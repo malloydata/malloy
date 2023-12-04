@@ -46,6 +46,7 @@ describe('BigQuery hand-built expression test', () => {
   function withJoin(leftKey: string, rightKey: string): StructRelationship {
     return {
       type: 'one',
+      matrixOperation: 'left',
       onExpression: [
         {type: 'field', path: `${leftKey}`},
         '=',
@@ -719,6 +720,7 @@ describe('BigQuery hand-built expression test', () => {
         ...aircraftHandBase,
         structRelationship: {
           type: 'many',
+          matrixOperation: 'left',
           onExpression: [
             {type: 'field', path: 'aircraft_model_code'},
             '=',

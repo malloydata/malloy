@@ -850,8 +850,15 @@ export type JoinRelationship =
   | 'many_to_one'
   | 'many_to_many';
 
+export type MatrixOperation = 'left' | 'right' | 'full' | 'inner';
+
+export function isMatrixOperation(x: string): x is MatrixOperation {
+  return ['left', 'right', 'full', 'inner'].includes(x);
+}
+
 export interface JoinOn {
   type: 'one' | 'many' | 'cross';
+  matrixOperation: MatrixOperation;
   onExpression?: Expr;
 }
 
