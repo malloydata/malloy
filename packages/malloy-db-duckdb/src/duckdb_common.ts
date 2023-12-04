@@ -35,8 +35,8 @@ import {
   StructDef,
   TestableConnection,
   DuckDBDialect,
+  FetchSchemaOptions,
 } from '@malloydata/malloy';
-import {FetchSchemaOptions} from '@malloydata/malloy-interfaces';
 
 export interface DuckDBQueryOptions {
   rowLimit: number;

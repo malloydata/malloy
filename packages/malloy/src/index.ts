@@ -152,6 +152,7 @@ export type {
   LookupConnection,
   ModelString,
   ModelURL,
+  FetchSchemaOptions,
   PersistSQLResults,
   PooledConnection,
   QueryString,
