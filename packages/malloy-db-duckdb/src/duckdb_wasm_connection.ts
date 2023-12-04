@@ -24,10 +24,10 @@
 import * as duckdb from '@malloydata/duckdb-wasm';
 import Worker from 'web-worker';
 import {
+  FetchSchemaOptions,
   QueryDataRow,
   RunSQLOptions,
   StructDef,
-  FetchSchemaOptions,
   SQLBlock,
 } from '@malloydata/malloy';
 import {StructRow, Table, Vector} from 'apache-arrow';

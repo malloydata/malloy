@@ -36,6 +36,7 @@ import * as googleCommon from '@google-cloud/common';
 import {GaxiosError} from 'gaxios';
 import {
   Connection,
+  FetchSchemaOptions,
   FieldTypeDef,
   Malloy,
   MalloyQueryData,
@@ -52,7 +53,6 @@ import {
   StructDef,
   toAsyncGenerator,
 } from '@malloydata/malloy';
-import {FetchSchemaOptions} from '@malloydata/malloy';
 
 export interface BigQueryManagerOptions {
   credentials?: {

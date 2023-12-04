@@ -30,6 +30,7 @@
 import * as crypto from 'crypto';
 import {
   Connection,
+  FetchSchemaOptions,
   MalloyQueryData,
   NamedStructDefs,
   PersistSQLResults,
@@ -38,7 +39,6 @@ import {
   QueryData,
   QueryDataRow,
   QueryRunStats,
-  FetchSchemaOptions,
   RunSQLOptions,
   SQLBlock,
   StreamingConnection,
