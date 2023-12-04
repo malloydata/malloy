@@ -151,7 +151,7 @@ const renderFieldContent = (
 
   return renderCell(f, value, {
     hideStartGutter: isFirstChild(f),
-    hideEndGutter: isLastChild(f) && (options.isDrillingEnabled ?? false),
+    hideEndGutter: isLastChild(f) && !(options.isDrillingEnabled ?? false),
   });
 };
 
