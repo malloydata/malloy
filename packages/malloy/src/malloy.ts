@@ -2842,9 +2842,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
     return Malloy.run({connections, preparedResult, options: finalOptions});
   }
 
-  async *runStream(options?: {
-    rowLimit?: number;
-  }): AsyncIterableIterator<DataRecord> {
+  async *runStream(options?: RunSQLOptions): AsyncIterableIterator<DataRecord> {
     const preparedResult = await this.getPreparedResult();
     const connections = this.runtime.connections;
     const finalOptions = runSQLOptionsWithAnnotations(preparedResult, options);
