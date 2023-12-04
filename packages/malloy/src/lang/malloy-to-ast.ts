@@ -570,8 +570,8 @@ export class MalloyToAST
     const {joinFrom, notes} = this.getJoinSource(joinAs, pcx.isExplore());
     const join = new ast.ExpressionJoin(joinAs, joinFrom);
     const onCx = pcx.joinExpression();
-    const mop = pcx.matrixOperation()?.text.toLocaleLowerCase();
-    if (mop && isMatrixOperation(mop)) {
+    const mop = pcx.matrixOperation()?.text.toLocaleLowerCase() || 'left';
+    if (isMatrixOperation(mop)) {
       join.matrixOperation = mop;
     } else {
       this.contextError(pcx, 'Internal Error: Unknown matrixOperation');
