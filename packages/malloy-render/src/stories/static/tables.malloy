@@ -1,0 +1,65 @@
+source: products is duckdb.table("data/products.parquet") extend {
+
+  view: records is{
+    select: *
+    limit: 1000
+  }
+
+  # bar_chart
+  view: category_bar is {
+    group_by: category
+    aggregate: avg_retail is retail_price.avg()
+  }
+
+  view: nested is {
+    group_by: category
+    aggregate: avg_retail is retail_price.avg()
+    nest:
+      nested_column_1 is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 10
+      }
+      another_nested is {
+        group_by: department
+        aggregate: avg_retail is retail_price.avg()
+        nest:
+          deeply_nested is {
+            group_by: `sku`
+            aggregate: total_cost is cost.sum()
+            limit: 3
+          }
+        limit: 5
+      }
+      record is {
+        nest: nested_record is {
+          group_by: id
+          aggregate: total_cost is cost.sum()
+          limit: 5
+        }
+      }
+      another_nested2 is {
+        group_by: department
+        aggregate: avg_retail is retail_price.avg()
+        nest: deeply_nested is {
+          group_by: `sku`
+          aggregate: total_cost is cost.sum()
+          limit: 3
+        }
+        limit: 5
+      }
+  }
+
+  view: number_formats is {
+    group_by: category
+    aggregate:
+      # currency
+      avg_retail_currency is retail_price.avg()
+      # percent
+      avg_retail_percent is retail_price.avg()
+      # number="#,##0.00"
+      avg_retail_number is retail_price.avg()
+      # duration
+      avg_retail_duration is round(retail_price.avg())
+  }
+};

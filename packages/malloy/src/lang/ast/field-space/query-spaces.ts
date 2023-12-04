@@ -34,7 +34,6 @@ import {LookupResult} from '../types/lookup-result';
 import {ColumnSpaceField} from './column-space-field';
 import {StructSpaceField} from './static-space';
 import {QueryInputSpace} from './query-input-space';
-import {SpaceEntry} from '../types/space-entry';
 
 /**
  * The output space of a query operation, it is not named "QueryOutputSpace"
@@ -50,6 +49,7 @@ export abstract class QuerySpace
   astEl?: MalloyElement | undefined;
   abstract readonly segmentType: 'reduce' | 'project' | 'index';
   expandedWild: Record<string, string[]> = {};
+  nestParent?: QuerySpace;
 
   constructor(
     readonly queryInputSpace: FieldSpace,
@@ -97,12 +97,6 @@ export abstract class QuerySpace
         super.pushFields(f);
       }
     }
-  }
-
-  setEntry(name: string, value: SpaceEntry): void {
-    super.setEntry(name, value);
-    // Everything in this namespace is an output field
-    value.outputField = true;
   }
 
   protected addWild(wild: WildcardFieldReference): void {
@@ -158,32 +152,6 @@ export abstract class QuerySpace
     }
   }
 
-  /**
-   * Check for the definition of an ungrouping reference in the result space,
-   * or in the case of an exclude reference, if this query is nested
-   * in another query, in the result space of a query that this query
-   * is nested inside of.
-   */
-  checkUngroup(fn: FieldName, isExclude: boolean): void {
-    if (!this.entry(fn.refString)) {
-      const parent = this.exprSpace.nestParent;
-      if (isExclude && parent) {
-        parent.whenComplete(() => {
-          const pOut = parent.outputSpace();
-          // a little ugly, but it breaks a circularity problem
-          if (pOut instanceof QuerySpace) {
-            pOut.checkUngroup(fn, isExclude);
-          } else {
-            throw new Error('OUCH');
-          }
-        });
-      } else {
-        const uName = isExclude ? 'exclude()' : 'all()';
-        fn.log(`${uName} '${fn.refString}' is missing from query output`);
-      }
-    }
-  }
-
   canContain(_typeDesc: model.TypeDesc): boolean {
     return true;
   }
@@ -216,9 +184,9 @@ export abstract class QuerySpace
         // (see creation of a QuerySpace) we add references to all the fields from
         // the refinement, but they don't have definitions. So in the case where we
         // don't have a field def, we "know" that that field is already in the query,
-        // and we don't need to worry about actually adding it. This is also true for
-        // project statements, where we add "*" as a field and also all the individuala
-        // fields, but the individual fields don't have field defs.
+        // and we don't need to worry about actually adding it. Previously, this was also true for
+        // project statements, where we added "*" as a field and also all the individual
+        // fields, but the individual fields didn't have field defs.
       }
     }
     this.isComplete();
@@ -281,7 +249,7 @@ export abstract class QuerySpace
   lookup(path: FieldName[]): LookupResult {
     const result = super.lookup(path);
     if (result.found) {
-      return result;
+      return {...result, isOutputField: true};
     }
     return this.exprSpace.lookup(path);
   }

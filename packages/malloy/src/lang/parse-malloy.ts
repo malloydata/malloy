@@ -80,10 +80,12 @@ import {
   NeedURLData,
   TranslateResponse,
   isNeedResponse,
+  ModelAnnotationResponse,
 } from './translate-response';
 import {locationContainsPosition} from './utils';
 import {Tag} from '../tags';
 import {MalloyParseInfo} from './malloy-parse-info';
+import {walkForModelAnnotation} from './parse-tree-walkers/model-annotation-walker';
 
 export type StepResponses =
   | DataRequestResponse
@@ -298,6 +300,10 @@ class ImportsAndTablesStep implements TranslationStep {
             ).toString()
           );
           that.addChild(ref);
+          that.imports.push({
+            importURL: ref,
+            location: {url: that.sourceURL, range: firstRef},
+          });
           that.root.importZone.reference(ref, {
             url: that.sourceURL,
             range: firstRef,
@@ -564,9 +570,39 @@ class HelpContextStep implements TranslationStep {
   }
 }
 
+class ModelAnnotationStep implements TranslationStep {
+  response?: ModelAnnotationResponse;
+  constructor(readonly parseStep: ParseStep) {}
+
+  step(
+    that: MalloyTranslation,
+    extendingModel?: ModelDef
+  ): ModelAnnotationResponse {
+    if (!this.response) {
+      const tryParse = this.parseStep.step(that);
+      if (!tryParse.parse || tryParse.final) {
+        return tryParse;
+      } else {
+        const modelAnnotation = walkForModelAnnotation(
+          that,
+          tryParse.parse.tokenStream,
+          tryParse.parse
+        );
+        this.response = {
+          modelAnnotation: {
+            ...modelAnnotation,
+            inherits: extendingModel?.annotation,
+          },
+        };
+      }
+    }
+    return this.response;
+  }
+}
+
 class TranslateStep implements TranslationStep {
   response?: TranslateResponse;
-  importedFlags = false;
+  importedAnnotations = false;
   constructor(readonly astStep: ASTStep) {}
 
   step(that: MalloyTranslation, extendingModel?: ModelDef): TranslateResponse {
@@ -575,12 +611,12 @@ class TranslateStep implements TranslationStep {
     }
 
     // begin with the compiler flags of the model we are extending
-    if (extendingModel && !this.importedFlags) {
+    if (extendingModel && !this.importedAnnotations) {
       const tagParse = Tag.annotationToTag(extendingModel.annotation, {
         prefix: /^##! /,
       });
       that.compilerFlags = tagParse.tag;
-      this.importedFlags = true;
+      this.importedAnnotations = true;
     }
 
     const astResponse = this.astStep.step(that);
@@ -617,7 +653,10 @@ class TranslateStep implements TranslationStep {
     }
 
     if (that.root.logger.hasErrors()) {
-      this.response = that.fatalResponse();
+      this.response = {
+        fromSources: that.getDependencies(),
+        ...that.fatalResponse(),
+      };
     } else {
       this.response = {
         translated: {
@@ -625,6 +664,7 @@ class TranslateStep implements TranslationStep {
           queryList: that.queryList,
           sqlBlocks: that.sqlBlocks,
         },
+        fromSources: that.getDependencies(),
         ...that.problemResponse(),
         final: true,
       };
@@ -644,6 +684,7 @@ export abstract class MalloyTranslation {
   compilerFlags = new Tag();
 
   readonly parseStep: ParseStep;
+  readonly modelAnnotationStep: ModelAnnotationStep;
   readonly importsAndTablesStep: ImportsAndTablesStep;
   readonly astStep: ASTStep;
   readonly metadataStep: MetadataStep;
@@ -672,6 +713,7 @@ export abstract class MalloyTranslation {
      * things will happen automatically.
      */
     this.parseStep = new ParseStep();
+    this.modelAnnotationStep = new ModelAnnotationStep(this.parseStep);
     this.metadataStep = new MetadataStep(this.parseStep);
     this.completionsStep = new CompletionsStep(this.parseStep);
     this.helpContextStep = new HelpContextStep(this.parseStep);
@@ -685,6 +727,14 @@ export abstract class MalloyTranslation {
     if (!this.childTranslators.get(url)) {
       this.childTranslators.set(url, new MalloyChildTranslator(url, this.root));
     }
+  }
+
+  getDependencies(): string[] {
+    const dependencies = [this.sourceURL];
+    for (const [_childURL, child] of this.childTranslators) {
+      dependencies.push(...child.getDependencies());
+    }
+    return dependencies;
   }
 
   addReference(reference: DocumentReference): void {
@@ -827,7 +877,6 @@ export abstract class MalloyTranslation {
     const attempt = this.translateStep.step(this, extendingModel);
     if (attempt.final) {
       this.finalAnswer = attempt;
-      this.buildImports();
     }
     return attempt;
   }
@@ -844,18 +893,12 @@ export abstract class MalloyTranslation {
     return undefined;
   }
 
-  private buildImports(): void {
-    for (const [key, value] of Object.entries(this.root.importZone.location)) {
-      // Ignore any import in another file
-      if (value.url !== this.sourceURL) {
-        continue;
-      }
-      this.imports.push({importURL: key, location: value});
-    }
-  }
-
   metadata(): MetadataResponse {
     return this.metadataStep.step(this);
+  }
+
+  modelAnnotation(extendingModel?: ModelDef): ModelAnnotationResponse {
+    return this.modelAnnotationStep.step(this, extendingModel);
   }
 
   completions(position: {

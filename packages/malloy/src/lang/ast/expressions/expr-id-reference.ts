@@ -47,14 +47,15 @@ export class ExprIdReference extends ExpressionDef {
   getExpression(fs: FieldSpace): ExprValue {
     const def = this.fieldReference.getField(fs);
     if (def.found) {
-      if (def.found.typeDesc().evalSpace === 'output') {
+      const td = def.found.typeDesc();
+      if (def.isOutputField) {
         return {
-          ...def.found.typeDesc(),
+          ...td,
+          evalSpace: td.evalSpace === 'constant' ? 'constant' : 'output',
           value: [{type: 'outputField', name: this.refString}],
         };
       }
       const value = [{type: def.found.refType, path: this.refString}];
-      const td = def.found.typeDesc();
       // We think that aggregates are more 'output' like, but maybe we will reconsider that...
       const evalSpace = expressionIsAggregate(td.expressionType)
         ? 'output'

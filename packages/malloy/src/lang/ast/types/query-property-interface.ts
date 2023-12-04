@@ -45,5 +45,8 @@ export enum LegalRefinementStage {
 export interface QueryPropertyInterface {
   queryRefinementStage: LegalRefinementStage | undefined;
   forceQueryClass: QueryClass | undefined;
+  // Edge case for `calculate:`, which needs a grouping or
+  // project to decide what kind of query it is
+  needsExplicitQueryClass?: boolean;
   queryExecute?: (executeFor: QueryBuilder) => void;
 }

@@ -3,7 +3,8 @@
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "dist",
-    "composite": true
+    "composite": true,
+    "noImplicitReturns": true
   },
   "include": ["./src", "node_modules/us-atlas"],
   "references": [

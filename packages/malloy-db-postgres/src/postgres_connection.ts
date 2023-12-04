@@ -44,7 +44,7 @@ import {
   StreamingConnection,
   StructDef,
 } from '@malloydata/malloy';
-import {Client, Pool, PoolClient} from 'pg';
+import {Client, Pool} from 'pg';
 import QueryStream from 'pg-query-stream';
 import {randomUUID} from 'crypto';
 
@@ -76,7 +76,6 @@ export class PostgresConnection
   implements Connection, StreamingConnection, PersistSQLResults
 {
   private readonly dialect = new PostgresDialect();
-  private isSetup = false;
   private schemaCache = new Map<
     string,
     | {schema: StructDef; error?: undefined; timestamp: number}
@@ -102,7 +101,7 @@ export class PostgresConnection
     }
   }
 
-  private async readConfig(): Promise<PostgresConnectionConfiguration> {
+  protected async readConfig(): Promise<PostgresConnectionConfiguration> {
     if (this.configReader instanceof Function) {
       return this.configReader();
     } else {
@@ -219,7 +218,7 @@ export class PostgresConnection
   ): Promise<MalloyQueryData> {
     const client = await this.getClient();
     await client.connect();
-    await this.connectionSetup();
+    await this.connectionSetup(client);
 
     let result = await client.query(sqlCommand);
     if (Array.isArray(result)) {
@@ -266,7 +265,11 @@ export class PostgresConnection
           = (e.object_catalog, e.object_schema, e.object_name, e.object_type, e.collection_type_identifier))
       where table_name='${tempTableName}';
     `;
-    await this.schemaFromQuery(infoQuery, structDef);
+    try {
+      await this.schemaFromQuery(infoQuery, structDef);
+    } catch (error) {
+      throw new Error(`Error fetching schema for ${sqlRef.name}: ${error}`);
+    }
     return structDef;
   }
 
@@ -274,13 +277,16 @@ export class PostgresConnection
     infoQuery: string,
     structDef: StructDef
   ): Promise<void> {
-    const result = await this.runPostgresQuery(
+    const {rows, totalRows} = await this.runPostgresQuery(
       infoQuery,
       SCHEMA_PAGE_SIZE,
       0,
       false
     );
-    for (const row of result.rows) {
+    if (!totalRows) {
+      throw new Error('Unable to read schema.');
+    }
+    for (const row of rows) {
       const postgresDataType = row['data_type'] as string;
       let s = structDef;
       let malloyType = this.dialect.sqlTypeToMalloyType(postgresDataType);
@@ -344,30 +350,20 @@ export class PostgresConnection
           AND table_schema = '${schema}'
     `;
 
-    await this.schemaFromQuery(infoQuery, structDef);
+    try {
+      await this.schemaFromQuery(infoQuery, structDef);
+    } catch (error) {
+      throw new Error(`Error fetching schema for ${tablePath}: ${error}`);
+    }
     return structDef;
   }
 
-  public async executeSQLRaw(query: string): Promise<QueryData> {
-    const config = await this.readQueryConfig();
-    const queryData = await this.runPostgresQuery(
-      query,
-      config.rowLimit || DEFAULT_PAGE_SIZE,
-      0,
-      false
-    );
-    return queryData.rows;
-  }
-
   public async test(): Promise<void> {
-    await this.executeSQLRaw('SELECT 1');
+    await this.runSQL('SELECT 1');
   }
 
-  public async connectionSetup(): Promise<void> {
-    if (!this.isSetup) {
-      this.executeSQLRaw("SET TIME ZONE 'UTC'");
-      this.isSetup = true;
-    }
+  public async connectionSetup(client: Client): Promise<void> {
+    await client.query("SET TIME ZONE 'UTC'");
   }
 
   public async runSQL(
@@ -377,28 +373,30 @@ export class PostgresConnection
   ): Promise<MalloyQueryData> {
     const config = await this.readQueryConfig();
 
-    const the_return = await this.runPostgresQuery(
+    return this.runPostgresQuery(
       sql,
       rowLimit ?? config.rowLimit ?? DEFAULT_PAGE_SIZE,
       rowIndex,
       true
     );
-    return the_return;
   }
 
   public async *runSQLStream(
     sqlCommand: string,
-    options?: {rowLimit?: number}
+    {rowLimit, abortSignal}: RunSQLOptions = {}
   ): AsyncIterableIterator<QueryDataRow> {
     const query = new QueryStream(sqlCommand);
     const client = await this.getClient();
-    client.connect();
+    await client.connect();
     const rowStream = client.query(query);
     let index = 0;
     for await (const row of rowStream) {
       yield row.row as QueryDataRow;
       index += 1;
-      if (options?.rowLimit !== undefined && index >= options.rowLimit) {
+      if (
+        (rowLimit !== undefined && index >= rowLimit) ||
+        abortSignal?.aborted
+      ) {
         query.destroy();
         break;
       }
@@ -429,7 +427,7 @@ export class PooledPostgresConnection
   extends PostgresConnection
   implements PooledConnection
 {
-  private pool: Pool;
+  private _pool: Pool | undefined;
 
   constructor(
     name: string,
@@ -437,8 +435,6 @@ export class PooledPostgresConnection
     configReader: PostgresConnectionConfigurationReader = {}
   ) {
     super(name, queryConfigReader, configReader);
-    this.pool = new Pool();
-    this.pool.on('acquire', client => client.query("SET TIME ZONE 'UTC'"));
   }
 
   public isPool(): true {
@@ -446,7 +442,28 @@ export class PooledPostgresConnection
   }
 
   public async drain(): Promise<void> {
-    await this.pool.end();
+    await this._pool?.end();
+  }
+
+  async getPool(): Promise<Pool> {
+    if (!this._pool) {
+      const {
+        username: user,
+        password,
+        databaseName: database,
+        port,
+        host,
+      } = await this.readConfig();
+      this._pool = new Pool({
+        user,
+        password,
+        database,
+        port,
+        host,
+      });
+      this._pool.on('acquire', client => client.query("SET TIME ZONE 'UTC'"));
+    }
+    return this._pool;
   }
 
   protected async runPostgresQuery(
@@ -455,7 +472,8 @@ export class PooledPostgresConnection
     _rowIndex: number,
     deJSON: boolean
   ): Promise<MalloyQueryData> {
-    let result = await this.pool.query(sqlCommand);
+    const pool = await this.getPool();
+    let result = await pool.query(sqlCommand);
 
     if (Array.isArray(result)) {
       result = result.pop();
@@ -471,21 +489,9 @@ export class PooledPostgresConnection
     };
   }
 
-  private async getClientFromPool(): Promise<[PoolClient, () => void]> {
-    return await new Promise((resolve, reject) =>
-      this.pool.connect((error, client: PoolClient, releaseClient) => {
-        if (error) {
-          reject(error);
-        } else {
-          resolve([client, releaseClient]);
-        }
-      })
-    );
-  }
-
   public async *runSQLStream(
     sqlCommand: string,
-    options?: {rowLimit?: number}
+    {rowLimit, abortSignal}: RunSQLOptions = {}
   ): AsyncIterableIterator<QueryDataRow> {
     const query = new QueryStream(sqlCommand);
     let index = 0;
@@ -493,17 +499,21 @@ export class PooledPostgresConnection
     // type. Because `query` is a `QueryStream`, the result is supposed to be a
     // `QueryStream` as well, but it's not. So instead, we get a client and call
     // `client.query(query)`, which does what it's supposed to.
-    const [client, releaseClient] = await this.getClientFromPool();
+    const pool = await this.getPool();
+    const client = await pool.connect();
     const resultStream: QueryStream = client.query(query);
     for await (const row of resultStream) {
       yield row.row as QueryDataRow;
       index += 1;
-      if (options?.rowLimit !== undefined && index >= options.rowLimit) {
+      if (
+        (rowLimit !== undefined && index >= rowLimit) ||
+        abortSignal?.aborted
+      ) {
         query.destroy();
         break;
       }
     }
-    releaseClient();
+    client.release();
   }
 
   async close(): Promise<void> {

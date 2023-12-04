@@ -1,8 +1,8 @@
 import script from './static/basic.malloy?raw';
-import {renderMalloy} from './render-malloy';
+import {renderMalloy} from './render-malloy-legacy';
 
 export default {
-  title: 'Malloy/Basic',
+  title: 'Malloy Legacy/Basic',
   render: ({source, view}, {globals: {connection}}) => {
     return renderMalloy({script, source, view, connection});
   },
@@ -12,7 +12,7 @@ export default {
 export const ProductsTable = {
   args: {
     source: 'products',
-    view: '{ select: * }',
+    view: 'records',
   },
 };
 
@@ -20,5 +20,12 @@ export const ProductsBar = {
   args: {
     source: 'products',
     view: 'category_bar',
+  },
+};
+
+export const FlattenNestedMeasures = {
+  args: {
+    source: 'products',
+    view: 'flatten',
   },
 };

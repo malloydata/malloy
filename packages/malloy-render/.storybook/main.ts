@@ -43,6 +43,10 @@ const config: StorybookConfig = {
           ),
         },
       },
+      server: {
+        // Disable HMR for now, as we can't seem to get malloy core nor Lit to fully support it
+        hmr: false,
+      },
       define: {
         'process.env': {},
       },

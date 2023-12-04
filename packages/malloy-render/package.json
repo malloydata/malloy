@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/render",
-  "version": "0.0.98",
+  "version": "0.0.111",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -23,8 +23,10 @@
     "build-storybook": "storybook build"
   },
   "dependencies": {
-    "@malloydata/malloy": "^0.0.98",
+    "@lit/context": "^1.1.0",
+    "@malloydata/malloy": "^0.0.111",
     "@types/luxon": "^2.4.0",
+    "lit": "^3.0.2",
     "lodash": "^4.17.20",
     "luxon": "^2.4.0",
     "ssf": "^0.11.2",
@@ -40,6 +42,7 @@
     "@storybook/html": "^7.5.0",
     "@storybook/html-vite": "^7.5.0",
     "@storybook/testing-library": "^0.2.2",
+    "@storybook/types": "^7.5.3",
     "storybook": "^7.5.0"
   }
 }

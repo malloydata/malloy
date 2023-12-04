@@ -181,7 +181,9 @@ export async function runQuery(runtime: Runtime, querySrc: string) {
     result = await query.run();
   } catch (e) {
     throw new Error(
-      `query.run failed: ${e.message}\n` + `SQL: ${await query.getSQL()}`
+      `query.run failed: ${e.message}\n` +
+        `SQL: ${await query.getSQL()}\n` +
+        e.stack
     );
   }
 

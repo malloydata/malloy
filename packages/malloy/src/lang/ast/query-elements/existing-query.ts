@@ -87,7 +87,7 @@ export class ExistingQuery extends PipelineDesc {
       if (head.annotation) {
         query.annotation = head.annotation;
       }
-      return {outputStruct: appended.structDef, query};
+      return {outputStruct: appended.structDef(), query};
     }
     this.log(`Illegal reference to '${this.head}', query expected`);
     return oops();

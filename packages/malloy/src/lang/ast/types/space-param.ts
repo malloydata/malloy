@@ -40,7 +40,7 @@ export class AbstractParameter extends SpaceParam {
     return this.astParam.parameter();
   }
 
-  describeType(): TypeDesc {
+  typeDesc(): TypeDesc {
     const type = this.astParam.type || 'error';
     // TODO Not sure whether params are considered "input space". It seems like they
     // could be input or constant, depending on usage.
@@ -57,7 +57,7 @@ export class DefinedParameter extends SpaceParam {
     return this.paramDef;
   }
 
-  describeType(): TypeDesc {
+  typeDesc(): TypeDesc {
     return {
       dataType: this.paramDef.type,
       expressionType: 'scalar',

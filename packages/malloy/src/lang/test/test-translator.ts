@@ -262,6 +262,7 @@ export class TestTranslator extends MalloyTranslator {
             as: 'b',
             structRelationship: {
               type: 'one',
+              matrixOperation: 'left',
               onExpression: [
                 {type: 'field', path: 'astr'},
                 '=',

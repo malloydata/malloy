@@ -67,32 +67,34 @@ export class ExprUngroup extends ExpressionDef {
       e: exprVal.value,
     };
     if (this.typeCheck(this.expr, {...exprVal, expressionType: 'scalar'})) {
-      if (this.fields.length > 0) {
-        if (!fs.isQueryFieldSpace()) {
-          this.log(
-            `${this.control}() must be in a query -- weird internal error`
-          );
-          return errorFor('ungroup query check');
-        }
-        const output = fs.outputSpace();
-        if (!(output instanceof QuerySpace)) {
-          // TODO maybe make OutputSpace return an interface which has checkUngroup
-          this.log(
-            `${this.control}() must be in a query -- weird internal error`
-          );
-          return errorFor('ungroup query check');
-        }
+      // Now every mentioned field must be in the output space of one of the queries
+      // of the nest tree leading to this query. If this is a source definition,
+      // this is not checked until sql generation time.
+      if (fs.isQueryFieldSpace() && this.fields.length > 0) {
         const dstFields: string[] = [];
         const isExclude = this.control === 'exclude';
-        for (const mustBeInOutput of this.fields) {
-          output.whenComplete(() => {
-            output.checkUngroup(mustBeInOutput, isExclude);
-          });
-          dstFields.push(mustBeInOutput.refString);
+        for (const mentionedField of this.fields) {
+          let ofs: FieldSpace | undefined = fs.outputSpace();
+          let notFound = true;
+          while (ofs) {
+            const entryInfo = ofs.lookup([mentionedField]);
+            if (entryInfo.found && entryInfo.isOutputField) {
+              dstFields.push(mentionedField.refString);
+              notFound = false;
+            } else if (ofs instanceof QuerySpace) {
+              // should always be true, but don't have types right, thus the if
+              ofs = ofs.nestParent;
+              continue;
+            }
+            break;
+          }
+          if (notFound) {
+            const uName = isExclude ? 'exclude()' : 'all()';
+            mentionedField.log(
+              `${uName} '${mentionedField.refString}' is missing from query output`
+            );
+          }
         }
-        // TODO maybe now we can just look up the fields in the output space now and ensure
-        // they're all there, rather than waiting until the query is finished to do it?
-        // See `order_by` for an example of how this could work.
         ungroup.fields = dstFields;
       }
       return {

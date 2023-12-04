@@ -122,15 +122,19 @@ describe('Postgres tests', () => {
 
   describe('time', () => {
     const zone = 'America/Mexico_City'; // -06:00 no DST
-    const zone_2020 = DateTime.fromObject({
-      year: 2020,
-      month: 2,
-      day: 20,
-      hour: 0,
-      minute: 0,
-      second: 0,
-      zone,
-    });
+    const zone_2020 = DateTime.fromObject(
+      {
+        year: 2020,
+        month: 2,
+        day: 20,
+        hour: 0,
+        minute: 0,
+        second: 0,
+      },
+      {
+        zone,
+      }
+    );
     test('can cast TIMESTAMPTZ to timestamp', async () => {
       await expect(
         `run: postgres.sql("""

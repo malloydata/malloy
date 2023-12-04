@@ -34,7 +34,7 @@ export abstract class QueryField extends SpaceField {
   abstract getQueryFieldDef(fs: FieldSpace): QueryFieldDef | undefined;
   abstract fieldDef(): FieldDef;
 
-  describeType(): TypeDesc {
+  typeDesc(): TypeDesc {
     return {dataType: 'turtle', expressionType: 'scalar', evalSpace: 'input'};
   }
 }

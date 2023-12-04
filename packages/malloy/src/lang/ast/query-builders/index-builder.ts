@@ -25,6 +25,8 @@ import {
   FilterExpression,
   PipeSegment,
   Sampling,
+  isIndexSegment,
+  isPartialSegment,
 } from '../../../model/malloy_types';
 
 import {ErrorFactory} from '../error-factory';
@@ -76,7 +78,7 @@ export class IndexBuilder implements QueryBuilder {
   }
 
   finalize(from: PipeSegment | undefined): PipeSegment {
-    if (from && from.type !== 'index') {
+    if (from && !isIndexSegment(from) && !isPartialSegment(from)) {
       this.resultFS.log(`Can't refine index with ${from.type}`);
       return ErrorFactory.indexSegment;
     }
@@ -101,7 +103,7 @@ export class IndexBuilder implements QueryBuilder {
       indexSegment.weightMeasure = this.indexOn.refString;
     }
 
-    if (from?.sample) {
+    if (from && isIndexSegment(from) && from?.sample) {
       indexSegment.sample = from.sample;
     }
     if (this.sample) {

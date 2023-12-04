@@ -30,7 +30,6 @@ import {
   ModelDef,
   ModelAnnotation,
   NamedModelObject,
-  Note,
   Query,
   SQLBlockStructDef,
   StructDef,
@@ -486,7 +485,7 @@ export class Document extends MalloyElement implements NameSpace {
   sqlBlocks: SQLBlockStructDef[] = [];
   statements: DocStatementList;
   didInitModel = false;
-  notes: Note[] = [];
+  annotation: Annotation = {};
   experiments = new Tag({});
 
   constructor(statements: (DocStatement | DocStatementList)[]) {
@@ -503,6 +502,9 @@ export class Document extends MalloyElement implements NameSpace {
     this.queryList = [];
     this.sqlBlocks = [];
     if (extendingModelDef) {
+      if (extendingModelDef.annotation) {
+        this.annotation.inherits = extendingModelDef.annotation;
+      }
       for (const [nm, orig] of Object.entries(extendingModelDef.contents)) {
         const entry = cloneDeep(orig);
         if (
@@ -552,9 +554,16 @@ export class Document extends MalloyElement implements NameSpace {
     this.modelAnnotationTodoList.push(sd);
   }
 
+  hasAnnotation(): boolean {
+    return (
+      (this.annotation.notes && this.annotation.notes.length > 0) ||
+      this.annotation.inherits !== undefined
+    );
+  }
+
   currentModelAnnotation(): ModelAnnotation | undefined {
-    if (this.notes.length > 0) {
-      const ret = {id: '', notes: this.notes};
+    if (this.hasAnnotation()) {
+      const ret = {...this.annotation, id: ''};
       ret.id = annotationID(ret);
       return ret;
     }
@@ -562,7 +571,7 @@ export class Document extends MalloyElement implements NameSpace {
 
   modelDef(): ModelDef {
     const def: ModelDef = {name: '', exports: [], contents: {}};
-    if (this.notes.length > 0) {
+    if (this.hasAnnotation()) {
       def.annotation = this.currentModelAnnotation();
     }
     for (const entry in this.documentModel) {

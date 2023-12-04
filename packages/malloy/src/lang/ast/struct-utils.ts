@@ -24,7 +24,12 @@
 import {inspect} from 'util';
 
 import {Segment} from '../../model/malloy_query';
-import {FieldDef, PipeSegment, StructDef} from '../../model/malloy_types';
+import {
+  FieldDef,
+  PipeSegment,
+  StructDef,
+  isPartialSegment,
+} from '../../model/malloy_types';
 
 import {ErrorFactory} from './error-factory';
 import {MalloyElement} from './types/malloy-element';
@@ -35,6 +40,10 @@ export function opOutputStruct(
   opDesc: PipeSegment
 ): StructDef {
   const badModel = ErrorFactory.isErrorStructDef(inputStruct);
+  // We don't want to expose partial segments to the compiler
+  if (isPartialSegment(opDesc)) {
+    opDesc = {...opDesc, type: 'reduce'};
+  }
   // Don't call into the model code with a broken model
   if (!badModel) {
     try {

@@ -27,19 +27,22 @@ import {
   PipeSegment,
   Pipeline,
   StructDef,
+  isAtomicField,
+  isTurtleDef,
 } from '../../../model/malloy_types';
 
 import {FieldName, FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
 import {QOPDesc} from '../query-properties/qop-desc';
-import {getStructFieldDef} from '../struct-utils';
-import {QueryInputSpace} from '../field-space/query-input-space';
+import {QuerySpace} from '../field-space/query-spaces';
 import {ViewFieldReference} from '../query-items/field-references';
 import {Refinement} from '../query-properties/refinements';
+import {StaticSpace} from '../field-space/static-space';
+import {SpaceField} from '../types/space-field';
 
 interface AppendResult {
   opList: PipeSegment[];
-  structDef: StructDef;
+  structDef: () => StructDef;
 }
 
 /**
@@ -50,7 +53,21 @@ interface AppendResult {
 export abstract class PipelineDesc extends MalloyElement {
   protected refinements?: Refinement[];
   protected qops: QOPDesc[] = [];
-  nestedInQuerySpace?: QueryInputSpace;
+  private isNestIn?: QuerySpace;
+
+  /**
+   * This pipeline is actually a nest statement, and the passed query space
+   * is the space for the query which contains the nest statement. This is
+   * used so that nest queries can walk up a nest chain to check
+   * "ungrouping" expressions.
+   *
+   * This is only here so that it can be used when a Builder is created
+   * so the query space created by the builder can also know that it is
+   * nested.
+   */
+  declareAsNestInside(qs: QuerySpace) {
+    this.isNestIn = qs;
+  }
 
   alreadyRefined(): boolean {
     return this.refinements !== undefined;
@@ -72,17 +89,16 @@ export abstract class PipelineDesc extends MalloyElement {
     modelPipe: PipeSegment[]
   ): AppendResult {
     const returnPipe: PipeSegment[] = [...modelPipe];
-    const nestedIn =
-      modelPipe.length === 0 ? this.nestedInQuerySpace : undefined;
-    let nextFS = pipelineOutput;
+    const nestedIn = modelPipe.length === 0 ? this.isNestIn : undefined;
+    let nextFS = () => pipelineOutput;
     for (const qop of this.qops) {
-      const next = qop.getOp(nextFS, nestedIn);
+      const next = qop.getOp(nextFS(), nestedIn);
       returnPipe.push(next.segment);
-      nextFS = next.outputSpace();
+      nextFS = () => next.outputSpace();
     }
     return {
       opList: returnPipe,
-      structDef: nextFS.structDef(),
+      structDef: () => nextFS().structDef(),
     };
   }
 
@@ -92,53 +108,91 @@ export abstract class PipelineDesc extends MalloyElement {
     }
     let pipeline: PipeSegment[] = [];
     if (modelPipe.pipeHead) {
-      const {pipeline: turtlePipe} = this.expandTurtle(
-        modelPipe.pipeHead.name,
-        fs.structDef()
-      );
+      const ref = new ViewFieldReference([
+        new FieldName(modelPipe.pipeHead.name),
+      ]);
+      this.has({ref});
+      const {pipeline: turtlePipe} = this.expandTurtle(ref, fs.structDef());
       pipeline.push(...turtlePipe);
     }
     pipeline.push(...modelPipe.pipeline);
     for (const refinement of this.refinements) {
-      pipeline = refinement.refine(fs, pipeline);
+      pipeline = refinement.refine(fs, pipeline, this.isNestIn);
     }
-    this.refinements = undefined;
     return {pipeline};
   }
 
   protected expandTurtle(
-    turtleName: string,
+    turtleName: ViewFieldReference,
     fromStruct: StructDef
   ): {
+    needsExpansionDueToScalar: boolean;
     pipeline: PipeSegment[];
     location: DocumentLocation | undefined;
     annotation: Annotation | undefined;
   } {
-    const turtle = getStructFieldDef(fromStruct, turtleName);
+    const fs = new StaticSpace(fromStruct);
+    const lookup = turtleName.getField(fs);
     let annotation: Annotation | undefined;
-    if (!turtle) {
+    if (!lookup.found) {
       this.log(`Query '${turtleName}' is not defined in source`);
-    } else if (turtle.type !== 'turtle') {
-      this.log(`'${turtleName}' is not a query`);
-    } else {
-      if (turtle.annotation) {
-        annotation = {inherits: turtle.annotation};
+    } else if (lookup.found instanceof SpaceField) {
+      const fieldDef = lookup.found.fieldDef();
+      if (fieldDef && isAtomicField(fieldDef)) {
+        if (this.inExperiment('scalar_lenses', true)) {
+          return {
+            needsExpansionDueToScalar: true,
+            pipeline: [
+              {
+                type: 'reduce',
+                fields: [
+                  {
+                    type: fieldDef.type,
+                    name: fieldDef.as ?? fieldDef.name,
+                    expressionType: fieldDef.expressionType,
+                    e: [{type: 'field', path: turtleName.refString}],
+                  },
+                ],
+              },
+            ],
+            location: fieldDef.location,
+            annotation,
+          };
+        } else {
+          this.log(`'${turtleName.refString}' is not a query`);
+        }
+      } else if (turtleName.list.length > 1) {
+        this.log('Cannot use view from join');
+      } else if (fieldDef && isTurtleDef(fieldDef)) {
+        if (fieldDef.annotation) {
+          annotation = {inherits: fieldDef.annotation};
+        }
+        return {
+          pipeline: fieldDef.pipeline,
+          location: fieldDef.location,
+          annotation,
+          needsExpansionDueToScalar: false,
+        };
       }
-      return {pipeline: turtle.pipeline, location: turtle.location, annotation};
     }
-    return {pipeline: [], location: undefined, annotation};
+    return {
+      pipeline: [],
+      location: undefined,
+      annotation,
+      needsExpansionDueToScalar: false,
+    };
   }
 }
 
 export abstract class TurtleHeadedPipe extends PipelineDesc {
-  _turtleName?: FieldName;
+  _turtleName?: ViewFieldReference;
 
-  set turtleName(turtleName: FieldName | undefined) {
+  set turtleName(turtleName: ViewFieldReference | undefined) {
     this._turtleName = turtleName;
     this.has({turtleName: turtleName});
   }
 
-  get turtleName(): FieldName | undefined {
+  get turtleName(): ViewFieldReference | undefined {
     return this._turtleName;
   }
 }

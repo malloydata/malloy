@@ -538,13 +538,10 @@ export function maxOfExpressionTypes(types: ExpressionType[]): ExpressionType {
   return types.reduce(maxExpressionType, 'scalar');
 }
 
-interface JustExpression {
-  e: Expr;
-}
-type HasExpression = FieldDef & JustExpression;
+type HasExpression = FieldDef & Expression & {e: Expr};
 /**  Grants access to the expression property of a FieldDef */
 export function hasExpression(f: FieldDef): f is HasExpression {
-  return (f as JustExpression).e !== undefined;
+  return (f as Expression).e !== undefined;
 }
 
 export type TimeFieldType = 'date' | 'timestamp';
@@ -777,6 +774,13 @@ export function isReduceSegment(pe: PipeSegment): pe is ReduceSegment {
   return pe.type === 'reduce';
 }
 
+export interface PartialSegment extends QuerySegment {
+  type: 'partial';
+}
+export function isPartialSegment(pe: PipeSegment): pe is PartialSegment {
+  return pe.type === 'partial';
+}
+
 export interface ProjectSegment extends QuerySegment {
   type: 'project';
 }
@@ -826,7 +830,7 @@ export function isIndexSegment(pe: PipeSegment): pe is IndexSegment {
 }
 
 export interface QuerySegment extends Filtered {
-  type: 'reduce' | 'project';
+  type: 'reduce' | 'project' | 'partial';
   fields: QueryFieldDef[];
   extendSource?: FieldDef[];
   limit?: number;
@@ -846,8 +850,15 @@ export type JoinRelationship =
   | 'many_to_one'
   | 'many_to_many';
 
+export type MatrixOperation = 'left' | 'right' | 'full' | 'inner';
+
+export function isMatrixOperation(x: string): x is MatrixOperation {
+  return ['left', 'right', 'full', 'inner'].includes(x);
+}
+
 export interface JoinOn {
   type: 'one' | 'many' | 'cross';
+  matrixOperation: MatrixOperation;
   onExpression?: Expr;
 }
 
@@ -1141,6 +1152,7 @@ export type MalloyQueryData = {
   rows: QueryDataRow[];
   totalRows: number;
   runStats?: QueryRunStats;
+  profilingUrl?: string;
 };
 
 export interface DrillSource {
@@ -1165,10 +1177,15 @@ export interface QueryResult extends CompiledQuery {
   totalRows: number;
   error?: string;
   runStats?: QueryRunStats;
+  profilingUrl?: string;
 }
 
 export function isTurtleDef(def: FieldDef): def is TurtleDef {
   return def.type === 'turtle';
+}
+
+export function isAtomicField(def: FieldDef): def is FieldAtomicDef {
+  return isAtomicFieldType(def.type);
 }
 
 export interface SearchResultRow {

@@ -62,6 +62,7 @@ const duckDBToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
   'USMALLINT': {type: 'number', numberType: 'integer'},
   'HUGEINT': {type: 'number', numberType: 'integer'},
   'DOUBLE': {type: 'number', numberType: 'float'},
+  'FLOAT': {type: 'number', numberType: 'float'},
   'VARCHAR': {type: 'string'},
   'DATE': {type: 'date'},
   'TIMESTAMP': {type: 'timestamp'},
@@ -128,7 +129,7 @@ export class DuckDBDialect extends Dialect {
     const fields = fieldList
       .map(f => `${f.sqlExpression} as ${f.sqlOutputName}`)
       .join(', ');
-    return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN ROW(${fields}))`;
+    return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN STRUCT_PACK(${fields}))`;
   }
 
   sqlAnyValueLastTurtle(
@@ -242,13 +243,13 @@ export class DuckDBDialect extends Dialect {
     lastStageName: string,
     structDef: StructDef
   ): string {
-    return `SELECT LIST(ROW(${structDef.fields
+    return `SELECT LIST(STRUCT_PACK(${structDef.fields
       .map(fieldDef => this.sqlMaybeQuoteIdentifier(getIdentifier(fieldDef)))
       .join(',')})) FROM ${lastStageName}\n`;
   }
 
   sqlSelectAliasAsStruct(alias: string, physicalFieldNames: string[]): string {
-    return `ROW(${physicalFieldNames
+    return `STRUCT_PACK(${physicalFieldNames
       .map(name => `${alias}.${name}`)
       .join(', ')})`;
   }

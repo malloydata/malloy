@@ -36,7 +36,6 @@ import {FieldSpace, QueryFieldSpace} from '../types/field-space';
 import {RefinedSpace} from './refined-space';
 
 export class QueryInputSpace extends RefinedSpace implements QueryFieldSpace {
-  nestParent?: QueryInputSpace;
   extendList: string[] = [];
 
   /**

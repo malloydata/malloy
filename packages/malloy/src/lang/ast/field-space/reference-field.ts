@@ -28,6 +28,7 @@ import {
   TypeDesc,
   isAtomicFieldType,
   isFilteredAliasedName,
+  hasExpression,
 } from '../../../model/malloy_types';
 
 import {FieldReference} from '../query-items/field-references';
@@ -66,11 +67,11 @@ export class ReferenceField extends SpaceField {
     return this.queryFieldDef;
   }
 
-  describeType(): TypeDesc {
+  typeDesc(): TypeDesc {
     if (this.memoTypeDesc) return this.memoTypeDesc;
     const refTo = this.referenceTo;
     if (refTo) {
-      this.memoTypeDesc = refTo.describeType();
+      this.memoTypeDesc = refTo.typeDesc();
       return this.memoTypeDesc;
     }
     return {dataType: 'error', expressionType: 'scalar', evalSpace: 'input'};
@@ -108,6 +109,9 @@ export class ReferenceField extends SpaceField {
               e: [{type: 'field', path}],
               annotation,
             };
+            if (hasExpression(origFd)) {
+              newField.expressionType = origFd.expressionType;
+            }
             return newField;
           }
           // maybe ok, this likely is some field which cannot be referenced

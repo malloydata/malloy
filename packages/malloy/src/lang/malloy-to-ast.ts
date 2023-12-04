@@ -43,7 +43,12 @@ import {
   idToStr,
 } from './parse-utils';
 import {CastType} from '../model';
-import {DocumentLocation, isCastType, Note} from '../model/malloy_types';
+import {
+  DocumentLocation,
+  isCastType,
+  isMatrixOperation,
+  Note,
+} from '../model/malloy_types';
 import {Tag} from '../tags';
 
 class ErrorNode extends ast.SourceQueryNode {
@@ -386,11 +391,11 @@ export class MalloyToAST
       }
       return properties;
     }
-    const turtleNameCx = pcx.turtleName();
-    if (turtleNameCx) {
+    const fieldPathCx = pcx.fieldPath();
+    if (fieldPathCx) {
       return this.astAt(
-        new ast.ViewFieldReference([this.getFieldName(turtleNameCx)]),
-        turtleNameCx
+        this.getFieldPath(fieldPathCx, ast.ViewFieldReference),
+        fieldPathCx
       );
     }
     throw this.internalError(
@@ -565,6 +570,12 @@ export class MalloyToAST
     const {joinFrom, notes} = this.getJoinSource(joinAs, pcx.isExplore());
     const join = new ast.ExpressionJoin(joinAs, joinFrom);
     const onCx = pcx.joinExpression();
+    const mop = pcx.matrixOperation()?.text.toLocaleLowerCase() || 'left';
+    if (isMatrixOperation(mop)) {
+      join.matrixOperation = mop;
+    } else {
+      this.contextError(pcx, 'Internal Error: Unknown matrixOperation');
+    }
     if (onCx) {
       join.joinOn = this.getFieldExpr(onCx);
     }
@@ -1055,9 +1066,9 @@ export class MalloyToAST
         "Leading '->' in a view or nest definition is no longer needed."
       );
     }
-    const nameCx = firstCx.exploreQueryName();
+    const nameCx = firstCx.fieldPath();
     if (nameCx) {
-      pipe.turtleName = this.getFieldName(nameCx);
+      pipe.turtleName = this.getFieldPath(nameCx, ast.ViewFieldReference);
     }
     const propsCx = firstCx.queryProperties();
     if (propsCx) {
@@ -1143,7 +1154,7 @@ export class MalloyToAST
   }
 
   visitNestExisting(pcx: parse.NestExistingContext): ast.NestedQuery {
-    const name = this.getFieldName(pcx.queryName());
+    const name = this.getFieldPath(pcx.fieldPath(), ast.ViewFieldReference);
     const rcxs = pcx.queryRefinement();
     const notes = this.getNotes(pcx.tags());
     if (rcxs.length > 0) {
@@ -1758,14 +1769,9 @@ export class MalloyToAST
     const applyTo = this.getSqExpr(pcx.sqExpr());
     const viewParts: ast.ArrowViewComponent[] = [];
     const headCx = pcx.leadSeg();
-    const headId = getOptionalId(headCx);
-    const headIdCx = headCx.id();
-    if (headIdCx && headId) {
-      viewParts.push(
-        new ast.ViewFieldReference([
-          this.astAt(new ast.FieldName(headId), headIdCx),
-        ])
-      );
+    const headIdCx = headCx.fieldPath();
+    if (headIdCx) {
+      viewParts.push(this.getFieldPath(headIdCx, ast.ViewFieldReference));
       const rcxs = headCx.queryRefinement();
       if (rcxs.length > 0) {
         viewParts.push(...rcxs.map(rcx => this.getQueryRefinements(rcx)));
@@ -1780,11 +1786,9 @@ export class MalloyToAST
       if (asQop) {
         viewParts.push(this.visitQueryProperties(asQop));
       }
-      const viewName = getOptionalId(seg);
+      const viewName = seg.fieldPath();
       if (viewName) {
-        viewParts.push(
-          new ast.ViewFieldReference([new ast.FieldName(viewName)])
-        );
+        viewParts.push(this.getFieldPath(viewName, ast.ViewFieldReference));
       }
     }
     const sqExpr = new ast.SQAppendView(applyTo, viewParts);

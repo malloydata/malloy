@@ -73,6 +73,13 @@ describe('source:', () => {
     test('single dimension', () => {
       expect('source: aa is a extend { dimension: x is 1 }').toTranslate();
     });
+    test('field def with null value', () => {
+      expect(
+        markSource`source: aa is a extend { dimension: x is ${'null'} }`
+      ).toTranslateWithWarnings(
+        'null value defaults to type number, use "null::TYPE" to specify correct type'
+      );
+    });
     test('multiple dimensions', () => {
       expect(`
         source: aa is a extend {
@@ -289,6 +296,50 @@ describe('source:', () => {
         source: c is a extend {
           view: chain is {
             group_by: astr
+          } -> {
+            top: 10; order_by: astr
+            select: *
+          }
+        }
+      `).toTranslate();
+    });
+    test('chained explore-query with refinement two steps', () => {
+      expect(`
+        source: c is a extend {
+          view: base is {
+            group_by: astr
+          } + {
+            group_by: ai
+          }
+          view: chain2 is base -> {
+            top: 10; order_by: astr
+            select: *
+          }
+        }
+      `).toTranslate();
+    });
+    test('pipelined explore-query with refinement', () => {
+      expect(`
+        source: c is a extend {
+          view: base is {
+            group_by: astr
+          }
+          view: chain is base + {
+            group_by: ai
+          } -> {
+            top: 10; order_by: astr
+            select: *
+          }
+        }
+      `).toTranslate();
+    });
+    test.skip('pipelined explore-query with view chain', () => {
+      expect(`
+        source: c is a extend {
+          view: chain is {
+            group_by: astr
+          } + {
+            group_by: ai
           } -> {
             top: 10; order_by: astr
             select: *

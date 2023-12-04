@@ -28,6 +28,7 @@ export interface LookupFound {
   found: SpaceEntry;
   relationship: {name: string; structRelationship: StructRelationship}[];
   error: undefined;
+  isOutputField: boolean;
 }
 export interface LookupError {
   error: string;

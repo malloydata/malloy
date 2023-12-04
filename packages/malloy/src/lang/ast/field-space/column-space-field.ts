@@ -36,7 +36,7 @@ export class ColumnSpaceField extends SpaceField {
     return this.haveFieldDef;
   }
 
-  describeType(): TypeDesc {
+  typeDesc(): TypeDesc {
     return this.fieldTypeFromFieldDef(this.haveFieldDef);
   }
 }

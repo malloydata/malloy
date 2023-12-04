@@ -10620,6 +10620,163 @@ exports[`rendering results html renderer complex query with tags transposed tabl
 </table>
 `;
 
+exports[`rendering results html renderer flattened nests render correctly 1`] = `
+<table
+  style="vertical-align: top; border-collapse: collapse; width: 100%;"
+>
+  <thead>
+    <tr>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        nm
+      </th>
+      <th
+        style="padding: 8px; text-align: right;"
+      >
+        avg_​height
+      </th>
+      <th
+        style="padding: 8px; text-align: right;"
+      >
+        monday avg_​height
+      </th>
+      <th
+        style="padding: 8px; text-align: right;"
+      >
+        thursday avg_​height
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          Sebastian
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          33.25
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          41
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          25.5
+        </span>
+      </td>
+    </tr>
+    <tr>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          Miguel
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          33.25
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          25.5
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span
+          class="value-null"
+        >
+          ∅
+        </span>
+      </td>
+    </tr>
+    <tr>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          Alex
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          33.25
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          47
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          31.5
+        </span>
+      </td>
+    </tr>
+    <tr>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          Pedro
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          32
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          20
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span
+          class="value-null"
+        >
+          ∅
+        </span>
+      </td>
+    </tr>
+  </tbody>
+</table>
+`;
+
 exports[`rendering results html renderer hidden tags rendered correctly dashboard 1`] = `
 <div>
   <div

@@ -21,6 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {Annotation} from './model/malloy_types';
+
 export interface RunSQLOptions {
   rowLimit?: number;
+  abortSignal?: AbortSignal;
+  /* This is an experimental feature */
+  modelAnnotation?: Annotation;
+  /* This is an experimental feature */
+  queryAnnotation?: Annotation;
 }

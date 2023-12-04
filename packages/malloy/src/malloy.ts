@@ -65,6 +65,8 @@ import {
   FieldUnsupportedDef,
   QueryRunStats,
   ImportLocation,
+  Annotation,
+  NamedModelObject,
 } from './model';
 import {
   Connection,
@@ -97,6 +99,7 @@ export interface ParseOptions {
 
 export interface CompileOptions {
   refreshSchemaCache?: boolean | number;
+  noThrowOnError?: boolean;
 }
 
 export class Malloy {
@@ -212,13 +215,13 @@ export class Malloy {
     parse,
     model,
     refreshSchemaCache,
+    noThrowOnError,
   }: {
     urlReader: URLReader;
     connections: LookupConnection<InfoConnection>;
     parse: Parse;
     model?: Model;
-    refreshSchemaCache?: boolean | number;
-  }): Promise<Model> {
+  } & CompileOptions): Promise<Model> {
     let refreshTimestamp: number | undefined;
     if (refreshSchemaCache) {
       refreshTimestamp =
@@ -237,6 +240,24 @@ export class Malloy {
             result.translated.queryList,
             result.translated.sqlBlocks,
             result.problems || [],
+            [...(model?.fromSources ?? []), ...(result.fromSources ?? [])],
+            (position: ModelDocumentPosition) =>
+              translator.referenceAt(position),
+            (position: ModelDocumentPosition) => translator.importAt(position)
+          );
+        } else if (noThrowOnError) {
+          const emptyModel = {
+            name: 'modelDidNotCompile',
+            exports: [],
+            contents: {},
+          };
+          const modelFromCompile = model?._modelDef || emptyModel;
+          return new Model(
+            modelFromCompile,
+            [],
+            [],
+            result.problems || [],
+            [...(model?.fromSources ?? []), ...(result.fromSources ?? [])],
             (position: ModelDocumentPosition) =>
               translator.referenceAt(position),
             (position: ModelDocumentPosition) => translator.importAt(position)
@@ -270,6 +291,7 @@ export class Malloy {
             }
           }
         }
+        const {modelAnnotation} = translator.modelAnnotation(model?._modelDef);
         if (result.tables) {
           // collect tables by connection name since there may be multiple connections
           const tablesByConnection: Map<
@@ -298,6 +320,7 @@ export class Malloy {
               const {schemas: tables, errors} =
                 await connection.fetchSchemaForTables(tablePathByKey, {
                   refreshTimestamp,
+                  modelAnnotation,
                 });
               translator.update({tables, errors: {tables: errors}});
             } catch (error) {
@@ -324,6 +347,7 @@ export class Malloy {
             );
             const resolved = await conn.fetchSchemaForSQLBlock(expanded, {
               refreshTimestamp,
+              modelAnnotation,
             });
             if (resolved.error) {
               translator.update({
@@ -459,6 +483,7 @@ export class Malloy {
           // TODO feature-sql-block There is no source explore...
           sourceExplore: '',
           sourceFilters: [],
+          profilingUrl: data.profilingUrl,
         },
         {
           name: 'empty_model',
@@ -474,6 +499,7 @@ export class Malloy {
           result: result.rows,
           totalRows: result.totalRows,
           runStats: result.runStats,
+          profilingUrl: result.profilingUrl,
         },
         preparedResult._modelDef
       );
@@ -641,6 +667,7 @@ export class Model implements Taggable {
     private queryList: InternalQuery[],
     private sqlBlocks: SQLBlockStructDef[],
     readonly problems: LogMessage[],
+    readonly fromSources: string[],
     referenceAt: (
       location: ModelDocumentPosition
     ) => DocumentReference | undefined = () => undefined,
@@ -786,14 +813,24 @@ export class Model implements Taggable {
    * @return An array of `Explore`s contained in the model.
    */
   public get explores(): Explore[] {
-    const explores: Explore[] = [];
-    for (const me in this.modelDef.contents) {
-      const ent = this.modelDef.contents[me];
-      if (ent.type === 'struct') {
-        explores.push(new Explore(ent));
-      }
-    }
-    return explores;
+    const isStructDef = (object: NamedModelObject): object is StructDef =>
+      object.type === 'struct';
+
+    return Object.values(this.modelDef.contents)
+      .filter(isStructDef)
+      .map(structDef => new Explore(structDef));
+  }
+
+  /**
+   * Get an array of `NamedQuery`s contained in the model.
+   *
+   * @return An array of `NamedQuery`s contained in the model.
+   */
+  public get namedQueries(): NamedQuery[] {
+    const isNamedQuery = (object: NamedModelObject): object is NamedQuery =>
+      object.type === 'query';
+
+    return Object.values(this.modelDef.contents).filter(isNamedQuery);
   }
 
   public get exportedExplores(): Explore[] {
@@ -1167,6 +1204,18 @@ export class PreparedResult implements Taggable {
     return Tag.annotationToTaglines(this.inner.annotation, prefix);
   }
 
+  get annotation(): Annotation | undefined {
+    return this.inner.annotation;
+  }
+
+  get modelAnnotation(): Annotation | undefined {
+    return this.modelDef.annotation;
+  }
+
+  get modelTag(): Tag {
+    return Tag.annotationToTag(this.modelDef.annotation).tag;
+  }
+
   /**
    * @return The name of the connection this query should be run against.
    */
@@ -1414,6 +1463,10 @@ export class Explore extends Entity {
     return FieldIsIntrinsic(this._structDef);
   }
 
+  public isExploreField(): this is ExploreField {
+    return false;
+  }
+
   private parsedModelTag?: Tag;
   public get modelTag(): Tag {
     this.parsedModelTag ||= Tag.annotationToTag(
@@ -1452,7 +1505,7 @@ export class Explore extends Entity {
   }
 
   public getSingleExploreModel(): Model {
-    return new Model(this.modelDef, [], [], []);
+    return new Model(this.modelDef, [], [], [], []);
   }
 
   private get fieldMap(): Map<string, Field> {
@@ -1775,11 +1828,19 @@ export class AtomicField extends Entity implements Taggable {
     return this.parent;
   }
 
+  /**
+   * @return Field name for drill.
+   */
   get expression(): string {
+    const dot = '.';
+    const resultMetadata = this.fieldTypeDef.resultMetadata;
+    // If field is joined-in from another table i.e. of type `tableName.columnName`,
+    // return sourceField, else return name because this could be a renamed field.
     return (
-      this.fieldTypeDef.resultMetadata?.sourceExpression ||
-      this.fieldTypeDef.resultMetadata?.sourceField ||
-      this.name
+      resultMetadata?.sourceExpression ||
+      (resultMetadata?.sourceField.includes(dot)
+        ? resultMetadata?.sourceField
+        : this.name)
     );
   }
 
@@ -2035,6 +2096,14 @@ export class ExploreField extends Explore implements Taggable {
     }
   }
 
+  public get isRecord(): boolean {
+    return this.joinRelationship === JoinRelationship.OneToOne;
+  }
+
+  public get isArray(): boolean {
+    return this.joinRelationship !== JoinRelationship.OneToOne;
+  }
+
   tagParse(spec?: TagParseSpec) {
     spec = Tag.addModelScope(spec, this._parentExplore.modelTag);
     return Tag.annotationToTag(this._structDef.annotation, spec);
@@ -2131,6 +2200,7 @@ export class Runtime {
     source: ModelURL | ModelString,
     options?: ParseOptions & CompileOptions
   ): ModelMaterializer {
+    const {refreshSchemaCache, noThrowOnError} = options || {};
     return new ModelMaterializer(this, async () => {
       const parse =
         source instanceof URL
@@ -2147,7 +2217,8 @@ export class Runtime {
         urlReader: this.urlReader,
         connections: this.connections,
         parse,
-        refreshSchemaCache: options?.refreshSchemaCache,
+        refreshSchemaCache,
+        noThrowOnError,
       });
     });
   }
@@ -2158,7 +2229,7 @@ export class Runtime {
   //      be used in tests.
   public _loadModelFromModelDef(modelDef: ModelDef): ModelMaterializer {
     return new ModelMaterializer(this, async () => {
-      return new Model(modelDef, [], [], []);
+      return new Model(modelDef, [], [], [], []);
     });
   }
 
@@ -2487,6 +2558,7 @@ export class ModelMaterializer extends FluentState<Model> {
     query: QueryString | QueryURL,
     options?: ParseOptions & CompileOptions
   ): QueryMaterializer {
+    const {refreshSchemaCache, noThrowOnError} = options || {};
     return this.makeQueryMaterializer(async () => {
       const urlReader = this.runtime.urlReader;
       const connections = this.runtime.connections;
@@ -2507,7 +2579,8 @@ export class ModelMaterializer extends FluentState<Model> {
         connections,
         parse,
         model,
-        refreshSchemaCache: options?.refreshSchemaCache,
+        refreshSchemaCache,
+        noThrowOnError,
       });
       return queryModel.preparedQuery;
     });
@@ -2765,7 +2838,8 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
   async run(options?: RunSQLOptions): Promise<Result> {
     const connections = this.runtime.connections;
     const preparedResult = await this.getPreparedResult();
-    return Malloy.run({connections, preparedResult, options});
+    const finalOptions = runSQLOptionsWithAnnotations(preparedResult, options);
+    return Malloy.run({connections, preparedResult, options: finalOptions});
   }
 
   async *runStream(options?: {
@@ -2773,7 +2847,12 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
   }): AsyncIterableIterator<DataRecord> {
     const preparedResult = await this.getPreparedResult();
     const connections = this.runtime.connections;
-    const stream = Malloy.runStream({connections, preparedResult, options});
+    const finalOptions = runSQLOptionsWithAnnotations(preparedResult, options);
+    const stream = Malloy.runStream({
+      connections,
+      preparedResult,
+      options: finalOptions,
+    });
     for await (const row of stream) {
       yield row;
     }
@@ -2830,6 +2909,17 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
   }
 }
 
+function runSQLOptionsWithAnnotations(
+  preparedResult: PreparedResult,
+  givenOptions?: RunSQLOptions
+): RunSQLOptions {
+  return {
+    queryAnnotation: preparedResult.annotation,
+    modelAnnotation: preparedResult.modelAnnotation,
+    ...givenOptions,
+  };
+}
+
 /**
  * An object representing the task of loading a `PreparedResult`, capable of
  * materializing the prepared result (via `getPreparedResult()`) or extending the task run
@@ -2844,7 +2934,12 @@ export class PreparedResultMaterializer extends FluentState<PreparedResult> {
   async run(options?: RunSQLOptions): Promise<Result> {
     const preparedResult = await this.getPreparedResult();
     const connections = this.runtime.connections;
-    return Malloy.run({connections, preparedResult, options});
+    const finalOptions = runSQLOptionsWithAnnotations(preparedResult, options);
+    return Malloy.run({
+      connections,
+      preparedResult,
+      options: finalOptions,
+    });
   }
 
   async *runStream(options?: {
@@ -2852,7 +2947,12 @@ export class PreparedResultMaterializer extends FluentState<PreparedResult> {
   }): AsyncIterableIterator<DataRecord> {
     const preparedResult = await this.getPreparedResult();
     const connections = this.runtime.connections;
-    const stream = Malloy.runStream({connections, preparedResult, options});
+    const finalOptions = runSQLOptionsWithAnnotations(preparedResult, options);
+    const stream = Malloy.runStream({
+      connections,
+      preparedResult,
+      options: finalOptions,
+    });
     for await (const row of stream) {
       yield row;
     }
@@ -3014,6 +3114,10 @@ export class Result extends PreparedResult {
 
   public get runStats(): QueryRunStats | undefined {
     return this.inner.runStats;
+  }
+
+  public get profilingUrl(): string | undefined {
+    return this.inner.profilingUrl;
   }
 
   public toJSON(): ResultJSON {
@@ -3487,6 +3591,7 @@ class DataNull extends Data<null> {
 export class DataArray extends Data<QueryData> implements Iterable<DataRecord> {
   private queryData: QueryData;
   protected _field: Explore;
+  private rowCache: Map<number, DataRecord> = new Map();
 
   constructor(
     queryData: QueryData,
@@ -3518,6 +3623,18 @@ export class DataArray extends Data<QueryData> implements Iterable<DataRecord> {
   }
 
   row(index: number): DataRecord {
+    let record = this.rowCache.get(index);
+    if (!record) {
+      record = new DataRecord(
+        this.queryData[index],
+        index,
+        this.field,
+        this,
+        this.parentRecord
+      );
+      this.rowCache.set(index, record);
+    }
+    return record;
     return new DataRecord(
       this.queryData[index],
       index,
@@ -3572,6 +3689,7 @@ export class DataRecord extends Data<{[fieldName: string]: DataColumn}> {
   private queryDataRow: QueryDataRow;
   protected _field: Explore;
   public readonly index: number | undefined;
+  private cellCache: Map<string, DataColumn> = new Map();
 
   constructor(
     queryDataRow: QueryDataRow,
@@ -3598,39 +3716,45 @@ export class DataRecord extends Data<{[fieldName: string]: DataColumn}> {
     const fieldName =
       typeof fieldOrName === 'string' ? fieldOrName : fieldOrName.name;
     const field = this._field.getFieldByName(fieldName);
-    const value = this.queryDataRow[fieldName];
-    if (value === null) {
-      return new DataNull(field, this, this);
-    }
-    if (field.isAtomicField()) {
-      if (field.isBoolean()) {
-        return new DataBoolean(value as boolean, field, this, this);
-      } else if (field.isDate()) {
-        return new DataDate(value as Date, field, this, this);
-      } else if (field.isJSON()) {
-        return new DataJSON(value as string, field, this, this);
-      } else if (field.isTimestamp()) {
-        return new DataTimestamp(value as Date, field, this, this);
-      } else if (field.isNumber()) {
-        return new DataNumber(value as number, field, this, this);
-      } else if (field.isString()) {
-        return new DataString(value as string, field, this, this);
-      } else if (field.isUnsupported()) {
-        return new DataUnsupported(value as unknown, field, this, this);
+    let column = this.cellCache.get(fieldName);
+    if (!column) {
+      const value = this.queryDataRow[fieldName];
+      if (value === null) {
+        column = new DataNull(field, this, this);
+      } else if (field.isAtomicField()) {
+        if (field.isBoolean()) {
+          column = new DataBoolean(value as boolean, field, this, this);
+        } else if (field.isDate()) {
+          column = new DataDate(value as Date, field, this, this);
+        } else if (field.isJSON()) {
+          column = new DataJSON(value as string, field, this, this);
+        } else if (field.isTimestamp()) {
+          column = new DataTimestamp(value as Date, field, this, this);
+        } else if (field.isNumber()) {
+          column = new DataNumber(value as number, field, this, this);
+        } else if (field.isString()) {
+          column = new DataString(value as string, field, this, this);
+        } else if (field.isUnsupported()) {
+          column = new DataUnsupported(value as unknown, field, this, this);
+        }
+      } else if (field.isExploreField()) {
+        if (Array.isArray(value)) {
+          column = new DataArray(value, field, this, this);
+        } else {
+          column = new DataRecord(
+            value as QueryDataRow,
+            undefined,
+            field,
+            this,
+            this
+          );
+        }
       }
-    } else if (field.isExploreField()) {
-      if (Array.isArray(value)) {
-        return new DataArray(value, field, this, this);
-      } else {
-        return new DataRecord(
-          value as QueryDataRow,
-          undefined,
-          field,
-          this,
-          this
-        );
-      }
+      if (column) this.cellCache.set(fieldName, column);
     }
+
+    if (column) return column;
+
     throw new Error(
       `Internal Error: could not construct data column for field '${fieldName}'.`
     );

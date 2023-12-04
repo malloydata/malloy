@@ -585,24 +585,32 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
 */
 
 const zone = 'America/Mexico_City'; // -06:00 no DST
-const zone_2020 = LuxonDateTime.fromObject({
-  year: 2020,
-  month: 2,
-  day: 20,
-  hour: 0,
-  minute: 0,
-  second: 0,
-  zone,
-});
-const utc_2020 = LuxonDateTime.fromObject({
-  year: 2020,
-  month: 2,
-  day: 20,
-  hour: 0,
-  minute: 0,
-  second: 0,
-  zone: 'UTC',
-});
+const zone_2020 = LuxonDateTime.fromObject(
+  {
+    year: 2020,
+    month: 2,
+    day: 20,
+    hour: 0,
+    minute: 0,
+    second: 0,
+  },
+  {
+    zone,
+  }
+);
+const utc_2020 = LuxonDateTime.fromObject(
+  {
+    year: 2020,
+    month: 2,
+    day: 20,
+    hour: 0,
+    minute: 0,
+    second: 0,
+  },
+  {
+    zone: 'UTC',
+  }
+);
 
 describe.each(runtimes.runtimeList)('%s: tz literals', (dbName, runtime) => {
   test(`${dbName} - default timezone is UTC`, async () => {

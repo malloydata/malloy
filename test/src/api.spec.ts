@@ -70,6 +70,53 @@ describe('extendModel', () => {
       'Given query name does not refer to a named query.'
     );
   });
+  test('extending models keep annotations', async () => {
+    await runtime
+      .loadModel(
+        `
+          ##! experimental { compilerTestExperimentParse compilerTestExperimentTranslate }
+          ;;[ "x" ]
+        `
+      )
+      .extendModel(';;[ "x" ]')
+      .extendModel(';;[ "x" ]')
+      .getModel();
+  });
+  describe('noThrowOnError', () => {
+    it('throws when not set', async () => {
+      await expect(runtime.getModel('source: foo is bar')).rejects.toThrow(
+        "Reference to undefined object 'bar'"
+      );
+    });
+
+    it('throws when false', async () => {
+      await expect(
+        runtime.getModel('source: foo is bar', {noThrowOnError: false})
+      ).rejects.toThrow("Reference to undefined object 'bar'");
+    });
+
+    it('does not throw when true', async () => {
+      await expect(
+        runtime.getModel('source: foo is bar', {noThrowOnError: true})
+      ).resolves.toEqual(
+        expect.objectContaining({
+          'problems': [
+            {
+              'at': {
+                'range': {
+                  'end': {'character': 18, 'line': 0},
+                  'start': {'character': 15, 'line': 0},
+                },
+                'url': 'internal://internal.malloy',
+              },
+              'message': "Reference to undefined object 'bar'",
+              'severity': 'error',
+            },
+          ],
+        })
+      );
+    });
+  });
 });
 
 afterAll(async () => await runtime.connection.close());

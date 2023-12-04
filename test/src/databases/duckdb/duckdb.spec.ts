@@ -43,23 +43,36 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
   });
 
   it('accepts all schema numbers', async () => {
-    const allInts = [
+    const allNumeric = [
       'BIGINT',
+      'DOUBLE',
+      'FLOAT',
+      'FLOAT4',
+      'FLOAT8',
+      'HUGEINT',
+      'INT',
+      'INT1',
+      'INT2',
+      'INT4',
+      'INT8',
       'INTEGER',
-      'TINYINT',
+      'LONG',
+      'REAL',
+      'SHORT',
+      'SIGNED',
       'SMALLINT',
+      'TINYINT',
       'UBIGINT',
       'UINTEGER',
-      'UTINYINT',
       'USMALLINT',
-      'HUGEINT',
+      'UTINYINT',
     ];
-    const allFields = allInts.map(intType => `a${intType.toLowerCase()}`);
+    const allFields = allNumeric.map(numType => `a${numType.toLowerCase()}`);
     const query = `
       run: ${dbName}.sql("""
         SELECT
-        ${allInts
-          .map(intType => `1::${intType} as a${intType.toLowerCase()}`)
+        ${allNumeric
+          .map(numType => `1::${numType} as a${numType.toLowerCase()}`)
           .join(',\n')}
       """) -> {
         aggregate:
@@ -70,7 +83,7 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
     `;
     await expect(query).malloyResultMatches(
       runtime,
-      allInts.reduce<Record<string, number>>((building, ent) => {
+      allNumeric.reduce<Record<string, number>>((building, ent) => {
         building[`sum_a${ent.toLowerCase()}`] = 1;
         return building;
       }, {})
@@ -100,15 +113,19 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
 
   describe('time', () => {
     const zone = 'America/Mexico_City'; // -06:00 no DST
-    const zone_2020 = DateTime.fromObject({
-      year: 2020,
-      month: 2,
-      day: 20,
-      hour: 0,
-      minute: 0,
-      second: 0,
-      zone,
-    });
+    const zone_2020 = DateTime.fromObject(
+      {
+        year: 2020,
+        month: 2,
+        day: 20,
+        hour: 0,
+        minute: 0,
+        second: 0,
+      },
+      {
+        zone,
+      }
+    );
     test('can cast TIMESTAMPTZ to timestamp', async () => {
       await expect(
         `run: duckdb.sql("""

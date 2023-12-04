@@ -57,7 +57,7 @@ export abstract class Join
   note?: Annotation;
 
   makeEntry(fs: DynamicSpace) {
-    fs.newEntry(this.name.refString, this, new JoinSpaceField(fs, this));
+    fs.newEntry(this.name.refString, this, new JoinSpaceField(this));
   }
 
   protected getStructDefFromExpr() {
@@ -86,6 +86,7 @@ export class KeyJoin extends Join {
       ...sourceDef,
       structRelationship: {
         type: 'one',
+        matrixOperation: 'left',
         onExpression: ["('join fixup'='not done yet')"],
       },
       location: this.location,
@@ -114,6 +115,7 @@ export class KeyJoin extends Join {
         if (pkey.type === exprX.dataType) {
           inStruct.structRelationship = {
             type: 'one',
+            matrixOperation: 'left',
             onExpression: [
               {
                 type: 'field',
@@ -139,9 +141,11 @@ export class KeyJoin extends Join {
 }
 
 type ExpressionJoinType = 'many' | 'one' | 'cross';
+export type MatrixOperation = 'left' | 'inner' | 'right' | 'full';
 export class ExpressionJoin extends Join {
   elementType = 'joinOnExpr';
   joinType: ExpressionJoinType = 'one';
+  matrixOperation: MatrixOperation = 'left';
   private expr?: ExpressionDef;
   constructor(
     readonly name: ModelEntryReference,
@@ -181,9 +185,18 @@ export class ExpressionJoin extends Join {
       return ErrorFactory.structDef;
     }
     const sourceDef = source.structDef();
+    let matrixOperation: MatrixOperation = 'left';
+    if (this.inExperiment('join_types', true)) {
+      matrixOperation = this.matrixOperation;
+    }
+
     const joinStruct: StructDef = {
       ...sourceDef,
-      structRelationship: {type: this.joinType},
+      // MTOY: add matrix type here
+      structRelationship: {
+        type: this.joinType,
+        matrixOperation,
+      },
       location: this.location,
     };
     if (sourceDef.structSource.type === 'query') {

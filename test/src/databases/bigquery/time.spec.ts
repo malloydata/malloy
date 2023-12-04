@@ -36,15 +36,19 @@ afterAll(async () => {
 describe('time specific tests for standardsql', () => {
   const runtime = runtimes.runtimeMap.get('bigquery');
 
-  const utc_2020 = DateTime.fromObject({
-    year: 2020,
-    month: 2,
-    day: 20,
-    hour: 0,
-    minute: 0,
-    second: 0,
-    zone: 'UTC',
-  });
+  const utc_2020 = DateTime.fromObject(
+    {
+      year: 2020,
+      month: 2,
+      day: 20,
+      hour: 0,
+      minute: 0,
+      second: 0,
+    },
+    {
+      zone: 'UTC',
+    }
+  );
   test('can cast unsupported DATETIME to timestamp', async () => {
     await expect(
       `run: bigquery.sql("SELECT DATETIME '2020-02-20 00:00:00' as t_datetime") -> {

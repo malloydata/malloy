@@ -1,0 +1,7 @@
+.night {
+  --malloy-theme--table-body-color: white;
+  --malloy-theme--table-header-color: #b1cad6;
+  --malloy-theme--table-body-weight: 400;
+  --malloy-theme--table-background: #212122;
+  --malloy-theme--table-border: 1px solid #4c505b;
+}

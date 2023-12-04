@@ -116,7 +116,14 @@ export abstract class FieldDeclaration
       };
     }
     const compressValue = compressExpr(exprValue.value);
-    const retType = exprValue.dataType;
+    let retType = exprValue.dataType;
+    if (retType === 'null') {
+      this.expr.log(
+        'null value defaults to type number, use "null::TYPE" to specify correct type',
+        'warn'
+      );
+      retType = 'number';
+    }
     if (isAtomicFieldType(retType) && retType !== 'error') {
       const template: FieldTypeDef = {
         name: exprName,
@@ -247,10 +254,6 @@ export class DefSpace implements FieldSpace {
   dialectObj(): Dialect | undefined {
     return this.realFS.dialectObj();
   }
-  whenComplete(step: () => void): void {
-    this.realFS.whenComplete(step);
-  }
-
   isQueryFieldSpace(): this is QueryFieldSpace {
     return this.realFS.isQueryFieldSpace();
   }
@@ -306,7 +309,7 @@ export class FieldDefinitionValue extends SpaceField {
   // really know what type we have. However since we have the FieldSpace,
   // we can compile the expression to find out, this might result in
   // some expressions being compiled twice.
-  describeType(): TypeDesc {
+  typeDesc(): TypeDesc {
     const typeFrom = this.qfd || this.fieldDef();
     return this.fieldTypeFromFieldDef(typeFrom);
   }

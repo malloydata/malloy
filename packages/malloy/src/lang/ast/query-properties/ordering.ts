@@ -58,7 +58,7 @@ export class OrderBy extends MalloyElement {
       if (entry.error) {
         this.field.log(entry.error);
       }
-      if (entry.found?.typeDesc().evalSpace === 'input') {
+      if (!entry.found || !entry.isOutputField) {
         this.log(`Unknown field ${this.field.refString} in output space`);
       }
       if (expressionIsAnalytic(entry.found?.typeDesc().expressionType)) {

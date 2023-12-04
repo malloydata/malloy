@@ -45,6 +45,7 @@ import {
   QueryData,
   QueryDataRow,
   QueryRunStats,
+  RunSQLOptions,
   SQLBlock,
   StandardSQLDialect,
   StreamingConnection,
@@ -74,12 +75,12 @@ interface CredentialBody {
 }
 
 interface BigQueryConnectionConfiguration {
-  defaultProject?: string;
+  projectId?: string /** This ID is used for Bigquery Table Normalization */;
   serviceAccountKeyPath?: string;
   location?: string;
   maximumBytesBilled?: string;
   timeoutMs?: string;
-  projectId?: string;
+  billingProjectId?: string;
   credentials?: CredentialBody;
 }
 
@@ -142,9 +143,13 @@ export class BigQueryConnection
   };
 
   private bigQuery: BigQuerySDK;
-  private projectId;
+  private billingProjectId;
   private temporaryTables = new Map<string, string>();
-  private defaultProject;
+
+  // This is the project we will use for table normalization. If someone
+  // is querying a set of tables that is not in their billing project, this allows them to
+  // not write the full path to the tables in every source
+  private projectId;
 
   private schemaCache = new Map<
     string,
@@ -176,13 +181,13 @@ export class BigQueryConnection
       userAgent: `Malloy/${Malloy.version}`,
       keyFilename: config.serviceAccountKeyPath,
       credentials: config.credentials,
-      projectId: config.projectId,
+      projectId: config.billingProjectId,
     });
 
     // record project ID because for unclear reasons we have to modify the project ID on the SDK when
     // we want to use the tables API
-    this.projectId = this.bigQuery.projectId;
-    this.defaultProject = config.defaultProject || this.bigQuery.projectId;
+    this.billingProjectId = this.bigQuery.projectId;
+    this.projectId = config.projectId || this.bigQuery.projectId;
 
     this.queryOptions = queryOptions;
     this.config = config;
@@ -224,17 +229,17 @@ export class BigQueryConnection
 
   private async _runSQL(
     sqlCommand: string,
-    options: Partial<BigQueryQueryOptions> = {},
+    {rowLimit, abortSignal}: RunSQLOptions = {},
     rowIndex = 0
   ): Promise<{
     data: MalloyQueryData;
     schema: bigquery.ITableFieldSchema | undefined;
   }> {
     const defaultOptions = this.readQueryOptions();
-    const pageSize = options.rowLimit ?? defaultOptions.rowLimit;
+    const pageSize = rowLimit ?? defaultOptions.rowLimit;
 
     try {
-      const queryResultsOptions = {
+      const queryResultsOptions: QueryResultsOptions = {
         maxResults: pageSize,
         startIndex: rowIndex.toString(),
       };
@@ -242,7 +247,8 @@ export class BigQueryConnection
       const jobResult = await this.createBigQueryJobAndGetResults(
         sqlCommand,
         undefined,
-        queryResultsOptions
+        queryResultsOptions,
+        abortSignal
       );
 
       const totalRows = +(jobResult[2]?.totalRows
@@ -327,7 +333,7 @@ export class BigQueryConnection
 
   private normalizeTablePath(tablePath: string): string {
     if (tablePath.split('.').length === 2) {
-      return `${this.defaultProject}.${tablePath}`;
+      return `${this.projectId}.${tablePath}`;
     } else {
       return tablePath;
     }
@@ -355,7 +361,7 @@ export class BigQueryConnection
         tableNamePart[tableNamePart.length - 1] === '*';
       const table = this.bigQuery.dataset(datasetNamePart).table(tableNamePart);
       const metadataPromise = table.getMetadata();
-      this.bigQuery.projectId = this.projectId;
+      this.bigQuery.projectId = this.billingProjectId;
       const [metadata] = await metadataPromise;
       return {
         schema: metadata.schema,
@@ -700,7 +706,8 @@ export class BigQueryConnection
   private async createBigQueryJobAndGetResults(
     sqlCommand: string,
     createQueryJobOptions?: Query,
-    getQueryResultsOptions?: QueryResultsOptions
+    getQueryResultsOptions?: QueryResultsOptions,
+    abortSignal?: AbortSignal
   ): Promise<
     PagedResponse<RowMetadata, Query, bigquery.IGetQueryResultsResponse>
   > {
@@ -709,6 +716,10 @@ export class BigQueryConnection
         query: sqlCommand,
         ...createQueryJobOptions,
       });
+      const cancel = () => {
+        job.cancel();
+      };
+      abortSignal?.addEventListener('abort', cancel);
 
       // TODO we should check if this is still required?
       // We do a simple retry-loop here, as a temporary fix for a transient
@@ -725,6 +736,8 @@ export class BigQueryConnection
           });
         } catch (fetchError) {
           lastFetchError = fetchError;
+        } finally {
+          abortSignal?.removeEventListener('abort', cancel);
         }
       }
       throw lastFetchError;
@@ -752,20 +765,19 @@ export class BigQueryConnection
       query: sqlCommand,
       dryRun,
     });
-    const url = `https://console.cloud.google.com/bigquery?project=${this.projectId}&j=bq:${this.location}:${job.id}&page=queryresults`;
+    const url = `https://console.cloud.google.com/bigquery?project=${this.billingProjectId}&j=bq:${this.location}:${job.id}&page=queryresults`;
     return url;
   }
 
   public runSQLStream(
     sqlCommand: string,
-    options: Partial<BigQueryQueryOptions> = {}
+    {rowLimit, abortSignal}: RunSQLOptions = {}
   ): AsyncIterableIterator<QueryDataRow> {
-    const bigQuery = this.bigQuery;
-    function streamBigQuery(
+    const streamBigQuery = (
       onError: (error: Error) => void,
       onData: (data: QueryDataRow) => void,
       onEnd: () => void
-    ) {
+    ) => {
       let index = 0;
       function handleData(
         this: ResourceStream<RowMetadata>,
@@ -773,16 +785,19 @@ export class BigQueryConnection
       ) {
         onData(rowMetadata);
         index += 1;
-        if (options.rowLimit !== undefined && index >= options.rowLimit) {
+        if (
+          (rowLimit !== undefined && index >= rowLimit) ||
+          abortSignal?.aborted
+        ) {
           this.end();
         }
       }
-      bigQuery
+      this.bigQuery
         .createQueryStream(sqlCommand)
         .on('error', onError)
         .on('data', handleData)
         .on('end', onEnd);
-    }
+    };
     return toAsyncGenerator<QueryDataRow>(streamBigQuery);
   }
 

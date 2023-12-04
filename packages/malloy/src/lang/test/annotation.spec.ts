@@ -266,6 +266,19 @@ describe('document annotation', () => {
     expect(m).toTranslate();
     expect(m.translator.compilerFlags.has('flagThis')).toBeTruthy();
   });
+  test('extended models inherit model flags', () => {
+    const first = model`## from=1\n`;
+    expect(first).toTranslate();
+    const firstModel = first.translator.translate()?.translated?.modelDef;
+    expect(firstModel).toBeDefined();
+    const second = model`## from=2\n`;
+    second.translator.internalModel = firstModel!;
+    const secondModel = second.translator.translate()?.translated?.modelDef;
+    expect(secondModel?.annotation).matchesAnnotation({
+      inherits: {notes: ['## from=1\n']},
+      notes: ['## from=2\n'],
+    });
+  });
 });
 describe('source definition annotations', () => {
   test('turtle block annotation', () => {
@@ -637,5 +650,26 @@ describe('query operation annotations', () => {
       const note_b = getFieldDef(foundYou.pipeline[0], 'xdim');
       expect(note_b?.annotation).matchesAnnotation({inherits: defaultTags});
     }
+  });
+  test('annotated references to measures on join preserve expression type', () => {
+    const m = model`
+    source: na is a extend {
+      measure:
+          one_count is sum(pick 1 when ai = 1 else 0)
+          pct_one is one_count / count();
+    }
+
+    run: na extend {
+      join_many: na on ai = na.ai
+    } -> {
+      group_by: ai
+      aggregate:
+        # percent
+        na.pct_one
+    }`;
+    expect(m).toTranslate();
+    const q = m.translator.queryList[0];
+    const fields = q.pipeline[0].fields;
+    expect(fields[1]).toMatchObject({expressionType: 'aggregate'});
   });
 });

@@ -69,7 +69,7 @@ describe('DuckDBConnection', () => {
     await new Promise(resolve => setTimeout(resolve));
     await connection.fetchSchemaForTables(
       {'test2': 'table2'},
-      {refreshTimestamp: Date.now()}
+      {refreshTimestamp: Date.now() + 10}
     );
     expect(runRawSQL).toBeCalledTimes(2);
   });
@@ -87,7 +87,7 @@ describe('DuckDBConnection', () => {
     expect(runRawSQL).toBeCalledTimes(1);
     await new Promise(resolve => setTimeout(resolve));
     await connection.fetchSchemaForSQLBlock(SQL_BLOCK_2, {
-      refreshTimestamp: Date.now(),
+      refreshTimestamp: Date.now() + 10,
     });
     expect(runRawSQL).toBeCalledTimes(2);
   });
