@@ -42,18 +42,15 @@ async function getError<T>(fn: () => Promise<T>) {
 
 runtimes.runtimeMap.forEach((runtime, databaseName) => {
   describe('warnings', () => {
-    // Today we don't show errors after the first model entry with an error,
-    // so this can't work yet.
-    it.skip(`can appear after errors - ${databaseName}`, async () => {
+    it(`can appear after errors - ${databaseName}`, async () => {
       const source = `
         source: foo is ${databaseName}.table('asdfds');
         source: bar is ${databaseName}.table('malloytest.state_facts') extend {
           dimension: a is LENGTH('foo')
         }
       `;
-      const error = await getError(() => runtime.getModel(source));
-      expect(error).not.toBeUndefined();
-      expect(error).toMatchObject({
+      const model = await runtime.getModel(source, {noThrowOnError: true});
+      expect(model).toMatchObject({
         problems: [
           {
             severity: 'error',
