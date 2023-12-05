@@ -42,6 +42,8 @@ async function getError<T>(fn: () => Promise<T>) {
 
 runtimes.runtimeMap.forEach((runtime, databaseName) => {
   describe('warnings', () => {
+    // NOTE: This test generates SQL errors on the console because of
+    // a hard-coded console.log() in the duckdb-wasm worker
     it(`can appear after errors - ${databaseName}`, async () => {
       const source = `
         source: foo is ${databaseName}.table('asdfds');
@@ -64,6 +66,8 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       });
     });
 
+    // NOTE: This test generates SQL errors on the console because of
+    // a hard-coded console.log() in the duckdb-wasm worker
     it(`can appear before errors - ${databaseName}`, async () => {
       const source = `
         source: bar is ${databaseName}.table('malloytest.state_facts') extend {
