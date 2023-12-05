@@ -62,4 +62,10 @@ source: products is duckdb.table("data/products.parquet") extend {
       # duration
       avg_retail_duration is round(retail_price.avg())
   }
-};
+}
+
+source: null_test is duckdb.sql("select unnest([1,null,3]) as i") extend {}
+
+run: products -> { group_by: category aggregate: `t.x` is max(1) }
+
+run: duckdb.sql("select unnest([1,null,3]) as i") -> { select: * }

@@ -57,3 +57,10 @@ export const NumberFormatting = {
     view: 'number_formats',
   },
 };
+
+export const NullTest = {
+  args: {
+    source: 'null_test',
+    view: '{ select: * }',
+  },
+};
