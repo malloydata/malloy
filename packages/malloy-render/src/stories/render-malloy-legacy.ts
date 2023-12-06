@@ -19,6 +19,14 @@ export function renderMalloy(options: RenderOptions) {
   const div = document.createElement('div');
   runAndRender(options, {
     dataStyles: {},
+    isDrillingEnabled: true,
+    onDrill: (
+      drillQuery: string,
+      _target: HTMLElement,
+      _drillFilters: string[]
+    ) => {
+      navigator.clipboard.writeText(drillQuery);
+    },
   }).then(el => {
     if (options.classes) el.classList.add(options.classes);
     div.replaceChildren(el);
