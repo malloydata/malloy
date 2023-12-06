@@ -80,6 +80,7 @@ import {
 import {DateTime} from 'luxon';
 import {Tag, TagParse, TagParseSpec, Taggable} from './tags';
 import {Dialect, getDialect} from './dialect';
+import {PathInfo} from './lang/parse-tree-walkers/find-table-path';
 
 export interface Loggable {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -932,6 +933,11 @@ export class Parse {
     );
   }
 
+  public get tablePathInfo(): DocumentTablePath[] {
+    const paths: PathInfo[] = this.translator.tablePathInfo().pathInfo ?? [];
+    return paths.map(path => new DocumentTablePath(path));
+  }
+
   public get _translator(): MalloyTranslator {
     return this.translator;
   }
@@ -950,6 +956,33 @@ export class Parse {
     character: number;
   }): DocumentHelpContext | undefined {
     return this.translator.helpContext(position).helpContext;
+  }
+}
+
+export class DocumentTablePath {
+  private _range: DocumentRange;
+  private _connId: string;
+  private _tablePath: string;
+
+  constructor(tablePath: PathInfo) {
+    this._range = DocumentRange.fromJSON(tablePath.range);
+    this._connId = tablePath.connId;
+    this._tablePath = tablePath.tablePath;
+  }
+
+  /**
+   * @return The range of characters in the source Malloy document that define this symbol.
+   */
+  public get range(): DocumentRange {
+    return this._range;
+  }
+
+  public get connId(): string {
+    return this._connId;
+  }
+
+  public get tablePath(): string {
+    return this._tablePath;
   }
 }
 

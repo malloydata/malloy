@@ -35,6 +35,7 @@ import {ResourceStream} from '@google-cloud/paginator';
 import * as googleCommon from '@google-cloud/common';
 import {GaxiosError} from 'gaxios';
 import {
+  BrowsableSourceConnection,
   Connection,
   ConnectionConfig,
   FetchSchemaOptions,
@@ -142,7 +143,11 @@ const TIMEOUT_MS = 1000 * 60 * 10;
 
 // manage access to BQ, control costs, enforce global data/API limits
 export class BigQueryConnection
-  implements Connection, PersistSQLResults, StreamingConnection
+  implements
+    Connection,
+    PersistSQLResults,
+    StreamingConnection,
+    BrowsableSourceConnection
 {
   public readonly name: string;
   private readonly dialect = new StandardSQLDialect();
@@ -254,6 +259,10 @@ export class BigQueryConnection
   }
 
   public get supportsNesting(): boolean {
+    return true;
+  }
+
+  public browsableSource(): this is BrowsableSourceConnection {
     return true;
   }
 
@@ -796,6 +805,12 @@ export class BigQueryConnection
       dryRun,
     });
     const url = `https://console.cloud.google.com/bigquery?project=${this.billingProjectId}&j=bq:${this.location}:${job.id}&page=queryresults`;
+    return url;
+  }
+
+  public getTableSourceUrl(tablePath: string) {
+    const tablePathInfo = tablePath.split('.');
+    const url = `https://pantheon.corp.google.com/bigquery?mods=allow_workbench_image_override&project=${this.projectId}&ws=!1m5!1m4!4m3!1s${tablePathInfo[0]}!2s${tablePathInfo[1]}!3s${tablePathInfo[2]}`;
     return url;
   }
 

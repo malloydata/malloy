@@ -39,6 +39,7 @@ import {
 } from '@malloydata/malloy';
 import {SnowflakeExecutor} from './snowflake_executor';
 import {
+  BrowsableSourceConnection,
   FetchSchemaOptions,
   TestableConnection,
 } from '@malloydata/malloy/dist/runtime_types';
@@ -139,6 +140,10 @@ export class SnowflakeConnection
 
   public canStream(): this is StreamingConnection {
     return true;
+  }
+
+  public browsableSource(): this is BrowsableSourceConnection {
+    return false; // TODO
   }
 
   public async estimateQueryCost(_sqlCommand: string): Promise<QueryRunStats> {
