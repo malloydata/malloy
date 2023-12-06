@@ -21,7 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Annotation, NamedQuery} from '../../../model/malloy_types';
+import {NamedQuery} from '../../../model/malloy_types';
+import {Annotation} from '../../../model/model_runtime_types';
 
 import {
   DocStatement,

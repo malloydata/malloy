@@ -22,12 +22,12 @@
  */
 
 import {
-  Annotation,
   ModelDef,
   Query,
   SQLBlockSource,
   SQLBlockStructDef,
 } from '../model/malloy_types';
+import {Annotation} from '../model/model_runtime_types';
 import {MalloyElement} from './ast';
 import {LogMessage} from './parse-log';
 import {DocumentSymbol} from './parse-tree-walkers/document-symbol-walker';
