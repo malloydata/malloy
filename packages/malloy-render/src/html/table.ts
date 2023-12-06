@@ -26,7 +26,6 @@ import {
   DataRecord,
   ExploreField,
   Field,
-  JoinRelationship,
   SortableField,
 } from '@malloydata/malloy';
 import {StyleDefaults} from '../data_styles';
