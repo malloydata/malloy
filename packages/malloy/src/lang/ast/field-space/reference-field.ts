@@ -22,7 +22,6 @@
  */
 
 import {
-  Annotation,
   FieldAtomicDef,
   QueryFieldDef,
   TypeDesc,
@@ -30,6 +29,7 @@ import {
   isFilteredAliasedName,
   hasExpression,
 } from '../../../model/malloy_types';
+import {Annotation} from '../../../model/model_runtime_types';
 
 import {FieldReference} from '../query-items/field-references';
 import {FieldSpace} from '../types/field-space';

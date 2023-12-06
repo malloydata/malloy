@@ -23,6 +23,14 @@
 
 // clang-format off
 
+import {
+  QueryRunStats,
+  DocumentLocation,
+  Annotation,
+  QueryData,
+  QueryValue,
+} from './model_runtime_types';
+
 interface ParamBase {
   name: string;
   type: AtomicFieldType;
@@ -48,24 +56,9 @@ export function paramHasValue(p: Parameter): boolean {
   return isValueParameter(p) || p.condition !== null;
 }
 
-export interface DocumentRange {
-  start: DocumentPosition;
-  end: DocumentPosition;
-}
-
-export interface DocumentPosition {
-  line: number;
-  character: number;
-}
-
 export interface ImportLocation {
   importURL: string;
   location: DocumentLocation;
-}
-
-export interface DocumentLocation {
-  url: string;
-  range: DocumentRange;
 }
 
 interface DocumentReferenceBase {
@@ -1116,44 +1109,10 @@ export interface ModelDef {
 export type NamedStructDefs = Record<string, StructDef>;
 export type NamedModelObjects = Record<string, NamedModelObject>;
 
-/** Malloy source annotations attached to objects */
-export interface Annotation {
-  inherits?: Annotation;
-  blockNotes?: Note[];
-  notes?: Note[];
-}
-export interface Note {
-  text: string;
-  at: DocumentLocation;
-}
 /** Annotations with a uuid to make it easier to stream */
 export interface ModelAnnotation extends Annotation {
   id: string;
 }
-
-export type QueryScalar = string | boolean | number | Date | Buffer | null;
-
-/** One value in one column of returned data. */
-export type QueryValue = QueryScalar | QueryData | QueryDataRow;
-
-/** A row of returned data. */
-export type QueryDataRow = {[columnName: string]: QueryValue};
-
-/** Returned query data. */
-export type QueryData = QueryDataRow[];
-
-/** Query execution stats. */
-export type QueryRunStats = {
-  queryCostBytes?: number;
-};
-
-/** Returned Malloy query data */
-export type MalloyQueryData = {
-  rows: QueryDataRow[];
-  totalRows: number;
-  runStats?: QueryRunStats;
-  profilingUrl?: string;
-};
 
 export interface DrillSource {
   sourceExplore: string;

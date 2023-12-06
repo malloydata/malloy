@@ -22,14 +22,13 @@
  */
 
 import {
-  Annotation,
-  DocumentLocation,
   PipeSegment,
   Pipeline,
   StructDef,
   isAtomicField,
   isTurtleDef,
 } from '../../../model/malloy_types';
+import {DocumentLocation, Annotation} from '../../../model/model_runtime_types';
 
 import {FieldName, FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';

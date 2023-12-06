@@ -24,7 +24,7 @@
 import {TestTranslator, getFieldDef, model} from './test-translator';
 import './parse-expects';
 import {diff} from 'jest-diff';
-import {Annotation} from '../../model/malloy_types';
+import {Annotation} from '../../model/model_runtime_types';
 
 interface TstAnnotation {
   inherits?: TstAnnotation;

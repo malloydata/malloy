@@ -43,12 +43,8 @@ import {
   idToStr,
 } from './parse-utils';
 import {CastType} from '../model';
-import {
-  DocumentLocation,
-  isCastType,
-  isMatrixOperation,
-  Note,
-} from '../model/malloy_types';
+import {isCastType, isMatrixOperation} from '../model/malloy_types';
+import {DocumentLocation, Note} from '../model/model_runtime_types';
 import {Tag} from '../tags';
 
 class ErrorNode extends ast.SourceQueryNode {

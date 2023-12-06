@@ -30,9 +30,6 @@ import {
 } from 'antlr4ts';
 import {ParseTree} from 'antlr4ts/tree';
 import {
-  DocumentLocation,
-  DocumentPosition,
-  DocumentRange,
   DocumentReference,
   ImportLocation,
   ModelDef,
@@ -41,6 +38,11 @@ import {
   SQLBlockStructDef,
   StructDef,
 } from '../model/malloy_types';
+import {
+  DocumentLocation,
+  DocumentPosition,
+  DocumentRange,
+} from '../model/model_runtime_types';
 import {MalloyLexer} from './lib/Malloy/MalloyLexer';
 import {MalloyParser} from './lib/Malloy/MalloyParser';
 import * as ast from './ast';

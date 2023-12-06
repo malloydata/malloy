@@ -22,6 +22,7 @@
  */
 
 import * as model from '../../../model/malloy_types';
+import {Annotation} from '../../../model/model_runtime_types';
 import {FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
 import {Noteable, extendNoteMethod} from '../types/noteable';
@@ -65,7 +66,7 @@ abstract class TurtleDeclRoot
 {
   readonly isNoteableObj = true;
   extendNote = extendNoteMethod;
-  note?: model.Annotation;
+  note?: Annotation;
   constructor(readonly name: string) {
     super();
   }

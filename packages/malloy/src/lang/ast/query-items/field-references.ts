@@ -21,7 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Annotation, FieldDef, TypeDesc} from '../../../model/malloy_types';
+import {FieldDef, TypeDesc} from '../../../model/malloy_types';
+import {Annotation} from '../../../model/model_runtime_types';
 import {DynamicSpace} from '../field-space/dynamic-space';
 import {ReferenceField} from '../field-space/reference-field';
 import {DefinitionList} from '../types/definition-list';

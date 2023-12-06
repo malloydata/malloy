@@ -27,7 +27,7 @@ import {
   ParserRuleContext,
 } from 'antlr4ts';
 import {ParseTree} from 'antlr4ts/tree';
-import {DocumentRange} from '../model/malloy_types';
+import {DocumentRange} from '../model/model_runtime_types';
 
 export interface MalloyParseInfo {
   root: ParseTree;

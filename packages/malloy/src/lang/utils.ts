@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DocumentLocation, DocumentPosition} from '../model/malloy_types';
+import {DocumentLocation, DocumentPosition} from '../model/model_runtime_types';
 
 export function locationContainsPosition(
   location: DocumentLocation,

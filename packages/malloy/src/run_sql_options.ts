@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Annotation} from './model/malloy_types';
+import {Annotation} from './model/model_runtime_types';
 
 export interface RunSQLOptions {
   rowLimit?: number;

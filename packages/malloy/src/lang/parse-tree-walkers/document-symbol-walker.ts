@@ -26,7 +26,7 @@ import {ParseTreeWalker} from 'antlr4ts/tree/ParseTreeWalker';
 import {ParseTree} from 'antlr4ts/tree';
 import {MalloyParserListener} from '../lib/Malloy/MalloyParserListener';
 import * as parser from '../lib/Malloy/MalloyParser';
-import {DocumentRange} from '../../model/malloy_types';
+import {DocumentRange} from '../../model/model_runtime_types';
 import {MalloyTranslation} from '../parse-malloy';
 import {getStringIfShort} from '../parse-utils';
 
