@@ -28,12 +28,7 @@ import * as parser from '../lib/Malloy/MalloyParser';
 import {MalloyParserListener} from '../lib/Malloy/MalloyParserListener';
 import {DocumentRange} from '../../model/malloy_types';
 import {MalloyTranslation} from '../parse-malloy';
-import {
-  HasString,
-  getId,
-  getStringIfShort,
-  getStringParts,
-} from '../parse-utils';
+import {getId, getPlainString} from '../parse-utils';
 
 type NeedImports = Record<string, DocumentRange>;
 type NeedTables = Record<
@@ -44,27 +39,6 @@ type NeedTables = Record<
     firstReference: DocumentRange;
   }
 >;
-
-// Copy of the version in the parser which also errors on each non-string in a
-// multi-line string collection. No need to error here, which is well, because
-// we don't have access to the error log.
-function getPlainString(cx: HasString): string {
-  const shortStr = getStringIfShort(cx);
-  if (shortStr) {
-    return shortStr;
-  }
-  const safeParts: string[] = [];
-  const multiLineStr = cx.string().sqlString();
-  if (multiLineStr) {
-    for (const part of getStringParts(multiLineStr)) {
-      if (typeof part === 'string') {
-        safeParts.push(part);
-      }
-    }
-    return safeParts.join('');
-  }
-  return '';
-}
 
 class FindExternalReferences implements MalloyParserListener {
   needTables: NeedTables = {};

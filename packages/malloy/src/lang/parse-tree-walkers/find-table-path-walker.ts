@@ -22,12 +22,7 @@
  */
 
 import {MalloyParserListener} from '../lib/Malloy/MalloyParserListener';
-import {
-  HasString,
-  getId,
-  getStringIfShort,
-  getStringParts,
-} from '../parse-utils';
+import {getId, getPlainString} from '../parse-utils';
 import {MalloyTranslation} from '../parse-malloy';
 import {CommonTokenStream} from 'antlr4ts';
 import {DocumentRange} from '../../model/malloy_types';
@@ -39,27 +34,6 @@ export interface PathInfo {
   connId: string;
   tablePath: string;
   range: DocumentRange;
-}
-
-// Copy of the version in the parser which also errors on each non-string in a
-// multi-line string collection. No need to error here, which is well, because
-// we don't have access to the error log.
-function getPlainString(cx: HasString): string {
-  const shortStr = getStringIfShort(cx);
-  if (shortStr) {
-    return shortStr;
-  }
-  const safeParts: string[] = [];
-  const multiLineStr = cx.string().sqlString();
-  if (multiLineStr) {
-    for (const part of getStringParts(multiLineStr)) {
-      if (typeof part === 'string') {
-        safeParts.push(part);
-      }
-    }
-    return safeParts.join('');
-  }
-  return '';
 }
 
 class FindTablePathWalker implements MalloyParserListener {
