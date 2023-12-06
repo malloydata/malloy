@@ -23,4 +23,3 @@
 
 export * from './malloy_types';
 export {Segment, QueryModel, flattenQuery} from './malloy_query';
-export * from './model_runtime_types';

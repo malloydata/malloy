@@ -21,8 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Expr, isJoinOn, StructDef} from '../../../model/malloy_types';
-import {Annotation} from '../../../model/model_runtime_types';
+import {
+  Annotation,
+  Expr,
+  isJoinOn,
+  StructDef,
+} from '../../../model/malloy_types';
 import {compressExpr} from '../expressions/utils';
 import {DynamicSpace} from '../field-space/dynamic-space';
 import {JoinSpaceField} from '../field-space/join-space-field';

@@ -21,8 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {StructDef} from '../../../model/malloy_types';
-import {Annotation} from '../../../model/model_runtime_types';
+import {Annotation, StructDef} from '../../../model/malloy_types';
 
 import {ErrorFactory} from '../error-factory';
 import {HasParameter} from '../parameters/has-parameter';
