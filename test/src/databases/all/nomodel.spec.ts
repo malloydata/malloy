@@ -410,6 +410,24 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     });
   });
 
+  it(`basic index - ${databaseName}`, async () => {
+    // a cross join produces a Many to Many result.
+    // symmetric aggregate are needed on both sides of the join
+    // Check the row count and that sums on each side work properly.
+    await expect(`
+      run: ${databaseName}.table('malloytest.flights') -> {
+        index: *
+      }
+      -> {
+        select: *
+        order_by: fieldValue, weight desc
+        where: fieldValue != null
+      }
+      `).malloyResultMatches(runtime, {
+      fieldValue: '-1 to 1180',
+    });
+  });
+
   testIf(runtime.supportsNesting)(
     `number as null- ${databaseName}`,
     async () => {
