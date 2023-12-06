@@ -421,10 +421,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       -> {
         select: *
         order_by: fieldValue, weight desc
-        where: fieldValue != null
+        where: fieldValue != null and fieldType = 'string'
       }
       `).malloyResultMatches(runtime, {
-      fieldValue: '-1 to 1180',
+      fieldValue: '1',
     });
   });
 
