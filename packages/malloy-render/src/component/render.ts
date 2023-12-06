@@ -22,9 +22,15 @@
  */
 
 import {Result, Tag} from '@malloydata/malloy';
-import {LitElement, html, css} from 'lit';
+import {LitElement, html, css, PropertyValues} from 'lit';
 import {customElement, property} from 'lit/decorators.js';
 import './table';
+import {provide} from '@lit/context';
+import {resultContext} from './result-context';
+import {
+  RenderResultMetadata,
+  getResultMetadata,
+} from './render-result-metadata';
 
 // Get the first valid theme value or fallback to CSS variable
 function getThemeValue(prop: string, ...themes: Array<Tag | undefined>) {
@@ -57,8 +63,9 @@ export class MalloyRender extends LitElement {
       --malloy-theme--table-gutter-size: 15px;
       --malloy-theme--table-pinned-background: #f5fafc;
       --malloy-theme--table-pinned-border: 1px solid #daedf3;
+      --malloy-theme--font-family: Inter, system-ui, sans-serif;
 
-      font-family: Inter, system-ui, sans-serif;
+      font-family: var(--malloy-render--font-family);
       font-size: var(--malloy-render--table-font-size);
     }
 
@@ -78,6 +85,15 @@ export class MalloyRender extends LitElement {
 
   @property({attribute: false})
   result!: Result;
+
+  @provide({context: resultContext})
+  metadata!: RenderResultMetadata;
+
+  willUpdate(changedProperties: PropertyValues<this>) {
+    if (changedProperties.has('result')) {
+      this.metadata = getResultMetadata(this.result);
+    }
+  }
 
   override render() {
     const modelTag = this.result.modelTag;
@@ -136,12 +152,14 @@ export class MalloyRender extends LitElement {
       localTheme,
       modelTheme
     );
+    const fontFamily = getThemeValue('fontFamily', localTheme, modelTheme);
 
     const dynamicStyle = html`<style>
       :host {
         --malloy-render--table-row-height: ${tableRowHeight};
         --malloy-render--table-body-color: ${tableBodyColor};
         --malloy-render--table-font-size: ${tableFontSize};
+        --malloy-render--font-family: ${fontFamily};
         --malloy-render--table-header-color: ${tableHeaderColor};
         --malloy-render--table-header-weight: ${tableHeaderWeight};
         --malloy-render--table-body-weight: ${tableBodyWeight};

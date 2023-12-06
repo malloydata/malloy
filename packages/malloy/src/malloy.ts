@@ -1415,6 +1415,16 @@ abstract class Entity {
     return sourceClasses;
   }
 
+  public get fieldPath(): string[] {
+    const path: string[] = [this.name];
+    let f: Entity | undefined = this._parent;
+    while (f) {
+      path.unshift(f.name);
+      f = f._parent;
+    }
+    return path;
+  }
+
   public hasParentExplore(): this is Field {
     return this._parent !== undefined;
   }
