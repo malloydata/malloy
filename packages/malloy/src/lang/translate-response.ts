@@ -33,7 +33,7 @@ import {LogMessage} from './parse-log';
 import {DocumentSymbol} from './parse-tree-walkers/document-symbol-walker';
 import {DocumentCompletion} from './parse-tree-walkers/document-completion-walker';
 import {DocumentHelpContext} from './parse-tree-walkers/document-help-context-walker';
-import {PathInfo} from './parse-tree-walkers/find-table-path';
+import {PathInfo} from './parse-tree-walkers/find-table-path-walker';
 
 /**
  * The translation interface is essentially a request/response protocol, and
