@@ -47,3 +47,25 @@ export type MalloyQueryData = {
   runStats?: QueryRunStats;
   profilingUrl?: string;
 };
+
+/** All names have their source names and how they will appear in the symbol table that owns them */
+export interface AliasedName {
+  name: string;
+  as?: string;
+}
+
+/** put location into the parse tree. */
+export interface HasLocation {
+  location?: DocumentLocation;
+}
+
+/** all named objects have a type an a name (optionally aliased) */
+export interface NamedObject extends AliasedName, HasLocation {
+  type: string;
+}
+
+export interface SQLBlock extends NamedObject {
+  type: 'sqlBlock';
+  connection?: string;
+  selectStr: string;
+}

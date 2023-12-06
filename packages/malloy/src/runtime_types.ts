@@ -22,13 +22,14 @@
  */
 
 import {RunSQLOptions} from './run_sql_options';
-import {SQLBlock, StructDef} from './model/malloy_types';
+import {StructDef} from './model/malloy_types';
 
 import {
   Annotation,
   QueryRunStats,
   QueryDataRow,
   MalloyQueryData,
+  SQLBlock,
 } from './model/model_runtime_types';
 import {Dialect} from './dialect';
 

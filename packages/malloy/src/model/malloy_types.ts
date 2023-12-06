@@ -24,10 +24,14 @@
 // clang-format off
 
 import {
+  SQLBlock,
   QueryRunStats,
   DocumentLocation,
   Annotation,
+  NamedObject,
+  AliasedName,
   QueryData,
+  HasLocation,
   QueryValue,
 } from './model_runtime_types';
 
@@ -99,17 +103,6 @@ export type DocumentReference =
   | DocumentFieldReference
   | DocumentJoinReference;
 
-/** put location into the parse tree. */
-export interface HasLocation {
-  location?: DocumentLocation;
-}
-
-/** All names have their source names and how they will appear in the symbol table that owns them */
-export interface AliasedName {
-  name: string;
-  as?: string;
-}
-
 export interface TypedObject {
   type: string;
 }
@@ -126,11 +119,6 @@ export function isFilteredAliasedName(
     }
   }
   return true;
-}
-
-/** all named objects have a type an a name (optionally aliased) */
-export interface NamedObject extends AliasedName, HasLocation {
-  type: string;
 }
 
 // result metadata for a field
@@ -883,12 +871,6 @@ export interface SQLBlockSource {
   select: SQLPhrase[];
 }
 
-export interface SQLBlock extends NamedObject {
-  type: 'sqlBlock';
-  connection?: string;
-  selectStr: string;
-}
-
 interface SubquerySource {
   type: 'sql';
   method: 'subquery';
@@ -1236,4 +1218,3 @@ export interface SearchValueMapResult {
   cardinality: number;
   values: {fieldValue: string; weight: number}[];
 }
-// clang-format on
