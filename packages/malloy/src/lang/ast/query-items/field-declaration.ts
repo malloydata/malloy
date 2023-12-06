@@ -23,6 +23,7 @@
 
 import {Dialect} from '../../../dialect/dialect';
 import {
+  Annotation,
   FieldTypeDef,
   isAtomicFieldType,
   StructDef,
@@ -30,7 +31,6 @@ import {
   FieldDef,
   QueryFieldDef,
 } from '../../../model/malloy_types';
-import {Annotation} from '../../../model/model_runtime_types';
 
 import {compressExpr} from '../expressions/utils';
 import {FT} from '../fragtype-utils';

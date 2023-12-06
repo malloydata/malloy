@@ -24,6 +24,7 @@
 
 import {inspect} from 'util';
 import {
+  DocumentLocation,
   FieldDef,
   ModelDef,
   NamedModelObject,
@@ -36,7 +37,6 @@ import {
   isFilteredAliasedName,
   isSQLFragment,
 } from '../../model/malloy_types';
-import {DocumentLocation} from '../../model/model_runtime_types';
 import {ExpressionDef, MalloyElement} from '../ast';
 import {NameSpace} from '../ast/types/name-space';
 import {ModelEntry} from '../ast/types/model-entry';

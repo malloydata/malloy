@@ -28,7 +28,7 @@ import {MalloyParserListener} from '../lib/Malloy/MalloyParserListener';
 import * as parser from '../lib/Malloy/MalloyParser';
 import {MalloyParser} from '../lib/Malloy/MalloyParser';
 import {Token} from 'antlr4ts/Token';
-import {DocumentRange} from '../../model/model_runtime_types';
+import {DocumentRange} from '../../model/malloy_types';
 
 export interface DocumentHighlight {
   range: DocumentRange;

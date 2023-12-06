@@ -23,6 +23,8 @@
 import cloneDeep from 'lodash/cloneDeep';
 
 import {
+  Annotation,
+  DocumentLocation,
   DocumentReference,
   isSQLBlockStruct,
   ModelDef,
@@ -32,7 +34,6 @@ import {
   SQLBlockStructDef,
   StructDef,
 } from '../../../model/malloy_types';
-import {Annotation, DocumentLocation} from '../../../model/model_runtime_types';
 import {Tag} from '../../../tags';
 import {LogSeverity, MessageLogger} from '../../parse-log';
 import {MalloyTranslation} from '../../parse-malloy';

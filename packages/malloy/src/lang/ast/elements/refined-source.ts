@@ -23,8 +23,11 @@
 
 import cloneDeep from 'lodash/cloneDeep';
 
-import {StructDef, expressionIsCalculation} from '../../../model/malloy_types';
-import {Annotation} from '../../../model/model_runtime_types';
+import {
+  Annotation,
+  StructDef,
+  expressionIsCalculation,
+} from '../../../model/malloy_types';
 
 import {RefinedSpace} from '../field-space/refined-space';
 import {HasParameter} from '../parameters/has-parameter';

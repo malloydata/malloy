@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Note} from '../../../model/model_runtime_types';
+import {Note} from '../../../model/malloy_types';
 import {Tag} from '../../../tags';
 import {MessageLogger} from '../../parse-log';
 import {Document, DocStatement, MalloyElement} from './malloy-element';
