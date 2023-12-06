@@ -25,7 +25,7 @@ import {
   expressionIsAggregate,
   isConditionParameter,
   mergeEvalSpaces,
-} from '../../../model/malloy_types';
+} from '@malloydata/malloy-interfaces';
 import {errorFor} from '../ast-utils';
 import {ExprValue} from '../types/expr-value';
 import {FieldReference} from '../query-items/field-references';

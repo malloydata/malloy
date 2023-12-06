@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {PipeSegment, isPartialSegment} from '../../model';
+import {PipeSegment, isPartialSegment} from '@malloydata/malloy-interfaces';
 
 // We don't want to ever generate actual 'partial' stages, so convert this
 // into a reduce so the compiler doesn't explode

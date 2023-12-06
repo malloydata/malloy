@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Sampling} from '../../../model/malloy_types';
+import {Sampling} from '@malloydata/malloy-interfaces';
 
 import {MalloyElement} from '../types/malloy-element';
 import {

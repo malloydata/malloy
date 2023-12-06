@@ -25,7 +25,7 @@ import {
   StructDef,
   StructRef,
   isSQLBlockStruct,
-} from '../../../model/malloy_types';
+} from '@malloydata/malloy-interfaces';
 import {NamedSource} from './named-source';
 
 export class FromSQLSource extends NamedSource {

@@ -27,7 +27,7 @@ import {
   ExpressionType,
   FieldValueType,
   TypeDesc,
-} from '../../model';
+} from '@malloydata/malloy-interfaces';
 
 function mkFragType(
   dataType: FieldValueType,

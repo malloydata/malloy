@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {isAtomicFieldType, Parameter} from '../../../model/malloy_types';
+import {isAtomicFieldType, Parameter} from '@malloydata/malloy-interfaces';
 
 import {ConstantSubExpression} from '../expressions/constant-sub-expression';
 import {HasParameter} from './has-parameter';

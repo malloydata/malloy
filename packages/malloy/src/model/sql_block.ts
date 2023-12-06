@@ -21,7 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {SQLBlockSource, SQLPhrase, isSQLFragment} from './malloy_types';
+import {
+  SQLBlockSource,
+  SQLPhrase,
+  isSQLFragment,
+} from '@malloydata/malloy-interfaces';
 import {generateHash} from './utils';
 
 /**

@@ -25,7 +25,7 @@ import {
   AtomicFieldType,
   FieldValueType,
   StructDef,
-} from '../../../model/malloy_types';
+} from '@malloydata/malloy-interfaces';
 
 import {Comparison} from '../types/comparison';
 import {ExprValue} from '../types/expr-value';

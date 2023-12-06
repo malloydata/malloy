@@ -33,7 +33,7 @@ import {
   Query,
   ReduceSegment,
   StructDef,
-} from '../../model/malloy_types';
+} from '@malloydata/malloy-interfaces';
 
 const theErrorStruct: StructDef = {
   type: 'struct',

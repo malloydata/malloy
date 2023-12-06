@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Expr, Fragment, mkExpr} from '../../../model/malloy_types';
+import {Expr, Fragment, mkExpr} from '@malloydata/malloy-interfaces';
 
 import {Equality} from '../types/equality';
 

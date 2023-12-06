@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {By, expressionIsAggregate} from '../../../model/malloy_types';
+import {By, expressionIsAggregate} from '@malloydata/malloy-interfaces';
 
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';

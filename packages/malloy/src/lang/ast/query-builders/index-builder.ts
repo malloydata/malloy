@@ -27,7 +27,7 @@ import {
   Sampling,
   isIndexSegment,
   isPartialSegment,
-} from '../../../model/malloy_types';
+} from '@malloydata/malloy-interfaces';
 
 import {ErrorFactory} from '../error-factory';
 import {FieldName, FieldSpace} from '../types/field-space';

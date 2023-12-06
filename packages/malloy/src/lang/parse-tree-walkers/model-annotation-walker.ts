@@ -26,7 +26,7 @@ import {ParseTreeWalker} from 'antlr4ts/tree/ParseTreeWalker';
 import {MalloyParserListener} from '../lib/Malloy/MalloyParserListener';
 import * as parser from '../lib/Malloy/MalloyParser';
 import {MalloyTranslation} from '../parse-malloy';
-import {Annotation, DocumentLocation, Note} from '../../model/malloy_types';
+import {Annotation, DocumentLocation, Note} from '@malloydata/malloy-interfaces';
 import {MalloyParseInfo} from '../malloy-parse-info';
 
 class ModelAnnotationWalker implements MalloyParserListener {

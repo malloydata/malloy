@@ -88,7 +88,7 @@ import {
   StructRef,
   TurtleDef,
   UngroupFragment,
-} from './malloy_types';
+} from '@malloydata/malloy-interfaces';
 
 import {Connection} from '../runtime_types';
 import {

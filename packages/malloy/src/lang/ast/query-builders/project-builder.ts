@@ -27,7 +27,7 @@ import {
   ProjectSegment,
   isPartialSegment,
   isProjectSegment,
-} from '../../../model/malloy_types';
+} from '@malloydata/malloy-interfaces';
 
 import {ErrorFactory} from '../error-factory';
 import {FieldSpace} from '../types/field-space';

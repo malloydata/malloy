@@ -33,7 +33,7 @@ import {
   model,
 } from './test-translator';
 import './parse-expects';
-import {DocumentLocation, DocumentPosition} from '../../model/malloy_types';
+import {DocumentLocation, DocumentPosition} from '@malloydata/malloy-interfaces';
 
 describe('source locations', () => {
   test('renamed source location', () => {

@@ -29,7 +29,7 @@ import {
   Fragment,
   isAtomicFieldType,
   StructRelationship,
-} from '../../../model/malloy_types';
+} from '@malloydata/malloy-interfaces';
 import {exprWalk} from '../../../model/utils';
 
 import {errorFor} from '../ast-utils';

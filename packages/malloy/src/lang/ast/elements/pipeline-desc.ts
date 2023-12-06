@@ -29,7 +29,7 @@ import {
   StructDef,
   isAtomicField,
   isTurtleDef,
-} from '../../../model/malloy_types';
+} from '@malloydata/malloy-interfaces';
 
 import {FieldName, FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';

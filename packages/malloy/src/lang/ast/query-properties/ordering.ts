@@ -24,7 +24,7 @@
 import {
   expressionIsAnalytic,
   OrderBy as ModelOrderBy,
-} from '../../../model/malloy_types';
+} from '@malloydata/malloy-interfaces';
 
 import {FieldName, FieldSpace} from '../types/field-space';
 import {ListOf, MalloyElement} from '../types/malloy-element';

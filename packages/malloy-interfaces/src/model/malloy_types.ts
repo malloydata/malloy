@@ -31,6 +31,7 @@ type ConstantExpr = Expr;
 type Condition = Expr;
 interface ParamCondition extends ParamBase {
   condition: Condition | null;
+  type: CastType;
 }
 interface ParamValue extends ParamBase {
   value: ConstantExpr | null;
@@ -324,7 +325,7 @@ export interface TypecastFragment extends DialectFragmentBase {
   function: 'cast';
   safe: boolean;
   expr: Expr;
-  dstType: AtomicFieldType;
+  dstType: CastType | {raw: string};
   srcType?: AtomicFieldType;
 }
 
@@ -537,27 +538,18 @@ export function maxOfExpressionTypes(types: ExpressionType[]): ExpressionType {
   return types.reduce(maxExpressionType, 'scalar');
 }
 
-interface JustExpression {
-  e: Expr;
-}
-type HasExpression = FieldDef & JustExpression;
+type HasExpression = FieldDef & Expression & {e: Expr};
 /**  Grants access to the expression property of a FieldDef */
 export function hasExpression(f: FieldDef): f is HasExpression {
-  return (f as JustExpression).e !== undefined;
+  return (f as Expression).e !== undefined;
 }
 
 export type TimeFieldType = 'date' | 'timestamp';
 export function isTimeFieldType(s: string): s is TimeFieldType {
   return s === 'date' || s === 'timestamp';
 }
-export type AtomicFieldType =
-  | 'string'
-  | 'number'
-  | TimeFieldType
-  | 'boolean'
-  | 'unsupported'
-  | 'json'
-  | 'error';
+export type CastType = 'string' | 'number' | TimeFieldType | 'boolean' | 'json';
+export type AtomicFieldType = CastType | 'unsupported' | 'error';
 export function isAtomicFieldType(s: string): s is AtomicFieldType {
   return [
     'string',
@@ -567,7 +559,13 @@ export function isAtomicFieldType(s: string): s is AtomicFieldType {
     'boolean',
     'json',
     'unsupported',
+    'error',
   ].includes(s);
+}
+export function isCastType(s: string): s is CastType {
+  return ['string', 'number', 'date', 'timestamp', 'boolean', 'json'].includes(
+    s
+  );
 }
 
 /**
@@ -597,37 +595,65 @@ export function FieldIsIntrinsic(f: FieldDef): boolean {
   }
 }
 
-/** Scalar String Field */
-export interface FieldStringDef extends FieldAtomicDef {
+export interface FieldStringTypeDef {
   type: 'string';
   bucketFilter?: string;
   bucketOther?: string;
 }
 
-/** Scalar Numeric String Field */
-export interface FieldNumberDef extends FieldAtomicDef {
+/** Scalar String Field */
+export interface FieldStringDef extends FieldAtomicDef, FieldStringTypeDef {
+  type: 'string';
+}
+
+export interface FieldNumberTypeDef {
   type: 'number';
   numberType?: 'integer' | 'float';
 }
 
-/** Scalar Boolean Field */
-export interface FieldBooleanDef extends FieldAtomicDef {
+/** Scalar Numeric String Field */
+export interface FieldNumberDef extends FieldAtomicDef, FieldNumberTypeDef {
+  type: 'number';
+}
+
+export interface FieldBooleanTypeDef {
   type: 'boolean';
 }
 
-/** Scalar JSON Field */
-export interface FieldJSONDef extends FieldAtomicDef {
+/** Scalar Boolean Field */
+export interface FieldBooleanDef extends FieldAtomicDef, FieldBooleanTypeDef {
+  type: 'boolean';
+}
+
+export interface FieldJSONTypeDef {
   type: 'json';
 }
 
-/** Scalar unsupported Field */
-export interface FieldUnsupportedDef extends FieldAtomicDef {
+/** Scalar JSON Field */
+export interface FieldJSONDef extends FieldAtomicDef, FieldJSONTypeDef {
+  type: 'json';
+}
+
+export interface FieldUnsupportedTypeDef {
   type: 'unsupported';
   rawType?: string;
 }
-export interface FieldErrorDef extends FieldAtomicDef {
+
+/** Scalar unsupported Field */
+export interface FieldUnsupportedDef
+  extends FieldAtomicDef,
+    FieldUnsupportedTypeDef {
+  type: 'unsupported';
+}
+
+export interface FieldErrorTypeDef {
   type: 'error';
 }
+
+export interface FieldErrorDef extends FieldAtomicDef, FieldErrorTypeDef {
+  type: 'error';
+}
+
 export type DateUnit = 'day' | 'week' | 'month' | 'quarter' | 'year';
 export function isDateUnit(str: string): str is DateUnit {
   return ['day', 'week', 'month', 'quarter', 'year'].includes(str);
@@ -650,16 +676,26 @@ export enum ValueType {
 
 export type TimeValueType = ValueType.Date | ValueType.Timestamp;
 
-/** Scalar Date Field. */
-export interface FieldDateDef extends FieldAtomicDef {
+export interface FieldDateTypeDef {
   type: 'date';
   timeframe?: DateUnit;
 }
 
-/** Scalar Timestamp Field */
-export interface FieldTimestampDef extends FieldAtomicDef {
+/** Scalar Date Field. */
+export interface FieldDateDef extends FieldAtomicDef, FieldDateTypeDef {
+  type: 'date';
+}
+
+export interface FieldTimestampTypeDef {
   type: 'timestamp';
   timeframe?: TimestampUnit;
+}
+
+/** Scalar Timestamp Field */
+export interface FieldTimestampDef
+  extends FieldAtomicDef,
+    FieldTimestampTypeDef {
+  type: 'timestamp';
 }
 
 /** parameter to order a query */
@@ -738,6 +774,13 @@ export function isReduceSegment(pe: PipeSegment): pe is ReduceSegment {
   return pe.type === 'reduce';
 }
 
+export interface PartialSegment extends QuerySegment {
+  type: 'partial';
+}
+export function isPartialSegment(pe: PipeSegment): pe is PartialSegment {
+  return pe.type === 'partial';
+}
+
 export interface ProjectSegment extends QuerySegment {
   type: 'project';
 }
@@ -787,7 +830,7 @@ export function isIndexSegment(pe: PipeSegment): pe is IndexSegment {
 }
 
 export interface QuerySegment extends Filtered {
-  type: 'reduce' | 'project';
+  type: 'reduce' | 'project' | 'partial';
   fields: QueryFieldDef[];
   extendSource?: FieldDef[];
   limit?: number;
@@ -807,8 +850,15 @@ export type JoinRelationship =
   | 'many_to_one'
   | 'many_to_many';
 
+export type MatrixOperation = 'left' | 'right' | 'full' | 'inner';
+
+export function isMatrixOperation(x: string): x is MatrixOperation {
+  return ['left', 'right', 'full', 'inner'].includes(x);
+}
+
 export interface JoinOn {
   type: 'one' | 'many' | 'cross';
+  matrixOperation: MatrixOperation;
   onExpression?: Expr;
 }
 
@@ -935,6 +985,7 @@ export interface FunctionOverloadDef {
   returnType: TypeDesc;
   needsWindowOrderBy?: boolean;
   between?: {preceding: number | string; following: number | string};
+  isSymmetric?: boolean;
   params: FunctionParameterDef[];
   dialect: {
     [dialect: string]: Expr;
@@ -982,6 +1033,16 @@ export type FieldTypeDef =
   | FieldJSONDef
   | FieldUnsupportedDef
   | FieldErrorDef;
+
+export type FieldAtomicTypeDef =
+  | FieldStringTypeDef
+  | FieldDateTypeDef
+  | FieldTimestampTypeDef
+  | FieldNumberTypeDef
+  | FieldBooleanTypeDef
+  | FieldJSONTypeDef
+  | FieldUnsupportedTypeDef
+  | FieldErrorTypeDef;
 
 export function isFieldTypeDef(f: FieldDef): f is FieldTypeDef {
   return (
@@ -1091,6 +1152,7 @@ export type MalloyQueryData = {
   rows: QueryDataRow[];
   totalRows: number;
   runStats?: QueryRunStats;
+  profilingUrl?: string;
 };
 
 export interface DrillSource {
@@ -1115,10 +1177,15 @@ export interface QueryResult extends CompiledQuery {
   totalRows: number;
   error?: string;
   runStats?: QueryRunStats;
+  profilingUrl?: string;
 }
 
 export function isTurtleDef(def: FieldDef): def is TurtleDef {
   return def.type === 'turtle';
+}
+
+export function isAtomicField(def: FieldDef): def is FieldAtomicDef {
+  return isAtomicFieldType(def.type);
 }
 
 export interface SearchResultRow {

@@ -23,7 +23,7 @@
 
 import {TestTranslator, aTableDef, markSource, model} from './test-translator';
 import './parse-expects';
-import {expressionIsCalculation, isAtomicFieldType} from '../../model';
+import {expressionIsCalculation, isAtomicFieldType} from '@malloydata/malloy-interfaces';
 
 describe('query:', () => {
   describe('basic query syntax', () => {

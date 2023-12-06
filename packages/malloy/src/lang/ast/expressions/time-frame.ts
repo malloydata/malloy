@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {TimestampUnit, isTimestampUnit} from '../../../model/malloy_types';
+import {TimestampUnit, isTimestampUnit} from '@malloydata/malloy-interfaces';
 
 import {MalloyElement} from '../types/malloy-element';
 

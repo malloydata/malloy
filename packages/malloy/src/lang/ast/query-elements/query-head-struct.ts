@@ -25,7 +25,7 @@ import {
   StructDef,
   StructRef,
   refIsStructDef,
-} from '../../../model/malloy_types';
+} from '@malloydata/malloy-interfaces';
 
 import {Source} from '../elements/source';
 import {NamedSource} from '../sources/named-source';

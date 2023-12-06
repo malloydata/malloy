@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {isFieldTypeDef, isFilteredAliasedName} from '../../model';
+import {isFieldTypeDef, isFilteredAliasedName} from '@malloydata/malloy-interfaces';
 import {
   expr,
   TestTranslator,

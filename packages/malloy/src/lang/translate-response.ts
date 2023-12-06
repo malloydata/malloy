@@ -27,7 +27,7 @@ import {
   Query,
   SQLBlockSource,
   SQLBlockStructDef,
-} from '../model/malloy_types';
+} from '@malloydata/malloy-interfaces';
 import {MalloyElement} from './ast';
 import {LogMessage} from './parse-log';
 import {DocumentSymbol} from './parse-tree-walkers/document-symbol-walker';

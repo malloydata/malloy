@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {PipeSegment, QueryFieldDef} from '../../../model/malloy_types';
+import {PipeSegment, QueryFieldDef} from '@malloydata/malloy-interfaces';
 import {FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
 import {OpDesc} from '../types/op-desc';

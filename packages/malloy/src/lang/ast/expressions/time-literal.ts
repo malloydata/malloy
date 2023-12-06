@@ -28,7 +28,7 @@ import {
   TimestampUnit,
   isTimeFieldType,
   TimeLiteralFragment,
-} from '../../../model/malloy_types';
+} from '@malloydata/malloy-interfaces';
 
 import {ExprValue} from '../types/expr-value';
 import {FieldSpace} from '../types/field-space';

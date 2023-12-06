@@ -37,7 +37,7 @@ import {
   maxExpressionType,
   maxOfExpressionTypes,
   mergeEvalSpaces,
-} from '../../../model/malloy_types';
+} from '@malloydata/malloy-interfaces';
 import {errorFor} from '../ast-utils';
 import {StructSpaceFieldBase} from '../field-space/struct-space-field-base';
 

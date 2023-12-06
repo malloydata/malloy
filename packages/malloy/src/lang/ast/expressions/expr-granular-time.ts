@@ -26,7 +26,7 @@ import {
   isTimeFieldType,
   mkExpr,
   TimestampUnit,
-} from '../../../model/malloy_types';
+} from '@malloydata/malloy-interfaces';
 
 import {errorFor} from '../ast-utils';
 import {FT} from '../fragtype-utils';

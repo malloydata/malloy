@@ -32,7 +32,7 @@ import {
   mergeEvalSpaces,
   maxOfExpressionTypes,
   ExpressionValueType,
-} from '../../../model/malloy_types';
+} from '@malloydata/malloy-interfaces';
 
 import {errorFor} from '../ast-utils';
 import {compose, nullsafeNot} from '../expressions/utils';

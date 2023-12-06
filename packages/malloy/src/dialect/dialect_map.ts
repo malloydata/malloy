@@ -25,7 +25,7 @@ import {DuckDBDialect} from './duckdb';
 import {Dialect} from './dialect';
 import {PostgresDialect} from './postgres';
 import {StandardSQLDialect} from './standardsql';
-import {FunctionDef, FunctionOverloadDef} from '../model/malloy_types';
+import {FunctionDef, FunctionOverloadDef} from '@malloydata/malloy-interfaces';
 import {DialectFunctionOverloadDef} from './functions';
 
 const dialectMap = new Map<string, Dialect>();

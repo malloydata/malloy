@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Query, refIsStructDef} from '../../../model/malloy_types';
+import {Query, refIsStructDef} from '@malloydata/malloy-interfaces';
 
 import {Source} from '../elements/source';
 import {ErrorFactory} from '../error-factory';

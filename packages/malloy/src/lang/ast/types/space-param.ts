@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Parameter, TypeDesc} from '../../../model/malloy_types';
+import {Parameter, TypeDesc} from '@malloydata/malloy-interfaces';
 
 import {SpaceEntry} from './space-entry';
 import {HasParameter} from '../parameters/has-parameter';

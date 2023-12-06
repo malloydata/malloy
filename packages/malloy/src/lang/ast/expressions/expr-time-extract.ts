@@ -28,7 +28,7 @@ import {
   isTimestampUnit,
   maxExpressionType,
   mergeEvalSpaces,
-} from '../../../model/malloy_types';
+} from '@malloydata/malloy-interfaces';
 
 import {errorFor} from '../ast-utils';
 import {ExprValue} from '../types/expr-value';

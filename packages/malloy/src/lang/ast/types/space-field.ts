@@ -26,7 +26,7 @@ import {
   QueryFieldDef,
   isFieldTypeDef,
   TypeDesc,
-} from '../../../model/malloy_types';
+} from '@malloydata/malloy-interfaces';
 import {SpaceEntry} from './space-entry';
 import {FieldSpace} from './field-space';
 

@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {maxExpressionType, mergeEvalSpaces} from '../../../model/malloy_types';
+import {maxExpressionType, mergeEvalSpaces} from '@malloydata/malloy-interfaces';
 
 import {errorFor} from '../ast-utils';
 import {ExprValue} from '../types/expr-value';

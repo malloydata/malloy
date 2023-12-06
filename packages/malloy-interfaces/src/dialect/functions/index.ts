@@ -1,4 +1,4 @@
-import {Expr, FunctionParameterDef, TypeDesc} from '../../model';
+import {Expr, FunctionParameterDef, TypeDesc} from '@malloydata/malloy-interfaces';
 
 /*
  * Copyright 2023 Google LLC

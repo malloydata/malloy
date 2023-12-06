@@ -23,7 +23,7 @@
 
 import {Dialect} from '../../../dialect/dialect';
 import {getDialect} from '../../../dialect/dialect_map';
-import {FieldDef, StructDef, isTurtleDef} from '../../../model/malloy_types';
+import {FieldDef, StructDef, isTurtleDef} from '@malloydata/malloy-interfaces';
 
 import {SpaceEntry} from '../types/space-entry';
 import {LookupResult} from '../types/lookup-result';

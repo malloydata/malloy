@@ -36,7 +36,7 @@ import {
   TurtleDef,
   isFilteredAliasedName,
   isSQLFragment,
-} from '../../model/malloy_types';
+} from '@malloydata/malloy-interfaces';
 import {ExpressionDef, MalloyElement} from '../ast';
 import {NameSpace} from '../ast/types/name-space';
 import {ModelEntry} from '../ast/types/model-entry';

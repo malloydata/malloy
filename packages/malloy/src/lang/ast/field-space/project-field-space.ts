@@ -26,7 +26,7 @@ import {
   expressionInvolvesAggregate,
   expressionIsAnalytic,
   TypeDesc,
-} from '../../../model/malloy_types';
+} from '@malloydata/malloy-interfaces';
 
 import {QuerySpace} from './query-spaces';
 

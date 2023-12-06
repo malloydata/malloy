@@ -22,7 +22,7 @@
  */
 
 import cloneDeep from 'lodash/cloneDeep';
-import * as model from '../../../model/malloy_types';
+import * as model from '@malloydata/malloy-interfaces';
 import {nameOf} from '../../field-utils';
 import {SpaceEntry} from '../types/space-entry';
 import {ErrorFactory} from '../error-factory';
