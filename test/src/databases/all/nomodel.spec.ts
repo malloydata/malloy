@@ -411,20 +411,18 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
 
   it(`basic index - ${databaseName}`, async () => {
-    // a cross join produces a Many to Many result.
-    // symmetric aggregate are needed on both sides of the join
-    // Check the row count and that sums on each side work properly.
+    // Make sure basic indexing works.
     await expect(`
       run: ${databaseName}.table('malloytest.flights') -> {
         index: *
       }
       -> {
         select: *
-        order_by: fieldValue, weight desc
-        where: fieldValue != null and fieldType = 'string'
+        order_by: fieldValue
+        where: fieldName = 'carrier'
       }
       `).malloyResultMatches(runtime, {
-      fieldValue: '1',
+      fieldValue: 'AA',
     });
   });
 
