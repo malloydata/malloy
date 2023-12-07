@@ -60,3 +60,14 @@ export function getTextWidth(
 export function clamp(s: number, e: number, v: number) {
   return Math.max(s, Math.min(e, v));
 }
+
+export function shouldRenderAs(f: Field) {
+  if (f.isAtomicField()) return 'cell';
+  const {tag} = f.tagParse();
+  if (tag.has('bar')) return 'bar-chart';
+  else return 'table';
+}
+
+export function getFieldKey(f: Field) {
+  return JSON.stringify(f.fieldPath);
+}
