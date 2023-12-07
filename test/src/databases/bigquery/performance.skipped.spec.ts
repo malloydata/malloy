@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import * as malloy from '@malloydata/malloy';
+import {QueryData} from '@malloydata/malloy-interfaces';
 import {RuntimeList} from '../../runtimes';
 
 // Chris, please rework.
@@ -44,7 +44,7 @@ it.skip('accessors are not too expensive', async () => {
       const inner = result.data.value[0]['inner'];
       let total = 0;
       let count = 0;
-      for (const row of inner as malloy.QueryData) {
+      for (const row of inner as QueryData) {
         total += row['distance'] as number;
         count += 1;
       }

@@ -23,7 +23,7 @@
 
 import {test} from '@jest/globals';
 import * as malloy from '@malloydata/malloy';
-import {Query} from '@malloydata/malloy';
+import {Query} from '@malloydata/malloy-interfaces';
 import {testModel} from '../../models/faa_model';
 import {BigQueryTestConnection, RuntimeList} from '../../runtimes';
 import {describeIfDatabaseAvailable, fStringEq} from '../../util';
