@@ -22,8 +22,8 @@
  */
 
 import {
-  isCastType,
   isSQLBlockStruct,
+  isCastType,
   isValueParameter,
   paramHasValue,
   StructDef,

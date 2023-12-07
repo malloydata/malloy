@@ -26,6 +26,7 @@
     "@google-cloud/common": "^5.0.1",
     "@google-cloud/paginator": "^5.0.0",
     "@malloydata/malloy": "^0.0.112",
+    "@malloydata/malloy-interfaces": "^0.0.112",
     "gaxios": "^4.2.0"
   }
 }

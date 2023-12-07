@@ -22,7 +22,7 @@
  */
 
 import {ExprValue} from '../types/expr-value';
-import {FieldValueType} from '../../../model';
+import {FieldValueType} from '@malloydata/malloy-interfaces';
 import {FT} from '../fragtype-utils';
 import {ExprAggregateFunction} from './expr-aggregate-function';
 import {ExpressionDef} from '../types/expression-def';

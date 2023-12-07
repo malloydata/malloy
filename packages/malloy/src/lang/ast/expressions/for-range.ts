@@ -21,7 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {maxExpressionType, mergeEvalSpaces} from '../../../model';
+import {
+  maxExpressionType,
+  mergeEvalSpaces,
+} from '@malloydata/malloy-interfaces';
 import {errorFor} from '../ast-utils';
 import {FT} from '../fragtype-utils';
 import {castDateToTimestamp, resolution, timeOffset} from '../time-utils';

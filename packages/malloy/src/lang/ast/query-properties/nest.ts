@@ -42,7 +42,7 @@ import {
   expressionIsAnalytic,
   expressionIsScalar,
   TypeDesc,
-} from '../../../model';
+} from '@malloydata/malloy-interfaces';
 import {
   FieldReference,
   ViewFieldReference,

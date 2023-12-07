@@ -23,7 +23,7 @@
 
 import {DuckDBCommon} from './duckdb_common';
 import {DuckDBConnection} from './duckdb_connection';
-import {SQLBlock} from '@malloydata/malloy';
+import {SQLBlock} from '@malloydata/malloy-interfaces';
 
 /*
  * !IMPORTANT

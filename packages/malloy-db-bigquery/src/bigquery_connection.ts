@@ -35,24 +35,27 @@ import {ResourceStream} from '@google-cloud/paginator';
 import * as googleCommon from '@google-cloud/common';
 import {GaxiosError} from 'gaxios';
 import {
-  Connection,
-  FetchSchemaOptions,
-  FieldTypeDef,
   Malloy,
+  RunSQLOptions,
+  StandardSQLDialect,
+  toAsyncGenerator,
+} from '@malloydata/malloy';
+
+import {
+  FetchSchemaOptions,
+  Connection,
+  FieldTypeDef,
   MalloyQueryData,
   NamedStructDefs,
-  PersistSQLResults,
-  PooledConnection,
   QueryData,
   QueryDataRow,
   QueryRunStats,
-  RunSQLOptions,
-  SQLBlock,
-  StandardSQLDialect,
+  PersistSQLResults,
+  PooledConnection,
   StreamingConnection,
+  SQLBlock,
   StructDef,
-  toAsyncGenerator,
-} from '@malloydata/malloy';
+} from '@malloydata/malloy-interfaces';
 
 export interface BigQueryManagerOptions {
   credentials?: {

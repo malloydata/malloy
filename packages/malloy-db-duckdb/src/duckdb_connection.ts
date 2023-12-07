@@ -30,7 +30,8 @@ import {
   OPEN_READWRITE,
   TableData,
 } from 'duckdb';
-import {QueryDataRow, RunSQLOptions} from '@malloydata/malloy';
+import {RunSQLOptions} from '@malloydata/malloy';
+import {QueryDataRow} from '@malloydata/malloy-interfaces';
 
 export class DuckDBConnection extends DuckDBCommon {
   connecting: Promise<void>;

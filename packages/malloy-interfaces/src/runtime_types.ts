@@ -28,7 +28,7 @@ import {
   QueryRunStats,
   SQLBlock,
   StructDef,
-} from '@malloydata/malloy-interfaces';
+} from './model';
 import {Dialect} from './dialect';
 
 /**

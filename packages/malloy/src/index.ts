@@ -108,3 +108,5 @@ export type {
 } from './runtime_types';
 export {toAsyncGenerator} from './connection_utils';
 export {type TagParse, Tag, type TagDict} from './tags';
+
+//export {MalloyQueryData, DocumentLocation, DocumentRange} from '@malloydata/malloy-interfaces';

@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {SQLBlock} from '@malloydata/malloy';
+import {SQLBlock} from '@malloydata/malloy-interfaces';
 import {DuckDBCommon} from './duckdb_common';
 import {DuckDBWASMConnection} from './duckdb_wasm_connection_node';
 

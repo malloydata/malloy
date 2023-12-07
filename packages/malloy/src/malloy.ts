@@ -66,7 +66,7 @@ import {
   Annotation,
   NamedModelObject,
 } from '@malloydata/malloy-interfaces';
-import {QueryModel, flattenQuery} from '@malloydata/malloy-interfaces';
+import {QueryModel, flattenQuery} from './model';
 import {
   Connection,
   InfoConnection,

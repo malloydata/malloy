@@ -21,6 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {RunSQLOptions, DuckDBDialect} from '@malloydata/malloy';
+
 import {
   FieldTypeDef,
   MalloyQueryData,
@@ -29,14 +31,12 @@ import {
   PooledConnection,
   QueryDataRow,
   QueryRunStats,
-  RunSQLOptions,
   SQLBlock,
   StreamingConnection,
   StructDef,
   TestableConnection,
-  DuckDBDialect,
   FetchSchemaOptions,
-} from '@malloydata/malloy';
+} from '@malloydata/malloy-interfaces';
 
 export interface DuckDBQueryOptions {
   rowLimit: number;

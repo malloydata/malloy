@@ -20,7 +20,7 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-import {PipeSegment} from '../../../model';
+import {PipeSegment} from '@malloydata/malloy-interfaces';
 import {ReduceBuilder} from './reduce-builder';
 
 export class PartialBuilder extends ReduceBuilder {
