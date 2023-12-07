@@ -232,23 +232,3 @@ export function unIndent(parts: (string | unknown)[]): void {
     }
   }
 }
-
-// No need to error here, which is well, because we don't have access to the
-// error log.
-export function getPlainString(cx: HasString): string {
-  const shortStr = getStringIfShort(cx);
-  if (shortStr) {
-    return shortStr;
-  }
-  const safeParts: string[] = [];
-  const multiLineStr = cx.string().sqlString();
-  if (multiLineStr) {
-    for (const part of getStringParts(multiLineStr)) {
-      if (typeof part === 'string') {
-        safeParts.push(part);
-      }
-    }
-    return safeParts.join('');
-  }
-  return '';
-}

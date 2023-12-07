@@ -971,12 +971,12 @@ export class Parse {
  */
 export class DocumentTablePath {
   private _range: DocumentRange;
-  private _connId: string;
+  private _connectionId: string;
   private _tablePath: string;
 
   constructor(tablePath: PathInfo) {
     this._range = DocumentRange.fromJSON(tablePath.range);
-    this._connId = tablePath.connId;
+    this._connectionId = tablePath.connectionId;
     this._tablePath = tablePath.tablePath;
   }
 
@@ -989,8 +989,8 @@ export class DocumentTablePath {
   }
 
   /** @return The Connection Id for this table. */
-  public get connId(): string {
-    return this._connId;
+  public get connectionId(): string {
+    return this._connectionId;
   }
 
   /** @return The full table path. */
