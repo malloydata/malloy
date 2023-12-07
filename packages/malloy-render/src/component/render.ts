@@ -25,6 +25,7 @@ import {Result, Tag} from '@malloydata/malloy';
 import {LitElement, html, css, PropertyValues} from 'lit';
 import {customElement, property} from 'lit/decorators.js';
 import './table';
+import './bar-chart';
 import {provide} from '@lit/context';
 import {resultContext} from './result-context';
 import {
