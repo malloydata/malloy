@@ -810,7 +810,7 @@ export class BigQueryConnection
 
   public getTableSourceUrl(tablePath: string) {
     const tablePathInfo = tablePath.split('.');
-    const url = `https://pantheon.corp.google.com/bigquery?mods=allow_workbench_image_override&project=${this.projectId}&ws=!1m5!1m4!4m3!1s${tablePathInfo[0]}!2s${tablePathInfo[1]}!3s${tablePathInfo[2]}`;
+    const url = `https://console.cloud.google.com/bigquery?ws=!1m5!1m4!4m3!1s${tablePathInfo[0]}!2s${tablePathInfo[1]}!3s${tablePathInfo[2]}`;
     return url;
   }
 
