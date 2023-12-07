@@ -410,6 +410,22 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     });
   });
 
+  it(`basic index - ${databaseName}`, async () => {
+    // Make sure basic indexing works.
+    await expect(`
+      run: ${databaseName}.table('malloytest.flights') -> {
+        index: *
+      }
+      -> {
+        select: *
+        order_by: fieldValue
+        where: fieldName = 'carrier'
+      }
+      `).malloyResultMatches(runtime, {
+      fieldValue: 'AA',
+    });
+  });
+
   testIf(runtime.supportsNesting)(
     `number as null- ${databaseName}`,
     async () => {

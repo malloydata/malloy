@@ -3657,7 +3657,7 @@ class QueryQueryIndexStage extends QueryQuery {
       }
       if (fields[i].type === 'timestamp' || fields[i].type === 'date') {
         s += `    WHEN ${i} THEN ${dialect.concat(
-          `MIN(${dialect.sqlDateToString(fields[i].expression)}`,
+          `MIN(${dialect.sqlDateToString(fields[i].expression)})`,
           "' to '",
           `MAX(${dialect.sqlDateToString(fields[i].expression)})`
         )}\n`;
