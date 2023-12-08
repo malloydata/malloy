@@ -21,4 +21,38 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export {TurtleHeadedPipe} from '../elements/pipeline-desc';
+import {Query, refIsStructDef} from '../../../model/malloy_types';
+import {Source} from '../elements/source';
+import {MalloyElement} from '../types/malloy-element';
+import {QueryComp} from '../types/query-comp';
+
+export class RawQuery extends MalloyElement {
+  elementType = 'raw-query';
+
+  constructor(readonly source: Source) {
+    super({source});
+  }
+
+  queryComp(isRefOk: boolean): QueryComp {
+    const structRef = isRefOk
+      ? this.source.structRef()
+      : this.source.structDef();
+    const structDef = refIsStructDef(structRef)
+      ? structRef
+      : this.source.structDef();
+    return {
+      query: {
+        type: 'query',
+        structRef,
+        pipeline: [{type: 'raw', fields: []}],
+        location: this.location,
+      },
+      outputStruct: structDef,
+      inputStruct: structDef,
+    };
+  }
+
+  query(): Query {
+    return this.queryComp(true).query;
+  }
+}

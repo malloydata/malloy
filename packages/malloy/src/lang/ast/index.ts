@@ -119,5 +119,4 @@ export * from './types/malloy-element';
 export * from './types/query-element';
 export * from './types/query-item';
 export * from './types/query-property';
-export * from './types/turtle-headed-pipe';
 export * from './types/query-extend-property';

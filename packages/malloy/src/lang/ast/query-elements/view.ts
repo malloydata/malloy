@@ -26,6 +26,7 @@ import {
   QueryFieldDef,
   TurtleDef,
   isAtomicFieldType,
+  isRawSegment,
 } from '../../../model/malloy_types';
 import {DynamicSpace} from '../field-space/dynamic-space';
 import {QuerySpace} from '../field-space/query-spaces';
@@ -247,67 +248,79 @@ export class ReferenceView extends View {
 
   getOp(inputFS: FieldSpace, refineTo: PipeSegment): OpDesc {
     const to = {...refineTo};
-    const from = this.getRefinementSegment(inputFS);
-    if (from) {
-      // TODO need to disallow partial + index for now to make the types happy
-      if (to.type === 'partial' && from.type !== 'index') {
-        to.type = from.type;
-      } else if (from.type !== to.type) {
-        this.log(`cannot refine ${to.type} view with ${from.type} view`);
-      }
+    if (isRawSegment(to)) {
+      this.log('Cannot refine raw query, must add an explicit query stage');
+    } else {
+      const from = this.getRefinementSegment(inputFS);
+      if (from) {
+        // TODO need to disallow partial + index for now to make the types happy
+        if (
+          to.type === 'partial' &&
+          from.type !== 'index' &&
+          from.type !== 'raw'
+        ) {
+          to.type = from.type;
+        } else if (from.type !== to.type) {
+          this.log(`cannot refine ${to.type} view with ${from.type} view`);
+        }
 
-      if (from.type !== 'index' && to.type !== 'index') {
-        if (from.orderBy !== undefined || from.by !== undefined) {
-          if (to.orderBy === undefined && to.by === undefined) {
-            if (from.orderBy) {
-              to.orderBy = from.orderBy;
-            } else if (from.by) {
-              to.by = from.by;
+        if (
+          from.type !== 'index' &&
+          to.type !== 'index' &&
+          from.type !== 'raw'
+        ) {
+          if (from.orderBy !== undefined || from.by !== undefined) {
+            if (to.orderBy === undefined && to.by === undefined) {
+              if (from.orderBy) {
+                to.orderBy = from.orderBy;
+              } else if (from.by) {
+                to.by = from.by;
+              }
+            } else {
+              this.log('refinement cannot override existing ordering');
             }
-          } else {
-            this.log('refinement cannot override existing ordering');
+          }
+
+          if (from.limit !== undefined) {
+            if (to.limit === undefined) {
+              to.limit = from.limit;
+            } else {
+              this.log('refinement cannot override existing limit');
+            }
           }
         }
 
-        if (from.limit !== undefined) {
-          if (to.limit === undefined) {
-            to.limit = from.limit;
-          } else {
-            this.log('refinement cannot override existing limit');
-          }
-        }
-      }
+        to.filterList =
+          to.filterList !== undefined || from.filterList !== undefined
+            ? [...(to.filterList ?? []), ...(from.filterList ?? [])]
+            : undefined;
 
-      to.filterList =
-        to.filterList !== undefined || from.filterList !== undefined
-          ? [...(to.filterList ?? []), ...(from.filterList ?? [])]
-          : undefined;
-
-      const overlappingFields: (QueryFieldDef | string)[] = [];
-      const nonOverlappingFields: (QueryFieldDef | string)[] = [];
-      const existingNames = new Map<string, QueryFieldDef | string>(
-        to.fields.map(
-          (f: QueryFieldDef | string): [string, QueryFieldDef | string] => [
-            extractName(f),
-            f,
-          ]
-        )
-      );
-      for (const field of from.fields) {
-        if (existingNames.has(extractName(field))) {
-          overlappingFields.push(field);
-        } else {
-          nonOverlappingFields.push(field);
-        }
-      }
-
-      to.fields = [...to.fields, ...nonOverlappingFields];
-      if (overlappingFields.length > 0) {
-        this.log(
-          `overlapping fields in refinement: ${overlappingFields.map(
-            extractName
-          )}`
+        const overlappingFields: (QueryFieldDef | string)[] = [];
+        const nonOverlappingFields: (QueryFieldDef | string)[] = [];
+        const existingNames = new Map<string, QueryFieldDef | string>(
+          to.fields.map(
+            (f: QueryFieldDef | string): [string, QueryFieldDef | string] => [
+              extractName(f),
+              f,
+            ]
+          )
         );
+        for (const field of from.fields) {
+          if (existingNames.has(extractName(field))) {
+            overlappingFields.push(field);
+          } else {
+            nonOverlappingFields.push(field);
+          }
+        }
+
+        to.fields = [...to.fields, ...nonOverlappingFields];
+        if (overlappingFields.length > 0) {
+          this.log(
+            `overlapping fields in refinement: ${overlappingFields.map(
+              extractName
+            )}`
+          );
+        }
       }
     }
 

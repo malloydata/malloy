@@ -615,6 +615,8 @@ describe('sql expressions', () => {
     }
   });
 
+  // TODO add a test for the error you get by trying to refine a sql query
+
   test('reference to sql expression in join', () => {
     const m = model`
       source: quux is a extend {

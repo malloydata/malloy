@@ -250,7 +250,6 @@ segExpr
 
 vExpr
   : segExpr                        # VSeg
-  | OPAREN segExpr CPAREN          # VParen
   | lhs=segExpr ARROW rhs=segExpr  # VArrow
   ;
 

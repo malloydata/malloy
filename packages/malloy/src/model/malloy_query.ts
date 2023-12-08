@@ -64,6 +64,7 @@ import {
   isParameterFragment,
   isPhysical,
   isQuerySegment,
+  isRawSegment,
   isSpreadFragment,
   isSQLExpressionFragment,
   isUngroupFragment,
@@ -1281,7 +1282,10 @@ class FieldInstanceResult implements FieldInstance {
   }
 
   getQueryInfo(): QueryInfo {
-    if (!isIndexSegment(this.firstSegment)) {
+    if (
+      !isIndexSegment(this.firstSegment) &&
+      !isRawSegment(this.firstSegment)
+    ) {
       const {queryTimezone} = this.firstSegment;
       if (queryTimezone) {
         return {queryTimezone};
@@ -1921,6 +1925,13 @@ class QueryQuery extends QueryField {
           stageWriter,
           isJoinedSubquery
         );
+      case 'raw':
+        return new QueryQueryRaw(
+          flatTurtleDef,
+          parent,
+          stageWriter,
+          isJoinedSubquery
+        );
       case 'partial':
         throw new Error('Attempt to make query out of partial stage');
     }
@@ -2429,7 +2440,7 @@ class QueryQuery extends QueryField {
 
       const lastSegment =
         fi.turtleDef.pipeline[fi.turtleDef.pipeline.length - 1];
-      const limit = lastSegment.limit;
+      const limit = isRawSegment(lastSegment) ? undefined : lastSegment.limit;
       let orderBy: OrderBy[] | undefined = undefined;
       if (isQuerySegment(lastSegment)) {
         orderBy = lastSegment.orderBy;
@@ -2835,7 +2846,7 @@ class QueryQuery extends QueryField {
     );
 
     // limit
-    if (this.firstSegment.limit) {
+    if (!isRawSegment(this.firstSegment) && this.firstSegment.limit) {
       s += `LIMIT ${this.firstSegment.limit}\n`;
     }
     this.resultStage = stageWriter.addStage(s);
@@ -3258,7 +3269,7 @@ class QueryQuery extends QueryField {
     );
 
     // limit
-    if (this.firstSegment.limit) {
+    if (!isRawSegment(this.firstSegment) && this.firstSegment.limit) {
       s += `LIMIT ${this.firstSegment.limit}\n`;
     }
 
@@ -3281,7 +3292,9 @@ class QueryQuery extends QueryField {
     // let fieldsSQL: string[] = [];
     const dialectFieldList: DialectFieldList = [];
     let orderBy = '';
-    const limit: number | undefined = resultStruct.firstSegment.limit;
+    const limit = isRawSegment(resultStruct.firstSegment)
+      ? undefined
+      : resultStruct.firstSegment.limit;
 
     // calculate the ordering.
     const obSQL: string[] = [];
@@ -3662,7 +3675,7 @@ class QueryQueryIndexStage extends QueryQuery {
     s += 'GROUP BY 1,2,3,4\n';
 
     // limit
-    if (this.firstSegment.limit) {
+    if (!isRawSegment(this.firstSegment) && this.firstSegment.limit) {
       s += `LIMIT ${this.firstSegment.limit}\n`;
     }
     // console.log(s);
@@ -3676,6 +3689,33 @@ class QueryQueryIndexStage extends QueryQuery {
 FROM ${resultStage}\n`
     );
     return this.resultStage;
+  }
+}
+
+class QueryQueryRaw extends QueryQuery {
+  generateSQL(stageWriter: StageWriter): string {
+    const ssrc = this.parent.fieldDef.structSource;
+    if (ssrc.type !== 'sql' || ssrc.method !== 'subquery') {
+      throw new Error(
+        'Invalid struct for QueryQueryRaw, currently only supports SQL'
+      );
+    }
+    const s = ssrc.sqlBlock.selectStr;
+    return stageWriter.addStage(s);
+  }
+
+  prepare() {
+    // Do nothing!
+  }
+
+  getResultStructDef(): StructDef {
+    return this.parent.fieldDef;
+  }
+
+  getResultMetadata(
+    _fi: FieldInstance
+  ): ResultStructMetadataDef | ResultMetadataDef | undefined {
+    return undefined;
   }
 }
 

@@ -26,6 +26,7 @@ import {MalloyElement, ModelEntryReference} from '../types/malloy-element';
 import {QueryComp} from '../types/query-comp';
 import {QueryHeadStruct} from './query-head-struct';
 import {Query} from '../../../model/malloy_types';
+import {getFinalStruct} from '../struct-utils';
 
 export class QueryReference extends MalloyElement {
   elementType = 'query-reference';
@@ -37,7 +38,7 @@ export class QueryReference extends MalloyElement {
   // TODO not using isRefOk
   queryComp(isRefOk: boolean): QueryComp {
     const headEntry = this.modelEntry(this.name);
-    const head = headEntry?.entry;
+    const query = headEntry?.entry;
     const oops = function () {
       return {
         inputStruct: ErrorFactory.structDef,
@@ -45,19 +46,19 @@ export class QueryReference extends MalloyElement {
         query: ErrorFactory.query,
       };
     };
-    if (!head) {
+    if (!query) {
       this.log(`Reference to undefined query '${this.name.refString}'`);
       return oops();
     }
-    if (head.type === 'query') {
-      const queryHead = new QueryHeadStruct(head.structRef);
+    if (query.type === 'query') {
+      const queryHead = new QueryHeadStruct(query.structRef);
       this.has({queryHead: queryHead});
-      const exploreStruct = queryHead.structDef();
-      // TODO one of these is definitely wrong...
+      const inputStruct = queryHead.structDef();
+      const outputStruct = getFinalStruct(this, inputStruct, query.pipeline);
       return {
-        query: head,
-        outputStruct: exploreStruct,
-        inputStruct: exploreStruct,
+        query,
+        outputStruct,
+        inputStruct,
       };
     }
     this.log(`Illegal reference to '${this.name}', query expected`);

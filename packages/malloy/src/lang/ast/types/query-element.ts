@@ -25,10 +25,14 @@ import {MalloyElement} from './malloy-element';
 import {QArrow} from '../query-elements/arrow';
 import {QRefine} from '../query-elements/refine';
 import {QueryReference} from '../query-elements/query-reference';
+import {RawQuery} from '../query-elements/raw-query';
 
-export type QueryElement = QArrow | QRefine | QueryReference;
+export type QueryElement = QArrow | QRefine | QueryReference | RawQuery;
 export function isQueryElement(e: MalloyElement): e is QueryElement {
   return (
-    e instanceof QArrow || e instanceof QRefine || e instanceof QueryReference
+    e instanceof QArrow ||
+    e instanceof QRefine ||
+    e instanceof QueryReference ||
+    e instanceof RawQuery
   );
 }

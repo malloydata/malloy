@@ -33,6 +33,7 @@ import {QArrow} from '../query-elements/arrow';
 import {QRefine} from '../query-elements/refine';
 import {QueryReference} from '../query-elements/query-reference';
 import {View} from '../query-elements/view';
+import {RawQuery} from '../query-elements/raw-query';
 
 export class SQReference extends SourceQueryNode {
   elementType = 'sqReference';
@@ -229,10 +230,8 @@ export class SQSourceWrapper extends SourceQueryNode {
   }
 
   getQuery() {
-    // TODO previously this returned an "empty" full query... I'm not sure when this is necessary
-    this.sqLog(
-      'This source should be explicity wrapped in an Arrow, not auto-wrapped'
-    );
-    return undefined;
+    const rawQuery = new RawQuery(this.theSource);
+    this.has({rawQuery});
+    return rawQuery;
   }
 }
