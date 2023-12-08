@@ -1676,11 +1676,6 @@ export class MalloyToAST
     );
   }
 
-  visitVParen(pcx: parse.VParenContext) {
-    // TODO maybe make an actual pass-through node in the AST
-    return this.visit(pcx.segExpr());
-  }
-
   visitSegParen(pcx: parse.SegParenContext) {
     // TODO maybe make an actual pass-through node in the AST
     return this.visit(pcx.vExpr());
