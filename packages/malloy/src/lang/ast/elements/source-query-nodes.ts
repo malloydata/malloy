@@ -22,22 +22,17 @@
  */
 
 import {RefinedSource} from './refined-source';
-import {MalloyElement, ModelEntryReference} from '../types/malloy-element';
+import {ModelEntryReference} from '../types/malloy-element';
 import {Source} from './source';
 import {SourceQueryNode} from './source-query';
 import {QueryElement} from '../types/query-element';
 import {QuerySource} from '../sources/query-source';
 import {NamedSource} from '../sources/named-source';
 import {SourceDesc} from '../types/source-desc';
-import {QOpDesc} from '../query-properties/qop-desc';
-import {ViewOrScalarFieldReference} from '../query-items/field-references';
-import {QueryProperty, isQueryProperty} from '../types/query-property';
-import {SourceProperty, isSourceProperty} from '../types/source-property';
-import {LogSeverity} from '../../parse-log';
 import {QArrow} from '../query-elements/arrow';
 import {QRefine} from '../query-elements/refine';
 import {QueryReference} from '../query-elements/query-reference';
-import {QOpDescView, View} from '../query-elements/view';
+import {View} from '../query-elements/view';
 
 export class SQReference extends SourceQueryNode {
   elementType = 'sqReference';
@@ -96,80 +91,6 @@ export class SQReference extends SourceQueryNode {
   }
 }
 
-export class SQLegacyModify extends SourceQueryNode {
-  elementType = 'sqLogacyModify';
-  constructor(
-    readonly sourceQuery: SourceQueryNode,
-    readonly plus: MalloyElement[],
-    readonly hasPlus: boolean,
-    readonly m4Severity: LogSeverity | false
-  ) {
-    super({sourceQuery, plus});
-  }
-
-  getQuery() {
-    const asQuery = this.sourceQuery.getQuery();
-    if (!asQuery) {
-      return;
-    }
-    if (!this.hasPlus && this.m4Severity) {
-      this.log(
-        'Implicit query refinement is deprecated, use the `+` operator',
-        this.m4Severity
-      );
-    }
-    const stmts: QueryProperty[] = [];
-    for (const stmt of this.plus) {
-      if (isQueryProperty(stmt)) {
-        stmts.push(stmt);
-      } else {
-        // just for typing, should never happen because this is an ambiguous modification
-        stmt.log('Unable to add this refinement to query');
-      }
-    }
-    const refinedQuery = new QRefine(
-      asQuery,
-      new QOpDescView(new QOpDesc(stmts))
-    );
-    this.has({refinedQuery});
-    return refinedQuery;
-  }
-
-  getSource() {
-    let asSource = this.sourceQuery.getSource();
-    if (!asSource) {
-      return;
-    }
-    if (this.m4Severity) {
-      if (this.hasPlus) {
-        this.log(
-          'Source extension with "+" is deprecated, use the "extend" operator',
-          this.m4Severity
-        );
-      } else {
-        this.log(
-          'Implicit source extension is deprecated, use the `extend` operator.',
-          this.m4Severity
-        );
-      }
-    }
-    const stmts: SourceProperty[] = [];
-    for (const stmt of this.plus) {
-      if (isSourceProperty(stmt)) {
-        stmts.push(stmt);
-      }
-    }
-    const extend = new SourceDesc(stmts);
-    asSource = new RefinedSource(asSource, extend);
-    this.has({asSource});
-    return asSource;
-  }
-
-  isSource() {
-    return this.sourceQuery.isSource();
-  }
-}
-
 export class SQExtendedSource extends SourceQueryNode {
   elementType = 'sqExtendedSource';
   asSource?: RefinedSource;
@@ -198,8 +119,6 @@ export class SQExtendedSource extends SourceQueryNode {
     return true;
   }
 }
-
-export type ArrowViewComponent = ViewOrScalarFieldReference | QOpDesc;
 
 export class SQAppendView extends SourceQueryNode {
   elementType = 'sqAppendView';
