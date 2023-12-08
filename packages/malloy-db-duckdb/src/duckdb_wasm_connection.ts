@@ -23,13 +23,8 @@
 
 import * as duckdb from '@malloydata/duckdb-wasm';
 import Worker from 'web-worker';
-import {
-  FetchSchemaOptions,
-  QueryDataRow,
-  RunSQLOptions,
-  StructDef,
-  SQLBlock,
-} from '@malloydata/malloy';
+import {FetchSchemaOptions, RunSQLOptions} from '@malloydata/malloy';
+import {QueryDataRow, StructDef, SQLBlock} from '@malloydata/malloy-interfaces';
 import {StructRow, Table, Vector} from 'apache-arrow';
 import {DuckDBCommon, QueryOptionsReader} from './duckdb_common';
 

@@ -33,7 +33,7 @@ import {
   Query,
   SQLBlockStructDef,
   StructDef,
-} from '../../../model/malloy_types';
+} from '@malloydata/malloy-interfaces';
 import {Tag} from '../../../tags';
 import {LogSeverity, MessageLogger} from '../../parse-log';
 import {MalloyTranslation} from '../../parse-malloy';

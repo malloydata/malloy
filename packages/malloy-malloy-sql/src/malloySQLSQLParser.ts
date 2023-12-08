@@ -22,7 +22,7 @@
  */
 
 // taze: RegExpExecArray.groups from //third_party/javascript/node_modules/typescript:es2018.regexp
-import {DocumentRange, DocumentPosition} from '@malloydata/malloy';
+import {DocumentRange, DocumentPosition} from '@malloydata/malloy-interfaces';
 import * as parser from './grammar/malloySQLSQL';
 import {
   MalloySQLSQLParseResults,

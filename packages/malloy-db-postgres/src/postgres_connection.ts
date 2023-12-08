@@ -28,6 +28,7 @@
 //
 
 import * as crypto from 'crypto';
+import {PostgresDialect, RunSQLOptions} from '@malloydata/malloy';
 import {
   Connection,
   FetchSchemaOptions,
@@ -35,15 +36,13 @@ import {
   NamedStructDefs,
   PersistSQLResults,
   PooledConnection,
-  PostgresDialect,
   QueryData,
   QueryDataRow,
   QueryRunStats,
-  RunSQLOptions,
   SQLBlock,
   StreamingConnection,
   StructDef,
-} from '@malloydata/malloy';
+} from '@malloydata/malloy-interfaces';
 import {Client, Pool} from 'pg';
 import QueryStream from 'pg-query-stream';
 import {randomUUID} from 'crypto';

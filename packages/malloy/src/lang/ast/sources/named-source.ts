@@ -22,13 +22,13 @@
  */
 
 import {
-  isCastType,
   isSQLBlockStruct,
+  isCastType,
   isValueParameter,
   paramHasValue,
   StructDef,
   StructRef,
-} from '../../../model/malloy_types';
+} from '@malloydata/malloy-interfaces';
 
 import {Source} from '../elements/source';
 import {ErrorFactory} from '../error-factory';

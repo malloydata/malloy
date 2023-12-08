@@ -37,7 +37,7 @@ import {
   isSamplingRows,
   mkExpr,
   FieldAtomicTypeDef,
-} from '../../model/malloy_types';
+} from '@malloydata/malloy-interfaces';
 import {indent} from '../../model/utils';
 import {DialectFunctionOverloadDef} from '../functions';
 import {DUCKDB_FUNCTIONS} from './functions';

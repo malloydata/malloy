@@ -21,5 +21,4 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export * from './malloy_types';
 export {Segment, QueryModel, flattenQuery} from './malloy_query';

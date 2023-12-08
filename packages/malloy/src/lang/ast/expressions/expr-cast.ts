@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {AtomicFieldType, CastType} from '../../../model';
+import {AtomicFieldType, CastType} from '@malloydata/malloy-interfaces';
 import {castTo} from '../time-utils';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';

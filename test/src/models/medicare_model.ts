@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {StructDef} from '@malloydata/malloy';
+import {StructDef} from '@malloydata/malloy-interfaces';
 
 // will it build?
 

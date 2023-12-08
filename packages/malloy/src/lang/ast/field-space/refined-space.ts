@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {StructDef} from '../../../model/malloy_types';
+import {StructDef} from '@malloydata/malloy-interfaces';
 import {FieldListEdit} from '../source-properties/field-list-edit';
 import {DynamicSpace} from './dynamic-space';
 import {canMakeEntry} from '../types/space-entry';

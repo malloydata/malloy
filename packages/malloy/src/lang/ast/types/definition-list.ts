@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Annotation} from '../../../model';
+import {Annotation} from '@malloydata/malloy-interfaces';
 import {ListOf, MalloyElement} from './malloy-element';
 import {Noteable, extendNoteHelper, isNoteable} from '../types/noteable';
 

@@ -29,7 +29,7 @@ import {
   QueryRunStats,
   SQLBlock,
   StructDef,
-} from './model/malloy_types';
+} from '@malloydata/malloy-interfaces';
 import {Dialect} from './dialect';
 
 /**

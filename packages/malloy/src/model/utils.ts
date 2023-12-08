@@ -22,7 +22,7 @@
  */
 
 import {v5 as uuidv5} from 'uuid';
-import {Expr, Fragment} from './malloy_types';
+import {Expr, Fragment} from '@malloydata/malloy-interfaces';
 
 /** simple indent function */
 export function indent(s: string): string {

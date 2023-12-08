@@ -25,7 +25,7 @@ import {
   StructDef,
   StructRef,
   SQLBlockSource,
-} from '../../../model/malloy_types';
+} from '@malloydata/malloy-interfaces';
 import {makeSQLBlock} from '../../../model/sql_block';
 import {NeedCompileSQL} from '../../translate-response';
 import {Source} from '../elements/source';

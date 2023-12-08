@@ -26,7 +26,7 @@ import {
   expressionIsUngroupedAggregate,
   FieldValueType,
   UngroupFragment,
-} from '../../../model/malloy_types';
+} from '@malloydata/malloy-interfaces';
 
 import {errorFor} from '../ast-utils';
 import {QuerySpace} from '../field-space/query-spaces';

@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {StructRelationship} from '../../../model';
+import {StructRelationship} from '@malloydata/malloy-interfaces';
 import {SpaceEntry} from './space-entry';
 
 export interface LookupFound {

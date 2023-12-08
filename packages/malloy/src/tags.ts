@@ -49,7 +49,7 @@ import {
 import {parseString} from './lang/parse-utils';
 import {LogMessage} from './lang';
 import cloneDeep from 'lodash/cloneDeep';
-import {Annotation, Note} from './model';
+import {Annotation, Note} from '@malloydata/malloy-interfaces';
 
 // The distinction between the interface and the Tag class exists solely to
 // make it possible to write tests and specify expected results This

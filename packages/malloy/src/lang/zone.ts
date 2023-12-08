@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DocumentLocation} from '../model/malloy_types';
+import {DocumentLocation} from '@malloydata/malloy-interfaces';
 
 export type ZoneData<TValue> = Record<string, TValue>;
 

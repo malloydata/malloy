@@ -22,6 +22,7 @@
  */
 
 import * as malloy from '@malloydata/malloy';
+import {SQLBlock} from '@malloydata/malloy-interfaces';
 import {BigQueryConnection} from './bigquery_connection';
 import {BigQuery as BigQuerySDK, TableMetadata} from '@google-cloud/bigquery';
 import * as util from 'util';
@@ -279,7 +280,7 @@ product_category,
 created_at AS inventory_items_created_at
 FROM "inventory_items.parquet"
 `,
-} as malloy.SQLBlock;
+} as SQLBlock;
 
 const SQL_BLOCK_2 = {
   type: 'sqlBlock',
@@ -297,4 +298,4 @@ product_category,
 created_at AS inventory_items_created_at
 FROM read_parquet("inventory_items2.parquet")
 `,
-} as malloy.SQLBlock;
+} as SQLBlock;

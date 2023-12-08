@@ -28,7 +28,7 @@ import {
   Query,
   StructDef,
   StructRelationship,
-} from '@malloydata/malloy';
+} from '@malloydata/malloy-interfaces';
 import {describeIfDatabaseAvailable, fStringLike} from '../../util';
 
 import * as malloy from '@malloydata/malloy';

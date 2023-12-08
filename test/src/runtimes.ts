@@ -22,14 +22,16 @@
  */
 
 import {
-  Connection,
   EmptyURLReader,
-  MalloyQueryData,
-  QueryDataRow,
   Result,
   RunSQLOptions,
   SingleConnectionRuntime,
 } from '@malloydata/malloy';
+import {
+  Connection,
+  MalloyQueryData,
+  QueryDataRow,
+} from '@malloydata/malloy-interfaces';
 import {BigQueryConnection} from '@malloydata/db-bigquery';
 import {DuckDBConnection} from '@malloydata/db-duckdb';
 import {DuckDBWASMConnection} from '@malloydata/db-duckdb/wasm';

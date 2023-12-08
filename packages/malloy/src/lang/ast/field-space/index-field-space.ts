@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {IndexSegment, PipeSegment} from '../../../model/malloy_types';
+import {IndexSegment, PipeSegment} from '@malloydata/malloy-interfaces';
 import {
   FieldReference,
   WildcardFieldReference,

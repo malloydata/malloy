@@ -36,7 +36,7 @@ import {
   isSamplingRows,
   mkExpr,
   FieldAtomicTypeDef,
-} from '../../model/malloy_types';
+} from '@malloydata/malloy-interfaces';
 import {POSTGRES_FUNCTIONS} from './functions';
 import {DialectFunctionOverloadDef} from '../functions';
 import {Dialect, DialectFieldList, QueryInfo, qtz} from '../dialect';

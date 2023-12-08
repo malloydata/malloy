@@ -49,7 +49,6 @@ import {
   NamedQuery,
   QueryData,
   QueryDataRow,
-  QueryModel,
   QueryResult,
   SQLBlock,
   SQLBlockSource,
@@ -59,7 +58,6 @@ import {
   StructDef,
   TurtleDef,
   expressionIsCalculation,
-  flattenQuery,
   isSQLBlockStruct,
   isSQLFragment,
   FieldUnsupportedDef,
@@ -67,7 +65,8 @@ import {
   ImportLocation,
   Annotation,
   NamedModelObject,
-} from './model';
+} from '@malloydata/malloy-interfaces';
+import {QueryModel, flattenQuery} from './model';
 import {
   Connection,
   InfoConnection,

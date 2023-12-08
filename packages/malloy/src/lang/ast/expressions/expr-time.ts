@@ -26,7 +26,7 @@ import {
   Fragment,
   TimeFieldType,
   isTimeFieldType,
-} from '../../../model/malloy_types';
+} from '@malloydata/malloy-interfaces';
 
 import {FieldSpace} from '../types/field-space';
 import {compressExpr} from './utils';

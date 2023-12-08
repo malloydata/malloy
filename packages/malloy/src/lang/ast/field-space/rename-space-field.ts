@@ -25,7 +25,7 @@ import {
   DocumentLocation,
   FieldDef,
   TypeDesc,
-} from '../../../model/malloy_types';
+} from '@malloydata/malloy-interfaces';
 
 import {SpaceField} from '../types/space-field';
 

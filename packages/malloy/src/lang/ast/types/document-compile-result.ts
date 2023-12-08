@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ModelDef, Query, SQLBlockStructDef} from '../../../model/malloy_types';
+import {ModelDef, Query, SQLBlockStructDef} from '@malloydata/malloy-interfaces';
 
 import {ModelDataRequest} from '../../translate-response';
 

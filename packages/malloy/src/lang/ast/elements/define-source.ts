@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Annotation, StructDef} from '../../../model/malloy_types';
+import {Annotation, StructDef} from '@malloydata/malloy-interfaces';
 
 import {ErrorFactory} from '../error-factory';
 import {HasParameter} from '../parameters/has-parameter';

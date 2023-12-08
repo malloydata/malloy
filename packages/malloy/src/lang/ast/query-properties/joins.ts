@@ -26,7 +26,7 @@ import {
   Expr,
   isJoinOn,
   StructDef,
-} from '../../../model/malloy_types';
+} from '@malloydata/malloy-interfaces';
 import {compressExpr} from '../expressions/utils';
 import {DynamicSpace} from '../field-space/dynamic-space';
 import {JoinSpaceField} from '../field-space/join-space-field';

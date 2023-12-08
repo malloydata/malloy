@@ -30,7 +30,7 @@ import {
   isAtomicFieldType,
   FieldValueType,
   CastType,
-} from '../../model/malloy_types';
+} from '@malloydata/malloy-interfaces';
 
 import {compressExpr} from './expressions/utils';
 import {TimeResult} from './types/time-result';

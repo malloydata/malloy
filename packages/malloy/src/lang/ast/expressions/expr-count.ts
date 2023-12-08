@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {AggregateFragment} from '../../../model/malloy_types';
+import {AggregateFragment} from '@malloydata/malloy-interfaces';
 
 import {FieldReference} from '../query-items/field-references';
 import {ExprValue} from '../types/expr-value';

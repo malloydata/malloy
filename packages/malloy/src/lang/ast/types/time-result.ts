@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {TimeFieldType, TimestampUnit} from '../../../model/malloy_types';
+import {TimeFieldType, TimestampUnit} from '@malloydata/malloy-interfaces';
 
 import {ExprResult} from './expr-result';
 

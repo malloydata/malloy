@@ -25,7 +25,7 @@ import {
   By as ModelBy,
   expressionIsAggregate,
   expressionIsAnalytic,
-} from '../../../model/malloy_types';
+} from '@malloydata/malloy-interfaces';
 
 import {compressExpr} from '../expressions/utils';
 import {ExpressionDef} from '../types/expression-def';

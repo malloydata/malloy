@@ -28,7 +28,7 @@ import {
   StructDef,
   isSQLBlockStruct,
   isSQLFragment,
-} from '../../model';
+} from '@malloydata/malloy-interfaces';
 import {makeSQLBlock} from '../../model/sql_block';
 import {TestTranslator, aTableDef} from './test-translator';
 import './parse-expects';

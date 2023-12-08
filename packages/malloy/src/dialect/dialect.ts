@@ -33,7 +33,7 @@ import {
   TypecastFragment,
   mkExpr,
   FieldAtomicTypeDef,
-} from '../model/malloy_types';
+} from '@malloydata/malloy-interfaces';
 import {DialectFunctionOverloadDef} from './functions';
 
 interface DialectField {

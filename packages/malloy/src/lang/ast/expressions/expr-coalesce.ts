@@ -21,7 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {maxExpressionType, mergeEvalSpaces, mkExpr} from '../../../model';
+import {
+  maxExpressionType,
+  mergeEvalSpaces,
+  mkExpr,
+} from '@malloydata/malloy-interfaces';
 import {FT} from '../fragtype-utils';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';

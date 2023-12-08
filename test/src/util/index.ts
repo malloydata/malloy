@@ -22,12 +22,14 @@
  */
 
 import {
-  FilterExpression,
-  Fragment,
   QueryMaterializer,
   Result,
   Runtime,
 } from '@malloydata/malloy';
+import {
+  FilterExpression,
+  Fragment,
+} from '@malloydata/malloy-interfaces';
 
 export function fStringEq(field: string, value: string): FilterExpression {
   return {

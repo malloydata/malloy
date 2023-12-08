@@ -29,7 +29,7 @@ import {
   isAtomicFieldType,
   isFilteredAliasedName,
   hasExpression,
-} from '../../../model/malloy_types';
+} from '@malloydata/malloy-interfaces';
 
 import {FieldReference} from '../query-items/field-references';
 import {FieldSpace} from '../types/field-space';

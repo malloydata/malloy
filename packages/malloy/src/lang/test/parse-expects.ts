@@ -23,7 +23,7 @@
  */
 
 import {MalloyTranslator, TranslateResponse} from '..';
-import {DocumentLocation, DocumentRange} from '../../model';
+import {DocumentLocation, DocumentRange} from '@malloydata/malloy-interfaces';
 import {
   BetaExpression,
   MarkedSource,

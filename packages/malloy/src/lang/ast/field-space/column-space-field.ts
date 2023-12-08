@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FieldDef, FieldTypeDef, TypeDesc} from '../../../model/malloy_types';
+import {FieldDef, FieldTypeDef, TypeDesc} from '@malloydata/malloy-interfaces';
 
 import {SpaceField} from '../types/space-field';
 

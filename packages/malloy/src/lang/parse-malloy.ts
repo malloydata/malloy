@@ -40,7 +40,7 @@ import {
   Query,
   SQLBlockStructDef,
   StructDef,
-} from '../model/malloy_types';
+} from '@malloydata/malloy-interfaces';
 import {MalloyLexer} from './lib/Malloy/MalloyLexer';
 import {MalloyParser} from './lib/Malloy/MalloyParser';
 import * as ast from './ast';

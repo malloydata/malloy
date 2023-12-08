@@ -22,7 +22,7 @@
  */
 
 import {PostgresConnection} from './postgres_connection';
-import {SQLBlock} from '@malloydata/malloy';
+import {SQLBlock} from '@malloydata/malloy-interfaces';
 
 /*
  * !IMPORTANT

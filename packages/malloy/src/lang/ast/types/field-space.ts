@@ -22,7 +22,7 @@
  */
 
 import {Dialect} from '../../../dialect/dialect';
-import {StructDef} from '../../../model/malloy_types';
+import {StructDef} from '@malloydata/malloy-interfaces';
 
 import {LookupResult} from './lookup-result';
 import {MalloyElement} from './malloy-element';

@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Parameter, CastType, isCastType} from '../../../model/malloy_types';
+import {Parameter, CastType, isCastType} from '@malloydata/malloy-interfaces';
 
 import {ConstantSubExpression} from '../expressions/constant-sub-expression';
 import {MalloyElement} from '../types/malloy-element';

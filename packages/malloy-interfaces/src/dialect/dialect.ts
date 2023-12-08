@@ -32,7 +32,7 @@ import {
   TimestampUnit,
   TypecastFragment,
   mkExpr,
-} from '../model/malloy_types';
+} from '../model';
 import {DialectFunctionOverloadDef} from './functions';
 
 interface DialectField {

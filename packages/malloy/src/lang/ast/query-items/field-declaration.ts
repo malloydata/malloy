@@ -30,7 +30,7 @@ import {
   TypeDesc,
   FieldDef,
   QueryFieldDef,
-} from '../../../model/malloy_types';
+} from '@malloydata/malloy-interfaces';
 
 import {compressExpr} from '../expressions/utils';
 import {FT} from '../fragtype-utils';

@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {PipeSegment} from '../../../model/malloy_types';
+import {PipeSegment} from '@malloydata/malloy-interfaces';
 import {QueryProperty} from './query-property';
 import {QueryInputSpace} from '../field-space/query-input-space';
 import {QuerySpace} from '../field-space/query-spaces';

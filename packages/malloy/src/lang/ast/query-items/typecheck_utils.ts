@@ -26,7 +26,7 @@ import {
   expressionIsAnalytic,
   expressionIsScalar,
   TypeDesc,
-} from '../../../model';
+} from '@malloydata/malloy-interfaces';
 import {MalloyElement} from '../types/malloy-element';
 
 export function typecheckProject(type: TypeDesc, logTo: MalloyElement) {

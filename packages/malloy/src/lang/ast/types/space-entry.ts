@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {TypeDesc} from '../../../model';
+import {TypeDesc} from '@malloydata/malloy-interfaces';
 import {DynamicSpace} from '../field-space/dynamic-space';
 import {MalloyElement} from './malloy-element';
 

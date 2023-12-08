@@ -42,13 +42,13 @@ import {
   unIndent,
   idToStr,
 } from './parse-utils';
-import {CastType} from '../model';
+import {CastType} from '@malloydata/malloy-interfaces';
 import {
   DocumentLocation,
   isCastType,
   isMatrixOperation,
   Note,
-} from '../model/malloy_types';
+} from '@malloydata/malloy-interfaces';
 import {Tag} from '../tags';
 
 class ErrorNode extends ast.SourceQueryNode {

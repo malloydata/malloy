@@ -27,65 +27,10 @@ export {
   PostgresDialect,
   registerDialect,
 } from './dialect';
-// TODO tighten up exports
-export type {
-  QueryDataRow,
-  // Currently needed only by tests
-  Fragment,
-  // Needed for DB
-  StructDef,
-  StructRelationship,
-  NamedStructDefs,
-  MalloyQueryData,
-  AtomicFieldType as AtomicFieldTypeInner,
-  DateUnit,
-  ExtractUnit,
-  TimestampUnit,
-  TimeFieldType,
-  QueryData,
-  QueryValue,
-  FieldTypeDef,
-  Expr,
-  DialectFragment,
-  TimeValue,
-  // Needed for drills in render
-  FilterExpression,
-  SQLBlock,
-  // Used in Composer Demo
-  FieldAtomicDef,
-  FieldDef,
-  FilteredAliasedName,
-  PipeSegment,
-  QueryFieldDef,
-  TurtleDef,
-  SearchValueMapResult,
-  SearchIndexResult,
-  ModelDef,
-  Query,
-  QueryRunStats,
-  NamedQuery,
-  NamedModelObject,
-  ExpressionType,
-  FunctionDef,
-  FunctionOverloadDef,
-  FunctionParameterDef,
-  ExpressionValueType,
-  TypeDesc,
-  FieldValueType,
-  ExpressionTypeDesc,
-  FunctionParamTypeDesc,
-  // used in MalloyError.log
-  DocumentLocation,
-  DocumentRange,
-  DocumentPosition,
-  Annotation,
-} from './model';
 export {
   // Used in Composer Demo
   Segment,
-  isFilteredAliasedName,
   flattenQuery,
-  expressionIsCalculation,
 } from './model';
 export {
   // Neede for VSCode extension
@@ -163,3 +108,5 @@ export type {
 } from './runtime_types';
 export {toAsyncGenerator} from './connection_utils';
 export {type TagParse, Tag, type TagDict} from './tags';
+
+//export {MalloyQueryData, DocumentLocation, DocumentRange} from '@malloydata/malloy-interfaces';

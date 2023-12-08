@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {SQLPhrase} from '../../../model/malloy_types';
+import {SQLPhrase} from '@malloydata/malloy-interfaces';
 
 import {MalloyElement} from '../types/malloy-element';
 import {SourceQueryNode} from '../elements/source-query';

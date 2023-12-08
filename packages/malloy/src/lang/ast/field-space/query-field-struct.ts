@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {QueryFieldDef, TurtleDef} from '../../../model/malloy_types';
+import {QueryFieldDef, TurtleDef} from '@malloydata/malloy-interfaces';
 
 import {QueryField} from './query-space-field';
 import {FieldSpace} from '../types/field-space';

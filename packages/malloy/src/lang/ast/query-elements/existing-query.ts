@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Query} from '../../../model/malloy_types';
+import {Query} from '@malloydata/malloy-interfaces';
 
 import {PipelineDesc} from '../elements/pipeline-desc';
 import {ErrorFactory} from '../error-factory';

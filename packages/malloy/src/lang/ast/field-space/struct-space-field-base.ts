@@ -26,7 +26,7 @@ import {
   StructDef,
   StructRelationship,
   TypeDesc,
-} from '../../../model/malloy_types';
+} from '@malloydata/malloy-interfaces';
 import {FieldSpace} from '../types/field-space';
 import {SpaceField} from '../types/space-field';
 

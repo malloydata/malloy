@@ -27,7 +27,7 @@ import {
   Annotation,
   StructDef,
   expressionIsCalculation,
-} from '../../../model/malloy_types';
+} from '@malloydata/malloy-interfaces';
 
 import {RefinedSpace} from '../field-space/refined-space';
 import {HasParameter} from '../parameters/has-parameter';

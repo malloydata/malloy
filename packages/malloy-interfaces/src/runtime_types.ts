@@ -28,7 +28,7 @@ import {
   QueryRunStats,
   SQLBlock,
   StructDef,
-} from './model/malloy_types';
+} from './model';
 import {Dialect} from './dialect';
 
 /**
