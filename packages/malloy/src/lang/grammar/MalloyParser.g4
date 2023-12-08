@@ -244,7 +244,7 @@ sqExpr
 segExpr
   : fieldPath                      # SegField
   | queryProperties                # SegOps
-  | OPAREN segExpr CPAREN          # SegParen
+  | OPAREN vExpr CPAREN            # SegParen
   | lhs=segExpr PLUS rhs=segExpr   # SegRefine
   ;
 
