@@ -413,7 +413,7 @@ export class HTMLTableRenderer extends ContainerRenderer {
         const drillIcon = createDrillIcon(this.document);
         drillCell.appendChild(drillIcon);
         drillCell.style.cssText = `
-          padding: 8px;
+          padding: 2px;
           vertical-align: top;
           border-bottom: 1px solid var(--malloy-border-color, #eaeaea);
           width: 25px;
