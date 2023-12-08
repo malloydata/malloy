@@ -27,7 +27,7 @@ import {DeclareFields} from '../query-properties/declare-fields';
 import {FieldListEdit} from '../source-properties/field-list-edit';
 import {Renames} from '../source-properties/renames';
 import {PrimaryKey} from '../source-properties/primary-key';
-import {Turtles} from '../source-properties/turtles';
+import {Views} from '../source-properties/turtles';
 import {MalloyElement} from './malloy-element';
 import {TimezoneStatement} from '../source-properties/timezone-statement';
 import {ObjectAnnotation} from './annotation-elements';
@@ -40,7 +40,7 @@ export type SourceProperty =
   | Renames
   | PrimaryKey
   | ObjectAnnotation
-  | Turtles
+  | Views
   | TimezoneStatement;
 export function isSourceProperty(p: MalloyElement): p is SourceProperty {
   return (
@@ -51,7 +51,7 @@ export function isSourceProperty(p: MalloyElement): p is SourceProperty {
     p instanceof Renames ||
     p instanceof PrimaryKey ||
     p instanceof ObjectAnnotation ||
-    p instanceof Turtles ||
+    p instanceof Views ||
     p instanceof TimezoneStatement
   );
 }

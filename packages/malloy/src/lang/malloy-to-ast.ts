@@ -235,10 +235,6 @@ export class MalloyToAST
     );
   }
 
-  protected getSegments(segments: parse.PipeElementContext[]): ast.QOPDesc[] {
-    return segments.map(cx => this.visitQueryProperties(cx.queryProperties()));
-  }
-
   protected getFilterShortcut(cx: parse.FilterShortcutContext): ast.Filter {
     const el = this.getFilterElement(cx.fieldExpr());
     this.m4advisory(
@@ -364,58 +360,10 @@ export class MalloyToAST
     return this.astAt(exploreDef, pcx);
   }
 
-  protected getQueryRefinements(
-    pcx: parse.QueryRefinementContext
-  ): ast.QOPDesc | ast.ViewOrScalarFieldReference {
-    const propertiesCx = pcx.queryProperties();
-    if (propertiesCx) {
-      const properties = this.astAt(
-        this.visitQueryProperties(propertiesCx),
-        pcx
-      );
-      if (pcx.REFINE()) {
-        this.m4advisory(
-          pcx,
-          'The experimental "refine" operator is deprecated, use the "+" operator'
-        );
-      } else if (!pcx.refineOperator()) {
-        this.m4advisory(
-          pcx,
-          'Implicit query refinement is deprecated, use the `+` operator'
-        );
-      }
-      return properties;
-    }
-    const fieldPathCx = pcx.fieldPath();
-    if (fieldPathCx) {
-      return this.astAt(
-        this.getFieldPath(fieldPathCx, ast.ViewOrScalarFieldReference),
-        fieldPathCx
-      );
-    }
-    throw this.internalError(
-      pcx,
-      'Expected either query properties or a view name in refinements'
-    );
-  }
-
   protected getSourceExtensions(
-    pcx: parse.SourceExtensionContext
+    extensions: parse.ExplorePropertiesContext
   ): ast.SourceDesc {
-    const extensions = pcx?.exploreProperties();
-    const sourceDesc = this.astAt(this.visitExploreProperties(extensions), pcx);
-    if (pcx.refineOperator()) {
-      this.m4advisory(
-        pcx,
-        'Source extension with "+" is deprecated, use the "extend" operator'
-      );
-    } else if (pcx.EXTEND() === undefined) {
-      this.m4advisory(
-        pcx,
-        'Implicit source extension is deprecated, use the `extend` operator.'
-      );
-    }
-    return sourceDesc;
+    return this.astAt(this.visitExploreProperties(extensions), extensions);
   }
 
   visitExploreProperties(pcx: parse.ExplorePropertiesContext): ast.SourceDesc {
@@ -693,17 +641,18 @@ export class MalloyToAST
     return this.astAt(having, pcx);
   }
 
-  visitSubQueryDefList(pcx: parse.SubQueryDefListContext): ast.Turtles {
+  visitSubQueryDefList(pcx: parse.SubQueryDefListContext): ast.Views {
     const babyTurtles = pcx
       .exploreQueryDef()
       .map(cx => this.visitExploreQueryDef(cx));
-    return new ast.Turtles(babyTurtles);
+    return new ast.Views(babyTurtles);
   }
 
   visitDefExploreQuery(pcx: parse.DefExploreQueryContext): ast.MalloyElement {
     const queryDefs = this.visitSubQueryDefList(pcx.subQueryDefList());
-    const blockNotes = this.getNotes(pcx.tags());
-    queryDefs.extendNote({blockNotes});
+    // TODO annotations
+    // const blockNotes = this.getNotes(pcx.tags());
+    // queryDefs.extendNote({blockNotes});
     if (pcx.QUERY()) {
       this.m4advisory(pcx, 'Use view: inside of a source instead of query:');
     }
@@ -759,7 +708,7 @@ export class MalloyToAST
     return this.astAt(timezoneStatement, cx);
   }
 
-  visitQueryProperties(pcx: parse.QueryPropertiesContext): ast.QOPDesc {
+  visitQueryProperties(pcx: parse.QueryPropertiesContext): ast.QOpDesc {
     const qProps = this.only<ast.QueryProperty>(
       pcx.queryStatement().map(qcx => this.astAt(this.visit(qcx), qcx)),
       x => ast.isQueryProperty(x) && x,
@@ -769,7 +718,7 @@ export class MalloyToAST
     if (fcx) {
       qProps.push(this.getFilterShortcut(fcx));
     }
-    return new ast.QOPDesc(qProps);
+    return new ast.QOpDesc(qProps);
   }
 
   getFieldPath(
@@ -1044,38 +993,6 @@ export class MalloyToAST
     return this.astAt(new ast.NamedSource(getId(pcx)), pcx);
   }
 
-  protected buildPipelineFromName(
-    pipe: ast.TurtleHeadedPipe,
-    pipeCx: parse.PipelineFromNameContext
-  ): void {
-    const firstCx = pipeCx.firstSegment();
-    if (firstCx.ARROW()) {
-      this.m4advisory(
-        firstCx,
-        "Leading '->' in a view or nest definition is no longer needed."
-      );
-    }
-    const nameCx = firstCx.fieldPath();
-    if (nameCx) {
-      pipe.turtleName = this.getFieldPath(
-        nameCx,
-        ast.ViewOrScalarFieldReference
-      );
-    }
-    const propsCx = firstCx.queryProperties();
-    if (propsCx) {
-      const queryDesc = this.visitQueryProperties(propsCx);
-      pipe.addSegments(queryDesc);
-    }
-    const rcxs = firstCx.queryRefinement();
-    if (rcxs.length > 0) {
-      const queryDescs = rcxs.map(rcx => this.getQueryRefinements(rcx));
-      pipe.refineWith(queryDescs);
-    }
-    const tail = this.getSegments(pipeCx.pipeElement());
-    pipe.addSegments(...tail);
-  }
-
   visitTopLevelQueryDefs(
     pcx: parse.TopLevelQueryDefsContext
   ): ast.DefineQueryList {
@@ -1146,37 +1063,36 @@ export class MalloyToAST
   }
 
   visitNestExisting(pcx: parse.NestExistingContext): ast.NestedQuery {
-    const name = this.getFieldPath(pcx.fieldPath(), ast.ViewFieldReference);
-    const rcxs = pcx.queryRefinement();
-    const notes = this.getNotes(pcx.tags());
-    if (rcxs.length > 0) {
-      const nestRefine = new ast.NestRefinement(name);
-      const queryDesc = rcxs.map(rcx => this.getQueryRefinements(rcx));
-      nestRefine.refineWith(queryDesc);
-      nestRefine.extendNote({notes});
+    const nameCx = pcx.fieldPath();
+    const name = this.getFieldPath(nameCx, ast.ViewFieldReference);
+    const refCx = pcx.vExpr();
+    // const notes = this.getNotes(pcx.tags());
+    if (refCx) {
+      const nestRefine = new ast.NestDefinition(
+        name.nameString,
+        this.getVExpr(refCx)
+      );
       return this.astAt(nestRefine, pcx);
     }
-    const nestRef = this.astAt(new ast.NestReference(name), pcx);
-    nestRef.extendNote({notes});
-    return nestRef;
+    return this.astAt(new ast.ReferenceView(name), pcx);
   }
 
   visitNestDef(pcx: parse.NestDefContext): ast.NestDefinition {
     const name = getId(pcx.queryName());
-    const nestDef = new ast.NestDefinition(name);
-    this.buildPipelineFromName(nestDef, pcx.pipelineFromName());
-    nestDef.extendNote({
-      notes: this.getNotes(pcx.tags()).concat(this.getIsNotes(pcx.isDefine())),
-    });
+    const vExpr = this.getVExpr(pcx.vExpr());
+    const nestDef = new ast.NestDefinition(name, vExpr);
+    // TODO fix annotations
+    // nestDef.extendNote({
+    //   notes: this.getNotes(pcx.tags()).concat(this.getIsNotes(pcx.isDefine())),
+    // });
     return this.astAt(nestDef, pcx);
   }
 
-  visitExploreQueryDef(pcx: parse.ExploreQueryDefContext): ast.TurtleDecl {
+  visitExploreQueryDef(pcx: parse.ExploreQueryDefContext): ast.ViewDefinition {
     const name = getId(pcx.exploreQueryNameDef());
-    const queryDef = new ast.TurtleDecl(name);
-    const notes = this.getNotes(pcx).concat(this.getIsNotes(pcx.isDefine()));
-    queryDef.extendNote({notes});
-    this.buildPipelineFromName(queryDef, pcx.pipelineFromName());
+    const queryDef = new ast.ViewDefinition(name, this.getVExpr(pcx.vExpr()));
+    // TODO annotations
+    // const notes = this.getNotes(pcx).concat(this.getIsNotes(pcx.isDefine()));
     return this.astAt(queryDef, pcx);
   }
 
@@ -1707,31 +1623,7 @@ export class MalloyToAST
     return new ast.ObjectAnnotation(allNotes);
   }
 
-  visitSQAmbiguous(pcx: parse.SQAmbiguousContext) {
-    const addCx = pcx.ambiguousModification();
-    const plus: ast.MalloyElement[] = [];
-    const filterCx = addCx.filterShortcut();
-    if (filterCx) {
-      plus.push(this.getFilterShortcut(filterCx));
-    }
-    for (const modifier of addCx.modEither()) {
-      plus.push(this.visit(modifier));
-    }
-    const sqExpr = this.getSqExpr(pcx.sqExpr());
-    const hasPlus = !!pcx.PLUS();
-    return this.astAt(
-      new ast.SQLegacyModify(sqExpr, plus, hasPlus, this.m4Severity()),
-      pcx
-    );
-  }
-
   visitSQID(pcx: parse.SQIDContext) {
-    if (pcx.ARROW()) {
-      this.m4advisory(
-        pcx,
-        'Leading arrow (`->`) when referencing a query is deprecated; remove the arrow'
-      );
-    }
     const ref = this.getModelEntryName(pcx);
     return this.astAt(new ast.SQReference(ref), pcx.id());
   }
@@ -1752,58 +1644,65 @@ export class MalloyToAST
     const extendSrc = this.getSqExpr(pcx.sqExpr());
     const src = new ast.SQExtendedSource(
       extendSrc,
-      this.getSourceExtensions(pcx.sourceExtension())
+      this.getSourceExtensions(pcx.exploreProperties())
     );
     return this.astAt(src, pcx);
   }
 
   visitSQArrow(pcx: parse.SQArrowContext) {
     const applyTo = this.getSqExpr(pcx.sqExpr());
-    const headCx = pcx.qSeg();
-    const headIdCx = headCx.fieldPath();
-    let head: ast.QOPDesc | ast.ViewOrScalarFieldReference | undefined;
-    if (headIdCx) {
-      head = this.getFieldPath(headIdCx, ast.ViewOrScalarFieldReference);
-    }
-    const qopCx = headCx.queryProperties();
-    if (qopCx) {
-      head = this.visitQueryProperties(qopCx);
-    }
-    if (head === undefined) {
-      throw this.internalError(
-        pcx,
-        'Expected either a head reference or query operations'
-      );
-    }
-    const sqExpr = new ast.SQAppendView(applyTo, head);
+    const headCx = pcx.segExpr();
+    const sqExpr = new ast.SQAppendView(applyTo, this.getVExpr(headCx));
     return this.astAt(sqExpr, pcx);
+  }
+
+  getVExpr(pcx: ParserRuleContext) {
+    const expr = this.visit(pcx);
+    if (expr instanceof ast.View) {
+      return expr;
+    }
+    throw this.internalError(pcx, `Expected view, got a '${expr.elementType}'`);
+  }
+
+  visitSegField(pcx: parse.SegFieldContext) {
+    return new ast.ReferenceView(
+      this.getFieldPath(pcx.fieldPath(), ast.ViewOrScalarFieldReference)
+    );
+  }
+
+  visitSegOps(pcx: parse.SegOpsContext) {
+    return new ast.QOpDescView(
+      this.visitQueryProperties(pcx.queryProperties())
+    );
+  }
+
+  visitVParen(pcx: parse.VParenContext) {
+    // TODO maybe make an actual pass-through node in the AST
+    return this.visit(pcx.segExpr());
+  }
+
+  visitSegParen(pcx: parse.SegParenContext) {
+    // TODO maybe make an actual pass-through node in the AST
+    return this.visit(pcx.segExpr());
+  }
+
+  visitVSeg(pcx: parse.VSegContext) {
+    return this.visit(pcx.segExpr());
+  }
+
+  visitSegRefine(pcx: parse.SegRefineContext) {
+    return new ast.VRefine(this.getVExpr(pcx._lhs), this.getVExpr(pcx._rhs));
+  }
+
+  visitVArrow(pcx: parse.VArrowContext) {
+    return new ast.VArrow(this.getVExpr(pcx._lhs), this.getVExpr(pcx._rhs));
   }
 
   visitSQRefinedQuery(pcx: parse.SQRefinedQueryContext) {
     const refineThis = this.getSqExpr(pcx.sqExpr());
-    const refine = pcx.queryRefinement();
-    if (refine.REFINE()) {
-      this.m4advisory(
-        refine,
-        'The `refine` keyword is deprecated, use the `+` operator'
-      );
-    }
-    const refined = new ast.SQRefinedQuery(
-      refineThis,
-      this.getQueryRefinements(refine)
-    );
+    const refine = pcx.segExpr();
+    const refined = new ast.SQRefinedQuery(refineThis, this.getVExpr(refine));
     return this.astAt(refined, pcx);
-  }
-
-  visitSQFrom(pcx: parse.SQFromContext) {
-    const fromThis = this.getSqExpr(pcx.sqExpr());
-    if (pcx.FROM()) {
-      this.m4advisory(
-        pcx,
-        '`from(some_query)` is deprecated; use `some_query` directly'
-      );
-    }
-    return this.astAt(new ast.SQFrom(fromThis), pcx);
   }
 
   visitSQTable(pcx: parse.SQTableContext) {
@@ -1813,16 +1712,6 @@ export class MalloyToAST
       return this.astAt(sqTable, pcx);
     }
     return new ErrorNode();
-  }
-
-  visitSQLegacySQLBlock(pcx: parse.SQLegacySQLBlockContext) {
-    const theBlock = this.getLegacySQLSouce(pcx.sqlExploreNameRef());
-    const sqExpr = new ast.SQSourceWrapper(theBlock);
-    this.m4advisory(
-      pcx,
-      '`from_sql` is deprecated; use `connection_name.sql(...)` as a source directly'
-    );
-    return this.astAt(sqExpr, pcx);
   }
 
   visitSQSQL(pcx: parse.SQSQLContext) {

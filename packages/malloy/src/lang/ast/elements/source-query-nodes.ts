@@ -29,17 +29,15 @@ import {QueryElement} from '../types/query-element';
 import {QuerySource} from '../sources/query-source';
 import {NamedSource} from '../sources/named-source';
 import {SourceDesc} from '../types/source-desc';
-import {QOPDesc} from '../query-properties/qop-desc';
-import {
-  ViewFieldReference,
-  ViewOrScalarFieldReference,
-} from '../query-items/field-references';
+import {QOpDesc} from '../query-properties/qop-desc';
+import {ViewOrScalarFieldReference} from '../query-items/field-references';
 import {QueryProperty, isQueryProperty} from '../types/query-property';
 import {SourceProperty, isSourceProperty} from '../types/source-property';
 import {LogSeverity} from '../../parse-log';
-import {Arrow} from '../query-elements/arrow';
-import {Refine} from '../query-elements/refine';
+import {QArrow} from '../query-elements/arrow';
+import {QRefine} from '../query-elements/refine';
 import {QueryReference} from '../query-elements/query-reference';
+import {QOpDescView, View} from '../query-elements/view';
 
 export class SQReference extends SourceQueryNode {
   elementType = 'sqReference';
@@ -129,7 +127,10 @@ export class SQLegacyModify extends SourceQueryNode {
         stmt.log('Unable to add this refinement to query');
       }
     }
-    const refinedQuery = new Refine(asQuery, new QOPDesc(stmts));
+    const refinedQuery = new QRefine(
+      asQuery,
+      new QOpDescView(new QOpDesc(stmts))
+    );
     this.has({refinedQuery});
     return refinedQuery;
   }
@@ -156,9 +157,6 @@ export class SQLegacyModify extends SourceQueryNode {
     for (const stmt of this.plus) {
       if (isSourceProperty(stmt)) {
         stmts.push(stmt);
-      } else {
-        // just for typing, should never happen because this is an ambiguous modification
-        stmt.log('Unable to add this extension to source');
       }
     }
     const extend = new SourceDesc(stmts);
@@ -201,37 +199,17 @@ export class SQExtendedSource extends SourceQueryNode {
   }
 }
 
-export type ArrowViewComponent = ViewOrScalarFieldReference | QOPDesc;
+export type ArrowViewComponent = ViewOrScalarFieldReference | QOpDesc;
 
 export class SQAppendView extends SourceQueryNode {
   elementType = 'sqAppendView';
   constructor(
     readonly applyTo: SourceQueryNode,
-    readonly operation: ViewOrScalarFieldReference | QOPDesc
+    readonly operation: View
   ) {
     super({applyTo, operation});
   }
 
-  /*
-
-    if the thing we are applying a view to as a query ... just add a segment
-      if the view is a segment
-
-    if it is a source then the first segment is allowed to be a string
-
-    all the rest of the segments are refinements to the first segment
-
-    which are usually illegal ... so patterns
-
-    src -> turtle // ok
-    src -> turtle + qop // ok second thing is a refinement
-    src -> qop // ok
-    query -> qop // ok
-
-    the grammar allows for a list of views and refinements ... these are not translated yet
-
-
-  */
   getQuery() {
     const lhs = this.applyTo.isSource()
       ? this.applyTo.getSource()
@@ -240,7 +218,7 @@ export class SQAppendView extends SourceQueryNode {
       this.sqLog('Could not get LHS of arrow operation');
       return;
     }
-    const arr = new Arrow(lhs, this.operation);
+    const arr = new QArrow(lhs, this.operation);
     this.has({query: arr});
     return arr;
   }
@@ -262,7 +240,7 @@ export class SQRefinedQuery extends SourceQueryNode {
 
   constructor(
     readonly toRefine: SourceQueryNode,
-    readonly refine: QOPDesc | ViewOrScalarFieldReference
+    readonly refine: View
   ) {
     super({toRefine, refine});
   }
@@ -280,7 +258,7 @@ export class SQRefinedQuery extends SourceQueryNode {
     }
     const refinedQuery = this.toRefine.getQuery();
     if (refinedQuery) {
-      const resultQuery = new Refine(refinedQuery, this.refine);
+      const resultQuery = new QRefine(refinedQuery, this.refine);
       this.has({query: resultQuery});
       return resultQuery;
     }

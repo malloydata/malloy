@@ -126,30 +126,8 @@ refineOperator: PLUS ;
 turtleName
   : id;
 
-queryRefinement
-  : (REFINE | refineOperator)? queryProperties
-  | refineOperator fieldPath
-  ;
-
-sourceExtension
-  : (EXTEND | refineOperator)? exploreProperties
-  ;
-
 sqlSource
   : connectionId DOT SQL OPAREN (sqlString|shortString) CPAREN
-  ;
-
-pipelineFromName
-  : firstSegment pipeElement*
-  ;
-
-firstSegment
-  : ARROW? queryProperties queryRefinement*
-  | fieldPath queryRefinement*
-  ;
-
-pipeElement
-  : ARROW queryProperties
   ;
 
 exploreTable
@@ -247,12 +225,6 @@ queryExtend
   : EXTENDQ queryExtendStatementList
   ;
 
-// this is a little turd to allow m0 and 4.0 to run at once
-ambiguousModification
-  : filterShortcut
-  | OCURLY (modEither | SEMI)* CCURLY
-  ;
-
 modEither
   : joinStatement
   | whereStatement
@@ -260,20 +232,26 @@ modEither
   ;
 
 sqExpr
-  : ARROW? id                                 # SQID
-  | sqExpr ARROW qSeg                         # SQArrow
-  | sqExpr PLUS? ambiguousModification        # SQAmbiguous
-  | sqExpr sourceExtension                    # SQExtendedSource
-  | sqExpr queryRefinement                    # SQRefinedQuery
-  | FROM OPAREN sqExpr CPAREN                 # SQFrom
+  : id                                        # SQID
+  | OPAREN sqExpr CPAREN                      # SQParens
+  | sqExpr PLUS segExpr                       # SQRefinedQuery
+  | sqExpr ARROW segExpr                      # SQArrow
+  | sqExpr EXTEND exploreProperties           # SQExtendedSource
   | exploreTable                              # SQTable
-  | FROM_SQL OPAREN sqlExploreNameRef CPAREN  # SQLegacySQLBlock
   | sqlSource                                 # SQSQL
   ;
 
-qSeg
-  : fieldPath
-  | queryProperties
+segExpr
+  : fieldPath                      # SegField
+  | queryProperties                # SegOps
+  | OPAREN segExpr CPAREN          # SegParen
+  | lhs=segExpr PLUS rhs=segExpr   # SegRefine
+  ;
+
+vExpr
+  : segExpr                        # VSeg
+  | OPAREN segExpr CPAREN          # VParen
+  | lhs=segExpr ARROW rhs=segExpr  # VArrow
   ;
 
 queryExtendStatement
@@ -330,7 +308,7 @@ subQueryDefList
 exploreQueryNameDef: id;
 
 exploreQueryDef
-  : ANNOTATION* exploreQueryNameDef isDefine pipelineFromName
+  : ANNOTATION* exploreQueryNameDef isDefine vExpr
   ;
 
 queryStatement
@@ -381,8 +359,8 @@ nestedQueryList
   ;
 
 nestEntry
-  : tags fieldPath queryRefinement*   # nestExisting
-  | tags queryName isDefine pipelineFromName            # nestDef
+  : tags fieldPath (PLUS vExpr)?    # nestExisting
+  | tags queryName isDefine vExpr   # nestDef
   ;
 
 aggregateStatement

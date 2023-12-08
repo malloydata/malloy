@@ -29,7 +29,7 @@ import {getFinalStruct, opOutputStruct} from '../struct-utils';
 import {StaticSpace} from '../field-space/static-space';
 import {LegalRefinementStage} from '../types/query-property-interface';
 import {ViewOrScalarFieldReference} from '../query-items/field-references';
-import {QOPDesc} from './qop-desc';
+import {QOpDesc} from './qop-desc';
 import {SpaceField} from '../types/space-field';
 import {QuerySpace} from '../field-space/query-spaces';
 
@@ -45,8 +45,8 @@ export abstract class Refinement extends MalloyElement {
     isNestIn: QuerySpace | undefined
   ): PipeSegment[];
 
-  static from(base: QOPDesc | ViewOrScalarFieldReference) {
-    return base instanceof QOPDesc
+  static from(base: QOpDesc | ViewOrScalarFieldReference) {
+    return base instanceof QOpDesc
       ? new QOPDescRefinement(base)
       : new NamedRefinement(base);
   }
@@ -186,14 +186,14 @@ function extractName(f1: QueryFieldDef | string): string {
 
 export class QOPDescRefinement extends Refinement {
   elementType = 'qopdescRefinement';
-  constructor(private readonly qOpDesc: QOPDesc) {
+  constructor(private readonly qOpDesc: QOpDesc) {
     super({qOpDesc});
   }
 
   private getOp(
     inputFS: FieldSpace,
     isNestIn: QuerySpace | undefined,
-    qOpDesc: QOPDesc,
+    qOpDesc: QOpDesc,
     refineThis: PipeSegment
   ): PipeSegment {
     qOpDesc.refineFrom(refineThis);
@@ -210,8 +210,8 @@ export class QOPDescRefinement extends Refinement {
       this.qOpDesc.refineFrom(pipeline[0]);
       return [this.getOp(inputFS, isNestIn, this.qOpDesc, pipeline[0])];
     }
-    const headRefinements = new QOPDesc([]);
-    const tailRefinements = new QOPDesc([]);
+    const headRefinements = new QOpDesc([]);
+    const tailRefinements = new QOpDesc([]);
     for (const qop of this.qOpDesc.list) {
       switch (qop.queryRefinementStage) {
         case LegalRefinementStage.Head:

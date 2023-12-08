@@ -21,9 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {TurtleDecl} from '../query-properties/nest';
-import {DefinitionList} from '../types/definition-list';
+import {ViewDefinition} from '../query-properties/nest';
+import {ListOf} from '../types/malloy-element';
 
-export class Turtles extends DefinitionList<TurtleDecl> {
+// TODO rename file to views
+export class Views extends ListOf<ViewDefinition> {
   elementType = 'turtleDefList';
 }

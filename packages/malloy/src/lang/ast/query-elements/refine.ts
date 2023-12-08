@@ -21,53 +21,76 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Query} from '../../../model/malloy_types';
+import {PipeSegment, Query} from '../../../model';
+import {QuerySpace} from '../field-space/query-spaces';
 import {StaticSpace} from '../field-space/static-space';
-import {ViewOrScalarFieldReference} from '../query-items/field-references';
-import {QOPDesc} from '../query-properties/qop-desc';
-import {Refinement} from '../query-properties/refinements';
 import {detectAndRemovePartialStages} from '../query-utils';
 import {getFinalStruct} from '../struct-utils';
+import {FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
+import {PipelineComp} from '../types/pipeline-comp';
 import {QueryComp} from '../types/query-comp';
 import {QueryElement} from '../types/query-element';
+import {View} from './view';
 
-export class Refine extends MalloyElement {
+export class VRefine extends View {
   elementType = 'refine';
 
   constructor(
-    readonly queryToRefine: QueryElement,
-    readonly refinement: QOPDesc | ViewOrScalarFieldReference
+    readonly base: View,
+    readonly refinement: View
   ) {
-    super(queryToRefine ? {queryToRefine, refinement} : {refinement});
+    super({base, refinement});
+  }
+
+  pipelineComp(fs: FieldSpace, isNestIn?: QuerySpace): PipelineComp {
+    const query = this.base.pipelineComp(fs);
+    const resultPipe = this.refinement.refine(fs, query.pipeline, isNestIn);
+    return {
+      pipeline: resultPipe,
+      outputStruct: getFinalStruct(this.refinement, fs.structDef(), resultPipe),
+    };
+  }
+
+  refine(
+    _inputFS: FieldSpace,
+    _pipeline: PipeSegment[],
+    _isNestIn: QuerySpace | undefined
+  ): PipeSegment[] {
+    this.log('TODO not yet implemented');
+    return [];
+  }
+}
+
+export class QRefine extends MalloyElement {
+  elementType = 'query-refine';
+
+  constructor(
+    readonly base: QueryElement,
+    readonly refinement: View
+  ) {
+    super({base, refinement});
   }
 
   queryComp(isRefOk: boolean): QueryComp {
-    const refinement = Refinement.from(this.refinement);
-    this.has({refinementCls: refinement});
-    const query = this.queryToRefine.queryComp(isRefOk);
-    const refineFS = new StaticSpace(query.refineInputStruct);
-    // TODO deal with nest
-    const resultPipe = refinement.refine(
-      refineFS,
-      query.query.pipeline,
+    const q = this.base.queryComp(isRefOk);
+    const inputFS = new StaticSpace(q.inputStruct);
+    const resultPipe = this.refinement.refine(
+      inputFS,
+      q.query.pipeline,
       undefined
     );
     return {
       query: {
-        ...query.query,
+        ...q.query,
         pipeline: resultPipe,
       },
-      outputStruct: getFinalStruct(
-        this.refinement,
-        query.refineInputStruct,
-        resultPipe
-      ),
-      refineInputStruct: query.refineInputStruct,
+      outputStruct: getFinalStruct(this.refinement, q.inputStruct, resultPipe),
+      inputStruct: q.inputStruct,
     };
   }
 
-  // TODO this code is duplicated in Arrow
+  // TODO this is duplicated everywhere ugh
   query(): Query {
     const q = this.queryComp(true).query;
     // TODO reconsider whether this is still necessary?

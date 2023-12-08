@@ -25,41 +25,64 @@ import {
   PipeSegment,
   Query,
   StructDef,
-  isAtomicFieldType,
   refIsStructDef,
 } from '../../../model/malloy_types';
 import {Source} from '../elements/source';
+import {QuerySpace} from '../field-space/query-spaces';
 import {StaticSpace} from '../field-space/static-space';
-import {ViewOrScalarFieldReference} from '../query-items/field-references';
-import {QOPDesc} from '../query-properties/qop-desc';
 import {detectAndRemovePartialStages} from '../query-utils';
-import {getFinalStruct, opOutputStruct} from '../struct-utils';
 import {FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
+import {PipelineComp} from '../types/pipeline-comp';
 import {QueryComp} from '../types/query-comp';
 import {QueryElement} from '../types/query-element';
-import {SpaceField} from '../types/space-field';
+import {View} from './view';
 
-export class Arrow extends MalloyElement {
+export class VArrow extends View {
+  elementType = 'viewArrow';
+
+  constructor(
+    readonly base: View,
+    readonly op: View
+  ) {
+    super({base, op});
+  }
+
+  pipelineComp(fs: FieldSpace): PipelineComp {
+    const baseComp = this.base.pipelineComp(fs);
+    const nextFS = new StaticSpace(baseComp.outputStruct);
+    const finalComp = this.op.pipelineComp(nextFS);
+    return {
+      pipeline: [...baseComp.pipeline, ...finalComp.pipeline],
+      outputStruct: finalComp.outputStruct,
+    };
+  }
+
+  refine(
+    _inputFS: FieldSpace,
+    _pipeline: PipeSegment[],
+    _isNestIn: QuerySpace | undefined
+  ): PipeSegment[] {
+    this.log('A multi-segment view cannot be used as a refinement');
+    return [];
+  }
+}
+
+export class QArrow extends MalloyElement {
   elementType = 'arrow';
 
   constructor(
-    readonly source: Source | QueryElement | undefined,
-    readonly operation: QOPDesc | ViewOrScalarFieldReference
+    readonly source: Source | QueryElement,
+    readonly view: View
   ) {
-    super(source ? {source, operation} : {operation});
+    super({source, view});
   }
 
   queryComp(isRefOk: boolean): QueryComp {
     let structDef: StructDef;
     let queryBase: Query;
     let fieldSpace: FieldSpace;
-    if (this.source === undefined) {
-      // For some reason the translator asked to generate a Query from something that was
-      // syntactically only ever meant to be a View -- this is illegal and the translator can
-      // safely barf
-      throw new Error('Attempt to generate a Query from a View');
-    } else if (this.source instanceof Source) {
+    if (this.source instanceof Source) {
       // We create a fresh query with either the QOPDesc as the head,
       // the view as the head, or the scalar as the head (if scalar lenses is enabled)
       const structRef = isRefOk
@@ -82,83 +105,15 @@ export class Arrow extends MalloyElement {
       structDef = lhsQuery.outputStruct;
       fieldSpace = new StaticSpace(lhsQuery.outputStruct);
     }
-    if (this.operation instanceof ViewOrScalarFieldReference) {
-      const lookup = this.operation.getField(fieldSpace);
-      if (!lookup.found) {
-        this.log(
-          `Cannot find ${this.operation.refString} in output of LHS query`
-        );
-        throw new Error('TODO return something better here');
-      } else if (isAtomicFieldType(lookup.found.typeDesc().dataType)) {
-        if (!this.inExperiment('scalar_lenses', true)) {
-          this.operation.log(
-            `Cannot use scalar field ${this.operation.refString} as a view; use \`scalar_lenses\` experiment to enable this behavior`
-          );
-        }
-        const newSegment: PipeSegment = {
-          type: 'reduce',
-          fields: [this.operation.refString],
-        };
-        return {
-          query: {
-            ...queryBase,
-            pipeline: [...queryBase.pipeline, newSegment],
-          },
-          // TODO I think we can probably construct this on our own without asking the compiler...
-          outputStruct: opOutputStruct(this, structDef, newSegment),
-          refineInputStruct: structDef,
-        };
-      } else if (lookup.found.typeDesc().dataType === 'turtle') {
-        if (this.operation.list.length > 1) {
-          this.log('Cannot use view from join');
-          throw new Error('TODO return something better here');
-        }
-        if (lookup.found instanceof SpaceField) {
-          const fieldDef = lookup.found.fieldDef();
-          if (fieldDef === undefined) {
-            throw new Error('Expected field to have definition');
-          }
-          if (fieldDef.type !== 'turtle') {
-            throw new Error('Expected field to be a view');
-          }
-          // TODO I think this is wrong...
-          const annotation = fieldDef.annotation
-            ? {inherits: fieldDef.annotation, ...queryBase.annotation}
-            : queryBase.annotation;
-          return {
-            query: {
-              ...queryBase,
-              // TODO Pretty sure I need to recursively expand the views here, since `fieldDef` here could have
-              // its own `pipeHead`
-              pipeline: [...queryBase.pipeline, ...fieldDef.pipeline],
-              annotation,
-            },
-            outputStruct: getFinalStruct(
-              this.operation,
-              structDef,
-              fieldDef.pipeline
-            ),
-            refineInputStruct: structDef,
-          };
-        } else {
-          throw new Error('Expected space field');
-        }
-      } else {
-        this.operation.log('This operation is not supported');
-        throw new Error('TODO return something better here');
-      }
-    } else {
-      // We have a QOPDesc
-      const newOperation = this.operation.getOp(fieldSpace, undefined);
-      return {
-        query: {
-          ...queryBase,
-          pipeline: [...queryBase.pipeline, newOperation.segment],
-        },
-        outputStruct: newOperation.outputSpace().structDef(),
-        refineInputStruct: structDef,
-      };
-    }
+    const pipeline = this.view.pipelineComp(fieldSpace);
+    return {
+      query: {
+        ...queryBase,
+        pipeline: [...queryBase.pipeline, ...pipeline.pipeline],
+      },
+      outputStruct: pipeline.outputStruct,
+      inputStruct: structDef,
+    };
   }
 
   query(): Query {

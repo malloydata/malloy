@@ -196,15 +196,11 @@ describe('error handling', () => {
     `).translationToFailWith("Output already has a field named 'astr'");
   });
   test('rejoin a query is renamed', () => {
-    // should not use from()
     expect(`
-      ##! -m4warnings
-      source: querySrc is from(
-        _db_.table('malloytest.flights')->{
-          group_by: origin
-          nest: nested is { group_by: destination }
-        }
-      )
+      source: querySrc is _db_.table('malloytest.flights')->{
+        group_by: origin
+        nest: nested is { group_by: destination }
+      }
 
     source: refineQuerySrc is querySrc extend {
       join_one: rejoin is querySrc on 7=8
@@ -736,18 +732,6 @@ describe('sql expressions', () => {
   });
 });
 
-describe('turtle with leading arrow', () => {
-  test('pre m4 optional leading arrow for defining a turtle', () => {
-    expect(`
-      ##! -m4warnings
-      source: c is a extend {
-        query: x is -> { select: * }
-        query: y is { select: * }
-      }
-    `).toTranslate();
-  });
-});
-
 describe('extend and refine', () => {
   describe('extend and refine, new syntax', () => {
     test('query name with query refinements', () => {
@@ -821,33 +805,6 @@ describe('extend and refine', () => {
     test('source name with source refinements', () => {
       expect(
         'source: s is a extend { dimension: ai_2 is ai + ai }'
-      ).toTranslate();
-    });
-
-    test('source name with ambiguous refinements', () => {
-      expect(
-        `##! -m4warnings
-         run: a + { join_one: b on b.ai = ai } -> { select: b.* }`
-      ).toTranslate();
-      expect(
-        `##! -m4warnings
-        run: a + { where: 1 = 1 } -> { select: * }`
-      ).toTranslate();
-      expect(
-        `##! -m4warnings
-        run: a + { dimension: three is 3 } -> { select: * }`
-      ).toTranslate();
-      expect(
-        `##! -m4warnings
-        source: s is a { join_one: b on b.ai = ai }`
-      ).toTranslate();
-      expect(
-        `##! -m4warnings
-        source: s is a { where: 1 = 1 }`
-      ).toTranslate();
-      expect(
-        `##! -m4warnings
-        source: s is a { dimension: three is 3 }`
       ).toTranslate();
     });
 
@@ -976,68 +933,9 @@ describe('extend and refine', () => {
       }`).toTranslate();
     });
   });
-
-  describe('m4 warnings', () => {
-    test('implicit refine in nest', () => {
-      expect(`##! m4warnings=warn
-      source: c is a extend {
-        view: x is { select: * }
-      }
-
-      run: c -> {
-        nest: x { limit: 1 }
-      }`).toTranslateWithWarnings(
-        'Implicit query refinement is deprecated, use the `+` operator'
-      );
-    });
-
-    test('implicit refine in turtle works', () => {
-      expect(`##! m4warnings=warn
-      source: c is a extend {
-        view: x is { select: * }
-        view: y is x { limit: 1 }
-      }`).toTranslateWithWarnings(
-        'Implicit query refinement is deprecated, use the `+` operator'
-      );
-    });
-
-    test('implicit query refinement', () => {
-      expect(`##! m4warnings=warn
-        query: q is a -> { group_by: ai }
-        run: q { group_by: three is 3 }
-      `).toTranslateWithWarnings(
-        'Implicit query refinement is deprecated, use the `+` operator'
-      );
-    });
-
-    test('implicit source extension', () => {
-      expect(
-        `##! m4warnings=warn
-        source: s is a { dimension: ai_2 is ai + ai }`
-      ).toTranslateWithWarnings(
-        'Implicit source extension is deprecated, use the `extend` operator.'
-      );
-    });
-  });
 });
 
 describe('miscellaneous m4 warnings', () => {
-  test('from() is deprecated', () => {
-    expect(`
-      ##! m4warnings=warn
-      query: q is a -> { select: * }
-      source: c is from(q) extend {
-        dimension: x is 1
-    }`).toTranslateWithWarnings(
-      '`from(some_query)` is deprecated; use `some_query` directly'
-    );
-    expect(`
-      ##! m4warnings=warn
-      query: q is a -> { select: * }
-      source: c is q extend {
-        dimension: x is 1
-    }`).toTranslate();
-  });
   test('project is deprecated', () => {
     expect(`
       ##! m4warnings=warn
@@ -1055,20 +953,6 @@ describe('miscellaneous m4 warnings', () => {
       query: x is a -> { select: * }
       run: x -> { select: * }
     `).toTranslate();
-    expect(`
-      ##! m4warnings=warn
-      query: x is a -> { select: * }
-      run: -> x
-    `).toTranslateWithWarnings(
-      'Leading arrow (`->`) when referencing a query is deprecated; remove the arrow'
-    );
-    expect(`
-      ##! m4warnings=warn
-      query: x is a -> { select: * }
-      run: -> x -> { select: * }
-    `).toTranslateWithWarnings(
-      'Leading arrow (`->`) when referencing a query is deprecated; remove the arrow'
-    );
   });
 });
 
@@ -1085,6 +969,14 @@ describe('m3/m4 source query sentences', () => {
     expect(`query: q_m4_err is a + ${qryRefine}`).translationToFailWith(
       "Cannot add view refinements to 'a' because it is a source"
     );
+  });
+  test('heckin parser', () => {
+    expect(`
+      source: s is a
+      query: q is s -> ${query}
+      source: s2_m4 is q + ${qryRefine} -> ${query} extend ${srcExtend};
+    `).toTranslate();
+    // source: s2_m4 is q + {limit:1} -> {select:*} extend {accept:ai};
   });
   test('legal sqexpressions', () => {
     // some things that are m4 warnings are commented out

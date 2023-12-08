@@ -36,7 +36,7 @@ import {QueryClass} from '../types/query-property-interface';
 import {PartialBuilder} from '../query-builders/partial-builder';
 import {QuerySpace} from '../field-space/query-spaces';
 
-export class QOPDesc extends ListOf<QueryProperty> {
+export class QOpDesc extends ListOf<QueryProperty> {
   elementType = 'queryOperation';
   opClass: QueryClass | undefined;
   private refineThis?: PipeSegment;

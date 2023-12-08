@@ -21,14 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {MalloyElement} from './malloy-element';
-import {QArrow} from '../query-elements/arrow';
-import {QRefine} from '../query-elements/refine';
-import {QueryReference} from '../query-elements/query-reference';
+import {PipeSegment, StructDef} from '../../../model/malloy_types';
 
-export type QueryElement = QArrow | QRefine | QueryReference;
-export function isQueryElement(e: MalloyElement): e is QueryElement {
-  return (
-    e instanceof QArrow || e instanceof QRefine || e instanceof QueryReference
-  );
+export interface PipelineComp {
+  outputStruct: StructDef;
+  pipeline: PipeSegment[];
 }

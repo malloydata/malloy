@@ -67,14 +67,6 @@ describe('query:', () => {
         -> { top: 5; where: astr ~ 'a%' group_by: astr }
     `).toTranslate();
     });
-    test('query output refined into another query pre-m4', () => {
-      expect(
-        `
-          ##! -m4warnings
-          run: from(ab -> {group_by: astr}) extend { dimension: bigstr is upper(astr) } -> { group_by: bigstr }
-        `
-      ).toTranslate();
-    });
     test('query output refined into another query', () => {
       expect(
         'run: ab -> {group_by: astr} extend { dimension: bigstr is upper(astr) } -> { group_by: bigstr }'

@@ -40,7 +40,7 @@ export class QueryReference extends MalloyElement {
     const head = headEntry?.entry;
     const oops = function () {
       return {
-        refineInputStruct: ErrorFactory.structDef,
+        inputStruct: ErrorFactory.structDef,
         outputStruct: ErrorFactory.structDef,
         query: ErrorFactory.query,
       };
@@ -57,7 +57,7 @@ export class QueryReference extends MalloyElement {
       return {
         query: head,
         outputStruct: exploreStruct,
-        refineInputStruct: exploreStruct,
+        inputStruct: exploreStruct,
       };
     }
     this.log(`Illegal reference to '${this.name}', query expected`);
