@@ -1451,7 +1451,7 @@ export type SerializedExplore = {
 
 export type SortableField = {field: Field; dir: 'asc' | 'desc' | undefined};
 
-export class Explore extends Entity {
+export class Explore extends Entity implements Taggable {
   protected readonly _structDef: StructDef;
   protected readonly _parentExplore?: Explore;
   private _fieldMap: Map<string, Field> | undefined;
@@ -1475,6 +1475,14 @@ export class Explore extends Entity {
 
   public isExploreField(): this is ExploreField {
     return false;
+  }
+
+  tagParse(spec?: TagParseSpec): TagParse {
+    return Tag.annotationToTag(this._structDef.annotation, spec);
+  }
+
+  getTaglines(prefix?: RegExp): string[] {
+    return Tag.annotationToTaglines(this._structDef.annotation, prefix);
   }
 
   private parsedModelTag?: Tag;
@@ -2082,7 +2090,7 @@ export enum JoinRelationship {
   ManyToOne = 'many_to_one',
 }
 
-export class ExploreField extends Explore implements Taggable {
+export class ExploreField extends Explore {
   protected _parentExplore: Explore;
 
   constructor(structDef: StructDef, parentExplore: Explore, source?: Explore) {
@@ -2114,13 +2122,9 @@ export class ExploreField extends Explore implements Taggable {
     return this.joinRelationship !== JoinRelationship.OneToOne;
   }
 
-  tagParse(spec?: TagParseSpec) {
+  override tagParse(spec?: TagParseSpec) {
     spec = Tag.addModelScope(spec, this._parentExplore.modelTag);
     return Tag.annotationToTag(this._structDef.annotation, spec);
-  }
-
-  getTaglines(prefix?: RegExp) {
-    return Tag.annotationToTaglines(this._structDef.annotation, prefix);
   }
 
   public isQueryField(): this is QueryField {
