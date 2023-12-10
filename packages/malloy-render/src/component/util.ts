@@ -36,3 +36,27 @@ export function isLastChild(f: Field | Explore) {
 export function isFirstChild(f: Field | Explore) {
   return getLocationInParent(f) === 0;
 }
+
+export function valueIsNumber(f: Field, v: unknown): v is number {
+  return f.isAtomicField() && f.isNumber() && v !== null;
+}
+
+export function valueIsString(f: Field, s: unknown): s is string {
+  return f.isAtomicField() && f.isString() && s !== null;
+}
+
+export function getTextWidth(
+  text: string,
+  font: string,
+  canvasToUse?: HTMLCanvasElement
+) {
+  const canvas = canvasToUse ?? document.createElement('canvas');
+  const context = canvas.getContext('2d')!;
+  context.font = font;
+  const metrics = context.measureText(text);
+  return metrics.width;
+}
+
+export function clamp(s: number, e: number, v: number) {
+  return Math.max(s, Math.min(e, v));
+}

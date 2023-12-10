@@ -30,6 +30,7 @@
 import * as crypto from 'crypto';
 import {
   Connection,
+  FetchSchemaOptions,
   MalloyQueryData,
   NamedStructDefs,
   PersistSQLResults,
@@ -46,7 +47,6 @@ import {
 import {Client, Pool} from 'pg';
 import QueryStream from 'pg-query-stream';
 import {randomUUID} from 'crypto';
-import {FetchSchemaOptions} from '@malloydata/malloy-interfaces';
 
 interface PostgresQueryConfiguration {
   rowLimit?: number;

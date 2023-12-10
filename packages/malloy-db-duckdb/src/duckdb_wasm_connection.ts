@@ -24,6 +24,7 @@
 import * as duckdb from '@malloydata/duckdb-wasm';
 import Worker from 'web-worker';
 import {
+  FetchSchemaOptions,
   QueryDataRow,
   RunSQLOptions,
   StructDef,
@@ -31,7 +32,6 @@ import {
 } from '@malloydata/malloy';
 import {StructRow, Table, Vector} from 'apache-arrow';
 import {DuckDBCommon, QueryOptionsReader} from './duckdb_common';
-import {FetchSchemaOptions} from '@malloydata/malloy-interfaces';
 
 const TABLE_MATCH = /FROM\s*('([^']*)'|"([^"]*)")/gi;
 const TABLE_FUNCTION_MATCH = /FROM\s+[a-z0-9_]+\(('([^']*)'|"([^"]*)")/gi;

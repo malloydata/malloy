@@ -1089,6 +1089,7 @@ class QueryFieldStruct extends QueryAtomicField {
       ...this.parent.fieldDef,
       structRelationship: {
         type: 'one',
+        matrixOperation: 'left',
         onExpression: [
           {
             type: 'field',
@@ -1668,7 +1669,10 @@ class FieldInstanceResultRoot extends FieldInstanceResult {
     for (const [name, join] of this.joins) {
       // first join is by default the
       const relationship = join.parentRelationship();
-      if (relationship === 'many_to_many') {
+      if (
+        relationship === 'many_to_many' ||
+        join.forceAllSymmetricCalculations()
+      ) {
         // everything must be calculated with symmetric aggregates
         leafiest = '0never';
       } else if (leafiest === undefined) {
@@ -1767,6 +1771,21 @@ class JoinInstance {
           `Internal error unknown relationship type to parent for ${this.queryStruct.fieldDef.name}`
         );
     }
+  }
+
+  // For now, we force all symmetric calculations for full and right joins
+  //  because we need distinct keys for COUNT(xx) operations.  Don't really need
+  //  this for sums.  This will produce correct results and we can optimize this
+  //  at some point..
+  forceAllSymmetricCalculations(): boolean {
+    const sr = this.queryStruct.fieldDef.structRelationship;
+    if (this.queryStruct.parent === undefined || !isJoinOn(sr)) {
+      return false;
+    }
+    if (sr.matrixOperation === 'right' || sr.matrixOperation === 'full') {
+      return true;
+    }
+    return false;
   }
 
   // postgres unnest needs to know the names of the physical fields.
@@ -2595,6 +2614,7 @@ class QueryQuery extends QueryField {
     const structRelationship = qs.fieldDef.structRelationship;
     let structSQL = qs.structSourceSQL(stageWriter);
     if (isJoinOn(structRelationship)) {
+      const matrixOperation = structRelationship.matrixOperation.toUpperCase();
       if (ji.makeUniqueKey) {
         const passKeys = this.generateSQLPassthroughKeys(qs);
         structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as __distinct_key, x.* ${passKeys} FROM ${structSQL} as x)`;
@@ -2626,7 +2646,7 @@ class QueryQuery extends QueryField {
         if (conditions !== undefined && conditions.length >= 1) {
           filters = ` AND (${conditions.join(' AND ')})`;
         }
-        s += `LEFT JOIN ${structSQL} AS ${ji.alias}\n  ON ${onCondition}${filters}\n`;
+        s += ` ${matrixOperation} JOIN ${structSQL} AS ${ji.alias}\n  ON ${onCondition}${filters}\n`;
       } else {
         let select = `SELECT ${ji.alias}.*`;
         let joins = '';
@@ -2645,7 +2665,7 @@ class QueryQuery extends QueryField {
         select += `\nFROM ${structSQL} AS ${
           ji.alias
         }\n${joins}\nWHERE ${conditions?.join(' AND ')}\n`;
-        s += `LEFT JOIN (\n${indent(select)}) AS ${
+        s += `${matrixOperation} JOIN (\n${indent(select)}) AS ${
           ji.alias
         }\n  ON ${onCondition}\n`;
         return s;
@@ -3637,7 +3657,7 @@ class QueryQueryIndexStage extends QueryQuery {
       }
       if (fields[i].type === 'timestamp' || fields[i].type === 'date') {
         s += `    WHEN ${i} THEN ${dialect.concat(
-          `MIN(${dialect.sqlDateToString(fields[i].expression)}`,
+          `MIN(${dialect.sqlDateToString(fields[i].expression)})`,
           "' to '",
           `MAX(${dialect.sqlDateToString(fields[i].expression)})`
         )}\n`;

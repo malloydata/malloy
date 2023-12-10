@@ -21,7 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export {HTMLView, JSONView} from './html/html_view';
-export * from './data_styles';
-// Needed for test only.
-export {getDrillQuery} from './drill';
+import {createContext} from '@lit/context';
+import {RenderResultMetadata} from './render-result-metadata';
+
+export const resultContext = createContext<RenderResultMetadata>(
+  'malloy-render-result'
+);

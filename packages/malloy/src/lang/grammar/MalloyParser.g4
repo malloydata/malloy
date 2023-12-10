@@ -299,9 +299,11 @@ isExplore
   : before_is=tags IS after_is=tags sqExpr
   ;
 
+matrixOperation : (LEFT | RIGHT | FULL| INNER);
+
 joinDef
-  : ANNOTATION* joinNameDef isExplore? WITH fieldExpr        # joinWith
-  | ANNOTATION* joinNameDef isExplore? (ON joinExpression)?  # joinOn
+  : ANNOTATION* joinNameDef isExplore? matrixOperation? WITH fieldExpr        # joinWith
+  | ANNOTATION* joinNameDef isExplore? (matrixOperation? ON joinExpression)?  # joinOn
   ;
 
 joinExpression: fieldExpr;

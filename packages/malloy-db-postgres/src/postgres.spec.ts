@@ -47,6 +47,7 @@ describe('PostgresConnection', () => {
 
   beforeEach(async () => {
     getTableSchema = jest
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .spyOn(PostgresConnection.prototype as any, 'getTableSchema')
       .mockResolvedValue({
         type: 'struct',
@@ -61,6 +62,7 @@ describe('PostgresConnection', () => {
       });
 
     getSQLBlockSchema = jest
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .spyOn(PostgresConnection.prototype as any, 'getSQLBlockSchema')
       .mockResolvedValue({
         type: 'struct',

@@ -116,7 +116,14 @@ export abstract class FieldDeclaration
       };
     }
     const compressValue = compressExpr(exprValue.value);
-    const retType = exprValue.dataType;
+    let retType = exprValue.dataType;
+    if (retType === 'null') {
+      this.expr.log(
+        'null value defaults to type number, use "null::TYPE" to specify correct type',
+        'warn'
+      );
+      retType = 'number';
+    }
     if (isAtomicFieldType(retType) && retType !== 'error') {
       const template: FieldTypeDef = {
         name: exprName,
