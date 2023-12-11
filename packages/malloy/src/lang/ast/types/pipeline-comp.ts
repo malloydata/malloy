@@ -27,4 +27,5 @@ export interface PipelineComp {
   outputStruct: StructDef;
   pipeline: PipeSegment[];
   annotation?: Annotation;
+  name?: string;
 }

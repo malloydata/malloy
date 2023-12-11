@@ -4581,10 +4581,7 @@ export class QueryModel {
       structs: ret.structs,
       sourceExplore,
       sourceFilters: query.filterList,
-      queryName:
-        query.pipeHead && query.pipeline.length === 0
-          ? query.pipeHead.name
-          : undefined,
+      queryName: query.name,
       connectionName: ret.connectionName,
       annotation: query.annotation,
     };

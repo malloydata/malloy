@@ -105,11 +105,12 @@ export class QArrow extends MalloyElement {
       inputStruct = lhsQuery.outputStruct;
       fieldSpace = new StaticSpace(lhsQuery.outputStruct);
     }
-    const {pipeline, annotation, outputStruct} =
+    const {pipeline, annotation, outputStruct, name} =
       this.view.pipelineComp(fieldSpace);
     return {
       query: {
         ...queryBase,
+        name,
         annotation,
         pipeline: [...queryBase.pipeline, ...pipeline],
       },

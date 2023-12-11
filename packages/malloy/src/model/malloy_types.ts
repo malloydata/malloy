@@ -758,6 +758,7 @@ export interface Pipeline {
 
 export interface Query extends Pipeline, Filtered, HasLocation {
   type?: 'query';
+  name?: string;
   structRef: StructRef;
   annotation?: Annotation;
   modelAnnotation?: Annotation;

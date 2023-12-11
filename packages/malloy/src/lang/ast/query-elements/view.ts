@@ -172,6 +172,7 @@ export class ReferenceView extends View {
       };
       return {
         pipeline: [newSegment],
+        name: this.reference.nameString,
         // TODO I think we can probably construct this on our own without asking the compiler...
         outputStruct: opOutputStruct(this, fs.structDef(), newSegment),
       };
@@ -191,6 +192,7 @@ export class ReferenceView extends View {
         }
         return {
           pipeline: [...fieldDef.pipeline],
+          name: fieldDef.name,
           annotation: fieldDef.annotation,
           outputStruct: getFinalStruct(
             this.reference,
