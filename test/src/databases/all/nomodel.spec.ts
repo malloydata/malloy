@@ -538,7 +538,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         `
         query: q is conn.table('malloytest.flights') -> { group_by: carrier }
         source: s is q
-        run: s -> { select: * }
+        run: s -> { select: *; order_by: carrier }
       `
       )
       .run();
