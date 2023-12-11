@@ -515,7 +515,13 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery('run: conn.sql("select 1 as one")')
       .run();
-    expect(result.sql).toBe('select 1 as one');
+    if (databaseName === 'postgres') {
+      expect(result.sql).toBe(`WITH __stage0 AS (
+  select 1 as one)
+SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
+    } else {
+      expect(result.sql).toBe('select 1 as one');
+    }
     expect(result.resultExplore).not.toBeUndefined();
   });
 
