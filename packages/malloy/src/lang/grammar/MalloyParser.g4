@@ -250,7 +250,7 @@ segExpr
 
 vExpr
   : segExpr                        # VSeg
-  | lhs=segExpr ARROW rhs=segExpr  # VArrow
+  | lhs=segExpr ARROW rhs=vExpr    # VArrow
   ;
 
 queryExtendStatement

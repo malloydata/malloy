@@ -1065,16 +1065,17 @@ export class MalloyToAST
   visitNestExisting(pcx: parse.NestExistingContext): ast.NestedQuery {
     const nameCx = pcx.fieldPath();
     const name = this.getFieldPath(nameCx, ast.ViewFieldReference);
-    const refCx = pcx.vExpr();
+    const referenceView = this.astAt(new ast.ReferenceView(name), nameCx);
+    const refineCx = pcx.vExpr();
     // const notes = this.getNotes(pcx.tags());
-    if (refCx) {
+    if (refineCx) {
       const nestRefine = new ast.NestDefinition(
         name.nameString,
-        this.getVExpr(refCx)
+        new ast.VRefine(referenceView, this.getVExpr(refineCx))
       );
       return this.astAt(nestRefine, pcx);
     }
-    return this.astAt(new ast.ReferenceView(name), pcx);
+    return referenceView;
   }
 
   visitNestDef(pcx: parse.NestDefContext): ast.NestDefinition {
