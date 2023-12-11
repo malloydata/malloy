@@ -1862,7 +1862,9 @@ class QueryQuery extends QueryField {
   ): QueryQuery {
     let parent = parentStruct;
 
-    const firstStage = fieldDef.pipeline[0];
+    let turtleWithFilters =
+      parentStruct.applyStructFiltersToTurtleDef(fieldDef);
+    const firstStage = turtleWithFilters.pipeline[0];
     const sourceDef = parentStruct.fieldDef;
 
     // if we are generating code
@@ -1881,14 +1883,14 @@ class QueryQuery extends QueryField {
         },
         parent.parent ? {struct: parent} : {model: parent.model}
       );
-      fieldDef = {
-        ...fieldDef,
+      turtleWithFilters = {
+        ...turtleWithFilters,
         pipeline: [
           {
             ...firstStage,
             extendSource: undefined,
           },
-          ...fieldDef.pipeline.slice(1),
+          ...turtleWithFilters.pipeline.slice(1),
         ],
       };
     }
@@ -1904,28 +1906,28 @@ class QueryQuery extends QueryField {
     switch (firstStage.type) {
       case 'reduce':
         return new QueryQueryReduce(
-          fieldDef,
+          turtleWithFilters,
           parent,
           stageWriter,
           isJoinedSubquery
         );
       case 'project':
         return new QueryQueryProject(
-          fieldDef,
+          turtleWithFilters,
           parent,
           stageWriter,
           isJoinedSubquery
         );
       case 'index':
         return new QueryQueryIndex(
-          fieldDef,
+          turtleWithFilters,
           parent,
           stageWriter,
           isJoinedSubquery
         );
       case 'raw':
         return new QueryQueryRaw(
-          fieldDef,
+          turtleWithFilters,
           parent,
           stageWriter,
           isJoinedSubquery
@@ -4352,6 +4354,29 @@ class QueryStruct extends QueryNode {
     } else {
       throw new Error('Internal Error.  inline struct can not be top level');
     }
+  }
+
+  applyStructFiltersToTurtleDef(
+    turtleDef: TurtleDef | TurtleDefPlus
+  ): TurtleDef {
+    let pipeline = turtleDef.pipeline;
+    const annotation = turtleDef.annotation;
+
+    const addedFilters = (turtleDef as TurtleDefPlus).filterList || [];
+    pipeline = cloneDeep(pipeline);
+    pipeline[0].filterList = addedFilters.concat(
+      pipeline[0].filterList || [],
+      this.fieldDef.filterList || []
+    );
+
+    const flatTurtleDef: TurtleDef = {
+      type: 'turtle',
+      name: turtleDef.name,
+      pipeline,
+      annotation,
+      location: turtleDef.location,
+    };
+    return flatTurtleDef;
   }
 }
 
