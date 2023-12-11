@@ -34,6 +34,7 @@ import {QueryBuilder} from '../types/query-builder';
 import {DynamicSpace} from '../field-space/dynamic-space';
 import {ReferenceView, View} from '../query-elements/view';
 import {Noteable, extendNoteMethod} from '../types/noteable';
+import {detectAndRemovePartialStages} from '../query-utils';
 
 export class ViewDefinition
   extends MalloyElement
@@ -64,10 +65,11 @@ export class ViewDefinition
 
   getFieldDef(fs: FieldSpace): model.TurtleDef {
     const {pipeline, annotation} = this.view.pipelineComp(fs);
+    const checkedPipeline = detectAndRemovePartialStages(pipeline, this);
     const def: model.TurtleDef = {
       type: 'turtle',
       name: this.name,
-      pipeline,
+      pipeline: checkedPipeline,
       annotation: {...this.note, inherits: annotation},
       location: this.location,
     };
@@ -84,10 +86,11 @@ export class NestDefinition extends ViewDefinition {
         fs,
         fs.outputSpace()
       );
+      const checkedPipeline = detectAndRemovePartialStages(pipeline, this);
       return {
         type: 'turtle',
         name: this.name,
-        pipeline,
+        pipeline: checkedPipeline,
         annotation: {...this.note, inherits: annotation},
         location: this.location,
       };

@@ -36,7 +36,7 @@ import {Filter} from '../query-properties/filters';
 import {Joins} from '../query-properties/joins';
 import {FieldListEdit} from '../source-properties/field-list-edit';
 import {PrimaryKey} from '../source-properties/primary-key';
-import {Views} from '../source-properties/turtles';
+import {Views} from '../source-properties/views';
 import {SourceDesc} from '../types/source-desc';
 import {ExploreField} from '../types/explore-field';
 

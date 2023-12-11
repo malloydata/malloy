@@ -21,19 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {NestDefinition} from '../query-properties/nest';
-import {Views} from '../source-properties/views';
-import {FieldDeclaration} from '../query-items/field-declaration';
-import {Join} from '../query-properties/joins';
-import {MalloyElement} from './malloy-element';
+import {ViewDefinition} from '../query-properties/nest';
+import {DefinitionList} from '../types/definition-list';
 
-export type FieldDecl = FieldDeclaration | Join | NestDefinition | Views;
-export function isFieldDecl(f: MalloyElement): f is FieldDecl {
-  return (
-    f instanceof FieldDeclaration ||
-    f instanceof Join ||
-    // TODO needed?
-    f instanceof NestDefinition ||
-    f instanceof Views
-  );
+export class Views extends DefinitionList<ViewDefinition> {
+  elementType = 'turtleDefList';
 }

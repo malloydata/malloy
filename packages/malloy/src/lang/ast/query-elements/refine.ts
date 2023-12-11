@@ -21,17 +21,16 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {PipeSegment, Query} from '../../../model';
+import {PipeSegment} from '../../../model';
 import {ErrorFactory} from '../error-factory';
 import {QuerySpace} from '../field-space/query-spaces';
 import {StaticSpace} from '../field-space/static-space';
-import {detectAndRemovePartialStages} from '../query-utils';
 import {getFinalStruct} from '../struct-utils';
 import {FieldSpace} from '../types/field-space';
-import {MalloyElement} from '../types/malloy-element';
 import {PipelineComp} from '../types/pipeline-comp';
 import {QueryComp} from '../types/query-comp';
 import {QueryElement} from '../types/query-element';
+import {QueryBase} from './query-base';
 import {View} from './view';
 
 export class VRefine extends View {
@@ -67,7 +66,7 @@ export class VRefine extends View {
   }
 }
 
-export class QRefine extends MalloyElement {
+export class QRefine extends QueryBase {
   elementType = 'query-refine';
 
   constructor(
@@ -93,19 +92,5 @@ export class QRefine extends MalloyElement {
       outputStruct: getFinalStruct(this.refinement, q.inputStruct, resultPipe),
       inputStruct: q.inputStruct,
     };
-  }
-
-  // TODO this is duplicated everywhere ugh
-  query(): Query {
-    const q = this.queryComp(true).query;
-    // TODO reconsider whether this is still necessary?
-    const {hasPartials, pipeline} = detectAndRemovePartialStages(q.pipeline);
-    if (hasPartials) {
-      this.log(
-        "Can't determine view type (`group_by` / `aggregate` / `nest`, `project`, `index`)"
-      );
-      return {...q, pipeline};
-    }
-    return q;
   }
 }

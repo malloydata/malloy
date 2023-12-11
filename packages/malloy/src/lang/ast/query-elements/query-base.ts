@@ -21,10 +21,19 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ViewDefinition} from '../query-properties/nest';
-import {DefinitionList} from '../types/definition-list';
+import {Query} from '../../../model/malloy_types';
+import {detectAndRemovePartialStages} from '../query-utils';
+import {MalloyElement} from '../types/malloy-element';
+import {QueryComp} from '../types/query-comp';
 
-// TODO rename file to views
-export class Views extends DefinitionList<ViewDefinition> {
-  elementType = 'turtleDefList';
+export abstract class QueryBase extends MalloyElement {
+  abstract queryComp(isRefOk: boolean): QueryComp;
+
+  query(): Query {
+    const q = this.queryComp(true).query;
+    return {
+      ...q,
+      pipeline: detectAndRemovePartialStages(q.pipeline, this),
+    };
+  }
 }

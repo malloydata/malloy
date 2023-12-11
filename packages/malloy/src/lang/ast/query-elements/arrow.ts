@@ -30,12 +30,11 @@ import {
 import {Source} from '../elements/source';
 import {QuerySpace} from '../field-space/query-spaces';
 import {StaticSpace} from '../field-space/static-space';
-import {detectAndRemovePartialStages} from '../query-utils';
 import {FieldSpace} from '../types/field-space';
-import {MalloyElement} from '../types/malloy-element';
 import {PipelineComp} from '../types/pipeline-comp';
 import {QueryComp} from '../types/query-comp';
 import {QueryElement} from '../types/query-element';
+import {QueryBase} from './query-base';
 import {View} from './view';
 
 export class VArrow extends View {
@@ -68,7 +67,7 @@ export class VArrow extends View {
   }
 }
 
-export class QArrow extends MalloyElement {
+export class QArrow extends QueryBase {
   elementType = 'arrow';
 
   constructor(
@@ -117,18 +116,5 @@ export class QArrow extends MalloyElement {
       outputStruct,
       inputStruct,
     };
-  }
-
-  query(): Query {
-    const q = this.queryComp(true).query;
-    // TODO reconsider whether this is still necessary?
-    const {hasPartials, pipeline} = detectAndRemovePartialStages(q.pipeline);
-    if (hasPartials) {
-      this.log(
-        "Can't determine view type (`group_by` / `aggregate` / `nest`, `project`, `index`)"
-      );
-      return {...q, pipeline};
-    }
-    return q;
   }
 }

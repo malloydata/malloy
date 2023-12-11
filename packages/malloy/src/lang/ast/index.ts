@@ -31,7 +31,7 @@ export * from './elements/source-query-nodes';
 export * from './source-properties/field-list-edit';
 export * from './source-properties/primary-key';
 export * from './source-properties/renames';
-export * from './source-properties/turtles';
+export * from './source-properties/views';
 export * from './source-properties/timezone-statement';
 export * from './expressions/apply';
 export * from './expressions/binary-numeric';
