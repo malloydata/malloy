@@ -145,8 +145,9 @@ export class ReferenceView extends View {
     super({reference});
   }
 
-  // TODO nest in?
-  pipelineComp(fs: FieldSpace, isNestIn?: QuerySpace): PipelineComp {
+  // `_isNestIn` is not needed because referenced fields can never be fields defined
+  // in nest parents anyway
+  pipelineComp(fs: FieldSpace, _isNestIn?: QuerySpace): PipelineComp {
     const lookup = this.reference.getField(fs);
     const oops = function () {
       return {
@@ -156,9 +157,7 @@ export class ReferenceView extends View {
       };
     };
     if (!lookup.found) {
-      this.log(
-        `Cannot find \`${this.reference.refString}\` in output of LHS query`
-      );
+      this.log(`\`${this.reference.refString}\` is not defined`);
       return oops();
     } else if (isAtomicFieldType(lookup.found.typeDesc().dataType)) {
       if (!this.inExperiment('scalar_lenses', true)) {
