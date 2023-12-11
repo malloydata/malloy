@@ -1053,15 +1053,15 @@ export class MalloyToAST
 
   visitNestedQueryList(pcx: parse.NestedQueryListContext): ast.Nests {
     return new ast.Nests(
-      this.only<ast.NestedQuery>(
+      this.only<ast.NestDefinition>(
         pcx.nestEntry().map(cx => this.visit(cx)),
-        x => ast.isNestedQuery(x) && x,
+        x => x instanceof ast.NestDefinition && x,
         'query'
       )
     );
   }
 
-  visitNestExisting(pcx: parse.NestExistingContext): ast.NestedQuery {
+  visitNestExisting(pcx: parse.NestExistingContext): ast.NestDefinition {
     const nameCx = pcx.fieldPath();
     const name = this.getFieldPath(nameCx, ast.ViewFieldReference);
     const referenceView = this.astAt(new ast.ReferenceView(name), nameCx);
@@ -1080,7 +1080,7 @@ export class MalloyToAST
       referenceView
     );
     nestReference.extendNote({notes});
-    return this.astAt(referenceView, pcx);
+    return this.astAt(nestReference, pcx);
   }
 
   visitNestDef(pcx: parse.NestDefContext): ast.NestDefinition {

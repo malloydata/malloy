@@ -96,35 +96,20 @@ export class NestDefinition extends ViewDefinition {
   }
 }
 
-export function isNestedQuery(me: MalloyElement): me is NestedQuery {
-  return me instanceof ReferenceView || me instanceof NestDefinition;
-}
-
 export class ViewField extends QueryField {
-  renameAs?: string;
   constructor(
     fs: FieldSpace,
-    readonly turtle: NestedQuery,
+    readonly turtle: ReferenceView | NestDefinition,
     protected name: string
   ) {
     super(fs);
   }
 
   getQueryFieldDef(fs: FieldSpace): model.QueryFieldDef {
-    const def = this.turtle.getFieldDef(fs);
-    if (this.renameAs) {
-      def.as = this.renameAs;
-    }
-    return def;
+    return this.turtle.getFieldDef(fs);
   }
 
   fieldDef(): model.TurtleDef {
-    const def = this.turtle.getFieldDef(this.inSpace);
-    if (this.renameAs) {
-      def.as = this.renameAs;
-    }
-    return def;
+    return this.turtle.getFieldDef(this.inSpace);
   }
 }
-
-export type NestedQuery = ReferenceView | NestDefinition;

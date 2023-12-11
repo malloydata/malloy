@@ -340,39 +340,10 @@ describe('source references', () => {
     });
   });
 
-  test('pre m4 reference to sql block', () => {
-    const source = markSource`
-      ##! -m4warnings
-      ${'sql: s is {select:"""SELECT 1 as one"""}'}
-      source: na is from_sql(${'s'})
-    `;
-    const m = new TestTranslator(source.code);
-    expect(m).toParse();
-    const compileSql = m.translate().compileSQL;
-    expect(compileSql).toBeDefined();
-    if (compileSql) {
-      m.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
-      });
-      expect(m).toTranslate();
-      const ref = m.referenceAt(pos(source.locations[1]));
-      expect(ref).toMatchObject({
-        location: source.locations[1],
-        type: 'sqlBlockReference',
-        text: 's',
-        definition: {
-          ...getSelectOneStruct(compileSql),
-          location: source.locations[0],
-        },
-      });
-    }
-  });
-
-  test('pre m4 reference to query in from', () => {
+  test('reference to query', () => {
     const source = model`
-      ##! -m4warnings
       query: ${'q is a -> { select: * }'}
-      source: na is from(-> ${'q'})
+      source: na is ${'q'}
     `;
     expect(source).toTranslate();
     const mt = source.translator;
