@@ -49,6 +49,7 @@ export class VRefine extends View {
     const resultPipe = this.refinement.refine(fs, query.pipeline, isNestIn);
     return {
       pipeline: resultPipe,
+      annotation: query.annotation,
       outputStruct:
         resultPipe.length > 0
           ? getFinalStruct(this.refinement, fs.structDef(), resultPipe)

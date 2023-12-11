@@ -650,9 +650,8 @@ export class MalloyToAST
 
   visitDefExploreQuery(pcx: parse.DefExploreQueryContext): ast.MalloyElement {
     const queryDefs = this.visitSubQueryDefList(pcx.subQueryDefList());
-    // TODO annotations
-    // const blockNotes = this.getNotes(pcx.tags());
-    // queryDefs.extendNote({blockNotes});
+    const blockNotes = this.getNotes(pcx.tags());
+    queryDefs.extendNote({blockNotes});
     if (pcx.QUERY()) {
       this.m4advisory(pcx, 'Use view: inside of a source instead of query:');
     }
@@ -1067,33 +1066,38 @@ export class MalloyToAST
     const name = this.getFieldPath(nameCx, ast.ViewFieldReference);
     const referenceView = this.astAt(new ast.ReferenceView(name), nameCx);
     const refineCx = pcx.vExpr();
-    // const notes = this.getNotes(pcx.tags());
+    const notes = this.getNotes(pcx.tags());
     if (refineCx) {
       const nestRefine = new ast.NestDefinition(
         name.nameString,
         new ast.VRefine(referenceView, this.getVExpr(refineCx))
       );
+      nestRefine.extendNote({notes});
       return this.astAt(nestRefine, pcx);
     }
-    return referenceView;
+    const nestReference = new ast.NestDefinition(
+      name.nameString,
+      referenceView
+    );
+    nestReference.extendNote({notes});
+    return this.astAt(referenceView, pcx);
   }
 
   visitNestDef(pcx: parse.NestDefContext): ast.NestDefinition {
     const name = getId(pcx.queryName());
     const vExpr = this.getVExpr(pcx.vExpr());
     const nestDef = new ast.NestDefinition(name, vExpr);
-    // TODO fix annotations
-    // nestDef.extendNote({
-    //   notes: this.getNotes(pcx.tags()).concat(this.getIsNotes(pcx.isDefine())),
-    // });
+    nestDef.extendNote({
+      notes: this.getNotes(pcx.tags()).concat(this.getIsNotes(pcx.isDefine())),
+    });
     return this.astAt(nestDef, pcx);
   }
 
   visitExploreQueryDef(pcx: parse.ExploreQueryDefContext): ast.ViewDefinition {
     const name = getId(pcx.exploreQueryNameDef());
     const queryDef = new ast.ViewDefinition(name, this.getVExpr(pcx.vExpr()));
-    // TODO annotations
-    // const notes = this.getNotes(pcx).concat(this.getIsNotes(pcx.isDefine()));
+    const notes = this.getNotes(pcx).concat(this.getIsNotes(pcx.isDefine()));
+    queryDef.extendNote({notes});
     return this.astAt(queryDef, pcx);
   }
 

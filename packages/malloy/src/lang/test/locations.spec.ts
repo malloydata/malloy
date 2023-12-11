@@ -123,10 +123,9 @@ describe('source locations', () => {
     expect(abool.location).toMatchObject(source.locations[0]);
   });
 
-  test('pre m4 location of field inherited from sql block', () => {
-    const source = markSource`##! -m4warnings
-      sql: s is { select: ${'"""SELECT 1 as one """'} }
-      source: na is from_sql(s)
+  test('location of field inherited from sql source', () => {
+    const source = markSource`
+      source: na is conn.sql(${'"""SELECT 1 as one """'})
     `;
     const m = new TestTranslator(source.code);
     expect(m).toParse();
@@ -143,16 +142,13 @@ describe('source locations', () => {
     }
   });
 
-  test('pre m4 location of fields inherited from a query', () => {
+  test('location of fields inherited from a query', () => {
     const source = markSource`
-      ##! -m4warnings
-      source: na is from(
-        ${"_db_.table('aTable')"} -> {
-          group_by:
-            abool
-            ${'y is 1'}
-        }
-      )
+      source: na is ${"_db_.table('aTable')"} -> {
+        group_by:
+          abool
+          ${'y is 1'}
+      }
     `;
     const m = new TestTranslator(source.code);
     expect(m).toTranslate();

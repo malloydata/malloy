@@ -22,9 +22,9 @@
  */
 
 import {ViewDefinition} from '../query-properties/nest';
-import {ListOf} from '../types/malloy-element';
+import {DefinitionList} from '../types/definition-list';
 
 // TODO rename file to views
-export class Views extends ListOf<ViewDefinition> {
+export class Views extends DefinitionList<ViewDefinition> {
   elementType = 'turtleDefList';
 }

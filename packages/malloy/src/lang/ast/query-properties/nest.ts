@@ -31,27 +31,20 @@ import {
   QueryPropertyInterface,
 } from '../types/query-property-interface';
 import {QueryBuilder} from '../types/query-builder';
-import {MakeEntry} from '../types/space-entry';
 import {DynamicSpace} from '../field-space/dynamic-space';
-import {QuerySpace} from '../field-space/query-spaces';
-import {
-  expressionIsAggregate,
-  expressionIsAnalytic,
-  expressionIsScalar,
-  TypeDesc,
-} from '../../../model';
-import {FieldReference} from '../query-items/field-references';
-import {SpaceField} from '../types/space-field';
-import {QueryFieldStruct} from '../field-space/query-field-struct';
 import {ReferenceView, View} from '../query-elements/view';
+import {Noteable, extendNoteMethod} from '../types/noteable';
 
 export class ViewDefinition
   extends MalloyElement
-  implements QueryPropertyInterface
+  implements QueryPropertyInterface, Noteable
 {
   elementType = 'view-definition';
   queryRefinementStage = LegalRefinementStage.Single;
   forceQueryClass = QueryClass.Grouping;
+  readonly isNoteableObj = true;
+  extendNote = extendNoteMethod;
+  note?: model.Annotation;
 
   constructor(
     readonly name: string,
@@ -70,12 +63,15 @@ export class ViewDefinition
   }
 
   getFieldDef(fs: FieldSpace): model.TurtleDef {
-    const pipeline = this.view.pipeline(fs);
-    return {
+    const {pipeline, annotation} = this.view.pipelineComp(fs);
+    const def: model.TurtleDef = {
       type: 'turtle',
       name: this.name,
       pipeline,
+      annotation: {...this.note, inherits: annotation},
+      location: this.location,
     };
+    return def;
   }
 }
 
@@ -84,11 +80,16 @@ export class NestDefinition extends ViewDefinition {
 
   getFieldDef(fs: FieldSpace): model.TurtleDef {
     if (fs.isQueryFieldSpace()) {
-      // TODO annotations
+      const {pipeline, annotation} = this.view.pipelineComp(
+        fs,
+        fs.outputSpace()
+      );
       return {
         type: 'turtle',
         name: this.name,
-        pipeline: this.view.pipeline(fs, fs.outputSpace()),
+        pipeline,
+        annotation: {...this.note, inherits: annotation},
+        location: this.location,
       };
     }
     throw this.internalError('Unexpected namespace for nest');
@@ -123,92 +124,6 @@ export class ViewField extends QueryField {
       def.as = this.renameAs;
     }
     return def;
-  }
-}
-
-export class NestReference
-  extends FieldReference
-  implements QueryPropertyInterface, MakeEntry
-{
-  elementType = 'nestReference';
-  forceQueryClass = QueryClass.Grouping;
-  queryRefinementStage = LegalRefinementStage.Single;
-
-  constructor(readonly name: FieldReference) {
-    super([...name.list]);
-  }
-  typecheck(type: TypeDesc) {
-    if (type.dataType !== 'turtle') {
-      let useInstead: string;
-      let kind: string;
-      if (expressionIsAnalytic(type.expressionType)) {
-        useInstead = 'a calculate';
-        kind = 'an analytic';
-      } else {
-        if (this.inExperiment('scalar_lenses', true)) {
-          return;
-        }
-        if (expressionIsScalar(type.expressionType)) {
-          useInstead = 'a group_by or select';
-          kind = 'a scalar';
-        } else if (expressionIsAggregate(type.expressionType)) {
-          useInstead = 'an aggregate';
-          kind = 'an aggregate';
-        } else {
-          throw new Error(
-            `Unexpected expression type ${type} not handled here`
-          );
-        }
-        this.log(
-          `Cannot use ${kind} field in a nest operation, did you mean to use ${useInstead} operation instead?`
-        );
-      }
-    }
-  }
-
-  // TODO refactor this
-  makeEntry(fs: DynamicSpace): void {
-    if (fs instanceof QuerySpace) {
-      const lookup = this.name.getField(fs.inputSpace());
-      if (lookup.found instanceof SpaceField) {
-        const field = lookup.found.fieldDef();
-        if (field && model.isAtomicField(field)) {
-          const name = field.as ?? field.name;
-          fs.newEntry(
-            name,
-            this,
-            new QueryFieldStruct(fs, {
-              type: 'turtle',
-              name,
-              pipeline: [
-                {
-                  type: 'reduce',
-                  fields: [
-                    {
-                      type: field.type,
-                      name,
-                      expressionType: field.expressionType,
-                      e: [{type: 'field', path: this.name.refString}],
-                    },
-                  ],
-                },
-              ],
-            })
-          );
-          return;
-        }
-      }
-      if (this.name.list.length > 1) {
-        this.log('Cannot nest view from join');
-        return;
-      }
-      return super.makeEntry(fs);
-    }
-    throw this.internalError('Unexpected namespace for nest');
-  }
-
-  queryExecute(executeFor: QueryBuilder) {
-    executeFor.resultFS.pushFields(this);
   }
 }
 

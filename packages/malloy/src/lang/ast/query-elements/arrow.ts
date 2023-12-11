@@ -79,7 +79,7 @@ export class QArrow extends MalloyElement {
   }
 
   queryComp(isRefOk: boolean): QueryComp {
-    let structDef: StructDef;
+    let inputStruct: StructDef;
     let queryBase: Query;
     let fieldSpace: FieldSpace;
     if (this.source instanceof Source) {
@@ -94,25 +94,27 @@ export class QArrow extends MalloyElement {
         pipeline: [],
         location: this.location,
       };
-      structDef = refIsStructDef(structRef)
+      inputStruct = refIsStructDef(structRef)
         ? structRef
         : this.source.structDef();
-      fieldSpace = new StaticSpace(structDef);
+      fieldSpace = new StaticSpace(inputStruct);
     } else {
       // We are adding a second stage to the given "source" query; we get the query and add a segment
       const lhsQuery = this.source.queryComp(isRefOk);
       queryBase = lhsQuery.query;
-      structDef = lhsQuery.outputStruct;
+      inputStruct = lhsQuery.outputStruct;
       fieldSpace = new StaticSpace(lhsQuery.outputStruct);
     }
-    const pipeline = this.view.pipelineComp(fieldSpace);
+    const {pipeline, annotation, outputStruct} =
+      this.view.pipelineComp(fieldSpace);
     return {
       query: {
         ...queryBase,
-        pipeline: [...queryBase.pipeline, ...pipeline.pipeline],
+        annotation,
+        pipeline: [...queryBase.pipeline, ...pipeline],
       },
-      outputStruct: pipeline.outputStruct,
-      inputStruct: structDef,
+      outputStruct,
+      inputStruct,
     };
   }
 

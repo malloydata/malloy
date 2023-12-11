@@ -189,9 +189,9 @@ export class ReferenceView extends View {
         if (fieldDef.type !== 'turtle') {
           throw new Error('Expected field to be a view');
         }
-        // TODO handle annotations correctly?
         return {
           pipeline: [...fieldDef.pipeline],
+          annotation: fieldDef.annotation,
           outputStruct: getFinalStruct(
             this.reference,
             fs.structDef(),
