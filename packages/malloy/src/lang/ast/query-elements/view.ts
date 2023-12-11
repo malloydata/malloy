@@ -145,9 +145,8 @@ export class ReferenceView extends View {
     super({reference});
   }
 
-  // `_isNestIn` is not needed because referenced fields can never be fields defined
-  // in nest parents anyway
-  pipelineComp(fs: FieldSpace, _isNestIn?: QuerySpace): PipelineComp {
+  // TODO nest in?
+  pipelineComp(fs: FieldSpace, isNestIn?: QuerySpace): PipelineComp {
     const lookup = this.reference.getField(fs);
     const oops = function () {
       return {
@@ -157,7 +156,9 @@ export class ReferenceView extends View {
       };
     };
     if (!lookup.found) {
-      this.log(`\`${this.reference.refString}\` is not defined`);
+      this.log(
+        `Cannot find \`${this.reference.refString}\` in output of LHS query`
+      );
       return oops();
     } else if (isAtomicFieldType(lookup.found.typeDesc().dataType)) {
       if (!this.inExperiment('scalar_lenses', true)) {
@@ -343,21 +344,6 @@ export class ReferenceView extends View {
           opOutputStruct(this.reference, inputFS.structDef(), to)
         ),
     };
-  }
-
-  getFieldDef(fs: FieldSpace): TurtleDef {
-    // TODO annotations
-    return {
-      type: 'turtle',
-      name: this.reference.nameString,
-      pipeline: this.pipeline(fs),
-    };
-  }
-
-  makeEntry(fs: DynamicSpace) {
-    const name = this.reference.nameString;
-    const qf = new ViewField(fs, this, name);
-    fs.newEntry(name, this, qf);
   }
 }
 

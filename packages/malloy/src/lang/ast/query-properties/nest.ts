@@ -32,7 +32,7 @@ import {
 } from '../types/query-property-interface';
 import {QueryBuilder} from '../types/query-builder';
 import {DynamicSpace} from '../field-space/dynamic-space';
-import {ReferenceView, View} from '../query-elements/view';
+import {View} from '../query-elements/view';
 import {Noteable, extendNoteMethod} from '../types/noteable';
 import {detectAndRemovePartialStages} from '../query-utils';
 
@@ -102,17 +102,17 @@ export class NestDefinition extends ViewDefinition {
 export class ViewField extends QueryField {
   constructor(
     fs: FieldSpace,
-    readonly turtle: ReferenceView | NestDefinition,
+    readonly view: ViewDefinition,
     protected name: string
   ) {
     super(fs);
   }
 
   getQueryFieldDef(fs: FieldSpace): model.QueryFieldDef {
-    return this.turtle.getFieldDef(fs);
+    return this.view.getFieldDef(fs);
   }
 
   fieldDef(): model.TurtleDef {
-    return this.turtle.getFieldDef(this.inSpace);
+    return this.view.getFieldDef(this.inSpace);
   }
 }
