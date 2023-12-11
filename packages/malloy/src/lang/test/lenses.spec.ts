@@ -132,7 +132,9 @@ describe('lenses', () => {
         }
         run: x -> n + d
       `
-    ).translationToFailWith("'n' is not a query");
+    ).translationToFailWith(
+      'Cannot use scalar field `n` as a view; use `scalar_lenses` experiment to enable this behavior'
+    );
   });
   test('cannot reference dimension', () => {
     expect(

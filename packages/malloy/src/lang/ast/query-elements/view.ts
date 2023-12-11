@@ -28,6 +28,7 @@ import {
   isAtomicFieldType,
   isRawSegment,
 } from '../../../model/malloy_types';
+import {ErrorFactory} from '../error-factory';
 import {DynamicSpace} from '../field-space/dynamic-space';
 import {QuerySpace} from '../field-space/query-spaces';
 import {StaticSpace} from '../field-space/static-space';
@@ -86,6 +87,9 @@ export class QOpDescView extends View {
     isNestIn: QuerySpace | undefined
   ): PipeSegment[] {
     const pipeline = [..._pipeline];
+    if (pipeline.length === 0) {
+      return pipeline;
+    }
     if (pipeline.length === 1) {
       this.operation.refineFrom(pipeline[0]);
       return [this.getOp(inputFS, isNestIn, this.operation, pipeline[0])];
@@ -144,15 +148,22 @@ export class ReferenceView extends View {
   // TODO nest in?
   pipelineComp(fs: FieldSpace, isNestIn?: QuerySpace): PipelineComp {
     const lookup = this.reference.getField(fs);
+    const oops = function () {
+      return {
+        inputStruct: ErrorFactory.structDef,
+        outputStruct: ErrorFactory.structDef,
+        pipeline: [],
+      };
+    };
     if (!lookup.found) {
       this.log(
-        `Cannot find ${this.reference.refString} in output of LHS query`
+        `Cannot find \`${this.reference.refString}\` in output of LHS query`
       );
-      throw new Error('TODO return something better here');
+      return oops();
     } else if (isAtomicFieldType(lookup.found.typeDesc().dataType)) {
       if (!this.inExperiment('scalar_lenses', true)) {
         this.reference.log(
-          `Cannot use scalar field ${this.reference.refString} as a view; use \`scalar_lenses\` experiment to enable this behavior`
+          `Cannot use scalar field \`${this.reference.refString}\` as a view; use \`scalar_lenses\` experiment to enable this behavior`
         );
       }
       const newSegment: PipeSegment = {
@@ -167,7 +178,7 @@ export class ReferenceView extends View {
     } else if (lookup.found.typeDesc().dataType === 'turtle') {
       if (this.reference.list.length > 1) {
         this.log('Cannot use view from join');
-        throw new Error('TODO return something better here');
+        return oops();
       }
       // TODO the type narrowing here is awful and I should redo it
       if (lookup.found instanceof SpaceField) {
@@ -192,7 +203,7 @@ export class ReferenceView extends View {
       }
     } else {
       this.reference.log('This operation is not supported');
-      throw new Error('TODO return something better here');
+      return oops();
     }
   }
 

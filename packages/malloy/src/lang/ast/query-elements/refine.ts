@@ -22,6 +22,7 @@
  */
 
 import {PipeSegment, Query} from '../../../model';
+import {ErrorFactory} from '../error-factory';
 import {QuerySpace} from '../field-space/query-spaces';
 import {StaticSpace} from '../field-space/static-space';
 import {detectAndRemovePartialStages} from '../query-utils';
@@ -48,7 +49,10 @@ export class VRefine extends View {
     const resultPipe = this.refinement.refine(fs, query.pipeline, isNestIn);
     return {
       pipeline: resultPipe,
-      outputStruct: getFinalStruct(this.refinement, fs.structDef(), resultPipe),
+      outputStruct:
+        resultPipe.length > 0
+          ? getFinalStruct(this.refinement, fs.structDef(), resultPipe)
+          : ErrorFactory.structDef,
     };
   }
 

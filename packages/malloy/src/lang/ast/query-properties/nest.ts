@@ -70,11 +70,11 @@ export class ViewDefinition
   }
 
   getFieldDef(fs: FieldSpace): model.TurtleDef {
-    // TODO annotations
+    const pipeline = this.view.pipeline(fs);
     return {
       type: 'turtle',
       name: this.name,
-      pipeline: this.view.pipeline(fs),
+      pipeline,
     };
   }
 }
