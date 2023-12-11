@@ -752,7 +752,6 @@ export interface TurtleSegment extends Filtered {
   name: string;
 }
 export interface Pipeline {
-  pipeHead?: TurtleSegment;
   pipeline: PipeSegment[];
 }
 

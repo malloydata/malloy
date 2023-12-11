@@ -84,7 +84,6 @@ export {
   // Used in Composer Demo
   Segment,
   isFilteredAliasedName,
-  flattenQuery,
   expressionIsCalculation,
 } from './model';
 export {

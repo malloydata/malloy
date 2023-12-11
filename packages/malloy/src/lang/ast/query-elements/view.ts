@@ -218,7 +218,7 @@ export class ReferenceView extends View {
     if (res.found instanceof SpaceField) {
       const fieldDef = res.found.fieldDef();
       if (fieldDef?.type === 'turtle') {
-        if (fieldDef.pipeline.length > 1 || fieldDef.pipeHead !== undefined) {
+        if (fieldDef.pipeline.length > 1) {
           this.reference.log(
             `named refinement \`${this.reference.refString}\` must have exactly one stage`
           );
