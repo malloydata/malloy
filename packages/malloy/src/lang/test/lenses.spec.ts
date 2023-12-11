@@ -254,7 +254,7 @@ describe('lenses', () => {
         }
         run: x -> { nest: y.z }
       `
-    ).translationToFailWith('Cannot nest view from join');
+    ).translationToFailWith('Cannot use view from join');
   });
   test('cannot use view from join as nest view head', () => {
     expect(

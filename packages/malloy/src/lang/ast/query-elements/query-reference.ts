@@ -25,7 +25,7 @@ import {ErrorFactory} from '../error-factory';
 import {MalloyElement, ModelEntryReference} from '../types/malloy-element';
 import {QueryComp} from '../types/query-comp';
 import {QueryHeadStruct} from './query-head-struct';
-import {Query} from '../../../model/malloy_types';
+import {Query, refIsStructDef} from '../../../model/malloy_types';
 import {getFinalStruct} from '../struct-utils';
 
 export class QueryReference extends MalloyElement {
@@ -35,7 +35,6 @@ export class QueryReference extends MalloyElement {
     super();
   }
 
-  // TODO not using isRefOk
   queryComp(isRefOk: boolean): QueryComp {
     const headEntry = this.modelEntry(this.name);
     const query = headEntry?.entry;
@@ -55,8 +54,13 @@ export class QueryReference extends MalloyElement {
       this.has({queryHead: queryHead});
       const inputStruct = queryHead.structDef();
       const outputStruct = getFinalStruct(this, inputStruct, query.pipeline);
+      const unRefedQuery = isRefOk
+        ? query
+        : refIsStructDef(query.structRef)
+        ? query
+        : {...query, structRef: inputStruct};
       return {
-        query,
+        query: unRefedQuery,
         outputStruct,
         inputStruct,
       };

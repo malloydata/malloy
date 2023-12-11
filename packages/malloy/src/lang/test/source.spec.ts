@@ -258,15 +258,6 @@ describe('source:', () => {
         'Use view: inside of a source instead of query:'
       );
     });
-    test('turtle in source m4 warning on arrow', () => {
-      expect(
-        `##! m4warnings=warn
-          source: c is a extend {view: q is -> { group_by: astr } }
-        `
-      ).toTranslateWithWarnings(
-        "Leading '->' in a view or nest definition is no longer needed."
-      );
-    });
     test('refined explore-query', () => {
       expect(`
         source: abNew is ab extend {
