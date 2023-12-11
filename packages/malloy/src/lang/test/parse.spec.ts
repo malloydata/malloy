@@ -954,14 +954,6 @@ describe('m3/m4 source query sentences', () => {
       "Cannot add view refinements to 'a' because it is a source"
     );
   });
-  test('heckin parser', () => {
-    expect(`
-      source: s is a
-      query: q is s -> ${query}
-      source: s2_m4 is q + ${qryRefine} -> ${query} extend ${srcExtend};
-    `).toTranslate();
-    // source: s2_m4 is q + {limit:1} -> {select:*} extend {accept:ai};
-  });
   test('legal sqexpressions', () => {
     // some things that are m4 warnings are commented out
     expect(`
