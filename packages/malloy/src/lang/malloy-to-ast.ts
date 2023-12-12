@@ -1063,7 +1063,7 @@ export class MalloyToAST
 
   visitNestExisting(pcx: parse.NestExistingContext): ast.NestDefinition {
     const nameCx = pcx.fieldPath();
-    const name = this.getFieldPath(nameCx, ast.ViewFieldReference);
+    const name = this.getFieldPath(nameCx, ast.ViewOrScalarFieldReference);
     const referenceView = this.astAt(new ast.ReferenceView(name), nameCx);
     const refineCx = pcx.vExpr();
     const notes = this.getNotes(pcx.tags());
