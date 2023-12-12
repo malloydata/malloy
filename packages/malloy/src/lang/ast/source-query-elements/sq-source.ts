@@ -24,6 +24,7 @@
 import {Source} from '../source-elements/source';
 import {SourceQueryElement} from './source-query-element';
 import {QueryRaw} from '../query-elements/query-raw';
+import {SQLSource} from '../source-elements/sql-source';
 
 export class SQSource extends SourceQueryElement {
   elementType = 'sq-source';
@@ -41,8 +42,12 @@ export class SQSource extends SourceQueryElement {
   }
 
   getQuery() {
-    const rawQuery = new QueryRaw(this.theSource);
-    this.has({rawQuery});
-    return rawQuery;
+    if (this.theSource instanceof SQLSource) {
+      const rawQuery = new QueryRaw(this.theSource);
+      this.has({rawQuery});
+      return rawQuery;
+    } else {
+      this.sqLog('This source cannot be used as a query');
+    }
   }
 }

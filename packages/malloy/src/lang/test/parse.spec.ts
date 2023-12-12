@@ -55,11 +55,21 @@ describe('model statements', () => {
       });
       expect(m).translationToFailWith('a1 is not a connection');
     });
+    test('cannot refine table', () => {
+      expect(
+        markSource`run: \`_db_\`.table('aTable') + { limit: 10 }`
+      ).translationToFailWith('Cannot add view refinements to a source');
+    });
     test('table function is deprecated', () => {
       expect(`##! m4warnings=warn
       source: testA is table('_db_:aTable')
     `).toTranslateWithWarnings(
         "`table('connection_name:table_path')` is deprecated; use `connection_name.table('table_path')`"
+      );
+    });
+    test('cannot run table', () => {
+      expect(markSource`run: \`_db_\`.table('aTable')`).translationToFailWith(
+        'This source cannot be used as a query'
       );
     });
   });
@@ -615,7 +625,22 @@ describe('sql expressions', () => {
     }
   });
 
-  // TODO add a test for the error you get by trying to refine a sql query
+  test('cannot refine sql query', () => {
+    const m = new TestTranslator(`
+    run: duckdb.sql("SELECT 1 as one") + { limit: 10 }
+    `);
+    expect(m).toParse();
+    const compileSql = m.translate().compileSQL;
+    expect(compileSql).toBeDefined();
+    if (compileSql) {
+      m.update({
+        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+      });
+      expect(m).translationToFailWith(
+        'Cannot add view refinements to a source'
+      );
+    }
+  });
 
   test('reference to sql expression in join', () => {
     const m = model`
