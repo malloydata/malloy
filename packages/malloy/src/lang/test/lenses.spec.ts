@@ -46,6 +46,30 @@ describe('lenses', () => {
       `
     ).toTranslate();
   });
+  test('lens parens patterns', () => {
+    expect(
+      markSource`
+        source: s1 is a extend {
+          view: v1 is { group_by: d1 is 1 }
+          view: v2 is { group_by: d2 is 2 }
+          view: v3 is { group_by: d3 is 3 }
+          view: v4 is (v1 + v2) + v3
+          view: v5 is {
+            nest: n1 is v1 + (v2 + v3)
+            nest: n2 is (({ group_by: d1 is 1 } + v2) + v3)
+            nest: n3 is v1 + v2 + { group_by: d3 is 3 }
+          }
+          view: v6 is { group_by: d1 is 1 } + (v2 + v3)
+        }
+        run: (s1 -> v4)
+        run: (s1 -> (((v4))))
+        source: s2 is ((s1 -> v1) + v2) + v3
+        source: s3 is s1 -> (v1 + (v2 + v3))
+        source: s4 is (s1 -> v1) + (v2 + v3)
+        source: s5 is s1 -> { group_by: d1 is 1 } + v2 + v3
+      `
+    ).toTranslate();
+  });
   test('cannot have overlapping names', () => {
     expect(
       markSource`
@@ -185,6 +209,34 @@ describe('lenses', () => {
         run: x -> two_stage + ({ where: true } + { limit: 3 })
       `
     ).toTranslate();
+  });
+  test('cannot refine with multi-stage', () => {
+    expect(
+      markSource`
+        ##! experimental { scalar_lenses }
+        source: x is a extend {
+          view: one_stage is { group_by: a is 1 }
+          view: two_stage is { group_by: a is 1 } -> { group_by: a }
+        }
+        run: x -> one_stage + two_stage
+      `
+    ).translationToFailWith(
+      'named refinement `two_stage` must have exactly one stage'
+    );
+  });
+  test('cannot refine with literal multi-stage', () => {
+    expect(
+      markSource`
+        ##! experimental { scalar_lenses }
+        source: x is a extend {
+          view: one_stage is { group_by: a is 1 }
+          view: two_stage is { group_by: a is 1 } -> { group_by: a }
+        }
+        run: x -> one_stage + ({ group_by: a is 1 } -> { group_by: a })
+      `
+    ).translationToFailWith(
+      'A multi-segment view cannot be used as a refinement'
+    );
   });
   test('can reference dimension in refinement when experiment is enabled', () => {
     expect(

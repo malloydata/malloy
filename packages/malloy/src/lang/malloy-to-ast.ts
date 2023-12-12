@@ -1654,6 +1654,12 @@ export class MalloyToAST
     return this.astAt(src, pcx);
   }
 
+  visitSQParens(pcx: parse.SQParensContext) {
+    // TODO maybe implement a pass-through SQParens node
+    const sqExpr = this.getSqExpr(pcx.sqExpr());
+    return this.astAt(sqExpr, pcx);
+  }
+
   visitSQArrow(pcx: parse.SQArrowContext) {
     const applyTo = this.getSqExpr(pcx.sqExpr());
     const headCx = pcx.segExpr();
