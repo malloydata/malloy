@@ -62,7 +62,7 @@ export class SQLString extends MalloyElement {
         if (queryObject) {
           ret.push(queryObject.query());
         } else {
-          el.sqLog('Cannot exand into a query');
+          el.sqLog('Cannot expand into a query');
         }
       }
     }
