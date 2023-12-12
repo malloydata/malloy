@@ -21,18 +21,47 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {MalloyElement} from './malloy-element';
-import {QueryArrow} from '../query-elements/query-arrow';
+import {SourceQueryElement} from './source-query-element';
+import {QuerySource} from '../source-elements/query-source';
 import {QueryRefine} from '../query-elements/query-refine';
-import {QueryReference} from '../query-elements/query-reference';
-import {QueryRaw} from '../query-elements/query-raw';
+import {View} from '../view-elements/view';
+import {SQReference} from './sq-reference';
 
-export type QueryElement = QueryArrow | QueryRefine | QueryReference | QueryRaw;
-export function isQueryElement(e: MalloyElement): e is QueryElement {
-  return (
-    e instanceof QueryArrow ||
-    e instanceof QueryRefine ||
-    e instanceof QueryReference ||
-    e instanceof QueryRaw
-  );
+export class SQRefine extends SourceQueryElement {
+  elementType = 'sq-refine';
+
+  constructor(
+    readonly toRefine: SourceQueryElement,
+    readonly refine: View
+  ) {
+    super({toRefine, refine});
+  }
+
+  getQuery() {
+    if (this.toRefine.isSource()) {
+      if (this.toRefine instanceof SQReference) {
+        this.sqLog(
+          `Cannot add view refinements to '${this.toRefine.ref.refString}' because it is a source`
+        );
+      } else {
+        this.sqLog('Cannot add view refinements to a source');
+      }
+      return;
+    }
+    const refinedQuery = this.toRefine.getQuery();
+    if (refinedQuery) {
+      const resultQuery = new QueryRefine(refinedQuery, this.refine);
+      this.has({query: resultQuery});
+      return resultQuery;
+    }
+  }
+
+  getSource() {
+    const query = this.getQuery();
+    if (query) {
+      const queryAsSource = new QuerySource(query);
+      this.has({queryAsSource});
+      return queryAsSource;
+    }
+  }
 }

@@ -21,8 +21,31 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DeclareFields} from './declare-fields';
+import {QueryFieldDef, TurtleDef} from '../../../model/malloy_types';
+import {ViewDefinition} from '../source-properties/view';
+import {FieldSpace} from '../types/field-space';
+import {QueryField} from './query-space-field';
 
-export class Measures extends DeclareFields {
-  elementType = 'measureList';
+// TODO naming: There's two subclasses of QueryField: ViewField and QueryFieldStruct
+// All three names should be changed. Maybe:
+// QueryField -> ViewField
+// ViewField -> ASTViewField
+// QueryFieldStruct -> IRViewField
+
+export class ViewField extends QueryField {
+  constructor(
+    fs: FieldSpace,
+    readonly view: ViewDefinition,
+    protected name: string
+  ) {
+    super(fs);
+  }
+
+  getQueryFieldDef(fs: FieldSpace): QueryFieldDef {
+    return this.view.getFieldDef(fs);
+  }
+
+  fieldDef(): TurtleDef {
+    return this.view.getFieldDef(this.inSpace);
+  }
 }

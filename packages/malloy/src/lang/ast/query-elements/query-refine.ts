@@ -21,38 +21,38 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Query, refIsStructDef} from '../../../model/malloy_types';
-import {Source} from '../elements/source';
-import {MalloyElement} from '../types/malloy-element';
+import {StaticSpace} from '../field-space/static-space';
+import {getFinalStruct} from '../struct-utils';
 import {QueryComp} from '../types/query-comp';
+import {QueryElement} from '../types/query-element';
+import {View} from '../view-elements/view';
+import {QueryBase} from './query-base';
 
-export class RawQuery extends MalloyElement {
-  elementType = 'raw-query';
+export class QueryRefine extends QueryBase {
+  elementType = 'query-refine';
 
-  constructor(readonly source: Source) {
-    super({source});
+  constructor(
+    readonly base: QueryElement,
+    readonly refinement: View
+  ) {
+    super({base, refinement});
   }
 
   queryComp(isRefOk: boolean): QueryComp {
-    const structRef = isRefOk
-      ? this.source.structRef()
-      : this.source.structDef();
-    const structDef = refIsStructDef(structRef)
-      ? structRef
-      : this.source.structDef();
+    const q = this.base.queryComp(isRefOk);
+    const inputFS = new StaticSpace(q.inputStruct);
+    const resultPipe = this.refinement.refine(
+      inputFS,
+      q.query.pipeline,
+      undefined
+    );
     return {
       query: {
-        type: 'query',
-        structRef,
-        pipeline: [{type: 'raw', fields: []}],
-        location: this.location,
+        ...q.query,
+        pipeline: resultPipe,
       },
-      outputStruct: structDef,
-      inputStruct: structDef,
+      outputStruct: getFinalStruct(this.refinement, q.inputStruct, resultPipe),
+      inputStruct: q.inputStruct,
     };
-  }
-
-  query(): Query {
-    return this.queryComp(true).query;
   }
 }

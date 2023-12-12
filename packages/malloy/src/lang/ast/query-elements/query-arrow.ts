@@ -21,53 +21,16 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  PipeSegment,
-  Query,
-  StructDef,
-  refIsStructDef,
-} from '../../../model/malloy_types';
-import {Source} from '../elements/source';
-import {QuerySpace} from '../field-space/query-spaces';
+import {Query, StructDef, refIsStructDef} from '../../../model/malloy_types';
+import {Source} from '../source-elements/source';
 import {StaticSpace} from '../field-space/static-space';
 import {FieldSpace} from '../types/field-space';
-import {PipelineComp} from '../types/pipeline-comp';
 import {QueryComp} from '../types/query-comp';
 import {QueryElement} from '../types/query-element';
 import {QueryBase} from './query-base';
-import {View} from './view';
+import {View} from '../view-elements/view';
 
-export class VArrow extends View {
-  elementType = 'viewArrow';
-
-  constructor(
-    readonly base: View,
-    readonly op: View
-  ) {
-    super({base, op});
-  }
-
-  pipelineComp(fs: FieldSpace): PipelineComp {
-    const baseComp = this.base.pipelineComp(fs);
-    const nextFS = new StaticSpace(baseComp.outputStruct);
-    const finalComp = this.op.pipelineComp(nextFS);
-    return {
-      pipeline: [...baseComp.pipeline, ...finalComp.pipeline],
-      outputStruct: finalComp.outputStruct,
-    };
-  }
-
-  refine(
-    _inputFS: FieldSpace,
-    _pipeline: PipeSegment[],
-    _isNestIn: QuerySpace | undefined
-  ): PipeSegment[] {
-    this.log('A multi-segment view cannot be used as a refinement');
-    return [];
-  }
-}
-
-export class QArrow extends QueryBase {
+export class QueryArrow extends QueryBase {
   elementType = 'arrow';
 
   constructor(

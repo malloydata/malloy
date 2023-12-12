@@ -24,16 +24,13 @@
 import {
   PipeSegment,
   QueryFieldDef,
-  TurtleDef,
   isAtomicFieldType,
   isRawSegment,
 } from '../../../model/malloy_types';
 import {ErrorFactory} from '../error-factory';
-import {DynamicSpace} from '../field-space/dynamic-space';
 import {QuerySpace} from '../field-space/query-spaces';
 import {StaticSpace} from '../field-space/static-space';
 import {ViewOrScalarFieldReference} from '../query-items/field-references';
-import {ViewField} from '../query-properties/nest';
 import {QOpDesc} from '../query-properties/qop-desc';
 import {getFinalStruct, opOutputStruct} from '../struct-utils';
 import {FieldSpace} from '../types/field-space';

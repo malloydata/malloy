@@ -25,7 +25,7 @@ import {Annotation} from '../../../model';
 
 import {DocStatement, Document, MalloyElement} from '../types/malloy-element';
 import {Noteable, extendNoteMethod} from '../types/noteable';
-import {SourceQueryNode} from '../elements/source-query';
+import {SourceQueryElement} from '../source-query-elements/source-query-element';
 
 export class AnonymousQuery
   extends MalloyElement
@@ -33,7 +33,7 @@ export class AnonymousQuery
 {
   elementType = 'anonymousQuery';
 
-  constructor(readonly queryExpr: SourceQueryNode) {
+  constructor(readonly queryExpr: SourceQueryElement) {
     super();
     this.has({queryExpr});
   }

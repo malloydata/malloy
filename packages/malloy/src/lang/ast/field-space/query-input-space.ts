@@ -30,7 +30,7 @@
  */
 
 import {FieldDeclaration} from '../query-items/field-declaration';
-import {Join} from '../query-properties/joins';
+import {Join} from '../source-properties/joins';
 import {SourceSpec, SpaceSeed} from '../space-seed';
 import {QueryFieldSpace} from '../types/field-space';
 import {QuerySpace} from './query-spaces';

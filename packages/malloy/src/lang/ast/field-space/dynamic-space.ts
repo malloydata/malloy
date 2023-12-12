@@ -28,7 +28,7 @@ import {SpaceEntry} from '../types/space-entry';
 import {ErrorFactory} from '../error-factory';
 import {HasParameter} from '../parameters/has-parameter';
 import {MalloyElement} from '../types/malloy-element';
-import {Join} from '../query-properties/joins';
+import {Join} from '../source-properties/joins';
 import {SpaceField} from '../types/space-field';
 import {JoinSpaceField} from './join-space-field';
 import {QueryField} from './query-space-field';

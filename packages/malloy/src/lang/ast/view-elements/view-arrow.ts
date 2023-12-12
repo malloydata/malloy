@@ -21,38 +21,30 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {PipeSegment} from '../../../model';
-import {ErrorFactory} from '../error-factory';
+import {PipeSegment} from '../../../model/malloy_types';
 import {QuerySpace} from '../field-space/query-spaces';
 import {StaticSpace} from '../field-space/static-space';
-import {getFinalStruct} from '../struct-utils';
 import {FieldSpace} from '../types/field-space';
 import {PipelineComp} from '../types/pipeline-comp';
-import {QueryComp} from '../types/query-comp';
-import {QueryElement} from '../types/query-element';
-import {QueryBase} from './query-base';
 import {View} from './view';
 
-export class VRefine extends View {
-  elementType = 'refine';
+export class ViewArrow extends View {
+  elementType = 'viewArrow';
 
   constructor(
     readonly base: View,
-    readonly refinement: View
+    readonly operation: View
   ) {
-    super({base, refinement});
+    super({base, operation});
   }
 
-  pipelineComp(fs: FieldSpace, isNestIn?: QuerySpace): PipelineComp {
-    const query = this.base.pipelineComp(fs);
-    const resultPipe = this.refinement.refine(fs, query.pipeline, isNestIn);
+  pipelineComp(fs: FieldSpace): PipelineComp {
+    const baseComp = this.base.pipelineComp(fs);
+    const nextFS = new StaticSpace(baseComp.outputStruct);
+    const finalComp = this.operation.pipelineComp(nextFS);
     return {
-      pipeline: resultPipe,
-      annotation: query.annotation,
-      outputStruct:
-        resultPipe.length > 0
-          ? getFinalStruct(this.refinement, fs.structDef(), resultPipe)
-          : ErrorFactory.structDef,
+      pipeline: [...baseComp.pipeline, ...finalComp.pipeline],
+      outputStruct: finalComp.outputStruct,
     };
   }
 
@@ -61,36 +53,7 @@ export class VRefine extends View {
     _pipeline: PipeSegment[],
     _isNestIn: QuerySpace | undefined
   ): PipeSegment[] {
-    this.log('TODO not yet implemented');
+    this.log('A multi-segment view cannot be used as a refinement');
     return [];
-  }
-}
-
-export class QRefine extends QueryBase {
-  elementType = 'query-refine';
-
-  constructor(
-    readonly base: QueryElement,
-    readonly refinement: View
-  ) {
-    super({base, refinement});
-  }
-
-  queryComp(isRefOk: boolean): QueryComp {
-    const q = this.base.queryComp(isRefOk);
-    const inputFS = new StaticSpace(q.inputStruct);
-    const resultPipe = this.refinement.refine(
-      inputFS,
-      q.query.pipeline,
-      undefined
-    );
-    return {
-      query: {
-        ...q.query,
-        pipeline: resultPipe,
-      },
-      outputStruct: getFinalStruct(this.refinement, q.inputStruct, resultPipe),
-      inputStruct: q.inputStruct,
-    };
   }
 }

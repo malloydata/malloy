@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ViewDefinition} from '../query-properties/nest';
+import {ViewDefinition} from './view';
 import {DefinitionList} from '../types/definition-list';
 
 export class Views extends DefinitionList<ViewDefinition> {

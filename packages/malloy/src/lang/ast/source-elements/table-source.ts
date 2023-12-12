@@ -26,7 +26,7 @@ import {
   constructTableKey,
   deprecatedParseTableURI,
 } from '../../parse-tree-walkers/find-external-references';
-import {Source} from '../elements/source';
+import {Source} from './source';
 import {ErrorFactory} from '../error-factory';
 import {ModelEntryReference} from '../types/malloy-element';
 

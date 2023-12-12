@@ -46,7 +46,7 @@ import {CastType} from '../model';
 import {DocumentLocation, isCastType, Note} from '../model/malloy_types';
 import {Tag} from '../tags';
 
-class ErrorNode extends ast.SourceQueryNode {
+class ErrorNode extends ast.SourceQueryElement {
   elementType = 'parseErrorSourceQuery';
 }
 
@@ -349,7 +349,7 @@ export class MalloyToAST
     const exploreExpr = this.visit(pcx.sqExplore());
     const exploreDef = new ast.DefineSource(
       getId(pcx.sourceNameDef()),
-      exploreExpr instanceof ast.SourceQueryNode ? exploreExpr : undefined,
+      exploreExpr instanceof ast.SourceQueryElement ? exploreExpr : undefined,
       true,
       []
     );
@@ -486,7 +486,7 @@ export class MalloyToAST
   protected getJoinSource(
     name: ast.ModelEntryReference,
     ecx: parse.IsExploreContext | undefined
-  ): {joinFrom: ast.SourceQueryNode; notes: Note[]} {
+  ): {joinFrom: ast.SourceQueryElement; notes: Note[]} {
     if (ecx) {
       const joinSrc = this.getSqExpr(ecx.sqExpr());
       const notes = this.getNotes(ecx._before_is).concat(
@@ -1010,7 +1010,7 @@ export class MalloyToAST
     const notes = this.getNotes(pcx.tags()).concat(
       this.getIsNotes(pcx.isDefine())
     );
-    if (queryExpr instanceof ast.SourceQueryNode) {
+    if (queryExpr instanceof ast.SourceQueryElement) {
       const queryDef = new ast.DefineQuery(queryName, queryExpr);
       queryDef.extendNote({notes});
       return this.astAt(queryDef, pcx);
@@ -1070,7 +1070,7 @@ export class MalloyToAST
     if (refineCx) {
       const nestRefine = new ast.NestDefinition(
         name.nameString,
-        new ast.VRefine(referenceView, this.getVExpr(refineCx))
+        new ast.ViewRefine(referenceView, this.getVExpr(refineCx))
       );
       nestRefine.extendNote({notes});
       return this.astAt(nestRefine, pcx);
@@ -1633,9 +1633,9 @@ export class MalloyToAST
     return this.astAt(new ast.SQReference(ref), pcx.id());
   }
 
-  protected getSqExpr(cx: parse.SqExprContext): ast.SourceQueryNode {
+  protected getSqExpr(cx: parse.SqExprContext): ast.SourceQueryElement {
     const result = this.visit(cx);
-    if (result instanceof ast.SourceQueryNode) {
+    if (result instanceof ast.SourceQueryElement) {
       return result;
     }
     this.contextError(
@@ -1647,7 +1647,7 @@ export class MalloyToAST
 
   visitSQExtendedSource(pcx: parse.SQExtendedSourceContext) {
     const extendSrc = this.getSqExpr(pcx.sqExpr());
-    const src = new ast.SQExtendedSource(
+    const src = new ast.SQExtend(
       extendSrc,
       this.getSourceExtensions(pcx.exploreProperties())
     );
@@ -1657,7 +1657,7 @@ export class MalloyToAST
   visitSQArrow(pcx: parse.SQArrowContext) {
     const applyTo = this.getSqExpr(pcx.sqExpr());
     const headCx = pcx.segExpr();
-    const sqExpr = new ast.SQAppendView(applyTo, this.getVExpr(headCx));
+    const sqExpr = new ast.SQArrow(applyTo, this.getVExpr(headCx));
     return this.astAt(sqExpr, pcx);
   }
 
@@ -1691,33 +1691,31 @@ export class MalloyToAST
   }
 
   visitSegRefine(pcx: parse.SegRefineContext) {
-    return new ast.VRefine(this.getVExpr(pcx._lhs), this.getVExpr(pcx._rhs));
+    return new ast.ViewRefine(this.getVExpr(pcx._lhs), this.getVExpr(pcx._rhs));
   }
 
   visitVArrow(pcx: parse.VArrowContext) {
-    return new ast.VArrow(this.getVExpr(pcx._lhs), this.getVExpr(pcx._rhs));
+    return new ast.ViewArrow(this.getVExpr(pcx._lhs), this.getVExpr(pcx._rhs));
   }
 
   visitSQRefinedQuery(pcx: parse.SQRefinedQueryContext) {
     const refineThis = this.getSqExpr(pcx.sqExpr());
     const refine = pcx.segExpr();
-    const refined = new ast.SQRefinedQuery(refineThis, this.getVExpr(refine));
+    const refined = new ast.SQRefine(refineThis, this.getVExpr(refine));
     return this.astAt(refined, pcx);
   }
 
   visitSQTable(pcx: parse.SQTableContext) {
     const theTable = this.visit(pcx.exploreTable());
     if (theTable instanceof TableSource) {
-      const sqTable = new ast.SQSourceWrapper(theTable);
+      const sqTable = new ast.SQSource(theTable);
       return this.astAt(sqTable, pcx);
     }
     return new ErrorNode();
   }
 
   visitSQSQL(pcx: parse.SQSQLContext) {
-    const sqExpr = new ast.SQSourceWrapper(
-      this.visitSqlSource(pcx.sqlSource())
-    );
+    const sqExpr = new ast.SQSource(this.visitSqlSource(pcx.sqlSource()));
     return this.astAt(sqExpr, pcx);
   }
 

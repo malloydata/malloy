@@ -21,9 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Dimensions} from '../query-properties/dimensions';
-import {Joins} from '../query-properties/joins';
-import {Measures} from '../query-properties/measures';
+import {Dimensions} from '../source-properties/dimensions';
+import {Joins} from '../source-properties/joins';
+import {Measures} from '../source-properties/measures';
 import {MalloyElement} from './malloy-element';
 
 export type QueryExtendProperty = Dimensions | Measures | Joins;

@@ -21,18 +21,28 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {MalloyElement} from './malloy-element';
-import {QueryArrow} from '../query-elements/query-arrow';
-import {QueryRefine} from '../query-elements/query-refine';
-import {QueryReference} from '../query-elements/query-reference';
+import {Source} from '../source-elements/source';
+import {SourceQueryElement} from './source-query-element';
 import {QueryRaw} from '../query-elements/query-raw';
 
-export type QueryElement = QueryArrow | QueryRefine | QueryReference | QueryRaw;
-export function isQueryElement(e: MalloyElement): e is QueryElement {
-  return (
-    e instanceof QueryArrow ||
-    e instanceof QueryRefine ||
-    e instanceof QueryReference ||
-    e instanceof QueryRaw
-  );
+export class SQSource extends SourceQueryElement {
+  elementType = 'sq-source';
+
+  constructor(readonly theSource: Source) {
+    super({theSource});
+  }
+
+  isSource() {
+    return true;
+  }
+
+  getSource() {
+    return this.theSource;
+  }
+
+  getQuery() {
+    const rawQuery = new QueryRaw(this.theSource);
+    this.has({rawQuery});
+    return rawQuery;
+  }
 }

@@ -27,8 +27,8 @@ import {
   refIsStructDef,
 } from '../../../model/malloy_types';
 
-import {Source} from '../elements/source';
-import {NamedSource} from '../sources/named-source';
+import {Source} from '../source-elements/source';
+import {NamedSource} from '../source-elements/named-source';
 
 export class QueryHeadStruct extends Source {
   elementType = 'internalOnlyQueryHead';

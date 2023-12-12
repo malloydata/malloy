@@ -23,59 +23,8 @@
 
 import * as model from '../../../model/malloy_types';
 import {FieldSpace} from '../types/field-space';
-import {MalloyElement} from '../types/malloy-element';
-import {QueryField} from '../field-space/query-space-field';
-import {
-  LegalRefinementStage,
-  QueryClass,
-  QueryPropertyInterface,
-} from '../types/query-property-interface';
-import {QueryBuilder} from '../types/query-builder';
-import {DynamicSpace} from '../field-space/dynamic-space';
-import {View} from '../query-elements/view';
-import {Noteable, extendNoteMethod} from '../types/noteable';
 import {detectAndRemovePartialStages} from '../query-utils';
-
-export class ViewDefinition
-  extends MalloyElement
-  implements QueryPropertyInterface, Noteable
-{
-  elementType = 'view-definition';
-  queryRefinementStage = LegalRefinementStage.Single;
-  forceQueryClass = QueryClass.Grouping;
-  readonly isNoteableObj = true;
-  extendNote = extendNoteMethod;
-  note?: model.Annotation;
-
-  constructor(
-    readonly name: string,
-    readonly view: View
-  ) {
-    super({view});
-  }
-
-  queryExecute(executeFor: QueryBuilder) {
-    executeFor.resultFS.pushFields(this);
-  }
-
-  makeEntry(fs: DynamicSpace) {
-    const qf = new ViewField(fs, this, this.name);
-    fs.newEntry(this.name, this, qf);
-  }
-
-  getFieldDef(fs: FieldSpace): model.TurtleDef {
-    const {pipeline, annotation} = this.view.pipelineComp(fs);
-    const checkedPipeline = detectAndRemovePartialStages(pipeline, this);
-    const def: model.TurtleDef = {
-      type: 'turtle',
-      name: this.name,
-      pipeline: checkedPipeline,
-      annotation: {...this.note, inherits: annotation},
-      location: this.location,
-    };
-    return def;
-  }
-}
+import {ViewDefinition} from '../source-properties/view';
 
 export class NestDefinition extends ViewDefinition {
   elementType = 'nest-definition';
@@ -96,23 +45,5 @@ export class NestDefinition extends ViewDefinition {
       };
     }
     throw this.internalError('Unexpected namespace for nest');
-  }
-}
-
-export class ViewField extends QueryField {
-  constructor(
-    fs: FieldSpace,
-    readonly view: ViewDefinition,
-    protected name: string
-  ) {
-    super(fs);
-  }
-
-  getQueryFieldDef(fs: FieldSpace): model.QueryFieldDef {
-    return this.view.getFieldDef(fs);
-  }
-
-  fieldDef(): model.TurtleDef {
-    return this.view.getFieldDef(this.inSpace);
   }
 }

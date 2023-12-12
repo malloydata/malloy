@@ -21,18 +21,23 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {MalloyElement} from './malloy-element';
-import {QueryArrow} from '../query-elements/query-arrow';
-import {QueryRefine} from '../query-elements/query-refine';
-import {QueryReference} from '../query-elements/query-reference';
-import {QueryRaw} from '../query-elements/query-raw';
+import {StructDef, StructSource} from '../../../model/malloy_types';
+import {Source} from './source';
+import {QueryElement} from '../types/query-element';
 
-export type QueryElement = QueryArrow | QueryRefine | QueryReference | QueryRaw;
-export function isQueryElement(e: MalloyElement): e is QueryElement {
-  return (
-    e instanceof QueryArrow ||
-    e instanceof QueryRefine ||
-    e instanceof QueryReference ||
-    e instanceof QueryRaw
-  );
+export class QuerySource extends Source {
+  elementType = 'querySource';
+  constructor(readonly query: QueryElement) {
+    super({query: query});
+  }
+
+  structDef(): StructDef {
+    const comp = this.query.queryComp(false);
+    const queryStruct = {
+      ...comp.outputStruct,
+      structSource: {type: 'query', query: comp.query} as StructSource,
+    };
+    this.document()?.rememberToAddModelAnnotations(queryStruct);
+    return queryStruct;
+  }
 }

@@ -21,21 +21,43 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {QueryFieldDef, TypeDesc} from '../../../model/malloy_types';
-
+import {PipeSegment} from '../../../model';
+import {ErrorFactory} from '../error-factory';
+import {QuerySpace} from '../field-space/query-spaces';
+import {getFinalStruct} from '../struct-utils';
 import {FieldSpace} from '../types/field-space';
-import {SpaceField} from '../types/space-field';
+import {PipelineComp} from '../types/pipeline-comp';
+import {View} from './view';
 
-export class WildSpaceField extends SpaceField {
-  constructor(readonly wildText: string) {
-    super();
+export class ViewRefine extends View {
+  elementType = 'refine';
+
+  constructor(
+    readonly base: View,
+    readonly refinement: View
+  ) {
+    super({base, refinement});
   }
 
-  typeDesc(): TypeDesc {
-    throw new Error('should never ask a wild field for its type');
+  pipelineComp(fs: FieldSpace, isNestIn?: QuerySpace): PipelineComp {
+    const query = this.base.pipelineComp(fs);
+    const resultPipe = this.refinement.refine(fs, query.pipeline, isNestIn);
+    return {
+      pipeline: resultPipe,
+      annotation: query.annotation,
+      outputStruct:
+        resultPipe.length > 0
+          ? getFinalStruct(this.refinement, fs.structDef(), resultPipe)
+          : ErrorFactory.structDef,
+    };
   }
 
-  getQueryFieldDef(_fs: FieldSpace): QueryFieldDef {
-    return this.wildText;
+  refine(
+    _inputFS: FieldSpace,
+    _pipeline: PipeSegment[],
+    _isNestIn: QuerySpace | undefined
+  ): PipeSegment[] {
+    this.log('TODO not yet implemented');
+    return [];
   }
 }

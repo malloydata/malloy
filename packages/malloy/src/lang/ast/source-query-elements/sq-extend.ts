@@ -21,8 +21,35 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DeclareFields} from './declare-fields';
+import {RefinedSource} from '../source-elements/refined-source';
+import {SourceQueryElement} from './source-query-element';
+import {SourceDesc} from '../types/source-desc';
 
-export class Dimensions extends DeclareFields {
-  elementType = 'dimensionList';
+export class SQExtend extends SourceQueryElement {
+  elementType = 'sq-extend';
+  asSource?: RefinedSource;
+
+  constructor(
+    readonly sqSrc: SourceQueryElement,
+    readonly extend: SourceDesc
+  ) {
+    super({sqSrc, extend});
+  }
+
+  getSource() {
+    if (this.asSource) {
+      return this.asSource;
+    }
+    const src = this.sqSrc.getSource();
+    if (src) {
+      this.asSource = new RefinedSource(src, this.extend);
+      this.has({asSource: this.asSource});
+      return this.asSource;
+    }
+    this.sqLog('Could not compute source to extend');
+  }
+
+  isSource() {
+    return true;
+  }
 }

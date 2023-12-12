@@ -28,7 +28,7 @@ import {
 } from '../../../model/malloy_types';
 import {makeSQLBlock} from '../../../model/sql_block';
 import {NeedCompileSQL} from '../../translate-response';
-import {Source} from '../elements/source';
+import {Source} from './source';
 import {ErrorFactory} from '../error-factory';
 import {SQLString} from '../sql-elements/sql-string';
 import {ModelEntryReference, Document} from '../types/malloy-element';

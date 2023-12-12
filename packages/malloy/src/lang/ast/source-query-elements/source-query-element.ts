@@ -23,9 +23,9 @@
 
 import {QueryElement} from '../types/query-element';
 import {MalloyElement} from '../types/malloy-element';
-import {Source} from './source';
+import {Source} from '../source-elements/source';
 
-export abstract class SourceQueryNode extends MalloyElement {
+export abstract class SourceQueryElement extends MalloyElement {
   errored = false;
 
   getSource(): Source | undefined {
@@ -53,7 +53,7 @@ export abstract class SourceQueryNode extends MalloyElement {
     }
     let clean = true;
     for (const child of this.walk()) {
-      if (child instanceof SourceQueryNode && child.errored) {
+      if (child instanceof SourceQueryElement && child.errored) {
         clean = false;
         break;
       }

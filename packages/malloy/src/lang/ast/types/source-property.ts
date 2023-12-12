@@ -22,7 +22,7 @@
  */
 
 import {Filter} from '../query-properties/filters';
-import {Joins} from '../query-properties/joins';
+import {Joins} from '../source-properties/joins';
 import {DeclareFields} from '../query-properties/declare-fields';
 import {FieldListEdit} from '../source-properties/field-list-edit';
 import {Renames} from '../source-properties/renames';

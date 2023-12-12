@@ -33,7 +33,7 @@ import {RefinedSpace} from '../field-space/refined-space';
 import {HasParameter} from '../parameters/has-parameter';
 import {DeclareFields} from '../query-properties/declare-fields';
 import {Filter} from '../query-properties/filters';
-import {Joins} from '../query-properties/joins';
+import {Joins} from '../source-properties/joins';
 import {FieldListEdit} from '../source-properties/field-list-edit';
 import {PrimaryKey} from '../source-properties/primary-key';
 import {Views} from '../source-properties/views';

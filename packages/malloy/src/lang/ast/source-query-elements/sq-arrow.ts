@@ -21,23 +21,42 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {StructDef, StructSource} from '../../../model/malloy_types';
-import {Source} from '../elements/source';
-import {QueryElement} from '../types/query-element';
+import {Source} from '../source-elements/source';
+import {SourceQueryElement} from './source-query-element';
+import {QuerySource} from '../source-elements/query-source';
+import {QueryArrow} from '../query-elements/query-arrow';
+import {View} from '../view-elements/view';
 
-export class QuerySource extends Source {
-  elementType = 'querySource';
-  constructor(readonly query: QueryElement) {
-    super({query: query});
+export class SQArrow extends SourceQueryElement {
+  elementType = 'sq-arrow';
+  constructor(
+    readonly applyTo: SourceQueryElement,
+    readonly operation: View
+  ) {
+    super({applyTo, operation});
   }
 
-  structDef(): StructDef {
-    const comp = this.query.queryComp(false);
-    const queryStruct = {
-      ...comp.outputStruct,
-      structSource: {type: 'query', query: comp.query} as StructSource,
-    };
-    this.document()?.rememberToAddModelAnnotations(queryStruct);
-    return queryStruct;
+  getQuery() {
+    const lhs = this.applyTo.isSource()
+      ? this.applyTo.getSource()
+      : this.applyTo.getQuery();
+    if (lhs === undefined) {
+      this.sqLog('Could not get LHS of arrow operation');
+      return;
+    }
+    const arr = new QueryArrow(lhs, this.operation);
+    this.has({query: arr});
+    return arr;
+  }
+
+  getSource(): Source | undefined {
+    const query = this.getQuery();
+    if (!query) {
+      this.sqLog("Couldn't comprehend query well enough to make a source");
+      return;
+    }
+    const asSource = new QuerySource(query);
+    this.has({asSource});
+    return asSource;
   }
 }

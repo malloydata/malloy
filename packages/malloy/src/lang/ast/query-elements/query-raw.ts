@@ -21,18 +21,38 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {MalloyElement} from './malloy-element';
-import {QueryArrow} from '../query-elements/query-arrow';
-import {QueryRefine} from '../query-elements/query-refine';
-import {QueryReference} from '../query-elements/query-reference';
-import {QueryRaw} from '../query-elements/query-raw';
+import {Query, refIsStructDef} from '../../../model/malloy_types';
+import {Source} from '../source-elements/source';
+import {MalloyElement} from '../types/malloy-element';
+import {QueryComp} from '../types/query-comp';
 
-export type QueryElement = QueryArrow | QueryRefine | QueryReference | QueryRaw;
-export function isQueryElement(e: MalloyElement): e is QueryElement {
-  return (
-    e instanceof QueryArrow ||
-    e instanceof QueryRefine ||
-    e instanceof QueryReference ||
-    e instanceof QueryRaw
-  );
+export class QueryRaw extends MalloyElement {
+  elementType = 'query-raw';
+
+  constructor(readonly source: Source) {
+    super({source});
+  }
+
+  queryComp(isRefOk: boolean): QueryComp {
+    const structRef = isRefOk
+      ? this.source.structRef()
+      : this.source.structDef();
+    const structDef = refIsStructDef(structRef)
+      ? structRef
+      : this.source.structDef();
+    return {
+      query: {
+        type: 'query',
+        structRef,
+        pipeline: [{type: 'raw', fields: []}],
+        location: this.location,
+      },
+      outputStruct: structDef,
+      inputStruct: structDef,
+    };
+  }
+
+  query(): Query {
+    return this.queryComp(true).query;
+  }
 }

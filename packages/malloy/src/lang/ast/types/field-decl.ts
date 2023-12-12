@@ -24,7 +24,7 @@
 import {NestDefinition} from '../query-properties/nest';
 import {Views} from '../source-properties/views';
 import {FieldDeclaration} from '../query-items/field-declaration';
-import {Join} from '../query-properties/joins';
+import {Join} from '../source-properties/joins';
 import {MalloyElement} from './malloy-element';
 
 export type FieldDecl = FieldDeclaration | Join | NestDefinition | Views;
