@@ -23,3 +23,4 @@
 
 export * from './malloy_types';
 export {Segment, QueryModel, flattenQuery} from './malloy_query';
+export {indent} from './utils';

@@ -23,14 +23,18 @@
 
 export type {DialectFunctionOverloadDef} from './functions/util';
 export {
+  arg,
   anyExprType,
   makeParam,
   overload,
   minScalar,
+  minAggregate,
+  maxScalar,
+  spread,
   sql,
 } from './functions/util';
-export {Dialect} from './dialect';
-export type {DialectFieldList} from './dialect';
+export {Dialect, qtz} from './dialect';
+export type {DialectFieldList, QueryInfo} from './dialect';
 export {StandardSQLDialect} from './standardsql';
 export {PostgresDialect} from './postgres';
 export {DuckDBDialect} from './duckdb';
