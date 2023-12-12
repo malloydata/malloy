@@ -34,10 +34,12 @@ export {
   maxScalar,
   sql,
   makeParam,
+  sqlFragment,
+  param,
   spread,
+  Dialect,
 } from './dialect';
 export type {
-  Dialect,
   DialectFieldList,
   DialectFunctionOverloadDef,
   QueryInfo,
