@@ -146,7 +146,8 @@ describe('lenses', () => {
         run: x -> d + n
       `
     ).translationToFailWith(
-      'named refinement `n` must be a view, found a number'
+      'Cannot use scalar field `n` as a refinement; use `scalar_lenses` experiment to enable this behavior',
+      'overlapping fields in refinement: n'
     );
   });
   test('can reference dimension at head of query when experiment is enabled', () => {
@@ -157,6 +158,31 @@ describe('lenses', () => {
           dimension: n is 1
         }
         run: x -> n
+      `
+    ).toTranslate();
+  });
+  test('can change refine precedence', () => {
+    expect(
+      markSource`
+        ##! experimental { scalar_lenses }
+        source: x is a extend {
+          dimension:
+            a is 1
+            b is 2
+            c is 3
+        }
+        run: x -> a + (b + c)
+      `
+    ).toTranslate();
+  });
+  test.skip('can split multi-stage refinement with plus', () => {
+    expect(
+      markSource`
+        ##! experimental { scalar_lenses }
+        source: x is a extend {
+          view: two_stage is { group_by: a is 1 } -> { group_by: a }
+        }
+        run: x -> two_stage + ({ where: true } + { limit: 3 })
       `
     ).toTranslate();
   });

@@ -88,6 +88,8 @@ export * from './query-elements/query-arrow';
 export * from './view-elements/view';
 export * from './view-elements/view-arrow';
 export * from './view-elements/view-refine';
+export * from './view-elements/reference-view';
+export * from './view-elements/qop-desc-view';
 export * from './query-items/field-declaration';
 export * from './query-items/field-references';
 export * from './query-properties/aggregate';

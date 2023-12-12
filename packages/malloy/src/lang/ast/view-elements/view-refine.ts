@@ -27,6 +27,7 @@ import {QuerySpace} from '../field-space/query-spaces';
 import {getFinalStruct} from '../struct-utils';
 import {FieldSpace} from '../types/field-space';
 import {PipelineComp} from '../types/pipeline-comp';
+import {refine} from './refine-utils';
 import {View} from './view';
 
 export class ViewRefine extends View {
@@ -53,11 +54,16 @@ export class ViewRefine extends View {
   }
 
   refine(
-    _inputFS: FieldSpace,
-    _pipeline: PipeSegment[],
-    _isNestIn: QuerySpace | undefined
+    inputFS: FieldSpace,
+    pipeline: PipeSegment[],
+    isNestIn: QuerySpace | undefined
   ): PipeSegment[] {
-    this.log('TODO not yet implemented');
-    return [];
+    const refineFrom = this.pipeline(inputFS, isNestIn);
+    if (refineFrom.length !== 1) {
+      this.refinement.log('refinement must have exactly one stage');
+      // TODO better error pipeline?
+      return pipeline;
+    }
+    return refine(this, pipeline, refineFrom[0]);
   }
 }
