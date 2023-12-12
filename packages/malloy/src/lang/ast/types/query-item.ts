@@ -26,4 +26,7 @@ import {FieldReference} from '../query-items/field-references';
 
 import {NestFieldDeclaration} from '../query-properties/nest';
 
-export type QueryItem = AtomicFieldDeclaration | FieldReference | NestFieldDeclaration;
+export type QueryItem =
+  | AtomicFieldDeclaration
+  | FieldReference
+  | NestFieldDeclaration;

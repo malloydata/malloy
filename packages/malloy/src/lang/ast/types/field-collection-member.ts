@@ -29,7 +29,9 @@ import {
 } from '../query-items/field-references';
 import {MalloyElement} from './malloy-element';
 
-export type FieldCollectionMember = FieldReferenceElement | AtomicFieldDeclaration;
+export type FieldCollectionMember =
+  | FieldReferenceElement
+  | AtomicFieldDeclaration;
 export function isFieldCollectionMember(
   el: MalloyElement
 ): el is FieldCollectionMember {
