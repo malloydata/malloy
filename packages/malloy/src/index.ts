@@ -38,6 +38,7 @@ export {
   param,
   spread,
   Dialect,
+  FUNCTIONS,
 } from './dialect';
 export type {
   DialectFieldList,

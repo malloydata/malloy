@@ -41,3 +41,4 @@ export {StandardSQLDialect} from './standardsql';
 export {PostgresDialect} from './postgres';
 export {DuckDBDialect} from './duckdb';
 export {getDialect, registerDialect, getDialectFunction} from './dialect_map';
+export {FUNCTIONS} from './functions';
