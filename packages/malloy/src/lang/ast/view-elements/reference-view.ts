@@ -43,8 +43,9 @@ export class ReferenceView extends View {
     super({reference});
   }
 
-  // `_isNestIn` is not needed because referenced fields can never be fields defined
-  // in nest parents anyway
+  // `isNestIn` is not needed because `ReferenceView`s never create a field space
+  // that would use it; this operation is already compiled, and `isNestIn` is only
+  // used for checking `exclude` references.
   pipelineComp(fs: FieldSpace, _isNestIn: QuerySpace): PipelineComp {
     return this._pipelineComp(fs);
   }
@@ -150,8 +151,9 @@ export class ReferenceView extends View {
     return pipeline[0];
   }
 
-  // `_isNestIn` is not needed because referenced fields can never be fields defined
-  // in nest parents anyway
+  // `isNestIn` is not needed because `ReferenceView`s never create a field space
+  // that would use it; this operation is already compiled, and `isNestIn` is only
+  // used for checking `exclude` references.
   refine(
     inputFS: FieldSpace,
     pipeline: PipeSegment[],
