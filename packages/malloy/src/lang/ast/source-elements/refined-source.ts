@@ -38,12 +38,11 @@ import {FieldListEdit} from '../source-properties/field-list-edit';
 import {PrimaryKey} from '../source-properties/primary-key';
 import {Views} from '../source-properties/views';
 import {SourceDesc} from '../types/source-desc';
-import {ExploreField} from '../types/explore-field';
-
 import {Source} from './source';
 import {TimezoneStatement} from '../source-properties/timezone-statement';
 import {ObjectAnnotation} from '../types/annotation-elements';
 import {Renames} from '../source-properties/renames';
+import {MakeEntry} from '../types/space-entry';
 
 /**
  * A Source made from a source reference and a set of refinements
@@ -66,7 +65,7 @@ export class RefinedSource extends Source {
   withParameters(pList: HasParameter[] | undefined): StructDef {
     let primaryKey: PrimaryKey | undefined;
     let fieldListEdit: FieldListEdit | undefined;
-    const fields: ExploreField[] = [];
+    const fields: MakeEntry[] = [];
     const filters: Filter[] = [];
     let newTimezone: string | undefined;
 
