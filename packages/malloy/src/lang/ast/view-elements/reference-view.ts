@@ -23,13 +23,14 @@
 
 import {
   PipeSegment,
+  StructDef,
   isAtomicFieldType,
   isTurtleDef,
 } from '../../../model/malloy_types';
 import {ErrorFactory} from '../error-factory';
 import {QuerySpace} from '../field-space/query-spaces';
 import {ViewOrScalarFieldReference} from '../query-items/field-references';
-import {getFinalStruct, opOutputStruct} from '../struct-utils';
+import {getFinalStruct} from '../struct-utils';
 import {FieldSpace} from '../types/field-space';
 import {PipelineComp} from '../types/pipeline-comp';
 import {SpaceField} from '../types/space-field';
@@ -88,11 +89,21 @@ export class ReferenceView extends View {
         type: 'reduce',
         fields: [this.reference.refString],
       };
+      const {dialect, queryTimezone, structRelationship} = fs.structDef();
+      const name = this.reference.nameString;
+      const outputStruct: StructDef = {
+        type: 'struct',
+        dialect,
+        queryTimezone,
+        name,
+        fields: [fieldDef],
+        structRelationship,
+        structSource: {type: 'query_result'},
+      };
       return {
         pipeline: [newSegment],
-        name: this.reference.nameString,
-        // TODO I think we can probably construct this on our own without asking the compiler...
-        outputStruct: opOutputStruct(this, fs.structDef(), newSegment),
+        name,
+        outputStruct,
       };
     } else if (isTurtleDef(fieldDef)) {
       if (this.reference.list.length > 1) {
