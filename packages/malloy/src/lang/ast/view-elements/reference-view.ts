@@ -21,7 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {PipeSegment, isAtomicFieldType} from '../../../model/malloy_types';
+import {
+  PipeSegment,
+  isAtomicFieldType,
+  isTurtleDef,
+} from '../../../model/malloy_types';
 import {ErrorFactory} from '../error-factory';
 import {QuerySpace} from '../field-space/query-spaces';
 import {ViewOrScalarFieldReference} from '../query-items/field-references';
@@ -61,8 +65,14 @@ export class ReferenceView extends View {
       this.log(`\`${this.reference.refString}\` is not defined`);
       return oops();
     }
-    const typeDesc = lookup.found.typeDesc();
-    if (isAtomicFieldType(typeDesc.dataType)) {
+    if (!(lookup.found instanceof SpaceField)) {
+      throw new Error('Expected space field');
+    }
+    const fieldDef = lookup.found.fieldDef();
+    if (fieldDef === undefined) {
+      throw new Error('Expected field to have definition');
+    }
+    if (isAtomicFieldType(fieldDef.type)) {
       if (!this.inExperiment('scalar_lenses', true)) {
         if (forRefinement) {
           this.reference.log(
@@ -84,7 +94,7 @@ export class ReferenceView extends View {
         // TODO I think we can probably construct this on our own without asking the compiler...
         outputStruct: opOutputStruct(this, fs.structDef(), newSegment),
       };
-    } else if (lookup.found.typeDesc().dataType === 'turtle') {
+    } else if (isTurtleDef(fieldDef)) {
       if (this.reference.list.length > 1) {
         if (forRefinement) {
           this.log('Cannot use view from join as refinement');
@@ -93,32 +103,20 @@ export class ReferenceView extends View {
         }
         return oops();
       }
-      // TODO the type narrowing here is awful and I should redo it
-      if (lookup.found instanceof SpaceField) {
-        const fieldDef = lookup.found.fieldDef();
-        if (fieldDef === undefined) {
-          throw new Error('Expected field to have definition');
-        }
-        if (fieldDef.type !== 'turtle') {
-          throw new Error('Expected field to be a view');
-        }
-        return {
-          pipeline: [...fieldDef.pipeline],
-          name: fieldDef.name,
-          annotation: fieldDef.annotation,
-          outputStruct: getFinalStruct(
-            this.reference,
-            fs.structDef(),
-            fieldDef.pipeline
-          ),
-        };
-      } else {
-        throw new Error('Expected space field');
-      }
+      return {
+        pipeline: [...fieldDef.pipeline],
+        name: fieldDef.name,
+        annotation: fieldDef.annotation,
+        outputStruct: getFinalStruct(
+          this.reference,
+          fs.structDef(),
+          fieldDef.pipeline
+        ),
+      };
     } else {
       if (forRefinement) {
         this.reference.log(
-          `named refinement \`${this.reference.refString}\` must be a view, found a ${typeDesc.dataType}`
+          `named refinement \`${this.reference.refString}\` must be a view, found a ${fieldDef.type}`
         );
       } else {
         this.reference.log('This operation is not supported');
