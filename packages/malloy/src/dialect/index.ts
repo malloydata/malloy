@@ -31,6 +31,8 @@ export {
   minAggregate,
   maxScalar,
   spread,
+  sqlFragment,
+  param,
   sql,
 } from './functions/util';
 export {Dialect, qtz} from './dialect';
