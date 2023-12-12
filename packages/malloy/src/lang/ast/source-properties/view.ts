@@ -24,25 +24,18 @@
 import * as model from '../../../model/malloy_types';
 import {FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
-import {
-  LegalRefinementStage,
-  QueryClass,
-  QueryPropertyInterface,
-} from '../types/query-property-interface';
-import {QueryBuilder} from '../types/query-builder';
 import {DynamicSpace} from '../field-space/dynamic-space';
 import {View} from '../view-elements/view';
 import {Noteable, extendNoteMethod} from '../types/noteable';
 import {detectAndRemovePartialStages} from '../query-utils';
-import {ViewField} from '../field-space/view-field';
+import {ASTViewField} from '../field-space/ast-view-field';
+import {MakeEntry} from '../types/space-entry';
 
-export class ViewDefinition
+export class ViewFieldDeclaration
   extends MalloyElement
-  implements QueryPropertyInterface, Noteable
+  implements Noteable, MakeEntry
 {
   elementType = 'view-definition';
-  queryRefinementStage = LegalRefinementStage.Single;
-  forceQueryClass = QueryClass.Grouping;
   readonly isNoteableObj = true;
   extendNote = extendNoteMethod;
   note?: model.Annotation;
@@ -54,12 +47,8 @@ export class ViewDefinition
     super({view});
   }
 
-  queryExecute(executeFor: QueryBuilder) {
-    executeFor.resultFS.pushFields(this);
-  }
-
   makeEntry(fs: DynamicSpace) {
-    const qf = new ViewField(fs, this, this.name);
+    const qf = new ASTViewField(fs, this, this.name);
     fs.newEntry(this.name, this, qf);
   }
 

@@ -4567,7 +4567,7 @@ export class QueryModel {
     // if we've compiled the SQL before use it otherwise
     let sqlPDT = this.exploreSearchSQLMap.get(explore);
     if (sqlPDT === undefined) {
-      sqlPDT = (await this.compileQuery(indexQuery, false)).sql;
+      sqlPDT = this.compileQuery(indexQuery, false).sql;
       this.exploreSearchSQLMap.set(explore, sqlPDT);
     }
 

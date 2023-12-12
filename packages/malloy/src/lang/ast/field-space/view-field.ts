@@ -21,31 +21,20 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {QueryFieldDef, TurtleDef} from '../../../model/malloy_types';
-import {ViewDefinition} from '../source-properties/view';
+import {FieldDef, QueryFieldDef, TypeDesc} from '../../../model/malloy_types';
+
 import {FieldSpace} from '../types/field-space';
-import {QueryField} from './query-space-field';
+import {SpaceField} from '../types/space-field';
 
-// TODO naming: There's two subclasses of QueryField: ViewField and QueryFieldStruct
-// All three names should be changed. Maybe:
-// QueryField -> ViewField
-// ViewField -> ASTViewField
-// QueryFieldStruct -> IRViewField
-
-export class ViewField extends QueryField {
-  constructor(
-    fs: FieldSpace,
-    readonly view: ViewDefinition,
-    protected name: string
-  ) {
-    super(fs);
+export abstract class ViewField extends SpaceField {
+  constructor(protected inSpace: FieldSpace) {
+    super();
   }
 
-  getQueryFieldDef(fs: FieldSpace): QueryFieldDef {
-    return this.view.getFieldDef(fs);
-  }
+  abstract getQueryFieldDef(fs: FieldSpace): QueryFieldDef | undefined;
+  abstract fieldDef(): FieldDef;
 
-  fieldDef(): TurtleDef {
-    return this.view.getFieldDef(this.inSpace);
+  typeDesc(): TypeDesc {
+    return {dataType: 'turtle', expressionType: 'scalar', evalSpace: 'input'};
   }
 }

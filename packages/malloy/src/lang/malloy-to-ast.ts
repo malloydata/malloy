@@ -220,7 +220,7 @@ export class MalloyToAST
   protected getFieldDefs(
     cxList: parse.FieldDefContext[],
     makeFieldDef: ast.FieldDeclarationConstructor
-  ): ast.FieldDeclaration[] {
+  ): ast.AtomicFieldDeclaration[] {
     return cxList.map(cx => this.getFieldDef(cx, makeFieldDef));
   }
 
@@ -532,7 +532,7 @@ export class MalloyToAST
   getFieldDef(
     pcx: parse.FieldDefContext,
     makeFieldDef: ast.FieldDeclarationConstructor
-  ): ast.FieldDeclaration {
+  ): ast.AtomicFieldDeclaration {
     const defCx = pcx.fieldExpr();
     const fieldName = getId(pcx.fieldNameDef());
     const valExpr = this.getFieldExpr(defCx);
@@ -764,7 +764,8 @@ export class MalloyToAST
         .queryFieldEntry()
         .map(e => this.getQueryFieldEntry(e, makeFieldDef, makeFieldRef)),
       x =>
-        x instanceof ast.FieldReference || x instanceof ast.FieldDeclaration
+        x instanceof ast.FieldReference ||
+        x instanceof ast.AtomicFieldDeclaration
           ? x
           : false,
       'view field'
@@ -811,7 +812,7 @@ export class MalloyToAST
     pcx: parse.TaggedRefContext,
     makeFieldDef: FieldDeclarationConstructor,
     makeFieldRef: ast.FieldReferenceConstructor
-  ): ast.FieldReference | ast.FieldDeclaration {
+  ): ast.FieldReference | ast.AtomicFieldDeclaration {
     const refExpr = pcx.refExpr();
     if (refExpr) {
       const ref = this.getFieldPath(
@@ -1053,29 +1054,29 @@ export class MalloyToAST
 
   visitNestedQueryList(pcx: parse.NestedQueryListContext): ast.Nests {
     return new ast.Nests(
-      this.only<ast.NestDefinition>(
+      this.only<ast.NestFieldDeclaration>(
         pcx.nestEntry().map(cx => this.visit(cx)),
-        x => x instanceof ast.NestDefinition && x,
+        x => x instanceof ast.NestFieldDeclaration && x,
         'query'
       )
     );
   }
 
-  visitNestExisting(pcx: parse.NestExistingContext): ast.NestDefinition {
+  visitNestExisting(pcx: parse.NestExistingContext): ast.NestFieldDeclaration {
     const nameCx = pcx.fieldPath();
     const name = this.getFieldPath(nameCx, ast.ViewOrScalarFieldReference);
     const referenceView = this.astAt(new ast.ReferenceView(name), nameCx);
     const refineCx = pcx.vExpr();
     const notes = this.getNotes(pcx.tags());
     if (refineCx) {
-      const nestRefine = new ast.NestDefinition(
+      const nestRefine = new ast.NestFieldDeclaration(
         name.nameString,
         new ast.ViewRefine(referenceView, this.getVExpr(refineCx))
       );
       nestRefine.extendNote({notes});
       return this.astAt(nestRefine, pcx);
     }
-    const nestReference = new ast.NestDefinition(
+    const nestReference = new ast.NestFieldDeclaration(
       name.nameString,
       referenceView
     );
@@ -1083,19 +1084,24 @@ export class MalloyToAST
     return this.astAt(nestReference, pcx);
   }
 
-  visitNestDef(pcx: parse.NestDefContext): ast.NestDefinition {
+  visitNestDef(pcx: parse.NestDefContext): ast.NestFieldDeclaration {
     const name = getId(pcx.queryName());
     const vExpr = this.getVExpr(pcx.vExpr());
-    const nestDef = new ast.NestDefinition(name, vExpr);
+    const nestDef = new ast.NestFieldDeclaration(name, vExpr);
     nestDef.extendNote({
       notes: this.getNotes(pcx.tags()).concat(this.getIsNotes(pcx.isDefine())),
     });
     return this.astAt(nestDef, pcx);
   }
 
-  visitExploreQueryDef(pcx: parse.ExploreQueryDefContext): ast.ViewDefinition {
+  visitExploreQueryDef(
+    pcx: parse.ExploreQueryDefContext
+  ): ast.ViewFieldDeclaration {
     const name = getId(pcx.exploreQueryNameDef());
-    const queryDef = new ast.ViewDefinition(name, this.getVExpr(pcx.vExpr()));
+    const queryDef = new ast.ViewFieldDeclaration(
+      name,
+      this.getVExpr(pcx.vExpr())
+    );
     const notes = this.getNotes(pcx).concat(this.getIsNotes(pcx.isDefine()));
     queryDef.extendNote({notes});
     return this.astAt(queryDef, pcx);

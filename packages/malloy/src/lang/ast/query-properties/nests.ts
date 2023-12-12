@@ -27,16 +27,16 @@ import {
   LegalRefinementStage,
   QueryPropertyInterface,
 } from '../types/query-property-interface';
-import {NestDefinition} from './nest';
+import {NestFieldDeclaration} from './nest';
 
 export class Nests
-  extends DefinitionList<NestDefinition>
+  extends DefinitionList<NestFieldDeclaration>
   implements QueryPropertyInterface
 {
   elementType = 'nestedQueries';
   queryRefinementStage = LegalRefinementStage.Single;
   forceQueryClass = QueryClass.Grouping;
-  constructor(nests: NestDefinition[]) {
+  constructor(nests: NestFieldDeclaration[]) {
     super(nests);
   }
 }

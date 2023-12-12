@@ -24,10 +24,26 @@
 import * as model from '../../../model/malloy_types';
 import {FieldSpace} from '../types/field-space';
 import {detectAndRemovePartialStages} from '../query-utils';
-import {ViewDefinition} from '../source-properties/view';
+import {ViewFieldDeclaration} from '../source-properties/view';
+import {
+  LegalRefinementStage,
+  QueryClass,
+  QueryPropertyInterface,
+} from '../types/query-property-interface';
+import {QueryBuilder} from '../types/query-builder';
 
-export class NestDefinition extends ViewDefinition {
+export class NestFieldDeclaration
+  extends ViewFieldDeclaration
+  implements QueryPropertyInterface
+{
+  // TODO Update element types
   elementType = 'nest-definition';
+  queryRefinementStage = LegalRefinementStage.Single;
+  forceQueryClass = QueryClass.Grouping;
+
+  queryExecute(executeFor: QueryBuilder) {
+    executeFor.resultFS.pushFields(this);
+  }
 
   getFieldDef(fs: FieldSpace): model.TurtleDef {
     if (fs.isQueryFieldSpace()) {

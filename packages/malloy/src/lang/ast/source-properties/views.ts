@@ -21,9 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ViewDefinition} from './view';
+import {ViewFieldDeclaration} from './view';
 import {DefinitionList} from '../types/definition-list';
 
-export class Views extends DefinitionList<ViewDefinition> {
+export class Views extends DefinitionList<ViewFieldDeclaration> {
   elementType = 'turtleDefList';
 }

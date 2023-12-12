@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FieldDeclaration} from '../query-items/field-declaration';
+import {AtomicFieldDeclaration} from '../query-items/field-declaration';
 import {
   FieldReference,
   FieldReferenceElement,
@@ -29,13 +29,13 @@ import {
 } from '../query-items/field-references';
 import {MalloyElement} from './malloy-element';
 
-export type FieldCollectionMember = FieldReferenceElement | FieldDeclaration;
+export type FieldCollectionMember = FieldReferenceElement | AtomicFieldDeclaration;
 export function isFieldCollectionMember(
   el: MalloyElement
 ): el is FieldCollectionMember {
   return (
     el instanceof FieldReference ||
     el instanceof WildcardFieldReference ||
-    el instanceof FieldDeclaration
+    el instanceof AtomicFieldDeclaration
   );
 }

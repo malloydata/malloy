@@ -31,7 +31,7 @@ import {MalloyElement} from '../types/malloy-element';
 import {Join} from '../source-properties/joins';
 import {SpaceField} from '../types/space-field';
 import {JoinSpaceField} from './join-space-field';
-import {QueryField} from './query-space-field';
+import {ViewField} from './view-field';
 import {AbstractParameter, SpaceParam} from '../types/space-param';
 import {SourceSpec, SpaceSeed} from '../space-seed';
 import {StaticSpace} from './static-space';
@@ -105,7 +105,7 @@ export abstract class DynamicSpace extends StaticSpace {
       for (const [name, spaceEntry] of this.entries()) {
         if (spaceEntry instanceof StructSpaceFieldBase) {
           joins.push([name, spaceEntry]);
-        } else if (spaceEntry instanceof QueryField) {
+        } else if (spaceEntry instanceof ViewField) {
           turtles.push([name, spaceEntry]);
         } else if (spaceEntry instanceof SpaceField) {
           fields.push([name, spaceEntry]);

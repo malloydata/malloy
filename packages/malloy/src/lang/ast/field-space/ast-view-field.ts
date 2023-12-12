@@ -22,31 +22,24 @@
  */
 
 import {QueryFieldDef, TurtleDef} from '../../../model/malloy_types';
-
-import {QueryField} from './query-space-field';
+import {ViewFieldDeclaration} from '../source-properties/view';
 import {FieldSpace} from '../types/field-space';
+import {ViewField} from './view-field';
 
-export class QueryFieldStruct extends QueryField {
+export class ASTViewField extends ViewField {
   constructor(
     fs: FieldSpace,
-    protected turtleDef: TurtleDef
+    readonly view: ViewFieldDeclaration,
+    protected name: string
   ) {
     super(fs);
-    this.haveFieldDef = turtleDef;
   }
 
-  rename(name: string): void {
-    this.turtleDef = {
-      ...this.turtleDef,
-      as: name,
-    };
+  getQueryFieldDef(fs: FieldSpace): QueryFieldDef {
+    return this.view.getFieldDef(fs);
   }
 
   fieldDef(): TurtleDef {
-    return this.turtleDef;
-  }
-
-  getQueryFieldDef(_fs: FieldSpace): QueryFieldDef | undefined {
-    return this.fieldDef();
+    return this.view.getFieldDef(this.inSpace);
   }
 }
