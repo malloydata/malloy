@@ -24,7 +24,7 @@
 import * as model from '../../../model/malloy_types';
 import {FieldSpace} from '../types/field-space';
 import {detectAndRemovePartialStages} from '../query-utils';
-import {ViewFieldDeclaration} from '../source-properties/view';
+import {ViewFieldDeclaration} from '../source-properties/view-field-declaration';
 import {
   LegalRefinementStage,
   QueryClass,
@@ -36,8 +36,7 @@ export class NestFieldDeclaration
   extends ViewFieldDeclaration
   implements QueryPropertyInterface
 {
-  // TODO Update element types
-  elementType = 'nest-definition';
+  elementType = 'nest-field-declaration';
   queryRefinementStage = LegalRefinementStage.Single;
   forceQueryClass = QueryClass.Grouping;
 

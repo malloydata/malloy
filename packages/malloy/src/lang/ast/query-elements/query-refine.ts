@@ -28,6 +28,11 @@ import {QueryElement} from '../types/query-element';
 import {View} from '../view-elements/view';
 import {QueryBase} from './query-base';
 
+/**
+ * A query operation that consists of an exisitng query with refinements.
+ *
+ * e.g. after `run:` in `run: flights_by_carrier + { limit: 10 }`
+ */
 export class QueryRefine extends QueryBase implements QueryElement {
   elementType = 'query-refine';
 

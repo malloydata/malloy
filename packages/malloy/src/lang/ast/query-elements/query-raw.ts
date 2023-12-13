@@ -27,6 +27,14 @@ import {MalloyElement} from '../types/malloy-element';
 import {QueryComp} from '../types/query-comp';
 import {QueryElement} from '../types/query-element';
 
+/**
+ * A query element which represents running the intrinsic fields of a
+ * source directly as a query. Currently this only works for SQL sources,
+ * where the "raw query" just means running the SQL that defined the source
+ * directly.
+ *
+ * e.g. after `run:` in `run: duckdb.sql("...")`
+ */
 export class QueryRaw extends MalloyElement implements QueryElement {
   elementType = 'query-raw';
 

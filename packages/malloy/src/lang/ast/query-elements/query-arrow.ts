@@ -30,6 +30,11 @@ import {QueryElement} from '../types/query-element';
 import {QueryBase} from './query-base';
 import {View} from '../view-elements/view';
 
+/**
+ * A query operation that adds segments to a LHS source or query.
+ *
+ * e.g. `flights -> by_carrier`
+ */
 export class QueryArrow extends QueryBase implements QueryElement {
   elementType = 'arrow';
 

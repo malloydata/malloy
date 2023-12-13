@@ -29,6 +29,11 @@ import {Query, refIsStructDef} from '../../../model/malloy_types';
 import {getFinalStruct} from '../struct-utils';
 import {QueryElement} from '../types/query-element';
 
+/**
+ * A query operation that is just a reference to an existing query.
+ *
+ * e.g. after the colon in `run: flights_by_carrier`
+ */
 export class QueryReference extends MalloyElement implements QueryElement {
   elementType = 'query-reference';
 

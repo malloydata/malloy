@@ -101,7 +101,7 @@ export * from './query-properties/filters';
 export * from './query-properties/group-by';
 export * from './query-properties/indexing';
 export * from './source-properties/joins';
-export * from './source-properties/view';
+export * from './source-properties/view-field-declaration';
 export * from './query-properties/limit';
 export * from './source-properties/measures';
 export * from './query-properties/nest';

@@ -35,7 +35,7 @@ export class ViewFieldDeclaration
   extends MalloyElement
   implements Noteable, MakeEntry
 {
-  elementType = 'view-definition';
+  elementType = 'view-field-declaration';
   readonly isNoteableObj = true;
   extendNote = extendNoteMethod;
   note?: model.Annotation;

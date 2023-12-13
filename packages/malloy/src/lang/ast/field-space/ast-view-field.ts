@@ -22,7 +22,7 @@
  */
 
 import {QueryFieldDef, TurtleDef} from '../../../model/malloy_types';
-import {ViewFieldDeclaration} from '../source-properties/view';
+import {ViewFieldDeclaration} from '../source-properties/view-field-declaration';
 import {FieldSpace} from '../types/field-space';
 import {ViewField} from './view-field';
 

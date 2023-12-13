@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ViewFieldDeclaration} from './view';
+import {ViewFieldDeclaration} from './view-field-declaration';
 import {DefinitionList} from '../types/definition-list';
 
 export class Views extends DefinitionList<ViewFieldDeclaration> {
