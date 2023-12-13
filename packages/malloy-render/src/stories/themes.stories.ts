@@ -1,11 +1,11 @@
 import {Meta} from '@storybook/html';
-import script from './static/tables.malloy?raw';
+import script from './static/themes.malloy?raw';
 import {createLoader} from './util';
 import './themes.css';
 import '../component/render';
 
 const meta: Meta = {
-  title: 'Malloy Next/Tables',
+  title: 'Malloy Next/Themes',
   render: ({classes}, context) => {
     const parent = document.createElement('div');
     parent.style.height = '1000px';
@@ -22,45 +22,24 @@ const meta: Meta = {
 
 export default meta;
 
-export const ProductsTable = {
+export const ModelThemeOverride = {
   args: {
     source: 'products',
     view: `records`,
   },
 };
 
-export const ProductsTableCustomTheme = {
+export const ViewThemeOverride = {
   args: {
     source: 'products',
-    view: 'records',
+    view: `records_override`,
+  },
+};
+
+export const ViewThemeOverrideCSS = {
+  args: {
+    source: 'products',
+    view: `records_override`,
     classes: 'night',
-  },
-};
-
-export const Products2Column = {
-  args: {
-    source: 'products',
-    view: 'category_bar',
-  },
-};
-
-export const Nested = {
-  args: {
-    source: 'products',
-    view: 'nested',
-  },
-};
-
-export const NumberFormatting = {
-  args: {
-    source: 'products',
-    view: 'number_formats',
-  },
-};
-
-export const NullTest = {
-  args: {
-    source: 'null_test',
-    view: '{ select: * }',
   },
 };

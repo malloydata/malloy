@@ -226,22 +226,46 @@ export function createNullElement(document: Document): HTMLElement {
 
 export function createDrillIcon(document: Document): HTMLElement {
   const drill = document.createElement('div');
-  drill.style.borderRadius = '20px';
-  drill.style.backgroundColor = 'var(--malloy-border-color, #efefef)';
-  drill.style.width = '27px';
-  drill.style.height = '14px';
-  drill.style.display = 'flex';
-  drill.style.justifyContent = 'center';
-  drill.style.alignItems = 'center';
-  drill.style.gap = '2px';
-  for (let i = 0; i < 3; i++) {
-    const dot = document.createElement('div');
-    dot.style.backgroundColor = 'var(--malloy-title-color, rgb(181 181 181))';
-    dot.style.borderRadius = '5px';
-    dot.style.width = '4px';
-    dot.style.height = '4px';
-    drill.appendChild(dot);
-  }
+  drill.classList.add('drill-icon');
+  drill.innerHTML = `
+  <style>
+    .drill-icon:hover .copy-circle {
+      fill: #eef7f9;
+    }
+
+    .drill-icon:active .copy-circle {
+      fill: #cfe9f0;
+    }
+
+    .drill-icon:hover .copy-icon,
+    .drill-icon:active .copy-icon {
+      fill: #53b2c8;
+    }
+  </style>
+  <svg
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <circle cx="12" cy="12" r="12" fill="none" class="copy-circle" />
+        <svg
+          x="6"
+          y="6"
+          width="12"
+          height="14"
+          viewBox="0 0 12 14"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M4 10.6667C3.63333 10.6667 3.31944 10.5361 3.05833 10.275C2.79722 10.0139 2.66667 9.7 2.66667 9.33333V1.33333C2.66667 0.966667 2.79722 0.652778 3.05833 0.391667C3.31944 0.130556 3.63333 0 4 0H10C10.3667 0 10.6806 0.130556 10.9417 0.391667C11.2028 0.652778 11.3333 0.966667 11.3333 1.33333V9.33333C11.3333 9.7 11.2028 10.0139 10.9417 10.275C10.6806 10.5361 10.3667 10.6667 10 10.6667H4ZM4 9.33333H10V1.33333H4V9.33333ZM1.33333 13.3333C0.966667 13.3333 0.652778 13.2028 0.391667 12.9417C0.130556 12.6806 0 12.3667 0 12V2.66667H1.33333V12H8.66667V13.3333H1.33333Z"
+            fill="#E7E7E7"
+            class="copy-icon"
+          />
+        </svg>
+      </svg>`;
   return drill;
 }
 

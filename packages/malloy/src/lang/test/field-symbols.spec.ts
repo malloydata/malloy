@@ -158,6 +158,7 @@ describe('structdef comprehension', () => {
       dialect: 'standardsql',
       structRelationship: {
         type: 'one',
+        matrixOperation: 'left',
         onExpression: [
           {type: 'field', path: 'aKey'},
           '=',

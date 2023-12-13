@@ -1,5 +1,3 @@
-## renderer_next
-
 source: products is duckdb.table("data/products.parquet") extend {
 
   view: records is{
@@ -7,7 +5,7 @@ source: products is duckdb.table("data/products.parquet") extend {
     limit: 1000
   }
 
-  # bar_chart renderer_next
+  # bar_chart
   view: category_bar is {
     group_by: category
     aggregate: avg_retail is retail_price.avg()
@@ -51,4 +49,23 @@ source: products is duckdb.table("data/products.parquet") extend {
         limit: 5
       }
   }
-};
+
+  view: number_formats is {
+    group_by: category
+    aggregate:
+      # currency
+      avg_retail_currency is retail_price.avg()
+      # percent
+      avg_retail_percent is retail_price.avg()
+      # number="#,##0.00"
+      avg_retail_number is retail_price.avg()
+      # duration
+      avg_retail_duration is round(retail_price.avg())
+  }
+}
+
+source: null_test is duckdb.sql("select unnest([1,null,3]) as i") extend {}
+
+run: products -> { group_by: category aggregate: `t.x` is max(1) }
+
+run: duckdb.sql("select unnest([1,null,3]) as i") -> { select: * }

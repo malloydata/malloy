@@ -21,6 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export * from './malloy_types';
-export {Segment, QueryModel} from './malloy_query';
-export {indent} from './utils';
+import {createContext} from '@lit/context';
+import {RenderResultMetadata} from './render-result-metadata';
+
+export const resultContext = createContext<RenderResultMetadata>(
+  'malloy-render-result'
+);

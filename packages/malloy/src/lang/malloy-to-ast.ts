@@ -43,7 +43,12 @@ import {
   idToStr,
 } from './parse-utils';
 import {CastType} from '../model';
-import {DocumentLocation, isCastType, Note} from '../model/malloy_types';
+import {
+  DocumentLocation,
+  isCastType,
+  isMatrixOperation,
+  Note,
+} from '../model/malloy_types';
 import {Tag} from '../tags';
 
 class ErrorNode extends ast.SourceQueryElement {
@@ -513,6 +518,12 @@ export class MalloyToAST
     const {joinFrom, notes} = this.getJoinSource(joinAs, pcx.isExplore());
     const join = new ast.ExpressionJoin(joinAs, joinFrom);
     const onCx = pcx.joinExpression();
+    const mop = pcx.matrixOperation()?.text.toLocaleLowerCase() || 'left';
+    if (isMatrixOperation(mop)) {
+      join.matrixOperation = mop;
+    } else {
+      this.contextError(pcx, 'Internal Error: Unknown matrixOperation');
+    }
     if (onCx) {
       join.joinOn = this.getFieldExpr(onCx);
     }

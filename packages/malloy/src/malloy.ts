@@ -65,6 +65,7 @@ import {
   QueryRunStats,
   ImportLocation,
   Annotation,
+  NamedModelObject,
 } from './model';
 import {
   Connection,
@@ -811,14 +812,24 @@ export class Model implements Taggable {
    * @return An array of `Explore`s contained in the model.
    */
   public get explores(): Explore[] {
-    const explores: Explore[] = [];
-    for (const me in this.modelDef.contents) {
-      const ent = this.modelDef.contents[me];
-      if (ent.type === 'struct') {
-        explores.push(new Explore(ent));
-      }
-    }
-    return explores;
+    const isStructDef = (object: NamedModelObject): object is StructDef =>
+      object.type === 'struct';
+
+    return Object.values(this.modelDef.contents)
+      .filter(isStructDef)
+      .map(structDef => new Explore(structDef));
+  }
+
+  /**
+   * Get an array of `NamedQuery`s contained in the model.
+   *
+   * @return An array of `NamedQuery`s contained in the model.
+   */
+  public get namedQueries(): NamedQuery[] {
+    const isNamedQuery = (object: NamedModelObject): object is NamedQuery =>
+      object.type === 'query';
+
+    return Object.values(this.modelDef.contents).filter(isNamedQuery);
   }
 
   public get exportedExplores(): Explore[] {
@@ -1186,6 +1197,10 @@ export class PreparedResult implements Taggable {
     return this.modelDef.annotation;
   }
 
+  get modelTag(): Tag {
+    return Tag.annotationToTag(this.modelDef.annotation).tag;
+  }
+
   /**
    * @return The name of the connection this query should be run against.
    */
@@ -1385,6 +1400,16 @@ abstract class Entity {
     return sourceClasses;
   }
 
+  public get fieldPath(): string[] {
+    const path: string[] = [this.name];
+    let f: Entity | undefined = this._parent;
+    while (f) {
+      path.unshift(f.name);
+      f = f._parent;
+    }
+    return path;
+  }
+
   public hasParentExplore(): this is Field {
     return this._parent !== undefined;
   }
@@ -1411,7 +1436,7 @@ export type SerializedExplore = {
 
 export type SortableField = {field: Field; dir: 'asc' | 'desc' | undefined};
 
-export class Explore extends Entity {
+export class Explore extends Entity implements Taggable {
   protected readonly _structDef: StructDef;
   protected readonly _parentExplore?: Explore;
   private _fieldMap: Map<string, Field> | undefined;
@@ -1435,6 +1460,14 @@ export class Explore extends Entity {
 
   public isExploreField(): this is ExploreField {
     return false;
+  }
+
+  tagParse(spec?: TagParseSpec): TagParse {
+    return Tag.annotationToTag(this._structDef.annotation, spec);
+  }
+
+  getTaglines(prefix?: RegExp): string[] {
+    return Tag.annotationToTaglines(this._structDef.annotation, prefix);
   }
 
   private parsedModelTag?: Tag;
@@ -1806,10 +1839,12 @@ export class AtomicField extends Entity implements Taggable {
     const resultMetadata = this.fieldTypeDef.resultMetadata;
     // If field is joined-in from another table i.e. of type `tableName.columnName`,
     // return sourceField, else return name because this could be a renamed field.
-    return resultMetadata?.sourceExpression ||
-      resultMetadata?.sourceField.includes(dot)
-      ? resultMetadata?.sourceField
-      : this.name;
+    return (
+      resultMetadata?.sourceExpression ||
+      (resultMetadata?.sourceField.includes(dot)
+        ? resultMetadata?.sourceField
+        : this.name)
+    );
   }
 
   public get location(): DocumentLocation | undefined {
@@ -2040,7 +2075,7 @@ export enum JoinRelationship {
   ManyToOne = 'many_to_one',
 }
 
-export class ExploreField extends Explore implements Taggable {
+export class ExploreField extends Explore {
   protected _parentExplore: Explore;
 
   constructor(structDef: StructDef, parentExplore: Explore, source?: Explore) {
@@ -2072,13 +2107,9 @@ export class ExploreField extends Explore implements Taggable {
     return this.joinRelationship !== JoinRelationship.OneToOne;
   }
 
-  tagParse(spec?: TagParseSpec) {
+  override tagParse(spec?: TagParseSpec) {
     spec = Tag.addModelScope(spec, this._parentExplore.modelTag);
     return Tag.annotationToTag(this._structDef.annotation, spec);
-  }
-
-  getTaglines(prefix?: RegExp) {
-    return Tag.annotationToTaglines(this._structDef.annotation, prefix);
   }
 
   public isQueryField(): this is QueryField {
@@ -2810,9 +2841,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
     return Malloy.run({connections, preparedResult, options: finalOptions});
   }
 
-  async *runStream(options?: {
-    rowLimit?: number;
-  }): AsyncIterableIterator<DataRecord> {
+  async *runStream(options?: RunSQLOptions): AsyncIterableIterator<DataRecord> {
     const preparedResult = await this.getPreparedResult();
     const connections = this.runtime.connections;
     const finalOptions = runSQLOptionsWithAnnotations(preparedResult, options);

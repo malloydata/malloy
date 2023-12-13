@@ -201,6 +201,7 @@ describe('db:BigQuery', () => {
 
     beforeEach(async () => {
       getTableFieldSchema = jest
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .spyOn(BigQueryConnection.prototype as any, 'getTableFieldSchema')
         .mockResolvedValue({
           schema: {},
@@ -209,6 +210,7 @@ describe('db:BigQuery', () => {
           needsPartitionDatePseudoColumn: false,
         });
       getSQLBlockSchema = jest
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .spyOn(BigQueryConnection.prototype as any, 'getSQLBlockSchema')
         .mockResolvedValue({
           schema: {},

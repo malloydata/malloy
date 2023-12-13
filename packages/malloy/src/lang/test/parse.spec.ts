@@ -387,7 +387,7 @@ describe('error cascading', () => {
         source: a1 is a extend {
           join_one: b with astr
           dimension:
-            ${'err is null'}
+            ${'err is nothing'}
             ${scalars.map((d, i) => `e${i} is ${d}`).join('\n            ')}
           measure:
             measure_err is count(foo),
@@ -396,10 +396,7 @@ describe('error cascading', () => {
               .join('\n            ')}
         }
       `
-    ).translationToFailWith(
-      "Cannot define 'err', unexpected type: null",
-      "'foo' is not defined"
-    );
+    ).translationToFailWith("'nothing' is not defined", "'foo' is not defined");
   });
 
   test('error type inference is good', () => {
@@ -407,12 +404,12 @@ describe('error cascading', () => {
       const source = `
           source: a1 is a extend {
             dimension:
-              ${'err is null'}
+              ${'err is nothing'}
               dim is length(${scalar}, 1)
           }
         `;
       expect(source).translationToFailWith(
-        "Cannot define 'err', unexpected type: null",
+        "'nothing' is not defined",
         `No matching overload for function length(${typedScalars[scalar]}, number)`
       );
     }
@@ -426,7 +423,7 @@ describe('error cascading', () => {
         }
         run: a1 -> {
           group_by:
-            ${'err is null'}
+            ${'err is nothing'}
           aggregate:
             measure_err is count(foo)
           calculate:
@@ -438,10 +435,7 @@ describe('error cascading', () => {
               .join('\n            ')}
         }
       `
-    ).translationToFailWith(
-      "Cannot define 'err', unexpected type: null",
-      "'foo' is not defined"
-    );
+    ).translationToFailWith("'nothing' is not defined", "'foo' is not defined");
   });
 });
 

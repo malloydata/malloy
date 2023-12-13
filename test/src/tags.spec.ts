@@ -157,6 +157,22 @@ describe('tagParse to Tag', () => {
     const x: TagTestTuple = ['x x.y', {x: {properties: {y: {}}}}];
     expect(x[0]).tagsAre(x[1]);
   });
+  test('inherits can be over-ridden', () => {
+    const loc1 = {
+      url: 'inherit-test',
+      range: {start: {line: 1, character: 0}, end: {line: 1, character: 0}},
+    };
+    const loc2 = {
+      url: 'inherit-test',
+      range: {start: {line: 2, character: 0}, end: {line: 2, character: 0}},
+    };
+    const nestedTags = Tag.annotationToTag({
+      inherits: {notes: [{text: '## from=inherits\n', at: loc1}]},
+      notes: [{text: '## from=notes\n', at: loc2}],
+    });
+    const fromVal = nestedTags.tag.text('from');
+    expect(fromVal).toEqual('notes');
+  });
 });
 
 describe('Tag access', () => {
@@ -460,5 +476,15 @@ describe('tags in results', () => {
     const globalScope = Tag.fromTagline('# scope=global', undefined).tag;
     tp = field.tagParse({scopes: [globalScope, sessionScope]}).tag;
     expect(tp).tagsAre({valueFrom: {eq: 'global'}});
+  });
+  test('inherited model tags override', async () => {
+    const model = runtime.loadModel(
+      '## from=cell1\nsource: one is duckdb.sql("select 1")'
+    );
+    const model2 = model.extendModel('## from=cell2');
+    const query = model2.loadQuery('run: one -> {select: `1`}');
+    const result = await query.run();
+    const modelTags = result.modelTag;
+    expect(modelTags.text('from')).toEqual('cell2');
   });
 });

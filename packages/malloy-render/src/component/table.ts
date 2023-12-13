@@ -21,115 +21,32 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataArray, DataRecord, Field} from '@malloydata/malloy';
+import {AtomicField, DataArray, DataRecord, Field} from '@malloydata/malloy';
 import {LitElement, TemplateResult, css, html, nothing} from 'lit';
 import {customElement, eventOptions, property, state} from 'lit/decorators.js';
 import {classMap} from 'lit/directives/class-map.js';
 import {createContext, provide, consume} from '@lit/context';
-import {isFirstChild, isLastChild} from './util';
+import {
+  clamp,
+  getTextWidth,
+  isFirstChild,
+  isLastChild,
+  valueIsNumber,
+} from './util';
+import {renderNumericField} from './render-numeric-field';
+import {resultContext} from './result-context';
+import {RenderResultMetadata} from './render-result-metadata';
+
+const MIN_COLUMN_WIDTH = 32;
+const MAX_COLUMN_WIDTH = 384;
+const COLUMN_BUFFER = 12;
 
 type TableContext = {
   root: boolean;
+  widthCache: Map<Field, number>;
 };
 
 const tableContext = createContext<TableContext | undefined>('table');
-
-type RenderOptions = {
-  pinnedHeader?: boolean;
-};
-
-// TODO: replace with an estimator per column
-function getColumnWidth() {
-  return 130;
-}
-
-const getContentStyle = (f: Field) => {
-  if (f.isAtomicField()) {
-    const width = getColumnWidth();
-    return `width: ${width}px; min-width: ${width}px; max-width: ${width}px;`;
-  }
-  return '';
-};
-
-const renderCell = (
-  f: Field,
-  value: unknown,
-  options: {
-    hideStartGutter: boolean;
-    hideEndGutter: boolean;
-  }
-) => {
-  return html`<div class="cell-wrapper">
-    <div
-      class=${classMap({
-        'cell-gutter': true,
-        'hide-gutter-border': options.hideStartGutter,
-      })}
-    ></div>
-    <div class="cell-content" style="${getContentStyle(f)}">${value}</div>
-    <div
-      class=${classMap({
-        'cell-gutter': true,
-        'hide-gutter-border': options.hideEndGutter,
-      })}
-    ></div>
-  </div>`;
-};
-
-const renderFieldContent = (
-  row: DataRecord,
-  f: Field,
-  options: RenderOptions
-) => {
-  if (f.isExploreField()) {
-    return html`<malloy-table
-      .data=${row.cell(f) as DataArray}
-      .pinnedHeader=${options.pinnedHeader ?? false}
-      .rowLimit=${options.pinnedHeader ? 1 : Infinity}
-    ></malloy-table>`;
-  }
-  let value = row.cell(f).value;
-  if (options.pinnedHeader) value = '';
-  else if (f.isAtomicField() && f.isNumber())
-    value = (value as number).toLocaleString();
-
-  return renderCell(f, value, {
-    hideStartGutter: isFirstChild(f),
-    hideEndGutter: isLastChild(f),
-  });
-};
-
-const renderField = (row: DataRecord, f: Field, options: RenderOptions) => {
-  return html`<td
-    class="column-cell ${classMap({
-      numeric: f.isAtomicField() && f.isNumber(),
-    })}"
-  >
-    ${renderFieldContent(row, f, options)}
-  </td>`;
-};
-
-const renderHeader = (f: Field) => {
-  const isFirst = isFirstChild(f);
-  const isParentFirst = isFirstChild(f.parentExplore);
-  const isParentNotAField = !f.parentExplore.isExploreField();
-  const hideStartGutter = isFirst && (isParentFirst || isParentNotAField);
-
-  const isLast = isLastChild(f);
-  const isParentLast = isLastChild(f.parentExplore);
-  const hideEndGutter = isLast && (isParentLast || isParentNotAField);
-
-  return html`<th
-    class="column-cell ${classMap({
-      numeric: f.isAtomicField() && f.isNumber(),
-    })}"
-  >
-    ${renderCell(f, f.name, {
-      hideStartGutter,
-      hideEndGutter,
-    })}
-  </th>`;
-};
 
 @customElement('malloy-table')
 export class Table extends LitElement {
@@ -160,7 +77,7 @@ export class Table extends LitElement {
 
     table {
       border-collapse: collapse;
-      background: var(--table-background);
+      background: var(--malloy-render--table-background);
     }
 
     th {
@@ -172,7 +89,7 @@ export class Table extends LitElement {
     }
 
     .column-cell {
-      height: var(--table-row-height);
+      height: var(--malloy-render--table-row-height);
       overflow: hidden;
       white-space: nowrap;
       text-align: left;
@@ -182,39 +99,40 @@ export class Table extends LitElement {
     }
 
     td.column-cell {
-      font-weight: var(--table-body-weight);
-      color: var(--table-body-color);
+      font-weight: var(--malloy-render--table-body-weight);
+      color: var(--malloy-render--table-body-color);
     }
 
     th.column-cell {
-      font-weight: var(--table-header-weight);
-      color: var(--table-header-color);
+      font-weight: var(--malloy-render--table-header-weight);
+      color: var(--malloy-render--table-header-color);
     }
 
     .column-cell.numeric {
       text-align: right;
+      font-variant-numeric: tabular-nums;
     }
 
     .cell-wrapper {
-      height: var(--table-row-height);
+      height: var(--malloy-render--table-row-height);
       display: flex;
       align-items: center;
       overflow: hidden;
     }
 
     .cell-content {
-      border-top: var(--table-border);
-      height: var(--table-row-height);
-      line-height: var(--table-row-height);
+      border-top: var(--malloy-render--table-border);
+      height: var(--malloy-render--table-row-height);
+      line-height: var(--malloy-render--table-row-height);
       flex: 1;
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
     .cell-gutter {
-      border-top: var(--table-border);
-      height: var(--table-row-height);
-      width: var(--table-gutter-size);
+      border-top: var(--malloy-render--table-border);
+      height: var(--malloy-render--table-row-height);
+      width: var(--malloy-render--table-gutter-size);
       transition: border-color 0.25s;
     }
 
@@ -227,11 +145,11 @@ export class Table extends LitElement {
     }
 
     .pinned-header th {
-      background: var(--table-background);
+      background: var(--malloy-render--table-background);
     }
 
     .pinned-header.scrolled th {
-      background: var(--table-pinned-background);
+      background: var(--malloy-render--table-pinned-background);
       box-shadow: 0 0 0.5em rgba(0, 0, 0, 0.5);
     }
 
@@ -239,7 +157,7 @@ export class Table extends LitElement {
       .cell-content,
       .cell-gutter,
       .cell-gutter.hide-gutter-border {
-        border-top: var(--table-pinned-border);
+        border-top: var(--malloy-render--table-pinned-border);
       }
     }
   `;
@@ -261,13 +179,23 @@ export class Table extends LitElement {
   public parentCtx: TableContext | undefined;
 
   @provide({context: tableContext})
-  ctx = {root: false};
+  ctx!: TableContext;
+
+  @consume({context: resultContext})
+  @property({attribute: false})
+  metadata!: RenderResultMetadata;
 
   override connectedCallback() {
     super.connectedCallback();
     if (typeof this.parentCtx === 'undefined') {
       this.ctx = {
         root: true,
+        widthCache: new Map(),
+      };
+    } else {
+      this.ctx = {
+        root: false,
+        widthCache: this.parentCtx.widthCache,
       };
     }
   }
@@ -284,14 +212,149 @@ export class Table extends LitElement {
     return super.createRenderRoot();
   }
 
+  private renderHeader(f: Field) {
+    const isFirst = isFirstChild(f);
+    const isParentFirst = isFirstChild(f.parentExplore);
+    const isParentNotAField = !f.parentExplore.isExploreField();
+    const hideStartGutter = isFirst && (isParentFirst || isParentNotAField);
+
+    const isLast = isLastChild(f);
+    const isParentLast = isLastChild(f.parentExplore);
+    const hideEndGutter = isLast && (isParentLast || isParentNotAField);
+
+    return html`<th
+      class="column-cell ${classMap({
+        numeric: f.isAtomicField() && f.isNumber(),
+      })}"
+    >
+      ${this.renderCell(f, f.name, {
+        hideStartGutter,
+        hideEndGutter,
+      })}
+    </th>`;
+  }
+
+  private renderField(row: DataRecord, f: Field) {
+    return html`<td
+      class="column-cell ${classMap({
+        numeric: f.isAtomicField() && f.isNumber(),
+      })}"
+    >
+      ${this.renderFieldContent(row, f)}
+    </td>`;
+  }
+
+  private getCellFontStyling() {
+    const rootStyle = getComputedStyle(this);
+    const fontFamily = rootStyle
+      .getPropertyValue('--malloy-render--font-family')
+      .trim();
+    const fontSize = rootStyle
+      .getPropertyValue('--malloy-render--table-font-size')
+      .trim();
+    return {
+      fontFamily,
+      fontSize,
+    };
+  }
+
+  private measuringCanvas = document.createElement('canvas');
+
+  private getColumnWidth(f: Field) {
+    const fieldKey = JSON.stringify(f.fieldPath);
+    const fieldMeta = this.metadata.fields[fieldKey];
+    let width = this.ctx.widthCache.get(f);
+
+    if (typeof width === 'undefined') {
+      const fontStyles = this.getCellFontStyling();
+      const font = `${fontStyles.fontSize} ${fontStyles.fontFamily}`;
+      const titleWidth = getTextWidth(f.name, font, this.measuringCanvas);
+      if (f.isAtomicField() && f.isString()) {
+        width =
+          Math.max(
+            getTextWidth(fieldMeta.maxString!, font, this.measuringCanvas),
+            titleWidth
+          ) + COLUMN_BUFFER;
+      } else if (f.isAtomicField() && f.isNumber()) {
+        const formattedValue = renderNumericField(f, fieldMeta.max!);
+        width =
+          Math.max(
+            getTextWidth(formattedValue, font, this.measuringCanvas),
+            titleWidth
+          ) + COLUMN_BUFFER;
+      } else width = 130;
+      width = clamp(MIN_COLUMN_WIDTH, MAX_COLUMN_WIDTH, width);
+      this.ctx.widthCache.set(f, width);
+    }
+
+    return width;
+  }
+
+  private getContentStyle(f: Field) {
+    if (f.isAtomicField()) {
+      const width = this.getColumnWidth(f);
+      return `width: ${width}px; min-width: ${width}px; max-width: ${width}px;`;
+    }
+    return '';
+  }
+
+  private renderCell(
+    f: Field,
+    value: string | number,
+    options: {
+      hideStartGutter: boolean;
+      hideEndGutter: boolean;
+    }
+  ) {
+    return html`<div class="cell-wrapper">
+      <div
+        class=${classMap({
+          'cell-gutter': true,
+          'hide-gutter-border': options.hideStartGutter,
+        })}
+      ></div>
+      <div
+        class="cell-content"
+        style="${this.getContentStyle(f)}"
+        title="${value}"
+      >
+        ${value}
+      </div>
+      <div
+        class=${classMap({
+          'cell-gutter': true,
+          'hide-gutter-border': options.hideEndGutter,
+        })}
+      ></div>
+    </div>`;
+  }
+
+  private renderFieldContent(row: DataRecord, f: Field) {
+    if (f.isExploreField()) {
+      return html`<malloy-table
+        .data=${row.cell(f) as DataArray}
+        .pinnedHeader=${this.pinnedHeader ?? false}
+        .rowLimit=${this.pinnedHeader ? 1 : Infinity}
+      ></malloy-table>`;
+    }
+    let value: number | string = row.cell(f).value as number;
+    if (this.pinnedHeader) value = '';
+    else if (valueIsNumber(f, value)) {
+      // TS doesn't support typeguards for multiple parameters, so unfortunately have to assert AtomicField here. https://github.com/microsoft/TypeScript/issues/26916
+      value = renderNumericField(f as AtomicField, value);
+    } else if (value === null) {
+      value = '∅';
+    }
+
+    return this.renderCell(f, value, {
+      hideStartGutter: isFirstChild(f),
+      hideEndGutter: isLastChild(f),
+    });
+  }
+
   override render() {
     const fields = this.data.field.allFields;
-
-    const headers = fields.map(f => renderHeader(f));
-
-    const renderOptions: RenderOptions = {
-      pinnedHeader: this.pinnedHeader,
-    };
+    const headers = fields.map(f => this.renderHeader(f));
 
     const rows: TemplateResult[] = [];
     let i = 0;
@@ -299,7 +362,7 @@ export class Table extends LitElement {
       if (i >= this.rowLimit) break;
       rows.push(
         html`<tr>
-          ${fields.map(f => renderField(row, f, renderOptions))}
+          ${fields.map(f => this.renderField(row, f))}
         </tr>`
       );
       i++;
@@ -325,7 +388,11 @@ export class Table extends LitElement {
       return nothing;
     };
 
-    return html`<div @scroll=${this._handleScroll} class="table-wrapper">
+    return html`<div
+      @scroll=${this._handleScroll}
+      class="table-wrapper"
+      part=${this.ctx.root ? 'table-container' : nothing}
+    >
       ${renderStickyHeader()}
       <table>
         <thead>
