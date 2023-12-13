@@ -45,14 +45,14 @@ export abstract class QuerySpace
   implements QueryFieldSpace
 {
   private exprSpace: QueryInputSpace;
-  astEl?: MalloyElement | undefined;
   abstract readonly segmentType: 'reduce' | 'project' | 'index';
   expandedWild: Record<string, string[]> = {};
-  nestParent?: QuerySpace;
 
   constructor(
     readonly queryInputSpace: FieldSpace,
-    refineThis: model.PipeSegment | undefined
+    refineThis: model.PipeSegment | undefined,
+    readonly nestParent: QuerySpace | undefined,
+    readonly astEl: MalloyElement
   ) {
     super(queryInputSpace.emptyStructDef());
     this.exprSpace = new QueryInputSpace(queryInputSpace, this);

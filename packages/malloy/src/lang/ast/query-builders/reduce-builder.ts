@@ -42,6 +42,7 @@ import {QueryBuilder} from '../types/query-builder';
 import {QuerySpace, ReduceFieldSpace} from '../field-space/query-spaces';
 import {DefinitionList} from '../types/definition-list';
 import {QueryInputSpace} from '../field-space/query-input-space';
+import {MalloyElement} from '../types/malloy-element';
 
 export class ReduceBuilder implements QueryBuilder {
   inputFS: QueryInputSpace;
@@ -51,17 +52,24 @@ export class ReduceBuilder implements QueryBuilder {
   limit?: number;
   type: 'grouping' | 'project';
 
-  constructor(baseFS: FieldSpace, refineThis: PipeSegment | undefined) {
-    this.resultFS = this.getResultSpace(baseFS, refineThis);
+  constructor(
+    baseFS: FieldSpace,
+    refineThis: PipeSegment | undefined,
+    isNestIn: QuerySpace | undefined,
+    astEl: MalloyElement
+  ) {
+    this.resultFS = this.getResultSpace(baseFS, refineThis, isNestIn, astEl);
     this.inputFS = this.resultFS.inputSpace();
     this.type = 'grouping';
   }
 
   getResultSpace(
     fs: FieldSpace,
-    refineThis: PipeSegment | undefined
+    refineThis: PipeSegment | undefined,
+    isNestIn: QuerySpace | undefined,
+    astEl: MalloyElement
   ): QuerySpace {
-    return new ReduceFieldSpace(fs, refineThis);
+    return new ReduceFieldSpace(fs, refineThis, isNestIn, astEl);
   }
 
   execute(qp: QueryProperty): void {
