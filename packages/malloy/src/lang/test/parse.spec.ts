@@ -721,10 +721,7 @@ describe('sql expressions', () => {
     }
   });
 
-  // TODO this is not possible to implement yet unless we
-  // can distinguish between the generated IR of `conn.sql(...)`
-  // and `conn.sql(...) -> { select: * }`.
-  test.skip('cannot refine a SQL query', () => {
+  test('cannot refine a SQL query saved as a query', () => {
     const m = new TestTranslator(`
       query: q1 is bigquery.sql("""select 1 as one""")
       run: q1 + { where: 1 = 1 }
@@ -736,7 +733,24 @@ describe('sql expressions', () => {
       m.update({
         compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
       });
-      expect(m).translationToFailWith('Cannot refine a SQL query');
+      expect(m).translationToFailWith('A raw query cannot be refined');
+    }
+  });
+
+  test('cannot refine a SQL query directly', () => {
+    const m = new TestTranslator(`
+      run: bigquery.sql("""select 1 as one""") + { where: 1 = 1 }
+    `);
+    expect(m).toParse();
+    const compileSql = m.translate().compileSQL;
+    expect(compileSql).toBeDefined();
+    if (compileSql) {
+      m.update({
+        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+      });
+      expect(m).translationToFailWith(
+        'Cannot add view refinements to a source'
+      );
     }
   });
 });

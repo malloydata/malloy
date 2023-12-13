@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {PipeSegment} from '../../../model/malloy_types';
+import {PipeSegment, isRawSegment} from '../../../model/malloy_types';
 import {QuerySpace} from '../field-space/query-spaces';
 import {StaticSpace} from '../field-space/static-space';
 import {QOpDesc} from '../query-properties/qop-desc';
@@ -51,6 +51,10 @@ export class QOpDescView extends View {
     qOpDesc: QOpDesc,
     refineThis: PipeSegment
   ): PipeSegment {
+    if (isRawSegment(refineThis)) {
+      this.log('A raw query cannot be refined');
+      return refineThis;
+    }
     qOpDesc.refineFrom(refineThis);
     return qOpDesc.getOp(inputFS, isNestIn).segment;
   }

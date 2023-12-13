@@ -317,7 +317,7 @@ describe('source:', () => {
         }
       `).toTranslate();
     });
-    test.skip('pipelined explore-query with view chain', () => {
+    test('pipelined explore-query with view chain', () => {
       expect(`
         source: c is a extend {
           view: chain is {
