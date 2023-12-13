@@ -27,8 +27,9 @@ import {QueryComp} from '../types/query-comp';
 import {QueryHeadStruct} from './query-head-struct';
 import {Query, refIsStructDef} from '../../../model/malloy_types';
 import {getFinalStruct} from '../struct-utils';
+import {QueryElement} from '../types/query-element';
 
-export class QueryReference extends MalloyElement {
+export class QueryReference extends MalloyElement implements QueryElement {
   elementType = 'query-reference';
 
   constructor(readonly name: ModelEntryReference) {

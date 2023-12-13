@@ -30,7 +30,7 @@ import {QueryElement} from '../types/query-element';
 import {QueryBase} from './query-base';
 import {View} from '../view-elements/view';
 
-export class QueryArrow extends QueryBase {
+export class QueryArrow extends QueryBase implements QueryElement {
   elementType = 'arrow';
 
   constructor(

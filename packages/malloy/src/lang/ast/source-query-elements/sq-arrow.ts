@@ -26,6 +26,7 @@ import {SourceQueryElement} from './source-query-element';
 import {QuerySource} from '../source-elements/query-source';
 import {QueryArrow} from '../query-elements/query-arrow';
 import {View} from '../view-elements/view';
+import {QueryElement} from '../types/query-element';
 
 export class SQArrow extends SourceQueryElement {
   elementType = 'sq-arrow';
@@ -36,7 +37,7 @@ export class SQArrow extends SourceQueryElement {
     super({applyTo, operation});
   }
 
-  getQuery() {
+  getQuery(): QueryElement | undefined {
     const lhs = this.applyTo.isSource()
       ? this.applyTo.getSource()
       : this.applyTo.getQuery();

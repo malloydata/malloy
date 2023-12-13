@@ -25,8 +25,9 @@ import {Query, refIsStructDef} from '../../../model/malloy_types';
 import {Source} from '../source-elements/source';
 import {MalloyElement} from '../types/malloy-element';
 import {QueryComp} from '../types/query-comp';
+import {QueryElement} from '../types/query-element';
 
-export class QueryRaw extends MalloyElement {
+export class QueryRaw extends MalloyElement implements QueryElement {
   elementType = 'query-raw';
 
   constructor(readonly source: Source) {

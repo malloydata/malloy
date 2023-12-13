@@ -28,7 +28,7 @@ import {QueryElement} from '../types/query-element';
 import {View} from '../view-elements/view';
 import {QueryBase} from './query-base';
 
-export class QueryRefine extends QueryBase {
+export class QueryRefine extends QueryBase implements QueryElement {
   elementType = 'query-refine';
 
   constructor(
