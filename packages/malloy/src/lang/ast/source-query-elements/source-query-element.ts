@@ -25,6 +25,12 @@ import {QueryElement} from '../types/query-element';
 import {MalloyElement} from '../types/malloy-element';
 import {Source} from '../source-elements/source';
 
+/**
+ * An AST element which can be treated as either a source or a query
+ * depending on context. For instance, an `SQReference` represents
+ * a model-level reference to an entity which is either a source or
+ * a query.
+ */
 export abstract class SourceQueryElement extends MalloyElement {
   errored = false;
 

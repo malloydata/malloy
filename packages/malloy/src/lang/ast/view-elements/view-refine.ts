@@ -30,6 +30,12 @@ import {PipelineComp} from '../types/pipeline-comp';
 import {refine} from './refine-utils';
 import {View} from './view';
 
+/**
+ * A view operation that represents the refinement of one view
+ * with another view.
+ *
+ * e.g. `by_carrier + { limit: 10 }`
+ */
 export class ViewRefine extends View {
   elementType = 'refine';
 

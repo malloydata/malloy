@@ -25,6 +25,13 @@ import {RefinedSource} from '../source-elements/refined-source';
 import {SourceQueryElement} from './source-query-element';
 import {SourceDesc} from '../types/source-desc';
 
+/**
+ * An element which represents adding source extensions to a
+ * query or source using the `extend` operator. This element
+ * cannot be treated as a query.
+ *
+ * e.g. `flights extend { rename: carrier2 is carrier }`
+ */
 export class SQExtend extends SourceQueryElement {
   elementType = 'sq-extend';
   asSource?: RefinedSource;

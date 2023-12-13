@@ -31,6 +31,11 @@ import {PipelineComp} from '../types/pipeline-comp';
 import {LegalRefinementStage} from '../types/query-property-interface';
 import {View} from './view';
 
+/**
+ * A view operation consisting of literal view operations.
+ *
+ * e.g. `{ limit: 10 }`
+ */
 export class QOpDescView extends View {
   elementType = 'qopdesc-view';
   constructor(readonly operation: QOpDesc) {

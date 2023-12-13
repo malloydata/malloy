@@ -28,6 +28,12 @@ import {FieldSpace} from '../types/field-space';
 import {PipelineComp} from '../types/pipeline-comp';
 import {View} from './view';
 
+/**
+ * A view operation which represents adding a segment (or multiple
+ * segments) to another view operation.
+ *
+ * e.g. after the `is` in `view: x is by_carrier -> { select: * }`
+ */
 export class ViewArrow extends View {
   elementType = 'viewArrow';
 

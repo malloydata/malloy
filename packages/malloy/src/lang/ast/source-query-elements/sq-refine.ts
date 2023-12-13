@@ -27,6 +27,12 @@ import {QueryRefine} from '../query-elements/query-refine';
 import {View} from '../view-elements/view';
 import {SQReference} from './sq-reference';
 
+/**
+ * An element which represents adding refinements to a query.
+ * Generates errors if the LHS can't be understood as a query.
+ *
+ * e.g. `flights_by_carrier + { limit: 10 }`
+ */
 export class SQRefine extends SourceQueryElement {
   elementType = 'sq-refine';
 

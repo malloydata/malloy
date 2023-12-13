@@ -37,6 +37,14 @@ import {SpaceField} from '../types/space-field';
 import {refine} from './refine-utils';
 import {View} from './view';
 
+/**
+ * A view operation that is just a reference to another view or a
+ * scalar field (the latter of which only works when the `scalar_lenses`)
+ * experiment is enabled.
+ *
+ * e.g. `by_carrier` in `flights -> by_carrier`
+ * e.g. `carrier.nickname` in `nest: carrier.nickname`
+ */
 export class ReferenceView extends View {
   elementType = 'reference-view';
   constructor(readonly reference: ViewOrScalarFieldReference) {

@@ -26,6 +26,12 @@ import {SourceQueryElement} from './source-query-element';
 import {QueryRaw} from '../query-elements/query-raw';
 import {SQLSource} from '../source-elements/sql-source';
 
+/**
+ * An element which wraps a known source (e.g. SQL or table).
+ * Can be treated in specific circumstances as a query,
+ * e.g. `run: duckdb.sql('...')`, but generally is just used as
+ * a source.
+ */
 export class SQSource extends SourceQueryElement {
   elementType = 'sq-source';
 

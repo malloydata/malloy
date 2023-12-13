@@ -29,6 +29,11 @@ import {QuerySource} from '../source-elements/query-source';
 import {NamedSource} from '../source-elements/named-source';
 import {QueryReference} from '../query-elements/query-reference';
 
+/**
+ * A reference to either a source or a query.
+ *
+ * e.g. `flights`
+ */
 export class SQReference extends SourceQueryElement {
   elementType = 'sq-reference';
   asSource?: Source;

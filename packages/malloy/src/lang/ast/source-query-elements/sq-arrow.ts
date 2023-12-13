@@ -28,6 +28,16 @@ import {QueryArrow} from '../query-elements/query-arrow';
 import {View} from '../view-elements/view';
 import {QueryElement} from '../types/query-element';
 
+/**
+ * An expression that adds a segment to a source or query.
+ * This generates a `QueryArrow`, which either creates a new query
+ * from scratch with the LHS as the source, or creates a new query
+ * by adding a segment to the LHS (when it is already a query).
+ * When this element is treated as a source, the resulting query is
+ * wrapped in a `QuerySource` element.
+ *
+ * e.g. `flights -> by_carrier`
+ */
 export class SQArrow extends SourceQueryElement {
   elementType = 'sq-arrow';
   constructor(
