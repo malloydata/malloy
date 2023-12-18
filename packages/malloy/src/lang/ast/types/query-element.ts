@@ -22,10 +22,23 @@
  */
 
 import {MalloyElement} from './malloy-element';
-import {ExistingQuery} from '../query-elements/existing-query';
-import {FullQuery} from '../query-elements/full-query';
+import {QueryArrow} from '../query-elements/query-arrow';
+import {QueryRefine} from '../query-elements/query-refine';
+import {QueryReference} from '../query-elements/query-reference';
+import {QueryRaw} from '../query-elements/query-raw';
+import {Query} from '../../../model/malloy_types';
+import {QueryComp} from './query-comp';
 
-export type QueryElement = FullQuery | ExistingQuery;
+export interface QueryElement extends MalloyElement {
+  queryComp(isRefOk: boolean): QueryComp;
+  query(): Query;
+}
+
 export function isQueryElement(e: MalloyElement): e is QueryElement {
-  return e instanceof FullQuery || e instanceof ExistingQuery;
+  return (
+    e instanceof QueryArrow ||
+    e instanceof QueryRefine ||
+    e instanceof QueryReference ||
+    e instanceof QueryRaw
+  );
 }

@@ -21,18 +21,19 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {TurtleDecl} from '../query-properties/nest';
-import {Turtles} from '../source-properties/turtles';
-import {FieldDeclaration} from '../query-items/field-declaration';
-import {Join} from '../query-properties/joins';
-import {MalloyElement} from './malloy-element';
+import {Query} from '../../../model/malloy_types';
+import {detectAndRemovePartialStages} from '../query-utils';
+import {MalloyElement} from '../types/malloy-element';
+import {QueryComp} from '../types/query-comp';
 
-export type FieldDecl = FieldDeclaration | Join | TurtleDecl | Turtles;
-export function isFieldDecl(f: MalloyElement): f is FieldDecl {
-  return (
-    f instanceof FieldDeclaration ||
-    f instanceof Join ||
-    f instanceof TurtleDecl ||
-    f instanceof Turtles
-  );
+export abstract class QueryBase extends MalloyElement {
+  abstract queryComp(isRefOk: boolean): QueryComp;
+
+  query(): Query {
+    const q = this.queryComp(true).query;
+    return {
+      ...q,
+      pipeline: detectAndRemovePartialStages(q.pipeline, this),
+    };
+  }
 }

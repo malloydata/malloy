@@ -41,7 +41,7 @@ import {
   QueryPropertyInterface,
 } from '../types/query-property-interface';
 import {MakeEntry} from '../types/space-entry';
-import {SourceQueryNode} from '../elements/source-query';
+import {SourceQueryElement} from '../source-query-elements/source-query-element';
 import {ErrorFactory} from '../error-factory';
 
 export abstract class Join
@@ -53,7 +53,7 @@ export abstract class Join
   abstract fixupJoinOn(outer: FieldSpace, inStruct: StructDef): void;
   readonly isNoteableObj = true;
   extendNote = extendNoteMethod;
-  abstract sourceExpr: SourceQueryNode;
+  abstract sourceExpr: SourceQueryElement;
   note?: Annotation;
 
   makeEntry(fs: DynamicSpace) {
@@ -74,7 +74,7 @@ export class KeyJoin extends Join {
   elementType = 'joinOnKey';
   constructor(
     readonly name: ModelEntryReference,
-    readonly sourceExpr: SourceQueryNode,
+    readonly sourceExpr: SourceQueryElement,
     readonly keyExpr: ExpressionDef
   ) {
     super({name, sourceExpr, keyExpr});
@@ -149,7 +149,7 @@ export class ExpressionJoin extends Join {
   private expr?: ExpressionDef;
   constructor(
     readonly name: ModelEntryReference,
-    readonly sourceExpr: SourceQueryNode
+    readonly sourceExpr: SourceQueryElement
   ) {
     super({name, sourceExpr});
   }

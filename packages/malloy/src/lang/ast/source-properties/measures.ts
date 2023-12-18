@@ -21,6 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export * from './malloy_types';
-export {Segment, QueryModel} from './malloy_query';
-export {indent} from './utils';
+import {DeclareFields} from '../query-properties/declare-fields';
+
+export class Measures extends DeclareFields {
+  elementType = 'measureList';
+}

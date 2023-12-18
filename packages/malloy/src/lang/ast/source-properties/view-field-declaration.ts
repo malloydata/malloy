@@ -23,42 +23,45 @@
 
 import * as model from '../../../model/malloy_types';
 import {FieldSpace} from '../types/field-space';
+import {MalloyElement} from '../types/malloy-element';
+import {DynamicSpace} from '../field-space/dynamic-space';
+import {View} from '../view-elements/view';
+import {Noteable, extendNoteMethod} from '../types/noteable';
 import {detectAndRemovePartialStages} from '../query-utils';
-import {ViewFieldDeclaration} from '../source-properties/view-field-declaration';
-import {
-  LegalRefinementStage,
-  QueryClass,
-  QueryPropertyInterface,
-} from '../types/query-property-interface';
-import {QueryBuilder} from '../types/query-builder';
+import {ASTViewField} from '../field-space/ast-view-field';
+import {MakeEntry} from '../types/space-entry';
 
-export class NestFieldDeclaration
-  extends ViewFieldDeclaration
-  implements QueryPropertyInterface
+export class ViewFieldDeclaration
+  extends MalloyElement
+  implements Noteable, MakeEntry
 {
-  elementType = 'nest-field-declaration';
-  queryRefinementStage = LegalRefinementStage.Single;
-  forceQueryClass = QueryClass.Grouping;
+  elementType = 'view-field-declaration';
+  readonly isNoteableObj = true;
+  extendNote = extendNoteMethod;
+  note?: model.Annotation;
 
-  queryExecute(executeFor: QueryBuilder) {
-    executeFor.resultFS.pushFields(this);
+  constructor(
+    readonly name: string,
+    readonly view: View
+  ) {
+    super({view});
+  }
+
+  makeEntry(fs: DynamicSpace) {
+    const qf = new ASTViewField(fs, this, this.name);
+    fs.newEntry(this.name, this, qf);
   }
 
   getFieldDef(fs: FieldSpace): model.TurtleDef {
-    if (fs.isQueryFieldSpace()) {
-      const {pipeline, annotation} = this.view.pipelineComp(
-        fs,
-        fs.outputSpace()
-      );
-      const checkedPipeline = detectAndRemovePartialStages(pipeline, this);
-      return {
-        type: 'turtle',
-        name: this.name,
-        pipeline: checkedPipeline,
-        annotation: {...this.note, inherits: annotation},
-        location: this.location,
-      };
-    }
-    throw this.internalError('Unexpected namespace for nest');
+    const {pipeline, annotation} = this.view.pipelineComp(fs);
+    const checkedPipeline = detectAndRemovePartialStages(pipeline, this);
+    const def: model.TurtleDef = {
+      type: 'turtle',
+      name: this.name,
+      pipeline: checkedPipeline,
+      annotation: {...this.note, inherits: annotation},
+      location: this.location,
+    };
+    return def;
   }
 }

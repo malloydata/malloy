@@ -30,7 +30,7 @@ import {
   StructRef,
 } from '../../../model/malloy_types';
 
-import {Source} from '../elements/source';
+import {Source} from './source';
 import {ErrorFactory} from '../error-factory';
 import {ConstantSubExpression} from '../expressions/constant-sub-expression';
 import {castTo} from '../time-utils';

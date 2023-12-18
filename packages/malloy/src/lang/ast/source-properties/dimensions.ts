@@ -21,11 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {RenameField} from '../source-properties/renames';
-import {FieldDecl, isFieldDecl} from './field-decl';
-import {MalloyElement} from './malloy-element';
+import {DeclareFields} from '../query-properties/declare-fields';
 
-export type ExploreField = FieldDecl | RenameField;
-export function isExploreField(f: MalloyElement): f is ExploreField {
-  return isFieldDecl(f) || f instanceof RenameField;
+export class Dimensions extends DeclareFields {
+  elementType = 'dimensionList';
 }

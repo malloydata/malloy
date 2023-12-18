@@ -26,4 +26,5 @@ import {Query, StructDef} from '../../../model/malloy_types';
 export interface QueryComp {
   outputStruct: StructDef;
   query: Query;
+  inputStruct: StructDef;
 }

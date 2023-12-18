@@ -231,7 +231,7 @@ describe('document annotation', () => {
     expect(note_a?.annotation).matchesAnnotation({
       blockNotes: ['# run_block\n'],
       notes: ['# run_note\n'],
-      inherits: {inherits: defaultTags},
+      inherits: defaultTags,
     });
   });
   test('model annotations', () => {

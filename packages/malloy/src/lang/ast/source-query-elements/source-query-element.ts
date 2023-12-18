@@ -21,4 +21,49 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export {TurtleHeadedPipe} from '../elements/pipeline-desc';
+import {QueryElement} from '../types/query-element';
+import {MalloyElement} from '../types/malloy-element';
+import {Source} from '../source-elements/source';
+
+/**
+ * An AST element which can be treated as either a source or a query
+ * depending on context. For instance, an `SQReference` represents
+ * a model-level reference to an entity which is either a source or
+ * a query.
+ */
+export abstract class SourceQueryElement extends MalloyElement {
+  errored = false;
+
+  getSource(): Source | undefined {
+    return;
+  }
+
+  getQuery(): QueryElement | undefined {
+    return;
+  }
+
+  isSource(): boolean {
+    return false;
+  }
+
+  sqLog(message: string) {
+    if (this.isErrorFree()) {
+      this.log(message);
+    }
+    this.errored = true;
+  }
+
+  isErrorFree(): boolean {
+    if (this.errored) {
+      return false;
+    }
+    let clean = true;
+    for (const child of this.walk()) {
+      if (child instanceof SourceQueryElement && child.errored) {
+        clean = false;
+        break;
+      }
+    }
+    return clean;
+  }
+}

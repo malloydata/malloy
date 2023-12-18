@@ -104,7 +104,6 @@ ON: O N ;
 OR: O R ;
 PICK: P I C K ;
 QUARTER: Q U A R T E R S?;
-REFINE: R E F I N E ;
 RIGHT: R I G H T ;
 SECOND: S E C O N D S?;
 STRING: S T R I N G;

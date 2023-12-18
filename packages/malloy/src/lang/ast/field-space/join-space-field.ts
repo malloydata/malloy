@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Join} from '../query-properties/joins';
+import {Join} from '../source-properties/joins';
 import {StructSpaceField} from './static-space';
 
 export class JoinSpaceField extends StructSpaceField {

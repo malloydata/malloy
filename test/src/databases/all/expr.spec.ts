@@ -289,7 +289,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       )
       .run();
     // TODO Same as above -- this test should check the explore name
-    // expect(result.getResultExplore().name).toBe(undefined);
+    // expect(result.resultExplore.name).toBe(undefined);
     expect(result._queryResult.queryName).toBe(undefined);
   });
 

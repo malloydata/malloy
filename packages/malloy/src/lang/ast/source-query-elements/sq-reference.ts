@@ -1,0 +1,92 @@
+/*
+ * Copyright 2023 Google LLC
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files
+ * (the "Software"), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge,
+ * publish, distribute, sublicense, and/or sell copies of the Software,
+ * and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+import {ModelEntryReference} from '../types/malloy-element';
+import {Source} from '../source-elements/source';
+import {SourceQueryElement} from './source-query-element';
+import {QueryElement} from '../types/query-element';
+import {QuerySource} from '../source-elements/query-source';
+import {NamedSource} from '../source-elements/named-source';
+import {QueryReference} from '../query-elements/query-reference';
+
+/**
+ * A reference to either a source or a query.
+ *
+ * e.g. `flights`
+ */
+export class SQReference extends SourceQueryElement {
+  elementType = 'sq-reference';
+  asSource?: Source;
+
+  constructor(readonly ref: ModelEntryReference) {
+    super({ref});
+  }
+
+  getQuery(): QueryElement | undefined {
+    const entry = this.ref.getNamed();
+    if (entry) {
+      if (entry.type === 'query') {
+        const query = new QueryReference(this.ref);
+        this.has({query});
+        return query;
+      } else {
+        this.sqLog(
+          `Illegal reference to '${entry.as || entry.name}', query expected`
+        );
+      }
+    } else {
+      this.ref.log(`Reference to undefined object '${this.ref.refString}'`);
+      this.errored = true;
+    }
+    return;
+  }
+
+  isSource() {
+    return this.ref.getNamed()?.type === 'struct';
+  }
+
+  getSource(): Source | undefined {
+    if (this.asSource) {
+      return this.asSource;
+    }
+    const entry = this.ref.getNamed();
+    if (!entry) {
+      this.ref.log(`Reference to undefined object '${this.ref.refString}'`);
+      this.errored = true;
+      return;
+    }
+    if (entry.type === 'query') {
+      const existingQuery = new QueryReference(this.ref);
+      this.asSource = new QuerySource(existingQuery);
+    } else if (entry.type === 'struct') {
+      this.asSource = new NamedSource(this.ref);
+    } else {
+      this.sqLog(
+        `Expected '${this.ref.refString}' to be of type query or source, not '${entry.type}'`
+      );
+      return;
+    }
+    this.has({asSource: this.asSource});
+    return this.asSource;
+  }
+}

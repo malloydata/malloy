@@ -46,6 +46,30 @@ describe('lenses', () => {
       `
     ).toTranslate();
   });
+  test('lens parens patterns', () => {
+    expect(
+      markSource`
+        source: s1 is a extend {
+          view: v1 is { group_by: d1 is 1 }
+          view: v2 is { group_by: d2 is 2 }
+          view: v3 is { group_by: d3 is 3 }
+          view: v4 is (v1 + v2) + v3
+          view: v5 is {
+            nest: n1 is v1 + (v2 + v3)
+            nest: n2 is (({ group_by: d1 is 1 } + v2) + v3)
+            nest: n3 is v1 + v2 + { group_by: d3 is 3 }
+          }
+          view: v6 is { group_by: d1 is 1 } + (v2 + v3)
+        }
+        run: (s1 -> v4)
+        run: (s1 -> (((v4))))
+        source: s2 is ((s1 -> v1) + v2) + v3
+        source: s3 is s1 -> (v1 + (v2 + v3))
+        source: s4 is (s1 -> v1) + (v2 + v3)
+        source: s5 is s1 -> { group_by: d1 is 1 } + v2 + v3
+      `
+    ).toTranslate();
+  });
   test('cannot have overlapping names', () => {
     expect(
       markSource`
@@ -132,7 +156,9 @@ describe('lenses', () => {
         }
         run: x -> n + d
       `
-    ).translationToFailWith("'n' is not a query");
+    ).translationToFailWith(
+      'Cannot use scalar field `n` as a view; use `scalar_lenses` experiment to enable this behavior'
+    );
   });
   test('cannot reference dimension', () => {
     expect(
@@ -144,7 +170,8 @@ describe('lenses', () => {
         run: x -> d + n
       `
     ).translationToFailWith(
-      'named refinement `n` must be a view, found a number'
+      'Cannot use scalar field `n` as a refinement; use `scalar_lenses` experiment to enable this behavior',
+      'overlapping fields in refinement: n'
     );
   });
   test('can reference dimension at head of query when experiment is enabled', () => {
@@ -157,6 +184,59 @@ describe('lenses', () => {
         run: x -> n
       `
     ).toTranslate();
+  });
+  test('can change refine precedence', () => {
+    expect(
+      markSource`
+        ##! experimental { scalar_lenses }
+        source: x is a extend {
+          dimension:
+            a is 1
+            b is 2
+            c is 3
+        }
+        run: x -> a + (b + c)
+      `
+    ).toTranslate();
+  });
+  test.skip('can split multi-stage refinement with plus', () => {
+    expect(
+      markSource`
+        ##! experimental { scalar_lenses }
+        source: x is a extend {
+          view: two_stage is { group_by: a is 1 } -> { group_by: a }
+        }
+        run: x -> two_stage + ({ where: true } + { limit: 3 })
+      `
+    ).toTranslate();
+  });
+  test('cannot refine with multi-stage', () => {
+    expect(
+      markSource`
+        ##! experimental { scalar_lenses }
+        source: x is a extend {
+          view: one_stage is { group_by: a is 1 }
+          view: two_stage is { group_by: a is 1 } -> { group_by: a }
+        }
+        run: x -> one_stage + two_stage
+      `
+    ).translationToFailWith(
+      'named refinement `two_stage` must have exactly one stage'
+    );
+  });
+  test('cannot refine with literal multi-stage', () => {
+    expect(
+      markSource`
+        ##! experimental { scalar_lenses }
+        source: x is a extend {
+          view: one_stage is { group_by: a is 1 }
+          view: two_stage is { group_by: a is 1 } -> { group_by: a }
+        }
+        run: x -> one_stage + ({ group_by: a is 1 } -> { group_by: a })
+      `
+    ).translationToFailWith(
+      'A multi-segment view cannot be used as a refinement'
+    );
   });
   test('can reference dimension in refinement when experiment is enabled', () => {
     expect(
@@ -252,7 +332,7 @@ describe('lenses', () => {
         }
         run: x -> { nest: y.z }
       `
-    ).translationToFailWith('Cannot nest view from join');
+    ).translationToFailWith('Cannot use view from join');
   });
   test('cannot use view from join as nest view head', () => {
     expect(

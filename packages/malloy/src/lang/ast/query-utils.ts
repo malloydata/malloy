@@ -22,13 +22,14 @@
  */
 
 import {PipeSegment, isPartialSegment} from '../../model';
+import {MalloyElement} from './types/malloy-element';
 
 // We don't want to ever generate actual 'partial' stages, so convert this
 // into a reduce so the compiler doesn't explode
-export function detectAndRemovePartialStages(pipeline: PipeSegment[]): {
-  hasPartials: boolean;
-  pipeline: PipeSegment[];
-} {
+export function detectAndRemovePartialStages(
+  pipeline: PipeSegment[],
+  logTo: MalloyElement
+): PipeSegment[] {
   const cleaned: PipeSegment[] = [];
   let hasPartials = false;
   for (const segment of pipeline) {
@@ -39,5 +40,10 @@ export function detectAndRemovePartialStages(pipeline: PipeSegment[]): {
       cleaned.push(segment);
     }
   }
-  return {hasPartials, pipeline: cleaned};
+  if (hasPartials) {
+    logTo.log(
+      "Can't determine view type (`group_by` / `aggregate` / `nest`, `project`, `index`)"
+    );
+  }
+  return cleaned;
 }

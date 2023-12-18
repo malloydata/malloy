@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FieldDeclaration} from '../query-items/field-declaration';
+import {AtomicFieldDeclaration} from '../query-items/field-declaration';
 import {DefinitionList} from '../types/definition-list';
 import {QueryBuilder} from '../types/query-builder';
 import {
@@ -30,14 +30,14 @@ import {
 } from '../types/query-property-interface';
 
 export class DeclareFields
-  extends DefinitionList<FieldDeclaration>
+  extends DefinitionList<AtomicFieldDeclaration>
   implements QueryPropertyInterface
 {
   elementType = 'declareFields';
   queryRefinementStage = LegalRefinementStage.Single;
   forceQueryClass = undefined;
 
-  constructor(fields: FieldDeclaration[]) {
+  constructor(fields: AtomicFieldDeclaration[]) {
     super(fields);
   }
 

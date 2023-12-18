@@ -21,32 +21,45 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {QueryFieldDef, TurtleDef} from '../../../model/malloy_types';
-
-import {QueryField} from './query-space-field';
+import {PipeSegment} from '../../../model/malloy_types';
+import {QuerySpace} from '../field-space/query-spaces';
+import {StaticSpace} from '../field-space/static-space';
 import {FieldSpace} from '../types/field-space';
+import {PipelineComp} from '../types/pipeline-comp';
+import {View} from './view';
 
-export class QueryFieldStruct extends QueryField {
+/**
+ * A view operation which represents adding a segment (or multiple
+ * segments) to another view operation.
+ *
+ * e.g. after the `is` in `view: x is by_carrier -> { select: * }`
+ */
+export class ViewArrow extends View {
+  elementType = 'viewArrow';
+
   constructor(
-    fs: FieldSpace,
-    protected turtleDef: TurtleDef
+    readonly base: View,
+    readonly operation: View
   ) {
-    super(fs);
-    this.haveFieldDef = turtleDef;
+    super({base, operation});
   }
 
-  rename(name: string): void {
-    this.turtleDef = {
-      ...this.turtleDef,
-      as: name,
+  pipelineComp(fs: FieldSpace): PipelineComp {
+    const baseComp = this.base.pipelineComp(fs);
+    const nextFS = new StaticSpace(baseComp.outputStruct);
+    const finalComp = this.operation.pipelineComp(nextFS);
+    return {
+      pipeline: [...baseComp.pipeline, ...finalComp.pipeline],
+      outputStruct: finalComp.outputStruct,
     };
   }
 
-  fieldDef(): TurtleDef {
-    return this.turtleDef;
-  }
-
-  getQueryFieldDef(_fs: FieldSpace): QueryFieldDef | undefined {
-    return this.fieldDef();
+  refine(
+    _inputFS: FieldSpace,
+    _pipeline: PipeSegment[],
+    _isNestIn: QuerySpace | undefined
+  ): PipeSegment[] {
+    this.log('A multi-segment view cannot be used as a refinement');
+    return [];
   }
 }

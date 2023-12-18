@@ -21,20 +21,25 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FieldDef, QueryFieldDef, TypeDesc} from '../../../model/malloy_types';
-
+import {QueryFieldDef, TurtleDef} from '../../../model/malloy_types';
+import {ViewFieldDeclaration} from '../source-properties/view-field-declaration';
 import {FieldSpace} from '../types/field-space';
-import {SpaceField} from '../types/space-field';
+import {ViewField} from './view-field';
 
-export abstract class QueryField extends SpaceField {
-  constructor(protected inSpace: FieldSpace) {
-    super();
+export class ASTViewField extends ViewField {
+  constructor(
+    fs: FieldSpace,
+    readonly view: ViewFieldDeclaration,
+    protected name: string
+  ) {
+    super(fs);
   }
 
-  abstract getQueryFieldDef(fs: FieldSpace): QueryFieldDef | undefined;
-  abstract fieldDef(): FieldDef;
+  getQueryFieldDef(fs: FieldSpace): QueryFieldDef {
+    return this.view.getFieldDef(fs);
+  }
 
-  typeDesc(): TypeDesc {
-    return {dataType: 'turtle', expressionType: 'scalar', evalSpace: 'input'};
+  fieldDef(): TurtleDef {
+    return this.view.getFieldDef(this.inSpace);
   }
 }

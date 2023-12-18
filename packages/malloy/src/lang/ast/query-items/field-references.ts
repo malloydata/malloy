@@ -179,8 +179,8 @@ export class DimensionFieldReference extends FieldReference {
   }
 }
 
-export class ViewFieldReference extends FieldReference {
-  elementType = 'viewFieldRefernce';
+export class ViewOrScalarFieldReference extends FieldReference {
+  elementType = 'viewOrScalarFieldReference';
   typecheck(_type: TypeDesc) {}
 }
 

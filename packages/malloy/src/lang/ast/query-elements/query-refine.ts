@@ -21,21 +21,43 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {StructDef} from '../../../model/malloy_types';
-import {Source} from '../elements/source';
+import {StaticSpace} from '../field-space/static-space';
+import {getFinalStruct} from '../struct-utils';
+import {QueryComp} from '../types/query-comp';
 import {QueryElement} from '../types/query-element';
+import {View} from '../view-elements/view';
+import {QueryBase} from './query-base';
 
-export class QuerySource extends Source {
-  elementType = 'querySource';
-  constructor(readonly query: QueryElement) {
-    super({query: query});
+/**
+ * A query operation that consists of an exisitng query with refinements.
+ *
+ * e.g. after `run:` in `run: flights_by_carrier + { limit: 10 }`
+ */
+export class QueryRefine extends QueryBase implements QueryElement {
+  elementType = 'query-refine';
+
+  constructor(
+    readonly base: QueryElement,
+    readonly refinement: View
+  ) {
+    super({base, refinement});
   }
 
-  structDef(): StructDef {
-    const comp = this.query.queryComp(false);
-    const queryStruct = comp.outputStruct;
-    queryStruct.structSource = {type: 'query', query: comp.query};
-    this.document()?.rememberToAddModelAnnotations(queryStruct);
-    return queryStruct;
+  queryComp(isRefOk: boolean): QueryComp {
+    const q = this.base.queryComp(isRefOk);
+    const inputFS = new StaticSpace(q.inputStruct);
+    const resultPipe = this.refinement.refine(
+      inputFS,
+      q.query.pipeline,
+      undefined
+    );
+    return {
+      query: {
+        ...q.query,
+        pipeline: resultPipe,
+      },
+      outputStruct: getFinalStruct(this.refinement, q.inputStruct, resultPipe),
+      inputStruct: q.inputStruct,
+    };
   }
 }

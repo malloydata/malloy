@@ -21,43 +21,20 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {QueryElement} from '../types/query-element';
-import {MalloyElement} from '../types/malloy-element';
-import {Source} from './source';
+import {FieldDef, QueryFieldDef, TypeDesc} from '../../../model/malloy_types';
 
-export abstract class SourceQueryNode extends MalloyElement {
-  errored = false;
+import {FieldSpace} from '../types/field-space';
+import {SpaceField} from '../types/space-field';
 
-  getSource(): Source | undefined {
-    return;
+export abstract class ViewField extends SpaceField {
+  constructor(protected inSpace: FieldSpace) {
+    super();
   }
 
-  getQuery(): QueryElement | undefined {
-    return;
-  }
+  abstract getQueryFieldDef(fs: FieldSpace): QueryFieldDef | undefined;
+  abstract fieldDef(): FieldDef;
 
-  isSource(): boolean {
-    return false;
-  }
-
-  sqLog(message: string) {
-    if (this.isErrorFree()) {
-      this.log(message);
-    }
-    this.errored = true;
-  }
-
-  isErrorFree(): boolean {
-    if (this.errored) {
-      return false;
-    }
-    let clean = true;
-    for (const child of this.walk()) {
-      if (child instanceof SourceQueryNode && child.errored) {
-        clean = false;
-        break;
-      }
-    }
-    return clean;
+  typeDesc(): TypeDesc {
+    return {dataType: 'turtle', expressionType: 'scalar', evalSpace: 'input'};
   }
 }

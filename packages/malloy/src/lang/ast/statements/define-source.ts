@@ -32,7 +32,7 @@ import {
   DocStatementList,
 } from '../types/malloy-element';
 import {Noteable, extendNoteMethod} from '../types/noteable';
-import {SourceQueryNode} from './source-query';
+import {SourceQueryElement} from '../source-query-elements/source-query-element';
 
 export class DefineSource
   extends MalloyElement
@@ -42,7 +42,7 @@ export class DefineSource
   readonly parameters?: HasParameter[];
   constructor(
     readonly name: string,
-    readonly sourceExpr: SourceQueryNode | undefined,
+    readonly sourceExpr: SourceQueryElement | undefined,
     readonly exported: boolean,
     params?: MalloyElement[]
   ) {

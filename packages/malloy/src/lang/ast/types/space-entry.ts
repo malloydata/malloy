@@ -30,7 +30,7 @@ export abstract class SpaceEntry {
   abstract refType: 'field' | 'parameter';
 }
 
-export interface MakeEntry {
+export interface MakeEntry extends MalloyElement {
   makeEntry: (fs: DynamicSpace) => void;
 }
 

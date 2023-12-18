@@ -27,7 +27,7 @@ import {IndexBuilder} from '../query-builders/index-builder';
 import {ProjectBuilder} from '../query-builders/project-builder';
 import {ReduceBuilder} from '../query-builders/reduce-builder';
 import {FieldSpace} from '../types/field-space';
-import {ListOf} from '../types/malloy-element';
+import {ListOf, MalloyElement} from '../types/malloy-element';
 import {OpDesc} from '../types/op-desc';
 import {opOutputStruct} from '../struct-utils';
 import {QueryProperty} from '../types/query-property';
@@ -36,7 +36,7 @@ import {QueryClass} from '../types/query-property-interface';
 import {PartialBuilder} from '../query-builders/partial-builder';
 import {QuerySpace} from '../field-space/query-spaces';
 
-export class QOPDesc extends ListOf<QueryProperty> {
+export class QOpDesc extends ListOf<QueryProperty> {
   elementType = 'queryOperation';
   opClass: QueryClass | undefined;
   private refineThis?: PipeSegment;
@@ -79,25 +79,25 @@ export class QOPDesc extends ListOf<QueryProperty> {
     this.refineThis = existing;
   }
 
-  private getBuilder(baseFS: FieldSpace): QueryBuilder {
+  private getBuilder(
+    baseFS: FieldSpace,
+    isNestIn: QuerySpace | undefined,
+    astEl: MalloyElement
+  ): QueryBuilder {
     switch (this.computeType()) {
       case QueryClass.Grouping:
-        return new ReduceBuilder(baseFS, this.refineThis);
+        return new ReduceBuilder(baseFS, this.refineThis, isNestIn, astEl);
       case QueryClass.Project:
-        return new ProjectBuilder(baseFS, this.refineThis);
+        return new ProjectBuilder(baseFS, this.refineThis, isNestIn, astEl);
       case QueryClass.Index:
-        return new IndexBuilder(baseFS, this.refineThis);
+        return new IndexBuilder(baseFS, this.refineThis, isNestIn, astEl);
       case undefined:
-        return new PartialBuilder(baseFS, this.refineThis);
+        return new PartialBuilder(baseFS, this.refineThis, isNestIn, astEl);
     }
   }
 
   getOp(inputFS: FieldSpace, isNestIn: QuerySpace | undefined): OpDesc {
-    const build = this.getBuilder(inputFS);
-    if (isNestIn) {
-      build.resultFS.nestParent = isNestIn;
-    }
-    build.resultFS.astEl = this;
+    const build = this.getBuilder(inputFS, isNestIn, this);
     for (const qp of this.list) {
       build.execute(qp);
     }

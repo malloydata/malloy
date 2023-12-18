@@ -30,7 +30,7 @@ import {
   DocStatementList,
 } from '../types/malloy-element';
 import {Noteable, extendNoteMethod} from '../types/noteable';
-import {SourceQueryNode} from './source-query';
+import {SourceQueryElement} from '../source-query-elements/source-query-element';
 
 export class DefineQuery
   extends MalloyElement
@@ -40,7 +40,7 @@ export class DefineQuery
 
   constructor(
     readonly name: string,
-    readonly queryExpr: SourceQueryNode
+    readonly queryExpr: SourceQueryElement
   ) {
     super({queryExpr});
   }

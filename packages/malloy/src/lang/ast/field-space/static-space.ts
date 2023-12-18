@@ -32,7 +32,7 @@ import {DefinedParameter} from '../types/space-param';
 import {SpaceField} from '../types/space-field';
 import {StructSpaceFieldBase} from './struct-space-field-base';
 import {ColumnSpaceField} from './column-space-field';
-import {QueryFieldStruct} from './query-field-struct';
+import {IRViewField} from './ir-view-field';
 
 type FieldMap = Record<string, SpaceEntry>;
 
@@ -57,7 +57,7 @@ export class StaticSpace implements FieldSpace {
     if (from.type === 'struct') {
       return new StructSpaceField(from);
     } else if (isTurtleDef(from)) {
-      return new QueryFieldStruct(this, from);
+      return new IRViewField(this, from);
     }
     return new ColumnSpaceField(from);
   }

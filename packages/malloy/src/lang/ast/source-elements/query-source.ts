@@ -21,6 +21,23 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export * from './malloy_types';
-export {Segment, QueryModel} from './malloy_query';
-export {indent} from './utils';
+import {StructDef, StructSource} from '../../../model/malloy_types';
+import {Source} from './source';
+import {QueryElement} from '../types/query-element';
+
+export class QuerySource extends Source {
+  elementType = 'querySource';
+  constructor(readonly query: QueryElement) {
+    super({query: query});
+  }
+
+  structDef(): StructDef {
+    const comp = this.query.queryComp(false);
+    const queryStruct = {
+      ...comp.outputStruct,
+      structSource: {type: 'query', query: comp.query} as StructSource,
+    };
+    this.document()?.rememberToAddModelAnnotations(queryStruct);
+    return queryStruct;
+  }
+}

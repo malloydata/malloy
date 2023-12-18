@@ -109,7 +109,6 @@ export {
   isSamplingPercent,
   isSamplingRows,
   mkExpr,
-  flattenQuery,
   expressionIsCalculation,
   indent,
 } from './model';

@@ -21,8 +21,42 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DeclareFields} from './declare-fields';
+import {RefinedSource} from '../source-elements/refined-source';
+import {SourceQueryElement} from './source-query-element';
+import {SourceDesc} from '../types/source-desc';
 
-export class Measures extends DeclareFields {
-  elementType = 'measureList';
+/**
+ * An element which represents adding source extensions to a
+ * query or source using the `extend` operator. This element
+ * cannot be treated as a query.
+ *
+ * e.g. `flights extend { rename: carrier2 is carrier }`
+ */
+export class SQExtend extends SourceQueryElement {
+  elementType = 'sq-extend';
+  asSource?: RefinedSource;
+
+  constructor(
+    readonly sqSrc: SourceQueryElement,
+    readonly extend: SourceDesc
+  ) {
+    super({sqSrc, extend});
+  }
+
+  getSource() {
+    if (this.asSource) {
+      return this.asSource;
+    }
+    const src = this.sqSrc.getSource();
+    if (src) {
+      this.asSource = new RefinedSource(src, this.extend);
+      this.has({asSource: this.asSource});
+      return this.asSource;
+    }
+    this.sqLog('Could not compute source to extend');
+  }
+
+  isSource() {
+    return true;
+  }
 }
