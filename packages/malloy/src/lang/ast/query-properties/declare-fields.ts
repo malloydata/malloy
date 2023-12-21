@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {QueryOperationSpace} from '../field-space/query-spaces';
 import {AtomicFieldDeclaration} from '../query-items/field-declaration';
 import {DefinitionList} from '../types/definition-list';
 import {QueryBuilder} from '../types/query-builder';

@@ -34,19 +34,26 @@ import {FieldSpace} from '../types/field-space';
 import {GroupBy} from '../query-properties/group-by';
 import {ProjectFieldSpace} from '../field-space/project-field-space';
 import {QueryProperty} from '../types/query-property';
-import {ReduceBuilder} from './reduce-builder';
-import {QuerySpace} from '../field-space/query-spaces';
+import {QuerySegmentBuilder, ReduceBuilder} from './reduce-builder';
+import {QueryOperationSpace} from '../field-space/query-spaces';
 import {MalloyElement} from '../types/malloy-element';
+import { QueryBuilder } from '../types/query-builder';
+import { QueryInputSpace } from '../field-space/query-input-space';
 
-export class ProjectBuilder extends ReduceBuilder {
+export class ProjectBuilder extends QuerySegmentBuilder implements QueryBuilder {
+  resultFS: ProjectFieldSpace;
+  inputFS: QueryInputSpace;
   readonly type = 'project';
-  getResultSpace(
-    fs: FieldSpace,
+
+  constructor(
+    baseFS: FieldSpace,
     refineThis: PipeSegment | undefined,
-    isNestIn: QuerySpace | undefined,
+    isNestIn: QueryOperationSpace | undefined,
     astEl: MalloyElement
-  ): ProjectFieldSpace {
-    return new ProjectFieldSpace(fs, refineThis, isNestIn, astEl);
+  ) {
+    super();
+    this.resultFS = new ProjectFieldSpace(baseFS, refineThis, isNestIn, astEl);
+    this.inputFS = this.resultFS.inputSpace();
   }
 
   execute(qp: QueryProperty): void {

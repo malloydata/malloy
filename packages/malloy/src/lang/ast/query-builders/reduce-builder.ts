@@ -39,38 +39,18 @@ import {Ordering} from '../query-properties/ordering';
 import {Top} from '../query-properties/top';
 import {QueryProperty} from '../types/query-property';
 import {QueryBuilder} from '../types/query-builder';
-import {QuerySpace, ReduceFieldSpace} from '../field-space/query-spaces';
+import {QueryOperationSpace, ReduceFieldSpace} from '../field-space/query-spaces';
 import {DefinitionList} from '../types/definition-list';
 import {QueryInputSpace} from '../field-space/query-input-space';
 import {MalloyElement} from '../types/malloy-element';
 
-export class ReduceBuilder implements QueryBuilder {
-  inputFS: QueryInputSpace;
-  resultFS: QuerySpace;
-  filters: FilterExpression[] = [];
+export abstract class QuerySegmentBuilder implements QueryBuilder {
   order?: Top | Ordering;
   limit?: number;
-  type: 'grouping' | 'project';
-
-  constructor(
-    baseFS: FieldSpace,
-    refineThis: PipeSegment | undefined,
-    isNestIn: QuerySpace | undefined,
-    astEl: MalloyElement
-  ) {
-    this.resultFS = this.getResultSpace(baseFS, refineThis, isNestIn, astEl);
-    this.inputFS = this.resultFS.inputSpace();
-    this.type = 'grouping';
-  }
-
-  getResultSpace(
-    fs: FieldSpace,
-    refineThis: PipeSegment | undefined,
-    isNestIn: QuerySpace | undefined,
-    astEl: MalloyElement
-  ): QuerySpace {
-    return new ReduceFieldSpace(fs, refineThis, isNestIn, astEl);
-  }
+  abstract inputFS: QueryInputSpace;
+  abstract resultFS: QueryOperationSpace;
+  abstract readonly type: 'grouping' | 'project';
+  filters: FilterExpression[] = [];
 
   execute(qp: QueryProperty): void {
     if (qp.queryExecute) {
@@ -110,6 +90,8 @@ export class ReduceBuilder implements QueryBuilder {
     }
   }
 
+  abstract finalize(fromSeg: PipeSegment | undefined): PipeSegment;
+
   refineFrom(from: PipeSegment | undefined, to: QuerySegment): void {
     if (from && from.type !== 'index' && from.type !== 'raw') {
       if (!this.order) {
@@ -144,6 +126,23 @@ export class ReduceBuilder implements QueryBuilder {
     } else if (oldFilters) {
       to.filterList = [...oldFilters, ...this.filters];
     }
+  }
+}
+
+export class ReduceBuilder extends QuerySegmentBuilder implements QueryBuilder {
+  inputFS: QueryInputSpace;
+  resultFS: ReduceFieldSpace;
+  readonly type = 'grouping';
+
+  constructor(
+    baseFS: FieldSpace,
+    refineThis: PipeSegment | undefined,
+    isNestIn: QueryOperationSpace | undefined,
+    astEl: MalloyElement
+  ) {
+    super();
+    this.resultFS = new ReduceFieldSpace(baseFS, refineThis, isNestIn, astEl);
+    this.inputFS = this.resultFS.inputSpace();
   }
 
   finalize(fromSeg: PipeSegment | undefined): PipeSegment {

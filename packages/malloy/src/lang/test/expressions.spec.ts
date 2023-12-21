@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {isFieldTypeDef, isFilteredAliasedName} from '../../model';
+import {isFieldTypeDef} from '../../model';
 import {
   expr,
   TestTranslator,
@@ -635,47 +635,50 @@ describe('expressions', () => {
     expect(queryDef).toBeDefined();
     expect(queryDef?.type).toBe('query');
     if (queryDef && queryDef.type === 'query') {
-      const x = queryDef.pipeline[0].fields[0];
-      if (
-        typeof x !== 'string' &&
-        !isFilteredAliasedName(x) &&
-        isFieldTypeDef(x) &&
-        x.type === 'number' &&
-        x.e
-      ) {
-        expect(x).toMatchObject({
-          'e': [
-            {
-              'function': 'numberLiteral',
-              'literal': '1',
-              'type': 'dialect',
-            },
-            // TODO not sure why there are TWO sets of parentheses... A previous version of this test
-            // just checked that there were ANY parens, so that went under the radar. Not fixing now.
-            '+((',
-            {
-              'denominator': [
-                {
-                  'function': 'numberLiteral',
-                  'literal': '4',
-                  'type': 'dialect',
-                },
-              ],
-              'function': 'div',
-              'numerator': [
-                {
-                  'function': 'numberLiteral',
-                  'literal': '3',
-                  'type': 'dialect',
-                },
-              ],
-              'type': 'dialect',
-            },
-            '))',
-          ],
-        });
-      } else {
-        fail('expression with parens compiled oddly');
+      const qSeg = queryDef.pipeline[0];
+      expect(qSeg.type).toEqual('reduce');
+      if (qSeg.type === 'reduce') {
+        const x = qSeg.queryFields[0];
+        if (
+          x.type !== 'fieldref' &&
+          isFieldTypeDef(x) &&
+          x.type === 'number' &&
+          x.e
+        ) {
+          expect(x).toMatchObject({
+            'e': [
+              {
+                'function': 'numberLiteral',
+                'literal': '1',
+                'type': 'dialect',
+              },
+              // TODO not sure why there are TWO sets of parentheses... A previous version of this test
+              // just checked that there were ANY parens, so that went under the radar. Not fixing now.
+              '+((',
+              {
+                'denominator': [
+                  {
+                    'function': 'numberLiteral',
+                    'literal': '4',
+                    'type': 'dialect',
+                  },
+                ],
+                'function': 'div',
+                'numerator': [
+                  {
+                    'function': 'numberLiteral',
+                    'literal': '3',
+                    'type': 'dialect',
+                  },
+                ],
+                'type': 'dialect',
+              },
+              '))',
+            ],
+          });
+        } else {
+          fail('expression with parens compiled oddly');
+        }
       }
     }
   });

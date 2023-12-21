@@ -119,7 +119,7 @@ export class ExprFunc extends ExpressionDef {
           implicitExpr = {
             dataType: footType.dataType,
             expressionType: footType.expressionType,
-            value: [{type: 'field', path: this.source.refString}],
+            value: [{type: 'field', path: this.source.path}],
             evalSpace: footType.evalSpace,
           };
           structPath = this.source.sourceString;

@@ -72,7 +72,6 @@ export type {
   // Used in Composer Demo
   FieldAtomicDef,
   FieldDef,
-  FilteredAliasedName,
   PipeSegment,
   QueryFieldDef,
   TurtleDef,
@@ -104,7 +103,6 @@ export type {
 export {
   // Used in Composer Demo
   Segment,
-  isFilteredAliasedName,
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,

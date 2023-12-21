@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Annotation, FieldDef, TypeDesc} from '../../../model/malloy_types';
+import {Annotation, FieldDef, RefToField, TypeDesc} from '../../../model/malloy_types';
 import {DynamicSpace} from '../field-space/dynamic-space';
 import {ReferenceField} from '../field-space/reference-field';
 import {DefinitionList} from '../types/definition-list';
@@ -70,8 +70,19 @@ export abstract class FieldReference
     }
   }
 
+  get refToField(): RefToField {
+    return {
+      type: 'fieldref',
+      path: this.list.map(n => n.refString),
+    }
+  }
+
   get refString(): string {
-    return this.list.map(n => n.refString).join('.');
+    return this.path.join('.');
+  }
+
+  get path(): string[] {
+    return this.list.map(n => n.refString);
   }
 
   get outputName(): string {

@@ -29,6 +29,7 @@ import {
   Fragment,
   isAtomicFieldType,
   StructRelationship,
+  TransitionalFieldName,
 } from '../../../model/malloy_types';
 import {exprWalk} from '../../../model/utils';
 
@@ -97,7 +98,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
                   }
                 : {
                     type: 'field',
-                    path: this.source.refString,
+                    path: this.source.path,
                   },
             ],
             evalSpace: footType.evalSpace,
@@ -201,7 +202,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
     if (this.source) {
       const lookup = this.source.getField(fs);
       if (lookup.found) {
-        const sfd: Fragment[] = [{type: 'field', path: this.source.refString}];
+        const sfd: Fragment[] = [{type: 'field', path: this.source.path}];
         result.push(...getJoinUsage(fs, sfd));
       }
     }
@@ -220,13 +221,13 @@ function getJoinUsage(
   const result: {name: string; structRelationship: StructRelationship}[][] = [];
   const lookup = (
     fs: FieldSpace,
-    path: string
+    path: TransitionalFieldName
   ): {
     fs: FieldSpace;
     def: FieldDef;
     relationship: {name: string; structRelationship: StructRelationship}[];
   } => {
-    const parts = path.split('.');
+    const parts = typeof path === 'string' ? path.split('.') : [...path];
     const head = parts[0];
     const rest = parts.slice(1);
     const def = fs.entry(head);

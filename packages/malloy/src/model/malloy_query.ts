@@ -37,7 +37,7 @@ import {
   FieldDateDef,
   FieldDef,
   FieldFragment,
-  FieldRef,
+  FieldRefOrDef,
   FieldTimestampDef,
   Filtered,
   FilterExpression,
@@ -2054,10 +2054,6 @@ class QueryQuery extends QueryField {
       as = field.getIdentifier();
     }
     return {as, field};
-  }
-
-  expandDependantField(resultStruct: FieldInstanceResult, fieldRef: FieldRef) {
-    this.expandField(fieldRef);
   }
 
   // find all the fieldNames in the struct (and children)
@@ -4210,28 +4206,6 @@ class QueryStruct extends QueryNode {
         return new QueryTurtle(field, this);
       default:
         throw new Error(`unknown field definition ${JSON.stringify(field)}`);
-    }
-  }
-
-  /**
-   * return a field if it exists, make one if we are passed a field definition.
-   */
-  getOrMakeField(fieldRef: FieldRef) {
-    if (typeof fieldRef === 'string') {
-      return this.getFieldByName(fieldRef);
-    } else {
-      return this.makeQueryField(fieldRef);
-    }
-  }
-
-  /** returns a dimension for the given name  or make one. */
-  getOrMakeDimension(fieldRef: FieldRef): QueryAtomicField {
-    const dim = this.getOrMakeField(fieldRef);
-
-    if (dim instanceof QueryAtomicField && isScalarField(dim)) {
-      return dim;
-    } else {
-      throw new Error(`${fieldRef} is not of type a scalar'`);
     }
   }
 

@@ -34,7 +34,7 @@ import {
   SQLBlockStructDef,
   StructDef,
   TurtleDef,
-  isFilteredAliasedName,
+  isQuerySegment,
   isSQLFragment,
 } from '../../model/malloy_types';
 import {ExpressionDef, MalloyElement} from '../ast';
@@ -71,7 +71,7 @@ const mockSchema: Record<string, StructDef> = {
         type: 'struct',
         name: 'astruct',
         structSource: {type: 'nested'},
-        structRelationship: {type: 'nested', isArray: true, field: 'foo'},
+        structRelationship: {type: 'nested', isArray: true, fieldName: 'foo'},
         fields: [{type: 'number', name: 'column', numberType: 'integer'}],
         dialect: 'standardsql',
       },
@@ -264,9 +264,9 @@ export class TestTranslator extends MalloyTranslator {
               type: 'one',
               matrixOperation: 'left',
               onExpression: [
-                {type: 'field', path: 'astr'},
+                {type: 'field', path: ['astr']},
                 '=',
-                {type: 'field', path: 'b.astr'},
+                {type: 'field', path: ['b', 'astr']},
               ],
             },
           },
@@ -284,7 +284,10 @@ export class TestTranslator extends MalloyTranslator {
             pipeline: [
               {
                 type: 'reduce',
-                fields: ['astr', 'acount'],
+                queryFields: [
+                  {type: 'fieldref', path: ['astr']},
+                  {type: 'fieldref', path: ['acount']},
+                ],
               },
             ],
           },
@@ -469,24 +472,22 @@ export function getFieldDef(
   name: string
 ): FieldDef {
   let found: FieldDef | undefined = undefined;
-  for (const f of thing.fields) {
-    if (typeof f === 'string') {
-      if (f === name) {
-        throw new Error(`Expected def for '${name}', found a ref`);
+  if (thing.type === 'struct') {
+    for (const f of thing.fields) {
+      if (f.as ?? f.name === name) {
+        return f;;
       }
-    } else if ((f.as || f.name) === name) {
-      if (isFilteredAliasedName(f)) {
-        throw new Error(`FilteredAliasedName for '${name}' unexpected`);
+    }
+  } else if (isQuerySegment(thing)) {
+    for (const f of thing.queryFields) {
+      if (f.type === 'fieldref') {
+        throw new Error(`Found reference to ${name} but test expected a definition`);
+      } else if (f.as ?? f.name === name) {
+        return f;
       }
-      found = f;
-      break;
     }
   }
-  if (found === undefined) {
-    throw new Error(`Compiled code did not contain expected field '${name}'`);
-  } else {
-    return found;
-  }
+  throw new Error(`Compiled code did not contain expected field '${name}'`);
 }
 
 // TODO "as" is almost always a code smell ...

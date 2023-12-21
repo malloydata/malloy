@@ -67,14 +67,14 @@ export class ErrorFactory {
   }
 
   static get reduceSegment(): ReduceSegment {
-    return {type: 'reduce', fields: []};
+    return {type: 'reduce', queryFields: []};
   }
 
   static get projectSegment(): ProjectSegment {
-    return {type: 'project', fields: []};
+    return {type: 'project', queryFields: []};
   }
 
   static get indexSegment(): IndexSegment {
-    return {type: 'index', fields: []};
+    return {type: 'index', indexFields: []};
   }
 }

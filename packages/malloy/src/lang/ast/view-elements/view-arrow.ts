@@ -22,7 +22,7 @@
  */
 
 import {PipeSegment} from '../../../model/malloy_types';
-import {QuerySpace} from '../field-space/query-spaces';
+import {QueryOperationSpace} from '../field-space/query-spaces';
 import {StaticSpace} from '../field-space/static-space';
 import {FieldSpace} from '../types/field-space';
 import {PipelineComp} from '../types/pipeline-comp';
@@ -57,7 +57,7 @@ export class ViewArrow extends View {
   refine(
     _inputFS: FieldSpace,
     _pipeline: PipeSegment[],
-    _isNestIn: QuerySpace | undefined
+    _isNestIn: QueryOperationSpace | undefined
   ): PipeSegment[] {
     this.log('A multi-segment view cannot be used as a refinement');
     return [];

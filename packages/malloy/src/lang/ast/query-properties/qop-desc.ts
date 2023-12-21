@@ -34,7 +34,7 @@ import {QueryProperty} from '../types/query-property';
 import {StaticSpace} from '../field-space/static-space';
 import {QueryClass} from '../types/query-property-interface';
 import {PartialBuilder} from '../query-builders/partial-builder';
-import {QuerySpace} from '../field-space/query-spaces';
+import {QueryOperationSpace} from '../field-space/query-spaces';
 
 export class QOpDesc extends ListOf<QueryProperty> {
   elementType = 'queryOperation';
@@ -81,7 +81,7 @@ export class QOpDesc extends ListOf<QueryProperty> {
 
   private getBuilder(
     baseFS: FieldSpace,
-    isNestIn: QuerySpace | undefined,
+    isNestIn: QueryOperationSpace | undefined,
     astEl: MalloyElement
   ): QueryBuilder {
     switch (this.computeType()) {
@@ -96,7 +96,7 @@ export class QOpDesc extends ListOf<QueryProperty> {
     }
   }
 
-  getOp(inputFS: FieldSpace, isNestIn: QuerySpace | undefined): OpDesc {
+  getOp(inputFS: FieldSpace, isNestIn: QueryOperationSpace | undefined): OpDesc {
     const build = this.getBuilder(inputFS, isNestIn, this);
     for (const qp of this.list) {
       build.execute(qp);

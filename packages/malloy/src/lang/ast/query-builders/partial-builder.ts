@@ -20,12 +20,17 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-import {PipeSegment} from '../../../model';
+import {PipeSegment, isQuerySegment} from '../../../model';
+import { isQueryElement } from '../types/query-element';
 import {ReduceBuilder} from './reduce-builder';
 
 export class PartialBuilder extends ReduceBuilder {
   finalize(fromSeg: PipeSegment | undefined): PipeSegment {
     const seg = super.finalize(fromSeg);
-    return {...seg, type: 'partial'};
+    if (isQuerySegment(seg)) {
+      return {...seg, type: 'partial'};
+    }
+    // TODO index, raw, ??
+    throw new Error(`Partial Builder cannot finalize from ${seg.type}`);
   }
 }

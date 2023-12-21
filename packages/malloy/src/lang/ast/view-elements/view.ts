@@ -22,7 +22,7 @@
  */
 
 import {PipeSegment} from '../../../model/malloy_types';
-import {QuerySpace} from '../field-space/query-spaces';
+import {QueryOperationSpace} from '../field-space/query-spaces';
 import {FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
 import {PipelineComp} from '../types/pipeline-comp';
@@ -43,15 +43,15 @@ import {PipelineComp} from '../types/pipeline-comp';
  * e.g. after the arrow in `run: flights -> by_carrier`
  */
 export abstract class View extends MalloyElement {
-  abstract pipelineComp(fs: FieldSpace, isNestIn?: QuerySpace): PipelineComp;
+  abstract pipelineComp(fs: FieldSpace, isNestIn?: QueryOperationSpace): PipelineComp;
 
-  pipeline(fs: FieldSpace, isNestIn?: QuerySpace): PipeSegment[] {
+  pipeline(fs: FieldSpace, isNestIn?: QueryOperationSpace): PipeSegment[] {
     return this.pipelineComp(fs, isNestIn).pipeline;
   }
 
   abstract refine(
     inputFS: FieldSpace,
     pipeline: PipeSegment[],
-    isNestIn: QuerySpace | undefined
+    isNestIn: QueryOperationSpace | undefined
   ): PipeSegment[];
 }

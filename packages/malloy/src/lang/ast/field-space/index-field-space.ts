@@ -21,27 +21,24 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {IndexSegment, PipeSegment} from '../../../model/malloy_types';
+import {IndexSegment, PipeSegment, IndexFieldDef} from '../../../model/malloy_types';
 import {
   FieldReference,
   WildcardFieldReference,
 } from '../query-items/field-references';
 import {MalloyElement} from '../types/malloy-element';
-import {QuerySpace} from './query-spaces';
+import { SpaceField } from '../types/space-field';
+import {QueryOperationSpace} from './query-spaces';
 
-export class IndexFieldSpace extends QuerySpace {
+export class IndexFieldSpace extends QueryOperationSpace {
   readonly segmentType = 'index';
-  fieldList = new Set<string>();
 
   pushFields(...defs: MalloyElement[]) {
     for (const indexField of defs) {
       if (indexField instanceof FieldReference) {
-        if (indexField.getField(this.inputSpace()).found) {
-          this.fieldList.add(indexField.refString);
-        }
-        // mtoy TODO else error ???
+        super.pushFields(indexField);
       } else if (indexField instanceof WildcardFieldReference) {
-        this.fieldList.add(indexField.refString);
+        this.addWild(indexField);
       } else {
         indexField.log('Internal error, not expected in index query');
       }
@@ -49,17 +46,24 @@ export class IndexFieldSpace extends QuerySpace {
   }
 
   getPipeSegment(refineIndex?: PipeSegment): IndexSegment {
-    if (refineIndex && refineIndex.fields) {
-      for (const exists of refineIndex.fields) {
-        if (typeof exists === 'string') {
-          this.fieldList.add(exists);
+    const indexFields: IndexFieldDef[] = [];
+    for (const [name, field] of this.entries()) {
+      if (field instanceof SpaceField) {
+        const wildPath = this.expandedWild[name];
+        if (wildPath) {
+          indexFields.push({type: 'fieldref', path: wildPath});
+          continue;
         }
+        if (field instanceof FieldReference) {
+          indexFields.push(field.refToField);
+        }
+        // see pushFields above, this is all there is
       }
     }
-    this.isComplete();
-    return {
-      type: 'index',
-      fields: Array.from(this.fieldList.values()),
-    };
+    return {type: 'index', indexFields};
+  }
+
+  addRefineFromFields(_refineThis: never) {
+    throw new Error("Refine the index");
   }
 }

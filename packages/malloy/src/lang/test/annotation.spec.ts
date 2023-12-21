@@ -668,8 +668,11 @@ describe('query operation annotations', () => {
         na.pct_one
     }`;
     expect(m).toTranslate();
-    const q = m.translator.queryList[0];
-    const fields = q.pipeline[0].fields;
-    expect(fields[1]).toMatchObject({expressionType: 'aggregate'});
+    const q = m.translator.queryList[0].pipeline[0];
+    expect(q.type).toEqual('reduce');
+    if (q.type == 'reduce') {
+      const fields = q.queryFields;
+      expect(fields[1]).toMatchObject({expressionType: 'aggregate'});
+    }
   });
 });
