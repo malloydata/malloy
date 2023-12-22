@@ -816,6 +816,7 @@ export function isRawSegment(pe: PipeSegment): pe is RawSegment {
 }
 
 export type IndexFieldDef = RefToField;
+export type SegmentFieldDef = IndexFieldDef | QueryFieldDef;
 
 export interface IndexSegment extends Filtered {
   type: 'index';

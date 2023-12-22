@@ -48,6 +48,7 @@ import {
   getIdentifier,
   getPhysicalFields,
   hasExpression,
+  IndexFieldDef,
   IndexSegment,
   isAggregateFragment,
   isApplyFragment,
@@ -82,10 +83,12 @@ import {
   ResultMetadataDef,
   ResultStructMetadataDef,
   SearchIndexResult,
+  SegmentFieldDef,
   SpreadFragment,
   SQLExpressionFragment,
   StructDef,
   StructRef,
+  TransitionalFieldName,
   TurtleDef,
   UngroupFragment,
 } from './malloy_types';
@@ -100,6 +103,7 @@ import {
   range,
 } from './utils';
 import {QueryInfo} from '../dialect/dialect';
+import { Index } from '../lang/ast';
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
@@ -1963,173 +1967,88 @@ class QueryQuery extends QueryField {
     );
   }
 
-  getFieldList(): QueryFieldDef[] {
-    switch (this.firstSegment.type) {
-      // case "index":
-      //   return this.firstSegment.fields || [];
-      case 'reduce':
-        return this.firstSegment.fields;
-      // probably need some way of checking type class of field here...
-      //  project should only contain scalars
-      case 'project':
-        return this.firstSegment.fields;
-      default:
-        throw new Error(
-          `Query contains no fields ${JSON.stringify(this.fieldDef)}`
-        );
-    }
-  }
-
   // get a field ref and expand it.
   expandField(f: QueryFieldDef) {
-    let as;
-    let field: QuerySomething;
-    // if it is a string
-    if (typeof f === 'string') {
-      field = this.parent.getQueryFieldByName(f);
-    } else if ('type' in f) {
-      field = this.parent.makeQueryField(f);
-    }
-    // or FilteredAliasedName or a hacked timestamp field.
-    else if ('name' in f && 'as' in f) {
-      field = this.parent.getQueryFieldByName(f.name);
-      // QueryFieldStructs return new names...
-      as = field.fieldDef.as || f.as;
-
-      if (field instanceof QueryFieldStruct) {
-        throw new Error(
-          'Syntax currently disallowed. Semantics up for discussion'
-        );
-      }
-
-      // Types of aliased fields.
-      // turtles
-      // Timestamps and Dates (are just fine to leave as is).
-      // measures
-
-      // let e: Expr;
-      if (field instanceof QueryQuery) {
-        const newFieldDef: TurtleDefPlus = cloneDeep(field.fieldDef);
-        newFieldDef.as = f.name;
-        newFieldDef.filterList = f.filterList;
-        field = QueryQuery.makeQuery(
-          newFieldDef,
-          this.parent,
-          undefined,
-          this.isJoinedSubquery
-        );
-      } else if (
-        !(
-          field instanceof QueryFieldTimestamp ||
-          field instanceof QueryFieldDate
-        )
-      ) {
-        throw new Error(
-          `No longer generate code this way. \n ${JSON.stringify(
-            f,
-            undefined,
-            2
-          )}`
-        );
-        // // its a measure
-        // e = [{ type: "field", path: field.getFullOutputName() }];
-        // if ("filterList" in f && f.filterList) {
-        //   e = [{ type: "filterExpression", filterList: f.filterList, e: e }];
-        // }
-        // const newFieldDef = {
-        //   type: field.fieldDef.type,
-        //   name: f.as,
-        //   e,
-        // };
-        // field = this.parent.makeQueryField(newFieldDef as FieldDef);
-      }
-
-      // or inline field FieldTypeDef
-    } else {
-      throw new Error(
-        `Unrecognized field definition ${JSON.stringify(f, undefined, 2)}`
-      );
-    }
-    if (!as) {
-      as = field.getIdentifier();
-    }
+    const field = (f.type === 'fieldref') ?
+      this.parent.getQueryFieldByName(f.path)
+      : this.parent.makeQueryField(f);
+    const as = field.getIdentifier();
     return {as, field};
   }
 
   // find all the fieldNames in the struct (and children)
   //  that match the filter
-  expandWildCardStruct(
-    struct: QueryStruct,
-    expandChildren: boolean,
-    filter: ((qf: QueryNode) => boolean) | undefined = undefined
-  ): string[] {
-    let fieldNames: string[] = [];
-    const structs: QueryStruct[] = [];
+  // expandWildCardStruct(
+  //   struct: QueryStruct,
+  //   expandChildren: boolean,
+  //   filter: ((qf: QueryNode) => boolean) | undefined = undefined
+  // ): string[] {
+  //   let fieldNames: string[] = [];
+  //   const structs: QueryStruct[] = [];
 
-    for (const [_name, f] of struct.nameMap) {
-      if (
-        f instanceof QueryAtomicField &&
-        isScalarField(f) &&
-        f.includeInWildcard() &&
-        !this.parent.dialect.ignoreInProject(f.fieldDef.name) &&
-        (!filter || filter(f))
-      ) {
-        // fieldNames.push(`${struct.getFullOutputName()}${name}`);
-        fieldNames.push(f.getFullOutputName());
-      } else if (f instanceof QueryStruct && expandChildren) {
-        structs.push(f);
-      }
-    }
-    for (const s of structs) {
-      fieldNames = fieldNames.concat(
-        this.expandWildCardStruct(s, expandChildren, filter)
-      );
-    }
-    return fieldNames;
-  }
-
-  // Do any '*' expansion.
-  expandWildCards(
-    fields: QueryFieldDef[],
-    filter: ((qf: QueryNode) => boolean) | undefined = undefined
-  ): QueryFieldDef[] {
-    let ret: QueryFieldDef[] = [];
-    for (const f of fields) {
-      if (typeof f !== 'string') {
-        ret.push(f);
-      } else {
-        const fieldName = f;
-        const path = fieldName.split('.');
-        if (!path[path.length - 1].startsWith('*')) {
-          ret.push(f);
-        } else {
-          const expandChildren = path.pop() === '**';
-          let struct = this.parent;
-          let pathElementName;
-          while (path.length > 0 && (pathElementName = path.shift())) {
-            const structNode = struct.getChildByName(pathElementName);
-            if (structNode === undefined) {
-              throw new Error(`Nested source not found '${pathElementName}'`);
-            }
-            if (structNode instanceof QueryStruct) {
-              struct = structNode;
-            } else {
-              throw new Error(`'${pathElementName}' is not a source object`);
-            }
-          }
-          ret = ret.concat(
-            this.expandWildCardStruct(struct, expandChildren, filter)
-          );
-        }
-      }
-    }
-    return ret;
-  }
+  //   for (const [_name, f] of struct.nameMap) {
+  //     if (
+  //       f instanceof QueryAtomicField &&
+  //       isScalarField(f) &&
+  //       f.includeInWildcard() &&
+  //       !this.parent.dialect.ignoreInProject(f.fieldDef.name) &&
+  //       (!filter || filter(f))
+  //     ) {
+  //       // fieldNames.push(`${struct.getFullOutputName()}${name}`);
+  //       fieldNames.push(f.getFullOutputName());
+  //     } else if (f instanceof QueryStruct && expandChildren) {
+  //       structs.push(f);
+  //     }
+  //   }
+  //   for (const s of structs) {
+  //     fieldNames = fieldNames.concat(
+  //       this.expandWildCardStruct(s, expandChildren, filter)
+  //     );
+  //   }
+  //   return fieldNames;
+  // }
+  // // Do any '*' expansion.
+  // expandWildCards(
+  //   fields: QueryFieldDef[],
+  //   filter: ((qf: QueryNode) => boolean) | undefined = undefined
+  // ): QueryFieldDef[] {
+  //   let ret: QueryFieldDef[] = [];
+  //   for (const f of fields) {
+  //     if (typeof f !== 'string') {
+  //       ret.push(f);
+  //     } else {
+  //       const fieldName = f;
+  //       const path = fieldName.split('.');
+  //       if (!path[path.length - 1].startsWith('*')) {
+  //         ret.push(f);
+  //       } else {
+  //         const expandChildren = path.pop() === '**';
+  //         let struct = this.parent;
+  //         let pathElementName;
+  //         while (path.length > 0 && (pathElementName = path.shift())) {
+  //           const structNode = struct.getChildByName(pathElementName);
+  //           if (structNode === undefined) {
+  //             throw new Error(`Nested source not found '${pathElementName}'`);
+  //           }
+  //           if (structNode instanceof QueryStruct) {
+  //             struct = structNode;
+  //           } else {
+  //             throw new Error(`'${pathElementName}' is not a source object`);
+  //           }
+  //         }
+  //         ret = ret.concat(
+  //           this.expandWildCardStruct(struct, expandChildren, filter)
+  //         );
+  //       }
+  //     }
+  //   }
+  //   return ret;
+  // }
 
   addDependantPath(
     resultStruct: FieldInstanceResult,
     context: QueryStruct,
-    path: string,
+    path: TransitionalFieldName,
     mayNeedUniqueKey: boolean,
     joinStack: string[]
   ) {
@@ -2295,9 +2214,14 @@ class QueryQuery extends QueryField {
     }
   }
 
+  getSegmentFields(resultStruct: FieldInstanceResult): SegmentFieldDef[] {
+    const fs = resultStruct.firstSegment;
+    return fs.type === 'index' ? fs.indexFields : isQuerySegment(fs) ? fs.queryFields : [];
+  }
+
   expandFields(resultStruct: FieldInstanceResult) {
     let resultIndex = 1;
-    for (const f of this.expandWildCards(resultStruct.firstSegment.fields)) {
+    for (const f of this.getSegmentFields(resultStruct)) {
       const {as, field} = this.expandField(f);
 
       if (field instanceof QueryTurtle || field instanceof QueryQuery) {
@@ -2501,7 +2425,7 @@ class QueryQuery extends QueryField {
           fi.getRepeatedResultType() === 'nested' ? 'nested' : 'inline';
         structDef.name = name;
         structDef.structRelationship = {
-          field: name,
+          fieldName: name,
           type: resultType,
           isArray: false,
         };
@@ -2683,7 +2607,7 @@ class QueryQuery extends QueryField {
       }
       const fieldExpression = this.parent.dialect.sqlFieldReference(
         qs.parent.getSQLIdentifier(),
-        structRelationship.field as string,
+        structRelationship.fieldName as string,
         'struct',
         qs.parent.fieldDef.structRelationship.type === 'nested',
         this.parent.fieldDef.structRelationship.type === 'nested' &&
@@ -3573,10 +3497,11 @@ class QueryQueryIndexStage extends QueryQuery {
     super(fieldDef, parent, stageWriter, isJoinedSubquery);
     this.fieldDef = fieldDef;
   }
-  // get a field ref and expand it.
-  expandField(f: string) {
-    const field = this.parent.getFieldByName(f);
-    return {as: f, field};
+
+  expandField(f: IndexFieldDef) {
+    const as = f.path[f.path.length -1];
+    const field = this.parent.getQueryFieldByName(f.path);
+    return {as, field};
   }
 
   expandFields(resultStruct: FieldInstanceResult) {
@@ -3584,8 +3509,7 @@ class QueryQueryIndexStage extends QueryQuery {
     const groupIndex = resultStruct.groupSet;
     this.maxGroupSet = groupIndex;
 
-    const fieldNames = (this.firstSegment as IndexSegment).fields || [];
-    for (const f of fieldNames) {
+    for (const f of (this.firstSegment as IndexSegment).indexFields) {
       const {as, field} = this.expandField(f);
 
       resultStruct.addField(as, field as QueryField, {
@@ -3769,20 +3693,20 @@ class QueryQueryIndex extends QueryQuery {
     }
   }
 
-  expandIndexWildCards(): string[] {
-    // if no fields were specified, look in the parent struct for strings.
-    let fieldNames = (this.firstSegment as IndexSegment).fields || [];
-    if (fieldNames.length === 0) {
-      fieldNames.push('**');
-    }
-    fieldNames = this.expandWildCards(
-      fieldNames,
-      qf =>
-        ['string', 'number', 'timestamp', 'date'].indexOf(qf.fieldDef.type) !==
-        -1
-    ) as string[];
-    return fieldNames;
-  }
+  // expandIndexWildCards(): string[] {
+  //   // if no fields were specified, look in the parent struct for strings.
+  //   let fieldNames = (this.firstSegment as IndexSegment).fields || [];
+  //   if (fieldNames.length === 0) {
+  //     fieldNames.push('**');
+  //   }
+  //   fieldNames = this.expandWildCards(
+  //     fieldNames,
+  //     qf =>
+  //       ['string', 'number', 'timestamp', 'date'].indexOf(qf.fieldDef.type) !==
+  //       -1
+  //   ) as string[];
+  //   return fieldNames;
+  // }
 
   // return the number of stages it is going to take to generate this index.
   getStageFields(): string[][] {
@@ -3828,12 +3752,14 @@ class QueryQueryIndex extends QueryQuery {
   }
 
   expandFields(_resultStruct: FieldInstanceResult) {
-    const fieldNames = this.expandIndexWildCards();
+    const indexSeg = this.firstSegment as IndexSegment;
+    const fieldNames = indexSeg.indexFields.map(f => f.path[f.path.length - 1]);
     this.mapFieldsIntoStages(fieldNames);
   }
 
   generateSQL(stageWriter: StageWriter): string {
     const stages = this.getStageFields();
+    const indexSeg = this.firstSegment as IndexSegment;
     const outputStageNames: string[] = [];
     for (const fields of stages) {
       const q = new QueryQueryIndexStage(
@@ -3841,8 +3767,8 @@ class QueryQueryIndex extends QueryQuery {
           ...this.fieldDef,
           pipeline: [
             {
-              ...(this.fieldDef.pipeline[0] as IndexSegment),
-              fields: fields,
+              ...indexSeg,
+              indexFields: fields,
             },
           ],
         },
@@ -4288,21 +4214,20 @@ class QueryStruct extends QueryNode {
   }
 
   /** convert a name into a field reference */
-  getFieldByName(name: string): QuerySomething {
-    const path = QueryStruct.resolvePath(name);
-    let ret = this as QuerySomething;
-    for (const n of path) {
-      const r = ret.getChildByName(n);
+  getFieldByName(name: TransitionalFieldName): QuerySomething {
+    const path = typeof name === 'string' ? QueryStruct.resolvePath(name) : name;
+    return path.reduce((retField: QuerySomething, childName: string) => {
+      const r = retField.getChildByName(childName);
       if (r === undefined) {
-        throw new Error(`Path not found ${name}`);
+        throw new Error(`Path not found ${path.join('.')}`);
       }
-      ret = r;
-    }
-    return ret;
+      return r;
+
+    }, this);
   }
 
   // structs referenced in queries are converted to fields.
-  getQueryFieldByName(name: string): QuerySomething {
+  getQueryFieldByName(name: TransitionalFieldName): QuerySomething {
     let field = this.getFieldByName(name);
     if (field instanceof QueryStruct) {
       field = field.getAsQueryField();
@@ -4310,7 +4235,7 @@ class QueryStruct extends QueryNode {
     return field;
   }
 
-  getDimensionOrMeasureByName(name: string): QueryAtomicField {
+  getDimensionOrMeasureByName(name: TransitionalFieldName): QueryAtomicField {
     const query = this.getFieldByName(name);
     if (query instanceof QueryAtomicField) {
       return query;
@@ -4320,7 +4245,7 @@ class QueryStruct extends QueryNode {
   }
 
   /** returns a query object for the given name */
-  getDimensionByName(name: string): QueryAtomicField {
+  getDimensionByName(name: TransitionalFieldName): QueryAtomicField {
     const query = this.getFieldByName(name);
 
     if (query instanceof QueryAtomicField && isScalarField(query)) {
@@ -4332,7 +4257,7 @@ class QueryStruct extends QueryNode {
 
   /** returns a query object for the given name */
   getStructByName(name: string): QueryStruct {
-    const struct = this.getFieldByName(name);
+    const struct = this[name];
     if (struct instanceof QueryStruct) {
       return struct;
     } else {
