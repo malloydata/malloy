@@ -78,7 +78,7 @@ export class DuckDBDialect extends Dialect {
   hasFinalStage = false;
   divisionIsInteger = true;
   supportsSumDistinctFunction = true;
-  unnestWithNumbers = true;
+  unnestWithNumbers = false;
   defaultSampling = {rows: 50000};
   supportUnnestArrayAgg = true;
   supportsAggDistinct = true;
