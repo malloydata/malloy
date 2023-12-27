@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import cloneDeep from 'lodash/cloneDeep';
+
 
 import {
   Annotation,
@@ -103,7 +103,7 @@ export class RefinedSource extends Source {
       }
     }
 
-    const from = cloneDeep(this.source.structDef());
+    const from = structuredClone(this.source.structDef());
     if (primaryKey) {
       from.primaryKey = primaryKey.field.name;
     }

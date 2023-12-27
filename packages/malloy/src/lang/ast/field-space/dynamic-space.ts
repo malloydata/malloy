@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import cloneDeep from 'lodash/cloneDeep';
+
 import * as model from '../../../model/malloy_types';
 import {nameOf} from '../../field-utils';
 import {SpaceEntry} from '../types/space-entry';
@@ -46,7 +46,7 @@ export abstract class DynamicSpace extends StaticSpace {
 
   constructor(extending: SourceSpec) {
     const source = new SpaceSeed(extending);
-    super(cloneDeep(source.structDef));
+    super(structuredClone(source.structDef));
     this.final = undefined;
     this.source = source;
   }
