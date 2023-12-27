@@ -21,7 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import cloneDeep from 'lodash/cloneDeep';
 import {Dialect, DialectFieldList, getDialect} from '../dialect';
 import {StandardSQLDialect} from '../dialect/standardsql/standardsql';
 import {
@@ -2009,7 +2008,7 @@ class QueryQuery extends QueryField {
 
       // let e: Expr;
       if (field instanceof QueryQuery) {
-        const newFieldDef: TurtleDefPlus = cloneDeep(field.fieldDef);
+        const newFieldDef: TurtleDefPlus = structuredClone(field.fieldDef);
         newFieldDef.as = f.name;
         newFieldDef.filterList = f.filterList;
         field = QueryQuery.makeQuery(
@@ -4383,7 +4382,7 @@ class QueryStruct extends QueryNode {
     const annotation = turtleDef.annotation;
 
     const addedFilters = (turtleDef as TurtleDefPlus).filterList || [];
-    pipeline = cloneDeep(pipeline);
+    pipeline = structuredClone(pipeline);
     pipeline[0].filterList = addedFilters.concat(
       pipeline[0].filterList || [],
       this.fieldDef.filterList || []

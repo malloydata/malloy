@@ -48,7 +48,6 @@ import {
 } from 'antlr4ts';
 import {parseString} from './lang/parse-utils';
 import {LogMessage} from './lang';
-import cloneDeep from 'lodash/cloneDeep';
 import {Annotation, Note} from './model';
 
 // The distinction between the interface and the Tag class exists solely to
@@ -337,7 +336,7 @@ export class Tag implements TagInterface {
   }
 
   clone(): Tag {
-    return new Tag(cloneDeep(this));
+    return new Tag(structuredClone(this));
   }
 }
 

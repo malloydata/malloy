@@ -24,7 +24,7 @@
 import * as lite from 'vega-lite';
 import {DataColumn, Explore, Field} from '@malloydata/malloy';
 import {HTMLChartRenderer} from './chart';
-import cloneDeep from 'lodash/cloneDeep';
+
 import {getColorScale} from './utils';
 import {StyleDefaults, VegaRenderOptions} from '../data_styles';
 import {RendererOptions} from '../renderer_types';
@@ -562,7 +562,7 @@ export class HTMLVegaSpecRenderer extends HTMLChartRenderer {
       throw new Error('Expected struct value not to be null.');
     }
 
-    const newSpec = cloneDeep(this.spec);
+    const newSpec = structuredClone(this.spec);
 
     this.translateFields(newSpec as unknown as DataContainer, data.field);
     const rdata = {
