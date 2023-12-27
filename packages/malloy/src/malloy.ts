@@ -370,7 +370,7 @@ export class Malloy {
     }
   }
 
-  private static compileSQLBlock(
+  static compileSQLBlock(
     partialModel: ModelDef | undefined,
     toCompile: SQLBlockSource
   ): SQLBlock {

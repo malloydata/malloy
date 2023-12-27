@@ -100,6 +100,7 @@ export type {
   TypecastFragment,
   Annotation,
   FieldAtomicTypeDef,
+  SQLBlockStructDef,
 } from './model';
 export {
   // Used in Composer Demo
