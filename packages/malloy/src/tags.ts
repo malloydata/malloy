@@ -48,7 +48,6 @@ import {
 } from 'antlr4ts';
 import {parseString} from './lang/parse-utils';
 import {LogMessage} from './lang';
-
 import {Annotation, Note} from './model';
 
 // The distinction between the interface and the Tag class exists solely to
