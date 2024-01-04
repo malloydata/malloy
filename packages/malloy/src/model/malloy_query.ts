@@ -53,6 +53,7 @@ import {
   isApplyValue,
   isAsymmetricFragment,
   isDialectFragment,
+  isLiteral,
   isFieldFragment,
   isFilterFragment,
   isFunctionCallFragment,
@@ -495,13 +496,23 @@ class QueryField extends QueryNode {
       const mappedArgs = expressionIsAggregate(
         overload.returnType.expressionType
       )
-        ? args.map(arg => {
+        ? args.map((arg, index) => {
             // TODO We assume that all arguments to this aggregate-returning function need to
             // have filters applied to them. This is not necessarily true in the general case,
             // e.g. in a function `avg_plus(a, b) = avg(a) + b` -- here, `b` should not be
             // be filtered. But since there aren't any aggregate functions like this in the
             // standard library we have planned, we ignore this for now.
-            return [this.generateDimFragment(resultSet, context, arg, state)];
+            // Update: Now we apply this only to arguments whose parameter is not constant-requiring.
+            // So in `string_agg(val, sep)`, `sep` does not get filters applied to it because
+            // it must be constant
+            const param = overload.params[index];
+            // TODO technically this should probably look at _which_ allowed param type was matched
+            // for this argument and see if that type is at most constant... but we lose type information
+            // by this point in the compilation, so that info would have to be passed into the func call
+            // fragment.
+            return param.allowedTypes.every(t => isLiteral(t.evalSpace))
+              ? arg
+              : [this.generateDimFragment(resultSet, context, arg, state)];
           })
         : args;
       const funcCall: Expr = this.expandFunctionCall(

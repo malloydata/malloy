@@ -961,6 +961,10 @@ export interface FunctionParamTypeDesc {
 
 export type EvalSpace = 'constant' | 'input' | 'output' | 'literal';
 
+export function isLiteral(evalSpace: EvalSpace) {
+  return evalSpace === 'literal';
+}
+
 export function mergeEvalSpaces(...evalSpaces: EvalSpace[]): EvalSpace {
   if (evalSpaces.every(e => e === 'constant' || e === 'literal')) {
     return 'constant';

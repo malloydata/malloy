@@ -79,6 +79,7 @@ import {
 import {fnAvgRolling} from './avg_moving';
 import {FunctionMap} from './function_map';
 import {fnCoalesce} from './coalesce';
+import {fnStringAgg} from './string_agg';
 
 /**
  * This is a function map containing default implementations of all Malloy
@@ -139,6 +140,7 @@ FUNCTIONS.add('exp', fnExp);
 
 // Aggregate functions
 FUNCTIONS.add('stddev', fnStddev);
+FUNCTIONS.add('string_agg', fnStringAgg);
 
 // Analytic functions
 FUNCTIONS.add('row_number', fnRowNumber);
