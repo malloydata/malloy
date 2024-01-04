@@ -99,7 +99,7 @@ export function getChartSettings(
   const hasXAxis = presetSize !== 'spark';
   const hasYAxis = presetSize !== 'spark';
   const exploreMetadata = metadata.fields[getFieldKey(field)];
-  let topPadding = ROW_HEIGHT;
+  let topPadding = presetSize !== 'spark' ? ROW_HEIGHT - 1 : 0; // Subtract 1 to account for top border
   let yTickCount: number | undefined;
   const yKey = getFieldKey(yField);
   const maxVal = metadata.fields[yKey]!.max!;

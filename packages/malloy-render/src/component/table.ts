@@ -125,15 +125,10 @@ export class Table extends LitElement {
       overflow: hidden;
     }
 
-    .cell-wrapper.atomic {
-      height: var(--malloy-render--table-row-height);
-    }
-
     .cell-content {
       border-top: var(--malloy-render--table-border);
       height: 100%;
-      /* Subtract 1px to make up for top border */
-      line-height: calc(var(--malloy-render--table-row-height) - 1px);
+      line-height: var(--malloy-render--table-row-height);
       flex: 1;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -262,10 +257,19 @@ export class Table extends LitElement {
 
   private getContentStyle(f: Field, isHeader = false) {
     const width = this.getColumnWidth(f);
-    if (isHeader) return '';
-    return typeof width === 'undefined'
-      ? ''
-      : `width: ${width}px; min-width: ${width}px; max-width: ${width}px;`;
+    let style = '';
+    if (isHeader) return style;
+
+    if (typeof width !== 'undefined') {
+      style += `width: ${width}px; min-width: ${width}px; max-width: ${width}px;`;
+    }
+
+    const height = this.ctx.layout[getFieldKey(f)].height;
+    if (typeof height === 'number') {
+      style += `height: ${height}px;`;
+    }
+
+    return style;
   }
 
   private renderCell(
