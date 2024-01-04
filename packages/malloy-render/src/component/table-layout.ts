@@ -33,10 +33,13 @@ import {ChartSettings, getChartSettings} from './chart-settings';
 const MIN_COLUMN_WIDTH = 32;
 const MAX_COLUMN_WIDTH = 384;
 const COLUMN_BUFFER = 12;
+// TODO: get from theme
+const ROW_HEIGHT = 28;
 
 type LayoutEntry = {
   metadata: FieldRenderMetadata;
   width: number;
+  height: number | null;
   chartSettings: ChartSettings | null;
 };
 
@@ -50,6 +53,7 @@ export function getTableLayout(metadata: RenderResultMetadata): TableLayout {
     const layoutEntry: LayoutEntry = {
       metadata: fieldMeta,
       width: getColumnWidth(field, metadata),
+      height: null,
       chartSettings: null,
     };
 
@@ -57,6 +61,9 @@ export function getTableLayout(metadata: RenderResultMetadata): TableLayout {
     if (tag.has('bar') && field.isExploreField()) {
       layoutEntry.chartSettings = getChartSettings(field, metadata);
       layoutEntry.width = layoutEntry.chartSettings.totalWidth;
+      layoutEntry.height = layoutEntry.chartSettings.totalHeight;
+    } else if (field.isAtomicField()) {
+      layoutEntry.height = ROW_HEIGHT;
     }
 
     layout[key] = layoutEntry;
