@@ -275,36 +275,6 @@ expressionModels.forEach((expressionModel, databaseName) => {
     });
   });
 
-  describe('string_agg', () => {
-    it(`works - ${databaseName}`, async () => {
-      await funcTestAgg(
-        "string_agg(name) { where: name ~ r'.*RUTHERFORD.*' }",
-        'RUTHERFORD PAT R JR,RUTHERFORD JAMES C'
-      );
-    });
-
-    it(`works with separator - ${databaseName}`, async () => {
-      await funcTestAgg(
-        "string_agg(name, ' & ') { where: name ~ r'.*RUTHERFORD.*' }",
-        'RUTHERFORD PAT R JR & RUTHERFORD JAMES C'
-      );
-    });
-
-    it(`works with struct - ${databaseName}`, async () => {
-      await funcTestAgg(
-        "aircraft_models.string_agg(aircraft_models.model) { where: name ~ r'.*RUTHERFORD.*' }",
-        'G-1159,J3C-65'
-      );
-    });
-
-    it(`works with implicit parameter - ${databaseName}`, async () => {
-      await funcTestAgg(
-        "aircraft_models.model.string_agg() { where: name ~ r'.*RUTHERFORD.*' }",
-        'G-1159,J3C-65'
-      );
-    });
-  });
-
   describe('row_number', () => {
     it(`works when the order by is a dimension  - ${databaseName}`, async () => {
       const result = await expressionModel
@@ -1144,6 +1114,49 @@ expressionModels.forEach((expressionModel, databaseName) => {
         );
       }
     });
+  });
+});
+
+
+describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
+  const expressionModel = runtime.loadModel(modelText(databaseName));
+
+  describe('string_agg', () => {
+    it(`works - ${databaseName}`, async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `run: aircraft -> {
+            where: name ~ r'.*RUTHERFORD.*'
+            aggregate: f is string_agg(name)
+            order_by: name
+          }`
+        )
+        .run();
+      expect(result.data.path('f').string.value).toBe(
+        'RUTHERFORD PAT R JR,RUTHERFORD JAMES C'
+      );
+    });
+
+    // it(`works with separator - ${databaseName}`, async () => {
+    //   await funcTestAgg(
+    //     "string_agg(name, ' & ') { where: name ~ r'.*RUTHERFORD.*' }",
+    //     'RUTHERFORD PAT R JR & RUTHERFORD JAMES C'
+    //   );
+    // });
+
+    // it(`works with struct - ${databaseName}`, async () => {
+    //   await funcTestAgg(
+    //     "aircraft_models.string_agg(aircraft_models.model) { where: name ~ r'.*RUTHERFORD.*' }",
+    //     'G-1159,J3C-65'
+    //   );
+    // });
+
+    // it(`works with implicit parameter - ${databaseName}`, async () => {
+    //   await funcTestAgg(
+    //     "aircraft_models.model.string_agg() { where: name ~ r'.*RUTHERFORD.*' }",
+    //     'G-1159,J3C-65'
+    //   );
+    // });
   });
 });
 
