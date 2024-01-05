@@ -19,6 +19,28 @@ source: products is duckdb.table("data/products.parquet") extend {
     `Top Brands` is topSellingBrands
   }
 
+  view: trailing_12_sales_trend is {
+    group_by: brand
+    aggregate: `Sales $` is retail_price.avg()*500
+    limit: 12
+    order_by: 1
+  }
+
+  view: sparks_nested is {
+    group_by: `Department` is department
+    # currency
+    aggregate: `Avg Retail` is retail_price.avg()
+    nest:
+      `Top 5 Categories` is {
+        group_by: category
+        limit: 5
+        # currency
+        aggregate: `Avg Retail` is retail_price.avg()
+        # bar size="spark"
+        nest: `Trailing 12mo Sales` is trailing_12_sales_trend
+      }
+  }
+
   view: category_bar is {
     limit: 2
     group_by: category
