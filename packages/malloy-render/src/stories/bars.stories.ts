@@ -42,3 +42,10 @@ export const Sparks = {
     view: 'sparks',
   },
 };
+
+export const SparksNested = {
+  args: {
+    source: 'products',
+    view: 'sparks_nested',
+  },
+};

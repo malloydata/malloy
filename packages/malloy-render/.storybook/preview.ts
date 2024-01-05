@@ -1,6 +1,7 @@
 import {DuckDBWASMConnection} from '@malloydata/db-duckdb/wasm';
 import {Preview} from '@storybook/html';
 import registeredData from './registered_data.json';
+import theme from './theme';
 
 async function createConnection() {
   const connection = new DuckDBWASMConnection('duckdb', null, undefined, {
@@ -25,6 +26,9 @@ const preview: Preview = {
         color: /(background|color)$/i,
         date: /Date$/i,
       },
+    },
+    docs: {
+      theme,
     },
   },
   globals: {
