@@ -95,7 +95,6 @@ export class MalloyRender extends LitElement {
       this.metadata = getResultMetadata(this.result);
       const modelTag = this.result.modelTag;
       const {tag: resultTag} = this.result.tagParse();
-
       const modelTheme = modelTag.tag('theme');
       const localTheme = resultTag.tag('theme');
       this.updateTheme(modelTheme, localTheme);
