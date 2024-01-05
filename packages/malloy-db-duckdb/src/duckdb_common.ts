@@ -249,7 +249,7 @@ export abstract class DuckDBCommon
           structSource: {type: arrayMatch ? 'nested' : 'inline'},
           structRelationship: {
             type: arrayMatch ? 'nested' : 'inline',
-            field: name,
+            fieldName: name,
             isArray: false,
           },
           fields: [],
@@ -266,7 +266,7 @@ export abstract class DuckDBCommon
             structSource: {type: 'nested'},
             structRelationship: {
               type: 'nested',
-              field: name,
+              fieldName: name,
               isArray: true,
             },
             fields: [{...malloyType, name: 'value'} as FieldTypeDef],

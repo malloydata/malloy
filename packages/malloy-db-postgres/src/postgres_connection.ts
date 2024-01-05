@@ -304,7 +304,7 @@ export class PostgresConnection
           dialect: this.dialectName,
           structRelationship: {
             type: 'nested',
-            field: name,
+            fieldName: name,
             isArray: true,
           },
           structSource: {type: 'nested'},
