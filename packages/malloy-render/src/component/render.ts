@@ -93,15 +93,16 @@ export class MalloyRender extends LitElement {
   willUpdate(changedProperties: PropertyValues<this>) {
     if (changedProperties.has('result')) {
       this.metadata = getResultMetadata(this.result);
+      const modelTag = this.result.modelTag;
+      const {tag: resultTag} = this.result.tagParse();
+
+      const modelTheme = modelTag.tag('theme');
+      const localTheme = resultTag.tag('theme');
+      this.updateTheme(modelTheme, localTheme);
     }
   }
 
-  override render() {
-    const modelTag = this.result.modelTag;
-    const {tag: resultTag} = this.result.tagParse();
-
-    const modelTheme = modelTag.tag('theme');
-    const localTheme = resultTag.tag('theme');
+  updateTheme(modelTheme?: Tag, localTheme?: Tag) {
     const tableRowHeight = getThemeValue(
       'tableRowHeight',
       localTheme,
@@ -188,7 +189,9 @@ export class MalloyRender extends LitElement {
       '--malloy-render--table-pinned-border',
       tablePinnedBorder
     );
+  }
 
+  override render() {
     return html`<malloy-table
       exportparts="table-container: container"
       .data=${this.result.data}
