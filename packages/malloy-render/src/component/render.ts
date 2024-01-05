@@ -93,15 +93,15 @@ export class MalloyRender extends LitElement {
   willUpdate(changedProperties: PropertyValues<this>) {
     if (changedProperties.has('result')) {
       this.metadata = getResultMetadata(this.result);
+      const modelTag = this.result.modelTag;
+      const {tag: resultTag} = this.result.tagParse();
+      const modelTheme = modelTag.tag('theme');
+      const localTheme = resultTag.tag('theme');
+      this.updateTheme(modelTheme, localTheme);
     }
   }
 
-  override render() {
-    const modelTag = this.result.modelTag;
-    const {tag: resultTag} = this.result.tagParse();
-
-    const modelTheme = modelTag.tag('theme');
-    const localTheme = resultTag.tag('theme');
+  updateTheme(modelTheme?: Tag, localTheme?: Tag) {
     const tableRowHeight = getThemeValue(
       'tableRowHeight',
       localTheme,
@@ -155,27 +155,46 @@ export class MalloyRender extends LitElement {
     );
     const fontFamily = getThemeValue('fontFamily', localTheme, modelTheme);
 
-    const dynamicStyle = html`<style>
-      :host {
-        --malloy-render--table-row-height: ${tableRowHeight};
-        --malloy-render--table-body-color: ${tableBodyColor};
-        --malloy-render--table-font-size: ${tableFontSize};
-        --malloy-render--font-family: ${fontFamily};
-        --malloy-render--table-header-color: ${tableHeaderColor};
-        --malloy-render--table-header-weight: ${tableHeaderWeight};
-        --malloy-render--table-body-weight: ${tableBodyWeight};
-        --malloy-render--table-border: ${tableBorder};
-        --malloy-render--table-background: ${tableBackground};
-        --malloy-render--table-gutter-size: ${tableGutterSize};
-        --malloy-render--table-pinned-background: ${tablePinnedBackground};
-        --malloy-render--table-pinned-border: ${tablePinnedBorder};
-      }
-    </style>`;
+    this.style.setProperty('--malloy-render--table-row-height', tableRowHeight);
+    this.style.setProperty('--malloy-render--table-body-color', tableBodyColor);
+    this.style.setProperty('--malloy-render--table-font-size', tableFontSize);
+    this.style.setProperty('--malloy-render--font-family', fontFamily);
+    this.style.setProperty(
+      '--malloy-render--table-header-color',
+      tableHeaderColor
+    );
+    this.style.setProperty(
+      '--malloy-render--table-header-weight',
+      tableHeaderWeight
+    );
+    this.style.setProperty(
+      '--malloy-render--table-body-weight',
+      tableBodyWeight
+    );
+    this.style.setProperty('--malloy-render--table-border', tableBorder);
+    this.style.setProperty(
+      '--malloy-render--table-background',
+      tableBackground
+    );
+    this.style.setProperty(
+      '--malloy-render--table-gutter-size',
+      tableGutterSize
+    );
+    this.style.setProperty(
+      '--malloy-render--table-pinned-background',
+      tablePinnedBackground
+    );
+    this.style.setProperty(
+      '--malloy-render--table-pinned-border',
+      tablePinnedBorder
+    );
+  }
 
-    return html`${dynamicStyle}<malloy-table
-        exportparts="table-container: container"
-        .data=${this.result.data}
-      ></malloy-table>`;
+  override render() {
+    return html`<malloy-table
+      exportparts="table-container: container"
+      .data=${this.result.data}
+    ></malloy-table>`;
   }
 }
 
