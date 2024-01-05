@@ -23,7 +23,7 @@
 
 import {ModelDef, StructDef, StructRelationship} from '@malloydata/malloy';
 
-import {fStringEq, fYearEq} from '../util';
+import {fStringEq, fToIF, fToQF, fYearEq} from '../util';
 
 import {medicareModel, medicareStateFacts} from './medicare_model';
 
@@ -347,7 +347,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
           pipeline: [
             {
               type: 'reduce',
-              fields: [
+              queryFields: fToQF([
                 'tail_num',
                 {
                   type: 'number',
@@ -361,7 +361,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
                     },
                   ],
                 },
-              ],
+              ]),
             },
           ],
         },
@@ -374,33 +374,13 @@ export const FLIGHTS_EXPLORE: StructDef = {
       ],
     },
 
-    // // Inline derived table
-    // {
-    //   type: 'struct',
-    //   name: "aircraft_facts2",
-    //   structSource: {
-    //     type: 'query',
-    //     query: {
-    //       type: 'reduce',
-    //         fields: [
-    //           'tail_num',
-    //           {name: 'total_distance', as: 'lifetime_distance'}
-    //         ]
-    //       }
-    //   },
-    //   structRelationship: {type: 'foreignKey', keyExpression: [{ type: "field", path:  'tail_num'},
-    //   fields: [
-    //   ]
-    // },
-    // query definition
-    // EXPLORE flights | REDUCE carriers.name, flight_count ORDER BY 1
     {
       type: 'turtle',
       name: 'flights_by_carrier',
       pipeline: [
         {
           type: 'reduce',
-          fields: [
+          queryFields: fToQF([
             'carriers.name',
             'flight_count',
             // { name: "origin.count", as: "origin_count" },
@@ -429,7 +409,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
                 },
               ],
             },
-          ],
+          ]),
           orderBy: [{field: 'name', dir: 'asc'}],
         },
       ],
@@ -441,7 +421,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
         {
           type: 'reduce',
 
-          fields: [
+          queryFields: fToQF([
             'carriers.name',
             {
               name: 'flights_2001',
@@ -479,7 +459,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
                 },
               ],
             },
-          ],
+          ]),
           orderBy: [{field: 'name', dir: 'asc'}],
         },
       ],
@@ -491,7 +471,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
       pipeline: [
         {
           type: 'reduce',
-          fields: ['destination.city', 'flight_count'],
+          queryFields: fToQF(['destination.city', 'flight_count']),
           orderBy: [{field: 2, dir: 'desc'}],
           limit: 5,
         },
@@ -505,12 +485,12 @@ export const FLIGHTS_EXPLORE: StructDef = {
       pipeline: [
         {
           type: 'reduce',
-          fields: [
+          queryFields: fToQF([
             'aircraft.aircraft_models.manufacturer',
             'aircraft.aircraft_models.model',
             'aircraft.aircraft_count',
             'flight_count',
-          ],
+          ]),
           orderBy: [{field: 'flight_count', dir: 'desc'}],
           filterList: [fStringEq('origin.state', 'CA')],
           limit: 5,
@@ -525,7 +505,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
         {
           type: 'reduce',
 
-          fields: [
+          queryFields: fToQF([
             'tail_num',
             {
               type: 'number',
@@ -539,7 +519,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
                 },
               ],
             },
-          ],
+          ]),
         },
       ],
     },
@@ -550,7 +530,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
       pipeline: [
         {
           type: 'reduce',
-          fields: ['carriers.name', 'aircraft.total_engines', 'flight_count'],
+          queryFields: fToQF(['carriers.name', 'aircraft.total_engines', 'flight_count']),
         },
       ],
     },
@@ -561,7 +541,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
       pipeline: [
         {
           type: 'reduce',
-          fields: ['aircraft_facts.lifetime_distance', 'flight_count'],
+          queryFields: fToQF(['aircraft_facts.lifetime_distance', 'flight_count']),
         },
       ],
     },
@@ -572,7 +552,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
       pipeline: [
         {
           type: 'reduce',
-          fields: ['flight_count', 'origin.city', 'origin.state'],
+          queryFields: fToQF(['flight_count', 'origin.city', 'origin.state']),
         },
       ],
     },
@@ -592,7 +572,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
       pipeline: [
         {
           type: 'reduce',
-          fields: [
+          queryFields: fToQF([
             'carrier',
             'flight_count',
             {
@@ -601,13 +581,13 @@ export const FLIGHTS_EXPLORE: StructDef = {
               pipeline: [
                 {
                   type: 'reduce',
-                  fields: ['origin_code', 'destination_code', 'flight_count'],
+                  queryFields: fToQF(['origin_code', 'destination_code', 'flight_count']),
                   limit: 5,
                   orderBy: [{field: 'flight_count', dir: 'desc'}],
                 },
               ],
             },
-          ],
+          ]),
         },
       ],
     },
@@ -622,7 +602,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
       pipeline: [
         {
           type: 'reduce',
-          fields: ['origin_code', 'destination_code', 'flight_count'],
+          queryFields: fToQF(['origin_code', 'destination_code', 'flight_count']),
           limit: 5,
           orderBy: [{field: 'flight_count', dir: 'desc'}],
         },
@@ -635,7 +615,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
       pipeline: [
         {
           type: 'reduce',
-          fields: ['carrier', 'flight_count', 'top_5_routes'],
+          queryFields: fToQF(['carrier', 'flight_count', 'top_5_routes']),
         },
       ],
     },
@@ -646,7 +626,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
       pipeline: [
         {
           type: 'reduce',
-          fields: ['destination.code', 'flight_count'],
+          queryFields: fToQF(['destination.code', 'flight_count']),
           filterList: [fStringEq('destination.state', 'NY')],
           orderBy: [{field: 'flight_count', dir: 'desc'}],
         },
@@ -659,11 +639,11 @@ export const FLIGHTS_EXPLORE: StructDef = {
       pipeline: [
         {
           type: 'reduce',
-          fields: [
+          queryFields: fToQF([
             'aircraft.aircraft_models.manufacturer',
             'aircraft.aircraft_count',
             'flight_count',
-          ],
+          ]),
           orderBy: [{field: 'flight_count', dir: 'desc'}],
           limit: 5,
         },
@@ -676,12 +656,12 @@ export const FLIGHTS_EXPLORE: StructDef = {
       pipeline: [
         {
           type: 'reduce',
-          fields: [
+          queryFields: fToQF([
             'carrier',
             'flight_count',
             'top_5_routes',
             'flights_by_manufacturer',
-          ],
+          ]),
           filterList: [fStringEq('origin.state', 'CA')],
         },
       ],
@@ -692,12 +672,12 @@ export const FLIGHTS_EXPLORE: StructDef = {
       pipeline: [
         {
           type: 'reduce',
-          fields: [
+          queryFields: fToQF([
             'origin_code',
             'destination_code',
             'flight_count',
             'flights_by_carrier',
-          ],
+          ]),
           limit: 5,
           orderBy: [{field: 'flight_count', dir: 'desc'}],
         },
@@ -710,14 +690,14 @@ export const FLIGHTS_EXPLORE: StructDef = {
         {
           type: 'reduce',
           filterList: [fStringEq('origin.state', 'CA')],
-          fields: [
+          queryFields: fToQF([
             {
               type: 'turtle',
               name: 'main',
               pipeline: [
                 {
                   type: 'reduce',
-                  fields: [
+                  queryFields: fToQF([
                     'carriers.name',
                     'flight_count',
                     //{ name: "origin.count", as: "origin_count" },
@@ -734,7 +714,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
                         },
                       ],
                     },
-                  ],
+                  ]),
                   orderBy: [{field: 'flight_count', dir: 'desc'}],
                 },
               ],
@@ -745,11 +725,11 @@ export const FLIGHTS_EXPLORE: StructDef = {
               pipeline: [
                 {
                   type: 'reduce',
-                  fields: ['flight_count'],
+                  queryFields: fToQF(['flight_count']),
                 },
               ],
             },
-          ],
+          ]),
         },
       ],
     },
@@ -760,7 +740,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
         {
           type: 'reduce',
           orderBy: [{field: 'dep_time', dir: 'asc'}],
-          fields: [
+          queryFields: fToQF([
             'id2',
             'dep_time',
             'tail_num',
@@ -769,7 +749,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
             'destination_code',
             'distance',
             'dep_delay',
-          ],
+          ]),
           limit: 500,
         },
       ],
@@ -780,7 +760,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
       pipeline: [
         {
           type: 'reduce',
-          fields: ['flight_count', 'total_distance', 'aircraft.aircraft_count'],
+          queryFields: fToQF(['flight_count', 'total_distance', 'aircraft.aircraft_count']),
         },
       ],
     },
@@ -795,7 +775,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
             fStringEq('carrier', 'UA'),
           ],
           limit: 20,
-          fields: [
+          queryFields: fToQF([
             {
               type: 'timestamp',
               name: 'dep_time',
@@ -809,7 +789,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
               pipeline: [
                 {
                   type: 'reduce',
-                  fields: [
+                  queryFields: fToQF([
                     'origin_code',
                     'destination_code',
                     'flight_count',
@@ -821,22 +801,22 @@ export const FLIGHTS_EXPLORE: StructDef = {
                           type: 'reduce',
                           orderBy: [{field: 'dep_time', dir: 'asc'}],
                           limit: 5,
-                          fields: [
+                          queryFields: fToQF([
                             'id2',
                             'dep_time',
                             'tail_num',
                             'flight_num',
                             'dep_delay',
-                          ],
+                          ]),
                         },
                       ],
                     },
-                  ],
+                  ]),
                   orderBy: [{field: 'flight_count', dir: 'desc'}],
                 },
               ],
             },
-          ],
+          ]),
         },
       ],
     },
@@ -863,7 +843,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
           type: 'reduce',
           filterList: [fStringEq('carrier', 'UA')],
           limit: 2,
-          fields: [
+          queryFields: fToQF([
             {
               type: 'timestamp',
               name: 'dep_time',
@@ -879,7 +859,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
                 {
                   type: 'reduce',
                   limit: 10,
-                  fields: [
+                  queryFields: fToQF([
                     'tail_num',
                     'flight_count',
                     {
@@ -889,23 +869,23 @@ export const FLIGHTS_EXPLORE: StructDef = {
                         {
                           type: 'reduce',
                           orderBy: [{field: 'dep_time', dir: 'asc'}],
-                          fields: [
+                          queryFields: fToQF([
                             'id2',
                             'dep_time',
                             'origin_code',
                             'destination_code',
                             'flight_num',
                             'dep_delay',
-                          ],
+                          ]),
                         },
                       ],
                     },
-                  ],
+                  ]),
                   orderBy: [{field: 'flight_count', dir: 'desc'}],
                 },
               ],
             },
-          ],
+          ]),
         },
       ],
     },
@@ -916,7 +896,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
         {
           type: 'index',
           weightMeasure: 'flight_count',
-          fields: [
+          indexFields: fToIF([
             'carrier',
             'origin_code',
             'destination_code',
@@ -934,7 +914,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
             'aircraft.aircraft_model_code',
             'aircraft.aircraft_models.manufacturer',
             'aircraft.aircraft_models.model',
-          ],
+          ]),
         },
       ],
     },

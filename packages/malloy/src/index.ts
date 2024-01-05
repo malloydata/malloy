@@ -74,6 +74,7 @@ export type {
   FieldDef,
   PipeSegment,
   QueryFieldDef,
+  IndexFieldDef,
   TurtleDef,
   SearchValueMapResult,
   SearchIndexResult,

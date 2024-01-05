@@ -29,7 +29,7 @@ import {
   StructDef,
   StructRelationship,
 } from '@malloydata/malloy';
-import {describeIfDatabaseAvailable, fStringLike} from '../../util';
+import {describeIfDatabaseAvailable, fStringLike, fToQF} from '../../util';
 
 import * as malloy from '@malloydata/malloy';
 import {RuntimeList} from '../../runtimes';
@@ -238,14 +238,14 @@ describe('BigQuery hand-built expression test', () => {
       {
         type: 'turtle',
         name: 'hand_turtle',
-        pipeline: [{type: 'reduce', fields: ['aircraft_count']}],
+        pipeline: [{type: 'reduce', queryFields: fToQF(['aircraft_count'])}],
       },
       {
         type: 'turtle',
         name: 'hand_turtle_pipeline',
         pipeline: [
-          {type: 'reduce', fields: ['aircraft_count']},
-          {type: 'reduce', fields: ['aircraft_count']},
+          {type: 'reduce', queryFields: fToQF(['aircraft_count'])},
+          {type: 'reduce', queryFields: fToQF(['aircraft_count'])},
         ],
       },
     ],
@@ -290,7 +290,7 @@ describe('BigQuery hand-built expression test', () => {
       pipeline: [
         {
           type: 'reduce',
-          fields: [
+          queryFields: [
             // "aircraft_models.total_seats",
             // "aircraft_models.boeing_seats"
             // "aircraft_models.percent_boeing",
@@ -359,7 +359,7 @@ describe('BigQuery hand-built expression test', () => {
       ._loadQueryFromQueryDef({
         structRef: 'aircraft',
         name: 'hand_turtle',
-        pipeline: [{type: 'reduce', fields: ['aircraft_count']}],
+        pipeline: [{type: 'reduce', queryFields: fToQF(['aircraft_count'])}],
       })
       .run();
     expect(result.data.value[0]['aircraft_count']).toBe(3599);
@@ -413,17 +413,17 @@ describe('BigQuery hand-built expression test', () => {
       pipeline: [
         {
           type: 'reduce',
-          fields: [
+          queryFields: fToQF([
             'state',
             'aircraft_count',
             {
               type: 'turtle',
               name: 'my_turtle',
               pipeline: [
-                {type: 'reduce', fields: ['county', 'aircraft_count']},
+                {type: 'reduce', queryFields: fToQF(['county', 'aircraft_count'])},
               ],
             },
-          ],
+          ]),
         },
       ],
     });
@@ -438,7 +438,7 @@ describe('BigQuery hand-built expression test', () => {
       pipeline: [
         {
           type: 'reduce',
-          fields: [
+          queryFields: fToQF([
             'state',
             'aircraft_count',
             {
@@ -452,7 +452,7 @@ describe('BigQuery hand-built expression test', () => {
                 },
               ],
             },
-          ],
+          ]),
         },
       ],
     });
@@ -467,7 +467,7 @@ describe('BigQuery hand-built expression test', () => {
       pipeline: [
         {
           type: 'reduce',
-          fields: ['state', 'aircraft_count', 'hand_turtle'],
+          queryFields: fToQF(['state', 'aircraft_count', 'hand_turtle']),
         },
       ],
     });
@@ -482,7 +482,7 @@ describe('BigQuery hand-built expression test', () => {
       pipeline: [
         {
           type: 'reduce',
-          fields: [
+          queryFields: fToQF([
             'state',
             'aircraft_count',
             {
@@ -491,7 +491,7 @@ describe('BigQuery hand-built expression test', () => {
               pipeline: [
                 {
                   type: 'reduce',
-                  fields: [
+                  queryFields: fToQF([
                     'county',
                     'aircraft_count',
                     {
@@ -505,11 +505,11 @@ describe('BigQuery hand-built expression test', () => {
                         },
                       ],
                     },
-                  ],
+                  ]),
                 },
               ],
             },
-          ],
+          ]),
         },
       ],
     });
@@ -523,8 +523,8 @@ describe('BigQuery hand-built expression test', () => {
       structRef: 'aircraft',
       name: 'hand_turtle_pipeline',
       pipeline: [
-        {type: 'reduce', fields: ['aircraft_count']},
-        {type: 'reduce', fields: ['aircraft_count']},
+        {type: 'reduce', queryFields: fToQF(['aircraft_count'])},
+        {type: 'reduce', queryFields: fToQF(['aircraft_count'])},
       ],
     });
     // console.log(result.sql);
@@ -540,7 +540,7 @@ describe('BigQuery hand-built expression test', () => {
         pipeline: [
           {
             type: 'reduce',
-            fields: [
+            queryFields: fToQF([
               'aircraft_count',
               {
                 type: 'turtle',
@@ -548,12 +548,12 @@ describe('BigQuery hand-built expression test', () => {
                 pipeline: [
                   {
                     type: 'reduce',
-                    fields: ['state', 'county', 'aircraft_count'],
+                    queryFields: fToQF(['state', 'county', 'aircraft_count']),
                   },
                   {
                     type: 'reduce',
                     filterList: [fStringLike('county', '2%')],
-                    fields: [
+                    queryFields: fToQF([
                       'state',
                       {
                         name: 'total_aircraft',
@@ -568,11 +568,11 @@ describe('BigQuery hand-built expression test', () => {
                         expressionType: 'aggregate',
                         numberType: 'float',
                       },
-                    ],
+                    ]),
                   },
                 ],
               },
-            ],
+            ]),
           },
         ],
       })
@@ -673,7 +673,7 @@ describe('BigQuery hand-built expression test', () => {
         pipeline: [
           {
             type: 'reduce',
-            fields: [
+            queryFields: [
               {
                 name: 'boeing_seats',
                 type: 'number',
@@ -753,11 +753,11 @@ describe('BigQuery hand-built expression test', () => {
         pipeline: [
           {
             type: 'reduce',
-            fields: [
+            queryFields: fToQF([
               'aircraft.state',
               'aircraft.aircraft_count',
               'model_count',
-            ],
+            ]),
           },
         ],
       })
@@ -774,7 +774,7 @@ describe('BigQuery hand-built expression test', () => {
         pipeline: [
           {
             type: 'reduce',
-            fields: ['total_seats', 'aircraft.aircraft_count'],
+            queryFields: fToQF(['total_seats', 'aircraft.aircraft_count']),
           },
         ],
       })

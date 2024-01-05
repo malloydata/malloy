@@ -22,6 +22,7 @@
  */
 
 import {StructDef} from '@malloydata/malloy';
+import { fToQF } from '../util';
 
 // will it build?
 
@@ -91,7 +92,7 @@ export const medicareModel: StructDef = {
       name: 'discharges_by_state',
       pipeline: [
         {
-          fields: ['provider_state', 'total_discharges'],
+          queryFields: fToQF(['provider_state', 'total_discharges']),
           orderBy: [{dir: 'desc', field: 2}],
           type: 'reduce',
         },
@@ -102,7 +103,7 @@ export const medicareModel: StructDef = {
       name: 'discharges_by_city',
       pipeline: [
         {
-          fields: ['provider_city', 'total_discharges'],
+          queryFields: fToQF(['provider_city', 'total_discharges']),
           orderBy: [{dir: 'desc', field: 2}],
           type: 'reduce',
         },
@@ -113,12 +114,12 @@ export const medicareModel: StructDef = {
       name: 'bigturtle_state',
       pipeline: [
         {
-          fields: [
+          queryFields: fToQF([
             'provider_state',
             'total_discharges',
             'discharges_by_city',
             'discharges_by_zip',
-          ],
+          ]),
           orderBy: [{dir: 'desc', field: 1}],
           type: 'reduce',
         },
@@ -129,7 +130,7 @@ export const medicareModel: StructDef = {
       name: 'discharges_by_zip',
       pipeline: [
         {
-          fields: ['provider_zipcode', 'total_discharges'],
+          queryFields: fToQF(['provider_zipcode', 'total_discharges']),
           orderBy: [{dir: 'desc', field: 2}],
           type: 'reduce',
         },
@@ -140,7 +141,7 @@ export const medicareModel: StructDef = {
       name: 'turtle_city_zip',
       pipeline: [
         {
-          fields: ['provider_city', 'total_discharges', 'discharges_by_zip'],
+          queryFields: fToQF(['provider_city', 'total_discharges', 'discharges_by_zip']),
           orderBy: [{dir: 'desc', field: 1}],
           type: 'reduce',
         },
@@ -151,7 +152,7 @@ export const medicareModel: StructDef = {
       name: 'triple_turtle',
       pipeline: [
         {
-          fields: ['provider_state', 'total_discharges', 'turtle_city_zip'],
+          queryFields: fToQF(['provider_state', 'total_discharges', 'turtle_city_zip']),
           orderBy: [{dir: 'desc', field: 1}],
           type: 'reduce',
         },
@@ -162,7 +163,7 @@ export const medicareModel: StructDef = {
       name: 'rollup_by_location',
       pipeline: [
         {
-          fields: [
+          queryFields: fToQF([
             'provider_state',
             'total_discharges',
             {
@@ -170,7 +171,7 @@ export const medicareModel: StructDef = {
               name: 'turtle_city_zip',
               pipeline: [
                 {
-                  fields: [
+                  queryFields: fToQF([
                     'provider_city',
                     'total_discharges',
                     {
@@ -178,19 +179,19 @@ export const medicareModel: StructDef = {
                       name: 'discharges_by_zip',
                       pipeline: [
                         {
-                          fields: ['provider_zipcode', 'total_discharges'],
+                          queryFields: fToQF(['provider_zipcode', 'total_discharges']),
                           orderBy: [{dir: 'desc', field: 2}],
                           type: 'reduce',
                         },
                       ],
                     },
-                  ],
+                  ]),
                   orderBy: [{dir: 'desc', field: 1}],
                   type: 'reduce',
                 },
               ],
             },
-          ],
+          ]),
           orderBy: [{dir: 'desc', field: 1}],
           type: 'reduce',
         },
@@ -217,7 +218,7 @@ export const medicareStateFacts: StructDef = {
       structRef: 'medicare_test',
       pipeline: [
         {
-          fields: [
+          queryFields: fToQF([
             'provider_state',
             {
               type: 'number',
@@ -225,7 +226,7 @@ export const medicareStateFacts: StructDef = {
               expressionType: 'aggregate',
               e: ['COUNT(DISTINCT ', {type: 'field', path: 'provider_id'}, ')'],
             },
-          ],
+          ]),
           type: 'reduce',
         },
       ],
