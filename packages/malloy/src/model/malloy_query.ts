@@ -3706,6 +3706,9 @@ class QueryQueryIndex extends QueryQuery {
       this.stages = [indexSeg.indexFields];
       return;
     }
+
+    // Collect the field references by unique path, the final
+    // index will be a union indexes from each unique path
     const stageMap: Record<string, RefToField[]> = {};
     for (const fref of indexSeg.indexFields) {
       let toStage = this.stages[0];
