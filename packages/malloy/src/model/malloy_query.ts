@@ -106,6 +106,10 @@ import {QueryInfo} from '../dialect/dialect';
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
+function pathToCol(path: string[]): string {
+  return path.map(el => encodeURIComponent(el)).join('/');
+}
+
 // quote a string for SQL use.  Perhaps should be in dialect.
 function generateSQLStringLiteral(sourceString: string): string {
   return `'${sourceString}'`;
@@ -3578,7 +3582,7 @@ class QueryQueryIndexStage extends QueryQuery {
 
     s += '  CASE group_set\n';
     for (let i = 0; i < fields.length; i++) {
-      const path = fields[i].path.map(el => encodeURIComponent(el)).join('/');
+      const path = pathToCol(fields[i].path);
       s += `    WHEN ${i} THEN '${path}'\n`;
     }
     s += `  END as ${fieldPathColumn},\n`;
@@ -3705,7 +3709,8 @@ class QueryQueryIndex extends QueryQuery {
     const stageMap: Record<string, RefToField[]> = {};
     for (const fref of indexSeg.indexFields) {
       if (fref.path.length > 1) {
-        let toStage = stageMap[fref.path[0]];
+        const stageRoot = pathToCol(fref.path.slice(0, fref.path.length - 1));
+        let toStage = stageMap[stageRoot];
         if (toStage === undefined) {
           const f = this.parent.nameMap.get(fref.path[0]);
           if (
@@ -3715,7 +3720,7 @@ class QueryQueryIndex extends QueryQuery {
             f.fieldDef.fields.length > 1
           ) {
             toStage = [];
-            stageMap[fref.path[0]] = toStage;
+            stageMap[stageRoot] = toStage;
             this.stages.push(toStage);
           } else {
             toStage = this.stages[0];
