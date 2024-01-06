@@ -34,13 +34,16 @@ import {FieldSpace} from '../types/field-space';
 import {GroupBy} from '../query-properties/group-by';
 import {ProjectFieldSpace} from '../field-space/project-field-space';
 import {QueryProperty} from '../types/query-property';
-import {QuerySegmentBuilder, ReduceBuilder} from './reduce-builder';
+import {QuerySegmentBuilder} from './reduce-builder';
 import {QueryOperationSpace} from '../field-space/query-spaces';
 import {MalloyElement} from '../types/malloy-element';
-import { QueryBuilder } from '../types/query-builder';
-import { QueryInputSpace } from '../field-space/query-input-space';
+import {QueryBuilder} from '../types/query-builder';
+import {QueryInputSpace} from '../field-space/query-input-space';
 
-export class ProjectBuilder extends QuerySegmentBuilder implements QueryBuilder {
+export class ProjectBuilder
+  extends QuerySegmentBuilder
+  implements QueryBuilder
+{
   resultFS: ProjectFieldSpace;
   inputFS: QueryInputSpace;
   readonly type = 'project';

@@ -23,10 +23,16 @@
 
 import {TestTranslator, aTableDef, markSource, model} from './test-translator';
 import './parse-expects';
-import {Query, QueryFieldDef, QuerySegment, expressionIsCalculation, isAtomicFieldType, isQuerySegment} from '../../model';
-import { isQueryElement } from '../ast';
+import {
+  Query,
+  QueryFieldDef,
+  QuerySegment,
+  expressionIsCalculation,
+  isAtomicFieldType,
+  isQuerySegment,
+} from '../../model';
 
-function getFirstQuerySegment(q: Query|undefined): QuerySegment|undefined {
+function getFirstQuerySegment(q: Query | undefined): QuerySegment | undefined {
   const qSeg = q?.pipeline[0];
   if (qSeg && isQuerySegment(qSeg)) {
     return qSeg;
@@ -40,7 +46,11 @@ function getFirstSegmentFields(q: Query | undefined): QueryFieldDef[] {
 
 function getFirstSegmentFieldNames(q: Query | undefined): string[] {
   const qf = getFirstSegmentFields(q);
-  return qf.map(f => f.type === 'fieldref' && f.path.length == 1 ? f.path[0] : `expected simple ref, got ${JSON.stringify(f)}`);
+  return qf.map(f =>
+    f.type === 'fieldref' && f.path.length === 1
+      ? f.path[0]
+      : `expected simple ref, got ${JSON.stringify(f)}`
+  );
 }
 
 describe('query:', () => {
@@ -813,8 +823,9 @@ describe('query:', () => {
       expect(selstar).toTranslate();
       const query = selstar.translator.getQuery(0);
       expect(query).toBeDefined();
-      const fields = getFirstSegmentFields(selstar.translator.getQuery(0))
-        .map(f => f.type === 'fieldref' ? f.path: `wrong field type ${f.type}`);
+      const fields = getFirstSegmentFields(selstar.translator.getQuery(0)).map(
+        f => (f.type === 'fieldref' ? f.path : `wrong field type ${f.type}`)
+      );
       expect(fields).toEqual(afields.map(f => ['b', f]));
     });
     test('expands star with exclusions', () => {
@@ -902,7 +913,7 @@ describe('query:', () => {
       if (q) {
         const index = q.pipeline[0];
         expect(index.type).toBe('index');
-        if (index.type == 'index') {
+        if (index.type === 'index') {
           expect(index.indexFields).toEqual([
             {type: 'fieldref', path: ['af']},
             {type: 'fieldref', path: ['astr']},

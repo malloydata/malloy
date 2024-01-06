@@ -29,7 +29,7 @@ import {
   PipeSegment,
 } from '../../../model/malloy_types';
 
-import {QuerySpace, QueryOperationSpace} from './query-spaces';
+import {QuerySpace} from './query-spaces';
 
 export class ProjectFieldSpace extends QuerySpace {
   readonly segmentType = 'project';
@@ -56,6 +56,6 @@ export class ProjectFieldSpace extends QuerySpace {
 
   addRefineFromFields(refineThis: PipeSegment) {
     // TODO
-    throw new Error("IMPLEMENT ME");
+    throw new Error('IMPLEMENT ME');
   }
 }

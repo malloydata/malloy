@@ -184,7 +184,7 @@ describe('structdef comprehension', () => {
       pipeline: [
         {
           type: 'reduce',
-          queryFields : [{type: 'fieldref', path:['a']}],
+          queryFields: [{type: 'fieldref', path: ['a']}],
         },
       ],
     };

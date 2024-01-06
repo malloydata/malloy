@@ -21,13 +21,17 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {IndexSegment, PipeSegment, IndexFieldDef} from '../../../model/malloy_types';
+import {
+  IndexSegment,
+  PipeSegment,
+  IndexFieldDef,
+} from '../../../model/malloy_types';
 import {
   FieldReference,
   WildcardFieldReference,
 } from '../query-items/field-references';
 import {MalloyElement} from '../types/malloy-element';
-import { SpaceField } from '../types/space-field';
+import {SpaceField} from '../types/space-field';
 import {QueryOperationSpace} from './query-spaces';
 
 export class IndexFieldSpace extends QueryOperationSpace {
@@ -45,7 +49,8 @@ export class IndexFieldSpace extends QueryOperationSpace {
     }
   }
 
-  getPipeSegment(refineIndex?: PipeSegment): IndexSegment {
+  // mtoy TODO whic is the refineIndex unused
+  getPipeSegment(_refineIndex?: PipeSegment): IndexSegment {
     const indexFields: IndexFieldDef[] = [];
     for (const [name, field] of this.entries()) {
       if (field instanceof SpaceField) {
@@ -64,6 +69,6 @@ export class IndexFieldSpace extends QueryOperationSpace {
   }
 
   addRefineFromFields(_refineThis: never) {
-    throw new Error("Refine the index");
+    throw new Error('Refine the index');
   }
 }

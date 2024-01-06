@@ -25,7 +25,7 @@ export default meta;
 export const ProductsTable = {
   args: {
     source: 'products',
-    view: `records`,
+    view: 'records',
   },
 };
 

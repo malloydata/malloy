@@ -43,7 +43,10 @@ import {PipelineComp} from '../types/pipeline-comp';
  * e.g. after the arrow in `run: flights -> by_carrier`
  */
 export abstract class View extends MalloyElement {
-  abstract pipelineComp(fs: FieldSpace, isNestIn?: QueryOperationSpace): PipelineComp;
+  abstract pipelineComp(
+    fs: FieldSpace,
+    isNestIn?: QueryOperationSpace
+  ): PipelineComp;
 
   pipeline(fs: FieldSpace, isNestIn?: QueryOperationSpace): PipeSegment[] {
     return this.pipelineComp(fs, isNestIn).pipeline;

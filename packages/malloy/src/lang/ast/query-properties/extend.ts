@@ -28,7 +28,6 @@ import {
   LegalRefinementStage,
   QueryPropertyInterface,
 } from '../types/query-property-interface';
-import { QueryOperationSpace } from '../field-space/query-spaces';
 
 export class ExtendBlock
   extends ListOf<QueryExtendProperty>

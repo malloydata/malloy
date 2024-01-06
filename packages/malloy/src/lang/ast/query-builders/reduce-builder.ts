@@ -39,7 +39,10 @@ import {Ordering} from '../query-properties/ordering';
 import {Top} from '../query-properties/top';
 import {QueryProperty} from '../types/query-property';
 import {QueryBuilder} from '../types/query-builder';
-import {QueryOperationSpace, ReduceFieldSpace} from '../field-space/query-spaces';
+import {
+  QueryOperationSpace,
+  ReduceFieldSpace,
+} from '../field-space/query-spaces';
 import {DefinitionList} from '../types/definition-list';
 import {QueryInputSpace} from '../field-space/query-input-space';
 import {MalloyElement} from '../types/malloy-element';

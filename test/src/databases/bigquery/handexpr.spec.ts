@@ -420,7 +420,10 @@ describe('BigQuery hand-built expression test', () => {
               type: 'turtle',
               name: 'my_turtle',
               pipeline: [
-                {type: 'reduce', queryFields: fToQF(['county', 'aircraft_count'])},
+                {
+                  type: 'reduce',
+                  queryFields: fToQF(['county', 'aircraft_count']),
+                },
               ],
             },
           ]),

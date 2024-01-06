@@ -21,15 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  Annotation,
-  FieldAtomicDef,
-  QueryFieldDef,
-  TypeDesc,
-  isAtomicFieldType,
-  hasExpression,
-  RefToField,
-} from '../../../model/malloy_types';
+import {Annotation, QueryFieldDef, TypeDesc} from '../../../model/malloy_types';
 
 import {FieldReference} from '../query-items/field-references';
 import {FieldSpace} from '../types/field-space';

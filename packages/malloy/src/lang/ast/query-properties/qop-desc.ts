@@ -96,7 +96,10 @@ export class QOpDesc extends ListOf<QueryProperty> {
     }
   }
 
-  getOp(inputFS: FieldSpace, isNestIn: QueryOperationSpace | undefined): OpDesc {
+  getOp(
+    inputFS: FieldSpace,
+    isNestIn: QueryOperationSpace | undefined
+  ): OpDesc {
     const build = this.getBuilder(inputFS, isNestIn, this);
     for (const qp of this.list) {
       build.execute(qp);

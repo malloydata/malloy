@@ -530,7 +530,11 @@ export const FLIGHTS_EXPLORE: StructDef = {
       pipeline: [
         {
           type: 'reduce',
-          queryFields: fToQF(['carriers.name', 'aircraft.total_engines', 'flight_count']),
+          queryFields: fToQF([
+            'carriers.name',
+            'aircraft.total_engines',
+            'flight_count',
+          ]),
         },
       ],
     },
@@ -541,7 +545,10 @@ export const FLIGHTS_EXPLORE: StructDef = {
       pipeline: [
         {
           type: 'reduce',
-          queryFields: fToQF(['aircraft_facts.lifetime_distance', 'flight_count']),
+          queryFields: fToQF([
+            'aircraft_facts.lifetime_distance',
+            'flight_count',
+          ]),
         },
       ],
     },
@@ -581,7 +588,11 @@ export const FLIGHTS_EXPLORE: StructDef = {
               pipeline: [
                 {
                   type: 'reduce',
-                  queryFields: fToQF(['origin_code', 'destination_code', 'flight_count']),
+                  queryFields: fToQF([
+                    'origin_code',
+                    'destination_code',
+                    'flight_count',
+                  ]),
                   limit: 5,
                   orderBy: [{field: 'flight_count', dir: 'desc'}],
                 },
@@ -602,7 +613,11 @@ export const FLIGHTS_EXPLORE: StructDef = {
       pipeline: [
         {
           type: 'reduce',
-          queryFields: fToQF(['origin_code', 'destination_code', 'flight_count']),
+          queryFields: fToQF([
+            'origin_code',
+            'destination_code',
+            'flight_count',
+          ]),
           limit: 5,
           orderBy: [{field: 'flight_count', dir: 'desc'}],
         },
@@ -760,7 +775,11 @@ export const FLIGHTS_EXPLORE: StructDef = {
       pipeline: [
         {
           type: 'reduce',
-          queryFields: fToQF(['flight_count', 'total_distance', 'aircraft.aircraft_count']),
+          queryFields: fToQF([
+            'flight_count',
+            'total_distance',
+            'aircraft.aircraft_count',
+          ]),
         },
       ],
     },

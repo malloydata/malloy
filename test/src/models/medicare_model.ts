@@ -22,7 +22,7 @@
  */
 
 import {StructDef} from '@malloydata/malloy';
-import { fToQF } from '../util';
+import {fToQF} from '../util';
 
 // will it build?
 
@@ -141,7 +141,11 @@ export const medicareModel: StructDef = {
       name: 'turtle_city_zip',
       pipeline: [
         {
-          queryFields: fToQF(['provider_city', 'total_discharges', 'discharges_by_zip']),
+          queryFields: fToQF([
+            'provider_city',
+            'total_discharges',
+            'discharges_by_zip',
+          ]),
           orderBy: [{dir: 'desc', field: 1}],
           type: 'reduce',
         },
@@ -152,7 +156,11 @@ export const medicareModel: StructDef = {
       name: 'triple_turtle',
       pipeline: [
         {
-          queryFields: fToQF(['provider_state', 'total_discharges', 'turtle_city_zip']),
+          queryFields: fToQF([
+            'provider_state',
+            'total_discharges',
+            'turtle_city_zip',
+          ]),
           orderBy: [{dir: 'desc', field: 1}],
           type: 'reduce',
         },
@@ -179,7 +187,10 @@ export const medicareModel: StructDef = {
                       name: 'discharges_by_zip',
                       pipeline: [
                         {
-                          queryFields: fToQF(['provider_zipcode', 'total_discharges']),
+                          queryFields: fToQF([
+                            'provider_zipcode',
+                            'total_discharges',
+                          ]),
                           orderBy: [{dir: 'desc', field: 2}],
                           type: 'reduce',
                         },

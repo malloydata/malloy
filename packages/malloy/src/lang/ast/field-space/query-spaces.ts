@@ -59,7 +59,7 @@ export abstract class QueryOperationSpace
     if (refineThis) this.addRefineFromFields(refineThis);
   }
 
- abstract addRefineFromFields(refineThis: model.PipeSegment): void;
+  abstract addRefineFromFields(refineThis: model.PipeSegment): void;
 
   log(s: string): void {
     if (this.astEl) {
@@ -131,22 +131,23 @@ export abstract class QueryOperationSpace
 
 // Project and Reduce or "QuerySegments" are built from a QuerySpace
 export abstract class QuerySpace extends QueryOperationSpace {
-
- addRefineFromFields(refineThis: model.PipeSegment) {
+  addRefineFromFields(refineThis: model.PipeSegment) {
     if (!model.isQuerySegment(refineThis)) {
       // TODO mtoy raw,partial,index
       return;
     }
     for (const field of refineThis.queryFields) {
-      if (field.type == 'fieldref') {
-        const refTo = this.exprSpace.lookup(field.path.map(f => new FieldName(f)));
+      if (field.type === 'fieldref') {
+        const refTo = this.exprSpace.lookup(
+          field.path.map(f => new FieldName(f))
+        );
         if (refTo.found) {
           this.setEntry(field.path[field.path.length - 1], refTo.found);
         }
       } else if (field.type !== 'turtle') {
         // TODO can you reference fields in a turtle as fields in the output space,
         // e.g. order_by: my_turtle.foo, or lag(my_turtle.foo)
-          this.setEntry(field.as ?? field.name, new ColumnSpaceField(field));
+        this.setEntry(field.as ?? field.name, new ColumnSpaceField(field));
       }
     }
   }
@@ -229,7 +230,10 @@ export abstract class QuerySpace extends QueryOperationSpace {
       queryFields: this.queryFieldDefs(),
     };
 
-    segment.queryFields = mergeFields(refineFrom?.queryFields, segment.queryFields);
+    segment.queryFields = mergeFields(
+      refineFrom?.queryFields,
+      segment.queryFields
+    );
 
     if (refineFrom?.extendSource) {
       segment.extendSource = refineFrom.extendSource;
@@ -274,8 +278,6 @@ export class ReduceFieldSpace extends QuerySpace {
 
 function isEmptyNest(fd: model.QueryFieldDef) {
   return (
-    typeof fd !== 'string' &&
-    fd.type === 'turtle' &&
-    fd.pipeline.length === 0
+    typeof fd !== 'string' && fd.type === 'turtle' && fd.pipeline.length === 0
   );
 }

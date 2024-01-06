@@ -21,7 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 import {PipeSegment, isQuerySegment} from '../../../model';
-import { isQueryElement } from '../types/query-element';
 import {ReduceBuilder} from './reduce-builder';
 
 export class PartialBuilder extends ReduceBuilder {

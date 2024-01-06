@@ -29,7 +29,7 @@ import {
 } from '../../../model/malloy_types';
 
 import {errorFor} from '../ast-utils';
-import {QuerySpace, QueryOperationSpace} from '../field-space/query-spaces';
+import {QuerySpace} from '../field-space/query-spaces';
 import {FT} from '../fragtype-utils';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';

@@ -121,7 +121,12 @@ describe('BigQuery expression tests', () => {
         // carrier top routes
         {
           type: 'project',
-          queryFields: fToQF(['carrier', 'flight_count', 'routes.origin_code', 'routes.route_flights']),
+          queryFields: fToQF([
+            'carrier',
+            'flight_count',
+            'routes.origin_code',
+            'routes.route_flights',
+          ]),
         },
       ],
     });
@@ -131,7 +136,9 @@ describe('BigQuery expression tests', () => {
   it('step_0', async () => {
     const sql = await compileQueryFromQueryDef(faa, {
       structRef: 'flights',
-      pipeline: [{type: 'reduce', queryFields: fToQF(['carriers.name', 'flight_count'])}],
+      pipeline: [
+        {type: 'reduce', queryFields: fToQF(['carriers.name', 'flight_count'])},
+      ],
     });
     await bqCompile(sql);
   });
@@ -143,7 +150,9 @@ describe('BigQuery expression tests', () => {
         fStringEq('origin.state', 'CA'),
         fStringEq('destination.state', 'NY'),
       ],
-      pipeline: [{type: 'reduce', queryFields: fToQF(['carriers.name', 'flight_count'])}],
+      pipeline: [
+        {type: 'reduce', queryFields: fToQF(['carriers.name', 'flight_count'])},
+      ],
     });
     await bqCompile(sql);
   });
@@ -253,7 +262,9 @@ describe('BigQuery expression tests', () => {
   it('simple_reduce', async () => {
     const sql = await compileQueryFromQueryDef(faa, {
       structRef: 'flights',
-      pipeline: [{type: 'reduce', queryFields: fToQF(['carrier', 'flight_count'])}],
+      pipeline: [
+        {type: 'reduce', queryFields: fToQF(['carrier', 'flight_count'])},
+      ],
     });
     await bqCompile(sql);
   });

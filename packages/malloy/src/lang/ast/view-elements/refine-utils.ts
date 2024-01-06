@@ -21,8 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {PipeSegment, QueryFieldDef, isQuerySegment, isRawSegment} from '../../../model';
-import { nameFromDef } from '../../field-utils';
+import {
+  PipeSegment,
+  QueryFieldDef,
+  isQuerySegment,
+  isRawSegment,
+} from '../../../model';
+import {nameFromDef} from '../../field-utils';
 import {MalloyElement} from '../types/malloy-element';
 
 export function refine(
@@ -79,9 +84,10 @@ export function refine(
       const overlappingFields: QueryFieldDef[] = [];
       const nonOverlappingFields: QueryFieldDef[] = [];
       const existingNames = new Map<string, QueryFieldDef>(
-        to.queryFields.map(
-          (f: QueryFieldDef): [string, QueryFieldDef] => [nameFromDef(f), f]
-        )
+        to.queryFields.map((f: QueryFieldDef): [string, QueryFieldDef] => [
+          nameFromDef(f),
+          f,
+        ])
       );
       for (const field of from.queryFields) {
         if (existingNames.has(nameFromDef(field))) {
@@ -93,7 +99,9 @@ export function refine(
       to.queryFields = [...to.queryFields, ...nonOverlappingFields];
       if (overlappingFields.length > 0) {
         logTo.log(
-          `overlapping fields in refinement: ${overlappingFields.map(nameFromDef)}`
+          `overlapping fields in refinement: ${overlappingFields.map(
+            nameFromDef
+          )}`
         );
       }
     } else if (from.type === 'index' && to.type === 'index') {

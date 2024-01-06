@@ -471,17 +471,18 @@ export function getFieldDef(
   thing: StructDef | PipeSegment,
   name: string
 ): FieldDef {
-  let found: FieldDef | undefined = undefined;
   if (thing.type === 'struct') {
     for (const f of thing.fields) {
       if (f.as ?? f.name === name) {
-        return f;;
+        return f;
       }
     }
   } else if (isQuerySegment(thing)) {
     for (const f of thing.queryFields) {
       if (f.type === 'fieldref') {
-        throw new Error(`Found reference to ${name} but test expected a definition`);
+        throw new Error(
+          `Found reference to ${name} but test expected a definition`
+        );
       } else if (f.as ?? f.name === name) {
         return f;
       }

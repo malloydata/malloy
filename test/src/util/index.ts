@@ -32,11 +32,15 @@ import {
 } from '@malloydata/malloy';
 
 export function fToQF(fs: (QueryFieldDef | string)[]): QueryFieldDef[] {
-  return fs.map(f => typeof f === 'string' ? {type: 'fieldref', path: f.split('.')} : f);
+  return fs.map(f =>
+    typeof f === 'string' ? {type: 'fieldref', path: f.split('.')} : f
+  );
 }
 
 export function fToIF(fs: string[]): IndexFieldDef[] {
-  return fs.map(f => typeof f === 'string' ? {type: 'fieldref', path: f.split('.')} : f);
+  return fs.map(f =>
+    typeof f === 'string' ? {type: 'fieldref', path: f.split('.')} : f
+  );
 }
 
 export function fStringEq(field: string, value: string): FilterExpression {
