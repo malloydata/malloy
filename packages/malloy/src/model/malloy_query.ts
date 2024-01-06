@@ -37,8 +37,6 @@ import {
   FieldDateDef,
   FieldDef,
   FieldFragment,
-  FieldRefOrDef,
-  FieldStringDef,
   FieldTimestampDef,
   Filtered,
   FilterExpression,
@@ -88,7 +86,6 @@ import {
   SegmentFieldDef,
   SpreadFragment,
   SQLExpressionFragment,
-  StringLiteralFragment,
   StructDef,
   StructRef,
   TransitionalFieldName,
@@ -106,9 +103,6 @@ import {
   range,
 } from './utils';
 import {QueryInfo} from '../dialect/dialect';
-import { Index } from '../lang/ast';
-import { startsWith } from 'lodash';
-import { StringField } from '../malloy';
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
@@ -135,10 +129,6 @@ export declare interface ParentQueryModel {
 interface OutputPipelinedSQL {
   sqlFieldName: string;
   pipelineSQL: string;
-}
-
-function pathStartsWith(path: string[], firstEls: string[]): boolean {
-  return firstEls.every((preEl: string, elIndex: number) => preEl === path[elIndex]);
 }
 
 class StageWriter {
@@ -1978,9 +1968,10 @@ class QueryQuery extends QueryField {
 
   // get a field ref and expand it.
   expandField(f: QueryFieldDef) {
-    const field = (f.type === 'fieldref') ?
-      this.parent.getQueryFieldByName(f.path)
-      : this.parent.makeQueryField(f);
+    const field =
+      f.type === 'fieldref'
+        ? this.parent.getQueryFieldByName(f.path)
+        : this.parent.makeQueryField(f);
     const as = field.getIdentifier();
     return {as, field};
   }
@@ -2225,7 +2216,11 @@ class QueryQuery extends QueryField {
 
   getSegmentFields(resultStruct: FieldInstanceResult): SegmentFieldDef[] {
     const fs = resultStruct.firstSegment;
-    return fs.type === 'index' ? fs.indexFields : isQuerySegment(fs) ? fs.queryFields : [];
+    return fs.type === 'index'
+      ? fs.indexFields
+      : isQuerySegment(fs)
+      ? fs.queryFields
+      : [];
   }
 
   expandFields(resultStruct: FieldInstanceResult) {
@@ -3487,36 +3482,6 @@ class QueryQuery extends QueryField {
     return {lastStageName, outputStruct};
   }
 }
-
-interface FieldTree {
-  children: Record<string,FieldTree>;
-  fields: Set<string>;
-}
-
-function makeJoinTree(): FieldTree {
-  return { children: {}, fields: new Set<string>() };
-}
-
-/**
- * @param fpath
- * @param fieldTree
- * @returns The node in the tree which contains the field
- */
-function addRefToTree(fpath: string[], fieldTree: FieldTree): FieldTree {
-  const head = fpath[0];
-  if (fpath.length == 1) {
-   fieldTree.fields.add(head);
-   return fieldTree;
-  } else {
-    let child = fieldTree.children[head];
-    if (!child) {
-      child = makeJoinTree();
-      fieldTree.children[head] = child;
-    }
-    return addRefToTree(fpath.slice(-1), child);
-  }
-}
-
 class QueryQueryReduce extends QueryQuery {}
 
 class QueryQueryProject extends QueryQuery {}
@@ -3526,7 +3491,7 @@ class QueryQueryProject extends QueryQuery {}
 //  nested repeated fields are safe to use.
 class QueryQueryIndexStage extends QueryQuery {
   fieldDef: TurtleDef;
-  indexPaths: Record<string,string[]> = {};
+  indexPaths: Record<string, string[]> = {};
   constructor(
     fieldDef: TurtleDef,
     parent: QueryStruct,
@@ -3538,7 +3503,7 @@ class QueryQueryIndexStage extends QueryQuery {
   }
 
   expandField(f: IndexFieldDef) {
-    const as = f.path[f.path.length -1];
+    const as = f.path[f.path.length - 1];
     const field = this.parent.getQueryFieldByName(f.path);
     return {as, field};
   }
@@ -3588,7 +3553,12 @@ class QueryQueryIndexStage extends QueryQuery {
         .f.generateExpression(this.rootResult);
     }
 
-    const fields: Array<{name: string; path: string[], type: string; expression: string}> = [];
+    const fields: Array<{
+      name: string;
+      path: string[];
+      type: string;
+      expression: string;
+    }> = [];
     for (const [name, field] of this.rootResult.allFields) {
       const fi = field as FieldInstanceField;
       if (fi.fieldUsage.type === 'result' && isScalarField(fi.f)) {
@@ -3619,7 +3589,7 @@ class QueryQueryIndexStage extends QueryQuery {
     }
     s += `  END as ${fieldTypeColumn},`;
 
-    s += `  CASE group_set WHEN 99999 THEN ${dialect.castToString('NULL')}\n`
+    s += `  CASE group_set WHEN 99999 THEN ${dialect.castToString('NULL')}\n`;
     for (let i = 0; i < fields.length; i++) {
       if (fields[i].type === 'string') {
         s += `    WHEN ${i} THEN ${fields[i].expression}\n`;
@@ -3732,7 +3702,7 @@ class QueryQueryIndex extends QueryQuery {
       this.stages = [indexSeg.indexFields];
       return;
     }
-    const stageMap: Record<string,RefToField[]> = {};
+    const stageMap: Record<string, RefToField[]> = {};
     for (const fref of indexSeg.indexFields) {
       if (fref.path.length > 1) {
         let toStage = stageMap[fref.path[0]];
@@ -3740,7 +3710,8 @@ class QueryQueryIndex extends QueryQuery {
           const f = this.parent.nameMap.get(fref.path[0]);
           if (
             f instanceof QueryStruct &&
-            (f.fieldDef.structRelationship.type === 'many' || f.fieldDef.structRelationship.type === 'nested') &&
+            (f.fieldDef.structRelationship.type === 'many' ||
+              f.fieldDef.structRelationship.type === 'nested') &&
             f.fieldDef.fields.length > 1
           ) {
             toStage = [];
@@ -3755,8 +3726,7 @@ class QueryQueryIndex extends QueryQuery {
     }
   }
 
-  expandFields(_resultStruct: FieldInstanceResult) {
-  }
+  expandFields(_resultStruct: FieldInstanceResult) {}
 
   generateSQL(stageWriter: StageWriter): string {
     const indexSeg = this.firstSegment as IndexSegment;
@@ -4220,14 +4190,14 @@ class QueryStruct extends QueryNode {
 
   /** convert a name into a field reference */
   getFieldByName(name: TransitionalFieldName): QuerySomething {
-    const path = typeof name === 'string' ? QueryStruct.resolvePath(name) : name;
+    const path =
+      typeof name === 'string' ? QueryStruct.resolvePath(name) : name;
     return path.reduce((retField: QuerySomething, childName: string) => {
       const r = retField.getChildByName(childName);
       if (r === undefined) {
         throw new Error(`Path not found ${path.join('.')}`);
       }
       return r;
-
     }, this);
   }
 
@@ -4476,7 +4446,7 @@ export class QueryModel {
     const indexStar: RefToField[] = [];
     for (const [fn, fv] of struct.nameMap) {
       if (!(fv instanceof QueryStruct)) {
-        indexStar.push({type: 'fieldref', path:[fn]});
+        indexStar.push({type: 'fieldref', path: [fn]});
       }
     }
     const indexQuery: Query = {
