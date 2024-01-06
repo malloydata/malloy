@@ -3708,10 +3708,11 @@ class QueryQueryIndex extends QueryQuery {
     }
     const stageMap: Record<string, RefToField[]> = {};
     for (const fref of indexSeg.indexFields) {
+      let toStage = this.stages[0];
       if (fref.path.length > 1) {
         const stageRoot = pathToCol(fref.path.slice(0, fref.path.length - 1));
-        let toStage = stageMap[stageRoot];
-        if (toStage === undefined) {
+        const stage = stageMap[stageRoot];
+        if (stage === undefined) {
           const f = this.parent.nameMap.get(fref.path[0]);
           if (
             f instanceof QueryStruct &&
@@ -3722,12 +3723,12 @@ class QueryQueryIndex extends QueryQuery {
             toStage = [];
             stageMap[stageRoot] = toStage;
             this.stages.push(toStage);
-          } else {
-            toStage = this.stages[0];
           }
+        } else {
+          toStage = stage;
         }
-        toStage.push(fref);
       }
+      toStage.push(fref);
     }
   }
 
