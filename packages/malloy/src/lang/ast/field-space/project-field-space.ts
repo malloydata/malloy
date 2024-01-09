@@ -27,7 +27,10 @@ import {
   expressionIsAnalytic,
   TypeDesc,
   PipeSegment,
+  isQuerySegment,
 } from '../../../model/malloy_types';
+import { FieldName } from '../types/field-space';
+import { ColumnSpaceField } from './column-space-field';
 
 import {QuerySpace} from './query-spaces';
 
@@ -52,10 +55,5 @@ export class ProjectFieldSpace extends QuerySpace {
       return false;
     }
     return true;
-  }
-
-  addRefineFromFields(refineThis: PipeSegment) {
-    // TODO
-    throw new Error('IMPLEMENT ME');
   }
 }
