@@ -26,11 +26,7 @@ import {
   expressionInvolvesAggregate,
   expressionIsAnalytic,
   TypeDesc,
-  PipeSegment,
-  isQuerySegment,
 } from '../../../model/malloy_types';
-import { FieldName } from '../types/field-space';
-import { ColumnSpaceField } from './column-space-field';
 
 import {QuerySpace} from './query-spaces';
 
