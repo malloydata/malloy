@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Google LLC
+ * Copyright 2024 Google LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files
@@ -21,34 +21,21 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Fragment} from '../../../model/malloy_types';
-import {
-  overload,
-  minAggregate,
-  maxScalar,
-  sql,
-  DialectFunctionOverloadDef,
-  makeParam,
-  literal,
-} from '../../functions/util';
+import {Filter} from '../query-properties/filters';
+import {Limit} from '../query-properties/limit';
+import {Ordering} from '../query-properties/ordering';
+import {PartitionBy} from '../query-properties/partition_by';
+import {MalloyElement} from './malloy-element';
 
-export function fnStringAgg(): DialectFunctionOverloadDef[] {
-  const value = makeParam('value', maxScalar('string'));
-  const separator = makeParam('separator', literal(maxScalar('string')));
-  const ob: Fragment = {type: 'function_order_by'};
-  const lim: Fragment = {type: 'function_limit'};
-  return [
-    overload(
-      minAggregate('string'),
-      [value.param],
-      sql`STRING_AGG(${value.arg}, ',' ${ob} ${lim})`,
-      {isSymmetric: true, supportsLimit: true, supportsOrderBy: true}
-    ),
-    overload(
-      minAggregate('string'),
-      [value.param, separator.param],
-      sql`STRING_AGG(${value.arg}, ${separator.arg} ${ob} ${lim})`,
-      {isSymmetric: true, supportsLimit: true, supportsOrderBy: true}
-    ),
-  ];
+export type FieldPropStatement = Filter | Limit | PartitionBy | Ordering;
+
+export function isFieldPropStatement(
+  el: MalloyElement
+): el is FieldPropStatement {
+  return (
+    el instanceof Filter ||
+    el instanceof Limit ||
+    el instanceof PartitionBy ||
+    el instanceof Ordering
+  );
 }

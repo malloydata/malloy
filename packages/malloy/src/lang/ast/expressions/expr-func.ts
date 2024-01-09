@@ -25,10 +25,12 @@ import {
   EvalSpace,
   Expr,
   expressionIsAggregate,
+  expressionIsAnalytic,
   expressionIsScalar,
   ExpressionType,
   FieldValueType,
   Fragment,
+  FunctionCallFragment,
   FunctionDef,
   FunctionOverloadDef,
   FunctionParameterDef,
@@ -42,6 +44,9 @@ import {errorFor} from '../ast-utils';
 import {StructSpaceFieldBase} from '../field-space/struct-space-field-base';
 
 import {FieldReference} from '../query-items/field-references';
+import {Limit} from '../query-properties/limit';
+import {Ordering} from '../query-properties/ordering';
+import {PartitionBy} from '../query-properties/partition_by';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
@@ -60,7 +65,18 @@ export class ExprFunc extends ExpressionDef {
     this.has({source: source});
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
+  getExpression(fs: FieldSpace) {
+    return this.getPropsExpression(fs);
+  }
+
+  getPropsExpression(
+    fs: FieldSpace,
+    props?: {
+      partitionBy?: PartitionBy;
+      orderBy?: Ordering;
+      limit?: Limit;
+    }
+  ): ExprValue {
     const argExprsWithoutImplicit = this.args.map(arg => arg.getExpression(fs));
     if (this.isRaw) {
       let expressionType: ExpressionType = 'scalar';
@@ -207,15 +223,43 @@ export class ExprFunc extends ExpressionDef {
       );
       return errorFor('cannot call with source');
     }
-    const funcCall: Expr = [
-      {
-        type: 'function_call',
-        overload,
-        args: argExprs.map(x => x.value),
-        expressionType,
-        structPath,
-      },
-    ];
+    const frag: FunctionCallFragment = {
+      type: 'function_call',
+      overload,
+      args: argExprs.map(x => x.value),
+      expressionType,
+      structPath,
+    };
+    const funcCall: Expr = [frag];
+    if (props?.orderBy) {
+      const ob = props.orderBy.getAggregateOrderBy(fs);
+      if (overload.supportsOrderBy) {
+        frag.orderBy = ob;
+      } else {
+        props.orderBy.log(`Function ${this.name} does not support order_by`);
+      }
+    }
+    if (props?.partitionBy) {
+      const res = props.partitionBy.partitionField.getField(fs);
+      if (res.error) {
+        props.partitionBy.log(
+          `No such field ${props.partitionBy.partitionField.refString}`
+        );
+      } else if (expressionIsAnalytic(type.expressionType)) {
+        frag.partitionBy = props.partitionBy.partitionField.refString;
+      } else {
+        props.partitionBy.log(
+          'partition_by is only supported for analytic functions'
+        );
+      }
+    }
+    if (props?.limit !== undefined) {
+      if (overload.supportsLimit) {
+        frag.limit = props.limit.limit;
+      } else {
+        this.log(`Function ${this.name} does not support limit`);
+      }
+    }
     if (type.dataType === 'any') {
       this.log(
         `Invalid return type ${type.dataType} for function '${this.name}'`

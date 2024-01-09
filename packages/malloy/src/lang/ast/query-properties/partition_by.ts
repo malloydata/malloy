@@ -21,34 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Fragment} from '../../../model/malloy_types';
-import {
-  overload,
-  minAggregate,
-  maxScalar,
-  sql,
-  DialectFunctionOverloadDef,
-  makeParam,
-  literal,
-} from '../../functions/util';
+import {FieldReference} from '../query-items/field-references';
+import {MalloyElement} from '../types/malloy-element';
 
-export function fnStringAgg(): DialectFunctionOverloadDef[] {
-  const value = makeParam('value', maxScalar('string'));
-  const separator = makeParam('separator', literal(maxScalar('string')));
-  const ob: Fragment = {type: 'function_order_by'};
-  const lim: Fragment = {type: 'function_limit'};
-  return [
-    overload(
-      minAggregate('string'),
-      [value.param],
-      sql`STRING_AGG(${value.arg}, ',' ${ob} ${lim})`,
-      {isSymmetric: true, supportsLimit: true, supportsOrderBy: true}
-    ),
-    overload(
-      minAggregate('string'),
-      [value.param, separator.param],
-      sql`STRING_AGG(${value.arg}, ${separator.arg} ${ob} ${lim})`,
-      {isSymmetric: true, supportsLimit: true, supportsOrderBy: true}
-    ),
-  ];
+export class PartitionBy extends MalloyElement {
+  elementType = 'partition_by';
+
+  constructor(readonly partitionField: FieldReference) {
+    super();
+  }
 }

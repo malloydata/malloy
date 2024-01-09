@@ -630,16 +630,6 @@ export class MalloyToAST
     return new ast.Filter(pcx.fieldExpr().map(f => this.getFilterElement(f)));
   }
 
-  visitFilterByShortcut(pcx: parse.FilterByShortcutContext): ast.Filter {
-    const el = this.getFilterElement(pcx.fieldExpr());
-    const res = this.astAt(new ast.Filter([el]), pcx);
-    this.m4advisory(
-      pcx,
-      'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead'
-    );
-    return res;
-  }
-
   visitWhereStatement(pcx: parse.WhereStatementContext): ast.Filter {
     const where = this.visitFilterClauseList(pcx.filterClauseList());
     where.having = false;
@@ -1504,12 +1494,18 @@ export class MalloyToAST
     return new ast.Pick(picks);
   }
 
-  visitExprFilter(pcx: parse.ExprFilterContext): ast.ExprFilter {
-    const filters = this.visit(pcx.filteredBy());
-    return new ast.ExprFilter(
-      this.getFieldExpr(pcx.fieldExpr()),
-      filters as ast.Filter
+  visitExprFieldProps(pcx: parse.ExprFieldPropsContext) {
+    const statements = this.only<
+      ast.Filter | ast.Ordering | ast.PartitionBy | ast.Limit
+    >(
+      pcx
+        .fieldProperties()
+        .fieldPropertyStatement()
+        .map(scx => this.visit(scx)),
+      x => ast.isFieldPropStatement(x) && x,
+      'field property statement'
     );
+    return new ast.ExprProps(this.getFieldExpr(pcx.fieldExpr()), statements);
   }
 
   visitLiteralTimestamp(pcx: parse.LiteralTimestampContext): ast.ExpressionDef {

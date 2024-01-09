@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {Fragment} from '../../model';
 import {
   overload,
   minAggregate,
@@ -34,18 +35,20 @@ import {
 export function fnStringAgg(): DialectFunctionOverloadDef[] {
   const value = makeParam('value', maxScalar('string'));
   const separator = makeParam('separator', literal(maxScalar('string')));
+  const ob: Fragment = {type: 'function_order_by'};
+  const lim: Fragment = {type: 'function_limit'};
   return [
     overload(
       minAggregate('string'),
       [value.param],
-      sql`STRING_AGG(${value.arg})`,
-      {isSymmetric: true}
+      sql`STRING_AGG(${value.arg} ${ob} ${lim})`,
+      {isSymmetric: true, supportsOrderBy: true, supportsLimit: true}
     ),
     overload(
       minAggregate('string'),
       [value.param, separator.param],
-      sql`STRING_AGG(${value.arg}, ${separator.arg})`,
-      {isSymmetric: true}
+      sql`STRING_AGG(${value.arg}, ${separator.arg} ${ob} ${lim})`,
+      {isSymmetric: true, supportsOrderBy: true, supportsLimit: true}
     ),
   ];
 }

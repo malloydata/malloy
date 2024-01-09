@@ -49,6 +49,27 @@ export class OrderBy extends MalloyElement {
     return typeof this.field === 'number' ? this.field : this.field.refString;
   }
 
+  getAggregateOrderBy(fs: FieldSpace): ModelOrderBy {
+    if (this.field instanceof FieldName) {
+      const entry = this.field.getField(fs);
+      if (entry.error) {
+        this.field.log(entry.error);
+      }
+      if (!entry.found) {
+        this.log(`Unknown field ${this.field.refString}`);
+      }
+    } else {
+      this.log(
+        'Index-based ordering is not supported in an aggregate order_by'
+      );
+    }
+    const orderElement: ModelOrderBy = {field: this.modelField};
+    if (this.dir) {
+      orderElement.dir = this.dir;
+    }
+    return orderElement;
+  }
+
   getOrderBy(fs: FieldSpace): ModelOrderBy {
     // TODO jump-to-definition now that we can lookup fields in the output space,
     // we need to actually add the reference when we do so.
@@ -87,5 +108,9 @@ export class Ordering
 
   getOrderBy(fs: FieldSpace): ModelOrderBy[] {
     return this.list.map(el => el.getOrderBy(fs));
+  }
+
+  getAggregateOrderBy(fs: FieldSpace): ModelOrderBy[] {
+    return this.list.map(el => el.getAggregateOrderBy(fs));
   }
 }

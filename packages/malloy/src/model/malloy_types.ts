@@ -215,6 +215,14 @@ export interface FunctionParameterFragment {
   name: string;
 }
 
+export interface FunctionOrderFragment {
+  type: 'function_order_by';
+}
+
+export interface FunctionLimitFragment {
+  type: 'function_limit';
+}
+
 export function isFunctionParameterFragment(
   f: Fragment
 ): f is FunctionParameterFragment {
@@ -227,6 +235,11 @@ export interface FunctionCallFragment {
   expressionType: ExpressionType;
   args: Expr[];
   structPath?: string;
+  // TODO should this be a string[];
+  orderBy?: OrderBy[];
+  limit?: number;
+  // TODO should this be a string[];
+  partitionBy?: string;
 }
 
 export function isFunctionCallFragment(f: Fragment): f is FunctionCallFragment {
@@ -389,6 +402,8 @@ export type Fragment =
   | UngroupFragment
   | DialectFragment
   | FunctionParameterFragment
+  | FunctionOrderFragment
+  | FunctionLimitFragment
   | FunctionCallFragment
   | SQLExpressionFragment
   | SpreadFragment;
@@ -998,6 +1013,8 @@ export interface FunctionOverloadDef {
   needsWindowOrderBy?: boolean;
   between?: {preceding: number | string; following: number | string};
   isSymmetric?: boolean;
+  supportsOrderBy?: boolean;
+  supportsLimit?: boolean;
   params: FunctionParameterDef[];
   dialect: {
     [dialect: string]: Expr;

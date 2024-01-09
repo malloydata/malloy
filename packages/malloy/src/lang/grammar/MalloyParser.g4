@@ -285,9 +285,15 @@ filterStatement
   | havingStatement
   ;
 
-filteredBy
-  : QMARK fieldExpr                   # filterByShortcut
-  | whereStatement                    # filterByWhere
+fieldProperties
+  : OCURLY (fieldPropertyStatement | SEMI)* CCURLY
+  ;
+
+fieldPropertyStatement
+  : whereStatement
+  | partitionByStatement
+  | orderByStatement
+  | limitStatement
   ;
 
 filterClauseList
@@ -374,6 +380,10 @@ calculateStatement
 
 projectStatement
   : tags (SELECT | PROJECT) fieldCollection
+  ;
+
+partitionByStatement
+  : PARTITION_BY id
   ;
 
 orderByStatement
@@ -494,7 +504,7 @@ malloyOrSQLType
 
 fieldExpr
   : fieldPath                                              # exprFieldPath
-  | fieldExpr OCURLY filteredBy CCURLY                     # exprFilter
+  | fieldExpr fieldProperties                              # exprFieldProps
   | literal                                                # exprLiteral
   | fieldExpr timeframe                                    # exprDuration
   | fieldExpr DOT timeframe                                # exprTimeTrunc

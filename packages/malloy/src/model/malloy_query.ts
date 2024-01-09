@@ -402,15 +402,32 @@ class QueryField extends QueryNode {
     );
   }
 
+  private generateSQLAggregateOrderBy(orderBy: OrderBy[]): string {
+    const o: string[] = [];
+    for (const f of orderBy) {
+      // TODO not sure how to validate field?
+      o.push(`${f.field} ${f.dir || 'ASC'}`);
+    }
+    if (o.length > 0) {
+      return this.parent.dialect.sqlOrderBy(o) + '\n';
+    }
+    return '';
+  }
+
   private expandFunctionCall(
     dialect: string,
     overload: FunctionOverloadDef,
-    args: Expr[]
+    args: Expr[],
+    orderBy?: OrderBy[],
+    limit?: number
   ) {
     const paramMap = this.getParameterMap(overload, args.length);
     if (overload.dialect[dialect] === undefined) {
       throw new Error(`Function is not defined for dialect ${dialect}`);
     }
+    const orderByFrag =
+      orderBy !== undefined ? [this.generateSQLAggregateOrderBy(orderBy)] : [];
+    const limitFrag = limit !== undefined ? [` LIMIT ${limit}`] : [];
     return exprMap(overload.dialect[dialect], fragment => {
       if (typeof fragment === 'string') {
         return [fragment];
@@ -424,7 +441,6 @@ class QueryField extends QueryNode {
           throw new Error(
             'Invalid function definition. Argument to spread must be a function parameter.'
           );
-          return [];
         }
         const entry = paramMap.get(param.name);
         if (entry === undefined) {
@@ -448,6 +464,10 @@ class QueryField extends QueryNode {
         } else {
           return args[entry.argIndexes[0]];
         }
+      } else if (fragment.type === 'function_order_by') {
+        return orderByFrag;
+      } else if (fragment.type === 'function_limit') {
+        return limitFrag;
       }
       return [fragment];
     });
@@ -518,7 +538,9 @@ class QueryField extends QueryNode {
       const funcCall: Expr = this.expandFunctionCall(
         context.dialect.name,
         overload,
-        mappedArgs
+        mappedArgs,
+        frag.orderBy,
+        frag.limit
       );
 
       if (expressionIsAnalytic(overload.returnType.expressionType)) {
@@ -793,7 +815,10 @@ class QueryField extends QueryNode {
     );
   }
 
-  getAnalyticPartitions(resultStruct: FieldInstanceResult) {
+  getAnalyticPartitions(
+    resultStruct: FieldInstanceResult,
+    extraPartitionField?: string
+  ) {
     const ret: string[] = [];
     let p = resultStruct.parent;
     while (p !== undefined) {
@@ -804,6 +829,10 @@ class QueryField extends QueryNode {
       ret.push(...partitionSQLs);
       p = p.parent;
     }
+    if (extraPartitionField) {
+      // TODO need to actually look it up
+      ret.push(extraPartitionField);
+    }
     return ret.join(', ');
   }
 
@@ -813,11 +842,15 @@ class QueryField extends QueryNode {
     expr: Expr,
     overload: FunctionOverloadDef,
     state: GenerateState,
-    args: Expr[]
+    args: Expr[],
+    partitionByField?: string
   ): string {
     let partitionBy = '';
     const isComplex = resultStruct.root().isComplexQuery;
-    const fieldsString = this.getAnalyticPartitions(resultStruct);
+    const fieldsString = this.getAnalyticPartitions(
+      resultStruct,
+      partitionByField
+    );
     if (isComplex || fieldsString.length > 0) {
       partitionBy = 'PARTITION BY ';
       if (isComplex) {

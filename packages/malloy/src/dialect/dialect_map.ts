@@ -121,6 +121,8 @@ export function getDialectFunction(name: string): FunctionDef | undefined {
             needsWindowOrderBy: overload.needsWindowOrderBy,
             between: overload.between,
             isSymmetric: overload.isSymmetric,
+            supportsOrderBy: overload.supportsOrderBy,
+            supportsLimit: overload.supportsLimit,
           });
         }
       }

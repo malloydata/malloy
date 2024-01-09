@@ -1117,23 +1117,47 @@ expressionModels.forEach((expressionModel, databaseName) => {
   });
 });
 
-
 describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   const expressionModel = runtime.loadModel(modelText(databaseName));
 
   describe('string_agg', () => {
-    it(`works - ${databaseName}`, async () => {
+    it(`works no order by - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
           `run: aircraft -> {
             where: name ~ r'.*RUTHERFORD.*'
             aggregate: f is string_agg(name)
-            order_by: name
           }`
         )
         .run();
-      expect(result.data.path('f').string.value).toBe(
+      expect(result.data.path(0, 'f').string.value).not.toBeUndefined();
+    });
+
+    it(`works with order by - ${databaseName}`, async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `run: aircraft -> {
+            where: name ~ r'.*RUTHERFORD.*'
+            aggregate: f is string_agg(name) { order_by: name }
+          }`
+        )
+        .run();
+      expect(result.data.path(0, 'f').string.value).toBe(
         'RUTHERFORD PAT R JR,RUTHERFORD JAMES C'
+      );
+    });
+
+    it(`works with order by and limit - ${databaseName}`, async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `run: aircraft -> {
+            aggregate: f is string_agg(name) { order_by: name; limit: 2 }
+          }`
+        )
+        .run();
+      expect(result.sql).toBe("FOO")
+      expect(result.data.path(0, 'f').string.value).toBe(
+        'FORSBERG CHARLES P,BOEGER BOGIE M'
       );
     });
 
