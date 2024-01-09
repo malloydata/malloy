@@ -22,7 +22,6 @@
  */
 grammar MalloyTag;
 
-// mtoy TODO error recovery?
 tagLine: tagSpec* EOF;
 
 tagSpec

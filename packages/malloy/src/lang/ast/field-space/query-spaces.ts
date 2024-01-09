@@ -215,8 +215,9 @@ export abstract class QuerySpace extends QueryOperationSpace {
     refineFrom: model.QuerySegment | undefined
   ): model.PipeSegment {
     if (this.segmentType === 'index') {
-      // TODO ... should make this go away
-      throw new Error('INDEX FIELD PIPE SEGMENT MIS HANDLED');
+      // come coding error made this "impossible" thing happen
+      this.log('internal error generating index segment from non index query');
+      return {type: 'reduce', queryFields: []};
     }
 
     if (refineFrom?.extendSource) {

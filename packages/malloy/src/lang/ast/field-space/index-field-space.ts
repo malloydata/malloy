@@ -49,8 +49,11 @@ export class IndexFieldSpace extends QueryOperationSpace {
     }
   }
 
-  // mtoy TODO whic is the refineIndex unused
-  getPipeSegment(_refineIndex?: PipeSegment): IndexSegment {
+  getPipeSegment(refineIndex?: PipeSegment): IndexSegment {
+    if (refineIndex) {
+      this.log('Indexed cannot be refined');
+      return {type: 'index', indexFields: []};
+    }
     const indexFields: IndexFieldDef[] = [];
     for (const [name, field] of this.entries()) {
       if (field instanceof SpaceField) {
