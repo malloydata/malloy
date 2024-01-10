@@ -24,10 +24,6 @@
 import {Result, ResultJSON} from '@malloydata/malloy';
 import {HTMLView} from '../html/html_view';
 
-declare global {
-  var document: Document;
-}
-
 export async function renderMalloyResults(
   queryResult,
   totalRows,

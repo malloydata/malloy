@@ -47,13 +47,14 @@ const licenseBanner = `/*
  */
 `;
 
+/* eslint-disable no-console */
 async function bundle() {
   try {
     await build({
       entryPoints: ['./src/bundle/main.ts'],
       bundle: true,
       sourcemap: true,
-      outfile: './src/bundle/bundled_renderer.js',
+      outfile: './dist/bundle/bundled_renderer.js',
       platform: 'browser',
       target: 'esnext',
       define: {
@@ -63,7 +64,6 @@ async function bundle() {
         js: licenseBanner,
       },
     });
-
     console.log('Build completed successfully.');
   } catch (e) {
     console.error('Build failed:', e.message);
