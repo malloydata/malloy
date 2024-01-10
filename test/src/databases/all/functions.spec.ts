@@ -1147,15 +1147,59 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       );
     });
 
-    it(`works with order by and limit - ${databaseName}`, async () => {
+    it(`works with order by field - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
           `run: aircraft -> {
-            aggregate: f is string_agg(name) { order_by: name; limit: 2 }
+            aggregate: f is string_agg(name, ',', name)
           }`
         )
         .run();
       expect(result.sql).toBe("FOO")
+      expect(result.data.path(0, 'f').string.value).toBe(
+        'FORSBERG CHARLES P,BOEGER BOGIE M'
+      );
+    });
+
+    it(`works with order by expression - ${databaseName}`, async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `run: aircraft -> {
+            group_by: name
+            order_by: name
+            limit: 10
+          } -> {
+            aggregate: f is string_agg(name, ',', concat(name, 'a'))
+          }`
+        )
+        .run();
+      expect(result.data.path(0, 'f').string.value).toBe(
+        'FORSBERG CHARLES P,BOEGER BOGIE M'
+      );
+    });
+
+    it(`works with order by join expression - ${databaseName}`, async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `run: aircraft -> {
+            aggregate: f is string_agg(name, ',', aircraft_models.model)
+          }`
+        )
+        .run();
+      expect(result.data.path(0, 'f').string.value).toBe(
+        'FORSBERG CHARLES P,BOEGER BOGIE M'
+      );
+    });
+
+    it(`works with order asc - ${databaseName}`, async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `run: aircraft -> {
+            aggregate: f is string_agg(name, ',', name, true)
+          }`
+        )
+        .run();
+      expect(result.sql).toBe('FOO');
       expect(result.data.path(0, 'f').string.value).toBe(
         'FORSBERG CHARLES P,BOEGER BOGIE M'
       );

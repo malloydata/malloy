@@ -417,17 +417,12 @@ class QueryField extends QueryNode {
   private expandFunctionCall(
     dialect: string,
     overload: FunctionOverloadDef,
-    args: Expr[],
-    orderBy?: OrderBy[],
-    limit?: number
+    args: Expr[]
   ) {
     const paramMap = this.getParameterMap(overload, args.length);
     if (overload.dialect[dialect] === undefined) {
       throw new Error(`Function is not defined for dialect ${dialect}`);
     }
-    const orderByFrag =
-      orderBy !== undefined ? [this.generateSQLAggregateOrderBy(orderBy)] : [];
-    const limitFrag = limit !== undefined ? [` LIMIT ${limit}`] : [];
     return exprMap(overload.dialect[dialect], fragment => {
       if (typeof fragment === 'string') {
         return [fragment];
@@ -464,10 +459,22 @@ class QueryField extends QueryNode {
         } else {
           return args[entry.argIndexes[0]];
         }
-      } else if (fragment.type === 'function_order_by') {
-        return orderByFrag;
-      } else if (fragment.type === 'function_limit') {
-        return limitFrag;
+      } else if (fragment.type === 'function_order_asc_desc') {
+        const entry = paramMap.get(fragment.name);
+        if (entry === undefined) {
+          return [fragment];
+        } else {
+          const arg = args[entry.argIndexes[0]];
+          if (arg.length !== 1) {
+            return [fragment];
+          } else if (arg[0] === 'true') {
+            return ['ASC'];
+          } else if (arg[0] === 'false') {
+            return ['DESC'];
+          } else {
+            return [];
+          }
+        }
       }
       return [fragment];
     });
@@ -538,9 +545,7 @@ class QueryField extends QueryNode {
       const funcCall: Expr = this.expandFunctionCall(
         context.dialect.name,
         overload,
-        mappedArgs,
-        frag.orderBy,
-        frag.limit
+        mappedArgs
       );
 
       if (expressionIsAnalytic(overload.returnType.expressionType)) {

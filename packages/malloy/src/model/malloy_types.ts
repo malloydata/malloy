@@ -215,12 +215,9 @@ export interface FunctionParameterFragment {
   name: string;
 }
 
-export interface FunctionOrderFragment {
-  type: 'function_order_by';
-}
-
-export interface FunctionLimitFragment {
-  type: 'function_limit';
+export interface FunctionOrderAscDescFragment {
+  type: 'function_order_asc_desc';
+  name: string;
 }
 
 export function isFunctionParameterFragment(
@@ -402,8 +399,7 @@ export type Fragment =
   | UngroupFragment
   | DialectFragment
   | FunctionParameterFragment
-  | FunctionOrderFragment
-  | FunctionLimitFragment
+  | FunctionOrderAscDescFragment
   | FunctionCallFragment
   | SQLExpressionFragment
   | SpreadFragment;
