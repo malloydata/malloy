@@ -8,6 +8,7 @@
     "*.d.ts",
     "node_modules/",
     "packages/malloy/src/lang/lib/Malloy",
+    "packages/malloy-render/src/bundle/bundled_renderer.js",
     "dist/"
   ],
   "plugins": ["@malloydata/lint"],
