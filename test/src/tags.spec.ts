@@ -487,4 +487,10 @@ describe('tags in results', () => {
     const modelTags = result.modelTag;
     expect(modelTags.text('from')).toEqual('cell2');
   });
+  test('test for speos and mtoy', () => {
+    const parse1 = Tag.fromTagline('# plot', undefined);
+    console.log('parse1 peek: ', parse1.tag.peek());
+    const parse2 = Tag.fromTagline('# plot.x=2', parse1.tag);
+    console.log('parse2 peek: ', parse2.tag.peek());
+  });
 });
