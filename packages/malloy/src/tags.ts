@@ -133,14 +133,14 @@ export class Tag implements TagInterface {
         str += `\n${spaces}  =: ${this.eq}`;
       } else {
         str += `\n${spaces}  =: [\n${spaces}    ${this.eq
-          .map(el => new Tag(el).peek(indent + 4))
+          .map(el => Tag.tagFrom(el).peek(indent + 4))
           .join(`\n${spaces}    `)}\n${spaces}  ]`;
       }
     }
 
     if (this.properties) {
       for (const k in this.properties) {
-        const val = new Tag(this.properties[k]);
+        const val = Tag.tagFrom(this.properties[k]);
         str += `\n${spaces}  ${k}: ${val.peek(indent + 2)}`;
       }
     }
