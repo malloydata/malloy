@@ -21,9 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Result, Tag} from '@malloydata/malloy';
+import {ModelDef, QueryResult, Result, Tag} from '@malloydata/malloy';
 import {LitElement, html, css, PropertyValues} from 'lit';
-import {customElement, property} from 'lit/decorators.js';
+import {customElement, property, state} from 'lit/decorators.js';
 import './table';
 import './bar-chart';
 import {provide} from '@lit/context';
@@ -85,16 +85,33 @@ export class MalloyRender extends LitElement {
   `;
 
   @property({attribute: false})
-  result!: Result;
+  result?: Result;
+
+  @property({attribute: false})
+  queryResult?: QueryResult;
+
+  @property({attribute: false})
+  modelDef?: ModelDef;
+
+  @state()
+  private _result!: Result;
 
   @provide({context: resultContext})
   metadata!: RenderResultMetadata;
 
   willUpdate(changedProperties: PropertyValues<this>) {
-    if (changedProperties.has('result')) {
-      this.metadata = getResultMetadata(this.result);
-      const modelTag = this.result.modelTag;
-      const {tag: resultTag} = this.result.tagParse();
+    if (
+      changedProperties.has('result') ||
+      changedProperties.has('queryResult') ||
+      changedProperties.has('modelDef')
+    ) {
+      if (this.result) this._result = this.result;
+      else if (this.queryResult && this.modelDef) {
+        this._result = new Result(this.queryResult, this.modelDef);
+      }
+      this.metadata = getResultMetadata(this._result);
+      const modelTag = this._result.modelTag;
+      const {tag: resultTag} = this._result.tagParse();
       const modelTheme = modelTag.tag('theme');
       const localTheme = resultTag.tag('theme');
       this.updateTheme(modelTheme, localTheme);
@@ -193,7 +210,7 @@ export class MalloyRender extends LitElement {
   override render() {
     return html`<malloy-table
       exportparts="table-container: container"
-      .data=${this.result.data}
+      .data=${this._result.data}
     ></malloy-table>`;
   }
 }
