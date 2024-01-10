@@ -48,7 +48,7 @@ export async function renderMalloyResults(
     // eslint-disable-next-line no-console
     console.error('Error rendering results:', error);
     const span = document.createElement('span');
-    span.textContent = 'Unable render malloy results.';
+    span.textContent = 'Unable to render malloy results.';
     return span;
   }
 }
