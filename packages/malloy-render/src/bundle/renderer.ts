@@ -21,37 +21,38 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {QueryData, Result, ResultJSON} from '@malloydata/malloy';
+import {Result, ResultJSON} from '@malloydata/malloy';
 import {HTMLView} from '../html/html_view';
 
 declare global {
-  // eslint-disable-next-line no-var
   var document: Document;
 }
 
 export async function renderMalloyResults(
-  resultStr: string,
-  totalRows: number,
-  preparedResultStr: string,
-  resultElementId: string
+  queryResult,
+  totalRows,
+  preparedResult
 ) {
-  const resultElement = document.getElementById(resultElementId);
-  const queryData: QueryData = JSON.parse(resultStr) as QueryData;
-  const preparedJson = JSON.parse(preparedResultStr);
-  const malloyRes: ResultJSON = {
-    queryResult: {
-      ...preparedJson.inner,
-      result: queryData,
-      totalRows: totalRows,
-    },
-    modelDef: preparedJson.modelDef,
-  };
-
-  const result = Result.fromJSON(malloyRes);
-  const htmlView = new HTMLView(document).render(result, {
-    dataStyles: {},
-    isDrillingEnabled: false,
-  });
-  const renderedHtml = await htmlView;
-  resultElement?.appendChild(renderedHtml);
+  try {
+    const malloyRes: ResultJSON = {
+      queryResult: {
+        ...preparedResult.inner,
+        result: queryResult,
+        totalRows: totalRows,
+      },
+      modelDef: preparedResult.modelDef,
+    };
+    const result = Result.fromJSON(malloyRes);
+    const htmlView = new HTMLView(document).render(result, {
+      dataStyles: {},
+      isDrillingEnabled: false,
+    });
+    return await htmlView;
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Error rendering results:', error);
+    const span = document.createElement('span');
+    span.textContent = 'Unable render malloy results.';
+    return span;
+  }
 }

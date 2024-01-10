@@ -26,19 +26,17 @@ import {renderMalloyResults} from './renderer';
 declare global {
   interface Window {
     renderMalloyResults: (
-      resultStr: string,
-      totalRows: number,
-      preparedResultStr: string,
-      resultElementId: string
-    ) => void;
+      queryResult,
+      totalRows,
+      preparedResult
+    ) => Promise<HTMLElement>;
   }
 }
 
-window.renderMalloyResults = (
+window.renderMalloyResults = async (
   resultStr,
   totalRows,
-  preparedResultStr,
-  resultElementId
+  preparedResultStr
 ) => {
-  renderMalloyResults(resultStr, totalRows, preparedResultStr, resultElementId);
+  return await renderMalloyResults(resultStr, totalRows, preparedResultStr);
 };

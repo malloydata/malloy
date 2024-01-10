@@ -13,15 +13,13 @@
     "node": ">=16"
   },
   "scripts": {
-    "add_licence": "node ./src/bundle/bundle_license.js",
-    "esbuild_bundle": "esbuild ./src/bundle/main.ts --bundle --sourcemap --outfile=./src/bundle/bundled_renderer.js --platform=browser --target=esnext '--define:process.env.NODE_DEBUG=\"development\"'",
-    "bundle_renderer": "npm run esbuild_bundle && npm run add_licence",
+    "bundle_renderer": "node src/bundle/esbuild_bundler.js",
     "lint": "eslint '**/*.ts{,x}'",
     "lint-fix": "eslint '**/*.ts{,x}' --fix",
     "test": "jest --config=../../jest.config.js",
     "build": "tsc --build",
     "clean": "tsc --build --clean",
-    "prepublishOnly": "npm run build",
+    "prepublishOnly": "npm run build && npm run bundle_renderer",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
   },
