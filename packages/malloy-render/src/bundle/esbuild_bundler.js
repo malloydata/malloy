@@ -70,4 +70,27 @@ async function bundle() {
   }
 }
 
+async function minifiedBundle() {
+  try {
+    await build({
+      entryPoints: ['./src/bundle/main.ts'],
+      bundle: true,
+      minify: true,
+      outfile: './dist/bundle/bundled_renderer.min.js',
+      platform: 'browser',
+      target: 'esnext',
+      define: {
+        'process.env.NODE_DEBUG': '"development"',
+      },
+      banner: {
+        js: licenseBanner,
+      },
+    });
+    console.log('Minify build completed successfully.');
+  } catch (e) {
+    console.error('Build failed:', e.message);
+  }
+}
+
 bundle();
+minifiedBundle();
