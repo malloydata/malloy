@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Result, ResultJSON} from '@malloydata/malloy';
+import {Result, ResultJSON, PreparedResult} from '@malloydata/malloy';
 import {HTMLView} from '../html/html_view';
 
 export async function renderMalloyResults(
@@ -30,13 +30,32 @@ export async function renderMalloyResults(
   preparedResult
 ) {
   try {
+    let preparedResultObj: PreparedResult;
+    if (
+      preparedResult._modelDef !== undefined &&
+      preparedResult._rawQuery !== undefined
+    ) {
+      // prepared result is safely typecasted.
+      preparedResultObj = preparedResult;
+    } else if (
+      preparedResult.inner !== undefined &&
+      preparedResult.modelDef !== undefined
+    ) {
+      // prepared result is raw json.
+      preparedResultObj = PreparedResult.fromJson({
+        query: preparedResult.inner,
+        modelDef: preparedResult.modelDef,
+      });
+    } else {
+      throw new Error('preparedResult has missing properties.');
+    }
     const malloyRes: ResultJSON = {
       queryResult: {
-        ...preparedResult.inner,
+        ...preparedResultObj._rawQuery,
         result: queryResult,
         totalRows: totalRows,
       },
-      modelDef: preparedResult.modelDef,
+      modelDef: preparedResultObj._modelDef,
     };
     const result = Result.fromJSON(malloyRes);
     const htmlView = new HTMLView(document).render(result, {
