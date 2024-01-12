@@ -33,6 +33,7 @@ import {LookupResult} from '../types/lookup-result';
 import {ColumnSpaceField} from './column-space-field';
 import {StructSpaceField} from './static-space';
 import {QueryInputSpace} from './query-input-space';
+import { SpaceEntry } from '../types/space-entry';
 
 /**
  * The output space of a query operation. It is not named "QueryOutputSpace"
@@ -101,6 +102,7 @@ export abstract class QueryOperationSpace
       }
     }
     const dialect = this.dialectObj();
+    const expandEntries: {name: string; entry: SpaceEntry}[] = [];
     for (const [name, entry] of current.entries()) {
       if (wild.except.has(name)) {
         continue;
@@ -121,10 +123,16 @@ export abstract class QueryOperationSpace
           model.expressionIsScalar(eType.expressionType) &&
           (dialect === undefined || !dialect.ignoreInProject(name))
         ) {
-          this.setEntry(name, entry);
+          expandEntries.push({name, entry});
           this.expandedWild[name] = joinPath.concat(name);
         }
       }
+    }
+    // There were tests which expected these to be sorted, and that seems reasonable
+    for (const x of expandEntries.sort((a, b) =>
+      a.name.localeCompare(b.name)
+    )) {
+      this.setEntry(x.name, x.entry);
     }
   }
 }
