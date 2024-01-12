@@ -33,6 +33,7 @@ import {
 import {MalloyElement} from '../types/malloy-element';
 import {SpaceField} from '../types/space-field';
 import {QueryOperationSpace} from './query-spaces';
+import { ReferenceField } from './reference-field';
 
 export class IndexFieldSpace extends QueryOperationSpace {
   readonly segmentType = 'index';
@@ -51,7 +52,7 @@ export class IndexFieldSpace extends QueryOperationSpace {
 
   getPipeSegment(refineIndex?: PipeSegment): IndexSegment {
     if (refineIndex) {
-      this.log('Indexed cannot be refined');
+      this.log('index query operations cannot be refined');
       return {type: 'index', indexFields: []};
     }
     const indexFields: IndexFieldDef[] = [];
@@ -62,8 +63,15 @@ export class IndexFieldSpace extends QueryOperationSpace {
           indexFields.push({type: 'fieldref', path: wildPath});
           continue;
         }
-        if (field instanceof FieldReference) {
-          indexFields.push(field.refToField);
+        if (field instanceof ReferenceField) {
+          // attempt to cause a type check
+          const fieldRef = field.fieldRef;
+          const check = fieldRef.getField(this.exprSpace);
+          if (check.error) {
+            fieldRef.log(check.error);
+          } else {
+            indexFields.push(fieldRef.refToField);
+          }
         }
         // see pushFields above, this is all there is
       }
@@ -71,7 +79,5 @@ export class IndexFieldSpace extends QueryOperationSpace {
     return {type: 'index', indexFields};
   }
 
-  addRefineFromFields(_refineThis: never) {
-    throw new Error('Refine the index');
-  }
+  addRefineFromFields(_refineThis: never) {}
 }
