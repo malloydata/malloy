@@ -33,7 +33,7 @@ import {LookupResult} from '../types/lookup-result';
 import {ColumnSpaceField} from './column-space-field';
 import {StructSpaceField} from './static-space';
 import {QueryInputSpace} from './query-input-space';
-import { SpaceEntry } from '../types/space-entry';
+import {SpaceEntry} from '../types/space-entry';
 
 /**
  * The output space of a query operation. It is not named "QueryOutputSpace"
