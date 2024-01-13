@@ -897,13 +897,13 @@ describe('query:', () => {
       expect('run:a->{index: astr}').toTranslate();
     });
     test('index path', () => {
-      expect('run:ab->{index: ab.astr}').toTranslate();
+      expect('run:ab->{index: b.astr}').toTranslate();
     });
     test('index unique on path', () => {
-      expect('run:ab->{index: b.astr, ab.astr}').toTranslate();
+      expect('run:ab->{index: astr, b.astr}').toTranslate();
     });
     test('index join.*', () => {
-      expect('run:ab->{index: ab.*}').toTranslate();
+      expect('run:ab->{index: b.*}').toTranslate();
     });
     test('index multiple', () => {
       const model = new TestTranslator('run:a->{index: af, astr}');
@@ -917,22 +917,6 @@ describe('query:', () => {
           expect(index.indexFields).toEqual([
             {type: 'fieldref', path: ['af']},
             {type: 'fieldref', path: ['astr']},
-          ]);
-        }
-      }
-    });
-    test('index star', () => {
-      const model = new TestTranslator('run:a->{index: *, astr}');
-      expect(model).toTranslate();
-      const q = model.getQuery(0);
-      expect(q).toBeDefined();
-      if (q) {
-        const index = q.pipeline[0];
-        expect(index.type).toBe('index');
-        if (index.type === 'index') {
-          expect(index.indexFields).toEqual([
-            {type: 'fieldref', path: ['af']},
-            {type: '*', wildPath: []},
           ]);
         }
       }

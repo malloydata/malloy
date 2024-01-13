@@ -151,6 +151,15 @@ export class IndexFieldReference extends FieldReference {
   typecheck(type: TypeDesc) {
     typecheckIndex(type, this);
   }
+
+  // Index entries are expected to be unique on path
+  static indexOutputName(path: string[]): string {
+    return path.map(pe => encodeURIComponent(pe)).join('/');
+  }
+
+  get outputName(): string {
+    return IndexFieldReference.indexOutputName(this.path);
+  }
 }
 
 export class AggregateFieldReference extends FieldReference {

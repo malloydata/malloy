@@ -25,15 +25,21 @@ import {
   IndexSegment,
   PipeSegment,
   IndexFieldDef,
+  isAtomicFieldType,
+  expressionIsScalar,
 } from '../../../model/malloy_types';
 import {
   FieldReference,
+  IndexFieldReference,
   WildcardFieldReference,
 } from '../query-items/field-references';
+import {FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
+import {SpaceEntry} from '../types/space-entry';
 import {SpaceField} from '../types/space-field';
 import {QueryOperationSpace} from './query-spaces';
-import { ReferenceField } from './reference-field';
+import {ReferenceField} from './reference-field';
+import {StructSpaceField} from './static-space';
 
 export class IndexFieldSpace extends QueryOperationSpace {
   readonly segmentType = 'index';
@@ -73,11 +79,74 @@ export class IndexFieldSpace extends QueryOperationSpace {
             indexFields.push(fieldRef.refToField);
           }
         }
-        // see pushFields above, this is all there is
       }
     }
     return {type: 'index', indexFields};
   }
 
   addRefineFromFields(_refineThis: never) {}
+
+  protected addWild(wild: WildcardFieldReference): void {
+    let current: FieldSpace = this.exprSpace;
+    const joinPath: string[] = [];
+    if (wild.joinPath) {
+      // walk path to determine namespace for *
+      for (const pathPart of wild.joinPath.list) {
+        const part = pathPart.refString;
+        joinPath.push(part);
+
+        const ent = current.entry(part);
+        if (ent) {
+          if (ent instanceof StructSpaceField) {
+            current = ent.fieldSpace;
+          } else {
+            pathPart.log(
+              `Field '${part}' does not contain rows and cannot be expanded with '*'`
+            );
+            return;
+          }
+        } else {
+          pathPart.log(`No such field as '${part}'`);
+          return;
+        }
+      }
+    }
+    const dialect = this.dialectObj();
+    const expandEntries: {name: string; entry: SpaceEntry}[] = [];
+    for (const [name, entry] of current.entries()) {
+      if (wild.except.has(name)) {
+        continue;
+      }
+      const indexName = IndexFieldReference.indexOutputName([
+        ...joinPath,
+        name,
+      ]);
+      if (this.entry(indexName)) {
+        const conflict = this.expandedWild[indexName]?.join('.');
+        wild.log(
+          `Cannot expand '${name}' in '${
+            wild.refString
+          }' because a field with that name already exists${
+            conflict ? ` (conflicts with ${conflict})` : ''
+          }`
+        );
+      } else {
+        const eType = entry.typeDesc();
+        if (
+          isAtomicFieldType(eType.dataType) &&
+          expressionIsScalar(eType.expressionType) &&
+          (dialect === undefined || !dialect.ignoreInProject(name))
+        ) {
+          expandEntries.push({name: indexName, entry});
+          this.expandedWild[indexName] = joinPath.concat(name);
+        }
+      }
+    }
+    // There were tests which expected these to be sorted, and that seems reasonable
+    for (const x of expandEntries.sort((a, b) =>
+      a.name.localeCompare(b.name)
+    )) {
+      this.setEntry(x.name, x.entry);
+    }
+  }
 }
