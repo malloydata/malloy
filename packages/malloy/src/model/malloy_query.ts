@@ -68,7 +68,6 @@ import {
   isSpreadFragment,
   isSQLExpressionFragment,
   isUngroupFragment,
-  isValueParameter,
   JoinRelationship,
   ModelDef,
   OrderBy,
@@ -88,7 +87,6 @@ import {
   SQLExpressionFragment,
   StructDef,
   StructRef,
-  TransitionalFieldName,
   TurtleDef,
   UngroupFragment,
 } from './malloy_types';
@@ -552,8 +550,11 @@ class QueryField extends QueryNode {
     resultSet: FieldInstanceResult,
     context: QueryStruct,
     expr: ParameterFragment,
-    state: GenerateState
+    _state: GenerateState
   ): string {
+    /*
+      mtoy todo parameters and paths figure this out
+
     // find the structDef and return the path to the field...
     const param = context.parameters()[expr.path];
     if (isValueParameter(param)) {
@@ -573,6 +574,7 @@ class QueryField extends QueryNode {
         state
       );
     }
+    */
     throw new Error(`Can't generate SQL, no value for ${expr.path}`);
   }
 
@@ -658,11 +660,15 @@ class QueryField extends QueryNode {
   generateDistinctKeyIfNecessary(
     resultSet: FieldInstanceResult,
     context: QueryStruct,
-    structPath: string | undefined
+    structPath: string[] | undefined
   ): string | undefined {
     let struct = context;
     if (structPath) {
-      struct = this.parent.root().getStructByName(structPath);
+      if (structPath.length > 1) {
+        // structPath is an aray but getStructByName takes a string, not sure what is wrong
+        throw new Error('lloyd needs to explain this to mtoy');
+      }
+      struct = this.parent.root().getStructByName(structPath[0]);
     }
     if (struct.needsSymetricCalculation(resultSet)) {
       return struct.getDistinctKey().generateExpression(resultSet);
@@ -1100,10 +1106,10 @@ class QueryFieldStruct extends QueryAtomicField {
         onExpression: [
           {
             type: 'field',
-            path: this.primaryKey,
+            path: [this.primaryKey],
           },
           '=',
-          {type: 'field', path: foreignKeyName},
+          {type: 'field', path: [foreignKeyName]},
         ],
       },
     };
@@ -2052,7 +2058,7 @@ class QueryQuery extends QueryField {
   addDependantPath(
     resultStruct: FieldInstanceResult,
     context: QueryStruct,
-    path: TransitionalFieldName,
+    path: string[],
     mayNeedUniqueKey: boolean,
     joinStack: string[]
   ) {
@@ -3532,7 +3538,7 @@ class QueryQueryIndexStage extends QueryQuery {
     }
     const measure = (this.firstSegment as IndexSegment).weightMeasure;
     if (measure !== undefined) {
-      const f = this.parent.getFieldByName(measure) as QueryField;
+      const f = this.parent.getFieldByName([measure]) as QueryField;
       resultStruct.addField(measure, f, {
         resultIndex,
         type: 'result',
@@ -4182,7 +4188,7 @@ class QueryStruct extends QueryNode {
 
   primaryKey(): QueryAtomicField | undefined {
     if (this.fieldDef.primaryKey) {
-      return this.getDimensionByName(this.fieldDef.primaryKey);
+      return this.getDimensionByName([this.fieldDef.primaryKey]);
     } else {
       return undefined;
     }
@@ -4198,9 +4204,7 @@ class QueryStruct extends QueryNode {
   }
 
   /** convert a name into a field reference */
-  getFieldByName(name: TransitionalFieldName): QuerySomething {
-    const path =
-      typeof name === 'string' ? QueryStruct.resolvePath(name) : name;
+  getFieldByName(path: string[]): QuerySomething {
     return path.reduce((retField: QuerySomething, childName: string) => {
       const r = retField.getChildByName(childName);
       if (r === undefined) {
@@ -4211,7 +4215,7 @@ class QueryStruct extends QueryNode {
   }
 
   // structs referenced in queries are converted to fields.
-  getQueryFieldByName(name: TransitionalFieldName): QuerySomething {
+  getQueryFieldByName(name: string[]): QuerySomething {
     let field = this.getFieldByName(name);
     if (field instanceof QueryStruct) {
       field = field.getAsQueryField();
@@ -4219,7 +4223,7 @@ class QueryStruct extends QueryNode {
     return field;
   }
 
-  getDimensionOrMeasureByName(name: TransitionalFieldName): QueryAtomicField {
+  getDimensionOrMeasureByName(name: string[]): QueryAtomicField {
     const query = this.getFieldByName(name);
     if (query instanceof QueryAtomicField) {
       return query;
@@ -4229,7 +4233,7 @@ class QueryStruct extends QueryNode {
   }
 
   /** returns a query object for the given name */
-  getDimensionByName(name: TransitionalFieldName): QueryAtomicField {
+  getDimensionByName(name: string[]): QueryAtomicField {
     const query = this.getFieldByName(name);
 
     if (query instanceof QueryAtomicField && isScalarField(query)) {
@@ -4251,7 +4255,7 @@ class QueryStruct extends QueryNode {
 
   getDistinctKey(): QueryAtomicField {
     if (this.fieldDef.structRelationship.type !== 'inline') {
-      return this.getDimensionByName('__distinct_key');
+      return this.getDimensionByName(['__distinct_key']);
     } else if (this.parent) {
       return this.parent.getDistinctKey();
     } else {

@@ -29,7 +29,6 @@ import {
   Fragment,
   isAtomicFieldType,
   StructRelationship,
-  TransitionalFieldName,
 } from '../../../model/malloy_types';
 import {exprWalk} from '../../../model/utils';
 
@@ -74,7 +73,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
     const inputFS = fs.isQueryFieldSpace() ? fs.inputSpace() : fs;
     let expr: FieldReference | ExpressionDef | undefined = this.expr;
     let exprVal = this.expr?.getExpression(inputFS);
-    let structPath = this.source?.refString;
+    let structPath = this.source?.path;
     let sourceRelationship: {
       name: string;
       structRelationship: StructRelationship;
@@ -103,7 +102,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
             ],
             evalSpace: footType.evalSpace,
           };
-          structPath = this.source.sourceString;
+          structPath = this.source.path;
           // Here we handle a special case where you write `foo.agg()` and `foo` is a
           // dimension which uses only one distinct join path; in this case, we set the
           // locality to be that join path
@@ -115,7 +114,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
             allUsagePaths.length > 0 &&
             allUsagePaths.slice(1).every(x => x === allUsagePaths[0]);
           if (allUsagesSame) {
-            structPath = allUsagePaths[0];
+            structPath = [allUsagePaths[0]];
             sourceRelationship = joinUsage[0];
           }
         } else {
@@ -221,21 +220,20 @@ function getJoinUsage(
   const result: {name: string; structRelationship: StructRelationship}[][] = [];
   const lookup = (
     fs: FieldSpace,
-    path: TransitionalFieldName
+    path: string[]
   ): {
     fs: FieldSpace;
     def: FieldDef;
     relationship: {name: string; structRelationship: StructRelationship}[];
   } => {
-    const parts = typeof path === 'string' ? path.split('.') : [...path];
-    const head = parts[0];
-    const rest = parts.slice(1);
+    const head = path[0];
+    const rest = path.slice(1);
     const def = fs.entry(head);
     if (def === undefined) {
       throw new Error(`Invalid field lookup ${head}`);
     }
     if (def instanceof StructSpaceField && rest.length > 0) {
-      const restDef = lookup(def.fieldSpace, rest.join('.'));
+      const restDef = lookup(def.fieldSpace, rest);
       return {
         ...restDef,
         relationship: [

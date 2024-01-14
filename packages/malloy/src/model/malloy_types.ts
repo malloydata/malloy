@@ -176,7 +176,7 @@ export interface AggregateFragment {
   type: 'aggregate';
   function: string;
   e: Expr;
-  structPath?: string;
+  structPath?: string[];
 }
 export function isAggregateFragment(f: Fragment): f is AggregateFragment {
   return (f as AggregateFragment)?.type === 'aggregate';
@@ -212,7 +212,7 @@ export interface FunctionCallFragment {
   overload: FunctionOverloadDef;
   expressionType: ExpressionType;
   args: Expr[];
-  structPath?: string;
+  structPath?: string[];
 }
 
 export function isFunctionCallFragment(f: Fragment): f is FunctionCallFragment {
@@ -239,12 +239,9 @@ export function isSpreadFragment(f: Fragment): f is SpreadFragment {
   return (f as SpreadFragment)?.type === 'spread';
 }
 
-/* for now, while we are transitionin to string[] */
-export type TransitionalFieldName = string | string[];
-
 export interface FieldFragment {
   type: 'field';
-  path: TransitionalFieldName;
+  path: string[];
 }
 export function isFieldFragment(f: Fragment): f is FieldFragment {
   return (f as FieldFragment)?.type === 'field';
@@ -252,7 +249,7 @@ export function isFieldFragment(f: Fragment): f is FieldFragment {
 
 export interface ParameterFragment {
   type: 'parameter';
-  path: string;
+  path: string[];
 }
 export function isParameterFragment(f: Fragment): f is ParameterFragment {
   return (f as ParameterFragment)?.type === 'parameter';
