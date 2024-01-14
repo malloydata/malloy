@@ -48,9 +48,9 @@ describe('BigQuery hand-built expression test', () => {
       type: 'one',
       matrixOperation: 'left',
       onExpression: [
-        {type: 'field', path: `${leftKey}`},
+        {type: 'field', path: [leftKey]},
         '=',
-        {type: 'field', path: `${rightKey}`},
+        {type: 'field', path: [rightKey]},
       ],
     };
   }
@@ -125,7 +125,7 @@ describe('BigQuery hand-built expression test', () => {
           {
             type: 'aggregate',
             function: 'sum',
-            e: [{type: 'field', path: 'seats'}],
+            e: [{type: 'field', path: ['seats']}],
           },
         ],
         expressionType: 'aggregate',
@@ -142,7 +142,7 @@ describe('BigQuery hand-built expression test', () => {
               {
                 type: 'aggregate',
                 function: 'sum',
-                e: [{type: 'field', path: 'seats'}],
+                e: [{type: 'field', path: ['seats']}],
               },
             ],
             filterList: [
@@ -152,7 +152,7 @@ describe('BigQuery hand-built expression test', () => {
                 expression: [
                   {
                     type: 'field',
-                    path: 'manufacturer',
+                    path: ['manufacturer'],
                   },
                   "='BOEING'",
                 ],
@@ -167,9 +167,9 @@ describe('BigQuery hand-built expression test', () => {
         type: 'number',
         e: [
           '(',
-          {type: 'field', path: 'boeing_seats'},
+          {type: 'field', path: ['boeing_seats']},
           '/',
-          {type: 'field', path: 'total_seats'},
+          {type: 'field', path: ['total_seats']},
           ')*100',
         ],
         expressionType: 'aggregate',
@@ -179,7 +179,7 @@ describe('BigQuery hand-built expression test', () => {
         name: 'percent_boeing_floor',
         type: 'number',
         expressionType: 'aggregate',
-        e: ['FLOOR(', {type: 'field', path: 'percent_boeing'}, ')'],
+        e: ['FLOOR(', {type: 'field', path: ['percent_boeing']}, ')'],
         numberType: 'float',
       },
     ],
@@ -319,7 +319,7 @@ describe('BigQuery hand-built expression test', () => {
                       e: [
                         {
                           type: 'field',
-                          path: 'aircraft_models.seats',
+                          path: ['aircraft_models.seats'],
                         },
                       ],
                     },
@@ -331,7 +331,7 @@ describe('BigQuery hand-built expression test', () => {
                       expression: [
                         {
                           type: 'field',
-                          path: 'aircraft_models.manufacturer',
+                          path: ['aircraft_models.manufacturer'],
                         },
                         "='BOEING'",
                       ],
@@ -451,7 +451,7 @@ describe('BigQuery hand-built expression test', () => {
               e: [
                 {
                   type: 'exclude',
-                  e: [{type: 'field', path: 'aircraft_count'}],
+                  e: [{type: 'field', path: ['aircraft_count']}],
                 },
               ],
             },
@@ -504,7 +504,7 @@ describe('BigQuery hand-built expression test', () => {
                       e: [
                         {
                           type: 'exclude',
-                          e: [{type: 'field', path: 'aircraft_count'}],
+                          e: [{type: 'field', path: ['aircraft_count']}],
                         },
                       ],
                     },
@@ -565,7 +565,7 @@ describe('BigQuery hand-built expression test', () => {
                           {
                             type: 'aggregate',
                             function: 'sum',
-                            e: [{type: 'field', path: 'aircraft_count'}],
+                            e: [{type: 'field', path: ['aircraft_count']}],
                           },
                         ],
                         expressionType: 'aggregate',
@@ -688,8 +688,8 @@ describe('BigQuery hand-built expression test', () => {
                       {
                         type: 'aggregate',
                         function: 'sum',
-                        structPath: 'aircraft_models',
-                        e: [{type: 'field', path: 'aircraft_models.seats'}],
+                        structPath: ['aircraft_models'],
+                        e: [{type: 'field', path: ['aircraft_models.seats']}],
                       },
                     ],
                     filterList: [
@@ -699,7 +699,7 @@ describe('BigQuery hand-built expression test', () => {
                         expression: [
                           {
                             type: 'field',
-                            path: 'aircraft_models.manufacturer',
+                            path: ['aircraft_models.manufacturer'],
                           },
                           "='BOEING'",
                         ],
@@ -728,9 +728,9 @@ describe('BigQuery hand-built expression test', () => {
           type: 'many',
           matrixOperation: 'left',
           onExpression: [
-            {type: 'field', path: 'aircraft_model_code'},
+            {type: 'field', path: ['aircraft_model_code']},
             '=',
-            {type: 'field', path: 'aircraft.aircraft_model_code'},
+            {type: 'field', path: ['aircraft.aircraft_model_code']},
           ],
         },
       },

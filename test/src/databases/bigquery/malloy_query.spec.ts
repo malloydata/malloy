@@ -217,7 +217,7 @@ describe('BigQuery expression tests', () => {
                     {
                       type: 'aggregate',
                       function: 'sum',
-                      e: [{type: 'field', path: 'distance'}],
+                      e: [{type: 'field', path: ['distance']}],
                     },
                   ],
                 },
@@ -284,7 +284,7 @@ describe('BigQuery expression tests', () => {
                 {
                   type: 'aggregate',
                   function: 'sum',
-                  e: [{type: 'field', path: 'distance'}],
+                  e: [{type: 'field', path: ['distance']}],
                 },
               ],
             },
@@ -306,7 +306,7 @@ describe('BigQuery expression tests', () => {
             {
               type: 'string',
               name: 'carrier',
-              e: ['UPPER(', {type: 'field', path: 'carriers.nickname'}, ')'],
+              e: ['UPPER(', {type: 'field', path: ['carriers.nickname']}, ')'],
             },
             'flight_count',
           ]),
@@ -331,7 +331,7 @@ describe('BigQuery expression tests', () => {
                 {
                   type: 'aggregate',
                   function: 'sum',
-                  e: [{type: 'field', path: 'distance'}],
+                  e: [{type: 'field', path: ['distance']}],
                 },
               ],
             },
@@ -363,7 +363,7 @@ describe('BigQuery expression tests', () => {
                     {
                       type: 'aggregate',
                       function: 'sum',
-                      e: [{type: 'field', path: 'distance'}],
+                      e: [{type: 'field', path: ['distance']}],
                     },
                   ],
                 },
@@ -397,7 +397,7 @@ describe('BigQuery expression tests', () => {
                     {
                       type: 'aggregate',
                       function: 'sum',
-                      e: [{type: 'field', path: 'distance'}],
+                      e: [{type: 'field', path: ['distance']}],
                     },
                   ],
                 },
