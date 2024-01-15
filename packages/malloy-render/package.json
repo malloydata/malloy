@@ -13,12 +13,13 @@
     "node": ">=16"
   },
   "scripts": {
+    "bundle_renderer": "node src/bundle/esbuild_bundler.js",
     "lint": "eslint '**/*.ts{,x}'",
     "lint-fix": "eslint '**/*.ts{,x}' --fix",
     "test": "jest --config=../../jest.config.js",
     "build": "tsc --build",
     "clean": "tsc --build --clean",
-    "prepublishOnly": "npm run build",
+    "prepublishOnly": "npm run build && npm run bundle_renderer",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
   },
@@ -43,6 +44,7 @@
     "@storybook/html-vite": "^7.5.0",
     "@storybook/testing-library": "^0.2.2",
     "@storybook/types": "^7.5.3",
+    "esbuild": "0.19.11",
     "storybook": "^7.5.0"
   }
 }

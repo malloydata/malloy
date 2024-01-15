@@ -135,6 +135,7 @@ export {
   SourceRelationship,
   DateTimeframe,
   TimestampTimeframe,
+  PreparedResult,
   Result,
   QueryMaterializer,
   CSVWriter,
@@ -146,7 +147,6 @@ export {
 export type {
   Model,
   PreparedQuery,
-  PreparedResult,
   Field,
   AtomicField,
   ExploreField,
