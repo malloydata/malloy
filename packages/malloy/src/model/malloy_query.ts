@@ -3846,38 +3846,6 @@ class QueryStruct extends QueryNode {
     }
   }
 
-  // when structs are referenced in queries, incorporate the
-  //  primary key of struct and add the struct as a join to the result.
-  getAsQueryField(): QueryFieldStruct {
-    if (this.fieldDef.primaryKey === undefined) {
-      throw new Error(
-        `Joined explores can only be included in queries if a primary key is defined: '${this.getFullOutputName()}' has no primary key`
-      );
-    }
-
-    const pkField = this.getPrimaryKeyField(this.fieldDef);
-    const pkType = pkField.fieldDef.type;
-    if (pkType !== 'string' && pkType !== 'number') {
-      throw new Error(
-        `Unknown Primary key data type for ${pkField.fieldDef.name}`
-      );
-    }
-    const aliasName = getIdentifier(this.fieldDef);
-    const pkName = this.fieldDef.primaryKey;
-    const fieldDef: FieldDef = {
-      type: pkType,
-      name: `${aliasName}_id`,
-      e: [
-        {
-          type: 'field',
-          // path: pkField.getFullOutputName(),
-          path: pkField.getIdentifier(),
-        },
-      ],
-    };
-    return new QueryFieldStruct(fieldDef, this, `${aliasName}.${pkName}`);
-  }
-
   getSQLIdentifier(): string {
     if (this.unnestWithNumbers() && this.parent !== undefined) {
       const x =
@@ -3956,7 +3924,7 @@ class QueryStruct extends QueryNode {
   }
 
   /** the the primary key or throw an error. */
-  getPrimaryKeyField(fieldDef: FieldDef) {
+  getPrimaryKeyField(fieldDef: FieldDef): QueryAtomicField {
     let pk;
     if ((pk = this.primaryKey())) {
       return pk;
@@ -4138,9 +4106,9 @@ class QueryStruct extends QueryNode {
 
   // structs referenced in queries are converted to fields.
   getQueryFieldByName(name: string[]): QuerySomething {
-    let field = this.getFieldByName(name);
+    const field = this.getFieldByName(name);
     if (field instanceof QueryStruct) {
-      field = field.getAsQueryField();
+      throw new Error(`Cannot reference ${name} as a scalar'`);
     }
     return field;
   }

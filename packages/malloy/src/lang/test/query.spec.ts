@@ -620,14 +620,10 @@ describe('query:', () => {
         "Parameter 3 ('default') of lag must be literal or constant, but received output"
       );
     });
-    // TODO we don't handle referencing a join as a field correctly in all cases today.
-    // For now, it at least is considered type `struct` and therefore fails to parse
-    // as a function argument.
-    // We add <join_name>_id to the query, but it's not included in the output space
     test('cannot use struct in function arg', () => {
       expect(
-        `run: a extend {join_one: b with astr } -> {
-          group_by: b
+        `run: ab -> {
+          group_by: b.astr
           calculate: foo is lag(b)
         }`
       ).translationToFailWith('No matching overload for function lag(struct)');
@@ -726,12 +722,6 @@ describe('query:', () => {
       expect(`run: a -> {
         extend: { join_one: b with astr }
         group_by: b.ai
-      }`).toTranslate();
-    });
-    test('reference join name in group_by', () => {
-      expect(`run: a -> {
-        extend: { join_one: b with astr }
-        group_by: b
       }`).toTranslate();
     });
     test('can reference select: inline join.* field in calculate', () => {
