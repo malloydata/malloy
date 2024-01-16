@@ -664,11 +664,7 @@ class QueryField extends QueryNode {
   ): string | undefined {
     let struct = context;
     if (structPath) {
-      if (structPath.length > 1) {
-        // structPath is an aray but getStructByName takes a string, not sure what is wrong
-        throw new Error('lloyd needs to explain this to mtoy');
-      }
-      struct = this.parent.root().getStructByName(structPath[0]);
+      struct = this.parent.root().getStructByName(structPath);
     }
     if (struct.needsSymetricCalculation(resultSet)) {
       return struct.getDistinctKey().generateExpression(resultSet);
@@ -1985,75 +1981,6 @@ class QueryQuery extends QueryField {
     const as = field.getIdentifier();
     return {as, field};
   }
-
-  // find all the fieldNames in the struct (and children)
-  //  that match the filter
-  // expandWildCardStruct(
-  //   struct: QueryStruct,
-  //   expandChildren: boolean,
-  //   filter: ((qf: QueryNode) => boolean) | undefined = undefined
-  // ): string[] {
-  //   let fieldNames: string[] = [];
-  //   const structs: QueryStruct[] = [];
-
-  //   for (const [_name, f] of struct.nameMap) {
-  //     if (
-  //       f instanceof QueryAtomicField &&
-  //       isScalarField(f) &&
-  //       f.includeInWildcard() &&
-  //       !this.parent.dialect.ignoreInProject(f.fieldDef.name) &&
-  //       (!filter || filter(f))
-  //     ) {
-  //       // fieldNames.push(`${struct.getFullOutputName()}${name}`);
-  //       fieldNames.push(f.getFullOutputName());
-  //     } else if (f instanceof QueryStruct && expandChildren) {
-  //       structs.push(f);
-  //     }
-  //   }
-  //   for (const s of structs) {
-  //     fieldNames = fieldNames.concat(
-  //       this.expandWildCardStruct(s, expandChildren, filter)
-  //     );
-  //   }
-  //   return fieldNames;
-  // }
-  // // Do any '*' expansion.
-  // expandWildCards(
-  //   fields: QueryFieldDef[],
-  //   filter: ((qf: QueryNode) => boolean) | undefined = undefined
-  // ): QueryFieldDef[] {
-  //   let ret: QueryFieldDef[] = [];
-  //   for (const f of fields) {
-  //     if (typeof f !== 'string') {
-  //       ret.push(f);
-  //     } else {
-  //       const fieldName = f;
-  //       const path = fieldName.split('.');
-  //       if (!path[path.length - 1].startsWith('*')) {
-  //         ret.push(f);
-  //       } else {
-  //         const expandChildren = path.pop() === '**';
-  //         let struct = this.parent;
-  //         let pathElementName;
-  //         while (path.length > 0 && (pathElementName = path.shift())) {
-  //           const structNode = struct.getChildByName(pathElementName);
-  //           if (structNode === undefined) {
-  //             throw new Error(`Nested source not found '${pathElementName}'`);
-  //           }
-  //           if (structNode instanceof QueryStruct) {
-  //             struct = structNode;
-  //           } else {
-  //             throw new Error(`'${pathElementName}' is not a source object`);
-  //           }
-  //         }
-  //         ret = ret.concat(
-  //           this.expandWildCardStruct(struct, expandChildren, filter)
-  //         );
-  //       }
-  //     }
-  //   }
-  //   return ret;
-  // }
 
   addDependantPath(
     resultStruct: FieldInstanceResult,
@@ -4194,16 +4121,11 @@ class QueryStruct extends QueryNode {
     }
   }
 
-  /** get the componennts of a field path */
-  static resolvePath(name: string): string[] {
-    return name.split('.');
-  }
-
   getChildByName(name: string): QuerySomething | undefined {
     return this.nameMap.get(name);
   }
 
-  /** convert a name into a field reference */
+  /** convert a path into a field reference */
   getFieldByName(path: string[]): QuerySomething {
     return path.reduce((retField: QuerySomething, childName: string) => {
       const r = retField.getChildByName(childName);
@@ -4244,12 +4166,12 @@ class QueryStruct extends QueryNode {
   }
 
   /** returns a query object for the given name */
-  getStructByName(name: string): QueryStruct {
-    const struct = this[name];
+  getStructByName(name: string[]): QueryStruct {
+    const struct = this.getFieldByName(name);
     if (struct instanceof QueryStruct) {
       return struct;
     } else {
-      throw new Error(`Error: Path to structure not found '${name}'`);
+      throw new Error(`Error: Path to structure not found '${name.join('.')}'`);
     }
   }
 
@@ -4323,21 +4245,6 @@ export class QueryModel {
       } else {
         throw new Error('Internal Error: Unknown structure type');
       }
-    }
-  }
-
-  parseQueryPath(name: string): {struct: QueryStruct; queryName: string} {
-    const path = name.split('.');
-    let struct;
-    if ((struct = this.structs.get(path[0]))) {
-      if (path.length > 1) {
-        path.shift();
-      } else {
-        throw new Error(`No query specified in Struct '${path[0]}'`);
-      }
-      return {queryName: path.join('.'), struct};
-    } else {
-      throw new Error(`Cannot find Struct '${path[0]}' Model`);
     }
   }
 

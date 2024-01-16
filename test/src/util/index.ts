@@ -31,6 +31,8 @@ import {
   Runtime,
 } from '@malloydata/malloy';
 
+// these two helper functions are here just to make older hand built models
+// easier to use in the new world were refs are not strings
 export function fToQF(fs: (QueryFieldDef | string)[]): QueryFieldDef[] {
   return fs.map(f =>
     typeof f === 'string' ? {type: 'fieldref', path: f.split('.')} : f

@@ -122,7 +122,7 @@ export class ExprFunc extends ExpressionDef {
             value: [{type: 'field', path: this.source.path}],
             evalSpace: footType.evalSpace,
           };
-          structPath = this.source.path;
+          structPath = this.source.path.slice(0, -1);
         } else {
           if (!(sourceFoot instanceof StructSpaceFieldBase)) {
             const message = `Aggregate source cannot be a ${footType.dataType}`;
