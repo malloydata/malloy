@@ -23,6 +23,7 @@
 
 import {
   AggregateFragment,
+  AggregateFunctionType,
   expressionIsAggregate,
   FieldDef,
   FieldValueType,
@@ -50,7 +51,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
   explicitSource?: boolean;
   legalChildTypes = [FT.numberT];
   constructor(
-    readonly func: string,
+    readonly func: AggregateFunctionType,
     expr?: ExpressionDef,
     explicitSource?: boolean
   ) {
