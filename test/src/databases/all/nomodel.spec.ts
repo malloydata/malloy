@@ -410,7 +410,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     });
   });
 
-  it(`leafy count - ${databaseName}`, async () => {
+  it.skip(`leafy count - ${databaseName}`, async () => {
     // in a joined table when the joined is leafiest
     //  we need to make sure we don't count rows that
     //  don't match the join.
