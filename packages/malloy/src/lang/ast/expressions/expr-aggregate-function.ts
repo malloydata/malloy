@@ -43,6 +43,11 @@ import {FieldSpace} from '../types/field-space';
 import {SpaceField} from '../types/space-field';
 import {ExprIdReference} from './expr-id-reference';
 
+interface JoinPathElement {
+  name: string;
+  structRelationship: StructRelationship;
+}
+
 export abstract class ExprAggregateFunction extends ExpressionDef {
   elementType: string;
   source?: FieldReference;
@@ -74,10 +79,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
     let expr: FieldReference | ExpressionDef | undefined = this.expr;
     let exprVal = this.expr?.getExpression(inputFS);
     let structPath = this.source?.path;
-    let sourceRelationship: {
-      name: string;
-      structRelationship: StructRelationship;
-    }[] = [];
+    let sourceRelationship: JoinPathElement[] = [];
     if (this.source) {
       const result = this.source.getField(inputFS);
       if (result.found) {
@@ -107,14 +109,11 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
           // dimension which uses only one distinct join path; in this case, we set the
           // locality to be that join path
           const joinUsage = this.getJoinUsage(inputFS);
-          const allUsagePaths = joinUsage.map(x =>
-            x.map(y => y.name).join('.')
-          );
           const allUsagesSame =
-            allUsagePaths.length > 0 &&
-            allUsagePaths.slice(1).every(x => x === allUsagePaths[0]);
+            joinUsage.length === 1 ||
+            joinUsage.slice(1).every(p => joinPathEq(p, joinUsage[0]));
           if (allUsagesSame) {
-            structPath = [allUsagePaths[0]];
+            structPath = joinUsage[0].map(p => p.name);
             sourceRelationship = joinUsage[0];
           }
         } else {
@@ -196,8 +195,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
   }
 
   getJoinUsage(fs: FieldSpace) {
-    const result: {name: string; structRelationship: StructRelationship}[][] =
-      [];
+    const result: JoinPathElement[][] = [];
     if (this.source) {
       const lookup = this.source.getField(fs);
       if (lookup.found) {
@@ -213,10 +211,21 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
   }
 }
 
-function getJoinUsage(
-  fs: FieldSpace,
-  expr: Fragment[]
-): {name: string; structRelationship: StructRelationship}[][] {
+function joinPathEq(a1: JoinPathElement[], a2: JoinPathElement[]): boolean {
+  let len = a1.length;
+  if (len !== a2.length) {
+    return false;
+  }
+  while (len > 0) {
+    len -= 1;
+    if (a1[len].name !== a2[len].name) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function getJoinUsage(fs: FieldSpace, expr: Fragment[]): JoinPathElement[][] {
   const result: {name: string; structRelationship: StructRelationship}[][] = [];
   const lookup = (
     fs: FieldSpace,
