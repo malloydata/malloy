@@ -23,6 +23,7 @@
     "@malloydata/db-postgres": "^0.0.119",
     "@malloydata/malloy": "^0.0.119",
     "@malloydata/render": "^0.0.119",
+    "@malloydata/db-external-postgres": "../../malloy-db-external-postgres",
     "jsdom": "^22.1.0",
     "luxon": "^2.4.0",
     "madge": "^6.0.0"

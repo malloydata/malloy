@@ -23,6 +23,9 @@
     },
     {
       "path": "../packages/malloy-malloy-sql"
+    },
+    {
+      "path": "../../malloy-db-external-postgres"
     }
   ]
 }

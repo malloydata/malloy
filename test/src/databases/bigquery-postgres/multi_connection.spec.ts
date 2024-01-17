@@ -26,7 +26,10 @@
 
 import * as malloy from '@malloydata/malloy';
 import {EmptyURLReader} from '@malloydata/malloy';
-import {BigQueryTestConnection, PostgresTestConnection} from '../../runtimes';
+import {
+  BigQueryTestConnection,
+  ExternalPostgresTestConnection,
+} from '../../runtimes';
 import {describeIfDatabaseAvailable} from '../../util';
 
 const res = describeIfDatabaseAvailable(['bigquery', 'postgres']);
@@ -46,7 +49,7 @@ describe('Multi-connection', () => {
     {},
     {projectId: 'malloy-data'}
   );
-  const postgresConnection = new PostgresTestConnection('postgres');
+  const postgresConnection = new ExternalPostgresTestConnection('postgres');
   const files = new EmptyURLReader();
 
   const connectionMap = new malloy.FixedConnectionMap(

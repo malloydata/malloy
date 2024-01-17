@@ -33,7 +33,8 @@ import {
 import {BigQueryConnection} from '@malloydata/db-bigquery';
 import {DuckDBConnection} from '@malloydata/db-duckdb';
 import {DuckDBWASMConnection} from '@malloydata/db-duckdb/wasm';
-import {PooledPostgresConnection} from '@malloydata/db-postgres';
+// eslint-disable-next-line node/no-unpublished-import
+import {ExternalPooledPostgresConnection} from '../../../malloy-db-external-postgres/dist/src/index';
 
 export class BigQueryTestConnection extends BigQueryConnection {
   // we probably need a better way to do this.
@@ -52,7 +53,7 @@ export class BigQueryTestConnection extends BigQueryConnection {
   }
 }
 
-export class PostgresTestConnection extends PooledPostgresConnection {
+export class ExternalPostgresTestConnection extends ExternalPooledPostgresConnection {
   // we probably need a better way to do this.
 
   public async runSQL(
@@ -128,7 +129,7 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
       );
       break;
     case 'postgres':
-      connection = new PostgresTestConnection(dbName);
+      connection = new ExternalPostgresTestConnection(dbName);
       break;
     case 'duckdb':
       connection = new DuckDBTestConnection(dbName);
