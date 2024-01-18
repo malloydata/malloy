@@ -1183,13 +1183,13 @@ class QueryFieldDistinctKey extends QueryAtomicField {
       return this.parent.dialect.concat(
         parentKey || '', // shouldn't have to do this...
         "'x'",
-        `(${this.parent.dialect.sqlFieldReference(
+        this.parent.dialect.sqlFieldReference(
           this.parent.getIdentifier(),
           '__row_id',
           'string',
           true,
           false
-        )})`
+        )
       );
     } else {
       // return this.parent.getIdentifier() + "." + "__distinct_key";
