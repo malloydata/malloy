@@ -24,7 +24,7 @@ When running `npm run storybook`, only changes in the malloy-render package will
 
 ## Using the Bundled Renderer
 
-A Platform agnostic Malloy Renderer bundle. Any JS platform with JSON results from a DB query execution and a PreparedResult object from Malloy library (or from Malloy Service) should be able to use this package to create an HTML Malloy Result. The renderer bundle is avialable from v0.0.118 onwards. Example usage:
+Any JS platform with JSON results from a DB query execution and a PreparedResult object from Malloy library (or from Malloy Service) should be able to use the bundled renderer to create an HTML Malloy Result. The renderer bundle is avialable from v0.0.118 onwards. Example usage:
 
 ```js
 var script = document.createElement('script');
@@ -39,4 +39,4 @@ renderMalloyResults(result, total_rows, preparedResult).then(
 );
 ```
 
-To build the bundle from source, run `npm run bundle_renderer`.
+To build the bundle from source, run `npm run bundle_renderer`. This will create the bundled js files in in `dist/bundle`.
