@@ -186,9 +186,17 @@ export function isDialectFragment(f: Fragment): f is DialectFragment {
   return (f as DialectFragment)?.type === 'dialect';
 }
 
+export type AggregateFunctionType =
+  | 'sum'
+  | 'avg'
+  | 'count'
+  | 'count_distinct'
+  | 'max'
+  | 'min';
+
 export interface AggregateFragment {
   type: 'aggregate';
-  function: string;
+  function: AggregateFunctionType;
   e: Expr;
   structPath?: string;
 }
