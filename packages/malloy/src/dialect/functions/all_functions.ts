@@ -79,6 +79,13 @@ import {
 import {fnAvgRolling} from './avg_moving';
 import {FunctionMap} from './function_map';
 import {fnCoalesce} from './coalesce';
+import {
+  fnSqlBoolean,
+  fnSqlDate,
+  fnSqlNumber,
+  fnSqlString,
+  fnSqlTimestamp,
+} from './sql';
 
 /**
  * This is a function map containing default implementations of all Malloy
@@ -154,5 +161,11 @@ FUNCTIONS.add('min_window', fnMinWindow);
 FUNCTIONS.add('max_window', fnMaxWindow);
 FUNCTIONS.add('sum_window', fnSumWindow);
 FUNCTIONS.add('avg_moving', fnAvgRolling);
+
+FUNCTIONS.add('sql_number', fnSqlNumber);
+FUNCTIONS.add('sql_string', fnSqlString);
+FUNCTIONS.add('sql_date', fnSqlDate);
+FUNCTIONS.add('sql_timestamp', fnSqlTimestamp);
+FUNCTIONS.add('sql_boolean', fnSqlBoolean);
 
 FUNCTIONS.seal();

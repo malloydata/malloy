@@ -207,7 +207,7 @@ export class ExprFunc extends ExpressionDef {
       );
       return errorFor('cannot call with source');
     }
-    const funcCall: Expr = [
+    let funcCall: Expr = [
       {
         type: 'function_call',
         overload,
@@ -216,6 +216,72 @@ export class ExprFunc extends ExpressionDef {
         structPath,
       },
     ];
+    if (
+      [
+        'sql_number',
+        'sql_string',
+        'sql_date',
+        'sql_timestamp',
+        'sql_boolean',
+      ].includes(func.name)
+    ) {
+      if (!this.inExperiment('sql_functions', true)) {
+        return errorFor(
+          `Cannot use sql_function \`${func.name}\`; use \`sql_functions\` experiment to enable this behavior`
+        );
+      }
+
+      const str = argExprs[0].value;
+      if (
+        str.length !== 1 ||
+        typeof str[0] === 'string' ||
+        str[0].type !== 'dialect' ||
+        str[0].function !== 'stringLiteral'
+      ) {
+        this.log(`Invalid string literal for \`${func.name}\``);
+      } else {
+        const literal = str[0].literal;
+        const parts = parseSQLInterpolation(literal);
+        const unsupportedInterpolations = parts
+          .filter(
+            part => part.type === 'interpolation' && part.name.includes('.')
+          )
+          .map(unsupportedPart =>
+            unsupportedPart.type === 'interpolation'
+              ? `\${${unsupportedPart.name}}`
+              : `\${${unsupportedPart.value}}`
+          );
+
+        if (unsupportedInterpolations.length > 0) {
+          const unsupportedInterpolationMsg =
+            unsupportedInterpolations.length === 1
+              ? `'.' paths are not yet supported in sql interpolations, found ${unsupportedInterpolations.at(
+                  0
+                )}`
+              : `'.' paths are not yet supported in sql interpolations, found [${unsupportedInterpolations.join(
+                  ', '
+                )}]`;
+          this.log(unsupportedInterpolationMsg);
+
+          return errorFor(
+            `${unsupportedInterpolationMsg}. See LookML \${...} documentation at https://cloud.google.com/looker/docs/reference/param-field-sql#sql_for_dimensions`
+          );
+        }
+
+        funcCall = [
+          {
+            type: 'sql-string',
+            e: parts.map(part =>
+              part.type === 'string'
+                ? part.value
+                : part.name === 'TABLE'
+                ? {type: 'source-reference'}
+                : {type: 'field-reference', path: part.name}
+            ),
+          },
+        ];
+      }
+    }
     if (type.dataType === 'any') {
       this.log(
         `Invalid return type ${type.dataType} for function '${this.name}'`
@@ -368,4 +434,35 @@ function findOverload(
       };
     }
   }
+}
+
+type InterpolationPart =
+  | {type: 'string'; value: string}
+  | {type: 'interpolation'; name: string};
+
+function parseSQLInterpolation(template: string): InterpolationPart[] {
+  const parts: InterpolationPart[] = [];
+  let remaining = template;
+  while (remaining.length) {
+    const nextInterp = remaining.indexOf('${');
+    if (nextInterp === -1) {
+      parts.push({type: 'string', value: remaining});
+      break;
+    } else {
+      const interpEnd = remaining.slice(nextInterp).indexOf('}');
+      if (interpEnd === -1) {
+        parts.push({type: 'string', value: remaining});
+        break;
+      }
+      if (nextInterp > 0) {
+        parts.push({type: 'string', value: remaining.slice(0, nextInterp)});
+      }
+      parts.push({
+        type: 'interpolation',
+        name: remaining.slice(nextInterp + 2, interpEnd + nextInterp),
+      });
+      remaining = remaining.slice(interpEnd + nextInterp + 1);
+    }
+  }
+  return parts;
 }
