@@ -1040,7 +1040,7 @@ function isAggregateField(f: QueryField): f is QueryAtomicField {
 }
 
 function isScalarField(f: QueryField): f is QueryAtomicField {
-  return f instanceof QueryAtomicField && !f.isCalculated();
+  return f instanceof QueryAtomicField && !f.isCalculated() && !f.isAggregate();
 }
 
 class QueryAtomicField extends QueryField {
@@ -3570,7 +3570,7 @@ class QueryQueryIndexStage extends QueryQuery {
 
     s += this.generateSQLFilters(this.rootResult, 'where').sql('where');
 
-    s += 'GROUP BY 1,2,3,4\n';
+    s += 'GROUP BY 1,2,3,4,5\n';
 
     // limit
     if (!isRawSegment(this.firstSegment) && this.firstSegment.limit) {
@@ -4331,12 +4331,15 @@ export class QueryModel {
     }
     // make a search index if one isn't modelled.
     const struct = this.getStructByName(explore);
-    const indexStar: RefToField[] = [];
+    let indexStar: RefToField[] = [];
     for (const [fn, fv] of struct.nameMap) {
       if (!(fv instanceof QueryStruct)) {
-        indexStar.push({type: 'fieldref', path: [fn]});
+        if (isScalarField(fv) && fv.includeInWildcard()) {
+          indexStar.push({type: 'fieldref', path: [fn]});
+        }
       }
     }
+    indexStar = indexStar.sort((a, b) => a.path[0].localeCompare(b.path[0]));
     const indexQuery: Query = {
       structRef: explore,
       pipeline: [
