@@ -43,14 +43,14 @@ describe('BigQuery hand-built expression test', () => {
     await runtimes.closeAll();
   });
 
-  function withJoin(leftKey: string, rightKey: string): StructRelationship {
+  function withJoin(leftKey: string[], rightKey: string[]): StructRelationship {
     return {
       type: 'one',
       matrixOperation: 'left',
       onExpression: [
-        {type: 'field', path: [leftKey]},
+        {type: 'field', path: leftKey},
         '=',
-        {type: 'field', path: [rightKey]},
+        {type: 'field', path: rightKey},
       ],
     };
   }
@@ -260,8 +260,8 @@ describe('BigQuery hand-built expression test', () => {
       {
         ...modelHandBase,
         structRelationship: withJoin(
-          'aircraft_model_code',
-          'aircraft_models.aircraft_model_code'
+          ['aircraft_model_code'],
+          ['aircraft_models', 'aircraft_model_code']
         ),
       },
     ],
@@ -319,7 +319,7 @@ describe('BigQuery hand-built expression test', () => {
                       e: [
                         {
                           type: 'field',
-                          path: ['aircraft_models.seats'],
+                          path: ['aircraft_models', 'seats'],
                         },
                       ],
                     },
@@ -331,7 +331,7 @@ describe('BigQuery hand-built expression test', () => {
                       expression: [
                         {
                           type: 'field',
-                          path: ['aircraft_models.manufacturer'],
+                          path: ['aircraft_models', 'manufacturer'],
                         },
                         "='BOEING'",
                       ],
@@ -689,7 +689,9 @@ describe('BigQuery hand-built expression test', () => {
                         type: 'aggregate',
                         function: 'sum',
                         structPath: ['aircraft_models'],
-                        e: [{type: 'field', path: ['aircraft_models.seats']}],
+                        e: [
+                          {type: 'field', path: ['aircraft_models', 'seats']},
+                        ],
                       },
                     ],
                     filterList: [
@@ -699,7 +701,7 @@ describe('BigQuery hand-built expression test', () => {
                         expression: [
                           {
                             type: 'field',
-                            path: ['aircraft_models.manufacturer'],
+                            path: ['aircraft_models', 'manufacturer'],
                           },
                           "='BOEING'",
                         ],
@@ -730,7 +732,7 @@ describe('BigQuery hand-built expression test', () => {
           onExpression: [
             {type: 'field', path: ['aircraft_model_code']},
             '=',
-            {type: 'field', path: ['aircraft.aircraft_model_code']},
+            {type: 'field', path: ['aircraft', 'aircraft_model_code']},
           ],
         },
       },
