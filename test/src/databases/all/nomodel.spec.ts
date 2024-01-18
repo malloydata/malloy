@@ -436,14 +436,11 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     });
   });
 
-  // Bug in duckdb https://github.com/duckdb/duckdb/issues/10269
-  testIf(!databaseName.startsWith('duckdb'))(
-    `leafy nested count - ${databaseName}`,
-    async () => {
-      // in a joined table when the joined is leafiest
-      //  we need to make sure we don't count rows that
-      //  don't match the join.
-      await expect(`
+  it(`leafy nested count - ${databaseName}`, async () => {
+    // in a joined table when the joined is leafiest
+    //  we need to make sure we don't count rows that
+    //  don't match the join.
+    await expect(`
       source: am_states is ${databaseName}.table('malloytest.state_facts') -> {
         group_by: state
         where: state ~ r'^(A|M)'
@@ -466,13 +463,12 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           root_count is count()
       }
       `).malloyResultMatches(runtime, {
-        leafy_count: 0,
-        root_count: 1,
-        state: 'CA',
-        am_state: null,
-      });
-    }
-  );
+      leafy_count: 0,
+      root_count: 1,
+      state: 'CA',
+      am_state: null,
+    });
+  });
 
   it(`basic index - ${databaseName}`, async () => {
     // Make sure basic indexing works.
