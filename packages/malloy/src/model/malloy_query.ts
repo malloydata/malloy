@@ -766,15 +766,30 @@ class QueryField extends QueryNode {
   ): string {
     let func = 'COUNT(';
     let thing = '1';
-    const distinctKeySQL = this.generateDistinctKeyIfNecessary(
-      resultSet,
-      context,
-      expr.structPath
-    );
-    if (distinctKeySQL) {
-      func = 'COUNT(DISTINCT';
-      thing = distinctKeySQL;
+
+    let struct = context;
+    if (expr.structPath) {
+      struct = this.parent.root().getStructByName(expr.structPath);
     }
+    const joinName = struct.getJoinableParent().getIdentifier();
+    const join = resultSet.root().joins.get(joinName);
+    if (!join) {
+      throw new Error(`Join ${joinName} not found in result set`);
+    }
+    if (!join.leafiest || join.makeUniqueKey) {
+      func = 'COUNT(DISTINCT';
+      thing = struct.getDistinctKey().generateExpression(resultSet);
+    }
+
+    // const distinctKeySQL = this.generateDistinctKeyIfNecessary(
+    //   resultSet,
+    //   context,
+    //   expr.structPath
+    // );
+    // if (distinctKeySQL) {
+    //   func = 'COUNT(DISTINCT';
+    //   thing = distinctKeySQL;
+    // }
 
     // find the structDef and return the path to the field...
     if (state.whereSQL) {
