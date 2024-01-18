@@ -21,3 +21,22 @@ Stories are written in the `src/stories` directory. To add more data and Malloy 
 ### On Reloading Changes
 
 When running `npm run storybook`, only changes in the malloy-render package will hot reload properly. Changes to dependencies like the core `malloy` package may require a browser reload to work properly.
+
+## Using the Bundled Renderer
+
+A Platform agnostic Malloy Renderer bundle. Any JS platform with JSON results from a DB query execution and a PreparedResult object from Malloy library (or from Malloy Service) should be able to use this package to create an HTML Malloy Result. The renderer bundle is avialable from v0.0.118 onwards. Example usage:
+
+```js
+var script = document.createElement('script');
+script.src =
+  'https://cdn.jsdelivr.net/npm/@malloydata/render@0.0.118/dist/bundle/bundled_renderer.min.js';
+document.head.appendChild(script);
+var resultElement = document.getElementById('result_div');
+renderMalloyResults(result, total_rows, preparedResult).then(
+  function (malloyResElement) {
+    resultElement.appendChild(malloyResElement);
+  }
+);
+```
+
+To build the bundle from source, run `npm run bundle_renderer`.
