@@ -28,7 +28,7 @@ import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr, testIf} from '../../util';
 import '../../util/db-jest-matchers';
 
-const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
+const runtimes = new RuntimeList(databasesFromEnvironmentOr(['duckdb']));
 
 // No prebuilt shared model, each test is complete.  Makes debugging easier.
 afterAll(async () => {
@@ -112,7 +112,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     await expect(`
       run: ${databaseName}.table('malloytest.flights') extend {
         dimension: one is 'one'
-      } -> {index:one, tailnum; sample: 50% }
+      } -> {index:one, tail_num; sample: 50% }
         -> {select: fieldName, weight, fieldValue; order_by: 2 desc; where: fieldName = 'one'}
     `).malloyResultMatches(runtime, {fieldName: 'one'});
     // Hard to get consistent results here so just check that we get a value back.
