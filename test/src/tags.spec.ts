@@ -107,6 +107,12 @@ describe('tagParse to Tag', () => {
       {name: {properties: {prop: {properties: {prop2: {}}}}}},
     ],
     ['no yes -no', {yes: {}}],
+
+    // TODO interesting behavior that removing a non-existant element, or the last element,
+    // does not remove the `properties`.
+    ['x -x.y', {x: {properties: {}}}],
+    ['x={y} -x.y', {x: {properties: {}}}],
+
     ['x={y z} -x.y', {x: {properties: {z: {}}}}],
     ['x={y z} x {-y}', {x: {properties: {z: {}}}}],
     ['x=1 x {xx=11}', {x: {eq: '1', properties: {xx: {eq: '11'}}}}],
@@ -486,5 +492,16 @@ describe('tags in results', () => {
     const result = await query.run();
     const modelTags = result.modelTag;
     expect(modelTags.text('from')).toEqual('cell2');
+  });
+  test('property access on existing tag (which does not yet have properties)', () => {
+    const parsePlot = Tag.fromTagline('# plot', undefined);
+    const parsed = Tag.fromTagline('# plot.x=2', parsePlot.tag);
+    const allTags = parsed.tag;
+    const plotTag = allTags.tag('plot');
+    const xTag = plotTag!.tag('x');
+    const x = xTag!.numeric();
+    expect(parsed.tag.numeric('plot', 'x')).toEqual(2);
+    expect(plotTag!.numeric('x')).toEqual(2);
+    expect(x).toEqual(2);
   });
 });

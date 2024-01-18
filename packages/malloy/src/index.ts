@@ -80,6 +80,7 @@ export type {
   SearchIndexResult,
   ModelDef,
   Query,
+  QueryResult,
   QueryRunStats,
   NamedQuery,
   NamedModelObject,
@@ -100,6 +101,7 @@ export type {
   TypecastFragment,
   Annotation,
   FieldAtomicTypeDef,
+  SQLBlockStructDef,
 } from './model';
 export {
   // Used in Composer Demo
@@ -132,6 +134,7 @@ export {
   SourceRelationship,
   DateTimeframe,
   TimestampTimeframe,
+  PreparedResult,
   Result,
   QueryMaterializer,
   CSVWriter,
@@ -143,7 +146,6 @@ export {
 export type {
   Model,
   PreparedQuery,
-  PreparedResult,
   Field,
   AtomicField,
   ExploreField,

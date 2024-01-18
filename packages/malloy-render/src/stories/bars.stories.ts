@@ -1,11 +1,11 @@
 import {Meta} from '@storybook/html';
-import script from './static/tables.malloy?raw';
+import script from './static/bars.malloy?raw';
 import {createLoader} from './util';
 import './themes.css';
 import '../component/render';
 
 const meta: Meta = {
-  title: 'Malloy Next/Tables',
+  title: 'Malloy Next/Bars',
   render: ({classes}, context) => {
     const parent = document.createElement('div');
     parent.style.height = 'calc(100vh - 40px)';
@@ -22,21 +22,6 @@ const meta: Meta = {
 
 export default meta;
 
-export const ProductsTable = {
-  args: {
-    source: 'products',
-    view: 'records',
-  },
-};
-
-export const ProductsTableCustomTheme = {
-  args: {
-    source: 'products',
-    view: 'records',
-    classes: 'night',
-  },
-};
-
 export const Products2Column = {
   args: {
     source: 'products',
@@ -51,16 +36,16 @@ export const Nested = {
   },
 };
 
-export const NumberFormatting = {
+export const Sparks = {
   args: {
     source: 'products',
-    view: 'number_formats',
+    view: 'sparks',
   },
 };
 
-export const NullTest = {
+export const SparksNested = {
   args: {
-    source: 'null_test',
-    view: '{ select: * }',
+    source: 'products',
+    view: 'sparks_nested',
   },
 };

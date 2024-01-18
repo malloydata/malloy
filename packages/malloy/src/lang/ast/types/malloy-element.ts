@@ -20,7 +20,6 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-import cloneDeep from 'lodash/cloneDeep';
 
 import {
   Annotation,
@@ -506,7 +505,7 @@ export class Document extends MalloyElement implements NameSpace {
         this.annotation.inherits = extendingModelDef.annotation;
       }
       for (const [nm, orig] of Object.entries(extendingModelDef.contents)) {
-        const entry = cloneDeep(orig);
+        const entry = structuredClone(orig);
         if (
           entry.type === 'struct' ||
           entry.type === 'query' ||
@@ -580,7 +579,7 @@ export class Document extends MalloyElement implements NameSpace {
         if (this.documentModel[entry].exported) {
           def.exports.push(entry);
         }
-        const newEntry = cloneDeep(entryDef);
+        const newEntry = structuredClone(entryDef);
         if (newEntry.modelAnnotation === undefined && def.annotation) {
           newEntry.modelAnnotation = def.annotation;
         }
