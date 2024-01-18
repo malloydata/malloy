@@ -4094,13 +4094,15 @@ class QueryStruct extends QueryNode {
 
   /** convert a path into a field reference */
   getFieldByName(path: string[]): QuerySomething {
-    return path.reduce((retField: QuerySomething, childName: string) => {
-      const r = retField.getChildByName(childName);
+    let lookIn = this as QuerySomething;
+    for (const childName of path) {
+      const r = lookIn.getChildByName(childName);
       if (r === undefined) {
         throw new Error(`Path not found ${path.join('.')}`);
       }
-      return r;
-    }, this);
+      lookIn = r;
+    }
+    return lookIn;
   }
 
   // structs referenced in queries are converted to fields.
