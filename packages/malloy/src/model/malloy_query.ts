@@ -3643,7 +3643,6 @@ class QueryQueryIndex extends QueryQuery {
     // index will be a union indexes from each unique path
     const stageMap: Record<string, RefToField[]> = {};
     for (const fref of indexSeg.indexFields) {
-      let toStage = this.stages[0];
       if (fref.path.length > 1) {
         const stageRoot = pathToCol(fref.path.slice(0, fref.path.length - 1));
         const stage = stageMap[stageRoot];
@@ -3655,15 +3654,20 @@ class QueryQueryIndex extends QueryQuery {
               f.fieldDef.structRelationship.type === 'nested') &&
             f.fieldDef.fields.length > 1
           ) {
-            toStage = [];
+            const toStage = [fref];
             stageMap[stageRoot] = toStage;
             this.stages.push(toStage);
+            continue;
           }
         } else {
-          toStage = stage;
+          stage.push(fref);
+          continue;
         }
       }
-      toStage.push(fref);
+      if (this.stages[0] === undefined) {
+        this.stages[0] = [];
+      }
+      this.stages[0].push(fref);
     }
   }
 
