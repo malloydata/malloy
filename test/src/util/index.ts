@@ -47,7 +47,7 @@ export function fToIF(fs: string[]): IndexFieldDef[] {
 
 export function fStringEq(field: string, value: string): FilterExpression {
   return {
-    expression: [{type: 'field', path: [field]}, `='${value}'`],
+    expression: [{type: 'field', path: field.split('.')}, `='${value}'`],
     code: `${field}='${value}'`,
     expressionType: 'scalar',
   };
@@ -55,7 +55,7 @@ export function fStringEq(field: string, value: string): FilterExpression {
 
 export function fStringLike(field: string, value: string): FilterExpression {
   return {
-    expression: [{type: 'field', path: [field]}, ` LIKE '${value}'`],
+    expression: [{type: 'field', path: field.split('.')}, ` LIKE '${value}'`],
     code: `${field}~'${value}'`,
     expressionType: 'scalar',
   };
@@ -64,7 +64,7 @@ export function fStringLike(field: string, value: string): FilterExpression {
 export function fYearEq(field: string, year: number): FilterExpression {
   const yBegin = `'${year}-01-01 00:00:00'`;
   const yEnd = `'${year + 1}-01-01 00:00:00'`;
-  const fx: Fragment = {type: 'field', path: [field]};
+  const fx: Fragment = {type: 'field', path: field.split('.')};
   return {
     expression: [fx, `>=${yBegin} and `, fx, `<${yEnd}`],
     code: `${field}:@${year}`,

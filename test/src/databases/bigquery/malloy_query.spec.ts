@@ -306,7 +306,11 @@ describe('BigQuery expression tests', () => {
             {
               type: 'string',
               name: 'carrier',
-              e: ['UPPER(', {type: 'field', path: ['carriers.nickname']}, ')'],
+              e: [
+                'UPPER(',
+                {type: 'field', path: ['carriers', 'nickname']},
+                ')',
+              ],
             },
             'flight_count',
           ]),

@@ -32,9 +32,9 @@ function withJoin(leftKey: string, rightKey: string): StructRelationship {
     type: 'one',
     matrixOperation: 'left',
     onExpression: [
-      {type: 'field', path: [leftKey]},
+      {type: 'field', path: leftKey.split('.')},
       '=',
-      {type: 'field', path: [rightKey]},
+      {type: 'field', path: rightKey.split('.')},
     ],
   };
 }
@@ -103,7 +103,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
         onExpression: [
           {type: 'field', path: ['carrier']},
           '=',
-          {type: 'field', path: ['carriers.code']},
+          {type: 'field', path: ['carriers', 'code']},
         ],
       },
       primaryKey: 'code',
@@ -174,7 +174,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
             {
               type: 'aggregate',
               function: 'sum',
-              e: [{type: 'field', path: ['aircraft_models.engines']}],
+              e: [{type: 'field', path: ['aircraft_models', 'engines']}],
             },
           ],
         },
