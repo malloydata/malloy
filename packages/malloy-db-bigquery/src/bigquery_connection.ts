@@ -799,12 +799,6 @@ export class BigQueryConnection
     return url;
   }
 
-  public getTableSourceUrl(tablePath: string) {
-    const tablePathInfo = tablePath.split('.');
-    const url = `https://console.cloud.google.com/bigquery?ws=!1m5!1m4!4m3!1s${tablePathInfo[0]}!2s${tablePathInfo[1]}!3s${tablePathInfo[2]}`;
-    return url;
-  }
-
   public runSQLStream(
     sqlCommand: string,
     {rowLimit, abortSignal}: RunSQLOptions = {}
