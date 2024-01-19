@@ -3439,7 +3439,7 @@ class QueryQueryIndexStage extends QueryQuery {
   }
 
   expandField(f: IndexFieldDef) {
-    const as = f.path[f.path.length - 1];
+    const as = f.path.join('.');
     const field = this.parent.getQueryFieldByName(f.path);
     return {as, field};
   }
