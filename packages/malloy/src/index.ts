@@ -169,7 +169,6 @@ export type {
 } from './malloy';
 export type {QueryOptionsReader, RunSQLOptions} from './run_sql_options';
 export type {
-  BrowsableSourceConnection,
   Connection,
   ConnectionConfig,
   ConnectionFactory,

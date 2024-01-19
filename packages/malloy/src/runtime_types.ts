@@ -162,9 +162,6 @@ export interface Connection extends InfoConnection {
    */
   runSQL(sql: string, options?: RunSQLOptions): Promise<MalloyQueryData>;
 
-  // Can the table source be opened in a browser, like BigQuery.
-  browsableSource(): this is BrowsableSourceConnection;
-
   // TODO feature-sql-block Comment
   isPool(): this is PooledConnection;
 
@@ -201,10 +198,6 @@ export interface StreamingConnection extends Connection {
     sqlCommand: string,
     options?: RunSQLOptions
   ): AsyncIterableIterator<QueryDataRow>;
-}
-
-export interface BrowsableSourceConnection extends Connection {
-  getTableSourceUrl(tablePath: string): string;
 }
 
 /**

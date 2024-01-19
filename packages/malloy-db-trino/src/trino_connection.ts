@@ -41,7 +41,6 @@ import {
   StandardSQLDialect,
   StreamingConnection,
   StructDef,
-  BrowsableSourceConnection,
 } from '@malloydata/malloy';
 import {PrestoClient, PrestoQuery} from '@prestodb/presto-js-client';
 import {randomUUID} from 'crypto';
@@ -271,10 +270,6 @@ export abstract class TrinoPrestoConnection
 
   public get supportsNesting(): boolean {
     return true;
-  }
-
-  public browsableSource(): this is BrowsableSourceConnection {
-    return false; // TODO
   }
 
   public async manifestTemporaryTable(_sqlCommand: string): Promise<string> {
