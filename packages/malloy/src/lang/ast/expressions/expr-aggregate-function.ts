@@ -177,7 +177,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
         function: this.func,
         e: exprVal.value,
       };
-      if (structPath) {
+      if (structPath && structPath.length > 0) {
         f.structPath = structPath;
       }
       return {
