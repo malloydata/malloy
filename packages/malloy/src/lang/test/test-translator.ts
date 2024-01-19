@@ -30,6 +30,7 @@ import {
   NamedModelObject,
   PipeSegment,
   Query,
+  QueryFieldDef,
   SQLBlockSource,
   SQLBlockStructDef,
   StructDef,
@@ -467,28 +468,31 @@ export function getModelQuery(modelDef: ModelDef, name: string): Query {
   return modelDef.contents[name] as Query;
 }
 
-export function getFieldDef(
-  thing: StructDef | PipeSegment,
-  name: string
-): FieldDef {
-  if (thing.type === 'struct') {
-    for (const f of thing.fields) {
-      if (f.as ?? f.name === name) {
-        return f;
-      }
+export function getFieldDef(source: StructDef, name: string): FieldDef {
+  for (const f of source.fields) {
+    if (f.as ?? f.name === name) {
+      return f;
     }
-  } else if (isQuerySegment(thing)) {
-    for (const f of thing.queryFields) {
+  }
+  throw new Error(`Compiled source did not contain expected field '${name}'`);
+}
+
+export function getQueryFieldDef(
+  query: PipeSegment,
+  name: string
+): QueryFieldDef {
+  if (isQuerySegment(query)) {
+    for (const f of query.queryFields) {
       if (f.type === 'fieldref') {
-        throw new Error(
-          `Found reference to ${name} but test expected a definition`
-        );
+        if (name === f.path[f.path.length - 1]) {
+          return f;
+        }
       } else if (f.as ?? f.name === name) {
         return f;
       }
     }
   }
-  throw new Error(`Compiled code did not contain expected field '${name}'`);
+  throw new Error(`Compiled query did not contain expected field '${name}'`);
 }
 
 // TODO "as" is almost always a code smell ...
