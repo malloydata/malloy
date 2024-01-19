@@ -25,6 +25,7 @@
 import {RuntimeList, allDatabases} from '../../runtimes';
 import '../../util/db-jest-matchers';
 import {databasesFromEnvironmentOr, mkSqlEqWith, testIf} from '../../util';
+import {fail} from 'assert';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
@@ -289,7 +290,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       )
       .run();
     // TODO Same as above -- this test should check the explore name
-    // expect(result.getResultExplore().name).toBe(undefined);
+    // expect(result.resultExplore.name).toBe(undefined);
     expect(result._queryResult.queryName).toBe(undefined);
   });
 
@@ -337,6 +338,179 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     `).malloyResultMatches(runtime, {
       avg_a_year_built1: 1969,
       avg_a_year_built2: 1969,
+    });
+  });
+
+  describe('sql expr functions', () => {
+    it('sql_string', async () => {
+      await expect(`
+      ##! experimental { sql_functions }
+      source: a is ${databaseName}.table('malloytest.aircraft_models') extend { where: aircraft_model_code ? '0270202' }
+
+      run: a -> {
+          group_by: string_1 is sql_string("UPPER(\${manufacturer})")
+        }
+      `).malloyResultMatches(expressionModel, {
+        string_1: 'AHRENS AIRCRAFT CORP.',
+      });
+    });
+
+    it('sql_number', async () => {
+      await expect(`
+      ##! experimental { sql_functions }
+      source: a is ${databaseName}.table('malloytest.aircraft_models') extend { where: aircraft_model_code ? '0270202' }
+
+      run: a -> {
+          group_by: seats
+          group_by: number_1 is sql_number("\${seats} * 2")
+        }
+  `).malloyResultMatches(expressionModel, {
+        seats: 29,
+        number_1: 58,
+      });
+    });
+
+    it('sql_boolean', async () => {
+      await expect(`
+      ##! experimental { sql_functions }
+      source: a is ${databaseName}.table('malloytest.aircraft_models') extend { where: aircraft_model_code ? '0270202' }
+
+      run: a -> {
+          group_by: boolean_1 is sql_boolean("\${seats} > 20")
+          group_by: boolean_2 is sql_boolean("\${engines} = 2")
+        }
+  `).malloyResultMatches(expressionModel, {
+        boolean_1: true,
+        boolean_2: false,
+      });
+    });
+
+    it('sql_date', async () => {
+      await expect(`
+      ##! experimental { sql_functions }
+      source: a is ${databaseName}.table('malloytest.aircraft') extend { where: tail_num ? 'N110WL' }
+
+      run: a -> {
+          group_by: date_1 is sql_date("\${last_action_date}")
+        }
+  `).malloyResultMatches(expressionModel, {
+        date_1: new Date('2000-01-04T00:00:00.000Z'),
+      });
+    });
+
+    it('sql_timestamp', async () => {
+      await expect(`
+      ##! experimental { sql_functions }
+      source: a is ${databaseName}.table('malloytest.aircraft') extend { where: tail_num ? 'N110WL' }
+
+      run: a -> {
+        group_by: timestamp_1 is sql_timestamp("\${last_action_date}")
+        }
+  `).malloyResultMatches(expressionModel, {
+        timestamp_1: new Date('2000-01-04T00:00:00.000Z'),
+      });
+    });
+
+    it('with ${TABLE}.field', async () => {
+      await expect(`
+      ##! experimental { sql_functions }
+      source: a is ${databaseName}.table('malloytest.aircraft_models') extend { where: aircraft_model_code ? '0270202' }
+
+      run: a -> {
+          group_by: string_1 is sql_string("UPPER(\${TABLE}.manufacturer)")
+        }
+      `).malloyResultMatches(expressionModel, {
+        string_1: 'AHRENS AIRCRAFT CORP.',
+      });
+    });
+
+    it('with ${field}', async () => {
+      await expect(`
+      ##! experimental { sql_functions }
+      source: a is ${databaseName}.table('malloytest.aircraft_models') extend { where: aircraft_model_code ? '0270202' }
+
+      run: a -> {
+          group_by: string_1 is sql_string("UPPER(\${manufacturer})")
+        }
+      `).malloyResultMatches(expressionModel, {
+        string_1: 'AHRENS AIRCRAFT CORP.',
+      });
+    });
+
+    it('sql_functions - experimental feature is ignored', async () => {
+      const query = await expressionModel.loadQuery(
+        `
+        source: a is ${databaseName}.table('malloytest.aircraft_models') extend { where: aircraft_model_code ? '0270202' }
+
+        run: a -> {
+            group_by: manufacturer
+            group_by: string_1 is sql_string("UPPER(\${manufacturer})")
+          }
+        `
+      );
+
+      const runResult = await query.run();
+      const dataResult = runResult.data.toObject();
+      expect(dataResult.length).toEqual(1);
+      const firstRow = dataResult.at(0);
+      if (firstRow !== undefined) {
+        expect(firstRow['manufacturer']).toEqual('AHRENS AIRCRAFT CORP.');
+        expect('string_1' in firstRow).toBeFalsy();
+      } else {
+        fail('exepected a single row, but found none');
+      }
+    });
+
+    describe('[not yet supported]', () => {
+      // See ${...} documentation for lookml here for guidance on remaining work:
+      // https://cloud.google.com/looker/docs/reference/param-field-sql#sql_for_dimensions
+      it('${view_name.dimension_name} - one path', async () => {
+        const query = await expressionModel.loadQuery(
+          `
+          ##! experimental { sql_functions }
+          source: a is ${databaseName}.table('malloytest.aircraft_models') extend { where: aircraft_model_code ? '0270202' }
+
+          run: a -> {
+              group_by: string_1 is sql_string("UPPER(\${a.manufacturer})")
+            }
+          `
+        );
+        await expect(query.run()).rejects.toThrow(
+          "'.' paths are not yet supported in sql interpolations, found ${a.manufacturer}"
+        );
+      });
+
+      it('${view_name.dimension_name} - multiple paths', async () => {
+        const query = await expressionModel.loadQuery(
+          `
+          ##! experimental { sql_functions }
+          source: a is ${databaseName}.table('malloytest.aircraft_models') extend { where: aircraft_model_code ? '0270202' }
+
+          run: a -> {
+              group_by: number_1 is sql_number("\${a.seats} * \${a.seats} + \${a.total_seats}")
+            }
+          `
+        );
+        await expect(query.run()).rejects.toThrow(
+          "'.' paths are not yet supported in sql interpolations, found [${a.seats}, ${a.seats}, ${a.total_seats}]"
+        );
+      });
+
+      it('${view_name.SQL_TABLE_NAME}', async () => {
+        const query = await expressionModel.loadQuery(
+          `
+          ##! experimental { sql_functions }
+          source: a is ${databaseName}.table('malloytest.aircraft_models') extend { where: aircraft_model_code ? '0270202' }
+
+          run: a -> {
+              group_by: number_1 is sql_number("\${a.SQL_TABLE_NAME}.seats")
+            }
+          `
+        );
+        await expect(query.run()).rejects.toThrow(
+          "'.' paths are not yet supported in sql interpolations, found ${a.SQL_TABLE_NAME}"
+        );
+      });
     });
   });
 

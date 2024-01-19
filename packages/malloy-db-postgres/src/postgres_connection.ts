@@ -63,6 +63,7 @@ interface PostgresConnectionConfiguration {
   username?: string;
   password?: string;
   databaseName?: string;
+  connectionString?: string;
 }
 
 type PostgresConnectionConfigurationReader =
@@ -200,6 +201,7 @@ export class PostgresConnection
       databaseName: database,
       port,
       host,
+      connectionString,
     } = await this.readConfig();
     return new Client({
       user,
@@ -207,6 +209,7 @@ export class PostgresConnection
       database,
       port,
       host,
+      connectionString,
     });
   }
 
@@ -453,6 +456,7 @@ export class PooledPostgresConnection
         databaseName: database,
         port,
         host,
+        connectionString,
       } = await this.readConfig();
       this._pool = new Pool({
         user,
@@ -460,6 +464,7 @@ export class PooledPostgresConnection
         database,
         port,
         host,
+        connectionString,
       });
       this._pool.on('acquire', client => client.query("SET TIME ZONE 'UTC'"));
     }

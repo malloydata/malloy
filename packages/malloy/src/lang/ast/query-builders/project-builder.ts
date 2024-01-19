@@ -35,14 +35,18 @@ import {GroupBy} from '../query-properties/group-by';
 import {ProjectFieldSpace} from '../field-space/project-field-space';
 import {QueryProperty} from '../types/query-property';
 import {ReduceBuilder} from './reduce-builder';
+import {QuerySpace} from '../field-space/query-spaces';
+import {MalloyElement} from '../types/malloy-element';
 
 export class ProjectBuilder extends ReduceBuilder {
   readonly type = 'project';
   getResultSpace(
     fs: FieldSpace,
-    refineThis: PipeSegment | undefined
+    refineThis: PipeSegment | undefined,
+    isNestIn: QuerySpace | undefined,
+    astEl: MalloyElement
   ): ProjectFieldSpace {
-    return new ProjectFieldSpace(fs, refineThis);
+    return new ProjectFieldSpace(fs, refineThis, isNestIn, astEl);
   }
 
   execute(qp: QueryProperty): void {

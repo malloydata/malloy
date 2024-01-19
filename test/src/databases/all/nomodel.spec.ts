@@ -410,6 +410,66 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     });
   });
 
+  it(`leafy count - ${databaseName}`, async () => {
+    // in a joined table when the joined is leafiest
+    //  we need to make sure we don't count rows that
+    //  don't match the join.
+    await expect(`
+      source: am_states is ${databaseName}.table('malloytest.state_facts') -> {
+        select: *
+        where: state ~ r'^(A|M)'
+      }
+
+      source: states is ${databaseName}.table('malloytest.state_facts') extend {
+        join_many: am_states on state=am_states.state
+      }
+
+      run: states -> {
+        where: state = 'CA'
+        aggregate:
+          leafy_count is am_states.count()
+          root_count is count()
+      }
+      `).malloyResultMatches(runtime, {
+      leafy_count: 0,
+      root_count: 1,
+    });
+  });
+
+  it(`leafy nested count - ${databaseName}`, async () => {
+    // in a joined table when the joined is leafiest
+    //  we need to make sure we don't count rows that
+    //  don't match the join.
+    await expect(`
+      source: am_states is ${databaseName}.table('malloytest.state_facts') -> {
+        group_by: state
+        where: state ~ r'^(A|M)'
+        nest: nested_state is {
+          group_by: state
+        }
+      }
+
+      source: states is ${databaseName}.table('malloytest.state_facts') extend {
+        join_many: am_states on state=am_states.state
+      }
+
+      run: states -> {
+        where: state = 'CA'
+        group_by:
+          state
+          am_state is am_states.state
+        aggregate:
+          leafy_count is am_states.nested_state.count()
+          root_count is count()
+      }
+      `).malloyResultMatches(runtime, {
+      leafy_count: 0,
+      root_count: 1,
+      state: 'CA',
+      am_state: null,
+    });
+  });
+
   it(`basic index - ${databaseName}`, async () => {
     // Make sure basic indexing works.
     await expect(`
@@ -659,6 +719,46 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       .loadQuery('run: conn.sql("select 1 as one")')
       .run();
     expect(result.data.value[0]['one']).toBe(1);
+  });
+
+  it(`simple sql is exactly as written - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery('run: conn.sql("select 1 as one")')
+      .run();
+    if (databaseName === 'postgres') {
+      expect(result.sql).toBe(`WITH __stage0 AS (
+  select 1 as one)
+SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
+    } else {
+      expect(result.sql).toBe('select 1 as one');
+    }
+    expect(result.resultExplore).not.toBeUndefined();
+  });
+
+  it(`source from query defined as sql query - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+        query: q is conn.sql("select 1 as one")
+        source: s is q
+        run: s -> { select: * }
+      `
+      )
+      .run();
+    expect(result.data.path(0, 'one').number.value).toBe(1);
+  });
+
+  it(`source from query defined as other query - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+        query: q is conn.table('malloytest.flights') -> { group_by: carrier }
+        source: s is q
+        run: s -> { select: *; order_by: carrier }
+      `
+      )
+      .run();
+    expect(result.data.path(0, 'carrier').string.value).toBe('AA');
   });
 
   it(`all with parameters - basic  - ${databaseName}`, async () => {

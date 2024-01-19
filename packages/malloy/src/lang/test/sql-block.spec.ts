@@ -101,9 +101,8 @@ describe('sql:', () => {
 
   test('source from sql', () => {
     const model = new TestTranslator(`
-      ##! -m4warnings
-      sql: users IS { select: """${selStmt}""" }
-      source: malloyUsers is from_sql(users) extend { primary_key: ai }
+      source: users is aConnection.sql("""${selStmt}""")
+      source: malloyUsers is users extend { primary_key: ai }
     `);
     expect(model).toParse();
     const needReq = model.translate();
@@ -232,13 +231,12 @@ describe('sql:', () => {
     expect(model).toTranslate();
   });
 
-  test('pre m4 source from extended sql-based-source', () => {
+  test('source from extended sql-based-source', () => {
     const model = new TestTranslator(`
-      ##! -m4warnings
-      sql: sql_block IS { select: """${selStmt}""" }
-      source: malloy_source is from_sql(sql_block) extend { primary_key: ai }
+      source: sql_block is aConnection.sql("""${selStmt}""")
+      source: malloy_source is sql_block extend { primary_key: ai }
 `);
-    const sql = makeSQLBlock([{sql: selStmt}]);
+    const sql = makeSQLBlock([{sql: selStmt}], 'aConnection');
     model.update({compileSQL: {[sql.name]: makeSchemaResponse(sql)}});
     expect(model).toTranslate();
     const modelDef = model?.translate()?.translated?.modelDef;

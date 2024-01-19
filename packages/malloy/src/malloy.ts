@@ -59,7 +59,6 @@ import {
   StructDef,
   TurtleDef,
   expressionIsCalculation,
-  flattenQuery,
   isSQLBlockStruct,
   isSQLFragment,
   FieldUnsupportedDef,
@@ -371,7 +370,7 @@ export class Malloy {
     }
   }
 
-  private static compileSQLBlock(
+  static compileSQLBlock(
     partialModel: ModelDef | undefined,
     toCompile: SQLBlockSource
   ): SQLBlock {
@@ -902,24 +901,10 @@ export class PreparedQuery implements Taggable {
 
   /**
    * Get the flattened version of a query -- one that does not have a `pipeHead`.
+   * @deprecated Because queries can no longer have `pipeHead`s.
    */
-  public getFlattenedQuery(defaultName: string): PreparedQuery {
-    let structRef = this._query.structRef;
-    if (typeof structRef !== 'string') {
-      structRef = structRef.as || structRef.name;
-    }
-    const turtleDef = flattenQuery(this._modelDef, {
-      ...this._query,
-      type: 'query',
-      name:
-        'as' in this._query ? this._query.as || this._query.name : defaultName,
-    });
-    return new PreparedQuery(
-      {...turtleDef, structRef, type: 'query'},
-      this._modelDef,
-      this.problems,
-      this.name || turtleDef.as || turtleDef.name
-    );
+  public getFlattenedQuery(_defaultName: string): PreparedQuery {
+    return this;
   }
 }
 
@@ -1181,6 +1166,11 @@ export class DocumentCompletion {
   }
 }
 
+export type PreparedResultJSON = {
+  query: CompiledQuery;
+  modelDef: ModelDef;
+};
+
 /**
  * A fully-prepared query containing SQL and metadata required to run the query.
  */
@@ -1192,6 +1182,17 @@ export class PreparedResult implements Taggable {
     protected modelDef: ModelDef
   ) {
     this.inner = query;
+  }
+
+  public static fromJson({
+    query,
+    modelDef,
+  }: PreparedResultJSON): PreparedResult {
+    // Validate extracted properties (optional, but recommended)
+    if (!query || !modelDef) {
+      throw new Error('Missing required properties in JSON data');
+    }
+    return new PreparedResult(query, modelDef);
   }
 
   tagParse(spec?: TagParseSpec): TagParse {

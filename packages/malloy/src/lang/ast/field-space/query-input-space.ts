@@ -29,10 +29,11 @@
  * specialized QuerySpace for each type of query operation.
  */
 
-import {FieldDeclaration} from '../query-items/field-declaration';
-import {Join} from '../query-properties/joins';
+import {AtomicFieldDeclaration} from '../query-items/field-declaration';
+import {Join} from '../source-properties/joins';
 import {SourceSpec, SpaceSeed} from '../space-seed';
-import {FieldSpace, QueryFieldSpace} from '../types/field-space';
+import {QueryFieldSpace} from '../types/field-space';
+import {QuerySpace} from './query-spaces';
 import {RefinedSpace} from './refined-space';
 
 export class QueryInputSpace extends RefinedSpace implements QueryFieldSpace {
@@ -46,13 +47,13 @@ export class QueryInputSpace extends RefinedSpace implements QueryFieldSpace {
    */
   constructor(
     input: SourceSpec,
-    private queryOutput: FieldSpace
+    private queryOutput: QuerySpace
   ) {
     const inputSpace = new SpaceSeed(input);
     super(inputSpace.structDef);
   }
 
-  extendSource(extendField: Join | FieldDeclaration): void {
+  extendSource(extendField: Join | AtomicFieldDeclaration): void {
     this.pushFields(extendField);
     if (extendField instanceof Join) {
       this.extendList.push(extendField.name.refString);

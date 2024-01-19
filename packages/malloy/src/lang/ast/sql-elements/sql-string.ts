@@ -24,9 +24,9 @@
 import {SQLPhrase} from '../../../model/malloy_types';
 
 import {MalloyElement} from '../types/malloy-element';
-import {SourceQueryNode} from '../elements/source-query';
+import {SourceQueryElement} from '../source-query-elements/source-query-element';
 
-type SQLStringSegment = string | SourceQueryNode;
+type SQLStringSegment = string | SourceQueryElement;
 export class SQLString extends MalloyElement {
   elementType = 'sqlString';
   elements: SQLStringSegment[] = [];
@@ -43,7 +43,7 @@ export class SQLString extends MalloyElement {
       if (el.length > 0) {
         this.elements.push(el);
       }
-    } else if (el instanceof SourceQueryNode) {
+    } else if (el instanceof SourceQueryElement) {
       this.elements.push(el);
       this.containsQueries = true;
       el.parent = this;
@@ -70,6 +70,6 @@ export class SQLString extends MalloyElement {
   }
 }
 
-function isQuery(x: SQLStringSegment): x is SourceQueryNode {
-  return x instanceof SourceQueryNode;
+function isQuery(x: SQLStringSegment): x is SourceQueryElement {
+  return x instanceof SourceQueryElement;
 }

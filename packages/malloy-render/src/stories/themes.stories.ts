@@ -8,7 +8,7 @@ const meta: Meta = {
   title: 'Malloy Next/Themes',
   render: ({classes}, context) => {
     const parent = document.createElement('div');
-    parent.style.height = '1000px';
+    parent.style.height = 'calc(100vh - 40px)';
     parent.style.position = 'relative';
     const el = document.createElement('malloy-render');
     if (classes) el.classList.add(classes);
@@ -25,21 +25,21 @@ export default meta;
 export const ModelThemeOverride = {
   args: {
     source: 'products',
-    view: `records`,
+    view: 'records',
   },
 };
 
 export const ViewThemeOverride = {
   args: {
     source: 'products',
-    view: `records_override`,
+    view: 'records_override',
   },
 };
 
 export const ViewThemeOverrideCSS = {
   args: {
     source: 'products',
-    view: `records_override`,
+    view: 'records_override',
     classes: 'night',
   },
 };

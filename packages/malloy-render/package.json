@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/render",
-  "version": "0.0.113",
+  "version": "0.0.119",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -13,18 +13,19 @@
     "node": ">=16"
   },
   "scripts": {
+    "bundle_renderer": "node src/bundle/esbuild_bundler.js",
     "lint": "eslint '**/*.ts{,x}'",
     "lint-fix": "eslint '**/*.ts{,x}' --fix",
     "test": "jest --config=../../jest.config.js",
     "build": "tsc --build",
     "clean": "tsc --build --clean",
-    "prepublishOnly": "npm run build",
+    "prepublishOnly": "npm run build && npm run bundle_renderer",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
   },
   "dependencies": {
     "@lit/context": "^1.1.0",
-    "@malloydata/malloy": "^0.0.113",
+    "@malloydata/malloy": "^0.0.119",
     "@types/luxon": "^2.4.0",
     "lit": "^3.0.2",
     "lodash": "^4.17.20",
@@ -43,6 +44,7 @@
     "@storybook/html-vite": "^7.5.0",
     "@storybook/testing-library": "^0.2.2",
     "@storybook/types": "^7.5.3",
+    "esbuild": "0.19.11",
     "storybook": "^7.5.0"
   }
 }

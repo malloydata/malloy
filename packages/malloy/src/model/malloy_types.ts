@@ -186,9 +186,17 @@ export function isDialectFragment(f: Fragment): f is DialectFragment {
   return (f as DialectFragment)?.type === 'dialect';
 }
 
+export type AggregateFunctionType =
+  | 'sum'
+  | 'avg'
+  | 'count'
+  | 'count_distinct'
+  | 'max'
+  | 'min';
+
 export interface AggregateFragment {
   type: 'aggregate';
-  function: string;
+  function: AggregateFunctionType;
   e: Expr;
   structPath?: string;
 }
@@ -259,6 +267,34 @@ export interface FieldFragment {
 }
 export function isFieldFragment(f: Fragment): f is FieldFragment {
   return (f as FieldFragment)?.type === 'field';
+}
+
+export interface FieldReferenceFragment {
+  type: 'field-reference';
+  path: string;
+}
+export function isFieldReferenceFragment(
+  f: Fragment
+): f is FieldReferenceFragment {
+  return (f as FieldReferenceFragment)?.type === 'field-reference';
+}
+
+export interface SqlStringFragment {
+  type: 'sql-string';
+  e: Expr;
+}
+export function isSqlStringFragment(f: Fragment): f is SqlStringFragment {
+  return (f as SqlStringFragment)?.type === 'sql-string';
+}
+
+export interface SourceReferenceFragment {
+  type: 'source-reference';
+  path?: string;
+}
+export function isSourceReferenceFragment(
+  f: Fragment
+): f is SourceReferenceFragment {
+  return (f as SourceReferenceFragment)?.type === 'source-reference';
 }
 
 export interface ParameterFragment {
@@ -382,6 +418,9 @@ export type Fragment =
   | ApplyFragment
   | ApplyValueFragment
   | FieldFragment
+  | FieldReferenceFragment
+  | SourceReferenceFragment
+  | SqlStringFragment
   | ParameterFragment
   | FilterFragment
   | OutputFieldFragment
@@ -752,12 +791,12 @@ export interface TurtleSegment extends Filtered {
   name: string;
 }
 export interface Pipeline {
-  pipeHead?: TurtleSegment;
   pipeline: PipeSegment[];
 }
 
 export interface Query extends Pipeline, Filtered, HasLocation {
   type?: 'query';
+  name?: string;
   structRef: StructRef;
   annotation?: Annotation;
   modelAnnotation?: Annotation;
@@ -765,7 +804,7 @@ export interface Query extends Pipeline, Filtered, HasLocation {
 
 export type NamedQuery = Query & NamedObject;
 
-export type PipeSegment = QuerySegment | IndexSegment;
+export type PipeSegment = QuerySegment | IndexSegment | RawSegment;
 
 export interface ReduceSegment extends QuerySegment {
   type: 'reduce';
@@ -816,6 +855,14 @@ interface SamplingEnable {
 
 export function isSamplingEnable(s: Sampling): s is SamplingEnable {
   return (s as SamplingEnable).enable !== undefined;
+}
+
+export interface RawSegment extends Filtered {
+  type: 'raw';
+  fields: never[];
+}
+export function isRawSegment(pe: PipeSegment): pe is RawSegment {
+  return (pe as RawSegment).type === 'raw';
 }
 
 export interface IndexSegment extends Filtered {

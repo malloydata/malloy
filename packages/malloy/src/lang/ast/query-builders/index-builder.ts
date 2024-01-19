@@ -39,6 +39,8 @@ import {IndexFieldSpace} from '../field-space/index-field-space';
 import {QueryProperty} from '../types/query-property';
 import {QueryBuilder} from '../types/query-builder';
 import {QueryInputSpace} from '../field-space/query-input-space';
+import {QuerySpace} from '../field-space/query-spaces';
+import {MalloyElement} from '../types/malloy-element';
 
 export class IndexBuilder implements QueryBuilder {
   filters: FilterExpression[] = [];
@@ -49,8 +51,13 @@ export class IndexBuilder implements QueryBuilder {
   inputFS: QueryInputSpace;
   readonly type = 'index';
 
-  constructor(inputFS: FieldSpace, refineThis: PipeSegment | undefined) {
-    this.resultFS = new IndexFieldSpace(inputFS, refineThis);
+  constructor(
+    inputFS: FieldSpace,
+    refineThis: PipeSegment | undefined,
+    isNestIn: QuerySpace | undefined,
+    astEl: MalloyElement
+  ) {
+    this.resultFS = new IndexFieldSpace(inputFS, refineThis, isNestIn, astEl);
     this.inputFS = this.resultFS.inputSpace();
   }
 

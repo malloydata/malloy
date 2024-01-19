@@ -58,9 +58,9 @@ export type FieldDeclarationConstructor = new (
   expr: ExpressionDef,
   defineName: string,
   exprSrc?: string
-) => FieldDeclaration;
+) => AtomicFieldDeclaration;
 
-export abstract class FieldDeclaration
+export abstract class AtomicFieldDeclaration
   extends MalloyElement
   implements Noteable, MakeEntry
 {
@@ -167,7 +167,7 @@ export abstract class FieldDeclaration
   }
 }
 
-export class CalculateFieldDeclaration extends FieldDeclaration {
+export class CalculateFieldDeclaration extends AtomicFieldDeclaration {
   elementType = 'calculateFieldDeclaration';
   typecheckExprValue(expr: ExprValue) {
     typecheckCalculate(expr, this);
@@ -177,42 +177,42 @@ export class CalculateFieldDeclaration extends FieldDeclaration {
   }
 }
 
-export class AggregateFieldDeclaration extends FieldDeclaration {
+export class AggregateFieldDeclaration extends AtomicFieldDeclaration {
   elementType = 'aggregateFieldDeclaration';
   typecheckExprValue(expr: ExprValue) {
     typecheckAggregate(expr, this);
   }
 }
 
-export class GroupByFieldDeclaration extends FieldDeclaration {
+export class GroupByFieldDeclaration extends AtomicFieldDeclaration {
   elementType = 'groupByFieldDeclaration';
   typecheckExprValue(expr: ExprValue) {
     typecheckGroupBy(expr, this);
   }
 }
 
-export class ProjectFieldDeclaration extends FieldDeclaration {
+export class ProjectFieldDeclaration extends AtomicFieldDeclaration {
   elementType = 'projectFieldDeclaration';
   typecheckExprValue(expr: ExprValue) {
     typecheckProject(expr, this);
   }
 }
 
-export class DeclareFieldDeclaration extends FieldDeclaration {
+export class DeclareFieldDeclaration extends AtomicFieldDeclaration {
   elementType = 'declareFieldDeclaration';
   typecheckExprValue(expr: ExprValue) {
     typecheckDeclare(expr, this);
   }
 }
 
-export class MeasureFieldDeclaration extends FieldDeclaration {
+export class MeasureFieldDeclaration extends AtomicFieldDeclaration {
   elementType = 'measureFieldDeclaration';
   typecheckExprValue(expr: ExprValue) {
     typecheckMeasure(expr, this);
   }
 }
 
-export class DimensionFieldDeclaration extends FieldDeclaration {
+export class DimensionFieldDeclaration extends AtomicFieldDeclaration {
   elementType = 'dimensionFieldDeclaration';
   typecheckExprValue(expr: ExprValue) {
     typecheckDimension(expr, this);
@@ -227,7 +227,7 @@ export class DefSpace implements FieldSpace {
   foundCircle = false;
   constructor(
     readonly realFS: FieldSpace,
-    readonly circular: FieldDeclaration
+    readonly circular: AtomicFieldDeclaration
   ) {}
   structDef(): StructDef {
     return this.realFS.structDef();
@@ -277,7 +277,7 @@ export class FieldDefinitionValue extends SpaceField {
   fieldName: string;
   constructor(
     readonly space: FieldSpace,
-    readonly exprDef: FieldDeclaration
+    readonly exprDef: AtomicFieldDeclaration
   ) {
     super();
     this.fieldName = exprDef.defineName;

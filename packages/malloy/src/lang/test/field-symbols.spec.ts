@@ -25,7 +25,7 @@ import * as model from '../../model/malloy_types';
 import {StaticSpace} from '../ast/field-space/static-space';
 import {ColumnSpaceField} from '../ast/field-space/column-space-field';
 import {FieldName} from '../ast/types/field-space';
-import {QueryFieldStruct} from '../ast/field-space/query-field-struct';
+import {IRViewField} from '../ast/field-space/ir-view-field';
 import {DefinedParameter} from '../ast/types/space-param';
 
 /*
@@ -190,7 +190,7 @@ describe('structdef comprehension', () => {
     };
     const struct = mkStructDef(field);
     const space = new StaticSpace(struct);
-    expect(space.lookup(fieldRef('t')).found).toBeInstanceOf(QueryFieldStruct);
+    expect(space.lookup(fieldRef('t')).found).toBeInstanceOf(IRViewField);
     const oField = space.structDef().fields[0];
     expect(oField).toEqual(field);
   });

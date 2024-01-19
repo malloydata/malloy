@@ -55,11 +55,21 @@ describe('model statements', () => {
       });
       expect(m).translationToFailWith('a1 is not a connection');
     });
+    test('cannot refine table', () => {
+      expect(
+        markSource`run: \`_db_\`.table('aTable') + { limit: 10 }`
+      ).translationToFailWith('Cannot add view refinements to a source');
+    });
     test('table function is deprecated', () => {
       expect(`##! m4warnings=warn
       source: testA is table('_db_:aTable')
     `).toTranslateWithWarnings(
         "`table('connection_name:table_path')` is deprecated; use `connection_name.table('table_path')`"
+      );
+    });
+    test('cannot run table', () => {
+      expect(markSource`run: \`_db_\`.table('aTable')`).translationToFailWith(
+        'This source cannot be used as a query'
       );
     });
   });
@@ -196,15 +206,11 @@ describe('error handling', () => {
     `).translationToFailWith("Output already has a field named 'astr'");
   });
   test('rejoin a query is renamed', () => {
-    // should not use from()
     expect(`
-      ##! -m4warnings
-      source: querySrc is from(
-        _db_.table('malloytest.flights')->{
-          group_by: origin
-          nest: nested is { group_by: destination }
-        }
-      )
+      source: querySrc is _db_.table('malloytest.flights')->{
+        group_by: origin
+        nest: nested is { group_by: destination }
+      }
 
     source: refineQuerySrc is querySrc extend {
       join_one: rejoin is querySrc on 7=8
@@ -613,6 +619,23 @@ describe('sql expressions', () => {
     }
   });
 
+  test('cannot refine sql query', () => {
+    const m = new TestTranslator(`
+    run: duckdb.sql("SELECT 1 as one") + { limit: 10 }
+    `);
+    expect(m).toParse();
+    const compileSql = m.translate().compileSQL;
+    expect(compileSql).toBeDefined();
+    if (compileSql) {
+      m.update({
+        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+      });
+      expect(m).translationToFailWith(
+        'Cannot add view refinements to a source'
+      );
+    }
+  });
+
   test('reference to sql expression in join', () => {
     const m = model`
       source: quux is a extend {
@@ -644,24 +667,6 @@ describe('sql expressions', () => {
     }
     expect(m).toTranslateWithWarnings(
       '`sql:` statement is deprecated, use `connection_name.sql(...)` instead'
-    );
-  });
-
-  test('from_sql deprecation warning', () => {
-    const m = new TestTranslator(
-      `##! m4warnings=warn
-      sql: bad_sql is {select: """SELECT 1 as one"""}
-      source: foo is from_sql(bad_sql)`
-    );
-    const req = m.translate().compileSQL;
-    if (req) {
-      m.update({
-        compileSQL: {[req.name]: getSelectOneStruct(req)},
-      });
-    }
-    expect(m).toTranslateWithWarnings(
-      '`sql:` statement is deprecated, use `connection_name.sql(...)` instead',
-      '`from_sql` is deprecated; use `connection_name.sql(...)` as a source directly'
     );
   });
 
@@ -710,10 +715,7 @@ describe('sql expressions', () => {
     }
   });
 
-  // TODO this is not possible to implement yet unless we
-  // can distinguish between the generated IR of `conn.sql(...)`
-  // and `conn.sql(...) -> { select: * }`.
-  test.skip('cannot refine a SQL query', () => {
+  test('cannot refine a SQL query saved as a query', () => {
     const m = new TestTranslator(`
       query: q1 is bigquery.sql("""select 1 as one""")
       run: q1 + { where: 1 = 1 }
@@ -725,20 +727,25 @@ describe('sql expressions', () => {
       m.update({
         compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
       });
-      expect(m).translationToFailWith('Cannot refine a SQL query');
+      expect(m).translationToFailWith('A raw query cannot be refined');
     }
   });
-});
 
-describe('turtle with leading arrow', () => {
-  test('pre m4 optional leading arrow for defining a turtle', () => {
-    expect(`
-      ##! -m4warnings
-      source: c is a extend {
-        query: x is -> { select: * }
-        query: y is { select: * }
-      }
-    `).toTranslate();
+  test('cannot refine a SQL query directly', () => {
+    const m = new TestTranslator(`
+      run: bigquery.sql("""select 1 as one""") + { where: 1 = 1 }
+    `);
+    expect(m).toParse();
+    const compileSql = m.translate().compileSQL;
+    expect(compileSql).toBeDefined();
+    if (compileSql) {
+      m.update({
+        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+      });
+      expect(m).translationToFailWith(
+        'Cannot add view refinements to a source'
+      );
+    }
   });
 });
 
@@ -815,33 +822,6 @@ describe('extend and refine', () => {
     test('source name with source refinements', () => {
       expect(
         'source: s is a extend { dimension: ai_2 is ai + ai }'
-      ).toTranslate();
-    });
-
-    test('source name with ambiguous refinements', () => {
-      expect(
-        `##! -m4warnings
-         run: a + { join_one: b on b.ai = ai } -> { select: b.* }`
-      ).toTranslate();
-      expect(
-        `##! -m4warnings
-        run: a + { where: 1 = 1 } -> { select: * }`
-      ).toTranslate();
-      expect(
-        `##! -m4warnings
-        run: a + { dimension: three is 3 } -> { select: * }`
-      ).toTranslate();
-      expect(
-        `##! -m4warnings
-        source: s is a { join_one: b on b.ai = ai }`
-      ).toTranslate();
-      expect(
-        `##! -m4warnings
-        source: s is a { where: 1 = 1 }`
-      ).toTranslate();
-      expect(
-        `##! -m4warnings
-        source: s is a { dimension: three is 3 }`
       ).toTranslate();
     });
 
@@ -970,68 +950,9 @@ describe('extend and refine', () => {
       }`).toTranslate();
     });
   });
-
-  describe('m4 warnings', () => {
-    test('implicit refine in nest', () => {
-      expect(`##! m4warnings=warn
-      source: c is a extend {
-        view: x is { select: * }
-      }
-
-      run: c -> {
-        nest: x { limit: 1 }
-      }`).toTranslateWithWarnings(
-        'Implicit query refinement is deprecated, use the `+` operator'
-      );
-    });
-
-    test('implicit refine in turtle works', () => {
-      expect(`##! m4warnings=warn
-      source: c is a extend {
-        view: x is { select: * }
-        view: y is x { limit: 1 }
-      }`).toTranslateWithWarnings(
-        'Implicit query refinement is deprecated, use the `+` operator'
-      );
-    });
-
-    test('implicit query refinement', () => {
-      expect(`##! m4warnings=warn
-        query: q is a -> { group_by: ai }
-        run: q { group_by: three is 3 }
-      `).toTranslateWithWarnings(
-        'Implicit query refinement is deprecated, use the `+` operator'
-      );
-    });
-
-    test('implicit source extension', () => {
-      expect(
-        `##! m4warnings=warn
-        source: s is a { dimension: ai_2 is ai + ai }`
-      ).toTranslateWithWarnings(
-        'Implicit source extension is deprecated, use the `extend` operator.'
-      );
-    });
-  });
 });
 
 describe('miscellaneous m4 warnings', () => {
-  test('from() is deprecated', () => {
-    expect(`
-      ##! m4warnings=warn
-      query: q is a -> { select: * }
-      source: c is from(q) extend {
-        dimension: x is 1
-    }`).toTranslateWithWarnings(
-      '`from(some_query)` is deprecated; use `some_query` directly'
-    );
-    expect(`
-      ##! m4warnings=warn
-      query: q is a -> { select: * }
-      source: c is q extend {
-        dimension: x is 1
-    }`).toTranslate();
-  });
   test('project is deprecated', () => {
     expect(`
       ##! m4warnings=warn
@@ -1049,20 +970,6 @@ describe('miscellaneous m4 warnings', () => {
       query: x is a -> { select: * }
       run: x -> { select: * }
     `).toTranslate();
-    expect(`
-      ##! m4warnings=warn
-      query: x is a -> { select: * }
-      run: -> x
-    `).toTranslateWithWarnings(
-      'Leading arrow (`->`) when referencing a query is deprecated; remove the arrow'
-    );
-    expect(`
-      ##! m4warnings=warn
-      query: x is a -> { select: * }
-      run: -> x -> { select: * }
-    `).toTranslateWithWarnings(
-      'Leading arrow (`->`) when referencing a query is deprecated; remove the arrow'
-    );
   });
 });
 

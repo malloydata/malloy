@@ -21,13 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FieldDeclaration} from '../query-items/field-declaration';
+import {AtomicFieldDeclaration} from '../query-items/field-declaration';
 import {FieldReference} from '../query-items/field-references';
 
-import {NestDefinition, NestReference} from '../query-properties/nest';
+import {NestFieldDeclaration} from '../query-properties/nest';
 
 export type QueryItem =
-  | FieldDeclaration
+  | AtomicFieldDeclaration
   | FieldReference
-  | NestDefinition
-  | NestReference;
+  | NestFieldDeclaration;

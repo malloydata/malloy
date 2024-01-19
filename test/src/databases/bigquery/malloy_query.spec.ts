@@ -66,15 +66,6 @@ const [describe] = describeIfDatabaseAvailable(['bigquery']);
 describe('BigQuery expression tests', () => {
   const faa = runtime._loadModelFromModelDef(testModel);
 
-  it('simple_pipeline', async () => {
-    const sql = await compileQueryFromQueryDef(faa, {
-      structRef: 'flights',
-      pipeHead: {name: 'flights_by_carrier'},
-      pipeline: [{fields: ['name', 'flight_count'], type: 'reduce'}],
-    });
-    await bqCompile(sql);
-  });
-
   // EXPLORE flights
   //  ->{
   //       carrier,
@@ -414,16 +405,6 @@ describe('BigQuery expression tests', () => {
     await bqCompile(sql);
   });
 
-  it('add_filter_to_named_query', async () => {
-    const sql = await compileQueryFromQueryDef(faa, {
-      structRef: 'flights',
-      filterList: [fStringEq('destination_code', 'AL')],
-      pipeHead: {name: 'flights_by_city_top_5'},
-      pipeline: [],
-    });
-    await bqCompile(sql);
-  });
-
   it('flights.flights_by_model', async () => {
     const sql = await compileQuery(faa, 'run: flights->flights_by_model');
     await bqCompile(sql);
@@ -484,30 +465,6 @@ describe('BigQuery expression tests', () => {
             'first_turtle',
           ],
           type: 'reduce',
-        },
-      ],
-    });
-    await bqCompile(sql);
-  });
-
-  it('add_filter_to_def', async () => {
-    const sql = await compileQueryFromQueryDef(faa, {
-      structRef: 'flights',
-      filterList: [fStringEq('destination_code', 'AL')],
-      pipeHead: {name: 'flights_by_carrier_with_totals'},
-      pipeline: [
-        {
-          type: 'reduce',
-          fields: [
-            'main.name',
-            'main.flight_count',
-            {
-              name: 'total_flights',
-              type: 'number',
-              expressionType: 'scalar',
-              e: [{type: 'field', path: 'totals.flight_count'}],
-            },
-          ],
         },
       ],
     });
@@ -642,45 +599,6 @@ describe('BigQuery expression tests', () => {
       })
       .run();
     expect(result.data.value[0]['num_providers']).toBe(296);
-  });
-
-  // const faa2: TestDeclaration[] = [
-
-  it('table_base_on_query2', async () => {
-    const result = await faa
-      ._loadQueryFromQueryDef({
-        structRef: {
-          type: 'struct',
-          name: 'malloy-data.malloytest.bq_medicare_test',
-          dialect: 'standardsql',
-          as: 'mtest',
-          structRelationship: {
-            type: 'basetable',
-            connectionName: 'bigquery',
-          },
-          structSource: {
-            type: 'table',
-            tablePath: 'malloy-data.malloytest.bq_medicare_test',
-          },
-          fields: [
-            {
-              type: 'number',
-              name: 'c',
-              expressionType: 'aggregate',
-              e: [{type: 'aggregate', function: 'count', e: []}],
-            },
-            {
-              type: 'turtle',
-              name: 'get_count',
-              pipeline: [{type: 'reduce', fields: ['c']}],
-            },
-          ],
-        },
-        pipeHead: {name: 'get_count'},
-        pipeline: [],
-      })
-      .run();
-    expect(result.data.value[0]['c']).toBe(202656);
   });
 });
 

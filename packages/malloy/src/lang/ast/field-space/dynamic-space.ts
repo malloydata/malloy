@@ -21,17 +21,16 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import cloneDeep from 'lodash/cloneDeep';
 import * as model from '../../../model/malloy_types';
 import {nameOf} from '../../field-utils';
 import {SpaceEntry} from '../types/space-entry';
 import {ErrorFactory} from '../error-factory';
 import {HasParameter} from '../parameters/has-parameter';
 import {MalloyElement} from '../types/malloy-element';
-import {Join} from '../query-properties/joins';
+import {Join} from '../source-properties/joins';
 import {SpaceField} from '../types/space-field';
 import {JoinSpaceField} from './join-space-field';
-import {QueryField} from './query-space-field';
+import {ViewField} from './view-field';
 import {AbstractParameter, SpaceParam} from '../types/space-param';
 import {SourceSpec, SpaceSeed} from '../space-seed';
 import {StaticSpace} from './static-space';
@@ -46,7 +45,7 @@ export abstract class DynamicSpace extends StaticSpace {
 
   constructor(extending: SourceSpec) {
     const source = new SpaceSeed(extending);
-    super(cloneDeep(source.structDef));
+    super(structuredClone(source.structDef));
     this.final = undefined;
     this.source = source;
   }
@@ -105,7 +104,7 @@ export abstract class DynamicSpace extends StaticSpace {
       for (const [name, spaceEntry] of this.entries()) {
         if (spaceEntry instanceof StructSpaceFieldBase) {
           joins.push([name, spaceEntry]);
-        } else if (spaceEntry instanceof QueryField) {
+        } else if (spaceEntry instanceof ViewField) {
           turtles.push([name, spaceEntry]);
         } else if (spaceEntry instanceof SpaceField) {
           fields.push([name, spaceEntry]);
