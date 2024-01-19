@@ -377,7 +377,25 @@ describe('tags in results', () => {
     const result = await loaded.run();
     expect(result.tagParse().tag).tagsAre(wantTag);
   });
-  test('atomic field has tag', async () => {
+  test('field ref has tag', async () => {
+    const loaded = runtime.loadQuery(
+      `run: duckdb.sql("select 1 as num") extend {
+        dimension: # sourceNote
+          one is num
+        } -> {
+          select: # queryNote
+          one
+      }`
+    );
+    const result = await loaded.run();
+    const shape = result.resultExplore;
+    const one = shape.getFieldByName('one');
+    expect(one).toBeDefined();
+    const tp = one.tagParse();
+    expect(tp.log).toEqual([]);
+    expect(tp.tag).tagsAre({sourceNote: {}, queryNote: {}});
+  });
+  test('atomic field model scope tag', async () => {
     const loaded = runtime.loadQuery(
       `
           ## modelDef=ok

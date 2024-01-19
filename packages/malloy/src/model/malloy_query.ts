@@ -25,6 +25,7 @@ import {Dialect, DialectFieldList, getDialect} from '../dialect';
 import {StandardSQLDialect} from '../dialect/standardsql/standardsql';
 import {
   AggregateFragment,
+  Annotation,
   CompiledQuery,
   DialectFragment,
   Expr,
@@ -1975,7 +1976,7 @@ class QueryQuery extends QueryField {
   expandField(f: QueryFieldDef) {
     const field =
       f.type === 'fieldref'
-        ? this.parent.getQueryFieldByName(f.path)
+        ? this.parent.getQueryFieldReference(f.path, f.annotation)
         : this.parent.makeQueryField(f);
     const as = field.getIdentifier();
     return {as, field};
@@ -4116,6 +4117,21 @@ class QueryStruct extends QueryNode {
     const field = this.getFieldByName(name);
     if (field instanceof QueryStruct) {
       throw new Error(`Cannot reference ${name} as a scalar'`);
+    }
+    return field;
+  }
+
+  getQueryFieldReference(
+    name: string[],
+    refAnnoatation: Annotation | undefined
+  ): QuerySomething {
+    const field = this.getQueryFieldByName(name);
+    if (refAnnoatation) {
+      // Made the field object from the source, but the annotations were computed by the compiler
+      // and have noth the source and reference annotations included, use those.
+      const newDef = {...field.fieldDef};
+      newDef.annotation = refAnnoatation;
+      field.fieldDef = newDef;
     }
     return field;
   }
