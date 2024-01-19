@@ -656,4 +656,24 @@ describe('query operation annotations', () => {
       expect(note_b?.annotation).matchesAnnotation({inherits: defaultTags});
     }
   });
+  test('a reference can have an annotation', () => {
+    const m = model`run: a extend {
+      # noted
+      dimension: noted_str is astr
+    } -> {
+      select:
+        # note
+        noted_str
+    }`;
+    expect(m).toTranslate();
+    const foundYou = m.translator.getQuery(0);
+    expect(foundYou).toBeDefined();
+    if (foundYou) {
+      const astr = getQueryFieldDef(foundYou.pipeline[0], 'noted_str');
+      expect(astr?.annotation).matchesAnnotation({
+        inherits: {blockNotes: ['# noted\n']},
+        notes: ['# note\n'],
+      });
+    }
+  });
 });
