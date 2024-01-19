@@ -24,7 +24,7 @@ When running `npm run storybook`, only changes in the malloy-render package will
 
 ## Using the Bundled Renderer
 
-Any JS platform with JSON results from a DB query execution and a PreparedResult object from Malloy library (or from Malloy Service) should be able to use the bundled renderer to create an HTML Malloy Result. The renderer bundle is avialable from v0.0.118 onwards. Example usage:
+Any web browser with JSON results from a DB query execution and a PreparedResult object from the Malloy library should be able to use the bundled renderer to create an HTML Malloy Result. The renderer bundle is available from v0.0.118 onwards. Example usage:
 
 ```js
 var script = document.createElement('script');
