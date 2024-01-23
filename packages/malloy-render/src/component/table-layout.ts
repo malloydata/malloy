@@ -83,8 +83,9 @@ function getColumnWidth(f: Field, metadata: RenderResultMetadata) {
       width =
         Math.max(getTextWidth(fieldMeta.maxString!, font), titleWidth) +
         COLUMN_BUFFER;
-    } else if (f.isAtomicField() && f.isNumber() && fieldMeta.max !== null) {
-      const formattedValue = renderNumericField(f, fieldMeta.max);
+    } else if (f.isAtomicField() && f.isNumber()) {
+      const formattedValue =
+        fieldMeta.max === null ? '∅' : renderNumericField(f, fieldMeta.max);
       width =
         Math.max(getTextWidth(formattedValue, font), titleWidth) +
         COLUMN_BUFFER;
