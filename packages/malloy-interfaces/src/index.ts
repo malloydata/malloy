@@ -21,23 +21,4 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export type {
-  Connection,
-  ConnectionConfig,
-  ConnectionFactory,
-  ConnectionParameter,
-  ConnectionParameterValue,
-  ConnectionConfigSchema,
-  FetchSchemaOptions,
-  InfoConnection,
-  LookupConnection,
-  ModelString,
-  ModelURL,
-  PersistSQLResults,
-  PooledConnection,
-  QueryString,
-  QueryURL,
-  TestableConnection,
-  StreamingConnection,
-  URLReader,
-} from './runtime_types';
+export {};
