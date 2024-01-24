@@ -172,9 +172,17 @@ export function isDialectFragment(f: Fragment): f is DialectFragment {
   return (f as DialectFragment)?.type === 'dialect';
 }
 
+export type AggregateFunctionType =
+  | 'sum'
+  | 'avg'
+  | 'count'
+  | 'count_distinct'
+  | 'max'
+  | 'min';
+
 export interface AggregateFragment {
   type: 'aggregate';
-  function: string;
+  function: AggregateFunctionType;
   e: Expr;
   structPath?: string[];
 }
@@ -245,6 +253,24 @@ export interface FieldFragment {
 }
 export function isFieldFragment(f: Fragment): f is FieldFragment {
   return (f as FieldFragment)?.type === 'field';
+}
+
+export interface SqlStringFragment {
+  type: 'sql-string';
+  e: Expr;
+}
+export function isSqlStringFragment(f: Fragment): f is SqlStringFragment {
+  return (f as SqlStringFragment)?.type === 'sql-string';
+}
+
+export interface SourceReferenceFragment {
+  type: 'source-reference';
+  path?: string[];
+}
+export function isSourceReferenceFragment(
+  f: Fragment
+): f is SourceReferenceFragment {
+  return (f as SourceReferenceFragment)?.type === 'source-reference';
 }
 
 export interface ParameterFragment {
@@ -368,6 +394,8 @@ export type Fragment =
   | ApplyFragment
   | ApplyValueFragment
   | FieldFragment
+  | SourceReferenceFragment
+  | SqlStringFragment
   | ParameterFragment
   | FilterFragment
   | OutputFieldFragment

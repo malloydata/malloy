@@ -77,14 +77,15 @@ function getColumnWidth(f: Field, metadata: RenderResultMetadata) {
   let width = 0;
   if (f.isAtomicField()) {
     // TODO: get font styles from theme
-    const font = `12px Inter, sans-serif`;
+    const font = '12px Inter, sans-serif';
     const titleWidth = getTextWidth(f.name, font);
     if (f.isAtomicField() && f.isString()) {
       width =
         Math.max(getTextWidth(fieldMeta.maxString!, font), titleWidth) +
         COLUMN_BUFFER;
     } else if (f.isAtomicField() && f.isNumber()) {
-      const formattedValue = renderNumericField(f, fieldMeta.max!);
+      const formattedValue =
+        fieldMeta.max === null ? '∅' : renderNumericField(f, fieldMeta.max);
       width =
         Math.max(getTextWidth(formattedValue, font), titleWidth) +
         COLUMN_BUFFER;

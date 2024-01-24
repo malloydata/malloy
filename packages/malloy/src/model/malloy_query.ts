@@ -25,6 +25,7 @@ import {Dialect, DialectFieldList, getDialect} from '../dialect';
 import {StandardSQLDialect} from '../dialect/standardsql/standardsql';
 import {
   AggregateFragment,
+  AggregateFunctionType,
   Annotation,
   CompiledQuery,
   DialectFragment,
@@ -82,9 +83,11 @@ import {
   ResultMetadataDef,
   ResultStructMetadataDef,
   SearchIndexResult,
+  SourceReferenceFragment,
   SegmentFieldDef,
   SpreadFragment,
   SQLExpressionFragment,
+  SqlStringFragment,
   StructDef,
   StructRef,
   TurtleDef,
@@ -131,6 +134,21 @@ export declare interface ParentQueryModel {
 interface OutputPipelinedSQL {
   sqlFieldName: string;
   pipelineSQL: string;
+}
+
+// Track the times we might need a unique key
+type UniqueKeyPossibleUse = AggregateFunctionType | 'generic_aggregate';
+
+class UniqueKeyUse extends Set<UniqueKeyPossibleUse> {
+  add_use(k: UniqueKeyPossibleUse | undefined) {
+    if (k !== undefined) {
+      return this.add(k);
+    }
+  }
+
+  hasAsymetricFunctions(): boolean {
+    return this.has('sum') || this.has('avg') || this.has('count');
+  }
 }
 
 class StageWriter {
@@ -313,8 +331,8 @@ class QueryField extends QueryNode {
     this.fieldDef = fieldDef;
   }
 
-  mayNeedUniqueKey(): boolean {
-    return false;
+  uniqueKeyPossibleUse(): UniqueKeyPossibleUse | undefined {
+    return undefined;
   }
 
   getJoinableParent(): QueryStruct {
@@ -760,15 +778,30 @@ class QueryField extends QueryNode {
   ): string {
     let func = 'COUNT(';
     let thing = '1';
-    const distinctKeySQL = this.generateDistinctKeyIfNecessary(
-      resultSet,
-      context,
-      expr.structPath
-    );
-    if (distinctKeySQL) {
-      func = 'COUNT(DISTINCT';
-      thing = distinctKeySQL;
+
+    let struct = context;
+    if (expr.structPath) {
+      struct = this.parent.root().getStructByName(expr.structPath);
     }
+    const joinName = struct.getJoinableParent().getIdentifier();
+    const join = resultSet.root().joins.get(joinName);
+    if (!join) {
+      throw new Error(`Join ${joinName} not found in result set`);
+    }
+    if (!join.leafiest || join.makeUniqueKey) {
+      func = 'COUNT(DISTINCT';
+      thing = struct.getDistinctKey().generateExpression(resultSet);
+    }
+
+    // const distinctKeySQL = this.generateDistinctKeyIfNecessary(
+    //   resultSet,
+    //   context,
+    //   expr.structPath
+    // );
+    // if (distinctKeySQL) {
+    //   func = 'COUNT(DISTINCT';
+    //   thing = distinctKeySQL;
+    // }
 
     // find the structDef and return the path to the field...
     if (state.whereSQL) {
@@ -790,6 +823,33 @@ class QueryField extends QueryNode {
       context.dialect.dialectExpr(resultSet.getQueryInfo(), expr),
       state
     );
+  }
+
+  generateSqlString(
+    resultSet: FieldInstanceResult,
+    context: QueryStruct,
+    expr: SqlStringFragment,
+    state: GenerateState
+  ): string {
+    return expr.e
+      .map(part =>
+        typeof part === 'string'
+          ? part
+          : this.generateExpressionFromExpr(resultSet, context, [part], state)
+      )
+      .join('');
+  }
+
+  generateSourceReference(
+    resultSet: FieldInstanceResult,
+    context: QueryStruct,
+    expr: SourceReferenceFragment
+  ): string {
+    if (expr.path === undefined) {
+      return context.getSQLIdentifier();
+    } else {
+      return context.getFieldByName(expr.path).getIdentifier();
+    }
   }
 
   getAnalyticPartitions(resultStruct: FieldInstanceResult) {
@@ -990,6 +1050,10 @@ class QueryField extends QueryNode {
         s += this.generateSpread(resultSet, context, expr, state);
       } else if (expr.type === 'dialect') {
         s += this.generateDialect(resultSet, context, expr, state);
+      } else if (expr.type === 'sql-string') {
+        s += this.generateSqlString(resultSet, context, expr, state);
+      } else if (expr.type === 'source-reference') {
+        s += this.generateSourceReference(resultSet, context, expr);
       } else {
         throw new Error(
           `Internal Error: Unknown expression fragment ${JSON.stringify(
@@ -1159,13 +1223,17 @@ class QueryFieldDistinctKey extends QueryAtomicField {
       const parentKey = this.parent.parent
         ?.getDistinctKey()
         .generateExpression(resultSet);
-      return `CONCAT(${parentKey}, 'x', ${this.parent.dialect.sqlFieldReference(
-        this.parent.getIdentifier(),
-        '__row_id',
-        'string',
-        true,
-        false
-      )})`;
+      return this.parent.dialect.concat(
+        parentKey || '', // shouldn't have to do this...
+        "'x'",
+        this.parent.dialect.sqlFieldReference(
+          this.parent.getIdentifier(),
+          '__row_id',
+          'string',
+          true,
+          false
+        )
+      );
     } else {
       // return this.parent.getIdentifier() + "." + "__distinct_key";
       return this.parent.dialect.sqlFieldReference(
@@ -1509,7 +1577,7 @@ class FieldInstanceResult implements FieldInstance {
   addStructToJoin(
     qs: QueryStruct,
     query: QueryQuery,
-    mayNeedUniqueKey: boolean,
+    uniqueKeyPossibleUse: UniqueKeyPossibleUse | undefined,
     joinStack: string[]
   ): void {
     const name = qs.getIdentifier();
@@ -1519,9 +1587,9 @@ class FieldInstanceResult implements FieldInstance {
       return;
     }
 
-    let join;
+    let join: JoinInstance | undefined;
     if ((join = this.root().joins.get(name))) {
-      join.mayNeedUniqueKey ||= mayNeedUniqueKey;
+      join.uniqueKeyPossibleUses.add_use(uniqueKeyPossibleUse);
       return;
     }
 
@@ -1530,7 +1598,7 @@ class FieldInstanceResult implements FieldInstance {
     const parentStruct = qs.parent?.getJoinableParent();
     if (parentStruct) {
       // add dependant expressions first...
-      this.addStructToJoin(parentStruct, query, false, joinStack);
+      this.addStructToJoin(parentStruct, query, undefined, joinStack);
       parent = this.root().joins.get(parentStruct.getIdentifier());
     }
 
@@ -1552,7 +1620,7 @@ class FieldInstanceResult implements FieldInstance {
       join = new JoinInstance(qs, name, parent);
       this.root().joins.set(name, join);
     }
-    join.mayNeedUniqueKey ||= mayNeedUniqueKey;
+    join.uniqueKeyPossibleUses.add_use(uniqueKeyPossibleUse);
   }
 
   findJoins(query: QueryQuery) {
@@ -1560,7 +1628,7 @@ class FieldInstanceResult implements FieldInstance {
       this.addStructToJoin(
         dim.f.getJoinableParent(),
         query,
-        dim.f.mayNeedUniqueKey(),
+        dim.f.uniqueKeyPossibleUse(),
         []
       );
     }
@@ -1677,7 +1745,7 @@ class FieldInstanceResultRoot extends FieldInstanceResult {
   // look at all the fields again in the structs in the query
 
   calculateSymmetricAggregates() {
-    let leafiest;
+    let leafiest: string | undefined;
     for (const [name, join] of this.joins) {
       // first join is by default the
       const relationship = join.parentRelationship();
@@ -1712,8 +1780,23 @@ class FieldInstanceResultRoot extends FieldInstanceResult {
     //  Nested Unique keys are dependant on the primary key of the parent
     //  and the table.
     for (const [_name, join] of this.joins) {
-      // don't need keys on leafiest
-      if (!join.leafiest && join.mayNeedUniqueKey) {
+      // in a one_to_many join we need a key to count there may be a failed
+      //  match in a left join.
+      // users -> {
+      //   group_by: user_id
+      //   aggregate: order_count is orders.count()
+      if (join.leafiest) {
+        if (
+          join.parent !== null &&
+          join.uniqueKeyPossibleUses.has('count') &&
+          !join.queryStruct.primaryKey()
+        ) {
+          join.makeUniqueKey = true;
+        }
+      } else if (
+        !join.leafiest &&
+        join.uniqueKeyPossibleUses.hasAsymetricFunctions()
+      ) {
         let j: JoinInstance | undefined = join;
         while (j) {
           if (!j.queryStruct.primaryKey()) {
@@ -1731,7 +1814,7 @@ class FieldInstanceResultRoot extends FieldInstanceResult {
 }
 
 class JoinInstance {
-  mayNeedUniqueKey = false;
+  uniqueKeyPossibleUses: UniqueKeyUse = new UniqueKeyUse();
   makeUniqueKey = false;
   leafiest = false;
   joinFilterConditions?: QueryFieldBoolean[];
@@ -1986,7 +2069,7 @@ class QueryQuery extends QueryField {
     resultStruct: FieldInstanceResult,
     context: QueryStruct,
     path: string[],
-    mayNeedUniqueKey: boolean,
+    uniqueKeyPossibleUse: UniqueKeyPossibleUse | undefined,
     joinStack: string[]
   ) {
     const node = context.getFieldByName(path);
@@ -2003,7 +2086,7 @@ class QueryQuery extends QueryField {
       .addStructToJoin(
         struct.getJoinableParent(),
         this,
-        mayNeedUniqueKey,
+        uniqueKeyPossibleUse,
         joinStack
       );
   }
@@ -2055,7 +2138,7 @@ class QueryQuery extends QueryField {
             .addStructToJoin(
               field.parent.getJoinableParent(),
               this,
-              false,
+              undefined,
               joinStack
             );
           // this.addDependantPath(resultStruct, field.parent, expr.path, false);
@@ -2114,12 +2197,17 @@ class QueryQuery extends QueryField {
               resultStruct,
               context,
               expr.structPath,
-              true,
+              expr.function,
               joinStack
             );
           } else {
             // we are doing a sum in the root.  It may need symetric aggregates
-            resultStruct.addStructToJoin(context, this, true, joinStack);
+            resultStruct.addStructToJoin(
+              context,
+              this,
+              expr.function,
+              joinStack
+            );
           }
         }
         this.addDependantExpr(resultStruct, context, expr.e, joinStack);
@@ -2129,7 +2217,7 @@ class QueryQuery extends QueryField {
             resultStruct,
             context,
             expr.structPath,
-            true,
+            'generic_aggregate',
             joinStack
           );
         }
@@ -2270,7 +2358,7 @@ class QueryQuery extends QueryField {
   prepare(_stageWriter: StageWriter | undefined) {
     if (!this.prepared) {
       this.expandFields(this.rootResult);
-      this.rootResult.addStructToJoin(this.parent, this, false, []);
+      this.rootResult.addStructToJoin(this.parent, this, undefined, []);
       this.rootResult.findJoins(this);
       this.rootResult.calculateSymmetricAggregates();
       this.prepared = true;
