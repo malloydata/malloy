@@ -49,7 +49,7 @@ export class ExprCount extends ExprAggregateFunction {
       e: [],
     };
     if (this.source) {
-      ret.structPath = this.source.refString;
+      ret.structPath = this.source.path;
     }
     return {
       dataType: 'number',

@@ -22,7 +22,7 @@
  */
 
 import {PipeSegment, isRawSegment} from '../../../model/malloy_types';
-import {QuerySpace} from '../field-space/query-spaces';
+import {QueryOperationSpace} from '../field-space/query-spaces';
 import {StaticSpace} from '../field-space/static-space';
 import {QOpDesc} from '../query-properties/qop-desc';
 import {getFinalStruct} from '../struct-utils';
@@ -42,7 +42,7 @@ export class QOpDescView extends View {
     super({operation});
   }
 
-  pipelineComp(fs: FieldSpace, isNestIn?: QuerySpace): PipelineComp {
+  pipelineComp(fs: FieldSpace, isNestIn?: QueryOperationSpace): PipelineComp {
     const newOperation = this.operation.getOp(fs, isNestIn);
     return {
       pipeline: [newOperation.segment],
@@ -52,7 +52,7 @@ export class QOpDescView extends View {
 
   private getOp(
     inputFS: FieldSpace,
-    isNestIn: QuerySpace | undefined,
+    isNestIn: QueryOperationSpace | undefined,
     qOpDesc: QOpDesc,
     refineThis: PipeSegment
   ): PipeSegment {
@@ -67,7 +67,7 @@ export class QOpDescView extends View {
   refine(
     inputFS: FieldSpace,
     _pipeline: PipeSegment[],
-    isNestIn: QuerySpace | undefined
+    isNestIn: QueryOperationSpace | undefined
   ): PipeSegment[] {
     const pipeline = [..._pipeline];
     if (pipeline.length === 0) {

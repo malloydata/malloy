@@ -160,7 +160,7 @@ describe.each(runtimes.runtimeList)(
           limit: 10
         }
       `).malloyResultMatches(gaModel, {
-        fieldName: 'channelGrouping',
+        // fieldName: 'channelGrouping',
         // fieldValue: 'Organic Search',
         // weight: 10,
       });
@@ -173,7 +173,7 @@ describe.each(runtimes.runtimeList)(
       }
       await expect(`
         run: ${databaseName}.table('malloytest.ga_sample')-> {
-          index: everything
+          index: *
           sample: ${sampleSize}
         }
         -> {

@@ -110,7 +110,7 @@ export class ExprFunc extends ExpressionDef {
     // Find the 'implicit argument' for aggregate functions called like `some_join.some_field.agg(...args)`
     // where the full arg list is `(some_field, ...args)`.
     let implicitExpr: ExprValue | undefined = undefined;
-    let structPath = this.source?.refString;
+    let structPath = this.source?.path;
     if (this.source) {
       const sourceFoot = this.source.getField(fs).found;
       if (sourceFoot) {
@@ -119,10 +119,10 @@ export class ExprFunc extends ExpressionDef {
           implicitExpr = {
             dataType: footType.dataType,
             expressionType: footType.expressionType,
-            value: [{type: 'field', path: this.source.refString}],
+            value: [{type: 'field', path: this.source.path}],
             evalSpace: footType.evalSpace,
           };
-          structPath = this.source.sourceString;
+          structPath = this.source.path.slice(0, -1);
         } else {
           if (!(sourceFoot instanceof StructSpaceFieldBase)) {
             const message = `Aggregate source cannot be a ${footType.dataType}`;
@@ -276,7 +276,7 @@ export class ExprFunc extends ExpressionDef {
                 ? part.value
                 : part.name === 'TABLE'
                 ? {type: 'source-reference'}
-                : {type: 'field-reference', path: part.name}
+                : {type: 'field', path: [part.name]}
             ),
           },
         ];

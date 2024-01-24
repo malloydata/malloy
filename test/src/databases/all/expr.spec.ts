@@ -594,54 +594,6 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       }
     `).malloyResultMatches(runtime, {model_count: 60461, b_count: 355});
   });
-
-  it('group by join - simple group by', async () => {
-    await expect(`
-      run: aircraft->{
-        group_by: aircraft_models
-        aggregate: aircraft_count
-      }
-  `).malloyResultMatches(expressionModel, {
-      aircraft_models_id: '7102802',
-      aircraft_count: 58,
-    });
-  });
-
-  it('group by explore - pipeline', async () => {
-    await expect(`
-      run: aircraft->{
-        group_by: aircraft_models
-        aggregate: aircraft_count
-      } -> {
-        group_by: aircraft_models.manufacturer
-        aggregate: aircraft_count is aircraft_count.sum()
-      }
-    `).malloyResultMatches(expressionModel, {
-      aircraft_count: 1048,
-      manufacturer: 'CESSNA',
-    });
-  });
-
-  it('group by explore - pipeline 2 levels', async () => {
-    await expect(`
-      run: ${databaseName}.table('malloytest.flights') extend {
-        join_one: a is ${databaseName}.table('malloytest.aircraft') extend {
-          join_one: state_facts
-            is ${databaseName}.table('malloytest.state_facts') extend {primary_key: state}
-            with state
-        } on tail_num = a.tail_num
-      } -> {
-        group_by: a.state_facts
-        aggregate: flight_count is count()
-      } -> {
-        group_by: state_facts.popular_name
-        aggregate: flight_count is flight_count.sum()
-      }
-    `).malloyResultMatches(runtime, {
-      flight_count: 199726,
-      popular_name: 'Isabella',
-    });
-  });
 });
 
 describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {

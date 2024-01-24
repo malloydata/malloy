@@ -28,7 +28,7 @@ import {
   isTurtleDef,
 } from '../../../model/malloy_types';
 import {ErrorFactory} from '../error-factory';
-import {QuerySpace} from '../field-space/query-spaces';
+import {QueryOperationSpace} from '../field-space/query-spaces';
 import {ViewOrScalarFieldReference} from '../query-items/field-references';
 import {getFinalStruct} from '../struct-utils';
 import {FieldSpace} from '../types/field-space';
@@ -54,7 +54,7 @@ export class ReferenceView extends View {
   // `isNestIn` is not needed because `ReferenceView`s never create a field space
   // that would use it; this operation is already compiled, and `isNestIn` is only
   // used for checking `exclude` references.
-  pipelineComp(fs: FieldSpace, _isNestIn: QuerySpace): PipelineComp {
+  pipelineComp(fs: FieldSpace, _isNestIn: QueryOperationSpace): PipelineComp {
     return this._pipelineComp(fs);
   }
 
@@ -96,7 +96,7 @@ export class ReferenceView extends View {
       }
       const newSegment: PipeSegment = {
         type: 'reduce',
-        fields: [this.reference.refString],
+        queryFields: [this.reference.refToField],
       };
       const {dialect, queryTimezone, structRelationship} = fs.structDef();
       const name = this.reference.nameString;
@@ -165,7 +165,7 @@ export class ReferenceView extends View {
   refine(
     inputFS: FieldSpace,
     pipeline: PipeSegment[],
-    _isNestIn: QuerySpace | undefined
+    _isNestIn: QueryOperationSpace | undefined
   ): PipeSegment[] {
     const refineFrom = this.getRefinementSegment(inputFS);
     if (refineFrom) {

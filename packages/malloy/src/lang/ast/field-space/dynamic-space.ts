@@ -22,7 +22,7 @@
  */
 
 import * as model from '../../../model/malloy_types';
-import {nameOf} from '../../field-utils';
+import {nameFromDef} from '../../field-utils';
 import {SpaceEntry} from '../types/space-entry';
 import {ErrorFactory} from '../error-factory';
 import {HasParameter} from '../parameters/has-parameter';
@@ -82,7 +82,7 @@ export abstract class DynamicSpace extends StaticSpace {
   }
 
   addFieldDef(fd: model.FieldDef): void {
-    this.setEntry(nameOf(fd), this.defToSpaceField(fd));
+    this.setEntry(nameFromDef(fd), this.defToSpaceField(fd));
   }
 
   setTimezone(tz: string): void {

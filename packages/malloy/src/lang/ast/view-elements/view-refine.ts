@@ -23,7 +23,7 @@
 
 import {PipeSegment} from '../../../model';
 import {ErrorFactory} from '../error-factory';
-import {QuerySpace} from '../field-space/query-spaces';
+import {QueryOperationSpace} from '../field-space/query-spaces';
 import {getFinalStruct} from '../struct-utils';
 import {FieldSpace} from '../types/field-space';
 import {PipelineComp} from '../types/pipeline-comp';
@@ -46,7 +46,7 @@ export class ViewRefine extends View {
     super({base, refinement});
   }
 
-  pipelineComp(fs: FieldSpace, isNestIn?: QuerySpace): PipelineComp {
+  pipelineComp(fs: FieldSpace, isNestIn?: QueryOperationSpace): PipelineComp {
     const query = this.base.pipelineComp(fs);
     const resultPipe = this.refinement.refine(fs, query.pipeline, isNestIn);
     return {
@@ -62,7 +62,7 @@ export class ViewRefine extends View {
   refine(
     inputFS: FieldSpace,
     pipeline: PipeSegment[],
-    isNestIn: QuerySpace | undefined
+    isNestIn: QueryOperationSpace | undefined
   ): PipeSegment[] {
     const refineFrom = this.pipeline(inputFS, isNestIn);
     if (refineFrom.length !== 1) {
