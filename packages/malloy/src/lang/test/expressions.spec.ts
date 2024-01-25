@@ -739,6 +739,9 @@ describe('unspported fields in schema', () => {
     );
     expect(uModel).toTranslate();
   });
+  test('neg1', () => {
+    expect(expr`(strpos(astr,':')-1)`).toTranslate();
+  });
 
   describe('cast', () => {
     // The "+ 1"s are there to make sure the result is of type 'number'
