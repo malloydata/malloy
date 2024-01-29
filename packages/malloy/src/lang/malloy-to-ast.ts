@@ -1525,6 +1525,15 @@ export class MalloyToAST
     return new ast.ExprProps(this.getFieldExpr(pcx.fieldExpr()), statements);
   }
 
+  visitPartitionByStatement(pcx: parse.PartitionByStatementContext) {
+    return this.astAt(
+      new ast.PartitionBy(
+        pcx.fieldExpr().map(exprCx => this.getFieldExpr(exprCx))
+      ),
+      pcx
+    );
+  }
+
   visitLiteralTimestamp(pcx: parse.LiteralTimestampContext): ast.ExpressionDef {
     return this.parseTime(pcx, ast.LiteralTimestamp.parse);
   }

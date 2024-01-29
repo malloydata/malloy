@@ -21,13 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FieldReference} from '../query-items/field-references';
-import {MalloyElement} from '../types/malloy-element';
+import {ExpressionDef} from '../types/expression-def';
+import {ListOf} from '../types/malloy-element';
 
-export class PartitionBy extends MalloyElement {
+export class PartitionBy extends ListOf<ExpressionDef> {
   elementType = 'partition_by';
 
-  constructor(readonly partitionField: FieldReference) {
-    super();
+  constructor(readonly partitionExprs: ExpressionDef[]) {
+    super(partitionExprs);
   }
 }

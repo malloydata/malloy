@@ -584,6 +584,14 @@ class QueryField extends QueryNode {
       );
 
       if (expressionIsAnalytic(overload.returnType.expressionType)) {
+        const extraPartitions = (frag.partitionBy ?? []).map(pexpr => {
+          return this.generateExpressionFromExpr(
+            resultSet,
+            context,
+            pexpr,
+            state
+          );
+        });
         // TODO probably need to pass in the function and arguments separately
         // in order to generate parameter SQL correctly in BQ re: partition
         return this.generateAnalyticFragment(
@@ -592,7 +600,8 @@ class QueryField extends QueryNode {
           funcCall,
           overload,
           state,
-          args
+          args,
+          extraPartitions
         );
       }
       return this.generateExpressionFromExpr(
@@ -903,8 +912,8 @@ class QueryField extends QueryNode {
 
   getAnalyticPartitions(
     resultStruct: FieldInstanceResult,
-    extraPartitionField?: string
-  ) {
+    extraPartitionFields?: string[]
+  ): string[] {
     const ret: string[] = [];
     let p = resultStruct.parent;
     while (p !== undefined) {
@@ -915,11 +924,10 @@ class QueryField extends QueryNode {
       ret.push(...partitionSQLs);
       p = p.parent;
     }
-    if (extraPartitionField) {
-      // TODO need to actually look it up
-      ret.push(extraPartitionField);
+    if (extraPartitionFields) {
+      ret.push(...extraPartitionFields);
     }
-    return ret.join(', ');
+    return ret;
   }
 
   generateAnalyticFragment(
@@ -929,23 +937,21 @@ class QueryField extends QueryNode {
     overload: FunctionOverloadDef,
     state: GenerateState,
     args: Expr[],
-    partitionByField?: string
+    partitionByFields?: string[]
   ): string {
-    let partitionBy = '';
     const isComplex = resultStruct.root().isComplexQuery;
-    const fieldsString = this.getAnalyticPartitions(
+    const partitionFields = this.getAnalyticPartitions(
       resultStruct,
-      partitionByField
+      partitionByFields
     );
-    if (isComplex || fieldsString.length > 0) {
-      partitionBy = 'PARTITION BY ';
-      if (isComplex) {
-        partitionBy += 'group_set';
-      }
-      if (fieldsString.length > 0) {
-        partitionBy += `, ${fieldsString}`;
-      }
-    }
+    const allPartitions = [
+      ...(isComplex ? ['group_set'] : []),
+      ...partitionFields,
+    ];
+    const partitionBy =
+      allPartitions.length > 0
+        ? `PARTITION BY ${allPartitions.join(', ')}`
+        : '';
 
     let orderBy = '';
     if (overload.needsWindowOrderBy) {
@@ -2292,6 +2298,11 @@ class QueryQuery extends QueryField {
         if (expr.orderBy) {
           for (const ob of expr.orderBy) {
             this.addDependantExpr(resultStruct, context, ob.e, joinStack);
+          }
+        }
+        if (expr.partitionBy) {
+          for (const pexpr of expr.partitionBy) {
+            this.addDependantExpr(resultStruct, context, pexpr, joinStack);
           }
         }
       }

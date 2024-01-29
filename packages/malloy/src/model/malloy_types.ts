@@ -230,8 +230,7 @@ export interface FunctionCallFragment {
   args: Expr[];
   orderBy?: AggregateOrderBy[];
   limit?: number;
-  // TODO should this be a string[];
-  partitionBy?: string;
+  partitionBy?: Expr[];
   structPath?: string[];
 }
 

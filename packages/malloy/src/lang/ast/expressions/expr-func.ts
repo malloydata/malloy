@@ -25,7 +25,6 @@ import {
   EvalSpace,
   Expr,
   expressionIsAggregate,
-  expressionIsAnalytic,
   expressionIsScalar,
   ExpressionType,
   FieldValueType,
@@ -247,18 +246,16 @@ export class ExprFunc extends ExpressionDef {
       }
     }
     if (props?.partitionBy) {
-      const res = props.partitionBy.partitionField.getField(fs);
-      if (res.error) {
-        props.partitionBy.log(
-          `No such field ${props.partitionBy.partitionField.refString}`
-        );
-      } else if (expressionIsAnalytic(type.expressionType)) {
-        frag.partitionBy = props.partitionBy.partitionField.refString;
-      } else {
-        props.partitionBy.log(
-          'partition_by is only supported for analytic functions'
-        );
+      const partitionBy: Expr[] = [];
+      for (const partitionExpr of props.partitionBy.partitionExprs) {
+        const e = partitionExpr.getExpression(fs);
+        if (expressionIsScalar(e.expressionType)) {
+          partitionBy.push(e.value);
+        } else {
+          partitionExpr.log('Partition expression must be scalar');
+        }
       }
+      frag.partitionBy = partitionBy;
     }
     if (
       [

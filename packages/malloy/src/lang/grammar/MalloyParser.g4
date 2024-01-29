@@ -395,7 +395,7 @@ projectStatement
   ;
 
 partitionByStatement
-  : PARTITION_BY id
+  : PARTITION_BY fieldExpr (COMMA fieldExpr)* COMMA?
   ;
 
 orderByStatement

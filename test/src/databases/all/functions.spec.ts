@@ -1257,6 +1257,25 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       );
     });
   });
+
+  describe('partition_by', () => {
+    it(`works - ${databaseName}`, async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `run: airport -> {
+            group_by: name
+            calculate: f is row_number() {
+              partition_by: length(name)
+            }
+          }`
+        )
+        .run();
+      expect(result.data.toObject()).toMatchObject([
+        {name: 'foo', f: 1},
+        {name: 'bar', f: 1},
+      ]);
+    });
+  });
 });
 
 afterAll(async () => {
