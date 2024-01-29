@@ -216,8 +216,8 @@ export function overload(
     needsWindowOrderBy?: boolean;
     between?: {preceding: number | string; following: number | string};
     isSymmetric?: boolean;
-    supportsOrderBy?: boolean;
     supportsLimit?: boolean;
+    supportsOrderBy?: boolean;
   }
 ): DialectFunctionOverloadDef {
   return {
