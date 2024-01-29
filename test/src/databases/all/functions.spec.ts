@@ -1130,15 +1130,17 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           }`
         )
         .run();
-      expect(result.data.path(0, 'f').string.value).not.toBeUndefined();
+      expect(result.data.path(0, 'f').string.value).toBe(
+        'RUTHERFORD PAT R JR,RUTHERFORD JAMES C'
+      );
     });
 
-    it(`works with order by - ${databaseName}`, async () => {
+    it(`works with dotted shortcut - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
           `run: aircraft -> {
             where: name ~ r'.*RUTHERFORD.*'
-            aggregate: f is string_agg(name) { order_by: name }
+            aggregate: f is name.string_agg()
           }`
         )
         .run();
@@ -1151,12 +1153,13 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       const result = await expressionModel
         .loadQuery(
           `run: aircraft -> {
+            where: name ~ r'.*RUTHERFORD.*'
             aggregate: f is string_agg(name, ',', name)
           }`
         )
         .run();
       expect(result.data.path(0, 'f').string.value).toBe(
-        'FORSBERG CHARLES P,BOEGER BOGIE M'
+        'RUTHERFORD JAMES C,RUTHERFORD PAT R JR'
       );
     });
 
@@ -1164,16 +1167,17 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       const result = await expressionModel
         .loadQuery(
           `run: aircraft -> {
+            where: name ~ r'.*FLY.*'
             group_by: name
-            order_by: name
-            limit: 10
+            order_by: name desc
+            limit: 3
           } -> {
-            aggregate: f is string_agg(name, ',', concat(name, 'a'))
+            aggregate: f is string_agg(name, ',', length(name))
           }`
         )
         .run();
       expect(result.data.path(0, 'f').string.value).toBe(
-        'FORSBERG CHARLES P,BOEGER BOGIE M'
+        'YANKEE FLYING CLUB INC,WESTCHESTER FLYING CLUB,WILSON FLYING SERVICE INC'
       );
     });
 
@@ -1181,12 +1185,13 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       const result = await expressionModel
         .loadQuery(
           `run: aircraft -> {
+            where: name ~ r'.*ADVENTURE.*'
             aggregate: f is string_agg(name, ',', aircraft_models.model)
-          }`
+          }` // TODO ensure that the SQL generator actually joins in the appropriate join?
         )
         .run();
       expect(result.data.path(0, 'f').string.value).toBe(
-        'FORSBERG CHARLES P,BOEGER BOGIE M'
+        'ADVENTURE INC,SEA PLANE ADVENTURE INC,A BALLOON ADVENTURES ALOFT,A AERONAUTICAL ADVENTURE INC'
       );
     });
 
@@ -1194,12 +1199,53 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       const result = await expressionModel
         .loadQuery(
           `run: aircraft -> {
+            where: name ~ r'.*FLY.*'
+            group_by: name
+            order_by: name desc
+            limit: 3
+          } -> {
             aggregate: f is string_agg(name, ',', name, true)
           }`
         )
         .run();
       expect(result.data.path(0, 'f').string.value).toBe(
-        'FORSBERG CHARLES P,BOEGER BOGIE M'
+        'WESTCHESTER FLYING CLUB,WILSON FLYING SERVICE INC,YANKEE FLYING CLUB INC'
+      );
+    });
+
+    it(`works with order desc - ${databaseName}`, async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `run: aircraft -> {
+            where: name ~ r'.*FLY.*'
+            group_by: name
+            order_by: name desc
+            limit: 3
+          } -> {
+            aggregate: f is string_agg(name, ',', name, false)
+          }`
+        )
+        .run();
+      expect(result.data.path(0, 'f').string.value).toBe(
+        'YANKEE FLYING CLUB INC,WILSON FLYING SERVICE INC,WESTCHESTER FLYING CLUB'
+      );
+    });
+
+    it(`works with order null - ${databaseName}`, async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `run: aircraft -> {
+            where: name ~ r'.*FLY.*'
+            group_by: name
+            order_by: name desc
+            limit: 3
+          } -> {
+            aggregate: f is string_agg(name, ',', name, null)
+          }`
+        )
+        .run();
+      expect(result.data.path(0, 'f').string.value).toBe(
+        'WESTCHESTER FLYING CLUB,WILSON FLYING SERVICE INC,YANKEE FLYING CLUB INC'
       );
     });
   });

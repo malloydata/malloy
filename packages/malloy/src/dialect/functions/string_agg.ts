@@ -36,7 +36,14 @@ import {
 export function fnStringAgg(): DialectFunctionOverloadDef[] {
   const value = makeParam('value', maxScalar('string'));
   const separator = makeParam('separator', literal(maxScalar('string')));
-  const orderBy = makeParam('order_by', maxScalar('string'));
+  const orderBy = makeParam(
+    'order_by',
+    maxScalar('string'),
+    maxScalar('number'),
+    maxScalar('date'),
+    maxScalar('timestamp'),
+    maxScalar('boolean')
+  );
   const ascDesc = makeParam('order_direction', constant(maxScalar('boolean')));
   // const ob: Fragment = {type: 'function_order_by'};
   // const lim: Fragment = {type: 'function_limit'};
