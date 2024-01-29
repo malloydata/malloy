@@ -22,13 +22,20 @@
  */
 
 import {Filter} from '../query-properties/filters';
+import {Limit} from '../query-properties/limit';
+import {Ordering} from '../query-properties/ordering';
 import {PartitionBy} from '../query-properties/partition_by';
 import {MalloyElement} from './malloy-element';
 
-export type FieldPropStatement = Filter | PartitionBy;
+export type FieldPropStatement = Filter | Limit | PartitionBy | Ordering;
 
 export function isFieldPropStatement(
   el: MalloyElement
 ): el is FieldPropStatement {
-  return el instanceof Filter || el instanceof PartitionBy;
+  return (
+    el instanceof Filter ||
+    el instanceof Limit ||
+    el instanceof PartitionBy ||
+    el instanceof Ordering
+  );
 }

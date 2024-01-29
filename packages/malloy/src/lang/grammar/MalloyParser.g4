@@ -292,6 +292,8 @@ fieldProperties
 fieldPropertyStatement
   : whereStatement
   | partitionByStatement
+  | orderByStatement
+  | limitStatement
   ;
 
 filterClauseList

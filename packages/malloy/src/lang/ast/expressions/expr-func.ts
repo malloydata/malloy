@@ -44,6 +44,8 @@ import {errorFor} from '../ast-utils';
 import {StructSpaceFieldBase} from '../field-space/struct-space-field-base';
 
 import {FieldReference} from '../query-items/field-references';
+import {Limit} from '../query-properties/limit';
+import {Ordering} from '../query-properties/ordering';
 import {PartitionBy} from '../query-properties/partition_by';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
@@ -71,6 +73,8 @@ export class ExprFunc extends ExpressionDef {
     fs: FieldSpace,
     props?: {
       partitionBy?: PartitionBy;
+      orderBy?: Ordering;
+      limit?: Limit;
     }
   ): ExprValue {
     const argExprsWithoutImplicit = this.args.map(arg => arg.getExpression(fs));
@@ -226,7 +230,15 @@ export class ExprFunc extends ExpressionDef {
       expressionType,
       structPath,
     };
-    let funcCall: Expr = [frag];
+    const funcCall: Expr = [frag];
+    if (props?.orderBy) {
+      const ob = props.orderBy.getAggregateOrderBy(fs);
+      if (overload.supportsOrderBy) {
+        frag.orderBy = ob;
+      } else {
+        props.orderBy.log(`Function ${this.name} does not support order_by`);
+      }
+    }
     if (props?.partitionBy) {
       const res = props.partitionBy.partitionField.getField(fs);
       if (res.error) {
@@ -241,6 +253,7 @@ export class ExprFunc extends ExpressionDef {
         );
       }
     }
+<<<<<<< HEAD
     if (
       [
         'sql_number',
@@ -305,6 +318,13 @@ export class ExprFunc extends ExpressionDef {
             ),
           },
         ];
+=======
+    if (props?.limit !== undefined) {
+      if (overload.supportsLimit) {
+        frag.limit = props.limit.limit;
+      } else {
+        this.log(`Function ${this.name} does not support limit`);
+>>>>>>> parent of 61596398 (Remove old stuff)
       }
     }
     if (type.dataType === 'any') {

@@ -226,6 +226,9 @@ export interface FunctionCallFragment {
   expressionType: ExpressionType;
   args: Expr[];
   // TODO should this be a string[];
+  orderBy?: OrderBy[];
+  limit?: number;
+  // TODO should this be a string[];
   partitionBy?: string;
   structPath?: string[];
 }
@@ -1023,6 +1026,8 @@ export interface FunctionOverloadDef {
   needsWindowOrderBy?: boolean;
   between?: {preceding: number | string; following: number | string};
   isSymmetric?: boolean;
+  supportsOrderBy?: boolean;
+  supportsLimit?: boolean;
   params: FunctionParameterDef[];
   dialect: {
     [dialect: string]: Expr;

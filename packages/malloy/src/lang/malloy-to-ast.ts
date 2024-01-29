@@ -1495,7 +1495,9 @@ export class MalloyToAST
   }
 
   visitExprFieldProps(pcx: parse.ExprFieldPropsContext) {
-    const statements = this.only<ast.FieldPropStatement>(
+    const statements = this.only<
+      ast.Filter | ast.Ordering | ast.PartitionBy | ast.Limit
+    >(
       pcx
         .fieldProperties()
         .fieldPropertyStatement()

@@ -26,6 +26,8 @@ import {expressionIsCalculation} from '../../../model/malloy_types';
 import {errorFor} from '../ast-utils';
 import {FT} from '../fragtype-utils';
 import {Filter} from '../query-properties/filters';
+import {Limit} from '../query-properties/limit';
+import {Ordering} from '../query-properties/ordering';
 import {PartitionBy} from '../query-properties/partition_by';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
@@ -80,6 +82,8 @@ export class ExprProps extends ExpressionDef {
 
   getExpression(fs: FieldSpace): ExprValue {
     let partitionBy: PartitionBy | undefined;
+    let limit: Limit | undefined;
+    let orderBy: Ordering | undefined;
     let where: Filter | undefined;
     for (const statement of this.statements) {
       if (statement instanceof PartitionBy) {
@@ -87,6 +91,18 @@ export class ExprProps extends ExpressionDef {
           statement.log('partition_by already specified');
         } else {
           partitionBy = statement;
+        }
+      } else if (statement instanceof Limit) {
+        if (limit) {
+          statement.log('limit already specified');
+        } else {
+          limit = statement;
+        }
+      } else if (statement instanceof Ordering) {
+        if (orderBy) {
+          statement.log('ordering already specified');
+        } else {
+          orderBy = statement;
         }
       } else {
         if (where) {
@@ -99,7 +115,11 @@ export class ExprProps extends ExpressionDef {
     }
     const resultExpr =
       this.expr instanceof ExprFunc
-        ? this.expr.getPropsExpression(fs, {partitionBy})
+        ? this.expr.getPropsExpression(fs, {
+            partitionBy,
+            limit,
+            orderBy,
+          })
         : this.expr.getExpression(fs);
     return this.getFilteredExpression(fs, resultExpr, where);
   }
