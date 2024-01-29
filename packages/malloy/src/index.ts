@@ -72,14 +72,15 @@ export type {
   // Used in Composer Demo
   FieldAtomicDef,
   FieldDef,
-  FilteredAliasedName,
   PipeSegment,
   QueryFieldDef,
+  IndexFieldDef,
   TurtleDef,
   SearchValueMapResult,
   SearchIndexResult,
   ModelDef,
   Query,
+  QueryResult,
   QueryRunStats,
   NamedQuery,
   NamedModelObject,
@@ -105,7 +106,6 @@ export type {
 export {
   // Used in Composer Demo
   Segment,
-  isFilteredAliasedName,
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
@@ -134,6 +134,7 @@ export {
   SourceRelationship,
   DateTimeframe,
   TimestampTimeframe,
+  PreparedResult,
   Result,
   QueryMaterializer,
   CSVWriter,
@@ -145,7 +146,6 @@ export {
 export type {
   Model,
   PreparedQuery,
-  PreparedResult,
   Field,
   AtomicField,
   ExploreField,

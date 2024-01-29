@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Google LLC
+ * Copyright 2024 Google LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files
@@ -21,6 +21,22 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export interface RunSQLOptions {
-  rowLimit?: number;
+import {renderMalloyResults} from './renderer';
+
+declare global {
+  interface Window {
+    renderMalloyResults: (
+      queryResult,
+      totalRows,
+      preparedResult
+    ) => Promise<HTMLElement>;
+  }
 }
+
+window.renderMalloyResults = async (
+  resultStr,
+  totalRows,
+  preparedResultStr
+) => {
+  return await renderMalloyResults(resultStr, totalRows, preparedResultStr);
+};

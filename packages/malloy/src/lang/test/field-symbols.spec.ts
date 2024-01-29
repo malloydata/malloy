@@ -118,7 +118,7 @@ describe('structdef comprehension', () => {
       dialect: 'standardsql',
       structRelationship: {
         type: 'nested',
-        field: 'a',
+        fieldName: 'a',
         isArray: false,
       },
       structSource: {type: 'nested'},
@@ -160,9 +160,9 @@ describe('structdef comprehension', () => {
         type: 'one',
         matrixOperation: 'left',
         onExpression: [
-          {type: 'field', path: 'aKey'},
+          {type: 'field', path: ['aKey']},
           '=',
-          {type: 'field', path: 't.a'},
+          {type: 'field', path: ['t', 'a']},
         ],
       },
       structSource: {type: 'table', tablePath: 't'},
@@ -184,7 +184,7 @@ describe('structdef comprehension', () => {
       pipeline: [
         {
           type: 'reduce',
-          fields: ['a'],
+          queryFields: [{type: 'fieldref', path: ['a']}],
         },
       ],
     };

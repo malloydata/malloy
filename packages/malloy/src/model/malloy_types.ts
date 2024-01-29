@@ -121,20 +121,6 @@ export interface TypedObject {
   type: string;
 }
 
-export interface FilteredAliasedName extends AliasedName {
-  filterList?: FilterExpression[];
-}
-export function isFilteredAliasedName(
-  f: FieldTypeRef
-): f is FilteredAliasedName {
-  for (const prop of Object.keys(f)) {
-    if (!['name', 'as', 'filterList'].includes(prop)) {
-      return false;
-    }
-  }
-  return true;
-}
-
 /** all named objects have a type an a name (optionally aliased) */
 export interface NamedObject extends AliasedName, HasLocation {
   type: string;
@@ -186,11 +172,19 @@ export function isDialectFragment(f: Fragment): f is DialectFragment {
   return (f as DialectFragment)?.type === 'dialect';
 }
 
+export type AggregateFunctionType =
+  | 'sum'
+  | 'avg'
+  | 'count'
+  | 'count_distinct'
+  | 'max'
+  | 'min';
+
 export interface AggregateFragment {
   type: 'aggregate';
-  function: string;
+  function: AggregateFunctionType;
   e: Expr;
-  structPath?: string;
+  structPath?: string[];
 }
 export function isAggregateFragment(f: Fragment): f is AggregateFragment {
   return (f as AggregateFragment)?.type === 'aggregate';
@@ -231,9 +225,9 @@ export interface FunctionCallFragment {
   overload: FunctionOverloadDef;
   expressionType: ExpressionType;
   args: Expr[];
-  structPath?: string;
   // TODO should this be a string[];
   partitionBy?: string;
+  structPath?: string[];
 }
 
 export function isFunctionCallFragment(f: Fragment): f is FunctionCallFragment {
@@ -262,15 +256,33 @@ export function isSpreadFragment(f: Fragment): f is SpreadFragment {
 
 export interface FieldFragment {
   type: 'field';
-  path: string;
+  path: string[];
 }
 export function isFieldFragment(f: Fragment): f is FieldFragment {
   return (f as FieldFragment)?.type === 'field';
 }
 
+export interface SqlStringFragment {
+  type: 'sql-string';
+  e: Expr;
+}
+export function isSqlStringFragment(f: Fragment): f is SqlStringFragment {
+  return (f as SqlStringFragment)?.type === 'sql-string';
+}
+
+export interface SourceReferenceFragment {
+  type: 'source-reference';
+  path?: string[];
+}
+export function isSourceReferenceFragment(
+  f: Fragment
+): f is SourceReferenceFragment {
+  return (f as SourceReferenceFragment)?.type === 'source-reference';
+}
+
 export interface ParameterFragment {
   type: 'parameter';
-  path: string;
+  path: string[];
 }
 export function isParameterFragment(f: Fragment): f is ParameterFragment {
   return (f as ParameterFragment)?.type === 'parameter';
@@ -389,6 +401,8 @@ export type Fragment =
   | ApplyFragment
   | ApplyValueFragment
   | FieldFragment
+  | SourceReferenceFragment
+  | SqlStringFragment
   | ParameterFragment
   | FilterFragment
   | OutputFieldFragment
@@ -834,9 +848,12 @@ export function isRawSegment(pe: PipeSegment): pe is RawSegment {
   return (pe as RawSegment).type === 'raw';
 }
 
+export type IndexFieldDef = RefToField;
+export type SegmentFieldDef = IndexFieldDef | QueryFieldDef;
+
 export interface IndexSegment extends Filtered {
   type: 'index';
-  fields: string[];
+  indexFields: IndexFieldDef[];
   limit?: number;
   weightMeasure?: string; // only allow the name of the field to use for weights
   sample?: Sampling;
@@ -847,7 +864,7 @@ export function isIndexSegment(pe: PipeSegment): pe is IndexSegment {
 
 export interface QuerySegment extends Filtered {
   type: 'reduce' | 'project' | 'partial';
-  fields: QueryFieldDef[];
+  queryFields: QueryFieldDef[];
   extendSource?: FieldDef[];
   limit?: number;
   by?: By;
@@ -886,7 +903,7 @@ export type StructRelationship =
   | {type: 'basetable'; connectionName: string}
   | JoinOn
   | {type: 'inline'}
-  | {type: 'nested'; field: FieldRef; isArray: boolean};
+  | {type: 'nested'; fieldName: string; isArray: boolean};
 
 export interface SQLFragment {
   sql: string;
@@ -1087,18 +1104,20 @@ export function isFieldStructDef(f: FieldDef): f is StructDef {
 
 // Queries
 
-/** field reference in a query */
-export type FieldTypeRef = string | FieldTypeDef | FilteredAliasedName;
-
-/** field reference with with possibly and order by. */
-export type QueryFieldDef = FieldTypeRef | TurtleDef;
+export type QueryFieldDef = FieldTypeDef | TurtleDef | RefToField;
 
 /** basics statement */
 export type FieldDef = FieldTypeDef | StructDef | TurtleDef;
 
 /** reference to a field */
 
-export type FieldRef = string | FieldDef;
+export interface RefToField {
+  type: 'fieldref';
+  path: string[];
+  annotation?: Annotation;
+}
+
+export type FieldRefOrDef = FieldDef | RefToField;
 
 /** which field is the primary key in this struct */
 export type PrimaryKeyRef = string;

@@ -26,7 +26,7 @@ import * as malloy from '@malloydata/malloy';
 import {Query} from '@malloydata/malloy';
 import {testModel} from '../../models/faa_model';
 import {BigQueryTestConnection, RuntimeList} from '../../runtimes';
-import {describeIfDatabaseAvailable, fStringEq} from '../../util';
+import {describeIfDatabaseAvailable, fStringEq, fToQF} from '../../util';
 import '../../util/db-jest-matchers';
 
 const runtimeList = new RuntimeList(['bigquery']);
@@ -85,7 +85,7 @@ describe('BigQuery expression tests', () => {
         // top 5 routes per carrier
         {
           type: 'reduce',
-          fields: [
+          queryFields: fToQF([
             'carrier',
             'flight_count',
             {
@@ -94,7 +94,7 @@ describe('BigQuery expression tests', () => {
               pipeline: [
                 {
                   type: 'reduce',
-                  fields: [
+                  queryFields: fToQF([
                     'origin_code',
                     'destination_code',
                     'flight_count',
@@ -110,23 +110,23 @@ describe('BigQuery expression tests', () => {
                         },
                       ],
                     },
-                  ],
+                  ]),
                 },
               ],
             },
-          ],
+          ]),
           limit: 5,
           orderBy: [{dir: 'desc', field: 'carrier'}],
         },
         // carrier top routes
         {
           type: 'project',
-          fields: [
+          queryFields: fToQF([
             'carrier',
             'flight_count',
             'routes.origin_code',
             'routes.route_flights',
-          ],
+          ]),
         },
       ],
     });
@@ -136,7 +136,9 @@ describe('BigQuery expression tests', () => {
   it('step_0', async () => {
     const sql = await compileQueryFromQueryDef(faa, {
       structRef: 'flights',
-      pipeline: [{type: 'reduce', fields: ['carriers.name', 'flight_count']}],
+      pipeline: [
+        {type: 'reduce', queryFields: fToQF(['carriers.name', 'flight_count'])},
+      ],
     });
     await bqCompile(sql);
   });
@@ -148,7 +150,9 @@ describe('BigQuery expression tests', () => {
         fStringEq('origin.state', 'CA'),
         fStringEq('destination.state', 'NY'),
       ],
-      pipeline: [{type: 'reduce', fields: ['carriers.name', 'flight_count']}],
+      pipeline: [
+        {type: 'reduce', queryFields: fToQF(['carriers.name', 'flight_count'])},
+      ],
     });
     await bqCompile(sql);
   });
@@ -158,7 +162,7 @@ describe('BigQuery expression tests', () => {
       structRef: 'flights',
       pipeline: [
         {
-          fields: [
+          queryFields: [
             {
               as: 'dep_year',
               name: 'dep_time',
@@ -213,7 +217,7 @@ describe('BigQuery expression tests', () => {
                     {
                       type: 'aggregate',
                       function: 'sum',
-                      e: [{type: 'field', path: 'distance'}],
+                      e: [{type: 'field', path: ['distance']}],
                     },
                   ],
                 },
@@ -232,7 +236,7 @@ describe('BigQuery expression tests', () => {
     const sql = await compileQueryFromQueryDef(faa, {
       pipeline: [
         {
-          fields: [
+          queryFields: fToQF([
             {
               bucketFilter: 'AA,WN,DL',
               bucketOther: 'Other Carrier',
@@ -240,7 +244,7 @@ describe('BigQuery expression tests', () => {
               type: 'string',
             },
             'flight_count',
-          ],
+          ]),
           orderBy: [{dir: 'asc', field: 2}],
           type: 'reduce',
         },
@@ -258,7 +262,9 @@ describe('BigQuery expression tests', () => {
   it('simple_reduce', async () => {
     const sql = await compileQueryFromQueryDef(faa, {
       structRef: 'flights',
-      pipeline: [{type: 'reduce', fields: ['carrier', 'flight_count']}],
+      pipeline: [
+        {type: 'reduce', queryFields: fToQF(['carrier', 'flight_count'])},
+      ],
     });
     await bqCompile(sql);
   });
@@ -269,7 +275,7 @@ describe('BigQuery expression tests', () => {
       pipeline: [
         {
           type: 'reduce',
-          fields: [
+          queryFields: fToQF([
             {
               type: 'number',
               expressionType: 'aggregate',
@@ -278,12 +284,12 @@ describe('BigQuery expression tests', () => {
                 {
                   type: 'aggregate',
                   function: 'sum',
-                  e: [{type: 'field', path: 'distance'}],
+                  e: [{type: 'field', path: ['distance']}],
                 },
               ],
             },
             'aircraft.aircraft_models.total_seats',
-          ],
+          ]),
         },
       ],
     });
@@ -296,14 +302,18 @@ describe('BigQuery expression tests', () => {
       pipeline: [
         {
           type: 'reduce',
-          fields: [
+          queryFields: fToQF([
             {
               type: 'string',
               name: 'carrier',
-              e: ['UPPER(', {type: 'field', path: 'carriers.nickname'}, ')'],
+              e: [
+                'UPPER(',
+                {type: 'field', path: ['carriers', 'nickname']},
+                ')',
+              ],
             },
             'flight_count',
-          ],
+          ]),
         },
       ],
     });
@@ -315,7 +325,7 @@ describe('BigQuery expression tests', () => {
       structRef: 'flights',
       pipeline: [
         {
-          fields: [
+          queryFields: fToQF([
             'carriers.name',
             {
               type: 'number',
@@ -325,11 +335,11 @@ describe('BigQuery expression tests', () => {
                 {
                   type: 'aggregate',
                   function: 'sum',
-                  e: [{type: 'field', path: 'distance'}],
+                  e: [{type: 'field', path: ['distance']}],
                 },
               ],
             },
-          ],
+          ]),
           type: 'reduce',
         },
       ],
@@ -343,7 +353,7 @@ describe('BigQuery expression tests', () => {
       pipeline: [
         {
           type: 'reduce',
-          fields: [
+          queryFields: fToQF([
             'aircraft.aircraft_models.manufacturer',
             {
               type: 'number',
@@ -357,13 +367,13 @@ describe('BigQuery expression tests', () => {
                     {
                       type: 'aggregate',
                       function: 'sum',
-                      e: [{type: 'field', path: 'distance'}],
+                      e: [{type: 'field', path: ['distance']}],
                     },
                   ],
                 },
               ],
             },
-          ],
+          ]),
         },
       ],
     });
@@ -376,7 +386,7 @@ describe('BigQuery expression tests', () => {
       pipeline: [
         {
           type: 'reduce',
-          fields: [
+          queryFields: fToQF([
             'origin.state',
             'flight_count',
             {
@@ -391,13 +401,13 @@ describe('BigQuery expression tests', () => {
                     {
                       type: 'aggregate',
                       function: 'sum',
-                      e: [{type: 'field', path: 'distance'}],
+                      e: [{type: 'field', path: ['distance']}],
                     },
                   ],
                 },
               ],
             },
-          ],
+          ]),
           filterList: [fStringEq('carriers.code', 'WN')],
         },
       ],
@@ -456,14 +466,14 @@ describe('BigQuery expression tests', () => {
       structRef: 'flights',
       pipeline: [
         {
-          fields: [
+          queryFields: fToQF([
             'origin.state',
             'flight_count',
             'flights_by_model',
             'flights_by_carrier',
             'measures_first',
             'first_turtle',
-          ],
+          ]),
           type: 'reduce',
         },
       ],
@@ -592,7 +602,7 @@ describe('BigQuery expression tests', () => {
         pipeline: [
           {
             type: 'reduce',
-            fields: ['provider_state', 'num_providers'],
+            queryFields: fToQF(['provider_state', 'num_providers']),
             orderBy: [{dir: 'desc', field: 2}],
           },
         ],

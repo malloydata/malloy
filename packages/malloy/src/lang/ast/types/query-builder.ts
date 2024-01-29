@@ -24,12 +24,12 @@
 import {PipeSegment} from '../../../model/malloy_types';
 import {QueryProperty} from './query-property';
 import {QueryInputSpace} from '../field-space/query-input-space';
-import {QuerySpace} from '../field-space/query-spaces';
+import {QueryOperationSpace} from '../field-space/query-spaces';
 
 export interface QueryBuilder {
   type: 'grouping' | 'index' | 'project';
   inputFS: QueryInputSpace;
-  resultFS: QuerySpace;
+  resultFS: QueryOperationSpace;
   execute(qp: QueryProperty): void;
   finalize(refineFrom: PipeSegment | undefined): PipeSegment;
 }

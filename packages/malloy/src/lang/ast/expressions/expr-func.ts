@@ -122,7 +122,7 @@ export class ExprFunc extends ExpressionDef {
     // Find the 'implicit argument' for aggregate functions called like `some_join.some_field.agg(...args)`
     // where the full arg list is `(some_field, ...args)`.
     let implicitExpr: ExprValue | undefined = undefined;
-    let structPath = this.source?.refString;
+    let structPath = this.source?.path;
     if (this.source) {
       const sourceFoot = this.source.getField(fs).found;
       if (sourceFoot) {
@@ -131,10 +131,10 @@ export class ExprFunc extends ExpressionDef {
           implicitExpr = {
             dataType: footType.dataType,
             expressionType: footType.expressionType,
-            value: [{type: 'field', path: this.source.refString}],
+            value: [{type: 'field', path: this.source.path}],
             evalSpace: footType.evalSpace,
           };
-          structPath = this.source.sourceString;
+          structPath = this.source.path.slice(0, -1);
         } else {
           if (!(sourceFoot instanceof StructSpaceFieldBase)) {
             const message = `Aggregate source cannot be a ${footType.dataType}`;
@@ -226,7 +226,7 @@ export class ExprFunc extends ExpressionDef {
       expressionType,
       structPath,
     };
-    const funcCall: Expr = [frag];
+    let funcCall: Expr = [frag];
     if (props?.partitionBy) {
       const res = props.partitionBy.partitionField.getField(fs);
       if (res.error) {
@@ -239,6 +239,72 @@ export class ExprFunc extends ExpressionDef {
         props.partitionBy.log(
           'partition_by is only supported for analytic functions'
         );
+      }
+    }
+    if (
+      [
+        'sql_number',
+        'sql_string',
+        'sql_date',
+        'sql_timestamp',
+        'sql_boolean',
+      ].includes(func.name)
+    ) {
+      if (!this.inExperiment('sql_functions', true)) {
+        return errorFor(
+          `Cannot use sql_function \`${func.name}\`; use \`sql_functions\` experiment to enable this behavior`
+        );
+      }
+
+      const str = argExprs[0].value;
+      if (
+        str.length !== 1 ||
+        typeof str[0] === 'string' ||
+        str[0].type !== 'dialect' ||
+        str[0].function !== 'stringLiteral'
+      ) {
+        this.log(`Invalid string literal for \`${func.name}\``);
+      } else {
+        const literal = str[0].literal;
+        const parts = parseSQLInterpolation(literal);
+        const unsupportedInterpolations = parts
+          .filter(
+            part => part.type === 'interpolation' && part.name.includes('.')
+          )
+          .map(unsupportedPart =>
+            unsupportedPart.type === 'interpolation'
+              ? `\${${unsupportedPart.name}}`
+              : `\${${unsupportedPart.value}}`
+          );
+
+        if (unsupportedInterpolations.length > 0) {
+          const unsupportedInterpolationMsg =
+            unsupportedInterpolations.length === 1
+              ? `'.' paths are not yet supported in sql interpolations, found ${unsupportedInterpolations.at(
+                  0
+                )}`
+              : `'.' paths are not yet supported in sql interpolations, found [${unsupportedInterpolations.join(
+                  ', '
+                )}]`;
+          this.log(unsupportedInterpolationMsg);
+
+          return errorFor(
+            `${unsupportedInterpolationMsg}. See LookML \${...} documentation at https://cloud.google.com/looker/docs/reference/param-field-sql#sql_for_dimensions`
+          );
+        }
+
+        funcCall = [
+          {
+            type: 'sql-string',
+            e: parts.map(part =>
+              part.type === 'string'
+                ? part.value
+                : part.name === 'TABLE'
+                ? {type: 'source-reference'}
+                : {type: 'field', path: [part.name]}
+            ),
+          },
+        ];
       }
     }
     if (type.dataType === 'any') {
@@ -393,4 +459,35 @@ function findOverload(
       };
     }
   }
+}
+
+type InterpolationPart =
+  | {type: 'string'; value: string}
+  | {type: 'interpolation'; name: string};
+
+function parseSQLInterpolation(template: string): InterpolationPart[] {
+  const parts: InterpolationPart[] = [];
+  let remaining = template;
+  while (remaining.length) {
+    const nextInterp = remaining.indexOf('${');
+    if (nextInterp === -1) {
+      parts.push({type: 'string', value: remaining});
+      break;
+    } else {
+      const interpEnd = remaining.slice(nextInterp).indexOf('}');
+      if (interpEnd === -1) {
+        parts.push({type: 'string', value: remaining});
+        break;
+      }
+      if (nextInterp > 0) {
+        parts.push({type: 'string', value: remaining.slice(0, nextInterp)});
+      }
+      parts.push({
+        type: 'interpolation',
+        name: remaining.slice(nextInterp + 2, interpEnd + nextInterp),
+      });
+      remaining = remaining.slice(interpEnd + nextInterp + 1);
+    }
+  }
+  return parts;
 }

@@ -1166,6 +1166,11 @@ export class DocumentCompletion {
   }
 }
 
+export type PreparedResultJSON = {
+  query: CompiledQuery;
+  modelDef: ModelDef;
+};
+
 /**
  * A fully-prepared query containing SQL and metadata required to run the query.
  */
@@ -1177,6 +1182,17 @@ export class PreparedResult implements Taggable {
     protected modelDef: ModelDef
   ) {
     this.inner = query;
+  }
+
+  public static fromJson({
+    query,
+    modelDef,
+  }: PreparedResultJSON): PreparedResult {
+    // Validate extracted properties (optional, but recommended)
+    if (!query || !modelDef) {
+      throw new Error('Missing required properties in JSON data');
+    }
+    return new PreparedResult(query, modelDef);
   }
 
   tagParse(spec?: TagParseSpec): TagParse {
@@ -1492,7 +1508,7 @@ export class Explore extends Entity implements Taggable {
       pipeline: [
         {
           type: 'reduce',
-          fields: [name],
+          queryFields: [{type: 'fieldref', path: [name]}],
         },
       ],
     };

@@ -30,11 +30,12 @@ import {
   NamedModelObject,
   PipeSegment,
   Query,
+  QueryFieldDef,
   SQLBlockSource,
   SQLBlockStructDef,
   StructDef,
   TurtleDef,
-  isFilteredAliasedName,
+  isQuerySegment,
   isSQLFragment,
 } from '../../model/malloy_types';
 import {ExpressionDef, MalloyElement} from '../ast';
@@ -71,7 +72,7 @@ const mockSchema: Record<string, StructDef> = {
         type: 'struct',
         name: 'astruct',
         structSource: {type: 'nested'},
-        structRelationship: {type: 'nested', isArray: true, field: 'foo'},
+        structRelationship: {type: 'nested', isArray: true, fieldName: 'foo'},
         fields: [{type: 'number', name: 'column', numberType: 'integer'}],
         dialect: 'standardsql',
       },
@@ -264,9 +265,9 @@ export class TestTranslator extends MalloyTranslator {
               type: 'one',
               matrixOperation: 'left',
               onExpression: [
-                {type: 'field', path: 'astr'},
+                {type: 'field', path: ['astr']},
                 '=',
-                {type: 'field', path: 'b.astr'},
+                {type: 'field', path: ['b', 'astr']},
               ],
             },
           },
@@ -284,7 +285,10 @@ export class TestTranslator extends MalloyTranslator {
             pipeline: [
               {
                 type: 'reduce',
-                fields: ['astr', 'acount'],
+                queryFields: [
+                  {type: 'fieldref', path: ['astr']},
+                  {type: 'fieldref', path: ['acount']},
+                ],
               },
             ],
           },
@@ -464,29 +468,31 @@ export function getModelQuery(modelDef: ModelDef, name: string): Query {
   return modelDef.contents[name] as Query;
 }
 
-export function getFieldDef(
-  thing: StructDef | PipeSegment,
-  name: string
-): FieldDef {
-  let found: FieldDef | undefined = undefined;
-  for (const f of thing.fields) {
-    if (typeof f === 'string') {
-      if (f === name) {
-        throw new Error(`Expected def for '${name}', found a ref`);
-      }
-    } else if ((f.as || f.name) === name) {
-      if (isFilteredAliasedName(f)) {
-        throw new Error(`FilteredAliasedName for '${name}' unexpected`);
-      }
-      found = f;
-      break;
+export function getFieldDef(source: StructDef, name: string): FieldDef {
+  for (const f of source.fields) {
+    if (f.as ?? f.name === name) {
+      return f;
     }
   }
-  if (found === undefined) {
-    throw new Error(`Compiled code did not contain expected field '${name}'`);
-  } else {
-    return found;
+  throw new Error(`Compiled source did not contain expected field '${name}'`);
+}
+
+export function getQueryFieldDef(
+  query: PipeSegment,
+  name: string
+): QueryFieldDef {
+  if (isQuerySegment(query)) {
+    for (const f of query.queryFields) {
+      if (f.type === 'fieldref') {
+        if (name === f.path[f.path.length - 1]) {
+          return f;
+        }
+      } else if (f.as ?? f.name === name) {
+        return f;
+      }
+    }
   }
+  throw new Error(`Compiled query did not contain expected field '${name}'`);
 }
 
 // TODO "as" is almost always a code smell ...

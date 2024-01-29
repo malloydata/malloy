@@ -511,7 +511,7 @@ export class BigQueryConnection
             structSource: {type: 'nested'},
             structRelationship: {
               type: 'nested',
-              field: name,
+              fieldName: name,
               isArray: true,
             },
             fields: [{...malloyType, name: 'value'} as FieldTypeDef],
@@ -527,7 +527,7 @@ export class BigQueryConnection
             field.mode === 'REPEATED' ? {type: 'nested'} : {type: 'inline'},
           structRelationship:
             field.mode === 'REPEATED'
-              ? {type: 'nested', field: name, isArray: false}
+              ? {type: 'nested', fieldName: name, isArray: false}
               : {type: 'inline'},
           fields: [],
         };

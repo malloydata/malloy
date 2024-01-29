@@ -21,7 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {TestTranslator, getFieldDef, model} from './test-translator';
+import {
+  TestTranslator,
+  getFieldDef,
+  getQueryFieldDef,
+  model,
+} from './test-translator';
 import './parse-expects';
 import {diff} from 'jest-diff';
 import {Annotation} from '../../model/malloy_types';
@@ -429,7 +434,7 @@ describe('query operation annotations', () => {
     const foundYou = m.getQuery('findme');
     expect(foundYou).toBeDefined();
     if (foundYou) {
-      const note_a = getFieldDef(foundYou.pipeline[0], 'note_a');
+      const note_a = getQueryFieldDef(foundYou.pipeline[0], 'note_a');
       expect(note_a?.annotation).matchesAnnotation(defaultTags);
     }
   });
@@ -455,7 +460,7 @@ describe('query operation annotations', () => {
     const foundYou = m.getQuery(0);
     expect(foundYou).toBeDefined();
     if (foundYou) {
-      const note_a = getFieldDef(foundYou.pipeline[0], 'note_a');
+      const note_a = getQueryFieldDef(foundYou.pipeline[0], 'note_a');
       expect(note_a?.annotation).matchesAnnotation({
         inherits: defaultTags,
         blockNotes: ['# note1\n'],
@@ -480,7 +485,7 @@ describe('query operation annotations', () => {
     const foundYou = m.getQuery('findme');
     expect(foundYou).toBeDefined();
     if (foundYou) {
-      const note_a = getFieldDef(foundYou.pipeline[0], 'note_a');
+      const note_a = getQueryFieldDef(foundYou.pipeline[0], 'note_a');
       expect(note_a?.annotation).matchesAnnotation(defaultTags);
     }
   });
@@ -502,7 +507,7 @@ describe('query operation annotations', () => {
     const foundYou = m.getQuery('findme');
     expect(foundYou).toBeDefined();
     if (foundYou) {
-      const note_a = getFieldDef(foundYou.pipeline[0], 'note_a');
+      const note_a = getQueryFieldDef(foundYou.pipeline[0], 'note_a');
       expect(note_a?.annotation).matchesAnnotation(defaultTags);
     }
   });
@@ -529,7 +534,7 @@ describe('query operation annotations', () => {
     const foundYou = m.getQuery('findme');
     expect(foundYou).toBeDefined();
     if (foundYou) {
-      const note_a = getFieldDef(foundYou.pipeline[0], 'note_a');
+      const note_a = getQueryFieldDef(foundYou.pipeline[0], 'note_a');
       expect(note_a?.annotation).matchesAnnotation({
         blockNotes: ['# note1\n'],
         inherits: defaultTags,
@@ -554,7 +559,7 @@ describe('query operation annotations', () => {
     const foundYou = m.getQuery('findme');
     expect(foundYou).toBeDefined();
     if (foundYou) {
-      const note_a = getFieldDef(foundYou.pipeline[0], 'note_a');
+      const note_a = getQueryFieldDef(foundYou.pipeline[0], 'note_a');
       expect(note_a?.annotation).matchesAnnotation(defaultTags);
     }
   });
@@ -581,7 +586,7 @@ describe('query operation annotations', () => {
     const foundYou = m.getQuery('findme');
     expect(foundYou).toBeDefined();
     if (foundYou) {
-      const note_a = getFieldDef(foundYou.pipeline[0], 'note_a');
+      const note_a = getQueryFieldDef(foundYou.pipeline[0], 'note_a');
       expect(note_a?.annotation).matchesAnnotation({
         blockNotes: ['# note1\n'],
         inherits: defaultTags,
@@ -606,7 +611,7 @@ describe('query operation annotations', () => {
     const foundYou = m.getQuery('findme');
     expect(foundYou).toBeDefined();
     if (foundYou) {
-      const note_a = getFieldDef(foundYou.pipeline[0], 'note_a');
+      const note_a = getQueryFieldDef(foundYou.pipeline[0], 'note_a');
       expect(note_a?.annotation).matchesAnnotation(defaultTags);
     }
   });
@@ -621,7 +626,7 @@ describe('query operation annotations', () => {
     const foundYou = m.getQuery(0);
     expect(foundYou).toBeDefined();
     if (foundYou) {
-      const note_b = getFieldDef(foundYou.pipeline[0], 'note_b');
+      const note_b = getQueryFieldDef(foundYou.pipeline[0], 'note_b');
       expect(note_b?.annotation).matchesAnnotation({inherits: defaultTags});
     }
   });
@@ -647,29 +652,28 @@ describe('query operation annotations', () => {
     const foundYou = m.translator.getQuery(0);
     expect(foundYou).toBeDefined();
     if (foundYou) {
-      const note_b = getFieldDef(foundYou.pipeline[0], 'xdim');
+      const note_b = getQueryFieldDef(foundYou.pipeline[0], 'xdim');
       expect(note_b?.annotation).matchesAnnotation({inherits: defaultTags});
     }
   });
-  test('annotated references to measures on join preserve expression type', () => {
-    const m = model`
-    source: na is a extend {
-      measure:
-          one_count is sum(pick 1 when ai = 1 else 0)
-          pct_one is one_count / count();
-    }
-
-    run: na extend {
-      join_many: na on ai = na.ai
+  test('a reference can have an annotation', () => {
+    const m = model`run: a extend {
+      # noted
+      dimension: noted_str is astr
     } -> {
-      group_by: ai
-      aggregate:
-        # percent
-        na.pct_one
+      select:
+        # note
+        noted_str
     }`;
     expect(m).toTranslate();
-    const q = m.translator.queryList[0];
-    const fields = q.pipeline[0].fields;
-    expect(fields[1]).toMatchObject({expressionType: 'aggregate'});
+    const foundYou = m.translator.getQuery(0);
+    expect(foundYou).toBeDefined();
+    if (foundYou) {
+      const astr = getQueryFieldDef(foundYou.pipeline[0], 'noted_str');
+      expect(astr?.annotation).matchesAnnotation({
+        inherits: {blockNotes: ['# noted\n']},
+        notes: ['# note\n'],
+      });
+    }
   });
 });

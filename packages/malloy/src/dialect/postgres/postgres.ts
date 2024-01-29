@@ -248,16 +248,16 @@ export class PostgresDialect extends Dialect {
     isNested: boolean,
     _isArray: boolean
   ): string {
-    let ret = `${alias}->>'${fieldName}'`;
+    let ret = `(${alias}->>'${fieldName}')`;
     if (isNested) {
       switch (fieldType) {
         case 'string':
           break;
         case 'number':
-          ret = `(${ret})::double precision`;
+          ret = `${ret}::double precision`;
           break;
         case 'struct':
-          ret = `(${ret})::jsonb`;
+          ret = `${ret}::jsonb`;
           break;
       }
       return ret;

@@ -134,6 +134,11 @@ export function exprMap(expr: Expr, func: (fragment: Fragment) => Expr): Expr {
         case 'parameter':
         case 'outputField':
           return fragment;
+        case 'sql-string':
+          return {
+            ...fragment,
+            e: exprMap(fragment.e, func),
+          };
         case 'function_call':
           return {
             ...fragment,
@@ -239,6 +244,11 @@ export function exprWalk(expr: Expr, func: (fragment: Fragment) => void): void {
         return {
           ...fragment,
           args: fragment.args.map(arg => exprWalk(arg, func)),
+        };
+      case 'sql-string':
+        return {
+          ...fragment,
+          e: exprWalk(fragment.e, func),
         };
       case 'filterExpression':
         return {

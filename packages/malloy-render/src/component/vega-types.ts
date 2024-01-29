@@ -1,5 +1,3 @@
-import {Expr, FunctionParameterDef, TypeDesc} from '../../model';
-
 /*
  * Copyright 2023 Google LLC
  *
@@ -22,11 +20,23 @@ import {Expr, FunctionParameterDef, TypeDesc} from '../../model';
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-export interface DialectFunctionOverloadDef {
-  // The expression type here is the MINIMUM return type
-  returnType: TypeDesc;
-  params: FunctionParameterDef[];
-  e: Expr;
-  needsWindowOrderBy?: boolean;
-  between: {preceding: number | string; following: number | string} | undefined;
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+import {Spec} from 'vega';
+import {TopLevelSpec} from 'vega-lite';
+
+/**
+ * TODO: create vega-lite-types package that exports types from vega-lite
+ * Because vega-lite typings are not available today, we are forced to use any
+ * */
+// tslint:disable-next-line:no-any
+export type VegaJSON = any;
+
+export function asVegaSpec(v: VegaJSON) {
+  return v as unknown as Spec;
+}
+
+export function asVegaLiteSpec(v: VegaJSON) {
+  return v as unknown as TopLevelSpec;
 }

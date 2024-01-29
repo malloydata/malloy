@@ -21,4 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export * from './malloy_types';
+declare module 'vega' {
+  // vega-typings does not export the typing for locale
+  const locale: () => {format: (f: string) => (v: number) => string};
+}

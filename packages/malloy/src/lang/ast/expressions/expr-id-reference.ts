@@ -55,7 +55,7 @@ export class ExprIdReference extends ExpressionDef {
           value: [{type: 'outputField', name: this.refString}],
         };
       }
-      const value = [{type: def.found.refType, path: this.refString}];
+      const value = [{type: def.found.refType, path: this.fieldReference.path}];
       // We think that aggregates are more 'output' like, but maybe we will reconsider that...
       const evalSpace = expressionIsAggregate(td.expressionType)
         ? 'output'
@@ -81,7 +81,7 @@ export class ExprIdReference extends ExpressionDef {
             {
               type: 'apply',
               value: lval.value,
-              to: [{type: 'parameter', path: this.refString}],
+              to: [{type: 'parameter', path: this.fieldReference.path}],
             },
           ],
         };

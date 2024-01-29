@@ -117,21 +117,34 @@ export class Tag implements TagInterface {
     }
     return thisTagId;
   }
-  peek(): string {
+  peek(indent = 0): string {
+    const spaces = ' '.repeat(indent);
     let str = `#${Tag.id(this)}`;
+    if (
+      this.properties === undefined &&
+      this.eq &&
+      typeof this.eq === 'string'
+    ) {
+      return str + `=${this.eq}`;
+    }
+    str += ' {';
     if (this.eq) {
       if (typeof this.eq === 'string') {
-        str += `=${this.eq}`;
+        str += `\n${spaces}  =: ${this.eq}`;
       } else {
-        str += '=[]';
+        str += `\n${spaces}  =: [\n${spaces}    ${this.eq
+          .map(el => Tag.tagFrom(el).peek(indent + 4))
+          .join(`\n${spaces}    `)}\n${spaces}  ]`;
       }
     }
+
     if (this.properties) {
-      const propStr = Object.keys(this.properties)
-        .map(k => `${k}:`)
-        .join(', ');
-      str += `{${propStr}}`;
+      for (const k in this.properties) {
+        const val = Tag.tagFrom(this.properties[k]);
+        str += `\n${spaces}  ${k}: ${val.peek(indent + 2)}`;
+      }
     }
+    str += `\n${spaces}}`;
     return str;
   }
 
@@ -368,6 +381,21 @@ class TagErrorListener implements ANTLRErrorListener<Token> {
     };
     this.log.push(logMsg);
   }
+
+  semanticError(cx: ParserRuleContext, msg: string): void {
+    const errAt = {
+      line: this.atLine,
+      // mtoy TODO get this right
+      character: 0,
+    };
+    const range = {start: errAt, end: errAt};
+    const logMsg: LogMessage = {
+      message: msg,
+      at: {url: this.sourceURL, range},
+      severity: 'error',
+    };
+    this.log.push(logMsg);
+  }
 }
 
 function getBuildOn(ctx: ParserRuleContext): Tag {
@@ -385,7 +413,7 @@ function getBuildOn(ctx: ParserRuleContext): Tag {
  * so that the caller can delete the tag with delete parent.tagName
  * or assign to it with parent[tagName] = new_value
  */
-function pathToAccess(buildOn: Tag, path: string[]): [string, TagDict] {
+function buildAccessPath(buildOn: Tag, path: string[]): [string, TagDict] {
   let parentPropertyObject = buildOn.getProperties();
   for (const p of path.slice(0, path.length - 1)) {
     let next: Tag;
@@ -393,6 +421,10 @@ function pathToAccess(buildOn: Tag, path: string[]): [string, TagDict] {
       next = new Tag({});
       parentPropertyObject[p] = next;
     } else {
+      // The access that we are performing requires that `.properties` be the
+      // same JS object (not equal, but identical), and `Tag.tagFrom` only copies
+      // the exact object in if it is actually present.
+      parentPropertyObject[p].properties ??= {};
       next = Tag.tagFrom(parentPropertyObject[p]);
     }
     parentPropertyObject = next.getProperties();
@@ -426,12 +458,12 @@ function parseTagline(
   const inputStream = CharStreams.fromString(source);
   const lexer = new MalloyTagLexer(inputStream);
   const tokenStream = new CommonTokenStream(lexer);
+  const pLog = new TagErrorListener(sourceURL, onLine, atChar);
   const taglineParser = new MalloyTagParser(tokenStream);
   taglineParser.removeErrorListeners();
-  const pLog = new TagErrorListener(sourceURL, onLine, atChar);
   taglineParser.addErrorListener(pLog);
   const tagTree = taglineParser.tagLine();
-  const treeWalker = new TaglineParser(outerScope);
+  const treeWalker = new TaglineParser(outerScope, pLog);
   const tag = treeWalker.tagLineToTag(tagTree, extending);
   return {tag, log: pLog.log};
 }
@@ -441,8 +473,10 @@ class TaglineParser
   implements MalloyTagVisitor<Tag>
 {
   scopes: Tag[] = [];
-  constructor(outerScopes: Tag[] = []) {
+  msgLog: TagErrorListener;
+  constructor(outerScopes: Tag[] = [], msgLog: TagErrorListener) {
     super();
+    this.msgLog = msgLog;
     this.scopes.unshift(...outerScopes);
   }
 
@@ -533,14 +567,17 @@ class TaglineParser
         break;
       }
     }
-    // MTOY TODO SYNTAX ERROR NOT FOUND
+    this.msgLog.semanticError(
+      ctx,
+      `Reference to undefined property ${path.join('.')}`
+    );
     return this.defaultResult();
   }
 
   visitTagEq(ctx: TagEqContext): Tag {
     const buildOn = getBuildOn(ctx);
     const name = this.getPropName(ctx.propName());
-    const [writeKey, writeInto] = pathToAccess(buildOn, name);
+    const [writeKey, writeInto] = buildAccessPath(buildOn, name);
     const eq = this.visit(ctx.eqValue());
     const propCx = ctx.properties();
     if (propCx) {
@@ -562,7 +599,7 @@ class TaglineParser
   visitTagReplaceProperties(ctx: TagReplacePropertiesContext): Tag {
     const buildOn = getBuildOn(ctx);
     const name = this.getPropName(ctx.propName());
-    const [writeKey, writeInto] = pathToAccess(buildOn, name);
+    const [writeKey, writeInto] = buildAccessPath(buildOn, name);
     const propCx = ctx.properties();
     const props = this.visitProperties(propCx);
     if (ctx.DOTTY() === undefined) {
@@ -578,7 +615,7 @@ class TaglineParser
   visitTagUpdateProperties(ctx: TagUpdatePropertiesContext): Tag {
     const buildOn = getBuildOn(ctx);
     const name = this.getPropName(ctx.propName());
-    const [writeKey, writeInto] = pathToAccess(buildOn, name);
+    const [writeKey, writeInto] = buildAccessPath(buildOn, name);
     const propCx = ctx.properties();
     propCx['buildOn'] = Tag.tagFrom(writeInto[writeKey]);
     const props = this.visitProperties(propCx);
@@ -591,7 +628,7 @@ class TaglineParser
   visitTagDef(ctx: TagDefContext): Tag {
     const buildOn = getBuildOn(ctx);
     const path = this.getPropName(ctx.propName());
-    const [writeKey, writeInto] = pathToAccess(buildOn, path);
+    const [writeKey, writeInto] = buildAccessPath(buildOn, path);
     if (ctx.MINUS()) {
       delete writeInto[writeKey];
     } else {

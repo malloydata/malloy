@@ -21,8 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataArray, Explore, Field, Result} from '@malloydata/malloy';
-import {valueIsNumber, valueIsString} from './util';
+import {
+  DataArray,
+  DataRecord,
+  Explore,
+  Field,
+  Result,
+} from '@malloydata/malloy';
+import {getFieldKey, valueIsNumber, valueIsString} from './util';
 
 export interface FieldRenderMetadata {
   field: Field;
@@ -30,6 +36,8 @@ export interface FieldRenderMetadata {
   max: number | null;
   minString: string | null;
   maxString: string | null;
+  values: Set<string>;
+  maxRecordCt: number | null;
 }
 
 export interface RenderResultMetadata {
@@ -38,9 +46,9 @@ export interface RenderResultMetadata {
 
 export function getResultMetadata(result: Result) {
   const fieldKeyMap: WeakMap<Field, string> = new WeakMap();
-  const getFieldKey = (f: Field) => {
+  const getCachedFieldKey = (f: Field) => {
     if (fieldKeyMap.has(f)) return fieldKeyMap.get(f)!;
-    const fieldKey = JSON.stringify(f.fieldPath);
+    const fieldKey = getFieldKey(f);
     fieldKeyMap.set(f, fieldKey);
     return fieldKey;
   };
@@ -51,16 +59,17 @@ export function getResultMetadata(result: Result) {
 
   function initFieldMeta(e: Explore) {
     for (const f of e.allFields) {
-      if (f.isAtomicField()) {
-        const fieldKey = getFieldKey(f);
-        metadata.fields[fieldKey] = {
-          field: f,
-          min: null,
-          max: null,
-          minString: null,
-          maxString: null,
-        };
-      } else if (f.isExploreField()) {
+      const fieldKey = getCachedFieldKey(f);
+      metadata.fields[fieldKey] = {
+        field: f,
+        min: null,
+        max: null,
+        minString: null,
+        maxString: null,
+        values: new Set(),
+        maxRecordCt: null,
+      };
+      if (f.isExploreField()) {
         initFieldMeta(f);
       }
     }
@@ -68,9 +77,11 @@ export function getResultMetadata(result: Result) {
 
   const populateFieldMeta = (
     data: DataArray,
-    metadata: RenderResultMetadata
+    metadata: RenderResultMetadata,
+    cb?: (row: DataRecord) => void
   ) => {
     for (const row of data) {
+      cb?.(row);
       for (const f of data.field.allFields) {
         const value = f.isAtomicField() ? row.cell(f).value : undefined;
         const fieldKey = getFieldKey(f);
@@ -81,13 +92,19 @@ export function getResultMetadata(result: Result) {
           fieldMeta.max = Math.max(fieldMeta.max ?? n, n);
         } else if (valueIsString(f, value)) {
           const s = value;
+          fieldMeta.values.add(s);
           if (!fieldMeta.minString || fieldMeta.minString.length > s.length)
             fieldMeta.minString = s;
           if (!fieldMeta.maxString || fieldMeta.maxString.length < s.length)
             fieldMeta.maxString = s;
         } else if (f.isExploreField()) {
           const data = row.cell(f) as DataArray;
-          populateFieldMeta(data, metadata);
+          let recordCt = 0;
+          populateFieldMeta(data, metadata, () => recordCt++);
+          fieldMeta.maxRecordCt = Math.max(
+            fieldMeta.maxRecordCt ?? recordCt,
+            recordCt
+          );
         }
       }
     }
