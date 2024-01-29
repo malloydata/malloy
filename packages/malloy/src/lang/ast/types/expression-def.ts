@@ -115,14 +115,6 @@ export abstract class ExpressionDef extends MalloyElement {
     return false;
   }
 
-  supportsOrderBy(_expr: ExprValue) {
-    return false;
-  }
-
-  supportsLimit(_expr: ExprValue) {
-    return false;
-  }
-
   supportsWhere(expr: ExprValue) {
     return expressionIsAggregate(expr.expressionType);
   }

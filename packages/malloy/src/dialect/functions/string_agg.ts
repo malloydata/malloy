@@ -49,25 +49,25 @@ export function fnStringAgg(): DialectFunctionOverloadDef[] {
       minAggregate('string'),
       [value.param],
       sql`STRING_AGG(${value.arg})`,
-      {isSymmetric: true, supportsOrderBy: true, supportsLimit: true}
+      {isSymmetric: true}
     ),
     overload(
       minAggregate('string'),
       [value.param, separator.param],
       sql`STRING_AGG(${value.arg}, ${separator.arg})`,
-      {isSymmetric: true, supportsOrderBy: true, supportsLimit: true}
+      {isSymmetric: true}
     ),
     overload(
       minAggregate('string'),
       [value.param, separator.param, orderBy.param],
       sql`STRING_AGG(${value.arg}, ${separator.arg} ORDER BY ${orderBy.arg})`,
-      {isSymmetric: true, supportsOrderBy: true, supportsLimit: true}
+      {isSymmetric: true}
     ),
     overload(
       minAggregate('string'),
       [value.param, separator.param, orderBy.param, ascDesc.param],
       sql`STRING_AGG(${value.arg}, ${separator.arg} ORDER BY ${orderBy.arg} ${ascDescFrag})`,
-      {isSymmetric: true, supportsOrderBy: true, supportsLimit: true}
+      {isSymmetric: true}
     ),
   ];
 }

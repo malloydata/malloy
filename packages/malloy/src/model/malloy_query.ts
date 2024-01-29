@@ -402,18 +402,6 @@ class QueryField extends QueryNode {
     );
   }
 
-  private generateSQLAggregateOrderBy(orderBy: OrderBy[]): string {
-    const o: string[] = [];
-    for (const f of orderBy) {
-      // TODO not sure how to validate field?
-      o.push(`${f.field} ${f.dir || 'ASC'}`);
-    }
-    if (o.length > 0) {
-      return this.parent.dialect.sqlOrderBy(o) + '\n';
-    }
-    return '';
-  }
-
   private expandFunctionCall(
     dialect: string,
     overload: FunctionOverloadDef,

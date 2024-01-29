@@ -1155,7 +1155,6 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           }`
         )
         .run();
-      expect(result.sql).toBe("FOO")
       expect(result.data.path(0, 'f').string.value).toBe(
         'FORSBERG CHARLES P,BOEGER BOGIE M'
       );
@@ -1199,32 +1198,10 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           }`
         )
         .run();
-      expect(result.sql).toBe('FOO');
       expect(result.data.path(0, 'f').string.value).toBe(
         'FORSBERG CHARLES P,BOEGER BOGIE M'
       );
     });
-
-    // it(`works with separator - ${databaseName}`, async () => {
-    //   await funcTestAgg(
-    //     "string_agg(name, ' & ') { where: name ~ r'.*RUTHERFORD.*' }",
-    //     'RUTHERFORD PAT R JR & RUTHERFORD JAMES C'
-    //   );
-    // });
-
-    // it(`works with struct - ${databaseName}`, async () => {
-    //   await funcTestAgg(
-    //     "aircraft_models.string_agg(aircraft_models.model) { where: name ~ r'.*RUTHERFORD.*' }",
-    //     'G-1159,J3C-65'
-    //   );
-    // });
-
-    // it(`works with implicit parameter - ${databaseName}`, async () => {
-    //   await funcTestAgg(
-    //     "aircraft_models.model.string_agg() { where: name ~ r'.*RUTHERFORD.*' }",
-    //     'G-1159,J3C-65'
-    //   );
-    // });
   });
 });
 

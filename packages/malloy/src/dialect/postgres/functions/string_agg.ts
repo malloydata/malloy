@@ -21,7 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Fragment} from '../../../model/malloy_types';
 import {
   overload,
   minAggregate,
@@ -42,13 +41,13 @@ export function fnStringAgg(): DialectFunctionOverloadDef[] {
       minAggregate('string'),
       [value.param],
       sql`STRING_AGG(${value.arg}, ',')`,
-      {isSymmetric: true, supportsLimit: true, supportsOrderBy: true}
+      {isSymmetric: true}
     ),
     overload(
       minAggregate('string'),
       [value.param, separator.param],
       sql`STRING_AGG(${value.arg}, ${separator.arg})`,
-      {isSymmetric: true, supportsLimit: true, supportsOrderBy: true}
+      {isSymmetric: true}
     ),
   ];
 }
