@@ -30,50 +30,24 @@ import {
   DialectFunctionOverloadDef,
   makeParam,
   literal,
-  constant,
 } from './util';
 
 export function fnStringAgg(): DialectFunctionOverloadDef[] {
   const value = makeParam('value', maxScalar('string'));
   const separator = makeParam('separator', literal(maxScalar('string')));
-  const orderBy = makeParam(
-    'order_by',
-    maxScalar('string'),
-    maxScalar('number'),
-    maxScalar('date'),
-    maxScalar('timestamp'),
-    maxScalar('boolean')
-  );
-  const ascDesc = makeParam('order_direction', constant(maxScalar('boolean')));
-  // const ob: Fragment = {type: 'function_order_by'};
-  // const lim: Fragment = {type: 'function_limit'};
-  const ascDescFrag: Fragment = {
-    type: 'function_order_asc_desc',
-    name: ascDesc.param.name,
-  };
+  const orderBy: Fragment = {type: 'aggregate_order_by'};
+  const limit: Fragment = {type: 'aggregate_limit'};
   return [
     overload(
       minAggregate('string'),
       [value.param],
-      sql`STRING_AGG(${value.arg})`,
+      sql`STRING_AGG(${value.arg}${orderBy}${limit})`,
       {isSymmetric: true, supportsOrderBy: true, supportsLimit: true}
     ),
     overload(
       minAggregate('string'),
       [value.param, separator.param],
-      sql`STRING_AGG(${value.arg}, ${separator.arg})`,
-      {isSymmetric: true, supportsOrderBy: true, supportsLimit: true}
-    ),
-    overload(
-      minAggregate('string'),
-      [value.param, separator.param, orderBy.param],
-      sql`STRING_AGG(${value.arg}, ${separator.arg} ORDER BY ${orderBy.arg})`,
-      {isSymmetric: true, supportsOrderBy: true, supportsLimit: true}
-    ),
-    overload(
-      minAggregate('string'),
-      [value.param, separator.param, orderBy.param, ascDesc.param],
-      sql`STRING_AGG(${value.arg}, ${separator.arg} ORDER BY ${orderBy.arg} ${ascDescFrag})`,
+      sql`STRING_AGG(${value.arg}, ${separator.arg}${orderBy}${limit})`,
       {isSymmetric: true, supportsOrderBy: true, supportsLimit: true}
     ),
   ];

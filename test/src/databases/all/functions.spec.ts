@@ -1154,11 +1154,12 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         .loadQuery(
           `run: aircraft -> {
             where: name ~ r'.*RUTHERFORD.*'
-            aggregate: f is string_agg(name, ',', name)
+            aggregate: f is string_agg(name, ',') {
+              order_by: name
+            }
           }`
         )
         .run();
-      expect(result.sql).toBe("FOO")
       expect(result.data.path(0, 'f').string.value).toBe(
         'RUTHERFORD JAMES C,RUTHERFORD PAT R JR'
       );
@@ -1173,7 +1174,9 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
             order_by: name desc
             limit: 3
           } -> {
-            aggregate: f is string_agg(name, ',', length(name))
+            aggregate: f is string_agg(name, ',') {
+              order_by: length(name)
+            }
           }`
         )
         .run();
@@ -1187,7 +1190,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         .loadQuery(
           `run: aircraft -> {
             where: name ~ r'.*ADVENTURE.*'
-            aggregate: f is string_agg(name, ',', aircraft_models.model)
+            aggregate: f is string_agg(name, ',') { order_by: aircraft_models.model }
           }` // TODO ensure that the SQL generator actually joins in the appropriate join?
         )
         .run();
@@ -1205,11 +1208,10 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
             order_by: name desc
             limit: 3
           } -> {
-            aggregate: f is string_agg(name, ',', name, true)
+            aggregate: f is string_agg(name, ',') { order_by: name asc }
           }`
         )
         .run();
-      expect(result.sql).toBe('FOO');
       expect(result.data.path(0, 'f').string.value).toBe(
         'WESTCHESTER FLYING CLUB,WILSON FLYING SERVICE INC,YANKEE FLYING CLUB INC'
       );
@@ -1224,7 +1226,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
             order_by: name desc
             limit: 3
           } -> {
-            aggregate: f is string_agg(name, ',', name, false)
+            aggregate: f is string_agg(name, ',') { order_by: name desc }
           }`
         )
         .run();
@@ -1233,7 +1235,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       );
     });
 
-    it(`works with order null - ${databaseName}`, async () => {
+    // TODO only bigquery
+    it(`works with limit - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
           `run: aircraft -> {
@@ -1242,35 +1245,17 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
             order_by: name desc
             limit: 3
           } -> {
-            aggregate: f is string_agg(name, ',', name, null)
+            aggregate: f is string_agg(name, ',') {
+              order_by: name desc
+              limit: 2
+            }
           }`
         )
         .run();
       expect(result.data.path(0, 'f').string.value).toBe(
-        'WESTCHESTER FLYING CLUB,WILSON FLYING SERVICE INC,YANKEE FLYING CLUB INC'
+        'YANKEE FLYING CLUB INC,WILSON FLYING SERVICE INC'
       );
     });
-
-    // it(`works with separator - ${databaseName}`, async () => {
-    //   await funcTestAgg(
-    //     "string_agg(name, ' & ') { where: name ~ r'.*RUTHERFORD.*' }",
-    //     'RUTHERFORD PAT R JR & RUTHERFORD JAMES C'
-    //   );
-    // });
-
-    // it(`works with struct - ${databaseName}`, async () => {
-    //   await funcTestAgg(
-    //     "aircraft_models.string_agg(aircraft_models.model) { where: name ~ r'.*RUTHERFORD.*' }",
-    //     'G-1159,J3C-65'
-    //   );
-    // });
-
-    // it(`works with implicit parameter - ${databaseName}`, async () => {
-    //   await funcTestAgg(
-    //     "aircraft_models.model.string_agg() { where: name ~ r'.*RUTHERFORD.*' }",
-    //     'G-1159,J3C-65'
-    //   );
-    // });
   });
 });
 

@@ -441,7 +441,9 @@ class QueryField extends QueryNode {
   private expandFunctionCall(
     dialect: string,
     overload: FunctionOverloadDef,
-    args: Expr[]
+    args: Expr[],
+    orderBy: string | undefined,
+    limit: string | undefined
   ) {
     const paramMap = this.getParameterMap(overload, args.length);
     if (overload.dialect[dialect] === undefined) {
@@ -483,22 +485,10 @@ class QueryField extends QueryNode {
         } else {
           return args[entry.argIndexes[0]];
         }
-      } else if (fragment.type === 'function_order_asc_desc') {
-        const entry = paramMap.get(fragment.name);
-        if (entry === undefined) {
-          return [fragment];
-        } else {
-          const arg = args[entry.argIndexes[0]];
-          if (arg.length !== 1) {
-            return [fragment];
-          } else if (arg[0] === 'true') {
-            return ['ASC'];
-          } else if (arg[0] === 'false') {
-            return ['DESC'];
-          } else {
-            return [];
-          }
-        }
+      } else if (fragment.type === 'aggregate_order_by') {
+        return orderBy ? [` ${orderBy}`] : [];
+      } else if (fragment.type === 'aggregate_limit') {
+        return limit ? [` ${limit}`] : [];
       }
       return [fragment];
     });
@@ -517,6 +507,23 @@ class QueryField extends QueryNode {
       expressionIsAggregate(overload.returnType.expressionType) &&
       !isSymmetric &&
       this.generateDistinctKeyIfNecessary(resultSet, context, frag.structPath);
+    const aggregateOrderBy = frag.orderBy
+      ? 'ORDER BY ' +
+        frag.orderBy
+          .map(ob => {
+            const osql = this.generateDimFragment(
+              resultSet,
+              context,
+              ob.e,
+              state
+            );
+            const dirsql =
+              ob.dir === 'asc' ? ' ASC' : ob.dir === 'desc' ? ' DESC' : '';
+            return `${osql}${dirsql}`;
+          })
+          .join(' ')
+      : undefined;
+    const aggregateLimit = frag.limit ? `LIMIT ${frag.limit}` : undefined;
     if (distinctKey) {
       if (!context.dialect.supportsAggDistinct) {
         throw new Error(
@@ -533,7 +540,9 @@ class QueryField extends QueryNode {
           const funcCall = this.expandFunctionCall(
             context.dialect.name,
             overload,
-            valNames.map(v => [v])
+            valNames.map(v => [v]),
+            aggregateOrderBy,
+            aggregateLimit
           );
           return this.generateExpressionFromExpr(
             resultSet,
@@ -569,7 +578,9 @@ class QueryField extends QueryNode {
       const funcCall: Expr = this.expandFunctionCall(
         context.dialect.name,
         overload,
-        mappedArgs
+        mappedArgs,
+        aggregateOrderBy,
+        aggregateLimit
       );
 
       if (expressionIsAnalytic(overload.returnType.expressionType)) {
@@ -2277,6 +2288,11 @@ class QueryQuery extends QueryField {
         }
         if (expressionIsAnalytic(expr.overload.returnType.expressionType)) {
           resultStruct.root().queryUsesPartitioning = true;
+        }
+        if (expr.orderBy) {
+          for (const ob of expr.orderBy) {
+            this.addDependantExpr(resultStruct, context, ob.e, joinStack);
+          }
         }
       }
     }

@@ -947,6 +947,23 @@ export class MalloyToAST
     return new ast.Limit(this.getNumber(pcx.INTEGER_LITERAL()));
   }
 
+  visitAggregateOrderBySpec(
+    pcx: parse.AggregateOrderBySpecContext
+  ): ast.AggregateOrderBy {
+    const dir = pcx.ASC() ? 'asc' : pcx.DESC() ? 'desc' : undefined;
+    const f = this.getFieldExpr(pcx.fieldExpr());
+    return this.astAt(new ast.AggregateOrderBy(f, dir), pcx);
+  }
+
+  visitAggregateOrdering(
+    pcx: parse.AggregateOrderingContext
+  ): ast.AggregateOrdering {
+    const orderList = pcx
+      .aggregateOrderBySpec()
+      .map(o => this.visitAggregateOrderBySpec(o));
+    return this.astAt(new ast.AggregateOrdering(orderList), pcx);
+  }
+
   visitOrderBySpec(pcx: parse.OrderBySpecContext): ast.OrderBy {
     const dir = pcx.ASC() ? 'asc' : pcx.DESC() ? 'desc' : undefined;
     const ncx = pcx.INTEGER_LITERAL();
@@ -1496,7 +1513,7 @@ export class MalloyToAST
 
   visitExprFieldProps(pcx: parse.ExprFieldPropsContext) {
     const statements = this.only<
-      ast.Filter | ast.Ordering | ast.PartitionBy | ast.Limit
+      ast.Filter | ast.AggregateOrdering | ast.PartitionBy | ast.Limit
     >(
       pcx
         .fieldProperties()

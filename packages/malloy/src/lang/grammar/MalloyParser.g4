@@ -289,10 +289,22 @@ fieldProperties
   : OCURLY (fieldPropertyStatement | SEMI)* CCURLY
   ;
 
+aggregateOrdering
+  : aggregateOrderBySpec (COMMA aggregateOrderBySpec)* COMMA?
+  ;
+
+aggregateOrderBySpec
+  : fieldExpr ( ASC | DESC ) ?
+  ;
+
+aggregateOrderByStatement
+  : ORDER_BY aggregateOrdering
+  ;
+
 fieldPropertyStatement
   : whereStatement
   | partitionByStatement
-  | orderByStatement
+  | aggregateOrderByStatement
   | limitStatement
   ;
 

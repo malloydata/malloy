@@ -21,25 +21,42 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {AggregateOrdering} from '../query-properties/aggregate-ordering';
-import {Filter} from '../query-properties/filters';
-import {Limit} from '../query-properties/limit';
-import {PartitionBy} from '../query-properties/partition_by';
-import {MalloyElement} from './malloy-element';
+import {
+  expressionIsScalar,
+  AggregateOrderBy as ModelAggregateOrderBy,
+} from '../../../model/malloy_types';
+import {ExpressionDef} from '../types/expression-def';
 
-export type FieldPropStatement =
-  | Filter
-  | Limit
-  | PartitionBy
-  | AggregateOrdering;
+import {FieldSpace} from '../types/field-space';
+import {ListOf, MalloyElement} from '../types/malloy-element';
 
-export function isFieldPropStatement(
-  el: MalloyElement
-): el is FieldPropStatement {
-  return (
-    el instanceof Filter ||
-    el instanceof Limit ||
-    el instanceof PartitionBy ||
-    el instanceof AggregateOrdering
-  );
+export class AggregateOrderBy extends MalloyElement {
+  elementType = 'orderBy';
+  constructor(
+    readonly field: ExpressionDef,
+    readonly dir?: 'asc' | 'desc'
+  ) {
+    super();
+    this.has({field});
+  }
+
+  getAggregateOrderBy(fs: FieldSpace): ModelAggregateOrderBy {
+    const expr = this.field.getExpression(fs);
+    if (!expressionIsScalar(expr.expressionType)) {
+      this.log('aggregate order_by must be scalar');
+    }
+    return {e: expr.value, dir: this.dir};
+  }
+}
+
+export class AggregateOrdering extends ListOf<AggregateOrderBy> {
+  elementType = 'aggregate-ordering';
+
+  constructor(list: AggregateOrderBy[]) {
+    super(list);
+  }
+
+  getAggregateOrderBy(fs: FieldSpace): ModelAggregateOrderBy[] {
+    return this.list.map(el => el.getAggregateOrderBy(fs));
+  }
 }

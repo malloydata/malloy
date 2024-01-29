@@ -108,6 +108,8 @@ export * from './source-properties/measures';
 export * from './query-properties/nest';
 export * from './query-properties/nests';
 export * from './query-properties/ordering';
+// TODO this should not live in 'query-properties'
+export * from './query-properties/aggregate-ordering';
 export * from './query-properties/project-statement';
 export * from './query-properties/qop-desc';
 export * from './query-properties/sampling';

@@ -21,7 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Fragment} from '../../../model/malloy_types';
 import {
   overload,
   minAggregate,
@@ -35,13 +34,12 @@ import {
 export function fnStringAgg(): DialectFunctionOverloadDef[] {
   const value = makeParam('value', maxScalar('string'));
   const separator = makeParam('separator', literal(maxScalar('string')));
-  // const ob: Fragment = {type: 'function_order_by'};
-  // const lim: Fragment = {type: 'function_limit'};
   return [
     overload(
       minAggregate('string'),
       [value.param],
       sql`STRING_AGG(${value.arg}, ',')`,
+      // TODO there's no way to un-support limit here without also disabling it in BigQuery
       {isSymmetric: true, supportsLimit: true, supportsOrderBy: true}
     ),
     overload(

@@ -209,15 +209,18 @@ export interface FunctionParameterFragment {
   name: string;
 }
 
-export interface FunctionOrderAscDescFragment {
-  type: 'function_order_asc_desc';
-  name: string;
-}
-
 export function isFunctionParameterFragment(
   f: Fragment
 ): f is FunctionParameterFragment {
   return (f as FunctionParameterFragment)?.type === 'function_parameter';
+}
+
+export interface AggregateOrderByFragment {
+  type: 'aggregate_order_by';
+}
+
+export interface AggregateLimitFragment {
+  type: 'aggregate_limit';
 }
 
 export interface FunctionCallFragment {
@@ -225,8 +228,7 @@ export interface FunctionCallFragment {
   overload: FunctionOverloadDef;
   expressionType: ExpressionType;
   args: Expr[];
-  // TODO should this be a string[];
-  orderBy?: OrderBy[];
+  orderBy?: AggregateOrderBy[];
   limit?: number;
   // TODO should this be a string[];
   partitionBy?: string;
@@ -413,7 +415,8 @@ export type Fragment =
   | UngroupFragment
   | DialectFragment
   | FunctionParameterFragment
-  | FunctionOrderAscDescFragment
+  | AggregateOrderByFragment
+  | AggregateLimitFragment
   | FunctionCallFragment
   | SQLExpressionFragment
   | SpreadFragment;
@@ -726,6 +729,11 @@ export interface FieldTimestampDef
 /** parameter to order a query */
 export interface OrderBy {
   field: string | number;
+  dir?: 'asc' | 'desc';
+}
+
+export interface AggregateOrderBy {
+  e: Expr;
   dir?: 'asc' | 'desc';
 }
 
