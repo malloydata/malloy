@@ -32,11 +32,17 @@ import {
 } from 'duckdb';
 import {QueryDataRow, RunSQLOptions} from '@malloydata/malloy';
 
+interface ActiveDB {
+  database: Database;
+  connections: Connection[];
+}
+
 export class DuckDBConnection extends DuckDBCommon {
   connecting: Promise<void>;
   protected connection: Connection | null = null;
-  protected database: Database | null = null;
   protected isSetup: Promise<void> | undefined;
+
+  static activeDBs: Record<string, ActiveDB> = {};
 
   constructor(
     public readonly name: string,
@@ -50,16 +56,27 @@ export class DuckDBConnection extends DuckDBCommon {
 
   private async init(): Promise<void> {
     return new Promise((resolve, reject) => {
-      this.database = new Database(
-        this.databasePath,
-        OPEN_READWRITE, // databasePath === ":memory:" ? OPEN_READWRITE : OPEN_READONLY,
-        err => {
-          if (err) {
-            reject(err);
+      let activeDB: ActiveDB;
+      if (this.databasePath in DuckDBConnection.activeDBs) {
+        activeDB = DuckDBConnection.activeDBs[this.databasePath];
+      } else {
+        const database = new Database(
+          this.databasePath,
+          OPEN_READWRITE, // databasePath === ":memory:" ? OPEN_READWRITE : OPEN_READONLY,
+          err => {
+            if (err) {
+              reject(err);
+            }
           }
-        }
-      );
-      this.connection = this.database.connect();
+        );
+        activeDB = {
+          database,
+          connections: [],
+        };
+        DuckDBConnection.activeDBs[this.databasePath] = activeDB;
+      }
+      this.connection = activeDB.database.connect();
+      activeDB.connections.push(this.connection);
       resolve();
     });
   }
@@ -164,12 +181,15 @@ export class DuckDBConnection extends DuckDBCommon {
   }
 
   async close(): Promise<void> {
-    if (this.connection) {
-      this.connection = null;
-    }
-    if (this.database) {
-      this.database.close();
-      this.database = null;
+    const activeDB = DuckDBConnection.activeDBs[this.databasePath];
+    if (activeDB) {
+      activeDB.connections = activeDB.connections.filter(
+        connection => connection !== this.connection
+      );
+      if (activeDB.connections.length === 0) {
+        activeDB.database.close();
+        delete DuckDBConnection.activeDBs[this.databasePath];
+      }
     }
   }
 }
