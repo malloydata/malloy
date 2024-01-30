@@ -220,6 +220,7 @@ export const monarch: Monaco.IMonarchLanguage = {
       [/\bmeasure\b/, 'keyword.control.measure'],
       [/\bnest\b/, 'keyword.control.nest'],
       [/\border_by\b/, 'keyword.control.order_by'],
+      [/\bpartition_by\b/, 'keyword.control.partition_by'],
       [/\bprimary_key\b/, 'keyword.control.primary_key'],
       [/\bproject\b/, 'keyword.control.project'],
       [/\bquery\b/, 'keyword.control.query'],
