@@ -22,6 +22,7 @@
  */
 
 import {
+  AggregateOrderBy,
   EvalSpace,
   Expr,
   expressionIsAggregate,
@@ -84,8 +85,8 @@ export class ExprFunc extends ExpressionDef {
   getPropsExpression(
     fs: FieldSpace,
     props?: {
-      partitionBy?: PartitionBy;
-      orderBy?: AggregateOrdering;
+      partitionBys?: PartitionBy[];
+      orderBys?: AggregateOrdering[];
       limit?: Limit;
     }
   ): ExprValue {
@@ -251,15 +252,19 @@ export class ExprFunc extends ExpressionDef {
     if (dialectOverload === undefined) {
       this.log(`Function ${this.name} is not defined in dialect ${dialect}`);
     } else {
-      if (props?.orderBy) {
+      if (props?.orderBys && props.orderBys.length > 0) {
         if (
           dialectOverload.supportsOrderBy ||
           expressionIsAnalytic(overload.returnType.expressionType)
         ) {
-          const ob = props.orderBy.getAggregateOrderBy(fs);
-          frag.orderBy = ob;
+          const allObs = props.orderBys.flatMap(orderBy =>
+            orderBy.getAggregateOrderBy(fs)
+          );
+          frag.orderBy = allObs;
         } else {
-          props.orderBy.log(`Function ${this.name} does not support order_by`);
+          props.orderBys[0].log(
+            `Function ${this.name} does not support order_by`
+          );
         }
       }
       if (props?.limit !== undefined) {
@@ -270,19 +275,21 @@ export class ExprFunc extends ExpressionDef {
         }
       }
     }
-    if (props?.partitionBy) {
-      const partitionBy: string[] = [];
-      for (const partitionField of props.partitionBy.partitionFields) {
-        const e = partitionField.getField(fs);
-        if (e.found === undefined) {
-          partitionField.log(`${partitionField.refString} is not defined`);
-        } else if (expressionIsScalar(e.found.typeDesc().expressionType)) {
-          partitionBy.push(partitionField.nameString);
-        } else {
-          partitionField.log('Partition expression must be scalar');
+    if (props?.partitionBys && props.partitionBys.length > 0) {
+      const partitionByFields: string[] = [];
+      for (const partitionBy of props.partitionBys) {
+        for (const partitionField of partitionBy.partitionFields) {
+          const e = partitionField.getField(fs);
+          if (e.found === undefined) {
+            partitionField.log(`${partitionField.refString} is not defined`);
+          } else if (expressionIsScalar(e.found.typeDesc().expressionType)) {
+            partitionByFields.push(partitionField.nameString);
+          } else {
+            partitionField.log('Partition expression must be scalar');
+          }
         }
       }
-      frag.partitionBy = partitionBy;
+      frag.partitionBy = partitionByFields;
     }
     if (
       [

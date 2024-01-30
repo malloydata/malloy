@@ -21,8 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {expressionIsCalculation} from '../../../model/malloy_types';
-
+import {
+  FilterExpression,
+  expressionIsCalculation,
+} from '../../../model/malloy_types';
 import {errorFor} from '../ast-utils';
 import {FT} from '../fragtype-utils';
 import {AggregateOrdering} from '../query-properties/aggregate-ordering';
@@ -48,19 +50,25 @@ export class ExprProps extends ExpressionDef {
   private getFilteredExpression(
     fs: FieldSpace,
     expr: ExprValue,
-    where: Filter | undefined
+    wheres: Filter[]
   ): ExprValue {
-    if (where) {
+    if (wheres.length > 0) {
       if (!this.expr.supportsWhere(expr)) {
         this.expr.log('Filtered expression requires an aggregate computation');
         return expr;
       }
-      const testList = where.getFilterList(fs);
-      if (testList.find(cond => expressionIsCalculation(cond.expressionType))) {
-        where.log(
-          'Cannot filter an expresion with an aggregate or analytical computation'
-        );
-        return expr;
+      const filterList: FilterExpression[] = [];
+      for (const where of wheres) {
+        const testList = where.getFilterList(fs);
+        if (
+          testList.find(cond => expressionIsCalculation(cond.expressionType))
+        ) {
+          where.log(
+            'Cannot filter an expresion with an aggregate or analytical computation'
+          );
+          return expr;
+        }
+        filterList.push(...testList);
       }
       if (this.typeCheck(this.expr, {...expr, expressionType: 'scalar'})) {
         return {
@@ -69,7 +77,7 @@ export class ExprProps extends ExpressionDef {
             {
               type: 'filterExpression',
               e: expr.value,
-              filterList: testList,
+              filterList,
             },
           ],
         };
@@ -81,21 +89,18 @@ export class ExprProps extends ExpressionDef {
   }
 
   getExpression(fs: FieldSpace): ExprValue {
-    let partitionBy: PartitionBy | undefined;
+    const partitionBys: PartitionBy[] = [];
     let limit: Limit | undefined;
-    let orderBy: AggregateOrdering | undefined;
-    let where: Filter | undefined;
+    const orderBys: AggregateOrdering[] = [];
+    const wheres: Filter[] = [];
     for (const statement of this.statements) {
       if (statement instanceof PartitionBy) {
-        if (partitionBy) {
-          // TODO support multiple partition_bys
-          statement.log('partition_by already specified');
-        } else if (!this.expr.canSupportPartitionBy()) {
+        if (!this.expr.canSupportPartitionBy()) {
           statement.log(
             '`partition_by` is not supported for this kind of expression'
           );
         } else {
-          partitionBy = statement;
+          partitionBys.push(statement);
         }
       } else if (statement instanceof Limit) {
         if (limit) {
@@ -106,33 +111,25 @@ export class ExprProps extends ExpressionDef {
           limit = statement;
         }
       } else if (statement instanceof AggregateOrdering) {
-        if (orderBy) {
-          // TODO support multiple order_bys
-          statement.log('ordering already specified');
-        } else if (!this.expr.canSupportPartitionBy()) {
+        if (!this.expr.canSupportPartitionBy()) {
           statement.log(
             '`order_by` is not supported for this kind of expression'
           );
         } else {
-          orderBy = statement;
+          orderBys.push(statement);
         }
       } else {
-        if (where) {
-          // TODO support multiple wheres
-          statement.log('filter alredy specified');
-        } else {
-          where = statement;
-        }
+        wheres.push(statement);
       }
     }
     const resultExpr =
       this.expr instanceof ExprFunc
         ? this.expr.getPropsExpression(fs, {
-            partitionBy,
+            partitionBys,
             limit,
-            orderBy,
+            orderBys,
           })
         : this.expr.getExpression(fs);
-    return this.getFilteredExpression(fs, resultExpr, where);
+    return this.getFilteredExpression(fs, resultExpr, wheres);
   }
 }

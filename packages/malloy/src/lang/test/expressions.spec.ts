@@ -233,6 +233,44 @@ describe('expressions', () => {
       `).toTranslate();
     });
 
+    test('can specify multiple partition_bys', () => {
+      expect(markSource`
+        ##! experimental { partition_by }
+        run: a -> {
+          group_by: ai, astr, abool
+          calculate: x is lag(ai) {
+            partition_by: ai
+            partition_by: astr, abool
+          }
+        }
+      `).toTranslate();
+    });
+
+    test('can specify multiple order_bys', () => {
+      expect(markSource`
+        ##! experimental { function_order_by }
+        run: a -> {
+          group_by: ai, astr, abool
+          calculate: x is lag(ai) {
+            order_by: ai
+            order_by: astr, abool
+          }
+        }
+      `).toTranslate();
+    });
+
+    test('can specify multiple wheres', () => {
+      expect(markSource`
+        ##! experimental { function_order_by }
+        run: a -> {
+          aggregate: x is count() {
+            where: ai > 10
+            where: astr ~ '%foo%'
+          }
+        }
+      `).toTranslate();
+    });
+
     test('string_agg can take order_by', () => {
       expect(markSource`
         ##! experimental { function_order_by }
