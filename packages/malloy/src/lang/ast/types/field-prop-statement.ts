@@ -21,10 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {AggregateOrdering} from '../query-properties/aggregate-ordering';
+import {AggregateOrdering} from '../expressions/aggregate-ordering';
 import {Filter} from '../query-properties/filters';
 import {Limit} from '../query-properties/limit';
-import {PartitionBy} from '../query-properties/partition_by';
+import {PartitionBy} from '../expressions/partition_by';
 import {MalloyElement} from './malloy-element';
 
 export type FieldPropStatement =

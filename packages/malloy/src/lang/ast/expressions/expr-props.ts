@@ -27,10 +27,10 @@ import {
 } from '../../../model/malloy_types';
 import {errorFor} from '../ast-utils';
 import {FT} from '../fragtype-utils';
-import {AggregateOrdering} from '../query-properties/aggregate-ordering';
+import {AggregateOrdering} from './aggregate-ordering';
 import {Filter} from '../query-properties/filters';
 import {Limit} from '../query-properties/limit';
-import {PartitionBy} from '../query-properties/partition_by';
+import {PartitionBy} from './partition_by';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldPropStatement} from '../types/field-prop-statement';

@@ -45,9 +45,9 @@ import {errorFor} from '../ast-utils';
 import {StructSpaceFieldBase} from '../field-space/struct-space-field-base';
 
 import {FieldReference} from '../query-items/field-references';
-import {AggregateOrdering} from '../query-properties/aggregate-ordering';
+import {AggregateOrdering} from './aggregate-ordering';
 import {Limit} from '../query-properties/limit';
-import {PartitionBy} from '../query-properties/partition_by';
+import {PartitionBy} from './partition_by';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
