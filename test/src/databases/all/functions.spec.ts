@@ -1264,6 +1264,144 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
   });
 
+  describe('string_agg_distinct', () => {
+    it(`actually distincts - ${databaseName}`, async () => {
+      const result = await runtime
+        .loadQuery(
+          `source: aircraft is ${databaseName}.table('malloytest.aircraft') extend {
+            primary_key: tail_num
+          }
+
+          source: aircraft_models is ${databaseName}.table('malloytest.aircraft_models') extend {
+            primary_key: aircraft_model_code
+            join_many: aircraft on aircraft_model_code = aircraft.aircraft_model_code
+          }
+
+          run: aircraft_models -> {
+            where: aircraft.name = 'RAYTHEON AIRCRAFT COMPANY' | 'FOWLER IRA R DBA'
+            aggregate: f_dist is aircraft.name.string_agg_distinct() { order_by: aircraft.name }
+            aggregate: f_all is aircraft.name.string_agg() { order_by: aircraft.name }
+          }`
+        )
+        .run();
+      expect(result.data.path(0, 'f_dist').string.value).toBe(
+        'FOWLER IRA R DBA,RAYTHEON AIRCRAFT COMPANY'
+      );
+      expect(result.data.path(0, 'f_all').string.value).toBe(
+        'FOWLER IRA R DBA,FOWLER IRA R DBA,RAYTHEON AIRCRAFT COMPANY,RAYTHEON AIRCRAFT COMPANY'
+      );
+    });
+
+    it(`works no order by - ${databaseName}`, async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `run: aircraft -> {
+            where: name ~ r'.*RUTHERFORD.*'
+            aggregate: f is string_agg_distinct(name)
+          }`
+        )
+        .run();
+      expect(result.data.path(0, 'f').string.value).toBe(
+        'RUTHERFORD PAT R JR,RUTHERFORD JAMES C'
+      );
+    });
+
+    it(`works with dotted shortcut - ${databaseName}`, async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `run: aircraft -> {
+            where: name ~ r'.*RUTHERFORD.*'
+            aggregate: f is name.string_agg_distinct()
+          }`
+        )
+        .run();
+      expect(result.data.path(0, 'f').string.value).toBe(
+        'RUTHERFORD PAT R JR,RUTHERFORD JAMES C'
+      );
+    });
+
+    it(`works with order by field - ${databaseName}`, async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `run: aircraft -> {
+            where: name ~ r'.*RUTHERFORD.*'
+            aggregate: f is string_agg_distinct(name, ',') {
+              order_by: name
+            }
+          }`
+        )
+        .run();
+      expect(result.data.path(0, 'f').string.value).toBe(
+        'RUTHERFORD JAMES C,RUTHERFORD PAT R JR'
+      );
+    });
+
+    // TODO there is a requirement (at least in BQ that the order_by: must be the same as the first argument
+    // when using distinct)
+
+    it(`works with order asc - ${databaseName}`, async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `run: aircraft -> {
+            where: name ~ r'.*FLY.*'
+            group_by: name
+            order_by: name desc
+            limit: 3
+          } -> {
+            aggregate: f is string_agg_distinct(name, ',') { order_by: name asc }
+          }`
+        )
+        .run();
+      expect(result.data.path(0, 'f').string.value).toBe(
+        'WESTCHESTER FLYING CLUB,WILSON FLYING SERVICE INC,YANKEE FLYING CLUB INC'
+      );
+    });
+
+    it(`works with order desc - ${databaseName}`, async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `run: aircraft -> {
+            where: name ~ r'.*FLY.*'
+            group_by: name
+            order_by: name desc
+            limit: 3
+          } -> {
+            aggregate: f is string_agg_distinct(name, ',') { order_by: name desc }
+          }`
+        )
+        .run();
+      expect(result.data.path(0, 'f').string.value).toBe(
+        'YANKEE FLYING CLUB INC,WILSON FLYING SERVICE INC,WESTCHESTER FLYING CLUB'
+      );
+    });
+
+    it(`works with limit - ${databaseName}`, async () => {
+      const query = expressionModel.loadQuery(
+        `run: aircraft -> {
+            where: name ~ r'.*FLY.*'
+            group_by: name
+            order_by: name desc
+            limit: 3
+          } -> {
+            aggregate: f is string_agg_distinct(name, ',') {
+              order_by: name desc
+              limit: 2
+            }
+          }`
+      );
+      if (databaseName === 'bigquery') {
+        const result = await query.run();
+        expect(result.data.path(0, 'f').string.value).toBe(
+          'YANKEE FLYING CLUB INC,WILSON FLYING SERVICE INC'
+        );
+      } else {
+        await expect(query.run()).rejects.toThrow(
+          'Function string_agg_distinct does not support limit'
+        );
+      }
+    });
+  });
+
   describe('partition_by', () => {
     it(`works - ${databaseName}`, async () => {
       const result = await expressionModel

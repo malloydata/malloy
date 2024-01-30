@@ -79,7 +79,7 @@ import {
 import {fnAvgRolling} from './avg_moving';
 import {FunctionMap} from './function_map';
 import {fnCoalesce} from './coalesce';
-import {fnStringAgg} from './string_agg';
+import {fnStringAgg, fnStringAggDistinct} from './string_agg';
 import {
   fnSqlBoolean,
   fnSqlDate,
@@ -148,6 +148,7 @@ FUNCTIONS.add('exp', fnExp);
 // Aggregate functions
 FUNCTIONS.add('stddev', fnStddev);
 FUNCTIONS.add('string_agg', fnStringAgg);
+FUNCTIONS.add('string_agg_distinct', fnStringAggDistinct);
 
 // Analytic functions
 FUNCTIONS.add('row_number', fnRowNumber);
