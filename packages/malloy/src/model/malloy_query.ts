@@ -950,7 +950,7 @@ class QueryField extends QueryNode {
         ? `PARTITION BY ${allPartitions.join(', ')}`
         : '';
 
-    let orderBy = funcOrdering;
+    let orderBy = funcOrdering ?? '';
     // TODO maybe some analytic functions don't support ordering??
     if (!funcOrdering && overload.needsWindowOrderBy) {
       // calculate the ordering.
