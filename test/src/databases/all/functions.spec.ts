@@ -1132,9 +1132,10 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           }`
         )
         .run();
-      expect(result.data.path(0, 'f').string.value).toBe(
-        'RUTHERFORD PAT R JR,RUTHERFORD JAMES C'
-      );
+      expect([
+        'RUTHERFORD PAT R JR,RUTHERFORD JAMES C',
+        'RUTHERFORD JAMES C,RUTHERFORD PAT R JR',
+      ]).toContain(result.data.path(0, 'f').string.value);
     });
 
     it(`works with dotted shortcut - ${databaseName}`, async () => {
@@ -1146,9 +1147,10 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           }`
         )
         .run();
-      expect(result.data.path(0, 'f').string.value).toBe(
-        'RUTHERFORD PAT R JR,RUTHERFORD JAMES C'
-      );
+      expect([
+        'RUTHERFORD PAT R JR,RUTHERFORD JAMES C',
+        'RUTHERFORD JAMES C,RUTHERFORD PAT R JR',
+      ]).toContain(result.data.path(0, 'f').string.value);
     });
 
     it(`works with order by field - ${databaseName}`, async () => {
