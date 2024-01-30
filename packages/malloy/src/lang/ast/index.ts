@@ -51,7 +51,7 @@ export * from './expressions/expr-coalesce';
 export * from './expressions/expr-compare';
 export * from './expressions/expr-count';
 export * from './expressions/expr-count-distinct';
-export * from './expressions/expr-filter';
+export * from './expressions/expr-props';
 export * from './expressions/expr-func';
 export * from './expressions/expr-granular-time';
 export * from './expressions/expr-id-reference';

@@ -65,6 +65,18 @@ export class ExprFunc extends ExpressionDef {
     this.has({source: source});
   }
 
+  canSupportPartitionBy() {
+    return true;
+  }
+
+  canSupportOrderBy() {
+    return true;
+  }
+
+  canSupportLimit() {
+    return true;
+  }
+
   getExpression(fs: FieldSpace) {
     return this.getPropsExpression(fs);
   }

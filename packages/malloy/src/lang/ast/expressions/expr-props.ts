@@ -88,19 +88,31 @@ export class ExprProps extends ExpressionDef {
     for (const statement of this.statements) {
       if (statement instanceof PartitionBy) {
         if (partitionBy) {
+          // TODO support multiple partition_bys
           statement.log('partition_by already specified');
+        } else if (!this.expr.canSupportPartitionBy()) {
+          statement.log(
+            '`partition_by` is not supported for this kind of expression'
+          );
         } else {
           partitionBy = statement;
         }
       } else if (statement instanceof Limit) {
         if (limit) {
           statement.log('limit already specified');
+        } else if (!this.expr.canSupportLimit()) {
+          statement.log('`limit` is not supported for this kind of expression');
         } else {
           limit = statement;
         }
       } else if (statement instanceof AggregateOrdering) {
         if (orderBy) {
+          // TODO support multiple order_bys
           statement.log('ordering already specified');
+        } else if (!this.expr.canSupportPartitionBy()) {
+          statement.log(
+            '`order_by` is not supported for this kind of expression'
+          );
         } else {
           orderBy = statement;
         }

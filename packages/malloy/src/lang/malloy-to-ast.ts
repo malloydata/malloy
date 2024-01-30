@@ -943,6 +943,13 @@ export class MalloyToAST
     return this.astAt(indexStmt, pcx);
   }
 
+  visitFieldPropertyLimitStatement(
+    pcx: parse.FieldPropertyLimitStatementContext
+  ): ast.Limit {
+    this.inExperiment('aggregate_limit', pcx);
+    return this.visitLimitStatement(pcx.limitStatement());
+  }
+
   visitLimitStatement(pcx: parse.LimitStatementContext): ast.Limit {
     return new ast.Limit(this.getNumber(pcx.INTEGER_LITERAL()));
   }
@@ -953,6 +960,11 @@ export class MalloyToAST
     const dir = pcx.ASC() ? 'asc' : pcx.DESC() ? 'desc' : undefined;
     const f = this.getFieldExpr(pcx.fieldExpr());
     return this.astAt(new ast.AggregateOrderBy(f, dir), pcx);
+  }
+
+  visitAggregateOrderByStatement(pcx: parse.AggregateOrderByStatementContext) {
+    this.inExperiment('function_order_by', pcx);
+    return this.visitAggregateOrdering(pcx.aggregateOrdering());
   }
 
   visitAggregateOrdering(
@@ -1526,6 +1538,7 @@ export class MalloyToAST
   }
 
   visitPartitionByStatement(pcx: parse.PartitionByStatementContext) {
+    this.inExperiment('partition_by', pcx);
     return this.astAt(
       new ast.PartitionBy(
         pcx

@@ -190,6 +190,63 @@ describe('expressions', () => {
     );
   });
 
+  describe('expr props', () => {
+    test('props not allowed without experiments enabled', () => {
+      expect(markSource`
+          run: a -> {
+            group_by: ai
+            group_by: x1 is string_agg(astr) { order_by: ai }
+            group_by: x2 is lag(ai) { partition_by: ai }
+            group_by: x3 is string_agg(astr) { limit: 10 }
+          }
+        `).translationToFailWith(
+        "Experimental flag 'function_order_by' required to enable this feature",
+        "Experimental flag 'partition_by' required to enable this feature",
+        "Experimental flag 'aggregate_limit' required to enable this feature"
+      );
+    });
+
+    test('props not allowed on most expressions', () => {
+      expect(markSource`
+          ##! experimental { function_order_by partition_by aggregate_limit }
+          run: a -> {
+            group_by: x1 is 1 { order_by: ai }
+            group_by: x2 is 1 { partition_by: ai }
+            group_by: x3 is 1 { limit: 10 }
+            group_by: x4 is 1 { where: ai }
+          }
+        `).translationToFailWith(
+        '`order_by` is not supported for this kind of expression',
+        '`partition_by` is not supported for this kind of expression',
+        '`limit` is not supported for this kind of expression',
+        'Filtered expression requires an aggregate computation'
+      );
+    });
+
+    test('analytics can take parititon_by and order_by', () => {
+      expect(markSource`
+        ##! experimental { function_order_by partition_by }
+        run: a -> {
+          group_by: ai
+          calculate: x is lag(ai) { partition_by: ai; order_by: ai }
+        }
+      `).toTranslate();
+    });
+
+    test('string_agg can take order_by', () => {
+      expect(markSource`
+        ##! experimental { function_order_by }
+        run: a -> {
+          aggregate: x1 is string_agg(astr) { order_by: ai }
+          aggregate: x2 is string_agg(astr) { order_by: ai * 2 }
+          aggregate: x3 is string_agg(astr) { order_by: ai desc }
+          aggregate: x4 is string_agg(astr) { order_by: ai asc }
+          aggregate: x5 is string_agg(astr) { order_by: ai asc, ai }
+        }
+      `).toTranslate();
+    });
+  });
+
   describe('aggregate forms', () => {
     const m = model`
       source: root is a extend {

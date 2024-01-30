@@ -1154,7 +1154,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     it(`works with order by field - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
-          `run: aircraft -> {
+          `##! experimental { function_order_by }
+          run: aircraft -> {
             where: name ~ r'.*RUTHERFORD.*'
             aggregate: f is string_agg(name, ',') {
               order_by: name
@@ -1170,7 +1171,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     it(`works with order by expression - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
-          `run: aircraft -> {
+          `##! experimental { function_order_by }
+          run: aircraft -> {
             where: name ~ r'.*FLY.*'
             group_by: name
             order_by: name desc
@@ -1190,7 +1192,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     it(`works with order by join expression - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
-          `run: aircraft -> {
+          `##! experimental { function_order_by }
+          run: aircraft -> {
             where: name ~ r'.*ADVENTURE.*'
             aggregate: f is string_agg(name, ',') { order_by: aircraft_models.model }
           }`
@@ -1204,7 +1207,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     it(`works with order asc - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
-          `run: aircraft -> {
+          `##! experimental { function_order_by }
+          run: aircraft -> {
             where: name ~ r'.*FLY.*'
             group_by: name
             order_by: name desc
@@ -1222,7 +1226,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     it(`works with order desc - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
-          `run: aircraft -> {
+          `##! experimental { function_order_by }
+          run: aircraft -> {
             where: name ~ r'.*FLY.*'
             group_by: name
             order_by: name desc
@@ -1239,7 +1244,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 
     it(`works with limit - ${databaseName}`, async () => {
       const query = expressionModel.loadQuery(
-        `run: aircraft -> {
+        `##! experimental { function_order_by aggregate_limit }
+        run: aircraft -> {
             where: name ~ r'.*FLY.*'
             group_by: name
             order_by: name desc
@@ -1268,7 +1274,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     it(`actually distincts - ${databaseName}`, async () => {
       const result = await runtime
         .loadQuery(
-          `source: aircraft is ${databaseName}.table('malloytest.aircraft') extend {
+          `##! experimental { function_order_by }
+          source: aircraft is ${databaseName}.table('malloytest.aircraft') extend {
             primary_key: tail_num
           }
 
@@ -1323,7 +1330,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     it(`works with order by field - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
-          `run: aircraft -> {
+          `##! experimental { function_order_by }
+          run: aircraft -> {
             where: name ~ r'.*RUTHERFORD.*'
             aggregate: f is string_agg_distinct(name, ',') {
               order_by: name
@@ -1342,7 +1350,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     it(`works with order asc - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
-          `run: aircraft -> {
+          `##! experimental { function_order_by }
+          run: aircraft -> {
             where: name ~ r'.*FLY.*'
             group_by: name
             order_by: name desc
@@ -1360,7 +1369,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     it(`works with order desc - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
-          `run: aircraft -> {
+          `##! experimental { function_order_by }
+          run: aircraft -> {
             where: name ~ r'.*FLY.*'
             group_by: name
             order_by: name desc
@@ -1377,7 +1387,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 
     it(`works with limit - ${databaseName}`, async () => {
       const query = expressionModel.loadQuery(
-        `run: aircraft -> {
+        `##! experimental { function_order_by aggregate_limit }
+        run: aircraft -> {
             where: name ~ r'.*FLY.*'
             group_by: name
             order_by: name desc
@@ -1406,7 +1417,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     it(`works - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
-          `run: flights -> {
+          `##! experimental { function_order_by partition_by }
+          run: flights -> {
             group_by:
               yr is year(dep_time)
               qtr is quarter(dep_time)

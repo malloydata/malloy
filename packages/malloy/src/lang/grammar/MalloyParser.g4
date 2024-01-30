@@ -301,11 +301,15 @@ aggregateOrderByStatement
   : ORDER_BY aggregateOrdering
   ;
 
+fieldPropertyLimitStatement
+  : limitStatement
+  ;
+
 fieldPropertyStatement
   : whereStatement
   | partitionByStatement
   | aggregateOrderByStatement
-  | limitStatement
+  | fieldPropertyLimitStatement
   ;
 
 filterClauseList

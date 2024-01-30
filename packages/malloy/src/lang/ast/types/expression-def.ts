@@ -111,15 +111,15 @@ export abstract class ExpressionDef extends MalloyElement {
     return applyBinary(fs, left, op, this);
   }
 
-  supportsPartitionBy(_expr: ExprValue) {
+  canSupportPartitionBy() {
     return false;
   }
 
-  supportsOrderBy(_expr: ExprValue) {
+  canSupportOrderBy() {
     return false;
   }
 
-  supportsLimit(_expr: ExprValue) {
+  canSupportLimit() {
     return false;
   }
 
