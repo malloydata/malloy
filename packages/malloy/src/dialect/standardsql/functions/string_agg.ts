@@ -36,18 +36,19 @@ export function fnStringAgg(): DialectFunctionOverloadDef[] {
   const value = makeParam('value', maxScalar('string'));
   const separator = makeParam('separator', literal(maxScalar('string')));
   const orderBy: Fragment = {type: 'aggregate_order_by'};
+  const limit: Fragment = {type: 'aggregate_limit'};
   return [
     overload(
       minAggregate('string'),
       [value.param],
-      sql`STRING_AGG(${value.arg}, ','${orderBy})`,
-      {isSymmetric: true, supportsOrderBy: true}
+      sql`STRING_AGG(${value.arg}${orderBy}${limit})`,
+      {isSymmetric: true, supportsOrderBy: true, supportsLimit: true}
     ),
     overload(
       minAggregate('string'),
       [value.param, separator.param],
-      sql`STRING_AGG(${value.arg}, ${separator.arg}${orderBy})`,
-      {isSymmetric: true, supportsOrderBy: true}
+      sql`STRING_AGG(${value.arg}, ${separator.arg}${orderBy}${limit})`,
+      {isSymmetric: true, supportsOrderBy: true, supportsLimit: true}
     ),
   ];
 }

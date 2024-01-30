@@ -1237,11 +1237,9 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       );
     });
 
-    // TODO only bigquery
     it(`works with limit - ${databaseName}`, async () => {
-      const result = await expressionModel
-        .loadQuery(
-          `run: aircraft -> {
+      const query = expressionModel.loadQuery(
+        `run: aircraft -> {
             where: name ~ r'.*FLY.*'
             group_by: name
             order_by: name desc
@@ -1252,11 +1250,17 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
               limit: 2
             }
           }`
-        )
-        .run();
-      expect(result.data.path(0, 'f').string.value).toBe(
-        'YANKEE FLYING CLUB INC,WILSON FLYING SERVICE INC'
       );
+      if (databaseName === 'bigquery') {
+        const result = await query.run();
+        expect(result.data.path(0, 'f').string.value).toBe(
+          'YANKEE FLYING CLUB INC,WILSON FLYING SERVICE INC'
+        );
+      } else {
+        await expect(query.run()).rejects.toThrow(
+          'Function string_agg does not support limit'
+        );
+      }
     });
   });
 

@@ -449,7 +449,7 @@ class QueryField extends QueryNode {
     if (overload.dialect[dialect] === undefined) {
       throw new Error(`Function is not defined for dialect ${dialect}`);
     }
-    return exprMap(overload.dialect[dialect], fragment => {
+    return exprMap(overload.dialect[dialect].e, fragment => {
       if (typeof fragment === 'string') {
         return [fragment];
       } else if (fragment.type === 'spread') {

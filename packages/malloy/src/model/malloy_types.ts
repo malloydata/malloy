@@ -1033,11 +1033,13 @@ export interface FunctionOverloadDef {
   needsWindowOrderBy?: boolean;
   between?: {preceding: number | string; following: number | string};
   isSymmetric?: boolean;
-  supportsOrderBy?: boolean;
-  supportsLimit?: boolean;
   params: FunctionParameterDef[];
   dialect: {
-    [dialect: string]: Expr;
+    [dialect: string]: {
+      e: Expr;
+      supportsOrderBy?: boolean;
+      supportsLimit?: boolean;
+    };
   };
 }
 

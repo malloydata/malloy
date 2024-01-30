@@ -231,22 +231,31 @@ export class ExprFunc extends ExpressionDef {
       structPath,
     };
     let funcCall: Expr = [frag];
-    if (props?.orderBy) {
-      if (
-        overload.supportsOrderBy ||
-        expressionIsAnalytic(overload.returnType.expressionType)
-      ) {
-        const ob = props.orderBy.getAggregateOrderBy(fs);
-        frag.orderBy = ob;
-      } else {
-        props.orderBy.log(`Function ${this.name} does not support order_by`);
+    const dialect = fs.dialectObj()?.name;
+    const dialectOverload = dialect ? overload.dialect[dialect] : undefined;
+    // TODO add in an error if you use an asymmetric function in BQ
+    // and the function uses joins
+    // TODO add in an error if you use an illegal join pattern
+    if (dialectOverload === undefined) {
+      this.log(`Function ${this.name} is not defined in dialect ${dialect}`);
+    } else {
+      if (props?.orderBy) {
+        if (
+          dialectOverload.supportsOrderBy ||
+          expressionIsAnalytic(overload.returnType.expressionType)
+        ) {
+          const ob = props.orderBy.getAggregateOrderBy(fs);
+          frag.orderBy = ob;
+        } else {
+          props.orderBy.log(`Function ${this.name} does not support order_by`);
+        }
       }
-    }
-    if (props?.limit !== undefined) {
-      if (overload.supportsLimit) {
-        frag.limit = props.limit.limit;
-      } else {
-        this.log(`Function ${this.name} does not support limit`);
+      if (props?.limit !== undefined) {
+        if (dialectOverload.supportsLimit) {
+          frag.limit = props.limit.limit;
+        } else {
+          this.log(`Function ${this.name} does not support limit`);
+        }
       }
     }
     if (props?.partitionBy) {
