@@ -25,6 +25,7 @@ import {
   EvalSpace,
   Expr,
   expressionIsAggregate,
+  expressionIsAnalytic,
   expressionIsScalar,
   ExpressionType,
   FieldValueType,
@@ -231,8 +232,11 @@ export class ExprFunc extends ExpressionDef {
     };
     let funcCall: Expr = [frag];
     if (props?.orderBy) {
-      const ob = props.orderBy.getAggregateOrderBy(fs);
-      if (overload.supportsOrderBy) {
+      if (
+        overload.supportsOrderBy ||
+        expressionIsAnalytic(overload.returnType.expressionType)
+      ) {
+        const ob = props.orderBy.getAggregateOrderBy(fs);
         frag.orderBy = ob;
       } else {
         props.orderBy.log(`Function ${this.name} does not support order_by`);

@@ -44,6 +44,8 @@ source: aircraft is ${databaseName}.table('malloytest.aircraft') extend {
 source: airports is ${databaseName}.table('malloytest.airports')
 
 source: state_facts is ${databaseName}.table('malloytest.state_facts')
+
+source: flights is ${databaseName}.table('malloytest.flights')
 `;
 }
 
@@ -1262,17 +1264,33 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     it(`works - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
-          `run: airport -> {
-            group_by: name
-            calculate: f is row_number() {
-              partition_by: length(name)
-            }
+          `run: flights -> {
+            group_by:
+              yr is year(dep_time)
+              qtr is quarter(dep_time)
+
+            aggregate:
+              qtr_flights is count()
+
+            calculate:
+              last_yr_qtr_flights is lag(qtr_flights) {
+                partition_by: qtr
+                order_by: yr asc
+              }
+            order_by: yr, qtr
+            where: dep_time < @2002
           }`
         )
         .run();
       expect(result.data.toObject()).toMatchObject([
-        {name: 'foo', f: 1},
-        {name: 'bar', f: 1},
+        {yr: 2000, qtr: 1, qtr_flights: 12148, last_yr_qtr_flights: null},
+        {yr: 2000, qtr: 2, qtr_flights: 11599, last_yr_qtr_flights: null},
+        {yr: 2000, qtr: 3, qtr_flights: 12075, last_yr_qtr_flights: null},
+        {yr: 2000, qtr: 4, qtr_flights: 11320, last_yr_qtr_flights: null},
+        {yr: 2001, qtr: 1, qtr_flights: 11612, last_yr_qtr_flights: 12148},
+        {yr: 2001, qtr: 2, qtr_flights: 13186, last_yr_qtr_flights: 11599},
+        {yr: 2001, qtr: 3, qtr_flights: 12663, last_yr_qtr_flights: 12075},
+        {yr: 2001, qtr: 4, qtr_flights: 11714, last_yr_qtr_flights: 11320},
       ]);
     });
   });

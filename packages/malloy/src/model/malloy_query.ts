@@ -601,7 +601,8 @@ class QueryField extends QueryNode {
           overload,
           state,
           args,
-          extraPartitions
+          extraPartitions,
+          aggregateOrderBy
         );
       }
       return this.generateExpressionFromExpr(
@@ -937,7 +938,8 @@ class QueryField extends QueryNode {
     overload: FunctionOverloadDef,
     state: GenerateState,
     args: Expr[],
-    partitionByFields?: string[]
+    partitionByFields?: string[],
+    funcOrdering?: string
   ): string {
     const isComplex = resultStruct.root().isComplexQuery;
     const partitionFields = this.getAnalyticPartitions(
@@ -953,8 +955,9 @@ class QueryField extends QueryNode {
         ? `PARTITION BY ${allPartitions.join(', ')}`
         : '';
 
-    let orderBy = '';
-    if (overload.needsWindowOrderBy) {
+    let orderBy = funcOrdering;
+    // TODO maybe some analytic functions don't support ordering??
+    if (!funcOrdering && overload.needsWindowOrderBy) {
       // calculate the ordering.
       const obSQL: string[] = [];
       let orderingField;
