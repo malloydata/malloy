@@ -1528,7 +1528,16 @@ export class MalloyToAST
   visitPartitionByStatement(pcx: parse.PartitionByStatementContext) {
     return this.astAt(
       new ast.PartitionBy(
-        pcx.fieldExpr().map(exprCx => this.getFieldExpr(exprCx))
+        pcx
+          .id()
+          .map(idCx =>
+            this.astAt(
+              new ast.PartitionByFieldReference([
+                this.astAt(new ast.FieldName(idToStr(idCx)), idCx),
+              ]),
+              idCx
+            )
+          )
       ),
       pcx
     );

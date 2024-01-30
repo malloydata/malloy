@@ -230,7 +230,8 @@ export interface FunctionCallFragment {
   args: Expr[];
   orderBy?: AggregateOrderBy[];
   limit?: number;
-  partitionBy?: Expr[];
+  // List of non-dotted output field references
+  partitionBy?: string[];
   structPath?: string[];
 }
 

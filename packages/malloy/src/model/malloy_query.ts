@@ -584,13 +584,8 @@ class QueryField extends QueryNode {
       );
 
       if (expressionIsAnalytic(overload.returnType.expressionType)) {
-        const extraPartitions = (frag.partitionBy ?? []).map(pexpr => {
-          return this.generateExpressionFromExpr(
-            resultSet,
-            context,
-            pexpr,
-            state
-          );
+        const extraPartitions = (frag.partitionBy ?? []).map(outputName => {
+          return `(${resultSet.getField(outputName).getAnalyticalSQL(false)})`;
         });
         // TODO probably need to pass in the function and arguments separately
         // in order to generate parameter SQL correctly in BQ re: partition
@@ -2301,11 +2296,6 @@ class QueryQuery extends QueryField {
         if (expr.orderBy) {
           for (const ob of expr.orderBy) {
             this.addDependantExpr(resultStruct, context, ob.e, joinStack);
-          }
-        }
-        if (expr.partitionBy) {
-          for (const pexpr of expr.partitionBy) {
-            this.addDependantExpr(resultStruct, context, pexpr, joinStack);
           }
         }
       }

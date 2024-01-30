@@ -1193,7 +1193,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           `run: aircraft -> {
             where: name ~ r'.*ADVENTURE.*'
             aggregate: f is string_agg(name, ',') { order_by: aircraft_models.model }
-          }` // TODO ensure that the SQL generator actually joins in the appropriate join?
+          }`
         )
         .run();
       expect(result.data.path(0, 'f').string.value).toBe(

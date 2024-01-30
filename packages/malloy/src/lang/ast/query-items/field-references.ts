@@ -139,6 +139,14 @@ export class ExpressionFieldReference extends FieldReference {
   }
 }
 
+export class PartitionByFieldReference extends FieldReference {
+  elementType = 'partitionByFieldReference';
+  // We assume that the partition by expression will typecheck this
+  typecheck() {
+    return;
+  }
+}
+
 export class CalculateFieldReference extends FieldReference {
   elementType = 'calculateFieldReference';
   typecheck(type: TypeDesc) {

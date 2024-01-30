@@ -259,13 +259,15 @@ export class ExprFunc extends ExpressionDef {
       }
     }
     if (props?.partitionBy) {
-      const partitionBy: Expr[] = [];
-      for (const partitionExpr of props.partitionBy.partitionExprs) {
-        const e = partitionExpr.getExpression(fs);
-        if (expressionIsScalar(e.expressionType)) {
-          partitionBy.push(e.value);
+      const partitionBy: string[] = [];
+      for (const partitionField of props.partitionBy.partitionFields) {
+        const e = partitionField.getField(fs);
+        if (e.found === undefined) {
+          partitionField.log(`${partitionField.refString} is not defined`);
+        } else if (expressionIsScalar(e.found.typeDesc().expressionType)) {
+          partitionBy.push(partitionField.nameString);
         } else {
-          partitionExpr.log('Partition expression must be scalar');
+          partitionField.log('Partition expression must be scalar');
         }
       }
       frag.partitionBy = partitionBy;
