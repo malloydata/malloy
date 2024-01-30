@@ -22,7 +22,6 @@
  */
 
 import {
-  AggregateOrderBy,
   EvalSpace,
   Expr,
   expressionIsAggregate,
