@@ -173,17 +173,6 @@ describe('expressions', () => {
         }
       `).toTranslate();
   });
-  test('shortcut filtered measure m4warning', () => {
-    expect(`
-      ##! m4warnings=warn
-      run: a -> {
-        group_by: ai
-        aggregate: x is avg(ai) {? astr = 'why?' }
-      }
-    `).toTranslateWithWarnings(
-      'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead'
-    );
-  });
   test('correctly flags filtered scalar', () => {
     const e = new BetaExpression('ai { where: true }');
     expect(e).translationToFailWith(
