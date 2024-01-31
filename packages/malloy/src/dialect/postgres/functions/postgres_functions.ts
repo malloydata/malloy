@@ -22,6 +22,7 @@
  */
 
 import {FUNCTIONS} from '../../functions';
+import {fnStringAgg, fnStringAggDistinct} from './string_agg';
 import {fnByteLength} from './byte_length';
 import {fnEndsWith} from './ends_with';
 import {fnGreatest, fnLeast} from './greatest_and_least';
@@ -54,5 +55,7 @@ POSTGRES_FUNCTIONS.add('trunc', fnTrunc);
 POSTGRES_FUNCTIONS.add('substr', fnSubstr);
 POSTGRES_FUNCTIONS.add('replace', fnReplace);
 POSTGRES_FUNCTIONS.add('ends_with', fnEndsWith);
+POSTGRES_FUNCTIONS.add('string_agg', fnStringAgg);
+POSTGRES_FUNCTIONS.add('string_agg_distinct', fnStringAggDistinct);
 POSTGRES_FUNCTIONS.add('log', fnLog);
 POSTGRES_FUNCTIONS.seal();

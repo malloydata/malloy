@@ -25,10 +25,12 @@ import {
   EvalSpace,
   Expr,
   expressionIsAggregate,
+  expressionIsAnalytic,
   expressionIsScalar,
   ExpressionType,
   FieldValueType,
   Fragment,
+  FunctionCallFragment,
   FunctionDef,
   FunctionOverloadDef,
   FunctionParameterDef,
@@ -42,6 +44,9 @@ import {errorFor} from '../ast-utils';
 import {StructSpaceFieldBase} from '../field-space/struct-space-field-base';
 
 import {FieldReference} from '../query-items/field-references';
+import {FunctionOrdering} from './function-ordering';
+import {Limit} from '../query-properties/limit';
+import {PartitionBy} from './partition_by';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
@@ -60,7 +65,30 @@ export class ExprFunc extends ExpressionDef {
     this.has({source: source});
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
+  canSupportPartitionBy() {
+    return true;
+  }
+
+  canSupportOrderBy() {
+    return true;
+  }
+
+  canSupportLimit() {
+    return true;
+  }
+
+  getExpression(fs: FieldSpace) {
+    return this.getPropsExpression(fs);
+  }
+
+  getPropsExpression(
+    fs: FieldSpace,
+    props?: {
+      partitionBys?: PartitionBy[];
+      orderBys?: FunctionOrdering[];
+      limit?: Limit;
+    }
+  ): ExprValue {
     const argExprsWithoutImplicit = this.args.map(arg => arg.getExpression(fs));
     if (this.isRaw) {
       let expressionType: ExpressionType = 'scalar';
@@ -207,15 +235,63 @@ export class ExprFunc extends ExpressionDef {
       );
       return errorFor('cannot call with source');
     }
-    let funcCall: Expr = [
-      {
-        type: 'function_call',
-        overload,
-        args: argExprs.map(x => x.value),
-        expressionType,
-        structPath,
-      },
-    ];
+    const frag: FunctionCallFragment = {
+      type: 'function_call',
+      overload,
+      args: argExprs.map(x => x.value),
+      expressionType,
+      structPath,
+    };
+    let funcCall: Expr = [frag];
+    const dialect = fs.dialectObj()?.name;
+    const dialectOverload = dialect ? overload.dialect[dialect] : undefined;
+    // TODO add in an error if you use an asymmetric function in BQ
+    // and the function uses joins
+    // TODO add in an error if you use an illegal join pattern
+    if (dialectOverload === undefined) {
+      this.log(`Function ${this.name} is not defined in dialect ${dialect}`);
+    } else {
+      if (props?.orderBys && props.orderBys.length > 0) {
+        const isAnalytic = expressionIsAnalytic(
+          overload.returnType.expressionType
+        );
+        if (dialectOverload.supportsOrderBy || isAnalytic) {
+          const allObs = props.orderBys.flatMap(orderBy =>
+            isAnalytic
+              ? orderBy.getAnalyticOrderBy(fs)
+              : orderBy.getAggregateOrderBy(fs)
+          );
+          frag.orderBy = allObs;
+        } else {
+          props.orderBys[0].log(
+            `Function ${this.name} does not support order_by`
+          );
+        }
+      }
+      if (props?.limit !== undefined) {
+        if (dialectOverload.supportsLimit) {
+          frag.limit = props.limit.limit;
+        } else {
+          this.log(`Function ${this.name} does not support limit`);
+        }
+      }
+    }
+    if (props?.partitionBys && props.partitionBys.length > 0) {
+      const partitionByFields: string[] = [];
+      for (const partitionBy of props.partitionBys) {
+        for (const partitionField of partitionBy.partitionFields) {
+          const e = partitionField.getField(fs);
+          if (e.found === undefined) {
+            partitionField.log(`${partitionField.refString} is not defined`);
+          } else if (expressionIsScalar(e.found.typeDesc().expressionType)) {
+            partitionByFields.push(partitionField.nameString);
+          } else {
+            partitionField.log('Partition expression must be scalar');
+          }
+        }
+      }
+      frag.partitionBy = partitionByFields;
+    }
     if (
       [
         'sql_number',

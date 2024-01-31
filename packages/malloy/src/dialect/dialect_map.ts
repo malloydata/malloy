@@ -110,14 +110,24 @@ export function getDialectFunction(name: string): FunctionDef | undefined {
           if (!returnEqual(overload, existingOverload)) {
             throw new Error('params match but return types differ!');
           }
-          existingOverload.dialect[dialect.name] = overload.e;
+          existingOverload.dialect[dialect.name] = {
+            e: overload.e,
+            supportsOrderBy: overload.supportsOrderBy,
+            supportsLimit: overload.supportsLimit,
+          };
           handled = true;
         }
         if (!handled) {
           func.overloads.push({
             returnType: overload.returnType,
             params: overload.params,
-            dialect: {[dialect.name]: overload.e},
+            dialect: {
+              [dialect.name]: {
+                e: overload.e,
+                supportsOrderBy: overload.supportsOrderBy,
+                supportsLimit: overload.supportsLimit,
+              },
+            },
             needsWindowOrderBy: overload.needsWindowOrderBy,
             between: overload.between,
             isSymmetric: overload.isSymmetric,

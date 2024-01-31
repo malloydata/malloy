@@ -32,6 +32,7 @@ import {
   mergeEvalSpaces,
   maxOfExpressionTypes,
   ExpressionValueType,
+  expressionIsAggregate,
 } from '../../../model/malloy_types';
 
 import {errorFor} from '../ast-utils';
@@ -108,6 +109,22 @@ export abstract class ExpressionDef extends MalloyElement {
    */
   apply(fs: FieldSpace, op: string, left: ExpressionDef): ExprValue {
     return applyBinary(fs, left, op, this);
+  }
+
+  canSupportPartitionBy() {
+    return false;
+  }
+
+  canSupportOrderBy() {
+    return false;
+  }
+
+  canSupportLimit() {
+    return false;
+  }
+
+  supportsWhere(expr: ExprValue) {
+    return expressionIsAggregate(expr.expressionType);
   }
 }
 

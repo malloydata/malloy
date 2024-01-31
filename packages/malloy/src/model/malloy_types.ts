@@ -215,11 +215,23 @@ export function isFunctionParameterFragment(
   return (f as FunctionParameterFragment)?.type === 'function_parameter';
 }
 
+export interface AggregateOrderByFragment {
+  type: 'aggregate_order_by';
+}
+
+export interface AggregateLimitFragment {
+  type: 'aggregate_limit';
+}
+
 export interface FunctionCallFragment {
   type: 'function_call';
   overload: FunctionOverloadDef;
   expressionType: ExpressionType;
   args: Expr[];
+  orderBy?: FunctionOrderBy[];
+  limit?: number;
+  // List of non-dotted output field references
+  partitionBy?: string[];
   structPath?: string[];
 }
 
@@ -403,6 +415,8 @@ export type Fragment =
   | UngroupFragment
   | DialectFragment
   | FunctionParameterFragment
+  | AggregateOrderByFragment
+  | AggregateLimitFragment
   | FunctionCallFragment
   | SQLExpressionFragment
   | SpreadFragment;
@@ -718,6 +732,11 @@ export interface OrderBy {
   dir?: 'asc' | 'desc';
 }
 
+export interface FunctionOrderBy {
+  e: Expr;
+  dir?: 'asc' | 'desc';
+}
+
 export interface ByName {
   by: 'name';
   name: string;
@@ -978,6 +997,10 @@ export interface FunctionParamTypeDesc {
 
 export type EvalSpace = 'constant' | 'input' | 'output' | 'literal';
 
+export function isLiteral(evalSpace: EvalSpace) {
+  return evalSpace === 'literal';
+}
+
 export function mergeEvalSpaces(...evalSpaces: EvalSpace[]): EvalSpace {
   if (evalSpaces.every(e => e === 'constant' || e === 'literal')) {
     return 'constant';
@@ -1013,7 +1036,11 @@ export interface FunctionOverloadDef {
   isSymmetric?: boolean;
   params: FunctionParameterDef[];
   dialect: {
-    [dialect: string]: Expr;
+    [dialect: string]: {
+      e: Expr;
+      supportsOrderBy?: boolean;
+      supportsLimit?: boolean;
+    };
   };
 }
 

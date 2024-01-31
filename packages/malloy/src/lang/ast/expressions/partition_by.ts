@@ -21,14 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FUNCTIONS} from '../../functions';
-import {fnStringAgg, fnStringAggDistinct} from './string_agg';
-import {fnChr} from './chr';
-import {fnPi} from './pi';
+import {PartitionByFieldReference} from '../query-items/field-references';
+import {ListOf} from '../types/malloy-element';
 
-export const STANDARDSQL_FUNCTIONS = FUNCTIONS.clone();
-STANDARDSQL_FUNCTIONS.add('pi', fnPi);
-STANDARDSQL_FUNCTIONS.add('chr', fnChr);
-STANDARDSQL_FUNCTIONS.add('string_agg', fnStringAgg);
-STANDARDSQL_FUNCTIONS.add('string_agg_distinct', fnStringAggDistinct);
-STANDARDSQL_FUNCTIONS.seal();
+export class PartitionBy extends ListOf<PartitionByFieldReference> {
+  elementType = 'partition_by';
+
+  constructor(readonly partitionFields: PartitionByFieldReference[]) {
+    super(partitionFields);
+  }
+}

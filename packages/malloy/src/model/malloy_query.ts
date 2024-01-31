@@ -55,6 +55,7 @@ import {
   isApplyValue,
   isAsymmetricFragment,
   isDialectFragment,
+  isLiteral,
   isFieldFragment,
   isFilterFragment,
   isFunctionCallFragment,
@@ -428,13 +429,15 @@ class QueryField extends QueryNode {
   private expandFunctionCall(
     dialect: string,
     overload: FunctionOverloadDef,
-    args: Expr[]
+    args: Expr[],
+    orderBy: string | undefined,
+    limit: string | undefined
   ) {
     const paramMap = this.getParameterMap(overload, args.length);
     if (overload.dialect[dialect] === undefined) {
       throw new Error(`Function is not defined for dialect ${dialect}`);
     }
-    return exprMap(overload.dialect[dialect], fragment => {
+    return exprMap(overload.dialect[dialect].e, fragment => {
       if (typeof fragment === 'string') {
         return [fragment];
       } else if (fragment.type === 'spread') {
@@ -447,7 +450,6 @@ class QueryField extends QueryNode {
           throw new Error(
             'Invalid function definition. Argument to spread must be a function parameter.'
           );
-          return [];
         }
         const entry = paramMap.get(param.name);
         if (entry === undefined) {
@@ -471,6 +473,10 @@ class QueryField extends QueryNode {
         } else {
           return args[entry.argIndexes[0]];
         }
+      } else if (fragment.type === 'aggregate_order_by') {
+        return orderBy ? [` ${orderBy}`] : [];
+      } else if (fragment.type === 'aggregate_limit') {
+        return limit ? [` ${limit}`] : [];
       }
       return [fragment];
     });
@@ -489,6 +495,23 @@ class QueryField extends QueryNode {
       expressionIsAggregate(overload.returnType.expressionType) &&
       !isSymmetric &&
       this.generateDistinctKeyIfNecessary(resultSet, context, frag.structPath);
+    const aggregateOrderBy = frag.orderBy
+      ? 'ORDER BY ' +
+        frag.orderBy
+          .map(ob => {
+            const osql = this.generateDimFragment(
+              resultSet,
+              context,
+              ob.e,
+              state
+            );
+            const dirsql =
+              ob.dir === 'asc' ? ' ASC' : ob.dir === 'desc' ? ' DESC' : '';
+            return `${osql}${dirsql}`;
+          })
+          .join(', ')
+      : undefined;
+    const aggregateLimit = frag.limit ? `LIMIT ${frag.limit}` : undefined;
     if (distinctKey) {
       if (!context.dialect.supportsAggDistinct) {
         throw new Error(
@@ -505,7 +528,9 @@ class QueryField extends QueryNode {
           const funcCall = this.expandFunctionCall(
             context.dialect.name,
             overload,
-            valNames.map(v => [v])
+            valNames.map(v => [v]),
+            aggregateOrderBy,
+            aggregateLimit
           );
           return this.generateExpressionFromExpr(
             resultSet,
@@ -519,22 +544,37 @@ class QueryField extends QueryNode {
       const mappedArgs = expressionIsAggregate(
         overload.returnType.expressionType
       )
-        ? args.map(arg => {
+        ? args.map((arg, index) => {
             // TODO We assume that all arguments to this aggregate-returning function need to
             // have filters applied to them. This is not necessarily true in the general case,
             // e.g. in a function `avg_plus(a, b) = avg(a) + b` -- here, `b` should not be
             // be filtered. But since there aren't any aggregate functions like this in the
             // standard library we have planned, we ignore this for now.
-            return [this.generateDimFragment(resultSet, context, arg, state)];
+            // Update: Now we apply this only to arguments whose parameter is not constant-requiring.
+            // So in `string_agg(val, sep)`, `sep` does not get filters applied to it because
+            // it must be constant
+            const param = overload.params[index];
+            // TODO technically this should probably look at _which_ allowed param type was matched
+            // for this argument and see if that type is at most constant... but we lose type information
+            // by this point in the compilation, so that info would have to be passed into the func call
+            // fragment.
+            return param.allowedTypes.every(t => isLiteral(t.evalSpace))
+              ? arg
+              : [this.generateDimFragment(resultSet, context, arg, state)];
           })
         : args;
       const funcCall: Expr = this.expandFunctionCall(
         context.dialect.name,
         overload,
-        mappedArgs
+        mappedArgs,
+        aggregateOrderBy,
+        aggregateLimit
       );
 
       if (expressionIsAnalytic(overload.returnType.expressionType)) {
+        const extraPartitions = (frag.partitionBy ?? []).map(outputName => {
+          return `(${resultSet.getField(outputName).getAnalyticalSQL(false)})`;
+        });
         // TODO probably need to pass in the function and arguments separately
         // in order to generate parameter SQL correctly in BQ re: partition
         return this.generateAnalyticFragment(
@@ -543,7 +583,9 @@ class QueryField extends QueryNode {
           funcCall,
           overload,
           state,
-          args
+          args,
+          extraPartitions,
+          aggregateOrderBy
         );
       }
       return this.generateExpressionFromExpr(
@@ -852,7 +894,10 @@ class QueryField extends QueryNode {
     }
   }
 
-  getAnalyticPartitions(resultStruct: FieldInstanceResult) {
+  getAnalyticPartitions(
+    resultStruct: FieldInstanceResult,
+    extraPartitionFields?: string[]
+  ): string[] {
     const ret: string[] = [];
     let p = resultStruct.parent;
     while (p !== undefined) {
@@ -863,7 +908,10 @@ class QueryField extends QueryNode {
       ret.push(...partitionSQLs);
       p = p.parent;
     }
-    return ret.join(', ');
+    if (extraPartitionFields) {
+      ret.push(...extraPartitionFields);
+    }
+    return ret;
   }
 
   generateAnalyticFragment(
@@ -872,23 +920,26 @@ class QueryField extends QueryNode {
     expr: Expr,
     overload: FunctionOverloadDef,
     state: GenerateState,
-    args: Expr[]
+    args: Expr[],
+    partitionByFields?: string[],
+    funcOrdering?: string
   ): string {
-    let partitionBy = '';
     const isComplex = resultStruct.root().isComplexQuery;
-    const fieldsString = this.getAnalyticPartitions(resultStruct);
-    if (isComplex || fieldsString.length > 0) {
-      partitionBy = 'PARTITION BY ';
-      if (isComplex) {
-        partitionBy += 'group_set';
-      }
-      if (fieldsString.length > 0) {
-        partitionBy += `, ${fieldsString}`;
-      }
-    }
+    const partitionFields = this.getAnalyticPartitions(
+      resultStruct,
+      partitionByFields
+    );
+    const allPartitions = [
+      ...(isComplex ? ['group_set'] : []),
+      ...partitionFields,
+    ];
+    const partitionBy =
+      allPartitions.length > 0
+        ? `PARTITION BY ${allPartitions.join(', ')}`
+        : '';
 
-    let orderBy = '';
-    if (overload.needsWindowOrderBy) {
+    let orderBy = funcOrdering ?? '';
+    if (!funcOrdering && overload.needsWindowOrderBy) {
       // calculate the ordering.
       const obSQL: string[] = [];
       let orderingField;
@@ -2228,6 +2279,11 @@ class QueryQuery extends QueryField {
         }
         if (expressionIsAnalytic(expr.overload.returnType.expressionType)) {
           resultStruct.root().queryUsesPartitioning = true;
+        }
+        if (expr.orderBy) {
+          for (const ob of expr.orderBy) {
+            this.addDependantExpr(resultStruct, context, ob.e, joinStack);
+          }
         }
       }
     }

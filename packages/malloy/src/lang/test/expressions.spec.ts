@@ -173,17 +173,6 @@ describe('expressions', () => {
         }
       `).toTranslate();
   });
-  test('shortcut filtered measure m4warning', () => {
-    expect(`
-      ##! m4warnings=warn
-      run: a -> {
-        group_by: ai
-        aggregate: x is avg(ai) {? astr = 'why?' }
-      }
-    `).toTranslateWithWarnings(
-      'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead'
-    );
-  });
   test('correctly flags filtered scalar', () => {
     const e = new BetaExpression('ai { where: true }');
     expect(e).translationToFailWith(
@@ -199,6 +188,161 @@ describe('expressions', () => {
       `).translationToFailWith(
       'Filtered expression requires an aggregate computation'
     );
+  });
+
+  describe('expr props', () => {
+    test('props not allowed without experiments enabled', () => {
+      expect(markSource`
+          run: a -> {
+            group_by: ai
+            group_by: x1 is string_agg(astr) { order_by: ai }
+            group_by: x2 is lag(ai) { partition_by: ai }
+            group_by: x3 is string_agg(astr) { limit: 10 }
+          }
+        `).translationToFailWith(
+        "Experimental flag 'function_order_by' required to enable this feature",
+        "Experimental flag 'partition_by' required to enable this feature",
+        "Experimental flag 'aggregate_limit' required to enable this feature"
+      );
+    });
+
+    test('props not allowed on most expressions', () => {
+      expect(markSource`
+          ##! experimental { function_order_by partition_by aggregate_limit }
+          run: a -> {
+            group_by: x1 is 1 { order_by: ai }
+            group_by: x2 is 1 { partition_by: ai }
+            group_by: x3 is 1 { limit: 10 }
+            group_by: x4 is 1 { where: ai }
+          }
+        `).translationToFailWith(
+        '`order_by` is not supported for this kind of expression',
+        '`partition_by` is not supported for this kind of expression',
+        '`limit` is not supported for this kind of expression',
+        'Filtered expression requires an aggregate computation'
+      );
+    });
+
+    test('analytics can take parititon_by and order_by', () => {
+      expect(markSource`
+        ##! experimental { function_order_by partition_by }
+        run: a -> {
+          group_by: ai
+          calculate: x is lag(ai) { partition_by: ai; order_by: ai }
+        }
+      `).toTranslate();
+    });
+
+    test('can specify multiple partition_bys', () => {
+      expect(markSource`
+        ##! experimental { partition_by }
+        run: a -> {
+          group_by: ai, astr, abool
+          calculate: x is lag(ai) {
+            partition_by: ai
+            partition_by: astr, abool
+          }
+        }
+      `).toTranslate();
+    });
+
+    test('can specify multiple order_bys', () => {
+      expect(markSource`
+        ##! experimental { function_order_by }
+        run: a -> {
+          group_by: ai, astr, abool
+          calculate: x is lag(ai) {
+            order_by: ai
+            order_by: astr, abool
+          }
+        }
+      `).toTranslate();
+    });
+
+    test('aggregate order by cannot be aggregate', () => {
+      expect(markSource`
+        ##! experimental { function_order_by }
+        run: a -> {
+          aggregate: x is string_agg(astr) {
+            order_by: sum(ai)
+          }
+        }
+      `).translationToFailWith('aggregate `order_by` must be scalar');
+    });
+
+    test('aggregate order by cannot be analytic', () => {
+      expect(markSource`
+        ##! experimental { function_order_by }
+        run: a -> {
+          aggregate: x is string_agg(astr) {
+            order_by: rank()
+          }
+        }
+      `).translationToFailWith('aggregate `order_by` must be scalar');
+    });
+
+    test('analytic order by can be an aggregate', () => {
+      expect(markSource`
+        ##! experimental { function_order_by }
+        run: a -> {
+          group_by: abool
+          calculate: x is lag(abool) {
+            order_by: sum(ai)
+          }
+        }
+      `).toTranslate();
+    });
+
+    test('analytic order by can be an output field', () => {
+      expect(markSource`
+        ##! experimental { function_order_by }
+        run: a -> {
+          group_by: ai
+          calculate: x is lag(ai) {
+            order_by: ai
+          }
+        }
+      `).toTranslate();
+    });
+
+    test('analytic order by must be an output field', () => {
+      expect(markSource`
+        ##! experimental { function_order_by }
+        run: a -> {
+          group_by: abool
+          calculate: x is lag(abool) {
+            order_by: ai
+          }
+        }
+      `).translationToFailWith(
+        'analytic `order_by` must be an aggregate or an output field reference'
+      );
+    });
+
+    test('can specify multiple wheres', () => {
+      expect(markSource`
+        ##! experimental { function_order_by }
+        run: a -> {
+          aggregate: x is count() {
+            where: ai > 10
+            where: astr ~ '%foo%'
+          }
+        }
+      `).toTranslate();
+    });
+
+    test('string_agg can take order_by', () => {
+      expect(markSource`
+        ##! experimental { function_order_by }
+        run: a -> {
+          aggregate: x1 is string_agg(astr) { order_by: ai }
+          aggregate: x2 is string_agg(astr) { order_by: ai * 2 }
+          aggregate: x3 is string_agg(astr) { order_by: ai desc }
+          aggregate: x4 is string_agg(astr) { order_by: ai asc }
+          aggregate: x5 is string_agg(astr) { order_by: ai asc, ai }
+        }
+      `).toTranslate();
+    });
   });
 
   describe('aggregate forms', () => {
