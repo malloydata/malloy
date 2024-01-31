@@ -118,4 +118,13 @@ source: products is duckdb.table("data/products.parquet") extend {
         limit: 5
       }
   }
+
+  # plot
+  view: plotTest is {
+    # x
+    group_by: category
+    # barY
+    aggregate: `Avg Retail` is retail_price.avg()
+    limit: 5
+  }
 }

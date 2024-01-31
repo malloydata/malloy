@@ -49,3 +49,10 @@ export const SparksNested = {
     view: 'sparks_nested',
   },
 };
+
+export const PlotTags = {
+  args: {
+    source: 'products',
+    view: 'plotTest',
+  },
+};

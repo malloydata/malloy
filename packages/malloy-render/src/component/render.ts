@@ -32,6 +32,8 @@ import {
   RenderResultMetadata,
   getResultMetadata,
 } from './render-result-metadata';
+import {parsePlotTags} from './plot/parse-plot-tags';
+import {plotToVega} from './plot/plot-to-vega';
 
 // Get the first valid theme value or fallback to CSS variable
 function getThemeValue(prop: string, ...themes: Array<Tag | undefined>) {
@@ -208,9 +210,26 @@ export class MalloyRender extends LitElement {
   }
 
   override render() {
+    // console.log(this._result, {
+    //   tags: this._result.tagParse(),
+    // });
+    const {tag} = this._result.tagParse();
+    if (tag.has('plot')) {
+      const spec = parsePlotTags(this._result);
+      const vgSpec = plotToVega(spec);
+
+      const data = this._result.data.queryData;
+      vgSpec.data[0].values = data;
+      console.log('SPEC', spec);
+      console.log('VGSPEC', vgSpec);
+      return html`<malloy-vega-chart .spec=${vgSpec}></malloy-vega-chart>`;
+    }
+
     return html`<malloy-table
       exportparts="table-container: container"
       .data=${this._result.data}
+      .width=${400}
+      .height=${200}
     ></malloy-table>`;
   }
 }
