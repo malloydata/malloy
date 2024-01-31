@@ -1124,165 +1124,116 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 
   describe('string_agg', () => {
     it(`works no order by - ${databaseName}`, async () => {
-      const result = await expressionModel
-        .loadQuery(
-          `run: aircraft -> {
-            where: name ~ r'.*RUTHERFORD.*'
-            aggregate: f is string_agg(name)
-          }`
-        )
-        .run();
-      expect([
-        'RUTHERFORD PAT R JR,RUTHERFORD JAMES C',
-        'RUTHERFORD JAMES C,RUTHERFORD PAT R JR',
-      ]).toContain(result.data.path(0, 'f').string.value);
+      expect(`run: aircraft -> {
+        where: name = 'RUTHERFORD PAT R JR'
+        aggregate: f is string_agg(name)
+      }`).malloyResultMatches(expressionModel, {f: 'RUTHERFORD PAT R JR'});
     });
 
     it(`works with dotted shortcut - ${databaseName}`, async () => {
-      const result = await expressionModel
-        .loadQuery(
-          `run: aircraft -> {
-            where: name ~ r'.*RUTHERFORD.*'
-            aggregate: f is name.string_agg()
-          }`
-        )
-        .run();
-      expect([
-        'RUTHERFORD PAT R JR,RUTHERFORD JAMES C',
-        'RUTHERFORD JAMES C,RUTHERFORD PAT R JR',
-      ]).toContain(result.data.path(0, 'f').string.value);
+      expect(`run: aircraft -> {
+        where: name = 'RUTHERFORD PAT R JR'
+        aggregate: f is name.string_agg()
+      }`).malloyResultMatches(expressionModel, {f: 'RUTHERFORD PAT R JR'});
     });
 
     it(`works with order by field - ${databaseName}`, async () => {
-      const result = await expressionModel
-        .loadQuery(
-          `##! experimental { function_order_by }
-          run: aircraft -> {
-            where: name ~ r'.*RUTHERFORD.*'
-            aggregate: f is string_agg(name, ',') {
-              order_by: name
-            }
-          }`
-        )
-        .run();
-      expect(result.data.path(0, 'f').string.value).toBe(
-        'RUTHERFORD JAMES C,RUTHERFORD PAT R JR'
-      );
+      expect(`##! experimental { function_order_by }
+      run: aircraft -> {
+        where: name ~ r'.*RUTHERFORD.*'
+        aggregate: f is string_agg(name, ',') {
+          order_by: name
+        }
+      }`).malloyResultMatches(expressionModel, {
+        f: 'RUTHERFORD JAMES C,RUTHERFORD PAT R JR',
+      });
     });
 
     it(`works with multiple order_bys - ${databaseName}`, async () => {
-      const result = await expressionModel
-        .loadQuery(
-          `##! experimental { function_order_by }
-          run: aircraft -> {
-            where: name ~ r'.*RUTHERFORD.*'
-            aggregate: f is string_agg(name, ',') {
-              order_by: city, name
-            }
-          }`
-        )
-        .run();
-      expect(result.data.path(0, 'f').string.value).toBe(
-        'RUTHERFORD PAT R JR,RUTHERFORD JAMES C'
-      );
+      expect(`##! experimental { function_order_by }
+      run: aircraft -> {
+        where: name ~ r'.*RUTHERFORD.*'
+        aggregate: f is string_agg(name, ',') {
+          order_by: city, name
+        }
+      }`).malloyResultMatches(expressionModel, {
+        f: 'RUTHERFORD PAT R JR,RUTHERFORD JAMES C',
+      });
     });
 
     it(`works with order by expression - ${databaseName}`, async () => {
-      const result = await expressionModel
-        .loadQuery(
-          `##! experimental { function_order_by }
-          run: aircraft -> {
-            where: name ~ r'.*FLY.*'
-            group_by: name
-            order_by: name desc
-            limit: 3
-          } -> {
-            aggregate: f is string_agg(name, ',') {
-              order_by: length(name)
-            }
-          }`
-        )
-        .run();
-      expect(result.data.path(0, 'f').string.value).toBe(
-        'YANKEE FLYING CLUB INC,WESTCHESTER FLYING CLUB,WILSON FLYING SERVICE INC'
-      );
+      expect(`##! experimental { function_order_by }
+      run: aircraft -> {
+        where: name ~ r'.*FLY.*'
+        group_by: name
+        order_by: name desc
+        limit: 3
+      } -> {
+        aggregate: f is string_agg(name, ',') {
+          order_by: length(name)
+        }
+      }`).malloyResultMatches(expressionModel, {
+        f: 'YANKEE FLYING CLUB INC,WESTCHESTER FLYING CLUB,WILSON FLYING SERVICE INC',
+      });
     });
 
     it(`works with order by join expression - ${databaseName}`, async () => {
-      const result = await expressionModel
-        .loadQuery(
-          `##! experimental { function_order_by }
-          run: aircraft -> {
-            where: name ~ r'.*ADVENTURE.*'
-            aggregate: f is string_agg(name, ',') { order_by: aircraft_models.model }
-          }`
-        )
-        .run();
-      expect(result.data.path(0, 'f').string.value).toBe(
-        'ADVENTURE INC,SEA PLANE ADVENTURE INC,A BALLOON ADVENTURES ALOFT,A AERONAUTICAL ADVENTURE INC'
-      );
+      expect(`##! experimental { function_order_by }
+      run: aircraft -> {
+        where: name ~ r'.*ADVENTURE.*'
+        aggregate: f is string_agg(name, ',') { order_by: aircraft_models.model }
+      }`).malloyResultMatches(expressionModel, {
+        f: 'ADVENTURE INC,SEA PLANE ADVENTURE INC,A BALLOON ADVENTURES ALOFT,A AERONAUTICAL ADVENTURE INC',
+      });
     });
 
     it(`works with order asc - ${databaseName}`, async () => {
-      const result = await expressionModel
-        .loadQuery(
-          `##! experimental { function_order_by }
-          run: aircraft -> {
-            where: name ~ r'.*FLY.*'
-            group_by: name
-            order_by: name desc
-            limit: 3
-          } -> {
-            aggregate: f is string_agg(name, ',') { order_by: name asc }
-          }`
-        )
-        .run();
-      expect(result.data.path(0, 'f').string.value).toBe(
-        'WESTCHESTER FLYING CLUB,WILSON FLYING SERVICE INC,YANKEE FLYING CLUB INC'
-      );
+      expect(`##! experimental { function_order_by }
+      run: aircraft -> {
+        where: name ~ r'.*FLY.*'
+        group_by: name
+        order_by: name desc
+        limit: 3
+      } -> {
+        aggregate: f is string_agg(name, ',') { order_by: name asc }
+      }`).malloyResultMatches(expressionModel, {
+        f: 'WESTCHESTER FLYING CLUB,WILSON FLYING SERVICE INC,YANKEE FLYING CLUB INC',
+      });
     });
 
     it(`works with order desc - ${databaseName}`, async () => {
-      const result = await expressionModel
-        .loadQuery(
-          `##! experimental { function_order_by }
-          run: aircraft -> {
-            where: name ~ r'.*FLY.*'
-            group_by: name
-            order_by: name desc
-            limit: 3
-          } -> {
-            aggregate: f is string_agg(name, ',') { order_by: name desc }
-          }`
-        )
-        .run();
-      expect(result.data.path(0, 'f').string.value).toBe(
-        'YANKEE FLYING CLUB INC,WILSON FLYING SERVICE INC,WESTCHESTER FLYING CLUB'
-      );
+      expect(`##! experimental { function_order_by }
+      run: aircraft -> {
+        where: name ~ r'.*FLY.*'
+        group_by: name
+        order_by: name desc
+        limit: 3
+      } -> {
+        aggregate: f is string_agg(name, ',') { order_by: name desc }
+      }`).malloyResultMatches(expressionModel, {
+        f: 'YANKEE FLYING CLUB INC,WILSON FLYING SERVICE INC,WESTCHESTER FLYING CLUB',
+      });
     });
 
     it(`works with limit - ${databaseName}`, async () => {
-      const query = expressionModel.loadQuery(
-        `##! experimental { function_order_by aggregate_limit }
-        run: aircraft -> {
-            where: name ~ r'.*FLY.*'
-            group_by: name
+      const query = `##! experimental { function_order_by aggregate_limit }
+      run: aircraft -> {
+          where: name ~ r'.*FLY.*'
+          group_by: name
+          order_by: name desc
+          limit: 3
+        } -> {
+          aggregate: f is string_agg(name, ',') {
             order_by: name desc
-            limit: 3
-          } -> {
-            aggregate: f is string_agg(name, ',') {
-              order_by: name desc
-              limit: 2
-            }
-          }`
-      );
+            limit: 2
+          }
+        }`;
       if (databaseName === 'bigquery') {
-        const result = await query.run();
-        expect(result.data.path(0, 'f').string.value).toBe(
-          'YANKEE FLYING CLUB INC,WILSON FLYING SERVICE INC'
-        );
+        expect(query).malloyResultMatches(expressionModel, {
+          f: 'YANKEE FLYING CLUB INC,WILSON FLYING SERVICE INC',
+        });
       } else {
-        await expect(query.run()).rejects.toThrow(
+        await expect(expressionModel.loadQuery(query).run()).rejects.toThrow(
           'Function string_agg does not support limit'
         );
       }
@@ -1291,143 +1242,107 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 
   describe('string_agg_distinct', () => {
     it(`actually distincts - ${databaseName}`, async () => {
-      const result = await runtime
-        .loadQuery(
-          `##! experimental { function_order_by }
-          source: aircraft is ${databaseName}.table('malloytest.aircraft') extend {
-            primary_key: tail_num
-          }
+      expect(`##! experimental { function_order_by }
+        source: aircraft is ${databaseName}.table('malloytest.aircraft') extend {
+          primary_key: tail_num
+        }
 
-          source: aircraft_models is ${databaseName}.table('malloytest.aircraft_models') extend {
-            primary_key: aircraft_model_code
-            join_many: aircraft on aircraft_model_code = aircraft.aircraft_model_code
-          }
+        source: aircraft_models is ${databaseName}.table('malloytest.aircraft_models') extend {
+          primary_key: aircraft_model_code
+          join_many: aircraft on aircraft_model_code = aircraft.aircraft_model_code
+        }
 
-          run: aircraft_models -> {
-            where: aircraft.name = 'RAYTHEON AIRCRAFT COMPANY' | 'FOWLER IRA R DBA'
-            aggregate: f_dist is aircraft.name.string_agg_distinct() { order_by: aircraft.name }
-            aggregate: f_all is aircraft.name.string_agg() { order_by: aircraft.name }
-          }`
-        )
-        .run();
-      expect(result.data.path(0, 'f_dist').string.value).toBe(
-        'FOWLER IRA R DBA,RAYTHEON AIRCRAFT COMPANY'
-      );
-      expect(result.data.path(0, 'f_all').string.value).toBe(
-        'FOWLER IRA R DBA,FOWLER IRA R DBA,RAYTHEON AIRCRAFT COMPANY,RAYTHEON AIRCRAFT COMPANY'
-      );
+        run: aircraft_models -> {
+          where: aircraft.name = 'RAYTHEON AIRCRAFT COMPANY' | 'FOWLER IRA R DBA'
+          aggregate: f_dist is aircraft.name.string_agg_distinct() { order_by: aircraft.name }
+          aggregate: f_all is aircraft.name.string_agg() { order_by: aircraft.name }
+      }`).malloyResultMatches(runtime, {
+        f_dist: 'FOWLER IRA R DBA,RAYTHEON AIRCRAFT COMPANY',
+        f_all:
+          'FOWLER IRA R DBA,FOWLER IRA R DBA,RAYTHEON AIRCRAFT COMPANY,RAYTHEON AIRCRAFT COMPANY',
+      });
     });
 
     it(`works no order by - ${databaseName}`, async () => {
-      const result = await expressionModel
-        .loadQuery(
-          `run: aircraft -> {
-            where: name ~ r'.*RUTHERFORD.*'
-            aggregate: f is string_agg_distinct(name)
-          }`
-        )
-        .run();
-      expect([
-        'RUTHERFORD PAT R JR,RUTHERFORD JAMES C',
-        'RUTHERFORD JAMES C,RUTHERFORD PAT R JR',
-      ]).toContain(result.data.path(0, 'f').string.value);
+      expect(`run: aircraft -> {
+        where: name = 'RUTHERFORD PAT R JR'
+        aggregate: f is string_agg_distinct(name)
+      }`).malloyResultMatches(expressionModel, {
+        f: 'RUTHERFORD PAT R JR',
+      });
     });
 
     it(`works with dotted shortcut - ${databaseName}`, async () => {
-      const result = await expressionModel
-        .loadQuery(
-          `run: aircraft -> {
-            where: name ~ r'.*RUTHERFORD.*'
-            aggregate: f is name.string_agg_distinct()
-          }`
-        )
-        .run();
-      expect([
-        'RUTHERFORD PAT R JR,RUTHERFORD JAMES C',
-        'RUTHERFORD JAMES C,RUTHERFORD PAT R JR',
-      ]).toContain(result.data.path(0, 'f').string.value);
+      expect(`run: aircraft -> {
+        where: name = 'RUTHERFORD PAT R JR'
+        aggregate: f is name.string_agg_distinct()
+      }`).malloyResultMatches(expressionModel, {
+        f: 'RUTHERFORD PAT R JR',
+      });
     });
 
     it(`works with order by field - ${databaseName}`, async () => {
-      const result = await expressionModel
-        .loadQuery(
-          `##! experimental { function_order_by }
-          run: aircraft -> {
-            where: name ~ r'.*RUTHERFORD.*'
-            aggregate: f is string_agg_distinct(name, ',') {
-              order_by: name
-            }
-          }`
-        )
-        .run();
-      expect(result.data.path(0, 'f').string.value).toBe(
-        'RUTHERFORD JAMES C,RUTHERFORD PAT R JR'
-      );
+      expect(`##! experimental { function_order_by }
+      run: aircraft -> {
+        where: name ~ r'.*RUTHERFORD.*'
+        aggregate: f is string_agg_distinct(name, ',') {
+          order_by: name
+        }
+      }`).malloyResultMatches(expressionModel, {
+        f: 'RUTHERFORD JAMES C,RUTHERFORD PAT R JR',
+      });
     });
 
     // TODO there is a requirement (at least in BQ that the order_by: must be the same as the first argument
     // when using distinct)
 
     it(`works with order asc - ${databaseName}`, async () => {
-      const result = await expressionModel
-        .loadQuery(
-          `##! experimental { function_order_by }
-          run: aircraft -> {
-            where: name ~ r'.*FLY.*'
-            group_by: name
-            order_by: name desc
-            limit: 3
-          } -> {
-            aggregate: f is string_agg_distinct(name, ',') { order_by: name asc }
-          }`
-        )
-        .run();
-      expect(result.data.path(0, 'f').string.value).toBe(
-        'WESTCHESTER FLYING CLUB,WILSON FLYING SERVICE INC,YANKEE FLYING CLUB INC'
-      );
+      expect(`##! experimental { function_order_by }
+      run: aircraft -> {
+        where: name ~ r'.*FLY.*'
+        group_by: name
+        order_by: name desc
+        limit: 3
+      } -> {
+        aggregate: f is string_agg_distinct(name, ',') { order_by: name asc }
+      }`).malloyResultMatches(expressionModel, {
+        f: 'WESTCHESTER FLYING CLUB,WILSON FLYING SERVICE INC,YANKEE FLYING CLUB INC',
+      });
     });
 
     it(`works with order desc - ${databaseName}`, async () => {
-      const result = await expressionModel
-        .loadQuery(
-          `##! experimental { function_order_by }
-          run: aircraft -> {
-            where: name ~ r'.*FLY.*'
-            group_by: name
-            order_by: name desc
-            limit: 3
-          } -> {
-            aggregate: f is string_agg_distinct(name, ',') { order_by: name desc }
-          }`
-        )
-        .run();
-      expect(result.data.path(0, 'f').string.value).toBe(
-        'YANKEE FLYING CLUB INC,WILSON FLYING SERVICE INC,WESTCHESTER FLYING CLUB'
-      );
+      expect(`##! experimental { function_order_by }
+      run: aircraft -> {
+        where: name ~ r'.*FLY.*'
+        group_by: name
+        order_by: name desc
+        limit: 3
+      } -> {
+        aggregate: f is string_agg_distinct(name, ',') { order_by: name desc }
+      }`).malloyResultMatches(expressionModel, {
+        f: 'YANKEE FLYING CLUB INC,WILSON FLYING SERVICE INC,WESTCHESTER FLYING CLUB',
+      });
     });
 
     it(`works with limit - ${databaseName}`, async () => {
-      const query = expressionModel.loadQuery(
-        `##! experimental { function_order_by aggregate_limit }
+      const query = `##! experimental { function_order_by aggregate_limit }
         run: aircraft -> {
-            where: name ~ r'.*FLY.*'
-            group_by: name
+          where: name ~ r'.*FLY.*'
+          group_by: name
+          order_by: name desc
+          limit: 3
+        } -> {
+          aggregate: f is string_agg_distinct(name, ',') {
             order_by: name desc
-            limit: 3
-          } -> {
-            aggregate: f is string_agg_distinct(name, ',') {
-              order_by: name desc
-              limit: 2
-            }
-          }`
-      );
+            limit: 2
+          }
+        }`;
       if (databaseName === 'bigquery') {
-        const result = await query.run();
-        expect(result.data.path(0, 'f').string.value).toBe(
-          'YANKEE FLYING CLUB INC,WILSON FLYING SERVICE INC'
-        );
+        expect(query).malloyResultMatches(expressionModel, {
+          f: 'YANKEE FLYING CLUB INC,WILSON FLYING SERVICE INC',
+        });
       } else {
-        await expect(query.run()).rejects.toThrow(
+        await expect(expressionModel.loadQuery(query).run()).rejects.toThrow(
           'Function string_agg_distinct does not support limit'
         );
       }
@@ -1436,28 +1351,23 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 
   describe('partition_by', () => {
     it(`works - ${databaseName}`, async () => {
-      const result = await expressionModel
-        .loadQuery(
-          `##! experimental { function_order_by partition_by }
-          run: flights -> {
-            group_by:
-              yr is year(dep_time)
-              qtr is quarter(dep_time)
+      expect(`##! experimental { function_order_by partition_by }
+      run: flights -> {
+        group_by:
+          yr is year(dep_time)
+          qtr is quarter(dep_time)
 
-            aggregate:
-              qtr_flights is count()
+        aggregate:
+          qtr_flights is count()
 
-            calculate:
-              last_yr_qtr_flights is lag(qtr_flights) {
-                partition_by: qtr
-                order_by: yr asc
-              }
-            order_by: yr, qtr
-            where: dep_time < @2002
-          }`
-        )
-        .run();
-      expect(result.data.toObject()).toMatchObject([
+        calculate:
+          last_yr_qtr_flights is lag(qtr_flights) {
+            partition_by: qtr
+            order_by: yr asc
+          }
+        order_by: yr, qtr
+        where: dep_time < @2002
+      }`).malloyResultMatches(expressionModel, [
         {yr: 2000, qtr: 1, qtr_flights: 12148, last_yr_qtr_flights: null},
         {yr: 2000, qtr: 2, qtr_flights: 11599, last_yr_qtr_flights: null},
         {yr: 2000, qtr: 3, qtr_flights: 12075, last_yr_qtr_flights: null},
@@ -1470,28 +1380,23 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
 
     it(`works with multiple order_bys - ${databaseName}`, async () => {
-      const result = await expressionModel
-        .loadQuery(
-          `##! experimental { function_order_by partition_by }
-          run: aircraft -> {
-            where: name =
-              "UNITED AIR LINES INC"
-              | "FEDERAL EXPRESS CORP"
-              | "AMERICAN AIRLINES INC"
-              | "CESSNA AIRCRAFT COMPANY"
-            group_by: name
-            calculate:
-              # label="Rank by model count then seat count"
-              r is rank() {
-                order_by:
-                  aircraft_models.count() desc,
-                  aircraft_models.seats.sum() desc
-              }
-            order_by: name
-          }`
-        )
-        .run();
-      expect(result.data.toObject()).toMatchObject([
+      expect(`##! experimental { function_order_by partition_by }
+      run: aircraft -> {
+        where: name =
+          "UNITED AIR LINES INC"
+          | "FEDERAL EXPRESS CORP"
+          | "AMERICAN AIRLINES INC"
+          | "CESSNA AIRCRAFT COMPANY"
+        group_by: name
+        calculate:
+          # label="Rank by model count then seat count"
+          r is rank() {
+            order_by:
+              aircraft_models.count() desc,
+              aircraft_models.seats.sum() desc
+          }
+        order_by: name
+      }`).malloyResultMatches(expressionModel, [
         {name: 'AMERICAN AIRLINES INC', r: 3},
         {name: 'CESSNA AIRCRAFT COMPANY', r: 4},
         {name: 'FEDERAL EXPRESS CORP', r: 2},
