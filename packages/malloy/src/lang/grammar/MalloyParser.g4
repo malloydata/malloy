@@ -399,7 +399,7 @@ projectStatement
   ;
 
 partitionByStatement
-  : PARTITION_BY id (COMMA? id)* COMMA?
+  : PARTITION_BY id (COMMA id)* COMMA?
   ;
 
 orderByStatement
