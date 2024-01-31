@@ -1,0 +1,13 @@
+import {registerDialect} from '@malloydata/malloy';
+
+import {
+  PostgresDialect,
+  ExternalPostgresTestConnection,
+} from '@external-drivers/db-external-postgres/';
+
+const drivers = {};
+
+registerDialect(new PostgresDialect());
+drivers['postgres'] = ExternalPostgresTestConnection;
+
+export {drivers};

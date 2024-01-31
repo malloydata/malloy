@@ -23,7 +23,6 @@
 export {
   DuckDBDialect,
   StandardSQLDialect,
-  PostgresDialect,
   registerDialect,
   arg,
   qtz,

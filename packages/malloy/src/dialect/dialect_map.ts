@@ -23,7 +23,6 @@
 
 import {DuckDBDialect} from './duckdb';
 import {Dialect} from './dialect';
-import {PostgresDialect} from './postgres';
 import {StandardSQLDialect} from './standardsql';
 import {FunctionDef, FunctionOverloadDef} from '../model/malloy_types';
 import {DialectFunctionOverloadDef} from './functions';
@@ -42,7 +41,6 @@ export function registerDialect(d: Dialect): void {
   dialectMap.set(d.name, d);
 }
 
-registerDialect(new PostgresDialect());
 registerDialect(new StandardSQLDialect());
 registerDialect(new DuckDBDialect());
 

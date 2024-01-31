@@ -3,7 +3,10 @@
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "dist",
-    "composite": true
+    "composite": true,
+    "paths": {
+      "@external-drivers/*": ["../../external-drivers/*"]
+    }
   },
   "references": [
     {
@@ -16,16 +19,10 @@
       "path": "../packages/malloy-db-bigquery"
     },
     {
-      "path": "../packages/malloy-db-postgres"
-    },
-    {
       "path": "../packages/malloy-db-duckdb"
     },
     {
       "path": "../packages/malloy-malloy-sql"
-    },
-    {
-      "path": "../../malloy-db-external-postgres"
     }
   ]
 }

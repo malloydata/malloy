@@ -33,27 +33,15 @@ import {
 import {BigQueryConnection} from '@malloydata/db-bigquery';
 import {DuckDBConnection} from '@malloydata/db-duckdb';
 import {DuckDBWASMConnection} from '@malloydata/db-duckdb/wasm';
-// eslint-disable-next-line node/no-unpublished-import
-import {ExternalPooledPostgresConnection} from '../../../malloy-db-external-postgres/dist/src/index';
 
-export class BigQueryTestConnection extends BigQueryConnection {
-  // we probably need a better way to do this.
-
-  public async runSQL(
-    sqlCommand: string,
-    options?: RunSQLOptions
-  ): Promise<MalloyQueryData> {
-    try {
-      return await super.runSQL(sqlCommand, options);
-    } catch (e) {
-      // eslint-disable-next-line no-console
-      console.log(`Error in SQL:\n ${sqlCommand}`);
-      throw e;
-    }
-  }
+let externalDrivers = {};
+try {
+  externalDrivers = require('./externalDrivers').drivers;
+} catch (e) {
+  // expected if file does not exist
 }
 
-export class ExternalPostgresTestConnection extends ExternalPooledPostgresConnection {
+export class BigQueryTestConnection extends BigQueryConnection {
   // we probably need a better way to do this.
 
   public async runSQL(
@@ -120,6 +108,12 @@ export function rows(qr: Result): QueryDataRow[] {
 
 export function runtimeFor(dbName: string): SingleConnectionRuntime {
   let connection;
+
+  if (externalDrivers[dbName]) {
+    connection = new externalDrivers[dbName](dbName);
+    return testRuntimeFor(connection);
+  }
+
   switch (dbName) {
     case 'bigquery':
       connection = new BigQueryTestConnection(
@@ -128,9 +122,6 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
         {projectId: 'malloy-data'}
       );
       break;
-    case 'postgres':
-      connection = new ExternalPostgresTestConnection(dbName);
-      break;
     case 'duckdb':
       connection = new DuckDBTestConnection(dbName);
       break;
@@ -138,7 +129,7 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
       connection = new DuckDBWASMTestConnection(dbName);
       break;
     default:
-      throw new Error(`Unknown runtime "${dbName}`);
+      throw new Error(`Unknown runtime "${dbName}"`);
   }
   return testRuntimeFor(connection);
 }
@@ -147,7 +138,7 @@ export function testRuntimeFor(connection: Connection) {
   return new SingleConnectionRuntime(files, connection);
 }
 
-export const allDatabases = ['postgres', 'bigquery', 'duckdb', 'duckdb_wasm'];
+export const allDatabases = ['bigquery', 'duckdb', 'duckdb_wasm'];
 type RuntimeDatabaseNames = (typeof allDatabases)[number];
 
 export class RuntimeList {

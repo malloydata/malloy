@@ -32,7 +32,7 @@ module.exports = {
     'node_modules/(?!(lit-html|lit-element|lit|@lit|@lit-labs)/)',
   ],
   transform: {
-    '^.+\\.(ts|tsx)$': ['ts-jest', {tsconfig: '<rootDir>/tsconfig.json'}],
+    '^.+\\.(ts|tsx)$': ['ts-jest', {tsconfig: '<rootDir>/test/tsconfig.json'}],
     '^.+\\.(js|jsx)$': [
       'babel-jest',
       {
@@ -44,4 +44,7 @@ module.exports = {
   testTimeout: 100000,
   verbose: true,
   testEnvironment: 'node',
+  moduleNameMapper: {
+    '^@external-drivers/(.*)$': '<rootDir>/../external-drivers/$1/src/index.ts',
+  },
 };
