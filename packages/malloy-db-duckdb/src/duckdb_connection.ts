@@ -22,15 +22,27 @@
  */
 
 import crypto from 'crypto';
-import {DuckDBCommon, QueryOptionsReader} from './duckdb_common';
+import {DuckDBCommon} from './duckdb_common';
 import {
   Connection,
   Database,
   DuckDbError,
+  OPEN_READONLY,
   OPEN_READWRITE,
   TableData,
 } from 'duckdb';
-import {QueryDataRow, RunSQLOptions} from '@malloydata/malloy';
+import {
+  ConnectionConfig,
+  QueryDataRow,
+  QueryOptionsReader,
+  RunSQLOptions,
+} from '@malloydata/malloy';
+
+export interface DuckDBConnectionOptions extends ConnectionConfig {
+  databasePath?: string;
+  workingDirectory?: string;
+  readOnly?: boolean;
+}
 
 interface ActiveDB {
   database: Database;
@@ -38,19 +50,64 @@ interface ActiveDB {
 }
 
 export class DuckDBConnection extends DuckDBCommon {
+  public readonly name: string;
+  private databasePath = ':memory:';
+  private workingDirectory = '.';
+  private readOnly = false;
+
   connecting: Promise<void>;
   protected connection: Connection | null = null;
   protected isSetup: Promise<void> | undefined;
 
   static activeDBs: Record<string, ActiveDB> = {};
 
+  public constructor(
+    options: DuckDBConnectionOptions,
+    queryOptions?: QueryOptionsReader
+  );
+  public constructor(
+    name: string,
+    databasePath?: string,
+    workingDirectory?: string,
+    queryOptions?: QueryOptionsReader
+  );
   constructor(
-    public readonly name: string,
-    private databasePath = ':memory:',
-    private workingDirectory = '.',
+    arg: string | DuckDBConnectionOptions,
+    arg2?: string | QueryOptionsReader,
+    workingDirectory?: string,
     queryOptions?: QueryOptionsReader
   ) {
-    super(queryOptions);
+    super();
+
+    if (typeof arg === 'string') {
+      this.name = arg;
+      if (typeof arg2 === 'string') {
+        this.databasePath = arg2;
+      }
+      if (typeof workingDirectory === 'string') {
+        this.workingDirectory = workingDirectory;
+      }
+      if (queryOptions) {
+        this.queryOptions = queryOptions;
+      }
+    } else {
+      this.name = arg.name;
+      if (arg2) {
+        this.queryOptions = arg2 as QueryOptionsReader;
+      }
+      if (typeof arg.readOnly === 'boolean') {
+        this.readOnly = arg.readOnly;
+      }
+      if (typeof arg.databasePath === 'string') {
+        this.databasePath = arg.databasePath;
+      }
+      if (typeof arg.workingDirectory === 'string') {
+        this.workingDirectory = arg.workingDirectory;
+      }
+    }
+    if (this.databasePath === ':memory:') {
+      this.readOnly = false;
+    }
     this.connecting = this.init();
   }
 
@@ -62,7 +119,7 @@ export class DuckDBConnection extends DuckDBCommon {
       } else {
         const database = new Database(
           this.databasePath,
-          OPEN_READWRITE, // databasePath === ":memory:" ? OPEN_READWRITE : OPEN_READONLY,
+          this.readOnly ? OPEN_READONLY : OPEN_READWRITE,
           err => {
             if (err) {
               reject(err);
@@ -151,6 +208,8 @@ export class DuckDBConnection extends DuckDBCommon {
     sql: string,
     {rowLimit, abortSignal}: RunSQLOptions = {}
   ): AsyncIterableIterator<QueryDataRow> {
+    const defaultOptions = this.readQueryOptions();
+    rowLimit ??= defaultOptions.rowLimit;
     await this.setup();
     if (!this.connection) {
       throw new Error('Connection not open');

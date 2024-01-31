@@ -30,6 +30,7 @@
 import * as crypto from 'crypto';
 import {
   Connection,
+  ConnectionConfig,
   FetchSchemaOptions,
   MalloyQueryData,
   NamedStructDefs,
@@ -38,6 +39,7 @@ import {
   PostgresDialect,
   QueryData,
   QueryDataRow,
+  QueryOptionsReader,
   QueryRunStats,
   RunSQLOptions,
   SQLBlock,
@@ -47,15 +49,6 @@ import {
 import {Client, Pool} from 'pg';
 import QueryStream from 'pg-query-stream';
 import {randomUUID} from 'crypto';
-
-interface PostgresQueryConfiguration {
-  rowLimit?: number;
-}
-
-type PostgresQueryConfigurationReader =
-  | PostgresQueryConfiguration
-  | (() => PostgresQueryConfiguration)
-  | (() => Promise<PostgresQueryConfiguration>);
 
 interface PostgresConnectionConfiguration {
   host?: string;
@@ -73,9 +66,17 @@ type PostgresConnectionConfigurationReader =
 const DEFAULT_PAGE_SIZE = 1000;
 const SCHEMA_PAGE_SIZE = 1000;
 
+export interface PostgresConnectionOptions
+  extends ConnectionConfig,
+    PostgresConnectionConfiguration {}
+
 export class PostgresConnection
   implements Connection, StreamingConnection, PersistSQLResults
 {
+  public readonly name: string;
+  private queryOptionsReader: QueryOptionsReader = {};
+  private configReader: PostgresConnectionConfigurationReader = {};
+
   private readonly dialect = new PostgresDialect();
   private schemaCache = new Map<
     string,
@@ -89,16 +90,39 @@ export class PostgresConnection
   >();
 
   constructor(
-    public readonly name: string,
-    private queryConfigReader: PostgresQueryConfigurationReader = {},
-    private configReader: PostgresConnectionConfigurationReader = {}
-  ) {}
-
-  private async readQueryConfig(): Promise<PostgresQueryConfiguration> {
-    if (this.queryConfigReader instanceof Function) {
-      return this.queryConfigReader();
+    options: PostgresConnectionOptions,
+    queryOptionsReader?: QueryOptionsReader
+  );
+  constructor(
+    name: string,
+    queryOptionsReader?: QueryOptionsReader,
+    configReader?: PostgresConnectionConfigurationReader
+  );
+  constructor(
+    arg: string | PostgresConnectionOptions,
+    queryOptionsReader?: QueryOptionsReader,
+    configReader?: PostgresConnectionConfigurationReader
+  ) {
+    if (typeof arg === 'string') {
+      this.name = arg;
+      if (configReader) {
+        this.configReader = configReader;
+      }
     } else {
-      return this.queryConfigReader;
+      const {name, ...configReader} = arg;
+      this.name = name;
+      this.configReader = configReader;
+    }
+    if (queryOptionsReader) {
+      this.queryOptionsReader = queryOptionsReader;
+    }
+  }
+
+  private async readQueryConfig(): Promise<RunSQLOptions> {
+    if (this.queryOptionsReader instanceof Function) {
+      return this.queryOptionsReader();
+    } else {
+      return this.queryOptionsReader;
     }
   }
 
@@ -433,11 +457,24 @@ export class PooledPostgresConnection
   private _pool: Pool | undefined;
 
   constructor(
+    options: PostgresConnectionOptions,
+    queryOptionsReader?: QueryOptionsReader
+  );
+  constructor(
     name: string,
-    queryConfigReader: PostgresQueryConfigurationReader = {},
-    configReader: PostgresConnectionConfigurationReader = {}
+    queryOptionsReader?: QueryOptionsReader,
+    configReader?: PostgresConnectionConfigurationReader
+  );
+  constructor(
+    arg: string | PostgresConnectionOptions,
+    queryOptionsReader?: QueryOptionsReader,
+    configReader?: PostgresConnectionConfigurationReader
   ) {
-    super(name, queryConfigReader, configReader);
+    if (typeof arg === 'string') {
+      super(arg, queryOptionsReader, configReader);
+    } else {
+      super(arg, queryOptionsReader);
+    }
   }
 
   public isPool(): true {
