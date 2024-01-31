@@ -4413,7 +4413,6 @@ interface QueryResults {
 /** start here */
 export class QueryModel {
   dialect: Dialect = new StandardSQLDialect();
-  // dialect: Dialect = new PostgresDialect();
   modelDef: ModelDef | undefined = undefined;
   structs = new Map<string, QueryStruct>();
   constructor(modelDef: ModelDef | undefined) {

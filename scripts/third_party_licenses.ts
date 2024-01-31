@@ -59,7 +59,6 @@ const malloyPackages = [
   '@malloydata/render',
   'test',
   '@malloydata/db-bigquery',
-  '@malloydata/db-postgres',
   '@malloydata/db-duckdb',
 ];
 

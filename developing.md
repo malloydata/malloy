@@ -15,8 +15,6 @@ Use the [VS Code ESLint extension](https://marketplace.visualstudio.com/items?it
 
 The tests can be run via the [VS Code Jest Runner extension](https://marketplace.visualstudio.com/items?itemName=firsttris.vscode-jest-runner). Alternatively, use `npm run test`, or a specific file, like `npm run test test/nomodel.spec.ts`.
 
-Some of the Postgres tests depend on static tables (i.e. `test/src/nomodel.spec.ts`). To set up the database locally for these tests, you can `gunzip` the `test/data/postgres/malloytest-postgres.sql.gz` file and run its SQL with a command such as `psql -f test/data/postgres/malloytest-postgres.sql.gz`.
-
 ### VS Code tips
 
 We provide a task in VS Code (.vscode/tasks.json) to watch the entire Malloy repo for typscript changes - this allows VS Code to output typescript errors even when files are closed. The default behavior is for errors to only appear in open files. If you want the watcher task to compile all files in the background, you can either run the task manually (Command Palette -> Tasks -> Run Task -> tsc-compile-watch). If you want to enable this task to always start when you open the project, run Command Palette -> Tasks: Manage Automatic Tasks in Folder -> Allow Automatic Tasks in folder.

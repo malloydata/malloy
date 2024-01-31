@@ -31,7 +31,6 @@ In practice, much of this loop is handled by various database plugins:
 
 - [DuckDB](https://github.com/malloydata/malloy/tree/main/packages/malloy-db-duckdb)
 - [BigQuery](https://github.com/malloydata/malloy/tree/main/packages/malloy-db-bigquery)
-- [Postgres](https://github.com/malloydata/malloy/tree/main/packages/malloy-db-postgres)
 
 ## Do you have any examples?
 

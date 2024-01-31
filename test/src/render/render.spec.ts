@@ -55,7 +55,6 @@ async function runUnsupportedRenderTest(
 
 const [describe, databases] = describeIfDatabaseAvailable([
   'bigquery',
-  'postgres',
   'duckdb',
 ]);
 const duckdb = runtimeFor('duckdb');
@@ -120,45 +119,45 @@ describe('rendering results', () => {
     );
   });
 
-  test('can render unsupported postgres interval types', async () => {
-    await runUnsupportedRenderTest(
-      'postgres',
-      runtimes,
-      'make_interval(days => 12)',
-      '12 days'
-    );
-  });
+  // test('can render unsupported postgres interval types', async () => {
+  //   await runUnsupportedRenderTest(
+  //     'postgres',
+  //     runtimes,
+  //     'make_interval(days => 12)',
+  //     '12 days'
+  //   );
+  // });
 
-  test('can render unsupported postgres uuid types', async () => {
-    await runUnsupportedRenderTest(
-      'postgres',
-      runtimes,
-      "CAST('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11' AS UUID)",
-      'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'
-    );
-  });
+  // test('can render unsupported postgres uuid types', async () => {
+  //   await runUnsupportedRenderTest(
+  //     'postgres',
+  //     runtimes,
+  //     "CAST('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11' AS UUID)",
+  //     'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'
+  //   );
+  // });
 
-  test('can render unsupported postgres inet types', async () => {
-    await runUnsupportedRenderTest(
-      'postgres',
-      runtimes,
-      "'192.168.1.1'::inet",
-      '192.168.1.1'
-    );
-  });
+  // test('can render unsupported postgres inet types', async () => {
+  //   await runUnsupportedRenderTest(
+  //     'postgres',
+  //     runtimes,
+  //     "'192.168.1.1'::inet",
+  //     '192.168.1.1'
+  //   );
+  // });
 
-  test('can render unsupported postgres macaddr types', async () => {
-    await runUnsupportedRenderTest(
-      'postgres',
-      runtimes,
-      "'00:04:E2:36:95:C0'::macaddr",
-      '00:04:e2:36:95:c0'
-    );
-  });
+  // test('can render unsupported postgres macaddr types', async () => {
+  //   await runUnsupportedRenderTest(
+  //     'postgres',
+  //     runtimes,
+  //     "'00:04:E2:36:95:C0'::macaddr",
+  //     '00:04:e2:36:95:c0'
+  //   );
+  // });
 
-  test('can render supported postgres types', async () => {
-    await runUnsupportedRenderTest('postgres', runtimes, '12345', '12,345');
-  });
+  // test('can render supported postgres types', async () => {
+  //   await runUnsupportedRenderTest('postgres', runtimes, '12345', '12,345');
+  // });
 
   test('can render supported duckdb types', async () => {
     await runUnsupportedRenderTest('duckdb', runtimes, '12345', '12,345');
