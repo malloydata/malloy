@@ -509,7 +509,7 @@ class QueryField extends QueryNode {
               ob.dir === 'asc' ? ' ASC' : ob.dir === 'desc' ? ' DESC' : '';
             return `${osql}${dirsql}`;
           })
-          .join(' ')
+          .join(', ')
       : undefined;
     const aggregateLimit = frag.limit ? `LIMIT ${frag.limit}` : undefined;
     if (distinctKey) {

@@ -956,10 +956,10 @@ export class MalloyToAST
 
   visitAggregateOrderBySpec(
     pcx: parse.AggregateOrderBySpecContext
-  ): ast.AggregateOrderBy {
+  ): ast.FunctionOrderBy {
     const dir = pcx.ASC() ? 'asc' : pcx.DESC() ? 'desc' : undefined;
     const f = this.getFieldExpr(pcx.fieldExpr());
-    return this.astAt(new ast.AggregateOrderBy(f, dir), pcx);
+    return this.astAt(new ast.FunctionOrderBy(f, dir), pcx);
   }
 
   visitAggregateOrderByStatement(pcx: parse.AggregateOrderByStatementContext) {
@@ -969,11 +969,11 @@ export class MalloyToAST
 
   visitAggregateOrdering(
     pcx: parse.AggregateOrderingContext
-  ): ast.AggregateOrdering {
+  ): ast.FunctionOrdering {
     const orderList = pcx
       .aggregateOrderBySpec()
       .map(o => this.visitAggregateOrderBySpec(o));
-    return this.astAt(new ast.AggregateOrdering(orderList), pcx);
+    return this.astAt(new ast.FunctionOrdering(orderList), pcx);
   }
 
   visitOrderBySpec(pcx: parse.OrderBySpecContext): ast.OrderBy {
@@ -1525,7 +1525,7 @@ export class MalloyToAST
 
   visitExprFieldProps(pcx: parse.ExprFieldPropsContext) {
     const statements = this.only<
-      ast.Filter | ast.AggregateOrdering | ast.PartitionBy | ast.Limit
+      ast.Filter | ast.FunctionOrdering | ast.PartitionBy | ast.Limit
     >(
       pcx
         .fieldProperties()

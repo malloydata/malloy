@@ -27,7 +27,7 @@ import {
 } from '../../../model/malloy_types';
 import {errorFor} from '../ast-utils';
 import {FT} from '../fragtype-utils';
-import {AggregateOrdering} from './aggregate-ordering';
+import {FunctionOrdering} from './function-ordering';
 import {Filter} from '../query-properties/filters';
 import {Limit} from '../query-properties/limit';
 import {PartitionBy} from './partition_by';
@@ -91,7 +91,7 @@ export class ExprProps extends ExpressionDef {
   getExpression(fs: FieldSpace): ExprValue {
     const partitionBys: PartitionBy[] = [];
     let limit: Limit | undefined;
-    const orderBys: AggregateOrdering[] = [];
+    const orderBys: FunctionOrdering[] = [];
     const wheres: Filter[] = [];
     for (const statement of this.statements) {
       if (statement instanceof PartitionBy) {
@@ -110,7 +110,7 @@ export class ExprProps extends ExpressionDef {
         } else {
           limit = statement;
         }
-      } else if (statement instanceof AggregateOrdering) {
+      } else if (statement instanceof FunctionOrdering) {
         if (!this.expr.canSupportPartitionBy()) {
           statement.log(
             '`order_by` is not supported for this kind of expression'

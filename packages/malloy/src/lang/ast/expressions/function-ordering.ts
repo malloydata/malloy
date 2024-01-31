@@ -22,15 +22,17 @@
  */
 
 import {
+  FunctionOrderBy as ModelFunctionOrderBy,
+  expressionIsAggregate,
   expressionIsScalar,
-  AggregateOrderBy as ModelAggregateOrderBy,
 } from '../../../model/malloy_types';
 import {ExpressionDef} from '../types/expression-def';
 
 import {FieldSpace} from '../types/field-space';
 import {ListOf, MalloyElement} from '../types/malloy-element';
+import {ExprIdReference} from './expr-id-reference';
 
-export class AggregateOrderBy extends MalloyElement {
+export class FunctionOrderBy extends MalloyElement {
   elementType = 'orderBy';
   constructor(
     readonly field: ExpressionDef,
@@ -40,23 +42,46 @@ export class AggregateOrderBy extends MalloyElement {
     this.has({field});
   }
 
-  getAggregateOrderBy(fs: FieldSpace): ModelAggregateOrderBy {
+  getAnalyticOrderBy(fs: FieldSpace): ModelFunctionOrderBy {
+    const expr = this.field.getExpression(fs);
+    if (expressionIsAggregate(expr.expressionType)) {
+      // Aggregates are okay
+    } else if (expressionIsScalar(expr.expressionType)) {
+      if (
+        !(this.field instanceof ExprIdReference) ||
+        expr.evalSpace === 'input'
+      ) {
+        this.field.log(
+          'analytic `order_by` must be an aggregate or an output field reference'
+        );
+      }
+    } else {
+      this.field.log('analytic `order_by` must be scalar or aggregate');
+    }
+    return {e: expr.value, dir: this.dir};
+  }
+
+  getAggregateOrderBy(fs: FieldSpace): ModelFunctionOrderBy {
     const expr = this.field.getExpression(fs);
     if (!expressionIsScalar(expr.expressionType)) {
-      this.log('aggregate order_by must be scalar');
+      this.field.log('aggregate `order_by` must be scalar');
     }
     return {e: expr.value, dir: this.dir};
   }
 }
 
-export class AggregateOrdering extends ListOf<AggregateOrderBy> {
-  elementType = 'aggregate-ordering';
+export class FunctionOrdering extends ListOf<FunctionOrderBy> {
+  elementType = 'function-ordering';
 
-  constructor(list: AggregateOrderBy[]) {
+  constructor(list: FunctionOrderBy[]) {
     super(list);
   }
 
-  getAggregateOrderBy(fs: FieldSpace): ModelAggregateOrderBy[] {
+  getAnalyticOrderBy(fs: FieldSpace): ModelFunctionOrderBy[] {
+    return this.list.map(el => el.getAnalyticOrderBy(fs));
+  }
+
+  getAggregateOrderBy(fs: FieldSpace): ModelFunctionOrderBy[] {
     return this.list.map(el => el.getAggregateOrderBy(fs));
   }
 }

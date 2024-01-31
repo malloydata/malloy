@@ -259,6 +259,66 @@ describe('expressions', () => {
       `).toTranslate();
     });
 
+    test('aggregate order by cannot be aggregate', () => {
+      expect(markSource`
+        ##! experimental { function_order_by }
+        run: a -> {
+          aggregate: x is string_agg(astr) {
+            order_by: sum(ai)
+          }
+        }
+      `).translationToFailWith('aggregate `order_by` must be scalar');
+    });
+
+    test('aggregate order by cannot be analytic', () => {
+      expect(markSource`
+        ##! experimental { function_order_by }
+        run: a -> {
+          aggregate: x is string_agg(astr) {
+            order_by: rank()
+          }
+        }
+      `).translationToFailWith('aggregate `order_by` must be scalar');
+    });
+
+    test('analytic order by can be an aggregate', () => {
+      expect(markSource`
+        ##! experimental { function_order_by }
+        run: a -> {
+          group_by: abool
+          calculate: x is lag(abool) {
+            order_by: sum(ai)
+          }
+        }
+      `).toTranslate();
+    });
+
+    test('analytic order by can be an output field', () => {
+      expect(markSource`
+        ##! experimental { function_order_by }
+        run: a -> {
+          group_by: ai
+          calculate: x is lag(ai) {
+            order_by: ai
+          }
+        }
+      `).toTranslate();
+    });
+
+    test('analytic order by must be an output field', () => {
+      expect(markSource`
+        ##! experimental { function_order_by }
+        run: a -> {
+          group_by: abool
+          calculate: x is lag(abool) {
+            order_by: ai
+          }
+        }
+      `).translationToFailWith(
+        'analytic `order_by` must be an aggregate or an output field reference'
+      );
+    });
+
     test('can specify multiple wheres', () => {
       expect(markSource`
         ##! experimental { function_order_by }

@@ -228,7 +228,7 @@ export interface FunctionCallFragment {
   overload: FunctionOverloadDef;
   expressionType: ExpressionType;
   args: Expr[];
-  orderBy?: AggregateOrderBy[];
+  orderBy?: FunctionOrderBy[];
   limit?: number;
   // List of non-dotted output field references
   partitionBy?: string[];
@@ -732,7 +732,7 @@ export interface OrderBy {
   dir?: 'asc' | 'desc';
 }
 
-export interface AggregateOrderBy {
+export interface FunctionOrderBy {
   e: Expr;
   dir?: 'asc' | 'desc';
 }

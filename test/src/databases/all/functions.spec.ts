@@ -1170,6 +1170,23 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       );
     });
 
+    it(`works with multiple order_bys - ${databaseName}`, async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `##! experimental { function_order_by }
+          run: aircraft -> {
+            where: name ~ r'.*RUTHERFORD.*'
+            aggregate: f is string_agg(name, ',') {
+              order_by: city, name
+            }
+          }`
+        )
+        .run();
+      expect(result.data.path(0, 'f').string.value).toBe(
+        'RUTHERFORD PAT R JR,RUTHERFORD JAMES C'
+      );
+    });
+
     it(`works with order by expression - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
@@ -1449,6 +1466,36 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         {yr: 2001, qtr: 2, qtr_flights: 13186, last_yr_qtr_flights: 11599},
         {yr: 2001, qtr: 3, qtr_flights: 12663, last_yr_qtr_flights: 12075},
         {yr: 2001, qtr: 4, qtr_flights: 11714, last_yr_qtr_flights: 11320},
+      ]);
+    });
+
+    it(`works with multiple order_bys - ${databaseName}`, async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `##! experimental { function_order_by partition_by }
+          run: aircraft -> {
+            where: name =
+              "UNITED AIR LINES INC"
+              | "FEDERAL EXPRESS CORP"
+              | "AMERICAN AIRLINES INC"
+              | "CESSNA AIRCRAFT COMPANY"
+            group_by: name
+            calculate:
+              # label="Rank by model count then seat count"
+              r is rank() {
+                order_by:
+                  aircraft_models.count() desc,
+                  aircraft_models.seats.sum() desc
+              }
+            order_by: name
+          }`
+        )
+        .run();
+      expect(result.data.toObject()).toMatchObject([
+        {name: 'AMERICAN AIRLINES INC', r: 3},
+        {name: 'CESSNA AIRCRAFT COMPANY', r: 4},
+        {name: 'FEDERAL EXPRESS CORP', r: 2},
+        {name: 'UNITED AIR LINES INC', r: 1},
       ]);
     });
   });

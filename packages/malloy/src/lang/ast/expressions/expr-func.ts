@@ -44,7 +44,7 @@ import {errorFor} from '../ast-utils';
 import {StructSpaceFieldBase} from '../field-space/struct-space-field-base';
 
 import {FieldReference} from '../query-items/field-references';
-import {AggregateOrdering} from './aggregate-ordering';
+import {FunctionOrdering} from './function-ordering';
 import {Limit} from '../query-properties/limit';
 import {PartitionBy} from './partition_by';
 import {ExprValue} from '../types/expr-value';
@@ -85,7 +85,7 @@ export class ExprFunc extends ExpressionDef {
     fs: FieldSpace,
     props?: {
       partitionBys?: PartitionBy[];
-      orderBys?: AggregateOrdering[];
+      orderBys?: FunctionOrdering[];
       limit?: Limit;
     }
   ): ExprValue {
@@ -252,12 +252,14 @@ export class ExprFunc extends ExpressionDef {
       this.log(`Function ${this.name} is not defined in dialect ${dialect}`);
     } else {
       if (props?.orderBys && props.orderBys.length > 0) {
-        if (
-          dialectOverload.supportsOrderBy ||
-          expressionIsAnalytic(overload.returnType.expressionType)
-        ) {
+        const isAnalytic = expressionIsAnalytic(
+          overload.returnType.expressionType
+        );
+        if (dialectOverload.supportsOrderBy || isAnalytic) {
           const allObs = props.orderBys.flatMap(orderBy =>
-            orderBy.getAggregateOrderBy(fs)
+            isAnalytic
+              ? orderBy.getAnalyticOrderBy(fs)
+              : orderBy.getAggregateOrderBy(fs)
           );
           frag.orderBy = allObs;
         } else {

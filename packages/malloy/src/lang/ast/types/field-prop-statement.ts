@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {AggregateOrdering} from '../expressions/aggregate-ordering';
+import {FunctionOrdering} from '../expressions/function-ordering';
 import {Filter} from '../query-properties/filters';
 import {Limit} from '../query-properties/limit';
 import {PartitionBy} from '../expressions/partition_by';
@@ -31,7 +31,7 @@ export type FieldPropStatement =
   | Filter
   | Limit
   | PartitionBy
-  | AggregateOrdering;
+  | FunctionOrdering;
 
 export function isFieldPropStatement(
   el: MalloyElement
@@ -40,6 +40,6 @@ export function isFieldPropStatement(
     el instanceof Filter ||
     el instanceof Limit ||
     el instanceof PartitionBy ||
-    el instanceof AggregateOrdering
+    el instanceof FunctionOrdering
   );
 }

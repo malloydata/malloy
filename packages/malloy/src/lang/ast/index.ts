@@ -41,7 +41,7 @@ export * from './source-properties/timezone-statement';
 export * from './expressions/apply';
 export * from './expressions/binary-numeric';
 export * from './expressions/boolean';
-export * from './expressions/aggregate-ordering';
+export * from './expressions/function-ordering';
 export * from './expressions/expr-add-sub';
 export * from './expressions/expr-aggregate-function';
 export * from './expressions/expr-alternation-tree';
