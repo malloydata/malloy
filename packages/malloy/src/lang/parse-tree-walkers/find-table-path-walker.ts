@@ -22,13 +22,7 @@
  */
 
 import {MalloyParserListener} from '../lib/Malloy/MalloyParserListener';
-import {
-  HasString,
-  getId,
-  getStringIfShort,
-  getStringParts,
-  unIndent,
-} from '../parse-utils';
+import {getId, getPlainString} from '../parse-utils';
 import {MalloyTranslation} from '../parse-malloy';
 import {CommonTokenStream} from 'antlr4ts';
 import {DocumentRange} from '../../model/malloy_types';
@@ -49,33 +43,10 @@ class FindTablePathWalker implements MalloyParserListener {
     readonly tokens: CommonTokenStream
   ) {}
 
-  protected getPlainString(cx: HasString): string | undefined {
-    const shortStr = getStringIfShort(cx);
-    if (shortStr) {
-      return shortStr;
-    }
-    const safeParts: string[] = [];
-    const multiLineStr = cx.string().sqlString();
-    if (multiLineStr) {
-      for (const part of getStringParts(multiLineStr)) {
-        if (typeof part === 'string') {
-          safeParts.push(part);
-        } else {
-          // Non string part found. Reject this table.
-          return undefined;
-        }
-      }
-      unIndent(safeParts);
-      return safeParts.join('');
-    }
-    // string: shortString | sqlString; So this will never happen
-    return '';
-  }
-
   enterTableMethod(pcx: parser.TableMethodContext): void {
     const connectionId = getId(pcx.connectionId());
-    const tablePath = this.getPlainString(pcx.tablePath());
-    if (tablePath) {
+    const [tablePath, _errorList] = getPlainString(pcx.tablePath(), true);
+    if (tablePath !== undefined) {
       this.pathInfos.push({
         connectionId,
         tablePath,
