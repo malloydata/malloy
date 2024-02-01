@@ -93,6 +93,7 @@ import {
   StructRef,
   TurtleDef,
   UngroupFragment,
+  FunctionOrderBy,
 } from './malloy_types';
 
 import {Connection} from '../runtime_types';
@@ -138,7 +139,9 @@ interface OutputPipelinedSQL {
 }
 
 // Track the times we might need a unique key
-type UniqueKeyPossibleUse = AggregateFunctionType | 'generic_aggregate';
+type UniqueKeyPossibleUse =
+  | AggregateFunctionType
+  | 'generic_asymmetric_aggregate';
 
 class UniqueKeyUse extends Set<UniqueKeyPossibleUse> {
   add_use(k: UniqueKeyPossibleUse | undefined) {
@@ -148,7 +151,12 @@ class UniqueKeyUse extends Set<UniqueKeyPossibleUse> {
   }
 
   hasAsymetricFunctions(): boolean {
-    return this.has('sum') || this.has('avg') || this.has('count');
+    return (
+      this.has('sum') ||
+      this.has('avg') ||
+      this.has('count') ||
+      this.has('generic_asymmetric_aggregate')
+    );
   }
 }
 
@@ -482,6 +490,30 @@ class QueryField extends QueryNode {
     });
   }
 
+  getFunctionOrderBy(
+    resultSet: FieldInstanceResult,
+    context: QueryStruct,
+    state: GenerateState,
+    orderBy: FunctionOrderBy[]
+  ) {
+    return (
+      'ORDER BY ' +
+      orderBy
+        .map(ob => {
+          const osql = this.generateDimFragment(
+            resultSet,
+            context,
+            ob.e,
+            state
+          );
+          const dirsql =
+            ob.dir === 'asc' ? ' ASC' : ob.dir === 'desc' ? ' DESC' : '';
+          return `${osql}${dirsql}`;
+        })
+        .join(', ')
+    );
+  }
+
   generateFunctionCallExpression(
     resultSet: FieldInstanceResult,
     context: QueryStruct,
@@ -495,22 +527,7 @@ class QueryField extends QueryNode {
       expressionIsAggregate(overload.returnType.expressionType) &&
       !isSymmetric &&
       this.generateDistinctKeyIfNecessary(resultSet, context, frag.structPath);
-    const aggregateOrderBy = frag.orderBy
-      ? 'ORDER BY ' +
-        frag.orderBy
-          .map(ob => {
-            const osql = this.generateDimFragment(
-              resultSet,
-              context,
-              ob.e,
-              state
-            );
-            const dirsql =
-              ob.dir === 'asc' ? ' ASC' : ob.dir === 'desc' ? ' DESC' : '';
-            return `${osql}${dirsql}`;
-          })
-          .join(', ')
-      : undefined;
+
     const aggregateLimit = frag.limit ? `LIMIT ${frag.limit}` : undefined;
     if (distinctKey) {
       if (!context.dialect.supportsAggDistinct) {
@@ -521,15 +538,26 @@ class QueryField extends QueryNode {
       const argsExpressions = args.map(arg => {
         return this.generateDimFragment(resultSet, context, arg, state);
       });
+      const orderBys = frag.orderBy ?? [];
+      const orderByExpressions = orderBys.map(ob => {
+        return this.generateDimFragment(resultSet, context, ob.e, state);
+      });
       return context.dialect.sqlAggDistinct(
         distinctKey,
-        argsExpressions,
+        [...argsExpressions, ...orderByExpressions],
         valNames => {
+          const vals: Expr[] = valNames.map(v => [v]);
+          const args = vals.slice(0, argsExpressions.length);
+          const orderBy: FunctionOrderBy[] = vals
+            .slice(argsExpressions.length)
+            .map((e, i) => {
+              return {e, dir: orderBys[i].dir};
+            });
           const funcCall = this.expandFunctionCall(
             context.dialect.name,
             overload,
-            valNames.map(v => [v]),
-            aggregateOrderBy,
+            args,
+            this.getFunctionOrderBy(resultSet, context, state, orderBy),
             aggregateLimit
           );
           return this.generateExpressionFromExpr(
@@ -563,11 +591,14 @@ class QueryField extends QueryNode {
               : [this.generateDimFragment(resultSet, context, arg, state)];
           })
         : args;
+      const orderBySql = frag.orderBy
+        ? this.getFunctionOrderBy(resultSet, context, state, frag.orderBy)
+        : '';
       const funcCall: Expr = this.expandFunctionCall(
         context.dialect.name,
         overload,
         mappedArgs,
-        aggregateOrderBy,
+        orderBySql,
         aggregateLimit
       );
 
@@ -575,8 +606,6 @@ class QueryField extends QueryNode {
         const extraPartitions = (frag.partitionBy ?? []).map(outputName => {
           return `(${resultSet.getField(outputName).getAnalyticalSQL(false)})`;
         });
-        // TODO probably need to pass in the function and arguments separately
-        // in order to generate parameter SQL correctly in BQ re: partition
         return this.generateAnalyticFragment(
           resultSet,
           context,
@@ -585,7 +614,7 @@ class QueryField extends QueryNode {
           state,
           args,
           extraPartitions,
-          aggregateOrderBy
+          orderBySql
         );
       }
       return this.generateExpressionFromExpr(
@@ -2263,17 +2292,30 @@ class QueryQuery extends QueryField {
         }
         this.addDependantExpr(resultStruct, context, expr.e, joinStack);
       } else if (isFunctionCallFragment(expr)) {
+        const isSymmetric = expr.overload.isSymmetric ?? false;
+        const isAggregate = expressionIsAggregate(
+          expr.overload.returnType.expressionType
+        );
+        const isAsymmetricAggregate = isAggregate && !isSymmetric;
+        const uniqueKeyPossibleUse = isAsymmetricAggregate
+          ? 'generic_asymmetric_aggregate'
+          : undefined;
         if (expr.structPath) {
           this.addDependantPath(
             resultStruct,
             context,
             expr.structPath,
-            'generic_aggregate',
+            uniqueKeyPossibleUse,
+            joinStack
+          );
+        } else if (isAsymmetricAggregate) {
+          resultStruct.addStructToJoin(
+            context,
+            this,
+            uniqueKeyPossibleUse,
             joinStack
           );
         }
-        // TODO Do we need to call `addStructToJoin` here in the case when there is no `structPath`
-        // and the function is an aggregate function?
         for (const e of expr.args) {
           this.addDependantExpr(resultStruct, context, e, joinStack);
         }

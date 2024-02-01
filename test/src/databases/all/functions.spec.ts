@@ -46,6 +46,8 @@ source: airports is ${databaseName}.table('malloytest.airports')
 source: state_facts is ${databaseName}.table('malloytest.state_facts')
 
 source: flights is ${databaseName}.table('malloytest.flights')
+
+source: carriers is ${databaseName}.table('malloytest.carriers')
 `;
 }
 
@@ -1212,6 +1214,22 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         aggregate: f is string_agg(name, ',') { order_by: name desc }
       }`).malloyResultMatches(expressionModel, {
         f: 'YANKEE FLYING CLUB INC,WILSON FLYING SERVICE INC,WESTCHESTER FLYING CLUB',
+      });
+    });
+
+    it(`works with fanout - ${databaseName}`, async () => {
+      expect(`
+      run: state_facts extend { join_many:
+        state_facts2 is ${databaseName}.table('malloytest.state_facts')
+          on state_facts2.state = state
+      } -> {
+        aggregate: c is state_facts2.count()
+        aggregate: s is string_agg(state) {
+          order_by: popular_name
+        }
+      }`).malloyResultMatches(expressionModel, {
+        s: 'MN,IA,LA,AR,IN,ME,MT,AL,NC,AZ,OH,WY,MA,OK,CO,NY,KY,HI,RI,CA,PA,NJ,TX,CT,NV,NM,FL,GA,MO,KS,TN,IL,WV,MS,SC,DC,ID,NE,VA,UT,NH,MD,AK,OR,SD,WA,MI,VT,WI,DE,ND',
+        c: 51,
       });
     });
 
