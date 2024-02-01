@@ -121,10 +121,48 @@ source: products is duckdb.table("data/products.parquet") extend {
 
   # plot
   view: plotTest is {
-    # x
-    group_by: category
+    group_by:
+      # x
+      category
     # barY
     aggregate: `Avg Retail` is retail_price.avg()
     limit: 5
   }
+
+  # plot
+  view: plotStack is {
+    group_by:
+      # x
+      category
+      department
+    # barY { fill='^department' }
+    aggregate: `Avg Retail` is retail_price.avg()
+    limit: 10
+  }
+
+  # plot
+  view: plotNoStack is {
+    group_by:
+      # x
+      category
+      department
+    # barY { fill='^department' noStack }
+    aggregate: `Avg Retail` is retail_price.avg()
+    limit: 10
+  }
+
+  # plot
+  view: plotGroup is {
+    group_by:
+      # fx
+      category
+      # x
+      department
+    # barY { fill='^department' }
+    aggregate: `Avg Retail` is retail_price.avg()
+    limit: 10
+  }
+
+  # -plot
+  view: plotRaw is plotTest;
 }

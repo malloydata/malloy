@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 /*
  * Copyright 2023 Google LLC
  *
@@ -218,6 +219,7 @@ export class MalloyRender extends LitElement {
       const spec = parsePlotTags(this._result);
       const vgSpec = plotToVega(spec);
 
+      // @ts-ignore
       const data = this._result.data.queryData;
       vgSpec.data[0].values = data;
       console.log('SPEC', spec);

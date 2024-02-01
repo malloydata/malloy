@@ -13,16 +13,33 @@ export function parsePlotTags(result: Result) {
   }
 
   const spec: Spec = {
-    x: plot.tag('x') ?? {
-      fields: [],
+    x: {
+      fields: plot.text('x') ? [plot.text('x')] : [],
       type: plot.text('x', 'type') ?? null,
     },
     y: {
       fields: [],
       type: plot.text('y', 'type') ?? null,
     },
+    color: {
+      fields: [],
+      type: plot.text('color', 'type') ?? null,
+    },
+    fx: {
+      fields: [],
+    },
+    fy: {
+      fields: [],
+    },
     marks: [],
+    lists: {},
   };
+
+  const lists = plot.tag('lists')?.dict ?? {};
+  for (const [id, tag] of Object.entries(lists)) {
+    const currList = tag.array();
+    if (currList) spec.lists[id] = currList;
+  }
 
   parseRootMarks(spec, plot);
 
@@ -36,6 +53,7 @@ export function parsePlotTags(result: Result) {
     // Pull out explicit x's and y's
     parseDimension({dim: 'x', tag, spec, field});
     parseDimension({dim: 'y', tag, spec, field});
+    parseDimension({dim: 'fx', tag, spec, field});
 
     parseMarks(field, spec);
   });
@@ -55,8 +73,14 @@ export function parsePlotTags(result: Result) {
   const firstXField = getField(result.resultExplore, firstXFieldPath);
   if (firstXField) spec.x.type = getScaleTypeFromField(firstXField as Field);
   const firstYFieldPath = spec.y.fields.at(0);
-  const firstYField = getField(result.resultExplore, firstYFieldPath);
+  const firstYField =
+    firstYFieldPath && getField(result.resultExplore, firstYFieldPath);
   if (firstYField) spec.y.type = getScaleTypeFromField(firstYField as Field);
+  const firstColorFieldPath = spec.color.fields.at(0);
+  const firstColorField =
+    firstColorFieldPath && getField(result.resultExplore, firstColorFieldPath);
+  if (firstColorField)
+    spec.color.type = getScaleTypeFromField(firstColorField as Field);
 
   return spec;
 }
@@ -82,7 +106,7 @@ function parseDimension({
   spec,
   field,
 }: {
-  dim: 'x' | 'y';
+  dim: 'x' | 'y' | 'fx' | 'fy';
   tag: Tag;
   spec: any;
   field: Field;
@@ -92,7 +116,7 @@ function parseDimension({
   }
 }
 
-function addToDim(dim: 'x' | 'y', spec: Spec, field: Field) {
+function addToDim(dim: 'x' | 'y' | 'fx' | 'fy', spec: Spec, field: Field) {
   // Tracks all fields to be used. (so it blends?)
   const fields = [...spec[dim].fields, getFieldPathFromRoot(field)];
 
@@ -214,6 +238,7 @@ function createBarYMark(
   tag: Tag,
   opts: {id?: string; field?: Field} = {}
 ) {
+  const currentContextPath = opts.field ? getFieldPathFromRoot(opts.field) : '';
   const id = opts.id ?? getNextId();
   const existingMarkIdx = spec.marks.findIndex(m => m.id === id);
   const existingMark = spec.marks[existingMarkIdx] ?? {};
@@ -232,11 +257,33 @@ function createBarYMark(
     );
   else if (opts.field) y = getFieldPathFromRoot(opts.field);
   else if (existingMark.y) y = existingMark.y;
+
+  let fillColorFieldPath: string | null = null;
+  // how to get relative path here??
+  if (tag.text('fill')) {
+    fillColorFieldPath = getFieldPathFromRef(
+      tag.text('fill')!,
+      currentContextPath
+    );
+    // util for adding / removing fields...
+    if (!spec.color.fields.includes(fillColorFieldPath)) {
+      spec.color.fields.push(fillColorFieldPath);
+    }
+  }
+
+  const zFieldPath = tag.text('z')
+    ? getFieldPathFromRef(tag.text('z')!, '')
+    : null;
+
   const mark = {
     type: 'barY',
     y,
+    yList: firstReal(tag.text('y', 'list'), existingMark.yList, null),
     x: tag.text('x') ?? existingMark.x ?? null,
     id,
+    z: firstReal(zFieldPath, fillColorFieldPath, existingMark.z, null),
+    fill: fillColorFieldPath,
+    fillList: oneOf(tag.text('fill', 'list'), existingMark.fillList, null),
   };
   // Should y be parsed at this point?
   if (existingMarkIdx > -1) spec.marks[existingMarkIdx] = mark;
@@ -268,5 +315,44 @@ function fieldPathFromExplore(f: Field) {
 }
 
 function getFieldPathFromRef(t: string, contextPath: string) {
-  return [contextPath, t].filter(d => d).join('.');
+  const match = t.match(/^(\^*)(.*)/);
+  if (!match) return t;
+  const [, parentScoping, fieldName] = match;
+  const ancestorCt = parentScoping.length;
+  const basePath =
+    ancestorCt > 0
+      ? contextPath.split('.').slice(0, -ancestorCt).join('.')
+      : contextPath;
+  return [basePath, fieldName].filter(d => d).join('.');
+}
+
+// Might be better as a `oneOf()` method, with an optional second arg for comparison. So the other stuff would have to be in an array?
+function firstReal(...things) {
+  let thing;
+  let i = 0;
+  while (
+    i < things.length &&
+    (typeof thing === 'undefined' || thing === null)
+  ) {
+    thing = things[i];
+    i++;
+  }
+  return thing;
+}
+
+// maybe oneOf and oneOfWith (that takes override)
+function oneOf(...things) {
+  return oneOfWith(things);
+}
+function oneOfWith(things, compOverride?) {
+  const shouldPass =
+    compOverride ??
+    (thing => typeof thing !== 'undefined' && typeof thing !== null);
+  let thing;
+  let i = 0;
+  while (i < things.length && !shouldPass(thing)) {
+    thing = things[i];
+    i++;
+  }
+  return thing;
 }

@@ -50,9 +50,30 @@ export const SparksNested = {
   },
 };
 
+export const PlotRaw = {
+  args: {
+    source: 'products',
+    view: 'plotRaw',
+  },
+};
+
 export const PlotTags = {
   args: {
     source: 'products',
     view: 'plotTest',
+  },
+};
+
+export const PlotStack = {
+  args: {
+    source: 'products',
+    view: 'plotStack',
+  },
+};
+
+export const PlotGroup = {
+  args: {
+    source: 'products',
+    view: 'plotGroup',
   },
 };
