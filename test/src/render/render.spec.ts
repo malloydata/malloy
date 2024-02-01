@@ -55,6 +55,7 @@ async function runUnsupportedRenderTest(
 
 const [describe, databases] = describeIfDatabaseAvailable([
   'bigquery',
+  'postgres',
   'duckdb',
 ]);
 const duckdb = runtimeFor('duckdb');

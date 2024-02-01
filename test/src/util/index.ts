@@ -28,6 +28,7 @@ import {
   Result,
   Runtime,
 } from '@malloydata/malloy';
+import {allDatabases} from '../runtimes';
 
 export function fStringEq(field: string, value: string): FilterExpression {
   return {
@@ -74,7 +75,7 @@ export function databasesFromEnvironmentOr(
 export function describeIfDatabaseAvailable(
   acceptableDatabases: string[]
 ): [jest.Describe, string[]] {
-  const currentDatabases = databasesFromEnvironmentOr(acceptableDatabases);
+  const currentDatabases = databasesFromEnvironmentOr(allDatabases);
   const overlap = acceptableDatabases.filter(d => currentDatabases.includes(d));
 
   return overlap.length > 0 ? [describe, overlap] : [describe.skip, overlap];
