@@ -137,8 +137,11 @@ export class MalloyToAST
 
   protected inExperiment(experimentID: string, cx: ParserRuleContext): boolean {
     const experimental = this.compilerFlags.tag('experimental');
-    if (experimental) {
-      return experimental.bare() || experimental.has(experimentID);
+    if (
+      experimental &&
+      (experimental.bare() || experimental.has(experimentID))
+    ) {
+      return true;
     }
     this.contextError(
       cx,

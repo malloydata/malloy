@@ -90,6 +90,14 @@ describe('model statements', () => {
     ).toTranslate();
   });
 
+  test('experiments do not bleed into one another', () => {
+    expect(
+      '##! experimental { this_experiment_does_not_exist }\n;;[ "x" ]'
+    ).translationToFailWith(
+      "Experimental flag 'compilerTestExperimentParse' required to enable this feature"
+    );
+  });
+
   test('experiment failures in parse are flagged', () => {
     expect(';;[ "x" ]').translationToFailWith(
       "Experimental flag 'compilerTestExperimentParse' required to enable this feature"
