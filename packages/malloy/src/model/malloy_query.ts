@@ -1838,7 +1838,7 @@ class FieldInstanceResultRoot extends FieldInstanceResult {
       //   aggregate: order_count is orders.count()
       if (join.leafiest) {
         if (
-          join.parent !== null &&
+          join.parent !== undefined &&
           join.uniqueKeyPossibleUses.has('count') &&
           !join.queryStruct.primaryKey()
         ) {
