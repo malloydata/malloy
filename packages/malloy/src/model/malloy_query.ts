@@ -526,8 +526,15 @@ class QueryField extends QueryNode {
     value: Expr,
     separator: Expr | undefined,
     distinctKey: string,
+    orderBy: FunctionOrderBy[] | undefined,
+    dialectName: string,
     state: GenerateState
   ): string {
+    if (orderBy) {
+      throw new Error(
+        `Function \`string_agg\` does not support fanning out with an order by in ${dialectName}`
+      );
+    }
     const valueSQL = this.generateDimFragment(resultSet, context, value, state);
     const separatorSQL = separator
       ? ' ,' + this.generateDimFragment(resultSet, context, separator, state)
@@ -564,7 +571,6 @@ class QueryField extends QueryNode {
     if (
       frag.name === 'string_agg' &&
       distinctKey &&
-      frag.orderBy === undefined &&
       !context.dialect.supportsAggDistinct
     ) {
       return this.generateAsymmetricStringAggExpression(
@@ -573,13 +579,15 @@ class QueryField extends QueryNode {
         args[0],
         args[1],
         distinctKey,
+        frag.orderBy,
+        context.dialect.name,
         state
       );
     }
     if (distinctKey) {
       if (!context.dialect.supportsAggDistinct) {
         throw new Error(
-          `Asymmetric aggregates are not supported for custom functions in ${context.dialect.name}.`
+          `Function \`${frag.name}\` does not support fanning out in ${context.dialect.name}`
         );
       }
       const argsExpressions = args.map(arg => {
