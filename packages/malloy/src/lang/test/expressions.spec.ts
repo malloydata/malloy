@@ -206,6 +206,22 @@ describe('expressions', () => {
       );
     });
 
+    test('props not allowed with different experiment enabled', () => {
+      expect(markSource`
+        ##! experimental.something_else
+          run: a -> {
+            group_by: ai
+            group_by: x1 is string_agg(astr) { order_by: ai }
+            group_by: x2 is lag(ai) { partition_by: ai }
+            group_by: x3 is string_agg(astr) { limit: 10 }
+          }
+        `).translationToFailWith(
+        "Experimental flag 'function_order_by' required to enable this feature",
+        "Experimental flag 'partition_by' required to enable this feature",
+        "Experimental flag 'aggregate_limit' required to enable this feature"
+      );
+    });
+
     test('props not allowed on most expressions', () => {
       expect(markSource`
           ##! experimental { function_order_by partition_by aggregate_limit }
