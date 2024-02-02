@@ -33,6 +33,8 @@ export {
   spread,
   sqlFragment,
   param,
+  params,
+  literal,
   sql,
 } from './functions/util';
 export {Dialect, qtz} from './dialect';
