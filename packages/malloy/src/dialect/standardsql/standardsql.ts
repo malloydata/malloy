@@ -463,11 +463,11 @@ ${indent(sql)}
   sqlMeasureTime(from: TimeValue, to: TimeValue, units: string): Expr {
     const measureMap: Record<string, TimeMeasure> = {
       'microsecond': {use: 'microsecond', ratio: 1},
-      'millisecond': {use: 'microsecond', ratio: 1000},
-      'second': {use: 'millisecond', ratio: 1000},
-      'minute': {use: 'second', ratio: 60},
-      'hour': {use: 'minute', ratio: 60},
-      'day': {use: 'hour', ratio: 24},
+      'millisecond': {use: 'millisecond', ratio: 1},
+      'second': {use: 'second', ratio: 1},
+      'minute': {use: 'minute', ratio: 1},
+      'hour': {use: 'hour', ratio: 1},
+      'day': {use: 'day', ratio: 1},
       'week': {use: 'day', ratio: 7},
     };
     let lVal = from.value;
