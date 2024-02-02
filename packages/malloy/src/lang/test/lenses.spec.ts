@@ -147,37 +147,9 @@ describe('lenses', () => {
       'cannot refine index view with project view'
     );
   });
-  test('cannot reference dimension at head of query ', () => {
-    expect(
-      markSource`
-        source: x is a extend {
-          dimension: n is 1
-          view: d is { group_by: n1 is 1 }
-        }
-        run: x -> n + d
-      `
-    ).translationToFailWith(
-      'Cannot use scalar field `n` as a view; use `scalar_lenses` experiment to enable this behavior'
-    );
-  });
-  test('cannot reference dimension', () => {
-    expect(
-      markSource`
-        source: x is a extend {
-          dimension: n is 1
-          view: d is { group_by: n }
-        }
-        run: x -> d + n
-      `
-    ).translationToFailWith(
-      'Cannot use scalar field `n` as a refinement; use `scalar_lenses` experiment to enable this behavior',
-      'overlapping fields in refinement: n'
-    );
-  });
   test('can reference dimension at head of query when experiment is enabled', () => {
     expect(
       markSource`
-        ##! experimental { scalar_lenses }
         source: x is a extend {
           dimension: n is 1
         }
@@ -188,7 +160,6 @@ describe('lenses', () => {
   test('can change refine precedence', () => {
     expect(
       markSource`
-        ##! experimental { scalar_lenses }
         source: x is a extend {
           dimension:
             a is 1
@@ -202,7 +173,6 @@ describe('lenses', () => {
   test.skip('can split multi-stage refinement with plus', () => {
     expect(
       markSource`
-        ##! experimental { scalar_lenses }
         source: x is a extend {
           view: two_stage is { group_by: a is 1 } -> { group_by: a }
         }
@@ -213,7 +183,6 @@ describe('lenses', () => {
   test('cannot refine with multi-stage', () => {
     expect(
       markSource`
-        ##! experimental { scalar_lenses }
         source: x is a extend {
           view: one_stage is { group_by: a is 1 }
           view: two_stage is { group_by: a is 1 } -> { group_by: a }
@@ -227,7 +196,6 @@ describe('lenses', () => {
   test('cannot refine with literal multi-stage', () => {
     expect(
       markSource`
-        ##! experimental { scalar_lenses }
         source: x is a extend {
           view: one_stage is { group_by: a is 1 }
           view: two_stage is { group_by: a is 1 } -> { group_by: a }
@@ -241,7 +209,6 @@ describe('lenses', () => {
   test('can reference dimension in refinement when experiment is enabled', () => {
     expect(
       markSource`
-        ##! experimental { scalar_lenses }
         source: x is a extend {
           dimension: n is 1
           view: d is { group_by: n1 is 1 }
@@ -253,7 +220,6 @@ describe('lenses', () => {
   test('can reference join field when experiment is enabled', () => {
     expect(
       markSource`
-        ##! experimental { scalar_lenses }
         source: x is a extend {
           join_cross: y is a extend { dimension: n is 1 } on true
         }
@@ -264,7 +230,6 @@ describe('lenses', () => {
   test('can reference join field in refinement when experiment is enabled', () => {
     expect(
       markSource`
-        ##! experimental { scalar_lenses }
         source: x is a extend {
           join_cross: y is a extend { dimension: n is 1 } on true
         }
@@ -275,7 +240,6 @@ describe('lenses', () => {
   test('can reference join field in nest refinement when experiment is enabled', () => {
     expect(
       markSource`
-        ##! experimental { scalar_lenses }
         source: x is a extend {
           join_cross: y is a extend { dimension: n is 1 } on true
         }
@@ -286,7 +250,6 @@ describe('lenses', () => {
   test('can nest dimension when experiment is enabled', () => {
     expect(
       markSource`
-        ##! experimental { scalar_lenses }
         source: x is a extend {
           dimension: n is 1
           view: d is { nest: n }
@@ -298,7 +261,6 @@ describe('lenses', () => {
   test('cannot use join_name in refinement shortcut', () => {
     expect(
       markSource`
-        ##! experimental { scalar_lenses }
         source: x is a extend {
           join_one: y is a on true
           view: m is { aggregate: c is count() }
@@ -311,7 +273,6 @@ describe('lenses', () => {
   test('cannot use view from join as whole pipeline', () => {
     expect(
       markSource`
-        ##! experimental { scalar_lenses }
         source: x is a extend {
           join_one: y is a extend {
             view: z is { group_by: d is 1 }
@@ -324,7 +285,6 @@ describe('lenses', () => {
   test('cannot use view from join in nest', () => {
     expect(
       markSource`
-        ##! experimental { scalar_lenses }
         source: x is a extend {
           join_one: y is a extend {
             view: z is { group_by: d is 1 }
@@ -337,7 +297,6 @@ describe('lenses', () => {
   test('cannot use view from join as nest view head', () => {
     expect(
       markSource`
-        ##! experimental { scalar_lenses }
         source: x is a extend {
           join_one: y is a extend {
             view: z is { group_by: d is 1 }
@@ -350,7 +309,6 @@ describe('lenses', () => {
   test('cannot use view from join as lens in query', () => {
     expect(
       markSource`
-        ##! experimental { scalar_lenses }
         source: x is a extend {
           join_one: y is a extend {
             view: z is { group_by: d is 1 }
@@ -363,7 +321,6 @@ describe('lenses', () => {
   test('cannot use view from join as lens in nest', () => {
     expect(
       markSource`
-        ##! experimental { scalar_lenses }
         source: x is a extend {
           join_one: y is a extend {
             view: z is { group_by: d is 1 }
@@ -376,7 +333,6 @@ describe('lenses', () => {
   test('can nest dimension with refinement when experiment is enabled', () => {
     expect(
       markSource`
-        ##! experimental { scalar_lenses }
         source: x is a extend {
           dimension: n is 1
           view: d is { nest: n + { where: n > 0 } }
@@ -485,7 +441,6 @@ describe('partial views', () => {
   test('copy of view with refinement should work', () => {
     expect(
       markSource`
-        ##! experimental { scalar_lenses }
         source: x is a extend {
           view: metrics is { aggregate: c is count() }
           view: v is { group_by: ai } + metrics
