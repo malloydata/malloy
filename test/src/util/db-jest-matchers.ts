@@ -31,6 +31,7 @@ import {
   LogMessage,
   SingleConnectionRuntime,
 } from '@malloydata/malloy';
+import {DateTime} from 'luxon';
 
 type ExpectedResultRow = Record<string, unknown>;
 type ExpectedResult = ExpectedResultRow | ExpectedResultRow[];
@@ -160,14 +161,22 @@ expect.extend({
             resultPath.push(0);
             resultPath.push(child);
           }
-          const got = result.data.path(...resultPath).value;
-          const pGot = JSON.stringify(got);
-          const mustBe = value instanceof Date ? value.getTime() : value;
-          const actuallyGot = got instanceof Date ? got.getTime() : got;
+          const gotValue = result.data.path(...resultPath).value;
+          const gotReadable = JSON.stringify(gotValue);
+          const actuallyGot =
+            gotValue instanceof Date ? gotValue.getTime() : gotValue;
+          let mustBe;
+          if (value instanceof Date) {
+            mustBe = value.getTime();
+          } else if (value instanceof DateTime) {
+            mustBe = value.toMillis();
+          } else {
+            mustBe = value;
+          }
           if (typeof mustBe === 'number' && typeof actuallyGot !== 'number') {
-            fails.push(`${expected} Got: Non Numeric '${pGot}'`);
+            fails.push(`${expected} Got: Non Numeric '${gotReadable}'`);
           } else if (actuallyGot !== mustBe) {
-            fails.push(`${expected} Got: ${pGot}`);
+            fails.push(`${expected} Got: ${gotReadable}`);
           }
         } catch (e) {
           fails.push(`${expected} Error: ${e.message}`);
