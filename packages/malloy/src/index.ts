@@ -35,6 +35,8 @@ export {
   makeParam,
   sqlFragment,
   param,
+  params,
+  literal,
   spread,
   Dialect,
   FUNCTIONS,
