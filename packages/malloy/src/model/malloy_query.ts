@@ -498,6 +498,7 @@ class QueryField extends QueryNode {
     args: Expr[],
     overload: FunctionOverloadDef
   ) {
+    if (orderBy.length === 0) return undefined;
     return (
       'ORDER BY ' +
       orderBy
@@ -519,6 +520,33 @@ class QueryField extends QueryNode {
     );
   }
 
+  generateAsymmetricStringAggExpression(
+    resultSet: FieldInstanceResult,
+    context: QueryStruct,
+    value: Expr,
+    separator: Expr | undefined,
+    distinctKey: string,
+    state: GenerateState
+  ): string {
+    const valueSQL = this.generateDimFragment(resultSet, context, value, state);
+    const separatorSQL = separator
+      ? ' ,' + this.generateDimFragment(resultSet, context, separator, state)
+      : '';
+    const keyStart = '__STRING_AGG_KS__';
+    const keyEnd = '__STRING_AGG_KE__';
+    const distinctValueSQL = `concat('${keyStart}', ${distinctKey}, '${keyEnd}', ${valueSQL})`;
+    return `REGEXP_REPLACE(
+      STRING_AGG(DISTINCT ${distinctValueSQL}${separatorSQL}),
+      '${keyStart}.*?${keyEnd}',
+      ''
+    )`;
+  }
+
+  getParamForArgIndex(params: FunctionParameterDef[], argIndex: number) {
+    const prevVariadic = params.slice(0, argIndex).find(p => p.isVariadic);
+    return prevVariadic ?? params[argIndex];
+  }
+
   generateFunctionCallExpression(
     resultSet: FieldInstanceResult,
     context: QueryStruct,
@@ -533,6 +561,21 @@ class QueryField extends QueryNode {
       !isSymmetric &&
       this.generateDistinctKeyIfNecessary(resultSet, context, frag.structPath);
     const aggregateLimit = frag.limit ? `LIMIT ${frag.limit}` : undefined;
+    if (
+      frag.name === 'string_agg' &&
+      distinctKey &&
+      frag.orderBy === undefined &&
+      !context.dialect.supportsAggDistinct
+    ) {
+      return this.generateAsymmetricStringAggExpression(
+        resultSet,
+        context,
+        args[0],
+        args[1],
+        distinctKey,
+        state
+      );
+    }
     if (distinctKey) {
       if (!context.dialect.supportsAggDistinct) {
         throw new Error(
@@ -553,25 +596,37 @@ class QueryField extends QueryNode {
         distinctKey,
         [...argsExpressions, ...orderByExpressions],
         valNames => {
-          const vals: Expr[] = valNames.map(v => [v]);
-          const args = vals.slice(0, argsExpressions.length);
+          const vals: Expr[] = valNames.map((v, i) => {
+            // Special case: the argument is required to be literal, so we use the actual argument
+            // rather than the packed value
+            // TODO don't even pack the value in the first place
+            if (i < args.length) {
+              const param = this.getParamForArgIndex(overload.params, i);
+              if (param.allowedTypes.every(t => isLiteral(t.evalSpace))) {
+                return args[i];
+              }
+            }
+            return [v];
+          });
+          const newArgs = vals.slice(0, argsExpressions.length);
           const orderBy: FunctionOrderBy[] = vals
             .slice(argsExpressions.length)
             .map((e, i) => {
               return {e, dir: orderBys[i].dir};
             });
+          const orderBySQL = this.getFunctionOrderBy(
+            resultSet,
+            context,
+            state,
+            orderBy,
+            newArgs,
+            overload
+          );
           const funcCall = this.expandFunctionCall(
             context.dialect.name,
             overload,
-            args,
-            this.getFunctionOrderBy(
-              resultSet,
-              context,
-              state,
-              orderBy,
-              args,
-              overload
-            ),
+            newArgs,
+            orderBySQL,
             aggregateLimit
           );
           return this.generateExpressionFromExpr(
@@ -595,7 +650,7 @@ class QueryField extends QueryNode {
             // Update: Now we apply this only to arguments whose parameter is not constant-requiring.
             // So in `string_agg(val, sep)`, `sep` does not get filters applied to it because
             // it must be constant
-            const param = overload.params[index];
+            const param = this.getParamForArgIndex(overload.params, index);
             // TODO technically this should probably look at _which_ allowed param type was matched
             // for this argument and see if that type is at most constant... but we lose type information
             // by this point in the compilation, so that info would have to be passed into the func call

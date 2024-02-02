@@ -225,6 +225,7 @@ export interface AggregateLimitFragment {
 
 export interface FunctionCallFragment {
   type: 'function_call';
+  name: string;
   overload: FunctionOverloadDef;
   expressionType: ExpressionType;
   args: Expr[];

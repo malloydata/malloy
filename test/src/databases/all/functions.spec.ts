@@ -1229,7 +1229,9 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       });
     });
 
-    it(`works with fanout - ${databaseName}`, async () => {
+    it(`works with fanout and order_by - ${databaseName}`, async () => {
+      // TODO bigquery cannot handle both fanout and order_by today
+      if (databaseName === 'bigquery') return;
       await expect(`##! experimental.function_order_by
       run: state_facts extend { join_many:
         state_facts2 is ${databaseName}.table('malloytest.state_facts')
@@ -1241,6 +1243,34 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         }
       }`).malloyResultMatches(expressionModel, {
         s: 'MN,IA,LA,AR,IN,ME,MT,AL,NC,AZ,OH,WY,MA,OK,CO,NY,KY,HI,RI,CA,PA,NJ,TX,CT,NV,NM,FL,GA,MO,KS,TN,IL,WV,MS,SC,DC,ID,NE,VA,UT,NH,MD,AK,OR,SD,WA,MI,VT,WI,DE,ND',
+        c: 51,
+      });
+    });
+
+    it(`works with fanout - ${databaseName}`, async () => {
+      await expect(`##! experimental.function_order_by
+      run: state_facts extend { join_many:
+        state_facts2 is ${databaseName}.table('malloytest.state_facts')
+          on state_facts2.state = state
+      } -> {
+        aggregate: c is state_facts2.count()
+        aggregate: s is string_agg('o')
+      }`).malloyResultMatches(expressionModel, {
+        s: 'o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o,o',
+        c: 51,
+      });
+    });
+
+    it(`works with fanout and separator - ${databaseName}`, async () => {
+      await expect(`##! experimental.function_order_by
+      run: state_facts extend { join_many:
+        state_facts2 is ${databaseName}.table('malloytest.state_facts')
+          on state_facts2.state = state
+      } -> {
+        aggregate: c is state_facts2.count()
+        aggregate: s is string_agg('o', '')
+      }`).malloyResultMatches(expressionModel, {
+        s: 'ooooooooooooooooooooooooooooooooooooooooooooooooooo',
         c: 51,
       });
     });

@@ -238,6 +238,7 @@ export class ExprFunc extends ExpressionDef {
     const frag: FunctionCallFragment = {
       type: 'function_call',
       overload,
+      name: this.name,
       args: argExprs.map(x => x.value),
       expressionType,
       structPath,
