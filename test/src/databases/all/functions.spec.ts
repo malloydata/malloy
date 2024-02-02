@@ -1239,10 +1239,10 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       } -> {
         aggregate: c is state_facts2.count()
         aggregate: s is string_agg(state) {
-          order_by: popular_name
+          order_by: popular_name, state
         }
       }`).malloyResultMatches(expressionModel, {
-        s: 'MN,IA,LA,AR,IN,ME,MT,AL,NC,AZ,OH,WY,MA,OK,CO,NY,KY,HI,RI,CA,PA,NJ,TX,CT,NV,NM,FL,GA,MO,KS,TN,IL,WV,MS,SC,DC,ID,NE,VA,UT,NH,MD,AK,OR,SD,WA,MI,VT,WI,DE,ND',
+        s: 'IA,LA,MN,AL,AR,IN,ME,MT,NC,AZ,CA,CO,CT,FL,GA,HI,IL,KS,KY,MA,MO,NJ,NM,NV,NY,OH,OK,PA,RI,TN,TX,WV,WY,DC,MS,SC,ID,NE,UT,VA,AK,DE,MD,MI,ND,NH,OR,SD,VT,WA,WI',
         c: 51,
       });
     });
