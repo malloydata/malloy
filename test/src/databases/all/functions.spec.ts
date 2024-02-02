@@ -1151,6 +1151,18 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       });
     });
 
+    it(`works with order by direction - ${databaseName}`, async () => {
+      expect(`##! experimental { function_order_by }
+      run: aircraft -> {
+        where: name ~ r'.*RUTHERFORD.*'
+        aggregate: f is string_agg(name, ',') {
+          order_by: asc
+        }
+      }`).malloyResultMatches(expressionModel, {
+        f: 'RUTHERFORD JAMES C,RUTHERFORD PAT R JR',
+      });
+    });
+
     it(`works with multiple order_bys - ${databaseName}`, async () => {
       await expect(`##! experimental { function_order_by }
       run: aircraft -> {
@@ -1272,7 +1284,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 
         run: aircraft_models -> {
           where: aircraft.name = 'RAYTHEON AIRCRAFT COMPANY' | 'FOWLER IRA R DBA'
-          aggregate: f_dist is aircraft.name.string_agg_distinct() { order_by: aircraft.name }
+          aggregate: f_dist is aircraft.name.string_agg_distinct() { order_by: asc }
           aggregate: f_all is aircraft.name.string_agg() { order_by: aircraft.name }
       }`).malloyResultMatches(runtime, {
         f_dist: 'FOWLER IRA R DBA,RAYTHEON AIRCRAFT COMPANY',
@@ -1299,20 +1311,17 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       });
     });
 
-    it(`works with order by field - ${databaseName}`, async () => {
+    it(`works with order by direction - ${databaseName}`, async () => {
       await expect(`##! experimental { function_order_by }
       run: aircraft -> {
         where: name ~ r'.*RUTHERFORD.*'
         aggregate: f is string_agg_distinct(name, ',') {
-          order_by: name
+          order_by: asc
         }
       }`).malloyResultMatches(expressionModel, {
         f: 'RUTHERFORD JAMES C,RUTHERFORD PAT R JR',
       });
     });
-
-    // TODO there is a requirement (at least in BQ that the order_by: must be the same as the first argument
-    // when using distinct)
 
     it(`works with order asc - ${databaseName}`, async () => {
       await expect(`##! experimental { function_order_by }
@@ -1322,7 +1331,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         order_by: name desc
         limit: 3
       } -> {
-        aggregate: f is string_agg_distinct(name, ',') { order_by: name asc }
+        aggregate: f is string_agg_distinct(name, ',') { order_by: asc }
       }`).malloyResultMatches(expressionModel, {
         f: 'WESTCHESTER FLYING CLUB,WILSON FLYING SERVICE INC,YANKEE FLYING CLUB INC',
       });
@@ -1336,7 +1345,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         order_by: name desc
         limit: 3
       } -> {
-        aggregate: f is string_agg_distinct(name, ',') { order_by: name desc }
+        aggregate: f is string_agg_distinct(name, ',') { order_by: desc }
       }`).malloyResultMatches(expressionModel, {
         f: 'YANKEE FLYING CLUB INC,WILSON FLYING SERVICE INC,WESTCHESTER FLYING CLUB',
       });
@@ -1351,7 +1360,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           limit: 3
         } -> {
           aggregate: f is string_agg_distinct(name, ',') {
-            order_by: name desc
+            order_by: desc
             limit: 2
           }
         }`;

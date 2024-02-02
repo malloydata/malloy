@@ -37,7 +37,8 @@ export interface DialectFunctionOverloadDef {
   e: Expr;
   needsWindowOrderBy?: boolean;
   isSymmetric?: boolean;
-  supportsOrderBy?: boolean;
+  supportsOrderBy?: boolean | 'only_default';
+  defaultOrderByArgIndex?: number;
   supportsLimit?: boolean;
   between: {preceding: number | string; following: number | string} | undefined;
 }
@@ -217,7 +218,8 @@ export function overload(
     between?: {preceding: number | string; following: number | string};
     isSymmetric?: boolean;
     supportsLimit?: boolean;
-    supportsOrderBy?: boolean;
+    defaultOrderByArgIndex?: number;
+    supportsOrderBy?: boolean | 'only_default';
   }
 ): DialectFunctionOverloadDef {
   return {
@@ -228,6 +230,7 @@ export function overload(
     between: options?.between,
     isSymmetric: options?.isSymmetric,
     supportsOrderBy: options?.supportsOrderBy,
+    defaultOrderByArgIndex: options?.defaultOrderByArgIndex,
     supportsLimit: options?.supportsLimit,
   };
 }

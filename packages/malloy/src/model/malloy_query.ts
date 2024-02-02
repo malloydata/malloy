@@ -494,16 +494,21 @@ class QueryField extends QueryNode {
     resultSet: FieldInstanceResult,
     context: QueryStruct,
     state: GenerateState,
-    orderBy: FunctionOrderBy[]
+    orderBy: FunctionOrderBy[],
+    args: Expr[],
+    overload: FunctionOverloadDef
   ) {
     return (
       'ORDER BY ' +
       orderBy
         .map(ob => {
+          const defaultOrderByArgIndex =
+            overload.dialect[context.dialect.name].defaultOrderByArgIndex ?? 0;
+          const expr = ob.e ?? args[defaultOrderByArgIndex];
           const osql = this.generateDimFragment(
             resultSet,
             context,
-            ob.e,
+            expr,
             state
           );
           const dirsql =
@@ -527,7 +532,6 @@ class QueryField extends QueryNode {
       expressionIsAggregate(overload.returnType.expressionType) &&
       !isSymmetric &&
       this.generateDistinctKeyIfNecessary(resultSet, context, frag.structPath);
-
     const aggregateLimit = frag.limit ? `LIMIT ${frag.limit}` : undefined;
     if (distinctKey) {
       if (!context.dialect.supportsAggDistinct) {
@@ -540,7 +544,10 @@ class QueryField extends QueryNode {
       });
       const orderBys = frag.orderBy ?? [];
       const orderByExpressions = orderBys.map(ob => {
-        return this.generateDimFragment(resultSet, context, ob.e, state);
+        const defaultOrderByArgIndex =
+          overload.dialect[context.dialect.name].defaultOrderByArgIndex ?? 0;
+        const expr = ob.e ?? args[defaultOrderByArgIndex];
+        return this.generateDimFragment(resultSet, context, expr, state);
       });
       return context.dialect.sqlAggDistinct(
         distinctKey,
@@ -557,7 +564,14 @@ class QueryField extends QueryNode {
             context.dialect.name,
             overload,
             args,
-            this.getFunctionOrderBy(resultSet, context, state, orderBy),
+            this.getFunctionOrderBy(
+              resultSet,
+              context,
+              state,
+              orderBy,
+              args,
+              overload
+            ),
             aggregateLimit
           );
           return this.generateExpressionFromExpr(
@@ -592,7 +606,14 @@ class QueryField extends QueryNode {
           })
         : args;
       const orderBySql = frag.orderBy
-        ? this.getFunctionOrderBy(resultSet, context, state, frag.orderBy)
+        ? this.getFunctionOrderBy(
+            resultSet,
+            context,
+            state,
+            frag.orderBy,
+            args,
+            overload
+          )
         : '';
       const funcCall: Expr = this.expandFunctionCall(
         context.dialect.name,
@@ -2324,7 +2345,9 @@ class QueryQuery extends QueryField {
         }
         if (expr.orderBy) {
           for (const ob of expr.orderBy) {
-            this.addDependantExpr(resultStruct, context, ob.e, joinStack);
+            if (ob.e) {
+              this.addDependantExpr(resultStruct, context, ob.e, joinStack);
+            }
           }
         }
       }

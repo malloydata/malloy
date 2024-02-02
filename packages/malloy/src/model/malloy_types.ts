@@ -732,10 +732,19 @@ export interface OrderBy {
   dir?: 'asc' | 'desc';
 }
 
-export interface FunctionOrderBy {
+export interface FunctionOrderByExpression {
   e: Expr;
   dir?: 'asc' | 'desc';
 }
+
+export interface FunctionOrderByDefaultExpression {
+  e: undefined;
+  dir: 'asc' | 'desc';
+}
+
+export type FunctionOrderBy =
+  | FunctionOrderByExpression
+  | FunctionOrderByDefaultExpression;
 
 export interface ByName {
   by: 'name';
@@ -1038,7 +1047,8 @@ export interface FunctionOverloadDef {
   dialect: {
     [dialect: string]: {
       e: Expr;
-      supportsOrderBy?: boolean;
+      supportsOrderBy?: boolean | 'only_default';
+      defaultOrderByArgIndex?: number;
       supportsLimit?: boolean;
     };
   };
