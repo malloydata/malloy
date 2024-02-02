@@ -1508,7 +1508,7 @@ export class Explore extends Entity implements Taggable {
       pipeline: [
         {
           type: 'reduce',
-          fields: [name],
+          queryFields: [{type: 'fieldref', path: [name]}],
         },
       ],
     };

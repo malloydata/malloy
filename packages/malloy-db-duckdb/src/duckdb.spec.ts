@@ -34,62 +34,95 @@ import {SQLBlock} from '@malloydata/malloy';
 
 describe('DuckDBConnection', () => {
   let connection: DuckDBConnection;
-  let runRawSQL: jest.SpyInstance;
 
   beforeAll(async () => {
     connection = new DuckDBConnection('duckdb');
     await connection.runSQL('SELECT 1');
+    expect(Object.keys(DuckDBConnection.activeDBs).length).toEqual(1);
   });
 
   afterAll(async () => {
     await connection.close();
+    expect(Object.keys(DuckDBConnection.activeDBs).length).toEqual(0);
   });
 
-  beforeEach(async () => {
-    runRawSQL = jest
-      .spyOn(DuckDBCommon.prototype, 'runRawSQL')
-      .mockResolvedValue({rows: [], totalRows: 0});
-  });
+  describe('schema', () => {
+    let runRawSQL: jest.SpyInstance;
 
-  afterEach(() => {
-    jest.resetAllMocks();
-  });
-
-  it('caches table schema', async () => {
-    await connection.fetchSchemaForTables({'test1': 'table1'}, {});
-    expect(runRawSQL).toBeCalledTimes(1);
-    await new Promise(resolve => setTimeout(resolve));
-    await connection.fetchSchemaForTables({'test1': 'table1'}, {});
-    expect(runRawSQL).toBeCalledTimes(1);
-  });
-
-  it('refreshes table schema', async () => {
-    await connection.fetchSchemaForTables({'test2': 'table2'}, {});
-    expect(runRawSQL).toBeCalledTimes(1);
-    await new Promise(resolve => setTimeout(resolve));
-    await connection.fetchSchemaForTables(
-      {'test2': 'table2'},
-      {refreshTimestamp: Date.now() + 10}
-    );
-    expect(runRawSQL).toBeCalledTimes(2);
-  });
-
-  it('caches sql schema', async () => {
-    await connection.fetchSchemaForSQLBlock(SQL_BLOCK_1, {});
-    expect(runRawSQL).toBeCalledTimes(1);
-    await new Promise(resolve => setTimeout(resolve));
-    await connection.fetchSchemaForSQLBlock(SQL_BLOCK_1, {});
-    expect(runRawSQL).toBeCalledTimes(1);
-  });
-
-  it('refreshes sql schema', async () => {
-    await connection.fetchSchemaForSQLBlock(SQL_BLOCK_2, {});
-    expect(runRawSQL).toBeCalledTimes(1);
-    await new Promise(resolve => setTimeout(resolve));
-    await connection.fetchSchemaForSQLBlock(SQL_BLOCK_2, {
-      refreshTimestamp: Date.now() + 10,
+    beforeEach(async () => {
+      runRawSQL = jest
+        .spyOn(DuckDBCommon.prototype, 'runRawSQL')
+        .mockResolvedValue({rows: [], totalRows: 0});
     });
-    expect(runRawSQL).toBeCalledTimes(2);
+
+    afterEach(() => {
+      jest.resetAllMocks();
+      runRawSQL.mockRestore();
+    });
+
+    it('caches table schema', async () => {
+      await connection.fetchSchemaForTables({'test1': 'table1'}, {});
+      expect(runRawSQL).toBeCalledTimes(1);
+      await new Promise(resolve => setTimeout(resolve));
+      await connection.fetchSchemaForTables({'test1': 'table1'}, {});
+      expect(runRawSQL).toBeCalledTimes(1);
+    });
+
+    it('refreshes table schema', async () => {
+      await connection.fetchSchemaForTables({'test2': 'table2'}, {});
+      expect(runRawSQL).toBeCalledTimes(1);
+      await new Promise(resolve => setTimeout(resolve));
+      await connection.fetchSchemaForTables(
+        {'test2': 'table2'},
+        {refreshTimestamp: Date.now() + 10}
+      );
+      expect(runRawSQL).toBeCalledTimes(2);
+    });
+
+    it('caches sql schema', async () => {
+      await connection.fetchSchemaForSQLBlock(SQL_BLOCK_1, {});
+      expect(runRawSQL).toBeCalledTimes(1);
+      await new Promise(resolve => setTimeout(resolve));
+      await connection.fetchSchemaForSQLBlock(SQL_BLOCK_1, {});
+      expect(runRawSQL).toBeCalledTimes(1);
+    });
+
+    it('refreshes sql schema', async () => {
+      await connection.fetchSchemaForSQLBlock(SQL_BLOCK_2, {});
+      expect(runRawSQL).toBeCalledTimes(1);
+      await new Promise(resolve => setTimeout(resolve));
+      await connection.fetchSchemaForSQLBlock(SQL_BLOCK_2, {
+        refreshTimestamp: Date.now() + 10,
+      });
+      expect(runRawSQL).toBeCalledTimes(2);
+    });
+  });
+
+  describe('multiple connections', () => {
+    it('can open multiple connections with different settings', async () => {
+      const connection1 = new DuckDBConnection('duckdb1');
+      const connection2 = new DuckDBConnection('duckdb2');
+
+      await connection1.runRawSQL("SET FILE_SEARCH_PATH='/home/user1'");
+      await connection2.runRawSQL("SET FILE_SEARCH_PATH='/home/user2'");
+
+      const val1 = await connection1.runSQL(
+        "SELECT current_setting('FILE_SEARCH_PATH') AS val"
+      );
+      const val2 = await connection2.runSQL(
+        "SELECT current_setting('FILE_SEARCH_PATH') AS val"
+      );
+
+      expect(Object.keys(DuckDBConnection.activeDBs).length).toEqual(1);
+      expect(DuckDBConnection.activeDBs[':memory:'].connections.length).toEqual(
+        3
+      );
+      expect(val1).toEqual({rows: [{val: '/home/user1'}], totalRows: 1});
+      expect(val2).toEqual({rows: [{val: '/home/user2'}], totalRows: 1});
+
+      await connection1.close();
+      await connection2.close();
+    });
   });
 });
 

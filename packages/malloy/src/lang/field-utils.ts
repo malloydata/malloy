@@ -23,24 +23,24 @@
 
 import {FieldDef, QueryFieldDef} from '../model/malloy_types';
 
-type Field = QueryFieldDef | FieldDef;
+type NamedFieldThing = FieldDef | QueryFieldDef;
 
-export function nameOf(qfd: Field): string {
-  if (typeof qfd === 'string') {
-    return qfd;
+export function nameFromDef(f1: NamedFieldThing): string {
+  if (f1.type === 'fieldref') {
+    return f1.path[f1.path.length - 1];
   }
-  return qfd.as || qfd.name;
+  return f1.as ?? f1.name;
 }
 
-export function mergeFields<T extends Field>(
+export function mergeFields<T extends NamedFieldThing>(
   older: T[] | undefined,
   newer: T[]
 ): T[] {
   if (older === undefined) {
     return newer;
   }
-  const redefined = new Set(newer.map(f => nameOf(f)));
-  const merged = older.filter(f => !redefined.has(nameOf(f)));
+  const redefined = new Set(newer.map(f => nameFromDef(f)));
+  const merged = older.filter(f => !redefined.has(nameFromDef(f)));
   merged.push(...newer);
   return merged;
 }

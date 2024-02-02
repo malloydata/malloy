@@ -22,7 +22,7 @@
  */
 
 import * as model from '../../../model/malloy_types';
-import {mergeFields, nameOf} from '../../field-utils';
+import {mergeFields, nameFromDef} from '../../field-utils';
 import {FieldName, FieldSpace, QueryFieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
 import {SpaceField} from '../types/space-field';
@@ -33,25 +33,26 @@ import {LookupResult} from '../types/lookup-result';
 import {ColumnSpaceField} from './column-space-field';
 import {StructSpaceField} from './static-space';
 import {QueryInputSpace} from './query-input-space';
+import {SpaceEntry} from '../types/space-entry';
 
 /**
- * The output space of a query operation, it is not named "QueryOutputSpace"
- * because this is the namespace of the Query. This is the one which is constructed
- * with the query. The QueryInputSpace is created and paired when a
- * QuerySpace is created.
+ * The output space of a query operation. It is not named "QueryOutputSpace"
+ * because this is the namespace of the Query which is a layer of an output and
+ * an input space. It constructed with the query operation. A QueryInputSpace is
+ * created and paired when a QueryOperationSpace is created.
  */
-export abstract class QuerySpace
+export abstract class QueryOperationSpace
   extends RefinedSpace
   implements QueryFieldSpace
 {
-  private exprSpace: QueryInputSpace;
+  protected exprSpace: QueryInputSpace;
   abstract readonly segmentType: 'reduce' | 'project' | 'index';
   expandedWild: Record<string, string[]> = {};
 
   constructor(
     readonly queryInputSpace: FieldSpace,
     refineThis: model.PipeSegment | undefined,
-    readonly nestParent: QuerySpace | undefined,
+    readonly nestParent: QueryOperationSpace | undefined,
     readonly astEl: MalloyElement
   ) {
     super(queryInputSpace.emptyStructDef());
@@ -59,28 +60,7 @@ export abstract class QuerySpace
     if (refineThis) this.addRefineFromFields(refineThis);
   }
 
-  private addRefineFromFields(refineThis: model.PipeSegment) {
-    for (const field of refineThis.fields) {
-      if (typeof field === 'string') {
-        const ent = this.exprSpace.entry(field);
-        if (ent) {
-          this.setEntry(field, ent);
-        }
-      } else if (model.isFilteredAliasedName(field)) {
-        const name = field.as ?? field.name;
-        const ent = this.exprSpace.entry(name);
-        if (ent) {
-          this.setEntry(name, ent);
-        }
-      } else {
-        // TODO can you reference fields in a turtle as fields in the output space,
-        // e.g. order_by: my_turtle.foo, or lag(my_turtle.foo)
-        if (field.type !== 'turtle') {
-          this.setEntry(field.as ?? field.name, new ColumnSpaceField(field));
-        }
-      }
-    }
-  }
+  abstract addRefineFromFields(refineThis: model.PipeSegment): void;
 
   log(s: string): void {
     if (this.astEl) {
@@ -88,14 +68,12 @@ export abstract class QuerySpace
     }
   }
 
-  pushFields(...defs: MalloyElement[]): void {
-    for (const f of defs) {
-      if (f instanceof WildcardFieldReference) {
-        this.addWild(f);
-      } else {
-        super.pushFields(f);
-      }
-    }
+  inputSpace(): QueryInputSpace {
+    return this.exprSpace;
+  }
+
+  outputSpace(): QueryOperationSpace {
+    return this;
   }
 
   protected addWild(wild: WildcardFieldReference): void {
@@ -124,6 +102,7 @@ export abstract class QuerySpace
       }
     }
     const dialect = this.dialectObj();
+    const expandEntries: {name: string; entry: SpaceEntry}[] = [];
     for (const [name, entry] of current.entries()) {
       if (wild.except.has(name)) {
         continue;
@@ -144,9 +123,49 @@ export abstract class QuerySpace
           model.expressionIsScalar(eType.expressionType) &&
           (dialect === undefined || !dialect.ignoreInProject(name))
         ) {
-          this.setEntry(name, entry);
+          expandEntries.push({name, entry});
           this.expandedWild[name] = joinPath.concat(name);
         }
+      }
+    }
+    // There were tests which expected these to be sorted, and that seems reasonable
+    for (const x of expandEntries.sort((a, b) =>
+      a.name.localeCompare(b.name)
+    )) {
+      this.setEntry(x.name, x.entry);
+    }
+  }
+}
+
+// Project and Reduce or "QuerySegments" are built from a QuerySpace
+export abstract class QuerySpace extends QueryOperationSpace {
+  addRefineFromFields(refineThis: model.PipeSegment) {
+    if (!model.isQuerySegment(refineThis)) {
+      // TODO mtoy raw,partial,index
+      return;
+    }
+    for (const field of refineThis.queryFields) {
+      if (field.type === 'fieldref') {
+        const refTo = this.exprSpace.lookup(
+          field.path.map(f => new FieldName(f))
+        );
+        if (refTo.found) {
+          this.setEntry(field.path[field.path.length - 1], refTo.found);
+        }
+      } else if (field.type !== 'turtle') {
+        // TODO can you reference fields in a turtle as fields in the output space,
+        // e.g. order_by: my_turtle.foo, or lag(my_turtle.foo)
+        this.setEntry(field.as ?? field.name, new ColumnSpaceField(field));
+      }
+    }
+  }
+
+  pushFields(...defs: MalloyElement[]): void {
+    for (const f of defs) {
+      if (f instanceof WildcardFieldReference) {
+        this.addWild(f);
+      } else {
+        super.pushFields(f);
       }
     }
   }
@@ -161,7 +180,7 @@ export abstract class QuerySpace
       if (field instanceof SpaceField) {
         const wildPath = this.expandedWild[name];
         if (wildPath) {
-          fields.push(wildPath.join('.'));
+          fields.push({type: 'fieldref', path: wildPath});
           continue;
         }
         const fieldQueryDef = field.getQueryFieldDef(this.exprSpace);
@@ -204,8 +223,9 @@ export abstract class QuerySpace
     refineFrom: model.QuerySegment | undefined
   ): model.PipeSegment {
     if (this.segmentType === 'index') {
-      // TODO ... should make this go away
-      throw new Error('INDEX FIELD PIPE SEGMENT MIS HANDLED');
+      // come coding error made this "impossible" thing happen
+      this.log('internal error generating index segment from non index query');
+      return {type: 'reduce', queryFields: []};
     }
 
     if (refineFrom?.extendSource) {
@@ -216,10 +236,13 @@ export abstract class QuerySpace
 
     const segment: model.QuerySegment = {
       type: this.segmentType,
-      fields: this.queryFieldDefs(),
+      queryFields: this.queryFieldDefs(),
     };
 
-    segment.fields = mergeFields(refineFrom?.fields, segment.fields);
+    segment.queryFields = mergeFields(
+      refineFrom?.queryFields,
+      segment.queryFields
+    );
 
     if (refineFrom?.extendSource) {
       segment.extendSource = refineFrom.extendSource;
@@ -230,7 +253,7 @@ export abstract class QuerySpace
 
       for (const extendName of this.exprSpace.extendList) {
         const extendEnt = extendedStruct.fields.find(
-          f => nameOf(f) === extendName
+          f => nameFromDef(f) === extendName
         );
         if (extendEnt) {
           newExtends.push(extendEnt);
@@ -256,14 +279,6 @@ export abstract class QuerySpace
   isQueryFieldSpace() {
     return true;
   }
-
-  outputSpace() {
-    return this;
-  }
-
-  inputSpace() {
-    return this.exprSpace;
-  }
 }
 
 export class ReduceFieldSpace extends QuerySpace {
@@ -272,9 +287,6 @@ export class ReduceFieldSpace extends QuerySpace {
 
 function isEmptyNest(fd: model.QueryFieldDef) {
   return (
-    typeof fd !== 'string' &&
-    !model.isFilteredAliasedName(fd) &&
-    fd.type === 'turtle' &&
-    fd.pipeline.length === 0
+    typeof fd !== 'string' && fd.type === 'turtle' && fd.pipeline.length === 0
   );
 }

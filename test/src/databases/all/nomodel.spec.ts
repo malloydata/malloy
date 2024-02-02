@@ -410,6 +410,66 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     });
   });
 
+  it(`leafy count - ${databaseName}`, async () => {
+    // in a joined table when the joined is leafiest
+    //  we need to make sure we don't count rows that
+    //  don't match the join.
+    await expect(`
+      source: am_states is ${databaseName}.table('malloytest.state_facts') -> {
+        select: *
+        where: state ~ r'^(A|M)'
+      }
+
+      source: states is ${databaseName}.table('malloytest.state_facts') extend {
+        join_many: am_states on state=am_states.state
+      }
+
+      run: states -> {
+        where: state = 'CA'
+        aggregate:
+          leafy_count is am_states.count()
+          root_count is count()
+      }
+      `).malloyResultMatches(runtime, {
+      leafy_count: 0,
+      root_count: 1,
+    });
+  });
+
+  it(`leafy nested count - ${databaseName}`, async () => {
+    // in a joined table when the joined is leafiest
+    //  we need to make sure we don't count rows that
+    //  don't match the join.
+    await expect(`
+      source: am_states is ${databaseName}.table('malloytest.state_facts') -> {
+        group_by: state
+        where: state ~ r'^(A|M)'
+        nest: nested_state is {
+          group_by: state
+        }
+      }
+
+      source: states is ${databaseName}.table('malloytest.state_facts') extend {
+        join_many: am_states on state=am_states.state
+      }
+
+      run: states -> {
+        where: state = 'CA'
+        group_by:
+          state
+          am_state is am_states.state
+        aggregate:
+          leafy_count is am_states.nested_state.count()
+          root_count is count()
+      }
+      `).malloyResultMatches(runtime, {
+      leafy_count: 0,
+      root_count: 1,
+      state: 'CA',
+      am_state: null,
+    });
+  });
+
   it(`basic index - ${databaseName}`, async () => {
     // Make sure basic indexing works.
     await expect(`

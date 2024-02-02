@@ -71,9 +71,9 @@ export type {
   // Used in Composer Demo
   FieldAtomicDef,
   FieldDef,
-  FilteredAliasedName,
   PipeSegment,
   QueryFieldDef,
+  IndexFieldDef,
   TurtleDef,
   SearchValueMapResult,
   SearchIndexResult,
@@ -105,7 +105,6 @@ export type {
 export {
   // Used in Composer Demo
   Segment,
-  isFilteredAliasedName,
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
@@ -166,7 +165,7 @@ export type {
   WriteStream,
   SerializedExplore,
 } from './malloy';
-export type {RunSQLOptions} from './run_sql_options';
+export type {QueryOptionsReader, RunSQLOptions} from './run_sql_options';
 export type {
   Connection,
   ConnectionConfig,
@@ -174,11 +173,11 @@ export type {
   ConnectionParameter,
   ConnectionParameterValue,
   ConnectionConfigSchema,
+  FetchSchemaOptions,
   InfoConnection,
   LookupConnection,
   ModelString,
   ModelURL,
-  FetchSchemaOptions,
   PersistSQLResults,
   PooledConnection,
   QueryString,

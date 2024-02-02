@@ -447,6 +447,10 @@
           "name": "keyword.control.order_by"
         },
         {
+          "match": "(?i)\\bpartition_by\\b",
+          "name": "keyword.control.partition_by"
+        },
+        {
           "match": "(?i)\\bprimary_key\\b",
           "name": "keyword.control.primary_key"
         },

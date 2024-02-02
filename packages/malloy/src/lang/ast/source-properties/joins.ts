@@ -119,7 +119,7 @@ export class KeyJoin extends Join {
             onExpression: [
               {
                 type: 'field',
-                path: `${this.name}.${inStruct.primaryKey}`,
+                path: [this.name.refString, inStruct.primaryKey],
               },
               '=',
               ...exprX.value,

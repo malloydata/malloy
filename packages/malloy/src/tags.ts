@@ -381,6 +381,21 @@ class TagErrorListener implements ANTLRErrorListener<Token> {
     };
     this.log.push(logMsg);
   }
+
+  semanticError(cx: ParserRuleContext, msg: string): void {
+    const errAt = {
+      line: this.atLine,
+      // mtoy TODO get this right
+      character: 0,
+    };
+    const range = {start: errAt, end: errAt};
+    const logMsg: LogMessage = {
+      message: msg,
+      at: {url: this.sourceURL, range},
+      severity: 'error',
+    };
+    this.log.push(logMsg);
+  }
 }
 
 function getBuildOn(ctx: ParserRuleContext): Tag {
@@ -443,12 +458,12 @@ function parseTagline(
   const inputStream = CharStreams.fromString(source);
   const lexer = new MalloyTagLexer(inputStream);
   const tokenStream = new CommonTokenStream(lexer);
+  const pLog = new TagErrorListener(sourceURL, onLine, atChar);
   const taglineParser = new MalloyTagParser(tokenStream);
   taglineParser.removeErrorListeners();
-  const pLog = new TagErrorListener(sourceURL, onLine, atChar);
   taglineParser.addErrorListener(pLog);
   const tagTree = taglineParser.tagLine();
-  const treeWalker = new TaglineParser(outerScope);
+  const treeWalker = new TaglineParser(outerScope, pLog);
   const tag = treeWalker.tagLineToTag(tagTree, extending);
   return {tag, log: pLog.log};
 }
@@ -458,8 +473,10 @@ class TaglineParser
   implements MalloyTagVisitor<Tag>
 {
   scopes: Tag[] = [];
-  constructor(outerScopes: Tag[] = []) {
+  msgLog: TagErrorListener;
+  constructor(outerScopes: Tag[] = [], msgLog: TagErrorListener) {
     super();
+    this.msgLog = msgLog;
     this.scopes.unshift(...outerScopes);
   }
 
@@ -550,7 +567,10 @@ class TaglineParser
         break;
       }
     }
-    // MTOY TODO SYNTAX ERROR NOT FOUND
+    this.msgLog.semanticError(
+      ctx,
+      `Reference to undefined property ${path.join('.')}`
+    );
     return this.defaultResult();
   }
 

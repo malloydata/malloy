@@ -21,7 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Annotation, FieldDef, TypeDesc} from '../../../model/malloy_types';
+import {
+  Annotation,
+  FieldDef,
+  RefToField,
+  TypeDesc,
+} from '../../../model/malloy_types';
 import {DynamicSpace} from '../field-space/dynamic-space';
 import {ReferenceField} from '../field-space/reference-field';
 import {DefinitionList} from '../types/definition-list';
@@ -70,8 +75,19 @@ export abstract class FieldReference
     }
   }
 
+  get refToField(): RefToField {
+    return {
+      type: 'fieldref',
+      path: this.list.map(n => n.refString),
+    };
+  }
+
   get refString(): string {
-    return this.list.map(n => n.refString).join('.');
+    return this.path.join('.');
+  }
+
+  get path(): string[] {
+    return this.list.map(n => n.refString);
   }
 
   get outputName(): string {
@@ -123,6 +139,14 @@ export class ExpressionFieldReference extends FieldReference {
   }
 }
 
+export class PartitionByFieldReference extends FieldReference {
+  elementType = 'partitionByFieldReference';
+  // We assume that the partition by expression will typecheck this
+  typecheck() {
+    return;
+  }
+}
+
 export class CalculateFieldReference extends FieldReference {
   elementType = 'calculateFieldReference';
   typecheck(type: TypeDesc) {
@@ -134,6 +158,15 @@ export class IndexFieldReference extends FieldReference {
   elementType = 'indexFieldReference';
   typecheck(type: TypeDesc) {
     typecheckIndex(type, this);
+  }
+
+  // Index entries are expected to be unique on path
+  static indexOutputName(path: string[]): string {
+    return path.map(pe => encodeURIComponent(pe)).join('/');
+  }
+
+  get outputName(): string {
+    return IndexFieldReference.indexOutputName(this.path);
   }
 }
 

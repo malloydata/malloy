@@ -22,10 +22,13 @@
  */
 
 import {FUNCTIONS} from '../../functions';
+import {fnStringAgg, fnStringAggDistinct} from './string_agg';
 import {fnChr} from './chr';
 import {fnPi} from './pi';
 
 export const STANDARDSQL_FUNCTIONS = FUNCTIONS.clone();
 STANDARDSQL_FUNCTIONS.add('pi', fnPi);
 STANDARDSQL_FUNCTIONS.add('chr', fnChr);
+STANDARDSQL_FUNCTIONS.add('string_agg', fnStringAgg);
+STANDARDSQL_FUNCTIONS.add('string_agg_distinct', fnStringAggDistinct);
 STANDARDSQL_FUNCTIONS.seal();

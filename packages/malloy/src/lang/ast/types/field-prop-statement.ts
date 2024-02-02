@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Google LLC
+ * Copyright 2024 Google LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files
@@ -21,4 +21,25 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export * from './malloy_types';
+import {FunctionOrdering} from '../expressions/function-ordering';
+import {Filter} from '../query-properties/filters';
+import {Limit} from '../query-properties/limit';
+import {PartitionBy} from '../expressions/partition_by';
+import {MalloyElement} from './malloy-element';
+
+export type FieldPropStatement =
+  | Filter
+  | Limit
+  | PartitionBy
+  | FunctionOrdering;
+
+export function isFieldPropStatement(
+  el: MalloyElement
+): el is FieldPropStatement {
+  return (
+    el instanceof Filter ||
+    el instanceof Limit ||
+    el instanceof PartitionBy ||
+    el instanceof FunctionOrdering
+  );
+}

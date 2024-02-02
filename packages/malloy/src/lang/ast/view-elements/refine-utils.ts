@@ -21,7 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {PipeSegment, QueryFieldDef, isRawSegment} from '../../../model';
+import {
+  PipeSegment,
+  QueryFieldDef,
+  isQuerySegment,
+  isRawSegment,
+} from '../../../model';
+import {nameFromDef} from '../../field-utils';
 import {MalloyElement} from '../types/malloy-element';
 
 export function refine(
@@ -74,37 +80,34 @@ export function refine(
         ? [...(to.filterList ?? []), ...(from.filterList ?? [])]
         : undefined;
 
-    const overlappingFields: (QueryFieldDef | string)[] = [];
-    const nonOverlappingFields: (QueryFieldDef | string)[] = [];
-    const existingNames = new Map<string, QueryFieldDef | string>(
-      to.fields.map(
-        (f: QueryFieldDef | string): [string, QueryFieldDef | string] => [
-          extractName(f),
+    if (isQuerySegment(from) && isQuerySegment(to)) {
+      const overlappingFields: QueryFieldDef[] = [];
+      const nonOverlappingFields: QueryFieldDef[] = [];
+      const existingNames = new Map<string, QueryFieldDef>(
+        to.queryFields.map((f: QueryFieldDef): [string, QueryFieldDef] => [
+          nameFromDef(f),
           f,
-        ]
-      )
-    );
-    for (const field of from.fields) {
-      if (existingNames.has(extractName(field))) {
-        overlappingFields.push(field);
-      } else {
-        nonOverlappingFields.push(field);
-      }
-    }
-
-    to.fields = [...to.fields, ...nonOverlappingFields];
-    if (overlappingFields.length > 0) {
-      logTo.log(
-        `overlapping fields in refinement: ${overlappingFields.map(
-          extractName
-        )}`
+        ])
       );
+      for (const field of from.queryFields) {
+        if (existingNames.has(nameFromDef(field))) {
+          overlappingFields.push(field);
+        } else {
+          nonOverlappingFields.push(field);
+        }
+      }
+      to.queryFields = [...to.queryFields, ...nonOverlappingFields];
+      if (overlappingFields.length > 0) {
+        logTo.log(
+          `overlapping fields in refinement: ${overlappingFields.map(
+            nameFromDef
+          )}`
+        );
+      }
+    } else if (from.type === 'index' && to.type === 'index') {
+      to.indexFields = [...from.indexFields, ...to.indexFields];
     }
   }
 
   return [to];
-}
-
-function extractName(f1: QueryFieldDef | string): string {
-  return typeof f1 === 'string' ? f1 : f1.as ?? f1.name;
 }

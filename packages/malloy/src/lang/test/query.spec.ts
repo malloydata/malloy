@@ -23,7 +23,35 @@
 
 import {TestTranslator, aTableDef, markSource, model} from './test-translator';
 import './parse-expects';
-import {expressionIsCalculation, isAtomicFieldType} from '../../model';
+import {
+  Query,
+  QueryFieldDef,
+  QuerySegment,
+  expressionIsCalculation,
+  isAtomicFieldType,
+  isQuerySegment,
+} from '../../model';
+
+function getFirstQuerySegment(q: Query | undefined): QuerySegment | undefined {
+  const qSeg = q?.pipeline[0];
+  if (qSeg && isQuerySegment(qSeg)) {
+    return qSeg;
+  }
+}
+
+function getFirstSegmentFields(q: Query | undefined): QueryFieldDef[] {
+  const qSeg = getFirstQuerySegment(q);
+  return qSeg?.queryFields ?? [];
+}
+
+function getFirstSegmentFieldNames(q: Query | undefined): string[] {
+  const qf = getFirstSegmentFields(q);
+  return qf.map(f =>
+    f.type === 'fieldref' && f.path.length === 1
+      ? f.path[0]
+      : `expected simple ref, got ${JSON.stringify(f)}`
+  );
+}
 
 describe('query:', () => {
   describe('basic query syntax', () => {
@@ -108,11 +136,10 @@ describe('query:', () => {
       query: nq is q + { group_by: astr }
     `);
       expect(x).toTranslate();
-      const q = x.getQuery('q');
+      const q = getFirstSegmentFields(x.getQuery('q'));
       expect(q).toBeDefined();
       if (q) {
-        const qFields = q.pipeline[0].fields;
-        expect(qFields.length).toBe(1);
+        expect(q.length).toBe(1);
       }
     });
     test('query composition preserves original', () => {
@@ -593,14 +620,10 @@ describe('query:', () => {
         "Parameter 3 ('default') of lag must be literal or constant, but received output"
       );
     });
-    // TODO we don't handle referencing a join as a field correctly in all cases today.
-    // For now, it at least is considered type `struct` and therefore fails to parse
-    // as a function argument.
-    // We add <join_name>_id to the query, but it's not included in the output space
     test('cannot use struct in function arg', () => {
       expect(
-        `run: a extend {join_one: b with astr } -> {
-          group_by: b
+        `run: ab -> {
+          group_by: b.astr
           calculate: foo is lag(b)
         }`
       ).translationToFailWith('No matching overload for function lag(struct)');
@@ -701,12 +724,6 @@ describe('query:', () => {
         group_by: b.ai
       }`).toTranslate();
     });
-    test('reference join name in group_by', () => {
-      expect(`run: a -> {
-        extend: { join_one: b with astr }
-        group_by: b
-      }`).toTranslate();
-    });
     test('can reference select: inline join.* field in calculate', () => {
       expect(`run: a -> {
         extend: { join_one: b with astr }
@@ -756,10 +773,9 @@ describe('query:', () => {
     test('aggregate reference', () => {
       const doc = model`run: a->{ aggregate: ai.sum() }`;
       expect(doc).toTranslate();
-      const q = doc.translator.getQuery(0);
+      const q = getFirstSegmentFields(doc.translator.getQuery(0));
       expect(q).toBeDefined();
-      const ai = q?.pipeline[0]?.fields[0];
-      expect(ai).toMatchObject({
+      expect(q[0]).toMatchObject({
         name: 'ai',
         type: 'number',
         expressionType: 'aggregate',
@@ -768,10 +784,9 @@ describe('query:', () => {
     test('timeunit reference', () => {
       const doc = model`run: a->{ group_by: ats.day }`;
       expect(doc).toTranslate();
-      const q = doc.translator.getQuery(0);
+      const q = getFirstSegmentFields(doc.translator.getQuery(0));
       expect(q).toBeDefined();
-      const ats = q?.pipeline[0]?.fields[0];
-      expect(ats).toMatchObject({name: 'ats', type: 'timestamp'});
+      expect(q[0]).toMatchObject({name: 'ats', type: 'timestamp'});
     });
     test('aggregate multiple', () => {
       expect(`
@@ -790,18 +805,18 @@ describe('query:', () => {
     test('expands star correctly', () => {
       const selstar = model`run: ab->{select: *}`;
       expect(selstar).toTranslate();
-      const query = selstar.translator.getQuery(0);
-      expect(query).toBeDefined();
-      const fields = query!.pipeline[0].fields;
-      expect(fields.sort()).toEqual(afields);
+      const fields = getFirstSegmentFieldNames(selstar.translator.getQuery(0));
+      expect(fields).toEqual(afields);
     });
     test('expands join dot star correctly', () => {
       const selstar = model`run: ab->{select: b.*}`;
       expect(selstar).toTranslate();
       const query = selstar.translator.getQuery(0);
       expect(query).toBeDefined();
-      const fields = query!.pipeline[0].fields;
-      expect(fields.sort()).toEqual(afields.map(f => `b.${f}`));
+      const fields = getFirstSegmentFields(selstar.translator.getQuery(0)).map(
+        f => (f.type === 'fieldref' ? f.path : `wrong field type ${f.type}`)
+      );
+      expect(fields).toEqual(afields.map(f => ['b', f]));
     });
     test('expands star with exclusions', () => {
       const selstar = model`run: ab->{select: * { except: ai, except: aun, aweird }}`;
@@ -809,10 +824,8 @@ describe('query:', () => {
         f => f !== 'ai' && f !== 'aun' && f !== 'aweird'
       );
       expect(selstar).toTranslate();
-      const query = selstar.translator.getQuery(0);
-      expect(query).toBeDefined();
-      const fields = query!.pipeline[0].fields;
-      expect(fields.sort()).toEqual(filterdFields);
+      const fields = getFirstSegmentFieldNames(selstar.translator.getQuery(0));
+      expect(fields).toEqual(filterdFields);
     });
     test('star error checking', () => {
       expect(markSource`run: a->{select: ${'zzz'}.*}`).translationToFailWith(
@@ -844,10 +857,8 @@ describe('query:', () => {
     test('regress check extend: and star', () => {
       const m = model`run: ab->{ extend: {dimension: x is 1} select: * }`;
       expect(m).toTranslate();
-      const q = m.translator.getQuery(0);
-      expect(q).toBeDefined();
-      const fields = q!.pipeline[0].fields;
-      expect(fields.sort()).toEqual(afields.concat('x'));
+      const fields = getFirstSegmentFieldNames(m.translator.getQuery(0));
+      expect(fields).toEqual(afields.concat('x'));
     });
     test('project def', () => {
       expect('run: ab->{ select: one is 1 }').toTranslate();
@@ -859,10 +870,8 @@ describe('query:', () => {
     test('regress check extend: and star', () => {
       const m = model`run: ab->{ extend: {dimension: x is 1} select: * }`;
       expect(m).toTranslate();
-      const q = m.translator.getQuery(0);
-      expect(q).toBeDefined();
-      const fields = q!.pipeline[0].fields;
-      expect(fields.sort()).toEqual(afields.concat('x'));
+      const fields = getFirstSegmentFieldNames(m.translator.getQuery(0));
+      expect(fields).toEqual(afields.concat('x'));
     });
     test('project def', () => {
       expect('run:ab->{ select: one is 1 }').toTranslate();
@@ -878,13 +887,13 @@ describe('query:', () => {
       expect('run:a->{index: astr}').toTranslate();
     });
     test('index path', () => {
-      expect('run:ab->{index: ab.astr}').toTranslate();
+      expect('run:ab->{index: b.astr}').toTranslate();
     });
     test('index unique on path', () => {
-      expect('run:ab->{index: b.astr, ab.astr}').toTranslate();
+      expect('run:ab->{index: astr, b.astr}').toTranslate();
     });
     test('index join.*', () => {
-      expect('run:ab->{index: ab.*}').toTranslate();
+      expect('run:ab->{index: b.*}').toTranslate();
     });
     test('index multiple', () => {
       const model = new TestTranslator('run:a->{index: af, astr}');
@@ -894,18 +903,12 @@ describe('query:', () => {
       if (q) {
         const index = q.pipeline[0];
         expect(index.type).toBe('index');
-        expect(index.fields).toEqual(['af', 'astr']);
-      }
-    });
-    test('index star', () => {
-      const model = new TestTranslator('run:a->{index: *, astr}');
-      expect(model).toTranslate();
-      const q = model.getQuery(0);
-      expect(q).toBeDefined();
-      if (q) {
-        const index = q.pipeline[0];
-        expect(index.type).toBe('index');
-        expect(index.fields).toEqual(['*', 'astr']);
+        if (index.type === 'index') {
+          expect(index.indexFields).toEqual([
+            {type: 'fieldref', path: ['af']},
+            {type: 'fieldref', path: ['astr']},
+          ]);
+        }
       }
     });
     test('index by', () => {

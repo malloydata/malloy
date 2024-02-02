@@ -630,16 +630,6 @@ export class MalloyToAST
     return new ast.Filter(pcx.fieldExpr().map(f => this.getFilterElement(f)));
   }
 
-  visitFilterByShortcut(pcx: parse.FilterByShortcutContext): ast.Filter {
-    const el = this.getFilterElement(pcx.fieldExpr());
-    const res = this.astAt(new ast.Filter([el]), pcx);
-    this.m4advisory(
-      pcx,
-      'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead'
-    );
-    return res;
-  }
-
   visitWhereStatement(pcx: parse.WhereStatementContext): ast.Filter {
     const where = this.visitFilterClauseList(pcx.filterClauseList());
     where.having = false;
@@ -953,8 +943,37 @@ export class MalloyToAST
     return this.astAt(indexStmt, pcx);
   }
 
+  visitFieldPropertyLimitStatement(
+    pcx: parse.FieldPropertyLimitStatementContext
+  ): ast.Limit {
+    this.inExperiment('aggregate_limit', pcx);
+    return this.visitLimitStatement(pcx.limitStatement());
+  }
+
   visitLimitStatement(pcx: parse.LimitStatementContext): ast.Limit {
     return new ast.Limit(this.getNumber(pcx.INTEGER_LITERAL()));
+  }
+
+  visitAggregateOrderBySpec(
+    pcx: parse.AggregateOrderBySpecContext
+  ): ast.FunctionOrderBy {
+    const dir = pcx.ASC() ? 'asc' : pcx.DESC() ? 'desc' : undefined;
+    const f = this.getFieldExpr(pcx.fieldExpr());
+    return this.astAt(new ast.FunctionOrderBy(f, dir), pcx);
+  }
+
+  visitAggregateOrderByStatement(pcx: parse.AggregateOrderByStatementContext) {
+    this.inExperiment('function_order_by', pcx);
+    return this.visitAggregateOrdering(pcx.aggregateOrdering());
+  }
+
+  visitAggregateOrdering(
+    pcx: parse.AggregateOrderingContext
+  ): ast.FunctionOrdering {
+    const orderList = pcx
+      .aggregateOrderBySpec()
+      .map(o => this.visitAggregateOrderBySpec(o));
+    return this.astAt(new ast.FunctionOrdering(orderList), pcx);
   }
 
   visitOrderBySpec(pcx: parse.OrderBySpecContext): ast.OrderBy {
@@ -1504,11 +1523,36 @@ export class MalloyToAST
     return new ast.Pick(picks);
   }
 
-  visitExprFilter(pcx: parse.ExprFilterContext): ast.ExprFilter {
-    const filters = this.visit(pcx.filteredBy());
-    return new ast.ExprFilter(
-      this.getFieldExpr(pcx.fieldExpr()),
-      filters as ast.Filter
+  visitExprFieldProps(pcx: parse.ExprFieldPropsContext) {
+    const statements = this.only<
+      ast.Filter | ast.FunctionOrdering | ast.PartitionBy | ast.Limit
+    >(
+      pcx
+        .fieldProperties()
+        .fieldPropertyStatement()
+        .map(scx => this.visit(scx)),
+      x => ast.isFieldPropStatement(x) && x,
+      'field property statement'
+    );
+    return new ast.ExprProps(this.getFieldExpr(pcx.fieldExpr()), statements);
+  }
+
+  visitPartitionByStatement(pcx: parse.PartitionByStatementContext) {
+    this.inExperiment('partition_by', pcx);
+    return this.astAt(
+      new ast.PartitionBy(
+        pcx
+          .id()
+          .map(idCx =>
+            this.astAt(
+              new ast.PartitionByFieldReference([
+                this.astAt(new ast.FieldName(idToStr(idCx)), idCx),
+              ]),
+              idCx
+            )
+          )
+      ),
+      pcx
     );
   }
 

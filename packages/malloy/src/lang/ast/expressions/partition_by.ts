@@ -21,6 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export interface RunSQLOptions {
-  rowLimit?: number;
+import {PartitionByFieldReference} from '../query-items/field-references';
+import {ListOf} from '../types/malloy-element';
+
+export class PartitionBy extends ListOf<PartitionByFieldReference> {
+  elementType = 'partition_by';
+
+  constructor(readonly partitionFields: PartitionByFieldReference[]) {
+    super(partitionFields);
+  }
 }

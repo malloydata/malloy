@@ -26,12 +26,14 @@ import Worker from 'web-worker';
 import {
   FetchSchemaOptions,
   QueryDataRow,
+  QueryOptionsReader,
   RunSQLOptions,
   StructDef,
   SQLBlock,
+  ConnectionConfig,
 } from '@malloydata/malloy';
 import {StructRow, Table, Vector} from 'apache-arrow';
-import {DuckDBCommon, QueryOptionsReader} from './duckdb_common';
+import {DuckDBCommon} from './duckdb_common';
 
 const TABLE_MATCH = /FROM\s*('([^']*)'|"([^"]*)")/gi;
 const TABLE_FUNCTION_MATCH = /FROM\s+[a-z0-9_]+\(('([^']*)'|"([^"]*)")/gi;
@@ -103,7 +105,14 @@ type RemoteFileCallback = (
   tableName: string
 ) => Promise<Uint8Array | undefined>;
 
+export interface DuckDBWasmOptions extends ConnectionConfig {
+  databasePath?: string;
+  workingDirectory?: string;
+}
 export abstract class DuckDBWASMConnection extends DuckDBCommon {
+  public readonly name: string;
+  private databasePath: string | null = null;
+  protected workingDirectory = '/';
   connecting: Promise<void>;
   protected _connection: duckdb.AsyncDuckDBConnection | null = null;
   protected _database: duckdb.AsyncDuckDB | null = null;
@@ -113,13 +122,43 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
   private remoteFileCallbacks: RemoteFileCallback[] = [];
   private remoteFileStatus: Record<string, Promise<number>> = {};
 
+  constructor(options: DuckDBWasmOptions, queryOptions?: QueryOptionsReader);
   constructor(
-    public readonly name: string,
-    private databasePath: string | null = null,
-    protected workingDirectory = '/',
+    name: string,
+    databasePath?: string | null,
+    workingDirectory?: string,
+    queryOptions?: QueryOptionsReader
+  );
+  constructor(
+    public readonly arg: string | DuckDBWasmOptions,
+    arg2?: string | QueryOptionsReader | null,
+    workingDirectory?: string,
     queryOptions?: QueryOptionsReader
   ) {
-    super(queryOptions);
+    super();
+    if (typeof arg === 'string') {
+      this.name = arg;
+      if (typeof arg2 === 'string') {
+        this.databasePath = arg2;
+      }
+      if (typeof workingDirectory === 'string') {
+        this.workingDirectory = workingDirectory;
+      }
+      if (queryOptions) {
+        this.queryOptions = queryOptions;
+      }
+    } else {
+      this.name = arg.name;
+      if (arg2) {
+        this.queryOptions = arg2 as QueryOptionsReader;
+      }
+      if (typeof arg.databasePath === 'string') {
+        this.databasePath = arg.databasePath;
+      }
+      if (typeof arg.workingDirectory === 'string') {
+        this.workingDirectory = arg.workingDirectory;
+      }
+    }
     this.connecting = this.init();
   }
 
@@ -234,6 +273,8 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
     if (!this.connection) {
       throw new Error('duckdb-wasm not connected');
     }
+    const defaultOptions = this.readQueryOptions();
+    rowLimit ??= defaultOptions.rowLimit;
     await this.setup();
     const statements = sql.split('-- hack: split on this');
 

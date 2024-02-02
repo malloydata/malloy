@@ -22,12 +22,14 @@
  */
 
 import {
+  FetchSchemaOptions,
   FieldTypeDef,
   MalloyQueryData,
   NamedStructDefs,
   PersistSQLResults,
   PooledConnection,
   QueryDataRow,
+  QueryOptionsReader,
   QueryRunStats,
   RunSQLOptions,
   SQLBlock,
@@ -35,16 +37,11 @@ import {
   StructDef,
   TestableConnection,
   DuckDBDialect,
-  FetchSchemaOptions,
 } from '@malloydata/malloy';
 
 export interface DuckDBQueryOptions {
   rowLimit: number;
 }
-
-export type QueryOptionsReader =
-  | Partial<DuckDBQueryOptions>
-  | (() => Partial<DuckDBQueryOptions>);
 
 const unquoteName = (name: string) => {
   const match = /^"(.*)"$/.exec(name);
@@ -79,7 +76,7 @@ export abstract class DuckDBCommon
     return 'duckdb';
   }
 
-  private readQueryOptions(): DuckDBQueryOptions {
+  protected readQueryOptions(): DuckDBQueryOptions {
     const options = DuckDBCommon.DEFAULT_QUERY_OPTIONS;
     if (this.queryOptions) {
       if (this.queryOptions instanceof Function) {
@@ -92,7 +89,7 @@ export abstract class DuckDBCommon
     }
   }
 
-  constructor(private queryOptions?: QueryOptionsReader) {}
+  constructor(protected queryOptions?: QueryOptionsReader) {}
 
   public isPool(): this is PooledConnection {
     return false;
@@ -139,7 +136,7 @@ export abstract class DuckDBCommon
 
   public abstract runSQLStream(
     sql: string,
-    _options: RunSQLOptions
+    options: RunSQLOptions
   ): AsyncIterableIterator<QueryDataRow>;
 
   private async getSQLBlockSchema(sqlRef: SQLBlock): Promise<StructDef> {
@@ -249,7 +246,7 @@ export abstract class DuckDBCommon
           structSource: {type: arrayMatch ? 'nested' : 'inline'},
           structRelationship: {
             type: arrayMatch ? 'nested' : 'inline',
-            field: name,
+            fieldName: name,
             isArray: false,
           },
           fields: [],
@@ -266,7 +263,7 @@ export abstract class DuckDBCommon
             structSource: {type: 'nested'},
             structRelationship: {
               type: 'nested',
-              field: name,
+              fieldName: name,
               isArray: true,
             },
             fields: [{...malloyType, name: 'value'} as FieldTypeDef],
