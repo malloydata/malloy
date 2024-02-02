@@ -1,0 +1,84 @@
+## renderer_next
+
+source: test is duckdb.table("data/test.csv") extend {
+
+
+  # plot
+  view: plotTest is {
+    group_by:
+      # x
+      Dim1
+    # barY
+    aggregate: `Expr1_Sum` is Expression1.sum()
+    limit: 5
+  }
+
+  # plot
+  view: plotStack is {
+    group_by:
+      # x
+      Dim1
+      Dim3
+    # barY { fill='^Dim3' }
+    aggregate: `Expr1_Sum` is Expression1.sum()
+    limit: 10
+  }
+
+  # plot
+  view: plotNoStack is {
+    group_by:
+      # x
+      Dim1
+      Dim2
+    # barY { fill='^Dim2' noStack }
+    aggregate: `Expr1_Sum` is Expression1.sum()
+    limit: 10
+  }
+
+  # plot
+  view: plotGroup is {
+    group_by:
+      # fx
+      Dim1
+      # x
+      Dim3
+    # barY { fill='^Dim3' }
+    aggregate: `Expr1_Sum` is Expression1.sum()
+    limit: 10
+  }
+
+  # plot.lists.l=[measure1,measure2]
+  # plot.x=Dim1
+  # plot.marks.bar=barY { y.list=l fill.list=l }
+  view: plotMeasureStack is {
+    group_by: Dim1
+    aggregate: measure1 is Expression1.sum(), measure2 is Expression1.sum()/2
+    limit: 5
+  }
+
+  # plot.lists.l=[measure1,measure2]
+  # plot.x.list=l
+  # plot.marks.bar=barY { y.list=l fill.list=l }
+  view: plotMeasureGroup is {
+    # fx
+    group_by: Dim1
+    aggregate: measure1 is Expression1.sum(), measure2 is Expression1.sum()/2
+    limit: 5
+  }
+
+  # plot
+  view: plotNested is {
+    nest: n is {
+      group_by:
+      # x
+      Dim1
+      # barY
+      aggregate: `Expr1_Sum` is Expression1.sum()
+      limit: 5
+    }
+
+  }
+
+  # -plot
+  view: plotRaw is plotTest;
+}

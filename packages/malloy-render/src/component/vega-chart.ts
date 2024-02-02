@@ -62,7 +62,7 @@ export class VegaChart extends LitElement {
       .hover();
     if (this.width) this.view.width(this.width);
     if (this.height) this.view.height(this.height);
-
+    console.log('view', this.view);
     this.view.run();
   }
 

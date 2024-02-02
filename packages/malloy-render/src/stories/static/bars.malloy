@@ -163,6 +163,25 @@ source: products is duckdb.table("data/products.parquet") extend {
     limit: 10
   }
 
+  # plot.lists.l=[avgRetail,medianRetail]
+  # plot.x=category
+  # plot.marks.bar=barY { y.list=l fill.list=l }
+  view: plotMeasureStack is {
+    group_by: category
+    aggregate: avgRetail is retail_price.avg(), medianRetail is retail_price.avg()/2
+    limit: 5
+  }
+
+  # plot.lists.l=[avgRetail,medianRetail]
+  # plot.fx=category
+  # plot.x.list=l
+  # plot.marks.bar=barY { y.list=l fill.list=l }
+  view: plotMeasureGroup is {
+    group_by: category
+    aggregate: avgRetail is retail_price.avg(), medianRetail is retail_price.avg()/2
+    limit: 5
+  }
+
   # -plot
   view: plotRaw is plotTest;
 }

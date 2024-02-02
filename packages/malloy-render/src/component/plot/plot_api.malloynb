@@ -1,0 +1,167 @@
+>>>markdown
+## Simple Charts Demo
+>>>markdown
+### Bar Chart: 1 dim, 1 measure
+>>>malloy
+# bar_chart
+view: barBasic is {
+  group_by: Dim1
+  aggregate: Expr1_Sum is Expression1.sum()
+  limit: 5
+}
+
+-- or explicit, with embedding
+# bar_chart
+view: barBasic is {
+  # x
+  group_by: Dim1
+  # y
+  aggregate: Expr1_Sum is Expression1.sum()
+  limit: 5
+}
+
+-- or explicit, at top
+# bar_chart {x=Dim1 y=Expr_1}
+view: barBasic is {
+  group_by: Dim1
+  aggregate: Expr1_Sum is Expression1.sum()
+  limit: 5
+}
+>>>markdown
+### Bar Chart: 2 dims, 1 measure stacked
+>>>malloy
+# bar_chart.stack
+view: barBasic is {
+  group_by: Dim1, Dim3
+  aggregate: Expr1_Sum is Expression1.sum()
+  limit: 5
+}
+
+-- or explicit, with embedding
+# bar_chart.stack
+view: barBasic is {
+  group_by:
+    # group
+    Dim1
+    # x
+    Dim3
+  # y
+  aggregate: Expr1_Sum is Expression1.sum()
+  limit: 5
+}
+
+-- or explicit, at top
+# bar_chart {stack group=Dim1 x=Dim3 y=Expr_1 }
+view: barBasic is {
+  group_by: Dim1, Dim3
+  aggregate: Expr1_Sum is Expression1.sum()
+  limit: 5
+}
+>>>markdown
+### Bar Chart: 2 dims, 1 measure grouped
+>>>malloy
+# bar_chart
+view: barBasic is {
+  group_by: Dim1, Dim3
+  aggregate: Expr1_Sum is Expression1.sum()
+  limit: 5
+}
+
+-- or explicit, with embedding
+# bar_chart
+view: barBasic is {
+  group_by:
+    # group
+    Dim1
+    # x
+    Dim3
+  # y
+  aggregate: Expr1_Sum is Expression1.sum()
+  limit: 5
+}
+
+-- or explicit, at top
+# bar_chart { group=Dim1 x=Dim3 y=Expr_1 }
+view: barBasic is {
+  group_by: Dim1, Dim3
+  aggregate: Expr1_Sum is Expression1.sum()
+  limit: 5
+}
+>>>markdown
+### Bar Chart: 1 dim, N measures stacked
+>>>markdown
+### Bar Chart: 1 dim, N measures grouped
+>>>markdown
+## Plot API Demo
+>>>markdown
+### Plot: Bars for 1 dim, 1 measure
+
+Data:
+>>>malloy
+view: plotBasic is {
+  group_by: Dim1
+  aggregate: Expr1_Sum is Expression1.sum()
+  limit: 5
+}
+>>>malloy
+ # plot
+view: plotBasic is{
+  # x
+  group_by: Dim1
+  # barY
+  aggregate: `Expr1_Sum` is Expression1.sum()
+  limit: 5
+}
+>>>markdown
+### Plot: Bars for 2 dims, 1 measure stacked
+>>>malloy
+  # plot
+  view: plotStack is {
+    group_by:
+      # x
+      Dim1
+      Dim3
+    # barY { fill='^Dim3' }
+    aggregate: `Expr1_Sum` is Expression1.sum()
+    limit: 10
+  }
+>>>markdown
+### Plot: Bars for 2 dims, 1 measure grouped
+>>>malloy
+# plot
+view: plotGroup is {
+  group_by:
+    # fx
+    Dim1
+    # x
+    Dim3
+  # barY { fill='^Dim3' }
+  aggregate: `Expr1_Sum` is Expression1.sum()
+  limit: 10
+}
+>>>markdown
+### Plot: Bars for 1 dim, N measures stacked
+>>>malloy
+# plot.lists.l=[measure1,measure2]
+# plot.x=Dim1
+# plot.marks.bar=barY { y.list=l fill.list=l }
+view: plotMeasureStack is {
+  group_by: Dim1
+  aggregate: measure1 is Expression1.sum(), measure2 is Expression1.sum()/2
+  limit: 5
+}
+>>>markdown
+### Plot: Bars for 1 dim, N measures grouped
+>>>malloy
+# plot.lists.l=[measure1,measure2]
+# plot.x.list=l
+# plot.marks.bar=barY { y.list=l fill.list=l }
+view: plotMeasureGroup is {
+  # fx
+  group_by: Dim1
+  aggregate: measure1 is Expression1.sum(), measure2 is Expression1.sum()/2
+  limit: 5
+}
+>>>markdown
+## Plot API Mocks
+>>>markdown

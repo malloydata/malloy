@@ -16,14 +16,17 @@ export function parsePlotTags(result: Result) {
     x: {
       fields: plot.text('x') ? [plot.text('x')] : [],
       type: plot.text('x', 'type') ?? null,
+      lists: [],
     },
     y: {
       fields: [],
       type: plot.text('y', 'type') ?? null,
+      lists: [],
     },
     color: {
       fields: [],
       type: plot.text('color', 'type') ?? null,
+      lists: [],
     },
     fx: {
       fields: [],
@@ -42,6 +45,10 @@ export function parsePlotTags(result: Result) {
   }
 
   parseRootMarks(spec, plot);
+  parseRootDimension({dim: 'x', tag: plot, spec});
+  parseRootDimension({dim: 'y', tag: plot, spec});
+  parseRootDimension({dim: 'fx', tag: plot, spec});
+  parseRootDimension({dim: 'fy', tag: plot, spec});
 
   // possible util: mergeAt(path, objToMerge)
 
@@ -70,12 +77,17 @@ export function parsePlotTags(result: Result) {
 
   // Update types. just get first for now
   const firstXFieldPath = spec.x.fields.at(0);
-  const firstXField = getField(result.resultExplore, firstXFieldPath);
+  const firstXField =
+    firstXFieldPath && getField(result.resultExplore, firstXFieldPath);
   if (firstXField) spec.x.type = getScaleTypeFromField(firstXField as Field);
+  // more hacks
+  if (spec.x.lists.length > 0) spec.x.type = 'nominal';
   const firstYFieldPath = spec.y.fields.at(0);
   const firstYField =
     firstYFieldPath && getField(result.resultExplore, firstYFieldPath);
   if (firstYField) spec.y.type = getScaleTypeFromField(firstYField as Field);
+  // more hacks
+  if (spec.y.lists.length > 0) spec.y.type = 'nominal';
   const firstColorFieldPath = spec.color.fields.at(0);
   const firstColorField =
     firstColorFieldPath && getField(result.resultExplore, firstColorFieldPath);
@@ -113,6 +125,29 @@ function parseDimension({
 }) {
   if (tag.tag(dim)) {
     addToDim(dim, spec, field);
+    if (tag.text(dim, 'list')) {
+      spec[dim].lists.push(tag.text(dim, 'list'));
+    }
+  }
+}
+
+function parseRootDimension({
+  dim,
+  tag,
+  spec,
+}: {
+  dim: 'x' | 'y' | 'fx' | 'fy';
+  tag: Tag;
+  spec: any;
+}) {
+  const dimTag = tag.tag(dim);
+  if (dimTag) {
+    if (dimTag.text()) {
+      spec[dim].fields.push(dimTag.text());
+    }
+    if (dimTag.text('list')) {
+      spec[dim].lists.push(tag.text(dim, 'list'));
+    }
   }
 }
 
@@ -271,9 +306,15 @@ function createBarYMark(
     }
   }
 
+  if (tag.text('fill', 'list')) {
+    spec.color.lists.push(tag.text('fill', 'list'));
+  }
+
   const zFieldPath = tag.text('z')
     ? getFieldPathFromRef(tag.text('z')!, '')
     : null;
+
+  const zListValue = tag.text('fill', 'list') ? 'listValue' : null;
 
   const mark = {
     type: 'barY',
@@ -281,7 +322,13 @@ function createBarYMark(
     yList: firstReal(tag.text('y', 'list'), existingMark.yList, null),
     x: tag.text('x') ?? existingMark.x ?? null,
     id,
-    z: firstReal(zFieldPath, fillColorFieldPath, existingMark.z, null),
+    z: firstReal(
+      zFieldPath,
+      fillColorFieldPath,
+      existingMark.z,
+      zListValue,
+      null
+    ),
     fill: fillColorFieldPath,
     fillList: oneOf(tag.text('fill', 'list'), existingMark.fillList, null),
   };

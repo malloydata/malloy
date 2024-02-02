@@ -1,11 +1,11 @@
 import {Meta} from '@storybook/html';
-import script from './static/bars.malloy?raw';
+import script from './static/plot.malloy?raw';
 import {createLoader} from './util';
 import './themes.css';
 import '../component/render';
 
 const meta: Meta = {
-  title: 'Malloy Next/Bars',
+  title: 'Malloy Next/Plot',
   render: ({classes}, context) => {
     const parent = document.createElement('div');
     parent.style.height = 'calc(100vh - 40px)';
@@ -22,72 +22,51 @@ const meta: Meta = {
 
 export default meta;
 
-export const Products2Column = {
-  args: {
-    source: 'products',
-    view: 'category_bar',
-  },
-};
-
-export const Nested = {
-  args: {
-    source: 'products',
-    view: 'nested',
-  },
-};
-
-export const Sparks = {
-  args: {
-    source: 'products',
-    view: 'sparks',
-  },
-};
-
-export const SparksNested = {
-  args: {
-    source: 'products',
-    view: 'sparks_nested',
-  },
-};
-
 export const PlotRaw = {
   args: {
-    source: 'products',
+    source: 'test',
     view: 'plotRaw',
   },
 };
 
 export const PlotTags = {
   args: {
-    source: 'products',
+    source: 'test',
     view: 'plotTest',
   },
 };
 
 export const PlotStack = {
   args: {
-    source: 'products',
+    source: 'test',
     view: 'plotStack',
   },
 };
 
 export const PlotGroup = {
   args: {
-    source: 'products',
+    source: 'test',
     view: 'plotGroup',
   },
 };
 
 export const PlotMeasureStack = {
   args: {
-    source: 'products',
+    source: 'test',
     view: 'plotMeasureStack',
   },
 };
 
 export const PlotMeasureGroup = {
   args: {
-    source: 'products',
+    source: 'test',
     view: 'plotMeasureGroup',
+  },
+};
+
+export const PlotNested = {
+  args: {
+    source: 'test',
+    view: 'plotNested',
   },
 };

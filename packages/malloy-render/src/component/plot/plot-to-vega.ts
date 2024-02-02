@@ -17,6 +17,16 @@ export function plotToVega(spec: Spec) {
     axes: [],
   };
 
+  // Setup lists as data
+  for (const [id, list] of Object.entries<Any>(spec.lists)) {
+    vgSpec.data.push({
+      name: `list_${id}`,
+      values: list.map(l => ({
+        value: l.eq,
+      })),
+    });
+  }
+
   // use spec.x/y.fields to look up all data for x axis
   const xScale: Any = {
     name: 'xscale',
@@ -36,7 +46,7 @@ export function plotToVega(spec: Spec) {
     type: spec.y.type === 'nominal' ? 'band' : 'linear',
     // TODO: manually derive domain from data, allow blended fields, etc. And how to do this from transformations like stacks?
     // may be able to do it in vega data transforms, although I don't love it
-    domain: {data: 'table', field: spec.y.fields.at(0)},
+    domain: {data: 'table', fields: spec.y.fields},
     range: 'height',
   };
   if (yScale.type === 'linear') {
@@ -54,11 +64,20 @@ export function plotToVega(spec: Spec) {
   vgSpec.scales.push(xScale);
   vgSpec.scales.push(yScale);
 
-  if (spec.color.fields.at(0)) {
+  const hasColorField = spec.color.fields.at(0);
+  const hasColorList = spec.color.lists.length > 0;
+  if (hasColorField) {
     vgSpec.scales.push(colorScale);
     vgSpec.legends.push({
       fill: 'color',
       title: spec.color.fields.at(0),
+    });
+  } else if (hasColorList) {
+    colorScale.domain = {data: `list_${spec.color.lists[0]}`, field: 'value'};
+    vgSpec.scales.push(colorScale);
+    vgSpec.legends.push({
+      fill: 'color',
+      title: spec.color.lists[0],
     });
   }
 
@@ -68,8 +87,16 @@ export function plotToVega(spec: Spec) {
   // If chart is faceting, create a facet layer first
   const fxField = spec.fx.fields.at(0);
   let groupMark: Any;
+  const xIsList = spec.x.lists.length > 0;
   if (fxField) {
     xScale.domain.field = fxField;
+    let innerDomain: Any = {data: 'table', field: spec.x.fields.at(0)};
+    if (xIsList) {
+      innerDomain = {
+        data: `list_${spec.x.lists[0]}`,
+        field: 'value',
+      };
+    }
 
     groupMark = {
       type: 'group',
@@ -94,7 +121,8 @@ export function plotToVega(spec: Spec) {
           range: 'width',
           paddingOuter: 0.2,
           // Make sure to share domain here
-          domain: {data: 'table', field: spec.x.fields.at(0)},
+          domain: innerDomain,
+          // domain: ['avgRetail', 'medianRetail'],
         },
       ],
       marks: [],
@@ -108,6 +136,39 @@ export function plotToVega(spec: Spec) {
   for (const mark of spec.marks) {
     const vgMark: Any = {};
     let markData: Any;
+    const yListId = mark.yList;
+    if (yListId) {
+      const yList = spec.lists[yListId].map(l => l.eq);
+      // HACK, the parse-plot-tags function should be doing this
+      const yScale = vgSpec.scales.find(s => s.name === 'yscale');
+      if (yScale) yScale.domain.fields.push(...yList);
+      const datasets: Any[] = [];
+      yList.forEach((yField, i) => {
+        datasets.push({
+          name: `list_${yListId}_${mark.id}_${i}`,
+          source: 'table', // or facet...
+          transform: [
+            {
+              type: 'formula',
+              as: 'listValue',
+              expr: `"${yField}"`,
+            },
+            {
+              type: 'formula',
+              as: 'listValueOfField',
+              expr: `datum["${yField}"]`,
+            },
+          ],
+        });
+      });
+      datasets.push({
+        name: `list_${yListId}_${mark.id}`,
+        source: datasets.map(d => d.name),
+      });
+      vgSpec.data.push(...datasets);
+
+      // markData.source = `list_${yListId}_${mark.id}`;
+    }
     if (groupMark) {
       groupMark.marks.push(vgMark);
       markData = {
@@ -120,11 +181,19 @@ export function plotToVega(spec: Spec) {
       vgSpec.marks.push(vgMark);
       markData = {
         name: mark.id,
-        source: 'table',
+        source: yListId ? `list_${yListId}_${mark.id}` : 'table',
         transform: [],
       };
       vgSpec.data.push(markData);
     }
+
+    // MORE HACKS
+    if (groupMark && yListId) {
+      groupMark.from.facet.data = `list_${yListId}_${mark.id}`;
+    }
+
+    let xField = mark.x ?? spec.x.fields.at(0);
+    if (xIsList) xField = 'listValue';
 
     // Set up data with any necessary transforms
 
@@ -133,8 +202,8 @@ export function plotToVega(spec: Spec) {
       if (mark.z) {
         markData.transform.push({
           type: 'stack',
-          groupby: [mark.x ?? spec.x.fields.at(0)],
-          field: mark.y ?? spec.y.fields.at(0),
+          groupby: [xField],
+          field: yListId ? 'listValueOfField' : mark.y ?? spec.y.fields.at(0),
           sort: {field: mark.z},
         });
       }
@@ -143,19 +212,38 @@ export function plotToVega(spec: Spec) {
       const xScaleName = groupMark ? 'pos' : 'xscale';
       vgMark.encode = {
         enter: {
-          x: {scale: xScaleName, field: mark.x ?? spec.x.fields.at(0)},
+          x: {scale: xScaleName, field: xField},
+          // width: {value: 20},
           width: {scale: xScaleName, band: 1},
           y: {scale: 'yscale', field: mark.y ?? spec.y.fields.at(0)},
           y2: {'scale': 'yscale', 'value': 0},
           fill: mark.fill
             ? {field: mark.fill, scale: 'color'}
             : {value: 'steelblue'},
-          // fillOpacity: {value: 0.5},
+          fillOpacity: {value: 0.5},
         },
       };
+      if (yListId) {
+        vgMark.encode.enter.y = {
+          signal: "scale('yscale', datum[datum.listValue])",
+        };
+      }
+      if (mark.fillList) {
+        vgMark.encode.enter.fill = {
+          field: 'listValue',
+          scale: 'color',
+        };
+      }
       if (mark.z) {
-        vgMark.encode.enter.y.field = 'y0';
-        vgMark.encode.enter.y2.field = 'y1';
+        vgMark.encode.enter.y = {
+          scale: 'yscale',
+          field: 'y0',
+        };
+        vgMark.encode.enter.y2 = {
+          scale: 'yscale',
+          field: 'y1',
+        };
+        if (!fxField) yScale.domain.fields.push({data: mark.id, field: 'y1'});
       }
     }
   }
