@@ -142,6 +142,7 @@ export interface ConnectionFactory {
     connectionConfig: ConnectionConfig,
     dialectRegistrar?: (dialect: Dialect) => void
   ): Connection & TestableConnection;
+  dialect: Dialect;
 }
 
 /**

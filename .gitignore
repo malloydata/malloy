@@ -26,7 +26,6 @@ vscode-extension/**/tsconfig.tsbuildinfo
 vscode-extension/**/package-lock.json
 vscode-extension/**/.eslintcache
 test/dist
-test/src/externalDrivers.ts
 
 # misc
 .DS_Store

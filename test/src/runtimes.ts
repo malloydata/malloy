@@ -21,25 +21,45 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import * as fs from 'fs';
+import * as path from 'path';
 import {
   Connection,
+  ConnectionFactory,
   EmptyURLReader,
   MalloyQueryData,
   QueryDataRow,
   Result,
   RunSQLOptions,
   SingleConnectionRuntime,
+  registerDialect,
 } from '@malloydata/malloy';
 import {BigQueryConnection} from '@malloydata/db-bigquery';
 import {DuckDBConnection} from '@malloydata/db-duckdb';
 import {DuckDBWASMConnection} from '@malloydata/db-duckdb/wasm';
 
-// TEMP remove
-let externalDrivers = {};
-try {
-  externalDrivers = require('./externalDrivers').drivers;
-} catch (e) {
-  // expected if file does not exist
+// check for external drivers in "external-drivers" folder (sibling folder to this repo)
+const externalDrivers = {};
+const externalDriversPath = path.join('..', 'external-drivers');
+if (fs.existsSync(externalDriversPath)) {
+  const driverFolders = fs
+    .readdirSync(externalDriversPath)
+    .filter(file =>
+      fs.statSync(path.join(externalDriversPath, file)).isDirectory()
+    );
+
+  for (const driverFolder of driverFolders) {
+    const module = path.join('@external-drivers', driverFolder);
+    try {
+      const connectionFactory = require(module)
+        .connectionFactory as ConnectionFactory;
+      externalDrivers[connectionFactory.connectionName] = connectionFactory;
+      registerDialect(connectionFactory.dialect);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error(e.message);
+    }
+  }
 }
 
 export class BigQueryTestConnection extends BigQueryConnection {
@@ -111,7 +131,9 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
   let connection;
 
   if (externalDrivers[dbName]) {
-    connection = new externalDrivers[dbName](dbName);
+    connection = (
+      externalDrivers[dbName] as ConnectionFactory
+    ).createConnection({name: dbName});
     return testRuntimeFor(connection);
   }
 
