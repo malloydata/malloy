@@ -34,6 +34,7 @@ import {BigQueryConnection} from '@malloydata/db-bigquery';
 import {DuckDBConnection} from '@malloydata/db-duckdb';
 import {DuckDBWASMConnection} from '@malloydata/db-duckdb/wasm';
 
+// TEMP remove
 let externalDrivers = {};
 try {
   externalDrivers = require('./externalDrivers').drivers;
@@ -138,7 +139,9 @@ export function testRuntimeFor(connection: Connection) {
   return new SingleConnectionRuntime(files, connection);
 }
 
-export const allDatabases = ['bigquery', 'duckdb', 'duckdb_wasm'];
+export const allDatabases = ['bigquery', 'duckdb', 'duckdb_wasm'].concat(
+  Object.keys(externalDrivers)
+);
 type RuntimeDatabaseNames = (typeof allDatabases)[number];
 
 export class RuntimeList {
