@@ -1836,17 +1836,13 @@ class FieldInstanceResultRoot extends FieldInstanceResult {
       // users -> {
       //   group_by: user_id
       //   aggregate: order_count is orders.count()
-      if (join.leafiest) {
-        if (
+      if (
+        // we have a leafiest count() joined subtree
+        (join.leafiest &&
           join.parent !== undefined &&
-          join.uniqueKeyPossibleUses.has('count') &&
-          !join.queryStruct.primaryKey()
-        ) {
-          join.makeUniqueKey = true;
-        }
-      } else if (
-        !join.leafiest &&
-        join.uniqueKeyPossibleUses.hasAsymetricFunctions()
+          join.uniqueKeyPossibleUses.has('count')) ||
+        // or not leafiest and we use an asymetric function
+        (!join.leafiest && join.uniqueKeyPossibleUses.hasAsymetricFunctions())
       ) {
         let j: JoinInstance | undefined = join;
         while (j) {
