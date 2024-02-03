@@ -455,10 +455,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     //  don't match the join.
     await expect(`
       source: am_states is ${databaseName}.table('malloytest.state_facts') -> {
-        group_by: state
+        group_by: state,popular_name
         where: state ~ r'^(A|M)'
         nest: nested_state is {
-          group_by: state
+          group_by: state,popular_name
         }
       }
 
