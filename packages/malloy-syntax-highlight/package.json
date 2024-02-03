@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/syntax-highlight",
-  "version": "0.0.122",
+  "version": "0.0.123",
   "description": "A package to simplify the process of developing, testing, and syncnig Malloy syntax highlighting grammars",
   "files": [
     "grammars/**/*.tmGrammar.json",
