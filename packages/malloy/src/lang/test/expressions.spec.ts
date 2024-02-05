@@ -557,6 +557,18 @@ describe('expressions', () => {
         'Cannot compute `sum` across repeated relationship `nested`; use `nested.column.sum()`'
       );
     });
+    test('can aggregate field defined with no join usage', () => {
+      expect(markSource`
+        ##! experimental { sql_functions }
+        source: s is a extend {
+          measure: c is count()
+          dimension: f is 1
+        }
+        run: s -> {
+          aggregate: v is f.sum()
+        }
+      `).toTranslate();
+    });
     test('sum(inline.column)', () => {
       expect(modelX`sum(inline.column)`).toTranslateWithWarnings(
         'Join path is required for this calculation; use `inline.column.sum()` or `source.sum(inline.column)` to get a result weighted with respect to `source`'
@@ -945,6 +957,12 @@ describe('unspported fields in schema', () => {
   });
   test('negative numbers are not tokens', () => {
     expect(expr`ai-1`).toTranslate();
+  });
+
+  describe('sql functions', () => {
+    test('can aggregate a sql_ function', () => {
+      expect(expr`sum(sql_number("\${a} * 2"))`).toTranslate();
+    });
   });
 
   describe('cast', () => {
