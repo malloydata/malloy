@@ -62,4 +62,8 @@ export class ViewArrow extends View {
     this.log('A multi-segment view cannot be used as a refinement');
     return [];
   }
+
+  getImplicitName(): string | undefined {
+    return this.operation.getImplicitName();
+  }
 }

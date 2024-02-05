@@ -186,6 +186,32 @@ test('turtle children turtles are included', () => {
   );
 });
 
+test('refinement chain gets name correctly', () => {
+  testSymbol(
+    markSource`
+      source: flights is DB.table('my.table.flights') extend {
+        query: my_turtle is { nest: ${'something + something_else'} }
+      }
+    `,
+    'something',
+    'query',
+    [0, 0, 0]
+  );
+});
+
+test('arrow in nest infers name correctly', () => {
+  testSymbol(
+    markSource`
+      source: flights is DB.table('my.table.flights') extend {
+        query: my_turtle is { nest: ${'thingy -> something + something_else'} }
+      }
+    `,
+    'something',
+    'query',
+    [0, 0, 0]
+  );
+});
+
 test('join withs are included', () => {
   testSymbol(
     markSource`

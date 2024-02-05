@@ -840,7 +840,7 @@ export class MalloyToAST
         } else {
           this.contextError(
             agg,
-            "'${aggFunc}' is not legal in a reference-only aggregation"
+            `\`${aggFunc}\` is not legal in a reference-only aggregation`
           );
           return ref;
         }
@@ -1096,34 +1096,28 @@ export class MalloyToAST
     );
   }
 
-  visitNestExisting(pcx: parse.NestExistingContext): ast.NestFieldDeclaration {
-    const nameCx = pcx.fieldPath();
-    const name = this.getFieldPath(nameCx, ast.ViewOrScalarFieldReference);
-    const referenceView = this.astAt(new ast.ReferenceView(name), nameCx);
-    const refineCx = pcx.vExpr();
-    const notes = this.getNotes(pcx.tags());
-    if (refineCx) {
-      const nestRefine = new ast.NestFieldDeclaration(
-        name.nameString,
-        new ast.ViewRefine(referenceView, this.getVExpr(refineCx))
-      );
-      nestRefine.extendNote({notes});
-      return this.astAt(nestRefine, pcx);
-    }
-    const nestReference = new ast.NestFieldDeclaration(
-      name.nameString,
-      referenceView
-    );
-    nestReference.extendNote({notes});
-    return this.astAt(nestReference, pcx);
-  }
-
   visitNestDef(pcx: parse.NestDefContext): ast.NestFieldDeclaration {
-    const name = getId(pcx.queryName());
+    const nameCx = pcx.queryName();
+    let name: string;
     const vExpr = this.getVExpr(pcx.vExpr());
+    if (nameCx) {
+      name = getId(nameCx);
+    } else {
+      const implicitName = vExpr.getImplicitName();
+      if (implicitName === undefined) {
+        this.contextError(
+          pcx,
+          '`nest:` view requires a name (add `nest_name is ...`)'
+        );
+      }
+      name = implicitName ?? '__unnamed__';
+    }
     const nestDef = new ast.NestFieldDeclaration(name, vExpr);
+    const isDefineCx = pcx.isDefine();
     nestDef.extendNote({
-      notes: this.getNotes(pcx.tags()).concat(this.getIsNotes(pcx.isDefine())),
+      notes: this.getNotes(pcx.tags()).concat(
+        isDefineCx ? this.getIsNotes(isDefineCx) : []
+      ),
     });
     return this.astAt(nestDef, pcx);
   }

@@ -401,8 +401,33 @@ describe('partial views', () => {
         run: a -> {
           nest: astr + ai + { order_by: astr }
         }
+        run: a -> {
+          nest: astr + { order_by: astr }
+        }
+        run: a -> astr + { order_by: astr }
+        run: a -> astr + ai + { order_by: astr }
       `
     ).toTranslate();
+  });
+  test('name can be inferred with arrow', () => {
+    expect(
+      markSource`
+        run: a extend { view: foo is { group_by: astr } } -> {
+          nest: foo -> astr + { order_by: astr }
+        }
+      `
+    ).toTranslate();
+  });
+  test('nice error when nest has no name', () => {
+    expect(
+      markSource`
+        run: a -> {
+          nest: { group_by: astr }
+        }
+      `
+    ).translationToFailWith(
+      '`nest:` view requires a name (add `nest_name is ...`)'
+    );
   });
   test.skip('partial with index', () => {
     expect(

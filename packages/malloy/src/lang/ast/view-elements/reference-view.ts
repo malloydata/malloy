@@ -163,4 +163,8 @@ export class ReferenceView extends View {
     // TODO better error pipeline
     return pipeline;
   }
+
+  getImplicitName(): string | undefined {
+    return this.reference.nameString;
+  }
 }
