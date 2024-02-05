@@ -395,6 +395,15 @@ describe('partial views', () => {
       `
     ).toTranslate();
   });
+  test('order by tacked on the end should work', () => {
+    expect(
+      markSource`
+        run: a -> {
+          nest: astr + ai + { order_by: astr }
+        }
+      `
+    ).toTranslate();
+  });
   test.skip('partial with index', () => {
     expect(
       markSource`
