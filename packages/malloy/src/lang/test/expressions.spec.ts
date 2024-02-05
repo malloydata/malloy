@@ -249,6 +249,50 @@ describe('expressions', () => {
       `).toTranslate();
     });
 
+    test('analytics order_by requires expression', () => {
+      expect(markSource`
+        ##! experimental { function_order_by }
+        run: a -> {
+          group_by: ai
+          calculate: x is lag(ai) { order_by: asc }
+        }
+      `).translationToFailWith(
+        'analytic `order_by` must specify an aggregate expression or output field reference'
+      );
+    });
+
+    test('string_agg_distinct order by cannot specify expression', () => {
+      expect(markSource`
+        ##! experimental { function_order_by }
+        run: a -> {
+          group_by: ai
+          aggregate: x is string_agg_distinct(astr) { order_by: ai }
+        }
+      `).translationToFailWith(
+        '`order_by` must be only `asc` or `desc` with no expression'
+      );
+    });
+
+    test('string_agg_distinct order by can be just direction', () => {
+      expect(markSource`
+        ##! experimental { function_order_by }
+        run: a -> {
+          group_by: ai
+          aggregate: x is string_agg_distinct(astr) { order_by: asc }
+        }
+      `).toTranslate();
+    });
+
+    test('string_agg order by can be just direction', () => {
+      expect(markSource`
+        ##! experimental { function_order_by }
+        run: a -> {
+          group_by: ai
+          aggregate: x is string_agg(astr) { order_by: asc }
+        }
+      `).toTranslate();
+    });
+
     test('can specify multiple partition_bys', () => {
       expect(markSource`
         ##! experimental { partition_by }

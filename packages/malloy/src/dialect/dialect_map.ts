@@ -113,6 +113,7 @@ export function getDialectFunction(name: string): FunctionDef | undefined {
           existingOverload.dialect[dialect.name] = {
             e: overload.e,
             supportsOrderBy: overload.supportsOrderBy,
+            defaultOrderByArgIndex: overload.defaultOrderByArgIndex,
             supportsLimit: overload.supportsLimit,
           };
           handled = true;
@@ -125,6 +126,7 @@ export function getDialectFunction(name: string): FunctionDef | undefined {
               [dialect.name]: {
                 e: overload.e,
                 supportsOrderBy: overload.supportsOrderBy,
+                defaultOrderByArgIndex: overload.defaultOrderByArgIndex,
                 supportsLimit: overload.supportsLimit,
               },
             },

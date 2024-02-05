@@ -35,14 +35,20 @@ import {ExprIdReference} from './expr-id-reference';
 export class FunctionOrderBy extends MalloyElement {
   elementType = 'orderBy';
   constructor(
-    readonly field: ExpressionDef,
+    readonly field?: ExpressionDef,
     readonly dir?: 'asc' | 'desc'
   ) {
     super();
-    this.has({field});
+    if (field) this.has({field});
   }
 
   getAnalyticOrderBy(fs: FieldSpace): ModelFunctionOrderBy {
+    if (!this.field) {
+      this.log(
+        'analytic `order_by` must specify an aggregate expression or output field reference'
+      );
+      return {e: ['error'], dir: this.dir};
+    }
     const expr = this.field.getExpression(fs);
     if (expressionIsAggregate(expr.expressionType)) {
       // Aggregates are okay
@@ -61,12 +67,29 @@ export class FunctionOrderBy extends MalloyElement {
     return {e: expr.value, dir: this.dir};
   }
 
-  getAggregateOrderBy(fs: FieldSpace): ModelFunctionOrderBy {
-    const expr = this.field.getExpression(fs);
-    if (!expressionIsScalar(expr.expressionType)) {
-      this.field.log('aggregate `order_by` must be scalar');
+  getAggregateOrderBy(
+    fs: FieldSpace,
+    allowExpression: boolean
+  ): ModelFunctionOrderBy {
+    if (this.field) {
+      const expr = this.field.getExpression(fs);
+      if (!expressionIsScalar(expr.expressionType)) {
+        this.field.log('aggregate `order_by` must be scalar');
+      }
+      if (!allowExpression) {
+        this.field.log(
+          '`order_by` must be only `asc` or `desc` with no expression'
+        );
+      }
+      return {e: expr.value, dir: this.dir};
+    } else {
+      if (this.dir === undefined) {
+        // This error should technically never happen because it can't parse this way
+        this.log('field or order direction must be specified');
+        return {e: undefined, dir: 'asc'};
+      }
+      return {e: undefined, dir: this.dir};
     }
-    return {e: expr.value, dir: this.dir};
   }
 }
 
@@ -81,7 +104,10 @@ export class FunctionOrdering extends ListOf<FunctionOrderBy> {
     return this.list.map(el => el.getAnalyticOrderBy(fs));
   }
 
-  getAggregateOrderBy(fs: FieldSpace): ModelFunctionOrderBy[] {
-    return this.list.map(el => el.getAggregateOrderBy(fs));
+  getAggregateOrderBy(
+    fs: FieldSpace,
+    allowExpression: boolean
+  ): ModelFunctionOrderBy[] {
+    return this.list.map(el => el.getAggregateOrderBy(fs, allowExpression));
   }
 }

@@ -295,6 +295,8 @@ aggregateOrdering
 
 aggregateOrderBySpec
   : fieldExpr ( ASC | DESC ) ?
+  | ASC
+  | DESC
   ;
 
 aggregateOrderByStatement

@@ -961,7 +961,8 @@ export class MalloyToAST
     pcx: parse.AggregateOrderBySpecContext
   ): ast.FunctionOrderBy {
     const dir = pcx.ASC() ? 'asc' : pcx.DESC() ? 'desc' : undefined;
-    const f = this.getFieldExpr(pcx.fieldExpr());
+    const fCx = pcx.fieldExpr();
+    const f = fCx ? this.getFieldExpr(fCx) : undefined;
     return this.astAt(new ast.FunctionOrderBy(f, dir), pcx);
   }
 

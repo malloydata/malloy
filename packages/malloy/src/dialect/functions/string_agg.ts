@@ -41,13 +41,13 @@ export function fnStringAgg(): DialectFunctionOverloadDef[] {
       minAggregate('string'),
       [value.param],
       sql`STRING_AGG(${value.arg}${orderBy})`,
-      {supportsOrderBy: true}
+      {supportsOrderBy: true, defaultOrderByArgIndex: 0}
     ),
     overload(
       minAggregate('string'),
       [value.param, separator.param],
       sql`STRING_AGG(${value.arg}, ${separator.arg}${orderBy})`,
-      {supportsOrderBy: true}
+      {supportsOrderBy: true, defaultOrderByArgIndex: 0}
     ),
   ];
 }
@@ -61,13 +61,21 @@ export function fnStringAggDistinct(): DialectFunctionOverloadDef[] {
       minAggregate('string'),
       [value.param],
       sql`STRING_AGG(DISTINCT ${value.arg}${orderBy})`,
-      {isSymmetric: true, supportsOrderBy: true}
+      {
+        isSymmetric: true,
+        supportsOrderBy: 'only_default',
+        defaultOrderByArgIndex: 0,
+      }
     ),
     overload(
       minAggregate('string'),
       [value.param, separator.param],
       sql`STRING_AGG(DISTINCT ${value.arg}, ${separator.arg}${orderBy})`,
-      {isSymmetric: true, supportsOrderBy: true}
+      {
+        isSymmetric: true,
+        supportsOrderBy: 'only_default',
+        defaultOrderByArgIndex: 0,
+      }
     ),
   ];
 }
