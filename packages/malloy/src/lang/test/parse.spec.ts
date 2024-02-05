@@ -1025,5 +1025,20 @@ describe('m3/m4 source query sentences', () => {
   });
 });
 
+describe('sql_functions', () => {
+  test('can aggregate sql function', () => {
+    expect(markSource`
+      ##! experimental { sql_functions }
+      source: s is a extend {
+        measure: c is count()
+        dimension: sql_expr is sql_number("LENGTH(\${TABLE}.astr)")
+      }
+      run: s -> {
+        aggregate: v is sql_expr.sum()
+      }
+    `).toTranslate();
+  });
+});
+
 test('non breaking space in source', () =>
   expect('source:\u00a0z\u00a0is\u00a0a').toParse());
