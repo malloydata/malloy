@@ -189,6 +189,18 @@ describe('expressions', () => {
       'Filtered expression requires an aggregate computation'
     );
   });
+  test('can use calculate with partition by in select', () => {
+    expect(markSource`
+    ##! experimental { partition_by function_order_by }
+    run: a -> {
+      select: ai, astr
+      calculate: prev is lag(ai) {
+        partition_by: astr
+        order_by: ai asc
+      }
+      order_by: ai asc, astr asc
+    }`).toTranslate();
+  });
 
   describe('expr props', () => {
     test('props not allowed without experiments enabled', () => {

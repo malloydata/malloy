@@ -3213,9 +3213,6 @@ class QueryQuery extends QueryField {
     };
     this.generateStage0Fields(this.rootResult, f, stageWriter);
 
-    if (this.firstSegment.type === 'project') {
-      throw new Error('PROJECT cannot be used on queries with turtles');
-    }
     const groupBy = 'GROUP BY ' + f.dimensionIndexes.join(',') + '\n';
 
     from += this.parent.dialect.sqlGroupSetTable(this.maxGroupSet) + '\n';
