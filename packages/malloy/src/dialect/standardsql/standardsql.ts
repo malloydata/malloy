@@ -37,7 +37,12 @@ import {
 } from '../../model/malloy_types';
 import {STANDARDSQL_FUNCTIONS} from './functions';
 import {DialectFunctionOverloadDef} from '../functions';
-import {Dialect, DialectFieldList, QueryInfo} from '../dialect';
+import {
+  Dialect,
+  DialectExprReturn,
+  DialectFieldList,
+  QueryInfo,
+} from '../dialect';
 
 // These are the units that "TIMESTAMP_ADD" "TIMESTAMP_DIFF" accept
 function timestampMeasureable(units: string): boolean {
@@ -68,11 +73,6 @@ function qtz(qi: QueryInfo): string | undefined {
   if (tz && tz !== 'UTC') {
     return tz;
   }
-}
-
-declare interface TimeMeasure {
-  use: string;
-  ratio: number;
 }
 
 const bqToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
@@ -460,37 +460,31 @@ ${indent(sql)}
     }
   }
 
-  sqlMeasureTime(from: TimeValue, to: TimeValue, units: string): Expr {
-    const measureMap: Record<string, TimeMeasure> = {
-      'microsecond': {use: 'microsecond', ratio: 1},
-      'millisecond': {use: 'millisecond', ratio: 1},
-      'second': {use: 'second', ratio: 1},
-      'minute': {use: 'minute', ratio: 1},
-      'hour': {use: 'hour', ratio: 1},
-      'day': {use: 'day', ratio: 1},
-      'week': {use: 'day', ratio: 7},
-    };
-    let lVal = from.value;
-    let rVal = to.value;
-    if (measureMap[units]) {
-      const {use: measureIn, ratio} = measureMap[units];
-      if (!timestampMeasureable(measureIn)) {
-        throw new Error(`Measure in '${measureIn} not implemented`);
-      }
-      if (from.valueType !== to.valueType) {
-        throw new Error("Can't measure difference between different types");
-      }
-      if (from.valueType === 'date') {
-        lVal = mkExpr`TIMESTAMP(${lVal})`;
-        rVal = mkExpr`TIMESTAMP(${rVal})`;
-      }
-      let measured = mkExpr`TIMESTAMP_DIFF(${rVal},${lVal},${measureIn})`;
-      if (ratio !== 1) {
-        measured = mkExpr`FLOOR(${measured}/${ratio.toString()}.0)`;
-      }
-      return measured;
+  sqlMeasureTime(
+    from: TimeValue,
+    to: TimeValue,
+    units: string
+  ): DialectExprReturn {
+    const lVal = from.value;
+    const rVal = to.value;
+    if (from.valueType !== to.valueType) {
+      return {error: "Can't measure difference between different types"};
     }
-    throw new Error(`Measure '${units} not implemented`);
+    switch (from.valueType) {
+      case 'timestamp':
+        if (!timestampMeasureable(units)) {
+          return {error: `Cannot measure timestamps by '${units}'`};
+        }
+        return mkExpr`TIMESTAMP_DIFF(${rVal},${lVal},${units})`;
+      case 'date':
+        if (!dateMeasureable(units)) {
+          return {error: `Cannot measure dates by '${units}'`};
+        }
+        return mkExpr`DATE(${rVal},${lVal},${units})`;
+    }
+    return {
+      error: `Interval measurement with '${from.valueType}' not implemented`,
+    };
   }
 
   sqlSampleTable(tableSQL: string, sample: Sampling | undefined): string {

@@ -2219,9 +2219,6 @@ class QueryQuery extends QueryField {
           case 'stringLiteral':
           case 'regexpLiteral':
             break;
-          case 'timeDiff':
-            expressions.push(expr.left.value, expr.right.value);
-            break;
           case 'delta':
             expressions.push(expr.base.value, expr.delta);
             break;

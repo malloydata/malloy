@@ -42,6 +42,11 @@ interface DialectField {
   sqlOutputName: string;
 }
 
+export type DialectExprReturn = Expr | {error: string};
+export function DERIsExpr(der: DialectExprReturn): der is Expr {
+  return !('error' in der);
+}
+
 /**
  * Data which dialect methods need in order to correctly generate SQL.
  * Initially this is just timezone related, but I made this an interface
@@ -211,7 +216,7 @@ export abstract class Dialect {
     from: TimeValue,
     to: TimeValue,
     units: TimestampUnit
-  ): Expr;
+  ): DialectExprReturn;
 
   abstract sqlAlterTime(
     op: '+' | '-',
@@ -253,8 +258,6 @@ export abstract class Dialect {
     switch (df.function) {
       case 'now':
         return this.sqlNow();
-      case 'timeDiff':
-        return this.sqlMeasureTime(df.left, df.right, df.units);
       case 'delta':
         return this.sqlAlterTime(df.op, df.base, df.delta, df.units);
       case 'trunc':

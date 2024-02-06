@@ -189,18 +189,6 @@ export function exprMap(expr: Expr, func: (fragment: Fragment) => Expr): Expr {
                   value: exprMap(fragment.expr.value, func),
                 },
               };
-            case 'timeDiff':
-              return {
-                ...fragment,
-                left: {
-                  ...fragment.left,
-                  value: exprMap(fragment.left.value, func),
-                },
-                right: {
-                  ...fragment.left,
-                  value: exprMap(fragment.left.value, func),
-                },
-              };
             default:
               throw new Error('unexpected dialect function');
           }
@@ -293,18 +281,6 @@ export function exprWalk(expr: Expr, func: (fragment: Fragment) => void): void {
               expr: {
                 ...fragment.expr,
                 value: exprWalk(fragment.expr.value, func),
-              },
-            };
-          case 'timeDiff':
-            return {
-              ...fragment,
-              left: {
-                ...fragment.left,
-                value: exprWalk(fragment.left.value, func),
-              },
-              right: {
-                ...fragment.left,
-                value: exprWalk(fragment.left.value, func),
               },
             };
           default:

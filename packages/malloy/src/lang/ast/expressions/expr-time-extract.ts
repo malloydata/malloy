@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {DERIsExpr} from '../../../dialect/dialect';
 import {
   ExtractUnit,
   isExtractUnit,
@@ -130,20 +131,30 @@ export class ExprTimeExtract extends ExpressionDef {
           this.log(`Cannot extract ${extractTo} from a range`);
           return errorFor(`${extractTo} bad extraction`);
         }
-        return {
+        const ret: ExprValue = {
           dataType: 'number',
           expressionType,
           evalSpace,
-          value: [
-            {
-              type: 'dialect',
-              function: 'timeDiff',
-              units: extractTo,
-              left: {valueType, value: first.value},
-              right: {valueType, value: last.value},
-            },
-          ],
+          value: [],
         };
+        const d = fs.dialectObj();
+        if (d) {
+          const timeDiff = d.sqlMeasureTime(
+            {valueType, value: first.value},
+            {valueType, value: last.value},
+            extractTo
+          );
+          if (DERIsExpr(timeDiff)) {
+            return {...ret, value: timeDiff};
+          }
+          this.log(timeDiff.error);
+          return {...ret, value: errorFor(timeDiff.error).value};
+        } else {
+          return {
+            ...ret,
+            value: errorFor('No dialect found to measure time interval').value,
+          };
+        }
       } else {
         const argV = from.getExpression(fs);
         if (isTimeFieldType(argV.dataType)) {

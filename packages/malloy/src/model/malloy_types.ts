@@ -318,13 +318,6 @@ export interface NowFragment extends DialectFragmentBase {
   function: 'now';
 }
 
-export interface TimeDiffFragment extends DialectFragmentBase {
-  function: 'timeDiff';
-  units: TimestampUnit;
-  left: TimeValue;
-  right: TimeValue;
-}
-
 export interface TimeDeltaFragment extends DialectFragmentBase {
   function: 'delta';
   base: TimeValue;
@@ -392,7 +385,6 @@ export type DialectFragment =
   | TimeLiteralFragment
   | NowFragment
   | TimeDeltaFragment
-  | TimeDiffFragment
   | TimeTruncFragment
   | TypecastFragment
   | TimeExtractFragment
