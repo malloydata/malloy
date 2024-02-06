@@ -94,7 +94,7 @@ export class DuckDBDialect extends Dialect {
   }
 
   quoteTablePath(tableName: string): string {
-    return tableName.match(/\//) ? `'${tableName}'` : tableName;
+    return tableName.match(/[/*:]/) ? `'${tableName}'` : tableName;
   }
 
   sqlGroupSetTable(groupSetCount: number): string {
