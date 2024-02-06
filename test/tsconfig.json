@@ -3,10 +3,7 @@
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "dist",
-    "composite": true,
-    "paths": {
-      "@external-drivers/*": ["../../external-drivers/*"]
-    }
+    "composite": true
   },
   "references": [
     {

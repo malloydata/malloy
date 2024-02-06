@@ -21,6 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import * as fs from 'fs';
+import * as path from 'path';
 import {
   FilterExpression,
   Fragment,
@@ -29,6 +31,8 @@ import {
   QueryMaterializer,
   Result,
   Runtime,
+  registerDialect,
+  ConnectionFactory,
 } from '@malloydata/malloy';
 import {allDatabases} from '../runtimes';
 
@@ -73,15 +77,72 @@ export function fYearEq(field: string, year: number): FilterExpression {
   };
 }
 
-// accepts databases in env, either via comma-separated dialect list (MALLOY_DATABASES=) or a single
-// database (MALLOY_DATABASE=). returns either databases defined in env or a default list that was passed.
+// load driver/database info from ENV or from databases.json
+const externalDrivers: {[id: string]: ConnectionFactory} = {};
+const externalDriverLocations = {};
+
+const repoDirectoryPath = path.join(__dirname, '..', '..', '..');
+const databasesJSONFile = path.join(repoDirectoryPath, 'databases.json');
+
+let userDefinedTestDatabases: string[] = [];
+if (process.env['MALLOY_DATABASES'] || process.env['MALLOY_DATABASE']) {
+  const envDatabasesString = (process.env['MALLOY_DATABASES'] ||
+    process.env['MALLOY_DATABASE']) as string;
+
+  // add comma-separated names to database list. if name has =/some/path,
+  // add name and path to list of external drivers
+  userDefinedTestDatabases = userDefinedTestDatabases.concat(
+    envDatabasesString
+      .split(',')
+      .map(dialectName => {
+        if (dialectName && dialectName.indexOf('=') !== -1) {
+          const [name, location] = dialectName.split('=');
+          externalDriverLocations[name] = location;
+          return name;
+        } else return dialectName;
+      })
+      .filter(Boolean) // handle "MALLOY_DATABASES=bigquery,", "MALLOY_DATABASE="bigquery,,postgres" etc
+  );
+} else if (fs.existsSync(databasesJSONFile)) {
+  const databasesJSON = JSON.parse(fs.readFileSync(databasesJSONFile, 'utf-8'));
+  if (databasesJSON.internal) {
+    userDefinedTestDatabases = userDefinedTestDatabases.concat(
+      databasesJSON.internal
+    );
+  }
+
+  if (databasesJSON.external) {
+    for (const [name, location] of Object.entries(databasesJSON.external)) {
+      userDefinedTestDatabases.push(name);
+      externalDriverLocations[name] = location;
+    }
+  }
+}
+
+// load external drivers & register dialects
+for (const [dialect, modulePath] of Object.entries<string>(
+  externalDriverLocations
+)) {
+  const absoluteModulePath = path.isAbsolute(modulePath)
+    ? modulePath
+    : path.join(repoDirectoryPath, modulePath);
+
+  const driver = require(absoluteModulePath);
+
+  if (!driver.connectionFactory)
+    throw new Error(`No connectionFactory export from ${dialect}`);
+
+  registerDialect(driver.connectionFactory.dialect);
+  externalDrivers[dialect] = driver.connectionFactory as ConnectionFactory;
+}
+
+export {externalDrivers, userDefinedTestDatabases};
+
 export function databasesFromEnvironmentOr(
   defaultDatabases: string[]
 ): string[] {
-  return process.env['MALLOY_DATABASES']
-    ? process.env['MALLOY_DATABASES'].split(',')
-    : process.env['MALLOY_DATABASE']
-    ? [process.env['MALLOY_DATABASE']]
+  return userDefinedTestDatabases.length > 0
+    ? userDefinedTestDatabases
     : defaultDatabases;
 }
 

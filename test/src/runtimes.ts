@@ -21,46 +21,19 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
 import {
   Connection,
-  ConnectionFactory,
   EmptyURLReader,
   MalloyQueryData,
   QueryDataRow,
   Result,
   RunSQLOptions,
   SingleConnectionRuntime,
-  registerDialect,
 } from '@malloydata/malloy';
 import {BigQueryConnection} from '@malloydata/db-bigquery';
 import {DuckDBConnection} from '@malloydata/db-duckdb';
 import {DuckDBWASMConnection} from '@malloydata/db-duckdb/wasm';
-
-// check for external drivers in "external-drivers" folder (sibling folder to this repo)
-const externalDrivers = {};
-const externalDriversPath = path.join('..', 'external-drivers');
-if (fs.existsSync(externalDriversPath)) {
-  const driverFolders = fs
-    .readdirSync(externalDriversPath)
-    .filter(file =>
-      fs.statSync(path.join(externalDriversPath, file)).isDirectory()
-    );
-
-  for (const driverFolder of driverFolders) {
-    const module = path.join('@external-drivers', driverFolder);
-    try {
-      const connectionFactory = require(module)
-        .connectionFactory as ConnectionFactory;
-      externalDrivers[connectionFactory.connectionName] = connectionFactory;
-      registerDialect(connectionFactory.dialect);
-    } catch (e) {
-      // eslint-disable-next-line no-console
-      console.error(e.message);
-    }
-  }
-}
+import {externalDrivers} from './util';
 
 export class BigQueryTestConnection extends BigQueryConnection {
   // we probably need a better way to do this.
@@ -131,9 +104,7 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
   let connection;
 
   if (externalDrivers[dbName]) {
-    connection = (
-      externalDrivers[dbName] as ConnectionFactory
-    ).createConnection({name: dbName});
+    connection = externalDrivers[dbName].createConnection({name: dbName});
     return testRuntimeFor(connection);
   }
 

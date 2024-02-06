@@ -44,7 +44,4 @@ module.exports = {
   testTimeout: 100000,
   verbose: true,
   testEnvironment: 'node',
-  moduleNameMapper: {
-    '^@external-drivers/(.*)$': '<rootDir>/../external-drivers/$1/src/index.ts',
-  },
 };
