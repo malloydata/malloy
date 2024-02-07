@@ -87,7 +87,7 @@ import {
   fnSqlString,
   fnSqlTimestamp,
 } from './sql';
-import { fnSumMoving } from './sum_moving';
+import {fnSumMoving} from './sum_moving';
 
 /**
  * This is a function map containing default implementations of all Malloy
