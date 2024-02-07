@@ -87,6 +87,7 @@ import {
   fnSqlString,
   fnSqlTimestamp,
 } from './sql';
+import { fnSumMoving } from './sum_moving';
 
 /**
  * This is a function map containing default implementations of all Malloy
@@ -164,6 +165,7 @@ FUNCTIONS.add('min_window', fnMinWindow);
 FUNCTIONS.add('max_window', fnMaxWindow);
 FUNCTIONS.add('sum_window', fnSumWindow);
 FUNCTIONS.add('avg_moving', fnAvgRolling);
+FUNCTIONS.add('sum_moving', fnSumMoving);
 
 FUNCTIONS.add('sql_number', fnSqlNumber);
 FUNCTIONS.add('sql_string', fnSqlString);
