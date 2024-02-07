@@ -533,6 +533,42 @@ describe('raw function call with type specified', () => {
   test('timestamp_seconds', () => {
     expect('timestamp_seconds!timestamp(0)').toReturnType('timestamp');
   });
+  test('aggregate', () => {
+    expect(`
+      ##! experimental.unknown_function_expression_types
+      run: a -> {
+        aggregate: a_count is approximate_count_distinct!number!measure(ai)
+      } -> {
+        select: a_count_plus_one is a_count + 1
+      }
+    `).toTranslate();
+  });
+  test('analytic', () => {
+    expect(`
+      ##! experimental.unknown_function_expression_types
+      run: a -> {
+        group_by: ai
+        calculate: per_rank is percentile_rank!number!calculation()
+      } -> {
+        select: per_rank_plus_one is per_rank + 1
+      }
+    `).toTranslate();
+  });
+  test('need experiment to enable unknown_function_expression_types', () => {
+    expect(`
+      run: a -> {
+        group_by: ai
+        calculate: per_rank is percentile_rank!number!calculation()
+        aggregate: a_count is approximate_count_distinct!number!measure(ai)
+      } -> {
+        select: per_rank_plus_one is per_rank + 1
+        select: a_count_plus_one is a_count + 1
+      }
+    `).translationToFailWith(
+      "Experimental flag 'unknown_function_expression_types' required to enable this feature",
+      "Experimental flag 'unknown_function_expression_types' required to enable this feature"
+    );
+  });
 });
 
 describe('sql expressions', () => {

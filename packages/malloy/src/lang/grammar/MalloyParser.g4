@@ -461,6 +461,7 @@ sampleSpec
 
 
 aggregate: SUM | COUNT | AVG | MIN | MAX;
+malloyFieldType: DIMENSION_T | MEASURE_T | CALCULATION_T;
 malloyType: STRING | NUMBER | BOOLEAN | DATE | TIMESTAMP;
 compareOp: MATCH | NOT_MATCH | GT | LT | GTE | LTE | EQ | NE;
 
@@ -549,7 +550,7 @@ fieldExpr
   | OPAREN partialAllowedFieldExpr CPAREN                  # exprExpr
   | fieldPath DOT id
       OPAREN ( argumentList? ) CPAREN                      # exprAggFunc
-  | ((id (EXCLAM malloyType?)?) | timeframe)
+  | ((id (EXCLAM malloyType? (EXCLAM malloyFieldType)?)?) | timeframe)
       OPAREN ( argumentList? ) CPAREN                      # exprFunc
   | pickStatement                                          # exprPick
   | ungroup OPAREN fieldExpr (COMMA fieldName)* CPAREN     # exprUngroup

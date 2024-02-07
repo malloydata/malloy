@@ -247,6 +247,79 @@ expressionModels.forEach((expressionModel, databaseName) => {
         ["substr('aaaa', 1, null)", null]
       );
     });
+
+    it(`works with measure specification - ${databaseName}`, async () => {
+      await expect(`
+        ##! experimental.unknown_function_expression_types
+        run: state_facts -> {
+          aggregate: manual_stddev is floor(stddev!number!measure(births))
+          aggregate: normal_stddev is floor(births.stddev())
+        }
+      `).malloyResultMatches(expressionModel, {
+        manual_stddev: 6137732,
+        normal_stddev: 6137732,
+      });
+    });
+
+    it.skip(`works with measure specification and source spec - ${databaseName}`, async () => {
+      await expect(`
+        ##! experimental.unknown_function_expression_types
+        run: state_facts extend { join_one: sf2 is state_facts on sf2.state = state } -> {
+          aggregate: manual_stddev is floor(sf2.stddev!number!measure(births))
+          aggregate: normal_stddev is floor(births.stddev())
+        }
+      `).malloyResultMatches(expressionModel, {
+        manual_stddev: 6137732,
+        normal_stddev: 6137732,
+      });
+    });
+
+    it.skip(`works with measure specification and implicit arg - ${databaseName}`, async () => {
+      await expect(`
+        ##! experimental.unknown_function_expression_types
+        run: state_facts extend { join_one: sf2 is state_facts on sf2.state = state } -> {
+          aggregate: manual_stddev is floor(sf2.births.stddev!number!measure())
+          aggregate: normal_stddev is floor(births.stddev())
+        }
+      `).malloyResultMatches(expressionModel, {
+        manual_stddev: 6137732,
+        normal_stddev: 6137732,
+      });
+    });
+
+    it(`works with measure specification and fanout - ${databaseName}`, async () => {
+      // TODO symmetric aggregates don't work with custom aggregate functions in BQ currently
+      if (databaseName === 'bigquery') return;
+      await expect(`
+        ##! experimental.unknown_function_expression_types
+        run: state_facts extend { join_many: sf2 is state_facts on sf2.state = state } -> {
+          aggregate: c is sf2.count()
+          aggregate: manual_stddev is floor(stddev!number!measure(births))
+          aggregate: normal_stddev is floor(births.stddev())
+        }
+      `).malloyResultMatches(expressionModel, {
+        manual_stddev: 6137732,
+        normal_stddev: 6137732,
+      });
+    });
+
+    it(`works with calculation specification - ${databaseName}`, async () => {
+      await expect(`
+        ##! experimental.unknown_function_expression_types
+        run: state_facts -> {
+          group_by: state, births
+          calculate: r is floor(rank!number!calculation())
+          order_by: births
+          limit: 5
+        }
+      `).malloyResultMatches(expressionModel, [
+        {state: 'AK', births: 407106, r: 1},
+        {state: 'WY', births: 423000, r: 2},
+        {state: 'VT', births: 545999, r: 3},
+        {state: 'DE', births: 615490, r: 4},
+        {state: 'NV', births: 842854, r: 5},
+      ]);
+    });
   });
 
   describe('stddev', () => {

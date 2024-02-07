@@ -223,18 +223,31 @@ export interface AggregateLimitFragment {
   type: 'aggregate_limit';
 }
 
+// export type FunctionCallFragment =
+//   | KnownFunctionCallFragment
+//   | UnknownFunctionCallFragment;
+
 export interface FunctionCallFragment {
   type: 'function_call';
   name: string;
-  overload: FunctionOverloadDef;
-  expressionType: ExpressionType;
   args: Expr[];
   orderBy?: FunctionOrderBy[];
   limit?: number;
   // List of non-dotted output field references
   partitionBy?: string[];
   structPath?: string[];
+  isKnownFunction: boolean;
+  overload: FunctionOverloadDef;
 }
+
+// export interface KnownFunctionCallFragment extends FunctionCallFragmentBase {
+//   isKnownFunction: true;
+// }
+
+// export interface UnknownFunctionCallFragment extends FunctionCallFragmentBase {
+//   isKnownFunction: false;
+//   expressionType: ExpressionType;
+// }
 
 export function isFunctionCallFragment(f: Fragment): f is FunctionCallFragment {
   return (f as FunctionCallFragment)?.type === 'function_call';
@@ -1038,6 +1051,13 @@ export interface FunctionParameterDef {
   isVariadic: boolean;
 }
 
+export interface FunctionDialectOverloadDef {
+  e: Expr;
+  supportsOrderBy?: boolean | 'only_default';
+  defaultOrderByArgIndex?: number;
+  supportsLimit?: boolean;
+}
+
 export interface FunctionOverloadDef {
   // The expression type here is the MINIMUM return type
   returnType: TypeDesc;
@@ -1046,12 +1066,7 @@ export interface FunctionOverloadDef {
   isSymmetric?: boolean;
   params: FunctionParameterDef[];
   dialect: {
-    [dialect: string]: {
-      e: Expr;
-      supportsOrderBy?: boolean | 'only_default';
-      defaultOrderByArgIndex?: number;
-      supportsLimit?: boolean;
-    };
+    [dialect: string]: FunctionDialectOverloadDef;
   };
 }
 
