@@ -22,8 +22,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {RuntimeList, allDatabases} from '../../runtimes';
-import {databasesFromEnvironmentOr} from '../../util';
+import {RuntimeList} from '../../runtimes';
+import {databasesFromEnvironmentOr, allDatabases} from '../../util';
 import '../../util/db-jest-matchers';
 import * as malloy from '@malloydata/malloy';
 

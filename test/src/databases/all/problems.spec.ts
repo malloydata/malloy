@@ -22,8 +22,8 @@
  */
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-import {RuntimeList, allDatabases} from '../../runtimes';
-import {databasesFromEnvironmentOr} from '../../util';
+import {RuntimeList} from '../../runtimes';
+import {databasesFromEnvironmentOr, allDatabases} from '../../util';
 import '../../util/db-jest-matchers';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));

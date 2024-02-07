@@ -22,9 +22,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {RuntimeList, allDatabases} from '../../runtimes';
+import {RuntimeList} from '../../runtimes';
 import '../../util/db-jest-matchers';
-import {databasesFromEnvironmentOr, mkSqlEqWith, testIf} from '../../util';
+import {
+  databasesFromEnvironmentOr,
+  mkSqlEqWith,
+  testIf,
+  allDatabases,
+} from '../../util';
 import {fail} from 'assert';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));

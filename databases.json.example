@@ -1,0 +1,6 @@
+{
+  "internal": ["bigquery", "duckdb"], <--- optional, default is BigQuery, DuckDB, DuckDB-WASM
+  "external": {
+    "postgres": "../driver-postgres"  <--- optional, path to external module
+  }
+}

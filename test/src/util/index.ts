@@ -34,7 +34,6 @@ import {
   registerDialect,
   ConnectionFactory,
 } from '@malloydata/malloy';
-import {allDatabases} from '../runtimes';
 
 // these two helper functions are here just to make older hand built models
 // easier to use in the new world were refs are not strings
@@ -119,6 +118,9 @@ if (process.env['MALLOY_DATABASES'] || process.env['MALLOY_DATABASE']) {
   }
 }
 
+// handle possible dupes of database names
+userDefinedTestDatabases = [...new Set(userDefinedTestDatabases)];
+
 // load external drivers & register dialects
 for (const [dialect, modulePath] of Object.entries<string>(
   externalDriverLocations
@@ -135,8 +137,11 @@ for (const [dialect, modulePath] of Object.entries<string>(
   registerDialect(driver.connectionFactory.dialect);
   externalDrivers[dialect] = driver.connectionFactory as ConnectionFactory;
 }
+const allDatabases = ['bigquery', 'duckdb', 'duckdb_wasm'].concat(
+  Object.keys(externalDrivers)
+);
 
-export {externalDrivers, userDefinedTestDatabases};
+export {externalDrivers, userDefinedTestDatabases, allDatabases};
 
 export function databasesFromEnvironmentOr(
   defaultDatabases: string[]

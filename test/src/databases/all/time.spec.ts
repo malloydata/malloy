@@ -22,9 +22,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {RuntimeList, allDatabases} from '../../runtimes';
+import {RuntimeList} from '../../runtimes';
 import '../../util/db-jest-matchers';
-import {mkSqlEqWith, runQuery, testIf} from '../../util';
+import {mkSqlEqWith, runQuery, testIf, allDatabases} from '../../util';
 import {DateTime as LuxonDateTime} from 'luxon';
 
 const runtimes = new RuntimeList(allDatabases);
