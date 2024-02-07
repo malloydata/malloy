@@ -1100,6 +1100,43 @@ expressionModels.forEach((expressionModel, databaseName) => {
       expect(result.data.path(2, 'rolling_avg').number.value).toBe(births2);
     });
   });
+
+  describe('sum_moving', () => {
+    it(`works - ${databaseName}`, async () => {
+      await expect(`
+      run: state_facts -> {
+        group_by: state, b is births
+        order_by: b desc
+        calculate: s is sum_moving(b, 2)
+        limit: 5
+      }`).malloyResultMatches(expressionModel, [
+        {b: 28810563, s: 28810563},
+        {b: 23694136, s: 23694136 + 28810563},
+        {b: 21467359, s: 21467359 + 23694136 + 28810563},
+        {b: 16661910, s: 16661910 + 21467359 + 23694136},
+        {b: 15178876, s: 15178876 + 16661910 + 21467359},
+      ]);
+    });
+
+    it(`works forward - ${databaseName}`, async () => {
+      await expect(`
+      run: state_facts -> {
+        group_by: state, b is births
+        order_by: b desc
+        calculate: s is sum_moving(b, 0, 2)
+        limit: 7
+      }`).malloyResultMatches(expressionModel, [
+        {b: 28810563, s: 28810563 + 23694136 + 21467359},
+        {b: 23694136, s: 23694136 + 21467359 + 16661910},
+        {b: 21467359, s: 21467359 + 16661910 + 15178876},
+        {b: 16661910, s: 16661910 + 15178876 + 14201526},
+        {b: 15178876, s: 15178876 + 14201526 + 11643455},
+        {b: 14201526},
+        {b: 11643455},
+      ]);
+    });
+  });
+
   describe('min, max, sum / window, cumulative', () => {
     it(`works - ${databaseName}`, async () => {
       const result = await expressionModel
