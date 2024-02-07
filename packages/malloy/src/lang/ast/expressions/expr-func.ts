@@ -256,6 +256,13 @@ export class ExprFunc extends ExpressionDef {
         const isAnalytic = expressionIsAnalytic(
           overload.returnType.expressionType
         );
+        if (!isAnalytic) {
+          if (!this.inExperiment('aggregate_order_by', true)) {
+            props.orderBys[0].log(
+              'Enable experiment `aggregate_order_by` to use `order_by` with an aggregate function'
+            );
+          }
+        }
         if (dialectOverload.supportsOrderBy || isAnalytic) {
           const allowExpression =
             dialectOverload.supportsOrderBy !== 'only_default';
@@ -267,7 +274,7 @@ export class ExprFunc extends ExpressionDef {
           frag.orderBy = allObs;
         } else {
           props.orderBys[0].log(
-            `Function ${this.name} does not support order_by`
+            `Function \`${this.name}\` does not support \`order_by\``
           );
         }
       }

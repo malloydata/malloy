@@ -967,7 +967,6 @@ export class MalloyToAST
   }
 
   visitAggregateOrderByStatement(pcx: parse.AggregateOrderByStatementContext) {
-    this.inExperiment('function_order_by', pcx);
     return this.visitAggregateOrdering(pcx.aggregateOrdering());
   }
 
@@ -1536,7 +1535,6 @@ export class MalloyToAST
   }
 
   visitPartitionByStatement(pcx: parse.PartitionByStatementContext) {
-    this.inExperiment('partition_by', pcx);
     return this.astAt(
       new ast.PartitionBy(
         pcx
