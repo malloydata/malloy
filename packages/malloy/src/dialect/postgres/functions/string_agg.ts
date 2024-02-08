@@ -36,19 +36,18 @@ export function fnStringAgg(): DialectFunctionOverloadDef[] {
   const value = makeParam('value', maxScalar('string'));
   const separator = makeParam('separator', literal(maxScalar('string')));
   const orderBy: Fragment = {type: 'aggregate_order_by'};
-  const limit: Fragment = {type: 'aggregate_limit'};
   return [
     overload(
       minAggregate('string'),
       [value.param],
-      sql`STRING_AGG(${value.arg}${orderBy}${limit})`,
-      {supportsOrderBy: true, supportsLimit: true, defaultOrderByArgIndex: 0}
+      sql`STRING_AGG(${value.arg}, ','${orderBy})`,
+      {supportsOrderBy: true}
     ),
     overload(
       minAggregate('string'),
       [value.param, separator.param],
-      sql`STRING_AGG(${value.arg}, ${separator.arg}${orderBy}${limit})`,
-      {supportsOrderBy: true, supportsLimit: true, defaultOrderByArgIndex: 0}
+      sql`STRING_AGG(${value.arg}, ${separator.arg}${orderBy})`,
+      {supportsOrderBy: true}
     ),
   ];
 }
@@ -57,27 +56,24 @@ export function fnStringAggDistinct(): DialectFunctionOverloadDef[] {
   const value = makeParam('value', maxScalar('string'));
   const separator = makeParam('separator', literal(maxScalar('string')));
   const orderBy: Fragment = {type: 'aggregate_order_by'};
-  const limit: Fragment = {type: 'aggregate_limit'};
   return [
     overload(
       minAggregate('string'),
       [value.param],
-      sql`STRING_AGG(DISTINCT ${value.arg}${orderBy}${limit})`,
+      sql`STRING_AGG(DISTINCT ${value.arg}, ','${orderBy})`,
       {
         isSymmetric: true,
         supportsOrderBy: 'only_default',
-        supportsLimit: true,
         defaultOrderByArgIndex: 0,
       }
     ),
     overload(
       minAggregate('string'),
       [value.param, separator.param],
-      sql`STRING_AGG(DISTINCT ${value.arg}, ${separator.arg}${orderBy}${limit})`,
+      sql`STRING_AGG(DISTINCT ${value.arg}, ${separator.arg}${orderBy})`,
       {
         isSymmetric: true,
         supportsOrderBy: 'only_default',
-        supportsLimit: true,
         defaultOrderByArgIndex: 0,
       }
     ),

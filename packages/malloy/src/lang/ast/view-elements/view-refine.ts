@@ -72,4 +72,8 @@ export class ViewRefine extends View {
     }
     return refine(this, pipeline, refineFrom[0]);
   }
+
+  getImplicitName(): string | undefined {
+    return this.base.getImplicitName();
+  }
 }

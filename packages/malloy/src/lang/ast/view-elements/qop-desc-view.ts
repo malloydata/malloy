@@ -120,4 +120,8 @@ export class QOpDescView extends View {
     }
     return pipeline;
   }
+
+  getImplicitName(): string | undefined {
+    return undefined;
+  }
 }

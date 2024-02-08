@@ -90,6 +90,14 @@ describe('model statements', () => {
     ).toTranslate();
   });
 
+  test('experiments do not bleed into one another', () => {
+    expect(
+      '##! experimental { this_experiment_does_not_exist }\n;;[ "x" ]'
+    ).translationToFailWith(
+      "Experimental flag 'compilerTestExperimentParse' required to enable this feature"
+    );
+  });
+
   test('experiment failures in parse are flagged', () => {
     expect(';;[ "x" ]').translationToFailWith(
       "Experimental flag 'compilerTestExperimentParse' required to enable this feature"
@@ -1013,6 +1021,21 @@ describe('m3/m4 source query sentences', () => {
       query: q1_plus is ab -> aturtle + ${qryRefine};
       query: q2 is s -> ${query} extend ${srcExtend} -> ${query};
 
+    `).toTranslate();
+  });
+});
+
+describe('sql_functions', () => {
+  test('can aggregate sql function', () => {
+    expect(markSource`
+      ##! experimental { sql_functions }
+      source: s is a extend {
+        measure: c is count()
+        dimension: sql_expr is sql_number("LENGTH(\${TABLE}.astr)")
+      }
+      run: s -> {
+        aggregate: v is sql_expr.sum()
+      }
     `).toTranslate();
   });
 });

@@ -238,6 +238,7 @@ export class ExprFunc extends ExpressionDef {
     const frag: FunctionCallFragment = {
       type: 'function_call',
       overload,
+      name: this.name,
       args: argExprs.map(x => x.value),
       expressionType,
       structPath,
@@ -255,16 +256,25 @@ export class ExprFunc extends ExpressionDef {
         const isAnalytic = expressionIsAnalytic(
           overload.returnType.expressionType
         );
+        if (!isAnalytic) {
+          if (!this.inExperiment('aggregate_order_by', true)) {
+            props.orderBys[0].log(
+              'Enable experiment `aggregate_order_by` to use `order_by` with an aggregate function'
+            );
+          }
+        }
         if (dialectOverload.supportsOrderBy || isAnalytic) {
+          const allowExpression =
+            dialectOverload.supportsOrderBy !== 'only_default';
           const allObs = props.orderBys.flatMap(orderBy =>
             isAnalytic
               ? orderBy.getAnalyticOrderBy(fs)
-              : orderBy.getAggregateOrderBy(fs)
+              : orderBy.getAggregateOrderBy(fs, allowExpression)
           );
           frag.orderBy = allObs;
         } else {
           props.orderBys[0].log(
-            `Function ${this.name} does not support order_by`
+            `Function \`${this.name}\` does not support \`order_by\``
           );
         }
       }

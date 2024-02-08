@@ -57,4 +57,6 @@ export abstract class View extends MalloyElement {
     pipeline: PipeSegment[],
     isNestIn: QueryOperationSpace | undefined
   ): PipeSegment[];
+
+  abstract getImplicitName(): string | undefined;
 }

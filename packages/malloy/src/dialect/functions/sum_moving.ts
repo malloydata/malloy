@@ -21,28 +21,40 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {errorFor} from '../ast-utils';
-import {FT} from '../fragtype-utils';
-import {ExprValue} from '../types/expr-value';
-import {ExpressionDef} from '../types/expression-def';
-import {FieldSpace} from '../types/field-space';
+import {
+  overload,
+  sql,
+  DialectFunctionOverloadDef,
+  minAnalytic,
+  maxAggregate,
+  output,
+  makeParam,
+  maxScalar,
+  literal,
+} from './util';
 
-export class ExprMinus extends ExpressionDef {
-  elementType = 'unary minus';
-  constructor(readonly expr: ExpressionDef) {
-    super({expr: expr});
-
-    this.legalChildTypes = [FT.numberT];
-  }
-
-  getExpression(fs: FieldSpace): ExprValue {
-    const expr = this.expr.getExpression(fs);
-    if (FT.typeIn(expr, this.legalChildTypes)) {
-      if (expr.value.length > 1) {
-        return {...expr, dataType: 'number', value: ['-(', ...expr.value, ')']};
+export function fnSumMoving(): DialectFunctionOverloadDef[] {
+  const value = makeParam('value', output(maxAggregate('number')));
+  const preceding = makeParam('preceding', literal(maxScalar('number')));
+  const following = makeParam('following', literal(maxScalar('number')));
+  return [
+    overload(
+      minAnalytic('number'),
+      [value.param, preceding.param],
+      sql`SUM(${value.arg})`,
+      {
+        needsWindowOrderBy: true,
+        between: {preceding: 'preceding', following: 0},
       }
-      return {...expr, dataType: 'number', value: ['-', ...expr.value]};
-    }
-    return errorFor('negate requires number');
-  }
+    ),
+    overload(
+      minAnalytic('number'),
+      [value.param, preceding.param, following.param],
+      sql`SUM(${value.arg})`,
+      {
+        needsWindowOrderBy: true,
+        between: {preceding: 'preceding', following: 'following'},
+      }
+    ),
+  ];
 }

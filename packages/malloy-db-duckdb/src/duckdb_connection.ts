@@ -39,7 +39,9 @@ import {
 } from '@malloydata/malloy';
 
 export interface DuckDBConnectionOptions extends ConnectionConfig {
+  additionalExtensions?: string[];
   databasePath?: string;
+  motherDuckToken: string | undefined;
   workingDirectory?: string;
   readOnly?: boolean;
 }
@@ -51,8 +53,10 @@ interface ActiveDB {
 
 export class DuckDBConnection extends DuckDBCommon {
   public readonly name: string;
+  private additionalExtensions: string[] = [];
   private databasePath = ':memory:';
   private workingDirectory = '.';
+  private motherDuckToken: string | undefined;
   private readOnly = false;
 
   connecting: Promise<void>;
@@ -104,6 +108,12 @@ export class DuckDBConnection extends DuckDBCommon {
       if (typeof arg.workingDirectory === 'string') {
         this.workingDirectory = arg.workingDirectory;
       }
+      if (typeof arg.motherDuckToken === 'string') {
+        this.motherDuckToken = arg.motherDuckToken;
+      }
+      if (Array.isArray(arg.additionalExtensions)) {
+        this.additionalExtensions = arg.additionalExtensions;
+      }
     }
     if (this.databasePath === ':memory:') {
       this.readOnly = false;
@@ -117,6 +127,9 @@ export class DuckDBConnection extends DuckDBCommon {
       if (this.databasePath in DuckDBConnection.activeDBs) {
         activeDB = DuckDBConnection.activeDBs[this.databasePath];
       } else {
+        if (this.motherDuckToken) {
+          process.env['MOTHERDUCK_TOKEN'] = this.motherDuckToken;
+        }
         const database = new Database(
           this.databasePath,
           this.readOnly ? OPEN_READONLY : OPEN_READWRITE,
@@ -155,7 +168,16 @@ export class DuckDBConnection extends DuckDBCommon {
           `SET FILE_SEARCH_PATH='${this.workingDirectory}'`
         );
       }
-      for (const ext of ['json', 'httpfs', 'icu']) {
+      const extensions = [
+        'json',
+        'httpfs',
+        'icu',
+        ...this.additionalExtensions,
+      ];
+      if (this.motherDuckToken) {
+        extensions.push('motherduck');
+      }
+      for (const ext of extensions) {
         await this.loadExtension(ext);
       }
       const setupCmds = ["SET TimeZone='UTC'"];

@@ -26,3 +26,7 @@ Add yours to the list, make sure no one else is using yours.
 
 * `compilerTestExperimentParse`
 * `compilerTestExperimentTranslate`
+* `join_types`
+* `aggregate_order_by`
+* `aggregate_limit`
+* `sql_functions`
