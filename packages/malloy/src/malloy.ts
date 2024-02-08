@@ -3937,21 +3937,21 @@ export class CSVWriter extends DataWriter {
 
   // Get header row along with extra empty spaces for nested children.
   private getHeaderRow(row: QueryDataRow): CellMatrix {
-    let csv = '';
+    const csv: string[] = [];
     let width = 0;
     for (const key in row) {
-      csv = csv + this.escape(key) + this.columnSeparator;
+      csv.push(this.escape(key));
       const val = row[key];
       width++;
       if (Array.isArray(val)) {
         const numKeys = this.getColWeight(val) - 1;
         width = width + numKeys;
         for (let i = 0; i < numKeys; i++) {
-          csv = csv + this.columnSeparator;
+          csv.push('');
         }
       }
     }
-    return {rows: [csv], length: 1, width: width};
+    return {rows: [csv.join(this.columnSeparator)], length: 1, width: width};
   }
 
   // Merge the child matrices i.e. merge the columns into one bigger matrix i.e. CSV.
@@ -3960,21 +3960,17 @@ export class CSVWriter extends DataWriter {
     const matrixWidth = matrices.reduce((sum, matrix) => sum + matrix.width, 0);
     const csvMatrix: string[] = [];
     for (let i = 0; i < maxLength; i++) {
-      let csvRow = '';
+      const csvRow: string[] = [];
       for (const matrix of matrices) {
         if (i < matrix.length) {
-          csvRow = csvRow + matrix.rows[i];
-          if (!csvRow.endsWith(this.columnSeparator)) {
-            csvRow = csvRow + this.columnSeparator;
-          }
+          csvRow.push(matrix.rows[i]);
         } else {
           // Add empty cells.
-          for (let w = 0; w < matrix.width; w++) {
-            csvRow = csvRow + this.columnSeparator;
-          }
+          const emptyCells: string[] = Array(matrix.width).fill('    ');
+          csvRow.push(...emptyCells);
         }
       }
-      csvMatrix.push(csvRow);
+      csvMatrix.push(csvRow.join(','));
     }
     return {
       rows: csvMatrix,
