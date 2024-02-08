@@ -4049,5 +4049,6 @@ export class CSVWriter extends DataWriter {
         this.stream.write(this.rowSeparator);
       }
     }
+    this.stream.close();
   }
 }
