@@ -3884,6 +3884,7 @@ export class CSVWriter extends DataWriter {
   private readonly rowSeparator = '\n';
   private readonly quoteCharacter = '"';
   private readonly includeHeader = true;
+  private readonly emptyCell = '';
 
   private escape(value: string) {
     const hasInnerQuote = value.includes(this.quoteCharacter);
@@ -3907,7 +3908,7 @@ export class CSVWriter extends DataWriter {
   // Re-using the old stringify method for sanity.
   private stringify(value: QueryValue) {
     if (value === null) {
-      return '';
+      return this.emptyCell;
     } else if (value instanceof Date) {
       return value.toISOString();
     } else if (typeof value === 'boolean' || typeof value === 'number') {
@@ -3947,7 +3948,7 @@ export class CSVWriter extends DataWriter {
         const numKeys = this.getColWeight(val) - 1;
         width = width + numKeys;
         for (let i = 0; i < numKeys; i++) {
-          csv.push('');
+          csv.push(this.emptyCell);
         }
       }
     }
@@ -3966,11 +3967,11 @@ export class CSVWriter extends DataWriter {
           csvRow.push(matrix.rows[i]);
         } else {
           // Add empty cells.
-          const emptyCells: string[] = Array(matrix.width).fill('    ');
+          const emptyCells: string[] = Array(matrix.width).fill(this.emptyCell);
           csvRow.push(...emptyCells);
         }
       }
-      csvMatrix.push(csvRow.join(','));
+      csvMatrix.push(csvRow.join(this.columnSeparator));
     }
     return {
       rows: csvMatrix,
