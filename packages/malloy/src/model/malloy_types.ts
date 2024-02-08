@@ -223,10 +223,6 @@ export interface AggregateLimitFragment {
   type: 'aggregate_limit';
 }
 
-// export type FunctionCallFragment =
-//   | KnownFunctionCallFragment
-//   | UnknownFunctionCallFragment;
-
 export interface FunctionCallFragment {
   type: 'function_call';
   name: string;
@@ -239,15 +235,6 @@ export interface FunctionCallFragment {
   isKnownFunction: boolean;
   overload: FunctionOverloadDef;
 }
-
-// export interface KnownFunctionCallFragment extends FunctionCallFragmentBase {
-//   isKnownFunction: true;
-// }
-
-// export interface UnknownFunctionCallFragment extends FunctionCallFragmentBase {
-//   isKnownFunction: false;
-//   expressionType: ExpressionType;
-// }
 
 export function isFunctionCallFragment(f: Fragment): f is FunctionCallFragment {
   return (f as FunctionCallFragment)?.type === 'function_call';
