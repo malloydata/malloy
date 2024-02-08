@@ -1195,7 +1195,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
 
     it(`works with order by field - ${databaseName}`, async () => {
-      await expect(`##! experimental { function_order_by }
+      await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
         where: name ~ r'.*RUTHERFORD.*'
         aggregate: f is string_agg(name, ',') {
@@ -1207,7 +1207,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
 
     it(`works with order by direction - ${databaseName}`, async () => {
-      expect(`##! experimental { function_order_by }
+      expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
         where: name ~ r'.*RUTHERFORD.*'
         aggregate: f is string_agg(name, ',') {
@@ -1219,7 +1219,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
 
     it(`works with multiple order_bys - ${databaseName}`, async () => {
-      await expect(`##! experimental { function_order_by }
+      await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
         where: name ~ r'.*RUTHERFORD.*'
         aggregate: f is string_agg(name, ',') {
@@ -1231,7 +1231,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
 
     it(`works with order by expression - ${databaseName}`, async () => {
-      await expect(`##! experimental { function_order_by }
+      await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
         where: name ~ r'.*FLY.*'
         group_by: name
@@ -1247,7 +1247,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
 
     it(`works with order by join expression - ${databaseName}`, async () => {
-      await expect(`##! experimental { function_order_by }
+      await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
         where: name ~ r'.*ADVENTURE.*'
         aggregate: f is string_agg(name, ',') { order_by: aircraft_models.model }
@@ -1257,7 +1257,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
 
     it(`works with order asc - ${databaseName}`, async () => {
-      await expect(`##! experimental { function_order_by }
+      await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
         where: name ~ r'.*FLY.*'
         group_by: name
@@ -1271,7 +1271,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
 
     it(`works with order desc - ${databaseName}`, async () => {
-      await expect(`##! experimental { function_order_by }
+      await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
         where: name ~ r'.*FLY.*'
         group_by: name
@@ -1287,7 +1287,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     it(`works with fanout and order_by - ${databaseName}`, async () => {
       // TODO bigquery cannot handle both fanout and order_by today
       if (databaseName === 'bigquery') return;
-      await expect(`##! experimental.function_order_by
+      await expect(`##! experimental.aggregate_order_by
       run: state_facts extend { join_many:
         state_facts2 is ${databaseName}.table('malloytest.state_facts')
           on state_facts2.state = state
@@ -1303,7 +1303,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
 
     it(`works with fanout - ${databaseName}`, async () => {
-      await expect(`##! experimental.function_order_by
+      await expect(`##! experimental.aggregate_order_by
       run: state_facts extend { join_many:
         state_facts2 is ${databaseName}.table('malloytest.state_facts')
           on state_facts2.state = state
@@ -1317,7 +1317,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
 
     it(`works with fanout and separator - ${databaseName}`, async () => {
-      await expect(`##! experimental.function_order_by
+      await expect(`##! experimental.aggregate_order_by
       run: state_facts extend { join_many:
         state_facts2 is ${databaseName}.table('malloytest.state_facts')
           on state_facts2.state = state
@@ -1331,7 +1331,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
 
     it(`works with limit - ${databaseName}`, async () => {
-      const query = `##! experimental { function_order_by aggregate_limit }
+      const query = `##! experimental { aggregate_order_by aggregate_limit }
       run: aircraft -> {
           where: name ~ r'.*FLY.*'
           group_by: name
@@ -1357,7 +1357,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 
   describe('string_agg_distinct', () => {
     it(`actually distincts - ${databaseName}`, async () => {
-      await expect(`##! experimental { function_order_by }
+      await expect(`##! experimental { aggregate_order_by }
         source: aircraft is ${databaseName}.table('malloytest.aircraft') extend {
           primary_key: tail_num
         }
@@ -1397,7 +1397,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
 
     it(`works with order by direction - ${databaseName}`, async () => {
-      await expect(`##! experimental { function_order_by }
+      await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
         where: name ~ r'.*RUTHERFORD.*'
         aggregate: f is string_agg_distinct(name, ',') {
@@ -1409,7 +1409,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
 
     it(`works with order asc - ${databaseName}`, async () => {
-      await expect(`##! experimental { function_order_by }
+      await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
         where: name ~ r'.*FLY.*'
         group_by: name
@@ -1423,7 +1423,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
 
     it(`works with order desc - ${databaseName}`, async () => {
-      await expect(`##! experimental { function_order_by }
+      await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
         where: name ~ r'.*FLY.*'
         group_by: name
@@ -1437,7 +1437,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
 
     it(`works with limit - ${databaseName}`, async () => {
-      const query = `##! experimental { function_order_by aggregate_limit }
+      const query = `##! experimental { aggregate_order_by aggregate_limit }
         run: aircraft -> {
           where: name ~ r'.*FLY.*'
           group_by: name
@@ -1463,7 +1463,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 
   describe('partition_by', () => {
     it(`works - ${databaseName}`, async () => {
-      await expect(`##! experimental { function_order_by partition_by }
+      await expect(`
       run: flights -> {
         group_by:
           yr is year(dep_time)
@@ -1492,7 +1492,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
 
     it(`works with multiple order_bys - ${databaseName}`, async () => {
-      await expect(`##! experimental { function_order_by partition_by }
+      await expect(`
       run: aircraft -> {
         where: name =
           "UNITED AIR LINES INC"
