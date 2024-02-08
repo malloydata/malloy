@@ -3858,6 +3858,7 @@ export class JSONWriter extends DataWriter {
   }
 }
 
+// Represents a csv cell/table.
 type CellMatrix = {
   rows: string[];
   length: number;
@@ -3939,14 +3940,14 @@ export class CSVWriter extends DataWriter {
     let csv = '';
     let width = 0;
     for (const key in row) {
-      csv = csv + this.escape(key) + ',';
+      csv = csv + this.escape(key) + this.columnSeparator;
       const val = row[key];
       width++;
       if (Array.isArray(val)) {
         const numKeys = this.getColWeight(val) - 1;
         width = width + numKeys;
         for (let i = 0; i < numKeys; i++) {
-          csv = csv + ',';
+          csv = csv + this.columnSeparator;
         }
       }
     }
@@ -3963,13 +3964,13 @@ export class CSVWriter extends DataWriter {
       for (const matrix of matrices) {
         if (i < matrix.length) {
           csvRow = csvRow + matrix.rows[i];
-          if (!csvRow.endsWith(',')) {
-            csvRow = csvRow + ',';
+          if (!csvRow.endsWith(this.columnSeparator)) {
+            csvRow = csvRow + this.columnSeparator;
           }
         } else {
           // Add empty cells.
           for (let w = 0; w < matrix.width; w++) {
-            csvRow = csvRow + ',';
+            csvRow = csvRow + this.columnSeparator;
           }
         }
       }
