@@ -431,6 +431,13 @@ function attachOrderBy(
 ) {
   if (orderBys && orderBys.length > 0) {
     const isAnalytic = expressionIsAnalytic(functionExpressionType);
+    if (!isAnalytic) {
+      if (!orderBys[0].inExperiment('aggregate_order_by', true)) {
+        orderBys[0].log(
+          'Enable experiment `aggregate_order_by` to use `order_by` with an aggregate function'
+        );
+      }
+    }
     if (dialectOverload?.supportsOrderBy || isAnalytic) {
       const allowExpression =
         dialectOverload?.supportsOrderBy !== 'only_default';
