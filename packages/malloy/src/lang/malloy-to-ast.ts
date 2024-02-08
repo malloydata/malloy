@@ -1478,7 +1478,7 @@ export class MalloyToAST
       : undefined;
     const source = pathCx && path ? this.astAt(path, pathCx) : undefined;
 
-    const isRaw = pcx.EXCLAM() !== undefined;
+    const isRaw = pcx.EXCLAM().length > 0;
     const rawRawType = pcx.malloyType()?.text;
     let rawType: CastType | undefined = undefined;
     if (rawRawType) {
