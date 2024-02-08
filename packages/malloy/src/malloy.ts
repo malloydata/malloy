@@ -3903,6 +3903,7 @@ export class CSVWriter extends DataWriter {
     return value;
   }
 
+  // Re-using the old stringify method for sanity.
   private stringify(value: QueryValue) {
     if (value === null) {
       return '';
