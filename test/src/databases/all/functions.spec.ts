@@ -261,12 +261,14 @@ expressionModels.forEach((expressionModel, databaseName) => {
       });
     });
 
-    it.skip(`works with measure specification and source spec - ${databaseName}`, async () => {
+    it(`works with measure specification and source spec - ${databaseName}`, async () => {
+      // TODO symmetric aggregates don't work with custom aggregate functions in BQ currently
+      if (databaseName === 'bigquery') return;
       await expect(`
         ##! experimental.unknown_function_expression_types
         run: state_facts extend { join_one: sf2 is state_facts on sf2.state = state } -> {
-          aggregate: manual_stddev is floor(sf2.stddev!number!measure(births))
-          aggregate: normal_stddev is floor(births.stddev())
+          aggregate: manual_stddev is floor(sf2.stddev!number!measure(sf2.births))
+          aggregate: normal_stddev is floor(sf2.stddev(sf2.births))
         }
       `).malloyResultMatches(expressionModel, {
         manual_stddev: 6137732,
@@ -274,11 +276,11 @@ expressionModels.forEach((expressionModel, databaseName) => {
       });
     });
 
-    it.skip(`works with measure specification and implicit arg - ${databaseName}`, async () => {
+    it(`works with measure specification and implicit arg - ${databaseName}`, async () => {
       await expect(`
         ##! experimental.unknown_function_expression_types
-        run: state_facts extend { join_one: sf2 is state_facts on sf2.state = state } -> {
-          aggregate: manual_stddev is floor(sf2.births.stddev!number!measure())
+        run: state_facts -> {
+          aggregate: manual_stddev is floor(births.stddev!number!measure())
           aggregate: normal_stddev is floor(births.stddev())
         }
       `).malloyResultMatches(expressionModel, {

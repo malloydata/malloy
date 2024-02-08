@@ -1473,6 +1473,12 @@ export class MalloyToAST
     const argsCx = pcx.argumentList();
     const args = argsCx ? this.allFieldExpressions(argsCx.fieldExpr()) : [];
 
+    const pathCx = pcx.fieldPath();
+    const path = pathCx
+      ? this.getFieldPath(pathCx, ast.ExpressionFieldReference)
+      : undefined;
+    const source = pathCx && path ? this.astAt(path, pathCx) : undefined;
+
     const isRaw = pcx.EXCLAM() !== undefined;
     const rawRawType = pcx.malloyType()?.text;
     let rawType: CastType | undefined = undefined;
@@ -1509,7 +1515,7 @@ export class MalloyToAST
       return this.astAt(new ast.ExprTimeExtract(fn, args), pcx);
     }
     return this.astAt(
-      new ast.ExprFunc(fn, args, isRaw, rawType, rawExprType),
+      new ast.ExprFunc(fn, args, isRaw, rawType, rawExprType, source),
       pcx
     );
   }

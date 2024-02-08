@@ -550,7 +550,7 @@ fieldExpr
   | OPAREN partialAllowedFieldExpr CPAREN                  # exprExpr
   | fieldPath DOT id
       OPAREN ( argumentList? ) CPAREN                      # exprAggFunc
-  | ((id (EXCLAM malloyType? (EXCLAM malloyFieldType)?)?) | timeframe)
+  | (((fieldPath DOT)? id (EXCLAM malloyType? (EXCLAM malloyFieldType)?)?) | timeframe)
       OPAREN ( argumentList? ) CPAREN                      # exprFunc
   | pickStatement                                          # exprPick
   | ungroup OPAREN fieldExpr (COMMA fieldName)* CPAREN     # exprUngroup
