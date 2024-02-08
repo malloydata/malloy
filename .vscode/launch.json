@@ -2,7 +2,32 @@
 // Use IntelliSense to learn about possible attributes.
 // Hover to view descriptions of existing attributes.
 // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+
+// NOTE! enableContentValidation: false allows sourcemapping when the workspace has multiple roots and one root requires
+// a module from the other root.
+// https://github.com/microsoft/vscode-js-debug/issues/898
 {
   "version": "0.2.0",
-  "configurations": []
+  "configurations": [
+    {
+      "type": "node",
+      "name": "vscode-jest-tests.v2",
+      "request": "launch",
+      "args": [
+        "test",
+        "--",
+        "--runInBand",
+        "--watchAll=false",
+        "--testNamePattern",
+        "${jest.testNamePattern}",
+        "--runTestsByPath",
+        "${jest.testFile}"
+      ],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "runtimeExecutable": "npm",
+      "sourceMaps": true,
+      "enableContentValidation": false
+    }
+  ]
 }
