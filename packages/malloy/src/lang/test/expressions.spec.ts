@@ -263,6 +263,30 @@ describe('expressions', () => {
       `).toTranslate();
     });
 
+    test('partition by works with scalar and aggregate', () => {
+      expect(markSource`
+        run: a -> {
+          group_by: ai
+          aggregate: c is count()
+          calculate: x is lag(ai) { partition_by: ai, c }
+        }
+      `).toTranslate();
+    });
+
+    test('partition by fails with analytic and ungrouped aggregate', () => {
+      expect(markSource`
+        run: a -> {
+          group_by: ai
+          aggregate: ac is all(count())
+          calculate: x is lag(ai) { partition_by: ac }
+          calculate: y is lag(ai) { partition_by: x }
+        }
+      `).translationToFailWith(
+        'Partition expression must be scalar or aggregate',
+        'Partition expression must be scalar or aggregate'
+      );
+    });
+
     test('analytics order_by requires expression', () => {
       expect(markSource`
         ##! experimental { aggregate_order_by }
