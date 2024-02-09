@@ -102,7 +102,7 @@ export class PostgresDialect extends Dialect {
   unnestWithNumbers = false;
   defaultSampling = {rows: 50000};
   supportUnnestArrayAgg = true;
-  supportsAggDistinct = true;
+  supportsAggDistinct = false;
   supportsCTEinCoorelatedSubQueries = true;
   supportsSafeCast = false;
   dontUnionIndex = false;

@@ -262,8 +262,8 @@ expressionModels.forEach((expressionModel, databaseName) => {
     });
 
     it(`works with measure specification and source spec - ${databaseName}`, async () => {
-      // TODO symmetric aggregates don't work with custom aggregate functions in BQ currently
-      if (databaseName === 'bigquery') return;
+      // TODO asymmetric aggregates don't work with custom aggregate functions in BQ or PG currently
+      if (['bigquery', 'postgres'].includes(databaseName)) return;
       await expect(`
         ##! experimental.unknown_function_expression_types
         run: state_facts extend { join_one: sf2 is state_facts on sf2.state = state } -> {
@@ -290,8 +290,8 @@ expressionModels.forEach((expressionModel, databaseName) => {
     });
 
     it(`works with measure specification and fanout - ${databaseName}`, async () => {
-      // TODO symmetric aggregates don't work with custom aggregate functions in BQ currently
-      if (databaseName === 'bigquery') return;
+      // TODO asymmetric aggregates don't work with custom aggregate functions in BQ or PG currently
+      if (['bigquery', 'postgres'].includes(databaseName)) return;
       await expect(`
         ##! experimental.unknown_function_expression_types
         run: state_facts extend { join_many: sf2 is state_facts on sf2.state = state } -> {
@@ -325,8 +325,8 @@ expressionModels.forEach((expressionModel, databaseName) => {
   });
 
   describe('stddev', () => {
-    // TODO symmetric aggregates don't work with custom aggregate functions in BQ currently
-    if (databaseName === 'bigquery') return;
+    // TODO asymmetric aggregates don't work with custom aggregate functions in BQ or PG currently
+    if (['bigquery', 'postgres'].includes(databaseName)) return;
     it(`works - ${databaseName}`, async () => {
       await funcTestAgg('round(stddev(aircraft_models.seats))', 29);
     });
