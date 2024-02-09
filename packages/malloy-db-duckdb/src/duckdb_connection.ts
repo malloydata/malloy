@@ -126,6 +126,9 @@ export class DuckDBConnection extends DuckDBCommon {
       let activeDB: ActiveDB;
       if (this.databasePath in DuckDBConnection.activeDBs) {
         activeDB = DuckDBConnection.activeDBs[this.databasePath];
+        this.connection = activeDB.database.connect();
+        activeDB.connections.push(this.connection);
+        resolve();
       } else {
         if (this.databasePath.startsWith('md:')) {
           if (this.motherDuckToken) {
