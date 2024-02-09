@@ -27,6 +27,7 @@ import {
   expressionIsAggregate,
   expressionIsAnalytic,
   expressionIsScalar,
+  expressionIsUngroupedAggregate,
   ExpressionType,
   FieldValueType,
   Fragment,
@@ -293,10 +294,15 @@ export class ExprFunc extends ExpressionDef {
           const e = partitionField.getField(fs);
           if (e.found === undefined) {
             partitionField.log(`${partitionField.refString} is not defined`);
-          } else if (expressionIsScalar(e.found.typeDesc().expressionType)) {
-            partitionByFields.push(partitionField.nameString);
+          } else if (
+            expressionIsAnalytic(e.found.typeDesc().expressionType) ||
+            expressionIsUngroupedAggregate(e.found.typeDesc().expressionType)
+          ) {
+            partitionField.log(
+              'Partition expression must be scalar or aggregate'
+            );
           } else {
-            partitionField.log('Partition expression must be scalar');
+            partitionByFields.push(partitionField.nameString);
           }
         }
       }
