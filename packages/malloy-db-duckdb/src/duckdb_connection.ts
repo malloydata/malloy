@@ -126,28 +126,44 @@ export class DuckDBConnection extends DuckDBCommon {
       let activeDB: ActiveDB;
       if (this.databasePath in DuckDBConnection.activeDBs) {
         activeDB = DuckDBConnection.activeDBs[this.databasePath];
+        this.connection = activeDB.database.connect();
+        activeDB.connections.push(this.connection);
+        resolve();
       } else {
-        if (this.motherDuckToken) {
-          process.env['MOTHERDUCK_TOKEN'] = this.motherDuckToken;
+        if (this.databasePath.startsWith('md:')) {
+          if (this.motherDuckToken) {
+            process.env['MOTHERDUCK_TOKEN'] = this.motherDuckToken;
+          }
+          if (!process.env['MOTHERDUCK_TOKEN']) {
+            const err = new Error('Please set your MotherDuck Token');
+            this.setup = async () => {
+              throw err;
+            };
+            return reject(err);
+          }
         }
         const database = new Database(
           this.databasePath,
           this.readOnly ? OPEN_READONLY : OPEN_READWRITE,
           err => {
             if (err) {
+              this.setup = async () => {
+                throw err;
+              };
               reject(err);
+            } else {
+              activeDB = {
+                database,
+                connections: [],
+              };
+              DuckDBConnection.activeDBs[this.databasePath] = activeDB;
+              this.connection = activeDB.database.connect();
+              activeDB.connections.push(this.connection);
+              resolve();
             }
           }
         );
-        activeDB = {
-          database,
-          connections: [],
-        };
-        DuckDBConnection.activeDBs[this.databasePath] = activeDB;
       }
-      this.connection = activeDB.database.connect();
-      activeDB.connections.push(this.connection);
-      resolve();
     });
   }
 
@@ -174,7 +190,7 @@ export class DuckDBConnection extends DuckDBCommon {
         'icu',
         ...this.additionalExtensions,
       ];
-      if (this.motherDuckToken) {
+      if (this.databasePath.startsWith('md:')) {
         extensions.push('motherduck');
       }
       for (const ext of extensions) {
