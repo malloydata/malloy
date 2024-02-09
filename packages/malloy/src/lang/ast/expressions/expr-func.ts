@@ -152,6 +152,7 @@ export class ExprFunc extends ExpressionDef {
       args: argExprs.map(x => x.value),
       structPath,
       isKnownFunction: true,
+      argsEvalSpaces: argExprs.map(x => x.evalSpace),
     };
     let funcCall: Expr = [frag];
     const dialectOverload = dialect ? overload.dialect[dialect] : undefined;

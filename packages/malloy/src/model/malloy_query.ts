@@ -94,6 +94,7 @@ import {
   TurtleDef,
   UngroupFragment,
   FunctionOrderBy,
+  isConstant,
 } from './malloy_types';
 
 import {Connection} from '../runtime_types';
@@ -605,12 +606,12 @@ class QueryField extends QueryNode {
         [...argsExpressions, ...orderByExpressions],
         valNames => {
           const vals: Expr[] = valNames.map((v, i) => {
-            // Special case: the argument is required to be literal, so we use the actual argument
+            // Special case: the argument is a literal, so we use the actual argument
             // rather than the packed value
             // TODO don't even pack the value in the first place
             if (i < args.length) {
-              const param = this.getParamForArgIndex(overload.params, i);
-              if (param.allowedTypes.every(t => isLiteral(t.evalSpace))) {
+              const evalSpace = frag.argsEvalSpaces[i];
+              if (isLiteral(evalSpace) || isConstant(evalSpace)) {
                 return args[i];
               }
             }

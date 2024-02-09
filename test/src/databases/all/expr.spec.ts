@@ -25,7 +25,6 @@
 import {RuntimeList, allDatabases} from '../../runtimes';
 import '../../util/db-jest-matchers';
 import {databasesFromEnvironmentOr, mkSqlEqWith, testIf} from '../../util';
-import {fail} from 'assert';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 

@@ -227,6 +227,7 @@ export interface FunctionCallFragment {
   type: 'function_call';
   name: string;
   args: Expr[];
+  argsEvalSpaces: EvalSpace[];
   orderBy?: FunctionOrderBy[];
   limit?: number;
   // List of non-dotted output field references
@@ -1009,6 +1010,10 @@ export type EvalSpace = 'constant' | 'input' | 'output' | 'literal';
 
 export function isLiteral(evalSpace: EvalSpace) {
   return evalSpace === 'literal';
+}
+
+export function isConstant(evalSpace: EvalSpace) {
+  return evalSpace === 'constant';
 }
 
 export function mergeEvalSpaces(...evalSpaces: EvalSpace[]): EvalSpace {
