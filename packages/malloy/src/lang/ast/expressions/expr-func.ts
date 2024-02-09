@@ -26,7 +26,6 @@ import {
   Expr,
   expressionIsAggregate,
   expressionIsAnalytic,
-  expressionIsCalculation,
   expressionIsScalar,
   expressionIsUngroupedAggregate,
   ExpressionType,
@@ -296,7 +295,7 @@ export class ExprFunc extends ExpressionDef {
           if (e.found === undefined) {
             partitionField.log(`${partitionField.refString} is not defined`);
           } else if (
-            expressionIsCalculation(e.found.typeDesc().expressionType) ||
+            expressionIsAnalytic(e.found.typeDesc().expressionType) ||
             expressionIsUngroupedAggregate(e.found.typeDesc().expressionType)
           ) {
             partitionField.log(
