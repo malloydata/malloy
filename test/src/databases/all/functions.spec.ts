@@ -1424,7 +1424,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         });
       } else {
         await expect(expressionModel.loadQuery(query).run()).rejects.toThrow(
-          'Function string_agg does not support limit'
+          'Function `string_agg` does not support `limit`'
         );
       }
     });
@@ -1530,7 +1530,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         });
       } else {
         await expect(expressionModel.loadQuery(query).run()).rejects.toThrow(
-          'Function string_agg_distinct does not support limit'
+          'Function `string_agg_distinct` does not support `limit`'
         );
       }
     });

@@ -450,7 +450,9 @@ function attachOrderBy(
     } else if (!dialectOverload) {
       orderBys[0].log('Unknown functions do not support `order_by`');
     } else {
-      orderBys[0].log(`Function ${functionName} does not support order_by`);
+      orderBys[0].log(
+        `Function \`${functionName}\` does not support \`order_by\``
+      );
     }
   }
 }
@@ -465,7 +467,7 @@ function attachLimit(
     if (dialectOverload?.supportsLimit) {
       frag.limit = limit.limit;
     } else if (dialectOverload) {
-      limit.log(`Function ${functionName} does not support \`limit\``);
+      limit.log(`Function \`${functionName}\` does not support \`limit\``);
     } else {
       limit.log('Unknown functions do not support `limit`');
     }
