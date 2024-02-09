@@ -1,0 +1,27 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Tier grammar can parse 20 to 29 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "match",
+  "value": [
+    "20 to 29",
+  ],
+}
+`;
+
+exports[`Tier grammar can parse sub^_region 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "match",
+  "value": [
+    "sub_region",
+  ],
+}
+`;

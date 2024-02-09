@@ -1,0 +1,21 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Summary for empty string date 1`] = `"is any time"`;
+
+exports[`Summary for empty string date_time 1`] = `"is any time"`;
+
+exports[`Summary for empty string location 1`] = `"is anywhere"`;
+
+exports[`Summary for empty string number 1`] = `"is any value"`;
+
+exports[`Summary for empty string string 1`] = `"is any value"`;
+
+exports[`Summary for empty string tier 1`] = `"is any value"`;
+
+exports[`Summary for user attribute with value 1`] = `"is some-value"`;
+
+exports[`Summary for user attribute with value and required 1`] = `"is some-value"`;
+
+exports[`Summary for user attribute without value 1`] = `"xyz-label (null)"`;
+
+exports[`Summary for user attribute without value and required 1`] = `"Value required"`;

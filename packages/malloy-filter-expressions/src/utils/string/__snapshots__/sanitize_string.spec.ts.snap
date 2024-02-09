@@ -1,0 +1,13 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Sanitize String tests replaces the userAttribute value when switching to match 1`] = `
+Object {
+  "attributeName": "id",
+  "attributeValue": "ua",
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "user_attribute",
+}
+`;

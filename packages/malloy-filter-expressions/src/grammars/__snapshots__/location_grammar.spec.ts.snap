@@ -1,0 +1,121 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Location grammar can parse expressions  1`] = `
+{
+  "id": 1,
+  "is": true,
+  "type": "anyvalue",
+}
+`;
+
+exports[`Location grammar can parse expressions -36.97, -122.03 1`] = `
+{
+  "id": 1,
+  "lat": -36.97,
+  "left": undefined,
+  "lon": -122.03,
+  "right": undefined,
+  "type": "location",
+}
+`;
+
+exports[`Location grammar can parse expressions -36.97, 122.03 1`] = `
+{
+  "id": 1,
+  "lat": -36.97,
+  "left": undefined,
+  "lon": 122.03,
+  "right": undefined,
+  "type": "location",
+}
+`;
+
+exports[`Location grammar can parse expressions -NULL 1`] = `
+{
+  "id": 1,
+  "left": undefined,
+  "right": undefined,
+  "type": "notnull",
+}
+`;
+
+exports[`Location grammar can parse expressions 36.97, -122.03 1`] = `
+{
+  "id": 1,
+  "lat": 36.97,
+  "left": undefined,
+  "lon": -122.03,
+  "right": undefined,
+  "type": "location",
+}
+`;
+
+exports[`Location grammar can parse expressions 40 miles from -36.97, -122.03 1`] = `
+{
+  "distance": 40,
+  "id": 1,
+  "lat": -36.97,
+  "left": undefined,
+  "lon": -122.03,
+  "right": undefined,
+  "type": "circle",
+  "unit": "miles",
+}
+`;
+
+exports[`Location grammar can parse expressions 40 miles from 36.97, -122.03 1`] = `
+{
+  "distance": 40,
+  "id": 1,
+  "lat": 36.97,
+  "left": undefined,
+  "lon": -122.03,
+  "right": undefined,
+  "type": "circle",
+  "unit": "miles",
+}
+`;
+
+exports[`Location grammar can parse expressions 100 miles from 36.97, -122.03 1`] = `
+{
+  "distance": 100,
+  "id": 1,
+  "lat": 36.97,
+  "left": undefined,
+  "lon": -122.03,
+  "right": undefined,
+  "type": "circle",
+  "unit": "miles",
+}
+`;
+
+exports[`Location grammar can parse expressions NOT NULL 1`] = `
+{
+  "id": 1,
+  "left": undefined,
+  "right": undefined,
+  "type": "notnull",
+}
+`;
+
+exports[`Location grammar can parse expressions NULL 1`] = `
+{
+  "id": 1,
+  "left": undefined,
+  "right": undefined,
+  "type": "null",
+}
+`;
+
+exports[`Location grammar can parse expressions inside box from 72.33, -173.14 to 14.39, -61.70 1`] = `
+{
+  "id": 1,
+  "lat": 72.33,
+  "lat1": 14.39,
+  "left": undefined,
+  "lon": -173.14,
+  "lon1": -61.7,
+  "right": undefined,
+  "type": "box",
+}
+`;

@@ -1,0 +1,1765 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Additional number tests != 1, 2, 3 1`] = `
+{
+  "id": 1,
+  "is": false,
+  "left": undefined,
+  "right": undefined,
+  "type": "=",
+  "value": [
+    1,
+    2,
+    3,
+  ],
+}
+`;
+
+exports[`Additional number tests .01 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "=",
+  "value": [
+    0.01,
+  ],
+}
+`;
+
+exports[`Additional number tests <    0 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "<",
+  "value": [
+    0,
+  ],
+}
+`;
+
+exports[`Additional number tests < -42 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "<",
+  "value": [
+    -42,
+  ],
+}
+`;
+
+exports[`Additional number tests < 1.1 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "<",
+  "value": [
+    1.1,
+  ],
+}
+`;
+
+exports[`Additional number tests <=    0 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "<=",
+  "value": [
+    0,
+  ],
+}
+`;
+
+exports[`Additional number tests <= -42 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "<=",
+  "value": [
+    -42,
+  ],
+}
+`;
+
+exports[`Additional number tests <= 1.1 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "<=",
+  "value": [
+    1.1,
+  ],
+}
+`;
+
+exports[`Additional number tests <=-242 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "<=",
+  "value": [
+    -242,
+  ],
+}
+`;
+
+exports[`Additional number tests <=0.1 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "<=",
+  "value": [
+    0.1,
+  ],
+}
+`;
+
+exports[`Additional number tests <=999 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "<=",
+  "value": [
+    999,
+  ],
+}
+`;
+
+exports[`Additional number tests <> 1 1`] = `
+{
+  "id": 1,
+  "is": false,
+  "left": undefined,
+  "right": undefined,
+  "type": "=",
+  "value": [
+    1,
+  ],
+}
+`;
+
+exports[`Additional number tests <-242 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "<",
+  "value": [
+    -242,
+  ],
+}
+`;
+
+exports[`Additional number tests <0.1 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "<",
+  "value": [
+    0.1,
+  ],
+}
+`;
+
+exports[`Additional number tests <3 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "<",
+  "value": [
+    3,
+  ],
+}
+`;
+
+exports[`Additional number tests <999 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "<",
+  "value": [
+    999,
+  ],
+}
+`;
+
+exports[`Additional number tests >    0 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": ">",
+  "value": [
+    0,
+  ],
+}
+`;
+
+exports[`Additional number tests > -42 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": ">",
+  "value": [
+    -42,
+  ],
+}
+`;
+
+exports[`Additional number tests > 1.1 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": ">",
+  "value": [
+    1.1,
+  ],
+}
+`;
+
+exports[`Additional number tests >=    0 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": ">=",
+  "value": [
+    0,
+  ],
+}
+`;
+
+exports[`Additional number tests >= -42 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": ">=",
+  "value": [
+    -42,
+  ],
+}
+`;
+
+exports[`Additional number tests >= 1.1 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": ">=",
+  "value": [
+    1.1,
+  ],
+}
+`;
+
+exports[`Additional number tests >=-242 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": ">=",
+  "value": [
+    -242,
+  ],
+}
+`;
+
+exports[`Additional number tests >=0.1 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": ">=",
+  "value": [
+    0.1,
+  ],
+}
+`;
+
+exports[`Additional number tests >=999 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": ">=",
+  "value": [
+    999,
+  ],
+}
+`;
+
+exports[`Additional number tests >-242 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": ">",
+  "value": [
+    -242,
+  ],
+}
+`;
+
+exports[`Additional number tests >0.1 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": ">",
+  "value": [
+    0.1,
+  ],
+}
+`;
+
+exports[`Additional number tests >999 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": ">",
+  "value": [
+    999,
+  ],
+}
+`;
+
+exports[`Additional number tests -.01 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "=",
+  "value": [
+    -0.01,
+  ],
+}
+`;
+
+exports[`Additional number tests -0.01 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "=",
+  "value": [
+    -0.01,
+  ],
+}
+`;
+
+exports[`Additional number tests 0.01 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "=",
+  "value": [
+    0.01,
+  ],
+}
+`;
+
+exports[`Additional number tests 1 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "=",
+  "value": [
+    1,
+  ],
+}
+`;
+
+exports[`Additional number tests 1, -1, 0.1 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "=",
+  "value": [
+    1,
+    -1,
+    0.1,
+  ],
+}
+`;
+
+exports[`Additional number tests 1, 2, 3 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "=",
+  "value": [
+    1,
+    2,
+    3,
+  ],
+}
+`;
+
+exports[`Additional number tests 3.14159 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "=",
+  "value": [
+    3.14159,
+  ],
+}
+`;
+
+exports[`Additional number tests 123456789 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "=",
+  "value": [
+    123456789,
+  ],
+}
+`;
+
+exports[`Additional number tests 12345678901234567890 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "=",
+  "value": [
+    12345678901234567890n,
+  ],
+}
+`;
+
+exports[`Additional number tests not -.2 1`] = `
+{
+  "id": 1,
+  "is": false,
+  "left": undefined,
+  "right": undefined,
+  "type": "=",
+  "value": [
+    -0.2,
+  ],
+}
+`;
+
+exports[`Additional number tests not -1.2 1`] = `
+{
+  "id": 1,
+  "is": false,
+  "left": undefined,
+  "right": undefined,
+  "type": "=",
+  "value": [
+    -1.2,
+  ],
+}
+`;
+
+exports[`Additional number tests not 1 1`] = `
+{
+  "id": 1,
+  "is": false,
+  "left": undefined,
+  "right": undefined,
+  "type": "=",
+  "value": [
+    1,
+  ],
+}
+`;
+
+exports[`Additional number tests not 1, 2, 3 1`] = `
+{
+  "id": 1,
+  "is": false,
+  "left": undefined,
+  "right": undefined,
+  "type": "=",
+  "value": [
+    1,
+    2,
+    3,
+  ],
+}
+`;
+
+exports[`Number grammar can parse (,100) 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "<",
+  "value": [
+    100,
+  ],
+}
+`;
+
+exports[`Number grammar can parse (-inf,100] 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "<=",
+  "value": [
+    100,
+  ],
+}
+`;
+
+exports[`Number grammar can parse (1, inf) 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": ">",
+  "value": [
+    1,
+  ],
+}
+`;
+
+exports[`Number grammar can parse (1,) 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": ">",
+  "value": [
+    1,
+  ],
+}
+`;
+
+exports[`Number grammar can parse (1,100) 1`] = `
+{
+  "bounds": "()",
+  "high": 100,
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "low": 1,
+  "right": undefined,
+  "type": "between",
+}
+`;
+
+exports[`Number grammar can parse (1,100] 1`] = `
+{
+  "bounds": "(]",
+  "high": 100,
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "low": 1,
+  "right": undefined,
+  "type": "between",
+}
+`;
+
+exports[`Number grammar can parse (1,100],500,600,(800,900],[2000,) 1`] = `
+{
+  "id": 2,
+  "left": {
+    "bounds": "(]",
+    "high": 100,
+    "id": 1,
+    "is": true,
+    "left": undefined,
+    "low": 1,
+    "right": undefined,
+    "type": "between",
+  },
+  "right": {
+    "id": 4,
+    "left": {
+      "id": 3,
+      "is": true,
+      "left": undefined,
+      "right": undefined,
+      "type": "=",
+      "value": [
+        500,
+        600,
+      ],
+    },
+    "right": {
+      "id": 6,
+      "left": {
+        "bounds": "(]",
+        "high": 900,
+        "id": 5,
+        "is": true,
+        "left": undefined,
+        "low": 800,
+        "right": undefined,
+        "type": "between",
+      },
+      "right": {
+        "id": 7,
+        "is": true,
+        "left": undefined,
+        "right": undefined,
+        "type": ">=",
+        "value": [
+          2000,
+        ],
+      },
+      "type": ",",
+    },
+    "type": ",",
+  },
+  "type": ",",
+}
+`;
+
+exports[`Number grammar can parse <> 5 1`] = `
+{
+  "id": 1,
+  "is": false,
+  "left": undefined,
+  "right": undefined,
+  "type": "=",
+  "value": [
+    5,
+  ],
+}
+`;
+
+exports[`Number grammar can parse <3 OR >80.44 1`] = `
+{
+  "bounds": "()",
+  "high": 80.44,
+  "id": 1,
+  "is": false,
+  "left": undefined,
+  "low": 3,
+  "right": undefined,
+  "type": "between",
+}
+`;
+
+exports[`Number grammar can parse >= 5.5 AND <=10 1`] = `
+{
+  "bounds": "[]",
+  "first": "=",
+  "high": 10,
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "low": 5.5,
+  "right": undefined,
+  "second": "=",
+  "type": "between",
+}
+`;
+
+exports[`Number grammar can parse >=50 AND <=100 OR >=500 AND <=1000 1`] = `
+{
+  "id": 2,
+  "left": {
+    "bounds": "[]",
+    "first": "=",
+    "high": 100,
+    "id": 1,
+    "is": true,
+    "left": undefined,
+    "low": 50,
+    "right": undefined,
+    "second": "=",
+    "type": "between",
+  },
+  "right": {
+    "bounds": "[]",
+    "first": "=",
+    "high": 1000,
+    "id": 3,
+    "is": true,
+    "left": undefined,
+    "low": 500,
+    "right": undefined,
+    "second": "=",
+    "type": "between",
+  },
+  "type": ",",
+}
+`;
+
+exports[`Number grammar can parse >5 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": ">",
+  "value": [
+    5,
+  ],
+}
+`;
+
+exports[`Number grammar can parse >10 AND <=20 OR 90 1`] = `
+{
+  "id": 2,
+  "left": {
+    "bounds": "(]",
+    "first": null,
+    "high": 20,
+    "id": 1,
+    "is": true,
+    "left": undefined,
+    "low": 10,
+    "right": undefined,
+    "second": "=",
+    "type": "between",
+  },
+  "right": {
+    "id": 3,
+    "is": true,
+    "left": undefined,
+    "right": undefined,
+    "type": "=",
+    "value": [
+      90,
+    ],
+  },
+  "type": ",",
+}
+`;
+
+exports[`Number grammar can parse [,10] 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "<=",
+  "value": [
+    10,
+  ],
+}
+`;
+
+exports[`Number grammar can parse [0,9],[20,29] 1`] = `
+{
+  "id": 2,
+  "left": {
+    "bounds": "[]",
+    "high": 9,
+    "id": 1,
+    "is": true,
+    "left": undefined,
+    "low": 0,
+    "right": undefined,
+    "type": "between",
+  },
+  "right": {
+    "bounds": "[]",
+    "high": 29,
+    "id": 3,
+    "is": true,
+    "left": undefined,
+    "low": 20,
+    "right": undefined,
+    "type": "between",
+  },
+  "type": ",",
+}
+`;
+
+exports[`Number grammar can parse [0,10],20 1`] = `
+{
+  "id": 2,
+  "left": {
+    "bounds": "[]",
+    "high": 10,
+    "id": 1,
+    "is": true,
+    "left": undefined,
+    "low": 0,
+    "right": undefined,
+    "type": "between",
+  },
+  "right": {
+    "id": 3,
+    "is": true,
+    "left": undefined,
+    "right": undefined,
+    "type": "=",
+    "value": [
+      20,
+    ],
+  },
+  "type": ",",
+}
+`;
+
+exports[`Number grammar can parse [1,100) 1`] = `
+{
+  "bounds": "[)",
+  "high": 100,
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "low": 1,
+  "right": undefined,
+  "type": "between",
+}
+`;
+
+exports[`Number grammar can parse [1,100] 1`] = `
+{
+  "bounds": "[]",
+  "high": 100,
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "low": 1,
+  "right": undefined,
+  "type": "between",
+}
+`;
+
+exports[`Number grammar can parse 1 to 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": ">=",
+  "value": [
+    "1",
+  ],
+}
+`;
+
+exports[`Number grammar can parse 1, 3, 5, 7 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "=",
+  "value": [
+    1,
+    3,
+    5,
+    7,
+  ],
+}
+`;
+
+exports[`Number grammar can parse 5 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "=",
+  "value": [
+    5,
+  ],
+}
+`;
+
+exports[`Number grammar can parse 5.5 to 10 1`] = `
+{
+  "bounds": "[]",
+  "high": "10",
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "low": "5.5",
+  "right": undefined,
+  "type": "between",
+}
+`;
+
+exports[`Number grammar can parse 23, not 42, 43 1`] = `
+{
+  "id": 1,
+  "is": false,
+  "left": undefined,
+  "right": undefined,
+  "type": "=",
+  "value": [
+    23,
+    42,
+    43,
+  ],
+}
+`;
+
+exports[`Number grammar can parse 23, not 42, not 42 1`] = `
+{
+  "id": 2,
+  "left": {
+    "id": 1,
+    "is": true,
+    "left": undefined,
+    "right": undefined,
+    "type": "=",
+    "value": [
+      23,
+    ],
+  },
+  "right": {
+    "id": 3,
+    "is": false,
+    "left": undefined,
+    "right": undefined,
+    "type": "=",
+    "value": [
+      42,
+    ],
+  },
+  "type": ",",
+}
+`;
+
+exports[`Number grammar can parse 23, not 42, not 43 1`] = `
+{
+  "id": 2,
+  "left": {
+    "id": 1,
+    "is": true,
+    "left": undefined,
+    "right": undefined,
+    "type": "=",
+    "value": [
+      23,
+    ],
+  },
+  "right": {
+    "id": 3,
+    "is": false,
+    "left": undefined,
+    "right": undefined,
+    "type": "=",
+    "value": [
+      42,
+      43,
+    ],
+  },
+  "type": ",",
+}
+`;
+
+exports[`Number grammar can parse 23,NOT [30,40] 1`] = `
+{
+  "id": 2,
+  "left": {
+    "id": 1,
+    "is": true,
+    "left": undefined,
+    "right": undefined,
+    "type": "=",
+    "value": [
+      23,
+    ],
+  },
+  "right": {
+    "bounds": "[]",
+    "high": 40,
+    "id": 3,
+    "is": false,
+    "left": undefined,
+    "low": 30,
+    "right": undefined,
+    "type": "between",
+  },
+  "type": ",",
+}
+`;
+
+exports[`Number grammar can parse 23,NOT NULL 1`] = `
+{
+  "id": 2,
+  "left": {
+    "id": 1,
+    "is": true,
+    "left": undefined,
+    "right": undefined,
+    "type": "=",
+    "value": [
+      23,
+    ],
+  },
+  "right": {
+    "id": 3,
+    "is": false,
+    "left": undefined,
+    "right": undefined,
+    "type": "null",
+  },
+  "type": ",",
+}
+`;
+
+exports[`Number grammar can parse 23,NOT NULL,NOT NULL 1`] = `
+{
+  "id": 2,
+  "left": {
+    "id": 1,
+    "is": true,
+    "left": undefined,
+    "right": undefined,
+    "type": "=",
+    "value": [
+      23,
+    ],
+  },
+  "right": {
+    "id": 3,
+    "is": false,
+    "left": undefined,
+    "right": undefined,
+    "type": "null",
+  },
+  "type": ",",
+}
+`;
+
+exports[`Number grammar can parse NOT 10,[1,5) 1`] = `
+{
+  "id": 2,
+  "left": {
+    "id": 1,
+    "is": false,
+    "left": undefined,
+    "right": undefined,
+    "type": "=",
+    "value": [
+      10,
+    ],
+  },
+  "right": {
+    "bounds": "[)",
+    "high": 5,
+    "id": 3,
+    "is": true,
+    "left": undefined,
+    "low": 1,
+    "right": undefined,
+    "type": "between",
+  },
+  "type": ",",
+}
+`;
+
+exports[`Number grammar can parse NOT NULL 1`] = `
+{
+  "id": 1,
+  "is": false,
+  "left": undefined,
+  "right": undefined,
+  "type": "null",
+}
+`;
+
+exports[`Number grammar can parse NULL 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "null",
+}
+`;
+
+exports[`Number grammar can parse not 3 to 80.44 1`] = `
+{
+  "bounds": "[]",
+  "high": "80.44",
+  "id": 1,
+  "is": false,
+  "left": undefined,
+  "low": "3",
+  "right": undefined,
+  "type": "between",
+}
+`;
+
+exports[`Number grammar can parse not 5 1`] = `
+{
+  "id": 1,
+  "is": false,
+  "left": undefined,
+  "right": undefined,
+  "type": "=",
+  "value": [
+    5,
+  ],
+}
+`;
+
+exports[`Number grammar can parse not 66, 99, 4 1`] = `
+{
+  "id": 1,
+  "is": false,
+  "left": undefined,
+  "right": undefined,
+  "type": "=",
+  "value": [
+    66,
+    99,
+    4,
+  ],
+}
+`;
+
+exports[`Number grammar can parse to 100 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "<=",
+  "value": [
+    "100",
+  ],
+}
+`;
+
+exports[`Number grammar can't parse (,) 1`] = `
+{
+  "expression": "(,)",
+  "id": 1,
+  "type": "matchesAdvanced",
+}
+`;
+
+exports[`Number grammar can't parse [inf,10] 1`] = `
+{
+  "expression": "[inf,10]",
+  "id": 1,
+  "type": "matchesAdvanced",
+}
+`;
+
+exports[`Number grammar can't parse AND 1`] = `
+{
+  "expression": "AND",
+  "id": 1,
+  "type": "matchesAdvanced",
+}
+`;
+
+exports[`Number grammar can't parse OR 1`] = `
+{
+  "expression": "OR",
+  "id": 1,
+  "type": "matchesAdvanced",
+}
+`;
+
+exports[`between tests (0.1,   -4] 1`] = `
+{
+  "bounds": "(]",
+  "high": -4,
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "low": 0.1,
+  "right": undefined,
+  "type": "between",
+}
+`;
+
+exports[`between tests (0.1, .11111) 1`] = `
+{
+  "bounds": "()",
+  "high": 0.11111,
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "low": 0.1,
+  "right": undefined,
+  "type": "between",
+}
+`;
+
+exports[`between tests <= 7 OR >80.44 1`] = `
+{
+  "bounds": "[)",
+  "high": 80.44,
+  "id": 1,
+  "is": false,
+  "left": undefined,
+  "low": 7,
+  "right": undefined,
+  "type": "between",
+}
+`;
+
+exports[`between tests <=80.44  AND    >.1 1`] = `
+{
+  "bounds": "(]",
+  "high": 80.44,
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "low": 0.1,
+  "right": undefined,
+  "type": "between",
+}
+`;
+
+exports[`between tests <7 OR >80.44 1`] = `
+{
+  "bounds": "()",
+  "high": 80.44,
+  "id": 1,
+  "is": false,
+  "left": undefined,
+  "low": 7,
+  "right": undefined,
+  "type": "between",
+}
+`;
+
+exports[`between tests >= 7 AND <80.44 1`] = `
+{
+  "bounds": "[)",
+  "first": "=",
+  "high": 80.44,
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "low": 7,
+  "right": undefined,
+  "second": null,
+  "type": "between",
+}
+`;
+
+exports[`between tests >=80.44  OR    <.1 1`] = `
+{
+  "bounds": "(]",
+  "high": 80.44,
+  "id": 1,
+  "is": false,
+  "left": undefined,
+  "low": 0.1,
+  "right": undefined,
+  "type": "between",
+}
+`;
+
+exports[`between tests >7 AND <80.44 1`] = `
+{
+  "bounds": "()",
+  "first": null,
+  "high": 80.44,
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "low": 7,
+  "right": undefined,
+  "second": null,
+  "type": "between",
+}
+`;
+
+exports[`between tests [0.1,   -4) 1`] = `
+{
+  "bounds": "[)",
+  "high": -4,
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "low": 0.1,
+  "right": undefined,
+  "type": "between",
+}
+`;
+
+exports[`between tests [2, 4] 1`] = `
+{
+  "bounds": "[]",
+  "high": 4,
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "low": 2,
+  "right": undefined,
+  "type": "between",
+}
+`;
+
+exports[`between tests -1.0 to .75 1`] = `
+{
+  "bounds": "[]",
+  "high": ".75",
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "low": "-1.0",
+  "right": undefined,
+  "type": "between",
+}
+`;
+
+exports[`between tests 1 to 5 1`] = `
+{
+  "bounds": "[]",
+  "high": "5",
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "low": "1",
+  "right": undefined,
+  "type": "between",
+}
+`;
+
+exports[`between tests NOT  (0.1,   -4] 1`] = `
+{
+  "bounds": "(]",
+  "high": -4,
+  "id": 1,
+  "is": false,
+  "left": undefined,
+  "low": 0.1,
+  "right": undefined,
+  "type": "between",
+}
+`;
+
+exports[`between tests NOT [0.1,   -4) 1`] = `
+{
+  "bounds": "[)",
+  "high": -4,
+  "id": 1,
+  "is": false,
+  "left": undefined,
+  "low": 0.1,
+  "right": undefined,
+  "type": "between",
+}
+`;
+
+exports[`between tests NOT -1.0 to .75 1`] = `
+{
+  "bounds": "[]",
+  "high": ".75",
+  "id": 1,
+  "is": false,
+  "left": undefined,
+  "low": "-1.0",
+  "right": undefined,
+  "type": "between",
+}
+`;
+
+exports[`between tests NOT 1 to 5 1`] = `
+{
+  "bounds": "[]",
+  "high": "5",
+  "id": 1,
+  "is": false,
+  "left": undefined,
+  "low": "1",
+  "right": undefined,
+  "type": "between",
+}
+`;
+
+exports[`between tests NOT(0.1, .11111) 1`] = `
+{
+  "bounds": "()",
+  "high": 0.11111,
+  "id": 1,
+  "is": false,
+  "left": undefined,
+  "low": 0.1,
+  "right": undefined,
+  "type": "between",
+}
+`;
+
+exports[`between tests NOT[2, 4] 1`] = `
+{
+  "bounds": "[]",
+  "high": 4,
+  "id": 1,
+  "is": false,
+  "left": undefined,
+  "low": 2,
+  "right": undefined,
+  "type": "between",
+}
+`;
+
+exports[`between tests not 3 to 80.44 1`] = `
+{
+  "bounds": "[]",
+  "high": "80.44",
+  "id": 1,
+  "is": false,
+  "left": undefined,
+  "low": "3",
+  "right": undefined,
+  "type": "between",
+}
+`;
+
+exports[`nowSupported expressions != 1, != 2 1`] = `
+{
+  "id": 1,
+  "is": false,
+  "left": undefined,
+  "right": undefined,
+  "type": "=",
+  "value": [
+    1,
+    2,
+  ],
+}
+`;
+
+exports[`nowSupported expressions <> 1, <> 2 1`] = `
+{
+  "id": 1,
+  "is": false,
+  "left": undefined,
+  "right": undefined,
+  "type": "=",
+  "value": [
+    1,
+    2,
+  ],
+}
+`;
+
+exports[`nowSupported expressions >1 AND <2 OR >3 AND <4 1`] = `
+{
+  "id": 2,
+  "left": {
+    "bounds": "()",
+    "first": null,
+    "high": 2,
+    "id": 1,
+    "is": true,
+    "left": undefined,
+    "low": 1,
+    "right": undefined,
+    "second": null,
+    "type": "between",
+  },
+  "right": {
+    "bounds": "()",
+    "first": null,
+    "high": 4,
+    "id": 3,
+    "is": true,
+    "left": undefined,
+    "low": 3,
+    "right": undefined,
+    "second": null,
+    "type": "between",
+  },
+  "type": ",",
+}
+`;
+
+exports[`nowSupported expressions 1 to 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": ">=",
+  "value": [
+    "1",
+  ],
+}
+`;
+
+exports[`nowSupported expressions 1, not 2 1`] = `
+{
+  "id": 1,
+  "is": false,
+  "left": undefined,
+  "right": undefined,
+  "type": "=",
+  "value": [
+    1,
+    2,
+  ],
+}
+`;
+
+exports[`nowSupported expressions not 1, not 2 1`] = `
+{
+  "id": 1,
+  "is": false,
+  "left": undefined,
+  "right": undefined,
+  "type": "=",
+  "value": [
+    1,
+    2,
+  ],
+}
+`;
+
+exports[`nowSupported expressions to -1 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "<=",
+  "value": [
+    "-1",
+  ],
+}
+`;
+
+exports[`nowSupported expressions to 0.1 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "<=",
+  "value": [
+    "0.1",
+  ],
+}
+`;
+
+exports[`nullValues number tests NOT NULL 1`] = `
+{
+  "id": 1,
+  "is": false,
+  "left": undefined,
+  "right": undefined,
+  "type": "null",
+}
+`;
+
+exports[`nullValues number tests NULL 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "null",
+}
+`;
+
+exports[`nullValues number tests Not Null 1`] = `
+{
+  "id": 1,
+  "is": false,
+  "left": undefined,
+  "right": undefined,
+  "type": "null",
+}
+`;
+
+exports[`nullValues number tests nUll 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "null",
+}
+`;
+
+exports[`nullValues number tests not null 1`] = `
+{
+  "id": 1,
+  "is": false,
+  "left": undefined,
+  "right": undefined,
+  "type": "null",
+}
+`;
+
+exports[`nullValues number tests null 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "null",
+}
+`;
+
+exports[`unsuppored expressions &,,,$%testContext.#,,,$,testContext. 1`] = `
+{
+  "expression": "&,,,$%testContext.#,,,$,testContext.",
+  "id": 1,
+  "type": "matchesAdvanced",
+}
+`;
+
+exports[`unsuppored expressions <>,. ¡™£¢∞§¶•ªº–≠œ∑ 1`] = `
+{
+  "expression": "<>,. ¡™£¢∞§¶•ªº–≠œ∑",
+  "id": 1,
+  "type": "matchesAdvanced",
+}
+`;
+
+exports[`unsuppored expressions \\\\\\\\\\\\\\ 1`] = `
+{
+  "expression": "\\\\\\\\\\\\\\",
+  "id": 1,
+  "type": "matchesAdvanced",
+}
+`;
+
+exports[`unsuppored expressions ^12345 1`] = `
+{
+  "expression": "^12345",
+  "id": 1,
+  "type": "matchesAdvanced",
+}
+`;
+
+exports[`unsuppored expressions ~\`!testContext.#$%^*()-+=_{}[]|? 1`] = `
+{
+  "expression": "~\`!testContext.#$%^*()-+=_{}[]|?",
+  "id": 1,
+  "type": "matchesAdvanced",
+}
+`;
+
+exports[`unsuppored expressions --1 1`] = `
+{
+  "expression": "--1",
+  "id": 1,
+  "type": "matchesAdvanced",
+}
+`;
+
+exports[`unsuppored expressions 0.....1 1`] = `
+{
+  "expression": "0.....1",
+  "id": 1,
+  "type": "matchesAdvanced",
+}
+`;
+
+exports[`unsuppored expressions 0.1.1.1 1`] = `
+{
+  "expression": "0.1.1.1",
+  "id": 1,
+  "type": "matchesAdvanced",
+}
+`;
+
+exports[`unsuppored expressions 1234^, 567 1`] = `
+{
+  "expression": "1234^, 567",
+  "id": 1,
+  "type": "matchesAdvanced",
+}
+`;
+
+exports[`unsuppored expressions foo 1`] = `
+{
+  "expression": "foo",
+  "id": 1,
+  "type": "matchesAdvanced",
+}
+`;
+
+exports[`unsuppored expressions seventeen 1`] = `
+{
+  "expression": "seventeen",
+  "id": 1,
+  "type": "matchesAdvanced",
+}
+`;
+
+exports[`unsuppored expressions ´®†¥¨ˆøπ“‘åß∂ƒ©˙∆˚¬…æ 1`] = `
+{
+  "expression": "´®†¥¨ˆøπ“‘åß∂ƒ©˙∆˚¬…æ",
+  "id": 1,
+  "type": "matchesAdvanced",
+}
+`;
+
+exports[`unsuppored expressions Ω≈ç√∫˜µ≤≥÷ 1`] = `
+{
+  "expression": "Ω≈ç√∫˜µ≤≥÷",
+  "id": 1,
+  "type": "matchesAdvanced",
+}
+`;
+
+exports[`unsuppored expressions 😻🌚 1`] = `
+{
+  "expression": "😻🌚",
+  "id": 1,
+  "type": "matchesAdvanced",
+}
+`;

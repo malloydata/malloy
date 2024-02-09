@@ -1,0 +1,28 @@
+{
+  "name": "@malloydata/malloy-filter-expressions",
+  "version": "0.0.1",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "homepage": "https://github.com/malloydata/malloy-filter-expressions#readme",
+  "engines": {
+    "node": ">=16"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/malloydata/malloy-filter-expressions"
+  },
+  "scripts": {
+    "test": "jest --config=../../jest.config.js",
+    "clean": "tsc --build --clean && rm -rf lib dist",
+    "build": "tsc --build",
+    "prepublishOnly": "npm run clean && npm run build"
+  },
+  "dependencies": {
+    "lodash": "^4.17.20",
+    "peggy": "^3.0.2"
+  },
+  "devDependencies": {
+    "@types/lodash": "^4.14.165"
+  }
+}

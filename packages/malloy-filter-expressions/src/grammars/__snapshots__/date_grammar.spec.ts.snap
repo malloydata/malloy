@@ -1,0 +1,1956 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Date grammar can parse  1`] = `
+{
+  "id": 1,
+  "is": true,
+  "type": "anyvalue",
+}
+`;
+
+exports[`Date grammar can parse 3 days 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "past",
+  "unit": "day",
+  "value": 3,
+}
+`;
+
+exports[`Date grammar can parse 3 days ago 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "pastAgo",
+  "unit": "day",
+  "value": 3,
+}
+`;
+
+exports[`Date grammar can parse 3 months ago for 2 days 1`] = `
+{
+  "endInterval": {
+    "type": "interval",
+    "unit": "day",
+    "value": 2,
+  },
+  "id": 1,
+  "intervalType": "ago",
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "startInterval": {
+    "type": "interval",
+    "unit": "month",
+    "value": 3,
+  },
+  "type": "relative",
+}
+`;
+
+exports[`Date grammar can parse 7 year ago 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "pastAgo",
+  "unit": "year",
+  "value": 7,
+}
+`;
+
+exports[`Date grammar can parse 2018 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "year",
+  "year": "2018",
+}
+`;
+
+exports[`Date grammar can parse 2018/01 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "month": "01",
+  "right": undefined,
+  "type": "month",
+  "year": "2018",
+}
+`;
+
+exports[`Date grammar can parse 2018-05-18 1`] = `
+{
+  "date": {
+    "day": "18",
+    "month": "05",
+    "year": "2018",
+  },
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "on",
+}
+`;
+
+exports[`Date grammar can parse 2018-05-18 12:00:00 to 2018-05-18 14:00:00 1`] = `
+{
+  "end": {
+    "day": "18",
+    "hour": "14",
+    "minute": "00",
+    "month": "05",
+    "second": "00",
+    "year": "2018",
+  },
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "start": {
+    "day": "18",
+    "hour": "12",
+    "minute": "00",
+    "month": "05",
+    "second": "00",
+    "year": "2018",
+  },
+  "type": "range",
+}
+`;
+
+exports[`Date grammar can parse absolute date 2018 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "year",
+  "year": "2018",
+}
+`;
+
+exports[`Date grammar can parse absolute date 2018/05 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "month": "05",
+  "right": undefined,
+  "type": "month",
+  "year": "2018",
+}
+`;
+
+exports[`Date grammar can parse absolute date 2018/05 for 2 months 1`] = `
+{
+  "end": {
+    "type": "interval",
+    "unit": "month",
+    "value": 2,
+  },
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "month": "05",
+  "right": undefined,
+  "type": "monthInterval",
+  "year": "2018",
+}
+`;
+
+exports[`Date grammar can parse absolute date 2018/05/10 05:00 for 5 hours 1`] = `
+{
+  "end": {
+    "type": "interval",
+    "unit": "hour",
+    "value": 5,
+  },
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "start": {
+    "day": "10",
+    "hour": "05",
+    "minute": "00",
+    "month": "05",
+    "second": "",
+    "year": "2018",
+  },
+  "type": "rangeInterval",
+}
+`;
+
+exports[`Date grammar can parse absolute date 2018/05/10 for 3 days 1`] = `
+{
+  "end": {
+    "type": "interval",
+    "unit": "day",
+    "value": 3,
+  },
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "start": {
+    "day": "10",
+    "month": "05",
+    "year": "2018",
+  },
+  "type": "rangeInterval",
+}
+`;
+
+exports[`Date grammar can parse absolute date 2018/05/10 for 5 months 1`] = `
+{
+  "end": {
+    "type": "interval",
+    "unit": "month",
+    "value": 5,
+  },
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "start": {
+    "day": "10",
+    "month": "05",
+    "year": "2018",
+  },
+  "type": "rangeInterval",
+}
+`;
+
+exports[`Date grammar can parse absolute date 2018/05/29 1`] = `
+{
+  "date": {
+    "day": "29",
+    "month": "05",
+    "year": "2018",
+  },
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "on",
+}
+`;
+
+exports[`Date grammar can parse absolute date FY2018 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "fiscalYear",
+  "year": "2018",
+}
+`;
+
+exports[`Date grammar can parse absolute date FY2018-Q1 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "quarter": "Q1",
+  "right": undefined,
+  "type": "fiscalQuarter",
+  "year": "2018",
+}
+`;
+
+exports[`Date grammar can parse absolute date after 2018/05/10 1`] = `
+{
+  "date": {
+    "day": "10",
+    "month": "05",
+    "year": "2018",
+  },
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "range": "absolute",
+  "right": undefined,
+  "type": "after",
+}
+`;
+
+exports[`Date grammar can parse absolute date before 2018/05/10 1`] = `
+{
+  "date": {
+    "day": "10",
+    "month": "05",
+    "year": "2018",
+  },
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "range": "absolute",
+  "right": undefined,
+  "type": "before",
+}
+`;
+
+exports[`Date grammar can parse after 1 month ago 1`] = `
+{
+  "fromnow": false,
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "range": "relative",
+  "right": undefined,
+  "type": "after",
+  "unit": "month",
+  "value": 1,
+}
+`;
+
+exports[`Date grammar can parse after 2 weeks from now 1`] = `
+{
+  "fromnow": true,
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "range": "relative",
+  "right": undefined,
+  "type": "after",
+  "unit": "week",
+  "value": 2,
+}
+`;
+
+exports[`Date grammar can parse after 2018-10-05 1`] = `
+{
+  "date": {
+    "day": "05",
+    "month": "10",
+    "year": "2018",
+  },
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "range": "absolute",
+  "right": undefined,
+  "type": "after",
+}
+`;
+
+exports[`Date grammar can parse after last day 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "after_last",
+  "unit": "day",
+}
+`;
+
+exports[`Date grammar can parse after last quarter 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "after_last",
+  "unit": "quarter",
+}
+`;
+
+exports[`Date grammar can parse after last year 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "after_last",
+  "unit": "year",
+}
+`;
+
+exports[`Date grammar can parse after next day 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "after_next",
+  "unit": "day",
+}
+`;
+
+exports[`Date grammar can parse after next month 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "after_next",
+  "unit": "month",
+}
+`;
+
+exports[`Date grammar can parse after next week 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "after_next",
+  "unit": "week",
+}
+`;
+
+exports[`Date grammar can parse after this day 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "after_this",
+  "unit": "day",
+}
+`;
+
+exports[`Date grammar can parse after this month 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "after_this",
+  "unit": "month",
+}
+`;
+
+exports[`Date grammar can parse after this week 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "after_this",
+  "unit": "week",
+}
+`;
+
+exports[`Date grammar can parse basic date  1`] = `
+{
+  "id": 1,
+  "is": true,
+  "type": "anyvalue",
+}
+`;
+
+exports[`Date grammar can parse basic date 3 days 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "past",
+  "unit": "day",
+  "value": 3,
+}
+`;
+
+exports[`Date grammar can parse basic date 3 days ago 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "pastAgo",
+  "unit": "day",
+  "value": 3,
+}
+`;
+
+exports[`Date grammar can parse basic date 3 days from now 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "from now",
+  "unit": "day",
+  "value": 3,
+}
+`;
+
+exports[`Date grammar can parse basic date 3 days from now for 2 weeks 1`] = `
+{
+  "endInterval": {
+    "type": "interval",
+    "unit": "week",
+    "value": 2,
+  },
+  "id": 1,
+  "intervalType": "from now",
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "startInterval": {
+    "type": "interval",
+    "unit": "day",
+    "value": 3,
+  },
+  "type": "relative",
+}
+`;
+
+exports[`Date grammar can parse basic date 3 months ago for 2 days 1`] = `
+{
+  "endInterval": {
+    "type": "interval",
+    "unit": "day",
+    "value": 2,
+  },
+  "id": 1,
+  "intervalType": "ago",
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "startInterval": {
+    "type": "interval",
+    "unit": "month",
+    "value": 3,
+  },
+  "type": "relative",
+}
+`;
+
+exports[`Date grammar can parse basic date 2018-01-01 12:00:00 for 3 days 1`] = `
+{
+  "end": {
+    "type": "interval",
+    "unit": "day",
+    "value": 3,
+  },
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "start": {
+    "day": "01",
+    "hour": "12",
+    "minute": "00",
+    "month": "01",
+    "second": "00",
+    "year": "2018",
+  },
+  "type": "rangeInterval",
+}
+`;
+
+exports[`Date grammar can parse basic date 2018-05-18 12:00:00 to 2018-05-18 14:00:00 1`] = `
+{
+  "end": {
+    "day": "18",
+    "hour": "14",
+    "minute": "00",
+    "month": "05",
+    "second": "00",
+    "year": "2018",
+  },
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "start": {
+    "day": "18",
+    "hour": "12",
+    "minute": "00",
+    "month": "05",
+    "second": "00",
+    "year": "2018",
+  },
+  "type": "range",
+}
+`;
+
+exports[`Date grammar can parse basic date Monday 1`] = `
+{
+  "day": "monday",
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "day",
+}
+`;
+
+exports[`Date grammar can parse basic date after 2018-10-05 1`] = `
+{
+  "date": {
+    "day": "05",
+    "month": "10",
+    "year": "2018",
+  },
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "range": "absolute",
+  "right": undefined,
+  "type": "after",
+}
+`;
+
+exports[`Date grammar can parse basic date before 3 days ago 1`] = `
+{
+  "fromnow": false,
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "range": "relative",
+  "right": undefined,
+  "type": "before",
+  "unit": "day",
+  "value": 3,
+}
+`;
+
+exports[`Date grammar can parse basic date before 2018-01-01 12:00:00 1`] = `
+{
+  "date": {
+    "day": "01",
+    "hour": "12",
+    "minute": "00",
+    "month": "01",
+    "second": "00",
+    "year": "2018",
+  },
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "range": "absolute",
+  "right": undefined,
+  "type": "before",
+}
+`;
+
+exports[`Date grammar can parse basic date next week 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "next",
+  "unit": "week",
+}
+`;
+
+exports[`Date grammar can parse basic date this day 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "this",
+  "unit": "day",
+}
+`;
+
+exports[`Date grammar can parse basic date this day to second 1`] = `
+{
+  "endInterval": "second",
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "startInterval": "day",
+  "type": "thisRange",
+}
+`;
+
+exports[`Date grammar can parse basic date this year to day 1`] = `
+{
+  "endInterval": "day",
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "startInterval": "year",
+  "type": "thisRange",
+}
+`;
+
+exports[`Date grammar can parse basic date this year to second 1`] = `
+{
+  "endInterval": "second",
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "startInterval": "year",
+  "type": "thisRange",
+}
+`;
+
+exports[`Date grammar can parse basic date today 1`] = `
+{
+  "day": "today",
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "day",
+}
+`;
+
+exports[`Date grammar can parse basic date tomorrow 1`] = `
+{
+  "day": "tomorrow",
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "day",
+}
+`;
+
+exports[`Date grammar can parse basic date yesterday 1`] = `
+{
+  "day": "yesterday",
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "day",
+}
+`;
+
+exports[`Date grammar can parse before 2 months from now 1`] = `
+{
+  "fromnow": true,
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "range": "relative",
+  "right": undefined,
+  "type": "before",
+  "unit": "month",
+  "value": 2,
+}
+`;
+
+exports[`Date grammar can parse before 3 days ago 1`] = `
+{
+  "fromnow": false,
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "range": "relative",
+  "right": undefined,
+  "type": "before",
+  "unit": "day",
+  "value": 3,
+}
+`;
+
+exports[`Date grammar can parse before 2018-01-01 12:00:00 1`] = `
+{
+  "date": {
+    "day": "01",
+    "hour": "12",
+    "minute": "00",
+    "month": "01",
+    "second": "00",
+    "year": "2018",
+  },
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "range": "absolute",
+  "right": undefined,
+  "type": "before",
+}
+`;
+
+exports[`Date grammar can parse before last day 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "before_last",
+  "unit": "day",
+}
+`;
+
+exports[`Date grammar can parse before last month 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "before_last",
+  "unit": "month",
+}
+`;
+
+exports[`Date grammar can parse before last week 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "before_last",
+  "unit": "week",
+}
+`;
+
+exports[`Date grammar can parse before next day 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "before_next",
+  "unit": "day",
+}
+`;
+
+exports[`Date grammar can parse before next quarter 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "before_next",
+  "unit": "quarter",
+}
+`;
+
+exports[`Date grammar can parse before next year 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "before_next",
+  "unit": "year",
+}
+`;
+
+exports[`Date grammar can parse before this day 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "before_this",
+  "unit": "day",
+}
+`;
+
+exports[`Date grammar can parse before this month 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "before_this",
+  "unit": "month",
+}
+`;
+
+exports[`Date grammar can parse before this week 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "before_this",
+  "unit": "week",
+}
+`;
+
+exports[`Date grammar can parse days 1 day ago 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "pastAgo",
+  "unit": "day",
+  "value": 1,
+}
+`;
+
+exports[`Date grammar can parse days 2 days 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "past",
+  "unit": "day",
+  "value": 2,
+}
+`;
+
+exports[`Date grammar can parse days 7 days ago for 7 days 1`] = `
+{
+  "complete": true,
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "past",
+  "unit": "day",
+  "value": 7,
+}
+`;
+
+exports[`Date grammar can parse days 7 days from now 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "from now",
+  "unit": "day",
+  "value": 7,
+}
+`;
+
+exports[`Date grammar can parse days last 3 days 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "lastInterval",
+  "unit": "day",
+  "value": 3,
+}
+`;
+
+exports[`Date grammar can parse days today 1`] = `
+{
+  "day": "today",
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "day",
+}
+`;
+
+exports[`Date grammar can parse days today for 7 days 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "dayInterval",
+  "unit": "day",
+  "value": 7,
+}
+`;
+
+exports[`Date grammar can parse hours 1 hour 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "past",
+  "unit": "hour",
+  "value": 1,
+}
+`;
+
+exports[`Date grammar can parse hours 24 hours 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "past",
+  "unit": "hour",
+  "value": 24,
+}
+`;
+
+exports[`Date grammar can parse hours 24 hours ago for 1 hour 1`] = `
+{
+  "endInterval": {
+    "type": "interval",
+    "unit": "hour",
+    "value": 1,
+  },
+  "id": 1,
+  "intervalType": "ago",
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "startInterval": {
+    "type": "interval",
+    "unit": "hour",
+    "value": 24,
+  },
+  "type": "relative",
+}
+`;
+
+exports[`Date grammar can parse last day 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "last",
+  "unit": "day",
+}
+`;
+
+exports[`Date grammar can parse last fiscal quarter 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "last",
+  "unit": "fiscal quarter",
+}
+`;
+
+exports[`Date grammar can parse last fiscal year 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "last",
+  "unit": "fiscal year",
+}
+`;
+
+exports[`Date grammar can parse last hour 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "last",
+  "unit": "hour",
+}
+`;
+
+exports[`Date grammar can parse last minute 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "last",
+  "unit": "minute",
+}
+`;
+
+exports[`Date grammar can parse last month 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "last",
+  "unit": "month",
+}
+`;
+
+exports[`Date grammar can parse last quarter 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "last",
+  "unit": "quarter",
+}
+`;
+
+exports[`Date grammar can parse last second 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "last",
+  "unit": "second",
+}
+`;
+
+exports[`Date grammar can parse last week 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "last",
+  "unit": "week",
+}
+`;
+
+exports[`Date grammar can parse last week 2`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "last",
+  "unit": "week",
+}
+`;
+
+exports[`Date grammar can parse last year 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "last",
+  "unit": "year",
+}
+`;
+
+exports[`Date grammar can parse minutes 1 minute 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "past",
+  "unit": "minute",
+  "value": 1,
+}
+`;
+
+exports[`Date grammar can parse minutes 60 minutes 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "past",
+  "unit": "minute",
+  "value": 60,
+}
+`;
+
+exports[`Date grammar can parse minutes 60 minutes ago for 1 minute 1`] = `
+{
+  "endInterval": {
+    "type": "interval",
+    "unit": "minute",
+    "value": 1,
+  },
+  "id": 1,
+  "intervalType": "ago",
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "startInterval": {
+    "type": "interval",
+    "unit": "minute",
+    "value": 60,
+  },
+  "type": "relative",
+}
+`;
+
+exports[`Date grammar can parse monday 1`] = `
+{
+  "day": "monday",
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "day",
+}
+`;
+
+exports[`Date grammar can parse months 1 month 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "past",
+  "unit": "month",
+  "value": 1,
+}
+`;
+
+exports[`Date grammar can parse months 2 months 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "past",
+  "unit": "month",
+  "value": 2,
+}
+`;
+
+exports[`Date grammar can parse months 2 months ago 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "pastAgo",
+  "unit": "month",
+  "value": 2,
+}
+`;
+
+exports[`Date grammar can parse months 2 months ago for 2 months 1`] = `
+{
+  "complete": true,
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "past",
+  "unit": "month",
+  "value": 2,
+}
+`;
+
+exports[`Date grammar can parse months 2 months from now 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "from now",
+  "unit": "month",
+  "value": 2,
+}
+`;
+
+exports[`Date grammar can parse months 6 months from now for 3 months 1`] = `
+{
+  "endInterval": {
+    "type": "interval",
+    "unit": "month",
+    "value": 3,
+  },
+  "id": 1,
+  "intervalType": "from now",
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "startInterval": {
+    "type": "interval",
+    "unit": "month",
+    "value": 6,
+  },
+  "type": "relative",
+}
+`;
+
+exports[`Date grammar can parse months before 2 months 1`] = `
+{
+  "fromnow": false,
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "range": "relative",
+  "right": undefined,
+  "type": "before",
+  "unit": "month",
+  "value": 2,
+}
+`;
+
+exports[`Date grammar can parse months before 2 months ago 1`] = `
+{
+  "fromnow": false,
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "range": "relative",
+  "right": undefined,
+  "type": "before",
+  "unit": "month",
+  "value": 2,
+}
+`;
+
+exports[`Date grammar can parse months before 2 months from now 1`] = `
+{
+  "fromnow": true,
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "range": "relative",
+  "right": undefined,
+  "type": "before",
+  "unit": "month",
+  "value": 2,
+}
+`;
+
+exports[`Date grammar can parse months last month 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "last",
+  "unit": "month",
+}
+`;
+
+exports[`Date grammar can parse months next month 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "next",
+  "unit": "month",
+}
+`;
+
+exports[`Date grammar can parse months this month 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "this",
+  "unit": "month",
+}
+`;
+
+exports[`Date grammar can parse next day 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "next",
+  "unit": "day",
+}
+`;
+
+exports[`Date grammar can parse next fiscal quarter 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "next",
+  "unit": "fiscal quarter",
+}
+`;
+
+exports[`Date grammar can parse next fiscal year 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "next",
+  "unit": "fiscal year",
+}
+`;
+
+exports[`Date grammar can parse next month 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "next",
+  "unit": "month",
+}
+`;
+
+exports[`Date grammar can parse next quarter 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "next",
+  "unit": "quarter",
+}
+`;
+
+exports[`Date grammar can parse next week 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "next",
+  "unit": "week",
+}
+`;
+
+exports[`Date grammar can parse next week 2`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "next",
+  "unit": "week",
+}
+`;
+
+exports[`Date grammar can parse next year 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "next",
+  "unit": "year",
+}
+`;
+
+exports[`Date grammar can parse not null 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "notnull",
+}
+`;
+
+exports[`Date grammar can parse null 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "null",
+}
+`;
+
+exports[`Date grammar can parse quarters 1 quarter 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "past",
+  "unit": "quarter",
+  "value": 1,
+}
+`;
+
+exports[`Date grammar can parse quarters 2 quarters 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "past",
+  "unit": "quarter",
+  "value": 2,
+}
+`;
+
+exports[`Date grammar can parse quarters 2 quarters ago 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "pastAgo",
+  "unit": "quarter",
+  "value": 2,
+}
+`;
+
+exports[`Date grammar can parse quarters 2018-07-01 for 1 quarter 1`] = `
+{
+  "end": {
+    "type": "interval",
+    "unit": "quarter",
+    "value": 1,
+  },
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "start": {
+    "day": "01",
+    "month": "07",
+    "year": "2018",
+  },
+  "type": "rangeInterval",
+}
+`;
+
+exports[`Date grammar can parse quarters 2018-Q4 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "quarter": {
+    "quarter": "4",
+  },
+  "right": undefined,
+  "type": "quarter",
+  "year": "2018",
+}
+`;
+
+exports[`Date grammar can parse quarters before 2 quarters ago 1`] = `
+{
+  "fromnow": false,
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "range": "relative",
+  "right": undefined,
+  "type": "before",
+  "unit": "quarter",
+  "value": 2,
+}
+`;
+
+exports[`Date grammar can parse quarters last quarter 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "last",
+  "unit": "quarter",
+}
+`;
+
+exports[`Date grammar can parse quarters next quarter 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "next",
+  "unit": "quarter",
+}
+`;
+
+exports[`Date grammar can parse quarters this quarter 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "this",
+  "unit": "quarter",
+}
+`;
+
+exports[`Date grammar can parse seconds 1 second 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "past",
+  "unit": "second",
+  "value": 1,
+}
+`;
+
+exports[`Date grammar can parse seconds 60 seconds 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "past",
+  "unit": "second",
+  "value": 60,
+}
+`;
+
+exports[`Date grammar can parse seconds 60 seconds ago for 1 second 1`] = `
+{
+  "endInterval": {
+    "type": "interval",
+    "unit": "second",
+    "value": 1,
+  },
+  "id": 1,
+  "intervalType": "ago",
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "startInterval": {
+    "type": "interval",
+    "unit": "second",
+    "value": 60,
+  },
+  "type": "relative",
+}
+`;
+
+exports[`Date grammar can parse this day 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "this",
+  "unit": "day",
+}
+`;
+
+exports[`Date grammar can parse this fiscal quarter 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "this",
+  "unit": "fiscal quarter",
+}
+`;
+
+exports[`Date grammar can parse this fiscal year 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "this",
+  "unit": "fiscal year",
+}
+`;
+
+exports[`Date grammar can parse this month 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "this",
+  "unit": "month",
+}
+`;
+
+exports[`Date grammar can parse this quarter 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "this",
+  "unit": "quarter",
+}
+`;
+
+exports[`Date grammar can parse this week 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "this",
+  "unit": "week",
+}
+`;
+
+exports[`Date grammar can parse this year 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "this",
+  "unit": "year",
+}
+`;
+
+exports[`Date grammar can parse this year to day 1`] = `
+{
+  "endInterval": "day",
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "startInterval": "year",
+  "type": "thisRange",
+}
+`;
+
+exports[`Date grammar can parse this year to second 1`] = `
+{
+  "endInterval": "second",
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "startInterval": "year",
+  "type": "thisRange",
+}
+`;
+
+exports[`Date grammar can parse weeks 1 week 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "past",
+  "unit": "week",
+  "value": 1,
+}
+`;
+
+exports[`Date grammar can parse weeks 1 week ago 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "pastAgo",
+  "unit": "week",
+  "value": 1,
+}
+`;
+
+exports[`Date grammar can parse weeks 2 weeks 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "past",
+  "unit": "week",
+  "value": 2,
+}
+`;
+
+exports[`Date grammar can parse weeks 2 weeks ago for 2 weeks 1`] = `
+{
+  "complete": true,
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "past",
+  "unit": "week",
+  "value": 2,
+}
+`;
+
+exports[`Date grammar can parse weeks after this week 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "after_this",
+  "unit": "week",
+}
+`;
+
+exports[`Date grammar can parse weeks before this week 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "before_this",
+  "unit": "week",
+}
+`;
+
+exports[`Date grammar can parse weeks last week 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "last",
+  "unit": "week",
+}
+`;
+
+exports[`Date grammar can parse weeks next week 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "next",
+  "unit": "week",
+}
+`;
+
+exports[`Date grammar can parse weeks this week 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "this",
+  "unit": "week",
+}
+`;
+
+exports[`Date grammar can parse years 1 year 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "past",
+  "unit": "year",
+  "value": 1,
+}
+`;
+
+exports[`Date grammar can parse years 2 years 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "past",
+  "unit": "year",
+  "value": 2,
+}
+`;
+
+exports[`Date grammar can parse years 2 years ago 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "pastAgo",
+  "unit": "year",
+  "value": 2,
+}
+`;
+
+exports[`Date grammar can parse years 2 years ago for 2 years 1`] = `
+{
+  "complete": true,
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "past",
+  "unit": "year",
+  "value": 2,
+}
+`;
+
+exports[`Date grammar can parse years before 2 years ago 1`] = `
+{
+  "fromnow": false,
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "range": "relative",
+  "right": undefined,
+  "type": "before",
+  "unit": "year",
+  "value": 2,
+}
+`;
+
+exports[`Date grammar can parse years last year 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "last",
+  "unit": "year",
+}
+`;
+
+exports[`Date grammar can parse years next year 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "next",
+  "unit": "year",
+}
+`;
+
+exports[`Date grammar can parse years this year 1`] = `
+{
+  "id": 1,
+  "is": true,
+  "left": undefined,
+  "right": undefined,
+  "type": "this",
+  "unit": "year",
+}
+`;
+
+exports[`Date grammar invalid dates show as matches advanced type -1 1`] = `
+{
+  "expression": "-1",
+  "id": 1,
+  "type": "matchesAdvanced",
+}
+`;
+
+exports[`Date grammar invalid dates show as matches advanced type not a valid date 1`] = `
+{
+  "expression": "not a valid date",
+  "id": 1,
+  "type": "matchesAdvanced",
+}
+`;
+
+exports[`Date grammar with multiple clauses parse correctly 1`] = `
+{
+  "id": 2,
+  "is": true,
+  "left": {
+    "id": 1,
+    "is": true,
+    "left": undefined,
+    "right": undefined,
+    "type": "pastAgo",
+    "unit": "year",
+    "value": 1,
+  },
+  "right": {
+    "id": 3,
+    "is": true,
+    "left": undefined,
+    "right": undefined,
+    "type": "pastAgo",
+    "unit": "month",
+    "value": 1,
+  },
+  "type": ",",
+}
+`;
+
+exports[`Date grammar with multiple clauses parse correctly 2`] = `undefined`;
