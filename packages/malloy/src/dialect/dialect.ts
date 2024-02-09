@@ -95,6 +95,7 @@ export abstract class Dialect {
   abstract unnestWithNumbers: boolean;
   abstract defaultSampling: Sampling;
   abstract supportsAggDistinct: boolean;
+  abstract supportsTypedAggDistinct: boolean;
   abstract supportUnnestArrayAgg: boolean; // won't need UDFs for nested pipelines
   abstract supportsCTEinCoorelatedSubQueries: boolean;
   abstract dontUnionIndex: boolean;

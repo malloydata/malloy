@@ -586,9 +586,9 @@ class QueryField extends QueryNode {
       );
     }
     if (distinctKey) {
-      if (!context.dialect.supportsAggDistinct) {
+      if (!context.dialect.supportsTypedAggDistinct) {
         throw new Error(
-          `Function \`${frag.name}\` does not support fanning out in ${context.dialect.name}`
+          `Function \`${frag.name}\` does not asymmetric aggregation in ${context.dialect.name}`
         );
       }
       const argsExpressions = args.map(arg => {
