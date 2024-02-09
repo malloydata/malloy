@@ -41,27 +41,34 @@ const runtimes = ['duckdb'];
 
 const [_describe, databases] = describeIfDatabaseAvailable(runtimes);
 
-describe('Streaming tests', () => {
-  const runtimes = new RuntimeList(databases);
-
-  afterAll(async () => {
-    await runtimes.closeAll();
-  });
-
-  runtimes.runtimeMap.forEach((runtime, databaseName) => {
-    it(`stream nested results to CSV - ${databaseName}`, async () => {
-      const stream = runtime
-        .loadModel(
-          `source: airports is ${databaseName}.table('test/data/duckdb/airports.parquet') extend {
+function modelText(databaseName: string) {
+  return `source: airports is ${databaseName}.table('test/data/duckdb/airports.parquet') extend {
   rename: facility_type is fac_type
 
   measure: airport_count is count()
+  measure: avg_elevation is avg(elevation)
+
+  view: higher_elevation is {
+    group_by: faa_region
+    aggregate: airport_count, avg_elevation
+    order_by: avg_elevation desc
+    limit: 5
+  }
+
+  view: by_county is {
+    where: county != null
+    group_by: county
+    aggregate: airport_count
+    limit: 2
+    order_by: airport_count desc, county desc
+  }
 
   view: by_state is {
     where: state != null
     group_by: state
     aggregate: airport_count
     limit: 2
+    nest: by_county
   }
 
   view: by_facility_type is {
@@ -79,20 +86,58 @@ describe('Streaming tests', () => {
     limit: 2
     aggregate: airport_count
   }
-}`
-        )
+}`;
+}
+
+describe('Streaming tests', () => {
+  const runtimes = new RuntimeList(databases);
+
+  afterAll(async () => {
+    await runtimes.closeAll();
+  });
+
+  runtimes.runtimeMap.forEach((runtime, databaseName) => {
+    it(`stream nested results to CSV - ${databaseName}`, async () => {
+      const stream = runtime
+        .loadModel(modelText(databaseName))
         .loadQuery('run: airports -> airports_by_region')
         .runStream();
       const accummulator = new StringAccumulator();
       const csvWriter = new CSVWriter(accummulator);
       await csvWriter.process(stream);
-      const expectedCsv = `faa_region,by_state,,by_facility_type,,airport_count
-AGL,state,airport_count,facility_type,airport_count,4437
-,IL,890,AIRPORT,3443,
-,OH,749,HELIPORT,826,
-ASW,state,airport_count,facility_type,airport_count,3268
-,TX,1845,AIRPORT,2341,
-,LA,500,HELIPORT,861,
+      const expectedCsv = `faa_region,by_state,,,,by_facility_type,,airport_count
+AGL,state,airport_count,by_county,,facility_type,airport_count,4437
+,IL,890,county,airport_count,AIRPORT,3443,
+,,,COOK,51,HELIPORT,826,
+,,,LA SALLE,39,,,
+,OH,749,county,airport_count,,,
+,,,FRANKLIN,27,,,
+,,,CUYAHOGA,27,,,
+ASW,state,airport_count,by_county,,facility_type,airport_count,3268
+,TX,1845,county,airport_count,AIRPORT,2341,
+,,,HARRIS,135,HELIPORT,861,
+,,,TARRANT,63,,,
+,LA,500,county,airport_count,,,
+,,,PLAQUEMINES,31,,,
+,,,VERMILION,29,,,
+`;
+      expect(accummulator.accumulatedValue).toBe(expectedCsv);
+    });
+
+    it(`stream simple results to CSV - ${databaseName}`, async () => {
+      const stream = runtime
+        .loadModel(modelText(databaseName))
+        .loadQuery('run: airports -> higher_elevation')
+        .runStream();
+      const accummulator = new StringAccumulator();
+      const csvWriter = new CSVWriter(accummulator);
+      await csvWriter.process(stream);
+      const expectedCsv = `faa_region,airport_count,avg_elevation
+ANM,2102,3284.3910561370126
+AWP,1503,1667.0991350632069
+ACE,1579,1339.0139328689045
+ASW,3268,1007.2873317013464
+AGL,4437,983.4800540906018
 `;
       expect(accummulator.accumulatedValue).toBe(expectedCsv);
     });
