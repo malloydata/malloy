@@ -977,7 +977,7 @@ describe('unspported fields in schema', () => {
       expect(`
         ##! experimental { sql_functions }
         run: a -> {
-          aggregate: x is sum(sql_number("\${a} * 2"))
+          aggregate: x is sum(sql_number("\${ai} * 2"))
         }
       `).toTranslate();
     });

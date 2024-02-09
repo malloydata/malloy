@@ -586,7 +586,12 @@ class QueryField extends QueryNode {
       );
     }
     if (distinctKey) {
-      if (!context.dialect.supportsTypedAggDistinct) {
+      const requiresTypedAggDistinct = frag.name !== 'string_agg';
+      if (
+        !(requiresTypedAggDistinct
+          ? context.dialect.supportsTypedAggDistinct
+          : context.dialect.supportsAggDistinct)
+      ) {
         throw new Error(
           `Function \`${frag.name}\` does not asymmetric aggregation in ${context.dialect.name}`
         );
