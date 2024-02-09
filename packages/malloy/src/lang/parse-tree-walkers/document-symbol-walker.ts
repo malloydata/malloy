@@ -152,13 +152,47 @@ class DocumentSymbolWalker implements MalloyParserListener {
     this.popScope();
   }
 
-  handleNestEntry(pcx: parser.NestExistingContext | parser.NestDefContext) {
+  getNestDefName(pcx: parser.NestDefContext) {
+    const nameCx = pcx.queryName();
+    if (nameCx) {
+      return nameCx.id().text;
+    }
+    let result: string | undefined = undefined;
+    let done = false;
+    const vExprListen: MalloyParserListener = {
+      enterVArrow(pcx: parser.VArrowContext) {
+        pcx.vExpr().enterRule(vExprListen);
+      },
+      enterVSeg(pcx: parser.VSegContext) {
+        pcx.segExpr().enterRule(segExprListen);
+      },
+    };
+    const segExprListen: MalloyParserListener = {
+      enterSegField(pcx: parser.SegFieldContext) {
+        const names = pcx.fieldPath().fieldName();
+        if (!done) result ??= names[names.length - 1].id().text;
+      },
+      enterSegParen(pcx: parser.SegParenContext) {
+        pcx.vExpr().enterRule(vExprListen);
+      },
+      enterSegRefine(pcx: parser.SegRefineContext) {
+        pcx._lhs.enterRule(segExprListen);
+      },
+      enterSegOps() {
+        result = undefined;
+        done = true;
+      },
+    };
+    pcx.vExpr().enterRule(vExprListen);
+    return result;
+  }
+
+  handleNestEntry(pcx: parser.NestDefContext) {
+    const name = this.getNestDefName(pcx);
+    if (name === undefined) return;
     const symbol = {
       range: this.translator.rangeFromContext(pcx),
-      name:
-        pcx instanceof parser.NestExistingContext
-          ? pcx.fieldPath().text
-          : pcx.queryName().id().text,
+      name,
       type: 'query',
       children: [],
     };
@@ -169,13 +203,11 @@ class DocumentSymbolWalker implements MalloyParserListener {
     return symbol;
   }
 
-  enterNestExisting(pcx: parser.NestExistingContext) {
-    this.handleNestEntry(pcx);
-  }
-
   enterNestDef(pcx: parser.NestDefContext) {
     const symbol = this.handleNestEntry(pcx);
-    this.scopes.push(symbol);
+    if (symbol) {
+      this.scopes.push(symbol);
+    }
   }
 
   exitNestDef(_pcx: parser.NestDefContext) {

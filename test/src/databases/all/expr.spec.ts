@@ -370,6 +370,22 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       });
     });
 
+    it('sql_number can be sum()med', async () => {
+      await expect(`
+        ##! experimental { sql_functions }
+        source: a is ${databaseName}.table('malloytest.aircraft_models') extend {
+          where: aircraft_model_code ? '0270202'
+          dimension: number_1 is sql_number("\${seats} * 2")
+        }
+
+        run: a -> {
+          aggregate: s is number_1.sum()
+        }
+      `).malloyResultMatches(expressionModel, {
+        s: 58,
+      });
+    });
+
     it('sql_boolean', async () => {
       await expect(`
       ##! experimental { sql_functions }

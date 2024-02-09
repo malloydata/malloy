@@ -47,7 +47,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
   it(`named view plus measure - ${databaseName}`, async () => {
     await expect(`
-      ##! experimental { scalar_lenses }
       source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
         view: d is { group_by: n }
         measure: c is count()
@@ -57,7 +56,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
   it(`dimension plus named view - ${databaseName}`, async () => {
     await expect(`
-      ##! experimental { scalar_lenses }
       source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
         view: m is { aggregate: c is count() }
       }
@@ -84,7 +82,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
   it(`dimension plus named view in source - ${databaseName}`, async () => {
     await expect(`
-      ##! experimental { scalar_lenses }
       source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
         view: m is { aggregate: c is count() }
         view: y is n + m
@@ -94,7 +91,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
   it(`named view plus dimension in source - ${databaseName}`, async () => {
     await expect(`
-      ##! experimental { scalar_lenses }
       source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
         view: m is { aggregate: c is count() }
         view: y is m + n
@@ -112,7 +108,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
   it(`literal view plus measure - ${databaseName}`, async () => {
     await expect(`
-      ##! experimental { scalar_lenses }
       source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
         measure: c is count()
       }
@@ -121,7 +116,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
   it(`measure plus literal view - ${databaseName}`, async () => {
     await expect(`
-      ##! experimental { scalar_lenses }
       source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
         measure: c is count()
       }
@@ -139,7 +133,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
   it(`literal view plus measure in source - ${databaseName}`, async () => {
     await expect(`
-      ##! experimental { scalar_lenses }
       source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
         measure: c is count()
         view: y is { group_by: n } + c
@@ -195,7 +188,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
   it(`nested no name with dimension head - ${databaseName}`, async () => {
     await expect(`
-      ##! experimental { scalar_lenses }
       source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
         view: m is { aggregate: c is count() }
       }
@@ -206,7 +198,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
   it(`nest dimension only - ${databaseName}`, async () => {
     await expect(`
-      ##! experimental { scalar_lenses }
       source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
         view: m is { aggregate: c is count() }
       }
@@ -217,7 +208,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
   it(`joined dimension in middle of refinements - ${databaseName}`, async () => {
     await expect(`
-      ##! experimental { scalar_lenses }
       source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
         join_one: y is ${databaseName}.sql("SELECT 2 AS n") on true
         view: m is { aggregate: c is count() }
@@ -227,7 +217,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
   it(`nest joined dimension refined - ${databaseName}`, async () => {
     await expect(`
-      ##! experimental { scalar_lenses }
       source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
         join_one: y is ${databaseName}.sql("SELECT 1 AS n") on true
         view: m is { aggregate: c is count() }
@@ -239,7 +228,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
   it(`joined dimension refined - ${databaseName}`, async () => {
     await expect(`
-      ##! experimental { scalar_lenses }
       source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
         join_one: y is ${databaseName}.sql("SELECT 2 AS n") on true
         view: m is { aggregate: c is count() }
@@ -249,7 +237,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
   it(`nest joined dimension bare - ${databaseName}`, async () => {
     await expect(`
-      ##! experimental { scalar_lenses }
       source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
         join_one: y is ${databaseName}.sql("SELECT 2 AS n") on true
         view: m is { aggregate: c is count() }
@@ -261,7 +248,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
   it(`joined dimension bare - ${databaseName}`, async () => {
     await expect(`
-      ##! experimental { scalar_lenses }
       source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
         join_one: y is ${databaseName}.sql("SELECT 2 AS n") on true
         view: m is { aggregate: c is count() }
@@ -271,7 +257,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
   it(`joined dimension nest refinement - ${databaseName}`, async () => {
     await expect(`
-      ##! experimental { scalar_lenses }
       source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
         join_one: y is ${databaseName}.sql("SELECT 2 AS n") on true
         view: m is { aggregate: c is count() }
@@ -281,7 +266,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
   it.skip(`nest measure only in second stage - ${databaseName}`, async () => {
     await expect(`
-      ##! experimental { scalar_lenses }
       source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
         view: m is { aggregate: c is count() }
       }
@@ -292,7 +276,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
   it(`nest dimension only in refinement - ${databaseName}`, async () => {
     await expect(`
-      ##! experimental { scalar_lenses }
       source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
         view: m is { aggregate: c is count() }
       }
@@ -303,7 +286,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
   it(`view dimension only - ${databaseName}`, async () => {
     await expect(`
-      ##! experimental { scalar_lenses }
       source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
         view: m is n
       }
@@ -312,7 +294,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
   it(`view join dimension only - ${databaseName}`, async () => {
     await expect(`
-      ##! experimental { scalar_lenses }
       source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
         join_one: y is ${databaseName}.sql("SELECT 2 AS n") on true
         view: m is y.n
@@ -322,21 +303,18 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
   it(`run dimension only - ${databaseName}`, async () => {
     await expect(`
-      ##! experimental { scalar_lenses }
       source: x is ${databaseName}.sql("SELECT 1 AS n")
       run: x -> n
     `).malloyResultMatches(runtime, {n: 1});
   });
   it.skip(`second stage refinement chain - ${databaseName}`, async () => {
     await expect(`
-      ##! experimental { scalar_lenses }
       source: x is ${databaseName}.sql("SELECT 1 AS n")
       run: x -> n -> n + { aggregate: c is count() }
     `).malloyResultMatches(runtime, {n: 1, c: 1});
   });
   it.skip(`second stage refinement chain in nest - ${databaseName}`, async () => {
     await expect(`
-      ##! experimental { scalar_lenses }
       source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
         view: v is n -> n + { aggregate: c is count() }
       }
@@ -344,7 +322,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
   it(`copy of view with lens - ${databaseName}`, async () => {
     await expect(`
-      ##! experimental { scalar_lenses }
       source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
         view: metrics is { aggregate: c is count() }
         view: v is { group_by: n } + metrics
@@ -355,7 +332,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
   it(`aggregate copy bug with only old refinement - ${databaseName}`, async () => {
     await expect(`
-      ##! experimental { scalar_lenses }
       source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
         measure: c is count()
       }
@@ -388,7 +364,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
   it(`aggregate copy bug - ${databaseName}`, async () => {
     await expect(`
-      ##! experimental { scalar_lenses }
       source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
         measure: c is count()
       }

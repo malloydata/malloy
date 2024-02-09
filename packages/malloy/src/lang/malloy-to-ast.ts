@@ -137,8 +137,11 @@ export class MalloyToAST
 
   protected inExperiment(experimentID: string, cx: ParserRuleContext): boolean {
     const experimental = this.compilerFlags.tag('experimental');
-    if (experimental) {
-      return experimental.bare() || experimental.has(experimentID);
+    if (
+      experimental &&
+      (experimental.bare() || experimental.has(experimentID))
+    ) {
+      return true;
     }
     this.contextError(
       cx,
@@ -837,7 +840,7 @@ export class MalloyToAST
         } else {
           this.contextError(
             agg,
-            "'${aggFunc}' is not legal in a reference-only aggregation"
+            `\`${aggFunc}\` is not legal in a reference-only aggregation`
           );
           return ref;
         }
@@ -958,12 +961,12 @@ export class MalloyToAST
     pcx: parse.AggregateOrderBySpecContext
   ): ast.FunctionOrderBy {
     const dir = pcx.ASC() ? 'asc' : pcx.DESC() ? 'desc' : undefined;
-    const f = this.getFieldExpr(pcx.fieldExpr());
+    const fCx = pcx.fieldExpr();
+    const f = fCx ? this.getFieldExpr(fCx) : undefined;
     return this.astAt(new ast.FunctionOrderBy(f, dir), pcx);
   }
 
   visitAggregateOrderByStatement(pcx: parse.AggregateOrderByStatementContext) {
-    this.inExperiment('function_order_by', pcx);
     return this.visitAggregateOrdering(pcx.aggregateOrdering());
   }
 
@@ -1092,34 +1095,28 @@ export class MalloyToAST
     );
   }
 
-  visitNestExisting(pcx: parse.NestExistingContext): ast.NestFieldDeclaration {
-    const nameCx = pcx.fieldPath();
-    const name = this.getFieldPath(nameCx, ast.ViewOrScalarFieldReference);
-    const referenceView = this.astAt(new ast.ReferenceView(name), nameCx);
-    const refineCx = pcx.vExpr();
-    const notes = this.getNotes(pcx.tags());
-    if (refineCx) {
-      const nestRefine = new ast.NestFieldDeclaration(
-        name.nameString,
-        new ast.ViewRefine(referenceView, this.getVExpr(refineCx))
-      );
-      nestRefine.extendNote({notes});
-      return this.astAt(nestRefine, pcx);
-    }
-    const nestReference = new ast.NestFieldDeclaration(
-      name.nameString,
-      referenceView
-    );
-    nestReference.extendNote({notes});
-    return this.astAt(nestReference, pcx);
-  }
-
   visitNestDef(pcx: parse.NestDefContext): ast.NestFieldDeclaration {
-    const name = getId(pcx.queryName());
+    const nameCx = pcx.queryName();
+    let name: string;
     const vExpr = this.getVExpr(pcx.vExpr());
+    if (nameCx) {
+      name = getId(nameCx);
+    } else {
+      const implicitName = vExpr.getImplicitName();
+      if (implicitName === undefined) {
+        this.contextError(
+          pcx,
+          '`nest:` view requires a name (add `nest_name is ...`)'
+        );
+      }
+      name = implicitName ?? '__unnamed__';
+    }
     const nestDef = new ast.NestFieldDeclaration(name, vExpr);
+    const isDefineCx = pcx.isDefine();
     nestDef.extendNote({
-      notes: this.getNotes(pcx.tags()).concat(this.getIsNotes(pcx.isDefine())),
+      notes: this.getNotes(pcx.tags()).concat(
+        isDefineCx ? this.getIsNotes(isDefineCx) : []
+      ),
     });
     return this.astAt(nestDef, pcx);
   }
@@ -1538,7 +1535,6 @@ export class MalloyToAST
   }
 
   visitPartitionByStatement(pcx: parse.PartitionByStatementContext) {
-    this.inExperiment('partition_by', pcx);
     return this.astAt(
       new ast.PartitionBy(
         pcx

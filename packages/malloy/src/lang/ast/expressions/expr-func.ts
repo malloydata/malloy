@@ -27,6 +27,7 @@ import {
   expressionIsAggregate,
   expressionIsAnalytic,
   expressionIsScalar,
+  expressionIsUngroupedAggregate,
   ExpressionType,
   FieldValueType,
   Fragment,
@@ -238,6 +239,7 @@ export class ExprFunc extends ExpressionDef {
     const frag: FunctionCallFragment = {
       type: 'function_call',
       overload,
+      name: this.name,
       args: argExprs.map(x => x.value),
       expressionType,
       structPath,
@@ -255,16 +257,25 @@ export class ExprFunc extends ExpressionDef {
         const isAnalytic = expressionIsAnalytic(
           overload.returnType.expressionType
         );
+        if (!isAnalytic) {
+          if (!this.inExperiment('aggregate_order_by', true)) {
+            props.orderBys[0].log(
+              'Enable experiment `aggregate_order_by` to use `order_by` with an aggregate function'
+            );
+          }
+        }
         if (dialectOverload.supportsOrderBy || isAnalytic) {
+          const allowExpression =
+            dialectOverload.supportsOrderBy !== 'only_default';
           const allObs = props.orderBys.flatMap(orderBy =>
             isAnalytic
               ? orderBy.getAnalyticOrderBy(fs)
-              : orderBy.getAggregateOrderBy(fs)
+              : orderBy.getAggregateOrderBy(fs, allowExpression)
           );
           frag.orderBy = allObs;
         } else {
           props.orderBys[0].log(
-            `Function ${this.name} does not support order_by`
+            `Function \`${this.name}\` does not support \`order_by\``
           );
         }
       }
@@ -283,10 +294,15 @@ export class ExprFunc extends ExpressionDef {
           const e = partitionField.getField(fs);
           if (e.found === undefined) {
             partitionField.log(`${partitionField.refString} is not defined`);
-          } else if (expressionIsScalar(e.found.typeDesc().expressionType)) {
-            partitionByFields.push(partitionField.nameString);
+          } else if (
+            expressionIsAnalytic(e.found.typeDesc().expressionType) ||
+            expressionIsUngroupedAggregate(e.found.typeDesc().expressionType)
+          ) {
+            partitionField.log(
+              'Partition expression must be scalar or aggregate'
+            );
           } else {
-            partitionField.log('Partition expression must be scalar');
+            partitionByFields.push(partitionField.nameString);
           }
         }
       }

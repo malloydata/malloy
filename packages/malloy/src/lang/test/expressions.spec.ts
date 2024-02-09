@@ -191,24 +191,55 @@ describe('expressions', () => {
   });
 
   describe('expr props', () => {
-    test('props not allowed without experiments enabled', () => {
+    test('aggregate order by not allowed without experiments enabled', () => {
       expect(markSource`
           run: a -> {
             group_by: ai
-            group_by: x1 is string_agg(astr) { order_by: ai }
-            group_by: x2 is lag(ai) { partition_by: ai }
+            aggregate: x1 is string_agg(astr) { order_by: ai }
+          }
+        `).translationToFailWith(
+        'Enable experiment `aggregate_order_by` to use `order_by` with an aggregate function'
+      );
+    });
+
+    test('aggregate limit not allowed without experiments enabled', () => {
+      expect(markSource`
+          run: a -> {
+            group_by: ai
+            aggregate: x3 is string_agg(astr) { limit: 10 }
+          }
+        `).translationToFailWith(
+        "Experimental flag 'aggregate_limit' required to enable this feature"
+      );
+    });
+
+    test('aggregate order_by not allowed with different experiment enabled', () => {
+      expect(markSource`
+        ##! experimental.something_else
+          run: a -> {
+            group_by: ai
+            aggregate: x1 is string_agg(astr) { order_by: ai }
+          }
+        `).translationToFailWith(
+        'Enable experiment `aggregate_order_by` to use `order_by` with an aggregate function'
+      );
+    });
+
+    test('aggregate limit not allowed with different experiment enabled', () => {
+      expect(markSource`
+        ##! experimental.something_else
+          run: a -> {
+            group_by: ai
             group_by: x3 is string_agg(astr) { limit: 10 }
           }
         `).translationToFailWith(
-        "Experimental flag 'function_order_by' required to enable this feature",
-        "Experimental flag 'partition_by' required to enable this feature",
         "Experimental flag 'aggregate_limit' required to enable this feature"
       );
     });
 
     test('props not allowed on most expressions', () => {
       expect(markSource`
-          ##! experimental { function_order_by partition_by aggregate_limit }
+          ##! experimental { aggregate_order_by aggregate_limit }
           run: a -> {
             group_by: x1 is 1 { order_by: ai }
             group_by: x2 is 1 { partition_by: ai }
@@ -225,7 +256,6 @@ describe('expressions', () => {
 
     test('analytics can take parititon_by and order_by', () => {
       expect(markSource`
-        ##! experimental { function_order_by partition_by }
         run: a -> {
           group_by: ai
           calculate: x is lag(ai) { partition_by: ai; order_by: ai }
@@ -233,9 +263,76 @@ describe('expressions', () => {
       `).toTranslate();
     });
 
+    test('partition by works with scalar and aggregate', () => {
+      expect(markSource`
+        run: a -> {
+          group_by: ai
+          aggregate: c is count()
+          calculate: x is lag(ai) { partition_by: ai, c }
+        }
+      `).toTranslate();
+    });
+
+    test('partition by fails with analytic and ungrouped aggregate', () => {
+      expect(markSource`
+        run: a -> {
+          group_by: ai
+          aggregate: ac is all(count())
+          calculate: x is lag(ai) { partition_by: ac }
+          calculate: y is lag(ai) { partition_by: x }
+        }
+      `).translationToFailWith(
+        'Partition expression must be scalar or aggregate',
+        'Partition expression must be scalar or aggregate'
+      );
+    });
+
+    test('analytics order_by requires expression', () => {
+      expect(markSource`
+        ##! experimental { aggregate_order_by }
+        run: a -> {
+          group_by: ai
+          calculate: x is lag(ai) { order_by: asc }
+        }
+      `).translationToFailWith(
+        'analytic `order_by` must specify an aggregate expression or output field reference'
+      );
+    });
+
+    test('string_agg_distinct order by cannot specify expression', () => {
+      expect(markSource`
+        ##! experimental { aggregate_order_by }
+        run: a -> {
+          group_by: ai
+          aggregate: x is string_agg_distinct(astr) { order_by: ai }
+        }
+      `).translationToFailWith(
+        '`order_by` must be only `asc` or `desc` with no expression'
+      );
+    });
+
+    test('string_agg_distinct order by can be just direction', () => {
+      expect(markSource`
+        ##! experimental { aggregate_order_by }
+        run: a -> {
+          group_by: ai
+          aggregate: x is string_agg_distinct(astr) { order_by: asc }
+        }
+      `).toTranslate();
+    });
+
+    test('string_agg order by can be just direction', () => {
+      expect(markSource`
+        ##! experimental { aggregate_order_by }
+        run: a -> {
+          group_by: ai
+          aggregate: x is string_agg(astr) { order_by: asc }
+        }
+      `).toTranslate();
+    });
+
     test('can specify multiple partition_bys', () => {
       expect(markSource`
-        ##! experimental { partition_by }
         run: a -> {
           group_by: ai, astr, abool
           calculate: x is lag(ai) {
@@ -248,7 +345,7 @@ describe('expressions', () => {
 
     test('can specify multiple order_bys', () => {
       expect(markSource`
-        ##! experimental { function_order_by }
+        ##! experimental { aggregate_order_by }
         run: a -> {
           group_by: ai, astr, abool
           calculate: x is lag(ai) {
@@ -261,7 +358,7 @@ describe('expressions', () => {
 
     test('aggregate order by cannot be aggregate', () => {
       expect(markSource`
-        ##! experimental { function_order_by }
+        ##! experimental { aggregate_order_by }
         run: a -> {
           aggregate: x is string_agg(astr) {
             order_by: sum(ai)
@@ -272,7 +369,7 @@ describe('expressions', () => {
 
     test('aggregate order by cannot be analytic', () => {
       expect(markSource`
-        ##! experimental { function_order_by }
+        ##! experimental { aggregate_order_by }
         run: a -> {
           aggregate: x is string_agg(astr) {
             order_by: rank()
@@ -283,7 +380,7 @@ describe('expressions', () => {
 
     test('analytic order by can be an aggregate', () => {
       expect(markSource`
-        ##! experimental { function_order_by }
+        ##! experimental { aggregate_order_by }
         run: a -> {
           group_by: abool
           calculate: x is lag(abool) {
@@ -295,7 +392,7 @@ describe('expressions', () => {
 
     test('analytic order by can be an output field', () => {
       expect(markSource`
-        ##! experimental { function_order_by }
+        ##! experimental { aggregate_order_by }
         run: a -> {
           group_by: ai
           calculate: x is lag(ai) {
@@ -307,7 +404,7 @@ describe('expressions', () => {
 
     test('analytic order by must be an output field', () => {
       expect(markSource`
-        ##! experimental { function_order_by }
+        ##! experimental { aggregate_order_by }
         run: a -> {
           group_by: abool
           calculate: x is lag(abool) {
@@ -321,7 +418,7 @@ describe('expressions', () => {
 
     test('can specify multiple wheres', () => {
       expect(markSource`
-        ##! experimental { function_order_by }
+        ##! experimental { aggregate_order_by }
         run: a -> {
           aggregate: x is count() {
             where: ai > 10
@@ -333,7 +430,7 @@ describe('expressions', () => {
 
     test('string_agg can take order_by', () => {
       expect(markSource`
-        ##! experimental { function_order_by }
+        ##! experimental { aggregate_order_by }
         run: a -> {
           aggregate: x1 is string_agg(astr) { order_by: ai }
           aggregate: x2 is string_agg(astr) { order_by: ai * 2 }
@@ -496,6 +593,18 @@ describe('expressions', () => {
       expect(modelX`source.sum(nested.column)`).translationToFailWith(
         'Cannot compute `sum` across repeated relationship `nested`; use `nested.column.sum()`'
       );
+    });
+    test('can aggregate field defined with no join usage', () => {
+      expect(markSource`
+        ##! experimental { sql_functions }
+        source: s is a extend {
+          measure: c is count()
+          dimension: f is 1
+        }
+        run: s -> {
+          aggregate: v is f.sum()
+        }
+      `).toTranslate();
     });
     test('sum(inline.column)', () => {
       expect(modelX`sum(inline.column)`).toTranslateWithWarnings(
@@ -885,6 +994,12 @@ describe('unspported fields in schema', () => {
   });
   test('negative numbers are not tokens', () => {
     expect(expr`ai-1`).toTranslate();
+  });
+
+  describe('sql functions', () => {
+    test('can aggregate a sql_ function', () => {
+      expect(expr`sum(sql_number("\${a} * 2"))`).toTranslate();
+    });
   });
 
   describe('cast', () => {

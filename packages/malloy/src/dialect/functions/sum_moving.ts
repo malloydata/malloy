@@ -21,26 +21,40 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export type {DialectFunctionOverloadDef} from './functions/util';
-export {
-  arg,
-  anyExprType,
-  makeParam,
+import {
   overload,
-  minScalar,
-  minAggregate,
-  maxScalar,
-  spread,
-  sqlFragment,
-  param,
-  params,
-  literal,
   sql,
-} from './functions/util';
-export {Dialect, qtz} from './dialect';
-export type {DialectFieldList, QueryInfo} from './dialect';
-export {StandardSQLDialect} from './standardsql';
-export {PostgresDialect} from './postgres';
-export {DuckDBDialect} from './duckdb';
-export {getDialect, registerDialect, getDialectFunction} from './dialect_map';
-export {FUNCTIONS} from './functions';
+  DialectFunctionOverloadDef,
+  minAnalytic,
+  maxAggregate,
+  output,
+  makeParam,
+  maxScalar,
+  literal,
+} from './util';
+
+export function fnSumMoving(): DialectFunctionOverloadDef[] {
+  const value = makeParam('value', output(maxAggregate('number')));
+  const preceding = makeParam('preceding', literal(maxScalar('number')));
+  const following = makeParam('following', literal(maxScalar('number')));
+  return [
+    overload(
+      minAnalytic('number'),
+      [value.param, preceding.param],
+      sql`SUM(${value.arg})`,
+      {
+        needsWindowOrderBy: true,
+        between: {preceding: 'preceding', following: 0},
+      }
+    ),
+    overload(
+      minAnalytic('number'),
+      [value.param, preceding.param, following.param],
+      sql`SUM(${value.arg})`,
+      {
+        needsWindowOrderBy: true,
+        between: {preceding: 'preceding', following: 'following'},
+      }
+    ),
+  ];
+}

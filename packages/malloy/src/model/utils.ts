@@ -133,6 +133,9 @@ export function exprMap(expr: Expr, func: (fragment: Fragment) => Expr): Expr {
         case 'function_parameter':
         case 'parameter':
         case 'outputField':
+        case 'source-reference':
+        case 'aggregate_limit':
+        case 'aggregate_order_by':
           return fragment;
         case 'sql-string':
           return {
@@ -227,6 +230,9 @@ export function exprWalk(expr: Expr, func: (fragment: Fragment) => void): void {
       case 'function_parameter':
       case 'parameter':
       case 'outputField':
+      case 'source-reference':
+      case 'aggregate_limit':
+      case 'aggregate_order_by':
         return fragment;
       case 'function_call':
         return {
@@ -288,7 +294,11 @@ export function exprWalk(expr: Expr, func: (fragment: Fragment) => void): void {
         }
       }
       default:
-        throw new Error('unexpected');
+        throw new Error(
+          `unexpected fragment type ${
+            (fragment as unknown as {type: string}).type
+          }`
+        );
     }
   });
 }

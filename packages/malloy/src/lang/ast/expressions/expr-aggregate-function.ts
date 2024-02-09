@@ -112,7 +112,8 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
           const joinUsage = this.getJoinUsage(inputFS);
           const allUsagesSame =
             joinUsage.length === 1 ||
-            joinUsage.slice(1).every(p => joinPathEq(p, joinUsage[0]));
+            (joinUsage.length > 1 &&
+              joinUsage.slice(1).every(p => joinPathEq(p, joinUsage[0])));
           if (allUsagesSame) {
             structPath = joinUsage[0].map(p => p.name);
             sourceRelationship = joinUsage[0];
@@ -270,7 +271,6 @@ function getJoinUsage(fs: FieldSpace, expr: Fragment[]): JoinPathElement[][] {
   };
   exprWalk(expr, frag => {
     if (typeof frag !== 'string') {
-      // TODO make this work for field references inside sql_* functions
       if (frag.type === 'field') {
         const def = lookup(fs, frag.path);
         if (def.def.type !== 'struct' && def.def.type !== 'turtle') {
@@ -280,6 +280,13 @@ function getJoinUsage(fs: FieldSpace, expr: Fragment[]): JoinPathElement[][] {
           } else {
             result.push(def.relationship);
           }
+        }
+      } else if (frag.type === 'source-reference') {
+        if (frag.path) {
+          const def = lookup(fs, frag.path);
+          result.push(def.relationship);
+        } else {
+          result.push([]);
         }
       }
     }

@@ -93,6 +93,7 @@ import {
   StructRef,
   TurtleDef,
   UngroupFragment,
+  FunctionOrderBy,
 } from './malloy_types';
 
 import {Connection} from '../runtime_types';
@@ -138,7 +139,9 @@ interface OutputPipelinedSQL {
 }
 
 // Track the times we might need a unique key
-type UniqueKeyPossibleUse = AggregateFunctionType | 'generic_aggregate';
+type UniqueKeyPossibleUse =
+  | AggregateFunctionType
+  | 'generic_asymmetric_aggregate';
 
 class UniqueKeyUse extends Set<UniqueKeyPossibleUse> {
   add_use(k: UniqueKeyPossibleUse | undefined) {
@@ -148,7 +151,12 @@ class UniqueKeyUse extends Set<UniqueKeyPossibleUse> {
   }
 
   hasAsymetricFunctions(): boolean {
-    return this.has('sum') || this.has('avg') || this.has('count');
+    return (
+      this.has('sum') ||
+      this.has('avg') ||
+      this.has('count') ||
+      this.has('generic_asymmetric_aggregate')
+    );
   }
 }
 
@@ -482,6 +490,70 @@ class QueryField extends QueryNode {
     });
   }
 
+  getFunctionOrderBy(
+    resultSet: FieldInstanceResult,
+    context: QueryStruct,
+    state: GenerateState,
+    orderBy: FunctionOrderBy[],
+    args: Expr[],
+    overload: FunctionOverloadDef
+  ) {
+    if (orderBy.length === 0) return undefined;
+    return (
+      'ORDER BY ' +
+      orderBy
+        .map(ob => {
+          const defaultOrderByArgIndex =
+            overload.dialect[context.dialect.name].defaultOrderByArgIndex ?? 0;
+          const expr = ob.e ?? args[defaultOrderByArgIndex];
+          const osql = this.generateDimFragment(
+            resultSet,
+            context,
+            expr,
+            state
+          );
+          const dirsql =
+            ob.dir === 'asc' ? ' ASC' : ob.dir === 'desc' ? ' DESC' : '';
+          return `${osql}${dirsql}`;
+        })
+        .join(', ')
+    );
+  }
+
+  generateAsymmetricStringAggExpression(
+    resultSet: FieldInstanceResult,
+    context: QueryStruct,
+    value: Expr,
+    separator: Expr | undefined,
+    distinctKey: string,
+    orderBy: FunctionOrderBy[] | undefined,
+    dialectName: string,
+    state: GenerateState
+  ): string {
+    if (orderBy) {
+      throw new Error(
+        `Function \`string_agg\` does not support fanning out with an order by in ${dialectName}`
+      );
+    }
+    const valueSQL = this.generateDimFragment(resultSet, context, value, state);
+    const separatorSQL = separator
+      ? ' ,' + this.generateDimFragment(resultSet, context, separator, state)
+      : '';
+    const keyStart = '__STRING_AGG_KS__';
+    const keyEnd = '__STRING_AGG_KE__';
+    const distinctValueSQL = `concat('${keyStart}', ${distinctKey}, '${keyEnd}', ${valueSQL})`;
+    return `REGEXP_REPLACE(
+      STRING_AGG(DISTINCT ${distinctValueSQL}${separatorSQL}),
+      '${keyStart}.*?${keyEnd}',
+      ''
+    )`;
+  }
+
+  getParamForArgIndex(params: FunctionParameterDef[], argIndex: number) {
+    const prevVariadic = params.slice(0, argIndex).find(p => p.isVariadic);
+    return prevVariadic ?? params[argIndex];
+  }
+
   generateFunctionCallExpression(
     resultSet: FieldInstanceResult,
     context: QueryStruct,
@@ -495,41 +567,74 @@ class QueryField extends QueryNode {
       expressionIsAggregate(overload.returnType.expressionType) &&
       !isSymmetric &&
       this.generateDistinctKeyIfNecessary(resultSet, context, frag.structPath);
-    const aggregateOrderBy = frag.orderBy
-      ? 'ORDER BY ' +
-        frag.orderBy
-          .map(ob => {
-            const osql = this.generateDimFragment(
-              resultSet,
-              context,
-              ob.e,
-              state
-            );
-            const dirsql =
-              ob.dir === 'asc' ? ' ASC' : ob.dir === 'desc' ? ' DESC' : '';
-            return `${osql}${dirsql}`;
-          })
-          .join(', ')
-      : undefined;
     const aggregateLimit = frag.limit ? `LIMIT ${frag.limit}` : undefined;
+    if (
+      frag.name === 'string_agg' &&
+      distinctKey &&
+      !context.dialect.supportsAggDistinct
+    ) {
+      return this.generateAsymmetricStringAggExpression(
+        resultSet,
+        context,
+        args[0],
+        args[1],
+        distinctKey,
+        frag.orderBy,
+        context.dialect.name,
+        state
+      );
+    }
     if (distinctKey) {
       if (!context.dialect.supportsAggDistinct) {
         throw new Error(
-          `Asymmetric aggregates are not supported for custom functions in ${context.dialect.name}.`
+          `Function \`${frag.name}\` does not support fanning out in ${context.dialect.name}`
         );
       }
       const argsExpressions = args.map(arg => {
         return this.generateDimFragment(resultSet, context, arg, state);
       });
+      const orderBys = frag.orderBy ?? [];
+      const orderByExpressions = orderBys.map(ob => {
+        const defaultOrderByArgIndex =
+          overload.dialect[context.dialect.name].defaultOrderByArgIndex ?? 0;
+        const expr = ob.e ?? args[defaultOrderByArgIndex];
+        return this.generateDimFragment(resultSet, context, expr, state);
+      });
       return context.dialect.sqlAggDistinct(
         distinctKey,
-        argsExpressions,
+        [...argsExpressions, ...orderByExpressions],
         valNames => {
+          const vals: Expr[] = valNames.map((v, i) => {
+            // Special case: the argument is required to be literal, so we use the actual argument
+            // rather than the packed value
+            // TODO don't even pack the value in the first place
+            if (i < args.length) {
+              const param = this.getParamForArgIndex(overload.params, i);
+              if (param.allowedTypes.every(t => isLiteral(t.evalSpace))) {
+                return args[i];
+              }
+            }
+            return [v];
+          });
+          const newArgs = vals.slice(0, argsExpressions.length);
+          const orderBy: FunctionOrderBy[] = vals
+            .slice(argsExpressions.length)
+            .map((e, i) => {
+              return {e, dir: orderBys[i].dir};
+            });
+          const orderBySQL = this.getFunctionOrderBy(
+            resultSet,
+            context,
+            state,
+            orderBy,
+            newArgs,
+            overload
+          );
           const funcCall = this.expandFunctionCall(
             context.dialect.name,
             overload,
-            valNames.map(v => [v]),
-            aggregateOrderBy,
+            newArgs,
+            orderBySQL,
             aggregateLimit
           );
           return this.generateExpressionFromExpr(
@@ -553,7 +658,7 @@ class QueryField extends QueryNode {
             // Update: Now we apply this only to arguments whose parameter is not constant-requiring.
             // So in `string_agg(val, sep)`, `sep` does not get filters applied to it because
             // it must be constant
-            const param = overload.params[index];
+            const param = this.getParamForArgIndex(overload.params, index);
             // TODO technically this should probably look at _which_ allowed param type was matched
             // for this argument and see if that type is at most constant... but we lose type information
             // by this point in the compilation, so that info would have to be passed into the func call
@@ -563,11 +668,21 @@ class QueryField extends QueryNode {
               : [this.generateDimFragment(resultSet, context, arg, state)];
           })
         : args;
+      const orderBySql = frag.orderBy
+        ? this.getFunctionOrderBy(
+            resultSet,
+            context,
+            state,
+            frag.orderBy,
+            args,
+            overload
+          )
+        : '';
       const funcCall: Expr = this.expandFunctionCall(
         context.dialect.name,
         overload,
         mappedArgs,
-        aggregateOrderBy,
+        orderBySql,
         aggregateLimit
       );
 
@@ -575,8 +690,6 @@ class QueryField extends QueryNode {
         const extraPartitions = (frag.partitionBy ?? []).map(outputName => {
           return `(${resultSet.getField(outputName).getAnalyticalSQL(false)})`;
         });
-        // TODO probably need to pass in the function and arguments separately
-        // in order to generate parameter SQL correctly in BQ re: partition
         return this.generateAnalyticFragment(
           resultSet,
           context,
@@ -585,7 +698,7 @@ class QueryField extends QueryNode {
           state,
           args,
           extraPartitions,
-          aggregateOrderBy
+          orderBySql
         );
       }
       return this.generateExpressionFromExpr(
@@ -1836,17 +1949,13 @@ class FieldInstanceResultRoot extends FieldInstanceResult {
       // users -> {
       //   group_by: user_id
       //   aggregate: order_count is orders.count()
-      if (join.leafiest) {
-        if (
-          join.parent !== null &&
-          join.uniqueKeyPossibleUses.has('count') &&
-          !join.queryStruct.primaryKey()
-        ) {
-          join.makeUniqueKey = true;
-        }
-      } else if (
-        !join.leafiest &&
-        join.uniqueKeyPossibleUses.hasAsymetricFunctions()
+      if (
+        // we have a leafiest count() joined subtree
+        (join.leafiest &&
+          join.parent !== undefined &&
+          join.uniqueKeyPossibleUses.has('count')) ||
+        // or not leafiest and we use an asymetric function
+        (!join.leafiest && join.uniqueKeyPossibleUses.hasAsymetricFunctions())
       ) {
         let j: JoinInstance | undefined = join;
         while (j) {
@@ -2260,17 +2369,30 @@ class QueryQuery extends QueryField {
         }
         this.addDependantExpr(resultStruct, context, expr.e, joinStack);
       } else if (isFunctionCallFragment(expr)) {
+        const isSymmetric = expr.overload.isSymmetric ?? false;
+        const isAggregate = expressionIsAggregate(
+          expr.overload.returnType.expressionType
+        );
+        const isAsymmetricAggregate = isAggregate && !isSymmetric;
+        const uniqueKeyPossibleUse = isAsymmetricAggregate
+          ? 'generic_asymmetric_aggregate'
+          : undefined;
         if (expr.structPath) {
           this.addDependantPath(
             resultStruct,
             context,
             expr.structPath,
-            'generic_aggregate',
+            uniqueKeyPossibleUse,
+            joinStack
+          );
+        } else if (isAsymmetricAggregate) {
+          resultStruct.addStructToJoin(
+            context,
+            this,
+            uniqueKeyPossibleUse,
             joinStack
           );
         }
-        // TODO Do we need to call `addStructToJoin` here in the case when there is no `structPath`
-        // and the function is an aggregate function?
         for (const e of expr.args) {
           this.addDependantExpr(resultStruct, context, e, joinStack);
         }
@@ -2279,7 +2401,9 @@ class QueryQuery extends QueryField {
         }
         if (expr.orderBy) {
           for (const ob of expr.orderBy) {
-            this.addDependantExpr(resultStruct, context, ob.e, joinStack);
+            if (ob.e) {
+              this.addDependantExpr(resultStruct, context, ob.e, joinStack);
+            }
           }
         }
       }

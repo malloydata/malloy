@@ -83,17 +83,6 @@ export class ReferenceView extends View {
       throw new Error('Expected field to have definition');
     }
     if (isAtomicFieldType(fieldDef.type)) {
-      if (!this.inExperiment('scalar_lenses', true)) {
-        if (forRefinement) {
-          this.reference.log(
-            `Cannot use scalar field \`${this.reference.refString}\` as a refinement; use \`scalar_lenses\` experiment to enable this behavior`
-          );
-        } else {
-          this.reference.log(
-            `Cannot use scalar field \`${this.reference.refString}\` as a view; use \`scalar_lenses\` experiment to enable this behavior`
-          );
-        }
-      }
       const newSegment: PipeSegment = {
         type: 'reduce',
         queryFields: [this.reference.refToField],
@@ -173,5 +162,9 @@ export class ReferenceView extends View {
     }
     // TODO better error pipeline
     return pipeline;
+  }
+
+  getImplicitName(): string | undefined {
+    return this.reference.nameString;
   }
 }

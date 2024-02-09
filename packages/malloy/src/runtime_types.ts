@@ -117,7 +117,11 @@ export interface InfoConnection {
   get name(): string;
 }
 
-export type ConnectionParameterValue = string | number | boolean;
+export type ConnectionParameterValue =
+  | string
+  | number
+  | boolean
+  | Array<ConnectionParameterValue>;
 
 export interface ConnectionParameter {
   name: string;

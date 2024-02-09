@@ -436,16 +436,29 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     });
   });
 
+  it(`count at root should not use distinct key - ${databaseName}`, async () => {
+    const q = await runtime
+      .loadQuery(
+        `
+      source: states is ${databaseName}.table('malloytest.state_facts')
+
+      run: states -> { aggregate: c is count() }
+      `
+      )
+      .run();
+    expect(q.sql.toLowerCase()).not.toContain('distinct');
+  });
+
   it(`leafy nested count - ${databaseName}`, async () => {
     // in a joined table when the joined is leafiest
     //  we need to make sure we don't count rows that
     //  don't match the join.
     await expect(`
       source: am_states is ${databaseName}.table('malloytest.state_facts') -> {
-        group_by: state
+        group_by: state,popular_name
         where: state ~ r'^(A|M)'
         nest: nested_state is {
-          group_by: state
+          group_by: state,popular_name
         }
       }
 

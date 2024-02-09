@@ -295,6 +295,8 @@ aggregateOrdering
 
 aggregateOrderBySpec
   : fieldExpr ( ASC | DESC ) ?
+  | ASC
+  | DESC
   ;
 
 aggregateOrderByStatement
@@ -382,8 +384,7 @@ nestedQueryList
   ;
 
 nestEntry
-  : tags fieldPath (PLUS vExpr)?    # nestExisting
-  | tags queryName isDefine vExpr   # nestDef
+  : tags (queryName isDefine)? vExpr   # nestDef
   ;
 
 aggregateStatement
