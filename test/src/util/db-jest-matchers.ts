@@ -66,104 +66,6 @@ declare global {
   }
 }
 
-export const malloyResultMatches = async (
-  querySrc: string,
-  runtime: Runner,
-  shouldEqual: ExpectedResult
-) => {
-  // TODO -- THIS IS NOT OK BUT I AM NOT FIXING IT NOW
-  if (querySrc.indexOf('nest:') >= 0) {
-    if (
-      runtime instanceof SingleConnectionRuntime &&
-      !runtime.supportsNesting
-    ) {
-      return {
-        pass: true,
-        message: () =>
-          'Test was skipped since connection does not support nesting.',
-      };
-    }
-  }
-
-  let query: QueryMaterializer;
-  try {
-    query = runtime.loadQuery(querySrc);
-  } catch (e) {
-    return {
-      pass: false,
-      message: () => `loadQuery failed: ${e.message}`,
-    };
-  }
-
-  let result: Result;
-  try {
-    result = await query.run();
-  } catch (e) {
-    let failMsg = `query.run failed: ${e.message}\n`;
-    if (e instanceof MalloyError) {
-      failMsg = `Error in query compilation\n${errorLogToString(
-        querySrc,
-        e.problems
-      )}`;
-    } else {
-      try {
-        failMsg += `SQL: ${await query.getSQL()}\n`;
-      } catch (e2) {
-        // we could not show the SQL for unknown reasons
-      }
-      failMsg += e.stack;
-    }
-    return {pass: false, message: () => failMsg};
-  }
-
-  const allRows = Array.isArray(shouldEqual) ? shouldEqual : [shouldEqual];
-  let i = 0;
-  const fails: string[] = [];
-  const gotRows = result.data.toObject().length;
-  if (Array.isArray(shouldEqual)) {
-    if (gotRows !== allRows.length) {
-      fails.push(`Expected result.rows=${allRows.length}  Got: ${gotRows}`);
-    }
-  }
-  for (const expected of allRows) {
-    for (const [name, value] of Object.entries(expected)) {
-      const pExpect = JSON.stringify(value);
-      const row = allRows.length > 1 ? `[${i}]` : '';
-      const expected = `Expected ${row}{${name}: ${pExpect}}`;
-      try {
-        const nestOne = name.split('.');
-        const resultPath = [i, nestOne[0]];
-        for (const child of nestOne.slice(1)) {
-          resultPath.push(0);
-          resultPath.push(child);
-        }
-        const got = result.data.path(...resultPath).value;
-        const pGot = JSON.stringify(got);
-        const mustBe = value instanceof Date ? value.getTime() : value;
-        const actuallyGot = got instanceof Date ? got.getTime() : got;
-        if (typeof mustBe === 'number' && typeof actuallyGot !== 'number') {
-          fails.push(`${expected} Got: Non Numeric '${pGot}'`);
-        } else if (actuallyGot !== mustBe) {
-          fails.push(`${expected} Got: ${pGot}`);
-        }
-      } catch (e) {
-        fails.push(`${expected} Error: ${e.message}`);
-      }
-    }
-    i += 1;
-  }
-  if (fails.length !== 0) {
-    const fromSQL = '  ' + (await query.getSQL()).split('\n').join('\n  ');
-    const failMsg = `SQL Generated:\n${fromSQL}\n${fails.join('\n')}`;
-    return {pass: false, message: () => failMsg};
-  }
-
-  return {
-    pass: true,
-    message: () => 'All rows matched expected results',
-  };
-};
-
 expect.extend({
   /**
    * Check the return of `sqlEQ(expr1,expr2)` and error if the database
@@ -186,7 +88,103 @@ expect.extend({
       message: () => 'SQL expression matched',
     };
   },
-  malloyResultMatches,
+  async malloyResultMatches(
+    querySrc: string,
+    runtime: Runner,
+    shouldEqual: ExpectedResult
+  ) {
+    // TODO -- THIS IS NOT OK BUT I AM NOT FIXING IT NOW
+    if (querySrc.indexOf('nest:') >= 0) {
+      if (
+        runtime instanceof SingleConnectionRuntime &&
+        !runtime.supportsNesting
+      ) {
+        return {
+          pass: true,
+          message: () =>
+            'Test was skipped since connection does not support nesting.',
+        };
+      }
+    }
+
+    let query: QueryMaterializer;
+    try {
+      query = runtime.loadQuery(querySrc);
+    } catch (e) {
+      return {
+        pass: false,
+        message: () => `loadQuery failed: ${e.message}`,
+      };
+    }
+
+    let result: Result;
+    try {
+      result = await query.run();
+    } catch (e) {
+      let failMsg = `query.run failed: ${e.message}\n`;
+      if (e instanceof MalloyError) {
+        failMsg = `Error in query compilation\n${errorLogToString(
+          querySrc,
+          e.problems
+        )}`;
+      } else {
+        try {
+          failMsg += `SQL: ${await query.getSQL()}\n`;
+        } catch (e2) {
+          // we could not show the SQL for unknown reasons
+        }
+        failMsg += e.stack;
+      }
+      return {pass: false, message: () => failMsg};
+    }
+
+    const allRows = Array.isArray(shouldEqual) ? shouldEqual : [shouldEqual];
+    let i = 0;
+    const fails: string[] = [];
+    const gotRows = result.data.toObject().length;
+    if (Array.isArray(shouldEqual)) {
+      if (gotRows !== allRows.length) {
+        fails.push(`Expected result.rows=${allRows.length}  Got: ${gotRows}`);
+      }
+    }
+    for (const expected of allRows) {
+      for (const [name, value] of Object.entries(expected)) {
+        const pExpect = JSON.stringify(value);
+        const row = allRows.length > 1 ? `[${i}]` : '';
+        const expected = `Expected ${row}{${name}: ${pExpect}}`;
+        try {
+          const nestOne = name.split('.');
+          const resultPath = [i, nestOne[0]];
+          for (const child of nestOne.slice(1)) {
+            resultPath.push(0);
+            resultPath.push(child);
+          }
+          const got = result.data.path(...resultPath).value;
+          const pGot = JSON.stringify(got);
+          const mustBe = value instanceof Date ? value.getTime() : value;
+          const actuallyGot = got instanceof Date ? got.getTime() : got;
+          if (typeof mustBe === 'number' && typeof actuallyGot !== 'number') {
+            fails.push(`${expected} Got: Non Numeric '${pGot}'`);
+          } else if (actuallyGot !== mustBe) {
+            fails.push(`${expected} Got: ${pGot}`);
+          }
+        } catch (e) {
+          fails.push(`${expected} Error: ${e.message}`);
+        }
+      }
+      i += 1;
+    }
+    if (fails.length !== 0) {
+      const fromSQL = '  ' + (await query.getSQL()).split('\n').join('\n  ');
+      const failMsg = `SQL Generated:\n${fromSQL}\n${fails.join('\n')}`;
+      return {pass: false, message: () => failMsg};
+    }
+
+    return {
+      pass: true,
+      message: () => 'All rows matched expected results',
+    };
+  },
 });
 
 function errorLogToString(src: string, msgs: LogMessage[]) {
