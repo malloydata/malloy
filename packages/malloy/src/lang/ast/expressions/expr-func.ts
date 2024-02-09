@@ -291,7 +291,13 @@ export class ExprFunc extends ExpressionDef {
         {
           name: 'args',
           isVariadic: true,
-          allowedTypes: [],
+          allowedTypes: [
+            {
+              dataType: 'any',
+              expressionType: 'aggregate',
+              evalSpace: 'input',
+            },
+          ],
         },
       ],
       dialect: {
