@@ -122,7 +122,7 @@ export class DuckDBConnection extends DuckDBCommon {
   }
 
   private async init(): Promise<void> {
-    return new Promise((resolve, reject) => {
+    return new Promise(resolve => {
       let activeDB: ActiveDB;
       if (this.databasePath in DuckDBConnection.activeDBs) {
         activeDB = DuckDBConnection.activeDBs[this.databasePath];
@@ -139,7 +139,7 @@ export class DuckDBConnection extends DuckDBCommon {
             this.setup = async () => {
               throw err;
             };
-            return reject(err);
+            return resolve();
           }
         }
         const database = new Database(
@@ -150,7 +150,6 @@ export class DuckDBConnection extends DuckDBCommon {
               this.setup = async () => {
                 throw err;
               };
-              reject(err);
             } else {
               activeDB = {
                 database,
@@ -159,8 +158,8 @@ export class DuckDBConnection extends DuckDBCommon {
               DuckDBConnection.activeDBs[this.databasePath] = activeDB;
               this.connection = activeDB.database.connect();
               activeDB.connections.push(this.connection);
-              resolve();
             }
+            resolve();
           }
         );
       }
