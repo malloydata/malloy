@@ -61,6 +61,7 @@ export class DuckDBConnection extends DuckDBCommon {
 
   connecting: Promise<void>;
   protected connection: Connection | null = null;
+  protected setupError: Error | undefined;
   protected isSetup: Promise<void> | undefined;
 
   static activeDBs: Record<string, ActiveDB> = {};
@@ -135,10 +136,7 @@ export class DuckDBConnection extends DuckDBCommon {
             process.env['MOTHERDUCK_TOKEN'] = this.motherDuckToken;
           }
           if (!process.env['MOTHERDUCK_TOKEN']) {
-            const err = new Error('Please set your MotherDuck Token');
-            this.setup = async () => {
-              throw err;
-            };
+            this.setupError = new Error('Please set your MotherDuck Token');
             return resolve();
           }
         }
@@ -147,9 +145,7 @@ export class DuckDBConnection extends DuckDBCommon {
           this.readOnly ? OPEN_READONLY : OPEN_READWRITE,
           err => {
             if (err) {
-              this.setup = async () => {
-                throw err;
-              };
+              this.setupError = err;
             } else {
               activeDB = {
                 database,
@@ -177,6 +173,9 @@ export class DuckDBConnection extends DuckDBCommon {
   }
 
   protected async setup(): Promise<void> {
+    if (this.setupError) {
+      throw this.setupError;
+    }
     const doSetup = async () => {
       if (this.workingDirectory) {
         await this.runDuckDBQuery(
