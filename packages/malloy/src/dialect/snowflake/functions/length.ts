@@ -29,7 +29,7 @@ import {
   anyExprType,
   sql,
   DialectFunctionOverloadDef,
-} from './util';
+} from '../../functions/util';
 
 export function fnLength(): DialectFunctionOverloadDef[] {
   return [
@@ -41,13 +41,12 @@ export function fnLength(): DialectFunctionOverloadDef[] {
   ];
 }
 
-// TODO: add support for byte length in postgres, duckdb
 export function fnByteLength(): DialectFunctionOverloadDef[] {
   return [
     overload(
       minScalar('number'),
       [param('value', anyExprType('string'))],
-      sql`BYTE_LENGTH(${arg('value')})`
+      sql`CEIL(BIT_LENGTH(${arg('value')}) / 8)`
     ),
   ];
 }

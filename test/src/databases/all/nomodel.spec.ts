@@ -46,6 +46,8 @@ function getSplitFunction(db: string) {
       `string_to_array(${column}, '${splitChar}')`,
     'duckdb_wasm': (column: string, splitChar: string) =>
       `string_to_array(${column}, '${splitChar}')`,
+    'snowflake': (column: string, splitChar: string) =>
+      `split(${column}, '${splitChar}')`,
   }[db];
 }
 

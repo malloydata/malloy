@@ -34,8 +34,8 @@ import {
 
 export function fnConcat(): DialectFunctionOverloadDef[] {
   return [
-    // TODO in DuckDB, nulls are treated like "", but in BigQuery, nulls propagate and the
-    // result becomes null
+    // TODO: in DuckDB and Postgres, nulls are treated like "",
+    // but in BigQuery and Snowflake, nulls propagate and the result becomes null
     overload(
       minScalar('string'),
       [],

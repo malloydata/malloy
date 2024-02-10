@@ -22,32 +22,24 @@
  */
 
 import {
-  arg,
   overload,
-  param,
   minScalar,
   anyExprType,
   sql,
   DialectFunctionOverloadDef,
-} from './util';
+  makeParam,
+} from '../../functions/util';
 
-export function fnLength(): DialectFunctionOverloadDef[] {
+export function fnDiv(): DialectFunctionOverloadDef[] {
+  const dividend = makeParam('dividend', anyExprType('number'));
+  const divisor = makeParam('divisor', anyExprType('number'));
+
   return [
     overload(
       minScalar('number'),
-      [param('value', anyExprType('string'))],
-      sql`LENGTH(${arg('value')})`
-    ),
-  ];
-}
-
-// TODO: add support for byte length in postgres, duckdb
-export function fnByteLength(): DialectFunctionOverloadDef[] {
-  return [
-    overload(
-      minScalar('number'),
-      [param('value', anyExprType('string'))],
-      sql`BYTE_LENGTH(${arg('value')})`
+      [dividend.param, divisor.param],
+      // in Snowflake division is always a float division, so we need this conversion
+      sql`CASE WHEN DIV0(${dividend.arg}, ${divisor.arg}) < 0 THEN CEIL(DIV0(${dividend.arg}, ${divisor.arg})) ELSE FLOOR(DIV0(${dividend.arg}, ${divisor.arg})) END`
     ),
   ];
 }

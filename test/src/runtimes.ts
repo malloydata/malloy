@@ -33,7 +33,23 @@ import {
 import {BigQueryConnection} from '@malloydata/db-bigquery';
 import {DuckDBConnection} from '@malloydata/db-duckdb';
 import {DuckDBWASMConnection} from '@malloydata/db-duckdb/wasm';
+import {SnowflakeConnection} from '@malloydata/db-snowflake';
 import {PooledPostgresConnection} from '@malloydata/db-postgres';
+
+export class SnowflakeTestConnection extends SnowflakeConnection {
+  public async runSQL(
+    sqlCommand: string,
+    options?: RunSQLOptions
+  ): Promise<MalloyQueryData> {
+    try {
+      return await super.runSQL(sqlCommand, options);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.log(`Error in SQL:\n ${sqlCommand}`);
+      throw e;
+    }
+  }
+}
 
 export class BigQueryTestConnection extends BigQueryConnection {
   // we probably need a better way to do this.
@@ -136,6 +152,9 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
     case 'duckdb_wasm':
       connection = new DuckDBWASMTestConnection(dbName);
       break;
+    case 'snowflake':
+      connection = new SnowflakeTestConnection(dbName);
+      break;
     default:
       throw new Error(`Unknown runtime "${dbName}`);
   }
@@ -146,7 +165,14 @@ export function testRuntimeFor(connection: Connection) {
   return new SingleConnectionRuntime(files, connection);
 }
 
-export const allDatabases = ['postgres', 'bigquery', 'duckdb', 'duckdb_wasm'];
+export const allDatabases = [
+  'postgres',
+  'bigquery',
+  'duckdb',
+  'duckdb_wasm',
+  'snowflake',
+];
+
 type RuntimeDatabaseNames = (typeof allDatabases)[number];
 
 export class RuntimeList {

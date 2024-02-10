@@ -228,8 +228,11 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   });
 
   // TODO not sure why this test needs to be skipped on postgres, feels like an oversight
-  testIf(databaseName !== 'postgres')('model: dates named', async () => {
-    await expect(`
+  // NOTE: unless underlying type is stored as a timestamp snowflake does not support extraction
+  testIf(!['postgres', 'snowflake'].includes(databaseName))(
+    'model: dates named',
+    async () => {
+      await expect(`
       run: ${databaseName}.table('malloytest.alltypes')->{
         group_by:
           t_date,
@@ -244,18 +247,19 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           t_timestamp_year is t_timestamp.year,
       }
     `).malloyResultMatches(runtime, {
-      t_date: new Date('2020-03-02'),
-      t_date_month: new Date('2020-03-01'),
-      t_date_year: new Date('2020-01-01'),
-      t_timestamp: new Date('2020-03-02T12:35:56.000Z'),
-      t_timestamp_second: new Date('2020-03-02T12:35:56.000Z'),
-      t_timestamp_minute: new Date('2020-03-02T12:35:00.000Z'),
-      t_timestamp_hour: new Date('2020-03-02T12:00:00.000Z'),
-      t_timestamp_date: new Date('2020-03-02'),
-      t_timestamp_month: new Date('2020-03-01'),
-      t_timestamp_year: new Date('2020-01-01'),
-    });
-  });
+        t_date: new Date('2020-03-02'),
+        t_date_month: new Date('2020-03-01'),
+        t_date_year: new Date('2020-01-01'),
+        t_timestamp: new Date('2020-03-02T12:35:56.000Z'),
+        t_timestamp_second: new Date('2020-03-02T12:35:56.000Z'),
+        t_timestamp_minute: new Date('2020-03-02T12:35:00.000Z'),
+        t_timestamp_hour: new Date('2020-03-02T12:00:00.000Z'),
+        t_timestamp_date: new Date('2020-03-02'),
+        t_timestamp_month: new Date('2020-03-01'),
+        t_timestamp_year: new Date('2020-01-01'),
+      });
+    }
+  );
 
   it('named query metadata undefined', async () => {
     const result = await expressionModel
@@ -309,19 +313,22 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     `).malloyResultMatches(expressionModel, {a: 312});
   });
 
-  testIf(runtime.connection.name !== 'postgres')('sql safe cast', async () => {
-    await expect(`
+  testIf(!['postgres', 'snowflake'].includes(runtime.connection.name))(
+    'sql safe cast',
+    async () => {
+      await expect(`
       run: ${databaseName}.sql('SELECT 1') -> { select:
         bad_date is '123':::date
         bad_number is 'abc':::number
         good_number is "312":::"integer"
       }
     `).malloyResultMatches(expressionModel, {
-      bad_date: null,
-      bad_number: null,
-      good_number: 312,
-    });
-  });
+        bad_date: null,
+        bad_number: null,
+        good_number: 312,
+      });
+    }
+  );
 
   it('many_field.sum() has correct locality', async () => {
     await expect(`
@@ -579,7 +586,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
   });
 
-  it('joined filtered explores with dependancies', async () => {
+  it('joined filtered explores with dependencies', async () => {
     await expect(`
       source: bo_models is
         ${databaseName}.table('malloytest.aircraft_models') extend { where: manufacturer ? ~ 'BO%' }

@@ -22,32 +22,21 @@
  */
 
 import {
-  arg,
   overload,
-  param,
   minScalar,
   anyExprType,
   sql,
   DialectFunctionOverloadDef,
-} from './util';
+  makeParam,
+} from '../../functions/util';
 
-export function fnLength(): DialectFunctionOverloadDef[] {
+export function fnIsInf(): DialectFunctionOverloadDef[] {
+  const value = makeParam('value', anyExprType('number'));
   return [
     overload(
-      minScalar('number'),
-      [param('value', anyExprType('string'))],
-      sql`LENGTH(${arg('value')})`
-    ),
-  ];
-}
-
-// TODO: add support for byte length in postgres, duckdb
-export function fnByteLength(): DialectFunctionOverloadDef[] {
-  return [
-    overload(
-      minScalar('number'),
-      [param('value', anyExprType('string'))],
-      sql`BYTE_LENGTH(${arg('value')})`
+      minScalar('boolean'),
+      [value.param],
+      sql`COALESCE(${value.arg} = 'inf'::FLOAT OR ${value.arg} = '-inf'::FLOAT, false)`
     ),
   ];
 }

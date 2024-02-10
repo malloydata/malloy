@@ -42,5 +42,6 @@ export type {DialectFieldList, QueryInfo} from './dialect';
 export {StandardSQLDialect} from './standardsql';
 export {PostgresDialect} from './postgres';
 export {DuckDBDialect} from './duckdb';
+export {SnowflakeDialect} from './snowflake';
 export {getDialect, registerDialect, getDialectFunction} from './dialect_map';
 export {FUNCTIONS} from './functions';

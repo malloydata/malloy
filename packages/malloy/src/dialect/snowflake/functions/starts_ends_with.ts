@@ -22,32 +22,34 @@
  */
 
 import {
-  arg,
   overload,
-  param,
   minScalar,
   anyExprType,
   sql,
   DialectFunctionOverloadDef,
-} from './util';
+  makeParam,
+} from '../../functions/util';
 
-export function fnLength(): DialectFunctionOverloadDef[] {
+export function fnStartsWith(): DialectFunctionOverloadDef[] {
+  const value = makeParam('value', anyExprType('string'));
+  const prefix = makeParam('prefix', anyExprType('string'));
   return [
     overload(
-      minScalar('number'),
-      [param('value', anyExprType('string'))],
-      sql`LENGTH(${arg('value')})`
+      minScalar('boolean'),
+      [value.param, prefix.param],
+      sql`COALESCE(STARTSWITH(${value.arg}, ${prefix.arg}), false)`
     ),
   ];
 }
 
-// TODO: add support for byte length in postgres, duckdb
-export function fnByteLength(): DialectFunctionOverloadDef[] {
+export function fnEndsWith(): DialectFunctionOverloadDef[] {
+  const value = makeParam('value', anyExprType('string'));
+  const suffix = makeParam('suffix', anyExprType('string'));
   return [
     overload(
-      minScalar('number'),
-      [param('value', anyExprType('string'))],
-      sql`BYTE_LENGTH(${arg('value')})`
+      minScalar('boolean'),
+      [value.param, suffix.param],
+      sql`COALESCE(ENDSWITH(${value.arg}, ${suffix.arg}), false)`
     ),
   ];
 }

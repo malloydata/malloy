@@ -21,33 +21,4 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  arg,
-  overload,
-  param,
-  minScalar,
-  anyExprType,
-  sql,
-  DialectFunctionOverloadDef,
-} from './util';
-
-export function fnLength(): DialectFunctionOverloadDef[] {
-  return [
-    overload(
-      minScalar('number'),
-      [param('value', anyExprType('string'))],
-      sql`LENGTH(${arg('value')})`
-    ),
-  ];
-}
-
-// TODO: add support for byte length in postgres, duckdb
-export function fnByteLength(): DialectFunctionOverloadDef[] {
-  return [
-    overload(
-      minScalar('number'),
-      [param('value', anyExprType('string'))],
-      sql`BYTE_LENGTH(${arg('value')})`
-    ),
-  ];
-}
+export * from './snowflake';

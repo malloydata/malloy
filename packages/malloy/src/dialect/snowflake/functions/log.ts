@@ -22,32 +22,23 @@
  */
 
 import {
-  arg,
   overload,
-  param,
   minScalar,
   anyExprType,
   sql,
+  makeParam,
   DialectFunctionOverloadDef,
-} from './util';
+} from '../../functions/util';
 
-export function fnLength(): DialectFunctionOverloadDef[] {
+export function fnLog(): DialectFunctionOverloadDef[] {
+  const value = makeParam('value', anyExprType('number'));
+  const base = makeParam('base', anyExprType('number'));
   return [
     overload(
       minScalar('number'),
-      [param('value', anyExprType('string'))],
-      sql`LENGTH(${arg('value')})`
-    ),
-  ];
-}
-
-// TODO: add support for byte length in postgres, duckdb
-export function fnByteLength(): DialectFunctionOverloadDef[] {
-  return [
-    overload(
-      minScalar('number'),
-      [param('value', anyExprType('string'))],
-      sql`BYTE_LENGTH(${arg('value')})`
+      [value.param, base.param],
+      // Snowflake take base first, then value
+      sql`LOG(${base.arg}, ${value.arg})`
     ),
   ];
 }

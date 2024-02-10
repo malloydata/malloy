@@ -22,32 +22,30 @@
  */
 
 import {
-  arg,
   overload,
-  param,
   minScalar,
   anyExprType,
   sql,
   DialectFunctionOverloadDef,
-} from './util';
+  makeParam,
+} from '../../functions/util';
 
-export function fnLength(): DialectFunctionOverloadDef[] {
+export function fnTrunc(): DialectFunctionOverloadDef[] {
+  const value = makeParam('value', anyExprType('number'));
+  const precision = makeParam('precision', anyExprType('number'));
+  // trunc function doesn't exist in Snowflake, so we emulate it.
+  // For both overloads, we switch between CEIL and FLOOR based on the sign of the arugment
+  // For the overload with precision, we multiply by a power of 10 before rounding, then divide.
   return [
     overload(
       minScalar('number'),
-      [param('value', anyExprType('string'))],
-      sql`LENGTH(${arg('value')})`
+      [value.param],
+      sql`CASE WHEN ${value.arg} < 0 THEN CEIL(${value.arg}) ELSE FLOOR(${value.arg}) END`
     ),
-  ];
-}
-
-// TODO: add support for byte length in postgres, duckdb
-export function fnByteLength(): DialectFunctionOverloadDef[] {
-  return [
     overload(
       minScalar('number'),
-      [param('value', anyExprType('string'))],
-      sql`BYTE_LENGTH(${arg('value')})`
+      [value.param, precision.param],
+      sql`CASE WHEN ${value.arg} < 0 THEN CEIL(${value.arg} * POW(10, ${precision.arg})) / POW(10, ${precision.arg}) ELSE FLOOR(${value.arg} * POW(10, ${precision.arg})) / POW(10, ${precision.arg}) END`
     ),
   ];
 }

@@ -944,7 +944,7 @@ class QueryField extends QueryNode {
       throw new Error(`Join ${joinName} not found in result set`);
     }
     if (!join.leafiest || join.makeUniqueKey) {
-      func = 'COUNT(DISTINCT';
+      func = 'COUNT(DISTINCT ';
       thing = struct.getDistinctKey().generateExpression(resultSet);
     }
 
@@ -960,9 +960,9 @@ class QueryField extends QueryNode {
 
     // find the structDef and return the path to the field...
     if (state.whereSQL) {
-      return `${func} CASE WHEN ${state.whereSQL} THEN ${thing} END)`;
+      return `${func}CASE WHEN ${state.whereSQL} THEN ${thing} END)`;
     } else {
-      return `${func} ${thing})`;
+      return `${func}${thing})`;
     }
   }
 
@@ -1435,7 +1435,7 @@ function sqlSumDistinct(
      SUM(DISTINCT ${uniqueInt})
   )`;
   let ret = `(${sumSQL}/(${multiplier}*1.0))`;
-  ret = `CAST(${ret} as ${dialect.defaultNumberType})`;
+  ret = `CAST(${ret} AS ${dialect.defaultNumberType})`;
   return ret;
 }
 

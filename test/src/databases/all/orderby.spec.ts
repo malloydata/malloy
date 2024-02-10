@@ -87,8 +87,10 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     `).malloyResultMatches(orderByModel, {});
   });
 
-  it(`reserved words are quoted in turtles - ${databaseName}`, async () => {
-    await expect(`
+  testIf(runtime.supportsNesting)(
+    `reserved words are quoted in turtles - ${databaseName}`,
+    async () => {
+      await expect(`
       run: models->{
         nest: withx is {
           group_by: select is UPPER(manufacturer)
@@ -100,7 +102,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           fetch is withx.fetch
       }
     `).malloyResultMatches(orderByModel, {});
-  });
+    }
+  );
 
   it.skip('reserved words in structure definitions', async () => {
     await expect(`

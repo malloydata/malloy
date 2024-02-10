@@ -87,6 +87,7 @@ console.log(`Creating database at ${databasePath}`);
     await run(
       `CREATE TABLE malloytest.ga_sample AS SELECT * FROM parquet_scan('${cwd}ga_sample.parquet')`
     );
+    console.log('Finished populating database with data from parqeut files');
   } catch (e) {
     console.log(e);
   }
