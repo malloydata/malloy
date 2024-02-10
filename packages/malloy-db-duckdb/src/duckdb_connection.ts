@@ -61,6 +61,7 @@ export class DuckDBConnection extends DuckDBCommon {
 
   connecting: Promise<void>;
   protected connection: Connection | null = null;
+  protected setupError: Error | undefined;
   protected isSetup: Promise<void> | undefined;
 
   static activeDBs: Record<string, ActiveDB> = {};
@@ -122,7 +123,7 @@ export class DuckDBConnection extends DuckDBCommon {
   }
 
   private async init(): Promise<void> {
-    return new Promise((resolve, reject) => {
+    return new Promise(resolve => {
       let activeDB: ActiveDB;
       if (this.databasePath in DuckDBConnection.activeDBs) {
         activeDB = DuckDBConnection.activeDBs[this.databasePath];
@@ -135,11 +136,8 @@ export class DuckDBConnection extends DuckDBCommon {
             process.env['MOTHERDUCK_TOKEN'] = this.motherDuckToken;
           }
           if (!process.env['MOTHERDUCK_TOKEN']) {
-            const err = new Error('Please set your MotherDuck Token');
-            this.setup = async () => {
-              throw err;
-            };
-            return reject(err);
+            this.setupError = new Error('Please set your MotherDuck Token');
+            return resolve();
           }
         }
         const database = new Database(
@@ -147,10 +145,7 @@ export class DuckDBConnection extends DuckDBCommon {
           this.readOnly ? OPEN_READONLY : OPEN_READWRITE,
           err => {
             if (err) {
-              this.setup = async () => {
-                throw err;
-              };
-              reject(err);
+              this.setupError = err;
             } else {
               activeDB = {
                 database,
@@ -159,8 +154,8 @@ export class DuckDBConnection extends DuckDBCommon {
               DuckDBConnection.activeDBs[this.databasePath] = activeDB;
               this.connection = activeDB.database.connect();
               activeDB.connections.push(this.connection);
-              resolve();
             }
+            resolve();
           }
         );
       }
@@ -178,6 +173,9 @@ export class DuckDBConnection extends DuckDBCommon {
   }
 
   protected async setup(): Promise<void> {
+    if (this.setupError) {
+      throw this.setupError;
+    }
     const doSetup = async () => {
       if (this.workingDirectory) {
         await this.runDuckDBQuery(
