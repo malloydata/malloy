@@ -1566,6 +1566,27 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       ]);
     });
 
+    it(`works with aggregate - ${databaseName}`, async () => {
+      await expect(`
+      run: state_facts -> {
+        aggregate: c is count()
+        group_by: l is substr(state, 1, 1)
+
+        calculate:
+          prev is lag(l) {
+            partition_by: c
+          }
+        order_by: l
+        limit: 5
+      }`).malloyResultMatches(expressionModel, [
+        {l: 'A', c: 4, prev: null},
+        {l: 'C', c: 3, prev: null},
+        {l: 'D', c: 2, prev: null},
+        {l: 'F', c: 1, prev: null},
+        {l: 'G', c: 1, prev: 'F'},
+      ]);
+    });
+
     it(`works with multiple order_bys - ${databaseName}`, async () => {
       await expect(`
       run: aircraft -> {
