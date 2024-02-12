@@ -35,6 +35,7 @@ import {
 } from './render-result-metadata';
 import {parsePlotTags} from './plot/parse-plot-tags';
 import {plotToVega} from './plot/plot-to-vega';
+import {parseBarChartTags} from './plot/parse-bar_chart-tags';
 
 // Get the first valid theme value or fallback to CSS variable
 function getThemeValue(prop: string, ...themes: Array<Tag | undefined>) {
@@ -217,6 +218,18 @@ export class MalloyRender extends LitElement {
     const {tag} = this._result.tagParse();
     if (tag.has('plot')) {
       const spec = parsePlotTags(this._result);
+      const vgSpec = plotToVega(spec);
+
+      // @ts-ignore
+      const data = this._result.data.queryData;
+      vgSpec.data[0].values = data;
+      console.log('SPEC', spec);
+      console.log('VGSPEC', vgSpec);
+      return html`<malloy-vega-chart .spec=${vgSpec}></malloy-vega-chart>`;
+    }
+
+    if (tag.has('bar_chart')) {
+      const spec = parseBarChartTags(this._result);
       const vgSpec = plotToVega(spec);
 
       // @ts-ignore

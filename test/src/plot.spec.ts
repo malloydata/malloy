@@ -7,6 +7,10 @@ import {parsePlotTags} from '../../packages/malloy-render/src/component/plot/par
 // @ts-ignore
 // eslint-disable-next-line node/no-unpublished-import
 import {plotToVega} from '../../packages/malloy-render/src/component/plot/plot-to-vega';
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+// eslint-disable-next-line node/no-unpublished-import
+import {parseBarChartTags} from '../../packages/malloy-render/src/component/plot/parse-bar_chart-tags';
 
 // Polyfill crypto for this test file
 global.crypto = require('crypto');
@@ -54,7 +58,7 @@ describe('plot test', () => {
     console.log(JSON.stringify(vlSpec, null, 2));
   });
 
-  test('group color', async () => {
+  test.only('group color', async () => {
     const loaded = runtime.loadQuery(
       `
         # plot
@@ -100,7 +104,7 @@ describe('plot test', () => {
     console.log(JSON.stringify(vlSpec, null, 2));
   });
 
-  test.only('group measures', async () => {
+  test('group measures', async () => {
     const loaded = runtime.loadQuery(
       `
         # plot.lists.l=[price,quantity]
@@ -120,6 +124,43 @@ describe('plot test', () => {
     const vlSpec = plotToVega(plotSpec);
     console.log(JSON.stringify(plotSpec, null, 2));
     console.log(JSON.stringify(vlSpec, null, 2));
+  });
+
+  test.only('bar 1d1m', async () => {
+    const loaded = runtime.loadQuery(
+      `
+        # bar_chart { x='category' y='price'}
+        run: duckdb.sql("SELECT 'a' as category, 'b' as region, 1 as price, 2 as quantity, 3 as cost") -> {
+          group_by: category
+          aggregate:
+            price is price.sum()
+            quantity is quantity.sum()
+        }
+      `
+    );
+    const result = await loaded.run();
+    const plotSpec = parseBarChartTags(result);
+    // const vlSpec = plotToVega(plotSpec);
+    console.log(JSON.stringify(plotSpec, null, 2));
+    // console.log(JSON.stringify(vlSpec, null, 2));
+  });
+
+  test.only('bar 1dNm', async () => {
+    const loaded = runtime.loadQuery(
+      `
+        # bar_chart { x='category'}
+        run: duckdb.sql("SELECT 'a' as category, 'b' as region, 1 as price, 2 as quantity, 3 as cost") -> {
+          group_by: category
+          # y
+          aggregate: price is price.sum(), quantity is quantity.sum()
+        }
+      `
+    );
+    const result = await loaded.run();
+    const plotSpec = parseBarChartTags(result);
+    // const vlSpec = plotToVega(plotSpec);
+    console.log(JSON.stringify(plotSpec, null, 2));
+    // console.log(JSON.stringify(vlSpec, null, 2));
   });
 
   test.skip('embedded view', async () => {

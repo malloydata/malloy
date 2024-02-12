@@ -337,7 +337,7 @@ function createBarYMark(
   else spec.marks.push(mark);
 }
 
-function walkFields(e: Explore, cb: (f: Field) => void, context?: any) {
+export function walkFields(e: Explore, cb: (f: Field) => void, context?: any) {
   context = context ?? {path: e.fieldPath};
   e.allFields.forEach(f => {
     cb(f);
@@ -350,18 +350,18 @@ function walkFields(e: Explore, cb: (f: Field) => void, context?: any) {
   });
 }
 
-function getFieldPathFromRoot(f: Field) {
+export function getFieldPathFromRoot(f: Field) {
   return fieldPathFromExplore(f).join('.');
 }
 
-function fieldPathFromExplore(f: Field) {
+export function fieldPathFromExplore(f: Field) {
   const res = f.parentExplore.isExploreField()
     ? getFieldPathFromRoot(f.parentExplore)
     : [];
   return [...res, f.name];
 }
 
-function getFieldPathFromRef(t: string, contextPath: string) {
+export function getFieldPathFromRef(t: string, contextPath: string) {
   const match = t.match(/^(\^*)(.*)/);
   if (!match) return t;
   const [, parentScoping, fieldName] = match;

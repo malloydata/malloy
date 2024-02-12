@@ -23,6 +23,9 @@
     },
     {
       "path": "../packages/malloy-malloy-sql"
+    },
+    {
+      "path": "../packages/malloy-render"
     }
   ]
 }

@@ -30,8 +30,8 @@ view: barBasic is {
 >>>markdown
 ### Bar Chart: 2 dims, 1 measure stacked
 >>>malloy
-# bar_chart.stack
-view: barBasic is {
+# bar_char.stack
+view: barStack is {
   group_by: Dim1, Dim3
   aggregate: Expr1_Sum is Expression1.sum()
   limit: 5
@@ -39,7 +39,7 @@ view: barBasic is {
 
 -- or explicit, with embedding
 # bar_chart.stack
-view: barBasic is {
+view: barStack is {
   group_by:
     # group
     Dim1
@@ -52,7 +52,7 @@ view: barBasic is {
 
 -- or explicit, at top
 # bar_chart {stack group=Dim1 x=Dim3 y=Expr_1 }
-view: barBasic is {
+view: barStack is {
   group_by: Dim1, Dim3
   aggregate: Expr1_Sum is Expression1.sum()
   limit: 5
@@ -61,7 +61,7 @@ view: barBasic is {
 ### Bar Chart: 2 dims, 1 measure grouped
 >>>malloy
 # bar_chart
-view: barBasic is {
+view: barGroup is {
   group_by: Dim1, Dim3
   aggregate: Expr1_Sum is Expression1.sum()
   limit: 5
@@ -69,7 +69,7 @@ view: barBasic is {
 
 -- or explicit, with embedding
 # bar_chart
-view: barBasic is {
+view: barGroup is {
   group_by:
     # group
     Dim1
@@ -82,15 +82,67 @@ view: barBasic is {
 
 -- or explicit, at top
 # bar_chart { group=Dim1 x=Dim3 y=Expr_1 }
-view: barBasic is {
+view: barGroup is {
   group_by: Dim1, Dim3
   aggregate: Expr1_Sum is Expression1.sum()
   limit: 5
 }
 >>>markdown
 ### Bar Chart: 1 dim, N measures stacked
+>>>malloy
+# bar_chart.stack
+view: barMeasureStack is {
+  group_by: Dim1
+  # y
+  aggregate: Expr1_Sum is Expression1.sum(), Expr2_Sum is Expression2.sum()
+  limit: 5
+}
+
+-- or explicit, with embedding
+# bar_chart.stack
+view: barMeasureStack is {
+  # x
+  group_by: Dim1
+  # y
+  aggregate: Expr1_Sum is Expression1.sum(), Expr2_Sum is Expression2.sum()
+  limit: 5
+}
+
+-- or explicit, at top
+# bar_chart.stack { x=Dim1 y=[Expr1_Sum, Expr2_Sum] }
+view: barMeasureStack is {
+  group_by: Dim1
+  aggregate: Expr1_Sum is Expression1.sum(), Expr2_Sum is Expression2.sum(), Expr3_Sum is Expression3.sum()
+  limit: 5
+}
 >>>markdown
 ### Bar Chart: 1 dim, N measures grouped
+>>>malloy
+# bar_chart
+view: barMeasureGroup is {
+  group_by: Dim1
+  # y
+  aggregate: Expr1_Sum is Expression1.sum(), Expr2_Sum is Expression2.sum()
+  limit: 5
+}
+
+-- or explicit, with embedding
+# bar_chart
+view: barMeasureGroup is {
+  # x
+  group_by: Dim1
+  # y
+  aggregate: Expr1_Sum is Expression1.sum(), Expr2_Sum is Expression2.sum()
+  limit: 5
+}
+
+-- or explicit, at top
+# bar_chart { x=Dim1 y=[Expr1_Sum, Expr2_Sum] }
+view: barMeasureGroup is {
+  group_by: Dim1
+  aggregate: Expr1_Sum is Expression1.sum(), Expr2_Sum is Expression2.sum(), Expr3_Sum is Expression3.sum()
+  limit: 5
+}
 >>>markdown
 ## Plot API Demo
 >>>markdown
@@ -105,26 +157,44 @@ view: plotBasic is {
 }
 >>>malloy
  # plot
-view: plotBasic is{
+view: plotBasic is {
   # x
   group_by: Dim1
   # barY
   aggregate: `Expr1_Sum` is Expression1.sum()
   limit: 5
 }
+
+-- explicit version
+# plot.x=Dim1
+# plot.marks.b=barY {y=Expr1_Sum}
+view: plotBasic is {
+  group_by: Dim1
+  aggregate: Expr1_Sum is Expression1.sum()
+  limit: 5
+}
 >>>markdown
 ### Plot: Bars for 2 dims, 1 measure stacked
 >>>malloy
-  # plot
-  view: plotStack is {
-    group_by:
-      # x
-      Dim1
-      Dim3
-    # barY { fill='^Dim3' }
-    aggregate: `Expr1_Sum` is Expression1.sum()
-    limit: 10
-  }
+# plot
+view: plotStack is {
+  group_by:
+    # x
+    Dim1
+    Dim3
+  # barY { fill='^Dim3' }
+  aggregate: `Expr1_Sum` is Expression1.sum()
+  limit: 10
+}
+
+-- explicit version
+# plot.x=Dim1
+# plot.marks.b=barY { y=Expr1_Sum fill=Dim3 }
+view: plotBasic is {
+  group_by: Dim1, Dim3
+  aggregate: Expr1_Sum is Expression1.sum()
+  limit: 5
+}
 >>>markdown
 ### Plot: Bars for 2 dims, 1 measure grouped
 >>>malloy
@@ -136,6 +206,15 @@ view: plotGroup is {
     # x
     Dim3
   # barY { fill='^Dim3' }
+  aggregate: `Expr1_Sum` is Expression1.sum()
+  limit: 10
+}
+
+-- explicit version
+# plot { fx=Dim1 x=Dim3 }
+# plot.marks.b=barY { y=Expr1_Sum fill=Dim3 }
+view: plotGroup is {
+  group_by: Dim1, Dim3
   aggregate: `Expr1_Sum` is Expression1.sum()
   limit: 10
 }

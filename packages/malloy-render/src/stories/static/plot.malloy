@@ -76,7 +76,96 @@ source: test is duckdb.table("data/test.csv") extend {
       aggregate: `Expr1_Sum` is Expression1.sum()
       limit: 5
     }
+  }
 
+  # bar_chart { x=Dim1 y=Expression1_Sum }
+  view: bar is {
+    group_by: Dim1
+    aggregate: Expression1_Sum is Expression1.sum()
+  }
+
+  # bar_chart { x=Dim1 split=Dim3 y=Expression1_Sum }
+  view: bar2 is {
+    group_by: Dim1, Dim3
+    aggregate: Expression1_Sum is Expression1.sum()
+  }
+
+  # bar_chart { stack x=Dim1 split=Dim3 y=Expression1_Sum }
+  view: bar3 is {
+    group_by: Dim1, Dim3
+    aggregate: Expression1_Sum is Expression1.sum()
+  }
+
+  # bar_chart { x=Dim1 y=[m1,m2] }
+  view: bar4 is {
+    group_by: Dim1
+    aggregate: m1 is Expression1.sum(), m2 is Expression1.sum()/2
+  }
+
+  # bar_chart { stack x=Dim1 y=[m1,m2] }
+  view: bar5 is {
+    group_by: Dim1
+    aggregate: m1 is Expression1.sum(), m2 is Expression1.sum()/2
+  }
+
+  # bar_chart.stack
+  view: bar6 is {
+    # x
+    group_by: Dim1
+    # y
+    aggregate: m1 is Expression1.sum(), m2 is Expression1.sum()/2
+  }
+
+  # bar_chart
+  view: bar7 is {
+    # x
+    group_by: Dim1
+    # y
+    aggregate: Expression1_Sum is Expression1.sum()
+  }
+
+  # bar_chart
+  view: bar8 is {
+    group_by: Dim1
+    aggregate: Expression1_Sum is Expression1.sum()
+  }
+
+  # bar_chart
+  view: bar9 is {
+    group_by: Dim1, Dim3
+    aggregate: Expression1_Sum is Expression1.sum()
+  }
+
+  # bar_chart
+  view: bar10 is {
+    group_by: Dim1, Dim3
+    aggregate: Expression1_Sum is Expression1.sum(), m2 is Expression1.sum()/2
+  }
+
+  # bar_chart
+  view: bar11 is {
+    group_by: Dim1, Dim3
+    aggregate:
+      Expression1_Sum is Expression1.sum()
+      # y
+      m2 is Expression1.sum()/2
+  }
+
+  # bar_chart.stack
+  view: bar12 is {
+    group_by: Dim1, Dim3
+    aggregate: Expression1_Sum is Expression1.sum()
+  }
+
+  # bar_chart.stack
+  view: bar13 is {
+    group_by:
+      # x
+      Dim1
+      # split
+      Dim3
+    # y
+    aggregate: Expression1_Sum is Expression1.sum()
   }
 
   # -plot

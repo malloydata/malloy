@@ -70,3 +70,94 @@ export const PlotNested = {
     view: 'plotNested',
   },
 };
+
+export const Bar = {
+  args: {
+    source: 'test',
+    view: 'bar',
+  },
+};
+
+export const Bar2 = {
+  args: {
+    source: 'test',
+    view: 'bar2',
+  },
+};
+
+export const Bar3 = {
+  args: {
+    source: 'test',
+    view: 'bar3',
+  },
+};
+
+export const Bar4 = {
+  args: {
+    source: 'test',
+    view: 'bar4',
+  },
+};
+
+export const Bar5 = {
+  args: {
+    source: 'test',
+    view: 'bar5',
+  },
+};
+
+export const Bar6 = {
+  args: {
+    source: 'test',
+    view: 'bar6',
+  },
+};
+
+export const Bar7 = {
+  args: {
+    source: 'test',
+    view: 'bar7',
+  },
+};
+
+export const Bar8 = {
+  args: {
+    source: 'test',
+    view: 'bar8',
+  },
+};
+
+export const Bar9 = {
+  args: {
+    source: 'test',
+    view: 'bar9',
+  },
+};
+
+export const Bar10 = {
+  args: {
+    source: 'test',
+    view: 'bar10',
+  },
+};
+
+export const Bar11 = {
+  args: {
+    source: 'test',
+    view: 'bar11',
+  },
+};
+
+export const Bar12 = {
+  args: {
+    source: 'test',
+    view: 'bar12',
+  },
+};
+
+export const Bar13 = {
+  args: {
+    source: 'test',
+    view: 'bar13',
+  },
+};
