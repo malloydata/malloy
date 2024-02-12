@@ -56,6 +56,7 @@ export class DuckDBConnection extends DuckDBCommon {
   private additionalExtensions: string[] = [];
   private databasePath = ':memory:';
   private workingDirectory = '.';
+  private isMotherDuck = false;
   private motherDuckToken: string | undefined;
   private readOnly = false;
 
@@ -119,19 +120,21 @@ export class DuckDBConnection extends DuckDBCommon {
     if (this.databasePath === ':memory:') {
       this.readOnly = false;
     }
+    this.isMotherDuck =
+      this.databasePath.startsWith('md:') ||
+      this.databasePath.startsWith('motherduck:');
     this.connecting = this.init();
   }
 
   private async init(): Promise<void> {
     return new Promise(resolve => {
-      let activeDB: ActiveDB;
       if (this.databasePath in DuckDBConnection.activeDBs) {
-        activeDB = DuckDBConnection.activeDBs[this.databasePath];
+        const activeDB = DuckDBConnection.activeDBs[this.databasePath];
         this.connection = activeDB.database.connect();
         activeDB.connections.push(this.connection);
         resolve();
       } else {
-        if (this.databasePath.startsWith('md:')) {
+        if (this.isMotherDuck) {
           if (this.motherDuckToken) {
             process.env['motherduck_token'] = this.motherDuckToken;
           }
@@ -140,6 +143,7 @@ export class DuckDBConnection extends DuckDBCommon {
             !process.env['MOTHERDUCK_TOKEN']
           ) {
             this.setupError = new Error('Please set your MotherDuck Token');
+            // Resolve instead of error because errors cannot be caught.
             return resolve();
           }
         }
@@ -150,13 +154,18 @@ export class DuckDBConnection extends DuckDBCommon {
             if (err) {
               this.setupError = err;
             } else {
-              activeDB = {
-                database,
-                connections: [],
-              };
-              DuckDBConnection.activeDBs[this.databasePath] = activeDB;
-              this.connection = activeDB.database.connect();
-              activeDB.connections.push(this.connection);
+              this.connection = database.connect();
+              // Don't cache MotherDuck connections so they can
+              // pick up fresh credentials if necessary.
+              if (!this.isMotherDuck) {
+                const activeDB: ActiveDB = {
+                  database,
+                  connections: [],
+                };
+                DuckDBConnection.activeDBs[this.databasePath] = activeDB;
+
+                activeDB.connections.push(this.connection);
+              }
             }
             resolve();
           }
