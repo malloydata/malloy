@@ -25,6 +25,8 @@ import {ModelDef, QueryResult, Result, Tag} from '@malloydata/malloy';
 import {LitElement, html, css, PropertyValues} from 'lit';
 import {customElement, property, state} from 'lit/decorators.js';
 import './table';
+// eslint-disable-next-line no-duplicate-imports -- need to import this type, but also run the side effect for registering the web component. The side effect doesn't work without above.
+import {Table} from './table';
 import './bar-chart';
 import {provide} from '@lit/context';
 import {resultContext} from './result-context';
@@ -81,6 +83,11 @@ export class MalloyRender extends LitElement {
           'liga' 1,
           'calt' 1;
       }
+    }
+
+    #root {
+      width: 100%;
+      height: 100%;
     }
   `;
 
@@ -207,11 +214,23 @@ export class MalloyRender extends LitElement {
     );
   }
 
+  public getTableScrollState() {
+    const mt = this.shadowRoot?.querySelector<Table>('#root > malloy-table');
+    return mt
+      ? {
+          isAtTop: mt.isAtTop,
+          isAtBottom: mt.isAtBottom,
+        }
+      : null;
+  }
+
   override render() {
-    return html`<malloy-table
-      exportparts="table-container: container"
-      .data=${this._result.data}
-    ></malloy-table>`;
+    return html`<div id="root">
+      <malloy-table
+        exportparts="table-container: container"
+        .data=${this._result.data}
+      ></malloy-table>
+    </div>`;
   }
 }
 
