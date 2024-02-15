@@ -31,10 +31,8 @@ import {
   nothing,
 } from 'lit';
 import {customElement, eventOptions, property, state} from 'lit/decorators.js';
-import {ref, Ref, createRef} from 'lit/directives/ref.js';
 import {classMap} from 'lit/directives/class-map.js';
 import {createContext, provide, consume} from '@lit/context';
-import {ResizeController} from '@lit-labs/observers/resize-controller.js';
 import {
   getFieldKey,
   isFirstChild,
@@ -192,37 +190,6 @@ export class Table extends LitElement {
   @property({attribute: false})
   metadata!: RenderResultMetadata;
 
-  @property({reflect: true, type: Boolean})
-  isAtTop = true;
-
-  @property({reflect: true, type: Boolean})
-  isAtBottom = true;
-
-  scrollRef: Ref<HTMLDivElement> = createRef();
-  private handleScrollCheck() {
-    const scroller = this.scrollRef.value;
-    if (scroller) {
-      this.isAtTop = scroller.scrollTop === 0;
-      this.isAtBottom =
-        scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight;
-    }
-  }
-  override firstUpdated() {
-    if (this.scrollRef.value) this._scrollerSize.observe(this.scrollRef.value);
-  }
-
-  private _scrollerSize = new ResizeController(this, {
-    target: null,
-    callback: () => this.handleScrollCheck(),
-  });
-
-  @eventOptions({passive: true})
-  private _handleScroll(e: Event) {
-    const target = e.target as HTMLElement;
-    this._scrolling = target.scrollTop > 0;
-    this.handleScrollCheck();
-  }
-
   override connectedCallback() {
     super.connectedCallback();
     if (typeof this.parentCtx === 'undefined') {
@@ -236,6 +203,12 @@ export class Table extends LitElement {
         layout: this.parentCtx.layout,
       };
     }
+  }
+
+  @eventOptions({passive: true})
+  private _handleScroll(e: Event) {
+    const target = e.target as HTMLElement;
+    this._scrolling = target.scrollTop > 0;
   }
 
   // If rendering a pinned header, render it within the current ShadowDOM root so we can use CSS to style the nested table headers when scrolling
@@ -410,7 +383,6 @@ export class Table extends LitElement {
       @scroll=${this._handleScroll}
       class="table-wrapper"
       part=${this.ctx.root ? 'table-container' : nothing}
-      ref=${ref(this.scrollRef)}
     >
       ${renderStickyHeader()}
       <table>
