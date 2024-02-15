@@ -24,8 +24,6 @@
 import {ModelDef, QueryResult, Result, Tag} from '@malloydata/malloy';
 import {LitElement, html, css, PropertyValues} from 'lit';
 import {customElement, property, state} from 'lit/decorators.js';
-import './table';
-// eslint-disable-next-line no-duplicate-imports -- need to import this type, but also run the side effect for registering the web component. The side effect doesn't work without above.
 import {Table} from './table';
 import './bar-chart';
 import {provide} from '@lit/context';
