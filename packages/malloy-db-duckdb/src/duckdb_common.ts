@@ -54,6 +54,9 @@ const unquoteName = (name: string) => {
 export abstract class DuckDBCommon
   implements TestableConnection, PersistSQLResults, StreamingConnection
 {
+  protected isMotherDuck = false;
+  protected motherDuckToken: string | undefined;
+
   private readonly dialect = new DuckDBDialect();
   static DEFAULT_QUERY_OPTIONS: DuckDBQueryOptions = {
     rowLimit: 10,

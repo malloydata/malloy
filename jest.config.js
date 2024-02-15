@@ -23,14 +23,21 @@
 
 process.env.TZ = 'America/Los_Angeles';
 
+const transformIgnoreModules = [
+  'lit-html',
+  'lit-element',
+  'lit',
+  '@lit',
+  '@lit-labs',
+  '@motherduckdb/wasm-client',
+].join('|');
+
 module.exports = {
   moduleFileExtensions: ['js', 'jsx', 'ts', 'tsx'],
   setupFilesAfterEnv: ['jest-expect-message'],
   testMatch: ['**/?(*.)spec.(ts|js)?(x)'],
   testPathIgnorePatterns: ['/node_modules/', '/dist/', '/out/'],
-  transformIgnorePatterns: [
-    'node_modules/(?!(lit-html|lit-element|lit|@lit|@lit-labs)/)',
-  ],
+  transformIgnorePatterns: [`node_modules/(?!(${transformIgnoreModules})/)`],
   transform: {
     '^.+\\.(ts|tsx)$': ['ts-jest', {tsconfig: '<rootDir>/tsconfig.json'}],
     '^.+\\.(js|jsx)$': [
