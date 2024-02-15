@@ -20,7 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-import {Explore, Field} from '@malloydata/malloy';
+import {Explore, Field, Tag} from '@malloydata/malloy';
+import {hasAny} from './tag-utils';
 
 function getLocationInParent(f: Field | Explore) {
   const parent = f.parentExplore;
@@ -61,13 +62,13 @@ export function clamp(s: number, e: number, v: number) {
   return Math.max(s, Math.min(e, v));
 }
 
-export function shouldRenderAs(f: Field) {
-  if (f.isAtomicField()) return 'cell';
-  const {tag} = f.tagParse();
-  if (tag.has('bar')) return 'bar-chart';
+export function shouldRenderAs(f: Field | Explore, tagOverride?: Tag) {
+  if (!f.isExplore() && f.isAtomicField()) return 'cell';
+  const tag = tagOverride ?? f.tagParse().tag;
+  if (hasAny(tag, 'bar_chart')) return 'chart';
   else return 'table';
 }
 
-export function getFieldKey(f: Field) {
+export function getFieldKey(f: Field | Explore) {
   return JSON.stringify(f.fieldPath);
 }

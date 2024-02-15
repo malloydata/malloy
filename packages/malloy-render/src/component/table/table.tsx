@@ -7,8 +7,15 @@ import {
   Show,
   Switch,
   Match,
+  JSXElement,
 } from 'solid-js';
-import {AtomicField, DataArray, DataRecord, Field} from '@malloydata/malloy';
+import {
+  AtomicField,
+  DataArray,
+  DataRecord,
+  ExploreField,
+  Field,
+} from '@malloydata/malloy';
 import {
   getFieldKey,
   isFirstChild,
@@ -22,10 +29,11 @@ import {getTableLayout} from './table-layout';
 import {useResultContext} from '../result-context';
 import {TableContext, useTableContext} from './table-context';
 import './table.css';
+import {Chart} from '../chart';
 
 const Cell = (props: {
   field: Field;
-  value: string | number | Element;
+  value: JSXElement;
   hideStartGutter: boolean;
   hideEndGutter: boolean;
   isHeader?: boolean;
@@ -104,7 +112,7 @@ const HeaderField = (props: {field: Field}) => {
 const TableField = (props: {field: Field; row: DataRecord}) => {
   const tableCtx = useTableContext()!;
   const renderAs = shouldRenderAs(props.field);
-  let renderValue: string | number | Element = '';
+  let renderValue: JSXElement = '';
   if (tableCtx.pinnedHeader) renderValue = '';
   else if (renderAs === 'cell') {
     const resultCellValue = props.row.cell(props.field).value;
@@ -119,14 +127,15 @@ const TableField = (props: {field: Field; row: DataRecord}) => {
     } else if (valueIsString(props.field, resultCellValue)) {
       renderValue = resultCellValue;
     }
-  } else if (renderAs === 'bar-chart') {
+  } else if (renderAs === 'chart') {
     const metadata = useResultContext();
     renderValue = (
-      <malloy-bar-chart
-        data={props.row.cell(props.field) as DataArray}
+      <Chart
+        field={props.field as ExploreField}
+        data={metadata.getData(props.row.cell(props.field))}
         metadata={metadata}
-      ></malloy-bar-chart>
-    ) as Element;
+      />
+    );
   }
 
   return (
