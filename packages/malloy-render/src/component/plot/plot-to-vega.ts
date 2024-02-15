@@ -1,10 +1,51 @@
 import Any from './any';
 import {Spec} from './parse-plot-tags';
+
+const grayMedium = '#727883';
+const gridGray = '#E5E7EB';
+
 export function plotToVega(spec: Spec) {
   const vgSpec: Any = {
     '$schema': 'https://vega.github.io/schema/vega/v5.json',
     width: 400,
     height: 200,
+    config: {
+      axisY: {
+        gridColor: gridGray,
+        tickColor: gridGray,
+        domain: false,
+        labelFont: 'Inter, sans-serif',
+        labelFontSize: 10,
+        labelFontWeight: 'normal',
+        labelColor: grayMedium,
+        labelPadding: 5,
+        titleColor: grayMedium,
+        titleFont: 'Inter, sans-serif',
+        titleFontSize: 12,
+        titleFontWeight: 'bold',
+        titlePadding: 10,
+        labelOverlap: false,
+      },
+      axisX: {
+        gridColor: gridGray,
+        tickColor: gridGray,
+        tickSize: 0,
+        domain: false,
+        labelFont: 'Inter, sans-serif',
+        labelFontSize: 10,
+        labelFontWeight: 'normal',
+        labelPadding: 5,
+        labelColor: grayMedium,
+        titleColor: grayMedium,
+        titleFont: 'Inter, sans-serif',
+        titleFontSize: 12,
+        titleFontWeight: 'bold',
+        titlePadding: 10,
+      },
+      view: {
+        strokeWidth: 0,
+      },
+    },
     data: [
       {
         name: 'table',
@@ -37,7 +78,7 @@ export function plotToVega(spec: Spec) {
   };
 
   if (xScale.type === 'band') {
-    xScale.padding = 0.05;
+    xScale.padding = 0.2;
     xScale.round = true;
   }
 
@@ -56,7 +97,7 @@ export function plotToVega(spec: Spec) {
   const colorScale: Any = {
     name: 'color',
     type: 'ordinal', // TODO: support other color scale types
-    range: 'category',
+    range: ['#4FA8BF', '#EDB74A', '#CC6F33'], // 'category',
     // TODO: manually derive domain from data, allow blended fields, etc
     domain: {data: 'table', field: spec.color.fields.at(0)},
   };
@@ -80,9 +121,6 @@ export function plotToVega(spec: Spec) {
       title: spec.color.lists[0],
     });
   }
-
-  vgSpec.axes.push({orient: 'bottom', scale: 'xscale'});
-  vgSpec.axes.push({orient: 'left', scale: 'yscale'});
 
   // If chart is faceting, create a facet layer first
   const fxField = spec.fx.fields.at(0);
@@ -219,8 +257,8 @@ export function plotToVega(spec: Spec) {
           y2: {'scale': 'yscale', 'value': 0},
           fill: mark.fill
             ? {field: mark.fill, scale: 'color'}
-            : {value: 'steelblue'},
-          fillOpacity: {value: 0.5},
+            : {value: '#4FA8BF'},
+          // fillOpacity: {value: 0.5},
         },
       };
       if (yListId) {
@@ -247,6 +285,26 @@ export function plotToVega(spec: Spec) {
       }
     }
   }
+
+  vgSpec.axes.push({
+    orient: 'bottom',
+    scale: 'xscale',
+    titlePadding: 8,
+    title:
+      spec.fx.fields.length > 0
+        ? spec.fx.fields.join(', ')
+        : spec.x.fields.join(', '),
+  });
+  vgSpec.axes.push({
+    orient: 'left',
+    scale: 'yscale',
+    grid: true,
+    tickCount: 4,
+    titlePadding: 8,
+    title: [...new Set(yScale.domain.fields)]
+      .filter(s => typeof s === 'string')
+      .join(', '), // spec.y.fields.join(', '),
+  });
 
   return vgSpec;
 }
