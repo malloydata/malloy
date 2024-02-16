@@ -67,6 +67,10 @@ export const unwrapArrow = (value: unknown): any => {
       return Number(obj[Symbol.toPrimitive]());
     } else if (Array.isArray(value)) {
       return value.map(unwrapArrow);
+    } else if (obj['microseconds'] && obj['timezone'] === null) {
+      return Number(obj['microseconds']) / 1000;
+    } else if (obj['days']) {
+      return new Date(obj['days'] * 8.64e7);
     } else {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result: Record<string | symbol, any> = {};
