@@ -38,6 +38,8 @@ import {DuckDBCommon} from './duckdb_common';
 const TABLE_MATCH = /FROM\s*('([^']*)'|"([^"]*)")/gi;
 const TABLE_FUNCTION_MATCH = /FROM\s+[a-z0-9_]+\(('([^']*)'|"([^"]*)")/gi;
 
+const FILE_EXTS = ['.csv', '.tsv', '.parquet'] as const;
+
 /**
  * Arrow's toJSON() doesn't really do what I'd expect, since
  * it still includes Arrow objects like DecimalBigNums and Vectors,
@@ -68,8 +70,10 @@ export const unwrapArrow = (value: unknown): any => {
     } else if (Array.isArray(value)) {
       return value.map(unwrapArrow);
     } else if (obj['microseconds'] && obj['timezone'] === null) {
+      // Convert epoch µs to ms
       return Number(obj['microseconds']) / 1000;
     } else if (obj['days']) {
+      // Convert epoch day to Date
       return new Date(obj['days'] * 8.64e7);
     } else {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -331,9 +335,6 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
     tables: string[],
     {refreshTimestamp}: FetchSchemaOptions
   ): Promise<void> {
-    if (this.isMotherDuck) {
-      return;
-    }
     const fetchRemoteFile = async (tablePath: string): Promise<number> => {
       for (const callback of this.remoteFileCallbacks) {
         const data = await callback(tablePath);
@@ -348,6 +349,13 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
     await this.setup();
 
     for (const tablePath of tables) {
+      if (
+        this.isMotherDuck &&
+        !tables.includes('/') &&
+        !FILE_EXTS.some(ext => tablePath.endsWith(ext))
+      ) {
+        continue;
+      }
       // http and s3 urls are handled by duckdb-wasm
       if (tablePath.match(/^https?:\/\//)) {
         continue;
