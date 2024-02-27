@@ -94,6 +94,7 @@ import {
   TurtleDef,
   UngroupFragment,
   FunctionOrderBy,
+  isConstant,
 } from './malloy_types';
 
 import {Connection} from '../runtime_types';
@@ -585,9 +586,14 @@ class QueryField extends QueryNode {
       );
     }
     if (distinctKey) {
-      if (!context.dialect.supportsAggDistinct) {
+      const requiresTypedAggDistinct = frag.name !== 'string_agg';
+      if (
+        !(requiresTypedAggDistinct
+          ? context.dialect.supportsTypedAggDistinct
+          : context.dialect.supportsAggDistinct)
+      ) {
         throw new Error(
-          `Function \`${frag.name}\` does not support fanning out in ${context.dialect.name}`
+          `Function \`${frag.name}\` does not asymmetric aggregation in ${context.dialect.name}`
         );
       }
       const argsExpressions = args.map(arg => {
@@ -605,12 +611,12 @@ class QueryField extends QueryNode {
         [...argsExpressions, ...orderByExpressions],
         valNames => {
           const vals: Expr[] = valNames.map((v, i) => {
-            // Special case: the argument is required to be literal, so we use the actual argument
+            // Special case: the argument is a literal, so we use the actual argument
             // rather than the packed value
             // TODO don't even pack the value in the first place
             if (i < args.length) {
-              const param = this.getParamForArgIndex(overload.params, i);
-              if (param.allowedTypes.every(t => isLiteral(t.evalSpace))) {
+              const evalSpace = frag.argsEvalSpaces[i];
+              if (isLiteral(evalSpace) || isConstant(evalSpace)) {
                 return args[i];
               }
             }

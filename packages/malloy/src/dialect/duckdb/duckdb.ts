@@ -82,6 +82,7 @@ export class DuckDBDialect extends Dialect {
   defaultSampling = {rows: 50000};
   supportUnnestArrayAgg = true;
   supportsAggDistinct = true;
+  supportsTypedAggDistinct = true;
   supportsCTEinCoorelatedSubQueries = true;
   dontUnionIndex = true;
   supportsQualify = true;

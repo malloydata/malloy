@@ -30,9 +30,9 @@ import {
   expressionIsUngroupedAggregate,
   ExpressionType,
   FieldValueType,
-  Fragment,
   FunctionCallFragment,
   FunctionDef,
+  FunctionDialectOverloadDef,
   FunctionOverloadDef,
   FunctionParameterDef,
   isAtomicFieldType,
@@ -60,6 +60,7 @@ export class ExprFunc extends ExpressionDef {
     readonly args: ExpressionDef[],
     readonly isRaw: boolean,
     readonly rawType: FieldValueType | undefined,
+    readonly rawExprType: ExpressionType | undefined,
     readonly source?: FieldReference
   ) {
     super({args: args});
@@ -91,140 +92,49 @@ export class ExprFunc extends ExpressionDef {
     }
   ): ExprValue {
     const argExprsWithoutImplicit = this.args.map(arg => arg.getExpression(fs));
-    if (this.isRaw) {
-      let expressionType: ExpressionType = 'scalar';
-      let collectType: FieldValueType | undefined;
-      const funcCall: Fragment[] = [`${this.name}(`];
-      for (const expr of argExprsWithoutImplicit) {
-        expressionType = maxExpressionType(expressionType, expr.expressionType);
+    const dialect = fs.dialectObj()?.name;
+    const isKnownFunction = !this.isRaw;
 
-        if (collectType) {
-          funcCall.push(',');
-        } else {
-          collectType = expr.dataType;
-        }
-        funcCall.push(...expr.value);
+    let func: FunctionDef | undefined = undefined;
+    if (isKnownFunction) {
+      func = this.getFunction();
+      if (func === undefined) {
+        return errorFor('called non function');
       }
-      funcCall.push(')');
-
-      const dataType = this.rawType ?? collectType ?? 'number';
-      return {
-        dataType,
-        expressionType,
-        value: compressExpr(funcCall),
-        evalSpace: mergeEvalSpaces(
-          ...argExprsWithoutImplicit.map(e => e.evalSpace)
-        ),
-      };
     }
 
-    // TODO this makes functions case-insensitive. This is weird that this is the only place
-    // where case insensitivity is thing.
-    const func = this.modelEntry(this.name.toLowerCase())?.entry;
-    if (func === undefined) {
-      this.log(
-        `Unknown function '${this.name}'. Use '${this.name}!(...)' to call a SQL function directly.`
-      );
-      return errorFor('unknown function');
-    } else if (func.type !== 'function') {
-      this.log(`Cannot call '${this.name}', which is of type ${func.type}`);
-      return errorFor('called non function');
-    }
-    if (func.name !== this.name) {
-      this.log(
-        `Case insensitivity for function names is deprecated, use '${func.name}' instead`,
-        'warn'
-      );
-    }
-    // Find the 'implicit argument' for aggregate functions called like `some_join.some_field.agg(...args)`
-    // where the full arg list is `(some_field, ...args)`.
+    const functionName = func ? func.name : this.name;
+
     let implicitExpr: ExprValue | undefined = undefined;
-    let structPath = this.source?.path;
+    let structPath: string[] | undefined = undefined;
     if (this.source) {
-      const sourceFoot = this.source.getField(fs).found;
-      if (sourceFoot) {
-        const footType = sourceFoot.typeDesc();
-        if (isAtomicFieldType(footType.dataType)) {
-          implicitExpr = {
-            dataType: footType.dataType,
-            expressionType: footType.expressionType,
-            value: [{type: 'field', path: this.source.path}],
-            evalSpace: footType.evalSpace,
-          };
-          structPath = this.source.path.slice(0, -1);
-        } else {
-          if (!(sourceFoot instanceof StructSpaceFieldBase)) {
-            const message = `Aggregate source cannot be a ${footType.dataType}`;
-            this.log(message);
-            return errorFor(message);
-          }
-        }
-      } else {
-        const message = `Reference to undefined value ${this.source.refString}`;
-        this.log(message);
-        return errorFor(message);
+      const result = this.getImplicitArgument(fs);
+      if (result === undefined) {
+        return errorFor('invalid implicit argument');
       }
+      implicitExpr = result?.implicitExpr;
+      structPath = result?.structPath;
     }
+
     // Construct the full args list including the implicit arg.
     const argExprs = [
       ...(implicitExpr ? [implicitExpr] : []),
       ...argExprsWithoutImplicit,
     ];
-    const result = findOverload(func, argExprs);
-    if (result === undefined) {
-      this.log(
-        `No matching overload for function ${this.name}(${argExprs
-          .map(e => e.dataType)
-          .join(', ')})`
-      );
+
+    const overload = func
+      ? this.getOverload(func, argExprs, implicitExpr !== undefined)
+      : this.getUnknownOverload(fs, argExprs);
+    if (overload === undefined) {
       return errorFor('no matching overload');
     }
-    const {overload, expressionTypeErrors, evalSpaceErrors, nullabilityErrors} =
-      result;
-    // Report errors for expression type mismatch
-    for (const error of expressionTypeErrors) {
-      const adjustedIndex = error.argIndex - (implicitExpr ? 1 : 0);
-      const allowed = expressionIsScalar(error.maxExpressionType)
-        ? 'scalar'
-        : 'scalar or aggregate';
-      const arg = this.args[adjustedIndex];
-      arg.log(
-        `Parameter ${error.argIndex + 1} ('${error.param.name}') of ${
-          this.name
-        } must be ${allowed}, but received ${error.actualExpressionType}`
-      );
-    }
-    // Report errors for eval space mismatch
-    for (const error of evalSpaceErrors) {
-      const adjustedIndex = error.argIndex - (implicitExpr ? 1 : 0);
-      const allowed =
-        error.maxEvalSpace === 'literal'
-          ? 'literal'
-          : error.maxEvalSpace === 'constant'
-          ? 'literal or constant'
-          : 'literal, constant or output';
-      const arg = this.args[adjustedIndex];
-      arg.log(
-        `Parameter ${error.argIndex + 1} ('${error.param.name}') of ${
-          this.name
-        } must be ${allowed}, but received ${error.actualEvalSpace}`
-      );
-    }
-    // Report nullability errors
-    for (const error of nullabilityErrors) {
-      const adjustedIndex = error.argIndex - (implicitExpr ? 1 : 0);
-      const arg = this.args[adjustedIndex];
-      arg.log(
-        `Parameter ${error.argIndex + 1} ('${error.param.name}') of ${
-          this.name
-        } must not be a literal null`
-      );
-    }
-    const type = overload.returnType;
+
+    const returnType = overload.returnType;
     const expressionType = maxOfExpressionTypes([
-      type.expressionType,
+      returnType.expressionType,
       ...argExprs.map(e => e.expressionType),
     ]);
+
     if (
       !expressionIsAggregate(overload.returnType.expressionType) &&
       this.source !== undefined
@@ -241,11 +151,11 @@ export class ExprFunc extends ExpressionDef {
       overload,
       name: this.name,
       args: argExprs.map(x => x.value),
-      expressionType,
       structPath,
+      isKnownFunction: true,
+      argsEvalSpaces: argExprs.map(x => x.evalSpace),
     };
     let funcCall: Expr = [frag];
-    const dialect = fs.dialectObj()?.name;
     const dialectOverload = dialect ? overload.dialect[dialect] : undefined;
     // TODO add in an error if you use an asymmetric function in BQ
     // and the function uses joins
@@ -253,130 +163,29 @@ export class ExprFunc extends ExpressionDef {
     if (dialectOverload === undefined) {
       this.log(`Function ${this.name} is not defined in dialect ${dialect}`);
     } else {
-      if (props?.orderBys && props.orderBys.length > 0) {
-        const isAnalytic = expressionIsAnalytic(
-          overload.returnType.expressionType
-        );
-        if (!isAnalytic) {
-          if (!this.inExperiment('aggregate_order_by', true)) {
-            props.orderBys[0].log(
-              'Enable experiment `aggregate_order_by` to use `order_by` with an aggregate function'
-            );
-          }
-        }
-        if (dialectOverload.supportsOrderBy || isAnalytic) {
-          const allowExpression =
-            dialectOverload.supportsOrderBy !== 'only_default';
-          const allObs = props.orderBys.flatMap(orderBy =>
-            isAnalytic
-              ? orderBy.getAnalyticOrderBy(fs)
-              : orderBy.getAggregateOrderBy(fs, allowExpression)
-          );
-          frag.orderBy = allObs;
-        } else {
-          props.orderBys[0].log(
-            `Function \`${this.name}\` does not support \`order_by\``
-          );
-        }
-      }
-      if (props?.limit !== undefined) {
-        if (dialectOverload.supportsLimit) {
-          frag.limit = props.limit.limit;
-        } else {
-          this.log(`Function ${this.name} does not support limit`);
-        }
-      }
+      attachOrderBy(
+        fs,
+        frag,
+        props?.orderBys,
+        this.name,
+        dialectOverload,
+        overload.returnType.expressionType
+      );
+      attachLimit(frag, props?.limit, this.name, dialectOverload);
     }
-    if (props?.partitionBys && props.partitionBys.length > 0) {
-      const partitionByFields: string[] = [];
-      for (const partitionBy of props.partitionBys) {
-        for (const partitionField of partitionBy.partitionFields) {
-          const e = partitionField.getField(fs);
-          if (e.found === undefined) {
-            partitionField.log(`${partitionField.refString} is not defined`);
-          } else if (
-            expressionIsAnalytic(e.found.typeDesc().expressionType) ||
-            expressionIsUngroupedAggregate(e.found.typeDesc().expressionType)
-          ) {
-            partitionField.log(
-              'Partition expression must be scalar or aggregate'
-            );
-          } else {
-            partitionByFields.push(partitionField.nameString);
-          }
-        }
+    attachPartitionBy(fs, frag, props?.partitionBys);
+
+    if (isSQLFunction(functionName)) {
+      const compiled = this.manuallyCompileSQLFunction(functionName, argExprs);
+      if (compiled === undefined) {
+        return errorFor('invalid SQL function call');
       }
-      frag.partitionBy = partitionByFields;
+      funcCall = compiled;
     }
-    if (
-      [
-        'sql_number',
-        'sql_string',
-        'sql_date',
-        'sql_timestamp',
-        'sql_boolean',
-      ].includes(func.name)
-    ) {
-      if (!this.inExperiment('sql_functions', true)) {
-        return errorFor(
-          `Cannot use sql_function \`${func.name}\`; use \`sql_functions\` experiment to enable this behavior`
-        );
-      }
 
-      const str = argExprs[0].value;
-      if (
-        str.length !== 1 ||
-        typeof str[0] === 'string' ||
-        str[0].type !== 'dialect' ||
-        str[0].function !== 'stringLiteral'
-      ) {
-        this.log(`Invalid string literal for \`${func.name}\``);
-      } else {
-        const literal = str[0].literal;
-        const parts = parseSQLInterpolation(literal);
-        const unsupportedInterpolations = parts
-          .filter(
-            part => part.type === 'interpolation' && part.name.includes('.')
-          )
-          .map(unsupportedPart =>
-            unsupportedPart.type === 'interpolation'
-              ? `\${${unsupportedPart.name}}`
-              : `\${${unsupportedPart.value}}`
-          );
-
-        if (unsupportedInterpolations.length > 0) {
-          const unsupportedInterpolationMsg =
-            unsupportedInterpolations.length === 1
-              ? `'.' paths are not yet supported in sql interpolations, found ${unsupportedInterpolations.at(
-                  0
-                )}`
-              : `'.' paths are not yet supported in sql interpolations, found [${unsupportedInterpolations.join(
-                  ', '
-                )}]`;
-          this.log(unsupportedInterpolationMsg);
-
-          return errorFor(
-            `${unsupportedInterpolationMsg}. See LookML \${...} documentation at https://cloud.google.com/looker/docs/reference/param-field-sql#sql_for_dimensions`
-          );
-        }
-
-        funcCall = [
-          {
-            type: 'sql-string',
-            e: parts.map(part =>
-              part.type === 'string'
-                ? part.value
-                : part.name === 'TABLE'
-                ? {type: 'source-reference'}
-                : {type: 'field', path: [part.name]}
-            ),
-          },
-        ];
-      }
-    }
-    if (type.dataType === 'any') {
+    if (returnType.dataType === 'any') {
       this.log(
-        `Invalid return type ${type.dataType} for function '${this.name}'`
+        `Invalid return type ${returnType.dataType} for function '${this.name}'`
       );
       return errorFor('invalid return type');
     }
@@ -393,12 +202,322 @@ export class ExprFunc extends ExpressionDef {
         ? maxEvalSpace
         : 'output';
     return {
-      dataType: type.dataType,
+      dataType: returnType.dataType,
       expressionType,
       value: compressExpr(funcCall),
       evalSpace,
     };
   }
+
+  private manuallyCompileSQLFunction(
+    functionName: string,
+    args: ExprValue[]
+  ): Expr | undefined {
+    if (!this.inExperiment('sql_functions', true)) {
+      this.log(
+        `Cannot use sql_function \`${functionName}\`; use \`sql_functions\` experiment to enable this behavior`
+      );
+      return undefined;
+    }
+
+    const str = args[0].value;
+    if (
+      str.length !== 1 ||
+      typeof str[0] === 'string' ||
+      str[0].type !== 'dialect' ||
+      str[0].function !== 'stringLiteral'
+    ) {
+      this.log(`Invalid string literal for \`${functionName}\``);
+    } else {
+      const literal = str[0].literal;
+      const parts = parseSQLInterpolation(literal);
+      const unsupportedInterpolations = parts
+        .filter(
+          part => part.type === 'interpolation' && part.name.includes('.')
+        )
+        .map(unsupportedPart =>
+          unsupportedPart.type === 'interpolation'
+            ? `\${${unsupportedPart.name}}`
+            : `\${${unsupportedPart.value}}`
+        );
+
+      if (unsupportedInterpolations.length > 0) {
+        const unsupportedInterpolationMsg =
+          unsupportedInterpolations.length === 1
+            ? `'.' paths are not yet supported in sql interpolations, found ${unsupportedInterpolations.at(
+                0
+              )}`
+            : `'.' paths are not yet supported in sql interpolations, found [${unsupportedInterpolations.join(
+                ', '
+              )}]`;
+        this.log(
+          `${unsupportedInterpolationMsg}. See LookML \${...} documentation at https://cloud.google.com/looker/docs/reference/param-field-sql#sql_for_dimensions`
+        );
+        return undefined;
+      }
+
+      return [
+        {
+          type: 'sql-string',
+          e: parts.map(part =>
+            part.type === 'string'
+              ? part.value
+              : part.name === 'TABLE'
+              ? {type: 'source-reference'}
+              : {type: 'field', path: [part.name]}
+          ),
+        },
+      ];
+    }
+  }
+
+  private getUnknownOverload(fs: FieldSpace, args: ExprValue[]) {
+    const dialect = fs.dialectObj()?.name;
+    const functionExpressionType = this.rawExprType ?? 'scalar';
+    let expressionType: ExpressionType = functionExpressionType;
+    let collectType: FieldValueType | undefined;
+    for (const expr of args) {
+      expressionType = maxExpressionType(expressionType, expr.expressionType);
+      collectType ??= expr.dataType;
+    }
+    const dataType = this.rawType ?? collectType ?? 'number';
+    const overload: FunctionOverloadDef = {
+      returnType: {
+        dataType,
+        expressionType: functionExpressionType,
+        evalSpace: 'input',
+      },
+      needsWindowOrderBy: true,
+      isSymmetric: false,
+      params: [
+        {
+          name: 'args',
+          isVariadic: true,
+          allowedTypes: [
+            {
+              dataType: 'any',
+              expressionType: 'aggregate',
+              evalSpace: 'input',
+            },
+          ],
+        },
+      ],
+      dialect: {
+        [dialect ?? 'unknown_dialect']: {
+          e: [
+            `${this.name}(`,
+            {type: 'spread', e: [{type: 'function_parameter', name: 'args'}]},
+            ')',
+          ],
+          supportsOrderBy: false,
+          defaultOrderByArgIndex: 0,
+          supportsLimit: false,
+        },
+      },
+    };
+    return overload;
+  }
+
+  private getOverload(
+    func: FunctionDef,
+    args: ExprValue[],
+    hasImplicitArg: boolean
+  ) {
+    const result = findOverload(func, args);
+    if (result === undefined) {
+      this.log(
+        `No matching overload for function ${this.name}(${args
+          .map(e => e.dataType)
+          .join(', ')})`
+      );
+      return undefined;
+    }
+    const {overload, expressionTypeErrors, evalSpaceErrors, nullabilityErrors} =
+      result;
+    // Report errors for expression type mismatch
+    for (const error of expressionTypeErrors) {
+      const adjustedIndex = error.argIndex - (hasImplicitArg ? 1 : 0);
+      const allowed = expressionIsScalar(error.maxExpressionType)
+        ? 'scalar'
+        : 'scalar or aggregate';
+      const arg = this.args[adjustedIndex];
+      arg.log(
+        `Parameter ${error.argIndex + 1} ('${error.param.name}') of ${
+          this.name
+        } must be ${allowed}, but received ${error.actualExpressionType}`
+      );
+    }
+    // Report errors for eval space mismatch
+    for (const error of evalSpaceErrors) {
+      const adjustedIndex = error.argIndex - (hasImplicitArg ? 1 : 0);
+      const allowed =
+        error.maxEvalSpace === 'literal'
+          ? 'literal'
+          : error.maxEvalSpace === 'constant'
+          ? 'literal or constant'
+          : 'literal, constant or output';
+      const arg = this.args[adjustedIndex];
+      arg.log(
+        `Parameter ${error.argIndex + 1} ('${error.param.name}') of ${
+          this.name
+        } must be ${allowed}, but received ${error.actualEvalSpace}`
+      );
+    }
+    // Report nullability errors
+    for (const error of nullabilityErrors) {
+      const adjustedIndex = error.argIndex - (hasImplicitArg ? 1 : 0);
+      const arg = this.args[adjustedIndex];
+      arg.log(
+        `Parameter ${error.argIndex + 1} ('${error.param.name}') of ${
+          this.name
+        } must not be a literal null`
+      );
+    }
+    return overload;
+  }
+
+  // Find the 'implicit argument' for aggregate functions called like `some_join.some_field.agg(...args)`
+  // where the full arg list is `(some_field, ...args)`.
+  private getImplicitArgument(
+    fs: FieldSpace
+  ): {implicitExpr?: ExprValue; structPath: string[]} | undefined {
+    if (this.source) {
+      const sourceFoot = this.source.getField(fs).found;
+      if (sourceFoot) {
+        const footType = sourceFoot.typeDesc();
+        if (isAtomicFieldType(footType.dataType)) {
+          return {
+            implicitExpr: {
+              dataType: footType.dataType,
+              expressionType: footType.expressionType,
+              value: [{type: 'field', path: this.source.path}],
+              evalSpace: footType.evalSpace,
+            },
+            structPath: this.source.path.slice(0, -1),
+          };
+        } else {
+          if (!(sourceFoot instanceof StructSpaceFieldBase)) {
+            this.log(`Aggregate source cannot be a ${footType.dataType}`);
+            return undefined;
+          }
+          return {structPath: this.source.path};
+        }
+      } else {
+        this.log(`Reference to undefined value ${this.source.refString}`);
+      }
+    }
+  }
+
+  private getFunction() {
+    const func = this.modelEntry(this.name.toLowerCase())?.entry;
+    if (func === undefined) {
+      this.log(
+        `Unknown function '${this.name}'. Use '${this.name}!(...)' to call a SQL function directly.`
+      );
+      return undefined;
+    } else if (func.type !== 'function') {
+      this.log(`Cannot call '${this.name}', which is of type ${func.type}`);
+      return undefined;
+    }
+    if (func.name !== this.name) {
+      this.log(
+        `Case insensitivity for function names is deprecated, use '${func.name}' instead`,
+        'warn'
+      );
+    }
+    return func;
+  }
+}
+
+function attachOrderBy(
+  fs: FieldSpace,
+  frag: FunctionCallFragment,
+  orderBys: FunctionOrdering[] | undefined,
+  functionName: string,
+  dialectOverload: FunctionDialectOverloadDef | undefined,
+  functionExpressionType: ExpressionType
+) {
+  if (orderBys && orderBys.length > 0) {
+    const isAnalytic = expressionIsAnalytic(functionExpressionType);
+    if (!isAnalytic) {
+      if (!orderBys[0].inExperiment('aggregate_order_by', true)) {
+        orderBys[0].log(
+          'Enable experiment `aggregate_order_by` to use `order_by` with an aggregate function'
+        );
+      }
+    }
+    if (dialectOverload?.supportsOrderBy || isAnalytic) {
+      const allowExpression =
+        dialectOverload?.supportsOrderBy !== 'only_default';
+      const allObs = orderBys.flatMap(orderBy =>
+        isAnalytic
+          ? orderBy.getAnalyticOrderBy(fs)
+          : orderBy.getAggregateOrderBy(fs, allowExpression)
+      );
+      frag.orderBy = allObs;
+    } else if (!dialectOverload) {
+      orderBys[0].log('Unknown functions do not support `order_by`');
+    } else {
+      orderBys[0].log(
+        `Function \`${functionName}\` does not support \`order_by\``
+      );
+    }
+  }
+}
+
+function attachLimit(
+  frag: FunctionCallFragment,
+  limit: Limit | undefined,
+  functionName: string,
+  dialectOverload: FunctionDialectOverloadDef | undefined
+) {
+  if (limit !== undefined) {
+    if (dialectOverload?.supportsLimit) {
+      frag.limit = limit.limit;
+    } else if (dialectOverload) {
+      limit.log(`Function \`${functionName}\` does not support \`limit\``);
+    } else {
+      limit.log('Unknown functions do not support `limit`');
+    }
+  }
+}
+
+function attachPartitionBy(
+  fs: FieldSpace,
+  frag: FunctionCallFragment,
+  partitionBys: PartitionBy[] | undefined
+) {
+  if (partitionBys && partitionBys.length > 0) {
+    const partitionByFields: string[] = [];
+    for (const partitionBy of partitionBys) {
+      for (const partitionField of partitionBy.partitionFields) {
+        const e = partitionField.getField(fs);
+        if (e.found === undefined) {
+          partitionField.log(`${partitionField.refString} is not defined`);
+        } else if (
+          expressionIsAnalytic(e.found.typeDesc().expressionType) ||
+          expressionIsUngroupedAggregate(e.found.typeDesc().expressionType)
+        ) {
+          partitionField.log(
+            'Partition expression must be scalar or aggregate'
+          );
+        } else {
+          partitionByFields.push(partitionField.nameString);
+        }
+      }
+    }
+    frag.partitionBy = partitionByFields;
+  }
+}
+
+function isSQLFunction(functionName: string) {
+  return [
+    'sql_number',
+    'sql_string',
+    'sql_date',
+    'sql_timestamp',
+    'sql_boolean',
+  ].includes(functionName);
 }
 
 type ExpressionTypeError = {

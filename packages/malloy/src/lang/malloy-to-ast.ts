@@ -1463,7 +1463,7 @@ export class MalloyToAST
       return this.astAt(new ast.ExprTimeExtract(fn, args), pcx);
     }
     return this.astAt(
-      new ast.ExprFunc(fn, args, false, undefined, source),
+      new ast.ExprFunc(fn, args, false, undefined, undefined, source),
       pcx
     );
   }
@@ -1472,7 +1472,13 @@ export class MalloyToAST
     const argsCx = pcx.argumentList();
     const args = argsCx ? this.allFieldExpressions(argsCx.fieldExpr()) : [];
 
-    const isRaw = pcx.EXCLAM() !== undefined;
+    const pathCx = pcx.fieldPath();
+    const path = pathCx
+      ? this.getFieldPath(pathCx, ast.ExpressionFieldReference)
+      : undefined;
+    const source = pathCx && path ? this.astAt(path, pathCx) : undefined;
+
+    const isRaw = pcx.EXCLAM().length > 0;
     const rawRawType = pcx.malloyType()?.text;
     let rawType: CastType | undefined = undefined;
     if (rawRawType) {
@@ -1487,6 +1493,17 @@ export class MalloyToAST
       }
     }
 
+    const exprType = pcx.malloyFieldType();
+    const rawExprType =
+      exprType &&
+      ((exprType.CALCULATION_T() && 'scalar_analytic') ??
+        (exprType.MEASURE_T() && 'aggregate') ??
+        'scalar');
+
+    if (exprType) {
+      this.inExperiment('unknown_function_expression_types', exprType);
+    }
+
     let fn = getOptionalId(pcx) || pcx.timeframe()?.text;
     if (fn === undefined) {
       this.contextError(pcx, 'Function name error');
@@ -1496,7 +1513,10 @@ export class MalloyToAST
     if (ast.ExprTimeExtract.extractor(fn)) {
       return this.astAt(new ast.ExprTimeExtract(fn, args), pcx);
     }
-    return this.astAt(new ast.ExprFunc(fn, args, isRaw, rawType), pcx);
+    return this.astAt(
+      new ast.ExprFunc(fn, args, isRaw, rawType, rawExprType, source),
+      pcx
+    );
   }
 
   visitExprDuration(pcx: parse.ExprDurationContext): ast.ExprDuration {

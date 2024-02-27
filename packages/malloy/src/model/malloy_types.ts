@@ -226,14 +226,15 @@ export interface AggregateLimitFragment {
 export interface FunctionCallFragment {
   type: 'function_call';
   name: string;
-  overload: FunctionOverloadDef;
-  expressionType: ExpressionType;
   args: Expr[];
+  argsEvalSpaces: EvalSpace[];
   orderBy?: FunctionOrderBy[];
   limit?: number;
   // List of non-dotted output field references
   partitionBy?: string[];
   structPath?: string[];
+  isKnownFunction: boolean;
+  overload: FunctionOverloadDef;
 }
 
 export function isFunctionCallFragment(f: Fragment): f is FunctionCallFragment {
@@ -1011,6 +1012,10 @@ export function isLiteral(evalSpace: EvalSpace) {
   return evalSpace === 'literal';
 }
 
+export function isConstant(evalSpace: EvalSpace) {
+  return evalSpace === 'constant';
+}
+
 export function mergeEvalSpaces(...evalSpaces: EvalSpace[]): EvalSpace {
   if (evalSpaces.every(e => e === 'constant' || e === 'literal')) {
     return 'constant';
@@ -1038,6 +1043,13 @@ export interface FunctionParameterDef {
   isVariadic: boolean;
 }
 
+export interface FunctionDialectOverloadDef {
+  e: Expr;
+  supportsOrderBy?: boolean | 'only_default';
+  defaultOrderByArgIndex?: number;
+  supportsLimit?: boolean;
+}
+
 export interface FunctionOverloadDef {
   // The expression type here is the MINIMUM return type
   returnType: TypeDesc;
@@ -1046,12 +1058,7 @@ export interface FunctionOverloadDef {
   isSymmetric?: boolean;
   params: FunctionParameterDef[];
   dialect: {
-    [dialect: string]: {
-      e: Expr;
-      supportsOrderBy?: boolean | 'only_default';
-      defaultOrderByArgIndex?: number;
-      supportsLimit?: boolean;
-    };
+    [dialect: string]: FunctionDialectOverloadDef;
   };
 }
 

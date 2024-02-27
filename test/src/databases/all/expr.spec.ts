@@ -25,7 +25,6 @@
 import {RuntimeList, allDatabases} from '../../runtimes';
 import '../../util/db-jest-matchers';
 import {databasesFromEnvironmentOr, mkSqlEqWith, testIf} from '../../util';
-import {fail} from 'assert';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
@@ -451,30 +450,6 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       `).malloyResultMatches(expressionModel, {
         string_1: 'AHRENS AIRCRAFT CORP.',
       });
-    });
-
-    it('sql_functions - experimental feature is ignored', async () => {
-      const query = await expressionModel.loadQuery(
-        `
-        source: a is ${databaseName}.table('malloytest.aircraft_models') extend { where: aircraft_model_code ? '0270202' }
-
-        run: a -> {
-            group_by: manufacturer
-            group_by: string_1 is sql_string("UPPER(\${manufacturer})")
-          }
-        `
-      );
-
-      const runResult = await query.run();
-      const dataResult = runResult.data.toObject();
-      expect(dataResult.length).toEqual(1);
-      const firstRow = dataResult.at(0);
-      if (firstRow !== undefined) {
-        expect(firstRow['manufacturer']).toEqual('AHRENS AIRCRAFT CORP.');
-        expect('string_1' in firstRow).toBeFalsy();
-      } else {
-        fail('exepected a single row, but found none');
-      }
     });
 
     describe('[not yet supported]', () => {
