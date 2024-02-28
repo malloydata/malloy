@@ -81,11 +81,13 @@ import {
   TranslateResponse,
   isNeedResponse,
   ModelAnnotationResponse,
+  TablePathResponse,
 } from './translate-response';
 import {locationContainsPosition} from './utils';
 import {Tag} from '../tags';
 import {MalloyParseInfo} from './malloy-parse-info';
 import {walkForModelAnnotation} from './parse-tree-walkers/model-annotation-walker';
+import {walkForTablePath} from './parse-tree-walkers/find-table-path-walker';
 
 export type StepResponses =
   | DataRequestResponse
@@ -600,6 +602,30 @@ class ModelAnnotationStep implements TranslationStep {
   }
 }
 
+class TablePathInfoStep implements TranslationStep {
+  response?: TablePathResponse;
+  constructor(readonly parseStep: ParseStep) {}
+
+  step(that: MalloyTranslation): TablePathResponse {
+    if (!this.response) {
+      const tryParse = this.parseStep.step(that);
+      if (!tryParse.parse) {
+        return tryParse;
+      } else {
+        const tablePath = walkForTablePath(
+          that,
+          tryParse.parse.tokenStream,
+          tryParse.parse
+        );
+        this.response = {
+          pathInfo: tablePath,
+        };
+      }
+    }
+    return this.response;
+  }
+}
+
 class TranslateStep implements TranslationStep {
   response?: TranslateResponse;
   importedAnnotations = false;
@@ -690,6 +716,7 @@ export abstract class MalloyTranslation {
   readonly metadataStep: MetadataStep;
   readonly completionsStep: CompletionsStep;
   readonly helpContextStep: HelpContextStep;
+  readonly tablePathInfoStep: TablePathInfoStep;
   readonly translateStep: TranslateStep;
 
   readonly references: ReferenceList;
@@ -719,6 +746,7 @@ export abstract class MalloyTranslation {
     this.helpContextStep = new HelpContextStep(this.parseStep);
     this.importsAndTablesStep = new ImportsAndTablesStep(this.parseStep);
     this.astStep = new ASTStep(this.importsAndTablesStep);
+    this.tablePathInfoStep = new TablePathInfoStep(this.parseStep);
     this.translateStep = new TranslateStep(this.astStep);
     this.references = new ReferenceList(sourceURL);
   }
@@ -899,6 +927,10 @@ export abstract class MalloyTranslation {
 
   modelAnnotation(extendingModel?: ModelDef): ModelAnnotationResponse {
     return this.modelAnnotationStep.step(this, extendingModel);
+  }
+
+  tablePathInfo(): TablePathResponse {
+    return this.tablePathInfoStep.step(this);
   }
 
   completions(position: {

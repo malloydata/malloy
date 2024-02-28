@@ -232,3 +232,39 @@ export function unIndent(parts: (string | unknown)[]): void {
     }
   }
 }
+
+/**
+ * Returns plain string from string context.
+ * @param cx string context
+ * @param strictCheck returns undefined if non string part is found.
+ * @returns string part and an error list.
+ */
+export function getPlainString(
+  cx: HasString,
+  strictCheck = false
+): [string | undefined, ParserRuleContext[]] {
+  const errorList: ParserRuleContext[] = [];
+  const shortStr = getStringIfShort(cx);
+  if (shortStr) {
+    return [shortStr, errorList];
+  }
+  const safeParts: string[] = [];
+  const multiLineStr = cx.string().sqlString();
+  if (multiLineStr) {
+    for (const part of getStringParts(multiLineStr)) {
+      if (typeof part === 'string') {
+        safeParts.push(part);
+      } else {
+        // Non string part found. Reject this.
+        errorList.push(part);
+        if (strictCheck) {
+          return [undefined, errorList];
+        }
+      }
+    }
+    unIndent(safeParts);
+    return [safeParts.join(''), errorList];
+  }
+  // string: shortString | sqlString; So this will never happen
+  return ['', errorList];
+}

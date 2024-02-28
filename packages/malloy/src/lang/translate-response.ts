@@ -34,6 +34,7 @@ import {DocumentSymbol} from './parse-tree-walkers/document-symbol-walker';
 import {DocumentHighlight} from './parse-tree-walkers/document-highlight-walker';
 import {DocumentCompletion} from './parse-tree-walkers/document-completion-walker';
 import {DocumentHelpContext} from './parse-tree-walkers/document-help-context-walker';
+import {PathInfo} from './parse-tree-walkers/find-table-path-walker';
 
 /**
  * The translation interface is essentially a request/response protocol, and
@@ -106,5 +107,10 @@ interface TranslatedResponseData
   };
   fromSources: string[];
 }
+
+interface TablePath extends NeededData, ProblemResponse, FinalResponse {
+  pathInfo: PathInfo[];
+}
+export type TablePathResponse = Partial<TablePath>;
 
 export type TranslateResponse = Partial<TranslatedResponseData>;
