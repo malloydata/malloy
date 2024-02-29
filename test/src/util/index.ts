@@ -80,8 +80,8 @@ export function databasesFromEnvironmentOr(
   return process.env['MALLOY_DATABASES']
     ? process.env['MALLOY_DATABASES'].split(',')
     : process.env['MALLOY_DATABASE']
-    ? [process.env['MALLOY_DATABASE']]
-    : defaultDatabases;
+      ? [process.env['MALLOY_DATABASE']]
+      : defaultDatabases;
 }
 
 // confirms that one or more of the databases being tested overlaps with the databases a test suite can accept.

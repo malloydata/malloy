@@ -135,30 +135,36 @@ export function rows(qr: Result): QueryDataRow[] {
 
 export function runtimeFor(dbName: string): SingleConnectionRuntime {
   let connection;
-  switch (dbName) {
-    case 'bigquery':
-      connection = new BigQueryTestConnection(
-        dbName,
-        {},
-        {projectId: 'malloy-data'}
-      );
-      break;
-    case 'postgres':
-      connection = new PostgresTestConnection(dbName);
-      break;
-    case 'duckdb':
-      connection = new DuckDBTestConnection(dbName);
-      break;
-    case 'duckdb_wasm':
-      connection = new DuckDBWASMTestConnection(dbName);
-      break;
-    case 'snowflake':
-      connection = new SnowflakeTestConnection(dbName);
-      break;
-    default:
-      throw new Error(`Unknown runtime "${dbName}`);
+  try {
+    switch (dbName) {
+      case 'bigquery':
+        connection = new BigQueryTestConnection(
+          dbName,
+          {},
+          {projectId: 'malloy-data'}
+        );
+        break;
+      case 'postgres':
+        connection = new PostgresTestConnection(dbName);
+        break;
+      case 'duckdb':
+        connection = new DuckDBTestConnection(dbName);
+        break;
+      case 'duckdb_wasm':
+        connection = new DuckDBWASMTestConnection(dbName);
+        break;
+      case 'snowflake':
+        connection = new SnowflakeTestConnection(dbName);
+        break;
+      default:
+        throw new Error(`Unknown runtime "${dbName}`);
+    }
+    return testRuntimeFor(connection);
+  } catch (error) {
+    throw new Error(
+      `Failed to create connection \`${dbName}\`: ${error.message}`
+    );
   }
-  return testRuntimeFor(connection);
 }
 
 export function testRuntimeFor(connection: Connection) {

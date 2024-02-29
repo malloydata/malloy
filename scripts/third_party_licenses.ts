@@ -60,6 +60,7 @@ const malloyPackages = [
   'test',
   '@malloydata/db-bigquery',
   '@malloydata/db-postgres',
+  '@malloydata/db-snowflake',
   '@malloydata/db-duckdb',
 ];
 

@@ -2424,8 +2424,8 @@ class QueryQuery extends QueryField {
     return fs.type === 'index'
       ? fs.indexFields
       : isQuerySegment(fs)
-      ? fs.queryFields
-      : [];
+        ? fs.queryFields
+        : [];
   }
 
   expandFields(resultStruct: FieldInstanceResult) {
@@ -4584,10 +4584,10 @@ export class QueryModel {
       typeof query.structRef === 'string'
         ? query.structRef
         : // LTNOTE: the parser needs to capture the query before the |.  This will work
-        //  in most cases but isn't actually complete.
-        query.structRef.type === 'struct'
-        ? query.structRef.as || query.structRef.name
-        : '(need to figure this out)';
+          //  in most cases but isn't actually complete.
+          query.structRef.type === 'struct'
+          ? query.structRef.as || query.structRef.name
+          : '(need to figure this out)';
     // LTNote:  I don't understand why this might be here.  It should have happened in loadQuery...
     if (finalize && this.dialect.hasFinalStage) {
       ret.lastStageName = ret.stageWriter.addStage(
