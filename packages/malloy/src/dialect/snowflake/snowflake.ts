@@ -109,11 +109,9 @@ export class SnowflakeDialect extends Dialect {
   supportsQualify = false;
   supportsNesting = false;
 
+  // don't mess with the table pathing.
   quoteTablePath(tablePath: string): string {
-    return tablePath
-      .split('.')
-      .map(part => `"${part}"`)
-      .join('.');
+    return tablePath;
   }
 
   sqlGroupSetTable(groupSetCount: number): string {

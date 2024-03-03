@@ -2757,7 +2757,7 @@ class QueryQuery extends QueryField {
       const matrixOperation = structRelationship.matrixOperation.toUpperCase();
       if (ji.makeUniqueKey) {
         const passKeys = this.generateSQLPassthroughKeys(qs);
-        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as __distinct_key, x.* ${passKeys} FROM ${structSQL} as x)`;
+        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as ${qs.dialect.sqlMaybeQuoteIdentifier('__distinct_key')}, x.* ${passKeys} FROM ${structSQL} as x)`;
       }
       let onCondition = '';
       if (qs.parent === undefined) {
@@ -2891,7 +2891,7 @@ class QueryQuery extends QueryField {
     if (structRelationship.type === 'basetable') {
       if (ji.makeUniqueKey) {
         const passKeys = this.generateSQLPassthroughKeys(qs);
-        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as __distinct_key, x.* ${passKeys} FROM ${structSQL} as x)`;
+        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as ${qs.dialect.sqlMaybeQuoteIdentifier('__distinct_key')}, x.* ${passKeys} FROM ${structSQL} as x)`;
       }
       s += `FROM ${structSQL} as ${ji.alias}\n`;
     } else {
@@ -3751,6 +3751,7 @@ class QueryQueryIndexStage extends QueryQuery {
     const fieldValueColumn = dialect.sqlMaybeQuoteIdentifier('fieldValue');
     const fieldTypeColumn = dialect.sqlMaybeQuoteIdentifier('fieldType');
     const fieldRangeColumn = dialect.sqlMaybeQuoteIdentifier('fieldRange');
+    const weightColumn = dialect.sqlMaybeQuoteIdentifier('weight');
     const measureName = (this.firstSegment as IndexSegment).weightMeasure;
     if (measureName) {
       measureSQL = this.rootResult
@@ -3802,7 +3803,7 @@ class QueryQueryIndexStage extends QueryQuery {
     }
     s += `  END as ${fieldValueColumn},\n`;
 
-    s += ` ${measureSQL} as weight,\n`;
+    s += ` ${measureSQL} as ${weightColumn},\n`;
 
     // just in case we don't have any field types, force the case statement to have at least one value.
     s += "  CASE group_set\n    WHEN 99999 THEN ''";
@@ -3852,7 +3853,7 @@ class QueryQueryIndexStage extends QueryQuery {
   ${fieldPathColumn},
   ${fieldTypeColumn},
   COALESCE(${fieldValueColumn}, ${fieldRangeColumn}) as ${fieldValueColumn},
-  weight
+  ${weightColumn}
 FROM ${resultStage}\n`
     );
     return this.resultStage;
@@ -4646,6 +4647,7 @@ export class QueryModel {
     const fieldValueColumn =
       struct.dialect.sqlMaybeQuoteIdentifier('fieldValue');
     const fieldTypeColumn = struct.dialect.sqlMaybeQuoteIdentifier('fieldType');
+    const weightColumn = struct.dialect.sqlMaybeQuoteIdentifier('weight');
 
     // if we've compiled the SQL before use it otherwise
     let sqlPDT = this.exploreSearchSQLMap.get(explore);
@@ -4659,7 +4661,7 @@ export class QueryModel {
               ${fieldPathColumn},
               ${fieldValueColumn},
               ${fieldTypeColumn},
-              weight,
+              ${weightColumn},
               CASE WHEN lower(${fieldValueColumn}) LIKE lower(${generateSQLStringLiteral(
                 searchValue + '%'
               )}) THEN 1 ELSE 0 END as match_first
@@ -4673,7 +4675,7 @@ export class QueryModel {
             }
             ORDER BY CASE WHEN lower(${fieldValueColumn}) LIKE  lower(${generateSQLStringLiteral(
               searchValue + '%'
-            )}) THEN 1 ELSE 0 END DESC, weight DESC
+            )}) THEN 1 ELSE 0 END DESC, ${weightColumn} DESC
             LIMIT ${limit}
           `;
     if (struct.dialect.hasFinalStage) {
@@ -4684,7 +4686,7 @@ export class QueryModel {
           fieldPathColumn,
           fieldValueColumn,
           fieldTypeColumn,
-          'weight',
+          weightColumn,
           'match_first',
         ]
       )}`;

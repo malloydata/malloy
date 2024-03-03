@@ -523,15 +523,15 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   it(`avg ignore null- ${databaseName}`, async () => {
     await expect(`
       source: one is ${databaseName}.sql("""
-        SELECT 2 as a
+        SELECT 2 as A
         UNION ALL SELECT 4
         UNION ALL SELECT null
       """)
       run: one -> {
         extend: { join_cross: x1 is one }
         aggregate:
-          avg_a is a.avg()
-          avg_b is x1.a.avg()
+          avg_a is A.avg()
+          avg_b is x1.A.avg()
       }`).malloyResultMatches(runtime, {avg_a: 3});
   });
 
@@ -731,21 +731,21 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
 
   it(`run simple sql - ${databaseName}`, async () => {
     const result = await runtime
-      .loadQuery('run: conn.sql("select 1 as one")')
+      .loadQuery('run: conn.sql("select 1 as ONE")')
       .run();
-    expect(result.data.value[0]['one']).toBe(1);
+    expect(result.data.value[0]['ONE']).toBe(1);
   });
 
   it(`simple sql is exactly as written - ${databaseName}`, async () => {
     const result = await runtime
-      .loadQuery('run: conn.sql("select 1 as one")')
+      .loadQuery('run: conn.sql("select 1 as ONE")')
       .run();
     if (databaseName === 'postgres') {
       expect(result.sql).toBe(`WITH __stage0 AS (
-  select 1 as one)
+  select 1 as ONE)
 SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
     } else {
-      expect(result.sql).toBe('select 1 as one');
+      expect(result.sql).toBe('select 1 as ONE');
     }
     expect(result.resultExplore).not.toBeUndefined();
   });
@@ -754,13 +754,13 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
     const result = await runtime
       .loadQuery(
         `
-        query: q is conn.sql("select 1 as one")
+        query: q is conn.sql("select 1 as ONE")
         source: s is q
         run: s -> { select: * }
       `
       )
       .run();
-    expect(result.data.path(0, 'one').number.value).toBe(1);
+    expect(result.data.path(0, 'ONE').number.value).toBe(1);
   });
 
   it(`source from query defined as other query - ${databaseName}`, async () => {
@@ -863,32 +863,32 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
     }
   );
 
-  const sql1234 = `${databaseName}.sql("SELECT 1 as a, 2 as b UNION ALL SELECT 3, 4")`;
+  const sql1234 = `${databaseName}.sql("SELECT 1 as A, 2 as B UNION ALL SELECT 3, 4")`;
 
   it(`sql as source - ${databaseName}`, async () => {
     await expect(`
-      run: ${sql1234} -> { select: a }
-    `).malloyResultMatches(runtime, {a: 1});
+      run: ${sql1234} -> { select: A }
+    `).malloyResultMatches(runtime, {A: 1});
   });
 
   it(`sql directly - ${databaseName}`, async () => {
-    await expect(`run: ${sql1234}`).malloyResultMatches(runtime, {a: 1});
+    await expect(`run: ${sql1234}`).malloyResultMatches(runtime, {A: 1});
   });
 
   it(`sql with turducken- ${databaseName}`, async () => {
     const turduckenQuery = `
       run: ${databaseName}.sql("""
         SELECT
-          'something' as something,
+          'something' as SOMETHING,
           *
         FROM %{
           ${databaseName}.table('malloytest.state_facts') -> {
-            group_by: popular_name
+            group_by: POPULAR_NAME is popular_name
             aggregate: state_count is count()
           }
         } AS by_name_query
       """) -> {
-          select: *; where: popular_name = 'Emma'
+          select: *; where: POPULAR_NAME = 'Emma'
         }`;
     await expect(turduckenQuery).malloyResultMatches(runtime, {state_count: 6});
   });
@@ -897,7 +897,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
   it(`local declarations external query - ${databaseName}`, async () => {
     await expect(`
       run: ${sql1234} -> {
-        extend: { dimension: c is a + 1 }
+        extend: { dimension: c is A + 1 }
         select: c
       }
     `).malloyResultMatches(runtime, {c: 2});
@@ -907,7 +907,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
     await expect(`
       run: ${sql1234} extend {
         view: bar is {
-          extend: { dimension: c is a + 1 }
+          extend: { dimension: c is A + 1 }
           select: c
         }
       } -> bar
@@ -918,7 +918,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
     await expect(`
       run: ${sql1234} extend {
         view: bar is {
-          extend: {dimension: c is a + 1}
+          extend: {dimension: c is A + 1}
           select: c
         }
         view: baz is bar +  {
@@ -932,11 +932,11 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
   it(`regexp match- ${databaseName}`, async () => {
     await expect(`
       run: ${databaseName}.sql("""
-        SELECT 'hello mom' as a, 'cheese tastes good' as b
+        SELECT 'hello mom' as A, 'cheese tastes good' as B
         UNION ALL SELECT 'lloyd is a bozo', 'michael likes poetry'
       """) -> {
-        aggregate: llo is count() {where: a ~ r'llo'}
-        aggregate: m2 is count() {where: a !~ r'bozo'}
+        aggregate: llo is count() {where: A ~ r'llo'}
+        aggregate: m2 is count() {where: A !~ r'bozo'}
       }
     `).malloyResultMatches(runtime, {llo: 2, m2: 1});
   });
@@ -944,21 +944,23 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
   it(`substitution precedence- ${databaseName}`, async () => {
     await expect(`
       run: ${databaseName}.sql("""
-        SELECT 5 as a, 2 as b
+        SELECT 5 as A, 2 as B
         UNION ALL SELECT 3, 4
       """) -> {
-        extend: {dimension:  c is b + 4}
-        select: x is a * c
+        extend: {dimension:  c is B + 4}
+        select: x is A * c
       }
       `).malloyResultMatches(runtime, {x: 30});
   });
 
-  it(`array unnest - ${databaseName}`, async () => {
-    await expect(`
+  testIf(runtime.supportsNesting)(
+    `array unnest - ${databaseName}`,
+    async () => {
+      await expect(`
       run: ${databaseName}.sql("""
         SELECT
-          city,
-          ${getSplitFunction(databaseName)!('city', ' ')} as words
+          ${runtime.q('city')},
+          ${getSplitFunction(databaseName)!(runtime.q('city'), ' ')} as words
         FROM ${rootDbPath(databaseName)}malloytest.aircraft
       """) -> {
         where: words.value != null
@@ -966,11 +968,14 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
         aggregate: c is count()
       }
       `).malloyResultMatches(runtime, {c: 145});
-  });
+    }
+  );
 
   // make sure we can count the total number of elements when fanning out.
-  it(`array unnest x 2 - ${databaseName}`, async () => {
-    await expect(`
+  testIf(runtime.supportsNesting)(
+    `array unnest x 2 - ${databaseName}`,
+    async () => {
+      await expect(`
       run: ${databaseName}.sql("""
         SELECT
           city,
@@ -984,7 +989,8 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
           c is words.count()
           a is abreak.count()
       }`).malloyResultMatches(runtime, {b: 3552, c: 4586, a: 6601});
-  });
+    }
+  );
 
   testIf(runtime.supportsNesting)(`nest null - ${databaseName}`, async () => {
     const result = await runtime

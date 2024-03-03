@@ -48,13 +48,13 @@ export interface ConnectionConfigFile {
   connection_name?: string;
 }
 
-function columnNameToLowerCase(row: QueryDataRow): QueryDataRow {
-  const ret: QueryDataRow = {};
-  for (const key in row) {
-    ret[key.toLowerCase()] = row[key];
-  }
-  return ret;
-}
+// function columnNameToLowerCase(row: QueryDataRow): QueryDataRow {
+//   const ret: QueryDataRow = {};
+//   for (const key in row) {
+//     ret[key.toLowerCase()] = row[key];
+//   }
+//   return ret;
+// }
 
 export class SnowflakeExecutor {
   private static defaultPoolOptions_: PoolOptions = {
@@ -141,7 +141,7 @@ export class SnowflakeExecutor {
           if (err) {
             reject(err);
           } else if (rows) {
-            resolve(rows.map(columnNameToLowerCase));
+            resolve(rows);
           }
         },
       });
@@ -152,10 +152,10 @@ export class SnowflakeExecutor {
     // set some default session parameters
     // this is quite imporant for snowflake because malloy tends to add quotes to all database identifiers
     // and snowflake is case sensitive by with quotes but matches against all caps identifiers without quotes
-    await this._execute(
-      'ALTER SESSION SET QUOTED_IDENTIFIERS_IGNORE_CASE = true;',
-      conn
-    );
+    // await this._execute(
+    //   'ALTER SESSION SET QUOTED_IDENTIFIERS_IGNORE_CASE = true;',
+    //   conn
+    // );
     // set utc as the default timezone which is the malloy convention
     await this._execute("ALTER SESSION SET TIMEZONE = 'UTC';", conn);
     // ensure week starts on Sunday which is the malloy convention
@@ -193,7 +193,7 @@ export class SnowflakeExecutor {
 
         let index = 0;
         function handleData(this: Readable, row: QueryDataRow) {
-          onData(columnNameToLowerCase(row));
+          onData(row);
           index += 1;
           if (options?.rowLimit !== undefined && index >= options.rowLimit) {
             onEnd();

@@ -63,14 +63,14 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     await expect(`
       run: ${databaseName}.sql("""
         SELECT * from (%{
-          ${databaseName}.sql("""SELECT 1 as one""") -> { group_by: one }
+          ${databaseName}.sql("""SELECT 1 as ONE""") -> { group_by: ONE }
         }) as the_table
-      """) -> { group_by: one }
-    `).malloyResultMatches(runtime, {one: 1});
+      """) -> { group_by: ONE }
+    `).malloyResultMatches(runtime, {ONE: 1});
   });
   it(`run sql expression as query - ${databaseName}`, async () => {
     await expect(
-      `run: ${databaseName}.sql("""SELECT 1 as one""")`
-    ).malloyResultMatches(runtime, {one: 1});
+      `run: ${databaseName}.sql("""SELECT 1 as ONE""")`
+    ).malloyResultMatches(runtime, {ONE: 1});
   });
 });

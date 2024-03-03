@@ -440,7 +440,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       source: a is ${databaseName}.table('malloytest.aircraft_models') extend { where: aircraft_model_code ? '0270202' }
 
       run: a -> {
-          group_by: string_1 is sql_string("UPPER(\${TABLE}.manufacturer)")
+          group_by: string_1 is sql_string('UPPER(\${TABLE}.${runtime.q('manufacturer')})')
         }
       `).malloyResultMatches(expressionModel, {
         string_1: 'AHRENS AIRCRAFT CORP.',
@@ -694,13 +694,13 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   test('nullish ?? operator', async () => {
     await expect(
       `run: ${databaseName}.sql("""
-          SELECT '' as null_value, '' as string_value
+          SELECT '' as NULL_VALUE, '' as STRING_VALUE
           UNION ALL SELECT null, 'correct'
       """) -> {
-        where: null_value = null
+        where: NULL_VALUE = null
         select:
-          found_null is  null_value ?? 'correct',
-          else_pass is string_value ?? 'incorrect'
+          found_null is  NULL_VALUE ?? 'correct',
+          else_pass is STRING_VALUE ?? 'incorrect'
           literal_null is null ?? 'correct'
       }`
     ).malloyResultMatches(runtime, {

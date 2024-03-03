@@ -179,10 +179,10 @@ export class SnowflakeConnection
   ): Promise<void> {
     const rows = await this.executor.batch(infoQuery);
     for (const row of rows) {
-      const snowflakeDataType = row['data_type'] as string;
+      const snowflakeDataType = row['DATA_TYPE'] as string;
       const s = structDef;
       const malloyType = this.dialect.sqlTypeToMalloyType(snowflakeDataType);
-      const name = row['column_name'] as string;
+      const name = row['COLUMN_NAME'] as string;
       if (malloyType) {
         s.fields.push({...malloyType, name});
       } else {
@@ -222,7 +222,7 @@ export class SnowflakeConnection
     // FIXME: only variant is probably shown, cannot infer element types, so how do we deal with variants?
     const infoQuery = `
   SELECT
-    LOWER(COLUMN_NAME) AS column_name,
+    column_name, -- LOWER(COLUMN_NAME) AS column_name,
     LOWER(DATA_TYPE) as data_type
   FROM
     INFORMATION_SCHEMA.COLUMNS
@@ -301,7 +301,7 @@ export class SnowflakeConnection
 
     const infoQuery = `
   SELECT
-    LOWER(column_name) as column_name,
+    column_name, -- LOWER(column_name) as column_name,
     LOWER(data_type) as data_type
   FROM
     INFORMATION_SCHEMA.COLUMNS
