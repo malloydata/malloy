@@ -2051,6 +2051,7 @@ class JoinInstance {
       dialectFieldList.push({
         type: f.type,
         sqlExpression: getIdentifier(f),
+        rawName: getIdentifier(f),
         sqlOutputName: getIdentifier(f),
       });
     }
@@ -3500,6 +3501,7 @@ class QueryQuery extends QueryField {
           sqlExpression: this.parent.dialect.sqlMaybeQuoteIdentifier(
             `${name}__${resultStruct.groupSet}`
           ),
+          rawName: name,
           sqlOutputName: sqlName,
         });
       } else if (
@@ -3513,6 +3515,7 @@ class QueryQuery extends QueryField {
         dialectFieldList.push({
           type: field.type,
           sqlExpression: field.f.generateExpression(resultStruct),
+          rawName: name,
           sqlOutputName: sqlName,
         });
       }

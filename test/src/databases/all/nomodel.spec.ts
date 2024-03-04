@@ -438,6 +438,29 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     });
   });
 
+  it(`nest/unnest -basic - ${databaseName}`, async () => {
+    // in a joined table when the joined is leafiest
+    //  we need to make sure we don't count rows that
+    //  don't match the join.
+    await expect(`
+      run: ${databaseName}.table('malloytest.state_facts') -> {
+        group_by: state
+        aggregate: c is airport_count.sum()
+        nest: p is {
+          group_by: popular_name
+          aggregate: d is airport_count.sum()
+        }
+      } -> {
+        group_by: state, c
+        aggregate: p.d.sum()
+      }
+      `).malloyResultMatches(runtime, {
+      state: 'TX',
+      c: 1845,
+      d: 1845,
+    });
+  });
+
   it(`count at root should not use distinct key - ${databaseName}`, async () => {
     const q = await runtime
       .loadQuery(
@@ -948,7 +971,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
         UNION ALL SELECT 3, 4
       """) -> {
         extend: {dimension:  c is B + 4}
-        select: x is A * c
+        select: x is  * c
       }
       `).malloyResultMatches(runtime, {x: 30});
   });
@@ -956,15 +979,17 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
   testIf(runtime.supportsNesting)(
     `array unnest - ${databaseName}`,
     async () => {
+      const cityField = runtime.q('city');
+      const splitFN = getSplitFunction(databaseName);
       await expect(`
       run: ${databaseName}.sql("""
         SELECT
-          ${runtime.q('city')},
-          ${getSplitFunction(databaseName)!(runtime.q('city'), ' ')} as words
+          ${cityField},
+          ${splitFN!(cityField, ' ')} as WORDS
         FROM ${rootDbPath(databaseName)}malloytest.aircraft
       """) -> {
-        where: words.value != null
-        group_by: words.value
+        where: WORDS.value != null
+        group_by: WORDS.value
         aggregate: c is count()
       }
       `).malloyResultMatches(runtime, {c: 145});

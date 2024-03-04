@@ -219,7 +219,18 @@ export class SnowflakeConnection
       },
       fields: [],
     };
-    // FIXME: only variant is probably shown, cannot infer element types, so how do we deal with variants?
+    // This is how we get variant information
+
+    // WITH tbl as (
+    //   SELECT * FROM malloytest.ga_sample
+    //  )
+    //  SELECT regexp_replace(PATH, '\\[.*\\]', '[]') as PATH, lower(TYPEOF(value)) as type
+    //  FROM (select object_construct(*) o from  tbl limit 100)
+    //      ,table(flatten(input => o, recursive => true)) as meta
+    //  WHERE lower(TYPEOF(value)) <> 'array'
+    //  GROUP BY 1,2
+    //  ORDER BY PATH
+
     const infoQuery = `
   SELECT
     column_name, -- LOWER(COLUMN_NAME) AS column_name,

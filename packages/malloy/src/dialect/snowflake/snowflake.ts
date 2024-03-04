@@ -107,7 +107,7 @@ export class SnowflakeDialect extends Dialect {
   supportsSafeCast = false;
   dontUnionIndex = false;
   supportsQualify = false;
-  supportsNesting = false;
+  supportsNesting = true;
 
   // don't mess with the table pathing.
   quoteTablePath(tablePath: string): string {
@@ -151,7 +151,7 @@ from
 
   mapFieldsForObjectConstruct(fieldList: DialectFieldList): string {
     return fieldList
-      .map(f => `'${f.sqlOutputName}', (${f.sqlExpression})`)
+      .map(f => `'${f.rawName}', (${f.sqlExpression})`)
       .join(', ');
   }
 
@@ -195,14 +195,28 @@ from
   }
 
   sqlUnnestAlias(
-    _source: string,
-    _alias: string,
+    source: string,
+    alias: string,
     _fieldList: DialectFieldList,
     _needDistinctKey: boolean,
-    _isArray: boolean,
+    isArray: boolean,
     _isInNestedPipeline: boolean
   ): string {
-    throw new Error('nesting: not fully supported in snowflake');
+    if (isArray) {
+      // if (needDistinctKey) {
+      //   // return `LEFT JOIN UNNEST(ARRAY(( SELECT AS STRUCT row_number() over() as __row_id, value FROM UNNEST(${source}) value))) as ${alias}`;
+      // } else {
+      //   return `LEFT JOIN UNNEST(ARRAY((SELECT AS STRUCT value FROM unnest(${source}) value))) as ${alias}`;
+      // }
+      throw new Error('not implemented yet');
+    } else {
+      // have to have a non empty row or it treats it like an inner join :barf-emoji:
+      return `LEFT JOIN LATERAL FLATTEN(INPUT => ifnull(${source},[1])) AS ${alias}`;
+      //   return `LEFT JOIN UNNEST(ARRAY(( SELECT AS STRUCT row_number() over() as __row_id, * FROM UNNEST(${source})))) as ${alias}`;
+      // } else {
+      //   return `LEFT JOIN UNNEST(${source}) as ${alias}`;
+      // }
+    }
   }
 
   /*
@@ -238,14 +252,21 @@ from
   sqlFieldReference(
     alias: string,
     fieldName: string,
-    _fieldType: string,
+    fieldType: string,
     isNested: boolean,
     _isArray: boolean
   ): string {
-    if (!isNested) {
+    if (fieldName === '__row_id') {
+      return `${alias}.INDEX::varchar`;
+    } else if (!isNested) {
       return `${alias}."${fieldName}"`;
+    } else {
+      let snowflakeType = fieldType;
+      if (fieldType === 'string') {
+        snowflakeType = 'varchar';
+      }
+      return `${alias}.value:"${fieldName}"::${snowflakeType}`;
     }
-    throw new Error('nesting: not fully supported in snowflake');
   }
 
   sqlUnnestPipelineHead(
