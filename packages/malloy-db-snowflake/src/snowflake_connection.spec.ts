@@ -28,12 +28,22 @@ import * as util from 'util';
 import * as fs from 'fs';
 import {SnowflakeExecutor} from './snowflake_executor';
 
+const envDatabases =
+  process.env['MALLOY_DATABASES'] || process.env['MALLOY_DATABASE'];
+
+let describe = globalThis.describe;
+if (envDatabases && !envDatabases.includes('snowflake')) {
+  describe = describe.skip;
+}
+
 describe('db:Snowflake', () => {
   let conn: SnowflakeConnection;
   let runtime: malloy.Runtime;
 
   beforeAll(() => {
-    const connOptions = SnowflakeExecutor.getConnectionOptionsFromToml();
+    const connOptions =
+      SnowflakeExecutor.getConnectionOptionsFromEnv() ||
+      SnowflakeExecutor.getConnectionOptionsFromToml();
     conn = new SnowflakeConnection('snowflake', {
       connOptions: connOptions,
       queryOptions: {rowLimit: 1000},
