@@ -35,6 +35,7 @@ import {DuckDBConnection} from '@malloydata/db-duckdb';
 import {DuckDBWASMConnection} from '@malloydata/db-duckdb/wasm';
 import {SnowflakeConnection} from '@malloydata/db-snowflake';
 import {PooledPostgresConnection} from '@malloydata/db-postgres';
+import {SnowflakeExecutor} from '@malloydata/db-snowflake/src/snowflake_executor';
 
 export class SnowflakeTestConnection extends SnowflakeConnection {
   public async runSQL(
@@ -154,7 +155,10 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
         connection = new DuckDBWASMTestConnection(dbName);
         break;
       case 'snowflake':
-        connection = new SnowflakeTestConnection(dbName);
+        {
+          const connOptions = SnowflakeExecutor.getConnectionOptionsFromEnv();
+          connection = new SnowflakeTestConnection(dbName, {connOptions});
+        }
         break;
       default:
         throw new Error(`Unknown runtime "${dbName}`);

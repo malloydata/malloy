@@ -77,6 +77,26 @@ export class SnowflakeExecutor {
     });
   }
 
+  public static getConnectionOptionsFromEnv(): ConnectionOptions | undefined {
+    const account = process.env['SNOWFLAKE_ACCOUNT'];
+    if (account) {
+      const username = process.env['SNOWFLAKE_USER'];
+      const password = process.env['SNOWFLAKE_PASSWORD'];
+      const warehouse = process.env['SNOWFLAKE_WAREHOUSE'];
+      const database = process.env['SNOWFLAKE_DATABASE'];
+      const schema = process.env['SNOWFLAKE_SCHEMA'];
+      return {
+        account,
+        username,
+        password,
+        warehouse,
+        database,
+        schema,
+      };
+    }
+    return undefined;
+  }
+
   public static getConnectionOptionsFromToml(
     options?: ConnectionConfigFile
   ): ConnectionOptions {
