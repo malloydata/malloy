@@ -48,7 +48,7 @@ type namespace = {database: string; schema: string};
 
 export interface SnowflakeConnectionOptions {
   // snowflake sdk connection options
-  connOptions: ConnectionOptions;
+  connOptions?: ConnectionOptions;
   // generic pool options to help maintain a pool of connections to snowflake
   poolOptions?: PoolOptions;
 

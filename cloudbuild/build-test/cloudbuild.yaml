@@ -18,6 +18,10 @@ steps:
       - 'PGHOST=127.0.0.1'
       - 'PGDATABASE=postgres'
       - 'PGUSER=673673622326@cloudbuild'
+      - 'SNOWFLAKE_ACCOUNT=pt58362-rx92781'
+      - 'SNOWFLAKE_WAREHOUSE=LOOKER_WH'
+      - 'SNOWFLAKE_DATABASE=MALLOYTEST'
+      - 'SNOWFLAKE_SCHEMA=PUBLIC'
     entrypoint: sh
     args:
       - -c
@@ -27,3 +31,9 @@ steps:
 timeout: '1800s'
 options:
   machineType: 'E2_HIGHCPU_32'
+availableSecrets:
+  secretManager:
+    - versionName: projects/malloy-303216/secrets/snowflake-user/versions/latest
+      env: 'SNOWFLAKE_USER'
+    - versionName: projects/malloy-303216/secrets/snowflake-password/versions/latest
+      env: 'SNOWFLAKE_PASSWORD'
