@@ -2471,11 +2471,17 @@ export class SingleConnectionRuntime<
   }
 
   // quote a column name
-  q(column: string): string {
+  quote(column: string): string {
     return getDialect(this.connection.dialectName).sqlMaybeQuoteIdentifier(
       column
     );
   }
+
+  getQuoter(): (arg: TemplateStringsArray) => string {
+    return (x: TemplateStringsArray) => this.quote(x.toString());
+  }
+
+  //const q = (x: TemplateStringsArray) => runtime.q(x.toString());
 }
 
 class FluentState<T> {

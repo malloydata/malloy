@@ -270,10 +270,14 @@ from
   }
 
   sqlUnnestPipelineHead(
-    _isSingleton: boolean,
-    _sourceSQLExpression: string
+    isSingleton: boolean,
+    sourceSQLExpression: string
   ): string {
-    throw new Error('nesting: not fully supported in snowflake');
+    let p = sourceSQLExpression;
+    if (isSingleton) {
+      p = `[${p}]`;
+    }
+    return `TABLE(FLATTEN(input =>${p}))`;
   }
 
   sqlCreateFunction(_id: string, _funcText: string): string {

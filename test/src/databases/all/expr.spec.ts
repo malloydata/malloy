@@ -58,6 +58,9 @@ source: aircraft is ${databaseName}.table('malloytest.aircraft') extend {
 describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   const expressionModel = runtime.loadModel(modelText(databaseName));
   // basic calculations for sum, filtered sum, without a join.
+
+  const q = runtime.getQuoter();
+
   it('basic calculations', async () => {
     await expect(`
       run: aircraft_models->{
@@ -440,7 +443,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       source: a is ${databaseName}.table('malloytest.aircraft_models') extend { where: aircraft_model_code ? '0270202' }
 
       run: a -> {
-          group_by: string_1 is sql_string('UPPER(\${TABLE}.${runtime.q('manufacturer')})')
+          group_by: string_1 is sql_string('UPPER(\${TABLE}.${q`manufacturer`})')
         }
       `).malloyResultMatches(expressionModel, {
         string_1: 'AHRENS AIRCRAFT CORP.',
@@ -620,6 +623,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 });
 
 describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
+  const q = runtime.getQuoter();
   const sqlEq = mkSqlEqWith(runtime, databaseName, {
     malloy: `extend {
       dimension: friName is 'friday'
@@ -694,13 +698,13 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   test('nullish ?? operator', async () => {
     await expect(
       `run: ${databaseName}.sql("""
-          SELECT '' as NULL_VALUE, '' as STRING_VALUE
+          SELECT '' as ${q`null_value`}, '' as ${q`string_value`}
           UNION ALL SELECT null, 'correct'
       """) -> {
-        where: NULL_VALUE = null
+        where: null_value = null
         select:
-          found_null is  NULL_VALUE ?? 'correct',
-          else_pass is STRING_VALUE ?? 'incorrect'
+          found_null is  null_value ?? 'correct',
+          else_pass is string_value ?? 'incorrect'
           literal_null is null ?? 'correct'
       }`
     ).malloyResultMatches(runtime, {
