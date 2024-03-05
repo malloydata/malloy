@@ -51,10 +51,10 @@ describe('expressions', () => {
 
     // mtoy todo units missing: implement, or document
     const diffable = ['second', 'minute', 'hour', 'day'];
-    test.each(diffable.map(x => [x]))('timestamp difference - %s', unit => {
+    test.each(diffable.map(x => [x]))('timestamp measure since - %s', unit => {
       expect(new BetaExpression(`${unit}(@2021 to ats)`)).toParse();
     });
-    test.each(diffable.map(x => [x]))('timestamp difference - %s', unit => {
+    test.each(diffable.map(x => [x]))('timestamp measure until - %s', unit => {
       expect(new BetaExpression(`${unit}(ats to @2030)`)).toParse();
     });
   });

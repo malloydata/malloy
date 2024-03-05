@@ -56,7 +56,8 @@ function timestampMeasureable(units: string): boolean {
   ].includes(units);
 }
 
-function dateMeasureable(units: string): boolean {
+// All units >= day
+function measurableInDays(units: string): boolean {
   return ['day', 'week', 'month', 'quarter', 'year'].includes(units);
 }
 
@@ -85,12 +86,12 @@ const bqToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
   'NUMERIC': {type: 'number', numberType: 'float'},
   'BIGNUMERIC': {type: 'number', numberType: 'float'},
   'TIMESTAMP': {type: 'timestamp'},
+  'DATETIME': {type: 'datetime'},
   'BOOLEAN': {type: 'boolean'},
   'BOOL': {type: 'boolean'},
   'JSON': {type: 'json'},
   // TODO (https://cloud.google.com/bigquery/docs/reference/rest/v2/tables#tablefieldschema):
   // BYTES
-  // DATETIME
   // TIME
   // GEOGRAPHY
 };
@@ -371,7 +372,7 @@ ${indent(sql)}
     const tz = qtz(qi);
     const tzAdd = tz ? `, "${tz}"` : '';
     if (sqlTime.valueType === 'date') {
-      if (dateMeasureable(units)) {
+      if (measurableInDays(units)) {
         return mkExpr`DATE_TRUNC(${sqlTime.value},${units})`;
       }
       return mkExpr`TIMESTAMP(${sqlTime.value}${tzAdd})`;
@@ -477,7 +478,7 @@ ${indent(sql)}
         }
         return mkExpr`TIMESTAMP_DIFF(${rVal},${lVal},${units})`;
       case 'date':
-        if (!dateMeasureable(units)) {
+        if (!measurableInDays(units)) {
           return {error: `Cannot measure dates by '${units}'`};
         }
         return mkExpr`DATE(${rVal},${lVal},${units})`;

@@ -25,7 +25,7 @@ import {
   DivFragment,
   Expr,
   TimestampUnit,
-  isDateUnit,
+  iaDateUnit,
   isTimeFieldType,
   maxExpressionType,
   FieldValueType,
@@ -175,7 +175,7 @@ export class ExprDuration extends ExpressionDef {
           resultGranularity
         );
       }
-      if (isDateUnit(this.timeframe)) {
+      if (iaDateUnit(this.timeframe)) {
         return timeResult(
           {
             dataType: 'date',

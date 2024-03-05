@@ -1716,6 +1716,7 @@ export enum AtomicFieldType {
   Boolean = 'boolean',
   Date = 'date',
   Timestamp = 'timestamp',
+  Datetime = 'datetime',
   Json = 'json',
   Unsupported = 'unsupported',
   Error = 'error',
@@ -1745,6 +1746,8 @@ export class AtomicField extends Entity implements Taggable {
         return AtomicFieldType.Date;
       case 'timestamp':
         return AtomicFieldType.Timestamp;
+      case 'datetime':
+        return AtomicFieldType.Datetime;
       case 'number':
         return AtomicFieldType.Number;
       case 'json':

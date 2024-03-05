@@ -565,9 +565,9 @@ export function hasExpression(f: FieldDef): f is HasExpression {
   return (f as Expression).e !== undefined;
 }
 
-export type TimeFieldType = 'date' | 'timestamp';
+export type TimeFieldType = 'date' | 'timestamp' | 'datetime';
 export function isTimeFieldType(s: string): s is TimeFieldType {
-  return s === 'date' || s === 'timestamp';
+  return s === 'date' || s === 'timestamp' || s === 'datetime';
 }
 export type CastType = 'string' | 'number' | TimeFieldType | 'boolean' | 'json';
 export type AtomicFieldType = CastType | 'unsupported' | 'error';
@@ -577,6 +577,7 @@ export function isAtomicFieldType(s: string): s is AtomicFieldType {
     'number',
     'date',
     'timestamp',
+    'datetime',
     'boolean',
     'json',
     'unsupported',
@@ -584,9 +585,15 @@ export function isAtomicFieldType(s: string): s is AtomicFieldType {
   ].includes(s);
 }
 export function isCastType(s: string): s is CastType {
-  return ['string', 'number', 'date', 'timestamp', 'boolean', 'json'].includes(
-    s
-  );
+  return [
+    'string',
+    'number',
+    'date',
+    'datetime',
+    'timestamp',
+    'boolean',
+    'json',
+  ].includes(s);
 }
 
 /**
@@ -676,12 +683,12 @@ export interface FieldErrorDef extends FieldAtomicDef, FieldErrorTypeDef {
 }
 
 export type DateUnit = 'day' | 'week' | 'month' | 'quarter' | 'year';
-export function isDateUnit(str: string): str is DateUnit {
+export function iaDateUnit(str: string): str is DateUnit {
   return ['day', 'week', 'month', 'quarter', 'year'].includes(str);
 }
 export type TimestampUnit = DateUnit | 'hour' | 'minute' | 'second';
 export function isTimestampUnit(s: string): s is TimestampUnit {
-  return isDateUnit(s) || ['hour', 'minute', 'second'].includes(s);
+  return iaDateUnit(s) || ['hour', 'minute', 'second'].includes(s);
 }
 export type ExtractUnit = TimestampUnit | 'day_of_week' | 'day_of_year';
 export function isExtractUnit(s: string): s is ExtractUnit {
@@ -691,20 +698,19 @@ export function isExtractUnit(s: string): s is ExtractUnit {
 export enum ValueType {
   Date = 'date',
   Timestamp = 'timestamp',
+  Datetime = 'datetime',
   Number = 'number',
   String = 'string',
 }
 
-export type TimeValueType = ValueType.Date | ValueType.Timestamp;
+export type TimeValueType =
+  | ValueType.Date
+  | ValueType.Timestamp
+  | ValueType.Datetime;
 
 export interface FieldDateTypeDef {
   type: 'date';
   timeframe?: DateUnit;
-}
-
-/** Scalar Date Field. */
-export interface FieldDateDef extends FieldAtomicDef, FieldDateTypeDef {
-  type: 'date';
 }
 
 export interface FieldTimestampTypeDef {
@@ -712,12 +718,19 @@ export interface FieldTimestampTypeDef {
   timeframe?: TimestampUnit;
 }
 
-/** Scalar Timestamp Field */
-export interface FieldTimestampDef
-  extends FieldAtomicDef,
-    FieldTimestampTypeDef {
-  type: 'timestamp';
+export interface FieldDatetimeTypeDef {
+  type: 'datetime';
+  timeframe?: TimestampUnit;
 }
+
+/** Scalar Date Field. */
+export type FieldDateDef = FieldAtomicDef & FieldDateTypeDef;
+
+/** Scalar Timestamp Field */
+export type FieldTimestampDef = FieldAtomicDef & FieldTimestampTypeDef;
+
+/** Scalar Datetime Field */
+export type FieldDatetimeDef = FieldAtomicDef & FieldDatetimeTypeDef;
 
 /** parameter to order a query */
 export interface OrderBy {
@@ -1083,6 +1096,7 @@ export type FieldTypeDef =
   | FieldStringDef
   | FieldDateDef
   | FieldTimestampDef
+  | FieldDatetimeDef
   | FieldNumberDef
   | FieldBooleanDef
   | FieldJSONDef
@@ -1093,6 +1107,7 @@ export type FieldAtomicTypeDef =
   | FieldStringTypeDef
   | FieldDateTypeDef
   | FieldTimestampTypeDef
+  | FieldDatetimeTypeDef
   | FieldNumberTypeDef
   | FieldBooleanTypeDef
   | FieldJSONTypeDef

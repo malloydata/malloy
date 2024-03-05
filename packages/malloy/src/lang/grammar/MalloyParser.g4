@@ -461,7 +461,7 @@ sampleSpec
 
 
 aggregate: SUM | COUNT | AVG | MIN | MAX;
-malloyType: STRING | NUMBER | BOOLEAN | DATE | TIMESTAMP;
+malloyType: STRING | NUMBER | BOOLEAN | DATE | TIMESTAMP | DATETIME;
 compareOp: MATCH | NOT_MATCH | GT | LT | GTE | LTE | EQ | NE;
 
 string
