@@ -36,6 +36,7 @@ afterAll(async () => {
 });
 
 runtimes.runtimeMap.forEach((runtime, databaseName) => {
+  const q = runtime.getQuoter();
   it(`sql expression with turducken - ${databaseName}`, async () => {
     await expect(`
       run: ${databaseName}.sql(
@@ -63,14 +64,14 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     await expect(`
       run: ${databaseName}.sql("""
         SELECT * from (%{
-          ${databaseName}.sql("""SELECT 1 as ONE""") -> { group_by: ONE }
+          ${databaseName}.sql("""SELECT 1 as ${q`one`} """) -> { group_by: one }
         }) as the_table
-      """) -> { group_by: ONE }
-    `).malloyResultMatches(runtime, {ONE: 1});
+      """) -> { group_by: one }
+    `).malloyResultMatches(runtime, {one: 1});
   });
   it(`run sql expression as query - ${databaseName}`, async () => {
     await expect(
-      `run: ${databaseName}.sql("""SELECT 1 as ONE""")`
-    ).malloyResultMatches(runtime, {ONE: 1});
+      `run: ${databaseName}.sql("""SELECT 1 as ${q`one`} """)`
+    ).malloyResultMatches(runtime, {one: 1});
   });
 });
