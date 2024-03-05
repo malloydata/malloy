@@ -299,17 +299,17 @@ function generateBeginEndRule(
   const beginTextMateTokenInfo: TextMateTokenInfo = p.beginCaptures
     ? p.beginCaptures
     : p.captures
-      ? p.captures
-      : p.name
-        ? p.name
-        : DEFAULT_TOKEN;
+    ? p.captures
+    : p.name
+    ? p.name
+    : DEFAULT_TOKEN;
   const endTextMateTokenInfo: TextMateTokenInfo = p.endCaptures
     ? p.endCaptures
     : p.captures
-      ? p.captures
-      : p.name
-        ? p.name
-        : DEFAULT_TOKEN;
+    ? p.captures
+    : p.name
+    ? p.name
+    : DEFAULT_TOKEN;
   if (embeddedLanguage) {
     const ref = embeddedLanguage + END_STATE_SUFFIX;
     const beginRule = generateRule(p.begin, beginTextMateTokenInfo, {
@@ -452,8 +452,8 @@ function generateMonarchRules(
       const tokenInfo = pattern.captures
         ? pattern.captures
         : pattern.name
-          ? pattern.name
-          : DEFAULT_TOKEN;
+        ? pattern.name
+        : DEFAULT_TOKEN;
       const rule = generateRule(pattern.match, tokenInfo);
       state.push(rule);
     }

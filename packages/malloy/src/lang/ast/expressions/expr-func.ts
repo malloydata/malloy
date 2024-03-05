@@ -201,8 +201,8 @@ export class ExprFunc extends ExpressionDef {
         error.maxEvalSpace === 'literal'
           ? 'literal'
           : error.maxEvalSpace === 'constant'
-            ? 'literal or constant'
-            : 'literal, constant or output';
+          ? 'literal or constant'
+          : 'literal, constant or output';
       const arg = this.args[adjustedIndex];
       arg.log(
         `Parameter ${error.argIndex + 1} ('${error.param.name}') of ${
@@ -367,8 +367,8 @@ export class ExprFunc extends ExpressionDef {
               part.type === 'string'
                 ? part.value
                 : part.name === 'TABLE'
-                  ? {type: 'source-reference'}
-                  : {type: 'field', path: [part.name]}
+                ? {type: 'source-reference'}
+                : {type: 'field', path: [part.name]}
             ),
           },
         ];
@@ -390,8 +390,8 @@ export class ExprFunc extends ExpressionDef {
       maxEvalSpace === 'constant'
         ? 'constant'
         : expressionIsScalar(expressionType)
-          ? maxEvalSpace
-          : 'output';
+        ? maxEvalSpace
+        : 'output';
     return {
       dataType: type.dataType,
       expressionType,

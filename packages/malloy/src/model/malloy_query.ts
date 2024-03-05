@@ -2425,8 +2425,8 @@ class QueryQuery extends QueryField {
     return fs.type === 'index'
       ? fs.indexFields
       : isQuerySegment(fs)
-        ? fs.queryFields
-        : [];
+      ? fs.queryFields
+      : [];
   }
 
   expandFields(resultStruct: FieldInstanceResult) {
@@ -2758,7 +2758,9 @@ class QueryQuery extends QueryField {
       const matrixOperation = structRelationship.matrixOperation.toUpperCase();
       if (ji.makeUniqueKey) {
         const passKeys = this.generateSQLPassthroughKeys(qs);
-        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as ${qs.dialect.sqlMaybeQuoteIdentifier('__distinct_key')}, x.* ${passKeys} FROM ${structSQL} as x)`;
+        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as ${qs.dialect.sqlMaybeQuoteIdentifier(
+          '__distinct_key'
+        )}, x.* ${passKeys} FROM ${structSQL} as x)`;
       }
       let onCondition = '';
       if (qs.parent === undefined) {
@@ -2892,7 +2894,9 @@ class QueryQuery extends QueryField {
     if (structRelationship.type === 'basetable') {
       if (ji.makeUniqueKey) {
         const passKeys = this.generateSQLPassthroughKeys(qs);
-        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as ${qs.dialect.sqlMaybeQuoteIdentifier('__distinct_key')}, x.* ${passKeys} FROM ${structSQL} as x)`;
+        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as ${qs.dialect.sqlMaybeQuoteIdentifier(
+          '__distinct_key'
+        )}, x.* ${passKeys} FROM ${structSQL} as x)`;
       }
       s += `FROM ${structSQL} as ${ji.alias}\n`;
     } else {
@@ -4588,10 +4592,10 @@ export class QueryModel {
       typeof query.structRef === 'string'
         ? query.structRef
         : // LTNOTE: the parser needs to capture the query before the |.  This will work
-          //  in most cases but isn't actually complete.
-          query.structRef.type === 'struct'
-          ? query.structRef.as || query.structRef.name
-          : '(need to figure this out)';
+        //  in most cases but isn't actually complete.
+        query.structRef.type === 'struct'
+        ? query.structRef.as || query.structRef.name
+        : '(need to figure this out)';
     // LTNote:  I don't understand why this might be here.  It should have happened in loadQuery...
     if (finalize && this.dialect.hasFinalStage) {
       ret.lastStageName = ret.stageWriter.addStage(
