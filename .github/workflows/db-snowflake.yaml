@@ -1,0 +1,34 @@
+name: Snowflake DB
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x]
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: 'true'
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: npm install, build, and test
+        run: |
+          npm ci --loglevel error
+          npm run build
+          npm run test-silent
+        env:
+          CI: true
+          MALLOY_DATABASES: snowflake
+          SNOWFLAKE_ACCOUNT: pt58362-rx92781
+          SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+          SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+          SNOWFLAKE_WAREHOUSE: LOOKER_WH
+          SNOWFLAKE_DATABASE: MALLOYTEST
+          SNOWFLAKE_SCHEMA: PUBLIC
