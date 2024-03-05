@@ -46,6 +46,8 @@ function getSplitFunction(db: string) {
       `string_to_array(${column}, '${splitChar}')`,
     'duckdb_wasm': (column: string, splitChar: string) =>
       `string_to_array(${column}, '${splitChar}')`,
+    'snowflake': (column: string, splitChar: string) =>
+      `split(${column}, '${splitChar}')`,
   }[db];
 }
 
@@ -54,6 +56,8 @@ afterAll(async () => {
 });
 
 runtimes.runtimeMap.forEach((runtime, databaseName) => {
+  const q = runtime.getQuoter();
+
   // Issue: #1284
   it(`parenthesize output field values - ${databaseName}`, async () => {
     await expect(`
@@ -436,6 +440,29 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     });
   });
 
+  it(`nest/unnest -basic - ${databaseName}`, async () => {
+    // in a joined table when the joined is leafiest
+    //  we need to make sure we don't count rows that
+    //  don't match the join.
+    await expect(`
+      run: ${databaseName}.table('malloytest.state_facts') -> {
+        group_by: state
+        aggregate: c is airport_count.sum()
+        nest: p is {
+          group_by: popular_name
+          aggregate: d is airport_count.sum()
+        }
+      } -> {
+        group_by: state, c
+        aggregate: p.d.sum()
+      }
+      `).malloyResultMatches(runtime, {
+      state: 'TX',
+      c: 1845,
+      d: 1845,
+    });
+  });
+
   it(`count at root should not use distinct key - ${databaseName}`, async () => {
     const q = await runtime
       .loadQuery(
@@ -521,7 +548,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   it(`avg ignore null- ${databaseName}`, async () => {
     await expect(`
       source: one is ${databaseName}.sql("""
-        SELECT 2 as a
+        SELECT 2 as ${q`a`}
         UNION ALL SELECT 4
         UNION ALL SELECT null
       """)
@@ -729,21 +756,21 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
 
   it(`run simple sql - ${databaseName}`, async () => {
     const result = await runtime
-      .loadQuery('run: conn.sql("select 1 as one")')
+      .loadQuery(`run: conn.sql('select 1 as ${q`one`}')`)
       .run();
     expect(result.data.value[0]['one']).toBe(1);
   });
 
   it(`simple sql is exactly as written - ${databaseName}`, async () => {
     const result = await runtime
-      .loadQuery('run: conn.sql("select 1 as one")')
+      .loadQuery(`run: conn.sql('select 1 as ${q`one`}')`)
       .run();
     if (databaseName === 'postgres') {
       expect(result.sql).toBe(`WITH __stage0 AS (
-  select 1 as one)
+  select 1 as ${q`one`})
 SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
     } else {
-      expect(result.sql).toBe('select 1 as one');
+      expect(result.sql).toBe(`select 1 as ${q`one`}`);
     }
     expect(result.resultExplore).not.toBeUndefined();
   });
@@ -752,7 +779,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
     const result = await runtime
       .loadQuery(
         `
-        query: q is conn.sql("select 1 as one")
+        query: q is conn.sql('select 1 as ${q`one`}')
         source: s is q
         run: s -> { select: * }
       `
@@ -861,7 +888,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
     }
   );
 
-  const sql1234 = `${databaseName}.sql("SELECT 1 as a, 2 as b UNION ALL SELECT 3, 4")`;
+  const sql1234 = `${databaseName}.sql('SELECT 1 as ${q`a`}, 2 as ${q`b`} UNION ALL SELECT 3, 4')`;
 
   it(`sql as source - ${databaseName}`, async () => {
     await expect(`
@@ -877,7 +904,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
     const turduckenQuery = `
       run: ${databaseName}.sql("""
         SELECT
-          'something' as something,
+          'something' as SOMETHING,
           *
         FROM %{
           ${databaseName}.table('malloytest.state_facts') -> {
@@ -930,7 +957,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
   it(`regexp match- ${databaseName}`, async () => {
     await expect(`
       run: ${databaseName}.sql("""
-        SELECT 'hello mom' as a, 'cheese tastes good' as b
+        SELECT 'hello mom' as ${q`a`}, 'cheese tastes good' as ${q`b`}
         UNION ALL SELECT 'lloyd is a bozo', 'michael likes poetry'
       """) -> {
         aggregate: llo is count() {where: a ~ r'llo'}
@@ -942,21 +969,24 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
   it(`substitution precedence- ${databaseName}`, async () => {
     await expect(`
       run: ${databaseName}.sql("""
-        SELECT 5 as a, 2 as b
+        SELECT 5 as ${q`a`}, 2 as ${q`b`}
         UNION ALL SELECT 3, 4
       """) -> {
         extend: {dimension:  c is b + 4}
-        select: x is a * c
+        select: x is  a * c
       }
       `).malloyResultMatches(runtime, {x: 30});
   });
 
-  it(`array unnest - ${databaseName}`, async () => {
-    await expect(`
+  testIf(runtime.supportsNesting)(
+    `array unnest - ${databaseName}`,
+    async () => {
+      const splitFN = getSplitFunction(databaseName);
+      await expect(`
       run: ${databaseName}.sql("""
         SELECT
-          city,
-          ${getSplitFunction(databaseName)!('city', ' ')} as words
+          ${q`city`},
+          ${splitFN!(q`city`, ' ')} as ${q`words`}
         FROM ${rootDbPath(databaseName)}malloytest.aircraft
       """) -> {
         where: words.value != null
@@ -964,16 +994,20 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
         aggregate: c is count()
       }
       `).malloyResultMatches(runtime, {c: 145});
-  });
+    }
+  );
 
   // make sure we can count the total number of elements when fanning out.
-  it(`array unnest x 2 - ${databaseName}`, async () => {
-    await expect(`
+  testIf(runtime.supportsNesting)(
+    `array unnest x 2 - ${databaseName}`,
+    async () => {
+      const splitFN = getSplitFunction(databaseName);
+      await expect(`
       run: ${databaseName}.sql("""
         SELECT
-          city,
-          ${getSplitFunction(databaseName)!('city', ' ')} as words,
-          ${getSplitFunction(databaseName)!('city', 'A')} as abreak
+          ${q`city`},
+          ${splitFN!(q`city`, ' ')} as ${q`words`},
+          ${splitFN!(q`city`, 'A')} as ${q`abreak`}
         FROM ${rootDbPath(databaseName)}malloytest.aircraft
         WHERE city IS NOT null
       """) -> {
@@ -982,7 +1016,8 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
           c is words.count()
           a is abreak.count()
       }`).malloyResultMatches(runtime, {b: 3552, c: 4586, a: 6601});
-  });
+    }
+  );
 
   testIf(runtime.supportsNesting)(`nest null - ${databaseName}`, async () => {
     const result = await runtime
@@ -1120,7 +1155,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
     const back = '\\';
     test('backslash quote', async () => {
       await expect(`
-        run: ${databaseName}.sql("SELECT 1") -> {
+        run: ${databaseName}.sql('SELECT 1') -> {
           select: tick is '${back}${tick}'
         }
       `).malloyResultMatches(runtime, {tick});

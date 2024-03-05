@@ -139,9 +139,17 @@ expect.extend({
       return {pass: false, message: () => failMsg};
     }
 
+    const debug = querySrc.indexOf('--debug') >= 0;
     const allRows = Array.isArray(shouldEqual) ? shouldEqual : [shouldEqual];
     let i = 0;
     const fails: string[] = [];
+
+    if (debug) {
+      fails.push(
+        `Debug: Result Data: ${JSON.stringify(result.data.toObject())}`
+      );
+    }
+
     const gotRows = result.data.toObject().length;
     if (Array.isArray(shouldEqual)) {
       if (gotRows !== allRows.length) {

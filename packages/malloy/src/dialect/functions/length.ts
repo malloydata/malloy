@@ -41,6 +41,7 @@ export function fnLength(): DialectFunctionOverloadDef[] {
   ];
 }
 
+// TODO: add support for byte length in postgres, duckdb
 export function fnByteLength(): DialectFunctionOverloadDef[] {
   return [
     overload(

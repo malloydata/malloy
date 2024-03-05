@@ -19,6 +19,9 @@
       "path": "../packages/malloy-db-postgres"
     },
     {
+      "path": "../packages/malloy-db-snowflake"
+    },
+    {
       "path": "../packages/malloy-db-duckdb"
     },
     {

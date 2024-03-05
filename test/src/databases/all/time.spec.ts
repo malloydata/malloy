@@ -24,10 +24,15 @@
 
 import {RuntimeList, allDatabases} from '../../runtimes';
 import '../../util/db-jest-matchers';
-import {mkSqlEqWith, runQuery, testIf} from '../../util';
+import {
+  databasesFromEnvironmentOr,
+  mkSqlEqWith,
+  runQuery,
+  testIf,
+} from '../../util';
 import {DateTime as LuxonDateTime} from 'luxon';
 
-const runtimes = new RuntimeList(allDatabases);
+const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 const timeSQL =
   "SELECT DATE '2021-02-24' as t_date, TIMESTAMP '2021-02-24 03:05:06' as t_timestamp";
@@ -620,12 +625,12 @@ describe.each(runtimes.runtimeList)('%s: tz literals', (dbName, runtime) => {
     const query = runtime.loadQuery(
       `
         run: ${dbName}.sql("SELECT 1") -> {
-          group_by: literalTime is @2020-02-20 00:00:00
+          group_by: literal_time is @2020-02-20 00:00:00
         }
 `
     );
     const result = await query.run();
-    const literal = result.data.path(0, 'literalTime').value as Date;
+    const literal = result.data.path(0, 'literal_time').value as Date;
     const have = LuxonDateTime.fromJSDate(literal);
     expect(have.valueOf()).toEqual(utc_2020.valueOf());
   });
@@ -634,12 +639,12 @@ describe.each(runtimes.runtimeList)('%s: tz literals', (dbName, runtime) => {
     const query = runtime.loadQuery(
       `
         run: ${dbName}.sql("SELECT 1") -> {
-          group_by: literalTime is @2020-02-20 00:00:00[America/Mexico_City]
+          group_by: literal_time is @2020-02-20 00:00:00[America/Mexico_City]
         }
 `
     );
     const result = await query.run();
-    const literal = result.data.path(0, 'literalTime').value as Date;
+    const literal = result.data.path(0, 'literal_time').value as Date;
     const have = LuxonDateTime.fromJSDate(literal);
     expect(have.valueOf()).toEqual(zone_2020.valueOf());
   });
@@ -651,12 +656,12 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
       `
         run: ${dbName}.sql("SELECT 1") -> {
           timezone: '${zone}'
-          group_by: literalTime is @2020-02-20 00:00:00
+          group_by: literal_time is @2020-02-20 00:00:00
         }
       `
     );
     const result = await query.run();
-    const literal = result.data.path(0, 'literalTime').value as Date;
+    const literal = result.data.path(0, 'literal_time').value as Date;
     const have = LuxonDateTime.fromJSDate(literal);
     expect(have.valueOf()).toEqual(zone_2020.valueOf());
   });

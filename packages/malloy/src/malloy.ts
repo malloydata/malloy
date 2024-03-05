@@ -2469,6 +2469,19 @@ export class SingleConnectionRuntime<
   get supportsNesting(): boolean {
     return getDialect(this.connection.dialectName).supportsNesting;
   }
+
+  // quote a column name
+  quote(column: string): string {
+    return getDialect(this.connection.dialectName).sqlMaybeQuoteIdentifier(
+      column
+    );
+  }
+
+  getQuoter(): (arg: TemplateStringsArray) => string {
+    return (x: TemplateStringsArray) => this.quote(x.toString());
+  }
+
+  //const q = (x: TemplateStringsArray) => runtime.q(x.toString());
 }
 
 class FluentState<T> {

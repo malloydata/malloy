@@ -39,6 +39,7 @@ import {DialectFunctionOverloadDef} from './functions';
 interface DialectField {
   type: string;
   sqlExpression: string;
+  rawName: string;
   sqlOutputName: string;
 }
 

@@ -58,6 +58,9 @@ source: aircraft is ${databaseName}.table('malloytest.aircraft') extend {
 describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   const expressionModel = runtime.loadModel(modelText(databaseName));
   // basic calculations for sum, filtered sum, without a join.
+
+  const q = runtime.getQuoter();
+
   it('basic calculations', async () => {
     await expect(`
       run: aircraft_models->{
@@ -228,8 +231,11 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   });
 
   // TODO not sure why this test needs to be skipped on postgres, feels like an oversight
-  testIf(databaseName !== 'postgres')('model: dates named', async () => {
-    await expect(`
+  // NOTE: unless underlying type is stored as a timestamp snowflake does not support extraction
+  testIf(!['postgres', 'snowflake'].includes(databaseName))(
+    'model: dates named',
+    async () => {
+      await expect(`
       run: ${databaseName}.table('malloytest.alltypes')->{
         group_by:
           t_date,
@@ -244,18 +250,19 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           t_timestamp_year is t_timestamp.year,
       }
     `).malloyResultMatches(runtime, {
-      t_date: new Date('2020-03-02'),
-      t_date_month: new Date('2020-03-01'),
-      t_date_year: new Date('2020-01-01'),
-      t_timestamp: new Date('2020-03-02T12:35:56.000Z'),
-      t_timestamp_second: new Date('2020-03-02T12:35:56.000Z'),
-      t_timestamp_minute: new Date('2020-03-02T12:35:00.000Z'),
-      t_timestamp_hour: new Date('2020-03-02T12:00:00.000Z'),
-      t_timestamp_date: new Date('2020-03-02'),
-      t_timestamp_month: new Date('2020-03-01'),
-      t_timestamp_year: new Date('2020-01-01'),
-    });
-  });
+        t_date: new Date('2020-03-02'),
+        t_date_month: new Date('2020-03-01'),
+        t_date_year: new Date('2020-01-01'),
+        t_timestamp: new Date('2020-03-02T12:35:56.000Z'),
+        t_timestamp_second: new Date('2020-03-02T12:35:56.000Z'),
+        t_timestamp_minute: new Date('2020-03-02T12:35:00.000Z'),
+        t_timestamp_hour: new Date('2020-03-02T12:00:00.000Z'),
+        t_timestamp_date: new Date('2020-03-02'),
+        t_timestamp_month: new Date('2020-03-01'),
+        t_timestamp_year: new Date('2020-01-01'),
+      });
+    }
+  );
 
   it('named query metadata undefined', async () => {
     const result = await expressionModel
@@ -309,19 +316,22 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     `).malloyResultMatches(expressionModel, {a: 312});
   });
 
-  testIf(runtime.connection.name !== 'postgres')('sql safe cast', async () => {
-    await expect(`
+  testIf(!['postgres', 'snowflake'].includes(runtime.connection.name))(
+    'sql safe cast',
+    async () => {
+      await expect(`
       run: ${databaseName}.sql('SELECT 1') -> { select:
         bad_date is '123':::date
         bad_number is 'abc':::number
         good_number is "312":::"integer"
       }
     `).malloyResultMatches(expressionModel, {
-      bad_date: null,
-      bad_number: null,
-      good_number: 312,
-    });
-  });
+        bad_date: null,
+        bad_number: null,
+        good_number: 312,
+      });
+    }
+  );
 
   it('many_field.sum() has correct locality', async () => {
     await expect(`
@@ -433,7 +443,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       source: a is ${databaseName}.table('malloytest.aircraft_models') extend { where: aircraft_model_code ? '0270202' }
 
       run: a -> {
-          group_by: string_1 is sql_string("UPPER(\${TABLE}.manufacturer)")
+          group_by: string_1 is sql_string('UPPER(\${TABLE}.${q`manufacturer`})')
         }
       `).malloyResultMatches(expressionModel, {
         string_1: 'AHRENS AIRCRAFT CORP.',
@@ -579,7 +589,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
   });
 
-  it('joined filtered explores with dependancies', async () => {
+  it('joined filtered explores with dependencies', async () => {
     await expect(`
       source: bo_models is
         ${databaseName}.table('malloytest.aircraft_models') extend { where: manufacturer ? ~ 'BO%' }
@@ -613,6 +623,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 });
 
 describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
+  const q = runtime.getQuoter();
   const sqlEq = mkSqlEqWith(runtime, databaseName, {
     malloy: `extend {
       dimension: friName is 'friday'
@@ -687,7 +698,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   test('nullish ?? operator', async () => {
     await expect(
       `run: ${databaseName}.sql("""
-          SELECT '' as null_value, '' as string_value
+          SELECT '' as ${q`null_value`}, '' as ${q`string_value`}
           UNION ALL SELECT null, 'correct'
       """) -> {
         where: null_value = null
