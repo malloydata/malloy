@@ -1006,7 +1006,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
       run: ${databaseName}.sql("""
         SELECT
           ${q`city`},
-          ${splitFN!(q`city`, ' ')} as ${q`word`},
+          ${splitFN!(q`city`, ' ')} as ${q`words`},
           ${splitFN!(q`city`, 'A')} as ${q`abreak`}
         FROM ${rootDbPath(databaseName)}malloytest.aircraft
         WHERE city IS NOT null
