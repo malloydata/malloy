@@ -361,11 +361,6 @@ class ImportsAndTablesStep implements TranslationStep {
   }
 }
 
-interface SQLExploreRef {
-  ref?: ast.FromSQLSource;
-  def?: ast.SQLStatement;
-}
-
 class ASTStep implements TranslationStep {
   response?: ASTResponse;
   private walked = false;
@@ -409,22 +404,9 @@ class ASTStep implements TranslationStep {
       throw new Error('TRANSLATOR INTERNAL ERROR: Unimplemented AST node');
     }
 
-    // I kind of think table refs should probably also be collected here
-    // instead of in the parse step. Note to myself, do that someday.
-    const sqlExplores: Record<string, SQLExploreRef> = {};
     if (!this.walked) {
       for (const walkedTo of newAst.walk()) {
-        if (walkedTo instanceof ast.FromSQLSource) {
-          if (!sqlExplores[walkedTo.refName]) {
-            sqlExplores[walkedTo.refName] = {};
-          }
-          sqlExplores[walkedTo.refName].ref = walkedTo;
-        } else if (walkedTo instanceof ast.SQLStatement && walkedTo.is) {
-          if (!sqlExplores[walkedTo.is]) {
-            sqlExplores[walkedTo.is] = {};
-          }
-          sqlExplores[walkedTo.is].def = walkedTo;
-        } else if (walkedTo instanceof ast.Unimplemented) {
+        if (walkedTo instanceof ast.Unimplemented) {
           walkedTo.log('INTERNAL COMPILER ERROR: Untranslated parse node');
         }
       }
@@ -436,13 +418,6 @@ class ASTStep implements TranslationStep {
       return this.response;
     }
 
-    /*
-TODO we used to scna the AST for SQL blocks here, don't need to do that
-becausae that happens at the translate step, but the code I need to
-understand is how a root translate can return the need of a chiold
-which has an SQL block ...
-
-*/
     // Now make sure that every child has fully translated itself
     // before this tree is ready to also translate ...
     for (const child of that.childTranslators.values()) {

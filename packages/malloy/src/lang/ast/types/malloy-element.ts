@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {getDialect} from '../../../dialect';
 import {
   Annotation,
   DocumentLocation,
@@ -615,6 +616,44 @@ export class Document extends MalloyElement implements NameSpace {
     if (this.globalNameSpace.getEntry(str) !== undefined) {
       this.log(`Cannot redefine '${str}', which is in global namespace`);
     }
+    if (ent.entry.type === 'struct') {
+      const msg = this.newExperimentalSource(ent.entry.dialect);
+      /*
+
+       * we add it to the model, so the compile can continue, but we also error.
+       */
+      if (msg) {
+        this.log(
+          `${msg}. Cannot use source '${ent.entry.as || ent.entry.name}'`
+        );
+      }
+    }
+
     this.documentModel[str] = ent;
+  }
+
+  private alreadyChecked: Record<string, boolean> = {};
+  /**
+   * Return an error message if this dialect is the first reference to this particular
+   * dialect, and the dialect is marked as experimental, and we are not running tests.
+   * @param dialect The dialect name
+   * @returns The error message or undefined
+   */
+  newExperimentalSource(dialect: string): string | undefined {
+    if (this.alreadyChecked[dialect]) {
+      return;
+    }
+    this.alreadyChecked[dialect] = true;
+    if (getDialect(dialect).experimental) {
+      const experimental = this.translator()?.compilerFlags.tag('experimental');
+      if (
+        experimental &&
+        (experimental.bare() || experimental.has('dialect', dialect))
+      ) {
+        return;
+      }
+      // TODO DO NOT DO THIS IN TESTS
+      return `Requires compiler flag '##! experimental.dialect.${dialect}'`;
+    }
   }
 }

@@ -175,12 +175,16 @@ export function testRuntimeFor(connection: Connection) {
   return new SingleConnectionRuntime(files, connection);
 }
 
+/**
+ * All databases which should be tested by default. Experimental dialects
+ * should not be in this list. Use MALLOY_DATABASE=dialect_name to test those
+ */
 export const allDatabases = [
   'postgres',
   'bigquery',
   'duckdb',
   'duckdb_wasm',
-  'snowflake',
+  // 'snowflake', -- EXPERIMETNAL
 ];
 
 type RuntimeDatabaseNames = (typeof allDatabases)[number];

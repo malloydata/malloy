@@ -100,6 +100,11 @@ export class NamedSource extends Source {
     } else if (isSQLBlockStruct(entry) && entry.declaredSQLBlock) {
       this.log(`Must use 'from_sql()' for sql source '${this.refName}'`);
       return;
+    } else {
+      const msg = this.document()?.newExperimentalSource(entry.dialect);
+      if (msg) {
+        this.log(msg);
+      }
     }
     return {...entry};
   }

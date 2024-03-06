@@ -113,6 +113,7 @@ export class StandardSQLDialect extends Dialect {
   supportsSafeCast = true;
   supportsNesting = true;
   cantPartitionWindowFunctionsOnExpressions = true;
+  experimental = false;
 
   quoteTablePath(tablePath: string): string {
     return `\`${tablePath}\``;

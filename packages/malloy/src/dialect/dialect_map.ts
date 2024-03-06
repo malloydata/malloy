@@ -143,3 +143,18 @@ export function getDialectFunction(name: string): FunctionDef | undefined {
   }
   return found ? func : undefined;
 }
+
+/**
+ * Some tests are run once, but require a particular dialect, which a developer might have disabled on their machine.
+ * @param dialectName
+ * @returns True if this dialect should be usable in a test
+ */
+export function usableInTests(dialectName: string): boolean {
+  if (process.env['MALLOY_DATABASE']) {
+    return process.env['MALLOY_DATABASE'] === dialectName;
+  }
+  if (process.env['MALLOY_DATABASES']) {
+    return process.env['MALLOY_DATABASES'].split(',').includes(dialectName);
+  }
+  return true;
+}

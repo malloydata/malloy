@@ -115,7 +115,6 @@ export * from './query-properties/sampling';
 export * from './query-properties/top';
 export * from './source-elements/named-source';
 export * from './source-elements/query-source';
-export * from './source-elements/from-sql-source';
 export * from './source-elements/sql-source';
 export * from './source-elements/table-source';
 export * from './sql-elements/sql-statement';

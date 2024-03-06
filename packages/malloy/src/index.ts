@@ -42,6 +42,7 @@ export {
   spread,
   Dialect,
   FUNCTIONS,
+  usableInTests,
 } from './dialect';
 export type {
   DialectFieldList,

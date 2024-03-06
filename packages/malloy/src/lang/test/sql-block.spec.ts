@@ -25,7 +25,6 @@
 import {
   SQLBlockSource,
   SQLBlockStructDef,
-  StructDef,
   isSQLBlockStruct,
   isSQLFragment,
 } from '../../model';
@@ -34,18 +33,7 @@ import {TestTranslator, aTableDef} from './test-translator';
 import './parse-expects';
 import {MalloyTranslator} from '../parse-malloy';
 
-function unlocatedStructDef(sd: StructDef): StructDef {
-  const ret = {...sd};
-  ret.fields = sd.fields.map(f => {
-    const nf = {...f};
-    delete nf.location;
-    return nf;
-  });
-  delete ret.location;
-  return ret;
-}
-
-describe('sql:', () => {
+describe('connection sql()', () => {
   const selStmt = 'SELECT * FROM aTable';
   function makeSchemaResponse(sql: SQLBlockSource): SQLBlockStructDef {
     const cname = sql.connection || 'bigquery';
@@ -66,38 +54,6 @@ describe('sql:', () => {
       fields: aTableDef.fields,
     };
   }
-
-  test('definition', () => {
-    const model = new TestTranslator(`
-      ##! -m4warnings
-      sql: users IS {
-        select: """${selStmt}"""
-        connection: "aConnection"
-      }
-    `);
-    const needReq = model.translate();
-    expect(model).toParse();
-    const needs = needReq?.compileSQL;
-    expect(needs).toBeDefined();
-    if (needs) {
-      const sql = makeSQLBlock([{sql: selStmt}], 'aConnection');
-      expect(needs).toMatchObject(sql);
-      const refKey = needs.name;
-      expect(refKey).toBeDefined();
-      if (refKey) {
-        const sr = makeSchemaResponse(sql);
-        model.update({compileSQL: {[refKey]: sr}});
-        expect(model).toTranslate();
-        const expectThis = unlocatedStructDef({...sr, as: 'users'});
-        if (isSQLBlockStruct(expectThis)) {
-          expectThis.declaredSQLBlock = true;
-        }
-        const got = unlocatedStructDef(model.sqlBlocks[0]);
-        delete got.modelAnnotation;
-        expect(got).toEqual(expectThis);
-      }
-    }
-  });
 
   test('source from sql', () => {
     const model = new TestTranslator(`
@@ -146,29 +102,7 @@ describe('sql:', () => {
 
   it('simple turducken', () => {
     const m = new TestTranslator(`
-      ##! -m4warnings
-      sql: someSql is {
-        select: """SELECT * FROM %{ a -> { group_by: astr } } WHERE 1=1"""
-      }
-    `);
-    expect(m).toParse();
-    const compileSql = m.translate().compileSQL;
-    expect(compileSql).toBeDefined();
-    if (compileSql) {
-      const select = compileSql.select[0];
-      const star = compileSql.select[1];
-      const where = compileSql.select[2];
-      expect(select).toEqual({sql: 'SELECT * FROM '});
-      expect(isSQLFragment(star)).toBeFalsy();
-      expect(where).toEqual({sql: ' WHERE 1=1'});
-    }
-  });
-  it('old style ', () => {
-    const m = new TestTranslator(`
-      ##! -m4warnings
-      sql: someSql is {
-        select: """SELECT * FROM %{ a -> { group_by: astr } } WHERE 1=1"""
-      }
+      source: someSql is _db_.sql("""SELECT * FROM %{ a -> { group_by: astr } } WHERE 1=1""")
     `);
     expect(m).toParse();
     const compileSql = m.translate().compileSQL;
@@ -214,28 +148,11 @@ describe('sql:', () => {
     `);
     expect(m).toParse();
   });
-  it('model preserved', () => {
-    const shouldBeOK = `
-      ##! -m4warnings
-      source: newa is a
-      sql: someSql is { select: """${selStmt}""" }
-      source: newaa is newa
-    `;
-    const model = new TestTranslator(shouldBeOK);
-    expect(model).toParse();
-    const needReq = model.translate();
-    const needs = needReq?.compileSQL;
-    expect(needs).toBeDefined();
-    const sql = makeSQLBlock([{sql: selStmt}]);
-    model.update({compileSQL: {[sql.name]: makeSchemaResponse(sql)}});
-    expect(model).toTranslate();
-  });
-
   test('source from extended sql-based-source', () => {
     const model = new TestTranslator(`
       source: sql_block is aConnection.sql("""${selStmt}""")
       source: malloy_source is sql_block extend { primary_key: ai }
-`);
+    `);
     const sql = makeSQLBlock([{sql: selStmt}], 'aConnection');
     model.update({compileSQL: {[sql.name]: makeSchemaResponse(sql)}});
     expect(model).toTranslate();

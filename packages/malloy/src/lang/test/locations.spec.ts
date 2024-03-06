@@ -184,22 +184,6 @@ describe('source locations', () => {
     }
   });
 
-  test('pre m4 location of named SQL block', () => {
-    const source = markSource`##! -m4warnings\n${'sql: s is { select: """SELECT 1 as one""" }'}`;
-    const m = new TestTranslator(source.code);
-    expect(m).toParse();
-    const compileSql = m.translate().compileSQL;
-    expect(compileSql).toBeDefined();
-    if (compileSql) {
-      m.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
-      });
-      expect(m).toTranslate();
-      const s = m.sqlBlocks[0];
-      expect(s.location).isLocationIn(source.locations[0], source.code);
-    }
-  });
-
   test('location of renamed field', () => {
     const source = markSource`
       source: na is a extend {
