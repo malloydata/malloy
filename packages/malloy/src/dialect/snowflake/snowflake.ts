@@ -115,30 +115,9 @@ export class SnowflakeDialect extends Dialect {
   }
 
   sqlGroupSetTable(groupSetCount: number): string {
-    return `CROSS JOIN (SELECT seq4() as group_set FROM TABLE(GENERATOR(ROWCOUNT => ${
-      groupSetCount + 1
-    }))) as group_set`;
+    return `SELECT index as group_set FROM TABLE(FLATTEN(ARRAY_GENERATE_RANGE(0, ${groupSetCount})))`;
   }
 
-  /*
-  // this just returns null in snowflake
-  select
-  any_value (t is not null) as av
-from
-  (
-    select
-      case
-        when group_set = 1 then 'one'
-      end as t
-    from
-      (
-        SELECT
-          seq4 () as group_set
-        FROM
-          TABLE (GENERATOR (ROWCOUNT => 3))
-      ) as tbl
-  );
-  */
   sqlAnyValue(groupSet: number, fieldName: string): string {
     return `(ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN ${fieldName} END) WITHIN GROUP (ORDER BY ${fieldName} ASC NULLS LAST))[0]`;
   }
@@ -284,8 +263,8 @@ from
     throw new Error('not implemented yet');
   }
 
-  sqlCreateFunctionCombineLastStage(_lastStageName: string): string {
-    throw new Error('not implemented yet');
+  sqlCreateFunctionCombineLastStage(lastStageName: string): string {
+    return `SELECT ARRAY_AGG(OBJECT_CONSTRUCT(*)) FROM ${lastStageName}`;
   }
 
   sqlSelectAliasAsStruct(alias: string): string {
