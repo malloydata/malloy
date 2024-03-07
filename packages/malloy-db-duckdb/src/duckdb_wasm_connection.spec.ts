@@ -28,7 +28,7 @@ import {DuckDBWASMConnection} from './duckdb_wasm_connection_node';
 const envDatabases = (
   process.env['MALLOY_DATABASES'] ||
   process.env['MALLOY_DATABASE'] ||
-  ''
+  'duckdb_wasm'
 ).split(',');
 
 let describe = globalThis.describe;

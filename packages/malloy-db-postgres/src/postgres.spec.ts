@@ -27,7 +27,7 @@ import {SQLBlock} from '@malloydata/malloy';
 const envDatabases = (
   process.env['MALLOY_DATABASES'] ||
   process.env['MALLOY_DATABASE'] ||
-  ''
+  'postgres'
 ).split(',');
 
 let describe = globalThis.describe;

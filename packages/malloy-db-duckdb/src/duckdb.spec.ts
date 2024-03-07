@@ -28,7 +28,7 @@ import {SQLBlock} from '@malloydata/malloy';
 const envDatabases = (
   process.env['MALLOY_DATABASES'] ||
   process.env['MALLOY_DATABASE'] ||
-  ''
+  'duckdb'
 ).split(',');
 
 let describe = globalThis.describe;

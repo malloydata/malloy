@@ -31,7 +31,7 @@ import {fileURLToPath} from 'url';
 const envDatabases = (
   process.env['MALLOY_DATABASES'] ||
   process.env['MALLOY_DATABASE'] ||
-  ''
+  'bigquery'
 ).split(',');
 
 let describe = globalThis.describe;
