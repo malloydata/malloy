@@ -25,6 +25,17 @@ import {SQLBlock} from '@malloydata/malloy';
 import {DuckDBCommon} from './duckdb_common';
 import {DuckDBWASMConnection} from './duckdb_wasm_connection_node';
 
+const envDatabases = (
+  process.env['MALLOY_DATABASES'] ||
+  process.env['MALLOY_DATABASE'] ||
+  ''
+).split(',');
+
+let describe = globalThis.describe;
+if (!envDatabases.includes('duckdb_wasm')) {
+  describe = describe.skip;
+}
+
 describe('DuckDBWasmConnection', () => {
   let connection: DuckDBWASMConnection;
   let findTables: jest.SpyInstance;

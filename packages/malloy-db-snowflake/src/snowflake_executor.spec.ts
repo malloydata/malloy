@@ -24,11 +24,14 @@
 import {SnowflakeExecutor} from './snowflake_executor';
 import {QueryData, RunSQLOptions} from '@malloydata/malloy';
 
-const envDatabases =
-  process.env['MALLOY_DATABASES'] || process.env['MALLOY_DATABASE'];
+const envDatabases = (
+  process.env['MALLOY_DATABASES'] ||
+  process.env['MALLOY_DATABASE'] ||
+  ''
+).split(',');
 
 let describe = globalThis.describe;
-if (envDatabases && !envDatabases.includes('snowflake')) {
+if (!envDatabases.includes('snowflake')) {
   describe = describe.skip;
 }
 

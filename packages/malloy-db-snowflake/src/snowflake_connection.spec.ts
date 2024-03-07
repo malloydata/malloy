@@ -28,11 +28,14 @@ import * as util from 'util';
 import * as fs from 'fs';
 import {SnowflakeExecutor} from './snowflake_executor';
 
-const envDatabases =
-  process.env['MALLOY_DATABASES'] || process.env['MALLOY_DATABASE'];
+const envDatabases = (
+  process.env['MALLOY_DATABASES'] ||
+  process.env['MALLOY_DATABASE'] ||
+  ''
+).split(',');
 
 let describe = globalThis.describe;
-if (envDatabases && !envDatabases.includes('snowflake')) {
+if (!envDatabases.includes('snowflake')) {
   describe = describe.skip;
 }
 

@@ -29,16 +29,14 @@ import {EmptyURLReader} from '@malloydata/malloy';
 import {BigQueryTestConnection, PostgresTestConnection} from '../../runtimes';
 import {describeIfDatabaseAvailable} from '../../util';
 
-const res = describeIfDatabaseAvailable(['bigquery', 'postgres']);
-let [describe] = res;
-const [, databases] = res;
+const [, databases] = describeIfDatabaseAvailable(['bigquery', 'postgres']);
 
 // *** NOTE ***
 // this is a special case (for now): a test that REQUIRES two databases - bigquery AND postgres
-describe =
+const describe =
   databases.filter(d => ['postgres', 'bigquery'].includes(d)).length >= 2
-    ? describe
-    : describe.skip;
+    ? globalThis.describe
+    : globalThis.describe.skip;
 
 describe('Multi-connection', () => {
   const bqConnection = new BigQueryTestConnection(

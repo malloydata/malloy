@@ -84,6 +84,19 @@ export function databasesFromEnvironmentOr(
     : defaultDatabases;
 }
 
+const describeSkip: jest.Describe = Object.assign(
+  (
+    name: number | string | Function | jest.FunctionLike,
+    fn: jest.EmptyFunction
+  ) => describe.skip(name, fn),
+  {
+    skip: describe.skip,
+    // eslint-disable-next-line no-restricted-properties
+    only: describe.only,
+    each: (() => () => it.skip('skipped', () => {})) as unknown as jest.Each,
+  }
+);
+
 // confirms that one or more of the databases being tested overlaps with the databases a test suite can accept.
 // if there is overlap, return a tuple of jest.describe and the dialects to be tested
 // if there is no overlap, return a tuple if jest.describe.skip and the dialects to be tested
@@ -93,7 +106,7 @@ export function describeIfDatabaseAvailable(
   const currentDatabases = databasesFromEnvironmentOr(acceptableDatabases);
   const overlap = acceptableDatabases.filter(d => currentDatabases.includes(d));
 
-  return overlap.length > 0 ? [describe, overlap] : [describe.skip, overlap];
+  return overlap.length > 0 ? [describe, overlap] : [describeSkip, overlap];
 }
 
 interface InitValues {
@@ -206,6 +219,13 @@ export async function runQuery(runtime: Runtime, querySrc: string) {
   return result;
 }
 
-export const testIf = (condition: boolean) => {
-  return condition ? test : test.skip;
-};
+export function onlyIf(
+  cond: boolean,
+  condTest: jest.ProvidesCallback
+): jest.ProvidesCallback {
+  if (cond) {
+    return condTest;
+  } else {
+    return () => {};
+  }
+}
