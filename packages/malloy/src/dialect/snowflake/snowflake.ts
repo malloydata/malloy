@@ -245,6 +245,8 @@ export class SnowflakeDialect extends Dialect {
       let snowflakeType = fieldType;
       if (fieldType === 'string') {
         snowflakeType = 'varchar';
+      } else if (fieldType === 'struct') {
+        snowflakeType = 'variant';
       }
       return `${alias}.value:"${fieldName}"::${snowflakeType}`;
     }
