@@ -22,7 +22,7 @@ Note: The Malloy VSCode Extension tracks a small amount of anonymous usage data.
 
 ## Join the Community
 
-- Join our [**Malloy Slack Community!**](https://join.slack.com/t/malloy-community/shared_invite/zt-1kgfwgi5g-CrsdaRqs81QY67QW0~t_uw) Use this community to ask questions, meet other Malloy users, and share ideas with one another.
+- Join our [**Malloy Slack Community!**](https://join.slack.com/t/malloy-community/shared_invite/zt-2crkkvo36-JNG6FM8cghRTyYmeS8hFBQ) Use this community to ask questions, meet other Malloy users, and share ideas with one another.
 - Use [**GitHub issues**](https://github.com/malloydata/malloy/issues) in this Repo to provide feedback, suggest improvements, report bugs, and start new discussions.
 
 ## Resources
