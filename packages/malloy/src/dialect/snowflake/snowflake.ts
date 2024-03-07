@@ -115,7 +115,9 @@ export class SnowflakeDialect extends Dialect {
   }
 
   sqlGroupSetTable(groupSetCount: number): string {
-    return `SELECT index as group_set FROM TABLE(FLATTEN(ARRAY_GENERATE_RANGE(0, ${groupSetCount})))`;
+    return `CROSS JOIN (SELECT index as group_set FROM TABLE(FLATTEN(ARRAY_GENERATE_RANGE(0, ${
+      groupSetCount + 1
+    }))))`;
   }
 
   sqlAnyValue(groupSet: number, fieldName: string): string {
