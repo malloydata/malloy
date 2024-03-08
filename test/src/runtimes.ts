@@ -184,7 +184,7 @@ export const allDatabases = [
   'bigquery',
   'duckdb',
   'duckdb_wasm',
-  // 'snowflake', -- EXPERIMETNAL
+  // 'snowflake', -- EXPERIMENTAL
 ];
 
 type RuntimeDatabaseNames = (typeof allDatabases)[number];
