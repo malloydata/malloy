@@ -23,7 +23,7 @@
  */
 
 import {RuntimeList, allDatabases} from '../../runtimes';
-import {databasesFromEnvironmentOr, testIf} from '../../util';
+import {databasesFromEnvironmentOr, onlyIf} from '../../util';
 import '../../util/db-jest-matchers';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
@@ -87,9 +87,9 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     `).malloyResultMatches(orderByModel, {});
   });
 
-  testIf(runtime.supportsNesting)(
+  test(
     `reserved words are quoted in turtles - ${databaseName}`,
-    async () => {
+    onlyIf(runtime.supportsNesting, async () => {
       await expect(`
       run: models->{
         nest: withx is {
@@ -102,7 +102,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           fetch is withx.fetch
       }
     `).malloyResultMatches(orderByModel, {});
-    }
+    })
   );
 
   it.skip('reserved words in structure definitions', async () => {
@@ -142,9 +142,9 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     `).malloyResultMatches(orderByModel, {model_count: 102});
   });
 
-  testIf(runtime.supportsNesting)(
+  test(
     `modeled having complex - ${databaseName}`,
-    async () => {
+    onlyIf(runtime.supportsNesting, async () => {
       await expect(`
         source: popular_names is models->{
           having: model_count > 100
@@ -161,7 +161,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           select: manufacturer, model_count
         }
       `).malloyResultMatches(orderByModel, {model_count: 102});
-    }
+    })
   );
 
   it(`turtle references joined element - ${databaseName}`, async () => {
