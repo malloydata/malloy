@@ -29,7 +29,7 @@ import {describeIfDatabaseAvailable} from '../../util';
 // TODO identify which tests need to run on wasm and move them into their own file
 const runtimes = ['duckdb', 'duckdb_wasm'];
 
-const [_describe, databases] = describeIfDatabaseAvailable(runtimes);
+const [describe, databases] = describeIfDatabaseAvailable(runtimes);
 const allDucks = new RuntimeList(databases);
 
 describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {

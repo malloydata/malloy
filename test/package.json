@@ -1,6 +1,9 @@
 {
   "name": "@malloydata/malloy-tests",
   "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "homepage": "https://github.com/malloydata/malloy#readme",

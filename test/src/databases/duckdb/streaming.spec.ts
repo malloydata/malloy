@@ -90,6 +90,9 @@ function modelText(databaseName: string) {
 }
 
 describe('Streaming tests', () => {
+  if (!databases.length) {
+    it.skip('skipped', () => {});
+  }
   const runtimes = new RuntimeList(databases);
 
   afterAll(async () => {
