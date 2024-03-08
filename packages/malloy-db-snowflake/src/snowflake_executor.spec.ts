@@ -23,17 +23,9 @@
 
 import {SnowflakeExecutor} from './snowflake_executor';
 import {QueryData, RunSQLOptions} from '@malloydata/malloy';
+import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
 
-const envDatabases = (
-  process.env['MALLOY_DATABASES'] ||
-  process.env['MALLOY_DATABASE'] ||
-  ''
-).split(',');
-
-let describe = globalThis.describe;
-if (!envDatabases.includes('snowflake')) {
-  describe = describe.skip;
-}
+const [describe] = describeIfDatabaseAvailable(['postgres']);
 
 class SnowflakeExecutorTestSetup {
   private executor_: SnowflakeExecutor;

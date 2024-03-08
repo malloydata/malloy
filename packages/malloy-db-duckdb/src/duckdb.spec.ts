@@ -24,17 +24,9 @@
 import {DuckDBCommon} from './duckdb_common';
 import {DuckDBConnection} from './duckdb_connection';
 import {SQLBlock} from '@malloydata/malloy';
+import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
 
-const envDatabases = (
-  process.env['MALLOY_DATABASES'] ||
-  process.env['MALLOY_DATABASE'] ||
-  'duckdb'
-).split(',');
-
-let describe = globalThis.describe;
-if (!envDatabases.includes('duckdb')) {
-  describe = describe.skip;
-}
+const [describe] = describeIfDatabaseAvailable(['duckdb']);
 
 /*
  * !IMPORTANT

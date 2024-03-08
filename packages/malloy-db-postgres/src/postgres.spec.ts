@@ -23,18 +23,9 @@
 
 import {PostgresConnection} from './postgres_connection';
 import {SQLBlock} from '@malloydata/malloy';
+import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
 
-const envDatabases = (
-  process.env['MALLOY_DATABASES'] ||
-  process.env['MALLOY_DATABASE'] ||
-  'postgres'
-).split(',');
-
-let describe = globalThis.describe;
-if (!envDatabases.includes('postgres')) {
-  describe = describe.skip;
-  describe.skip = describe;
-}
+const [describe] = describeIfDatabaseAvailable(['postgres']);
 
 /*
  * !IMPORTANT
