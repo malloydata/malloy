@@ -25,7 +25,7 @@ import {SnowflakeExecutor} from './snowflake_executor';
 import {QueryData, RunSQLOptions} from '@malloydata/malloy';
 import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
 
-const [describe] = describeIfDatabaseAvailable(['postgres']);
+const [describe] = describeIfDatabaseAvailable(['snowflake']);
 
 class SnowflakeExecutorTestSetup {
   private executor_: SnowflakeExecutor;
