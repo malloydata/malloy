@@ -1,4 +1,4 @@
-name: Snowflake DB (Non-blocking)
+name: MotherDuck
 
 on: [push]
 
