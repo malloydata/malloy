@@ -22,7 +22,7 @@
  */
 
 import {PostgresConnection} from './postgres_connection';
-import {SQLBlock, usableInTests} from '@malloydata/malloy';
+import {SQLBlock} from '@malloydata/malloy';
 
 const envDatabases = (
   process.env['MALLOY_DATABASES'] ||
@@ -41,97 +41,93 @@ if (!envDatabases.includes('postgres')) {
  * The connection is reused for each test, so if you do not name your tables
  * and keys uniquely for each test you will see cross test interactions.
  */
-if (usableInTests('postgres')) {
-  describe('PostgresConnection', () => {
-    let connection: PostgresConnection;
-    let getTableSchema: jest.SpyInstance;
-    let getSQLBlockSchema: jest.SpyInstance;
+describe('PostgresConnection', () => {
+  let connection: PostgresConnection;
+  let getTableSchema: jest.SpyInstance;
+  let getSQLBlockSchema: jest.SpyInstance;
 
-    beforeAll(async () => {
-      connection = new PostgresConnection('duckdb');
-      await connection.runSQL('SELECT 1');
-    });
-
-    afterAll(async () => {
-      await connection.close();
-    });
-
-    beforeEach(async () => {
-      getTableSchema = jest
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .spyOn(PostgresConnection.prototype as any, 'getTableSchema')
-        .mockResolvedValue({
-          type: 'struct',
-          dialect: 'postgres',
-          name: 'name',
-          structSource: {type: 'table', tablePath: 'test'},
-          structRelationship: {
-            type: 'basetable',
-            connectionName: 'postgres',
-          },
-          fields: [],
-        });
-
-      getSQLBlockSchema = jest
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .spyOn(PostgresConnection.prototype as any, 'getSQLBlockSchema')
-        .mockResolvedValue({
-          type: 'struct',
-          dialect: 'postgres',
-          name: 'name',
-          structSource: {
-            type: 'sql',
-            method: 'subquery',
-            sqlBlock: SQL_BLOCK_1,
-          },
-          structRelationship: {
-            type: 'basetable',
-            connectionName: 'postgres',
-          },
-          fields: [],
-        });
-    });
-
-    afterEach(() => {
-      jest.resetAllMocks();
-    });
-
-    it('caches table schema', async () => {
-      await connection.fetchSchemaForTables({'test1': 'table1'}, {});
-      expect(getTableSchema).toBeCalledTimes(1);
-      await connection.fetchSchemaForTables({'test1': 'table1'}, {});
-      expect(getTableSchema).toBeCalledTimes(1);
-    });
-
-    it('refreshes table schema', async () => {
-      await connection.fetchSchemaForTables({'test2': 'table2'}, {});
-      expect(getTableSchema).toBeCalledTimes(1);
-      await connection.fetchSchemaForTables(
-        {'test2': 'table2'},
-        {refreshTimestamp: Date.now() + 10}
-      );
-      expect(getTableSchema).toBeCalledTimes(2);
-    });
-
-    it('caches sql schema', async () => {
-      await connection.fetchSchemaForSQLBlock(SQL_BLOCK_1, {});
-      expect(getSQLBlockSchema).toBeCalledTimes(1);
-      await connection.fetchSchemaForSQLBlock(SQL_BLOCK_1, {});
-      expect(getSQLBlockSchema).toBeCalledTimes(1);
-    });
-
-    it('refreshes sql schema', async () => {
-      await connection.fetchSchemaForSQLBlock(SQL_BLOCK_2, {});
-      expect(getSQLBlockSchema).toBeCalledTimes(1);
-      await connection.fetchSchemaForSQLBlock(SQL_BLOCK_2, {
-        refreshTimestamp: Date.now() + 10,
-      });
-      expect(getSQLBlockSchema).toBeCalledTimes(2);
-    });
+  beforeAll(async () => {
+    connection = new PostgresConnection('duckdb');
+    await connection.runSQL('SELECT 1');
   });
-} else {
-  describe.skip('postgres tests skipped', () => {});
-}
+
+  afterAll(async () => {
+    await connection.close();
+  });
+
+  beforeEach(async () => {
+    getTableSchema = jest
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .spyOn(PostgresConnection.prototype as any, 'getTableSchema')
+      .mockResolvedValue({
+        type: 'struct',
+        dialect: 'postgres',
+        name: 'name',
+        structSource: {type: 'table', tablePath: 'test'},
+        structRelationship: {
+          type: 'basetable',
+          connectionName: 'postgres',
+        },
+        fields: [],
+      });
+
+    getSQLBlockSchema = jest
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .spyOn(PostgresConnection.prototype as any, 'getSQLBlockSchema')
+      .mockResolvedValue({
+        type: 'struct',
+        dialect: 'postgres',
+        name: 'name',
+        structSource: {
+          type: 'sql',
+          method: 'subquery',
+          sqlBlock: SQL_BLOCK_1,
+        },
+        structRelationship: {
+          type: 'basetable',
+          connectionName: 'postgres',
+        },
+        fields: [],
+      });
+  });
+
+  afterEach(() => {
+    jest.resetAllMocks();
+  });
+
+  it('caches table schema', async () => {
+    await connection.fetchSchemaForTables({'test1': 'table1'}, {});
+    expect(getTableSchema).toBeCalledTimes(1);
+    await connection.fetchSchemaForTables({'test1': 'table1'}, {});
+    expect(getTableSchema).toBeCalledTimes(1);
+  });
+
+  it('refreshes table schema', async () => {
+    await connection.fetchSchemaForTables({'test2': 'table2'}, {});
+    expect(getTableSchema).toBeCalledTimes(1);
+    await connection.fetchSchemaForTables(
+      {'test2': 'table2'},
+      {refreshTimestamp: Date.now() + 10}
+    );
+    expect(getTableSchema).toBeCalledTimes(2);
+  });
+
+  it('caches sql schema', async () => {
+    await connection.fetchSchemaForSQLBlock(SQL_BLOCK_1, {});
+    expect(getSQLBlockSchema).toBeCalledTimes(1);
+    await connection.fetchSchemaForSQLBlock(SQL_BLOCK_1, {});
+    expect(getSQLBlockSchema).toBeCalledTimes(1);
+  });
+
+  it('refreshes sql schema', async () => {
+    await connection.fetchSchemaForSQLBlock(SQL_BLOCK_2, {});
+    expect(getSQLBlockSchema).toBeCalledTimes(1);
+    await connection.fetchSchemaForSQLBlock(SQL_BLOCK_2, {
+      refreshTimestamp: Date.now() + 10,
+    });
+    expect(getSQLBlockSchema).toBeCalledTimes(2);
+  });
+});
 
 const SQL_BLOCK_1 = {
   type: 'sqlBlock',
