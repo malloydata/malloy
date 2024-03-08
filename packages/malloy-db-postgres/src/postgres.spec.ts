@@ -41,6 +41,7 @@ if (!envDatabases.includes('postgres')) {
  * The connection is reused for each test, so if you do not name your tables
  * and keys uniquely for each test you will see cross test interactions.
  */
+
 describe('PostgresConnection', () => {
   let connection: PostgresConnection;
   let getTableSchema: jest.SpyInstance;
