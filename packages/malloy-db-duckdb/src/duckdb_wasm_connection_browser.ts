@@ -26,7 +26,7 @@ import {
   DuckDBWASMConnection as DuckDBWASMConnectionBase,
   unwrapArrow,
 } from './duckdb_wasm_connection';
-import {MDConnection} from '@motherduckdb/wasm-client';
+import {MDConnection} from '@motherduck/wasm-client';
 import {QueryDataRow} from '@malloydata/malloy';
 
 export class DuckDBWASMConnection extends DuckDBWASMConnectionBase {

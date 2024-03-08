@@ -29,7 +29,7 @@ const transformIgnoreModules = [
   'lit',
   '@lit',
   '@lit-labs',
-  '@motherduckdb/wasm-client',
+  '@motherduck/wasm-client',
 ].join('|');
 
 module.exports = {
