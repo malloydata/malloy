@@ -482,7 +482,9 @@ class QueryField extends QueryNode {
           return args[entry.argIndexes[0]];
         }
       } else if (fragment.type === 'aggregate_order_by') {
-        return orderBy ? [` ${orderBy}`] : [];
+        return orderBy
+          ? [` ${fragment.prefix ?? ''}${orderBy}${fragment.suffix ?? ''}`]
+          : [];
       } else if (fragment.type === 'aggregate_limit') {
         return limit ? [` ${limit}`] : [];
       }
