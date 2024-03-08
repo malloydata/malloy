@@ -2,7 +2,7 @@ import {Meta} from '@storybook/html';
 import script from './static/bars.malloy?raw';
 import {createLoader} from './util';
 import './themes.css';
-import '../component/render';
+import '../component/render-webcomponent';
 
 const meta: Meta = {
   title: 'Malloy Next/Bars',
