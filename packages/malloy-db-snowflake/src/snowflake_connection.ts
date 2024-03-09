@@ -201,8 +201,6 @@ export class SnowflakeConnection
     tableKey: string,
     tablePath: string
   ): Promise<StructDef> {
-
-
     const structDef: StructDef = {
       type: 'struct',
       dialect: 'snowflake',
