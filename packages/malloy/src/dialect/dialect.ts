@@ -113,6 +113,9 @@ export abstract class Dialect {
   // Snowflake can't yet support pipelines in nested views.
   supportsPipelinesInViews = true;
 
+  // Some dialects don't supporrt arrays.
+  supportsArraysInData = true;
+
   // return the definition of a function with the given name
   abstract getGlobalFunctionDef(
     name: string
