@@ -527,7 +527,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
 
   test(
-    `number as null- ${databaseName}`,
+    `number as null 2 - ${databaseName}`,
     onlyIf(runtime.supportsNesting, async () => {
       // a cross join produces a Many to Many result.
       // symmetric aggregate are needed on both sides of the join
@@ -845,21 +845,26 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
 
   test(
     `single value to udf - ${databaseName}`,
-    onlyIf(runtime.supportsNesting, async () => {
-      await expect(`
+    onlyIf(
+      runtime.supportsNesting && runtime.dialect.supportsPipelinesInViews,
+      async () => {
+        await expect(`
         run: ${databaseName}.table('malloytest.state_facts') extend {
           view: fun is {
             aggregate: t is count()
           } -> { select: t1 is t+1 }
         } -> { nest: fun }
       `).malloyResultMatches(runtime, {'fun.t1': 52});
-    })
+      }
+    )
   );
 
   test(
     `Multi value to udf - ${databaseName}`,
-    onlyIf(runtime.supportsNesting, async () => {
-      await expect(`
+    onlyIf(
+      runtime.supportsNesting && runtime.dialect.supportsPipelinesInViews,
+      async () => {
+        await expect(`
         run: ${databaseName}.table('malloytest.state_facts') extend {
           view: fun is {
             group_by: one is 1
@@ -869,13 +874,16 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
           nest: fun
         }
       `).malloyResultMatches(runtime, {'fun.t1': 52});
-    })
+      }
+    )
   );
 
   test(
     `Multi value to udf group by - ${databaseName}`,
-    onlyIf(runtime.supportsNesting, async () => {
-      await expect(`
+    onlyIf(
+      runtime.supportsNesting && runtime.dialect.supportsPipelinesInViews,
+      async () => {
+        await expect(`
         run: ${databaseName}.table('malloytest.state_facts') extend {
           view: fun is {
             group_by: one is 1
@@ -885,7 +893,8 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
           nest: fun
         }
       `).malloyResultMatches(runtime, {'fun.t1': 52});
-    })
+      }
+    )
   );
 
   const sql1234 = `${databaseName}.sql('SELECT 1 as ${q`a`}, 2 as ${q`b`} UNION ALL SELECT 3, 4')`;
@@ -980,9 +989,11 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
 
   test(
     `array unnest - ${databaseName}`,
-    onlyIf(runtime.supportsNesting, async () => {
-      const splitFN = getSplitFunction(databaseName);
-      await expect(`
+    onlyIf(
+      runtime.supportsNesting && runtime.dialect.supportsArraysInData,
+      async () => {
+        const splitFN = getSplitFunction(databaseName);
+        await expect(`
       run: ${databaseName}.sql("""
         SELECT
           ${q`city`},
@@ -994,15 +1005,18 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
         aggregate: c is count()
       }
       `).malloyResultMatches(runtime, {c: 145});
-    })
+      }
+    )
   );
 
   // make sure we can count the total number of elements when fanning out.
   test(
     `array unnest x 2 - ${databaseName}`,
-    onlyIf(runtime.supportsNesting, async () => {
-      const splitFN = getSplitFunction(databaseName);
-      await expect(`
+    onlyIf(
+      runtime.supportsNesting && runtime.dialect.supportsArraysInData,
+      async () => {
+        const splitFN = getSplitFunction(databaseName);
+        await expect(`
       run: ${databaseName}.sql("""
         SELECT
           ${q`city`},
@@ -1016,7 +1030,8 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
           c is words.count()
           a is abreak.count()
       }`).malloyResultMatches(runtime, {b: 3552, c: 4586, a: 6601});
-    })
+      }
+    )
   );
 
   test(
@@ -1158,14 +1173,14 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
     const back = '\\';
     test('backslash quote', async () => {
       await expect(`
-        run: ${databaseName}.sql('SELECT 1') -> {
+        run: ${databaseName}.sql('SELECT 1 as one') -> {
           select: tick is '${back}${tick}'
         }
       `).malloyResultMatches(runtime, {tick});
     });
     test('backslash backslash', async () => {
       await expect(`
-        run: ${databaseName}.sql("SELECT 1") -> {
+        run: ${databaseName}.sql("SELECT 1 as one") -> {
           select: back is '${back}${back}'
         }
       `).malloyResultMatches(runtime, {back});

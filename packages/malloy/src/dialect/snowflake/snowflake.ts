@@ -108,6 +108,8 @@ export class SnowflakeDialect extends Dialect {
   dontUnionIndex = false;
   supportsQualify = false;
   supportsNesting = true;
+  supportsPipelinesInViews = false;
+  supportsArraysInData = false;
 
   // don't mess with the table pathing.
   quoteTablePath(tablePath: string): string {
@@ -115,7 +117,9 @@ export class SnowflakeDialect extends Dialect {
   }
 
   sqlGroupSetTable(groupSetCount: number): string {
-    return `SELECT index as group_set FROM TABLE(FLATTEN(ARRAY_GENERATE_RANGE(0, ${groupSetCount})))`;
+    return `CROSS JOIN (SELECT index as group_set FROM TABLE(FLATTEN(ARRAY_GENERATE_RANGE(0, ${
+      groupSetCount + 1
+    }))))`;
   }
 
   sqlAnyValue(groupSet: number, fieldName: string): string {
@@ -142,7 +146,7 @@ export class SnowflakeDialect extends Dialect {
   ): string {
     const fields = this.mapFieldsForObjectConstruct(fieldList);
     const orderByClause = orderBy ? ` WITHIN GROUP (${orderBy})` : '';
-    const aggClause = `ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN OBJECT_CONSTRUCT(${fields}) END)${orderByClause}`;
+    const aggClause = `ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN OBJECT_CONSTRUCT_KEEP_NULL(${fields}) END)${orderByClause}`;
     if (limit === undefined) {
       return `COALESCE(${aggClause}, [])`;
     }
@@ -151,7 +155,7 @@ export class SnowflakeDialect extends Dialect {
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
     const fields = this.mapFieldsForObjectConstruct(fieldList);
-    return `(ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN OBJECT_CONSTRUCT(${fields}) END) WITHIN GROUP (ORDER BY 1 ASC NULLS LAST))[0]`;
+    return `(ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN OBJECT_CONSTRUCT_KEEP_NULL(${fields}) END) WITHIN GROUP (ORDER BY 1 ASC NULLS LAST))[0]`;
   }
 
   sqlAnyValueLastTurtle(
@@ -170,7 +174,7 @@ export class SnowflakeDialect extends Dialect {
     const nullValues = fieldList
       .map(f => `'${f.sqlOutputName}', NULL`)
       .join(', ');
-    return `COALESCE(ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN OBJECT_CONSTRUCT(${fields}) END)[0], OBJECT_CONSTRUCT_KEEP_NULL(${nullValues}))`;
+    return `COALESCE(ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN OBJECT_CONSTRUCT_KEEP_NULL(${fields}) END)[0], OBJECT_CONSTRUCT_KEEP_NULL(${nullValues}))`;
   }
 
   sqlUnnestAlias(
@@ -243,6 +247,8 @@ export class SnowflakeDialect extends Dialect {
       let snowflakeType = fieldType;
       if (fieldType === 'string') {
         snowflakeType = 'varchar';
+      } else if (fieldType === 'struct') {
+        snowflakeType = 'variant';
       }
       return `${alias}.value:"${fieldName}"::${snowflakeType}`;
     }
@@ -263,12 +269,13 @@ export class SnowflakeDialect extends Dialect {
     throw new Error('not implemented yet');
   }
 
-  sqlCreateFunctionCombineLastStage(lastStageName: string): string {
-    return `SELECT ARRAY_AGG(OBJECT_CONSTRUCT(*)) FROM ${lastStageName}`;
+  sqlCreateFunctionCombineLastStage(_lastStageName: string): string {
+    throw new Error('not implemented yet');
+    // return `SELECT ARRAY_AGG(OBJECT_CONSTRUCT(*)) FROM ${lastStageName}`;
   }
 
   sqlSelectAliasAsStruct(alias: string): string {
-    return `OBJECT_CONSTRUCT(${alias}.*)`;
+    return `OBJECT_CONSTRUCT_KEEP_NULL(${alias}.*)`;
   }
   sqlMaybeQuoteIdentifier(identifier: string): string {
     return `"${identifier}"`;

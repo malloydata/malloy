@@ -34,11 +34,11 @@ import {DateTime as LuxonDateTime} from 'luxon';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
-const timeSQL =
-  "SELECT DATE '2021-02-24' as t_date, TIMESTAMP '2021-02-24 03:05:06' as t_timestamp";
-
 // MTOY todo look at this list for timezone problems, I know there are some
 describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
+  const q = runtime.getQuoter();
+
+  const timeSQL = `SELECT DATE '2021-02-24' as ${q`t_date`}, TIMESTAMP '2021-02-24 03:05:06' as ${q`t_timestamp`} `;
   const sqlEq = mkSqlEqWith(runtime, dbName, {sql: timeSQL});
 
   describe('interval measurement', () => {
@@ -654,6 +654,7 @@ describe.each(runtimes.runtimeList)('%s: tz literals', (dbName, runtime) => {
 });
 
 describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
+  const q = runtime.getQuoter();
   test('literal timestamps', async () => {
     const query = runtime.loadQuery(
       `
@@ -708,7 +709,7 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
 
   test('cast date to timestamp', async () => {
     await expect(
-      `run: ${dbName}.sql(" SELECT DATE '2020-02-20'  AS mex_20") -> {
+      `run: ${dbName}.sql(""" SELECT DATE '2020-02-20'  AS ${q`mex_20`} """) -> {
         timezone: '${zone}'
         select: mex_ts is mex_20::timestamp
       }`
