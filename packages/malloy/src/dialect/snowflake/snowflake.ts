@@ -146,7 +146,7 @@ export class SnowflakeDialect extends Dialect {
   ): string {
     const fields = this.mapFieldsForObjectConstruct(fieldList);
     const orderByClause = orderBy ? ` WITHIN GROUP (${orderBy})` : '';
-    const aggClause = `ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN OBJECT_CONSTRUCT(${fields}) END)${orderByClause}`;
+    const aggClause = `ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN OBJECT_CONSTRUCT_KEEP_NULL(${fields}) END)${orderByClause}`;
     if (limit === undefined) {
       return `COALESCE(${aggClause}, [])`;
     }
@@ -155,7 +155,7 @@ export class SnowflakeDialect extends Dialect {
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
     const fields = this.mapFieldsForObjectConstruct(fieldList);
-    return `(ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN OBJECT_CONSTRUCT(${fields}) END) WITHIN GROUP (ORDER BY 1 ASC NULLS LAST))[0]`;
+    return `(ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN OBJECT_CONSTRUCT_KEEP_NULL(${fields}) END) WITHIN GROUP (ORDER BY 1 ASC NULLS LAST))[0]`;
   }
 
   sqlAnyValueLastTurtle(
@@ -174,7 +174,7 @@ export class SnowflakeDialect extends Dialect {
     const nullValues = fieldList
       .map(f => `'${f.sqlOutputName}', NULL`)
       .join(', ');
-    return `COALESCE(ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN OBJECT_CONSTRUCT(${fields}) END)[0], OBJECT_CONSTRUCT_KEEP_NULL(${nullValues}))`;
+    return `COALESCE(ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN OBJECT_CONSTRUCT_KEEP_NULL(${fields}) END)[0], OBJECT_CONSTRUCT_KEEP_NULL(${nullValues}))`;
   }
 
   sqlUnnestAlias(
@@ -275,7 +275,7 @@ export class SnowflakeDialect extends Dialect {
   }
 
   sqlSelectAliasAsStruct(alias: string): string {
-    return `OBJECT_CONSTRUCT(${alias}.*)`;
+    return `OBJECT_CONSTRUCT_KEEP_NULL(${alias}.*)`;
   }
   sqlMaybeQuoteIdentifier(identifier: string): string {
     return `"${identifier}"`;

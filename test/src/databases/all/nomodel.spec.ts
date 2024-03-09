@@ -527,7 +527,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
 
   test(
-    `number as null- ${databaseName}`,
+    `number as null 2 - ${databaseName}`,
     onlyIf(runtime.supportsNesting, async () => {
       // a cross join produces a Many to Many result.
       // symmetric aggregate are needed on both sides of the join
@@ -1173,14 +1173,14 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
     const back = '\\';
     test('backslash quote', async () => {
       await expect(`
-        run: ${databaseName}.sql('SELECT 1') -> {
+        run: ${databaseName}.sql('SELECT 1 as one') -> {
           select: tick is '${back}${tick}'
         }
       `).malloyResultMatches(runtime, {tick});
     });
     test('backslash backslash', async () => {
       await expect(`
-        run: ${databaseName}.sql("SELECT 1") -> {
+        run: ${databaseName}.sql("SELECT 1 as one") -> {
           select: back is '${back}${back}'
         }
       `).malloyResultMatches(runtime, {back});
