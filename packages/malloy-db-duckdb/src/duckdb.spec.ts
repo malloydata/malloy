@@ -25,6 +25,17 @@ import {DuckDBCommon} from './duckdb_common';
 import {DuckDBConnection} from './duckdb_connection';
 import {SQLBlock} from '@malloydata/malloy';
 
+const envDatabases = (
+  process.env['MALLOY_DATABASES'] ||
+  process.env['MALLOY_DATABASE'] ||
+  'duckdb'
+).split(',');
+
+let describe = globalThis.describe;
+if (!envDatabases.includes('duckdb')) {
+  describe = describe.skip;
+}
+
 /*
  * !IMPORTANT
  *
@@ -62,39 +73,39 @@ describe('DuckDBConnection', () => {
 
     it('caches table schema', async () => {
       await connection.fetchSchemaForTables({'test1': 'table1'}, {});
-      expect(runRawSQL).toBeCalledTimes(1);
+      expect(runRawSQL).toHaveBeenCalledTimes(1);
       await new Promise(resolve => setTimeout(resolve));
       await connection.fetchSchemaForTables({'test1': 'table1'}, {});
-      expect(runRawSQL).toBeCalledTimes(1);
+      expect(runRawSQL).toHaveBeenCalledTimes(1);
     });
 
     it('refreshes table schema', async () => {
       await connection.fetchSchemaForTables({'test2': 'table2'}, {});
-      expect(runRawSQL).toBeCalledTimes(1);
+      expect(runRawSQL).toHaveBeenCalledTimes(1);
       await new Promise(resolve => setTimeout(resolve));
       await connection.fetchSchemaForTables(
         {'test2': 'table2'},
         {refreshTimestamp: Date.now() + 10}
       );
-      expect(runRawSQL).toBeCalledTimes(2);
+      expect(runRawSQL).toHaveBeenCalledTimes(2);
     });
 
     it('caches sql schema', async () => {
       await connection.fetchSchemaForSQLBlock(SQL_BLOCK_1, {});
-      expect(runRawSQL).toBeCalledTimes(1);
+      expect(runRawSQL).toHaveBeenCalledTimes(1);
       await new Promise(resolve => setTimeout(resolve));
       await connection.fetchSchemaForSQLBlock(SQL_BLOCK_1, {});
-      expect(runRawSQL).toBeCalledTimes(1);
+      expect(runRawSQL).toHaveBeenCalledTimes(1);
     });
 
     it('refreshes sql schema', async () => {
       await connection.fetchSchemaForSQLBlock(SQL_BLOCK_2, {});
-      expect(runRawSQL).toBeCalledTimes(1);
+      expect(runRawSQL).toHaveBeenCalledTimes(1);
       await new Promise(resolve => setTimeout(resolve));
       await connection.fetchSchemaForSQLBlock(SQL_BLOCK_2, {
         refreshTimestamp: Date.now() + 10,
       });
-      expect(runRawSQL).toBeCalledTimes(2);
+      expect(runRawSQL).toHaveBeenCalledTimes(2);
     });
   });
 

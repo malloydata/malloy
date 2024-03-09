@@ -48,6 +48,9 @@ const [describe, databases] = describeIfDatabaseAvailable([
 ]);
 
 describe('Streaming tests', () => {
+  if (!databases.length) {
+    it.skip('skipped', () => {});
+  }
   const runtimes = new RuntimeList(databases);
 
   afterAll(async () => {

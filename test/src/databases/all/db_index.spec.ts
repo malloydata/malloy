@@ -25,7 +25,7 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 
 import {RuntimeList, allDatabases} from '../../runtimes';
-import {databasesFromEnvironmentOr, testIf} from '../../util';
+import {databasesFromEnvironmentOr, onlyIf} from '../../util';
 import '../../util/db-jest-matchers';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
@@ -96,16 +96,16 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
 
   // bigquery doesn't support row count based sampling.
-  testIf(databaseName !== 'bigquery')(
+  test(
     `index rows count - ${databaseName}`,
-    async () => {
+    onlyIf(databaseName !== 'bigquery', async () => {
       await expect(`
         run: ${databaseName}.table('malloytest.state_facts') extend {
           dimension: one is 'one'
         } -> {index:one, state; sample: 10 }
             -> {select: fieldName, weight, fieldValue; order_by: 2 desc; where: fieldName = 'one'}
       `).malloyResultMatches(runtime, {fieldName: 'one', weight: 10});
-    }
+    })
   );
 
   it(`index rows count - ${databaseName}`, async () => {

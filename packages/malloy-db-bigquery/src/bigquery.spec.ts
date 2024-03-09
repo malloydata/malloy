@@ -28,6 +28,17 @@ import * as util from 'util';
 import * as fs from 'fs';
 import {fileURLToPath} from 'url';
 
+const envDatabases = (
+  process.env['MALLOY_DATABASES'] ||
+  process.env['MALLOY_DATABASE'] ||
+  'bigquery'
+).split(',');
+
+let describe = globalThis.describe;
+if (!envDatabases.includes('bigquery')) {
+  describe = describe.skip;
+}
+
 describe('db:BigQuery', () => {
   let bq: BigQueryConnection;
   let runtime: malloy.Runtime;
