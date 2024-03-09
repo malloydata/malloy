@@ -179,10 +179,12 @@ export class SnowflakeConnection
   ): Promise<void> {
     const rows = await this.executor.batch(infoQuery);
     for (const row of rows) {
-      const snowflakeDataType = row['DATA_TYPE'] as string;
+      // data types look like `VARCHAR(1234)`
+      let snowflakeDataType = row['type'] as string;
+      snowflakeDataType = snowflakeDataType.toLocaleLowerCase().split('(')[0];
       const s = structDef;
       const malloyType = this.dialect.sqlTypeToMalloyType(snowflakeDataType);
-      const name = row['COLUMN_NAME'] as string;
+      const name = row['name'] as string;
       if (malloyType) {
         s.fields.push({...malloyType, name});
       } else {
@@ -199,14 +201,7 @@ export class SnowflakeConnection
     tableKey: string,
     tablePath: string
   ): Promise<StructDef> {
-    // looks like snowflake:schemaName.tableName
-    tableKey = tableKey.toLowerCase();
 
-    let [schema, tableName] = ['', tablePath];
-    const schema_and_table = tablePath.split('.');
-    if (schema_and_table.length === 2) {
-      [schema, tableName] = schema_and_table;
-    }
 
     const structDef: StructDef = {
       type: 'struct',
@@ -231,16 +226,7 @@ export class SnowflakeConnection
     //  GROUP BY 1,2
     //  ORDER BY PATH
 
-    const infoQuery = `
-  SELECT
-    column_name, -- LOWER(COLUMN_NAME) AS column_name,
-    LOWER(DATA_TYPE) as data_type
-  FROM
-    INFORMATION_SCHEMA.COLUMNS
-  WHERE
-    table_schema = UPPER('${schema}')
-    AND table_name = UPPER('${tableName}');
-    `;
+    const infoQuery = `DESCRIBE TABLE ${tablePath}`;
 
     await this.schemaFromQuery(infoQuery, structDef);
     return structDef;
@@ -304,21 +290,11 @@ export class SnowflakeConnection
     const tempTableName = this.getTempTableName(sqlRef.selectStr);
     this.runSQL(
       `
-      CREATE OR REPLACE TEMP TABLE ${tempTableName} as SELECT * FROM (
-        ${sqlRef.selectStr}
-      ) as x WHERE false;
+      CREATE OR REPLACE TEMP VIEW ${tempTableName} as ${sqlRef.selectStr};
       `
     );
 
-    const infoQuery = `
-  SELECT
-    column_name, -- LOWER(column_name) as column_name,
-    LOWER(data_type) as data_type
-  FROM
-    INFORMATION_SCHEMA.COLUMNS
-  WHERE
-    table_name = UPPER('${tempTableName}');
-  `;
+    const infoQuery = `DESCRIBE TABLE ${tempTableName}`;
     await this.schemaFromQuery(infoQuery, structDef);
     return structDef;
   }
