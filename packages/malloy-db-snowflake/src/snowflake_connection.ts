@@ -131,13 +131,9 @@ export class SnowflakeConnection
     await this.executor.done();
   }
 
-  private getTempTableName(sqlCommand: string): string {
+  private getTempViewName(sqlCommand: string): string {
     const hash = crypto.createHash('md5').update(sqlCommand).digest('hex');
-    let tableName = `tt${hash}`;
-    if (this.scratchSpace) {
-      tableName = `${this.scratchSpace.database}.${this.scratchSpace.schema}.${tableName}`;
-    }
-    return tableName;
+    return `tt${hash}`;
   }
 
   public async runSQL(
@@ -285,7 +281,7 @@ export class SnowflakeConnection
     };
 
     // create temp table with same schema as the query
-    const tempTableName = this.getTempTableName(sqlRef.selectStr);
+    const tempTableName = this.getTempViewName(sqlRef.selectStr);
     this.runSQL(
       `
       CREATE OR REPLACE TEMP VIEW ${tempTableName} as ${sqlRef.selectStr};
@@ -325,7 +321,7 @@ export class SnowflakeConnection
   }
 
   public async manifestTemporaryTable(sqlCommand: string): Promise<string> {
-    const tableName = this.getTempTableName(sqlCommand);
+    const tableName = this.getTempViewName(sqlCommand);
     const cmd = `CREATE OR REPLACE TEMP TABLE ${tableName} AS (${sqlCommand});`;
     await this.runSQL(cmd);
     return tableName;

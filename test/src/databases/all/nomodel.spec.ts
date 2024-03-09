@@ -843,7 +843,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
     }
   );
 
-  testIf(runtime.supportsNesting)(
+  testIf(runtime.supportsNesting && runtime.dialect.supportsPipelinesInViews)(
     `single value to udf - ${databaseName}`,
     async () => {
       await expect(`
@@ -856,7 +856,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
     }
   );
 
-  testIf(runtime.supportsNesting)(
+  testIf(runtime.supportsNesting && runtime.dialect.supportsPipelinesInViews)(
     `Multi value to udf - ${databaseName}`,
     async () => {
       await expect(`
@@ -872,7 +872,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
     }
   );
 
-  testIf(runtime.supportsNesting)(
+  testIf(runtime.supportsNesting && runtime.dialect.supportsPipelinesInViews)(
     `Multi value to udf group by - ${databaseName}`,
     async () => {
       await expect(`

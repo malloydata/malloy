@@ -108,6 +108,7 @@ export class SnowflakeDialect extends Dialect {
   dontUnionIndex = false;
   supportsQualify = false;
   supportsNesting = true;
+  supportsPipelineInViews = false;
 
   // don't mess with the table pathing.
   quoteTablePath(tablePath: string): string {
@@ -267,8 +268,9 @@ export class SnowflakeDialect extends Dialect {
     throw new Error('not implemented yet');
   }
 
-  sqlCreateFunctionCombineLastStage(lastStageName: string): string {
-    return `SELECT ARRAY_AGG(OBJECT_CONSTRUCT(*)) FROM ${lastStageName}`;
+  sqlCreateFunctionCombineLastStage(_lastStageName: string): string {
+    throw new Error('not implemented yet');
+    // return `SELECT ARRAY_AGG(OBJECT_CONSTRUCT(*)) FROM ${lastStageName}`;
   }
 
   sqlSelectAliasAsStruct(alias: string): string {
