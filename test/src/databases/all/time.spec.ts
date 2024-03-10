@@ -478,7 +478,7 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
         (
           await runQuery(
             runtime,
-            `run: ${dbName}.sql("SELECT 1") extend {
+            `run: ${dbName}.sql("SELECT 1 as one") extend {
               timezone: 'America/Los_Angeles'
               dimension: la_time is @2021-02-24 03:05:06
             } -> {
@@ -497,7 +497,7 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
           (
             await runQuery(
               runtime,
-              `run: ${dbName}.sql("SELECT 1") extend {
+              `run: ${dbName}.sql("SELECT 1 as one") extend {
                 dimension: default_time is @2021-02-24 03:05:06
                 view: la_query is {
                   timezone: 'America/Los_Angeles'
@@ -526,7 +526,7 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
           (
             await runQuery(
               runtime,
-              `run: ${dbName}.sql("SELECT 1") extend {
+              `run: ${dbName}.sql("SELECT 1 as one") extend {
                 dimension: default_time is @2021-02-24 03:05:06
                 view: undef_query is {
                   select: undef_time is @2021-02-24 03:05:06
@@ -547,7 +547,7 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
       onlyIf(runtime.supportsNesting, async () => {
         const theQuery = await runQuery(
           runtime,
-          `run: ${dbName}.sql('SELECT 1') extend {
+          `run: ${dbName}.sql('SELECT 1 as one') extend {
             timezone: 'America/New_York'
             dimension: ny_time is @2021-02-24 03:05:06
             view: la_query is {
@@ -627,7 +627,7 @@ describe.each(runtimes.runtimeList)('%s: tz literals', (dbName, runtime) => {
     // really tests nothing, but I feel calmer with this here.
     const query = runtime.loadQuery(
       `
-        run: ${dbName}.sql("SELECT 1") -> {
+        run: ${dbName}.sql("SELECT 1 as one") -> {
           group_by: literal_time is @2020-02-20 00:00:00
         }
 `
@@ -641,7 +641,7 @@ describe.each(runtimes.runtimeList)('%s: tz literals', (dbName, runtime) => {
   test('literal with zone name', async () => {
     const query = runtime.loadQuery(
       `
-        run: ${dbName}.sql("SELECT 1") -> {
+        run: ${dbName}.sql("SELECT 1 as one") -> {
           group_by: literal_time is @2020-02-20 00:00:00[America/Mexico_City]
         }
 `
@@ -658,7 +658,7 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
   test('literal timestamps', async () => {
     const query = runtime.loadQuery(
       `
-        run: ${dbName}.sql("SELECT 1") -> {
+        run: ${dbName}.sql("SELECT 1 as one") -> {
           timezone: '${zone}'
           group_by: literal_time is @2020-02-20 00:00:00
         }
@@ -672,7 +672,7 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
 
   test('extract', async () => {
     await expect(
-      `run: ${dbName}.sql("SELECT 1") -> {
+      `run: ${dbName}.sql("SELECT 1 as one") -> {
         timezone: '${zone}'
         extend: { dimension: utc_midnight is @2020-02-20 00:00:00[UTC] }
         select:

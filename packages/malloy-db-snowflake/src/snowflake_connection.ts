@@ -166,14 +166,16 @@ export class SnowflakeConnection
   }
 
   public async test(): Promise<void> {
-    await this.executor.batch('SELECT 1');
+    await this.executor.batch('SELECT 1 as one');
   }
 
-  private async schemaFromQuery(
-    infoQuery: string,
+  private async schemaFromTablePath(
+    tablePath: string,
     structDef: StructDef
   ): Promise<void> {
+    const infoQuery = `DESCRIBE TABLE ${tablePath}`;
     const rows = await this.executor.batch(infoQuery);
+    const variants: string[] = [];
     for (const row of rows) {
       // data types look like `VARCHAR(1234)`
       let snowflakeDataType = row['type'] as string;
@@ -181,7 +183,9 @@ export class SnowflakeConnection
       const s = structDef;
       const malloyType = this.dialect.sqlTypeToMalloyType(snowflakeDataType);
       const name = row['name'] as string;
-      if (malloyType) {
+      if (snowflakeDataType === 'variant' || snowflakeDataType === 'array') {
+        variants.push(name);
+      } else if (malloyType) {
         s.fields.push({...malloyType, name});
       } else {
         s.fields.push({
@@ -191,6 +195,30 @@ export class SnowflakeConnection
         });
       }
     }
+    // if we have variants, sample the data
+    if (variants.length > 0) {
+      const sampleQuery = `
+        SELECT regexp_replace(PATH, '\\\\[.*\\\\]', '[]') as PATH, lower(TYPEOF(value)) as type
+        FROM (select object_construct(*) o from  ${tablePath} limit 100)
+            ,table(flatten(input => o, recursive => true)) as meta
+        WHERE lower(TYPEOF(value)) <> 'array'
+        GROUP BY 1,2
+        ORDER BY PATH;
+      `;
+      const fieldList = await this.executor.batch(sampleQuery);
+      console.log(fieldList);
+    }
+    // This is how we get variant information
+
+    // WITH tbl as (
+    //   SELECT * FROM malloytest.ga_sample
+    //  )
+    //  SELECT regexp_replace(PATH, '\\[.*\\]', '[]') as PATH, lower(TYPEOF(value)) as type
+    //  FROM (select object_construct(*) o from  tbl limit 100)
+    //      ,table(flatten(input => o, recursive => true)) as meta
+    //  WHERE lower(TYPEOF(value)) <> 'array'
+    //  GROUP BY 1,2
+    //  ORDER BY PATH;
   }
 
   private async getTableSchema(
@@ -208,21 +236,7 @@ export class SnowflakeConnection
       },
       fields: [],
     };
-    // This is how we get variant information
-
-    // WITH tbl as (
-    //   SELECT * FROM malloytest.ga_sample
-    //  )
-    //  SELECT regexp_replace(PATH, '\\[.*\\]', '[]') as PATH, lower(TYPEOF(value)) as type
-    //  FROM (select object_construct(*) o from  tbl limit 100)
-    //      ,table(flatten(input => o, recursive => true)) as meta
-    //  WHERE lower(TYPEOF(value)) <> 'array'
-    //  GROUP BY 1,2
-    //  ORDER BY PATH
-
-    const infoQuery = `DESCRIBE TABLE ${tablePath}`;
-
-    await this.schemaFromQuery(infoQuery, structDef);
+    await this.schemaFromTablePath(tablePath, structDef);
     return structDef;
   }
 
@@ -288,8 +302,7 @@ export class SnowflakeConnection
       `
     );
 
-    const infoQuery = `DESCRIBE TABLE ${tempTableName}`;
-    await this.schemaFromQuery(infoQuery, structDef);
+    await this.schemaFromTablePath(tempTableName, structDef);
     return structDef;
   }
 

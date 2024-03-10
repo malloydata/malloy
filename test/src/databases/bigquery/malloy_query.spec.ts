@@ -53,7 +53,7 @@ async function runQuery(model: malloy.ModelMaterializer, query: string) {
 
 async function bqCompile(sql: string): Promise<boolean> {
   try {
-    await bq.executeSQLRaw(`WITH test AS(\n${sql}) SELECT 1`);
+    await bq.executeSQLRaw(`WITH test AS(\n${sql}) SELECT 1 as one`);
   } catch (e) {
     malloy.Malloy.log.error(`SQL: didn't compile\n=============\n${sql}`);
     throw e;

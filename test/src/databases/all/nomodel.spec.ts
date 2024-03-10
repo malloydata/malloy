@@ -990,7 +990,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
   test(
     `array unnest - ${databaseName}`,
     onlyIf(
-      runtime.supportsNesting && runtime.dialect.supportsArraysInData,
+      runtime.supportsNesting, // && runtime.dialect.supportsArraysInData,
       async () => {
         const splitFN = getSplitFunction(databaseName);
         await expect(`
