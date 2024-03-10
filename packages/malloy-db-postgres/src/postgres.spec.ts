@@ -33,6 +33,7 @@ const envDatabases = (
 let describe = globalThis.describe;
 if (!envDatabases.includes('postgres')) {
   describe = describe.skip;
+  describe.skip = describe;
 }
 
 /*

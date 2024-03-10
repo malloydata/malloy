@@ -27,6 +27,18 @@ import './util/db-jest-matchers';
 
 const runtime = runtimeFor('duckdb');
 
+const envDatabases = (
+  process.env['MALLOY_DATABASES'] ||
+  process.env['MALLOY_DATABASE'] ||
+  'duckdb'
+).split(',');
+
+let describe = globalThis.describe;
+if (!envDatabases.includes('duckdb')) {
+  describe = describe.skip;
+  describe.skip = describe;
+}
+
 describe('extendModel', () => {
   test('can run query in extend section', async () => {
     const model = runtime.loadModel(`
