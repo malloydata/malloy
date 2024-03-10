@@ -990,7 +990,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
   test(
     `array unnest - ${databaseName}`,
     onlyIf(
-      runtime.supportsNesting, // && runtime.dialect.supportsArraysInData,
+      runtime.supportsNesting && runtime.dialect.supportsArraysInData,
       async () => {
         const splitFN = getSplitFunction(databaseName);
         await expect(`
@@ -1023,7 +1023,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
           ${splitFN!(q`city`, ' ')} as ${q`words`},
           ${splitFN!(q`city`, 'A')} as ${q`abreak`}
         FROM ${rootDbPath(databaseName)}malloytest.aircraft
-        WHERE city IS NOT null
+        WHERE ${q`city`} IS NOT null
       """) -> {
         aggregate:
           b is count()
