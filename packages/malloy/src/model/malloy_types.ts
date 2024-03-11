@@ -217,6 +217,8 @@ export function isFunctionParameterFragment(
 
 export interface AggregateOrderByFragment {
   type: 'aggregate_order_by';
+  prefix?: string;
+  suffix?: string;
 }
 
 export interface AggregateLimitFragment {
