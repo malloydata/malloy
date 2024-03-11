@@ -30,6 +30,7 @@ import {
   Result,
   Runtime,
 } from '@malloydata/malloy';
+export * from '@malloydata/malloy/test';
 
 // these two helper functions are here just to make older hand built models
 // easier to use in the new world were refs are not strings
@@ -70,43 +71,6 @@ export function fYearEq(field: string, year: number): FilterExpression {
     code: `${field}:@${year}`,
     expressionType: 'scalar',
   };
-}
-
-// accepts databases in env, either via comma-separated dialect list (MALLOY_DATABASES=) or a single
-// database (MALLOY_DATABASE=). returns either databases defined in env or a default list that was passed.
-export function databasesFromEnvironmentOr(
-  defaultDatabases: string[]
-): string[] {
-  return process.env['MALLOY_DATABASES']
-    ? process.env['MALLOY_DATABASES'].split(',')
-    : process.env['MALLOY_DATABASE']
-    ? [process.env['MALLOY_DATABASE']]
-    : defaultDatabases;
-}
-
-const describeSkip: jest.Describe = Object.assign(
-  (
-    name: number | string | Function | jest.FunctionLike,
-    fn: jest.EmptyFunction
-  ) => describe.skip(name, fn),
-  {
-    skip: describe.skip,
-    // eslint-disable-next-line no-restricted-properties
-    only: describe.only,
-    each: (() => () => it.skip('skipped', () => {})) as unknown as jest.Each,
-  }
-);
-
-// confirms that one or more of the databases being tested overlaps with the databases a test suite can accept.
-// if there is overlap, return a tuple of jest.describe and the dialects to be tested
-// if there is no overlap, return a tuple if jest.describe.skip and the dialects to be tested
-export function describeIfDatabaseAvailable(
-  acceptableDatabases: string[]
-): [jest.Describe, string[]] {
-  const currentDatabases = databasesFromEnvironmentOr(acceptableDatabases);
-  const overlap = acceptableDatabases.filter(d => currentDatabases.includes(d));
-
-  return overlap.length > 0 ? [describe, overlap] : [describeSkip, overlap];
 }
 
 interface InitValues {
