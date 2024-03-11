@@ -509,7 +509,7 @@ describe('rendering results', () => {
   describe('date renderer', () => {
     test('date with timezone rendered correctly', async () => {
       const src = `
-        query: mex_query is duckdb.sql('SELECT 1 as ') -> {
+        query: mex_query is duckdb.sql('SELECT 1 as one ') -> {
           timezone: 'America/Mexico_City'
           select: mex_time is @2021-02-24 03:05:06
         }
