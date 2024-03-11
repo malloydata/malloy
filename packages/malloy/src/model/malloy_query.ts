@@ -573,7 +573,8 @@ class QueryField extends QueryNode {
     if (
       frag.name === 'string_agg' &&
       distinctKey &&
-      !context.dialect.supportsAggDistinct
+      !context.dialect.supportsAggDistinct &&
+      context.dialect.name !== 'snowflake'
     ) {
       return this.generateAsymmetricStringAggExpression(
         resultSet,
@@ -1079,6 +1080,7 @@ class QueryField extends QueryNode {
         }
         if (resultStruct.firstSegment.type === 'reduce') {
           const orderSQL = orderingField.fif.getAnalyticalSQL(false);
+          // const orderSQL = this.generateDimFragment(resultSet, context, arg, state)
           obSQL.push(` ${orderSQL} ${ordering.dir || 'ASC'}`);
         } else if (resultStruct.firstSegment.type === 'project') {
           obSQL.push(
@@ -1725,6 +1727,13 @@ class FieldInstanceResult implements FieldInstance {
     for (const [_name, fi] of this.allFields) {
       if (fi instanceof FieldInstanceField) {
         if (fi.fieldUsage.type === 'result') {
+          if (
+            fi.f.fieldDef.type === 'turtle' ||
+            fi.f.fieldDef.type === 'struct' ||
+            expressionIsAnalytic(fi.f.fieldDef.expressionType)
+          ) {
+            continue;
+          }
           firstField ||= fi.fieldUsage.resultIndex;
           if (['date', 'timestamp'].indexOf(fi.f.fieldDef.type) > -1) {
             return [{dir: 'desc', field: fi.fieldUsage.resultIndex}];
@@ -3037,7 +3046,18 @@ class QueryQuery extends QueryField {
     output: StageOutputContext,
     stageWriter: StageWriter
   ) {
+    const scalarFields: [string, FieldInstanceField][] = [];
+    const otherFields: [string, FieldInstance][] = [];
     for (const [name, fi] of resultSet.allFields) {
+      if (fi instanceof FieldInstanceField && isScalarField(fi.f)) {
+        scalarFields.push([name, fi]);
+      } else {
+        otherFields.push([name, fi]);
+      }
+    }
+    const orderedFields = [...scalarFields, ...otherFields];
+
+    for (const [name, fi] of orderedFields) {
       const outputName = this.parent.dialect.sqlMaybeQuoteIdentifier(
         `${name}__${resultSet.groupSet}`
       );
