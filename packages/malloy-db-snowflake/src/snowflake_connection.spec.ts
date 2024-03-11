@@ -65,8 +65,8 @@ describe('db:Snowflake', () => {
   });
 
   it('runs a SQL query', async () => {
-    const res = await conn.runSQL('SELECT 1 as t');
-    expect(res.rows[0]['t']).toBe(1);
+    const res = await conn.runSQL('SELECT 1 as T');
+    expect(res.rows[0]['T']).toBe(1);
   });
 
   it('runs a Malloy query', async () => {

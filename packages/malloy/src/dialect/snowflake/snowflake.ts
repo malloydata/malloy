@@ -109,7 +109,6 @@ export class SnowflakeDialect extends Dialect {
   supportsQualify = false;
   supportsNesting = true;
   supportsPipelinesInViews = false;
-  supportsArraysInData = false;
 
   // don't mess with the table pathing.
   quoteTablePath(tablePath: string): string {
@@ -191,7 +190,7 @@ export class SnowflakeDialect extends Dialect {
       // } else {
       //   return `LEFT JOIN UNNEST(ARRAY((SELECT AS STRUCT value FROM unnest(${source}) value))) as ${alias}`;
       // }
-      throw new Error('not implemented yet');
+      return `,LATERAL FLATTEN(INPUT => ${source}) AS ${alias}_1, LATERAL (SELECT ${alias}_1.INDEX, object_construct('value', ${alias}_1.value) as value ) as ${alias}`;
     } else {
       // have to have a non empty row or it treats it like an inner join :barf-emoji:
       return `LEFT JOIN LATERAL FLATTEN(INPUT => ifnull(${source},[1])) AS ${alias}`;

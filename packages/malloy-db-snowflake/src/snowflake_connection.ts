@@ -35,6 +35,7 @@ import {
   QueryDataRow,
   SnowflakeDialect,
   NamedStructDefs,
+  FieldTypeDef,
 } from '@malloydata/malloy';
 import {SnowflakeExecutor} from './snowflake_executor';
 import {
@@ -58,6 +59,23 @@ export interface SnowflakeConnectionOptions {
   scratchSpace?: namespace;
 
   queryOptions?: RunSQLOptions;
+}
+
+class StructMap {
+  fieldMap = new Map<string, StructMap>();
+  type = 'record';
+  isArray = false;
+
+  constructor(type: string, isArray: boolean) {
+    this.type = type;
+    this.isArray = isArray;
+  }
+
+  addChild(name: string, type: string): StructMap {
+    const s = new StructMap(type, false);
+    this.fieldMap.set(name, s);
+    return s;
+  }
 }
 
 export class SnowflakeConnection
@@ -166,14 +184,77 @@ export class SnowflakeConnection
   }
 
   public async test(): Promise<void> {
-    await this.executor.batch('SELECT 1');
+    await this.executor.batch('SELECT 1 as one');
   }
 
-  private async schemaFromQuery(
-    infoQuery: string,
+  private variantToMalloyType(type: string): string {
+    if (type === 'integer') {
+      return 'number';
+    } else if (type === 'varchar') {
+      return 'string';
+    } else {
+      return 'unknown';
+    }
+  }
+
+  private addFieldsToStructDef(
+    structDef: StructDef,
+    structMap: StructMap
+  ): void {
+    if (structMap.fieldMap.size === 0) return;
+    for (const [field, value] of structMap.fieldMap) {
+      const type = value.type;
+      const name = field;
+
+      // check for an array
+      if (value.isArray && type !== 'object') {
+        const malloyType = this.variantToMalloyType(type);
+        if (malloyType) {
+          const innerStructDef: StructDef = {
+            type: 'struct',
+            name,
+            dialect: this.dialectName,
+            structSource: {type: 'nested'},
+            structRelationship: {
+              type: 'nested',
+              fieldName: name,
+              isArray: true,
+            },
+            fields: [{type: malloyType, name: 'value'} as FieldTypeDef],
+          };
+          structDef.fields.push(innerStructDef);
+        }
+      } else if (type === 'object') {
+        const innerStructDef: StructDef = {
+          type: 'struct',
+          name,
+          dialect: this.dialectName,
+          structSource: value.isArray ? {type: 'nested'} : {type: 'inline'},
+          structRelationship: value.isArray
+            ? {type: 'nested', fieldName: name, isArray: false}
+            : {type: 'inline'},
+          fields: [],
+        };
+        this.addFieldsToStructDef(innerStructDef, value);
+        structDef.fields.push(innerStructDef);
+      } else {
+        const malloyType = this.dialect.sqlTypeToMalloyType(type) ?? {
+          type: 'unsupported',
+          rawType: type.toLowerCase(),
+        };
+        structDef.fields.push({name, ...malloyType} as FieldTypeDef);
+      }
+    }
+  }
+
+  private async schemaFromTablePath(
+    tablePath: string,
     structDef: StructDef
   ): Promise<void> {
+    const infoQuery = `DESCRIBE TABLE ${tablePath}`;
     const rows = await this.executor.batch(infoQuery);
+    const variants: string[] = [];
+    const notVariant = new Map<string, boolean>();
     for (const row of rows) {
       // data types look like `VARCHAR(1234)`
       let snowflakeDataType = row['type'] as string;
@@ -181,6 +262,13 @@ export class SnowflakeConnection
       const s = structDef;
       const malloyType = this.dialect.sqlTypeToMalloyType(snowflakeDataType);
       const name = row['name'] as string;
+
+      if (snowflakeDataType === 'variant' || snowflakeDataType === 'array') {
+        variants.push(name);
+        continue;
+      }
+
+      notVariant.set(name, true);
       if (malloyType) {
         s.fields.push({...malloyType, name});
       } else {
@@ -190,6 +278,46 @@ export class SnowflakeConnection
           name,
         });
       }
+    }
+    // if we have variants, sample the data
+    if (variants.length > 0) {
+      const sampleQuery = `
+        SELECT regexp_replace(PATH, '\\\\[[0-9]*\\\\]', '') as PATH, lower(TYPEOF(value)) as type
+        FROM (select object_construct(*) o from  ${tablePath} limit 100)
+            ,table(flatten(input => o, recursive => true)) as meta
+        GROUP BY 1,2
+        ORDER BY PATH;
+      `;
+      const fieldPathRows = await this.executor.batch(sampleQuery);
+
+      // take the schema in list form an convert it into a tree.
+
+      const structMap = new StructMap('object', true);
+
+      for (const f of fieldPathRows) {
+        const pathString = f['PATH']?.valueOf().toString();
+        const fieldType = f['TYPE']?.valueOf().toString();
+        if (pathString === undefined || fieldType === undefined) continue;
+        const path = pathString.split('.');
+        let parent = structMap;
+
+        // ignore the fields we've already added.
+        if (path.length === 1 && notVariant.get(pathString)) continue;
+
+        for (const segment of path) {
+          let thisNode = parent.fieldMap.get(segment);
+          if (thisNode === undefined) {
+            thisNode = parent.addChild(segment, fieldType);
+          }
+          if (fieldType === 'array') {
+            thisNode.isArray = true;
+          } else {
+            thisNode.type = fieldType;
+          }
+          parent = thisNode;
+        }
+      }
+      this.addFieldsToStructDef(structDef, structMap);
     }
   }
 
@@ -208,21 +336,7 @@ export class SnowflakeConnection
       },
       fields: [],
     };
-    // This is how we get variant information
-
-    // WITH tbl as (
-    //   SELECT * FROM malloytest.ga_sample
-    //  )
-    //  SELECT regexp_replace(PATH, '\\[.*\\]', '[]') as PATH, lower(TYPEOF(value)) as type
-    //  FROM (select object_construct(*) o from  tbl limit 100)
-    //      ,table(flatten(input => o, recursive => true)) as meta
-    //  WHERE lower(TYPEOF(value)) <> 'array'
-    //  GROUP BY 1,2
-    //  ORDER BY PATH
-
-    const infoQuery = `DESCRIBE TABLE ${tablePath}`;
-
-    await this.schemaFromQuery(infoQuery, structDef);
+    await this.schemaFromTablePath(tablePath, structDef);
     return structDef;
   }
 
@@ -288,8 +402,7 @@ export class SnowflakeConnection
       `
     );
 
-    const infoQuery = `DESCRIBE TABLE ${tempTableName}`;
-    await this.schemaFromQuery(infoQuery, structDef);
+    await this.schemaFromTablePath(tempTableName, structDef);
     return structDef;
   }
 
