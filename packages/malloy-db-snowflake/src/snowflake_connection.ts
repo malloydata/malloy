@@ -193,7 +193,7 @@ export class SnowflakeConnection
     } else if (type === 'varchar') {
       return 'string';
     } else {
-      return 'unknown';
+      return 'unsupported';
     }
   }
 
@@ -304,6 +304,7 @@ export class SnowflakeConnection
         // ignore the fields we've already added.
         if (path.length === 1 && notVariant.get(pathString)) continue;
 
+        let index = 0;
         for (const segment of path) {
           let thisNode = parent.fieldMap.get(segment);
           if (thisNode === undefined) {
@@ -311,10 +312,12 @@ export class SnowflakeConnection
           }
           if (fieldType === 'array') {
             thisNode.isArray = true;
-          } else {
+            // if this is the last
+          } else if (index === path.length - 1) {
             thisNode.type = fieldType;
           }
           parent = thisNode;
+          index += 1;
         }
       }
       this.addFieldsToStructDef(structDef, structMap);

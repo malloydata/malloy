@@ -116,6 +116,9 @@ export abstract class Dialect {
   // Some dialects don't supporrt arrays.
   supportsArraysInData = true;
 
+  // can read some version of ga_sample
+  readsNestedData = true;
+
   // return the definition of a function with the given name
   abstract getGlobalFunctionDef(
     name: string

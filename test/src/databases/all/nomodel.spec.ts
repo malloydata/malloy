@@ -1035,6 +1035,29 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
   );
 
   test(
+    `can unnest from file - ${databaseName}`,
+    onlyIf(
+      runtime.supportsNesting && runtime.dialect.readsNestedData,
+      async () => {
+        await expect(`
+        source: ga_sample is ${databaseName}.table('malloytest.ga_sample')
+
+        run: ga_sample -> {
+          where: hits.product.productBrand != null
+          group_by:
+            hits.product.productBrand
+            hits.product.productSKU
+          aggregate:
+            h is hits.count()
+            c is count()
+            p is hits.product.count()
+        }
+      `).malloyResultMatches(runtime, {h: 1192, c: 681, p: 1192});
+      }
+    )
+  );
+
+  test(
     `nest null - ${databaseName}`,
     onlyIf(runtime.supportsNesting, async () => {
       const result = await runtime
