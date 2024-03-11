@@ -13,8 +13,9 @@
       "runOptions": { "runOn": "folderOpen" },
       "presentation": {
         "reveal": "silent",
-        "revealProblems": "onProblem",
-        "close": true
+        "revealProblems": "never",
+        "close": true,
+        "focus": false
       }
     }
   ]
