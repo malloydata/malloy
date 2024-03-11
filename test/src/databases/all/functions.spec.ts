@@ -113,7 +113,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     it(`works - ${databaseName}`, async () => {
       const expected = {
         'bigquery': 'foo2003-01-01 12:00:00+00',
-        'snowflake': 'foo2003-01-01 12:00:00.000Z',
+        'snowflake': 'foo2003-01-01 12:00:00.000',
       };
 
       await funcTestMultiple(
