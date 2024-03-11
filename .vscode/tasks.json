@@ -14,7 +14,8 @@
       "presentation": {
         "reveal": "silent",
         "revealProblems": "never",
-        "close": true
+        "close": true,
+        "focus": false
       }
     }
   ]

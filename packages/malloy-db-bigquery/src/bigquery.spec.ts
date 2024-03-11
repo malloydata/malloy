@@ -37,6 +37,7 @@ const envDatabases = (
 let describe = globalThis.describe;
 if (!envDatabases.includes('bigquery')) {
   describe = describe.skip;
+  describe.skip = describe;
 }
 
 describe('db:BigQuery', () => {
