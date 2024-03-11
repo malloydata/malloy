@@ -4,15 +4,16 @@
 -- snowsql -f uploadddate.sql
 
 
-drop database malloytestdb;
-create database malloytestdb;
+drop database malloytest;
+create database malloytest;
 
-use malloytestdb;
+use malloytest;
 create schema malloytest;
 
 CREATE OR REPLACE FILE FORMAT PARQUET_SCHEMA_DETECTION
   TYPE = PARQUET
-  BINARY_AS_TEXT = FALSE;
+  BINARY_AS_TEXT = FALSE
+  USE_LOGICAL_TYPE = TRUE;
 
 PUT file://../data/duckdb/aircraft.parquet @~/staged;
 

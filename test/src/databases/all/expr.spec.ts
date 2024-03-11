@@ -24,7 +24,7 @@
 
 import {RuntimeList, allDatabases} from '../../runtimes';
 import '../../util/db-jest-matchers';
-import {databasesFromEnvironmentOr, mkSqlEqWith, testIf} from '../../util';
+import {databasesFromEnvironmentOr, mkSqlEqWith, onlyIf} from '../../util';
 import {fail} from 'assert';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
@@ -119,13 +119,16 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   });
 
   // filtered turtle expressions
-  testIf(runtime.supportsNesting)('model: filtered turtle', async () => {
-    await expect(`
+  test(
+    'model: filtered turtle',
+    onlyIf(runtime.supportsNesting, async () => {
+      await expect(`
       run: aircraft->{
         nest: b is by_manufacturer + { where: aircraft_models.manufacturer ?~'B%'}
       }
     `).malloyResultMatches(expressionModel, {'b.manufacturer': 'BEECH'});
-  });
+    })
+  );
 
   // having.
   it('model: simple having', async () => {
@@ -139,8 +142,10 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     `).malloyResultMatches(expressionModel, {aircraft_count: 91});
   });
 
-  testIf(runtime.supportsNesting)('model: having in a nest', async () => {
-    await expect(`
+  test(
+    'model: having in a nest',
+    onlyIf(runtime.supportsNesting, async () => {
+      await expect(`
       run: aircraft->{
         top: 10
         order_by: 1
@@ -155,10 +160,13 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         }
       }
     `).malloyResultMatches(expressionModel, {'by_state.state': 'VA'});
-  });
+    })
+  );
 
-  testIf(runtime.supportsNesting)('model: turtle having on main', async () => {
-    await expect(`
+  test(
+    'model: turtle having on main',
+    onlyIf(runtime.supportsNesting, async () => {
+      await expect(`
       run: aircraft->{
         order_by: 2 asc
         having: aircraft_count ? >500
@@ -178,14 +186,15 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         }
       }
     `).malloyResultMatches(expressionModel, {
-      'by_state.by_city.city': 'ALBUQUERQUE',
-    });
-  });
+        'by_state.by_city.city': 'ALBUQUERQUE',
+      });
+    })
+  );
 
   // bigquery doesn't like to partition by floats,
-  testIf(runtime.supportsNesting)(
+  test(
     'model: having float group by partition',
-    async () => {
+    onlyIf(runtime.supportsNesting, async () => {
       await expect(`${modelText(databaseName)}
         run: aircraft_models->{
           order_by: 1
@@ -198,7 +207,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
             aggregate: aircraft_model_count
           }
       }`).malloyResultMatches(runtime, {aircraft_model_count: 448});
-    }
+    })
   );
 
   it('model: aggregate functions distinct min max', async () => {
@@ -232,9 +241,9 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 
   // TODO not sure why this test needs to be skipped on postgres, feels like an oversight
   // NOTE: unless underlying type is stored as a timestamp snowflake does not support extraction
-  testIf(!['postgres', 'snowflake'].includes(databaseName))(
+  test(
     'model: dates named',
-    async () => {
+    onlyIf(!['postgres', 'snowflake'].includes(databaseName), async () => {
       await expect(`
       run: ${databaseName}.table('malloytest.alltypes')->{
         group_by:
@@ -261,7 +270,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         t_timestamp_month: new Date('2020-03-01'),
         t_timestamp_year: new Date('2020-01-01'),
       });
-    }
+    })
   );
 
   it('named query metadata undefined', async () => {
@@ -316,21 +325,24 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     `).malloyResultMatches(expressionModel, {a: 312});
   });
 
-  testIf(!['postgres', 'snowflake'].includes(runtime.connection.name))(
+  test(
     'sql safe cast',
-    async () => {
-      await expect(`
-      run: ${databaseName}.sql('SELECT 1') -> { select:
+    onlyIf(
+      !['postgres', 'snowflake'].includes(runtime.connection.name),
+      async () => {
+        await expect(`
+      run: ${databaseName}.sql('SELECT 1 as one') -> { select:
         bad_date is '123':::date
         bad_number is 'abc':::number
         good_number is "312":::"integer"
       }
     `).malloyResultMatches(expressionModel, {
-        bad_date: null,
-        bad_number: null,
-        good_number: 312,
-      });
-    }
+          bad_date: null,
+          bad_number: null,
+          good_number: 312,
+        });
+      }
+    )
   );
 
   it('many_field.sum() has correct locality', async () => {
@@ -540,9 +552,9 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
   });
 
-  testIf(runtime.supportsNesting)(
+  test(
     'query with aliasname used twice',
-    async () => {
+    onlyIf(runtime.supportsNesting, async () => {
       await expect(`
         run: aircraft->{
           group_by: first is substr(city,1,1)
@@ -562,7 +574,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
             order_by: 2 desc, 1
         }
       `).malloyResultMatches(expressionModel, {first_three: 'SAB'});
-    }
+    })
   );
 
   it('joined filtered sources', async () => {
@@ -685,7 +697,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
     test('quote double quote', async () => {
       await expect(
-        `run: ${databaseName}.sql("SELECT 1") -> {
+        `run: ${databaseName}.sql("SELECT 1 as one") -> {
           select: double_quote is "${back}${dq}"
         }`
       ).malloyResultMatches(runtime, {double_quote: '"'});
@@ -716,7 +728,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 
   test('dimension expressions expanded with parens properly', async () => {
     await expect(
-      `run: ${databaseName}.sql("SELECT 1") extend {
+      `run: ${databaseName}.sql("SELECT 1 as one") extend {
         dimension: fot is (false) or (true)
       } -> {
         select:

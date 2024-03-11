@@ -170,16 +170,15 @@ export class SnowflakeExecutor {
 
   private async _setSessionParams(conn: Connection) {
     // set some default session parameters
-    // this is quite imporant for snowflake because malloy tends to add quotes to all database identifiers
-    // and snowflake is case sensitive by with quotes but matches against all caps identifiers without quotes
-    // await this._execute(
-    //   'ALTER SESSION SET QUOTED_IDENTIFIERS_IGNORE_CASE = true;',
-    //   conn
-    // );
     // set utc as the default timezone which is the malloy convention
     await this._execute("ALTER SESSION SET TIMEZONE = 'UTC';", conn);
     // ensure week starts on Sunday which is the malloy convention
     await this._execute('ALTER SESSION SET WEEK_START = 7;', conn);
+    // so javascript can parse the dates
+    await this._execute(
+      "ALTER SESSION SET TIMESTAMP_NTZ_OUTPUT_FORMAT='YYYY-MM-DDTHH24:MI:SS.FF3TZH:TZM';",
+      conn
+    );
   }
 
   public async batch(sqlText: string): Promise<QueryData> {
