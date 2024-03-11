@@ -13,7 +13,7 @@
       "runOptions": { "runOn": "folderOpen" },
       "presentation": {
         "reveal": "silent",
-        "revealProblems": "onProblem",
+        "revealProblems": "never",
         "close": true
       }
     }
