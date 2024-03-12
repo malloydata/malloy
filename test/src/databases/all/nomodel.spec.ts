@@ -862,6 +862,35 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
   );
 
   test(
+    `Query with nested pipeline - ${databaseName}`,
+    onlyIf(
+      runtime.supportsNesting && runtime.dialect.supportsPipelinesInViews,
+      async () => {
+        await expect(`
+        source: airports is snowflake.table('malloytest.airports') extend {
+          measure: airport_count is count()
+
+          view: pipe is {
+            group_by: city, state
+            aggregate: a is airport_count
+          }
+          -> {
+            group_by: state
+            aggregate: b is a.sum()
+          }
+        }
+
+        run: airports -> {
+          group_by: faa_region
+          aggregate: airport_count
+          nest: pipe
+        }
+      `).malloyResultMatches(runtime, {'fun.t1': 52});
+      }
+    )
+  );
+
+  test(
     `Multi value to udf - ${databaseName}`,
     onlyIf(
       runtime.supportsNesting && runtime.dialect.supportsPipelinesInViews,
