@@ -111,7 +111,6 @@ describe('db:BigQuery', () => {
     expect(exists).toBeTruthy();
   });
 
-  /*
   describe.skip('manifests permanent table', () => {
     const datasetName = 'test_malloy_test_dataset';
     const tableName = 'test_malloy_test_table';
@@ -198,7 +197,6 @@ describe('db:BigQuery', () => {
       expect(results[0]).toStrictEqual({t: 1});
     });
   });
-  */
 
   describe('Caching', () => {
     let getTableFieldSchema: jest.SpyInstance;
