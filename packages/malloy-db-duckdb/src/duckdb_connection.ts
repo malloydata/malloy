@@ -56,8 +56,6 @@ export class DuckDBConnection extends DuckDBCommon {
   private additionalExtensions: string[] = [];
   private databasePath = ':memory:';
   private workingDirectory = '.';
-  private isMotherDuck = false;
-  private motherDuckToken: string | undefined;
   private readOnly = false;
 
   connecting: Promise<void>;

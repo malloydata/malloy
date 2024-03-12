@@ -89,10 +89,6 @@ export class PostgresTestConnection extends PooledPostgresConnection {
 export class DuckDBTestConnection extends DuckDBConnection {
   // we probably need a better way to do this.
 
-  constructor(name: string) {
-    super(name, 'test/data/duckdb/duckdb_test.db');
-  }
-
   public async runSQL(
     sqlCommand: string,
     options?: RunSQLOptions
@@ -109,10 +105,6 @@ export class DuckDBTestConnection extends DuckDBConnection {
 
 export class DuckDBWASMTestConnection extends DuckDBWASMConnection {
   // we probably need a better way to do this.
-
-  constructor(name: string) {
-    super(name, 'test/data/duckdb/duckdb_test.db');
-  }
 
   public async runSQL(
     sqlCommand: string,
@@ -135,7 +127,7 @@ export function rows(qr: Result): QueryDataRow[] {
 }
 
 export function runtimeFor(dbName: string): SingleConnectionRuntime {
-  let connection;
+  let connection: Connection;
   try {
     switch (dbName) {
       case 'bigquery':
@@ -149,10 +141,19 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
         connection = new PostgresTestConnection(dbName);
         break;
       case 'duckdb':
-        connection = new DuckDBTestConnection(dbName);
+        connection = new DuckDBTestConnection(
+          dbName,
+          'test/data/duckdb/duckdb_test.db'
+        );
         break;
       case 'duckdb_wasm':
-        connection = new DuckDBWASMTestConnection(dbName);
+        connection = new DuckDBWASMTestConnection(
+          dbName,
+          'test/data/duckdb/duckdb_test.db'
+        );
+        break;
+      case 'motherduck':
+        connection = new DuckDBTestConnection(dbName, 'md:my_db');
         break;
       case 'snowflake':
         {
