@@ -5,18 +5,14 @@
   "tasks": [
     {
       "type": "typescript",
-      "tsconfig": "tsconfig.compile-no-emit.json",
+      "tsconfig": "packages/malloy/tsconfig.json",
       "option": "watch",
-      "problemMatcher": ["$tsc-watch"],
+      "problemMatcher": [
+        "$tsc-watch"
+      ],
       "group": "build",
-      "label": "tsc-compile-watch",
-      "runOptions": { "runOn": "folderOpen" },
-      "presentation": {
-        "reveal": "silent",
-        "revealProblems": "never",
-        "close": true,
-        "focus": false
-      }
+      "label": "tsc: watch - packages/malloy/tsconfig.json",
+      "runOptions": { "runOn": "folderOpen" }
     }
   ]
 }
