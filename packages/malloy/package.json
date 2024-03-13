@@ -4,12 +4,16 @@
   "license": "MIT",
   "exports": {
     ".": "./dist/index.js",
+    "./dialect": "./dist/dialect/index.js",
     "./test": "./dist/test/index.js"
   },
   "typesVersions": {
     "*": {
       "index": [
         "./dist/index.d.ts"
+      ],
+      "dialect": [
+        "./dist/dialect/index.d.ts"
       ],
       "test": [
         "./dist/test/index.d.ts"

@@ -17,6 +17,7 @@ pushd ${DATA_DIR}
 # -- Create a file format that sets the file type as Parquet.
 format="CREATE OR REPLACE FILE FORMAT PARQUET_SCHEMA_DETECTION
   TYPE = PARQUET
+  USE_LOGICAL_TYPE = TRUE
   BINARY_AS_TEXT = FALSE;"
 echo -ne "${format}\n\n"
 
