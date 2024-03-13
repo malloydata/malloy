@@ -408,14 +408,6 @@ export class MalloyToAST
     );
   }
 
-  protected getLegacySQLSouce(
-    pcx: parse.SqlExploreNameRefContext
-  ): ast.FromSQLSource {
-    const name = this.getModelEntryName(pcx);
-    const res = this.astAt(new ast.FromSQLSource(name), pcx);
-    return res;
-  }
-
   visitSqlSource(pcx: parse.SqlSourceContext): ast.SQLSource {
     const connId = pcx.connectionId();
     const connectionName = this.astAt(this.getModelEntryName(connId), connId);
