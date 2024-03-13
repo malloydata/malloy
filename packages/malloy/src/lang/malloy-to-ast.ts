@@ -1597,40 +1597,6 @@ export class MalloyToAST
     return this.getFieldExpr(pcx.fieldExpr());
   }
 
-  visitDefineSQLStatement(
-    pcx: parse.DefineSQLStatementContext
-  ): ast.SQLStatement {
-    const blockName = pcx.nameSQLBlock()?.text;
-    const blockParts = pcx.sqlBlock().blockSQLDef();
-    const sqlStr = new ast.SQLString();
-    let connectionName: string | undefined;
-    for (const blockEnt of blockParts) {
-      const nmCx = blockEnt.connectionName();
-      if (nmCx) {
-        if (connectionName) {
-          this.contextError(nmCx, 'Cannot redefine connection');
-        } else {
-          connectionName = this.getPlainString(nmCx);
-        }
-      }
-      const selCx = blockEnt.sqlString();
-      if (selCx) {
-        this.makeSqlString(selCx, sqlStr);
-      }
-    }
-    const stmt = new ast.SQLStatement(sqlStr);
-    if (connectionName !== undefined) {
-      stmt.connection = connectionName;
-    }
-    stmt.is = blockName;
-    const result = this.astAt(stmt, pcx);
-    this.m4advisory(
-      pcx,
-      '`sql:` statement is deprecated, use `connection_name.sql(...)` instead'
-    );
-    return result;
-  }
-
   visitSampleStatement(pcx: parse.SampleStatementContext): ast.SampleProperty {
     const rowCx = pcx.sampleSpec().INTEGER_LITERAL();
     if (rowCx) {

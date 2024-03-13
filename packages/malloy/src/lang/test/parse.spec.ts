@@ -662,22 +662,6 @@ describe('sql expressions', () => {
     }
   });
 
-  test('sql statement deprecation warning', () => {
-    const m = new TestTranslator(
-      `##! m4warnings=warn
-      sql: bad_sql is {select: """SELECT 1 as one"""}`
-    );
-    const req = m.translate().compileSQL;
-    if (req) {
-      m.update({
-        compileSQL: {[req.name]: getSelectOneStruct(req)},
-      });
-    }
-    expect(m).toTranslateWithWarnings(
-      '`sql:` statement is deprecated, use `connection_name.sql(...)` instead'
-    );
-  });
-
   test('reference to sql expression in run', () => {
     const m = new TestTranslator(`
       run: bigquery.sql("""select 1 as one""")

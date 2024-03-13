@@ -54,7 +54,6 @@ export const HighlightType = {
     Table: 'call.table',
     From: 'call.from',
     Function: 'call.function',
-    FromSQL: 'call.from_sql',
   },
   // TODO many of these should probably be categorized further
   Keyword: {
@@ -220,9 +219,6 @@ export function passForHighlights(
         break;
       case MalloyParser.FROM:
         register(token, HighlightType.Call.From);
-        break;
-      case MalloyParser.FROM_SQL:
-        register(token, HighlightType.Call.FromSQL);
         break;
       case MalloyParser.SQ_STRING:
       case MalloyParser.DQ_STRING:
