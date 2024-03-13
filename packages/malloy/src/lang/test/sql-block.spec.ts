@@ -25,7 +25,6 @@
 import {
   SQLBlockSource,
   SQLBlockStructDef,
-  StructDef,
   isSQLBlockStruct,
   isSQLFragment,
 } from '../../model';
@@ -33,17 +32,6 @@ import {makeSQLBlock} from '../../model/sql_block';
 import {TestTranslator, aTableDef} from './test-translator';
 import './parse-expects';
 import {MalloyTranslator} from '../parse-malloy';
-
-function unlocatedStructDef(sd: StructDef): StructDef {
-  const ret = {...sd};
-  ret.fields = sd.fields.map(f => {
-    const nf = {...f};
-    delete nf.location;
-    return nf;
-  });
-  delete ret.location;
-  return ret;
-}
 
 describe('sql blocks in malloy', () => {
   const selStmt = 'SELECT * FROM aTable';
