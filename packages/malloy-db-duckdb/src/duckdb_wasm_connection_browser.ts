@@ -48,7 +48,7 @@ function unwrapMotherDuck(value: DuckDBValue) {
     if (value instanceof DuckDBDate) {
       result = new Date(value.days * 8.64e7);
     } else if (value instanceof DuckDBDecimal) {
-      result = Number(value.scaledValue);
+      result = Number(value.scaledValue) / Math.pow(10, value.scale);
     } else if (value instanceof DuckDBTime) {
       result = new Date(Number(value.microseconds) / 1000);
     } else if (value instanceof DuckDBTimestampMicroseconds) {
