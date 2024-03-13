@@ -1,9 +1,9 @@
-name: Snowflake DB (Non-blocking)
+name: Snowflake DB
 
 on: [push]
 
 jobs:
-  build:
+  test-snowflake:
     runs-on: ubuntu-latest
 
     strategy:
