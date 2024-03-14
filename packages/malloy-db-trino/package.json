@@ -1,9 +1,9 @@
 {
   "name": "@malloydata/db-trino",
-  "version": "0.0.132",
+  "version": "0.0.1",
   "license": "MIT",
-  "main": "dist/tmp_index.js",
-  "types": "dist/tmp_index.d.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "homepage": "https://github.com/malloydata/malloy#readme",
   "repository": {
     "type": "git",

@@ -224,6 +224,7 @@ export class DuckDBConnection extends DuckDBCommon {
   protected async runDuckDBQuery(
     sql: string
   ): Promise<{rows: TableData; totalRows: number}> {
+    console.log(`=============== SQL ${sql}`);
     return new Promise((resolve, reject) => {
       if (this.connection) {
         this.connection.all(sql, (err: DuckDbError | null, rows: TableData) => {

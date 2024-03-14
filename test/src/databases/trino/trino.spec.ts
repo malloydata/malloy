@@ -21,28 +21,38 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export type {DialectFunctionOverloadDef} from './functions/util';
-export {
-  arg,
-  anyExprType,
-  makeParam,
-  overload,
-  minScalar,
-  minAggregate,
-  maxScalar,
-  spread,
-  sqlFragment,
-  param,
-  params,
-  literal,
-  sql,
-} from './functions/util';
-export {Dialect, qtz} from './dialect';
-export type {DialectFieldList, QueryInfo} from './dialect';
-export {StandardSQLDialect} from './standardsql';
-export {PostgresDialect} from './postgres';
-export {DuckDBDialect} from './duckdb';
-export {SnowflakeDialect} from './snowflake';
-export {TrinoDialect} from './trino';
-export {getDialect, registerDialect, getDialectFunction} from './dialect_map';
-export {FUNCTIONS} from './functions';
+/* eslint-disable no-console */
+
+import {describeIfDatabaseAvailable} from '../../util';
+import {RuntimeList} from '../../runtimes';
+import '../../util/db-jest-matchers';
+
+const [describe] = describeIfDatabaseAvailable(['trino']);
+
+describe('Trino tests', () => {
+  const runtimes = new RuntimeList(['trino']);
+
+  afterAll(async () => {
+    await runtimes.closeAll();
+  });
+
+  runtimes.runtimeMap.forEach((runtime, databaseName) => {
+    // Issue: #151
+    it(`Basic trino  - ${databaseName}`, async () => {
+      await expect(`
+        run: trino.table('sample.burstbank.customer') -> {
+          group_by: city
+          aggregate: avgIncome is avg(estimated_income)
+          aggregate: counti is count()
+          nest: foo is {
+            select: estimated_income
+            order_by: estimated_income
+            limit: 5
+          }
+          order_by: counti desc
+          limit: 5
+        }
+      `).malloyResultMatches(runtime, {custkey: '1000001'});
+    });
+  });
+});
