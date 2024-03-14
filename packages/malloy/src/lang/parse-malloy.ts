@@ -53,12 +53,6 @@ import {
 import {Zone, ZoneData} from './zone';
 import {walkForDocumentSymbols} from './parse-tree-walkers/document-symbol-walker';
 import {
-  DocumentHighlight,
-  passForHighlights,
-  sortHighlights,
-  walkForDocumentHighlights,
-} from './parse-tree-walkers/document-highlight-walker';
-import {
   DocumentCompletion,
   walkForDocumentCompletions,
 } from './parse-tree-walkers/document-completion-walker';
@@ -460,21 +454,8 @@ class MetadataStep implements TranslationStep {
         } catch {
           // Do nothing, symbols already `undefined`
         }
-        let walkHighlights: DocumentHighlight[];
-        try {
-          walkHighlights = walkForDocumentHighlights(
-            tryParse.parse.tokenStream,
-            tryParse.parse.root
-          );
-        } catch {
-          walkHighlights = [];
-        }
         this.response = {
           symbols,
-          highlights: sortHighlights([
-            ...passForHighlights(tryParse.parse.tokenStream),
-            ...walkHighlights,
-          ]),
           final: true,
         };
       }

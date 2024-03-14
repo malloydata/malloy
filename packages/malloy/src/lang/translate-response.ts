@@ -31,7 +31,6 @@ import {
 import {MalloyElement} from './ast';
 import {LogMessage} from './parse-log';
 import {DocumentSymbol} from './parse-tree-walkers/document-symbol-walker';
-import {DocumentHighlight} from './parse-tree-walkers/document-highlight-walker';
 import {DocumentCompletion} from './parse-tree-walkers/document-completion-walker';
 import {DocumentHelpContext} from './parse-tree-walkers/document-help-context-walker';
 
@@ -77,7 +76,6 @@ interface ASTData extends ProblemResponse, NeededData, FinalResponse {
 export type ASTResponse = Partial<ASTData>;
 interface Metadata extends NeededData, ProblemResponse, FinalResponse {
   symbols: DocumentSymbol[];
-  highlights: DocumentHighlight[];
 }
 export type MetadataResponse = Partial<Metadata>;
 interface ModelAnnotationData
