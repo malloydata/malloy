@@ -11,6 +11,7 @@
       "packages/malloy-db-duckdb",
       "packages/malloy-db-postgres",
       "packages/malloy-db-snowflake",
+      "packages/malloy-db-trino",
       "packages/malloy-malloy-sql",
       "packages/malloy-lint",
       "packages/malloy-render",
