@@ -1,0 +1,38 @@
+{
+  "name": "@malloydata/db-trino",
+  "version": "0.0.1",
+  "license": "MIT",
+  "main": "dist/tmp_index.js",
+  "types": "dist/tmp_index.d.ts",
+  "homepage": "https://github.com/malloydata/malloy#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/malloydata/malloy.git"
+  },
+  "engines": {
+    "node": ">=16"
+  },
+  "scripts": {
+    "lint": "eslint '**/*.ts{,x}'",
+    "lint-fix": "eslint '**/*.ts{,x}' --fix",
+    "test": "jest --config=../../jest.config.js",
+    "build": "tsc --build",
+    "clean": "tsc --build --clean",
+    "malloyc": "ts-node ../../scripts/malloy-to-json",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@malloydata/malloy": "^0.0.130",
+    "gaxios": "^4.2.0",
+    "trino-client": "^0.2.2"
+  },
+  "description": "Malloy is an experimental language for describing data relationships and transformations. It is both a semantic modeling language and a querying language that runs queries against a relational database. Malloy currently connects to BigQuery and Postgres, and natively supports DuckDB. We've built a Visual Studio Code extension to facilitate building Malloy data models, querying and transforming data, and creating simple visualizations and dashboards.",
+  "bugs": {
+    "url": "https://github.com/malloydata/malloy/issues"
+  },
+  "keywords": [
+    "malloy",
+    "trino"
+  ],
+  "author": ""
+}
