@@ -1039,7 +1039,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
   test(
     `can unnest from file - ${databaseName}`,
     onlyIf(
-      runtime.supportsNesting && runtime.dialect.readsNestedData,
+      runtime.supportsNesting /*&& runtime.dialect.readsNestedData*/,
       async () => {
         await expect(`
         source: ga_sample is ${databaseName}.table('malloytest.ga_sample')

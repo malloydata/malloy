@@ -144,7 +144,7 @@ export class TrinoConnection implements Connection, PersistSQLResults {
     queryOptions?: QueryOptionsReader,
     config: TrinoConnectionConfiguration = {}
   ) {
-    this.name = 'TrinoConnection';
+    this.name = 'trino';
     /* if (typeof arg === 'string') {
       this.name = arg;
     } else {
@@ -289,7 +289,7 @@ export class TrinoConnection implements Connection, PersistSQLResults {
       malloyRows.push(malloyRow);
     }
 
-    console.log(`${JSON.stringify(malloyRows)}`);
+    console.log(`ROWS: ${JSON.stringify(malloyRows)}`);
     // TODO: handle totalrows.
     return {rows: malloyRows, totalRows: malloyRows.length};
   }
