@@ -7,6 +7,7 @@
     {"path": "packages/malloy-db-duckdb"},
     {"path": "packages/malloy-db-postgres"},
     {"path": "packages/malloy-db-snowflake"},
+    {"path": "packages/malloy-db-trino"},
     {"path": "packages/malloy-malloy-sql"},
     {"path": "test"},
     {"path": "packages/malloy-render"}

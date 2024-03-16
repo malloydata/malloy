@@ -1,9 +1,9 @@
-name: MotherDuck
+name: MotherDuck DB
 
 on: [push]
 
 jobs:
-  build:
+  test-motherduck:
     runs-on: ubuntu-latest
 
     strategy:

@@ -22,6 +22,9 @@
       "path": "../packages/malloy-db-snowflake"
     },
     {
+      "path": "../packages/malloy-db-trino"
+    },
+    {
       "path": "../packages/malloy-db-duckdb"
     },
     {
