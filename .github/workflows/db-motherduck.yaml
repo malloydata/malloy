@@ -1,9 +1,9 @@
-name: Snowflake DB
+name: MotherDuck DB
 
 on: [push]
 
 jobs:
-  test-snowflake:
+  test-motherduck:
     runs-on: ubuntu-latest
 
     strategy:
@@ -25,10 +25,5 @@ jobs:
           npm run test-silent
         env:
           CI: true
-          MALLOY_DATABASES: snowflake
-          SNOWFLAKE_ACCOUNT: pt58362-rx92781
-          SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
-          SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
-          SNOWFLAKE_WAREHOUSE: LOOKER_WH
-          SNOWFLAKE_DATABASE: MALLOYTEST
-          SNOWFLAKE_SCHEMA: PUBLIC
+          MALLOY_DATABASES: motherduck
+          MOTHERDUCK_TOKEN: ${{ secrets.MOTHERDUCK_TOKEN }}

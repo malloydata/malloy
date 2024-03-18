@@ -21,35 +21,17 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import crypto from 'crypto';
-import {DuckDBBundles} from '@duckdb/duckdb-wasm';
-import {DuckDBWASMConnection as DuckDBWASMConnectionBase} from './duckdb_wasm_connection';
+// eslint-disable-next-line no-restricted-imports
+import {generateHash} from './utils';
 
-export class DuckDBWASMConnection extends DuckDBWASMConnectionBase {
-  getBundles(): DuckDBBundles {
-    const resolvePath = require.resolve('@duckdb/duckdb-wasm');
-    if (!resolvePath) {
-      throw new Error('Unable to resolve @duckdb/duckdb-wasm path');
-    }
-    const distMatch = resolvePath.match(/^.*\/dist\//);
-    if (!distMatch) {
-      throw new Error('Unable to resolve @duckdb/duckdb-wasm dist path');
-    }
-    const dist = distMatch[0];
-
-    return {
-      mvp: {
-        mainModule: `${dist}/duckdb-mvp.wasm`,
-        mainWorker: `${dist}/duckdb-node-mvp.worker.cjs`,
-      },
-      eh: {
-        mainModule: `${dist}/duckdb-eh.wasm`,
-        mainWorker: `${dist}/duckdb-node-eh.worker.cjs`,
-      },
-    };
-  }
-
-  async createHash(sqlCommand: string): Promise<string> {
-    return crypto.createHash('md5').update(sqlCommand).digest('hex');
-  }
-}
+describe('model/utils', () => {
+  it('should generate deterministic hashes', () => {
+    const hash1 = generateHash('test-content');
+    expect(hash1).toEqual('ab17568f-0362-503d-a9c6-76fb0b203636');
+  });
+  it('should generate unique hashes', () => {
+    const hash1 = generateHash('test-content');
+    const hash2 = generateHash('test-content-different');
+    expect(hash1).not.toEqual(hash2);
+  });
+});

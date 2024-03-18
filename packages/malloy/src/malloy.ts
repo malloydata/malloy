@@ -80,7 +80,7 @@ import {
 } from './runtime_types';
 import {DateTime} from 'luxon';
 import {Tag, TagParse, TagParseSpec, Taggable} from './tags';
-import {getDialect} from './dialect';
+import {Dialect, getDialect} from './dialect';
 
 export interface Loggable {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -2475,6 +2475,10 @@ export class SingleConnectionRuntime<
     return getDialect(this.connection.dialectName).sqlMaybeQuoteIdentifier(
       column
     );
+  }
+
+  get dialect(): Dialect {
+    return getDialect(this.connection.dialectName);
   }
 
   getQuoter(): (arg: TemplateStringsArray) => string {

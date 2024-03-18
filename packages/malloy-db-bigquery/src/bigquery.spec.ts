@@ -22,22 +22,14 @@
  */
 
 import * as malloy from '@malloydata/malloy';
+import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
 import {BigQueryConnection} from './bigquery_connection';
 import {BigQuery as BigQuerySDK, TableMetadata} from '@google-cloud/bigquery';
 import * as util from 'util';
 import * as fs from 'fs';
 import {fileURLToPath} from 'url';
 
-const envDatabases = (
-  process.env['MALLOY_DATABASES'] ||
-  process.env['MALLOY_DATABASE'] ||
-  'bigquery'
-).split(',');
-
-let describe = globalThis.describe;
-if (!envDatabases.includes('bigquery')) {
-  describe = describe.skip;
-}
+const [describe] = describeIfDatabaseAvailable(['bigquery']);
 
 describe('db:BigQuery', () => {
   let bq: BigQueryConnection;

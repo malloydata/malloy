@@ -35,19 +35,23 @@ import {
 export function fnStringAgg(): DialectFunctionOverloadDef[] {
   const value = makeParam('value', maxScalar('string'));
   const separator = makeParam('separator', literal(maxScalar('string')));
-  const orderBy: Fragment = {type: 'aggregate_order_by'};
+  const orderBy: Fragment = {
+    type: 'aggregate_order_by',
+    prefix: ' WITHIN GROUP(',
+    suffix: ')',
+  };
 
   return [
     overload(
       minAggregate('string'),
       [value.param],
-      sql`LISTAGG(${value.arg}, ',') WITHIN GROUP(${orderBy})`,
+      sql`LISTAGG(${value.arg}, ',')${orderBy}`,
       {supportsOrderBy: true, supportsLimit: false}
     ),
     overload(
       minAggregate('string'),
       [value.param, separator.param],
-      sql`LISTAGG(${value.arg}, ${separator.arg}) WITHIN GROUP(${orderBy})`,
+      sql`LISTAGG(${value.arg}, ${separator.arg})${orderBy}`,
       {supportsOrderBy: true, supportsLimit: false}
     ),
   ];
@@ -56,19 +60,23 @@ export function fnStringAgg(): DialectFunctionOverloadDef[] {
 export function fnStringAggDistinct(): DialectFunctionOverloadDef[] {
   const value = makeParam('value', maxScalar('string'));
   const separator = makeParam('separator', literal(maxScalar('string')));
-  const orderBy: Fragment = {type: 'aggregate_order_by'};
+  const orderBy: Fragment = {
+    type: 'aggregate_order_by',
+    prefix: ' WITHIN GROUP(',
+    suffix: ')',
+  };
 
   return [
     overload(
       minAggregate('string'),
       [value.param],
-      sql`LISTAGG(DISTINCT ${value.arg}, ',') WITHIN GROUP(${orderBy})`,
+      sql`LISTAGG(DISTINCT ${value.arg}, ',')${orderBy}`,
       {supportsOrderBy: true, supportsLimit: false}
     ),
     overload(
       minAggregate('string'),
       [value.param, separator.param],
-      sql`LISTAGG(DISTINCT ${value.arg}, ${separator.arg}) WITHIN GROUP(${orderBy})`,
+      sql`LISTAGG(DISTINCT ${value.arg}, ${separator.arg})${orderBy}`,
       {supportsOrderBy: true, supportsLimit: false}
     ),
   ];

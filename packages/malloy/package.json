@@ -1,7 +1,21 @@
 {
   "name": "@malloydata/malloy",
-  "version": "0.0.127",
+  "version": "0.0.132",
   "license": "MIT",
+  "exports": {
+    ".": "./dist/index.js",
+    "./test": "./dist/test/index.js"
+  },
+  "typesVersions": {
+    "*": {
+      "index": [
+        "./dist/index.d.ts"
+      ],
+      "test": [
+        "./dist/test/index.d.ts"
+      ]
+    }
+  },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "homepage": "https://github.com/malloydata/malloy#readme",

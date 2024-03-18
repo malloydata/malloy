@@ -111,6 +111,15 @@ export abstract class Dialect {
   // StandardSQL dialects can't partition on expression in window functions
   cantPartitionWindowFunctionsOnExpressions = false;
 
+  // Snowflake can't yet support pipelines in nested views.
+  supportsPipelinesInViews = true;
+
+  // Some dialects don't supporrt arrays.
+  supportsArraysInData = true;
+
+  // can read some version of ga_sample
+  readsNestedData = true;
+
   // return the definition of a function with the given name
   abstract getGlobalFunctionDef(
     name: string

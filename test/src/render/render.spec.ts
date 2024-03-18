@@ -509,7 +509,7 @@ describe('rendering results', () => {
   describe('date renderer', () => {
     test('date with timezone rendered correctly', async () => {
       const src = `
-        query: mex_query is duckdb.sql('SELECT 1') -> {
+        query: mex_query is duckdb.sql('SELECT 1 as one ') -> {
           timezone: 'America/Mexico_City'
           select: mex_time is @2021-02-24 03:05:06
         }
@@ -554,7 +554,7 @@ describe('rendering results', () => {
     test('date with timezone rendered correctly', async () => {
       const src = `
         query: mex_query is # bar_chart
-          duckdb.sql('SELECT 1') -> {
+          duckdb.sql('SELECT 1 as one') -> {
             timezone: 'America/Mexico_City'
             select: mex_time is @2021-02-24 03:05:06
           }
@@ -622,7 +622,7 @@ describe('rendering results', () => {
   describe('data volume renderer', () => {
     test('data volume tags works correctly', async () => {
       const src = `
-        query: bytes_query is duckdb.sql('SELECT 1') -> {
+        query: bytes_query is duckdb.sql('SELECT 1 as one') -> {
           select:
           # data_volume = bytes
           usage_b is 3758
@@ -651,7 +651,7 @@ describe('rendering results', () => {
   describe('duration renderer', () => {
     test('duration tags works correctly', async () => {
       const src = `
-        query: duration_query is duckdb.sql('SELECT 1') -> {
+        query: duration_query is duckdb.sql('SELECT 1 as one') -> {
           select:
           # duration = nanoseconds
           ns1 is 1

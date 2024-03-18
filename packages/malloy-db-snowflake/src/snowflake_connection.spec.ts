@@ -22,22 +22,14 @@
  */
 
 import * as malloy from '@malloydata/malloy';
+import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
 import {SnowflakeConnection} from './snowflake_connection';
 import {fileURLToPath} from 'url';
 import * as util from 'util';
 import * as fs from 'fs';
 import {SnowflakeExecutor} from './snowflake_executor';
 
-const envDatabases = (
-  process.env['MALLOY_DATABASES'] ||
-  process.env['MALLOY_DATABASE'] ||
-  ''
-).split(',');
-
-let describe = globalThis.describe;
-if (!envDatabases.includes('snowflake')) {
-  describe = describe.skip;
-}
+const [describe] = describeIfDatabaseAvailable(['snowflake']);
 
 describe('db:Snowflake', () => {
   let conn: SnowflakeConnection;
@@ -65,8 +57,8 @@ describe('db:Snowflake', () => {
   });
 
   it('runs a SQL query', async () => {
-    const res = await conn.runSQL('SELECT 1 as t');
-    expect(res.rows[0]['t']).toBe(1);
+    const res = await conn.runSQL('SELECT 1 as T');
+    expect(res.rows[0]['T']).toBe(1);
   });
 
   it('runs a Malloy query', async () => {

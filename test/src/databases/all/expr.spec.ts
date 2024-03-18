@@ -331,7 +331,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       !['postgres', 'snowflake'].includes(runtime.connection.name),
       async () => {
         await expect(`
-      run: ${databaseName}.sql('SELECT 1') -> { select:
+      run: ${databaseName}.sql('SELECT 1 as one') -> { select:
         bad_date is '123':::date
         bad_number is 'abc':::number
         good_number is "312":::"integer"
@@ -697,7 +697,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
     test('quote double quote', async () => {
       await expect(
-        `run: ${databaseName}.sql("SELECT 1") -> {
+        `run: ${databaseName}.sql("SELECT 1 as one") -> {
           select: double_quote is "${back}${dq}"
         }`
       ).malloyResultMatches(runtime, {double_quote: '"'});
@@ -728,7 +728,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 
   test('dimension expressions expanded with parens properly', async () => {
     await expect(
-      `run: ${databaseName}.sql("SELECT 1") extend {
+      `run: ${databaseName}.sql("SELECT 1 as one") extend {
         dimension: fot is (false) or (true)
       } -> {
         select:

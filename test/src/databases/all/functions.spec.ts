@@ -113,7 +113,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     it(`works - ${databaseName}`, async () => {
       const expected = {
         'bigquery': 'foo2003-01-01 12:00:00+00',
-        'snowflake': 'foo2003-01-01 12:00:00.000',
+        'snowflake': 'foo2003-01-01T12:00:00.000Z',
       };
 
       await funcTestMultiple(
@@ -1289,7 +1289,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 
     it(`works with fanout and order_by - ${databaseName}`, async () => {
       // TODO bigquery cannot handle both fanout and order_by today
-      if (databaseName === 'bigquery') return;
+      if (['bigquery', 'snowflake'].includes(databaseName)) return;
       await expect(`##! experimental.aggregate_order_by
       run: state_facts extend { join_many:
         state_facts2 is ${databaseName}.table('malloytest.state_facts')
@@ -1306,6 +1306,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
 
     it(`works with fanout - ${databaseName}`, async () => {
+      // Snowflake cannot handle the fanout case today
+      if (databaseName === 'snowflake') return;
       await expect(`##! experimental.aggregate_order_by
       run: state_facts extend { join_many:
         state_facts2 is ${databaseName}.table('malloytest.state_facts')
@@ -1320,6 +1322,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
 
     it(`works with fanout and separator - ${databaseName}`, async () => {
+      // Snowflake cannot handle the fanout case today
+      if (databaseName === 'snowflake') return;
       await expect(`##! experimental.aggregate_order_by
       run: state_facts extend { join_many:
         state_facts2 is ${databaseName}.table('malloytest.state_facts')

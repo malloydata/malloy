@@ -110,6 +110,7 @@ export class PostgresDialect extends Dialect {
   globalFunctions = POSTGRES_FUNCTIONS;
   supportsNesting = true;
   experimental = false;
+  readsNestedData = false;
 
   quoteTablePath(tablePath: string): string {
     return tablePath
