@@ -117,7 +117,6 @@ export * from './source-elements/named-source';
 export * from './source-elements/query-source';
 export * from './source-elements/sql-source';
 export * from './source-elements/table-source';
-export * from './sql-elements/sql-statement';
 export * from './sql-elements/sql-string';
 export * from './types/annotation-elements';
 export * from './types/comparison';

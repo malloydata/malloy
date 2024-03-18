@@ -60,7 +60,6 @@ export default [
   ["/'regexp string /*-- \\escapes\\uFFFF \\'more\\"],
   ['"/* -- \\e\\uFFFF \\\'\\'],
   ["state ~ 'CA' | r'M.' | \"CO\" | /'O.'  -- end"],
-  ['select: """ SELECT 1 """'],
   ['run: duckdb.sql("""', '  SELECT 1', '""")'],
   // [
   //   'select: """',

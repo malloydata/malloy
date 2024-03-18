@@ -240,15 +240,6 @@ describe('source locations', () => {
     expect(y.location).toMatchObject(source.locations[0]);
   });
 
-  // Since """ strings are not single tokens, I don't know how to do this.
-  // test("multi line sql block token span is correct", () => {
-  //   const sqlSource = `sql: { select: """// line 0\n//line 1\n// line 2""" }`;
-  //   const m = new TestTranslator(sqlSource);
-  //   expect(m).not.toParse();
-  //   const errList = m.errors().errors;
-  //   expect(errList[0].at?.range.end).toEqual({ line: 2, character: 11 });
-  // });
-
   test('undefined query location', () => {
     expect(model`run: ${'xyz'}`).translationToFailWith(
       "Reference to undefined object 'xyz'"

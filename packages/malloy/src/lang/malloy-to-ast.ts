@@ -1597,16 +1597,6 @@ export class MalloyToAST
     return this.getFieldExpr(pcx.fieldExpr());
   }
 
-  visitDefineSQLStatement(
-    pcx: parse.DefineSQLStatementContext
-  ): ast.SQLStatement {
-    this.m4advisory(
-      pcx,
-      '`sql:` statement is deprecated, use `connection_name.sql(...)` instead'
-    );
-    return this.astAt(new ast.SQLStatement(), pcx);
-  }
-
   visitSampleStatement(pcx: parse.SampleStatementContext): ast.SampleProperty {
     const rowCx = pcx.sampleSpec().INTEGER_LITERAL();
     if (rowCx) {

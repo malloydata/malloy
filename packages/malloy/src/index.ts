@@ -117,8 +117,6 @@ export {
   indent,
 } from './model';
 export {
-  // Neede for VSCode extension
-  HighlightType,
   // Needed for tests only
   MalloyTranslator,
 } from './lang';
@@ -161,7 +159,6 @@ export type {
   Loggable,
   ModelMaterializer,
   DocumentSymbol,
-  DocumentHighlight,
   ResultJSON,
   PreparedResultMaterializer,
   SQLBlockMaterializer,

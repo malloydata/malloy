@@ -53,12 +53,6 @@ import {
 import {Zone, ZoneData} from './zone';
 import {walkForDocumentSymbols} from './parse-tree-walkers/document-symbol-walker';
 import {
-  DocumentHighlight,
-  passForHighlights,
-  sortHighlights,
-  walkForDocumentHighlights,
-} from './parse-tree-walkers/document-highlight-walker';
-import {
   DocumentCompletion,
   walkForDocumentCompletions,
 } from './parse-tree-walkers/document-completion-walker';
@@ -395,16 +389,15 @@ class ASTStep implements TranslationStep {
     );
     const newAst = secondPass.visit(parse.root);
     that.compilerFlags = secondPass.compilerFlags;
-    if (that.root.logger.hasErrors()) {
-      this.response = that.fatalResponse();
-      return this.response;
-    }
 
     if (newAst.elementType === 'unimplemented') {
-      throw new Error('TRANSLATOR INTERNAL ERROR: Unimplemented AST node');
+      newAst.log('INTERNAL COMPILER ERROR: Untranslated parse node');
     }
 
     if (!this.walked) {
+      // The DocumentStatement.needs method has largely replaced the need to walk
+      // the AST once it has been translated, this one check remains, though
+      // it should probably never be hit
       for (const walkedTo of newAst.walk()) {
         if (walkedTo instanceof ast.Unimplemented) {
           walkedTo.log('INTERNAL COMPILER ERROR: Untranslated parse node');
@@ -412,7 +405,7 @@ class ASTStep implements TranslationStep {
       }
       this.walked = true;
     }
-    // If there is a partial ast ...
+
     if (that.root.logger.hasErrors()) {
       this.response = that.fatalResponse();
       return this.response;
@@ -461,21 +454,8 @@ class MetadataStep implements TranslationStep {
         } catch {
           // Do nothing, symbols already `undefined`
         }
-        let walkHighlights: DocumentHighlight[];
-        try {
-          walkHighlights = walkForDocumentHighlights(
-            tryParse.parse.tokenStream,
-            tryParse.parse.root
-          );
-        } catch {
-          walkHighlights = [];
-        }
         this.response = {
           symbols,
-          highlights: sortHighlights([
-            ...passForHighlights(tryParse.parse.tokenStream),
-            ...walkHighlights,
-          ]),
           final: true,
         };
       }
