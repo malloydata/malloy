@@ -108,7 +108,7 @@ export class SnowflakeDialect extends Dialect {
   dontUnionIndex = false;
   supportsQualify = false;
   supportsNesting = true;
-  experimental = true;
+  experimental = false;
   supportsPipelinesInViews = false;
 
   // don't mess with the table pathing.
