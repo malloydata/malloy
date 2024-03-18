@@ -617,16 +617,7 @@ export class Document extends MalloyElement implements NameSpace {
       this.log(`Cannot redefine '${str}', which is in global namespace`);
     }
     if (ent.entry.type === 'struct') {
-      const msg = this.newExperimentalSource(ent.entry.dialect);
-      /*
-
-       * we add it to the model, so the compile can continue, but we also error.
-       */
-      if (msg) {
-        this.log(
-          `${msg}. Cannot use source '${ent.entry.as || ent.entry.name}'`
-        );
-      }
+      this.checkExperimentalDialect(this, ent.entry.dialect);
     }
 
     this.documentModel[str] = ent;
@@ -639,7 +630,7 @@ export class Document extends MalloyElement implements NameSpace {
    * @param dialect The dialect name
    * @returns The error message or undefined
    */
-  newExperimentalSource(dialect: string): string | undefined {
+  checkExperimentalDialect(me: MalloyElement, dialect: string) {
     if (this.alreadyChecked[dialect]) {
       return;
     }
@@ -653,7 +644,10 @@ export class Document extends MalloyElement implements NameSpace {
         return;
       }
       // TODO DO NOT DO THIS IN TESTS
-      return `Requires compiler flag '##! experimental.dialect.${dialect}'`;
+      me.log(
+        `Requires compiler flag '##! experimental.dialect.${dialect}'`,
+        'error'
+      );
     }
   }
 }

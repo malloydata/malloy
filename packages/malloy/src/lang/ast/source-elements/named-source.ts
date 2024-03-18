@@ -101,10 +101,7 @@ export class NamedSource extends Source {
       this.log(`Must use 'from_sql()' for sql source '${this.refName}'`);
       return;
     } else {
-      const msg = this.document()?.newExperimentalSource(entry.dialect);
-      if (msg) {
-        this.log(msg);
-      }
+      this.document()?.checkExperimentalDialect(this, entry.dialect);
     }
     return {...entry};
   }
