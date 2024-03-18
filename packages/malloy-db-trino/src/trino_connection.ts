@@ -76,9 +76,8 @@ export class TrinoConnection implements Connection, PersistSQLResults {
     'string': {type: 'string'},
     'date': {type: 'date'},
 
-    'STRING': {type: 'string'},
-    'INTEGER': {type: 'number', numberType: 'integer'},
-    'INT64': {type: 'number', numberType: 'integer'},
+    // TODO: cleanup.
+    /* 'INT64': {type: 'number', numberType: 'integer'},
     'FLOAT': {type: 'number', numberType: 'float'},
     'FLOAT64': {type: 'number', numberType: 'float'},
     'NUMERIC': {type: 'number', numberType: 'float'},
@@ -86,7 +85,7 @@ export class TrinoConnection implements Connection, PersistSQLResults {
     'TIMESTAMP': {type: 'timestamp'},
     'BOOLEAN': {type: 'boolean'},
     'BOOL': {type: 'boolean'},
-    'JSON': {type: 'json'},
+    'JSON': {type: 'json'},*/
     // TODO (https://cloud.google.com/bigquery/docs/reference/rest/v2/tables#tablefieldschema):
     // BYTES
     // DATETIME
@@ -265,7 +264,9 @@ export class TrinoConnection implements Connection, PersistSQLResults {
     // TODO: fill in with options.
     const result = await this.trino.query(sqlCommand);
 
-    const queryResult = await result.next();
+    console.log(`THE SQL ===> ${sqlCommand}`);
+
+    let queryResult = await result.next();
     if (queryResult.value.error) {
       // TODO: handle.
       throw new Error(
@@ -275,21 +276,35 @@ export class TrinoConnection implements Connection, PersistSQLResults {
       );
     }
 
-    const rows = queryResult.value.data ?? [];
-
     const malloyRows: QueryDataRow[] = [];
-    for (const row of rows) {
-      const malloyRow: QueryDataRow = {};
-      for (let i = 0; i < queryResult.value.columns.length; i++) {
-        const column = queryResult.value.columns[i];
-        // TODO: handle arrays etc.
-        malloyRow[column.name] = row[i] as QueryValue;
+    while (queryResult !== null) {
+      const rows = queryResult.value.data ?? [];
+      for (const row of rows) {
+        const malloyRow: QueryDataRow = {};
+        for (let i = 0; i < queryResult.value.columns.length; i++) {
+          console.log(
+            `COLUMNI ${JSON.stringify(queryResult.value.columns[i])}`
+          );
+          const column = queryResult.value.columns[i];
+          // TODO: handle arrays etc.
+          if (column.type === 'json') {
+            malloyRow[column.name] = JSON.parse(row[i]) as QueryValue;
+          } else {
+            malloyRow[column.name] = row[i] as QueryValue;
+          }
+        }
+
+        malloyRows.push(malloyRow);
       }
 
-      malloyRows.push(malloyRow);
+      if (!queryResult.done) {
+        queryResult = await result.next();
+      } else {
+        break;
+      }
     }
 
-    console.log(`ROWS: ${JSON.stringify(malloyRows)}`);
+    console.log(`ROWS: ${JSON.stringify(malloyRows)} ${malloyRows.length}`);
     // TODO: handle totalrows.
     return {rows: malloyRows, totalRows: malloyRows.length};
   }
@@ -325,7 +340,10 @@ export class TrinoConnection implements Connection, PersistSQLResults {
 
     for (const tableKey in missing) {
       let inCache = this.schemaCache.get(tableKey);
-      const tablePath = missing[tableKey].replace(/malloytest/g, "malloy_demo.faa");
+      const tablePath = missing[tableKey].replace(
+        /malloytest/g,
+        'malloy_demo.faa'
+      );
       if (
         !inCache ||
         (refreshTimestamp && refreshTimestamp > inCache.timestamp)
@@ -384,7 +402,9 @@ export class TrinoConnection implements Connection, PersistSQLResults {
       if (queryResult.value.error) {
         // TODO: handle.
         throw new Error(
-          `Failed to grab schema for table ${tablePath}: ${JSON.stringify(queryResult.value.error)}`
+          `Failed to grab schema for table ${tablePath}: ${JSON.stringify(
+            queryResult.value.error
+          )}`
         );
       }
 

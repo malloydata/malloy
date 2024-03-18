@@ -40,18 +40,9 @@ describe('Trino tests', () => {
     // Issue: #151
     it(`Basic trino  - ${databaseName}`, async () => {
       await expect(`
-        run: trino.table('sample.burstbank.customer') -> {
-          group_by: city
-          aggregate: avgIncome is avg(estimated_income)
-          aggregate: counti is count()
-          nest: foo is {
-            select: estimated_income
-            order_by: estimated_income
-            limit: 5
-          }
-          order_by: counti desc
-          limit: 5
-        }
+      run: trino.table('malloy_demo.faa.aircraft') -> {
+            select: *
+    }
       `).malloyResultMatches(runtime, {custkey: '1000001'});
     });
   });

@@ -140,7 +140,7 @@ export class TrinoDialect extends Dialect {
     const fields = fieldList
       .map(f => `\n '${f.sqlOutputName}' VALUE ${f.sqlExpression}`)
       .join(', ');
-    return `COALESCE(SLICE(COALESCE(ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN JSON_OBJECT(${fields}) END \n ${orderBy} -- ${tail}\n), ARRAY[]), 1, ${limit}), ARRAY[])`;
+    return `cast(COALESCE(SLICE(COALESCE(ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN JSON_PARSE(JSON_OBJECT(${fields})) END \n ${orderBy} -- ${tail}\n), ARRAY[]), 1, ${limit}), ARRAY[]) as json)`;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
