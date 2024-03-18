@@ -28,7 +28,6 @@ malloyDocument: (malloyStatement | SEMI)* EOF;
 
 malloyStatement
   : defineSourceStatement
-  | defineSQLStatement
   | defineQuery
   | importStatement
   | runStatement
@@ -60,19 +59,6 @@ isDefine
 
 runStatement
   : tags RUN topLevelAnonQueryDef
-  ;
-
-defineSQLStatement
-  : SQLC nameSQLBlock isDefine sqlBlock
-  ;
-
-sqlBlock
-  : OCURLY blockSQLDef+ CCURLY
-  ;
-
-blockSQLDef
-  : CONNECTION connectionName
-  | SELECT sqlString
   ;
 
 sqlString

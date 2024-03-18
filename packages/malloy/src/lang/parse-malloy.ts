@@ -53,12 +53,6 @@ import {
 import {Zone, ZoneData} from './zone';
 import {walkForDocumentSymbols} from './parse-tree-walkers/document-symbol-walker';
 import {
-  DocumentHighlight,
-  passForHighlights,
-  sortHighlights,
-  walkForDocumentHighlights,
-} from './parse-tree-walkers/document-highlight-walker';
-import {
   DocumentCompletion,
   walkForDocumentCompletions,
 } from './parse-tree-walkers/document-completion-walker';
@@ -361,11 +355,6 @@ class ImportsAndTablesStep implements TranslationStep {
   }
 }
 
-interface SQLExploreRef {
-  ref?: ast.FromSQLSource;
-  def?: ast.SQLStatement;
-}
-
 class ASTStep implements TranslationStep {
   response?: ASTResponse;
   private walked = false;
@@ -400,49 +389,28 @@ class ASTStep implements TranslationStep {
     );
     const newAst = secondPass.visit(parse.root);
     that.compilerFlags = secondPass.compilerFlags;
-    if (that.root.logger.hasErrors()) {
-      this.response = that.fatalResponse();
-      return this.response;
-    }
 
     if (newAst.elementType === 'unimplemented') {
-      throw new Error('TRANSLATOR INTERNAL ERROR: Unimplemented AST node');
+      newAst.log('INTERNAL COMPILER ERROR: Untranslated parse node');
     }
 
-    // I kind of think table refs should probably also be collected here
-    // instead of in the parse step. Note to myself, do that someday.
-    const sqlExplores: Record<string, SQLExploreRef> = {};
     if (!this.walked) {
+      // The DocumentStatement.needs method has largely replaced the need to walk
+      // the AST once it has been translated, this one check remains, though
+      // it should probably never be hit
       for (const walkedTo of newAst.walk()) {
-        if (walkedTo instanceof ast.FromSQLSource) {
-          if (!sqlExplores[walkedTo.refName]) {
-            sqlExplores[walkedTo.refName] = {};
-          }
-          sqlExplores[walkedTo.refName].ref = walkedTo;
-        } else if (walkedTo instanceof ast.SQLStatement && walkedTo.is) {
-          if (!sqlExplores[walkedTo.is]) {
-            sqlExplores[walkedTo.is] = {};
-          }
-          sqlExplores[walkedTo.is].def = walkedTo;
-        } else if (walkedTo instanceof ast.Unimplemented) {
+        if (walkedTo instanceof ast.Unimplemented) {
           walkedTo.log('INTERNAL COMPILER ERROR: Untranslated parse node');
         }
       }
       this.walked = true;
     }
-    // If there is a partial ast ...
+
     if (that.root.logger.hasErrors()) {
       this.response = that.fatalResponse();
       return this.response;
     }
 
-    /*
-TODO we used to scna the AST for SQL blocks here, don't need to do that
-becausae that happens at the translate step, but the code I need to
-understand is how a root translate can return the need of a chiold
-which has an SQL block ...
-
-*/
     // Now make sure that every child has fully translated itself
     // before this tree is ready to also translate ...
     for (const child of that.childTranslators.values()) {
@@ -486,21 +454,8 @@ class MetadataStep implements TranslationStep {
         } catch {
           // Do nothing, symbols already `undefined`
         }
-        let walkHighlights: DocumentHighlight[];
-        try {
-          walkHighlights = walkForDocumentHighlights(
-            tryParse.parse.tokenStream,
-            tryParse.parse.root
-          );
-        } catch {
-          walkHighlights = [];
-        }
         this.response = {
           symbols,
-          highlights: sortHighlights([
-            ...passForHighlights(tryParse.parse.tokenStream),
-            ...walkHighlights,
-          ]),
           final: true,
         };
       }

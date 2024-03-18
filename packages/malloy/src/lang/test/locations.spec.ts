@@ -184,22 +184,6 @@ describe('source locations', () => {
     }
   });
 
-  test('pre m4 location of named SQL block', () => {
-    const source = markSource`##! -m4warnings\n${'sql: s is { select: """SELECT 1 as one""" }'}`;
-    const m = new TestTranslator(source.code);
-    expect(m).toParse();
-    const compileSql = m.translate().compileSQL;
-    expect(compileSql).toBeDefined();
-    if (compileSql) {
-      m.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
-      });
-      expect(m).toTranslate();
-      const s = m.sqlBlocks[0];
-      expect(s.location).isLocationIn(source.locations[0], source.code);
-    }
-  });
-
   test('location of renamed field', () => {
     const source = markSource`
       source: na is a extend {
@@ -255,15 +239,6 @@ describe('source locations', () => {
     const y = getFieldDef(x, 'y');
     expect(y.location).toMatchObject(source.locations[0]);
   });
-
-  // Since """ strings are not single tokens, I don't know how to do this.
-  // test("multi line sql block token span is correct", () => {
-  //   const sqlSource = `sql: { select: """// line 0\n//line 1\n// line 2""" }`;
-  //   const m = new TestTranslator(sqlSource);
-  //   expect(m).not.toParse();
-  //   const errList = m.errors().errors;
-  //   expect(errList[0].at?.range.end).toEqual({ line: 2, character: 11 });
-  // });
 
   test('undefined query location', () => {
     expect(model`run: ${'xyz'}`).translationToFailWith(

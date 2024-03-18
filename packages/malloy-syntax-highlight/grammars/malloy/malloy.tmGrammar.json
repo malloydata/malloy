@@ -40,22 +40,6 @@
     "sql-string": {
       "patterns": [
         {
-          "begin": "\\b(select)(\\s*:\\s*)(\"\"\")",
-          "end": "\"\"\"",
-          "beginCaptures": {
-            "1": { "name": "keyword.control.select" },
-            "3": { "name": "punctuation.sql-block.open" }
-          },
-          "endCaptures": {
-            "0": { "name": "punctuation.sql-block.close" }
-          },
-          "name": "source.sql",
-          "patterns": [
-            { "include": "#malloy-in-sql" },
-            { "include": "source.sql" }
-          ]
-        },
-        {
           "begin": "(\\b[A-Za-z_][A-Za-z_0-9]*)(\\s*\\.\\s*)(sql)(\\s*\\(\\s*)(\"\"\")",
           "end": "\"\"\"",
           "beginCaptures": {
@@ -84,7 +68,7 @@
           }
         },
         {
-          "match": "(?i)\\b(AVG|COUNT|FIRST|FORMAT|LAST|LCASE|LEN|MAX|MID|MIN|MOD|NOW|ROUND|SUM|UCASE|TABLE|FROM|FROM_SQL|UNGROUPED)(\\s*\\()",
+          "match": "(?i)\\b(AVG|COUNT|FIRST|FORMAT|LAST|LCASE|LEN|MAX|MID|MIN|MOD|NOW|ROUND|SUM|UCASE|UNGROUPED)(\\s*\\()",
           "captures": {
             "1": { "name": "entity.name.function" }
           }
@@ -350,11 +334,7 @@
           "match": "(?i)\\baccept\\b",
           "name": "keyword.control.accept"
         },
-        {
-          "match": "(?i)\\bsql\\b",
-          "name": "keyword.control.sql"
-        },
-        {
+       {
           "match": "(?i)\\bselect\\b",
           "name": "keyword.control.select"
         },

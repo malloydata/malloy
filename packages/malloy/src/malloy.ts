@@ -24,7 +24,6 @@
 import {RunSQLOptions} from './run_sql_options';
 import {
   DocumentCompletion as DocumentCompletionDefinition,
-  DocumentHighlight as DocumentHighlightDefinition,
   DocumentSymbol as DocumentSymbolDefinition,
   LogMessage,
   MalloyTranslator,
@@ -916,20 +915,6 @@ export class Parse {
   constructor(private translator: MalloyTranslator) {}
 
   /**
-   * Retrieve the document highlights for the parsed document.
-   *
-   * These highlights represent the parsed tokens contained in the document,
-   * and may be used for syntax highlighting in an IDE, for example.
-   *
-   * @return An array of document highlights.
-   */
-  public get highlights(): DocumentHighlight[] {
-    return (this.translator.metadata().highlights || []).map(
-      highlight => new DocumentHighlight(highlight)
-    );
-  }
-
-  /**
    * Retrieve the symbols defined in the parsed document.
    *
    * These symbols represent any object defined (e.g. `Query`s and `Explore`s)
@@ -961,45 +946,6 @@ export class Parse {
     character: number;
   }): DocumentHelpContext | undefined {
     return this.translator.helpContext(position).helpContext;
-  }
-}
-
-/**
- * A document highlight.
- *
- * Represents a parsed token contained in a Malloy document
- * and may be used for syntax highlighting in an IDE, for example.
- */
-export class DocumentHighlight {
-  private _range: DocumentRange;
-  private _type: string;
-
-  constructor(documentHighlight: DocumentHighlightDefinition) {
-    this._range = new DocumentRange(
-      new DocumentPosition(
-        documentHighlight.range.start.line,
-        documentHighlight.range.start.character
-      ),
-      new DocumentPosition(
-        documentHighlight.range.end.line,
-        documentHighlight.range.end.character
-      )
-    );
-    this._type = documentHighlight.type;
-  }
-
-  /**
-   * @return The range of characters this highlight spans within its source document.
-   */
-  get range(): DocumentRange {
-    return this._range;
-  }
-
-  /**
-   * @return The type of highlight, which may be any `HighlightType`.
-   */
-  get type(): string {
-    return this._type;
   }
 }
 
