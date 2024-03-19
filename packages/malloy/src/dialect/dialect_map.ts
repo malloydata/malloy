@@ -26,6 +26,7 @@ import {Dialect} from './dialect';
 import {PostgresDialect} from './postgres';
 import {SnowflakeDialect} from './snowflake';
 import {StandardSQLDialect} from './standardsql';
+import {TrinoDialect} from './trino';
 import {FunctionDef, FunctionOverloadDef} from '../model/malloy_types';
 import {DialectFunctionOverloadDef} from './functions';
 
@@ -47,6 +48,7 @@ registerDialect(new PostgresDialect());
 registerDialect(new StandardSQLDialect());
 registerDialect(new DuckDBDialect());
 registerDialect(new SnowflakeDialect());
+registerDialect(new TrinoDialect());
 
 function paramsEqual(
   a: DialectFunctionOverloadDef,
