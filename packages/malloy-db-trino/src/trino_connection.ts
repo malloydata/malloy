@@ -26,7 +26,6 @@ import {
   ConnectionConfig,
   FetchSchemaOptions,
   FieldTypeDef,
-  Malloy,
   MalloyQueryData,
   FieldAtomicTypeDef,
   NamedStructDefs,
@@ -201,8 +200,8 @@ export class TrinoConnection implements Connection, PersistSQLResults {
     return true;
   }
 
-  public async manifestTemporaryTable(sqlCommand: string): Promise<string> {
-    throw new Error('not impld 1');
+  public async manifestTemporaryTable(_sqlCommand: string): Promise<string> {
+    throw new Error('not implemented 1');
   }
 
   /*  private async _runSQL(
@@ -253,7 +252,8 @@ export class TrinoConnection implements Connection, PersistSQLResults {
   public async runSQL(
     sqlCommand: string,
     options: RunSQLOptions = {},
-    rowIndex = 0
+    // TODO(figutierrez): Use.
+    _rowIndex = 0
   ): Promise<MalloyQueryData> {
     //sqlCommand = sqlCommand.replace(new RegExp('`', 'g'), '');
     // TODO: default row limit.
@@ -262,7 +262,6 @@ export class TrinoConnection implements Connection, PersistSQLResults {
     }`;
     // TODO: fill in with options.
     const result = await this.trino.query(sqlCommand);
-
 
     let queryResult = await result.next();
     if (queryResult.value.error) {
@@ -299,14 +298,16 @@ export class TrinoConnection implements Connection, PersistSQLResults {
       }
     }
 
+    // TODO(figutierrez): Remove.
+    // eslint-disable-next-line no-console
     console.log(`ROWS: ${JSON.stringify(malloyRows)} ${malloyRows.length}`);
     // TODO: handle totalrows.
     return {rows: malloyRows, totalRows: malloyRows.length};
   }
 
   public async runSQLBlockAndFetchResultSchema(
-    sqlBlock: SQLBlock,
-    options?: RunSQLOptions
+    _sqlBlock: SQLBlock,
+    _options?: RunSQLOptions
   ): Promise<{data: MalloyQueryData; schema: StructDef}> {
     /*const {data, schema: schemaRaw} = await this._runSQL(
       sqlBlock.selectStr,
@@ -320,7 +321,7 @@ export class TrinoConnection implements Connection, PersistSQLResults {
 
     const schema = this.structDefFromSQLSchema(sqlBlock, schemaRaw);
     return {data, schema};*/
-    throw new Error('Not impld 3');
+    throw new Error('Not implemented 3');
   }
 
   public async fetchSchemaForTables(
@@ -420,13 +421,13 @@ export class TrinoConnection implements Connection, PersistSQLResults {
   }
 
   public async fetchSchemaForSQLBlock(
-    sqlRef: SQLBlock,
-    {refreshTimestamp}: FetchSchemaOptions
+    _sqlRef: SQLBlock,
+    {_refreshTimestamp}: FetchSchemaOptions
   ): Promise<
     | {structDef: StructDef; error?: undefined}
     | {error: string; structDef?: undefined}
   > {
-    throw new Error('Not impld 5');
+    throw new Error('Not implemented 5');
   }
 
   /*  public async downloadMalloyQuery(
@@ -439,7 +440,7 @@ export class TrinoConnection implements Connection, PersistSQLResults {
     return job.getQueryResultsStream();
   }*/
 
-  public async estimateQueryCost(sqlCommand: string): Promise<QueryRunStats> {
+  public async estimateQueryCost(_sqlCommand: string): Promise<QueryRunStats> {
     /*const dryRunResults = await this.dryRunSQLQuery(sqlCommand);
     return {
       queryCostBytes: Number(
@@ -449,10 +450,10 @@ export class TrinoConnection implements Connection, PersistSQLResults {
     throw new Error('Not impld 6');
   }
 
-  public async executeSQLRaw(sqlCommand: string): Promise<QueryData> {
+  public async executeSQLRaw(_sqlCommand: string): Promise<QueryData> {
     /*const result = await this.createTrinoJobAndGetResults(sqlCommand);
     return result[0];*/
-    throw new Error('Not impld 7');
+    throw new Error('Not implemented 7');
   }
 
   public async test(): Promise<void> {
