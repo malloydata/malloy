@@ -185,13 +185,12 @@ export function testRuntimeFor(connection: Connection) {
 }
 
 export const allDatabases = [
-  /*'postgres',
+  'postgres',
   'bigquery',
   'duckdb',
   'duckdb_wasm',
-  'snowflake',*/
-  'trino',
-  //'duckdb',
+  'snowflake',
+  'duckdb',
 ];
 
 type RuntimeDatabaseNames = (typeof allDatabases)[number];
