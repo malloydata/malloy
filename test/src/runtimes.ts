@@ -190,7 +190,6 @@ export const allDatabases = [
   'duckdb',
   'duckdb_wasm',
   'snowflake',
-  'duckdb',
 ];
 
 type RuntimeDatabaseNames = (typeof allDatabases)[number];
