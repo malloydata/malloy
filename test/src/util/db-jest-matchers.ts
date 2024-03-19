@@ -126,8 +126,7 @@ expect.extend({
       if (e instanceof MalloyError) {
         failMsg = `Error in query compilation\n${errorLogToString(
           querySrc,
-          e.problems,
-          JSON.stringify(e)
+          e.problems
         )}`;
       } else {
         try {
@@ -197,7 +196,7 @@ expect.extend({
   },
 });
 
-function errorLogToString(src: string, msgs: LogMessage[], str: string) {
+function errorLogToString(src: string, msgs: LogMessage[]) {
   let lovely = '';
   let lineNo = 0;
   for (const line of src.split('\n')) {
@@ -212,7 +211,5 @@ function errorLogToString(src: string, msgs: LogMessage[], str: string) {
     }
     lineNo += 1;
   }
-
-  lovely += `!!!!!!!!!!!! strstr ${str}\n`;
   return lovely;
 }
