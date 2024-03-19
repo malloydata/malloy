@@ -5,7 +5,7 @@
     "outDir": "dist",
     "composite": true,
     "noImplicitReturns": true,
-    "jsx": "preserve",
+    "jsx": "react-jsx",
     "jsxImportSource": "solid-js"
   },
   "include": ["./src", "./src/**/*.d.ts", "node_modules/us-atlas"],
