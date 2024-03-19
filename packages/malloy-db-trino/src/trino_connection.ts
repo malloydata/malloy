@@ -74,7 +74,7 @@ export class TrinoConnection implements Connection, PersistSQLResults {
     'string': {type: 'string'},
     'date': {type: 'date'},
 
-    // TODO: cleanup.
+    // TODO(figutierrez0): cleanup.
     /* 'INT64': {type: 'number', numberType: 'integer'},
     'FLOAT': {type: 'number', numberType: 'float'},
     'FLOAT64': {type: 'number', numberType: 'float'},
@@ -422,7 +422,8 @@ export class TrinoConnection implements Connection, PersistSQLResults {
 
   public async fetchSchemaForSQLBlock(
     _sqlRef: SQLBlock,
-    {_refreshTimestamp}: FetchSchemaOptions
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    {refreshTimestamp}: FetchSchemaOptions
   ): Promise<
     | {structDef: StructDef; error?: undefined}
     | {error: string; structDef?: undefined}
