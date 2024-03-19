@@ -116,7 +116,7 @@ export class TrinoDialect extends Dialect {
 
   quoteTablePath(tablePath: string): string {
     // TODO: look into escaping.
-    return `${tablePath.replace(/malloytest/g, "malloy_demo.faa")}`;
+    return `${tablePath.replace(/malloytest/g, 'malloy_demo.faa')}`;
   }
 
   sqlGroupSetTable(groupSetCount: number): string {
@@ -145,7 +145,7 @@ export class TrinoDialect extends Dialect {
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
     const fields = fieldList
-    .map(f => `\n '${f.sqlOutputName}' VALUE ${f.sqlExpression}`)
+      .map(f => `\n '${f.sqlOutputName}' VALUE ${f.sqlExpression}`)
       .join(', ');
     return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN JSON_OBJECT(${fields}))`;
   }
@@ -260,6 +260,7 @@ ${indent(sql)}
     return `(SELECT AS STRUCT ${alias}.*)`;
   }
 
+  // TODO(figutierrez): update.
   keywords = `
   ALL
   AND
@@ -540,9 +541,8 @@ ${indent(sql)}
   }
 
   sqlTypeToMalloyType(sqlType: string): FieldAtomicTypeDef | undefined {
-    // Remove trailing params
-    const baseSqlType = sqlType.match(/^(\w+)/)?.at(0) ?? sqlType;
-    return bqToMalloyTypes[baseSqlType.toUpperCase()];
+    // TODO(figutierrez): unimplemented.
+    return undefined;
   }
 
   castToString(expression: string): string {

@@ -35,7 +35,7 @@ import {DuckDBConnection} from '@malloydata/db-duckdb';
 import {DuckDBWASMConnection} from '@malloydata/db-duckdb/wasm';
 import {SnowflakeConnection} from '@malloydata/db-snowflake';
 import {PooledPostgresConnection} from '@malloydata/db-postgres';
-import {TrinoConnection} from '@malloydata/db-trino';
+import {TrinoConnection, TrinoExecutor} from '@malloydata/db-trino';
 import {SnowflakeExecutor} from '@malloydata/db-snowflake/src/snowflake_executor';
 
 export class SnowflakeTestConnection extends SnowflakeConnection {
@@ -166,12 +166,7 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
         connection = new TrinoConnection(
           dbName,
           {},
-          {
-            server:
-              'https://malloytesting-test-cluster.trino.galaxy.starburst.io',
-            user: 'na.arreola@gmail.com/accountadmin',
-            password: 'Malloystarburst2024@',
-          }
+          TrinoExecutor.getConnectionOptionsFromEnv()
         );
         break;
       default:

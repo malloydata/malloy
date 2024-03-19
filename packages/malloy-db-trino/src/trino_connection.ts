@@ -42,7 +42,6 @@ import {
   StandardSQLDialect,
   StreamingConnection,
   StructDef,
-  toAsyncGenerator,
 } from '@malloydata/malloy';
 import {Trino, BasicAuth} from 'trino-client';
 
@@ -56,7 +55,7 @@ export interface TrinoManagerOptions {
   userAgent: string;
 }
 
-interface TrinoConnectionConfiguration {
+export interface TrinoConnectionConfiguration {
   server?: string;
   catalog?: string;
   schema?: string;
@@ -264,7 +263,6 @@ export class TrinoConnection implements Connection, PersistSQLResults {
     // TODO: fill in with options.
     const result = await this.trino.query(sqlCommand);
 
-    console.log(`THE SQL ===> ${sqlCommand}`);
 
     let queryResult = await result.next();
     if (queryResult.value.error) {
@@ -282,9 +280,6 @@ export class TrinoConnection implements Connection, PersistSQLResults {
       for (const row of rows) {
         const malloyRow: QueryDataRow = {};
         for (let i = 0; i < queryResult.value.columns.length; i++) {
-          console.log(
-            `COLUMNI ${JSON.stringify(queryResult.value.columns[i])}`
-          );
           const column = queryResult.value.columns[i];
           // TODO: handle arrays etc.
           if (column.type === 'json') {
@@ -355,7 +350,6 @@ export class TrinoConnection implements Connection, PersistSQLResults {
             // TODO: remove.
             tablePath
           );
-          console.log(`THE SCHEMA: ${JSON.stringify(schema)}`);
           inCache = {
             schema,
             timestamp,
@@ -422,8 +416,6 @@ export class TrinoConnection implements Connection, PersistSQLResults {
       throw new Error(`Could not fetch schema for table ${tablePath} ${e}`);
     }
     // TODO: handle repeated etc.
-
-    console.log('finished');
     return structDef;
   }
 
