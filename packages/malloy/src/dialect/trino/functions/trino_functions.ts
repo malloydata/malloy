@@ -21,4 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export {};
+import {FUNCTIONS} from '../../functions';
+
+export const TRINO_FUNCTIONS = FUNCTIONS.clone();
+
+TRINO_FUNCTIONS.seal();

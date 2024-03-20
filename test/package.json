@@ -27,6 +27,7 @@
     "@malloydata/db-snowflake": "^0.0.133",
     "@malloydata/malloy": "^0.0.133",
     "@malloydata/render": "^0.0.133",
+    "@malloydata/db-trino": "^0.0.133",
     "jsdom": "^22.1.0",
     "luxon": "^2.4.0",
     "madge": "^6.0.0"
