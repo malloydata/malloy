@@ -37,7 +37,12 @@ import {
 } from '../../model/malloy_types';
 import {STANDARDSQL_FUNCTIONS} from './functions';
 import {DialectFunctionOverloadDef} from '../functions';
-import {Dialect, DialectFieldList, QueryInfo} from '../dialect';
+import {
+  Dialect,
+  DialectExprReturn,
+  DialectFieldList,
+  QueryInfo,
+} from '../dialect';
 
 // These are the units that "TIMESTAMP_ADD" "TIMESTAMP_DIFF" accept
 function timestampMeasureable(units: string): boolean {
@@ -51,7 +56,8 @@ function timestampMeasureable(units: string): boolean {
   ].includes(units);
 }
 
-function dateMeasureable(units: string): boolean {
+// All units >= day
+function measurableInDays(units: string): boolean {
   return ['day', 'week', 'month', 'quarter', 'year'].includes(units);
 }
 
@@ -70,11 +76,6 @@ function qtz(qi: QueryInfo): string | undefined {
   }
 }
 
-declare interface TimeMeasure {
-  use: string;
-  ratio: number;
-}
-
 const bqToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
   'DATE': {type: 'date'},
   'STRING': {type: 'string'},
@@ -85,12 +86,12 @@ const bqToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
   'NUMERIC': {type: 'number', numberType: 'float'},
   'BIGNUMERIC': {type: 'number', numberType: 'float'},
   'TIMESTAMP': {type: 'timestamp'},
+  'DATETIME': {type: 'datetime'},
   'BOOLEAN': {type: 'boolean'},
   'BOOL': {type: 'boolean'},
   'JSON': {type: 'json'},
   // TODO (https://cloud.google.com/bigquery/docs/reference/rest/v2/tables#tablefieldschema):
   // BYTES
-  // DATETIME
   // TIME
   // GEOGRAPHY
 };
@@ -371,7 +372,7 @@ ${indent(sql)}
     const tz = qtz(qi);
     const tzAdd = tz ? `, "${tz}"` : '';
     if (sqlTime.valueType === 'date') {
-      if (dateMeasureable(units)) {
+      if (measurableInDays(units)) {
         return mkExpr`DATE_TRUNC(${sqlTime.value},${units})`;
       }
       return mkExpr`TIMESTAMP(${sqlTime.value}${tzAdd})`;
@@ -460,37 +461,31 @@ ${indent(sql)}
     }
   }
 
-  sqlMeasureTime(from: TimeValue, to: TimeValue, units: string): Expr {
-    const measureMap: Record<string, TimeMeasure> = {
-      'microsecond': {use: 'microsecond', ratio: 1},
-      'millisecond': {use: 'microsecond', ratio: 1000},
-      'second': {use: 'millisecond', ratio: 1000},
-      'minute': {use: 'second', ratio: 60},
-      'hour': {use: 'minute', ratio: 60},
-      'day': {use: 'hour', ratio: 24},
-      'week': {use: 'day', ratio: 7},
-    };
-    let lVal = from.value;
-    let rVal = to.value;
-    if (measureMap[units]) {
-      const {use: measureIn, ratio} = measureMap[units];
-      if (!timestampMeasureable(measureIn)) {
-        throw new Error(`Measure in '${measureIn} not implemented`);
-      }
-      if (from.valueType !== to.valueType) {
-        throw new Error("Can't measure difference between different types");
-      }
-      if (from.valueType === 'date') {
-        lVal = mkExpr`TIMESTAMP(${lVal})`;
-        rVal = mkExpr`TIMESTAMP(${rVal})`;
-      }
-      let measured = mkExpr`TIMESTAMP_DIFF(${rVal},${lVal},${measureIn})`;
-      if (ratio !== 1) {
-        measured = mkExpr`FLOOR(${measured}/${ratio.toString()}.0)`;
-      }
-      return measured;
+  sqlMeasureTime(
+    from: TimeValue,
+    to: TimeValue,
+    units: string
+  ): DialectExprReturn {
+    const lVal = from.value;
+    const rVal = to.value;
+    if (from.valueType !== to.valueType) {
+      return {error: "Can't measure difference between different types"};
     }
-    throw new Error(`Measure '${units} not implemented`);
+    switch (from.valueType) {
+      case 'timestamp':
+        if (!timestampMeasureable(units)) {
+          return {error: `Cannot measure timestamps by '${units}'`};
+        }
+        return mkExpr`TIMESTAMP_DIFF(${rVal},${lVal},${units})`;
+      case 'date':
+        if (!measurableInDays(units)) {
+          return {error: `Cannot measure dates by '${units}'`};
+        }
+        return mkExpr`DATE(${rVal},${lVal},${units})`;
+    }
+    return {
+      error: `Interval measurement with '${from.valueType}' not implemented`,
+    };
   }
 
   sqlSampleTable(tableSQL: string, sample: Sampling | undefined): string {

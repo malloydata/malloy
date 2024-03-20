@@ -22,7 +22,7 @@
  */
 
 import {
-  isDateUnit,
+  iaDateUnit,
   isTimeFieldType,
   mkExpr,
   TimestampUnit,
@@ -87,7 +87,7 @@ export class ExprGranularTime extends ExpressionDef {
     }
     const returnType =
       exprVal.dataType === 'error'
-        ? isDateUnit(timeframe)
+        ? iaDateUnit(timeframe)
           ? 'date'
           : 'timestamp'
         : exprVal.dataType;

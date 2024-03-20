@@ -1382,6 +1382,8 @@ class QueryFieldTimestamp extends QueryAtomicField {
   }
 }
 
+class QueryFieldDatetime extends QueryFieldTimestamp {}
+
 class QueryFieldDistinctKey extends QueryAtomicField {
   generateExpression(resultSet: FieldInstanceResult): string {
     if (this.parent.primaryKey()) {
@@ -2339,9 +2341,6 @@ class QueryQuery extends QueryField {
           case 'timeLiteral':
           case 'stringLiteral':
           case 'regexpLiteral':
-            break;
-          case 'timeDiff':
-            expressions.push(expr.left.value, expr.right.value);
             break;
           case 'delta':
             expressions.push(expr.base.value, expr.delta);
@@ -4304,6 +4303,8 @@ class QueryStruct extends QueryNode {
         return new QueryFieldDate(field, this);
       case 'timestamp':
         return new QueryFieldTimestamp(field, this);
+      case 'datetime':
+        return new QueryFieldDatetime(field, this);
       case 'number':
         return new QueryFieldNumber(field, this);
       case 'boolean':
