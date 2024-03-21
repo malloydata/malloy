@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/db-trino",
-  "version": "0.0.134",
+  "version": "0.0.135",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
