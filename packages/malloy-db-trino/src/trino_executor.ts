@@ -48,10 +48,6 @@ export class TrinoExecutor {
         catalog,
         schema,
       };
-    } else {
-      throw new Error(
-        'Tried to get Trino connection from Env, no TRINO_SERVER specified.'
-      );
     }
 
     return undefined;

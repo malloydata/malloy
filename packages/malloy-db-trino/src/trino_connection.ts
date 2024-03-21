@@ -442,13 +442,8 @@ export class TrinoConnection implements Connection, PersistSQLResults {
   }*/
 
   public async estimateQueryCost(_sqlCommand: string): Promise<QueryRunStats> {
-    /*const dryRunResults = await this.dryRunSQLQuery(sqlCommand);
-    return {
-      queryCostBytes: Number(
-        dryRunResults.metadata.statistics.totalBytesProcessed
-      ),
-    };*/
-    throw new Error('Not impld 6');
+    // TODO(figutierrez): Implement.
+    return {};
   }
 
   public async executeSQLRaw(_sqlCommand: string): Promise<QueryData> {
