@@ -1,6 +1,6 @@
 name: Postgres DB
 
-on: [push]
+on: [pull_request]
 
 jobs:
   # Label of the container job

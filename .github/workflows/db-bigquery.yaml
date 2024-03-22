@@ -1,9 +1,9 @@
-name: Snowflake DB
+name: BigQuery DB
 
 on: [pull_request]
 
 jobs:
-  test-snowflake:
+  test-bigquery:
     runs-on: ubuntu-latest
 
     strategy:
@@ -18,6 +18,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
+      - name: GCloud auth
+        uses: 'google-github-actions/auth@v2'
+        with:
+          credentials_json: '${{ secrets.BIGQUERY_KEY }}'
       - name: npm install, build, and test
         run: |
           npm ci --loglevel error
@@ -25,10 +29,4 @@ jobs:
           npm run test-silent
         env:
           CI: true
-          MALLOY_DATABASES: snowflake
-          SNOWFLAKE_ACCOUNT: pt58362-rx92781
-          SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
-          SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
-          SNOWFLAKE_WAREHOUSE: LOOKER_WH
-          SNOWFLAKE_DATABASE: MALLOYTEST
-          SNOWFLAKE_SCHEMA: PUBLIC
+          MALLOY_DATABASES: bigquery
