@@ -16,6 +16,6 @@ nix-shell \
   npm run build-duckdb-db
   npm run test-silent
   export MALLOY_DATABASES=duckdb,postgres
-  npm run test-silent
+  npm run test-silent -- -- test/src/databases/multi-connection/multi_connection.spec.ts
 NIXCMD
 )"
