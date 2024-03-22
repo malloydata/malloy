@@ -26,23 +26,22 @@
 
 import * as malloy from '@malloydata/malloy';
 import {EmptyURLReader} from '@malloydata/malloy';
-import {BigQueryTestConnection, PostgresTestConnection} from '../../runtimes';
+import {DuckDBTestConnection, PostgresTestConnection} from '../../runtimes';
 import {describeIfDatabaseAvailable} from '../../util';
 
-const [, databases] = describeIfDatabaseAvailable(['bigquery', 'postgres']);
+const [, databases] = describeIfDatabaseAvailable(['duckdb', 'postgres']);
 
 // *** NOTE ***
-// this is a special case (for now): a test that REQUIRES two databases - bigquery AND postgres
+// this is a special case (for now): a test that REQUIRES two databases - duckdb AND postgres
 const describe =
-  databases.filter(d => ['postgres', 'bigquery'].includes(d)).length >= 2
+  databases.filter(d => ['postgres', 'duckdb'].includes(d)).length >= 2
     ? globalThis.describe
     : globalThis.describe.skip;
 
 describe('Multi-connection', () => {
-  const bqConnection = new BigQueryTestConnection(
-    'bigquery',
-    {},
-    {projectId: 'malloy-data'}
+  const ddbConnection = new DuckDBTestConnection(
+    'duckdb',
+    'test/data/duckdb/duckdb_test.db'
   );
   const postgresConnection = new PostgresTestConnection('postgres');
   const files = new EmptyURLReader();
@@ -50,11 +49,11 @@ describe('Multi-connection', () => {
   const connectionMap = new malloy.FixedConnectionMap(
     new Map(
       Object.entries({
-        bigquery: bqConnection,
+        duckdb: ddbConnection,
         postgres: postgresConnection,
       })
     ),
-    'bigquery'
+    'duckdb'
   );
 
   const runtime = new malloy.Runtime(files, connectionMap);
@@ -64,7 +63,7 @@ describe('Multi-connection', () => {
   });
 
   const expressionModelText = `
-source: bigquery_state_facts is bigquery.table('malloytest.state_facts') extend {
+source: duckdb_state_facts is duckdb.table('malloytest.state_facts') extend {
   measure: state_count is count(state)+2
 }
 
@@ -75,11 +74,11 @@ source: postgres_aircraft is postgres.table('malloytest.aircraft') extend {
 
   const expressionModel = runtime.loadModel(expressionModelText);
 
-  it('bigquery query', async () => {
+  it('duckdb query', async () => {
     const result = await expressionModel
       .loadQuery(
         `
-      run: bigquery_state_facts-> {
+      run: duckdb_state_facts-> {
         aggregate: state_count
       }
     `
