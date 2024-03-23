@@ -39,7 +39,9 @@ jobs:
           npm run build
           echo CREATE EXTENSION tsm_system_rows\; | psql
           gunzip -c test/data/postgres/malloytest-postgres.sql.gz | psql
-          npm run test-silent
+          npm run test-silent -- -- test packages/malloy-db-postgres
+          export MALLOY_DATABASES=duckdb,postgres
+          npm run test-silent -- -- test/src/databases/multi-connection/multi_connection.spec.ts
         env:
           MALLOY_DATABASES: postgres
           PGHOST: localhost

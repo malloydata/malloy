@@ -22,7 +22,7 @@ jobs:
         run: |
           npm ci --loglevel error
           npm run build
-          npm run test-silent
+          npm run test-silent -- -- test packages/malloy-db-snowflake
         env:
           CI: true
           MALLOY_DATABASES: snowflake
