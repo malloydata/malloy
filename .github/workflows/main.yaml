@@ -22,6 +22,7 @@ jobs:
         run: |
           npm ci --loglevel error
           npm run build
+          npm run build-duckdb-db
           npm run test-silent
         env:
           CI: true
