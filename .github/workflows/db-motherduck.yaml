@@ -1,6 +1,11 @@
 name: MotherDuck DB
 
-on: [pull_request]
+on:
+  pull_request:
+  workflow_call:
+    secrets:
+      MOTHERDUCK_TOKEN:
+        required: true
 
 jobs:
   test-motherduck:
