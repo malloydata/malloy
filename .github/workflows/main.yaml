@@ -3,7 +3,7 @@ name: Core
 on: [pull_request]
 
 jobs:
-  test-bigquery:
+  test-all:
     runs-on: ubuntu-latest
 
     strategy:
