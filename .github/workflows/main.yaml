@@ -1,9 +1,9 @@
-name: BigQuery DB
+name: Core
 
 on: [pull_request]
 
 jobs:
-  test-bigquery:
+  test-all:
     runs-on: ubuntu-latest
 
     strategy:
@@ -18,15 +18,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-      - name: GCloud auth
-        uses: 'google-github-actions/auth@v2'
-        with:
-          credentials_json: '${{ secrets.BIGQUERY_KEY }}'
       - name: npm install, build, and test
         run: |
           npm ci --loglevel error
           npm run build
-          npm run test-silent -- -- test packages/malloy-db-bigquery
+          npm run build-duckdb-db
+          npm run test-silent
         env:
           CI: true
-          MALLOY_DATABASES: bigquery
+          MALLOY_DATABASES: duckdb,duckdb_wasm
