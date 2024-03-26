@@ -4,7 +4,7 @@
   "version": "0.0.135",
   "command": {
     "version": {
-      "allowBranch": "main"
+      "allowBranch": "whscullin/release"
     }
   }
 }
