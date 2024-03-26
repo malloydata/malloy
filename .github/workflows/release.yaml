@@ -1,0 +1,68 @@
+name: npmjs.com Release
+
+on: [workflow_dispatch]
+
+jobs:
+  db-bigquery:
+    uses: './.github/workflows/db-bigquery.yaml'
+    secrets:
+      BIGQUERY_KEY: ${{ secrets.BIGQUERY_KEY }}
+  db-motherduck:
+    uses: './.github/workflows/db-motherduck.yaml'
+    secrets:
+      MOTHERDUCK_TOKEN: ${{ secrets.MOTHERDUCK_TOKEN }}
+  db-postgres:
+    uses: './.github/workflows/db-postgres.yaml'
+  db-snowflake:
+    uses: './.github/workflows/db-snowflake.yaml'
+    secrets:
+      SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+      SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+  main:
+    uses: './.github/workflows/main.yaml'
+
+  npm-prerelease:
+    needs:
+      - db-bigquery
+      - db-motherduck
+      - db-postgres
+      - db-snowflake
+      - main
+    runs-on: ubuntu-latest
+    env:
+      PACKAGES: 'packages/malloy-interfaces packages/malloy packages/malloy-db-bigquery packages/malloy-db-duckdb packages/malloy-db-postgres packages/malloy-db-snowflake packages/malloy-db-trino packages/malloy-render packages/malloy-malloy-sql test packages/malloy-syntax-highlight'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18.x
+      - name: npm install, build, and publish
+        run: |
+          # Build
+          npm --no-audit --no-fund ci --loglevel error
+          # Publish
+          echo Publishing $PACKAGES
+          VERSION=$(jq -r .version ./lerna.json)
+          for package in $PACKAGES; do
+            echo Publishing $package $VERSION
+            npm publish --dry-run -w $package --access=public
+          done
+          # Make sure we're current
+          git pull origin $BRANCH_NAME
+          # Tag current version
+          git tag v$VERSION
+          git push origin v$VERSION
+          # Bump version
+          npx lerna version patch --yes --no-push --no-git-tag-version
+          VERSION=$(jq -r .version ./lerna.json)
+          echo Updating to $VERSION
+          # Push new version to github
+          git commit -am "Version $VERSION-dev"
+          git push origin $BRANCH_NAME
+        env:
+          CI: true
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          BRANCH_NAME: whscullin/release
