@@ -442,20 +442,28 @@ export class TrinoConnection implements Connection, PersistSQLResults {
       fields: [],
     };
 
-    const tmpQueryName = `myMalloyQuery${randomUUID()}`;
+    const tmpQueryName = `myMalloyQuery${randomUUID().replace(/-/g, '')}`;
+    await this.executeAndWait(
+      `PREPARE ${tmpQueryName} FROM ${sqlRef.selectStr}`
+    );
     return await this.loadSchemaForSqlBlock(
-      `PREPARE ${tmpQueryName} FROM ${sqlRef.selectStr};
-      DESCRIBE OUTPUT ${tmpQueryName};`,
+      `DESCRIBE OUTPUT ${tmpQueryName}`,
       structDef,
       `query ${sqlRef.selectStr.substring(0, 50)}`
     );
+  }
+
+  private async executeAndWait(sqlBlock: string): Promise<void> {
+    const result = await this.trino.query(sqlBlock);
+    // TODO: make sure failure is handled correctly.
+    while (!(await result.next()).done);
   }
 
   private async loadSchemaForSqlBlock(
     sqlBlock: string,
     structDef: StructDef,
     element: string
-  ) {
+  ): Promise<StructDef> {
     try {
       const result = await this.trino.query(sqlBlock);
 
