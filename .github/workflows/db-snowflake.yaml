@@ -1,6 +1,13 @@
 name: Snowflake DB
 
-on: [pull_request]
+on:
+  pull_request:
+  workflow_call:
+    secrets:
+      SNOWFLAKE_USER:
+        required: true
+      SNOWFLAKE_PASSWORD:
+        required: true
 
 jobs:
   test-snowflake:
