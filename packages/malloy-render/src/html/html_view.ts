@@ -33,7 +33,7 @@ import {ContainerRenderer} from './container';
 import {createErrorElement} from './utils';
 import {MainRendererFactory} from '../main_renderer_factory';
 import {HTMLListRenderer} from './list';
-import '../component/render';
+import '../component/render-webcomponent';
 
 export class HTMLView {
   constructor(private document: Document) {}

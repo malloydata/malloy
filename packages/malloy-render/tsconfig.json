@@ -4,9 +4,11 @@
     "rootDir": "src",
     "outDir": "dist",
     "composite": true,
-    "noImplicitReturns": true
+    "noImplicitReturns": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "solid-js"
   },
-  "include": ["./src", "node_modules/us-atlas"],
+  "include": ["./src", "./src/**/*.d.ts", "node_modules/us-atlas"],
   "references": [
     {
       "path": "../malloy"

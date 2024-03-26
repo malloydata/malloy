@@ -24,8 +24,6 @@ import {LitElement, html} from 'lit';
 import {customElement, property} from 'lit/decorators.js';
 import './vega-chart';
 import {DataArray, ExploreField} from '@malloydata/malloy';
-import {consume} from '@lit/context';
-import {resultContext} from './result-context';
 import {RenderResultMetadata} from './render-result-metadata';
 import {getChartSettings} from './chart-settings';
 import {baseSpec} from './vega-lite-base-spec';
@@ -36,7 +34,6 @@ export class BarChart extends LitElement {
   @property({attribute: false})
   data!: DataArray;
 
-  @consume({context: resultContext})
   @property({attribute: false})
   metadata!: RenderResultMetadata;
 
