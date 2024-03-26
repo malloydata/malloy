@@ -3,7 +3,7 @@ name: npmjs.com Pre-release
 on:
   push:
     branches:
-      - main:
+      - main
 
 jobs:
   db-bigquery:
