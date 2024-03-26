@@ -1,32 +1,32 @@
 name: npmjs.com Release
 
-on: [workflow_dispatch, push]
+on: [workflow_dispatch]
 
 jobs:
-  # db-bigquery:
-  #   uses: './.github/workflows/db-bigquery.yaml'
-  #   secrets:
-  #     BIGQUERY_KEY: ${{ secrets.BIGQUERY_KEY }}
-  # db-motherduck:
-  #   uses: './.github/workflows/db-motherduck.yaml'
-  #   secrets:
-  #     MOTHERDUCK_TOKEN: ${{ secrets.MOTHERDUCK_TOKEN }}
-  # db-postgres:
-  #   uses: './.github/workflows/db-postgres.yaml'
-  # db-snowflake:
-  #   uses: './.github/workflows/db-snowflake.yaml'
-  #   secrets:
-  #     SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
-  #     SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+  db-bigquery:
+    uses: './.github/workflows/db-bigquery.yaml'
+    secrets:
+      BIGQUERY_KEY: ${{ secrets.BIGQUERY_KEY }}
+  db-motherduck:
+    uses: './.github/workflows/db-motherduck.yaml'
+    secrets:
+      MOTHERDUCK_TOKEN: ${{ secrets.MOTHERDUCK_TOKEN }}
+  db-postgres:
+    uses: './.github/workflows/db-postgres.yaml'
+  db-snowflake:
+    uses: './.github/workflows/db-snowflake.yaml'
+    secrets:
+      SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+      SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
   main:
     uses: './.github/workflows/main.yaml'
 
   npm-release:
     needs:
-      # - db-bigquery
-      # - db-motherduck
-      # - db-postgres
-      # - db-snowflake
+      - db-bigquery
+      - db-motherduck
+      - db-postgres
+      - db-snowflake
       - main
     runs-on: ubuntu-latest
     env:
@@ -48,7 +48,7 @@ jobs:
           VERSION=$(jq -r .version ./lerna.json)
           for package in $PACKAGES; do
             echo Publishing $package $VERSION
-            npm publish --dry-run -w $package --access=public
+            npm publish -w $package --access=public
           done
           # Make sure we're current
           git pull origin $BRANCH_NAME
@@ -65,4 +65,4 @@ jobs:
         env:
           CI: true
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          BRANCH_NAME: whscullin/release
+          BRANCH_NAME: main
