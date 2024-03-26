@@ -42,6 +42,7 @@ import {
   StreamingConnection,
   StructDef,
 } from '@malloydata/malloy';
+import {randomUUID} from 'crypto';
 import {Trino, BasicAuth} from 'trino-client';
 
 export interface TrinoManagerOptions {
@@ -389,15 +390,82 @@ export class TrinoConnection implements Connection, PersistSQLResults {
       fields: [],
     };
 
+    return await this.loadSchemaForSqlBlock(
+      `DESCRIBE ${tablePath}`,
+      structDef,
+      `table ${tablePath}`
+    );
+  }
+
+  public async fetchSchemaForSQLBlock(
+    sqlRef: SQLBlock,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    {refreshTimestamp}: FetchSchemaOptions
+  ): Promise<
+    | {structDef: StructDef; error?: undefined}
+    | {error: string; structDef?: undefined}
+  > {
+    const key = sqlRef.name;
+    let inCache = this.sqlSchemaCache.get(key);
+    if (
+      !inCache ||
+      (refreshTimestamp && refreshTimestamp > inCache.timestamp)
+    ) {
+      const timestamp = refreshTimestamp ?? Date.now();
+      try {
+        inCache = {
+          structDef: await this.structDefFromSqlBlock(sqlRef),
+          timestamp,
+        };
+      } catch (error) {
+        inCache = {error: error.message, timestamp};
+      }
+      this.sqlSchemaCache.set(key, inCache);
+    }
+    return inCache;
+  }
+
+  private async structDefFromSqlBlock(sqlRef: SQLBlock): Promise<StructDef> {
+    throw Error(`------THE SCHEMA FOR: ${sqlRef.selectStr}`);
+    /*const structDef: StructDef = {
+      type: 'struct',
+      name: sqlRef.name,
+      dialect: this.dialectName,
+      structSource: {
+        type: 'sql',
+        method: 'subquery',
+        sqlBlock: sqlRef,
+      },
+      structRelationship: {
+        type: 'basetable',
+        connectionName: this.name,
+      },
+      fields: [],
+    };
+
+    const tmpQueryName = `myMalloyQuery${randomUUID()}`;
+    return await this.loadSchemaForSqlBlock(
+      `PREPARE ${tmpQueryName} FROM ${sqlRef.selectStr};
+      DESCRIBE OUTPUT ${tmpQueryName};`,
+      structDef,
+      `query ${sqlRef.selectStr.substring(0, 50)}`
+    );*/
+  }
+
+  private async loadSchemaForSqlBlock(
+    sqlBlock: string,
+    structDef: StructDef,
+    element: string
+  ) {
     try {
-      const result = await this.trino.query(`DESCRIBE ${tablePath}`);
+      const result = await this.trino.query(sqlBlock);
 
       const queryResult = await result.next();
 
       if (queryResult.value.error) {
         // TODO: handle.
         throw new Error(
-          `Failed to grab schema for table ${tablePath}: ${JSON.stringify(
+          `Failed to grab schema for ${element}: ${JSON.stringify(
             queryResult.value.error
           )}`
         );
@@ -414,21 +482,10 @@ export class TrinoConnection implements Connection, PersistSQLResults {
         structDef.fields.push({name: fieldName, ...malloyType} as FieldTypeDef);
       }
     } catch (e) {
-      throw new Error(`Could not fetch schema for table ${tablePath} ${e}`);
+      throw new Error(`Could not fetch schema for ${element} ${e}`);
     }
-    // TODO: handle repeated etc.
-    return structDef;
-  }
 
-  public async fetchSchemaForSQLBlock(
-    _sqlRef: SQLBlock,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    {refreshTimestamp}: FetchSchemaOptions
-  ): Promise<
-    | {structDef: StructDef; error?: undefined}
-    | {error: string; structDef?: undefined}
-  > {
-    throw new Error('Not implemented 5');
+    return structDef;
   }
 
   /*  public async downloadMalloyQuery(
