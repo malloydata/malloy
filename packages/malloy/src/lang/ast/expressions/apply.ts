@@ -24,6 +24,10 @@
 import {Comparison} from '../types/comparison';
 import {ExprCompare} from './expr-compare';
 import {ExpressionDef} from '../types/expression-def';
+import {ExprValue} from '../types/expr-value';
+import {FieldSpace} from '../types/field-space';
+import {isGranularResult} from '../types/granular-result';
+import {ExprGranularTime} from './expr-granular-time';
 
 export class Apply extends ExprCompare {
   elementType = 'apply';
@@ -32,5 +36,17 @@ export class Apply extends ExprCompare {
     readonly right: ExpressionDef
   ) {
     super(left, Comparison.EqualTo, right);
+  }
+
+  getExpression(fs: FieldSpace): ExprValue {
+    if (!this.right.granular()) {
+      const rhs = this.right.requestExpression(fs);
+      if (rhs && isGranularResult(rhs)) {
+        // Need to wrap granular computations to get granular behavior
+        const newRight = new ExprGranularTime(this.right, rhs.timeframe, false);
+        return newRight.apply(fs, this.op, this.left);
+      }
+    }
+    return super.getExpression(fs);
   }
 }

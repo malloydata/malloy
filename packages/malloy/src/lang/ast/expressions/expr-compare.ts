@@ -49,14 +49,6 @@ export class ExprCompare extends BinaryBoolean<Comparison> {
   }
 
   getExpression(fs: FieldSpace): ExprValue {
-    if (!this.right.granular()) {
-      const rhs = this.right.requestExpression(fs);
-      if (rhs && isGranularResult(rhs)) {
-        const newRight = new ExprGranularTime(this.right, rhs.timeframe, false);
-        return newRight.apply(fs, this.op, this.left);
-      }
-    }
-
     return this.right.apply(fs, this.op, this.left);
   }
 }

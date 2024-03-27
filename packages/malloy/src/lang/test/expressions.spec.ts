@@ -144,6 +144,23 @@ describe('expressions', () => {
         'Cannot measure from date to timestamp'
       );
     });
+    test('compare to truncation uses straight comparison', () => {
+      // Because equality comparisons with truncation end up being range checks
+      const compare = expr`@2024-02-01 = @2023-12-27.quarter + 1`;
+      expect(compare).toTranslate();
+      const compare_expr = compare.translator.generated().value;
+
+      expect(compare_expr[0]).toMatchObject({
+        function: 'timeLiteral',
+        literal: '2024-02-01',
+      });
+      expect(compare_expr[1]).toEqual('=');
+
+      const plus1 = expr`@2023-12-27.quarter + 1`;
+      expect(plus1).toTranslate();
+      const compare_to = plus1.translator.generated().value;
+      expect(compare_expr[2]).toEqual(compare_to[0]);
+    });
     test('comparison promotes date literal to timestamp', () => {
       expect(expr`@2001 = ats`).toTranslate();
     });
