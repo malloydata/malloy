@@ -26,9 +26,7 @@ import {Comparison} from '../types/comparison';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
-import {isGranularResult} from '../types/granular-result';
 import {BinaryBoolean} from './binary-boolean';
-import {ExprGranularTime} from './expr-granular-time';
 
 const compareTypes = {
   '~': [FT.stringT],
