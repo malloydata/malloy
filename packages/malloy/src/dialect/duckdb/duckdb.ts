@@ -87,6 +87,7 @@ export class DuckDBDialect extends Dialect {
   supportsQualify = true;
   supportsSafeCast = true;
   supportsNesting = true;
+  experimental = false;
 
   // hack until they support temporary macros.
   get udfPrefix(): string {

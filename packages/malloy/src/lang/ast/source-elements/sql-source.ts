@@ -98,6 +98,8 @@ export class SQLSource extends Source {
         compileSQL: sql,
         partialModel: this.select.containsQueries ? doc.modelDef() : undefined,
       };
+    } else if (lookup.status === 'present') {
+      doc.checkExperimentalDialect(this, lookup.value.dialect);
     }
   }
 

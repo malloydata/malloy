@@ -33,7 +33,7 @@ import {TestTranslator, aTableDef} from './test-translator';
 import './parse-expects';
 import {MalloyTranslator} from '../parse-malloy';
 
-describe('sql blocks in malloy', () => {
+describe('connection sql()', () => {
   const selStmt = 'SELECT * FROM aTable';
   function makeSchemaResponse(sql: SQLBlockSource): SQLBlockStructDef {
     const cname = sql.connection || 'bigquery';
@@ -148,12 +148,11 @@ describe('sql blocks in malloy', () => {
     `);
     expect(m).toParse();
   });
-
   test('source from extended sql-based-source', () => {
     const model = new TestTranslator(`
       source: sql_block is aConnection.sql("""${selStmt}""")
       source: malloy_source is sql_block extend { primary_key: ai }
-`);
+    `);
     const sql = makeSQLBlock([{sql: selStmt}], 'aConnection');
     model.update({compileSQL: {[sql.name]: makeSchemaResponse(sql)}});
     expect(model).toTranslate();
