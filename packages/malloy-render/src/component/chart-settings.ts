@@ -24,7 +24,7 @@
 import {Explore, ExploreField, Field} from '@malloydata/malloy';
 import {scale, locale} from 'vega';
 import {getFieldKey, getTextWidth} from './util';
-import {RenderResultMetadata} from './render-result-metadata';
+import {RenderResultMetadata} from './types';
 
 export type ChartSettings = {
   plotWidth: number;

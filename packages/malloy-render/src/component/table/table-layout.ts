@@ -22,13 +22,10 @@
  */
 
 import {Field} from '@malloydata/malloy';
-import {
-  FieldRenderMetadata,
-  RenderResultMetadata,
-} from '../render-result-metadata';
 import {clamp, getFieldKey, getTextWidth} from '../util';
 import {renderNumericField} from '../render-numeric-field';
 import {hasAny} from '../tag-utils';
+import {FieldRenderMetadata, RenderResultMetadata} from '../types';
 
 const MIN_COLUMN_WIDTH = 32;
 const MAX_COLUMN_WIDTH = 384;

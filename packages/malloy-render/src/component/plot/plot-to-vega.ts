@@ -1,17 +1,7 @@
 import {Explore, ExploreField} from '@malloydata/malloy';
 import {getChartSettings} from '../chart-settings';
-import {RenderResultMetadata} from '../render-result-metadata';
 import {PlotSpec} from './spec';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Vega does not have good TS support
-export type VegaSpec = any;
-export type VegaChartProps = {
-  spec: VegaSpec;
-  plotWidth: number;
-  plotHeight: number;
-  totalWidth: number;
-  totalHeight: number;
-};
+import {RenderResultMetadata, VegaChartProps, VegaSpec} from '../types';
 
 const grayMedium = '#727883';
 const gridGray = '#E5E7EB';

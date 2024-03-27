@@ -34,19 +34,9 @@ import {
 } from '@malloydata/malloy';
 import {getFieldKey, valueIsNumber, valueIsString} from './util';
 import {generateBarChartSpec} from './bar-chart/generate-bar_chart-spec';
-import {VegaChartProps, plotToVega} from './plot/plot-to-vega';
+import {plotToVega} from './plot/plot-to-vega';
 import {hasAny} from './tag-utils';
-
-export interface FieldRenderMetadata {
-  field: Field | Explore;
-  min: number | null;
-  max: number | null;
-  minString: string | null;
-  maxString: string | null;
-  values: Set<string>;
-  maxRecordCt: number | null;
-  vegaChartProps?: VegaChartProps;
-}
+import {RenderResultMetadata} from './types';
 
 function createDataCache() {
   const dataCache = new WeakMap<DataColumn, QueryData>();
@@ -62,14 +52,6 @@ function createDataCache() {
       return dataCache.get(cell)!;
     },
   };
-}
-
-export interface RenderResultMetadata {
-  fields: Record<string, FieldRenderMetadata>;
-  fieldKeyMap: WeakMap<Field | Explore, string>;
-  getFieldKey: (f: Field | Explore) => string;
-  field: (f: Field | Explore) => FieldRenderMetadata;
-  getData: (cell: DataColumn) => QueryData;
 }
 
 export function getResultMetadata(result: Result) {
