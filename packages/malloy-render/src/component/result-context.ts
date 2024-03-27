@@ -1,5 +1,5 @@
 import {createContext, useContext} from 'solid-js';
-import {RenderResultMetadata} from './render-result-metadata';
+import {RenderResultMetadata} from './types';
 
 export const ResultContext = createContext<RenderResultMetadata>();
 export const useResultContext = () => {

@@ -1,6 +1,6 @@
 import {Explore, ExploreField, QueryData} from '@malloydata/malloy';
-import {RenderResultMetadata} from './render-result-metadata';
 import {VegaChart} from './vega/vega-chart';
+import {RenderResultMetadata} from './types';
 
 export function Chart(props: {
   field: Explore | ExploreField;
