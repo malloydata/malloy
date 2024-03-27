@@ -42,7 +42,6 @@ jobs:
       - name: npm install, build, and publish
         run: |
           # Configure git user
-          git remote set-url origin git@github.com:malloydata/malloy
           git config --global user.email "malloy-ci-bot@malloydata.org"
           git config --global user.name "Malloy CI Bot"
           # Build
