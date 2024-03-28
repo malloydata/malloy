@@ -1,5 +1,5 @@
 import {Explore, Tag} from '@malloydata/malloy';
-import {Mark, PlotSpec, createEmptySpec} from '../plot/spec';
+import {Mark, PlotSpec, createEmptySpec} from '../plot/plot-spec';
 import {getFieldPathBetweenFields, walkFields} from '../plot/util';
 
 export function generateBarChartSpec(

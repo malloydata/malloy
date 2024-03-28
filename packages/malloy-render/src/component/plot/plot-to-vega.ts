@@ -1,6 +1,6 @@
 import {Explore, ExploreField} from '@malloydata/malloy';
 import {getChartSettings} from '../chart-settings';
-import {PlotSpec} from './spec';
+import {PlotSpec} from './plot-spec';
 import {RenderResultMetadata, VegaChartProps, VegaSpec} from '../types';
 
 const grayMedium = '#727883';
