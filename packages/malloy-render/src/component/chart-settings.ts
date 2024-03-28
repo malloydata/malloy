@@ -21,23 +21,27 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ExploreField, Field} from '@malloydata/malloy';
+import {Explore, ExploreField, Field} from '@malloydata/malloy';
 import {scale, locale} from 'vega';
 import {getFieldKey, getTextWidth} from './util';
-import {RenderResultMetadata} from './render-result-metadata';
+import {RenderResultMetadata} from './types';
 
 export type ChartSettings = {
   plotWidth: number;
   plotHeight: number;
   xAxis: {
     labelAngle: number;
+    labelAlign?: string;
+    labelBaseline?: string;
     labelSize: number;
     height: number;
     titleSize: number;
+    hidden: boolean;
   };
   yAxis: {
     width: number;
     tickCount?: number;
+    hidden: boolean;
   };
   yScale: {
     domain: number[];
@@ -69,7 +73,7 @@ const CHART_SIZES = {
 const ROW_HEIGHT = 28;
 
 export function getChartSettings(
-  field: ExploreField,
+  field: Explore | ExploreField,
   metadata: RenderResultMetadata
 ): ChartSettings {
   // TODO: improve logic for field extraction
@@ -94,6 +98,8 @@ export function getChartSettings(
   let xAxisHeight = 0;
   let yAxisWidth = 0;
   let labelAngle = -90;
+  let labelAlign: string | undefined = 'right';
+  let labelBaseline = 'middle';
   let labelSize = 0;
   let xTitleSize = 0;
   const hasXAxis = presetSize !== 'spark';
@@ -152,6 +158,8 @@ export function getChartSettings(
     if (xSpacePerLabel > xAxisHeight) {
       labelAngle = 0;
       labelSize = xSpacePerLabel;
+      labelAlign = undefined;
+      labelBaseline = 'top';
     }
   }
 
@@ -160,28 +168,36 @@ export function getChartSettings(
   const roundedUpRowHeight = Math.ceil(totalSize / ROW_HEIGHT) * ROW_HEIGHT;
   xTitleSize += roundedUpRowHeight - totalSize;
 
+  const isSpark = tag.text('size') === 'spark';
+
   return {
     plotWidth: chartWidth,
     plotHeight: chartHeight,
     xAxis: {
       labelAngle,
+      labelAlign,
+      labelBaseline,
       labelSize,
       height: xAxisHeight,
       titleSize: xTitleSize,
+      hidden: isSpark,
     },
     yAxis: {
       width: yAxisWidth,
       tickCount: yTickCount,
+      hidden: isSpark,
     },
     yScale: {
       domain: yDomain,
     },
-    padding: {
-      top: topPadding,
-      left: yAxisWidth,
-      bottom: xAxisHeight + xTitleSize,
-      right: 0,
-    },
+    padding: isSpark
+      ? {top: 0, left: 0, bottom: 0, right: 0}
+      : {
+          top: topPadding + 1,
+          left: yAxisWidth,
+          bottom: xAxisHeight + xTitleSize,
+          right: 0,
+        },
     xField,
     yField,
     get totalWidth() {

@@ -23,95 +23,142 @@
 
 import {
   DataArray,
-  DataRecord,
+  DataColumn,
   Explore,
+  ExploreField,
   Field,
+  QueryData,
+  QueryDataRow,
   Result,
+  Tag,
 } from '@malloydata/malloy';
 import {getFieldKey, valueIsNumber, valueIsString} from './util';
+import {generateBarChartSpec} from './bar-chart/generate-bar_chart-spec';
+import {plotToVega} from './plot/plot-to-vega';
+import {hasAny} from './tag-utils';
+import {RenderResultMetadata} from './types';
 
-export interface FieldRenderMetadata {
-  field: Field;
-  min: number | null;
-  max: number | null;
-  minString: string | null;
-  maxString: string | null;
-  values: Set<string>;
-  maxRecordCt: number | null;
-}
-
-export interface RenderResultMetadata {
-  fields: Record<string, FieldRenderMetadata>;
+function createDataCache() {
+  const dataCache = new WeakMap<DataColumn, QueryData>();
+  return {
+    get: (cell: DataColumn) => {
+      if (!dataCache.has(cell) && cell.isArray()) {
+        const data: QueryDataRow[] = [];
+        for (const row of cell) {
+          data.push(row.toObject());
+        }
+        dataCache.set(cell, data);
+      }
+      return dataCache.get(cell)!;
+    },
+  };
 }
 
 export function getResultMetadata(result: Result) {
-  const fieldKeyMap: WeakMap<Field, string> = new WeakMap();
-  const getCachedFieldKey = (f: Field) => {
+  const fieldKeyMap: WeakMap<Field | Explore, string> = new WeakMap();
+  const getCachedFieldKey = (f: Field | Explore) => {
     if (fieldKeyMap.has(f)) return fieldKeyMap.get(f)!;
     const fieldKey = getFieldKey(f);
     fieldKeyMap.set(f, fieldKey);
     return fieldKey;
   };
-
+  const dataCache = createDataCache();
   const metadata: RenderResultMetadata = {
     fields: {},
+    fieldKeyMap,
+    getFieldKey: getCachedFieldKey,
+    field: (f: Field | Explore) => metadata.fields[getCachedFieldKey(f)],
+    getData: dataCache.get,
   };
 
-  function initFieldMeta(e: Explore) {
-    for (const f of e.allFields) {
-      const fieldKey = getCachedFieldKey(f);
-      metadata.fields[fieldKey] = {
-        field: f,
-        min: null,
-        max: null,
-        minString: null,
-        maxString: null,
-        values: new Set(),
-        maxRecordCt: null,
-      };
-      if (f.isExploreField()) {
-        initFieldMeta(f);
+  const rootField = result.data.field;
+  const fieldKey = metadata.getFieldKey(rootField);
+  metadata.fields[fieldKey] = {
+    field: rootField,
+    min: null,
+    max: null,
+    minString: null,
+    maxString: null,
+    values: new Set(),
+    maxRecordCt: null,
+  };
+
+  initFieldMeta(result.data.field, metadata);
+  populateFieldMeta(result.data, metadata);
+
+  Object.values(metadata.fields).forEach(m => {
+    const f = m.field;
+    // If explore, do some additional post-processing like determining chart settings
+    if (f.isExploreField()) populateExploreMeta(f, f.tagParse().tag, metadata);
+    else if (f.isExplore())
+      populateExploreMeta(f, result.tagParse().tag, metadata);
+  });
+
+  return metadata;
+}
+
+function initFieldMeta(e: Explore, metadata: RenderResultMetadata) {
+  for (const f of e.allFields) {
+    const fieldKey = metadata.getFieldKey(f);
+    metadata.fields[fieldKey] = {
+      field: f,
+      min: null,
+      max: null,
+      minString: null,
+      maxString: null,
+      values: new Set(),
+      maxRecordCt: null,
+    };
+    if (f.isExploreField()) {
+      initFieldMeta(f, metadata);
+    }
+  }
+}
+
+const populateFieldMeta = (data: DataArray, metadata: RenderResultMetadata) => {
+  let currExploreRecordCt = 0;
+  for (const row of data) {
+    currExploreRecordCt++;
+    for (const f of data.field.allFields) {
+      const value = f.isAtomicField() ? row.cell(f).value : undefined;
+      const fieldMeta = metadata.field(f);
+      if (valueIsNumber(f, value)) {
+        const n = value;
+        fieldMeta.min = Math.min(fieldMeta.min ?? n, n);
+        fieldMeta.max = Math.max(fieldMeta.max ?? n, n);
+      } else if (valueIsString(f, value)) {
+        const s = value;
+        fieldMeta.values.add(s);
+        if (!fieldMeta.minString || fieldMeta.minString.length > s.length)
+          fieldMeta.minString = s;
+        if (!fieldMeta.maxString || fieldMeta.maxString.length < s.length)
+          fieldMeta.maxString = s;
+      } else if (f.isExploreField()) {
+        const data = row.cell(f) as DataArray;
+        populateFieldMeta(data, metadata);
       }
     }
   }
+  // root explore
+  const rootField = data.field;
+  const fieldMeta = metadata.field(rootField);
+  fieldMeta.maxRecordCt = Math.max(
+    fieldMeta.maxRecordCt ?? currExploreRecordCt,
+    currExploreRecordCt
+  );
+};
 
-  const populateFieldMeta = (
-    data: DataArray,
-    metadata: RenderResultMetadata,
-    cb?: (row: DataRecord) => void
-  ) => {
-    for (const row of data) {
-      cb?.(row);
-      for (const f of data.field.allFields) {
-        const value = f.isAtomicField() ? row.cell(f).value : undefined;
-        const fieldKey = getFieldKey(f);
-        const fieldMeta = metadata.fields[fieldKey];
-        if (valueIsNumber(f, value)) {
-          const n = value;
-          fieldMeta.min = Math.min(fieldMeta.min ?? n, n);
-          fieldMeta.max = Math.max(fieldMeta.max ?? n, n);
-        } else if (valueIsString(f, value)) {
-          const s = value;
-          fieldMeta.values.add(s);
-          if (!fieldMeta.minString || fieldMeta.minString.length > s.length)
-            fieldMeta.minString = s;
-          if (!fieldMeta.maxString || fieldMeta.maxString.length < s.length)
-            fieldMeta.maxString = s;
-        } else if (f.isExploreField()) {
-          const data = row.cell(f) as DataArray;
-          let recordCt = 0;
-          populateFieldMeta(data, metadata, () => recordCt++);
-          fieldMeta.maxRecordCt = Math.max(
-            fieldMeta.maxRecordCt ?? recordCt,
-            recordCt
-          );
-        }
-      }
-    }
-  };
-
-  initFieldMeta(result.data.field);
-  populateFieldMeta(result.data, metadata);
-
-  return metadata;
+function populateExploreMeta(
+  f: Explore | ExploreField,
+  tag: Tag,
+  metadata: RenderResultMetadata
+) {
+  const fieldMeta = metadata.field(f);
+  if (hasAny(tag, 'bar', 'bar_chart')) {
+    const plotSpec = generateBarChartSpec(f, tag);
+    fieldMeta.vegaChartProps = plotToVega(plotSpec, {
+      field: f,
+      metadata,
+    });
+  }
 }
