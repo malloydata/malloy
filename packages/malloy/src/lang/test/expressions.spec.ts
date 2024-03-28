@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {isFieldTypeDef} from '../../model';
+import {Fragment, isFieldTypeDef} from '../../model';
 import {
   expr,
   TestTranslator,
@@ -31,6 +31,30 @@ import {
   makeModelFunc,
 } from './test-translator';
 import './parse-expects';
+
+/**
+ * Convert an expression to a string, any fragment which is not a string turns into a variable,
+ * useful for maybe checking simple code generation, but it sort of hints at an interesting matcher
+ * @param expr Compiled expression
+ * @returns A string with variables A,B,... substituded for non string elements
+ */
+function exprToString(expr: Fragment[]): string {
+  let varCode = 'A'.charCodeAt(0);
+  const vars: Record<string, string> = {};
+  return expr
+    .map(f => {
+      if (typeof f === 'string') {
+        return f;
+      }
+      const key = JSON.stringify(f);
+      if (!vars[key]) {
+        vars[key] = String.fromCharCode(varCode);
+        varCode += 1;
+      }
+      return vars[key];
+    })
+    .join('');
+}
 
 describe('expressions', () => {
   describe('timeframes', () => {
@@ -145,21 +169,41 @@ describe('expressions', () => {
       );
     });
     test('compare to truncation uses straight comparison', () => {
-      // Because equality comparisons with truncation end up being range checks
-      const compare = expr`@2024-02-01 = @2023-12-27.quarter + 1`;
+      const compare = expr`ad = ad.quarter`;
       expect(compare).toTranslate();
       const compare_expr = compare.translator.generated().value;
-
-      expect(compare_expr[0]).toMatchObject({
-        function: 'timeLiteral',
-        literal: '2024-02-01',
-      });
-      expect(compare_expr[1]).toEqual('=');
-
-      const plus1 = expr`@2023-12-27.quarter + 1`;
-      expect(plus1).toTranslate();
-      const compare_to = plus1.translator.generated().value;
-      expect(compare_expr[2]).toEqual(compare_to[0]);
+      expect(exprToString(compare_expr)).toEqual('A=B');
+    });
+    test('compare to granular result expression uses straight comparison', () => {
+      const compare = expr`ad = ad.quarter + 1`;
+      expect(compare).toTranslate();
+      const compare_expr = compare.translator.generated().value;
+      expect(exprToString(compare_expr)).toEqual('A=B');
+    });
+    test('apply granular-truncation uses range', () => {
+      const compare = expr`ad ? ad.quarter`;
+      expect(compare).toTranslate();
+      const compare_expr = compare.translator.generated().value;
+      expect(exprToString(compare_expr)).toEqual('(A>=B)and(A<C)');
+    });
+    test('apply granular-literal alternation uses range', () => {
+      const compare = expr`ad ? @2020 | @2022`;
+      expect(compare).toTranslate();
+      const compare_expr = compare.translator.generated().value;
+      expect(exprToString(compare_expr)).toEqual(
+        '((A>=B)and(A<C))or((A>=D)and(A<E))'
+      );
+    });
+    // this should use range, but it uses = and alternations are
+    // kind of needing help so this is a placeholder for
+    // future work
+    test.skip('apply granular-result alternation uses range', () => {
+      const compare = expr`ad ? ad.year | ad.month`;
+      expect(compare).toTranslate();
+      const compare_expr = compare.translator.generated().value;
+      expect(exprToString(compare_expr)).toEqual(
+        '((A>=B)and(A<C))or((A>=D)and(A<E))'
+      );
     });
     test('comparison promotes date literal to timestamp', () => {
       expect(expr`@2001 = ats`).toTranslate();

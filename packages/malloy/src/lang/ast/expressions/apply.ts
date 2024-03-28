@@ -39,13 +39,16 @@ export class Apply extends ExprCompare {
   }
 
   getExpression(fs: FieldSpace): ExprValue {
+    let right = this.right;
     if (!this.right.granular()) {
       const rhs = this.right.requestExpression(fs);
       if (rhs && isGranularResult(rhs)) {
         // Need to wrap granular computations to get granular behavior
-        const newRight = new ExprGranularTime(this.right, rhs.timeframe, false);
-        return newRight.apply(fs, this.op, this.left);
+        right = new ExprGranularTime(this.right, rhs.timeframe, false);
       }
+    }
+    if (right instanceof ExprGranularTime) {
+      return right.toRange(fs).apply(fs, this.op, this.left);
     }
     return super.getExpression(fs);
   }
