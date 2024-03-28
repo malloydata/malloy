@@ -49,3 +49,24 @@ export const SparksNested = {
     view: 'sparks_nested',
   },
 };
+
+export const TestOld = {
+  args: {
+    source: 'products',
+    view: 'test',
+  },
+};
+
+export const Test = {
+  args: {
+    source: 'products',
+    view: 'topSellingBrandsTest',
+  },
+};
+
+export const NestedTest = {
+  args: {
+    source: 'products',
+    view: 'nested_test',
+  },
+};

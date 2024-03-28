@@ -1,10 +1,11 @@
 import {ModelDef, QueryResult, Result, Tag} from '@malloydata/malloy';
-import {createEffect, createMemo} from 'solid-js';
+import {Match, Switch, createEffect, createMemo} from 'solid-js';
 import {getResultMetadata} from './render-result-metadata';
 import {ResultContext} from './result-context';
+import {Chart} from './chart';
 import MalloyTable from './table/table';
-import './bar-chart';
 import './render.css';
+import {shouldRenderAs} from './util';
 
 export type MalloyRenderProps = {
   result?: Result;
@@ -46,9 +47,23 @@ export function MalloyRender(props: MalloyRenderProps, {element}) {
     }
   });
 
+  const renderAs = () => {
+    const tag = tags().resultTag;
+    const rootField = result().resultExplore;
+    return shouldRenderAs(rootField, tag);
+  };
+
   return (
     <ResultContext.Provider value={metadata()}>
-      <MalloyTable data={result().data} />
+      <Switch fallback={<MalloyTable data={result().data} />}>
+        <Match when={renderAs() === 'chart'}>
+          <Chart
+            field={result().resultExplore}
+            data={metadata().getData(result().data)}
+            metadata={metadata()}
+          />
+        </Match>
+      </Switch>
     </ResultContext.Provider>
   );
 }

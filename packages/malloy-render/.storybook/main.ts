@@ -53,6 +53,7 @@ const config: StorybookConfig = {
       define: {
         'process.env': {},
       },
+      assetsInclude: ['/sb-preview/runtime.js'],
     };
     const finalConfig = mergeConfig(config, configOverride);
     return finalConfig;
