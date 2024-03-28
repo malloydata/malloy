@@ -511,14 +511,14 @@ export interface MarkedSource {
   translator?: TestTranslator;
 }
 
-interface HasTranslator extends MarkedSource {
-  translator: TestTranslator;
+interface HasTranslator<TT extends TestTranslator> extends MarkedSource {
+  translator: TT;
 }
 
 export function expr(
   unmarked: TemplateStringsArray,
   ...marked: string[]
-): HasTranslator {
+): HasTranslator<BetaExpression> {
   const ms = markSource(unmarked, ...marked);
   return {
     ...ms,
@@ -529,7 +529,7 @@ export function expr(
 export function model(
   unmarked: TemplateStringsArray,
   ...marked: string[]
-): HasTranslator {
+): HasTranslator<TestTranslator> {
   const ms = markSource(unmarked, ...marked);
   return {
     ...ms,
@@ -545,7 +545,7 @@ export function makeModelFunc(options: {
   return function model(
     unmarked: TemplateStringsArray,
     ...marked: string[]
-  ): HasTranslator {
+  ): HasTranslator<TestTranslator> {
     const ms = markSource(unmarked, ...marked);
     return {
       ...ms,

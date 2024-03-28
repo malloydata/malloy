@@ -99,27 +99,27 @@ export class ExprGranularTime extends ExpressionDef {
     };
   }
 
-  apply(fs: FieldSpace, op: string, left: ExpressionDef): ExprValue {
-    return this.getRange(fs).apply(fs, op, left);
+  // apply(fs: FieldSpace, op: string, left: ExpressionDef): ExprValue {
+  //   return this.getRange(fs).apply(fs, op, left);
 
-    /*
-      write tests for each of these cases ....
+  //   /*
+  //     write tests for each of these cases ....
 
-      vt  rt  gt  use
-      dt  dt  dt  dateRange
-      dt  dt  ts  == or timeStampRange
-      dt  ts  dt  timestampRange
-      dt  ts  ts  timeStampRange
+  //     vt  rt  gt  use
+  //     dt  dt  dt  dateRange
+  //     dt  dt  ts  == or timeStampRange
+  //     dt  ts  dt  timestampRange
+  //     dt  ts  ts  timeStampRange
 
-      ts  ts  ts  timestampRange
-      ts  ts  dt  timestampRange
-      ts  dt  ts  timestampRange
-      ts  dt  dt  either
+  //     ts  ts  ts  timestampRange
+  //     ts  ts  dt  timestampRange
+  //     ts  dt  ts  timestampRange
+  //     ts  dt  dt  either
 
-    */
-  }
+  //   */
+  // }
 
-  protected getRange(fs: FieldSpace): Range {
+  toRange(fs: FieldSpace): Range {
     const begin = this.getExpression(fs);
     if (begin.dataType === 'timestamp') {
       const beginTS = ExprTime.fromValue('timestamp', begin);
