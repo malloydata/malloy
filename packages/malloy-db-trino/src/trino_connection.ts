@@ -301,7 +301,7 @@ export class TrinoConnection implements Connection, PersistSQLResults {
 
     // TODO(figutierrez): Remove.
     // eslint-disable-next-line no-console
-    console.log(`ROWS: ${JSON.stringify(malloyRows)} ${malloyRows.length}`);
+    // console.log(`ROWS: ${JSON.stringify(malloyRows)} ${malloyRows.length}`);
     // TODO: handle totalrows.
     return {rows: malloyRows, totalRows: malloyRows.length};
   }
