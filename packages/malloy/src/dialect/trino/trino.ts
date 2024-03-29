@@ -34,6 +34,7 @@ import {
   isSamplingRows,
   mkExpr,
   FieldAtomicTypeDef,
+  DialectFragment,
 } from '../../model/malloy_types';
 import {TRINO_FUNCTIONS} from './functions';
 import {DialectFunctionOverloadDef} from '../functions';
@@ -81,7 +82,7 @@ export class TrinoDialect extends Dialect {
   defaultDecimalType = 'NUMERIC';
   udfPrefix = '__udf';
   hasFinalStage = false;
-  divisionIsInteger = false;
+  divisionIsInteger = true;
   supportsSumDistinctFunction = false;
   unnestWithNumbers = false;
   defaultSampling = {enable: false};
@@ -101,6 +102,15 @@ export class TrinoDialect extends Dialect {
 
   sqlGroupSetTable(groupSetCount: number): string {
     return `CROSS JOIN (SELECT row_number() OVER() -1  group_set FROM UNNEST(SEQUENCE(0,${groupSetCount})))`;
+  }
+
+  dialectExpr(qi: QueryInfo, df: DialectFragment): Expr {
+    switch (df.function) {
+      case 'div': {
+        return mkExpr`CAST(${df.numerator} AS DOUBLE)/${df.denominator}`;
+      }
+    }
+    return super.dialectExpr(qi, df);
   }
 
   sqlAnyValue(groupSet: number, fieldName: string): string {
