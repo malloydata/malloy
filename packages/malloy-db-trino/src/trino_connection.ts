@@ -339,7 +339,7 @@ export class TrinoConnection implements Connection, PersistSQLResults {
       let inCache = this.schemaCache.get(tableKey);
       const tablePath = missing[tableKey].replace(
         /malloytest/g,
-        'malloy_demo.faa'
+        'malloy_test.faa'
       );
       if (
         !inCache ||
