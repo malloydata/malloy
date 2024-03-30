@@ -2955,12 +2955,25 @@ class QueryQuery extends QueryField {
         // convert name to an index
         const fi = resultStruct.getField(f.field);
         if (fi && fi.fieldUsage.type === 'result') {
-          o.push(`${fi.fieldUsage.resultIndex} ${f.dir || 'ASC'}`);
+          if (this.parent.dialect.orderByClause === 'ordinal') {
+            o.push(`${fi.fieldUsage.resultIndex} ${f.dir || 'ASC'}`);
+          } else if (this.parent.dialect.orderByClause === 'expression') {
+            o.push(`${f.field}${f.dir || 'ASC'}`);
+          }
         } else {
           throw new Error(`Unknown field in ORDER BY ${f.field}`);
         }
       } else {
-        o.push(`${f.field} ${f.dir || 'ASC'}`);
+        if (this.parent.dialect.orderByClause === 'ordinal') {
+          o.push(`${f.field} ${f.dir || 'ASC'}`);
+        } else if (this.parent.dialect.orderByClause === 'expression') {
+          const orderingField = resultStruct.getFieldByNumber(f.field);
+          o.push(
+            ` ${orderingField.fif.f.generateExpression(resultStruct)} ${
+              f.dir || 'ASC'
+            }`
+          );
+        }
       }
     }
     if (o.length > 0) {

@@ -138,6 +138,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         group_by: state
         aggregate: aircraft_count
         order_by: 2
+        limit: 2
       }
     `).malloyResultMatches(expressionModel, {aircraft_count: 91});
   });

@@ -85,6 +85,8 @@ export function qtz(qi: QueryInfo): string | undefined {
 
 export type DialectFieldList = DialectField[];
 
+export type OrderByClauseType = 'expression' | 'ordinal';
+
 export abstract class Dialect {
   abstract name: string;
   abstract defaultNumberType: string;
@@ -118,6 +120,9 @@ export abstract class Dialect {
 
   // can read some version of ga_sample
   readsNestedData = true;
+
+  // ORDER BY 1 DESC
+  orderByClause: OrderByClauseType = 'ordinal';
 
   // return the definition of a function with the given name
   abstract getGlobalFunctionDef(

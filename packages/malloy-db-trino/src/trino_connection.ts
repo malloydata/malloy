@@ -159,7 +159,7 @@ export class TrinoConnection implements Connection, PersistSQLResults {
     // TODO: check user is set.
     this.trino = Trino.create({
       server: config.server,
-      catalog: config.catalog,
+      catalog: 'malloy_demo', //config.catalog,
       schema: config.schema,
       auth: new BasicAuth(config.user!, config.password),
     });
@@ -337,10 +337,7 @@ export class TrinoConnection implements Connection, PersistSQLResults {
 
     for (const tableKey in missing) {
       let inCache = this.schemaCache.get(tableKey);
-      const tablePath = missing[tableKey].replace(
-        /malloytest/g,
-        'malloy_demo.faa'
-      );
+      const tablePath = missing[tableKey];
       if (
         !inCache ||
         (refreshTimestamp && refreshTimestamp > inCache.timestamp)

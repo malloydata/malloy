@@ -38,7 +38,12 @@ import {
 } from '../../model/malloy_types';
 import {TRINO_FUNCTIONS} from './functions';
 import {DialectFunctionOverloadDef} from '../functions';
-import {Dialect, DialectFieldList, QueryInfo} from '../dialect';
+import {
+  Dialect,
+  DialectFieldList,
+  OrderByClauseType,
+  QueryInfo,
+} from '../dialect';
 
 // These are the units that "TIMESTAMP_ADD" "TIMESTAMP_DIFF" accept
 function timestampMeasureable(units: string): boolean {
@@ -78,8 +83,8 @@ declare interface TimeMeasure {
 
 export class TrinoDialect extends Dialect {
   name = 'trino';
-  defaultNumberType = 'FLOAT64';
-  defaultDecimalType = 'NUMERIC';
+  defaultNumberType = 'DOUBLE';
+  defaultDecimalType = 'DECIMAL';
   udfPrefix = '__udf';
   hasFinalStage = false;
   divisionIsInteger = true;
@@ -94,10 +99,12 @@ export class TrinoDialect extends Dialect {
   supportsSafeCast = true;
   supportsNesting = true;
   cantPartitionWindowFunctionsOnExpressions = true;
+  orderByClause: OrderByClauseType = 'output_name';
 
   quoteTablePath(tablePath: string): string {
     // TODO: look into escaping.
-    return `${tablePath.replace(/malloytest/g, 'malloy_demo.faa')}`;
+    //return `${tablePath.replace(/malloytest/g, 'malloy_demo.malloytest')}`;
+    return tablePath;
   }
 
   sqlGroupSetTable(groupSetCount: number): string {
@@ -191,10 +198,10 @@ export class TrinoDialect extends Dialect {
   }
 
   sqlSumDistinctHashedKey(sqlDistinctKey: string): string {
-    sqlDistinctKey = `CAST(${sqlDistinctKey} AS STRING)`;
-    const upperPart = `cast(cast(concat('0x', substr(to_hex(md5(${sqlDistinctKey})), 1, 15)) as int64) as numeric) * 4294967296`;
-    const lowerPart = `cast(cast(concat('0x', substr(to_hex(md5(${sqlDistinctKey})), 16, 8)) as int64) as numeric)`;
-    // See the comment below on `sql_sum_distinct` for why we multiply by this decimal
+    sqlDistinctKey = `CAST(${sqlDistinctKey} AS VARCHAR)`;
+
+    const upperPart = `cast(from_base(substr(to_hex(md5(to_utf8(${sqlDistinctKey}))), 1, 15),16) as DECIMAL) * DECIMAL '4294967296' `;
+    const lowerPart = `cast(from_base(substr(to_hex(md5(to_utf8(${sqlDistinctKey}))), 16, 8),16) as DECIMAL) `;
     const precisionShiftMultiplier = '0.000000001';
     return `(${upperPart} + ${lowerPart}) * ${precisionShiftMultiplier}`;
   }
@@ -522,9 +529,9 @@ ${indent(sql)}
   malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string {
     if (malloyType.type === 'number') {
       if (malloyType.numberType === 'integer') {
-        return 'INT64';
+        return 'BIGINT';
       } else {
-        return 'FLOAT64';
+        return 'DOUBLE';
       }
     }
     return malloyType.type;
@@ -536,7 +543,7 @@ ${indent(sql)}
   }
 
   castToString(expression: string): string {
-    return `CAST(${expression} as STRING)`;
+    return `CAST(${expression} as VARCHAR)`;
   }
 
   concat(...values: string[]): string {
