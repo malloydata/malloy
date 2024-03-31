@@ -36,13 +36,27 @@ import {
 } from '../model/malloy_types';
 import {DialectFunctionOverloadDef} from './functions';
 
+type DialectFieldTypes = string | 'struct';
+
 interface DialectField {
-  type: string;
+  type: DialectFieldTypes;
   sqlExpression: string;
   rawName: string;
   sqlOutputName: string;
 }
 
+export interface DialectFieldTypeStruct extends DialectField {
+  type: 'struct';
+  nestedStruct: DialectFieldList;
+  isArray: boolean;
+}
+
+export function isDialectFieldStruct(
+  d: DialectField
+): d is DialectFieldTypeStruct {
+  return d.type === 'struct';
+}
+export type DialectFieldList = DialectField[];
 /**
  * Data which dialect methods need in order to correctly generate SQL.
  * Initially this is just timezone related, but I made this an interface
@@ -83,7 +97,7 @@ export function qtz(qi: QueryInfo): string | undefined {
   return tz;
 }
 
-export type DialectFieldList = DialectField[];
+export type OrderByClauseType = 'output_name' | 'ordinal';
 
 export abstract class Dialect {
   abstract name: string;
@@ -118,6 +132,9 @@ export abstract class Dialect {
 
   // can read some version of ga_sample
   readsNestedData = true;
+
+  // ORDER BY 1 DESC
+  orderByClause: OrderByClauseType = 'ordinal';
 
   // return the definition of a function with the given name
   abstract getGlobalFunctionDef(

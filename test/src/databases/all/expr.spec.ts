@@ -110,6 +110,46 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
   });
 
+  // simple turtle expressions
+  it(' simple turtle', async () => {
+    await expect(`
+      run:  ${databaseName}.table('malloytest.state_facts') -> {
+        group_by: popular_name
+        aggregate: airport_count.sum()
+        nest: by_state is {
+          group_by: state
+          aggregate: airport_count.sum()
+          limit: 2
+        }
+        limit: 3
+      }
+    `).malloyResultMatches(expressionModel, {
+      'by_state.state': 'TX',
+      'by_state.airport_count': 1845,
+    });
+  });
+
+  it('double turtle', async () => {
+    await expect(`
+      run:  ${databaseName}.table('malloytest.state_facts') -> {
+        aggregate: airport_count.sum()
+        nest: o is {
+          group_by: popular_name
+          aggregate: airport_count.sum()
+          nest: by_state is {
+            group_by: state
+            aggregate: airport_count.sum()
+            limit: 2
+          }
+          limit: 3
+        }
+      }
+    `).malloyResultMatches(expressionModel, {
+      'o.by_state.state': 'TX',
+      'o.by_state.airport_count': 1845,
+    });
+  });
+
   // turtle expressions
   it('model: turtle', async () => {
     await expect('run: aircraft->by_manufacturer').malloyResultMatches(
@@ -138,6 +178,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         group_by: state
         aggregate: aircraft_count
         order_by: 2
+        limit: 2
       }
     `).malloyResultMatches(expressionModel, {aircraft_count: 91});
   });

@@ -159,7 +159,7 @@ export class TrinoConnection implements Connection, PersistSQLResults {
     // TODO: check user is set.
     this.trino = Trino.create({
       server: config.server,
-      catalog: config.catalog,
+      catalog: 'malloy_demo', //config.catalog,
       schema: config.schema,
       auth: new BasicAuth(config.user!, config.password),
     });
@@ -263,7 +263,6 @@ export class TrinoConnection implements Connection, PersistSQLResults {
     }`;
     // TODO: fill in with options.
     const result = await this.trino.query(sqlCommand);
-
     let queryResult = await result.next();
     if (queryResult.value.error) {
       // TODO: handle.
@@ -301,7 +300,7 @@ export class TrinoConnection implements Connection, PersistSQLResults {
 
     // TODO(figutierrez): Remove.
     // eslint-disable-next-line no-console
-    console.log(`ROWS: ${JSON.stringify(malloyRows)} ${malloyRows.length}`);
+    // console.log(`ROWS: ${JSON.stringify(malloyRows)} ${malloyRows.length}`);
     // TODO: handle totalrows.
     return {rows: malloyRows, totalRows: malloyRows.length};
   }
@@ -337,10 +336,8 @@ export class TrinoConnection implements Connection, PersistSQLResults {
 
     for (const tableKey in missing) {
       let inCache = this.schemaCache.get(tableKey);
-      const tablePath = missing[tableKey].replace(
-        /malloytest/g,
-        'malloy_test.faa'
-      );
+      const tablePath = missing[tableKey];
+
       if (
         !inCache ||
         (refreshTimestamp && refreshTimestamp > inCache.timestamp)
