@@ -337,6 +337,7 @@ export class TrinoConnection implements Connection, PersistSQLResults {
     for (const tableKey in missing) {
       let inCache = this.schemaCache.get(tableKey);
       const tablePath = missing[tableKey];
+
       if (
         !inCache ||
         (refreshTimestamp && refreshTimestamp > inCache.timestamp)
