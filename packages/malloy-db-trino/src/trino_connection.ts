@@ -263,7 +263,6 @@ export class TrinoConnection implements Connection, PersistSQLResults {
     }`;
     // TODO: fill in with options.
     const result = await this.trino.query(sqlCommand);
-
     let queryResult = await result.next();
     if (queryResult.value.error) {
       // TODO: handle.

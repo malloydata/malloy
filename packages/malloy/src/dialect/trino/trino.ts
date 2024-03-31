@@ -16,7 +16,7 @@
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
  * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
  * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,p
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
@@ -43,6 +43,7 @@ import {
   DialectFieldList,
   OrderByClauseType,
   QueryInfo,
+  isDialectFieldStruct,
 } from '../dialect';
 
 // These are the units that "TIMESTAMP_ADD" "TIMESTAMP_DIFF" accept
@@ -80,6 +81,11 @@ declare interface TimeMeasure {
   use: string;
   ratio: number;
 }
+
+const trinoTypeMap = {
+  'string': 'VARCHAR',
+  'number': 'DOUBLE',
+};
 
 export class TrinoDialect extends Dialect {
   name = 'trino';
@@ -123,6 +129,22 @@ export class TrinoDialect extends Dialect {
   sqlAnyValue(groupSet: number, fieldName: string): string {
     return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN ${fieldName} END)`;
   }
+
+  buildTypeExpression(fieldList: DialectFieldList): string {
+    const fields: string[] = [];
+    for (const f of fieldList) {
+      if (isDialectFieldStruct(f)) {
+        let s = `ROW(${this.buildTypeExpression(f.nestedStruct)})`;
+        if (f.isArray) {
+          s = `array(${s})`;
+        }
+        fields.push(s);
+      } else {
+        fields.push(`${f.sqlOutputName} ${trinoTypeMap[f.type] || f.type}`);
+      }
+    }
+    return fields.join(', \n');
+  }
   // can array agg or any_value a struct...
   sqlAggregateTurtle(
     groupSet: number,
@@ -130,14 +152,13 @@ export class TrinoDialect extends Dialect {
     orderBy: string | undefined,
     limit: number | undefined
   ): string {
-    let tail = '';
+    const expressions = fieldList.map(f => f.sqlExpression).join(',\n ');
+    const definitions = this.buildTypeExpression(fieldList);
+    let ret = `ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN CAST(ROW(${expressions}) AS ROW(${definitions})) END ${orderBy})`;
     if (limit !== undefined) {
-      tail += ` LIMIT ${limit}`;
+      ret = `SLICE(${ret}, 1, ${limit})`;
     }
-    const fields = fieldList
-      .map(f => `\n '${f.sqlOutputName}' VALUE ${f.sqlExpression}`)
-      .join(', ');
-    return `cast(COALESCE(SLICE(COALESCE(ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN JSON_PARSE(JSON_OBJECT(${fields})) END \n ${orderBy} -- ${tail}\n), ARRAY[]), 1, ${limit}), ARRAY[]) as json)`;
+    return ret;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
@@ -533,6 +554,8 @@ ${indent(sql)}
       } else {
         return 'DOUBLE';
       }
+    } else if (malloyType.type === 'string') {
+      return 'VARCHAR';
     }
     return malloyType.type;
   }

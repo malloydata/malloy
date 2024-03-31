@@ -133,7 +133,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     await expect(`
       run:  ${databaseName}.table('malloytest.state_facts') -> {
         aggregate: airport_count.sum()
-        nest: outer is {
+        nest: o is {
           group_by: popular_name
           aggregate: airport_count.sum()
           nest: by_state is {
@@ -145,8 +145,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         }
       }
     `).malloyResultMatches(expressionModel, {
-      'outer.by_state.state': 'TX',
-      'outer.by_state.airport_count': 1845,
+      'o.by_state.state': 'TX',
+      'o.by_state.airport_count': 1845,
     });
   });
 

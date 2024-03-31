@@ -105,7 +105,7 @@ import {
   joinWith,
   range,
 } from './utils';
-import {QueryInfo} from '../dialect/dialect';
+import {DialectFieldTypeStruct, QueryInfo} from '../dialect/dialect';
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
@@ -2957,7 +2957,7 @@ class QueryQuery extends QueryField {
         if (fi && fi.fieldUsage.type === 'result') {
           if (this.parent.dialect.orderByClause === 'ordinal') {
             o.push(`${fi.fieldUsage.resultIndex} ${f.dir || 'ASC'}`);
-          } else if (this.parent.dialect.orderByClause === 'expression') {
+          } else if (this.parent.dialect.orderByClause === 'output_name') {
             o.push(`${f.field}${f.dir || 'ASC'}`);
           }
         } else {
@@ -2966,12 +2966,12 @@ class QueryQuery extends QueryField {
       } else {
         if (this.parent.dialect.orderByClause === 'ordinal') {
           o.push(`${f.field} ${f.dir || 'ASC'}`);
-        } else if (this.parent.dialect.orderByClause === 'expression') {
+        } else if (this.parent.dialect.orderByClause === 'output_name') {
           const orderingField = resultStruct.getFieldByNumber(f.field);
           o.push(
-            ` ${orderingField.fif.f.generateExpression(resultStruct)} ${
-              f.dir || 'ASC'
-            }`
+            `${this.parent.dialect.sqlMaybeQuoteIdentifier(
+              orderingField.name
+            )} ${f.dir || 'ASC'}`
           );
         }
       }
@@ -3472,6 +3472,57 @@ class QueryQuery extends QueryField {
     return this.resultStage;
   }
 
+  // create a simplified version of the StructDef for dialects.
+  buildDialectFieldList(resultStruct: FieldInstanceResult): DialectFieldList {
+    const dialectFieldList: DialectFieldList = [];
+
+    for (const [name, field] of resultStruct.allFields) {
+      const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
+      //
+      if (
+        resultStruct.firstSegment.type === 'reduce' &&
+        field instanceof FieldInstanceResult
+      ) {
+        const d: DialectFieldTypeStruct = {
+          type: 'struct',
+          sqlExpression: this.parent.dialect.sqlMaybeQuoteIdentifier(
+            `${name}__${resultStruct.groupSet}`
+          ),
+          rawName: name,
+          sqlOutputName: sqlName,
+          isArray: field.getRepeatedResultType() === 'nested',
+          nestedStruct: this.buildDialectFieldList(field),
+        };
+        dialectFieldList.push(d);
+      } else if (
+        resultStruct.firstSegment.type === 'reduce' &&
+        field instanceof FieldInstanceField &&
+        field.fieldUsage.type === 'result'
+      ) {
+        dialectFieldList.push({
+          type: field.f.fieldDef.type,
+          sqlExpression: this.parent.dialect.sqlMaybeQuoteIdentifier(
+            `${name}__${resultStruct.groupSet}`
+          ),
+          rawName: name,
+          sqlOutputName: sqlName,
+        });
+      } else if (
+        resultStruct.firstSegment.type === 'project' &&
+        field instanceof FieldInstanceField &&
+        field.fieldUsage.type === 'result'
+      ) {
+        dialectFieldList.push({
+          type: field.type,
+          sqlExpression: field.f.generateExpression(resultStruct),
+          rawName: name,
+          sqlOutputName: sqlName,
+        });
+      }
+    }
+    return dialectFieldList;
+  }
+
   generateTurtleSQL(
     resultStruct: FieldInstanceResult,
     stageWriter: StageWriter,
@@ -3479,7 +3530,6 @@ class QueryQuery extends QueryField {
     outputPipelinedSQL: OutputPipelinedSQL[]
   ): string {
     // let fieldsSQL: string[] = [];
-    const dialectFieldList: DialectFieldList = [];
     let orderBy = '';
     const limit = isRawSegment(resultStruct.firstSegment)
       ? undefined
@@ -3521,44 +3571,7 @@ class QueryQuery extends QueryField {
       orderBy = ' ' + this.parent.dialect.sqlOrderBy(obSQL);
     }
 
-    for (const [name, field] of resultStruct.allFields) {
-      const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
-      //
-      if (
-        resultStruct.firstSegment.type === 'reduce' &&
-        (field instanceof FieldInstanceResult ||
-          (field instanceof FieldInstanceField &&
-            field.fieldUsage.type === 'result'))
-      ) {
-        // fieldsSQL.push(`${name}__${resultStruct.groupSet} as ${sqlName}`);
-        // outputFieldNames.push(name);
-        dialectFieldList.push({
-          type:
-            field instanceof FieldInstanceField
-              ? field.f.fieldDef.type
-              : 'struct',
-          sqlExpression: this.parent.dialect.sqlMaybeQuoteIdentifier(
-            `${name}__${resultStruct.groupSet}`
-          ),
-          rawName: name,
-          sqlOutputName: sqlName,
-        });
-      } else if (
-        resultStruct.firstSegment.type === 'project' &&
-        field instanceof FieldInstanceField &&
-        field.fieldUsage.type === 'result'
-      ) {
-        // fieldsSQL.push(
-        //   `${field.f.generateExpression(resultStruct)} as ${sqlName}`
-        // );
-        dialectFieldList.push({
-          type: field.type,
-          sqlExpression: field.f.generateExpression(resultStruct),
-          rawName: name,
-          sqlOutputName: sqlName,
-        });
-      }
-    }
+    const dialectFieldList = this.buildDialectFieldList(resultStruct);
 
     let resultType;
     let ret;
