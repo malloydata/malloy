@@ -256,12 +256,6 @@ export class TrinoConnection implements Connection, PersistSQLResults {
     // TODO(figutierrez): Use.
     _rowIndex = 0
   ): Promise<MalloyQueryData> {
-    //sqlCommand = sqlCommand.replace(new RegExp('`', 'g'), '');
-    // TODO: default row limit.
-    sqlCommand = `SELECT * FROM (${sqlCommand}) limit ${
-      options.rowLimit ?? 50
-    }`;
-    // TODO: fill in with options.
     const result = await this.trino.query(sqlCommand);
     let queryResult = await result.next();
     if (queryResult.value.error) {
@@ -273,8 +267,9 @@ export class TrinoConnection implements Connection, PersistSQLResults {
       );
     }
 
+    let maxRows = options.rowLimit ?? 50;
     const malloyRows: QueryDataRow[] = [];
-    while (queryResult !== null) {
+    while (queryResult !== null && maxRows--) {
       const rows = queryResult.value.data ?? [];
       for (const row of rows) {
         const malloyRow: QueryDataRow = {};
