@@ -1,0 +1,34 @@
+name: npmjs.com Pre-release
+
+on: [workflow_dispatch]
+
+jobs:
+  db-bigquery:
+    uses: './.github/workflows/db-bigquery.yaml'
+    secrets:
+      BIGQUERY_KEY: ${{ secrets.BIGQUERY_KEY }}
+  db-motherduck:
+    uses: './.github/workflows/db-motherduck.yaml'
+    secrets:
+      MOTHERDUCK_TOKEN: ${{ secrets.MOTHERDUCK_TOKEN }}
+  db-postgres:
+    uses: './.github/workflows/db-postgres.yaml'
+  db-snowflake:
+    uses: './.github/workflows/db-snowflake.yaml'
+    secrets:
+      SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+      SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+  main:
+    uses: './.github/workflows/main.yaml'
+
+  npm-prerelease:
+    needs:
+      - db-bigquery
+      - db-motherduck
+      - db-postgres
+      - db-snowflake
+      - main
+    runs-on: ubuntu-latest
+    steps:
+      - name: Success
+        run: echo Success
