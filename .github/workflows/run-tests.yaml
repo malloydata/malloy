@@ -1,4 +1,4 @@
-name: npmjs.com Pre-release
+name: Malloy Tests
 
 on: [workflow_dispatch]
 
@@ -21,7 +21,7 @@ jobs:
   main:
     uses: './.github/workflows/main.yaml'
 
-  npm-prerelease:
+  malloy-tests:
     needs:
       - db-bigquery
       - db-motherduck
