@@ -384,13 +384,7 @@ ${indent(sql)}
   WITHIN`.split(/\s/);
 
   sqlMaybeQuoteIdentifier(identifier: string): string {
-    // return this.keywords.indexOf(identifier.toUpperCase()) > 0
-    //   ? '`' + identifier + '`'
-    //   : identifier;
-    return identifier;
-
-    // TODO: may need to escape;
-    //return `"${identifier}"`;
+    return '"' + identifier + '"';
   }
 
   sqlNow(): Expr {
