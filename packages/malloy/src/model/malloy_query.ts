@@ -2958,7 +2958,11 @@ class QueryQuery extends QueryField {
           if (this.parent.dialect.orderByClause === 'ordinal') {
             o.push(`${fi.fieldUsage.resultIndex} ${f.dir || 'ASC'}`);
           } else if (this.parent.dialect.orderByClause === 'output_name') {
-            o.push(`${f.field}${f.dir || 'ASC'}`);
+            o.push(
+              `${this.parent.dialect.sqlMaybeQuoteIdentifier(f.field)} ${
+                f.dir || 'ASC'
+              }`
+            );
           }
         } else {
           throw new Error(`Unknown field in ORDER BY ${f.field}`);
