@@ -50,6 +50,8 @@ function getSplitFunction(db: string) {
       `string_to_array(${column}, '${splitChar}')`,
     'snowflake': (column: string, splitChar: string) =>
       `split(${column}, '${splitChar}')`,
+    'trino': (column: string, splitChar: string) =>
+      `split(${column}, '${splitChar}')`,
   }[db];
 }
 

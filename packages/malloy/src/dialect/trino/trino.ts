@@ -104,7 +104,7 @@ export class TrinoDialect extends Dialect {
   supportsQualify = true;
   supportsSafeCast = true;
   supportsNesting = true;
-  cantPartitionWindowFunctionsOnExpressions = true;
+  cantPartitionWindowFunctionsOnExpressions = false;
   orderByClause: OrderByClauseType = 'output_name';
 
   quoteTablePath(tablePath: string): string {
