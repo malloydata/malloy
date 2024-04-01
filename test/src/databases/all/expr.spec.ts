@@ -150,6 +150,28 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
   });
 
+  it('double turtle - pipeline', async () => {
+    await expect(`
+      run:  ${databaseName}.table('malloytest.state_facts') -> {
+        aggregate: airport_count.sum()
+        nest: o is {
+          group_by: popular_name
+          aggregate: airport_count.sum()
+          nest: by_state is {
+            group_by: state
+            aggregate: airport_count.sum()
+            limit: 2
+          }
+          limit: 3
+        }
+      } -> {
+        aggregate: o.by_state.airport_count.sum()
+      }
+    `).malloyResultMatches(expressionModel, {
+      'airport_count': 5023,
+    });
+  });
+
   // turtle expressions
   it('model: turtle', async () => {
     await expect('run: aircraft->by_manufacturer').malloyResultMatches(

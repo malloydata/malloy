@@ -205,16 +205,19 @@ export class TrinoDialect extends Dialect {
     isArray: boolean,
     _isInNestedPipeline: boolean
   ): string {
+    const fieldsNames = fieldList.map(f =>
+      this.sqlMaybeQuoteIdentifier(f.sqlOutputName)
+    );
     if (isArray) {
       if (needDistinctKey) {
-        return `LEFT JOIN UNNEST(ARRAY(( SELECT AS STRUCT row_number() over() as __row_id, value FROM UNNEST(${source}) value))) as ${alias}`;
+        return `,UNNEST(ARRAY(( SELECT AS STRUCT row_number() over() as __row_id, value FROM UNNEST(${source}) value))) as ${alias}`;
       } else {
-        return `LEFT JOIN UNNEST(ARRAY((SELECT AS STRUCT value FROM unnest(${source}) value))) as ${alias}`;
+        return `,UNNEST(ARRAY((SELECT AS STRUCT value FROM unnest(${source}) value))) as ${alias}`;
       }
     } else if (needDistinctKey) {
-      return `LEFT JOIN UNNEST(ARRAY(( SELECT AS STRUCT row_number() over() as __row_id, * FROM UNNEST(${source})))) as ${alias}`;
+      return `,UNNEST(zip_with(a, SEQUENCE(1,cardinality(a)), (r,__row_id) -> (r, __row_id))) as ${alias}_outer(${alias},__row_id)`;
     } else {
-      return `LEFT JOIN UNNEST(${source}) as ${alias}`;
+      return `,UNNEST(${source}) as ${alias}(${fieldsNames.join(', ')})`;
     }
   }
 
@@ -228,7 +231,7 @@ export class TrinoDialect extends Dialect {
   }
 
   sqlGenerateUUID(): string {
-    return 'GENERATE_UUID()';
+    return 'UUID()';
   }
 
   sqlFieldReference(
@@ -238,6 +241,10 @@ export class TrinoDialect extends Dialect {
     _isNested: boolean,
     _isArray: boolean
   ): string {
+    // LTNOTE: hack, in duckdb we can't have structs as tables so we kind of simulate it.
+    if (fieldName === '__row_id') {
+      return `${alias}_outer.__row_id`;
+    }
     return `${alias}.${fieldName}`;
   }
 
@@ -460,7 +467,7 @@ ${indent(sql)}
   }
 
   sqlRegexpMatch(expr: Expr, regexp: Expr): Expr {
-    return mkExpr`REGEXP_CONTAINS(${expr}, ${regexp})`;
+    return mkExpr`REGEXP_LIKE(${expr}, ${regexp})`;
   }
 
   sqlLiteralTime(
