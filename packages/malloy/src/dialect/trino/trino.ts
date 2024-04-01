@@ -180,14 +180,10 @@ export class TrinoDialect extends Dialect {
     groupSet: number,
     fieldList: DialectFieldList
   ): string {
-    const fields = fieldList
-      .map(f => `${f.sqlExpression} as ${f.sqlOutputName}`)
-      .join(', ');
-    const nullValues = fieldList
-      .map(f => `NULL as ${f.sqlOutputName}`)
-      .join(', ');
-
-    return `COALESCE(ANY_VALUE(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}) END), STRUCT(${nullValues}))`;
+    const fields = fieldList.map(f => f.sqlExpression).join(', ');
+    const nullValues = fieldList.map(_f => 'NULL').join(', ');
+    const definitions = this.buildTypeExpression(fieldList);
+    return `COALESCE(ANY_VALUE(CASE WHEN group_set=${groupSet} THEN CAST(ROW(${fields}) AS ROW(${definitions})) END), CAST(ROW(${nullValues}) AS ROW(${definitions})))`;
   }
 
   //
