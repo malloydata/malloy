@@ -114,16 +114,12 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   it(' simple turtle', async () => {
     await expect(`
       run:  ${databaseName}.table('malloytest.state_facts') -> {
-        --debug
         group_by: popular_name
         aggregate: airport_count.sum()
         nest: by_state is {
           group_by: state
           aggregate: airport_count.sum()
           limit: 2
-        }
-        nest: a is {
-          aggregate: foo is airport_count.sum(), bar is max(airport_count)
         }
         limit: 3
       }
