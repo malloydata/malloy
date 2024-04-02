@@ -108,7 +108,7 @@ export class SnowflakeDialect extends Dialect {
   dontUnionIndex = false;
   supportsQualify = false;
   supportsNesting = true;
-  supportsPipelinesInViews = false;
+  supportsPipelinesInViews = true;
 
   // don't mess with the table pathing.
   quoteTablePath(tablePath: string): string {
@@ -185,19 +185,10 @@ export class SnowflakeDialect extends Dialect {
     _isInNestedPipeline: boolean
   ): string {
     if (isArray) {
-      // if (needDistinctKey) {
-      //   // return `LEFT JOIN UNNEST(ARRAY(( SELECT AS STRUCT row_number() over() as __row_id, value FROM UNNEST(${source}) value))) as ${alias}`;
-      // } else {
-      //   return `LEFT JOIN UNNEST(ARRAY((SELECT AS STRUCT value FROM unnest(${source}) value))) as ${alias}`;
-      // }
       return `,LATERAL FLATTEN(INPUT => ${source}) AS ${alias}_1, LATERAL (SELECT ${alias}_1.INDEX, object_construct('value', ${alias}_1.value) as value ) as ${alias}`;
     } else {
       // have to have a non empty row or it treats it like an inner join :barf-emoji:
       return `LEFT JOIN LATERAL FLATTEN(INPUT => ifnull(${source},[1])) AS ${alias}`;
-      //   return `LEFT JOIN UNNEST(ARRAY(( SELECT AS STRUCT row_number() over() as __row_id, * FROM UNNEST(${source})))) as ${alias}`;
-      // } else {
-      //   return `LEFT JOIN UNNEST(${source}) as ${alias}`;
-      // }
     }
   }
 
@@ -268,9 +259,9 @@ export class SnowflakeDialect extends Dialect {
     throw new Error('not implemented yet');
   }
 
-  sqlCreateFunctionCombineLastStage(_lastStageName: string): string {
-    throw new Error('not implemented yet');
-    // return `SELECT ARRAY_AGG(OBJECT_CONSTRUCT(*)) FROM ${lastStageName}`;
+  sqlCreateFunctionCombineLastStage(lastStageName: string): string {
+    // throw new Error('not implemented yet');
+    return `SELECT ARRAY_AGG(OBJECT_CONSTRUCT(*)) FROM ${lastStageName}`;
   }
 
   sqlSelectAliasAsStruct(alias: string): string {
