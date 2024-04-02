@@ -253,6 +253,29 @@ export class TrinoConnection implements Connection, PersistSQLResults {
     }
   }*/
 
+  convertRow(structDef: StructDef, row: unknown[]) {
+    const col = {};
+    for (let i = 0; i < structDef.fields.length; i++) {
+      col[structDef.fields[i].name] = row[i];
+    }
+    return col;
+  }
+
+  convertNest(structDef: StructDef, dataRows: unknown[][]) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ret: any[] = [];
+    if (
+      structDef.structRelationship.type === 'nested' &&
+      !structDef.structRelationship.isArray
+    ) {
+      return this.convertRow(structDef, dataRows);
+    }
+    for (const row of dataRows) {
+      ret.push(this.convertRow(structDef, row));
+    }
+    return ret;
+  }
+
   public async runSQL(
     sqlCommand: string,
     options: RunSQLOptions = {},
@@ -270,6 +293,14 @@ export class TrinoConnection implements Connection, PersistSQLResults {
       );
     }
 
+    const malloyColumns = queryResult.value.columns.map(c =>
+      this.malloyTypeFromTrinoType(c.name, c.type)
+    );
+
+    // Debugging types
+    // const _x = queryResult.value.columns.map(c => console.log(c.type));
+    // console.log(JSON.stringify(malloyColumns, null, 2));
+
     let maxRows = options.rowLimit ?? 50;
     const malloyRows: QueryDataRow[] = [];
     while (queryResult !== null && maxRows--) {
@@ -278,9 +309,11 @@ export class TrinoConnection implements Connection, PersistSQLResults {
         const malloyRow: QueryDataRow = {};
         for (let i = 0; i < queryResult.value.columns.length; i++) {
           const column = queryResult.value.columns[i];
-          // TODO: handle arrays etc.
-          if (column.type === 'json') {
-            malloyRow[column.name] = JSON.parse(row[i]) as QueryValue;
+          if (malloyColumns[i].type === 'struct') {
+            malloyRow[column.name] = this.convertNest(
+              malloyColumns[i] as StructDef,
+              row[i]
+            ) as QueryValue;
           } else {
             malloyRow[column.name] = row[i] as QueryValue;
           }
@@ -468,18 +501,27 @@ export class TrinoConnection implements Connection, PersistSQLResults {
     if (arrayMatch) {
       const arrayType = arrayMatch[1];
       const innerType = this.malloyTypeFromTrinoType(name, arrayType);
-      malloyType = {
-        type: 'struct',
-        name,
-        dialect: this.dialectName,
-        structSource: {type: 'nested'},
-        structRelationship: {
+      if (innerType.type === 'struct') {
+        malloyType = innerType;
+        malloyType.structRelationship = {
           type: 'nested',
           fieldName: name,
           isArray: true,
-        },
-        fields: [{...innerType, name: 'value'} as FieldTypeDef],
-      };
+        };
+      } else {
+        malloyType = {
+          type: 'struct',
+          name,
+          dialect: this.dialectName,
+          structSource: {type: 'nested'},
+          structRelationship: {
+            type: 'nested',
+            fieldName: name,
+            isArray: true,
+          },
+          fields: [{...innerType, name: 'value'} as FieldTypeDef],
+        };
+      }
     } else if (structMatch) {
       // TODO: Trino doesn't quote or escape commas in field names,
       // so some magic is going to need to be applied before we get here
