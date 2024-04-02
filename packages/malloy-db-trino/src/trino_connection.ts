@@ -286,7 +286,11 @@ export class TrinoConnection implements Connection, PersistSQLResults {
     if (queryResult.value.error) {
       // TODO: handle.
       const {failureInfo: _, ...error} = queryResult.value.error;
-      throw new Error(JSON.stringify(error, null, 2));
+      throw new Error(
+        `Failed to execute sql: ${sqlCommand}. \n Error: ${JSON.stringify(
+          error
+        )}`
+      );
     }
 
     const malloyColumns = queryResult.value.columns.map(c =>
