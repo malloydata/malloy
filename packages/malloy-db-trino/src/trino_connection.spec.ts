@@ -113,22 +113,9 @@ describe('Trino connection', () => {
         },
         'structSource': {'type': 'nested'},
         'fields': [
-          {
-            'name': 'value',
-            'type': 'struct',
-            'dialect': 'trino',
-            'structRelationship': {
-              'fieldName': 'test',
-              'isArray': false,
-              'type': 'nested',
-            },
-            'structSource': {'type': 'nested'},
-            'fields': [
-              {'name': 'a', 'numberType': 'float', 'type': 'number'},
-              {'name': 'b', 'numberType': 'integer', 'type': 'number'},
-              {'name': 'c', 'type': 'string'},
-            ],
-          },
+          {'name': 'a', 'numberType': 'float', 'type': 'number'},
+          {'name': 'b', 'numberType': 'integer', 'type': 'number'},
+          {'name': 'c', 'type': 'string'},
         ],
       });
     });
