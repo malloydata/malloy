@@ -487,6 +487,35 @@ export class TrinoConnection implements Connection, PersistSQLResults {
     while (!(await result.next()).done);
   }
 
+  private splitColumns(s: string) {
+    const columns: string[] = [];
+    let parens = 0;
+    let column = '';
+    let eatSpaces = true;
+    for (let idx = 0; idx < s.length; idx++) {
+      const c = s.charAt(idx);
+      if (eatSpaces && c === ' ') {
+        // Eat space
+      } else {
+        eatSpaces = false;
+        if (!parens && c === ',') {
+          columns.push(column);
+          column = '';
+          eatSpaces = true;
+        } else {
+          column += c;
+        }
+        if (c === '(') {
+          parens += 1;
+        } else if (c === ')') {
+          parens -= 1;
+        }
+      }
+    }
+    columns.push(column);
+    return columns;
+  }
+
   malloyTypeFromTrinoType(
     name: string,
     trinoType: string
@@ -526,7 +555,7 @@ export class TrinoConnection implements Connection, PersistSQLResults {
       // TODO: Trino doesn't quote or escape commas in field names,
       // so some magic is going to need to be applied before we get here
       // to avoid confusion if a field name contains a comma
-      const innerTypes = structMatch[1].split(/,\s+/);
+      const innerTypes = this.splitColumns(structMatch[1]);
       malloyType = {
         type: 'struct',
         name,
