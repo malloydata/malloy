@@ -28,13 +28,22 @@ const STRUCT_SCHEMA = 'row(a double, b integer, c varchar(60))';
 const DEEP_SCHEMA = 'array(row(a double, b integer, c varchar(60)))';
 
 describe('Trino connection', () => {
+  let connection: TrinoConnection;
+
+  beforeAll(() => {
+    connection = new TrinoConnection(
+      'trino',
+      {},
+      TrinoExecutor.getConnectionOptionsFromEnv()
+    );
+  });
+
+  afterAll(() => {
+    connection.close();
+  });
+
   describe('schema parser', () => {
     it('parses arrays', () => {
-      const connection = new TrinoConnection(
-        'trino',
-        {},
-        TrinoExecutor.getConnectionOptionsFromEnv()
-      );
       expect(connection.malloyTypeFromTrinoType('test', ARRAY_SCHEMA)).toEqual({
         'name': 'test',
         'type': 'struct',
@@ -118,6 +127,19 @@ describe('Trino connection', () => {
           {'name': 'c', 'type': 'string'},
         ],
       });
+    });
+  });
+
+  describe('splitColumns', () => {
+    it('handles internal rows', () => {
+      const nested =
+        'popular_name varchar, airport_count double, by_state array(row(state varchar, airport_count double))';
+
+      expect(connection.splitColumns(nested)).toEqual([
+        'popular_name varchar',
+        'airport_count double',
+        'by_state array(row(state varchar, airport_count double))',
+      ]);
     });
   });
 });
