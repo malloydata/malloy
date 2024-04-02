@@ -72,8 +72,11 @@ export class TrinoConnection implements Connection, PersistSQLResults {
     'integer': {type: 'number', numberType: 'integer'},
     'bigint': {type: 'number', numberType: 'integer'},
     'double': {type: 'number', numberType: 'float'},
+    'decimal': {type: 'number', numberType: 'float'},
     'string': {type: 'string'},
     'date': {type: 'date'},
+    'timestamp': {type: 'timestamp'},
+    'boolean': {type: 'boolean'},
 
     // TODO(figutierrez0): cleanup.
     /* 'INT64': {type: 'number', numberType: 'integer'},
@@ -465,6 +468,89 @@ export class TrinoConnection implements Connection, PersistSQLResults {
     while (!(await result.next()).done);
   }
 
+  malloyTypeFromTrinoType(
+    name: string,
+    trinoType: string
+  ): FieldAtomicTypeDef | StructDef {
+    let malloyType: FieldAtomicTypeDef | StructDef;
+    // Arrays look like `array(type)`
+    const arrayMatch = trinoType.match(/^array\((.*)\)$/);
+
+    // Structs look like `row(name type, name type)`
+    const structMatch = trinoType.match(/^row\((.*)\)$/);
+
+    if (arrayMatch) {
+      const arrayType = arrayMatch[1];
+      const innerType = this.malloyTypeFromTrinoType(name, arrayType);
+      malloyType = {
+        type: 'struct',
+        name,
+        dialect: this.dialectName,
+        structSource: {type: 'nested'},
+        structRelationship: {
+          type: 'nested',
+          fieldName: name,
+          isArray: true,
+        },
+        fields: [{...innerType, name: 'value'} as FieldTypeDef],
+      };
+    } else if (structMatch) {
+      // TODO: Trino doesn't quote or escape commas in field names,
+      // so some magic is going to need to be applied before we get here
+      // to avoid confusion if a field name contains a comma
+      const innerTypes = structMatch[1].split(/,\s+/);
+      malloyType = {
+        type: 'struct',
+        name,
+        dialect: this.dialectName,
+        structSource: {type: 'nested'},
+        structRelationship: {
+          type: 'nested',
+          fieldName: name,
+          isArray: false,
+        },
+        fields: [],
+      };
+      for (let innerType of innerTypes) {
+        // TODO: Handle time zone type annotation, which is an
+        // exception to the types not containing spaces assumption
+        innerType = innerType.replace(/ with time zone$/, '');
+        const parts = innerType.match(/^(.*)\s(\S+)$/);
+        if (parts) {
+          const innerName = parts[1];
+          const innerTrinoType = parts[2];
+          const innerMalloyType = this.malloyTypeFromTrinoType(
+            innerName,
+            innerTrinoType
+          );
+          malloyType.fields.push({...innerMalloyType, name: innerName});
+        } else {
+          malloyType.fields.push({
+            name: 'unknown',
+            type: 'unsupported',
+            rawType: innerType.toLowerCase(),
+          });
+        }
+      }
+    } else {
+      malloyType = this.sqlToMalloyType(trinoType) ?? {
+        type: 'unsupported',
+        rawType: trinoType.toLowerCase(),
+      };
+    }
+    return malloyType;
+  }
+
+  structDefFromSchema(rows: string[][], structDef: StructDef): void {
+    for (const row of rows) {
+      const name = row[0];
+      const type = row[1] || row[4];
+      const malloyType = this.malloyTypeFromTrinoType(name, type);
+      // console.log('>', row, '\n<', malloyType);
+      structDef.fields.push({name, ...malloyType});
+    }
+  }
+
   private async loadSchemaForSqlBlock(
     sqlBlock: string,
     structDef: StructDef,
@@ -484,16 +570,8 @@ export class TrinoConnection implements Connection, PersistSQLResults {
         );
       }
 
-      const rows = queryResult.value.data ?? [];
-      for (const row of rows) {
-        const fieldName = row[0];
-        const type = row[1];
-        const malloyType = this.sqlToMalloyType(type) ?? {
-          type: 'unsupported',
-          rawType: type.toLowerCase(),
-        };
-        structDef.fields.push({name: fieldName, ...malloyType} as FieldTypeDef);
-      }
+      const rows: string[][] = queryResult.value.data ?? [];
+      this.structDefFromSchema(rows, structDef);
     } catch (e) {
       throw new Error(`Could not fetch schema for ${element} ${e}`);
     }
