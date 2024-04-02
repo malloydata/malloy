@@ -487,7 +487,7 @@ export class TrinoConnection implements Connection, PersistSQLResults {
     while (!(await result.next()).done);
   }
 
-  private splitColumns(s: string) {
+  splitColumns(s: string) {
     const columns: string[] = [];
     let parens = 0;
     let column = '';
