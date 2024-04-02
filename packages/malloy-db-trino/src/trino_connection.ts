@@ -250,6 +250,20 @@ export class TrinoConnection implements Connection, PersistSQLResults {
     }
   }*/
 
+  convertNest(column: string, dataRows: unknown[][]) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ret: any[] = [];
+    for (const row of dataRows) {
+      const col = {};
+      for (const element of row) {
+        const e: string[] = element as string[];
+        col[e[0] as string] = e[1];
+      }
+      ret.push(col);
+    }
+    return ret;
+  }
+
   public async runSQL(
     sqlCommand: string,
     options: RunSQLOptions = {},
@@ -276,8 +290,8 @@ export class TrinoConnection implements Connection, PersistSQLResults {
         for (let i = 0; i < queryResult.value.columns.length; i++) {
           const column = queryResult.value.columns[i];
           // TODO: handle arrays etc.
-          if (column.type === 'json') {
-            malloyRow[column.name] = JSON.parse(row[i]) as QueryValue;
+          if (column.type.startsWith('xarray(row')) {
+            malloyRow[column.name] = this.convertNest(column.type, row[i]);
           } else {
             malloyRow[column.name] = row[i] as QueryValue;
           }
