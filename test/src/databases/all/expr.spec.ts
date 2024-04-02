@@ -111,7 +111,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   });
 
   // simple turtle expressions
-  it(' simple turtle', async () => {
+  it('simple turtle', async () => {
     await expect(`
       run:  ${databaseName}.table('malloytest.state_facts') -> {
         group_by: popular_name

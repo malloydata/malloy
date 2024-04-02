@@ -533,11 +533,11 @@ export class TrinoConnection implements Connection, PersistSQLResults {
       const arrayType = arrayMatch[1];
       const innerType = this.malloyTypeFromTrinoType(name, arrayType);
       if (innerType.type === 'struct') {
-        malloyType = innerType;
+        malloyType = {...innerType, structSource: {type: 'nested'}};
         malloyType.structRelationship = {
           type: 'nested',
           fieldName: name,
-          isArray: true,
+          isArray: false,
         };
       } else {
         malloyType = {
@@ -562,11 +562,9 @@ export class TrinoConnection implements Connection, PersistSQLResults {
         type: 'struct',
         name,
         dialect: this.dialectName,
-        structSource: {type: 'nested'},
+        structSource: {type: 'inline'},
         structRelationship: {
-          type: 'nested',
-          fieldName: name,
-          isArray: false,
+          type: 'inline',
         },
         fields: [],
       };
@@ -597,6 +595,7 @@ export class TrinoConnection implements Connection, PersistSQLResults {
         rawType: trinoType.toLowerCase(),
       };
     }
+    // console.log('>', trinoType, '\n<', malloyType);
     return malloyType;
   }
 
