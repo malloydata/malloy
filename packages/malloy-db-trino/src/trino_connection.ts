@@ -262,8 +262,7 @@ export class TrinoConnection implements Connection, PersistSQLResults {
   }
 
   convertNest(structDef: StructDef, dataRows: unknown[][]) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const ret: any[] = [];
+    const ret: unknown[] = [];
     if (
       structDef.structRelationship.type === 'nested' &&
       !structDef.structRelationship.isArray
@@ -286,11 +285,8 @@ export class TrinoConnection implements Connection, PersistSQLResults {
     let queryResult = await result.next();
     if (queryResult.value.error) {
       // TODO: handle.
-      throw new Error(
-        `Failed to execute sql: ${sqlCommand}. \n Error: ${JSON.stringify(
-          queryResult.value.error
-        )}`
-      );
+      const {failureInfo: _, ...error} = queryResult.value.error;
+      throw new Error(JSON.stringify(error, null, 2));
     }
 
     const malloyColumns = queryResult.value.columns.map(c =>
@@ -572,7 +568,7 @@ export class TrinoConnection implements Connection, PersistSQLResults {
   structDefFromSchema(rows: string[][], structDef: StructDef): void {
     for (const row of rows) {
       const name = row[0];
-      const type = row[1] || row[4];
+      const type = row[4] || row[1];
       const malloyType = this.malloyTypeFromTrinoType(name, type);
       // console.log('>', row, '\n<', malloyType);
       structDef.fields.push({name, ...malloyType});
