@@ -1,0 +1,32 @@
+name: Trino DB
+
+on: [pull_request, workflow_call]
+
+jobs:
+  # Label of the container job
+  test-trino:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: npm install, build, and test
+        run: |
+          npm ci --loglevel error
+          npm run build
+          npm run build-duckdb-db
+          npm run test-silent -- -- test
+        env:
+          MALLOY_DATABASES: trino
+          TRINO_SERVER: https://malloytesting-test-cluster.trino.galaxy.starburst.io
+          TRINO_USER: ${{ secrets.TRINO_USER}}
+          TRINO_PASSWORD: ${{ secrets.TRINO_PASSWORD}}
