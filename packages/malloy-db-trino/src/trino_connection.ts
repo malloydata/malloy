@@ -256,20 +256,21 @@ export class TrinoConnection implements Connection, PersistSQLResults {
   convertRow(structDef: StructDef, row: unknown[]) {
     const col = {};
     for (let i = 0; i < structDef.fields.length; i++) {
-      col[structDef.fields[i].name] = row[i];
+      col[structDef.fields[i].name] = row[i] === undefined ? null : row[i];
     }
     return col;
   }
 
   convertNest(structDef: StructDef, dataRows: unknown[][]) {
+    const rows = dataRows === null || dataRows === undefined ? [] : dataRows;
     const ret: unknown[] = [];
     if (
       structDef.structRelationship.type === 'nested' &&
       !structDef.structRelationship.isArray
     ) {
-      return this.convertRow(structDef, dataRows);
+      return this.convertRow(structDef, rows);
     }
-    for (const row of dataRows) {
+    for (const row of rows) {
       ret.push(this.convertRow(structDef, row));
     }
     return ret;
@@ -300,6 +301,7 @@ export class TrinoConnection implements Connection, PersistSQLResults {
     // Debugging types
     // const _x = queryResult.value.columns.map(c => console.log(c.type));
     // console.log(JSON.stringify(malloyColumns, null, 2));
+    // console.log(JSON.stringify(queryResult.value.data, null, 2));
 
     let maxRows = options.rowLimit ?? 50;
     const malloyRows: QueryDataRow[] = [];
