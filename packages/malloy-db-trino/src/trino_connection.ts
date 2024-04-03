@@ -256,27 +256,21 @@ export class TrinoConnection implements Connection, PersistSQLResults {
   convertRow(structDef: StructDef, row: unknown[]) {
     const col = {};
     for (let i = 0; i < structDef.fields.length; i++) {
-      if (structDef.fields[i].type === 'struct') {
-        col[structDef.fields[i].name] = this.convertNest(
-          structDef.fields[i] as StructDef,
-          row[i]
-        );
-      }
       col[structDef.fields[i].name] = row[i];
     }
     return col;
   }
 
-  convertNest(structDef: StructDef, dataRows: unknown) {
+  convertNest(structDef: StructDef, dataRows: unknown[][]) {
     const ret: unknown[] = [];
     if (
       structDef.structRelationship.type === 'nested' &&
       !structDef.structRelationship.isArray
     ) {
-      return this.convertRow(structDef, dataRows as unknown[]);
+      return this.convertRow(structDef, dataRows);
     }
-    for (const row of dataRows as unknown[]) {
-      ret.push(this.convertRow(structDef, row as unknown[]));
+    for (const row of dataRows) {
+      ret.push(this.convertRow(structDef, row));
     }
     return ret;
   }
@@ -528,14 +522,13 @@ export class TrinoConnection implements Connection, PersistSQLResults {
   ): FieldAtomicTypeDef | StructDef {
     let malloyType: FieldAtomicTypeDef | StructDef;
     // Arrays look like `array(type)`
-    // console.log(`"${name}" "${trinoType}"`);
-    const arrayMatch = trinoType.match(/^([^,]+\s)?array\((.*)\)$/);
+    const arrayMatch = trinoType.match(/^array\((.*)\)$/);
 
     // Structs look like `row(name type, name type)`
-    const structMatch = trinoType.match(/^([^,]+\s)?row\((.*)\)$/);
+    const structMatch = trinoType.match(/^row\((.*)\)$/);
 
     if (arrayMatch) {
-      const arrayType = arrayMatch[2];
+      const arrayType = arrayMatch[1];
       const innerType = this.malloyTypeFromTrinoType(name, arrayType);
       if (innerType.type === 'struct') {
         malloyType = innerType;
@@ -579,7 +572,7 @@ export class TrinoConnection implements Connection, PersistSQLResults {
         // TODO: Handle time zone type annotation, which is an
         // exception to the types not containing spaces assumption
         innerType = innerType.replace(/ with time zone$/, '');
-        const parts = innerType.match(/^(.*)\s((array\(.*)|\S+)$/);
+        const parts = innerType.match(/^(.*)\s(\S+)$/);
         if (parts) {
           const innerName = parts[1];
           const innerTrinoType = parts[2];
