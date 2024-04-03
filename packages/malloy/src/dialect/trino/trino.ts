@@ -154,7 +154,7 @@ export class TrinoDialect extends Dialect {
   ): string {
     const expressions = fieldList.map(f => f.sqlExpression).join(',\n ');
     const definitions = this.buildTypeExpression(fieldList);
-    let ret = `ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN CAST(ROW(${expressions}) AS ROW(${definitions})) END ${orderBy})`;
+    let ret = `ARRAY_AGG(CAST(ROW(${expressions}) AS ROW(${definitions})) ${orderBy}) FILTER (WHERE group_set=${groupSet})`;
     if (limit !== undefined) {
       ret = `SLICE(${ret}, 1, ${limit})`;
     }
