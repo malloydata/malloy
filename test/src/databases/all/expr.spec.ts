@@ -142,11 +142,16 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
             limit: 2
           }
           limit: 3
+          nest: inline is {
+            aggregate: inline_sum is airport_count.sum()
+          }
         }
       }
     `).malloyResultMatches(expressionModel, {
       'o.by_state.state': 'TX',
       'o.by_state.airport_count': 1845,
+      // 'o.inline.inline_sum': 19701,
+      'airport_count': 19701,
     });
   });
 
