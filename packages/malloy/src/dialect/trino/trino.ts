@@ -138,7 +138,7 @@ export class TrinoDialect extends Dialect {
         if (f.isArray) {
           s = `array(${s})`;
         }
-        fields.push(s);
+        fields.push(`${f.sqlOutputName} ${s}`);
       } else {
         fields.push(`${f.sqlOutputName} ${trinoTypeMap[f.type] || f.type}`);
       }
@@ -450,7 +450,7 @@ ${indent(sql)}
         typeof cast.dstType === 'string'
           ? this.malloyTypeToSQLType({type: cast.dstType})
           : cast.dstType.raw;
-      const castFunc = cast.safe ? 'SAFE_CAST' : 'CAST';
+      const castFunc = cast.safe ? 'TRY_CAST' : 'CAST';
       return mkExpr`${castFunc}(${cast.expr} AS ${dstType})`;
     }
     return cast.expr;
@@ -530,13 +530,11 @@ ${indent(sql)}
   }
 
   sqlLiteralString(literal: string): string {
-    const noVirgule = literal.replace(/\\/g, '\\\\');
-    return "'" + noVirgule.replace(/'/g, "\\'") + "'";
+    return "'" + literal.replace(/'/g, "''") + "'";
   }
 
   sqlLiteralRegexp(literal: string): string {
-    const noVirgule = literal.replace(/\\/g, '\\\\');
-    return "'" + noVirgule.replace(/'/g, "\\'") + "'";
+    return "'" + literal.replace(/'/g, "''") + "'";
   }
 
   getGlobalFunctionDef(name: string): DialectFunctionOverloadDef[] | undefined {
