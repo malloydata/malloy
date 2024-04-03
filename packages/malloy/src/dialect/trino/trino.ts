@@ -138,7 +138,7 @@ export class TrinoDialect extends Dialect {
         if (f.isArray) {
           s = `array(${s})`;
         }
-        fields.push(s);
+        fields.push(`${f.sqlOutputName} ${s}`);
       } else {
         fields.push(`${f.sqlOutputName} ${trinoTypeMap[f.type] || f.type}`);
       }
