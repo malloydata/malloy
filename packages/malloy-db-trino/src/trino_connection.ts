@@ -291,9 +291,10 @@ export class TrinoConnection implements Connection, PersistSQLResults {
     let queryResult = await result.next();
     if (queryResult.value.error) {
       // TODO: handle.
+      const {failureInfo: _, ...error} = queryResult.value.error;
       throw new Error(
         `Failed to execute sql: ${sqlCommand}. \n Error: ${JSON.stringify(
-          queryResult.value.error
+          error
         )}`
       );
     }
@@ -303,8 +304,8 @@ export class TrinoConnection implements Connection, PersistSQLResults {
     );
 
     // Debugging types
-    const _x = queryResult.value.columns.map(c => console.log(c.type));
-    console.log(JSON.stringify(malloyColumns, null, 2));
+    // const _x = queryResult.value.columns.map(c => console.log(c.type));
+    // console.log(JSON.stringify(malloyColumns, null, 2));
 
     let maxRows = options.rowLimit ?? 50;
     const malloyRows: QueryDataRow[] = [];
@@ -492,13 +493,42 @@ export class TrinoConnection implements Connection, PersistSQLResults {
     while (!(await result.next()).done);
   }
 
+  splitColumns(s: string) {
+    const columns: string[] = [];
+    let parens = 0;
+    let column = '';
+    let eatSpaces = true;
+    for (let idx = 0; idx < s.length; idx++) {
+      const c = s.charAt(idx);
+      if (eatSpaces && c === ' ') {
+        // Eat space
+      } else {
+        eatSpaces = false;
+        if (!parens && c === ',') {
+          columns.push(column);
+          column = '';
+          eatSpaces = true;
+        } else {
+          column += c;
+        }
+        if (c === '(') {
+          parens += 1;
+        } else if (c === ')') {
+          parens -= 1;
+        }
+      }
+    }
+    columns.push(column);
+    return columns;
+  }
+
   malloyTypeFromTrinoType(
     name: string,
     trinoType: string
   ): FieldAtomicTypeDef | StructDef {
     let malloyType: FieldAtomicTypeDef | StructDef;
     // Arrays look like `array(type)`
-    console.log(`"${name}$ "${trinoType}"`);
+    // console.log(`"${name}" "${trinoType}"`);
     const arrayMatch = trinoType.match(/^([^,]+\s)?array\((.*)\)$/);
 
     // Structs look like `row(name type, name type)`
@@ -532,7 +562,7 @@ export class TrinoConnection implements Connection, PersistSQLResults {
       // TODO: Trino doesn't quote or escape commas in field names,
       // so some magic is going to need to be applied before we get here
       // to avoid confusion if a field name contains a comma
-      const innerTypes = structMatch[2].split(/,\s+/);
+      const innerTypes = this.splitColumns(structMatch[1]);
       malloyType = {
         type: 'struct',
         name,
@@ -578,7 +608,7 @@ export class TrinoConnection implements Connection, PersistSQLResults {
   structDefFromSchema(rows: string[][], structDef: StructDef): void {
     for (const row of rows) {
       const name = row[0];
-      const type = row[1] || row[4];
+      const type = row[4] || row[1];
       const malloyType = this.malloyTypeFromTrinoType(name, type);
       // console.log('>', row, '\n<', malloyType);
       structDef.fields.push({name, ...malloyType});

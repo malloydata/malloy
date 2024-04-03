@@ -24,7 +24,7 @@ jobs:
           npm ci --loglevel error
           npm run build
           npm run build-duckdb-db
-          npm run test-silent -- -- test
+          npm run test test
         env:
           MALLOY_DATABASES: trino
           TRINO_SERVER: https://malloytesting-test-cluster.trino.galaxy.starburst.io
