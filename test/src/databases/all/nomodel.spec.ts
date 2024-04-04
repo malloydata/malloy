@@ -907,7 +907,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
     await expect(`
       run: ${sql1234} -> {
         select: a
-        order_by 1
+        order_by: 1
       }
     `).malloyResultMatches(runtime, {a: 1});
   });
