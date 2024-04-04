@@ -231,7 +231,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       }
       run: f->{
         aggregate:
-          row_count is count(concat(state,a.r))
+          row_count is count(concat(state,a.r::string))
           left_sum is airport_count.sum()
           right_sum is a.r.sum()
           sum_sum is sum(airport_count + a.r)
@@ -937,6 +937,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
       run: ${sql1234} -> {
         extend: { dimension: c is a + 1 }
         select: c
+        order_by: 1
       }
     `).malloyResultMatches(runtime, {c: 2});
   });
@@ -947,6 +948,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
         view: bar is {
           extend: { dimension: c is a + 1 }
           select: c
+          order_by: 1
         }
       } -> bar
     `).malloyResultMatches(runtime, {c: 2});
@@ -958,10 +960,12 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
         view: bar is {
           extend: {dimension: c is a + 1}
           select: c
+          order_by: 1
         }
         view: baz is bar +  {
           extend: {dimension: d is c + 1}
           select: d
+          order_by: 1
         }
       } -> baz
     `).malloyResultMatches(runtime, {d: 3});
