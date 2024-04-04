@@ -8,7 +8,7 @@ global.customElements = window.customElements;
 global.CSSStyleSheet = window.CSSStyleSheet;
 
 /**
- * A replacement for [describe()] that mimics [describe.skip()]
+ * A replacement for [test()] that mimics [test.skip()]
  */
 
 const testSkip: jest.It = Object.assign(
