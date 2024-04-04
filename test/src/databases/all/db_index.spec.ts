@@ -22,10 +22,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-
 import {RuntimeList, allDatabases} from '../../runtimes';
-import {databasesFromEnvironmentOr, onlyIf} from '../../util';
+import {databasesFromEnvironmentOr} from '../../util';
 import '../../util/db-jest-matchers';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
@@ -96,16 +94,16 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
 
   // bigquery doesn't support row count based sampling.
-  test(
+  test.when(databaseName !== 'bigquery')(
     `index rows count - ${databaseName}`,
-    onlyIf(databaseName !== 'bigquery', async () => {
+    async () => {
       await expect(`
         run: ${databaseName}.table('malloytest.state_facts') extend {
           dimension: one is 'one'
         } -> {index:one, state; sample: 10 }
             -> {select: fieldName, weight, fieldValue; order_by: 2 desc; where: fieldName = 'one'}
       `).malloyResultMatches(runtime, {fieldName: 'one', weight: 10});
-    })
+    }
   );
 
   it(`index rows count - ${databaseName}`, async () => {

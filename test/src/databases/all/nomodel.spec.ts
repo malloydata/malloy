@@ -25,7 +25,7 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 
 import {RuntimeList, allDatabases} from '../../runtimes';
-import {databasesFromEnvironmentOr, onlyIf} from '../../util';
+import {databasesFromEnvironmentOr} from '../../util';
 import '../../util/db-jest-matchers';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
@@ -530,9 +530,9 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     });
   });
 
-  test(
-    `number as null 2 - ${databaseName}`,
-    onlyIf(runtime.supportsNesting, async () => {
+  test.when(runtime.supportsNesting)(
+    'number as null 2 - ${databaseName}',
+    async () => {
       // a cross join produces a Many to Many result.
       // symmetric aggregate are needed on both sides of the join
       // Check the row count and that sums on each side work properly.
@@ -545,7 +545,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           }
         }
       `).malloyResultMatches(runtime, {'ugly.foo': null});
-    })
+    }
   );
 
   // average should only include non-null values in the denominator
@@ -590,9 +590,9 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       }`).malloyResultMatches(runtime, {births_per_100k: 9742});
   });
 
-  test(
-    `ungrouped top level with nested  - ${databaseName}`,
-    onlyIf(runtime.supportsNesting, async () => {
+  test.when(runtime.supportsNesting)(
+    'ungrouped top level with nested  - ${databaseName}',
+    async () => {
       await expect(`
       run: ${databaseName}.table('malloytest.state_facts') extend {
         measure: total_births is births.sum()
@@ -606,7 +606,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         }
         limit: 1000
       }`).malloyResultMatches(runtime, {births_per_100k: 9742});
-    })
+    }
   );
 
   it(`ungrouped - eliminate rows  - ${databaseName}`, async () => {
@@ -624,9 +624,9 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     ]);
   });
 
-  test(
-    `ungrouped nested with no grouping above - ${databaseName}`,
-    onlyIf(runtime.supportsNesting, async () => {
+  test.when(runtime.supportsNesting)(
+    'ungrouped nested with no grouping above - ${databaseName}',
+    async () => {
       await expect(`
         run: ${databaseName}.table('malloytest.state_facts') extend {
           measure: total_births is births.sum()
@@ -638,12 +638,12 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
             aggregate: births_per_100k
           }
         }`).malloyResultMatches(runtime, {'by_name.births_per_100k': 66703});
-    })
+    }
   );
 
-  test(
-    `ungrouped - partial grouping - ${databaseName}`,
-    onlyIf(runtime.supportsNesting, async () => {
+  test.when(runtime.supportsNesting)(
+    'ungrouped - partial grouping - ${databaseName}',
+    async () => {
       await expect(`
         run: ${databaseName}.table('malloytest.airports') extend {
           measure: c is count()
@@ -672,12 +672,12 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         'fac_type.all_of_this_type': 1782,
         'fac_type.all_top': 2421,
       });
-    })
+    }
   );
 
-  test(
-    `ungrouped - all nested - ${databaseName}`,
-    onlyIf(runtime.supportsNesting, async () => {
+  test.when(runtime.supportsNesting)(
+    'ungrouped - all nested - ${databaseName}',
+    async () => {
       await expect(`
         run: ${databaseName}.table('malloytest.airports') extend {
           measure: c is count()
@@ -701,12 +701,12 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         'fac_type.all_': 1845,
         'fac_type.all_major': 1819,
       });
-    })
+    }
   );
 
-  test(
-    `ungrouped nested  - ${databaseName}`,
-    onlyIf(runtime.supportsNesting, async () => {
+  test.when(runtime.supportsNesting)(
+    'ungrouped nested  - ${databaseName}',
+    async () => {
       await expect(`
         run: ${databaseName}.table('malloytest.state_facts') extend {
           measure: total_births is births.sum()
@@ -719,12 +719,12 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           }
         }
       `).malloyResultMatches(runtime, {'by_state.births_per_100k': 36593});
-    })
+    }
   );
 
-  test(
-    `ungrouped nested expression  - ${databaseName}`,
-    onlyIf(runtime.supportsNesting, async () => {
+  test.when(runtime.supportsNesting)(
+    'ungrouped nested expression  - ${databaseName}',
+    async () => {
       await expect(`
         run: ${databaseName}.table('malloytest.state_facts') extend {
           measure: total_births is births.sum()
@@ -737,12 +737,12 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           }
         }
       `).malloyResultMatches(runtime, {'by_state.births_per_100k': 36593});
-    })
+    }
   );
 
-  test(
-    `ungrouped nested group by float  - ${databaseName}`,
-    onlyIf(runtime.supportsNesting, async () => {
+  test.when(runtime.supportsNesting)(
+    'ungrouped nested group by float  - ${databaseName}',
+    async () => {
       await expect(`
         run: ${databaseName}.table('malloytest.state_facts') extend {
           measure: total_births is births.sum()
@@ -755,7 +755,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           }
         }
       `).malloyResultMatches(runtime, {'by_state.ug': 62742230});
-    })
+    }
   );
 
   it(`run simple sql - ${databaseName}`, async () => {
@@ -822,9 +822,9 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
     });
   });
 
-  test(
-    `all with parameters - nest  - ${databaseName}`,
-    onlyIf(runtime.supportsNesting, async () => {
+  test.when(runtime.supportsNesting)(
+    'all with parameters - nest  - ${databaseName}',
+    async () => {
       await expect(`
         run: ${databaseName}.table('malloytest.state_facts') extend {
           measure: total_births is births.sum()
@@ -844,31 +844,28 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
         'by_stuff.all_births': 119809719,
         'by_stuff.all_name': 61091215,
       });
-    })
+    }
   );
 
-  test(
-    `single value to udf - ${databaseName}`,
-    onlyIf(
-      runtime.supportsNesting && runtime.dialect.supportsPipelinesInViews,
-      async () => {
-        await expect(`
+  test.when(
+    runtime.supportsNesting && runtime.dialect.supportsPipelinesInViews
+  )(`single value to udf - ${databaseName}`, async () => {
+    await expect(`
         run: ${databaseName}.table('malloytest.state_facts') extend {
           view: fun is {
             aggregate: t is count()
           } -> { select: t1 is t+1 }
         } -> { nest: fun }
       `).malloyResultMatches(runtime, {'fun.t1': 52});
-      }
-    )
-  );
+  });
 
-  test(
+  test.when(
+    runtime.supportsNesting && runtime.dialect.supportsPipelinesInViews
+  )(
     `Multi value to udf - ${databaseName}`,
-    onlyIf(
-      runtime.supportsNesting && runtime.dialect.supportsPipelinesInViews,
-      async () => {
-        await expect(`
+
+    async () => {
+      await expect(`
         run: ${databaseName}.table('malloytest.state_facts') extend {
           view: fun is {
             group_by: one is 1
@@ -878,16 +875,13 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
           nest: fun
         }
       `).malloyResultMatches(runtime, {'fun.t1': 52});
-      }
-    )
+    }
   );
 
-  test(
-    `Multi value to udf group by - ${databaseName}`,
-    onlyIf(
-      runtime.supportsNesting && runtime.dialect.supportsPipelinesInViews,
-      async () => {
-        await expect(`
+  test.when(
+    runtime.supportsNesting && runtime.dialect.supportsPipelinesInViews
+  )(`Multi value to udf group by - ${databaseName}`, async () => {
+    await expect(`
         run: ${databaseName}.table('malloytest.state_facts') extend {
           view: fun is {
             group_by: one is 1
@@ -897,9 +891,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
           nest: fun
         }
       `).malloyResultMatches(runtime, {'fun.t1': 52});
-      }
-    )
-  );
+  });
 
   const sql1234 = `${databaseName}.sql('SELECT 1 as ${q`a`}, 2 as ${q`b`} UNION ALL SELECT 3, 4')`;
 
@@ -991,13 +983,11 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
       `).malloyResultMatches(runtime, {x: 30});
   });
 
-  test(
+  test.when(runtime.supportsNesting && runtime.dialect.supportsArraysInData)(
     `array unnest - ${databaseName}`,
-    onlyIf(
-      runtime.supportsNesting && runtime.dialect.supportsArraysInData,
-      async () => {
-        const splitFN = getSplitFunction(databaseName);
-        await expect(`
+    async () => {
+      const splitFN = getSplitFunction(databaseName);
+      await expect(`
       run: ${databaseName}.sql("""
         SELECT
           ${q`city`},
@@ -1009,18 +999,15 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
         aggregate: c is count()
       }
       `).malloyResultMatches(runtime, {c: 145});
-      }
-    )
+    }
   );
 
   // make sure we can count the total number of elements when fanning out.
-  test(
+  test.when(runtime.supportsNesting && runtime.dialect.supportsArraysInData)(
     `array unnest x 2 - ${databaseName}`,
-    onlyIf(
-      runtime.supportsNesting && runtime.dialect.supportsArraysInData,
-      async () => {
-        const splitFN = getSplitFunction(databaseName);
-        await expect(`
+    async () => {
+      const splitFN = getSplitFunction(databaseName);
+      await expect(`
       run: ${databaseName}.sql("""
         SELECT
           ${q`city`},
@@ -1034,16 +1021,13 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
           c is words.count()
           a is abreak.count()
       }`).malloyResultMatches(runtime, {b: 3552, c: 4586, a: 6601});
-      }
-    )
+    }
   );
 
-  test(
+  test.when(runtime.supportsNesting && runtime.dialect.readsNestedData)(
     `can unnest from file - ${databaseName}`,
-    onlyIf(
-      runtime.supportsNesting && runtime.dialect.readsNestedData,
-      async () => {
-        await expect(`
+    async () => {
+      await expect(`
         source: ga_sample is ${databaseName}.table('malloytest.ga_sample')
 
         run: ga_sample -> {
@@ -1057,13 +1041,12 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
             p is hits.product.count()
         }
       `).malloyResultMatches(runtime, {h: 1192, c: 681, p: 1192});
-      }
-    )
+    }
   );
 
-  test(
-    `nest null - ${databaseName}`,
-    onlyIf(runtime.supportsNesting, async () => {
+  test.when(runtime.supportsNesting)(
+    'nest null - ${databaseName}',
+    async () => {
       const result = await runtime
         .loadQuery(
           `
@@ -1091,12 +1074,12 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
       const d: any = result.data.toObject();
       expect(d[0]['by_state']).not.toBe(null);
       expect(d[0]['by_state1']).not.toBe(null);
-    })
+    }
   );
 
-  test(
-    `number as null- ${databaseName}`,
-    onlyIf(runtime.supportsNesting, async () => {
+  test.when(runtime.supportsNesting)(
+    'number as null- ${databaseName}',
+    async () => {
       const result = await runtime
         .loadQuery(
           `
@@ -1113,7 +1096,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
         )
         .run();
       expect(result.data.path(0, 'ugly', 0, 'foo').value).toBe(null);
-    })
+    }
   );
 
   it(`removes surpuflous order_by - solo aggregates - ${databaseName}`, async () => {
@@ -1213,10 +1196,8 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
       `).malloyResultMatches(runtime, {back});
     });
 
-    test(
-      'spaces in names',
-      onlyIf(runtime.supportsNesting, async () => {
-        await expect(`
+    test.when(runtime.supportsNesting)('spaces in names', async () => {
+      await expect(`
         source: \`space race\` is ${databaseName}.table('malloytest.state_facts') extend {
           join_one: \`j space\` is ${databaseName}.table('malloytest.state_facts') on \`j space\`.state=state
           view: \`q u e r y\` is {
@@ -1235,7 +1216,6 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
         }
         run: \`space race\` -> \`q u e r y\`
       `).malloyResultMatches(runtime, {'c o u n t': 24});
-      })
-    );
+    });
   });
 });

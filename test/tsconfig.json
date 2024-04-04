@@ -1,10 +1,10 @@
 {
   "extends": "../tsconfig.packages.json",
   "compilerOptions": {
-    "outDir": "dist",
+    "noEmit": true,
     "composite": true
   },
-  "include": ["src", "bin"],
+  "include": ["src", "bin", "./jest.setup.ts", "./types/jest.d.ts"],
   "references": [
     {
       "path": "../packages/malloy-interfaces"
