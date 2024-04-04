@@ -1391,9 +1391,8 @@ class QueryFieldDistinctKey extends QueryAtomicField {
       const parentKey = this.parent.parent
         ?.getDistinctKey()
         .generateExpression(resultSet);
-      return this.parent.dialect.concat(
+      return this.parent.dialect.sqlMakeUnnestKey(
         parentKey || '', // shouldn't have to do this...
-        "'x'",
         this.parent.dialect.sqlFieldReference(
           this.parent.getIdentifier(),
           '__row_id',

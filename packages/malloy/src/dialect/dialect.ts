@@ -344,6 +344,10 @@ export abstract class Dialect {
     return `"${qi.queryTimezone}"`;
   }
 
+  sqlMakeUnnestKey(key: string, rowKey: string) {
+    return this.concat(key, "'x'", rowKey);
+  }
+
   abstract sqlTypeToMalloyType(sqlType: string): FieldAtomicTypeDef | undefined;
   abstract malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string;
 

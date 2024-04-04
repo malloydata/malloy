@@ -206,12 +206,12 @@ export class TrinoDialect extends Dialect {
     );
     if (isArray) {
       if (needDistinctKey) {
-        return `,UNNEST(ARRAY(( SELECT AS STRUCT row_number() over() as __row_id, value FROM UNNEST(${source}) value))) as ${alias}`;
+        return `,UNNEST(zip(${source}, SEQUENCE(1,cardinality(${source})))) as words_0(value,__row_id_from_${alias})`;
       } else {
-        return `,UNNEST(ARRAY((SELECT AS STRUCT value FROM unnest(${source}) value))) as ${alias}`;
+        return `,UNNEST(transform(${source}, x -> ROW(x) )) as ${alias}(value)`;
       }
     } else if (needDistinctKey) {
-      return `,UNNEST(zip_with(a, SEQUENCE(1,cardinality(a)), (r,__row_id) -> (r, __row_id))) as ${alias}_outer(${alias},__row_id)`;
+      return `,UNNEST(zip_with(a, SEQUENCE(1,cardinality(a)), (r,__row_id) -> (r, __row_id))) as ${alias}_outer(${alias},__row_id_from_${alias})`;
     } else {
       return `,UNNEST(${source}) as ${alias}(${fieldsNames.join(', ')})`;
     }
@@ -239,7 +239,7 @@ export class TrinoDialect extends Dialect {
   ): string {
     // LTNOTE: hack, in duckdb we can't have structs as tables so we kind of simulate it.
     if (fieldName === '__row_id') {
-      return `${alias}_outer.__row_id`;
+      return `__row_id_from_${alias}`;
     }
     return `${alias}.${fieldName}`;
   }
@@ -566,6 +566,10 @@ ${indent(sql)}
 
   concat(...values: string[]): string {
     return values.join(' || ');
+  }
+
+  sqlMakeUnnestKey(key: string, rowKey: string) {
+    return `CAST(${key} as VARCHAR) || 'x' || CAST(${rowKey} as VARCHAR)`;
   }
 
   validateTypeName(sqlType: string): boolean {
