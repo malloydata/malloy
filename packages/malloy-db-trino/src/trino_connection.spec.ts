@@ -23,9 +23,14 @@
 
 import {TrinoConnection, TrinoExecutor} from '.';
 
+// Array(varchar) is array
 const ARRAY_SCHEMA = 'array(integer)';
-const STRUCT_SCHEMA = 'row(a double, b integer, c varchar(60))';
-const DEEP_SCHEMA = 'array(row(a double, b integer, c varchar(60)))';
+
+// Row(...) is inline
+const INLINE_SCHEMA = 'row(a double, b integer, c varchar(60))';
+
+// Array(row(....)) is nested
+const NESTED_SCHEMA = 'array(row(a double, b integer, c varchar(60)))';
 
 describe('Trino connection', () => {
   let connection: TrinoConnection;
@@ -66,24 +71,17 @@ describe('Trino connection', () => {
       });
     });
 
-    it('parses structs', () => {
-      const connection = new TrinoConnection(
-        'trino',
-        {},
-        TrinoExecutor.getConnectionOptionsFromEnv()
-      );
-      expect(connection.malloyTypeFromTrinoType('test', STRUCT_SCHEMA)).toEqual(
+    it('parses inline', () => {
+      expect(connection.malloyTypeFromTrinoType('test', INLINE_SCHEMA)).toEqual(
         {
           'name': 'test',
           'type': 'struct',
           'dialect': 'trino',
           'structRelationship': {
-            'fieldName': 'test',
-            'isArray': false,
-            'type': 'nested',
+            'type': 'inline',
           },
           'structSource': {
-            'type': 'nested',
+            'type': 'inline',
           },
           'fields': [
             {
@@ -105,28 +103,33 @@ describe('Trino connection', () => {
       );
     });
 
-    it('parses arrays of structs', () => {
-      const connection = new TrinoConnection(
-        'trino',
-        {},
-        TrinoExecutor.getConnectionOptionsFromEnv()
+    it('parses nested', () => {
+      expect(connection.malloyTypeFromTrinoType('test', NESTED_SCHEMA)).toEqual(
+        {
+          'name': 'test',
+          'type': 'struct',
+          'dialect': 'trino',
+          'structRelationship': {
+            'fieldName': 'test',
+            'isArray': true,
+            'type': 'nested',
+          },
+          'structSource': {'type': 'nested'},
+          'fields': [
+            {'name': 'a', 'numberType': 'float', 'type': 'number'},
+            {'name': 'b', 'numberType': 'integer', 'type': 'number'},
+            {'name': 'c', 'type': 'string'},
+          ],
+        }
       );
-      expect(connection.malloyTypeFromTrinoType('test', DEEP_SCHEMA)).toEqual({
-        'name': 'test',
-        'type': 'struct',
-        'dialect': 'trino',
-        'structRelationship': {
-          'fieldName': 'test',
-          'isArray': true,
-          'type': 'nested',
-        },
-        'structSource': {'type': 'nested'},
-        'fields': [
-          {'name': 'a', 'numberType': 'float', 'type': 'number'},
-          {'name': 'b', 'numberType': 'integer', 'type': 'number'},
-          {'name': 'c', 'type': 'string'},
-        ],
-      });
+    });
+
+    it('parses a simple type', () => {
+      expect(connection.malloyTypeFromTrinoType('test', 'varchar(60)')).toEqual(
+        {
+          'type': 'string',
+        }
+      );
     });
   });
 

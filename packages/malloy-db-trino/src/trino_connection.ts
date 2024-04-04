@@ -253,23 +253,36 @@ export class TrinoConnection implements Connection, PersistSQLResults {
     }
   }*/
 
-  convertRow(structDef: StructDef, row: unknown[]) {
-    const col = {};
+  convertRow(structDef: StructDef, _row: unknown) {
+    const retRow = {};
+    const row = _row as [];
     for (let i = 0; i < structDef.fields.length; i++) {
-      col[structDef.fields[i].name] = row[i] === undefined ? null : row[i];
+      const field = structDef.fields[i];
+
+      if (field.type === 'struct') {
+        const struct = field as StructDef;
+        if (struct.structSource.type === 'inline') {
+          retRow[field.name] = this.convertRow(struct, row[i]);
+        } else {
+          retRow[field.name] = this.convertNest(struct, row[i]);
+        }
+      } else {
+        retRow[field.name] = row[i] === undefined ? null : row[i];
+      }
     }
-    return col;
+    //console.log(retRow);
+    return retRow;
   }
 
-  convertNest(structDef: StructDef, dataRows: unknown[][]) {
-    const rows = dataRows === null || dataRows === undefined ? [] : dataRows;
+  convertNest(structDef: StructDef, data: unknown) {
     const ret: unknown[] = [];
-    if (
-      structDef.structRelationship.type === 'nested' &&
-      !structDef.structRelationship.isArray
-    ) {
-      return this.convertRow(structDef, rows);
+    //console.log(
+    //   `${JSON.stringify(structDef, null, 2)} ${JSON.stringify(data, null, 2)} `
+    // );
+    if (structDef.structSource.type === 'inline') {
+      return this.convertRow(structDef, data);
     }
+    const rows = (data === null || data === undefined ? [] : data) as unknown[];
     for (const row of rows) {
       ret.push(this.convertRow(structDef, row));
     }
@@ -312,10 +325,24 @@ export class TrinoConnection implements Connection, PersistSQLResults {
         for (let i = 0; i < queryResult.value.columns.length; i++) {
           const column = queryResult.value.columns[i];
           if (malloyColumns[i].type === 'struct') {
-            malloyRow[column.name] = this.convertNest(
-              malloyColumns[i] as StructDef,
-              row[i]
-            ) as QueryValue;
+            const structDef = malloyColumns[i] as StructDef;
+            if (structDef.structSource.type === 'inline') {
+              malloyRow[column.name] = this.convertRow(
+                structDef,
+                row[i]
+              ) as QueryValue;
+            } else {
+              malloyRow[column.name] = this.convertNest(
+                structDef,
+                row[i]
+              ) as QueryValue;
+            }
+            // console.log(
+            //   column.name,
+            //   JSON.stringify(malloyColumns[i], null, 2),
+            //   JSON.stringify(row[i]),
+            //   JSON.stringify(malloyRow[column.name])
+            // );
           } else {
             malloyRow[column.name] = row[i] as QueryValue;
           }
@@ -524,16 +551,18 @@ export class TrinoConnection implements Connection, PersistSQLResults {
   ): FieldAtomicTypeDef | StructDef {
     let malloyType: FieldAtomicTypeDef | StructDef;
     // Arrays look like `array(type)`
-    const arrayMatch = trinoType.match(/^array\((.*)\)$/);
+    const arrayMatch = trinoType.match(/^(([^,])+\s)?array\((.*)\)$/);
+    // console.log(`${trinoType} arrayMatch: ${arrayMatch}`);
 
     // Structs look like `row(name type, name type)`
-    const structMatch = trinoType.match(/^row\((.*)\)$/);
+    const structMatch = trinoType.match(/^(([^,])+\s)?row\((.*)\)$/);
+    // console.log(`${trinoType} structMatch: ${structMatch}`);
 
     if (arrayMatch) {
-      const arrayType = arrayMatch[1];
+      const arrayType = arrayMatch[3];
       const innerType = this.malloyTypeFromTrinoType(name, arrayType);
       if (innerType.type === 'struct') {
-        malloyType = innerType;
+        malloyType = {...innerType, structSource: {type: 'nested'}};
         malloyType.structRelationship = {
           type: 'nested',
           fieldName: name,
@@ -557,16 +586,15 @@ export class TrinoConnection implements Connection, PersistSQLResults {
       // TODO: Trino doesn't quote or escape commas in field names,
       // so some magic is going to need to be applied before we get here
       // to avoid confusion if a field name contains a comma
-      const innerTypes = this.splitColumns(structMatch[1]);
+      const innerTypes = this.splitColumns(structMatch[3]);
+      // console.log(`innerType: ${JSON.stringify(innerTypes)}`);
       malloyType = {
         type: 'struct',
         name,
         dialect: this.dialectName,
-        structSource: {type: 'nested'},
+        structSource: {type: 'inline'},
         structRelationship: {
-          type: 'nested',
-          fieldName: name,
-          isArray: false,
+          type: 'inline',
         },
         fields: [],
       };
@@ -574,7 +602,10 @@ export class TrinoConnection implements Connection, PersistSQLResults {
         // TODO: Handle time zone type annotation, which is an
         // exception to the types not containing spaces assumption
         innerType = innerType.replace(/ with time zone$/, '');
-        const parts = innerType.match(/^(.*)\s(\S+)$/);
+        let parts = innerType.match(/^(.*)\s((array\(|row\().*)$/);
+        if (parts === null) {
+          parts = innerType.match(/^(.*)\s(\S+)$/);
+        }
         if (parts) {
           const innerName = parts[1];
           const innerTrinoType = parts[2];
@@ -597,6 +628,7 @@ export class TrinoConnection implements Connection, PersistSQLResults {
         rawType: trinoType.toLowerCase(),
       };
     }
+    // console.log('>', trinoType, '\n<', malloyType);
     return malloyType;
   }
 
