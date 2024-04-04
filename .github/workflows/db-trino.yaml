@@ -24,6 +24,8 @@ jobs:
           npm ci --loglevel error
           npm run build
           npm run build-duckdb-db
+          npm run ping-db trino
+          npm run test packages/malloy-db-trino
           npm run test test
         env:
           MALLOY_DATABASES: trino
