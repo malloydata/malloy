@@ -22,8 +22,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-
 import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr, onlyIf} from '../../util';
 import '../../util/db-jest-matchers';
