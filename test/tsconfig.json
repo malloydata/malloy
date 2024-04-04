@@ -5,6 +5,7 @@
     "outDir": "dist",
     "composite": true
   },
+  "include": ["src", "bin"],
   "references": [
     {
       "path": "../packages/malloy-interfaces"
