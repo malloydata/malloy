@@ -150,7 +150,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     `).malloyResultMatches(expressionModel, {
       'o.by_state.state': 'TX',
       'o.by_state.airport_count': 1845,
-      // 'o.inline.inline_sum': 19701,
+      //'o.inline.inline_sum': 19701,   // this should work.. @mtoy
       'airport_count': 19701,
     });
   });

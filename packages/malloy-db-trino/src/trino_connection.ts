@@ -257,13 +257,18 @@ export class TrinoConnection implements Connection, PersistSQLResults {
     const retRow = {};
     const row = _row as [];
     for (let i = 0; i < structDef.fields.length; i++) {
-      if (structDef.fields[i].type === 'struct') {
-        return this.convertNest(
-          structDef.fields[i] as StructDef,
-          row[i] as unknown[][]
-        );
+      const field = structDef.fields[i];
+
+      if (field.type === 'struct') {
+        const struct = field as StructDef;
+        if (struct.structSource.type === 'inline') {
+          retRow[field.name] = this.convertRow(struct, row[i]);
+        } else {
+          retRow[field.name] = this.convertNest(struct, row[i]);
+        }
+      } else {
+        retRow[field.name] = row[i] === undefined ? null : row[i];
       }
-      retRow[structDef.fields[i].name] = row[i] === undefined ? null : row[i];
     }
     //console.log(retRow);
     return retRow;
@@ -272,8 +277,8 @@ export class TrinoConnection implements Connection, PersistSQLResults {
   convertNest(structDef: StructDef, data: unknown) {
     const ret: unknown[] = [];
     //console.log(
-      `${JSON.stringify(structDef, null, 2)} ${JSON.stringify(data, null, 2)} `
-    );
+    //   `${JSON.stringify(structDef, null, 2)} ${JSON.stringify(data, null, 2)} `
+    // );
     if (structDef.structSource.type === 'inline') {
       return this.convertRow(structDef, data);
     }
@@ -320,16 +325,24 @@ export class TrinoConnection implements Connection, PersistSQLResults {
         for (let i = 0; i < queryResult.value.columns.length; i++) {
           const column = queryResult.value.columns[i];
           if (malloyColumns[i].type === 'struct') {
-            malloyRow[column.name] = this.convertNest(
-              malloyColumns[i] as StructDef,
-              row[i]
-            ) as QueryValue;
-            console.log(
-              column.name,
-              JSON.stringify(malloyColumns[i], null, 2),
-              JSON.stringify(row[i]),
-              JSON.stringify(malloyRow[column.name])
-            );
+            const structDef = malloyColumns[i] as StructDef;
+            if (structDef.structSource.type === 'inline') {
+              malloyRow[column.name] = this.convertRow(
+                structDef,
+                row[i]
+              ) as QueryValue;
+            } else {
+              malloyRow[column.name] = this.convertNest(
+                structDef,
+                row[i]
+              ) as QueryValue;
+            }
+            // console.log(
+            //   column.name,
+            //   JSON.stringify(malloyColumns[i], null, 2),
+            //   JSON.stringify(row[i]),
+            //   JSON.stringify(malloyRow[column.name])
+            // );
           } else {
             malloyRow[column.name] = row[i] as QueryValue;
           }
