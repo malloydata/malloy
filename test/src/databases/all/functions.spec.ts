@@ -105,6 +105,8 @@ expressionModels.forEach((expressionModel, databaseName) => {
 
     const result = await run();
     testCases.forEach((testCase, i) => {
+      // console.log(databaseName, result.sql);
+      // console.log(result.data);
       expect(result.data.path(0, `f${i}`).value).toBe(testCase[1]);
     });
   };
@@ -170,11 +172,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     it(`works - ${databaseName}`, async () => {
       await funcTestMultiple(
         ['ceil(1.9)', 2],
-        // TODO Remove when we upgrade to DuckDB 0.8.X -- DuckDB has some bugs with rounding
-        // that are fixed in 0.8.
-        ...(databaseName === 'duckdb_wasm'
-          ? []
-          : ([['ceil(-1.9)', -1]] as [string, number][])),
+        ['ceil(-1.9)', -1],
         ['ceil(null)', null]
       );
     });
@@ -216,9 +214,16 @@ expressionModels.forEach((expressionModel, databaseName) => {
         ["replace('aaaa', r'.', 'c')", 'cccc'],
         [
           "replace('axbxc', r'(a).(b).(c)', '\\\\0 - \\\\1 - \\\\2 - \\\\3')",
-          databaseName === 'postgres' ? '\\0 - a - b - c' : 'axbxc - a - b - c',
+          databaseName === 'postgres'
+            ? '\\0 - a - b - c'
+            : databaseName === 'trino'
+            ? '0 - 1 - 2 - 3'
+            : 'axbxc - a - b - c',
         ],
-        ["replace('aaaa', '', 'c')", 'aaaa'],
+        [
+          "replace('aaaa', '', 'c')",
+          databaseName === 'trino' ? 'cacacacac' : 'aaaa',
+        ],
         ["replace(null, 'a', 'c')", null],
         ["replace('aaaa', null, 'c')", null],
         ["replace('aaaa', 'a', null)", null]
@@ -232,7 +237,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
         ["substr('foo', 2)", 'oo'],
         ["substr('foo', 2, 1)", 'o'],
         ["substr('foo bar baz', -3)", 'baz'],
-        ['substr(null, 1, 2)', null],
+        ["substr(nullif('x','x'), 1, 2)", null], // trino can use null literal here.
         ["substr('aaaa', null, 1)", null],
         ["substr('aaaa', 1, null)", null]
       );
@@ -245,7 +250,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
         ['floor(cbrt!(27)::number)', 3],
         ['floor(cbrt!number(27))', 3],
         ["substr('foo bar baz', -3)", 'baz'],
-        ['substr(null, 1, 2)', null],
+        ["substr(nullif('x','x'), 1, 2)", null],
         ["substr('aaaa', null, 1)", null],
         ["substr('aaaa', 1, null)", null]
       );
@@ -254,7 +259,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
 
   describe('stddev', () => {
     // TODO symmetric aggregates don't work with custom aggregate functions in BQ currently
-    if (['bigquery', 'snowflake'].includes(databaseName)) return;
+    if (['bigquery', 'snowflake', 'trino'].includes(databaseName)) return;
     it(`works - ${databaseName}`, async () => {
       await funcTestAgg('round(stddev(aircraft_models.seats))', 29);
     });

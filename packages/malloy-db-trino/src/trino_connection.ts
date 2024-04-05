@@ -343,6 +343,9 @@ export class TrinoConnection implements Connection, PersistSQLResults {
             //   JSON.stringify(row[i]),
             //   JSON.stringify(malloyRow[column.name])
             // );
+          } else if (malloyColumns[i].type === 'number' && row[i] !== null) {
+            // decimal numbers come back as strings
+            malloyRow[column.name] = +(row[i] as number);
           } else {
             malloyRow[column.name] = row[i] as QueryValue;
           }
