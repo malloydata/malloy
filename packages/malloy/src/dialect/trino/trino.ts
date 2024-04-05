@@ -206,14 +206,16 @@ export class TrinoDialect extends Dialect {
     );
     if (isArray) {
       if (needDistinctKey) {
-        return `,UNNEST(zip(${source}, SEQUENCE(1,cardinality(${source})))) as words_0(value,__row_id_from_${alias})`;
+        return `LEFT JOIN UNNEST(zip(${source}, SEQUENCE(1,cardinality(${source})))) as words_0(value,__row_id_from_${alias}) ON TRUE`;
       } else {
-        return `,UNNEST(transform(${source}, x -> ROW(x) )) as ${alias}(value)`;
+        return `LEFT JOIN UNNEST(transform(${source}, x -> ROW(x) )) as ${alias}(value) ON TRUE`;
       }
     } else if (needDistinctKey) {
-      return `,UNNEST(zip_with(a, SEQUENCE(1,cardinality(a)), (r,__row_id) -> (r, __row_id))) as ${alias}_outer(${alias},__row_id_from_${alias})`;
+      return `LEFT JOIN UNNEST(zip_with(${source}, SEQUENCE(1,cardinality(${source})), (r,__row_id) -> (r, __row_id))) as ${alias}_outer(${alias},__row_id_from_${alias}) ON TRUE`;
     } else {
-      return `,UNNEST(${source}) as ${alias}(${fieldsNames.join(', ')})`;
+      return `LEFT JOIN UNNEST(${source}) as ${alias}(${fieldsNames.join(
+        ', '
+      )}) ON TRUE`;
     }
   }
 

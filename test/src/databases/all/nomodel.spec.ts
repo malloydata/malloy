@@ -7,7 +7,7 @@
  * (the "Software"), to deal in the Software without restriction,
  * including without limitation the rights to use, copy, modify, merge,
  * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
+ * and to permit persons to whom the Software is furnished to do so
  * subject to the following conditions:
  *
  * The above copyright notice and this permission notice shall be
@@ -231,7 +231,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       }
       run: f->{
         aggregate:
-          row_count is count(concat(state,a.r))
+          row_count is count(concat(state,a.r::string))
           left_sum is airport_count.sum()
           right_sum is a.r.sum()
           sum_sum is sum(airport_count + a.r)
@@ -897,7 +897,10 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
 
   it(`sql as source - ${databaseName}`, async () => {
     await expect(`
-      run: ${sql1234} -> { select: a }
+      run: ${sql1234} -> {
+        select: a
+        order_by: 1
+      }
     `).malloyResultMatches(runtime, {a: 1});
   });
 
@@ -919,6 +922,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
         } AS by_name_query
       """) -> {
           select: *; where: popular_name = 'Emma'
+          order_by: state_count DESC
         }`;
     await expect(turduckenQuery).malloyResultMatches(runtime, {state_count: 6});
   });
@@ -929,6 +933,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
       run: ${sql1234} -> {
         extend: { dimension: c is a + 1 }
         select: c
+        order_by: 1
       }
     `).malloyResultMatches(runtime, {c: 2});
   });
@@ -939,6 +944,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
         view: bar is {
           extend: { dimension: c is a + 1 }
           select: c
+          order_by: 1
         }
       } -> bar
     `).malloyResultMatches(runtime, {c: 2});
@@ -950,10 +956,12 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
         view: bar is {
           extend: {dimension: c is a + 1}
           select: c
+          order_by: 1
         }
         view: baz is bar +  {
           extend: {dimension: d is c + 1}
           select: d
+          order_by: 1
         }
       } -> baz
     `).malloyResultMatches(runtime, {d: 3});
