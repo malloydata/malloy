@@ -224,7 +224,7 @@ export abstract class DuckDBCommon
     return ret;
   }
 
-  private fillStructDefFromTypeMap(
+  fillStructDefFromTypeMap(
     structDef: StructDef,
     typeMap: {[name: string]: string}
   ) {
@@ -247,11 +247,15 @@ export abstract class DuckDBCommon
           name,
           dialect: this.dialectName,
           structSource: {type: arrayMatch ? 'nested' : 'inline'},
-          structRelationship: {
-            type: arrayMatch ? 'nested' : 'inline',
-            fieldName: name,
-            isArray: false,
-          },
+          structRelationship: arrayMatch
+            ? {
+                type: 'nested',
+                fieldName: name,
+                isArray: false,
+              }
+            : {
+                type: 'inline',
+              },
           fields: [],
         };
         this.fillStructDefFromTypeMap(innerStructDef, newTypeMap);

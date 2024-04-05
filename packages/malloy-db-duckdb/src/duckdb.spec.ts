@@ -23,7 +23,7 @@
 
 import {DuckDBCommon} from './duckdb_common';
 import {DuckDBConnection} from './duckdb_connection';
-import {SQLBlock} from '@malloydata/malloy';
+import {SQLBlock, StructDef} from '@malloydata/malloy';
 import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
 
 const [describe] = describeIfDatabaseAvailable(['duckdb']);
@@ -127,8 +127,123 @@ describe('DuckDBConnection', () => {
       await connection2.close();
     });
   });
+
+  describe('schema parser', () => {
+    it('parses arrays', () => {
+      const structDef = makeStructDef();
+      connection.fillStructDefFromTypeMap(structDef, {test: ARRAY_SCHEMA});
+      expect(structDef.fields[0]).toEqual({
+        'name': 'test',
+        'type': 'struct',
+        'dialect': 'duckdb',
+        'structRelationship': {
+          'fieldName': 'test',
+          'isArray': true,
+          'type': 'nested',
+        },
+        'structSource': {
+          'type': 'nested',
+        },
+        'fields': [
+          {
+            'name': 'value',
+            'type': 'number',
+            'numberType': 'integer',
+          },
+        ],
+      });
+    });
+
+    it('parses inline', () => {
+      const structDef = makeStructDef();
+      connection.fillStructDefFromTypeMap(structDef, {test: INLINE_SCHEMA});
+      expect(structDef.fields[0]).toEqual({
+        'name': 'test',
+        'type': 'struct',
+        'dialect': 'duckdb',
+        'structRelationship': {
+          'type': 'inline',
+        },
+        'structSource': {
+          'type': 'inline',
+        },
+        'fields': [
+          {
+            'name': 'a',
+            'type': 'number',
+            'numberType': 'float',
+          },
+          {
+            'name': 'b',
+            'type': 'number',
+            'numberType': 'integer',
+          },
+          {
+            'name': 'c',
+            'type': 'string',
+          },
+        ],
+      });
+    });
+
+    it('parses nested', () => {
+      const structDef = makeStructDef();
+      connection.fillStructDefFromTypeMap(structDef, {test: NESTED_SCHEMA});
+      expect(structDef.fields[0]).toEqual({
+        'name': 'test',
+        'type': 'struct',
+        'dialect': 'duckdb',
+        'structRelationship': {
+          'fieldName': 'test',
+          'isArray': false,
+          'type': 'nested',
+        },
+        'structSource': {'type': 'nested'},
+        'fields': [
+          {'name': 'a', 'numberType': 'float', 'type': 'number'},
+          {'name': 'b', 'numberType': 'integer', 'type': 'number'},
+          {'name': 'c', 'type': 'string'},
+        ],
+      });
+    });
+
+    it('parses a simple type', () => {
+      const structDef = makeStructDef();
+      connection.fillStructDefFromTypeMap(structDef, {test: 'varchar(60)'});
+      expect(structDef.fields[0]).toEqual({
+        'name': 'test',
+        'type': 'string',
+      });
+    });
+  });
 });
 
+/**
+ * Create a basic StructDef for the purpose of passing to
+ * DuckDBConnection.fillStructDefFromTypeMap()
+ *
+ * @returns valid StructDef for testing
+ */
+const makeStructDef = (): StructDef => {
+  return {
+    type: 'struct',
+    name: 'test',
+    dialect: 'duckdb',
+    structSource: {type: 'table', tablePath: 'test'},
+    structRelationship: {
+      type: 'basetable',
+      connectionName: 'duckdb',
+    },
+    fields: [],
+  };
+};
+
+//
+// SQL blocks for testing table name detection in
+// DuckDBConnection.fetchSchemaForSQLBlock()
+//
+
+// Uses string value for table
 const SQL_BLOCK_1 = {
   type: 'sqlBlock',
   name: 'block1',
@@ -147,6 +262,7 @@ FROM "inventory_items.parquet"
 `,
 } as SQLBlock;
 
+// Uses read_parquet() for table
 const SQL_BLOCK_2 = {
   type: 'sqlBlock',
   name: 'block2',
@@ -164,3 +280,16 @@ created_at AS inventory_items_created_at
 FROM read_parquet("inventory_items2.parquet")
 `,
 } as SQLBlock;
+
+//
+// Type strings for testing DuckDBConnection.fillStructDefFromTypeMap()
+//
+
+// 'integer[]' is array
+const ARRAY_SCHEMA = 'integer[]';
+
+// STRUCT(...) is inline
+const INLINE_SCHEMA = 'STRUCT(a double, b integer, c varchar(60))';
+
+// STRUCT(....)[] is nested
+const NESTED_SCHEMA = 'STRUCT(a double, b integer, c varchar(60))[]';
