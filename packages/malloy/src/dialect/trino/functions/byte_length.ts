@@ -21,17 +21,22 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FUNCTIONS} from '../../functions';
-import {fnTrunc} from './trunc';
-import {fnLog} from './log';
-import {fnIfnull} from './ifnull';
-import {fnConcat} from './concat';
-import {fnByteLength} from './byte_length';
+import {
+  arg,
+  overload,
+  param,
+  minScalar,
+  anyExprType,
+  sql,
+  DialectFunctionOverloadDef,
+} from '../../functions/util';
 
-export const TRINO_FUNCTIONS = FUNCTIONS.clone();
-TRINO_FUNCTIONS.add('trunc', fnTrunc);
-TRINO_FUNCTIONS.add('log', fnLog);
-TRINO_FUNCTIONS.add('ifnull', fnIfnull);
-TRINO_FUNCTIONS.add('byte_length', fnByteLength);
-TRINO_FUNCTIONS.add('concat', fnConcat);
-TRINO_FUNCTIONS.seal();
+export function fnByteLength(): DialectFunctionOverloadDef[] {
+  return [
+    overload(
+      minScalar('number'),
+      [param('value', anyExprType('string'))],
+      sql`(LENGTH(CAST(${arg('value')} AS VARBINARY)))`
+    ),
+  ];
+}

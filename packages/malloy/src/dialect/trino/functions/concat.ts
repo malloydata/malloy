@@ -21,17 +21,39 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FUNCTIONS} from '../../functions';
-import {fnTrunc} from './trunc';
-import {fnLog} from './log';
-import {fnIfnull} from './ifnull';
-import {fnConcat} from './concat';
-import {fnByteLength} from './byte_length';
+import {
+  arg,
+  overload,
+  params,
+  minScalar,
+  anyExprType,
+  spreadCast,
+  sql,
+  DialectFunctionOverloadDef,
+} from '../../functions/util';
 
-export const TRINO_FUNCTIONS = FUNCTIONS.clone();
-TRINO_FUNCTIONS.add('trunc', fnTrunc);
-TRINO_FUNCTIONS.add('log', fnLog);
-TRINO_FUNCTIONS.add('ifnull', fnIfnull);
-TRINO_FUNCTIONS.add('byte_length', fnByteLength);
-TRINO_FUNCTIONS.add('concat', fnConcat);
-TRINO_FUNCTIONS.seal();
+export function fnConcat(): DialectFunctionOverloadDef[] {
+  return [
+    // TODO: in DuckDB and Postgres, nulls are treated like "",
+    // but in BigQuery and Snowflake, nulls propagate and the result becomes null
+    overload(
+      minScalar('string'),
+      [],
+      [{type: 'dialect', function: 'stringLiteral', literal: ''}]
+    ),
+    overload(
+      minScalar('string'),
+      [
+        params(
+          'values',
+          anyExprType('string'),
+          anyExprType('number'),
+          anyExprType('date'),
+          anyExprType('timestamp'),
+          anyExprType('boolean')
+        ),
+      ],
+      sql`CONCAT(${spreadCast(arg('values'), 'VARCHAR')})`
+    ),
+  ];
+}

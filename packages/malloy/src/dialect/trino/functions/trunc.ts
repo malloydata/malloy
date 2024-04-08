@@ -21,17 +21,31 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FUNCTIONS} from '../../functions';
-import {fnTrunc} from './trunc';
-import {fnLog} from './log';
-import {fnIfnull} from './ifnull';
-import {fnConcat} from './concat';
-import {fnByteLength} from './byte_length';
+import {
+  overload,
+  minScalar,
+  anyExprType,
+  sql,
+  DialectFunctionOverloadDef,
+  makeParam,
+} from '../../functions/util';
 
-export const TRINO_FUNCTIONS = FUNCTIONS.clone();
-TRINO_FUNCTIONS.add('trunc', fnTrunc);
-TRINO_FUNCTIONS.add('log', fnLog);
-TRINO_FUNCTIONS.add('ifnull', fnIfnull);
-TRINO_FUNCTIONS.add('byte_length', fnByteLength);
-TRINO_FUNCTIONS.add('concat', fnConcat);
-TRINO_FUNCTIONS.seal();
+export function fnTrunc(): DialectFunctionOverloadDef[] {
+  const value = makeParam('value', anyExprType('number'));
+  const precision = makeParam('precision', anyExprType('number'));
+  // Trunc function doesn't exist in DuckDB, so we emulate it.
+  // For both overloads, we switch between CEIL and FLOOR based on the sign of the arugment
+  // For the overload with precision, we multiply by a power of 10 before rounding, then divide.
+  return [
+    overload(
+      minScalar('number'),
+      [value.param],
+      sql`CASE WHEN ${value.arg} < 0 THEN CEIL(${value.arg}) ELSE FLOOR(${value.arg}) END`
+    ),
+    overload(
+      minScalar('number'),
+      [value.param, precision.param],
+      sql`CASE WHEN ${value.arg} < 0 THEN CEIL(${value.arg} * POW(10, ${precision.arg})) / POW(10, ${precision.arg}) ELSE FLOOR(${value.arg} * POW(10, ${precision.arg})) / POW(10, ${precision.arg}) END`
+    ),
+  ];
+}

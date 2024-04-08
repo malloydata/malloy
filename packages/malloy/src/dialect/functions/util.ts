@@ -57,6 +57,15 @@ export function spread(f: Fragment): Fragment {
   };
 }
 
+// LTABB: this doesn't work, needs to be rewriten in terms of function parameters.
+export function spreadCast(f: Fragment, _destType: string): Fragment {
+  return {
+    type: 'spread',
+    e: [f],
+    // e: ['CAST(', f, `AS ${destType})`],
+  };
+}
+
 /**
  * Prefer `sql` when possible.
  */

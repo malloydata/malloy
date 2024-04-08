@@ -237,7 +237,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
         ["substr('foo', 2)", 'oo'],
         ["substr('foo', 2, 1)", 'o'],
         ["substr('foo bar baz', -3)", 'baz'],
-        ["substr(nullif('x','x'), 1, 2)", null], // trino can use null literal here.
+        ["substr(nullif('x','x'), 1, 2)", null], //  nullMatchesFunctionSignature.
         ["substr('aaaa', null, 1)", null],
         ["substr('aaaa', 1, null)", null]
       );
@@ -250,7 +250,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
         ['floor(cbrt!(27)::number)', 3],
         ['floor(cbrt!number(27))', 3],
         ["substr('foo bar baz', -3)", 'baz'],
-        ["substr(nullif('x','x'), 1, 2)", null],
+        ["substr(nullif('x','x'), 1, 2)", null], // nullMatchesFunctionSignature
         ["substr('aaaa', null, 1)", null],
         ["substr('aaaa', 1, null)", null]
       );
