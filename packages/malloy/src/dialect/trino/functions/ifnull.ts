@@ -21,17 +21,32 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FUNCTIONS} from '../../functions';
-import {fnTrunc} from './trunc';
-import {fnLog} from './log';
-import {fnIfnull} from './ifnull';
-import {fnConcat} from './concat';
-import {fnByteLength} from './byte_length';
+import {ExpressionValueType} from '../../../model/malloy_types';
+import {
+  arg,
+  overload,
+  param,
+  minScalar,
+  sql,
+  DialectFunctionOverloadDef,
+  anyExprType,
+} from '../../functions/util';
 
-export const TRINO_FUNCTIONS = FUNCTIONS.clone();
-TRINO_FUNCTIONS.add('trunc', fnTrunc);
-TRINO_FUNCTIONS.add('log', fnLog);
-TRINO_FUNCTIONS.add('ifnull', fnIfnull);
-TRINO_FUNCTIONS.add('byte_length', fnByteLength);
-TRINO_FUNCTIONS.add('concat', fnConcat);
-TRINO_FUNCTIONS.seal();
+const types: ExpressionValueType[] = [
+  'string',
+  'number',
+  'timestamp',
+  'date',
+  'json',
+];
+
+export function fnIfnull(): DialectFunctionOverloadDef[] {
+  return types.map(type =>
+    overload(
+      minScalar(type),
+      [param('value', anyExprType(type)), param('default', anyExprType(type))],
+      // Postgres doesn't have an IFNULL function, so we use COALESCE, which is equivalent.
+      sql`COALESCE(${arg('value')}, ${arg('default')})`
+    )
+  );
+}

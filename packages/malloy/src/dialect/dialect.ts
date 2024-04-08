@@ -136,6 +136,9 @@ export abstract class Dialect {
   // ORDER BY 1 DESC
   orderByClause: OrderByClauseType = 'ordinal';
 
+  // null will match in a function signature
+  nullMatchesFunctionSignature = true;
+
   // return the definition of a function with the given name
   abstract getGlobalFunctionDef(
     name: string
