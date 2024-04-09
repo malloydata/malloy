@@ -55,14 +55,14 @@ declare global {
        *   * The empty match {} accepts ANY data, but will errror if there is not a row
        *   * If the query is tagged with # test.debug then the test will fail and the result will be printed
        *   * If the query is tagged with # test.verbose then the result will be printed only if the test fails
-       *   * nestName.colName expects nestName to be a query which returns multiple rows, it will match
+       *   * A match key of nestName.colName expects nestName to be a query which returns multiple rows, it will match
        *     fields from the first row of the rows of nestName
-       *   * nestName/colName expects nestName to be a record/struct type
+       *   * A match key of nestName/colName expects nestName to be a record/struct type
        *
        * In addition, the query is checked for the following tags
        *
-       *   * test.verbose -- If the test fails, also dump the result data structure
-       *   * test.debug -- Test will fail, and trhe result data strudcture will be dumped.
+       *   * test.verbose -- If the test fails, also pretty-print the result data
+       *   * test.debug -- Force test failure, and the result data will be printed
        *
        * @param querySrc Malloy source, last query in source will be run
        * @param runtime Database connection runtime OR Model ( for the call to loadQuery )
