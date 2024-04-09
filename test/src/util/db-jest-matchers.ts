@@ -31,6 +31,7 @@ import {
   LogMessage,
   SingleConnectionRuntime,
 } from '@malloydata/malloy';
+import {inspect} from 'util';
 
 type ExpectedResultRow = Record<string, unknown>;
 type ExpectedResult = ExpectedResultRow | ExpectedResultRow[];
@@ -50,9 +51,18 @@ declare global {
        *     await expect('query').malloyResultMatches(runtime, {colName: colValue});
        *     await expect('query').malloyResultMatches(runtime, [{colName: colValue}]);
        *
-       *   * If "colName" has a dot in it, it is assumed to be a reference to a value in a nest
        *   * If you use an array, the number of rows in the result must match the rows in the match
        *   * The empty match {} accepts ANY data, but will errror if there is not a row
+       *   * If the query is tagged with # test.debug then the test will fail and the result will be printed
+       *   * If the query is tagged with # test.verbose then the result will be printed only if the test fails
+       *   * nestName.colName expects nestName to be a query which returns multiple rows, it will match
+       *     fields from the first row of the rows of nestName
+       *   * nestName/colName expects nestName to be a record/struct type
+       *
+       * In addition, the query is checked for the following tags
+       *
+       *   * test.verbose -- If the test fails, also dump the result data structure
+       *   * test.debug -- Test will fail, and trhe result data strudcture will be dumped.
        *
        * @param querySrc Malloy source, last query in source will be run
        * @param runtime Database connection runtime OR Model ( for the call to loadQuery )
@@ -118,6 +128,8 @@ expect.extend({
       };
     }
 
+    const queryTags = (await query.getPreparedQuery()).tagParse().tag;
+    const queryTestTag = queryTags.tag('test');
     let result: Result;
     try {
       result = await query.run();
@@ -139,34 +151,36 @@ expect.extend({
       return {pass: false, message: () => failMsg};
     }
 
-    const debug = querySrc.indexOf('--debug') >= 0;
     const allRows = Array.isArray(shouldEqual) ? shouldEqual : [shouldEqual];
-    let i = 0;
     const fails: string[] = [];
-
-    if (debug) {
-      fails.push(
-        `Debug: Result Data: ${JSON.stringify(result.data.toObject())}`
-      );
-    }
-
     const gotRows = result.data.toObject().length;
+
     if (Array.isArray(shouldEqual)) {
       if (gotRows !== allRows.length) {
         fails.push(`Expected result.rows=${allRows.length}  Got: ${gotRows}`);
       }
     }
+    let matchRow = 0;
     for (const expected of allRows) {
       for (const [name, value] of Object.entries(expected)) {
         const pExpect = JSON.stringify(value);
-        const row = allRows.length > 1 ? `[${i}]` : '';
+        const row = allRows.length > 1 ? `[${matchRow}]` : '';
         const expected = `Expected ${row}{${name}: ${pExpect}}`;
         try {
-          const nestOne = name.split('.');
-          const resultPath = [i, nestOne[0]];
-          for (const child of nestOne.slice(1)) {
-            resultPath.push(0);
-            resultPath.push(child);
+          // the internet taught me this, use lookahead/behind to preserve delimiters
+          // but we are splitting on / and .
+          const nestParse = name.split(/(?=[./])|(?<=[./])/g);
+
+          const resultPath = [matchRow, nestParse[0]];
+          for (
+            let pathCursor = 1;
+            pathCursor < nestParse.length;
+            pathCursor += 2
+          ) {
+            if (nestParse[pathCursor] === '.') {
+              resultPath.push(0);
+            }
+            resultPath.push(nestParse[pathCursor + 1]);
           }
           const got = result.data.path(...resultPath).value;
           const pGot = JSON.stringify(got);
@@ -181,10 +195,19 @@ expect.extend({
           fails.push(`${expected} Error: ${e.message}`);
         }
       }
-      i += 1;
+      matchRow += 1;
     }
-    if (fails.length !== 0) {
+    const failedTest = fails.length > 0;
+    const debugFail = queryTestTag?.has('debug');
+    if (debugFail || (failedTest && queryTestTag?.has('verbose'))) {
+      fails.unshift(`Result Data: ${humanReadable(result.data.toObject())}\n`);
+    }
+
+    if (fails.length > 0) {
       const fromSQL = '  ' + (await query.getSQL()).split('\n').join('\n  ');
+      if (debugFail && !failedTest) {
+        fails.push('\nTest forced failure (# test.debug)');
+      }
       const failMsg = `SQL Generated:\n${fromSQL}\n${fails.join('\n')}`;
       return {pass: false, message: () => failMsg};
     }
@@ -212,4 +235,8 @@ function errorLogToString(src: string, msgs: LogMessage[]) {
     lineNo += 1;
   }
   return lovely;
+}
+
+function humanReadable(thing: unknown): string {
+  return inspect(thing, {breakLength: 72, depth: Infinity});
 }
