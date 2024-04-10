@@ -23,14 +23,18 @@
 
 import {TrinoConnection, TrinoExecutor} from '.';
 
-// Array(varchar) is array
+// array(varchar) is array
 const ARRAY_SCHEMA = 'array(integer)';
 
-// Row(...) is inline
+// row(...) is inline
 const INLINE_SCHEMA = 'row(a double, b integer, c varchar(60))';
 
-// Array(row(....)) is nested
+// array(row(....)) is nested
 const NESTED_SCHEMA = 'array(row(a double, b integer, c varchar(60)))';
+
+// array(row(..., array(row(....)))) is deeply nested
+const DEEP_SCHEMA =
+  'array(row(a double, b array(row(c integer, d varchar(60)))))';
 
 describe('Trino connection', () => {
   let connection: TrinoConnection;
@@ -130,6 +134,53 @@ describe('Trino connection', () => {
           'type': 'string',
         }
       );
+    });
+
+    it('parses deep nesting', () => {
+      expect(connection.malloyTypeFromTrinoType('test', DEEP_SCHEMA)).toEqual({
+        'name': 'test',
+        'type': 'struct',
+        'dialect': 'trino',
+        'structRelationship': {
+          'fieldName': 'test',
+          'isArray': true,
+          'type': 'nested',
+        },
+        'structSource': {
+          'type': 'nested',
+        },
+        'fields': [
+          {
+            'name': 'a',
+            'numberType': 'float',
+            'type': 'number',
+          },
+          {
+            'name': 'b',
+            'type': 'struct',
+            'dialect': 'trino',
+            'structRelationship': {
+              'fieldName': 'b',
+              'isArray': true,
+              'type': 'nested',
+            },
+            'structSource': {
+              'type': 'nested',
+            },
+            'fields': [
+              {
+                'name': 'c',
+                'numberType': 'integer',
+                'type': 'number',
+              },
+              {
+                'name': 'd',
+                'type': 'string',
+              },
+            ],
+          },
+        ],
+      });
     });
   });
 

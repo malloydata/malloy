@@ -343,9 +343,18 @@ export class TrinoConnection implements Connection, PersistSQLResults {
             //   JSON.stringify(row[i]),
             //   JSON.stringify(malloyRow[column.name])
             // );
-          } else if (malloyColumns[i].type === 'number' && row[i] !== null) {
+          } else if (
+            malloyColumns[i].type === 'number' &&
+            typeof row[i] === 'string'
+          ) {
             // decimal numbers come back as strings
-            malloyRow[column.name] = +(row[i] as number);
+            malloyRow[column.name] = +row[i];
+          } else if (
+            malloyColumns[i].type === 'timestamp' &&
+            typeof row[i] === 'string'
+          ) {
+            // timestamps come back as strings
+            malloyRow[column.name] = new Date(row[i]);
           } else {
             malloyRow[column.name] = row[i] as QueryValue;
           }
@@ -605,9 +614,9 @@ export class TrinoConnection implements Connection, PersistSQLResults {
         // TODO: Handle time zone type annotation, which is an
         // exception to the types not containing spaces assumption
         innerType = innerType.replace(/ with time zone$/, '');
-        let parts = innerType.match(/^(.*)\s((array\(|row\().*)$/);
+        let parts = innerType.match(/^(.+?)\s((array\(|row\().*)$/);
         if (parts === null) {
-          parts = innerType.match(/^(.*)\s(\S+)$/);
+          parts = innerType.match(/^(.+)\s(\S+)$/);
         }
         if (parts) {
           const innerName = parts[1];
