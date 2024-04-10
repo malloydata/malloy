@@ -554,15 +554,15 @@ export class TrinoConnection implements Connection, PersistSQLResults {
   ): FieldAtomicTypeDef | StructDef {
     let malloyType: FieldAtomicTypeDef | StructDef;
     // Arrays look like `array(type)`
-    const arrayMatch = trinoType.match(/^(([^,])+\s)?array\((.*)\)$/);
+    const arrayMatch = trinoType.match(/^array\((.*)\)$/);
     // console.log(`${trinoType} arrayMatch: ${arrayMatch}`);
 
     // Structs look like `row(name type, name type)`
-    const structMatch = trinoType.match(/^(([^,])+\s)?row\((.*)\)$/);
+    const structMatch = trinoType.match(/^row\((.*)\)$/);
     // console.log(`${trinoType} structMatch: ${structMatch}`);
 
     if (arrayMatch) {
-      const arrayType = arrayMatch[3];
+      const arrayType = arrayMatch[1];
       const innerType = this.malloyTypeFromTrinoType(name, arrayType);
       if (innerType.type === 'struct') {
         malloyType = {...innerType, structSource: {type: 'nested'}};
@@ -589,7 +589,7 @@ export class TrinoConnection implements Connection, PersistSQLResults {
       // TODO: Trino doesn't quote or escape commas in field names,
       // so some magic is going to need to be applied before we get here
       // to avoid confusion if a field name contains a comma
-      const innerTypes = this.splitColumns(structMatch[3]);
+      const innerTypes = this.splitColumns(structMatch[1]);
       // console.log(`innerType: ${JSON.stringify(innerTypes)}`);
       malloyType = {
         type: 'struct',
@@ -605,9 +605,9 @@ export class TrinoConnection implements Connection, PersistSQLResults {
         // TODO: Handle time zone type annotation, which is an
         // exception to the types not containing spaces assumption
         innerType = innerType.replace(/ with time zone$/, '');
-        let parts = innerType.match(/^(.*)\s((array\(|row\().*)$/);
+        let parts = innerType.match(/^(.+?)\s((array\(|row\().*)$/);
         if (parts === null) {
-          parts = innerType.match(/^(.*)\s(\S+)$/);
+          parts = innerType.match(/^(.+)\s(\S+)$/);
         }
         if (parts) {
           const innerName = parts[1];
