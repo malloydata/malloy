@@ -26,7 +26,6 @@ import {
   Expr,
   ExtractUnit,
   Sampling,
-  StructDef,
   TimeFieldType,
   TimeValue,
   TimestampUnit,
@@ -139,6 +138,9 @@ export abstract class Dialect {
   // null will match in a function signature
   nullMatchesFunctionSignature = true;
 
+  // support select * replace(...)
+  supportsSelectReplace = true;
+
   // return the definition of a function with the given name
   abstract getGlobalFunctionDef(
     name: string
@@ -207,13 +209,13 @@ export abstract class Dialect {
 
   abstract sqlCreateFunctionCombineLastStage(
     lastStageName: string,
-    structDef: StructDef
+    fieldList: DialectFieldList
   ): string;
   abstract sqlCreateTableAsSelect(tableName: string, sql: string): string;
 
   abstract sqlSelectAliasAsStruct(
     alias: string,
-    physicalFieldNames: string[]
+    fieldList: DialectFieldList
   ): string;
 
   sqlFinalStage(_lastStageName: string, _fields: string[]): string {

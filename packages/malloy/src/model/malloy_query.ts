@@ -138,6 +138,20 @@ interface OutputPipelinedSQL {
   pipelineSQL: string;
 }
 
+function getDialectFieldList(structDef: StructDef): DialectFieldList {
+  const dialectFieldList: DialectFieldList = [];
+
+  for (const f of structDef.fields.filter(isPhysical)) {
+    dialectFieldList.push({
+      type: f.type,
+      sqlExpression: getIdentifier(f),
+      rawName: getIdentifier(f),
+      sqlOutputName: getIdentifier(f),
+    });
+  }
+  return dialectFieldList;
+}
+
 // Track the times we might need a unique key
 type UniqueKeyPossibleUse =
   | AggregateFunctionType
@@ -206,7 +220,10 @@ class StageWriter {
     if (lastStageName === undefined) {
       throw new Error('Internal Error: no stage to combine');
     }
-    sql += dialect.sqlCreateFunctionCombineLastStage(lastStageName, structDef);
+    sql += dialect.sqlCreateFunctionCombineLastStage(
+      lastStageName,
+      getDialectFieldList(structDef)
+    );
 
     const id = `${dialect.udfPrefix}${this.root().udfs.length}`;
     sql = dialect.sqlCreateFunction(id, sql);
@@ -264,14 +281,14 @@ class StageWriter {
     if (!this.useCTE) {
       return dialect.sqlCreateFunctionCombineLastStage(
         `(${this.withs[0]})`,
-        structDef
+        getDialectFieldList(structDef)
       );
     } else {
       return (
         this.combineStages(true).sql +
         dialect.sqlCreateFunctionCombineLastStage(
           this.getName(this.withs.length - 1),
-          structDef
+          getDialectFieldList(structDef)
         )
       );
     }
@@ -2055,17 +2072,7 @@ class JoinInstance {
 
   // postgres unnest needs to know the names of the physical fields.
   getDialectFieldList(): DialectFieldList {
-    const dialectFieldList: DialectFieldList = [];
-
-    for (const f of this.queryStruct.fieldDef.fields.filter(isPhysical)) {
-      dialectFieldList.push({
-        type: f.type,
-        sqlExpression: getIdentifier(f),
-        rawName: getIdentifier(f),
-        sqlOutputName: getIdentifier(f),
-      });
-    }
-    return dialectFieldList;
+    return getDialectFieldList(this.queryStruct.fieldDef);
   }
 }
 
@@ -2805,14 +2812,9 @@ class QueryQuery extends QueryField {
         let joins = '';
         for (const childJoin of ji.children) {
           joins += this.generateSQLJoinBlock(stageWriter, childJoin);
-          const physicalFields = getPhysicalFields(
-            childJoin.queryStruct.fieldDef
-          ).map(fieldDef =>
-            this.parent.dialect.sqlMaybeQuoteIdentifier(fieldDef.name)
-          );
           select += `, ${this.parent.dialect.sqlSelectAliasAsStruct(
             childJoin.alias,
-            physicalFields
+            getDialectFieldList(childJoin.queryStruct.fieldDef)
           )} AS ${childJoin.alias}`;
         }
         select += `\nFROM ${structSQL} AS ${
@@ -3044,17 +3046,28 @@ class QueryQuery extends QueryField {
     if (outputPipelinedSQL.length === 0) {
       return lastStageName;
     }
-    const pipelinesSQL = outputPipelinedSQL
-      .map(
-        o =>
-          `${o.pipelineSQL} as ${o.sqlFieldName}
-      `
-      )
-      .join(',\n');
-    return stageWriter.addStage(
-      `SELECT * replace (${pipelinesSQL}) FROM ${lastStageName}
-      `
-    );
+
+    let retSQL: string;
+    if (this.parent.dialect.supportsSelectReplace) {
+      const pipelinesSQL = outputPipelinedSQL
+        .map(o => `${o.pipelineSQL} as ${o.sqlFieldName}`)
+        .join(',\n');
+      retSQL = `SELECT * replace (${pipelinesSQL}) FROM ${lastStageName}
+        `;
+    } else {
+      const pipelinesSQL = outputPipelinedSQL
+        .map(o => `${o.pipelineSQL} as ${o.sqlFieldName}`)
+        .join(',\n');
+      const outputFields = outputPipelinedSQL.map(f => f.sqlFieldName);
+      const allFields = Array.from(this.rootResult.allFields.keys()).map(f =>
+        this.parent.dialect.sqlMaybeQuoteIdentifier(f)
+      );
+      const fields = allFields.filter(f => outputFields.indexOf(f) === -1);
+      retSQL = `SELECT ${
+        fields.length > 0 ? fields.join(', ') + ',' : ''
+      } ${pipelinesSQL} FROM ${lastStageName}`;
+    }
+    return stageWriter.addStage(retSQL);
   }
 
   generateStage0Fields(
@@ -3711,7 +3724,10 @@ class QueryQuery extends QueryField {
     return ret;
   }
 
-  generateSQLFromPipeline(stageWriter: StageWriter) {
+  generateSQLFromPipeline(stageWriter: StageWriter): {
+    lastStageName: string;
+    outputStruct: StructDef;
+  } {
     this.prepare(stageWriter);
     let lastStageName = this.generateSQL(stageWriter);
     let outputStruct = this.getResultStructDef();

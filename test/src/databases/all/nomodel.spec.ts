@@ -872,6 +872,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
             aggregate: t is count()
           } -> { select: t1 is t+1 }
         } -> {
+          group_by: two is 2
           nest: fun
         }
       `).malloyResultMatches(runtime, {'fun.t1': 52});

@@ -26,12 +26,10 @@ import {
   Expr,
   ExtractUnit,
   Sampling,
-  StructDef,
   TimeFieldType,
   TimeValue,
   TimestampUnit,
   TypecastFragment,
-  getIdentifier,
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
@@ -241,16 +239,19 @@ export class DuckDBDialect extends Dialect {
 
   sqlCreateFunctionCombineLastStage(
     lastStageName: string,
-    structDef: StructDef
+    dialectFieldList: DialectFieldList
   ): string {
-    return `SELECT LIST(STRUCT_PACK(${structDef.fields
-      .map(fieldDef => this.sqlMaybeQuoteIdentifier(getIdentifier(fieldDef)))
+    return `SELECT LIST(STRUCT_PACK(${dialectFieldList
+      .map(d => this.sqlMaybeQuoteIdentifier(d.sqlOutputName))
       .join(',')})) FROM ${lastStageName}\n`;
   }
 
-  sqlSelectAliasAsStruct(alias: string, physicalFieldNames: string[]): string {
-    return `STRUCT_PACK(${physicalFieldNames
-      .map(name => `${alias}.${name}`)
+  sqlSelectAliasAsStruct(
+    alias: string,
+    dialectFieldList: DialectFieldList
+  ): string {
+    return `STRUCT_PACK(${dialectFieldList
+      .map(d => `${alias}.${d.sqlOutputName}`)
       .join(', ')})`;
   }
   // TODO

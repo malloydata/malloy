@@ -105,6 +105,7 @@ export class TrinoDialect extends Dialect {
   cantPartitionWindowFunctionsOnExpressions = false;
   orderByClause: OrderByClauseType = 'output_name';
   nullMatchesFunctionSignature = false;
+  supportsSelectReplace = false;
 
   quoteTablePath(tablePath: string): string {
     // TODO: look into escaping.
@@ -251,7 +252,7 @@ export class TrinoDialect extends Dialect {
   ): string {
     let p = sourceSQLExpression;
     if (isSingleton) {
-      p = `[${p}]`;
+      p = `ARRAY[${p}]`;
     }
     return `UNNEST(${p})`;
   }
@@ -274,12 +275,19 @@ ${indent(sql)}
 `;
   }
 
-  sqlCreateFunctionCombineLastStage(lastStageName: string): string {
-    return `SELECT ARRAY((SELECT AS STRUCT * FROM ${lastStageName}))\n`;
+  sqlCreateFunctionCombineLastStage(
+    lastStageName: string,
+    fieldList: DialectFieldList
+  ): string {
+    const fields = fieldList.map(f => f.sqlExpression).join(', ');
+    const definitions = this.buildTypeExpression(fieldList);
+    return `SELECT ARRAY_AGG(CAST(ROW(${fields}) as ROW(${definitions}))) FROM ${lastStageName}\n`;
   }
 
-  sqlSelectAliasAsStruct(alias: string): string {
-    return `(SELECT AS STRUCT ${alias}.*)`;
+  sqlSelectAliasAsStruct(alias: string, fieldList): string {
+    const fields = fieldList.map(f => f.sqlExpression).join(', ');
+    const definitions = this.buildTypeExpression(fieldList);
+    return `CAST(ROW(${fields}) as ROW(${definitions})`;
   }
 
   // TODO(figutierrez): update.
