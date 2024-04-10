@@ -343,9 +343,18 @@ export class TrinoConnection implements Connection, PersistSQLResults {
             //   JSON.stringify(row[i]),
             //   JSON.stringify(malloyRow[column.name])
             // );
-          } else if (malloyColumns[i].type === 'number' && row[i] !== null) {
+          } else if (
+            malloyColumns[i].type === 'number' &&
+            typeof row[i] === 'string'
+          ) {
             // decimal numbers come back as strings
-            malloyRow[column.name] = +(row[i] as number);
+            malloyRow[column.name] = +row[i];
+          } else if (
+            malloyColumns[i].type === 'timestamp' &&
+            typeof row[i] === 'string'
+          ) {
+            // timestamps come back as strings
+            malloyRow[column.name] = new Date(row[i]);
           } else {
             malloyRow[column.name] = row[i] as QueryValue;
           }
