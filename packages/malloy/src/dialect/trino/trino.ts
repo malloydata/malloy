@@ -107,6 +107,7 @@ export class TrinoDialect extends Dialect {
   nullMatchesFunctionSignature = false;
   supportsSelectReplace = false;
   supportsComplexFilteredSources = false;
+  supportsTempTables = false;
 
   quoteTablePath(tablePath: string): string {
     // TODO: look into escaping.

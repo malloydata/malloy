@@ -34,35 +34,38 @@ afterAll(async () => {
 });
 
 runtimes.runtimeMap.forEach((runtime, databaseName) => {
-  it(`basic index  - ${databaseName}`, async () => {
-    const model = await runtime.loadModel(
-      `
+  test.when(runtime.dialect.supportsTempTables)(
+    `basic index  - ${databaseName}`,
+    async () => {
+      const model = await runtime.loadModel(
+        `
         source: airports is ${databaseName}.table('malloytest.airports') extend {
         }
     `
-    );
-    let result = await model.search('airports', 'SANTA', 10);
+      );
+      let result = await model.search('airports', 'SANTA', 10);
 
-    // if (result !== undefined) {
-    //   console.log(result);
-    // } else {
-    //   console.log("no result");
-    // }
-    expect(result).toBeDefined();
-    if (result !== undefined) {
-      expect(result[0].fieldName).toBe('county');
-      expect(result[0].fieldValue).toBe('SANTA ROSA');
-      expect(result[0].weight).toBe(26);
-      expect(result.length).toBe(10);
-    }
+      // if (result !== undefined) {
+      //   console.log(result);
+      // } else {
+      //   console.log("no result");
+      // }
+      expect(result).toBeDefined();
+      if (result !== undefined) {
+        expect(result[0].fieldName).toBe('county');
+        expect(result[0].fieldValue).toBe('SANTA ROSA');
+        expect(result[0].weight).toBe(26);
+        expect(result.length).toBe(10);
+      }
 
-    result = await model.search('airports', 'SANTA A', 100, 'city');
-    if (result !== undefined) {
-      // console.log(result);
-      expect(result[0].fieldName).toBe('city');
-      expect(result[0].fieldValue).toBe('SANTA ANA');
+      result = await model.search('airports', 'SANTA A', 100, 'city');
+      if (result !== undefined) {
+        // console.log(result);
+        expect(result[0].fieldName).toBe('city');
+        expect(result[0].fieldValue).toBe('SANTA ANA');
+      }
     }
-  });
+  );
 
   it(`index value map  - ${databaseName}`, async () => {
     const model = await runtime.loadModel(
