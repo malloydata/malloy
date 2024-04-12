@@ -1061,9 +1061,9 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
 
         run: ga_sample -> {
           aggregate:
-            p is hits.product.productRevenue.sum()
+            p is floor(hits.product.productPrice.avg())
         }
-      `).malloyResultMatches(runtime, {p: 8901999948});
+      `).malloyResultMatches(runtime, {p: 23001594});
     }
   );
 
