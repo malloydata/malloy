@@ -556,16 +556,14 @@ class QueryField extends QueryNode {
     }
     const valueSQL = this.generateDimFragment(resultSet, context, value, state);
     const separatorSQL = separator
-      ? ' ,' + this.generateDimFragment(resultSet, context, separator, state)
+      ? this.generateDimFragment(resultSet, context, separator, state)
       : '';
-    const keyStart = '__STRING_AGG_KS__';
-    const keyEnd = '__STRING_AGG_KE__';
-    const distinctValueSQL = `concat('${keyStart}', ${distinctKey}, '${keyEnd}', ${valueSQL})`;
-    return `REGEXP_REPLACE(
-      STRING_AGG(DISTINCT ${distinctValueSQL}${separatorSQL}),
-      '${keyStart}.*?${keyEnd}',
-      ''
-    )`;
+
+    return this.parent.dialect.sqlStringAggDistinct(
+      distinctKey,
+      valueSQL,
+      separatorSQL
+    );
   }
 
   getParamForArgIndex(params: FunctionParameterDef[], argIndex: number) {

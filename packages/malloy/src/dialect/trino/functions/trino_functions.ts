@@ -27,6 +27,7 @@ import {fnLog} from './log';
 import {fnIfnull} from './ifnull';
 import {fnConcat} from './concat';
 import {fnByteLength} from './byte_length';
+import {fnStringAgg, fnStringAggDistinct} from './string_agg';
 
 export const TRINO_FUNCTIONS = FUNCTIONS.clone();
 TRINO_FUNCTIONS.add('trunc', fnTrunc);
@@ -34,4 +35,6 @@ TRINO_FUNCTIONS.add('log', fnLog);
 TRINO_FUNCTIONS.add('ifnull', fnIfnull);
 TRINO_FUNCTIONS.add('byte_length', fnByteLength);
 TRINO_FUNCTIONS.add('concat', fnConcat);
+TRINO_FUNCTIONS.add('string_agg', fnStringAgg);
+TRINO_FUNCTIONS.add('string_agg_distinct', fnStringAggDistinct);
 TRINO_FUNCTIONS.seal();

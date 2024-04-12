@@ -584,6 +584,17 @@ ${indent(sql)}
     return `CAST(${key} as VARCHAR) || 'x' || CAST(${rowKey} as VARCHAR)`;
   }
 
+  sqlStringAggDistinct(
+    distinctKey: string,
+    valueSQL: string,
+    separatorSQL: string
+  ) {
+    return `
+    ARRAY_JOIN(TRANSFORM(ARRAY_AGG(DISTINCT ARRAY[CAST(${valueSQL} AS VARCHAR),CAST(${distinctKey} as VARCHAR)]), x -> x[1]),${
+      separatorSQL.length > 0 ? separatorSQL : "','"
+    })`;
+  }
+
   validateTypeName(sqlType: string): boolean {
     // Letters:              BIGINT
     // Numbers:              INT8

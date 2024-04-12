@@ -1053,6 +1053,20 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
     }
   );
 
+  test.when(runtime.supportsNesting && runtime.dialect.readsNestedData)(
+    `can double unnest - ${databaseName}`,
+    async () => {
+      await expect(`
+        source: ga_sample is ${databaseName}.table('malloytest.ga_sample')
+
+        run: ga_sample -> {
+          aggregate:
+            p is hits.product.productRevenue.sum()
+        }
+      `).malloyResultMatches(runtime, {p: 8901999948});
+    }
+  );
+
   test.when(runtime.supportsNesting)(
     'nest null - ${databaseName}',
     async () => {
