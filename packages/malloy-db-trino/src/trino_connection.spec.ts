@@ -115,7 +115,7 @@ describe('Trino connection', () => {
           'dialect': 'trino',
           'structRelationship': {
             'fieldName': 'test',
-            'isArray': true,
+            'isArray': false,
             'type': 'nested',
           },
           'structSource': {'type': 'nested'},
@@ -143,7 +143,7 @@ describe('Trino connection', () => {
         'dialect': 'trino',
         'structRelationship': {
           'fieldName': 'test',
-          'isArray': true,
+          'isArray': false,
           'type': 'nested',
         },
         'structSource': {
@@ -161,7 +161,7 @@ describe('Trino connection', () => {
             'dialect': 'trino',
             'structRelationship': {
               'fieldName': 'b',
-              'isArray': true,
+              'isArray': false,
               'type': 'nested',
             },
             'structSource': {

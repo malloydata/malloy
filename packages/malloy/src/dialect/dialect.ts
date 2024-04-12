@@ -141,6 +141,9 @@ export abstract class Dialect {
   // support select * replace(...)
   supportsSelectReplace = true;
 
+  // ability to join source with a filter on a joined source.
+  supportsComplexFilteredSources = true;
+
   // return the definition of a function with the given name
   abstract getGlobalFunctionDef(
     name: string
@@ -351,6 +354,24 @@ export abstract class Dialect {
 
   sqlMakeUnnestKey(key: string, rowKey: string) {
     return this.concat(key, "'x'", rowKey);
+  }
+
+  // default implementation
+  sqlStringAggDistinct(
+    distinctKey: string,
+    valueSQL: string,
+    separatorSQL: string
+  ) {
+    const keyStart = '__STRING_AGG_KS__';
+    const keyEnd = '__STRING_AGG_KE__';
+    const distinctValueSQL = `concat('${keyStart}', ${distinctKey}, '${keyEnd}', ${valueSQL})`;
+    return `REGEXP_REPLACE(
+      STRING_AGG(DISTINCT ${distinctValueSQL}${
+        separatorSQL.length > 0 ? ',' + separatorSQL : ''
+      }),
+      '${keyStart}.*?${keyEnd}',
+      ''
+    )`;
   }
 
   abstract sqlTypeToMalloyType(sqlType: string): FieldAtomicTypeDef | undefined;

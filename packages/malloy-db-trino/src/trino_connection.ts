@@ -578,7 +578,7 @@ export class TrinoConnection implements Connection, PersistSQLResults {
         malloyType.structRelationship = {
           type: 'nested',
           fieldName: name,
-          isArray: true,
+          isArray: false,
         };
       } else {
         malloyType = {

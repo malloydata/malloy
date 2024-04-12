@@ -106,6 +106,7 @@ export class TrinoDialect extends Dialect {
   orderByClause: OrderByClauseType = 'output_name';
   nullMatchesFunctionSignature = false;
   supportsSelectReplace = false;
+  supportsComplexFilteredSources = false;
 
   quoteTablePath(tablePath: string): string {
     // TODO: look into escaping.
@@ -243,7 +244,7 @@ export class TrinoDialect extends Dialect {
     if (fieldName === '__row_id') {
       return `__row_id_from_${alias}`;
     }
-    return `${alias}.${fieldName}`;
+    return `${alias}.${this.sqlMaybeQuoteIdentifier(fieldName)}`;
   }
 
   sqlUnnestPipelineHead(
@@ -429,7 +430,7 @@ ${indent(sql)}
       }
     }
     const extracted = mkExpr`EXTRACT(${pgUnits} FROM ${extractFrom})`;
-    return units === 'day_of_week' ? mkExpr`(${extracted}+1)` : extracted;
+    return units === 'day_of_week' ? mkExpr`mod(${extracted}+1,7)` : extracted;
   }
 
   sqlAlterTime(
@@ -531,11 +532,9 @@ ${indent(sql)}
         sample = this.defaultSampling;
       }
       if (isSamplingRows(sample)) {
-        throw new Error(
-          "StandardSQL doesn't support sampling by rows only percent"
-        );
+        throw new Error("Trino doesn't support sampling by rows only percent");
       } else if (isSamplingPercent(sample)) {
-        return `(SELECT * FROM ${tableSQL}  TABLESAMPLE SYSTEM (${sample.percent} PERCENT))`;
+        return `(SELECT * FROM ${tableSQL}  TABLESAMPLE SYSTEM (${sample.percent}))`;
       }
     }
     return tableSQL;
@@ -582,6 +581,17 @@ ${indent(sql)}
 
   sqlMakeUnnestKey(key: string, rowKey: string) {
     return `CAST(${key} as VARCHAR) || 'x' || CAST(${rowKey} as VARCHAR)`;
+  }
+
+  sqlStringAggDistinct(
+    distinctKey: string,
+    valueSQL: string,
+    separatorSQL: string
+  ) {
+    return `
+    ARRAY_JOIN(TRANSFORM(ARRAY_AGG(DISTINCT ARRAY[CAST(${valueSQL} AS VARCHAR),CAST(${distinctKey} as VARCHAR)]), x -> x[1]),${
+      separatorSQL.length > 0 ? separatorSQL : "','"
+    })`;
   }
 
   validateTypeName(sqlType: string): boolean {

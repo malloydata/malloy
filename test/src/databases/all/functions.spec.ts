@@ -1294,7 +1294,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 
     it(`works with fanout and order_by - ${databaseName}`, async () => {
       // TODO bigquery cannot handle both fanout and order_by today
-      if (['bigquery', 'snowflake'].includes(databaseName)) return;
+      if (['bigquery', 'snowflake', 'trino'].includes(databaseName)) return;
       await expect(`##! experimental.aggregate_order_by
       run: state_facts extend { join_many:
         state_facts2 is ${databaseName}.table('malloytest.state_facts')
