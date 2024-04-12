@@ -2806,6 +2806,11 @@ class QueryQuery extends QueryField {
         }
         s += ` ${matrixOperation} JOIN ${structSQL} AS ${ji.alias}\n  ON ${onCondition}${filters}\n`;
       } else {
+        if (!this.parent.dialect.supportsComplexFilteredSources) {
+          throw new Error(
+            'Cannot join a source with a filter on a joined source'
+          );
+        }
         let select = `SELECT ${ji.alias}.*`;
         let joins = '';
         for (const childJoin of ji.children) {
@@ -3527,7 +3532,7 @@ class QueryQuery extends QueryField {
         field.fieldUsage.type === 'result'
       ) {
         dialectFieldList.push({
-          type: field.type,
+          type: field.f.fieldDef.type,
           sqlExpression: field.f.generateExpression(resultStruct),
           rawName: name,
           sqlOutputName: sqlName,

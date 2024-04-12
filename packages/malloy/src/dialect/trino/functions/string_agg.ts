@@ -51,7 +51,7 @@ export function fnStringAgg(): DialectFunctionOverloadDef[] {
     overload(
       minAggregate('string'),
       [value.param, separator.param],
-      sql`ARRAY_JOIN(ARRAY_AGG(${value.arg} ${orderBy}), ',')`,
+      sql`ARRAY_JOIN(ARRAY_AGG(${value.arg} ${orderBy}), ${separator.arg})`,
       {supportsOrderBy: true, supportsLimit: false}
     ),
   ];
@@ -76,7 +76,7 @@ export function fnStringAggDistinct(): DialectFunctionOverloadDef[] {
     overload(
       minAggregate('string'),
       [value.param, separator.param],
-      sql`ARRAY_JOIN(ARRAY_AGG(DISTINCT ${value.arg} ${orderBy}), ',')`,
+      sql`ARRAY_JOIN(ARRAY_AGG(DISTINCT ${value.arg} ${orderBy}), ${separator.arg})`,
       {supportsOrderBy: true, supportsLimit: false}
     ),
   ];

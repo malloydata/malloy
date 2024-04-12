@@ -141,6 +141,9 @@ export abstract class Dialect {
   // support select * replace(...)
   supportsSelectReplace = true;
 
+  // ability to join source with a filter on a joined source.
+  supportsComplexFilteredSources = true;
+
   // return the definition of a function with the given name
   abstract getGlobalFunctionDef(
     name: string

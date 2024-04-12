@@ -661,8 +661,10 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
   });
 
-  it('joined filtered explores with dependencies', async () => {
-    await expect(`
+  test.when(runtime.dialect.supportsComplexFilteredSources)(
+    'joined filtered explores with dependencies',
+    async () => {
+      await expect(`
       source: bo_models is
         ${databaseName}.table('malloytest.aircraft_models') extend { where: manufacturer ? ~ 'BO%' }
         -> { select: aircraft_model_code, manufacturer, seats }
@@ -691,7 +693,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         -- aggregate: b_models.bo_models.bo_count
       }
     `).malloyResultMatches(runtime, {model_count: 60461, b_count: 355});
-  });
+    }
+  );
 });
 
 describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {

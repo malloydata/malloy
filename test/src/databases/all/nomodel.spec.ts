@@ -905,8 +905,14 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
     `).malloyResultMatches(runtime, {a: 1});
   });
 
+  // have to add an order_by: otherwise it isn't deterministic.
   it(`sql directly - ${databaseName}`, async () => {
-    await expect(`run: ${sql1234}`).malloyResultMatches(runtime, {a: 1});
+    await expect(
+      `run: ${sql1234}->{
+        select: *
+        order_by: a asc
+      }`
+    ).malloyResultMatches(runtime, {a: 1});
   });
 
   it(`sql with turducken- ${databaseName}`, async () => {
@@ -988,6 +994,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
       """) -> {
         extend: {dimension:  c is b + 4}
         select: x is  a * c
+        order_by: x desc
       }
       `).malloyResultMatches(runtime, {x: 30});
   });
