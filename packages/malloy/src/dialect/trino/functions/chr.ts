@@ -24,36 +24,39 @@
 import {
   arg,
   overload,
-  params,
+  param,
   minScalar,
   anyExprType,
-  spread,
   sql,
   DialectFunctionOverloadDef,
 } from '../../functions/util';
 
-export function fnConcat(): DialectFunctionOverloadDef[] {
+export function fnChr(): DialectFunctionOverloadDef[] {
   return [
-    // TODO: in DuckDB and Postgres, nulls are treated like "",
-    // but in BigQuery and Snowflake, nulls propagate and the result becomes null
     overload(
       minScalar('string'),
-      [],
-      [{type: 'dialect', function: 'stringLiteral', literal: ''}]
+      [param('value', anyExprType('number'))],
+      sql`CASE WHEN ${arg('value')} = 0 THEN '' ELSE CHR(${arg('value')}) END`
     ),
+  ];
+}
+
+export function fnAscii(): DialectFunctionOverloadDef[] {
+  return [
     overload(
-      minScalar('string'),
-      [
-        params(
-          'values',
-          anyExprType('string'),
-          anyExprType('number'),
-          anyExprType('date'),
-          anyExprType('timestamp'),
-          anyExprType('boolean')
-        ),
-      ],
-      sql`CONCAT(${spread(arg('values'), 'CAST(', 'AS VARCHAR)')})`
+      minScalar('number'),
+      [param('value', anyExprType('string'))],
+      sql`CODEPOINT(NULLIF(CAST(${arg('value')} as VARCHAR(1)),''))`
+    ),
+  ];
+}
+
+export function fnUnicode(): DialectFunctionOverloadDef[] {
+  return [
+    overload(
+      minScalar('number'),
+      [param('value', anyExprType('string'))],
+      sql`CODEPOINT(NULLIF(CAST(${arg('value')} as VARCHAR(1)),''))`
     ),
   ];
 }

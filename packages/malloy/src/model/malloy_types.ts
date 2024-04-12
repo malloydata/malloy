@@ -256,6 +256,8 @@ export function isSQLExpressionFragment(
 export interface SpreadFragment {
   type: 'spread';
   e: Expr;
+  prefix: string | undefined;
+  suffix: string | undefined;
 }
 
 export function isSpreadFragment(f: Fragment): f is SpreadFragment {
