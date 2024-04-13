@@ -30,26 +30,13 @@ import {
   makeParam,
 } from '../../functions/util';
 
-export function fnStartsWith(): DialectFunctionOverloadDef[] {
+export function fnReverse(): DialectFunctionOverloadDef[] {
   const value = makeParam('value', anyExprType('string'));
-  const prefix = makeParam('prefix', anyExprType('string'));
   return [
     overload(
-      minScalar('boolean'),
-      [value.param, prefix.param],
-      sql`COALESCE(STARTS_WITH(${value.arg}, ${prefix.arg}), false)`
-    ),
-  ];
-}
-
-export function fnEndsWith(): DialectFunctionOverloadDef[] {
-  const value = makeParam('value', anyExprType('string'));
-  const suffix = makeParam('suffix', anyExprType('string'));
-  return [
-    overload(
-      minScalar('boolean'),
-      [value.param, suffix.param],
-      sql`COALESCE(STARTS_WITH(REVERSE(CAST(${value.arg} AS VARCHAR)), REVERSE(CAST(${suffix.arg} AS VARCHAR))), false)`
+      minScalar('string'),
+      [value.param],
+      sql`REVERSE(CAST(${value.arg} AS VARCHAR))`
     ),
   ];
 }

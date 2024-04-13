@@ -32,6 +32,8 @@ import {fnStringAgg, fnStringAggDistinct} from './string_agg';
 import {fnChr, fnAscii, fnUnicode} from './chr';
 import {fnStartsWith, fnEndsWith} from './starts_ends_with';
 import {fnDiv} from './div';
+import {fnRepeat} from './repeat';
+import {fnReverse} from './reverse';
 
 export const TRINO_FUNCTIONS = FUNCTIONS.clone();
 TRINO_FUNCTIONS.add('trunc', fnTrunc);
@@ -48,4 +50,6 @@ TRINO_FUNCTIONS.add('ends_with', fnEndsWith);
 TRINO_FUNCTIONS.add('chr', fnChr);
 TRINO_FUNCTIONS.add('ascii', fnAscii);
 TRINO_FUNCTIONS.add('unicode', fnUnicode);
+TRINO_FUNCTIONS.add('repeat', fnRepeat);
+TRINO_FUNCTIONS.add('reverse', fnReverse);
 TRINO_FUNCTIONS.seal();

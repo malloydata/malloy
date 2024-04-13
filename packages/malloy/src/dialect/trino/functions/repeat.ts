@@ -30,26 +30,14 @@ import {
   makeParam,
 } from '../../functions/util';
 
-export function fnStartsWith(): DialectFunctionOverloadDef[] {
+export function fnRepeat(): DialectFunctionOverloadDef[] {
   const value = makeParam('value', anyExprType('string'));
-  const prefix = makeParam('prefix', anyExprType('string'));
+  const count = makeParam('count', anyExprType('number'));
   return [
     overload(
-      minScalar('boolean'),
-      [value.param, prefix.param],
-      sql`COALESCE(STARTS_WITH(${value.arg}, ${prefix.arg}), false)`
-    ),
-  ];
-}
-
-export function fnEndsWith(): DialectFunctionOverloadDef[] {
-  const value = makeParam('value', anyExprType('string'));
-  const suffix = makeParam('suffix', anyExprType('string'));
-  return [
-    overload(
-      minScalar('boolean'),
-      [value.param, suffix.param],
-      sql`COALESCE(STARTS_WITH(REVERSE(CAST(${value.arg} AS VARCHAR)), REVERSE(CAST(${suffix.arg} AS VARCHAR))), false)`
+      minScalar('string'),
+      [value.param, count.param],
+      sql`ARRAY_JOIN(REPEAT(${value.arg}, CASE WHEN ${value.arg} IS NOT NULL THEN ${count.arg} END),'')`
     ),
   ];
 }
