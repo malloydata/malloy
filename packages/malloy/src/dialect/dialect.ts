@@ -144,6 +144,9 @@ export abstract class Dialect {
   // ability to join source with a filter on a joined source.
   supportsComplexFilteredSources = true;
 
+  // can create temp tables
+  supportsTempTables = true;
+
   // return the definition of a function with the given name
   abstract getGlobalFunctionDef(
     name: string

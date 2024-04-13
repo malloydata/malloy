@@ -22,38 +22,22 @@
  */
 
 import {
-  arg,
   overload,
-  params,
   minScalar,
   anyExprType,
-  spread,
   sql,
   DialectFunctionOverloadDef,
+  makeParam,
 } from '../../functions/util';
 
-export function fnConcat(): DialectFunctionOverloadDef[] {
+export function fnRepeat(): DialectFunctionOverloadDef[] {
+  const value = makeParam('value', anyExprType('string'));
+  const count = makeParam('count', anyExprType('number'));
   return [
-    // TODO: in DuckDB and Postgres, nulls are treated like "",
-    // but in BigQuery and Snowflake, nulls propagate and the result becomes null
     overload(
       minScalar('string'),
-      [],
-      [{type: 'dialect', function: 'stringLiteral', literal: ''}]
-    ),
-    overload(
-      minScalar('string'),
-      [
-        params(
-          'values',
-          anyExprType('string'),
-          anyExprType('number'),
-          anyExprType('date'),
-          anyExprType('timestamp'),
-          anyExprType('boolean')
-        ),
-      ],
-      sql`CONCAT(${spread(arg('values'), 'CAST(', 'AS VARCHAR)')})`
+      [value.param, count.param],
+      sql`ARRAY_JOIN(REPEAT(${value.arg}, CASE WHEN ${value.arg} IS NOT NULL THEN ${count.arg} END),'')`
     ),
   ];
 }

@@ -50,19 +50,16 @@ export function arg(name: string): Fragment {
   };
 }
 
-export function spread(f: Fragment): Fragment {
+export function spread(
+  f: Fragment,
+  prefix: string | undefined = undefined,
+  suffix: string | undefined = undefined
+): Fragment {
   return {
     type: 'spread',
     e: [f],
-  };
-}
-
-// LTABB: this doesn't work, needs to be rewriten in terms of function parameters.
-export function spreadCast(f: Fragment, _destType: string): Fragment {
-  return {
-    type: 'spread',
-    e: [f],
-    // e: ['CAST(', f, `AS ${destType})`],
+    prefix,
+    suffix,
   };
 }
 
