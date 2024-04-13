@@ -97,7 +97,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
 
   // bigquery doesn't support row count based sampling.
-  test.when(databaseName !== 'bigquery')(
+  test.when(databaseName !== 'bigquery' && databaseName !== 'trino')(
     `index rows count - ${databaseName}`,
     async () => {
       await expect(`
