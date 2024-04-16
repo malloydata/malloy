@@ -103,6 +103,14 @@ export class DuckDBDialect extends Dialect {
     return `FIRST(${fieldName}) FILTER (WHERE ${fieldName} IS NOT NULL)`;
   }
 
+  // DuckDB WASM has an issue with returning invalid DecimalBigNum
+  // values unless we explicitly cast to DOUBLE
+  override sqlLiteralNumber(literal: string): string {
+    return literal.includes('.')
+      ? `${literal}::${this.defaultNumberType}`
+      : literal;
+  }
+
   mapFields(fieldList: DialectFieldList): string {
     return fieldList.join(', ');
   }

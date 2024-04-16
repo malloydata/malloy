@@ -90,6 +90,17 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
     );
   });
 
+  it('handles decimal literals', async () => {
+    const query = `
+    run: duckdb.sql("select 1") -> {
+      select:
+          n1 is 1.234
+          n2 is 1234.0 / 1000
+  }
+    `;
+    await expect(query).malloyResultMatches(runtime, {n1: 1.234, n2: 1.234});
+  });
+
   it('can open json files', async () => {
     await expect(`
       run: duckdb.table('test/data/duckdb/test.json') -> {
