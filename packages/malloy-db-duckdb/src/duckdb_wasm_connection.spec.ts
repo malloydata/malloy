@@ -107,7 +107,8 @@ FROM read_parquet("inventory_items2.parquet")
   });
 
   // Test to check that DecimalBigNums are broken.
-  // Remove/update when fixed
+  // Remove/update when fixed, and remove the work-around in
+  // sqlLiteralNumber()
   it('DecimalBigNum is broken', async () => {
     const result = await connection.runSQL('SELECT 1.234 AS n1');
     expect(result).toEqual({'rows': [{'n1': 1234}], 'totalRows': 1});
