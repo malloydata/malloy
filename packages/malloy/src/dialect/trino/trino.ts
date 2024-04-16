@@ -406,12 +406,11 @@ ${indent(sql)}
     if (sqlTime.valueType === 'timestamp') {
       const tz = qtz(qi);
       if (tz) {
-        const civilSource = mkExpr`CAST(${truncThis} AS TIMESTAMP AT TIME ZONE '${tz}')`;
-        let civilTrunc = mkExpr`DATE_TRUNC('${units}', ${civilSource})`;
+        const civilSource = mkExpr`AT_TIMEZONE(${truncThis},'${tz}')`;
+        const civilTrunc = mkExpr`DATE_TRUNC('${units}', ${civilSource})`;
         // MTOY todo ... only need to do this if this is a date ...
-        civilTrunc = mkExpr`CAST(${civilTrunc}, TIMESTAMP)`;
-        const truncTsTz = mkExpr`${civilTrunc} AT TIME ZONE '${tz}'`;
-        return mkExpr`CAST((${truncTsTz}),TIMESTAMP)`;
+        return mkExpr`AT_TIMEZONE(${civilTrunc},'${tz}')`;
+        // return mkExpr`CAST((${truncTsTz}),TIMESTAMP)`;
       }
     }
     let result = mkExpr`DATE_TRUNC('${units}', ${truncThis})`;
@@ -427,7 +426,7 @@ ${indent(sql)}
     if (from.valueType === 'timestamp') {
       const tz = qtz(qi);
       if (tz) {
-        extractFrom = mkExpr`CAST(${extractFrom}, TIMESTAMP AT TIME ZONE '${tz}')`;
+        extractFrom = mkExpr`at_timezone(${extractFrom},'${tz}')`;
       }
     }
     const extracted = mkExpr`EXTRACT(${pgUnits} FROM ${extractFrom})`;
