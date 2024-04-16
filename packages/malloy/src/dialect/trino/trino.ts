@@ -406,7 +406,7 @@ ${indent(sql)}
     if (sqlTime.valueType === 'timestamp') {
       const tz = qtz(qi);
       if (tz) {
-        const civilSource = mkExpr`CAST(${truncThis} AS TIMESTAMPTZ AT TIME ZONE '${tz}')`;
+        const civilSource = mkExpr`CAST(${truncThis} AS TIMESTAMP AT TIME ZONE '${tz}')`;
         let civilTrunc = mkExpr`DATE_TRUNC('${units}', ${civilSource})`;
         // MTOY todo ... only need to do this if this is a date ...
         civilTrunc = mkExpr`CAST(${civilTrunc}, TIMESTAMP)`;
@@ -427,7 +427,7 @@ ${indent(sql)}
     if (from.valueType === 'timestamp') {
       const tz = qtz(qi);
       if (tz) {
-        extractFrom = mkExpr`CAST(${extractFrom}, TIMESTAMPTZ AT TIME ZONE '${tz}')`;
+        extractFrom = mkExpr`CAST(${extractFrom}, TIMESTAMP AT TIME ZONE '${tz}')`;
       }
     }
     const extracted = mkExpr`EXTRACT(${pgUnits} FROM ${extractFrom})`;
@@ -455,13 +455,13 @@ ${indent(sql)}
   }
 
   sqlCast(qi: QueryInfo, cast: TypecastFragment): Expr {
-    const op = `${cast.srcType}::${cast.dstType}`;
+    const op = `${cast.srcType}=>${cast.dstType}`;
     const tz = qtz(qi);
-    if (op === 'timestamp::date' && tz) {
-      const tstz = mkExpr`CAST(${cast.expr} as TIMESTAMPTZ)`;
+    if (op === 'timestamp=>date' && tz) {
+      const tstz = mkExpr`CAST(${cast.expr} as TIMESTAMP)`;
       return mkExpr`CAST((${tstz}) AT TIME ZONE '${tz}' AS DATE)`;
-    } else if (op === 'date::timestamp' && tz) {
-      return mkExpr`CAST(CAST(${cast.expr}), TIMESTAMP AT TIME ZONE '${tz}') AS TIMESTAMP)`;
+    } else if (op === 'date=>timestamp' && tz) {
+      return mkExpr`CAST(CONCAT(CAST(CAST(${cast.expr} AS TIMESTAMP) AS VARCHAR), ' ${tz}') AS TIMESTAMP WITH TIME ZONE)`;
     }
     if (cast.srcType !== cast.dstType) {
       const dstType =
@@ -489,7 +489,7 @@ ${indent(sql)}
     }
     const tz = timezone || qtz(qi);
     if (tz) {
-      return `TIMESTAMPTZ '${timeString} ${tz}'::TIMESTAMP`;
+      return `TIMESTAMP '${timeString} ${tz}'`;
     }
     return `TIMESTAMP '${timeString}'`;
   }
