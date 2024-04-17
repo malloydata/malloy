@@ -4,9 +4,7 @@ on:
   pull_request:
   workflow_call:
     secrets:
-      SNOWFLAKE_USER:
-        required: true
-      SNOWFLAKE_PASSWORD:
+      SNOWFLAKE_CONNECTION:
         required: true
 
 jobs:
@@ -29,13 +27,9 @@ jobs:
         run: |
           npm ci --loglevel error
           npm run build
+          ./scripts/gen-snowflake-auth.sh
           npm run test-silent -- -- test packages/malloy-db-snowflake
         env:
           CI: true
           MALLOY_DATABASES: snowflake
-          SNOWFLAKE_ACCOUNT: pt58362-rx92781
-          SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
-          SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
-          SNOWFLAKE_WAREHOUSE: LOOKER_WH
-          SNOWFLAKE_DATABASE: MALLOYTEST
-          SNOWFLAKE_SCHEMA: PUBLIC
+          SNOWFLAKE_CONNECTION: ${{ secrets.SNOWFLAKE_CONNECTION }}
