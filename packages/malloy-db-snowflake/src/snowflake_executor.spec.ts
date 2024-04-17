@@ -29,7 +29,7 @@ const [describe] = describeIfDatabaseAvailable(['snowflake']);
 
 class SnowflakeExecutorTestSetup {
   private executor_: SnowflakeExecutor;
-  constructor(private executor: SnowflakeExecutor) {
+  constructor(executor: SnowflakeExecutor) {
     this.executor_ = executor;
   }
 
