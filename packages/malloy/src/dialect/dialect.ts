@@ -147,6 +147,8 @@ export abstract class Dialect {
   // can create temp tables
   supportsTempTables = true;
 
+  hasModOperator = true;
+
   // return the definition of a function with the given name
   abstract getGlobalFunctionDef(
     name: string
@@ -308,6 +310,12 @@ export abstract class Dialect {
           return mkExpr`${df.numerator}*1.0/${df.denominator}`;
         }
         return mkExpr`${df.numerator}/${df.denominator}`;
+      }
+      case 'mod': {
+        if (this.hasModOperator) {
+          return mkExpr`${df.numerator}%${df.denominator}`;
+        }
+        return mkExpr`mod(${df.numerator},${df.denominator})`;
       }
       case 'timeLiteral': {
         return [
