@@ -98,7 +98,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 
   it('computes mod correctly', async () => {
     await expect(`
-      run: ${databaseName}.sql("SELECT 10 as ten") -> {select: mod is ten%3}
+      run: ${databaseName}.sql("SELECT 10 as ten") -> {select: mod is 10 % 3}
     `).malloyResultMatches(runtime, {mod: 1});
   });
 
