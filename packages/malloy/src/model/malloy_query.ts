@@ -2336,6 +2336,7 @@ class QueryQuery extends QueryField {
           case 'now':
             break;
           case 'div':
+          case 'mod':
             expressions.push(expr.denominator);
             expressions.push(expr.numerator);
             break;
