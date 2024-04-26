@@ -1226,6 +1226,15 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
       `).malloyResultMatches(runtime, {back});
     });
 
+    test('source with reserve word', async () => {
+      await expect(`
+        source: create is ${databaseName}.table('malloytest.state_facts')
+        run: create -> {
+          aggregate: c is count()
+        }
+      `).malloyResultMatches(runtime, {c: 51});
+    });
+
     test.when(runtime.supportsNesting)('spaces in names', async () => {
       await expect(`
         source: \`space race\` is ${databaseName}.table('malloytest.state_facts') extend {

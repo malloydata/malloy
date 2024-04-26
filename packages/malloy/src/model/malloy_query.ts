@@ -4214,11 +4214,7 @@ class QueryStruct extends QueryNode {
   getIdentifier(): string {
     // if it is the root table, use provided alias if we have one.
     if (this.fieldDef.structRelationship.type === 'basetable') {
-      if (this.fieldDef.as === undefined) {
-        return 'base';
-      } else {
-        return identifierNormalize(super.getIdentifier());
-      }
+      return 'base';
     }
     // if this is an inline object, include the parents alias.
     if (this.fieldDef.structRelationship.type === 'inline' && this.parent) {
