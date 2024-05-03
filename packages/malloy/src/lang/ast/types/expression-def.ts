@@ -22,7 +22,7 @@
  */
 
 import {
-  DivFragment,
+  DivModFragment,
   Expr,
   TimestampUnit,
   isDateUnit,
@@ -514,10 +514,10 @@ export function applyBinary(
   if (oneOf(op, '+', '-')) {
     return delta(fs, left, op, right);
   }
-  if (oneOf(op, '*', '%')) {
+  if (op === '*') {
     return numeric(fs, left, op, right);
   }
-  if (oneOf(op, '/')) {
+  if (oneOf(op, '/', '%')) {
     const num = left.getExpression(fs);
     const denom = right.getExpression(fs);
     const noGo = unsupportError(left, num, right, denom);
@@ -530,13 +530,13 @@ export function applyBinary(
     if (err) return err;
 
     if (num.dataType !== 'number') {
-      left.log('Numerator for division must be a number');
+      left.log('Numerator must be a number');
     } else if (denom.dataType !== 'number') {
-      right.log('Denominator for division must be a number');
+      right.log('Denominator must be a number');
     } else {
-      const div: DivFragment = {
+      const div: DivModFragment = {
         type: 'dialect',
-        function: 'div',
+        function: op === '/' ? 'div' : 'mod',
         numerator: num.value,
         denominator: denom.value,
       };

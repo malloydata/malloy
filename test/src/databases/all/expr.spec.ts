@@ -96,6 +96,12 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
   });
 
+  it('computes mod correctly', async () => {
+    await expect(`
+      run: ${databaseName}.sql("SELECT 10 as ten") -> {select: mod is 10 % 3}
+    `).malloyResultMatches(runtime, {mod: 1});
+  });
+
   // Model based version of sums.
   it('model: expression fixups.', async () => {
     await expect(`
@@ -388,12 +394,12 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     `).malloyResultMatches(expressionModel, {a: 312});
   });
 
-  test.when(!['postgres', 'snowflake'].includes(runtime.connection.name))(
+  test.when(!['postgres'].includes(runtime.connection.name))(
     'sql safe cast',
     async () => {
       await expect(`
       run: ${databaseName}.sql('SELECT 1 as one') -> { select:
-        bad_date is '123':::date
+        bad_date is '12a':::date
         bad_number is 'abc':::number
         good_number is "312":::"integer"
       }

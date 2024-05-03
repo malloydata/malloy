@@ -33,7 +33,7 @@ describe('turducken', () => {
       run: duckdb.sql("""SELECT one as num FROM %{hasone->{select:*}}""")
     `);
     const qsql = await q.getSQL();
-    expect(qsql).toContain(`FROM (${sql}) as hasone`);
+    expect(qsql).toContain(`FROM (${sql}) as base`);
   });
   test('malloy source code not double-wrapped in parens', async () => {
     const sql = 'SELECT 1 as one';
@@ -42,6 +42,6 @@ describe('turducken', () => {
       run: duckdb.sql("""SELECT one as num FROM (%{hasone->{select:*}})""")
     `);
     const qsql = await q.getSQL();
-    expect(qsql).toContain(`FROM (${sql}) as hasone`);
+    expect(qsql).toContain(`FROM (${sql}) as base`);
   });
 });

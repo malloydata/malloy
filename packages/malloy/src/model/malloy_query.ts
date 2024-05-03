@@ -1148,7 +1148,11 @@ class QueryField extends QueryNode {
       state
     );
 
-    return `${funcSQL} OVER(${partitionBy} ${orderBy} ${between})`;
+    let retExpr = `${funcSQL} OVER(${partitionBy} ${orderBy} ${between})`;
+    if (isComplex) {
+      retExpr = `CASE WHEN group_set=${resultStruct.groupSet} THEN ${retExpr} END`;
+    }
+    return retExpr;
   }
 
   generateExpressionFromExpr(
@@ -2336,6 +2340,7 @@ class QueryQuery extends QueryField {
           case 'now':
             break;
           case 'div':
+          case 'mod':
             expressions.push(expr.denominator);
             expressions.push(expr.numerator);
             break;
@@ -4213,11 +4218,7 @@ class QueryStruct extends QueryNode {
   getIdentifier(): string {
     // if it is the root table, use provided alias if we have one.
     if (this.fieldDef.structRelationship.type === 'basetable') {
-      if (this.fieldDef.as === undefined) {
-        return 'base';
-      } else {
-        return identifierNormalize(super.getIdentifier());
-      }
+      return 'base';
     }
     // if this is an inline object, include the parents alias.
     if (this.fieldDef.structRelationship.type === 'inline' && this.parent) {
