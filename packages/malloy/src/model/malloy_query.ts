@@ -1148,7 +1148,11 @@ class QueryField extends QueryNode {
       state
     );
 
-    return `${funcSQL} OVER(${partitionBy} ${orderBy} ${between})`;
+    let retExpr = `${funcSQL} OVER(${partitionBy} ${orderBy} ${between})`;
+    if (isComplex) {
+      retExpr = `CASE WHEN group_set=${resultStruct.groupSet} THEN ${retExpr} END`;
+    }
+    return retExpr;
   }
 
   generateExpressionFromExpr(
