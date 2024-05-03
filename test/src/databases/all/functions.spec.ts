@@ -430,6 +430,33 @@ expressionModels.forEach((expressionModel, databaseName) => {
       expect(result.data.path(2, 'neg_r').value).toBe(-3);
       expect(result.data.path(3, 'neg_r').value).toBe(-3);
     });
+
+    it(`properly isolated nested calculations - ${databaseName}`, async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `run: ${databaseName}.table('malloytest.airports') -> {
+            group_by: faa_region
+            aggregate: airport_count is count()
+            calculate: id is row_number()
+            nest: by_fac_type is {
+              group_by: fac_type
+              aggregate: airport_count is count()
+              calculate: id2 is row_number()
+              nest: elevation is {
+                aggregate: avg_elevation is elevation.avg()
+              }
+              limit: 2
+            }
+          }
+          -> {
+            // should be 2 rows, max of 2
+            group_by: by_fac_type.id2
+            order_by: id2 desc
+          }`
+        )
+        .run();
+      expect(result.data.path(0, 'id2').value).toBe(2);
+    });
   });
 
   describe('lag', () => {
