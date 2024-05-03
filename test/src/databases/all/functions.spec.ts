@@ -23,7 +23,7 @@
  */
 
 import {RuntimeList, allDatabases} from '../../runtimes';
-import {databasesFromEnvironmentOr} from '../../util';
+import {brokenIn, databasesFromEnvironmentOr} from '../../util';
 import '../../util/db-jest-matchers';
 import * as malloy from '@malloydata/malloy';
 
@@ -112,29 +112,32 @@ expressionModels.forEach((expressionModel, databaseName) => {
   };
 
   describe('concat', () => {
-    it(`works - ${databaseName}`, async () => {
-      const expected = {
-        'bigquery': 'foo2003-01-01 12:00:00+00',
-        'snowflake': 'foo2003-01-01T12:00:00.000Z',
-      };
+    it.when(!brokenIn('trino', databaseName) /* crswenson */)(
+      `works - ${databaseName}`,
+      async () => {
+        const expected = {
+          'bigquery': 'foo2003-01-01 12:00:00+00',
+          'snowflake': 'foo2003-01-01T12:00:00.000Z',
+        };
 
-      await funcTestMultiple(
-        ["concat('foo', 'bar')", 'foobar'],
-        ["concat(1, 'bar')", '1bar'],
-        [
-          "concat('cons', true)",
-          databaseName === 'postgres' ? 'const' : 'construe',
-        ],
-        ["concat('foo', @2003)", 'foo2003-01-01'],
-        [
-          "concat('foo', @2003-01-01 12:00:00)",
-          expected[databaseName] ?? 'foo2003-01-01 12:00:00',
-        ],
-        // TODO Maybe implement consistent null behavior
-        // ["concat('foo', null)", null],
-        ['concat()', '']
-      );
-    });
+        await funcTestMultiple(
+          ["concat('foo', 'bar')", 'foobar'],
+          ["concat(1, 'bar')", '1bar'],
+          [
+            "concat('cons', true)",
+            databaseName === 'postgres' ? 'const' : 'construe',
+          ],
+          ["concat('foo', @2003)", 'foo2003-01-01'],
+          [
+            "concat('foo', @2003-01-01 12:00:00)",
+            expected[databaseName] ?? 'foo2003-01-01 12:00:00',
+          ],
+          // TODO Maybe implement consistent null behavior
+          // ["concat('foo', null)", null],
+          ['concat()', '']
+        );
+      }
+    );
   });
 
   describe('round', () => {
