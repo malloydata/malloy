@@ -66,3 +66,7 @@ export function describeIfDatabaseAvailable(
 
   return overlap.length > 0 ? [describe, overlap] : [describeSkip, overlap];
 }
+
+export function brokenIn(dialectName: string, connectionName: string): boolean {
+  return dialectName === connectionName;
+}
