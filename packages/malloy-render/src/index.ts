@@ -23,5 +23,6 @@
 
 export {HTMLView, JSONView} from './html/html_view';
 export * from './data_styles';
+export type {MalloyRenderProps} from './component/render';
 // Needed for test only.
 export {getDrillQuery} from './drill';
