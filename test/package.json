@@ -24,6 +24,7 @@
     "@malloydata/db-bigquery": "^0.0.146",
     "@malloydata/db-duckdb": "^0.0.146",
     "@malloydata/db-postgres": "^0.0.146",
+    "@malloydata/db-redshift": "^0.0.146",
     "@malloydata/db-snowflake": "^0.0.146",
     "@malloydata/db-trino": "^0.0.146",
     "@malloydata/malloy": "^0.0.146",

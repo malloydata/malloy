@@ -21,29 +21,24 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export type {DialectFunctionOverloadDef} from './functions/util';
-export {
-  arg,
-  anyExprType,
-  makeParam,
+import {
   overload,
-  minScalar,
   minAggregate,
   maxScalar,
-  spread,
-  sqlFragment,
-  param,
-  params,
-  literal,
   sql,
-} from './functions/util';
-export {Dialect, qtz} from './dialect';
-export type {DialectFieldList, QueryInfo} from './dialect';
-export {StandardSQLDialect} from './standardsql';
-export {PostgresDialect} from './postgres';
-export {DuckDBDialect} from './duckdb';
-export {RedshiftDialect} from './redshift';
-export {SnowflakeDialect} from './snowflake';
-export {TrinoDialect} from './trino';
-export {getDialect, registerDialect, getDialectFunction} from './dialect_map';
-export {FUNCTIONS} from './functions';
+  DialectFunctionOverloadDef,
+  makeParam,
+} from '../../functions/util';
+
+export function fnStddev(): DialectFunctionOverloadDef[] {
+  const value = makeParam('value', maxScalar('number'));
+  return [
+    overload(
+      minAggregate('number'),
+      [value.param],
+      // TODO this is a bit of a hack in order to make the arrayAggUnnest work for Redshift,
+      // as we don't currently have a good way of doing this while preserving types
+      sql`STDDEV(${value.arg}::DOUBLE PRECISION)`
+    ),
+  ];
+}

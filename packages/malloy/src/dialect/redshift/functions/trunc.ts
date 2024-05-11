@@ -21,29 +21,32 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export type {DialectFunctionOverloadDef} from './functions/util';
-export {
-  arg,
-  anyExprType,
-  makeParam,
+import {
   overload,
   minScalar,
-  minAggregate,
-  maxScalar,
-  spread,
-  sqlFragment,
-  param,
-  params,
-  literal,
+  anyExprType,
   sql,
-} from './functions/util';
-export {Dialect, qtz} from './dialect';
-export type {DialectFieldList, QueryInfo} from './dialect';
-export {StandardSQLDialect} from './standardsql';
-export {PostgresDialect} from './postgres';
-export {DuckDBDialect} from './duckdb';
-export {RedshiftDialect} from './redshift';
-export {SnowflakeDialect} from './snowflake';
-export {TrinoDialect} from './trino';
-export {getDialect, registerDialect, getDialectFunction} from './dialect_map';
-export {FUNCTIONS} from './functions';
+  DialectFunctionOverloadDef,
+  makeParam,
+} from '../../functions/util';
+
+export function fnTrunc(): DialectFunctionOverloadDef[] {
+  const value = makeParam('value', anyExprType('number'));
+  const precision = makeParam('precision', anyExprType('number'));
+  // Redshift doesn't let you TRUNC a FLOAT with a precision, so we cast to NUMERIC first
+  // Also, TRUNC(NULL) doesn't compile because PG doesn't know the type of NULL, so we cast to
+  // NUMERIC there too...
+  // TODO Maybe there's a way we don't have to cast to NUMERIC.
+  return [
+    overload(
+      minScalar('number'),
+      [value.param],
+      sql`TRUNC(${value.arg}::NUMERIC)`
+    ),
+    overload(
+      minScalar('number'),
+      [value.param, precision.param],
+      sql`TRUNC((${value.arg}::NUMERIC), ${precision.arg})`
+    ),
+  ];
+}

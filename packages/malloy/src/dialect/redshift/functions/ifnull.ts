@@ -21,29 +21,32 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export type {DialectFunctionOverloadDef} from './functions/util';
-export {
+import {ExpressionValueType} from '../../../model/malloy_types';
+import {
   arg,
-  anyExprType,
-  makeParam,
   overload,
-  minScalar,
-  minAggregate,
-  maxScalar,
-  spread,
-  sqlFragment,
   param,
-  params,
-  literal,
+  minScalar,
   sql,
-} from './functions/util';
-export {Dialect, qtz} from './dialect';
-export type {DialectFieldList, QueryInfo} from './dialect';
-export {StandardSQLDialect} from './standardsql';
-export {PostgresDialect} from './postgres';
-export {DuckDBDialect} from './duckdb';
-export {RedshiftDialect} from './redshift';
-export {SnowflakeDialect} from './snowflake';
-export {TrinoDialect} from './trino';
-export {getDialect, registerDialect, getDialectFunction} from './dialect_map';
-export {FUNCTIONS} from './functions';
+  DialectFunctionOverloadDef,
+  anyExprType,
+} from '../../functions/util';
+
+const types: ExpressionValueType[] = [
+  'string',
+  'number',
+  'timestamp',
+  'date',
+  'json',
+];
+
+export function fnIfnull(): DialectFunctionOverloadDef[] {
+  return types.map(type =>
+    overload(
+      minScalar(type),
+      [param('value', anyExprType(type)), param('default', anyExprType(type))],
+      // Redshift doesn't have an IFNULL function, so we use COALESCE, which is equivalent.
+      sql`COALESCE(${arg('value')}, ${arg('default')})`
+    )
+  );
+}

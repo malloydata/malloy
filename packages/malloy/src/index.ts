@@ -24,6 +24,7 @@ export {
   DuckDBDialect,
   StandardSQLDialect,
   PostgresDialect,
+  RedshiftDialect,
   SnowflakeDialect,
   registerDialect,
   arg,

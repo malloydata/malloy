@@ -24,6 +24,7 @@
 import {DuckDBDialect} from './duckdb';
 import {Dialect} from './dialect';
 import {PostgresDialect} from './postgres';
+import {RedshiftDialect} from './redshift';
 import {SnowflakeDialect} from './snowflake';
 import {StandardSQLDialect} from './standardsql';
 import {TrinoDialect} from './trino';
@@ -47,6 +48,7 @@ export function registerDialect(d: Dialect): void {
 registerDialect(new PostgresDialect());
 registerDialect(new StandardSQLDialect());
 registerDialect(new DuckDBDialect());
+registerDialect(new RedshiftDialect());
 registerDialect(new SnowflakeDialect());
 registerDialect(new TrinoDialect());
 

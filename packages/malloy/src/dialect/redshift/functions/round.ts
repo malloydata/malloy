@@ -21,29 +21,31 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export type {DialectFunctionOverloadDef} from './functions/util';
-export {
-  arg,
-  anyExprType,
-  makeParam,
+import {
   overload,
   minScalar,
-  minAggregate,
-  maxScalar,
-  spread,
-  sqlFragment,
-  param,
-  params,
-  literal,
+  anyExprType,
   sql,
-} from './functions/util';
-export {Dialect, qtz} from './dialect';
-export type {DialectFieldList, QueryInfo} from './dialect';
-export {StandardSQLDialect} from './standardsql';
-export {PostgresDialect} from './postgres';
-export {DuckDBDialect} from './duckdb';
-export {RedshiftDialect} from './redshift';
-export {SnowflakeDialect} from './snowflake';
-export {TrinoDialect} from './trino';
-export {getDialect, registerDialect, getDialectFunction} from './dialect_map';
-export {FUNCTIONS} from './functions';
+  DialectFunctionOverloadDef,
+  makeParam,
+} from '../../functions/util';
+
+export function fnRound(): DialectFunctionOverloadDef[] {
+  const value = makeParam('value', anyExprType('number'));
+  const precision = makeParam('precision', anyExprType('number'));
+  return [
+    overload(
+      minScalar('number'),
+      [value.param],
+      sql`ROUND((${value.arg})::NUMERIC)`
+    ),
+    // Redshift doesn't let you ROUND a FLOAT to a particular number of decimal places,
+    // so we cast to NUMERIC first...
+    // TODO it would be nice not to have to do this cast if it was already NUMERIC type...
+    overload(
+      minScalar('number'),
+      [value.param, precision.param],
+      sql`ROUND((${value.arg})::NUMERIC, ${precision.arg})`
+    ),
+  ];
+}

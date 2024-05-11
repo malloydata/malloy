@@ -21,29 +21,46 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export type {DialectFunctionOverloadDef} from './functions/util';
-export {
+import {ExpressionValueType} from '../../../model/malloy_types';
+import {
   arg,
-  anyExprType,
-  makeParam,
   overload,
-  minScalar,
-  minAggregate,
-  maxScalar,
-  spread,
-  sqlFragment,
-  param,
   params,
-  literal,
-  sql,
-} from './functions/util';
-export {Dialect, qtz} from './dialect';
-export type {DialectFieldList, QueryInfo} from './dialect';
-export {StandardSQLDialect} from './standardsql';
-export {PostgresDialect} from './postgres';
-export {DuckDBDialect} from './duckdb';
-export {RedshiftDialect} from './redshift';
-export {SnowflakeDialect} from './snowflake';
-export {TrinoDialect} from './trino';
-export {getDialect, registerDialect, getDialectFunction} from './dialect_map';
-export {FUNCTIONS} from './functions';
+  minScalar,
+  anyExprType,
+  sqlFragment,
+  DialectFunctionOverloadDef,
+  spread,
+} from '../../functions/util';
+
+const types: ExpressionValueType[] = [
+  'string',
+  'number',
+  'timestamp',
+  'date',
+  'json',
+];
+
+function greatestOrLeast(
+  fn: 'GREATEST' | 'LEAST'
+): DialectFunctionOverloadDef[] {
+  return types.map(type =>
+    overload(
+      minScalar(type),
+      [params('values', anyExprType(type))],
+      // We match BigQuery null behavior here -- if any argument is null, return null
+      [
+        sqlFragment(
+          'CASE WHEN NUM_NULLS(',
+          spread(arg('values')),
+          `) > 0 THEN NULL ELSE ${fn}(`,
+          spread(arg('values')),
+          ') END'
+        ),
+      ]
+    )
+  );
+}
+
+export const fnGreatest = () => greatestOrLeast('GREATEST');
+export const fnLeast = () => greatestOrLeast('LEAST');

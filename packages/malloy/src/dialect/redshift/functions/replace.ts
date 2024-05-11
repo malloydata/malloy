@@ -21,29 +21,31 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export type {DialectFunctionOverloadDef} from './functions/util';
-export {
-  arg,
-  anyExprType,
-  makeParam,
+import {
   overload,
   minScalar,
-  minAggregate,
-  maxScalar,
-  spread,
-  sqlFragment,
-  param,
-  params,
-  literal,
+  anyExprType,
   sql,
-} from './functions/util';
-export {Dialect, qtz} from './dialect';
-export type {DialectFieldList, QueryInfo} from './dialect';
-export {StandardSQLDialect} from './standardsql';
-export {PostgresDialect} from './postgres';
-export {DuckDBDialect} from './duckdb';
-export {RedshiftDialect} from './redshift';
-export {SnowflakeDialect} from './snowflake';
-export {TrinoDialect} from './trino';
-export {getDialect, registerDialect, getDialectFunction} from './dialect_map';
-export {FUNCTIONS} from './functions';
+  DialectFunctionOverloadDef,
+  makeParam,
+} from '../../functions/util';
+
+export function fnReplace(): DialectFunctionOverloadDef[] {
+  const value = makeParam('value', anyExprType('string'));
+  const stringPattern = makeParam('pattern', anyExprType('string'));
+  const regexPattern = makeParam('pattern', anyExprType('regular expression'));
+  const replacement = makeParam('replacement', anyExprType('string'));
+  return [
+    overload(
+      minScalar('string'),
+      [value.param, stringPattern.param, replacement.param],
+      sql`REPLACE(${value.arg}, ${stringPattern.arg}, ${replacement.arg})`
+    ),
+    overload(
+      minScalar('string'),
+      [value.param, regexPattern.param, replacement.param],
+      // In Redshift we need to specifically say that it's a global replacement.
+      sql`REGEXP_REPLACE(${value.arg}, ${regexPattern.arg}, ${replacement.arg}, 'g')`
+    ),
+  ];
+}

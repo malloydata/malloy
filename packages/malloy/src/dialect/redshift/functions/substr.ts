@@ -21,29 +21,30 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export type {DialectFunctionOverloadDef} from './functions/util';
-export {
-  arg,
-  anyExprType,
-  makeParam,
+import {
   overload,
   minScalar,
-  minAggregate,
-  maxScalar,
-  spread,
-  sqlFragment,
-  param,
-  params,
-  literal,
+  anyExprType,
   sql,
-} from './functions/util';
-export {Dialect, qtz} from './dialect';
-export type {DialectFieldList, QueryInfo} from './dialect';
-export {StandardSQLDialect} from './standardsql';
-export {PostgresDialect} from './postgres';
-export {DuckDBDialect} from './duckdb';
-export {RedshiftDialect} from './redshift';
-export {SnowflakeDialect} from './snowflake';
-export {TrinoDialect} from './trino';
-export {getDialect, registerDialect, getDialectFunction} from './dialect_map';
-export {FUNCTIONS} from './functions';
+  DialectFunctionOverloadDef,
+  makeParam,
+} from '../../functions/util';
+
+export function fnSubstr(): DialectFunctionOverloadDef[] {
+  const value = makeParam('value', anyExprType('string'));
+  const position = makeParam('position', anyExprType('number'));
+  const length = makeParam('length', anyExprType('number'));
+  return [
+    // We do some fancy footwork here to make Redshift support negative indexing for the position parameter
+    overload(
+      minScalar('string'),
+      [value.param, position.param],
+      sql`SUBSTRING(${value.arg}, CASE WHEN ${position.arg} < 0 THEN LENGTH(${value.arg}) + ${position.arg} + 1 ELSE ${position.arg} END)`
+    ),
+    overload(
+      minScalar('string'),
+      [value.param, position.param, length.param],
+      sql`SUBSTRING(${value.arg}, CASE WHEN ${position.arg} < 0 THEN LENGTH(${value.arg}) + ${position.arg} + 1 ELSE ${position.arg} END, ${length.arg})`
+    ),
+  ];
+}

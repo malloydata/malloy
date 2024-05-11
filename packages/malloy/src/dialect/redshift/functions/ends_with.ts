@@ -21,29 +21,25 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export type {DialectFunctionOverloadDef} from './functions/util';
-export {
-  arg,
-  anyExprType,
-  makeParam,
+import {
   overload,
   minScalar,
-  minAggregate,
-  maxScalar,
-  spread,
-  sqlFragment,
-  param,
-  params,
-  literal,
+  anyExprType,
   sql,
-} from './functions/util';
-export {Dialect, qtz} from './dialect';
-export type {DialectFieldList, QueryInfo} from './dialect';
-export {StandardSQLDialect} from './standardsql';
-export {PostgresDialect} from './postgres';
-export {DuckDBDialect} from './duckdb';
-export {RedshiftDialect} from './redshift';
-export {SnowflakeDialect} from './snowflake';
-export {TrinoDialect} from './trino';
-export {getDialect, registerDialect, getDialectFunction} from './dialect_map';
-export {FUNCTIONS} from './functions';
+  DialectFunctionOverloadDef,
+  makeParam,
+} from '../../functions/util';
+
+export function fnEndsWith(): DialectFunctionOverloadDef[] {
+  const value = makeParam('value', anyExprType('string'));
+  const suffix = makeParam('suffix', anyExprType('string'));
+  return [
+    overload(
+      minScalar('boolean'),
+      [value.param, suffix.param],
+      // There's no ENDS_WITH function in Redshift, so we do a hacky check that the last
+      // N characters, where N is the length of the suffix, are equal to the suffix.
+      sql`COALESCE(RIGHT(${value.arg}, LENGTH(${suffix.arg})) = ${suffix.arg}, false)`
+    ),
+  ];
+}
