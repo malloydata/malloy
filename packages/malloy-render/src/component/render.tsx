@@ -6,6 +6,7 @@ import {Chart} from './chart';
 import MalloyTable from './table/table';
 import './render.css';
 import {shouldRenderAs} from './util';
+import {ComponentOptions, ICustomElement} from 'component-register';
 
 export type MalloyRenderProps = {
   result?: Result;
@@ -15,7 +16,7 @@ export type MalloyRenderProps = {
 
 export function MalloyRender(
   props: MalloyRenderProps,
-  {element}: {element: HTMLElement}
+  {element}: ComponentOptions
 ) {
   const result = createMemo(() => {
     if (props.result) return props.result;
@@ -33,7 +34,7 @@ export function MalloyRender(
 
 export function MalloyRenderInner(props: {
   result: Result;
-  element: HTMLElement;
+  element: ICustomElement;
 }) {
   const metadata = createMemo(() => getResultMetadata(props.result));
   const tags = () => {
@@ -53,7 +54,7 @@ export function MalloyRenderInner(props: {
     if (props.element) {
       const style = generateThemeStyle(tags().modelTheme, tags().localTheme);
       for (const [key, value] of Object.entries(style)) {
-        props.element.style.setProperty(key, value);
+        props.element['style'].setProperty(key, value);
       }
     }
   });
