@@ -64,7 +64,7 @@ export class ExprProps extends ExpressionDef {
           testList.find(cond => expressionIsCalculation(cond.expressionType))
         ) {
           where.log(
-            'Cannot filter an expresion with an aggregate or analytical computation'
+            'Cannot filter an expression with an aggregate or analytical computation'
           );
           return expr;
         }
