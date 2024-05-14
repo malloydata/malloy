@@ -1,11 +1,12 @@
 import {ModelDef, QueryResult, Result, Tag} from '@malloydata/malloy';
-import {Match, Switch, createEffect, createMemo} from 'solid-js';
+import {Match, Show, Switch, createEffect, createMemo} from 'solid-js';
 import {getResultMetadata} from './render-result-metadata';
 import {ResultContext} from './result-context';
 import {Chart} from './chart';
 import MalloyTable from './table/table';
 import './render.css';
 import {shouldRenderAs} from './util';
+import {ComponentOptions, ICustomElement} from 'component-register';
 
 export type MalloyRenderProps = {
   result?: Result;
@@ -13,21 +14,32 @@ export type MalloyRenderProps = {
   modelDef?: ModelDef;
 };
 
-export function MalloyRender(props: MalloyRenderProps, {element}) {
+export function MalloyRender(
+  props: MalloyRenderProps,
+  {element}: ComponentOptions
+) {
   const result = createMemo(() => {
     if (props.result) return props.result;
     else if (props.queryResult && props.modelDef)
       return new Result(props.queryResult, props.modelDef);
-    else
-      throw Error(
-        'MalloyRender: Must provide either a result or a queryResult and modelDef.'
-      );
+    else return null;
   });
 
-  const metadata = createMemo(() => getResultMetadata(result()));
+  return (
+    <Show when={result()}>
+      <MalloyRenderInner result={result()!} element={element} />
+    </Show>
+  );
+}
+
+export function MalloyRenderInner(props: {
+  result: Result;
+  element: ICustomElement;
+}) {
+  const metadata = createMemo(() => getResultMetadata(props.result));
   const tags = () => {
-    const modelTag = result().modelTag;
-    const resultTag = result().tagParse().tag;
+    const modelTag = props.result.modelTag;
+    const resultTag = props.result.tagParse().tag;
     const modelTheme = modelTag.tag('theme');
     const localTheme = resultTag.tag('theme');
     return {
@@ -39,27 +51,27 @@ export function MalloyRender(props: MalloyRenderProps, {element}) {
   };
 
   createEffect(() => {
-    if (element) {
+    if (props.element) {
       const style = generateThemeStyle(tags().modelTheme, tags().localTheme);
       for (const [key, value] of Object.entries(style)) {
-        element.style.setProperty(key, value);
+        props.element['style'].setProperty(key, value);
       }
     }
   });
 
   const renderAs = () => {
     const tag = tags().resultTag;
-    const rootField = result().resultExplore;
+    const rootField = props.result.resultExplore;
     return shouldRenderAs(rootField, tag);
   };
 
   return (
     <ResultContext.Provider value={metadata()}>
-      <Switch fallback={<MalloyTable data={result().data} />}>
+      <Switch fallback={<MalloyTable data={props.result.data} />}>
         <Match when={renderAs() === 'chart'}>
           <Chart
-            field={result().resultExplore}
-            data={metadata().getData(result().data)}
+            field={props.result.resultExplore}
+            data={metadata().getData(props.result.data)}
             metadata={metadata()}
           />
         </Match>
@@ -85,7 +97,7 @@ function getThemeValue(prop: string, ...themes: Array<Tag | undefined>) {
 }
 
 function generateThemeStyle(modelTheme?: Tag, localTheme?: Tag) {
-  const style = {};
+  const style: Record<string, string> = {};
 
   const tableRowHeight = getThemeValue(
     'tableRowHeight',
