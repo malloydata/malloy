@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@jest/globals": "^29.4.3",
+    "@malloydata/db-athena": "^0.0.146",
     "@malloydata/db-bigquery": "^0.0.146",
     "@malloydata/db-duckdb": "^0.0.146",
     "@malloydata/db-postgres": "^0.0.146",

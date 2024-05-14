@@ -7,6 +7,7 @@
     "packages": [
       "packages/malloy-interfaces",
       "packages/malloy",
+      "packages/malloy-db-athena",
       "packages/malloy-db-bigquery",
       "packages/malloy-db-trino",
       "packages/malloy-db-duckdb",
