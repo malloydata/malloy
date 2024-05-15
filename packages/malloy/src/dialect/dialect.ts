@@ -26,7 +26,6 @@ import {
   Expr,
   ExtractUnit,
   Sampling,
-  StructDef,
   TimeFieldType,
   TimeValue,
   TimestampUnit,
@@ -36,13 +35,27 @@ import {
 } from '../model/malloy_types';
 import {DialectFunctionOverloadDef} from './functions';
 
+type DialectFieldTypes = string | 'struct';
+
 interface DialectField {
-  type: string;
+  type: DialectFieldTypes;
   sqlExpression: string;
   rawName: string;
   sqlOutputName: string;
 }
 
+export interface DialectFieldTypeStruct extends DialectField {
+  type: 'struct';
+  nestedStruct: DialectFieldList;
+  isArray: boolean;
+}
+
+export function isDialectFieldStruct(
+  d: DialectField
+): d is DialectFieldTypeStruct {
+  return d.type === 'struct';
+}
+export type DialectFieldList = DialectField[];
 /**
  * Data which dialect methods need in order to correctly generate SQL.
  * Initially this is just timezone related, but I made this an interface
@@ -83,7 +96,7 @@ export function qtz(qi: QueryInfo): string | undefined {
   return tz;
 }
 
-export type DialectFieldList = DialectField[];
+export type OrderByClauseType = 'output_name' | 'ordinal';
 
 export abstract class Dialect {
   abstract name: string;
@@ -119,6 +132,23 @@ export abstract class Dialect {
 
   // can read some version of ga_sample
   readsNestedData = true;
+
+  // ORDER BY 1 DESC
+  orderByClause: OrderByClauseType = 'ordinal';
+
+  // null will match in a function signature
+  nullMatchesFunctionSignature = true;
+
+  // support select * replace(...)
+  supportsSelectReplace = true;
+
+  // ability to join source with a filter on a joined source.
+  supportsComplexFilteredSources = true;
+
+  // can create temp tables
+  supportsTempTables = true;
+
+  hasModOperator = true;
 
   // return the definition of a function with the given name
   abstract getGlobalFunctionDef(
@@ -188,13 +218,13 @@ export abstract class Dialect {
 
   abstract sqlCreateFunctionCombineLastStage(
     lastStageName: string,
-    structDef: StructDef
+    fieldList: DialectFieldList
   ): string;
   abstract sqlCreateTableAsSelect(tableName: string, sql: string): string;
 
   abstract sqlSelectAliasAsStruct(
     alias: string,
-    physicalFieldNames: string[]
+    fieldList: DialectFieldList
   ): string;
 
   sqlFinalStage(_lastStageName: string, _fields: string[]): string {
@@ -282,6 +312,12 @@ export abstract class Dialect {
         }
         return mkExpr`${df.numerator}/${df.denominator}`;
       }
+      case 'mod': {
+        if (this.hasModOperator) {
+          return mkExpr`${df.numerator}%${df.denominator}`;
+        }
+        return mkExpr`mod(${df.numerator},${df.denominator})`;
+      }
       case 'timeLiteral': {
         return [
           this.sqlLiteralTime(qi, df.literal, df.literalType, df.timezone),
@@ -326,6 +362,28 @@ export abstract class Dialect {
 
   sqlTzStr(qi: QueryInfo): string {
     return `"${qi.queryTimezone}"`;
+  }
+
+  sqlMakeUnnestKey(key: string, rowKey: string) {
+    return this.concat(key, "'x'", rowKey);
+  }
+
+  // default implementation
+  sqlStringAggDistinct(
+    distinctKey: string,
+    valueSQL: string,
+    separatorSQL: string
+  ) {
+    const keyStart = '__STRING_AGG_KS__';
+    const keyEnd = '__STRING_AGG_KE__';
+    const distinctValueSQL = `concat('${keyStart}', ${distinctKey}, '${keyEnd}', ${valueSQL})`;
+    return `REGEXP_REPLACE(
+      STRING_AGG(DISTINCT ${distinctValueSQL}${
+        separatorSQL.length > 0 ? ',' + separatorSQL : ''
+      }),
+      '${keyStart}.*?${keyEnd}',
+      ''
+    )`;
   }
 
   abstract sqlTypeToMalloyType(sqlType: string): FieldAtomicTypeDef | undefined;

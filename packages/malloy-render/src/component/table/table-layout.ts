@@ -22,13 +22,10 @@
  */
 
 import {Field} from '@malloydata/malloy';
-import {
-  FieldRenderMetadata,
-  RenderResultMetadata,
-} from './render-result-metadata';
-import {clamp, getFieldKey, getTextWidth} from './util';
-import {renderNumericField} from './render-numeric-field';
-import {ChartSettings, getChartSettings} from './chart-settings';
+import {clamp, getFieldKey, getTextWidth} from '../util';
+import {renderNumericField} from '../render-numeric-field';
+import {hasAny} from '../tag-utils';
+import {FieldRenderMetadata, RenderResultMetadata} from '../types';
 
 const MIN_COLUMN_WIDTH = 32;
 const MAX_COLUMN_WIDTH = 384;
@@ -40,7 +37,6 @@ type LayoutEntry = {
   metadata: FieldRenderMetadata;
   width: number;
   height: number | null;
-  chartSettings: ChartSettings | null;
 };
 
 export type TableLayout = Record<string, LayoutEntry>;
@@ -52,17 +48,15 @@ export function getTableLayout(metadata: RenderResultMetadata): TableLayout {
     const field = fieldMeta.field;
     const layoutEntry: LayoutEntry = {
       metadata: fieldMeta,
-      width: getColumnWidth(field, metadata),
+      width: !field.isExplore() ? getColumnWidth(field, metadata) : 0,
       height: null,
-      chartSettings: null,
     };
 
     const {tag} = field.tagParse();
-    if (tag.has('bar') && field.isExploreField()) {
-      layoutEntry.chartSettings = getChartSettings(field, metadata);
-      layoutEntry.width = layoutEntry.chartSettings.totalWidth;
-      layoutEntry.height = layoutEntry.chartSettings.totalHeight;
-    } else if (field.isAtomicField()) {
+    if (hasAny(tag, 'bar', 'bar_chart') && field.isExploreField()) {
+      layoutEntry.width = fieldMeta.vegaChartProps!.totalWidth;
+      layoutEntry.height = fieldMeta.vegaChartProps!.totalHeight;
+    } else if (!field.isExplore() && field.isAtomicField()) {
       layoutEntry.height = ROW_HEIGHT;
     }
 

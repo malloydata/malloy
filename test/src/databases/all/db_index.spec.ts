@@ -22,10 +22,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-
 import {RuntimeList, allDatabases} from '../../runtimes';
-import {databasesFromEnvironmentOr, onlyIf} from '../../util';
+import {databasesFromEnvironmentOr} from '../../util';
 import '../../util/db-jest-matchers';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
@@ -36,35 +34,38 @@ afterAll(async () => {
 });
 
 runtimes.runtimeMap.forEach((runtime, databaseName) => {
-  it(`basic index  - ${databaseName}`, async () => {
-    const model = await runtime.loadModel(
-      `
+  test.when(runtime.dialect.supportsTempTables)(
+    `basic index  - ${databaseName}`,
+    async () => {
+      const model = await runtime.loadModel(
+        `
         source: airports is ${databaseName}.table('malloytest.airports') extend {
         }
     `
-    );
-    let result = await model.search('airports', 'SANTA', 10);
+      );
+      let result = await model.search('airports', 'SANTA', 10);
 
-    // if (result !== undefined) {
-    //   console.log(result);
-    // } else {
-    //   console.log("no result");
-    // }
-    expect(result).toBeDefined();
-    if (result !== undefined) {
-      expect(result[0].fieldName).toBe('county');
-      expect(result[0].fieldValue).toBe('SANTA ROSA');
-      expect(result[0].weight).toBe(26);
-      expect(result.length).toBe(10);
-    }
+      // if (result !== undefined) {
+      //   console.log(result);
+      // } else {
+      //   console.log("no result");
+      // }
+      expect(result).toBeDefined();
+      if (result !== undefined) {
+        expect(result[0].fieldName).toBe('county');
+        expect(result[0].fieldValue).toBe('SANTA ROSA');
+        expect(result[0].weight).toBe(26);
+        expect(result.length).toBe(10);
+      }
 
-    result = await model.search('airports', 'SANTA A', 100, 'city');
-    if (result !== undefined) {
-      // console.log(result);
-      expect(result[0].fieldName).toBe('city');
-      expect(result[0].fieldValue).toBe('SANTA ANA');
+      result = await model.search('airports', 'SANTA A', 100, 'city');
+      if (result !== undefined) {
+        // console.log(result);
+        expect(result[0].fieldName).toBe('city');
+        expect(result[0].fieldValue).toBe('SANTA ANA');
+      }
     }
-  });
+  );
 
   it(`index value map  - ${databaseName}`, async () => {
     const model = await runtime.loadModel(
@@ -96,16 +97,16 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
 
   // bigquery doesn't support row count based sampling.
-  test(
+  test.when(databaseName !== 'bigquery' && databaseName !== 'trino')(
     `index rows count - ${databaseName}`,
-    onlyIf(databaseName !== 'bigquery', async () => {
+    async () => {
       await expect(`
         run: ${databaseName}.table('malloytest.state_facts') extend {
           dimension: one is 'one'
         } -> {index:one, state; sample: 10 }
             -> {select: fieldName, weight, fieldValue; order_by: 2 desc; where: fieldName = 'one'}
       `).malloyResultMatches(runtime, {fieldName: 'one', weight: 10});
-    })
+    }
   );
 
   it(`index rows count - ${databaseName}`, async () => {

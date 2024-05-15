@@ -8,10 +8,10 @@
       "packages/malloy-interfaces",
       "packages/malloy",
       "packages/malloy-db-bigquery",
+      "packages/malloy-db-trino",
       "packages/malloy-db-duckdb",
       "packages/malloy-db-postgres",
       "packages/malloy-db-snowflake",
-      "packages/malloy-db-trino",
       "packages/malloy-malloy-sql",
       "packages/malloy-lint",
       "packages/malloy-render",
@@ -41,7 +41,8 @@
     "test-deps": "npm run build && npx jest -t dependencies",
     "third-party-licenses": "ts-node scripts/third_party_licenses",
     "malloyc": "ts-node scripts/malloy-to-json",
-    "build-duckdb-db": "ts-node scripts/build_duckdb_test_database"
+    "build-duckdb-db": "ts-node scripts/build_duckdb_test_database",
+    "ping-db": "ts-node ./test/bin/ping_db.ts"
   },
   "devDependencies": {
     "@babel/plugin-transform-runtime": "^7.23.3",

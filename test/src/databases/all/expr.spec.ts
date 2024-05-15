@@ -24,7 +24,7 @@
 
 import {RuntimeList, allDatabases} from '../../runtimes';
 import '../../util/db-jest-matchers';
-import {databasesFromEnvironmentOr, mkSqlEqWith, onlyIf} from '../../util';
+import {databasesFromEnvironmentOr, mkSqlEqWith} from '../../util';
 import {fail} from 'assert';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
@@ -96,6 +96,12 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
   });
 
+  it('computes mod correctly', async () => {
+    await expect(`
+      run: ${databaseName}.sql("SELECT 10 as ten") -> {select: mod is 10 % 3}
+    `).malloyResultMatches(runtime, {mod: 1});
+  });
+
   // Model based version of sums.
   it('model: expression fixups.', async () => {
     await expect(`
@@ -110,6 +116,74 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
   });
 
+  // simple turtle expressions
+  it('simple turtle', async () => {
+    await expect(`
+      run:  ${databaseName}.table('malloytest.state_facts') -> {
+        group_by: popular_name
+        aggregate: airport_count.sum()
+        nest: by_state is {
+          group_by: state
+          aggregate: airport_count.sum()
+          limit: 2
+        }
+        limit: 3
+      }
+    `).malloyResultMatches(expressionModel, {
+      'by_state.state': 'TX',
+      'by_state.airport_count': 1845,
+    });
+  });
+
+  it('double turtle', async () => {
+    await expect(`
+      run:  ${databaseName}.table('malloytest.state_facts') -> {
+        aggregate: airport_count.sum()
+        nest: o is {
+          group_by: popular_name
+          aggregate: airport_count.sum()
+          nest: by_state is {
+            group_by: state
+            aggregate: airport_count.sum()
+            limit: 2
+          }
+          limit: 3
+          nest: inline is {
+            aggregate: inline_sum is airport_count.sum()
+          }
+        }
+      }
+    `).malloyResultMatches(expressionModel, {
+      'o.by_state.state': 'TX',
+      'o.by_state.airport_count': 1845,
+      'o.airport_count': 11146,
+      'o.inline/inline_sum': 11146,
+      'airport_count': 19701,
+    });
+  });
+
+  it('double turtle - pipeline', async () => {
+    await expect(`
+      run:  ${databaseName}.table('malloytest.state_facts') -> {
+        aggregate: airport_count.sum()
+        nest: o is {
+          group_by: popular_name
+          aggregate: airport_count.sum()
+          nest: by_state is {
+            group_by: state
+            aggregate: airport_count.sum()
+            limit: 2
+          }
+          limit: 3
+        }
+      } -> {
+        aggregate: o.by_state.airport_count.sum()
+      }
+    `).malloyResultMatches(expressionModel, {
+      'airport_count': 5023,
+    });
+  });
+
   // turtle expressions
   it('model: turtle', async () => {
     await expect('run: aircraft->by_manufacturer').malloyResultMatches(
@@ -119,16 +193,13 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   });
 
   // filtered turtle expressions
-  test(
-    'model: filtered turtle',
-    onlyIf(runtime.supportsNesting, async () => {
-      await expect(`
+  test.when(runtime.supportsNesting)('model: filtered turtle', async () => {
+    await expect(`
       run: aircraft->{
         nest: b is by_manufacturer + { where: aircraft_models.manufacturer ?~'B%'}
       }
     `).malloyResultMatches(expressionModel, {'b.manufacturer': 'BEECH'});
-    })
-  );
+  });
 
   // having.
   it('model: simple having', async () => {
@@ -138,14 +209,13 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         group_by: state
         aggregate: aircraft_count
         order_by: 2
+        limit: 2
       }
     `).malloyResultMatches(expressionModel, {aircraft_count: 91});
   });
 
-  test(
-    'model: having in a nest',
-    onlyIf(runtime.supportsNesting, async () => {
-      await expect(`
+  test.when(runtime.supportsNesting)('model: having in a nest', async () => {
+    await expect(`
       run: aircraft->{
         top: 10
         order_by: 1
@@ -160,12 +230,11 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         }
       }
     `).malloyResultMatches(expressionModel, {'by_state.state': 'VA'});
-    })
-  );
+  });
 
-  test(
+  test.when(runtime.supportsNesting)(
     'model: turtle having on main',
-    onlyIf(runtime.supportsNesting, async () => {
+    async () => {
       await expect(`
       run: aircraft->{
         order_by: 2 asc
@@ -188,13 +257,13 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     `).malloyResultMatches(expressionModel, {
         'by_state.by_city.city': 'ALBUQUERQUE',
       });
-    })
+    }
   );
 
   // bigquery doesn't like to partition by floats,
-  test(
+  test.when(runtime.supportsNesting)(
     'model: having float group by partition',
-    onlyIf(runtime.supportsNesting, async () => {
+    async () => {
       await expect(`${modelText(databaseName)}
         run: aircraft_models->{
           order_by: 1
@@ -207,7 +276,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
             aggregate: aircraft_model_count
           }
       }`).malloyResultMatches(runtime, {aircraft_model_count: 448});
-    })
+    }
   );
 
   it('model: aggregate functions distinct min max', async () => {
@@ -241,9 +310,9 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 
   // TODO not sure why this test needs to be skipped on postgres, feels like an oversight
   // NOTE: unless underlying type is stored as a timestamp snowflake does not support extraction
-  test(
+  test.when(!['postgres', 'snowflake'].includes(databaseName))(
     'model: dates named',
-    onlyIf(!['postgres', 'snowflake'].includes(databaseName), async () => {
+    async () => {
       await expect(`
       run: ${databaseName}.table('malloytest.alltypes')->{
         group_by:
@@ -270,7 +339,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         t_timestamp_month: new Date('2020-03-01'),
         t_timestamp_year: new Date('2020-01-01'),
       });
-    })
+    }
   );
 
   it('named query metadata undefined', async () => {
@@ -325,24 +394,21 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     `).malloyResultMatches(expressionModel, {a: 312});
   });
 
-  test(
+  test.when(!['postgres'].includes(runtime.connection.name))(
     'sql safe cast',
-    onlyIf(
-      !['postgres', 'snowflake'].includes(runtime.connection.name),
-      async () => {
-        await expect(`
+    async () => {
+      await expect(`
       run: ${databaseName}.sql('SELECT 1 as one') -> { select:
-        bad_date is '123':::date
+        bad_date is '12a':::date
         bad_number is 'abc':::number
         good_number is "312":::"integer"
       }
     `).malloyResultMatches(expressionModel, {
-          bad_date: null,
-          bad_number: null,
-          good_number: 312,
-        });
-      }
-    )
+        bad_date: null,
+        bad_number: null,
+        good_number: 312,
+      });
+    }
   );
 
   it('many_field.sum() has correct locality', async () => {
@@ -552,9 +618,9 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
   });
 
-  test(
+  test.when(runtime.supportsNesting)(
     'query with aliasname used twice',
-    onlyIf(runtime.supportsNesting, async () => {
+    async () => {
       await expect(`
         run: aircraft->{
           group_by: first is substr(city,1,1)
@@ -574,7 +640,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
             order_by: 2 desc, 1
         }
       `).malloyResultMatches(expressionModel, {first_three: 'SAB'});
-    })
+    }
   );
 
   it('joined filtered sources', async () => {
@@ -601,8 +667,10 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
   });
 
-  it('joined filtered explores with dependencies', async () => {
-    await expect(`
+  test.when(runtime.dialect.supportsComplexFilteredSources)(
+    'joined filtered explores with dependencies',
+    async () => {
+      await expect(`
       source: bo_models is
         ${databaseName}.table('malloytest.aircraft_models') extend { where: manufacturer ? ~ 'BO%' }
         -> { select: aircraft_model_code, manufacturer, seats }
@@ -631,7 +699,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         -- aggregate: b_models.bo_models.bo_count
       }
     `).malloyResultMatches(runtime, {model_count: 60461, b_count: 355});
-  });
+    }
+  );
 });
 
 describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {

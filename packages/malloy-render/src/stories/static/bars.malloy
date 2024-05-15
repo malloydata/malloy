@@ -3,12 +3,24 @@ source: products is duckdb.table("data/products.parquet") extend {
   measure: avg_margin is avg(retail_price - cost)
   dimension: product is name
 
-  # bar
+  # bar_chart
   view: topSellingBrands is {
     group_by: brand
     aggregate: `Sales $` is retail_price.avg()*500
     limit: 10
   }
+
+  # bar_chart
+  view: topSellingBrandsTest is {
+    group_by: brand
+    aggregate: `Sales $` is retail_price.avg()*500
+    limit: 10
+  }
+
+  view: test is {
+    nest: topSellingBrands
+  }
+
 
   view: sparks is {
     group_by: category
@@ -36,7 +48,7 @@ source: products is duckdb.table("data/products.parquet") extend {
         limit: 5
         # currency
         aggregate: `Avg Retail` is retail_price.avg()
-        # bar size="spark"
+        # bar_chart size="spark"
         nest: `Trailing 12mo Sales` is trailing_12_sales_trend
       }
   }
@@ -76,14 +88,52 @@ source: products is duckdb.table("data/products.parquet") extend {
     `2xl` is topSellingBrands
   }
 
+  view: nested_test is {
+    group_by: category
+    aggregate: avg_retail is retail_price.avg()
+    nest:
+      # bar_chart size=lg
+      # size.height=220 size.width=300
+      nested_column_1 is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 10
+      }
+      # bar_chart size=lg
+      # size.height=220 size.width=300
+      nested_column_2 is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 10
+      }
+      nested_column_3 is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 10
+      }
+    limit: 2
+  }
+
 
   view: nested is {
     group_by: category
     aggregate: avg_retail is retail_price.avg()
     nest:
-      # bar size=lg
+      # bar_chart size=lg
       # size.height=220 size.width=300
       nested_column_1 is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 10
+      }
+      # bar_chart size=lg
+      # size.height=220 size.width=300
+      nested_column_2 is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 10
+      }
+      nested_column_3 is {
         group_by: brand
         aggregate: avg_retail is retail_price.avg()
         limit: 10
@@ -91,7 +141,7 @@ source: products is duckdb.table("data/products.parquet") extend {
       another_nested is {
         group_by: department
         aggregate: avg_retail is retail_price.avg()
-        # bar
+        # bar_chart
         nest:
           deeply_nested is {
             group_by: `sku`

@@ -105,7 +105,7 @@ import {
   joinWith,
   range,
 } from './utils';
-import {QueryInfo} from '../dialect/dialect';
+import {DialectFieldTypeStruct, QueryInfo} from '../dialect/dialect';
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
@@ -136,6 +136,20 @@ export declare interface ParentQueryModel {
 interface OutputPipelinedSQL {
   sqlFieldName: string;
   pipelineSQL: string;
+}
+
+function getDialectFieldList(structDef: StructDef): DialectFieldList {
+  const dialectFieldList: DialectFieldList = [];
+
+  for (const f of structDef.fields.filter(isPhysical)) {
+    dialectFieldList.push({
+      type: f.type,
+      sqlExpression: getIdentifier(f),
+      rawName: getIdentifier(f),
+      sqlOutputName: getIdentifier(f),
+    });
+  }
+  return dialectFieldList;
 }
 
 // Track the times we might need a unique key
@@ -206,7 +220,10 @@ class StageWriter {
     if (lastStageName === undefined) {
       throw new Error('Internal Error: no stage to combine');
     }
-    sql += dialect.sqlCreateFunctionCombineLastStage(lastStageName, structDef);
+    sql += dialect.sqlCreateFunctionCombineLastStage(
+      lastStageName,
+      getDialectFieldList(structDef)
+    );
 
     const id = `${dialect.udfPrefix}${this.root().udfs.length}`;
     sql = dialect.sqlCreateFunction(id, sql);
@@ -264,14 +281,14 @@ class StageWriter {
     if (!this.useCTE) {
       return dialect.sqlCreateFunctionCombineLastStage(
         `(${this.withs[0]})`,
-        structDef
+        getDialectFieldList(structDef)
       );
     } else {
       return (
         this.combineStages(true).sql +
         dialect.sqlCreateFunctionCombineLastStage(
           this.getName(this.withs.length - 1),
-          structDef
+          getDialectFieldList(structDef)
         )
       );
     }
@@ -539,16 +556,14 @@ class QueryField extends QueryNode {
     }
     const valueSQL = this.generateDimFragment(resultSet, context, value, state);
     const separatorSQL = separator
-      ? ' ,' + this.generateDimFragment(resultSet, context, separator, state)
+      ? this.generateDimFragment(resultSet, context, separator, state)
       : '';
-    const keyStart = '__STRING_AGG_KS__';
-    const keyEnd = '__STRING_AGG_KE__';
-    const distinctValueSQL = `concat('${keyStart}', ${distinctKey}, '${keyEnd}', ${valueSQL})`;
-    return `REGEXP_REPLACE(
-      STRING_AGG(DISTINCT ${distinctValueSQL}${separatorSQL}),
-      '${keyStart}.*?${keyEnd}',
-      ''
-    )`;
+
+    return this.parent.dialect.sqlStringAggDistinct(
+      distinctKey,
+      valueSQL,
+      separatorSQL
+    );
   }
 
   getParamForArgIndex(params: FunctionParameterDef[], argIndex: number) {
@@ -1133,7 +1148,11 @@ class QueryField extends QueryNode {
       state
     );
 
-    return `${funcSQL} OVER(${partitionBy} ${orderBy} ${between})`;
+    let retExpr = `${funcSQL} OVER(${partitionBy} ${orderBy} ${between})`;
+    if (isComplex) {
+      retExpr = `CASE WHEN group_set=${resultStruct.groupSet} THEN ${retExpr} END`;
+    }
+    return retExpr;
   }
 
   generateExpressionFromExpr(
@@ -1391,9 +1410,8 @@ class QueryFieldDistinctKey extends QueryAtomicField {
       const parentKey = this.parent.parent
         ?.getDistinctKey()
         .generateExpression(resultSet);
-      return this.parent.dialect.concat(
+      return this.parent.dialect.sqlMakeUnnestKey(
         parentKey || '', // shouldn't have to do this...
-        "'x'",
         this.parent.dialect.sqlFieldReference(
           this.parent.getIdentifier(),
           '__row_id',
@@ -2056,17 +2074,7 @@ class JoinInstance {
 
   // postgres unnest needs to know the names of the physical fields.
   getDialectFieldList(): DialectFieldList {
-    const dialectFieldList: DialectFieldList = [];
-
-    for (const f of this.queryStruct.fieldDef.fields.filter(isPhysical)) {
-      dialectFieldList.push({
-        type: f.type,
-        sqlExpression: getIdentifier(f),
-        rawName: getIdentifier(f),
-        sqlOutputName: getIdentifier(f),
-      });
-    }
-    return dialectFieldList;
+    return getDialectFieldList(this.queryStruct.fieldDef);
   }
 }
 
@@ -2332,6 +2340,7 @@ class QueryQuery extends QueryField {
           case 'now':
             break;
           case 'div':
+          case 'mod':
             expressions.push(expr.denominator);
             expressions.push(expr.numerator);
             break;
@@ -2802,18 +2811,18 @@ class QueryQuery extends QueryField {
         }
         s += ` ${matrixOperation} JOIN ${structSQL} AS ${ji.alias}\n  ON ${onCondition}${filters}\n`;
       } else {
+        if (!this.parent.dialect.supportsComplexFilteredSources) {
+          throw new Error(
+            'Cannot join a source with a filter on a joined source'
+          );
+        }
         let select = `SELECT ${ji.alias}.*`;
         let joins = '';
         for (const childJoin of ji.children) {
           joins += this.generateSQLJoinBlock(stageWriter, childJoin);
-          const physicalFields = getPhysicalFields(
-            childJoin.queryStruct.fieldDef
-          ).map(fieldDef =>
-            this.parent.dialect.sqlMaybeQuoteIdentifier(fieldDef.name)
-          );
           select += `, ${this.parent.dialect.sqlSelectAliasAsStruct(
             childJoin.alias,
-            physicalFields
+            getDialectFieldList(childJoin.queryStruct.fieldDef)
           )} AS ${childJoin.alias}`;
         }
         select += `\nFROM ${structSQL} AS ${
@@ -2955,12 +2964,29 @@ class QueryQuery extends QueryField {
         // convert name to an index
         const fi = resultStruct.getField(f.field);
         if (fi && fi.fieldUsage.type === 'result') {
-          o.push(`${fi.fieldUsage.resultIndex} ${f.dir || 'ASC'}`);
+          if (this.parent.dialect.orderByClause === 'ordinal') {
+            o.push(`${fi.fieldUsage.resultIndex} ${f.dir || 'ASC'}`);
+          } else if (this.parent.dialect.orderByClause === 'output_name') {
+            o.push(
+              `${this.parent.dialect.sqlMaybeQuoteIdentifier(f.field)} ${
+                f.dir || 'ASC'
+              }`
+            );
+          }
         } else {
           throw new Error(`Unknown field in ORDER BY ${f.field}`);
         }
       } else {
-        o.push(`${f.field} ${f.dir || 'ASC'}`);
+        if (this.parent.dialect.orderByClause === 'ordinal') {
+          o.push(`${f.field} ${f.dir || 'ASC'}`);
+        } else if (this.parent.dialect.orderByClause === 'output_name') {
+          const orderingField = resultStruct.getFieldByNumber(f.field);
+          o.push(
+            `${this.parent.dialect.sqlMaybeQuoteIdentifier(
+              orderingField.name
+            )} ${f.dir || 'ASC'}`
+          );
+        }
       }
     }
     if (o.length > 0) {
@@ -3028,17 +3054,28 @@ class QueryQuery extends QueryField {
     if (outputPipelinedSQL.length === 0) {
       return lastStageName;
     }
-    const pipelinesSQL = outputPipelinedSQL
-      .map(
-        o =>
-          `${o.pipelineSQL} as ${o.sqlFieldName}
-      `
-      )
-      .join(',\n');
-    return stageWriter.addStage(
-      `SELECT * replace (${pipelinesSQL}) FROM ${lastStageName}
-      `
-    );
+
+    let retSQL: string;
+    if (this.parent.dialect.supportsSelectReplace) {
+      const pipelinesSQL = outputPipelinedSQL
+        .map(o => `${o.pipelineSQL} as ${o.sqlFieldName}`)
+        .join(',\n');
+      retSQL = `SELECT * replace (${pipelinesSQL}) FROM ${lastStageName}
+        `;
+    } else {
+      const pipelinesSQL = outputPipelinedSQL
+        .map(o => `${o.pipelineSQL} as ${o.sqlFieldName}`)
+        .join(',\n');
+      const outputFields = outputPipelinedSQL.map(f => f.sqlFieldName);
+      const allFields = Array.from(this.rootResult.allFields.keys()).map(f =>
+        this.parent.dialect.sqlMaybeQuoteIdentifier(f)
+      );
+      const fields = allFields.filter(f => outputFields.indexOf(f) === -1);
+      retSQL = `SELECT ${
+        fields.length > 0 ? fields.join(', ') + ',' : ''
+      } ${pipelinesSQL} FROM ${lastStageName}`;
+    }
+    return stageWriter.addStage(retSQL);
   }
 
   generateStage0Fields(
@@ -3459,6 +3496,57 @@ class QueryQuery extends QueryField {
     return this.resultStage;
   }
 
+  // create a simplified version of the StructDef for dialects.
+  buildDialectFieldList(resultStruct: FieldInstanceResult): DialectFieldList {
+    const dialectFieldList: DialectFieldList = [];
+
+    for (const [name, field] of resultStruct.allFields) {
+      const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
+      //
+      if (
+        resultStruct.firstSegment.type === 'reduce' &&
+        field instanceof FieldInstanceResult
+      ) {
+        const d: DialectFieldTypeStruct = {
+          type: 'struct',
+          sqlExpression: this.parent.dialect.sqlMaybeQuoteIdentifier(
+            `${name}__${resultStruct.groupSet}`
+          ),
+          rawName: name,
+          sqlOutputName: sqlName,
+          isArray: field.getRepeatedResultType() === 'nested',
+          nestedStruct: this.buildDialectFieldList(field),
+        };
+        dialectFieldList.push(d);
+      } else if (
+        resultStruct.firstSegment.type === 'reduce' &&
+        field instanceof FieldInstanceField &&
+        field.fieldUsage.type === 'result'
+      ) {
+        dialectFieldList.push({
+          type: field.f.fieldDef.type,
+          sqlExpression: this.parent.dialect.sqlMaybeQuoteIdentifier(
+            `${name}__${resultStruct.groupSet}`
+          ),
+          rawName: name,
+          sqlOutputName: sqlName,
+        });
+      } else if (
+        resultStruct.firstSegment.type === 'project' &&
+        field instanceof FieldInstanceField &&
+        field.fieldUsage.type === 'result'
+      ) {
+        dialectFieldList.push({
+          type: field.f.fieldDef.type,
+          sqlExpression: field.f.generateExpression(resultStruct),
+          rawName: name,
+          sqlOutputName: sqlName,
+        });
+      }
+    }
+    return dialectFieldList;
+  }
+
   generateTurtleSQL(
     resultStruct: FieldInstanceResult,
     stageWriter: StageWriter,
@@ -3466,7 +3554,6 @@ class QueryQuery extends QueryField {
     outputPipelinedSQL: OutputPipelinedSQL[]
   ): string {
     // let fieldsSQL: string[] = [];
-    const dialectFieldList: DialectFieldList = [];
     let orderBy = '';
     const limit = isRawSegment(resultStruct.firstSegment)
       ? undefined
@@ -3508,44 +3595,7 @@ class QueryQuery extends QueryField {
       orderBy = ' ' + this.parent.dialect.sqlOrderBy(obSQL);
     }
 
-    for (const [name, field] of resultStruct.allFields) {
-      const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
-      //
-      if (
-        resultStruct.firstSegment.type === 'reduce' &&
-        (field instanceof FieldInstanceResult ||
-          (field instanceof FieldInstanceField &&
-            field.fieldUsage.type === 'result'))
-      ) {
-        // fieldsSQL.push(`${name}__${resultStruct.groupSet} as ${sqlName}`);
-        // outputFieldNames.push(name);
-        dialectFieldList.push({
-          type:
-            field instanceof FieldInstanceField
-              ? field.f.fieldDef.type
-              : 'struct',
-          sqlExpression: this.parent.dialect.sqlMaybeQuoteIdentifier(
-            `${name}__${resultStruct.groupSet}`
-          ),
-          rawName: name,
-          sqlOutputName: sqlName,
-        });
-      } else if (
-        resultStruct.firstSegment.type === 'project' &&
-        field instanceof FieldInstanceField &&
-        field.fieldUsage.type === 'result'
-      ) {
-        // fieldsSQL.push(
-        //   `${field.f.generateExpression(resultStruct)} as ${sqlName}`
-        // );
-        dialectFieldList.push({
-          type: field.type,
-          sqlExpression: field.f.generateExpression(resultStruct),
-          rawName: name,
-          sqlOutputName: sqlName,
-        });
-      }
-    }
+    const dialectFieldList = this.buildDialectFieldList(resultStruct);
 
     let resultType;
     let ret;
@@ -3682,7 +3732,10 @@ class QueryQuery extends QueryField {
     return ret;
   }
 
-  generateSQLFromPipeline(stageWriter: StageWriter) {
+  generateSQLFromPipeline(stageWriter: StageWriter): {
+    lastStageName: string;
+    outputStruct: StructDef;
+  } {
     this.prepare(stageWriter);
     let lastStageName = this.generateSQL(stageWriter);
     let outputStruct = this.getResultStructDef();
@@ -4165,11 +4218,7 @@ class QueryStruct extends QueryNode {
   getIdentifier(): string {
     // if it is the root table, use provided alias if we have one.
     if (this.fieldDef.structRelationship.type === 'basetable') {
-      if (this.fieldDef.as === undefined) {
-        return 'base';
-      } else {
-        return identifierNormalize(super.getIdentifier());
-      }
+      return 'base';
     }
     // if this is an inline object, include the parents alias.
     if (this.fieldDef.structRelationship.type === 'inline' && this.parent) {

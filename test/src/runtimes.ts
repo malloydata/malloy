@@ -35,6 +35,7 @@ import {DuckDBConnection} from '@malloydata/db-duckdb';
 import {DuckDBWASMConnection} from '@malloydata/db-duckdb/wasm';
 import {SnowflakeConnection} from '@malloydata/db-snowflake';
 import {PooledPostgresConnection} from '@malloydata/db-postgres';
+import {TrinoConnection, TrinoExecutor} from '@malloydata/db-trino';
 import {SnowflakeExecutor} from '@malloydata/db-snowflake/src/snowflake_executor';
 
 export class SnowflakeTestConnection extends SnowflakeConnection {
@@ -161,6 +162,13 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
           connection = new SnowflakeTestConnection(dbName, {connOptions});
         }
         break;
+      case 'trino':
+        connection = new TrinoConnection(
+          dbName,
+          {},
+          TrinoExecutor.getConnectionOptionsFromEnv()
+        );
+        break;
       default:
         throw new Error(`Unknown runtime "${dbName}`);
     }
@@ -185,7 +193,8 @@ export const allDatabases = [
   'bigquery',
   'duckdb',
   'duckdb_wasm',
-  // 'snowflake', -- EXPERIMENTAL
+  'snowflake',
+  'trino',
 ];
 
 type RuntimeDatabaseNames = (typeof allDatabases)[number];

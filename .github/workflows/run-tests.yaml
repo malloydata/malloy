@@ -1,0 +1,33 @@
+name: Malloy Tests
+
+on: [workflow_dispatch]
+
+jobs:
+  db-bigquery:
+    uses: './.github/workflows/db-bigquery.yaml'
+    secrets:
+      BIGQUERY_KEY: ${{ secrets.BIGQUERY_KEY }}
+  db-motherduck:
+    uses: './.github/workflows/db-motherduck.yaml'
+    secrets:
+      MOTHERDUCK_TOKEN: ${{ secrets.MOTHERDUCK_TOKEN }}
+  db-postgres:
+    uses: './.github/workflows/db-postgres.yaml'
+  db-snowflake:
+    uses: './.github/workflows/db-snowflake.yaml'
+    secrets:
+      SNOWFLAKE_CONNECTION: ${{ secrets.SNOWFLAKE_CONNECTION }}
+  main:
+    uses: './.github/workflows/main.yaml'
+
+  malloy-tests:
+    needs:
+      - db-bigquery
+      - db-motherduck
+      - db-postgres
+      - db-snowflake
+      - main
+    runs-on: ubuntu-latest
+    steps:
+      - name: Success
+        run: echo Success

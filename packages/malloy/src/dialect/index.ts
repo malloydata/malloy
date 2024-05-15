@@ -43,5 +43,6 @@ export {StandardSQLDialect} from './standardsql';
 export {PostgresDialect} from './postgres';
 export {DuckDBDialect} from './duckdb';
 export {SnowflakeDialect} from './snowflake';
+export {TrinoDialect} from './trino';
 export {getDialect, registerDialect, getDialectFunction} from './dialect_map';
 export {FUNCTIONS} from './functions';

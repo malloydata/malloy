@@ -89,12 +89,15 @@ const snowflakeToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
 
 export class SnowflakeDialect extends Dialect {
   name = 'snowflake';
+  experimental = false;
   defaultNumberType = 'NUMBER';
   defaultDecimalType = 'NUMBER';
   udfPrefix = '__udf';
   hasFinalStage = false;
   divisionIsInteger = false;
   supportsSumDistinctFunction = false;
+  supportsSafeCast = true;
+  supportsNesting = true;
   defaultSampling = {rows: 50000};
   globalFunctions = SNOWFLAKE_FUNCTIONS;
 
@@ -104,11 +107,8 @@ export class SnowflakeDialect extends Dialect {
   supportUnnestArrayAgg = false;
   supportsAggDistinct = false;
   supportsCTEinCoorelatedSubQueries = false;
-  supportsSafeCast = false;
   dontUnionIndex = false;
   supportsQualify = false;
-  supportsNesting = true;
-  experimental = false;
   supportsPipelinesInViews = false;
 
   // don't mess with the table pathing.
@@ -339,11 +339,14 @@ ${indent(sql)}
     if (cast.srcType === cast.dstType) {
       return cast.expr;
     }
-    if (cast.safe) {
+    if (cast.safe && typeof cast.srcType !== 'string') {
       // safe cast is only supported for a few combinations of src -> dst types
       // so we will not support it in the general case
+      // see: https://docs.snowflake.com/en/sql-reference/functions/try_cast
+
       throw new Error(
-        "Snowflake dialect doesn't support safe cast for a few types"
+        `Snowflake dialect doesn't support safe cast for a few types:
+        refer to: https://docs.snowflake.com/en/sql-reference/functions/try_cast`
       );
     }
 
@@ -364,7 +367,8 @@ ${indent(sql)}
       typeof cast.dstType === 'string'
         ? this.malloyTypeToSQLType({type: cast.dstType})
         : cast.dstType.raw;
-    return mkExpr`CAST(${cast.expr} AS ${dstType})`;
+    const castFunc = cast.safe ? 'TRY_CAST' : 'CAST';
+    return mkExpr`${castFunc}(${cast.expr} AS ${dstType})`;
   }
 
   sqlLiteralTime(

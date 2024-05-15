@@ -1,8 +1,8 @@
 {
   "name": "@malloydata/render",
-  "version": "0.0.133",
+  "version": "0.0.146",
   "license": "MIT",
-  "main": "dist/index.js",
+  "main": "dist/module/index.umd.js",
   "types": "dist/index.d.ts",
   "homepage": "https://github.com/malloydata/malloy#readme",
   "repository": {
@@ -12,24 +12,34 @@
   "engines": {
     "node": ">=16"
   },
+  "exports": {
+    ".": "./dist/module/index.umd.js",
+    "./style": "./dist/module/style.css",
+    "./webcomponent": "./dist/webcomponent/malloy-render.umd.js",
+    "./webcomponent/style": "./dist/webcomponent/style.css"
+  },
   "scripts": {
     "bundle_renderer": "node src/bundle/esbuild_bundler.js",
     "lint": "eslint '**/*.ts{,x}'",
     "lint-fix": "eslint '**/*.ts{,x}' --fix",
     "test": "jest --config=../../jest.config.js",
-    "build": "tsc --build",
+    "build": "npm run build-types && npm run build-source && npm run build-webcomponent",
     "clean": "tsc --build --clean",
-    "prepublishOnly": "npm run build && npm run bundle_renderer",
+    "prepublishOnly": "npm run build",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "build-source": "vite build --outDir 'dist/module' --config vite.config.ts",
+    "build-webcomponent": "vite build --outDir 'dist/webcomponent' --config vite.config.webcomponent.ts",
+    "build-types": "tsc --build --declaration --emitDeclarationOnly"
   },
   "dependencies": {
-    "@lit/context": "^1.1.0",
-    "@malloydata/malloy": "^0.0.133",
+    "@malloydata/malloy": "^0.0.146",
     "@types/luxon": "^2.4.0",
-    "lit": "^3.0.2",
+    "component-register": "^0.8.3",
     "lodash": "^4.17.20",
     "luxon": "^2.4.0",
+    "solid-element": "^1.8.0",
+    "solid-js": "^1.8.15",
     "ssf": "^0.11.2",
     "us-atlas": "^3.0.0",
     "vega": "^5.21.0",
@@ -44,7 +54,10 @@
     "@storybook/html-vite": "^7.5.0",
     "@storybook/testing-library": "^0.2.2",
     "@storybook/types": "^7.5.3",
+    "@types/luxon": "^2.4.0",
     "esbuild": "0.19.11",
-    "storybook": "^7.5.0"
+    "storybook": "^7.5.0",
+    "vite": "^5.1.5",
+    "vite-plugin-solid": "^2.10.1"
   }
 }

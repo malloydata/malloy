@@ -256,6 +256,8 @@ export function isSQLExpressionFragment(
 export interface SpreadFragment {
   type: 'spread';
   e: Expr;
+  prefix: string | undefined;
+  suffix: string | undefined;
 }
 
 export function isSpreadFragment(f: Fragment): f is SpreadFragment {
@@ -362,8 +364,8 @@ export interface RegexpMatchFragment extends DialectFragmentBase {
   regexp: Expr;
 }
 
-export interface DivFragment extends DialectFragmentBase {
-  function: 'div';
+export interface DivModFragment extends DialectFragmentBase {
+  function: 'div' | 'mod';
   numerator: Expr;
   denominator: Expr;
 }
@@ -391,7 +393,7 @@ export interface NumberLiteralFragment extends DialectFragmentBase {
 }
 
 export type DialectFragment =
-  | DivFragment
+  | DivModFragment
   | TimeLiteralFragment
   | NowFragment
   | TimeDeltaFragment

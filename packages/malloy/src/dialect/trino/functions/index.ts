@@ -21,4 +21,4 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export {};
+export {TRINO_FUNCTIONS} from './trino_functions';

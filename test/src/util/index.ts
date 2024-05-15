@@ -182,14 +182,3 @@ export async function runQuery(runtime: Runtime, querySrc: string) {
 
   return result;
 }
-
-export function onlyIf(
-  cond: boolean,
-  condTest: jest.ProvidesCallback
-): jest.ProvidesCallback {
-  if (cond) {
-    return condTest;
-  } else {
-    return () => {};
-  }
-}

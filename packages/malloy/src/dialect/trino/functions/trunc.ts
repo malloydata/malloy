@@ -21,34 +21,31 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-process.env.TZ = 'America/Los_Angeles';
+import {
+  overload,
+  minScalar,
+  anyExprType,
+  sql,
+  DialectFunctionOverloadDef,
+  makeParam,
+} from '../../functions/util';
 
-const transformIgnoreModules = [
-  'lit-html',
-  'lit-element',
-  'lit',
-  '@lit',
-  '@lit-labs',
-  '@motherduck/wasm-client',
-].join('|');
-
-module.exports = {
-  moduleFileExtensions: ['js', 'jsx', 'ts', 'tsx'],
-  setupFilesAfterEnv: ['jest-expect-message'],
-  testMatch: ['**/?(*.)spec.(ts|js)?(x)'],
-  testPathIgnorePatterns: ['/node_modules/', '/dist/', '/out/'],
-  transformIgnorePatterns: [`node_modules/(?!(${transformIgnoreModules})/)`],
-  transform: {
-    '^.+\\.(ts|tsx)$': ['ts-jest', {tsconfig: '<rootDir>/tsconfig.json'}],
-    '^.+\\.(js|jsx)$': [
-      'babel-jest',
-      {
-        'presets': ['@babel/preset-env'],
-        'plugins': [['@babel/transform-runtime']],
-      },
-    ],
-  },
-  testTimeout: 100000,
-  verbose: true,
-  testEnvironment: 'node',
-};
+export function fnTrunc(): DialectFunctionOverloadDef[] {
+  const value = makeParam('value', anyExprType('number'));
+  const precision = makeParam('precision', anyExprType('number'));
+  // Trunc function doesn't exist in DuckDB, so we emulate it.
+  // For both overloads, we switch between CEIL and FLOOR based on the sign of the arugment
+  // For the overload with precision, we multiply by a power of 10 before rounding, then divide.
+  return [
+    overload(
+      minScalar('number'),
+      [value.param],
+      sql`CASE WHEN ${value.arg} < 0 THEN CEIL(${value.arg}) ELSE FLOOR(${value.arg}) END`
+    ),
+    overload(
+      minScalar('number'),
+      [value.param, precision.param],
+      sql`CASE WHEN ${value.arg} < 0 THEN CEIL(${value.arg} * POW(10, ${precision.arg})) / POW(10, ${precision.arg}) ELSE FLOOR(${value.arg} * POW(10, ${precision.arg})) / POW(10, ${precision.arg}) END`
+    ),
+  ];
+}

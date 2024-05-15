@@ -1,6 +1,11 @@
 name: MotherDuck DB
 
-on: [push]
+on:
+  pull_request:
+  workflow_call:
+    secrets:
+      MOTHERDUCK_TOKEN:
+        required: true
 
 jobs:
   test-motherduck:
@@ -22,7 +27,7 @@ jobs:
         run: |
           npm ci --loglevel error
           npm run build
-          npm run test-silent
+          npm run test-silent -- -- test packages/malloy-duckdb
         env:
           CI: true
           MALLOY_DATABASES: motherduck

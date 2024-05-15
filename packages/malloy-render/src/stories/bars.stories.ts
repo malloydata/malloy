@@ -2,7 +2,7 @@ import {Meta} from '@storybook/html';
 import script from './static/bars.malloy?raw';
 import {createLoader} from './util';
 import './themes.css';
-import '../component/render';
+import '../component/render-webcomponent';
 
 const meta: Meta = {
   title: 'Malloy Next/Bars',
@@ -47,5 +47,26 @@ export const SparksNested = {
   args: {
     source: 'products',
     view: 'sparks_nested',
+  },
+};
+
+export const TestOld = {
+  args: {
+    source: 'products',
+    view: 'test',
+  },
+};
+
+export const Test = {
+  args: {
+    source: 'products',
+    view: 'topSellingBrandsTest',
+  },
+};
+
+export const NestedTest = {
+  args: {
+    source: 'products',
+    view: 'nested_test',
   },
 };

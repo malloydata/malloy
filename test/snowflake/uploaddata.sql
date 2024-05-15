@@ -1,7 +1,7 @@
 -- to run
 
 -- cd test/snowflake
--- snowsql -f uploadddate.sql
+-- snowsql -f uploaddata.sql
 
 
 drop database malloytest;

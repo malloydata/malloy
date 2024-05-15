@@ -41,7 +41,7 @@ import {
 export interface DuckDBConnectionOptions extends ConnectionConfig {
   additionalExtensions?: string[];
   databasePath?: string;
-  motherDuckToken: string | undefined;
+  motherDuckToken?: string;
   workingDirectory?: string;
   readOnly?: boolean;
 }

@@ -50,10 +50,16 @@ export function arg(name: string): Fragment {
   };
 }
 
-export function spread(f: Fragment): Fragment {
+export function spread(
+  f: Fragment,
+  prefix: string | undefined = undefined,
+  suffix: string | undefined = undefined
+): Fragment {
   return {
     type: 'spread',
     e: [f],
+    prefix,
+    suffix,
   };
 }
 

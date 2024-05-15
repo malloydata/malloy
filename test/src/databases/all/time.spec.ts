@@ -25,9 +25,9 @@
 import {RuntimeList, allDatabases} from '../../runtimes';
 import '../../util/db-jest-matchers';
 import {
+  brokenIn,
   databasesFromEnvironmentOr,
   mkSqlEqWith,
-  onlyIf,
   runQuery,
 } from '../../util';
 import {DateTime as LuxonDateTime} from 'luxon';
@@ -462,15 +462,18 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
     });
   });
 
-  test('dependant join dialect fragments', async () => {
-    await expect(`
+  test.when(!brokenIn('trino', dbName) /* mtoy */)(
+    'dependant join dialect fragments',
+    async () => {
+      await expect(`
       source: timeData is ${dbName}.sql("""${timeSQL}""")
       run: timeData -> {
         extend: {join_one: joined is timeData on t_date = joined.t_date}
         group_by: t_month is joined.t_timestamp.month
       }
     `).malloyResultMatches(runtime, {t_month: new Date('2021-02-01')});
-  });
+    }
+  );
 
   describe('timezone set correctly', () => {
     test('timezone set in source used by query', async () => {
@@ -490,9 +493,9 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
     });
 
     // TODO don't need to run this on all connections, so onlyIf not needed
-    test(
+    test.when(runtime.supportsNesting)(
       'timezone set in view inside source',
-      onlyIf(runtime.supportsNesting, async () => {
+      async () => {
         expect(
           (
             await runQuery(
@@ -515,13 +518,13 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
             {name: 'la_query', queryTimezone: 'America/Los_Angeles'},
           ],
         });
-      })
+      }
     );
 
-    // TODO don't need to run this on all connections, so onlyIf not needed
-    test(
+    // TODO don't need to run this on all connections, so .when() not needed
+    test.when(runtime.supportsNesting)(
       'timezone set in query using source',
-      onlyIf(runtime.supportsNesting, async () => {
+      async () => {
         expect(
           (
             await runQuery(
@@ -539,15 +542,13 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
             )
           ).resultExplore.queryTimezone
         ).toBe('America/Los_Angeles');
-      })
+      }
     );
 
-    test(
-      'multiple timezones',
-      onlyIf(runtime.supportsNesting, async () => {
-        const theQuery = await runQuery(
-          runtime,
-          `run: ${dbName}.sql('SELECT 1 as one') extend {
+    test.when(runtime.supportsNesting)('multiple timezones', async () => {
+      const theQuery = await runQuery(
+        runtime,
+        `run: ${dbName}.sql('SELECT 1 as one') extend {
             timezone: 'America/New_York'
             dimension: ny_time is @2021-02-24 03:05:06
             view: la_query is {
@@ -562,17 +563,16 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
           group_by: ny_time
           nest: la_query, mex_query
           }`
-        );
-        expect(theQuery.resultExplore.structDef).toMatchObject({
-          queryTimezone: 'America/New_York',
-          fields: [
-            {},
-            {name: 'la_query', queryTimezone: 'America/Los_Angeles'},
-            {name: 'mex_query', queryTimezone: 'America/Mexico_City'},
-          ],
-        });
-      })
-    );
+      );
+      expect(theQuery.resultExplore.structDef).toMatchObject({
+        queryTimezone: 'America/New_York',
+        fields: [
+          {},
+          {name: 'la_query', queryTimezone: 'America/Los_Angeles'},
+          {name: 'mex_query', queryTimezone: 'America/Mexico_City'},
+        ],
+      });
+    });
   });
 });
 
@@ -621,54 +621,63 @@ const utc_2020 = LuxonDateTime.fromObject(
 );
 
 describe.each(runtimes.runtimeList)('%s: tz literals', (dbName, runtime) => {
-  test(`${dbName} - default timezone is UTC`, async () => {
-    // this makes sure that the tests which use the test timezome are actually
-    // testing something ... file this under "abundance of caution". It
-    // really tests nothing, but I feel calmer with this here.
-    const query = runtime.loadQuery(
-      `
+  test.when(!brokenIn('trino', dbName) /* mtoy */)(
+    `${dbName} - default timezone is UTC`,
+    async () => {
+      // this makes sure that the tests which use the test timezome are actually
+      // testing something ... file this under "abundance of caution". It
+      // really tests nothing, but I feel calmer with this here.
+      const query = runtime.loadQuery(
+        `
         run: ${dbName}.sql("SELECT 1 as one") -> {
           group_by: literal_time is @2020-02-20 00:00:00
         }
 `
-    );
-    const result = await query.run();
-    const literal = result.data.path(0, 'literal_time').value as Date;
-    const have = LuxonDateTime.fromJSDate(literal);
-    expect(have.valueOf()).toEqual(utc_2020.valueOf());
-  });
+      );
+      const result = await query.run();
+      const literal = result.data.path(0, 'literal_time').value as Date;
+      const have = LuxonDateTime.fromJSDate(literal);
+      expect(have.valueOf()).toEqual(utc_2020.valueOf());
+    }
+  );
 
-  test('literal with zone name', async () => {
-    const query = runtime.loadQuery(
-      `
+  test.when(!brokenIn('trino', dbName) /* mtoy */)(
+    'literal with zone name',
+    async () => {
+      const query = runtime.loadQuery(
+        `
         run: ${dbName}.sql("SELECT 1 as one") -> {
           group_by: literal_time is @2020-02-20 00:00:00[America/Mexico_City]
         }
 `
-    );
-    const result = await query.run();
-    const literal = result.data.path(0, 'literal_time').value as Date;
-    const have = LuxonDateTime.fromJSDate(literal);
-    expect(have.valueOf()).toEqual(zone_2020.valueOf());
-  });
+      );
+      const result = await query.run();
+      const literal = result.data.path(0, 'literal_time').value as Date;
+      const have = LuxonDateTime.fromJSDate(literal);
+      expect(have.valueOf()).toEqual(zone_2020.valueOf());
+    }
+  );
 });
 
 describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
   const q = runtime.getQuoter();
-  test('literal timestamps', async () => {
-    const query = runtime.loadQuery(
-      `
+  test.when(!brokenIn('trino', dbName) /* mtoy */)(
+    'literal timestamps',
+    async () => {
+      const query = runtime.loadQuery(
+        `
         run: ${dbName}.sql("SELECT 1 as one") -> {
           timezone: '${zone}'
           group_by: literal_time is @2020-02-20 00:00:00
         }
       `
-    );
-    const result = await query.run();
-    const literal = result.data.path(0, 'literal_time').value as Date;
-    const have = LuxonDateTime.fromJSDate(literal);
-    expect(have.valueOf()).toEqual(zone_2020.valueOf());
-  });
+      );
+      const result = await query.run();
+      const literal = result.data.path(0, 'literal_time').value as Date;
+      const have = LuxonDateTime.fromJSDate(literal);
+      expect(have.valueOf()).toEqual(zone_2020.valueOf());
+    }
+  );
 
   test('extract', async () => {
     await expect(
@@ -682,7 +691,7 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
     ).malloyResultMatches(runtime, {mex_midnight: 18, mex_day: 19});
   });
 
-  test('truncate day', async () => {
+  test.when(!brokenIn('trino', dbName) /* mtoy */)('truncate day', async () => {
     // At midnight in london it the 19th in Mexico, so that truncates to
     // midnight on the 19th
     const mex_19 = LuxonDateTime.fromISO('2020-02-19T00:00:00', {zone});
@@ -695,26 +704,32 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
     ).malloyResultMatches(runtime, {mex_day: mex_19.toJSDate()});
   });
 
-  test('cast timestamp to date', async () => {
-    // At midnight in london it is the 19th in Mexico, so when we cast that
-    // to a date, it should be the 19th.
-    await expect(
-      `run: ${dbName}.sql("SELECT 1 as x") -> {
+  test.when(!brokenIn('trino', dbName) /* mtoy */)(
+    'cast timestamp to date',
+    async () => {
+      // At midnight in london it is the 19th in Mexico, so when we cast that
+      // to a date, it should be the 19th.
+      await expect(
+        `run: ${dbName}.sql("SELECT 1 as x") -> {
         timezone: '${zone}'
         extend: { dimension: utc_midnight is @2020-02-20 00:00:00[UTC] }
         select: mex_day is day(utc_midnight::date)
       }`
-    ).malloyResultMatches(runtime, {mex_day: 19});
-  });
+      ).malloyResultMatches(runtime, {mex_day: 19});
+    }
+  );
 
-  test('cast date to timestamp', async () => {
-    await expect(
-      `run: ${dbName}.sql(""" SELECT DATE '2020-02-20'  AS ${q`mex_20`} """) -> {
+  test.when(!brokenIn('trino', dbName) /* mtoy */)(
+    'cast date to timestamp',
+    async () => {
+      await expect(
+        `run: ${dbName}.sql(""" SELECT DATE '2020-02-20'  AS ${q`mex_20`} """) -> {
         timezone: '${zone}'
         select: mex_ts is mex_20::timestamp
       }`
-    ).malloyResultMatches(runtime, {mex_ts: zone_2020.toJSDate()});
-  });
+      ).malloyResultMatches(runtime, {mex_ts: zone_2020.toJSDate()});
+    }
+  );
 });
 
 afterAll(async () => {

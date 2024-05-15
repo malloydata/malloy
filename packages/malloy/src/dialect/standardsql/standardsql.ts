@@ -97,6 +97,7 @@ const bqToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
 
 export class StandardSQLDialect extends Dialect {
   name = 'standardsql';
+  experimental = false;
   defaultNumberType = 'FLOAT64';
   defaultDecimalType = 'NUMERIC';
   udfPrefix = '__udf';
@@ -113,7 +114,7 @@ export class StandardSQLDialect extends Dialect {
   supportsSafeCast = true;
   supportsNesting = true;
   cantPartitionWindowFunctionsOnExpressions = true;
-  experimental = false;
+  hasModOperator = false;
 
   quoteTablePath(tablePath: string): string {
     return `\`${tablePath}\``;
