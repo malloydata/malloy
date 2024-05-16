@@ -32,13 +32,15 @@ import {
   SQLBlock,
   ConnectionConfig,
 } from '@malloydata/malloy';
-import {StructRow, Table, Vector} from 'apache-arrow';
+import {StructRow, Table} from 'apache-arrow';
 import {DuckDBCommon} from './duckdb_common';
 
 const TABLE_MATCH = /FROM\s*('([^']*)'|"([^"]*)")/gi;
 const TABLE_FUNCTION_MATCH = /FROM\s+[a-z0-9_]+\(('([^']*)'|"([^"]*)")/gi;
 
 const FILE_EXTS = ['.csv', '.tsv', '.parquet'] as const;
+
+const isIterable = (x: object): x is Iterable<unknown> => Symbol.iterator in x;
 
 /**
  * Arrow's toJSON() doesn't really do what I'd expect, since
@@ -52,8 +54,6 @@ const FILE_EXTS = ['.csv', '.tsv', '.parquet'] as const;
 export const unwrapArrow = (value: unknown): any => {
   if (value === null) {
     return value;
-  } else if (value instanceof Vector) {
-    return [...value].map(unwrapArrow);
   } else if (value instanceof Date) {
     return value;
   } else if (typeof value === 'bigint') {
@@ -69,6 +69,9 @@ export const unwrapArrow = (value: unknown): any => {
       return Number(obj[Symbol.toPrimitive]());
     } else if (Array.isArray(value)) {
       return value.map(unwrapArrow);
+    } else if (isIterable(value)) {
+      // Catch Arrow Vector objects
+      return [...value].map(unwrapArrow);
     } else {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result: Record<string | symbol, any> = {};
