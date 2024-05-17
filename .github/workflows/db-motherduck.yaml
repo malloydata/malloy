@@ -31,4 +31,4 @@ jobs:
         env:
           CI: true
           MALLOY_DATABASES: motherduck
-          MOTHERDUCK_TOKEN: ${{ secrets.MOTHERDUCK_TOKEN }}
+          MOTHERDUCK_TOKEN: ${{ secrets.MOTHERDUCK_TOKEN_10 }}
