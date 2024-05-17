@@ -13,7 +13,7 @@ jobs:
   db-motherduck:
     uses: './.github/workflows/db-motherduck.yaml'
     secrets:
-      MOTHERDUCK_TOKEN: ${{ secrets.MOTHERDUCK_TOKEN }}
+      MOTHERDUCK_TOKEN_10: ${{ secrets.MOTHERDUCK_TOKEN_10 }}
   db-postgres:
     uses: './.github/workflows/db-postgres.yaml'
   db-snowflake:

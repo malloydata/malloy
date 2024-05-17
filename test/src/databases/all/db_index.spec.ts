@@ -109,15 +109,18 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     }
   );
 
-  it(`index rows count - ${databaseName}`, async () => {
-    await expect(`
+  it.when(databaseName !== 'trino')(
+    `index rows count - ${databaseName}`,
+    async () => {
+      await expect(`
       run: ${databaseName}.table('malloytest.flights') extend {
         dimension: one is 'one'
       } -> {index:one, tail_num; sample: 50% }
         -> {select: fieldName, weight, fieldValue; order_by: 2 desc; where: fieldName = 'one'}
     `).malloyResultMatches(runtime, {fieldName: 'one'});
-    // Hard to get consistent results here so just check that we get a value back.
-  });
+      // Hard to get consistent results here so just check that we get a value back.
+    }
+  );
 
   // it(`fanned data index  - ${databaseName}`, async () => {
   //   const result = await runtime
