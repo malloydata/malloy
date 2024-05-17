@@ -4,7 +4,7 @@ on:
   pull_request:
   workflow_call:
     secrets:
-      MOTHERDUCK_TOKEN:
+      MOTHERDUCK_TOKEN_10:
         required: true
 
 jobs:
