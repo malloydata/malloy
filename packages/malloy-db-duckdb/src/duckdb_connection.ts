@@ -135,6 +135,7 @@ export class DuckDBConnection extends DuckDBCommon {
         if (this.isMotherDuck) {
           if (this.motherDuckToken) {
             process.env['motherduck_token'] = this.motherDuckToken;
+            process.env['MOTHERDUCK_TOKEN'] = this.motherDuckToken;
           }
           if (
             !process.env['motherduck_token'] &&
