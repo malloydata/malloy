@@ -623,27 +623,20 @@ export class Document extends MalloyElement implements NameSpace {
     this.documentModel[str] = ent;
   }
 
-  private alreadyChecked: Record<string, boolean> = {};
   /**
    * Return an error message if this dialect is the first reference to this particular
    * dialect, and the dialect is marked as experimental, and we are not running tests.
    * @param dialect The dialect name
    * @returns The error message or undefined
    */
-  checkExperimentalDialect(me: MalloyElement, dialect: string) {
-    if (this.alreadyChecked[dialect]) {
-      return;
-    }
-    this.alreadyChecked[dialect] = true;
-    if (getDialect(dialect).experimental) {
-      const experimental = this.translator()?.compilerFlags.tag('experimental');
-      if (
-        experimental &&
-        (experimental.bare() || experimental.has('dialect', dialect))
-      ) {
-        return;
-      }
-      // TODO DO NOT DO THIS IN TESTS
+  checkExperimentalDialect(me: MalloyElement, dialect: string): void {
+    const t = this.translator();
+    if (
+      t &&
+      t.firstReferenceToDialect(dialect) &&
+      getDialect(dialect).experimental &&
+      !t.experimentalDialectEnabled(dialect)
+    ) {
       me.log(
         `Requires compiler flag '##! experimental.dialect.${dialect}'`,
         'error'

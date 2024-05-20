@@ -920,6 +920,38 @@ export abstract class MalloyTranslation {
   rangeFromToken(token: Token): DocumentRange {
     return this.rangeFromTokens(token, token);
   }
+
+  /*
+   Experimental dialect support, not confident this is how this should work.
+
+   To prevent cascading errors, each translator will only warn once about use of an experimental dialect.
+
+   To enable tests to run without having to enabled experimental dialects, there is a hook here for
+   the owner of a Translator object to decide if we check the experimental flag.
+
+   Not sure where the logic for this needs to go, this is just my first guess
+   */
+
+  private dialectAlreadyChecked: Record<string, boolean> = {};
+  firstReferenceToDialect(dialect: string): boolean {
+    if (this.dialectAlreadyChecked[dialect]) {
+      return false;
+    }
+    this.dialectAlreadyChecked[dialect] = true;
+    return true;
+  }
+
+  allDialectsEnabled = false;
+  experimentalDialectEnabled(dialect: string): boolean {
+    if (this.allDialectsEnabled) {
+      return true;
+    }
+    const experimental = this.compilerFlags.tag('experimental');
+    return (
+      experimental !== undefined &&
+      (experimental.bare() || experimental.has('dialect', dialect))
+    );
+  }
 }
 
 export class MalloyChildTranslator extends MalloyTranslation {
