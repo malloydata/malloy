@@ -216,6 +216,7 @@ export class RuntimeList {
         database instanceof SingleConnectionRuntime
           ? database
           : runtimeFor(database);
+      rt.isTestRuntime = true;
       this.runtimeMap.set(rt.connection.name, rt);
       this.runtimeList.push([rt.connection.name, rt]);
     }
