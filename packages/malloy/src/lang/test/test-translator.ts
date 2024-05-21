@@ -229,6 +229,7 @@ export class TestChildTranslator extends MalloyChildTranslator {
 
 const testURI = 'internal://test/langtests/root.malloy';
 export class TestTranslator extends MalloyTranslator {
+  allDialectsEnabled = true;
   testRoot?: TestRoot;
   /*
    * All test source files can assume that an import of this

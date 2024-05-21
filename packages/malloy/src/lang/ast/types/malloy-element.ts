@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {getDialect} from '../../../dialect';
 import {
   Annotation,
   DocumentLocation,
@@ -615,6 +616,31 @@ export class Document extends MalloyElement implements NameSpace {
     if (this.globalNameSpace.getEntry(str) !== undefined) {
       this.log(`Cannot redefine '${str}', which is in global namespace`);
     }
+    if (ent.entry.type === 'struct') {
+      this.checkExperimentalDialect(this, ent.entry.dialect);
+    }
+
     this.documentModel[str] = ent;
+  }
+
+  /**
+   * Return an error message if this dialect is the first reference to this particular
+   * dialect, and the dialect is marked as experimental, and we are not running tests.
+   * @param dialect The dialect name
+   * @returns The error message or undefined
+   */
+  checkExperimentalDialect(me: MalloyElement, dialect: string): void {
+    const t = this.translator();
+    if (
+      t &&
+      t.firstReferenceToDialect(dialect) &&
+      getDialect(dialect).experimental &&
+      !t.experimentalDialectEnabled(dialect)
+    ) {
+      me.log(
+        `Requires compiler flag '##! experimental.dialect.${dialect}'`,
+        'error'
+      );
+    }
   }
 }

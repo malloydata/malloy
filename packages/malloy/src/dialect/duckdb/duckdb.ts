@@ -71,6 +71,7 @@ const duckDBToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
 
 export class DuckDBDialect extends Dialect {
   name = 'duckdb';
+  experimental = false;
   defaultNumberType = 'DOUBLE';
   defaultDecimalType = 'NUMERIC';
   hasFinalStage = false;

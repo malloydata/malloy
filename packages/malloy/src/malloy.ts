@@ -94,6 +94,7 @@ export interface Loggable {
 
 export interface ParseOptions {
   importBaseURL?: URL;
+  testEnvironment?: boolean;
 }
 
 export interface CompileOptions {
@@ -136,6 +137,9 @@ export class Malloy {
         urls: {[url.toString()]: source},
       }
     );
+    if (options?.testEnvironment) {
+      translator.allDialectsEnabled = true;
+    }
     return new Parse(translator);
   }
 
@@ -2101,6 +2105,7 @@ export class ExploreField extends Explore {
  * An environment for compiling and running Malloy queries.
  */
 export class Runtime {
+  isTestRuntime = false;
   private _urlReader: URLReader;
   private _connections: LookupConnection<Connection>;
 
@@ -2163,6 +2168,13 @@ export class Runtime {
     options?: ParseOptions & CompileOptions
   ): ModelMaterializer {
     const {refreshSchemaCache, noThrowOnError} = options || {};
+    if (this.isTestRuntime) {
+      if (options === undefined) {
+        options = {testEnvironment: true};
+      } else {
+        options = {...options, testEnvironment: true};
+      }
+    }
     return new ModelMaterializer(this, async () => {
       const parse =
         source instanceof URL
@@ -2541,6 +2553,13 @@ export class ModelMaterializer extends FluentState<Model> {
     return this.makeQueryMaterializer(async () => {
       const urlReader = this.runtime.urlReader;
       const connections = this.runtime.connections;
+      if (this.runtime.isTestRuntime) {
+        if (options === undefined) {
+          options = {testEnvironment: true};
+        } else {
+          options = {...options, testEnvironment: true};
+        }
+      }
       const parse =
         query instanceof URL
           ? await Malloy.parse({
@@ -2576,6 +2595,13 @@ export class ModelMaterializer extends FluentState<Model> {
     query: QueryString | QueryURL,
     options?: ParseOptions & CompileOptions
   ): ModelMaterializer {
+    if (this.runtime.isTestRuntime) {
+      if (options === undefined) {
+        options = {testEnvironment: true};
+      } else {
+        options = {...options, testEnvironment: true};
+      }
+    }
     return new ModelMaterializer(this.runtime, async () => {
       const urlReader = this.runtime.urlReader;
       const connections = this.runtime.connections;

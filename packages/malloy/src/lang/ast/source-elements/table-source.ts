@@ -45,6 +45,10 @@ export abstract class TableSource extends Source {
     let msg = `Schema read failure for table '${tablePath}' for connection '${connectionName}'`;
     if (tableDefEntry) {
       if (tableDefEntry.status === 'present') {
+        this.document()?.checkExperimentalDialect(
+          this,
+          tableDefEntry.value.dialect
+        );
         tableDefEntry.value.location = this.location;
         tableDefEntry.value.fields.forEach(field => {
           field.location = this.location;

@@ -115,6 +115,7 @@ export abstract class Dialect {
   abstract supportsQualify: boolean;
   abstract supportsSafeCast: boolean;
   abstract supportsNesting: boolean;
+  abstract experimental: boolean; // requires ##! experimental.dialect.NAME
 
   // -- we should add flags with default values from now on so as to not break
   // dialects outside our repository

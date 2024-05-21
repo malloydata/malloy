@@ -89,6 +89,7 @@ const snowflakeToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
 
 export class SnowflakeDialect extends Dialect {
   name = 'snowflake';
+  experimental = false;
   defaultNumberType = 'NUMBER';
   defaultDecimalType = 'NUMBER';
   udfPrefix = '__udf';
@@ -109,8 +110,6 @@ export class SnowflakeDialect extends Dialect {
   dontUnionIndex = false;
   supportsQualify = false;
   supportsPipelinesInViews = false;
-
-
 
   // don't mess with the table pathing.
   quoteTablePath(tablePath: string): string {
