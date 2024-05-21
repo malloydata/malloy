@@ -87,7 +87,7 @@ const trinoTypeMap = {
 
 export class TrinoDialect extends Dialect {
   name = 'trino';
-  experimental = true;
+  experimental = false;
   defaultNumberType = 'DOUBLE';
   defaultDecimalType = 'DECIMAL';
   udfPrefix = '__udf';
