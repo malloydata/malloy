@@ -203,7 +203,9 @@ export class Tag implements TagInterface {
     annote: Annotation | undefined,
     spec: TagParseSpec = {}
   ): TagParse {
+    console.log("Annotation: " + annote + " " + spec);
     let extending = spec.extending || new Tag();
+    console.log("Extending 1: " + extending);
     const prefix = spec.prefix || /^##? /;
     annote ||= {};
     const allErrs: LogMessage[] = [];
@@ -211,6 +213,7 @@ export class Tag implements TagInterface {
       const inherits = Tag.annotationToTag(annote.inherits, spec);
       allErrs.push(...inherits.log);
       extending = inherits.tag;
+      console.log("Extending 2: " + extending);
     }
     const allNotes: Note[] = [];
     if (annote.blockNotes) {
@@ -230,9 +233,11 @@ export class Tag implements TagInterface {
           note.at.range.start.character
         );
         extending = noteParse.tag;
+        console.log("Extending 3: " + extending);
         allErrs.push(...noteParse.log);
       }
     }
+    console.log("Extending final: " + extending);
     return {tag: extending, log: allErrs};
   }
 
