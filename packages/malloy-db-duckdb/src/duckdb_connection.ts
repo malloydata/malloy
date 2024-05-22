@@ -133,17 +133,24 @@ export class DuckDBConnection extends DuckDBCommon {
         resolve();
       } else {
         if (this.isMotherDuck) {
-          if (this.motherDuckToken) {
-            process.env['motherduck_token'] = this.motherDuckToken;
-            process.env['MOTHERDUCK_TOKEN'] = this.motherDuckToken;
-          }
           if (
+            !this.motherDuckToken &&
             !process.env['motherduck_token'] &&
             !process.env['MOTHERDUCK_TOKEN']
           ) {
             this.setupError = new Error('Please set your MotherDuck Token');
             // Resolve instead of error because errors cannot be caught.
             return resolve();
+          }
+          if (this.motherDuckToken) {
+            try {
+              const dbUrl = new URL(this.databasePath);
+              dbUrl.searchParams.set('motherduck_token', this.motherDuckToken);
+              this.databasePath = dbUrl.toString();
+            } catch {
+              // eslint-disable-next-line no-console
+              console.warn('Unable to update MotherDuck URL with token');
+            }
           }
         }
         const database = new Database(
@@ -154,17 +161,13 @@ export class DuckDBConnection extends DuckDBCommon {
               this.setupError = err;
             } else {
               this.connection = database.connect();
-              // Don't cache MotherDuck connections so they can
-              // pick up fresh credentials if necessary.
-              if (!this.isMotherDuck) {
-                const activeDB: ActiveDB = {
-                  database,
-                  connections: [],
-                };
-                DuckDBConnection.activeDBs[this.databasePath] = activeDB;
+              const activeDB: ActiveDB = {
+                database,
+                connections: [],
+              };
+              DuckDBConnection.activeDBs[this.databasePath] = activeDB;
 
-                activeDB.connections.push(this.connection);
-              }
+              activeDB.connections.push(this.connection);
             }
             resolve();
           }
