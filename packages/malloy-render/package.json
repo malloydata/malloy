@@ -33,7 +33,7 @@
     "build-types": "tsc --build --declaration --emitDeclarationOnly"
   },
   "dependencies": {
-    "@malloydata/malloy": "^0.0.147",
+    "@malloydata/malloy": "github:malloydata/malloy#composer-debugging",
     "@types/luxon": "^2.4.0",
     "component-register": "^0.8.3",
     "lodash": "^4.17.20",
