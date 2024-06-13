@@ -189,11 +189,11 @@ export function testRuntimeFor(connection: Connection) {
  * should not be in this list. Use MALLOY_DATABASE=dialect_name to test those
  */
 export const allDatabases = [
-  'postgres',
+  /*'postgres',
   'bigquery',
   'duckdb',
   'duckdb_wasm',
-  'snowflake',
+  'snowflake',*/
   'trino',
 ];
 

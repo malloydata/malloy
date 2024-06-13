@@ -43,7 +43,7 @@ import {
   StructDef,
 } from '@malloydata/malloy';
 import {randomUUID} from 'crypto';
-import {Trino, BasicAuth} from 'trino-client';
+//import fetch from 'node-fetch';
 
 export interface TrinoManagerOptions {
   credentials?: {
@@ -129,8 +129,6 @@ export class TrinoConnection implements Connection, PersistSQLResults {
 
   private config: TrinoConnectionConfiguration;
 
-  private trino: Trino;
-
   constructor(
     option: TrinoConnectionOptions,
     queryOptions?: QueryOptionsReader
@@ -159,13 +157,6 @@ export class TrinoConnection implements Connection, PersistSQLResults {
         };
       }
     }*/
-    // TODO: check user is set.
-    this.trino = Trino.create({
-      server: config.server,
-      catalog: 'malloy_demo', //config.catalog,
-      schema: config.schema,
-      auth: new BasicAuth(config.user!, config.password),
-    });
 
     this.queryOptions = queryOptions;
     this.config = config;
@@ -256,18 +247,21 @@ export class TrinoConnection implements Connection, PersistSQLResults {
   convertRow(structDef: StructDef, _row: unknown) {
     const retRow = {};
     const row = _row as [];
+    console.log(`THE FIELD LEN: ${structDef.fields.length}`);
     for (let i = 0; i < structDef.fields.length; i++) {
       const field = structDef.fields[i];
+      const fieldName = field.name.replace(/"/g, '');
+      console.log(`THE FIELD NAME: ${fieldName}`);
 
       if (field.type === 'struct') {
         const struct = field as StructDef;
         if (struct.structSource.type === 'inline') {
-          retRow[field.name] = this.convertRow(struct, row[i]);
+          retRow[fieldName] = this.convertRow(struct, row[i]);
         } else {
-          retRow[field.name] = this.convertNest(struct, row[i]);
+          retRow[fieldName] = this.convertNest(struct, row[i]);
         }
       } else {
-        retRow[field.name] = row[i] === undefined ? null : row[i];
+        retRow[fieldName] = row[i] === undefined ? null : row[i];
       }
     }
     //console.log(retRow);
@@ -283,6 +277,10 @@ export class TrinoConnection implements Connection, PersistSQLResults {
       return this.convertRow(structDef, data);
     }
     const rows = (data === null || data === undefined ? [] : data) as unknown[];
+
+    console.log(
+      `=====> CONVERTING NEST ${structDef.structSource.type} ${rows.length}`
+    );
     for (const row of rows) {
       ret.push(this.convertRow(structDef, row));
     }
@@ -295,11 +293,21 @@ export class TrinoConnection implements Connection, PersistSQLResults {
     // TODO(figutierrez): Use.
     _rowIndex = 0
   ): Promise<MalloyQueryData> {
-    const result = await this.trino.query(sqlCommand);
-    let queryResult = await result.next();
-    if (queryResult.value.error) {
+    const result = await fetch('http://localhost:7777/hello', {
+      method: 'POST',
+      body: sqlCommand,
+    });
+
+    /*console.log(
+      `===============================================================> \n BODY ${await result.body?.getReader().read}`
+    );*/
+    const parsedResult = await result.json();
+
+    //let queryResult = await result.next();
+    // TODO(figutierrez): Multiple calls.
+    if (parsedResult.error) {
       // TODO: handle.
-      const {failureInfo: _, ...error} = queryResult.value.error;
+      const {failureInfo: _, ...error} = parsedResult.error;
       throw new Error(
         `Failed to execute sql: ${sqlCommand}. \n Error: ${JSON.stringify(
           error
@@ -307,7 +315,7 @@ export class TrinoConnection implements Connection, PersistSQLResults {
       );
     }
 
-    const malloyColumns = queryResult.value.columns.map(c =>
+    const malloyColumns = parsedResult.columns.map(c =>
       this.malloyTypeFromTrinoType(c.name, c.type)
     );
 
@@ -318,12 +326,12 @@ export class TrinoConnection implements Connection, PersistSQLResults {
 
     let maxRows = options.rowLimit ?? 50;
     const malloyRows: QueryDataRow[] = [];
-    while (queryResult !== null && maxRows--) {
-      const rows = queryResult.value.data ?? [];
+    while (parsedResult !== null && maxRows--) {
+      const rows = parsedResult.data ?? [];
       for (const row of rows) {
         const malloyRow: QueryDataRow = {};
-        for (let i = 0; i < queryResult.value.columns.length; i++) {
-          const column = queryResult.value.columns[i];
+        for (let i = 0; i < parsedResult.columns.length; i++) {
+          const column = parsedResult.columns[i];
           if (malloyColumns[i].type === 'struct') {
             const structDef = malloyColumns[i] as StructDef;
             if (structDef.structSource.type === 'inline') {
@@ -363,17 +371,19 @@ export class TrinoConnection implements Connection, PersistSQLResults {
         malloyRows.push(malloyRow);
       }
 
-      if (!queryResult.done) {
+      /*if (!queryResult.done) {
         queryResult = await result.next();
       } else {
         break;
-      }
+      }*/
     }
 
     // TODO(figutierrez): Remove.
     // eslint-disable-next-line no-console
-    // console.log(`ROWS: ${JSON.stringify(malloyRows)} ${malloyRows.length}`);
+    console.log(`ROWS: ${JSON.stringify(malloyRows)} ${malloyRows.length}`);
     // TODO: handle totalrows.
+    /*    console.log(`ROWS: ${JSON.stringify(malloyRows)} ${malloyRows.length}`);
+    malloyRows = malloyRows.slice(0, maxRows);*/
     return {rows: malloyRows, totalRows: malloyRows.length};
   }
 
@@ -523,9 +533,13 @@ export class TrinoConnection implements Connection, PersistSQLResults {
   }
 
   private async executeAndWait(sqlBlock: string): Promise<void> {
-    const result = await this.trino.query(sqlBlock);
+    await fetch('http://localhost:7777/hello', {
+      method: 'POST',
+      body: sqlBlock,
+    });
     // TODO: make sure failure is handled correctly.
-    while (!(await result.next()).done);
+    // TODO(figutierrez): multiple calls
+    //while (!(await result.next()).done);
   }
 
   splitColumns(s: string) {
@@ -660,23 +674,30 @@ export class TrinoConnection implements Connection, PersistSQLResults {
     element: string
   ): Promise<StructDef> {
     try {
-      const result = await this.trino.query(sqlBlock);
+      console.log('================> SENDING SQL');
+      const result = await fetch('http://localhost:7777/hello', {
+        method: 'POST',
+        body: sqlBlock,
+      });
 
-      const queryResult = await result.next();
-
-      if (queryResult.value.error) {
+      console.log(`================> RECEIVING RESULT ${result.body}`);
+      const parsedResult = await result.json();
+      // console.log(`THE RESULT IS: ${JSON.stringify(table)}`);
+      if (parsedResult.error) {
         // TODO: handle.
         throw new Error(
           `Failed to grab schema for ${element}: ${JSON.stringify(
-            queryResult.value.error
+            parsedResult.error
           )}`
         );
       }
 
-      const rows: string[][] = queryResult.value.data ?? [];
+      const rows: string[][] = parsedResult.data ?? [];
       this.structDefFromSchema(rows, structDef);
     } catch (e) {
-      throw new Error(`Could not fetch schema for ${element} ${e}`);
+      throw new Error(
+        `Could not fetch schema 22 for ${element} ${JSON.stringify(typeof e)}`
+      );
     }
 
     return structDef;
