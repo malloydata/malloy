@@ -8,7 +8,6 @@ async function doRun(): Promise<void> {
     user: 'arreola222',
     ssl: {
       ca: 'CorpCA',
-      //cert: '/var/facebook/credentials/arreola/presto/arreola.pem',
       cert: `<CERT CONTENT>`,
     },
     //source: 'presto-client-js-test',
