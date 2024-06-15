@@ -575,6 +575,8 @@ export class TrinoConnection implements Connection, PersistSQLResults {
     name: string,
     trinoType: string
   ): FieldAtomicTypeDef | StructDef {
+    name = name.replace(/"/g, '');
+    console.log(`===> NAME ${name} TYPE ${trinoType}`);
     let malloyType: FieldAtomicTypeDef | StructDef;
     // Arrays look like `array(type)`
     const arrayMatch = trinoType.match(/^(([^,])+\s)?array\((.*)\)$/);
@@ -633,7 +635,7 @@ export class TrinoConnection implements Connection, PersistSQLResults {
           parts = innerType.match(/^(.+)\s(\S+)$/);
         }
         if (parts) {
-          const innerName = parts[1];
+          const innerName = parts[1].replace(/"/g, '');;
           const innerTrinoType = parts[2];
           const innerMalloyType = this.malloyTypeFromTrinoType(
             innerName,
@@ -660,7 +662,7 @@ export class TrinoConnection implements Connection, PersistSQLResults {
 
   structDefFromSchema(rows: string[][], structDef: StructDef): void {
     for (const row of rows) {
-      const name = row[0];
+      const name = row[0].replace(/"/g, '');
       const type = row[4] || row[1];
       const malloyType = this.malloyTypeFromTrinoType(name, type);
       // console.log('>', row, '\n<', malloyType);

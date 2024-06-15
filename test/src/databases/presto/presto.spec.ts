@@ -34,7 +34,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   jest.setTimeout(100000);
   it('basic calculations', async () => {
     await expect(`
-      run: trino.table('dim_public_tasks') -> {
+      run: trino.table('presto_query_statistics') -> {
         group_by: task_id
         nest: foo is {
           select: owning_team_id, ds
