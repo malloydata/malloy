@@ -218,6 +218,34 @@ describe.each(runtimes.runtimeList)(
         // don't know what to expect ...
       });
     });
+
+    test(`join on nested field - ${databaseName}`, async () => {
+      await expect(`
+      source: a is ${databaseName}.table('malloytest.airports') -> {
+        group_by: state
+        aggregate: airport_count is count()
+        nest: by_fac_type is {
+          group_by: fac_type
+          aggregate: airport_count is count()
+        }
+      }
+
+      source: fac_types is a -> {
+        group_by: by_fac_type.fac_type
+        aggregate: by_fac_type.airport_count.sum()
+      }
+
+      run: fac_types -> {
+          extend: {
+          join_many: a on fac_type = a.by_fac_type.fac_type
+        }
+        group_by: a.by_fac_type.fac_type
+        aggregate: a.by_fac_type.airport_count.sum()
+      }
+      `).malloyResultMatches(runtime, {
+        'fac_type': 'AIRPORT',
+      });
+    });
   }
 );
 
