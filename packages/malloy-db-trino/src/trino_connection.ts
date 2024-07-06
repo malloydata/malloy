@@ -162,7 +162,7 @@ export class TrinoConnection implements Connection, PersistSQLResults {
     // TODO: check user is set.
     this.trino = Trino.create({
       server: config.server,
-      catalog: 'malloy_demo', //config.catalog,
+      catalog: config.catalog,
       schema: config.schema,
       auth: new BasicAuth(config.user!, config.password),
     });
