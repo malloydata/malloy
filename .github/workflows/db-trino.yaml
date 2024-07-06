@@ -1,6 +1,11 @@
 name: Trino DB
 
-on: [pull_request, workflow_call]
+on:
+  pull_request:
+  workflow_call:
+    secrets:
+      BQ_PRESTO_TRINO_KEY:
+        required: true
 
 jobs:
   # Label of the container job
@@ -24,11 +29,14 @@ jobs:
           npm ci --loglevel error
           npm run build
           npm run build-duckdb-db
-          npm run ping-db trino
+          ./test/trino/trino_start.sh
           npm run test packages/malloy-db-trino
           npm run test test
+          ./test/trino/trino_stop.sh
         env:
           MALLOY_DATABASES: trino
-          TRINO_SERVER: https://malloytesting-test-cluster.trino.galaxy.starburst.io
-          TRINO_USER: ${{ secrets.TRINO_USER}}
-          TRINO_PASSWORD: ${{ secrets.TRINO_PASSWORD}}
+          BQ_CREDENTIALS_KEY: ${{ secrets.BQ_PRESTO_TRINO_KEY }}
+          TRINO_CATALOG: bigquery
+          TRINO_SCHEMA: malloytest
+          TRINO_SERVER: http://localhost:8090
+          TRINO_USER: malloy-ci-bot@malloydata.org
