@@ -604,3 +604,7 @@ ${indent(sql)}
     return sqlType.match(/^[A-Za-z\s(),<>0-9]*$/) !== null;
   }
 }
+
+export class PrestoDialect extends TrinoDialect {
+  name = 'presto';
+}
