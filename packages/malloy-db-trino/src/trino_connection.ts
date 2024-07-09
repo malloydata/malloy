@@ -510,7 +510,7 @@ export abstract class TrinoPrestoConnection implements Connection, PersistSQLRes
       fields: [],
     };
 
-    this.fillStructDefForSqlBlockSchema(sqlRef.sql, structDef)
+    this.fillStructDefForSqlBlockSchema(sqlRef.selectStr, structDef)
 
     return structDef;
   }
@@ -552,7 +552,7 @@ export abstract class TrinoPrestoConnection implements Connection, PersistSQLRes
     return columns;
   }
 
-  protected malloyTypeFromTrinoType(
+  public malloyTypeFromTrinoType(
     name: string,
     trinoType: string
   ): FieldAtomicTypeDef | StructDef {
@@ -727,7 +727,6 @@ export class PrestoConnection extends TrinoPrestoConnection {
   protected async fillStructDefForSqlBlockSchema(sql: string, structDef: StructDef): Promise<void> {
     const explainResult = await this.runSQL(`EXPLAIN ${sql}`, {});
     this.schemaFromExplain(explainResult, structDef);
-    return structDef;
   }
 
 
@@ -803,7 +802,7 @@ export class TrinoConnection extends TrinoPrestoConnection {
     await this.executeAndWait(
       `PREPARE ${tmpQueryName} FROM ${sql}`
     );
-    return await this.loadSchemaForSqlBlock(
+    await this.loadSchemaForSqlBlock(
       `DESCRIBE OUTPUT ${tmpQueryName}`,
       structDef,
       `query ${sql.substring(0, 50)}`
