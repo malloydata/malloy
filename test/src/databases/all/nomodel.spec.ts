@@ -548,6 +548,17 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     }
   );
 
+  it(`sql block- ${databaseName}`, async () => {
+    await expect(`
+      source: one is ${databaseName}.sql("""
+        SELECT 2 as ${q`a`}
+      """)
+      run: one -> {
+        select: a
+      }`).malloyResultMatches(runtime, {a: 2});
+  });
+
+
   // average should only include non-null values in the denominator
   it(`avg ignore null- ${databaseName}`, async () => {
     await expect(`
@@ -628,6 +639,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     'ungrouped nested with no grouping above - ${databaseName}',
     async () => {
       await expect(`
+        // # test.debug
         run: ${databaseName}.table('malloytest.state_facts') extend {
           measure: total_births is births.sum()
           measure: births_per_100k is floor(total_births/ all(total_births) * 100000)
