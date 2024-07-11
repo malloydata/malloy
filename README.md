@@ -6,7 +6,7 @@ Malloy is an experimental language for describing data relationships and transfo
 ---
 
 ## Installing Malloy
-
+Test update
 The easiest way to try Malloy is with our VS Code Extension, which provides a place to create Malloy models, execute queries, get help, and more. VS Code is a text editor and IDE (integrated development environment) that runs on your desktop or in your browser. A few ways to install the extension:
 
 * [I already have VS Code](https://docs.malloydata.dev/documentation/setup/extension.html#using-the-malloy-extension-on-your-desktop)
