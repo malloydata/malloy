@@ -5,7 +5,7 @@ on:
   workflow_call:
     secrets:
       SNOWFLAKE_CONNECTION:
-        required: true
+        required: false
 
 jobs:
   test-snowflake:
