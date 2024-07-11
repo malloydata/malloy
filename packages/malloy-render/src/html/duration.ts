@@ -107,7 +107,7 @@ export class HTMLDurationRenderer extends HTMLTextRenderer {
     if (value === 1) {
       unitString = unitString.substring(0, unitString.length - 1);
     }
-    const formattedValue = numFormat ? format(numFormat, value) : value;
+    const formattedValue = numFormat ? format(numFormat, value) : value.toLocaleString();
     return `${formattedValue} ${unitString}`;
   }
 }
