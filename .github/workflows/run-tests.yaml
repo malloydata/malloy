@@ -25,7 +25,6 @@ jobs:
       - db-bigquery
       - db-motherduck
       - db-postgres
-      - db-snowflake
       - main
     runs-on: ubuntu-latest
     steps:
