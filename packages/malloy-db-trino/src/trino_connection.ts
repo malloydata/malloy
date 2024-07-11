@@ -517,7 +517,7 @@ export abstract class TrinoPrestoConnection
       fields: [],
     };
 
-    this.fillStructDefForSqlBlockSchema(sqlRef.selectStr, structDef);
+    await this.fillStructDefForSqlBlockSchema(sqlRef.selectStr, structDef);
 
     return structDef;
   }

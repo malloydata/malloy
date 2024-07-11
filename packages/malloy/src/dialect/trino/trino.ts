@@ -607,6 +607,7 @@ ${indent(sql)}
 
 export class PrestoDialect extends TrinoDialect {
   name = 'presto';
+  supportsPipelinesInViews = false; // what a drag...
 
   sqlGenerateUUID(): string {
     return 'CAST(UUID() AS VARCHAR)';
