@@ -21,7 +21,7 @@ do
   sleep 1
   counter=$((counter+1))
   # if doesn't start after 2 minutes, output logs and kill process
-  if [ $counter -eq 120 ]
+  if [ $counter -eq 300 ]
   then
     docker logs trino-malloy >& ./.tmp/trino-malloy.logs
     docker rm -f trino-malloy
