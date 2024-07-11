@@ -139,7 +139,9 @@ class TrinooBase implements BaseConnection {
 }
 
 // manage access to BQ, control costs, enforce global data/API limits
-export abstract class TrinoPrestoConnection implements Connection, PersistSQLResults {
+export abstract class TrinoPrestoConnection
+  implements Connection, PersistSQLResults
+{
   trinoToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
     'varchar': {type: 'string'},
     'integer': {type: 'number', numberType: 'integer'},
@@ -257,9 +259,13 @@ export abstract class TrinoPrestoConnection implements Connection, PersistSQLRes
     throw new Error('not implemented 1');
   }
 
+  unpackArray(data: unknown): unknown[] {
+    return data as unknown[];
+  }
+
   convertRow(structDef: StructDef, _row: unknown) {
     const retRow = {};
-    const row = _row as [];
+    const row = this.unpackArray(_row);
     for (let i = 0; i < structDef.fields.length; i++) {
       const field = structDef.fields[i];
 
@@ -278,7 +284,8 @@ export abstract class TrinoPrestoConnection implements Connection, PersistSQLRes
     return retRow;
   }
 
-  convertNest(structDef: StructDef, data: unknown) {
+  convertNest(structDef: StructDef, _data: unknown) {
+    const data = this.unpackArray(_data);
     const ret: unknown[] = [];
     //console.log(
     //   `${JSON.stringify(structDef, null, 2)} ${JSON.stringify(data, null, 2)} `
@@ -510,12 +517,15 @@ export abstract class TrinoPrestoConnection implements Connection, PersistSQLRes
       fields: [],
     };
 
-    this.fillStructDefForSqlBlockSchema(sqlRef.selectStr, structDef)
+    this.fillStructDefForSqlBlockSchema(sqlRef.selectStr, structDef);
 
     return structDef;
   }
 
-  protected abstract fillStructDefForSqlBlockSchema(sql: string, structDef: StructDef): Promise<void>;
+  protected abstract fillStructDefForSqlBlockSchema(
+    sql: string,
+    structDef: StructDef
+  ): Promise<void>;
 
   protected async executeAndWait(sqlBlock: string): Promise<void> {
     await this.client.runSQL(sqlBlock, undefined);
@@ -614,7 +624,8 @@ export abstract class TrinoPrestoConnection implements Connection, PersistSQLRes
           parts = innerType.match(/^(.+)\s(\S+)$/);
         }
         if (parts) {
-          const innerName = parts[1];
+          // remove quotes from the name
+          const innerName = parts[1].replace(/^"(.+(?="$))"$/, '$1');
           const innerTrinoType = parts[2];
           const innerMalloyType = this.malloyTypeFromTrinoType(
             innerName,
@@ -723,29 +734,39 @@ export class PrestoConnection extends TrinoPrestoConnection {
     super('presto', queryOptions, config);
   }
 
-
-  protected async fillStructDefForSqlBlockSchema(sql: string, structDef: StructDef): Promise<void> {
+  protected async fillStructDefForSqlBlockSchema(
+    sql: string,
+    structDef: StructDef
+  ): Promise<void> {
     const explainResult = await this.runSQL(`EXPLAIN ${sql}`, {});
     this.schemaFromExplain(explainResult, structDef);
   }
 
-
-  private schemaFromExplain(explainResult: MalloyQueryData, structDef: StructDef) {
+  private schemaFromExplain(
+    explainResult: MalloyQueryData,
+    structDef: StructDef
+  ) {
     if (explainResult.rows.length === 0) {
-        throw new Error('Received empty explain result when trying to fetch schema.');
+      throw new Error(
+        'Received empty explain result when trying to fetch schema.'
+      );
     }
 
     const resultFirstRow = explainResult.rows[0];
 
     if (resultFirstRow['Query Plan'] === undefined) {
-        throw new Error(`Explain result has rows but column 'Query Plan' is not present.`);
+      throw new Error(
+        "Explain result has rows but column 'Query Plan' is not present."
+      );
     }
 
     const expResult = resultFirstRow['Query Plan'] as string;
 
     const lines = expResult.split('\n');
-    if (lines?.length == 0) {
-        throw new Error('Received invalid explain result when trying to fetch schema.');
+    if (lines?.length === 0) {
+      throw new Error(
+        'Received invalid explain result when trying to fetch schema.'
+      );
     }
 
     let outputLine = lines[0];
@@ -755,27 +776,38 @@ export class PrestoConnection extends TrinoPrestoConnection {
 
     const lineParts = outputLine.split('] => [');
 
-    if (lineParts.length != 2) {
-        throw new Error('There was a problem parsing schema from Explain.');
+    if (lineParts.length !== 2) {
+      throw new Error('There was a problem parsing schema from Explain.');
     }
-
 
     const fieldNamesPart = lineParts[0];
     const fieldNames = fieldNamesPart.split(',').map(e => e.trim());
 
     let schemaData = lineParts[1];
     schemaData = schemaData.substring(0, schemaData.length - 1);
-    const rawFieldsTarget = schemaData.split(',').map(e => e.trim()).map(e => e.split(':'));
+    const rawFieldsTarget = schemaData
+      .split(',')
+      .map(e => e.trim())
+      .map(e => e.split(':'));
 
-    if (rawFieldsTarget.length != fieldNames.length) {
-      throw new Error('There was a problem parsing schema from Explain. Field names size do not match target fields with types.');
+    if (rawFieldsTarget.length !== fieldNames.length) {
+      throw new Error(
+        'There was a problem parsing schema from Explain. Field names size do not match target fields with types.'
+      );
     }
 
-    for (var index = 0; index < fieldNames.length; index++) {
+    for (let index = 0; index < fieldNames.length; index++) {
       const name = fieldNames[index];
       const type = rawFieldsTarget[index][1];
-      structDef.fields.push({name, ...this.malloyTypeFromTrinoType(name, type)});
+      structDef.fields.push({
+        name,
+        ...this.malloyTypeFromTrinoType(name, type),
+      });
     }
+  }
+
+  unpackArray(data: unknown): unknown[] {
+    return JSON.parse(data as string);
   }
 }
 
@@ -797,11 +829,12 @@ export class TrinoConnection extends TrinoPrestoConnection {
     super('trino', queryOptions, config);
   }
 
-  protected async fillStructDefForSqlBlockSchema(sql: string, structDef: StructDef): Promise<void> {
+  protected async fillStructDefForSqlBlockSchema(
+    sql: string,
+    structDef: StructDef
+  ): Promise<void> {
     const tmpQueryName = `myMalloyQuery${randomUUID().replace(/-/g, '')}`;
-    await this.executeAndWait(
-      `PREPARE ${tmpQueryName} FROM ${sql}`
-    );
+    await this.executeAndWait(`PREPARE ${tmpQueryName} FROM ${sql}`);
     await this.loadSchemaForSqlBlock(
       `DESCRIBE OUTPUT ${tmpQueryName}`,
       structDef,
