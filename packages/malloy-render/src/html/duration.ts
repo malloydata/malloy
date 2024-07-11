@@ -31,6 +31,7 @@ import {
 import {RendererOptions} from '../renderer_types';
 import {Renderer} from '../renderer';
 import {RendererFactory} from '../renderer_factory';
+import { format } from 'ssf';
 
 export class HTMLDurationRenderer extends HTMLTextRenderer {
   constructor(
@@ -63,6 +64,8 @@ export class HTMLDurationRenderer extends HTMLTextRenderer {
     }
 
     const targetUnit = this.options.duration_unit ?? DurationUnit.Seconds;
+    const numFormat = data.field.tagParse().tag.text("number");
+
     let currentDuration = data.number.value;
     let currentUnitValue = 0;
     let durationParts: string[] = [];
@@ -82,7 +85,7 @@ export class HTMLDurationRenderer extends HTMLTextRenderer {
 
       if (currentUnitValue > 0) {
         durationParts = [
-          this.formatTimeUnit(currentUnitValue, unit),
+          this.formatTimeUnit(currentUnitValue, unit, numFormat),
           ...durationParts,
         ];
       }
@@ -96,15 +99,16 @@ export class HTMLDurationRenderer extends HTMLTextRenderer {
       return durationParts.slice(0, 2).join(' ');
     }
 
-    return this.formatTimeUnit(0, targetUnit);
+    return this.formatTimeUnit(0, targetUnit, numFormat);
   }
 
-  formatTimeUnit(value: number, unit: DurationUnit) {
+  formatTimeUnit(value: number, unit: DurationUnit, numFormat?: string) {
     let unitString = unit.toString();
     if (value === 1) {
       unitString = unitString.substring(0, unitString.length - 1);
     }
-    return `${value} ${unitString}`;
+    const formattedValue = numFormat ? format(numFormat, value) : value;
+    return `${formattedValue} ${unitString}`;
   }
 }
 

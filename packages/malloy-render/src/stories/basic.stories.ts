@@ -29,3 +29,10 @@ export const FlattenNestedMeasures = {
     view: 'flatten',
   },
 };
+
+export const Formats = {
+  args: {
+    source: 'products',
+    view: 'formats'
+  }
+}

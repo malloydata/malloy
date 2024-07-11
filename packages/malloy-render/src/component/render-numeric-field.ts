@@ -36,12 +36,13 @@ const multiplierMap = new Map<DurationUnit, number>([
   [DurationUnit.Days, Number.MAX_VALUE],
 ]);
 
-function formatTimeUnit(value: number, unit: DurationUnit) {
+function formatTimeUnit(value: number, unit: DurationUnit, numFormat?: string) {
   let unitString = unit.toString();
   if (value === 1) {
     unitString = unitString.substring(0, unitString.length - 1);
   }
-  return `${value} ${unitString}`;
+  const formattedValue = numFormat ? format(numFormat, value) : value;
+  return `${formattedValue} ${unitString}`;
 }
 
 export function renderNumericField(f: AtomicField, value: number) {
@@ -65,6 +66,7 @@ export function renderNumericField(f: AtomicField, value: number) {
   } else if (tag.has('percent')) displayValue = format('#,##0.00%', value);
   else if (tag.has('duration')) {
     const duration_unit = tag.text('duration');
+    const numFormat = tag.text('number');
     const targetUnit = duration_unit ?? DurationUnit.Seconds;
 
     let currentDuration = value;
@@ -86,7 +88,7 @@ export function renderNumericField(f: AtomicField, value: number) {
 
       if (currentUnitValue > 0) {
         durationParts = [
-          formatTimeUnit(currentUnitValue, unit),
+          formatTimeUnit(currentUnitValue, unit, numFormat),
           ...durationParts,
         ];
       }
@@ -98,7 +100,7 @@ export function renderNumericField(f: AtomicField, value: number) {
 
     if (durationParts.length > 0) {
       displayValue = durationParts.slice(0, 2).join(' ');
-    } else displayValue = formatTimeUnit(0, targetUnit as DurationUnit);
+    } else displayValue = formatTimeUnit(0, targetUnit as DurationUnit, numFormat);
   } else if (tag.has('number'))
     displayValue = format(tag.text('number')!, value);
   else displayValue = (value as number).toLocaleString();
