@@ -12,7 +12,7 @@ bigquery.arrow-serialization.enabled=false
 EOF
 
 # run docker
-docker run -p 8090:8080 -d -v ./.tmp/bigquery.properties:/etc/trino/catalog/bigquery.properties --name trino-malloy trinodb/trino
+docker run -p 8090:8090 -d -v ./.tmp/bigquery.properties:/etc/trino/catalog/bigquery.properties --name trino-malloy trinodb/trino
 
 # wait for server to start
 counter=0

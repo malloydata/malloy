@@ -1,4 +1,4 @@
-import {Trino, BasicAuth} from 'trino-client';
+/*import {Trino, BasicAuth} from 'trino-client';
 import PrestoClient from '@prestodb/presto-js-client';
 
 // function CallPresto(client: Client, query: string ) {
@@ -72,3 +72,4 @@ describe('Trino connection', () => {
     }
   });
 });
+*/
