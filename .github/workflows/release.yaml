@@ -25,9 +25,7 @@ jobs:
       - db-bigquery
       - db-motherduck
       - db-postgres
-
-      # TODO: Reenable snowflake once its working.
-      #- db-snowflake
+      - db-snowflake
       - main
     runs-on: ubuntu-latest
     env:
