@@ -41,6 +41,9 @@ jobs:
           TRINO_SERVER: http://localhost:8090
           TRINO_USER: malloy-ci-bot@malloydata.org
           TRINO_PASSWORD: ""
+      - name: grab docker logs
+        run: |
+          docker logs --since=1h trino-malloy
       - name: Archive production artifacts
         if: always()
         uses: actions/upload-artifact@v4
