@@ -31,4 +31,9 @@ do
   fi
 done
 
+while ! nc -z localhost 8090; do
+  sleep 5
+  echo "Waiting for Trino port to be ready"
+done
+
 echo "Trino running on port localhost:8090"
