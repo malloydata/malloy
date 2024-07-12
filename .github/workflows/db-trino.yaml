@@ -40,14 +40,14 @@ jobs:
           TRINO_SCHEMA: malloytest
           TRINO_SERVER: http://localhost:8080
           TRINO_USER: malloy-ci-bot@malloydata.org
-      - name: Show docker logs
-        if: always()
-        run: |
-          docker logs --since=1h trino-malloy
-      - name: Archive production artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: trino-logs
-          path: |
-            .tmp/**
+      # - name: Show docker logs
+      #   if: always()
+      #   run: |
+      #     docker logs --since=1h trino-malloy
+      # - name: Archive production artifacts
+      #   if: always()
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: trino-logs
+      #     path: |
+      #       .tmp/**
