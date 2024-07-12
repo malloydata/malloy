@@ -61,6 +61,8 @@ source: products is duckdb.table("data/products.parquet") extend {
       avg_retail_number is retail_price.avg()
       # duration
       avg_retail_duration is round(retail_price.avg())
+      # duration.terse
+      avg_retail_duration_terse is round(retail_price.avg())
   }
 }
 

@@ -24,6 +24,7 @@
 import {AtomicField} from '@malloydata/malloy';
 import {Currency, DurationUnit} from '../data_styles';
 import {format} from 'ssf';
+import { getText } from '../html/duration';
 
 // Map of unit to how many units of the make up the following time unit.
 const multiplierMap = new Map<DurationUnit, number>([
@@ -66,41 +67,8 @@ export function renderNumericField(f: AtomicField, value: number) {
   } else if (tag.has('percent')) displayValue = format('#,##0.00%', value);
   else if (tag.has('duration')) {
     const duration_unit = tag.text('duration');
-    const numFormat = tag.text('number');
     const targetUnit = duration_unit ?? DurationUnit.Seconds;
-
-    let currentDuration = value;
-    let currentUnitValue = 0;
-    let durationParts: string[] = [];
-    let foundUnit = false;
-
-    for (const [unit, multiplier] of multiplierMap) {
-      if (unit === targetUnit) {
-        foundUnit = true;
-      }
-
-      if (!foundUnit) {
-        continue;
-      }
-
-      currentUnitValue = currentDuration % multiplier;
-      currentDuration = Math.floor((currentDuration /= multiplier));
-
-      if (currentUnitValue > 0) {
-        durationParts = [
-          formatTimeUnit(currentUnitValue, unit, numFormat),
-          ...durationParts,
-        ];
-      }
-
-      if (currentDuration === 0) {
-        break;
-      }
-    }
-
-    if (durationParts.length > 0) {
-      displayValue = durationParts.slice(0, 2).join(' ');
-    } else displayValue = formatTimeUnit(0, targetUnit as DurationUnit, numFormat);
+    return getText(f, value, {durationUnit: targetUnit});
   } else if (tag.has('number'))
     displayValue = format(tag.text('number')!, value);
   else displayValue = (value as number).toLocaleString();

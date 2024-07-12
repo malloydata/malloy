@@ -59,6 +59,8 @@ source: products is duckdb.table("data/products.parquet") extend {
       Default is 0.0123730499
       # duration
       `# duration` is 0.0123730499
+      # duration.terse
+      `# duration.terse` is 0.0123730499
       # number="0.##"
       `# number=0.##` is 0.0123730499
       # duration number="0.##"
