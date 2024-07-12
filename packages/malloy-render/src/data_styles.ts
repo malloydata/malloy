@@ -125,6 +125,10 @@ export enum DurationUnit {
   Days = 'days',
 }
 
+export function isDurationUnit(unit: string): unit is DurationUnit {
+  return Object.values(DurationUnit).includes(unit as DurationUnit);
+}
+
 export interface DurationRenderOptions extends TextRenderOptions {
   duration_unit?: DurationUnit;
 }

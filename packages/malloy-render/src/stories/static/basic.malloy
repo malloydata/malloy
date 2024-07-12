@@ -1,6 +1,6 @@
 source: products is duckdb.table("data/products.parquet") extend {
 
-  view: records is{
+  view: records is {
     select: *
     limit: 1000
   }
@@ -51,5 +51,19 @@ source: products is duckdb.table("data/products.parquet") extend {
           }
         where: distribution_center_id=1 or distribution_center_id=2
       }
+  }
+
+  view: formats is {
+    group_by:
+      `Test number` is "0.0123730499"
+      Default is 0.0123730499
+      # duration
+      `# duration` is 0.0123730499
+      # duration.terse
+      `# duration.terse` is 0.0123730499
+      # number="0.##"
+      `# number=0.##` is 0.0123730499
+      # duration number="0.##"
+      `# duration number=0.##` is 0.0123730499
   }
 };

@@ -21,16 +21,107 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataColumn, Explore, Field} from '@malloydata/malloy';
+import {AtomicField, DataColumn, Explore, Field} from '@malloydata/malloy';
 import {HTMLTextRenderer} from './text';
 import {
   DurationRenderOptions,
   DurationUnit,
+  isDurationUnit,
   StyleDefaults,
 } from '../data_styles';
 import {RendererOptions} from '../renderer_types';
 import {Renderer} from '../renderer';
 import {RendererFactory} from '../renderer_factory';
+import {format} from 'ssf';
+
+export function formatTimeUnit(
+  value: number,
+  unit: DurationUnit,
+  options: {numFormat?: string; terse?: boolean} = {}
+) {
+  let unitString = unit.toString();
+  if (options.terse) {
+    unitString = terseDurationUnitsMap.get(unit) ?? unitString;
+  } else if (value === 1) {
+    unitString = unitString.substring(0, unitString.length - 1);
+  }
+
+  const formattedValue = options.numFormat
+    ? format(options.numFormat, value)
+    : value.toLocaleString();
+  return `${formattedValue}${options.terse ? '' : ' '}${unitString}`;
+}
+
+const terseDurationUnitsMap = new Map<DurationUnit, string>([
+  [DurationUnit.Nanoseconds, 'ns'],
+  [DurationUnit.Microseconds, 'µs'],
+  [DurationUnit.Milliseconds, 'ms'],
+  [DurationUnit.Seconds, 's'],
+  [DurationUnit.Minutes, 'm'],
+  [DurationUnit.Hours, 'h'],
+  [DurationUnit.Days, 'd'],
+]);
+
+const multiplierMap = new Map<DurationUnit, number>([
+  [DurationUnit.Nanoseconds, 1000],
+  [DurationUnit.Microseconds, 1000],
+  [DurationUnit.Milliseconds, 1000],
+  [DurationUnit.Seconds, 60],
+  [DurationUnit.Minutes, 60],
+  [DurationUnit.Hours, 24],
+  [DurationUnit.Days, Number.MAX_VALUE],
+]);
+
+export function getText(
+  field: AtomicField,
+  value: number,
+  options: {
+    durationUnit?: string;
+  }
+): string | null {
+  const targetUnit =
+    options.durationUnit && isDurationUnit(options.durationUnit)
+      ? options.durationUnit
+      : DurationUnit.Seconds;
+  const tag = field.tagParse().tag;
+  const numFormat = tag.text('number');
+  const terse = tag.has('duration', 'terse');
+
+  let currentDuration = value;
+  let currentUnitValue = 0;
+  let durationParts: string[] = [];
+  let foundUnit = false;
+
+  for (const [unit, multiplier] of multiplierMap) {
+    if (unit === targetUnit) {
+      foundUnit = true;
+    }
+
+    if (!foundUnit) {
+      continue;
+    }
+
+    currentUnitValue = currentDuration % multiplier;
+    currentDuration = Math.floor((currentDuration /= multiplier));
+
+    if (currentUnitValue > 0) {
+      durationParts = [
+        formatTimeUnit(currentUnitValue, unit, {numFormat, terse}),
+        ...durationParts,
+      ];
+    }
+
+    if (currentDuration === 0) {
+      break;
+    }
+  }
+
+  if (durationParts.length > 0) {
+    return durationParts.slice(0, 2).join(' ');
+  }
+
+  return formatTimeUnit(0, targetUnit, {numFormat, terse});
+}
 
 export class HTMLDurationRenderer extends HTMLTextRenderer {
   constructor(
@@ -39,17 +130,6 @@ export class HTMLDurationRenderer extends HTMLTextRenderer {
   ) {
     super(document);
   }
-
-  // Map of unit to how many units of the make up the following time unit.
-  static multiplierMap = new Map<DurationUnit, number>([
-    [DurationUnit.Nanoseconds, 1000],
-    [DurationUnit.Microseconds, 1000],
-    [DurationUnit.Milliseconds, 1000],
-    [DurationUnit.Seconds, 60],
-    [DurationUnit.Minutes, 60],
-    [DurationUnit.Hours, 24],
-    [DurationUnit.Days, Number.MAX_VALUE],
-  ]);
 
   override getText(data: DataColumn): string | null {
     if (data.isNull()) {
@@ -61,50 +141,9 @@ export class HTMLDurationRenderer extends HTMLTextRenderer {
         `Cannot format field ${data.field.name} as a duration unit since its not a number`
       );
     }
-
-    const targetUnit = this.options.duration_unit ?? DurationUnit.Seconds;
-    let currentDuration = data.number.value;
-    let currentUnitValue = 0;
-    let durationParts: string[] = [];
-    let foundUnit = false;
-
-    for (const [unit, multiplier] of HTMLDurationRenderer.multiplierMap) {
-      if (unit === targetUnit) {
-        foundUnit = true;
-      }
-
-      if (!foundUnit) {
-        continue;
-      }
-
-      currentUnitValue = currentDuration % multiplier;
-      currentDuration = Math.floor((currentDuration /= multiplier));
-
-      if (currentUnitValue > 0) {
-        durationParts = [
-          this.formatTimeUnit(currentUnitValue, unit),
-          ...durationParts,
-        ];
-      }
-
-      if (currentDuration === 0) {
-        break;
-      }
-    }
-
-    if (durationParts.length > 0) {
-      return durationParts.slice(0, 2).join(' ');
-    }
-
-    return this.formatTimeUnit(0, targetUnit);
-  }
-
-  formatTimeUnit(value: number, unit: DurationUnit) {
-    let unitString = unit.toString();
-    if (value === 1) {
-      unitString = unitString.substring(0, unitString.length - 1);
-    }
-    return `${value} ${unitString}`;
+    return getText(data.field, data.number.value, {
+      durationUnit: this.options.duration_unit,
+    });
   }
 }
 
