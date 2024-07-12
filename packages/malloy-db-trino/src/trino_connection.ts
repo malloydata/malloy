@@ -115,7 +115,6 @@ class TrinooBase implements BaseConnection {
   }
   async runSQL(sql: string, limit: number | undefined) {
     const result = await this.client.query(sql);
-    console.log(`==> SOMETHING SUCCEEDED ${sql}`);
     let queryResult = await result.next();
     const columns = queryResult.value.columns;
 
@@ -681,7 +680,7 @@ export abstract class TrinoPrestoConnection
       const rows: string[][] = (queryResult.rows as string[][]) ?? [];
       this.structDefFromSchema(rows, structDef);
     } catch (e) {
-      throw new Error(`Could not fetch schema for ${element} ${JSON.stringify(e as Error)} ${(e as Error).stack}`);
+      throw new Error(`Could not fetch schema for ${element} ${JSON.stringify(e as Error)}`);
     }
 
     return structDef;
