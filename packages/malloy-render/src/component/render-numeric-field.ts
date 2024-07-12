@@ -26,26 +26,6 @@ import {Currency, DurationUnit} from '../data_styles';
 import {format} from 'ssf';
 import { getText } from '../html/duration';
 
-// Map of unit to how many units of the make up the following time unit.
-const multiplierMap = new Map<DurationUnit, number>([
-  [DurationUnit.Nanoseconds, 1000],
-  [DurationUnit.Microseconds, 1000],
-  [DurationUnit.Milliseconds, 1000],
-  [DurationUnit.Seconds, 60],
-  [DurationUnit.Minutes, 60],
-  [DurationUnit.Hours, 24],
-  [DurationUnit.Days, Number.MAX_VALUE],
-]);
-
-function formatTimeUnit(value: number, unit: DurationUnit, numFormat?: string) {
-  let unitString = unit.toString();
-  if (value === 1) {
-    unitString = unitString.substring(0, unitString.length - 1);
-  }
-  const formattedValue = numFormat ? format(numFormat, value) : value.toLocaleString();
-  return `${formattedValue} ${unitString}`;
-}
-
 export function renderNumericField(f: AtomicField, value: number) {
   let displayValue: string | number = value;
   const {tag} = f.tagParse();
