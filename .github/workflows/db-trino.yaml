@@ -40,4 +40,4 @@ jobs:
           TRINO_SCHEMA: malloytest
           TRINO_SERVER: http://localhost:8090
           TRINO_USER: malloy-ci-bot@malloydata.org
-          TRINO_PASSWORD: ''
+          TRINO_PASSWORD: ""
