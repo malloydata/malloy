@@ -26,7 +26,7 @@ import {Currency, DurationUnit} from '../data_styles';
 import {format} from 'ssf';
 import { getText } from '../html/duration';
 
-export function renderNumericField(f: AtomicField, value: number) {
+export function renderNumericField(f: AtomicField, value: number): string {
   let displayValue: string | number = value;
   const {tag} = f.tagParse();
   if (tag.has('currency')) {
@@ -48,7 +48,7 @@ export function renderNumericField(f: AtomicField, value: number) {
   else if (tag.has('duration')) {
     const duration_unit = tag.text('duration');
     const targetUnit = duration_unit ?? DurationUnit.Seconds;
-    return getText(f, value, {durationUnit: targetUnit});
+    return getText(f, value, {durationUnit: targetUnit}) ?? value.toLocaleString();
   } else if (tag.has('number'))
     displayValue = format(tag.text('number')!, value);
   else displayValue = (value as number).toLocaleString();
