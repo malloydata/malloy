@@ -12,7 +12,7 @@ bigquery.arrow-serialization.enabled=false
 EOF
 
 # run docker
-docker run -p 8090:8080 -d -v ./.tmp/bigquery.properties:/etc/trino/catalog/bigquery.properties --name trino-malloy trinodb/trino
+docker run -p 8080:8080 -d -v ./.tmp/bigquery.properties:/etc/trino/catalog/bigquery.properties --name trino-malloy trinodb/trino
 
 # wait for server to start
 counter=0
@@ -21,7 +21,7 @@ do
   sleep 1
   counter=$((counter+1))
   # if doesn't start after 2 minutes, output logs and kill process
-  if [ $counter -eq 120 ]
+  if [ $counter -eq 300 ]
   then
     docker logs trino-malloy >& ./.tmp/trino-malloy.logs
     docker rm -f trino-malloy
@@ -31,4 +31,4 @@ do
   fi
 done
 
-echo "Trino running on port localhost:8090"
+echo "Trino running on port localhost:8080"

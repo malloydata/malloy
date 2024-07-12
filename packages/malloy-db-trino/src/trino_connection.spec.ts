@@ -43,7 +43,7 @@ describe('Trino connection', () => {
     connection = new TrinoConnection(
       'trino',
       {},
-      TrinoExecutor.getConnectionOptionsFromEnv()
+      TrinoExecutor.getConnectionOptionsFromEnv('trino')
     );
   });
 

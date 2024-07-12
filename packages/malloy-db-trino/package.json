@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@malloydata/malloy": "^0.0.130",
+    "@prestodb/presto-js-client": "^1.0.0",
     "gaxios": "^4.2.0",
     "trino-client": "^0.2.2"
   },

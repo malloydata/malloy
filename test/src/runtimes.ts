@@ -37,6 +37,7 @@ import {SnowflakeConnection} from '@malloydata/db-snowflake';
 import {PooledPostgresConnection} from '@malloydata/db-postgres';
 import {TrinoConnection, TrinoExecutor} from '@malloydata/db-trino';
 import {SnowflakeExecutor} from '@malloydata/db-snowflake/src/snowflake_executor';
+import {PrestoConnection} from '@malloydata/db-trino/src/trino_connection';
 
 export class SnowflakeTestConnection extends SnowflakeConnection {
   public async runSQL(
@@ -166,7 +167,14 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
         connection = new TrinoConnection(
           dbName,
           {},
-          TrinoExecutor.getConnectionOptionsFromEnv()
+          TrinoExecutor.getConnectionOptionsFromEnv(dbName)
+        );
+        break;
+      case 'presto':
+        connection = new PrestoConnection(
+          dbName,
+          {},
+          TrinoExecutor.getConnectionOptionsFromEnv(dbName) // they share configs.
         );
         break;
       default:

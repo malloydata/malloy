@@ -209,16 +209,16 @@ export class TrinoDialect extends Dialect {
     );
     if (isArray) {
       if (needDistinctKey) {
-        return `LEFT JOIN UNNEST(zip(${source}, SEQUENCE(1,cardinality(${source})))) as words_0(value,__row_id_from_${alias}) ON TRUE`;
+        return `CROSS JOIN UNNEST(COALESCE(zip(${source}, SEQUENCE(1,cardinality(${source}))),ARRAY[null])) as words_0(value,__row_id_from_${alias})`;
       } else {
-        return `LEFT JOIN UNNEST(transform(${source}, x -> ROW(x) )) as ${alias}(value) ON TRUE`;
+        return `CROSS JOIN UNNEST(COALESCE(transform(${source}, x -> ROW(x) ), ARRAY[null])) as ${alias}(value)`;
       }
     } else if (needDistinctKey) {
-      return `LEFT JOIN UNNEST(zip_with(${source}, SEQUENCE(1,cardinality(${source})), (r,__row_id) -> (r, __row_id))) as ${alias}_outer(${alias},__row_id_from_${alias}) ON TRUE`;
+      return `CROSS JOIN UNNEST(COALESCE(zip_with(${source}, SEQUENCE(1,cardinality(${source})), (r,__row_id) -> (r, __row_id)),ARRAY[null])) as ${alias}_outer(${alias},__row_id_from_${alias})`;
     } else {
-      return `LEFT JOIN UNNEST(${source}) as ${alias}(${fieldsNames.join(
+      return `CROSS JOIN UNNEST(COALESCE(${source}, ARRAY[null])) as ${alias}(${fieldsNames.join(
         ', '
-      )}) ON TRUE`;
+      )})`;
     }
   }
 
@@ -602,5 +602,14 @@ ${indent(sql)}
     // Parentheses, Commas:  NUMERIC(5, 2)
     // Angle Brackets:       ARRAY<INT64>
     return sqlType.match(/^[A-Za-z\s(),<>0-9]*$/) !== null;
+  }
+}
+
+export class PrestoDialect extends TrinoDialect {
+  name = 'presto';
+  supportsPipelinesInViews = false; // what a drag...
+
+  sqlGenerateUUID(): string {
+    return 'CAST(UUID() AS VARCHAR)';
   }
 }
