@@ -680,7 +680,7 @@ export abstract class TrinoPrestoConnection
       const rows: string[][] = (queryResult.rows as string[][]) ?? [];
       this.structDefFromSchema(rows, structDef);
     } catch (e) {
-      throw new Error(`Could not fetch schema for ${element} ${e}`);
+      throw new Error(`Could not fetch schema for ${element} ${JSON.stringify(e as Error)} ${(e as Error).stack}`);
     }
 
     return structDef;
