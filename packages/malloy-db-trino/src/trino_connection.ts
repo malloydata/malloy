@@ -115,6 +115,7 @@ class TrinooBase implements BaseConnection {
   }
   async runSQL(sql: string, limit: number | undefined) {
     const result = await this.client.query(sql);
+    console.log(`==> SOMETHING SUCCEEDED ${sql}`);
     let queryResult = await result.next();
     const columns = queryResult.value.columns;
 
