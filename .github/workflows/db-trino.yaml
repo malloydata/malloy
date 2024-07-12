@@ -40,7 +40,6 @@ jobs:
           TRINO_SCHEMA: malloytest
           TRINO_SERVER: http://localhost:8080
           TRINO_USER: malloy-ci-bot@malloydata.org
-          TRINO_PASSWORD: ""
       - name: Show docker logs
         if: always()
         run: |

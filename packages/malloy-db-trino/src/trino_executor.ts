@@ -56,7 +56,7 @@ export class TrinoExecutor {
     // TODO(figutierrez): We may not need to support these.
     const catalog = process.env[`${envPrefix}_CATALOG`];
     const schema = process.env[`${envPrefix}_SCHEMA`];
-    return {
+    const ret = {
       server,
       user,
       port,
@@ -64,5 +64,6 @@ export class TrinoExecutor {
       catalog,
       schema,
     };
+    return ret;
   }
 }

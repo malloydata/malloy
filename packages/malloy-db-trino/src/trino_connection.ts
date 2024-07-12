@@ -71,7 +71,11 @@ export interface BaseConnection {
   runSQL(
     sql: string,
     limit: number | undefined
-  ): Promise<{rows: unknown[][]; columns: {name: string; type: string}[]}>;
+  ): Promise<{
+    rows: unknown[][];
+    columns: {name: string; type: string; error?: string}[];
+    error?: string;
+  }>;
 }
 
 class PrestoBase implements BaseConnection {
@@ -87,18 +91,23 @@ class PrestoBase implements BaseConnection {
     });
   }
   async runSQL(sql: string, limit: number | undefined) {
-    let ret: PrestoQuery;
+    let ret: PrestoQuery | undefined = undefined;
     const q = limit ? `SELECT * FROM(${sql}) LIMIT ${limit}` : sql;
+    let error: string | undefined = undefined;
     try {
       ret = (await this.client.query(q)) || [];
       // console.log(ret);
-    } catch (error) {
+    } catch (errorObj) {
       // console.log(error);
-      throw new Error(error);
+      error = errorObj.toString();
     }
     return {
-      rows: ret.data || [],
-      columns: ret.columns as {name: string; type: string}[],
+      rows: ret && ret.data ? ret.data : [],
+      columns:
+        ret && ret.columns
+          ? (ret.columns as {name: string; type: string}[])
+          : [],
+      error,
     };
   }
 }
@@ -110,12 +119,19 @@ class TrinooBase implements BaseConnection {
       catalog: config.catalog,
       server: config.server,
       schema: config.schema,
-      auth: new BasicAuth(config.user!, config.password),
+      auth: new BasicAuth(config.user!, config.password || ''),
     });
   }
   async runSQL(sql: string, limit: number | undefined) {
     const result = await this.client.query(sql);
     let queryResult = await result.next();
+    if (queryResult.value.error) {
+      return {
+        rows: [],
+        columns: [],
+        error: JSON.stringify(queryResult.value.error),
+      };
+    }
     const columns = queryResult.value.columns;
 
     const outputRows: unknown[][] = [];
@@ -668,19 +684,20 @@ export abstract class TrinoPrestoConnection
     try {
       const queryResult = await this.client.runSQL(sqlBlock, undefined);
 
-      // if (queryResult.error) {
-      //   // TODO: handle.
-      //   throw new Error(
-      //     `Failed to grab schema for ${element}: ${JSON.stringify(
-      //       queryResult.value.error
-      //     )}`
-      //   );
-      // }
+      if (queryResult.error) {
+        // TODO: handle.
+        throw new Error(
+          `Failed to grab schema for ${queryResult.error}
+          )}`
+        );
+      }
 
       const rows: string[][] = (queryResult.rows as string[][]) ?? [];
       this.structDefFromSchema(rows, structDef);
     } catch (e) {
-      throw new Error(`Could not fetch schema for ${element} ${JSON.stringify(e as Error)}`);
+      throw new Error(
+        `Could not fetch schema for ${element} ${JSON.stringify(e as Error)}`
+      );
     }
 
     return structDef;
