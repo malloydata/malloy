@@ -33,6 +33,6 @@ export const FlattenNestedMeasures = {
 export const Formats = {
   args: {
     source: 'products',
-    view: 'formats'
-  }
-}
+    view: 'formats',
+  },
+};

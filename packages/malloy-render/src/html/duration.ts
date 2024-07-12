@@ -32,17 +32,24 @@ import {
 import {RendererOptions} from '../renderer_types';
 import {Renderer} from '../renderer';
 import {RendererFactory} from '../renderer_factory';
-import { format } from 'ssf';
+import {format} from 'ssf';
 
-export function formatTimeUnit(value: number, unit: DurationUnit, options: { numFormat?: string; terse?: boolean } = {}) {
+export function formatTimeUnit(
+  value: number,
+  unit: DurationUnit,
+  options: {numFormat?: string; terse?: boolean} = {}
+) {
   let unitString = unit.toString();
-    if(options.terse) unitString = terseDurationUnitsMap.get(unit) ?? unitString;
-    else if (value === 1) {
-      unitString = unitString.substring(0, unitString.length - 1);
-    }
+  if (options.terse) {
+    unitString = terseDurationUnitsMap.get(unit) ?? unitString;
+  } else if (value === 1) {
+    unitString = unitString.substring(0, unitString.length - 1);
+  }
 
-  const formattedValue = options.numFormat ? format(options.numFormat, value) : value.toLocaleString();
-  return `${formattedValue}${options.terse ? "" : " "}${unitString}`;
+  const formattedValue = options.numFormat
+    ? format(options.numFormat, value)
+    : value.toLocaleString();
+  return `${formattedValue}${options.terse ? '' : ' '}${unitString}`;
 }
 
 const terseDurationUnitsMap = new Map<DurationUnit, string>([
@@ -65,15 +72,20 @@ const multiplierMap = new Map<DurationUnit, number>([
   [DurationUnit.Days, Number.MAX_VALUE],
 ]);
 
-export function getText(field: AtomicField, value: number, options: {
-  durationUnit?: string
-}): string | null {
-
-
-  const targetUnit = options.durationUnit && isDurationUnit(options.durationUnit) ? options.durationUnit : DurationUnit.Seconds;
+export function getText(
+  field: AtomicField,
+  value: number,
+  options: {
+    durationUnit?: string;
+  }
+): string | null {
+  const targetUnit =
+    options.durationUnit && isDurationUnit(options.durationUnit)
+      ? options.durationUnit
+      : DurationUnit.Seconds;
   const tag = field.tagParse().tag;
-  const numFormat = tag.text("number");
-  const terse = tag.has("duration","terse");
+  const numFormat = tag.text('number');
+  const terse = tag.has('duration', 'terse');
 
   let currentDuration = value;
   let currentUnitValue = 0;
@@ -129,7 +141,9 @@ export class HTMLDurationRenderer extends HTMLTextRenderer {
         `Cannot format field ${data.field.name} as a duration unit since its not a number`
       );
     }
-    return getText(data.field, data.number.value, {durationUnit: this.options.duration_unit});
+    return getText(data.field, data.number.value, {
+      durationUnit: this.options.duration_unit,
+    });
   }
 }
 
