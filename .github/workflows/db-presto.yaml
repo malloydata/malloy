@@ -1,0 +1,54 @@
+name: Presto DB
+
+on:
+  pull_request:
+  workflow_call:
+    secrets:
+      BQ_PRESTO_TRINO_KEY:
+        required: true
+
+jobs:
+  # Label of the container job
+  test-presto:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: npm install, build, and test
+        run: |
+          npm ci --loglevel error
+          npm run build
+          npm run build-duckdb-db
+          ./test/presto/presto_start.sh
+          npm run test packages/malloy-db-trino
+          npm run test test
+          ./test/presto/presto_stop.sh
+        env:
+          MALLOY_DATABASES: presto
+          BQ_CREDENTIALS_KEY: ${{ secrets.BQ_PRESTO_TRINO_KEY }}
+          PRESTO_CATALOG: bigquery
+          PRESTO_SCHEMA: malloytest
+          PRESTO_HOST: http://localhost
+          PRESTO_PORT: 8080
+          PRESTO_USER: malloy-ci-bot@malloydata.org
+      # - name: Show docker logs
+      #   if: always()
+      #   run: |
+      #     docker logs --since=1h trino-malloy
+      # - name: Archive production artifacts
+      #   if: always()
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: trino-logs
+      #     path: |
+      #       .tmp/**
