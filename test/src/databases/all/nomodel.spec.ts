@@ -479,7 +479,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    expect(q.sql.toLowerCase()).toContain('distinct');
+    expect(q.sql.toLowerCase()).not.toContain('distinct');
   });
 
   it.when(runtime.dialect.supportsLeftJoinUnnest)(
