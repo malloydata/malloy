@@ -37,8 +37,8 @@ export function fnLog(): DialectFunctionOverloadDef[] {
     overload(
       minScalar('number'),
       [value.param, base.param],
-      // Snowflake take base first, then value
-      sql`LOG(${base.arg},${value.arg})`
+      // Trino has it but Presto doesn't
+      sql`(LN(${value.arg}) / LN(${base.arg}))`
     ),
   ];
 }

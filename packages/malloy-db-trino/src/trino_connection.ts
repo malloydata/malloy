@@ -335,6 +335,10 @@ export abstract class TrinoPrestoConnection
     // }
 
     const r = await this.client.runSQL(sqlCommand, options.rowLimit);
+
+    if (r.error) {
+      throw new Error(r.error);
+    }
     const inputRows = r.rows;
     const columns = r.columns;
 

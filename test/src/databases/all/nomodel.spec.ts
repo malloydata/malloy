@@ -482,11 +482,13 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(q.sql.toLowerCase()).not.toContain('distinct');
   });
 
-  it(`leafy nested count - ${databaseName}`, async () => {
-    // in a joined table when the joined is leafiest
-    //  we need to make sure we don't count rows that
-    //  don't match the join.
-    await expect(`
+  it.when(runtime.dialect.supportsLeftJoinUnnest)(
+    `leafy nested count - ${databaseName}`,
+    async () => {
+      // in a joined table when the joined is leafiest
+      //  we need to make sure we don't count rows that
+      //  don't match the join.
+      await expect(`
       source: am_states is ${databaseName}.table('malloytest.state_facts') -> {
         group_by: state,popular_name
         where: state ~ r'^(A|M)'
@@ -498,7 +500,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       source: states is ${databaseName}.table('malloytest.state_facts') extend {
         join_many: am_states on state=am_states.state
       }
-
       run: states -> {
         where: state = 'CA'
         group_by:
@@ -509,12 +510,13 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           root_count is count()
       }
       `).malloyResultMatches(runtime, {
-      leafy_count: 0,
-      root_count: 1,
-      state: 'CA',
-      am_state: null,
-    });
-  });
+        leafy_count: 0,
+        root_count: 1,
+        state: 'CA',
+        am_state: null,
+      });
+    }
+  );
 
   it(`basic index - ${databaseName}`, async () => {
     // Make sure basic indexing works.
@@ -559,7 +561,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         select: a
       }`).malloyResultMatches(runtime, {a: 2});
   });
-
 
   // average should only include non-null values in the denominator
   it(`avg ignore null- ${databaseName}`, async () => {
@@ -1055,11 +1056,23 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
   );
 
   test.when(runtime.supportsNesting && runtime.dialect.readsNestedData)(
+    `can unnest simply from file - ${databaseName}`,
+    async () => {
+      await expect(`
+        source: ga_sample is ${databaseName}.table('malloytest.ga_sample')
+        run: ga_sample -> {
+          aggregate:
+            h is hits.count()
+        }
+      `).malloyResultMatches(runtime, {h: 13233});
+    }
+  );
+
+  test.when(runtime.supportsNesting && runtime.dialect.readsNestedData)(
     `can unnest from file - ${databaseName}`,
     async () => {
       await expect(`
         source: ga_sample is ${databaseName}.table('malloytest.ga_sample')
-
         run: ga_sample -> {
           where: hits.product.productBrand != null
           group_by:

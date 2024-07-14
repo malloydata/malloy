@@ -194,10 +194,10 @@ describe('join expression tests', () => {
     `).malloyResultMatches(joinModel, {f_sum2: 60462});
     });
 
-    test.when(runtime.supportsNesting)(
-      `model: unnest is left join - ${database}`,
-      async () => {
-        await expect(`
+    test.when(
+      runtime.supportsNesting && runtime.dialect.supportsLeftJoinUnnest
+    )(`model: unnest is left join - ${database}`, async () => {
+      await expect(`
           // produce a table with 4 rows that has a nested element
           query: a_states is ${database}.table('malloytest.state_facts')-> {
           where: state ? ~ 'A%'
@@ -220,8 +220,7 @@ describe('join expression tests', () => {
             limit: 5
           }
         `).malloyResultMatches(joinModel, [{}, {}, {}, {}, {}]);
-      }
-    );
+    });
 
     // not sure how to solve this one yet, just check for > 4 rows
     it(`All joins at the same level - ${database}`, async () => {
