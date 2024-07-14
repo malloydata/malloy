@@ -22,4 +22,5 @@
  */
 
 export {TrinoConnection} from './trino_connection';
+export {PrestoConnection} from './trino_connection';
 export {TrinoExecutor} from './trino_executor';
