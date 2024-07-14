@@ -112,32 +112,32 @@ expressionModels.forEach((expressionModel, databaseName) => {
   };
 
   describe('concat', () => {
-    it.when(!brokenIn('trino', databaseName) /* crswenson */)(
-      `works - ${databaseName}`,
-      async () => {
-        const expected = {
-          'bigquery': 'foo2003-01-01 12:00:00+00',
-          'snowflake': 'foo2003-01-01T12:00:00.000Z',
-        };
+    it.when(
+      !brokenIn('trino', databaseName) &&
+        !brokenIn('presto', databaseName) /* crswenson */
+    )(`works - ${databaseName}`, async () => {
+      const expected = {
+        'bigquery': 'foo2003-01-01 12:00:00+00',
+        'snowflake': 'foo2003-01-01T12:00:00.000Z',
+      };
 
-        await funcTestMultiple(
-          ["concat('foo', 'bar')", 'foobar'],
-          ["concat(1, 'bar')", '1bar'],
-          [
-            "concat('cons', true)",
-            databaseName === 'postgres' ? 'const' : 'construe',
-          ],
-          ["concat('foo', @2003)", 'foo2003-01-01'],
-          [
-            "concat('foo', @2003-01-01 12:00:00)",
-            expected[databaseName] ?? 'foo2003-01-01 12:00:00',
-          ],
-          // TODO Maybe implement consistent null behavior
-          // ["concat('foo', null)", null],
-          ['concat()', '']
-        );
-      }
-    );
+      await funcTestMultiple(
+        ["concat('foo', 'bar')", 'foobar'],
+        ["concat(1, 'bar')", '1bar'],
+        [
+          "concat('cons', true)",
+          databaseName === 'postgres' ? 'const' : 'construe',
+        ],
+        ["concat('foo', @2003)", 'foo2003-01-01'],
+        [
+          "concat('foo', @2003-01-01 12:00:00)",
+          expected[databaseName] ?? 'foo2003-01-01 12:00:00',
+        ],
+        // TODO Maybe implement consistent null behavior
+        // ["concat('foo', null)", null],
+        ['concat()', '']
+      );
+    });
   });
 
   describe('round', () => {
@@ -219,13 +219,15 @@ expressionModels.forEach((expressionModel, databaseName) => {
           "replace('axbxc', r'(a).(b).(c)', '\\\\0 - \\\\1 - \\\\2 - \\\\3')",
           databaseName === 'postgres'
             ? '\\0 - a - b - c'
-            : databaseName === 'trino'
+            : databaseName === 'trino' || databaseName === 'presto'
             ? '0 - 1 - 2 - 3'
             : 'axbxc - a - b - c',
         ],
         [
           "replace('aaaa', '', 'c')",
-          databaseName === 'trino' ? 'cacacacac' : 'aaaa',
+          databaseName === 'trino' || databaseName === 'presto'
+            ? 'cacacacac'
+            : 'aaaa',
         ],
         ["replace(null, 'a', 'c')", null],
         ["replace('aaaa', null, 'c')", null],
@@ -262,7 +264,8 @@ expressionModels.forEach((expressionModel, databaseName) => {
 
   describe('stddev', () => {
     // TODO symmetric aggregates don't work with custom aggregate functions in BQ currently
-    if (['bigquery', 'snowflake', 'trino'].includes(databaseName)) return;
+    if (['bigquery', 'snowflake', 'trino', 'presto'].includes(databaseName))
+      return;
     it(`works - ${databaseName}`, async () => {
       await funcTestAgg('round(stddev(aircraft_models.seats))', 29);
     });
@@ -786,7 +789,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     });
   });
   describe('is_inf', () => {
-    const inf = ['trino'].includes(databaseName)
+    const inf = ['trino', 'presto'].includes(databaseName)
       ? 'infinity!()'
       : "'+inf'::number";
     it(`works - ${databaseName}`, async () => {
@@ -1327,7 +1330,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 
     it(`works with fanout and order_by - ${databaseName}`, async () => {
       // TODO bigquery cannot handle both fanout and order_by today
-      if (['bigquery', 'snowflake', 'trino'].includes(databaseName)) return;
+      if (['bigquery', 'snowflake', 'trino', 'presto'].includes(databaseName))
+        return;
       await expect(`##! experimental.aggregate_order_by
       run: state_facts extend { join_many:
         state_facts2 is ${databaseName}.table('malloytest.state_facts')

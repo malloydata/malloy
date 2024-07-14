@@ -150,6 +150,9 @@ export abstract class Dialect {
 
   hasModOperator = true;
 
+  // can LEFT JOIN UNNEST
+  supportsLeftJoinUnnest = true;
+
   // return the definition of a function with the given name
   abstract getGlobalFunctionDef(
     name: string

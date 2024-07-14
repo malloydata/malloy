@@ -462,18 +462,17 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
     });
   });
 
-  test.when(!brokenIn('trino', dbName) /* mtoy */)(
-    'dependant join dialect fragments',
-    async () => {
-      await expect(`
+  test.when(
+    !brokenIn('trino', dbName) && !brokenIn('presto', dbName) /* mtoy */
+  )('dependant join dialect fragments', async () => {
+    await expect(`
       source: timeData is ${dbName}.sql("""${timeSQL}""")
       run: timeData -> {
         extend: {join_one: joined is timeData on t_date = joined.t_date}
         group_by: t_month is joined.t_timestamp.month
       }
     `).malloyResultMatches(runtime, {t_month: new Date('2021-02-01')});
-    }
-  );
+  });
 
   describe('timezone set correctly', () => {
     test('timezone set in source used by query', async () => {
@@ -621,63 +620,60 @@ const utc_2020 = LuxonDateTime.fromObject(
 );
 
 describe.each(runtimes.runtimeList)('%s: tz literals', (dbName, runtime) => {
-  test.when(!brokenIn('trino', dbName) /* mtoy */)(
-    `${dbName} - default timezone is UTC`,
-    async () => {
-      // this makes sure that the tests which use the test timezome are actually
-      // testing something ... file this under "abundance of caution". It
-      // really tests nothing, but I feel calmer with this here.
-      const query = runtime.loadQuery(
-        `
+  test.when(
+    !brokenIn('trino', dbName) && !brokenIn('presto', dbName) /* mtoy */
+  )(`${dbName} - default timezone is UTC`, async () => {
+    // this makes sure that the tests which use the test timezome are actually
+    // testing something ... file this under "abundance of caution". It
+    // really tests nothing, but I feel calmer with this here.
+    const query = runtime.loadQuery(
+      `
         run: ${dbName}.sql("SELECT 1 as one") -> {
           group_by: literal_time is @2020-02-20 00:00:00
         }
 `
-      );
-      const result = await query.run();
-      const literal = result.data.path(0, 'literal_time').value as Date;
-      const have = LuxonDateTime.fromJSDate(literal);
-      expect(have.valueOf()).toEqual(utc_2020.valueOf());
-    }
-  );
+    );
+    const result = await query.run();
+    const literal = result.data.path(0, 'literal_time').value as Date;
+    const have = LuxonDateTime.fromJSDate(literal);
+    expect(have.valueOf()).toEqual(utc_2020.valueOf());
+  });
 
-  test.when(!brokenIn('trino', dbName) /* mtoy */)(
-    'literal with zone name',
-    async () => {
-      const query = runtime.loadQuery(
-        `
+  test.when(
+    !brokenIn('trino', dbName) && !brokenIn('presto', dbName) /* mtoy */
+  )('literal with zone name', async () => {
+    const query = runtime.loadQuery(
+      `
         run: ${dbName}.sql("SELECT 1 as one") -> {
           group_by: literal_time is @2020-02-20 00:00:00[America/Mexico_City]
         }
 `
-      );
-      const result = await query.run();
-      const literal = result.data.path(0, 'literal_time').value as Date;
-      const have = LuxonDateTime.fromJSDate(literal);
-      expect(have.valueOf()).toEqual(zone_2020.valueOf());
-    }
-  );
+    );
+    const result = await query.run();
+    const literal = result.data.path(0, 'literal_time').value as Date;
+    const have = LuxonDateTime.fromJSDate(literal);
+    expect(have.valueOf()).toEqual(zone_2020.valueOf());
+  });
 });
 
 describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
   const q = runtime.getQuoter();
-  test.when(!brokenIn('trino', dbName) /* mtoy */)(
-    'literal timestamps',
-    async () => {
-      const query = runtime.loadQuery(
-        `
+  test.when(
+    !brokenIn('trino', dbName) && !brokenIn('presto', dbName) /* mtoy */
+  )('literal timestamps', async () => {
+    const query = runtime.loadQuery(
+      `
         run: ${dbName}.sql("SELECT 1 as one") -> {
           timezone: '${zone}'
           group_by: literal_time is @2020-02-20 00:00:00
         }
       `
-      );
-      const result = await query.run();
-      const literal = result.data.path(0, 'literal_time').value as Date;
-      const have = LuxonDateTime.fromJSDate(literal);
-      expect(have.valueOf()).toEqual(zone_2020.valueOf());
-    }
-  );
+    );
+    const result = await query.run();
+    const literal = result.data.path(0, 'literal_time').value as Date;
+    const have = LuxonDateTime.fromJSDate(literal);
+    expect(have.valueOf()).toEqual(zone_2020.valueOf());
+  });
 
   test('extract', async () => {
     await expect(
@@ -691,7 +687,9 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
     ).malloyResultMatches(runtime, {mex_midnight: 18, mex_day: 19});
   });
 
-  test.when(!brokenIn('trino', dbName) /* mtoy */)('truncate day', async () => {
+  test.when(
+    !brokenIn('trino', dbName) && !brokenIn('presto', dbName) /* mtoy */
+  )('truncate day', async () => {
     // At midnight in london it the 19th in Mexico, so that truncates to
     // midnight on the 19th
     const mex_19 = LuxonDateTime.fromISO('2020-02-19T00:00:00', {zone});
@@ -704,32 +702,30 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
     ).malloyResultMatches(runtime, {mex_day: mex_19.toJSDate()});
   });
 
-  test.when(!brokenIn('trino', dbName) /* mtoy */)(
-    'cast timestamp to date',
-    async () => {
-      // At midnight in london it is the 19th in Mexico, so when we cast that
-      // to a date, it should be the 19th.
-      await expect(
-        `run: ${dbName}.sql("SELECT 1 as x") -> {
+  test.when(
+    !brokenIn('trino', dbName) && !brokenIn('presto', dbName) /* mtoy */
+  )('cast timestamp to date', async () => {
+    // At midnight in london it is the 19th in Mexico, so when we cast that
+    // to a date, it should be the 19th.
+    await expect(
+      `run: ${dbName}.sql("SELECT 1 as x") -> {
         timezone: '${zone}'
         extend: { dimension: utc_midnight is @2020-02-20 00:00:00[UTC] }
         select: mex_day is day(utc_midnight::date)
       }`
-      ).malloyResultMatches(runtime, {mex_day: 19});
-    }
-  );
+    ).malloyResultMatches(runtime, {mex_day: 19});
+  });
 
-  test.when(!brokenIn('trino', dbName) /* mtoy */)(
-    'cast date to timestamp',
-    async () => {
-      await expect(
-        `run: ${dbName}.sql(""" SELECT DATE '2020-02-20'  AS ${q`mex_20`} """) -> {
+  test.when(
+    !brokenIn('trino', dbName) && !brokenIn('presto', dbName) /* mtoy */
+  )('cast date to timestamp', async () => {
+    await expect(
+      `run: ${dbName}.sql(""" SELECT DATE '2020-02-20'  AS ${q`mex_20`} """) -> {
         timezone: '${zone}'
         select: mex_ts is mex_20::timestamp
       }`
-      ).malloyResultMatches(runtime, {mex_ts: zone_2020.toJSDate()});
-    }
-  );
+    ).malloyResultMatches(runtime, {mex_ts: zone_2020.toJSDate()});
+  });
 });
 
 afterAll(async () => {

@@ -97,19 +97,20 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
 
   // bigquery doesn't support row count based sampling.
-  test.when(databaseName !== 'bigquery' && databaseName !== 'trino')(
-    `index rows count - ${databaseName}`,
-    async () => {
-      await expect(`
+  test.when(
+    databaseName !== 'bigquery' &&
+      databaseName !== 'trino' &&
+      databaseName !== 'presto'
+  )(`index rows count - ${databaseName}`, async () => {
+    await expect(`
         run: ${databaseName}.table('malloytest.state_facts') extend {
           dimension: one is 'one'
         } -> {index:one, state; sample: 10 }
             -> {select: fieldName, weight, fieldValue; order_by: 2 desc; where: fieldName = 'one'}
       `).malloyResultMatches(runtime, {fieldName: 'one', weight: 10});
-    }
-  );
+  });
 
-  it.when(databaseName !== 'trino')(
+  it.when(databaseName !== 'trino' && databaseName !== 'presto')(
     `index rows count - ${databaseName}`,
     async () => {
       await expect(`

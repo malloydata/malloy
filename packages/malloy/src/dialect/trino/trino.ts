@@ -199,26 +199,22 @@ export class TrinoDialect extends Dialect {
   sqlUnnestAlias(
     source: string,
     alias: string,
-    fieldList: DialectFieldList,
+    _fieldList: DialectFieldList,
     needDistinctKey: boolean,
     isArray: boolean,
     _isInNestedPipeline: boolean
   ): string {
-    const fieldsNames = fieldList.map(f =>
-      this.sqlMaybeQuoteIdentifier(f.sqlOutputName)
-    );
     if (isArray) {
       if (needDistinctKey) {
-        return `CROSS JOIN UNNEST(COALESCE(zip(${source}, SEQUENCE(1,cardinality(${source}))),ARRAY[null])) as words_0(value,__row_id_from_${alias})`;
+        // return `LEFT JOIN UNNEST(transform(${source}, x -> ROW(x) )) WITH ORDINALIITY as words_0(value,__row_id_from_${alias}) ON TRUE`;
+        return `LEFT JOIN UNNEST(zip_with(${source},array[],(r,ignore) -> (r, ignore))) WITH ORDINALITY as ${alias}(value, ignore,__row_id_from_${alias}) ON TRUE`;
       } else {
-        return `CROSS JOIN UNNEST(COALESCE(transform(${source}, x -> ROW(x) ), ARRAY[null])) as ${alias}(value)`;
+        return `LEFT JOIN UNNEST(zip_with(${source},array[],(r,ignore) -> (r, ignore))) as ${alias}(value, ignore) ON TRUE`;
       }
     } else if (needDistinctKey) {
-      return `CROSS JOIN UNNEST(COALESCE(zip_with(${source}, SEQUENCE(1,cardinality(${source})), (r,__row_id) -> (r, __row_id)),ARRAY[null])) as ${alias}_outer(${alias},__row_id_from_${alias})`;
+      return `LEFT JOIN UNNEST(zip_with(${source},array[],(r,ignore) -> (r, ignore))) WITH ORDINALITY as ${alias}_outer(${alias}, ignore,__row_id_from_${alias}) ON TRUE`;
     } else {
-      return `CROSS JOIN UNNEST(COALESCE(${source}, ARRAY[null])) as ${alias}(${fieldsNames.join(
-        ', '
-      )})`;
+      return `LEFT JOIN UNNEST(zip_with(${source},array[],(r,ignore) -> (r, ignore)))as ${alias}_outer(${alias},ignore) ON TRUE`;
     }
   }
 
@@ -608,8 +604,31 @@ ${indent(sql)}
 export class PrestoDialect extends TrinoDialect {
   name = 'presto';
   supportsPipelinesInViews = false; // what a drag...
+  supportsLeftJoinUnnest = false; // we need to fix this....
 
   sqlGenerateUUID(): string {
     return 'CAST(UUID() AS VARCHAR)';
+  }
+
+  sqlUnnestAlias(
+    source: string,
+    alias: string,
+    _fieldList: DialectFieldList,
+    needDistinctKey: boolean,
+    isArray: boolean,
+    _isInNestedPipeline: boolean
+  ): string {
+    if (isArray) {
+      if (needDistinctKey) {
+        // return `LEFT JOIN UNNEST(transform(${source}, x -> ROW(x) )) WITH ORDINALIITY as words_0(value,__row_id_from_${alias}) ON TRUE`;
+        return `CROSS JOIN UNNEST(zip_with(${source},array[],(r,ignore) -> (r, ignore))) WITH ORDINALITY as ${alias}(value, ignore,__row_id_from_${alias})`;
+      } else {
+        return `CROSS JOIN UNNEST(zip_with(${source},array[],(r,ignore) -> (r, ignore))) as ${alias}(value, ignore)`;
+      }
+    } else if (needDistinctKey) {
+      return `CROSS JOIN UNNEST(zip_with(${source},array[],(r,ignore) -> (r, ignore))) WITH ORDINALITY as ${alias}_outer(${alias}, ignore,__row_id_from_${alias})`;
+    } else {
+      return `CROSS JOIN UNNEST(zip_with(${source},array[],(r,ignore) -> (r, ignore)))as ${alias}_outer(${alias},ignore)`;
+    }
   }
 }
