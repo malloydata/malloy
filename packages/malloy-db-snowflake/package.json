@@ -22,9 +22,9 @@
   },
   "dependencies": {
     "@malloydata/malloy": "^0.0.150",
-    "@types/snowflake-sdk": "^1.6.16",
+    "@types/snowflake-sdk": "^1.6.24",
     "generic-pool": "^3.9.0",
-    "snowflake-sdk": "^1.9.0",
+    "snowflake-sdk": "^1.11.0",
     "toml": "^3.0.0"
   }
 }

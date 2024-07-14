@@ -23,7 +23,7 @@
 
 import snowflake, {
   SnowflakeError,
-  Statement,
+  RowStatement,
   Connection,
   ConnectionOptions,
 } from 'snowflake-sdk';
@@ -155,7 +155,7 @@ export class SnowflakeExecutor {
         sqlText,
         complete: (
           err: SnowflakeError | undefined,
-          _stmt: Statement,
+          _stmt: RowStatement,
           rows?: QueryData
         ) => {
           if (err) {
@@ -171,11 +171,14 @@ export class SnowflakeExecutor {
   private async _setSessionParams(conn: Connection) {
     // set some default session parameters
     // ensure we do not ignore case for quoted identifiers
-    await this._execute("ALTER SESSION SET QUOTED_IDENTIFIERS_IGNORE_CASE = FALSE;", conn);
+    await this._execute(
+      'ALTER SESSION SET QUOTED_IDENTIFIERS_IGNORE_CASE = FALSE;',
+      conn
+    );
     // set utc as the default timezone which is the malloy convention
     await this._execute("ALTER SESSION SET TIMEZONE = 'UTC';", conn);
     // ensure week starts on Sunday which is the malloy convention
-    await this._execute("ALTER SESSION SET WEEK_START = 7;", conn);
+    await this._execute('ALTER SESSION SET WEEK_START = 7;', conn);
     // so javascript can parse the dates
     await this._execute(
       "ALTER SESSION SET TIMESTAMP_NTZ_OUTPUT_FORMAT='YYYY-MM-DDTHH24:MI:SS.FF3TZH:TZM';",
@@ -197,34 +200,54 @@ export class SnowflakeExecutor {
     const pool: Pool<Connection> = this.pool_;
     return await pool.acquire().then(async (conn: Connection) => {
       await this._setSessionParams(conn);
-      const stmt: Statement = conn.execute({
-        sqlText,
-        streamResult: true,
-      });
-      const stream: Readable = stmt.streamRows();
-      function streamSnowflake(
-        onError: (error: Error) => void,
-        onData: (data: QueryDataRow) => void,
-        onEnd: () => void
-      ) {
-        function handleEnd() {
-          onEnd();
-          pool.release(conn);
-        }
 
-        let index = 0;
-        function handleData(this: Readable, row: QueryDataRow) {
-          onData(row);
-          index += 1;
-          if (options?.rowLimit !== undefined && index >= options.rowLimit) {
-            onEnd();
-          }
-        }
-        stream.on('error', onError);
-        stream.on('data', handleData);
-        stream.on('end', handleEnd);
-      }
-      return Promise.resolve(toAsyncGenerator<QueryDataRow>(streamSnowflake));
+      return new Promise((resolve, reject) => {
+        conn.execute({
+          sqlText,
+          streamResult: true,
+          complete: async (
+            err: SnowflakeError | undefined,
+            stmt: RowStatement
+          ) => {
+            if (err) {
+              reject(err);
+            }
+
+            // const statement = conn.getResultsFromQueryId({
+            //   sqlText,
+            //   complete: () => {},
+            //   queryId: stmt.getQueryId(),
+            // });
+            const stream: Readable = stmt.streamRows();
+            function streamSnowflake(
+              onError: (error: Error) => void,
+              onData: (data: QueryDataRow) => void,
+              onEnd: () => void
+            ) {
+              function handleEnd() {
+                onEnd();
+                pool.release(conn);
+              }
+
+              let index = 0;
+              function handleData(this: Readable, row: QueryDataRow) {
+                onData(row);
+                index += 1;
+                if (
+                  options?.rowLimit !== undefined &&
+                  index >= options.rowLimit
+                ) {
+                  onEnd();
+                }
+              }
+              stream.on('error', onError);
+              stream.on('data', handleData);
+              stream.on('end', handleEnd);
+            }
+            return resolve(toAsyncGenerator<QueryDataRow>(streamSnowflake));
+          },
+        });
+      });
     });
   }
 }
