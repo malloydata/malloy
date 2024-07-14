@@ -479,7 +479,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    expect(q.sql.toLowerCase()).not.toContain('distinct');
+    expect(q.sql.toLowerCase()).t.toContain('distinct');
   });
 
   it.when(runtime.dialect.supportsLeftJoinUnnest)(
@@ -500,7 +500,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       source: states is ${databaseName}.table('malloytest.state_facts') extend {
         join_many: am_states on state=am_states.state
       }
-      # test.debug
       run: states -> {
         where: state = 'CA'
         group_by:
