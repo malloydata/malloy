@@ -95,6 +95,7 @@ class PrestoBase implements BaseConnection {
     const q = limit ? `SELECT * FROM(${sql}) LIMIT ${limit}` : sql;
     let error: string | undefined = undefined;
     try {
+      await this.client.query('SET SESSION legacy_unnest=true');
       ret = (await this.client.query(q)) || [];
       // console.log(ret);
     } catch (errorObj) {
@@ -334,7 +335,7 @@ export abstract class TrinoPrestoConnection
     //   );
     // }
 
-    const r = await this.client.runSQL(sqlCommand, options.rowLimit);
+    const r = await this.client.runSQL(sqlCommand, options.rowLimit || 50);
 
     if (r.error) {
       throw new Error(r.error);
