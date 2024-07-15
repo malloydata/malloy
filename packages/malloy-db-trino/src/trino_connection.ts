@@ -335,7 +335,7 @@ export abstract class TrinoPrestoConnection
     //   );
     // }
 
-    const r = await this.client.runSQL(sqlCommand, options.rowLimit || 50);
+    const r = await this.client.runSQL(sqlCommand, options.rowLimit);
 
     if (r.error) {
       throw new Error(r.error);
