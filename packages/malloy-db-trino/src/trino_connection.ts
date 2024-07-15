@@ -88,6 +88,7 @@ class PrestoBase implements BaseConnection {
       schema: config.schema,
       timezone: 'America/Costa_Rica',
       user: config.user || 'anyone',
+      extraHeaders: {'X-Presto-Session': 'legacy_unnest=true'}
     });
   }
   async runSQL(sql: string, limit: number | undefined) {
@@ -95,7 +96,6 @@ class PrestoBase implements BaseConnection {
     const q = limit ? `SELECT * FROM(${sql}) LIMIT ${limit}` : sql;
     let error: string | undefined = undefined;
     try {
-      await this.client.query('SET SESSION legacy_unnest=true');
       ret = (await this.client.query(q)) || [];
       // console.log(ret);
     } catch (errorObj) {
