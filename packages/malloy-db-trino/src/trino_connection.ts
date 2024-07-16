@@ -88,6 +88,7 @@ class PrestoBase implements BaseConnection {
       schema: config.schema,
       timezone: 'America/Costa_Rica',
       user: config.user || 'anyone',
+      extraHeaders: {'X-Presto-Session': 'legacy_unnest=true'},
     });
   }
   async runSQL(sql: string, limit: number | undefined) {
