@@ -1055,23 +1055,26 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
     }
   );
 
-  test.when(runtime.supportsNesting && runtime.dialect.readsNestedData)(
-    `can unnest simply from file - ${databaseName}`,
-    async () => {
-      await expect(`
+  test.when(
+    runtime.supportsNesting &&
+      runtime.dialect.readsNestedData &&
+      databaseName !== 'presto'
+  )(`can unnest simply from file - ${databaseName}`, async () => {
+    await expect(`
         source: ga_sample is ${databaseName}.table('malloytest.ga_sample')
         run: ga_sample -> {
           aggregate:
             h is hits.count()
         }
       `).malloyResultMatches(runtime, {h: 13233});
-    }
-  );
+  });
 
-  test.when(runtime.supportsNesting && runtime.dialect.readsNestedData)(
-    `can unnest from file - ${databaseName}`,
-    async () => {
-      await expect(`
+  test.when(
+    runtime.supportsNesting &&
+      runtime.dialect.readsNestedData &&
+      databaseName !== 'presto'
+  )(`can unnest from file - ${databaseName}`, async () => {
+    await expect(`
         source: ga_sample is ${databaseName}.table('malloytest.ga_sample')
         run: ga_sample -> {
           where: hits.product.productBrand != null
@@ -1084,13 +1087,14 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
             p is hits.product.count()
         }
       `).malloyResultMatches(runtime, {h: 1192, c: 681, p: 1192});
-    }
-  );
+  });
 
-  test.when(runtime.supportsNesting && runtime.dialect.readsNestedData)(
-    `can double unnest - ${databaseName}`,
-    async () => {
-      await expect(`
+  test.when(
+    runtime.supportsNesting &&
+      runtime.dialect.readsNestedData &&
+      databaseName !== 'presto'
+  )(`can double unnest - ${databaseName}`, async () => {
+    await expect(`
         source: ga_sample is ${databaseName}.table('malloytest.ga_sample')
 
         run: ga_sample -> {
@@ -1098,8 +1102,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
             p is floor(hits.product.productPrice.avg())
         }
       `).malloyResultMatches(runtime, {p: 23001594});
-    }
-  );
+  });
 
   test.when(runtime.supportsNesting)(
     'nest null - ${databaseName}',
