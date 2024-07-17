@@ -94,6 +94,7 @@ import {
   TurtleDef,
   UngroupFragment,
   FunctionOrderBy,
+  isValueParameter,
 } from './malloy_types';
 
 import {Connection} from '../runtime_types';
@@ -741,13 +742,14 @@ class QueryField extends QueryNode {
     resultSet: FieldInstanceResult,
     context: QueryStruct,
     expr: ParameterFragment,
-    _state: GenerateState
+    state: GenerateState
   ): string {
-    /*
-      mtoy todo parameters and paths figure this out
-
-    // find the structDef and return the path to the field...
-    const param = context.parameters()[expr.path];
+    // TODO maybe bake this into the type?
+    if (expr.path.length !== 1) {
+      throw new Error('Parameter paths must be length 1');
+    }
+    const name = expr.path[0];
+    const param = context.parameters()[name];
     if (isValueParameter(param)) {
       if (param.value) {
         return this.generateExpressionFromExpr(
@@ -758,6 +760,7 @@ class QueryField extends QueryNode {
         );
       }
     } else if (param.condition) {
+      // TODO remove?
       return this.generateExpressionFromExpr(
         resultSet,
         context,
@@ -765,7 +768,6 @@ class QueryField extends QueryNode {
         state
       );
     }
-    */
     throw new Error(`Can't generate SQL, no value for ${expr.path}`);
   }
 

@@ -39,29 +39,18 @@ export class DefineSource
   implements DocStatement, Noteable
 {
   elementType = 'defineSource';
-  readonly parameters?: HasParameter[];
   constructor(
     readonly name: string,
     readonly sourceExpr: SourceQueryElement | undefined,
     readonly exported: boolean,
-    params?: MalloyElement[]
+    readonly parameters?: HasParameter[] | undefined
   ) {
     super();
     if (sourceExpr) {
       this.has({sourceExpr});
     }
-    if (params) {
-      this.parameters = [];
-      for (const el of params) {
-        if (el instanceof HasParameter) {
-          this.parameters.push(el);
-        } else {
-          this.log(
-            `Unexpected element type in define statement: ${el.elementType}`
-          );
-        }
-      }
-      this.has({parameters: this.parameters});
+    if (parameters) {
+      this.has({parameters});
     }
   }
   readonly isNoteableObj = true;

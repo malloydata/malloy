@@ -36,6 +36,7 @@ export abstract class Source extends MalloyElement {
     return this.structDef();
   }
 
+  // TODO can this please just be in the constructor instead???
   withParameters(pList: HasParameter[] | undefined): StructDef {
     const before = this.structDef();
     // TODO name collisions are flagged where?

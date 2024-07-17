@@ -16,9 +16,9 @@ export function plotToVega(
   const chartSettings = getChartSettings(options.field, options.metadata);
   const vegaSpec: VegaSpec = {
     '$schema': 'https://vega.github.io/schema/vega/v5.json',
-    width: chartSettings.plotWidth,
-    height: chartSettings.plotHeight,
-    config: {
+    'width': chartSettings.plotWidth,
+    'height': chartSettings.plotHeight,
+    'config': {
       axisY: {
         gridColor: gridGray,
         tickColor: gridGray,
@@ -56,22 +56,22 @@ export function plotToVega(
         strokeWidth: 0,
       },
     },
-    data: [
+    'data': [
       {
         name: 'table',
         values: [],
       },
     ],
-    marks: [],
-    scales: [],
-    legends: [],
-    axes: [],
-    autosize: {
+    'marks': [],
+    'scales': [],
+    'legends': [],
+    'axes': [],
+    'autosize': {
       type: 'none',
       resize: true,
       contains: 'content',
     },
-    padding: chartSettings.padding,
+    'padding': chartSettings.padding,
   };
 
   // use spec.x/y.fields to look up all data for x axis

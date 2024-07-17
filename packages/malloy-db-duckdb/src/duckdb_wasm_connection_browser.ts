@@ -104,6 +104,7 @@ export class DuckDBWASMConnection extends DuckDBWASMConnectionBase {
       });
       await mdConnection.isInitialized();
       this._mdConnection = mdConnection;
+      // eslint-disable-next-line no-console
       console.info('MotherDuck initialized');
     } else {
       await super.init();

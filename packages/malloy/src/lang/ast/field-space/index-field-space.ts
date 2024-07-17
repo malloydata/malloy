@@ -117,6 +117,10 @@ export class IndexFieldSpace extends QueryOperationSpace {
       if (wild.except.has(name)) {
         continue;
       }
+      // TODO is this right for wildcards to not include parameters?
+      if (entry.refType === 'parameter') {
+        continue;
+      }
       const indexName = IndexFieldReference.indexOutputName([
         ...joinPath,
         name,

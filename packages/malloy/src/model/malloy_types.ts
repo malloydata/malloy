@@ -45,7 +45,7 @@ export function isConditionParameter(p: Parameter): p is ParamCondition {
   return (p as ParamCondition).condition !== undefined;
 }
 export function paramHasValue(p: Parameter): boolean {
-  return isValueParameter(p) || p.condition !== null;
+  return isValueParameter(p) && p.value !== null;
 }
 
 export interface DocumentRange {

@@ -107,6 +107,10 @@ export abstract class QueryOperationSpace
       if (wild.except.has(name)) {
         continue;
       }
+      // TODO is this right for wildcards to not include parameters?
+      if (entry.refType === 'parameter') {
+        continue;
+      }
       if (this.entry(name)) {
         const conflict = this.expandedWild[name]?.join('.');
         wild.log(

@@ -1,5 +1,6 @@
 /*
  * Copyright 2023 Google LLC
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files
@@ -32,31 +33,23 @@ import {
 
 import {Source} from './source';
 import {ErrorFactory} from '../error-factory';
-import {ConstantSubExpression} from '../expressions/constant-sub-expression';
 import {castTo} from '../time-utils';
-import {MalloyElement, ModelEntryReference} from '../types/malloy-element';
+import {ModelEntryReference} from '../types/malloy-element';
+import {Argument} from '../parameters/argument';
+import {StaticSpace} from '../field-space/static-space';
+import {LogSeverity} from '../../parse-log';
 
-export class IsValueBlock extends MalloyElement {
-  elementType = 'isValueBlock';
-
-  constructor(readonly isMap: Record<string, ConstantSubExpression>) {
-    super();
-    this.has(isMap);
-  }
-}
 
 export class NamedSource extends Source {
   elementType = 'namedSource';
-  protected isBlock?: IsValueBlock;
 
   constructor(
     readonly ref: ModelEntryReference | string,
-    paramValues: Record<string, ConstantSubExpression> = {}
+    readonly args: Argument[] | undefined = undefined
   ) {
     super();
-    if (paramValues && Object.keys(paramValues).length > 0) {
-      this.isBlock = new IsValueBlock(paramValues);
-      this.has({parameterValues: this.isBlock});
+    if (args) {
+      this.has({args});
     }
     if (ref instanceof ModelEntryReference) {
       this.has({ref: ref});
@@ -68,7 +61,7 @@ export class NamedSource extends Source {
   }
 
   structRef(): StructRef {
-    if (this.isBlock) {
+    if (this.args !== undefined) {
       return this.structDef();
     }
     const modelEnt = this.modelEntry(this.ref);
@@ -78,6 +71,14 @@ export class NamedSource extends Source {
       return this.structDef();
     }
     return this.refName;
+  }
+
+  refLog(message: string, severity?: LogSeverity) {
+    if (typeof this.ref === 'string') {
+      this.log(message, severity);
+    } else {
+      this.ref.log(message, severity);
+    }
   }
 
   modelStruct(): StructDef | undefined {
@@ -121,46 +122,64 @@ export class NamedSource extends Source {
       which might result in a full translation.
     */
 
-    const ret = this.modelStruct();
-    if (!ret) {
+    const base = this.modelStruct();
+    if (!base) {
       const notFound = ErrorFactory.structDef;
       const err = `${this.refName}-undefined`;
       notFound.name = notFound.name + err;
       notFound.dialect = notFound.dialect + err;
       return notFound;
     }
-    const declared = {...ret.parameters};
+    // Clone parameters to not mutate
+    const parameters = {};
+    for (const paramName in base.parameters) {
+      parameters[paramName] = {...base.parameters[paramName]};
+    }
 
-    const makeWith = this.isBlock?.isMap || {};
-    for (const [pName, pExpr] of Object.entries(makeWith)) {
-      const decl = declared[pName];
-      // const pVal = pExpr.constantValue();
+    const passedNames = new Set();
+    for (const argument of this.args ?? []) {
+      if (argument.id === undefined) {
+        argument.value.log(
+          'Parameterized source arguments must be named with `parameter_name is`'
+        );
+        continue;
+      }
+      if (passedNames.has(argument.id.refString)) {
+        argument.log(
+          `Cannot pass argument for \`${argument.id.refString}\` more than once`
+        );
+        continue;
+      }
+      passedNames.add(argument.id.refString);
+      const decl = parameters[argument.id.refString];
       if (!decl) {
-        this.log(`Value given for undeclared parameter '${pName}`);
+        argument.id.log(
+          `\`${this.refName}\` has no declared parameter named \`${argument.id.refString}\``
+        );
       } else {
         if (isValueParameter(decl)) {
-          if (decl.constant) {
-            pExpr.log(`Cannot override constant parameter ${pName}`);
-          } else {
-            const pVal = pExpr.constantValue();
-            let value = pVal.value;
-            if (pVal.dataType !== decl.type && isCastType(decl.type)) {
-              value = castTo(decl.type, pVal.value, pVal.dataType, true);
-            }
-            decl.value = value;
+          // TODO probably make this constant for now, or use ConstantSubExpression here instead, or figure out a way to
+          // correctly handle parameter/argument circularity??
+          const fs = new StaticSpace(base);
+          const pVal = argument.value.getExpression(fs);
+          let value = pVal.value;
+          if (pVal.dataType !== decl.type && isCastType(decl.type)) {
+            value = castTo(decl.type, pVal.value, pVal.dataType, true);
           }
+          decl.value = value;
         } else {
-          // TODO type checking here -- except I am still not sure what
-          // datatype half conditions have ..
-          decl.condition = pExpr.constantCondition(decl.type).value;
+          throw new Error('UNIMPLEMENTED'); // TODO remove need for this branch?
         }
       }
     }
-    for (const checkDef in ret.parameters) {
-      if (!paramHasValue(declared[checkDef])) {
-        this.log(`Value not provided for required parameter ${checkDef}`);
+    for (const checkDef in parameters) {
+      if (!paramHasValue(parameters[checkDef])) {
+        this.refLog(
+          `Argument not provided for required parameter \`${checkDef}\``
+        );
       }
     }
+    const ret = {...base, parameters};
     this.document()?.rememberToAddModelAnnotations(ret);
     return ret;
   }
