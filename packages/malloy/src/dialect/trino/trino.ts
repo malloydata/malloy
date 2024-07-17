@@ -621,17 +621,25 @@ export class PrestoDialect extends TrinoDialect {
     if (isArray) {
       if (needDistinctKey) {
         // return `LEFT JOIN UNNEST(transform(${source}, x -> CAST(ROW(x) as ROW(value) )) WITH ORDINALIITY as words_0(value,__row_id_from_${alias}) ON TRUE`;
-        return `CROSS JOIN UNNEST(${source}) WITH ORDINALITY as ${alias}(value, __row_id_from_${alias}) `;
+        return (
+          '-- Simulate a left join\n' +
+          `CROSS JOIN  UNNEST(COALESCE(${source},ARRAY[NULL])) WITH ORDINALITY as ${alias}(value, __row_id_almost_${alias})\n` +
+          `CROSS JOIN UNNEST(ARRAY[CASE WHEN ${source} IS NOT NULL THEN __row_id_almost_${alias} END]) as ${alias}_ignore(__row_id_from_${alias})`
+        );
       } else {
         // return `CROSS JOIN UNNEST(zip_with(${source},array[],(r,ignore) -> (r, ignore))) as ${alias}(value, ignore)`;
-        return `CROSS JOIN UNNEST(${source}) as ${alias}(value) `;
+        return `CROSS JOIN  UNNEST(COALESCE(${source}, ARRAY[NULL])) as ${alias}(value) `;
       }
     } else if (needDistinctKey) {
       // return `CROSS JOIN UNNEST(zip_with(${source},array[],(r,ignore) -> (r, ignore))) WITH ORDINALITY as ${alias}_outer(${alias}, ignore,__row_id_from_${alias})`;
-      return `CROSS JOIN UNNEST(${source}) WITH ORDINALITY as ${alias}_outer(${alias}, __row_id_from_${alias})`;
+      return (
+        '-- Simulate a left join\n' +
+        `CROSS JOIN UNNEST(COALESCE(${source}, ARRAY[NULL])) WITH ORDINALITY as ${alias}_outer(${alias}, __row_id_almost_${alias})\n` +
+        `CROSS JOIN UNNEST(ARRAY[CASE WHEN ${source} IS NOT NULL THEN __row_id_almost_${alias} END]) as ${alias}_ignore(__row_id_from_${alias})`
+      );
     } else {
       // return `CROSS JOIN UNNEST(zip_with(${source},array[],(r,ignore) -> (r, ignore)))as ${alias}_outer(${alias},ignore)`;
-      return `CROSS JOIN UNNEST(${source}) as ${alias}_outer(${alias})`;
+      return `CROSS JOIN  UNNEST(COALESCE(${source}, ARRAY[NULL])) as ${alias}_outer(${alias})`;
     }
   }
 }
