@@ -95,7 +95,7 @@ export class SnowflakeDialect extends Dialect {
   udfPrefix = '__udf';
   hasFinalStage = false;
   divisionIsInteger = false;
-  supportsSumDistinctFunction = false;
+  supportsSumDistinctFunction = true;
   supportsSafeCast = true;
   supportsNesting = true;
   defaultSampling = {rows: 50000};
