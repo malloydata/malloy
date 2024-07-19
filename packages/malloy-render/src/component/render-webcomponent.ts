@@ -16,15 +16,21 @@ const withStyles = ComponentType => {
   };
 };
 
-compose(
-  register('malloy-render', {
-    result: undefined,
-    queryResult: undefined,
-    modelDef: undefined,
-  }),
-  withStyles,
-  withSolid
-)(MalloyRender);
+if (!customElements.get('malloy-render')) {
+  compose(
+    register('malloy-render', {
+      result: undefined,
+      queryResult: undefined,
+      modelDef: undefined,
+    }),
+    withStyles,
+    withSolid
+  )(MalloyRender);
+} else {
+  console.warn(
+    "The custom element 'malloy-render' has already been defined. Make sure you are not loading multiple versions of the malloy-render package as they could conflict."
+  );
+}
 
 declare global {
   interface HTMLElementTagNameMap {
