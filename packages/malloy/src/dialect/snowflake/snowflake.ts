@@ -95,7 +95,7 @@ export class SnowflakeDialect extends Dialect {
   udfPrefix = '__udf';
   hasFinalStage = false;
   divisionIsInteger = false;
-  supportsSumDistinctFunction = false;
+  supportsSumDistinctFunction = true;
   supportsSafeCast = true;
   supportsNesting = true;
   defaultSampling = {rows: 50000};
@@ -224,10 +224,22 @@ export class SnowflakeDialect extends Dialect {
     sqlDistinctKey = `${sqlDistinctKey}::STRING`;
     const upperPart = `to_number(substr(md5_hex(${sqlDistinctKey}), 1, 15), repeat('X', 15)) * 4294967296`;
     const lowerPart = `to_number(substr(md5_hex(${sqlDistinctKey}), 16, 8), repeat('X', 8))`;
-    const precisionShiftMultiplier = '0.000000001';
-    return `(${upperPart} + ${lowerPart}) * ${precisionShiftMultiplier}`;
+    return `(${upperPart} + ${lowerPart})`;
   }
 
+  sqlSumDistinct(key: string, value: string, funcName: string): string {
+    const hashKey = this.sqlSumDistinctHashedKey(key);
+    const scale = 100000000.0;
+    const v = `(COALESCE(${value},0)*${scale})`;
+
+    const sqlSum = `(SUM(DISTINCT ${hashKey} + ${v}) - SUM(DISTINCT ${hashKey}))/${scale}`;
+    if (funcName === 'SUM') {
+      return sqlSum;
+    } else if (funcName === 'AVG') {
+      return `(${sqlSum})/NULLIF(COUNT(DISTINCT CASE WHEN ${value} IS NOT NULL THEN ${key} END),0)`;
+    }
+    throw new Error(`Unknown Symmetric Aggregate function ${funcName}`);
+  }
   sqlGenerateUUID(): string {
     return 'UUID_STRING()';
   }

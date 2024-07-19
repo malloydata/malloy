@@ -93,7 +93,7 @@ export class TrinoDialect extends Dialect {
   udfPrefix = '__udf';
   hasFinalStage = false;
   divisionIsInteger = true;
-  supportsSumDistinctFunction = false;
+  supportsSumDistinctFunction = true;
   unnestWithNumbers = false;
   defaultSampling = {enable: false};
   supportUnnestArrayAgg = false;
@@ -217,14 +217,28 @@ export class TrinoDialect extends Dialect {
       return `LEFT JOIN UNNEST(zip_with(${source},array[],(r,ignore) -> (r, ignore)))as ${alias}_outer(${alias},ignore) ON TRUE`;
     }
   }
+  static dtype = 'DECIMAL(38,0)';
 
   sqlSumDistinctHashedKey(sqlDistinctKey: string): string {
     sqlDistinctKey = `CAST(${sqlDistinctKey} AS VARCHAR)`;
 
-    const upperPart = `cast(from_base(substr(to_hex(md5(to_utf8(${sqlDistinctKey}))), 1, 15),16) as DECIMAL) * DECIMAL '4294967296' `;
-    const lowerPart = `cast(from_base(substr(to_hex(md5(to_utf8(${sqlDistinctKey}))), 16, 8),16) as DECIMAL) `;
-    const precisionShiftMultiplier = '0.000000001';
-    return `(${upperPart} + ${lowerPart}) * ${precisionShiftMultiplier}`;
+    const upperPart = `cast(from_base(substr(to_hex(md5(to_utf8(${sqlDistinctKey}))), 1, 15),16) as ${TrinoDialect.dtype}) * CAST('4294967296' AS ${TrinoDialect.dtype}) `;
+    const lowerPart = `cast(from_base(substr(to_hex(md5(to_utf8(${sqlDistinctKey}))), 16, 8),16) as ${TrinoDialect.dtype}) `;
+    return `(${upperPart} + ${lowerPart})`;
+  }
+
+  sqlSumDistinct(key: string, value: string, funcName: string): string {
+    const hashKey = this.sqlSumDistinctHashedKey(key);
+    const scale = 100000000;
+    const v = `CAST(COALESCE(${value},0)*${scale} as ${TrinoDialect.dtype})`;
+
+    const sqlSum = `CAST(SUM(DISTINCT ${hashKey} + ${v}) - SUM(DISTINCT ${hashKey}) AS DOUBLE)/${scale}`;
+    if (funcName === 'SUM') {
+      return sqlSum;
+    } else if (funcName === 'AVG') {
+      return `(${sqlSum})/NULLIF(COUNT(DISTINCT CASE WHEN ${value} IS NOT NULL THEN ${key} END),0)`;
+    }
+    throw new Error(`Unknown Symmetric Aggregate function ${funcName}`);
   }
 
   sqlGenerateUUID(): string {

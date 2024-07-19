@@ -201,7 +201,9 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     // symmetric aggregate are needed on both sides of the join
     // Check the row count and that sums on each side work properly.
     await expect(`
-      source: a is ${databaseName}.table('malloytest.state_facts')
+      source: a is ${databaseName}.table('malloytest.state_facts') extend {
+        dimension: x is airport_count/10000
+      }
       source: f is a extend {
         join_cross: a
       }
@@ -212,11 +214,15 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           right_count is a.count()
           left_sum is airport_count.sum()
           right_sum is a.airport_count.sum()
+          left_small_sum is round(x.sum() * 10000)
+          right_small_sum is round(x.sum() * 10000)
       }
     `).malloyResultMatches(runtime, {
       row_count: 51 * 51,
       left_sum: 19701,
       right_sum: 19701,
+      left_small_sum: 19701,
+      right_small_sum: 19701,
     });
   });
 
