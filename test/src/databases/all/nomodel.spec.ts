@@ -214,8 +214,8 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           right_count is a.count()
           left_sum is airport_count.sum()
           right_sum is a.airport_count.sum()
-          left_small_sum is x.sum() * 10000
-          right_small_sum is x.sum() * 10000
+          left_small_sum is round(x.sum() * 10000)
+          right_small_sum is round(x.sum() * 10000)
       }
     `).malloyResultMatches(runtime, {
       row_count: 51 * 51,
