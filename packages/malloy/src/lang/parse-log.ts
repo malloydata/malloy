@@ -32,6 +32,7 @@ export interface LogMessage {
   message: string;
   at?: DocumentLocation;
   severity: LogSeverity;
+  errorTag?: string;
 }
 
 export interface MessageLogger {
@@ -50,7 +51,18 @@ export class MessageLog implements MessageLogger {
     return this.rawLog;
   }
 
+  /**
+   * Add a message to the log.
+   *
+   * If the messsage ends with '[tag]', the tag is removed and stored in the `errorTag` field.
+   * @param logMsg Message possibly containing an error tag
+   */
   log(logMsg: LogMessage): void {
+    const tagged = logMsg.message.match(/^(.+)\[(.+)]$/);
+    if (tagged) {
+      logMsg.message = tagged[1];
+      logMsg.errorTag = tagged[2];
+    }
     this.rawLog.push(logMsg);
   }
 
