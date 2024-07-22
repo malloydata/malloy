@@ -100,7 +100,9 @@ export class Pick extends ExpressionDef {
       );
       if (returnType && !FT.typeEq(returnType, thenExpr, true)) {
         const whenType = FT.inspect(thenExpr);
-        this.log(`pick type '${whenType}', expected '${returnType.dataType}'`);
+        this.log(
+          `pick type '${whenType}', expected '${returnType.dataType}'[pick-values-must-match]`
+        );
         return errorFor('pick when type');
       }
       returnType = typeCoalesce(returnType, thenExpr);
@@ -114,7 +116,7 @@ export class Pick extends ExpressionDef {
       this.log(
         `${errSrc} type '${FT.inspect(elseVal)}', expected '${
           returnType.dataType
-        }'`
+        }'[pick-values-must-match]`
       );
       return errorFor('pick else type');
     }
@@ -164,7 +166,9 @@ export class Pick extends ExpressionDef {
       }
       if (returnType && !FT.typeEq(returnType, aChoice.pick, true)) {
         const whenType = FT.inspect(aChoice.pick);
-        this.log(`pick type '${whenType}', expected '${returnType.dataType}'`);
+        this.log(
+          `pick type '${whenType}', expected '${returnType.dataType}'[pick-values-must-match]`
+        );
         return errorFor('pick value type');
       }
       returnType = typeCoalesce(returnType, aChoice.pick);
@@ -196,7 +200,9 @@ export class Pick extends ExpressionDef {
     returnType = typeCoalesce(returnType, defVal);
     if (!FT.typeEq(returnType, defVal, true)) {
       this.elsePick.log(
-        `else type '${FT.inspect(defVal)}', expected '${returnType.dataType}'`
+        `else type '${FT.inspect(defVal)}', expected '${
+          returnType.dataType
+        }'[pick-values-must-match]`
       );
       return errorFor('pick value type mismatch');
     }

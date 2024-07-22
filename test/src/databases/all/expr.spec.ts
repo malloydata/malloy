@@ -596,7 +596,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           `
         );
         await expect(query.run()).rejects.toThrow(
-          "'.' paths are not yet supported in sql interpolations, found [${a.seats}, ${a.seats}, ${a.total_seats}]"
+          "'.' paths are not yet supported in sql interpolations, found (${a.seats}, ${a.seats}, ${a.total_seats})"
         );
       });
 
