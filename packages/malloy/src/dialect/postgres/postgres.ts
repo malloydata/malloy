@@ -89,6 +89,7 @@ const postgresToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
   'bytea': {type: 'string'},
   'pg_ndistinct': {type: 'number', numberType: 'integer'},
   'varchar': {type: 'string'},
+  'uuid': {type: 'string'},
 };
 
 export class PostgresDialect extends Dialect {

@@ -67,6 +67,7 @@ const duckDBToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
   'TIME': {type: 'string'},
   'DECIMAL': {type: 'number', numberType: 'float'},
   'BOOLEAN': {type: 'boolean'},
+  'UUID': {type: 'string'},
 };
 
 export class DuckDBDialect extends Dialect {
