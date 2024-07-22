@@ -1520,7 +1520,7 @@ export class Explore extends Entity implements Taggable {
               return [name, new BooleanField(fieldDef, this, sourceField)];
             } else if (fieldDef.type === 'json') {
               return [name, new JSONField(fieldDef, this, sourceField)];
-            } else if (fieldDef.type === 'unsupported') {
+            } else if (fieldDef.type === 'sql native') {
               return [name, new UnsupportedField(fieldDef, this, sourceField)];
             }
           }
@@ -1667,7 +1667,7 @@ export enum AtomicFieldType {
   Date = 'date',
   Timestamp = 'timestamp',
   Json = 'json',
-  Unsupported = 'unsupported',
+  NativeSQL = 'sql native',
   Error = 'error',
 }
 
@@ -1699,8 +1699,8 @@ export class AtomicField extends Entity implements Taggable {
         return AtomicFieldType.Number;
       case 'json':
         return AtomicFieldType.Json;
-      case 'unsupported':
-        return AtomicFieldType.Unsupported;
+      case 'sql native':
+        return AtomicFieldType.NativeSQL;
       case 'error':
         return AtomicFieldType.Error;
     }

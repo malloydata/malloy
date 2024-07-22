@@ -565,7 +565,7 @@ export class BigQueryConnection
         structDef.fields.push(innerStructDef);
       } else {
         const malloyType = this.dialect.sqlTypeToMalloyType(type) ?? {
-          type: 'unsupported',
+          type: 'sql native',
           rawType: type.toLowerCase(),
         };
         structDef.fields.push({name, ...malloyType} as FieldTypeDef);

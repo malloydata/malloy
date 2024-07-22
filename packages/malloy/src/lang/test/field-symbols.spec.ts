@@ -102,7 +102,7 @@ describe('structdef comprehension', () => {
   test('import unsupported field', () => {
     const field: model.FieldDef = {
       name: 't',
-      type: 'unsupported',
+      type: 'sql native',
     };
     const struct = mkStructDef(field);
     const space = new StaticSpace(struct);

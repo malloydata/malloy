@@ -193,7 +193,7 @@ export class SnowflakeConnection
     } else if (type === 'varchar') {
       return 'string';
     } else {
-      return 'unsupported';
+      return 'sql native';
     }
   }
 
@@ -239,7 +239,7 @@ export class SnowflakeConnection
         structDef.fields.push(innerStructDef);
       } else {
         const malloyType = this.dialect.sqlTypeToMalloyType(type) ?? {
-          type: 'unsupported',
+          type: 'sql native',
           rawType: type.toLowerCase(),
         };
         structDef.fields.push({name, ...malloyType} as FieldTypeDef);
@@ -273,7 +273,7 @@ export class SnowflakeConnection
         s.fields.push({...malloyType, name});
       } else {
         s.fields.push({
-          type: 'unsupported',
+          type: 'sql native',
           rawType: snowflakeDataType,
           name,
         });

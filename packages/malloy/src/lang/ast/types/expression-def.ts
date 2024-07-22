@@ -91,7 +91,11 @@ export abstract class ExpressionDef extends MalloyElement {
    */
   typeCheck(eNode: ExpressionDef, eVal: ExprValue): boolean {
     if (eVal.dataType !== 'error' && !FT.in(eVal, this.legalChildTypes)) {
-      eNode.log(`'${this.elementType}' Can't use type ${FT.inspect(eVal)}`);
+      eNode.log(
+        eVal.dataType === 'sql native'
+          ? `'${this.elementType}' Can't be used with unsupported SQL native type '${eVal.rawType}'[unsupported-sql-native-type-not-allowed-in-expression]`
+          : `'${this.elementType}' Can't use type ${FT.inspect(eVal)}`
+      );
       return false;
     }
     return true;
@@ -319,7 +323,7 @@ function equality(
 
   // Unsupported types can be compare with null
   const checkUnsupport =
-    lhs.dataType === 'unsupported' || rhs.dataType === 'unsupported';
+    lhs.dataType === 'sql native' || rhs.dataType === 'sql native';
   if (checkUnsupport) {
     const oneNull = lhs.dataType === 'null' || rhs.dataType === 'null';
     const rawMatch = lhs.rawType && lhs.rawType === rhs.rawType;
@@ -522,7 +526,7 @@ export function applyBinary(
     const denom = right.getExpression(fs);
     const noGo = unsupportError(left, num, right, denom);
     if (noGo) {
-      left.log('Cannot operate with unsupported type');
+      left.log(`Cannot use '${op}' with sql native type`);
       return noGo;
     }
 
@@ -582,12 +586,16 @@ function unsupportError(
     value: ["'unsupported operation'"],
     evalSpace: mergeEvalSpaces(lhs.evalSpace, rhs.evalSpace),
   };
-  if (lhs.dataType === 'unsupported') {
-    l.log('Unsupported type not allowed in expression');
+  if (lhs.dataType === 'sql native') {
+    l.log(
+      `Unsupported SQL native type '${lhs.rawType}' not allowed in expression[unsupported-sql-native-type-not-allowed-in-expression]`
+    );
     return {...ret, dataType: rhs.dataType};
   }
-  if (rhs.dataType === 'unsupported') {
-    r.log('Unsupported type not allowed in expression');
+  if (rhs.dataType === 'sql native') {
+    r.log(
+      `Unsupported SQL native type '${rhs.rawType}' not allowed in expression[unsupported-sql-native-type-not-allowed-in-expression]`
+    );
     return ret;
   }
   return undefined;

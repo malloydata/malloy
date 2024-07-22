@@ -341,7 +341,7 @@ export class PostgresConnection
         s.fields.push({...malloyType, name});
       } else {
         s.fields.push({
-          type: 'unsupported',
+          type: 'sql native',
           rawType: postgresDataType.toLowerCase(),
           name,
         });
