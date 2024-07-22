@@ -60,7 +60,7 @@ import {
   expressionIsCalculation,
   isSQLBlockStruct,
   isSQLFragment,
-  FieldUnsupportedDef,
+  FeldNativeUnsupportedDef,
   QueryRunStats,
   ImportLocation,
   Annotation,
@@ -1667,7 +1667,7 @@ export enum AtomicFieldType {
   Date = 'date',
   Timestamp = 'timestamp',
   Json = 'json',
-  NativeSQL = 'sql native',
+  NativeUnsupported = 'sql native',
   Error = 'error',
 }
 
@@ -1700,7 +1700,7 @@ export class AtomicField extends Entity implements Taggable {
       case 'json':
         return AtomicFieldType.Json;
       case 'sql native':
-        return AtomicFieldType.NativeSQL;
+        return AtomicFieldType.NativeUnsupported;
       case 'error':
         return AtomicFieldType.Error;
     }
@@ -1941,9 +1941,9 @@ export class JSONField extends AtomicField {
 }
 
 export class UnsupportedField extends AtomicField {
-  private fieldUnsupportedDef: FieldUnsupportedDef;
+  private fieldUnsupportedDef: FeldNativeUnsupportedDef;
   constructor(
-    fieldUnsupportedDef: FieldUnsupportedDef,
+    fieldUnsupportedDef: FeldNativeUnsupportedDef,
     parent: Explore,
     source?: AtomicField
   ) {

@@ -667,15 +667,15 @@ export interface FieldJSONDef extends FieldAtomicDef, FieldJSONTypeDef {
   type: 'json';
 }
 
-export interface FieldUnsupportedTypeDef {
+export interface FieldNativeUnsupportedTypeDef {
   type: 'sql native';
   rawType?: string;
 }
 
 /** Scalar unsupported Field */
-export interface FieldUnsupportedDef
+export interface FeldNativeUnsupportedDef
   extends FieldAtomicDef,
-    FieldUnsupportedTypeDef {
+    FieldNativeUnsupportedTypeDef {
   type: 'sql native';
 }
 
@@ -1098,7 +1098,7 @@ export type FieldTypeDef =
   | FieldNumberDef
   | FieldBooleanDef
   | FieldJSONDef
-  | FieldUnsupportedDef
+  | FeldNativeUnsupportedDef
   | FieldErrorDef;
 
 export type FieldAtomicTypeDef =
@@ -1108,7 +1108,7 @@ export type FieldAtomicTypeDef =
   | FieldNumberTypeDef
   | FieldBooleanTypeDef
   | FieldJSONTypeDef
-  | FieldUnsupportedTypeDef
+  | FieldNativeUnsupportedTypeDef
   | FieldErrorTypeDef;
 
 export function isFieldTypeDef(f: FieldDef): f is FieldTypeDef {
