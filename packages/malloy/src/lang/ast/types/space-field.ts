@@ -44,8 +44,8 @@ export abstract class SpaceField extends SpaceEntry {
       ref.expressionType = def.expressionType;
     }
     if (
-      ref.dataType === 'unsupported' &&
-      def.type === 'unsupported' &&
+      ref.dataType === 'sql native' &&
+      def.type === 'sql native' &&
       def.rawType
     ) {
       ref.rawType = def.rawType;

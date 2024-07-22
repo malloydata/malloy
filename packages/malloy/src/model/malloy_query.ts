@@ -2737,7 +2737,7 @@ class QueryQuery extends QueryField {
                 annotation,
               });
               break;
-            case 'unsupported':
+            case 'sql native':
               fields.push({...fi.f.fieldDef, resultMetadata, location});
               break;
             default:
@@ -4359,7 +4359,7 @@ class QueryStruct extends QueryNode {
         return new QueryFieldBoolean(field, this);
       case 'json':
         return new QueryFieldJSON(field, this);
-      case 'unsupported':
+      case 'sql native':
         return new QueryFieldUnsupported(field, this);
       // case "reduce":
       // case "project":

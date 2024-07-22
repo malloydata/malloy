@@ -582,7 +582,7 @@ export function isTimeFieldType(s: string): s is TimeFieldType {
   return s === 'date' || s === 'timestamp';
 }
 export type CastType = 'string' | 'number' | TimeFieldType | 'boolean' | 'json';
-export type AtomicFieldType = CastType | 'unsupported' | 'error';
+export type AtomicFieldType = CastType | 'sql native' | 'error';
 export function isAtomicFieldType(s: string): s is AtomicFieldType {
   return [
     'string',
@@ -591,7 +591,7 @@ export function isAtomicFieldType(s: string): s is AtomicFieldType {
     'timestamp',
     'boolean',
     'json',
-    'unsupported',
+    'sql native',
     'error',
   ].includes(s);
 }
@@ -667,16 +667,16 @@ export interface FieldJSONDef extends FieldAtomicDef, FieldJSONTypeDef {
   type: 'json';
 }
 
-export interface FieldUnsupportedTypeDef {
-  type: 'unsupported';
+export interface FieldNativeUnsupportedTypeDef {
+  type: 'sql native';
   rawType?: string;
 }
 
 /** Scalar unsupported Field */
-export interface FieldUnsupportedDef
+export interface FeldNativeUnsupportedDef
   extends FieldAtomicDef,
-    FieldUnsupportedTypeDef {
-  type: 'unsupported';
+    FieldNativeUnsupportedTypeDef {
+  type: 'sql native';
 }
 
 export interface FieldErrorTypeDef {
@@ -1098,7 +1098,7 @@ export type FieldTypeDef =
   | FieldNumberDef
   | FieldBooleanDef
   | FieldJSONDef
-  | FieldUnsupportedDef
+  | FeldNativeUnsupportedDef
   | FieldErrorDef;
 
 export type FieldAtomicTypeDef =
@@ -1108,7 +1108,7 @@ export type FieldAtomicTypeDef =
   | FieldNumberTypeDef
   | FieldBooleanTypeDef
   | FieldJSONTypeDef
-  | FieldUnsupportedTypeDef
+  | FieldNativeUnsupportedTypeDef
   | FieldErrorTypeDef;
 
 export function isFieldTypeDef(f: FieldDef): f is FieldTypeDef {

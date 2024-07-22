@@ -656,14 +656,14 @@ export abstract class TrinoPrestoConnection
         } else {
           malloyType.fields.push({
             name: 'unknown',
-            type: 'unsupported',
+            type: 'sql native',
             rawType: innerType.toLowerCase(),
           });
         }
       }
     } else {
       malloyType = this.sqlToMalloyType(trinoType) ?? {
-        type: 'unsupported',
+        type: 'sql native',
         rawType: trinoType.toLowerCase(),
       };
     }

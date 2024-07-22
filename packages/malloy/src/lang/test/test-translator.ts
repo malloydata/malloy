@@ -66,8 +66,8 @@ const mockSchema: Record<string, StructDef> = {
       {type: 'date', name: 'ad'},
       {type: 'boolean', name: 'abool'},
       {type: 'timestamp', name: 'ats'},
-      {type: 'unsupported', name: 'aun'},
-      {type: 'unsupported', name: 'aweird', rawType: 'weird'},
+      {type: 'sql native', name: 'aun'},
+      {type: 'sql native', name: 'aweird', rawType: 'weird'},
       {
         type: 'struct',
         name: 'astruct',

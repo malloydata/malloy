@@ -40,7 +40,7 @@ export class ExprCast extends ExpressionDef {
 
   getExpression(fs: FieldSpace): ExprValue {
     const expr = this.expr.getExpression(fs);
-    let dataType: AtomicFieldType = 'unsupported';
+    let dataType: AtomicFieldType = 'sql native';
     if (typeof this.castType === 'string') {
       dataType = this.castType;
     } else {
@@ -51,7 +51,7 @@ export class ExprCast extends ExpressionDef {
           // but `TypeDesc` does not support them.
           dataType =
             fs.dialectObj()?.sqlTypeToMalloyType(this.castType.raw)?.type ??
-            'unsupported';
+            'sql native';
         } else {
           this.log(
             `Cast type \`${this.castType.raw}\` is invalid for ${dialect.name} dialect`

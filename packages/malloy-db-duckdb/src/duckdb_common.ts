@@ -281,7 +281,7 @@ export abstract class DuckDBCommon
             structDef.fields.push({...malloyType, name});
           } else {
             structDef.fields.push({
-              type: 'unsupported',
+              type: 'sql native',
               rawType: duckDBType.toLowerCase(),
               name,
             });

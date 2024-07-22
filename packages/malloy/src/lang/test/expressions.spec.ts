@@ -1006,12 +1006,12 @@ describe('expressions', () => {
     expect(expr`${name} = NULL`).toTranslate();
   });
 });
-describe('unspported fields in schema', () => {
-  test('unsupported reference in result allowed', () => {
+describe('sql native fields in schema', () => {
+  test('sql native reference in result allowed', () => {
     const uModel = new TestTranslator('run: a->{ group_by: aun }');
     expect(uModel).toTranslate();
   });
-  test('unsupported reference can be compared to NULL', () => {
+  test('sql native reference can be compared to NULL', () => {
     const uModel = new TestTranslator(
       'run: a->{ where: aun != NULL; select: * }'
     );
@@ -1023,7 +1023,7 @@ describe('unspported fields in schema', () => {
       'run: ab->{ where: aun = b.aun  select: * }'
     );
     expect(uModel).translationToFailWith(
-      'Unsupported type not allowed in expression'
+      "Unsupported SQL native type 'undefined' not allowed in expression"
     );
   });
   test('flag unsupported compare', () => {
@@ -1032,7 +1032,7 @@ describe('unspported fields in schema', () => {
       'run: ab->{ where: aun > b.aun  select: * }'
     );
     expect(uModel).translationToFailWith(
-      'Unsupported type not allowed in expression'
+      "Unsupported SQL native type 'undefined' not allowed in expression"
     );
   });
   test('allow unsupported equality when raw types match', () => {
@@ -1045,7 +1045,9 @@ describe('unspported fields in schema', () => {
     const uModel = new TestTranslator(
       'source: x is a extend { dimension: notUn is not aun }'
     );
-    expect(uModel).translationToFailWith("'not' Can't use type unsupported");
+    expect(uModel).translationToFailWith(
+      "'not' Can't be used with unsupported SQL native type 'undefined'"
+    );
   });
   test('allow unsupported to be cast', () => {
     const uModel = new TestTranslator(

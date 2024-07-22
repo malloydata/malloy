@@ -60,7 +60,7 @@ import {
   expressionIsCalculation,
   isSQLBlockStruct,
   isSQLFragment,
-  FieldUnsupportedDef,
+  FeldNativeUnsupportedDef,
   QueryRunStats,
   ImportLocation,
   Annotation,
@@ -1520,7 +1520,7 @@ export class Explore extends Entity implements Taggable {
               return [name, new BooleanField(fieldDef, this, sourceField)];
             } else if (fieldDef.type === 'json') {
               return [name, new JSONField(fieldDef, this, sourceField)];
-            } else if (fieldDef.type === 'unsupported') {
+            } else if (fieldDef.type === 'sql native') {
               return [name, new UnsupportedField(fieldDef, this, sourceField)];
             }
           }
@@ -1667,7 +1667,7 @@ export enum AtomicFieldType {
   Date = 'date',
   Timestamp = 'timestamp',
   Json = 'json',
-  Unsupported = 'unsupported',
+  NativeUnsupported = 'sql native',
   Error = 'error',
 }
 
@@ -1699,8 +1699,8 @@ export class AtomicField extends Entity implements Taggable {
         return AtomicFieldType.Number;
       case 'json':
         return AtomicFieldType.Json;
-      case 'unsupported':
-        return AtomicFieldType.Unsupported;
+      case 'sql native':
+        return AtomicFieldType.NativeUnsupported;
       case 'error':
         return AtomicFieldType.Error;
     }
@@ -1941,9 +1941,9 @@ export class JSONField extends AtomicField {
 }
 
 export class UnsupportedField extends AtomicField {
-  private fieldUnsupportedDef: FieldUnsupportedDef;
+  private fieldUnsupportedDef: FeldNativeUnsupportedDef;
   constructor(
-    fieldUnsupportedDef: FieldUnsupportedDef,
+    fieldUnsupportedDef: FeldNativeUnsupportedDef,
     parent: Explore,
     source?: AtomicField
   ) {
