@@ -116,7 +116,7 @@ export class Pick extends ExpressionDef {
       this.log(
         `${errSrc} type '${FT.inspect(elseVal)}', expected '${
           returnType.dataType
-        }[pick-values-must-match]'`
+        }'[pick-values-must-match]`
       );
       return errorFor('pick else type');
     }
