@@ -350,9 +350,9 @@ export class ExprFunc extends ExpressionDef {
               ? `'.' paths are not yet supported in sql interpolations, found ${unsupportedInterpolations.at(
                   0
                 )}`
-              : `'.' paths are not yet supported in sql interpolations, found [${unsupportedInterpolations.join(
+              : `'.' paths are not yet supported in sql interpolations, found (${unsupportedInterpolations.join(
                   ', '
-                )}]`;
+                )})`;
           this.log(unsupportedInterpolationMsg);
 
           return errorFor(
