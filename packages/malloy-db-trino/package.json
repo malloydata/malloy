@@ -10,7 +10,7 @@
     "url": "git+https://github.com/malloydata/malloy.git"
   },
   "engines": {
-    "node": ">=16"
+    "node": ">=18"
   },
   "scripts": {
     "lint": "eslint '**/*.ts{,x}'",
