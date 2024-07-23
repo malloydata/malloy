@@ -122,6 +122,7 @@ export {
 } from './lang';
 export type {LogMessage, TranslateResponse} from './lang';
 export {
+  Model,
   Malloy,
   Runtime,
   AtomicFieldType,
@@ -145,7 +146,6 @@ export {
   Explore,
 } from './malloy';
 export type {
-  Model,
   PreparedQuery,
   Field,
   AtomicField,
