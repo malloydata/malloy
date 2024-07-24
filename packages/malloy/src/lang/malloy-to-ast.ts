@@ -369,6 +369,7 @@ export class MalloyToAST
     pcx: parse.SourceParametersContext | undefined
   ): ast.HasParameter[] {
     if (pcx === undefined) return [];
+    this.inExperiment('parameters', pcx);
     return pcx.sourceParameter().map(param => this.getSourceParameter(param));
   }
 
@@ -1689,8 +1690,8 @@ export class MalloyToAST
   getSQArguments(
     pcx: parse.SourceArgumentsContext | undefined
   ): ast.Argument[] | undefined {
-    // TODO should this return type be Argument instead?
     if (pcx === undefined) return undefined;
+    this.inExperiment('parameters', pcx);
     return pcx.sourceArgument().map(arg => this.getSQArgument(arg));
   }
 

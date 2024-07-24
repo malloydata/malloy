@@ -55,6 +55,10 @@ describe('source locations', () => {
     );
   });
 
+  // TODO make parameters have locations, and make references to them work
+  // with existing jump-to-definition system
+  test.todo('location of parameter');
+
   test('location of defined dimension', () => {
     const source = markSource`source: na is a extend { dimension: ${'x is 1'} }`;
     const m = new TestTranslator(source.code);

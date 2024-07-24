@@ -4128,8 +4128,43 @@ class QueryStruct extends QueryNode {
     this.addFieldsFromFieldList(this.fieldDef.fields);
   }
 
+  resolveParentParameterReferences(param: Parameter): Parameter {
+    if (isValueParameter(param)) {
+      return {
+        ...param,
+        value: param.value === null ? null : exprMap(param.value, (frag) => {
+          if (typeof frag === 'string') return [frag];
+          if (frag.type === 'parameter') {
+            if (this.parent === undefined) {
+              throw new Error("No parent from which to retrieve parameter value");
+            }
+            const resolved1 = this.parent.parameters()[frag.path[0]];
+            const resolved2 = this.parent.resolveParentParameterReferences(resolved1);
+            if (!isValueParameter(resolved2) || resolved2.value === null) {
+              throw new Error("Invalid parameter value");
+            } else {
+              return resolved2.value;
+            }
+          }
+          return [frag];
+        })
+      };
+    } else {
+      return param;
+    }
+  }
+
+  private resolvedParameters: Record<string, Parameter> | undefined = undefined;
   parameters(): Record<string, Parameter> {
-    return this.fieldDef.parameters || {};
+    if (this.resolvedParameters !== undefined) {
+      return this.resolvedParameters;
+    }
+    this.resolvedParameters = {};
+    for (const parameterName in this.fieldDef.parameters) {
+      const orig = this.fieldDef.parameters[parameterName];
+      this.resolvedParameters[parameterName] = this.resolveParentParameterReferences(orig);
+    }
+    return this.resolvedParameters;
   }
 
   addFieldsFromFieldList(fields: FieldDef[]) {
