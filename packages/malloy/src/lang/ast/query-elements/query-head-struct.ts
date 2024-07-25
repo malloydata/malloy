@@ -29,6 +29,7 @@ import {
 
 import {Source} from '../source-elements/source';
 import {NamedSource} from '../source-elements/named-source';
+import { FieldSpace } from '../types/field-space';
 
 export class QueryHeadStruct extends Source {
   elementType = 'internalOnlyQueryHead';
@@ -40,12 +41,12 @@ export class QueryHeadStruct extends Source {
     return this.fromRef;
   }
 
-  structDef(): StructDef {
+  structDef(intoFS: FieldSpace | undefined, ): StructDef {
     if (refIsStructDef(this.fromRef)) {
       return this.fromRef;
     }
-    const ns = new NamedSource(this.fromRef);
+    const ns = new NamedSource(this.fromRef, undefined);
     this.has({exploreReference: ns});
-    return ns.structDef();
+    return ns.structDef(intoFS);
   }
 }

@@ -24,21 +24,24 @@
 import {StructDef, StructRef} from '../../../model/malloy_types';
 import {MalloyElement} from '../types/malloy-element';
 import {HasParameter} from '../parameters/has-parameter';
+import { FieldSpace } from '../types/field-space';
+import { ParameterSpace2 } from '../field-space/parameter-space';
 
 /**
  * A "Source" is a thing which you can run queries against. The main
  * function of a source is to represent an eventual StructDef
  */
 export abstract class Source extends MalloyElement {
-  abstract structDef(): StructDef;
+  abstract structDef(intoFS: FieldSpace | undefined): StructDef;
 
-  structRef(): StructRef {
-    return this.structDef();
+  structRef(intoFS: FieldSpace | undefined): StructRef {
+    return this.structDef(intoFS);
   }
 
   // TODO can this please just be in the constructor instead???
-  withParameters(pList: HasParameter[] | undefined): StructDef {
-    const before = this.structDef();
+  withParameters(intoFS: FieldSpace | undefined, pList: HasParameter[] | undefined): StructDef {
+    const paramSpace = pList ? new ParameterSpace2(pList) : undefined;
+    const before = this.structDef(paramSpace);
     // TODO name collisions are flagged where?
     if (pList) {
       const parameters = {...(before.parameters || {})};

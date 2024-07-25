@@ -1035,10 +1035,6 @@ export class MalloyToAST
     return this.astAt(top, pcx);
   }
 
-  visitSourceID(pcx: parse.SourceIDContext): ast.NamedSource {
-    return this.astAt(new ast.NamedSource(getId(pcx)), pcx);
-  }
-
   visitTopLevelQueryDefs(
     pcx: parse.TopLevelQueryDefsContext
   ): ast.DefineQueryList {

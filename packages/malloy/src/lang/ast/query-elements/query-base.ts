@@ -23,14 +23,15 @@
 
 import {Query} from '../../../model/malloy_types';
 import {detectAndRemovePartialStages} from '../query-utils';
+import { FieldSpace } from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
 import {QueryComp} from '../types/query-comp';
 
 export abstract class QueryBase extends MalloyElement {
-  abstract queryComp(isRefOk: boolean): QueryComp;
+  abstract queryComp(intoFS: FieldSpace | undefined, isRefOk: boolean): QueryComp;
 
   query(): Query {
-    const q = this.queryComp(true).query;
+    const q = this.queryComp(undefined, true).query;
     return {
       ...q,
       pipeline: detectAndRemovePartialStages(q.pipeline, this),

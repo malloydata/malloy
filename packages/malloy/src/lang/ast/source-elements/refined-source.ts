@@ -41,6 +41,8 @@ import {TimezoneStatement} from '../source-properties/timezone-statement';
 import {ObjectAnnotation} from '../types/annotation-elements';
 import {Renames} from '../source-properties/renames';
 import {MakeEntry} from '../types/space-entry';
+import { FieldSpace } from '../types/field-space';
+import { ParameterSpace2 } from '../field-space/parameter-space';
 
 /**
  * A Source made from a source reference and a set of refinements
@@ -53,14 +55,14 @@ export class RefinedSource extends Source {
     readonly source: Source,
     readonly refinement: SourceDesc
   ) {
-    super({source: source, refinement: refinement});
+    super({source, refinement});
   }
 
-  structDef(): StructDef {
-    return this.withParameters([]);
+  structDef(intoFS: FieldSpace | undefined): StructDef {
+    return this.withParameters(intoFS, []);
   }
 
-  withParameters(pList: HasParameter[] | undefined): StructDef {
+  withParameters(intoFS: FieldSpace | undefined, pList: HasParameter[] | undefined): StructDef {
     let primaryKey: PrimaryKey | undefined;
     let fieldListEdit: FieldListEdit | undefined;
     const fields: MakeEntry[] = [];
@@ -101,7 +103,8 @@ export class RefinedSource extends Source {
       }
     }
 
-    const from = structuredClone(this.source.structDef());
+    const paramSpace = pList ? new ParameterSpace2(pList) : undefined;
+    const from = structuredClone(this.source.structDef(paramSpace));
     if (primaryKey) {
       from.primaryKey = primaryKey.field.name;
     }
@@ -109,10 +112,10 @@ export class RefinedSource extends Source {
     if (newTimezone) {
       fs.setTimezone(newTimezone);
     }
-    fs.pushFields(...fields);
     if (pList) {
       fs.addParameters(pList);
     }
+    fs.pushFields(...fields);
     if (primaryKey) {
       const keyDef = primaryKey.field.getField(fs);
       if (keyDef.error) {

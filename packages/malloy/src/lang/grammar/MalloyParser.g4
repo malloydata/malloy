@@ -159,7 +159,6 @@ sourceParameter
 
 parameterNameDef: id;
 sourceNameDef: id;
-sourceID: id;
 
 exploreProperties
   : OCURLY (exploreStatement | SEMI)* CCURLY

@@ -38,14 +38,17 @@ import {ModelEntryReference} from '../types/malloy-element';
 import {Argument} from '../parameters/argument';
 import {StaticSpace} from '../field-space/static-space';
 import {LogSeverity} from '../../parse-log';
-
+import { ExprIdReference } from '../expressions/expr-id-reference';
+import { FieldSpace } from '../types/field-space';
+import { ParameterSpace } from '../field-space/parameter-space';
+import { HasParameter } from '../parameters/has-parameter';
 
 export class NamedSource extends Source {
   elementType = 'namedSource';
 
   constructor(
     readonly ref: ModelEntryReference | string,
-    readonly args: Argument[] | undefined = undefined
+    readonly args: Argument[] | undefined
   ) {
     super();
     if (args) {
@@ -60,15 +63,15 @@ export class NamedSource extends Source {
     return this.ref instanceof ModelEntryReference ? this.ref.name : this.ref;
   }
 
-  structRef(): StructRef {
+  structRef(intoFS: FieldSpace | undefined, ): StructRef {
     if (this.args !== undefined) {
-      return this.structDef();
+      return this.structDef(intoFS);
     }
     const modelEnt = this.modelEntry(this.ref);
     if (modelEnt && !modelEnt.exported) {
       // If we are not exporting the referenced structdef, don't
       // use the reference
-      return this.structDef();
+      return this.structDef(intoFS);
     }
     return this.refName;
   }
@@ -107,7 +110,7 @@ export class NamedSource extends Source {
     return {...entry};
   }
 
-  structDef(): StructDef {
+  structDef(intoFS: FieldSpace | undefined, ): StructDef {
     /*
       Can't really generate the callback list until after all the
       things before me are translated, and that kinda screws up
@@ -138,30 +141,33 @@ export class NamedSource extends Source {
 
     const passedNames = new Set();
     for (const argument of this.args ?? []) {
-      if (argument.id === undefined) {
+      const id = argument.id ??
+        (argument.value instanceof ExprIdReference
+        ? argument.value.fieldReference
+        : undefined);
+      if (id === undefined) {
         argument.value.log(
           'Parameterized source arguments must be named with `parameter_name is`'
         );
         continue;
       }
-      if (passedNames.has(argument.id.refString)) {
+      const name = id.outputName;
+      if (passedNames.has(name)) {
         argument.log(
-          `Cannot pass argument for \`${argument.id.refString}\` more than once`
+          `Cannot pass argument for \`${name}\` more than once`
         );
         continue;
       }
-      passedNames.add(argument.id.refString);
-      const decl = parameters[argument.id.refString];
+      passedNames.add(name);
+      const decl = parameters[name];
       if (!decl) {
-        argument.id.log(
-          `\`${this.refName}\` has no declared parameter named \`${argument.id.refString}\``
+        id.log(
+          `\`${this.refName}\` has no declared parameter named \`${id.refString}\``
         );
       } else {
         if (isValueParameter(decl)) {
-          // TODO probably make this constant for now, or use ConstantSubExpression here instead, or figure out a way to
-          // correctly handle parameter/argument circularity??
-          const fs = new StaticSpace(base);
-          const pVal = argument.value.getExpression(fs);
+          const paramSpace = new ParameterSpace(intoFS);
+          const pVal = argument.value.getExpression(paramSpace);
           let value = pVal.value;
           if (pVal.dataType !== decl.type && isCastType(decl.type)) {
             value = castTo(decl.type, pVal.value, pVal.dataType, true);

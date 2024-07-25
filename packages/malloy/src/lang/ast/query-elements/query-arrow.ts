@@ -45,7 +45,7 @@ export class QueryArrow extends QueryBase implements QueryElement {
     super({source, view});
   }
 
-  queryComp(isRefOk: boolean): QueryComp {
+  queryComp(intoFS: FieldSpace | undefined, isRefOk: boolean): QueryComp {
     let inputStruct: StructDef;
     let queryBase: Query;
     let fieldSpace: FieldSpace;
@@ -53,8 +53,8 @@ export class QueryArrow extends QueryBase implements QueryElement {
       // We create a fresh query with either the QOPDesc as the head,
       // the view as the head, or the scalar as the head (if scalar lenses is enabled)
       const structRef = isRefOk
-        ? this.source.structRef()
-        : this.source.structDef();
+        ? this.source.structRef(intoFS)
+        : this.source.structDef(intoFS);
       queryBase = {
         type: 'query',
         structRef,
@@ -63,11 +63,11 @@ export class QueryArrow extends QueryBase implements QueryElement {
       };
       inputStruct = refIsStructDef(structRef)
         ? structRef
-        : this.source.structDef();
+        : this.source.structDef(intoFS);
       fieldSpace = new StaticSpace(inputStruct);
     } else {
       // We are adding a second stage to the given "source" query; we get the query and add a segment
-      const lhsQuery = this.source.queryComp(isRefOk);
+      const lhsQuery = this.source.queryComp(intoFS, isRefOk);
       queryBase = lhsQuery.query;
       inputStruct = lhsQuery.outputStruct;
       fieldSpace = new StaticSpace(lhsQuery.outputStruct);

@@ -41,8 +41,7 @@ export class SQLSource extends Source {
     readonly connectionName: ModelEntryReference,
     readonly select: SQLString
   ) {
-    super();
-    this.has({connectionName, select});
+    super({connectionName, select});
   }
 
   sqlBlock(): SQLBlockSource {

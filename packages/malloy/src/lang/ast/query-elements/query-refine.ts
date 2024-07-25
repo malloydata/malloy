@@ -23,6 +23,7 @@
 
 import {StaticSpace} from '../field-space/static-space';
 import {getFinalStruct} from '../struct-utils';
+import { FieldSpace } from '../types/field-space';
 import {QueryComp} from '../types/query-comp';
 import {QueryElement} from '../types/query-element';
 import {View} from '../view-elements/view';
@@ -43,8 +44,8 @@ export class QueryRefine extends QueryBase implements QueryElement {
     super({base, refinement});
   }
 
-  queryComp(isRefOk: boolean): QueryComp {
-    const q = this.base.queryComp(isRefOk);
+  queryComp(intoFS: FieldSpace | undefined, isRefOk: boolean): QueryComp {
+    const q = this.base.queryComp(intoFS, isRefOk);
     const inputFS = new StaticSpace(q.inputStruct);
     const resultPipe = this.refinement.refine(
       inputFS,

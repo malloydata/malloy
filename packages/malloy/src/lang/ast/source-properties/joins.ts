@@ -49,7 +49,7 @@ export abstract class Join
   implements Noteable, MakeEntry
 {
   abstract name: ModelEntryReference;
-  abstract structDef(): StructDef;
+  abstract structDef(intoFS: FieldSpace): StructDef;
   abstract fixupJoinOn(outer: FieldSpace, inStruct: StructDef): void;
   readonly isNoteableObj = true;
   extendNote = extendNoteMethod;
@@ -57,16 +57,16 @@ export abstract class Join
   note?: Annotation;
 
   makeEntry(fs: DynamicSpace) {
-    fs.newEntry(this.name.refString, this, new JoinSpaceField(this));
+    fs.newEntry(this.name.refString, this, new JoinSpaceField(fs, this));
   }
 
-  protected getStructDefFromExpr() {
+  protected getStructDefFromExpr(intoFS: FieldSpace) {
     const source = this.sourceExpr.getSource();
     if (!source) {
       this.sourceExpr.sqLog('Cannot great a source to join from');
       return ErrorFactory.structDef;
     }
-    return source.structDef();
+    return source.structDef(intoFS);
   }
 }
 
@@ -80,8 +80,8 @@ export class KeyJoin extends Join {
     super({name, sourceExpr, keyExpr});
   }
 
-  structDef(): StructDef {
-    const sourceDef = this.getStructDefFromExpr();
+  structDef(intoFS: FieldSpace): StructDef {
+    const sourceDef = this.getStructDefFromExpr(intoFS);
     const joinStruct: StructDef = {
       ...sourceDef,
       structRelationship: {
@@ -178,13 +178,13 @@ export class ExpressionJoin extends Join {
     }
   }
 
-  structDef(): StructDef {
+  structDef(intoFS: FieldSpace): StructDef {
     const source = this.sourceExpr.getSource();
     if (!source) {
       this.sourceExpr.sqLog('Cannot create a source to join from');
       return ErrorFactory.structDef;
     }
-    const sourceDef = source.structDef();
+    const sourceDef = source.structDef(intoFS);
     let matrixOperation: MatrixOperation = 'left';
     if (this.inExperiment('join_types', true)) {
       matrixOperation = this.matrixOperation;

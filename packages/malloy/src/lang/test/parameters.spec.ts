@@ -15,6 +15,27 @@ describe('parameters', () => {
       source: ab_new(param::number) is ab
     `).toTranslate();
   });
+  test('can pass parameter into extended base source', () => {
+    expect(`
+      ##! experimental.parameters
+      source: ab_new(param::number) is ab
+      source: ab_new_new(param::number) is ab_new(param) extend {}
+    `).toTranslate();
+  });
+  test('can pass parameter into base source longhand', () => {
+    expect(`
+      ##! experimental.parameters
+      source: ab_new(param::number) is ab
+      source: ab_new_new(param::number) is ab_new(param is param)
+    `).toTranslate();
+  });
+  test('can pass parameter into base source shorthand', () => {
+    expect(`
+      ##! experimental.parameters
+      source: ab_new(param::number) is ab
+      source: ab_new_new(param::number) is ab_new(param)
+    `).toTranslate();
+  });
   test('can use declared parameter', () => {
     expect(`
       ##! experimental.parameters
@@ -51,6 +72,26 @@ describe('parameters', () => {
       run: ab_new(param is ai) -> { select: * }
     `).toTranslate();
   });
+  test('can pass through parameter to joined source', () => {
+    expect(`
+      ##! experimental.parameters
+      source: ab_ext_1(a_1::string) is ab extend {
+        where: ai = a_1
+      }
+
+      source: ab_ext_2(a_2::string) is ab extend {
+        where: ai = a_2
+        join_many: ab_ext_1 is ab_ext_1(a_1 is a_2) on 1 = 1
+      }
+
+      run: ab_ext_2(a_2 is "CA") -> {
+        group_by:
+          a1 is ai,
+          a2 is ab_ext_1.ai
+        aggregate: c is count()
+      }
+    `).toTranslate();
+  });
   // TODO is this desired behavior?
   // This feels like a breach of the interface for sources, if we consider parameterized sources to
   // be like functions: the parameters should be internal only?
@@ -61,6 +102,38 @@ describe('parameters', () => {
       run: ab_new(param is 1) -> { select: param }
     `).toTranslate();
   });
+  test('error when declaring parameter twice', () => {
+    expect(
+      markSource`
+        ##! experimental.parameters
+        source: ab_new(param::number, ${'param::number'}) is ab
+      `
+    ).translationToFailWith(
+      "Already defined",
+    );
+  });
+  test('error when declaring parameter with same name as field', () => {
+    expect(
+      markSource`
+        ##! experimental.parameters
+        source: ab_new(${'a::number'}) is ab
+      `
+    ).translationToFailWith(
+      "Already defined",
+    );
+  });
+  test('error when declaring field with same name as parameter', () => {
+    expect(
+      markSource`
+        ##! experimental.parameters
+        source: ab_new(param::number) is ab extend {
+          dimension: param is 1
+        }
+      `
+    ).translationToFailWith(
+      "Already defined",
+    );
+  });
   test('error when declaring parameter without experiment enabled', () => {
     expect(
       markSource`
@@ -68,6 +141,18 @@ describe('parameters', () => {
       `
     ).translationToFailWith(
       "Experimental flag 'parameters' required to enable this feature",
+    );
+  });
+  test('cannot except parameter', () => {
+    expect(
+      markSource`
+        ##! experimental.parameters
+        source: ab_new(param::number) is ab extend {
+          except: param
+        }
+      `
+    ).translationToFailWith(
+      "Nope",
     );
   });
   test('error when using parameter without experiment enabled', () => {
@@ -86,6 +171,18 @@ describe('parameters', () => {
         ##! experimental.parameters
         source: ab_new(param::number) is ab
         run: ab_new(param is ${'param'}) -> { select: * }
+      `
+    ).translationToFailWith(
+      'cannot find param',
+    );
+  });
+  // TODO mutually circular parameters
+  test('error when circularly referencing mutually recursive parameters in argument', () => {
+    expect(
+      markSource`
+        ##! experimental.parameters
+        source: ab_new(p_a::number, p_b::number) is ab
+        run: ab_new(p_a is ${'p_b'}, p_b is ${'p_a'}) -> { select: * }
       `
     ).translationToFailWith(
       'cannot find param',

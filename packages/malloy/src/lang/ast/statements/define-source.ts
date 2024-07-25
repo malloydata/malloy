@@ -65,7 +65,7 @@ export class DefineSource
       if (theSource === undefined) {
         return;
       }
-      const structDef = theSource.withParameters(this.parameters);
+      const structDef = theSource.withParameters(undefined, this.parameters);
       if (ErrorFactory.isErrorStructDef(structDef)) {
         return;
       }

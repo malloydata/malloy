@@ -24,15 +24,16 @@
 import {StructDef, StructSource} from '../../../model/malloy_types';
 import {Source} from './source';
 import {QueryElement} from '../types/query-element';
+import { FieldSpace } from '../types/field-space';
 
 export class QuerySource extends Source {
   elementType = 'querySource';
   constructor(readonly query: QueryElement) {
-    super({query: query});
+    super({query});
   }
 
-  structDef(): StructDef {
-    const comp = this.query.queryComp(false);
+  structDef(intoFS: FieldSpace | undefined, ): StructDef {
+    const comp = this.query.queryComp(intoFS, false);
     const queryStruct = {
       ...comp.outputStruct,
       structSource: {type: 'query', query: comp.query} as StructSource,
