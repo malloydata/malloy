@@ -252,7 +252,7 @@ function makeContainerRenderer<Type extends ContainerRenderer>(
 ): ContainerRenderer {
   const c = ContainerRenderer.make(cType, document, explore, options, tagged);
   const result: ChildRenderers = {};
-  explore.intrinsicFields.forEach((field: Field) => {
+  explore.allFields.forEach((field: Field) => {
     result[field.name] = makeRenderer(
       field,
       document,

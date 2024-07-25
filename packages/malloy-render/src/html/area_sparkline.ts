@@ -33,7 +33,7 @@ import {RendererOptions} from '../renderer_types';
 
 export class HTMLAreaSparkLineRenderer extends HTMLSparkLineRenderer {
   override getVegaLiteSpec(data: DataArray): lite.TopLevelSpec {
-    const fields = data.field.intrinsicFields;
+    const fields = data.field.allFields;
     const xField = fields[0];
     const yField = fields[1];
     const colorField = fields[2];

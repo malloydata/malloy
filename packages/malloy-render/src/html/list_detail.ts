@@ -26,6 +26,6 @@ import {HTMLListRenderer} from './list';
 
 export class HTMLListDetailRenderer extends HTMLListRenderer {
   getDetailField(explore: Explore): Field | undefined {
-    return explore.intrinsicFields[1];
+    return explore.allFields[1];
   }
 }

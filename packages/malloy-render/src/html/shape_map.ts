@@ -34,11 +34,11 @@ import {RendererFactory} from '../renderer_factory';
 
 export class HTMLShapeMapRenderer extends HTMLChartRenderer {
   private getRegionField(explore: Explore): Field {
-    return explore.intrinsicFields[0];
+    return explore.allFields[0];
   }
 
   private getColorField(explore: Explore): Field {
-    return explore.intrinsicFields[1];
+    return explore.allFields[1];
   }
 
   getDataValue(data: DataColumn): string | number | undefined {

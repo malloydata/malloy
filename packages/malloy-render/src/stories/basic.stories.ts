@@ -36,3 +36,10 @@ export const Formats = {
     view: 'formats',
   },
 };
+
+export const UnsupportedField = {
+  args: {
+    source: 'uuid',
+    view: 'details',
+  },
+};

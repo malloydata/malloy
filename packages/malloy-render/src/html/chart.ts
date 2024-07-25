@@ -47,7 +47,7 @@ export abstract class HTMLChartRenderer implements Renderer {
       const mappedRow: {
         [p: string]: string | number | Date | undefined | null;
       } = {};
-      for (const field of data.field.intrinsicFields) {
+      for (const field of data.field.allFields) {
         let dataValue = this.getDataValue(row.cell(field));
         if (dataValue instanceof Date) {
           dataValue = normalizeToTimezone(dataValue, this.timezone);

@@ -56,7 +56,7 @@ export class HTMLSegmentMapRenderer extends HTMLChartRenderer {
       throw new Error('Expected struct value not to be null.');
     }
 
-    const fields = data.field.intrinsicFields;
+    const fields = data.field.allFields;
 
     const lat1Field = fields[0];
     const lon1Field = fields[1];

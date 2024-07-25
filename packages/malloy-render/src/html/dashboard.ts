@@ -47,7 +47,7 @@ export class HTMLDashboardRenderer extends ContainerRenderer {
       );
     }
 
-    const fields = table.field.intrinsicFields;
+    const fields = table.field.allFields;
 
     const dimensions = fields.filter(
       field => field.isAtomicField() && field.sourceWasDimension()

@@ -62,7 +62,7 @@ function getTableFilters(table: DataArray): FilterItem[] {
 
 function getRowFilters(row: DataRecord): FilterItem[] {
   const filters: FilterItem[] = [];
-  const dimensions = row.field.intrinsicFields.filter(
+  const dimensions = row.field.allFields.filter(
     field => field.isAtomicField() && field.sourceWasDimension()
   );
 

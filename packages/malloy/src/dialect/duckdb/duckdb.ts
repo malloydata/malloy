@@ -67,7 +67,6 @@ const duckDBToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
   'TIME': {type: 'string'},
   'DECIMAL': {type: 'number', numberType: 'float'},
   'BOOLEAN': {type: 'boolean'},
-  'UUID': {type: 'string'},
 };
 
 export class DuckDBDialect extends Dialect {
@@ -475,6 +474,7 @@ export class DuckDBDialect extends Dialect {
   }
 
   sqlTypeToMalloyType(sqlType: string): FieldAtomicTypeDef | undefined {
+    console.log('sqlType', sqlType);
     // Remove trailing params
     const baseSqlType = sqlType.match(/^(\w+)/)?.at(0) ?? sqlType;
     return duckDBToMalloyTypes[baseSqlType.toUpperCase()];
