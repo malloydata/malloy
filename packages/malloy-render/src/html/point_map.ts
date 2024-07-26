@@ -77,7 +77,7 @@ export class HTMLPointMapRenderer extends HTMLChartRenderer {
       throw new Error('Expected struct value not to be null.');
     }
 
-    const fields = data.field.intrinsicFields;
+    const fields = data.field.allFields;
 
     const latField = fields[0];
     const lonField = fields[1];

@@ -32,7 +32,7 @@ export class HTMLListRenderer extends ContainerRenderer {
   };
 
   getValueField(struct: Explore): Field {
-    return struct.intrinsicFields[0];
+    return struct.allFields[0];
   }
 
   getDetailField(_struct: Explore): Field | undefined {

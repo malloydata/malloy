@@ -78,6 +78,6 @@ export class UnsupportedRendererFactory extends RendererFactory<DataRenderOption
   }
 
   get rendererName() {
-    return undefined;
+    return 'unsupported';
   }
 }
