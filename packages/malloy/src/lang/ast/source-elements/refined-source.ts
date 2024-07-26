@@ -62,7 +62,7 @@ export class RefinedSource extends Source {
   }
 
   withParameters(
-    _parameterSpace: ParameterSpace | undefined,
+    parameterSpace: ParameterSpace | undefined,
     pList: HasParameter[] | undefined
   ): StructDef {
     let primaryKey: PrimaryKey | undefined;
@@ -107,10 +107,13 @@ export class RefinedSource extends Source {
 
     const paramSpace = pList ? new ParameterSpace(pList) : undefined;
     const from = structuredClone(this.source.structDef(paramSpace));
+    // Note that this is explicitly not:
+    // const from = structuredClone(this.source.withParameters(parameterSpace, pList));
+    // Because the parameters are added to the resulting struct, not the base struct
     if (primaryKey) {
       from.primaryKey = primaryKey.field.name;
     }
-    const fs = RefinedSpace.filteredFrom(from, fieldListEdit);
+    const fs = RefinedSpace.filteredFrom(from, fieldListEdit, paramSpace);
     if (newTimezone) {
       fs.setTimezone(newTimezone);
     }

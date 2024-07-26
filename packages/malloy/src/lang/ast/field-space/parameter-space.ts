@@ -47,13 +47,13 @@ export class ParameterSpace implements FieldSpace {
     const entry = this.entry(name.refString);
     if (entry === undefined) {
       return {
-        error: `No parameter named \`${name}\``,
+        error: `\`${name}\` is not defined`,
         found: undefined,
       };
     }
     if (symbol.length > 1) {
       return {
-        error: `Parameter cannot contain a \`${symbol.slice(1).join('.')}\``,
+        error: `\`${name}\` cannot contain a \`${symbol.slice(1).join('.')}\``,
         found: undefined,
       };
     }

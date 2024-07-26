@@ -65,7 +65,9 @@ export class DefineSource
       if (theSource === undefined) {
         return;
       }
+      const parameters = this.deduplicatedParameters();
       const structDef = theSource.withParameters(undefined, this.parameters);
+      this.validateParameterShadowing(parameters, structDef);
       if (ErrorFactory.isErrorStructDef(structDef)) {
         return;
       }
@@ -80,6 +82,28 @@ export class DefineSource
           : this.note;
       }
       doc.setEntry(this.name, {entry, exported: this.exported});
+    }
+  }
+
+  private deduplicatedParameters(): HasParameter[] {
+    if (this.parameters === undefined) return [];
+    const exists = {};
+    const out: HasParameter[] = [];
+    for (const parameter of this.parameters) {
+      if (parameter.name in exists) {
+        parameter.log(`Cannot redefine parameter \`${parameter.name}\``);
+      }
+      exists[parameter.name] = true;
+      out.push(parameter);
+    }
+    return out;
+  }
+
+  private validateParameterShadowing(parameters: HasParameter[], structDef: StructDef) {
+    for (const parameter of parameters) {
+      if (structDef.fields.find(field => (field.as ?? field.name) === parameter.name)) {
+        parameter.log(`Illegal shadowing of field \`${parameter.name}\` by parameter with the same name`)
+      }
     }
   }
 }

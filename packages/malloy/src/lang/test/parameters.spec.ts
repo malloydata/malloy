@@ -79,19 +79,19 @@ describe('parameters', () => {
       run: ab_new(param is 1 + 1) -> { select: * }
     `).toTranslate();
   });
-  test('can reference renamed param in query against source', () => {
-    expect(`
+  test('cannot reference renamed param in query against source', () => {
+    expect(markSource`
       ##! experimental.parameters
       source: ab_new(param::number) is ab
-      run: ab_new(param is 1) -> { select: p is param }
-    `).toTranslate();
+      run: ab_new(param is 1) -> { select: p is ${'param'} }
+    `).translationToFailWith("'param' is not defined");
   });
   test('can reference field in source in argument', () => {
-    expect(`
+    expect(markSource`
       ##! experimental.parameters
       source: ab_new(param::number) is ab
-      run: ab_new(param is ai) -> { select: * }
-    `).toTranslate();
+      run: ab_new(param is ${'ai'}) -> { select: * }
+    `).translationToFailWith("`ai` is not defined");
   });
   test('can pass through parameter to joined source', () => {
     expect(`
@@ -141,15 +141,12 @@ describe('parameters', () => {
       }
     `).toTranslate();
   });
-  // TODO is this desired behavior?
-  // This feels like a breach of the interface for sources, if we consider parameterized sources to
-  // be like functions: the parameters should be internal only?
   test('can reference param in query against source', () => {
-    expect(`
+    expect(markSource`
       ##! experimental.parameters
       source: ab_new(param::number) is ab
-      run: ab_new(param is 1) -> { select: param }
-    `).toTranslate();
+      run: ab_new(param is 1) -> { select: ${'param'} }
+    `).translationToFailWith(`'param' is not defined`);
   });
   test('can reference param in view in source', () => {
     expect(`
@@ -167,12 +164,12 @@ describe('parameters', () => {
       }
     `).toTranslate();
   });
-  test('can reference param in expression in query against source', () => {
+  test('cannot reference param in expression in query against source', () => {
     expect(`
       ##! experimental.parameters
       source: ab_new(param::number) is ab
-      run: ab_new(param is 1) -> { select: p is param }
-    `).toTranslate();
+      run: ab_new(param is 1) -> { select: p is ${'param'} }
+    `).translationToFailWith("'param' is not defined");
   });
   test('error when declaring parameter twice', () => {
     expect(
@@ -180,15 +177,42 @@ describe('parameters', () => {
         ##! experimental.parameters
         source: ab_new(param::number, ${'param::number'}) is ab
       `
-    ).translationToFailWith('Already defined');
+    ).translationToFailWith('Cannot redefine parameter `param`');
   });
-  test('error when declaring parameter with same name as field', () => {
+  // TODO actually maybe this is okay!
+  test('error when declaring parameter with same name as field (extended)', () => {
+    expect(
+      `
+        ##! experimental.parameters
+        source: ab_new(ai::string) is ab extend {
+          dimension: foo is upper(ai)
+        }
+      `
+    ).translationToFailWith(
+      'No matching overload for function upper(number)',
+      'Illegal shadowing of field `ai` by parameter with the same name'
+    );
+  });
+  test('can shadow field that is excepted', () => {
+    expect(
+      `
+        ##! experimental.parameters
+        source: ab_new(ai::string) is ab extend {
+          except: ai
+          dimension: foo is upper(ai)
+        }
+      `
+    ).toTranslate();
+  });
+  test('error when declaring parameter with same name as field (not extended)', () => {
     expect(
       markSource`
         ##! experimental.parameters
-        source: ab_new(${'ai::number'}) is ab
+        source: ab_new(${'ai::string'}) is ab
       `
-    ).translationToFailWith('Already defined');
+    ).translationToFailWith(
+      'Illegal shadowing of field `ai` by parameter with the same name'
+    );
   });
   test('do not inherit parameters from base source', () => {
     expect(
@@ -196,9 +220,9 @@ describe('parameters', () => {
         ##! experimental.parameters
         source: ab_new(param::number) is ab
         source: ab_new_new is ab_new(param is 1)
-        run: ab_new_new(${'param is 2'})
+        run: ab_new_new(${'param'} is 2) -> { select: * }
       `
-    ).translationToFailWith('No such parameter');
+    ).translationToFailWith("`ab_new_new` has no declared parameter named `param`");
   });
   test('error when declaring field with same name as parameter', () => {
     expect(
@@ -219,7 +243,18 @@ describe('parameters', () => {
       "Experimental flag 'parameters' required to enable this feature"
     );
   });
-  test('cannot except parameter', () => {
+  test('cannot except parameter from extended source', () => {
+    expect(
+      markSource`
+        ##! experimental.parameters
+        source: ab_new(param_a::number) is ab
+        source: ab_new_new(param_b::number) is ab_new(param_a is 1) extend {
+          except: param_a
+        }
+      `
+    ).translationToFailWith('`param_a` is not defined');
+  });
+  test('cannot except parameter in direct extend', () => {
     expect(
       markSource`
         ##! experimental.parameters
@@ -227,7 +262,17 @@ describe('parameters', () => {
           except: param
         }
       `
-    ).translationToFailWith('Nope');
+    ).translationToFailWith('Illegal `except:` of parameter');
+  });
+  test('cannot accept parameter', () => {
+    expect(
+      markSource`
+        ##! experimental.parameters
+        source: ab_new(param::number) is ab extend {
+          accept: param
+        }
+      `
+    ).translationToFailWith('Illegal `accept:` of parameter');
   });
   test('error when using parameter without experiment enabled', () => {
     expect(
@@ -239,14 +284,14 @@ describe('parameters', () => {
     );
   });
   // TODO either detect circularity or make parameters constant only
-  test.skip('error when circularly referencing parameter in argument', () => {
+  test('parameters cannot reference themselves', () => {
     expect(
       markSource`
         ##! experimental.parameters
         source: ab_new(param::number) is ab
         run: ab_new(param is ${'param'}) -> { select: * }
       `
-    ).translationToFailWith('cannot find param');
+    ).translationToFailWith('`param` is not defined');
   });
   // TODO mutually circular parameters
   test('error when circularly referencing mutually recursive parameters in argument', () => {
@@ -256,7 +301,10 @@ describe('parameters', () => {
         source: ab_new(p_a::number, p_b::number) is ab
         run: ab_new(p_a is ${'p_b'}, p_b is ${'p_a'}) -> { select: * }
       `
-    ).translationToFailWith('cannot find param');
+    ).translationToFailWith(
+      "`p_b` is not defined",
+      '`p_a` is not defined'
+    );
   });
   test('error when passing param with no name', () => {
     expect(
@@ -322,6 +370,19 @@ describe('parameters', () => {
       `
     ).translationToFailWith(
       'Argument not provided for required parameter `param`'
+    );
+  });
+  test('error when referencing parameter that does not exist in join definition', () => {
+    expect(
+      markSource`
+        ##! experimental.parameters
+        source: ab_new_1(param_1::number) is ab
+        source: ab_new_2(param_2::number) is ab extend {
+          join_one: ab_join is ab_new_1(param_1 is ${'param_3'})
+        }
+      `
+    ).translationToFailWith(
+      '`param_3` is not defined'
     );
   });
 });

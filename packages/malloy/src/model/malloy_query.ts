@@ -4143,6 +4143,7 @@ class QueryStruct extends QueryNode {
                       'No parent from which to retrieve parameter value'
                     );
                   }
+                  // TODO naming of "arguments" vs "parameters" is confusing here
                   const resolved1 = this.parent.parameters()[frag.path[0]];
                   const resolved2 =
                     this.parent.resolveParentParameterReferences(resolved1);
@@ -4169,8 +4170,9 @@ class QueryStruct extends QueryNode {
       return this.resolvedParameters;
     }
     this.resolvedParameters = {};
-    for (const parameterName in this.fieldDef.parameters) {
-      const orig = this.fieldDef.parameters[parameterName];
+    const args = this.fieldDef.arguments ?? {};
+    for (const parameterName in args) {
+      const orig = args[parameterName];
       this.resolvedParameters[parameterName] =
         this.resolveParentParameterReferences(orig);
     }

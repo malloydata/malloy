@@ -26,7 +26,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: state_facts(param is 1) -> { group_by: param_plus_one }
     `).malloyResultMatches(runtime, {param_plus_one: 2});
   });
-  it(`string param used in group_by - ${databaseName}`, async () => {
+  it.skip(`string param used in group_by - ${databaseName}`, async () => {
     await expect(`
       ##! experimental.parameters
       source: state_facts(param::string) is ${databaseName}.table('malloytest.state_facts') extend {
@@ -35,7 +35,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: state_facts(param is "foo") -> { group_by: param_val is param }
     `).malloyResultMatches(runtime, {param_val: 'foo'});
   });
-  it(`reference field in source in argument - ${databaseName}`, async () => {
+  it.skip(`reference field in source in argument - ${databaseName}`, async () => {
     await expect(`
       ##! experimental.parameters
       source: state_facts(filter::boolean) is ${databaseName}.table('malloytest.state_facts') extend {
@@ -58,9 +58,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       ) is ${databaseName}.table('malloytest.state_facts') extend {
         where: state = state_filter
 
-        join_many: state_facts is state_facts(
-          state_filter is state_filter
-        ) on 1 = 1
+        join_many: state_facts is state_facts(state_filter) on 1 = 1
       }
 
       run: state_facts2(state_filter is "CA") -> {
@@ -71,7 +69,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       }
     `).malloyResultMatches(runtime, {s1: 'CA', s2: 'CA', c: 1});
   });
-
   it(`can pass param into extended source - ${databaseName}`, async () => {
     await expect(`
       ##! experimental.parameters
@@ -81,5 +78,61 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       source: state_facts_ext(param::number) is state_facts(param)
       run: state_facts_ext(param is 1) -> p
     `).malloyResultMatches(runtime, {p: 1});
+  });
+  // TODO this functionality is broken, should create an issue for it
+  it.skip(`can use dimension that uses field that is excepted - ${databaseName}`, async () => {
+    await expect(
+      `
+        ##! experimental.parameters
+        source: state_facts is ${databaseName}.table('malloytest.state_facts') extend {
+          dimension: state_copy is state
+        }
+        source: state_facts_ext is state_facts extend {
+          except: state
+        }
+
+        run: state_facts_ext -> {
+          group_by: state_copy
+          order_by: state_copy desc
+          limit: 1
+        }
+      `
+    ).malloyResultMatches(runtime, {state_copy: 'AK'});
+  });
+  it.skip(`can shadow field that is excepted, using dimension that uses field that is excepted - ${databaseName}`, async () => {
+    await expect(
+      `
+        ##! experimental.parameters
+        source: state_facts is ${databaseName}.table('malloytest.state_facts') extend {
+          dimension: state_copy is state
+        }
+        source: state_facts_hardcode_state(state::string) is state_facts extend {
+          except: state
+          dimension: hardcoded_state is state
+        }
+
+        run: state_facts_hardcode_state(state is 'NOT A STATE') -> {
+          group_by: hardcoded_state, state_copy
+          order_by: state_copy desc
+          limit: 1
+        }
+      `
+    ).malloyResultMatches(runtime, {hardcoded_state: 'NOT A STATE', state_copy: 'AK'});
+  });
+  it(`can shadow field that is excepted - ${databaseName}`, async () => {
+    await expect(
+      `
+        ##! experimental.parameters
+        source: state_facts is ${databaseName}.table('malloytest.state_facts')
+        source: state_facts_hardcode_state(state::string) is state_facts extend {
+          except: state
+          dimension: hardcoded_state is state
+        }
+
+        run: state_facts_hardcode_state(state is 'NOT A STATE') -> {
+          group_by: hardcoded_state
+        }
+      `
+    ).malloyResultMatches(runtime, {hardcoded_state: 'NOT A STATE'});
   });
 });

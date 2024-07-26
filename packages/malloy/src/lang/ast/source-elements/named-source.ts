@@ -112,28 +112,6 @@ export class NamedSource extends Source {
     return this.withParameters(parameterSpace, []);
   }
 
-  // TODO unduplicate this....
-  // withParameters(
-  //   _parameterSpace: ParameterSpace | undefined,
-  //   pList: HasParameter[] | undefined
-  // ): StructDef {
-  //   const paramSpace = pList ? new ParameterSpace(pList) : undefined;
-  //   const before = this.structDef(paramSpace);
-  //   // TODO name collisions are flagged where? TODO CRS address
-  //   if (pList) {
-  //     const parameters = {...(before.parameters || {})};
-  //     for (const hasP of pList) {
-  //       const pVal = hasP.parameter();
-  //       parameters[pVal.name] = pVal;
-  //     }
-  //     return {
-  //       ...before,
-  //       parameters,
-  //     };
-  //   }
-  //   return before;
-  // }
-
   withParameters(
     parameterSpace: ParameterSpace | undefined,
     pList: HasParameter[] | undefined
@@ -216,7 +194,7 @@ export class NamedSource extends Source {
       const compiled = parameter.parameter();
       outParameters[compiled.name] = compiled;
     }
-    const ret = {...base, parameters: outParameters};
+    const ret = {...base, parameters: outParameters, arguments: parameters};
     this.document()?.rememberToAddModelAnnotations(ret);
     return ret;
   }

@@ -63,10 +63,12 @@ export abstract class DynamicSpace extends StaticSpace {
     super.setEntry(name, value);
   }
 
-  addParameters(params: HasParameter[]): DynamicSpace {
-    this.parameters.push(...params);
-    for (const oneP of params) {
-      this.setEntry(oneP.name, new AbstractParameter(oneP));
+  addParameters(parameters: HasParameter[]): DynamicSpace {
+    for (const parameter of parameters) {
+      if (this.entry(parameter.name) === undefined) {
+        this.parameters.push(parameter);
+        this.setEntry(parameter.name, new AbstractParameter(parameter));
+      }
     }
     return this;
   }
