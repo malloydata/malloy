@@ -112,7 +112,7 @@ export class StaticSpace implements FieldSpace {
   }
 
   emptyStructDef(): StructDef {
-    return {...this.fromStruct, fields: []};
+    return {...this.fromStruct, fields: [], parameters: {}};
   }
 
   lookup(path: FieldName[]): LookupResult {

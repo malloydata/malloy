@@ -38,11 +38,10 @@ export abstract class Source extends MalloyElement {
   }
 
   withParameters(
-    _parameterSpace: ParameterSpace | undefined,
+    parameterSpace: ParameterSpace | undefined,
     pList: HasParameter[] | undefined
   ): StructDef {
-    const paramSpace = pList ? new ParameterSpace(pList) : undefined;
-    const before = this.structDef(paramSpace);
+    const before = this.structDef(parameterSpace);
     // TODO name collisions are flagged where? TODO CRS address
     if (pList) {
       const parameters = {...(before.parameters || {})};

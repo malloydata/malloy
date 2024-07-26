@@ -22,6 +22,27 @@ describe('parameters', () => {
       source: ab_new_new(param::number) is ab_new(param) extend {}
     `).toTranslate();
   });
+  test('can pass parameter into named base source', () => {
+    expect(`
+      ##! experimental.parameters
+      source: ab_new(param::number) is ab
+      source: ab_new_new(param::number) is ab_new(param)
+    `).toTranslate();
+  });
+  test('can pass differently-named parameter into extended base source', () => {
+    expect(`
+      ##! experimental.parameters
+      source: ab_new(new_param::number) is ab
+      source: ab_new_new(new_new_param::number) is ab_new(new_param is new_new_param) extend {}
+    `).toTranslate();
+  });
+  test('can pass differently-named parameter into named base source', () => {
+    expect(`
+      ##! experimental.parameters
+      source: ab_new(new_param::number) is ab
+      source: ab_new_new(new_new_param::number) is ab_new(new_param is new_new_param)
+    `).toTranslate();
+  });
   test('can pass parameter into base source longhand', () => {
     expect(`
       ##! experimental.parameters
@@ -123,11 +144,34 @@ describe('parameters', () => {
   // TODO is this desired behavior?
   // This feels like a breach of the interface for sources, if we consider parameterized sources to
   // be like functions: the parameters should be internal only?
-  test.skip('can reference param in query against source', () => {
+  test('can reference param in query against source', () => {
     expect(`
       ##! experimental.parameters
       source: ab_new(param::number) is ab
       run: ab_new(param is 1) -> { select: param }
+    `).toTranslate();
+  });
+  test('can reference param in view in source', () => {
+    expect(`
+      ##! experimental.parameters
+      source: ab_new(param::number) is ab extend {
+        view: x is { select: param }
+      }
+    `).toTranslate();
+  });
+  test('can declare dimension which is just the parameter', () => {
+    expect(`
+      ##! experimental.parameters
+      source: ab_new(param::number) is ab extend {
+        dimension: p is param
+      }
+    `).toTranslate();
+  });
+  test('can reference param in expression in query against source', () => {
+    expect(`
+      ##! experimental.parameters
+      source: ab_new(param::number) is ab
+      run: ab_new(param is 1) -> { select: p is param }
     `).toTranslate();
   });
   test('error when declaring parameter twice', () => {
@@ -142,9 +186,19 @@ describe('parameters', () => {
     expect(
       markSource`
         ##! experimental.parameters
-        source: ab_new(${'a::number'}) is ab
+        source: ab_new(${'ai::number'}) is ab
       `
     ).translationToFailWith('Already defined');
+  });
+  test('do not inherit parameters from base source', () => {
+    expect(
+      markSource`
+        ##! experimental.parameters
+        source: ab_new(param::number) is ab
+        source: ab_new_new is ab_new(param is 1)
+        run: ab_new_new(${'param is 2'})
+      `
+    ).translationToFailWith('No such parameter');
   });
   test('error when declaring field with same name as parameter', () => {
     expect(

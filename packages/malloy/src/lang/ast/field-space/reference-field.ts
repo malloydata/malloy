@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Annotation, QueryFieldDef, TypeDesc} from '../../../model/malloy_types';
+import {Annotation, isCastType, QueryFieldDef, TypeDesc} from '../../../model/malloy_types';
 
 import {FieldReference} from '../query-items/field-references';
 import {FieldSpace} from '../types/field-space';
@@ -54,10 +54,22 @@ export class ReferenceField extends SpaceField {
       if (check.error) {
         this.fieldRef.log(check.error);
       }
-      this.queryFieldDef = {
-        type: 'fieldref',
-        path: this.fieldRef.list.map(f => f.name),
-      };
+      // const path = this.fieldRef.list.map(f => f.name);
+      // this.queryFieldDef = check.found?.refType === 'parameter'
+      //   ? { type: 'parameterref', path }
+      //   : { type: 'fieldref', path };
+
+      const path = this.fieldRef.list.map(f => f.name);
+      this.queryFieldDef = { type: 'fieldref', path };
+
+      // TODO HACK
+      if (check.found?.refType === 'parameter') {
+        const type = check.found.typeDesc().dataType;
+        if (isCastType(type)) {
+          this.queryFieldDef = { type, name: path[0], e: [{ type: 'parameter', path }]}
+        }
+      }
+
       const refTo = this.referenceTo;
       if (refTo instanceof SpaceField && refTo.haveFieldDef) {
         const origFd = refTo.haveFieldDef;
@@ -67,7 +79,7 @@ export class ReferenceField extends SpaceField {
           if (origFd.annotation) {
             annotation.inherits = origFd.annotation;
           }
-          this.queryFieldDef.annotation = annotation;
+          this.queryFieldDef!.annotation = annotation; // TODO why does typescript require ! here
         }
       }
     }

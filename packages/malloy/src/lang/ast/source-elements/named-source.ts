@@ -39,7 +39,7 @@ import {Argument} from '../parameters/argument';
 import {LogSeverity} from '../../parse-log';
 import {ExprIdReference} from '../expressions/expr-id-reference';
 import {ParameterSpace} from '../field-space/parameter-space';
-import {ConstantFieldSpace} from '../expressions/constant-sub-expression';
+import { HasParameter } from '../parameters/has-parameter';
 
 export class NamedSource extends Source {
   elementType = 'namedSource';
@@ -109,6 +109,35 @@ export class NamedSource extends Source {
   }
 
   structDef(parameterSpace: ParameterSpace | undefined): StructDef {
+    return this.withParameters(parameterSpace, []);
+  }
+
+  // TODO unduplicate this....
+  // withParameters(
+  //   _parameterSpace: ParameterSpace | undefined,
+  //   pList: HasParameter[] | undefined
+  // ): StructDef {
+  //   const paramSpace = pList ? new ParameterSpace(pList) : undefined;
+  //   const before = this.structDef(paramSpace);
+  //   // TODO name collisions are flagged where? TODO CRS address
+  //   if (pList) {
+  //     const parameters = {...(before.parameters || {})};
+  //     for (const hasP of pList) {
+  //       const pVal = hasP.parameter();
+  //       parameters[pVal.name] = pVal;
+  //     }
+  //     return {
+  //       ...before,
+  //       parameters,
+  //     };
+  //   }
+  //   return before;
+  // }
+
+  withParameters(
+    parameterSpace: ParameterSpace | undefined,
+    pList: HasParameter[] | undefined
+  ): StructDef {
     /*
       Can't really generate the callback list until after all the
       things before me are translated, and that kinda screws up
@@ -163,7 +192,7 @@ export class NamedSource extends Source {
         );
       } else {
         if (isValueParameter(decl)) {
-          const paramSpace = parameterSpace ?? new ConstantFieldSpace();
+          const paramSpace = parameterSpace ?? new ParameterSpace(pList ?? []);
           const pVal = argument.value.getExpression(paramSpace);
           let value = pVal.value;
           if (pVal.dataType !== decl.type && isCastType(decl.type)) {
@@ -182,7 +211,12 @@ export class NamedSource extends Source {
         );
       }
     }
-    const ret = {...base, parameters};
+    const outParameters = {};
+    for (const parameter of pList ?? []) {
+      const compiled = parameter.parameter();
+      outParameters[compiled.name] = compiled;
+    }
+    const ret = {...base, parameters: outParameters};
     this.document()?.rememberToAddModelAnnotations(ret);
     return ret;
   }
