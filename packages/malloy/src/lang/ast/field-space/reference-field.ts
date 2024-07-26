@@ -21,7 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Annotation, isCastType, QueryFieldDef, TypeDesc} from '../../../model/malloy_types';
+import {
+  Annotation,
+  isCastType,
+  QueryFieldDef,
+  TypeDesc,
+} from '../../../model/malloy_types';
 
 import {FieldReference} from '../query-items/field-references';
 import {FieldSpace} from '../types/field-space';
@@ -60,13 +65,17 @@ export class ReferenceField extends SpaceField {
       //   : { type: 'fieldref', path };
 
       const path = this.fieldRef.list.map(f => f.name);
-      this.queryFieldDef = { type: 'fieldref', path };
+      this.queryFieldDef = {type: 'fieldref', path};
 
       // TODO HACK
       if (check.found?.refType === 'parameter') {
         const type = check.found.typeDesc().dataType;
         if (isCastType(type)) {
-          this.queryFieldDef = { type, name: path[0], e: [{ type: 'parameter', path }]}
+          this.queryFieldDef = {
+            type,
+            name: path[0],
+            e: [{type: 'parameter', path}],
+          };
         }
       }
 

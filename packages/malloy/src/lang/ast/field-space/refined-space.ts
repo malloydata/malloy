@@ -26,7 +26,7 @@ import {FieldListEdit} from '../source-properties/field-list-edit';
 import {DynamicSpace} from './dynamic-space';
 import {canMakeEntry} from '../types/space-entry';
 import {MalloyElement} from '../types/malloy-element';
-import { ParameterSpace } from './parameter-space';
+import {ParameterSpace} from './parameter-space';
 
 export class RefinedSpace extends DynamicSpace {
   /**
@@ -34,13 +34,17 @@ export class RefinedSpace extends DynamicSpace {
    * @param from A structdef which seeds this space
    * @param choose A accept/except edit of the "from" fields
    */
-  static filteredFrom(from: StructDef, choose: FieldListEdit | undefined, parameters: ParameterSpace | undefined): RefinedSpace {
+  static filteredFrom(
+    from: StructDef,
+    choose: FieldListEdit | undefined,
+    parameters: ParameterSpace | undefined
+  ): RefinedSpace {
     const edited = new RefinedSpace(from);
     if (choose) {
       const names = choose.refs.list;
       const oldMap = edited.entries();
       for (const name of names) {
-        const existing = oldMap.find(([symb, ]) => symb === name.refString);
+        const existing = oldMap.find(([symb]) => symb === name.refString);
         if (existing === undefined) {
           if (parameters?.entry(name.refString)) {
             name.log(`Illegal \`${choose.edit}:\` of parameter`);

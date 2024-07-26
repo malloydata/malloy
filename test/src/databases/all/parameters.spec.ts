@@ -9,8 +9,7 @@ import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
 import '../../util/db-jest-matchers';
 
-// const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
-const runtimes = new RuntimeList(databasesFromEnvironmentOr(['duckdb']));
+const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 afterAll(async () => {
   await runtimes.closeAll();
@@ -117,7 +116,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           limit: 1
         }
       `
-    ).malloyResultMatches(runtime, {hardcoded_state: 'NOT A STATE', state_copy: 'AK'});
+    ).malloyResultMatches(runtime, {
+      hardcoded_state: 'NOT A STATE',
+      state_copy: 'AK',
+    });
   });
   it(`can shadow field that is excepted - ${databaseName}`, async () => {
     await expect(

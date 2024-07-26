@@ -39,7 +39,7 @@ import {Argument} from '../parameters/argument';
 import {LogSeverity} from '../../parse-log';
 import {ExprIdReference} from '../expressions/expr-id-reference';
 import {ParameterSpace} from '../field-space/parameter-space';
-import { HasParameter } from '../parameters/has-parameter';
+import {HasParameter} from '../parameters/has-parameter';
 
 export class NamedSource extends Source {
   elementType = 'namedSource';

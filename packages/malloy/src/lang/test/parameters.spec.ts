@@ -91,7 +91,7 @@ describe('parameters', () => {
       ##! experimental.parameters
       source: ab_new(param::number) is ab
       run: ab_new(param is ${'ai'}) -> { select: * }
-    `).translationToFailWith("`ai` is not defined");
+    `).translationToFailWith('`ai` is not defined');
   });
   test('can pass through parameter to joined source', () => {
     expect(`
@@ -146,7 +146,7 @@ describe('parameters', () => {
       ##! experimental.parameters
       source: ab_new(param::number) is ab
       run: ab_new(param is 1) -> { select: ${'param'} }
-    `).translationToFailWith(`'param' is not defined`);
+    `).translationToFailWith("'param' is not defined");
   });
   test('can reference param in view in source', () => {
     expect(`
@@ -222,7 +222,9 @@ describe('parameters', () => {
         source: ab_new_new is ab_new(param is 1)
         run: ab_new_new(${'param'} is 2) -> { select: * }
       `
-    ).translationToFailWith("`ab_new_new` has no declared parameter named `param`");
+    ).translationToFailWith(
+      '`ab_new_new` has no declared parameter named `param`'
+    );
   });
   test('error when declaring field with same name as parameter', () => {
     expect(
@@ -232,7 +234,7 @@ describe('parameters', () => {
           dimension: param is 1
         }
       `
-    ).translationToFailWith(`Cannot redefine 'param'`);
+    ).translationToFailWith("Cannot redefine 'param'");
   });
   test('error when declaring parameter without experiment enabled', () => {
     expect(
@@ -301,10 +303,7 @@ describe('parameters', () => {
         source: ab_new(p_a::number, p_b::number) is ab
         run: ab_new(p_a is ${'p_b'}, p_b is ${'p_a'}) -> { select: * }
       `
-    ).translationToFailWith(
-      "`p_b` is not defined",
-      '`p_a` is not defined'
-    );
+    ).translationToFailWith('`p_b` is not defined', '`p_a` is not defined');
   });
   test('error when passing param with no name', () => {
     expect(
@@ -381,8 +380,6 @@ describe('parameters', () => {
           join_one: ab_join is ab_new_1(param_1 is ${'param_3'})
         }
       `
-    ).translationToFailWith(
-      '`param_3` is not defined'
-    );
+    ).translationToFailWith('`param_3` is not defined');
   });
 });

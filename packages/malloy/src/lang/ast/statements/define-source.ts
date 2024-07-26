@@ -99,10 +99,19 @@ export class DefineSource
     return out;
   }
 
-  private validateParameterShadowing(parameters: HasParameter[], structDef: StructDef) {
+  private validateParameterShadowing(
+    parameters: HasParameter[],
+    structDef: StructDef
+  ) {
     for (const parameter of parameters) {
-      if (structDef.fields.find(field => (field.as ?? field.name) === parameter.name)) {
-        parameter.log(`Illegal shadowing of field \`${parameter.name}\` by parameter with the same name`)
+      if (
+        structDef.fields.find(
+          field => (field.as ?? field.name) === parameter.name
+        )
+      ) {
+        parameter.log(
+          `Illegal shadowing of field \`${parameter.name}\` by parameter with the same name`
+        );
       }
     }
   }
