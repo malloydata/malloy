@@ -4132,22 +4132,31 @@ class QueryStruct extends QueryNode {
     if (isValueParameter(param)) {
       return {
         ...param,
-        value: param.value === null ? null : exprMap(param.value, (frag) => {
-          if (typeof frag === 'string') return [frag];
-          if (frag.type === 'parameter') {
-            if (this.parent === undefined) {
-              throw new Error("No parent from which to retrieve parameter value");
-            }
-            const resolved1 = this.parent.parameters()[frag.path[0]];
-            const resolved2 = this.parent.resolveParentParameterReferences(resolved1);
-            if (!isValueParameter(resolved2) || resolved2.value === null) {
-              throw new Error("Invalid parameter value");
-            } else {
-              return resolved2.value;
-            }
-          }
-          return [frag];
-        })
+        value:
+          param.value === null
+            ? null
+            : exprMap(param.value, frag => {
+                if (typeof frag === 'string') return [frag];
+                if (frag.type === 'parameter') {
+                  if (this.parent === undefined) {
+                    throw new Error(
+                      'No parent from which to retrieve parameter value'
+                    );
+                  }
+                  const resolved1 = this.parent.parameters()[frag.path[0]];
+                  const resolved2 =
+                    this.parent.resolveParentParameterReferences(resolved1);
+                  if (
+                    !isValueParameter(resolved2) ||
+                    resolved2.value === null
+                  ) {
+                    throw new Error('Invalid parameter value');
+                  } else {
+                    return resolved2.value;
+                  }
+                }
+                return [frag];
+              }),
       };
     } else {
       return param;
@@ -4162,7 +4171,8 @@ class QueryStruct extends QueryNode {
     this.resolvedParameters = {};
     for (const parameterName in this.fieldDef.parameters) {
       const orig = this.fieldDef.parameters[parameterName];
-      this.resolvedParameters[parameterName] = this.resolveParentParameterReferences(orig);
+      this.resolvedParameters[parameterName] =
+        this.resolveParentParameterReferences(orig);
     }
     return this.resolvedParameters;
   }

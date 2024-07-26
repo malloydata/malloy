@@ -22,8 +22,8 @@
  */
 
 import {Query, refIsStructDef} from '../../../model/malloy_types';
+import {ParameterSpace} from '../field-space/parameter-space';
 import {Source} from '../source-elements/source';
-import { FieldSpace } from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
 import {QueryComp} from '../types/query-comp';
 import {QueryElement} from '../types/query-element';
@@ -43,13 +43,16 @@ export class QueryRaw extends MalloyElement implements QueryElement {
     super({source});
   }
 
-  queryComp(intoFS: FieldSpace | undefined, isRefOk: boolean): QueryComp {
+  queryComp(
+    parameterSpace: ParameterSpace | undefined,
+    isRefOk: boolean
+  ): QueryComp {
     const structRef = isRefOk
-      ? this.source.structRef(intoFS)
-      : this.source.structDef(intoFS);
+      ? this.source.structRef(parameterSpace)
+      : this.source.structDef(parameterSpace);
     const structDef = refIsStructDef(structRef)
       ? structRef
-      : this.source.structDef(intoFS);
+      : this.source.structDef(parameterSpace);
     return {
       query: {
         type: 'query',

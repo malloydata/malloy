@@ -22,14 +22,14 @@
  */
 
 import {Join} from '../source-properties/joins';
-import { FieldSpace } from '../types/field-space';
+import {ParameterSpace} from './parameter-space';
 import {StructSpaceField} from './static-space';
 
 export class JoinSpaceField extends StructSpaceField {
   constructor(
-    readonly intoFS: FieldSpace,
+    readonly parameterSpace: ParameterSpace,
     readonly join: Join
   ) {
-    super(join.structDef(intoFS));
+    super(join.structDef(parameterSpace));
   }
 }

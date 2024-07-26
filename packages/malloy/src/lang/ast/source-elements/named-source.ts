@@ -36,12 +36,10 @@ import {ErrorFactory} from '../error-factory';
 import {castTo} from '../time-utils';
 import {ModelEntryReference} from '../types/malloy-element';
 import {Argument} from '../parameters/argument';
-import {StaticSpace} from '../field-space/static-space';
 import {LogSeverity} from '../../parse-log';
-import { ExprIdReference } from '../expressions/expr-id-reference';
-import { FieldSpace } from '../types/field-space';
-import { ParameterSpace } from '../field-space/parameter-space';
-import { HasParameter } from '../parameters/has-parameter';
+import {ExprIdReference} from '../expressions/expr-id-reference';
+import {ParameterSpace} from '../field-space/parameter-space';
+import {ConstantFieldSpace} from '../expressions/constant-sub-expression';
 
 export class NamedSource extends Source {
   elementType = 'namedSource';
@@ -63,15 +61,15 @@ export class NamedSource extends Source {
     return this.ref instanceof ModelEntryReference ? this.ref.name : this.ref;
   }
 
-  structRef(intoFS: FieldSpace | undefined, ): StructRef {
+  structRef(parameterSpace: ParameterSpace | undefined): StructRef {
     if (this.args !== undefined) {
-      return this.structDef(intoFS);
+      return this.structDef(parameterSpace);
     }
     const modelEnt = this.modelEntry(this.ref);
     if (modelEnt && !modelEnt.exported) {
       // If we are not exporting the referenced structdef, don't
       // use the reference
-      return this.structDef(intoFS);
+      return this.structDef(parameterSpace);
     }
     return this.refName;
   }
@@ -110,7 +108,7 @@ export class NamedSource extends Source {
     return {...entry};
   }
 
-  structDef(intoFS: FieldSpace | undefined, ): StructDef {
+  structDef(parameterSpace: ParameterSpace | undefined): StructDef {
     /*
       Can't really generate the callback list until after all the
       things before me are translated, and that kinda screws up
@@ -141,10 +139,11 @@ export class NamedSource extends Source {
 
     const passedNames = new Set();
     for (const argument of this.args ?? []) {
-      const id = argument.id ??
+      const id =
+        argument.id ??
         (argument.value instanceof ExprIdReference
-        ? argument.value.fieldReference
-        : undefined);
+          ? argument.value.fieldReference
+          : undefined);
       if (id === undefined) {
         argument.value.log(
           'Parameterized source arguments must be named with `parameter_name is`'
@@ -153,9 +152,7 @@ export class NamedSource extends Source {
       }
       const name = id.outputName;
       if (passedNames.has(name)) {
-        argument.log(
-          `Cannot pass argument for \`${name}\` more than once`
-        );
+        argument.log(`Cannot pass argument for \`${name}\` more than once`);
         continue;
       }
       passedNames.add(name);
@@ -166,7 +163,7 @@ export class NamedSource extends Source {
         );
       } else {
         if (isValueParameter(decl)) {
-          const paramSpace = new ParameterSpace(intoFS);
+          const paramSpace = parameterSpace ?? new ConstantFieldSpace();
           const pVal = argument.value.getExpression(paramSpace);
           let value = pVal.value;
           if (pVal.dataType !== decl.type && isCastType(decl.type)) {

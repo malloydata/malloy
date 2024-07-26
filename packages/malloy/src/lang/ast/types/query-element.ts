@@ -28,10 +28,13 @@ import {QueryReference} from '../query-elements/query-reference';
 import {QueryRaw} from '../query-elements/query-raw';
 import {Query} from '../../../model/malloy_types';
 import {QueryComp} from './query-comp';
-import { FieldSpace } from './field-space';
+import {ParameterSpace} from '../field-space/parameter-space';
 
 export interface QueryElement extends MalloyElement {
-  queryComp(intoFS: FieldSpace | undefined, isRefOk: boolean): QueryComp;
+  queryComp(
+    parameterSpace: ParameterSpace | undefined,
+    isRefOk: boolean
+  ): QueryComp;
   query(): Query;
 }
 

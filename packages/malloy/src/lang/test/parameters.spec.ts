@@ -92,6 +92,34 @@ describe('parameters', () => {
       }
     `).toTranslate();
   });
+  test('can pass through parameter to source in joined query', () => {
+    expect(`
+      ##! experimental.parameters
+      source: ab_ext_1(a_1::string) is ab extend {
+        where: ai = a_1
+      }
+
+      source: ab_ext_2(a_2::string) is ab extend {
+        where: ai = a_2
+        join_many: ab_ext_1 is ab_ext_1(a_1 is a_2) -> { select: * } on 1 = 1
+      }
+    `).toTranslate();
+  });
+  test.skip('can pass through parameter to source in query in joined SQL source', () => {
+    expect(`
+      ##! experimental.parameters
+      source: ab_ext_1(a_1::string) is ab extend {
+        where: ai = a_1
+      }
+
+      source: ab_ext_2(a_2::string) is ab extend {
+        where: ai = a_2
+        join_many: ab_ext_1 is duckdb.sql("""
+          SELECT * FROM (%{ ab_ext_1(a_1 is a_2) -> { select: * } })
+        """) on 1 = 1
+      }
+    `).toTranslate();
+  });
   // TODO is this desired behavior?
   // This feels like a breach of the interface for sources, if we consider parameterized sources to
   // be like functions: the parameters should be internal only?
@@ -108,9 +136,7 @@ describe('parameters', () => {
         ##! experimental.parameters
         source: ab_new(param::number, ${'param::number'}) is ab
       `
-    ).translationToFailWith(
-      "Already defined",
-    );
+    ).translationToFailWith('Already defined');
   });
   test('error when declaring parameter with same name as field', () => {
     expect(
@@ -118,9 +144,7 @@ describe('parameters', () => {
         ##! experimental.parameters
         source: ab_new(${'a::number'}) is ab
       `
-    ).translationToFailWith(
-      "Already defined",
-    );
+    ).translationToFailWith('Already defined');
   });
   test('error when declaring field with same name as parameter', () => {
     expect(
@@ -130,9 +154,7 @@ describe('parameters', () => {
           dimension: param is 1
         }
       `
-    ).translationToFailWith(
-      "Already defined",
-    );
+    ).translationToFailWith(`Cannot redefine 'param'`);
   });
   test('error when declaring parameter without experiment enabled', () => {
     expect(
@@ -140,7 +162,7 @@ describe('parameters', () => {
         source: ab_new(param::number) is ab
       `
     ).translationToFailWith(
-      "Experimental flag 'parameters' required to enable this feature",
+      "Experimental flag 'parameters' required to enable this feature"
     );
   });
   test('cannot except parameter', () => {
@@ -151,9 +173,7 @@ describe('parameters', () => {
           except: param
         }
       `
-    ).translationToFailWith(
-      "Nope",
-    );
+    ).translationToFailWith('Nope');
   });
   test('error when using parameter without experiment enabled', () => {
     expect(
@@ -161,7 +181,7 @@ describe('parameters', () => {
         run: ab_new${'(param is param)'} -> { select: * }
       `
     ).translationToFailWith(
-      "Experimental flag 'parameters' required to enable this feature",
+      "Experimental flag 'parameters' required to enable this feature"
     );
   });
   // TODO either detect circularity or make parameters constant only
@@ -172,9 +192,7 @@ describe('parameters', () => {
         source: ab_new(param::number) is ab
         run: ab_new(param is ${'param'}) -> { select: * }
       `
-    ).translationToFailWith(
-      'cannot find param',
-    );
+    ).translationToFailWith('cannot find param');
   });
   // TODO mutually circular parameters
   test('error when circularly referencing mutually recursive parameters in argument', () => {
@@ -184,9 +202,7 @@ describe('parameters', () => {
         source: ab_new(p_a::number, p_b::number) is ab
         run: ab_new(p_a is ${'p_b'}, p_b is ${'p_a'}) -> { select: * }
       `
-    ).translationToFailWith(
-      'cannot find param',
-    );
+    ).translationToFailWith('cannot find param');
   });
   test('error when passing param with no name', () => {
     expect(

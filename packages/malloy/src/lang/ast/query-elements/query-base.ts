@@ -22,13 +22,16 @@
  */
 
 import {Query} from '../../../model/malloy_types';
+import {ParameterSpace} from '../field-space/parameter-space';
 import {detectAndRemovePartialStages} from '../query-utils';
-import { FieldSpace } from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
 import {QueryComp} from '../types/query-comp';
 
 export abstract class QueryBase extends MalloyElement {
-  abstract queryComp(intoFS: FieldSpace | undefined, isRefOk: boolean): QueryComp;
+  abstract queryComp(
+    parameterSpace: ParameterSpace | undefined,
+    isRefOk: boolean
+  ): QueryComp;
 
   query(): Query {
     const q = this.queryComp(undefined, true).query;

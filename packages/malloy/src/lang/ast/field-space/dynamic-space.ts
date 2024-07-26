@@ -35,12 +35,14 @@ import {AbstractParameter, SpaceParam} from '../types/space-param';
 import {SourceSpec, SpaceSeed} from '../space-seed';
 import {StaticSpace} from './static-space';
 import {StructSpaceFieldBase} from './struct-space-field-base';
+import {ParameterSpace} from './parameter-space';
 
 export abstract class DynamicSpace extends StaticSpace {
   protected final: model.StructDef | undefined;
   protected source: SpaceSeed;
   completions: (() => void)[] = [];
   private complete = false;
+  private parameters: HasParameter[] = [];
   protected newTimezone?: string;
 
   constructor(extending: SourceSpec) {
@@ -62,10 +64,15 @@ export abstract class DynamicSpace extends StaticSpace {
   }
 
   addParameters(params: HasParameter[]): DynamicSpace {
+    this.parameters.push(...params);
     for (const oneP of params) {
       this.setEntry(oneP.name, new AbstractParameter(oneP));
     }
     return this;
+  }
+
+  parameterSpace(): ParameterSpace {
+    return new ParameterSpace(this.parameters);
   }
 
   newEntry(name: string, logTo: MalloyElement, entry: SpaceEntry): void {
@@ -113,9 +120,10 @@ export abstract class DynamicSpace extends StaticSpace {
         }
       }
       const reorderFields = [...fields, ...joins, ...turtles];
+      const parameterSpace = this.parameterSpace();
       for (const [, field] of reorderFields) {
         if (field instanceof JoinSpaceField) {
-          const joinStruct = field.join.structDef(this);
+          const joinStruct = field.join.structDef(parameterSpace);
           if (!ErrorFactory.isErrorStructDef(joinStruct)) {
             this.final.fields.push(joinStruct);
             fixupJoins.push([field.join, joinStruct]);

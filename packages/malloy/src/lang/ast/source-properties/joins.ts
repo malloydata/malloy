@@ -43,13 +43,14 @@ import {
 import {MakeEntry} from '../types/space-entry';
 import {SourceQueryElement} from '../source-query-elements/source-query-element';
 import {ErrorFactory} from '../error-factory';
+import {ParameterSpace} from '../field-space/parameter-space';
 
 export abstract class Join
   extends MalloyElement
   implements Noteable, MakeEntry
 {
   abstract name: ModelEntryReference;
-  abstract structDef(intoFS: FieldSpace): StructDef;
+  abstract structDef(parameterSpace: ParameterSpace): StructDef;
   abstract fixupJoinOn(outer: FieldSpace, inStruct: StructDef): void;
   readonly isNoteableObj = true;
   extendNote = extendNoteMethod;
@@ -57,16 +58,20 @@ export abstract class Join
   note?: Annotation;
 
   makeEntry(fs: DynamicSpace) {
-    fs.newEntry(this.name.refString, this, new JoinSpaceField(fs, this));
+    fs.newEntry(
+      this.name.refString,
+      this,
+      new JoinSpaceField(fs.parameterSpace(), this)
+    );
   }
 
-  protected getStructDefFromExpr(intoFS: FieldSpace) {
+  protected getStructDefFromExpr(parameterSpace: ParameterSpace) {
     const source = this.sourceExpr.getSource();
     if (!source) {
       this.sourceExpr.sqLog('Cannot great a source to join from');
       return ErrorFactory.structDef;
     }
-    return source.structDef(intoFS);
+    return source.structDef(parameterSpace);
   }
 }
 
@@ -80,8 +85,8 @@ export class KeyJoin extends Join {
     super({name, sourceExpr, keyExpr});
   }
 
-  structDef(intoFS: FieldSpace): StructDef {
-    const sourceDef = this.getStructDefFromExpr(intoFS);
+  structDef(parameterSpace: ParameterSpace): StructDef {
+    const sourceDef = this.getStructDefFromExpr(parameterSpace);
     const joinStruct: StructDef = {
       ...sourceDef,
       structRelationship: {
@@ -178,13 +183,13 @@ export class ExpressionJoin extends Join {
     }
   }
 
-  structDef(intoFS: FieldSpace): StructDef {
+  structDef(parameterSpace: ParameterSpace): StructDef {
     const source = this.sourceExpr.getSource();
     if (!source) {
       this.sourceExpr.sqLog('Cannot create a source to join from');
       return ErrorFactory.structDef;
     }
-    const sourceDef = source.structDef(intoFS);
+    const sourceDef = source.structDef(parameterSpace);
     let matrixOperation: MatrixOperation = 'left';
     if (this.inExperiment('join_types', true)) {
       matrixOperation = this.matrixOperation;

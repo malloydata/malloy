@@ -24,25 +24,26 @@
 import {StructDef, StructRef} from '../../../model/malloy_types';
 import {MalloyElement} from '../types/malloy-element';
 import {HasParameter} from '../parameters/has-parameter';
-import { FieldSpace } from '../types/field-space';
-import { ParameterSpace2 } from '../field-space/parameter-space';
+import {ParameterSpace} from '../field-space/parameter-space';
 
 /**
  * A "Source" is a thing which you can run queries against. The main
  * function of a source is to represent an eventual StructDef
  */
 export abstract class Source extends MalloyElement {
-  abstract structDef(intoFS: FieldSpace | undefined): StructDef;
+  abstract structDef(parameterSpace: ParameterSpace | undefined): StructDef;
 
-  structRef(intoFS: FieldSpace | undefined): StructRef {
-    return this.structDef(intoFS);
+  structRef(parameterSpace: ParameterSpace | undefined): StructRef {
+    return this.structDef(parameterSpace);
   }
 
-  // TODO can this please just be in the constructor instead???
-  withParameters(intoFS: FieldSpace | undefined, pList: HasParameter[] | undefined): StructDef {
-    const paramSpace = pList ? new ParameterSpace2(pList) : undefined;
+  withParameters(
+    _parameterSpace: ParameterSpace | undefined,
+    pList: HasParameter[] | undefined
+  ): StructDef {
+    const paramSpace = pList ? new ParameterSpace(pList) : undefined;
     const before = this.structDef(paramSpace);
-    // TODO name collisions are flagged where?
+    // TODO name collisions are flagged where? TODO CRS address
     if (pList) {
       const parameters = {...(before.parameters || {})};
       for (const hasP of pList) {

@@ -28,7 +28,7 @@ import {QueryHeadStruct} from './query-head-struct';
 import {Query, refIsStructDef} from '../../../model/malloy_types';
 import {getFinalStruct} from '../struct-utils';
 import {QueryElement} from '../types/query-element';
-import { FieldSpace } from '../types/field-space';
+import {ParameterSpace} from '../field-space/parameter-space';
 
 /**
  * A query operation that is just a reference to an existing query.
@@ -42,7 +42,10 @@ export class QueryReference extends MalloyElement implements QueryElement {
     super();
   }
 
-  queryComp(intoFS: FieldSpace | undefined, isRefOk: boolean): QueryComp {
+  queryComp(
+    parameterSpace: ParameterSpace | undefined,
+    isRefOk: boolean
+  ): QueryComp {
     const headEntry = this.modelEntry(this.name);
     const query = headEntry?.entry;
     const oops = function () {
@@ -59,7 +62,7 @@ export class QueryReference extends MalloyElement implements QueryElement {
     if (query.type === 'query') {
       const queryHead = new QueryHeadStruct(query.structRef);
       this.has({queryHead: queryHead});
-      const inputStruct = queryHead.structDef(intoFS);
+      const inputStruct = queryHead.structDef(parameterSpace);
       const outputStruct = getFinalStruct(this, inputStruct, query.pipeline);
       const unRefedQuery = isRefOk
         ? query

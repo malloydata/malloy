@@ -37,7 +37,7 @@ import {SpaceEntry} from '../types/space-entry';
 import {ExprCompare} from './expr-compare';
 import {compressExpr} from './utils';
 
-class ConstantFieldSpace implements FieldSpace {
+export class ConstantFieldSpace implements FieldSpace {
   readonly type = 'fieldSpace';
   structDef(): StructDef {
     throw new Error('ConstantFieldSpace cannot generate a structDef');

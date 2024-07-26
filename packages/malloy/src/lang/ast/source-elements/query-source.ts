@@ -24,7 +24,7 @@
 import {StructDef, StructSource} from '../../../model/malloy_types';
 import {Source} from './source';
 import {QueryElement} from '../types/query-element';
-import { FieldSpace } from '../types/field-space';
+import {ParameterSpace} from '../field-space/parameter-space';
 
 export class QuerySource extends Source {
   elementType = 'querySource';
@@ -32,8 +32,8 @@ export class QuerySource extends Source {
     super({query});
   }
 
-  structDef(intoFS: FieldSpace | undefined, ): StructDef {
-    const comp = this.query.queryComp(intoFS, false);
+  structDef(parameterSpace: ParameterSpace | undefined): StructDef {
+    const comp = this.query.queryComp(parameterSpace, false);
     const queryStruct = {
       ...comp.outputStruct,
       structSource: {type: 'query', query: comp.query} as StructSource,
