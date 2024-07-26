@@ -79,6 +79,15 @@ describe('parameters', () => {
       run: ab_new(param is 1 + 1) -> { select: * }
     `).toTranslate();
   });
+  test('parameter not included in wildcard', () => {
+    expect(markSource`
+      ##! experimental.parameters
+      source: ab_new(param::number) is ab extend {
+        view: all_fields is { select: * }
+      }
+      run: ab_new(param is 1) -> all_fields -> { select: ${'param'} }
+    `).translationToFailWith("'param' is not defined");
+  });
   test('cannot reference renamed param in query against source', () => {
     expect(markSource`
       ##! experimental.parameters
