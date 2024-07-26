@@ -814,6 +814,20 @@ export type NamedQuery = Query & NamedObject;
 
 export type PipeSegment = QuerySegment | IndexSegment | RawSegment;
 
+export function segmentHasErrors(segment: PipeSegment): boolean {
+  if (segment.type === 'reduce' || segment.type === 'project' || segment.type === 'partial') {
+    if (segment.extendSource) {
+      if (segment.extendSource.some(f => f.type === 'error')) {
+        return true;
+      }
+    }
+    if (segment.queryFields.some(f => f.type === 'error')) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export interface ReduceSegment extends QuerySegment {
   type: 'reduce';
 }

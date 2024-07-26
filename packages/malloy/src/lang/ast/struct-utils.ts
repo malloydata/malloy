@@ -29,6 +29,7 @@ import {
   PipeSegment,
   StructDef,
   isPartialSegment,
+  segmentHasErrors,
 } from '../../model/malloy_types';
 
 import {ErrorFactory} from './error-factory';
@@ -44,8 +45,9 @@ export function opOutputStruct(
   if (isPartialSegment(opDesc)) {
     opDesc = {...opDesc, type: 'reduce'};
   }
+  const badOpDesc = segmentHasErrors(opDesc)
   // Don't call into the model code with a broken model
-  if (!badModel) {
+  if (!badModel && !badOpDesc) {
     try {
       return Segment.nextStructDef(inputStruct, opDesc);
     } catch (e) {

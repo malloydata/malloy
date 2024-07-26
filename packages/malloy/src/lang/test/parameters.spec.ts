@@ -95,6 +95,27 @@ describe('parameters', () => {
       run: ab_new(param is 1) -> { select: p is ${'param'} }
     `).translationToFailWith("'param' is not defined");
   });
+  test('cannot reference param in source extension', () => {
+    expect(markSource`
+      ##! experimental.parameters
+      source: ab_new(param::number) is ab
+      source: x is ab_new(param is 1) extend {
+        dimension: param_copy is ${'param'}
+      }
+    `).translationToFailWith("'param' is not defined");
+  });
+  test('cannot reference param in in-query source extension', () => {
+    expect(markSource`
+      ##! experimental.parameters
+      source: ab_new(param::number) is ab
+      run: ab_new(param is 1) -> {
+        extend: {
+          dimension: param_copy is ${'param'}
+        }
+        group_by: param_copy
+      }
+    `).translationToFailWith("'param' is not defined");
+  });
   test('can reference field in source in argument', () => {
     expect(markSource`
       ##! experimental.parameters
