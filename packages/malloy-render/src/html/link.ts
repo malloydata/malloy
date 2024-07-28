@@ -36,6 +36,13 @@ export class HTMLLinkRenderer implements Renderer {
       return createNullElement(this.document);
     }
 
+    const {tag} = data.field.tagParse();
+    const linkTag = tag.tag('link');
+
+    if (!linkTag) {
+      return createErrorElement(this.document, 'Missing tag for Link renderer');
+    }
+
     if (!data.isString()) {
       return createErrorElement(
         this.document,
@@ -43,8 +50,18 @@ export class HTMLLinkRenderer implements Renderer {
       );
     }
 
+    // if a URL template is provided, replace the data were '$$$' appears.
+    const urlTemplate = linkTag.text('url_template');
+
     const element = this.document.createElement('a');
     element.href = data.value;
+    if (urlTemplate) {
+      if (urlTemplate.indexOf('$$') > 0) {
+        element.href = urlTemplate.replace('$$', data.value);
+      } else {
+        element.href = urlTemplate + data.value;
+      }
+    }
     element.target = '_blank';
     element.appendChild(
       this.document.createTextNode(data.value.replace(/\//g, '/\u200C'))
