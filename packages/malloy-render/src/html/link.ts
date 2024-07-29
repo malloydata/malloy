@@ -56,7 +56,7 @@ export class HTMLLinkRenderer implements Renderer {
     const element = this.document.createElement('a');
     element.href = data.value;
     if (urlTemplate) {
-      if (urlTemplate.indexOf('$$') > 0) {
+      if (urlTemplate.indexOf('$$') > -1) {
         element.href = urlTemplate.replace('$$', data.value);
       } else {
         element.href = urlTemplate + data.value;
