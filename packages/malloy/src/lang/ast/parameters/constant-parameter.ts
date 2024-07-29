@@ -23,13 +23,13 @@
 
 import {isAtomicFieldType, Parameter} from '../../../model/malloy_types';
 
-import {ConstantSubExpression} from '../expressions/constant-sub-expression';
+import {ConstantExpression} from '../expressions/constant-expression';
 import {HasParameter} from './has-parameter';
 
 export class ConstantParameter extends HasParameter {
   constructor(
     name: string,
-    readonly value: ConstantSubExpression
+    readonly value: ConstantExpression
   ) {
     super({name, isCondition: false});
     this.has({value: value});

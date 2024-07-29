@@ -10,6 +10,7 @@ import {databasesFromEnvironmentOr} from '../../util';
 import '../../util/db-jest-matchers';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
+// const runtimes = new RuntimeList(databasesFromEnvironmentOr(['duckdb']));
 
 afterAll(async () => {
   await runtimes.closeAll();
@@ -136,5 +137,39 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         }
       `
     ).malloyResultMatches(runtime, {hardcoded_state: 'NOT A STATE'});
+  });
+  it(`default value propagates - ${databaseName}`, async () => {
+    await expect(
+      `
+        ##! experimental.parameters
+        source: ab_new(param::number is 10) is ${databaseName}.table('malloytest.state_facts') extend {
+          dimension: param_value is param
+        }
+        run: ab_new -> { group_by: param_value }
+      `
+    ).malloyResultMatches(runtime, {param_value: 10});
+  });
+  it(`default value can be overridden - ${databaseName}`, async () => {
+    await expect(
+      `
+        ##! experimental.parameters
+        source: ab_new(param::number is 10) is ${databaseName}.table('malloytest.state_facts') extend {
+          dimension: param_value is param
+        }
+        run: ab_new(param is 11) -> { group_by: param_value }
+      `
+    ).malloyResultMatches(runtime, {param_value: 11});
+  });
+  it(`default value passed through extension propagates - ${databaseName}`, async () => {
+    await expect(
+      `
+        ##! experimental.parameters
+        source: ab_new(param::number is 10) is ${databaseName}.table('malloytest.state_facts') extend {
+          dimension: param_value is param
+        }
+        source: ab_new_new(param::number is 11) is ab_new(param) extend {}
+        run: ab_new_new -> { group_by: param_value }
+      `
+    ).malloyResultMatches(runtime, {param_value: 11});
   });
 });

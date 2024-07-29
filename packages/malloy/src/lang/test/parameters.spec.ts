@@ -9,10 +9,40 @@ import {markSource} from './test-translator';
 import './parse-expects';
 
 describe('parameters', () => {
-  test('can declare parameter', () => {
+  test('can declare parameter with no default value', () => {
     expect(`
       ##! experimental.parameters
       source: ab_new(param::number) is ab
+    `).toTranslate();
+  });
+  test('can declare parameter with default value literal', () => {
+    expect(`
+      ##! experimental.parameters
+      source: ab_new(param::number is 7) is ab
+    `).toTranslate();
+  });
+  test('can declare parameter with default value constant', () => {
+    expect(`
+      ##! experimental.parameters
+      source: ab_new(param::number is 7 + 7) is ab
+    `).toTranslate();
+  });
+  test('cannot specify default value with incompatible type', () => {
+    expect(markSource`
+      ##! experimental.parameters
+      source: ab_new(param::number is ${'"hello"'}) is ab
+    `).translationToFailWith("Default value for parameter does not match declared type `number`");
+  });
+  test('no additional error if default value type is error', () => {
+    expect(markSource`
+      ##! experimental.parameters
+      source: ab_new(param::number is 1 + "foo") is ab
+    `).translationToFailWith("Non numeric('number,string') value with '+'");
+  });
+  test('can declare parameter with inferred type', () => {
+    expect(`
+      ##! experimental.parameters
+      source: ab_new(param is 7) is ab
     `).toTranslate();
   });
   test('can pass parameter into extended base source', () => {
@@ -20,6 +50,21 @@ describe('parameters', () => {
       ##! experimental.parameters
       source: ab_new(param::number) is ab
       source: ab_new_new(param::number) is ab_new(param) extend {}
+    `).toTranslate();
+  });
+  test('can pass parameter to override default value with constant', () => {
+    expect(`
+      ##! experimental.parameters
+      source: ab_new(param::number is 10) is ab
+      source: ab_new_new is ab_new(param is 7) extend {}
+    `).toTranslate();
+  });
+  // TODO ensure this passes though
+  test('can pass parameter to override default value with param value', () => {
+    expect(`
+      ##! experimental.parameters
+      source: ab_new(param::number is 10) is ab
+      source: ab_new_new(param::number is 11) is ab_new(param) extend {}
     `).toTranslate();
   });
   test('can pass parameter into named base source', () => {
@@ -70,6 +115,20 @@ describe('parameters', () => {
       ##! experimental.parameters
       source: ab_new(param::number) is ab
       run: ab_new(param is 1) -> { select: * }
+    `).toTranslate();
+  });
+  test('can not pass argument for default-valued param', () => {
+    expect(`
+      ##! experimental.parameters
+      source: ab_new(param is 1) is ab
+      run: ab_new -> { select: * }
+    `).toTranslate();
+  });
+  test('can pass zero args for source with default-valued param', () => {
+    expect(`
+      ##! experimental.parameters
+      source: ab_new(param is 1) is ab
+      run: ab_new() -> { select: * }
     `).toTranslate();
   });
   test('can pass non-literal argument for param', () => {
@@ -411,5 +470,13 @@ describe('parameters', () => {
         }
       `
     ).translationToFailWith('`param_3` is not defined');
+  });
+  test('error when referencing identifier in default param value', () => {
+    expect(
+      markSource`
+        ##! experimental.parameters
+        source: ab_new_1(param_1 is ${'ident'}) is ab
+      `
+    ).translationToFailWith('Only constants allowed in parameter default values');
   });
 });

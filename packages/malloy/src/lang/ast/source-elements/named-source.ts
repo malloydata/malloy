@@ -66,7 +66,9 @@ export class NamedSource extends Source {
       return this.structDef(parameterSpace);
     }
     const modelEnt = this.modelEntry(this.ref);
-    if (modelEnt && !modelEnt.exported) {
+    // TODO right now we just expand the structRef if it has any parameters; but we should really
+    // evaluate arguments separately and return them here, to be included in the query;
+    if (modelEnt && (!modelEnt.exported || modelEnt.entry.type === 'struct' && modelEnt.entry.parameters)) {
       // If we are not exporting the referenced structdef, don't
       // use the reference
       return this.structDef(parameterSpace);
@@ -144,6 +146,7 @@ export class NamedSource extends Source {
       parameters[paramName] = {...base.parameters[paramName]};
     }
 
+    const outArguments = {};
     const passedNames = new Set();
     for (const argument of this.args ?? []) {
       const id =
@@ -163,38 +166,47 @@ export class NamedSource extends Source {
         continue;
       }
       passedNames.add(name);
-      const decl = parameters[name];
-      if (!decl) {
+      const parameter = parameters[name];
+      if (!parameter) {
         id.log(
           `\`${this.refName}\` has no declared parameter named \`${id.refString}\``
         );
       } else {
-        if (isValueParameter(decl)) {
+        if (isValueParameter(parameter)) {
           const paramSpace = parameterSpace ?? new ParameterSpace(pList ?? []);
           const pVal = argument.value.getExpression(paramSpace);
           let value = pVal.value;
-          if (pVal.dataType !== decl.type && isCastType(decl.type)) {
-            value = castTo(decl.type, pVal.value, pVal.dataType, true);
+          if (pVal.dataType !== parameter.type && isCastType(parameter.type)) {
+            value = castTo(parameter.type, pVal.value, pVal.dataType, true);
           }
-          decl.value = value;
+          outArguments[name] = {
+            ...parameter,
+            value
+          };
         } else {
           throw new Error('UNIMPLEMENTED'); // TODO remove need for this branch?
         }
       }
     }
-    for (const checkDef in parameters) {
-      if (!paramHasValue(parameters[checkDef])) {
-        this.refLog(
-          `Argument not provided for required parameter \`${checkDef}\``
-        );
+
+    for (const paramName in parameters) {
+      if (!(paramName in outArguments)) {
+        if (paramHasValue(parameters[paramName])) {
+          outArguments[paramName] = parameters[paramName];
+        } else {
+          this.refLog(
+            `Argument not provided for required parameter \`${paramName}\``
+          );
+        }
       }
     }
+
     const outParameters = {};
     for (const parameter of pList ?? []) {
       const compiled = parameter.parameter();
       outParameters[compiled.name] = compiled;
     }
-    const ret = {...base, parameters: outParameters, arguments: parameters};
+    const ret = {...base, parameters: outParameters, arguments: outArguments};
     this.document()?.rememberToAddModelAnnotations(ret);
     return ret;
   }

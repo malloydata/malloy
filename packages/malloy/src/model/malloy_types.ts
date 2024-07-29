@@ -1004,6 +1004,18 @@ export interface StructDef extends NamedObject, ResultStructMetadata, Filtered {
   modelAnnotation?: ModelAnnotation;
 }
 
+/*
+source: foo(x::string) is ....
+// parameters: [{x}]
+
+run: foo(x is 1)
+// no parameters
+// arguments: [{x is 1}]
+
+
+run: foo -> thing
+*/
+
 export type ExpressionValueType =
   | AtomicFieldType
   | 'null'

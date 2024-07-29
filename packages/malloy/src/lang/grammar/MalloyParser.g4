@@ -154,7 +154,7 @@ sourceParameters
   ;
 
 sourceParameter
-  : parameterNameDef DOUBLECOLON malloyType
+  : parameterNameDef (DOUBLECOLON malloyType)? (IS fieldExpr)?
   ;
 
 parameterNameDef: id;

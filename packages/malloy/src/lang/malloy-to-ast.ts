@@ -51,6 +51,7 @@ import {
   Note,
 } from '../model/malloy_types';
 import {Tag} from '../tags';
+import { ConstantExpression } from './ast/expressions/constant-expression';
 
 class ErrorNode extends ast.SourceQueryElement {
   elementType = 'parseErrorSourceQuery';
@@ -355,11 +356,16 @@ export class MalloyToAST
   }
 
   getSourceParameter(pcx: parse.SourceParameterContext): ast.HasParameter {
+    const defaultCx = pcx.fieldExpr();
+    const defaultValue = defaultCx ? this.astAt(new ConstantExpression(this.getFieldExpr(defaultCx)), defaultCx) : undefined;
+    const typeCx = pcx.malloyType();
+    const type = typeCx ? this.getMalloyType(typeCx) : undefined;
     return this.astAt(
       new ast.HasParameter({
         name: getId(pcx.parameterNameDef()),
         isCondition: false, // TODO crs remove?
-        type: this.getMalloyType(pcx.malloyType()),
+        type,
+        default: defaultValue
       }),
       pcx
     );

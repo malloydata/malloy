@@ -4170,6 +4170,12 @@ class QueryStruct extends QueryNode {
       return this.resolvedParameters;
     }
     this.resolvedParameters = {};
+    // First, copy over all parameters, to get default values
+    const params = this.fieldDef.parameters ?? {};
+    for (const parameterName in params) {
+      this.resolvedParameters[parameterName] = params[parameterName];
+    }
+    // Then, copy over arguments to override default values
     const args = this.fieldDef.arguments ?? {};
     for (const parameterName in args) {
       const orig = args[parameterName];

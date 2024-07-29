@@ -47,7 +47,7 @@ export class ConstantFieldSpace implements FieldSpace {
   }
   lookup(_name: unknown): LookupResult {
     return {
-      error: 'Only constants allowed in parameter expressions',
+      error: 'Only constants allowed in parameter default values',
       found: undefined,
     };
   }
@@ -80,7 +80,7 @@ class DollarReference extends ExpressionDef {
   }
 }
 
-export class ConstantSubExpression extends ExpressionDef {
+export class ConstantExpression extends ExpressionDef {
   elementType = 'constantExpression';
   private cfs?: ConstantFieldSpace;
   constructor(readonly expr: ExpressionDef) {
