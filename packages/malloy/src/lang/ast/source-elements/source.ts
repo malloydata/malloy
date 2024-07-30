@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {StructDef, StructRef} from '../../../model/malloy_types';
+import {InvokedStructRef, StructDef} from '../../../model/malloy_types';
 import {MalloyElement} from '../types/malloy-element';
 import {HasParameter} from '../parameters/has-parameter';
 import {ParameterSpace} from '../field-space/parameter-space';
@@ -33,8 +33,10 @@ import {ParameterSpace} from '../field-space/parameter-space';
 export abstract class Source extends MalloyElement {
   abstract structDef(parameterSpace: ParameterSpace | undefined): StructDef;
 
-  structRef(parameterSpace: ParameterSpace | undefined): StructRef {
-    return this.structDef(parameterSpace);
+  structRef(parameterSpace: ParameterSpace | undefined): InvokedStructRef {
+    return {
+      structRef: this.structDef(parameterSpace)
+    };
   }
 
   withParameters(

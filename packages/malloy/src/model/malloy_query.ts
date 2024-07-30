@@ -749,22 +749,22 @@ class QueryField extends QueryNode {
       throw new Error('Parameter paths must be length 1');
     }
     const name = expr.path[0];
-    const param = context.parameters()[name];
-    if (isValueParameter(param)) {
-      if (param.value) {
+    const argument = context.arguments()[name];
+    if (isValueParameter(argument)) {
+      if (argument.value) {
         return this.generateExpressionFromExpr(
           resultSet,
           context,
-          param.value,
+          argument.value,
           state
         );
       }
-    } else if (param.condition) {
+    } else if (argument.condition) {
       // TODO remove?
       return this.generateExpressionFromExpr(
         resultSet,
         context,
-        param.condition,
+        argument.condition,
         state
       );
     }
@@ -2090,7 +2090,7 @@ class QueryTurtle extends QueryField {}
  */
 export class Segment {
   static nextStructDef(structDef: StructDef, segment: PipeSegment): StructDef {
-    const qs = new QueryStruct(structDef, {
+    const qs = new QueryStruct(structDef, undefined, {
       model: new QueryModel(undefined),
     });
     const turtleDef: TurtleDef = {
@@ -2174,6 +2174,7 @@ class QueryQuery extends QueryField {
           ...sourceDef,
           fields: [...sourceDef.fields, ...firstStage.extendSource],
         },
+        parentStruct.sourceArguments,
         parent.parent ? {struct: parent} : {model: parent.model}
       );
       turtleWithFilters = {
@@ -3678,7 +3679,7 @@ class QueryQuery extends QueryField {
         sourceSQLExpression
       );
       structDef.structSource = {type: 'sql', method: 'nested'};
-      const qs = new QueryStruct(structDef, {
+      const qs = new QueryStruct(structDef, undefined, {
         model: this.parent.getModel(),
       });
       const q = QueryQuery.makeQuery(
@@ -3750,7 +3751,7 @@ class QueryQuery extends QueryField {
       };
       pipeline.shift();
       for (const transform of pipeline) {
-        const s = new QueryStruct(structDef, {
+        const s = new QueryStruct(structDef, undefined, {
           model: this.parent.getModel(),
         });
         const q = QueryQuery.makeQuery(
@@ -4101,6 +4102,7 @@ class QueryStruct extends QueryNode {
 
   constructor(
     fieldDef: StructDef,
+    readonly sourceArguments: Record<string, Parameter> | undefined,
     parent: ParentQueryStruct | ParentQueryModel
   ) {
     super(fieldDef);
@@ -4144,7 +4146,7 @@ class QueryStruct extends QueryNode {
                     );
                   }
                   // TODO naming of "arguments" vs "parameters" is confusing here
-                  const resolved1 = this.parent.parameters()[frag.path[0]];
+                  const resolved1 = this.parent.arguments()[frag.path[0]];
                   const resolved2 =
                     this.parent.resolveParentParameterReferences(resolved1);
                   if (
@@ -4164,25 +4166,36 @@ class QueryStruct extends QueryNode {
     }
   }
 
-  private resolvedParameters: Record<string, Parameter> | undefined = undefined;
-  parameters(): Record<string, Parameter> {
-    if (this.resolvedParameters !== undefined) {
-      return this.resolvedParameters;
+  /**
+   * TEST THIS
+   * source: foo(param::string) .... {
+   *
+   *
+   *   join: bar is something(param) -> { ... }
+   * }
+   *
+   *
+   */
+
+  private resolvedArguments: Record<string, Parameter> | undefined = undefined;
+  arguments(): Record<string, Parameter> {
+    if (this.resolvedArguments !== undefined) {
+      return this.resolvedArguments;
     }
-    this.resolvedParameters = {};
-    // First, copy over all parameters, to get default values
-    const params = this.fieldDef.parameters ?? {};
-    for (const parameterName in params) {
-      this.resolvedParameters[parameterName] = params[parameterName];
-    }
+    this.resolvedArguments = {};
+      // First, copy over all parameters, to get default values
+      const params = this.fieldDef.parameters ?? {};
+      for (const parameterName in params) {
+        this.resolvedArguments[parameterName] = params[parameterName];
+      }
     // Then, copy over arguments to override default values
-    const args = this.fieldDef.arguments ?? {};
+    const args = this.sourceArguments ?? this.fieldDef.arguments ?? {};
     for (const parameterName in args) {
       const orig = args[parameterName];
-      this.resolvedParameters[parameterName] =
+      this.resolvedArguments[parameterName] =
         this.resolveParentParameterReferences(orig);
     }
-    return this.resolvedParameters;
+    return this.resolvedArguments;
   }
 
   addFieldsFromFieldList(fields: FieldDef[]) {
@@ -4193,7 +4206,7 @@ class QueryStruct extends QueryNode {
         case 'struct': {
           this.addFieldToNameMap(
             as,
-            new QueryStruct(field as StructDef, {
+            new QueryStruct(field as StructDef, undefined, {
               struct: this,
             })
           );
@@ -4630,7 +4643,7 @@ export class QueryModel {
     for (const s of Object.values(this.modelDef.contents)) {
       let qs;
       if (s.type === 'struct') {
-        qs = new QueryStruct(s, {model: this});
+        qs = new QueryStruct(s, undefined, {model: this});
         this.structs.set(getIdentifier(s), qs);
         qs.resolveQueryFields();
       } else if (s.type === 'query') {
@@ -4650,16 +4663,20 @@ export class QueryModel {
     }
   }
 
-  getStructFromRef(structRef: StructRef): QueryStruct {
+  getStructFromRef(structRef: StructRef, sourceArguments: Record<string, Parameter> | undefined): QueryStruct {
     let structDef;
     if (typeof structRef === 'string') {
-      return this.getStructByName(structRef);
+      const ret = this.getStructByName(structRef);
+      if (sourceArguments !== undefined) {
+        return new QueryStruct(ret.fieldDef, sourceArguments, ret.parent ?? {model: this});
+      }
+      return ret;
     } else if (structRef.type === 'struct') {
       structDef = structRef;
     } else {
       throw new Error('Broken for now');
     }
-    return new QueryStruct(structDef, {model: this});
+    return new QueryStruct(structDef, sourceArguments, {model: this});
   }
 
   loadQuery(
@@ -4683,7 +4700,7 @@ export class QueryModel {
 
     const q = QueryQuery.makeQuery(
       turtleDef,
-      this.getStructFromRef(query.structRef),
+      this.getStructFromRef(query.structRef, query.sourceArguments),
       stageWriter,
       isJoinedSubquery
     );

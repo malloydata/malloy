@@ -781,6 +781,11 @@ export function refIsStructDef(ref: StructRef): ref is StructDef {
   return typeof ref !== 'string' && ref.type === 'struct';
 }
 
+export type InvokedStructRef = {
+  structRef: StructRef;
+  sourceArguments?: Record<string, Parameter>;
+};
+
 /** join pattern structs is a struct. */
 export interface JoinedStruct {
   structRef: StructRef;
@@ -806,6 +811,7 @@ export interface Query extends Pipeline, Filtered, HasLocation {
   type?: 'query';
   name?: string;
   structRef: StructRef;
+  sourceArguments?: Record<string, Parameter>; // TODO "Argument" type?
   annotation?: Annotation;
   modelAnnotation?: Annotation;
 }

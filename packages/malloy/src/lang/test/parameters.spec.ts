@@ -102,12 +102,42 @@ describe('parameters', () => {
       source: ab_new_new(param::number) is ab_new(param)
     `).toTranslate();
   });
-  test('can use declared parameter', () => {
+  test('can use declared parameter in dimension', () => {
     expect(`
       ##! experimental.parameters
       source: ab_new(param::number) is ab extend {
         dimension: param_plus_one is param + 1
       }
+    `).toTranslate();
+  });
+  test('can use declared parameter in nest extending other', () => {
+    expect(`
+      ##! experimental.parameters
+      source: ab_new(param::number is 10) is ab extend {
+        dimension: p1 is param
+        view: my_view is {
+          group_by: p2 is param
+          nest: nested is {
+            group_by: p3 is param
+          }
+        }
+      }
+      run: ab_new -> my_view
+    `).toTranslate();
+  });
+  test('can use declared parameter in nest with table', () => {
+    expect(`
+      ##! experimental.parameters
+      source: ab_new(param::number is 10) is _db_.table('aTable') extend {
+        dimension: p1 is param
+        view: my_view is {
+          group_by: p2 is param
+          nest: nested is {
+            group_by: p3 is param
+          }
+        }
+      }
+      run: ab_new -> my_view
     `).toTranslate();
   });
   test('can pass argument for param', () => {
@@ -152,6 +182,13 @@ describe('parameters', () => {
       ##! experimental.parameters
       source: ab_new(param::number) is ab
       run: ab_new(param is 1) -> { select: p is ${'param'} }
+    `).translationToFailWith("'param' is not defined");
+  });
+  test('cannot reference param in query against source', () => {
+    expect(markSource`
+      ##! experimental.parameters
+      source: ab_new(param::number) is ab
+      run: ab_new(param is 1) -> { select: ${'param'} }
     `).translationToFailWith("'param' is not defined");
   });
   test('cannot reference param in source extension', () => {
@@ -374,7 +411,6 @@ describe('parameters', () => {
       "Experimental flag 'parameters' required to enable this feature"
     );
   });
-  // TODO either detect circularity or make parameters constant only
   test('parameters cannot reference themselves', () => {
     expect(
       markSource`
@@ -478,5 +514,17 @@ describe('parameters', () => {
         source: ab_new_1(param_1 is ${'ident'}) is ab
       `
     ).translationToFailWith('Only constants allowed in parameter default values');
+  });
+  test.skip('can use param in multi-stage query', () => {
+    expect(`
+      ##! experimental.parameters
+      source: ab_new(param::number) is ab extend {
+        view: q is {
+          select: *
+        } -> {
+          group_by: x is param
+        }
+      }
+    `).toTranslate();
   });
 });

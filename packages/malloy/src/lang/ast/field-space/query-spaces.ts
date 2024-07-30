@@ -56,6 +56,8 @@ export abstract class QueryOperationSpace
     readonly astEl: MalloyElement
   ) {
     super(queryInputSpace.emptyStructDef());
+
+    // TODO I don't understand at all how QueryInputSpace gets its map?
     this.exprSpace = new QueryInputSpace(queryInputSpace, this);
     if (refineThis) this.addRefineFromFields(refineThis);
   }

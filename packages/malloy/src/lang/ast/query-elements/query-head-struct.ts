@@ -22,6 +22,7 @@
  */
 
 import {
+  InvokedStructRef,
   StructDef,
   StructRef,
   refIsStructDef,
@@ -37,8 +38,8 @@ export class QueryHeadStruct extends Source {
     super();
   }
 
-  structRef(): StructRef {
-    return this.fromRef;
+  structRef(): InvokedStructRef {
+    return {structRef: this.fromRef};
   }
 
   structDef(parameterSpace: ParameterSpace | undefined): StructDef {

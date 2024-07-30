@@ -99,11 +99,23 @@ export abstract class DynamicSpace extends StaticSpace {
   }
 
   structDef(): model.StructDef {
-    const parameters = this.fromStruct.parameters || {};
     if (this.final === undefined) {
+
+      // TODO this is kinda weird: we grab all the parameters so that we can
+      // populate the "final" structDef with parameters immediately so that views
+      // (or nested views) can see them when they are compiling and need to know
+      // the struct def of the source while it is still being defined.
+      const parameters = {};
+      for (const [name, entry] of this.entries()) {
+        if (entry instanceof SpaceParam) {
+          parameters[name] = entry.parameter();
+        }
+      }
+
       this.final = {
         ...this.fromStruct,
         fields: [],
+        parameters,
       };
       // Need to process the entities in specific order
       const fields: [string, SpaceField][] = [];
@@ -117,8 +129,6 @@ export abstract class DynamicSpace extends StaticSpace {
           turtles.push([name, spaceEntry]);
         } else if (spaceEntry instanceof SpaceField) {
           fields.push([name, spaceEntry]);
-        } else if (spaceEntry instanceof SpaceParam) {
-          parameters[name] = spaceEntry.parameter();
         }
       }
       const reorderFields = [...fields, ...joins, ...turtles];
@@ -142,9 +152,7 @@ export abstract class DynamicSpace extends StaticSpace {
           // }
         }
       }
-      if (Object.entries(parameters).length > 0) {
-        this.final.parameters = parameters;
-      }
+
       // If we have join expressions, we need to now go back and fill them in
       for (const [join, missingOn] of fixupJoins) {
         join.fixupJoinOn(this, missingOn);

@@ -23,8 +23,8 @@
 
 import {
   StructDef,
-  StructRef,
   SQLBlockSource,
+  InvokedStructRef,
 } from '../../../model/malloy_types';
 import {makeSQLBlock} from '../../../model/sql_block';
 import {NeedCompileSQL} from '../../translate-response';
@@ -54,8 +54,10 @@ export class SQLSource extends Source {
     return this.requestBlock;
   }
 
-  structRef(): StructRef {
-    return this.structDef();
+  structRef(): InvokedStructRef {
+    return {
+      structRef: this.structDef()
+    };
   }
 
   validateConnectionName(): boolean {

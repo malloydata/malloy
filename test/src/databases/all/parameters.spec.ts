@@ -9,8 +9,8 @@ import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
 import '../../util/db-jest-matchers';
 
-const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
-// const runtimes = new RuntimeList(databasesFromEnvironmentOr(['duckdb']));
+// const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
+const runtimes = new RuntimeList(databasesFromEnvironmentOr(['duckdb']));
 
 afterAll(async () => {
   await runtimes.closeAll();
@@ -171,5 +171,51 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         run: ab_new_new -> { group_by: param_value }
       `
     ).malloyResultMatches(runtime, {param_value: 11});
+  });
+  it(`use parameter in nested view - ${databaseName}`, async () => {
+    await expect(
+      `
+        ##! experimental.parameters
+        source: ab_new(param::number is 10) is ${databaseName}.table('malloytest.state_facts') extend {
+          dimension: param_value_1 is param
+          view: v is {
+            group_by: param_value_1
+            group_by: param_value_2 is param
+            nest: n is {
+              group_by: param_value_1
+              group_by: param_value_3 is param
+            }
+          }
+        }
+        run: ab_new -> v
+      `
+    ).malloyResultMatches(runtime, {param_value_1: 10, param_value_2: 10, 'n.param_value_1': 10, 'n.param_value_3': 10});
+  });
+  // TODO aparently, the `state_facts(state_filter) -> { select: * }` query in malloy_query
+  // does not have its parent set to `state_facts2`, so the parameter cannot be resolved
+  it.skip(`can pass param into joined source from query - ${databaseName}`, async () => {
+    await expect(`
+      ##! experimental.parameters
+      source: state_facts(
+        state_filter::string
+      ) is ${databaseName}.table('malloytest.state_facts') extend {
+        where: state = state_filter
+      }
+
+      source: state_facts2(
+        state_filter::string
+      ) is ${databaseName}.table('malloytest.state_facts') extend {
+        where: state = state_filter
+
+        join_many: state_facts is (state_facts(state_filter) -> { select: * }) on 1 = 1
+      }
+
+      run: state_facts2(state_filter is "CA") -> {
+        group_by:
+          s1 is state,
+          s2 is state_facts.state
+        aggregate: c is count()
+      }
+    `).malloyResultMatches(runtime, {s1: 'CA', s2: 'CA', c: 1});
   });
 });

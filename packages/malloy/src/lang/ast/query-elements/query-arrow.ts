@@ -56,17 +56,17 @@ export class QueryArrow extends QueryBase implements QueryElement {
     if (this.source instanceof Source) {
       // We create a fresh query with either the QOPDesc as the head,
       // the view as the head, or the scalar as the head (if scalar lenses is enabled)
-      const structRef = isRefOk
-        ? this.source.structRef(parameterSpace)
-        : this.source.structDef(parameterSpace);
+    const invoked = isRefOk
+      ? this.source.structRef(parameterSpace)
+      : {structRef: this.source.structDef(parameterSpace)};
       queryBase = {
         type: 'query',
-        structRef,
+        ...invoked,
         pipeline: [],
         location: this.location,
       };
-      inputStruct = refIsStructDef(structRef)
-        ? structRef
+      inputStruct = refIsStructDef(invoked.structRef)
+        ? invoked.structRef
         : this.source.structDef(parameterSpace);
       fieldSpace = new StaticSpace(inputStruct);
     } else {

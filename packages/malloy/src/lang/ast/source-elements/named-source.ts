@@ -23,12 +23,13 @@
  */
 
 import {
+  InvokedStructRef,
   isCastType,
   isSQLBlockStruct,
   isValueParameter,
+  Parameter,
   paramHasValue,
   StructDef,
-  StructRef,
 } from '../../../model/malloy_types';
 
 import {Source} from './source';
@@ -61,19 +62,18 @@ export class NamedSource extends Source {
     return this.ref instanceof ModelEntryReference ? this.ref.name : this.ref;
   }
 
-  structRef(parameterSpace: ParameterSpace | undefined): StructRef {
-    if (this.args !== undefined) {
-      return this.structDef(parameterSpace);
-    }
+  structRef(parameterSpace: ParameterSpace | undefined): InvokedStructRef {
     const modelEnt = this.modelEntry(this.ref);
-    // TODO right now we just expand the structRef if it has any parameters; but we should really
-    // evaluate arguments separately and return them here, to be included in the query;
-    if (modelEnt && (!modelEnt.exported || modelEnt.entry.type === 'struct' && modelEnt.entry.parameters)) {
-      // If we are not exporting the referenced structdef, don't
-      // use the reference
-      return this.structDef(parameterSpace);
+    // If we are not exporting the referenced structdef, don't use the reference
+    if (modelEnt && !modelEnt.exported) {
+      return {
+        structRef: this.structDef(parameterSpace)
+      };
     }
-    return this.refName;
+    return {
+      structRef: this.refName,
+      sourceArguments: this.evaluateArgumentsForRef(parameterSpace),
+    };
   }
 
   refLog(message: string, severity?: LogSeverity) {
@@ -110,6 +110,81 @@ export class NamedSource extends Source {
     return {...entry};
   }
 
+  private evaluateArgumentsForRef(
+    parameterSpace: ParameterSpace | undefined,
+  ): Record<string, Parameter> {
+    const base = this.modelStruct();
+    if (base === undefined) {
+      return {};
+    }
+
+    return this.evaluateArguments(parameterSpace, base.parameters, []);
+  }
+
+  private evaluateArguments(
+    parameterSpace: ParameterSpace | undefined,
+    parametersIn: Record<string, Parameter> | undefined,
+    parametersOut: HasParameter[] | undefined
+  ): Record<string, Parameter> {
+    const outArguments = {};
+    const passedNames = new Set();
+    for (const argument of this.args ?? []) {
+      const id =
+        argument.id ??
+        (argument.value instanceof ExprIdReference
+          ? argument.value.fieldReference
+          : undefined);
+      if (id === undefined) {
+        argument.value.log(
+          'Parameterized source arguments must be named with `parameter_name is`'
+        );
+        continue;
+      }
+      const name = id.outputName;
+      if (passedNames.has(name)) {
+        argument.log(`Cannot pass argument for \`${name}\` more than once`);
+        continue;
+      }
+      passedNames.add(name);
+      const parameter = (parametersIn ?? {})[name];
+      if (!parameter) {
+        id.log(
+          `\`${this.refName}\` has no declared parameter named \`${id.refString}\``
+        );
+      } else {
+        if (isValueParameter(parameter)) {
+          const paramSpace = parameterSpace ?? new ParameterSpace(parametersOut ?? []);
+          const pVal = argument.value.getExpression(paramSpace);
+          let value = pVal.value;
+          if (pVal.dataType !== parameter.type && isCastType(parameter.type)) {
+            value = castTo(parameter.type, pVal.value, pVal.dataType, true);
+          }
+          outArguments[name] = {
+            ...parameter,
+            value
+          };
+        } else {
+          throw new Error('UNIMPLEMENTED'); // TODO remove need for this branch?
+        }
+      }
+    }
+
+    for (const paramName in parametersIn) {
+      if (!(paramName in outArguments)) {
+        if (paramHasValue(parametersIn[paramName])) {
+          // TODO probably should not do this, and just look in the referenced source to get the default parameter values.
+          outArguments[paramName] = {...parametersIn[paramName]};
+        } else {
+          this.refLog(
+            `Argument not provided for required parameter \`${paramName}\``
+          );
+        }
+      }
+    }
+
+    return outArguments;
+  }
+
   structDef(parameterSpace: ParameterSpace | undefined): StructDef {
     return this.withParameters(parameterSpace, []);
   }
@@ -140,72 +215,19 @@ export class NamedSource extends Source {
       notFound.dialect = notFound.dialect + err;
       return notFound;
     }
-    // Clone parameters to not mutate
-    const parameters = {};
-    for (const paramName in base.parameters) {
-      parameters[paramName] = {...base.parameters[paramName]};
-    }
-
-    const outArguments = {};
-    const passedNames = new Set();
-    for (const argument of this.args ?? []) {
-      const id =
-        argument.id ??
-        (argument.value instanceof ExprIdReference
-          ? argument.value.fieldReference
-          : undefined);
-      if (id === undefined) {
-        argument.value.log(
-          'Parameterized source arguments must be named with `parameter_name is`'
-        );
-        continue;
-      }
-      const name = id.outputName;
-      if (passedNames.has(name)) {
-        argument.log(`Cannot pass argument for \`${name}\` more than once`);
-        continue;
-      }
-      passedNames.add(name);
-      const parameter = parameters[name];
-      if (!parameter) {
-        id.log(
-          `\`${this.refName}\` has no declared parameter named \`${id.refString}\``
-        );
-      } else {
-        if (isValueParameter(parameter)) {
-          const paramSpace = parameterSpace ?? new ParameterSpace(pList ?? []);
-          const pVal = argument.value.getExpression(paramSpace);
-          let value = pVal.value;
-          if (pVal.dataType !== parameter.type && isCastType(parameter.type)) {
-            value = castTo(parameter.type, pVal.value, pVal.dataType, true);
-          }
-          outArguments[name] = {
-            ...parameter,
-            value
-          };
-        } else {
-          throw new Error('UNIMPLEMENTED'); // TODO remove need for this branch?
-        }
-      }
-    }
-
-    for (const paramName in parameters) {
-      if (!(paramName in outArguments)) {
-        if (paramHasValue(parameters[paramName])) {
-          outArguments[paramName] = parameters[paramName];
-        } else {
-          this.refLog(
-            `Argument not provided for required parameter \`${paramName}\``
-          );
-        }
-      }
-    }
 
     const outParameters = {};
     for (const parameter of pList ?? []) {
       const compiled = parameter.parameter();
       outParameters[compiled.name] = compiled;
     }
+
+    const outArguments = this.evaluateArguments(
+      parameterSpace,
+      base.parameters,
+      pList
+    );
+
     const ret = {...base, parameters: outParameters, arguments: outArguments};
     this.document()?.rememberToAddModelAnnotations(ret);
     return ret;
