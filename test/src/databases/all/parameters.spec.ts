@@ -88,7 +88,11 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: state_facts_ext(param is 1) -> p
     `).malloyResultMatches(runtime, {p: 1});
   });
-  // TODO this functionality is broken, should create an issue for it
+  // TODO excepting a field outright removes it from the source, without consideration
+  //      to other fields that use that removed field in their definition; consider
+  //      changing rename/accept/except to modify a mapping layer between the underlying
+  //      source and the created source, as well as a separate way to override the definition
+  //      of a field deeply (without removing it or changing its type).
   it.skip(`can use dimension that uses field that is excepted - ${databaseName}`, async () => {
     await expect(
       `
