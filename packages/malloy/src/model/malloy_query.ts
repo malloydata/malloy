@@ -4143,26 +4143,25 @@ class QueryStruct extends QueryNode {
     };
   }
 
-  // TODO clarify naming/logic of `arguments` vs `sourceArguments` vs `resolvedArguments`
-  private resolvedArguments: Record<string, Parameter> | undefined = undefined;
+  private _arguments: Record<string, Parameter> | undefined = undefined;
   arguments(): Record<string, Parameter> {
-    if (this.resolvedArguments !== undefined) {
-      return this.resolvedArguments;
+    if (this._arguments !== undefined) {
+      return this._arguments;
     }
-    this.resolvedArguments = {};
+    this._arguments = {};
     // First, copy over all parameters, to get default values
     const params = this.fieldDef.parameters ?? {};
     for (const parameterName in params) {
-      this.resolvedArguments[parameterName] = params[parameterName];
+      this._arguments[parameterName] = params[parameterName];
     }
     // Then, copy over arguments to override default values
     const args = this.sourceArguments ?? this.fieldDef.arguments ?? {};
     for (const parameterName in args) {
       const orig = args[parameterName];
-      this.resolvedArguments[parameterName] =
+      this._arguments[parameterName] =
         this.resolveParentParameterReferences(orig);
     }
-    return this.resolvedArguments;
+    return this._arguments;
   }
 
   addFieldsFromFieldList(fields: FieldDef[]) {

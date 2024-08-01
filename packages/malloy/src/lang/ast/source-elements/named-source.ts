@@ -167,10 +167,7 @@ export class NamedSource extends Source {
 
     for (const paramName in parametersIn) {
       if (!(paramName in outArguments)) {
-        if (paramHasValue(parametersIn[paramName])) {
-          // TODO probably should not do this, and just look in the referenced source to get the default parameter values.
-          outArguments[paramName] = {...parametersIn[paramName]};
-        } else {
+        if (!paramHasValue(parametersIn[paramName])) {
           this.refLog(
             `Argument not provided for required parameter \`${paramName}\``
           );
