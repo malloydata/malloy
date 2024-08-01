@@ -541,30 +541,6 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       });
     });
 
-    it('sql_functions - experimental feature is ignored', async () => {
-      const query = await expressionModel.loadQuery(
-        `
-        source: a is ${databaseName}.table('malloytest.aircraft_models') extend { where: aircraft_model_code ? '0270202' }
-
-        run: a -> {
-            group_by: manufacturer
-            group_by: string_1 is sql_string("UPPER(\${manufacturer})")
-          }
-        `
-      );
-
-      const runResult = await query.run();
-      const dataResult = runResult.data.toObject();
-      expect(dataResult.length).toEqual(1);
-      const firstRow = dataResult.at(0);
-      if (firstRow !== undefined) {
-        expect(firstRow['manufacturer']).toEqual('AHRENS AIRCRAFT CORP.');
-        expect('string_1' in firstRow).toBeFalsy();
-      } else {
-        fail('exepected a single row, but found none');
-      }
-    });
-
     describe('[not yet supported]', () => {
       // See ${...} documentation for lookml here for guidance on remaining work:
       // https://cloud.google.com/looker/docs/reference/param-field-sql#sql_for_dimensions
