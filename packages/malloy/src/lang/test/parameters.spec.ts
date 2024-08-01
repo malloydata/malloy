@@ -610,6 +610,6 @@ describe('parameters', () => {
       ##! experimental.parameters
       source: ab_new(param::number) is ab
       source: ab_new_new(param::number) is ab_new(${'param'}) -> { select: * }
-    `).translationToFailWith("`param` is not defined");
+    `).translationToFailWith('`param` is not defined');
   });
 });

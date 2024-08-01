@@ -368,7 +368,7 @@ export class ExprFunc extends ExpressionDef {
             expr.push({type: 'source-reference'});
           } else {
             const name = new FieldName(part.name);
-            this.has({ name });
+            this.has({name});
             const result = fs.lookup([name]);
             if (result.found === undefined) {
               this.log(`Invalid interpolation: ${result.error}`);

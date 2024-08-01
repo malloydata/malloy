@@ -23,7 +23,7 @@
 
 import {
   Annotation,
-  isCastType,
+  CastType,
   QueryFieldDef,
   TypeDesc,
 } from '../../../model/malloy_types';
@@ -59,25 +59,20 @@ export class ReferenceField extends SpaceField {
       if (check.error) {
         this.fieldRef.log(check.error);
       }
-      // const path = this.fieldRef.list.map(f => f.name);
-      // this.queryFieldDef = check.found?.refType === 'parameter'
-      //   ? { type: 'parameterref', path }
-      //   : { type: 'fieldref', path };
 
+      // TODO investigate removing 'fieldref' as a type, as it obscures the
+      //      actual type of the field and is redundant with the slightly
+      //      more verbose `{ e: [{ type: 'field', path }] }`
       const path = this.fieldRef.list.map(f => f.name);
-      this.queryFieldDef = {type: 'fieldref', path};
-
-      // TODO HACK
-      if (check.found?.refType === 'parameter') {
-        const type = check.found.typeDesc().dataType;
-        if (isCastType(type)) {
-          this.queryFieldDef = {
-            type,
-            name: path[0],
-            e: [{type: 'parameter', path}],
-          };
-        }
-      }
+      const queryFieldDef: QueryFieldDef =
+        check.found?.refType === 'parameter'
+          ? {
+              type: check.found.typeDesc().dataType as CastType,
+              name: path[0],
+              e: [{type: 'parameter', path}],
+            }
+          : {type: 'fieldref', path};
+      this.queryFieldDef = queryFieldDef;
 
       const refTo = this.referenceTo;
       if (refTo instanceof SpaceField && refTo.haveFieldDef) {
@@ -88,7 +83,7 @@ export class ReferenceField extends SpaceField {
           if (origFd.annotation) {
             annotation.inherits = origFd.annotation;
           }
-          this.queryFieldDef!.annotation = annotation; // TODO why does typescript require ! here
+          this.queryFieldDef.annotation = annotation;
         }
       }
     }

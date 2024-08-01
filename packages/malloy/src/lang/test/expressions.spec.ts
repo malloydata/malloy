@@ -1073,7 +1073,9 @@ describe('unspported fields in schema', () => {
         run: a -> {
           group_by: x is sql_number("\${asdfasdf} * 2")
         }
-      `).translationToFailWith("Invalid interpolation: 'asdfasdf' is not defined");
+      `).translationToFailWith(
+        "Invalid interpolation: 'asdfasdf' is not defined"
+      );
     });
 
     test('error when using sql_ function without experiment', () => {
@@ -1081,7 +1083,9 @@ describe('unspported fields in schema', () => {
         run: a -> {
           group_by: x is sql_number("\${asdfasdf} * 2")
         }
-      `).translationToFailWith("Cannot use sql_function `sql_number`; use `sql_functions` experiment to enable this behavior");
+      `).translationToFailWith(
+        'Cannot use sql_function `sql_number`; use `sql_functions` experiment to enable this behavior'
+      );
     });
   });
 
