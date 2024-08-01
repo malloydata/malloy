@@ -88,7 +88,6 @@ describe('parameters', () => {
       source: ab_new_new is ab_new(param is 7) extend {}
     `).toTranslate();
   });
-  // TODO ensure this passes though
   test('can pass parameter to override default value with param value', () => {
     expect(`
       ##! experimental.parameters
@@ -381,7 +380,8 @@ describe('parameters', () => {
       `
     ).translationToFailWith('Cannot redefine parameter `param`');
   });
-  // TODO actually maybe this is okay!
+  // This behavior will likely change in the future; but in the meantime, this
+  // safeguards against some confusion about parameter scoping
   test('error when declaring parameter with same name as field (extended)', () => {
     expect(
       `
@@ -496,7 +496,8 @@ describe('parameters', () => {
       `
     ).translationToFailWith('`param` is not defined');
   });
-  // TODO mutually circular parameters
+  // This just looks like circular referencing--in reality, you cannot reference other
+  // parameters in parameter arguments, hence just "xxx is not defined"
   test('error when circularly referencing mutually recursive parameters in argument', () => {
     expect(
       markSource`
