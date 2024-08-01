@@ -997,7 +997,7 @@ export interface StructDef extends NamedObject, ResultStructMetadata, Filtered {
   fields: FieldDef[];
   primaryKey?: PrimaryKeyRef;
   // "parameters in" -- values that are usable internally in this source
-  arguments?: Record<string, Parameter>;
+  arguments?: Record<string, Argument>;
   // "parameters out" -- values that must be passed into this source to use it
   parameters?: Record<string, Parameter>;
   queryTimezone?: string;
