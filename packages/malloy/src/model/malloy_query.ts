@@ -94,7 +94,6 @@ import {
   TurtleDef,
   UngroupFragment,
   FunctionOrderBy,
-  isValueParameter,
 } from './malloy_types';
 
 import {Connection} from '../runtime_types';
@@ -744,27 +743,13 @@ class QueryField extends QueryNode {
     expr: ParameterFragment,
     state: GenerateState
   ): string {
-    // TODO maybe bake this into the type?
-    if (expr.path.length !== 1) {
-      throw new Error('Parameter paths must be length 1');
-    }
     const name = expr.path[0];
     const argument = context.arguments()[name];
-    if (isValueParameter(argument)) {
-      if (argument.value) {
-        return this.generateExpressionFromExpr(
-          resultSet,
-          context,
-          argument.value,
-          state
-        );
-      }
-    } else if (argument.condition) {
-      // TODO remove?
+    if (argument.value) {
       return this.generateExpressionFromExpr(
         resultSet,
         context,
-        argument.condition,
+        argument.value,
         state
       );
     }
@@ -4131,39 +4116,31 @@ class QueryStruct extends QueryNode {
   }
 
   resolveParentParameterReferences(param: Parameter): Parameter {
-    if (isValueParameter(param)) {
-      return {
-        ...param,
-        value:
-          param.value === null
-            ? null
-            : exprMap(param.value, frag => {
-                if (typeof frag === 'string') return [frag];
-                if (frag.type === 'parameter') {
-                  if (this.parent === undefined) {
-                    throw new Error(
-                      'No parent from which to retrieve parameter value'
-                    );
-                  }
-                  // TODO naming of "arguments" vs "parameters" is confusing here
-                  const resolved1 = this.parent.arguments()[frag.path[0]];
-                  const resolved2 =
-                    this.parent.resolveParentParameterReferences(resolved1);
-                  if (
-                    !isValueParameter(resolved2) ||
-                    resolved2.value === null
-                  ) {
-                    throw new Error('Invalid parameter value');
-                  } else {
-                    return resolved2.value;
-                  }
+    return {
+      ...param,
+      value:
+        param.value === null
+          ? null
+          : exprMap(param.value, frag => {
+              if (typeof frag === 'string') return [frag];
+              if (frag.type === 'parameter') {
+                if (this.parent === undefined) {
+                  throw new Error(
+                    'No parent from which to retrieve parameter value'
+                  );
                 }
-                return [frag];
-              }),
-      };
-    } else {
-      return param;
-    }
+                const resolved1 = this.parent.arguments()[frag.path[0]];
+                const resolved2 =
+                  this.parent.resolveParentParameterReferences(resolved1);
+                if (resolved2.value === null) {
+                  throw new Error('Invalid parameter value');
+                } else {
+                  return resolved2.value;
+                }
+              }
+              return [frag];
+            }),
+    };
   }
 
   // TODO clarify naming/logic of `arguments` vs `sourceArguments` vs `resolvedArguments`

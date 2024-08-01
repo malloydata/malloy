@@ -43,14 +43,12 @@ export class ConstantParameter extends HasParameter {
         value: ['XXX-type-mismatch-error-XXX'],
         type: 'error',
         name: this.name,
-        constant: true,
       };
     }
     return {
       value: cVal.value,
       type: cVal.dataType,
       name: this.name,
-      constant: true,
     };
   }
 }

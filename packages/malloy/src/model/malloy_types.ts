@@ -23,29 +23,16 @@
 
 // clang-format off
 
-interface ParamBase {
+type ConstantExpr = Expr;
+
+export interface Parameter {
+  value: ConstantExpr | null;
   name: string;
   type: AtomicFieldType;
 }
-type ConstantExpr = Expr;
-type Condition = Expr;
-interface ParamCondition extends ParamBase {
-  condition: Condition | null;
-  type: CastType;
-}
-interface ParamValue extends ParamBase {
-  value: ConstantExpr | null;
-  constant: boolean;
-}
-export type Parameter = ParamCondition | ParamValue;
-export function isValueParameter(p: Parameter): p is ParamValue {
-  return (p as ParamValue).value !== undefined;
-}
-export function isConditionParameter(p: Parameter): p is ParamCondition {
-  return (p as ParamCondition).condition !== undefined;
-}
+
 export function paramHasValue(p: Parameter): boolean {
-  return isValueParameter(p) && p.value !== null;
+  return p.value !== null;
 }
 
 export interface DocumentRange {
@@ -1017,18 +1004,6 @@ export interface StructDef extends NamedObject, ResultStructMetadata, Filtered {
   annotation?: Annotation;
   modelAnnotation?: ModelAnnotation;
 }
-
-/*
-source: foo(x::string) is ....
-// parameters: [{x}]
-
-run: foo(x is 1)
-// no parameters
-// arguments: [{x is 1}]
-
-
-run: foo -> thing
-*/
 
 export type ExpressionValueType =
   | AtomicFieldType

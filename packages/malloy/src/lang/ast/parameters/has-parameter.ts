@@ -73,14 +73,12 @@ export class HasParameter extends MalloyElement {
           value: constant.value,
           name: this.name,
           type: 'error',
-          constant: true, // TODO remove condition parameter type
         };
       }
       return {
         value: constant.value,
         name: this.name,
         type: constant.dataType,
-        constant: true,
       };
     }
     if (this.type === undefined) {
@@ -90,7 +88,6 @@ export class HasParameter extends MalloyElement {
       value: null,
       name: this.name,
       type: this.type ?? 'error',
-      constant: true,
     };
   }
 }

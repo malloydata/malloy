@@ -26,7 +26,6 @@ import {
   InvokedStructRef,
   isCastType,
   isSQLBlockStruct,
-  isValueParameter,
   Parameter,
   paramHasValue,
   StructDef,
@@ -152,21 +151,17 @@ export class NamedSource extends Source {
           `\`${this.refName}\` has no declared parameter named \`${id.refString}\``
         );
       } else {
-        if (isValueParameter(parameter)) {
-          const paramSpace =
-            parameterSpace ?? new ParameterSpace(parametersOut ?? []);
-          const pVal = argument.value.getExpression(paramSpace);
-          let value = pVal.value;
-          if (pVal.dataType !== parameter.type && isCastType(parameter.type)) {
-            value = castTo(parameter.type, pVal.value, pVal.dataType, true);
-          }
-          outArguments[name] = {
-            ...parameter,
-            value,
-          };
-        } else {
-          throw new Error('UNIMPLEMENTED'); // TODO remove need for this branch?
+        const paramSpace =
+          parameterSpace ?? new ParameterSpace(parametersOut ?? []);
+        const pVal = argument.value.getExpression(paramSpace);
+        let value = pVal.value;
+        if (pVal.dataType !== parameter.type && isCastType(parameter.type)) {
+          value = castTo(parameter.type, pVal.value, pVal.dataType, true);
         }
+        outArguments[name] = {
+          ...parameter,
+          value,
+        };
       }
     }
 
