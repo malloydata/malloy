@@ -209,8 +209,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       'n.param_value_3': 10,
     });
   });
-  // TODO aparently, the `state_facts(state_filter) -> { select: * }` query in malloy_query
-  // does not have its parent set to `state_facts2`, so the parameter cannot be resolved
   it.skip(`can pass param into joined source from query - ${databaseName}`, async () => {
     await expect(`
       ##! experimental.parameters
@@ -236,8 +234,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       }
     `).malloyResultMatches(runtime, {s1: 'CA', s2: 'CA', c: 1});
   });
-  // TODO likewise here, the source `state_facts` does not have its parent set to `state_facts_query`
-  // (even though here `isRefOk` is false when generating the query)
   it.skip(`can pass param into query definition - ${databaseName}`, async () => {
     await expect(`
       ##! experimental.parameters
