@@ -50,7 +50,7 @@ import {Limit} from '../query-properties/limit';
 import {PartitionBy} from './partition_by';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import {FieldSpace} from '../types/field-space';
+import {FieldName, FieldSpace} from '../types/field-space';
 import {compressExpr} from './utils';
 
 export class ExprFunc extends ExpressionDef {
@@ -367,10 +367,14 @@ export class ExprFunc extends ExpressionDef {
           } else if (part.name === 'TABLE') {
             expr.push({type: 'source-reference'});
           } else {
-            // TODO fs.entry is wrong -- needs to use lookup, but can't because we don't
-            // have a FieldName instance
-            const result = fs.entry(part.name);
-            if (result?.refType === 'parameter') {
+            const name = new FieldName(part.name);
+            this.has({ name });
+            const result = fs.lookup([name]);
+            if (result.found === undefined) {
+              this.log(`Invalid interpolation: ${result.error}`);
+              return errorFor('invalid interpolated field');
+            }
+            if (result.found.refType === 'parameter') {
               expr.push({type: 'parameter', path: [part.name]});
             } else {
               expr.push({type: 'field', path: [part.name]});

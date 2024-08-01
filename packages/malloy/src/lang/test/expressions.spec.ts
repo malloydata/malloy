@@ -1059,7 +1059,29 @@ describe('unspported fields in schema', () => {
 
   describe('sql functions', () => {
     test('can aggregate a sql_ function', () => {
-      expect(expr`sum(sql_number("\${a} * 2"))`).toTranslate();
+      expect(`
+        ##! experimental.sql_functions
+        run: a -> {
+          aggregate: x is sum(sql_number("\${ai} * 2"))
+        }
+      `).toTranslate();
+    });
+
+    test('error when interpolating field that does not exist', () => {
+      expect(`
+        ##! experimental.sql_functions
+        run: a -> {
+          group_by: x is sql_number("\${asdfasdf} * 2")
+        }
+      `).translationToFailWith("Invalid interpolation: 'asdfasdf' is not defined");
+    });
+
+    test('error when using sql_ function without experiment', () => {
+      expect(`
+        run: a -> {
+          group_by: x is sql_number("\${asdfasdf} * 2")
+        }
+      `).translationToFailWith("Cannot use sql_function `sql_number`; use `sql_functions` experiment to enable this behavior");
     });
   });
 
