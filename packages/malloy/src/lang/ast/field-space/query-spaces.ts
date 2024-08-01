@@ -57,7 +57,6 @@ export abstract class QueryOperationSpace
   ) {
     super(queryInputSpace.emptyStructDef());
 
-    // TODO I don't understand at all how QueryInputSpace gets its map?
     this.exprSpace = new QueryInputSpace(queryInputSpace, this);
     if (refineThis) this.addRefineFromFields(refineThis);
   }
@@ -109,7 +108,6 @@ export abstract class QueryOperationSpace
       if (wild.except.has(name)) {
         continue;
       }
-      // TODO is this right for wildcards to not include parameters?
       if (entry.refType === 'parameter') {
         continue;
       }
