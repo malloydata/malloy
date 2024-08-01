@@ -4166,17 +4166,7 @@ class QueryStruct extends QueryNode {
     }
   }
 
-  /**
-   * TEST THIS
-   * source: foo(param::string) .... {
-   *
-   *
-   *   join: bar is something(param) -> { ... }
-   * }
-   *
-   *
-   */
-
+  // TODO clarify naming/logic of `arguments` vs `sourceArguments` vs `resolvedArguments`
   private resolvedArguments: Record<string, Parameter> | undefined = undefined;
   arguments(): Record<string, Parameter> {
     if (this.resolvedArguments !== undefined) {

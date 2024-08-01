@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {InvokedStructRef, StructDef} from '../../../model/malloy_types';
+import {InvokedStructRef, Parameter, StructDef} from '../../../model/malloy_types';
 import {MalloyElement} from '../types/malloy-element';
 import {HasParameter} from '../parameters/has-parameter';
 import {ParameterSpace} from '../field-space/parameter-space';
@@ -39,23 +39,24 @@ export abstract class Source extends MalloyElement {
     };
   }
 
+  protected packParameters(pList: HasParameter[] | undefined): Record<string, Parameter> | undefined {
+    if (pList === undefined) return undefined;
+    const parameters = {};
+    for (const hasP of pList) {
+      const pVal = hasP.parameter();
+      parameters[pVal.name] = pVal;
+    }
+    return parameters;
+  }
+
   withParameters(
     parameterSpace: ParameterSpace | undefined,
     pList: HasParameter[] | undefined
   ): StructDef {
     const before = this.structDef(parameterSpace);
-    // TODO name collisions are flagged where? TODO CRS address
-    if (pList) {
-      const parameters = {...(before.parameters || {})};
-      for (const hasP of pList) {
-        const pVal = hasP.parameter();
-        parameters[pVal.name] = pVal;
-      }
-      return {
-        ...before,
-        parameters,
-      };
-    }
-    return before;
+    return {
+      ...before,
+      parameters: this.packParameters(pList),
+    };
   }
 }

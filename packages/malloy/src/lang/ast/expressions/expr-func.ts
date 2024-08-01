@@ -318,9 +318,9 @@ export class ExprFunc extends ExpressionDef {
       ].includes(func.name)
     ) {
       if (!this.inExperiment('sql_functions', true)) {
-        return errorFor(
-          `Cannot use sql_function \`${func.name}\`; use \`sql_functions\` experiment to enable this behavior`
-        );
+        const message = `Cannot use sql_function \`${func.name}\`; use \`sql_functions\` experiment to enable this behavior`;
+        this.log(message);
+        return errorFor("sql_function used without enabling");
       }
 
       const str = argExprs[0].value;
@@ -360,18 +360,25 @@ export class ExprFunc extends ExpressionDef {
           );
         }
 
-        funcCall = [
-          {
-            type: 'sql-string',
-            e: parts.map(part =>
-              part.type === 'string'
-                ? part.value
-                : part.name === 'TABLE'
-                ? {type: 'source-reference'}
-                : {type: 'field', path: [part.name]}
-            ),
-          },
-        ];
+        const expr: Fragment[] = [];
+        for (const part of parts) {
+          if (part.type === 'string') {
+            expr.push(part.value);
+          } else if (part.name === 'TABLE') {
+            expr.push({type: 'source-reference'});
+          } else {
+            // TODO fs.entry is wrong -- needs to use lookup, but can't because we don't
+            // have a FieldName instance
+            const result = fs.entry(part.name);
+            if (result?.refType === 'parameter') {
+              expr.push({ type: 'parameter', path: [part.name]});
+            } else {
+              expr.push({ type: 'field', path: [part.name]});
+            }
+          }
+        }
+
+        funcCall = [{ type: 'sql-string', e: expr }];
       }
     }
     if (type.dataType === 'any') {

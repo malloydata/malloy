@@ -26,6 +26,15 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: state_facts(param is 1) -> { group_by: param_plus_one }
     `).malloyResultMatches(runtime, {param_plus_one: 2});
   });
+  it(`number param used in sql function - ${databaseName}`, async () => {
+    await expect(`
+      ##! experimental { parameters sql_functions }
+      source: state_facts(param::number) is ${databaseName}.table('malloytest.state_facts') extend {
+        dimension: param_plus_one is sql_number("\${param} + 1")
+      }
+      run: state_facts(param is 1) -> { group_by: param_plus_one }
+    `).malloyResultMatches(runtime, {param_plus_one: 2});
+  });
   it.skip(`string param used in group_by - ${databaseName}`, async () => {
     await expect(`
       ##! experimental.parameters
@@ -208,6 +217,68 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         where: state = state_filter
 
         join_many: state_facts is (state_facts(state_filter) -> { select: * }) on 1 = 1
+      }
+
+      run: state_facts2(state_filter is "CA") -> {
+        group_by:
+          s1 is state,
+          s2 is state_facts.state
+        aggregate: c is count()
+      }
+    `).malloyResultMatches(runtime, {s1: 'CA', s2: 'CA', c: 1});
+  });
+  // TODO likewise here, the source `state_facts` does not have its parent set to `state_facts_query`
+  // (even though here `isRefOk` is false when generating the query)
+  it(`can pass param into query definition - ${databaseName}`, async () => {
+    await expect(`
+      ##! experimental.parameters
+      source: state_facts(
+        state_filter::string
+      ) is ${databaseName}.table('malloytest.state_facts') extend {
+        where: state = state_filter
+      }
+
+      source: state_facts_query(state_filter::string) is state_facts(state_filter) -> { select: * }
+
+      run: state_facts_query(state_filter is "CA") -> {
+        select: state
+      }
+    `).malloyResultMatches(runtime, {state: 'CA'});
+  });
+  it(`can use param in join on - ${databaseName}`, async () => {
+    await expect(`
+      ##! experimental.parameters
+      source: state_facts is ${databaseName}.table('malloytest.state_facts')
+
+      source: state_facts2(
+        state_filter::string
+      ) is ${databaseName}.table('malloytest.state_facts') extend {
+        where: state = state_filter
+
+        join_many: state_facts on state_facts.state = state_filter
+      }
+
+      run: state_facts2(state_filter is "CA") -> {
+        group_by:
+          s1 is state,
+          s2 is state_facts.state
+        aggregate: c is count()
+      }
+    `).malloyResultMatches(runtime, {s1: 'CA', s2: 'CA', c: 1});
+  });
+  it(`can use param in join with - ${databaseName}`, async () => {
+    await expect(`
+      ##! experimental.parameters
+      source: state_facts is ${databaseName}.table('malloytest.state_facts') extend {
+        primary_key: state
+      }
+
+      source: state_facts2(
+        state_filter::string
+      ) is ${databaseName}.table('malloytest.state_facts') extend {
+        where: state = state_filter
+
+        join_one: state_facts with state_filter
       }
 
       run: state_facts2(state_filter is "CA") -> {

@@ -33,6 +33,24 @@ describe('parameters', () => {
       source: ab_new(param::number is ${'"hello"'}) is ab
     `).translationToFailWith("Default value for parameter does not match declared type `number`");
   });
+  test('error if paramter has no type or value', () => {
+    expect(markSource`
+      ##! experimental.parameters
+      source: ab_new(param) is ab
+    `).translationToFailWith("Parameter must have default value or declared type");
+  });
+  test('error if paramter type is null', () => {
+    expect(markSource`
+      ##! experimental.parameters
+      source: ab_new(param is null) is ab
+    `).translationToFailWith("Default value cannot have type `null`");
+  });
+  test('error if paramter type is range', () => {
+    expect(markSource`
+      ##! experimental.parameters
+      source: ab_new(param is 10 to 20) is ab
+    `).translationToFailWith("A Range is not a value");
+  });
   test('no additional error if default value type is error', () => {
     expect(markSource`
       ##! experimental.parameters
@@ -50,6 +68,13 @@ describe('parameters', () => {
       ##! experimental.parameters
       source: ab_new(param::number) is ab
       source: ab_new_new(param::number) is ab_new(param) extend {}
+    `).toTranslate();
+  });
+  test('can pass parameter into source of query', () => {
+    expect(`
+      ##! experimental.parameters
+      source: ab_new(param::number) is ab
+      source: ab_new_new(param::number) is ab_new(param) -> { select: * }
     `).toTranslate();
   });
   test('can pass parameter to override default value with constant', () => {
@@ -110,6 +135,15 @@ describe('parameters', () => {
       }
     `).toTranslate();
   });
+  test('can use declared parameter in sql function', () => {
+    expect(`
+      ##! experimental { parameters sql_functions }
+      source: ab_new(param::number) is ab extend {
+        dimension: param_plus_one is sql_number("\${param} + 1")
+      }
+      run: ab_new(param is 1) -> param_plus_one
+    `).toTranslate();
+  });
   test('can use declared parameter in nest extending other', () => {
     expect(`
       ##! experimental.parameters
@@ -123,6 +157,19 @@ describe('parameters', () => {
         }
       }
       run: ab_new -> my_view
+    `).toTranslate();
+  });
+  test('can use declared parameter in source extension in view', () => {
+    expect(`
+      ##! experimental.parameters
+      source: ab_new(param::number is 10) is ab extend {
+        view: my_view is {
+          extend: {
+            dimension: p1 is param
+          }
+          group_by: p1
+        }
+      }
     `).toTranslate();
   });
   test('can use declared parameter in nest with table', () => {
@@ -250,6 +297,31 @@ describe('parameters', () => {
         where: ai = a_2
         join_many: ab_ext_1 is ab_ext_1(a_1 is a_2) -> { select: * } on 1 = 1
       }
+    `).toTranslate();
+  });
+  test.skip('can pass through parameter to view in joined query', () => {
+    expect(`
+      ##! experimental.parameters
+      source: ab_ext(param::string) is ab extend {
+        join_many: abq is ab -> { select: p is param } on 1 = 1
+      }
+    `).toTranslate();
+  });
+  test.skip('can pass through parameter to source in query in SQL source', () => {
+    expect(`
+      ##! experimental.parameters
+      source: ab_ext(param::string) is ab
+      source: sql_query(a_1::string) is duckdb.sql("""
+        SELECT * FROM (%{ ab_ext(param is a_1) -> { select: * } })
+      """)
+    `).toTranslate();
+  });
+  test.skip('can pass through parameter to view in query in SQL source', () => {
+    expect(`
+      ##! experimental.parameters
+      source: sql_query(a_1::string) is duckdb.sql("""
+        SELECT * FROM (%{ ab -> { select: p is param } })
+      """)
     `).toTranslate();
   });
   test.skip('can pass through parameter to source in query in joined SQL source', () => {

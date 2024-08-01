@@ -834,6 +834,10 @@ export function segmentHasErrors(segment: PipeSegment): boolean {
   return false;
 }
 
+export function structHasErrors(struct: StructDef): boolean {
+  return struct.fields.some(f => f.type === 'error');
+}
+
 export interface ReduceSegment extends QuerySegment {
   type: 'reduce';
 }

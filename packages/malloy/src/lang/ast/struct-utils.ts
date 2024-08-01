@@ -30,6 +30,7 @@ import {
   StructDef,
   isPartialSegment,
   segmentHasErrors,
+  structHasErrors,
 } from '../../model/malloy_types';
 
 import {ErrorFactory} from './error-factory';
@@ -40,7 +41,7 @@ export function opOutputStruct(
   inputStruct: StructDef,
   opDesc: PipeSegment
 ): StructDef {
-  const badModel = ErrorFactory.isErrorStructDef(inputStruct);
+  const badModel = ErrorFactory.isErrorStructDef(inputStruct) || structHasErrors(inputStruct);
   // We don't want to expose partial segments to the compiler
   if (isPartialSegment(opDesc)) {
     opDesc = {...opDesc, type: 'reduce'};
