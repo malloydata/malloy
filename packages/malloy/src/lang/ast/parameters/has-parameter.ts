@@ -28,7 +28,6 @@ import {MalloyElement} from '../types/malloy-element';
 
 interface HasInit {
   name: string;
-  isCondition: boolean;
   type?: string;
   default?: ConstantExpression;
 }
@@ -36,14 +35,12 @@ interface HasInit {
 export class HasParameter extends MalloyElement {
   elementType = 'hasParameter';
   readonly name: string;
-  readonly isCondition: boolean;
   readonly type?: CastType;
   readonly default?: ConstantExpression;
 
   constructor(init: HasInit) {
     super();
     this.name = init.name;
-    this.isCondition = init.isCondition;
     if (init.type && isCastType(init.type)) {
       this.type = init.type;
     }

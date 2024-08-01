@@ -368,7 +368,6 @@ export class MalloyToAST
     return this.astAt(
       new ast.HasParameter({
         name: getId(pcx.parameterNameDef()),
-        isCondition: false, // TODO crs remove?
         type,
         default: defaultValue,
       }),
