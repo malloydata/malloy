@@ -100,10 +100,8 @@ export abstract class DynamicSpace extends StaticSpace {
 
   structDef(): model.StructDef {
     if (this.final === undefined) {
-      // TODO this is kinda weird: we grab all the parameters so that we can
-      // populate the "final" structDef with parameters immediately so that views
-      // (or nested views) can see them when they are compiling and need to know
-      // the struct def of the source while it is still being defined.
+      // Grab all the parameters so that we can populate the "final" structDef
+      // with parameters immediately so that views can see them when they are translating
       const parameters = {};
       for (const [name, entry] of this.entries()) {
         if (entry instanceof SpaceParam) {
