@@ -23,6 +23,7 @@
 
 import {
   InvokedStructRef,
+  Parameter,
   StructDef,
   StructRef,
   refIsStructDef,
@@ -34,7 +35,7 @@ import {ParameterSpace} from '../field-space/parameter-space';
 
 export class QueryHeadStruct extends Source {
   elementType = 'internalOnlyQueryHead';
-  constructor(readonly fromRef: StructRef) {
+  constructor(readonly fromRef: StructRef, readonly sourceArguments: Record<string, Parameter> | undefined) {
     super();
   }
 
@@ -46,7 +47,7 @@ export class QueryHeadStruct extends Source {
     if (refIsStructDef(this.fromRef)) {
       return this.fromRef;
     }
-    const ns = new NamedSource(this.fromRef, undefined);
+    const ns = new NamedSource(this.fromRef, this.sourceArguments, undefined);
     this.has({exploreReference: ns});
     return ns.structDef(parameterSpace);
   }

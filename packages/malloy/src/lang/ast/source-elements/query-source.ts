@@ -46,10 +46,6 @@ export class QuerySource extends Source {
       ...comp.outputStruct,
       structSource: {type: 'query', query: comp.query} as StructSource,
     };
-    // TODO test this
-    if (comp.query.sourceArguments !== undefined) {
-      queryStruct.arguments = comp.query.sourceArguments;
-    }
     this.document()?.rememberToAddModelAnnotations(queryStruct);
     return {
       ...queryStruct,

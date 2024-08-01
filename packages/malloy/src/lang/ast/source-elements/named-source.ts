@@ -46,6 +46,7 @@ export class NamedSource extends Source {
 
   constructor(
     readonly ref: ModelEntryReference | string,
+    readonly sourceArguments: Record<string, Parameter> | undefined,
     readonly args: Argument[] | undefined
   ) {
     super();
@@ -125,7 +126,7 @@ export class NamedSource extends Source {
     parametersIn: Record<string, Parameter> | undefined,
     parametersOut: HasParameter[] | undefined
   ): Record<string, Parameter> {
-    const outArguments = {};
+    const outArguments = {...this.sourceArguments};
     const passedNames = new Set();
     for (const argument of this.args ?? []) {
       const id =
@@ -218,7 +219,7 @@ export class NamedSource extends Source {
     const outArguments = this.evaluateArguments(
       parameterSpace,
       base.parameters,
-      pList
+      pList,
     );
 
     const ret = {...base, parameters: outParameters, arguments: outArguments};

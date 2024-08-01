@@ -621,4 +621,26 @@ describe('parameters', () => {
       ) is ab
     `).toTranslate();
   });
+  test('source arguments from query propagate as arguments not parameters', () => {
+    expect(`
+      ##! experimental.parameters
+      source: ab_new(param::number) is ab extend {
+        dimension: param_value is param
+      }
+      query: foo is ab_new(param is 1) -> { select: param_value }
+      source: foo_ext is foo
+      run: foo_ext -> { select: param_value }
+    `).toTranslate();
+  });
+  test('source arguments carry over from previous invocation', () => {
+    expect(`
+      ##! experimental.parameters
+      source: ab_new(param::number) is ab extend {
+        dimension: param_value is param
+      }
+      source: foo is ab_new(param is 1)
+      source: foo_ext is foo
+      run: foo_ext -> { select: param_value }
+    `).toTranslate();
+  });
 });

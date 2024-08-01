@@ -294,4 +294,15 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       }
     `).malloyResultMatches(runtime, {s1: 'CA', s2: 'CA', c: 1});
   });
+  it(`source arguments in query propagate when turned into source - ${databaseName}`, async () => {
+    await expect(`
+      ##! experimental.parameters
+      source: ab_new(param::number) is ${databaseName}.table('malloytest.state_facts') extend {
+        dimension: param_value is param
+      }
+      query: foo is ab_new(param is 1) -> { select: param_value }
+      source: foo_ext is foo
+      run: foo_ext -> { select: param_value }
+    `).malloyResultMatches(runtime, {param_value: 1});
+  });
 });

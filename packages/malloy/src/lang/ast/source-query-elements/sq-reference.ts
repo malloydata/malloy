@@ -89,7 +89,7 @@ export class SQReference extends SourceQueryElement {
       const existingQuery = new QueryReference(this.ref);
       this.asSource = new QuerySource(existingQuery);
     } else if (entry.type === 'struct') {
-      this.asSource = new NamedSource(this.ref, this.args);
+      this.asSource = new NamedSource(this.ref, undefined, this.args);
     } else {
       this.sqLog(
         `Expected '${this.ref.refString}' to be of type query or source, not '${entry.type}'`
