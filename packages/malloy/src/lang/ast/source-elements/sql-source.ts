@@ -56,7 +56,7 @@ export class SQLSource extends Source {
 
   structRef(): InvokedStructRef {
     return {
-      structRef: this.structDef()
+      structRef: this.structDef(),
     };
   }
 

@@ -21,7 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ParameterSpace} from '../field-space/parameter-space';
 import {StaticSpace} from '../field-space/static-space';
 import {getFinalStruct} from '../struct-utils';
 import {QueryComp} from '../types/query-comp';
@@ -44,11 +43,8 @@ export class QueryRefine extends QueryBase implements QueryElement {
     super({base, refinement});
   }
 
-  queryComp(
-    parameterSpace: ParameterSpace | undefined,
-    isRefOk: boolean
-  ): QueryComp {
-    const q = this.base.queryComp(parameterSpace, isRefOk);
+  queryComp(isRefOk: boolean): QueryComp {
+    const q = this.base.queryComp(isRefOk);
     const inputFS = new StaticSpace(q.inputStruct);
     const resultPipe = this.refinement.refine(
       inputFS,

@@ -31,25 +31,29 @@ describe('parameters', () => {
     expect(markSource`
       ##! experimental.parameters
       source: ab_new(param::number is ${'"hello"'}) is ab
-    `).translationToFailWith("Default value for parameter does not match declared type `number`");
+    `).translationToFailWith(
+      'Default value for parameter does not match declared type `number`'
+    );
   });
   test('error if paramter has no type or value', () => {
     expect(markSource`
       ##! experimental.parameters
       source: ab_new(param) is ab
-    `).translationToFailWith("Parameter must have default value or declared type");
+    `).translationToFailWith(
+      'Parameter must have default value or declared type'
+    );
   });
   test('error if paramter type is null', () => {
     expect(markSource`
       ##! experimental.parameters
       source: ab_new(param is null) is ab
-    `).translationToFailWith("Default value cannot have type `null`");
+    `).translationToFailWith('Default value cannot have type `null`');
   });
   test('error if paramter type is range', () => {
     expect(markSource`
       ##! experimental.parameters
       source: ab_new(param is 10 to 20) is ab
-    `).translationToFailWith("A Range is not a value");
+    `).translationToFailWith('A Range is not a value');
   });
   test('no additional error if default value type is error', () => {
     expect(markSource`
@@ -70,7 +74,7 @@ describe('parameters', () => {
       source: ab_new_new(param::number) is ab_new(param) extend {}
     `).toTranslate();
   });
-  test('can pass parameter into source of query', () => {
+  test.skip('can pass parameter into source of query', () => {
     expect(`
       ##! experimental.parameters
       source: ab_new(param::number) is ab
@@ -286,7 +290,7 @@ describe('parameters', () => {
       }
     `).toTranslate();
   });
-  test('can pass through parameter to source in joined query', () => {
+  test.skip('can pass through parameter to source in joined query', () => {
     expect(`
       ##! experimental.parameters
       source: ab_ext_1(a_1::string) is ab extend {
@@ -585,7 +589,9 @@ describe('parameters', () => {
         ##! experimental.parameters
         source: ab_new_1(param_1 is ${'ident'}) is ab
       `
-    ).translationToFailWith('Only constants allowed in parameter default values');
+    ).translationToFailWith(
+      'Only constants allowed in parameter default values'
+    );
   });
   test.skip('can use param in multi-stage query', () => {
     expect(`
@@ -598,5 +604,12 @@ describe('parameters', () => {
         }
       }
     `).toTranslate();
+  });
+  test('can not pass parameter into source of query yet', () => {
+    expect(markSource`
+      ##! experimental.parameters
+      source: ab_new(param::number) is ab
+      source: ab_new_new(param::number) is ab_new(${'param'}) -> { select: * }
+    `).translationToFailWith("`param` is not defined");
   });
 });

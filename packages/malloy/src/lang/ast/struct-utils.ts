@@ -41,12 +41,13 @@ export function opOutputStruct(
   inputStruct: StructDef,
   opDesc: PipeSegment
 ): StructDef {
-  const badModel = ErrorFactory.isErrorStructDef(inputStruct) || structHasErrors(inputStruct);
+  const badModel =
+    ErrorFactory.isErrorStructDef(inputStruct) || structHasErrors(inputStruct);
   // We don't want to expose partial segments to the compiler
   if (isPartialSegment(opDesc)) {
     opDesc = {...opDesc, type: 'reduce'};
   }
-  const badOpDesc = segmentHasErrors(opDesc)
+  const badOpDesc = segmentHasErrors(opDesc);
   // Don't call into the model code with a broken model
   if (!badModel && !badOpDesc) {
     try {

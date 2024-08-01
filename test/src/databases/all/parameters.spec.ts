@@ -198,7 +198,12 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         }
         run: ab_new -> v
       `
-    ).malloyResultMatches(runtime, {param_value_1: 10, param_value_2: 10, 'n.param_value_1': 10, 'n.param_value_3': 10});
+    ).malloyResultMatches(runtime, {
+      'param_value_1': 10,
+      'param_value_2': 10,
+      'n.param_value_1': 10,
+      'n.param_value_3': 10,
+    });
   });
   // TODO aparently, the `state_facts(state_filter) -> { select: * }` query in malloy_query
   // does not have its parent set to `state_facts2`, so the parameter cannot be resolved
@@ -229,7 +234,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
   // TODO likewise here, the source `state_facts` does not have its parent set to `state_facts_query`
   // (even though here `isRefOk` is false when generating the query)
-  it(`can pass param into query definition - ${databaseName}`, async () => {
+  it.skip(`can pass param into query definition - ${databaseName}`, async () => {
     await expect(`
       ##! experimental.parameters
       source: state_facts(

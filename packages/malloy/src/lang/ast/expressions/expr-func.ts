@@ -320,7 +320,7 @@ export class ExprFunc extends ExpressionDef {
       if (!this.inExperiment('sql_functions', true)) {
         const message = `Cannot use sql_function \`${func.name}\`; use \`sql_functions\` experiment to enable this behavior`;
         this.log(message);
-        return errorFor("sql_function used without enabling");
+        return errorFor('sql_function used without enabling');
       }
 
       const str = argExprs[0].value;
@@ -371,14 +371,14 @@ export class ExprFunc extends ExpressionDef {
             // have a FieldName instance
             const result = fs.entry(part.name);
             if (result?.refType === 'parameter') {
-              expr.push({ type: 'parameter', path: [part.name]});
+              expr.push({type: 'parameter', path: [part.name]});
             } else {
-              expr.push({ type: 'field', path: [part.name]});
+              expr.push({type: 'field', path: [part.name]});
             }
           }
         }
 
-        funcCall = [{ type: 'sql-string', e: expr }];
+        funcCall = [{type: 'sql-string', e: expr}];
       }
     }
     if (type.dataType === 'any') {

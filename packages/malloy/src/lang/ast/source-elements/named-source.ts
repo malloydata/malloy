@@ -67,7 +67,7 @@ export class NamedSource extends Source {
     // If we are not exporting the referenced structdef, don't use the reference
     if (modelEnt && !modelEnt.exported) {
       return {
-        structRef: this.structDef(parameterSpace)
+        structRef: this.structDef(parameterSpace),
       };
     }
     return {
@@ -111,7 +111,7 @@ export class NamedSource extends Source {
   }
 
   private evaluateArgumentsForRef(
-    parameterSpace: ParameterSpace | undefined,
+    parameterSpace: ParameterSpace | undefined
   ): Record<string, Parameter> {
     const base = this.modelStruct();
     if (base === undefined) {
@@ -153,7 +153,8 @@ export class NamedSource extends Source {
         );
       } else {
         if (isValueParameter(parameter)) {
-          const paramSpace = parameterSpace ?? new ParameterSpace(parametersOut ?? []);
+          const paramSpace =
+            parameterSpace ?? new ParameterSpace(parametersOut ?? []);
           const pVal = argument.value.getExpression(paramSpace);
           let value = pVal.value;
           if (pVal.dataType !== parameter.type && isCastType(parameter.type)) {
@@ -161,7 +162,7 @@ export class NamedSource extends Source {
           }
           outArguments[name] = {
             ...parameter,
-            value
+            value,
           };
         } else {
           throw new Error('UNIMPLEMENTED'); // TODO remove need for this branch?

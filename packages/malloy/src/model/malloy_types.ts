@@ -821,7 +821,11 @@ export type NamedQuery = Query & NamedObject;
 export type PipeSegment = QuerySegment | IndexSegment | RawSegment;
 
 export function segmentHasErrors(segment: PipeSegment): boolean {
-  if (segment.type === 'reduce' || segment.type === 'project' || segment.type === 'partial') {
+  if (
+    segment.type === 'reduce' ||
+    segment.type === 'project' ||
+    segment.type === 'partial'
+  ) {
     if (segment.extendSource) {
       if (segment.extendSource.some(f => f.type === 'error')) {
         return true;

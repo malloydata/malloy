@@ -56,33 +56,41 @@ export class HasParameter extends MalloyElement {
   parameter(): Parameter {
     if (this.default !== undefined) {
       const constant = this.default.constantValue();
-      if (this.type && this.type !== constant.dataType && constant.dataType !== 'error') {
-        this.default.log(`Default value for parameter does not match declared type \`${this.type}\``);
+      if (
+        this.type &&
+        this.type !== constant.dataType &&
+        constant.dataType !== 'error'
+      ) {
+        this.default.log(
+          `Default value for parameter does not match declared type \`${this.type}\``
+        );
       }
       if (!isCastType(constant.dataType) && constant.dataType !== 'error') {
-        this.default.log(`Default value cannot have type \`${constant.dataType}\``);
+        this.default.log(
+          `Default value cannot have type \`${constant.dataType}\``
+        );
         return {
           value: constant.value,
           name: this.name,
           type: 'error',
           constant: true, // TODO remove condition parameter type
-        }
+        };
       }
       return {
         value: constant.value,
         name: this.name,
         type: constant.dataType,
         constant: true,
-      }
+      };
     }
     if (this.type === undefined) {
-      this.log("Parameter must have default value or declared type");
+      this.log('Parameter must have default value or declared type');
     }
     return {
       value: null,
       name: this.name,
       type: this.type ?? 'error',
-      constant: true
-    }
+      constant: true,
+    };
   }
 }

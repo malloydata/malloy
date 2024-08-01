@@ -4173,11 +4173,11 @@ class QueryStruct extends QueryNode {
       return this.resolvedArguments;
     }
     this.resolvedArguments = {};
-      // First, copy over all parameters, to get default values
-      const params = this.fieldDef.parameters ?? {};
-      for (const parameterName in params) {
-        this.resolvedArguments[parameterName] = params[parameterName];
-      }
+    // First, copy over all parameters, to get default values
+    const params = this.fieldDef.parameters ?? {};
+    for (const parameterName in params) {
+      this.resolvedArguments[parameterName] = params[parameterName];
+    }
     // Then, copy over arguments to override default values
     const args = this.sourceArguments ?? this.fieldDef.arguments ?? {};
     for (const parameterName in args) {
@@ -4653,12 +4653,19 @@ export class QueryModel {
     }
   }
 
-  getStructFromRef(structRef: StructRef, sourceArguments: Record<string, Parameter> | undefined): QueryStruct {
+  getStructFromRef(
+    structRef: StructRef,
+    sourceArguments: Record<string, Parameter> | undefined
+  ): QueryStruct {
     let structDef;
     if (typeof structRef === 'string') {
       const ret = this.getStructByName(structRef);
       if (sourceArguments !== undefined) {
-        return new QueryStruct(ret.fieldDef, sourceArguments, ret.parent ?? {model: this});
+        return new QueryStruct(
+          ret.fieldDef,
+          sourceArguments,
+          ret.parent ?? {model: this}
+        );
       }
       return ret;
     } else if (structRef.type === 'struct') {
