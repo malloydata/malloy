@@ -23,6 +23,7 @@
  */
 
 import {
+  Argument,
   InvokedStructRef,
   isCastType,
   isSQLBlockStruct,
@@ -35,7 +36,7 @@ import {Source} from './source';
 import {ErrorFactory} from '../error-factory';
 import {castTo} from '../time-utils';
 import {ModelEntryReference} from '../types/malloy-element';
-import {Argument} from '../parameters/argument';
+import {Argument as HasArgument} from '../parameters/argument';
 import {LogSeverity} from '../../parse-log';
 import {ExprIdReference} from '../expressions/expr-id-reference';
 import {ParameterSpace} from '../field-space/parameter-space';
@@ -46,8 +47,8 @@ export class NamedSource extends Source {
 
   constructor(
     readonly ref: ModelEntryReference | string,
-    readonly sourceArguments: Record<string, Parameter> | undefined,
-    readonly args: Argument[] | undefined
+    readonly sourceArguments: Record<string, Argument> | undefined,
+    readonly args: HasArgument[] | undefined
   ) {
     super();
     if (args) {

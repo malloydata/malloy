@@ -22,8 +22,8 @@
  */
 
 import {
+  Argument,
   InvokedStructRef,
-  Parameter,
   StructDef,
   StructRef,
   refIsStructDef,
@@ -35,7 +35,7 @@ import {ParameterSpace} from '../field-space/parameter-space';
 
 export class QueryHeadStruct extends Source {
   elementType = 'internalOnlyQueryHead';
-  constructor(readonly fromRef: StructRef, readonly sourceArguments: Record<string, Parameter> | undefined) {
+  constructor(readonly fromRef: StructRef, readonly sourceArguments: Record<string, Argument> | undefined) {
     super();
   }
 

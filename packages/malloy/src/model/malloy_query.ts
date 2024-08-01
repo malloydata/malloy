@@ -94,6 +94,7 @@ import {
   TurtleDef,
   UngroupFragment,
   FunctionOrderBy,
+  Argument,
 } from './malloy_types';
 
 import {Connection} from '../runtime_types';
@@ -4087,7 +4088,7 @@ class QueryStruct extends QueryNode {
 
   constructor(
     fieldDef: StructDef,
-    readonly sourceArguments: Record<string, Parameter> | undefined,
+    readonly sourceArguments: Record<string, Argument> | undefined,
     parent: ParentQueryStruct | ParentQueryModel
   ) {
     super(fieldDef);
@@ -4143,8 +4144,8 @@ class QueryStruct extends QueryNode {
     };
   }
 
-  private _arguments: Record<string, Parameter> | undefined = undefined;
-  arguments(): Record<string, Parameter> {
+  private _arguments: Record<string, Argument> | undefined = undefined;
+  arguments(): Record<string, Argument> {
     if (this._arguments !== undefined) {
       return this._arguments;
     }
@@ -4631,7 +4632,7 @@ export class QueryModel {
 
   getStructFromRef(
     structRef: StructRef,
-    sourceArguments: Record<string, Parameter> | undefined
+    sourceArguments: Record<string, Argument> | undefined
   ): QueryStruct {
     let structDef;
     if (typeof structRef === 'string') {

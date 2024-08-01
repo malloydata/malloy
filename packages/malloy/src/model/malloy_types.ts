@@ -30,6 +30,7 @@ export interface Parameter {
   name: string;
   type: AtomicFieldType;
 }
+export type Argument = Parameter;
 
 export function paramHasValue(p: Parameter): boolean {
   return p.value !== null;
@@ -770,7 +771,7 @@ export function refIsStructDef(ref: StructRef): ref is StructDef {
 
 export type InvokedStructRef = {
   structRef: StructRef;
-  sourceArguments?: Record<string, Parameter>;
+  sourceArguments?: Record<string, Argument>;
 };
 
 /** join pattern structs is a struct. */
@@ -798,7 +799,7 @@ export interface Query extends Pipeline, Filtered, HasLocation {
   type?: 'query';
   name?: string;
   structRef: StructRef;
-  sourceArguments?: Record<string, Parameter>; // TODO "Argument" type?
+  sourceArguments?: Record<string, Argument>;
   annotation?: Annotation;
   modelAnnotation?: Annotation;
 }
