@@ -612,4 +612,13 @@ describe('parameters', () => {
       source: ab_new_new(param::number) is ab_new(${'param'}) -> { select: * }
     `).translationToFailWith('`param` is not defined');
   });
+  test.skip('can add an annotation to a param', () => {
+    expect(`
+      ##! experimental.parameters
+      source: ab_new(
+        # mytag=1
+        param::number
+      ) is ab
+    `).toTranslate();
+  });
 });
