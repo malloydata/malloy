@@ -645,6 +645,35 @@ describe('rendering results', () => {
     });
   });
 
+  describe('link renderer', () => {
+    test('data volume tags works correctly', async () => {
+      const src = `
+        query: bytes_query is duckdb.sql('SELECT 1 as one') -> {
+          select:
+          # link
+          just_link is "http://123.com"
+          # link.url_template="http://123.com/"
+          link_append is "4"
+          # link.url_template="http://123.com/$$/5"
+          link_substitue is "4"
+          # link{url_template="http://123.com/$$/5", key_column=key}
+          link_with_key is 'HTML Text'
+          key is "4"
+        }
+      `;
+      const result = await (
+        await duckdb.loadModel(src).loadQueryByName('bytes_query')
+      ).run();
+      const document = new JSDOM().window.document;
+      const html = await new HTMLView(document).render(result, {
+        dataStyles: {},
+      });
+      // console.log(html.outerHTML);
+
+      expect(html).toMatchSnapshot();
+    });
+  });
+
   describe('duration renderer', () => {
     test('duration tags works correctly', async () => {
       const src = `
