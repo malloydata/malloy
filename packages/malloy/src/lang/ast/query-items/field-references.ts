@@ -147,6 +147,14 @@ export class PartitionByFieldReference extends FieldReference {
   }
 }
 
+export class ParameterFieldReference extends FieldReference {
+  elementType = 'parameterFieldReference';
+  // The invocation of the argument will typecheck this
+  typecheck() {
+    return;
+  }
+}
+
 export class CalculateFieldReference extends FieldReference {
   elementType = 'calculateFieldReference';
   typecheck(type: TypeDesc) {

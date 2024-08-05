@@ -28,6 +28,7 @@ import {QueryElement} from '../types/query-element';
 import {QuerySource} from '../source-elements/query-source';
 import {NamedSource} from '../source-elements/named-source';
 import {QueryReference} from '../query-elements/query-reference';
+import {Argument} from '../parameters/argument';
 
 /**
  * A reference to either a source or a query.
@@ -38,8 +39,14 @@ export class SQReference extends SourceQueryElement {
   elementType = 'sq-reference';
   asSource?: Source;
 
-  constructor(readonly ref: ModelEntryReference) {
+  constructor(
+    readonly ref: ModelEntryReference,
+    readonly args?: Argument[] | undefined
+  ) {
     super({ref});
+    if (args !== undefined) {
+      this.has({args});
+    }
   }
 
   getQuery(): QueryElement | undefined {
@@ -76,10 +83,13 @@ export class SQReference extends SourceQueryElement {
       return;
     }
     if (entry.type === 'query') {
+      if (this.args !== undefined) {
+        this.ref.log('Arguments cannot be passed to queries');
+      }
       const existingQuery = new QueryReference(this.ref);
       this.asSource = new QuerySource(existingQuery);
     } else if (entry.type === 'struct') {
-      this.asSource = new NamedSource(this.ref);
+      this.asSource = new NamedSource(this.ref, undefined, this.args);
     } else {
       this.sqLog(
         `Expected '${this.ref.refString}' to be of type query or source, not '${entry.type}'`

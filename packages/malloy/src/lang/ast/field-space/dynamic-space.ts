@@ -35,12 +35,14 @@ import {AbstractParameter, SpaceParam} from '../types/space-param';
 import {SourceSpec, SpaceSeed} from '../space-seed';
 import {StaticSpace} from './static-space';
 import {StructSpaceFieldBase} from './struct-space-field-base';
+import {ParameterSpace} from './parameter-space';
 
 export abstract class DynamicSpace extends StaticSpace {
   protected final: model.StructDef | undefined;
   protected source: SpaceSeed;
   completions: (() => void)[] = [];
   private complete = false;
+  private parameters: HasParameter[] = [];
   protected newTimezone?: string;
 
   constructor(extending: SourceSpec) {
@@ -61,11 +63,18 @@ export abstract class DynamicSpace extends StaticSpace {
     super.setEntry(name, value);
   }
 
-  addParameters(params: HasParameter[]): DynamicSpace {
-    for (const oneP of params) {
-      this.setEntry(oneP.name, new AbstractParameter(oneP));
+  addParameters(parameters: HasParameter[]): DynamicSpace {
+    for (const parameter of parameters) {
+      if (this.entry(parameter.name) === undefined) {
+        this.parameters.push(parameter);
+        this.setEntry(parameter.name, new AbstractParameter(parameter));
+      }
     }
     return this;
+  }
+
+  parameterSpace(): ParameterSpace {
+    return new ParameterSpace(this.parameters);
   }
 
   newEntry(name: string, logTo: MalloyElement, entry: SpaceEntry): void {
@@ -90,11 +99,20 @@ export abstract class DynamicSpace extends StaticSpace {
   }
 
   structDef(): model.StructDef {
-    const parameters = this.fromStruct.parameters || {};
     if (this.final === undefined) {
+      // Grab all the parameters so that we can populate the "final" structDef
+      // with parameters immediately so that views can see them when they are translating
+      const parameters = {};
+      for (const [name, entry] of this.entries()) {
+        if (entry instanceof SpaceParam) {
+          parameters[name] = entry.parameter();
+        }
+      }
+
       this.final = {
         ...this.fromStruct,
         fields: [],
+        parameters,
       };
       // Need to process the entities in specific order
       const fields: [string, SpaceField][] = [];
@@ -108,14 +126,13 @@ export abstract class DynamicSpace extends StaticSpace {
           turtles.push([name, spaceEntry]);
         } else if (spaceEntry instanceof SpaceField) {
           fields.push([name, spaceEntry]);
-        } else if (spaceEntry instanceof SpaceParam) {
-          parameters[name] = spaceEntry.parameter();
         }
       }
       const reorderFields = [...fields, ...joins, ...turtles];
+      const parameterSpace = this.parameterSpace();
       for (const [, field] of reorderFields) {
         if (field instanceof JoinSpaceField) {
-          const joinStruct = field.join.structDef();
+          const joinStruct = field.join.structDef(parameterSpace);
           if (!ErrorFactory.isErrorStructDef(joinStruct)) {
             this.final.fields.push(joinStruct);
             fixupJoins.push([field.join, joinStruct]);
@@ -132,9 +149,7 @@ export abstract class DynamicSpace extends StaticSpace {
           // }
         }
       }
-      if (Object.entries(parameters).length > 0) {
-        this.final.parameters = parameters;
-      }
+
       // If we have join expressions, we need to now go back and fill them in
       for (const [join, missingOn] of fixupJoins) {
         join.fixupJoinOn(this, missingOn);

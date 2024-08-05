@@ -453,6 +453,8 @@ function numeric(
     };
   }
 
+  // TODO make the error location be the operand that is not a number, rather than
+  // always the first operand
   left.log(`Non numeric('${lhs.dataType},${rhs.dataType}') value with '${op}'`);
   return errorFor('numbers required');
 }

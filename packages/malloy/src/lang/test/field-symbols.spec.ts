@@ -202,13 +202,11 @@ describe('structdef comprehension', () => {
         name: 'cReqStr',
         type: 'string',
         value: null,
-        constant: false,
       },
       cOptStr: {
         name: 'cOptStr',
         type: 'string',
         value: ['value'],
-        constant: false,
       },
     };
     const space = new StaticSpace(struct);

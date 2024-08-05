@@ -23,29 +23,17 @@
 
 // clang-format off
 
-interface ParamBase {
+type ConstantExpr = Expr;
+
+export interface Parameter {
+  value: ConstantExpr | null;
   name: string;
   type: AtomicFieldType;
 }
-type ConstantExpr = Expr;
-type Condition = Expr;
-interface ParamCondition extends ParamBase {
-  condition: Condition | null;
-  type: CastType;
-}
-interface ParamValue extends ParamBase {
-  value: ConstantExpr | null;
-  constant: boolean;
-}
-export type Parameter = ParamCondition | ParamValue;
-export function isValueParameter(p: Parameter): p is ParamValue {
-  return (p as ParamValue).value !== undefined;
-}
-export function isConditionParameter(p: Parameter): p is ParamCondition {
-  return (p as ParamCondition).condition !== undefined;
-}
+export type Argument = Parameter;
+
 export function paramHasValue(p: Parameter): boolean {
-  return isValueParameter(p) || p.condition !== null;
+  return p.value !== null;
 }
 
 export interface DocumentRange {
@@ -781,6 +769,11 @@ export function refIsStructDef(ref: StructRef): ref is StructDef {
   return typeof ref !== 'string' && ref.type === 'struct';
 }
 
+export type InvokedStructRef = {
+  structRef: StructRef;
+  sourceArguments?: Record<string, Argument>;
+};
+
 /** join pattern structs is a struct. */
 export interface JoinedStruct {
   structRef: StructRef;
@@ -806,6 +799,7 @@ export interface Query extends Pipeline, Filtered, HasLocation {
   type?: 'query';
   name?: string;
   structRef: StructRef;
+  sourceArguments?: Record<string, Argument>;
   annotation?: Annotation;
   modelAnnotation?: Annotation;
 }
@@ -813,6 +807,28 @@ export interface Query extends Pipeline, Filtered, HasLocation {
 export type NamedQuery = Query & NamedObject;
 
 export type PipeSegment = QuerySegment | IndexSegment | RawSegment;
+
+export function segmentHasErrors(segment: PipeSegment): boolean {
+  if (
+    segment.type === 'reduce' ||
+    segment.type === 'project' ||
+    segment.type === 'partial'
+  ) {
+    if (segment.extendSource) {
+      if (segment.extendSource.some(f => f.type === 'error')) {
+        return true;
+      }
+    }
+    if (segment.queryFields.some(f => f.type === 'error')) {
+      return true;
+    }
+  }
+  return false;
+}
+
+export function structHasErrors(struct: StructDef): boolean {
+  return struct.fields.some(f => f.type === 'error');
+}
 
 export interface ReduceSegment extends QuerySegment {
   type: 'reduce';
@@ -980,6 +996,9 @@ export interface StructDef extends NamedObject, ResultStructMetadata, Filtered {
   structRelationship: StructRelationship;
   fields: FieldDef[];
   primaryKey?: PrimaryKeyRef;
+  // "parameters in" -- values that are usable internally in this source
+  arguments?: Record<string, Argument>;
+  // "parameters out" -- values that must be passed into this source to use it
   parameters?: Record<string, Parameter>;
   queryTimezone?: string;
   dialect: string;

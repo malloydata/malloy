@@ -41,6 +41,7 @@ import {TimezoneStatement} from '../source-properties/timezone-statement';
 import {ObjectAnnotation} from '../types/annotation-elements';
 import {Renames} from '../source-properties/renames';
 import {MakeEntry} from '../types/space-entry';
+import {ParameterSpace} from '../field-space/parameter-space';
 
 /**
  * A Source made from a source reference and a set of refinements
@@ -53,14 +54,17 @@ export class RefinedSource extends Source {
     readonly source: Source,
     readonly refinement: SourceDesc
   ) {
-    super({source: source, refinement: refinement});
+    super({source, refinement});
   }
 
-  structDef(): StructDef {
-    return this.withParameters([]);
+  structDef(parameterSpace: ParameterSpace | undefined): StructDef {
+    return this.withParameters(parameterSpace, []);
   }
 
-  withParameters(pList: HasParameter[] | undefined): StructDef {
+  withParameters(
+    parameterSpace: ParameterSpace | undefined,
+    pList: HasParameter[] | undefined
+  ): StructDef {
     let primaryKey: PrimaryKey | undefined;
     let fieldListEdit: FieldListEdit | undefined;
     const fields: MakeEntry[] = [];
@@ -101,18 +105,22 @@ export class RefinedSource extends Source {
       }
     }
 
-    const from = structuredClone(this.source.structDef());
+    const paramSpace = pList ? new ParameterSpace(pList) : undefined;
+    const from = structuredClone(this.source.structDef(paramSpace));
+    // Note that this is explicitly not:
+    // const from = structuredClone(this.source.withParameters(parameterSpace, pList));
+    // Because the parameters are added to the resulting struct, not the base struct
     if (primaryKey) {
       from.primaryKey = primaryKey.field.name;
     }
-    const fs = RefinedSpace.filteredFrom(from, fieldListEdit);
+    const fs = RefinedSpace.filteredFrom(from, fieldListEdit, paramSpace);
     if (newTimezone) {
       fs.setTimezone(newTimezone);
     }
-    fs.pushFields(...fields);
     if (pList) {
       fs.addParameters(pList);
     }
+    fs.pushFields(...fields);
     if (primaryKey) {
       const keyDef = primaryKey.field.getField(fs);
       if (keyDef.error) {

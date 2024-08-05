@@ -117,6 +117,9 @@ export class IndexFieldSpace extends QueryOperationSpace {
       if (wild.except.has(name)) {
         continue;
       }
+      if (entry.refType === 'parameter') {
+        continue;
+      }
       const indexName = IndexFieldReference.indexOutputName([
         ...joinPath,
         name,

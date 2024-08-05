@@ -1,5 +1,6 @@
 /*
  * Copyright 2023 Google LLC
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files
@@ -140,15 +141,24 @@ sourcePropertyList
   ;
 
 sourceDefinition
-  : tags sourceNameDef isDefine sqExplore
+  : tags sourceNameDef sourceParameters? isDefine sqExplore
   ;
 
 sqExplore
   : sqExpr
   ;
 
+sourceParameters
+  : OPAREN CPAREN
+  | OPAREN sourceParameter (COMMA sourceParameter)* CPAREN
+  ;
+
+sourceParameter
+  : parameterNameDef (DOUBLECOLON malloyType)? (IS fieldExpr)?
+  ;
+
+parameterNameDef: id;
 sourceNameDef: id;
-sourceID: id;
 
 exploreProperties
   : OCURLY (exploreStatement | SEMI)* CCURLY
@@ -217,8 +227,21 @@ modEither
   | declareStatement
   ;
 
+sourceArguments
+  : OPAREN CPAREN
+  | OPAREN sourceArgument (COMMA sourceArgument)* CPAREN
+  ;
+
+argumentId
+  : id
+  ;
+
+sourceArgument
+  : (argumentId IS)? fieldExpr
+  ;
+
 sqExpr
-  : id                                        # SQID
+  : id sourceArguments?                       # SQID
   | OPAREN sqExpr CPAREN                      # SQParens
   | sqExpr PLUS segExpr                       # SQRefinedQuery
   | sqExpr ARROW segExpr                      # SQArrow

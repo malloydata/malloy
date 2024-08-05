@@ -1,5 +1,6 @@
 /*
  * Copyright 2023 Google LLC
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files
@@ -50,6 +51,7 @@ import {
   Note,
 } from '../model/malloy_types';
 import {Tag} from '../tags';
+import {ConstantExpression} from './ast/expressions/constant-expression';
 
 class ErrorNode extends ast.SourceQueryElement {
   elementType = 'parseErrorSourceQuery';
@@ -353,13 +355,42 @@ export class MalloyToAST
     return defList;
   }
 
+  getSourceParameter(pcx: parse.SourceParameterContext): ast.HasParameter {
+    const defaultCx = pcx.fieldExpr();
+    const defaultValue = defaultCx
+      ? this.astAt(
+          new ConstantExpression(this.getFieldExpr(defaultCx)),
+          defaultCx
+        )
+      : undefined;
+    const typeCx = pcx.malloyType();
+    const type = typeCx ? this.getMalloyType(typeCx) : undefined;
+    return this.astAt(
+      new ast.HasParameter({
+        name: getId(pcx.parameterNameDef()),
+        type,
+        default: defaultValue,
+      }),
+      pcx
+    );
+  }
+
+  getSourceParameters(
+    pcx: parse.SourceParametersContext | undefined
+  ): ast.HasParameter[] {
+    if (pcx === undefined) return [];
+    this.inExperiment('parameters', pcx);
+    return pcx.sourceParameter().map(param => this.getSourceParameter(param));
+  }
+
   visitSourceDefinition(pcx: parse.SourceDefinitionContext): ast.DefineSource {
     const exploreExpr = this.visit(pcx.sqExplore());
+    const params = this.getSourceParameters(pcx.sourceParameters());
     const exploreDef = new ast.DefineSource(
       getId(pcx.sourceNameDef()),
       exploreExpr instanceof ast.SourceQueryElement ? exploreExpr : undefined,
       true,
-      []
+      params
     );
     const notes = this.getNotes(pcx.tags()).concat(
       this.getIsNotes(pcx.isDefine())
@@ -1014,10 +1045,6 @@ export class MalloyToAST
     return this.astAt(top, pcx);
   }
 
-  visitSourceID(pcx: parse.SourceIDContext): ast.NamedSource {
-    return this.astAt(new ast.NamedSource(getId(pcx)), pcx);
-  }
-
   visitTopLevelQueryDefs(
     pcx: parse.TopLevelQueryDefsContext
   ): ast.DefineQueryList {
@@ -1394,16 +1421,20 @@ export class MalloyToAST
     return new ast.ExprCast(this.getFieldExpr(pcx.fieldExpr()), type);
   }
 
+  getMalloyType(pcx: parse.MalloyTypeContext) {
+    const type = pcx.text;
+    if (isCastType(type)) {
+      return type;
+    }
+    throw this.internalError(pcx, `unknown type '${type}'`);
+  }
+
   getMalloyOrSQLType(
     pcx: parse.MalloyOrSQLTypeContext
   ): CastType | {raw: string} {
     const mtcx = pcx.malloyType();
     if (mtcx) {
-      const type = mtcx.text;
-      if (isCastType(type)) {
-        return type;
-      }
-      throw this.internalError(pcx, `unknown type '${type}'`);
+      return this.getMalloyType(mtcx);
     }
     const rtcx = pcx.string();
     if (rtcx) {
@@ -1643,9 +1674,37 @@ export class MalloyToAST
     return new ast.ObjectAnnotation(allNotes);
   }
 
+  getSQArgument(pcx: parse.SourceArgumentContext): ast.Argument {
+    const id = pcx.argumentId();
+    const ref = id
+      ? this.astAt(
+          new ast.PartitionByFieldReference([
+            this.astAt(new ast.FieldName(idToStr(id.id())), id),
+          ]),
+          id
+        )
+      : undefined;
+    return this.astAt(
+      new ast.Argument({
+        id: ref,
+        value: this.getFieldExpr(pcx.fieldExpr()),
+      }),
+      pcx
+    );
+  }
+
+  getSQArguments(
+    pcx: parse.SourceArgumentsContext | undefined
+  ): ast.Argument[] | undefined {
+    if (pcx === undefined) return undefined;
+    this.inExperiment('parameters', pcx);
+    return pcx.sourceArgument().map(arg => this.getSQArgument(arg));
+  }
+
   visitSQID(pcx: parse.SQIDContext) {
     const ref = this.getModelEntryName(pcx);
-    return this.astAt(new ast.SQReference(ref), pcx.id());
+    const args = this.getSQArguments(pcx.sourceArguments());
+    return this.astAt(new ast.SQReference(ref, args), pcx.id());
   }
 
   protected getSqExpr(cx: parse.SqExprContext): ast.SourceQueryElement {

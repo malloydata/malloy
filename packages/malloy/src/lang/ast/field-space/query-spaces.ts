@@ -56,6 +56,7 @@ export abstract class QueryOperationSpace
     readonly astEl: MalloyElement
   ) {
     super(queryInputSpace.emptyStructDef());
+
     this.exprSpace = new QueryInputSpace(queryInputSpace, this);
     if (refineThis) this.addRefineFromFields(refineThis);
   }
@@ -105,6 +106,9 @@ export abstract class QueryOperationSpace
     const expandEntries: {name: string; entry: SpaceEntry}[] = [];
     for (const [name, entry] of current.entries()) {
       if (wild.except.has(name)) {
+        continue;
+      }
+      if (entry.refType === 'parameter') {
         continue;
       }
       if (this.entry(name)) {

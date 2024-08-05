@@ -73,13 +73,9 @@ export class StaticSpace implements FieldSpace {
         for (const [paramName, paramDef] of Object.entries(
           this.fromStruct.parameters
         )) {
-          if (this.memoMap[paramName]) {
-            throw new Error(
-              `In struct '${this.fromStruct.as || this.fromStruct.name}': ` +
-                ` : Field and parameter name conflict '${paramName}`
-            );
+          if (!(paramName in this.memoMap)) {
+            this.memoMap[paramName] = new DefinedParameter(paramDef);
           }
-          this.memoMap[paramName] = new DefinedParameter(paramDef);
         }
       }
     }
@@ -112,7 +108,7 @@ export class StaticSpace implements FieldSpace {
   }
 
   emptyStructDef(): StructDef {
-    return {...this.fromStruct, fields: []};
+    return {...this.fromStruct, fields: [], parameters: {}};
   }
 
   lookup(path: FieldName[]): LookupResult {

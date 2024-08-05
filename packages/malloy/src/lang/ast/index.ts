@@ -83,6 +83,7 @@ export * from './expressions/unary';
 export * from './expressions/utils';
 export * from './statements/import-statement';
 export * from './query-properties/extend';
+export * from './parameters/argument';
 export * from './parameters/has-parameter';
 export * from './query-elements/anonymous-query';
 export * from './query-elements/query-refine';

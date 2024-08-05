@@ -24,20 +24,32 @@
 import {StructDef, StructSource} from '../../../model/malloy_types';
 import {Source} from './source';
 import {QueryElement} from '../types/query-element';
+import {ParameterSpace} from '../field-space/parameter-space';
+import {HasParameter} from '../parameters/has-parameter';
 
 export class QuerySource extends Source {
   elementType = 'querySource';
   constructor(readonly query: QueryElement) {
-    super({query: query});
+    super({query});
   }
 
-  structDef(): StructDef {
+  structDef(parameterSpace: ParameterSpace | undefined): StructDef {
+    return this.withParameters(parameterSpace, undefined);
+  }
+
+  withParameters(
+    parameterSpace: ParameterSpace | undefined,
+    pList: HasParameter[] | undefined
+  ): StructDef {
     const comp = this.query.queryComp(false);
     const queryStruct = {
       ...comp.outputStruct,
       structSource: {type: 'query', query: comp.query} as StructSource,
     };
     this.document()?.rememberToAddModelAnnotations(queryStruct);
-    return queryStruct;
+    return {
+      ...queryStruct,
+      parameters: this.packParameters(pList),
+    };
   }
 }

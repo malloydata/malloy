@@ -39,29 +39,18 @@ export class DefineSource
   implements DocStatement, Noteable
 {
   elementType = 'defineSource';
-  readonly parameters?: HasParameter[];
   constructor(
     readonly name: string,
     readonly sourceExpr: SourceQueryElement | undefined,
     readonly exported: boolean,
-    params?: MalloyElement[]
+    readonly parameters?: HasParameter[] | undefined
   ) {
     super();
     if (sourceExpr) {
       this.has({sourceExpr});
     }
-    if (params) {
-      this.parameters = [];
-      for (const el of params) {
-        if (el instanceof HasParameter) {
-          this.parameters.push(el);
-        } else {
-          this.log(
-            `Unexpected element type in define statement: ${el.elementType}`
-          );
-        }
-      }
-      this.has({parameters: this.parameters});
+    if (parameters) {
+      this.has({parameters});
     }
   }
   readonly isNoteableObj = true;
@@ -76,7 +65,9 @@ export class DefineSource
       if (theSource === undefined) {
         return;
       }
-      const structDef = theSource.withParameters(this.parameters);
+      const parameters = this.deduplicatedParameters();
+      const structDef = theSource.withParameters(undefined, this.parameters);
+      this.validateParameterShadowing(parameters, structDef);
       if (ErrorFactory.isErrorStructDef(structDef)) {
         return;
       }
@@ -91,6 +82,37 @@ export class DefineSource
           : this.note;
       }
       doc.setEntry(this.name, {entry, exported: this.exported});
+    }
+  }
+
+  private deduplicatedParameters(): HasParameter[] {
+    if (this.parameters === undefined) return [];
+    const exists = {};
+    const out: HasParameter[] = [];
+    for (const parameter of this.parameters) {
+      if (parameter.name in exists) {
+        parameter.log(`Cannot redefine parameter \`${parameter.name}\``);
+      }
+      exists[parameter.name] = true;
+      out.push(parameter);
+    }
+    return out;
+  }
+
+  private validateParameterShadowing(
+    parameters: HasParameter[],
+    structDef: StructDef
+  ) {
+    for (const parameter of parameters) {
+      if (
+        structDef.fields.find(
+          field => (field.as ?? field.name) === parameter.name
+        )
+      ) {
+        parameter.log(
+          `Illegal shadowing of field \`${parameter.name}\` by parameter with the same name`
+        );
+      }
     }
   }
 }

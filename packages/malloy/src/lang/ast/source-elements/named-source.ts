@@ -1,5 +1,6 @@
 /*
  * Copyright 2023 Google LLC
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files
@@ -22,41 +23,36 @@
  */
 
 import {
+  Argument,
+  InvokedStructRef,
   isCastType,
   isSQLBlockStruct,
-  isValueParameter,
+  Parameter,
   paramHasValue,
   StructDef,
-  StructRef,
 } from '../../../model/malloy_types';
 
 import {Source} from './source';
 import {ErrorFactory} from '../error-factory';
-import {ConstantSubExpression} from '../expressions/constant-sub-expression';
 import {castTo} from '../time-utils';
-import {MalloyElement, ModelEntryReference} from '../types/malloy-element';
-
-export class IsValueBlock extends MalloyElement {
-  elementType = 'isValueBlock';
-
-  constructor(readonly isMap: Record<string, ConstantSubExpression>) {
-    super();
-    this.has(isMap);
-  }
-}
+import {ModelEntryReference} from '../types/malloy-element';
+import {Argument as HasArgument} from '../parameters/argument';
+import {LogSeverity} from '../../parse-log';
+import {ExprIdReference} from '../expressions/expr-id-reference';
+import {ParameterSpace} from '../field-space/parameter-space';
+import {HasParameter} from '../parameters/has-parameter';
 
 export class NamedSource extends Source {
   elementType = 'namedSource';
-  protected isBlock?: IsValueBlock;
 
   constructor(
     readonly ref: ModelEntryReference | string,
-    paramValues: Record<string, ConstantSubExpression> = {}
+    readonly sourceArguments: Record<string, Argument> | undefined,
+    readonly args: HasArgument[] | undefined
   ) {
     super();
-    if (paramValues && Object.keys(paramValues).length > 0) {
-      this.isBlock = new IsValueBlock(paramValues);
-      this.has({parameterValues: this.isBlock});
+    if (args) {
+      this.has({args});
     }
     if (ref instanceof ModelEntryReference) {
       this.has({ref: ref});
@@ -67,17 +63,26 @@ export class NamedSource extends Source {
     return this.ref instanceof ModelEntryReference ? this.ref.name : this.ref;
   }
 
-  structRef(): StructRef {
-    if (this.isBlock) {
-      return this.structDef();
-    }
+  structRef(parameterSpace: ParameterSpace | undefined): InvokedStructRef {
     const modelEnt = this.modelEntry(this.ref);
+    // If we are not exporting the referenced structdef, don't use the reference
     if (modelEnt && !modelEnt.exported) {
-      // If we are not exporting the referenced structdef, don't
-      // use the reference
-      return this.structDef();
+      return {
+        structRef: this.structDef(parameterSpace),
+      };
     }
-    return this.refName;
+    return {
+      structRef: this.refName,
+      sourceArguments: this.evaluateArgumentsForRef(parameterSpace),
+    };
+  }
+
+  refLog(message: string, severity?: LogSeverity) {
+    if (typeof this.ref === 'string') {
+      this.log(message, severity);
+    } else {
+      this.ref.log(message, severity);
+    }
   }
 
   modelStruct(): StructDef | undefined {
@@ -106,7 +111,83 @@ export class NamedSource extends Source {
     return {...entry};
   }
 
-  structDef(): StructDef {
+  private evaluateArgumentsForRef(
+    parameterSpace: ParameterSpace | undefined
+  ): Record<string, Parameter> {
+    const base = this.modelStruct();
+    if (base === undefined) {
+      return {};
+    }
+
+    return this.evaluateArguments(parameterSpace, base.parameters, []);
+  }
+
+  private evaluateArguments(
+    parameterSpace: ParameterSpace | undefined,
+    parametersIn: Record<string, Parameter> | undefined,
+    parametersOut: HasParameter[] | undefined
+  ): Record<string, Parameter> {
+    const outArguments = {...this.sourceArguments};
+    const passedNames = new Set();
+    for (const argument of this.args ?? []) {
+      const id =
+        argument.id ??
+        (argument.value instanceof ExprIdReference
+          ? argument.value.fieldReference
+          : undefined);
+      if (id === undefined) {
+        argument.value.log(
+          'Parameterized source arguments must be named with `parameter_name is`'
+        );
+        continue;
+      }
+      const name = id.outputName;
+      if (passedNames.has(name)) {
+        argument.log(`Cannot pass argument for \`${name}\` more than once`);
+        continue;
+      }
+      passedNames.add(name);
+      const parameter = (parametersIn ?? {})[name];
+      if (!parameter) {
+        id.log(
+          `\`${this.refName}\` has no declared parameter named \`${id.refString}\``
+        );
+      } else {
+        const paramSpace =
+          parameterSpace ?? new ParameterSpace(parametersOut ?? []);
+        const pVal = argument.value.getExpression(paramSpace);
+        let value = pVal.value;
+        if (pVal.dataType !== parameter.type && isCastType(parameter.type)) {
+          value = castTo(parameter.type, pVal.value, pVal.dataType, true);
+        }
+        outArguments[name] = {
+          ...parameter,
+          value,
+        };
+      }
+    }
+
+    for (const paramName in parametersIn) {
+      if (!(paramName in outArguments)) {
+        if (!paramHasValue(parametersIn[paramName])) {
+          this.refLog(
+            `Argument not provided for required parameter \`${paramName}\``
+          );
+        }
+      }
+    }
+
+    return outArguments;
+  }
+
+  structDef(parameterSpace: ParameterSpace | undefined): StructDef {
+    return this.withParameters(parameterSpace, []);
+  }
+
+  withParameters(
+    parameterSpace: ParameterSpace | undefined,
+    pList: HasParameter[] | undefined
+  ): StructDef {
     /*
       Can't really generate the callback list until after all the
       things before me are translated, and that kinda screws up
@@ -121,46 +202,28 @@ export class NamedSource extends Source {
       which might result in a full translation.
     */
 
-    const ret = this.modelStruct();
-    if (!ret) {
+    const base = this.modelStruct();
+    if (!base) {
       const notFound = ErrorFactory.structDef;
       const err = `${this.refName}-undefined`;
       notFound.name = notFound.name + err;
       notFound.dialect = notFound.dialect + err;
       return notFound;
     }
-    const declared = {...ret.parameters};
 
-    const makeWith = this.isBlock?.isMap || {};
-    for (const [pName, pExpr] of Object.entries(makeWith)) {
-      const decl = declared[pName];
-      // const pVal = pExpr.constantValue();
-      if (!decl) {
-        this.log(`Value given for undeclared parameter '${pName}`);
-      } else {
-        if (isValueParameter(decl)) {
-          if (decl.constant) {
-            pExpr.log(`Cannot override constant parameter ${pName}`);
-          } else {
-            const pVal = pExpr.constantValue();
-            let value = pVal.value;
-            if (pVal.dataType !== decl.type && isCastType(decl.type)) {
-              value = castTo(decl.type, pVal.value, pVal.dataType, true);
-            }
-            decl.value = value;
-          }
-        } else {
-          // TODO type checking here -- except I am still not sure what
-          // datatype half conditions have ..
-          decl.condition = pExpr.constantCondition(decl.type).value;
-        }
-      }
+    const outParameters = {};
+    for (const parameter of pList ?? []) {
+      const compiled = parameter.parameter();
+      outParameters[compiled.name] = compiled;
     }
-    for (const checkDef in ret.parameters) {
-      if (!paramHasValue(declared[checkDef])) {
-        this.log(`Value not provided for required parameter ${checkDef}`);
-      }
-    }
+
+    const outArguments = this.evaluateArguments(
+      parameterSpace,
+      base.parameters,
+      pList,
+    );
+
+    const ret = {...base, parameters: outParameters, arguments: outArguments};
     this.document()?.rememberToAddModelAnnotations(ret);
     return ret;
   }

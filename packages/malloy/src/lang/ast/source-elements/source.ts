@@ -21,35 +21,48 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {StructDef, StructRef} from '../../../model/malloy_types';
+import {
+  InvokedStructRef,
+  Parameter,
+  StructDef,
+} from '../../../model/malloy_types';
 import {MalloyElement} from '../types/malloy-element';
 import {HasParameter} from '../parameters/has-parameter';
+import {ParameterSpace} from '../field-space/parameter-space';
 
 /**
  * A "Source" is a thing which you can run queries against. The main
  * function of a source is to represent an eventual StructDef
  */
 export abstract class Source extends MalloyElement {
-  abstract structDef(): StructDef;
+  abstract structDef(parameterSpace: ParameterSpace | undefined): StructDef;
 
-  structRef(): StructRef {
-    return this.structDef();
+  structRef(parameterSpace: ParameterSpace | undefined): InvokedStructRef {
+    return {
+      structRef: this.structDef(parameterSpace),
+    };
   }
 
-  withParameters(pList: HasParameter[] | undefined): StructDef {
-    const before = this.structDef();
-    // TODO name collisions are flagged where?
-    if (pList) {
-      const parameters = {...(before.parameters || {})};
-      for (const hasP of pList) {
-        const pVal = hasP.parameter();
-        parameters[pVal.name] = pVal;
-      }
-      return {
-        ...before,
-        parameters,
-      };
+  protected packParameters(
+    pList: HasParameter[] | undefined
+  ): Record<string, Parameter> | undefined {
+    if (pList === undefined) return undefined;
+    const parameters = {};
+    for (const hasP of pList) {
+      const pVal = hasP.parameter();
+      parameters[pVal.name] = pVal;
     }
-    return before;
+    return parameters;
+  }
+
+  withParameters(
+    parameterSpace: ParameterSpace | undefined,
+    pList: HasParameter[] | undefined
+  ): StructDef {
+    const before = this.structDef(parameterSpace);
+    return {
+      ...before,
+      parameters: this.packParameters(pList),
+    };
   }
 }

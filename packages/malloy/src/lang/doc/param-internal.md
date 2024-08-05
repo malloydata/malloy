@@ -2,6 +2,9 @@
 
 Landmarks on the road to a "fully parameterized Malloy" would be.
 
+Warning: this doc is outdated; a new doc will be created soon.
+TODO: create new doc
+
 ## Phase 0
 
 1) Exploreable items can require filter definition to limit the size of a query

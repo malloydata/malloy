@@ -21,7 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Annotation, QueryFieldDef, TypeDesc} from '../../../model/malloy_types';
+import {
+  Annotation,
+  CastType,
+  QueryFieldDef,
+  TypeDesc,
+} from '../../../model/malloy_types';
 
 import {FieldReference} from '../query-items/field-references';
 import {FieldSpace} from '../types/field-space';
@@ -54,10 +59,21 @@ export class ReferenceField extends SpaceField {
       if (check.error) {
         this.fieldRef.log(check.error);
       }
-      this.queryFieldDef = {
-        type: 'fieldref',
-        path: this.fieldRef.list.map(f => f.name),
-      };
+
+      // TODO investigate removing 'fieldref' as a type, as it obscures the
+      //      actual type of the field and is redundant with the slightly
+      //      more verbose `{ e: [{ type: 'field', path }] }`
+      const path = this.fieldRef.list.map(f => f.name);
+      const queryFieldDef: QueryFieldDef =
+        check.found?.refType === 'parameter'
+          ? {
+              type: check.found.typeDesc().dataType as CastType,
+              name: path[0],
+              e: [{type: 'parameter', path}],
+            }
+          : {type: 'fieldref', path};
+      this.queryFieldDef = queryFieldDef;
+
       const refTo = this.referenceTo;
       if (refTo instanceof SpaceField && refTo.haveFieldDef) {
         const origFd = refTo.haveFieldDef;

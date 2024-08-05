@@ -23,14 +23,11 @@
 
 import {
   expressionIsAggregate,
-  isConditionParameter,
-  mergeEvalSpaces,
 } from '../../../model/malloy_types';
 import {errorFor} from '../ast-utils';
 import {ExprValue} from '../types/expr-value';
 import {FieldReference} from '../query-items/field-references';
 import {FieldSpace} from '../types/field-space';
-import {SpaceParam} from '../types/space-param';
 import {ExpressionDef} from '../types/expression-def';
 
 export class ExprIdReference extends ExpressionDef {
@@ -64,29 +61,5 @@ export class ExprIdReference extends ExpressionDef {
     }
     this.log(def.error);
     return errorFor(def.error);
-  }
-
-  apply(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {
-    const entry = this.fieldReference.getField(fs).found;
-    if (entry instanceof SpaceParam) {
-      const cParam = entry.parameter();
-      if (isConditionParameter(cParam)) {
-        const lval = expr.getExpression(fs);
-        return {
-          dataType: 'boolean',
-          expressionType: lval.expressionType,
-          // TODO not sure about the input-ness of parameters
-          evalSpace: mergeEvalSpaces(lval.evalSpace, 'input'),
-          value: [
-            {
-              type: 'apply',
-              value: lval.value,
-              to: [{type: 'parameter', path: this.fieldReference.path}],
-            },
-          ],
-        };
-      }
-    }
-    return super.apply(fs, op, expr);
   }
 }

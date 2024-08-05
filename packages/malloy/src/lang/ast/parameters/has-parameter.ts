@@ -23,27 +23,24 @@
 
 import {Parameter, CastType, isCastType} from '../../../model/malloy_types';
 
-import {ConstantSubExpression} from '../expressions/constant-sub-expression';
+import {ConstantExpression} from '../expressions/constant-expression';
 import {MalloyElement} from '../types/malloy-element';
 
 interface HasInit {
   name: string;
-  isCondition: boolean;
   type?: string;
-  default?: ConstantSubExpression;
+  default?: ConstantExpression;
 }
 
 export class HasParameter extends MalloyElement {
   elementType = 'hasParameter';
   readonly name: string;
-  readonly isCondition: boolean;
   readonly type?: CastType;
-  readonly default?: ConstantSubExpression;
+  readonly default?: ConstantExpression;
 
   constructor(init: HasInit) {
     super();
     this.name = init.name;
-    this.isCondition = init.isCondition;
     if (init.type && isCastType(init.type)) {
       this.type = init.type;
     }
@@ -54,22 +51,40 @@ export class HasParameter extends MalloyElement {
   }
 
   parameter(): Parameter {
-    const name = this.name;
-    const type = this.type || 'string';
-    if (this.isCondition) {
-      const cCond = this.default?.constantCondition(type).value || null;
+    if (this.default !== undefined) {
+      const constant = this.default.constantValue();
+      if (
+        this.type &&
+        this.type !== constant.dataType &&
+        constant.dataType !== 'error'
+      ) {
+        this.default.log(
+          `Default value for parameter does not match declared type \`${this.type}\``
+        );
+      }
+      if (!isCastType(constant.dataType) && constant.dataType !== 'error') {
+        this.default.log(
+          `Default value cannot have type \`${constant.dataType}\``
+        );
+        return {
+          value: constant.value,
+          name: this.name,
+          type: 'error',
+        };
+      }
       return {
-        type,
-        name,
-        condition: cCond,
+        value: constant.value,
+        name: this.name,
+        type: constant.dataType,
       };
     }
-    const cVal = this.default?.constantValue().value || null;
+    if (this.type === undefined) {
+      this.log('Parameter must have default value or declared type');
+    }
     return {
-      value: cVal,
-      type,
+      value: null,
       name: this.name,
-      constant: false,
+      type: this.type ?? 'error',
     };
   }
 }
