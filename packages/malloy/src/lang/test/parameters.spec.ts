@@ -61,7 +61,7 @@ describe('parameters', () => {
       source: ab_new(param::string is null) is ab
     `).toTranslate();
   });
-  test('allowed to write ::string is null', () => {
+  test('can use param in null equality expression', () => {
     expect(`
       ##! experimental.parameters
       source: ab_new(param is null::string) is ab extend {
