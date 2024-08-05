@@ -313,4 +313,16 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: state_facts(param is @2024-04-11.month) -> { group_by: date_value }
     `).malloyResultMatches(runtime, {date_value: 1});
   });
+  it(`can use parameter in null check - ${databaseName}`, async () => {
+    await expect(`
+      ##! experimental.parameters
+      source: state_facts(
+        param::string is null,
+        state_filter::string is "CA"
+      ) is ${databaseName}.table('malloytest.state_facts') extend {
+        where: param = null and state = state_filter
+      }
+      run: state_facts -> { group_by: state }
+    `).malloyResultMatches(runtime, {state: 'CA'});
+  });
 });
