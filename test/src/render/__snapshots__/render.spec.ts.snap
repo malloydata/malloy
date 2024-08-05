@@ -11848,6 +11848,93 @@ exports[`rendering results html renderer pivot table renders correctly 1`] = `
 </table>
 `;
 
+exports[`rendering results link renderer data volume tags works correctly 1`] = `
+<table
+  style="vertical-align: top; border-collapse: collapse; width: 100%;"
+>
+  <thead>
+    <tr>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        just_​link
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        link_​append
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        link_​substitue
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        link_​with_​key
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        key
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <a
+          href="http://123.com"
+          target="_blank"
+        >
+          http:/‌/‌123.com
+        </a>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <a
+          href="http://123.com/4"
+          target="_blank"
+        >
+          4
+        </a>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <a
+          href="http://123.com/4/5"
+          target="_blank"
+        >
+          4
+        </a>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <a
+          href="http://123.com/4/5"
+          target="_blank"
+        >
+          HTML Text
+        </a>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          4
+        </span>
+      </td>
+    </tr>
+  </tbody>
+</table>
+`;
+
 exports[`rendering results number renderer value format tags works correctly 1`] = `
 <table
   style="vertical-align: top; border-collapse: collapse; width: 100%;"

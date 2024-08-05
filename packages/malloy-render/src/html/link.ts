@@ -23,7 +23,7 @@
 
 import {DataColumn, Explore, Field} from '@malloydata/malloy';
 import {Renderer} from '../renderer';
-import {createErrorElement, createNullElement} from './utils';
+import {createErrorElement, createNullElement, getDynamicValue} from './utils';
 import {LinkRenderOptions, StyleDefaults} from '../data_styles';
 import {RendererOptions} from '../renderer_types';
 import {RendererFactory} from '../renderer_factory';
@@ -50,6 +50,14 @@ export class HTMLLinkRenderer implements Renderer {
       );
     }
 
+    const keyColumn = linkTag.tag('key_column')?.text();
+    let key: string = data.value || '';
+    if (keyColumn && data.parentRecord) {
+      const d = data.parentRecord.cell(keyColumn);
+      if (d && d.isString()) {
+        key = d.value
+      }
+    }
     // if a URL template is provided, replace the data were '$$$' appears.
     const urlTemplate = linkTag.text('url_template');
 
@@ -57,9 +65,9 @@ export class HTMLLinkRenderer implements Renderer {
     element.href = data.value;
     if (urlTemplate) {
       if (urlTemplate.indexOf('$$') > -1) {
-        element.href = urlTemplate.replace('$$', data.value);
+        element.href = urlTemplate.replace('$$', key);
       } else {
-        element.href = urlTemplate + data.value;
+        element.href = urlTemplate + key;
       }
     }
     element.target = '_blank';
