@@ -1,0 +1,22 @@
+source: logos is duckdb.table("data/logos.csv") extend {
+  view: link is {
+    group_by:
+      brand
+      # link
+      logo
+  }
+
+  view: link_template is {
+    group_by:
+      brand
+      # link { url_template="https://www.google.com/search?q=$$" }
+      `Google search` is brand
+  }
+
+  view: link_template_key_column is {
+    group_by:
+      brand
+      # link { url_template="https://www.google.com/search?q=$$" field="brand" }
+      `Google search` is 'Google search'
+  }
+};

@@ -50,24 +50,20 @@ export class HTMLLinkRenderer implements Renderer {
       );
     }
 
-    const keyColumn = linkTag.tag('key_column')?.text();
-    let key: string = data.value || '';
-    if (keyColumn && data.parentRecord) {
-      const d = data.parentRecord.cell(keyColumn);
-      if (d && d.isString()) {
-        key = d.value
-      }
-    }
+    // Read href component from field value or override with field tag if it exists
+    const hrefComponent =
+      getDynamicValue<string>({tag: linkTag, data}) ?? data.value;
+
     // if a URL template is provided, replace the data were '$$$' appears.
     const urlTemplate = linkTag.text('url_template');
 
     const element = this.document.createElement('a');
-    element.href = data.value;
+    element.href = hrefComponent;
     if (urlTemplate) {
       if (urlTemplate.indexOf('$$') > -1) {
-        element.href = urlTemplate.replace('$$', key);
+        element.href = urlTemplate.replace('$$', hrefComponent);
       } else {
-        element.href = urlTemplate + key;
+        element.href = urlTemplate + hrefComponent;
       }
     }
     element.target = '_blank';
