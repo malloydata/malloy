@@ -56,11 +56,28 @@ export class HasParameter extends MalloyElement {
       if (
         this.type &&
         this.type !== constant.dataType &&
+        constant.dataType !== 'null' &&
         constant.dataType !== 'error'
       ) {
         this.default.log(
           `Default value for parameter does not match declared type \`${this.type}\``
         );
+      }
+      if (constant.dataType === 'null') {
+        if (this.type) {
+          return {
+            value: constant.value,
+            name: this.name,
+            type: this.type,
+          };
+        } else {
+          this.default.log("Default value cannot have type `null` unless parameter type is also specified")
+          return {
+            value: constant.value,
+            name: this.name,
+            type: 'error',
+          };
+        }
       }
       if (!isCastType(constant.dataType) && constant.dataType !== 'error') {
         this.default.log(
