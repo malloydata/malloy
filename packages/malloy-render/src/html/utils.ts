@@ -297,6 +297,13 @@ export function getParentRecord(data: DataColumn, n = 0) {
   return record;
 }
 
+function getPathInfo(path: string): {levelsUp: number; pathSegments: string[]} {
+  const pathParts = path.split('/');
+  const levelsUp = pathParts.filter(part => part === '..').length + 1;
+  const pathSegments = pathParts.filter(part => part !== '..' && part !== '');
+  return {levelsUp, pathSegments};
+}
+
 export function getDynamicValue<T = unknown>({
   tag,
   data,
@@ -304,16 +311,16 @@ export function getDynamicValue<T = unknown>({
   tag: Tag;
   data: DataColumn;
 }): T | undefined {
-  const match = tag
-    .tag('field')
-    ?.text()
-    ?.match(/^(\^*)(.*)/);
-  if (!match) return undefined;
-
-  const [, parentScoping, fieldName] = match;
-
-  const ancestorCt = parentScoping.length;
-  const scope = getParentRecord(data, ancestorCt);
-  if ('cell' in scope) return scope.cell(fieldName)?.value as T;
-  return undefined;
+  try {
+    const path = tag.tag('field')?.text() ?? '';
+    const {levelsUp, pathSegments} = getPathInfo(path);
+    let scope = getParentRecord(data, levelsUp);
+    while (pathSegments.length > 0 && 'cell' in scope) {
+      const fieldName = pathSegments.shift()!;
+      scope = scope.cell(fieldName);
+    }
+    return scope?.value as T;
+  } catch (err) {
+    return undefined;
+  }
 }

@@ -656,7 +656,7 @@ describe('rendering results', () => {
           link_append is "4"
           # link.url_template="http://123.com/$$/5"
           link_substitue is "4"
-          # link{url_template="http://123.com/$$/5", key_column=key}
+          # link{url_template="http://123.com/$$/5" field=key}
           link_with_key is 'HTML Text'
           key is "4"
         }
@@ -668,7 +668,6 @@ describe('rendering results', () => {
       const html = await new HTMLView(document).render(result, {
         dataStyles: {},
       });
-      // console.log(html.outerHTML);
 
       expect(html).toMatchSnapshot();
     });
