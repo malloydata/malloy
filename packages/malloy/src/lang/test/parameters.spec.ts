@@ -47,7 +47,28 @@ describe('parameters', () => {
     expect(markSource`
       ##! experimental.parameters
       source: ab_new(param is null) is ab
-    `).translationToFailWith('Default value cannot have type `null`');
+    `).translationToFailWith('Default value cannot have type `null` unless parameter type is also specified');
+  });
+  test('allowed to write null::string', () => {
+    expect(`
+      ##! experimental.parameters
+      source: ab_new(param is null::string) is ab
+    `).toTranslate();
+  });
+  test('allowed to write ::string is null', () => {
+    expect(`
+      ##! experimental.parameters
+      source: ab_new(param::string is null) is ab
+    `).toTranslate();
+  });
+  test('allowed to write ::string is null', () => {
+    expect(`
+      ##! experimental.parameters
+      source: ab_new(param is null::string) is ab extend {
+        where: param = null
+      }
+        run: ab_new(param is "foo") -> { select: * } -> { select: * }
+    `).toTranslate();
   });
   test('error if paramter type is range', () => {
     expect(markSource`
