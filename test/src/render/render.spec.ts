@@ -325,7 +325,6 @@ describe('rendering results', () => {
             measure: visitcount is sum(vaccine) / count();
 
             # currency
-            # hidden
             dimension: price is apptcost
 
             view: by_name is {
