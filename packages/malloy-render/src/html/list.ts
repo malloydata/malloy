@@ -32,7 +32,11 @@ export class HTMLListRenderer extends ContainerRenderer {
   };
 
   getValueField(struct: Explore): Field {
-    return struct.allFields[0];
+    // Get the first non-hidden field as the value
+    return struct.allFields.filter(field => {
+      const {tag} = field.tagParse();
+      return !tag.has('hidden');
+    })[0];
   }
 
   getDetailField(_struct: Explore): Field | undefined {
