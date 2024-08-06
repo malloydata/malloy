@@ -33,7 +33,6 @@ import {ContainerRenderer} from './container';
 import {createErrorElement} from './utils';
 import {MainRendererFactory} from '../main_renderer_factory';
 import {HTMLListRenderer} from './list';
-import '../component/render-webcomponent';
 
 export class HTMLView {
   constructor(private document: Document) {}
@@ -41,9 +40,17 @@ export class HTMLView {
   async render(result: Result, options: RendererOptions): Promise<HTMLElement> {
     const isNextRenderer = result.modelTag.has('renderer_next');
     if (isNextRenderer) {
-      const el = this.document.createElement('malloy-render');
-      el.result = result;
-      return el;
+      const hasNextRenderer =
+        !!this.document.defaultView?.customElements.get('malloy-render');
+      if (hasNextRenderer) {
+        const el = this.document.createElement('malloy-render');
+        el.result = result;
+        return el;
+      } else {
+        console.warn(
+          'Tried to use the new Malloy renderer, but the malloy-render component was not found. Falling back to the legacy renderer.'
+        );
+      }
     }
 
     const table = result.data;
