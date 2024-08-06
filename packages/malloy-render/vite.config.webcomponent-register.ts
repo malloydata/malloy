@@ -8,9 +8,9 @@ export default defineConfig({
   },
   build: {
     lib: {
-      entry: 'src/component/render-webcomponent.ts',
-      name: 'malloy-render',
-      fileName: 'malloy-render',
+      entry: 'src/component/register-webcomponent.ts',
+      name: 'register',
+      fileName: 'register',
     },
     rollupOptions: {
       external: [],

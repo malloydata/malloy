@@ -16,6 +16,7 @@
     ".": "./dist/module/index.umd.js",
     "./style": "./dist/module/style.css",
     "./webcomponent": "./dist/webcomponent/malloy-render.umd.js",
+    "./webcomponent/register": "./dist/register/register.umd.js",
     "./webcomponent/style": "./dist/webcomponent/style.css"
   },
   "scripts": {
@@ -29,13 +30,13 @@
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "build-source": "vite build --outDir 'dist/module' --config vite.config.ts",
-    "build-webcomponent": "vite build --outDir 'dist/webcomponent' --config vite.config.webcomponent.ts",
+    "build-webcomponent": "vite build --outDir 'dist/webcomponent' --config vite.config.webcomponent.ts && vite build --outDir 'dist/register' --config vite.config.webcomponent-register.ts",
     "build-types": "tsc --build --declaration --emitDeclarationOnly"
   },
   "dependencies": {
     "@malloydata/malloy": "^0.0.161",
     "@types/luxon": "^2.4.0",
-    "component-register": "^0.8.3",
+    "component-register": "^0.8.6",
     "lodash": "^4.17.20",
     "luxon": "^2.4.0",
     "solid-element": "^1.8.0",
