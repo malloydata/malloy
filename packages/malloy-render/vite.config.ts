@@ -22,4 +22,7 @@ export default defineConfig({
       include: [/malloy/, /node_modules/],
     },
   },
+  define: {
+    'process.env': {},
+  },
 });
