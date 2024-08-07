@@ -47,7 +47,9 @@ describe('parameters', () => {
     expect(markSource`
       ##! experimental.parameters
       source: ab_new(param is null) is ab
-    `).translationToFailWith('Default value cannot have type `null` unless parameter type is also specified');
+    `).translationToFailWith(
+      'Default value cannot have type `null` unless parameter type is also specified'
+    );
   });
   test('allowed to write null::string', () => {
     expect(`
@@ -79,8 +81,10 @@ describe('parameters', () => {
   test('no additional error if default value type is error', () => {
     expect(markSource`
       ##! experimental.parameters
-      source: ab_new(param::number is 1 + "foo") is ab
-    `).translationToFailWith("Non numeric('number,string') value with '+'");
+      source: ab_new(param::number is 1 + ${'"foo"'}) is ab
+    `).translationToFailWith(
+      "The '+' operator requires a number, not a 'string'"
+    );
   });
   test('can declare parameter with inferred type', () => {
     expect(`

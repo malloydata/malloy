@@ -548,7 +548,9 @@ describe('query:', () => {
     test('function return type incorrect', () => {
       expect(`run: a -> {
           group_by: s is floor(1.2) + 'a'
-      }`).translationToFailWith("Non numeric('number,string') value with '+'");
+      }`).translationToFailWith(
+        "The '+' operator requires a number, not a 'string'"
+      );
     });
     test('can use output value in calculate', () => {
       expect(`run: a -> {
