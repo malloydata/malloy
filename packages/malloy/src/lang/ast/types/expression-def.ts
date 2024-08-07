@@ -414,15 +414,6 @@ function oneOf(op: string, ...operators: string[]): boolean {
   return operators.includes(op);
 }
 
-function allAre(oneType: FieldValueType, ...values: ExprValue[]): boolean {
-  for (const v of values) {
-    if (v.dataType !== oneType) {
-      return false;
-    }
-  }
-  return true;
-}
-
 function numeric(
   fs: FieldSpace,
   left: ExpressionDef,
@@ -444,7 +435,13 @@ function numeric(
     rhs.expressionType
   );
 
-  if (allAre('number', lhs, rhs)) {
+  if (lhs.dataType !== 'number') {
+    left.log(`The '${op}' operator requires a number, not a '${lhs.dataType}'`);
+  } else if (rhs.dataType !== 'number') {
+    right.log(
+      `The '${op}' operator requires a number, not a '${rhs.dataType}'`
+    );
+  } else {
     return {
       dataType: 'number',
       expressionType,
@@ -452,10 +449,6 @@ function numeric(
       evalSpace: mergeEvalSpaces(lhs.evalSpace, rhs.evalSpace),
     };
   }
-
-  // TODO make the error location be the operand that is not a number, rather than
-  // always the first operand
-  left.log(`Non numeric('${lhs.dataType},${rhs.dataType}') value with '${op}'`);
   return errorFor('numbers required');
 }
 
