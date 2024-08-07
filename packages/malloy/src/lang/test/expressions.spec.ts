@@ -94,6 +94,18 @@ describe('expressions', () => {
     test('addition', () => {
       expect(expr`42 + 7`).toTranslate();
     });
+    test('typecheck addition lhs', () => {
+      const wrong = expr`${'"string"'} + 1`;
+      expect(wrong).translationToFailWith(
+        "The '+' operator requires a number, not a 'string'"
+      );
+    });
+    test('typecheck addition rhs', () => {
+      const wrong = expr`1 + ${'"string"'}`;
+      expect(wrong).translationToFailWith(
+        "The '+' operator requires a number, not a 'string'"
+      );
+    });
     test('subtraction', () => {
       expect(expr`42 - 7`).toTranslate();
     });
