@@ -514,18 +514,24 @@ export class MalloyToAST
     return pcx.joinDef().map(jcx => this.visit(jcx));
   }
 
-  protected getJoinSource(
-    name: ast.ModelEntryReference,
-    ecx: parse.IsExploreContext | undefined
-  ): {joinFrom: ast.SourceQueryElement; notes: Note[]} {
+  protected getJoinFrom(
+    cx: parse.JoinFromContext
+  ): {joinAs: ast.ModelEntryReference, joinFrom: ast.SourceQueryElement; notes: Note[]} {
+    const ecx = cx.isExplore();
+    const joinAs = this.getModelEntryName(cx.joinNameDef());
     if (ecx) {
-      const joinSrc = this.getSqExpr(ecx.sqExpr());
+      const joinFrom = this.getSqExpr(ecx.sqExpr());
       const notes = this.getNotes(ecx._before_is).concat(
         this.getNotes(ecx._after_is)
       );
-      return {joinFrom: joinSrc, notes};
+      return {joinFrom, notes, joinAs};
     }
-    return {joinFrom: new ast.SQReference(name), notes: []};
+    const acx = cx.sourceArguments();
+    if (acx) {
+      const joinFrom = this.astAt(new ast.SQReference(joinAs, this.getSQArguments(acx)), cx);
+      return {joinFrom, notes: [], joinAs};
+    }
+    return {joinAs, joinFrom: new ast.SQReference(joinAs), notes: []};
   }
 
   visitQueryJoinStatement(
@@ -540,8 +546,7 @@ export class MalloyToAST
   }
 
   visitJoinOn(pcx: parse.JoinOnContext): ast.Join {
-    const joinAs = this.getModelEntryName(pcx.joinNameDef());
-    const {joinFrom, notes} = this.getJoinSource(joinAs, pcx.isExplore());
+    const {joinAs, joinFrom, notes} = this.getJoinFrom(pcx.joinFrom());
     const join = new ast.ExpressionJoin(joinAs, joinFrom);
     const onCx = pcx.joinExpression();
     const mop = pcx.matrixOperation()?.text.toLocaleLowerCase() || 'left';
@@ -558,8 +563,7 @@ export class MalloyToAST
   }
 
   visitJoinWith(pcx: parse.JoinWithContext): ast.Join {
-    const joinAs = this.getModelEntryName(pcx.joinNameDef());
-    const {joinFrom, notes} = this.getJoinSource(joinAs, pcx.isExplore());
+    const {joinAs, joinFrom, notes} = this.getJoinFrom(pcx.joinFrom());
     const joinOn = this.getFieldExpr(pcx.fieldExpr());
     const join = new ast.KeyJoin(joinAs, joinFrom, joinOn);
     join.extendNote({notes: this.getNotes(pcx).concat(notes)});

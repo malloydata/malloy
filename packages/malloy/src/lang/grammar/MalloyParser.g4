@@ -282,9 +282,15 @@ isExplore
 
 matrixOperation : (LEFT | RIGHT | FULL| INNER);
 
+joinFrom
+  : joinNameDef
+  | joinNameDef sourceArguments
+  | joinNameDef isExplore
+  ;
+
 joinDef
-  : ANNOTATION* joinNameDef isExplore? matrixOperation? WITH fieldExpr        # joinWith
-  | ANNOTATION* joinNameDef isExplore? (matrixOperation? ON joinExpression)?  # joinOn
+  : ANNOTATION* joinFrom matrixOperation? WITH fieldExpr        # joinWith
+  | ANNOTATION* joinFrom (matrixOperation? ON joinExpression)?  # joinOn
   ;
 
 joinExpression: fieldExpr;
