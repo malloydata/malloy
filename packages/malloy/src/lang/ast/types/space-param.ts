@@ -32,14 +32,17 @@ export abstract class SpaceParam extends SpaceEntry {
 }
 
 export class AbstractParameter extends SpaceParam {
-  constructor(readonly astParam: HasParameter) {
+  constructor(
+    readonly astParam: HasParameter,
+    readonly inheritFromParameters: Record<string, Parameter> | undefined
+  ) {
     super();
   }
 
   _parameter: Parameter | undefined = undefined;
   parameter(): Parameter {
     if (this._parameter !== undefined) return this._parameter;
-    this._parameter = this.astParam.parameter();
+    this._parameter = this.astParam.parameter(this.inheritFromParameters);
     return this._parameter;
   }
 

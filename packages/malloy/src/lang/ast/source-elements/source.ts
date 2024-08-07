@@ -49,7 +49,7 @@ export abstract class Source extends MalloyElement {
     if (pList === undefined) return undefined;
     const parameters = {};
     for (const hasP of pList) {
-      const pVal = hasP.parameter();
+      const pVal = hasP.parameter(undefined);
       parameters[pVal.name] = pVal;
     }
     return parameters;

@@ -21,9 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  expressionIsAggregate,
-} from '../../../model/malloy_types';
+import {expressionIsAggregate} from '../../../model/malloy_types';
 import {errorFor} from '../ast-utils';
 import {ExprValue} from '../types/expr-value';
 import {FieldReference} from '../query-items/field-references';

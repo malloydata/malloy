@@ -40,14 +40,16 @@ describe('parameters', () => {
       ##! experimental.parameters
       source: ab_new(param) is ab
     `).translationToFailWith(
-      'Parameter must have default value or declared type'
+      'Parameter must have default value or declared type, or must be able to inherit from extended source parameters'
     );
   });
   test('error if paramter type is null', () => {
     expect(markSource`
       ##! experimental.parameters
       source: ab_new(param is null) is ab
-    `).translationToFailWith('Default value cannot have type `null` unless parameter type is also specified');
+    `).translationToFailWith(
+      'Default value cannot have type `null` unless parameter type is also specified'
+    );
   });
   test('allowed to write null::string', () => {
     expect(`
@@ -93,6 +95,13 @@ describe('parameters', () => {
       ##! experimental.parameters
       source: ab_new(param::number) is ab
       source: ab_new_new(param::number) is ab_new(param) extend {}
+    `).toTranslate();
+  });
+  test('can inherit parameter from extended base source', () => {
+    expect(`
+      ##! experimental.parameters
+      source: ab_new(param::number) is ab
+      source: ab_new_new(param) is ab_new(param) extend {}
     `).toTranslate();
   });
   test.skip('can pass parameter into source of query', () => {
@@ -415,17 +424,6 @@ describe('parameters', () => {
       'No matching overload for function upper(number)',
       'Illegal shadowing of field `ai` by parameter with the same name'
     );
-  });
-  test('can shadow field that is excepted', () => {
-    expect(
-      `
-        ##! experimental.parameters
-        source: ab_new(ai::string) is ab extend {
-          except: ai
-          dimension: foo is upper(ai)
-        }
-      `
-    ).toTranslate();
   });
   test('error when declaring parameter with same name as field (not extended)', () => {
     expect(

@@ -134,22 +134,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       state_copy: 'AK',
     });
   });
-  it(`can shadow field that is excepted - ${databaseName}`, async () => {
-    await expect(
-      `
-        ##! experimental.parameters
-        source: state_facts is ${databaseName}.table('malloytest.state_facts')
-        source: state_facts_hardcode_state(state::string) is state_facts extend {
-          except: state
-          dimension: hardcoded_state is state
-        }
-
-        run: state_facts_hardcode_state(state is 'NOT A STATE') -> {
-          group_by: hardcoded_state
-        }
-      `
-    ).malloyResultMatches(runtime, {hardcoded_state: 'NOT A STATE'});
-  });
   it(`default value propagates - ${databaseName}`, async () => {
     await expect(
       `
@@ -324,5 +308,17 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       }
       run: state_facts -> { group_by: state }
     `).malloyResultMatches(runtime, {state: 'CA'});
+  });
+  it(`can inherit parameter default value - ${databaseName}`, async () => {
+    await expect(`
+      ##! experimental.parameters
+      source: state_facts(
+        state_filter::string is "CA"
+      ) is ${databaseName}.table('malloytest.state_facts') extend {
+        where: state = state_filter
+      }
+      source: state_facts_ext(state_filter) is state_facts(state_filter)
+      run: state_facts_ext -> { group_by: state; aggregate: c is count() }
+    `).malloyResultMatches(runtime, {state: 'CA', c: 1});
   });
 });

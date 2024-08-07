@@ -45,12 +45,10 @@ export class RefinedSpace extends DynamicSpace {
       const oldMap = edited.entries();
       for (const name of names) {
         const existing = oldMap.find(([symb]) => symb === name.refString);
-        if (existing === undefined) {
-          if (parameters?.entry(name.refString)) {
-            name.log(`Illegal \`${choose.edit}:\` of parameter`);
-          } else {
-            name.log(`\`${name.refString}\` is not defined`);
-          }
+        if (parameters?.entry(name.refString)) {
+          name.log(`Illegal \`${choose.edit}:\` of parameter`);
+        } else if (existing === undefined) {
+          name.log(`\`${name.refString}\` is not defined`);
         }
       }
       edited.dropEntries();
