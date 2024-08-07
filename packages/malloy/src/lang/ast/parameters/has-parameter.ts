@@ -50,7 +50,9 @@ export class HasParameter extends MalloyElement {
     }
   }
 
-  parameter(): Parameter {
+  parameter(
+    inheritFromParameters: Record<string, Parameter> | undefined
+  ): Parameter {
     if (this.default !== undefined) {
       const constant = this.default.constantValue();
       if (
@@ -71,7 +73,9 @@ export class HasParameter extends MalloyElement {
             type: this.type,
           };
         } else {
-          this.default.log("Default value cannot have type `null` unless parameter type is also specified")
+          this.default.log(
+            'Default value cannot have type `null` unless parameter type is also specified'
+          );
           return {
             value: constant.value,
             name: this.name,
@@ -96,7 +100,15 @@ export class HasParameter extends MalloyElement {
       };
     }
     if (this.type === undefined) {
-      this.log('Parameter must have default value or declared type');
+      if (inheritFromParameters !== undefined) {
+        const inherited = inheritFromParameters[this.name];
+        if (inherited !== undefined) {
+          return {...inherited};
+        }
+      }
+      this.log(
+        'Parameter must have default value or declared type, or must be able to inherit from extended source parameters'
+      );
     }
     return {
       value: null,

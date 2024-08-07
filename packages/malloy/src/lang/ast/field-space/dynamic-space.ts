@@ -42,7 +42,7 @@ export abstract class DynamicSpace extends StaticSpace {
   protected source: SpaceSeed;
   completions: (() => void)[] = [];
   private complete = false;
-  private parameters: HasParameter[] = [];
+  private _parameterSpace: ParameterSpace | undefined = undefined;
   protected newTimezone?: string;
 
   constructor(extending: SourceSpec) {
@@ -63,18 +63,27 @@ export abstract class DynamicSpace extends StaticSpace {
     super.setEntry(name, value);
   }
 
-  addParameters(parameters: HasParameter[]): DynamicSpace {
+  addParameters(
+    parameters: HasParameter[],
+    inheritFromParameters: Record<string, model.Parameter> | undefined
+  ): DynamicSpace {
     for (const parameter of parameters) {
       if (this.entry(parameter.name) === undefined) {
-        this.parameters.push(parameter);
-        this.setEntry(parameter.name, new AbstractParameter(parameter));
+        this.setEntry(
+          parameter.name,
+          new AbstractParameter(parameter, inheritFromParameters)
+        );
       }
     }
+    this._parameterSpace = new ParameterSpace(
+      parameters,
+      inheritFromParameters
+    );
     return this;
   }
 
   parameterSpace(): ParameterSpace {
-    return new ParameterSpace(this.parameters);
+    return this._parameterSpace ?? new ParameterSpace([], undefined);
   }
 
   newEntry(name: string, logTo: MalloyElement, entry: SpaceEntry): void {

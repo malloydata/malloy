@@ -154,7 +154,8 @@ export class NamedSource extends Source {
         );
       } else {
         const paramSpace =
-          parameterSpace ?? new ParameterSpace(parametersOut ?? []);
+          parameterSpace ??
+          new ParameterSpace(parametersOut ?? [], parametersIn);
         const pVal = argument.value.getExpression(paramSpace);
         let value = pVal.value;
         if (pVal.dataType !== parameter.type && isCastType(parameter.type)) {
@@ -213,14 +214,14 @@ export class NamedSource extends Source {
 
     const outParameters = {};
     for (const parameter of pList ?? []) {
-      const compiled = parameter.parameter();
+      const compiled = parameter.parameter(base.parameters);
       outParameters[compiled.name] = compiled;
     }
 
     const outArguments = this.evaluateArguments(
       parameterSpace,
       base.parameters,
-      pList,
+      pList
     );
 
     const ret = {...base, parameters: outParameters, arguments: outArguments};

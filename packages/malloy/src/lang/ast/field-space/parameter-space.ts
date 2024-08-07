@@ -6,7 +6,7 @@
  */
 
 import {Dialect} from '../../../dialect';
-import {StructDef} from '../../../model';
+import {Parameter, StructDef} from '../../../model';
 import {HasParameter} from '../parameters/has-parameter';
 import {FieldName, FieldSpace, QueryFieldSpace} from '../types/field-space';
 import {LookupResult} from '../types/lookup-result';
@@ -17,10 +17,16 @@ export class ParameterSpace implements FieldSpace {
   readonly type = 'fieldSpace';
 
   private readonly _map: Record<string, SpaceEntry>;
-  constructor(parameters: HasParameter[]) {
+  constructor(
+    parameters: HasParameter[],
+    readonly inheritFromParameters: Record<string, Parameter> | undefined
+  ) {
     this._map = {};
     for (const parameter of parameters) {
-      this._map[parameter.name] = new AbstractParameter(parameter);
+      this._map[parameter.name] = new AbstractParameter(
+        parameter,
+        inheritFromParameters
+      );
     }
   }
 
