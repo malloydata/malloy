@@ -56,9 +56,18 @@ export function getTableLayout(metadata: RenderResultMetadata): TableLayout {
     if (hasAny(tag, 'bar', 'bar_chart') && field.isExploreField()) {
       layoutEntry.width = fieldMeta.vegaChartProps!.totalWidth;
       layoutEntry.height = fieldMeta.vegaChartProps!.totalHeight;
+    }
+    // TODO: figure out better width / height detection?
+    else if (hasAny(tag, 'list', 'list_detail') && field.isExploreField()) {
+      layoutEntry.width = 320;
     } else if (!field.isExplore() && field.isAtomicField()) {
       layoutEntry.height = ROW_HEIGHT;
     }
+
+    const overrideWidth = tag.numeric('width');
+    const overrideHeight = tag.numeric('height');
+    if (overrideWidth) layoutEntry.width = overrideWidth;
+    if (overrideHeight) layoutEntry.height = overrideHeight;
 
     layout[key] = layoutEntry;
   }

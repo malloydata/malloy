@@ -68,6 +68,7 @@ export function shouldRenderAs(f: Field | Explore, tagOverride?: Tag) {
     if (tag.has('link')) return 'link';
     return 'cell';
   }
+  if (hasAny(tag, 'list', 'list_detail')) return 'list';
   if (hasAny(tag, 'bar_chart')) return 'chart';
   else return 'table';
 }
