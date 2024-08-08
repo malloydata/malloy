@@ -266,7 +266,7 @@ class DocumentSymbolWalker implements MalloyParserListener {
   handleJoinDef(pcx: parser.JoinWithContext | parser.JoinOnContext) {
     const symbol = {
       range: this.translator.rangeFromContext(pcx),
-      name: pcx.joinNameDef().id().text,
+      name: pcx.joinFrom().joinNameDef().id().text,
       type: 'join',
       children: [],
     };

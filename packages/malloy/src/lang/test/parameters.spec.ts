@@ -294,7 +294,27 @@ describe('parameters', () => {
       run: ab_new(param is ${'ai'}) -> { select: * }
     `).translationToFailWith('`ai` is not defined');
   });
-  test('can pass through parameter to joined source', () => {
+  test('can pass through parameter to joined source (shorthand)', () => {
+    expect(`
+      ##! experimental.parameters
+      source: ab_ext_1(a_1::string) is ab extend {
+        where: ai = a_1
+      }
+
+      source: ab_ext_2(a_2::string) is ab extend {
+        where: ai = a_2
+        join_many: ab_ext_1(a_1 is a_2) on 1 = 1
+      }
+
+      run: ab_ext_2(a_2 is "CA") -> {
+        group_by:
+          a1 is ai,
+          a2 is ab_ext_1.ai
+        aggregate: c is count()
+      }
+    `).toTranslate();
+  });
+  test('can pass through parameter to joined source (longhand)', () => {
     expect(`
       ##! experimental.parameters
       source: ab_ext_1(a_1::string) is ab extend {
