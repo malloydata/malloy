@@ -63,8 +63,11 @@ export function clamp(s: number, e: number, v: number) {
 }
 
 export function shouldRenderAs(f: Field | Explore, tagOverride?: Tag) {
-  if (!f.isExplore() && f.isAtomicField()) return 'cell';
   const tag = tagOverride ?? f.tagParse().tag;
+  if (!f.isExplore() && f.isAtomicField()) {
+    if (tag.has('link')) return 'link';
+    return 'cell';
+  }
   if (hasAny(tag, 'bar_chart')) return 'chart';
   else return 'table';
 }

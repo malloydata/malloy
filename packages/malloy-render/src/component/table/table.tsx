@@ -25,6 +25,7 @@ import {
   valueIsString,
 } from '../util';
 import {renderNumericField} from '../render-numeric-field';
+import {renderLink} from '../render-link';
 import {getTableLayout} from './table-layout';
 import {useResultContext} from '../result-context';
 import {TableContext, useTableContext} from './table-context';
@@ -127,6 +128,12 @@ const TableField = (props: {field: Field; row: DataRecord}) => {
     } else if (valueIsString(props.field, resultCellValue)) {
       renderValue = resultCellValue;
     }
+  } else if (renderAs === 'link') {
+    // renderAs will only return link for AtomicFields. TODO: add additional typeguard here?
+    renderValue = renderLink(
+      props.field as AtomicField,
+      props.row.cell(props.field)
+    );
   } else if (renderAs === 'chart') {
     const metadata = useResultContext();
     renderValue = (
