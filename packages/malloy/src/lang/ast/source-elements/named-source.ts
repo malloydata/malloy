@@ -169,7 +169,9 @@ export class NamedSource extends Source {
 
     for (const paramName in parametersIn) {
       if (!(paramName in outArguments)) {
-        if (!paramHasValue(parametersIn[paramName])) {
+        if (paramHasValue(parametersIn[paramName])) {
+          outArguments[paramName] = {...parametersIn[paramName]};
+        } else {
           this.refLog(
             `Argument not provided for required parameter \`${paramName}\``
           );
