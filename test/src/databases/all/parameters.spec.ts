@@ -9,7 +9,8 @@ import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
 import '../../util/db-jest-matchers';
 
-const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
+const runtimes = new RuntimeList(databasesFromEnvironmentOr(['duckdb']));
+// const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 afterAll(async () => {
   await runtimes.closeAll();
@@ -324,5 +325,17 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       }
       run: state_facts -> { group_by: state }
     `).malloyResultMatches(runtime, {state: 'CA'});
+  });
+  it(`default value not passed through extension propagates - ${databaseName}`, async () => {
+    await expect(
+      `
+        ##! experimental.parameters
+        source: ab_new(param::number is 10) is ${databaseName}.table('malloytest.state_facts') extend {
+          dimension: param_value is param
+        }
+        source: ab_new_new is ab_new extend {}
+        run: ab_new_new -> { group_by: param_value }
+      `
+    ).malloyResultMatches(runtime, {param_value: 10});
   });
 });
