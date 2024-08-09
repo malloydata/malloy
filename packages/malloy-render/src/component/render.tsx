@@ -1,12 +1,16 @@
-import {ModelDef, QueryResult, Result, Tag} from '@malloydata/malloy';
-import {Match, Show, Switch, createEffect, createMemo} from 'solid-js';
+import {
+  ExploreField,
+  ModelDef,
+  QueryResult,
+  Result,
+  Tag,
+} from '@malloydata/malloy';
+import {Show, createEffect, createMemo} from 'solid-js';
 import {getResultMetadata} from './render-result-metadata';
 import {ResultContext} from './result-context';
-import {Chart} from './chart';
-import MalloyTable from './table/table';
 import './render.css';
-import {shouldRenderAs} from './util';
 import {ComponentOptions, ICustomElement} from 'component-register';
+import {applyRenderer} from './apply-renderer';
 
 export type MalloyRenderProps = {
   result?: Result;
@@ -59,23 +63,18 @@ export function MalloyRenderInner(props: {
     }
   });
 
-  const renderAs = () => {
-    const tag = tags().resultTag;
-    const rootField = props.result.resultExplore;
-    return shouldRenderAs(rootField, tag);
-  };
+  const rendering = () =>
+    applyRenderer({
+      // TODO: figure out what to do about the diffs between top level Explore vs. ExploreFields/AtomicFields
+      field: props.result.resultExplore as ExploreField,
+      dataColumn: props.result.data,
+      resultMetadata: metadata(),
+      tag: tags().resultTag,
+    });
 
   return (
     <ResultContext.Provider value={metadata()}>
-      <Switch fallback={<MalloyTable data={props.result.data} />}>
-        <Match when={renderAs() === 'chart'}>
-          <Chart
-            field={props.result.resultExplore}
-            data={metadata().getData(props.result.data)}
-            metadata={metadata()}
-          />
-        </Match>
-      </Switch>
+      {rendering().renderValue}
     </ResultContext.Provider>
   );
 }

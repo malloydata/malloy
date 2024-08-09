@@ -9,28 +9,13 @@ import {
   Match,
   JSXElement,
 } from 'solid-js';
-import {
-  AtomicField,
-  DataArray,
-  DataRecord,
-  ExploreField,
-  Field,
-} from '@malloydata/malloy';
-import {
-  getFieldKey,
-  isFirstChild,
-  isLastChild,
-  shouldRenderAs,
-  valueIsNumber,
-  valueIsString,
-} from '../util';
-import {renderNumericField} from '../render-numeric-field';
-import {renderLink} from '../render-link';
+import {DataArray, DataRecord, Field} from '@malloydata/malloy';
+import {getFieldKey, isFirstChild, isLastChild} from '../util';
 import {getTableLayout} from './table-layout';
 import {useResultContext} from '../result-context';
 import {TableContext, useTableContext} from './table-context';
 import './table.css';
-import {Chart} from '../chart';
+import {applyRenderer} from '../apply-renderer';
 
 const Cell = (props: {
   field: Field;
@@ -112,38 +97,23 @@ const HeaderField = (props: {field: Field}) => {
 
 const TableField = (props: {field: Field; row: DataRecord}) => {
   const tableCtx = useTableContext()!;
-  const renderAs = shouldRenderAs(props.field);
   let renderValue: JSXElement = '';
-  if (tableCtx.pinnedHeader) renderValue = '';
-  else if (renderAs === 'cell') {
-    const resultCellValue = props.row.cell(props.field).value;
-    if (valueIsNumber(props.field, resultCellValue)) {
-      // TS doesn't support typeguards for multiple parameters, so unfortunately have to assert AtomicField here. https://github.com/microsoft/TypeScript/issues/26916
-      renderValue = renderNumericField(
-        props.field as AtomicField,
-        resultCellValue
-      );
-    } else if (resultCellValue === null) {
-      renderValue = '∅';
-    } else if (valueIsString(props.field, resultCellValue)) {
-      renderValue = resultCellValue;
-    }
-  } else if (renderAs === 'link') {
-    // renderAs will only return link for AtomicFields. TODO: add additional typeguard here?
-    renderValue = renderLink(
-      props.field as AtomicField,
-      props.row.cell(props.field)
-    );
-  } else if (renderAs === 'chart') {
-    const metadata = useResultContext();
-    renderValue = (
-      <Chart
-        field={props.field as ExploreField}
-        data={metadata.getData(props.row.cell(props.field))}
-        metadata={metadata}
-      />
-    );
-  }
+  let renderAs = '';
+  ({renderValue, renderAs} = applyRenderer({
+    field: props.field,
+    dataColumn: props.row.cell(props.field),
+    resultMetadata: useResultContext(),
+    tag: props.field.tagParse().tag,
+    customProps: {
+      table: {
+        pinnedHeader: tableCtx.pinnedHeader,
+        rowLimit: tableCtx.pinnedHeader ? 1 : Infinity,
+      },
+    },
+  }));
+
+  // Hide table content in pinned header
+  if (tableCtx.pinnedHeader && renderAs !== 'table') renderValue = '';
 
   return (
     <td
@@ -153,13 +123,8 @@ const TableField = (props: {field: Field; row: DataRecord}) => {
       }}
     >
       <Switch>
-        <Match when={renderAs === 'table'}>
-          <MalloyTable
-            data={props.row.cell(props.field) as DataArray}
-            pinnedHeader={tableCtx.pinnedHeader}
-            rowLimit={tableCtx.pinnedHeader ? 1 : Infinity}
-          />
-        </Match>
+        {/* When table, skip cell wrapper */}
+        <Match when={renderAs === 'table'}>{renderValue}</Match>
         <Match when>
           <Cell
             field={props.field}
