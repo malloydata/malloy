@@ -2,7 +2,6 @@ import {
   AtomicField,
   DataArray,
   DataColumn,
-  Explore,
   ExploreField,
   Field,
   Tag,
@@ -78,6 +77,7 @@ export function applyRenderer(props: RendererProps) {
       try {
         renderValue = String(dataColumn.value);
       } catch (err) {
+        // eslint-disable-next-line no-console
         console.warn('Couldnt get value for ', field, dataColumn);
       }
     }

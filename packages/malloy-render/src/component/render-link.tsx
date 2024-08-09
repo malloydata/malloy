@@ -22,7 +22,7 @@ export function renderLink(f: AtomicField, data: DataColumn) {
     }
   }
 
-  let cleanedValue = value.replace(/\//g, '/\u200C');
+  const cleanedValue = value.replace(/\//g, '/\u200C');
   return (
     <a target="_blank" href={href}>
       {cleanedValue}

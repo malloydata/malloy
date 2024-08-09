@@ -47,6 +47,7 @@ export class HTMLView {
         el.result = result;
         return el;
       } else {
+        // eslint-disable-next-line no-console
         console.warn(
           'Tried to use the new Malloy renderer, but the malloy-render component was not found. Falling back to the legacy renderer.'
         );
