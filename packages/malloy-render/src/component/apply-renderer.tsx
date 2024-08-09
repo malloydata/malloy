@@ -15,6 +15,7 @@ import {renderLink} from './render-link';
 import {Chart} from './chart';
 import MalloyTable from './table/table';
 import {renderList} from './render-list';
+import {renderImage} from './render-image';
 
 export type RendererProps = {
   field: Field;
@@ -50,6 +51,10 @@ export function applyRenderer(props: RendererProps) {
     case 'list': {
       // TODO: typeguard here?
       renderValue = renderList(props);
+      break;
+    }
+    case 'image': {
+      renderValue = renderImage(props);
       break;
     }
     case 'chart': {

@@ -66,6 +66,7 @@ export function shouldRenderAs(f: Field | Explore, tagOverride?: Tag) {
   const tag = tagOverride ?? f.tagParse().tag;
   if (!f.isExplore() && f.isAtomicField()) {
     if (tag.has('link')) return 'link';
+    if (tag.has('image')) return 'image';
     return 'cell';
   }
   if (hasAny(tag, 'list', 'list_detail')) return 'list';

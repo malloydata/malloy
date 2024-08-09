@@ -60,6 +60,15 @@ export function getTableLayout(metadata: RenderResultMetadata): TableLayout {
     // TODO: figure out better width / height detection?
     else if (hasAny(tag, 'list', 'list_detail') && field.isExploreField()) {
       layoutEntry.width = 320;
+    }
+    // TODO: better width / height detection
+    else if (tag.has('image')) {
+      const overrideWidth = tag.text('width');
+      const overrideHeight = tag.text('height');
+      if (overrideWidth?.endsWith('px'))
+        layoutEntry.width = parseInt(overrideWidth);
+      if (overrideHeight?.endsWith('px'))
+        layoutEntry.height = parseInt(overrideHeight);
     } else if (!field.isExplore() && field.isAtomicField()) {
       layoutEntry.height = ROW_HEIGHT;
     }
