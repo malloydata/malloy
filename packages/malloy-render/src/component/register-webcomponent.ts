@@ -35,6 +35,7 @@ export default function registerWebComponent({
       withSolid
     )(MalloyRender);
   } else {
+    // eslint-disable-next-line no-console
     console.warn(
       "The custom element 'malloy-render' has already been defined. Make sure you are not loading multiple versions of the malloy-render package as they could conflict."
     );

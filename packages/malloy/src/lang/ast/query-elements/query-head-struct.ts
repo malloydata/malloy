@@ -35,7 +35,10 @@ import {ParameterSpace} from '../field-space/parameter-space';
 
 export class QueryHeadStruct extends Source {
   elementType = 'internalOnlyQueryHead';
-  constructor(readonly fromRef: StructRef, readonly sourceArguments: Record<string, Argument> | undefined) {
+  constructor(
+    readonly fromRef: StructRef,
+    readonly sourceArguments: Record<string, Argument> | undefined
+  ) {
     super();
   }
 

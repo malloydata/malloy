@@ -4156,7 +4156,7 @@ class QueryStruct extends QueryNode {
       this._arguments[parameterName] = params[parameterName];
     }
     // Then, copy over arguments to override default values
-    const args = { ...this.fieldDef.arguments, ...this.sourceArguments };
+    const args = {...this.fieldDef.arguments, ...this.sourceArguments};
     for (const parameterName in args) {
       const orig = args[parameterName];
       this._arguments[parameterName] =

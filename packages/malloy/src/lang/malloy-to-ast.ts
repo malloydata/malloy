@@ -514,9 +514,11 @@ export class MalloyToAST
     return pcx.joinDef().map(jcx => this.visit(jcx));
   }
 
-  protected getJoinFrom(
-    cx: parse.JoinFromContext
-  ): {joinAs: ast.ModelEntryReference, joinFrom: ast.SourceQueryElement; notes: Note[]} {
+  protected getJoinFrom(cx: parse.JoinFromContext): {
+    joinAs: ast.ModelEntryReference;
+    joinFrom: ast.SourceQueryElement;
+    notes: Note[];
+  } {
     const ecx = cx.isExplore();
     const joinAs = this.getModelEntryName(cx.joinNameDef());
     if (ecx) {
@@ -528,7 +530,10 @@ export class MalloyToAST
     }
     const acx = cx.sourceArguments();
     if (acx) {
-      const joinFrom = this.astAt(new ast.SQReference(joinAs, this.getSQArguments(acx)), cx);
+      const joinFrom = this.astAt(
+        new ast.SQReference(joinAs, this.getSQArguments(acx)),
+        cx
+      );
       return {joinFrom, notes: [], joinAs};
     }
     return {joinAs, joinFrom: new ast.SQReference(joinAs), notes: []};
