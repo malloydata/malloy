@@ -222,7 +222,7 @@ export class NamedSource extends Source {
     const outArguments = this.evaluateArguments(
       parameterSpace,
       base.parameters,
-      pList,
+      pList
     );
 
     const ret = {...base, parameters: outParameters, arguments: outArguments};

@@ -71,7 +71,9 @@ export class HasParameter extends MalloyElement {
             type: this.type,
           };
         } else {
-          this.default.log("Default value cannot have type `null` unless parameter type is also specified")
+          this.default.log(
+            'Default value cannot have type `null` unless parameter type is also specified'
+          );
           return {
             value: constant.value,
             name: this.name,
