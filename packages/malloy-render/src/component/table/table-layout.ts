@@ -21,25 +21,24 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Field} from '@malloydata/malloy';
-import {clamp, getFieldKey, getTextWidth} from '../util';
-import {renderNumericField} from '../render-numeric-field';
-import {hasAny} from '../tag-utils';
 import {FieldRenderMetadata, RenderResultMetadata} from '../types';
-
-const MIN_COLUMN_WIDTH = 32;
-const MAX_COLUMN_WIDTH = 384;
-const COLUMN_BUFFER = 12;
-// TODO: get from theme
-const ROW_HEIGHT = 28;
 
 type LayoutEntry = {
   metadata: FieldRenderMetadata;
-  width: number;
+  width: number | null;
   height: number | null;
 };
 
 export type TableLayout = Record<string, LayoutEntry>;
+
+const NAMED_COLUMN_WIDTHS = {
+  'xs': 28,
+  'sm': 64,
+  'md': 128,
+  'lg': 256,
+  'xl': 384,
+  '2xl': 512,
+};
 
 export function getTableLayout(metadata: RenderResultMetadata): TableLayout {
   const layout = {};
@@ -48,62 +47,19 @@ export function getTableLayout(metadata: RenderResultMetadata): TableLayout {
     const field = fieldMeta.field;
     const layoutEntry: LayoutEntry = {
       metadata: fieldMeta,
-      width: !field.isExplore() ? getColumnWidth(field, metadata) : 0,
+      width: null,
       height: null,
     };
-
     const {tag} = field.tagParse();
-    if (hasAny(tag, 'bar', 'bar_chart') && field.isExploreField()) {
-      layoutEntry.width = fieldMeta.vegaChartProps!.totalWidth;
-      layoutEntry.height = fieldMeta.vegaChartProps!.totalHeight;
-    }
-    // TODO: figure out better width / height detection?
-    else if (hasAny(tag, 'list', 'list_detail') && field.isExploreField()) {
-      layoutEntry.width = 320;
-    }
-    // TODO: better width / height detection
-    else if (tag.has('image')) {
-      const overrideWidth = tag.text('width');
-      const overrideHeight = tag.text('height');
-      if (overrideWidth?.endsWith('px'))
-        layoutEntry.width = parseInt(overrideWidth);
-      if (overrideHeight?.endsWith('px'))
-        layoutEntry.height = parseInt(overrideHeight);
-    } else if (!field.isExplore() && field.isAtomicField()) {
-      layoutEntry.height = ROW_HEIGHT;
-    }
+    // Allow overriding size
+    const textWidth = tag.text('width');
+    if (textWidth && NAMED_COLUMN_WIDTHS[textWidth])
+      layoutEntry.width = NAMED_COLUMN_WIDTHS[textWidth];
+    else if (tag.numeric('width')) layoutEntry.width = tag.numeric('width')!;
 
-    const overrideWidth = tag.numeric('width');
-    const overrideHeight = tag.numeric('height');
-    if (overrideWidth) layoutEntry.width = overrideWidth;
-    if (overrideHeight) layoutEntry.height = overrideHeight;
+    if (tag.numeric('height')) layoutEntry.height = tag.numeric('height')!;
 
     layout[key] = layoutEntry;
   }
   return layout;
-}
-
-function getColumnWidth(f: Field, metadata: RenderResultMetadata) {
-  const fieldKey = getFieldKey(f);
-  const fieldMeta = metadata.fields[fieldKey];
-  let width = 0;
-  if (f.isAtomicField()) {
-    // TODO: get font styles from theme
-    const font = '12px Inter, sans-serif';
-    const titleWidth = getTextWidth(f.name, font);
-    if (f.isAtomicField() && f.isString()) {
-      width =
-        Math.max(getTextWidth(fieldMeta.maxString!, font), titleWidth) +
-        COLUMN_BUFFER;
-    } else if (f.isAtomicField() && f.isNumber()) {
-      const formattedValue =
-        fieldMeta.max === null ? '∅' : renderNumericField(f, fieldMeta.max);
-      width =
-        Math.max(getTextWidth(formattedValue, font), titleWidth) +
-        COLUMN_BUFFER;
-    } else width = 130;
-    width = clamp(MIN_COLUMN_WIDTH, MAX_COLUMN_WIDTH, width);
-  }
-
-  return width;
 }

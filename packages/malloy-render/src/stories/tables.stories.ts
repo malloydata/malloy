@@ -44,10 +44,24 @@ export const Products2Column = {
   },
 };
 
+export const SimpleNested = {
+  args: {
+    source: 'products',
+    view: 'simple_nested',
+  },
+};
+
 export const Nested = {
   args: {
     source: 'products',
     view: 'nested',
+  },
+};
+
+export const Nested2 = {
+  args: {
+    source: 'products',
+    view: 'nested_2',
   },
 };
 
@@ -62,5 +76,12 @@ export const NullTest = {
   args: {
     source: 'null_test',
     view: '{ select: * }',
+  },
+};
+
+export const LongColumn = {
+  args: {
+    source: 'products',
+    view: 'long_column',
   },
 };

@@ -10,6 +10,11 @@ export type VegaChartProps = {
   totalHeight: number;
 };
 
+export type FieldHeaderRangeMap = Record<
+  string,
+  {abs: [number, number]; rel: [number, number]; depth: number}
+>;
+
 export interface FieldRenderMetadata {
   field: Field | Explore;
   min: number | null;
@@ -18,6 +23,9 @@ export interface FieldRenderMetadata {
   maxString: string | null;
   values: Set<string>;
   maxRecordCt: number | null;
+  absoluteColumnRange: [number, number];
+  relativeColumnRange: [number, number];
+  depth: number;
   vegaChartProps?: VegaChartProps;
 }
 
@@ -27,4 +35,6 @@ export interface RenderResultMetadata {
   getFieldKey: (f: Field | Explore) => string;
   field: (f: Field | Explore) => FieldRenderMetadata;
   getData: (cell: DataColumn) => QueryData;
+  fieldHeaderRangeMap: FieldHeaderRangeMap;
+  totalHeaderSize: number;
 }

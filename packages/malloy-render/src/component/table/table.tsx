@@ -8,14 +8,25 @@ import {
   Switch,
   Match,
   JSXElement,
+  JSX,
 } from 'solid-js';
 import {DataArray, DataRecord, Field} from '@malloydata/malloy';
-import {getFieldKey, isFirstChild, isLastChild} from '../util';
+import {
+  getFieldKey,
+  getRangeSize,
+  isFirstChild,
+  isLastChild,
+  shouldRenderAs,
+} from '../util';
 import {getTableLayout} from './table-layout';
 import {useResultContext} from '../result-context';
 import {TableContext, useTableContext} from './table-context';
 import './table.css';
 import {applyRenderer} from '../apply-renderer';
+
+const IS_CHROMIUM = navigator.userAgent.toLowerCase().indexOf('chrome') >= 0;
+// CSS Subgrid + Sticky Positioning only seems to work reliably in Chrome
+const SUPPORTS_STICKY = IS_CHROMIUM;
 
 const Cell = (props: {
   field: Field;
@@ -28,12 +39,14 @@ const Cell = (props: {
     const layout = useTableContext()!.layout;
     const width = layout[getFieldKey(props.field)].width;
     const height = layout[getFieldKey(props.field)].height;
-    let style = '';
+    const style: JSX.CSSProperties = {};
     if (!props.isHeader) {
-      if (typeof width !== 'undefined') {
-        style += `width: ${width}px; min-width: ${width}px; max-width: ${width}px;`;
+      if (width) {
+        style.width = `${width}px`;
+        style['min-width'] = `${width}px`;
+        style['max-width'] = `${width}px;`;
         if (typeof height === 'number') {
-          style += `height: ${height}px;`;
+          style.height = `${height}px;`;
         }
       }
     }
@@ -41,33 +54,23 @@ const Cell = (props: {
   };
 
   return (
-    <div class="cell-wrapper">
-      <div
-        class="cell-gutter"
-        classList={{
-          'hide-gutter-border': props.hideStartGutter,
-        }}
-      ></div>
-      <div
-        class="cell-content"
-        classList={{
-          header: props.isHeader,
-        }}
-        style={style()}
-      >
-        {props.value}
-      </div>
-      <div
-        class="cell-gutter"
-        classList={{
-          'hide-gutter-border': props.hideEndGutter,
-        }}
-      ></div>
+    <div
+      class="cell-content"
+      classList={{
+        'header': props.isHeader,
+        'hide-start-gutter': props.hideStartGutter,
+        'hide-end-gutter': props.hideEndGutter,
+      }}
+      style={style()}
+      title={typeof props.value === 'string' ? props.value : ''}
+    >
+      {props.value}
     </div>
   );
 };
 
-const HeaderField = (props: {field: Field}) => {
+const HeaderField = (props: {field: Field; isPinned?: boolean}) => {
+  const resultMetadata = useResultContext();
   const isFirst = isFirstChild(props.field);
   const isParentFirst = isFirstChild(props.field.parentExplore);
   const isParentNotAField = !props.field.parentExplore.isExploreField();
@@ -77,11 +80,21 @@ const HeaderField = (props: {field: Field}) => {
   const isParentLast = isLastChild(props.field.parentExplore);
   const hideEndGutter = isLast && (isParentLast || isParentNotAField);
 
+  const columnRange = props.isPinned
+    ? resultMetadata.field(props.field).absoluteColumnRange
+    : resultMetadata.field(props.field).relativeColumnRange;
+
   return (
-    <th
-      class="column-cell"
+    <div
+      class="column-cell th"
       classList={{
-        numeric: props.field.isAtomicField() && props.field.isNumber(),
+        'numeric': props.field.isAtomicField() && props.field.isNumber(),
+        'pinned-header': props.isPinned,
+      }}
+      style={{
+        'grid-column': `${columnRange[0] + 1} / span ${getRangeSize(
+          columnRange
+        )}`,
       }}
     >
       <Cell
@@ -91,11 +104,12 @@ const HeaderField = (props: {field: Field}) => {
         hideEndGutter={hideEndGutter}
         isHeader
       />
-    </th>
+    </div>
   );
 };
 
 const TableField = (props: {field: Field; row: DataRecord}) => {
+  const resultMetadata = useResultContext();
   const tableCtx = useTableContext()!;
   let renderValue: JSXElement = '';
   let renderAs = '';
@@ -115,12 +129,29 @@ const TableField = (props: {field: Field; row: DataRecord}) => {
   // Hide table content in pinned header
   if (tableCtx.pinnedHeader && renderAs !== 'table') renderValue = '';
 
+  const columnRange = resultMetadata.field(props.field).relativeColumnRange;
+  const style: JSX.CSSProperties = {
+    'grid-column': `${columnRange[0] + 1} / span ${getRangeSize(columnRange)}`,
+    'height': 'fit-content',
+  };
+
+  if (renderAs === 'table') {
+    style.display = 'grid';
+    style.grid = 'auto / subgrid';
+  }
+  // TODO: review what should be sticky
+  else if (SUPPORTS_STICKY && props.field.isAtomicField()) {
+    style.position = 'sticky';
+    style.top = `${(resultMetadata.field(props.field).depth + 1) * 28}px`;
+  }
+
   return (
-    <td
-      class="column-cell"
+    <div
+      class="column-cell td"
       classList={{
         numeric: props.field.isAtomicField() && props.field.isNumber(),
       }}
+      style={style}
     >
       <Switch>
         {/* When table, skip cell wrapper */}
@@ -134,7 +165,7 @@ const TableField = (props: {field: Field; row: DataRecord}) => {
           />
         </Match>
       </Switch>
-    </td>
+    </div>
   );
 };
 
@@ -145,6 +176,7 @@ const MalloyTableRoot = (_props: {
 }) => {
   const props = mergeProps({rowLimit: Infinity, pinnedHeader: false}, _props);
   const tableCtx = useTableContext()!;
+  const resultMetadata = useResultContext();
 
   const [scrolling, setScrolling] = createSignal(false);
   const handleScroll = (e: Event) => {
@@ -152,6 +184,62 @@ const MalloyTableRoot = (_props: {
     setScrolling(target.scrollTop > 0);
   };
 
+  const pinnedFields = createMemo(() => {
+    const fields = Object.entries(resultMetadata.fieldHeaderRangeMap)
+      .sort((a, b) => {
+        if (a[1].depth < b[1].depth) return -1;
+        else if (a[1].depth > b[1].depth) return 1;
+        else if (a[1].abs[0] < b[1].abs[0]) return -1;
+        else if (a[1].abs[0] > b[1].abs[0]) return 1;
+        else return 0;
+      })
+      .filter(([key, value]) => {
+        const isNotRoot = value.depth >= 0;
+        const isPartOfTable =
+          shouldRenderAs(resultMetadata.fields[key].field.parentExplore!) ===
+          'table';
+        return isNotRoot && isPartOfTable;
+      })
+      .map(([key, value]) => ({
+        fieldKey: key,
+        field: resultMetadata.fields[key].field,
+        ...value,
+      }));
+    return fields;
+  });
+
+  const maxDepth = createMemo(() =>
+    Math.max(...pinnedFields().map(f => f.depth))
+  );
+
+  const getContainerStyle: () => JSX.CSSProperties = () => {
+    const fieldMeta = resultMetadata.field(props.data.field);
+    if (tableCtx.root) {
+      return {
+        'grid-template-columns': `repeat(${resultMetadata.totalHeaderSize}, max-content)`,
+      };
+    }
+    return {
+      'grid-column': `1 / span ${getRangeSize(fieldMeta.relativeColumnRange)}`,
+    };
+  };
+
+  const getRowStyle: (idx: number) => JSX.CSSProperties = (idx: number) => {
+    const fieldMeta = resultMetadata.field(props.data.field);
+    const rowStyle = {
+      'grid-column': `1 / span ${getRangeSize(fieldMeta.relativeColumnRange)}`,
+    };
+
+    // Offset first row to hide behind pinned headers
+    if (idx === 0 && tableCtx.root)
+      rowStyle[
+        'margin-top'
+      ] = `calc(-${maxDepth()} * var(--malloy-render--table-row-height))`;
+
+    return rowStyle;
+  };
+
+  // TODO: Get this from resultMetadata cache?
   const data = createMemo(() => {
     const data: DataRecord[] = [];
     let i = 0;
@@ -165,41 +253,45 @@ const MalloyTableRoot = (_props: {
 
   return (
     <div
-      onScroll={handleScroll}
       class="malloy-table"
       classList={{
         'root': tableCtx.root,
-        'pinned-header': tableCtx.pinnedHeader,
         'scrolled': scrolling(),
       }}
+      onScroll={handleScroll}
+      style={getContainerStyle()}
     >
+      {/* pinned header */}
       <Show when={tableCtx.root}>
-        <div class="sticky-header">
-          <div class="sticky-header-content">
-            <MalloyTable data={props.data} rowLimit={1} pinnedHeader={true} />
-          </div>
-        </div>
-      </Show>
-      <table>
-        <thead>
-          <tr>
-            {props.data.field.allFields.map(f => (
-              <HeaderField field={f} />
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          <For each={data()}>
-            {row => (
-              <tr>
-                {props.data.field.allFields.map(f => (
-                  <TableField field={f} row={row} />
-                ))}
-              </tr>
+        <div
+          class="pinned-header-row"
+          style={`grid-column: 1 / span ${resultMetadata.totalHeaderSize};`}
+        >
+          <For each={pinnedFields()}>
+            {pinnedField => (
+              <HeaderField field={pinnedField.field as Field} isPinned />
             )}
           </For>
-        </tbody>
-      </table>
+        </div>
+      </Show>
+      {/* header */}
+      <Show when={!tableCtx.root}>
+        <div class="table-row" style={getRowStyle(-1)}>
+          <For each={props.data.field.allFields}>
+            {field => <HeaderField field={field} />}
+          </For>
+        </div>
+      </Show>
+      {/* rows */}
+      <For each={data()}>
+        {(row, idx) => (
+          <div class="table-row" style={getRowStyle(idx())}>
+            <For each={props.data.field.allFields}>
+              {field => <TableField field={field} row={row} />}
+            </For>
+          </div>
+        )}
+      </For>
     </div>
   );
 };

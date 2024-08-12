@@ -16,4 +16,19 @@ source: logos is duckdb.table("data/logos.csv") extend {
           logo
       }
   }
+
+  view: img_from_grandparent is {
+    group_by:
+      brand
+      nest: l2 is {
+        group_by: foo is brand,
+        nest: details is {
+          group_by:
+            product
+            # image image.height=40px image.alt=fallback image.alt.field='../../brand'
+            logo
+        }
+      }
+
+  }
 };
