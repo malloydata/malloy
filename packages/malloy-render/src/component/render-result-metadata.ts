@@ -71,7 +71,7 @@ export function getResultMetadata(result: Result) {
   ): [FieldHeaderRangeMap, number, number] {
     let fieldMap: FieldHeaderRangeMap = {};
 
-    explore.allFields.forEach((field, index) => {
+    explore.allFields.forEach(field => {
       if (!field.isExploreField()) {
         fieldMap[getCachedFieldKey(field)] = {
           abs: [start, start],

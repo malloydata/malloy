@@ -57,7 +57,7 @@ const Cell = (props: {
     <div
       class="cell-content"
       classList={{
-        header: props.isHeader,
+        'header': props.isHeader,
         'hide-start-gutter': props.hideStartGutter,
         'hide-end-gutter': props.hideEndGutter,
       }}
@@ -88,7 +88,7 @@ const HeaderField = (props: {field: Field; isPinned?: boolean}) => {
     <div
       class="column-cell th"
       classList={{
-        numeric: props.field.isAtomicField() && props.field.isNumber(),
+        'numeric': props.field.isAtomicField() && props.field.isNumber(),
         'pinned-header': props.isPinned,
       }}
       style={{
@@ -132,7 +132,7 @@ const TableField = (props: {field: Field; row: DataRecord}) => {
   const columnRange = resultMetadata.field(props.field).relativeColumnRange;
   const style: JSX.CSSProperties = {
     'grid-column': `${columnRange[0] + 1} / span ${getRangeSize(columnRange)}`,
-    height: 'fit-content',
+    'height': 'fit-content',
   };
 
   if (renderAs === 'table') {

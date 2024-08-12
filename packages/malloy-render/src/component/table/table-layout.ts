@@ -32,11 +32,11 @@ type LayoutEntry = {
 export type TableLayout = Record<string, LayoutEntry>;
 
 const NAMED_COLUMN_WIDTHS = {
-  xs: 28,
-  sm: 64,
-  md: 128,
-  lg: 256,
-  xl: 384,
+  'xs': 28,
+  'sm': 64,
+  'md': 128,
+  'lg': 256,
+  'xl': 384,
   '2xl': 512,
 };
 
