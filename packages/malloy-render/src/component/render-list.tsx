@@ -31,7 +31,7 @@ export function renderList(props: RendererProps) {
 
   // TODO: width estimator for list renderer? and others
   return (
-    <div style="text-wrap: wrap;">
+    <div class="malloy-list" style="text-wrap: wrap;">
       <For each={rows}>
         {(row, idx) => (
           <span>

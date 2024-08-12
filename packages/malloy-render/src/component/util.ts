@@ -77,3 +77,7 @@ export function shouldRenderAs(f: Field | Explore, tagOverride?: Tag) {
 export function getFieldKey(f: Field | Explore) {
   return JSON.stringify(f.fieldPath);
 }
+
+export function getRangeSize(range: [number, number]) {
+  return range[1] - range[0] + 1;
+}

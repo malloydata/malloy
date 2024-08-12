@@ -1,49 +1,57 @@
-.malloy-table .sticky-header {
-  position: sticky;
-  top: 0px;
-  z-index: 100;
-}
-
-.malloy-table .sticky-header-content {
-  position: absolute;
-  top: 0px;
-  left: 0px;
-  pointer-events: none;
-}
-
-.malloy-table .sticky-header-content th {
-  pointer-events: all;
-}
-
-.malloy-table table {
-  border-collapse: collapse;
-  background: var(--malloy-render--table-background);
-}
-
-.malloy-table th {
-  transition: background-color 0.25s;
-}
-
-.malloy-table table * {
+.malloy-table * {
   box-sizing: border-box;
 }
 
+.malloy-table {
+  background: var(--malloy-render--table-background);
+}
+
+.malloy-table {
+  display: grid;
+  grid: auto / subgrid;
+}
+
+.malloy-table.root {
+  width: fit-content;
+  max-width: 100%;
+  height: fit-content;
+  max-height: 100%;
+  position: relative;
+  overflow: auto;
+}
+
+.malloy-table .pinned-header-row {
+  display: grid;
+  grid: auto / subgrid;
+  position: sticky;
+  top: 0px;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.malloy-table .table-row {
+  display: grid;
+  grid: auto / subgrid;
+}
+
+.malloy-table .th {
+  transition: background-color 0.25s;
+}
+
 .malloy-table .column-cell {
-  height: var(--malloy-render--table-row-height);
-  overflow: hidden;
+  min-height: var(--malloy-render--table-row-height);
   white-space: nowrap;
   text-align: left;
   padding: 0px;
   vertical-align: top;
-  position: relative;
 }
 
-.malloy-table td.column-cell {
+.malloy-table .td.column-cell {
   font-weight: var(--malloy-render--table-body-weight);
   color: var(--malloy-render--table-body-color);
 }
 
-.malloy-table th.column-cell {
+.malloy-table .th.column-cell {
   font-weight: var(--malloy-render--table-header-weight);
   color: var(--malloy-render--table-header-color);
 }
@@ -53,54 +61,63 @@
   font-variant-numeric: tabular-nums;
 }
 
-.malloy-table .cell-wrapper {
-  display: flex;
-  align-items: start;
-  overflow: hidden;
-}
-
 .malloy-table .cell-content {
   border-top: var(--malloy-render--table-border);
   height: 100%;
-  line-height: var(--malloy-render--table-row-height);
+  /* -1px for the top border */
+  line-height: calc(var(--malloy-render--table-row-height) - 1px);
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
+  margin-inline: 0px;
+  padding-inline: var(--malloy-render--table-gutter-size);
 }
 
-.malloy-table .cell-gutter {
-  border-top: var(--malloy-render--table-border);
-  height: var(--malloy-render--table-row-height);
-  width: var(--malloy-render--table-gutter-size);
-  transition: border-color 0.25s;
+.malloy-table .cell-content.hide-start-gutter {
+  margin-left: var(--malloy-render--table-gutter-size);
+  padding-left: 0px;
 }
 
-.malloy-table .cell-gutter.hide-gutter-border {
-  border-color: transparent;
+.malloy-table .cell-content.hide-end-gutter {
+  margin-right: var(--malloy-render--table-gutter-size);
+  padding-right: 0px;
 }
 
-.malloy-table.pinned-header table {
-  background: transparent;
+/* If scrolled, show all gutter borders in pinned header */
+.malloy-table.scrolled .pinned-header {
+  .cell-content.hide-start-gutter,
+  .cell-content.hide-end-gutter {
+    margin-inline: 0px;
+    padding-inline: var(--malloy-render--table-gutter-size);
+  }
 }
 
-.malloy-table.pinned-header th {
+.malloy-table .pinned-header.th {
   background: var(--malloy-render--table-background);
+  pointer-events: all;
 }
 
-.malloy-table.root {
-  width: 100%;
-  height: 100%;
-  position: relative;
-  overflow: auto;
-}
-
-.malloy-table.scrolled .pinned-header .cell-content,
-.malloy-table.scrolled .pinned-header .cell-gutter,
-.malloy-table.scrolled .pinned-header .cell-gutter.hide-gutter-border {
+.malloy-table.scrolled .pinned-header .cell-content {
   border-top: var(--malloy-render--table-pinned-border);
 }
 
-.malloy-table.scrolled .pinned-header th {
+.malloy-table.scrolled .pinned-header.th {
+  position: relative;
   background: var(--malloy-render--table-pinned-background);
-  box-shadow: 0 0 0.5em rgba(0, 0, 0, 0.5);
+}
+
+.malloy-table.scrolled .pinned-header:after {
+  content: '';
+  border-bottom: var(--malloy-render--table-pinned-border);
+  width: 100%;
+  height: 0px;
+  display: inline-block;
+  position: absolute;
+  left: 0px;
+  right: 0px;
+}
+
+/* TODO figure out better strategy for tweaking renderers inside table */
+.malloy-table .malloy-list {
+  line-height: var(--malloy-render--table-row-height);
 }

@@ -33,7 +33,6 @@ source: logos is duckdb.table("data/logos.csv") extend {
 
   view: nested_list is {
     group_by: brand
-    # width=600
     nest: list_detail_renderers
   }
 };
