@@ -153,8 +153,9 @@ export class NamedSource extends Source {
           `\`${this.refName}\` has no declared parameter named \`${id.refString}\``
         );
       } else {
-        const paramSpace =
-          parameterSpace ?? new ParameterSpace(parametersOut ?? []);
+        // const paramSpace =
+        //   parameterSpace ?? new ParameterSpace(parametersOut ?? []);
+        const paramSpace = this.parameterSpace();
         const pVal = argument.value.getExpression(paramSpace);
         let value = pVal.value;
         if (pVal.dataType !== parameter.type && isCastType(parameter.type)) {

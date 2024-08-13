@@ -38,6 +38,8 @@ import {Tag} from '../../../tags';
 import {LogSeverity, MessageLogger} from '../../parse-log';
 import {MalloyTranslation} from '../../parse-malloy';
 import {ModelDataRequest} from '../../translate-response';
+import {ParameterSpace} from '../field-space/parameter-space';
+import { HasParameter } from '../parameters/has-parameter';
 import {DocumentCompileResult} from './document-compile-result';
 import {GlobalNameSpace} from './global-name-space';
 import {ModelEntry} from './model-entry';
@@ -50,6 +52,7 @@ export abstract class MalloyElement {
   codeLocation?: DocumentLocation;
   children: ElementChildren = {};
   parent: MalloyElement | null = null;
+  _parameterScope: ParameterSpace | undefined = undefined;
 
   /**
    * @param kids All children passed to the constructor are not optional
@@ -308,6 +311,21 @@ export abstract class MalloyElement {
       );
     }
     return false;
+  }
+
+  parameterSpace() {
+    if (this._parameterScope) {
+      return this._parameterScope;
+    }
+    if (this.parent) {
+      return this.parent.parameterSpace();
+    }
+    return new ParameterSpace([]);
+  }
+
+  introduceParameterScope(parameters: HasParameter[]) {
+    const parentScope = this.parameterSpace();
+    this._parameterScope = new ParameterSpace(parameters, parentScope);
   }
 }
 
