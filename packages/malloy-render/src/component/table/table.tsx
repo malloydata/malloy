@@ -11,18 +11,13 @@ import {
   JSX,
 } from 'solid-js';
 import {DataArray, DataRecord, Field} from '@malloydata/malloy';
-import {
-  getFieldKey,
-  getRangeSize,
-  isFirstChild,
-  isLastChild,
-  shouldRenderAs,
-} from '../util';
+import {getRangeSize, isFirstChild, isLastChild, shouldRenderAs} from '../util';
 import {getTableLayout} from './table-layout';
 import {useResultContext} from '../result-context';
 import {TableContext, useTableContext} from './table-context';
 import './table.css';
 import {applyRenderer} from '../apply-renderer';
+import {isFieldHidden} from '../../tags_utils';
 
 const IS_CHROMIUM = navigator.userAgent.toLowerCase().indexOf('chrome') >= 0;
 // CSS Subgrid + Sticky Positioning only seems to work reliably in Chrome
@@ -37,8 +32,8 @@ const Cell = (props: {
 }) => {
   const style = () => {
     const layout = useTableContext()!.layout;
-    const width = layout[getFieldKey(props.field)].width;
-    const height = layout[getFieldKey(props.field)].height;
+    const width = layout.fieldLayout(props.field).width;
+    const height = layout.fieldLayout(props.field).height;
     const style: JSX.CSSProperties = {};
     if (!props.isHeader) {
       if (width) {
@@ -69,8 +64,12 @@ const Cell = (props: {
   );
 };
 
+function renameColumn(name: string) {
+  return name.replace(/_/g, ' ');
+}
+
 const HeaderField = (props: {field: Field; isPinned?: boolean}) => {
-  const resultMetadata = useResultContext();
+  const {layout: tableLayout, autoRenameColumns} = useTableContext()!;
   const isFirst = isFirstChild(props.field);
   const isParentFirst = isFirstChild(props.field.parentExplore);
   const isParentNotAField = !props.field.parentExplore.isExploreField();
@@ -81,8 +80,8 @@ const HeaderField = (props: {field: Field; isPinned?: boolean}) => {
   const hideEndGutter = isLast && (isParentLast || isParentNotAField);
 
   const columnRange = props.isPinned
-    ? resultMetadata.field(props.field).absoluteColumnRange
-    : resultMetadata.field(props.field).relativeColumnRange;
+    ? tableLayout.fieldLayout(props.field).absoluteColumnRange
+    : tableLayout.fieldLayout(props.field).relativeColumnRange;
 
   return (
     <div
@@ -99,7 +98,9 @@ const HeaderField = (props: {field: Field; isPinned?: boolean}) => {
     >
       <Cell
         field={props.field}
-        value={props.field.name}
+        value={
+          autoRenameColumns ? renameColumn(props.field.name) : props.field.name
+        }
         hideStartGutter={hideStartGutter}
         hideEndGutter={hideEndGutter}
         isHeader
@@ -109,7 +110,6 @@ const HeaderField = (props: {field: Field; isPinned?: boolean}) => {
 };
 
 const TableField = (props: {field: Field; row: DataRecord}) => {
-  const resultMetadata = useResultContext();
   const tableCtx = useTableContext()!;
   let renderValue: JSXElement = '';
   let renderAs = '';
@@ -129,7 +129,8 @@ const TableField = (props: {field: Field; row: DataRecord}) => {
   // Hide table content in pinned header
   if (tableCtx.pinnedHeader && renderAs !== 'table') renderValue = '';
 
-  const columnRange = resultMetadata.field(props.field).relativeColumnRange;
+  const tableLayout = useTableContext()!.layout;
+  const columnRange = tableLayout.fieldLayout(props.field).relativeColumnRange;
   const style: JSX.CSSProperties = {
     'grid-column': `${columnRange[0] + 1} / span ${getRangeSize(columnRange)}`,
     'height': 'fit-content',
@@ -142,7 +143,7 @@ const TableField = (props: {field: Field; row: DataRecord}) => {
   // TODO: review what should be sticky
   else if (SUPPORTS_STICKY && props.field.isAtomicField()) {
     style.position = 'sticky';
-    style.top = `${(resultMetadata.field(props.field).depth + 1) * 28}px`;
+    style.top = `${(tableLayout.fieldLayout(props.field).depth + 1) * 28}px`;
   }
 
   return (
@@ -185,7 +186,7 @@ const MalloyTableRoot = (_props: {
   };
 
   const pinnedFields = createMemo(() => {
-    const fields = Object.entries(resultMetadata.fieldHeaderRangeMap)
+    const fields = Object.entries(tableCtx.layout.fieldHeaderRangeMap)
       .sort((a, b) => {
         if (a[1].depth < b[1].depth) return -1;
         else if (a[1].depth > b[1].depth) return 1;
@@ -213,21 +214,25 @@ const MalloyTableRoot = (_props: {
   );
 
   const getContainerStyle: () => JSX.CSSProperties = () => {
-    const fieldMeta = resultMetadata.field(props.data.field);
     if (tableCtx.root) {
       return {
-        'grid-template-columns': `repeat(${resultMetadata.totalHeaderSize}, max-content)`,
+        'grid-template-columns': `repeat(${tableCtx.layout.totalHeaderSize}, max-content)`,
       };
     }
+    const columnRange = tableCtx.layout.fieldLayout(
+      props.data.field
+    ).relativeColumnRange;
     return {
-      'grid-column': `1 / span ${getRangeSize(fieldMeta.relativeColumnRange)}`,
+      'grid-column': `1 / span ${getRangeSize(columnRange)}`,
     };
   };
 
   const getRowStyle: (idx: number) => JSX.CSSProperties = (idx: number) => {
-    const fieldMeta = resultMetadata.field(props.data.field);
+    const columnRange = tableCtx.layout.fieldLayout(
+      props.data.field
+    ).relativeColumnRange;
     const rowStyle = {
-      'grid-column': `1 / span ${getRangeSize(fieldMeta.relativeColumnRange)}`,
+      'grid-column': `1 / span ${getRangeSize(columnRange)}`,
     };
 
     // Offset first row to hide behind pinned headers
@@ -251,6 +256,9 @@ const MalloyTableRoot = (_props: {
     return data;
   });
 
+  const visibleFields = () =>
+    props.data.field.allFields.filter(f => !isFieldHidden(f));
+
   return (
     <div
       class="malloy-table"
@@ -265,7 +273,7 @@ const MalloyTableRoot = (_props: {
       <Show when={tableCtx.root}>
         <div
           class="pinned-header-row"
-          style={`grid-column: 1 / span ${resultMetadata.totalHeaderSize};`}
+          style={`grid-column: 1 / span ${tableCtx.layout.totalHeaderSize};`}
         >
           <For each={pinnedFields()}>
             {pinnedField => (
@@ -277,7 +285,7 @@ const MalloyTableRoot = (_props: {
       {/* header */}
       <Show when={!tableCtx.root}>
         <div class="table-row" style={getRowStyle(-1)}>
-          <For each={props.data.field.allFields}>
+          <For each={visibleFields()}>
             {field => <HeaderField field={field} />}
           </For>
         </div>
@@ -286,7 +294,7 @@ const MalloyTableRoot = (_props: {
       <For each={data()}>
         {(row, idx) => (
           <div class="table-row" style={getRowStyle(idx())}>
-            <For each={props.data.field.allFields}>
+            <For each={visibleFields()}>
               {field => <TableField field={field} row={row} />}
             </For>
           </div>
@@ -306,16 +314,27 @@ const MalloyTable: Component<{
   const tableCtx = createMemo(() => {
     if (hasTableCtx) {
       const parentCtx = useTableContext()!;
+
       return {
         root: false,
         pinnedHeader: props.pinnedHeader ?? parentCtx.pinnedHeader,
         layout: parentCtx.layout,
+        autoRenameColumns: parentCtx.autoRenameColumns,
       };
     }
+
+    // For now, only support turning columns off at root level.
+    // This is due to an issue with pinned headers, which are always at root. So can't mix and match column renaming.
+    // This can be fixed by moving the renaming detection into the TableLayout generator
+    const autoRenameColumnsTag = () =>
+      props.data.field.tagParse().tag.tag('table', 'auto_rename')?.text() ??
+      metadata.resultTag.tag('table', 'auto_rename')?.text();
+
     return {
       root: true,
       pinnedHeader: props.pinnedHeader ?? false,
-      layout: getTableLayout(metadata),
+      layout: getTableLayout(metadata, props.data.field),
+      autoRenameColumns: autoRenameColumnsTag() === 'off' ? false : true,
     };
   });
 

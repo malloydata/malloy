@@ -36,7 +36,7 @@ import {getFieldKey, valueIsNumber, valueIsString} from './util';
 import {generateBarChartSpec} from './bar-chart/generate-bar_chart-spec';
 import {plotToVega} from './plot/plot-to-vega';
 import {hasAny} from './tag-utils';
-import {FieldHeaderRangeMap, RenderResultMetadata} from './types';
+import {RenderResultMetadata} from './types';
 
 function createDataCache() {
   const dataCache = new WeakMap<DataColumn, QueryData>();
@@ -63,50 +63,6 @@ export function getResultMetadata(result: Result) {
     return fieldKey;
   };
 
-  function createFieldHeaderRangeMap(
-    explore: Explore,
-    start = 0,
-    relStart = 0,
-    depth = 0
-  ): [FieldHeaderRangeMap, number, number] {
-    let fieldMap: FieldHeaderRangeMap = {};
-
-    explore.allFields.forEach(field => {
-      if (!field.isExploreField()) {
-        fieldMap[getCachedFieldKey(field)] = {
-          abs: [start, start],
-          rel: [relStart, relStart],
-          depth,
-        };
-        start++;
-        relStart++;
-      } else {
-        const [nestedFieldMap, nextStart, nextRelStart] =
-          createFieldHeaderRangeMap(field, start, 0, depth + 1);
-        fieldMap = {...fieldMap, ...nestedFieldMap};
-        fieldMap[getCachedFieldKey(field)] = {
-          abs: [start, nextStart - 1],
-          rel: [relStart, relStart + nextRelStart - 1],
-          depth,
-        };
-        start = nextStart;
-        relStart += nextRelStart;
-      }
-    });
-
-    return [fieldMap, start, relStart];
-  }
-
-  const [fieldHeaderRangeMap] = createFieldHeaderRangeMap(result.data.field);
-  const totalHeaderSize =
-    Math.max(...Object.values(fieldHeaderRangeMap).map(f => f.abs[1])) + 1;
-  // Populate for root explore
-  fieldHeaderRangeMap[getCachedFieldKey(result.data.field)] = {
-    abs: [0, totalHeaderSize - 1],
-    rel: [0, totalHeaderSize - 1],
-    depth: -1,
-  };
-
   const dataCache = createDataCache();
 
   const metadata: RenderResultMetadata = {
@@ -115,8 +71,8 @@ export function getResultMetadata(result: Result) {
     getFieldKey: getCachedFieldKey,
     field: (f: Field | Explore) => metadata.fields[getCachedFieldKey(f)],
     getData: dataCache.get,
-    fieldHeaderRangeMap,
-    totalHeaderSize,
+    modelTag: result.modelTag,
+    resultTag: result.tagParse().tag,
   };
 
   const rootField = result.data.field;
@@ -129,9 +85,6 @@ export function getResultMetadata(result: Result) {
     maxString: null,
     values: new Set(),
     maxRecordCt: null,
-    absoluteColumnRange: fieldHeaderRangeMap[fieldKey].abs,
-    relativeColumnRange: fieldHeaderRangeMap[fieldKey].rel,
-    depth: fieldHeaderRangeMap[fieldKey].depth,
   };
 
   initFieldMeta(result.data.field, metadata);
@@ -159,9 +112,6 @@ function initFieldMeta(e: Explore, metadata: RenderResultMetadata) {
       maxString: null,
       values: new Set(),
       maxRecordCt: null,
-      absoluteColumnRange: metadata.fieldHeaderRangeMap[fieldKey].abs,
-      relativeColumnRange: metadata.fieldHeaderRangeMap[fieldKey].rel,
-      depth: metadata.fieldHeaderRangeMap[fieldKey].depth,
     };
     if (f.isExploreField()) {
       initFieldMeta(f, metadata);
