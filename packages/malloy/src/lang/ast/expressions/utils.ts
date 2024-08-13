@@ -85,7 +85,7 @@ export function compressExpr(expr: Expr): Expr {
 
 export function nullsafeNot(expr: Expr, op?: Equality): Expr {
   if (op === undefined || op === '!=' || op === '!~') {
-    return mkExpr`COALESCE(NOT(${expr}),FALSE)`;
+    return mkExpr`NOT(COALESCE(${expr}, FALSE))`;
   }
   return expr;
 }
