@@ -34,4 +34,5 @@ export interface RenderResultMetadata {
   getData: (cell: DataColumn) => QueryData;
   modelTag: Tag;
   resultTag: Tag;
+  rootField: Field | Explore;
 }

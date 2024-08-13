@@ -64,7 +64,7 @@ export function getResultMetadata(result: Result) {
   };
 
   const dataCache = createDataCache();
-
+  const rootField = result.data.field;
   const metadata: RenderResultMetadata = {
     fields: {},
     fieldKeyMap,
@@ -73,9 +73,9 @@ export function getResultMetadata(result: Result) {
     getData: dataCache.get,
     modelTag: result.modelTag,
     resultTag: result.tagParse().tag,
+    rootField,
   };
 
-  const rootField = result.data.field;
   const fieldKey = metadata.getFieldKey(rootField);
   metadata.fields[fieldKey] = {
     field: rootField,

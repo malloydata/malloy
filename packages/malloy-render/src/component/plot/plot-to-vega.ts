@@ -3,8 +3,8 @@ import {getChartSettings} from '../chart-settings';
 import {PlotSpec} from './plot-spec';
 import {RenderResultMetadata, VegaChartProps, VegaSpec} from '../types';
 
-const grayMedium = '#727883';
-const gridGray = '#E5E7EB';
+export const grayMedium = '#727883';
+export const gridGray = '#E5E7EB';
 
 export function plotToVega(
   plotSpec: PlotSpec,
@@ -32,7 +32,7 @@ export function plotToVega(
         titleColor: grayMedium,
         titleFont: 'Inter, sans-serif',
         titleFontSize: 12,
-        titleFontWeight: 'bold',
+        titleFontWeight: 500,
         titlePadding: 10,
         labelOverlap: false,
       },
@@ -49,7 +49,7 @@ export function plotToVega(
         titleColor: grayMedium,
         titleFont: 'Inter, sans-serif',
         titleFontSize: 12,
-        titleFontWeight: 'bold',
+        titleFontWeight: 500,
         titlePadding: 10,
       },
       view: {
