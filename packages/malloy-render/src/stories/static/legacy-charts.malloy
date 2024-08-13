@@ -1,0 +1,31 @@
+source: products is duckdb.table("data/products.parquet") extend {
+
+  # line_chart
+  view: lc is {
+    group_by: id
+    aggregate: avg_retail is retail_price.avg()
+    order_by: id
+  }
+
+  # line_chart
+  view: lc_multiple is {
+    group_by: id
+    aggregate: avg_retail is retail_price.avg()
+    group_by: category
+    order_by: id
+  }
+
+  view: nlc is {
+    group_by: category
+    aggregate: avg_retail is retail_price.avg()
+    nest: lc
+  }
+
+  # scatter_chart
+  view: sc is {
+    aggregate:
+      avg_retail is retail_price.avg()
+      avg_cost is retail_price.avg()
+    group_by: brand
+  }
+}

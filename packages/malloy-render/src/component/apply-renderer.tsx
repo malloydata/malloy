@@ -2,12 +2,13 @@ import {
   AtomicField,
   DataArray,
   DataColumn,
+  Explore,
   ExploreField,
   Field,
   Tag,
 } from '@malloydata/malloy';
 import {RenderResultMetadata} from './types';
-import {shouldRenderAs, valueIsNumber, valueIsString} from './util';
+import {valueIsNumber, valueIsString} from './util';
 import {JSXElement} from 'solid-js';
 import {renderNumericField} from './render-numeric-field';
 import {renderLink} from './render-link';
@@ -16,6 +17,8 @@ import MalloyTable from './table/table';
 import {renderList} from './render-list';
 import {renderImage} from './render-image';
 import {Dashboard} from './dashboard/dashboard';
+import {LegacyChart} from './legacy-charts/legacy_chart';
+import {hasAny} from './tag-utils';
 
 export type RendererProps = {
   field: Field;
@@ -24,6 +27,23 @@ export type RendererProps = {
   tag: Tag;
   customProps?: Record<string, Record<string, unknown>>;
 };
+
+export function shouldRenderAs(f: Field | Explore, tagOverride?: Tag) {
+  const tag = tagOverride ?? f.tagParse().tag;
+  if (!f.isExplore() && f.isAtomicField()) {
+    if (tag.has('link')) return 'link';
+    if (tag.has('image')) return 'image';
+    return 'cell';
+  }
+  if (hasAny(tag, 'list', 'list_detail')) return 'list';
+  if (hasAny(tag, 'bar_chart')) return 'chart';
+  if (tag.has('dashboard')) return 'dashboard';
+  if (tag.has('line_chart')) return 'line_chart';
+  if (tag.has('scatter_chart')) return 'scatter_chart';
+  if (tag.has('shape_map')) return 'shape_map';
+  if (tag.has('segment_map')) return 'segment_map';
+  else return 'table';
+}
 
 export function applyRenderer(props: RendererProps) {
   const {field, dataColumn, resultMetadata, tag, customProps = {}} = props;
@@ -70,6 +90,15 @@ export function applyRenderer(props: RendererProps) {
     }
     case 'dashboard': {
       renderValue = <Dashboard data={dataColumn as DataArray} />;
+      break;
+    }
+    case 'line_chart':
+    case 'scatter_chart':
+    case 'shape_map':
+    case 'segment_map': {
+      renderValue = (
+        <LegacyChart type={renderAs} data={dataColumn as DataArray} />
+      );
       break;
     }
     case 'table': {

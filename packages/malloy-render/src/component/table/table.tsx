@@ -11,12 +11,12 @@ import {
   JSX,
 } from 'solid-js';
 import {DataArray, DataRecord, Field} from '@malloydata/malloy';
-import {getRangeSize, isFirstChild, isLastChild, shouldRenderAs} from '../util';
+import {getRangeSize, isFirstChild, isLastChild} from '../util';
 import {getTableLayout} from './table-layout';
 import {useResultContext} from '../result-context';
 import {TableContext, useTableContext} from './table-context';
 import './table.css';
-import {applyRenderer} from '../apply-renderer';
+import {applyRenderer, shouldRenderAs} from '../apply-renderer';
 import {isFieldHidden} from '../../tags_utils';
 
 const IS_CHROMIUM = navigator.userAgent.toLowerCase().indexOf('chrome') >= 0;
