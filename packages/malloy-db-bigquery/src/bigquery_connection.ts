@@ -43,7 +43,6 @@ import {
   MalloyQueryData,
   NamedStructDefs,
   PersistSQLResults,
-  PooledConnection,
   QueryData,
   QueryDataRow,
   QueryOptionsReader,
@@ -55,6 +54,7 @@ import {
   StructDef,
   toAsyncGenerator,
 } from '@malloydata/malloy';
+import {BaseConnection} from '@malloydata/malloy/connection';
 
 export interface BigQueryManagerOptions {
   credentials?: {
@@ -142,6 +142,7 @@ const TIMEOUT_MS = 1000 * 60 * 10;
 
 // manage access to BQ, control costs, enforce global data/API limits
 export class BigQueryConnection
+  extends BaseConnection
   implements Connection, PersistSQLResults, StreamingConnection
 {
   public readonly name: string;
@@ -194,6 +195,7 @@ export class BigQueryConnection
     queryOptions?: QueryOptionsReader,
     config: BigQueryConnectionConfiguration = {}
   ) {
+    super();
     if (typeof arg === 'string') {
       this.name = arg;
     } else {
@@ -239,10 +241,6 @@ export class BigQueryConnection
     } else {
       return options;
     }
-  }
-
-  public isPool(): this is PooledConnection {
-    return false;
   }
 
   public canPersist(): this is PersistSQLResults {

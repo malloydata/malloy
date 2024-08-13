@@ -30,7 +30,6 @@ import {
   FieldAtomicTypeDef,
   NamedStructDefs,
   PersistSQLResults,
-  PooledConnection,
   QueryValue,
   QueryData,
   QueryDataRow,
@@ -39,9 +38,10 @@ import {
   RunSQLOptions,
   SQLBlock,
   StandardSQLDialect,
-  StreamingConnection,
   StructDef,
 } from '@malloydata/malloy';
+import {BaseConnection} from '@malloydata/malloy/connection';
+
 import {PrestoClient, PrestoQuery} from '@prestodb/presto-js-client';
 import {randomUUID} from 'crypto';
 import {Trino, BasicAuth} from 'trino-client';
@@ -67,7 +67,7 @@ export interface TrinoConnectionConfiguration {
 
 export type TrinoConnectionOptions = ConnectionConfig;
 
-export interface BaseConnection {
+export interface BaseRunner {
   runSQL(
     sql: string,
     limit: number | undefined
@@ -78,7 +78,7 @@ export interface BaseConnection {
   }>;
 }
 
-class PrestoBase implements BaseConnection {
+class PrestoRunner implements BaseRunner {
   client: PrestoClient;
   constructor(config: TrinoConnectionConfiguration) {
     this.client = new PrestoClient({
@@ -113,7 +113,7 @@ class PrestoBase implements BaseConnection {
   }
 }
 
-class TrinooBase implements BaseConnection {
+class TrinoRunner implements BaseRunner {
   client: Trino;
   constructor(config: TrinoConnectionConfiguration) {
     this.client = Trino.create({
@@ -157,6 +157,7 @@ class TrinooBase implements BaseConnection {
 
 // manage access to BQ, control costs, enforce global data/API limits
 export abstract class TrinoPrestoConnection
+  extends BaseConnection
   implements Connection, PersistSQLResults
 {
   trinoToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
@@ -221,19 +222,20 @@ export abstract class TrinoPrestoConnection
 
   //private config: TrinoConnectionConfiguration;
 
-  private client: BaseConnection;
+  private client: BaseRunner;
 
   constructor(
     name: string,
     queryOptions?: QueryOptionsReader,
     pConfig?: TrinoConnectionConfiguration
   ) {
+    super();
     const config = pConfig || {};
     this.name = name;
     if (name === 'trino') {
-      this.client = new TrinooBase(config);
+      this.client = new TrinoRunner(config);
     } else {
-      this.client = new PrestoBase(config);
+      this.client = new PrestoRunner(config);
     }
     this.queryOptions = queryOptions;
     //this.config = config;
@@ -256,16 +258,8 @@ export abstract class TrinoPrestoConnection
     }
   }
 
-  public isPool(): this is PooledConnection {
-    return false;
-  }
-
   public canPersist(): this is PersistSQLResults {
     return true;
-  }
-
-  public canStream(): this is StreamingConnection {
-    return false;
   }
 
   public get supportsNesting(): boolean {

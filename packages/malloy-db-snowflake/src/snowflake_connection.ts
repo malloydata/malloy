@@ -23,6 +23,7 @@
 
 import * as crypto from 'crypto';
 import {
+  FetchSchemaOptions,
   RunSQLOptions,
   MalloyQueryData,
   QueryRunStats,
@@ -36,12 +37,11 @@ import {
   SnowflakeDialect,
   NamedStructDefs,
   FieldTypeDef,
-} from '@malloydata/malloy';
-import {SnowflakeExecutor} from './snowflake_executor';
-import {
-  FetchSchemaOptions,
   TestableConnection,
-} from '@malloydata/malloy/dist/runtime_types';
+} from '@malloydata/malloy';
+import {BaseConnection} from '@malloydata/malloy/connection';
+
+import {SnowflakeExecutor} from './snowflake_executor';
 import {ConnectionOptions} from 'snowflake-sdk';
 import {Options as PoolOptions} from 'generic-pool';
 
@@ -79,6 +79,7 @@ class StructMap {
 }
 
 export class SnowflakeConnection
+  extends BaseConnection
   implements
     Connection,
     PersistSQLResults,
@@ -110,6 +111,7 @@ export class SnowflakeConnection
     public readonly name: string,
     options?: SnowflakeConnectionOptions
   ) {
+    super();
     let connOptions = options?.connOptions;
     if (connOptions === undefined) {
       // try to get connection options from ~/.snowflake/connections.toml

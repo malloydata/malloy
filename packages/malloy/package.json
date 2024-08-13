@@ -4,7 +4,8 @@
   "license": "MIT",
   "exports": {
     ".": "./dist/index.js",
-    "./test": "./dist/test/index.js"
+    "./test": "./dist/test/index.js",
+    "./connection": "./dist/connection/index.js"
   },
   "typesVersions": {
     "*": {
@@ -13,6 +14,9 @@
       ],
       "test": [
         "./dist/test/index.d.ts"
+      ],
+      "connection": [
+        "./dist/connection/index.d.ts"
       ]
     }
   },

@@ -168,6 +168,13 @@ export type {
 } from './malloy';
 export type {QueryOptionsReader, RunSQLOptions} from './run_sql_options';
 export type {
+  ModelString,
+  ModelURL,
+  QueryString,
+  QueryURL,
+  URLReader,
+} from './runtime_types';
+export type {
   Connection,
   ConnectionConfig,
   ConnectionFactory,
@@ -177,15 +184,10 @@ export type {
   FetchSchemaOptions,
   InfoConnection,
   LookupConnection,
-  ModelString,
-  ModelURL,
   PersistSQLResults,
   PooledConnection,
-  QueryString,
-  QueryURL,
   TestableConnection,
   StreamingConnection,
-  URLReader,
-} from './runtime_types';
+} from './connection/types';
 export {toAsyncGenerator} from './connection_utils';
 export {type TagParse, Tag, type TagDict} from './tags';

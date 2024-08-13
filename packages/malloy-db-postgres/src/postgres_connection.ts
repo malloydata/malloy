@@ -46,6 +46,8 @@ import {
   StreamingConnection,
   StructDef,
 } from '@malloydata/malloy';
+import {BaseConnection} from '@malloydata/malloy/connection';
+
 import {Client, Pool} from 'pg';
 import QueryStream from 'pg-query-stream';
 import {randomUUID} from 'crypto';
@@ -71,6 +73,7 @@ export interface PostgresConnectionOptions
     PostgresConnectionConfiguration {}
 
 export class PostgresConnection
+  extends BaseConnection
   implements Connection, StreamingConnection, PersistSQLResults
 {
   public readonly name: string;
@@ -103,6 +106,7 @@ export class PostgresConnection
     queryOptionsReader?: QueryOptionsReader,
     configReader?: PostgresConnectionConfigurationReader
   ) {
+    super();
     if (typeof arg === 'string') {
       this.name = arg;
       if (configReader) {
