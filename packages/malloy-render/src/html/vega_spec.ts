@@ -30,6 +30,7 @@ import {StyleDefaults, VegaRenderOptions} from '../data_styles';
 import {RendererOptions} from '../renderer_types';
 import {RendererFactory} from '../renderer_factory';
 import {Renderer} from '../renderer';
+import {grayMedium, gridGray} from '../component/plot/plot-to-vega';
 
 type DataContainer = Array<unknown> | Record<string, unknown>;
 
@@ -39,10 +40,10 @@ export const DEFAULT_SPEC: Partial<lite.TopLevelSpec> = {
     params: [
       {
         name: 'defaultFont',
-        value: "var(--malloy-font-family, 'Roboto')",
+        value: "var(--malloy-font-family, 'Inter')",
       },
-      {name: 'titleColor', value: 'var(--malloy-title-color, #505050)'},
-      {name: 'labelColor', value: 'var(--malloy-label-color, #505050)'},
+      {name: 'titleColor', value: `var(--malloy-title-color, ${grayMedium})`},
+      {name: 'labelColor', value: `var(--malloy-label-color, ${grayMedium})`},
     ],
     background: undefined,
     color: {expr: 'titleColor'},
@@ -71,6 +72,10 @@ export const DEFAULT_SPEC: Partial<lite.TopLevelSpec> = {
       titleFontWeight: 500,
       titleColor: {expr: 'titleColor'},
       titleFontSize: 12,
+      gridColor: gridGray,
+      tickColor: gridGray,
+      labelPadding: 5,
+      titlePadding: 10,
     },
     legend: {
       titleFontWeight: 500,
