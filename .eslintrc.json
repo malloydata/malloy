@@ -10,7 +10,6 @@
     "packages/malloy/src/lang/lib/Malloy",
     "dist/"
   ],
-  "plugins": ["@malloydata/lint"],
   "rules": {
     "no-console": "warn",
     "prettier/prettier": ["error", {"quoteProps": "preserve"}],
@@ -42,7 +41,6 @@
       "error",
       {"prefer": "parameter-property"}
     ],
-    "quote-props": ["error", "consistent"],
-    "@malloydata/lint/quote-string-properties": "error"
+    "quote-props": ["error", "consistent"]
   }
 }
