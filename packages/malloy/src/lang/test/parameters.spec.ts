@@ -99,7 +99,7 @@ describe('parameters', () => {
       source: ab_new_new(param::number) is ab_new(param) extend {}
     `).toTranslate();
   });
-  test.skip('can pass parameter into source of query', () => {
+  test('can pass parameter into source of query', () => {
     expect(`
       ##! experimental.parameters
       source: ab_new(param::number) is ab
@@ -651,12 +651,12 @@ describe('parameters', () => {
       }
     `).toTranslate();
   });
-  test('can not pass parameter into source of query yet', () => {
-    expect(markSource`
+  test('can pass parameter into source of query', () => {
+    expect(`
       ##! experimental.parameters
       source: ab_new(param::number) is ab
-      source: ab_new_new(param::number) is ab_new(${'param'}) -> { select: * }
-    `).translationToFailWith('`param` is not defined');
+      source: ab_new_new(param::number) is ab_new(param) -> { select: * }
+    `).toTranslate();
   });
   test.skip('can add an annotation to a param', () => {
     expect(`

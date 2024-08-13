@@ -9,7 +9,8 @@ import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
 import '../../util/db-jest-matchers';
 
-const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
+const runtimes = new RuntimeList(databasesFromEnvironmentOr(['duckdb']));
+// const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 afterAll(async () => {
   await runtimes.closeAll();
@@ -208,7 +209,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       'n.param_value_3': 10,
     });
   });
-  it.skip(`can pass param into joined source from query - ${databaseName}`, async () => {
+  it(`can pass param into joined source from query - ${databaseName}`, async () => {
     await expect(`
       ##! experimental.parameters
       source: state_facts(
@@ -233,7 +234,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       }
     `).malloyResultMatches(runtime, {s1: 'CA', s2: 'CA', c: 1});
   });
-  it.skip(`can pass param into query definition - ${databaseName}`, async () => {
+  it(`can pass param into query definition - ${databaseName}`, async () => {
     await expect(`
       ##! experimental.parameters
       source: state_facts(

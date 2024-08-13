@@ -61,7 +61,7 @@ export class QueryReference extends MalloyElement implements QueryElement {
         query.sourceArguments
       );
       this.has({queryHead: queryHead});
-      const inputStruct = queryHead.structDef(undefined);
+      const inputStruct = queryHead.structDef();
       const outputStruct = getFinalStruct(this, inputStruct, query.pipeline);
       const unRefedQuery = isRefOk
         ? query

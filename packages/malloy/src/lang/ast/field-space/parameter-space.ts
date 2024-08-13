@@ -17,7 +17,10 @@ export class ParameterSpace implements FieldSpace {
   readonly type = 'fieldSpace';
 
   private readonly _map: Record<string, SpaceEntry>;
-  constructor(parameters: HasParameter[]) {
+  constructor(
+    parameters: HasParameter[],
+    readonly parentScope: ParameterSpace | undefined = undefined
+  ) {
     this._map = {};
     for (const parameter of parameters) {
       this._map[parameter.name] = new AbstractParameter(parameter);

@@ -24,7 +24,6 @@
 import {StructDef, StructSource} from '../../../model/malloy_types';
 import {Source} from './source';
 import {QueryElement} from '../types/query-element';
-import {ParameterSpace} from '../field-space/parameter-space';
 import {HasParameter} from '../parameters/has-parameter';
 
 export class QuerySource extends Source {
@@ -33,14 +32,11 @@ export class QuerySource extends Source {
     super({query});
   }
 
-  structDef(parameterSpace: ParameterSpace | undefined): StructDef {
-    return this.withParameters(parameterSpace, undefined);
+  structDef(): StructDef {
+    return this.withParameters(undefined);
   }
 
-  withParameters(
-    parameterSpace: ParameterSpace | undefined,
-    pList: HasParameter[] | undefined
-  ): StructDef {
+  withParameters(pList: HasParameter[] | undefined): StructDef {
     const comp = this.query.queryComp(false);
     const queryStruct = {
       ...comp.outputStruct,
