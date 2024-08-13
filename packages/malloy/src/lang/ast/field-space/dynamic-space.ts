@@ -129,10 +129,9 @@ export abstract class DynamicSpace extends StaticSpace {
         }
       }
       const reorderFields = [...fields, ...joins, ...turtles];
-      const parameterSpace = this.parameterSpace();
       for (const [, field] of reorderFields) {
         if (field instanceof JoinSpaceField) {
-          const joinStruct = field.join.structDef(parameterSpace);
+          const joinStruct = field.join.structDef();
           if (!ErrorFactory.isErrorStructDef(joinStruct)) {
             this.final.fields.push(joinStruct);
             fixupJoins.push([field.join, joinStruct]);

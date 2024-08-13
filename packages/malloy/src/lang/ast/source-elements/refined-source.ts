@@ -57,14 +57,11 @@ export class RefinedSource extends Source {
     super({source, refinement});
   }
 
-  structDef(parameterSpace: ParameterSpace | undefined): StructDef {
-    return this.withParameters(parameterSpace, []);
+  structDef(): StructDef {
+    return this.withParameters([]);
   }
 
-  withParameters(
-    parameterSpace: ParameterSpace | undefined,
-    pList: HasParameter[] | undefined
-  ): StructDef {
+  withParameters(pList: HasParameter[] | undefined): StructDef {
     let primaryKey: PrimaryKey | undefined;
     let fieldListEdit: FieldListEdit | undefined;
     const fields: MakeEntry[] = [];
@@ -106,14 +103,14 @@ export class RefinedSource extends Source {
     }
 
     const paramSpace = pList ? new ParameterSpace(pList) : undefined;
-    const from = structuredClone(this.source.structDef(paramSpace));
+    const from = structuredClone(this.source.structDef());
     // Note that this is explicitly not:
     // const from = structuredClone(this.source.withParameters(parameterSpace, pList));
     // Because the parameters are added to the resulting struct, not the base struct
     if (primaryKey) {
       from.primaryKey = primaryKey.field.name;
     }
-    const fs = RefinedSpace.filteredFrom(from, fieldListEdit, paramSpace);
+    const fs = RefinedSpace.filteredFrom(from, fieldListEdit, paramSpace); // TODO replace with the new lexical space
     if (newTimezone) {
       fs.setTimezone(newTimezone);
     }

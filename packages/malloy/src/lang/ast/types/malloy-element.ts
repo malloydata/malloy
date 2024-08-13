@@ -39,7 +39,7 @@ import {LogSeverity, MessageLogger} from '../../parse-log';
 import {MalloyTranslation} from '../../parse-malloy';
 import {ModelDataRequest} from '../../translate-response';
 import {ParameterSpace} from '../field-space/parameter-space';
-import { HasParameter } from '../parameters/has-parameter';
+import {HasParameter} from '../parameters/has-parameter';
 import {DocumentCompileResult} from './document-compile-result';
 import {GlobalNameSpace} from './global-name-space';
 import {ModelEntry} from './model-entry';

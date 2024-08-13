@@ -67,7 +67,7 @@ export class DefineSource
       }
       const parameters = this.deduplicatedParameters();
       if (parameters.length) this.introduceParameterScope(parameters);
-      const structDef = theSource.withParameters(undefined, this.parameters);
+      const structDef = theSource.withParameters(this.parameters);
       this.validateParameterShadowing(parameters, structDef);
       if (ErrorFactory.isErrorStructDef(structDef)) {
         return;

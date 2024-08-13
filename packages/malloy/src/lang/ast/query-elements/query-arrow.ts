@@ -53,8 +53,8 @@ export class QueryArrow extends QueryBase implements QueryElement {
       // We create a fresh query with either the QOPDesc as the head,
       // the view as the head, or the scalar as the head (if scalar lenses is enabled)
       const invoked = isRefOk
-        ? this.source.structRef(undefined)
-        : {structRef: this.source.structDef(undefined)};
+        ? this.source.structRef()
+        : {structRef: this.source.structDef()};
       queryBase = {
         type: 'query',
         ...invoked,
@@ -63,7 +63,7 @@ export class QueryArrow extends QueryBase implements QueryElement {
       };
       inputStruct = refIsStructDef(invoked.structRef)
         ? invoked.structRef
-        : this.source.structDef(undefined);
+        : this.source.structDef();
       fieldSpace = new StaticSpace(inputStruct);
     } else {
       // We are adding a second stage to the given "source" query; we get the query and add a segment

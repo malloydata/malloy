@@ -39,7 +39,6 @@ import {ModelEntryReference} from '../types/malloy-element';
 import {Argument as HasArgument} from '../parameters/argument';
 import {LogSeverity} from '../../parse-log';
 import {ExprIdReference} from '../expressions/expr-id-reference';
-import {ParameterSpace} from '../field-space/parameter-space';
 import {HasParameter} from '../parameters/has-parameter';
 
 export class NamedSource extends Source {
@@ -63,17 +62,17 @@ export class NamedSource extends Source {
     return this.ref instanceof ModelEntryReference ? this.ref.name : this.ref;
   }
 
-  structRef(parameterSpace: ParameterSpace | undefined): InvokedStructRef {
+  structRef(): InvokedStructRef {
     const modelEnt = this.modelEntry(this.ref);
     // If we are not exporting the referenced structdef, don't use the reference
     if (modelEnt && !modelEnt.exported) {
       return {
-        structRef: this.structDef(parameterSpace),
+        structRef: this.structDef(),
       };
     }
     return {
       structRef: this.refName,
-      sourceArguments: this.evaluateArgumentsForRef(parameterSpace),
+      sourceArguments: this.evaluateArgumentsForRef(),
     };
   }
 
@@ -111,21 +110,17 @@ export class NamedSource extends Source {
     return {...entry};
   }
 
-  private evaluateArgumentsForRef(
-    parameterSpace: ParameterSpace | undefined
-  ): Record<string, Parameter> {
+  private evaluateArgumentsForRef(): Record<string, Parameter> {
     const base = this.modelStruct();
     if (base === undefined) {
       return {};
     }
 
-    return this.evaluateArguments(parameterSpace, base.parameters, []);
+    return this.evaluateArguments(base.parameters);
   }
 
   private evaluateArguments(
-    parameterSpace: ParameterSpace | undefined,
-    parametersIn: Record<string, Parameter> | undefined,
-    parametersOut: HasParameter[] | undefined
+    parametersIn: Record<string, Parameter> | undefined
   ): Record<string, Parameter> {
     const outArguments = {...this.sourceArguments};
     const passedNames = new Set();
@@ -153,8 +148,6 @@ export class NamedSource extends Source {
           `\`${this.refName}\` has no declared parameter named \`${id.refString}\``
         );
       } else {
-        // const paramSpace =
-        //   parameterSpace ?? new ParameterSpace(parametersOut ?? []);
         const paramSpace = this.parameterSpace();
         const pVal = argument.value.getExpression(paramSpace);
         let value = pVal.value;
@@ -183,14 +176,11 @@ export class NamedSource extends Source {
     return outArguments;
   }
 
-  structDef(parameterSpace: ParameterSpace | undefined): StructDef {
-    return this.withParameters(parameterSpace, []);
+  structDef(): StructDef {
+    return this.withParameters([]);
   }
 
-  withParameters(
-    parameterSpace: ParameterSpace | undefined,
-    pList: HasParameter[] | undefined
-  ): StructDef {
+  withParameters(pList: HasParameter[] | undefined): StructDef {
     /*
       Can't really generate the callback list until after all the
       things before me are translated, and that kinda screws up
@@ -220,11 +210,7 @@ export class NamedSource extends Source {
       outParameters[compiled.name] = compiled;
     }
 
-    const outArguments = this.evaluateArguments(
-      parameterSpace,
-      base.parameters,
-      pList
-    );
+    const outArguments = this.evaluateArguments(base.parameters);
 
     const ret = {...base, parameters: outParameters, arguments: outArguments};
     this.document()?.rememberToAddModelAnnotations(ret);

@@ -31,7 +31,6 @@ import {
 
 import {Source} from '../source-elements/source';
 import {NamedSource} from '../source-elements/named-source';
-import {ParameterSpace} from '../field-space/parameter-space';
 
 export class QueryHeadStruct extends Source {
   elementType = 'internalOnlyQueryHead';
@@ -46,12 +45,12 @@ export class QueryHeadStruct extends Source {
     return {structRef: this.fromRef};
   }
 
-  structDef(parameterSpace: ParameterSpace | undefined): StructDef {
+  structDef(): StructDef {
     if (refIsStructDef(this.fromRef)) {
       return this.fromRef;
     }
     const ns = new NamedSource(this.fromRef, this.sourceArguments, undefined);
     this.has({exploreReference: ns});
-    return ns.structDef(parameterSpace);
+    return ns.structDef();
   }
 }

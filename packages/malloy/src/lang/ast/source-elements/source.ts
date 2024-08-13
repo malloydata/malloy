@@ -28,18 +28,17 @@ import {
 } from '../../../model/malloy_types';
 import {MalloyElement} from '../types/malloy-element';
 import {HasParameter} from '../parameters/has-parameter';
-import {ParameterSpace} from '../field-space/parameter-space';
 
 /**
  * A "Source" is a thing which you can run queries against. The main
  * function of a source is to represent an eventual StructDef
  */
 export abstract class Source extends MalloyElement {
-  abstract structDef(parameterSpace: ParameterSpace | undefined): StructDef;
+  abstract structDef(): StructDef;
 
-  structRef(parameterSpace: ParameterSpace | undefined): InvokedStructRef {
+  structRef(): InvokedStructRef {
     return {
-      structRef: this.structDef(parameterSpace),
+      structRef: this.structDef(),
     };
   }
 
@@ -55,11 +54,8 @@ export abstract class Source extends MalloyElement {
     return parameters;
   }
 
-  withParameters(
-    parameterSpace: ParameterSpace | undefined,
-    pList: HasParameter[] | undefined
-  ): StructDef {
-    const before = this.structDef(parameterSpace);
+  withParameters(pList: HasParameter[] | undefined): StructDef {
+    const before = this.structDef();
     return {
       ...before,
       parameters: this.packParameters(pList),
