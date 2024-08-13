@@ -42,8 +42,8 @@ export function MalloyRenderInner(props: {
 }) {
   const metadata = createMemo(() => getResultMetadata(props.result));
   const tags = () => {
-    const modelTag = props.result.modelTag;
-    const resultTag = props.result.tagParse().tag;
+    const modelTag = metadata().modelTag;
+    const resultTag = metadata().resultTag;
     const modelTheme = modelTag.tag('theme');
     const localTheme = resultTag.tag('theme');
     return {

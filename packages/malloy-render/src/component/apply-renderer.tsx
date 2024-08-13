@@ -15,6 +15,7 @@ import {Chart} from './chart';
 import MalloyTable from './table/table';
 import {renderList} from './render-list';
 import {renderImage} from './render-image';
+import {Dashboard} from './dashboard/dashboard';
 
 export type RendererProps = {
   field: Field;
@@ -65,6 +66,10 @@ export function applyRenderer(props: RendererProps) {
           {...propsToPass}
         />
       );
+      break;
+    }
+    case 'dashboard': {
+      renderValue = <Dashboard data={dataColumn as DataArray} />;
       break;
     }
     case 'table': {

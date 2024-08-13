@@ -71,6 +71,7 @@ export function shouldRenderAs(f: Field | Explore, tagOverride?: Tag) {
   }
   if (hasAny(tag, 'list', 'list_detail')) return 'list';
   if (hasAny(tag, 'bar_chart')) return 'chart';
+  if (tag.has('dashboard')) return 'dashboard';
   else return 'table';
 }
 

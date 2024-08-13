@@ -3,6 +3,7 @@ import {withSolid} from 'solid-element';
 import {MalloyRender, MalloyRenderProps} from './render';
 import css from './render.css?raw';
 import tableCss from './table/table.css?raw';
+import dashboardCss from './dashboard/dashboard.css?raw';
 
 const withStyles = ComponentType => {
   return (props, options) => {
@@ -10,7 +11,7 @@ const withStyles = ComponentType => {
     const stylesheet = new CSSStyleSheet();
     stylesheet.replaceSync(css);
     const tableStylesheet = new CSSStyleSheet();
-    tableStylesheet.replaceSync(tableCss);
+    tableStylesheet.replaceSync([tableCss, dashboardCss].join('\n'));
     element.renderRoot.adoptedStyleSheets = [stylesheet, tableStylesheet];
     return ComponentType(props, options);
   };
