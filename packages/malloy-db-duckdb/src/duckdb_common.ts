@@ -38,6 +38,7 @@ import {
   TestableConnection,
   DuckDBDialect,
 } from '@malloydata/malloy';
+import {BaseConnection} from '@malloydata/malloy/connection';
 
 export interface DuckDBQueryOptions {
   rowLimit: number;
@@ -52,6 +53,7 @@ const unquoteName = (name: string) => {
 };
 
 export abstract class DuckDBCommon
+  extends BaseConnection
   implements TestableConnection, PersistSQLResults, StreamingConnection
 {
   protected isMotherDuck = false;
@@ -92,7 +94,9 @@ export abstract class DuckDBCommon
     }
   }
 
-  constructor(protected queryOptions?: QueryOptionsReader) {}
+  constructor(protected queryOptions?: QueryOptionsReader) {
+    super();
+  }
 
   public isPool(): this is PooledConnection {
     return false;

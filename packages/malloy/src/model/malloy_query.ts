@@ -97,7 +97,7 @@ import {
   Argument,
 } from './malloy_types';
 
-import {Connection} from '../runtime_types';
+import {Connection} from '../connection/types';
 import {
   AndChain,
   exprMap,

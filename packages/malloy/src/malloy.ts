@@ -68,15 +68,13 @@ import {
   QueryValue,
 } from './model';
 import {
-  Connection,
-  InfoConnection,
-  LookupConnection,
   ModelString,
   ModelURL,
   QueryString,
   QueryURL,
   URLReader,
 } from './runtime_types';
+import {Connection, InfoConnection, LookupConnection} from './connection/types';
 import {DateTime} from 'luxon';
 import {Tag, TagParse, TagParseSpec, Taggable} from './tags';
 import {Dialect, getDialect} from './dialect';
