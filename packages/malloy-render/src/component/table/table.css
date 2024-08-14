@@ -4,6 +4,18 @@
 
 .malloy-table {
   background: var(--malloy-render--table-background);
+  --table-gutter-left-multiplier: 1;
+  --table-gutter-right-multiplier: 1;
+  --table-row-span: 1;
+  --total-header-size: 1;
+}
+
+.malloy-table .table-gutter-left {
+  --table-gutter-left-multiplier: 2;
+}
+
+.malloy-table .table-gutter-right {
+  --table-gutter-right-multiplier: 2;
 }
 
 .malloy-table {
@@ -18,6 +30,11 @@
   max-height: 100%;
   position: relative;
   overflow: auto;
+  grid-template-columns: repeat(var(--total-header-size), fit-content(100%));
+}
+
+.malloy-table:not(.root) {
+  grid-column: 1 / span var(--table-row-span);
 }
 
 .malloy-table .pinned-header-row {
@@ -27,11 +44,21 @@
   top: 0px;
   z-index: 100;
   pointer-events: none;
+  height: fit-content;
+  margin-bottom: -100%;
+  grid-column: 1 / span var(--total-header-size);
+}
+
+.malloy-table .pinned-header-subrow {
+  display: grid;
+  grid: auto / subgrid;
+  grid-column: 1 / span var(--total-header-size);
 }
 
 .malloy-table .table-row {
   display: grid;
   grid: auto / subgrid;
+  grid-column: 1 / span var(--table-row-span);
 }
 
 .malloy-table .th {
@@ -61,34 +88,73 @@
   font-variant-numeric: tabular-nums;
 }
 
+.malloy-table .th.numeric .cell-content {
+  justify-content: end;
+}
+
 .malloy-table .cell-content {
   border-top: var(--malloy-render--table-border);
   height: 100%;
+
+  /* TODO: This is better than nothing, but could use work.
+    A linear scaling of padding / line-height doesn't work all that well as you get bigger.
+  */
   /* -1px for the top border */
-  line-height: calc(var(--malloy-render--table-row-height) - 1px);
+  line-height: calc(var(--malloy-render--table-row-height) * 5 / 7 - 1px);
+  /* padding-block: 4px; */
+  padding-block: calc(var(--malloy-render--table-row-height) * 1 / 7);
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   margin-inline: 0px;
-  padding-inline: var(--malloy-render--table-gutter-size);
+  /* padding-inline: var(--malloy-render--table-gutter-size); */
+  padding-left: calc(
+    var(--malloy-render--table-gutter-size) *
+      var(--table-gutter-left-multiplier)
+  );
+  padding-right: calc(
+    var(--malloy-render--table-gutter-size) *
+      var(--table-gutter-right-multiplier)
+  );
+  text-wrap: wrap;
+  word-break: normal;
+}
+
+.malloy-table .th .cell-content {
+  display: flex;
+  align-items: end;
 }
 
 .malloy-table .cell-content.hide-start-gutter {
-  margin-left: var(--malloy-render--table-gutter-size);
+  margin-left: calc(
+    var(--malloy-render--table-gutter-size) *
+      var(--table-gutter-left-multiplier)
+  );
   padding-left: 0px;
 }
 
 .malloy-table .cell-content.hide-end-gutter {
-  margin-right: var(--malloy-render--table-gutter-size);
+  margin-right: calc(
+    var(--malloy-render--table-gutter-size) *
+      var(--table-gutter-right-multiplier)
+  );
   padding-right: 0px;
 }
 
-/* If pinned, show all gutter borders in pinned header */
+/* If scrolled, show all gutter borders in pinned header */
 .malloy-table.pinned .pinned-header {
   .cell-content.hide-start-gutter,
   .cell-content.hide-end-gutter {
     margin-inline: 0px;
-    padding-inline: var(--malloy-render--table-gutter-size);
+    padding-left: calc(
+      var(--malloy-render--table-gutter-size) *
+        var(--table-gutter-left-multiplier)
+    );
+
+    padding-right: calc(
+      var(--malloy-render--table-gutter-size) *
+        var(--table-gutter-right-multiplier)
+    );
   }
 }
 
@@ -119,5 +185,5 @@
 
 /* TODO figure out better strategy for tweaking renderers inside table */
 .malloy-table .malloy-list {
-  line-height: var(--malloy-render--table-row-height);
+  line-height: calc(var(--malloy-render--table-row-height) * 5 / 7 - 1px);
 }

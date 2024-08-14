@@ -28,3 +28,10 @@ export const Dashboard = {
     view: 'dash',
   },
 };
+
+export const DashboardDense = {
+  args: {
+    source: 'products',
+    view: 'dash_dense',
+  },
+};

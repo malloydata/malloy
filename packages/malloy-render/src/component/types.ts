@@ -24,6 +24,7 @@ export interface FieldRenderMetadata {
   values: Set<string>;
   maxRecordCt: number | null;
   vegaChartProps?: VegaChartProps;
+  renderAs: string;
 }
 
 export interface RenderResultMetadata {
