@@ -297,11 +297,11 @@ const MalloyTableRoot = (_props: {
       <Show when={tableCtx.root}>
         <div
           ref={bodyDetector}
-          style="position: absolute; visibility: hidden;"
+          style="position: sticky; left: 0px; height: 0px; visibility: hidden;"
         ></div>
         <div
           ref={pinnedDetector}
-          style="position: sticky; top: 0px; height: 0px; visibility: hidden;"
+          style="position: sticky; top: 0px; left: 0px; height: 0px; visibility: hidden;"
         ></div>
         <div
           class="pinned-header-row"
