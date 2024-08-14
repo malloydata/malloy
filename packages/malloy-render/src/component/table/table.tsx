@@ -9,6 +9,7 @@ import {
   Match,
   JSXElement,
   JSX,
+  onMount,
 } from 'solid-js';
 import {DataArray, DataRecord, Field} from '@malloydata/malloy';
 import {getRangeSize, isFirstChild, isLastChild} from '../util';
@@ -179,12 +180,6 @@ const MalloyTableRoot = (_props: {
   const tableCtx = useTableContext()!;
   const resultMetadata = useResultContext();
 
-  const [scrolling, setScrolling] = createSignal(false);
-  const handleScroll = (e: Event) => {
-    const target = e.target as HTMLElement;
-    setScrolling(target.scrollTop > 0);
-  };
-
   const pinnedFields = createMemo(() => {
     const fields = Object.entries(tableCtx.layout.fieldHeaderRangeMap)
       .sort((a, b) => {
@@ -259,18 +254,36 @@ const MalloyTableRoot = (_props: {
   const visibleFields = () =>
     props.data.field.allFields.filter(f => !isFieldHidden(f));
 
+  let pinnedDetector;
+  const [pinned, setPinned] = createSignal(false);
+  onMount(() => {
+    if (pinnedDetector) {
+      const observer = new IntersectionObserver(
+        ([e]) => {
+          setPinned(e.intersectionRatio < 1);
+        },
+        {threshold: [1]}
+      );
+      observer.observe(pinnedDetector);
+    }
+  });
+
   return (
     <div
       class="malloy-table"
       classList={{
         'root': tableCtx.root,
-        'scrolled': scrolling(),
+        'pinned': pinned(),
       }}
-      onScroll={handleScroll}
+      part={tableCtx.root ? 'table-container' : ''}
       style={getContainerStyle()}
     >
       {/* pinned header */}
       <Show when={tableCtx.root}>
+        <div
+          ref={pinnedDetector}
+          style="position: absolute; visibility: hidden;"
+        ></div>
         <div
           class="pinned-header-row"
           style={`grid-column: 1 / span ${tableCtx.layout.totalHeaderSize};`}
