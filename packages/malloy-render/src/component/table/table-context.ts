@@ -5,7 +5,6 @@ type TableContext = {
   root: boolean;
   pinnedHeader: boolean;
   layout: TableLayout;
-  autoRenameColumns: boolean;
 };
 
 export const TableContext = createContext<TableContext>();
