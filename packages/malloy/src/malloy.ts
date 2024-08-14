@@ -78,6 +78,7 @@ import {Connection, InfoConnection, LookupConnection} from './connection/types';
 import {DateTime} from 'luxon';
 import {Tag, TagParse, TagParseSpec, Taggable} from './tags';
 import {Dialect, getDialect} from './dialect';
+import {PathInfo} from './lang/parse-tree-walkers/find-table-path-walker';
 
 export interface Loggable {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -930,6 +931,18 @@ export class Parse {
     );
   }
 
+  /**
+   * Retrieve the full table paths for tables defined in the parsed document.
+   * Derived tables i.e. a table that extends another table, table from a query
+   * are not included.
+   *
+   * @return An array of document table path info.
+   */
+  public get tablePathInfo(): DocumentTablePath[] {
+    const paths: PathInfo[] = this.translator.tablePathInfo().pathInfo ?? [];
+    return paths.map(path => new DocumentTablePath(path));
+  }
+
   public get _translator(): MalloyTranslator {
     return this.translator;
   }
@@ -948,6 +961,39 @@ export class Parse {
     character: number;
   }): DocumentHelpContext | undefined {
     return this.translator.helpContext(position).helpContext;
+  }
+}
+
+/**
+ * Path info for a table defined in a Malloy document.
+ */
+export class DocumentTablePath {
+  private _range: DocumentRange;
+  private _connectionId: string;
+  private _tablePath: string;
+
+  constructor(tablePath: PathInfo) {
+    this._range = DocumentRange.fromJSON(tablePath.range);
+    this._connectionId = tablePath.connectionId;
+    this._tablePath = tablePath.tablePath;
+  }
+
+  /**
+   * @return The range of characters in the source Malloy document that defines
+   * this table.
+   */
+  public get range(): DocumentRange {
+    return this._range;
+  }
+
+  /** @return The Connection Id for this table. */
+  public get connectionId(): string {
+    return this._connectionId;
+  }
+
+  /** @return The full table path. */
+  public get tablePath(): string {
+    return this._tablePath;
   }
 }
 

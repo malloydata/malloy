@@ -158,6 +158,7 @@ export type {
   DataArrayOrRecord,
   Loggable,
   ModelMaterializer,
+  DocumentTablePath,
   DocumentSymbol,
   ResultJSON,
   PreparedResultMaterializer,
