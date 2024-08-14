@@ -64,12 +64,8 @@ const Cell = (props: {
   );
 };
 
-function renameColumn(name: string) {
-  return name.replace(/_/g, ' ');
-}
-
 const HeaderField = (props: {field: Field; isPinned?: boolean}) => {
-  const {layout: tableLayout, autoRenameColumns} = useTableContext()!;
+  const {layout: tableLayout} = useTableContext()!;
   const isFirst = isFirstChild(props.field);
   const isParentFirst = isFirstChild(props.field.parentExplore);
   const isParentNotAField = !props.field.parentExplore.isExploreField();
@@ -98,9 +94,7 @@ const HeaderField = (props: {field: Field; isPinned?: boolean}) => {
     >
       <Cell
         field={props.field}
-        value={
-          autoRenameColumns ? renameColumn(props.field.name) : props.field.name
-        }
+        value={props.field.name}
         hideStartGutter={hideStartGutter}
         hideEndGutter={hideEndGutter}
         isHeader
@@ -319,22 +313,13 @@ const MalloyTable: Component<{
         root: false,
         pinnedHeader: props.pinnedHeader ?? parentCtx.pinnedHeader,
         layout: parentCtx.layout,
-        autoRenameColumns: parentCtx.autoRenameColumns,
       };
     }
-
-    // For now, only support turning columns off at root level.
-    // This is due to an issue with pinned headers, which are always at root. So can't mix and match column renaming.
-    // This can be fixed by moving the renaming detection into the TableLayout generator
-    const autoRenameColumnsTag = () =>
-      props.data.field.tagParse().tag.tag('table', 'auto_rename')?.text() ??
-      metadata.resultTag.tag('table', 'auto_rename')?.text();
 
     return {
       root: true,
       pinnedHeader: props.pinnedHeader ?? false,
       layout: getTableLayout(metadata, props.data.field),
-      autoRenameColumns: autoRenameColumnsTag() === 'off' ? false : true,
     };
   });
 

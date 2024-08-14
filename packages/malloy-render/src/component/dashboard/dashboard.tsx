@@ -9,14 +9,11 @@ function DashboardItem(props: {
   field: Field;
   row: DataRecord;
   resultMetadata: RenderResultMetadata;
-  getFieldDisplayName: (f: Field) => string;
   isMeasure?: boolean;
 }) {
   return (
     <div class="dashboard-item">
-      <div class="dashboard-item-title">
-        {props.getFieldDisplayName(props.field)}
-      </div>
+      <div class="dashboard-item-title">{props.field.name}</div>
       <div
         class="dashboard-item-value"
         classList={{
@@ -68,11 +65,6 @@ export function Dashboard(props: {data: DataArray}) {
   });
 
   const resultMetadata = useResultContext();
-  const disableAutoRename =
-    resultMetadata.resultTag.tag('dashboard', 'auto_rename')?.text() === 'off';
-  const getFieldDisplayName = (f: Field) => {
-    return disableAutoRename ? f.name : f.name.replace(/_/g, ' ');
-  };
 
   return (
     <div class="malloy-dashboard">
@@ -84,9 +76,7 @@ export function Dashboard(props: {data: DataArray}) {
                 <For each={dimensions()}>
                   {d => (
                     <div class="dashboard-dimension-wrapper">
-                      <div class="dashboard-dimension-name">
-                        {getFieldDisplayName(d)}
-                      </div>
+                      <div class="dashboard-dimension-name">{d.name}</div>
                       <div class="dashboard-dimension-value">
                         {row.cell(d).value as string}
                       </div>
@@ -95,7 +85,6 @@ export function Dashboard(props: {data: DataArray}) {
                 </For>
               </div>
               <div class="dashboard-row-header-separator" />
-              {/* <hr class="dashboard-row-head" /> */}
             </div>
             <div class="dashboard-row-body">
               <For each={nonDimensions()}>
@@ -104,7 +93,6 @@ export function Dashboard(props: {data: DataArray}) {
                     field={field}
                     row={row}
                     resultMetadata={resultMetadata}
-                    getFieldDisplayName={getFieldDisplayName}
                     isMeasure={
                       field.isAtomicField() && field.sourceWasMeasureLike()
                     }
