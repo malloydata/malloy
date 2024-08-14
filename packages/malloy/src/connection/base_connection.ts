@@ -56,4 +56,12 @@ export abstract class BaseConnection implements Connection {
   async estimateQueryCost(_sqlCommand: string): Promise<QueryRunStats> {
     return {};
   }
+
+  async fetchMetadata() {
+    return {};
+  }
+
+  async fetchTableMetadata(_tablePath: string) {
+    return {};
+  }
 }
