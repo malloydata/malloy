@@ -254,17 +254,32 @@ const MalloyTableRoot = (_props: {
   const visibleFields = () =>
     props.data.field.allFields.filter(f => !isFieldHidden(f));
 
+  /*
+    Detect pinned by checking if the body has scrolled content offscreen,
+    but the pinned content is still fully visible.
+  */
+  let bodyDetector;
   let pinnedDetector;
-  const [pinned, setPinned] = createSignal(false);
+  const [bodyOffscreen, setBodyOffscreen] = createSignal(false);
+  const [pinnedOffscreen, setPinnedOffscreen] = createSignal(false);
+  const pinned = () => bodyOffscreen() && !pinnedOffscreen();
   onMount(() => {
-    if (pinnedDetector) {
+    if (bodyDetector && pinnedDetector) {
       const observer = new IntersectionObserver(
         ([e]) => {
-          setPinned(e.intersectionRatio < 1);
+          setBodyOffscreen(e.intersectionRatio < 1);
         },
         {threshold: [1]}
       );
-      observer.observe(pinnedDetector);
+      observer.observe(bodyDetector);
+
+      const observer2 = new IntersectionObserver(
+        ([e]) => {
+          setPinnedOffscreen(e.intersectionRatio < 1);
+        },
+        {threshold: [1]}
+      );
+      observer2.observe(pinnedDetector);
     }
   });
 
@@ -281,8 +296,12 @@ const MalloyTableRoot = (_props: {
       {/* pinned header */}
       <Show when={tableCtx.root}>
         <div
-          ref={pinnedDetector}
+          ref={bodyDetector}
           style="position: absolute; visibility: hidden;"
+        ></div>
+        <div
+          ref={pinnedDetector}
+          style="position: sticky; top: 0px; height: 0px; visibility: hidden;"
         ></div>
         <div
           class="pinned-header-row"
