@@ -2667,6 +2667,7 @@ export class ModelMaterializer extends FluentState<Model> {
         parse,
         model,
         refreshSchemaCache: options?.refreshSchemaCache,
+        noThrowOnError: options?.noThrowOnError,
       });
       return queryModel;
     });
