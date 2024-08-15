@@ -54,7 +54,7 @@ import {
   StructDef,
   toAsyncGenerator,
 } from '@malloydata/malloy';
-import {BaseConnection} from '@malloydata/malloy/connection';
+import {BaseConnection, TableMetadata} from '@malloydata/malloy/connection';
 
 export interface BigQueryManagerOptions {
   credentials?: {
@@ -827,6 +827,13 @@ export class BigQueryConnection
         .on('end', onEnd);
     };
     return toAsyncGenerator<QueryDataRow>(streamBigQuery);
+  }
+
+  async fetchTableMetadata(tablePath: string): Promise<TableMetadata> {
+    const tablePathInfo = tablePath.split('.');
+    return {
+      url: `https://console.cloud.google.com/bigquery?ws=!1m5!1m4!4m3!1s${tablePathInfo[0]}!2s${tablePathInfo[1]}!3s${tablePathInfo[2]}`,
+    };
   }
 
   async close(): Promise<void> {

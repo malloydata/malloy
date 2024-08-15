@@ -92,6 +92,14 @@ export interface ConnectionFactory {
   ): Connection & TestableConnection;
 }
 
+export interface ConnectionMetadata {
+  url?: string;
+}
+
+export interface TableMetadata {
+  url?: string;
+}
+
 /**
  * An object capable of running SQL.
  */
@@ -118,6 +126,10 @@ export interface Connection extends InfoConnection {
   estimateQueryCost(sqlCommand: string): Promise<QueryRunStats>;
 
   get dialectName(): string;
+
+  fetchMetadata: () => Promise<ConnectionMetadata>;
+
+  fetchTableMetadata: (tablePath: string) => Promise<TableMetadata>;
 }
 
 // TODO feature-sql-block Comment
