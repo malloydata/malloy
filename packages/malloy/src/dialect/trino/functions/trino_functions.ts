@@ -34,6 +34,7 @@ import {fnStartsWith, fnEndsWith} from './starts_ends_with';
 import {fnDiv} from './div';
 import {fnRepeat} from './repeat';
 import {fnReverse} from './reverse';
+import {fnCountApprox} from './count_approx';
 
 export const TRINO_FUNCTIONS = FUNCTIONS.clone();
 TRINO_FUNCTIONS.add('trunc', fnTrunc);
@@ -52,4 +53,5 @@ TRINO_FUNCTIONS.add('ascii', fnAscii);
 TRINO_FUNCTIONS.add('unicode', fnUnicode);
 TRINO_FUNCTIONS.add('repeat', fnRepeat);
 TRINO_FUNCTIONS.add('reverse', fnReverse);
+TRINO_FUNCTIONS.add('count_approx', fnCountApprox);
 TRINO_FUNCTIONS.seal();

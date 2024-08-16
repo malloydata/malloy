@@ -23,6 +23,7 @@
 
 import {FUNCTIONS} from '../../functions';
 import {fnByteLength} from './byte_length';
+import {fnCountApprox} from './count_approx';
 import {fnDiv} from './div';
 import {fnEndsWith} from './ends_with';
 import {fnGreatest, fnLeast} from './greatest_and_least';
@@ -47,4 +48,5 @@ DUCKDB_FUNCTIONS.add('unicode', fnUnicode);
 DUCKDB_FUNCTIONS.add('replace', fnReplace);
 DUCKDB_FUNCTIONS.add('ends_with', fnEndsWith);
 DUCKDB_FUNCTIONS.add('log', fnLog);
+DUCKDB_FUNCTIONS.add('count_approx', fnCountApprox);
 DUCKDB_FUNCTIONS.seal();
