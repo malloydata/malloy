@@ -1093,7 +1093,7 @@ expressionModels.forEach((x, databaseName) => {
       async () => {
         await expect(`
           // be accurate within 10%
-          # test.debug
+          // # test.debug
           run: ${databaseName}.table('malloytest.state_facts') -> {
             aggregate: x is round(count_approx(state)/10,0)*10
             aggregate: y is round(count_approx(airport_count)/10,0)*10
