@@ -153,6 +153,8 @@ export abstract class Dialect {
   // can LEFT JOIN UNNEST
   supportsLeftJoinUnnest = true;
 
+  supportsCountApprox = false;
+
   // return the definition of a function with the given name
   abstract getGlobalFunctionDef(
     name: string
