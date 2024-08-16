@@ -19,6 +19,7 @@ import {TableContext, useTableContext} from './table-context';
 import './table.css';
 import {applyRenderer, shouldRenderAs} from '../apply-renderer';
 import {isFieldHidden} from '../../tags_utils';
+import {createStore} from 'solid-js/store';
 
 const IS_CHROMIUM = navigator.userAgent.toLowerCase().indexOf('chrome') >= 0;
 // CSS Subgrid + Sticky Positioning only seems to work reliably in Chrome
@@ -30,6 +31,8 @@ const Cell = (props: {
   hideStartGutter: boolean;
   hideEndGutter: boolean;
   isHeader?: boolean;
+  tableGutterLeft?: boolean;
+  tableGutterRight?: boolean;
 }) => {
   const style = () => {
     const layout = useTableContext()!.layout;
@@ -56,6 +59,8 @@ const Cell = (props: {
         'header': props.isHeader,
         'hide-start-gutter': props.hideStartGutter,
         'hide-end-gutter': props.hideEndGutter,
+        'table-gutter-left': !!props.tableGutterLeft,
+        'table-gutter-right': !!props.tableGutterRight,
       }}
       style={style()}
       title={typeof props.value === 'string' ? props.value : ''}
@@ -76,9 +81,17 @@ const HeaderField = (props: {field: Field; isPinned?: boolean}) => {
   const isParentLast = isLastChild(props.field.parentExplore);
   const hideEndGutter = isLast && (isParentLast || isParentNotAField);
 
+  const fieldLayout = tableLayout.fieldLayout(props.field);
   const columnRange = props.isPinned
-    ? tableLayout.fieldLayout(props.field).absoluteColumnRange
-    : tableLayout.fieldLayout(props.field).relativeColumnRange;
+    ? fieldLayout.absoluteColumnRange
+    : fieldLayout.relativeColumnRange;
+
+  const tableGutterLeft =
+    (fieldLayout.depth > 0 && isFirstChild(props.field)) ||
+    fieldLayout.metadata.renderAs === 'table';
+  const tableGutterRight =
+    (fieldLayout.depth > 0 && isLastChild(props.field)) ||
+    (fieldLayout.depth === 0 && fieldLayout.metadata.renderAs === 'table');
 
   return (
     <div
@@ -91,13 +104,19 @@ const HeaderField = (props: {field: Field; isPinned?: boolean}) => {
         'grid-column': `${columnRange[0] + 1} / span ${getRangeSize(
           columnRange
         )}`,
+        'height': !props.isPinned
+          ? `var(--malloy-render--table-header-height-${fieldLayout.depth})`
+          : undefined,
       }}
     >
       <Cell
         field={props.field}
-        value={props.field.name}
+        // Add zero-width space so header name will wrap on _
+        value={props.field.name.replace(/_/g, '_\u200b')}
         hideStartGutter={hideStartGutter}
         hideEndGutter={hideEndGutter}
+        tableGutterLeft={tableGutterLeft}
+        tableGutterRight={tableGutterRight}
         isHeader
       />
     </div>
@@ -125,7 +144,8 @@ const TableField = (props: {field: Field; row: DataRecord}) => {
   if (tableCtx.pinnedHeader && renderAs !== 'table') renderValue = '';
 
   const tableLayout = useTableContext()!.layout;
-  const columnRange = tableLayout.fieldLayout(props.field).relativeColumnRange;
+  const fieldLayout = tableLayout.fieldLayout(props.field);
+  const columnRange = fieldLayout.relativeColumnRange;
   const style: JSX.CSSProperties = {
     'grid-column': `${columnRange[0] + 1} / span ${getRangeSize(columnRange)}`,
     'height': 'fit-content',
@@ -138,8 +158,11 @@ const TableField = (props: {field: Field; row: DataRecord}) => {
   // TODO: review what should be sticky
   else if (SUPPORTS_STICKY && props.field.isAtomicField()) {
     style.position = 'sticky';
-    style.top = `${(tableLayout.fieldLayout(props.field).depth + 1) * 28}px`;
+    style.top = `var(--malloy-render--table-header-cumulative-height-${fieldLayout.depth})`;
   }
+
+  const tableGutterLeft = fieldLayout.depth > 0 && isFirstChild(props.field);
+  const tableGutterRight = fieldLayout.depth > 0 && isLastChild(props.field);
 
   return (
     <div
@@ -158,6 +181,8 @@ const TableField = (props: {field: Field; row: DataRecord}) => {
             value={renderValue}
             hideStartGutter={isFirstChild(props.field)}
             hideEndGutter={isLastChild(props.field)}
+            tableGutterLeft={tableGutterLeft}
+            tableGutterRight={tableGutterRight}
           />
         </Match>
       </Switch>
@@ -198,39 +223,30 @@ const MalloyTableRoot = (_props: {
     return fields;
   });
 
-  const maxDepth = createMemo(() =>
-    Math.max(...pinnedFields().map(f => f.depth))
-  );
-
   const getContainerStyle: () => JSX.CSSProperties = () => {
+    const columnRange = tableCtx.layout.fieldLayout(
+      props.data.field
+    ).relativeColumnRange;
+
+    const style: JSX.CSSProperties = {
+      '--table-row-span': getRangeSize(columnRange),
+    };
+
     if (tableCtx.root) {
-      return {
-        'grid-template-columns': `repeat(${tableCtx.layout.totalHeaderSize}, max-content)`,
-      };
+      let cumulativeDepth = 0;
+      Object.entries(tableCtx.headerSizeStore[0])
+        .sort(([a], [b]) => parseInt(a) - parseInt(b))
+        .forEach(([depth, size]) => {
+          style[`--malloy-render--table-header-height-${depth}`] = `${size}px`;
+          cumulativeDepth += size;
+          style[
+            `--malloy-render--table-header-cumulative-height-${depth}`
+          ] = `${cumulativeDepth}px`;
+        });
+
+      style['--total-header-size'] = tableCtx.layout.totalHeaderSize;
     }
-    const columnRange = tableCtx.layout.fieldLayout(
-      props.data.field
-    ).relativeColumnRange;
-    return {
-      'grid-column': `1 / span ${getRangeSize(columnRange)}`,
-    };
-  };
-
-  const getRowStyle: (idx: number) => JSX.CSSProperties = (idx: number) => {
-    const columnRange = tableCtx.layout.fieldLayout(
-      props.data.field
-    ).relativeColumnRange;
-    const rowStyle = {
-      'grid-column': `1 / span ${getRangeSize(columnRange)}`,
-    };
-
-    // Offset first row to hide behind pinned headers
-    if (idx === 0 && tableCtx.root)
-      rowStyle[
-        'margin-top'
-      ] = `calc(-${maxDepth()} * var(--malloy-render--table-row-height))`;
-
-    return rowStyle;
+    return style;
   };
 
   // TODO: Get this from resultMetadata cache?
@@ -248,12 +264,21 @@ const MalloyTableRoot = (_props: {
   const visibleFields = () =>
     props.data.field.allFields.filter(f => !isFieldHidden(f));
 
+  const pinnedFieldsByDepth = () => {
+    const fields = pinnedFields();
+    return fields.reduce<(typeof fields)[]>((acc, curr) => {
+      const list = acc[curr.depth] || (acc[curr.depth] = []);
+      list.push(curr);
+      return acc;
+    }, []);
+  };
+
   /*
     Detect pinned by checking if the body has scrolled content offscreen,
     but the pinned content is still fully visible.
   */
-  let bodyDetector;
-  let pinnedDetector;
+  let bodyDetector: HTMLDivElement | undefined;
+  let pinnedDetector: HTMLDivElement | undefined;
   const [bodyOffscreen, setBodyOffscreen] = createSignal(false);
   const [pinnedOffscreen, setPinnedOffscreen] = createSignal(false);
   const pinned = () => bodyOffscreen() && !pinnedOffscreen();
@@ -277,6 +302,34 @@ const MalloyTableRoot = (_props: {
     }
   });
 
+  const headerMeasureEls: HTMLDivElement[] = [];
+  onMount(() => {
+    if (tableCtx.root) {
+      const [headerSizes, setHeaderSizes] = tableCtx.headerSizeStore;
+      const resizeObserver = new ResizeObserver(entries => {
+        const changes = entries.reduce((acc, e) => {
+          const depth = e.target.getAttribute('data-depth');
+          const newHeight = e.contentRect.height;
+          if (typeof depth === 'string' && headerSizes[depth] !== newHeight) {
+            acc[depth] = newHeight;
+          }
+          return acc;
+        }, {});
+        if (Object.entries(changes).length > 0)
+          setHeaderSizes(store => {
+            return {
+              ...store,
+              ...changes,
+            };
+          });
+      });
+
+      headerMeasureEls.forEach(el => {
+        resizeObserver.observe(el);
+      });
+    }
+  });
+
   return (
     <div
       class="malloy-table"
@@ -297,29 +350,34 @@ const MalloyTableRoot = (_props: {
           ref={pinnedDetector}
           style="position: sticky; top: 0px; left: 0px; height: 0px; visibility: hidden;"
         ></div>
-        <div
-          class="pinned-header-row"
-          style={`grid-column: 1 / span ${tableCtx.layout.totalHeaderSize};`}
-        >
-          <For each={pinnedFields()}>
-            {pinnedField => (
-              <HeaderField field={pinnedField.field as Field} isPinned />
+        <div class="pinned-header-row">
+          <For each={pinnedFieldsByDepth()}>
+            {(pinnedFields, idx) => (
+              <div
+                ref={el => (headerMeasureEls[idx()] = el)}
+                data-depth={idx()}
+                class="pinned-header-subrow"
+              >
+                <For each={pinnedFields}>
+                  {pinnedField => (
+                    <HeaderField field={pinnedField.field as Field} isPinned />
+                  )}
+                </For>
+              </div>
             )}
           </For>
         </div>
       </Show>
       {/* header */}
-      <Show when={!tableCtx.root}>
-        <div class="table-row" style={getRowStyle(-1)}>
-          <For each={visibleFields()}>
-            {field => <HeaderField field={field} />}
-          </For>
-        </div>
-      </Show>
+      <div class="table-row">
+        <For each={visibleFields()}>
+          {field => <HeaderField field={field} />}
+        </For>
+      </div>
       {/* rows */}
       <For each={data()}>
-        {(row, idx) => (
-          <div class="table-row" style={getRowStyle(idx())}>
+        {row => (
+          <div class="table-row">
             <For each={visibleFields()}>
               {field => <TableField field={field} row={row} />}
             </For>
@@ -345,6 +403,7 @@ const MalloyTable: Component<{
         root: false,
         pinnedHeader: props.pinnedHeader ?? parentCtx.pinnedHeader,
         layout: parentCtx.layout,
+        headerSizeStore: parentCtx.headerSizeStore,
       };
     }
 
@@ -352,6 +411,7 @@ const MalloyTable: Component<{
       root: true,
       pinnedHeader: props.pinnedHeader ?? false,
       layout: getTableLayout(metadata, props.data.field),
+      headerSizeStore: createStore({}),
     };
   });
 

@@ -29,9 +29,11 @@ export function renderList(props: RendererProps) {
     rows.push(row);
   }
 
-  // TODO: width estimator for list renderer? and others
   return (
-    <div class="malloy-list" style="text-wrap: wrap;">
+    <div
+      class="malloy-list"
+      style="text-wrap: wrap; line-height: calc(var(--malloy-render--table-row-height) * 5 / 7 - 1px);"
+    >
       <For each={rows}>
         {(row, idx) => (
           <span>

@@ -3,8 +3,8 @@
   width: 100%;
   height: 100%;
   overflow: auto;
-  display: grid;
-  grid-template-rows: auto;
+  display: flex;
+  flex-direction: column;
   gap: 48px;
 }
 
@@ -55,6 +55,10 @@
       rgb(229, 231, 235) 0px 0px 0px 1px,
       rgba(0, 0, 0, 0.1) 0px 1px 3px 0px,
       rgba(0, 0, 0, 0.1) 0px 1px 2px -1px;
+  }
+
+  .dashboard-item-value {
+    overflow: auto;
   }
 
   .dashboard-item-title {
