@@ -1,6 +1,11 @@
-import {Explore, Tag} from '@malloydata/malloy';
+import {Explore, Field, Tag} from '@malloydata/malloy';
 import {Mark, PlotSpec, createEmptySpec} from '../plot/plot-spec';
-import {getFieldPathBetweenFields, walkFields} from '../plot/util';
+import {
+  getFieldFromRelativePath,
+  getFieldPathBetweenFields,
+  walkFields,
+} from '../plot/util';
+import {isAtomicField} from '@malloydata/malloy/src/model';
 
 export function generateBarChartSpec(
   explore: Explore,
@@ -49,17 +54,19 @@ export function generateBarChartSpec(
 
   // If still no x or y, attempt to pick the best choice
   if (spec.x.fields.length === 0) {
-    // Pick first string field for x. (what about dates? others? basically non numbers?)
-    const stringFields = explore.allFields.filter(
-      f => f.isAtomicField() && f.isString()
+    // Pick first dimension field
+    const dimensions = explore.allFields.filter(
+      f => f.isAtomicField() && f.sourceWasDimension()
     );
-    if (stringFields.length > 0)
-      spec.x.fields.push(getFieldPathBetweenFields(explore, stringFields[0]));
+    if (dimensions.length > 0) {
+      spec.x.fields.push(getFieldPathBetweenFields(explore, dimensions[0]));
+    }
   }
   if (spec.y.fields.length === 0) {
-    // Pick first numeric field for y
+    // Pick first numeric measure field
     const numberField = explore.allFields.find(
-      f => f.isAtomicField() && f.isNumber()
+      // f => f.isAtomicField() && f.isNumber()
+      f => f.isAtomicField() && f.sourceWasMeasureLike() && f.isNumber()
     );
     if (numberField)
       spec.y.fields.push(getFieldPathBetweenFields(explore, numberField));
@@ -76,8 +83,12 @@ export function generateBarChartSpec(
 
   // Determine scale types for channels
   // TODO: Make this derived from the fields chosen
+  const xField = getFieldFromRelativePath(explore, spec.x.fields.at(0)!);
+
   spec.x.type = 'nominal';
   spec.y.type = 'quantitative';
+
+  console.log({spec, xField});
 
   return spec;
 }

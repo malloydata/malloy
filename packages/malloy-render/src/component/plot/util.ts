@@ -1,4 +1,4 @@
-import {Explore, Field} from '@malloydata/malloy';
+import {Explore, ExploreField, Field} from '@malloydata/malloy';
 
 export function walkFields(e: Explore, cb: (f: Field) => void) {
   e.allFields.forEach(f => {
@@ -41,4 +41,20 @@ export function getFieldPathBetweenFields(
   }
 
   return childPath.slice(startIndex).join('.');
+}
+
+export function getFieldFromRelativePath(explore: Explore, path: string) {
+  const pathParts = path.split('.');
+  let field: Field | Explore | undefined = explore;
+  for (const part of pathParts) {
+    if (!field) break;
+    if (field.isExplore()) {
+      field = field.allFields.find(f => f.name === part);
+    } else {
+      throw new Error(
+        'Tried to get field from relative path, but path is not valid.'
+      );
+    }
+  }
+  return field;
 }

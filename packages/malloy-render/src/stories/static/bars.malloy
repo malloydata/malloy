@@ -1,3 +1,5 @@
+## renderer_next
+
 source: products is duckdb.table("data/products.parquet") extend {
   measure: total_sales is retail_price.sum()
   measure: avg_margin is avg(retail_price - cost)
@@ -169,11 +171,24 @@ source: products is duckdb.table("data/products.parquet") extend {
       }
   }
 
-  # bar_chart
+  # bar_chart size=xl
   view: bar_numeric_axis is {
     group_by: id
     aggregate: total_cost is cost.sum()
     limit: 20
     order_by: 1
+  }
+
+
+  view: t is {
+    group_by: id
+    nest: bar_numeric_axis
+  }
+
+  # bar_chart
+  view: x is {
+    group_by: adsfasdfasdfsdfgssdfg is make_date!(2024,1,id)
+    limit: 10
+    where: id < 20
   }
 }

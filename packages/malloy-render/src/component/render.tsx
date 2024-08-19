@@ -72,6 +72,8 @@ export function MalloyRenderInner(props: {
       tag: tags().resultTag,
     });
 
+  console.log('metadata', metadata());
+
   return (
     <ResultContext.Provider value={metadata()}>
       {rendering().renderValue}

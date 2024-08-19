@@ -77,3 +77,10 @@ export const BarNumericAxis = {
     view: 'bar_numeric_axis',
   },
 };
+
+export const BarDateAxis = {
+  args: {
+    source: 'products',
+    view: 'x',
+  },
+};

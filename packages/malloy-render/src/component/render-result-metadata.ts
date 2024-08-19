@@ -163,6 +163,7 @@ function populateExploreMeta(
   const fieldMeta = metadata.field(f);
   if (hasAny(tag, 'bar', 'bar_chart')) {
     const plotSpec = generateBarChartSpec(f, tag);
+    console.log({plotSpec, f, fieldMeta});
     fieldMeta.vegaChartProps = plotToVega(plotSpec, {
       field: f,
       metadata,

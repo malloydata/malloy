@@ -14,6 +14,7 @@ export function plotToVega(
   }
 ): VegaChartProps {
   const chartSettings = getChartSettings(options.field, options.metadata);
+  console.log({chartSettings});
   const vegaSpec: VegaSpec = {
     '$schema': 'https://vega.github.io/schema/vega/v5.json',
     'width': chartSettings.plotWidth,
