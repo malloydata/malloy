@@ -116,10 +116,15 @@ source: products is duckdb.table("data/products.parquet") extend {
       # duration.terse
       avg_retail_duration_terse is round(retail_price.avg())
   }
+
+  # transpose
+  view: date_and_time is {
+    group_by:
+      `@2001-02-03` is @2001-02-03
+      `@2001-02-03 04:05:06.001` is @2001-02-03 04:05:06.001
+      `@2001-02-03 04:05:06.001[America/Mexico_City]` is @2001-02-03 04:05:06.001[America/Mexico_City]
+    limit: 1
+  }
 }
 
 source: null_test is duckdb.sql("select unnest([1,null,3]) as i") extend {}
-
-run: products -> { group_by: category aggregate: `t.x` is max(1) }
-
-run: duckdb.sql("select unnest([1,null,3]) as i") -> { select: * }
