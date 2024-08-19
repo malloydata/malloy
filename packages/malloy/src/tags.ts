@@ -49,7 +49,7 @@ import {
 import {parseString} from './lang/parse-utils';
 import {LogMessage} from './lang';
 import {Annotation, Note} from './model';
-import { cloneDeep } from 'lodash';
+import cloneDeep from 'lodash/cloneDeep';
 
 // The distinction between the interface and the Tag class exists solely to
 // make it possible to write tests and specify expected results This
