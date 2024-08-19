@@ -70,3 +70,10 @@ export const NestedTest = {
     view: 'nested_test',
   },
 };
+
+export const BarNumericAxis = {
+  args: {
+    source: 'products',
+    view: 'bar_numeric_axis',
+  },
+};

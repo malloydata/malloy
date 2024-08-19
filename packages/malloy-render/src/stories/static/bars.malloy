@@ -168,4 +168,12 @@ source: products is duckdb.table("data/products.parquet") extend {
         limit: 5
       }
   }
+
+  # bar_chart
+  view: bar_numeric_axis is {
+    group_by: id
+    aggregate: total_cost is cost.sum()
+    limit: 20
+    order_by: 1
+  }
 }
