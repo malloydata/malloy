@@ -59,9 +59,11 @@
 
   .dashboard-item-value {
     overflow: auto;
+    text-align: left;
   }
 
   .dashboard-item-title {
+    text-align: left;
     font-weight: 400;
     font-size: 12px;
     color: rgb(100, 102, 107);
@@ -80,9 +82,11 @@
 
   .dashboard-dimension-name {
     font-size: 12px;
+    text-align: left;
   }
   .dashboard-dimension-value {
     font-size: 14px;
     font-weight: 600;
+    text-align: left;
   }
 }
