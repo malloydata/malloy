@@ -85,3 +85,10 @@ export const LongColumn = {
     view: 'long_column',
   },
 };
+
+export const DateAndTime = {
+  args: {
+    source: 'products',
+    view: 'date_and_time',
+  },
+};

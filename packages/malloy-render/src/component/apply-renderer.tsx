@@ -19,6 +19,7 @@ import {renderImage} from './render-image';
 import {Dashboard} from './dashboard/dashboard';
 import {LegacyChart} from './legacy-charts/legacy_chart';
 import {hasAny} from './tag-utils';
+import {renderTime} from './render-time';
 
 export type RendererProps = {
   field: Field;
@@ -60,6 +61,14 @@ export function applyRenderer(props: RendererProps) {
         renderValue = '∅';
       } else if (valueIsString(field, resultCellValue)) {
         renderValue = resultCellValue;
+      } else if (
+        field.isAtomicField() &&
+        (field.isDate() || field.isTimestamp())
+      ) {
+        renderValue = renderTime(props);
+      } else {
+        // try to force to string
+        renderValue = String(resultCellValue);
       }
       break;
     }
