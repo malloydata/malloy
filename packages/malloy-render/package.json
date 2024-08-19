@@ -35,9 +35,10 @@
   },
   "dependencies": {
     "@malloydata/malloy": "^0.0.170",
+    "@malloydata/render": "file:",
     "@types/luxon": "^2.4.0",
     "component-register": "^0.8.6",
-    "lodash": "^4.17.20",
+    "lodash": "^4.17.21",
     "luxon": "^2.4.0",
     "solid-element": "^1.8.0",
     "solid-js": "^1.8.15",

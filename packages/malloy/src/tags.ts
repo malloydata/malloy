@@ -49,6 +49,7 @@ import {
 import {parseString} from './lang/parse-utils';
 import {LogMessage} from './lang';
 import {Annotation, Note} from './model';
+import { cloneDeep } from 'lodash';
 
 // The distinction between the interface and the Tag class exists solely to
 // make it possible to write tests and specify expected results This
@@ -349,7 +350,7 @@ export class Tag implements TagInterface {
   }
 
   clone(): Tag {
-    return new Tag(structuredClone(this));
+    return new Tag(cloneDeep(this));
   }
 }
 
