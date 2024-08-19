@@ -78,7 +78,14 @@ export function Dashboard(props: {data: DataArray}) {
                     <div class="dashboard-dimension-wrapper">
                       <div class="dashboard-dimension-name">{d.name}</div>
                       <div class="dashboard-dimension-value">
-                        {row.cell(d).value as string}
+                        {
+                          applyRenderer({
+                            field: d,
+                            dataColumn: row.cell(d),
+                            tag: d.tagParse().tag,
+                            resultMetadata,
+                          }).renderValue
+                        }
                       </div>
                     </div>
                   )}
