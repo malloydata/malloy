@@ -1245,6 +1245,7 @@ export class PreparedResult implements Taggable {
     const explore = this.inner.structs[this.inner.structs.length - 1];
     const namedExplore = {
       ...explore,
+      annotation: this.inner.annotation,
       name: this.inner.queryName || explore.name,
     };
     // TODO `sourceExplore` is not fully-implemented yet -- it cannot
