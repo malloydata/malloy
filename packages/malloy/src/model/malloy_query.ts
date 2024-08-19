@@ -107,6 +107,7 @@ import {
   range,
 } from './utils';
 import {DialectFieldTypeStruct, QueryInfo} from '../dialect/dialect';
+import cloneDeep from 'lodash/cloneDeep';
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
@@ -4565,7 +4566,7 @@ class QueryStruct extends QueryNode {
     const annotation = turtleDef.annotation;
 
     const addedFilters = (turtleDef as TurtleDefPlus).filterList || [];
-    pipeline = structuredClone(pipeline);
+    pipeline = cloneDeep(pipeline);
     pipeline[0].filterList = addedFilters.concat(
       pipeline[0].filterList || [],
       this.fieldDef.filterList || []

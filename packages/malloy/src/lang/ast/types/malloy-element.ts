@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import cloneDeep from 'lodash/cloneDeep';
 import {getDialect} from '../../../dialect';
 import {
   Annotation,
@@ -506,7 +507,7 @@ export class Document extends MalloyElement implements NameSpace {
         this.annotation.inherits = extendingModelDef.annotation;
       }
       for (const [nm, orig] of Object.entries(extendingModelDef.contents)) {
-        const entry = structuredClone(orig);
+        const entry = cloneDeep(orig);
         if (
           entry.type === 'struct' ||
           entry.type === 'query' ||
@@ -580,7 +581,7 @@ export class Document extends MalloyElement implements NameSpace {
         if (this.documentModel[entry].exported) {
           def.exports.push(entry);
         }
-        const newEntry = structuredClone(entryDef);
+        const newEntry = cloneDeep(entryDef);
         if (newEntry.modelAnnotation === undefined && def.annotation) {
           newEntry.modelAnnotation = def.annotation;
         }
