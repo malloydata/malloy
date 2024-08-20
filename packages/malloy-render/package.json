@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/render",
-  "version": "0.0.174",
+  "version": "0.0.175",
   "license": "MIT",
   "main": "dist/module/index.umd.js",
   "types": "dist/index.d.ts",
@@ -34,7 +34,7 @@
     "build-types": "tsc --build --declaration --emitDeclarationOnly"
   },
   "dependencies": {
-    "@malloydata/malloy": "^0.0.174",
+    "@malloydata/malloy": "^0.0.175",
     "@types/luxon": "^2.4.0",
     "component-register": "^0.8.6",
     "lodash": "^4.17.20",
