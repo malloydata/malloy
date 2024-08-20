@@ -8,6 +8,7 @@ export type QueryOptions = {
   source: string;
   view: string;
   connection: Promise<DuckDBWASMConnection>;
+  annotation?: string;
 };
 
 export function createLoader(
@@ -19,6 +20,7 @@ export function createLoader(
       source: context.args['source'],
       view: context.args['view'],
       connection: context.globals['connection'],
+      annotation: context.args['annotation'],
     }),
   });
 }
@@ -28,11 +30,15 @@ export async function runQuery({
   source,
   view,
   connection,
+  annotation = '',
 }: QueryOptions) {
   const conn = await connection;
   const runtime = new SingleConnectionRuntime(conn);
   const model = runtime.loadModel(script);
-  const runner = model.loadQuery(`run: ${source} -> ${view}`);
+  const runner = model.loadQuery(`
+    ${annotation}
+    run: ${source} -> ${view}
+  `);
   const result = await runner.run();
   return result;
 }

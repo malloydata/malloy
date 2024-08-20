@@ -84,3 +84,10 @@ export const BarDateAxis = {
     view: 'x',
   },
 };
+
+export const BarSeries = {
+  args: {
+    source: 'products',
+    view: 'bar_chart_series',
+  },
+};

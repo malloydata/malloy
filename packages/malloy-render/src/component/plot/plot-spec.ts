@@ -10,6 +10,7 @@ export type Mark = {
   type: string; // TODO: narrow for different mark types
   x: string | null;
   y: string | null;
+  fill: string | null;
 };
 
 export type PlotSpec = {

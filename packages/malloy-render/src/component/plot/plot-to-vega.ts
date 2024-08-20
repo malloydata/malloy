@@ -2,9 +2,22 @@ import {Explore, ExploreField} from '@malloydata/malloy';
 import {getChartSettings} from '../chart-settings';
 import {PlotSpec} from './plot-spec';
 import {RenderResultMetadata, VegaChartProps, VegaSpec} from '../types';
+import {getFieldFromRelativePath} from './util';
 
 export const grayMedium = '#727883';
 export const gridGray = '#E5E7EB';
+
+const DATE_TIME_FORMATS = {
+  'year': '%Y',
+  'quarter': '%B',
+  'month': '%B',
+  'week': '%b %d',
+  'date': '%a %d',
+  'hours': '%I %p',
+  'minutes': '%I:%M',
+  'seconds': ':%S',
+  'milliseconds': '.%L',
+};
 
 export function plotToVega(
   plotSpec: PlotSpec,
@@ -13,7 +26,11 @@ export function plotToVega(
     metadata: RenderResultMetadata;
   }
 ): VegaChartProps {
-  const chartSettings = getChartSettings(options.field, options.metadata);
+  const chartSettings = getChartSettings(
+    options.field,
+    options.metadata,
+    plotSpec
+  );
   console.log({chartSettings});
   const vegaSpec: VegaSpec = {
     '$schema': 'https://vega.github.io/schema/vega/v5.json',
@@ -102,8 +119,69 @@ export function plotToVega(
     yScale.nice = true;
   }
 
+  const colorScale: VegaSpec = {
+    name: 'color',
+    type: 'ordinal',
+    range: ['#4FA8BF', '#EDB74A', '#CC6F33'], // need bigger range...
+    domain: {data: 'table', field: plotSpec.color.fields.at(0)},
+  };
+  const hasColorField = plotSpec.color.fields.at(0);
+  if (hasColorField) {
+    vegaSpec.scales.push(colorScale);
+    vegaSpec.legends.push({
+      fill: 'color',
+      title: plotSpec.color.fields.at(0),
+      orient: 'none',
+      direction: 'horizontal',
+      // offset: 10,
+      legendX: -30,
+      legendY: -40,
+    });
+  }
+
   vegaSpec.scales.push(xScale);
   vegaSpec.scales.push(yScale);
+
+  // If chart is faceting, create a facet layer first
+  const fxField = plotSpec.fx.fields.at(0);
+  let groupMark;
+  if (fxField) {
+    xScale.domain.field = fxField;
+    let innerDomain = {data: 'table', field: plotSpec.x.fields.at(0)};
+
+    groupMark = {
+      type: 'group',
+      from: {
+        facet: {
+          data: 'table',
+          name: 'facet',
+          groupby: fxField,
+        },
+      },
+      data: [],
+      encode: {
+        enter: {
+          x: {scale: 'xscale', field: fxField},
+        },
+      },
+      signals: [{name: 'width', 'update': "bandwidth('xscale')"}],
+      scales: [
+        {
+          name: 'pos',
+          type: 'band',
+          range: 'width',
+          paddingOuter: 0.2,
+          // Make sure to share domain here
+          domain: innerDomain,
+        },
+      ],
+      marks: [],
+    };
+  }
+
+  if (groupMark) {
+    vegaSpec.marks.push(groupMark);
+  }
 
   for (const plotMark of plotSpec.marks) {
     const vegaMark: VegaSpec = {};
@@ -114,38 +192,71 @@ export function plotToVega(
       source: 'table',
       transform: [],
     };
-    vegaSpec.data.push(markData);
 
     if (plotMark.type === 'bar_y') {
       vegaMark.type = 'rect';
       vegaMark.from = {data: plotMark.id};
       const xField = plotMark.x ?? plotSpec.x.fields.at(0);
       const yField = plotMark.y ?? plotSpec.y.fields.at(0);
+      const fillField = plotMark.fill;
+      const xScaleName = groupMark ? 'pos' : 'xscale';
       vegaMark.encode = {
         enter: {
-          x: {scale: 'xscale', field: xField, band: 0.1},
-          width: {scale: 'xscale', band: 0.8},
+          x: {scale: xScaleName, field: xField, band: 0.1},
+          width: {scale: xScaleName, band: groupMark ? 1 : 0.8},
           y: {scale: 'yscale', field: yField},
           y2: {'scale': 'yscale', 'value': 0},
-          fill: {value: '#53B2C8'},
+          fill: fillField
+            ? {field: plotMark.fill, scale: 'color'}
+            : {value: '#53B2C8'},
+          // fillOpacity: {value: 0.5},
         },
       };
-
+    }
+    if (groupMark) {
+      groupMark.marks.push(vegaMark);
+      const markData = {
+        name: plotMark.id,
+        source: 'facet',
+        transform: [],
+      };
+      groupMark.data.push(markData);
+    } else {
       vegaSpec.marks.push(vegaMark);
+      vegaSpec.data.push(markData);
     }
   }
 
-  if (!chartSettings.xAxis.hidden)
-    vegaSpec.axes.push({
+  if (!chartSettings.xAxis.hidden) {
+    const xAxis: Record<string, any> = {
       orient: 'bottom',
       scale: 'xscale',
-      title: plotSpec.x.fields.join(', '),
+      title: groupMark
+        ? plotSpec.fx.fields.join(', ')
+        : plotSpec.x.fields.join(', '),
       labelAngle: chartSettings.xAxis.labelAngle,
       labelLimit: chartSettings.xAxis.labelSize,
       labelAlign: chartSettings.xAxis.labelAlign,
       labelBaseline: chartSettings.xAxis.labelBaseline,
       maxExtent: chartSettings.xAxis.height,
-    });
+    };
+    // If x field is Date/Time, format; TODO: handling field existence, field lookups, multiple field types
+    const xField = getFieldFromRelativePath(
+      options.field,
+      plotSpec.x.fields.at(0)!
+    )!;
+    console.log({xField, isQuery: xField!.isQuery()});
+    if (
+      xField &&
+      !xField.isExplore() &&
+      xField.isAtomicField() &&
+      (xField.isDate() || xField.isTimestamp())
+    ) {
+      xAxis['formatType'] = 'utc';
+      xAxis['format'] = DATE_TIME_FORMATS;
+    }
+    vegaSpec.axes.push(xAxis);
+  }
 
   if (!chartSettings.yAxis.hidden)
     vegaSpec.axes.push({

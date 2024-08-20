@@ -25,6 +25,8 @@ import {Explore, ExploreField, Field} from '@malloydata/malloy';
 import {scale, locale} from 'vega';
 import {getFieldKey, getTextWidth} from './util';
 import {RenderResultMetadata} from './types';
+import {PlotSpec} from './plot/plot-spec';
+import {getFieldFromRelativePath} from './plot/util';
 
 export type ChartSettings = {
   plotWidth: number;
@@ -74,11 +76,15 @@ const ROW_HEIGHT = 28;
 
 export function getChartSettings(
   field: Explore | ExploreField,
-  metadata: RenderResultMetadata
+  metadata: RenderResultMetadata,
+  plotSpec: PlotSpec
 ): ChartSettings {
   // TODO: improve logic for field extraction
-  const xField = field.allFields.at(0)!;
-  const yField = field.allFields.at(1)!;
+  const xField = getFieldFromRelativePath(field, plotSpec.x.fields.at(0)!)!;
+  const yField = getFieldFromRelativePath(field, plotSpec.y.fields.at(0)!)!;
+  console.log({allFields: field.allFields, xField, yField});
+  // const xField = field.allFields.at(0)!;
+  // const yField = field.allFields.at(1)!;
   const {tag} = field.tagParse();
 
   let chartWidth = 0,

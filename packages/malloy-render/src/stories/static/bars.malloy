@@ -1,4 +1,3 @@
-## renderer_next
 
 source: products is duckdb.table("data/products.parquet") extend {
   measure: total_sales is retail_price.sum()
@@ -173,10 +172,10 @@ source: products is duckdb.table("data/products.parquet") extend {
 
   # bar_chart size=xl
   view: bar_numeric_axis is {
-    group_by: id
     aggregate: total_cost is cost.sum()
+    group_by: id
     limit: 20
-    order_by: 1
+    order_by: id
   }
 
 
@@ -185,10 +184,39 @@ source: products is duckdb.table("data/products.parquet") extend {
     nest: bar_numeric_axis
   }
 
-  # bar_chart
+  -- # bar_chart {} size=xl
+  -- view: bar_chart_series is {
+  --   group_by:
+  --     category, department
+  --   aggregate: total_cost is cost.sum()
+  --   -- order_by: brand
+  --   limit: 10
+  -- }
+
+  view: bar_chart_series is {
+    group_by: brand,
+    # bar_chart {  } size=xl
+    nest: n is {
+      group_by:
+        -- category, department
+        department, category
+      aggregate: total_cost is cost.sum()
+      -- order_by: brand
+      limit: 10
+    }
+    limit: 10
+  }
+
+
+  # bar_chart size=xl
   view: x is {
-    group_by: adsfasdfasdfsdfgssdfg is make_date!(2024,1,id)
+    group_by:
+      a is make_date!(2024,1,id)::timestamp.day
+      -- b is make_date!(2024,1,id)::date.week
+      -- foo is @2001.year
+    aggregate: total_cost is cost.sum()
     limit: 10
     where: id < 20
+    order_by: 1
   }
 }

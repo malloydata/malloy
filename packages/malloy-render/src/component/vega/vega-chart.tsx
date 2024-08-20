@@ -22,6 +22,8 @@ export function VegaChart(props: VegaChartProps) {
         ? compile(asVegaLiteSpec(props.spec)).spec
         : asVegaSpec(props.spec);
 
+    console.log({vegaspec});
+
     view = new View(parse(vegaspec)).initialize(el).renderer('svg').hover();
     view.run();
   });
