@@ -131,4 +131,21 @@ describe('extendModel', () => {
   });
 });
 
+describe('tags', () => {
+  test('view run as query gets tags in explore', async () => {
+    const model = runtime.loadModel(`
+      source: aircraft is duckdb.table('malloytest.aircraft') extend {
+        # bar_chart
+        view: by_state is {
+          group_by: state
+          aggregate: aircraft_count is count()
+        }
+      }
+    `);
+    const query = model.loadQuery('run: aircraft -> by_state');
+    const result = await query.run();
+    expect(result.resultExplore.tagParse().tag.has('bar_chart')).toBe(true);
+  });
+});
+
 afterAll(async () => await runtime.connection.close());
