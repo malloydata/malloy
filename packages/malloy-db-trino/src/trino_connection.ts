@@ -164,6 +164,8 @@ export abstract class TrinoPrestoConnection
     'varchar': {type: 'string'},
     'integer': {type: 'number', numberType: 'integer'},
     'bigint': {type: 'number', numberType: 'integer'},
+    'smallint': {type: 'number', numberType: 'integer'},
+    'tinyint': {type: 'number', numberType: 'integer'},
     'double': {type: 'number', numberType: 'float'},
     'decimal': {type: 'number', numberType: 'float'},
     'string': {type: 'string'},
