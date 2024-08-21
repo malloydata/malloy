@@ -36,7 +36,6 @@ import {SourceSpec, SpaceSeed} from '../space-seed';
 import {StaticSpace} from './static-space';
 import {StructSpaceFieldBase} from './struct-space-field-base';
 import {ParameterSpace} from './parameter-space';
-import cloneDeep from 'lodash/cloneDeep';
 
 export abstract class DynamicSpace extends StaticSpace {
   protected final: model.StructDef | undefined;
@@ -48,7 +47,7 @@ export abstract class DynamicSpace extends StaticSpace {
 
   constructor(extending: SourceSpec) {
     const source = new SpaceSeed(extending);
-    super(cloneDeep(source.structDef));
+    super(structuredClone(source.structDef));
     this.final = undefined;
     this.source = source;
   }
