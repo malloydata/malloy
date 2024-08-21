@@ -46,6 +46,8 @@ export function shouldRenderAs(f: Field | Explore, tagOverride?: Tag) {
   else return 'table';
 }
 
+const NULL_SYMBOL = '∅';
+
 export function applyRenderer(props: RendererProps) {
   const {field, dataColumn, resultMetadata, tag, customProps = {}} = props;
   const renderAs = shouldRenderAs(field, tag);
@@ -58,7 +60,7 @@ export function applyRenderer(props: RendererProps) {
         // TS doesn't support typeguards for multiple parameters, so unfortunately have to assert AtomicField here. https://github.com/microsoft/TypeScript/issues/26916
         renderValue = renderNumericField(field as AtomicField, resultCellValue);
       } else if (resultCellValue === null) {
-        renderValue = '∅';
+        renderValue = NULL_SYMBOL;
       } else if (valueIsString(field, resultCellValue)) {
         renderValue = resultCellValue;
       } else if (
@@ -98,22 +100,35 @@ export function applyRenderer(props: RendererProps) {
       break;
     }
     case 'dashboard': {
-      renderValue = <Dashboard data={dataColumn as DataArray} />;
+      if (dataColumn.isArray()) renderValue = <Dashboard data={dataColumn} />;
+      else if (dataColumn.isNull()) renderValue = NULL_SYMBOL;
+      else
+        throw new Error(
+          `Malloy render: wrong data type passed to the dashboard renderer for field ${dataColumn.field.name}`
+        );
       break;
     }
     case 'line_chart':
     case 'scatter_chart':
     case 'shape_map':
     case 'segment_map': {
-      renderValue = (
-        <LegacyChart type={renderAs} data={dataColumn as DataArray} />
-      );
+      if (dataColumn.isArray())
+        renderValue = <LegacyChart type={renderAs} data={dataColumn} />;
+      else if (dataColumn.isNull()) renderValue = NULL_SYMBOL;
+      else
+        throw new Error(
+          `Malloy render: wrong data type passed to the ${renderAs} renderer for field ${dataColumn.field.name}`
+        );
       break;
     }
     case 'table': {
-      renderValue = (
-        <MalloyTable data={dataColumn as DataArray} {...propsToPass} />
-      );
+      if (dataColumn.isArray())
+        renderValue = <MalloyTable data={dataColumn} {...propsToPass} />;
+      else if (dataColumn.isNull()) renderValue = NULL_SYMBOL;
+      else
+        throw new Error(
+          `Malloy render: wrong data type passed to the table renderer for field ${dataColumn.field.name}`
+        );
       break;
     }
     default: {
