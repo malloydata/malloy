@@ -1,6 +1,5 @@
 import {
   AtomicField,
-  DataArray,
   DataColumn,
   Explore,
   ExploreField,
