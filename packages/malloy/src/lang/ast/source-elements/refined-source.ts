@@ -42,7 +42,6 @@ import {ObjectAnnotation} from '../types/annotation-elements';
 import {Renames} from '../source-properties/renames';
 import {MakeEntry} from '../types/space-entry';
 import {ParameterSpace} from '../field-space/parameter-space';
-import cloneDeep from 'lodash/cloneDeep';
 
 /**
  * A Source made from a source reference and a set of refinements
@@ -107,9 +106,9 @@ export class RefinedSource extends Source {
     }
 
     const paramSpace = pList ? new ParameterSpace(pList) : undefined;
-    const from = cloneDeep(this.source.structDef(paramSpace));
+    const from = structuredClone(this.source.structDef(paramSpace));
     // Note that this is explicitly not:
-    // const from = cloneDeep(this.source.withParameters(parameterSpace, pList));
+    // const from = structuredClone(this.source.withParameters(parameterSpace, pList));
     // Because the parameters are added to the resulting struct, not the base struct
     if (primaryKey) {
       from.primaryKey = primaryKey.field.name;

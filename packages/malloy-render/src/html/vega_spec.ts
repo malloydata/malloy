@@ -31,7 +31,6 @@ import {RendererOptions} from '../renderer_types';
 import {RendererFactory} from '../renderer_factory';
 import {Renderer} from '../renderer';
 import {grayMedium, gridGray} from '../component/plot/plot-to-vega';
-import cloneDeep from 'lodash/cloneDeep';
 
 type DataContainer = Array<unknown> | Record<string, unknown>;
 
@@ -568,7 +567,7 @@ export class HTMLVegaSpecRenderer extends HTMLChartRenderer {
       throw new Error('Expected struct value not to be null.');
     }
 
-    const newSpec = cloneDeep(this.spec);
+    const newSpec = structuredClone(this.spec);
 
     this.translateFields(newSpec as unknown as DataContainer, data.field);
     const rdata = {

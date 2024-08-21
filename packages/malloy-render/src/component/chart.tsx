@@ -1,7 +1,6 @@
 import {Explore, ExploreField, QueryData} from '@malloydata/malloy';
 import {VegaChart} from './vega/vega-chart';
 import {RenderResultMetadata} from './types';
-import cloneDeep from 'lodash/cloneDeep';
 
 export function Chart(props: {
   field: Explore | ExploreField;
@@ -10,7 +9,7 @@ export function Chart(props: {
 }) {
   const {field, data} = props;
   const chartProps = props.metadata.field(field).vegaChartProps!;
-  const vgSpec = cloneDeep(chartProps.spec);
+  const vgSpec = structuredClone(chartProps.spec);
   vgSpec.data[0].values = data;
   return (
     <VegaChart
