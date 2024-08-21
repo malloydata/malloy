@@ -141,8 +141,8 @@ const populateFieldMeta = (data: DataArray, metadata: RenderResultMetadata) => {
         if (!fieldMeta.maxString || fieldMeta.maxString.length < s.length)
           fieldMeta.maxString = s;
       } else if (f.isExploreField()) {
-        const data = row.cell(f) as DataArray;
-        populateFieldMeta(data, metadata);
+        const data = row.cell(f);
+        if (data.isArray()) populateFieldMeta(data, metadata);
       }
     }
   }
