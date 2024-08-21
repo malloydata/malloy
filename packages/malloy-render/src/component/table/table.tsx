@@ -11,7 +11,7 @@ import {
   JSX,
   onMount,
 } from 'solid-js';
-import {DataArray, DataRecord, Field} from '@malloydata/malloy';
+import {DataArrayOrRecord, DataRecord, Field} from '@malloydata/malloy';
 import {getRangeSize, isFirstChild, isLastChild} from '../util';
 import {getTableLayout} from './table-layout';
 import {useResultContext} from '../result-context';
@@ -191,7 +191,7 @@ const TableField = (props: {field: Field; row: DataRecord}) => {
 };
 
 const MalloyTableRoot = (_props: {
-  data: DataArray;
+  data: DataArrayOrRecord;
   rowLimit?: number;
   pinnedHeader?: boolean;
 }) => {
@@ -389,7 +389,7 @@ const MalloyTableRoot = (_props: {
 };
 
 const MalloyTable: Component<{
-  data: DataArray;
+  data: DataArrayOrRecord;
   rowLimit?: number;
   pinnedHeader?: boolean;
 }> = props => {

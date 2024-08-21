@@ -1,5 +1,6 @@
 import {
   AtomicField,
+  DataArrayOrRecord,
   DataColumn,
   Explore,
   ExploreField,
@@ -121,8 +122,13 @@ export function applyRenderer(props: RendererProps) {
       break;
     }
     case 'table': {
-      if (dataColumn.isArray())
-        renderValue = <MalloyTable data={dataColumn} {...propsToPass} />;
+      if (dataColumn.isArrayOrRecord())
+        renderValue = (
+          <MalloyTable
+            data={dataColumn as DataArrayOrRecord}
+            {...propsToPass}
+          />
+        );
       else if (dataColumn.isNull()) renderValue = NULL_SYMBOL;
       else
         throw new Error(
