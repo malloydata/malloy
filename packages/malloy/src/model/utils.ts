@@ -200,8 +200,8 @@ export function exprMap(expr: Expr, func: (fragment: Fragment) => Expr): Expr {
                   value: exprMap(fragment.left.value, func),
                 },
                 right: {
-                  ...fragment.left,
-                  value: exprMap(fragment.left.value, func),
+                  ...fragment.right,
+                  value: exprMap(fragment.right.value, func),
                 },
               };
             default:
@@ -309,8 +309,8 @@ export function exprWalk(expr: Expr, func: (fragment: Fragment) => void): void {
                 value: exprWalk(fragment.left.value, func),
               },
               right: {
-                ...fragment.left,
-                value: exprWalk(fragment.left.value, func),
+                ...fragment.right,
+                value: exprWalk(fragment.right.value, func),
               },
             };
           default:
