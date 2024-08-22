@@ -93,6 +93,13 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
       ).isSqlEq();
     });
 
+    test('timeDiff passed to a function preserves rhs', async () => {
+      await expect(`
+        run: ${dbName}.sql("SELECT 1")
+        -> { select: yd is floor(days(@2001 to @2002)) }
+      `).malloyResultMatches(runtime, {yd: 365});
+    });
+
     // MTOY TODO remove or implment
     // These all are complicated by civul time issues, skipping for now
     // test.skip('weeks', async () => {
