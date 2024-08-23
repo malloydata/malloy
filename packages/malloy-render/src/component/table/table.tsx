@@ -10,7 +10,6 @@ import {
   JSXElement,
   JSX,
   onMount,
-  createEffect,
 } from 'solid-js';
 import {DataArrayOrRecord, DataRecord, Field} from '@malloydata/malloy';
 import {getRangeSize, isFirstChild, isLastChild} from '../util';
@@ -130,7 +129,6 @@ const HeaderField = (props: {field: Field; isPinned?: boolean}) => {
 };
 
 const TableField = (props: {field: Field; row: DataRecord}) => {
-  const tableCtx = useTableContext()!;
   let renderValue: JSXElement = '';
   let renderAs = '';
   ({renderValue, renderAs} = applyRenderer({
@@ -378,7 +376,7 @@ const MalloyTableRoot = (_props: {
   // Observe column width sizes
   onMount(() => {
     if (pinnedHeaderRow) {
-      const resizeObserver = new ResizeObserver(entries => {
+      const resizeObserver = new ResizeObserver(() => {
         // select all nodes with data-pinned-header attribute
         if (isScrolling || measureInitial) {
           measureInitial = false;
@@ -487,8 +485,8 @@ const MalloyTableRoot = (_props: {
           <div
             class="table-row"
             style={{
-              height: 'fit-content',
-              width: '100%',
+              'height': 'fit-content',
+              'width': '100%',
               'padding-top': `${items![0]?.start ?? 0}px`,
             }}
           >
