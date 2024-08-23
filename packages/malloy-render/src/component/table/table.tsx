@@ -381,6 +381,7 @@ const MalloyTableRoot = (_props: {
       const resizeObserver = new ResizeObserver(entries => {
         // select all nodes with data-pinned-header attribute
         if (isScrolling || measureInitial) {
+          measureInitial = false;
           const pinnedHeaders = pinnedHeaderRow.querySelectorAll(
             '[data-pinned-header]'
           );
