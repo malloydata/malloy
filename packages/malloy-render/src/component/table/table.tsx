@@ -428,11 +428,6 @@ const MalloyTableRoot = (_props: {
     }
   });
 
-  createEffect(() => {
-    if (tableCtx.root)
-      console.log(JSON.parse(JSON.stringify(tableCtx.store.columnWidths)));
-  });
-
   return (
     <div
       class="malloy-table"
