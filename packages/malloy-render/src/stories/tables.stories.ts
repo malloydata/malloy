@@ -92,9 +92,3 @@ export const DateAndTime = {
     view: 'date_and_time',
   },
 };
-export const DirectTest = {
-  args: {
-    source: 'duckdb.sql("select unnest([1,null,3]) as i")',
-    view: `{ select: * }`,
-  },
-};

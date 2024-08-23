@@ -30,10 +30,7 @@
   max-height: 100%;
   position: relative;
   overflow: auto;
-  grid-template-columns: repeat(
-    var(--total-header-size),
-    minmax(auto, max-content)
-  );
+  grid-template-columns: repeat(var(--total-header-size), fit-content(100%));
 }
 
 .malloy-table:not(.root) {
