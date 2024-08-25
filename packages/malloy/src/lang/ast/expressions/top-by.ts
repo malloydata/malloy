@@ -26,7 +26,6 @@ import {By, expressionIsAggregate} from '../../../model/malloy_types';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
-import {compressExpr} from './utils';
 
 export class TopBy extends MalloyElement {
   elementType = 'topBy';
@@ -43,7 +42,7 @@ export class TopBy extends MalloyElement {
       if (!expressionIsAggregate(byExpr.expressionType)) {
         this.log('top by expression must be an aggregate');
       }
-      return {by: 'expression', e: compressExpr(byExpr.value)};
+      return {by: 'expression', e: byExpr.value};
     }
     return {by: 'name', name: this.by};
   }

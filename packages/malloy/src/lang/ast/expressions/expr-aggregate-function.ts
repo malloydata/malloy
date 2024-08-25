@@ -22,14 +22,14 @@
  */
 
 import {
-  AggregateFragment,
   AggregateFunctionType,
   expressionIsAggregate,
   FieldDef,
   FieldValueType,
-  Fragment,
   isAtomicFieldType,
   StructRelationship,
+  Expr,
+  AggregateExpr,
 } from '../../../model/malloy_types';
 import {exprWalk} from '../../../model/utils';
 
@@ -92,17 +92,10 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
           exprVal = {
             dataType: footType.dataType,
             expressionType: footType.expressionType,
-            value: [
+            value:
               footType.evalSpace === 'output'
-                ? {
-                    type: 'outputField',
-                    name: this.source.refString,
-                  }
-                : {
-                    type: 'field',
-                    path: this.source.path,
-                  },
-            ],
+                ? {node: 'outputField', name: this.source.refString}
+                : {node: 'field', path: this.source.path},
             evalSpace: footType.evalSpace,
           };
           structPath = this.source.path;
@@ -174,8 +167,8 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
         expressionType: 'scalar',
       })
     ) {
-      const f: AggregateFragment = {
-        type: 'aggregate',
+      const f: AggregateExpr = {
+        node: 'aggregate',
         function: this.func,
         e: exprVal.value,
       };
@@ -185,7 +178,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
       return {
         dataType: this.returns(exprVal),
         expressionType: 'aggregate',
-        value: [f],
+        value: f,
         evalSpace: 'output',
       };
     }
@@ -201,7 +194,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
     if (this.source) {
       const lookup = this.source.getField(fs);
       if (lookup.found) {
-        const sfd: Fragment[] = [{type: 'field', path: this.source.path}];
+        const sfd: Expr = {node: 'field', path: this.source.path};
         result.push(...getJoinUsage(fs, sfd));
       }
     }
@@ -227,7 +220,7 @@ function joinPathEq(a1: JoinPathElement[], a2: JoinPathElement[]): boolean {
   return true;
 }
 
-function getJoinUsage(fs: FieldSpace, expr: Fragment[]): JoinPathElement[][] {
+function getJoinUsage(fs: FieldSpace, expr: Expr): JoinPathElement[][] {
   const result: {name: string; structRelationship: StructRelationship}[][] = [];
   const lookup = (
     fs: FieldSpace,
@@ -269,28 +262,26 @@ function getJoinUsage(fs: FieldSpace, expr: Fragment[]): JoinPathElement[][] {
       throw new Error('expected a field def or struct');
     }
   };
-  exprWalk(expr, frag => {
-    if (typeof frag !== 'string') {
-      if (frag.type === 'field') {
-        const def = lookup(fs, frag.path);
-        if (def.def.type !== 'struct' && def.def.type !== 'turtle') {
-          if (def.def.e) {
-            const defUsage = getJoinUsage(def.fs, def.def.e);
-            result.push(...defUsage.map(r => [...def.relationship, ...r]));
-          } else {
-            result.push(def.relationship);
-          }
-        }
-      } else if (frag.type === 'source-reference') {
-        if (frag.path) {
-          const def = lookup(fs, frag.path);
-          result.push(def.relationship);
+  for (const frag of exprWalk(expr)) {
+    if (frag.node === 'field') {
+      const def = lookup(fs, frag.path);
+      if (def.def.type !== 'struct' && def.def.type !== 'turtle') {
+        if (def.def.e) {
+          const defUsage = getJoinUsage(def.fs, def.def.e);
+          result.push(...defUsage.map(r => [...def.relationship, ...r]));
         } else {
-          result.push([]);
+          result.push(def.relationship);
         }
       }
+    } else if (frag.node === 'source-reference') {
+      if (frag.path) {
+        const def = lookup(fs, frag.path);
+        result.push(def.relationship);
+      } else {
+        result.push([]);
+      }
     }
-  });
+  }
   return result;
 }
 

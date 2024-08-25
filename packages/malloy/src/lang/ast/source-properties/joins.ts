@@ -27,7 +27,6 @@ import {
   isJoinOn,
   StructDef,
 } from '../../../model/malloy_types';
-import {compressExpr} from '../expressions/utils';
 import {DynamicSpace} from '../field-space/dynamic-space';
 import {JoinSpaceField} from '../field-space/join-space-field';
 import {DefinitionList} from '../types/definition-list';
@@ -92,7 +91,7 @@ export class KeyJoin extends Join {
       structRelationship: {
         type: 'one',
         matrixOperation: 'left',
-        onExpression: ["('join fixup'='not done yet')"],
+        onExpression: {node: 'error', message: "('join fixup'='not done yet')"},
       },
       location: this.location,
     };
@@ -121,14 +120,16 @@ export class KeyJoin extends Join {
           inStruct.structRelationship = {
             type: 'one',
             matrixOperation: 'left',
-            onExpression: [
-              {
-                type: 'field',
-                path: [this.name.refString, inStruct.primaryKey],
+            onExpression: {
+              node: '=',
+              kids: {
+                left: {
+                  node: 'field',
+                  path: [this.name.refString, inStruct.primaryKey],
+                },
+                right: exprX.value,
               },
-              '=',
-              ...exprX.value,
-            ],
+            },
           };
           return;
         } else {
@@ -179,7 +180,7 @@ export class ExpressionJoin extends Join {
     }
     const joinRel = inStruct.structRelationship;
     if (isJoinOn(joinRel)) {
-      joinRel.onExpression = compressExpr(exprX.value);
+      joinRel.onExpression = exprX.value;
     }
   }
 

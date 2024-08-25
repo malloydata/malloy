@@ -47,10 +47,10 @@ export class ExprIdReference extends ExpressionDef {
         return {
           ...td,
           evalSpace: td.evalSpace === 'constant' ? 'constant' : 'output',
-          value: [{type: 'outputField', name: this.refString}],
+          value: {node: 'outputField', name: this.refString},
         };
       }
-      const value = [{type: def.found.refType, path: this.fieldReference.path}];
+      const value = {node: def.found.refType, path: this.fieldReference.path};
       // We think that aggregates are more 'output' like, but maybe we will reconsider that...
       const evalSpace = expressionIsAggregate(td.expressionType)
         ? 'output'

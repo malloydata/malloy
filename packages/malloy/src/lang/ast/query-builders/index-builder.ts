@@ -22,7 +22,7 @@
  */
 
 import {
-  FilterExpression,
+  FilterCondition,
   PipeSegment,
   Sampling,
   isIndexSegment,
@@ -43,7 +43,7 @@ import {QueryOperationSpace} from '../field-space/query-spaces';
 import {MalloyElement} from '../types/malloy-element';
 
 export class IndexBuilder implements QueryBuilder {
-  filters: FilterExpression[] = [];
+  filters: FilterCondition[] = [];
   limit?: Limit;
   indexOn?: FieldName;
   sample?: Sampling;

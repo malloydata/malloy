@@ -24,11 +24,9 @@
 import {Dialect, DialectFieldList, getDialect} from '../dialect';
 import {StandardSQLDialect} from '../dialect/standardsql/standardsql';
 import {
-  AggregateFragment,
   AggregateFunctionType,
   Annotation,
   CompiledQuery,
-  DialectFragment,
   Expr,
   expressionIsAggregate,
   expressionIsAnalytic,
@@ -37,12 +35,8 @@ import {
   FieldAtomicDef,
   FieldDateDef,
   FieldDef,
-  FieldFragment,
   FieldTimestampDef,
   Filtered,
-  FilterExpression,
-  FilterFragment,
-  FunctionCallFragment,
   FunctionOverloadDef,
   FunctionParameterDef,
   getIdentifier,
@@ -50,32 +44,18 @@ import {
   hasExpression,
   IndexFieldDef,
   IndexSegment,
-  isAggregateFragment,
-  isApplyFragment,
-  isApplyValue,
-  isAsymmetricFragment,
-  isDialectFragment,
   isLiteral,
-  isFieldFragment,
-  isFilterFragment,
-  isFunctionCallFragment,
-  isFunctionParameterFragment,
   isIndexSegment,
   isJoinOn,
-  isOutputFieldFragment,
-  isParameterFragment,
   isPhysical,
   isQuerySegment,
   isRawSegment,
-  isSpreadFragment,
-  isSQLExpressionFragment,
-  isUngroupFragment,
   JoinRelationship,
   ModelDef,
   OrderBy,
-  OutputFieldFragment,
+  OutputFieldNode,
   Parameter,
-  ParameterFragment,
+  ParameterNode,
   PipeSegment,
   Query,
   QueryFieldDef,
@@ -84,23 +64,32 @@ import {
   ResultMetadataDef,
   ResultStructMetadataDef,
   SearchIndexResult,
-  SourceReferenceFragment,
   SegmentFieldDef,
-  SpreadFragment,
-  SQLExpressionFragment,
-  SqlStringFragment,
   StructDef,
   StructRef,
   TurtleDef,
-  UngroupFragment,
   FunctionOrderBy,
   Argument,
+  AggregateExpr,
+  FilterCondition,
+  exprHasE,
+  exprHasKids,
+  isAsymmetricExpr,
+  GenericSQLExpr,
+  FieldnameNode,
+  exprIsLeaf,
+  FunctionCallNode,
+  UngroupNode,
+  SourceReferenceNode,
+  TimeTruncExpr,
+  PickExpr,
 } from './malloy_types';
 
 import {Connection} from '../connection/types';
 import {
   AndChain,
   exprMap,
+  exprWalk,
   generateHash,
   indent,
   joinWith,
@@ -394,13 +383,13 @@ class QueryField extends QueryNode {
   generateFieldFragment(
     resultSet: FieldInstanceResult,
     context: QueryStruct,
-    expr: FieldFragment,
+    expr: FieldnameNode,
     state: GenerateState
   ): string {
     // find the structDef and return the path to the field...
     const field = context.getFieldByName(expr.path) as QueryField;
     if (hasExpression(field.fieldDef)) {
-      const ret = this.generateExpressionFromExpr(
+      const ret = this.exprToSQL(
         resultSet,
         field.parent,
         field.fieldDef.e,
@@ -423,7 +412,7 @@ class QueryField extends QueryNode {
   generateOutputFieldFragment(
     resultSet: FieldInstanceResult,
     _context: QueryStruct,
-    frag: OutputFieldFragment,
+    frag: OutputFieldNode,
     _state: GenerateState
   ): string {
     return `(${resultSet.getField(frag.name).getAnalyticalSQL(false)})`;
@@ -432,10 +421,16 @@ class QueryField extends QueryNode {
   generateSQLExpression(
     resultSet: FieldInstanceResult,
     context: QueryStruct,
-    frag: SQLExpressionFragment,
+    expr: GenericSQLExpr,
     state: GenerateState
   ): string {
-    return this.generateExpressionFromExpr(resultSet, context, frag.e, state);
+    return expr.src
+      .map(srcEl =>
+        typeof srcEl === 'string'
+          ? srcEl
+          : this.exprToSQL(resultSet, context, expr.kids.args[srcEl], state)
+      )
+      .join('');
   }
 
   private getParameterMap(
@@ -464,12 +459,10 @@ class QueryField extends QueryNode {
       throw new Error(`Function is not defined for dialect ${dialect}`);
     }
     return exprMap(overload.dialect[dialect].e, fragment => {
-      if (typeof fragment === 'string') {
-        return [fragment];
-      } else if (fragment.type === 'spread') {
+      if (fragment.node === 'spread') {
         const param = fragment.e[0];
         if (
-          fragment.e.length !== 1 ||
+          exprIsLeaf(fragment.e) ||
           typeof param === 'string' ||
           param.type !== 'function_parameter'
         ) {
@@ -486,7 +479,7 @@ class QueryField extends QueryNode {
             ','
           );
         }
-      } else if (fragment.type === 'function_parameter') {
+      } else if (fragment.node === 'function_parameter') {
         const entry = paramMap.get(fragment.name);
         if (entry === undefined) {
           return [fragment];
@@ -499,14 +492,14 @@ class QueryField extends QueryNode {
         } else {
           return args[entry.argIndexes[0]];
         }
-      } else if (fragment.type === 'aggregate_order_by') {
+      } else if (fragment.node === 'aggregate_order_by') {
         return orderBy
           ? [` ${fragment.prefix ?? ''}${orderBy}${fragment.suffix ?? ''}`]
           : [];
-      } else if (fragment.type === 'aggregate_limit') {
+      } else if (fragment.node === 'aggregate_limit') {
         return limit ? [` ${limit}`] : [];
       }
-      return [fragment];
+      return fragment;
     });
   }
 
@@ -575,11 +568,11 @@ class QueryField extends QueryNode {
   generateFunctionCallExpression(
     resultSet: FieldInstanceResult,
     context: QueryStruct,
-    frag: FunctionCallFragment,
+    frag: FunctionCallNode,
     state: GenerateState
   ): string {
     const overload = frag.overload;
-    const args = frag.args;
+    const args = frag.kids.args;
     const isSymmetric = frag.overload.isSymmetric ?? false;
     const distinctKey =
       expressionIsAggregate(overload.returnType.expressionType) &&
@@ -598,7 +591,7 @@ class QueryField extends QueryNode {
         args[0],
         args[1],
         distinctKey,
-        frag.orderBy,
+        frag.kids.orderBy,
         context.dialect.name,
         state
       );
@@ -656,12 +649,7 @@ class QueryField extends QueryNode {
             orderBySQL,
             aggregateLimit
           );
-          return this.generateExpressionFromExpr(
-            resultSet,
-            context,
-            funcCall,
-            state
-          );
+          return this.exprToSQL(resultSet, context, funcCall, state);
         }
       );
     } else {
@@ -720,12 +708,7 @@ class QueryField extends QueryNode {
           orderBySql
         );
       }
-      return this.generateExpressionFromExpr(
-        resultSet,
-        context,
-        funcCall,
-        state
-      );
+      return this.exprToSQL(resultSet, context, funcCall, state);
     }
   }
 
@@ -741,18 +724,13 @@ class QueryField extends QueryNode {
   generateParameterFragment(
     resultSet: FieldInstanceResult,
     context: QueryStruct,
-    expr: ParameterFragment,
+    expr: ParameterNode,
     state: GenerateState
   ): string {
     const name = expr.path[0];
     const argument = context.arguments()[name];
     if (argument.value) {
-      return this.generateExpressionFromExpr(
-        resultSet,
-        context,
-        argument.value,
-        state
-      );
+      return this.exprToSQL(resultSet, context, argument.value, state);
     }
     throw new Error(`Can't generate SQL, no value for ${expr.path}`);
   }
@@ -766,15 +744,10 @@ class QueryField extends QueryNode {
     const allWhere = new AndChain(state.whereSQL);
     for (const cond of expr.filterList) {
       allWhere.add(
-        this.generateExpressionFromExpr(
-          resultSet,
-          context,
-          cond.expression,
-          state.withWhere()
-        )
+        this.exprToSQL(resultSet, context, cond.expression, state.withWhere())
       );
     }
-    return this.generateExpressionFromExpr(
+    return this.exprToSQL(
       resultSet,
       context,
       expr.e,
@@ -788,7 +761,7 @@ class QueryField extends QueryNode {
     expr: Expr,
     state: GenerateState
   ): string {
-    let dim = this.generateExpressionFromExpr(resultSet, context, expr, state);
+    let dim = this.exprToSQL(resultSet, context, expr, state);
     if (state.whereSQL) {
       dim = `CASE WHEN ${state.whereSQL} THEN ${dim} END`;
     }
@@ -798,7 +771,7 @@ class QueryField extends QueryNode {
   generateUngroupedFragment(
     resultSet: FieldInstanceResult,
     context: QueryStruct,
-    expr: UngroupFragment,
+    expr: UngroupNode,
     state: GenerateState
   ): string {
     if (state.totalGroupSet !== -1) {
@@ -809,7 +782,7 @@ class QueryField extends QueryNode {
     let ungroupSet: UngroupSet | undefined;
 
     if (expr.fields && expr.fields.length > 0) {
-      const key = expr.fields.sort().join('|') + expr.type;
+      const key = expr.fields.sort().join('|') + expr.dataType;
       ungroupSet = resultSet.ungroupedSets.get(key);
       if (ungroupSet === undefined) {
         throw new Error(`Internal Error, cannot find groupset with key ${key}`);
@@ -819,7 +792,7 @@ class QueryField extends QueryNode {
       totalGroupSet = resultSet.parent ? resultSet.parent.groupSet : 0;
     }
 
-    const s = this.generateExpressionFromExpr(
+    const s = this.exprToSQL(
       resultSet,
       context,
       expr.e,
@@ -855,7 +828,7 @@ class QueryField extends QueryNode {
   generateSumFragment(
     resultSet: FieldInstanceResult,
     context: QueryStruct,
-    expr: AggregateFragment,
+    expr: AggregateExpr,
     state: GenerateState
   ): string {
     const dimSQL = this.generateDimFragment(resultSet, context, expr.e, state);
@@ -894,7 +867,7 @@ class QueryField extends QueryNode {
   generateAvgFragment(
     resultSet: FieldInstanceResult,
     context: QueryStruct,
-    expr: AggregateFragment,
+    expr: AggregateExpr,
     state: GenerateState
   ): string {
     // find the structDef and return the path to the field...
@@ -972,39 +945,10 @@ class QueryField extends QueryNode {
     }
   }
 
-  generateDialect(
-    resultSet: FieldInstanceResult,
-    context: QueryStruct,
-    expr: DialectFragment,
-    state: GenerateState
-  ): string {
-    return this.generateExpressionFromExpr(
-      resultSet,
-      context,
-      context.dialect.dialectExpr(resultSet.getQueryInfo(), expr),
-      state
-    );
-  }
-
-  generateSqlString(
-    resultSet: FieldInstanceResult,
-    context: QueryStruct,
-    expr: SqlStringFragment,
-    state: GenerateState
-  ): string {
-    return expr.e
-      .map(part =>
-        typeof part === 'string'
-          ? part
-          : this.generateExpressionFromExpr(resultSet, context, [part], state)
-      )
-      .join('');
-  }
-
   generateSourceReference(
     resultSet: FieldInstanceResult,
     context: QueryStruct,
-    expr: SourceReferenceFragment
+    expr: SourceReferenceNode
   ): string {
     if (expr.path === undefined) {
       return context.getSQLIdentifier();
@@ -1129,12 +1073,7 @@ class QueryField extends QueryNode {
       between = `ROWS BETWEEN ${preceding} PRECEDING AND ${following} FOLLOWING`;
     }
 
-    const funcSQL = this.generateExpressionFromExpr(
-      resultStruct,
-      context,
-      expr,
-      state
-    );
+    const funcSQL = this.exprToSQL(resultStruct, context, expr, state);
 
     let retExpr = `${funcSQL} OVER(${partitionBy} ${orderBy} ${between})`;
     if (isComplex) {
@@ -1143,34 +1082,85 @@ class QueryField extends QueryNode {
     return retExpr;
   }
 
-  generateExpressionFromExpr(
+  generatePickSQL(pf: PickExpr): string {
+    const caseStmt = ['CASE'];
+    for (let i = 0; i < pf.kids.pickWhen.length; i += 1) {
+      caseStmt.push(
+        `WHEN ${pf.kids.pickWhen[i].sql} THEN ${pf.kids.pickThen[i].sql}`
+      );
+    }
+    caseStmt.push(`ELSE ${pf.kids.pickElse.sql}`, 'END');
+    return caseStmt.join(' ');
+  }
+
+  exprToSQL(
     resultSet: FieldInstanceResult,
     context: QueryStruct,
-    e: Expr,
+    exprToTranslate: Expr,
     state: GenerateState = new GenerateState()
   ): string {
-    let s = '';
-    for (const expr of e) {
-      if (typeof expr === 'string') {
-        s += expr;
-      } else if (isFieldFragment(expr)) {
-        s += this.generateFieldFragment(resultSet, context, expr, state);
-      } else if (isParameterFragment(expr)) {
-        s += this.generateParameterFragment(resultSet, context, expr, state);
-      } else if (isFilterFragment(expr)) {
-        s += this.generateFilterFragment(resultSet, context, expr, state);
-      } else if (isUngroupFragment(expr)) {
-        s += this.generateUngroupedFragment(resultSet, context, expr, state);
-      } else if (isAggregateFragment(expr)) {
-        let agg;
+    // Wrap non leaf sub expressions in parenthesis
+    const subExpr = function (qf: QueryField, e: Expr) {
+      const sql = qf.exprToSQL(resultSet, context, e, state);
+      if (exprHasKids(e) || exprHasE(e)) {
+        return `(${sql})`;
+      }
+      return sql;
+    };
+
+    /*
+     * Translate the children first, and stash the translation
+     * in the nodes themselves, so that if we call into the dialect
+     * it will have access to the translated children.
+     */
+    let expr = exprToTranslate;
+    if (exprHasE(exprToTranslate)) {
+      expr = {...exprToTranslate};
+      const eSql = subExpr(this, expr.e);
+      expr.e = {...expr.e, sql: eSql};
+    } else if (exprHasKids(exprToTranslate)) {
+      expr = {...exprToTranslate};
+      const oldKids = exprToTranslate.kids;
+      for (const [name, kidExpr] of Object.entries(oldKids)) {
+        if (Array.isArray(kidExpr)) {
+          expr.kids[name] = kidExpr.map(e => {
+            return {...e, sql: subExpr(this, e)};
+          });
+        } else {
+          expr.kids[name] = {...oldKids[name], sql: subExpr(this, kidExpr)};
+        }
+      }
+    }
+
+    /*
+     * Give the dialect a chance to translate this node
+     */
+    const qi = resultSet.getQueryInfo();
+    const dialectSQL = this.parent.dialect.exprToSQL(qi, expr);
+    if (dialectSQL) {
+      return dialectSQL;
+    }
+
+    switch (expr.node) {
+      case 'field':
+        return this.generateFieldFragment(resultSet, context, expr, state);
+      case 'parameter':
+        return this.generateParameterFragment(resultSet, context, expr, state);
+      case 'filteredExpr':
+        return this.generateFilterFragment(resultSet, context, expr, state);
+      case 'all':
+      case 'exclude':
+        return this.generateUngroupedFragment(resultSet, context, expr, state);
+      case 'genericSQLExpr':
+        return this.generateSQLExpression(resultSet, context, expr, state);
+      case 'aggregate': {
+        let agg = '';
         if (expr.function === 'sum') {
           agg = this.generateSumFragment(resultSet, context, expr, state);
         } else if (expr.function === 'avg') {
           agg = this.generateAvgFragment(resultSet, context, expr, state);
         } else if (expr.function === 'count') {
           agg = this.generateCountFragment(resultSet, context, expr, state);
-        } else if (['count_distinct', 'min', 'max'].includes(expr.function)) {
-          agg = this.generateSymmetricFragment(resultSet, context, expr, state);
         } else {
           throw new Error(
             `Internal Error: Unknown aggregate function ${expr.function}`
@@ -1181,92 +1171,100 @@ class QueryField extends QueryNode {
           if (state.totalGroupSet !== -1) {
             groupSet = state.totalGroupSet;
           }
-          s += this.caseGroup([groupSet], agg);
-        } else {
-          s += agg;
+          return this.caseGroup([groupSet], agg);
         }
-      } else if (isApplyFragment(expr)) {
-        const applyVal = this.generateExpressionFromExpr(
-          resultSet,
-          context,
-          expr.value,
-          state
-        );
-        s += this.generateExpressionFromExpr(
-          resultSet,
-          context,
-          expr.to,
-          state.withApply(applyVal)
-        );
-      } else if (isApplyValue(expr)) {
-        if (state.applyValue) {
-          s += state.applyValue;
-        } else {
-          throw new Error(
-            'Internal Error: Partial application value referenced but not provided'
-          );
-        }
-      } else if (isFunctionParameterFragment(expr)) {
+        return agg;
+      }
+      case 'function_parameter':
         throw new Error(
           'Internal Error: Function parameter fragment remaining during SQL generation'
         );
-      } else if (isOutputFieldFragment(expr)) {
-        s += this.generateOutputFieldFragment(resultSet, context, expr, state);
-      } else if (isSQLExpressionFragment(expr)) {
-        s += this.generateSQLExpression(resultSet, context, expr, state);
-      } else if (isFunctionCallFragment(expr)) {
-        s += this.generateFunctionCallExpression(
+      case 'outputField':
+        return this.generateOutputFieldFragment(
           resultSet,
           context,
           expr,
           state
         );
-      } else if (isSpreadFragment(expr)) {
-        s += this.generateSpread(resultSet, context, expr, state);
-      } else if (expr.type === 'dialect') {
-        s += this.generateDialect(resultSet, context, expr, state);
-      } else if (expr.type === 'sql-string') {
-        s += this.generateSqlString(resultSet, context, expr, state);
-      } else if (expr.type === 'source-reference') {
-        s += this.generateSourceReference(resultSet, context, expr);
-      } else {
+      case 'function_call':
+        return this.generateFunctionCallExpression(
+          resultSet,
+          context,
+          expr,
+          state
+        );
+      case 'spread':
+        return this.generateSpread(resultSet, context, expr, state);
+      case 'source-reference':
+        return this.generateSourceReference(resultSet, context, expr);
+      case '+':
+      case '-':
+      case '*':
+      case '%':
+      case '/':
+      case '=':
+      case '!=':
+      case '>':
+      case '<':
+      case '>=':
+      case '<=':
+        return `${expr.kids.left.sql}${expr.node}${expr.kids.right.sql}`;
+      case 'and':
+      case 'or':
+        return `${expr.kids.left.sql} ${expr.node} ${expr.kids.right.sql}`;
+      case 'coalesce':
+        return `COALESCE(${expr.kids.left.sql},${expr.kids.right.sql})`;
+      case 'like':
+        return `${expr.kids.left.sql} LIKE ${expr.kids.right.sql}`;
+      case '!like':
+        return `${expr.kids.left.sql} NOT LIKE ${expr.kids.right.sql}`;
+      case '()':
+        return `(${expr.e.sql})`;
+      case 'not':
+        return `NOT ${expr.e.sql}`;
+      case 'unary-':
+        return `-${expr.e.sql}`;
+      case 'is-null':
+        return `${expr.e.sql} IS NULL`;
+      case 'is-not-null':
+        return `${expr.e.sql} IS NOT NULL`;
+      case 'true':
+      case 'false':
+        return expr.node;
+      case 'null':
+        return 'NULL';
+      case 'pick':
+        return this.generatePickSQL(expr);
+      default:
         throw new Error(
-          `Internal Error: Unknown expression fragment ${JSON.stringify(
+          `Internal Error: Unknown expression node ${JSON.stringify(
             expr,
             undefined,
             2
           )}`
         );
-      }
     }
-    return s;
   }
 
   getExpr(): Expr {
     if (hasExpression(this.fieldDef)) {
       return this.fieldDef.e;
     }
-    return [
-      this.parent.dialect.sqlFieldReference(
-        this.parent.getSQLIdentifier(),
-        this.fieldDef.name,
-        this.fieldDef.type,
-        this.parent.fieldDef.structSource.type === 'nested' ||
-          this.parent.fieldDef.structSource.type === 'inline' ||
-          (this.parent.fieldDef.structSource.type === 'sql' &&
-            this.parent.fieldDef.structSource.method === 'nested'),
-        this.parent.fieldDef.structRelationship.type === 'nested' &&
-          this.parent.fieldDef.structRelationship.isArray
-      ),
-    ];
+    return this.parent.dialect.sqlFieldReference(
+      this.parent.getSQLIdentifier(),
+      this.fieldDef.name,
+      this.fieldDef.type,
+      this.parent.fieldDef.structSource.type === 'nested' ||
+        this.parent.fieldDef.structSource.type === 'inline' ||
+        (this.parent.fieldDef.structSource.type === 'sql' &&
+          this.parent.fieldDef.structSource.method === 'nested'),
+      this.parent.fieldDef.structRelationship.type === 'nested' &&
+        this.parent.fieldDef.structRelationship.isArray
+    );
   }
 
   generateExpression(resultSet: FieldInstanceResult): string {
-    return this.generateExpressionFromExpr(
-      resultSet,
-      this.parent,
-      this.getExpr()
-    );
+    return this.exprToSQL(resultSet, this.parent, this.getExpr());
   }
 }
 
@@ -1299,7 +1297,7 @@ class QueryAtomicField extends QueryField {
     );
   }
 
-  getFilterList(): FilterExpression[] {
+  getFilterList(): FilterCondition[] {
     return [];
   }
 
@@ -1338,14 +1336,13 @@ class QueryFieldStruct extends QueryAtomicField {
       structRelationship: {
         type: 'one',
         matrixOperation: 'left',
-        onExpression: [
-          {
-            type: 'field',
-            path: [this.primaryKey],
+        onExpression: {
+          node: '=',
+          kids: {
+            left: {node: 'field', path: [this.primaryKey]},
+            right: {node: 'field', path: [foreignKeyName]},
           },
-          '=',
-          {type: 'field', path: [foreignKeyName]},
-        ],
+        },
       },
     };
   }
@@ -1357,12 +1354,12 @@ class QueryFieldDate extends QueryAtomicField {
     if (!fd.timeframe) {
       return super.generateExpression(resultSet);
     } else {
-      const truncated = this.parent.dialect.sqlTrunc(
-        resultSet.getQueryInfo(),
-        {value: this.getExpr(), valueType: 'date'},
-        fd.timeframe
-      );
-      return this.generateExpressionFromExpr(resultSet, this.parent, truncated);
+      const truncated: TimeTruncExpr = {
+        node: 'trunc',
+        e: {...this.getExpr(), dataType: 'date'},
+        units: fd.timeframe,
+      };
+      return this.exprToSQL(resultSet, this.parent, truncated);
     }
   }
 
@@ -1532,6 +1529,12 @@ class FieldInstanceResult implements FieldInstance {
     this.firstSegment = turtleDef.pipeline[0];
   }
 
+  /**
+   * Information about the query containing this result set. Invented
+   * to pass on timezone information, but maybe more things will
+   * eventually go in here.
+   * @returns QueryInfo
+   */
   getQueryInfo(): QueryInfo {
     if (
       !isIndexSegment(this.firstSegment) &&
@@ -2014,7 +2017,7 @@ class JoinInstance {
           {
             type: 'boolean',
             name: 'ignoreme',
-            e: filter.expression,
+            e: filter.e,
           },
           this.queryStruct
         );
@@ -2266,122 +2269,16 @@ class QueryQuery extends QueryField {
     e: Expr,
     joinStack: string[]
   ): void {
-    for (const expr of e) {
-      if (
-        isFunctionCallFragment(expr) &&
-        expressionIsAnalytic(expr.overload.returnType.expressionType) &&
-        this.parent.dialect.cantPartitionWindowFunctionsOnExpressions
-      ) {
-        // force the use of a lateral_join_bag
-        resultStruct.root().isComplexQuery = true;
-        resultStruct.root().queryUsesPartitioning = true;
-      }
-      if (isUngroupFragment(expr)) {
-        resultStruct.resultUsesUngrouped = true;
-        resultStruct.root().isComplexQuery = true;
-        resultStruct.root().queryUsesPartitioning = true;
-        if (expr.fields && expr.fields.length > 0) {
-          const key = expr.fields.sort().join('|') + expr.type;
-          if (resultStruct.ungroupedSets.get(key) === undefined) {
-            resultStruct.ungroupedSets.set(key, {
-              type: expr.type,
-              fields: expr.fields,
-              groupSet: -1,
-            });
-          }
+    for (const expr of exprWalk(e)) {
+      if (expr.node === 'function_call') {
+        if (
+          expressionIsAnalytic(expr.overload.returnType.expressionType) &&
+          this.parent.dialect.cantPartitionWindowFunctionsOnExpressions
+        ) {
+          // force the use of a lateral_join_bag
+          resultStruct.root().isComplexQuery = true;
+          resultStruct.root().queryUsesPartitioning = true;
         }
-
-        this.addDependantExpr(resultStruct, context, expr.e, joinStack);
-      } else if (isFieldFragment(expr)) {
-        const field = context.getDimensionOrMeasureByName(expr.path);
-        if (hasExpression(field.fieldDef)) {
-          this.addDependantExpr(
-            resultStruct,
-            field.parent,
-            field.fieldDef.e,
-            joinStack
-          );
-        } else {
-          resultStruct
-            .root()
-            .addStructToJoin(
-              field.parent.getJoinableParent(),
-              this,
-              undefined,
-              joinStack
-            );
-          // this.addDependantPath(resultStruct, field.parent, expr.path, false);
-        }
-      } else if (isFilterFragment(expr)) {
-        for (const filterCond of expr.filterList) {
-          this.addDependantExpr(
-            resultStruct,
-            context,
-            filterCond.expression,
-            joinStack
-          );
-          this.addDependantExpr(resultStruct, context, expr.e, joinStack);
-        }
-        this.addDependantExpr(resultStruct, context, expr.e, joinStack);
-      } else if (isDialectFragment(expr)) {
-        const expressions: Expr[] = [];
-        switch (expr.function) {
-          case 'now':
-            break;
-          case 'div':
-          case 'mod':
-            expressions.push(expr.denominator);
-            expressions.push(expr.numerator);
-            break;
-          case 'numberLiteral':
-          case 'timeLiteral':
-          case 'stringLiteral':
-          case 'regexpLiteral':
-            break;
-          case 'timeDiff':
-            expressions.push(expr.left.value, expr.right.value);
-            break;
-          case 'delta':
-            expressions.push(expr.base.value, expr.delta);
-            break;
-          case 'trunc':
-          case 'extract':
-            expressions.push(expr.expr.value);
-            break;
-          case 'regexpMatch':
-          case 'cast':
-            expressions.push(expr.expr);
-            break;
-          default:
-            throw new Error(
-              "Unknown dialect Fragment type.  Can't generate dependancies"
-            );
-        }
-        for (const e of expressions) {
-          this.addDependantExpr(resultStruct, context, e, joinStack);
-        }
-      } else if (isAggregateFragment(expr)) {
-        if (isAsymmetricFragment(expr)) {
-          if (expr.structPath) {
-            this.addDependantPath(
-              resultStruct,
-              context,
-              expr.structPath,
-              expr.function,
-              joinStack
-            );
-          } else {
-            // we are doing a sum in the root.  It may need symetric aggregates
-            resultStruct.addStructToJoin(
-              context,
-              this,
-              expr.function,
-              joinStack
-            );
-          }
-        }
-        this.addDependantExpr(resultStruct, context, expr.e, joinStack);
-      } else if (isFunctionCallFragment(expr)) {
         const isSymmetric = expr.overload.isSymmetric ?? false;
         const isAggregate = expressionIsAggregate(
           expr.overload.returnType.expressionType
@@ -2406,17 +2303,61 @@ class QueryQuery extends QueryField {
             joinStack
           );
         }
-        for (const e of expr.args) {
-          this.addDependantExpr(resultStruct, context, e, joinStack);
-        }
         if (expressionIsAnalytic(expr.overload.returnType.expressionType)) {
           resultStruct.root().queryUsesPartitioning = true;
         }
-        if (expr.orderBy) {
-          for (const ob of expr.orderBy) {
-            if (ob.e) {
-              this.addDependantExpr(resultStruct, context, ob.e, joinStack);
-            }
+      } else if (expr.node === 'all' || expr.node === 'exclude') {
+        resultStruct.resultUsesUngrouped = true;
+        resultStruct.root().isComplexQuery = true;
+        resultStruct.root().queryUsesPartitioning = true;
+        if (expr.fields && expr.fields.length > 0) {
+          const key = expr.fields.sort().join('|') + expr.node;
+          if (resultStruct.ungroupedSets.get(key) === undefined) {
+            resultStruct.ungroupedSets.set(key, {
+              type: expr.node,
+              fields: expr.fields,
+              groupSet: -1,
+            });
+          }
+        }
+      }
+      if (expr.node === 'field') {
+        const field = context.getDimensionOrMeasureByName(expr.path);
+        if (hasExpression(field.fieldDef)) {
+          this.addDependantExpr(
+            resultStruct,
+            field.parent,
+            field.fieldDef.e,
+            joinStack
+          );
+        } else {
+          resultStruct
+            .root()
+            .addStructToJoin(
+              field.parent.getJoinableParent(),
+              this,
+              undefined,
+              joinStack
+            );
+        }
+      } else if (expr.node === 'aggregate') {
+        if (isAsymmetricExpr(expr)) {
+          if (expr.structPath) {
+            this.addDependantPath(
+              resultStruct,
+              context,
+              expr.structPath,
+              expr.function,
+              joinStack
+            );
+          } else {
+            // we are doing a sum in the root.  It may need symetric aggregates
+            resultStruct.addStructToJoin(
+              context,
+              this,
+              expr.function,
+              joinStack
+            );
           }
         }
       }
@@ -2502,7 +2443,7 @@ class QueryQuery extends QueryField {
     // in the correct catgory.
     for (const cond of resultStruct.firstSegment.filterList || []) {
       const context = this.parent;
-      this.addDependantExpr(resultStruct, context, cond.expression, []);
+      this.addDependantExpr(resultStruct, context, cond.e, []);
     }
     for (const join of resultStruct.root().joins.values() || []) {
       for (const qf of join.joinFilterConditions || []) {
@@ -2515,11 +2456,11 @@ class QueryQuery extends QueryField {
 
   generateSQLFilters(
     resultStruct: FieldInstanceResult,
-    which: 'where' | 'having',
-    filterList: FilterExpression[] | undefined = undefined
+    which: 'where' | 'having'
+    // filterList: FilterCondition[] | undefined = undefined
   ): AndChain {
     const resultFilters = new AndChain();
-    const list = filterList || resultStruct.firstSegment.filterList;
+    const list = resultStruct.firstSegment.filterList;
     if (list === undefined) {
       return resultFilters;
     }
@@ -2533,10 +2474,10 @@ class QueryQuery extends QueryField {
         (which === 'having' && expressionIsCalculation(cond.expressionType)) ||
         (which === 'where' && expressionIsScalar(cond.expressionType))
       ) {
-        const sqlClause = this.generateExpressionFromExpr(
+        const sqlClause = this.exprToSQL(
           resultStruct,
           context,
-          cond.expression,
+          cond.e,
           undefined
         );
         resultFilters.add(sqlClause);
@@ -4123,8 +4064,7 @@ class QueryStruct extends QueryNode {
         param.value === null
           ? null
           : exprMap(param.value, frag => {
-              if (typeof frag === 'string') return [frag];
-              if (frag.type === 'parameter') {
+              if (frag.node === 'parameter') {
                 if (this.parent === undefined) {
                   throw new Error(
                     'No parent from which to retrieve parameter value'
@@ -4139,7 +4079,7 @@ class QueryStruct extends QueryNode {
                   return resolved2.value;
                 }
               }
-              return [frag];
+              return frag;
             }),
     };
   }

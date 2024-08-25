@@ -24,29 +24,25 @@
 import {indent} from '../../model/utils';
 import {
   Expr,
-  ExtractUnit,
   Sampling,
-  TimeValue,
-  TimestampUnit,
-  TypecastFragment,
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
-  mkExpr,
   FieldAtomicTypeDef,
-  DialectFragment,
-  DateUnit,
-  TimeFieldType,
+  TimeDeltaExpr,
+  TypecastExpr,
+  RegexMatchExpr,
+  MeasureTimeExpr,
 } from '../../model/malloy_types';
 import {TRINO_FUNCTIONS} from './functions';
 import {DialectFunctionOverloadDef} from '../functions';
 import {
-  Dialect,
   DialectFieldList,
   OrderByClauseType,
   QueryInfo,
   isDialectFieldStruct,
 } from '../dialect';
+import {PostgresBase} from '../pg_impl';
 
 // These are the units that "TIMESTAMP_ADD" "TIMESTAMP_DIFF" accept
 function timestampMeasureable(units: string): boolean {
@@ -59,11 +55,6 @@ function timestampMeasureable(units: string): boolean {
     'day',
   ].includes(units);
 }
-
-const pgExtractionMap: Record<string, string> = {
-  'day_of_week': 'dow',
-  'day_of_year': 'doy',
-};
 
 /**
  * Return a non UTC timezone, if one was specificed.
@@ -85,7 +76,7 @@ const trinoTypeMap = {
   'number': 'DOUBLE',
 };
 
-export class TrinoDialect extends Dialect {
+export class TrinoDialect extends PostgresBase {
   name = 'trino';
   experimental = false;
   defaultNumberType = 'DOUBLE';
@@ -121,13 +112,12 @@ export class TrinoDialect extends Dialect {
     return `CROSS JOIN (SELECT row_number() OVER() -1  group_set FROM UNNEST(SEQUENCE(0,${groupSetCount})))`;
   }
 
-  dialectExpr(qi: QueryInfo, df: DialectFragment): Expr {
-    switch (df.function) {
-      case 'div': {
-        return mkExpr`CAST(${df.numerator} AS DOUBLE)/${df.denominator}`;
-      }
+  exprToSQL(qi: QueryInfo, df: Expr): string | undefined {
+    switch (df.node) {
+      case '/':
+        return `CAST(${df.kids.left.sql} AS DOUBLE)/${df.kids.right.sql}`;
     }
-    return super.dialectExpr(qi, df);
+    return super.exprToSQL(qi, df);
   }
 
   sqlAnyValue(groupSet: number, fieldName: string): string {
@@ -406,73 +396,32 @@ ${indent(sql)}
     return '"' + identifier + '"';
   }
 
-  sqlNow(): Expr {
-    return mkExpr`LOCALTIMESTAMP`;
-  }
-  sqlTrunc(qi: QueryInfo, sqlTime: TimeValue, units: TimestampUnit): Expr {
-    // adjusting for monday/sunday weeks
-    const week = units === 'week';
-    const truncThis = week
-      ? mkExpr`DATE_ADD('day', 1, ${sqlTime.value})`
-      : sqlTime.value;
-    if (sqlTime.valueType === 'timestamp') {
-      const tz = qtz(qi);
-      if (tz) {
-        const civilSource = mkExpr`AT_TIMEZONE(${truncThis},'${tz}')`;
-        const civilTrunc = mkExpr`DATE_TRUNC('${units}', ${civilSource})`;
-        // MTOY todo ... only need to do this if this is a date ...
-        return mkExpr`AT_TIMEZONE(${civilTrunc},'${tz}')`;
-        // return mkExpr`CAST((${truncTsTz}),TIMESTAMP)`;
-      }
-    }
-    let result = mkExpr`DATE_TRUNC('${units}', ${truncThis})`;
-    if (week) {
-      result = mkExpr`DATE_ADD('day',-1, ${result})`;
-    }
-    return result;
-  }
-
-  sqlExtract(qi: QueryInfo, from: TimeValue, units: ExtractUnit): Expr {
-    const pgUnits = pgExtractionMap[units] || units;
-    let extractFrom = from.value;
-    if (from.valueType === 'timestamp') {
-      const tz = qtz(qi);
-      if (tz) {
-        extractFrom = mkExpr`at_timezone(${extractFrom},'${tz}')`;
-      }
-    }
-    const extracted = mkExpr`EXTRACT(${pgUnits} FROM ${extractFrom})`;
-    return units === 'day_of_week' ? mkExpr`mod(${extracted}+1,7)` : extracted;
-  }
-
-  sqlAlterTime(
-    op: '+' | '-',
-    expr: TimeValue,
-    n: Expr,
-    timeframe: DateUnit
-  ): Expr {
+  sqlAlterTimeExpr(df: TimeDeltaExpr): string {
+    let timeframe = df.units;
+    let n = df.kids.delta.sql;
     if (timeframe === 'quarter') {
       timeframe = 'month';
-      n = mkExpr`${n}*3`;
+      n = `${n}*3`;
     }
     if (timeframe === 'week') {
       timeframe = 'day';
-      n = mkExpr`${n}*7`;
+      n = `${n}*7`;
     }
-    if (op === '-') {
-      n = mkExpr`(${n})*-1`;
+    if (df.op === '-') {
+      n = `(${n})*-1`;
     }
-    return mkExpr`DATE_ADD('${timeframe}', ${n}, ${expr.value})`;
+    return `DATE_ADD('${timeframe}', ${n}, ${df.kids.base.sql})`;
   }
 
-  sqlCast(qi: QueryInfo, cast: TypecastFragment): Expr {
+  sqlCast(qi: QueryInfo, cast: TypecastExpr): string {
     const op = `${cast.srcType}=>${cast.dstType}`;
     const tz = qtz(qi);
+    const expr = cast.e.sql || '';
     if (op === 'timestamp=>date' && tz) {
-      const tstz = mkExpr`CAST(${cast.expr} as TIMESTAMP)`;
-      return mkExpr`CAST((${tstz}) AT TIME ZONE '${tz}' AS DATE)`;
+      const tstz = `CAST(${expr} as TIMESTAMP)`;
+      return `CAST((${tstz}) AT TIME ZONE '${tz}' AS DATE)`;
     } else if (op === 'date=>timestamp' && tz) {
-      return mkExpr`CAST(CONCAT(CAST(CAST(${cast.expr} AS TIMESTAMP) AS VARCHAR), ' ${tz}') AS TIMESTAMP WITH TIME ZONE)`;
+      return `CAST(CONCAT(CAST(CAST(${expr} AS TIMESTAMP) AS VARCHAR), ' ${tz}') AS TIMESTAMP WITH TIME ZONE)`;
     }
     if (cast.srcType !== cast.dstType) {
       const dstType =
@@ -480,32 +429,16 @@ ${indent(sql)}
           ? this.malloyTypeToSQLType({type: cast.dstType})
           : cast.dstType.raw;
       const castFunc = cast.safe ? 'TRY_CAST' : 'CAST';
-      return mkExpr`${castFunc}(${cast.expr} AS ${dstType})`;
+      return `${castFunc}(${expr} AS ${dstType})`;
     }
-    return cast.expr;
+    return expr;
   }
 
-  sqlRegexpMatch(expr: Expr, regexp: Expr): Expr {
-    return mkExpr`REGEXP_LIKE(${expr}, ${regexp})`;
+  sqlRegexpMatch(reCmp: RegexMatchExpr): string {
+    return `REGEXP_LIKE(${reCmp.kids.expr.sql}, ${reCmp.kids.regex.sql})`;
   }
 
-  sqlLiteralTime(
-    qi: QueryInfo,
-    timeString: string,
-    type: TimeFieldType,
-    timezone: string | undefined
-  ): string {
-    if (type === 'date') {
-      return `DATE '${timeString}'`;
-    }
-    const tz = timezone || qtz(qi);
-    if (tz) {
-      return `TIMESTAMP '${timeString} ${tz}'`;
-    }
-    return `TIMESTAMP '${timeString}'`;
-  }
-
-  sqlMeasureTime(from: TimeValue, to: TimeValue, units: string): Expr {
+  sqlMeasureTimeExpr(mf: MeasureTimeExpr): string {
     const measureMap: Record<string, TimeMeasure> = {
       'microsecond': {use: 'microsecond', ratio: 1},
       'millisecond': {use: 'microsecond', ratio: 1000},
@@ -515,27 +448,29 @@ ${indent(sql)}
       'day': {use: 'hour', ratio: 24},
       'week': {use: 'day', ratio: 7},
     };
-    let lVal = from.value;
-    let rVal = to.value;
-    if (measureMap[units]) {
-      const {use: measureIn, ratio} = measureMap[units];
+    const from = mf.kids.left;
+    const to = mf.kids.right;
+    let lVal = from.sql;
+    let rVal = to.sql;
+    if (measureMap[mf.units]) {
+      const {use: measureIn, ratio} = measureMap[mf.units];
       if (!timestampMeasureable(measureIn)) {
         throw new Error(`Measure in '${measureIn} not implemented`);
       }
-      if (from.valueType !== to.valueType) {
+      if (from.dataType !== to.dataType) {
         throw new Error("Can't measure difference between different types");
       }
-      if (from.valueType === 'date') {
-        lVal = mkExpr`CAST(${lVal} AS TIMESTAMP)`;
-        rVal = mkExpr`CAST(${rVal} AS TIMESTAMP)`;
+      if (from.dataType === 'date') {
+        lVal = `CAST(${lVal} AS TIMESTAMP)`;
+        rVal = `CAST(${rVal} AS TIMESTAMP)`;
       }
-      let measured = mkExpr`DATE_DIFF('${measureIn}',${lVal},${rVal})`;
+      let measured = `DATE_DIFF('${measureIn}',${lVal},${rVal})`;
       if (ratio !== 1) {
-        measured = mkExpr`FLOOR(CAST(${measured} AS DOUBLE)/${ratio.toString()}.0)`;
+        measured = `FLOOR(CAST(${measured} AS DOUBLE)/${ratio.toString()}.0)`;
       }
       return measured;
     }
-    throw new Error(`Measure '${units} not implemented`);
+    throw new Error(`Measure '${mf.units} not implemented`);
   }
 
   sqlSampleTable(tableSQL: string, sample: Sampling | undefined): string {

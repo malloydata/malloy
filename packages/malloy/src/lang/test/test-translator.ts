@@ -233,7 +233,7 @@ export class TestTranslator extends MalloyTranslator {
   testRoot?: TestRoot;
   /*
    * All test source files can assume that an import of this
-   * model has already happened.
+
    *
    * Also the following tables will be available on _db_
    *   aTable, malloytest.carriers, malloytest.flights, malloytest.airports
@@ -246,6 +246,7 @@ export class TestTranslator extends MalloyTranslator {
    *     query: aturtle is { group_by: astr; aggregate: acount }
    *   }
    */
+
   internalModel: ModelDef = {
     name: testURI,
     exports: [],
@@ -265,11 +266,13 @@ export class TestTranslator extends MalloyTranslator {
             structRelationship: {
               type: 'one',
               matrixOperation: 'left',
-              onExpression: [
-                {type: 'field', path: ['astr']},
-                '=',
-                {type: 'field', path: ['b', 'astr']},
-              ],
+              onExpression: {
+                node: '=',
+                kids: {
+                  left: {node: 'field', path: ['astr']},
+                  right: {node: 'field', path: ['b', 'astr']},
+                },
+              },
             },
           },
           {
@@ -277,7 +280,7 @@ export class TestTranslator extends MalloyTranslator {
             name: 'acount',
             numberType: 'integer',
             expressionType: 'aggregate',
-            e: ['COUNT()'],
+            e: {node: 'aggregate', function: 'count'},
             code: 'count()',
           },
           {

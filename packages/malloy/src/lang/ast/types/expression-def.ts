@@ -22,7 +22,6 @@
  */
 
 import {
-  DivModFragment,
   Expr,
   TimestampUnit,
   isDateUnit,
@@ -36,15 +35,22 @@ import {
 } from '../../../model/malloy_types';
 
 import {errorFor} from '../ast-utils';
-import {compose, nullsafeNot} from '../expressions/utils';
+import {nullsafeNot} from '../expressions/utils';
 import {FT} from '../fragtype-utils';
 import {timeOffset, timeResult} from '../time-utils';
-import {isComparison} from './comparison';
-import {Equality, isEquality} from './equality';
 import {ExprValue} from './expr-value';
 import {FieldSpace} from './field-space';
 import {isGranularResult} from './granular-result';
 import {MalloyElement} from './malloy-element';
+import {
+  ArithmeticMalloyOperator,
+  BinaryMalloyOperator,
+  CompareMalloyOperator,
+  EqualityMalloyOperator,
+  getExprNode,
+  isComparison,
+  isEquality,
+} from './binary_operators';
 
 class TypeMismatch extends Error {}
 
@@ -111,7 +117,11 @@ export abstract class ExpressionDef extends MalloyElement {
    * @param expr The "other" (besdies 'this') value
    * @return The translated expression
    */
-  apply(fs: FieldSpace, op: string, left: ExpressionDef): ExprValue {
+  apply(
+    fs: FieldSpace,
+    op: BinaryMalloyOperator,
+    left: ExpressionDef
+  ): ExprValue {
     return applyBinary(fs, left, op, this);
   }
 
@@ -142,7 +152,11 @@ export class ExprDuration extends ExpressionDef {
     super({n: n});
   }
 
-  apply(fs: FieldSpace, op: string, left: ExpressionDef): ExprValue {
+  apply(
+    fs: FieldSpace,
+    op: BinaryMalloyOperator,
+    left: ExpressionDef
+  ): ExprValue {
     const lhs = left.getExpression(fs);
     this.typeCheck(this, lhs);
     if (isTimeFieldType(lhs.dataType) && (op === '+' || op === '-')) {
@@ -204,7 +218,7 @@ export class ExprDuration extends ExpressionDef {
     return {
       dataType: 'duration',
       expressionType: 'scalar',
-      value: ['__ERROR_DURATION_IS_NOT_A_VALUE__'],
+      value: {node: 'error', message: 'Duration is not a value'},
       evalSpace: 'constant',
     };
   }
@@ -236,20 +250,21 @@ export function getMorphicValue(
 function timeCompare(
   left: ExpressionDef,
   lhs: ExprValue,
-  op: string,
+  op: CompareMalloyOperator,
   rhs: ExprValue
 ): Expr | undefined {
   const leftIsTime = isTimeFieldType(lhs.dataType);
   const rightIsTime = isTimeFieldType(rhs.dataType);
+  const node = getExprNode(op);
   if (leftIsTime && rightIsTime) {
     if (lhs.dataType !== rhs.dataType) {
       const lval = willMorphTo(lhs, 'timestamp');
       const rval = willMorphTo(rhs, 'timestamp');
       if (lval && rval) {
-        return compose(lval, op, rval);
+        return {node, kids: {left: lval, right: lval}};
       }
     } else {
-      return compose(lhs.value, op, rhs.value);
+      return {node, kids: {left: lhs.value, right: rhs.value}};
     }
   }
   if (
@@ -258,7 +273,7 @@ function timeCompare(
     rhs.dataType !== 'null'
   ) {
     left.log(`Cannot compare a ${lhs.dataType} to a ${rhs.dataType}`);
-    return ['false'];
+    return {node: 'false'};
   }
   return undefined;
 }
@@ -266,25 +281,17 @@ function timeCompare(
 function regexEqual(left: ExprValue, right: ExprValue): Expr | undefined {
   if (left.dataType === 'string') {
     if (right.dataType === 'regular expression') {
-      return [
-        {
-          type: 'dialect',
-          function: 'regexpMatch',
-          expr: left.value,
-          regexp: right.value,
-        },
-      ];
+      return {
+        node: 'regexpMatch',
+        kids: {expr: left.value, regex: right.value},
+      };
     }
   } else if (right.dataType === 'string') {
     if (left.dataType === 'regular expression') {
-      return [
-        {
-          type: 'dialect',
-          function: 'regexpMatch',
-          expr: right.value,
-          regexp: left.value,
-        },
-      ];
+      return {
+        node: 'regexpMatch',
+        kids: {expr: right.value, regex: left.value},
+      };
     }
   }
   return undefined;
@@ -296,15 +303,15 @@ function nullCompare(
   right: ExprValue
 ): Expr | undefined {
   const not = op === '!=' || op === '!~';
+  const nullCmp = not ? 'is-not-null' : 'is-null';
   if (left.dataType === 'null' || right.dataType === 'null') {
-    const maybeNot = not ? ' NOT' : '';
     if (left.dataType !== 'null') {
-      return [...left.value, ` IS${maybeNot} NULL`];
+      return {node: nullCmp, e: left.value};
     }
     if (right.dataType !== 'null') {
-      return [...right.value, `IS${maybeNot} NULL`];
+      return {node: nullCmp, e: right.value};
     }
-    return [not ? 'false' : 'true'];
+    return {node: not ? 'false' : 'true'};
   }
   return undefined;
 }
@@ -312,11 +319,12 @@ function nullCompare(
 function equality(
   fs: FieldSpace,
   left: ExpressionDef,
-  op: Equality,
+  op: EqualityMalloyOperator,
   right: ExpressionDef
 ): ExprValue {
   const lhs = left.getExpression(fs);
   const rhs = right.getExpression(fs);
+  const node = getExprNode(op);
 
   const err = errorCascade('boolean', lhs, rhs);
   if (err) return err;
@@ -334,16 +342,16 @@ function equality(
       }
     }
   }
-  let value =
-    timeCompare(left, lhs, op, rhs) || compose(lhs.value, op, rhs.value);
+  let value = timeCompare(left, lhs, op, rhs) || {
+    node,
+    kids: {left: lhs.value, right: rhs.value},
+  };
 
   if (lhs.dataType !== 'error' && rhs.dataType !== 'error') {
     switch (op) {
       case '~':
       case '!~': {
-        if (lhs.dataType === 'string' && rhs.dataType === 'string') {
-          value = compose(lhs.value, 'LIKE', rhs.value);
-        } else {
+        if (lhs.dataType !== 'string' || rhs.dataType !== 'string') {
           const regexCmp = regexEqual(lhs, rhs);
           if (regexCmp === undefined) {
             throw new TypeMismatch(
@@ -358,13 +366,11 @@ function equality(
       case '=':
       case '!=': {
         const nullCmp = nullCompare(lhs, op, rhs);
+        const eqNode = value;
         if (nullCmp) {
           value = nullCmp;
         } else {
-          value = nullsafeNot(
-            regexEqual(lhs, rhs) || compose(lhs.value, '=', rhs.value),
-            op
-          );
+          value = nullsafeNot(regexEqual(lhs, rhs) || eqNode);
         }
         break;
       }
@@ -382,7 +388,7 @@ function equality(
 function compare(
   fs: FieldSpace,
   left: ExpressionDef,
-  op: string,
+  op: CompareMalloyOperator,
   right: ExpressionDef
 ): ExprValue {
   const lhs = left.getExpression(fs);
@@ -399,8 +405,10 @@ function compare(
   if (noCompare) {
     return {...noCompare, dataType: 'boolean'};
   }
-  const value =
-    timeCompare(left, lhs, op, rhs) || compose(lhs.value, op, rhs.value);
+  const value = timeCompare(left, lhs, op, rhs) || {
+    node: getExprNode(op),
+    kids: {left: lhs.value, right: rhs.value},
+  };
 
   return {
     dataType: 'boolean',
@@ -410,14 +418,10 @@ function compare(
   };
 }
 
-function oneOf(op: string, ...operators: string[]): boolean {
-  return operators.includes(op);
-}
-
 function numeric(
   fs: FieldSpace,
   left: ExpressionDef,
-  op: string,
+  op: ArithmeticMalloyOperator,
   right: ExpressionDef
 ): ExprValue {
   const lhs = left.getExpression(fs);
@@ -445,7 +449,7 @@ function numeric(
     return {
       dataType: 'number',
       expressionType,
-      value: compose(lhs.value, op, rhs.value),
+      value: {node: op, kids: {left: lhs.value, right: rhs.value}},
       evalSpace: mergeEvalSpaces(lhs.evalSpace, rhs.evalSpace),
     };
   }
@@ -455,7 +459,7 @@ function numeric(
 function delta(
   fs: FieldSpace,
   left: ExpressionDef,
-  op: string,
+  op: '+' | '-',
   right: ExpressionDef
 ): ExprValue {
   const lhs = left.getExpression(fs);
@@ -501,7 +505,7 @@ function delta(
 export function applyBinary(
   fs: FieldSpace,
   left: ExpressionDef,
-  op: string,
+  op: BinaryMalloyOperator,
   right: ExpressionDef
 ): ExprValue {
   if (isEquality(op)) {
@@ -510,13 +514,13 @@ export function applyBinary(
   if (isComparison(op)) {
     return compare(fs, left, op, right);
   }
-  if (oneOf(op, '+', '-')) {
+  if (op === '+' || op === '-') {
     return delta(fs, left, op, right);
   }
   if (op === '*') {
     return numeric(fs, left, op, right);
   }
-  if (oneOf(op, '/', '%')) {
+  if (op === '/' || op === '%') {
     const num = left.getExpression(fs);
     const denom = right.getExpression(fs);
     const noGo = unsupportError(left, num, right, denom);
@@ -533,11 +537,9 @@ export function applyBinary(
     } else if (denom.dataType !== 'number') {
       right.log('Denominator must be a number');
     } else {
-      const div: DivModFragment = {
-        type: 'dialect',
-        function: op === '/' ? 'div' : 'mod',
-        numerator: num.value,
-        denominator: denom.value,
+      const divmod: Expr = {
+        node: op,
+        kids: {left: num.value, right: denom.value},
       };
       return {
         dataType: 'number',
@@ -546,7 +548,7 @@ export function applyBinary(
           denom.expressionType
         ),
         evalSpace: mergeEvalSpaces(num.evalSpace, denom.evalSpace),
-        value: [div],
+        value: divmod,
       };
     }
     return errorFor('divide type mismatch');
@@ -555,12 +557,15 @@ export function applyBinary(
   return errorFor('applybinary bad operator');
 }
 
-function errorCascade(dataType: ExpressionValueType, ...es: ExprValue[]) {
+function errorCascade(
+  dataType: ExpressionValueType,
+  ...es: ExprValue[]
+): ExprValue | undefined {
   if (es.some(e => e.dataType === 'error')) {
     return {
       dataType,
       expressionType: maxOfExpressionTypes(es.map(e => e.expressionType)),
-      value: ["'cascading error'"],
+      value: {node: 'error', message: 'cascading error'},
       evalSpace: mergeEvalSpaces(...es.map(e => e.evalSpace)),
     };
   }
@@ -575,17 +580,18 @@ function unsupportError(
   r: ExpressionDef,
   rhs: ExprValue
 ): ExprValue | undefined {
-  const ret = {
+  const ret: ExprValue = {
     dataType: lhs.dataType,
     expressionType: maxExpressionType(lhs.expressionType, rhs.expressionType),
-    value: ["'unsupported operation'"],
+    value: {node: 'error', message: 'sql-native unsupported'},
     evalSpace: mergeEvalSpaces(lhs.evalSpace, rhs.evalSpace),
   };
   if (lhs.dataType === 'sql native') {
     l.log(
       `Unsupported SQL native type '${lhs.rawType}' not allowed in expression[unsupported-sql-native-type-not-allowed-in-expression]`
     );
-    return {...ret, dataType: rhs.dataType};
+    ret.dataType = rhs.dataType;
+    return ret;
   }
   if (rhs.dataType === 'sql native') {
     r.log(

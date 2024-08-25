@@ -22,14 +22,14 @@
  */
 
 import {
+  Expr,
   ExpressionType,
-  Fragment,
   TimeFieldType,
+  TypecastExpr,
   isTimeFieldType,
 } from '../../../model/malloy_types';
 
 import {FieldSpace} from '../types/field-space';
-import {compressExpr} from './utils';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 
@@ -38,7 +38,7 @@ export class ExprTime extends ExpressionDef {
   readonly translationValue: ExprValue;
   constructor(
     timeType: TimeFieldType,
-    value: Fragment[] | string,
+    value: Expr,
     expressionType: ExpressionType = 'scalar'
   ) {
     super();
@@ -46,7 +46,7 @@ export class ExprTime extends ExpressionDef {
     this.translationValue = {
       dataType: timeType,
       expressionType,
-      value: typeof value === 'string' ? [value] : value,
+      value,
       evalSpace: 'constant',
     };
   }
@@ -58,17 +58,16 @@ export class ExprTime extends ExpressionDef {
   static fromValue(timeType: TimeFieldType, expr: ExprValue): ExprTime {
     let value = expr.value;
     if (timeType !== expr.dataType) {
-      const toTs: Fragment = {
-        type: 'dialect',
-        function: 'cast',
+      const toTs: TypecastExpr = {
+        node: 'cast',
         safe: false,
         dstType: timeType,
-        expr: expr.value,
+        e: expr.value,
       };
       if (isTimeFieldType(expr.dataType)) {
         toTs.srcType = expr.dataType;
       }
-      value = compressExpr([toTs]);
+      value = toTs;
     }
     return new ExprTime(timeType, value, expr.expressionType);
   }

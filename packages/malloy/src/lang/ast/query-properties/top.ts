@@ -27,7 +27,6 @@ import {
   expressionIsAnalytic,
 } from '../../../model/malloy_types';
 
-import {compressExpr} from '../expressions/utils';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldName, FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
@@ -80,7 +79,7 @@ export class Top extends MalloyElement implements QueryPropertyInterface {
         if (byExpr.evalSpace === 'output') {
           this.by.log('top by expression must be an output expression');
         }
-        return {by: 'expression', e: compressExpr(byExpr.value)};
+        return {by: 'expression', e: byExpr.value};
       }
     }
     return undefined;

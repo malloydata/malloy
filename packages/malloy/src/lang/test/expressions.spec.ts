@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Fragment, isFieldTypeDef} from '../../model';
+import {Expr, isFieldTypeDef} from '../../model';
 import {
   expr,
   TestTranslator,
@@ -33,27 +33,38 @@ import {
 import './parse-expects';
 
 /**
- * Convert an expression to a string, any fragment which is not a string turns into a variable,
- * useful for maybe checking simple code generation, but it sort of hints at an interesting matcher
- * @param expr Compiled expression
- * @returns A string with variables A,B,... substituded for non string elements
+ * Try and write a generic version of the expression, might some day be the basis for
+ * a much better expression matcher.
  */
-function exprToString(expr: Fragment[]): string {
-  let varCode = 'A'.charCodeAt(0);
-  const vars: Record<string, string> = {};
-  return expr
-    .map(f => {
-      if (typeof f === 'string') {
-        return f;
+function exprToString(e: Expr, symbols: Record<string, string> = {}): string {
+  switch (e.node) {
+    case '=':
+    case '>':
+    case '>=':
+    case '<':
+    case '<=':
+      return `${exprToString(e.kids.left, symbols)}${e.node}${exprToString(
+        e.kids.right,
+        symbols
+      )}`;
+    case 'and':
+    case 'or':
+      return `(${exprToString(e.kids.left, symbols)})${e.node}(${exprToString(
+        e.kids.right,
+        symbols
+      )})`;
+    case 'field': {
+      const ref = e.path.join('.');
+      if (symbols[ref] === undefined) {
+        const nSyms = Object.keys(symbols).length;
+        symbols[ref] = String.fromCharCode('A'.charCodeAt(0) + nSyms);
       }
-      const key = JSON.stringify(f);
-      if (!vars[key]) {
-        vars[key] = String.fromCharCode(varCode);
-        varCode += 1;
-      }
-      return vars[key];
-    })
-    .join('');
+      return symbols[ref];
+    }
+    case '()':
+      return `(${exprToString(e.e, symbols)})`;
+  }
+  return `<${e.node}>`;
 }
 
 describe('expressions', () => {

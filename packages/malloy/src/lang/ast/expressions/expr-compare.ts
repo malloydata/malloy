@@ -22,7 +22,7 @@
  */
 
 import {FT} from '../fragtype-utils';
-import {Comparison} from '../types/comparison';
+import {CompareMalloyOperator} from '../types/binary_operators';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
@@ -39,9 +39,13 @@ const compareTypes = {
   '>': [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
 };
 
-export class ExprCompare extends BinaryBoolean<Comparison> {
+export class ExprCompare extends BinaryBoolean<CompareMalloyOperator> {
   elementType = 'a<=>b';
-  constructor(left: ExpressionDef, op: Comparison, right: ExpressionDef) {
+  constructor(
+    left: ExpressionDef,
+    op: CompareMalloyOperator,
+    right: ExpressionDef
+  ) {
     super(left, op, right);
     this.legalChildTypes = compareTypes[op];
   }

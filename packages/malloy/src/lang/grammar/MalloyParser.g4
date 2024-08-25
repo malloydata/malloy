@@ -556,7 +556,6 @@ fieldExpr
   | fieldExpr OR fieldExpr                                 # exprLogicalOr
   | fieldExpr DOUBLE_QMARK fieldExpr                       # exprCoalesce
   | CAST OPAREN fieldExpr AS malloyOrSQLType CPAREN        # exprCast
-  | COUNT OPAREN DISTINCT fieldExpr CPAREN                 # exprCountDisinct
   | (SOURCE_KW DOT)? aggregate
       OPAREN (fieldExpr | STAR)? CPAREN                    # exprPathlessAggregate
   | fieldPath DOT aggregate

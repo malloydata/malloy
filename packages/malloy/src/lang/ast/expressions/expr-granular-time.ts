@@ -22,9 +22,9 @@
  */
 
 import {
+  Expr,
   isDateUnit,
   isTimeFieldType,
-  mkExpr,
   TimestampUnit,
 } from '../../../model/malloy_types';
 
@@ -71,14 +71,11 @@ export class ExprGranularTime extends ExpressionDef {
         timeframe: timeframe,
       };
       if (this.truncate) {
-        tsVal.value = [
-          {
-            type: 'dialect',
-            function: 'trunc',
-            expr: {value: exprVal.value, valueType: exprVal.dataType},
-            units: timeframe,
-          },
-        ];
+        tsVal.value = {
+          node: 'trunc',
+          e: {...exprVal.value, dataType: exprVal.dataType},
+          units: timeframe,
+        };
       }
       return tsVal;
     }
@@ -121,17 +118,18 @@ export class ExprGranularTime extends ExpressionDef {
 
   toRange(fs: FieldSpace): Range {
     const begin = this.getExpression(fs);
+    const one: Expr = {node: 'numberLiteral', literal: '1'};
     if (begin.dataType === 'timestamp') {
       const beginTS = ExprTime.fromValue('timestamp', begin);
       const endTS = new ExprTime(
         'timestamp',
-        timeOffset('timestamp', begin.value, '+', mkExpr`1`, this.units),
+        timeOffset('timestamp', begin.value, '+', one, this.units),
         begin.expressionType
       );
       return new Range(beginTS, endTS);
     }
     const beginDate = new ExprTime('date', begin.value, begin.expressionType);
-    const endAt = timeOffset('date', begin.value, '+', ['1'], this.units);
+    const endAt = timeOffset('date', begin.value, '+', one, this.units);
     const endDate = new ExprTime('date', endAt, begin.expressionType);
     return new Range(beginDate, endDate);
   }

@@ -22,7 +22,7 @@
  */
 
 import {
-  FilterExpression,
+  FilterCondition,
   Fragment,
   QueryFieldDef,
   IndexFieldDef,
@@ -46,7 +46,7 @@ export function fToIF(fs: string[]): IndexFieldDef[] {
   );
 }
 
-export function fStringEq(field: string, value: string): FilterExpression {
+export function fStringEq(field: string, value: string): FilterCondition {
   return {
     expression: [{type: 'field', path: field.split('.')}, `='${value}'`],
     code: `${field}='${value}'`,
@@ -54,7 +54,7 @@ export function fStringEq(field: string, value: string): FilterExpression {
   };
 }
 
-export function fStringLike(field: string, value: string): FilterExpression {
+export function fStringLike(field: string, value: string): FilterCondition {
   return {
     expression: [{type: 'field', path: field.split('.')}, ` LIKE '${value}'`],
     code: `${field}~'${value}'`,
@@ -62,7 +62,7 @@ export function fStringLike(field: string, value: string): FilterExpression {
   };
 }
 
-export function fYearEq(field: string, year: number): FilterExpression {
+export function fYearEq(field: string, year: number): FilterCondition {
   const yBegin = `'${year}-01-01 00:00:00'`;
   const yEnd = `'${year + 1}-01-01 00:00:00'`;
   const fx: Fragment = {type: 'field', path: field.split('.')};

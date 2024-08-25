@@ -36,11 +36,7 @@ export function fnConcat(): DialectFunctionOverloadDef[] {
   return [
     // TODO: in DuckDB and Postgres, nulls are treated like "",
     // but in BigQuery and Snowflake, nulls propagate and the result becomes null
-    overload(
-      minScalar('string'),
-      [],
-      [{type: 'dialect', function: 'stringLiteral', literal: ''}]
-    ),
+    overload(minScalar('string'), [], {node: 'stringLiteral', literal: ''}),
     overload(
       minScalar('string'),
       [

@@ -22,32 +22,23 @@
  */
 
 import {
-  DateUnit,
-  Expr,
-  ExtractUnit,
   Sampling,
-  TimeFieldType,
-  TimeValue,
-  TimestampUnit,
-  TypecastFragment,
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
-  mkExpr,
   FieldAtomicTypeDef,
+  TimeDeltaExpr,
+  RegexMatchExpr,
+  MeasureTimeExpr,
 } from '../../model/malloy_types';
 import {indent} from '../../model/utils';
 import {DialectFunctionOverloadDef} from '../functions';
 import {DUCKDB_FUNCTIONS} from './functions';
-import {Dialect, DialectFieldList, QueryInfo, inDays, qtz} from '../dialect';
+import {DialectFieldList, inDays} from '../dialect';
+import {PostgresBase} from '../pg_impl';
 
 // need to refactor runSQL to take a SQLBlock instead of just a sql string.
 const hackSplitComment = '-- hack: split on this';
-
-const pgExtractionMap: Record<string, string> = {
-  'day_of_week': 'dow',
-  'day_of_year': 'doy',
-};
 
 const duckDBToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
   'BIGINT': {type: 'number', numberType: 'integer'},
@@ -69,7 +60,7 @@ const duckDBToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
   'BOOLEAN': {type: 'boolean'},
 };
 
-export class DuckDBDialect extends Dialect {
+export class DuckDBDialect extends PostgresBase {
   name = 'duckdb';
   experimental = false;
   defaultNumberType = 'DOUBLE';
@@ -283,119 +274,6 @@ export class DuckDBDialect extends Dialect {
     throw new Error('Not implemented Yet');
   }
 
-  sqlMeasureTime(from: TimeValue, to: TimeValue, units: string): Expr {
-    let lVal = from.value;
-    let rVal = to.value;
-    if (!inDays(units)) {
-      if (from.valueType === 'date') {
-        lVal = mkExpr`(${lVal})::TIMESTAMP`;
-      }
-      if (to.valueType === 'date') {
-        rVal = mkExpr`(${rVal})::TIMESTAMP`;
-      }
-    }
-    return mkExpr`DATE_SUB('${units}',${lVal},${rVal})`;
-  }
-
-  sqlNow(): Expr {
-    return mkExpr`LOCALTIMESTAMP`;
-  }
-
-  sqlTrunc(qi: QueryInfo, sqlTime: TimeValue, units: TimestampUnit): Expr {
-    // adjusting for monday/sunday weeks
-    const week = units === 'week';
-    const truncThis = week
-      ? mkExpr`${sqlTime.value} + INTERVAL 1 DAY`
-      : sqlTime.value;
-    if (sqlTime.valueType === 'timestamp') {
-      const tz = qtz(qi);
-      if (tz) {
-        const civilSource = mkExpr`(${truncThis}::TIMESTAMPTZ AT TIME ZONE '${tz}')`;
-        let civilTrunc = mkExpr`DATE_TRUNC('${units}', ${civilSource})`;
-        // MTOY todo ... only need to do this if this is a date ...
-        civilTrunc = mkExpr`${civilTrunc}::TIMESTAMP`;
-        const truncTsTz = mkExpr`${civilTrunc} AT TIME ZONE '${tz}'`;
-        return mkExpr`(${truncTsTz})::TIMESTAMP`;
-      }
-    }
-    let result = mkExpr`DATE_TRUNC('${units}', ${truncThis})`;
-    if (week) {
-      result = mkExpr`(${result} - INTERVAL 1 DAY)`;
-    }
-    return result;
-  }
-
-  sqlExtract(qi: QueryInfo, from: TimeValue, units: ExtractUnit): Expr {
-    const pgUnits = pgExtractionMap[units] || units;
-    let extractFrom = from.value;
-    if (from.valueType === 'timestamp') {
-      const tz = qtz(qi);
-      if (tz) {
-        extractFrom = mkExpr`(${extractFrom}::TIMESTAMPTZ AT TIME ZONE '${tz}')`;
-      }
-    }
-    const extracted = mkExpr`EXTRACT(${pgUnits} FROM ${extractFrom})`;
-    return units === 'day_of_week' ? mkExpr`(${extracted}+1)` : extracted;
-  }
-
-  sqlAlterTime(
-    op: '+' | '-',
-    expr: TimeValue,
-    n: Expr,
-    timeframe: DateUnit
-  ): Expr {
-    if (timeframe === 'quarter') {
-      timeframe = 'month';
-      n = mkExpr`${n}*3`;
-    }
-    if (timeframe === 'week') {
-      timeframe = 'day';
-      n = mkExpr`${n}*7`;
-    }
-    const interval = mkExpr`INTERVAL (${n}) ${timeframe}`;
-    return mkExpr`${expr.value} ${op} ${interval}`;
-  }
-
-  sqlCast(qi: QueryInfo, cast: TypecastFragment): Expr {
-    const op = `${cast.srcType}::${cast.dstType}`;
-    const tz = qtz(qi);
-    if (op === 'timestamp::date' && tz) {
-      const tstz = mkExpr`${cast.expr}::TIMESTAMPTZ`;
-      return mkExpr`CAST((${tstz}) AT TIME ZONE '${tz}' AS DATE)`;
-    } else if (op === 'date::timestamp' && tz) {
-      return mkExpr`CAST((${cast.expr})::TIMESTAMP AT TIME ZONE '${tz}' AS TIMESTAMP)`;
-    }
-    if (cast.srcType !== cast.dstType) {
-      const dstType =
-        typeof cast.dstType === 'string'
-          ? this.malloyTypeToSQLType({type: cast.dstType})
-          : cast.dstType.raw;
-      const castFunc = cast.safe ? 'TRY_CAST' : 'CAST';
-      return mkExpr`${castFunc}(${cast.expr} AS ${dstType})`;
-    }
-    return cast.expr;
-  }
-
-  sqlRegexpMatch(expr: Expr, regexp: Expr): Expr {
-    return mkExpr`REGEXP_MATCHES(${expr}, ${regexp})`;
-  }
-
-  sqlLiteralTime(
-    qi: QueryInfo,
-    timeString: string,
-    type: TimeFieldType,
-    timezone: string | undefined
-  ): string {
-    if (type === 'date') {
-      return `DATE '${timeString}'`;
-    }
-    const tz = timezone || qtz(qi);
-    if (tz) {
-      return `TIMESTAMPTZ '${timeString} ${tz}'::TIMESTAMP`;
-    }
-    return `TIMESTAMP '${timeString}'`;
-  }
-
   sqlSumDistinct(key: string, value: string, funcName: string): string {
     // return `sum_distinct(list({key:${key}, val: ${value}}))`;
     return `(
@@ -495,5 +373,39 @@ export class DuckDBDialect extends Dialect {
     // Parentheses, Commas:  DECIMAL(1, 1)
     // Brackets:             INT[ ]
     return sqlType.match(/^[A-Za-z\s(),[\]0-9]*$/) !== null;
+  }
+
+  sqlAlterTimeExpr(df: TimeDeltaExpr): string {
+    let timeframe = df.units;
+    let n = df.kids.delta.sql;
+    if (timeframe === 'quarter') {
+      timeframe = 'month';
+      n = `${n}*3`;
+    } else if (timeframe === 'week') {
+      timeframe = 'day';
+      n = `${n}*7`;
+    }
+    const interval = `INTERVAL (${n}) ${timeframe}`;
+    return `${df.kids.base.sql} ${df.op} ${interval}`;
+  }
+
+  sqlRegexpMatch(df: RegexMatchExpr): string {
+    return `REGEXP_MATCHES(${df.kids.expr.sql},${df.kids.regex.sql})`;
+  }
+
+  sqlMeasureTimeExpr(df: MeasureTimeExpr): string {
+    const from = df.kids.left;
+    const to = df.kids.right;
+    let lVal = from.sql || '';
+    let rVal = to.sql || '';
+    if (!inDays(df.units)) {
+      if (from.dataType === 'date') {
+        lVal = `${lVal}::TIMESTAMP`;
+      }
+      if (to.dataType === 'date') {
+        rVal = `${rVal}::TIMESTAMP`;
+      }
+    }
+    return `DATE_SUB('${df.units}', ${lVal}, ${rVal})`;
   }
 }

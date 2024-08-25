@@ -22,7 +22,7 @@
  */
 
 import {errorFor} from '../ast-utils';
-import {Comparison} from '../types/comparison';
+import {CompareMalloyOperator} from '../types/binary_operators';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
@@ -30,7 +30,7 @@ import {FieldSpace} from '../types/field-space';
 export class PartialCompare extends ExpressionDef {
   elementType = '<=> a';
   constructor(
-    readonly op: Comparison,
+    readonly op: CompareMalloyOperator,
     readonly right: ExpressionDef
   ) {
     super({right: right});

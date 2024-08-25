@@ -25,7 +25,7 @@ import {
   expressionIsAggregate,
   expressionIsUngroupedAggregate,
   FieldValueType,
-  UngroupFragment,
+  UngroupNode,
 } from '../../../model/malloy_types';
 
 import {errorFor} from '../ast-utils';
@@ -62,8 +62,8 @@ export class ExprUngroup extends ExpressionDef {
       );
       return errorFor('doubly-ungrouped aggregate');
     }
-    const ungroup: UngroupFragment = {
-      type: this.control,
+    const ungroup: UngroupNode = {
+      node: this.control,
       e: exprVal.value,
     };
     if (this.typeCheck(this.expr, {...exprVal, expressionType: 'scalar'})) {
@@ -100,7 +100,7 @@ export class ExprUngroup extends ExpressionDef {
       return {
         dataType: this.returns(exprVal),
         expressionType: 'ungrouped_aggregate',
-        value: [ungroup],
+        value: ungroup,
         evalSpace: 'output',
       };
     }

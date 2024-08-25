@@ -120,7 +120,7 @@ export * from './source-elements/sql-source';
 export * from './source-elements/table-source';
 export * from './sql-elements/sql-string';
 export * from './types/annotation-elements';
-export * from './types/comparison';
+export * from './types/binary_operators';
 export * from './types/source-desc';
 export * from './types/source-property';
 export * from './types/expression-def';

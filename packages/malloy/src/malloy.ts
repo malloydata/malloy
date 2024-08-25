@@ -41,7 +41,7 @@ import {
   FieldStringDef,
   FieldTimestampDef,
   FieldTypeDef,
-  FilterExpression,
+  FilterCondition,
   Query as InternalQuery,
   ModelDef,
   DocumentPosition as ModelDocumentPosition,
@@ -1274,7 +1274,7 @@ export class PreparedResult implements Taggable {
     return this.inner.sourceExplore;
   }
 
-  public get _sourceFilters(): FilterExpression[] {
+  public get _sourceFilters(): FilterCondition[] {
     return this.inner.sourceFilters || [];
   }
 }
@@ -1663,8 +1663,8 @@ export class Explore extends Entity implements Taggable {
     return this instanceof ExploreField;
   }
 
-  // TODO wrapper type for FilterExpression
-  get filters(): FilterExpression[] {
+  // TODO wrapper type for FilterCondition
+  get filters(): FilterCondition[] {
     return this.structDef.resultMetadata?.filterList || [];
   }
 

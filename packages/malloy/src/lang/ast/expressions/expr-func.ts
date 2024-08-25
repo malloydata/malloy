@@ -51,7 +51,6 @@ import {PartitionBy} from './partition_by';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldName, FieldSpace} from '../types/field-space';
-import {compressExpr} from './utils';
 
 export class ExprFunc extends ExpressionDef {
   elementType = 'function call()';
@@ -94,7 +93,7 @@ export class ExprFunc extends ExpressionDef {
     if (this.isRaw) {
       let expressionType: ExpressionType = 'scalar';
       let collectType: FieldValueType | undefined;
-      const funcCall: Fragment[] = [`${this.name}(`];
+      const funcCall: Expr = [`${this.name}(`];
       for (const expr of argExprsWithoutImplicit) {
         expressionType = maxExpressionType(expressionType, expr.expressionType);
 
@@ -360,7 +359,7 @@ export class ExprFunc extends ExpressionDef {
           );
         }
 
-        const expr: Fragment[] = [];
+        const expr: Expr = [];
         for (const part of parts) {
           if (part.type === 'string') {
             expr.push(part.value);
