@@ -23,7 +23,6 @@
 
 import {
   FilterCondition,
-  Fragment,
   QueryFieldDef,
   IndexFieldDef,
   QueryMaterializer,
@@ -48,7 +47,14 @@ export function fToIF(fs: string[]): IndexFieldDef[] {
 
 export function fStringEq(field: string, value: string): FilterCondition {
   return {
-    expression: [{type: 'field', path: field.split('.')}, `='${value}'`],
+    node: 'filterCondition',
+    e: {
+      node: '=',
+      kids: {
+        left: {node: 'field', path: field.split('.')},
+        right: {node: 'stringLiteral', literal: value},
+      },
+    },
     code: `${field}='${value}'`,
     expressionType: 'scalar',
   };
