@@ -16,6 +16,7 @@ export type MalloyRenderProps = {
   result?: Result;
   queryResult?: QueryResult;
   modelDef?: ModelDef;
+  scrollEl?: HTMLElement;
 };
 
 export function MalloyRender(
@@ -31,7 +32,11 @@ export function MalloyRender(
 
   return (
     <Show when={result()}>
-      <MalloyRenderInner result={result()!} element={element} />
+      <MalloyRenderInner
+        result={result()!}
+        element={element}
+        scrollEl={props.scrollEl}
+      />
     </Show>
   );
 }
@@ -39,6 +44,7 @@ export function MalloyRender(
 export function MalloyRenderInner(props: {
   result: Result;
   element: ICustomElement;
+  scrollEl?: HTMLElement;
 }) {
   const metadata = createMemo(() => getResultMetadata(props.result));
   const tags = () => {
@@ -70,6 +76,11 @@ export function MalloyRenderInner(props: {
       dataColumn: props.result.data,
       resultMetadata: metadata(),
       tag: tags().resultTag,
+      customProps: {
+        table: {
+          scrollEl: props.scrollEl,
+        },
+      },
     });
 
   return (
