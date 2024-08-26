@@ -174,7 +174,12 @@ export function exprMap(eNode: Expr, mapFunc: (e: Expr) => Expr): Expr {
   return mapFunc(mapExpr);
 }
 export type SQLExprElement = string | Expr;
-export function makeSQLExpression(from: SQLExprElement[]): GenericSQLExpr {
+
+/**
+ * Take a mixed array of strings and Expr and turn it into an SQLExpr
+ * expression node.
+ */
+export function composeSQLExpr(from: SQLExprElement[]): GenericSQLExpr {
   const ret: GenericSQLExpr = {
     node: 'genericSQLExpr',
     kids: {args: []},

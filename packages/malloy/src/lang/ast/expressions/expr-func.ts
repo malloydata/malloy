@@ -50,7 +50,7 @@ import {PartitionBy} from './partition_by';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldName, FieldSpace} from '../types/field-space';
-import {makeSQLExpression, SQLExprElement} from '../../../model/utils';
+import {composeSQLExpr, SQLExprElement} from '../../../model/utils';
 
 export class ExprFunc extends ExpressionDef {
   elementType = 'function call()';
@@ -110,7 +110,7 @@ export class ExprFunc extends ExpressionDef {
       return {
         dataType,
         expressionType,
-        value: makeSQLExpression(funcCall),
+        value: composeSQLExpr(funcCall),
         evalSpace: mergeEvalSpaces(
           ...argExprsWithoutImplicit.map(e => e.evalSpace)
         ),
@@ -376,7 +376,7 @@ export class ExprFunc extends ExpressionDef {
           }
         }
 
-        funcCall = makeSQLExpression(expr);
+        funcCall = composeSQLExpr(expr);
       }
     }
     if (type.dataType === 'any') {

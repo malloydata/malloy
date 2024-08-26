@@ -41,7 +41,7 @@ export const CHILD_EXPLORE: StructDef = {
       type: 'number',
       name: 'flight_count',
       expressionType: 'aggregate',
-      e: {node: 'aggregate', function: 'count'},
+      e: {node: 'aggregate', function: 'count', e: {node: ''}},
     },
   ],
 };
@@ -63,7 +63,7 @@ export const PARENT_EXPLORE: StructDef = {
       type: 'number',
       name: 'some_parent_count',
       expressionType: 'aggregate',
-      e: {node: 'aggregate', function: 'count'},
+      e: {node: 'aggregate', function: 'count', e: {node: ''}},
     },
   ],
 };
@@ -85,7 +85,7 @@ export const GRADPARENT_EXPLORE: StructDef = {
       type: 'number',
       name: 'some_gradparent_count',
       expressionType: 'aggregate',
-      e: {node: 'aggregate', function: 'count'},
+      e: {node: 'aggregate', function: 'count', e: {node: ''}},
     },
   ],
 };
@@ -107,7 +107,7 @@ export const SOURCE_EXPLORE: StructDef = {
       type: 'number',
       name: 'some_child_count',
       expressionType: 'aggregate',
-      e: {node: 'aggregate', function: 'count'},
+      e: {node: 'aggregate', function: 'count', e: {node: ''}},
     },
   ],
 };

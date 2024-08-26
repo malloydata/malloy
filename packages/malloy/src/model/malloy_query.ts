@@ -77,12 +77,13 @@ import {
   isAsymmetricExpr,
   GenericSQLExpr,
   FieldnameNode,
-  exprIsLeaf,
   FunctionCallNode,
   UngroupNode,
   SourceReferenceNode,
   TimeTruncExpr,
   PickExpr,
+  SpreadExpr,
+  FilteredExpr,
 } from './malloy_types';
 
 import {Connection} from '../connection/types';
@@ -92,8 +93,9 @@ import {
   exprWalk,
   generateHash,
   indent,
-  joinWith,
+  composeSQLExpr,
   range,
+  SQLExprElement,
 } from './utils';
 import {DialectFieldTypeStruct, QueryInfo} from '../dialect/dialect';
 
@@ -459,50 +461,53 @@ class QueryField extends QueryNode {
     orderBy: string | undefined,
     limit: string | undefined
   ) {
+    function withCommas(es: Expr[]): SQLExprElement[] {
+      const ret: SQLExprElement[] = [];
+      for (let i = 0; i < es.length; ) {
+        ret.push(es[i]);
+        i += 1;
+        if (i < es.length) {
+          ret.push(',');
+        }
+      }
+      return ret;
+    }
     const paramMap = this.getParameterMap(overload, args.length);
     if (overload.dialect[dialect] === undefined) {
-      throw new Error(`Function is not defined for dialect ${dialect}`);
+      throw new Error(`Function is not defined for '${dialect}' dialect`);
     }
     return exprMap(overload.dialect[dialect].e, fragment => {
       if (fragment.node === 'spread') {
-        const param = fragment.e[0];
-        if (
-          exprIsLeaf(fragment.e) ||
-          typeof param === 'string' ||
-          param.type !== 'function_parameter'
-        ) {
+        const param = fragment.e;
+        if (param.node !== 'function_parameter') {
           throw new Error(
             'Invalid function definition. Argument to spread must be a function parameter.'
           );
         }
         const entry = paramMap.get(param.name);
         if (entry === undefined) {
-          return [fragment];
-        } else {
-          return joinWith(
-            entry.argIndexes.map(argIndex => args[argIndex]),
-            ','
-          );
+          return fragment;
         }
+        const spread = entry.argIndexes.map(argIndex => args[argIndex]);
+        return composeSQLExpr(withCommas(spread));
       } else if (fragment.node === 'function_parameter') {
         const entry = paramMap.get(fragment.name);
         if (entry === undefined) {
-          return [fragment];
+          return fragment;
         } else if (entry.param.isVariadic) {
-          const spread = joinWith(
-            entry.argIndexes.map(argIndex => args[argIndex]),
-            ','
-          );
-          return ['[', ...spread, ']'];
+          const spread = entry.argIndexes.map(argIndex => args[argIndex]);
+          return composeSQLExpr(withCommas(spread));
         } else {
           return args[entry.argIndexes[0]];
         }
       } else if (fragment.node === 'aggregate_order_by') {
         return orderBy
-          ? [` ${fragment.prefix ?? ''}${orderBy}${fragment.suffix ?? ''}`]
-          : [];
+          ? composeSQLExpr([
+              ` ${fragment.prefix ?? ''}${orderBy}${fragment.suffix ?? ''}`,
+            ])
+          : {node: ''};
       } else if (fragment.node === 'aggregate_limit') {
-        return limit ? [` ${limit}`] : [];
+        return limit ? composeSQLExpr([` ${limit}`]) : {node: ''};
       }
       return fragment;
     });
@@ -523,7 +528,8 @@ class QueryField extends QueryNode {
         .map(ob => {
           const defaultOrderByArgIndex =
             overload.dialect[context.dialect.name].defaultOrderByArgIndex ?? 0;
-          const expr = ob.e ?? args[defaultOrderByArgIndex];
+          const expr =
+            ob.node === 'functionOrderBy' ? ob.e : args[defaultOrderByArgIndex];
           const osql = this.generateDimFragment(
             resultSet,
             context,
@@ -610,11 +616,12 @@ class QueryField extends QueryNode {
       const argsExpressions = args.map(arg => {
         return this.generateDimFragment(resultSet, context, arg, state);
       });
-      const orderBys = frag.orderBy ?? [];
+      const orderBys = frag.kids.orderBy ?? [];
       const orderByExpressions = orderBys.map(ob => {
         const defaultOrderByArgIndex =
           overload.dialect[context.dialect.name].defaultOrderByArgIndex ?? 0;
-        const expr = ob.e ?? args[defaultOrderByArgIndex];
+        const expr =
+          ob.node === 'functionOrderBy' ? ob.e : args[defaultOrderByArgIndex];
         return this.generateDimFragment(resultSet, context, expr, state);
       });
       return context.dialect.sqlAggDistinct(
@@ -631,13 +638,13 @@ class QueryField extends QueryNode {
                 return args[i];
               }
             }
-            return [v];
+            return composeSQLExpr([v]);
           });
           const newArgs = vals.slice(0, argsExpressions.length);
           const orderBy: FunctionOrderBy[] = vals
             .slice(argsExpressions.length)
             .map((e, i) => {
-              return {e, dir: orderBys[i].dir};
+              return {node: 'functionOrderBy', e, dir: orderBys[i].dir};
             });
           const orderBySQL = this.getFunctionOrderBy(
             resultSet,
@@ -677,15 +684,17 @@ class QueryField extends QueryNode {
             // fragment.
             return param.allowedTypes.every(t => isLiteral(t.evalSpace))
               ? arg
-              : [this.generateDimFragment(resultSet, context, arg, state)];
+              : composeSQLExpr([
+                  this.generateDimFragment(resultSet, context, arg, state),
+                ]);
           })
         : args;
-      const orderBySql = frag.orderBy
+      const orderBySql = frag.kids.orderBy
         ? this.getFunctionOrderBy(
             resultSet,
             context,
             state,
-            frag.orderBy,
+            frag.kids.orderBy,
             args,
             overload
           )
@@ -720,7 +729,7 @@ class QueryField extends QueryNode {
   generateSpread(
     _resultSet: FieldInstanceResult,
     _context: QueryStruct,
-    _frag: SpreadFragment,
+    _frag: SpreadExpr,
     _state: GenerateState
   ): string {
     throw new Error('Unexpanded spread encountered during SQL generation');
@@ -743,19 +752,19 @@ class QueryField extends QueryNode {
   generateFilterFragment(
     resultSet: FieldInstanceResult,
     context: QueryStruct,
-    expr: FilterFragment,
+    expr: FilteredExpr,
     state: GenerateState
   ): string {
     const allWhere = new AndChain(state.whereSQL);
-    for (const cond of expr.filterList) {
+    for (const cond of expr.kids.filterList) {
       allWhere.add(
-        this.exprToSQL(resultSet, context, cond.expression, state.withWhere())
+        this.exprToSQL(resultSet, context, cond.e, state.withWhere())
       );
     }
     return this.exprToSQL(
       resultSet,
       context,
-      expr.e,
+      expr.kids.e,
       state.withWhere(allWhere.sql())
     );
   }
@@ -858,14 +867,12 @@ class QueryField extends QueryNode {
   generateSymmetricFragment(
     resultSet: FieldInstanceResult,
     context: QueryStruct,
-    expr: AggregateFragment,
+    expr: AggregateExpr,
     state: GenerateState
   ): string {
     const dimSQL = this.generateDimFragment(resultSet, context, expr.e, state);
     const f =
-      expr.function === 'count_distinct'
-        ? 'count(distinct '
-        : expr.function + '(';
+      expr.function === 'distinct' ? 'count(distinct ' : expr.function + '(';
     return `${f}${dimSQL})`;
   }
 
@@ -912,7 +919,7 @@ class QueryField extends QueryNode {
   generateCountFragment(
     resultSet: FieldInstanceResult,
     context: QueryStruct,
-    expr: AggregateFragment,
+    expr: AggregateExpr,
     state: GenerateState
   ): string {
     let func = 'COUNT(';
@@ -1064,12 +1071,7 @@ class QueryField extends QueryNode {
           param => param.name === value
         );
         const arg = args[argIndex];
-        if (
-          arg.length !== 1 ||
-          typeof arg[0] === 'string' ||
-          arg[0].type !== 'dialect' ||
-          arg[0].function !== 'numberLiteral'
-        ) {
+        if (arg.node !== 'numberLiteral') {
           throw new Error('Invalid number of rows for window spec');
         }
         // TODO this does not handle float literals correctly
@@ -1242,6 +1244,8 @@ class QueryField extends QueryNode {
         return 'NULL';
       case 'pick':
         return this.generatePickSQL(expr);
+      case '':
+        return '';
       default:
         throw new Error(
           `Internal Error: Unknown expression node ${JSON.stringify(
@@ -1257,17 +1261,23 @@ class QueryField extends QueryNode {
     if (hasExpression(this.fieldDef)) {
       return this.fieldDef.e;
     }
-    return this.parent.dialect.sqlFieldReference(
-      this.parent.getSQLIdentifier(),
-      this.fieldDef.name,
-      this.fieldDef.type,
-      this.parent.fieldDef.structSource.type === 'nested' ||
-        this.parent.fieldDef.structSource.type === 'inline' ||
-        (this.parent.fieldDef.structSource.type === 'sql' &&
-          this.parent.fieldDef.structSource.method === 'nested'),
-      this.parent.fieldDef.structRelationship.type === 'nested' &&
-        this.parent.fieldDef.structRelationship.isArray
-    );
+    return {
+      node: 'genericSQLExpr',
+      kids: {args: []},
+      src: [
+        this.parent.dialect.sqlFieldReference(
+          this.parent.getSQLIdentifier(),
+          this.fieldDef.name,
+          this.fieldDef.type,
+          this.parent.fieldDef.structSource.type === 'nested' ||
+            this.parent.fieldDef.structSource.type === 'inline' ||
+            (this.parent.fieldDef.structSource.type === 'sql' &&
+              this.parent.fieldDef.structSource.method === 'nested'),
+          this.parent.fieldDef.structRelationship.type === 'nested' &&
+            this.parent.fieldDef.structRelationship.isArray
+        ),
+      ],
+    };
   }
 
   generateExpression(resultSet: FieldInstanceResult): string {

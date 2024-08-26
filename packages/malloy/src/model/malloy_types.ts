@@ -65,6 +65,7 @@ export type Expr =
   | FilterCondition
   | FilteredExpr
   | AggregateExpr
+  | EmptyExpr
   | UngroupNode
   | FunctionParameterNode
   | SpreadExpr
@@ -159,7 +160,8 @@ export type AggregateFunctionType =
   | 'distinct'
   | 'max'
   | 'min';
-export interface AggregateExpr extends ExprOptionalE {
+
+export interface AggregateExpr extends ExprE {
   node: 'aggregate';
   function: AggregateFunctionType;
   structPath?: string[];
@@ -169,6 +171,10 @@ export function isAsymmetricExpr(f: Expr): f is AggregateExpr {
     f.node === 'aggregate' &&
     ['sum', 'avg', 'count', 'distinct'].includes(f.function)
   );
+}
+
+export interface EmptyExpr extends ExprLeaf {
+  node: '';
 }
 
 export interface UngroupNode extends ExprE {
@@ -304,7 +310,6 @@ export interface PickExpr extends ExprWithKids {
   node: 'pick';
   kids: {pickWhen: Expr[]; pickThen: Expr[]; pickElse: Expr};
 }
-
 export type ExpressionType =
   | 'scalar'
   | 'aggregate'
