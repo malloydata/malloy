@@ -23,30 +23,19 @@
 
 import {indent} from '../../model/utils';
 import {
-  DateUnit,
-  Expr,
-  ExtractUnit,
   Sampling,
-  TimeFieldType,
-  TimestampUnit,
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
   FieldAtomicTypeDef,
   TimeDeltaExpr,
   TypecastExpr,
-  RegexMatchExpr,
   MeasureTimeExpr,
 } from '../../model/malloy_types';
 import {POSTGRES_FUNCTIONS} from './functions';
 import {DialectFunctionOverloadDef} from '../functions';
-import {Dialect, DialectFieldList, QueryInfo, qtz} from '../dialect';
-import { PostgresBase } from '../pg_impl';
-
-const pgExtractionMap: Record<string, string> = {
-  'day_of_week': 'dow',
-  'day_of_year': 'doy',
-};
+import {DialectFieldList, QueryInfo} from '../dialect';
+import {PostgresBase} from '../pg_impl';
 
 const pgMakeIntervalMap: Record<string, string> = {
   'year': 'years',
