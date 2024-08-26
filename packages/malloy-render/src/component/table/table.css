@@ -48,7 +48,6 @@
   z-index: 100;
   pointer-events: none;
   height: fit-content;
-  margin-bottom: -100%;
   grid-column: 1 / span var(--total-header-size);
 }
 

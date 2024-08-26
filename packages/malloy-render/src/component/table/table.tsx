@@ -193,6 +193,7 @@ const TableField = (props: {field: Field; row: DataRecord}) => {
 const MalloyTableRoot = (_props: {
   data: DataArrayOrRecord;
   rowLimit?: number;
+  scrollEl?: HTMLElement;
 }) => {
   const props = mergeProps({rowLimit: Infinity}, _props);
   const tableCtx = useTableContext()!;
@@ -346,8 +347,9 @@ const MalloyTableRoot = (_props: {
     }
   });
 
-  let scrollEl!: HTMLDivElement;
-  let virtualizer: Virtualizer<HTMLDivElement, Element> | undefined;
+  let scrollEl!: HTMLElement;
+  if (props.scrollEl) scrollEl = props.scrollEl;
+  let virtualizer: Virtualizer<HTMLElement, Element> | undefined;
 
   if (tableCtx.root) {
     virtualizer = createVirtualizer({
@@ -379,7 +381,6 @@ const MalloyTableRoot = (_props: {
       const resizeObserver = new ResizeObserver(() => {
         // select all nodes with data-pinned-header attribute
         if (isScrolling || measureInitial) {
-          measureInitial = false;
           const pinnedHeaders = pinnedHeaderRow.querySelectorAll(
             '[data-pinned-header]'
           );
@@ -391,13 +392,16 @@ const MalloyTableRoot = (_props: {
             if (typeof currWidth === 'undefined' || value > currWidth)
               updates.push([key, value]);
           });
-          if (updates.length > 0)
+          if (updates.length > 0) {
             tableCtx.setStore(
               'columnWidths',
               produce((widths: Record<string, number>) => {
                 updates.forEach(([key, value]) => (widths[key] = value));
               })
             );
+          }
+          // Update measureInitial on next tick so that table sizes don't immediately get cleared by other ResizeObserver
+          setTimeout(() => (measureInitial = false), 0);
         }
       });
       resizeObserver.observe(pinnedHeaderRow);
@@ -407,7 +411,7 @@ const MalloyTableRoot = (_props: {
   // Observe table width resize
   // Clear width cache if table changes size due to something besides scroll position (fetching new data)
   // Meant to handle when the table resizes due to less available real estate, like a viewport change
-  // This is still buggy - it is clearing the first resize event
+  // TODO find a better way to handle this scenario
   onMount(() => {
     if (tableCtx.root) {
       let priorWidth: number | null = null;
@@ -427,10 +431,18 @@ const MalloyTableRoot = (_props: {
     }
   });
 
+  const getPinnedHeaderRowStyle = () => ({
+    'margin-bottom': `calc(-1 * var(--malloy-render--table-header-cumulative-height-${
+      tableCtx.layout.maxDepth - 1
+    }))`,
+  });
+
   return (
     <div
       class="malloy-table"
-      ref={scrollEl}
+      ref={el => {
+        if (!props.scrollEl) scrollEl = el;
+      }}
       classList={{
         'root': tableCtx.root,
         'pinned': pinned(),
@@ -449,7 +461,11 @@ const MalloyTableRoot = (_props: {
           ref={pinnedDetector}
           style="position: sticky; top: 0px; left: 0px; height: 0px; visibility: hidden;"
         ></div>
-        <div class="pinned-header-row" ref={pinnedHeaderRow}>
+        <div
+          class="pinned-header-row"
+          ref={pinnedHeaderRow}
+          style={getPinnedHeaderRowStyle()}
+        >
           <For each={pinnedFieldsByDepth()}>
             {(pinnedFields, idx) => (
               <div
@@ -500,15 +516,7 @@ const MalloyTableRoot = (_props: {
                   }
                   style=""
                 >
-                  {/* row {virtualRow.index} */}
-                  <Show
-                    when={virtualRow.index > 0}
-                    fallback={
-                      <For each={visibleFields()}>
-                        {field => <HeaderField field={field} />}
-                      </For>
-                    }
-                  >
+                  <Show when={virtualRow.index >= 0}>
                     <For each={visibleFields()}>
                       {field => (
                         <TableField
@@ -550,6 +558,7 @@ const MalloyTableRoot = (_props: {
 const MalloyTable: Component<{
   data: DataArrayOrRecord;
   rowLimit?: number;
+  scrollEl?: HTMLElement;
 }> = props => {
   const metadata = useResultContext();
   const hasTableCtx = !!useTableContext();

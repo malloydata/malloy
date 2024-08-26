@@ -44,6 +44,7 @@ export type TableLayout = {
   fieldHeaderRangeMap: FieldHeaderRangeMap;
   fieldLayout: (field: Field | Explore) => LayoutEntry;
   totalHeaderSize: number;
+  maxDepth: number;
 };
 
 const NAMED_COLUMN_WIDTHS = {
@@ -112,6 +113,7 @@ export function getTableLayout(
       return this.fields[getFieldKey(f)];
     },
     totalHeaderSize,
+    maxDepth: 0,
   };
 
   for (const [key, fieldMeta] of Object.entries(metadata.fields)) {
@@ -127,6 +129,7 @@ export function getTableLayout(
       relativeColumnRange: fieldHeaderRangeMap[key].rel,
       depth: fieldHeaderRangeMap[key].depth,
     };
+    layout.maxDepth = Math.max(layout.maxDepth, layoutEntry.depth);
     const {tag} = field.tagParse();
     // Allow overriding size
     const textWidth = tag.text('width');
