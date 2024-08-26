@@ -29,6 +29,7 @@ import {
   FunctionParamTypeDesc,
   GenericSQLExpr,
 } from '../../model/malloy_types';
+import {SQLExprElement} from '../../model/utils';
 
 export interface DialectFunctionOverloadDef {
   // The expression type here is the MINIMUM return type
@@ -55,19 +56,26 @@ export function spread(
   return {node: 'spread', e, prefix, suffix};
 }
 
-export function sql(strings: TemplateStringsArray, ...args: Expr[]): Expr {
+export function sql(
+  strings: TemplateStringsArray,
+  ...subExprs: SQLExprElement[]
+): Expr {
   const ret: GenericSQLExpr = {
     node: 'genericSQLExpr',
     kids: {args: []},
     src: [],
   };
   for (const str of strings) {
-    ret.src.push(str);
-    const arg = args.shift();
-    if (args.length > 0 && arg) {
-      ret.src.push(ret.kids.args.length);
-      ret.kids.args.push(arg);
+    let srcToPush = str;
+    const arg = subExprs.shift();
+    if (subExprs.length > 0 && arg) {
+      if (typeof arg === 'string') {
+        srcToPush = srcToPush + arg;
+      } else {
+        ret.kids.args.push(arg);
+      }
     }
+    ret.src.push(srcToPush);
   }
   return ret;
 }

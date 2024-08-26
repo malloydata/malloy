@@ -28,9 +28,9 @@ import {
   params,
   minScalar,
   anyExprType,
-  sqlFragment,
   DialectFunctionOverloadDef,
   spread,
+  sql,
 } from '../../functions/util';
 
 const types: ExpressionValueType[] = [
@@ -53,24 +53,11 @@ function greatestOrLeast(
       // CASE WHEN arg1 IS NULL OR arg2 is NULL ... OR argN is NULL THEN NULL ELSE GREATEST(arg1, arg2, ..., argN) END
       // But we can't do that with today's function spec.
       // That might look someday like
-      /*
-        sqlFragment(
-          'CASE WHEN ',
-          spread(map(arg('values'), '$ARG IS NULL'), ' OR '),
-          `THEN NULL ELSE ${fn}(`,
-          spread(arg('values')),
-          ') END'
-        ),
-       */
-      [
-        sqlFragment(
-          'CASE WHEN LEN(LIST_FILTER([',
-          spread(arg('values')),
-          `], x -> x is null)) > 0 THEN NULL ELSE ${fn}(`,
-          spread(arg('values')),
-          ') END'
-        ),
-      ]
+      sql`CASE
+  WHEN LEN(LIST_FILTER([${spread(arg('values'))}], x -> x is null)) > 0
+  THEN NULL
+  ELSE ${fn}(${spread(arg('values'))})
+END`
     )
   );
 }

@@ -22,7 +22,13 @@
  */
 
 import {v5 as uuidv5} from 'uuid';
-import {AnyExpr, Expr, ExprE, exprHasE, exprHasKids, ExprWithKids} from './malloy_types';
+import {
+  Expr,
+  exprHasE,
+  exprHasKids,
+  ExprWithKids,
+  GenericSQLExpr,
+} from './malloy_types';
 
 /** simple indent function */
 export function indent(s: string): string {
@@ -166,4 +172,40 @@ export function exprMap(eNode: Expr, mapFunc: (e: Expr) => Expr): Expr {
     mapExpr.e = mapFunc(mapExpr.e);
   }
   return mapFunc(mapExpr);
+}
+export type SQLExprElement = string | Expr;
+export function makeSQLExpression(from: SQLExprElement[]): GenericSQLExpr {
+  const ret: GenericSQLExpr = {
+    node: 'genericSQLExpr',
+    kids: {args: []},
+    src: [],
+  };
+  // Build the array of alternating strings and expressions
+  let nextUp: 'string' | 'expr' = 'string';
+  for (const el of from) {
+    if (nextUp === 'string') {
+      if (typeof el === 'string') {
+        ret.src.push(el);
+      } else {
+        // Two expressions in a row get an empty string between them
+        ret.src.push('');
+        ret.kids.args.push(el);
+      }
+      nextUp = 'expr';
+    } else {
+      if (typeof el === 'string') {
+        // Add this string to the previous string, if there was one
+        // and continue to wait for an expression
+        if (ret.src.length === 0) {
+          ret.src[0] = el;
+        } else {
+          ret.src[ret.src.length - 1] += el;
+        }
+        continue;
+      }
+      ret.kids.args.push(el);
+      nextUp = 'string';
+    }
+  }
+  return ret;
 }

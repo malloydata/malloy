@@ -35,7 +35,6 @@ export {
   maxScalar,
   sql,
   makeParam,
-  sqlFragment,
   param,
   params,
   literal,

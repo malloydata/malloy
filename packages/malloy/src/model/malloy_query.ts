@@ -418,19 +418,24 @@ class QueryField extends QueryNode {
     return `(${resultSet.getField(frag.name).getAnalyticalSQL(false)})`;
   }
 
-  generateSQLExpression(
+  *stringsFromSQLExpression(
     resultSet: FieldInstanceResult,
     context: QueryStruct,
-    expr: GenericSQLExpr,
+    e: GenericSQLExpr,
     state: GenerateState
-  ): string {
-    return expr.src
-      .map(srcEl =>
-        typeof srcEl === 'string'
-          ? srcEl
-          : this.exprToSQL(resultSet, context, expr.kids.args[srcEl], state)
-      )
-      .join('');
+  ) {
+    /*
+     * Like template strings, the array of strings is paired with template insertions,
+     * each string is followed by at most one expression to be inserted
+     */
+    const subExprList = [...e.kids.args];
+    for (const str of e.src) {
+      yield str;
+      const expr = subExprList.shift();
+      if (expr) {
+        yield this.exprToSQL(resultSet, context, expr, state);
+      }
+    }
   }
 
   private getParameterMap(
@@ -1152,7 +1157,9 @@ class QueryField extends QueryNode {
       case 'exclude':
         return this.generateUngroupedFragment(resultSet, context, expr, state);
       case 'genericSQLExpr':
-        return this.generateSQLExpression(resultSet, context, expr, state);
+        return Array.from(
+          this.stringsFromSQLExpression(resultSet, context, expr, state)
+        ).join('');
       case 'aggregate': {
         let agg = '';
         if (expr.function === 'sum') {

@@ -31,7 +31,6 @@ export {
   minAggregate,
   maxScalar,
   spread,
-  sqlFragment,
   param,
   params,
   literal,

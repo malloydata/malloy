@@ -68,6 +68,8 @@ export type Expr =
   | UngroupNode
   | FunctionParameterNode
   | SpreadExpr
+  | AggregateOrderByNode
+  | AggregateLimitNode
   | FieldnameNode
   | SourceReferenceNode
   | ParameterNode
@@ -127,7 +129,7 @@ export interface FunctionCallNode extends ExprWithKids {
   name: string;
   overload: FunctionOverloadDef;
   expressionType: ExpressionType;
-  kids: {args: Expr[]; orderBy: FunctionOrderBy[]};
+  kids: {args: Expr[]; orderBy?: FunctionOrderBy[]};
   limit?: number;
   // List of non-dotted output field references
   partitionBy?: string[];
@@ -179,6 +181,16 @@ export interface FunctionParameterNode extends ExprLeaf {
   name: string;
 }
 
+export interface AggregateOrderByNode extends ExprLeaf {
+  node: 'aggregate_order_by';
+  prefix?: string;
+  suffix?: string;
+}
+
+export interface AggregateLimitNode extends ExprLeaf {
+  node: 'aggregate_limit';
+}
+
 export interface SpreadExpr extends ExprE {
   node: 'spread';
   prefix: string | undefined;
@@ -190,7 +202,7 @@ export interface FieldnameNode extends ExprLeaf {
   path: string[];
 }
 
-export interface SourceReferenceNode extends ExprE {
+export interface SourceReferenceNode extends ExprLeaf {
   node: 'source-reference';
   path?: string[];
 }
@@ -275,14 +287,13 @@ export interface BooleanLiteralNode extends ExprLeaf {
 
 export interface ErrorNode extends ExprLeaf {
   node: 'error';
-  message: string;
+  message?: string;
 }
 
-type GenericStringOrRef = string | number;
 export interface GenericSQLExpr extends ExprWithKids {
   node: 'genericSQLExpr';
   kids: {args: Expr[]};
-  src: GenericStringOrRef[];
+  src: string[];
 }
 
 export interface NullNode extends ExprLeaf {
@@ -718,6 +729,11 @@ export function refIsStructDef(ref: StructRef): ref is StructDef {
   return typeof ref !== 'string' && ref.type === 'struct';
 }
 
+export type InvokedStructRef = {
+  structRef: StructRef;
+  sourceArguments?: Record<string, Argument>;
+};
+
 /** join pattern structs is a struct. */
 export interface JoinedStruct {
   structRef: StructRef;
@@ -890,12 +906,12 @@ export type StructRelationship =
   | {type: 'inline'}
   | {type: 'nested'; fieldName: string; isArray: boolean};
 
-export interface SQLFragment {
+export interface SQLStringSegment {
   sql: string;
 }
-export type SQLPhrase = Query | SQLFragment;
-export function isSQLFragment(f: SQLPhrase): f is SQLFragment {
-  return (f as SQLFragment).sql !== undefined;
+export type SQLPhrase = Query | SQLStringSegment;
+export function isSQLFragment(f: SQLPhrase): f is SQLStringSegment {
+  return (f as SQLStringSegment).sql !== undefined;
 }
 /**
  * A source reference to an SQL block. The compiler uses these to request

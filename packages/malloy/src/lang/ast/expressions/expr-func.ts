@@ -30,8 +30,7 @@ import {
   expressionIsUngroupedAggregate,
   ExpressionType,
   FieldValueType,
-  Fragment,
-  FunctionCallFragment,
+  FunctionCallNode,
   FunctionDef,
   FunctionOverloadDef,
   FunctionParameterDef,
@@ -51,6 +50,7 @@ import {PartitionBy} from './partition_by';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldName, FieldSpace} from '../types/field-space';
+import {makeSQLExpression, SQLExprElement} from '../../../model/utils';
 
 export class ExprFunc extends ExpressionDef {
   elementType = 'function call()';
@@ -93,7 +93,7 @@ export class ExprFunc extends ExpressionDef {
     if (this.isRaw) {
       let expressionType: ExpressionType = 'scalar';
       let collectType: FieldValueType | undefined;
-      const funcCall: Expr = [`${this.name}(`];
+      const funcCall: SQLExprElement[] = [`${this.name}(`];
       for (const expr of argExprsWithoutImplicit) {
         expressionType = maxExpressionType(expressionType, expr.expressionType);
 
@@ -102,7 +102,7 @@ export class ExprFunc extends ExpressionDef {
         } else {
           collectType = expr.dataType;
         }
-        funcCall.push(...expr.value);
+        funcCall.push(expr.value);
       }
       funcCall.push(')');
 
@@ -110,7 +110,7 @@ export class ExprFunc extends ExpressionDef {
       return {
         dataType,
         expressionType,
-        value: compressExpr(funcCall),
+        value: makeSQLExpression(funcCall),
         evalSpace: mergeEvalSpaces(
           ...argExprsWithoutImplicit.map(e => e.evalSpace)
         ),
@@ -147,7 +147,7 @@ export class ExprFunc extends ExpressionDef {
           implicitExpr = {
             dataType: footType.dataType,
             expressionType: footType.expressionType,
-            value: [{type: 'field', path: this.source.path}],
+            value: {node: 'field', path: this.source.path},
             evalSpace: footType.evalSpace,
           };
           structPath = this.source.path.slice(0, -1);
@@ -235,15 +235,15 @@ export class ExprFunc extends ExpressionDef {
       );
       return errorFor('cannot call with source');
     }
-    const frag: FunctionCallFragment = {
-      type: 'function_call',
+    const frag: FunctionCallNode = {
+      node: 'function_call',
       overload,
       name: this.name,
-      args: argExprs.map(x => x.value),
+      kids: {args: argExprs.map(x => x.value)},
       expressionType,
       structPath,
     };
-    let funcCall: Expr = [frag];
+    let funcCall: Expr = frag;
     const dialect = fs.dialectObj()?.name;
     const dialectOverload = dialect ? overload.dialect[dialect] : undefined;
     // TODO add in an error if you use an asymmetric function in BQ
@@ -271,7 +271,7 @@ export class ExprFunc extends ExpressionDef {
               ? orderBy.getAnalyticOrderBy(fs)
               : orderBy.getAggregateOrderBy(fs, allowExpression)
           );
-          frag.orderBy = allObs;
+          frag.kids.orderBy = allObs;
         } else {
           props.orderBys[0].log(
             `Function \`${this.name}\` does not support \`order_by\``
@@ -323,12 +323,7 @@ export class ExprFunc extends ExpressionDef {
       }
 
       const str = argExprs[0].value;
-      if (
-        str.length !== 1 ||
-        typeof str[0] === 'string' ||
-        str[0].type !== 'dialect' ||
-        str[0].function !== 'stringLiteral'
-      ) {
+      if (str.node !== 'stringLiteral') {
         this.log(`Invalid string literal for \`${func.name}\``);
       } else {
         const literal = str[0].literal;
@@ -359,12 +354,12 @@ export class ExprFunc extends ExpressionDef {
           );
         }
 
-        const expr: Expr = [];
+        const expr: SQLExprElement[] = [];
         for (const part of parts) {
           if (part.type === 'string') {
             expr.push(part.value);
           } else if (part.name === 'TABLE') {
-            expr.push({type: 'source-reference'});
+            expr.push({node: 'source-reference'});
           } else {
             const name = new FieldName(part.name);
             this.has({name});
@@ -374,14 +369,14 @@ export class ExprFunc extends ExpressionDef {
               return errorFor('invalid interpolated field');
             }
             if (result.found.refType === 'parameter') {
-              expr.push({type: 'parameter', path: [part.name]});
+              expr.push({node: 'parameter', path: [part.name]});
             } else {
-              expr.push({type: 'field', path: [part.name]});
+              expr.push({node: 'field', path: [part.name]});
             }
           }
         }
 
-        funcCall = [{type: 'sql-string', e: expr}];
+        funcCall = makeSQLExpression(expr);
       }
     }
     if (type.dataType === 'any') {
@@ -405,7 +400,7 @@ export class ExprFunc extends ExpressionDef {
     return {
       dataType: type.dataType,
       expressionType,
-      value: compressExpr(funcCall),
+      value: funcCall,
       evalSpace,
     };
   }

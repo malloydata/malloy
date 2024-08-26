@@ -23,6 +23,7 @@
 
 import {
   Argument,
+  InvokedStructRef,
   StructDef,
   StructRef,
   refIsStructDef,
