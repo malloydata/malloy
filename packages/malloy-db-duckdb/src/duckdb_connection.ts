@@ -23,20 +23,14 @@
 
 import crypto from 'crypto';
 import {DuckDBCommon} from './duckdb_common';
-import {
-  Connection,
-  Database,
-  DuckDbError,
-  OPEN_READONLY,
-  OPEN_READWRITE,
-  TableData,
-} from 'duckdb';
+import {Connection, Database, DuckDbError, TableData} from 'duckdb';
 import {
   ConnectionConfig,
   QueryDataRow,
   QueryOptionsReader,
   RunSQLOptions,
 } from '@malloydata/malloy';
+import packageJson from '@malloydata/malloy/package.json';
 
 export interface DuckDBConnectionOptions extends ConnectionConfig {
   additionalExtensions?: string[];
@@ -132,6 +126,7 @@ export class DuckDBConnection extends DuckDBCommon {
         activeDB.connections.push(this.connection);
         resolve();
       } else {
+        const config: Record<string, string> = {};
         if (this.isMotherDuck) {
           if (
             !this.motherDuckToken &&
@@ -143,35 +138,28 @@ export class DuckDBConnection extends DuckDBCommon {
             return resolve();
           }
           if (this.motherDuckToken) {
-            try {
-              const dbUrl = new URL(this.databasePath);
-              dbUrl.searchParams.set('motherduck_token', this.motherDuckToken);
-              this.databasePath = dbUrl.toString();
-            } catch {
-              // eslint-disable-next-line no-console
-              console.warn('Unable to update MotherDuck URL with token');
-            }
+            config['motherduck_token'] = this.motherDuckToken;
           }
+          config['custom_user_agent'] = `Malloy/${packageJson.version}`;
         }
-        const database = new Database(
-          this.databasePath,
-          this.readOnly ? OPEN_READONLY : OPEN_READWRITE,
-          err => {
-            if (err) {
-              this.setupError = err;
-            } else {
-              this.connection = database.connect();
-              const activeDB: ActiveDB = {
-                database,
-                connections: [],
-              };
-              DuckDBConnection.activeDBs[this.databasePath] = activeDB;
+        if (this.readOnly) {
+          config['access_mode'] = 'READ_ONLY';
+        }
+        const database = new Database(this.databasePath, config, err => {
+          if (err) {
+            this.setupError = err;
+          } else {
+            this.connection = database.connect();
+            const activeDB: ActiveDB = {
+              database,
+              connections: [],
+            };
+            DuckDBConnection.activeDBs[this.databasePath] = activeDB;
 
-              activeDB.connections.push(this.connection);
-            }
-            resolve();
+            activeDB.connections.push(this.connection);
           }
-        );
+          resolve();
+        });
       }
     });
   }

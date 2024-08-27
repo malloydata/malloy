@@ -5,7 +5,8 @@
   "exports": {
     ".": "./dist/index.js",
     "./test": "./dist/test/index.js",
-    "./connection": "./dist/connection/index.js"
+    "./connection": "./dist/connection/index.js",
+    "./package.json": "./package.json"
   },
   "typesVersions": {
     "*": {
