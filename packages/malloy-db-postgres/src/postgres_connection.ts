@@ -481,7 +481,7 @@ export class PooledPostgresConnection
     }
   }
 
-  public isPool(): true {
+  public isPool(): this is PooledConnection {
     return true;
   }
 
