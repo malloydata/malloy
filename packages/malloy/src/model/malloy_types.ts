@@ -48,10 +48,10 @@ export interface ExprWithKids extends ExprLeaf {
 export type AnyExpr = ExprE | ExprOptionalE | ExprWithKids | ExprLeaf;
 
 export function exprHasKids(e: AnyExpr): e is ExprWithKids {
-  return (e as ExprWithKids).kids !== null;
+  return 'kids' in e;
 }
 export function exprHasE(e: AnyExpr): e is ExprE {
-  return (e as ExprE).e !== null;
+  return 'e' in e;
 }
 export function exprIsLeaf(e: AnyExpr) {
   return !(exprHasKids(e) || exprHasE(e));
