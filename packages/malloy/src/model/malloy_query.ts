@@ -1106,6 +1106,12 @@ class QueryField extends QueryNode {
     exprToTranslate: Expr,
     state: GenerateState = new GenerateState()
   ): string {
+    if (exprToTranslate.sql !== undefined) {
+      // Since we clone the nodes before we record the sql,
+      // I don't think this ever happens, but just in case, there
+      // are some weird code paths.
+      return exprToTranslate.sql;
+    }
     // Wrap non leaf sub expressions in parenthesis
     const subExpr = function (qf: QueryField, e: Expr) {
       const sql = qf.exprToSQL(resultSet, context, e, state);
@@ -1246,13 +1252,18 @@ class QueryField extends QueryNode {
         return this.generatePickSQL(expr);
       case '':
         return '';
+      case 'filterCondition':
+        // our child should be translated ....
+        if (expr.e.sql) {
+          expr.sql = expr.e.sql;
+          return expr.sql;
+        }
+        return '';
       default:
         throw new Error(
-          `Internal Error: Unknown expression node ${JSON.stringify(
-            expr,
-            undefined,
-            2
-          )}`
+          `Internal Error: Unknown expression node '${
+            expr.node
+          }' ${JSON.stringify(expr, undefined, 2)}`
         );
     }
   }
