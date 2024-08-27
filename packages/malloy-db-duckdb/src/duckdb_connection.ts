@@ -126,7 +126,9 @@ export class DuckDBConnection extends DuckDBCommon {
         activeDB.connections.push(this.connection);
         resolve();
       } else {
-        const config: Record<string, string> = {};
+        const config: Record<string, string> = {
+          'custom_user_agent': `Malloy/${packageJson.version}`,
+        };
         if (this.isMotherDuck) {
           if (
             !this.motherDuckToken &&
@@ -140,10 +142,9 @@ export class DuckDBConnection extends DuckDBCommon {
           if (this.motherDuckToken) {
             config['motherduck_token'] = this.motherDuckToken;
           }
-          config['custom_user_agent'] = `Malloy/${packageJson.version}`;
         }
         if (this.readOnly) {
-          config['access_mode'] = 'READ_ONLY';
+          config['access_mode'] = 'read_only';
         }
         const database = new Database(this.databasePath, config, err => {
           if (err) {
