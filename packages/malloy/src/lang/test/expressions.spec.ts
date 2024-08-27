@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Expr, isFieldTypeDef} from '../../model';
+import {Expr} from '../../model';
 import {
   expr,
   TestTranslator,
@@ -43,6 +43,11 @@ function exprToString(e: Expr, symbols: Record<string, string> = {}): string {
     case '>=':
     case '<':
     case '<=':
+    case '+':
+    case '-':
+    case '*':
+    case '/':
+    case '%':
       return `${exprToString(e.kids.left, symbols)}${e.node}${exprToString(
         e.kids.right,
         symbols
@@ -203,7 +208,7 @@ describe('expressions', () => {
       const compare = expr`ad = ad.quarter + 1`;
       expect(compare).toTranslate();
       const compare_expr = compare.translator.generated().value;
-      expect(exprToString(compare_expr)).toEqual('A=<delta>');
+      expect(exprToString(compare_expr)).toEqual('A={delta}');
     });
     test('apply granular-truncation uses range', () => {
       const compare = expr`ad ? ad.quarter`;
@@ -856,15 +861,6 @@ describe('expressions', () => {
         calculate: bar is lag(sum(output))
       }`).translationToFailWith("'output' is not defined");
     });
-    test('count(distinct column)', () => {
-      expect(model`
-      ##! m4warnings=warn
-      run: a -> {
-        aggregate: x is count(distinct astr)
-      }`).toTranslateWithWarnings(
-        '`count(distinct expression)` deprecated, use `count(expression)` instead'
-      );
-    });
   });
 
   describe('pick statements', () => {
@@ -967,59 +963,13 @@ describe('expressions', () => {
     });
   });
   test('paren and applied div', () => {
-    const modelSrc = 'query: z is a -> { group_by: x is 1+(3/4) }';
-    const m = new TestTranslator(modelSrc);
-    expect(m).toTranslate();
-    const queryDef = m.translate()?.translated?.modelDef.contents['z'];
-    expect(queryDef).toBeDefined();
-    expect(queryDef?.type).toBe('query');
-    if (queryDef && queryDef.type === 'query') {
-      const qSeg = queryDef.pipeline[0];
-      expect(qSeg.type).toEqual('reduce');
-      if (qSeg.type === 'reduce') {
-        const x = qSeg.queryFields[0];
-        if (
-          x.type !== 'fieldref' &&
-          isFieldTypeDef(x) &&
-          x.type === 'number' &&
-          x.e
-        ) {
-          expect(x).toMatchObject({
-            'e': [
-              {
-                'function': 'numberLiteral',
-                'literal': '1',
-                'type': 'dialect',
-              },
-              // TODO not sure why there are TWO sets of parentheses... A previous version of this test
-              // just checked that there were ANY parens, so that went under the radar. Not fixing now.
-              '+((',
-              {
-                'denominator': [
-                  {
-                    'function': 'numberLiteral',
-                    'literal': '4',
-                    'type': 'dialect',
-                  },
-                ],
-                'function': 'div',
-                'numerator': [
-                  {
-                    'function': 'numberLiteral',
-                    'literal': '3',
-                    'type': 'dialect',
-                  },
-                ],
-                'type': 'dialect',
-              },
-              '))',
-            ],
-          });
-        } else {
-          fail('expression with parens compiled oddly');
-        }
-      }
-    }
+    const one34 = expr`1+(3/4)`;
+    expect(one34).toTranslate();
+    const exprVal = one34.translator.generated();
+    const exprE = exprVal.value;
+    expect(exprToString(exprE)).toEqual(
+      '{numberLiteral}+({numberLiteral}/{numberLiteral})'
+    );
   });
   test.each([
     ['ats', 'timestamp'],

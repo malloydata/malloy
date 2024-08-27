@@ -1075,7 +1075,7 @@ class QueryField extends QueryNode {
           throw new Error('Invalid number of rows for window spec');
         }
         // TODO this does not handle float literals correctly
-        return arg[0].literal;
+        return arg.literal;
       });
       between = `ROWS BETWEEN ${preceding} PRECEDING AND ${following} FOLLOWING`;
     }

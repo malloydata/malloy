@@ -326,7 +326,7 @@ export class ExprFunc extends ExpressionDef {
       if (str.node !== 'stringLiteral') {
         this.log(`Invalid string literal for \`${func.name}\``);
       } else {
-        const literal = str[0].literal;
+        const literal = str.literal;
         const parts = parseSQLInterpolation(literal);
         const unsupportedInterpolations = parts
           .filter(
