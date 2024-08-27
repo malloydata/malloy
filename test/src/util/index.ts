@@ -28,6 +28,8 @@ import {
   QueryMaterializer,
   Result,
   Runtime,
+  Expr,
+  composeSQLExpr,
 } from '@malloydata/malloy';
 export * from '@malloydata/malloy/test';
 
@@ -62,7 +64,14 @@ export function fStringEq(field: string, value: string): FilterCondition {
 
 export function fStringLike(field: string, value: string): FilterCondition {
   return {
-    expression: [{type: 'field', path: field.split('.')}, ` LIKE '${value}'`],
+    node: 'filterCondition',
+    e: {
+      node: 'like',
+      kids: {
+        left: {node: 'field', path: field.split('.')},
+        right: {node: 'stringLiteral', literal: value},
+      },
+    },
     code: `${field}~'${value}'`,
     expressionType: 'scalar',
   };
@@ -71,9 +80,10 @@ export function fStringLike(field: string, value: string): FilterCondition {
 export function fYearEq(field: string, year: number): FilterCondition {
   const yBegin = `'${year}-01-01 00:00:00'`;
   const yEnd = `'${year + 1}-01-01 00:00:00'`;
-  const fx: Fragment = {type: 'field', path: field.split('.')};
+  const fx: Expr = {node: 'field', path: field.split('.')};
   return {
-    expression: [fx, `>=${yBegin} and `, fx, `<${yEnd}`],
+    node: 'filterCondition',
+    e: composeSQLExpr([fx, `>=${yBegin} and `, fx, `<${yEnd}`]),
     code: `${field}:@${year}`,
     expressionType: 'scalar',
   };

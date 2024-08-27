@@ -108,6 +108,7 @@ export {
   isSamplingRows,
   expressionIsCalculation,
   indent,
+  composeSQLExpr,
 } from './model';
 export {
   // Needed for tests only
