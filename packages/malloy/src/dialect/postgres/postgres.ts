@@ -37,7 +37,6 @@ import {DialectFunctionOverloadDef} from '../functions';
 import {DialectFieldList, QueryInfo} from '../dialect';
 import {PostgresBase} from '../pg_impl';
 
-
 const pgMakeIntervalMap: Record<string, string> = {
   'year': 'years',
   'month': 'months',
