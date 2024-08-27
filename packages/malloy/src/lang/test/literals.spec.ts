@@ -33,7 +33,7 @@ describe('literals', () => {
   test('string', () => {
     const m = new BetaExpression("'forty two'");
     expect(m).toTranslate();
-    const m42 = m.generated().value[0];
+    const m42 = m.generated().value;
     expect(m42).toMatchObject({literal: 'forty two'});
   });
 
@@ -99,7 +99,7 @@ describe('literals', () => {
     } else {
       expect(isGranularResult(ir)).toBeFalsy();
     }
-    expect(ir.value[0]).toEqual(expect.objectContaining(result));
+    expect(ir.value).toEqual(expect.objectContaining(result));
   });
   const morphicLiterals: [string, string | undefined][] = [
     ['@1960', '1960-01-01 00:00:00'],
@@ -117,7 +117,7 @@ describe('literals', () => {
     if (morphic) {
       expect(morphTo).toBeDefined();
       if (morphTo) {
-        expect(morphTo[0]).toEqual(expect.objectContaining({literal: morphic}));
+        expect(morphTo).toEqual(expect.objectContaining({literal: morphic}));
       }
     } else {
       expect(morphTo).toBeUndefined();
@@ -190,7 +190,7 @@ describe('literals', () => {
               right
         """`);
       expect(checking).toTranslate();
-      const v = checking.generated().value[0];
+      const v = checking.generated().value;
       expect(v).toMatchObject({literal: '\nleft\n  mid\n    right\n'});
     });
     test('multi-line indent decreasing', () => {
@@ -200,13 +200,13 @@ describe('literals', () => {
           left
         """`);
       expect(checking).toTranslate();
-      const v = checking.generated().value[0];
+      const v = checking.generated().value;
       expect(v).toMatchObject({literal: '\n    right\n  mid\nleft\n'});
     });
     test('multi-line indent keep', () => {
       const checking = new BetaExpression('"""right\n  mid\nleft"""');
       expect(checking).toTranslate();
-      const v = checking.generated().value[0];
+      const v = checking.generated().value;
       expect(v).toMatchObject({literal: 'right\n  mid\nleft'});
     });
     test('timezone single quote', () => {

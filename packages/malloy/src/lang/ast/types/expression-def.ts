@@ -370,7 +370,7 @@ function equality(
         if (nullCmp) {
           value = nullCmp;
         } else {
-          value = nullsafeNot(regexEqual(lhs, rhs) || eqNode);
+          value = nullsafeNot(regexEqual(lhs, rhs) || eqNode, op);
         }
         break;
       }

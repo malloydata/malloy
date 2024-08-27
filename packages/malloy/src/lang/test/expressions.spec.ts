@@ -63,8 +63,10 @@ function exprToString(e: Expr, symbols: Record<string, string> = {}): string {
     }
     case '()':
       return `(${exprToString(e.e, symbols)})`;
+    case 'not':
+      return `not(${exprToString(e.e, symbols)})`;
   }
-  return `<${e.node}>`;
+  return `{${e.node}}`;
 }
 
 describe('expressions', () => {
@@ -195,26 +197,26 @@ describe('expressions', () => {
       const compare = expr`ad = ad.quarter`;
       expect(compare).toTranslate();
       const compare_expr = compare.translator.generated().value;
-      expect(exprToString(compare_expr)).toEqual('A=B');
+      expect(exprToString(compare_expr)).toEqual('A={trunc}');
     });
     test('compare to granular result expression uses straight comparison', () => {
       const compare = expr`ad = ad.quarter + 1`;
       expect(compare).toTranslate();
       const compare_expr = compare.translator.generated().value;
-      expect(exprToString(compare_expr)).toEqual('A=B');
+      expect(exprToString(compare_expr)).toEqual('A=<delta>');
     });
     test('apply granular-truncation uses range', () => {
       const compare = expr`ad ? ad.quarter`;
       expect(compare).toTranslate();
       const compare_expr = compare.translator.generated().value;
-      expect(exprToString(compare_expr)).toEqual('(A>=B)and(A<C)');
+      expect(exprToString(compare_expr)).toEqual('(A>={trunc})and(A<{delta})');
     });
-    test('apply granular-literal alternation uses range', () => {
+    test('apply granular-literal alternation uses all literals for range', () => {
       const compare = expr`ad ? @2020 | @2022`;
       expect(compare).toTranslate();
       const compare_expr = compare.translator.generated().value;
       expect(exprToString(compare_expr)).toEqual(
-        '((A>=B)and(A<C))or((A>=D)and(A<E))'
+        '((A>={timeLiteral})and(A<{timeLiteral}))or((A>={timeLiteral})and(A<{timeLiteral}))'
       );
     });
     // this should use range, but it uses = and alternations are
