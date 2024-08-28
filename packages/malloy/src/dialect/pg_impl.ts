@@ -14,7 +14,7 @@ import {
 } from '../model/malloy_types';
 import {Dialect, qtz, QueryInfo} from './dialect';
 
-const timeExtractMap: Record<string, string> = {
+export const timeExtractMap: Record<string, string> = {
   'day_of_week': 'dow',
   'day_of_year': 'doy',
 };

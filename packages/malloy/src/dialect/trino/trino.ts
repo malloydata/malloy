@@ -34,6 +34,7 @@ import {
   RegexMatchExpr,
   MeasureTimeExpr,
   TimeLiteralNode,
+  TimeExtractExpr,
 } from '../../model/malloy_types';
 import {TRINO_FUNCTIONS} from './functions';
 import {DialectFunctionOverloadDef} from '../functions';
@@ -43,7 +44,7 @@ import {
   QueryInfo,
   isDialectFieldStruct,
 } from '../dialect';
-import {PostgresBase} from '../pg_impl';
+import {PostgresBase, timeExtractMap} from '../pg_impl';
 
 // These are the units that "TIMESTAMP_ADD" "TIMESTAMP_DIFF" accept
 function timestampMeasureable(units: string): boolean {
@@ -560,6 +561,19 @@ ${indent(sql)}
       return `TIMESTAMP '${lit.literal} ${tz}'`;
     }
     return `TIMESTAMP '${lit.literal}'`;
+  }
+
+  sqlTimeExtractExpr(qi: QueryInfo, from: TimeExtractExpr): string {
+    const pgUnits = timeExtractMap[from.units] || from.units;
+    let extractFrom = from.sql || '';
+    if (from.dataType === 'timestamp') {
+      const tz = qtz(qi);
+      if (tz) {
+        extractFrom = `at_timezone(${extractFrom},'${tz}')`;
+      }
+    }
+    const extracted = `EXTRACT(${pgUnits} FROM ${extractFrom})`;
+    return from.units === 'day_of_week' ? `mod(${extracted}+1,7)` : extracted;
   }
 }
 
