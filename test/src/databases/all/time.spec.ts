@@ -687,13 +687,15 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
 
   test('extract', async () => {
     await expect(
-      `run: ${dbName}.sql("SELECT 1 as one") -> {
-        timezone: '${zone}'
-        extend: { dimension: utc_midnight is @2020-02-20 00:00:00[UTC] }
-        select:
-          mex_midnight is hour(utc_midnight)
-          mex_day is day(utc_midnight)
-      }`
+      `# test.debug
+        run: ${dbName}.sql("SELECT 1 as one") -> {
+          timezone: '${zone}'
+          extend: { dimension: utc_midnight is @2020-02-20 00:00:00[UTC] }
+          select:
+            mex_midnight is hour(utc_midnight)
+            mex_day is day(utc_midnight)
+        }
+      `
     ).malloyResultMatches(runtime, {mex_midnight: 18, mex_day: 19});
   });
 
