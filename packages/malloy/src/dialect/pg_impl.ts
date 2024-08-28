@@ -85,7 +85,7 @@ export abstract class PostgresBase extends Dialect {
   }
 
   sqlRegexpMatch(df: RegexMatchExpr): string {
-    return `${df.kids.expr.sql} ~ ${df.kids.regex.sql})`;
+    return `${df.kids.expr.sql} ~ ${df.kids.regex.sql}`;
   }
 
   sqlLiteralTime(qi: QueryInfo, lt: TimeLiteralNode): string {

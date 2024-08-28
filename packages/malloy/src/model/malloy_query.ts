@@ -1254,7 +1254,7 @@ class QueryField extends QueryNode {
       case '':
         return '';
       case 'filterCondition':
-        // our child should be translated ....
+        // our child will be translated at the top of this function
         if (expr.e.sql) {
           expr.sql = expr.e.sql;
           return expr.sql;
