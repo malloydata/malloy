@@ -44,7 +44,6 @@ import {
   isDialectFieldStruct,
 } from '../dialect';
 import {PostgresBase} from '../pg_impl';
-import { LiteralTimestamp } from '../../lang/ast';
 
 // These are the units that "TIMESTAMP_ADD" "TIMESTAMP_DIFF" accept
 function timestampMeasureable(units: string): boolean {
