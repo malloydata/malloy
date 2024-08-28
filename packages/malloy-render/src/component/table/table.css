@@ -63,6 +63,21 @@
   grid-column: 1 / span var(--table-row-span);
 }
 
+.malloy-table .limit-row {
+  height: var(--malloy-render--table-row-height);
+  line-height: var(--malloy-render--table-row-height);
+  border-top: var(--malloy-render--table-border);
+  font-style: italic;
+  margin-left: calc(
+    var(--malloy-render--table-gutter-size) *
+      var(--table-gutter-left-multiplier)
+  );
+  margin-right: calc(
+    var(--malloy-render--table-gutter-size) *
+      var(--table-gutter-right-multiplier)
+  );
+}
+
 .malloy-table .th {
   transition: background-color 0.25s;
 }
