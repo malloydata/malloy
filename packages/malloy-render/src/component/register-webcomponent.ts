@@ -29,6 +29,7 @@ export default function registerWebComponent({
           result: undefined,
           queryResult: undefined,
           modelDef: undefined,
+          scrollEl: undefined,
         },
         {customElements, BaseElement: HTMLElement}
       ),

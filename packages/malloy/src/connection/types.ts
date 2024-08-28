@@ -142,7 +142,7 @@ export interface PooledConnection extends Connection {
   // Most pool implementations require a specific call to release connection handles. If a Connection is a
   // PooledConnection, drain() should be called when connection usage is over
   drain(): Promise<void>;
-  isPool(): true;
+  isPool(): this is PooledConnection;
 }
 
 export interface PersistSQLResults extends Connection {

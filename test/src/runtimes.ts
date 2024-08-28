@@ -155,7 +155,11 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
         );
         break;
       case 'motherduck':
-        connection = new DuckDBTestConnection(dbName, 'md:my_db');
+        connection = new DuckDBTestConnection({
+          name: dbName,
+          databasePath: 'md:my_db',
+          motherDuckToken: process.env['TEST_MD_TOKEN'],
+        });
         break;
       case 'snowflake':
         {
