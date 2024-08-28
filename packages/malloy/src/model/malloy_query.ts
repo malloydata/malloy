@@ -797,7 +797,7 @@ class QueryField extends QueryNode {
     let ungroupSet: UngroupSet | undefined;
 
     if (expr.fields && expr.fields.length > 0) {
-      const key = expr.fields.sort().join('|') + expr.dataType;
+      const key = expr.fields.sort().join('|') + expr.node;
       ungroupSet = resultSet.ungroupedSets.get(key);
       if (ungroupSet === undefined) {
         throw new Error(`Internal Error, cannot find groupset with key ${key}`);
