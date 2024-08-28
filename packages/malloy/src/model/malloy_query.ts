@@ -1260,6 +1260,9 @@ class QueryField extends QueryNode {
           return expr.sql;
         }
         return '';
+      case 'functionDefaultOrderBy':
+      case 'functionOrderBy':
+        return '';
       default:
         throw new Error(
           `Internal Error: Unknown expression node '${
