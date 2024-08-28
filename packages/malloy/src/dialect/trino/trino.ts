@@ -566,7 +566,7 @@ ${indent(sql)}
   sqlTimeExtractExpr(qi: QueryInfo, from: TimeExtractExpr): string {
     const pgUnits = timeExtractMap[from.units] || from.units;
     let extractFrom = from.e.sql || '';
-    if (from.dataType === 'timestamp') {
+    if (from.e.dataType === 'timestamp') {
       const tz = qtz(qi);
       if (tz) {
         extractFrom = `at_timezone(${extractFrom},'${tz}')`;
