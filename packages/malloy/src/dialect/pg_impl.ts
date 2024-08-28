@@ -27,7 +27,7 @@ export abstract class PostgresBase extends Dialect {
   sqlTruncExpr(qi: QueryInfo, df: TimeTruncExpr): string {
     // adjusting for monday/sunday weeks
     const week = df.units === 'week';
-    const truncThis = week ? `${df.e.sql} + INTERVAL 1 DAY` : df.e.sql;
+    const truncThis = week ? `${df.e.sql} + INTERVAL '1' DAY` : df.e.sql;
     if (df.e.dataType === 'timestamp') {
       const tz = qtz(qi);
       if (tz) {
@@ -41,7 +41,7 @@ export abstract class PostgresBase extends Dialect {
     }
     let result = `DATE_TRUNC('${df.units}', ${truncThis})`;
     if (week) {
-      result = `(${result} - INTERVAL 1 DAY)`;
+      result = `(${result} - INTERVAL '1' DAY)`;
     }
     return result;
   }
