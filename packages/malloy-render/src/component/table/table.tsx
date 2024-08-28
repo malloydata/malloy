@@ -267,11 +267,15 @@ const MalloyTableRoot = (_props: {
   };
 
   // TODO: Get this from resultMetadata cache?
+  const [rowsAreLimited, setRowsAreLimited] = createSignal(false);
   const data = createMemo(() => {
     const data: DataRecord[] = [];
     let i = 0;
     for (const row of props.data) {
-      if (i >= props.rowLimit) break;
+      if (i >= props.rowLimit) {
+        setRowsAreLimited(true);
+        break;
+      }
       data.push(row);
       i++;
     }
@@ -550,6 +554,11 @@ const MalloyTableRoot = (_props: {
             </div>
           )}
         </For>
+        <Show when={rowsAreLimited()}>
+          <div class="table-row limit-row">
+            Limiting nested table to {props.rowLimit} records
+          </div>
+        </Show>
       </Show>
     </div>
   );
