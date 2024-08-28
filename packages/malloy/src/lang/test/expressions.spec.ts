@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Fragment, isFieldTypeDef} from '../../model';
+import {Expr} from '../../model';
 import {
   expr,
   TestTranslator,
@@ -33,27 +33,45 @@ import {
 import './parse-expects';
 
 /**
- * Convert an expression to a string, any fragment which is not a string turns into a variable,
- * useful for maybe checking simple code generation, but it sort of hints at an interesting matcher
- * @param expr Compiled expression
- * @returns A string with variables A,B,... substituded for non string elements
+ * Try and write a generic version of the expression, might some day be the basis for
+ * a much better expression matcher.
  */
-function exprToString(expr: Fragment[]): string {
-  let varCode = 'A'.charCodeAt(0);
-  const vars: Record<string, string> = {};
-  return expr
-    .map(f => {
-      if (typeof f === 'string') {
-        return f;
+function exprToString(e: Expr, symbols: Record<string, string> = {}): string {
+  switch (e.node) {
+    case '=':
+    case '>':
+    case '>=':
+    case '<':
+    case '<=':
+    case '+':
+    case '-':
+    case '*':
+    case '/':
+    case '%':
+      return `${exprToString(e.kids.left, symbols)}${e.node}${exprToString(
+        e.kids.right,
+        symbols
+      )}`;
+    case 'and':
+    case 'or':
+      return `(${exprToString(e.kids.left, symbols)})${e.node}(${exprToString(
+        e.kids.right,
+        symbols
+      )})`;
+    case 'field': {
+      const ref = e.path.join('.');
+      if (symbols[ref] === undefined) {
+        const nSyms = Object.keys(symbols).length;
+        symbols[ref] = String.fromCharCode('A'.charCodeAt(0) + nSyms);
       }
-      const key = JSON.stringify(f);
-      if (!vars[key]) {
-        vars[key] = String.fromCharCode(varCode);
-        varCode += 1;
-      }
-      return vars[key];
-    })
-    .join('');
+      return symbols[ref];
+    }
+    case '()':
+      return `(${exprToString(e.e, symbols)})`;
+    case 'not':
+      return `not(${exprToString(e.e, symbols)})`;
+  }
+  return `{${e.node}}`;
 }
 
 describe('expressions', () => {
@@ -184,26 +202,26 @@ describe('expressions', () => {
       const compare = expr`ad = ad.quarter`;
       expect(compare).toTranslate();
       const compare_expr = compare.translator.generated().value;
-      expect(exprToString(compare_expr)).toEqual('A=B');
+      expect(exprToString(compare_expr)).toEqual('A={trunc}');
     });
     test('compare to granular result expression uses straight comparison', () => {
       const compare = expr`ad = ad.quarter + 1`;
       expect(compare).toTranslate();
       const compare_expr = compare.translator.generated().value;
-      expect(exprToString(compare_expr)).toEqual('A=B');
+      expect(exprToString(compare_expr)).toEqual('A={delta}');
     });
     test('apply granular-truncation uses range', () => {
       const compare = expr`ad ? ad.quarter`;
       expect(compare).toTranslate();
       const compare_expr = compare.translator.generated().value;
-      expect(exprToString(compare_expr)).toEqual('(A>=B)and(A<C)');
+      expect(exprToString(compare_expr)).toEqual('(A>={trunc})and(A<{delta})');
     });
-    test('apply granular-literal alternation uses range', () => {
+    test('apply granular-literal alternation uses all literals for range', () => {
       const compare = expr`ad ? @2020 | @2022`;
       expect(compare).toTranslate();
       const compare_expr = compare.translator.generated().value;
       expect(exprToString(compare_expr)).toEqual(
-        '((A>=B)and(A<C))or((A>=D)and(A<E))'
+        '((A>={timeLiteral})and(A<{timeLiteral}))or((A>={timeLiteral})and(A<{timeLiteral}))'
       );
     });
     // this should use range, but it uses = and alternations are
@@ -843,15 +861,6 @@ describe('expressions', () => {
         calculate: bar is lag(sum(output))
       }`).translationToFailWith("'output' is not defined");
     });
-    test('count(distinct column)', () => {
-      expect(model`
-      ##! m4warnings=warn
-      run: a -> {
-        aggregate: x is count(distinct astr)
-      }`).toTranslateWithWarnings(
-        '`count(distinct expression)` deprecated, use `count(expression)` instead'
-      );
-    });
   });
 
   describe('pick statements', () => {
@@ -954,59 +963,13 @@ describe('expressions', () => {
     });
   });
   test('paren and applied div', () => {
-    const modelSrc = 'query: z is a -> { group_by: x is 1+(3/4) }';
-    const m = new TestTranslator(modelSrc);
-    expect(m).toTranslate();
-    const queryDef = m.translate()?.translated?.modelDef.contents['z'];
-    expect(queryDef).toBeDefined();
-    expect(queryDef?.type).toBe('query');
-    if (queryDef && queryDef.type === 'query') {
-      const qSeg = queryDef.pipeline[0];
-      expect(qSeg.type).toEqual('reduce');
-      if (qSeg.type === 'reduce') {
-        const x = qSeg.queryFields[0];
-        if (
-          x.type !== 'fieldref' &&
-          isFieldTypeDef(x) &&
-          x.type === 'number' &&
-          x.e
-        ) {
-          expect(x).toMatchObject({
-            'e': [
-              {
-                'function': 'numberLiteral',
-                'literal': '1',
-                'type': 'dialect',
-              },
-              // TODO not sure why there are TWO sets of parentheses... A previous version of this test
-              // just checked that there were ANY parens, so that went under the radar. Not fixing now.
-              '+((',
-              {
-                'denominator': [
-                  {
-                    'function': 'numberLiteral',
-                    'literal': '4',
-                    'type': 'dialect',
-                  },
-                ],
-                'function': 'div',
-                'numerator': [
-                  {
-                    'function': 'numberLiteral',
-                    'literal': '3',
-                    'type': 'dialect',
-                  },
-                ],
-                'type': 'dialect',
-              },
-              '))',
-            ],
-          });
-        } else {
-          fail('expression with parens compiled oddly');
-        }
-      }
-    }
+    const one34 = expr`1+(3/4)`;
+    expect(one34).toTranslate();
+    const exprVal = one34.translator.generated();
+    const exprE = exprVal.value;
+    expect(exprToString(exprE)).toEqual(
+      '{numberLiteral}+({numberLiteral}/{numberLiteral})'
+    );
   });
   test.each([
     ['ats', 'timestamp'],

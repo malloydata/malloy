@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Fragment} from '../../../model';
+import {AggregateOrderByNode} from '../../../model';
 import {
   overload,
   minAggregate,
@@ -35,8 +35,8 @@ import {
 export function fnStringAgg(): DialectFunctionOverloadDef[] {
   const value = makeParam('value', maxScalar('string'));
   const separator = makeParam('separator', literal(maxScalar('string')));
-  const orderBy: Fragment = {
-    type: 'aggregate_order_by',
+  const orderBy: AggregateOrderByNode = {
+    node: 'aggregate_order_by',
     prefix: ' WITHIN GROUP(',
     suffix: ')',
   };
@@ -60,8 +60,8 @@ export function fnStringAgg(): DialectFunctionOverloadDef[] {
 export function fnStringAggDistinct(): DialectFunctionOverloadDef[] {
   const value = makeParam('value', maxScalar('string'));
   const separator = makeParam('separator', literal(maxScalar('string')));
-  const orderBy: Fragment = {
-    type: 'aggregate_order_by',
+  const orderBy: AggregateOrderByNode = {
+    node: 'aggregate_order_by',
     prefix: ' WITHIN GROUP(',
     suffix: ')',
   };

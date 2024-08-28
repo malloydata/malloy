@@ -40,7 +40,7 @@ export class ExprNumber extends ExpressionDef {
     return {
       ...FT.numberT,
       evalSpace: 'literal',
-      value: [{type: 'dialect', function: 'numberLiteral', literal: this.n}],
+      value: {node: 'numberLiteral', literal: this.n},
     };
   }
 }

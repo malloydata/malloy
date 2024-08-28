@@ -134,15 +134,14 @@ export class ExprTimeExtract extends ExpressionDef {
           dataType: 'number',
           expressionType,
           evalSpace,
-          value: [
-            {
-              type: 'dialect',
-              function: 'timeDiff',
-              units: extractTo,
-              left: {valueType, value: first.value},
-              right: {valueType, value: last.value},
+          value: {
+            node: 'timeDiff',
+            units: extractTo,
+            kids: {
+              left: {...first.value, dataType: valueType},
+              right: {...last.value, dataType: valueType},
             },
-          ],
+          },
         };
       } else {
         const argV = from.getExpression(fs);
@@ -151,14 +150,11 @@ export class ExprTimeExtract extends ExpressionDef {
             dataType: 'number',
             expressionType: argV.expressionType,
             evalSpace: argV.evalSpace,
-            value: [
-              {
-                type: 'dialect',
-                function: 'extract',
-                expr: {value: argV.value, valueType: argV.dataType},
-                units: extractTo,
-              },
-            ],
+            value: {
+              node: 'extract',
+              e: {...argV.value, dataType: argV.dataType},
+              units: extractTo,
+            },
           };
         }
         if (argV.dataType !== 'error') {

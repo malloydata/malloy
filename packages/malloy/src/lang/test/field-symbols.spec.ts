@@ -159,11 +159,13 @@ describe('structdef comprehension', () => {
       structRelationship: {
         type: 'one',
         matrixOperation: 'left',
-        onExpression: [
-          {type: 'field', path: ['aKey']},
-          '=',
-          {type: 'field', path: ['t', 'a']},
-        ],
+        onExpression: {
+          node: '=',
+          kids: {
+            left: {node: 'field', path: ['aKey']},
+            right: {node: 'field', path: ['t', 'a']},
+          },
+        },
       },
       structSource: {type: 'table', tablePath: 't'},
       fields: [{type: 'string', name: 'a'}],
@@ -206,7 +208,7 @@ describe('structdef comprehension', () => {
       cOptStr: {
         name: 'cOptStr',
         type: 'string',
-        value: ['value'],
+        value: {node: 'stringLiteral', literal: 'value'},
       },
     };
     const space = new StaticSpace(struct);

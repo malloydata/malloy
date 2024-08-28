@@ -37,13 +37,7 @@ export class ExprString extends ExpressionDef {
   getExpression(_fs: FieldSpace): ExprValue {
     return {
       ...FT.stringT,
-      value: [
-        {
-          type: 'dialect',
-          function: 'stringLiteral',
-          literal: this.value,
-        },
-      ],
+      value: {node: 'stringLiteral', literal: this.value},
       evalSpace: 'literal',
     };
   }

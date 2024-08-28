@@ -41,7 +41,7 @@ export const CHILD_EXPLORE: StructDef = {
       type: 'number',
       name: 'flight_count',
       expressionType: 'aggregate',
-      e: [{type: 'aggregate', function: 'count', e: []}],
+      e: {node: 'aggregate', function: 'count', e: {node: ''}},
     },
   ],
 };
@@ -63,7 +63,7 @@ export const PARENT_EXPLORE: StructDef = {
       type: 'number',
       name: 'some_parent_count',
       expressionType: 'aggregate',
-      e: [{type: 'aggregate', function: 'count', e: []}],
+      e: {node: 'aggregate', function: 'count', e: {node: ''}},
     },
   ],
 };
@@ -85,7 +85,7 @@ export const GRADPARENT_EXPLORE: StructDef = {
       type: 'number',
       name: 'some_gradparent_count',
       expressionType: 'aggregate',
-      e: [{type: 'aggregate', function: 'count', e: []}],
+      e: {node: 'aggregate', function: 'count', e: {node: ''}},
     },
   ],
 };
@@ -107,7 +107,7 @@ export const SOURCE_EXPLORE: StructDef = {
       type: 'number',
       name: 'some_child_count',
       expressionType: 'aggregate',
-      e: [{type: 'aggregate', function: 'count', e: []}],
+      e: {node: 'aggregate', function: 'count', e: {node: ''}},
     },
   ],
 };
@@ -116,7 +116,7 @@ describe('serializeModel', () => {
   test('Stringify on an `explore` with no parent nor source explore', async () => {
     const parent_explore = new Explore(PARENT_EXPLORE);
     expect(JSON.stringify(parent_explore)).toStrictEqual(
-      '{"_structDef":{"type":"struct","name":"some_ns.parent","as":"parent","dialect":"standardsql","structSource":{"type":"table","tablePath":"some_ns.parent"},"structRelationship":{"type":"basetable","connectionName":"bigquery"},"primaryKey":"id2","fields":[{"type":"string","name":"name"},{"type":"number","name":"some_parent_count","expressionType":"aggregate","e":[{"type":"aggregate","function":"count","e":[]}]}]}}'
+      '{"_structDef":{"type":"struct","name":"some_ns.parent","as":"parent","dialect":"standardsql","structSource":{"type":"table","tablePath":"some_ns.parent"},"structRelationship":{"type":"basetable","connectionName":"bigquery"},"primaryKey":"id2","fields":[{"type":"string","name":"name"},{"type":"number","name":"some_parent_count","expressionType":"aggregate","e":{"node":"aggregate","function":"count","e":{"node":""}}}]}}'
     );
   });
 

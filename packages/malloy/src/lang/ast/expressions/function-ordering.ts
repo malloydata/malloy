@@ -47,7 +47,7 @@ export class FunctionOrderBy extends MalloyElement {
       this.log(
         'analytic `order_by` must specify an aggregate expression or output field reference'
       );
-      return {e: ['error'], dir: this.dir};
+      return {node: 'functionOrderBy', e: {node: 'error'}, dir: this.dir};
     }
     const expr = this.field.getExpression(fs);
     if (expressionIsAggregate(expr.expressionType)) {
@@ -64,7 +64,7 @@ export class FunctionOrderBy extends MalloyElement {
     } else {
       this.field.log('analytic `order_by` must be scalar or aggregate');
     }
-    return {e: expr.value, dir: this.dir};
+    return {node: 'functionOrderBy', e: expr.value, dir: this.dir};
   }
 
   getAggregateOrderBy(
@@ -81,14 +81,14 @@ export class FunctionOrderBy extends MalloyElement {
           '`order_by` must be only `asc` or `desc` with no expression'
         );
       }
-      return {e: expr.value, dir: this.dir};
+      return {node: 'functionOrderBy', e: expr.value, dir: this.dir};
     } else {
       if (this.dir === undefined) {
         // This error should technically never happen because it can't parse this way
         this.log('field or order direction must be specified');
-        return {e: undefined, dir: 'asc'};
+        return {node: 'functionDefaultOrderBy', dir: 'asc'};
       }
-      return {e: undefined, dir: this.dir};
+      return {node: 'functionDefaultOrderBy', dir: this.dir};
     }
   }
 }

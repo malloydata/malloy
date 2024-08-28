@@ -26,7 +26,6 @@ import {castTo} from '../time-utils';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
-import {compressExpr} from './utils';
 
 export class ExprCast extends ExpressionDef {
   elementType = 'cast';
@@ -62,9 +61,7 @@ export class ExprCast extends ExpressionDef {
     return {
       dataType,
       expressionType: expr.expressionType,
-      value: compressExpr(
-        castTo(this.castType, expr.value, expr.dataType, this.safe)
-      ),
+      value: castTo(this.castType, expr.value, expr.dataType, this.safe),
       evalSpace: expr.evalSpace,
     };
   }

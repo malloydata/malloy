@@ -22,7 +22,7 @@
  */
 
 import {
-  FilterExpression,
+  FilterCondition,
   expressionIsCalculation,
 } from '../../../model/malloy_types';
 import {errorFor} from '../ast-utils';
@@ -57,7 +57,7 @@ export class ExprProps extends ExpressionDef {
         this.expr.log('Filtered expression requires an aggregate computation');
         return expr;
       }
-      const filterList: FilterExpression[] = [];
+      const filterList: FilterCondition[] = [];
       for (const where of wheres) {
         const testList = where.getFilterList(fs);
         if (
@@ -73,13 +73,10 @@ export class ExprProps extends ExpressionDef {
       if (this.typeCheck(this.expr, {...expr, expressionType: 'scalar'})) {
         return {
           ...expr,
-          value: [
-            {
-              type: 'filterExpression',
-              e: expr.value,
-              filterList,
-            },
-          ],
+          value: {
+            node: 'filteredExpr',
+            kids: {e: expr.value, filterList},
+          },
         };
       }
       this.expr.log(`Cannot filter '${expr.dataType}' data`);

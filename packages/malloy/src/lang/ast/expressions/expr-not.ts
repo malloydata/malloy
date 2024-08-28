@@ -41,7 +41,7 @@ export class ExprNot extends Unary {
     return {
       ...notThis,
       dataType: 'boolean',
-      value: doNot ? nullsafeNot(notThis.value) : ['false'],
+      value: doNot ? nullsafeNot(notThis.value) : {node: 'false'},
     };
   }
 }

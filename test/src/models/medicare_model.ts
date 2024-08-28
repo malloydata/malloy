@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {StructDef} from '@malloydata/malloy';
+import {composeSQLExpr, StructDef} from '@malloydata/malloy';
 import {fToQF} from '../util';
 
 // will it build?
@@ -66,25 +66,27 @@ export const medicareModel: StructDef = {
       type: 'number',
       name: 'count_of_drugs',
       expressionType: 'aggregate',
-      e: [{type: 'aggregate', function: 'count', e: []}],
+      e: {node: 'aggregate', function: 'count', e: {node: ''}},
     },
     {
       type: 'number',
       name: 'provider_count',
       expressionType: 'aggregate',
-      e: ['COUNT(DISTINCT ', {type: 'field', path: ['provider_id']}, ')'],
+      e: composeSQLExpr([
+        'COUNT(DISTINCT ',
+        {node: 'field', path: ['provider_id']},
+        ')',
+      ]),
     },
     {
       type: 'number',
       name: 'total_discharges',
       expressionType: 'aggregate',
-      e: [
-        {
-          type: 'aggregate',
-          function: 'sum',
-          e: [{type: 'field', path: ['discharges']}],
-        },
-      ],
+      e: {
+        node: 'aggregate',
+        function: 'sum',
+        e: {node: 'field', path: ['discharges']},
+      },
     },
 
     {
@@ -235,11 +237,11 @@ export const medicareStateFacts: StructDef = {
               type: 'number',
               name: 'num_providers',
               expressionType: 'aggregate',
-              e: [
+              e: composeSQLExpr([
                 'COUNT(DISTINCT ',
-                {type: 'field', path: ['provider_id']},
+                {node: 'field', path: ['provider_id']},
                 ')',
-              ],
+              ]),
             },
           ]),
           type: 'reduce',

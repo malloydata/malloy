@@ -1273,19 +1273,6 @@ export class MalloyToAST
     throw this.internalError(pcx, `untranslatable comparison operator '${op}'`);
   }
 
-  visitExprCountDisinct(
-    pcx: parse.ExprCountDisinctContext
-  ): ast.ExprCountDistinct {
-    this.m4advisory(
-      pcx,
-      '`count(distinct expression)` deprecated, use `count(expression)` instead'
-    );
-    return this.astAt(
-      new ast.ExprCountDistinct(this.getFieldExpr(pcx.fieldExpr())),
-      pcx
-    );
-  }
-
   visitExprUngroup(pcx: parse.ExprUngroupContext): ast.ExprUngroup {
     const flist = pcx.fieldName().map(fcx => this.getFieldName(fcx));
     const kw = pcx.ungroup().text.toLowerCase();

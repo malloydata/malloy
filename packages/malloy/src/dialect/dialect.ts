@@ -22,16 +22,16 @@
  */
 
 import {
-  DialectFragment,
   Expr,
-  ExtractUnit,
   Sampling,
-  TimeFieldType,
-  TimeValue,
-  TimestampUnit,
-  TypecastFragment,
-  mkExpr,
   FieldAtomicTypeDef,
+  MeasureTimeExpr,
+  TimeTruncExpr,
+  TimeExtractExpr,
+  TimeDeltaExpr,
+  TypecastExpr,
+  RegexMatchExpr,
+  TimeLiteralNode,
 } from '../model/malloy_types';
 import {DialectFunctionOverloadDef} from './functions';
 
@@ -242,51 +242,6 @@ export abstract class Dialect {
   }
   abstract sqlMaybeQuoteIdentifier(identifier: string): string;
 
-  abstract sqlNow(): Expr;
-  abstract sqlTrunc(
-    qi: QueryInfo,
-    sqlTime: TimeValue,
-    units: TimestampUnit
-  ): Expr;
-  abstract sqlExtract(
-    qi: QueryInfo,
-    sqlTime: TimeValue,
-    units: ExtractUnit
-  ): Expr;
-  abstract sqlMeasureTime(
-    from: TimeValue,
-    to: TimeValue,
-    units: TimestampUnit
-  ): Expr;
-
-  abstract sqlAlterTime(
-    op: '+' | '-',
-    expr: TimeValue,
-    n: Expr,
-    timeframe: TimestampUnit
-  ): Expr;
-
-  // BigQuery has some fieldNames that are Pseudo Fields and shouldn't be
-  //  included in projections.
-  ignoreInProject(_fieldName: string): boolean {
-    return false;
-  }
-
-  abstract sqlCast(qi: QueryInfo, cast: TypecastFragment): Expr;
-
-  abstract sqlLiteralTime(
-    qi: QueryInfo,
-    timeString: string,
-    type: TimeFieldType,
-    timezone?: string
-  ): string;
-
-  abstract sqlLiteralString(literal: string): string;
-
-  abstract sqlLiteralRegexp(literal: string): string;
-
-  abstract sqlRegexpMatch(expr: Expr, regex: Expr): Expr;
-
   abstract castToString(expression: string): string;
 
   abstract concat(...values: string[]): string;
@@ -295,45 +250,69 @@ export abstract class Dialect {
     return literal;
   }
 
-  dialectExpr(qi: QueryInfo, df: DialectFragment): Expr {
-    switch (df.function) {
+  // BigQuery has some fieldNames that are Pseudo Fields and shouldn't be
+  //  included in projections.
+  ignoreInProject(_fieldName: string): boolean {
+    return false;
+  }
+
+  abstract sqlNowExpr(): string;
+  abstract sqlTruncExpr(qi: QueryInfo, toTrunc: TimeTruncExpr): string;
+  abstract sqlTimeExtractExpr(qi: QueryInfo, xFrom: TimeExtractExpr): string;
+  abstract sqlMeasureTimeExpr(e: MeasureTimeExpr): string;
+  abstract sqlAlterTimeExpr(df: TimeDeltaExpr): string;
+  abstract sqlCast(qi: QueryInfo, cast: TypecastExpr): string;
+  abstract sqlLiteralTime(qi: QueryInfo, df: TimeLiteralNode): string;
+  abstract sqlLiteralString(literal: string): string;
+  abstract sqlLiteralRegexp(literal: string): string;
+  abstract sqlRegexpMatch(df: RegexMatchExpr): string;
+
+  /**
+   * The dialect has a chance to over-ride how expressions are translated. If
+   * "undefined" is returned then the translation is left to the query translator.
+   *
+   * Any child nodes of the expression will already have been translated, and
+   * the translated value will be in the ".sql" fields for those nodes
+   * @param qi Info from the query containing this expression
+   * @param df The expression being translated
+   * @returns The SQL translation of the expression, or undefined
+   */
+  exprToSQL(qi: QueryInfo, df: Expr): string | undefined {
+    switch (df.node) {
       case 'now':
-        return this.sqlNow();
+        return this.sqlNowExpr();
       case 'timeDiff':
-        return this.sqlMeasureTime(df.left, df.right, df.units);
+        return this.sqlMeasureTimeExpr(df);
       case 'delta':
-        return this.sqlAlterTime(df.op, df.base, df.delta, df.units);
+        return this.sqlAlterTimeExpr(df);
       case 'trunc':
-        return this.sqlTrunc(qi, df.expr, df.units);
+        return this.sqlTruncExpr(qi, df);
       case 'extract':
-        return this.sqlExtract(qi, df.expr, df.units);
+        return this.sqlTimeExtractExpr(qi, df);
       case 'cast':
         return this.sqlCast(qi, df);
       case 'regexpMatch':
-        return this.sqlRegexpMatch(df.expr, df.regexp);
-      case 'div': {
+        return this.sqlRegexpMatch(df);
+      case '/': {
         if (this.divisionIsInteger) {
-          return mkExpr`${df.numerator}*1.0/${df.denominator}`;
+          return `${df.kids.left.sql}*1.0/${df.kids.right.sql}`;
         }
-        return mkExpr`${df.numerator}/${df.denominator}`;
+        return;
       }
-      case 'mod': {
-        if (this.hasModOperator) {
-          return mkExpr`${df.numerator}%${df.denominator}`;
+      case '%': {
+        if (!this.hasModOperator) {
+          return `MOD(${df.kids.left.sql},${df.kids.right.sql})`;
         }
-        return mkExpr`mod(${df.numerator},${df.denominator})`;
+        return;
       }
-      case 'timeLiteral': {
-        return [
-          this.sqlLiteralTime(qi, df.literal, df.literalType, df.timezone),
-        ];
-      }
+      case 'timeLiteral':
+        return this.sqlLiteralTime(qi, df);
       case 'stringLiteral':
-        return [this.sqlLiteralString(df.literal)];
+        return this.sqlLiteralString(df.literal);
       case 'numberLiteral':
-        return [this.sqlLiteralNumber(df.literal)];
+        return this.sqlLiteralNumber(df.literal);
       case 'regexpLiteral':
-        return [this.sqlLiteralRegexp(df.literal)];
+        return this.sqlLiteralRegexp(df.literal);
     }
   }
 

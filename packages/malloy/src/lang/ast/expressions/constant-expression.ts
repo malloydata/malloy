@@ -21,21 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  AtomicFieldType,
-  FieldValueType,
-  StructDef,
-} from '../../../model/malloy_types';
+import {StructDef} from '../../../model/malloy_types';
+import {BinaryMalloyOperator} from '../types/binary_operators';
 
-import {Comparison} from '../types/comparison';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace, QueryFieldSpace} from '../types/field-space';
 import {LookupResult} from '../types/lookup-result';
 import {SpaceEntry} from '../types/space-entry';
-
-import {ExprCompare} from './expr-compare';
-import {compressExpr} from './utils';
 
 export class ConstantFieldSpace implements FieldSpace {
   readonly type = 'fieldSpace';
@@ -65,21 +58,6 @@ export class ConstantFieldSpace implements FieldSpace {
   }
 }
 
-class DollarReference extends ExpressionDef {
-  elementType = '$';
-  constructor(readonly refType: FieldValueType) {
-    super();
-  }
-  getExpression(_fs: FieldSpace): ExprValue {
-    return {
-      dataType: this.refType,
-      value: [{type: 'applyVal'}],
-      expressionType: 'scalar',
-      evalSpace: 'constant',
-    };
-  }
-}
-
 export class ConstantExpression extends ExpressionDef {
   elementType = 'constantExpression';
   private cfs?: ConstantFieldSpace;
@@ -102,17 +80,11 @@ export class ConstantExpression extends ExpressionDef {
     return this.expr.getExpression(this.constantFs);
   }
 
-  constantCondition(type: AtomicFieldType): ExprValue {
-    const compareAndContrast = new ExprCompare(
-      new DollarReference(type),
-      Comparison.EqualTo,
-      this.expr
-    );
-    const application = compareAndContrast.getExpression(this.constantFs);
-    return {...application, value: compressExpr(application.value)};
-  }
-
-  apply(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {
+  apply(
+    fs: FieldSpace,
+    op: BinaryMalloyOperator,
+    expr: ExpressionDef
+  ): ExprValue {
     return this.expr.apply(fs, op, expr);
   }
 

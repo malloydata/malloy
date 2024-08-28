@@ -24,9 +24,9 @@
 import {
   EvalSpace,
   ExpressionType,
-  Fragment,
   maxExpressionType,
   mergeEvalSpaces,
+  PickExpr,
 } from '../../../model/malloy_types';
 
 import {errorFor} from '../ast-utils';
@@ -35,7 +35,6 @@ import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
-import {compressExpr} from './utils';
 
 interface Choice {
   pick: ExprValue;
@@ -80,7 +79,14 @@ export class Pick extends ExpressionDef {
   }
 
   apply(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {
-    const caseValue: Fragment[] = ['CASE'];
+    const caseValue: PickExpr = {
+      node: 'pick',
+      kids: {
+        pickWhen: [],
+        pickThen: [],
+        pickElse: {node: 'error', message: 'pick statement not complete'},
+      },
+    };
     let returnType: ExprValue | undefined;
     let anyExpressionType: ExpressionType = 'scalar';
     let anyEvalSpace: EvalSpace = 'constant';
@@ -106,7 +112,8 @@ export class Pick extends ExpressionDef {
         return errorFor('pick when type');
       }
       returnType = typeCoalesce(returnType, thenExpr);
-      caseValue.push(' WHEN ', ...whenExpr.value, ' THEN ', ...thenExpr.value);
+      caseValue.kids.pickWhen.push(whenExpr.value);
+      caseValue.kids.pickThen.push(thenExpr.value);
     }
     const elsePart = this.elsePick || expr;
     const elseVal = elsePart.getExpression(fs);
@@ -120,6 +127,7 @@ export class Pick extends ExpressionDef {
       );
       return errorFor('pick else type');
     }
+    caseValue.kids.pickElse = elseVal.value;
     return {
       dataType: returnType.dataType,
       expressionType: maxExpressionType(
@@ -127,11 +135,19 @@ export class Pick extends ExpressionDef {
         elseVal.expressionType
       ),
       evalSpace: mergeEvalSpaces(anyEvalSpace, elseVal.evalSpace),
-      value: compressExpr([...caseValue, ' ELSE ', ...elseVal.value, ' END']),
+      value: caseValue,
     };
   }
 
   getExpression(fs: FieldSpace): ExprValue {
+    const pick: PickExpr = {
+      node: 'pick',
+      kids: {
+        pickWhen: [],
+        pickThen: [],
+        pickElse: {node: 'error', message: 'pick statement not complete'},
+      },
+    };
     if (this.elsePick === undefined) {
       this.log("pick incomplete, missing 'else'");
       return errorFor('no value for partial pick');
@@ -154,7 +170,6 @@ export class Pick extends ExpressionDef {
       });
     }
     let returnType: ExprValue | undefined;
-    const caseValue: Fragment[] = ['CASE'];
     let anyExpressionType: ExpressionType = 'scalar';
     let anyEvalSpace: EvalSpace = 'constant';
     for (const aChoice of choiceValues) {
@@ -184,12 +199,8 @@ export class Pick extends ExpressionDef {
         aChoice.pick.evalSpace,
         aChoice.when.evalSpace
       );
-      caseValue.push(
-        ' WHEN ',
-        ...aChoice.when.value,
-        ' THEN ',
-        ...aChoice.pick.value
-      );
+      pick.kids.pickWhen.push(aChoice.when.value);
+      pick.kids.pickThen.push(aChoice.pick.value);
     }
     const defVal = this.elsePick.getExpression(fs);
     anyExpressionType = maxExpressionType(
@@ -206,11 +217,11 @@ export class Pick extends ExpressionDef {
       );
       return errorFor('pick value type mismatch');
     }
-    caseValue.push(' ELSE ', ...defVal.value, ' END');
+    pick.kids.pickElse = defVal.value;
     return {
       dataType: returnType.dataType,
       expressionType: anyExpressionType,
-      value: compressExpr(caseValue),
+      value: pick,
       evalSpace: anyEvalSpace,
     };
   }

@@ -24,10 +24,9 @@
 import {
   expressionIsAggregate,
   expressionIsAnalytic,
-  FilterExpression,
+  FilterCondition,
 } from '../../../model/malloy_types';
 
-import {compressExpr} from '../expressions/utils';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 import {ListOf, MalloyElement} from '../types/malloy-element';
@@ -45,19 +44,21 @@ export class FilterElement extends MalloyElement {
     super({expr: expr});
   }
 
-  filterExpression(fs: FieldSpace): FilterExpression {
+  filterCondition(fs: FieldSpace): FilterCondition {
     const exprVal = this.expr.getExpression(fs);
     if (exprVal.dataType !== 'boolean') {
       this.expr.log('Filter expression must have boolean value');
       return {
+        node: 'filterCondition',
         code: this.exprSrc,
-        expression: ['_FILTER_MUST_RETURN_BOOLEAN_'],
+        e: {node: 'false'},
         expressionType: 'scalar',
       };
     }
-    const exprCond: FilterExpression = {
+    const exprCond: FilterCondition = {
+      node: 'filterCondition',
       code: this.exprSrc,
-      expression: compressExpr(exprVal.value),
+      e: exprVal.value,
       expressionType: exprVal.expressionType,
     };
     return exprCond;
@@ -81,10 +82,10 @@ export class Filter
       : LegalRefinementStage.Head;
   }
 
-  getFilterList(fs: FieldSpace): FilterExpression[] {
-    const checked: FilterExpression[] = [];
+  getFilterList(fs: FieldSpace): FilterCondition[] {
+    const checked: FilterCondition[] = [];
     for (const oneElement of this.list) {
-      const fExpr = oneElement.filterExpression(fs);
+      const fExpr = oneElement.filterCondition(fs);
 
       // mtoy todo is having we never set then queryRefinementStage might be wrong
       // ... calculations and aggregations must go last

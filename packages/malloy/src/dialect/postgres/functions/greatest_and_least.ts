@@ -28,9 +28,9 @@ import {
   params,
   minScalar,
   anyExprType,
-  sqlFragment,
   DialectFunctionOverloadDef,
   spread,
+  sql,
 } from '../../functions/util';
 
 const types: ExpressionValueType[] = [
@@ -49,15 +49,9 @@ function greatestOrLeast(
       minScalar(type),
       [params('values', anyExprType(type))],
       // We match BigQuery null behavior here -- if any argument is null, return null
-      [
-        sqlFragment(
-          'CASE WHEN NUM_NULLS(',
-          spread(arg('values')),
-          `) > 0 THEN NULL ELSE ${fn}(`,
-          spread(arg('values')),
-          ') END'
-        ),
-      ]
+      sql`CASE WHEN NUM_NULLS(${spread(
+        arg('values')
+      )}) > 0 THEN NULL ELSE ${fn}(${spread(arg('values'))}) END`
     )
   );
 }

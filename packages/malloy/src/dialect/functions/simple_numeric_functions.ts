@@ -28,7 +28,7 @@ import {
   minScalar,
   anyExprType,
   DialectFunctionOverloadDef,
-  sqlFragment,
+  sql,
 } from './util';
 
 export function simple(fn: string): DialectFunctionOverloadDef[] {
@@ -36,7 +36,7 @@ export function simple(fn: string): DialectFunctionOverloadDef[] {
     overload(
       minScalar('number'),
       [param('value', anyExprType('number'))],
-      [sqlFragment(`${fn}(`, arg('value'), ')')]
+      sql`${fn}(${arg('value')})`
     ),
   ];
 }

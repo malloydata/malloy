@@ -27,7 +27,7 @@ import {
   TimeFieldType,
   TimestampUnit,
   isTimeFieldType,
-  TimeLiteralFragment,
+  TimeLiteralNode,
 } from '../../../model/malloy_types';
 
 import {ExprValue} from '../types/expr-value';
@@ -36,6 +36,7 @@ import {Range} from './range';
 import {ExprTime} from './expr-time';
 import {ExpressionDef, getMorphicValue} from '../types/expression-def';
 import {TimeResult} from '../types/time-result';
+import {BinaryMalloyOperator} from '../types/binary_operators';
 
 export class TimeFormatError extends Error {}
 
@@ -90,12 +91,11 @@ abstract class TimeLiteral extends ExpressionDef {
     }
   }
 
-  protected makeLiteral(val: string, typ: TimeFieldType): TimeLiteralFragment {
-    const timeFrag: TimeLiteralFragment = {
-      type: 'dialect',
-      function: 'timeLiteral',
+  protected makeLiteral(val: string, typ: TimeFieldType): TimeLiteralNode {
+    const timeFrag: TimeLiteralNode = {
+      node: 'timeLiteral',
       literal: val,
-      literalType: typ,
+      dataType: typ,
     };
     if (this.timeZone) {
       timeFrag.timezone = this.timeZone;
@@ -106,7 +106,7 @@ abstract class TimeLiteral extends ExpressionDef {
   protected makeValue(val: string, dataType: TimeFieldType): TimeResult {
     const timeFrag = this.makeLiteral(val, dataType);
     const expressionType = 'scalar';
-    const value = [timeFrag];
+    const value = timeFrag;
     if (this.units) {
       return {
         dataType,
@@ -189,7 +189,11 @@ class GranularLiteral extends TimeLiteral {
     super(tm, units, timeType);
   }
 
-  apply(fs: FieldSpace, op: string, left: ExpressionDef): ExprValue {
+  apply(
+    fs: FieldSpace,
+    op: BinaryMalloyOperator,
+    left: ExpressionDef
+  ): ExprValue {
     // We have a chance to write our own range comparison will all constants.
     let rangeStart = this.getExpression(fs);
     let rangeEnd = this.getNext();
@@ -257,17 +261,16 @@ abstract class DateBasedLiteral extends GranularLiteral {
 
   getExpression(_fs: FieldSpace): ExprValue {
     const dateValue = this.makeValue(this.literalPart, 'date');
-    const timestamp = [
-      this.makeLiteral(`${this.literalPart} 00:00:00`, 'timestamp'),
-    ];
+    const timestamp = this.makeLiteral(
+      `${this.literalPart} 00:00:00`,
+      'timestamp'
+    );
     return {...dateValue, morphic: {timestamp}, evalSpace: 'literal'};
   }
 
   getNext(): ExprValue | undefined {
     const dateValue = this.makeValue(this.nextLit, 'date');
-    const timestamp = [
-      this.makeLiteral(`${this.nextLit} 00:00:00`, 'timestamp'),
-    ];
+    const timestamp = this.makeLiteral(`${this.nextLit} 00:00:00`, 'timestamp');
     return {...dateValue, morphic: {timestamp}};
   }
 }

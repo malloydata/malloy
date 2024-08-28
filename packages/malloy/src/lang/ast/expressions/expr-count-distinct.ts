@@ -28,6 +28,6 @@ import {ExpressionDef} from '../types/expression-def';
 export class ExprCountDistinct extends ExprAggregateFunction {
   legalChildTypes = [FT.numberT, FT.stringT, FT.dateT, FT.timestampT];
   constructor(expr: ExpressionDef) {
-    super('count_distinct', expr);
+    super('distinct', expr);
   }
 }

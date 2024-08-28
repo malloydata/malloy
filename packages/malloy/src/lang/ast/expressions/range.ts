@@ -24,10 +24,10 @@
 import {maxExpressionType, mergeEvalSpaces} from '../../../model/malloy_types';
 
 import {errorFor} from '../ast-utils';
+import {BinaryMalloyOperator} from '../types/binary_operators';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
-import {compose} from './utils';
 
 export class Range extends ExpressionDef {
   elementType = 'range';
@@ -38,7 +38,11 @@ export class Range extends ExpressionDef {
     super({first: first, last: last});
   }
 
-  apply(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {
+  apply(
+    fs: FieldSpace,
+    op: BinaryMalloyOperator,
+    expr: ExpressionDef
+  ): ExprValue {
     switch (op) {
       case '=':
       case '!=': {
@@ -54,7 +58,10 @@ export class Range extends ExpressionDef {
             toValue.expressionType
           ),
           evalSpace: mergeEvalSpaces(fromValue.evalSpace, toValue.evalSpace),
-          value: compose(fromValue.value, op2, toValue.value),
+          value: {
+            node: op2,
+            kids: {left: fromValue.value, right: toValue.value},
+          },
         };
       }
 

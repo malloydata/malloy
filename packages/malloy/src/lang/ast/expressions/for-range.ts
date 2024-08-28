@@ -25,6 +25,7 @@ import {maxExpressionType, mergeEvalSpaces} from '../../../model';
 import {errorFor} from '../ast-utils';
 import {FT} from '../fragtype-utils';
 import {castDateToTimestamp, resolution, timeOffset} from '../time-utils';
+import {BinaryMalloyOperator} from '../types/binary_operators';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
@@ -43,7 +44,11 @@ export class ForRange extends ExpressionDef {
     super({from: from, duration: duration, timeframe: timeframe});
   }
 
-  apply(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {
+  apply(
+    fs: FieldSpace,
+    op: BinaryMalloyOperator,
+    expr: ExpressionDef
+  ): ExprValue {
     const startV = this.from.getExpression(fs);
     const checkV = expr.getExpression(fs);
     if (!this.typeCheck(expr, checkV)) {

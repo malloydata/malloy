@@ -35,7 +35,6 @@ export {
   maxScalar,
   sql,
   makeParam,
-  sqlFragment,
   param,
   params,
   literal,
@@ -51,8 +50,6 @@ export type {
 // TODO tighten up exports
 export type {
   QueryDataRow,
-  // Currently needed only by tests
-  Fragment,
   // Needed for DB
   StructDef,
   StructRelationship,
@@ -67,10 +64,8 @@ export type {
   QueryValue,
   FieldTypeDef,
   Expr,
-  DialectFragment,
-  TimeValue,
   // Needed for drills in render
-  FilterExpression,
+  FilterCondition,
   SQLBlock,
   // Used in Composer Demo
   FieldAtomicDef,
@@ -101,7 +96,6 @@ export type {
   DocumentRange,
   DocumentPosition,
   Sampling,
-  TypecastFragment,
   Annotation,
   FieldAtomicTypeDef,
   SQLBlockStructDef,
@@ -112,9 +106,9 @@ export {
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
-  mkExpr,
   expressionIsCalculation,
   indent,
+  composeSQLExpr,
 } from './model';
 export {
   // Needed for tests only

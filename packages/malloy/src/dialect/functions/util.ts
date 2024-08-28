@@ -23,12 +23,13 @@
 
 import {
   FunctionParameterDef,
-  Fragment,
   FieldValueType,
   TypeDesc,
   Expr,
   FunctionParamTypeDesc,
+  GenericSQLExpr,
 } from '../../model/malloy_types';
+import {SQLExprElement} from '../../model/utils';
 
 export interface DialectFunctionOverloadDef {
   // The expression type here is the MINIMUM return type
@@ -43,57 +44,46 @@ export interface DialectFunctionOverloadDef {
   between: {preceding: number | string; following: number | string} | undefined;
 }
 
-export function arg(name: string): Fragment {
-  return {
-    type: 'function_parameter',
-    name,
-  };
+export function arg(name: string): Expr {
+  return {node: 'function_parameter', name};
 }
 
 export function spread(
-  f: Fragment,
+  e: Expr,
   prefix: string | undefined = undefined,
   suffix: string | undefined = undefined
-): Fragment {
-  return {
-    type: 'spread',
-    e: [f],
-    prefix,
-    suffix,
-  };
-}
-
-/**
- * Prefer `sql` when possible.
- */
-export function sqlFragment(...e: Expr): Fragment {
-  return {
-    type: 'sql_expression',
-    e,
-  };
+): Expr {
+  return {node: 'spread', e, prefix, suffix};
 }
 
 export function sql(
   strings: TemplateStringsArray,
-  ...expr: (Fragment | string)[]
+  ...subExprs: SQLExprElement[]
 ): Expr {
-  return [
-    {
-      type: 'sql_expression',
-      e: interpolate<Fragment>([...strings], expr),
-    },
-  ];
-}
-
-function interpolate<T>(outer: T[], inner: T[]): T[] {
-  const result: T[] = [];
-  for (let i = 0; i < outer.length; i++) {
-    result.push(outer[i]);
-    if (i < inner.length) {
-      result.push(inner[i]);
+  const ret: GenericSQLExpr = {
+    node: 'genericSQLExpr',
+    kids: {args: []},
+    src: [],
+  };
+  const safeExprs = [...subExprs];
+  let srcToPush = '';
+  for (const str of strings) {
+    srcToPush += str;
+    const arg = safeExprs.shift();
+    if (arg !== undefined) {
+      if (typeof arg === 'string') {
+        srcToPush += arg;
+      } else {
+        ret.src.push(srcToPush);
+        ret.kids.args.push(arg);
+        srcToPush = '';
+      }
     }
   }
-  return result;
+  if (srcToPush.length > 0) {
+    ret.src.push(srcToPush);
+  }
+  return ret;
 }
 
 export function constant(type: TypeDesc): TypeDesc {
@@ -145,7 +135,7 @@ export function param(
 export function makeParam(
   name: string,
   ...allowedTypes: FunctionParamTypeDesc[]
-): {param: FunctionParameterDef; arg: Fragment} {
+): {param: FunctionParameterDef; arg: Expr} {
   return {param: param(name, ...allowedTypes), arg: arg(name)};
 }
 

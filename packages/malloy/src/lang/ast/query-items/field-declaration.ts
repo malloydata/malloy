@@ -32,7 +32,6 @@ import {
   QueryFieldDef,
 } from '../../../model/malloy_types';
 
-import {compressExpr} from '../expressions/utils';
 import {FT} from '../fragtype-utils';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
@@ -115,7 +114,6 @@ export abstract class AtomicFieldDeclaration
         type: 'error',
       };
     }
-    const compressValue = compressExpr(exprValue.value);
     let retType = exprValue.dataType;
     if (retType === 'null') {
       this.expr.log(
@@ -130,9 +128,7 @@ export abstract class AtomicFieldDeclaration
         type: retType,
         location: this.location,
       };
-      if (compressValue.length > 0) {
-        template.e = compressValue;
-      }
+      template.e = exprValue.value;
       if (exprValue.expressionType) {
         template.expressionType = exprValue.expressionType;
       }
