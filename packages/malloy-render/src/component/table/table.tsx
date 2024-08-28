@@ -555,7 +555,7 @@ const MalloyTableRoot = (_props: {
           )}
         </For>
         <Show when={rowsAreLimited()}>
-          <div class="table-row limit-row">
+          <div class="table-row limit-row table-gutter-left table-gutter-right">
             Limiting nested table to {props.rowLimit} records
           </div>
         </Show>

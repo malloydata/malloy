@@ -68,11 +68,11 @@
   line-height: var(--malloy-render--table-row-height);
   border-top: var(--malloy-render--table-border);
   font-style: italic;
-  padding-left: calc(
+  margin-left: calc(
     var(--malloy-render--table-gutter-size) *
       var(--table-gutter-left-multiplier)
   );
-  padding-right: calc(
+  margin-right: calc(
     var(--malloy-render--table-gutter-size) *
       var(--table-gutter-right-multiplier)
   );
