@@ -60,7 +60,7 @@ export abstract class PostgresBase extends Dialect {
       }
     }
     const extracted = `EXTRACT(${units} FROM ${extractFrom})`;
-    return from.units === 'day_of_week' ? `(${extracted}+1)` : extracted;
+    return from.units === 'day_of_week' ? `mod(${extracted}+1,7)` : extracted;
   }
 
   sqlCast(qi: QueryInfo, cast: TypecastExpr): string {
