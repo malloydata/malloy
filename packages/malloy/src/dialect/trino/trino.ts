@@ -33,6 +33,7 @@ import {
   TypecastExpr,
   RegexMatchExpr,
   MeasureTimeExpr,
+  TimeLiteralNode,
 } from '../../model/malloy_types';
 import {TRINO_FUNCTIONS} from './functions';
 import {DialectFunctionOverloadDef} from '../functions';
@@ -43,6 +44,7 @@ import {
   isDialectFieldStruct,
 } from '../dialect';
 import {PostgresBase} from '../pg_impl';
+import { LiteralTimestamp } from '../../lang/ast';
 
 // These are the units that "TIMESTAMP_ADD" "TIMESTAMP_DIFF" accept
 function timestampMeasureable(units: string): boolean {
@@ -548,6 +550,17 @@ ${indent(sql)}
     // Parentheses, Commas:  NUMERIC(5, 2)
     // Angle Brackets:       ARRAY<INT64>
     return sqlType.match(/^[A-Za-z\s(),<>0-9]*$/) !== null;
+  }
+
+  sqlLiteralTime(qi: QueryInfo, lit: TimeLiteralNode): string {
+    if (lit.dataType === 'date') {
+      return `DATE '${lit.literal}'`;
+    }
+    const tz = lit.timezone || qtz(qi);
+    if (tz) {
+      return `TIMESTAMP '${lit.literal} ${tz}'`;
+    }
+    return `TIMESTAMP '${lit.literal}'`;
   }
 }
 
