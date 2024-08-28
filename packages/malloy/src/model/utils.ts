@@ -155,7 +155,7 @@ export function* exprWalk(
 }
 
 export function exprMap(eNode: Expr, mapFunc: (e: Expr) => Expr): Expr {
-  let mapExpr = eNode;
+  let mapExpr = {...eNode};
   if (exprHasKids(eNode)) {
     const parentNode: ExprWithKids = {...eNode};
     parentNode.kids = {};
@@ -186,30 +186,21 @@ export function composeSQLExpr(from: SQLExprElement[]): GenericSQLExpr {
     src: [],
   };
   // Build the array of alternating strings and expressions
-  let nextUp: 'string' | 'expr' = 'string';
+  let lastWasString = false;
   for (const el of from) {
-    if (nextUp === 'string') {
-      if (typeof el === 'string') {
-        ret.src.push(el);
+    if (typeof el === 'string') {
+      if (lastWasString) {
+        ret.src[ret.src.length - 1] += el;
       } else {
-        // Two expressions in a row get an empty string between them
-        ret.src.push('');
-        ret.kids.args.push(el);
+        ret.src.push(el);
       }
-      nextUp = 'expr';
+      lastWasString = true;
     } else {
-      if (typeof el === 'string') {
-        // Add this string to the previous string, if there was one
-        // and continue to wait for an expression
-        if (ret.src.length === 0) {
-          ret.src[0] = el;
-        } else {
-          ret.src[ret.src.length - 1] += el;
-        }
-        continue;
+      if (!lastWasString) {
+        ret.src.push('');
       }
       ret.kids.args.push(el);
-      nextUp = 'string';
+      lastWasString = false;
     }
   }
   return ret;

@@ -65,16 +65,22 @@ export function sql(
     kids: {args: []},
     src: [],
   };
+  const safeExprs = [...subExprs];
+  let srcToPush = '';
   for (const str of strings) {
-    let srcToPush = str;
-    const arg = subExprs.shift();
-    if (subExprs.length > 0 && arg) {
+    srcToPush += str;
+    const arg = safeExprs.shift();
+    if (arg !== undefined) {
       if (typeof arg === 'string') {
-        srcToPush = srcToPush + arg;
+        srcToPush += arg;
       } else {
+        ret.src.push(srcToPush);
         ret.kids.args.push(arg);
+        srcToPush = '';
       }
     }
+  }
+  if (srcToPush.length > 0) {
     ret.src.push(srcToPush);
   }
   return ret;

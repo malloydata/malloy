@@ -476,7 +476,7 @@ class QueryField extends QueryNode {
     if (overload.dialect[dialect] === undefined) {
       throw new Error(`Function is not defined for '${dialect}' dialect`);
     }
-    return exprMap(overload.dialect[dialect].e, fragment => {
+    const expanded = exprMap(overload.dialect[dialect].e, fragment => {
       if (fragment.node === 'spread') {
         const param = fragment.e;
         if (param.node !== 'function_parameter') {
@@ -511,6 +511,7 @@ class QueryField extends QueryNode {
       }
       return fragment;
     });
+    return expanded;
   }
 
   getFunctionOrderBy(
@@ -1106,16 +1107,10 @@ class QueryField extends QueryNode {
     exprToTranslate: Expr,
     state: GenerateState = new GenerateState()
   ): string {
-    if (exprToTranslate.sql !== undefined) {
-      // Since we clone the nodes before we record the sql,
-      // I don't think this ever happens, but just in case, there
-      // are some weird code paths.
-      return exprToTranslate.sql;
-    }
     // Wrap non leaf sub expressions in parenthesis
     const subExpr = function (qf: QueryField, e: Expr) {
       const sql = qf.exprToSQL(resultSet, context, e, state);
-      if (exprHasKids(e) || exprHasE(e)) {
+      if (exprHasKids(e)) {
         return `(${sql})`;
       }
       return sql;
@@ -1176,6 +1171,12 @@ class QueryField extends QueryNode {
           agg = this.generateAvgFragment(resultSet, context, expr, state);
         } else if (expr.function === 'count') {
           agg = this.generateCountFragment(resultSet, context, expr, state);
+        } else if (
+          expr.function === 'min' ||
+          expr.function === 'max' ||
+          expr.function === 'distinct'
+        ) {
+          agg = this.generateSymmetricFragment(resultSet, context, expr, state);
         } else {
           throw new Error(
             `Internal Error: Unknown aggregate function ${expr.function}`
