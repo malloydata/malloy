@@ -50,15 +50,20 @@ export interface FilteredExpr extends ExprWithKids {
 To add a new node type, make a new interface inheriting from the correct parent,
 and then add that node to `type Expr = |` union;
 
+### dataType?
+
+Not all nodes have a `dataType:`, but for some nodes the dataType is required for translation.
+When defining one of these nodes, the interface should reflect that.
+
 ## Node translation
 
-The basic outline of a node being translated to SQL happens in the class `QueryField` in the method `exprToSQL` ( used to be `generateExpressionFromExpr`)
+The basic outline of a node being translated to SQL happens in the class `QueryField` in the method `exprToSQL` ( used to be called `generateExpressionFromExpr`)
 
-There is a large switch statement which is pretty easy to read which checks for the node type, and then generates the SQL
-for that node type (or dispatches to a method call for that node type). There are a few things things that happen before switch statement, which you should know about.
+There is a `switch()` statement which checks for the node type, and then generates the SQL
+for each node type (or dispatches to a method call for the appropriate node type). There are a few things things that happen before the switch statement, which you should know about.
 
-1) All the child nodes are translated and each child node will have it's translation stored in `.sql`. Thus when translating a node, the translations of the children have already been computed and can be composed into the translated result.
-  * If the child is NOT a leaf node, the `.sql` of the
+1) All the node's children are translated, and each child node will have it's translation stored in `.sql`. Thus when translating a node, the translations of the children have already been computed and can be composed into the translated result.
+  * If a child is NOT a leaf node, the `.sql` of the
     child node will be wrapped in `()` to it should always be safe to simply use the `.sql` without
     adding extra parens.
 2) After the child nodes are translated, before the main siwtch statement in `QueryField`, the dialect is consulted and given a chance to translate the Expr. This is how all dialect specific actions like time and date operations are handled, and how dialect specific actions like modifying the division operator also happen.
@@ -94,7 +99,7 @@ There are some utility functions for working with expression trees.
     for (const expr of exprWalk(e)) {
 ```
 
-`exprWalk(expr, 'pre' | 'post')` returns an iterator which produces a (default pre), pre or post order walk
+`exprWalk(expr, 'pre' | 'post')` returns an iterator which produces a pre or post order (default pre) walk
 of the expression tree one node at a time. `exprWalk` deals with the
 complexities of `ExprE` vs `ExprWithKids` and `kids:` which are
 arrays of `Expr` types.
@@ -107,14 +112,14 @@ by the passed mapping funciton.
 
 ### composeSQLExpr
 
-Used mostly by the function code, but sometimes useful when writing hand built models for tests. The first is very similar to the previous expression type, and array of mixed strings and nodes.
+Used mostly by the function code, but sometimes useful when writing hand built models for tests. For those familiar with the `Fragment[]` era of expressions, the data format is very similar, an array of mixed strings and nodes.
 
 ```TypeScript
 export type SQLExprElement = string | Expr;
 export function composeSQL(SQLExprElement[]): Expr { ...
 ```
 
-`composeSQL(['SOME SQL,', someExpr, ', MORE SQL'])` will concatnate the literal strings and the translated SQL from each expression into a single Expr node which will translate in `exprToSQL` to the concatenation of those strings.
+`composeSQL(['SOME SQL,', someExpr, ', MORE SQL'])` creates an Epxr node which will collect the literal strings and the translated SQL from each expression into an Expr node. `exprToSQL` will expand that node to the concatenation of all the elements.
 
 ### sql``
 
