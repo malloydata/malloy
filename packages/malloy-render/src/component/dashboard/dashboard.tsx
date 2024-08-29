@@ -4,6 +4,7 @@ import {createMemo, For} from 'solid-js';
 import {applyRenderer} from '../apply-renderer';
 import {useResultContext} from '../result-context';
 import {RenderResultMetadata} from '../types';
+import {createVirtualizer, Virtualizer} from '@tanstack/solid-virtual';
 
 function DashboardItem(props: {
   field: Field;
@@ -33,7 +34,7 @@ function DashboardItem(props: {
   );
 }
 
-export function Dashboard(props: {data: DataArray}) {
+export function Dashboard(props: {data: DataArray; scrollEl?: HTMLElement}) {
   const field = () => props.data.field;
 
   const dimensions = () =>
@@ -64,52 +65,86 @@ export function Dashboard(props: {data: DataArray}) {
     return data;
   });
 
+  let scrollEl!: HTMLElement;
+  if (props.scrollEl) scrollEl = props.scrollEl;
+  const virtualizer: Virtualizer<HTMLElement, Element> = createVirtualizer({
+    count: data().length,
+    getScrollElement: () => scrollEl,
+    estimateSize: () => 192,
+  });
+  const items = virtualizer.getVirtualItems();
+
   const resultMetadata = useResultContext();
 
   return (
-    <div class="malloy-dashboard">
-      <For each={data()}>
-        {row => (
-          <div class="dashboard-row">
-            <div class="dashboard-row-header">
-              <div class="dashboard-row-header-dimension-list">
-                <For each={dimensions()}>
-                  {d => (
-                    <div class="dashboard-dimension-wrapper">
-                      <div class="dashboard-dimension-name">{d.name}</div>
-                      <div class="dashboard-dimension-value">
-                        {
-                          applyRenderer({
-                            field: d,
-                            dataColumn: row.cell(d),
-                            tag: d.tagParse().tag,
-                            resultMetadata,
-                          }).renderValue
+    <div
+      class="malloy-dashboard"
+      ref={el => {
+        if (!props.scrollEl) scrollEl = el;
+      }}
+    >
+      <div
+        style={{
+          height: virtualizer.getTotalSize() + 'px',
+          width: '100%',
+          position: 'relative',
+        }}
+      >
+        <div
+          style={{
+            'height': 'fit-content',
+            'width': '100%',
+            'padding-top': `${items![0]?.start ?? 0}px`,
+          }}
+        >
+          <For each={items}>
+            {virtualRow => (
+              <div
+                class="dashboard-row"
+                data-index={virtualRow.index}
+                ref={el => queueMicrotask(() => virtualizer.measureElement(el))}
+              >
+                <div class="dashboard-row-header">
+                  <div class="dashboard-row-header-dimension-list">
+                    <For each={dimensions()}>
+                      {d => (
+                        <div class="dashboard-dimension-wrapper">
+                          <div class="dashboard-dimension-name">{d.name}</div>
+                          <div class="dashboard-dimension-value">
+                            {
+                              applyRenderer({
+                                field: d,
+                                dataColumn: data()[virtualRow.index].cell(d),
+                                tag: d.tagParse().tag,
+                                resultMetadata,
+                              }).renderValue
+                            }
+                          </div>
+                        </div>
+                      )}
+                    </For>
+                  </div>
+                  <div class="dashboard-row-header-separator" />
+                </div>
+                <div class="dashboard-row-body">
+                  <For each={nonDimensions()}>
+                    {field => (
+                      <DashboardItem
+                        field={field}
+                        row={data()[virtualRow.index]}
+                        resultMetadata={resultMetadata}
+                        isMeasure={
+                          field.isAtomicField() && field.sourceWasMeasureLike()
                         }
-                      </div>
-                    </div>
-                  )}
-                </For>
+                      />
+                    )}
+                  </For>
+                </div>
               </div>
-              <div class="dashboard-row-header-separator" />
-            </div>
-            <div class="dashboard-row-body">
-              <For each={nonDimensions()}>
-                {field => (
-                  <DashboardItem
-                    field={field}
-                    row={row}
-                    resultMetadata={resultMetadata}
-                    isMeasure={
-                      field.isAtomicField() && field.sourceWasMeasureLike()
-                    }
-                  />
-                )}
-              </For>
-            </div>
-          </div>
-        )}
-      </For>
+            )}
+          </For>
+        </div>
+      </div>
     </div>
   );
 }

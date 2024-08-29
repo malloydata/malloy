@@ -21,8 +21,6 @@
   },
   "scripts": {
     "bundle_renderer": "node src/bundle/esbuild_bundler.js",
-    "lint": "eslint '**/*.ts{,x}'",
-    "lint-fix": "eslint '**/*.ts{,x}' --fix",
     "test": "jest --config=../../jest.config.js",
     "build": "npm run build-types && npm run build-source && npm run build-webcomponent",
     "clean": "tsc --build --clean",

@@ -80,6 +80,9 @@ export function MalloyRenderInner(props: {
         table: {
           scrollEl: props.scrollEl,
         },
+        dashboard: {
+          scrollEl: props.scrollEl,
+        },
       },
     });
 
