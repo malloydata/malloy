@@ -100,7 +100,8 @@ export function applyRenderer(props: RendererProps) {
       break;
     }
     case 'dashboard': {
-      if (dataColumn.isArray()) renderValue = <Dashboard data={dataColumn} />;
+      if (dataColumn.isArray())
+        renderValue = <Dashboard data={dataColumn} {...propsToPass} />;
       else if (dataColumn.isNull()) renderValue = NULL_SYMBOL;
       else
         throw new Error(

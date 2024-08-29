@@ -518,7 +518,6 @@ const MalloyTableRoot = (_props: {
                   ref={el =>
                     queueMicrotask(() => virtualizer!.measureElement(el))
                   }
-                  style=""
                 >
                   <Show when={virtualRow.index >= 0}>
                     <For each={visibleFields()}>
