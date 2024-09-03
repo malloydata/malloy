@@ -3532,7 +3532,10 @@ function valueToDate(value: Date): Date {
     // which represents the same instant in time, but we don't have the data
     // flow to implement that. This may be a problem at some future day,
     // so here is a comment, for that day.
-    const parsed = DateTime.fromISO(value, {zone: 'UTC'});
+    let parsed = DateTime.fromISO(value, {zone: 'UTC'});
+    if (!parsed.isValid) {
+      parsed = DateTime.fromSQL(value, {zone: 'UTC'});
+    }
     return parsed.toJSDate();
   }
 }
