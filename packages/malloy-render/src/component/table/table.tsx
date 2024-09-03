@@ -436,9 +436,7 @@ const MalloyTableRoot = (_props: {
   });
 
   const getPinnedHeaderRowStyle = () => ({
-    'margin-bottom': `calc(-1 * var(--malloy-render--table-header-cumulative-height-${
-      tableCtx.layout.maxDepth - 1
-    }))`,
+    'margin-bottom': `calc(-1 * (var(--malloy-render--table-header-cumulative-height-${tableCtx.layout.maxDepth}) - var(--malloy-render--table-header-height-0)))`,
   });
 
   return (
