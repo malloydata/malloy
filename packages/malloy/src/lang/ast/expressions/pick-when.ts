@@ -105,10 +105,12 @@ export class Pick extends ExpressionDef {
         thenExpr.evalSpace
       );
       if (returnType && !FT.typeEq(returnType, thenExpr, true)) {
-        const whenType = FT.inspect(thenExpr);
-        this.log(
-          `pick type '${whenType}', expected '${returnType.dataType}'[pick-values-must-match]`
-        );
+        // const whenType = FT.inspect(thenExpr);
+        this.log({
+          code: 'pick-type-mismatch/when-does-not-match',
+          whenType: thenExpr.dataType,
+          returnType: returnType.dataType,
+        });
         return errorFor('pick when type');
       }
       returnType = typeCoalesce(returnType, thenExpr);
@@ -119,12 +121,19 @@ export class Pick extends ExpressionDef {
     const elseVal = elsePart.getExpression(fs);
     returnType = typeCoalesce(returnType, elseVal);
     if (!FT.typeEq(returnType, elseVal, true)) {
-      const errSrc = this.elsePick ? 'else' : 'pick default';
-      this.log(
-        `${errSrc} type '${FT.inspect(elseVal)}', expected '${
-          returnType.dataType
-        }'[pick-values-must-match]`
-      );
+      if (this.elsePick) {
+        this.log({
+          code: 'pick-type-mismatch/else-does-not-match',
+          elseType: elseVal.dataType,
+          returnType: returnType.dataType,
+        });
+      } else {
+        this.log({
+          code: 'pick-type-mismatch/default-does-not-match',
+          defaultType: elseVal.dataType,
+          returnType: returnType.dataType,
+        });
+      }
       return errorFor('pick else type');
     }
     caseValue.kids.pickElse = elseVal.value;
@@ -149,19 +158,19 @@ export class Pick extends ExpressionDef {
       },
     };
     if (this.elsePick === undefined) {
-      this.log("pick incomplete, missing 'else'");
+      this.log({code: 'invalid-pick/missing-else'});
       return errorFor('no value for partial pick');
     }
 
     const choiceValues: Choice[] = [];
     for (const c of this.choices) {
       if (c.pick === undefined) {
-        this.log('pick with no value can only be used with apply');
+        this.log({code: 'invalid-pick/no-value'});
         return errorFor('no value for partial pick');
       }
       const pickWhen = c.when.requestExpression(fs);
       if (pickWhen === undefined) {
-        this.log('pick with partial when can only be used with apply');
+        this.log({code: 'invalid-pick/illegal-partial'});
         return errorFor('partial when');
       }
       choiceValues.push({
@@ -174,16 +183,19 @@ export class Pick extends ExpressionDef {
     let anyEvalSpace: EvalSpace = 'constant';
     for (const aChoice of choiceValues) {
       if (!FT.typeEq(aChoice.when, FT.boolT)) {
-        this.log(
-          `when expression must be boolean, not '${FT.inspect(aChoice.when)}`
-        );
+        this.log({
+          code: 'pick-type-mismatch/when-not-boolean',
+          whenType: aChoice.pick.dataType,
+        });
         return errorFor('pick when type');
       }
       if (returnType && !FT.typeEq(returnType, aChoice.pick, true)) {
-        const whenType = FT.inspect(aChoice.pick);
-        this.log(
-          `pick type '${whenType}', expected '${returnType.dataType}'[pick-values-must-match]`
-        );
+        // const whenType = FT.inspect(aChoice.pick);
+        this.log({
+          code: 'pick-type-mismatch/when-does-not-match',
+          whenType: aChoice.pick.dataType,
+          returnType: returnType.dataType,
+        });
         return errorFor('pick value type');
       }
       returnType = typeCoalesce(returnType, aChoice.pick);
@@ -210,11 +222,11 @@ export class Pick extends ExpressionDef {
     anyEvalSpace = mergeEvalSpaces(anyEvalSpace, defVal.evalSpace);
     returnType = typeCoalesce(returnType, defVal);
     if (!FT.typeEq(returnType, defVal, true)) {
-      this.elsePick.log(
-        `else type '${FT.inspect(defVal)}', expected '${
-          returnType.dataType
-        }'[pick-values-must-match]`
-      );
+      this.elsePick.log({
+        code: 'pick-type-mismatch/else-does-not-match',
+        elseType: defVal.dataType,
+        returnType: returnType.dataType,
+      });
       return errorFor('pick value type mismatch');
     }
     pick.kids.pickElse = defVal.value;

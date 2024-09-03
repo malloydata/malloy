@@ -921,7 +921,9 @@ describe('expressions', () => {
         source: na is a extend { dimension: d is
           pick 7 when true and true
         }
-      `).translationToFailWith("pick incomplete, missing 'else'");
+      `).translationToFailWith({
+        code: 'invalid-pick/missing-else',
+      });
     });
     test('n-ary with mismatch when clauses', () => {
       expect(markSource`

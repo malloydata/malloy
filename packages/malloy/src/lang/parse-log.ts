@@ -22,6 +22,7 @@
  */
 
 import {DocumentLocation} from '../model/malloy_types';
+import {Any as LogMessageData} from './log-message-data-types';
 
 export type LogSeverity = 'error' | 'warn' | 'debug';
 
@@ -29,6 +30,7 @@ export type LogSeverity = 'error' | 'warn' | 'debug';
  * Default severity is "error"
  */
 export interface LogMessage {
+  data: LogMessageData;
   message: string;
   at?: DocumentLocation;
   severity: LogSeverity;
