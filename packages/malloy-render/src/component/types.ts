@@ -40,8 +40,9 @@ export interface RenderResultMetadata {
 
 export type MalloyClickEventPayload = {
   field: Field;
-  displayValue: any;
-  value: any;
+  // TODO: type these later
+  displayValue: unknown;
+  value: unknown;
   fieldPath: string[];
   isHeader: boolean;
   event: MouseEvent;

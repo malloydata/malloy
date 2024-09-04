@@ -35,7 +35,7 @@ const Cell = (props: {
   isHeader?: boolean;
   tableGutterLeft?: boolean;
   tableGutterRight?: boolean;
-  rawValue?: any;
+  rawValue?: unknown;
 }) => {
   const style = () => {
     const layout = useTableContext()!.layout;
