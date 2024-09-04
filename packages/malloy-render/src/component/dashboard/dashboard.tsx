@@ -57,6 +57,19 @@ export function Dashboard(props: {data: DataArray; scrollEl?: HTMLElement}) {
     return [...measureFields, ...otherFields];
   };
 
+  const nonDimensionsGrouped = () => {
+    const group: Field[][] = [[]];
+    for (const f of nonDimensions()) {
+      const {tag} = f.tagParse();
+      if (tag.has('break')) {
+        group.push([]);
+      }
+      const lastGroup = group.at(-1)!;
+      lastGroup.push(f);
+    }
+    return group;
+  };
+
   const data = createMemo(() => {
     const data: DataRecord[] = [];
     for (const row of props.data) {
@@ -126,20 +139,25 @@ export function Dashboard(props: {data: DataArray; scrollEl?: HTMLElement}) {
                   </div>
                   <div class="dashboard-row-header-separator" />
                 </div>
-                <div class="dashboard-row-body">
-                  <For each={nonDimensions()}>
-                    {field => (
-                      <DashboardItem
-                        field={field}
-                        row={data()[virtualRow.index]}
-                        resultMetadata={resultMetadata}
-                        isMeasure={
-                          field.isAtomicField() && field.sourceWasMeasureLike()
-                        }
-                      />
-                    )}
-                  </For>
-                </div>
+                <For each={nonDimensionsGrouped()}>
+                  {group => (
+                    <div class="dashboard-row-body">
+                      <For each={group}>
+                        {field => (
+                          <DashboardItem
+                            field={field}
+                            row={data()[virtualRow.index]}
+                            resultMetadata={resultMetadata}
+                            isMeasure={
+                              field.isAtomicField() &&
+                              field.sourceWasMeasureLike()
+                            }
+                          />
+                        )}
+                      </For>
+                    </div>
+                  )}
+                </For>
               </div>
             )}
           </For>

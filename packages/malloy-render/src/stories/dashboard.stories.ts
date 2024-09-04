@@ -35,3 +35,10 @@ export const DashboardDense = {
     view: 'dash_dense',
   },
 };
+
+export const DashboardWithBreak = {
+  args: {
+    source: 'products',
+    view: 'dash_with_break',
+  },
+};
