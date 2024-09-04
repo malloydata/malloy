@@ -27,12 +27,40 @@ export function renderTime({field, dataColumn}: RendererProps) {
   }
   if (field.isTimestamp()) {
     const value = dataColumn.value as Date;
-    const dateDisplay = getUTCDisplayDate(value);
+    const fullYear = value.getUTCFullYear();
+    const fullMonth = padZeros(value.getUTCMonth() + 1);
+    const fullDate = padZeros(value.getUTCDate());
     const hours = padZeros(value.getUTCHours());
     const minutes = padZeros(value.getUTCMinutes());
     const seconds = padZeros(value.getUTCSeconds());
     const time = `${hours}:${minutes}:${seconds}`;
-    return `${dateDisplay} ${time}`;
+    const dateDisplay = `${fullYear}-${fullMonth}-${fullDate}`;
+    switch (field.timeframe) {
+      case 'minute': {
+        return `${dateDisplay} ${hours}:${minutes}`;
+      }
+      case 'hour': {
+        return `${dateDisplay} ${hours}:00 for 1 hour`;
+      }
+      case 'day': {
+        return `${dateDisplay}`;
+      }
+      case 'week': {
+        return `WK${dateDisplay}`;
+      }
+      case 'month': {
+        return `${fullYear}-${fullMonth}`;
+      }
+      case 'quarter': {
+        return `${fullYear}-Q${Math.floor(value.getUTCMonth() / 3) + 1}`;
+      }
+      case 'year': {
+        return value.getUTCFullYear();
+      }
+      default: {
+        return `${dateDisplay} ${time}`;
+      }
+    }
   }
   return '';
 }
