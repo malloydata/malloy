@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Expr, QuerySegment} from '../../model';
+import {Expr} from '../../model';
 import {
   expr,
   TestTranslator,
@@ -29,7 +29,6 @@ import {
   BetaExpression,
   model,
   makeModelFunc,
-  getQueryField,
   getQueryFieldDef,
 } from './test-translator';
 import './parse-expects';
