@@ -248,6 +248,13 @@ sqExpr
   | sqExpr EXTEND exploreProperties           # SQExtendedSource
   | exploreTable                              # SQTable
   | sqlSource                                 # SQSQL
+  | sqExpr exploreProperties {
+    this.notifyErrorListeners(
+      "Missing `extend` between source expression and source extension",
+      this.exploreProperties().start,
+      undefined
+    );
+  }                                           #SQExtendWithoutExtend
   ;
 
 segExpr
