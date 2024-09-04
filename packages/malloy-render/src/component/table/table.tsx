@@ -355,11 +355,13 @@ const MalloyTableRoot = (_props: {
   if (props.scrollEl) scrollEl = props.scrollEl;
   let virtualizer: Virtualizer<HTMLElement, Element> | undefined;
 
+  const [rowEstimate, setRowEstimate] = createSignal(28);
+
   if (tableCtx.root) {
     virtualizer = createVirtualizer({
       count: data().length,
       getScrollElement: () => scrollEl,
-      estimateSize: () => 28,
+      estimateSize: () => rowEstimate(), // need better size estimate
     });
   }
 
@@ -516,7 +518,13 @@ const MalloyTableRoot = (_props: {
                   class="table-row"
                   data-index={virtualRow.index}
                   ref={el =>
-                    queueMicrotask(() => virtualizer!.measureElement(el))
+                    queueMicrotask(() => {
+                      virtualizer!.measureElement(el);
+                      // Use first row size as estimate for all rows
+                      if (virtualRow.index === 0) {
+                        setRowEstimate(el.clientHeight);
+                      }
+                    })
                   }
                 >
                   <Show when={virtualRow.index >= 0}>
