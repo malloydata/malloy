@@ -29,6 +29,7 @@ import {
   BetaExpression,
   model,
   makeModelFunc,
+  getQueryFieldDef,
 } from './test-translator';
 import './parse-expects';
 
@@ -77,26 +78,33 @@ function exprToString(e: Expr, symbols: Record<string, string> = {}): string {
 describe('expressions', () => {
   describe('timeframes', () => {
     const timeframes = [
-      'second',
-      'minute',
-      'hour',
-      'day',
-      'week',
-      'month',
-      'quarter',
-      'year',
+      ['second', 'minute', 'hour', 'day', 'week', 'month', 'quarter', 'year'],
     ];
+    test.each(timeframes)('timestamp truncate %s', unit => {
+      const truncSrc = model`run: a->{select: tts is ats.${unit}}`;
+      expect(truncSrc).toTranslate();
+      const tQuery = truncSrc.translator.getQuery(0);
+      expect(tQuery).toBeDefined();
+      const tField = getQueryFieldDef(tQuery!.pipeline[0], 'tts');
+      expect(tField['timeframe']).toEqual(unit);
+    });
 
-    test.each(timeframes.map(x => [x]))('truncate %s', unit => {
-      expect(new BetaExpression(`ats.${unit}`)).toParse();
+    const dateTF = [['week', 'month', 'quarter', 'year']];
+    test.each(dateTF)('date truncate %s', unit => {
+      const truncSrc = model`run: a->{select: td is ad.${unit}}`;
+      expect(truncSrc).toTranslate();
+      const tQuery = truncSrc.translator.getQuery(0);
+      expect(tQuery).toBeDefined();
+      const tField = getQueryFieldDef(tQuery!.pipeline[0], 'td');
+      expect(tField['timeframe']).toEqual(unit);
     });
 
     // mtoy todo units missing: implement, or document
-    const diffable = ['second', 'minute', 'hour', 'day'];
-    test.each(diffable.map(x => [x]))('timestamp difference - %s', unit => {
+    const diffable = [['second', 'minute', 'hour', 'day']];
+    test.each(diffable)('timestamp difference - %s', unit => {
       expect(new BetaExpression(`${unit}(@2021 to ats)`)).toParse();
     });
-    test.each(diffable.map(x => [x]))('timestamp difference - %s', unit => {
+    test.each(diffable)('timestamp difference - %s', unit => {
       expect(new BetaExpression(`${unit}(ats to @2030)`)).toParse();
     });
   });
