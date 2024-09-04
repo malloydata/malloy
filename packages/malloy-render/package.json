@@ -25,7 +25,7 @@
     "build": "npm run build-types && npm run build-source && npm run build-webcomponent",
     "clean": "tsc --build --clean",
     "prepublishOnly": "npm run build",
-    "storybook": "storybook dev -p 6006",
+    "storybook": "rm -rf ./node_modules/.cache && storybook dev -p 6006",
     "build-storybook": "storybook build",
     "build-source": "vite build --outDir 'dist/module' --config vite.config.ts",
     "build-webcomponent": "vite build --outDir 'dist/webcomponent' --config vite.config.webcomponent.ts && vite build --outDir 'dist/register' --config vite.config.webcomponent-register.ts",

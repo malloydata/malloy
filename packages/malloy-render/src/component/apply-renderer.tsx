@@ -53,96 +53,98 @@ export function applyRenderer(props: RendererProps) {
   const renderAs = shouldRenderAs(field, tag);
   let renderValue: JSXElement = '';
   const propsToPass = customProps[renderAs] || {};
-  switch (renderAs) {
-    case 'cell': {
-      const resultCellValue = dataColumn.value;
-      if (valueIsNumber(field, resultCellValue)) {
-        // TS doesn't support typeguards for multiple parameters, so unfortunately have to assert AtomicField here. https://github.com/microsoft/TypeScript/issues/26916
-        renderValue = renderNumericField(field as AtomicField, resultCellValue);
-      } else if (resultCellValue === null) {
-        renderValue = NULL_SYMBOL;
-      } else if (valueIsString(field, resultCellValue)) {
-        renderValue = resultCellValue;
-      } else if (
-        field.isAtomicField() &&
-        (field.isDate() || field.isTimestamp())
-      ) {
-        renderValue = renderTime(props);
-      } else {
-        // try to force to string
-        renderValue = String(resultCellValue);
+  if (dataColumn.isNull()) {
+    renderValue = NULL_SYMBOL;
+  } else {
+    switch (renderAs) {
+      case 'cell': {
+        const resultCellValue = dataColumn.value;
+        if (valueIsNumber(field, resultCellValue)) {
+          // TS doesn't support typeguards for multiple parameters, so unfortunately have to assert AtomicField here. https://github.com/microsoft/TypeScript/issues/26916
+          renderValue = renderNumericField(
+            field as AtomicField,
+            resultCellValue
+          );
+        } else if (valueIsString(field, resultCellValue)) {
+          renderValue = resultCellValue;
+        } else if (
+          field.isAtomicField() &&
+          (field.isDate() || field.isTimestamp())
+        ) {
+          renderValue = renderTime(props);
+        } else {
+          // try to force to string
+          renderValue = String(resultCellValue);
+        }
+        break;
       }
-      break;
-    }
-    case 'link': {
-      // renderAs will only return link for AtomicFields. TODO: add additional typeguard here?
-      renderValue = renderLink(field as AtomicField, dataColumn);
-      break;
-    }
-    case 'list': {
-      // TODO: typeguard here?
-      renderValue = renderList(props);
-      break;
-    }
-    case 'image': {
-      renderValue = renderImage(props);
-      break;
-    }
-    case 'chart': {
-      renderValue = (
-        <Chart
-          field={field as ExploreField}
-          data={resultMetadata.getData(dataColumn)}
-          metadata={resultMetadata}
-          {...propsToPass}
-        />
-      );
-      break;
-    }
-    case 'dashboard': {
-      if (dataColumn.isArray())
-        renderValue = <Dashboard data={dataColumn} {...propsToPass} />;
-      else if (dataColumn.isNull()) renderValue = NULL_SYMBOL;
-      else
-        throw new Error(
-          `Malloy render: wrong data type passed to the dashboard renderer for field ${dataColumn.field.name}`
-        );
-      break;
-    }
-    case 'line_chart':
-    case 'scatter_chart':
-    case 'shape_map':
-    case 'segment_map': {
-      if (dataColumn.isArray())
-        renderValue = <LegacyChart type={renderAs} data={dataColumn} />;
-      else if (dataColumn.isNull()) renderValue = NULL_SYMBOL;
-      else
-        throw new Error(
-          `Malloy render: wrong data type passed to the ${renderAs} renderer for field ${dataColumn.field.name}`
-        );
-      break;
-    }
-    case 'table': {
-      if (dataColumn.isArrayOrRecord())
+      case 'link': {
+        // renderAs will only return link for AtomicFields. TODO: add additional typeguard here?
+        renderValue = renderLink(field as AtomicField, dataColumn);
+        break;
+      }
+      case 'list': {
+        // TODO: typeguard here?
+        renderValue = renderList(props);
+        break;
+      }
+      case 'image': {
+        renderValue = renderImage(props);
+        break;
+      }
+      case 'chart': {
         renderValue = (
-          <MalloyTable
-            data={dataColumn as DataArrayOrRecord}
+          <Chart
+            field={field as ExploreField}
+            data={resultMetadata.getData(dataColumn)}
+            metadata={resultMetadata}
             {...propsToPass}
           />
         );
-      else if (dataColumn.isNull()) renderValue = NULL_SYMBOL;
-      else
-        throw new Error(
-          `Malloy render: wrong data type passed to the table renderer for field ${dataColumn.field.name}`
-        );
-      break;
-    }
-    default: {
-      try {
-        renderValue = String(dataColumn.value);
-      } catch (err) {
-        // eslint-disable-next-line no-console
-        console.warn('Couldnt get value for ', field, dataColumn);
+        break;
+      }
+      case 'dashboard': {
+        if (dataColumn.isArray())
+          renderValue = <Dashboard data={dataColumn} {...propsToPass} />;
+        else
+          throw new Error(
+            `Malloy render: wrong data type passed to the dashboard renderer for field ${dataColumn.field.name}`
+          );
+        break;
+      }
+      case 'line_chart':
+      case 'scatter_chart':
+      case 'shape_map':
+      case 'segment_map': {
+        if (dataColumn.isArray())
+          renderValue = <LegacyChart type={renderAs} data={dataColumn} />;
+        else
+          throw new Error(
+            `Malloy render: wrong data type passed to the ${renderAs} renderer for field ${dataColumn.field.name}`
+          );
+        break;
+      }
+      case 'table': {
+        if (dataColumn.isArrayOrRecord())
+          renderValue = (
+            <MalloyTable
+              data={dataColumn as DataArrayOrRecord}
+              {...propsToPass}
+            />
+          );
+        else
+          throw new Error(
+            `Malloy render: wrong data type passed to the table renderer for field ${dataColumn.field.name}`
+          );
+        break;
+      }
+      default: {
+        try {
+          renderValue = String(dataColumn.value);
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.warn('Couldnt get value for ', field, dataColumn);
+        }
       }
     }
   }
