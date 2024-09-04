@@ -21,6 +21,7 @@ import {applyRenderer, shouldRenderAs} from '../apply-renderer';
 import {isFieldHidden} from '../../tags_utils';
 import {createStore, produce} from 'solid-js/store';
 import {createVirtualizer, Virtualizer} from '@tanstack/solid-virtual';
+import {useConfig} from '../render';
 
 const IS_CHROMIUM = navigator.userAgent.toLowerCase().indexOf('chrome') >= 0;
 // CSS Subgrid + Sticky Positioning only seems to work reliably in Chrome
@@ -34,6 +35,7 @@ const Cell = (props: {
   isHeader?: boolean;
   tableGutterLeft?: boolean;
   tableGutterRight?: boolean;
+  rawValue?: unknown;
 }) => {
   const style = () => {
     const layout = useTableContext()!.layout;
@@ -53,6 +55,24 @@ const Cell = (props: {
     return style;
   };
 
+  const config = useConfig();
+  const handleClick = (evt: MouseEvent) => {
+    if (config.onClick)
+      config.onClick({
+        field: props.field,
+        displayValue: props.isHeader
+          ? props.rawValue
+          : typeof props.value !== 'function'
+          ? props.value
+          : null,
+        value: typeof props.rawValue !== 'function' ? props.rawValue : null,
+        fieldPath: props.field.fieldPath,
+        isHeader: !!props.isHeader,
+        event: evt,
+        type: 'table-cell',
+      });
+  };
+
   return (
     <div
       class="cell-content"
@@ -65,6 +85,7 @@ const Cell = (props: {
       }}
       style={style()}
       title={typeof props.value === 'string' ? props.value : ''}
+      onClick={config.onClick ? handleClick : undefined}
     >
       {props.value}
     </div>
@@ -123,6 +144,7 @@ const HeaderField = (props: {field: Field; isPinned?: boolean}) => {
         tableGutterLeft={tableGutterLeft}
         tableGutterRight={tableGutterRight}
         isHeader
+        rawValue={props.field.name}
       />
     </div>
   );
@@ -183,6 +205,7 @@ const TableField = (props: {field: Field; row: DataRecord}) => {
             hideEndGutter={isLastChild(props.field)}
             tableGutterLeft={tableGutterLeft}
             tableGutterRight={tableGutterRight}
+            rawValue={props.row.cell(props.field).value}
           />
         </Match>
       </Switch>
@@ -194,6 +217,7 @@ const MalloyTableRoot = (_props: {
   data: DataArrayOrRecord;
   rowLimit?: number;
   scrollEl?: HTMLElement;
+  disableVirtualization?: boolean;
 }) => {
   const props = mergeProps({rowLimit: Infinity}, _props);
   const tableCtx = useTableContext()!;
@@ -357,7 +381,9 @@ const MalloyTableRoot = (_props: {
 
   const [rowEstimate, setRowEstimate] = createSignal(28);
 
-  if (tableCtx.root) {
+  const shouldVirtualize = tableCtx.root && !props.disableVirtualization;
+
+  if (shouldVirtualize) {
     virtualizer = createVirtualizer({
       count: data().length,
       getScrollElement: () => scrollEl,
@@ -488,18 +514,14 @@ const MalloyTableRoot = (_props: {
         </div>
       </Show>
       {/* virtualized table */}
-      <Show when={tableCtx.root}>
+      <Show when={shouldVirtualize}>
         <div
           class="table-row"
-          style={
-            tableCtx.root
-              ? {
-                  height: virtualizer!.getTotalSize() + 'px',
-                  width: '100%',
-                  position: 'relative',
-                }
-              : {}
-          }
+          style={{
+            height: virtualizer!.getTotalSize() + 'px',
+            width: '100%',
+            position: 'relative',
+          }}
         >
           {/* second wrapper */}
           <div
@@ -542,13 +564,15 @@ const MalloyTableRoot = (_props: {
         </div>
       </Show>
       {/* non-virtualized table */}
-      <Show when={!tableCtx.root}>
+      <Show when={!shouldVirtualize}>
         {/* header */}
-        <div class="table-row">
-          <For each={visibleFields()}>
-            {field => <HeaderField field={field} />}
-          </For>
-        </div>
+        <Show when={!tableCtx.root}>
+          <div class="table-row">
+            <For each={visibleFields()}>
+              {field => <HeaderField field={field} />}
+            </For>
+          </div>
+        </Show>
         {/* rows */}
         <For each={data()}>
           {row => (
@@ -573,6 +597,7 @@ const MalloyTable: Component<{
   data: DataArrayOrRecord;
   rowLimit?: number;
   scrollEl?: HTMLElement;
+  disableVirtualization?: boolean;
 }> = props => {
   const metadata = useResultContext();
   const hasTableCtx = !!useTableContext();
