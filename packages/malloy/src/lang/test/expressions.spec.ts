@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Expr} from '../../model';
+import {Expr, exprIsLeaf} from '../../model';
 import {
   expr,
   TestTranslator,
@@ -38,6 +38,10 @@ import './parse-expects';
  * a much better expression matcher.
  */
 function exprToString(e: Expr, symbols: Record<string, string> = {}): string {
+  function subExpr(e: Expr): string {
+    const x = exprToString(e, symbols);
+    return x[0] === '{' || exprIsLeaf(e) ? x : `(${x})`;
+  }
   switch (e.node) {
     case '=':
     case '>':
@@ -49,16 +53,12 @@ function exprToString(e: Expr, symbols: Record<string, string> = {}): string {
     case '*':
     case '/':
     case '%':
-      return `${exprToString(e.kids.left, symbols)}${e.node}${exprToString(
-        e.kids.right,
-        symbols
-      )}`;
+      return `${subExpr(e.kids.left)}${e.node}${subExpr(e.kids.right)}`;
     case 'and':
+    case 'like':
+    case '!like':
     case 'or':
-      return `(${exprToString(e.kids.left, symbols)})${e.node}(${exprToString(
-        e.kids.right,
-        symbols
-      )})`;
+      return `${subExpr(e.kids.left)} ${e.node} ${subExpr(e.kids.right)}`;
     case 'field': {
       const ref = e.path.join('.');
       if (symbols[ref] === undefined) {
@@ -68,9 +68,11 @@ function exprToString(e: Expr, symbols: Record<string, string> = {}): string {
       return symbols[ref];
     }
     case '()':
-      return `(${exprToString(e.e, symbols)})`;
+      return `(${subExpr(e.e)})`;
     case 'not':
       return `not(${exprToString(e.e, symbols)})`;
+    case 'coalesce':
+      return `${subExpr(e.kids.left)} ?? ${subExpr(e.kids.right)}`;
   }
   return `{${e.node}}`;
 }
@@ -222,14 +224,16 @@ describe('expressions', () => {
       const compare = expr`ad ? ad.quarter`;
       expect(compare).toTranslate();
       const compare_expr = compare.translator.generated().value;
-      expect(exprToString(compare_expr)).toEqual('(A>={trunc})and(A<{delta})');
+      expect(exprToString(compare_expr)).toEqual(
+        '(A>={trunc}) and (A<{delta})'
+      );
     });
     test('apply granular-literal alternation uses all literals for range', () => {
       const compare = expr`ad ? @2020 | @2022`;
       expect(compare).toTranslate();
       const compare_expr = compare.translator.generated().value;
       expect(exprToString(compare_expr)).toEqual(
-        '((A>={timeLiteral})and(A<{timeLiteral}))or((A>={timeLiteral})and(A<{timeLiteral}))'
+        '((A>={timeLiteral}) and (A<{timeLiteral})) or ((A>={timeLiteral}) and (A<{timeLiteral}))'
       );
     });
     // this should use range, but it uses = and alternations are
@@ -258,6 +262,35 @@ describe('expressions', () => {
     });
     test('apply with parens', () => {
       expect(expr`ai ? (> 1 & < 100)`).toTranslate();
+    });
+    test('is null with warning', () => {
+      const warnSrc = expr`ai is null`;
+      expect(warnSrc).toTranslateWithWarnings(
+        "Use '= NULL' instead of 'IS NULL'"
+      );
+      const x = warnSrc.translator.generated().value;
+      expect(exprToString(x)).toEqual('{is-null}');
+    });
+    test('is not null with warning', () => {
+      const warnSrc = expr`ai is not null`;
+      expect(warnSrc).toTranslateWithWarnings(
+        "Use '!= NULL' instead of 'IS NOT NULL'"
+      );
+      const x = warnSrc.translator.generated().value;
+      expect(exprToString(x)).toEqual('{is-not-null}');
+    });
+    test('like with warning', () => {
+      const warnSrc = expr`astr like 'a'`;
+      expect(warnSrc).toTranslateWithWarnings("Use '~' instead of 'LIKE'");
+      const x = warnSrc.translator.generated().value;
+      expect(exprToString(x)).toEqual('A like {stringLiteral}');
+    });
+    test('NOT LIKE with warning', () => {
+      const warnSrc = expr`astr not like 'a'`;
+      expect(warnSrc).toTranslateWithWarnings("Use '!~' instead of 'NOT LIKE'");
+      const x = warnSrc.translator.generated().value;
+      // null safe not makes this weirder
+      expect(exprToString(x)).toEqual('A !like {stringLiteral}');
     });
   });
 
@@ -976,7 +1009,7 @@ describe('expressions', () => {
     const exprVal = one34.translator.generated();
     const exprE = exprVal.value;
     expect(exprToString(exprE)).toEqual(
-      '{numberLiteral}+({numberLiteral}/{numberLiteral})'
+      '{numberLiteral}+(({numberLiteral}/{numberLiteral}))'
     );
   });
   test.each([

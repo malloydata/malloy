@@ -1791,4 +1791,37 @@ export class MalloyToAST
       pcx
     );
   }
+
+  visitExprWarnLike(pcx: parse.ExprWarnLikeContext): ast.ExprCompare {
+    let op: ast.CompareMalloyOperator = '~';
+    if (pcx.NOT()) {
+      op = '!~';
+      this.contextError(pcx, "Use '!~' instead of 'NOT LIKE'", 'warn');
+    } else {
+      this.contextError(pcx, "Use '~' instead of 'LIKE'", 'warn');
+    }
+    return this.astAt(
+      new ast.ExprCompare(
+        this.getFieldExpr(pcx.fieldExpr(0)),
+        op,
+        this.getFieldExpr(pcx.fieldExpr(1))
+      ),
+      pcx
+    );
+  }
+
+  visitExprWarnNullCmp(pcx: parse.ExprWarnNullCmpContext): ast.ExprCompare {
+    let op: ast.CompareMalloyOperator = '=';
+    if (pcx.NOT()) {
+      op = '!=';
+      this.contextError(pcx, "Use '!= NULL' instead of 'IS NOT NULL'", 'warn');
+    } else {
+      this.contextError(pcx, "Use '= NULL' instead of 'IS NULL'", 'warn');
+    }
+    const nullExpr = new ast.ExprNULL();
+    return this.astAt(
+      new ast.ExprCompare(this.getFieldExpr(pcx.fieldExpr()), op, nullExpr),
+      pcx
+    );
+  }
 }

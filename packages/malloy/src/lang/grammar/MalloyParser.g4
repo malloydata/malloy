@@ -550,6 +550,8 @@ fieldExpr
   | fieldExpr AMPER partialAllowedFieldExpr                # exprAndTree
   | fieldExpr BAR partialAllowedFieldExpr                  # exprOrTree
   | fieldExpr compareOp fieldExpr                          # exprCompare
+  | fieldExpr NOT? LIKE fieldExpr                          # exprWarnLike
+  | fieldExpr IS NOT? NULL                                 # exprWarnNullCmp
   | fieldExpr QMARK partialAllowedFieldExpr                # exprApply
   | NOT fieldExpr                                          # exprNot
   | fieldExpr AND fieldExpr                                # exprLogicalAnd
