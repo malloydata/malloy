@@ -136,10 +136,9 @@ export abstract class AtomicFieldDeclaration
       if (this.exprSrc) {
         template.code = this.exprSrc;
       }
-      // TODO this should work for dates too
       if (
-        (isGranularResult(exprValue) && template.type === 'timestamp') ||
-        template.type === 'date'
+        isGranularResult(exprValue) &&
+        (template.type === 'timestamp' || template.type === 'date')
       ) {
         template.timeframe = exprValue.timeframe;
       }
