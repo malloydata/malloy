@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Explore, ExploreField, Field} from '@malloydata/malloy';
+import {Explore, ExploreField, Field, Tag} from '@malloydata/malloy';
 import {scale, locale} from 'vega';
 import {getFieldKey, getTextWidth} from './util';
 import {RenderResultMetadata} from './types';
@@ -74,7 +74,8 @@ const ROW_HEIGHT = 28;
 
 export function getChartSettings(
   field: Explore | ExploreField,
-  metadata: RenderResultMetadata
+  metadata: RenderResultMetadata,
+  chartTag: Tag
 ): ChartSettings {
   // TODO: improve logic for field extraction
   const xField = field.allFields.at(0)!;
@@ -188,7 +189,7 @@ export function getChartSettings(
       hidden: isSpark,
     },
     yScale: {
-      domain: yDomain,
+      domain: chartTag.has('y', 'independent') ? null : yDomain,
     },
     padding: isSpark
       ? {top: 0, left: 0, bottom: 0, right: 0}

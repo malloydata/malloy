@@ -168,4 +168,22 @@ source: products is duckdb.table("data/products.parquet") extend {
         limit: 5
       }
   }
+
+  view: nested_independent_axis is {
+    group_by: category
+    aggregate: avg_retail is retail_price.avg()
+    # bar_chart
+    nest: top_brands is {
+      group_by: brand
+      aggregate: avg_retail is retail_price.avg()
+      limit: 10
+    }
+    # bar_chart { y.independent }
+    nest: top_brands_independent is {
+      group_by: brand
+      aggregate: avg_retail is retail_price.avg()
+      limit: 10
+    }
+    limit: 5
+  }
 }

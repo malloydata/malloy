@@ -166,6 +166,7 @@ function populateExploreMeta(
     fieldMeta.vegaChartProps = plotToVega(plotSpec, {
       field: f,
       metadata,
+      chartTag: (tag.tag('bar_chart') ?? tag.tag('bar'))!,
     });
   }
 }
