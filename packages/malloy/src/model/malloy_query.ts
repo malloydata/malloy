@@ -1228,7 +1228,7 @@ class QueryField extends QueryNode {
       case '!=': {
         // eslint-disable-next-line no-case-declarations
         const compare = `${expr.kids.left.sql}${expr.node}${expr.kids.right.sql}`;
-        return `COALESCE(${compare},${expr.node === '=' ? 'false' : 'true'}`;
+        return `COALESCE(${compare},${expr.node === '=' ? 'false' : 'true'})`;
       }
       case 'and':
       case 'or':

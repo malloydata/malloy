@@ -266,7 +266,7 @@ describe('expressions', () => {
     test('is null with warning', () => {
       const warnSrc = expr`ai is null`;
       expect(warnSrc).toTranslateWithWarnings(
-        "Use '= NULL' instead of 'IS NULL'"
+        "Use '= NULL' to check for NULL instead of 'IS NULL'"
       );
       const x = warnSrc.translator.generated().value;
       expect(exprToString(x)).toEqual('{is-null}');
@@ -274,20 +274,24 @@ describe('expressions', () => {
     test('is not null with warning', () => {
       const warnSrc = expr`ai is not null`;
       expect(warnSrc).toTranslateWithWarnings(
-        "Use '!= NULL' instead of 'IS NOT NULL'"
+        "Use '!= NULL' to check for NULL instead of 'IS NOT NULL'"
       );
       const x = warnSrc.translator.generated().value;
       expect(exprToString(x)).toEqual('{is-not-null}');
     });
     test('like with warning', () => {
       const warnSrc = expr`astr like 'a'`;
-      expect(warnSrc).toTranslateWithWarnings("Use '~' instead of 'LIKE'");
+      expect(warnSrc).toTranslateWithWarnings(
+        "Use Malloy operator '~' instead of 'LIKE'"
+      );
       const x = warnSrc.translator.generated().value;
       expect(exprToString(x)).toEqual('A like {stringLiteral}');
     });
     test('NOT LIKE with warning', () => {
       const warnSrc = expr`astr not like 'a'`;
-      expect(warnSrc).toTranslateWithWarnings("Use '!~' instead of 'NOT LIKE'");
+      expect(warnSrc).toTranslateWithWarnings(
+        "Use Malloy operator '!~' instead of 'NOT LIKE'"
+      );
       const x = warnSrc.translator.generated().value;
       // null safe not makes this weirder
       expect(exprToString(x)).toEqual('A !like {stringLiteral}');

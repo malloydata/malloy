@@ -1796,9 +1796,17 @@ export class MalloyToAST
     let op: ast.CompareMalloyOperator = '~';
     if (pcx.NOT()) {
       op = '!~';
-      this.contextError(pcx, "Use '!~' instead of 'NOT LIKE'", 'warn');
+      this.contextError(
+        pcx,
+        "Use Malloy operator '!~' instead of 'NOT LIKE'",
+        'warn'
+      );
     } else {
-      this.contextError(pcx, "Use '~' instead of 'LIKE'", 'warn');
+      this.contextError(
+        pcx,
+        "Use Malloy operator '~' instead of 'LIKE'",
+        'warn'
+      );
     }
     return this.astAt(
       new ast.ExprCompare(
@@ -1814,9 +1822,17 @@ export class MalloyToAST
     let op: ast.CompareMalloyOperator = '=';
     if (pcx.NOT()) {
       op = '!=';
-      this.contextError(pcx, "Use '!= NULL' instead of 'IS NOT NULL'", 'warn');
+      this.contextError(
+        pcx,
+        "Use '!= NULL' to check for NULL instead of 'IS NOT NULL'",
+        'warn'
+      );
     } else {
-      this.contextError(pcx, "Use '= NULL' instead of 'IS NULL'", 'warn');
+      this.contextError(
+        pcx,
+        "Use '= NULL' to check for NULL instead of 'IS NULL'",
+        'warn'
+      );
     }
     const nullExpr = new ast.ExprNULL();
     return this.astAt(
