@@ -29,6 +29,8 @@ import {
   BetaExpression,
   model,
   makeModelFunc,
+  getQueryField,
+  getQueryFieldDef,
 } from './test-translator';
 import './parse-expects';
 
@@ -80,25 +82,21 @@ describe('expressions', () => {
       ['second', 'minute', 'hour', 'day', 'week', 'month', 'quarter', 'year'],
     ];
     test.each(timeframes)('timestamp truncate %s', unit => {
-      const truncSrc = model`run: a->{select: ats.${unit}}`;
+      const truncSrc = model`run: a->{select: tts is ats.${unit}}`;
       expect(truncSrc).toTranslate();
       const tQuery = truncSrc.translator.getQuery(0);
       expect(tQuery).toBeDefined();
-      const tOp = tQuery!.pipeline[0] as QuerySegment;
-      expect(tOp.type).toEqual('project');
-      const tField = tOp.queryFields[0];
+      const tField = getQueryFieldDef(tQuery!.pipeline[0], 'tts');
       expect(tField['timeframe']).toEqual(unit);
     });
 
     const dateTF = [['week', 'month', 'quarter', 'year']];
     test.each(dateTF)('date truncate %s', unit => {
-      const truncSrc = model`run: a->{select: ad.${unit}}`;
+      const truncSrc = model`run: a->{select: td is ad.${unit}}`;
       expect(truncSrc).toTranslate();
       const tQuery = truncSrc.translator.getQuery(0);
       expect(tQuery).toBeDefined();
-      const tOp = tQuery!.pipeline[0] as QuerySegment;
-      expect(tOp.type).toEqual('project');
-      const tField = tOp.queryFields[0];
+      const tField = getQueryFieldDef(tQuery!.pipeline[0], 'td');
       expect(tField['timeframe']).toEqual(unit);
     });
 
