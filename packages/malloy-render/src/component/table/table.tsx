@@ -216,6 +216,7 @@ const MalloyTableRoot = (_props: {
   data: DataArrayOrRecord;
   rowLimit?: number;
   scrollEl?: HTMLElement;
+  disableVirtualization?: boolean;
 }) => {
   const props = mergeProps({rowLimit: Infinity}, _props);
   const tableCtx = useTableContext()!;
@@ -379,7 +380,9 @@ const MalloyTableRoot = (_props: {
 
   const [rowEstimate, setRowEstimate] = createSignal(28);
 
-  if (tableCtx.root) {
+  const shouldVirtualize = tableCtx.root && !props.disableVirtualization;
+
+  if (shouldVirtualize) {
     virtualizer = createVirtualizer({
       count: data().length,
       getScrollElement: () => scrollEl,
@@ -510,18 +513,14 @@ const MalloyTableRoot = (_props: {
         </div>
       </Show>
       {/* virtualized table */}
-      <Show when={tableCtx.root}>
+      <Show when={shouldVirtualize}>
         <div
           class="table-row"
-          style={
-            tableCtx.root
-              ? {
-                  height: virtualizer!.getTotalSize() + 'px',
-                  width: '100%',
-                  position: 'relative',
-                }
-              : {}
-          }
+          style={{
+            height: virtualizer!.getTotalSize() + 'px',
+            width: '100%',
+            position: 'relative',
+          }}
         >
           {/* second wrapper */}
           <div
@@ -564,13 +563,15 @@ const MalloyTableRoot = (_props: {
         </div>
       </Show>
       {/* non-virtualized table */}
-      <Show when={!tableCtx.root}>
+      <Show when={!shouldVirtualize}>
         {/* header */}
-        <div class="table-row">
-          <For each={visibleFields()}>
-            {field => <HeaderField field={field} />}
-          </For>
-        </div>
+        <Show when={!tableCtx.root}>
+          <div class="table-row">
+            <For each={visibleFields()}>
+              {field => <HeaderField field={field} />}
+            </For>
+          </div>
+        </Show>
         {/* rows */}
         <For each={data()}>
           {row => (
@@ -595,6 +596,7 @@ const MalloyTable: Component<{
   data: DataArrayOrRecord;
   rowLimit?: number;
   scrollEl?: HTMLElement;
+  disableVirtualization?: boolean;
 }> = props => {
   const metadata = useResultContext();
   const hasTableCtx = !!useTableContext();

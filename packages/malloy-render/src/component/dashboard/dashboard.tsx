@@ -28,6 +28,11 @@ function DashboardItem(props: {
             dataColumn: props.row.cell(props.field),
             tag: props.field.tagParse().tag,
             resultMetadata: props.resultMetadata,
+            customProps: {
+              table: {
+                disableVirtualization: true,
+              },
+            },
           }).renderValue
         }
       </div>
