@@ -44,4 +44,21 @@ source: products is duckdb.table("data/products.parquet") extend {
         limit: 10
       }
   }
+
+  # dashboard
+  view: dash_with_break is {
+    group_by:
+      category
+    # currency
+    aggregate:
+      avg_retail is retail_price.avg()
+      sum_retail is retail_price.sum()
+    nest:
+      # break
+      by_brand is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 10
+      }
+  }
 }
