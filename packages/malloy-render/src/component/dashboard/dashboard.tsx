@@ -5,6 +5,7 @@ import {applyRenderer} from '../apply-renderer';
 import {useResultContext} from '../result-context';
 import {RenderResultMetadata} from '../types';
 import {createVirtualizer, Virtualizer} from '@tanstack/solid-virtual';
+import {useConfig} from '../render';
 
 function DashboardItem(props: {
   field: Field;
@@ -78,6 +79,7 @@ export function Dashboard(props: {data: DataArray; scrollEl?: HTMLElement}) {
     return data;
   });
 
+  const config = useConfig();
   let scrollEl!: HTMLElement;
   if (props.scrollEl) scrollEl = props.scrollEl;
   const virtualizer: Virtualizer<HTMLElement, Element> = createVirtualizer({

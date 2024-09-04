@@ -37,3 +37,12 @@ export interface RenderResultMetadata {
   resultTag: Tag;
   rootField: Field | Explore;
 }
+
+export type MalloyClickEventPayload = {
+  field: Field;
+  displayValue: any;
+  value: any;
+  fieldPath: string[];
+  isHeader: boolean;
+  event: MouseEvent;
+};
