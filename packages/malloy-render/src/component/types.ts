@@ -45,4 +45,5 @@ export type MalloyClickEventPayload = {
   fieldPath: string[];
   isHeader: boolean;
   event: MouseEvent;
+  type: 'dashboard-item' | 'table-cell';
 };

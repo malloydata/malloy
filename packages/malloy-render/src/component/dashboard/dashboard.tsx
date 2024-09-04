@@ -13,8 +13,40 @@ function DashboardItem(props: {
   resultMetadata: RenderResultMetadata;
   isMeasure?: boolean;
 }) {
+  const rendering = applyRenderer({
+    field: props.field,
+    dataColumn: props.row.cell(props.field),
+    tag: props.field.tagParse().tag,
+    resultMetadata: props.resultMetadata,
+    customProps: {
+      table: {
+        disableVirtualization: true,
+      },
+    },
+  });
+
+  const config = useConfig();
+  const handleClick = (evt: MouseEvent) => {
+    if (config.onClick)
+      config.onClick({
+        field: props.field,
+        displayValue:
+          typeof rendering.renderValue !== 'function'
+            ? rendering.renderValue
+            : null,
+        value: props.row.cell(props.field).value,
+        fieldPath: props.field.fieldPath,
+        isHeader: false,
+        event: evt,
+        type: 'dashboard-item',
+      });
+  };
+
   return (
-    <div class="dashboard-item">
+    <div
+      class="dashboard-item"
+      onClick={config.onClick ? handleClick : undefined}
+    >
       <div class="dashboard-item-title">{props.field.name}</div>
       <div
         class="dashboard-item-value"
@@ -22,19 +54,7 @@ function DashboardItem(props: {
           'dashboard-item-value-measure': props.isMeasure,
         }}
       >
-        {
-          applyRenderer({
-            field: props.field,
-            dataColumn: props.row.cell(props.field),
-            tag: props.field.tagParse().tag,
-            resultMetadata: props.resultMetadata,
-            customProps: {
-              table: {
-                disableVirtualization: true,
-              },
-            },
-          }).renderValue
-        }
+        {rendering.renderValue}
       </div>
     </div>
   );
@@ -84,7 +104,6 @@ export function Dashboard(props: {data: DataArray; scrollEl?: HTMLElement}) {
     return data;
   });
 
-  const config = useConfig();
   let scrollEl!: HTMLElement;
   if (props.scrollEl) scrollEl = props.scrollEl;
   const virtualizer: Virtualizer<HTMLElement, Element> = createVirtualizer({

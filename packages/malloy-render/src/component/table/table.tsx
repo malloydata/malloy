@@ -69,6 +69,7 @@ const Cell = (props: {
         fieldPath: props.field.fieldPath,
         isHeader: !!props.isHeader,
         event: evt,
+        type: 'table-cell',
       });
   };
 
