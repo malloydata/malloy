@@ -1222,23 +1222,21 @@ class QueryField extends QueryNode {
       case '<':
       case '>=':
       case '<=':
-        return `${expr.kids.left.sql}${expr.node}${expr.kids.right.sql}`;
-      // Malloy equality comparisons always return a boolean
       case '=':
+        return `${expr.kids.left.sql}${expr.node}${expr.kids.right.sql}`;
+      // Malloy inequality comparisons always return a boolean
       case '!=': {
-        // eslint-disable-next-line no-case-declarations
-        const compare = `${expr.kids.left.sql}${expr.node}${expr.kids.right.sql}`;
-        return `COALESCE(${compare},${expr.node === '=' ? 'false' : 'true'})`;
+        const notEqual = `${expr.kids.left.sql}!=${expr.kids.right.sql}`;
+        return `COALESCE(${notEqual},true)`;
       }
       case 'and':
       case 'or':
         return `${expr.kids.left.sql} ${expr.node} ${expr.kids.right.sql}`;
       case 'coalesce':
         return `COALESCE(${expr.kids.left.sql},${expr.kids.right.sql})`;
-      case 'like': {
-        const like = `${expr.kids.left.sql} LIKE ${expr.kids.right.sql}`;
-        return `COALESCE(${like},false)`;
-      }
+      case 'like':
+        return `{expr.kids.left.sql} LIKE ${expr.kids.right.sql}`;
+      // Malloy inequality comparisons always return a boolean
       case '!like': {
         const notLike = `${expr.kids.left.sql} NOT LIKE ${expr.kids.right.sql}`;
         return `COALESCE(${notLike},true)`;
