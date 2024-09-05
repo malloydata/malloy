@@ -1235,7 +1235,7 @@ class QueryField extends QueryNode {
       case 'coalesce':
         return `COALESCE(${expr.kids.left.sql},${expr.kids.right.sql})`;
       case 'like':
-        return `{expr.kids.left.sql} LIKE ${expr.kids.right.sql}`;
+        return `${expr.kids.left.sql} LIKE ${expr.kids.right.sql}`;
       // Malloy inequality comparisons always return a boolean
       case '!like': {
         const notLike = `${expr.kids.left.sql} NOT LIKE ${expr.kids.right.sql}`;
