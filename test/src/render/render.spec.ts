@@ -75,7 +75,7 @@ describe('rendering results', () => {
     expect(runtime).toBeDefined();
     if (runtime) {
       const src = `
-        run: bigquery.table('malloy-data.faa.flights') -> {
+        run: bigquery.table('malloy-data.malloytest.flights') -> {
           group_by: carrier
           aggregate: flight_count is count()
         }

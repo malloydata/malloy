@@ -53,13 +53,13 @@ describe('db:BigQuery', () => {
 
   it('costs a SQL query', async () => {
     const res = await bq.estimateQueryCost(
-      'SELECT * FROM malloy-data.faa.airports'
+      'SELECT * FROM malloy-data.malloytest.airports'
     );
     expect(res.queryCostBytes).toBe(3029200);
   });
 
   it('gets table schema', async () => {
-    const res = await bq.getTableFieldSchema('malloy-data.faa.carriers');
+    const res = await bq.getTableFieldSchema('malloy-data.malloytest.carriers');
     expect(res.schema).toStrictEqual({
       fields: [
         {name: 'code', type: 'STRING'},
@@ -74,7 +74,7 @@ describe('db:BigQuery', () => {
   it('runs a Malloy query', async () => {
     const sql = await runtime
       .loadModel(
-        "source: carriers is bigquery.table('malloy-data.faa.carriers') extend { measure: carrier_count is count() }"
+        "source: carriers is bigquery.table('malloy-data.malloytest.carriers') extend { measure: carrier_count is count() }"
       )
       .loadQuery('run: carriers -> { aggregate: carrier_count }')
       .getSQL();
@@ -85,7 +85,7 @@ describe('db:BigQuery', () => {
   it('streams a Malloy query for download', async () => {
     const sql = await runtime
       .loadModel(
-        "source: carriers is bigquery.table('malloy-data.faa.carriers') extend { measure: carrier_count is count() }"
+        "source: carriers is bigquery.table('malloy-data.malloytest.carriers') extend { measure: carrier_count is count() }"
       )
       .loadQuery('run: carriers -> { group_by: name }')
       .getSQL();
