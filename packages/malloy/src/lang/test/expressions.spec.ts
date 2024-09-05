@@ -295,7 +295,6 @@ describe('expressions', () => {
         "Use Malloy operator '!~' instead of 'NOT LIKE'"
       );
       const x = warnSrc.translator.generated().value;
-      // null safe not makes this weirder
       expect(exprToString(x)).toEqual('A !like {stringLiteral}');
     });
     test('is is-null in a model', () => {
