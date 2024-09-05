@@ -160,6 +160,10 @@ export abstract class Dialect {
     name: string
   ): DialectFunctionOverloadDef[] | undefined;
 
+  abstract getDialectFunctions(): {
+    [name: string]: DialectFunctionOverloadDef[];
+  };
+
   // return a quoted string for use as a table path.
   abstract quoteTablePath(tablePath: string): string;
 

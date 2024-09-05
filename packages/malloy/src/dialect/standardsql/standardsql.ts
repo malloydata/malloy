@@ -39,6 +39,7 @@ import {
 import {STANDARDSQL_FUNCTIONS} from './functions';
 import {DialectFunctionOverloadDef} from '../functions';
 import {Dialect, DialectFieldList, QueryInfo} from '../dialect';
+import {STANDARDSQL_DIALECT_FUNCTIONS} from './functions/dialect_functions';
 
 // These are the units that "TIMESTAMP_ADD" "TIMESTAMP_DIFF" accept
 function timestampMeasureable(units: string): boolean {
@@ -519,6 +520,10 @@ ${indent(sql)}
 
   getGlobalFunctionDef(name: string): DialectFunctionOverloadDef[] | undefined {
     return STANDARDSQL_FUNCTIONS.get(name);
+  }
+
+  getDialectFunctions(): {[name: string]: DialectFunctionOverloadDef[]} {
+    return STANDARDSQL_DIALECT_FUNCTIONS;
   }
 
   malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string {

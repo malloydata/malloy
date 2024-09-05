@@ -747,6 +747,18 @@ describe('query:', () => {
         calculate: a is lag(big_i)
       }`).toTranslate();
     });
+    describe('dialect functions', () => {
+      test('can use function enabled in this dialect (standardsql)', () => {
+        expect(`run: a -> {
+          group_by: d is date_from_unix_date(1000)
+        }`).toTranslate();
+      });
+      test('cannot use function enabled in a different dialect (duckdb)', () => {
+        expect(`run: a -> {
+          group_by: ts is to_timestamp(1000)
+        }`).translationToFailWith(/Unknown function/);
+      });
+    });
   });
 
   describe('qops', () => {

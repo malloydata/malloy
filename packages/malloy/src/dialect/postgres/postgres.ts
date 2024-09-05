@@ -36,6 +36,7 @@ import {POSTGRES_FUNCTIONS} from './functions';
 import {DialectFunctionOverloadDef} from '../functions';
 import {DialectFieldList, QueryInfo} from '../dialect';
 import {PostgresBase} from '../pg_impl';
+import {POSTGRES_DIALECT_FUNCTIONS} from './functions/dialect_functions';
 
 const pgMakeIntervalMap: Record<string, string> = {
   'year': 'years',
@@ -392,6 +393,10 @@ export class PostgresDialect extends PostgresBase {
 
   getGlobalFunctionDef(name: string): DialectFunctionOverloadDef[] | undefined {
     return POSTGRES_FUNCTIONS.get(name);
+  }
+
+  getDialectFunctions(): {[name: string]: DialectFunctionOverloadDef[]} {
+    return POSTGRES_DIALECT_FUNCTIONS;
   }
 
   malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string {
