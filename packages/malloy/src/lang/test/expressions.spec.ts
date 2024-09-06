@@ -21,7 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Expr} from '../../model';
 import {
   expr,
   TestTranslator,
@@ -30,50 +29,10 @@ import {
   model,
   makeModelFunc,
   getQueryFieldDef,
+  getExplore,
+  getFieldDef,
 } from './test-translator';
 import './parse-expects';
-
-/**
- * Try and write a generic version of the expression, might some day be the basis for
- * a much better expression matcher.
- */
-function exprToString(e: Expr, symbols: Record<string, string> = {}): string {
-  switch (e.node) {
-    case '=':
-    case '>':
-    case '>=':
-    case '<':
-    case '<=':
-    case '+':
-    case '-':
-    case '*':
-    case '/':
-    case '%':
-      return `${exprToString(e.kids.left, symbols)}${e.node}${exprToString(
-        e.kids.right,
-        symbols
-      )}`;
-    case 'and':
-    case 'or':
-      return `(${exprToString(e.kids.left, symbols)})${e.node}(${exprToString(
-        e.kids.right,
-        symbols
-      )})`;
-    case 'field': {
-      const ref = e.path.join('.');
-      if (symbols[ref] === undefined) {
-        const nSyms = Object.keys(symbols).length;
-        symbols[ref] = String.fromCharCode('A'.charCodeAt(0) + nSyms);
-      }
-      return symbols[ref];
-    }
-    case '()':
-      return `(${exprToString(e.e, symbols)})`;
-    case 'not':
-      return `not(${exprToString(e.e, symbols)})`;
-  }
-  return `{${e.node}}`;
-}
 
 describe('expressions', () => {
   describe('timeframes', () => {
@@ -110,7 +69,7 @@ describe('expressions', () => {
   });
 
   test('field name', () => {
-    expect(expr`astr`).toTranslate();
+    expect(expr`astr`).compilesTo('astr');
   });
   test('function call', () => {
     expect(expr`concat('foo')`).toTranslate();
@@ -118,7 +77,7 @@ describe('expressions', () => {
 
   describe('operators', () => {
     test('addition', () => {
-      expect(expr`42 + 7`).toTranslate();
+      expect('42 + 7').compilesTo('{42 + 7}');
     });
     test('typecheck addition lhs', () => {
       const wrong = expr`${'"string"'} + 1`;
@@ -133,58 +92,64 @@ describe('expressions', () => {
       );
     });
     test('subtraction', () => {
-      expect(expr`42 - 7`).toTranslate();
+      expect('42 - 7').compilesTo('{42 - 7}');
     });
     test('multiplication', () => {
-      expect(expr`42 * 7`).toTranslate();
+      expect('42 * 7').compilesTo('{42 * 7}');
     });
     test('mod', () => {
-      expect(expr`42 % 7`).toTranslate();
+      expect('42 % 7').compilesTo('{42 % 7}');
     });
     test('division', () => {
-      expect(expr`42 / 7`).toTranslate();
+      expect('42 / 7').compilesTo('{42 / 7}');
     });
     test('unary negation', () => {
-      expect(expr`- ai`).toTranslate();
+      expect('- ai').compilesTo('{unary- ai}');
     });
     test('equal', () => {
-      expect(expr`42 = 7`).toTranslate();
+      expect('42 = 7').compilesTo('{42 = 7}');
     });
     test('not equal', () => {
-      expect(expr`42 != 7`).toTranslate();
+      expect('42 != 7').compilesTo('{42 != 7}');
     });
     test('greater than', () => {
-      expect(expr`42 > 7`).toTranslate();
+      expect('42 > 7').compilesTo('{42 > 7}');
     });
     test('greater than or equal', () => {
-      expect(expr`42 >= 7`).toTranslate();
+      expect('42 >= 7').compilesTo('{42 >= 7}');
     });
     test('less than or equal', () => {
-      expect(expr`42 <= 7`).toTranslate();
+      expect('42 <= 7').compilesTo('{42 <= 7}');
     });
     test('less than', () => {
-      expect(expr`42 < 7`).toTranslate();
+      expect('42 < 7').compilesTo('{42 < 7}');
     });
     test('match', () => {
-      expect(expr`'forty-two' ~ 'fifty-four'`).toTranslate();
+      expect("'forty-two' ~ 'fifty-four'").compilesTo(
+        '{"forty-two" like "fifty-four"}'
+      );
     });
     test('not match', () => {
-      expect(expr`'forty-two' !~ 'fifty-four'`).toTranslate();
+      expect("'forty-two' !~ 'fifty-four'").compilesTo(
+        '{"forty-two" !like "fifty-four"}'
+      );
     });
-    test('apply', () => {
-      expect(expr`'forty-two' ? 'fifty-four'`).toTranslate();
+    test('apply as equality', () => {
+      expect("'forty-two' ? 'fifty-four'").compilesTo(
+        '{"forty-two" = "fifty-four"}'
+      );
     });
     test('not', () => {
-      expect(expr`not true`).toTranslate();
+      expect('not true').compilesTo('{not true}');
     });
     test('and', () => {
-      expect(expr`true and false`).toTranslate();
+      expect('true and false').compilesTo('{true and false}');
     });
     test('or', () => {
-      expect(expr`true or false`).toTranslate();
+      expect('true or false').compilesTo('{true or false}');
     });
     test('null-check (??)', () => {
-      expect(expr`ai ?? 7`).toTranslate();
+      expect('ai ?? 7').compilesTo('{ai coalesce 7}');
     });
     test('coalesce type mismatch', () => {
       expect(new BetaExpression('ai ?? @2003')).translationToFailWith(
@@ -207,40 +172,21 @@ describe('expressions', () => {
       );
     });
     test('compare to truncation uses straight comparison', () => {
-      const compare = expr`ad = ad.quarter`;
-      expect(compare).toTranslate();
-      const compare_expr = compare.translator.generated().value;
-      expect(exprToString(compare_expr)).toEqual('A={trunc}');
+      expect('ad = ad.quarter').compilesTo('{ad = {timeTrunc-quarter ad}}');
     });
     test('compare to granular result expression uses straight comparison', () => {
-      const compare = expr`ad = ad.quarter + 1`;
-      expect(compare).toTranslate();
-      const compare_expr = compare.translator.generated().value;
-      expect(exprToString(compare_expr)).toEqual('A={delta}');
-    });
-    test('apply granular-truncation uses range', () => {
-      const compare = expr`ad ? ad.quarter`;
-      expect(compare).toTranslate();
-      const compare_expr = compare.translator.generated().value;
-      expect(exprToString(compare_expr)).toEqual('(A>={trunc})and(A<{delta})');
-    });
-    test('apply granular-literal alternation uses all literals for range', () => {
-      const compare = expr`ad ? @2020 | @2022`;
-      expect(compare).toTranslate();
-      const compare_expr = compare.translator.generated().value;
-      expect(exprToString(compare_expr)).toEqual(
-        '((A>={timeLiteral})and(A<{timeLiteral}))or((A>={timeLiteral})and(A<{timeLiteral}))'
+      expect('ad = ad.quarter + 1').compilesTo(
+        '{ad = {+quarter {timeTrunc-quarter ad} 1}}'
       );
     });
-    // this should use range, but it uses = and alternations are
-    // kind of needing help so this is a placeholder for
-    // future work
-    test.skip('apply granular-result alternation uses range', () => {
-      const compare = expr`ad ? ad.year | ad.month`;
-      expect(compare).toTranslate();
-      const compare_expr = compare.translator.generated().value;
-      expect(exprToString(compare_expr)).toEqual(
-        '((A>=B)and(A<C))or((A>=D)and(A<E))'
+    test('apply granular-truncation uses range', () => {
+      expect('ad ? ad.quarter').compilesTo(
+        '{{ad >= {timeTrunc-quarter ad}} and {ad < {+quarter {timeTrunc-quarter ad} 1}}}'
+      );
+    });
+    test('apply granular-literal alternation uses all literals for range', () => {
+      expect('ad ? @2020 | @2022').compilesTo(
+        '{{{ad >= @2020-01-01} and {ad < @2021-01-01}} or {{ad >= @2022-01-01} and {ad < @2023-01-01}}}'
       );
     });
     test('comparison promotes date literal to timestamp', () => {
@@ -258,6 +204,80 @@ describe('expressions', () => {
     });
     test('apply with parens', () => {
       expect(expr`ai ? (> 1 & < 100)`).toTranslate();
+    });
+    describe('sql friendly warnings', () => {
+      test('is null with warning', () => {
+        const warnSrc = expr`ai is null`;
+        expect(warnSrc).toTranslateWithWarnings(
+          "Use '= NULL' to check for NULL instead of 'IS NULL'"
+        );
+        expect(warnSrc).compilesTo('{is-null ai}');
+        const warning = warnSrc.translator.problems()[0];
+        expect(warning.replacement).toEqual('ai = null');
+      });
+      test('is not null with warning', () => {
+        const warnSrc = expr`ai is not null`;
+        expect(warnSrc).toTranslateWithWarnings(
+          "Use '!= NULL' to check for NULL instead of 'IS NOT NULL'"
+        );
+        expect(warnSrc).compilesTo('{is-not-null ai}');
+        const warning = warnSrc.translator.problems()[0];
+        expect(warning.replacement).toEqual('ai != null');
+      });
+      test('like with warning', () => {
+        const warnSrc = expr`astr like 'a'`;
+        expect(warnSrc).toTranslateWithWarnings(
+          "Use Malloy operator '~' instead of 'LIKE'"
+        );
+        expect(warnSrc).compilesTo('{astr like "a"}');
+        const warning = warnSrc.translator.problems()[0];
+        expect(warning.replacement).toEqual("astr ~ 'a'");
+      });
+      test('NOT LIKE with warning', () => {
+        const warnSrc = expr`astr not like 'a'`;
+        expect(warnSrc).toTranslateWithWarnings(
+          "Use Malloy operator '!~' instead of 'NOT LIKE'"
+        );
+        expect(warnSrc).compilesTo('{astr !like "a"}');
+        const warning = warnSrc.translator.problems()[0];
+        expect(warning.replacement).toEqual("astr !~ 'a'");
+      });
+      test('is is-null in a model', () => {
+        const isNullSrc = model`source: xa is a extend { dimension: x1 is astr is null }`;
+        expect(isNullSrc).toTranslateWithWarnings(
+          "Use '= NULL' to check for NULL instead of 'IS NULL'"
+        );
+      });
+      test('is not-null in a model', () => {
+        const isNullSrc = model`source: xa is a extend { dimension: x1 is not null }`;
+        expect(isNullSrc).toTranslate();
+      });
+      test('is not-null is in a model', () => {
+        const isNullSrc = model`source: xa is a extend { dimension: x1 is not null is null }`;
+        expect(isNullSrc).toTranslateWithWarnings(
+          "Use '= NULL' to check for NULL instead of 'IS NULL'"
+        );
+        const warning = isNullSrc.translator.problems()[0];
+        expect(warning.replacement).toEqual('null = null');
+      });
+      test('x is expr y is not null', () => {
+        const isNullSrc = model`source: xa is a extend { dimension: x is 1 y is not null }`;
+        expect(isNullSrc).toTranslate();
+        const xaModel = isNullSrc.translator.translate().translated;
+        const xa = getExplore(xaModel!.modelDef, 'xa');
+        const x = getFieldDef(xa, 'x');
+        expect(x).toMatchObject({e: {node: 'numberLiteral'}});
+        const y = getFieldDef(xa, 'y');
+        expect(y).toMatchObject({e: {node: 'not'}});
+      });
+      test('not null::number', () => {
+        const notNull = expr`not null::number`;
+        expect(notNull).translationToFailWith("'not' Can't use type number");
+      });
+      test('(not null)::number', () => {
+        const notNull = expr`(not null)::number`;
+        expect(notNull).toTranslate();
+      });
     });
   });
 
@@ -971,13 +991,7 @@ describe('expressions', () => {
     });
   });
   test('paren and applied div', () => {
-    const one34 = expr`1+(3/4)`;
-    expect(one34).toTranslate();
-    const exprVal = one34.translator.generated();
-    const exprE = exprVal.value;
-    expect(exprToString(exprE)).toEqual(
-      '{numberLiteral}+({numberLiteral}/{numberLiteral})'
-    );
+    expect('1+(3/4)').compilesTo('{1 + ({3 / 4})}');
   });
   test.each([
     ['ats', 'timestamp'],

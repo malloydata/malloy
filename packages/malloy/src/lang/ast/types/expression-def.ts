@@ -35,7 +35,6 @@ import {
 } from '../../../model/malloy_types';
 
 import {errorFor} from '../ast-utils';
-import {nullsafeNot} from '../expressions/utils';
 import {FT} from '../fragtype-utils';
 import {timeOffset, timeResult} from '../time-utils';
 import {ExprValue} from './expr-value';
@@ -360,18 +359,11 @@ function equality(
           }
           value = regexCmp;
         }
-        value = nullsafeNot(value, op);
         break;
       }
       case '=':
       case '!=': {
-        const nullCmp = nullCompare(lhs, op, rhs);
-        const eqNode = value;
-        if (nullCmp) {
-          value = nullCmp;
-        } else {
-          value = nullsafeNot(regexEqual(lhs, rhs) || eqNode, op);
-        }
+        value = nullCompare(lhs, op, rhs) ?? value;
         break;
       }
     }

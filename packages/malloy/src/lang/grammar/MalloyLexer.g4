@@ -91,6 +91,7 @@ IS: I S ;
 JSON: J S O N;
 LAST: L A S T ;
 LEFT: L E F T ;
+LIKE: L I K E ;
 MAX: M A X;
 MIN: M I N;
 MINUTE: M I N U T E S?;

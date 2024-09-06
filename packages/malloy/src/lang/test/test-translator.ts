@@ -25,6 +25,7 @@
 import {inspect} from 'util';
 import {
   DocumentLocation,
+  Expr,
   FieldDef,
   ModelDef,
   NamedModelObject,
@@ -35,6 +36,7 @@ import {
   SQLBlockStructDef,
   StructDef,
   TurtleDef,
+  exprIsLeaf,
   isQuerySegment,
   isSQLFragment,
 } from '../../model/malloy_types';
@@ -622,4 +624,47 @@ export function getSelectOneStruct(
     structRelationship: {type: 'basetable', connectionName: 'bigquery'},
     fields: [{type: 'number', name: 'one'}],
   };
+}
+
+export function exprToString(
+  e: Expr,
+  symbols: Record<string, string> = {}
+): string {
+  function subExpr(e: Expr): string {
+    const x = exprToString(e, symbols);
+    return x[0] === '{' || exprIsLeaf(e) ? x : `(${x})`;
+  }
+  switch (e.node) {
+    case '=':
+    case '>':
+    case '>=':
+    case '<':
+    case '<=':
+    case '+':
+    case '-':
+    case '*':
+    case '/':
+    case '%':
+      return `${subExpr(e.kids.left)}${e.node}${subExpr(e.kids.right)}`;
+    case 'and':
+    case 'like':
+    case '!like':
+    case 'or':
+      return `${subExpr(e.kids.left)} ${e.node} ${subExpr(e.kids.right)}`;
+    case 'field': {
+      const ref = e.path.join('.');
+      if (symbols[ref] === undefined) {
+        const nSyms = Object.keys(symbols).length;
+        symbols[ref] = String.fromCharCode('A'.charCodeAt(0) + nSyms);
+      }
+      return symbols[ref];
+    }
+    case '()':
+      return `(${subExpr(e.e)})`;
+    case 'not':
+      return `not(${exprToString(e.e, symbols)})`;
+    case 'coalesce':
+      return `${subExpr(e.kids.left)} ?? ${subExpr(e.kids.right)}`;
+  }
+  return `{${e.node}}`;
 }

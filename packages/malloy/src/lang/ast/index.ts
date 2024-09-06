@@ -80,7 +80,6 @@ export * from './expressions/range';
 export * from './expressions/time-frame';
 export * from './expressions/top-by';
 export * from './expressions/unary';
-export * from './expressions/utils';
 export * from './statements/import-statement';
 export * from './query-properties/extend';
 export * from './parameters/argument';

@@ -33,6 +33,7 @@ export interface LogMessage {
   at?: DocumentLocation;
   severity: LogSeverity;
   errorTag?: string;
+  replacement?: string;
 }
 
 export interface MessageLogger {
