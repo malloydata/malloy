@@ -17,7 +17,7 @@ import {ResultContext} from './result-context';
 import './render.css';
 import {ComponentOptions, ICustomElement} from 'component-register';
 import {applyRenderer} from './apply-renderer';
-import {MalloyClickEventPayload} from './types';
+import {MalloyClickEventPayload, VegaConfigHandler} from './types';
 
 export type MalloyRenderProps = {
   result?: Result;
@@ -25,10 +25,12 @@ export type MalloyRenderProps = {
   modelDef?: ModelDef;
   scrollEl?: HTMLElement;
   onClick?: (payload: MalloyClickEventPayload) => void;
+  vegaConfigOverride?: VegaConfigHandler;
 };
 
 const ConfigContext = createContext<{
   onClick?: (payload: MalloyClickEventPayload) => void;
+  vegaConfigOverride?: VegaConfigHandler;
 }>();
 
 export const useConfig = () => {
@@ -53,11 +55,17 @@ export function MalloyRender(
 
   return (
     <Show when={result()}>
-      <ConfigContext.Provider value={{onClick: props.onClick}}>
+      <ConfigContext.Provider
+        value={{
+          onClick: props.onClick,
+          vegaConfigOverride: props.vegaConfigOverride,
+        }}
+      >
         <MalloyRenderInner
           result={result()!}
           element={element}
           scrollEl={props.scrollEl}
+          vegaConfigOverride={props.vegaConfigOverride}
         />
       </ConfigContext.Provider>
     </Show>
@@ -68,8 +76,13 @@ export function MalloyRenderInner(props: {
   result: Result;
   element: ICustomElement;
   scrollEl?: HTMLElement;
+  vegaConfigOverride?: VegaConfigHandler;
 }) {
-  const metadata = createMemo(() => getResultMetadata(props.result));
+  const metadata = createMemo(() =>
+    getResultMetadata(props.result, {
+      getVegaConfigOverride: props.vegaConfigOverride,
+    })
+  );
   const tags = () => {
     const modelTag = metadata().modelTag;
     const resultTag = metadata().resultTag;

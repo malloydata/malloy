@@ -6,6 +6,7 @@ import {ShapeMapRendererFactory} from '../../html/shape_map';
 import {SegmentMapRendererFactory} from '../../html/segment_map';
 import {useResultContext} from '../result-context';
 import {getFieldKey} from '../util';
+import {useConfig} from '../render';
 
 const renderers = [
   LineChartRendererFactory.instance,
@@ -15,6 +16,8 @@ const renderers = [
 ];
 export function LegacyChart(props: {data: DataArray; type: string}) {
   const metadata = useResultContext();
+  const config = useConfig();
+  const vegaConfig = config.vegaConfigOverride?.(props.type) ?? {};
   const renderer = () =>
     renderers
       .find(r => r.rendererName === props.type)
@@ -29,7 +32,7 @@ export function LegacyChart(props: {data: DataArray; type: string}) {
         },
         {dataStyles: {}},
         props.data.field,
-        {}
+        {vegaConfigOverride: vegaConfig}
       );
   let el;
   createEffect(async () => {

@@ -31,6 +31,7 @@ export default function registerWebComponent({
           modelDef: undefined,
           scrollEl: undefined,
           onClick: undefined,
+          vegaConfigOverride: undefined,
         },
         {customElements, BaseElement: HTMLElement}
       ),

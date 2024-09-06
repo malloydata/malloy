@@ -28,11 +28,13 @@ import {Renderer} from '../renderer';
 import {RendererOptions} from '../renderer_types';
 import {ChartRenderOptions, StyleDefaults} from '../data_styles';
 import {normalizeToTimezone} from '../html/utils';
+import {mergeVegaConfigs} from '../component/plot/merge-vega-configs';
 
 type MappedRow = {[p: string]: string | number | Date | undefined | null};
 
 export abstract class HTMLChartRenderer implements Renderer {
   size: string;
+  chartOptions: ChartRenderOptions;
   abstract getDataType(
     field: Field
   ): 'temporal' | 'ordinal' | 'quantitative' | 'nominal';
@@ -76,6 +78,7 @@ export abstract class HTMLChartRenderer implements Renderer {
     protected timezone?: string
   ) {
     this.size = chartOptions.size || this.styleDefaults.size || 'medium';
+    this.chartOptions = chartOptions;
   }
 
   abstract getVegaLiteSpec(data: DataArray): lite.TopLevelSpec;
@@ -86,6 +89,10 @@ export abstract class HTMLChartRenderer implements Renderer {
     }
 
     const spec = this.getVegaLiteSpec(table);
+    spec.config = mergeVegaConfigs(
+      spec.config ?? {},
+      this.chartOptions.vegaConfigOverride ?? {}
+    );
 
     const vegaspec = lite.compile(spec, {
       logger: {

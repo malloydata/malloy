@@ -1,7 +1,14 @@
 import {Explore, ExploreField, Tag} from '@malloydata/malloy';
 import {getChartSettings} from '../chart-settings';
 import {PlotSpec} from './plot-spec';
-import {RenderResultMetadata, VegaChartProps, VegaSpec} from '../types';
+import {
+  RenderResultMetadata,
+  VegaChartProps,
+  VegaConfigHandler,
+  VegaSpec,
+} from '../types';
+import {baseVegaConfig} from './base-vega-config';
+import {mergeVegaConfigs} from './merge-vega-configs';
 
 export const grayMedium = '#727883';
 export const gridGray = '#E5E7EB';
@@ -12,6 +19,8 @@ export function plotToVega(
     field: Explore | ExploreField;
     metadata: RenderResultMetadata;
     chartTag: Tag;
+    chartType: string;
+    getVegaConfigOverride?: VegaConfigHandler;
   }
 ): VegaChartProps {
   const chartSettings = getChartSettings(
@@ -19,48 +28,16 @@ export function plotToVega(
     options.metadata,
     options.chartTag
   );
+
+  const vegaConfig = mergeVegaConfigs(
+    baseVegaConfig(),
+    options.getVegaConfigOverride?.(options.chartType) ?? {}
+  );
   const vegaSpec: VegaSpec = {
     '$schema': 'https://vega.github.io/schema/vega/v5.json',
     'width': chartSettings.plotWidth,
     'height': chartSettings.plotHeight,
-    'config': {
-      axisY: {
-        gridColor: gridGray,
-        tickColor: gridGray,
-        domain: false,
-
-        labelFont: 'Inter, sans-serif',
-        labelFontSize: 10,
-        labelFontWeight: 'normal',
-        labelColor: grayMedium,
-        labelPadding: 5,
-        titleColor: grayMedium,
-        titleFont: 'Inter, sans-serif',
-        titleFontSize: 12,
-        titleFontWeight: 500,
-        titlePadding: 10,
-        labelOverlap: false,
-      },
-      axisX: {
-        gridColor: gridGray,
-        tickColor: gridGray,
-        tickSize: 0,
-        domain: false,
-        labelFont: 'Inter, sans-serif',
-        labelFontSize: 10,
-        labelFontWeight: 'normal',
-        labelPadding: 5,
-        labelColor: grayMedium,
-        titleColor: grayMedium,
-        titleFont: 'Inter, sans-serif',
-        titleFontSize: 12,
-        titleFontWeight: 500,
-        titlePadding: 10,
-      },
-      view: {
-        strokeWidth: 0,
-      },
-    },
+    'config': vegaConfig,
     'data': [
       {
         name: 'table',
@@ -131,7 +108,7 @@ export function plotToVega(
           width: {scale: 'xscale', band: 0.8},
           y: {scale: 'yscale', field: yField},
           y2: {'scale': 'yscale', 'value': 0},
-          fill: {value: '#53B2C8'},
+          fill: {value: vegaSpec.config.range.category[0]},
         },
       };
 
@@ -170,5 +147,6 @@ export function plotToVega(
     plotHeight: chartSettings.plotHeight,
     totalWidth: chartSettings.totalWidth,
     totalHeight: chartSettings.totalHeight,
+    chartType: options.chartType,
   };
 }
