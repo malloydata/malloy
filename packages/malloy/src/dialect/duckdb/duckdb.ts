@@ -37,6 +37,7 @@ import {DUCKDB_FUNCTIONS} from './functions';
 import {DialectFieldList, inDays} from '../dialect';
 import {PostgresBase} from '../pg_impl';
 import {DUCKDB_DIALECT_FUNCTIONS} from './functions/dialect_functions';
+import {expandBlueprintMap} from '../functions/util';
 
 // need to refactor runSQL to take a SQLBlock instead of just a sql string.
 const hackSplitComment = '-- hack: split on this';
@@ -341,7 +342,7 @@ export class DuckDBDialect extends PostgresBase {
   }
 
   getDialectFunctions(): {[name: string]: DialectFunctionOverloadDef[]} {
-    return DUCKDB_DIALECT_FUNCTIONS;
+    return expandBlueprintMap(DUCKDB_DIALECT_FUNCTIONS);
   }
 
   malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string {

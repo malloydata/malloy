@@ -25,7 +25,7 @@ import {ExpressionValueType} from '../../../model/malloy_types';
 import {
   arg,
   overload,
-  params,
+  variadicParam,
   minScalar,
   anyExprType,
   DialectFunctionOverloadDef,
@@ -47,7 +47,7 @@ function greatestOrLeast(
   return types.map(type =>
     overload(
       minScalar(type),
-      [params('values', anyExprType(type))],
+      [variadicParam('values', anyExprType(type))],
       // TODO create a way for a function spec to map SQL to each arg before spreading, or something like that
       // Currently this SQL is pretty nasty, and we would rather write
       // CASE WHEN arg1 IS NULL OR arg2 is NULL ... OR argN is NULL THEN NULL ELSE GREATEST(arg1, arg2, ..., argN) END

@@ -24,7 +24,7 @@
 import {
   arg,
   overload,
-  params,
+  variadicParam,
   minScalar,
   anyExprType,
   spread,
@@ -40,7 +40,7 @@ export function fnConcat(): DialectFunctionOverloadDef[] {
     overload(
       minScalar('string'),
       [
-        params(
+        variadicParam(
           'values',
           anyExprType('string'),
           anyExprType('number'),

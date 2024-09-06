@@ -32,7 +32,7 @@ export {
   maxScalar,
   spread,
   param,
-  params,
+  variadicParam,
   literal,
   sql,
 } from './functions/util';

@@ -29,7 +29,7 @@ import {
   sql,
   DialectFunctionOverloadDef,
   anyExprType,
-  params,
+  variadicParam,
   spread,
 } from './util';
 
@@ -45,7 +45,7 @@ export function fnCoalesce(): DialectFunctionOverloadDef[] {
   return types.map(type =>
     overload(
       minScalar(type),
-      [params('values', anyExprType(type))],
+      [variadicParam('values', anyExprType(type))],
       sql`COALESCE(${spread(arg('values'))})`
     )
   );

@@ -6,23 +6,62 @@
  */
 
 import {
-  DialectFunctionOverloadDef,
-  anyExprType,
-  arg,
-  minScalar,
-  overload,
-  param,
-  sql,
+  DefinitionBlueprint,
+  DefinitionBlueprintMap,
+  OverloadedDefinitionBlueprint,
 } from '../../functions/util';
 
-export const DUCKDB_DIALECT_FUNCTIONS: {
-  [name: string]: DialectFunctionOverloadDef[];
-} = {
-  to_timestamp: [
-    overload(
-      minScalar('timestamp'),
-      [param('epoch_seconds', anyExprType('number'))],
-      sql`TO_TIMESTAMP(${arg('epoch_seconds')})`
-    ),
-  ],
+const to_timestamp: DefinitionBlueprint = {
+  takes: {'epoch_seconds': 'number'},
+  returns: 'timestamp',
+  impl: {function: 'TO_TIMESTAMP'},
+};
+
+const string_agg: OverloadedDefinitionBlueprint = {
+  'default_separator': {
+    takes: {'value': {dimension: 'string'}},
+    returns: {measure: 'string'},
+    supportsOrderBy: true,
+    impl: {
+      sql: 'STRING_AGG(DISTINCT $value$order_by)',
+      defaultOrderByArgIndex: 0,
+    },
+  },
+  'with_separator': {
+    takes: {
+      'value': {dimension: 'string'},
+      'separator': {literal: 'string'},
+    },
+    returns: {measure: 'string'},
+    supportsOrderBy: true,
+    impl: {
+      sql: 'STRING_AGG(DISTINCT $value, $separator$order_by)',
+      defaultOrderByArgIndex: 0,
+    },
+  },
+};
+
+const string_agg_distinct: OverloadedDefinitionBlueprint = {
+  'default_separator': {
+    ...string_agg['default_separator'],
+    isSymmetric: true,
+    impl: {
+      sql: 'STRING_AGG(DISTINCT $value$order_by)',
+      defaultOrderByArgIndex: 0,
+    },
+  },
+  'with_separator': {
+    ...string_agg['with_separator'],
+    isSymmetric: true,
+    impl: {
+      sql: 'STRING_AGG(DISTINCT $value, $separator$order_by)',
+      defaultOrderByArgIndex: 0,
+    },
+  },
+};
+
+export const DUCKDB_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
+  to_timestamp,
+  string_agg,
+  string_agg_distinct,
 };

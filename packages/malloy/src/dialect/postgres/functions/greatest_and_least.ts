@@ -25,7 +25,7 @@ import {ExpressionValueType} from '../../../model/malloy_types';
 import {
   arg,
   overload,
-  params,
+  variadicParam,
   minScalar,
   anyExprType,
   DialectFunctionOverloadDef,
@@ -47,7 +47,7 @@ function greatestOrLeast(
   return types.map(type =>
     overload(
       minScalar(type),
-      [params('values', anyExprType(type))],
+      [variadicParam('values', anyExprType(type))],
       // We match BigQuery null behavior here -- if any argument is null, return null
       sql`CASE WHEN NUM_NULLS(${spread(
         arg('values')

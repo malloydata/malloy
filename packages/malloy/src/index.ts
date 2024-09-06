@@ -36,7 +36,7 @@ export {
   sql,
   makeParam,
   param,
-  params,
+  variadicParam,
   literal,
   spread,
   Dialect,

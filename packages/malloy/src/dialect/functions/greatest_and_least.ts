@@ -25,7 +25,7 @@ import {ExpressionValueType} from '../../model/malloy_types';
 import {
   arg,
   overload,
-  params,
+  variadicParam,
   minScalar,
   anyExprType,
   sql,
@@ -50,7 +50,7 @@ function greatestOrLeast(
   return types.map(type =>
     overload(
       minScalar(type),
-      [params('values', anyExprType(type))],
+      [variadicParam('values', anyExprType(type))],
       sql`${fn}(${spread(arg('values'))})`
     )
   );
