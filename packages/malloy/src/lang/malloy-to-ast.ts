@@ -45,6 +45,7 @@ import {
 import {CastType} from '../model';
 import {
   DocumentLocation,
+  DocumentRange,
   isCastType,
   isMatrixOperation,
   Note,
@@ -133,6 +134,19 @@ export class MalloyToAST
       message: msg,
       at: this.getLocation(cx),
       severity: sev,
+    });
+  }
+
+  protected warnWithReplacement(
+    message: string,
+    range: DocumentRange,
+    replacement: string
+  ): void {
+    this.msgLog.log({
+      message,
+      at: {url: this.parseInfo.sourceURL, range},
+      severity: 'warn',
+      replacement,
     });
   }
 
@@ -1794,25 +1808,28 @@ export class MalloyToAST
 
   visitExprWarnLike(pcx: parse.ExprWarnLikeContext): ast.ExprCompare {
     let op: ast.CompareMalloyOperator = '~';
+    const left = pcx.fieldExpr(0);
+    const right = pcx.fieldExpr(1);
+    const wholeRange = this.parseInfo.rangeFromContext(pcx);
     if (pcx.NOT()) {
       op = '!~';
-      this.contextError(
-        pcx,
+      this.warnWithReplacement(
         "Use Malloy operator '!~' instead of 'NOT LIKE'",
-        'warn'
+        wholeRange,
+        `${left.text} !~ ${right.text}`
       );
     } else {
-      this.contextError(
-        pcx,
+      this.warnWithReplacement(
         "Use Malloy operator '~' instead of 'LIKE'",
-        'warn'
+        wholeRange,
+        `${left.text} ~ ${right.text}`
       );
     }
     return this.astAt(
       new ast.ExprCompare(
-        this.getFieldExpr(pcx.fieldExpr(0)),
+        this.getFieldExpr(left),
         op,
-        this.getFieldExpr(pcx.fieldExpr(1))
+        this.getFieldExpr(right)
       ),
       pcx
     );
@@ -1820,23 +1837,25 @@ export class MalloyToAST
 
   visitExprWarnNullCmp(pcx: parse.ExprWarnNullCmpContext): ast.ExprCompare {
     let op: ast.CompareMalloyOperator = '=';
+    const expr = pcx.fieldExpr();
+    const wholeRange = this.parseInfo.rangeFromContext(pcx);
     if (pcx.NOT()) {
       op = '!=';
-      this.contextError(
-        pcx,
+      this.warnWithReplacement(
         "Use '!= NULL' to check for NULL instead of 'IS NOT NULL'",
-        'warn'
+        wholeRange,
+        `${expr.text} != null`
       );
     } else {
-      this.contextError(
-        pcx,
+      this.warnWithReplacement(
         "Use '= NULL' to check for NULL instead of 'IS NULL'",
-        'warn'
+        wholeRange,
+        `${expr.text} = null`
       );
     }
     const nullExpr = new ast.ExprNULL();
     return this.astAt(
-      new ast.ExprCompare(this.getFieldExpr(pcx.fieldExpr()), op, nullExpr),
+      new ast.ExprCompare(this.getFieldExpr(expr), op, nullExpr),
       pcx
     );
   }
