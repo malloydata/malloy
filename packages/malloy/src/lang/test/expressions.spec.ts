@@ -205,67 +205,79 @@ describe('expressions', () => {
     test('apply with parens', () => {
       expect(expr`ai ? (> 1 & < 100)`).toTranslate();
     });
-    test('is null with warning', () => {
-      const warnSrc = expr`ai is null`;
-      expect(warnSrc).toTranslateWithWarnings(
-        "Use '= NULL' to check for NULL instead of 'IS NULL'"
-      );
-      expect(warnSrc).compilesTo('{is-null ai}');
-    });
-    test('is not null with warning', () => {
-      const warnSrc = expr`ai is not null`;
-      expect(warnSrc).toTranslateWithWarnings(
-        "Use '!= NULL' to check for NULL instead of 'IS NOT NULL'"
-      );
-      expect(warnSrc).compilesTo('{is-not-null ai}');
-    });
-    test('like with warning', () => {
-      const warnSrc = expr`astr like 'a'`;
-      expect(warnSrc).toTranslateWithWarnings(
-        "Use Malloy operator '~' instead of 'LIKE'"
-      );
-      expect(warnSrc).compilesTo('{astr like "a"}');
-    });
-    test('NOT LIKE with warning', () => {
-      const warnSrc = expr`astr not like 'a'`;
-      expect(warnSrc).toTranslateWithWarnings(
-        "Use Malloy operator '!~' instead of 'NOT LIKE'"
-      );
-      expect(warnSrc).compilesTo('{astr !like "a"}');
-    });
-    test('is is-null in a model', () => {
-      const isNullSrc = model`source: xa is a extend { dimension: x1 is astr is null }`;
-      expect(isNullSrc).toTranslateWithWarnings(
-        "Use '= NULL' to check for NULL instead of 'IS NULL'"
-      );
-    });
-    test('is not-null in a model', () => {
-      const isNullSrc = model`source: xa is a extend { dimension: x1 is not null }`;
-      expect(isNullSrc).toTranslate();
-    });
-    test('is not-null is in a model', () => {
-      const isNullSrc = model`source: xa is a extend { dimension: x1 is not null is null }`;
-      expect(isNullSrc).toTranslateWithWarnings(
-        "Use '= NULL' to check for NULL instead of 'IS NULL'"
-      );
-    });
-    test('x is expr y is not null', () => {
-      const isNullSrc = model`source: xa is a extend { dimension: x is 1 y is not null }`;
-      expect(isNullSrc).toTranslate();
-      const xaModel = isNullSrc.translator.translate().translated;
-      const xa = getExplore(xaModel!.modelDef, 'xa');
-      const x = getFieldDef(xa, 'x');
-      expect(x).toMatchObject({e: {node: 'numberLiteral'}});
-      const y = getFieldDef(xa, 'y');
-      expect(y).toMatchObject({e: {node: 'not'}});
-    });
-    test('not null::number', () => {
-      const notNull = expr`not null::number`;
-      expect(notNull).translationToFailWith("'not' Can't use type number");
-    });
-    test('(not null)::number', () => {
-      const notNull = expr`(not null)::number`;
-      expect(notNull).toTranslate();
+    describe('sql friendly warnings', () => {
+      test('is null with warning', () => {
+        const warnSrc = expr`ai is null`;
+        expect(warnSrc).toTranslateWithWarnings(
+          "Use '= NULL' to check for NULL instead of 'IS NULL'"
+        );
+        expect(warnSrc).compilesTo('{is-null ai}');
+        const warning = warnSrc.translator.problems()[0];
+        expect(warning.replacement).toEqual('ai = null');
+      });
+      test('is not null with warning', () => {
+        const warnSrc = expr`ai is not null`;
+        expect(warnSrc).toTranslateWithWarnings(
+          "Use '!= NULL' to check for NULL instead of 'IS NOT NULL'"
+        );
+        expect(warnSrc).compilesTo('{is-not-null ai}');
+        const warning = warnSrc.translator.problems()[0];
+        expect(warning.replacement).toEqual('ai != null');
+      });
+      test('like with warning', () => {
+        const warnSrc = expr`astr like 'a'`;
+        expect(warnSrc).toTranslateWithWarnings(
+          "Use Malloy operator '~' instead of 'LIKE'"
+        );
+        expect(warnSrc).compilesTo('{astr like "a"}');
+        const warning = warnSrc.translator.problems()[0];
+        expect(warning.replacement).toEqual("astr ~ 'a'");
+      });
+      test('NOT LIKE with warning', () => {
+        const warnSrc = expr`astr not like 'a'`;
+        expect(warnSrc).toTranslateWithWarnings(
+          "Use Malloy operator '!~' instead of 'NOT LIKE'"
+        );
+        expect(warnSrc).compilesTo('{astr !like "a"}');
+        const warning = warnSrc.translator.problems()[0];
+        expect(warning.replacement).toEqual("astr !~ 'a'");
+      });
+      test('is is-null in a model', () => {
+        const isNullSrc = model`source: xa is a extend { dimension: x1 is astr is null }`;
+        expect(isNullSrc).toTranslateWithWarnings(
+          "Use '= NULL' to check for NULL instead of 'IS NULL'"
+        );
+      });
+      test('is not-null in a model', () => {
+        const isNullSrc = model`source: xa is a extend { dimension: x1 is not null }`;
+        expect(isNullSrc).toTranslate();
+      });
+      test('is not-null is in a model', () => {
+        const isNullSrc = model`source: xa is a extend { dimension: x1 is not null is null }`;
+        expect(isNullSrc).toTranslateWithWarnings(
+          "Use '= NULL' to check for NULL instead of 'IS NULL'"
+        );
+        const warning = isNullSrc.translator.problems()[0];
+        expect(warning.replacement).toEqual('null = null');
+      });
+      test('x is expr y is not null', () => {
+        const isNullSrc = model`source: xa is a extend { dimension: x is 1 y is not null }`;
+        expect(isNullSrc).toTranslate();
+        const xaModel = isNullSrc.translator.translate().translated;
+        const xa = getExplore(xaModel!.modelDef, 'xa');
+        const x = getFieldDef(xa, 'x');
+        expect(x).toMatchObject({e: {node: 'numberLiteral'}});
+        const y = getFieldDef(xa, 'y');
+        expect(y).toMatchObject({e: {node: 'not'}});
+      });
+      test('not null::number', () => {
+        const notNull = expr`not null::number`;
+        expect(notNull).translationToFailWith("'not' Can't use type number");
+      });
+      test('(not null)::number', () => {
+        const notNull = expr`(not null)::number`;
+        expect(notNull).toTranslate();
+      });
     });
   });
 
