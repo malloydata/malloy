@@ -39,6 +39,7 @@ import {
 import {SNOWFLAKE_FUNCTIONS} from './functions';
 import {DialectFunctionOverloadDef} from '../functions';
 import {Dialect, DialectFieldList, QueryInfo, qtz} from '../dialect';
+import {SNOWFLAKE_DIALECT_FUNCTIONS} from './functions/dialect_functions';
 
 const extractionMap: Record<string, string> = {
   'day_of_week': 'dayofweek',
@@ -443,6 +444,10 @@ ${indent(sql)}
 
   getGlobalFunctionDef(name: string): DialectFunctionOverloadDef[] | undefined {
     return SNOWFLAKE_FUNCTIONS.get(name);
+  }
+
+  getDialectFunctions(): {[name: string]: DialectFunctionOverloadDef[]} {
+    return SNOWFLAKE_DIALECT_FUNCTIONS;
   }
 
   malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string {

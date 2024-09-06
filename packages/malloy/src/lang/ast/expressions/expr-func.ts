@@ -81,6 +81,36 @@ export class ExprFunc extends ExpressionDef {
     return this.getPropsExpression(fs);
   }
 
+  private findFunctionDef(
+    dialect: string | undefined
+  ):
+    | {found: FunctionDef; error: undefined}
+    | {found: undefined; error: string} {
+    // TODO this makes functions case-insensitive. This is weird that this is the only place
+    // where case insensitivity is thing.
+    const normalizedName = this.name.toLowerCase();
+    const dialectFunc = dialect
+      ? this.getDialectNamespace(dialect)?.getEntry(normalizedName)?.entry
+      : undefined;
+    const func = dialectFunc ?? this.modelEntry(normalizedName)?.entry;
+    if (func === undefined) {
+      this.log(
+        `Unknown function '${this.name}'. Use '${this.name}!(...)' to call a SQL function directly.`
+      );
+      return {found: undefined, error: 'unknown function'};
+    } else if (func.type !== 'function') {
+      this.log(`Cannot call '${this.name}', which is of type ${func.type}`);
+      return {found: undefined, error: 'called non function'};
+    }
+    if (func.name !== this.name) {
+      this.log(
+        `Case insensitivity for function names is deprecated, use '${func.name}' instead`,
+        'warn'
+      );
+    }
+    return {found: func, error: undefined};
+  }
+
   getPropsExpression(
     fs: FieldSpace,
     props?: {
@@ -116,24 +146,10 @@ export class ExprFunc extends ExpressionDef {
         ),
       };
     }
-
-    // TODO this makes functions case-insensitive. This is weird that this is the only place
-    // where case insensitivity is thing.
-    const func = this.modelEntry(this.name.toLowerCase())?.entry;
+    const dialect = fs.dialectObj()?.name;
+    const {found: func, error} = this.findFunctionDef(dialect);
     if (func === undefined) {
-      this.log(
-        `Unknown function '${this.name}'. Use '${this.name}!(...)' to call a SQL function directly.`
-      );
-      return errorFor('unknown function');
-    } else if (func.type !== 'function') {
-      this.log(`Cannot call '${this.name}', which is of type ${func.type}`);
-      return errorFor('called non function');
-    }
-    if (func.name !== this.name) {
-      this.log(
-        `Case insensitivity for function names is deprecated, use '${func.name}' instead`,
-        'warn'
-      );
+      return errorFor(error);
     }
     // Find the 'implicit argument' for aggregate functions called like `some_join.some_field.agg(...args)`
     // where the full arg list is `(some_field, ...args)`.
@@ -244,7 +260,6 @@ export class ExprFunc extends ExpressionDef {
       structPath,
     };
     let funcCall: Expr = frag;
-    const dialect = fs.dialectObj()?.name;
     const dialectOverload = dialect ? overload.dialect[dialect] : undefined;
     // TODO add in an error if you use an asymmetric function in BQ
     // and the function uses joins

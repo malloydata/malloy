@@ -38,6 +38,7 @@ import {Tag} from '../../../tags';
 import {LogSeverity, MessageLogger} from '../../parse-log';
 import {MalloyTranslation} from '../../parse-malloy';
 import {ModelDataRequest} from '../../translate-response';
+import {DialectNameSpace} from './dialect-name-space';
 import {DocumentCompileResult} from './document-compile-result';
 import {GlobalNameSpace} from './global-name-space';
 import {ModelEntry} from './model-entry';
@@ -119,6 +120,10 @@ export abstract class MalloyElement {
       return this.parent.namespace();
     }
     throw new Error('INTERNAL ERROR: Translation without document scope');
+  }
+
+  getDialectNamespace(dialectName: string): NameSpace | undefined {
+    return this.document()?.getDialectNamespace(dialectName);
   }
 
   modelEntry(reference: string | ModelEntryReference): ModelEntry | undefined {
@@ -642,5 +647,16 @@ export class Document extends MalloyElement implements NameSpace {
         'error'
       );
     }
+  }
+
+  private readonly dialectNameSpaces = new Map<string, NameSpace>();
+  getDialectNamespace(dialectName: string): NameSpace | undefined {
+    if (this.dialectNameSpaces.has(dialectName)) {
+      return this.dialectNameSpaces.get(dialectName);
+    }
+    const dialect = getDialect(dialectName);
+    const ns = new DialectNameSpace(dialect);
+    this.dialectNameSpaces.set(dialectName, ns);
+    return ns;
   }
 }

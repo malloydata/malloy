@@ -1245,6 +1245,25 @@ expressionModels.forEach((x, databaseName) => {
       }
     });
   });
+
+  describe('dialect functions', () => {
+    describe('duckdb', () => {
+      const duckdb = it.when(databaseName === 'duckdb');
+      duckdb('to_timestamp', async () => {
+        await funcTest('to_timestamp(1725555835) = @2024-09-05 17:03:55', true);
+      });
+    });
+
+    describe('trino', () => {
+      const trino = it.when(databaseName === 'trino');
+      trino('from_unixtime', async () => {
+        await funcTest(
+          'from_unixtime(1725555835) = @2024-09-05 17:03:55',
+          true
+        );
+      });
+    });
+  });
 });
 
 describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
