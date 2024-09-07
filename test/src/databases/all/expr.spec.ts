@@ -676,6 +676,33 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     `).malloyResultMatches(runtime, {model_count: 60461, b_count: 355});
     }
   );
+
+  test('joined filtered explores with NO dependencies', async () => {
+    await expect(`
+      source: sf is ${databaseName}.table('malloytest.state_facts') extend {
+        measure: state_count is count()
+        primary_key: state
+      }
+
+      source: al is sf extend {where: state = 'AL'}
+
+      source: a is sf extend {
+        where: state ~ 'A%'
+        join_one: al with state
+      }
+
+      source: allx is sf extend {
+        join_one: a with state
+      }
+      // # test.debug
+      run: allx -> {
+        aggregate:
+          allx is state_count
+          a is a.state_count
+          al is a.al.state_count
+      }
+    `).malloyResultMatches(runtime, {allx: 51, a: 4, al: 1});
+  });
 });
 
 describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {

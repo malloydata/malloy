@@ -2775,17 +2775,31 @@ class QueryQuery extends QueryField {
           qf.generateExpression(this.rootResult)
         );
       }
-      if (ji.children.length === 0 || conditions === undefined) {
+
+      if (
+        ji.children.length === 0 ||
+        conditions === undefined ||
+        !this.parent.dialect.supportsComplexFilteredSources
+      ) {
+        // LTNOTE: need a check here to see the children's where: conditions are local
+        //  to the source and not to any of it's joined children.
+        //  In Presto, we're going to get a SQL error if in this case
+        //  for now.  We need to inspect the 'condition' of each of the children
+        //  to see if they reference subchildren and blow up if they do
+        //  or move them to the where clause with a (x.distnct_key is NULL or (condition))
+        //
+        // const childrenFiltersAreComplex = somethign(conditions)
+        // if (conditions && childrenFiltersAreComplex !this.parent.dialect.supportsComplexFilteredSources) {
+        //   throw new Error(
+        //     'Cannot join a source with a complex filter on a joined source'
+        //   );
+        // }
+
         if (conditions !== undefined && conditions.length >= 1) {
           filters = ` AND (${conditions.join(' AND ')})`;
         }
         s += ` ${matrixOperation} JOIN ${structSQL} AS ${ji.alias}\n  ON ${onCondition}${filters}\n`;
       } else {
-        if (!this.parent.dialect.supportsComplexFilteredSources) {
-          throw new Error(
-            'Cannot join a source with a filter on a joined source'
-          );
-        }
         let select = `SELECT ${ji.alias}.*`;
         let joins = '';
         for (const childJoin of ji.children) {
