@@ -22,12 +22,13 @@
  */
 
 import {FT} from '../fragtype-utils';
+import {ArithmeticMalloyOperator} from '../types/binary_operators';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 
 export abstract class BinaryNumeric<
-  opType extends string,
+  opType extends ArithmeticMalloyOperator,
 > extends ExpressionDef {
   elementType = 'numeric binary abstract';
   constructor(

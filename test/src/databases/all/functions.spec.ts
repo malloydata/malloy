@@ -51,12 +51,23 @@ source: carriers is ${databaseName}.table('malloytest.carriers')
 `;
 }
 
-const expressionModels = new Map<string, malloy.ModelMaterializer>();
+const expressionModels = new Map<
+  string,
+  {
+    runtime: malloy.SingleConnectionRuntime;
+    expressionModel: malloy.ModelMaterializer;
+  }
+>();
 runtimes.runtimeMap.forEach((runtime, databaseName) =>
-  expressionModels.set(databaseName, runtime.loadModel(modelText(databaseName)))
+  expressionModels.set(databaseName, {
+    runtime,
+    expressionModel: runtime.loadModel(modelText(databaseName)),
+  })
 );
 
-expressionModels.forEach((expressionModel, databaseName) => {
+expressionModels.forEach((x, databaseName) => {
+  const expressionModel = x.expressionModel;
+  const runtime = x.runtime;
   const funcTestGeneral = async (
     expr: string,
     type: 'group_by' | 'aggregate',
@@ -1075,6 +1086,22 @@ expressionModels.forEach((expressionModel, databaseName) => {
       expect(result.data.path(9, 'next_state').value).toBe('NONE');
     });
   });
+
+  describe('count_approx', () => {
+    test.when(runtime.dialect.supportsCountApprox)(
+      'works generally',
+      async () => {
+        await expect(`
+          // be accurate within 10%
+          // # test.debug
+          run: ${databaseName}.table('malloytest.state_facts') -> {
+            aggregate: x is round(count_approx(state)/10,0)*10
+            aggregate: y is round(count_approx(airport_count)/10,0)*10
+          }
+          `).malloyResultMatches(runtime, {'x': 50, 'y': 50});
+      }
+    );
+  });
   describe('last_value', () => {
     it(`works - ${databaseName}`, async () => {
       const result = await expressionModel
@@ -1216,6 +1243,25 @@ expressionModels.forEach((expressionModel, databaseName) => {
           births.reduce((a, b) => a + b)
         );
       }
+    });
+  });
+
+  describe('dialect functions', () => {
+    describe('duckdb', () => {
+      const duckdb = it.when(databaseName === 'duckdb');
+      duckdb('to_timestamp', async () => {
+        await funcTest('to_timestamp(1725555835) = @2024-09-05 17:03:55', true);
+      });
+    });
+
+    describe('trino', () => {
+      const trino = it.when(databaseName === 'trino');
+      trino('from_unixtime', async () => {
+        await funcTest(
+          'from_unixtime(1725555835) = @2024-09-05 17:03:55',
+          true
+        );
+      });
     });
   });
 });

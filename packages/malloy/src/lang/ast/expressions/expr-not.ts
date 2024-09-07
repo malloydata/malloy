@@ -26,7 +26,6 @@ import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 import {Unary} from './unary';
-import {nullsafeNot} from './utils';
 
 export class ExprNot extends Unary {
   elementType = 'not';
@@ -41,7 +40,7 @@ export class ExprNot extends Unary {
     return {
       ...notThis,
       dataType: 'boolean',
-      value: doNot ? nullsafeNot(notThis.value) : ['false'],
+      value: {node: 'not', e: doNot ? notThis.value : {node: 'false'}},
     };
   }
 }

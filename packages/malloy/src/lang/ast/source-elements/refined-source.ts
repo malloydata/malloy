@@ -133,7 +133,7 @@ export class RefinedSource extends Source {
     let moreFilters = false;
     for (const filter of filters) {
       for (const el of filter.list) {
-        const fc = el.filterExpression(fs);
+        const fc = el.filterCondition(fs);
         if (expressionIsCalculation(fc.expressionType)) {
           el.log("Can't use aggregate computations in top level filters");
         } else {

@@ -164,6 +164,8 @@ export abstract class TrinoPrestoConnection
     'varchar': {type: 'string'},
     'integer': {type: 'number', numberType: 'integer'},
     'bigint': {type: 'number', numberType: 'integer'},
+    'smallint': {type: 'number', numberType: 'integer'},
+    'tinyint': {type: 'number', numberType: 'integer'},
     'double': {type: 'number', numberType: 'float'},
     'decimal': {type: 'number', numberType: 'float'},
     'string': {type: 'string'},
@@ -685,17 +687,16 @@ export abstract class TrinoPrestoConnection
 
       if (queryResult.error) {
         // TODO: handle.
-        throw new Error(
-          `Failed to grab schema for ${queryResult.error}
-          )}`
-        );
+        throw new Error(queryResult.error);
       }
 
       const rows: string[][] = (queryResult.rows as string[][]) ?? [];
       this.structDefFromSchema(rows, structDef);
     } catch (e) {
       throw new Error(
-        `Could not fetch schema for ${element} ${JSON.stringify(e as Error)}`
+        `Could not fetch schema for ${element} ${
+          e instanceof Error ? e.message : e
+        }`
       );
     }
 

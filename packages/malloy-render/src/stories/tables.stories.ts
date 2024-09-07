@@ -85,3 +85,16 @@ export const LongColumn = {
     view: 'long_column',
   },
 };
+
+export const DateAndTime = {
+  args: {
+    source: 'products',
+    view: 'date_and_time',
+  },
+};
+export const DirectTest = {
+  args: {
+    source: 'duckdb.sql("select unnest([1,null,3]) as i")',
+    view: '{ select: * }',
+  },
+};

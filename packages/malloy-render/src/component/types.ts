@@ -24,6 +24,7 @@ export interface FieldRenderMetadata {
   values: Set<string>;
   maxRecordCt: number | null;
   vegaChartProps?: VegaChartProps;
+  renderAs: string;
 }
 
 export interface RenderResultMetadata {
@@ -36,3 +37,14 @@ export interface RenderResultMetadata {
   resultTag: Tag;
   rootField: Field | Explore;
 }
+
+export type MalloyClickEventPayload = {
+  field: Field;
+  // TODO: type these later
+  displayValue: unknown;
+  value: unknown;
+  fieldPath: string[];
+  isHeader: boolean;
+  event: MouseEvent;
+  type: 'dashboard-item' | 'table-cell';
+};

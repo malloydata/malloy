@@ -5,17 +5,39 @@ import {
   Result,
   Tag,
 } from '@malloydata/malloy';
-import {Show, createEffect, createMemo} from 'solid-js';
+import {
+  Show,
+  createContext,
+  createEffect,
+  createMemo,
+  useContext,
+} from 'solid-js';
 import {getResultMetadata} from './render-result-metadata';
 import {ResultContext} from './result-context';
 import './render.css';
 import {ComponentOptions, ICustomElement} from 'component-register';
 import {applyRenderer} from './apply-renderer';
+import {MalloyClickEventPayload} from './types';
 
 export type MalloyRenderProps = {
   result?: Result;
   queryResult?: QueryResult;
   modelDef?: ModelDef;
+  scrollEl?: HTMLElement;
+  onClick?: (payload: MalloyClickEventPayload) => void;
+};
+
+const ConfigContext = createContext<{
+  onClick?: (payload: MalloyClickEventPayload) => void;
+}>();
+
+export const useConfig = () => {
+  const config = useContext(ConfigContext);
+  if (!config)
+    throw new Error(
+      'ConfigContext missing a value; did you provide a ConfigProvider?'
+    );
+  return config;
 };
 
 export function MalloyRender(
@@ -31,7 +53,13 @@ export function MalloyRender(
 
   return (
     <Show when={result()}>
-      <MalloyRenderInner result={result()!} element={element} />
+      <ConfigContext.Provider value={{onClick: props.onClick}}>
+        <MalloyRenderInner
+          result={result()!}
+          element={element}
+          scrollEl={props.scrollEl}
+        />
+      </ConfigContext.Provider>
     </Show>
   );
 }
@@ -39,6 +67,7 @@ export function MalloyRender(
 export function MalloyRenderInner(props: {
   result: Result;
   element: ICustomElement;
+  scrollEl?: HTMLElement;
 }) {
   const metadata = createMemo(() => getResultMetadata(props.result));
   const tags = () => {
@@ -70,6 +99,14 @@ export function MalloyRenderInner(props: {
       dataColumn: props.result.data,
       resultMetadata: metadata(),
       tag: tags().resultTag,
+      customProps: {
+        table: {
+          scrollEl: props.scrollEl,
+        },
+        dashboard: {
+          scrollEl: props.scrollEl,
+        },
+      },
     });
 
   return (

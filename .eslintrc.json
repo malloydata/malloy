@@ -42,5 +42,13 @@
       {"prefer": "parameter-property"}
     ],
     "quote-props": ["error", "consistent"]
-  }
+  },
+  "overrides": [
+    {
+      "files": ["**/vite.config.*", "scripts/**"],
+      "rules": {
+        "node/no-unpublished-import": "off"
+      }
+    }
+  ]
 }

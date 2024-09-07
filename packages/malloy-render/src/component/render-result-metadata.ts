@@ -37,6 +37,7 @@ import {generateBarChartSpec} from './bar-chart/generate-bar_chart-spec';
 import {plotToVega} from './plot/plot-to-vega';
 import {hasAny} from './tag-utils';
 import {RenderResultMetadata} from './types';
+import {shouldRenderAs} from './apply-renderer';
 
 function createDataCache() {
   const dataCache = new WeakMap<DataColumn, QueryData>();
@@ -85,6 +86,7 @@ export function getResultMetadata(result: Result) {
     maxString: null,
     values: new Set(),
     maxRecordCt: null,
+    renderAs: shouldRenderAs(rootField, result.tagParse().tag),
   };
 
   initFieldMeta(result.data.field, metadata);
@@ -112,6 +114,7 @@ function initFieldMeta(e: Explore, metadata: RenderResultMetadata) {
       maxString: null,
       values: new Set(),
       maxRecordCt: null,
+      renderAs: shouldRenderAs(f),
     };
     if (f.isExploreField()) {
       initFieldMeta(f, metadata);
@@ -138,8 +141,8 @@ const populateFieldMeta = (data: DataArray, metadata: RenderResultMetadata) => {
         if (!fieldMeta.maxString || fieldMeta.maxString.length < s.length)
           fieldMeta.maxString = s;
       } else if (f.isExploreField()) {
-        const data = row.cell(f) as DataArray;
-        populateFieldMeta(data, metadata);
+        const data = row.cell(f);
+        if (data.isArray()) populateFieldMeta(data, metadata);
       }
     }
   }
@@ -163,6 +166,7 @@ function populateExploreMeta(
     fieldMeta.vegaChartProps = plotToVega(plotSpec, {
       field: f,
       metadata,
+      chartTag: (tag.tag('bar_chart') ?? tag.tag('bar'))!,
     });
   }
 }

@@ -69,7 +69,7 @@ export class ReferenceField extends SpaceField {
           ? {
               type: check.found.typeDesc().dataType as CastType,
               name: path[0],
-              e: [{type: 'parameter', path}],
+              e: {node: 'parameter', path},
             }
           : {type: 'fieldref', path};
       this.queryFieldDef = queryFieldDef;

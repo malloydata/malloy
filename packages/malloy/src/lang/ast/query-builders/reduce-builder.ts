@@ -22,7 +22,7 @@
  */
 
 import {
-  FilterExpression,
+  FilterCondition,
   PartialSegment,
   PipeSegment,
   QuerySegment,
@@ -53,7 +53,7 @@ export abstract class QuerySegmentBuilder implements QueryBuilder {
   abstract inputFS: QueryInputSpace;
   abstract resultFS: QueryOperationSpace;
   abstract readonly type: 'grouping' | 'project';
-  filters: FilterExpression[] = [];
+  filters: FilterCondition[] = [];
 
   execute(qp: QueryProperty): void {
     if (qp.queryExecute) {

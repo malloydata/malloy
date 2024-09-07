@@ -32,55 +32,25 @@ import {
 
 export function fnSqlNumber(): DialectFunctionOverloadDef[] {
   const value = makeParam('value', literal(maxScalar('string')));
-  return [
-    overload(
-      minScalar('number'),
-      [value.param],
-      [{type: 'sql-string', e: [value.arg]}]
-    ),
-  ];
+  return [overload(minScalar('number'), [value.param], value.arg)];
 }
 
 export function fnSqlString(): DialectFunctionOverloadDef[] {
   const value = makeParam('value', literal(maxScalar('string')));
-  return [
-    overload(
-      minScalar('string'),
-      [value.param],
-      [{type: 'sql-string', e: [value.arg]}]
-    ),
-  ];
+  return [overload(minScalar('string'), [value.param], value.arg)];
 }
 
 export function fnSqlDate(): DialectFunctionOverloadDef[] {
   const value = makeParam('value', literal(maxScalar('string')));
-  return [
-    overload(
-      minScalar('date'),
-      [value.param],
-      [{type: 'sql-string', e: [value.arg]}]
-    ),
-  ];
+  return [overload(minScalar('date'), [value.param], value.arg)];
 }
 
 export function fnSqlTimestamp(): DialectFunctionOverloadDef[] {
   const value = makeParam('value', literal(maxScalar('string')));
-  return [
-    overload(
-      minScalar('timestamp'),
-      [value.param],
-      [{type: 'sql-string', e: [value.arg]}]
-    ),
-  ];
+  return [overload(minScalar('timestamp'), [value.param], value.arg)];
 }
 
 export function fnSqlBoolean(): DialectFunctionOverloadDef[] {
   const value = makeParam('value', literal(maxScalar('string')));
-  return [
-    overload(
-      minScalar('boolean'),
-      [value.param],
-      [{type: 'sql-string', e: [value.arg]}]
-    ),
-  ];
+  return [overload(minScalar('boolean'), [value.param], value.arg)];
 }

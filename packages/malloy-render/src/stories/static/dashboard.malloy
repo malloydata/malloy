@@ -15,4 +15,50 @@ source: products is duckdb.table("data/products.parquet") extend {
         limit: 10
       }
   }
+
+  # dashboard
+  view: dash_dense is {
+    group_by:
+      category
+    # currency
+    aggregate:
+      avg_retail is retail_price.avg()
+      sum_retail is retail_price.sum()
+      avg_retail2 is retail_price.avg()
+      avg_retail3 is retail_price.avg()
+      avg_retail4 is retail_price.avg()
+      avg_retail5 is retail_price.avg()
+      avg_retail6 is retail_price.avg()
+      avg_retail7 is retail_price.avg()
+    nest:
+      by_brand is {
+        group_by: brand
+        aggregate:
+          avg_retail is retail_price.avg()
+          avg_retail2 is retail_price.avg()
+          avg_retail3 is retail_price.avg()
+          avg_retail4 is retail_price.avg()
+          avg_retail5 is retail_price.avg()
+          avg_retail6 is retail_price.avg()
+          avg_retail7 is retail_price.avg()
+        limit: 10
+      }
+  }
+
+  # dashboard
+  view: dash_with_break is {
+    group_by:
+      category
+    # currency
+    aggregate:
+      avg_retail is retail_price.avg()
+      sum_retail is retail_price.sum()
+    nest:
+      # break
+      by_brand is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 10
+      }
+  }
 }

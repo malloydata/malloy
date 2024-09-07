@@ -23,23 +23,23 @@
 
 import {indent} from '../../model/utils';
 import {
-  DateUnit,
-  Expr,
-  ExtractUnit,
   Sampling,
-  TimeFieldType,
-  TimeValue,
-  TimestampUnit,
-  TypecastFragment,
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
-  mkExpr,
   FieldAtomicTypeDef,
+  TimeTruncExpr,
+  TimeExtractExpr,
+  TimeDeltaExpr,
+  TypecastExpr,
+  TimeLiteralNode,
+  MeasureTimeExpr,
+  RegexMatchExpr,
 } from '../../model/malloy_types';
 import {SNOWFLAKE_FUNCTIONS} from './functions';
 import {DialectFunctionOverloadDef} from '../functions';
 import {Dialect, DialectFieldList, QueryInfo, qtz} from '../dialect';
+import {SNOWFLAKE_DIALECT_FUNCTIONS} from './functions/dialect_functions';
 
 const extractionMap: Record<string, string> = {
   'day_of_week': 'dayofweek',
@@ -186,19 +186,10 @@ export class SnowflakeDialect extends Dialect {
     _isInNestedPipeline: boolean
   ): string {
     if (isArray) {
-      // if (needDistinctKey) {
-      //   // return `LEFT JOIN UNNEST(ARRAY(( SELECT AS STRUCT row_number() over() as __row_id, value FROM UNNEST(${source}) value))) as ${alias}`;
-      // } else {
-      //   return `LEFT JOIN UNNEST(ARRAY((SELECT AS STRUCT value FROM unnest(${source}) value))) as ${alias}`;
-      // }
       return `,LATERAL FLATTEN(INPUT => ${source}) AS ${alias}_1, LATERAL (SELECT ${alias}_1.INDEX, object_construct('value', ${alias}_1.value) as value ) as ${alias}`;
     } else {
       // have to have a non empty row or it treats it like an inner join :barf-emoji:
       return `LEFT JOIN LATERAL FLATTEN(INPUT => ifnull(${source},[1])) AS ${alias}`;
-      //   return `LEFT JOIN UNNEST(ARRAY(( SELECT AS STRUCT row_number() over() as __row_id, * FROM UNNEST(${source})))) as ${alias}`;
-      // } else {
-      //   return `LEFT JOIN UNNEST(${source}) as ${alias}`;
-      // }
     }
   }
 
@@ -302,54 +293,49 @@ ${indent(sql)}
 `;
   }
 
-  sqlTrunc(qi: QueryInfo, sqlTime: TimeValue, units: TimestampUnit): Expr {
+  sqlTruncExpr(qi: QueryInfo, te: TimeTruncExpr): string {
     const tz = qtz(qi);
-    let truncThis = sqlTime.value;
-    if (tz && sqlTime.valueType === 'timestamp') {
-      truncThis = mkExpr`CONVERT_TIMEZONE('${tz}', ${truncThis})`;
+    let truncThis = te.e.sql;
+    if (tz && te.e.dataType === 'timestamp') {
+      truncThis = `CONVERT_TIMEZONE('${tz}',${truncThis})`;
     }
-    return mkExpr`DATE_TRUNC('${units}', ${truncThis})`;
+    return `DATE_TRUNC('${te.units}',${truncThis})`;
   }
 
-  sqlExtract(qi: QueryInfo, from: TimeValue, units: ExtractUnit): Expr {
-    const extractUnits = extractionMap[units] || units;
-    let extractFrom = from.value;
+  sqlTimeExtractExpr(qi: QueryInfo, from: TimeExtractExpr): string {
+    const extractUnits = extractionMap[from.units] || from.units;
+    let extractFrom = from.e.sql;
     const tz = qtz(qi);
 
-    if (tz && from.valueType === 'timestamp') {
-      extractFrom = mkExpr`CONVERT_TIMEZONE('${tz}', ${extractFrom})`;
+    if (tz && from.e.dataType === 'timestamp') {
+      extractFrom = `CONVERT_TIMEZONE('${tz}', ${extractFrom})`;
     }
-    const extracted = mkExpr`EXTRACT(${extractUnits} FROM ${extractFrom})`;
-    return extracted;
+    return `EXTRACT(${extractUnits} FROM ${extractFrom})`;
   }
 
-  sqlAlterTime(
-    op: '+' | '-',
-    expr: TimeValue,
-    n: Expr,
-    timeframe: DateUnit
-  ): Expr {
-    const interval = mkExpr`INTERVAL '${n} ${timeframe}'`;
-    return mkExpr`((${expr.value})${op}${interval})`;
+  sqlAlterTimeExpr(df: TimeDeltaExpr): string {
+    const interval = `INTERVAL '${df.kids.delta.sql} ${df.units}'`;
+    return `(${df.kids.base.sql})${df.op}${interval}`;
   }
 
-  private atTz(expr: Expr, tz: string | undefined): Expr {
+  private atTz(sqlExpr: string, tz: string | undefined): string {
     if (tz !== undefined) {
-      return mkExpr`(
-      TO_CHAR(${expr}::TIMESTAMP_NTZ, 'YYYY-MM-DD HH24:MI:SS.FF9') ||
+      return `(
+      TO_CHAR(${sqlExpr}::TIMESTAMP_NTZ, 'YYYY-MM-DD HH24:MI:SS.FF9') ||
       TO_CHAR(CONVERT_TIMEZONE('${tz}', '1970-01-01 00:00:00'), 'TZHTZM')
     )::TIMESTAMP_TZ`;
     }
-    return mkExpr`${expr}::TIMESTAMP_NTZ`;
+    return `${sqlExpr}::TIMESTAMP_NTZ`;
   }
 
-  sqlNow(): Expr {
-    return mkExpr`CURRENT_TIMESTAMP()`;
+  sqlNowExpr(): string {
+    return 'CURRENT_TIMESTAMP()';
   }
 
-  sqlCast(qi: QueryInfo, cast: TypecastFragment): Expr {
+  sqlCast(qi: QueryInfo, cast: TypecastExpr): string {
+    const src = cast.e.sql || '';
     if (cast.srcType === cast.dstType) {
-      return cast.expr;
+      return src;
     }
     if (cast.safe && typeof cast.srcType !== 'string') {
       // safe cast is only supported for a few combinations of src -> dst types
@@ -365,13 +351,13 @@ ${indent(sql)}
     const tz = qtz(qi);
     // casting timestamps and dates
     if (cast.dstType === 'date' && cast.srcType === 'timestamp') {
-      let castExpr = cast.expr;
+      let castExpr = src;
       if (tz) {
-        castExpr = mkExpr`CONVERT_TIMEZONE('${tz}', ${castExpr})`;
+        castExpr = `CONVERT_TIMEZONE('${tz}', ${castExpr})`;
       }
-      return mkExpr`TO_DATE(${castExpr})`;
+      return `TO_DATE(${castExpr})`;
     } else if (cast.dstType === 'timestamp' && cast.srcType === 'date') {
-      const retExpr = mkExpr`TO_TIMESTAMP(${cast.expr})`;
+      const retExpr = `TO_TIMESTAMP(${src})`;
       return this.atTz(retExpr, tz);
     }
 
@@ -380,20 +366,15 @@ ${indent(sql)}
         ? this.malloyTypeToSQLType({type: cast.dstType})
         : cast.dstType.raw;
     const castFunc = cast.safe ? 'TRY_CAST' : 'CAST';
-    return mkExpr`${castFunc}(${cast.expr} AS ${dstType})`;
+    return `${castFunc}(${src} AS ${dstType})`;
   }
 
-  sqlLiteralTime(
-    qi: QueryInfo,
-    timeString: string,
-    type: TimeFieldType,
-    timezone: string | undefined
-  ): string {
+  sqlLiteralTime(qi: QueryInfo, lf: TimeLiteralNode): string {
     const tz = qtz(qi);
     // just making it explicit that timestring does not have timezone info
-    let ret = `'${timeString}'::TIMESTAMP_NTZ`;
+    let ret = `'${lf.literal}'::TIMESTAMP_NTZ`;
     // now do the hack to add timezone to a timestamp ntz
-    const targetTimeZone = timezone ?? tz;
+    const targetTimeZone = lf.timezone ?? tz;
     if (targetTimeZone) {
       const targetTimeZoneSuffix = `TO_CHAR(CONVERT_TIMEZONE('${targetTimeZone}', '1970-01-01 00:00:00'), 'TZHTZM')`;
       const retTimeString = `TO_CHAR(${ret}, 'YYYY-MM-DD HH24:MI:SS.FF9')`;
@@ -401,7 +382,7 @@ ${indent(sql)}
       ret = `(${ret})::TIMESTAMP_TZ`;
     }
 
-    switch (type) {
+    switch (lf.dataType) {
       case 'date':
         return `TO_DATE(${ret})`;
       case 'timestamp': {
@@ -410,26 +391,27 @@ ${indent(sql)}
     }
   }
 
-  sqlMeasureTime(from: TimeValue, to: TimeValue, units: string): Expr {
+  sqlMeasureTimeExpr(df: MeasureTimeExpr): string {
+    const from = df.kids.left;
+    const to = df.kids.right;
     let extractUnits = 'nanoseconds';
-    if (from.valueType === 'date' || to.valueType === 'date') {
+    if (from.dataType === 'date' || to.dataType === 'date') {
       extractUnits = 'seconds';
     }
 
-    return mkExpr`TIMESTAMPDIFF(
-      '${units}',
+    return `TIMESTAMPDIFF(
+      '${df.units}',
       '1970-01-01 00:00:00'::TIMESTAMP_NTZ,
       TIMESTAMPADD(
         '${extractUnits}',
-        EXTRACT('epoch_${extractUnits}', ${to.value}) - EXTRACT('epoch_${extractUnits}', ${from.value}),
+        EXTRACT('epoch_${extractUnits}', ${to.sql}) - EXTRACT('epoch_${extractUnits}', ${from.sql}),
         '1970-01-01 00:00:00'::TIMESTAMP_NTZ
       )
     )`;
   }
 
-  sqlRegexpMatch(expr: Expr, regexp: Expr): Expr {
-    // regexp_match captures any partial match
-    return mkExpr`(REGEXP_INSTR(${expr}, ${regexp}) != 0)`;
+  sqlRegexpMatch(compare: RegexMatchExpr): string {
+    return `REGEXP_INSTR(${compare.kids.expr.sql}, ${compare.kids.regex.sql}) != 0`;
   }
 
   sqlSampleTable(tableSQL: string, sample: Sampling | undefined): string {
@@ -462,6 +444,10 @@ ${indent(sql)}
 
   getGlobalFunctionDef(name: string): DialectFunctionOverloadDef[] | undefined {
     return SNOWFLAKE_FUNCTIONS.get(name);
+  }
+
+  getDialectFunctions(): {[name: string]: DialectFunctionOverloadDef[]} {
+    return SNOWFLAKE_DIALECT_FUNCTIONS;
   }
 
   malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string {

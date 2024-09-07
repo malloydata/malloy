@@ -25,13 +25,13 @@ import {maxExpressionType, mergeEvalSpaces} from '../../../model/malloy_types';
 
 import {errorFor} from '../ast-utils';
 import {FT} from '../fragtype-utils';
+import {BinaryMalloyOperator, getExprNode} from '../types/binary_operators';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
-import {compose} from './utils';
 
 export abstract class BinaryBoolean<
-  opType extends string,
+  opType extends BinaryMalloyOperator,
 > extends ExpressionDef {
   elementType = 'abstract boolean binary';
   legalChildTypes = [FT.boolT];
@@ -40,7 +40,7 @@ export abstract class BinaryBoolean<
     readonly op: opType,
     readonly right: ExpressionDef
   ) {
-    super({left: left, right: right});
+    super({left, right});
   }
 
   getExpression(fs: FieldSpace): ExprValue {
@@ -54,8 +54,11 @@ export abstract class BinaryBoolean<
           left.expressionType,
           right.expressionType
         ),
+        value: {
+          node: getExprNode(this.op),
+          kids: {left: left.value, right: right.value},
+        },
         evalSpace,
-        value: compose(left.value, this.op, right.value),
       };
     }
     return errorFor('logial required boolean');

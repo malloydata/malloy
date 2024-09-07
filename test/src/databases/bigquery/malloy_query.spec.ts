@@ -102,13 +102,7 @@ describe('BigQuery expression tests', () => {
                       type: 'number',
                       name: 'route_flights',
                       expressionType: 'aggregate',
-                      e: [
-                        {
-                          type: 'aggregate',
-                          function: 'count',
-                          e: [],
-                        },
-                      ],
+                      e: {node: 'aggregate', function: 'count', e: {node: ''}},
                     },
                   ]),
                 },
@@ -209,19 +203,17 @@ describe('BigQuery expression tests', () => {
               type: 'number',
               name: 'total_distance_ca',
               expressionType: 'aggregate',
-              e: [
-                {
-                  type: 'filterExpression',
+              e: {
+                node: 'filteredExpr',
+                kids: {
                   filterList: [fStringEq('origin.state', 'CA')],
-                  e: [
-                    {
-                      type: 'aggregate',
-                      function: 'sum',
-                      e: [{type: 'field', path: ['distance']}],
-                    },
-                  ],
+                  e: {
+                    node: 'aggregate',
+                    function: 'sum',
+                    e: {node: 'field', path: ['distance']},
+                  },
                 },
-              ],
+              },
             },
           ],
           limit: 20,
@@ -280,13 +272,11 @@ describe('BigQuery expression tests', () => {
               type: 'number',
               expressionType: 'aggregate',
               name: 'total_distance',
-              e: [
-                {
-                  type: 'aggregate',
-                  function: 'sum',
-                  e: [{type: 'field', path: ['distance']}],
-                },
-              ],
+              e: {
+                node: 'aggregate',
+                function: 'sum',
+                e: {node: 'field', path: ['distance']},
+              },
             },
             'aircraft.aircraft_models.total_seats',
           ]),
@@ -306,11 +296,11 @@ describe('BigQuery expression tests', () => {
             {
               type: 'string',
               name: 'carrier',
-              e: [
+              e: malloy.composeSQLExpr([
                 'UPPER(',
-                {type: 'field', path: ['carriers', 'nickname']},
+                {node: 'field', path: ['carriers', 'nickname']},
                 ')',
-              ],
+              ]),
             },
             'flight_count',
           ]),
@@ -331,13 +321,11 @@ describe('BigQuery expression tests', () => {
               type: 'number',
               expressionType: 'aggregate',
               name: 'total_distance',
-              e: [
-                {
-                  type: 'aggregate',
-                  function: 'sum',
-                  e: [{type: 'field', path: ['distance']}],
-                },
-              ],
+              e: {
+                node: 'aggregate',
+                function: 'sum',
+                e: {node: 'field', path: ['distance']},
+              },
             },
           ]),
           type: 'reduce',
@@ -359,19 +347,17 @@ describe('BigQuery expression tests', () => {
               type: 'number',
               expressionType: 'aggregate',
               name: 'total_distance',
-              e: [
-                {
-                  type: 'filterExpression',
+              e: {
+                node: 'filteredExpr',
+                kids: {
                   filterList: [fStringEq('origin_code', 'SFO')],
-                  e: [
-                    {
-                      type: 'aggregate',
-                      function: 'sum',
-                      e: [{type: 'field', path: ['distance']}],
-                    },
-                  ],
+                  e: {
+                    node: 'aggregate',
+                    function: 'sum',
+                    e: {node: 'field', path: ['distance']},
+                  },
                 },
-              ],
+              },
             },
           ]),
         },
@@ -393,19 +379,17 @@ describe('BigQuery expression tests', () => {
               type: 'number',
               expressionType: 'aggregate',
               name: 'total_distance',
-              e: [
-                {
-                  type: 'filterExpression',
+              e: {
+                node: 'filteredExpr',
+                kids: {
                   filterList: [fStringEq('origin_code', 'SFO')],
-                  e: [
-                    {
-                      type: 'aggregate',
-                      function: 'sum',
-                      e: [{type: 'field', path: ['distance']}],
-                    },
-                  ],
+                  e: {
+                    node: 'aggregate',
+                    function: 'sum',
+                    e: {node: 'field', path: ['distance']},
+                  },
                 },
-              ],
+              },
             },
           ]),
           filterList: [fStringEq('carriers.code', 'WN')],

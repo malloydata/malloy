@@ -550,13 +550,14 @@ fieldExpr
   | fieldExpr AMPER partialAllowedFieldExpr                # exprAndTree
   | fieldExpr BAR partialAllowedFieldExpr                  # exprOrTree
   | fieldExpr compareOp fieldExpr                          # exprCompare
+  | fieldExpr NOT? LIKE fieldExpr                          # exprWarnLike
+  | fieldExpr IS NOT? NULL                                 # exprWarnNullCmp
   | fieldExpr QMARK partialAllowedFieldExpr                # exprApply
   | NOT fieldExpr                                          # exprNot
   | fieldExpr AND fieldExpr                                # exprLogicalAnd
   | fieldExpr OR fieldExpr                                 # exprLogicalOr
   | fieldExpr DOUBLE_QMARK fieldExpr                       # exprCoalesce
   | CAST OPAREN fieldExpr AS malloyOrSQLType CPAREN        # exprCast
-  | COUNT OPAREN DISTINCT fieldExpr CPAREN                 # exprCountDisinct
   | (SOURCE_KW DOT)? aggregate
       OPAREN (fieldExpr | STAR)? CPAREN                    # exprPathlessAggregate
   | fieldPath DOT aggregate

@@ -23,6 +23,306 @@
 
 // clang-format off
 
+/**
+ * Field computations are compiled into an expression tree of "Expr"
+ * type nodes. Each node is one of these three interfaces. The
+ * final type "Expr" is a union type of all known nodes, so
+ * that you can use "if (expr.node === 'nodeType')" instead of
+ * having to write discriminator functions for every node type.
+ */
+export interface ExprLeaf {
+  node: string;
+  dataType?: AtomicFieldType;
+  sql?: string;
+}
+export interface ExprE extends ExprLeaf {
+  e: Expr;
+}
+export interface ExprOptionalE extends ExprLeaf {
+  e?: Expr;
+}
+
+export interface ExprWithKids extends ExprLeaf {
+  kids: Record<string, Expr | Expr[]>;
+}
+export type AnyExpr = ExprE | ExprOptionalE | ExprWithKids | ExprLeaf;
+
+export function exprHasKids(e: AnyExpr): e is ExprWithKids {
+  return 'kids' in e;
+}
+export function exprHasE(e: AnyExpr): e is ExprE {
+  return 'e' in e;
+}
+export function exprIsLeaf(e: AnyExpr) {
+  return !(exprHasKids(e) || exprHasE(e));
+}
+
+export type Expr =
+  | BinaryExpr
+  | UnaryExpr
+  | FunctionCallNode
+  | OutputFieldNode
+  | FilterCondition
+  | FilteredExpr
+  | AggregateExpr
+  | EmptyExpr
+  | UngroupNode
+  | FunctionParameterNode
+  | SpreadExpr
+  | AggregateOrderByNode
+  | AggregateLimitNode
+  | FieldnameNode
+  | SourceReferenceNode
+  | ParameterNode
+  | NowNode
+  | MeasureTimeExpr
+  | TimeDeltaExpr
+  | TimeTruncExpr
+  | TimeExtractExpr
+  | TypecastExpr
+  | RegexMatchExpr
+  | RegexLiteralNode
+  | TimeLiteralNode
+  | StringLiteralNode
+  | NumberLiteralNode
+  | BooleanLiteralNode
+  | FunctionOrderBy
+  | GenericSQLExpr
+  | NullNode
+  | PickExpr
+  | ErrorNode;
+
+interface HasDataType {
+  dataType: AtomicFieldType;
+}
+export type TypedExpr = Expr & HasDataType;
+
+export type BinaryOperator =
+  | '+'
+  | '-'
+  | '*'
+  | '%'
+  | '/'
+  | 'and'
+  | 'or'
+  | '='
+  | '!='
+  | '>'
+  | '<'
+  | '>='
+  | '<='
+  | 'coalesce'
+  | 'like'
+  | '!like';
+export interface BinaryExpr extends ExprWithKids {
+  node: BinaryOperator;
+  kids: {left: Expr; right: Expr};
+}
+
+export type UnaryOperator = '()' | 'not' | 'unary-' | 'is-null' | 'is-not-null';
+export interface UnaryExpr extends ExprE {
+  node: UnaryOperator;
+  e: Expr;
+}
+
+export interface FunctionCallNode extends ExprWithKids {
+  node: 'function_call';
+  name: string;
+  overload: FunctionOverloadDef;
+  expressionType: ExpressionType;
+  kids: {args: Expr[]; orderBy?: FunctionOrderBy[]};
+  limit?: number;
+  // List of non-dotted output field references
+  partitionBy?: string[];
+  structPath?: string[];
+}
+
+export interface OutputFieldNode extends ExprLeaf {
+  node: 'outputField';
+  name: string;
+}
+
+export interface FilterCondition extends ExprE {
+  node: 'filterCondition';
+  code: string;
+  expressionType: ExpressionType;
+}
+
+export interface FilteredExpr extends ExprWithKids {
+  node: 'filteredExpr';
+  kids: {e: Expr; filterList: FilterCondition[]};
+}
+
+export type AggregateFunctionType =
+  | 'sum'
+  | 'avg'
+  | 'count'
+  | 'distinct'
+  | 'max'
+  | 'min';
+
+export interface AggregateExpr extends ExprE {
+  node: 'aggregate';
+  function: AggregateFunctionType;
+  structPath?: string[];
+}
+export function isAsymmetricExpr(f: Expr): f is AggregateExpr {
+  return (
+    f.node === 'aggregate' &&
+    ['sum', 'avg', 'count', 'distinct'].includes(f.function)
+  );
+}
+
+export interface EmptyExpr extends ExprLeaf {
+  node: '';
+}
+
+export interface UngroupNode extends ExprE {
+  node: 'all' | 'exclude';
+  fields?: string[];
+}
+
+export interface FunctionParameterNode extends ExprLeaf {
+  node: 'function_parameter';
+  name: string;
+}
+
+export interface AggregateOrderByNode extends ExprLeaf {
+  node: 'aggregate_order_by';
+  prefix?: string;
+  suffix?: string;
+}
+
+export interface AggregateLimitNode extends ExprLeaf {
+  node: 'aggregate_limit';
+}
+
+export interface SpreadExpr extends ExprE {
+  node: 'spread';
+  prefix: string | undefined;
+  suffix: string | undefined;
+}
+
+export interface FieldnameNode extends ExprLeaf {
+  node: 'field';
+  path: string[];
+}
+
+export interface SourceReferenceNode extends ExprLeaf {
+  node: 'source-reference';
+  path?: string[];
+}
+
+export interface ParameterNode extends ExprLeaf {
+  node: 'parameter';
+  path: string[];
+}
+
+export interface NowNode extends ExprLeaf {
+  node: 'now';
+}
+
+interface HasTimeValue {
+  dataType: TimeFieldType;
+}
+type TimeExpr = Expr & HasTimeValue;
+
+export interface MeasureTimeExpr extends ExprWithKids {
+  node: 'timeDiff';
+  units: TimestampUnit;
+  kids: {left: TimeExpr; right: TimeExpr};
+}
+
+export interface TimeDeltaExpr extends ExprWithKids {
+  node: 'delta';
+  kids: {base: TimeExpr; delta: Expr};
+  op: '+' | '-';
+  units: TimestampUnit;
+}
+
+export interface TimeTruncExpr extends ExprE {
+  node: 'trunc';
+  e: TimeExpr;
+  units: TimestampUnit;
+}
+
+export interface TimeExtractExpr extends ExprE {
+  node: 'extract';
+  e: TimeExpr;
+  units: ExtractUnit;
+}
+
+export interface TypecastExpr extends ExprE {
+  node: 'cast';
+  safe: boolean;
+  e: Expr;
+  dstType: CastType | {raw: string};
+  srcType?: AtomicFieldType;
+}
+
+export interface RegexMatchExpr extends ExprWithKids {
+  node: 'regexpMatch';
+  kids: {expr: Expr; regex: Expr};
+}
+
+export interface TimeLiteralNode extends ExprLeaf {
+  node: 'timeLiteral';
+  literal: string;
+  dataType: TimeFieldType;
+  timezone?: string;
+}
+
+export interface StringLiteralNode extends ExprLeaf {
+  node: 'stringLiteral';
+  literal: string;
+}
+
+export interface RegexLiteralNode extends ExprLeaf {
+  node: 'regexpLiteral';
+  literal: string;
+}
+
+export interface NumberLiteralNode extends ExprLeaf {
+  node: 'numberLiteral';
+  literal: string;
+}
+
+export interface BooleanLiteralNode extends ExprLeaf {
+  node: 'true' | 'false';
+}
+
+export interface ErrorNode extends ExprLeaf {
+  node: 'error';
+  message?: string;
+}
+
+export interface GenericSQLExpr extends ExprWithKids {
+  node: 'genericSQLExpr';
+  kids: {args: Expr[]};
+  src: string[];
+}
+
+export interface NullNode extends ExprLeaf {
+  node: 'null';
+}
+
+export interface PickExpr extends ExprWithKids {
+  node: 'pick';
+  kids: {pickWhen: Expr[]; pickThen: Expr[]; pickElse: Expr};
+}
+export type ExpressionType =
+  | 'scalar'
+  | 'aggregate'
+  | 'scalar_analytic'
+  | 'aggregate_analytic'
+  | 'ungrouped_aggregate';
+
+export interface Expression {
+  e?: Expr;
+  expressionType?: ExpressionType;
+  code?: string;
+}
+
 type ConstantExpr = Expr;
 
 export interface Parameter {
@@ -119,7 +419,7 @@ export interface ResultMetadataDef {
   sourceField: string;
   sourceExpression?: string;
   sourceClasses: string[];
-  filterList?: FilterExpression[];
+  filterList?: FilterCondition[];
   fieldKind: 'measure' | 'dimension' | 'struct';
 }
 
@@ -135,341 +435,6 @@ export interface ResultMetadata {
 
 export interface ResultStructMetadata {
   resultMetadata?: ResultStructMetadataDef;
-}
-
-export interface OutputFieldFragment {
-  type: 'outputField';
-  name: string;
-}
-
-export function isOutputFieldFragment(f: Fragment): f is OutputFieldFragment {
-  return (f as OutputFieldFragment)?.type === 'outputField';
-}
-
-export interface FilterFragment {
-  type: 'filterExpression';
-  filterList: FilterExpression[];
-  e: Expr;
-}
-
-export function isFilterFragment(f: Fragment): f is FilterFragment {
-  return (f as FilterFragment)?.type === 'filterExpression';
-}
-
-export function isDialectFragment(f: Fragment): f is DialectFragment {
-  return (f as DialectFragment)?.type === 'dialect';
-}
-
-export type AggregateFunctionType =
-  | 'sum'
-  | 'avg'
-  | 'count'
-  | 'count_distinct'
-  | 'max'
-  | 'min';
-
-export interface AggregateFragment {
-  type: 'aggregate';
-  function: AggregateFunctionType;
-  e: Expr;
-  structPath?: string[];
-}
-export function isAggregateFragment(f: Fragment): f is AggregateFragment {
-  return (f as AggregateFragment)?.type === 'aggregate';
-}
-export function isAsymmetricFragment(f: Fragment): f is AggregateFragment {
-  return isAggregateFragment(f) && ['sum', 'avg', 'count'].includes(f.function);
-}
-
-export interface UngroupFragment {
-  type: 'all' | 'exclude';
-  e: Expr;
-  fields?: string[];
-}
-
-export function isUngroupFragment(f: Fragment): f is UngroupFragment {
-  const ftype = (f as UngroupFragment)?.type;
-  return ftype === 'all' || ftype === 'exclude';
-}
-
-export interface FunctionParameterFragment {
-  type: 'function_parameter';
-  name: string;
-}
-
-export function isFunctionParameterFragment(
-  f: Fragment
-): f is FunctionParameterFragment {
-  return (f as FunctionParameterFragment)?.type === 'function_parameter';
-}
-
-export interface AggregateOrderByFragment {
-  type: 'aggregate_order_by';
-  prefix?: string;
-  suffix?: string;
-}
-
-export interface AggregateLimitFragment {
-  type: 'aggregate_limit';
-}
-
-export interface FunctionCallFragment {
-  type: 'function_call';
-  name: string;
-  overload: FunctionOverloadDef;
-  expressionType: ExpressionType;
-  args: Expr[];
-  orderBy?: FunctionOrderBy[];
-  limit?: number;
-  // List of non-dotted output field references
-  partitionBy?: string[];
-  structPath?: string[];
-}
-
-export function isFunctionCallFragment(f: Fragment): f is FunctionCallFragment {
-  return (f as FunctionCallFragment)?.type === 'function_call';
-}
-
-export interface SQLExpressionFragment {
-  type: 'sql_expression';
-  e: Expr;
-}
-
-export function isSQLExpressionFragment(
-  f: Fragment
-): f is SQLExpressionFragment {
-  return (f as SQLExpressionFragment)?.type === 'sql_expression';
-}
-
-export interface SpreadFragment {
-  type: 'spread';
-  e: Expr;
-  prefix: string | undefined;
-  suffix: string | undefined;
-}
-
-export function isSpreadFragment(f: Fragment): f is SpreadFragment {
-  return (f as SpreadFragment)?.type === 'spread';
-}
-
-export interface FieldFragment {
-  type: 'field';
-  path: string[];
-}
-export function isFieldFragment(f: Fragment): f is FieldFragment {
-  return (f as FieldFragment)?.type === 'field';
-}
-
-export interface SqlStringFragment {
-  type: 'sql-string';
-  e: Expr;
-}
-export function isSqlStringFragment(f: Fragment): f is SqlStringFragment {
-  return (f as SqlStringFragment)?.type === 'sql-string';
-}
-
-export interface SourceReferenceFragment {
-  type: 'source-reference';
-  path?: string[];
-}
-export function isSourceReferenceFragment(
-  f: Fragment
-): f is SourceReferenceFragment {
-  return (f as SourceReferenceFragment)?.type === 'source-reference';
-}
-
-export interface ParameterFragment {
-  type: 'parameter';
-  path: string[];
-}
-export function isParameterFragment(f: Fragment): f is ParameterFragment {
-  return (f as ParameterFragment)?.type === 'parameter';
-}
-
-export interface ApplyValueFragment {
-  type: 'applyVal';
-}
-export function isApplyValue(f: Fragment): f is ApplyValueFragment {
-  return (f as ApplyValueFragment)?.type === 'applyVal';
-}
-
-export interface ApplyFragment {
-  type: 'apply';
-  value: Expr;
-  to: Expr;
-}
-export function isApplyFragment(f: Fragment): f is ApplyFragment {
-  return (f as ApplyFragment)?.type === 'apply';
-}
-
-interface DialectFragmentBase {
-  type: 'dialect';
-  function: string;
-}
-
-export interface NowFragment extends DialectFragmentBase {
-  function: 'now';
-}
-
-export interface TimeDiffFragment extends DialectFragmentBase {
-  function: 'timeDiff';
-  units: TimestampUnit;
-  left: TimeValue;
-  right: TimeValue;
-}
-
-export interface TimeDeltaFragment extends DialectFragmentBase {
-  function: 'delta';
-  base: TimeValue;
-  op: '+' | '-';
-  delta: Expr;
-  units: TimestampUnit;
-}
-
-export interface TimeTruncFragment extends DialectFragmentBase {
-  function: 'trunc';
-  expr: TimeValue;
-  units: TimestampUnit;
-}
-
-export interface TimeExtractFragment extends DialectFragmentBase {
-  function: 'extract';
-  expr: TimeValue;
-  units: ExtractUnit;
-}
-
-export interface TypecastFragment extends DialectFragmentBase {
-  function: 'cast';
-  safe: boolean;
-  expr: Expr;
-  dstType: CastType | {raw: string};
-  srcType?: AtomicFieldType;
-}
-
-export interface RegexpMatchFragment extends DialectFragmentBase {
-  function: 'regexpMatch';
-  expr: Expr;
-  regexp: Expr;
-}
-
-export interface DivModFragment extends DialectFragmentBase {
-  function: 'div' | 'mod';
-  numerator: Expr;
-  denominator: Expr;
-}
-
-export interface TimeLiteralFragment extends DialectFragmentBase {
-  function: 'timeLiteral';
-  literal: string;
-  literalType: TimeFieldType;
-  timezone?: string;
-}
-
-export interface StringLiteralFragment extends DialectFragmentBase {
-  function: 'stringLiteral';
-  literal: string;
-}
-
-export interface RegexpLiteralFragment extends DialectFragmentBase {
-  function: 'regexpLiteral';
-  literal: string;
-}
-
-export interface NumberLiteralFragment extends DialectFragmentBase {
-  function: 'numberLiteral';
-  literal: string;
-}
-
-export type DialectFragment =
-  | DivModFragment
-  | TimeLiteralFragment
-  | NowFragment
-  | TimeDeltaFragment
-  | TimeDiffFragment
-  | TimeTruncFragment
-  | TypecastFragment
-  | TimeExtractFragment
-  | StringLiteralFragment
-  | RegexpLiteralFragment
-  | NumberLiteralFragment
-  | RegexpMatchFragment;
-
-export type Fragment =
-  | string
-  | ApplyFragment
-  | ApplyValueFragment
-  | FieldFragment
-  | SourceReferenceFragment
-  | SqlStringFragment
-  | ParameterFragment
-  | FilterFragment
-  | OutputFieldFragment
-  | AggregateFragment
-  | UngroupFragment
-  | DialectFragment
-  | FunctionParameterFragment
-  | AggregateOrderByFragment
-  | AggregateLimitFragment
-  | FunctionCallFragment
-  | SQLExpressionFragment
-  | SpreadFragment;
-
-export type Expr = Fragment[];
-
-export interface TypedValue {
-  value: Expr;
-  valueType: AtomicFieldType;
-}
-export interface TimeValue extends TypedValue {
-  valueType: TimeFieldType;
-}
-
-type TagElement = Expr | string;
-
-/**
- * Return an Expr based on the string template, subsittutions can be
- * either strings, or other Exprs.
-
- * ```
- * units = "inches"
- * len: Expr = [ "something", "returning", "a length "]
- * computeExpr = mkExpr`MEASURE(${len} in ${units})`;
- * ```
- */
-export function mkExpr(
-  src: TemplateStringsArray,
-  ...exprs: TagElement[]
-): Expr {
-  const ret: Expr = [];
-  let index;
-  for (index = 0; index < exprs.length; index++) {
-    const el = exprs[index];
-    if (src[index].length > 0) {
-      ret.push(src[index]);
-    }
-    if (typeof el === 'string') {
-      ret.push(el);
-    } else {
-      ret.push(...el);
-    }
-  }
-  if (src[index].length > 0) {
-    ret.push(src[index]);
-  }
-  return ret;
-}
-
-export type ExpressionType =
-  | 'scalar'
-  | 'aggregate'
-  | 'scalar_analytic'
-  | 'aggregate_analytic'
-  | 'ungrouped_aggregate';
-
-export interface Expression {
-  e?: Expr;
-  expressionType?: ExpressionType;
-  code?: string;
 }
 
 export function expressionIsScalar(e: ExpressionType | undefined): boolean {
@@ -725,13 +690,13 @@ export interface OrderBy {
   dir?: 'asc' | 'desc';
 }
 
-export interface FunctionOrderByExpression {
-  e: Expr;
+export interface FunctionOrderByExpression extends ExprE {
+  node: 'functionOrderBy';
   dir?: 'asc' | 'desc';
 }
 
-export interface FunctionOrderByDefaultExpression {
-  e: undefined;
+export interface FunctionOrderByDefaultExpression extends ExprLeaf {
+  node: 'functionDefaultOrderBy';
   dir: 'asc' | 'desc';
 }
 
@@ -782,7 +747,7 @@ export interface JoinedStruct {
 }
 
 export interface Filtered {
-  filterList?: FilterExpression[];
+  filterList?: FilterCondition[];
 }
 
 /**
@@ -946,12 +911,12 @@ export type StructRelationship =
   | {type: 'inline'}
   | {type: 'nested'; fieldName: string; isArray: boolean};
 
-export interface SQLFragment {
+export interface SQLStringSegment {
   sql: string;
 }
-export type SQLPhrase = Query | SQLFragment;
-export function isSQLFragment(f: SQLPhrase): f is SQLFragment {
-  return (f as SQLFragment).sql !== undefined;
+export type SQLPhrase = Query | SQLStringSegment;
+export function isSQLFragment(f: SQLPhrase): f is SQLStringSegment {
+  return (f as SQLStringSegment).sql !== undefined;
 }
 /**
  * A source reference to an SQL block. The compiler uses these to request
@@ -1171,13 +1136,6 @@ export type FieldRefOrDef = FieldDef | RefToField;
 /** which field is the primary key in this struct */
 export type PrimaryKeyRef = string;
 
-/** filters */
-export interface FilterExpression {
-  expression: Expr;
-  code: string;
-  expressionType: ExpressionType;
-}
-
 /** Get the output name for a NamedObject */
 export function getIdentifier(n: AliasedName): string {
   if (n.as !== undefined) {
@@ -1245,7 +1203,7 @@ export type MalloyQueryData = {
 
 export interface DrillSource {
   sourceExplore: string;
-  sourceFilters?: FilterExpression[];
+  sourceFilters?: FilterCondition[];
 }
 
 export interface CompiledQuery extends DrillSource {

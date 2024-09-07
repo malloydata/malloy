@@ -34,12 +34,7 @@ export class ExprNow extends ExpressionDef {
       expressionType: 'scalar',
       // `now` is considered to be a constant, at least in the dialects we support today
       evalSpace: 'constant',
-      value: [
-        {
-          type: 'dialect',
-          function: 'now',
-        },
-      ],
+      value: {node: 'now'},
     };
   }
 }

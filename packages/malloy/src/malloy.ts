@@ -41,7 +41,7 @@ import {
   FieldStringDef,
   FieldTimestampDef,
   FieldTypeDef,
-  FilterExpression,
+  FilterCondition,
   Query as InternalQuery,
   ModelDef,
   DocumentPosition as ModelDocumentPosition,
@@ -1245,6 +1245,7 @@ export class PreparedResult implements Taggable {
     const explore = this.inner.structs[this.inner.structs.length - 1];
     const namedExplore = {
       ...explore,
+      annotation: this.inner.annotation,
       name: this.inner.queryName || explore.name,
     };
     // TODO `sourceExplore` is not fully-implemented yet -- it cannot
@@ -1273,7 +1274,7 @@ export class PreparedResult implements Taggable {
     return this.inner.sourceExplore;
   }
 
-  public get _sourceFilters(): FilterExpression[] {
+  public get _sourceFilters(): FilterCondition[] {
     return this.inner.sourceFilters || [];
   }
 }
@@ -1662,8 +1663,8 @@ export class Explore extends Entity implements Taggable {
     return this instanceof ExploreField;
   }
 
-  // TODO wrapper type for FilterExpression
-  get filters(): FilterExpression[] {
+  // TODO wrapper type for FilterCondition
+  get filters(): FilterCondition[] {
     return this.structDef.resultMetadata?.filterList || [];
   }
 
@@ -2667,6 +2668,7 @@ export class ModelMaterializer extends FluentState<Model> {
         parse,
         model,
         refreshSchemaCache: options?.refreshSchemaCache,
+        noThrowOnError: options?.noThrowOnError,
       });
       return queryModel;
     });
@@ -3530,7 +3532,10 @@ function valueToDate(value: Date): Date {
     // which represents the same instant in time, but we don't have the data
     // flow to implement that. This may be a problem at some future day,
     // so here is a comment, for that day.
-    const parsed = DateTime.fromISO(value, {zone: 'UTC'});
+    let parsed = DateTime.fromISO(value, {zone: 'UTC'});
+    if (!parsed.isValid) {
+      parsed = DateTime.fromSQL(value, {zone: 'UTC'});
+    }
     return parsed.toJSDate();
   }
 }

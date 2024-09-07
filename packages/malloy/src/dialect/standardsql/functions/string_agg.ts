@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Fragment} from '../../../model';
+import {AggregateLimitNode, AggregateOrderByNode} from '../../../model';
 import {
   overload,
   minAggregate,
@@ -35,8 +35,8 @@ import {
 export function fnStringAgg(): DialectFunctionOverloadDef[] {
   const value = makeParam('value', maxScalar('string'));
   const separator = makeParam('separator', literal(maxScalar('string')));
-  const orderBy: Fragment = {type: 'aggregate_order_by'};
-  const limit: Fragment = {type: 'aggregate_limit'};
+  const orderBy: AggregateOrderByNode = {node: 'aggregate_order_by'};
+  const limit: AggregateLimitNode = {node: 'aggregate_limit'};
   return [
     overload(
       minAggregate('string'),
@@ -56,8 +56,8 @@ export function fnStringAgg(): DialectFunctionOverloadDef[] {
 export function fnStringAggDistinct(): DialectFunctionOverloadDef[] {
   const value = makeParam('value', maxScalar('string'));
   const separator = makeParam('separator', literal(maxScalar('string')));
-  const orderBy: Fragment = {type: 'aggregate_order_by'};
-  const limit: Fragment = {type: 'aggregate_limit'};
+  const orderBy: AggregateOrderByNode = {node: 'aggregate_order_by'};
+  const limit: AggregateLimitNode = {node: 'aggregate_limit'};
   return [
     overload(
       minAggregate('string'),

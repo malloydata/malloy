@@ -1,4 +1,4 @@
-import {Explore, ExploreField} from '@malloydata/malloy';
+import {Explore, ExploreField, Tag} from '@malloydata/malloy';
 import {getChartSettings} from '../chart-settings';
 import {PlotSpec} from './plot-spec';
 import {RenderResultMetadata, VegaChartProps, VegaSpec} from '../types';
@@ -11,9 +11,14 @@ export function plotToVega(
   options: {
     field: Explore | ExploreField;
     metadata: RenderResultMetadata;
+    chartTag: Tag;
   }
 ): VegaChartProps {
-  const chartSettings = getChartSettings(options.field, options.metadata);
+  const chartSettings = getChartSettings(
+    options.field,
+    options.metadata,
+    options.chartTag
+  );
   const vegaSpec: VegaSpec = {
     '$schema': 'https://vega.github.io/schema/vega/v5.json',
     'width': chartSettings.plotWidth,

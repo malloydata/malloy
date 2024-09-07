@@ -24,19 +24,26 @@
 import {maxExpressionType, mergeEvalSpaces} from '../../../model/malloy_types';
 import {errorFor} from '../ast-utils';
 import {ExprValue} from '../types/expr-value';
-import {BinaryBoolean} from './binary-boolean';
 import {FieldSpace} from '../types/field-space';
 import {ExpressionDef} from '../types/expression-def';
-import {compose} from './utils';
+import {BinaryMalloyOperator} from '../types/binary_operators';
 
-export class ExprAlternationTree extends BinaryBoolean<'|' | '&'> {
+export class ExprAlternationTree extends ExpressionDef {
   elementType = 'alternation';
-  constructor(left: ExpressionDef, op: '|' | '&', right: ExpressionDef) {
-    super(left, op, right);
+  constructor(
+    readonly left: ExpressionDef,
+    readonly op: '|' | '&',
+    readonly right: ExpressionDef
+  ) {
+    super({left, right});
     this.elementType = `${op}alternation${op}`;
   }
 
-  apply(fs: FieldSpace, applyOp: string, expr: ExpressionDef): ExprValue {
+  apply(
+    fs: FieldSpace,
+    applyOp: BinaryMalloyOperator,
+    expr: ExpressionDef
+  ): ExprValue {
     const choice1 = this.left.apply(fs, applyOp, expr);
     const choice2 = this.right.apply(fs, applyOp, expr);
     return {
@@ -46,11 +53,10 @@ export class ExprAlternationTree extends BinaryBoolean<'|' | '&'> {
         choice2.expressionType
       ),
       evalSpace: mergeEvalSpaces(choice1.evalSpace, choice2.evalSpace),
-      value: compose(
-        choice1.value,
-        this.op === '&' ? 'and' : 'or',
-        choice2.value
-      ),
+      value: {
+        node: this.op === '&' ? 'and' : 'or',
+        kids: {left: choice1.value, right: choice2.value},
+      },
     };
   }
 

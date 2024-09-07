@@ -21,7 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Fragment, isFieldTypeDef} from '../../model';
 import {
   expr,
   TestTranslator,
@@ -29,62 +28,48 @@ import {
   BetaExpression,
   model,
   makeModelFunc,
+  getQueryFieldDef,
+  getExplore,
+  getFieldDef,
 } from './test-translator';
 import './parse-expects';
-
-/**
- * Convert an expression to a string, any fragment which is not a string turns into a variable,
- * useful for maybe checking simple code generation, but it sort of hints at an interesting matcher
- * @param expr Compiled expression
- * @returns A string with variables A,B,... substituded for non string elements
- */
-function exprToString(expr: Fragment[]): string {
-  let varCode = 'A'.charCodeAt(0);
-  const vars: Record<string, string> = {};
-  return expr
-    .map(f => {
-      if (typeof f === 'string') {
-        return f;
-      }
-      const key = JSON.stringify(f);
-      if (!vars[key]) {
-        vars[key] = String.fromCharCode(varCode);
-        varCode += 1;
-      }
-      return vars[key];
-    })
-    .join('');
-}
 
 describe('expressions', () => {
   describe('timeframes', () => {
     const timeframes = [
-      'second',
-      'minute',
-      'hour',
-      'day',
-      'week',
-      'month',
-      'quarter',
-      'year',
+      ['second', 'minute', 'hour', 'day', 'week', 'month', 'quarter', 'year'],
     ];
+    test.each(timeframes)('timestamp truncate %s', unit => {
+      const truncSrc = model`run: a->{select: tts is ats.${unit}}`;
+      expect(truncSrc).toTranslate();
+      const tQuery = truncSrc.translator.getQuery(0);
+      expect(tQuery).toBeDefined();
+      const tField = getQueryFieldDef(tQuery!.pipeline[0], 'tts');
+      expect(tField['timeframe']).toEqual(unit);
+    });
 
-    test.each(timeframes.map(x => [x]))('truncate %s', unit => {
-      expect(new BetaExpression(`ats.${unit}`)).toParse();
+    const dateTF = [['week', 'month', 'quarter', 'year']];
+    test.each(dateTF)('date truncate %s', unit => {
+      const truncSrc = model`run: a->{select: td is ad.${unit}}`;
+      expect(truncSrc).toTranslate();
+      const tQuery = truncSrc.translator.getQuery(0);
+      expect(tQuery).toBeDefined();
+      const tField = getQueryFieldDef(tQuery!.pipeline[0], 'td');
+      expect(tField['timeframe']).toEqual(unit);
     });
 
     // mtoy todo units missing: implement, or document
-    const diffable = ['second', 'minute', 'hour', 'day'];
-    test.each(diffable.map(x => [x]))('timestamp difference - %s', unit => {
+    const diffable = [['second', 'minute', 'hour', 'day']];
+    test.each(diffable)('timestamp difference - %s', unit => {
       expect(new BetaExpression(`${unit}(@2021 to ats)`)).toParse();
     });
-    test.each(diffable.map(x => [x]))('timestamp difference - %s', unit => {
+    test.each(diffable)('timestamp difference - %s', unit => {
       expect(new BetaExpression(`${unit}(ats to @2030)`)).toParse();
     });
   });
 
   test('field name', () => {
-    expect(expr`astr`).toTranslate();
+    expect(expr`astr`).compilesTo('astr');
   });
   test('function call', () => {
     expect(expr`concat('foo')`).toTranslate();
@@ -92,7 +77,7 @@ describe('expressions', () => {
 
   describe('operators', () => {
     test('addition', () => {
-      expect(expr`42 + 7`).toTranslate();
+      expect('42 + 7').compilesTo('{42 + 7}');
     });
     test('typecheck addition lhs', () => {
       const wrong = expr`${'"string"'} + 1`;
@@ -107,58 +92,64 @@ describe('expressions', () => {
       );
     });
     test('subtraction', () => {
-      expect(expr`42 - 7`).toTranslate();
+      expect('42 - 7').compilesTo('{42 - 7}');
     });
     test('multiplication', () => {
-      expect(expr`42 * 7`).toTranslate();
+      expect('42 * 7').compilesTo('{42 * 7}');
     });
     test('mod', () => {
-      expect(expr`42 % 7`).toTranslate();
+      expect('42 % 7').compilesTo('{42 % 7}');
     });
     test('division', () => {
-      expect(expr`42 / 7`).toTranslate();
+      expect('42 / 7').compilesTo('{42 / 7}');
     });
     test('unary negation', () => {
-      expect(expr`- ai`).toTranslate();
+      expect('- ai').compilesTo('{unary- ai}');
     });
     test('equal', () => {
-      expect(expr`42 = 7`).toTranslate();
+      expect('42 = 7').compilesTo('{42 = 7}');
     });
     test('not equal', () => {
-      expect(expr`42 != 7`).toTranslate();
+      expect('42 != 7').compilesTo('{42 != 7}');
     });
     test('greater than', () => {
-      expect(expr`42 > 7`).toTranslate();
+      expect('42 > 7').compilesTo('{42 > 7}');
     });
     test('greater than or equal', () => {
-      expect(expr`42 >= 7`).toTranslate();
+      expect('42 >= 7').compilesTo('{42 >= 7}');
     });
     test('less than or equal', () => {
-      expect(expr`42 <= 7`).toTranslate();
+      expect('42 <= 7').compilesTo('{42 <= 7}');
     });
     test('less than', () => {
-      expect(expr`42 < 7`).toTranslate();
+      expect('42 < 7').compilesTo('{42 < 7}');
     });
     test('match', () => {
-      expect(expr`'forty-two' ~ 'fifty-four'`).toTranslate();
+      expect("'forty-two' ~ 'fifty-four'").compilesTo(
+        '{"forty-two" like "fifty-four"}'
+      );
     });
     test('not match', () => {
-      expect(expr`'forty-two' !~ 'fifty-four'`).toTranslate();
+      expect("'forty-two' !~ 'fifty-four'").compilesTo(
+        '{"forty-two" !like "fifty-four"}'
+      );
     });
-    test('apply', () => {
-      expect(expr`'forty-two' ? 'fifty-four'`).toTranslate();
+    test('apply as equality', () => {
+      expect("'forty-two' ? 'fifty-four'").compilesTo(
+        '{"forty-two" = "fifty-four"}'
+      );
     });
     test('not', () => {
-      expect(expr`not true`).toTranslate();
+      expect('not true').compilesTo('{not true}');
     });
     test('and', () => {
-      expect(expr`true and false`).toTranslate();
+      expect('true and false').compilesTo('{true and false}');
     });
     test('or', () => {
-      expect(expr`true or false`).toTranslate();
+      expect('true or false').compilesTo('{true or false}');
     });
     test('null-check (??)', () => {
-      expect(expr`ai ?? 7`).toTranslate();
+      expect('ai ?? 7').compilesTo('{ai coalesce 7}');
     });
     test('coalesce type mismatch', () => {
       expect(new BetaExpression('ai ?? @2003')).translationToFailWith(
@@ -181,40 +172,21 @@ describe('expressions', () => {
       );
     });
     test('compare to truncation uses straight comparison', () => {
-      const compare = expr`ad = ad.quarter`;
-      expect(compare).toTranslate();
-      const compare_expr = compare.translator.generated().value;
-      expect(exprToString(compare_expr)).toEqual('A=B');
+      expect('ad = ad.quarter').compilesTo('{ad = {timeTrunc-quarter ad}}');
     });
     test('compare to granular result expression uses straight comparison', () => {
-      const compare = expr`ad = ad.quarter + 1`;
-      expect(compare).toTranslate();
-      const compare_expr = compare.translator.generated().value;
-      expect(exprToString(compare_expr)).toEqual('A=B');
-    });
-    test('apply granular-truncation uses range', () => {
-      const compare = expr`ad ? ad.quarter`;
-      expect(compare).toTranslate();
-      const compare_expr = compare.translator.generated().value;
-      expect(exprToString(compare_expr)).toEqual('(A>=B)and(A<C)');
-    });
-    test('apply granular-literal alternation uses range', () => {
-      const compare = expr`ad ? @2020 | @2022`;
-      expect(compare).toTranslate();
-      const compare_expr = compare.translator.generated().value;
-      expect(exprToString(compare_expr)).toEqual(
-        '((A>=B)and(A<C))or((A>=D)and(A<E))'
+      expect('ad = ad.quarter + 1').compilesTo(
+        '{ad = {+quarter {timeTrunc-quarter ad} 1}}'
       );
     });
-    // this should use range, but it uses = and alternations are
-    // kind of needing help so this is a placeholder for
-    // future work
-    test.skip('apply granular-result alternation uses range', () => {
-      const compare = expr`ad ? ad.year | ad.month`;
-      expect(compare).toTranslate();
-      const compare_expr = compare.translator.generated().value;
-      expect(exprToString(compare_expr)).toEqual(
-        '((A>=B)and(A<C))or((A>=D)and(A<E))'
+    test('apply granular-truncation uses range', () => {
+      expect('ad ? ad.quarter').compilesTo(
+        '{{ad >= {timeTrunc-quarter ad}} and {ad < {+quarter {timeTrunc-quarter ad} 1}}}'
+      );
+    });
+    test('apply granular-literal alternation uses all literals for range', () => {
+      expect('ad ? @2020 | @2022').compilesTo(
+        '{{{ad >= @2020-01-01} and {ad < @2021-01-01}} or {{ad >= @2022-01-01} and {ad < @2023-01-01}}}'
       );
     });
     test('comparison promotes date literal to timestamp', () => {
@@ -232,6 +204,80 @@ describe('expressions', () => {
     });
     test('apply with parens', () => {
       expect(expr`ai ? (> 1 & < 100)`).toTranslate();
+    });
+    describe('sql friendly warnings', () => {
+      test('is null with warning', () => {
+        const warnSrc = expr`ai is null`;
+        expect(warnSrc).toTranslateWithWarnings(
+          "Use '= NULL' to check for NULL instead of 'IS NULL'"
+        );
+        expect(warnSrc).compilesTo('{is-null ai}');
+        const warning = warnSrc.translator.problems()[0];
+        expect(warning.replacement).toEqual('ai = null');
+      });
+      test('is not null with warning', () => {
+        const warnSrc = expr`ai is not null`;
+        expect(warnSrc).toTranslateWithWarnings(
+          "Use '!= NULL' to check for NULL instead of 'IS NOT NULL'"
+        );
+        expect(warnSrc).compilesTo('{is-not-null ai}');
+        const warning = warnSrc.translator.problems()[0];
+        expect(warning.replacement).toEqual('ai != null');
+      });
+      test('like with warning', () => {
+        const warnSrc = expr`astr like 'a'`;
+        expect(warnSrc).toTranslateWithWarnings(
+          "Use Malloy operator '~' instead of 'LIKE'"
+        );
+        expect(warnSrc).compilesTo('{astr like "a"}');
+        const warning = warnSrc.translator.problems()[0];
+        expect(warning.replacement).toEqual("astr ~ 'a'");
+      });
+      test('NOT LIKE with warning', () => {
+        const warnSrc = expr`astr not like 'a'`;
+        expect(warnSrc).toTranslateWithWarnings(
+          "Use Malloy operator '!~' instead of 'NOT LIKE'"
+        );
+        expect(warnSrc).compilesTo('{astr !like "a"}');
+        const warning = warnSrc.translator.problems()[0];
+        expect(warning.replacement).toEqual("astr !~ 'a'");
+      });
+      test('is is-null in a model', () => {
+        const isNullSrc = model`source: xa is a extend { dimension: x1 is astr is null }`;
+        expect(isNullSrc).toTranslateWithWarnings(
+          "Use '= NULL' to check for NULL instead of 'IS NULL'"
+        );
+      });
+      test('is not-null in a model', () => {
+        const isNullSrc = model`source: xa is a extend { dimension: x1 is not null }`;
+        expect(isNullSrc).toTranslate();
+      });
+      test('is not-null is in a model', () => {
+        const isNullSrc = model`source: xa is a extend { dimension: x1 is not null is null }`;
+        expect(isNullSrc).toTranslateWithWarnings(
+          "Use '= NULL' to check for NULL instead of 'IS NULL'"
+        );
+        const warning = isNullSrc.translator.problems()[0];
+        expect(warning.replacement).toEqual('null = null');
+      });
+      test('x is expr y is not null', () => {
+        const isNullSrc = model`source: xa is a extend { dimension: x is 1 y is not null }`;
+        expect(isNullSrc).toTranslate();
+        const xaModel = isNullSrc.translator.translate().translated;
+        const xa = getExplore(xaModel!.modelDef, 'xa');
+        const x = getFieldDef(xa, 'x');
+        expect(x).toMatchObject({e: {node: 'numberLiteral'}});
+        const y = getFieldDef(xa, 'y');
+        expect(y).toMatchObject({e: {node: 'not'}});
+      });
+      test('not null::number', () => {
+        const notNull = expr`not null::number`;
+        expect(notNull).translationToFailWith("'not' Can't use type number");
+      });
+      test('(not null)::number', () => {
+        const notNull = expr`(not null)::number`;
+        expect(notNull).toTranslate();
+      });
     });
   });
 
@@ -843,15 +889,6 @@ describe('expressions', () => {
         calculate: bar is lag(sum(output))
       }`).translationToFailWith("'output' is not defined");
     });
-    test('count(distinct column)', () => {
-      expect(model`
-      ##! m4warnings=warn
-      run: a -> {
-        aggregate: x is count(distinct astr)
-      }`).toTranslateWithWarnings(
-        '`count(distinct expression)` deprecated, use `count(expression)` instead'
-      );
-    });
   });
 
   describe('pick statements', () => {
@@ -954,59 +991,7 @@ describe('expressions', () => {
     });
   });
   test('paren and applied div', () => {
-    const modelSrc = 'query: z is a -> { group_by: x is 1+(3/4) }';
-    const m = new TestTranslator(modelSrc);
-    expect(m).toTranslate();
-    const queryDef = m.translate()?.translated?.modelDef.contents['z'];
-    expect(queryDef).toBeDefined();
-    expect(queryDef?.type).toBe('query');
-    if (queryDef && queryDef.type === 'query') {
-      const qSeg = queryDef.pipeline[0];
-      expect(qSeg.type).toEqual('reduce');
-      if (qSeg.type === 'reduce') {
-        const x = qSeg.queryFields[0];
-        if (
-          x.type !== 'fieldref' &&
-          isFieldTypeDef(x) &&
-          x.type === 'number' &&
-          x.e
-        ) {
-          expect(x).toMatchObject({
-            'e': [
-              {
-                'function': 'numberLiteral',
-                'literal': '1',
-                'type': 'dialect',
-              },
-              // TODO not sure why there are TWO sets of parentheses... A previous version of this test
-              // just checked that there were ANY parens, so that went under the radar. Not fixing now.
-              '+((',
-              {
-                'denominator': [
-                  {
-                    'function': 'numberLiteral',
-                    'literal': '4',
-                    'type': 'dialect',
-                  },
-                ],
-                'function': 'div',
-                'numerator': [
-                  {
-                    'function': 'numberLiteral',
-                    'literal': '3',
-                    'type': 'dialect',
-                  },
-                ],
-                'type': 'dialect',
-              },
-              '))',
-            ],
-          });
-        } else {
-          fail('expression with parens compiled oddly');
-        }
-      }
-    }
+    expect('1+(3/4)').compilesTo('{1 + ({3 / 4})}');
   });
   test.each([
     ['ats', 'timestamp'],

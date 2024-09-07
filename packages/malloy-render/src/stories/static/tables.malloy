@@ -3,6 +3,7 @@ source: products is duckdb.table("data/products.parquet") extend {
   view: records is{
     select: *
     limit: 1000
+    order_by: id
   }
 
   view: long_column is {
@@ -28,7 +29,7 @@ source: products is duckdb.table("data/products.parquet") extend {
         aggregate: avg_retail is retail_price.avg()
         limit: 10
       },
-      # list_detail width=xl
+      # list_detail
       nested_column_2 is {
         group_by: brand
         aggregate: avg_retail is retail_price.avg()
@@ -116,10 +117,27 @@ source: products is duckdb.table("data/products.parquet") extend {
       # duration.terse
       avg_retail_duration_terse is round(retail_price.avg())
   }
+
+  # transpose
+  view: date_and_time is {
+    group_by:
+      `@2001-02-03` is @2001-02-03
+      `@2001-02-03.minute` is @2001-02-03.minute
+      `@2001-02-03.week` is @2001-02-03.week
+      `@2001-02-03.month` is @2001-02-03.month
+      `@2001-02-03.quarter` is @2001-02-03.quarter
+      `@2001-02-03.year` is @2001-02-03.year
+      `@2001-02-03 04:05:06.001` is @2001-02-03 04:05:06.001
+      `@2001-02-03 04:05:06.001[America/Mexico_City]` is @2001-02-03 04:05:06.001[America/Mexico_City]
+      `@2001-02-03 04:05:06.001.minute` is @2001-02-03 04:05:06.001.minute
+      `@2001-02-03 04:05:06.001.hour` is @2001-02-03 04:05:06.001.hour
+      `@2001-02-03 04:05:06.001.day` is @2001-02-03 04:05:06.001.day
+      `@2001-02-03 04:05:06.001.week` is @2001-02-03 04:05:06.001.week
+      `@2001-02-03 04:05:06.001.month` is @2001-02-03 04:05:06.001.month
+      `@2001-02-03 04:05:06.001.quarter` is @2001-02-03 04:05:06.001.quarter
+      `@2001-02-03 04:05:06.001.year` is @2001-02-03 04:05:06.001.year
+    limit: 1
+  }
 }
 
 source: null_test is duckdb.sql("select unnest([1,null,3]) as i") extend {}
-
-run: products -> { group_by: category aggregate: `t.x` is max(1) }
-
-run: duckdb.sql("select unnest([1,null,3]) as i") -> { select: * }

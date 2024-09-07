@@ -21,7 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ModelDef, StructDef, StructRelationship} from '@malloydata/malloy';
+import {
+  composeSQLExpr,
+  ModelDef,
+  StructDef,
+  StructRelationship,
+} from '@malloydata/malloy';
 
 import {fStringEq, fToIF, fToQF, fYearEq} from '../util';
 
@@ -31,11 +36,11 @@ function withJoin(leftKey: string, rightKey: string): StructRelationship {
   return {
     type: 'one',
     matrixOperation: 'left',
-    onExpression: [
-      {type: 'field', path: leftKey.split('.')},
+    onExpression: composeSQLExpr([
+      {node: 'field', path: leftKey.split('.')},
       '=',
-      {type: 'field', path: rightKey.split('.')},
-    ],
+      {node: 'field', path: rightKey.split('.')},
+    ]),
   };
 }
 
@@ -72,19 +77,17 @@ export const FLIGHTS_EXPLORE: StructDef = {
       type: 'number',
       name: 'flight_count',
       expressionType: 'aggregate',
-      e: [{type: 'aggregate', function: 'count', e: []}],
+      e: {node: 'aggregate', function: 'count', e: {node: ''}},
     },
     {
       type: 'number',
       name: 'total_distance',
       expressionType: 'aggregate',
-      e: [
-        {
-          type: 'aggregate',
-          function: 'sum',
-          e: [{type: 'field', path: ['distance']}],
-        },
-      ],
+      e: {
+        node: 'aggregate',
+        function: 'sum',
+        e: {node: 'field', path: ['distance']},
+      },
     },
 
     // carriers
@@ -100,11 +103,11 @@ export const FLIGHTS_EXPLORE: StructDef = {
       structRelationship: {
         type: 'one',
         matrixOperation: 'left',
-        onExpression: [
-          {type: 'field', path: ['carrier']},
+        onExpression: composeSQLExpr([
+          {node: 'field', path: ['carrier']},
           '=',
-          {type: 'field', path: ['carriers', 'code']},
-        ],
+          {node: 'field', path: ['carriers', 'code']},
+        ]),
       },
       primaryKey: 'code',
       fields: [
@@ -164,19 +167,17 @@ export const FLIGHTS_EXPLORE: StructDef = {
           type: 'number',
           name: 'aircraft_count',
           expressionType: 'aggregate',
-          e: [{type: 'aggregate', function: 'count', e: []}],
+          e: {node: 'aggregate', function: 'count', e: {node: ''}},
         },
         {
           type: 'number',
           name: 'total_engines',
           expressionType: 'aggregate',
-          e: [
-            {
-              type: 'aggregate',
-              function: 'sum',
-              e: [{type: 'field', path: ['aircraft_models', 'engines']}],
-            },
-          ],
+          e: {
+            node: 'aggregate',
+            function: 'sum',
+            e: {node: 'field', path: ['aircraft_models', 'engines']},
+          },
         },
 
         // subjoin aircraft models
@@ -222,13 +223,11 @@ export const FLIGHTS_EXPLORE: StructDef = {
               type: 'number',
               expressionType: 'aggregate',
               name: 'total_seats',
-              e: [
-                {
-                  type: 'aggregate',
-                  function: 'sum',
-                  e: [{type: 'field', path: ['seats']}],
-                },
-              ],
+              e: {
+                node: 'aggregate',
+                function: 'sum',
+                e: {node: 'field', path: ['seats']},
+              },
             },
           ],
         },
@@ -279,7 +278,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
           type: 'number',
           name: 'count',
           expressionType: 'aggregate',
-          e: [{type: 'aggregate', function: 'count', e: []}],
+          e: {node: 'aggregate', function: 'count', e: {node: ''}},
         },
       ],
     },
@@ -328,7 +327,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
           type: 'number',
           name: 'count',
           expressionType: 'aggregate',
-          e: [{type: 'aggregate', function: 'count', e: []}],
+          e: {node: 'aggregate', function: 'count', e: {node: ''}},
         },
       ],
     },
@@ -353,13 +352,11 @@ export const FLIGHTS_EXPLORE: StructDef = {
                   type: 'number',
                   name: 'lifetime_distance',
                   expressionType: 'aggregate',
-                  e: [
-                    {
-                      type: 'aggregate',
-                      function: 'sum',
-                      e: [{type: 'field', path: ['distance']}],
-                    },
-                  ],
+                  e: {
+                    node: 'aggregate',
+                    function: 'sum',
+                    e: {node: 'field', path: ['distance']},
+                  },
                 },
               ]),
             },
@@ -388,26 +385,22 @@ export const FLIGHTS_EXPLORE: StructDef = {
               type: 'number',
               name: 'origin_count',
               expressionType: 'aggregate',
-              e: [
-                {
-                  type: 'aggregate',
-                  function: 'count',
-                  e: [],
-                  structPath: ['origin'],
-                },
-              ],
+              e: {
+                node: 'aggregate',
+                function: 'count',
+                e: {node: ''},
+                structPath: ['origin'],
+              },
             },
             {
               type: 'number',
               name: 'my_total_distance',
               expressionType: 'aggregate',
-              e: [
-                {
-                  type: 'aggregate',
-                  function: 'sum',
-                  e: [{type: 'field', path: ['distance']}],
-                },
-              ],
+              e: {
+                node: 'aggregate',
+                function: 'sum',
+                e: {node: 'field', path: ['distance']},
+              },
             },
           ]),
           orderBy: [{field: 'name', dir: 'asc'}],
@@ -427,37 +420,25 @@ export const FLIGHTS_EXPLORE: StructDef = {
               name: 'flights_2001',
               type: 'number',
               expressionType: 'aggregate',
-              e: [
-                {
-                  type: 'filterExpression',
+              e: {
+                node: 'filteredExpr',
+                kids: {
                   filterList: [fYearEq('dep_time', 2001)],
-                  e: [
-                    {
-                      type: 'aggregate',
-                      function: 'count',
-                      e: [],
-                    },
-                  ],
+                  e: {node: 'aggregate', function: 'count', e: {node: ''}},
                 },
-              ],
+              },
             },
             {
               name: 'flights_2002',
               type: 'number',
               expressionType: 'aggregate',
-              e: [
-                {
-                  type: 'filterExpression',
+              e: {
+                node: 'filteredExpr',
+                kids: {
                   filterList: [fYearEq('dep_time', 2001)],
-                  e: [
-                    {
-                      type: 'aggregate',
-                      function: 'count',
-                      e: [],
-                    },
-                  ],
+                  e: {node: 'aggregate', function: 'count', e: {node: ''}},
                 },
-              ],
+              },
             },
           ]),
           orderBy: [{field: 'name', dir: 'asc'}],
@@ -511,13 +492,11 @@ export const FLIGHTS_EXPLORE: StructDef = {
               type: 'number',
               name: 'lifetime_distance',
               expressionType: 'aggregate',
-              e: [
-                {
-                  type: 'aggregate',
-                  function: 'sum',
-                  e: [{type: 'field', path: ['distance']}],
-                },
-              ],
+              e: {
+                node: 'aggregate',
+                function: 'sum',
+                e: {node: 'field', path: ['distance']},
+              },
             },
           ]),
         },
@@ -720,14 +699,12 @@ export const FLIGHTS_EXPLORE: StructDef = {
                       type: 'number',
                       name: 'origin_count',
                       expressionType: 'aggregate',
-                      e: [
-                        {
-                          type: 'aggregate',
-                          function: 'count',
-                          e: [],
-                          structPath: ['origin'],
-                        },
-                      ],
+                      e: {
+                        node: 'aggregate',
+                        function: 'count',
+                        e: {node: ''},
+                        structPath: ['origin'],
+                      },
                     },
                   ]),
                   orderBy: [{field: 'flight_count', dir: 'desc'}],
@@ -988,7 +965,7 @@ const tableAirports: StructDef = {
       type: 'number',
       name: 'count',
       expressionType: 'aggregate',
-      e: [{type: 'aggregate', function: 'count', e: []}],
+      e: {node: 'aggregate', function: 'count', e: {node: ''}},
     },
   ],
 };

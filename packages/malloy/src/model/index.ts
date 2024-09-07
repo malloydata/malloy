@@ -23,4 +23,4 @@
 
 export * from './malloy_types';
 export {Segment, QueryModel} from './malloy_query';
-export {indent} from './utils';
+export {indent, composeSQLExpr} from './utils';

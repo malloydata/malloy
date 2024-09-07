@@ -28,7 +28,7 @@ import {
   minScalar,
   anyExprType,
   DialectFunctionOverloadDef,
-  sqlFragment,
+  sql,
 } from './util';
 
 function trimFn(fn: string): DialectFunctionOverloadDef[] {
@@ -36,7 +36,7 @@ function trimFn(fn: string): DialectFunctionOverloadDef[] {
     overload(
       minScalar('string'),
       [param('value', anyExprType('string'))],
-      [sqlFragment(`${fn}(`, arg('value'), ')')]
+      sql`${fn}(${arg('value')})`
     ),
     overload(
       minScalar('string'),
@@ -44,7 +44,7 @@ function trimFn(fn: string): DialectFunctionOverloadDef[] {
         param('value', anyExprType('string')),
         param('trim_characters', anyExprType('string')),
       ],
-      [sqlFragment(`${fn}(`, arg('value'), ',', arg('trim_characters'), ')')]
+      sql`${fn}(${arg('value')},${arg('trim_characters')})`
     ),
   ];
 }

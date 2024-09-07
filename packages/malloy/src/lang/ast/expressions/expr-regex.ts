@@ -34,9 +34,7 @@ export class ExprRegEx extends ExpressionDef {
     return {
       dataType: 'regular expression',
       expressionType: 'scalar',
-      value: [
-        {type: 'dialect', function: 'regexpLiteral', literal: this.regex},
-      ],
+      value: {node: 'regexpLiteral', literal: this.regex},
       evalSpace: 'literal',
     };
   }
