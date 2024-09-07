@@ -110,6 +110,7 @@ export class SnowflakeDialect extends Dialect {
   dontUnionIndex = false;
   supportsQualify = false;
   supportsPipelinesInViews = false;
+  supportsComplexFilteredSources = false;
 
   // don't mess with the table pathing.
   quoteTablePath(tablePath: string): string {
