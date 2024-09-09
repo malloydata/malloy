@@ -80,14 +80,6 @@ function paramsEqual(
   );
 }
 
-function paramsCompatible(
-  a: DialectFunctionOverloadDef,
-  b: FunctionOverloadDef
-): boolean {
-  // TODO detect when parameters are not exactly equal, but would cause collision issues...
-  return paramsEqual(a, b);
-}
-
 export function getDialectFunctions(): Map<string, FunctionDef> {
   const baseImplementations = getMalloyStandardFunctions();
   const dialectOverrides: {
@@ -120,7 +112,7 @@ export function getDialectFunctions(): Map<string, FunctionDef> {
       for (const dialect of dialects) {
         const overloads = dialectOverrides[dialect.name][name] ?? [];
         const dialectOverload =
-          overloads.find(o => paramsCompatible(o, overload)) ?? baseOverload;
+          overloads.find(o => paramsEqual(o, overload)) ?? baseOverload;
         overload.dialect[dialect.name] = {
           e: dialectOverload.e,
           // TODO should supportsOrderBy be in the signature block?
