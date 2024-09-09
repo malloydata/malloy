@@ -62,6 +62,10 @@ const duckdb = runtimeFor('duckdb');
 describe('rendering results', () => {
   const runtimes = new RuntimeList(databases);
 
+  beforeEach(() => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
   afterAll(async () => {
     await runtimes.closeAll();
   });
