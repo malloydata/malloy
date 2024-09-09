@@ -47,6 +47,7 @@ const string_agg_distinct: OverloadedDefinitionBlueprint = {
   'default_separator': {
     ...string_agg['default_separator'],
     isSymmetric: true,
+    supportsOrderBy: 'only_default',
     impl: {
       sql: 'STRING_AGG(DISTINCT ${value}${order_by:}${limit:})',
       defaultOrderByArgIndex: 0,
@@ -55,6 +56,7 @@ const string_agg_distinct: OverloadedDefinitionBlueprint = {
   'with_separator': {
     ...string_agg['with_separator'],
     isSymmetric: true,
+    supportsOrderBy: 'only_default',
     impl: {
       sql: 'STRING_AGG(DISTINCT ${value}, ${separator}${order_by:}${limit:})',
       defaultOrderByArgIndex: 0,
