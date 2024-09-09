@@ -32,12 +32,15 @@ import {
   MeasureTimeExpr,
 } from '../../model/malloy_types';
 import {indent} from '../../model/utils';
-import {DialectFunctionOverloadDef} from '../functions';
-import {DUCKDB_FUNCTIONS} from './functions';
+import {
+  DialectFunctionOverloadDef,
+  expandOverrideMap,
+  expandBlueprintMap,
+} from '../functions';
 import {DialectFieldList, inDays} from '../dialect';
 import {PostgresBase} from '../pg_impl';
-import {DUCKDB_DIALECT_FUNCTIONS} from './functions/dialect_functions';
-import {expandBlueprintMap} from '../functions/util';
+import {DUCKDB_DIALECT_FUNCTIONS} from './dialect_functions';
+import {DUCKDB_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
 // need to refactor runSQL to take a SQLBlock instead of just a sql string.
 const hackSplitComment = '-- hack: split on this';
@@ -337,8 +340,10 @@ export class DuckDBDialect extends PostgresBase {
     return "'" + literal.replace(/'/g, "''") + "'";
   }
 
-  getGlobalFunctionDef(name: string): DialectFunctionOverloadDef[] | undefined {
-    return DUCKDB_FUNCTIONS.get(name);
+  getDialectFunctionOverrides(): {
+    [name: string]: DialectFunctionOverloadDef[];
+  } {
+    return expandOverrideMap(DUCKDB_MALLOY_STANDARD_OVERLOADS);
   }
 
   getDialectFunctions(): {[name: string]: DialectFunctionOverloadDef[]} {

@@ -43,5 +43,5 @@ export {PostgresDialect} from './postgres';
 export {DuckDBDialect} from './duckdb';
 export {SnowflakeDialect} from './snowflake';
 export {TrinoDialect} from './trino';
-export {getDialect, registerDialect, getDialectFunction} from './dialect_map';
-export {FUNCTIONS} from './functions';
+export {getDialect, registerDialect} from './dialect_map';
+export {getMalloyStandardFunctions} from './functions';

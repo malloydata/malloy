@@ -499,7 +499,9 @@ function findOverload(
           (paramT.evalSpace === 'constant' &&
             (arg.evalSpace === 'input' || arg.evalSpace === 'output')) ||
           // Error if output is required but arg is input
-          (paramT.evalSpace === 'output' && arg.evalSpace === 'input')
+          // TODO: Assumption that all calculations can only take output
+          (expressionIsAnalytic(overload.returnType.expressionType) &&
+            arg.evalSpace === 'input')
         ) {
           evalSpaceErrors.push({
             argIndex,

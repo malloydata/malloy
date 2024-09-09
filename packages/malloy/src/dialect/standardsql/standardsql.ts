@@ -36,10 +36,14 @@ import {
   TimeLiteralNode,
   MeasureTimeExpr,
 } from '../../model/malloy_types';
-import {STANDARDSQL_FUNCTIONS} from './functions';
-import {DialectFunctionOverloadDef} from '../functions';
+import {
+  DialectFunctionOverloadDef,
+  expandOverrideMap,
+  expandBlueprintMap,
+} from '../functions';
 import {Dialect, DialectFieldList, QueryInfo} from '../dialect';
-import {STANDARDSQL_DIALECT_FUNCTIONS} from './functions/dialect_functions';
+import {STANDARDSQL_DIALECT_FUNCTIONS} from './dialect_functions';
+import {STANDARDSQL_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
 // These are the units that "TIMESTAMP_ADD" "TIMESTAMP_DIFF" accept
 function timestampMeasureable(units: string): boolean {
@@ -518,12 +522,14 @@ ${indent(sql)}
     return "'" + noVirgule.replace(/'/g, "\\'") + "'";
   }
 
-  getGlobalFunctionDef(name: string): DialectFunctionOverloadDef[] | undefined {
-    return STANDARDSQL_FUNCTIONS.get(name);
+  getDialectFunctionOverrides(): {
+    [name: string]: DialectFunctionOverloadDef[];
+  } {
+    return expandOverrideMap(STANDARDSQL_MALLOY_STANDARD_OVERLOADS);
   }
 
   getDialectFunctions(): {[name: string]: DialectFunctionOverloadDef[]} {
-    return STANDARDSQL_DIALECT_FUNCTIONS;
+    return expandBlueprintMap(STANDARDSQL_DIALECT_FUNCTIONS);
   }
 
   malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string {

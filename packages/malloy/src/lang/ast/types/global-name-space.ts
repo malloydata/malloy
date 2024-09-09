@@ -21,21 +21,27 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {getDialectFunction} from '../../../dialect/dialect_map';
+import {
+  DialectFunctionOverloadDef,
+  getMalloyStandardFunctions,
+} from '../../../dialect';
+import {getDialects} from '../../../dialect/dialect_map';
+import {FunctionDef, FunctionOverloadDef} from '../../../model';
 import {ModelEntry} from './model-entry';
 import {NameSpace} from './name-space';
 
 /**
- * We may want to remove this in the future...
- *
  * This is a global namespace which exists in the root of all Documents
  * and includes SQL function definitions.
  */
 export class GlobalNameSpace implements NameSpace {
+  entries: Map<string, FunctionDef>;
+  constructor() {
+    this.entries = getDialectFunctions();
+  }
+
   getEntry(name: string): ModelEntry | undefined {
-    // TODO cache this or precompute this so we're not comparing/merging dialect
-    // overloads on every usage
-    const func = getDialectFunction(name);
+    const func = this.entries.get(name);
     if (func === undefined) {
       return undefined;
     }
@@ -48,4 +54,85 @@ export class GlobalNameSpace implements NameSpace {
   setEntry(_name: string, _value: ModelEntry, _exported: boolean): void {
     throw new Error('The global namespace is immutable!');
   }
+}
+
+function paramsEqual(
+  a: DialectFunctionOverloadDef,
+  b: FunctionOverloadDef
+): boolean {
+  return (
+    a.params.length === b.params.length &&
+    a.params.every((param, i) => {
+      const otherParam = b.params[i];
+      return (
+        param.isVariadic === otherParam.isVariadic &&
+        param.name === otherParam.name &&
+        param.allowedTypes.length === otherParam.allowedTypes.length &&
+        param.allowedTypes.every(t =>
+          otherParam.allowedTypes.some(
+            ot =>
+              t.dataType === ot.dataType &&
+              t.expressionType === ot.expressionType
+          )
+        )
+      );
+    })
+  );
+}
+
+function paramsCompatible(
+  a: DialectFunctionOverloadDef,
+  b: FunctionOverloadDef
+): boolean {
+  // TODO detect when parameters are not exactly equal, but would cause collision issues...
+  return paramsEqual(a, b);
+}
+
+export function getDialectFunctions(): Map<string, FunctionDef> {
+  const baseImplementations = getMalloyStandardFunctions();
+  const dialectOverrides: {
+    [dialectName: string]: {
+      [functionName: string]: DialectFunctionOverloadDef[];
+    };
+  } = {};
+  const dialects = getDialects();
+  for (const dialect of dialects) {
+    dialectOverrides[dialect.name] = dialect.getDialectFunctionOverrides();
+  }
+  const functions = new Map<string, FunctionDef>();
+  for (const name in baseImplementations) {
+    const baseOverloads = baseImplementations[name];
+    const func: FunctionDef = {
+      type: 'function',
+      name,
+      overloads: [],
+    };
+    for (const baseOverload of baseOverloads) {
+      const overload: FunctionOverloadDef = {
+        returnType: baseOverload.returnType,
+        params: baseOverload.params,
+        dialect: {},
+        // TODO should needsWindowOrderBy be in the dialect block?
+        needsWindowOrderBy: baseOverload.needsWindowOrderBy,
+        between: baseOverload.between,
+        isSymmetric: baseOverload.isSymmetric,
+      };
+      for (const dialect of dialects) {
+        const overloads = dialectOverrides[dialect.name][name] ?? [];
+        const dialectOverload =
+          overloads.find(o => paramsCompatible(o, overload)) ?? baseOverload;
+        overload.dialect[dialect.name] = {
+          e: dialectOverload.e,
+          // TODO should supportsOrderBy be in the signature block?
+          supportsOrderBy: dialectOverload.supportsOrderBy,
+          defaultOrderByArgIndex: dialectOverload.defaultOrderByArgIndex,
+          // TODO should supportsLimit be in the signature block?
+          supportsLimit: dialectOverload.supportsLimit,
+        };
+      }
+      func.overloads.push(overload);
+    }
+    functions.set(name, func);
+  }
+  return functions;
 }

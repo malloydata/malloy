@@ -36,8 +36,11 @@ import {
   TimeLiteralNode,
   TimeExtractExpr,
 } from '../../model/malloy_types';
-import {TRINO_FUNCTIONS} from './functions';
-import {DialectFunctionOverloadDef} from '../functions';
+import {
+  DialectFunctionOverloadDef,
+  expandOverrideMap,
+  expandBlueprintMap,
+} from '../functions';
 import {
   DialectFieldList,
   OrderByClauseType,
@@ -45,7 +48,8 @@ import {
   isDialectFieldStruct,
 } from '../dialect';
 import {PostgresBase, timeExtractMap} from '../pg_impl';
-import {TRINO_DIALECT_FUNCTIONS} from './functions/dialect_functions';
+import {TRINO_DIALECT_FUNCTIONS} from './dialect_functions';
+import {TRINO_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
 // These are the units that "TIMESTAMP_ADD" "TIMESTAMP_DIFF" accept
 function timestampMeasureable(units: string): boolean {
@@ -498,15 +502,14 @@ ${indent(sql)}
     return "'" + literal.replace(/'/g, "''") + "'";
   }
 
-  getGlobalFunctionDef(name: string): DialectFunctionOverloadDef[] | undefined {
-    // TODO: implement
-    return TRINO_FUNCTIONS.get(name);
-  }
-
-  getDialectFunctions(): {
+  getDialectFunctionOverrides(): {
     [name: string]: DialectFunctionOverloadDef[];
   } {
-    return TRINO_DIALECT_FUNCTIONS;
+    return expandOverrideMap(TRINO_MALLOY_STANDARD_OVERLOADS);
+  }
+
+  getDialectFunctions(): {[name: string]: DialectFunctionOverloadDef[]} {
+    return expandBlueprintMap(TRINO_DIALECT_FUNCTIONS);
   }
 
   malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string {

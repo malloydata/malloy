@@ -40,7 +40,7 @@ export {
   literal,
   spread,
   Dialect,
-  FUNCTIONS,
+  // TODO fix exports relating to blueprints and functions
 } from './dialect';
 export type {
   DialectFieldList,

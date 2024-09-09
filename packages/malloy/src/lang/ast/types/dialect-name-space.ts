@@ -42,6 +42,7 @@ export class DialectNameSpace implements NameSpace {
       });
     }
   }
+
   getEntry(name: string): ModelEntry | undefined {
     const func = this.entries.get(name);
     if (func === undefined) {

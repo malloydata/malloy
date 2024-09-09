@@ -32,11 +32,15 @@ import {
   TypecastExpr,
   MeasureTimeExpr,
 } from '../../model/malloy_types';
-import {POSTGRES_FUNCTIONS} from './functions';
-import {DialectFunctionOverloadDef} from '../functions';
+import {
+  DialectFunctionOverloadDef,
+  expandOverrideMap,
+  expandBlueprintMap,
+} from '../functions';
 import {DialectFieldList, QueryInfo} from '../dialect';
 import {PostgresBase} from '../pg_impl';
-import {POSTGRES_DIALECT_FUNCTIONS} from './functions/dialect_functions';
+import {POSTGRES_DIALECT_FUNCTIONS} from './dialect_functions';
+import {POSTGRES_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
 const pgMakeIntervalMap: Record<string, string> = {
   'year': 'years',
@@ -99,7 +103,6 @@ export class PostgresDialect extends PostgresBase {
   supportsSafeCast = false;
   dontUnionIndex = false;
   supportsQualify = false;
-  globalFunctions = POSTGRES_FUNCTIONS;
   supportsNesting = true;
   experimental = false;
   readsNestedData = false;
@@ -391,12 +394,14 @@ export class PostgresDialect extends PostgresBase {
     return "'" + literal.replace(/'/g, "''") + "'";
   }
 
-  getGlobalFunctionDef(name: string): DialectFunctionOverloadDef[] | undefined {
-    return POSTGRES_FUNCTIONS.get(name);
+  getDialectFunctionOverrides(): {
+    [name: string]: DialectFunctionOverloadDef[];
+  } {
+    return expandOverrideMap(POSTGRES_MALLOY_STANDARD_OVERLOADS);
   }
 
   getDialectFunctions(): {[name: string]: DialectFunctionOverloadDef[]} {
-    return POSTGRES_DIALECT_FUNCTIONS;
+    return expandBlueprintMap(POSTGRES_DIALECT_FUNCTIONS);
   }
 
   malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string {
