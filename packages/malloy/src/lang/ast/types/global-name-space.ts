@@ -104,9 +104,8 @@ export function getDialectFunctions(): Map<string, FunctionDef> {
         returnType: baseOverload.returnType,
         params: baseOverload.params,
         dialect: {},
-        // TODO should needsWindowOrderBy be in the dialect block?
-        needsWindowOrderBy: baseOverload.needsWindowOrderBy,
-        between: baseOverload.between,
+        supportsOrderBy: baseOverload.supportsOrderBy,
+        supportsLimit: baseOverload.supportsLimit,
         isSymmetric: baseOverload.isSymmetric,
       };
       for (const dialect of dialects) {
@@ -115,11 +114,9 @@ export function getDialectFunctions(): Map<string, FunctionDef> {
           overloads.find(o => paramsEqual(o, overload)) ?? baseOverload;
         overload.dialect[dialect.name] = {
           e: dialectOverload.e,
-          // TODO should supportsOrderBy be in the signature block?
-          supportsOrderBy: dialectOverload.supportsOrderBy,
+          needsWindowOrderBy: dialectOverload.needsWindowOrderBy,
+          between: dialectOverload.between,
           defaultOrderByArgIndex: dialectOverload.defaultOrderByArgIndex,
-          // TODO should supportsLimit be in the signature block?
-          supportsLimit: dialectOverload.supportsLimit,
         };
       }
       func.overloads.push(overload);

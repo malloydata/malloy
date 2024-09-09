@@ -26,17 +26,17 @@ export class DialectNameSpace implements NameSpace {
           return {
             returnType: overload.returnType,
             params: overload.params,
+            supportsOrderBy: overload.supportsOrderBy,
+            supportsLimit: overload.supportsLimit,
+            isSymmetric: overload.isSymmetric,
             dialect: {
               [dialect.name]: {
                 e: overload.e,
-                supportsOrderBy: overload.supportsOrderBy,
                 defaultOrderByArgIndex: overload.defaultOrderByArgIndex,
-                supportsLimit: overload.supportsLimit,
+                between: overload.between,
+                needsWindowOrderBy: overload.needsWindowOrderBy,
               },
             },
-            needsWindowOrderBy: overload.needsWindowOrderBy,
-            between: overload.between,
-            isSymmetric: overload.isSymmetric,
           };
         }),
       });

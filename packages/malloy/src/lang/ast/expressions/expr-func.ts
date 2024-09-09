@@ -260,45 +260,39 @@ export class ExprFunc extends ExpressionDef {
       structPath,
     };
     let funcCall: Expr = frag;
-    const dialectOverload = dialect ? overload.dialect[dialect] : undefined;
     // TODO add in an error if you use an asymmetric function in BQ
     // and the function uses joins
     // TODO add in an error if you use an illegal join pattern
-    if (dialectOverload === undefined) {
-      this.log(`Function ${this.name} is not defined in dialect ${dialect}`);
-    } else {
-      if (props?.orderBys && props.orderBys.length > 0) {
-        const isAnalytic = expressionIsAnalytic(
-          overload.returnType.expressionType
-        );
-        if (!isAnalytic) {
-          if (!this.inExperiment('aggregate_order_by', true)) {
-            props.orderBys[0].log(
-              'Enable experiment `aggregate_order_by` to use `order_by` with an aggregate function'
-            );
-          }
-        }
-        if (dialectOverload.supportsOrderBy || isAnalytic) {
-          const allowExpression =
-            dialectOverload.supportsOrderBy !== 'only_default';
-          const allObs = props.orderBys.flatMap(orderBy =>
-            isAnalytic
-              ? orderBy.getAnalyticOrderBy(fs)
-              : orderBy.getAggregateOrderBy(fs, allowExpression)
-          );
-          frag.kids.orderBy = allObs;
-        } else {
+    if (props?.orderBys && props.orderBys.length > 0) {
+      const isAnalytic = expressionIsAnalytic(
+        overload.returnType.expressionType
+      );
+      if (!isAnalytic) {
+        if (!this.inExperiment('aggregate_order_by', true)) {
           props.orderBys[0].log(
-            `Function \`${this.name}\` does not support \`order_by\``
+            'Enable experiment `aggregate_order_by` to use `order_by` with an aggregate function'
           );
         }
       }
-      if (props?.limit !== undefined) {
-        if (dialectOverload.supportsLimit) {
-          frag.limit = props.limit.limit;
-        } else {
-          this.log(`Function ${this.name} does not support limit`);
-        }
+      if (overload.supportsOrderBy || isAnalytic) {
+        const allowExpression = overload.supportsOrderBy !== 'only_default';
+        const allObs = props.orderBys.flatMap(orderBy =>
+          isAnalytic
+            ? orderBy.getAnalyticOrderBy(fs)
+            : orderBy.getAggregateOrderBy(fs, allowExpression)
+        );
+        frag.kids.orderBy = allObs;
+      } else {
+        props.orderBys[0].log(
+          `Function \`${this.name}\` does not support \`order_by\``
+        );
+      }
+    }
+    if (props?.limit !== undefined) {
+      if (overload.supportsLimit) {
+        frag.limit = props.limit.limit;
+      } else {
+        this.log(`Function ${this.name} does not support limit`);
       }
     }
     if (props?.partitionBys && props.partitionBys.length > 0) {
