@@ -41,7 +41,7 @@ export const baseVegaConfig = () => ({
     'ordinal': ['#05214D', '#083E89', '#1877F2', '#76B6FF', '#A8D1FF'],
     'ramp': ['#05214D', '#083E89', '#1877F2', '#76B6FF', '#A8D1FF'],
   },
-  axisY: {
+  'axisY': {
     gridColor: gridGray,
     tickColor: gridGray,
     domain: false,
@@ -58,7 +58,7 @@ export const baseVegaConfig = () => ({
     titlePadding: 10,
     labelOverlap: false,
   },
-  axisX: {
+  'axisX': {
     gridColor: gridGray,
     tickColor: gridGray,
     tickSize: 0,
@@ -74,7 +74,7 @@ export const baseVegaConfig = () => ({
     titleFontWeight: 500,
     titlePadding: 10,
   },
-  view: {
+  'view': {
     strokeWidth: 0,
   },
 });

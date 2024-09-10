@@ -36,7 +36,7 @@ import {getFieldKey, valueIsNumber, valueIsString} from './util';
 import {generateBarChartSpec} from './bar-chart/generate-bar_chart-spec';
 import {plotToVega} from './plot/plot-to-vega';
 import {hasAny} from './tag-utils';
-import {RenderResultMetadata, VegaConfigHandler, VegaSpec} from './types';
+import {RenderResultMetadata, VegaConfigHandler} from './types';
 import {shouldRenderAs} from './apply-renderer';
 
 function createDataCache() {

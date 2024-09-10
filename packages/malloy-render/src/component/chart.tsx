@@ -11,11 +11,6 @@ export function Chart(props: {
   const {field, data} = props;
   const chartProps = props.metadata.field(field).vegaChartProps!;
   const vgSpec = structuredClone(chartProps.spec);
-  const config = useConfig();
-  if (config.vegaConfigOverride) {
-    const maybeConfig = config.vegaConfigOverride(chartProps.chartType);
-    // TODO: merge configs here
-  }
   vgSpec.data[0].values = data;
   return (
     <VegaChart

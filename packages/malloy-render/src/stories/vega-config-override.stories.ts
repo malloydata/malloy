@@ -13,7 +13,7 @@ const meta: Meta = {
     const el = document.createElement('malloy-render');
     if (classes) el.classList.add(classes);
     el.result = context.loaded['result'];
-    el.vegaConfigOverride = chartType => {
+    el.vegaConfigOverride = () => {
       return {
         'range': {
           'category': ['#9467bd'],
