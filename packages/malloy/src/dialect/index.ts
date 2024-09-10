@@ -21,7 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export type {DialectFunctionOverloadDef} from './functions/util';
+export type {
+  DialectFunctionOverloadDef,
+  DefinitionBlueprint,
+  DefinitionBlueprintMap,
+  OverloadedDefinitionBlueprint,
+} from './functions/util';
 export {
   arg,
   anyExprType,
@@ -45,3 +50,4 @@ export {SnowflakeDialect} from './snowflake';
 export {TrinoDialect} from './trino';
 export {getDialect, registerDialect} from './dialect_map';
 export {getMalloyStandardFunctions} from './functions';
+export type {MalloyStandardFunctionImplementations} from './functions';

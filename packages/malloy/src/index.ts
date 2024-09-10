@@ -40,12 +40,15 @@ export {
   literal,
   spread,
   Dialect,
-  // TODO fix exports relating to blueprints and functions
 } from './dialect';
 export type {
   DialectFieldList,
   DialectFunctionOverloadDef,
   QueryInfo,
+  MalloyStandardFunctionImplementations,
+  DefinitionBlueprint,
+  DefinitionBlueprintMap,
+  OverloadedDefinitionBlueprint,
 } from './dialect';
 // TODO tighten up exports
 export type {
