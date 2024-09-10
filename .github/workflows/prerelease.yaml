@@ -28,7 +28,7 @@ jobs:
       - db-bigquery
       - db-motherduck
       - db-postgres
-      - db-snowflake
+      # - db-snowflake
       - main
     runs-on: ubuntu-latest
     env:
