@@ -24,7 +24,7 @@ const count_approx: DefinitionBlueprint = {
 };
 
 const string_agg: OverloadedDefinitionBlueprint = {
-  'default_separator': {
+  default_separator: {
     takes: {'value': {dimension: 'string'}},
     returns: {measure: 'string'},
     supportsOrderBy: true,
@@ -33,7 +33,7 @@ const string_agg: OverloadedDefinitionBlueprint = {
       defaultOrderByArgIndex: 0,
     },
   },
-  'with_separator': {
+  with_separator: {
     takes: {
       'value': {dimension: 'string'},
       'separator': {literal: 'string'},
@@ -48,7 +48,7 @@ const string_agg: OverloadedDefinitionBlueprint = {
 };
 
 const string_agg_distinct: OverloadedDefinitionBlueprint = {
-  'default_separator': {
+  default_separator: {
     ...string_agg['default_separator'],
     isSymmetric: true,
     impl: {
@@ -56,7 +56,7 @@ const string_agg_distinct: OverloadedDefinitionBlueprint = {
       defaultOrderByArgIndex: 0,
     },
   },
-  'with_separator': {
+  with_separator: {
     ...string_agg['with_separator'],
     isSymmetric: true,
     impl: {

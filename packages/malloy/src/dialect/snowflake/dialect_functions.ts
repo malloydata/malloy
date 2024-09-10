@@ -20,7 +20,7 @@ const order_by: AggregateOrderByNode = {
 };
 
 const string_agg: OverloadedDefinitionBlueprint = {
-  'default_separator': {
+  default_separator: {
     takes: {'value': {dimension: 'string'}},
     returns: {measure: 'string'},
     supportsOrderBy: true,
@@ -28,7 +28,7 @@ const string_agg: OverloadedDefinitionBlueprint = {
       expr: sql`LISTAGG(${a('value')}, ',')${order_by}`,
     },
   },
-  'with_separator': {
+  with_separator: {
     takes: {
       'value': {dimension: 'string'},
       'separator': {literal: 'string'},
@@ -42,14 +42,14 @@ const string_agg: OverloadedDefinitionBlueprint = {
 };
 
 const string_agg_distinct: OverloadedDefinitionBlueprint = {
-  'default_separator': {
+  default_separator: {
     ...string_agg['default_separator'],
     isSymmetric: true,
     impl: {
       expr: sql`LISTAGG(DISTINCT ${a('value')}, ',')${order_by}`,
     },
   },
-  'with_separator': {
+  with_separator: {
     ...string_agg['with_separator'],
     isSymmetric: true,
     impl: {

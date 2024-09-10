@@ -5,12 +5,12 @@
  *  LICENSE file in the root directory of this source tree.
  */
 
-import {OverrideMap} from '../functions/util';
+import {MalloyStandardFunctionImplementations as OverrideMap} from '../functions/malloy_standard_functions';
 
 export const STANDARDSQL_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
-  'chr': {
+  chr: {
     sql: "CASE WHEN IFNULL(${value}, 1) = 0 THEN '' ELSE CHR(${value}) END",
   },
   // There's no built-in PI function, but we can compute it easily.
-  'pi': {sql: 'ACOS(-1)'},
+  pi: {sql: 'ACOS(-1)'},
 };

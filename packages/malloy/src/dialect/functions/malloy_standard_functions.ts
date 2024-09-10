@@ -8,76 +8,159 @@
 import {ExpressionValueType} from '../../model';
 import {
   DefinitionBlueprint,
-  DefinitionBlueprintMap,
   DialectFunctionOverloadDef,
-  OverloadedDefinitionBlueprint,
-  OverrideMap,
+  ImplementationBlueprint,
   expandBlueprintMap,
   expandOverrideMapFromBase,
 } from './util';
 
-const abs: DefinitionBlueprint = {
+type D = DefinitionBlueprint;
+type I = ImplementationBlueprint;
+type DefinitionsFor<T> = {[key in keyof T]: D};
+type ImplementationsFor<T> = {[key in keyof T]?: I};
+
+type DefinitionFor<T> = T extends D ? D : DefinitionsFor<T>;
+type ImplementationFor<T> = T extends D ? I : ImplementationsFor<T>;
+
+type DefinitionMap<T> = {[key in keyof T]: DefinitionFor<T[key]>};
+
+type ImplementationMap<T> = {[key in keyof T]?: ImplementationFor<T[key]>};
+
+type Standard = {
+  abs: D;
+  acos: D;
+  ascii: D;
+  asin: D;
+  atan2: D;
+  atan: D;
+  byte_length: D;
+  ceil: D;
+  chr: D;
+  coalesce: D;
+  concat: {empty: D; variadic: D};
+  cos: D;
+  div: D;
+  ends_with: D;
+  exp: D;
+  floor: D;
+  greatest: D;
+  ifnull: D;
+  is_inf: D;
+  is_nan: D;
+  least: D;
+  length: D;
+  ln: D;
+  log: D;
+  lower: D;
+  ltrim: {whitespace: D; characters: D};
+  nullif: D;
+  pi: D;
+  pow: D;
+  rand: D;
+  regexp_extract: D;
+  repeat: D;
+  replace: {string: D; regular_expression: D};
+  reverse: D;
+  round: {to_integer: D; to_precision: D};
+  rtrim: {whitespace: D; characters: D};
+  sign: D;
+  sin: D;
+  sqrt: D;
+  starts_with: D;
+  strpos: D;
+  substr: {position_only: D; with_length: D};
+  tan: D;
+  trim: {whitespace: D; characters: D};
+  trunc: {to_integer: D; to_precision: D};
+  unicode: D;
+  upper: D;
+  stddev: D;
+  avg_moving: {preceding: D; following: D};
+  first_value: D;
+  lag: {bare: D; with_offset: D; with_default: D};
+  last_value: D;
+  lead: {bare: D; with_offset: D; with_default: D};
+  max_cumulative: D;
+  max_window: D;
+  min_cumulative: D;
+  min_window: D;
+  rank: D;
+  row_number: D;
+  sum_cumulative: D;
+  sum_moving: {preceding: D; following: D};
+  sum_window: D;
+  sql_boolean: D;
+  sql_date: D;
+  sql_number: D;
+  sql_string: D;
+  sql_timestamp: D;
+};
+
+export type MalloyStandardFunctionDefinitions = DefinitionMap<Standard>;
+export type MalloyStandardFunctionImplementations = ImplementationMap<Standard>;
+
+const abs: DefinitionFor<Standard['abs']> = {
   takes: {'value': 'number'},
   returns: 'number',
   impl: {function: 'ABS'},
 };
 
-const acos: DefinitionBlueprint = {
+const acos: DefinitionFor<Standard['acos']> = {
   takes: {'value': 'number'},
   returns: 'number',
   impl: {function: 'ACOS'},
 };
 
-const ascii: DefinitionBlueprint = {
+const ascii: DefinitionFor<Standard['ascii']> = {
   takes: {'value': 'string'},
   returns: 'number',
   impl: {function: 'ASCII'},
 };
 
-const asin: DefinitionBlueprint = {
+const asin: DefinitionFor<Standard['asin']> = {
   takes: {'value': 'number'},
   returns: 'number',
   impl: {function: 'ASIN'},
 };
 
-const atan2: DefinitionBlueprint = {
+const atan2: DefinitionFor<Standard['atan2']> = {
   takes: {'y': 'number', 'x': 'number'},
   returns: 'number',
   impl: {function: 'ATAN2'},
 };
 
-const atan: DefinitionBlueprint = {
+const atan: DefinitionFor<Standard['atan']> = {
   takes: {'value': 'number'},
   returns: 'number',
   impl: {function: 'ATAN'},
 };
 
-const byte_length: DefinitionBlueprint = {
+const byte_length: DefinitionFor<Standard['byte_length']> = {
   takes: {'value': 'string'},
   returns: 'number',
   impl: {function: 'BYTE_LENGTH'},
 };
 
-const ceil: DefinitionBlueprint = {
+const ceil: DefinitionFor<Standard['ceil']> = {
   takes: {'value': 'number'},
   returns: 'number',
   impl: {function: 'CEIL'},
 };
 
-const chr: DefinitionBlueprint = {
+const chr: DefinitionFor<Standard['chr']> = {
   takes: {'value': 'number'},
   returns: 'string',
   impl: {sql: "CASE WHEN ${value} = 0 THEN '' ELSE CHR(${value}) END"},
 };
 
-const coalesce: DefinitionBlueprint = {
+const coalesce: DefinitionFor<Standard['coalesce']> = {
   generic: ['T', ['string', 'number', 'timestamp', 'date', 'json']],
   takes: {'value': {variadic: {generic: 'T'}}},
   returns: {generic: 'T'},
   impl: {function: 'COALESCE'},
 };
 
-const concat: OverloadedDefinitionBlueprint = {
+const concat: DefinitionFor<Standard['concat']> = {
   'empty': {
     takes: {},
     returns: 'string',
@@ -94,80 +177,80 @@ const concat: OverloadedDefinitionBlueprint = {
   },
 };
 
-const cos: DefinitionBlueprint = {
+const cos: DefinitionFor<Standard['cos']> = {
   takes: {'value': 'number'},
   returns: 'number',
   impl: {function: 'COS'},
 };
 
-const div: DefinitionBlueprint = {
+const div: DefinitionFor<Standard['div']> = {
   takes: {'dividend': 'number', 'divisor': 'number'},
   returns: 'number',
   impl: {function: 'DIV'},
 };
 
-const ends_with: DefinitionBlueprint = {
+const ends_with: DefinitionFor<Standard['ends_with']> = {
   takes: {'value': 'string', 'suffix': 'string'},
   returns: 'boolean',
   impl: {sql: 'COALESCE(ENDS_WITH(${value}, ${suffix}), false)'},
 };
 
-const exp: DefinitionBlueprint = {
+const exp: DefinitionFor<Standard['exp']> = {
   takes: {'value': 'number'},
   returns: 'number',
   impl: {function: 'EXP'},
 };
 
-const floor: DefinitionBlueprint = {
+const floor: DefinitionFor<Standard['floor']> = {
   takes: {'value': 'number'},
   returns: 'number',
   impl: {function: 'FLOOR'},
 };
 
-const greatest: DefinitionBlueprint = {
+const greatest: DefinitionFor<Standard['greatest']> = {
   generic: ['T', ['string', 'number', 'timestamp', 'date', 'json']],
   takes: {'values': {variadic: {generic: 'T'}}},
   returns: {generic: 'T'},
   impl: {function: 'GREATEST'},
 };
 
-const ifnull: DefinitionBlueprint = {
+const ifnull: DefinitionFor<Standard['ifnull']> = {
   generic: ['T', ['string', 'number', 'timestamp', 'date', 'json']],
   takes: {'value': {generic: 'T'}, 'default': {generic: 'T'}},
   returns: {generic: 'T'},
   impl: {function: 'IFNULL'},
 };
 
-const is_inf: DefinitionBlueprint = {
+const is_inf: DefinitionFor<Standard['is_inf']> = {
   takes: {'value': 'number'},
   returns: 'boolean',
   impl: {sql: 'COALESCE(IS_INF(${value}), false)'},
 };
 
-const is_nan: DefinitionBlueprint = {
+const is_nan: DefinitionFor<Standard['is_nan']> = {
   takes: {'value': 'number'},
   returns: 'boolean',
   impl: {sql: 'COALESCE(IS_NAN(${value}), false)'},
 };
 
-const least: DefinitionBlueprint = {
+const least: DefinitionFor<Standard['least']> = {
   ...greatest,
   impl: {function: 'LEAST'},
 };
 
-const length: DefinitionBlueprint = {
+const length: DefinitionFor<Standard['length']> = {
   takes: {'value': 'string'},
   returns: 'number',
   impl: {function: 'LENGTH'},
 };
 
-const ln: DefinitionBlueprint = {
+const ln: DefinitionFor<Standard['ln']> = {
   takes: {'value': 'number'},
   returns: 'number',
   impl: {function: 'LN'},
 };
 
-const log: DefinitionBlueprint = {
+const log: DefinitionFor<Standard['log']> = {
   takes: {
     'value': 'number',
     'base': 'number',
@@ -176,13 +259,13 @@ const log: DefinitionBlueprint = {
   impl: {function: 'LOG'},
 };
 
-const lower: DefinitionBlueprint = {
+const lower: DefinitionFor<Standard['lower']> = {
   takes: {'value': 'string'},
   returns: 'string',
   impl: {function: 'LOWER'},
 };
 
-const ltrim: OverloadedDefinitionBlueprint = {
+const ltrim: DefinitionFor<Standard['ltrim']> = {
   'whitespace': {
     takes: {'value': 'string'},
     returns: 'string',
@@ -195,32 +278,32 @@ const ltrim: OverloadedDefinitionBlueprint = {
   },
 };
 
-const nullif: DefinitionBlueprint = {
+const nullif: DefinitionFor<Standard['nullif']> = {
   generic: ['T', ['string', 'number', 'timestamp', 'date', 'json']],
   takes: {'value1': {generic: 'T'}, 'value2': {generic: 'T'}},
   returns: {generic: 'T'},
   impl: {function: 'NULLIF'},
 };
 
-const pi: DefinitionBlueprint = {
+const pi: DefinitionFor<Standard['pi']> = {
   takes: {},
   returns: 'number',
   impl: {function: 'PI'},
 };
 
-const pow: DefinitionBlueprint = {
+const pow: DefinitionFor<Standard['pow']> = {
   takes: {'base': 'number', 'exponent': 'number'},
   returns: 'number',
   impl: {function: 'POW'},
 };
 
-const rand: DefinitionBlueprint = {
+const rand: DefinitionFor<Standard['rand']> = {
   takes: {},
   returns: 'number',
   impl: {function: 'RAND'},
 };
 
-const regexp_extract: DefinitionBlueprint = {
+const regexp_extract: DefinitionFor<Standard['regexp_extract']> = {
   // TODO consider supporting these parameters
   // 'position': 'number',
   // 'occurrence': 'number',
@@ -229,14 +312,14 @@ const regexp_extract: DefinitionBlueprint = {
   impl: {function: 'REGEXP_EXTRACT'},
 };
 
-const repeat: DefinitionBlueprint = {
+const repeat: DefinitionFor<Standard['repeat']> = {
   takes: {'value': 'string', 'count': 'number'},
   returns: 'string',
   impl: {function: 'REPEAT'},
 };
 
 // TODO maybe we need to have a parameter to say whether it's a global replacement or not...
-const replace: OverloadedDefinitionBlueprint = {
+const replace: DefinitionFor<Standard['replace']> = {
   'string': {
     takes: {'value': 'string', 'pattern': 'string', 'replacement': 'string'},
     returns: 'string',
@@ -256,13 +339,13 @@ const replace: OverloadedDefinitionBlueprint = {
   },
 };
 
-const reverse: DefinitionBlueprint = {
+const reverse: DefinitionFor<Standard['reverse']> = {
   takes: {'value': 'string'},
   returns: 'string',
   impl: {function: 'REVERSE'},
 };
 
-const round: OverloadedDefinitionBlueprint = {
+const round: DefinitionFor<Standard['round']> = {
   'to_integer': {
     takes: {'value': 'number'},
     returns: 'number',
@@ -279,7 +362,7 @@ const round: OverloadedDefinitionBlueprint = {
   },
 };
 
-const rtrim: OverloadedDefinitionBlueprint = {
+const rtrim: DefinitionFor<Standard['rtrim']> = {
   'whitespace': {
     ...ltrim['whitespace'],
     impl: {function: 'RTRIM'},
@@ -290,37 +373,37 @@ const rtrim: OverloadedDefinitionBlueprint = {
   },
 };
 
-const sign: DefinitionBlueprint = {
+const sign: DefinitionFor<Standard['sign']> = {
   takes: {'value': 'number'},
   returns: 'number',
   impl: {function: 'SIGN'},
 };
 
-const sin: DefinitionBlueprint = {
+const sin: DefinitionFor<Standard['sin']> = {
   takes: {'value': 'number'},
   returns: 'number',
   impl: {function: 'SIN'},
 };
 
-const sqrt: DefinitionBlueprint = {
+const sqrt: DefinitionFor<Standard['sqrt']> = {
   takes: {'value': 'number'},
   returns: 'number',
   impl: {function: 'SQRT'},
 };
 
-const starts_with: DefinitionBlueprint = {
+const starts_with: DefinitionFor<Standard['starts_with']> = {
   takes: {'value': 'string', 'prefix': 'string'},
   returns: 'boolean',
   impl: {sql: 'COALESCE(STARTS_WITH(${value}, ${prefix}), false)'},
 };
 
-const strpos: DefinitionBlueprint = {
+const strpos: DefinitionFor<Standard['strpos']> = {
   takes: {'test_string': 'string', 'search_string': 'string'},
   returns: 'number',
   impl: {function: 'STRPOS'},
 };
 
-const substr: OverloadedDefinitionBlueprint = {
+const substr: DefinitionFor<Standard['substr']> = {
   'position_only': {
     takes: {'value': 'string', 'position': 'number'},
     returns: 'string',
@@ -333,13 +416,13 @@ const substr: OverloadedDefinitionBlueprint = {
   },
 };
 
-const tan: DefinitionBlueprint = {
+const tan: DefinitionFor<Standard['tan']> = {
   takes: {'value': 'number'},
   returns: 'number',
   impl: {function: 'TAN'},
 };
 
-const trim: OverloadedDefinitionBlueprint = {
+const trim: DefinitionFor<Standard['trim']> = {
   'whitespace': {
     ...ltrim['whitespace'],
     impl: {function: 'TRIM'},
@@ -350,7 +433,7 @@ const trim: OverloadedDefinitionBlueprint = {
   },
 };
 
-const trunc: OverloadedDefinitionBlueprint = {
+const trunc: DefinitionFor<Standard['trunc']> = {
   'to_integer': {
     takes: {'value': 'number'},
     returns: 'number',
@@ -365,27 +448,27 @@ const trunc: OverloadedDefinitionBlueprint = {
   },
 };
 
-const unicode: DefinitionBlueprint = {
+const unicode: DefinitionFor<Standard['unicode']> = {
   takes: {'value': 'string'},
   returns: 'number',
   impl: {function: 'UNICODE'},
 };
 
-const upper: DefinitionBlueprint = {
+const upper: DefinitionFor<Standard['upper']> = {
   takes: {'value': 'string'},
   returns: 'string',
   impl: {function: 'UPPER'},
 };
 
 // Aggregate functions
-const stddev: DefinitionBlueprint = {
+const stddev: DefinitionFor<Standard['stddev']> = {
   takes: {'value': {dimension: 'number'}},
   returns: {measure: 'number'},
   impl: {function: 'STDDEV'},
 };
 
 // Analytic functions
-const avg_moving: OverloadedDefinitionBlueprint = {
+const avg_moving: DefinitionFor<Standard['avg_moving']> = {
   'preceding': {
     generic: ['T', ['string', 'number', 'timestamp', 'date']],
     takes: {
@@ -415,7 +498,7 @@ const avg_moving: OverloadedDefinitionBlueprint = {
   },
 };
 
-const first_value: DefinitionBlueprint = {
+const first_value: DefinitionFor<Standard['first_value']> = {
   generic: ['T', ['string', 'number', 'timestamp', 'date', 'json']],
   takes: {'value': {measure: {generic: 'T'}}}, // TODO needs output aggregate?
   returns: {calculation: {generic: 'T'}},
@@ -430,7 +513,7 @@ const LAG_TYPES: ExpressionValueType[] = [
   'json',
   'boolean',
 ];
-const lag: OverloadedDefinitionBlueprint = {
+const lag: DefinitionFor<Standard['lag']> = {
   'bare': {
     generic: ['T', LAG_TYPES],
     takes: {
@@ -460,7 +543,7 @@ const lag: OverloadedDefinitionBlueprint = {
   },
 };
 
-const last_value: DefinitionBlueprint = {
+const last_value: DefinitionFor<Standard['last_value']> = {
   generic: ['T', ['string', 'number', 'timestamp', 'date', 'json']],
   takes: {'value': {measure: {generic: 'T'}}}, // TODO needs output aggregate?
   returns: {calculation: {generic: 'T'}},
@@ -471,7 +554,7 @@ const last_value: DefinitionBlueprint = {
   },
 };
 
-const lead: OverloadedDefinitionBlueprint = {
+const lead: DefinitionFor<Standard['lead']> = {
   'bare': {
     ...lag['bare'],
     impl: {function: 'LEAD', needsWindowOrderBy: true},
@@ -486,28 +569,28 @@ const lead: OverloadedDefinitionBlueprint = {
   },
 };
 
-const max_cumulative: DefinitionBlueprint = {
+const max_cumulative: DefinitionFor<Standard['max_cumulative']> = {
   generic: ['T', ['string', 'number', 'timestamp', 'date']],
   takes: {'value': {measure: {generic: 'T'}}}, // TODO should be output only
   returns: {calculation: {generic: 'T'}},
   impl: {function: 'MAX', needsWindowOrderBy: true},
 };
 
-const max_window: DefinitionBlueprint = {
+const max_window: DefinitionFor<Standard['max_window']> = {
   generic: ['T', ['string', 'number', 'timestamp', 'date']],
   takes: {'value': {measure: {generic: 'T'}}}, // TODO should be output only
   returns: {calculation: {generic: 'T'}},
   impl: {function: 'MAX', needsWindowOrderBy: false},
 };
 
-const min_cumulative: DefinitionBlueprint = {
+const min_cumulative: DefinitionFor<Standard['min_cumulative']> = {
   generic: ['T', ['string', 'number', 'timestamp', 'date']],
   takes: {'value': {measure: {generic: 'T'}}}, // TODO should be output only
   returns: {calculation: {generic: 'T'}},
   impl: {function: 'MIN', needsWindowOrderBy: true},
 };
 
-const min_window: DefinitionBlueprint = {
+const min_window: DefinitionFor<Standard['min_window']> = {
   generic: ['T', ['string', 'number', 'timestamp', 'date']],
   takes: {'value': {measure: {generic: 'T'}}}, // TODO should be output only
   returns: {calculation: {generic: 'T'}},
@@ -515,26 +598,26 @@ const min_window: DefinitionBlueprint = {
 };
 
 // TODO would you ever want to rank by a different thing than the order by?
-const rank: DefinitionBlueprint = {
+const rank: DefinitionFor<Standard['rank']> = {
   takes: {},
   returns: {calculation: 'number'},
   impl: {function: 'RANK', needsWindowOrderBy: true},
 };
 
-const row_number: DefinitionBlueprint = {
+const row_number: DefinitionFor<Standard['row_number']> = {
   takes: {},
   returns: {calculation: 'number'},
   impl: {function: 'ROW_NUMBER', needsWindowOrderBy: true},
 };
 
-const sum_cumulative: DefinitionBlueprint = {
+const sum_cumulative: DefinitionFor<Standard['sum_cumulative']> = {
   generic: ['T', ['string', 'number', 'timestamp', 'date']],
   takes: {'value': {measure: {generic: 'T'}}}, // TODO should be output only
   returns: {calculation: {generic: 'T'}},
   impl: {function: 'SUM', needsWindowOrderBy: true},
 };
 
-const sum_moving: OverloadedDefinitionBlueprint = {
+const sum_moving: DefinitionFor<Standard['sum_moving']> = {
   'preceding': {
     generic: ['T', ['string', 'number', 'timestamp', 'date']],
     takes: {
@@ -564,7 +647,7 @@ const sum_moving: OverloadedDefinitionBlueprint = {
   },
 };
 
-const sum_window: DefinitionBlueprint = {
+const sum_window: DefinitionFor<Standard['sum_window']> = {
   generic: ['T', ['string', 'number', 'timestamp', 'date']],
   takes: {'value': {measure: {generic: 'T'}}}, // TODO should be output only
   returns: {calculation: {generic: 'T'}},
@@ -572,37 +655,37 @@ const sum_window: DefinitionBlueprint = {
 };
 
 // SQL functions
-const sql_boolean: DefinitionBlueprint = {
+const sql_boolean: DefinitionFor<Standard['sql_boolean']> = {
   takes: {'value': {literal: 'string'}},
   returns: 'boolean',
   impl: {expr: {node: 'function_parameter', name: 'value'}},
 };
 
-const sql_date: DefinitionBlueprint = {
+const sql_date: DefinitionFor<Standard['sql_date']> = {
   takes: {'value': {literal: 'string'}},
   returns: 'date',
   impl: {expr: {node: 'function_parameter', name: 'value'}},
 };
 
-const sql_number: DefinitionBlueprint = {
+const sql_number: DefinitionFor<Standard['sql_number']> = {
   takes: {'value': {literal: 'string'}},
   returns: 'number',
   impl: {expr: {node: 'function_parameter', name: 'value'}},
 };
 
-const sql_string: DefinitionBlueprint = {
+const sql_string: DefinitionFor<Standard['sql_string']> = {
   takes: {'value': {literal: 'string'}},
   returns: 'string',
   impl: {expr: {node: 'function_parameter', name: 'value'}},
 };
 
-const sql_timestamp: DefinitionBlueprint = {
+const sql_timestamp: DefinitionFor<Standard['sql_timestamp']> = {
   takes: {'value': {literal: 'string'}},
   returns: 'timestamp',
   impl: {expr: {node: 'function_parameter', name: 'value'}},
 };
 
-export const MALLOY_STANDARD_FUNCTIONS: DefinitionBlueprintMap = {
+export const MALLOY_STANDARD_FUNCTIONS: MalloyStandardFunctionDefinitions = {
   abs,
   acos,
   ascii,
@@ -686,7 +769,9 @@ export function getMalloyStandardFunctions(): {
   return expandBlueprintMap(MALLOY_STANDARD_FUNCTIONS);
 }
 
-export function expandOverrideMap(overrides: OverrideMap): {
+export function expandOverrideMap(
+  overrides: MalloyStandardFunctionImplementations
+): {
   [name: string]: DialectFunctionOverloadDef[];
 } {
   return expandOverrideMapFromBase(MALLOY_STANDARD_FUNCTIONS, overrides);

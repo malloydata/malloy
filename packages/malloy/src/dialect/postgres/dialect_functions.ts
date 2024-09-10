@@ -11,13 +11,13 @@ import {
 } from '../functions/util';
 
 const string_agg: OverloadedDefinitionBlueprint = {
-  'default_separator': {
+  default_separator: {
     takes: {'value': {dimension: 'string'}},
     returns: {measure: 'string'},
     supportsOrderBy: true,
     impl: {sql: "STRING_AGG(${value}, ','${order_by:})"},
   },
-  'with_separator': {
+  with_separator: {
     takes: {
       'value': {dimension: 'string'},
       'separator': {literal: 'string'},
@@ -29,7 +29,7 @@ const string_agg: OverloadedDefinitionBlueprint = {
 };
 
 const string_agg_distinct: OverloadedDefinitionBlueprint = {
-  'default_separator': {
+  default_separator: {
     ...string_agg['default_separator'],
     isSymmetric: true,
     supportsOrderBy: 'only_default',
@@ -38,7 +38,7 @@ const string_agg_distinct: OverloadedDefinitionBlueprint = {
       defaultOrderByArgIndex: 0,
     },
   },
-  'with_separator': {
+  with_separator: {
     ...string_agg['with_separator'],
     isSymmetric: true,
     supportsOrderBy: 'only_default',
