@@ -36,7 +36,7 @@ import {getFieldKey, valueIsNumber, valueIsString} from './util';
 import {generateBarChartSpec} from './bar-chart/generate-bar_chart-spec';
 import {plotToVega} from './plot/plot-to-vega';
 import {hasAny} from './tag-utils';
-import {RenderResultMetadata} from './types';
+import {RenderResultMetadata, VegaConfigHandler} from './types';
 import {shouldRenderAs} from './apply-renderer';
 
 function createDataCache() {
@@ -55,7 +55,14 @@ function createDataCache() {
   };
 }
 
-export function getResultMetadata(result: Result) {
+export type GetResultMetadataOptions = {
+  getVegaConfigOverride?: VegaConfigHandler;
+};
+
+export function getResultMetadata(
+  result: Result,
+  options: GetResultMetadataOptions = {}
+) {
   const fieldKeyMap: WeakMap<Field | Explore, string> = new WeakMap();
   const getCachedFieldKey = (f: Field | Explore) => {
     if (fieldKeyMap.has(f)) return fieldKeyMap.get(f)!;
@@ -95,9 +102,10 @@ export function getResultMetadata(result: Result) {
   Object.values(metadata.fields).forEach(m => {
     const f = m.field;
     // If explore, do some additional post-processing like determining chart settings
-    if (f.isExploreField()) populateExploreMeta(f, f.tagParse().tag, metadata);
+    if (f.isExploreField())
+      populateExploreMeta(f, f.tagParse().tag, metadata, options);
     else if (f.isExplore())
-      populateExploreMeta(f, result.tagParse().tag, metadata);
+      populateExploreMeta(f, result.tagParse().tag, metadata, options);
   });
 
   return metadata;
@@ -158,7 +166,8 @@ const populateFieldMeta = (data: DataArray, metadata: RenderResultMetadata) => {
 function populateExploreMeta(
   f: Explore | ExploreField,
   tag: Tag,
-  metadata: RenderResultMetadata
+  metadata: RenderResultMetadata,
+  options: GetResultMetadataOptions
 ) {
   const fieldMeta = metadata.field(f);
   if (hasAny(tag, 'bar', 'bar_chart')) {
@@ -167,6 +176,8 @@ function populateExploreMeta(
       field: f,
       metadata,
       chartTag: (tag.tag('bar_chart') ?? tag.tag('bar'))!,
+      chartType: 'bar_chart',
+      getVegaConfigOverride: options.getVegaConfigOverride,
     });
   }
 }

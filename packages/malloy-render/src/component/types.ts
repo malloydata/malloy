@@ -8,6 +8,7 @@ export type VegaChartProps = {
   plotHeight: number;
   totalWidth: number;
   totalHeight: number;
+  chartType: string;
 };
 
 export type FieldHeaderRangeMap = Record<
@@ -48,3 +49,7 @@ export type MalloyClickEventPayload = {
   event: MouseEvent;
   type: 'dashboard-item' | 'table-cell';
 };
+
+export type VegaConfigHandler = (
+  chartType: string
+) => Record<string, unknown> | undefined;
