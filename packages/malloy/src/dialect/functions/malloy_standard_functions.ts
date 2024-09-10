@@ -472,7 +472,7 @@ const avg_moving: DefinitionFor<Standard['avg_moving']> = {
   'preceding': {
     generic: ['T', ['string', 'number', 'timestamp', 'date']],
     takes: {
-      'value': {measure: {generic: 'T'}}, // TODO only output
+      'value': {measure: {generic: 'T'}},
       'preceding': {literal: 'number'},
     },
     returns: {calculation: {generic: 'T'}},
@@ -485,7 +485,7 @@ const avg_moving: DefinitionFor<Standard['avg_moving']> = {
   'following': {
     generic: ['T', ['string', 'number', 'timestamp', 'date']],
     takes: {
-      'value': {measure: {generic: 'T'}}, // TODO only output
+      'value': {measure: {generic: 'T'}},
       'preceding': {literal: 'number'},
       'following': {literal: 'number'},
     },
@@ -500,7 +500,7 @@ const avg_moving: DefinitionFor<Standard['avg_moving']> = {
 
 const first_value: DefinitionFor<Standard['first_value']> = {
   generic: ['T', ['string', 'number', 'timestamp', 'date', 'json']],
-  takes: {'value': {measure: {generic: 'T'}}}, // TODO needs output aggregate?
+  takes: {'value': {measure: {generic: 'T'}}},
   returns: {calculation: {generic: 'T'}},
   impl: {function: 'FIRST_VALUE', needsWindowOrderBy: true},
 };
@@ -517,7 +517,7 @@ const lag: DefinitionFor<Standard['lag']> = {
   'bare': {
     generic: ['T', LAG_TYPES],
     takes: {
-      'value': {measure: {generic: 'T'}}, // TODO needs to be output
+      'value': {measure: {generic: 'T'}},
     },
     returns: {calculation: {generic: 'T'}},
     impl: {function: 'LAG', needsWindowOrderBy: true},
@@ -525,7 +525,7 @@ const lag: DefinitionFor<Standard['lag']> = {
   'with_offset': {
     generic: ['T', LAG_TYPES],
     takes: {
-      'value': {measure: {generic: 'T'}}, // TODO needs to be output
+      'value': {measure: {generic: 'T'}},
       'offset': {literal: 'number'},
     },
     returns: {calculation: {generic: 'T'}},
@@ -534,7 +534,7 @@ const lag: DefinitionFor<Standard['lag']> = {
   'with_default': {
     generic: ['T', LAG_TYPES],
     takes: {
-      'value': {measure: {generic: 'T'}}, // TODO needs to be output
+      'value': {measure: {generic: 'T'}},
       'offset': {literal: 'number'},
       'default': {constant: {generic: 'T'}}, // TODO needs to be constant max aggregate?
     },
@@ -545,7 +545,7 @@ const lag: DefinitionFor<Standard['lag']> = {
 
 const last_value: DefinitionFor<Standard['last_value']> = {
   generic: ['T', ['string', 'number', 'timestamp', 'date', 'json']],
-  takes: {'value': {measure: {generic: 'T'}}}, // TODO needs output aggregate?
+  takes: {'value': {measure: {generic: 'T'}}},
   returns: {calculation: {generic: 'T'}},
   impl: {
     function: 'LAST_VALUE',
@@ -571,28 +571,28 @@ const lead: DefinitionFor<Standard['lead']> = {
 
 const max_cumulative: DefinitionFor<Standard['max_cumulative']> = {
   generic: ['T', ['string', 'number', 'timestamp', 'date']],
-  takes: {'value': {measure: {generic: 'T'}}}, // TODO should be output only
+  takes: {'value': {measure: {generic: 'T'}}},
   returns: {calculation: {generic: 'T'}},
   impl: {function: 'MAX', needsWindowOrderBy: true},
 };
 
 const max_window: DefinitionFor<Standard['max_window']> = {
   generic: ['T', ['string', 'number', 'timestamp', 'date']],
-  takes: {'value': {measure: {generic: 'T'}}}, // TODO should be output only
+  takes: {'value': {measure: {generic: 'T'}}},
   returns: {calculation: {generic: 'T'}},
   impl: {function: 'MAX', needsWindowOrderBy: false},
 };
 
 const min_cumulative: DefinitionFor<Standard['min_cumulative']> = {
   generic: ['T', ['string', 'number', 'timestamp', 'date']],
-  takes: {'value': {measure: {generic: 'T'}}}, // TODO should be output only
+  takes: {'value': {measure: {generic: 'T'}}},
   returns: {calculation: {generic: 'T'}},
   impl: {function: 'MIN', needsWindowOrderBy: true},
 };
 
 const min_window: DefinitionFor<Standard['min_window']> = {
   generic: ['T', ['string', 'number', 'timestamp', 'date']],
-  takes: {'value': {measure: {generic: 'T'}}}, // TODO should be output only
+  takes: {'value': {measure: {generic: 'T'}}},
   returns: {calculation: {generic: 'T'}},
   impl: {function: 'MIN', needsWindowOrderBy: false},
 };
@@ -612,7 +612,7 @@ const row_number: DefinitionFor<Standard['row_number']> = {
 
 const sum_cumulative: DefinitionFor<Standard['sum_cumulative']> = {
   generic: ['T', ['string', 'number', 'timestamp', 'date']],
-  takes: {'value': {measure: {generic: 'T'}}}, // TODO should be output only
+  takes: {'value': {measure: {generic: 'T'}}},
   returns: {calculation: {generic: 'T'}},
   impl: {function: 'SUM', needsWindowOrderBy: true},
 };
@@ -621,7 +621,7 @@ const sum_moving: DefinitionFor<Standard['sum_moving']> = {
   'preceding': {
     generic: ['T', ['string', 'number', 'timestamp', 'date']],
     takes: {
-      'value': {measure: {generic: 'T'}}, // TODO only output
+      'value': {measure: {generic: 'T'}},
       'preceding': {literal: 'number'},
     },
     returns: {calculation: {generic: 'T'}},
@@ -634,7 +634,7 @@ const sum_moving: DefinitionFor<Standard['sum_moving']> = {
   'following': {
     generic: ['T', ['string', 'number', 'timestamp', 'date']],
     takes: {
-      'value': {measure: {generic: 'T'}}, // TODO only output
+      'value': {measure: {generic: 'T'}},
       'preceding': {literal: 'number'},
       'following': {literal: 'number'},
     },
@@ -649,7 +649,7 @@ const sum_moving: DefinitionFor<Standard['sum_moving']> = {
 
 const sum_window: DefinitionFor<Standard['sum_window']> = {
   generic: ['T', ['string', 'number', 'timestamp', 'date']],
-  takes: {'value': {measure: {generic: 'T'}}}, // TODO should be output only
+  takes: {'value': {measure: {generic: 'T'}}},
   returns: {calculation: {generic: 'T'}},
   impl: {function: 'SUM', needsWindowOrderBy: false},
 };
