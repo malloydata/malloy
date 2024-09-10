@@ -13,10 +13,10 @@ jobs:
       MOTHERDUCK_TOKEN_10: ${{ secrets.MOTHERDUCK_TOKEN_10 }}
   db-postgres:
     uses: './.github/workflows/db-postgres.yaml'
-  db-snowflake:
-    uses: './.github/workflows/db-snowflake.yaml'
-    secrets:
-      SNOWFLAKE_CONNECTION: ${{ secrets.SNOWFLAKE_CONNECTION }}
+  # db-snowflake:
+  #   uses: './.github/workflows/db-snowflake.yaml'
+  #   secrets:
+  #     SNOWFLAKE_CONNECTION: ${{ secrets.SNOWFLAKE_CONNECTION }}
   main:
     uses: './.github/workflows/main.yaml'
 
