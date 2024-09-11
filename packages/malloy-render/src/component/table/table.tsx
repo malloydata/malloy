@@ -36,6 +36,7 @@ const Cell = (props: {
   tableGutterLeft?: boolean;
   tableGutterRight?: boolean;
   rawValue?: unknown;
+  isChart?: boolean;
 }) => {
   const style = () => {
     const layout = useTableContext()!.layout;
@@ -82,6 +83,7 @@ const Cell = (props: {
         'hide-end-gutter': props.hideEndGutter,
         'table-gutter-left': !!props.tableGutterLeft,
         'table-gutter-right': !!props.tableGutterRight,
+        'chart': !!props.isChart,
       }}
       style={style()}
       title={typeof props.value === 'string' ? props.value : ''}
@@ -206,6 +208,7 @@ const TableField = (props: {field: Field; row: DataRecord}) => {
             tableGutterLeft={tableGutterLeft}
             tableGutterRight={tableGutterRight}
             rawValue={props.row.cell(props.field).value}
+            isChart={renderAs === 'chart'}
           />
         </Match>
       </Switch>
@@ -246,6 +249,10 @@ const MalloyTableRoot = (_props: {
         ...value,
       }));
     return fields;
+  });
+
+  const maxPinnedHeaderDepth = createMemo(() => {
+    return Math.max(...pinnedFields().map(f => f.depth));
   });
 
   const fieldsToSize = createMemo(() => {
@@ -464,7 +471,7 @@ const MalloyTableRoot = (_props: {
   });
 
   const getPinnedHeaderRowStyle = () => ({
-    'margin-bottom': `calc(-1 * (var(--malloy-render--table-header-cumulative-height-${tableCtx.layout.maxDepth}) - var(--malloy-render--table-header-height-0)))`,
+    'margin-bottom': `calc(-1 * (var(--malloy-render--table-header-cumulative-height-${maxPinnedHeaderDepth()}) - var(--malloy-render--table-header-height-0)))`,
   });
 
   return (

@@ -137,6 +137,14 @@
   word-break: normal;
 }
 
+.malloy-table .cell-content.chart {
+  padding-block: 0px;
+}
+
+.malloy-table .cell-content.chart svg {
+  display: block;
+}
+
 .malloy-table .th .cell-content {
   display: flex;
   align-items: end;
