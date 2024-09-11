@@ -655,20 +655,17 @@ export type DialectFunctionTests = {
 };
 
 function addTests(overload: DefinitionBlueprint, tests: ExprTypeSplitTests) {
-  const testsToAdd: TestCase[] =
-    overload.tests?.map(test => {
-      return [test.expr, test.returns];
-    }) ?? [];
+  if (overload.tests === undefined) return;
   if (typeof overload.returns !== 'string') {
     if ('measure' in overload.returns) {
-      tests.measures.push(...testsToAdd);
+      tests.measures.push(...overload.tests);
       return;
     } else if ('calculation' in overload.returns) {
-      tests.calculations.push(...testsToAdd);
+      tests.calculations.push(...overload.tests);
       return;
     }
   }
-  tests.dimensions.push(...testsToAdd);
+  tests.dimensions.push(...overload.tests);
 }
 
 export function collectDialectFunctionTests(
