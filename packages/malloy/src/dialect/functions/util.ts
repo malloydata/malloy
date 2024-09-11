@@ -248,6 +248,8 @@ type ParamTypeBlueprint =
   | TypeDescBlueprint[]
   | {variadic: TypeDescBlueprint | TypeDescBlueprint[]};
 
+type TestCase = [string, string | boolean | number | null];
+
 export interface SignatureBlueprint {
   // today only one generic is allowed, but if we need more
   // we could change this to `{[name: string]: ExpressionValueType[]}`
@@ -257,6 +259,7 @@ export interface SignatureBlueprint {
   supportsOrderBy?: boolean | 'only_default';
   supportsLimit?: boolean;
   isSymmetric?: boolean;
+  tests?: TestCase[];
 }
 
 interface ImplementationBlueprintBase {
@@ -546,7 +549,7 @@ function expandBlueprint(
   return [expandOneBlueprint(blueprint)];
 }
 
-function isDefinitionBlueprint(
+export function isDefinitionBlueprint(
   blueprint: DefinitionBlueprint | OverloadedDefinitionBlueprint
 ): blueprint is DefinitionBlueprint {
   return 'takes' in blueprint && 'returns' in blueprint && 'impl' in blueprint;
@@ -639,4 +642,54 @@ export function expandOverrideMapFromBase(
     );
   }
   return map;
+}
+
+type ExprTypeSplitTests = {
+  measures: TestCase[];
+  dimensions: TestCase[];
+  calculations: TestCase[];
+};
+
+export type DialectFunctionTests = {
+  [functionName: string]: ExprTypeSplitTests;
+};
+
+function addTests(overload: DefinitionBlueprint, tests: ExprTypeSplitTests) {
+  const testsToAdd: TestCase[] =
+    overload.tests?.map(test => {
+      return [test.expr, test.returns];
+    }) ?? [];
+  if (typeof overload.returns !== 'string') {
+    if ('measure' in overload.returns) {
+      tests.measures.push(...testsToAdd);
+      return;
+    } else if ('calculation' in overload.returns) {
+      tests.calculations.push(...testsToAdd);
+      return;
+    }
+  }
+  tests.dimensions.push(...testsToAdd);
+}
+
+export function collectDialectFunctionTests(
+  blueprints: DefinitionBlueprintMap
+): DialectFunctionTests {
+  const allTests: DialectFunctionTests = {};
+  for (const funcName in blueprints) {
+    const tests = {
+      measures: [],
+      dimensions: [],
+      calculations: [],
+    };
+    const func = blueprints[funcName];
+    if (isDefinitionBlueprint(func)) {
+      addTests(func, tests);
+    } else {
+      for (const overloadName in func) {
+        addTests(func[overloadName], tests);
+      }
+    }
+    allTests[funcName] = tests;
+  }
+  return allTests;
 }

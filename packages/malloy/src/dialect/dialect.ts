@@ -33,7 +33,7 @@ import {
   RegexMatchExpr,
   TimeLiteralNode,
 } from '../model/malloy_types';
-import {DialectFunctionOverloadDef} from './functions';
+import {DialectFunctionOverloadDef, DialectFunctionTests} from './functions';
 
 type DialectFieldTypes = string | 'struct';
 
@@ -162,6 +162,8 @@ export abstract class Dialect {
   abstract getDialectFunctions(): {
     [name: string]: DialectFunctionOverloadDef[];
   };
+
+  abstract getDialectFunctionTests(): DialectFunctionTests;
 
   // return a quoted string for use as a table path.
   abstract quoteTablePath(tablePath: string): string;

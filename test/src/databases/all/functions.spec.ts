@@ -65,9 +65,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) =>
   })
 );
 
-expressionModels.forEach((x, databaseName) => {
-  const expressionModel = x.expressionModel;
-  const runtime = x.runtime;
+type TestCase = [string, string | boolean | number | null];
+
+describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
+  const expressionModel = runtime.loadModel(modelText(databaseName));
   const funcTestGeneral = async (
     expr: string,
     type: 'group_by' | 'aggregate',
@@ -100,15 +101,24 @@ expressionModels.forEach((x, databaseName) => {
     expexted: string | boolean | number | null
   ) => funcTestGeneral(expr, 'aggregate', {success: expexted});
 
-  const funcTestMultiple = async (
-    ...testCases: [string, string | boolean | number | null][]
+  const funcTestMultiple = async (...testCases: TestCase[]) => {
+    await funcTestMultipleGeneral(testCases);
+  };
+
+  // const funcTestAggMultiple = async (...testCases: TestCase[]) => {
+  //   await funcTestMultipleGeneral(testCases, 'aggregate');
+  // };
+
+  const funcTestMultipleGeneral = async (
+    testCases: TestCase[],
+    kind = 'group_by'
   ) => {
     const run = async () => {
       return await expressionModel
         .loadQuery(
           `
       run: aircraft -> { ${testCases.map(
-        (testCase, i) => `group_by: f${i} is ${testCase[0]}`
+        (testCase, i) => `${kind}: f${i} is ${testCase[0]}`
       )} }`
         )
         .run();
@@ -126,7 +136,7 @@ expressionModels.forEach((x, databaseName) => {
     it.when(
       !brokenIn('trino', databaseName) &&
         !brokenIn('presto', databaseName) /* crswenson */
-    )(`works - ${databaseName}`, async () => {
+    )('works', async () => {
       const expected = {
         'bigquery': 'foo2003-01-01 12:00:00+00',
         'snowflake': 'foo2003-01-01T12:00:00.000Z',
@@ -152,7 +162,7 @@ expressionModels.forEach((x, databaseName) => {
   });
 
   describe('round', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(
         ['round(1.2)', 1],
         // TODO Remove when we upgrade to DuckDB 0.8.X -- DuckDB has some bugs with rounding
@@ -168,7 +178,7 @@ expressionModels.forEach((x, databaseName) => {
   });
 
   describe('floor', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(
         ['floor(1.9)', 1],
         // TODO Remove when we upgrade to DuckDB 0.8.X -- DuckDB has some bugs with rounding
@@ -183,7 +193,7 @@ expressionModels.forEach((x, databaseName) => {
   });
 
   describe('ceil', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(
         ['ceil(1.9)', 2],
         ['ceil(-1.9)', -1],
@@ -193,25 +203,25 @@ expressionModels.forEach((x, databaseName) => {
   });
 
   describe('length', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(["length('foo')", 3], ['length(null)', null]);
     });
   });
 
   describe('lower', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(["lower('FoO')", 'foo'], ['lower(null)', null]);
     });
   });
 
   describe('upper', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(["upper('fOo')", 'FOO'], ['upper(null)', null]);
     });
   });
 
   describe('regexp_extract', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(
         ["regexp_extract('I have a dog', r'd[aeiou]g')", 'dog'],
         ["regexp_extract(null, r'd[aeiou]g')", null],
@@ -222,7 +232,7 @@ expressionModels.forEach((x, databaseName) => {
   });
 
   describe('replace', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(
         ["replace('aaaa', 'a', 'c')", 'cccc'],
         ["replace('aaaa', r'.', 'c')", 'cccc'],
@@ -248,7 +258,7 @@ expressionModels.forEach((x, databaseName) => {
   });
 
   describe('substr', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(
         ["substr('foo', 2)", 'oo'],
         ["substr('foo', 2, 1)", 'o'],
@@ -261,7 +271,7 @@ expressionModels.forEach((x, databaseName) => {
   });
 
   describe('raw function call', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(
         ['floor(cbrt!(27)::number)', 3],
         ['floor(cbrt!number(27))', 3],
@@ -277,7 +287,7 @@ expressionModels.forEach((x, databaseName) => {
     // TODO symmetric aggregates don't work with custom aggregate functions in BQ currently
     if (['bigquery', 'snowflake', 'trino', 'presto'].includes(databaseName))
       return;
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestAgg('round(stddev(aircraft_models.seats))', 29);
     });
 
@@ -674,7 +684,7 @@ expressionModels.forEach((x, databaseName) => {
   });
 
   describe('trunc', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(
         ['trunc(1.9)', 1],
         // TODO Remove when we upgrade to DuckDB 0.8.X -- DuckDB has some bugs with rounding
@@ -690,7 +700,7 @@ expressionModels.forEach((x, databaseName) => {
     });
   });
   describe('log', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(
         ['log(10, 10)', 1],
         ['log(100, 10)', 2],
@@ -701,7 +711,7 @@ expressionModels.forEach((x, databaseName) => {
     });
   });
   describe('ln', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(
         ['ln(exp(1))', 1],
         ['ln(exp(2))', 2],
@@ -710,7 +720,7 @@ expressionModels.forEach((x, databaseName) => {
     });
   });
   describe('exp', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(
         ['exp(0)', 1],
         ['ln(exp(1))', 1],
@@ -722,39 +732,39 @@ expressionModels.forEach((x, databaseName) => {
   // TODO trig functions could have more exhaustive tests -- these are mostly just here to
   // ensure they exist
   describe('cos', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(['cos(0)', 1], ['cos(null)', null]);
     });
   });
   describe('acos', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(['acos(1)', 0], ['acos(null)', null]);
     });
   });
 
   describe('sin', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(['sin(0)', 0], ['sin(null)', null]);
     });
   });
   describe('asin', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(['asin(0)', 0], ['asin(null)', null]);
     });
   });
 
   describe('tan', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(['tan(0)', 0], ['tan(null)', null]);
     });
   });
   describe('atan', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(['atan(0)', 0], ['atan(null)', null]);
     });
   });
   describe('atan2', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(
         ['atan2(0, 1)', 0],
         ['atan2(null, 1)', null],
@@ -763,7 +773,7 @@ expressionModels.forEach((x, databaseName) => {
     });
   });
   describe('sqrt', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(
         ['sqrt(9)', 3],
         ['sqrt(6.25)', 2.5],
@@ -772,7 +782,7 @@ expressionModels.forEach((x, databaseName) => {
     });
   });
   describe('pow', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(
         ['pow(2, 3)', 8],
         ['pow(null, 3)', null],
@@ -781,7 +791,7 @@ expressionModels.forEach((x, databaseName) => {
     });
   });
   describe('abs', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(
         ['abs(-3)', 3],
         ['abs(3)', 3],
@@ -790,7 +800,7 @@ expressionModels.forEach((x, databaseName) => {
     });
   });
   describe('sign', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(
         ['sign(100)', 1],
         ['sign(-2)', -1],
@@ -803,7 +813,7 @@ expressionModels.forEach((x, databaseName) => {
     const inf = ['trino', 'presto'].includes(databaseName)
       ? 'infinity!()'
       : "'+inf'::number";
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(
         [`is_inf(${inf})`, true],
         ['is_inf(100)', false],
@@ -812,7 +822,7 @@ expressionModels.forEach((x, databaseName) => {
     });
   });
   describe('is_nan', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(
         ["is_nan('NaN'::number)", true],
         ['is_nan(100)', false],
@@ -821,7 +831,7 @@ expressionModels.forEach((x, databaseName) => {
     });
   });
   describe('greatest', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(
         ['greatest(1, 10, -100)', 10],
         ['greatest(@2003, @2004, @1994) = @2004', true],
@@ -836,7 +846,7 @@ expressionModels.forEach((x, databaseName) => {
     });
   });
   describe('least', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(
         ['least(1, 10, -100)', -100],
         ['least(@2003, @2004, @1994) = @1994', true],
@@ -851,7 +861,7 @@ expressionModels.forEach((x, databaseName) => {
     });
   });
   describe('div', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(
         ['div(3, 2)', 1],
         ['div(null, 2)', null],
@@ -860,7 +870,7 @@ expressionModels.forEach((x, databaseName) => {
     });
   });
   describe('strpos', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(
         ["strpos('123456789', '3')", 3],
         ["strpos('123456789', '0')", 0],
@@ -870,7 +880,7 @@ expressionModels.forEach((x, databaseName) => {
     });
   });
   describe('starts_with', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(
         ["starts_with('hello world', 'hello')", true],
         ["starts_with('hello world', 'world')", false],
@@ -880,7 +890,7 @@ expressionModels.forEach((x, databaseName) => {
     });
   });
   describe('ends_with', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(
         ["ends_with('hello world', 'world')", true],
         ["ends_with('hello world', 'hello')", false],
@@ -890,7 +900,7 @@ expressionModels.forEach((x, databaseName) => {
     });
   });
   describe('trim', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(
         ["trim('  keep this  ')", 'keep this'],
         ["trim('_ _keep_this_ _', '_ ')", 'keep_this'],
@@ -902,7 +912,7 @@ expressionModels.forEach((x, databaseName) => {
     });
   });
   describe('ltrim', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(
         ["ltrim('  keep this ->  ')", 'keep this ->  '],
         ["ltrim('_ _keep_this -> _ _', '_ ')", 'keep_this -> _ _'],
@@ -914,7 +924,7 @@ expressionModels.forEach((x, databaseName) => {
     });
   });
   describe('rtrim', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(
         ["rtrim('  <- keep this  ')", '  <- keep this'],
         ["rtrim('_ _ <- keep_this_ _', '_ ')", '_ _ <- keep_this'],
@@ -940,7 +950,7 @@ expressionModels.forEach((x, databaseName) => {
   });
 
   describe('byte_length', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(
         ["byte_length('hello')", 5],
         ["byte_length('©')", 2],
@@ -949,7 +959,7 @@ expressionModels.forEach((x, databaseName) => {
     });
   });
   describe('ifnull', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(
         ["ifnull('a', 'b')", 'a'],
         ["ifnull(null, 'b')", 'b'],
@@ -959,7 +969,7 @@ expressionModels.forEach((x, databaseName) => {
     });
   });
   describe('coalesce', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(
         // ["coalesce('a')", 'a'],
         ["coalesce('a', 'b')", 'a'],
@@ -972,7 +982,7 @@ expressionModels.forEach((x, databaseName) => {
     });
   });
   describe('nullif', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(
         ["nullif('a', 'a')", null],
         ["nullif('a', 'b')", 'a'],
@@ -983,7 +993,7 @@ expressionModels.forEach((x, databaseName) => {
     });
   });
   describe('chr', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(
         ['chr(65)', 'A'],
         ['chr(255)', 'ÿ']
@@ -995,7 +1005,7 @@ expressionModels.forEach((x, databaseName) => {
     });
   });
   describe('ascii', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(
         ["ascii('A')", 65],
         ["ascii('ABC')", 65],
@@ -1005,7 +1015,7 @@ expressionModels.forEach((x, databaseName) => {
     });
   });
   describe('unicode', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(
         ["unicode('A')", 65],
         ["unicode('â')", 226],
@@ -1017,7 +1027,7 @@ expressionModels.forEach((x, databaseName) => {
   });
 
   describe('repeat', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(
         ["repeat('foo', 0)", ''],
         ["repeat('foo', 1)", 'foo'],
@@ -1033,7 +1043,7 @@ expressionModels.forEach((x, databaseName) => {
     // undefined behavior when negative, undefined behavior (likely error) when non-integer
   });
   describe('reverse', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await funcTestMultiple(
         ["reverse('foo')", 'oof'],
         ["reverse('')", ''],
@@ -1103,7 +1113,7 @@ expressionModels.forEach((x, databaseName) => {
     );
   });
   describe('last_value', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       const result = await expressionModel
         .loadQuery(
           `
@@ -1121,7 +1131,7 @@ expressionModels.forEach((x, databaseName) => {
     });
   });
   describe('avg_moving', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       const result = await expressionModel
         .loadQuery(
           `
@@ -1173,7 +1183,7 @@ expressionModels.forEach((x, databaseName) => {
   });
 
   describe('sum_moving', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await expect(`
       run: state_facts -> {
         group_by: state, b is births
@@ -1209,7 +1219,7 @@ expressionModels.forEach((x, databaseName) => {
   });
 
   describe('min, max, sum / window, cumulative', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       const result = await expressionModel
         .loadQuery(
           `
@@ -1247,27 +1257,24 @@ expressionModels.forEach((x, databaseName) => {
   });
 
   describe('dialect functions', () => {
-    describe('duckdb', () => {
-      const duckdb = it.when(databaseName === 'duckdb');
-      duckdb('to_timestamp', async () => {
-        await funcTest('to_timestamp(1725555835) = @2024-09-05 17:03:55', true);
-      });
-    });
+    const functionTests = runtime.dialect.getDialectFunctionTests();
 
-    describe('trino', () => {
-      const trino = it.when(databaseName === 'trino');
-      trino('from_unixtime', async () => {
-        await funcTest(
-          'from_unixtime(1725555835) = @2024-09-05 17:03:55',
-          true
-        );
-      });
+    describe.each(Object.entries(functionTests))('%s', (_, funcTests) => {
+      it.when(funcTests.dimensions.length > 0)(
+        `passes ${funcTests.dimensions.length} inline dimension tests`,
+        async () => {
+          await funcTestMultiple(...funcTests.dimensions);
+        }
+      );
+
+      // it.when(funcTests.measures.length > 0)(
+      //   `passes ${funcTests.measures.length} inline tests`,
+      //   async () => {
+      //     await funcTestAggMultiple(...funcTests.measures);
+      //   }
+      // );
     });
   });
-});
-
-describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
-  const expressionModel = runtime.loadModel(modelText(databaseName));
 
   describe('string_agg', () => {
     it(`works no order by - ${databaseName}`, async () => {
@@ -1557,7 +1564,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   });
 
   describe('partition_by', () => {
-    it(`works - ${databaseName}`, async () => {
+    it('works', async () => {
       await expect(`
       run: flights -> {
         group_by:

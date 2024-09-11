@@ -36,6 +36,8 @@ import {
   DialectFunctionOverloadDef,
   expandOverrideMap,
   expandBlueprintMap,
+  DialectFunctionTests,
+  collectDialectFunctionTests,
 } from '../functions';
 import {DialectFieldList, inDays} from '../dialect';
 import {PostgresBase} from '../pg_impl';
@@ -348,6 +350,10 @@ export class DuckDBDialect extends PostgresBase {
 
   getDialectFunctions(): {[name: string]: DialectFunctionOverloadDef[]} {
     return expandBlueprintMap(DUCKDB_DIALECT_FUNCTIONS);
+  }
+
+  getDialectFunctionTests(): DialectFunctionTests {
+    return collectDialectFunctionTests(DUCKDB_DIALECT_FUNCTIONS);
   }
 
   malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string {
