@@ -143,6 +143,7 @@ export function plotToVega(
 
   return {
     spec: vegaSpec,
+    specType: 'vega',
     plotWidth: chartSettings.plotWidth,
     plotHeight: chartSettings.plotHeight,
     totalWidth: chartSettings.totalWidth,

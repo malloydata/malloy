@@ -4,6 +4,7 @@ import {DataColumn, Explore, Field, QueryData, Tag} from '@malloydata/malloy';
 export type VegaSpec = any;
 export type VegaChartProps = {
   spec: VegaSpec;
+  specType: 'vega' | 'vega-lite';
   plotWidth: number;
   plotHeight: number;
   totalWidth: number;

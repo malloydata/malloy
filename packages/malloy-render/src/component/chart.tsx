@@ -9,12 +9,15 @@ export function Chart(props: {
 }) {
   const {field, data} = props;
   const chartProps = props.metadata.field(field).vegaChartProps!;
-  const vgSpec = structuredClone(chartProps.spec);
-  vgSpec.data[0].values = data;
+  const spec = structuredClone(chartProps.spec);
+  if (chartProps.specType === 'vega') {
+    spec.data[0].values = data;
+  } else spec.data.values = data;
+
   return (
     <VegaChart
-      spec={vgSpec}
-      type="vega"
+      spec={spec}
+      type={chartProps.specType}
       width={chartProps.plotWidth}
       height={chartProps.plotHeight}
     />
