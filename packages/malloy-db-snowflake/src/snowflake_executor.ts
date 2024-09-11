@@ -134,6 +134,9 @@ export class SnowflakeExecutor {
       );
     }
 
+    const {password: _password, ...rest} = connection;
+    console.log(JSON.stringify(rest, null, 2));
+
     return {
       // some basic options we configure by default but can be overriden
       ...SnowflakeExecutor.defaultConnectionOptions,
