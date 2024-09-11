@@ -21,8 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export type {DialectFunctionOverloadDef} from './util';
-export {expandBlueprintMap} from './util';
+export type {DialectFunctionOverloadDef, DialectFunctionTests} from './util';
+export {expandBlueprintMap, collectDialectFunctionTests} from './util';
 export {
   getMalloyStandardFunctions,
   expandOverrideMap,

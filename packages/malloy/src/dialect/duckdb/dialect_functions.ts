@@ -15,6 +15,7 @@ const to_timestamp: DefinitionBlueprint = {
   takes: {'epoch_seconds': 'number'},
   returns: 'timestamp',
   impl: {function: 'TO_TIMESTAMP'},
+  tests: [['to_timestamp(1725555835) = @2024-09-05 17:03:55', true]],
 };
 
 const count_approx: DefinitionBlueprint = {

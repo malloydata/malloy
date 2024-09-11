@@ -40,6 +40,8 @@ import {
   DialectFunctionOverloadDef,
   expandOverrideMap,
   expandBlueprintMap,
+  DialectFunctionTests,
+  collectDialectFunctionTests,
 } from '../functions';
 import {
   DialectFieldList,
@@ -510,6 +512,10 @@ ${indent(sql)}
 
   getDialectFunctions(): {[name: string]: DialectFunctionOverloadDef[]} {
     return expandBlueprintMap(TRINO_DIALECT_FUNCTIONS);
+  }
+
+  getDialectFunctionTests(): DialectFunctionTests {
+    return collectDialectFunctionTests(TRINO_DIALECT_FUNCTIONS);
   }
 
   malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string {

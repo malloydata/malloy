@@ -36,6 +36,8 @@ import {
   DialectFunctionOverloadDef,
   expandOverrideMap,
   expandBlueprintMap,
+  DialectFunctionTests,
+  collectDialectFunctionTests,
 } from '../functions';
 import {DialectFieldList, QueryInfo} from '../dialect';
 import {PostgresBase} from '../pg_impl';
@@ -403,6 +405,10 @@ export class PostgresDialect extends PostgresBase {
 
   getDialectFunctions(): {[name: string]: DialectFunctionOverloadDef[]} {
     return expandBlueprintMap(POSTGRES_DIALECT_FUNCTIONS);
+  }
+
+  getDialectFunctionTests(): DialectFunctionTests {
+    return collectDialectFunctionTests(POSTGRES_DIALECT_FUNCTIONS);
   }
 
   malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string {
