@@ -36,16 +36,19 @@ export {
   sql,
   makeParam,
   param,
-  params,
+  variadicParam,
   literal,
   spread,
   Dialect,
-  FUNCTIONS,
 } from './dialect';
 export type {
   DialectFieldList,
   DialectFunctionOverloadDef,
   QueryInfo,
+  MalloyStandardFunctionImplementations,
+  DefinitionBlueprint,
+  DefinitionBlueprintMap,
+  OverloadedDefinitionBlueprint,
 } from './dialect';
 // TODO tighten up exports
 export type {

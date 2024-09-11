@@ -713,6 +713,7 @@ class QueryField extends QueryNode {
           return `(${resultSet.getField(outputName).getAnalyticalSQL(false)})`;
         });
         return this.generateAnalyticFragment(
+          context.dialect.name,
           resultSet,
           context,
           funcCall,
@@ -991,6 +992,7 @@ class QueryField extends QueryNode {
   }
 
   generateAnalyticFragment(
+    dialect: string,
     resultStruct: FieldInstanceResult,
     context: QueryStruct,
     expr: Expr,
@@ -1015,7 +1017,8 @@ class QueryField extends QueryNode {
         : '';
 
     let orderBy = funcOrdering ?? '';
-    if (!funcOrdering && overload.needsWindowOrderBy) {
+    const dialectOverload = overload.dialect[dialect];
+    if (!funcOrdering && dialectOverload.needsWindowOrderBy) {
       // calculate the ordering.
       const obSQL: string[] = [];
       let orderingField;
@@ -1057,10 +1060,10 @@ class QueryField extends QueryNode {
     }
 
     let between = '';
-    if (overload.between) {
+    if (dialectOverload.between) {
       const [preceding, following] = [
-        overload.between.preceding,
-        overload.between.following,
+        dialectOverload.between.preceding,
+        dialectOverload.between.following,
       ].map(value => {
         if (value === -1) {
           return 'UNBOUNDED';

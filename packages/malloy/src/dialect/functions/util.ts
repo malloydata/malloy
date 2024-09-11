@@ -28,6 +28,7 @@ import {
   Expr,
   FunctionParamTypeDesc,
   GenericSQLExpr,
+  ExpressionValueType,
 } from '../../model/malloy_types';
 import {SQLExprElement} from '../../model/utils';
 
@@ -107,7 +108,7 @@ export function literal(type: TypeDesc): TypeDesc {
   };
 }
 
-export function params(
+export function variadicParam(
   name: string,
   ...allowedTypes: FunctionParamTypeDesc[]
 ): FunctionParameterDef {
@@ -229,4 +230,413 @@ export function overload(
     defaultOrderByArgIndex: options?.defaultOrderByArgIndex,
     supportsLimit: options?.supportsLimit,
   };
+}
+
+export type TypeDescBlueprint =
+  // default for return type is min scalar
+  // default for param type is any expression type (max input)
+  | ExpressionValueType
+  | {generic: string}
+  | {literal: ExpressionValueType | {generic: string}}
+  | {constant: ExpressionValueType | {generic: string}}
+  | {dimension: ExpressionValueType | {generic: string}}
+  | {measure: ExpressionValueType | {generic: string}}
+  | {calculation: ExpressionValueType | {generic: string}};
+
+type ParamTypeBlueprint =
+  | TypeDescBlueprint
+  | TypeDescBlueprint[]
+  | {variadic: TypeDescBlueprint | TypeDescBlueprint[]};
+
+export interface SignatureBlueprint {
+  // today only one generic is allowed, but if we need more
+  // we could change this to `{[name: string]: ExpressionValueType[]}`
+  generic?: [string, ExpressionValueType[]];
+  takes: {[name: string]: ParamTypeBlueprint};
+  returns: TypeDescBlueprint;
+  supportsOrderBy?: boolean | 'only_default';
+  supportsLimit?: boolean;
+  isSymmetric?: boolean;
+}
+
+interface ImplementationBlueprintBase {
+  needsWindowOrderBy?: boolean;
+  between?: {preceding: number | string; following: number | string};
+  defaultOrderByArgIndex?: number;
+}
+
+interface ImplementationBlueprintSql extends ImplementationBlueprintBase {
+  sql: string;
+}
+
+interface ImplementationBlueprintExpr extends ImplementationBlueprintBase {
+  expr: Expr;
+}
+
+interface ImplementationBlueprintFunction extends ImplementationBlueprintBase {
+  function: string;
+}
+
+export type ImplementationBlueprint =
+  | ImplementationBlueprintSql
+  | ImplementationBlueprintExpr
+  | ImplementationBlueprintFunction;
+
+export interface DefinitionBlueprint extends SignatureBlueprint {
+  impl: ImplementationBlueprint;
+}
+
+export type OverloadedDefinitionBlueprint = {
+  [signatureName: string]: DefinitionBlueprint;
+};
+
+export type DefinitionBlueprintMap = {
+  [name: string]: DefinitionBlueprint | OverloadedDefinitionBlueprint;
+};
+
+export type OverloadedImplementationBlueprint = {
+  [signatureName: string]: ImplementationBlueprint;
+};
+
+export type OverrideMap = {
+  [name: string]: ImplementationBlueprint | OverloadedImplementationBlueprint;
+};
+
+function removeGeneric(
+  type: ExpressionValueType | {generic: string},
+  generic: {name: string; type: ExpressionValueType} | undefined
+) {
+  if (typeof type === 'string') {
+    return type;
+  }
+  if (type.generic !== generic?.name) {
+    throw new Error(`Cannot expand generic name ${type.generic}`);
+  }
+  return generic.type;
+}
+
+function expandReturnTypeBlueprint(
+  blueprint: TypeDescBlueprint,
+  generic: {name: string; type: ExpressionValueType} | undefined
+): TypeDesc {
+  if (typeof blueprint === 'string') {
+    return minScalar(blueprint);
+  } else if ('generic' in blueprint) {
+    return minScalar(removeGeneric(blueprint, generic));
+  } else if ('literal' in blueprint) {
+    return literal(minScalar(removeGeneric(blueprint.literal, generic)));
+  } else if ('constant' in blueprint) {
+    return constant(minScalar(removeGeneric(blueprint.constant, generic)));
+  } else if ('dimension' in blueprint) {
+    return minScalar(removeGeneric(blueprint.dimension, generic));
+  } else if ('measure' in blueprint) {
+    return minAggregate(removeGeneric(blueprint.measure, generic));
+  } else {
+    return minAnalytic(removeGeneric(blueprint.calculation, generic));
+  }
+}
+
+function isTypeDescBlueprint(
+  blueprint: ParamTypeBlueprint
+): blueprint is TypeDescBlueprint {
+  return (
+    typeof blueprint === 'string' ||
+    'generic' in blueprint ||
+    'literal' in blueprint ||
+    'constant' in blueprint ||
+    'dimension' in blueprint ||
+    'measure' in blueprint ||
+    'calculation' in blueprint
+  );
+}
+
+function extractParamTypeBlueprints(
+  blueprint: ParamTypeBlueprint
+): TypeDescBlueprint[] {
+  if (isTypeDescBlueprint(blueprint)) {
+    return [blueprint];
+  } else if (Array.isArray(blueprint)) {
+    return blueprint;
+  } else if (isTypeDescBlueprint(blueprint.variadic)) {
+    return [blueprint.variadic];
+  } else {
+    return blueprint.variadic;
+  }
+}
+
+function expandParamTypeBlueprint(
+  blueprint: TypeDescBlueprint,
+  generic: {name: string; type: ExpressionValueType} | undefined
+): FunctionParamTypeDesc {
+  if (typeof blueprint === 'string') {
+    return anyExprType(blueprint);
+  } else if ('generic' in blueprint) {
+    return anyExprType(removeGeneric(blueprint, generic));
+  } else if ('literal' in blueprint) {
+    return literal(maxScalar(removeGeneric(blueprint.literal, generic)));
+  } else if ('constant' in blueprint) {
+    return constant(maxScalar(removeGeneric(blueprint.constant, generic)));
+  } else if ('dimension' in blueprint) {
+    return maxScalar(removeGeneric(blueprint.dimension, generic));
+  } else if ('measure' in blueprint) {
+    return maxAggregate(removeGeneric(blueprint.measure, generic));
+  } else {
+    return maxAnalytic(removeGeneric(blueprint.calculation, generic));
+  }
+}
+
+function expandParamTypeBlueprints(
+  blueprints: TypeDescBlueprint[],
+  generic: {name: string; type: ExpressionValueType} | undefined
+) {
+  return blueprints.map(blueprint =>
+    expandParamTypeBlueprint(blueprint, generic)
+  );
+}
+
+function isVariadicParamBlueprint(blueprint: ParamTypeBlueprint): boolean {
+  return typeof blueprint !== 'string' && 'variadic' in blueprint;
+}
+
+function expandParamBlueprint(
+  name: string,
+  blueprint: ParamTypeBlueprint,
+  generic: {name: string; type: ExpressionValueType} | undefined
+): FunctionParameterDef {
+  return {
+    name,
+    allowedTypes: expandParamTypeBlueprints(
+      extractParamTypeBlueprints(blueprint),
+      generic
+    ),
+    isVariadic: isVariadicParamBlueprint(blueprint),
+  };
+}
+
+function expandParamsBlueprints(
+  blueprints: {[name: string]: ParamTypeBlueprint},
+  generic: {name: string; type: ExpressionValueType} | undefined
+) {
+  const paramsArray = Object.entries(blueprints);
+  return paramsArray.map(blueprint =>
+    expandParamBlueprint(blueprint[0], blueprint[1], generic)
+  );
+}
+
+function expandBlueprintSqlInterpolation(sql: string): Expr {
+  const src: string[] = [];
+  const args: Expr[] = [];
+  let current = sql;
+  while (current.length > 0) {
+    const start = current.indexOf('${');
+    if (start === -1) {
+      src.push(current);
+      break;
+    }
+    const left = current.slice(0, start);
+    current = current.slice(start);
+    const end = current.indexOf('}');
+    if (end === -1) {
+      src.push(left + current);
+      break;
+    }
+    const arg = current.slice(2, end);
+    current = current.slice(end + 1);
+    const isSpread = arg.startsWith('...');
+    const isSpecial = arg.endsWith(':');
+    const name = isSpread ? arg.slice(3) : isSpecial ? arg.slice(0, -1) : arg;
+    const param: Expr = {node: 'function_parameter', name};
+    src.push(left);
+    // TODO validate that there is a param with this name?
+    if (isSpread) {
+      args.push({node: 'spread', e: param, prefix: '', suffix: ''});
+    } else if (isSpecial && name === 'order_by') {
+      args.push({node: 'aggregate_order_by'});
+    } else if (isSpecial && name === 'limit') {
+      args.push({node: 'aggregate_limit'});
+    } else {
+      args.push(param);
+    }
+  }
+  const node: GenericSQLExpr = {
+    node: 'genericSQLExpr',
+    kids: {args},
+    src,
+  };
+  return node;
+}
+
+function makeParamReplacement(
+  name: string,
+  blueprint: ParamTypeBlueprint
+): Expr {
+  if (isVariadicParamBlueprint(blueprint)) {
+    return {
+      node: 'spread',
+      e: {node: 'function_parameter', name},
+      prefix: '',
+      suffix: '',
+    };
+  }
+  return {node: 'function_parameter', name};
+}
+
+function expandBlueprintFunction(
+  name: string,
+  blueprint: DefinitionBlueprint
+): Expr {
+  const takesArray = Object.entries(blueprint.takes);
+  const numCommas = takesArray.length > 0 ? takesArray.length - 1 : 0;
+  return {
+    node: 'genericSQLExpr',
+    kids: {
+      args: takesArray.map(param => makeParamReplacement(param[0], param[1])),
+    },
+    src: [`${name}(`, ...Array(numCommas).fill(','), ')'],
+  };
+}
+
+function expendImplExprBlueprint(blueprint: DefinitionBlueprint): Expr {
+  if ('sql' in blueprint.impl) {
+    return expandBlueprintSqlInterpolation(blueprint.impl.sql);
+  } else if ('expr' in blueprint.impl) {
+    return blueprint.impl.expr;
+  } else {
+    return expandBlueprintFunction(blueprint.impl.function, blueprint);
+  }
+}
+
+function expandImplBlueprint(blueprint: DefinitionBlueprint): {
+  e: Expr;
+  between: {preceding: string | number; following: string | number} | undefined;
+  needsWindowOrderBy: boolean | undefined;
+  defaultOrderByArgIndex: number | undefined;
+} {
+  return {
+    e: expendImplExprBlueprint(blueprint),
+    between: blueprint.impl.between,
+    needsWindowOrderBy: blueprint.impl.needsWindowOrderBy,
+    defaultOrderByArgIndex: blueprint.impl.defaultOrderByArgIndex,
+  };
+}
+
+function expandOneBlueprint(
+  blueprint: DefinitionBlueprint,
+  generic?: {name: string; type: ExpressionValueType}
+): DialectFunctionOverloadDef {
+  return {
+    returnType: expandReturnTypeBlueprint(blueprint.returns, generic),
+    params: expandParamsBlueprints(blueprint.takes, generic),
+    isSymmetric: blueprint.isSymmetric,
+    supportsOrderBy: blueprint.supportsOrderBy,
+    supportsLimit: blueprint.supportsLimit,
+    ...expandImplBlueprint(blueprint),
+  };
+}
+
+function expandBlueprint(
+  blueprint: DefinitionBlueprint
+): DialectFunctionOverloadDef[] {
+  if (blueprint.generic !== undefined) {
+    const name = blueprint.generic[0];
+    return blueprint.generic[1].map(type =>
+      expandOneBlueprint(blueprint, {name, type})
+    );
+  }
+  return [expandOneBlueprint(blueprint)];
+}
+
+function isDefinitionBlueprint(
+  blueprint: DefinitionBlueprint | OverloadedDefinitionBlueprint
+): blueprint is DefinitionBlueprint {
+  return 'takes' in blueprint && 'returns' in blueprint && 'impl' in blueprint;
+}
+
+function isImplementationBlueprint(
+  blueprint: ImplementationBlueprint | OverloadedImplementationBlueprint
+): blueprint is ImplementationBlueprint {
+  return 'function' in blueprint || 'sql' in blueprint || 'expr' in blueprint;
+}
+
+function expandOverloadedBlueprint(
+  blueprint: DefinitionBlueprint | OverloadedDefinitionBlueprint
+): DialectFunctionOverloadDef[] {
+  if (isDefinitionBlueprint(blueprint)) {
+    return expandBlueprint(blueprint);
+  } else {
+    return Object.values(blueprint).flatMap(overload =>
+      expandBlueprint(overload)
+    );
+  }
+}
+
+export function expandBlueprintMap(blueprints: DefinitionBlueprintMap) {
+  const map: {[name: string]: DialectFunctionOverloadDef[]} = {};
+  for (const name in blueprints) {
+    map[name] = expandOverloadedBlueprint(blueprints[name]);
+  }
+  return map;
+}
+
+function expandImplementationBlueprint(
+  base: DefinitionBlueprint,
+  impl: ImplementationBlueprint
+): DialectFunctionOverloadDef[] {
+  return expandBlueprint({...base, impl});
+}
+
+function expandOverloadedOverrideBlueprint(
+  name: string,
+  base: DefinitionBlueprint | OverloadedDefinitionBlueprint,
+  blueprint: ImplementationBlueprint | OverloadedImplementationBlueprint
+): DialectFunctionOverloadDef[] {
+  if (isImplementationBlueprint(blueprint)) {
+    if (!isDefinitionBlueprint(base)) {
+      throw new Error(
+        `Malformed function override: ${name}. Attempt to override multiple overloads with a single overload (missing: ${Object.keys(
+          base
+        )})`
+      );
+    }
+    return expandImplementationBlueprint(base, blueprint);
+  } else {
+    if (isDefinitionBlueprint(base)) {
+      throw new Error(
+        `Malformed function override: ${name}. Attempt to override a single overload with multiple overloads (extraneous: ${Object.keys(
+          blueprint
+        )})`
+      );
+    }
+    return Object.entries(blueprint).flatMap(([overloadName, overload]) => {
+      const baseOverload = base[overloadName];
+      if (baseOverload === undefined) {
+        throw new Error(
+          `Malformed function override: ${name}. No overload named ${overloadName}`
+        );
+      }
+      return expandImplementationBlueprint(baseOverload, overload);
+    });
+  }
+}
+
+export function expandOverrideMapFromBase(
+  base: DefinitionBlueprintMap,
+  overrides: OverrideMap
+): {
+  [name: string]: DialectFunctionOverloadDef[];
+} {
+  const map: {[name: string]: DialectFunctionOverloadDef[]} = {};
+  for (const name in overrides) {
+    if (!(name in base)) {
+      throw new Error(
+        `Malformed function override: ${name}. No such function in Malloy standard`
+      );
+    }
+    map[name] = expandOverloadedOverrideBlueprint(
+      name,
+      base[name],
+      overrides[name]
+    );
+  }
+  return map;
 }
