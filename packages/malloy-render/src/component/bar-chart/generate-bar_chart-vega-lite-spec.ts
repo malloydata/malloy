@@ -47,7 +47,7 @@ export function generateBarChartVegaLiteSpec(
       'x': {
         'field': xFieldPath,
         'type': 'ordinal',
-        axis: {
+        'axis': {
           ...chartSettings.xAxis,
           labelLimit: chartSettings.xAxis.labelSize,
         },
@@ -55,13 +55,13 @@ export function generateBarChartVegaLiteSpec(
       'y': {
         'field': yFieldPath,
         'type': 'quantitative',
-        axis: chartSettings.yAxis.hidden
+        'axis': chartSettings.yAxis.hidden
           ? null
           : {
               ...chartSettings.yAxis,
               labelLimit: chartSettings.yAxis.width + 10,
             },
-        scale: chartSettings.yScale,
+        'scale': chartSettings.yScale,
       },
       'color': {
         'scale': {'range': 'category'},

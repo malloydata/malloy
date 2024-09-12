@@ -114,7 +114,6 @@ export function getChartSettings(
   let yTickCount: number | undefined;
   const yKey = getFieldKey(yField);
   const maxVal = metadata.fields[yKey]!.max!;
-  console.log({maxVal, yField, yKey, metadata});
   const yScale = scale('linear')()
     .domain([0, maxVal])
     .nice()
@@ -175,8 +174,6 @@ export function getChartSettings(
   xTitleSize += roundedUpRowHeight - totalSize;
 
   const isSpark = tag.text('size') === 'spark';
-
-  console.log({chartTag});
 
   return {
     plotWidth: chartWidth,
