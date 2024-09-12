@@ -291,18 +291,18 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       await funcTestAgg('round(stddev(aircraft_models.seats))', 29);
     });
 
-    it(`works with struct - ${databaseName}`, async () => {
+    it('works with struct', async () => {
       await funcTestAgg(
         'round(aircraft_models.stddev(aircraft_models.seats))',
         41
       );
     });
 
-    it(`works with implicit parameter - ${databaseName}`, async () => {
+    it('works with implicit parameter', async () => {
       await funcTestAgg('round(aircraft_models.seats.stddev())', 41);
     });
 
-    it(`works with filter - ${databaseName}`, async () => {
+    it('works with filter', async () => {
       await funcTestAgg(
         'round(aircraft_models.seats.stddev() { where: 1 = 1 })',
         41
@@ -315,7 +315,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   });
 
   describe('row_number', () => {
-    it(`works when the order by is a dimension  - ${databaseName}`, async () => {
+    it('works when the order by is a dimension', async () => {
       const result = await expressionModel
         .loadQuery(
           `run: state_facts -> {
@@ -328,7 +328,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       expect(result.data.path(1, 'row_num').value).toBe(2);
     });
 
-    it(`works when the order by is a dimension in the other order  - ${databaseName}`, async () => {
+    it('works when the order by is a dimension in the other order', async () => {
       const result = await expressionModel
         .loadQuery(
           `run: state_facts -> {
@@ -341,7 +341,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       expect(result.data.path(1, 'row_num').value).toBe(2);
     });
 
-    it(`works when the order by is a measure - ${databaseName}`, async () => {
+    it('works when the order by is a measure', async () => {
       const result = await expressionModel
         .loadQuery(
           `run: state_facts -> {
@@ -355,7 +355,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       expect(result.data.path(1, 'row_num').value).toBe(2);
     });
 
-    it(`works when the order by is a measure but there is no group by - ${databaseName}`, async () => {
+    it('works when the order by is a measure but there is no group by', async () => {
       const result = await expressionModel
         .loadQuery(
           `run: state_facts -> {
@@ -367,7 +367,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       expect(result.data.path(0, 'row_num').value).toBe(1);
     });
 
-    it(`works inside nest - ${databaseName}`, async () => {
+    it('works inside nest', async () => {
       const result = await expressionModel
         .loadQuery(
           `run: state_facts extend { join_one: airports on airports.state = state } -> {
@@ -385,7 +385,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       expect(result.data.path(1, 'q', 1, 'row_num').value).toBe(2);
     });
 
-    test(`works outside nest, but with a nest nearby - ${databaseName}`, async () => {
+    test('works outside nest, but with a nest nearby', async () => {
       const result = await expressionModel
         .loadQuery(
           `run: state_facts -> {
@@ -403,7 +403,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   });
 
   describe('rank', () => {
-    it(`works ordered by dimension - ${databaseName}`, async () => {
+    it('works ordered by dimension', async () => {
       const result = await expressionModel
         .loadQuery(
           `run: state_facts -> {
@@ -424,7 +424,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       expect(result.data.path(11, 'births_ballpark_rank').value).toBe(12);
     });
 
-    it(`works ordered by aggregate - ${databaseName}`, async () => {
+    it('works ordered by aggregate', async () => {
       const result = await expressionModel
         .loadQuery(
           `run: state_facts -> {
@@ -440,7 +440,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       expect(result.data.path(3, 'r').value).toBe(3);
     });
 
-    it(`works using unary minus in calculate block - ${databaseName}`, async () => {
+    it('works using unary minus in calculate block', async () => {
       const result = await expressionModel
         .loadQuery(
           `run: state_facts -> {
@@ -458,7 +458,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       expect(result.data.path(3, 'neg_r').value).toBe(-3);
     });
 
-    it(`properly isolated nested calculations - ${databaseName}`, async () => {
+    it('properly isolated nested calculations', async () => {
       const result = await expressionModel
         .loadQuery(
           `run: ${databaseName}.table('malloytest.airports') -> {
@@ -487,7 +487,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   });
 
   describe('lag', () => {
-    it(`works with one param - ${databaseName}`, async () => {
+    it('works with one param', async () => {
       const result = await expressionModel
         .loadQuery(
           `run: state_facts -> {
@@ -503,7 +503,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       expect(result.data.path(2, 'prev_state').value).toBe('AL');
     });
 
-    it(`works with expression field - ${databaseName}`, async () => {
+    it('works with expression field', async () => {
       const result = await expressionModel
         .loadQuery(
           `run: state_facts -> {
@@ -519,7 +519,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       expect(result.data.path(2, 'prev_state').value).toBe('al');
     });
 
-    it(`works with expression - ${databaseName}`, async () => {
+    it('works with expression', async () => {
       const result = await expressionModel
         .loadQuery(
           `run: state_facts -> {
@@ -535,7 +535,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       expect(result.data.path(2, 'prev_state').value).toBe('al');
     });
 
-    it(`works with field, ordering by expression field - ${databaseName}`, async () => {
+    it('works with field, ordering by expression field', async () => {
       const result = await expressionModel
         .loadQuery(
           `run: state_facts -> {
@@ -553,7 +553,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       expect(result.data.path(2, 'prev_count').value).toBe(1);
     });
 
-    it(`works with offset - ${databaseName}`, async () => {
+    it('works with offset', async () => {
       const result = await expressionModel
         .loadQuery(
           `run: state_facts -> {
@@ -570,7 +570,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       expect(result.data.path(3, 'prev_prev_state').value).toBe('AL');
     });
 
-    it(`works with default value - ${databaseName}`, async () => {
+    it('works with default value', async () => {
       const result = await expressionModel
         .loadQuery(
           `run: state_facts -> {
@@ -582,7 +582,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       expect(result.data.path(0, 'prev_state').value).toBe('NONE');
     });
 
-    it(`works with now as the default value - ${databaseName}`, async () => {
+    it('works with now as the default value', async () => {
       const result = await expressionModel
         .loadQuery(
           `
@@ -598,7 +598,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   });
 
   describe('output field in calculate', () => {
-    it(`output field referenceable in calculate - ${databaseName}`, async () => {
+    it('output field referenceable in calculate', async () => {
       const result = await expressionModel
         .loadQuery(
           `run: aircraft -> {
@@ -614,7 +614,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   });
 
   describe('first_value', () => {
-    test(`works in nest - ${databaseName}`, async () => {
+    test('works in nest', async () => {
       const result = await expressionModel
         .loadQuery(
           `
@@ -637,7 +637,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         result.data.path(1, 'by_county', 0, 'aircraft_count').value
       );
     });
-    it(`works outside nest - ${databaseName}`, async () => {
+    it('works outside nest', async () => {
       const result = await expressionModel
         .loadQuery(
           `
@@ -652,7 +652,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       expect(result.data.path(0, 'most_births').value).toBe(firstBirths);
       expect(result.data.path(1, 'most_births').value).toBe(firstBirths);
     });
-    it(`works with an aggregate which is not in the query - ${databaseName}`, async () => {
+    it('works with an aggregate which is not in the query', async () => {
       const result = await expressionModel
         .loadQuery(
           `
@@ -667,7 +667,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       expect(result.data.path(1, 'prev_airport_count').value).toBe(608);
       expect(result.data.path(2, 'prev_airport_count').value).toBe(260);
     });
-    it(`works with a localized aggregate - ${databaseName}`, async () => {
+    it('works with a localized aggregate', async () => {
       const result = await expressionModel
         .loadQuery(
           `
@@ -936,7 +936,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
   });
   describe('rand', () => {
-    it(`is usually not the same value - ${databaseName}`, async () => {
+    it('is usually not the same value', async () => {
       // There are around a billion values that rand() can be, so if this
       // test fails, most likely something is broken. Otherwise, you're the lucky
       // one in a billion!
@@ -944,7 +944,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
   });
   describe('pi', () => {
-    it(`is pi - ${databaseName}`, async () => {
+    it('is pi', async () => {
       await funcTest('abs(pi() - 3.141592653589793) < 0.0000000000001', true);
     });
   });
@@ -1037,7 +1037,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       );
     });
     // TODO how does a user do this: the second argument needs to be an integer, but floor doesn't cast to "integer" type.
-    it.skip(`works floor decimal - ${databaseName}`, async () => {
+    it.skip('works floor decimal', async () => {
       await funcTest("repeat('foo', floor(2.5))", 'foofoo');
     });
     // undefined behavior when negative, undefined behavior (likely error) when non-integer
@@ -1053,7 +1053,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   });
 
   describe('lead', () => {
-    it(`works with one param - ${databaseName}`, async () => {
+    it('works with one param', async () => {
       const result = await expressionModel
         .loadQuery(
           `run: state_facts -> {
@@ -1067,7 +1067,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       expect(result.data.path(1, 'state').value).toBe('AL');
     });
 
-    it(`works with offset - ${databaseName}`, async () => {
+    it('works with offset', async () => {
       const result = await expressionModel
         .loadQuery(
           `run: state_facts -> {
@@ -1084,7 +1084,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       expect(result.data.path(3, 'state').value).toBe('AZ');
     });
 
-    it(`works with default value - ${databaseName}`, async () => {
+    it('works with default value', async () => {
       const result = await expressionModel
         .loadQuery(
           `run: state_facts -> { select: *; limit: 10 } -> {
@@ -1158,7 +1158,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       );
     });
 
-    it(`works forward - ${databaseName}`, async () => {
+    it('works forward', async () => {
       const result = await expressionModel
         .loadQuery(
           `
@@ -1199,7 +1199,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       ]);
     });
 
-    it(`works forward - ${databaseName}`, async () => {
+    it('works forward', async () => {
       await expect(`
       run: state_facts -> {
         group_by: state, b is births
@@ -1277,21 +1277,21 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   });
 
   describe('string_agg', () => {
-    it(`works no order by - ${databaseName}`, async () => {
+    it('works no order by', async () => {
       await expect(`run: aircraft -> {
         where: name = 'RUTHERFORD PAT R JR'
         aggregate: f is string_agg(name)
       }`).malloyResultMatches(expressionModel, {f: 'RUTHERFORD PAT R JR'});
     });
 
-    it(`works with dotted shortcut - ${databaseName}`, async () => {
+    it('works with dotted shortcut', async () => {
       await expect(`run: aircraft -> {
         where: name = 'RUTHERFORD PAT R JR'
         aggregate: f is name.string_agg()
       }`).malloyResultMatches(expressionModel, {f: 'RUTHERFORD PAT R JR'});
     });
 
-    it(`works with order by field - ${databaseName}`, async () => {
+    it('works with order by field', async () => {
       await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
         where: name ~ r'.*RUTHERFORD.*'
@@ -1303,7 +1303,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       });
     });
 
-    it(`works with order by direction - ${databaseName}`, async () => {
+    it('works with order by direction', async () => {
       expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
         where: name ~ r'.*RUTHERFORD.*'
@@ -1315,7 +1315,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       });
     });
 
-    it(`works with multiple order_bys - ${databaseName}`, async () => {
+    it('works with multiple order_bys', async () => {
       await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
         where: name ~ r'.*RUTHERFORD.*'
@@ -1327,7 +1327,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       });
     });
 
-    it(`works with order by expression - ${databaseName}`, async () => {
+    it('works with order by expression', async () => {
       await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
         where: name ~ r'.*FLY.*'
@@ -1343,7 +1343,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       });
     });
 
-    it(`works with order by join expression - ${databaseName}`, async () => {
+    it('works with order by join expression', async () => {
       await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
         where: name ~ r'.*ADVENTURE.*'
@@ -1353,7 +1353,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       });
     });
 
-    it(`works with order asc - ${databaseName}`, async () => {
+    it('works with order asc', async () => {
       await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
         where: name ~ r'.*FLY.*'
@@ -1367,7 +1367,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       });
     });
 
-    it(`works with order desc - ${databaseName}`, async () => {
+    it('works with order desc', async () => {
       await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
         where: name ~ r'.*FLY.*'
@@ -1381,7 +1381,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       });
     });
 
-    it(`works with fanout and order_by - ${databaseName}`, async () => {
+    it('works with fanout and order_by', async () => {
       // TODO bigquery cannot handle both fanout and order_by today
       if (['bigquery', 'snowflake', 'trino', 'presto'].includes(databaseName))
         return;
@@ -1400,7 +1400,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       });
     });
 
-    it(`works with fanout - ${databaseName}`, async () => {
+    it('works with fanout', async () => {
       // Snowflake cannot handle the fanout case today
       if (databaseName === 'snowflake') return;
       await expect(`##! experimental.aggregate_order_by
@@ -1416,7 +1416,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       });
     });
 
-    it(`works with fanout and separator - ${databaseName}`, async () => {
+    it('works with fanout and separator', async () => {
       // Snowflake cannot handle the fanout case today
       if (databaseName === 'snowflake') return;
       await expect(`##! experimental.aggregate_order_by
@@ -1432,7 +1432,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       });
     });
 
-    it(`works with limit - ${databaseName}`, async () => {
+    it('works with limit', async () => {
       const query = `##! experimental { aggregate_order_by aggregate_limit }
       run: aircraft -> {
           where: name ~ r'.*FLY.*'
@@ -1458,7 +1458,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   });
 
   describe('string_agg_distinct', () => {
-    it(`actually distincts - ${databaseName}`, async () => {
+    it('actually distincts', async () => {
       await expect(`##! experimental { aggregate_order_by }
         source: aircraft is ${databaseName}.table('malloytest.aircraft') extend {
           primary_key: tail_num
@@ -1480,7 +1480,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       });
     });
 
-    it(`works no order by - ${databaseName}`, async () => {
+    it('works no order by', async () => {
       await expect(`run: aircraft -> {
         where: name = 'RUTHERFORD PAT R JR'
         aggregate: f is string_agg_distinct(name)
@@ -1489,7 +1489,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       });
     });
 
-    it(`works with dotted shortcut - ${databaseName}`, async () => {
+    it('works with dotted shortcut', async () => {
       await expect(`run: aircraft -> {
         where: name = 'RUTHERFORD PAT R JR'
         aggregate: f is name.string_agg_distinct()
@@ -1498,7 +1498,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       });
     });
 
-    it(`works with order by direction - ${databaseName}`, async () => {
+    it('works with order by direction', async () => {
       await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
         where: name ~ r'.*RUTHERFORD.*'
@@ -1510,7 +1510,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       });
     });
 
-    it(`works with order asc - ${databaseName}`, async () => {
+    it('works with order asc', async () => {
       await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
         where: name ~ r'.*FLY.*'
@@ -1524,7 +1524,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       });
     });
 
-    it(`works with order desc - ${databaseName}`, async () => {
+    it('works with order desc', async () => {
       await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
         where: name ~ r'.*FLY.*'
@@ -1538,7 +1538,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       });
     });
 
-    it(`works with limit - ${databaseName}`, async () => {
+    it('works with limit', async () => {
       const query = `##! experimental { aggregate_order_by aggregate_limit }
         run: aircraft -> {
           where: name ~ r'.*FLY.*'
@@ -1593,7 +1593,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       ]);
     });
 
-    it(`works with aggregate - ${databaseName}`, async () => {
+    it('works with aggregate', async () => {
       await expect(`
       run: state_facts -> {
         aggregate: c is count()
@@ -1614,7 +1614,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       ]);
     });
 
-    it(`works with multiple order_bys - ${databaseName}`, async () => {
+    it('works with multiple order_bys', async () => {
       await expect(`
       run: aircraft -> {
         where: name =
