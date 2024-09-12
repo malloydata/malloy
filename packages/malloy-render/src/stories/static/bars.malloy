@@ -236,5 +236,15 @@ source: products is duckdb.table("data/products.parquet") extend {
       limit: 10
     }
 
+    nest: n is {
+      group_by: brand
+       # bar_chart
+      nest: grouped is {
+        group_by: brand, department
+        aggregate: `Sales $` is retail_price.avg()*500
+        limit: 10
+      }
+    }
+
   }
 }
