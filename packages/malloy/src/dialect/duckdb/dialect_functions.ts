@@ -11,6 +11,12 @@ import {
   OverloadedDefinitionBlueprint,
 } from '../functions/util';
 
+const dayname: DefinitionBlueprint = {
+  takes: {'date_value': ['date', 'timestamp']},
+  returns: 'string',
+  impl: {function: 'DAYNAME'},
+};
+
 const to_timestamp: DefinitionBlueprint = {
   takes: {'epoch_seconds': 'number'},
   returns: 'timestamp',
@@ -68,6 +74,7 @@ const string_agg_distinct: OverloadedDefinitionBlueprint = {
 
 export const DUCKDB_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   count_approx,
+  dayname,
   to_timestamp,
   string_agg,
   string_agg_distinct,
