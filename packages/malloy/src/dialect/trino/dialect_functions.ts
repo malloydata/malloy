@@ -23,13 +23,13 @@ const date_format: DefinitionBlueprint = {
   impl: {function: 'DATE_FORMAT'},
   tests: [
     [
-      'date_format(@2024-09-05 17:03:55, "%Y-%m-%d %H:%i:%")',
+      'date_format(@2024-09-05 17:03:55, "%Y-%m-%d %H:%i:%S")',
       '2024-09-05 17:03:55',
     ],
   ],
 };
 
-const from_unixtime: DefinitionBlueprint = {
+const _from_unixtime: DefinitionBlueprint = {
   takes: {'unixtime': 'number'},
   returns: 'timestamp',
   impl: {function: 'FROM_UNIXTIME'},
@@ -37,7 +37,7 @@ const from_unixtime: DefinitionBlueprint = {
 };
 
 const json_extract_scalar: DefinitionBlueprint = {
-  takes: {'value': 'string', 'json_path': 'string'},
+  takes: {'value': 'json', 'json_path': 'string'},
   returns: 'string',
   impl: {function: 'JSON_EXTRACT_SCALAR'},
 };
@@ -57,7 +57,11 @@ const regexp_replace: OverloadedDefinitionBlueprint = {
     tests: [["regexp_replace('1a 2b 14m', '\\d+[ab] ')", '14m']],
   },
   with_replacement: {
-    takes: {'value': 'string', 'pattern': ['string', 'regular expression']},
+    takes: {
+      'value': 'string',
+      'pattern': ['string', 'regular expression'],
+      'replacement': 'string',
+    },
     returns: 'string',
     impl: {function: 'REGEXP_REPLACE'},
     tests: [
@@ -106,7 +110,7 @@ const string_agg_distinct: OverloadedDefinitionBlueprint = {
   },
 };
 
-const to_unixtime: DefinitionBlueprint = {
+const _to_unixtime: DefinitionBlueprint = {
   takes: {'value': 'timestamp'},
   returns: 'number',
   impl: {function: 'TO_UNIXTIME'},
@@ -116,11 +120,11 @@ const to_unixtime: DefinitionBlueprint = {
 export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   count_approx,
   date_format,
-  from_unixtime,
+  // from_unixtime,
   json_extract_scalar,
   json_parse,
   regexp_replace,
   string_agg,
   string_agg_distinct,
-  to_unixtime,
+  // to_unixtime,
 };
