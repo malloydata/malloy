@@ -54,7 +54,7 @@ const regexp_replace: OverloadedDefinitionBlueprint = {
     takes: {'value': 'string', 'pattern': ['string', 'regular expression']},
     returns: 'string',
     impl: {function: 'REGEXP_REPLACE'},
-    tests: [["regexp_replace('1a 2b 14m', '\\\\d+[ab]')", '14m']],
+    tests: [["regexp_replace('1a 2b 14m', '\\\\d+[ab]\\\\s*')", '14m']],
   },
   with_replacement: {
     takes: {
