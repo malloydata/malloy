@@ -75,11 +75,15 @@ const ROW_HEIGHT = 28;
 export function getChartSettings(
   field: Explore | ExploreField,
   metadata: RenderResultMetadata,
-  chartTag: Tag
+  chartTag: Tag,
+  options?: {
+    xField?: Field;
+    yField?: Field;
+  }
 ): ChartSettings {
   // TODO: improve logic for field extraction
-  const xField = field.allFields.at(0)!;
-  const yField = field.allFields.at(1)!;
+  const xField = options?.xField ?? field.allFields.at(0)!;
+  const yField = options?.yField ?? field.allFields.at(1)!;
   const {tag} = field.tagParse();
 
   let chartWidth = 0,

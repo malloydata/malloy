@@ -17,6 +17,13 @@ source: products is duckdb.table("data/products.parquet") extend {
     limit: 10
   }
 
+   # bar_chart
+  view: topSellingBrandsSeries is {
+    group_by: brand, department
+    aggregate: `Sales $` is retail_price.avg()*500
+    limit: 10
+  }
+
   view: test is {
     nest: topSellingBrands
   }
@@ -185,5 +192,49 @@ source: products is duckdb.table("data/products.parquet") extend {
       limit: 10
     }
     limit: 5
+  }
+
+  view: seriesCharts is {
+    # bar_chart
+    nest: grouped is {
+      group_by: brand, department_long_label is department
+      aggregate: `Sales $` is retail_price.avg()*500
+      limit: 10
+    }
+    # bar_chart.stack
+    nest: stacked is {
+      group_by: brand, department
+      aggregate: `Sales $` is retail_price.avg()*500
+      limit: 10
+    }
+    # bar_chart
+    nest: ySeries is {
+      group_by: brand
+      aggregate:
+        # y
+        `Sales $` is retail_price.avg()*500
+        # y
+        `Cost $ really long label` is retail_price.avg()*300
+      limit: 10
+    }
+    # bar_chart.stack
+    nest: ySeriesStack is {
+      group_by: brand
+      aggregate:
+        # y
+        `Sales $` is retail_price.avg()*500
+        # y
+        `Cost $` is retail_price.avg()*300
+      limit: 10
+    }
+    # bar_chart { x=brand y=['Sales $', 'Cost $'] }
+    nest: ySeriesExplicit is {
+      group_by: brand
+      aggregate:
+        `Sales $` is retail_price.avg()*500
+        `Cost $` is retail_price.avg()*300
+      limit: 10
+    }
+
   }
 }

@@ -33,11 +33,13 @@ import {
   Tag,
 } from '@malloydata/malloy';
 import {getFieldKey, valueIsNumber, valueIsString} from './util';
-import {generateBarChartSpec} from './bar-chart/generate-bar_chart-spec';
-import {plotToVega} from './plot/plot-to-vega';
 import {hasAny} from './tag-utils';
 import {RenderResultMetadata, VegaConfigHandler} from './types';
 import {shouldRenderAs} from './apply-renderer';
+import {getBarChartSettings} from './bar-chart/get-bar_chart-settings';
+import {generateBarChartVegaLiteSpec} from './bar-chart/generate-bar_chart-vega-lite-spec';
+import {mergeVegaConfigs} from './plot/merge-vega-configs';
+import {baseVegaConfig} from './plot/base-vega-config';
 
 function createDataCache() {
   const dataCache = new WeakMap<DataColumn, QueryData>();
@@ -171,13 +173,27 @@ function populateExploreMeta(
 ) {
   const fieldMeta = metadata.field(f);
   if (hasAny(tag, 'bar', 'bar_chart')) {
-    const plotSpec = generateBarChartSpec(f, tag);
-    fieldMeta.vegaChartProps = plotToVega(plotSpec, {
-      field: f,
+    const chartTag = (tag.tag('bar_chart') ?? tag.tag('bar'))!;
+    const barSettings = getBarChartSettings(f, tag);
+    const vegaLiteProps = generateBarChartVegaLiteSpec(
+      f,
+      barSettings,
       metadata,
-      chartTag: (tag.tag('bar_chart') ?? tag.tag('bar'))!,
+      chartTag
+    );
+
+    const vegaConfig = mergeVegaConfigs(
+      baseVegaConfig(),
+      options.getVegaConfigOverride?.('bar_chart') ?? {}
+    );
+
+    fieldMeta.vegaChartProps = {
+      ...vegaLiteProps,
+      spec: {
+        ...vegaLiteProps.spec,
+        config: vegaConfig,
+      },
       chartType: 'bar_chart',
-      getVegaConfigOverride: options.getVegaConfigOverride,
-    });
+    };
   }
 }
