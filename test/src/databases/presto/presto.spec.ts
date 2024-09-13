@@ -52,21 +52,12 @@ describe('Presto tests', () => {
   });
 
   it('runs the date_parse function', async () => {
-    const ts_obj = DateTime.fromObject({
-      year: 2024,
-      month: 9,
-      day: 15,
-      hour: 0,
-      minute: 0,
-      second: 0,
-    });
+    const ts_obj = DateTime.fromISO('2024-09-15T00:00:00.000Z', {zone: 'UTC'});
 
     await expect(`run: presto.sql("SELECT 1 as n") -> {
-      select: x is date_parse('2024-09-15', '%Y-%m-%d')
+      select: x is date_parse('2024-09-15', '%Y-%m-%d')::date
       }`).malloyResultMatches(runtime, {x: ts_obj});
   });
-
-  // Failing test:  Expected {x: "2024-09-15T00:00:00.000-07:00"} Got: "2024-09-15T07:00:00.000Z"
 
   it('runs the regexp_replace function', async () => {
     await expect(`run: presto.sql("SELECT 1 as n") -> {
