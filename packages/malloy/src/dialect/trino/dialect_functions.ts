@@ -50,6 +50,14 @@ const bool_or: DefinitionBlueprint = {
   impl: {function: 'BOOL_OR'},
 };
 
+const corr: DefinitionBlueprint = {
+  takes: {'y': {dimension: 'number'}, 'x': {dimension: 'number'}},
+  returns: {measure: 'number'},
+  impl: {
+    sql: 'CORR(${y}, ${x})'
+  },
+};
+
 const count_approx: DefinitionBlueprint = {
   takes: {'value': {dimension: 'any'}},
   returns: {measure: 'number'},
@@ -94,6 +102,12 @@ const string_agg_distinct: OverloadedDefinitionBlueprint = {
     },
   },
 };
+
+const variance: DefinitionBlueprint = {
+  takes: {'value': {dimension: 'number'}},
+  returns: {measure: 'number'},
+  impl: {function: 'VARIANCE'},
+}
 
 // Scalar functions
 
@@ -165,9 +179,11 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   arbitrary,
   bool_and,
   bool_or,
+  corr,
   count_approx,
   string_agg,
   string_agg_distinct,
+  variance,
 
   // scalar functions
   bitwise_and,

@@ -142,4 +142,26 @@ describe('Presto tests', () => {
         x is bitwise_or(n1, n2)
       }`).malloyResultMatches(runtime, {x: 32962391})
   });
+
+  it('runs the variance function', async () => {
+    await expect(`run: presto.sql("""
+      SELECT 1 as n
+      UNION ALL SELECT 50 as n
+      UNION ALL SELECT 100 as n
+      """) -> {
+      aggregate:
+        var is variance(n)
+      }`).malloyResultMatches(runtime, {var: 2450.333333333333})
+  });
+
+  it('runs the corr function', async () => {
+    await expect(`run: presto.sql("""
+                SELECT 1 as y, 55 as x
+      UNION ALL SELECT 50 as y, 22 as x
+      UNION ALL SELECT 100 as y, 1 as x
+      """) -> {
+      aggregate:
+        correlation is corr(y, x)
+      }`).malloyResultMatches(runtime, {correlation: -0.9911108})
+  });
 });
