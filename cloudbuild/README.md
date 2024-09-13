@@ -6,7 +6,7 @@ Cloudbuild is a GCP solution for running tests and other continuous integration 
 
 ## Our Testing Architecture
 
-There are several technologies to be aware of: 
+There are several technologies to be aware of:
 
 - **cloudbuild**: infrastructure to run tests; automatically provisions machines, communicates with GitHub (i.e. updates PRs with status), and furnishes UX for viewing test results
 - **docker**: cloudbuild runs test scripts inside a _docker image_
