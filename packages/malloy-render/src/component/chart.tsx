@@ -19,7 +19,7 @@ export function Chart(props: {
   const dateTimeFields = field.allFields.filter(
     f => f.isAtomicField() && (f.isDate() || f.isTimestamp())
   );
-  data.forEach((row, i) => {
+  data.forEach(row => {
     dateTimeFields.forEach(f => {
       const value = row[f.name];
       if (typeof value === 'number' || typeof value === 'string')
