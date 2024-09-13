@@ -30,8 +30,6 @@ describe('Presto tests', () => {
     ).malloyResultMatches(runtime, {n: 1});
   });
 
-  // TODO: couldn't get this test to past locally, Presto in docker is giving me a value
-  // of 1726138784, one hour different.
   it('runs the to_unixtime function', async () => {
     await expect(`run: presto.sql("SELECT 1 as n") -> {
       timezone: 'America/Los_Angeles'
