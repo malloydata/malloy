@@ -2,6 +2,7 @@ import {Explore, ExploreField, QueryData} from '@malloydata/malloy';
 import {VegaChart} from './vega/vega-chart';
 import {RenderResultMetadata} from './types';
 import {renderTimeString} from './render-time';
+import {DateField, TimestampField} from '@malloydata/malloy/src/malloy';
 
 export function Chart(props: {
   field: Explore | ExploreField;
@@ -18,7 +19,7 @@ export function Chart(props: {
   // TODO: improve handling date/times in chart axes
   const dateTimeFields = field.allFields.filter(
     f => f.isAtomicField() && (f.isDate() || f.isTimestamp())
-  );
+  ) as Array<DateField | TimestampField>; // TS 5.3.3 doesn't recognize the filter type narrowing
   data.forEach(row => {
     dateTimeFields.forEach(f => {
       const value = row[f.name];
