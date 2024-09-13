@@ -17,6 +17,84 @@ const from_unixtime: DefinitionBlueprint = {
   impl: {function: 'FROM_UNIXTIME'},
 };
 
+const to_unixtime: DefinitionBlueprint = {
+  takes: {'ts_val': 'timestamp'},
+  returns: 'number',
+  impl: {function: 'TO_UNIXTIME'},
+};
+
+const date_format: DefinitionBlueprint = {
+  takes: {'ts_val': 'timestamp', 'format': 'string'},
+  returns: 'string',
+  impl: {
+    sql: 'DATE_FORMAT(${ts_val}, ${format})'
+  },
+};
+
+//date_parse(string, format) -> timestamp()
+const date_parse : DefinitionBlueprint = {
+  takes: {'ts_string': 'string', 'format': 'string'},
+  returns: 'timestamp',
+  impl: {
+    sql: 'DATE_PARSE(${ts_string}, ${format})'
+  },
+};
+
+const arbitrary: DefinitionBlueprint = {
+  generic: ['T', ['string', 'number', 'date', 'timestamp', 'boolean', 'json']],
+  takes: {'value': {dimension: { generic: 'T' }}},
+  returns: {measure: {generic: 'T'}},
+  impl: {function: 'ARBITRARY'},
+};
+
+const regexp_replace: OverloadedDefinitionBlueprint = {
+  remove_matches: {
+    takes: {'input_val': 'string', 'regexp_pattern': 'string'},
+    returns: 'string',
+    impl: {
+      sql: "REGEXP_REPLACE(${input_val}, ${regexp_pattern})",
+    },
+  },
+
+  replace_matches: {
+    takes: {'input_val': 'string', 'regexp_pattern': 'string', 'replace_pattern': 'string'},
+    returns: 'string',
+    impl: {
+      sql: "REGEXP_REPLACE(${input_val}, ${regexp_pattern}, ${replace_pattern})",
+    },
+  }
+}
+
+const approx_percentile: OverloadedDefinitionBlueprint = {
+  default: {
+    takes: {'value': 'number', 'percentage': 'number'},
+    returns: {measure: 'number'},
+    impl: {
+      sql: 'APPROX_PERCENTILE(${value}, ${percentage})'
+    },
+  },
+
+  with_error_threshold: {
+    takes: {'value': 'number', 'percentage': 'number', 'error_threshold': 'number'},
+    returns: {measure: 'number'},
+    impl: {
+      sql: 'APPROX_PERCENTILE(${value}, ${percentage}, ${error_threshold})'
+    },
+  }
+}
+
+const bool_and: DefinitionBlueprint = {
+  takes: {'value': {dimension: 'boolean'}},
+  returns: {measure: 'boolean'},
+  impl: {function: 'BOOL_AND'},
+};
+
+const bool_or: DefinitionBlueprint = {
+  takes: {'value': {dimension: 'boolean'}},
+  returns: {measure: 'boolean'},
+  impl: {function: 'BOOL_OR'},
+};
+
 const count_approx: DefinitionBlueprint = {
   takes: {'value': {dimension: 'any'}},
   returns: {measure: 'number'},
@@ -63,8 +141,16 @@ const string_agg_distinct: OverloadedDefinitionBlueprint = {
 };
 
 export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
+  arbitrary,
   count_approx,
+  approx_percentile,
+  date_format,
+  date_parse,
+  regexp_replace,
   from_unixtime,
+  to_unixtime,
+  bool_and,
+  bool_or,
   string_agg,
   string_agg_distinct,
 };
