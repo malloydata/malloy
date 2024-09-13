@@ -10,7 +10,6 @@
 import {RuntimeList} from '../../runtimes';
 import {describeIfDatabaseAvailable} from '../../util';
 import '../../util/db-jest-matchers';
-import {DateTime} from 'luxon';
 
 const [describe] = describeIfDatabaseAvailable(['presto']);
 
@@ -52,11 +51,11 @@ describe('Presto tests', () => {
   });
 
   it('runs the date_parse function', async () => {
-    const ts_obj = DateTime.fromISO('2024-09-15T00:00:00.000Z', {zone: 'UTC'});
+    const expected = Date.parse('15 Sep 2024 00:00:00 UTC');
 
     await expect(`run: presto.sql("SELECT 1 as n") -> {
       select: x is date_parse('2024-09-15', '%Y-%m-%d')::date
-      }`).malloyResultMatches(runtime, {x: ts_obj});
+      }`).malloyResultMatches(runtime, {x: expected});
   });
 
   it('runs the regexp_replace function', async () => {
