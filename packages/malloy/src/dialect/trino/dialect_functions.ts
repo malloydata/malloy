@@ -82,6 +82,20 @@ const count_approx: DefinitionBlueprint = {
   impl: {function: 'APPROX_DISTINCT'},
 };
 
+const max_by: DefinitionBlueprint = {
+  generic: ['T', ['string', 'number', 'date', 'timestamp', 'boolean', 'json']],
+  takes: {'value': {dimension: { generic: 'T' }}, 'order_by_val': {dimension: 'any' }},
+  returns: {measure: {generic: 'T'}},
+  impl: {sql: 'MAX_BY(${value}, ${order_by_val})'},
+}
+
+const min_by: DefinitionBlueprint = {
+  generic: ['T', ['string', 'number', 'date', 'timestamp', 'boolean', 'json']],
+  takes: {'value': {dimension: { generic: 'T' }}, 'order_by_val': {dimension: 'any' }},
+  returns: {measure: {generic: 'T'}},
+  impl: {sql: 'MIN_BY(${value}, ${order_by_val})'},
+}
+
 const string_agg: OverloadedDefinitionBlueprint = {
   default_separator: {
     takes: {'value': {dimension: 'string'}},
@@ -214,6 +228,8 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   bool_or,
   corr,
   count_approx,
+  max_by,
+  min_by,
   string_agg,
   string_agg_distinct,
   variance,
