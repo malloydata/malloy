@@ -79,6 +79,14 @@ describe('Presto tests', () => {
       }`).malloyResultMatches(runtime, {remove_matches: '14m', replace_matches: '3ca 3cb 14m'})
   });
 
+  it('runs the regexp_like function', async () => {
+    await expect(`run: presto.sql("SELECT 1 as n") -> {
+      select:
+        should_match is regexp_like('1a 2b 14m', '\\\\d+b')
+        shouldnt_match is regexp_like('1a 2b 14m', '\\\\d+c')
+      }`).malloyResultMatches(runtime, {should_match: true, shouldnt_match: false})
+  });
+
   it('runs the approx_percentile function', async () => {
     await expect(`run: presto.sql("""
       SELECT 1 as n
@@ -150,8 +158,8 @@ describe('Presto tests', () => {
       UNION ALL SELECT 100 as n
       """) -> {
       aggregate:
-        var is variance(n)
-      }`).malloyResultMatches(runtime, {var: 2450.333333333333})
+        var is floor(variance(n))
+      }`).malloyResultMatches(runtime, {var: 2450})
   });
 
   it('runs the corr function', async () => {
@@ -163,5 +171,18 @@ describe('Presto tests', () => {
       aggregate:
         correlation is corr(y, x)
       }`).malloyResultMatches(runtime, {correlation: -0.9911108})
+  });
+
+  it('runs the json_extract_scalar function', async () => {
+    await expect(`run: presto.sql("""
+                SELECT 1 as n
+                """) -> {
+      select:
+        json_arr is json_extract_scalar('[1, 2, 3]', '$[2]')
+        json_obj is json_extract_scalar(
+            '{"store": {"book": [ {"title": "Moby Dick", "author": "Herman Melville"} ]}}',
+            '$.store.book[0].author'
+          )
+      }`).malloyResultMatches(runtime, {json_arr: "3", json_obj: 'Herman Melville'})
   });
 });

@@ -149,6 +149,18 @@ const from_unixtime: DefinitionBlueprint = {
   impl: {function: 'FROM_UNIXTIME'},
 };
 
+const json_extract_scalar: DefinitionBlueprint = {
+  takes: {'json_val': 'string', 'json_path': 'string'},
+  returns: 'string',
+  impl: {sql: 'JSON_EXTRACT_SCALAR(${json_val}, ${json_path})'}
+}
+
+const regexp_like: DefinitionBlueprint = {
+  takes: {'str': 'string', 'pattern': 'string'},
+  returns: 'boolean',
+  impl: {sql: 'REGEXP_LIKE(${str}, ${pattern})'},
+}
+
 const regexp_replace: OverloadedDefinitionBlueprint = {
   remove_matches: {
     takes: {'input_val': 'string', 'regexp_pattern': 'string'},
@@ -191,6 +203,8 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   date_format,
   date_parse,
   from_unixtime,
+  json_extract_scalar,
+  regexp_like,
   regexp_replace,
   to_unixtime,
 };
