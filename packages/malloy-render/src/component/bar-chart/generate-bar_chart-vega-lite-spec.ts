@@ -31,6 +31,23 @@ export function generateBarChartVegaLiteSpec(
     yField,
   });
 
+  const xMeta = metadata.field(xField);
+  const seriesMeta = seriesField ? metadata.field(seriesField) : null;
+
+  const forceSharedX = chartTag.text('x', 'independent') === 'true';
+  const forceIndependentX = chartTag.has('x', 'independent') && !forceSharedX;
+  const autoSharedX = xMeta.values.size <= 20;
+  const shouldShareXDomain =
+    forceSharedX || (autoSharedX && !forceIndependentX);
+
+  const forceSharedSeries = chartTag.text('series', 'independent') === 'true';
+  const forceIndependentSeries =
+    chartTag.has('series', 'independent') && !forceSharedSeries;
+  const autoSharedSeries = seriesMeta && seriesMeta.values.size <= 20;
+  const shouldShareSeriesDomain =
+    seriesField &&
+    (forceSharedSeries || (autoSharedSeries && !forceIndependentSeries));
+
   const spec: VegaSpec = {
     '$schema': 'https://vega.github.io/schema/vega-lite/v5.json',
     'width': chartSettings.plotWidth,
@@ -51,6 +68,9 @@ export function generateBarChartVegaLiteSpec(
           ...chartSettings.xAxis,
           labelLimit: chartSettings.xAxis.labelSize,
         },
+        'scale': {
+          'domain': shouldShareXDomain ? [...xMeta.values] : null,
+        },
       },
       'y': {
         'field': yFieldPath,
@@ -64,7 +84,10 @@ export function generateBarChartVegaLiteSpec(
         'scale': chartSettings.yScale,
       },
       'color': {
-        'scale': {'range': 'category'},
+        'scale': {
+          'domain': shouldShareSeriesDomain ? [...seriesMeta!.values] : null,
+          'range': 'category',
+        },
       },
     },
   };

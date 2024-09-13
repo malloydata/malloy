@@ -1,6 +1,13 @@
-import {Explore, ExploreField, QueryData} from '@malloydata/malloy';
+import {
+  Explore,
+  ExploreField,
+  QueryData,
+  DateField,
+  TimestampField,
+} from '@malloydata/malloy';
 import {VegaChart} from './vega/vega-chart';
 import {RenderResultMetadata} from './types';
+import {renderTimeString} from './render-time';
 
 export function Chart(props: {
   field: Explore | ExploreField;
@@ -13,6 +20,22 @@ export function Chart(props: {
   if (chartProps.specType === 'vega') {
     spec.data[0].values = data;
   } else spec.data.values = data;
+
+  // TODO: improve handling date/times in chart axes
+  const dateTimeFields = field.allFields.filter(
+    f => f.isAtomicField() && (f.isDate() || f.isTimestamp())
+  ) as (DateField | TimestampField)[];
+  data.forEach(row => {
+    dateTimeFields.forEach(f => {
+      const value = row[f.name];
+      if (typeof value === 'number' || typeof value === 'string')
+        row[f.name] = renderTimeString(
+          new Date(value),
+          f.isDate(),
+          f.timeframe
+        );
+    });
+  });
 
   return (
     <VegaChart

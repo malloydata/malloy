@@ -32,7 +32,12 @@ import {
   Result,
   Tag,
 } from '@malloydata/malloy';
-import {getFieldKey, valueIsNumber, valueIsString} from './util';
+import {
+  getFieldKey,
+  valueIsDateTime,
+  valueIsNumber,
+  valueIsString,
+} from './util';
 import {hasAny} from './tag-utils';
 import {RenderResultMetadata, VegaConfigHandler} from './types';
 import {shouldRenderAs} from './apply-renderer';
@@ -40,6 +45,7 @@ import {getBarChartSettings} from './bar-chart/get-bar_chart-settings';
 import {generateBarChartVegaLiteSpec} from './bar-chart/generate-bar_chart-vega-lite-spec';
 import {mergeVegaConfigs} from './plot/merge-vega-configs';
 import {baseVegaConfig} from './plot/base-vega-config';
+import {renderTimeString} from './render-time';
 
 function createDataCache() {
   const dataCache = new WeakMap<DataColumn, QueryData>();
@@ -143,6 +149,9 @@ const populateFieldMeta = (data: DataArray, metadata: RenderResultMetadata) => {
         const n = value;
         fieldMeta.min = Math.min(fieldMeta.min ?? n, n);
         fieldMeta.max = Math.max(fieldMeta.max ?? n, n);
+        if (f.isAtomicField() && f.sourceWasDimension()) {
+          fieldMeta.values.add(n);
+        }
       } else if (valueIsString(f, value)) {
         const s = value;
         fieldMeta.values.add(s);
@@ -150,6 +159,31 @@ const populateFieldMeta = (data: DataArray, metadata: RenderResultMetadata) => {
           fieldMeta.minString = s;
         if (!fieldMeta.maxString || fieldMeta.maxString.length < s.length)
           fieldMeta.maxString = s;
+      } else if (valueIsDateTime(f, value)) {
+        const numericValue = Number(value);
+        fieldMeta.min = Math.min(fieldMeta.min ?? numericValue, numericValue);
+        fieldMeta.max = Math.max(fieldMeta.max ?? numericValue, numericValue);
+        const stringValue = renderTimeString(
+          value,
+          f.isAtomicField() && f.isDate(),
+          f.isAtomicField() && (f.isDate() || f.isTimestamp())
+            ? f.timeframe
+            : undefined
+        ).toString();
+        if (
+          !fieldMeta.minString ||
+          fieldMeta.minString.length > stringValue.length
+        )
+          fieldMeta.minString = stringValue;
+        if (
+          !fieldMeta.maxString ||
+          fieldMeta.maxString.length < stringValue.length
+        )
+          fieldMeta.maxString = stringValue;
+
+        if (f.isAtomicField() && f.sourceWasDimension()) {
+          fieldMeta.values.add(stringValue);
+        }
       } else if (f.isExploreField()) {
         const data = row.cell(f);
         if (data.isArray()) populateFieldMeta(data, metadata);
