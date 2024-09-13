@@ -125,5 +125,21 @@ describe('Presto tests', () => {
       })
   });
 
+  it('runs the bitwise_and function', async () => {
+    await expect(`run: presto.sql("""
+                SELECT 13678423 as n1, 23524678 as n2
+      """) -> {
+      select:
+        x is bitwise_and(n1, n2)
+      }`).malloyResultMatches(runtime, {x: 4240710})
+  });
 
+  it('runs the bitwise_or function', async () => {
+    await expect(`run: presto.sql("""
+                SELECT 13678423 as n1, 23524678 as n2
+      """) -> {
+      select:
+        x is bitwise_or(n1, n2)
+      }`).malloyResultMatches(runtime, {x: 32962391})
+  });
 });

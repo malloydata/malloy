@@ -97,6 +97,22 @@ const string_agg_distinct: OverloadedDefinitionBlueprint = {
 
 // Scalar functions
 
+const bitwise_and: DefinitionBlueprint = {
+  takes: {'val1': 'number', 'val2': 'number'},
+  returns: 'number',
+  impl: {
+    sql: 'BITWISE_AND(${val1}, ${val2})'
+  }
+}
+
+const bitwise_or: DefinitionBlueprint = {
+  takes: {'val1': 'number', 'val2': 'number'},
+  returns: 'number',
+  impl: {
+    sql: 'BITWISE_OR(${val1}, ${val2})'
+  }
+}
+
 const date_format: DefinitionBlueprint = {
   takes: {'ts_val': 'timestamp', 'format': 'string'},
   returns: 'string',
@@ -154,6 +170,8 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   string_agg_distinct,
 
   // scalar functions
+  bitwise_and,
+  bitwise_or,
   date_format,
   date_parse,
   from_unixtime,
