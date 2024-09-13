@@ -11,59 +11,7 @@ import {
   OverloadedDefinitionBlueprint,
 } from '../functions/util';
 
-const from_unixtime: DefinitionBlueprint = {
-  takes: {'unixtime': 'number'},
-  returns: 'timestamp',
-  impl: {function: 'FROM_UNIXTIME'},
-};
-
-const to_unixtime: DefinitionBlueprint = {
-  takes: {'ts_val': 'timestamp'},
-  returns: 'number',
-  impl: {function: 'TO_UNIXTIME'},
-};
-
-const date_format: DefinitionBlueprint = {
-  takes: {'ts_val': 'timestamp', 'format': 'string'},
-  returns: 'string',
-  impl: {
-    sql: 'DATE_FORMAT(${ts_val}, ${format})'
-  },
-};
-
-//date_parse(string, format) -> timestamp()
-const date_parse : DefinitionBlueprint = {
-  takes: {'ts_string': 'string', 'format': 'string'},
-  returns: 'timestamp',
-  impl: {
-    sql: 'DATE_PARSE(${ts_string}, ${format})'
-  },
-};
-
-const arbitrary: DefinitionBlueprint = {
-  generic: ['T', ['string', 'number', 'date', 'timestamp', 'boolean', 'json']],
-  takes: {'value': {dimension: { generic: 'T' }}},
-  returns: {measure: {generic: 'T'}},
-  impl: {function: 'ARBITRARY'},
-};
-
-const regexp_replace: OverloadedDefinitionBlueprint = {
-  remove_matches: {
-    takes: {'input_val': 'string', 'regexp_pattern': 'string'},
-    returns: 'string',
-    impl: {
-      sql: "REGEXP_REPLACE(${input_val}, ${regexp_pattern})",
-    },
-  },
-
-  replace_matches: {
-    takes: {'input_val': 'string', 'regexp_pattern': 'string', 'replace_pattern': 'string'},
-    returns: 'string',
-    impl: {
-      sql: "REGEXP_REPLACE(${input_val}, ${regexp_pattern}, ${replace_pattern})",
-    },
-  }
-}
+// Aggregate functions:
 
 const approx_percentile: OverloadedDefinitionBlueprint = {
   default: {
@@ -82,6 +30,13 @@ const approx_percentile: OverloadedDefinitionBlueprint = {
     },
   }
 }
+
+const arbitrary: DefinitionBlueprint = {
+  generic: ['T', ['string', 'number', 'date', 'timestamp', 'boolean', 'json']],
+  takes: {'value': {dimension: { generic: 'T' }}},
+  returns: {measure: {generic: 'T'}},
+  impl: {function: 'ARBITRARY'},
+};
 
 const bool_and: DefinitionBlueprint = {
   takes: {'value': {dimension: 'boolean'}},
@@ -140,17 +95,68 @@ const string_agg_distinct: OverloadedDefinitionBlueprint = {
   },
 };
 
+// Scalar functions
+
+const date_format: DefinitionBlueprint = {
+  takes: {'ts_val': 'timestamp', 'format': 'string'},
+  returns: 'string',
+  impl: {
+    sql: 'DATE_FORMAT(${ts_val}, ${format})'
+  },
+};
+
+const date_parse : DefinitionBlueprint = {
+  takes: {'ts_string': 'string', 'format': 'string'},
+  returns: 'timestamp',
+  impl: {
+    sql: 'DATE_PARSE(${ts_string}, ${format})'
+  },
+};
+
+const from_unixtime: DefinitionBlueprint = {
+  takes: {'unixtime': 'number'},
+  returns: 'timestamp',
+  impl: {function: 'FROM_UNIXTIME'},
+};
+
+const regexp_replace: OverloadedDefinitionBlueprint = {
+  remove_matches: {
+    takes: {'input_val': 'string', 'regexp_pattern': 'string'},
+    returns: 'string',
+    impl: {
+      sql: "REGEXP_REPLACE(${input_val}, ${regexp_pattern})",
+    },
+  },
+
+  replace_matches: {
+    takes: {'input_val': 'string', 'regexp_pattern': 'string', 'replace_pattern': 'string'},
+    returns: 'string',
+    impl: {
+      sql: "REGEXP_REPLACE(${input_val}, ${regexp_pattern}, ${replace_pattern})",
+    },
+  }
+}
+
+const to_unixtime: DefinitionBlueprint = {
+  takes: {'ts_val': 'timestamp'},
+  returns: 'number',
+  impl: {function: 'TO_UNIXTIME'},
+};
+
 export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
-  arbitrary,
-  count_approx,
+  // aggregate functions
   approx_percentile,
-  date_format,
-  date_parse,
-  regexp_replace,
-  from_unixtime,
-  to_unixtime,
+  arbitrary,
   bool_and,
   bool_or,
+  count_approx,
   string_agg,
   string_agg_distinct,
+
+  // scalar functions
+  date_format,
+  date_parse,
+  from_unixtime,
+  regexp_replace,
+  to_unixtime,
 };
