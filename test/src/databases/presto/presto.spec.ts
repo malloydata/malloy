@@ -185,4 +185,19 @@ describe('Presto tests', () => {
           )
       }`).malloyResultMatches(runtime, {json_arr: "3", json_obj: 'Herman Melville'})
   });
+
+  it('runs the bitwise_agg functions', async () => {
+    await expect(`run: presto.sql("""
+                SELECT 13678423 as n1 UNION ALL
+                SELECT 23524678 as n1 UNION ALL
+                SELECT 987342 as n1
+      """) -> {
+      aggregate:
+        and_agg is bitwise_and_agg(n1)
+        or_agg is bitwise_or_agg(n1)
+        xor_agg is bitwise_xor_agg(n1)
+      }`).malloyResultMatches(runtime, {and_agg: 33552351, or_agg: 4166, xor_agg: 28922591})
+  });
+
+
 });

@@ -38,6 +38,24 @@ const arbitrary: DefinitionBlueprint = {
   impl: {function: 'ARBITRARY'},
 };
 
+const bitwise_and_agg: DefinitionBlueprint = {
+  takes: {'value': {dimension: 'number'}},
+  returns: {measure: 'number'},
+  impl: {function: 'BITWISE_OR_AGG'}
+}
+
+const bitwise_or_agg: DefinitionBlueprint = {
+  takes: {'value': {dimension: 'number'}},
+  returns: {measure: 'number'},
+  impl: {function: 'BITWISE_AND_AGG'}
+}
+
+const bitwise_xor_agg: DefinitionBlueprint = {
+  takes: {'value': {dimension: 'number'}},
+  returns: {measure: 'number'},
+  impl: {function: 'BITWISE_XOR_AGG'}
+}
+
 const bool_and: DefinitionBlueprint = {
   takes: {'value': {dimension: 'boolean'}},
   returns: {measure: 'boolean'},
@@ -189,6 +207,9 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   // aggregate functions
   approx_percentile,
   arbitrary,
+  bitwise_and_agg,
+  bitwise_or_agg,
+  bitwise_xor_agg,
   bool_and,
   bool_or,
   corr,
