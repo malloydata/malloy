@@ -23,7 +23,7 @@ export interface FieldRenderMetadata {
   max: number | null;
   minString: string | null;
   maxString: string | null;
-  values: Set<string>;
+  values: Set<string | number>;
   maxRecordCt: number | null;
   vegaChartProps?: VegaChartProps;
   renderAs: string;

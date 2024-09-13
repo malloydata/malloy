@@ -155,12 +155,20 @@ export function getChartSettings(
     const X_AXIS_THRESHOLD = 0.3;
     const minBottomPadding = 15;
     xTitleSize = 22 + minBottomPadding;
-    xAxisHeight = Math.min(maxStringSize, X_AXIS_THRESHOLD * chartHeight);
+    xAxisHeight = Math.min(
+      maxStringSize + xTitleSize,
+      X_AXIS_THRESHOLD * chartHeight
+    );
     labelSize = xAxisHeight;
 
-    const xSpacePerLabel =
-      (chartWidth - yAxisWidth) / exploreMetadata.maxRecordCt!;
-    if (xSpacePerLabel > xAxisHeight) {
+    // TODO: improve this, this logic exists in more detail in generate vega spec. this is a hacky partial solution for now :/
+    const uniqueValuesCt = metadata.fields[xKey]!.values.size;
+    const isSharedDomain = uniqueValuesCt <= 20;
+    const recordsToFit = isSharedDomain
+      ? uniqueValuesCt
+      : exploreMetadata.maxRecordCt!;
+    const xSpacePerLabel = (chartWidth - yAxisWidth) / recordsToFit;
+    if (xSpacePerLabel > xAxisHeight || xSpacePerLabel > maxStringSize) {
       labelAngle = 0;
       labelSize = xSpacePerLabel;
       labelAlign = undefined;

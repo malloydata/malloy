@@ -45,6 +45,10 @@ export function valueIsString(f: Field, s: unknown): s is string {
   return f.isAtomicField() && f.isString() && s !== null;
 }
 
+export function valueIsDateTime(f: Field, v: unknown): v is Date {
+  return f.isAtomicField() && (f.isDate() || f.isTimestamp()) && v !== null;
+}
+
 export function getTextWidth(
   text: string,
   font: string,
