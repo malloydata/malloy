@@ -18,22 +18,26 @@ const approx_percentile: OverloadedDefinitionBlueprint = {
     takes: {'value': 'number', 'percentage': 'number'},
     returns: {measure: 'number'},
     impl: {
-      sql: 'APPROX_PERCENTILE(${value}, ${percentage})'
+      sql: 'APPROX_PERCENTILE(${value}, ${percentage})',
     },
   },
 
   with_error_threshold: {
-    takes: {'value': 'number', 'percentage': 'number', 'error_threshold': 'number'},
+    takes: {
+      'value': 'number',
+      'percentage': 'number',
+      'error_threshold': 'number',
+    },
     returns: {measure: 'number'},
     impl: {
-      sql: 'APPROX_PERCENTILE(${value}, ${percentage}, ${error_threshold})'
+      sql: 'APPROX_PERCENTILE(${value}, ${percentage}, ${error_threshold})',
     },
-  }
-}
+  },
+};
 
 const arbitrary: DefinitionBlueprint = {
   generic: ['T', ['string', 'number', 'date', 'timestamp', 'boolean', 'json']],
-  takes: {'value': {dimension: { generic: 'T' }}},
+  takes: {'value': {dimension: {generic: 'T'}}},
   returns: {measure: {generic: 'T'}},
   impl: {function: 'ARBITRARY'},
 };
@@ -41,20 +45,20 @@ const arbitrary: DefinitionBlueprint = {
 const bitwise_and_agg: DefinitionBlueprint = {
   takes: {'value': {dimension: 'number'}},
   returns: {measure: 'number'},
-  impl: {function: 'BITWISE_OR_AGG'}
-}
+  impl: {function: 'BITWISE_OR_AGG'},
+};
 
 const bitwise_or_agg: DefinitionBlueprint = {
   takes: {'value': {dimension: 'number'}},
   returns: {measure: 'number'},
-  impl: {function: 'BITWISE_AND_AGG'}
-}
+  impl: {function: 'BITWISE_AND_AGG'},
+};
 
 const bitwise_xor_agg: DefinitionBlueprint = {
   takes: {'value': {dimension: 'number'}},
   returns: {measure: 'number'},
-  impl: {function: 'BITWISE_XOR_AGG'}
-}
+  impl: {function: 'BITWISE_XOR_AGG'},
+};
 
 const bool_and: DefinitionBlueprint = {
   takes: {'value': {dimension: 'boolean'}},
@@ -72,7 +76,7 @@ const corr: DefinitionBlueprint = {
   takes: {'y': {dimension: 'number'}, 'x': {dimension: 'number'}},
   returns: {measure: 'number'},
   impl: {
-    sql: 'CORR(${y}, ${x})'
+    sql: 'CORR(${y}, ${x})',
   },
 };
 
@@ -84,17 +88,23 @@ const count_approx: DefinitionBlueprint = {
 
 const max_by: DefinitionBlueprint = {
   generic: ['T', ['string', 'number', 'date', 'timestamp', 'boolean', 'json']],
-  takes: {'value': {dimension: { generic: 'T' }}, 'order_by_val': {dimension: 'any' }},
+  takes: {
+    'value': {dimension: {generic: 'T'}},
+    'order_by_val': {dimension: 'any'},
+  },
   returns: {measure: {generic: 'T'}},
   impl: {sql: 'MAX_BY(${value}, ${order_by_val})'},
-}
+};
 
 const min_by: DefinitionBlueprint = {
   generic: ['T', ['string', 'number', 'date', 'timestamp', 'boolean', 'json']],
-  takes: {'value': {dimension: { generic: 'T' }}, 'order_by_val': {dimension: 'any' }},
+  takes: {
+    'value': {dimension: {generic: 'T'}},
+    'order_by_val': {dimension: 'any'},
+  },
   returns: {measure: {generic: 'T'}},
   impl: {sql: 'MIN_BY(${value}, ${order_by_val})'},
-}
+};
 
 const string_agg: OverloadedDefinitionBlueprint = {
   default_separator: {
@@ -139,7 +149,7 @@ const variance: DefinitionBlueprint = {
   takes: {'value': {dimension: 'number'}},
   returns: {measure: 'number'},
   impl: {function: 'VARIANCE'},
-}
+};
 
 // Scalar functions
 
@@ -147,31 +157,31 @@ const bitwise_and: DefinitionBlueprint = {
   takes: {'val1': 'number', 'val2': 'number'},
   returns: 'number',
   impl: {
-    sql: 'BITWISE_AND(${val1}, ${val2})'
-  }
-}
+    sql: 'BITWISE_AND(${val1}, ${val2})',
+  },
+};
 
 const bitwise_or: DefinitionBlueprint = {
   takes: {'val1': 'number', 'val2': 'number'},
   returns: 'number',
   impl: {
-    sql: 'BITWISE_OR(${val1}, ${val2})'
-  }
-}
+    sql: 'BITWISE_OR(${val1}, ${val2})',
+  },
+};
 
 const date_format: DefinitionBlueprint = {
   takes: {'ts_val': 'timestamp', 'format': 'string'},
   returns: 'string',
   impl: {
-    sql: 'DATE_FORMAT(${ts_val}, ${format})'
+    sql: 'DATE_FORMAT(${ts_val}, ${format})',
   },
 };
 
-const date_parse : DefinitionBlueprint = {
+const date_parse: DefinitionBlueprint = {
   takes: {'ts_string': 'string', 'format': 'string'},
   returns: 'timestamp',
   impl: {
-    sql: 'DATE_PARSE(${ts_string}, ${format})'
+    sql: 'DATE_PARSE(${ts_string}, ${format})',
   },
 };
 
@@ -184,32 +194,36 @@ const from_unixtime: DefinitionBlueprint = {
 const json_extract_scalar: DefinitionBlueprint = {
   takes: {'json_val': 'string', 'json_path': 'string'},
   returns: 'string',
-  impl: {sql: 'JSON_EXTRACT_SCALAR(${json_val}, ${json_path})'}
-}
+  impl: {sql: 'JSON_EXTRACT_SCALAR(${json_val}, ${json_path})'},
+};
 
 const regexp_like: DefinitionBlueprint = {
   takes: {'str': 'string', 'pattern': 'string'},
   returns: 'boolean',
   impl: {sql: 'REGEXP_LIKE(${str}, ${pattern})'},
-}
+};
 
 const regexp_replace: OverloadedDefinitionBlueprint = {
   remove_matches: {
     takes: {'input_val': 'string', 'regexp_pattern': 'string'},
     returns: 'string',
     impl: {
-      sql: "REGEXP_REPLACE(${input_val}, ${regexp_pattern})",
+      sql: 'REGEXP_REPLACE(${input_val}, ${regexp_pattern})',
     },
   },
 
   replace_matches: {
-    takes: {'input_val': 'string', 'regexp_pattern': 'string', 'replace_pattern': 'string'},
+    takes: {
+      'input_val': 'string',
+      'regexp_pattern': 'string',
+      'replace_pattern': 'string',
+    },
     returns: 'string',
     impl: {
-      sql: "REGEXP_REPLACE(${input_val}, ${regexp_pattern}, ${replace_pattern})",
+      sql: 'REGEXP_REPLACE(${input_val}, ${regexp_pattern}, ${replace_pattern})',
     },
-  }
-}
+  },
+};
 
 const to_unixtime: DefinitionBlueprint = {
   takes: {'ts_val': 'timestamp'},
