@@ -18,7 +18,7 @@ const approx_percentile: OverloadedDefinitionBlueprint = {
     takes: {'value': 'number', 'percentage': 'number'},
     returns: {measure: 'number'},
     impl: {
-      sql: 'APPROX_PERCENTILE(${value}, ${percentage})',
+      function: 'APPROX_PERCENTILE',
     },
   },
 
@@ -29,9 +29,7 @@ const approx_percentile: OverloadedDefinitionBlueprint = {
       'error_threshold': 'number',
     },
     returns: {measure: 'number'},
-    impl: {
-      sql: 'APPROX_PERCENTILE(${value}, ${percentage}, ${error_threshold})',
-    },
+    impl: {function: 'APPROX_PERCENTILE'},
   },
 };
 
@@ -93,7 +91,7 @@ const max_by: DefinitionBlueprint = {
     'order_by_val': {dimension: 'any'},
   },
   returns: {measure: {generic: 'T'}},
-  impl: {sql: 'MAX_BY(${value}, ${order_by_val})'},
+  impl: {function: 'MAX_BY'},
 };
 
 const min_by: DefinitionBlueprint = {
@@ -103,7 +101,7 @@ const min_by: DefinitionBlueprint = {
     'order_by_val': {dimension: 'any'},
   },
   returns: {measure: {generic: 'T'}},
-  impl: {sql: 'MIN_BY(${value}, ${order_by_val})'},
+  impl: {function: 'MIN_BY'},
 };
 
 const string_agg: OverloadedDefinitionBlueprint = {
@@ -157,7 +155,7 @@ const bitwise_and: DefinitionBlueprint = {
   takes: {'val1': 'number', 'val2': 'number'},
   returns: 'number',
   impl: {
-    sql: 'BITWISE_AND(${val1}, ${val2})',
+    function: 'BITWISE_AND',
   },
 };
 
@@ -165,7 +163,7 @@ const bitwise_or: DefinitionBlueprint = {
   takes: {'val1': 'number', 'val2': 'number'},
   returns: 'number',
   impl: {
-    sql: 'BITWISE_OR(${val1}, ${val2})',
+    function: 'BITWISE_OR',
   },
 };
 
@@ -173,7 +171,7 @@ const date_format: DefinitionBlueprint = {
   takes: {'ts_val': 'timestamp', 'format': 'string'},
   returns: 'string',
   impl: {
-    sql: 'DATE_FORMAT(${ts_val}, ${format})',
+    function: 'DATE_FORMAT',
   },
 };
 
@@ -192,35 +190,38 @@ const from_unixtime: DefinitionBlueprint = {
 };
 
 const json_extract_scalar: DefinitionBlueprint = {
-  takes: {'json_val': 'string', 'json_path': 'string'},
+  takes: {'json_val': ['string', 'json'], 'json_path': 'string'},
   returns: 'string',
-  impl: {sql: 'JSON_EXTRACT_SCALAR(${json_val}, ${json_path})'},
+  impl: {function: 'JSON_EXTRACT_SCALAR'},
 };
 
 const regexp_like: DefinitionBlueprint = {
-  takes: {'str': 'string', 'pattern': 'string'},
+  takes: {'str': 'string', 'pattern': ['string', 'regular expression']},
   returns: 'boolean',
-  impl: {sql: 'REGEXP_LIKE(${str}, ${pattern})'},
+  impl: {function: 'REGEXP_LIKE'},
 };
 
 const regexp_replace: OverloadedDefinitionBlueprint = {
   remove_matches: {
-    takes: {'input_val': 'string', 'regexp_pattern': 'string'},
+    takes: {
+      'input_val': 'string',
+      'regexp_pattern': ['string', 'regular expression'],
+    },
     returns: 'string',
     impl: {
-      sql: 'REGEXP_REPLACE(${input_val}, ${regexp_pattern})',
+      function: 'REGEXP_REPLACE',
     },
   },
 
   replace_matches: {
     takes: {
       'input_val': 'string',
-      'regexp_pattern': 'string',
-      'replace_pattern': 'string',
+      'regexp_pattern': ['string', 'regular expression'],
+      'replacement': 'string',
     },
     returns: 'string',
     impl: {
-      sql: 'REGEXP_REPLACE(${input_val}, ${regexp_pattern}, ${replace_pattern})',
+      function: 'REGEXP_REPLACE',
     },
   },
 };
