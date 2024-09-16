@@ -93,10 +93,8 @@ describe.each(runtimes.runtimeList)(
       """) -> {
       aggregate:
         default_pctl is approx_percentile(n, 0.5)
-        pctl_with_error is approx_percentile(n, .99, 0.1)
       }`).malloyResultMatches(runtime, {
         default_pctl: 50,
-        pctl_with_error: 100,
       });
     });
 

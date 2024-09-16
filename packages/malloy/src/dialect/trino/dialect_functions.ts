@@ -13,23 +13,15 @@ import {
 
 // Aggregate functions:
 
-const approx_percentile: OverloadedDefinitionBlueprint = {
-  default: {
-    takes: {'value': 'number', 'percentage': 'number'},
-    returns: {measure: 'number'},
-    impl: {
-      function: 'APPROX_PERCENTILE',
-    },
-  },
-
-  with_error_threshold: {
-    takes: {
-      'value': 'number',
-      'percentage': 'number',
-      'error_threshold': 'number',
-    },
-    returns: {measure: 'number'},
-    impl: {function: 'APPROX_PERCENTILE'},
+// TODO: Approx percentile can be called with a third argument; we probably
+// want to implement that at some point
+// In Presto, this is an "error" parameter between 0 and 1
+// In Trino, this is a "weight" parameter between 1 and 99
+const approx_percentile: DefinitionBlueprint = {
+  takes: {'value': 'number', 'percentage': 'number'},
+  returns: {measure: 'number'},
+  impl: {
+    function: 'APPROX_PERCENTILE',
   },
 };
 
