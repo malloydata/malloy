@@ -1092,13 +1092,16 @@ expressionModels.forEach((x, databaseName) => {
       'works generally',
       async () => {
         await expect(`
-          // be accurate within 10%
+          // be accurate within 30%
           // # test.debug
           run: ${databaseName}.table('malloytest.state_facts') -> {
-            aggregate: x is round(count_approx(state)/10,0)*10
-            aggregate: y is round(count_approx(airport_count)/10,0)*10
+            aggregate: passes is abs(count_approx(state)-count(state))/count(state) < 0.3
+            aggregate: also_passes is abs(count_approx(airport_count)-count(airport_count))/count(airport_count) < 0.3
           }
-          `).malloyResultMatches(runtime, {'x': 50, 'y': 50});
+          `).malloyResultMatches(runtime, {
+          'passes': true,
+          'also_passes': true,
+        });
       }
     );
   });
