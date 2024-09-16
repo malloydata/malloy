@@ -48,6 +48,7 @@ import {DataRequestResponse, TranslateResponse} from '../translate-response';
 import {StaticSpace} from '../ast/field-space/static-space';
 import {ExprValue} from '../ast/types/expr-value';
 import {GlobalNameSpace} from '../ast/types/global-name-space';
+import {EventStream} from '../events';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types
 export function pretty(thing: any): string {
@@ -306,10 +307,11 @@ export class TestTranslator extends MalloyTranslator {
   constructor(
     readonly testSrc: string,
     importBaseURL: string | null = null,
+    eventStream: EventStream | null = null,
     rootRule = 'malloyDocument',
     internalModel?: ModelDef
   ) {
-    super(testURI, importBaseURL);
+    super(testURI, importBaseURL, null, eventStream);
     this.grammarRule = rootRule;
     this.importZone.define(testURI, testSrc);
     if (internalModel !== undefined) {
@@ -428,7 +430,7 @@ export class TestTranslator extends MalloyTranslator {
 export class BetaExpression extends TestTranslator {
   private compiled?: ExprValue;
   constructor(src: string) {
-    super(src, null, 'justExpr');
+    super(src, null, null, 'justExpr');
   }
 
   private testFS() {
@@ -558,6 +560,7 @@ export function makeModelFunc(options: {
       translator: new TestTranslator(
         (options.prefix ?? '') +
           (options.wrap ? options.wrap(ms.code) : ms.code),
+        null,
         null,
         undefined,
         options?.model

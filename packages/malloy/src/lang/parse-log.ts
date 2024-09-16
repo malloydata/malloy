@@ -22,6 +22,7 @@
  */
 
 import {DocumentLocation} from '../model/malloy_types';
+import {EventStream} from './events';
 
 export type LogSeverity = 'error' | 'warn' | 'debug';
 
@@ -48,6 +49,8 @@ export interface MessageLogger {
 export class MessageLog implements MessageLogger {
   private rawLog: LogMessage[] = [];
 
+  constructor(private readonly eventStream: EventStream | null) {}
+
   getLog(): LogMessage[] {
     return this.rawLog;
   }
@@ -70,6 +73,10 @@ export class MessageLog implements MessageLogger {
       }
     }
     this.rawLog.push(logMsg);
+    this.eventStream?.emit({
+      id: `translation-${logMsg.severity}`,
+      data: {code: logMsg.errorTag}, // TODO change to code
+    });
   }
 
   reset(): void {

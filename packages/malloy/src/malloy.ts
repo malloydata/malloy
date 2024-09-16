@@ -79,6 +79,7 @@ import {DateTime} from 'luxon';
 import {Tag, TagParse, TagParseSpec, Taggable} from './tags';
 import {Dialect, getDialect} from './dialect';
 import {PathInfo} from './lang/parse-tree-walkers/find-table-path-walker';
+import {EventStream} from './lang/events';
 
 export interface Loggable {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -106,20 +107,10 @@ export class Malloy {
   public static get version(): string {
     return '0.0.1';
   }
-
-  private static _log: Loggable;
-
-  public static get log(): Loggable {
-    return Malloy._log || console;
-  }
-
-  public static setLogger(log: Loggable): void {
-    Malloy._log = log;
-  }
-
   private static _parse(
     source: string,
     url?: URL,
+    eventStream?: EventStream,
     options?: ParseOptions
   ): Parse {
     if (url === undefined) {
@@ -134,7 +125,8 @@ export class Malloy {
       importBaseURL.toString(),
       {
         urls: {[url.toString()]: source},
-      }
+      },
+      eventStream
     );
     if (options?.testEnvironment) {
       translator.allDialectsEnabled = true;
@@ -152,10 +144,12 @@ export class Malloy {
   public static parse({
     url,
     urlReader,
+    eventStream,
     options,
   }: {
     url: URL;
     urlReader: URLReader;
+    eventStream?: EventStream;
     options?: ParseOptions;
   }): Promise<Parse>;
   /**
@@ -168,25 +162,29 @@ export class Malloy {
   public static parse({
     source,
     url,
+    eventStream,
     options,
   }: {
     url?: URL;
     source: string;
+    eventStream?: EventStream;
     options?: ParseOptions;
   }): Parse;
   public static parse({
     url,
     urlReader,
     source,
+    eventStream,
     options,
   }: {
     url?: URL;
     source?: string;
     urlReader?: URLReader;
+    eventStream?: EventStream;
     options?: ParseOptions;
   }): Parse | Promise<Parse> {
     if (source !== undefined) {
-      return Malloy._parse(source, url, options);
+      return Malloy._parse(source, url, eventStream, options);
     } else {
       if (urlReader === undefined) {
         throw new Error('Internal Error: urlReader is required.');
@@ -197,7 +195,7 @@ export class Malloy {
         );
       }
       return urlReader.readURL(url).then(source => {
-        return Malloy._parse(source, url, options);
+        return Malloy._parse(source, url, eventStream, options);
       });
     }
   }
@@ -2153,22 +2151,45 @@ export class Runtime {
   isTestRuntime = false;
   private _urlReader: URLReader;
   private _connections: LookupConnection<Connection>;
+  private _eventStream: EventStream | undefined;
 
   constructor(runtime: LookupConnection<Connection> & URLReader);
-  constructor(urls: URLReader, connections: LookupConnection<Connection>);
-  constructor(urls: URLReader, connection: Connection);
-  constructor(connection: Connection);
-  constructor(connections: LookupConnection<Connection>);
   constructor(
-    ...args: (URLReader | LookupConnection<Connection> | Connection)[]
+    urls: URLReader,
+    connections: LookupConnection<Connection>,
+    eventStream?: EventStream
+  );
+  constructor(
+    urls: URLReader,
+    connection: Connection,
+    eventStream?: EventStream
+  );
+  constructor(connection: Connection, eventStream?: EventStream);
+  constructor(
+    connections: LookupConnection<Connection>,
+    eventStream?: EventStream
+  );
+  constructor(
+    ...args: (
+      | URLReader
+      | LookupConnection<Connection>
+      | Connection
+      | EventStream
+      | undefined
+    )[]
   ) {
     let urlReader: URLReader | undefined;
     let connections: LookupConnection<Connection> | undefined;
+    let eventStream: EventStream | undefined;
     for (const arg of args) {
-      if (isURLReader(arg)) {
+      if (arg === undefined) {
+        continue;
+      } else if (isURLReader(arg)) {
         urlReader = arg;
       } else if (isLookupConnection<Connection>(arg)) {
         connections = arg;
+      } else if (isEventStream(arg)) {
+        eventStream = arg;
       } else {
         connections = {
           lookupConnection: () => Promise.resolve(arg),
@@ -2185,6 +2206,7 @@ export class Runtime {
     }
     this._urlReader = urlReader;
     this._connections = connections;
+    this._eventStream = eventStream;
   }
 
   /**
@@ -2199,6 +2221,13 @@ export class Runtime {
    */
   public get connections(): LookupConnection<Connection> {
     return this._connections;
+  }
+
+  /**
+   * @return The `EventStream` for this runtime instance.
+   */
+  public get eventStream(): EventStream | undefined {
+    return this._eventStream;
   }
 
   /**
@@ -3849,6 +3878,7 @@ function isURLReader(
     | LookupConnection<InfoConnection>
     | LookupConnection<Connection>
     | Connection
+    | EventStream
 ): thing is URLReader {
   return 'readURL' in thing;
 }
@@ -3859,8 +3889,20 @@ function isLookupConnection<T extends InfoConnection = InfoConnection>(
     | LookupConnection<InfoConnection>
     | LookupConnection<Connection>
     | Connection
+    | EventStream
 ): thing is LookupConnection<T> {
   return 'lookupConnection' in thing;
+}
+
+function isEventStream(
+  thing:
+    | URLReader
+    | LookupConnection<InfoConnection>
+    | LookupConnection<Connection>
+    | Connection
+    | EventStream
+): thing is EventStream {
+  return 'emit' in thing;
 }
 
 export interface WriteStream {
