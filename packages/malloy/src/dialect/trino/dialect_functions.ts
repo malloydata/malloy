@@ -189,8 +189,10 @@ const from_unixtime: DefinitionBlueprint = {
   impl: {function: 'FROM_UNIXTIME'},
 };
 
+// TODO: support Presto JSON types
+// eventually, this should take 'json_val': ['string', 'json']
 const json_extract_scalar: DefinitionBlueprint = {
-  takes: {'json_val': ['string', 'json'], 'json_path': 'string'},
+  takes: {'json_val': 'string', 'json_path': 'string'},
   returns: 'string',
   impl: {function: 'JSON_EXTRACT_SCALAR'},
 };

@@ -62,9 +62,13 @@ describe('Presto tests', () => {
       select:
         remove_matches is regexp_replace('1a 2b 14m', '\\\\d+[ab] ')
         replace_matches is regexp_replace('1a 2b 14m', '(\\\\d+)([ab]) ', '3c$2 ')
+        remove_matches_r is regexp_replace('1a 2b 14m', r'\\d+[ab] ')
+        replace_matches_r is regexp_replace('1a 2b 14m', r'(\\d+)([ab]) ', '3c$2 ')
       }`).malloyResultMatches(runtime, {
       remove_matches: '14m',
       replace_matches: '3ca 3cb 14m',
+      remove_matches_r: '14m',
+      replace_matches_r: '3ca 3cb 14m',
     });
   });
 
@@ -73,9 +77,13 @@ describe('Presto tests', () => {
       select:
         should_match is regexp_like('1a 2b 14m', '\\\\d+b')
         shouldnt_match is regexp_like('1a 2b 14m', '\\\\d+c')
+        should_match_r is regexp_like('1a 2b 14m', r'\\d+b')
+        shouldnt_match_r is regexp_like('1a 2b 14m', r'\\d+c')
       }`).malloyResultMatches(runtime, {
       should_match: true,
       shouldnt_match: false,
+      should_match_r: true,
+      shouldnt_match_r: false,
     });
   });
 
@@ -168,19 +176,23 @@ describe('Presto tests', () => {
       }`).malloyResultMatches(runtime, {correlation: -0.9911108});
   });
 
+  // TODO: once we support Presto JSON types, we should test that situation
   it('runs the json_extract_scalar function', async () => {
     await expect(`run: presto.sql("""
-                SELECT 1 as n
+                SELECT 1 as n,
+                JSON '{"store": {"book": [ {"title": "Moby Dick", "author": "Herman Melville"} ]}}' as literal_col
                 """) -> {
       select:
         json_arr is json_extract_scalar('[1, 2, 3]', '$[2]')
         json_obj is json_extract_scalar(
             '{"store": {"book": [ {"title": "Moby Dick", "author": "Herman Melville"} ]}}',
             '$.store.book[0].author'
-          )
+          ),
+        -- json_literal is json_extract_scalar(literal_col, '$.store.book[0].author')
       }`).malloyResultMatches(runtime, {
       json_arr: '3',
       json_obj: 'Herman Melville',
+      // json_literal: 'Herman Melville',
     });
   });
 
