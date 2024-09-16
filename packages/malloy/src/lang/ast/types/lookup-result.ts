@@ -31,7 +31,7 @@ export interface LookupFound {
   isOutputField: boolean;
 }
 export interface LookupError {
-  error: string;
+  error: {message: string; code: string};
   found: undefined;
 }
 

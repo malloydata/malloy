@@ -149,6 +149,7 @@ class ParseStep implements TranslationStep {
         const msg = e instanceof Error ? e.message : '';
         that.urlIsFullPath = false;
         that.root.logger.log({
+          code: 'failed-to-compute-absolute-import-url',
           message: `Could not compute full path URL: ${msg}`,
           severity: 'error',
         });
@@ -165,7 +166,12 @@ class ParseStep implements TranslationStep {
           ? `import error: ${srcEnt.message}`
           : `import '${that.sourceURL}' error: ${srcEnt.message}`;
         const at = srcEnt.firstReference || that.defaultLocation();
-        that.root.logger.log({message, at, severity: 'error'});
+        that.root.logger.log({
+          code: 'import-error',
+          message,
+          at,
+          severity: 'error',
+        });
         this.response = that.fatalResponse();
         return this.response;
       }
@@ -179,6 +185,7 @@ class ParseStep implements TranslationStep {
       parse = this.runParser(source, that);
     } catch (parseException) {
       that.root.logger.log({
+        code: 'parse-exception',
         message: `Malloy internal parser exception [${parseException.message}]`,
         severity: 'error',
       });
@@ -309,6 +316,7 @@ class ImportsAndTablesStep implements TranslationStep {
           // may be impossible, because it will append any garbage
           // to the known good rootURL assuming it is relative
           that.root.logger.log({
+            code: 'invalid-import-url',
             message: `Malformed URL '${relativeRef}'"`,
             at: {url: that.sourceURL, range: firstRef},
             severity: 'error',
@@ -393,7 +401,10 @@ class ASTStep implements TranslationStep {
     that.compilerFlags = secondPass.compilerFlags;
 
     if (newAst.elementType === 'unimplemented') {
-      newAst.log('INTERNAL COMPILER ERROR: Untranslated parse node');
+      newAst.log(
+        'untranslated-parse-node',
+        'INTERNAL COMPILER ERROR: Untranslated parse node'
+      );
     }
 
     if (!this.walked) {
@@ -402,7 +413,10 @@ class ASTStep implements TranslationStep {
       // it should probably never be hit
       for (const walkedTo of newAst.walk()) {
         if (walkedTo instanceof ast.Unimplemented) {
-          walkedTo.log('INTERNAL COMPILER ERROR: Untranslated parse node');
+          walkedTo.log(
+            'untranslated-parse-node',
+            'INTERNAL COMPILER ERROR: Untranslated parse node'
+          );
         }
       }
       this.walked = true;
@@ -626,6 +640,7 @@ class TranslateStep implements TranslationStep {
         }
       } else {
         that.root.logger.log({
+          code: 'parsed-non-malloy-document',
           message: `'${that.sourceURL}' did not parse to malloy document`,
           at: that.defaultLocation(),
           severity: 'error',
@@ -1069,6 +1084,7 @@ export class MalloyParserErrorHandler implements ANTLRErrorListener<Token> {
       ? this.translator.rangeFromToken(offendingSymbol)
       : {start: errAt, end: errAt};
     const error: LogMessage = {
+      code: 'syntax-error',
       message: msg,
       at: {url: this.translator.sourceURL, range},
       severity: 'error',

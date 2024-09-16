@@ -32,7 +32,7 @@ export interface LogMessage {
   message: string;
   at?: DocumentLocation;
   severity: LogSeverity;
-  errorTag?: string;
+  code: string;
   replacement?: string;
 }
 
@@ -54,21 +54,8 @@ export class MessageLog implements MessageLogger {
 
   /**
    * Add a message to the log.
-   *
-   * If the messsage ends with '[tag]', the tag is removed and stored in the `errorTag` field.
-   * @param logMsg Message possibly containing an error tag
    */
   log(logMsg: LogMessage): void {
-    const msg = logMsg.message;
-    // github security is worried about msg.match(/^(.+)\[(.+)\]$/ because if someone
-    // could craft code with a long varibale name which would blow up that regular expression
-    if (msg.endsWith(']')) {
-      const tagStart = msg.lastIndexOf('[');
-      if (tagStart > 0) {
-        logMsg.message = msg.slice(0, tagStart);
-        logMsg.errorTag = msg.slice(tagStart + 1, -1);
-      }
-    }
     this.rawLog.push(logMsg);
   }
 

@@ -42,6 +42,7 @@ export function detectAndRemovePartialStages(
   }
   if (hasPartials) {
     logTo.log(
+      'ambiguous-view-type',
       "Can't determine view type (`group_by` / `aggregate` / `nest`, `project`, `index`)"
     );
   }

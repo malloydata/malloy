@@ -58,11 +58,15 @@ export class SQReference extends SourceQueryElement {
         return query;
       } else {
         this.sqLog(
+          `cannot-use-${entry.type}-as-query`,
           `Illegal reference to '${entry.as || entry.name}', query expected`
         );
       }
     } else {
-      this.ref.log(`Reference to undefined object '${this.ref.refString}'`);
+      this.ref.log(
+        'source-or-query-not-found',
+        `Reference to undefined object '${this.ref.refString}'`
+      );
       this.errored = true;
     }
     return;
@@ -78,13 +82,19 @@ export class SQReference extends SourceQueryElement {
     }
     const entry = this.ref.getNamed();
     if (!entry) {
-      this.ref.log(`Reference to undefined object '${this.ref.refString}'`);
+      this.ref.log(
+        'source-not-found',
+        `Reference to undefined object '${this.ref.refString}'`
+      );
       this.errored = true;
       return;
     }
     if (entry.type === 'query') {
       if (this.args !== undefined) {
-        this.ref.log('Arguments cannot be passed to queries');
+        this.ref.log(
+          'illegal-query-argument',
+          'Arguments cannot be passed to queries'
+        );
       }
       const existingQuery = new QueryReference(this.ref);
       this.asSource = new QuerySource(existingQuery);
@@ -92,6 +102,7 @@ export class SQReference extends SourceQueryElement {
       this.asSource = new NamedSource(this.ref, undefined, this.args);
     } else {
       this.sqLog(
+        `cannot-use-${entry.type}-as-source`,
         `Expected '${this.ref.refString}' to be of type query or source, not '${entry.type}'`
       );
       return;

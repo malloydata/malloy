@@ -200,7 +200,7 @@ export abstract class MalloyElement {
   }
 
   private readonly logged = new Set<string>();
-  log(message: string, severity: LogSeverity = 'error'): void {
+  log(code: string, message: string, severity: LogSeverity = 'error'): void {
     if (this.codeLocation) {
       /*
        * If this element has a location, then don't report the same
@@ -211,7 +211,7 @@ export abstract class MalloyElement {
       }
       this.logged.add(message);
     }
-    const msg = {at: this.location, message, severity};
+    const msg = {at: this.location, message, severity, code};
     const logTo = this.logger();
     if (logTo) {
       logTo.log(msg);
@@ -288,8 +288,8 @@ export abstract class MalloyElement {
     return extra;
   }
 
-  protected internalError(msg: string): Error {
-    this.log(`INTERNAL ERROR IN TRANSLATION: ${msg}`);
+  protected internalError(code: string, msg: string): Error {
+    this.log(code, `INTERNAL ERROR IN TRANSLATION: ${msg}`);
     return new Error(msg);
   }
 
@@ -309,6 +309,7 @@ export abstract class MalloyElement {
     }
     if (!silent) {
       this.log(
+        'experiment-not-enabled',
         `Experimental flag '${experimentID}' is not set, feature not available`
       );
     }
@@ -619,7 +620,10 @@ export class Document extends MalloyElement implements NameSpace {
   setEntry(str: string, ent: ModelEntry): void {
     // TODO this error message is going to be in the wrong place everywhere...
     if (this.globalNameSpace.getEntry(str) !== undefined) {
-      this.log(`Cannot redefine '${str}', which is in global namespace`);
+      this.log(
+        'name-conflict-with-global',
+        `Cannot redefine '${str}', which is in global namespace`
+      );
     }
     if (ent.entry.type === 'struct') {
       this.checkExperimentalDialect(this, ent.entry.dialect);
@@ -643,6 +647,7 @@ export class Document extends MalloyElement implements NameSpace {
       !t.experimentalDialectEnabled(dialect)
     ) {
       me.log(
+        'experiment-not-enabled',
         `Requires compiler flag '##! experimental.dialect.${dialect}'`,
         'error'
       );

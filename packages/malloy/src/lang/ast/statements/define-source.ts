@@ -59,7 +59,10 @@ export class DefineSource
 
   execute(doc: Document): void {
     if (doc.modelEntry(this.name)) {
-      this.log(`Cannot redefine '${this.name}'`);
+      this.log(
+        'source-definition-name-conflict',
+        `Cannot redefine '${this.name}'`
+      );
     } else {
       const theSource = this.sourceExpr?.getSource();
       if (theSource === undefined) {
@@ -91,7 +94,10 @@ export class DefineSource
     const out: HasParameter[] = [];
     for (const parameter of this.parameters) {
       if (parameter.name in exists) {
-        parameter.log(`Cannot redefine parameter \`${parameter.name}\``);
+        parameter.log(
+          'parameter-name-conflict',
+          `Cannot redefine parameter \`${parameter.name}\``
+        );
       }
       exists[parameter.name] = true;
       out.push(parameter);
@@ -110,6 +116,7 @@ export class DefineSource
         )
       ) {
         parameter.log(
+          'parameter-shadowing-field',
           `Illegal shadowing of field \`${parameter.name}\` by parameter with the same name`
         );
       }

@@ -40,20 +40,31 @@ export class ParameterSpace implements FieldSpace {
     const name = symbol[0];
     if (name === undefined) {
       return {
-        error: 'Invalid reference',
+        error: {
+          message: 'Invalid reference',
+          code: 'invalid-parameter-reference',
+        },
         found: undefined,
       };
     }
     const entry = this.entry(name.refString);
     if (entry === undefined) {
       return {
-        error: `\`${name}\` is not defined`,
+        error: {
+          message: `\`${name}\` is not defined`,
+          code: 'parameter-not-found',
+        },
         found: undefined,
       };
     }
     if (symbol.length > 1) {
       return {
-        error: `\`${name}\` cannot contain a \`${symbol.slice(1).join('.')}\``,
+        error: {
+          message: `\`${name}\` cannot contain a \`${symbol
+            .slice(1)
+            .join('.')}\``,
+          code: 'invalid-parameter-reference',
+        },
         found: undefined,
       };
     }

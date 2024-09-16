@@ -59,6 +59,9 @@ export class NestFieldDeclaration
         location: this.location,
       };
     }
-    throw this.internalError('Unexpected namespace for nest');
+    throw this.internalError(
+      'unexpected-nest-outside-view',
+      'Unexpected namespace for nest'
+    );
   }
 }

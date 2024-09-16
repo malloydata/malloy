@@ -47,10 +47,14 @@ export class SQRefine extends SourceQueryElement {
     if (this.toRefine.isSource()) {
       if (this.toRefine instanceof SQReference) {
         this.sqLog(
+          'illegal-refinement-of-source',
           `Cannot add view refinements to '${this.toRefine.ref.refString}' because it is a source`
         );
       } else {
-        this.sqLog('Cannot add view refinements to a source');
+        this.sqLog(
+          'illegal-refinement-of-source',
+          'Cannot add view refinements to a source'
+        );
       }
       return;
     }

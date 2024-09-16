@@ -53,6 +53,7 @@ export class ExprCoalesce extends ExpressionDef {
      */
     if (!FT.typeEq(maybeNull, whenNull)) {
       this.log(
+        'type-error/mismatched-coalesce-types',
         `Mismatched types for coalesce (${maybeNull.dataType}, ${whenNull.dataType})`
       );
     }

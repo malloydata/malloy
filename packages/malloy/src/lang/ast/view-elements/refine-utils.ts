@@ -37,20 +37,29 @@ export function refine(
 ): PipeSegment[] {
   // TODO we should probably support this
   if (refineTo.length !== 1) {
-    logTo.log('Named refinements of multi-stage views are not supported');
+    logTo.log(
+      'refinement-with-multistage-view',
+      'Named refinements of multi-stage views are not supported'
+    );
     // TODO better error pipeline?
     return refineTo;
   }
   const to = {...refineTo[0]};
   const from = refineFrom;
   if (isRawSegment(to)) {
-    logTo.log('Cannot refine raw query, must add an explicit query stage');
+    logTo.log(
+      'refinement-of-raw-query',
+      'Cannot refine raw query, must add an explicit query stage'
+    );
   } else {
     // TODO need to disallow partial + index for now to make the types happy
     if (to.type === 'partial' && from.type !== 'index' && from.type !== 'raw') {
       to.type = from.type;
     } else if (from.type !== to.type) {
-      logTo.log(`cannot refine ${to.type} view with ${from.type} view`);
+      logTo.log(
+        'mismatched-view-types-for-refinement',
+        `cannot refine ${to.type} view with ${from.type} view`
+      );
     }
 
     if (from.type !== 'index' && to.type !== 'index' && from.type !== 'raw') {
@@ -62,7 +71,10 @@ export function refine(
             to.by = from.by;
           }
         } else {
-          logTo.log('refinement cannot override existing ordering');
+          logTo.log(
+            'ordering-overridden-in-refinement',
+            'refinement cannot override existing ordering'
+          );
         }
       }
 
@@ -70,7 +82,10 @@ export function refine(
         if (to.limit === undefined) {
           to.limit = from.limit;
         } else {
-          logTo.log('refinement cannot override existing limit');
+          logTo.log(
+            'limit-overridden-in-refinement',
+            'refinement cannot override existing limit'
+          );
         }
       }
     }
@@ -99,6 +114,7 @@ export function refine(
       to.queryFields = [...to.queryFields, ...nonOverlappingFields];
       if (overlappingFields.length > 0) {
         logTo.log(
+          'name-conflict-in-refinement',
           `overlapping fields in refinement: ${overlappingFields.map(
             nameFromDef
           )}`

@@ -53,6 +53,7 @@ export class ExprCast extends ExpressionDef {
             'sql native';
         } else {
           this.log(
+            'invalid-sql-native-type',
             `Cast type \`${this.castType.raw}\` is invalid for ${dialect.name} dialect`
           );
         }

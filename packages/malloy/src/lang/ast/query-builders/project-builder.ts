@@ -61,7 +61,10 @@ export class ProjectBuilder
 
   execute(qp: QueryProperty): void {
     if (qp.elementType === 'having' || qp instanceof GroupBy) {
-      qp.log('Illegal statement in a select query operation');
+      qp.log(
+        'illegal-operation-in-select-segment',
+        'Illegal statement in a select query operation'
+      );
     } else {
       super.execute(qp);
     }
@@ -73,7 +76,10 @@ export class ProjectBuilder
       if (isProjectSegment(fromSeg) || isPartialSegment(fromSeg)) {
         from = fromSeg;
       } else {
-        this.resultFS.log(`Can't refine select with ${fromSeg.type}`);
+        this.resultFS.log(
+          'incompatible-segment-for-select-refinement',
+          `Can't refine select with ${fromSeg.type}`
+        );
         return ErrorFactory.projectSegment;
       }
     }

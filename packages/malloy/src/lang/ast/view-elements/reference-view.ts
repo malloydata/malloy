@@ -72,7 +72,10 @@ export class ReferenceView extends View {
       };
     };
     if (!lookup.found) {
-      this.log(`\`${this.reference.refString}\` is not defined`);
+      this.log(
+        'view-not-found',
+        `\`${this.reference.refString}\` is not defined`
+      );
       return oops();
     }
     if (!(lookup.found instanceof SpaceField)) {
@@ -106,9 +109,12 @@ export class ReferenceView extends View {
     } else if (isTurtleDef(fieldDef)) {
       if (this.reference.list.length > 1) {
         if (forRefinement) {
-          this.log('Cannot use view from join as refinement');
+          this.log(
+            'refinement-with-joined-view',
+            'Cannot use view from join as refinement'
+          );
         } else {
-          this.log('Cannot use view from join');
+          this.log('nest-of-joined-view', 'Cannot use view from join');
         }
         return oops();
       }
@@ -125,10 +131,11 @@ export class ReferenceView extends View {
     } else {
       if (forRefinement) {
         this.reference.log(
+          'refinement-with-source',
           `named refinement \`${this.reference.refString}\` must be a view, found a ${fieldDef.type}`
         );
       } else {
-        this.reference.log('This operation is not supported');
+        this.reference.log('nest-of-source', 'This operation is not supported');
       }
       return oops();
     }
@@ -141,6 +148,7 @@ export class ReferenceView extends View {
     if (error) return;
     if (pipeline.length !== 1) {
       this.reference.log(
+        'refinement-with-multistage-view',
         `named refinement \`${this.reference.refString}\` must have exactly one stage`
       );
       return;

@@ -77,11 +77,11 @@ export class NamedSource extends Source {
     };
   }
 
-  refLog(message: string, severity?: LogSeverity) {
+  refLog(code: string, message: string, severity?: LogSeverity) {
     if (typeof this.ref === 'string') {
-      this.log(message, severity);
+      this.log(code, message, severity);
     } else {
-      this.ref.log(message, severity);
+      this.ref.log(code, message, severity);
     }
   }
 
@@ -90,20 +90,35 @@ export class NamedSource extends Source {
     const entry = modelEnt?.entry;
     if (!entry) {
       const undefMsg = `Undefined source '${this.refName}'`;
-      (this.ref instanceof ModelEntryReference ? this.ref : this).log(undefMsg);
+      (this.ref instanceof ModelEntryReference ? this.ref : this).log(
+        'source-not-found',
+        undefMsg
+      );
       return;
     }
     if (entry.type === 'query') {
-      this.log(`Cannot construct a source from a query '${this.refName}'`);
+      this.log(
+        'invalid-source-from-query',
+        `Cannot construct a source from a query '${this.refName}'`
+      );
       return;
     } else if (entry.type === 'function') {
-      this.log(`Cannot construct a source from a function '${this.refName}'`);
+      this.log(
+        'invalid-source-from-function',
+        `Cannot construct a source from a function '${this.refName}'`
+      );
       return;
     } else if (entry.type === 'connection') {
-      this.log(`Cannot construct a source from a connection '${this.refName}'`);
+      this.log(
+        'invalid-source-from-connection',
+        `Cannot construct a source from a connection '${this.refName}'`
+      );
       return;
     } else if (isSQLBlockStruct(entry) && entry.declaredSQLBlock) {
-      this.log(`Must use 'from_sql()' for sql source '${this.refName}'`);
+      this.log(
+        'invalid-source-from-sql-block',
+        `Must use 'from_sql()' for sql source '${this.refName}'`
+      );
       return;
     } else {
       this.document()?.checkExperimentalDialect(this, entry.dialect);
@@ -137,19 +152,24 @@ export class NamedSource extends Source {
           : undefined);
       if (id === undefined) {
         argument.value.log(
+          'unnamed-source-argument',
           'Parameterized source arguments must be named with `parameter_name is`'
         );
         continue;
       }
       const name = id.outputName;
       if (passedNames.has(name)) {
-        argument.log(`Cannot pass argument for \`${name}\` more than once`);
+        argument.log(
+          'duplicate-source-argument',
+          `Cannot pass argument for \`${name}\` more than once`
+        );
         continue;
       }
       passedNames.add(name);
       const parameter = (parametersIn ?? {})[name];
       if (!parameter) {
         id.log(
+          'source-parameter-not-found',
           `\`${this.refName}\` has no declared parameter named \`${id.refString}\``
         );
       } else {
@@ -173,6 +193,7 @@ export class NamedSource extends Source {
           outArguments[paramName] = {...parametersIn[paramName]};
         } else {
           this.refLog(
+            'missing-source-argument',
             `Argument not provided for required parameter \`${paramName}\``
           );
         }

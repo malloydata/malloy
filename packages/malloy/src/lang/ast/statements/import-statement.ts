@@ -73,7 +73,7 @@ export class ImportStatement
     try {
       this.fullURL = decodeURI(new URL(url, baseURL).toString());
     } catch (e) {
-      this.log('Invalid URI in import statement');
+      this.log('invalid-import-url', 'Invalid URL in import statement');
     }
   }
 
@@ -92,7 +92,10 @@ export class ImportStatement
   execute(doc: Document): void {
     const trans = this.translator();
     if (!trans) {
-      this.log('Cannot import without translation context');
+      this.log(
+        'no-translator-for-import',
+        'Cannot import without translation context'
+      );
     } else if (this.fullURL) {
       const src = trans.root.importZone.getEntry(this.fullURL);
       if (src.status === 'present') {
@@ -102,7 +105,10 @@ export class ImportStatement
           for (const importOne of this.list) {
             const fetchName = importOne.from || importOne;
             if (doc.getEntry(importOne.text)) {
-              importOne.log(`Cannot redefine '${importOne.text}'`);
+              importOne.log(
+                'name-conflict-on-selective-import',
+                `Cannot redefine '${importOne.text}'`
+              );
             } else if (importable[fetchName.text]) {
               const importMe = {...importable[fetchName.text]};
               if (importOne.from) {
@@ -110,7 +116,10 @@ export class ImportStatement
               }
               doc.setEntry(importOne.text, {entry: importMe, exported: false});
             } else {
-              fetchName.log(`Cannot find '${fetchName.text}', not imported`);
+              fetchName.log(
+                'selective-import-not-found',
+                `Cannot find '${fetchName.text}', not imported`
+              );
             }
           }
         } else {
@@ -119,16 +128,19 @@ export class ImportStatement
             trans.getChildExports(this.fullURL)
           )) {
             if (doc.getEntry(importing)) {
-              this.log(`Cannot redefine '${importing}'`);
+              this.log(
+                'name-conflict-on-indiscriminate-import',
+                `Cannot redefine '${importing}'`
+              );
             } else {
               doc.setEntry(importing, {entry, exported: false});
             }
           }
         }
       } else if (src.status === 'error') {
-        this.log(`import failed: '${src.message}'`);
+        this.log('failed-import', `import failed: '${src.message}'`);
       } else {
-        this.log(`import failed with status: '${src.status}'`);
+        this.log('failed-import', `import failed with status: '${src.status}'`);
       }
     }
   }

@@ -53,14 +53,17 @@ export class ExprUngroup extends ExpressionDef {
   getExpression(fs: FieldSpace): ExprValue {
     const exprVal = this.expr.getExpression(fs);
     if (!expressionIsAggregate(exprVal.expressionType)) {
-      this.expr.log(`${this.control}() expression must be an aggregate`);
-      return errorFor('ungrouped scalar');
+      const code = 'ungroup-of-non-aggregate';
+      this.expr.log(code, `${this.control}() expression must be an aggregate`);
+      return errorFor(code);
     }
     if (expressionIsUngroupedAggregate(exprVal.expressionType)) {
+      const code = 'ungroup-of-ungrouped-aggregate';
       this.expr.log(
+        code,
         `${this.control}() expression must not already be ungrouped`
       );
-      return errorFor('doubly-ungrouped aggregate');
+      return errorFor(code);
     }
     const ungroup: UngroupNode = {
       node: this.control,
@@ -91,6 +94,7 @@ export class ExprUngroup extends ExpressionDef {
           if (notFound) {
             const uName = isExclude ? 'exclude()' : 'all()';
             mentionedField.log(
+              'ungroup-field-not-in-output',
               `${uName} '${mentionedField.refString}' is missing from query output`
             );
           }
@@ -104,7 +108,8 @@ export class ExprUngroup extends ExpressionDef {
         evalSpace: 'output',
       };
     }
-    this.log(`${this.control}() incompatible type`);
-    return errorFor('ungrouped type check');
+    const code = 'ungroup-with-non-scalar';
+    this.log(code, `${this.control}() incompatible type`);
+    return errorFor(code);
   }
 }

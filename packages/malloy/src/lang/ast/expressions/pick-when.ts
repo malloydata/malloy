@@ -107,7 +107,8 @@ export class Pick extends ExpressionDef {
       if (returnType && !FT.typeEq(returnType, thenExpr, true)) {
         const whenType = FT.inspect(thenExpr);
         this.log(
-          `pick type '${whenType}', expected '${returnType.dataType}'[pick-values-must-match]`
+          'pick-values-must-match',
+          `pick type '${whenType}', expected '${returnType.dataType}'`
         );
         return errorFor('pick when type');
       }
@@ -121,9 +122,10 @@ export class Pick extends ExpressionDef {
     if (!FT.typeEq(returnType, elseVal, true)) {
       const errSrc = this.elsePick ? 'else' : 'pick default';
       this.log(
+        'pick-values-must-match',
         `${errSrc} type '${FT.inspect(elseVal)}', expected '${
           returnType.dataType
-        }'[pick-values-must-match]`
+        }'`
       );
       return errorFor('pick else type');
     }
@@ -149,19 +151,25 @@ export class Pick extends ExpressionDef {
       },
     };
     if (this.elsePick === undefined) {
-      this.log("pick incomplete, missing 'else'");
+      this.log('pick-missing-else', "pick incomplete, missing 'else'");
       return errorFor('no value for partial pick');
     }
 
     const choiceValues: Choice[] = [];
     for (const c of this.choices) {
       if (c.pick === undefined) {
-        this.log('pick with no value can only be used with apply');
+        this.log(
+          'pick-missing-value',
+          'pick with no value can only be used with apply'
+        );
         return errorFor('no value for partial pick');
       }
       const pickWhen = c.when.requestExpression(fs);
       if (pickWhen === undefined) {
-        this.log('pick with partial when can only be used with apply');
+        this.log(
+          'pick-illegal-partial',
+          'pick with partial when can only be used with apply'
+        );
         return errorFor('partial when');
       }
       choiceValues.push({
@@ -175,6 +183,7 @@ export class Pick extends ExpressionDef {
     for (const aChoice of choiceValues) {
       if (!FT.typeEq(aChoice.when, FT.boolT)) {
         this.log(
+          'pick-non-boolean-when',
           `when expression must be boolean, not '${FT.inspect(aChoice.when)}`
         );
         return errorFor('pick when type');
@@ -182,7 +191,8 @@ export class Pick extends ExpressionDef {
       if (returnType && !FT.typeEq(returnType, aChoice.pick, true)) {
         const whenType = FT.inspect(aChoice.pick);
         this.log(
-          `pick type '${whenType}', expected '${returnType.dataType}'[pick-values-must-match]`
+          'pick-values-must-match',
+          `pick type '${whenType}', expected '${returnType.dataType}'`
         );
         return errorFor('pick value type');
       }
@@ -211,9 +221,8 @@ export class Pick extends ExpressionDef {
     returnType = typeCoalesce(returnType, defVal);
     if (!FT.typeEq(returnType, defVal, true)) {
       this.elsePick.log(
-        `else type '${FT.inspect(defVal)}', expected '${
-          returnType.dataType
-        }'[pick-values-must-match]`
+        'pick-values-must-match',
+        `else type '${FT.inspect(defVal)}', expected '${returnType.dataType}'`
       );
       return errorFor('pick value type mismatch');
     }

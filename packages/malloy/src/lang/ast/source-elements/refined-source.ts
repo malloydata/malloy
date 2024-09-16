@@ -79,14 +79,16 @@ export class RefinedSource extends Source {
       const errTo = el;
       if (el instanceof PrimaryKey) {
         if (primaryKey) {
-          primaryKey.log('Primary key already defined');
-          el.log('Primary key redefined');
+          const code = 'multiple-primary-keys';
+          primaryKey.log(code, 'Primary key already defined');
+          el.log(code, 'Primary key redefined');
         }
         primaryKey = el;
       } else if (el instanceof FieldListEdit) {
         if (fieldListEdit) {
-          fieldListEdit.log('Too many accept/except statements');
-          el.log('Too many accept/except statements');
+          const code = 'multiple-field-list-edits';
+          fieldListEdit.log(code, 'Too many accept/except statements');
+          el.log(code, 'Too many accept/except statements');
         }
         fieldListEdit = el;
       } else if (
@@ -101,7 +103,10 @@ export class RefinedSource extends Source {
       } else if (el instanceof TimezoneStatement) {
         newTimezone = el.tz;
       } else {
-        errTo.log(`Unexpected source property: '${errTo.elementType}'`);
+        errTo.log(
+          'unexpected-source-property',
+          `Unexpected source property: '${errTo.elementType}'`
+        );
       }
     }
 
@@ -124,7 +129,7 @@ export class RefinedSource extends Source {
     if (primaryKey) {
       const keyDef = primaryKey.field.getField(fs);
       if (keyDef.error) {
-        primaryKey.log(keyDef.error);
+        primaryKey.log(keyDef.error.code, keyDef.error.message);
       }
     }
     const retStruct = fs.structDef();
@@ -135,7 +140,10 @@ export class RefinedSource extends Source {
       for (const el of filter.list) {
         const fc = el.filterCondition(fs);
         if (expressionIsCalculation(fc.expressionType)) {
-          el.log("Can't use aggregate computations in top level filters");
+          el.log(
+            'aggregate-in-source-filter',
+            "Can't use aggregate computations in top level filters"
+          );
         } else {
           filterList.push(fc);
           moreFilters = true;

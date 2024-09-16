@@ -56,13 +56,19 @@ export class OrderBy extends MalloyElement {
       const output = fs.outputSpace();
       const entry = this.field.getField(output);
       if (entry.error) {
-        this.field.log(entry.error);
+        this.field.log(entry.error.code, entry.error.message);
       }
       if (!entry.found || !entry.isOutputField) {
-        this.log(`Unknown field ${this.field.refString} in output space`);
+        this.log(
+          'order-by-not-found-in-output',
+          `Unknown field ${this.field.refString} in output space`
+        );
       }
       if (expressionIsAnalytic(entry.found?.typeDesc().expressionType)) {
-        this.log(`Illegal order by of analytic field ${this.field.refString}`);
+        this.log(
+          'order-by-analytic',
+          `Illegal order by of analytic field ${this.field.refString}`
+        );
       }
     }
     const orderElement: ModelOrderBy = {field: this.modelField};

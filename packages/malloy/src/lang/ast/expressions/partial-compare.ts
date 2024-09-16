@@ -49,7 +49,7 @@ export class PartialCompare extends ExpressionDef {
   }
 
   getExpression(_fs: FieldSpace): ExprValue {
-    this.log('Partial comparison does not have a value');
+    this.log('partial-as-value', 'Partial comparison does not have a value');
     return errorFor('no value for partial compare');
   }
 }

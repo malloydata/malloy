@@ -66,27 +66,39 @@ export class IndexBuilder implements QueryBuilder {
       this.filters.push(...qp.getFilterList(this.inputFS));
     } else if (qp instanceof Limit) {
       if (this.limit) {
-        this.limit.log('Ignored, too many limit: statements');
+        this.limit.log(
+          'index-limit-already-specified',
+          'Ignored, too many limit: statements'
+        );
       }
       this.limit = qp;
     } else if (qp instanceof Index) {
       this.resultFS.pushFields(...qp.fields.list);
       if (qp.weightBy) {
         if (this.indexOn) {
-          this.indexOn.log('Ignoring previous BY');
+          this.indexOn.log(
+            'index-by-already-specified',
+            'Ignoring previous BY'
+          );
         }
         this.indexOn = qp.weightBy;
       }
     } else if (qp instanceof SampleProperty) {
       this.sample = qp.sampling();
     } else {
-      qp.log('Not legal in an index query operation');
+      qp.log(
+        'illegal-operation-for-index',
+        'Not legal in an index query operation'
+      );
     }
   }
 
   finalize(from: PipeSegment | undefined): PipeSegment {
     if (from && !isIndexSegment(from) && !isPartialSegment(from)) {
-      this.resultFS.log(`Can't refine index with ${from.type}`);
+      this.resultFS.log(
+        'refinement-of-index-segment',
+        `Can't refine index with ${from.type}`
+      );
       return ErrorFactory.indexSegment;
     }
 

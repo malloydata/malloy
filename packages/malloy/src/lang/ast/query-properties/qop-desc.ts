@@ -57,7 +57,10 @@ export class QOpDesc extends ListOf<QueryProperty> {
       if (el.forceQueryClass) {
         if (guessType) {
           if (guessType !== el.forceQueryClass) {
-            el.log(`Not legal in ${guessType} query`);
+            el.log(
+              `illegal-${guessType}-operation`,
+              `Not legal in ${guessType} query`
+            );
           }
         } else {
           guessType = el.forceQueryClass;
@@ -67,6 +70,7 @@ export class QOpDesc extends ListOf<QueryProperty> {
     }
     if (guessType === undefined && needsExplicitQueryClass) {
       this.log(
+        'ambiguous-view-type',
         "Can't determine view type (`group_by` / `aggregate` / `nest`, `project`, `index`)"
       );
       guessType = QueryClass.Project;

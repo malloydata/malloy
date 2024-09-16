@@ -63,9 +63,9 @@ export abstract class QueryOperationSpace
 
   abstract addRefineFromFields(refineThis: model.PipeSegment): void;
 
-  log(s: string): void {
+  log(code: string, s: string): void {
     if (this.astEl) {
-      this.astEl.log(s);
+      this.astEl.log(code, s);
     }
   }
 
@@ -92,12 +92,16 @@ export abstract class QueryOperationSpace
             current = ent.fieldSpace;
           } else {
             pathPart.log(
+              'invalid-wildcard-source',
               `Field '${part}' does not contain rows and cannot be expanded with '*'`
             );
             return;
           }
         } else {
-          pathPart.log(`No such field as '${part}'`);
+          pathPart.log(
+            'wildcard-source-not-defined',
+            `No such field as '${part}'`
+          );
           return;
         }
       }
@@ -114,6 +118,7 @@ export abstract class QueryOperationSpace
       if (this.entry(name)) {
         const conflict = this.expandedWild[name]?.join('.');
         wild.log(
+          'name-conflict-in-wildcard-expansion',
           `Cannot expand '${name}' in '${
             wild.refString
           }' because a field with that name already exists${
@@ -228,7 +233,10 @@ export abstract class QuerySpace extends QueryOperationSpace {
   ): model.PipeSegment {
     if (this.segmentType === 'index') {
       // come coding error made this "impossible" thing happen
-      this.log('internal error generating index segment from non index query');
+      this.log(
+        'unexpected-index-segment',
+        'internal error generating index segment from non index query'
+      );
       return {type: 'reduce', queryFields: []};
     }
 

@@ -1026,10 +1026,3 @@ describe('sql_functions', () => {
 
 test('non breaking space in source', () =>
   expect('source:\u00a0z\u00a0is\u00a0a').toParse());
-
-test('error tagging', () => {
-  const m = model`run: a -> { select: err is pick 1 when true else 'one' }`;
-  expect(m).translationToFailWith("else type 'string', expected 'number'");
-  const firstErr = m.translator.root.logger.getLog()[0];
-  expect(firstErr?.errorTag).toBe('pick-values-must-match');
-});

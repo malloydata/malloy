@@ -113,26 +113,26 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
           }
         } else {
           if (!(sourceFoot instanceof StructSpaceFieldBase)) {
-            this.log(`Aggregate source cannot be a ${footType.dataType}`);
-            return errorFor(
-              `Aggregate source cannot be a ${footType.dataType}`
-            );
+            const code = 'invalid-aggregate-source';
+            this.log(code, `Aggregate source cannot be a ${footType.dataType}`);
+            return errorFor(code);
           }
         }
       } else {
-        this.log(`Reference to undefined value ${this.source.refString}`);
-        return errorFor(
-          `Reference to undefined value ${this.source.refString}`
-        );
+        const code = 'aggregate-source-not-found';
+        this.log(code, `Reference to undefined value ${this.source.refString}`);
+        return errorFor(code);
       }
     }
     if (exprVal === undefined) {
-      this.log('Missing expression for aggregate function');
-      return errorFor('agggregate without expression');
+      const code = 'missing-aggregate-expression';
+      this.log(code, 'Missing expression for aggregate function');
+      return errorFor(code);
     }
     if (expressionIsAggregate(exprVal.expressionType)) {
-      this.log('Aggregate expression cannot be aggregate');
-      return errorFor('reagggregate');
+      const code = 'aggregate-of-aggregate';
+      this.log(code, 'Aggregate expression cannot be aggregate');
+      return errorFor(code);
     }
     const isAnError = exprVal.dataType === 'error';
     if (!isAnError) {
@@ -147,7 +147,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
           const usagePaths = getJoinUsagePaths(sourceRelationship, joinUsage);
           const joinError = validateUsagePaths(this.elementType, usagePaths);
           const message = sourceSpecified
-            ? joinError
+            ? joinError?.message
             : 'Join path is required for this calculation';
           if (message) {
             const errorWithSuggestion = suggestNewVersion(
@@ -156,7 +156,11 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
               expr,
               this.elementType
             );
-            this.log(errorWithSuggestion, joinError ? 'error' : 'warn');
+            this.log(
+              joinError?.code ?? 'illegal-join-usage',
+              errorWithSuggestion,
+              joinError ? 'error' : 'warn'
+            );
           }
         }
       }
@@ -329,15 +333,24 @@ function validateUsagePaths(
     structRelationship: StructRelationship;
     reverse: boolean;
   }[][]
-) {
+): {message: string; code: string} | undefined {
   for (const path of usagePaths) {
     for (const step of path) {
       if (step.structRelationship.type === 'cross') {
-        return `Cannot compute \`${functionName}\` across \`join_cross\` relationship \`${step.name}\``;
+        return {
+          code: 'aggregate-traverses-join-cross',
+          message: `Cannot compute \`${functionName}\` across \`join_cross\` relationship \`${step.name}\``,
+        };
       } else if (step.structRelationship.type === 'many' && !step.reverse) {
-        return `Cannot compute \`${functionName}\` across \`join_many\` relationship \`${step.name}\``;
+        return {
+          code: 'aggregate-traverses-join-many',
+          message: `Cannot compute \`${functionName}\` across \`join_many\` relationship \`${step.name}\``,
+        };
       } else if (step.structRelationship.type === 'nested' && !step.reverse) {
-        return `Cannot compute \`${functionName}\` across repeated relationship \`${step.name}\``;
+        return {
+          code: 'aggregate-traverses-repeated-relationship',
+          message: `Cannot compute \`${functionName}\` across repeated relationship \`${step.name}\``,
+        };
       }
     }
   }

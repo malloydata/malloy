@@ -68,7 +68,7 @@ export abstract class TableSource extends Source {
         msg = tableDefEntry.message;
       }
     }
-    this.log(msg);
+    this.log('failed-to-fetch-table-schema', msg);
     return ErrorFactory.structDef;
   }
 }
@@ -94,6 +94,7 @@ export class TableMethodSource extends TableSource {
       );
     } else if (connection.entry.type !== 'connection') {
       this.connectionName.log(
+        'invalid-connection-for-table-source',
         `${this.connectionName.refString} is not a connection`
       );
       return undefined;

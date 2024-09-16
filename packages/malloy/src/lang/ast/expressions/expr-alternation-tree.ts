@@ -65,7 +65,7 @@ export class ExprAlternationTree extends ExpressionDef {
   }
 
   getExpression(_fs: FieldSpace): ExprValue {
-    this.log('Alternation tree has no value');
+    this.log('alternation-as-value', 'Alternation tree has no value');
     return errorFor('no value from alternation tree');
   }
 }

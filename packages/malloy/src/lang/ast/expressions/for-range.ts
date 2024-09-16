@@ -57,7 +57,10 @@ export class ForRange extends ExpressionDef {
     const nV = this.duration.getExpression(fs);
     if (nV.dataType !== 'number') {
       if (nV.dataType !== 'error') {
-        this.log(`FOR duration count must be a number, not '${nV.dataType}'`);
+        this.log(
+          'invalid-duration-quantity',
+          `FOR duration count must be a number, not '${nV.dataType}'`
+        );
       }
       return {
         dataType: 'boolean',
@@ -115,7 +118,7 @@ export class ForRange extends ExpressionDef {
   }
 
   getExpression(_fs: FieldSpace): ExprValue {
-    this.log('A Range is not a value');
+    this.log('range-as-value', 'A Range is not a value');
     return errorFor('range has no value');
   }
 }

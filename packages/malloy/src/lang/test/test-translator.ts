@@ -350,6 +350,7 @@ export class TestTranslator extends MalloyTranslator {
       if (whatImports) {
         mysterious = false;
         this.logger.log({
+          code: 'missing-imports',
           at: this.defaultLocation(),
           message: `Missing imports: ${whatImports.join(',')}`,
           severity: 'error',
@@ -359,6 +360,7 @@ export class TestTranslator extends MalloyTranslator {
       if (needThese) {
         mysterious = false;
         this.logger.log({
+          code: 'missing-schema',
           at: this.defaultLocation(),
           message: `Missing schema: ${needThese.join(',')}`,
           severity: 'error',
@@ -366,6 +368,7 @@ export class TestTranslator extends MalloyTranslator {
       }
       if (mysterious) {
         this.logger.log({
+          code: 'mysterious-translation-failure',
           at: this.defaultLocation(),
           message: 'mysterious translation failure',
           severity: 'error',

@@ -67,7 +67,10 @@ export abstract class FieldReference
   makeEntry(fs: DynamicSpace) {
     const refName = this.outputName;
     if (fs.entry(refName)) {
-      this.log(`Output already has a field named '${refName}'`);
+      this.log(
+        'output-name-conflict',
+        `Output already has a field named '${refName}'`
+      );
     } else {
       // In a QuerySpace, this needs to be able to find the thing to which it refers
       const fromFS = fs.isQueryFieldSpace() ? fs.inputSpace() : fs;
@@ -237,7 +240,10 @@ export class WildcardFieldReference extends MalloyElement implements Noteable {
   }
 
   getFieldDef(): FieldDef {
-    throw this.internalError('fielddef request from wildcard reference');
+    throw this.internalError(
+      'wildcard-is-not-a-field',
+      'fielddef request from wildcard reference'
+    );
   }
 
   get refString(): string {

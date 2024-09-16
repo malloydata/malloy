@@ -46,9 +46,9 @@ export abstract class SourceQueryElement extends MalloyElement {
     return false;
   }
 
-  sqLog(message: string) {
+  sqLog(code: string, message: string) {
     if (this.isErrorFree()) {
-      this.log(message);
+      this.log(code, message);
     }
     this.errored = true;
   }
