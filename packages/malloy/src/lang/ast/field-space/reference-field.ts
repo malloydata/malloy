@@ -23,9 +23,9 @@
 
 import {
   Annotation,
-  CastType,
   QueryFieldDef,
   TypeDesc,
+  isAtomicFieldType,
 } from '../../../model/malloy_types';
 
 import {FieldReference} from '../query-items/field-references';
@@ -56,22 +56,28 @@ export class ReferenceField extends SpaceField {
   getQueryFieldDef(fs: FieldSpace): QueryFieldDef | undefined {
     if (!this.queryFieldDef) {
       const check = this.fieldRef.getField(fs);
-      if (check.error) {
+      if (check.error !== undefined) {
         this.fieldRef.log(check.error);
+        return undefined;
+      }
+      const path = this.fieldRef.path;
+      const type = check.found.typeDesc().dataType;
+      if (!isAtomicFieldType(type)) {
+        return undefined;
       }
 
-      // TODO investigate removing 'fieldref' as a type, as it obscures the
-      //      actual type of the field and is redundant with the slightly
-      //      more verbose `{ e: [{ type: 'field', path }] }`
-      const path = this.fieldRef.list.map(f => f.name);
       const queryFieldDef: QueryFieldDef =
-        check.found?.refType === 'parameter'
+        check.found.refType === 'parameter'
           ? {
-              type: check.found.typeDesc().dataType as CastType,
+              type,
               name: path[0],
               e: {node: 'parameter', path},
             }
-          : {type: 'fieldref', path};
+          : {
+              type,
+              name: this.fieldRef.nameString,
+              e: {node: 'field', path},
+            };
       this.queryFieldDef = queryFieldDef;
 
       const refTo = this.referenceTo;
@@ -84,6 +90,9 @@ export class ReferenceField extends SpaceField {
             annotation.inherits = origFd.annotation;
           }
           this.queryFieldDef.annotation = annotation;
+        }
+        if (origFd.location && this.queryFieldDef.type !== 'fieldref') {
+          this.queryFieldDef.location = origFd.location;
         }
       }
     }

@@ -290,7 +290,5 @@ export class ReduceFieldSpace extends QuerySpace {
 }
 
 function isEmptyNest(fd: model.QueryFieldDef) {
-  return (
-    typeof fd !== 'string' && fd.type === 'turtle' && fd.pipeline.length === 0
-  );
+  return fd.type === 'turtle' && fd.pipeline.length === 0;
 }
