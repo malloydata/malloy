@@ -351,8 +351,12 @@ function equality(
       case '~':
       case '!~': {
         if (lhs.dataType !== 'string' || rhs.dataType !== 'string') {
-          const regexCmp = regexEqual(lhs, rhs);
-          if (regexCmp === undefined) {
+          let regexCmp = regexEqual(lhs, rhs);
+          if (regexCmp) {
+            if (op[0] === '!') {
+              regexCmp = {node: 'not', e: {...regexCmp}};
+            }
+          } else {
             throw new TypeMismatch(
               "Incompatible types for match('~') operator"
             );
