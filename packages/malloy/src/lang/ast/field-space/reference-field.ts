@@ -61,7 +61,9 @@ export class ReferenceField extends SpaceField {
         return undefined;
       }
       const path = this.fieldRef.path;
-      const type = check.found.typeDesc().dataType;
+      const typeDesc = check.found.typeDesc();
+      const type = typeDesc.dataType;
+      const expressionType = typeDesc.expressionType;
       if (!isAtomicFieldType(type)) {
         return undefined;
       }
@@ -76,6 +78,7 @@ export class ReferenceField extends SpaceField {
           : {
               type,
               name: this.fieldRef.nameString,
+              expressionType,
               e: {node: 'field', path},
             };
       this.queryFieldDef = queryFieldDef;
