@@ -26,7 +26,7 @@ import {scale, locale} from 'vega';
 import {getFieldKey, getTextWidth} from './util';
 import {RenderResultMetadata} from './types';
 
-export type ChartSettings = {
+export type ChartLayoutSettings = {
   plotWidth: number;
   plotHeight: number;
   xAxis: {
@@ -72,16 +72,20 @@ const CHART_SIZES = {
 // TODO: read from theme CSS
 const ROW_HEIGHT = 28;
 
-export function getChartSettings(
+export function getChartLayoutSettings(
   field: Explore | ExploreField,
   metadata: RenderResultMetadata,
   chartTag: Tag,
-  options?: {
+  options: {
     xField?: Field;
     yField?: Field;
+    chartType: string;
+    getXMinMax?: () => [number, number];
+    getYMinMax?: () => [number, number];
   }
-): ChartSettings {
+): ChartLayoutSettings {
   // TODO: improve logic for field extraction
+  // may not need this anymore if we enforce the options, so each chart passes its specific needs for calculating layout
   const xField = options?.xField ?? field.allFields.at(0)!;
   const yField = options?.yField ?? field.allFields.at(1)!;
   const {tag} = field.tagParse();
@@ -113,33 +117,42 @@ export function getChartSettings(
   let topPadding = presetSize !== 'spark' ? ROW_HEIGHT - 1 : 0; // Subtract 1 to account for top border
   let yTickCount: number | undefined;
   const yKey = getFieldKey(yField);
-  const maxVal = metadata.fields[yKey]!.max!;
+  const [minVal, maxVal] = options?.getYMinMax?.() ?? [
+    metadata.fields[yKey]!.min!,
+    metadata.fields[yKey]!.max!,
+  ];
   const yScale = scale('linear')()
-    .domain([0, maxVal])
+    .domain([minVal, maxVal])
     .nice()
     .range([chartHeight, 0]);
   const yDomain = yScale.domain();
 
   if (hasYAxis) {
     const maxAxisVal = yScale.domain().at(1);
+    const minAxisVal = yScale.domain().at(0);
     const l = locale();
-    const formatted = l.format(',')(maxAxisVal);
+    const formattedMin = l.format(',')(minAxisVal);
+    const formattedMax = l.format(',')(maxAxisVal);
     const yTitleSize = 31; // Estimate for now, can be dynamic later
     const yLabelOffset = 5;
     yAxisWidth =
-      getTextWidth(formatted, 'Inter, sans-serif 12px') +
+      Math.max(
+        getTextWidth(formattedMin, 'Inter, sans-serif 12px'),
+        getTextWidth(formattedMax, 'Inter, sans-serif 12px')
+      ) +
       yLabelOffset +
       yTitleSize;
 
     // Check whether we need to adjust axis values manually
     const noOfTicks = Math.ceil(chartHeight / 40);
     const ticks = yScale.ticks(noOfTicks);
-    if (ticks.at(-1) < maxAxisVal) {
-      const offRatio = (maxAxisVal - ticks.at(-1)) / maxAxisVal;
+    const topTick = ticks.at(-1);
+    if (topTick < maxAxisVal) {
+      const offRatio = (maxAxisVal - topTick) / (maxAxisVal - minAxisVal);
       // adjust chart height
       const newChartHeight = chartHeight / (1 - offRatio);
       // adjust chart padding
-      topPadding = topPadding - (newChartHeight - chartHeight);
+      topPadding = Math.max(0, topPadding - (newChartHeight - chartHeight));
       chartHeight = newChartHeight;
 
       // Hardcode # of ticks, or the resize could make room for more ticks and then screw things up
@@ -153,12 +166,8 @@ export function getChartSettings(
     const maxString = metadata.fields[xKey]!.maxString!;
     const maxStringSize = getTextWidth(maxString, 'Inter, sans-serif 12px');
     const X_AXIS_THRESHOLD = 0.3;
-    const minBottomPadding = 15;
-    xTitleSize = 22 + minBottomPadding;
-    xAxisHeight = Math.min(
-      maxStringSize + xTitleSize,
-      X_AXIS_THRESHOLD * chartHeight
-    );
+    xTitleSize = 26;
+    xAxisHeight = Math.min(maxStringSize, X_AXIS_THRESHOLD * chartHeight);
     labelSize = xAxisHeight;
 
     // TODO: improve this, this logic exists in more detail in generate vega spec. this is a hacky partial solution for now :/
@@ -173,6 +182,8 @@ export function getChartSettings(
       labelSize = xSpacePerLabel;
       labelAlign = undefined;
       labelBaseline = 'top';
+      xTitleSize = 22;
+      xAxisHeight = 14;
     }
   }
 

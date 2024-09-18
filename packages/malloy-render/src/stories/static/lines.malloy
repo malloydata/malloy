@@ -2,22 +2,23 @@ source: products is duckdb.table("data/products.parquet") extend {
   measure: total_sales is retail_price.sum()
   measure: avg_margin is avg(retail_price - cost)
   dimension: product is name
+  dimension: dcId is distribution_center_id::number
 
-  # bar_chart
+  # line_chart
   view: topSellingBrands is {
     group_by: brand
     aggregate: `Sales $` is retail_price.avg()*500
     limit: 10
   }
 
-  # bar_chart
+  # line_chart
   view: topSellingBrandsTest is {
     group_by: brand
     aggregate: `Sales $` is retail_price.avg()*500
     limit: 10
   }
 
-   # bar_chart
+   # line_chart
   view: topSellingBrandsSeries is {
     group_by: brand, department
     aggregate: `Sales $` is retail_price.avg()*500
@@ -55,7 +56,7 @@ source: products is duckdb.table("data/products.parquet") extend {
         limit: 5
         # currency
         aggregate: `Avg Retail` is retail_price.avg()
-        # bar_chart size="spark"
+        # line_chart size="spark"
         nest: `Trailing 12mo Sales` is trailing_12_sales_trend
       }
   }
@@ -99,14 +100,14 @@ source: products is duckdb.table("data/products.parquet") extend {
     group_by: category
     aggregate: avg_retail is retail_price.avg()
     nest:
-      # bar_chart size=lg
+      # line_chart size=lg
       # size.height=220 size.width=300
       nested_column_1 is {
         group_by: brand
         aggregate: avg_retail is retail_price.avg()
         limit: 10
       }
-      # bar_chart size=lg
+      # line_chart size=lg
       # size.height=220 size.width=300
       nested_column_2 is {
         group_by: brand
@@ -126,14 +127,14 @@ source: products is duckdb.table("data/products.parquet") extend {
     group_by: category
     aggregate: avg_retail is retail_price.avg()
     nest:
-      # bar_chart size=lg
+      # line_chart size=lg
       # size.height=220 size.width=300
       nested_column_1 is {
         group_by: brand
         aggregate: avg_retail is retail_price.avg()
         limit: 10
       }
-      # bar_chart size=lg
+      # line_chart size=lg
       # size.height=220 size.width=300
       nested_column_2 is {
         group_by: brand
@@ -148,7 +149,7 @@ source: products is duckdb.table("data/products.parquet") extend {
       another_nested is {
         group_by: department
         aggregate: avg_retail is retail_price.avg()
-        # bar_chart
+        # line_chart
         nest:
           deeply_nested is {
             group_by: `sku`
@@ -179,13 +180,13 @@ source: products is duckdb.table("data/products.parquet") extend {
   view: nested_independent_axis is {
     group_by: category
     aggregate: avg_retail is retail_price.avg()
-    # bar_chart
+    # line_chart
     nest: top_brands is {
       group_by: brand
       aggregate: avg_retail is retail_price.avg()
       limit: 10
     }
-    # bar_chart { y.independent }
+    # line_chart { y.independent }
     nest: top_brands_independent is {
       group_by: brand
       aggregate: avg_retail is retail_price.avg()
@@ -194,76 +195,39 @@ source: products is duckdb.table("data/products.parquet") extend {
     limit: 5
   }
 
+  view: baseLineData is {
+    group_by: dcId
+    aggregate: `Sales $` is retail_price.avg()
+    order_by: dcId
+  }
+
   # dashboard
   view: seriesCharts is {
-    # bar_chart
-    nest: grouped is {
-      group_by: brand, department_long_label is department
-      aggregate: `Sales $` is retail_price.avg()*500
-      limit: 10
+    group_by: ` ` is 'Line Charts'
+    # line_chart
+    nest: basic is baseLineData
+    # line_chart.zero_baseline=false
+    nest: basicNoZero is baseLineData
+    # line_chart
+    nest: dimensionSeries is baseLineData + { group_by: department }
+    # line_chart { interpolate=step }
+    nest: dimensionSeriesStep is baseLineData + { group_by: department }
+    # line_chart { y=['Sales $', 'Cost $']}
+    nest: ySeries is  baseLineData + { aggregate: `Cost $` is retail_price.avg()*0.5 }
+    # line_chart.zero_baseline=false
+    nest: negativeData is {
+      group_by: dcId, department
+    aggregate: `Sales $` is retail_price.avg()-170
+    order_by: dcId
     }
-    # bar_chart.stack
-    nest: stacked is {
-      group_by: brand, department
-      aggregate: `Sales $` is retail_price.avg()*500
-      limit: 10
-    }
-    # bar_chart
-    nest: ySeries is {
-      group_by: brand
-      aggregate:
-        # y
-        `Sales $` is retail_price.avg()*500
-        # y
-        `Cost $ really long label` is retail_price.avg()*300
-      limit: 10
-    }
-    # bar_chart.stack
-    nest: ySeriesStack is {
-      group_by: brand
-      aggregate:
-        # y
-        `Sales $` is retail_price.avg()*500
-        # y
-        `Cost $` is retail_price.avg()*300
-      limit: 10
-    }
-    # bar_chart { x=brand y=['Cost $', 'Sales $'] }
-    nest: ySeriesExplicit is {
-      group_by: brand
-      aggregate:
-        `Sales $` is retail_price.avg()*500
-        `Cost $` is retail_price.avg()*300
-      limit: 10
-    }
+    # line_chart
+    nest: onePoint is baseLineData + { limit: 1 }
+    # line_chart { y=['Sales $', 'Cost $']}
+    nest: onePointMultiY is baseLineData + { aggregate: `Cost $` is retail_price.avg()*0.5 limit: 1 }
+    # line_chart
+    nest: onePointSeries is baseLineData + { group_by: department limit: 2 }
 
-    # bar_chart
-    nest: negative is {
-      group_by: brand
-      aggregate: `Sales $` is retail_price.avg()-500
-      limit: 10
-    }
-
-    nest: negative_data is {
-      group_by: brand
-      aggregate: `Sales $` is retail_price.avg()-500
-      limit: 10
-    }
-
-    # bar_chart
-    nest: grouped_negative is {
-      group_by: brand, department_long_label is department
-      aggregate: `Sales $` is retail_price.avg()-1000
-      limit: 10
-    }
-    # bar_chart.stack
-    nest: stacked_negative is {
-      group_by: brand, department
-      aggregate: `Sales $` is avg(retail_price)-700
-      limit: 10
-    }
-
-    # bar_chart
+    # line_chart
     nest: numericAxis is {
       group_by: id
       aggregate:
@@ -272,7 +236,7 @@ source: products is duckdb.table("data/products.parquet") extend {
       order_by: id
     }
 
-    # bar_chart
+    # line_chart
     nest: dateAxis is {
       group_by:
         `date` is @2001-02-03 + id day
@@ -282,15 +246,13 @@ source: products is duckdb.table("data/products.parquet") extend {
       order_by: `date`
     }
 
-    nest: n is {
-      group_by: brand
-       # bar_chart
-      nest: grouped is {
-        group_by: brand, department
-        aggregate: `Sales $` is retail_price.avg()*500
-        limit: 10
-      }
+    nest: nested is {
+      group_by: category
+       # line_chart
+      nest: dimensionSeries is baseLineData + { group_by: department }
       limit: 10
     }
   }
 }
+
+run: products -> { group_by: distribution_center_id}
