@@ -35,7 +35,12 @@ import {
   StructDef,
 } from '../../../model/malloy_types';
 import {Tag} from '../../../tags';
-import {LogSeverity, MessageLogger} from '../../parse-log';
+import {
+  MessageCode,
+  MessageDataType,
+  MessageLogger,
+  makeMessage,
+} from '../../parse-log';
 import {MalloyTranslation} from '../../parse-malloy';
 import {ModelDataRequest} from '../../translate-response';
 import {DialectNameSpace} from './dialect-name-space';
@@ -200,26 +205,32 @@ export abstract class MalloyElement {
   }
 
   private readonly logged = new Set<string>();
-  log(message: string, severity: LogSeverity = 'error'): void {
+  log<T extends MessageCode>(
+    code: T,
+    data: MessageDataType<T>,
+    extras?: {
+      replacement?: string;
+    }
+  ): MessageCode {
+    const log = makeMessage(code, data, extras);
     if (this.codeLocation) {
       /*
        * If this element has a location, then don't report the same
        * error message at the same location more than once
        */
-      if (this.logged.has(message)) {
-        return;
+      if (this.logged.has(log.message)) {
+        return code;
       }
-      this.logged.add(message);
+      this.logged.add(log.message);
     }
-    const msg = {at: this.location, message, severity};
     const logTo = this.logger();
     if (logTo) {
-      logTo.log(msg);
-      return;
+      logTo.log(log);
+      return code;
     }
     throw new Error(
       `Translation error (without error reporter):\n${JSON.stringify(
-        msg,
+        log,
         null,
         2
       )}`
@@ -288,9 +299,9 @@ export abstract class MalloyElement {
     return extra;
   }
 
-  protected internalError(msg: string): Error {
-    this.log(`INTERNAL ERROR IN TRANSLATION: ${msg}`);
-    return new Error(msg);
+  protected internalError(message: string): Error {
+    this.log('internal-translator-error', {message});
+    return new Error(message);
   }
 
   needs(doc: Document): ModelDataRequest | undefined {
@@ -300,17 +311,15 @@ export abstract class MalloyElement {
     }
   }
 
-  inExperiment(experimentID: string, silent = false) {
+  inExperiment(experimentId: string, silent = false) {
     const experimental = this.translator()?.compilerFlags.tag('experimental');
     const enabled =
-      experimental && (experimental.bare() || experimental.has(experimentID));
+      experimental && (experimental.bare() || experimental.has(experimentId));
     if (enabled) {
       return true;
     }
     if (!silent) {
-      this.log(
-        `Experimental flag '${experimentID}' is not set, feature not available`
-      );
+      this.log('experiment-not-enabled', {experimentId});
     }
     return false;
   }
@@ -616,16 +625,16 @@ export class Document extends MalloyElement implements NameSpace {
     return this.globalNameSpace.getEntry(str) ?? this.documentModel[str];
   }
 
-  setEntry(str: string, ent: ModelEntry): void {
+  setEntry(name: string, ent: ModelEntry): void {
     // TODO this error message is going to be in the wrong place everywhere...
-    if (this.globalNameSpace.getEntry(str) !== undefined) {
-      this.log(`Cannot redefine '${str}', which is in global namespace`);
+    if (this.globalNameSpace.getEntry(name) !== undefined) {
+      this.log('global-namespace-redefine', {name});
     }
     if (ent.entry.type === 'struct') {
       this.checkExperimentalDialect(this, ent.entry.dialect);
     }
 
-    this.documentModel[str] = ent;
+    this.documentModel[name] = ent;
   }
 
   /**
@@ -642,10 +651,7 @@ export class Document extends MalloyElement implements NameSpace {
       getDialect(dialect).experimental &&
       !t.experimentalDialectEnabled(dialect)
     ) {
-      me.log(
-        `Requires compiler flag '##! experimental.dialect.${dialect}'`,
-        'error'
-      );
+      me.log('experimental-dialect-not-enabled', {dialect});
     }
   }
 

@@ -45,10 +45,100 @@ export interface MessageLogger {
   empty(): boolean;
 }
 
-export class MessageLog implements MessageLogger {
-  private rawLog: LogMessage[] = [];
+type MessageDataTypes = {
+  'pick-then-does-not-match': {thenType: string; returnType: string};
+  'pick-else-does-not-match': {elseType: string; returnType: string};
+  'pick-default-does-not-match': {defaultType: string; returnType: string};
+  'parser-error': {message: string};
+  'internal-translator-error': {message: string};
+  'experiment-not-enabled': {experimentId: string};
+  'global-namespace-redefine': {name: string};
+  'experimental-dialect-not-enabled': {dialect: string};
+  'pick-missing-else': {};
+  'pick-missing-value': {};
+  'pick-illegal-partial': {};
+  'pick-then-must-be-boolean': {thenType: string};
+};
 
-  getLog(): LogMessage[] {
+export type MessageCode = keyof MessageDataTypes;
+
+export type MessageDataType<T extends MessageCode> = MessageDataTypes[T];
+
+type ErrorCodeMessageMap = {
+  [key in keyof MessageDataTypes]: (data: MessageDataType<key>) => MessageInfo;
+};
+
+type MessageInfo =
+  | string
+  | {warn: string; tag?: string}
+  | {error: string; tag?: string};
+
+export const messages2: ErrorCodeMessageMap = {
+  'pick-then-does-not-match': e => ({
+    error: `then type ${e.thenType} does not match return type ${e.returnType}`,
+    tag: 'pick-values-must-match',
+  }),
+  'pick-else-does-not-match': e =>
+    `else type ${e.elseType} does not match return type ${e.returnType}`,
+  'pick-default-does-not-match': e =>
+    `default type ${e.defaultType} does not match return type ${e.returnType}`,
+  'parser-error': e => `Parse error: ${e.message}`,
+  'internal-translator-error': e =>
+    `INTERNAL ERROR IN TRANSLATION: ${e.message}`,
+  'experiment-not-enabled': e =>
+    `Experimental flag '${e.experimentId}' is not set, feature not available`,
+  'global-namespace-redefine': e =>
+    `Cannot redefine '${e.name}', which is in global namespace`,
+  'experimental-dialect-not-enabled': e =>
+    `Requires compiler flag '##! experimental.dialect.${e.dialect}'`,
+  'pick-missing-else': () => "pick incomplete, missing 'else'",
+  'pick-missing-value': () => 'pick with no value can only be used with apply',
+  'pick-illegal-partial': () =>
+    'pick with partial when can only be used with apply',
+  'pick-then-must-be-boolean': e =>
+    `when expression must be boolean, not ${e.thenType}`,
+};
+
+export interface ALogMessage<T extends MessageCode> {
+  code: T;
+  message: string;
+  at?: DocumentLocation;
+  data: MessageDataType<T>;
+  severity: LogSeverity;
+  errorTag?: string;
+  replacement?: string;
+}
+
+export type AnyLogMessage = ALogMessage<MessageCode>;
+
+export function makeMessage<T extends MessageCode>(
+  code: T,
+  data: MessageDataType<T>,
+  extras?: {
+    replacement?: string;
+  }
+): ALogMessage<T> {
+  const info = messages2[code](data);
+  const message =
+    typeof info === 'string' ? info : 'warn' in info ? info.warn : info.error;
+  const severity =
+    typeof info === 'string' ? 'error' : 'warn' in info ? 'warn' : 'error';
+  const errorTag = typeof info === 'string' ? undefined : info.tag;
+  const replacement = extras?.replacement;
+  return {
+    code,
+    data,
+    message,
+    severity,
+    errorTag,
+    replacement,
+  };
+}
+
+export class MessageLog implements MessageLogger {
+  private rawLog: AnyLogMessage[] = [];
+
+  getLog(): AnyLogMessage[] {
     return this.rawLog;
   }
 
@@ -58,7 +148,7 @@ export class MessageLog implements MessageLogger {
    * If the messsage ends with '[tag]', the tag is removed and stored in the `errorTag` field.
    * @param logMsg Message possibly containing an error tag
    */
-  log(logMsg: LogMessage): void {
+  log(logMsg: AnyLogMessage): void {
     const msg = logMsg.message;
     // github security is worried about msg.match(/^(.+)\[(.+)\]$/ because if someone
     // could craft code with a long varibale name which would blow up that regular expression
