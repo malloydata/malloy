@@ -84,6 +84,7 @@ import {
   PickExpr,
   SpreadExpr,
   FilteredExpr,
+  isAtomicField,
 } from './malloy_types';
 
 import {Connection} from '../connection/types';
@@ -2547,9 +2548,12 @@ class QueryQuery extends QueryField {
       if (fi.fieldUsage.type === 'result') {
         const fieldDef = fi.f.fieldDef as FieldAtomicDef;
         let filterList;
-        const sourceField =
+        let sourceField =
           fi.f.parent.getFullOutputName() +
           (fieldDef.name || fieldDef.as || 'undefined');
+        if (isAtomicField(fieldDef) && fieldDef.e?.node === 'field') {
+          sourceField = fieldDef.e.path.join('.');
+        }
         const sourceExpression: string | undefined = fieldDef.code;
         const sourceClasses = [sourceField];
         if (isCalculatedField(fi.f)) {
