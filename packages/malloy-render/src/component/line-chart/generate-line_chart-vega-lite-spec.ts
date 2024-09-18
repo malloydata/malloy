@@ -71,7 +71,7 @@ export function generateLineChartVegaLiteSpec(
   const sharedYDomain = yScale.domain();
 
   const lineMark: VegaSpec = {
-    'mark': {'type': 'line'},
+    'mark': {'type': 'line', 'interpolate': settings.interpolate},
     'encoding': {
       'x': {
         'field': xFieldPath,

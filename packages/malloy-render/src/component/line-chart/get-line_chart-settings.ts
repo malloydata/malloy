@@ -7,6 +7,7 @@ export type LineChartSettings = {
   yChannel: Channel;
   seriesChannel: Channel;
   zeroBaseline: boolean;
+  interpolate?: string;
 };
 
 export function getLineChartSettings(
@@ -24,6 +25,8 @@ export function getLineChartSettings(
   const zeroBaseline = chart.has('zero_baseline')
     ? chart.text('zero_baseline') !== 'false'
     : true;
+
+  const interpolate = chart.text('interpolate');
 
   const xChannel: Channel = {
     fields: [],
@@ -125,5 +128,6 @@ export function getLineChartSettings(
     yChannel,
     seriesChannel,
     zeroBaseline,
+    interpolate,
   };
 }
