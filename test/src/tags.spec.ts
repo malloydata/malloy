@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {TagDict, Tag} from '@malloydata/malloy';
+import {TagDict, Tag, Explore} from '@malloydata/malloy';
 import {runtimeFor} from './runtimes';
 
 declare global {
@@ -521,5 +521,30 @@ describe('tags in results', () => {
     expect(parsed.tag.numeric('plot', 'x')).toEqual(2);
     expect(plotTag!.numeric('x')).toEqual(2);
     expect(x).toEqual(2);
+  });
+  test('nested fields of same field do not share tags', async () => {
+    const loaded = runtime.loadQuery(`
+      source: one is duckdb.sql("SELECT 1 as one")
+      run: one -> {
+        nest: a is {
+          # a
+          group_by: one
+        }
+        nest: b is {
+          # b
+          group_by: one
+        }
+      }
+    `);
+    const result = await loaded.run();
+    const shape = result.resultExplore;
+    const a = shape.getFieldByName('a');
+    expect(a.isExploreField()).toBe(true);
+    if (a.isExploreField()) {
+      const one = a.getFieldByName('one');
+      expect(one.tagParse().tag).tagsAre({
+        a: {},
+      });
+    }
   });
 });
