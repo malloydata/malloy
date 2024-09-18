@@ -184,7 +184,10 @@ export abstract class QuerySpace extends QueryOperationSpace {
       if (field instanceof SpaceField) {
         const wildPath = this.expandedWild[name];
         if (wildPath) {
-          fields.push({type: 'fieldref', path: wildPath});
+          const type = field.typeDesc().dataType;
+          if (model.isAtomicFieldType(type)) {
+            fields.push({type, name, e: {node: 'field', path: wildPath}});
+          }
           continue;
         }
         const fieldQueryDef = field.getQueryFieldDef(this.exprSpace);

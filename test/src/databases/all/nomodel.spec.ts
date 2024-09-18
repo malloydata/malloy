@@ -1305,4 +1305,25 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
       `).malloyResultMatches(runtime, {'c o u n t': 24});
     });
   });
+
+  it('references to fields with the same name in a query are okay', async () => {
+    const query = `
+      query: q is ${databaseName}.sql("select 1 as one, 2 as two, 3 as three") -> {
+        extend: {
+          dimension: foo is three + 1
+        }
+        select:
+            one is one
+            two is two + 1
+            three is foo
+      }
+      query: q2 is q -> { select: * }
+      run: q2
+    `;
+    await expect(query).malloyResultMatches(runtime, {
+      one: 1,
+      two: 3,
+      three: 4,
+    });
+  });
 });

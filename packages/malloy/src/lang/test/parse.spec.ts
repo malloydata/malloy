@@ -527,6 +527,21 @@ describe('pipeline comprehension', () => {
     const s2 = m.getQuery('s2');
     expect(s2?.pipeline.length).toBe(2);
   });
+
+  test('field references that refer to their own name are okay, even in queries based on queries', () => {
+    expect(`
+      query: q is a -> {
+        extend: {
+          dimension: foo is af + 1
+        }
+        select:
+          af is foo
+          ai is ai + 1
+          astr is astr
+      }
+      query: q2 is q -> { select: * }
+    `).toTranslate();
+  });
 });
 
 describe('raw function call with type specified', () => {

@@ -28,6 +28,7 @@ import {
   QueryFieldDef,
   QuerySegment,
   expressionIsCalculation,
+  isAtomicField,
   isAtomicFieldType,
   isQuerySegment,
 } from '../../model';
@@ -44,11 +45,14 @@ function getFirstSegmentFields(q: Query | undefined): QueryFieldDef[] {
   return qSeg?.queryFields ?? [];
 }
 
-function getFirstSegmentFieldNames(q: Query | undefined): string[] {
+function getFirstSegmentFieldReferences(q: Query | undefined): string[] {
   const qf = getFirstSegmentFields(q);
   return qf.map(f =>
-    f.type === 'fieldref' && f.path.length === 1
-      ? f.path[0]
+    f.type !== 'fieldref' &&
+    isAtomicField(f) &&
+    f.e?.node === 'field' &&
+    f.e?.path.length === 1
+      ? f.e.path[0]
       : `expected simple ref, got ${JSON.stringify(f)}`
   );
 }
@@ -819,7 +823,9 @@ describe('query:', () => {
     test('expands star correctly', () => {
       const selstar = model`run: ab->{select: *}`;
       expect(selstar).toTranslate();
-      const fields = getFirstSegmentFieldNames(selstar.translator.getQuery(0));
+      const fields = getFirstSegmentFieldReferences(
+        selstar.translator.getQuery(0)
+      );
       expect(fields).toEqual(afields);
     });
     test('expands join dot star correctly', () => {
@@ -828,7 +834,10 @@ describe('query:', () => {
       const query = selstar.translator.getQuery(0);
       expect(query).toBeDefined();
       const fields = getFirstSegmentFields(selstar.translator.getQuery(0)).map(
-        f => (f.type === 'fieldref' ? f.path : `wrong field type ${f.type}`)
+        f =>
+          f.type !== 'fieldref' && isAtomicField(f) && f.e?.node === 'field'
+            ? f.e?.path
+            : `wrong field type ${f}`
       );
       expect(fields).toEqual(afields.map(f => ['b', f]));
     });
@@ -838,7 +847,9 @@ describe('query:', () => {
         f => f !== 'ai' && f !== 'aun' && f !== 'aweird'
       );
       expect(selstar).toTranslate();
-      const fields = getFirstSegmentFieldNames(selstar.translator.getQuery(0));
+      const fields = getFirstSegmentFieldReferences(
+        selstar.translator.getQuery(0)
+      );
       expect(fields).toEqual(filterdFields);
     });
     test('star error checking', () => {
@@ -871,7 +882,7 @@ describe('query:', () => {
     test('regress check extend: and star', () => {
       const m = model`run: ab->{ extend: {dimension: x is 1} select: * }`;
       expect(m).toTranslate();
-      const fields = getFirstSegmentFieldNames(m.translator.getQuery(0));
+      const fields = getFirstSegmentFieldReferences(m.translator.getQuery(0));
       expect(fields).toEqual(afields.concat('x'));
     });
     test('project def', () => {
@@ -884,7 +895,7 @@ describe('query:', () => {
     test('regress check extend: and star', () => {
       const m = model`run: ab->{ extend: {dimension: x is 1} select: * }`;
       expect(m).toTranslate();
-      const fields = getFirstSegmentFieldNames(m.translator.getQuery(0));
+      const fields = getFirstSegmentFieldReferences(m.translator.getQuery(0));
       expect(fields).toEqual(afields.concat('x'));
     });
     test('project def', () => {

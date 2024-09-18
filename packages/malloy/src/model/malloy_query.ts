@@ -2367,7 +2367,7 @@ class QueryQuery extends QueryField {
       }
       if (expr.node === 'field') {
         const field = context.getDimensionOrMeasureByName(expr.path);
-        if (hasExpression(field.fieldDef)) {
+        if (hasExpression(field.fieldDef) && field.fieldDef.e !== e) {
           this.addDependantExpr(
             resultStruct,
             field.parent,
