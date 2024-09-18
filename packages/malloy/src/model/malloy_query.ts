@@ -4505,12 +4505,13 @@ class QueryStruct extends QueryNode {
     refAnnoatation: Annotation | undefined
   ): QuerySomething {
     const field = this.getQueryFieldByName(name);
-    if (refAnnoatation) {
+    if (refAnnoatation !== undefined) {
       // Made the field object from the source, but the annotations were computed by the compiler
       // and have noth the source and reference annotations included, use those.
       const newDef = {...field.fieldDef};
       newDef.annotation = refAnnoatation;
       field.fieldDef = newDef;
+      return this.makeQueryField(newDef);
     }
     return field;
   }
