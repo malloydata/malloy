@@ -52,12 +52,14 @@ export class MalloySQLParser {
     };
   }
   private static createParseError(
+    code: string,
     message: string,
     range: MalloySQLParseRange,
     url = '.'
   ): MalloySQLParseError {
     const log: LogMessage = {
       message,
+      code,
       at: {
         url,
         range: this.convertRange(range),
@@ -85,6 +87,7 @@ export class MalloySQLParser {
             e.message,
             [
               {
+                code: 'malloysql-syntax-error',
                 message: e.message,
                 at: {url, range: this.convertRange(e.location)},
                 severity: 'error',
@@ -116,6 +119,7 @@ export class MalloySQLParser {
       ) {
         errors.push(
           this.createParseError(
+            '???',
             'Only comments are allowed after ">>>malloy"',
             parsedStatement.delimiterRange,
             url
@@ -130,6 +134,7 @@ export class MalloySQLParser {
         else
           errors.push(
             this.createParseError(
+              'malloysql-invalid-connection-specification',
               '"connection:" found but no connection value was provided',
               parsedStatement.delimiterRange,
               url
@@ -170,6 +175,7 @@ export class MalloySQLParser {
           if (!previousConnection)
             errors.push(
               this.createParseError(
+                'malloysql-missing-connection-specification',
                 'No connection configuration specified',
                 parsedStatement.delimiterRange,
                 url
