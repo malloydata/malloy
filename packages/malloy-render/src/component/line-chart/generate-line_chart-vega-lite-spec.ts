@@ -70,6 +70,9 @@ export function generateLineChartVegaLiteSpec(
     .range([chartSettings.plotHeight, 0]);
   const sharedYDomain = yScale.domain();
 
+  // todo: make this based on data type of x? if continuous axis, use asc/desc?
+  const xSort = shouldShareXDomain ? [...xMeta.values] : null;
+
   const lineMark: VegaSpec = {
     'mark': {'type': 'line', 'interpolate': settings.interpolate},
     'encoding': {
@@ -84,8 +87,8 @@ export function generateLineChartVegaLiteSpec(
         'scale': {
           'domain': shouldShareXDomain ? [...xMeta.values] : null,
         },
-        // todo: make this based on data type of x? if continuous axis, use asc/desc?
-        'sort': shouldShareXDomain ? [...xMeta.values] : null,
+
+        'sort': xSort,
       },
       'y': {
         'field': yFieldPath,
@@ -122,6 +125,7 @@ export function generateLineChartVegaLiteSpec(
       'x': {
         'field': seriesFieldPath ? `values.0.${xFieldPath}` : xFieldPath,
         'type': 'ordinal',
+        'sort': xSort,
       },
       'y': {
         'field': seriesFieldPath ? `values.0.${yFieldPath}` : yFieldPath,

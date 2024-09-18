@@ -1,15 +1,16 @@
 import {Explore, Tag} from '@malloydata/malloy';
-import {BarChartSettings} from './get-bar_chart-settings';
+import {AreaChartSettings} from './get-area_chart-settings';
 import {RenderResultMetadata, VegaChartProps, VegaSpec} from '../types';
 import {getChartLayoutSettings} from '../chart-layout-settings';
 import {getFieldFromRootPath} from '../plot/util';
+import {scale} from 'vega';
 
 const LEGEND_PERC = 0.4;
 const LEGEND_MAX = 384;
 
-export function generateBarChartVegaLiteSpec(
+export function generateAreaChartVegaLiteSpec(
   explore: Explore,
-  settings: BarChartSettings,
+  settings: AreaChartSettings,
   metadata: RenderResultMetadata,
   chartTag: Tag
 ): VegaChartProps {
@@ -17,14 +18,17 @@ export function generateBarChartVegaLiteSpec(
   const yFieldPath = settings.yChannel.fields.at(0);
   const seriesFieldPath = settings.seriesChannel.fields.at(0);
 
-  if (!xFieldPath) throw new Error('Malloy Bar Chart: Missing x field');
-  if (!yFieldPath) throw new Error('Malloy Bar Chart: Missing y field');
+  if (!xFieldPath) throw new Error('Malloy Area Chart: Missing x field');
+  if (!yFieldPath) throw new Error('Malloy Area Chart: Missing y field');
 
   const xField = getFieldFromRootPath(explore, xFieldPath);
   const yField = getFieldFromRootPath(explore, yFieldPath);
   const seriesField = seriesFieldPath
     ? getFieldFromRootPath(explore, seriesFieldPath)
     : null;
+
+  // TODO: figure out when this isn't true (measure list? how do I make those stack? shit.)
+  const isStack = true;
 
   let yMin = Infinity;
   let yMax = -Infinity;
@@ -36,13 +40,13 @@ export function generateBarChartVegaLiteSpec(
     if (max !== null) yMax = Math.max(yMax, max);
   }
 
-  const yDomainMin = Math.min(0, yMin);
-  const yDomainMax = Math.max(0, yMax);
+  const yDomainMin = settings.zeroBaseline ? Math.min(0, yMin) : yMin;
+  const yDomainMax = settings.zeroBaseline ? Math.max(0, yMax) : yMax;
 
   const chartSettings = getChartLayoutSettings(explore, metadata, chartTag, {
     xField,
     yField,
-    chartType: 'bar_chart',
+    chartType: 'area_chart',
     getYMinMax: () => [yDomainMin, yDomainMax],
   });
 
@@ -63,6 +67,105 @@ export function generateBarChartVegaLiteSpec(
     seriesField &&
     (forceSharedSeries || (autoSharedSeries && !forceIndependentSeries));
 
+  const yScale = scale('linear')()
+    .domain([yDomainMin, yDomainMax])
+    .nice()
+    .range([chartSettings.plotHeight, 0]);
+  const sharedYDomain = yScale.domain();
+
+  // todo: make this based on data type of x? if continuous axis, use asc/desc?
+  const xSort = shouldShareXDomain ? [...xMeta.values] : null;
+
+  const areaMark: VegaSpec = {
+    'mark': {'type': 'area', 'interpolate': settings.interpolate},
+    'encoding': {
+      'x': {
+        'field': xFieldPath,
+        'type': 'ordinal',
+        'axis': {
+          ...chartSettings.xAxis,
+          labelLimit: chartSettings.xAxis.labelSize,
+          title: settings.xChannel.fields.join(', '),
+        },
+        'scale': {
+          'domain': shouldShareXDomain ? [...xMeta.values] : null,
+        },
+        'sort': xSort,
+      },
+      'y': {
+        'field': yFieldPath,
+        'type': 'quantitative',
+        'axis': chartSettings.yAxis.hidden
+          ? null
+          : {
+              ...chartSettings.yAxis,
+              labelLimit: chartSettings.yAxis.width + 10,
+              title: settings.yChannel.fields.join(', '),
+            },
+        'scale': {
+          'domain': chartTag.has('y', 'independent') ? null : sharedYDomain,
+        },
+      },
+      'color': {
+        'scale': {
+          'domain': shouldShareSeriesDomain ? [...seriesMeta!.values] : null,
+          'range': 'category',
+        },
+      },
+      'fillOpacity': {'value': 0.5},
+    },
+  };
+
+  // Points should only show if a specific area has only one point
+  // The transformations to accomplish this are different when doing a field driven series vs. a measure list series
+  const pointMark: VegaSpec = {
+    'mark': {
+      'type': 'point',
+      'filled': true,
+      'size': 64,
+    },
+    'encoding': {
+      'x': {
+        'field': seriesFieldPath ? `values.0.${xFieldPath}` : xFieldPath,
+        'type': 'ordinal',
+        'sort': xSort,
+      },
+      'y': {
+        'field': seriesFieldPath ? `values.0.${yFieldPath}` : yFieldPath,
+        'type': 'quantitative',
+      },
+      'color': {
+        'scale': {
+          'domain': shouldShareSeriesDomain ? [...seriesMeta!.values] : null,
+          'range': 'category',
+        },
+      },
+    },
+    'transform': seriesFieldPath
+      ? [
+          {
+            'aggregate': [
+              {
+                'op': 'count',
+                'field': xFieldPath,
+                'as': 'groupCount',
+              },
+              {'op': 'min', 'field': xFieldPath, 'as': xFieldPath},
+              {'op': 'values'},
+            ],
+            'groupby': [seriesFieldPath],
+          },
+          {
+            'filter': 'datum.groupCount == 1',
+          },
+        ]
+      : [
+          {
+            'filter': 'dataLength === 1',
+          },
+        ],
+  };
+
   const spec: VegaSpec = {
     '$schema': 'https://vega.github.io/schema/vega-lite/v5.json',
     'width': chartSettings.plotWidth,
@@ -74,37 +177,12 @@ export function generateBarChartVegaLiteSpec(
     },
     'padding': chartSettings.padding,
     'data': {'values': []},
-    'mark': {'type': 'bar'},
-    'encoding': {
-      'x': {
-        'field': xFieldPath,
-        'type': 'ordinal',
-        'axis': {
-          ...chartSettings.xAxis,
-          labelLimit: chartSettings.xAxis.labelSize,
-        },
-        'scale': {
-          'domain': shouldShareXDomain ? [...xMeta.values] : null,
-        },
-      },
-      'y': {
-        'field': yFieldPath,
-        'type': 'quantitative',
-        'axis': chartSettings.yAxis.hidden
-          ? null
-          : {
-              ...chartSettings.yAxis,
-              labelLimit: chartSettings.yAxis.width + 10,
-            },
-        'scale': chartSettings.yScale,
-      },
-      'color': {
-        'scale': {
-          'domain': shouldShareSeriesDomain ? [...seriesMeta!.values] : null,
-          'range': 'category',
-        },
-      },
-    },
+    'params': [{'name': 'dataLength', 'expr': "length(data('source_0'))"}],
+    'layer': [
+      areaMark,
+      // TODO: get pointMark working
+      // pointMark
+    ],
   };
 
   const needsLegend = seriesField || settings.yChannel.fields.length > 1;
@@ -136,39 +214,43 @@ export function generateBarChartVegaLiteSpec(
 
   if (needsLegend) spec.padding.right = legendSize;
 
-  // todo: properly calculate max value for stacks
-  // will also need this to determine padding
-  if (settings.isStack) {
-    spec.encoding.y.scale.domain = null;
-  }
-
   // Field driven series
   if (seriesField) {
-    spec.encoding.color.field = seriesFieldPath;
-    spec.encoding.color.legend = legendSettings;
+    areaMark.encoding.color.field = seriesFieldPath;
+    areaMark.encoding.color.legend = legendSettings;
+    pointMark.encoding.color.field = seriesFieldPath;
   } else {
-    spec.encoding.color.datum = '';
+    areaMark.encoding.color.datum = '';
+    pointMark.encoding.color.datum = '';
   }
-  if (!settings.isStack && seriesField) {
-    spec.encoding.xOffset = {field: seriesFieldPath};
+
+  // TODO: figure this out..
+  if (isStack) {
+    areaMark.encoding.y.scale.domain = null;
   }
 
   // Measure list series
   if (settings.yChannel.fields.length > 1) {
-    spec.transform = [
+    areaMark.transform = [
       {
         'fold': [...settings.yChannel.fields],
       },
     ];
-    spec.encoding.y.field = 'value';
-    spec.encoding.color.field = 'key';
-    delete spec.encoding.color.datum;
-    if (!settings.isStack) {
-      spec.encoding.xOffset = {field: 'key'};
-    }
+    areaMark.encoding.y.field = 'value';
+    areaMark.encoding.color.field = 'key';
+    delete areaMark.encoding.color.datum;
+
+    pointMark.transform = [
+      {
+        'fold': [...settings.yChannel.fields],
+      },
+    ];
+    pointMark.encoding.y.field = 'value';
+    pointMark.encoding.color.field = 'key';
+    delete pointMark.encoding.color.datum;
 
     legendSettings.title = '';
-    spec.encoding.color.legend = legendSettings;
+    areaMark.encoding.color.legend = legendSettings;
   }
 
   return {
@@ -178,6 +260,6 @@ export function generateBarChartVegaLiteSpec(
     plotHeight: chartSettings.plotHeight,
     totalWidth: chartSettings.totalWidth,
     totalHeight: chartSettings.totalHeight,
-    chartType: 'bar_chart',
+    chartType: 'area_chart',
   };
 }
