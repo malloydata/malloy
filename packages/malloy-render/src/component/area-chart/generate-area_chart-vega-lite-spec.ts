@@ -27,12 +27,12 @@ export function generateAreaChartVegaLiteSpec(
     ? getFieldFromRootPath(explore, seriesFieldPath)
     : null;
 
-  // TODO: figure out when this isn't true (measure list? how do I make those stack? shit.)
-  const isStack = true;
+  const isStack = !settings.isDiffChart;
 
   let yMin = Infinity;
   let yMax = -Infinity;
-  for (const name of settings.yChannel.fields) {
+  const yFields = [...settings.yChannel.fields, ...settings.y2Channel.fields];
+  for (const name of yFields) {
     const field = getFieldFromRootPath(explore, name);
     const min = metadata.field(field).min;
     if (min !== null) yMin = Math.min(yMin, min);
@@ -251,6 +251,17 @@ export function generateAreaChartVegaLiteSpec(
 
     legendSettings.title = '';
     areaMark.encoding.color.legend = legendSettings;
+  }
+
+  if (settings.isStreamGraph) {
+    areaMark.encoding.y.stack = 'center';
+    areaMark.encoding.y.axis = null;
+  }
+
+  if (settings.y2Channel.fields.length > 0) {
+    areaMark.encoding.y2 = {
+      'field': settings.y2Channel.fields.at(0),
+    };
   }
 
   return {

@@ -9,6 +9,8 @@ export type AreaChartSettings = {
   seriesChannel: Channel;
   zeroBaseline: boolean;
   interpolate?: string;
+  isDiffChart: boolean;
+  isStreamGraph: boolean;
 };
 
 export function getAreaChartSettings(
@@ -22,9 +24,6 @@ export function getAreaChartSettings(
       'Tried to render a bar_chart, but no bar_chart tag was found'
     );
   }
-
-  // TODO: should always be zero_baseline unless doing area difference chart
-  const zeroBaseline = true;
 
   const interpolate = chart.text('interpolate');
 
@@ -140,6 +139,11 @@ export function getAreaChartSettings(
   yChannel.type = 'quantitative';
   seriesChannel.type = 'nominal';
 
+  const isDiffChart = y2Channel.fields.length > 0;
+  const zeroBaseline = !(
+    isDiffChart && chart.text('zero_baseline') === 'false'
+  );
+
   return {
     xChannel,
     yChannel,
@@ -147,5 +151,7 @@ export function getAreaChartSettings(
     seriesChannel,
     zeroBaseline,
     interpolate,
+    isDiffChart,
+    isStreamGraph: chart.text('stack') === 'center',
   };
 }
