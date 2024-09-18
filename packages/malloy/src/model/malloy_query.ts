@@ -4510,7 +4510,6 @@ class QueryStruct extends QueryNode {
       // and have noth the source and reference annotations included, use those.
       const newDef = {...field.fieldDef};
       newDef.annotation = refAnnoatation;
-      field.fieldDef = newDef;
       return this.makeQueryField(newDef);
     }
     return field;
