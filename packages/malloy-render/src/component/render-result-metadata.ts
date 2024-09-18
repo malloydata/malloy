@@ -39,13 +39,15 @@ import {
   valueIsString,
 } from './util';
 import {hasAny} from './tag-utils';
-import {RenderResultMetadata, VegaConfigHandler} from './types';
+import {RenderResultMetadata, VegaChartProps, VegaConfigHandler} from './types';
 import {shouldRenderAs} from './apply-renderer';
 import {getBarChartSettings} from './bar-chart/get-bar_chart-settings';
 import {generateBarChartVegaLiteSpec} from './bar-chart/generate-bar_chart-vega-lite-spec';
 import {mergeVegaConfigs} from './plot/merge-vega-configs';
 import {baseVegaConfig} from './plot/base-vega-config';
 import {renderTimeString} from './render-time';
+import {getLineChartSettings} from './line-chart/get-line_chart-settings';
+import {generateLineChartVegaLiteSpec} from './line-chart/generate-line_chart-vega-lite-spec';
 
 function createDataCache() {
   const dataCache = new WeakMap<DataColumn, QueryData>();
@@ -206,28 +208,37 @@ function populateExploreMeta(
   options: GetResultMetadataOptions
 ) {
   const fieldMeta = metadata.field(f);
+  let vegaLiteProps: VegaChartProps | null = null;
   if (hasAny(tag, 'bar', 'bar_chart')) {
     const chartTag = (tag.tag('bar_chart') ?? tag.tag('bar'))!;
     const barSettings = getBarChartSettings(f, tag);
-    const vegaLiteProps = generateBarChartVegaLiteSpec(
+    vegaLiteProps = generateBarChartVegaLiteSpec(
       f,
       barSettings,
       metadata,
       chartTag
     );
-
+  } else if (tag.has('line_chart')) {
+    const chartTag = tag.tag('line_chart')!;
+    const lineSettings = getLineChartSettings(f, tag);
+    vegaLiteProps = generateLineChartVegaLiteSpec(
+      f,
+      lineSettings,
+      metadata,
+      chartTag
+    );
+  }
+  if (vegaLiteProps) {
     const vegaConfig = mergeVegaConfigs(
       baseVegaConfig(),
-      options.getVegaConfigOverride?.('bar_chart') ?? {}
+      options.getVegaConfigOverride?.(vegaLiteProps.chartType) ?? {}
     );
-
     fieldMeta.vegaChartProps = {
       ...vegaLiteProps,
       spec: {
         ...vegaLiteProps.spec,
         config: vegaConfig,
       },
-      chartType: 'bar_chart',
     };
   }
 }
