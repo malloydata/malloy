@@ -83,15 +83,17 @@ describe('extendModel', () => {
     );
   });
   test('can get named view on explore', async () => {
-    const model = await runtime.getModel(`
+    const model = runtime.loadModel(`
       source: state_facts is duckdb.table('malloytest.state_facts') extend {
-        view: states is {
-          group_by: state
+        view: count_states is {
+          aggregate: c is count()
         }
       }
     `);
-    const stateFacts = model.getExploreByName('state_facts');
-    expect(() => stateFacts.getQueryByName('states')).not.toThrow();
+    const stateFacts = model.loadExploreByName('state_facts');
+    const states = stateFacts.loadQueryByName('count_states');
+    const result = await states.run();
+    expect(result.data.path(0, 'c').value).toBe(51);
   });
   test('extending models keep annotations', async () => {
     await runtime
