@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {TagDict, Tag, Explore} from '@malloydata/malloy';
+import {TagDict, Tag} from '@malloydata/malloy';
 import {runtimeFor} from './runtimes';
 
 declare global {
@@ -542,9 +542,7 @@ describe('tags in results', () => {
     expect(a.isExploreField()).toBe(true);
     if (a.isExploreField()) {
       const one = a.getFieldByName('one');
-      expect(one.tagParse().tag).tagsAre({
-        a: {},
-      });
+      expect(one.tagParse().tag).tagsAre({a: {}});
     }
   });
 });
