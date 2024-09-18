@@ -1498,15 +1498,17 @@ export class Explore extends Entity implements Taggable {
   }
 
   public getQueryByName(name: string): PreparedQuery {
+    const view = this.structDef.fields?.find(v => v.name === name);
+    if (view === undefined) {
+      throw new Error(`No such view \`${name}\`.`);
+    }
+    if (view.type !== 'turtle') {
+      throw new Error(`\`${name}\` is not a view.`);
+    }
     const internalQuery: InternalQuery = {
       type: 'query',
       structRef: this.structDef,
-      pipeline: [
-        {
-          type: 'reduce',
-          queryFields: [{type: 'fieldref', path: [name]}],
-        },
-      ],
+      pipeline: view.pipeline,
     };
     return new PreparedQuery(internalQuery, this.modelDef, [], name);
   }
