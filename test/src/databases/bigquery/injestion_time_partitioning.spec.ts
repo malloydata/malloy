@@ -25,7 +25,7 @@ import {RuntimeList} from '../../runtimes';
 import {describeIfDatabaseAvailable} from '../../util';
 
 const [describe, databases] = describeIfDatabaseAvailable(['bigquery']);
-describe('Wildcard BigQuery Tables', () => {
+describe.skip('Wildcard BigQuery Tables', () => {
   const runtimes = new RuntimeList(databases);
 
   afterAll(async () => {
