@@ -32,7 +32,7 @@ const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 // No prebuilt shared model, each test is complete.  Makes debugging easier.
 function rootDbPath(databaseName: string) {
-  return databaseName === 'bigquery' ? 'malloy-data.' : '';
+  return databaseName === 'bigquery' ? 'malloydata-org.' : '';
 }
 
 // TODO: Figure out how to generalize this.

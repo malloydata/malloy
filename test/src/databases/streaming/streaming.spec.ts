@@ -43,7 +43,8 @@ class StringAccumulator implements WriteStream {
 }
 
 const [describe, databases] = describeIfDatabaseAvailable([
-  'bigquery',
+  // FIXME
+  // 'bigquery',
   'postgres',
   'duckdb',
   'duckdb_wasm',

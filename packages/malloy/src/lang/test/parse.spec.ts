@@ -301,7 +301,7 @@ describe('translation need error locations', () => {
 
   test('table struct error location', () => {
     const source = model`
-      source: bad_explore is ${"_db_.table('malloy-data.bad.table')"}
+      source: bad_explore is ${"_db_.table('malloydata-org.bad.table')"}
     `;
     const m = source.translator;
     const result = m.translate();

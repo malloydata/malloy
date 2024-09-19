@@ -84,13 +84,13 @@ describe('BigQuery hand-built expression test', () => {
   }
 
   const modelHandBase: StructDef = {
-    name: 'malloy-data.malloytest.aircraft_models',
+    name: 'malloydata-org.malloytest.aircraft_models',
     as: 'aircraft_models',
     type: 'struct',
     dialect: 'standardsql',
     structSource: {
       type: 'table',
-      tablePath: 'malloy-data.malloytest.aircraft_models',
+      tablePath: 'malloydata-org.malloytest.aircraft_models',
     },
     structRelationship: {type: 'basetable', connectionName: 'bigquery'},
     fields: [
@@ -191,11 +191,11 @@ describe('BigQuery hand-built expression test', () => {
 
   const aircraftHandBase: StructDef = {
     type: 'struct',
-    name: 'malloy-data.malloytest.aircraft',
+    name: 'malloydata-org.malloytest.aircraft',
     dialect: 'standardsql',
     structSource: {
       type: 'table',
-      tablePath: 'malloy-data.malloytest.aircraft',
+      tablePath: 'malloydata-org.malloytest.aircraft',
     },
     structRelationship: {type: 'basetable', connectionName: 'bigquery'},
     fields: [
