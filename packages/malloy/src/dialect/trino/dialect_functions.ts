@@ -74,6 +74,7 @@ const count_approx: DefinitionBlueprint = {
   takes: {'value': {dimension: 'any'}},
   returns: {measure: 'number'},
   impl: {function: 'APPROX_DISTINCT'},
+  isSymmetric: true,
 };
 
 const max_by: DefinitionBlueprint = {

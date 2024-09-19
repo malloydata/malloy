@@ -27,6 +27,7 @@ const count_approx: DefinitionBlueprint = {
   takes: {'value': {dimension: 'any'}},
   returns: {measure: 'number'},
   impl: {function: 'APPROX_COUNT_DISTINCT'},
+  isSymmetric: true,
 };
 
 const string_agg: OverloadedDefinitionBlueprint = {
