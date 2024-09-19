@@ -48,6 +48,8 @@ import {baseVegaConfig} from './plot/base-vega-config';
 import {renderTimeString} from './render-time';
 import {getLineChartSettings} from './line-chart/get-line_chart-settings';
 import {generateLineChartVegaLiteSpec} from './line-chart/generate-line_chart-vega-lite-spec';
+import {getAreaChartSettings} from './area-chart/get-area_chart-settings';
+import {generateAreaChartVegaLiteSpec} from './area-chart/generate-area_chart-vega-lite-spec';
 
 function createDataCache() {
   const dataCache = new WeakMap<DataColumn, QueryData>();
@@ -227,7 +229,17 @@ function populateExploreMeta(
       metadata,
       chartTag
     );
+  } else if (tag.has('area_chart')) {
+    const chartTag = tag.tag('area_chart')!;
+    const areaSettings = getAreaChartSettings(f, tag);
+    vegaLiteProps = generateAreaChartVegaLiteSpec(
+      f,
+      areaSettings,
+      metadata,
+      chartTag
+    );
   }
+
   if (vegaLiteProps) {
     const vegaConfig = mergeVegaConfigs(
       baseVegaConfig(),

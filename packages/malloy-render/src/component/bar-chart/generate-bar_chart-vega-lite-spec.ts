@@ -127,10 +127,12 @@ export function generateBarChartVegaLiteSpec(
     chartSettings.totalWidth * LEGEND_PERC,
     maxCharCt * 10 + 20
   );
-  const legendSettings = () => ({
+  const legendSettings: VegaSpec = {
     titleLimit: legendSize - 20,
     labelLimit: legendSize - 40,
-  });
+    padding: 8,
+    offset: 4,
+  };
 
   if (needsLegend) spec.padding.right = legendSize;
 
@@ -143,7 +145,7 @@ export function generateBarChartVegaLiteSpec(
   // Field driven series
   if (seriesField) {
     spec.encoding.color.field = seriesFieldPath;
-    spec.encoding.color.legend = legendSettings();
+    spec.encoding.color.legend = legendSettings;
   } else {
     spec.encoding.color.datum = '';
   }
@@ -153,21 +155,20 @@ export function generateBarChartVegaLiteSpec(
 
   // Measure list series
   if (settings.yChannel.fields.length > 1) {
-    spec.repeat = {'layer': [...settings.yChannel.fields]};
-    spec.spec = {
-      mark: spec.mark,
-      encoding: spec.encoding,
-    };
-    spec.mark = undefined;
-    spec.encoding = undefined;
-    spec.spec.encoding.y.field = {'repeat': 'layer'};
-    spec.spec.encoding.color = {
-      'datum': {'repeat': 'layer'},
-      'title': '',
-      'legend': legendSettings(),
-    };
-    if (!settings.isStack)
-      spec.spec.encoding.xOffset = {'datum': {'repeat': 'layer'}};
+    spec.transform = [
+      {
+        'fold': [...settings.yChannel.fields],
+      },
+    ];
+    spec.encoding.y.field = 'value';
+    spec.encoding.color.field = 'key';
+    delete spec.encoding.color.datum;
+    if (!settings.isStack) {
+      spec.encoding.xOffset = {field: 'key'};
+    }
+
+    legendSettings.title = '';
+    spec.encoding.color.legend = legendSettings;
   }
 
   return {

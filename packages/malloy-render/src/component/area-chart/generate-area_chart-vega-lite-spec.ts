@@ -1,5 +1,5 @@
 import {Explore, Tag} from '@malloydata/malloy';
-import {LineChartSettings} from './get-line_chart-settings';
+import {AreaChartSettings} from './get-area_chart-settings';
 import {RenderResultMetadata, VegaChartProps, VegaSpec} from '../types';
 import {getChartLayoutSettings} from '../chart-layout-settings';
 import {getFieldFromRootPath} from '../plot/util';
@@ -8,9 +8,9 @@ import {scale} from 'vega';
 const LEGEND_PERC = 0.4;
 const LEGEND_MAX = 384;
 
-export function generateLineChartVegaLiteSpec(
+export function generateAreaChartVegaLiteSpec(
   explore: Explore,
-  settings: LineChartSettings,
+  settings: AreaChartSettings,
   metadata: RenderResultMetadata,
   chartTag: Tag
 ): VegaChartProps {
@@ -18,8 +18,8 @@ export function generateLineChartVegaLiteSpec(
   const yFieldPath = settings.yChannel.fields.at(0);
   const seriesFieldPath = settings.seriesChannel.fields.at(0);
 
-  if (!xFieldPath) throw new Error('Malloy Bar Chart: Missing x field');
-  if (!yFieldPath) throw new Error('Malloy Bar Chart: Missing y field');
+  if (!xFieldPath) throw new Error('Malloy Area Chart: Missing x field');
+  if (!yFieldPath) throw new Error('Malloy Area Chart: Missing y field');
 
   const xField = getFieldFromRootPath(explore, xFieldPath);
   const yField = getFieldFromRootPath(explore, yFieldPath);
@@ -27,9 +27,12 @@ export function generateLineChartVegaLiteSpec(
     ? getFieldFromRootPath(explore, seriesFieldPath)
     : null;
 
+  const isStack = !settings.isDiffChart;
+
   let yMin = Infinity;
   let yMax = -Infinity;
-  for (const name of settings.yChannel.fields) {
+  const yFields = [...settings.yChannel.fields, ...settings.y2Channel.fields];
+  for (const name of yFields) {
     const field = getFieldFromRootPath(explore, name);
     const min = metadata.field(field).min;
     if (min !== null) yMin = Math.min(yMin, min);
@@ -43,7 +46,7 @@ export function generateLineChartVegaLiteSpec(
   const chartSettings = getChartLayoutSettings(explore, metadata, chartTag, {
     xField,
     yField,
-    chartType: 'line_chart',
+    chartType: 'area_chart',
     getYMinMax: () => [yDomainMin, yDomainMax],
   });
 
@@ -73,8 +76,12 @@ export function generateLineChartVegaLiteSpec(
   // todo: make this based on data type of x? if continuous axis, use asc/desc?
   const xSort = shouldShareXDomain ? [...xMeta.values] : null;
 
-  const lineMark: VegaSpec = {
-    'mark': {'type': 'line', 'interpolate': settings.interpolate},
+  const areaMark: VegaSpec = {
+    'mark': {
+      'type': 'area',
+      'interpolate': settings.interpolate,
+      'line': !settings.isDiffChart,
+    },
     'encoding': {
       'x': {
         'field': xFieldPath,
@@ -87,7 +94,6 @@ export function generateLineChartVegaLiteSpec(
         'scale': {
           'domain': shouldShareXDomain ? [...xMeta.values] : null,
         },
-
         'sort': xSort,
       },
       'y': {
@@ -110,10 +116,16 @@ export function generateLineChartVegaLiteSpec(
           'range': 'category',
         },
       },
+      'fillOpacity': {'value': 0.5},
+      'opacity': {'value': 0.7},
     },
   };
 
-  // Points should only show if a specific line has only one point
+  // Line mark for diff chart
+  const baseDiffLineMark = structuredClone(areaMark);
+  baseDiffLineMark.mark.type = 'line';
+
+  // Points should only show if a specific area has only one point
   // The transformations to accomplish this are different when doing a field driven series vs. a measure list series
   const pointMark: VegaSpec = {
     'mark': {
@@ -163,31 +175,19 @@ export function generateLineChartVegaLiteSpec(
         ],
   };
 
-  const spec: VegaSpec = {
-    '$schema': 'https://vega.github.io/schema/vega-lite/v5.json',
-    'width': chartSettings.plotWidth,
-    'height': chartSettings.plotHeight,
-    'autosize': {
-      type: 'none',
-      resize: true,
-      contains: 'content',
-    },
-    'padding': chartSettings.padding,
-    'data': {'values': []},
-    'params': [{'name': 'dataLength', 'expr': "length(data('source_0'))"}],
-    'layer': [lineMark, pointMark],
-  };
-
-  const needsLegend = seriesField || settings.yChannel.fields.length > 1;
+  const needsLegend =
+    settings.isDimensionalSeries ||
+    settings.isMeasureSeries ||
+    settings.isDiffChart;
   // TODO: No legend for sparks
   let maxCharCt = 0;
   if (needsLegend) {
-    if (seriesField) {
+    if (settings.isDimensionalSeries && seriesField) {
       const meta = metadata.field(seriesField);
       maxCharCt = meta.maxString?.length ?? 0;
       maxCharCt = Math.max(maxCharCt, seriesField.name.length);
     } else {
-      maxCharCt = settings.yChannel.fields.reduce(
+      maxCharCt = yFields.reduce(
         (max, f) => Math.max(max, f.length),
         maxCharCt
       );
@@ -198,45 +198,111 @@ export function generateLineChartVegaLiteSpec(
     chartSettings.totalWidth * LEGEND_PERC,
     maxCharCt * 10 + 20
   );
-  const legendSettings = () => ({
+  const legendSettings: VegaSpec = {
     titleLimit: legendSize - 20,
     labelLimit: legendSize - 40,
     padding: 8,
     offset: 4,
-  });
-
-  if (needsLegend) spec.padding.right = legendSize;
+  };
 
   // Field driven series
-  if (seriesField) {
-    lineMark.encoding.color.field = seriesFieldPath;
-    lineMark.encoding.color.legend = legendSettings();
+  if (settings.isDimensionalSeries && seriesField) {
+    areaMark.encoding.color.field = seriesFieldPath;
+    areaMark.encoding.color.legend = legendSettings;
     pointMark.encoding.color.field = seriesFieldPath;
   } else {
-    lineMark.encoding.color.datum = '';
+    areaMark.encoding.color.datum = '';
     pointMark.encoding.color.datum = '';
   }
 
+  // TODO: figure this out..
+  if (isStack) {
+    areaMark.encoding.y.scale.domain = null;
+  }
+
   // Measure list series
-  if (settings.yChannel.fields.length > 1) {
-    spec.repeat = {'layer': [...settings.yChannel.fields]};
-    spec.spec = {
-      layer: [...spec.layer],
-    };
-    spec.layer = undefined;
-    lineMark.encoding.y.field = {'repeat': 'layer'};
-    lineMark.encoding.color = {
-      'datum': {'repeat': 'layer'},
-      'title': '',
-      'legend': legendSettings(),
-    };
-    pointMark.encoding.y.field = {'repeat': 'layer'};
-    pointMark.encoding.color = {
-      'datum': {'repeat': 'layer'},
-      'title': '',
-      'legend': legendSettings(),
+  if (settings.isMeasureSeries) {
+    areaMark.transform = [
+      {
+        'fold': [...settings.yChannel.fields],
+      },
+    ];
+    areaMark.encoding.y.field = 'value';
+    areaMark.encoding.color.field = 'key';
+    delete areaMark.encoding.color.datum;
+
+    pointMark.transform = [
+      {
+        'fold': [...settings.yChannel.fields],
+      },
+    ];
+    pointMark.encoding.y.field = 'value';
+    pointMark.encoding.color.field = 'key';
+    delete pointMark.encoding.color.datum;
+
+    legendSettings.title = '';
+    areaMark.encoding.color.legend = legendSettings;
+    areaMark.encoding.y.axis.title = '';
+  }
+
+  // Strea graph
+  if (settings.isStreamGraph) {
+    areaMark.encoding.y.stack = 'center';
+    areaMark.encoding.y.axis = null;
+    areaMark.encoding.x.axis.grid = true;
+    areaMark.mark.line = false;
+    areaMark.encoding.opacity = {'value': 1};
+    areaMark.encoding.fillOpacity = {'value': 1};
+  }
+
+  // Diff chart
+  if (settings.isDiffChart) {
+    areaMark.encoding.y2 = {
+      'field': settings.y2Channel.fields.at(0),
     };
   }
+
+  const layers = [areaMark];
+
+  // Should we even allow diff charts that are dimensional series? Or just ignore the y2?
+  if (settings.isDiffChart && !settings.isDimensionalSeries) {
+    baseDiffLineMark.transform = [
+      {
+        'fold': [...yFields],
+      },
+    ];
+    baseDiffLineMark.encoding.y.field = 'value';
+    baseDiffLineMark.encoding.strokeDash = {
+      field: 'key',
+      legend: legendSettings,
+    };
+    legendSettings.title = '';
+    areaMark.encoding.color.legend = null;
+    areaMark.encoding.y.axis.title = '';
+    baseDiffLineMark.encoding.y.axis.title = '';
+    areaMark.encoding.y2 = {
+      'field': settings.y2Channel.fields.at(0),
+    };
+    layers.push(baseDiffLineMark);
+  }
+
+  const padding = chartSettings.padding;
+  if (needsLegend) padding.right = legendSize;
+
+  const spec: VegaSpec = {
+    '$schema': 'https://vega.github.io/schema/vega-lite/v5.json',
+    'width': chartSettings.plotWidth,
+    'height': chartSettings.plotHeight,
+    'autosize': {
+      type: 'none',
+      resize: true,
+      contains: 'content',
+    },
+    'padding': padding,
+    'data': {'values': []},
+    'params': [{'name': 'dataLength', 'expr': "length(data('source_0'))"}],
+    'layer': layers,
+  };
 
   return {
     spec,
@@ -245,6 +311,6 @@ export function generateLineChartVegaLiteSpec(
     plotHeight: chartSettings.plotHeight,
     totalWidth: chartSettings.totalWidth,
     totalHeight: chartSettings.totalHeight,
-    chartType: 'line_chart',
+    chartType: 'area_chart',
   };
 }
