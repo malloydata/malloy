@@ -36,11 +36,10 @@ import {
 } from '../../../model/malloy_types';
 import {Tag} from '../../../tags';
 import {
-  MessageCodeWithNullDataType,
   MessageCode,
   MessageDataType,
   MessageLogger,
-  makeMessage,
+  makeLogMessage,
 } from '../../parse-log';
 import {MalloyTranslation} from '../../parse-malloy';
 import {ModelDataRequest} from '../../translate-response';
@@ -207,27 +206,14 @@ export abstract class MalloyElement {
 
   private readonly logged = new Set<string>();
   log<T extends MessageCode>(
-    code: MessageCodeWithNullDataType<T>,
-    data?: MessageDataType<T>,
-    extras?: {
-      replacement?: string;
-    }
-  ): MessageCode;
-  log<T extends MessageCode>(
     code: T,
     data: MessageDataType<T>,
     extras?: {
       replacement?: string;
-    }
-  ): MessageCode;
-  log<T extends MessageCode>(
-    code: T,
-    data: MessageDataType<T>,
-    extras?: {
-      replacement?: string;
+      at?: DocumentLocation;
     }
   ): MessageCode {
-    const log = makeMessage(code, data, extras);
+    const log = makeLogMessage(code, data, extras);
     if (this.codeLocation) {
       /*
        * If this element has a location, then don't report the same
@@ -240,7 +226,7 @@ export abstract class MalloyElement {
     }
     const logTo = this.logger();
     if (logTo) {
-      logTo.log(log);
+      logTo.logMessage(log);
       return code;
     }
     throw new Error(
