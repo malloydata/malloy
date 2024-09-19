@@ -11,6 +11,8 @@ export type AreaChartSettings = {
   interpolate?: string;
   isDiffChart: boolean;
   isStreamGraph: boolean;
+  isDimensionalSeries: boolean;
+  isMeasureSeries: boolean;
 };
 
 export function getAreaChartSettings(
@@ -144,6 +146,10 @@ export function getAreaChartSettings(
     isDiffChart && chart.text('zero_baseline') === 'false'
   );
 
+  const isDimensionalSeries = seriesChannel.fields.length > 0;
+  // Don't flag as measure series if a dimension series is set
+  const isMeasureSeries = !isDimensionalSeries && yChannel.fields.length > 1;
+
   return {
     xChannel,
     yChannel,
@@ -153,5 +159,7 @@ export function getAreaChartSettings(
     interpolate,
     isDiffChart,
     isStreamGraph: chart.text('stack') === 'center',
+    isDimensionalSeries,
+    isMeasureSeries,
   };
 }

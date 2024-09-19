@@ -216,6 +216,8 @@ source: products is duckdb.table("data/products.parquet") extend {
     nest: dimensionSeriesStep is baseLineData + { group_by: department }
     # area_chart { y=['Sales $', 'Cost $']}
     nest: ySeries is  baseLineData + { aggregate: `Cost $` is retail_price.avg()*0.5 }
+    # area_chart { y=['Sales $', 'Cost $'] stack=center }
+    nest: ySeriesStream is baseLineData + { aggregate: `Cost $` is retail_price.avg()*0.5 }
     # area_chart { y='Sales $' y2='Cost $' }
     nest: diff is  baseLineData + { aggregate: `Cost $` is retail_price.avg()*0.5 }
     # area_chart { y='Sales $' y2='Cost $' zero_baseline=false }
