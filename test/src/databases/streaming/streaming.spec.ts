@@ -106,7 +106,7 @@ describe('Streaming tests', () => {
       const accummulator = new StringAccumulator();
       const csvWriter = new CSVWriter(accummulator);
       await csvWriter.process(stream);
-      expect(accummulator.accumulatedValue).toBe('code\n1Q9\\n');
+      expect(accummulator.accumulatedValue).toBe('code\n1Q9\n');
     });
   });
 });
