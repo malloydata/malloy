@@ -1088,8 +1088,8 @@ expressionModels.forEach((x, databaseName) => {
   });
 
   describe('count_approx', () => {
-    const testIfSupported = test.when(runtime.dialect.supportsCountApprox);
-    testIfSupported('works generally', async () => {
+    const supported = runtime.dialect.supportsCountApprox;
+    test.when(supported)('works generally', async () => {
       await expect(`
           // be accurate within 30%
           // # test.debug
@@ -1102,7 +1102,7 @@ expressionModels.forEach((x, databaseName) => {
         'also_passes': true,
       });
     });
-    testIfSupported('works with fanout', async () => {
+    test.when(supported)('works with fanout', async () => {
       await expect(`
         source: state_facts is ${databaseName}.table('malloytest.state_facts')
         source: state_facts_fanout is ${databaseName}.table('malloytest.state_facts') extend {
