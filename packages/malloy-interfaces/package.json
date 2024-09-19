@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/malloy-interfaces",
-  "version": "0.0.185",
+  "version": "0.0.186",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
