@@ -54,15 +54,18 @@ type MessageDataTypes = {
   'experiment-not-enabled': {experimentId: string};
   'global-namespace-redefine': {name: string};
   'experimental-dialect-not-enabled': {dialect: string};
-  'pick-missing-else': {};
-  'pick-missing-value': {};
-  'pick-illegal-partial': {};
+  'pick-missing-else': null;
+  'pick-missing-value': null;
+  'pick-illegal-partial': null;
   'pick-then-must-be-boolean': {thenType: string};
 };
 
 export type MessageCode = keyof MessageDataTypes;
 
 export type MessageDataType<T extends MessageCode> = MessageDataTypes[T];
+
+export type MessageCodeWithNullDataType<T extends MessageCode> =
+  MessageDataType<T> extends null ? T : never;
 
 type ErrorCodeMessageMap = {
   [key in keyof MessageDataTypes]: (data: MessageDataType<key>) => MessageInfo;

@@ -155,17 +155,17 @@ export class Pick extends ExpressionDef {
       },
     };
     if (this.elsePick === undefined) {
-      return errorFor(this.log('pick-missing-else', {}));
+      return errorFor(this.log('pick-missing-else'));
     }
 
     const choiceValues: Choice[] = [];
     for (const c of this.choices) {
       if (c.pick === undefined) {
-        return errorFor(this.log('pick-missing-value', {}));
+        return errorFor(this.log('pick-missing-value'));
       }
       const pickWhen = c.when.requestExpression(fs);
       if (pickWhen === undefined) {
-        return errorFor(this.log('pick-illegal-partial', {}));
+        return errorFor(this.log('pick-illegal-partial'));
       }
       choiceValues.push({
         pick: c.pick.getExpression(fs),

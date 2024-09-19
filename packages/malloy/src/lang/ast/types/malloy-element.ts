@@ -36,6 +36,7 @@ import {
 } from '../../../model/malloy_types';
 import {Tag} from '../../../tags';
 import {
+  MessageCodeWithNullDataType,
   MessageCode,
   MessageDataType,
   MessageLogger,
@@ -205,6 +206,20 @@ export abstract class MalloyElement {
   }
 
   private readonly logged = new Set<string>();
+  log<T extends MessageCode>(
+    code: MessageCodeWithNullDataType<T>,
+    data?: MessageDataType<T>,
+    extras?: {
+      replacement?: string;
+    }
+  ): MessageCode;
+  log<T extends MessageCode>(
+    code: T,
+    data: MessageDataType<T>,
+    extras?: {
+      replacement?: string;
+    }
+  ): MessageCode;
   log<T extends MessageCode>(
     code: T,
     data: MessageDataType<T>,
