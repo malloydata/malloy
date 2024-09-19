@@ -37,7 +37,7 @@ export function renderTimeString(
       return `${fullYear}-Q${Math.floor(value.getUTCMonth() / 3) + 1}`;
     }
     case 'year': {
-      return value.getUTCFullYear();
+      return value.getUTCFullYear().toString();
     }
     default: {
       if (isDate) return dateDisplay;
