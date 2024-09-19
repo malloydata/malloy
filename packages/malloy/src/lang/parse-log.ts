@@ -21,7 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DocumentLocation, FieldValueType} from '../model/malloy_types';
+import {
+  DocumentLocation,
+  EvalSpace,
+  ExpressionType,
+  FieldValueType,
+  expressionIsScalar,
+} from '../model/malloy_types';
 
 export type LogSeverity = 'error' | 'warn' | 'debug';
 
@@ -61,6 +67,8 @@ type MessageDataTypes = {
   'parser-error': {message: string};
   'internal-translator-error': {message: string};
   'experiment-not-enabled': {experimentId: string};
+  'sql-functions-experiment-not-enabled': {name: string};
+  'aggregate-order-by-experiment-not-enabled': {};
   'global-namespace-redefine': {name: string};
   'experimental-dialect-not-enabled': {dialect: string};
   'pick-missing-else': {};
@@ -74,6 +82,48 @@ type MessageDataTypes = {
   'parse-exception': {message: string};
   'import-error': {message: string; url: string};
   'cannot-compute-full-import-url': {message: string};
+  'function-not-found': {name: string};
+  'called-non-function': {
+    type: 'struct' | 'connection' | 'query';
+    name: string;
+  };
+  'function-case-does-not-match': {name: string};
+  'invalid-aggregate-source': {type: FieldValueType};
+  'aggregate-source-not-found': {source: string};
+  'no-matching-overload': {name: string; types: FieldValueType[]};
+  'mismatched-function-argument-expression-type': {
+    functionName: string;
+    parameterName: string;
+    argumentIndex: number;
+    maximumAllowedExpressionType: ExpressionType;
+    actualExpressionType: ExpressionType;
+  };
+  'mismatched-function-argument-evaluation-space': {
+    functionName: string;
+    parameterName: string;
+    argumentIndex: number;
+    maximumAllowedEvaluationSpace: EvalSpace;
+    actualEvaluationSpace: EvalSpace;
+  };
+  'function-argument-must-not-be-literal-null': {
+    functionName: string;
+    parameterName: string;
+    argumentIndex: number;
+  };
+  'non-aggregate-function-called-with-source': {
+    name: string;
+    types: FieldValueType[];
+  };
+  'illegal-function-order-by': {name: string};
+  'illegal-function-limit': {name: string};
+  'partition-by-not-found': {name: string};
+  'partition-by-must-be-scalar-or-aggregate': {};
+  'invalid-sql-expression-string': {sqlFunctionName: string};
+  'unsupported-sql-function-dotted-interpolation': {
+    unsupportedInterpolations: string[];
+  };
+  'sql-function-interpolation-not-found': {name: string};
+  'invalid-function-return-type': {type: FieldValueType; name: string};
 };
 
 export const MESSAGE_FORMATTERS: ErrorCodeMessageMap = {
@@ -90,6 +140,10 @@ export const MESSAGE_FORMATTERS: ErrorCodeMessageMap = {
     `INTERNAL ERROR IN TRANSLATION: ${e.message}`,
   'experiment-not-enabled': e =>
     `Experimental flag '${e.experimentId}' is not set, feature not available`,
+  'sql-functions-experiment-not-enabled': e =>
+    `Cannot use sql_function \`${e.name}\`; use \`sql_functions\` experiment to enable this behavior`,
+  'aggregate-order-by-experiment-not-enabled': () =>
+    'Enable experiment `aggregate_order_by` to use `order_by` with an aggregate function',
   'global-namespace-redefine': e =>
     `Cannot redefine '${e.name}', which is in global namespace`,
   'experimental-dialect-not-enabled': e =>
@@ -113,6 +167,61 @@ export const MESSAGE_FORMATTERS: ErrorCodeMessageMap = {
       : `import '${e.url}' error: ${e.message}`,
   'cannot-compute-full-import-url': e =>
     `Could not compute full path URL: ${e.message}`,
+  'function-not-found': e =>
+    `Unknown function '${e.name}'. Use '${e.name}!(...)' to call a SQL function directly.`,
+  'called-non-function': e =>
+    `Cannot call '${e.name}', which is of type ${e.type}`,
+  'function-case-does-not-match': e => ({
+    warn: `Case insensitivity for function names is deprecated, use '${e.name}' instead`,
+  }),
+  'invalid-aggregate-source': e => `Aggregate source cannot be a ${e.type}`,
+  'aggregate-source-not-found': e => `Reference to undefined value ${e.source}`,
+  'no-matching-overload': e =>
+    `No matching overload for function ${e.name}(${e.types.join(', ')})`,
+  'mismatched-function-argument-expression-type': e => {
+    const allowed = expressionIsScalar(e.maximumAllowedExpressionType)
+      ? 'scalar'
+      : 'scalar or aggregate';
+    return `Parameter ${e.argumentIndex + 1} ('${e.parameterName}') of ${
+      e.functionName
+    } must be ${allowed}, but received ${e.actualExpressionType}`;
+  },
+  'mismatched-function-argument-evaluation-space': e => {
+    const allowed =
+      e.maximumAllowedEvaluationSpace === 'literal'
+        ? 'literal'
+        : e.maximumAllowedEvaluationSpace === 'constant'
+        ? 'literal or constant'
+        : 'literal, constant or output';
+    return `Parameter ${e.argumentIndex + 1} ('${e.parameterName}') of ${
+      e.functionName
+    } must be ${allowed}, but received ${e.actualEvaluationSpace}`;
+  },
+  'function-argument-must-not-be-literal-null': e =>
+    `Parameter ${e.argumentIndex + 1} ('${e.parameterName}') of ${
+      e.functionName
+    } must not be a literal null`,
+  'non-aggregate-function-called-with-source': e =>
+    `Cannot call function ${e.name}(${e.types.join(', ')}) with source`,
+  'illegal-function-order-by': e =>
+    `Function \`${e.name}\` does not support \`order_by\``,
+  'illegal-function-limit': e => `Function ${e.name} does not support limit`,
+  'partition-by-not-found': e => `${e.name} is not defined`,
+  'partition-by-must-be-scalar-or-aggregate': () =>
+    'Partition expression must be scalar or aggregate',
+  'invalid-sql-expression-string': e =>
+    `Invalid string literal for \`${e.sqlFunctionName}\``,
+  'unsupported-sql-function-dotted-interpolation': e =>
+    (e.unsupportedInterpolations.length === 1
+      ? `'.' paths are not yet supported in sql interpolations, found ${e.unsupportedInterpolations[0]}`
+      : `'.' paths are not yet supported in sql interpolations, found (${e.unsupportedInterpolations.join(
+          ', '
+        )})`) +
+    '. See LookML ${...} documentation at https://cloud.google.com/looker/docs/reference/param-field-sql#sql_for_dimensions',
+  'sql-function-interpolation-not-found': e =>
+    `Invalid interpolation: ${e.name} not found`,
+  'invalid-function-return-type': e =>
+    `Invalid return type ${e.type} for function '${e.name}'`,
 };
 
 export type MessageCode = keyof MessageDataTypes;

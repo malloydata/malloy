@@ -94,19 +94,17 @@ export class ExprFunc extends ExpressionDef {
       : undefined;
     const func = dialectFunc ?? this.modelEntry(normalizedName)?.entry;
     if (func === undefined) {
-      this.log(
-        `Unknown function '${this.name}'. Use '${this.name}!(...)' to call a SQL function directly.`
-      );
-      return {found: undefined, error: 'unknown function'};
+      const error = this.log('function-not-found', {name: this.name});
+      return {found: undefined, error};
     } else if (func.type !== 'function') {
-      this.log(`Cannot call '${this.name}', which is of type ${func.type}`);
-      return {found: undefined, error: 'called non function'};
+      const error = this.log('called-non-function', {
+        name: this.name,
+        type: func.type,
+      });
+      return {found: undefined, error};
     }
     if (func.name !== this.name) {
-      this.log(
-        `Case insensitivity for function names is deprecated, use '${func.name}' instead`,
-        'warn'
-      );
+      this.log('function-case-does-not-match', {name: func.name});
     }
     return {found: func, error: undefined};
   }
@@ -169,15 +167,17 @@ export class ExprFunc extends ExpressionDef {
           structPath = this.source.path.slice(0, -1);
         } else {
           if (!(sourceFoot instanceof StructSpaceFieldBase)) {
-            const message = `Aggregate source cannot be a ${footType.dataType}`;
-            this.log(message);
-            return errorFor(message);
+            const code = this.log('invalid-aggregate-source', {
+              type: footType.dataType,
+            });
+            return errorFor(code);
           }
         }
       } else {
-        const message = `Reference to undefined value ${this.source.refString}`;
-        this.log(message);
-        return errorFor(message);
+        const code = this.log('aggregate-source-not-found', {
+          source: this.source.refString,
+        });
+        return errorFor(code);
       }
     }
     // Construct the full args list including the implicit arg.
@@ -187,53 +187,47 @@ export class ExprFunc extends ExpressionDef {
     ];
     const result = findOverload(func, argExprs);
     if (result === undefined) {
-      this.log(
-        `No matching overload for function ${this.name}(${argExprs
-          .map(e => e.dataType)
-          .join(', ')})`
-      );
-      return errorFor('no matching overload');
+      const code = this.log('no-matching-overload', {
+        name: this.name,
+        types: argExprs.map(e => e.dataType),
+      });
+      return errorFor(code);
     }
     const {overload, expressionTypeErrors, evalSpaceErrors, nullabilityErrors} =
       result;
     // Report errors for expression type mismatch
     for (const error of expressionTypeErrors) {
       const adjustedIndex = error.argIndex - (implicitExpr ? 1 : 0);
-      const allowed = expressionIsScalar(error.maxExpressionType)
-        ? 'scalar'
-        : 'scalar or aggregate';
       const arg = this.args[adjustedIndex];
-      arg.log(
-        `Parameter ${error.argIndex + 1} ('${error.param.name}') of ${
-          this.name
-        } must be ${allowed}, but received ${error.actualExpressionType}`
-      );
+      arg.log('mismatched-function-argument-expression-type', {
+        functionName: this.name,
+        parameterName: error.param.name,
+        maximumAllowedExpressionType: error.maxExpressionType,
+        actualExpressionType: error.actualExpressionType,
+        argumentIndex: error.argIndex,
+      });
     }
     // Report errors for eval space mismatch
     for (const error of evalSpaceErrors) {
       const adjustedIndex = error.argIndex - (implicitExpr ? 1 : 0);
-      const allowed =
-        error.maxEvalSpace === 'literal'
-          ? 'literal'
-          : error.maxEvalSpace === 'constant'
-          ? 'literal or constant'
-          : 'literal, constant or output';
       const arg = this.args[adjustedIndex];
-      arg.log(
-        `Parameter ${error.argIndex + 1} ('${error.param.name}') of ${
-          this.name
-        } must be ${allowed}, but received ${error.actualEvalSpace}`
-      );
+      arg.log('mismatched-function-argument-evaluation-space', {
+        functionName: this.name,
+        parameterName: error.param.name,
+        argumentIndex: error.argIndex,
+        maximumAllowedEvaluationSpace: error.maxEvalSpace,
+        actualEvaluationSpace: error.actualEvalSpace,
+      });
     }
     // Report nullability errors
     for (const error of nullabilityErrors) {
       const adjustedIndex = error.argIndex - (implicitExpr ? 1 : 0);
       const arg = this.args[adjustedIndex];
-      arg.log(
-        `Parameter ${error.argIndex + 1} ('${error.param.name}') of ${
-          this.name
-        } must not be a literal null`
-      );
+      arg.log('function-argument-must-not-be-literal-null', {
+        argumentIndex: error.argIndex,
+        functionName: this.name,
+        parameterName: error.param.name,
+      });
     }
     const type = overload.returnType;
     const expressionType = maxOfExpressionTypes([
@@ -244,12 +238,11 @@ export class ExprFunc extends ExpressionDef {
       !expressionIsAggregate(overload.returnType.expressionType) &&
       this.source !== undefined
     ) {
-      this.log(
-        `Cannot call function ${this.name}(${argExprs
-          .map(e => e.dataType)
-          .join(', ')}) with source`
-      );
-      return errorFor('cannot call with source');
+      const code = this.log('non-aggregate-function-called-with-source', {
+        name: this.name,
+        types: argExprs.map(e => e.dataType),
+      });
+      return errorFor(code);
     }
     const frag: FunctionCallNode = {
       node: 'function_call',
@@ -270,7 +263,8 @@ export class ExprFunc extends ExpressionDef {
       if (!isAnalytic) {
         if (!this.inExperiment('aggregate_order_by', true)) {
           props.orderBys[0].log(
-            'Enable experiment `aggregate_order_by` to use `order_by` with an aggregate function'
+            'aggregate-order-by-experiment-not-enabled',
+            {}
           );
         }
       }
@@ -283,16 +277,14 @@ export class ExprFunc extends ExpressionDef {
         );
         frag.kids.orderBy = allObs;
       } else {
-        props.orderBys[0].log(
-          `Function \`${this.name}\` does not support \`order_by\``
-        );
+        props.orderBys[0].log('illegal-function-order-by', {name: this.name});
       }
     }
     if (props?.limit !== undefined) {
       if (overload.supportsLimit) {
         frag.limit = props.limit.limit;
       } else {
-        this.log(`Function ${this.name} does not support limit`);
+        this.log('illegal-function-limit', {name: this.name});
       }
     }
     if (props?.partitionBys && props.partitionBys.length > 0) {
@@ -301,14 +293,14 @@ export class ExprFunc extends ExpressionDef {
         for (const partitionField of partitionBy.partitionFields) {
           const e = partitionField.getField(fs);
           if (e.found === undefined) {
-            partitionField.log(`${partitionField.refString} is not defined`);
+            partitionField.log('partition-by-not-found', {
+              name: partitionField.refString,
+            });
           } else if (
             expressionIsAnalytic(e.found.typeDesc().expressionType) ||
             expressionIsUngroupedAggregate(e.found.typeDesc().expressionType)
           ) {
-            partitionField.log(
-              'Partition expression must be scalar or aggregate'
-            );
+            partitionField.log('partition-by-must-be-scalar-or-aggregate', {});
           } else {
             partitionByFields.push(partitionField.nameString);
           }
@@ -326,14 +318,15 @@ export class ExprFunc extends ExpressionDef {
       ].includes(func.name)
     ) {
       if (!this.inExperiment('sql_functions', true)) {
-        const message = `Cannot use sql_function \`${func.name}\`; use \`sql_functions\` experiment to enable this behavior`;
-        this.log(message);
-        return errorFor('sql_function used without enabling');
+        const code = this.log('sql-functions-experiment-not-enabled', {
+          name: func.name,
+        });
+        return errorFor(code);
       }
 
       const str = argExprs[0].value;
       if (str.node !== 'stringLiteral') {
-        this.log(`Invalid string literal for \`${func.name}\``);
+        this.log('invalid-sql-expression-string', {sqlFunctionName: func.name});
       } else {
         const literal = str.literal;
         const parts = parseSQLInterpolation(literal);
@@ -348,19 +341,11 @@ export class ExprFunc extends ExpressionDef {
           );
 
         if (unsupportedInterpolations.length > 0) {
-          const unsupportedInterpolationMsg =
-            unsupportedInterpolations.length === 1
-              ? `'.' paths are not yet supported in sql interpolations, found ${unsupportedInterpolations.at(
-                  0
-                )}`
-              : `'.' paths are not yet supported in sql interpolations, found (${unsupportedInterpolations.join(
-                  ', '
-                )})`;
-          this.log(unsupportedInterpolationMsg);
-
-          return errorFor(
-            `${unsupportedInterpolationMsg}. See LookML \${...} documentation at https://cloud.google.com/looker/docs/reference/param-field-sql#sql_for_dimensions`
+          const code = this.log(
+            'unsupported-sql-function-dotted-interpolation',
+            {unsupportedInterpolations}
           );
+          return errorFor(code);
         }
 
         const expr: SQLExprElement[] = [];
@@ -374,8 +359,10 @@ export class ExprFunc extends ExpressionDef {
             this.has({name});
             const result = fs.lookup([name]);
             if (result.found === undefined) {
-              this.log(`Invalid interpolation: ${result.error}`);
-              return errorFor('invalid interpolated field');
+              const code = this.log('sql-function-interpolation-not-found', {
+                name: part.name,
+              });
+              return errorFor(code);
             }
             if (result.found.refType === 'parameter') {
               expr.push({node: 'parameter', path: [part.name]});
@@ -389,10 +376,11 @@ export class ExprFunc extends ExpressionDef {
       }
     }
     if (type.dataType === 'any') {
-      this.log(
-        `Invalid return type ${type.dataType} for function '${this.name}'`
-      );
-      return errorFor('invalid return type');
+      const code = this.log('invalid-function-return-type', {
+        type: type.dataType,
+        name: func.name,
+      });
+      return errorFor(code);
     }
     const maxEvalSpace = mergeEvalSpaces(...argExprs.map(e => e.evalSpace));
     // If the merged eval space of all args is constant, the result is constant.
