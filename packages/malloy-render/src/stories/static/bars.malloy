@@ -282,6 +282,26 @@ source: products is duckdb.table("data/products.parquet") extend {
       order_by: `date`
     }
 
+    # bar_chart size=xl
+    nest: yearExtract is {
+      group_by:
+        `date` is year(@2001-02-03 + id year)
+      aggregate:
+        `Sales $` is retail_price.avg()*500
+      limit: 10
+      order_by: `date`
+    }
+
+    # bar_chart size=xl
+    nest: yearTruncate is {
+      group_by:
+        `date` is (@2001-02-03 + id year).year
+      aggregate:
+        `Sales $` is retail_price.avg()*500
+      limit: 10
+      order_by: `date`
+    }
+
     nest: n is {
       group_by: brand
        # bar_chart
