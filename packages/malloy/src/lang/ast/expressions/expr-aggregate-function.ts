@@ -27,9 +27,10 @@ import {
   FieldDef,
   FieldValueType,
   isAtomicFieldType,
-  StructRelationship,
-  Expr,
   AggregateExpr,
+  Expr,
+  hasExpression,
+  hasJoin,
 } from '../../../model/malloy_types';
 import {exprWalk} from '../../../model/utils';
 
@@ -43,11 +44,7 @@ import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 import {SpaceField} from '../types/space-field';
 import {ExprIdReference} from './expr-id-reference';
-
-interface JoinPathElement {
-  name: string;
-  structRelationship: StructRelationship;
-}
+import {JoinPath, JoinPathElement} from '../types/lookup-result';
 
 export abstract class ExprAggregateFunction extends ExpressionDef {
   elementType: string;
@@ -84,7 +81,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
     if (this.source) {
       const result = this.source.getField(inputFS);
       if (result.found) {
-        sourceRelationship = result.relationship;
+        sourceRelationship = result.joinPath;
         const sourceFoot = result.found;
         const footType = sourceFoot.typeDesc();
         if (isAtomicFieldType(footType.dataType)) {
@@ -190,7 +187,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
   }
 
   getJoinUsage(fs: FieldSpace) {
-    const result: JoinPathElement[][] = [];
+    const result: JoinPath[] = [];
     if (this.source) {
       const lookup = this.source.getField(fs);
       if (lookup.found) {
@@ -206,7 +203,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
   }
 }
 
-function joinPathEq(a1: JoinPathElement[], a2: JoinPathElement[]): boolean {
+function joinPathEq(a1: JoinPath, a2: JoinPath): boolean {
   let len = a1.length;
   if (len !== a2.length) {
     return false;
@@ -220,15 +217,15 @@ function joinPathEq(a1: JoinPathElement[], a2: JoinPathElement[]): boolean {
   return true;
 }
 
-function getJoinUsage(fs: FieldSpace, expr: Expr): JoinPathElement[][] {
-  const result: {name: string; structRelationship: StructRelationship}[][] = [];
-  const lookup = (
+function getJoinUsage(fs: FieldSpace, expr: Expr): JoinPath[] {
+  const result: JoinPath[] = [];
+  const lookupWithPath = (
     fs: FieldSpace,
     path: string[]
   ): {
     fs: FieldSpace;
     def: FieldDef;
-    relationship: {name: string; structRelationship: StructRelationship}[];
+    joinPath: JoinPath;
   } => {
     const head = path[0];
     const rest = path.slice(1);
@@ -237,13 +234,10 @@ function getJoinUsage(fs: FieldSpace, expr: Expr): JoinPathElement[][] {
       throw new Error(`Invalid field lookup ${head}`);
     }
     if (def instanceof StructSpaceField && rest.length > 0) {
-      const restDef = lookup(def.fieldSpace, rest);
+      const restDef = lookupWithPath(def.fieldSpace, rest);
       return {
         ...restDef,
-        relationship: [
-          {name: head, structRelationship: def.structRelationship},
-          ...restDef.relationship,
-        ],
+        joinPath: [{...def.joinPathElement, name: head}, ...restDef.joinPath],
       };
     } else if (def instanceof SpaceField) {
       if (rest.length !== 0) {
@@ -254,7 +248,7 @@ function getJoinUsage(fs: FieldSpace, expr: Expr): JoinPathElement[][] {
         return {
           fs,
           def: fieldDef,
-          relationship: [],
+          joinPath: [],
         };
       }
       throw new Error('No field def');
@@ -264,19 +258,20 @@ function getJoinUsage(fs: FieldSpace, expr: Expr): JoinPathElement[][] {
   };
   for (const frag of exprWalk(expr)) {
     if (frag.node === 'field') {
-      const def = lookup(fs, frag.path);
-      if (def.def.type !== 'struct' && def.def.type !== 'turtle') {
-        if (def.def.e) {
-          const defUsage = getJoinUsage(def.fs, def.def.e);
-          result.push(...defUsage.map(r => [...def.relationship, ...r]));
+      const def = lookupWithPath(fs, frag.path);
+      const field = def.def;
+      if (isAtomicFieldType(field.type) && !hasJoin(field)) {
+        if (hasExpression(field)) {
+          const defUsage = getJoinUsage(def.fs, field.e);
+          result.push(...defUsage.map(r => [...def.joinPath, ...r]));
         } else {
-          result.push(def.relationship);
+          result.push(def.joinPath);
         }
       }
     } else if (frag.node === 'source-reference') {
       if (frag.path) {
-        const def = lookup(fs, frag.path);
-        result.push(def.relationship);
+        const def = lookupWithPath(fs, frag.path);
+        result.push(def.joinPath);
       } else {
         result.push([]);
       }
@@ -285,35 +280,25 @@ function getJoinUsage(fs: FieldSpace, expr: Expr): JoinPathElement[][] {
   return result;
 }
 
+type UsagePathElement = JoinPathElement & {reverse: boolean};
+type UsagePath = UsagePathElement[];
 function getJoinUsagePaths(
-  sourceRelationship: {name: string; structRelationship: StructRelationship}[],
-  joinUsage: {name: string; structRelationship: StructRelationship}[][]
-): {
-  name: string;
-  structRelationship: StructRelationship;
-  reverse: boolean;
-}[][] {
-  const sourceToUsagePaths: {
-    name: string;
-    structRelationship: StructRelationship;
-    reverse: boolean;
-  }[][] = [];
+  joinPath: JoinPath,
+  joinUsage: JoinPath[]
+): UsagePath[] {
+  const sourceToUsagePaths: UsagePath[] = [];
   for (const usage of joinUsage) {
     let overlap = 0;
-    for (let i = 0; i < sourceRelationship.length && i < usage.length; i++) {
-      if (sourceRelationship[i].name === usage[i].name) {
+    for (let i = 0; i < joinPath.length && i < usage.length; i++) {
+      if (joinPath[i].name === usage[i].name) {
         overlap = i + 1;
       } else {
         break;
       }
     }
-    const nonOverlapSource = sourceRelationship.slice(overlap);
+    const nonOverlapSource = joinPath.slice(overlap);
     const nonOverlapUsage = usage.slice(overlap);
-    const sourceToUsagePath: {
-      name: string;
-      structRelationship: StructRelationship;
-      reverse: boolean;
-    }[] = [
+    const sourceToUsagePath: UsagePath = [
       ...nonOverlapSource.map(r => ({...r, reverse: true})),
       ...nonOverlapUsage.map(r => ({...r, reverse: false})),
     ];
@@ -322,22 +307,15 @@ function getJoinUsagePaths(
   return sourceToUsagePaths;
 }
 
-function validateUsagePaths(
-  functionName: string,
-  usagePaths: {
-    name: string;
-    structRelationship: StructRelationship;
-    reverse: boolean;
-  }[][]
-) {
+function validateUsagePaths(functionName: string, usagePaths: UsagePath[]) {
   for (const path of usagePaths) {
     for (const step of path) {
-      if (step.structRelationship.type === 'cross') {
+      if (step.joinType === 'cross') {
         return `Cannot compute \`${functionName}\` across \`join_cross\` relationship \`${step.name}\``;
-      } else if (step.structRelationship.type === 'many' && !step.reverse) {
+      } else if (step.joinType === 'many' && !step.reverse) {
         return `Cannot compute \`${functionName}\` across \`join_many\` relationship \`${step.name}\``;
-      } else if (step.structRelationship.type === 'nested' && !step.reverse) {
-        return `Cannot compute \`${functionName}\` across repeated relationship \`${step.name}\``;
+      } else if (step.joinElementType === 'array' && !step.reverse) {
+        return `Cannot compute \`${functionName}\` across repeated relationship or array \`${step.name}\``;
       }
     }
   }
@@ -345,7 +323,7 @@ function validateUsagePaths(
 
 function suggestNewVersion(
   joinError: string,
-  joinUsage: {name: string; structRelationship: StructRelationship}[][],
+  joinUsage: JoinPath[],
   expr: FieldReference | ExpressionDef,
   func: string
 ) {
@@ -370,11 +348,7 @@ function suggestNewVersion(
   const indexFromEndOfLastMany = longestOverlap
     .slice()
     .reverse()
-    .findIndex(
-      x =>
-        x.structRelationship.type === 'many' ||
-        x.structRelationship.type === 'cross'
-    );
+    .findIndex(x => x.joinType === 'many' || x.joinType === 'cross');
   const numJoinsToLastMany =
     indexFromEndOfLastMany === -1
       ? 0

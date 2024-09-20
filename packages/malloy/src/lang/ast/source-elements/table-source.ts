@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {StructDef} from '../../../model/malloy_types';
+import {SourceStructDef} from '../../../model/malloy_types';
 import {
   constructTableKey,
   deprecatedParseTableURI,
@@ -34,7 +34,7 @@ type TableInfo = {tablePath: string; connectionName?: string | undefined};
 export abstract class TableSource extends Source {
   abstract getTableInfo(): TableInfo | undefined;
 
-  structDef(): StructDef {
+  getStructDef(): SourceStructDef {
     const info = this.getTableInfo();
     if (info === undefined) {
       return ErrorFactory.structDef;

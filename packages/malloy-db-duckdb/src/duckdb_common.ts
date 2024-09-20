@@ -308,7 +308,7 @@ export abstract class DuckDBCommon
     this.fillStructDefFromTypeMap(structDef, typeMap);
   }
 
-  public async fetchSchemaForSQLBlock(
+  public async fetchSchemaForSQLStruct(
     sqlRef: SQLBlock,
     {refreshTimestamp}: FetchSchemaOptions
   ): Promise<

@@ -60,7 +60,7 @@ export class ParameterSpace implements FieldSpace {
     return {
       found: entry,
       error: undefined,
-      relationship: [],
+      joinPath: [],
       isOutputField: false,
     };
   }

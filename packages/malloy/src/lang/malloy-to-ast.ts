@@ -456,7 +456,7 @@ export class MalloyToAST
     return this.astAt(expr, pcx);
   }
 
-  visitDefJoinMany(pcx: parse.DefJoinManyContext): ast.Joins {
+  visitDefJoinMany(pcx: parse.DefJoinManyContext): ast.JoinStatement {
     const joins: ast.Join[] = [];
     for (const joinCx of pcx.joinList().joinDef()) {
       const join = this.visit(joinCx);
@@ -472,12 +472,12 @@ export class MalloyToAST
         }
       }
     }
-    const joinMany = new ast.Joins(joins);
+    const joinMany = new ast.JoinStatement(joins);
     joinMany.extendNote({blockNotes: this.getNotes(pcx.tags())});
     return joinMany;
   }
 
-  visitDefJoinOne(pcx: parse.DefJoinOneContext): ast.Joins {
+  visitDefJoinOne(pcx: parse.DefJoinOneContext): ast.JoinStatement {
     const joinList = this.getJoinList(pcx.joinList());
     const joins: ast.Join[] = [];
     for (const join of joinList) {
@@ -488,12 +488,12 @@ export class MalloyToAST
         }
       }
     }
-    const joinOne = new ast.Joins(joins);
+    const joinOne = new ast.JoinStatement(joins);
     joinOne.extendNote({blockNotes: this.getNotes(pcx.tags())});
     return joinOne;
   }
 
-  visitDefJoinCross(pcx: parse.DefJoinCrossContext): ast.Joins {
+  visitDefJoinCross(pcx: parse.DefJoinCrossContext): ast.JoinStatement {
     const joinList = this.getJoinList(pcx.joinList());
     const joins: ast.Join[] = [];
     for (const join of joinList) {
@@ -506,13 +506,17 @@ export class MalloyToAST
         }
       }
     }
-    const joinCross = new ast.Joins(joins);
+    const joinCross = new ast.JoinStatement(joins);
     joinCross.extendNote({blockNotes: this.getNotes(pcx.tags())});
     return joinCross;
   }
 
-  protected getJoinList(pcx: parse.JoinListContext): ast.MalloyElement[] {
-    return pcx.joinDef().map(jcx => this.visit(jcx));
+  protected getJoinList(pcx: parse.JoinListContext): ast.Join[] {
+    return this.only<ast.Join>(
+      pcx.joinDef().map(scx => this.visit(scx)),
+      x => x instanceof ast.Join && x,
+      'join'
+    );
   }
 
   protected getJoinFrom(cx: parse.JoinFromContext): {
@@ -1804,6 +1808,37 @@ export class MalloyToAST
       new ast.ExperimentalExperiment('compilerTestExperimentTranslate'),
       pcx
     );
+  }
+
+  visitRecordRef(pcx: parse.RecordRefContext) {
+    const pathCx = pcx.fieldPath();
+    const tailEl = pathCx.fieldName().at(-1);
+    if (tailEl) {
+      const elementKey = getId(tailEl);
+      const idRef = new ast.ExprIdReference(
+        this.getFieldPath(pathCx, ast.ExpressionFieldReference)
+      );
+      return new ast.RecordElement(elementKey, idRef);
+    }
+    throw this.internalError(
+      pathCx,
+      'IMPOSSIBLY A PATH CONTAINED ZERO ELEMENTS'
+    );
+  }
+
+  visitRecordExpr(pcx: parse.RecordExprContext) {
+    const elementKey = getId(pcx.recordKey());
+    const elementVal = this.getFieldExpr(pcx.fieldExpr());
+    return new ast.RecordElement(elementKey, elementVal);
+  }
+
+  visitExprLiteralRecord(pcx: parse.ExprLiteralRecordContext) {
+    const els = this.only<ast.RecordElement>(
+      pcx.recordElement().map(elCx => this.astAt(this.visit(elCx), elCx)),
+      visited => visited instanceof ast.RecordElement && visited,
+      'a key value pair'
+    );
+    return new ast.RecordLiteral(els);
   }
 
   visitExprWarnLike(pcx: parse.ExprWarnLikeContext): ast.ExprCompare {

@@ -370,7 +370,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
     }
   }
 
-  public async fetchSchemaForSQLBlock(
+  public async fetchSchemaForSQLStruct(
     sqlRef: SQLBlock,
     options: FetchSchemaOptions
   ): Promise<
@@ -385,7 +385,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
       tables.push(match[2] || match[3]);
     }
     await this.findTables(tables, options);
-    return super.fetchSchemaForSQLBlock(sqlRef, options);
+    return super.fetchSchemaForSQLStruct(sqlRef, options);
   }
 
   async fetchSchemaForTables(

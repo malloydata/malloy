@@ -57,7 +57,7 @@ describe('DuckDBWasmConnection', () => {
   });
 
   it('finds simple tables in SQL', async () => {
-    await connection.fetchSchemaForSQLBlock(
+    await connection.fetchSchemaForSQLStruct(
       {
         selectStr: `
 SELECT
@@ -82,7 +82,7 @@ FROM "inventory_items.parquet"
   });
 
   it('finds table functions in SQL', async () => {
-    await connection.fetchSchemaForSQLBlock(
+    await connection.fetchSchemaForSQLStruct(
       {
         selectStr: `
 SELECT

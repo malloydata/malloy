@@ -22,13 +22,12 @@
  */
 
 import {Dimensions} from '../source-properties/dimensions';
-import {Joins} from '../source-properties/joins';
 import {Measures} from '../source-properties/measures';
 import {MalloyElement} from './malloy-element';
 
-export type QueryExtendProperty = Dimensions | Measures | Joins;
+export type QueryExtendProperty = Dimensions | Measures;
 export function isQueryExtendProperty(
   q: MalloyElement
 ): q is QueryExtendProperty {
-  return q instanceof Dimensions || q instanceof Measures || q instanceof Joins;
+  return q instanceof Dimensions || q instanceof Measures;
 }

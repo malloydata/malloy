@@ -32,7 +32,7 @@ import {
 } from '../../../model/malloy_types';
 
 import {ErrorFactory} from '../error-factory';
-import {FieldSpace} from '../types/field-space';
+import {SourceFieldSpace} from '../types/field-space';
 import {Filter} from '../query-properties/filters';
 import {Limit} from '../query-properties/limit';
 import {Ordering} from '../query-properties/ordering';
@@ -138,7 +138,7 @@ export class ReduceBuilder extends QuerySegmentBuilder implements QueryBuilder {
   readonly type = 'grouping';
 
   constructor(
-    baseFS: FieldSpace,
+    baseFS: SourceFieldSpace,
     refineThis: PipeSegment | undefined,
     isNestIn: QueryOperationSpace | undefined,
     astEl: MalloyElement

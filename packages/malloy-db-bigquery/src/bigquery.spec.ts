@@ -250,18 +250,18 @@ describe('db:BigQuery', () => {
     });
 
     it('caches sql schema', async () => {
-      await bq.fetchSchemaForSQLBlock(SQL_BLOCK_1, {});
+      await bq.fetchSchemaForSQLStruct(SQL_BLOCK_1, {});
       expect(getSQLBlockSchema).toBeCalledTimes(1);
       await new Promise(resolve => setTimeout(resolve));
-      await bq.fetchSchemaForSQLBlock(SQL_BLOCK_1, {});
+      await bq.fetchSchemaForSQLStruct(SQL_BLOCK_1, {});
       expect(getSQLBlockSchema).toBeCalledTimes(1);
     });
 
     it('refreshes sql schema', async () => {
-      await bq.fetchSchemaForSQLBlock(SQL_BLOCK_2, {});
+      await bq.fetchSchemaForSQLStruct(SQL_BLOCK_2, {});
       expect(getSQLBlockSchema).toBeCalledTimes(1);
       await new Promise(resolve => setTimeout(resolve));
-      await bq.fetchSchemaForSQLBlock(SQL_BLOCK_2, {
+      await bq.fetchSchemaForSQLStruct(SQL_BLOCK_2, {
         refreshTimestamp: Date.now() + 10,
       });
       expect(getSQLBlockSchema).toBeCalledTimes(2);

@@ -24,7 +24,7 @@
 import {
   Argument,
   InvokedStructRef,
-  StructDef,
+  SourceStructDef,
   StructRef,
   refIsStructDef,
 } from '../../../model/malloy_types';
@@ -46,12 +46,12 @@ export class QueryHeadStruct extends Source {
     return {structRef: this.fromRef};
   }
 
-  structDef(parameterSpace: ParameterSpace | undefined): StructDef {
+  getStructDef(parameterSpace: ParameterSpace | undefined): SourceStructDef {
     if (refIsStructDef(this.fromRef)) {
       return this.fromRef;
     }
     const ns = new NamedSource(this.fromRef, this.sourceArguments, undefined);
     this.has({exploreReference: ns});
-    return ns.structDef(parameterSpace);
+    return ns.getStructDef(parameterSpace);
   }
 }

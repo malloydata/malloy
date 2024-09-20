@@ -57,14 +57,14 @@ async function getError<T>(promise: Promise<T>): Promise<Error | undefined> {
 describe('experimental dialects', () => {
   const duckdbX = 'duckdb_experimental';
   class DuckdbXConnection extends DuckDBConnection {
-    public async fetchSchemaForSQLBlock(
+    public async fetchSchemaForSQLStruct(
       sqlRef: SQLBlock,
       options: FetchSchemaOptions
     ): Promise<
       | {structDef: StructDef; error?: undefined}
       | {error: string; structDef?: undefined}
     > {
-      const result = await super.fetchSchemaForSQLBlock(sqlRef, options);
+      const result = await super.fetchSchemaForSQLStruct(sqlRef, options);
       if (result.error === undefined) {
         return {structDef: {...result.structDef, dialect: duckdbX}};
       }

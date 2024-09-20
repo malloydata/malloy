@@ -12,19 +12,19 @@ import {databasesFromEnvironmentOr} from '../../util';
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(['duckdb']));
 
 describe.each(runtimes.runtimeList)('%s record types', (dbName, runtime) => {
-  const sqlTestData = "{ first: 'Mark', last: 'Tonka' }";
+  const sqlTestData = "{ first: 'Mark', surname: 'Tonka' }";
   const model = runtime.loadModel(
-    `source: people is ${dbName}.sql("SELECT ${sqlTestData} AS name")`
+    `source: people is ${dbName}.sql("SELECT ${sqlTestData} AS name, [ ${sqlTestData}, ${sqlTestData} ] as zznames")`
   );
   test('record access', async () => {
     await expect(
-      'run: people -> { select: a is name.first, b is name.`last` }'
+      'run: people -> { select: a is name.first, b is name.surname }'
     ).malloyResultMatches(model, {a: 'Mark', b: 'Tonka'});
   });
   test('select entire record', async () => {
     await expect('run: people -> { select: name }').malloyResultMatches(model, {
       'name/first': 'Mark',
-      'name/last': 'Tonka',
+      'name/surname': 'Tonka',
     });
   });
   test('group_by entire record', async () => {
@@ -32,24 +32,41 @@ describe.each(runtimes.runtimeList)('%s record types', (dbName, runtime) => {
       model,
       {
         'name/first': 'Mark',
-        'name/last': 'Tonka',
+        'name/surname': 'Tonka',
       }
     );
   });
   test('record literal', async () => {
     await expect(
-      "run: people -> { select: name is {first is 'Mack', last is 'Truck'} }"
+      "run: people -> { select: buddy is {first is 'Mack', surname is 'Truck'} }"
     ).malloyResultMatches(model, {
-      'name/first': 'Mack',
-      'name/last': 'Truck',
+      'buddy/first': 'Mack',
+      'buddy/surname': 'Truck',
     });
   });
-  test('record literal with inferred key names', async () => {
+  // mtoy todo add a "translationToFailWith" test for { n is count()} in lang/test
+  test('nested rec literal', async () => {
     await expect(
-      'run: people -> { select: name is {name.first, name.last} }'
+      "run: people -> { select: friends is { best is { first is 'Mack', surname is 'Truck'} } }"
     ).malloyResultMatches(model, {
-      'name/first': 'Mark',
-      'name/last': 'Tonka',
+      'friends/best/first': 'Mack',
+      'friends/best/surname': 'Truck',
+    });
+  });
+  test('nested value literal', async () => {
+    await expect(
+      'run: people -> { select: friends is { best is name } }'
+    ).malloyResultMatches(model, {
+      'friends/best/first': 'Mack',
+      'friends/best/surname': 'Truck',
+    });
+  });
+  test('literal record with inferred key names', async () => {
+    await expect(
+      'run: people -> { select: dad_name is {first is "Morgan", name.surname} }'
+    ).malloyResultMatches(model, {
+      'dad_name/first': 'Morgan',
+      'dad_name/surname': 'Tonka',
     });
   });
 });

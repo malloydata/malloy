@@ -52,7 +52,6 @@ export type {
   QueryDataRow,
   // Needed for DB
   StructDef,
-  StructRelationship,
   NamedStructDefs,
   MalloyQueryData,
   AtomicFieldType as AtomicFieldTypeInner,
@@ -62,13 +61,11 @@ export type {
   TimeFieldType,
   QueryData,
   QueryValue,
-  FieldTypeDef,
   Expr,
   // Needed for drills in render
   FilterCondition,
-  SQLBlock,
+  SQLSentence,
   // Used in Composer Demo
-  FieldAtomicDef,
   FieldDef,
   PipeSegment,
   QueryFieldDef,
@@ -98,7 +95,6 @@ export type {
   Sampling,
   Annotation,
   FieldAtomicTypeDef,
-  SQLBlockStructDef,
 } from './model';
 export {
   // Used in Composer Demo
@@ -156,7 +152,6 @@ export type {
   DocumentSymbol,
   ResultJSON,
   PreparedResultMaterializer,
-  SQLBlockMaterializer,
   ExploreMaterializer,
   WriteStream,
   SerializedExplore,

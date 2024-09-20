@@ -21,19 +21,16 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {StructDef} from '../../model/malloy_types';
+import {StructDef, TableSourceStruct} from '../../model/malloy_types';
 import {Explore} from '../../malloy';
 
-export const CHILD_EXPLORE: StructDef = {
-  type: 'struct',
+export const CHILD_EXPLORE: TableSourceStruct = {
+  type: 'table',
   name: 'some_ns.child',
   as: 'child',
   dialect: 'standardsql',
-  structSource: {
-    type: 'table',
-    tablePath: 'some_ns.child',
-  },
-  structRelationship: {type: 'basetable', connectionName: 'bigquery'},
+  tablePath: 'some_ns.child',
+  connection: 'bigquery',
   primaryKey: 'id1',
   fields: [
     {type: 'string', name: 'carrier'},
@@ -46,16 +43,13 @@ export const CHILD_EXPLORE: StructDef = {
   ],
 };
 
-export const PARENT_EXPLORE: StructDef = {
-  type: 'struct',
+export const PARENT_EXPLORE: TableSourceStruct = {
+  type: 'table',
   name: 'some_ns.parent',
   as: 'parent',
   dialect: 'standardsql',
-  structSource: {
-    type: 'table',
-    tablePath: 'some_ns.parent',
-  },
-  structRelationship: {type: 'basetable', connectionName: 'bigquery'},
+  tablePath: 'some_ns.parent',
+  connection: 'bigquery',
   primaryKey: 'id2',
   fields: [
     {type: 'string', name: 'name'},
@@ -68,22 +62,19 @@ export const PARENT_EXPLORE: StructDef = {
   ],
 };
 
-export const GRADPARENT_EXPLORE: StructDef = {
-  type: 'struct',
+export const GRANDPARENT_EXPLORE: TableSourceStruct = {
+  type: 'table',
   name: 'some_ns.gradparent',
-  as: 'parent',
+  as: 'grandparent',
   dialect: 'standardsql',
-  structSource: {
-    type: 'table',
-    tablePath: 'some_ns.gradparent',
-  },
-  structRelationship: {type: 'basetable', connectionName: 'bigquery'},
+  tablePath: 'some_ns.grandparent',
+  connection: 'bigquery',
   primaryKey: 'id3',
   fields: [
     {type: 'string', name: 'name'},
     {
       type: 'number',
-      name: 'some_gradparent_count',
+      name: 'some_grandparent_count',
       expressionType: 'aggregate',
       e: {node: 'aggregate', function: 'count', e: {node: ''}},
     },
@@ -91,15 +82,12 @@ export const GRADPARENT_EXPLORE: StructDef = {
 };
 
 export const SOURCE_EXPLORE: StructDef = {
-  type: 'struct',
+  type: 'table',
   name: 'some_ns.source',
   as: 'source',
   dialect: 'standardsql',
-  structSource: {
-    type: 'table',
-    tablePath: 'some_ns.source',
-  },
-  structRelationship: {type: 'basetable', connectionName: 'bigquery'},
+  tablePath: 'some_ns.grandparent',
+  connection: 'bigquery',
   primaryKey: 'id4',
   fields: [
     {type: 'string', name: 'name'},
@@ -128,8 +116,8 @@ describe('serializeModel', () => {
   });
 
   test('Having parent and source explores', async () => {
-    const gradparent_explore = new Explore(GRADPARENT_EXPLORE);
-    const parent_explore = new Explore(PARENT_EXPLORE, gradparent_explore);
+    const grandparent_explore = new Explore(GRANDPARENT_EXPLORE);
+    const parent_explore = new Explore(PARENT_EXPLORE, grandparent_explore);
     const source_explore = new Explore(SOURCE_EXPLORE);
     const child_explore = new Explore(
       CHILD_EXPLORE,

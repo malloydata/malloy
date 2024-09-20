@@ -411,7 +411,7 @@ export class SnowflakeConnection
     return structDef;
   }
 
-  public async fetchSchemaForSQLBlock(
+  public async fetchSchemaForSQLStruct(
     sqlRef: SQLBlock,
     {refreshTimestamp}: FetchSchemaOptions
   ): Promise<

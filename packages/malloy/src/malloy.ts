@@ -33,14 +33,11 @@ import {
   CompiledQuery,
   DocumentLocation,
   DocumentReference,
-  FieldBooleanDef,
-  FieldDateDef,
-  FieldIsIntrinsic,
-  FieldJSONDef,
-  FieldNumberDef,
-  FieldStringDef,
-  FieldTimestampDef,
-  FieldTypeDef,
+  BooleanFieldDef,
+  fieldIsIntrinsic,
+  JSONFieldDef,
+  NumberFieldDef,
+  StringFieldDef,
   FilterCondition,
   Query as InternalQuery,
   ModelDef,
@@ -50,22 +47,28 @@ import {
   QueryDataRow,
   QueryModel,
   QueryResult,
-  SQLBlock,
-  SQLBlockSource,
-  SQLBlockStructDef,
   SearchIndexResult,
   SearchValueMapResult,
   StructDef,
   TurtleDef,
   expressionIsCalculation,
-  isSQLBlockStruct,
-  isSQLFragment,
-  FeldNativeUnsupportedDef,
+  isSegmentSQL,
+  NativeUnsupportedFieldDef,
   QueryRunStats,
   ImportLocation,
   Annotation,
   NamedModelObject,
   QueryValue,
+  SQLSentence,
+  SQLSourceStruct,
+  modelObjIsSource,
+  isFieldStructDef,
+  FieldAtomicDef,
+  DateFieldDef,
+  TimestampFieldDef,
+  isAtomicFieldType,
+  SourceStructDef,
+  isSourceStructDef,
 } from './model';
 import {
   ModelString,
@@ -232,15 +235,13 @@ export class Malloy {
           : Date.now();
     }
     const translator = parse._translator;
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
+    for (;;) {
       const result = translator.translate(model?._modelDef);
       if (result.final) {
         if (result.translated) {
           return new Model(
             result.translated.modelDef,
             result.translated.queryList,
-            result.translated.sqlBlocks,
             result.problems || [],
             [...(model?.fromSources ?? []), ...(result.fromSources ?? [])],
             (position: ModelDocumentPosition) =>
@@ -256,7 +257,6 @@ export class Malloy {
           const modelFromCompile = model?._modelDef || emptyModel;
           return new Model(
             modelFromCompile,
-            [],
             [],
             result.problems || [],
             [...(model?.fromSources ?? []), ...(result.fromSources ?? [])],
@@ -344,10 +344,11 @@ export class Malloy {
           try {
             const conn = await connections.lookupConnection(connectionName);
             const expanded = Malloy.compileSQLBlock(
+              conn.dialectName,
               result.partialModel,
               toCompile
             );
-            const resolved = await conn.fetchSchemaForSQLBlock(expanded, {
+            const resolved = await conn.fetchSchemaForSQLStruct(expanded, {
               refreshTimestamp,
               modelAnnotation,
             });
@@ -357,11 +358,9 @@ export class Malloy {
               });
             }
             if (resolved.structDef) {
-              if (isSQLBlockStruct(resolved.structDef)) {
-                translator.update({
-                  compileSQL: {[expanded.name]: resolved.structDef},
-                });
-              }
+              translator.update({
+                compileSQL: {[expanded.name]: resolved.structDef},
+              });
             }
           } catch (error) {
             const errors: {[name: string]: string} = {};
@@ -374,14 +373,15 @@ export class Malloy {
   }
 
   static compileSQLBlock(
+    dialect: string,
     partialModel: ModelDef | undefined,
-    toCompile: SQLBlockSource
-  ): SQLBlock {
+    toCompile: SQLSentence
+  ): SQLSourceStruct {
     let queryModel: QueryModel | undefined = undefined;
     let selectStr = '';
     let parenAlready = false;
     for (const segment of toCompile.select) {
-      if (isSQLFragment(segment)) {
+      if (isSegmentSQL(segment)) {
         selectStr += segment.sql;
         parenAlready = segment.sql.match(/\(\s*$/) !== null;
       } else {
@@ -400,7 +400,14 @@ export class Malloy {
       }
     }
     const {name, connection} = toCompile;
-    return {type: 'sqlBlock', name, connection, selectStr};
+    return {
+      type: 'sql_select',
+      name,
+      connection,
+      dialect,
+      selectStr,
+      fields: [],
+    };
   }
 
   /**
@@ -422,22 +429,22 @@ export class Malloy {
   }): Promise<Result>;
   public static async run(params: {
     connection: Connection;
-    sqlStruct: SQLBlockStructDef;
+    sqlStruct: SQLSourceStruct;
     options?: RunSQLOptions;
   }): Promise<Result>;
   public static async run(params: {
     connections: LookupConnection<Connection>;
-    sqlStruct: SQLBlockStructDef;
+    sqlStruct: SQLSourceStruct;
     options?: RunSQLOptions;
   }): Promise<Result>;
   public static async run(params: {
     connection: Connection;
-    sqlStruct: SQLBlockStructDef;
+    sqlStruct: SQLSourceStruct;
     options?: RunSQLOptions;
   }): Promise<Result>;
   public static async run(params: {
     connections: LookupConnection<Connection>;
-    sqlStruct: SQLBlockStructDef;
+    sqlStruct: SQLSourceStruct;
     options?: RunSQLOptions;
   }): Promise<Result>;
   public static async run({
@@ -449,11 +456,10 @@ export class Malloy {
   }: {
     connection?: Connection;
     preparedResult?: PreparedResult;
-    sqlStruct?: SQLBlockStructDef;
+    sqlStruct?: SQLSourceStruct;
     connections?: LookupConnection<Connection>;
     options?: RunSQLOptions;
   }): Promise<Result> {
-    const sqlBlock = sqlStruct?.structSource.sqlBlock;
     if (!connection) {
       if (!connections) {
         throw new Error(
@@ -461,27 +467,22 @@ export class Malloy {
         );
       }
       const connectionName =
-        sqlBlock?.connection || preparedResult?.connectionName;
+        sqlStruct?.connection || preparedResult?.connectionName;
       connection = await connections.lookupConnection(connectionName);
     }
-    if (sqlStruct && sqlBlock) {
-      if (sqlStruct.structRelationship.type !== 'basetable') {
-        throw new Error(
-          "Expected schema's structRelationship type to be 'basetable'."
-        );
-      }
-      const data = await connection.runSQL(sqlBlock.selectStr);
+    if (sqlStruct) {
+      const data = await connection.runSQL(sqlStruct.selectStr);
       return new Result(
         {
           structs: [sqlStruct],
-          sql: sqlBlock.selectStr,
+          sql: sqlStruct.selectStr,
           result: data.rows,
           totalRows: data.totalRows,
           runStats: data.runStats,
-          lastStageName: sqlBlock.name,
+          lastStageName: sqlStruct.name,
           // TODO feature-sql-block There is no malloy code...
           malloy: '',
-          connectionName: sqlStruct.structRelationship.connectionName,
+          connectionName: sqlStruct.connection,
           // TODO feature-sql-block There is no source explore...
           sourceExplore: '',
           sourceFilters: [],
@@ -524,22 +525,12 @@ export class Malloy {
   }): AsyncIterableIterator<DataRecord>;
   public static runStream(params: {
     connection: Connection;
-    sqlStruct: SQLBlockStructDef;
+    sqlStruct: SQLSourceStruct;
     options?: RunSQLOptions;
   }): AsyncIterableIterator<DataRecord>;
   public static runStream(params: {
     connections: LookupConnection<Connection>;
-    sqlBlock: SQLBlock;
-    options?: RunSQLOptions;
-  }): AsyncIterableIterator<DataRecord>;
-  public static runStream(params: {
-    connection: Connection;
-    sqlStruct: SQLBlockStructDef;
-    options?: RunSQLOptions;
-  }): AsyncIterableIterator<DataRecord>;
-  public static runStream(params: {
-    connections: LookupConnection<Connection>;
-    sqlStruct: SQLBlockStructDef;
+    sqlStruct: SQLSourceStruct;
     options?: RunSQLOptions;
   }): AsyncIterableIterator<DataRecord>;
   public static async *runStream({
@@ -551,18 +542,17 @@ export class Malloy {
   }: {
     connection?: Connection;
     preparedResult?: PreparedResult;
-    sqlStruct?: SQLBlockStructDef;
+    sqlStruct?: SQLSourceStruct;
     connections?: LookupConnection<Connection>;
     options?: RunSQLOptions;
   }): AsyncIterableIterator<DataRecord> {
-    const sqlBlock = sqlStruct?.structSource.sqlBlock;
-    if (sqlBlock === undefined && preparedResult === undefined) {
+    if (sqlStruct === undefined && preparedResult === undefined) {
       throw new Error(
         'Internal error: sqlBlock or preparedResult must be provided.'
       );
     }
     const connectionName =
-      sqlBlock?.connection || preparedResult?.connectionName;
+      sqlStruct?.connection || preparedResult?.connectionName;
     if (connection === undefined) {
       if (connections === undefined) {
         throw new Error(
@@ -578,13 +568,8 @@ export class Malloy {
     let sql: string;
     let resultExplore: Explore;
     if (sqlStruct) {
-      if (sqlStruct.structRelationship.type !== 'basetable') {
-        throw new Error(
-          "Expected schema's structRelationship type to be 'basetable'."
-        );
-      }
       resultExplore = new Explore(sqlStruct);
-      sql = sqlStruct.structSource.sqlBlock.selectStr;
+      sql = sqlStruct.selectStr;
     } else if (preparedResult !== undefined) {
       resultExplore = preparedResult.resultExplore;
       sql = preparedResult.sql;
@@ -606,7 +591,7 @@ export class Malloy {
   }): Promise<QueryRunStats>;
   public static async estimateQueryCost(params: {
     connections: LookupConnection<Connection>;
-    sqlStruct: SQLBlockStructDef;
+    sqlStruct: SQLSourceStruct;
   }): Promise<QueryRunStats>;
   public static async estimateQueryCost({
     connections,
@@ -614,10 +599,9 @@ export class Malloy {
     sqlStruct,
   }: {
     preparedResult?: PreparedResult;
-    sqlStruct?: SQLBlockStructDef;
+    sqlStruct?: SQLSourceStruct;
     connections: LookupConnection<Connection>;
   }): Promise<QueryRunStats> {
-    const sqlBlock = sqlStruct?.structSource.sqlBlock;
     if (!connections) {
       throw new Error(
         'Internal Error: Connection or LookupConnection<Connection> must be provided.'
@@ -625,13 +609,13 @@ export class Malloy {
     }
 
     const connectionName =
-      sqlBlock?.connection || preparedResult?.connectionName;
+      sqlStruct?.connection || preparedResult?.connectionName;
     const connection = await connections.lookupConnection(connectionName);
 
-    if (sqlBlock) {
-      return await connection.estimateQueryCost(sqlBlock?.selectStr);
+    if (sqlStruct) {
+      return await connection.estimateQueryCost(sqlStruct.selectStr);
     } else if (preparedResult) {
-      return await connection.estimateQueryCost(preparedResult?.sql);
+      return await connection.estimateQueryCost(preparedResult.sql);
     } else {
       throw new Error(
         'Internal error: sqlStruct or preparedResult must be provided.'
@@ -667,7 +651,6 @@ export class Model implements Taggable {
   constructor(
     private modelDef: ModelDef,
     private queryList: InternalQuery[],
-    private sqlBlocks: SQLBlockStructDef[],
     readonly problems: LogMessage[],
     readonly fromSources: string[],
     referenceAt: (
@@ -750,36 +733,6 @@ export class Model implements Taggable {
   }
 
   /**
-   * Retrieve a prepared query by the name of a query at the top level of the model.
-   *
-   * @param queryName Name of the query to retrieve.
-   * @return A prepared query.
-   */
-  public getSQLBlockByName(sqlBlockName: string): SQLBlockStructDef {
-    const sqlBlock = this.sqlBlocks.find(
-      sqlBlock => sqlBlock.as === sqlBlockName
-    );
-    if (sqlBlock === undefined) {
-      throw new Error(`No SQL Block named '${sqlBlockName}'`);
-    }
-    return sqlBlock;
-  }
-
-  /**
-   * Retrieve a prepared query by the name of a query at the top level of the model.
-   *
-   * @param index Index of the SQL Block to retrieve.
-   * @return A prepared query.
-   */
-  public getSQLBlockByIndex(index: number): SQLBlockStructDef {
-    const sqlBlock = this.sqlBlocks[index];
-    if (sqlBlock === undefined) {
-      throw new Error(`No SQL Block at index ${index}`);
-    }
-    return sqlBlock;
-  }
-
-  /**
    * Retrieve a prepared query for the final unnamed query at the top level of a model.
    *
    * @return A prepared query.
@@ -803,7 +756,7 @@ export class Model implements Taggable {
    */
   public getExploreByName(name: string): Explore {
     const struct = this.modelDef.contents[name];
-    if (struct.type === 'struct') {
+    if (modelObjIsSource(struct)) {
       return new Explore(struct);
     }
     throw new Error("'name' is not an explore");
@@ -815,11 +768,8 @@ export class Model implements Taggable {
    * @return An array of `Explore`s contained in the model.
    */
   public get explores(): Explore[] {
-    const isStructDef = (object: NamedModelObject): object is StructDef =>
-      object.type === 'struct';
-
     return Object.values(this.modelDef.contents)
-      .filter(isStructDef)
+      .filter(modelObjIsSource)
       .map(structDef => new Explore(structDef));
   }
 
@@ -896,7 +846,7 @@ export class PreparedQuery implements Taggable {
       typeof sourceRef === 'string'
         ? this._modelDef.contents[sourceRef]
         : sourceRef;
-    if (source.type !== 'struct') {
+    if (!modelObjIsSource(source)) {
       throw new Error('Invalid source for query');
     }
     return source.dialect;
@@ -1264,7 +1214,7 @@ export class PreparedResult implements Taggable {
     if (explore === undefined) {
       throw new Error('Malformed query result.');
     }
-    if (explore.type === 'struct') {
+    if (modelObjIsSource(explore)) {
       return new Explore(explore);
     }
     throw new Error(`'${name} is not an explore`);
@@ -1467,7 +1417,13 @@ export class Explore extends Entity implements Taggable {
   }
 
   public isIntrinsic(): boolean {
-    return FieldIsIntrinsic(this._structDef);
+    // Don't have the right discriminator, if this was a field def at some point, the field-defness ahs been lost.
+    // A record or an array might be atomic, AND be a structdef, unless they are a dimension (i.e. have a an
+    // expression)
+    if (isAtomicFieldType(this._structDef.type)) {
+      return !('e' in this._structDef);
+    }
+    return false;
   }
 
   public isExploreField(): this is ExploreField {
@@ -1498,9 +1454,15 @@ export class Explore extends Entity implements Taggable {
   }
 
   public getQueryByName(name: string): PreparedQuery {
+    const structRef = this.sourceStructDef;
+    if (!structRef) {
+      throw new Error(
+        `Cannot get query by name from a struct of type ${this.structDef.type}`
+      );
+    }
     const internalQuery: InternalQuery = {
       type: 'query',
-      structRef: this.structDef,
+      structRef,
       pipeline: [
         {
           type: 'reduce',
@@ -1520,7 +1482,7 @@ export class Explore extends Entity implements Taggable {
   }
 
   public getSingleExploreModel(): Model {
-    return new Model(this.modelDef, [], [], [], []);
+    return new Model(this.modelDef, [], [], []);
   }
 
   private get fieldMap(): Map<string, Field> {
@@ -1530,7 +1492,7 @@ export class Explore extends Entity implements Taggable {
         this.structDef.fields.map(fieldDef => {
           const name = fieldDef.as || fieldDef.name;
           const sourceField = sourceFields.get(fieldDef.name);
-          if (fieldDef.type === 'struct') {
+          if (isFieldStructDef(fieldDef)) {
             return [name, new ExploreField(fieldDef, this, sourceField)];
           } else if (fieldDef.type === 'turtle') {
             return [name, new QueryField(fieldDef, this, sourceField)];
@@ -1582,7 +1544,7 @@ export class Explore extends Entity implements Taggable {
   public get allFieldsWithOrder(): SortableField[] {
     if (!this._allFieldsWithOrder) {
       const orderByFields = [
-        ...(this.structDef.resultMetadata?.orderBy?.map(f => {
+        ...(this.sourceStructDef?.resultMetadata?.orderBy?.map(f => {
           if (typeof f.field === 'string') {
             const a = {
               field: this.fieldMap.get(f.field as string)!,
@@ -1635,28 +1597,11 @@ export class Explore extends Entity implements Taggable {
   }
 
   public get primaryKey(): string | undefined {
-    return this.structDef.primaryKey;
+    return this.sourceStructDef?.primaryKey;
   }
 
   public get parentExplore(): Explore | undefined {
     return this._parentExplore;
-  }
-
-  public get sourceRelationship(): SourceRelationship {
-    switch (this.structDef.structRelationship.type) {
-      case 'many':
-        return SourceRelationship.Many;
-      case 'one':
-        return SourceRelationship.One;
-      case 'cross':
-        return SourceRelationship.Cross;
-      case 'inline':
-        return SourceRelationship.Inline;
-      case 'nested':
-        return SourceRelationship.Nested;
-      case 'basetable':
-        return SourceRelationship.BaseTable;
-    }
   }
 
   public hasParentExplore(): this is ExploreField {
@@ -1669,7 +1614,7 @@ export class Explore extends Entity implements Taggable {
   }
 
   get limit(): number | undefined {
-    return this.structDef.resultMetadata?.limit;
+    return this.sourceStructDef?.resultMetadata?.limit;
   }
 
   public get structDef(): StructDef {
@@ -1677,7 +1622,13 @@ export class Explore extends Entity implements Taggable {
   }
 
   public get queryTimezone(): string | undefined {
-    return this.structDef.queryTimezone;
+    return this.sourceStructDef?.queryTimezone;
+  }
+
+  public get sourceStructDef(): SourceStructDef | undefined {
+    if (isSourceStructDef(this.structDef)) {
+      return this.structDef;
+    }
   }
 
   public toJSON(): SerializedExplore {
@@ -1717,11 +1668,11 @@ export enum AtomicFieldType {
 }
 
 export class AtomicField extends Entity implements Taggable {
-  protected fieldTypeDef: FieldTypeDef;
+  protected fieldTypeDef: FieldAtomicDef;
   protected parent: Explore;
 
   constructor(
-    fieldTypeDef: FieldTypeDef,
+    fieldTypeDef: FieldAtomicDef,
     parent: Explore,
     source?: AtomicField
   ) {
@@ -1748,6 +1699,13 @@ export class AtomicField extends Entity implements Taggable {
         return AtomicFieldType.NativeUnsupported;
       case 'error':
         return AtomicFieldType.Error;
+      case 'record':
+      case 'array':
+        throw new Error(`MTOY TODO IMPLEMENT Atomic ${this.fieldTypeDef.type}`);
+      default: {
+        const x: never = this.fieldTypeDef;
+        throw new Error(`Can't make an atomic field from ${x}`);
+      }
     }
   }
 
@@ -1761,7 +1719,7 @@ export class AtomicField extends Entity implements Taggable {
   }
 
   public isIntrinsic(): boolean {
-    return FieldIsIntrinsic(this.fieldTypeDef);
+    return fieldIsIntrinsic(this.fieldTypeDef);
   }
 
   public isQueryField(): this is QueryField {
@@ -1884,9 +1842,9 @@ export enum TimestampTimeframe {
 }
 
 export class DateField extends AtomicField {
-  private fieldDateDef: FieldDateDef;
+  private fieldDateDef: DateFieldDef;
   constructor(
-    fieldDateDef: FieldDateDef,
+    fieldDateDef: DateFieldDef,
     parent: Explore,
     source?: AtomicField
   ) {
@@ -1914,9 +1872,9 @@ export class DateField extends AtomicField {
 }
 
 export class TimestampField extends AtomicField {
-  private fieldTimestampDef: FieldTimestampDef;
+  private fieldTimestampDef: TimestampFieldDef;
   constructor(
-    fieldTimestampDef: FieldTimestampDef,
+    fieldTimestampDef: TimestampFieldDef,
     parent: Explore,
     source?: AtomicField
   ) {
@@ -1950,9 +1908,9 @@ export class TimestampField extends AtomicField {
 }
 
 export class NumberField extends AtomicField {
-  private fieldNumberDef: FieldNumberDef;
+  private fieldNumberDef: NumberFieldDef;
   constructor(
-    fieldNumberDef: FieldNumberDef,
+    fieldNumberDef: NumberFieldDef,
     parent: Explore,
     source?: AtomicField
   ) {
@@ -1962,9 +1920,9 @@ export class NumberField extends AtomicField {
 }
 
 export class BooleanField extends AtomicField {
-  private fieldBooleanDef: FieldBooleanDef;
+  private fieldBooleanDef: BooleanFieldDef;
   constructor(
-    fieldBooleanDef: FieldBooleanDef,
+    fieldBooleanDef: BooleanFieldDef,
     parent: Explore,
     source?: AtomicField
   ) {
@@ -1974,9 +1932,9 @@ export class BooleanField extends AtomicField {
 }
 
 export class JSONField extends AtomicField {
-  private fieldJSONDef: FieldJSONDef;
+  private fieldJSONDef: JSONFieldDef;
   constructor(
-    fieldJSONDef: FieldJSONDef,
+    fieldJSONDef: JSONFieldDef,
     parent: Explore,
     source?: AtomicField
   ) {
@@ -1986,9 +1944,9 @@ export class JSONField extends AtomicField {
 }
 
 export class UnsupportedField extends AtomicField {
-  private fieldUnsupportedDef: FeldNativeUnsupportedDef;
+  private fieldUnsupportedDef: NativeUnsupportedFieldDef;
   constructor(
-    fieldUnsupportedDef: FeldNativeUnsupportedDef,
+    fieldUnsupportedDef: NativeUnsupportedFieldDef,
     parent: Explore,
     source?: AtomicField
   ) {
@@ -2001,9 +1959,9 @@ export class UnsupportedField extends AtomicField {
 }
 
 export class StringField extends AtomicField {
-  private fieldStringDef: FieldStringDef;
+  private fieldStringDef: StringFieldDef;
   constructor(
-    fieldStringDef: FieldStringDef,
+    fieldStringDef: StringFieldDef,
     parent: Explore,
     source?: AtomicField
   ) {
@@ -2096,15 +2054,12 @@ export class ExploreField extends Explore {
   }
 
   public get joinRelationship(): JoinRelationship {
-    switch (this.structDef.structRelationship.type) {
+    const joinType = this.structDef['join'];
+    switch (joinType) {
       case 'one':
         return JoinRelationship.OneToMany;
       case 'many':
       case 'cross':
-        return JoinRelationship.ManyToOne;
-      case 'inline':
-        return JoinRelationship.OneToOne;
-      case 'nested':
         return JoinRelationship.ManyToOne;
       default:
         throw new Error('A source field must have a join relationship.');
@@ -2248,7 +2203,7 @@ export class Runtime {
   //      be used in tests.
   public _loadModelFromModelDef(modelDef: ModelDef): ModelMaterializer {
     return new ModelMaterializer(this, async () => {
-      return new Model(modelDef, [], [], [], []);
+      return new Model(modelDef, [], [], []);
     });
   }
 
@@ -2298,40 +2253,6 @@ export class Runtime {
     options?: ParseOptions & CompileOptions
   ): QueryMaterializer {
     return this.loadModel(model, options).loadQueryByName(name);
-  }
-
-  /**
-   * Load a SQL block by the URL or contents of a Malloy model document
-   * and the name of a query contained in the model.
-   *
-   * @param model The model URL or contents to load and (eventually) compile to retrieve the requested query.
-   * @param name The name of the sql block to use within the model.
-   * @return A `SQLBlockMaterializer` capable of materializing the requested query, running it,
-   * or loading further related objects.
-   */
-  public loadSQLBlockByName(
-    model: ModelURL | ModelString,
-    name: string,
-    options?: ParseOptions & CompileOptions
-  ): SQLBlockMaterializer {
-    return this.loadModel(model, options).loadSQLBlockByName(name);
-  }
-
-  /**
-   * Load a SQL block by the URL or contents of a Malloy model document
-   * and the name of a query contained in the model.
-   *
-   * @param model The model URL or contents to load and (eventually) compile to retrieve the requested query.
-   * @param index The index of the SQL block to use within the model. Note: named blocks are indexable, too.
-   * @return A `SQLBlockMaterializer` capable of materializing the requested query, running it,
-   * or loading further related objects.
-   */
-  public loadSQLBlockByIndex(
-    model: ModelURL | ModelString,
-    index: number,
-    options?: ParseOptions & CompileOptions
-  ): SQLBlockMaterializer {
-    return this.loadModel(model, options).loadSQLBlockByIndex(index);
   }
 
   // TODO maybe use overloads for the alternative parameters
@@ -2391,38 +2312,6 @@ export class Runtime {
     options?: ParseOptions & CompileOptions
   ): Promise<PreparedQuery> {
     return this.loadQueryByName(model, name, options).getPreparedQuery();
-  }
-
-  /**
-   * Get a SQL block by the URL or contents of a Malloy model document
-   * and the name of a SQL block contained in the model.
-   *
-   * @param model The model URL or contents to load and (eventually) compile to retrieve the requested query.
-   * @param name The name of the sql block to use within the model.
-   * @return A promise of a `CompiledSQLBlock`.
-   */
-  public getSQLBlockByName(
-    model: ModelURL | ModelString,
-    name: string,
-    options?: ParseOptions & CompileOptions
-  ): Promise<SQLBlockStructDef> {
-    return this.loadSQLBlockByName(model, name, options).getSQLBlock();
-  }
-
-  /**
-   * Get a SQL block by the URL or contents of a Malloy model document
-   * and the name of a query contained in the model.
-   *
-   * @param model The model URL or contents to load and (eventually) compile to retrieve the requested query.
-   * @param index The index of the SQL block to use within the model. Note: named blocks are indexable, too.
-   * @return A promise of a `SQLBlock`.
-   */
-  public getSQLBlockByIndex(
-    model: ModelURL | ModelString,
-    index: number,
-    options?: ParseOptions & CompileOptions
-  ): Promise<SQLBlockStructDef> {
-    return this.loadSQLBlockByIndex(model, index, options).getSQLBlock();
   }
 }
 
@@ -2530,12 +2419,6 @@ class FluentState<T> {
     materialize: () => Promise<PreparedResult>
   ): PreparedResultMaterializer {
     return new PreparedResultMaterializer(this.runtime, materialize);
-  }
-
-  protected makeSQLBlockMaterializer(
-    materialize: () => Promise<SQLBlockStructDef>
-  ): SQLBlockMaterializer {
-    return new SQLBlockMaterializer(this.runtime, materialize);
   }
 }
 
@@ -2683,12 +2566,10 @@ export class ModelMaterializer extends FluentState<Model> {
     const model = await this.materialize();
     const queryModel = new QueryModel(model._modelDef);
     const schema = model.getExploreByName(sourceName).structDef;
-    if (schema.structRelationship.type !== 'basetable') {
-      throw new Error(
-        "Expected schema's structRelationship type to be 'basetable'."
-      );
+    if (!isSourceStructDef(schema)) {
+      throw new Error('Source to be searched was unexpectedly, not a source');
     }
-    const connectionName = schema.structRelationship.connectionName;
+    const connectionName = schema.connection;
     const connection =
       await this.runtime.connections.lookupConnection(connectionName);
     return await queryModel.searchIndex(
@@ -2707,10 +2588,8 @@ export class ModelMaterializer extends FluentState<Model> {
   ): Promise<SearchValueMapResult[] | undefined> {
     const model = await this.materialize();
     const schema = model.getExploreByName(sourceName);
-    if (schema.structDef.structRelationship.type !== 'basetable') {
-      throw new Error(
-        "Expected schema's structRelationship type to be 'basetable'."
-      );
+    if (!isSourceStructDef(schema.structDef)) {
+      throw new Error('Source to be searched was unexpectedly, not a source');
     }
     let indexQuery = '{index: *}';
 
@@ -2737,34 +2616,6 @@ export class ModelMaterializer extends FluentState<Model> {
       rowLimit: 1000,
     });
     return result._queryResult.result as unknown as SearchValueMapResult[];
-  }
-
-  /**
-   * Load a SQL Block by name.
-   *
-   * @param name The name of the SQL Block to load.
-   * @return A `SQLBlockMaterializer` capable of materializing the requested sql block, running it,
-   * or loading further related objects.
-   */
-  public loadSQLBlockByName(name: string): SQLBlockMaterializer {
-    return this.makeSQLBlockMaterializer(async () => {
-      return (await this.materialize()).getSQLBlockByName(name);
-    });
-  }
-
-  /**
-   * Load a SQL Block by index.
-   *
-   * @param index The index of the SQL Block to load. Note: named SQL blocks are indexable, too.
-   * @return A `SQLBlockMaterializer` capable of materializing the requested sql block, running it,
-   * or loading further related objects.
-   *
-   * TODO feature-sql-block Should named SQL blocks be indexable? This is not the way unnamed queries work.
-   */
-  public loadSQLBlockByIndex(index: number): SQLBlockMaterializer {
-    return this.makeSQLBlockMaterializer(async () => {
-      return (await this.materialize()).getSQLBlockByIndex(index);
-    });
   }
 
   /**
@@ -2807,28 +2658,6 @@ export class ModelMaterializer extends FluentState<Model> {
     options?: ParseOptions
   ): Promise<PreparedQuery> {
     return this.loadQuery(query, options).getPreparedQuery();
-  }
-
-  /**
-   * Get a SQL Block by name.
-   *
-   * @param name The name of the SQL Block to load.
-   * @return A promise of a `SQLBlock`.
-   */
-  public getSQLBlockByName(name: string): Promise<SQLBlockStructDef> {
-    return this.loadSQLBlockByName(name).getSQLBlock();
-  }
-
-  /**
-   * Get a SQL Block by index.
-   *
-   * @param index The index of the SQL Block to load. Note: named SQL blocks are indexable, too.
-   * @return A promise of a `SQLBlock`.
-   *
-   * TODO feature-sql-block Should named SQL blocks be indexable? This is not the way unnamed queries work.
-   */
-  public getSQLBlockByIndex(index: number): Promise<SQLBlockStructDef> {
-    return this.loadSQLBlockByIndex(index).getSQLBlock();
   }
 
   // TODO Consider formalizing this. Perhaps as a `withQuery` method,
@@ -3023,64 +2852,6 @@ export class PreparedResultMaterializer extends FluentState<PreparedResult> {
    */
   public async getSQL(): Promise<string> {
     return (await this.getPreparedResult()).sql;
-  }
-}
-
-/**
- * An object representing the task of loading a `SQLBlock`, capable of
- * materializing the SQLBlock (via `getSQLBlock()`) or extending the task run
- * the query.
- */
-export class SQLBlockMaterializer extends FluentState<SQLBlockStructDef> {
-  /**
-   * Run this SQL block.
-   *
-   * @return A promise to the query result data.
-   */
-  async run(options?: RunSQLOptions): Promise<Result> {
-    const sqlBlock = await this.getSQLBlock();
-    const connections = this.runtime.connections;
-    return Malloy.run({
-      connections,
-      sqlStruct: sqlBlock,
-      options,
-    });
-  }
-
-  async *runStream(options?: {
-    rowLimit?: number;
-  }): AsyncIterableIterator<DataRecord> {
-    const sqlStruct = await this.getSQLBlock();
-    const connections = this.runtime.connections;
-    const stream = Malloy.runStream({connections, sqlStruct, options});
-    for await (const row of stream) {
-      yield row;
-    }
-  }
-
-  /**
-   * Materialize this loaded SQL block.
-   *
-   * @return A promise of a SQL block.
-   */
-  public getSQLBlock(): Promise<SQLBlockStructDef> {
-    return this.materialize();
-  }
-
-  /**
-   * Materialize the SQL of this loaded SQL block.
-   *
-   * @return A promise to the SQL string.
-   */
-  public async getSQL(): Promise<string> {
-    const sqlStruct = await this.getSQLBlock();
-    return sqlStruct.structSource.sqlBlock.selectStr;
-  }
-
-  public async estimateQueryCost(): Promise<QueryRunStats> {
-    const connections = this.runtime.connections;
-    const sqlStruct = await this.getSQLBlock();
-    return Malloy.estimateQueryCost({connections, sqlStruct});
   }
 }
 

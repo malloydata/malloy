@@ -195,7 +195,7 @@ export class PostgresConnection
     return {schemas, errors};
   }
 
-  public async fetchSchemaForSQLBlock(
+  public async fetchSchemaForSQLStruct(
     sqlRef: SQLBlock,
     {refreshTimestamp}: FetchSchemaOptions
   ): Promise<

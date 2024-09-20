@@ -83,18 +83,18 @@ describe('DuckDBConnection', () => {
     });
 
     it('caches sql schema', async () => {
-      await connection.fetchSchemaForSQLBlock(SQL_BLOCK_1, {});
+      await connection.fetchSchemaForSQLStruct(SQL_BLOCK_1, {});
       expect(runRawSQL).toHaveBeenCalledTimes(1);
       await new Promise(resolve => setTimeout(resolve));
-      await connection.fetchSchemaForSQLBlock(SQL_BLOCK_1, {});
+      await connection.fetchSchemaForSQLStruct(SQL_BLOCK_1, {});
       expect(runRawSQL).toHaveBeenCalledTimes(1);
     });
 
     it('refreshes sql schema', async () => {
-      await connection.fetchSchemaForSQLBlock(SQL_BLOCK_2, {});
+      await connection.fetchSchemaForSQLStruct(SQL_BLOCK_2, {});
       expect(runRawSQL).toHaveBeenCalledTimes(1);
       await new Promise(resolve => setTimeout(resolve));
-      await connection.fetchSchemaForSQLBlock(SQL_BLOCK_2, {
+      await connection.fetchSchemaForSQLStruct(SQL_BLOCK_2, {
         refreshTimestamp: Date.now() + 10,
       });
       expect(runRawSQL).toHaveBeenCalledTimes(2);

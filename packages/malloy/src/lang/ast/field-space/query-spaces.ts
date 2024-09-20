@@ -23,7 +23,12 @@
 
 import * as model from '../../../model/malloy_types';
 import {mergeFields, nameFromDef} from '../../field-utils';
-import {FieldName, FieldSpace, QueryFieldSpace} from '../types/field-space';
+import {
+  FieldName,
+  FieldSpace,
+  QueryFieldSpace,
+  SourceFieldSpace,
+} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
 import {SpaceField} from '../types/space-field';
 
@@ -50,14 +55,14 @@ export abstract class QueryOperationSpace
   expandedWild: Record<string, string[]> = {};
 
   constructor(
-    readonly queryInputSpace: FieldSpace,
+    readonly queryInputSpace: SourceFieldSpace,
     refineThis: model.PipeSegment | undefined,
     readonly nestParent: QueryOperationSpace | undefined,
     readonly astEl: MalloyElement
   ) {
     super(queryInputSpace.emptyStructDef());
 
-    this.exprSpace = new QueryInputSpace(queryInputSpace, this);
+    this.exprSpace = new QueryInputSpace(queryInputSpace.structDef(), this);
     if (refineThis) this.addRefineFromFields(refineThis);
   }
 
@@ -280,7 +285,7 @@ export abstract class QuerySpace extends QueryOperationSpace {
     return this.exprSpace.lookup(path);
   }
 
-  isQueryFieldSpace() {
+  isQueryFieldSpace(): this is QueryFieldSpace {
     return true;
   }
 }

@@ -23,10 +23,11 @@
 
 import {
   StructDef,
-  SQLBlockSource,
+  SQLSentence,
   InvokedStructRef,
+  SourceStructDef,
 } from '../../../model/malloy_types';
-import {makeSQLBlock} from '../../../model/sql_block';
+import {makeSQLSentence} from '../../../model/sql_block';
 import {NeedCompileSQL} from '../../translate-response';
 import {Source} from './source';
 import {ErrorFactory} from '../error-factory';
@@ -35,7 +36,7 @@ import {ModelEntryReference, Document} from '../types/malloy-element';
 
 export class SQLSource extends Source {
   elementType = 'sqlSource';
-  requestBlock?: SQLBlockSource;
+  requestBlock?: SQLSentence;
   private connectionNameInvalid = false;
   constructor(
     readonly connectionName: ModelEntryReference,
@@ -44,9 +45,9 @@ export class SQLSource extends Source {
     super({connectionName, select});
   }
 
-  sqlBlock(): SQLBlockSource {
+  sqlSentence(): SQLSentence {
     if (!this.requestBlock) {
-      this.requestBlock = makeSQLBlock(
+      this.requestBlock = makeSQLSentence(
         this.select.sqlPhrases(),
         this.connectionName.refString
       );
@@ -56,7 +57,7 @@ export class SQLSource extends Source {
 
   structRef(): InvokedStructRef {
     return {
-      structRef: this.structDef(),
+      structRef: this.getStructDef(),
     };
   }
 
@@ -86,7 +87,7 @@ export class SQLSource extends Source {
     }
     const childNeeds = super.needs(doc);
     if (childNeeds) return childNeeds;
-    const sql = this.sqlBlock();
+    const sql = this.sqlSentence();
     const sqlDefEntry = this.translator()?.root.sqlQueryZone;
     if (!sqlDefEntry) {
       this.log("Cant't look up schema for sql block");
@@ -104,7 +105,7 @@ export class SQLSource extends Source {
     }
   }
 
-  structDef(): StructDef {
+  getStructDef(): SourceStructDef {
     if (!this.validateConnectionName()) {
       return ErrorFactory.structDef;
     }
@@ -113,7 +114,7 @@ export class SQLSource extends Source {
       this.log("Cant't look up schema for sql block");
       return ErrorFactory.structDef;
     }
-    const sql = this.sqlBlock();
+    const sql = this.sqlSentence();
     sqlDefEntry.reference(sql.name, this.location);
     const lookup = sqlDefEntry.getEntry(sql.name);
     if (lookup.status === 'error') {

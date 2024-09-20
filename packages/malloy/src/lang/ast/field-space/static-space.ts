@@ -23,11 +23,25 @@
 
 import {Dialect} from '../../../dialect/dialect';
 import {getDialect} from '../../../dialect/dialect_map';
-import {FieldDef, StructDef, isTurtleDef} from '../../../model/malloy_types';
+import {
+  FieldDef,
+  StructDef,
+  SourceStructDef,
+  hasJoin,
+  isFieldStructDef,
+  isTurtleDef,
+  isSourceStructDef,
+  JoinFieldDef,
+} from '../../../model/malloy_types';
 
 import {SpaceEntry} from '../types/space-entry';
 import {LookupResult} from '../types/lookup-result';
-import {FieldName, FieldSpace, QueryFieldSpace} from '../types/field-space';
+import {
+  FieldName,
+  FieldSpace,
+  QueryFieldSpace,
+  SourceFieldSpace,
+} from '../types/field-space';
 import {DefinedParameter} from '../types/space-param';
 import {SpaceField} from '../types/space-field';
 import {StructSpaceFieldBase} from './struct-space-field-base';
@@ -39,11 +53,11 @@ type FieldMap = Record<string, SpaceEntry>;
 export class StaticSpace implements FieldSpace {
   readonly type = 'fieldSpace';
   private memoMap?: FieldMap;
-  protected fromStruct: StructDef;
-
-  constructor(sourceStructDef: StructDef) {
-    this.fromStruct = sourceStructDef;
+  get dialect() {
+    return this.fromStruct.dialect;
   }
+
+  constructor(protected fromStruct: StructDef) {}
 
   dialectObj(): Dialect | undefined {
     try {
@@ -54,8 +68,8 @@ export class StaticSpace implements FieldSpace {
   }
 
   defToSpaceField(from: FieldDef): SpaceField {
-    if (from.type === 'struct') {
-      return new StructSpaceField(from);
+    if (isFieldStructDef(from) && hasJoin(from)) {
+      return new StructSpaceField(from, this.fromStruct.dialect);
     } else if (isTurtleDef(from)) {
       return new IRViewField(this, from);
     }
@@ -69,12 +83,14 @@ export class StaticSpace implements FieldSpace {
         const name = f.as || f.name;
         this.memoMap[name] = this.defToSpaceField(f);
       }
-      if (this.fromStruct.parameters) {
-        for (const [paramName, paramDef] of Object.entries(
-          this.fromStruct.parameters
-        )) {
-          if (!(paramName in this.memoMap)) {
-            this.memoMap[paramName] = new DefinedParameter(paramDef);
+      if (isSourceStructDef(this.fromStruct)) {
+        if (this.fromStruct.parameters) {
+          for (const [paramName, paramDef] of Object.entries(
+            this.fromStruct.parameters
+          )) {
+            if (!(paramName in this.memoMap)) {
+              this.memoMap[paramName] = new DefinedParameter(paramDef);
+            }
           }
         }
       }
@@ -108,7 +124,12 @@ export class StaticSpace implements FieldSpace {
   }
 
   emptyStructDef(): StructDef {
-    return {...this.fromStruct, fields: [], parameters: {}};
+    const ret = {...this.fromStruct};
+    if (isSourceStructDef(ret)) {
+      ret.parameters = {};
+    }
+    ret.fields = [];
+    return ret;
   }
 
   lookup(path: FieldName[]): LookupResult {
@@ -132,14 +153,9 @@ export class StaticSpace implements FieldSpace {
         });
       }
     }
-    const relationship =
+    const joinPath =
       found instanceof StructSpaceFieldBase
-        ? [
-            {
-              name: head.refString,
-              structRelationship: found.structRelationship,
-            },
-          ]
+        ? [{...found.joinPathElement, name: head.refString}]
         : [];
     if (rest.length) {
       if (found instanceof StructSpaceFieldBase) {
@@ -147,7 +163,7 @@ export class StaticSpace implements FieldSpace {
         if (restResult.found) {
           return {
             ...restResult,
-            relationship: [...relationship, ...restResult.relationship],
+            joinPath: [...joinPath, ...restResult.joinPath],
           };
         } else {
           return restResult;
@@ -158,7 +174,7 @@ export class StaticSpace implements FieldSpace {
         found: undefined,
       };
     }
-    return {found, error: undefined, relationship, isOutputField: false};
+    return {found, error: undefined, joinPath, isOutputField: false};
   }
 
   isQueryFieldSpace(): this is QueryFieldSpace {
@@ -167,11 +183,28 @@ export class StaticSpace implements FieldSpace {
 }
 
 export class StructSpaceField extends StructSpaceFieldBase {
-  constructor(def: StructDef) {
+  private parentDialect: string;
+  constructor(def: JoinFieldDef, dialect: string) {
     super(def);
+    this.parentDialect = dialect;
   }
 
   get fieldSpace(): FieldSpace {
     return new StaticSpace(this.sourceDef);
+  }
+}
+
+export class StaticSourceSpace extends StaticSpace implements SourceFieldSpace {
+  constructor(protected source: SourceStructDef) {
+    super(source);
+  }
+  structDef(): SourceStructDef {
+    return this.source;
+  }
+  emptyStructDef(): SourceStructDef {
+    const ret = {...this.source};
+    ret.parameters = {};
+    ret.fields = [];
+    return ret;
   }
 }

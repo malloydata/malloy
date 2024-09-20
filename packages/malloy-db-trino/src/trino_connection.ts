@@ -25,7 +25,6 @@ import {
   Connection,
   ConnectionConfig,
   FetchSchemaOptions,
-  FieldTypeDef,
   MalloyQueryData,
   FieldAtomicTypeDef,
   NamedStructDefs,
@@ -36,7 +35,6 @@ import {
   QueryOptionsReader,
   QueryRunStats,
   RunSQLOptions,
-  SQLBlock,
   StandardSQLDialect,
   StructDef,
 } from '@malloydata/malloy';
@@ -489,7 +487,7 @@ export abstract class TrinoPrestoConnection
     );
   }
 
-  public async fetchSchemaForSQLBlock(
+  public async fetchSchemaForSQLStruct(
     sqlRef: SQLBlock,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     {refreshTimestamp}: FetchSchemaOptions

@@ -700,7 +700,7 @@ export class BigQueryConnection
     throw lastFetchError;
   }
 
-  public async fetchSchemaForSQLBlock(
+  public async fetchSchemaForSQLStruct(
     sqlRef: SQLBlock,
     {refreshTimestamp}: FetchSchemaOptions
   ): Promise<

@@ -34,13 +34,13 @@ import {DefinedParameter} from '../ast/types/space-param';
  */
 
 describe('structdef comprehension', () => {
-  function mkStructDef(field: model.FieldDef): model.StructDef {
+  function mkStructDef(field: model.FieldDef): model.SourceStructDef {
     return {
-      type: 'struct',
+      type: 'table',
       name: 'test',
       dialect: 'standardsql',
-      structSource: {type: 'table', tablePath: 'test'},
-      structRelationship: {type: 'basetable', connectionName: 'test'},
+      tablePath: 'test',
+      connection: 'test',
       fields: [field],
     };
   }
@@ -111,17 +111,12 @@ describe('structdef comprehension', () => {
     expect(oField).toEqual(field);
   });
 
-  test('import nested field', () => {
+  test('import repeated record', () => {
     const field: model.FieldDef = {
       name: 't',
-      type: 'struct',
+      type: 'array',
       dialect: 'standardsql',
-      structRelationship: {
-        type: 'nested',
-        fieldName: 'a',
-        isArray: false,
-      },
-      structSource: {type: 'nested'},
+      dataType: {type: 'string'},
       fields: [{type: 'string', name: 'b'}],
     };
     const struct = mkStructDef(field);
@@ -136,10 +131,9 @@ describe('structdef comprehension', () => {
   test('import inline field', () => {
     const field: model.FieldDef = {
       name: 't',
-      type: 'struct',
+      type: 'record',
+      typeSchema: {a: {type: 'string'}},
       dialect: 'standardsql',
-      structRelationship: {type: 'inline'},
-      structSource: {type: 'inline'},
       fields: [{type: 'string', name: 'a'}],
     };
     const struct = mkStructDef(field);
@@ -154,20 +148,19 @@ describe('structdef comprehension', () => {
   test('import join field', () => {
     const field: model.FieldDef = {
       name: 't',
-      type: 'struct',
+      type: 'table',
       dialect: 'standardsql',
-      structRelationship: {
-        type: 'one',
-        matrixOperation: 'left',
-        onExpression: {
-          node: '=',
-          kids: {
-            left: {node: 'field', path: ['aKey']},
-            right: {node: 'field', path: ['t', 'a']},
-          },
+      connection: 'test',
+      join: 'one',
+      matrixOperation: 'left',
+      onExpression: {
+        node: '=',
+        kids: {
+          left: {node: 'field', path: ['aKey']},
+          right: {node: 'field', path: ['t', 'a']},
         },
       },
-      structSource: {type: 'table', tablePath: 't'},
+      tablePath: 't',
       fields: [{type: 'string', name: 'a'}],
     };
     const struct = mkStructDef(field);

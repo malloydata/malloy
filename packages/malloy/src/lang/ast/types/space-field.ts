@@ -24,23 +24,23 @@
 import {
   FieldDef,
   QueryFieldDef,
-  isFieldTypeDef,
+  isAtomicDef,
   TypeDesc,
+  FieldAtomicDef,
 } from '../../../model/malloy_types';
 import {SpaceEntry} from './space-entry';
 import {FieldSpace} from './field-space';
 
 export abstract class SpaceField extends SpaceEntry {
   readonly refType = 'field';
-  haveFieldDef?: FieldDef;
 
-  protected fieldTypeFromFieldDef(def: FieldDef): TypeDesc {
+  protected fieldTypeFromFieldDef(def: FieldAtomicDef): TypeDesc {
     const ref: TypeDesc = {
       dataType: def.type,
       expressionType: 'scalar',
       evalSpace: 'input',
     };
-    if (isFieldTypeDef(def) && def.expressionType) {
+    if (isAtomicDef(def) && def.expressionType) {
       ref.expressionType = def.expressionType;
     }
     if (
@@ -58,6 +58,13 @@ export abstract class SpaceField extends SpaceEntry {
   }
 
   fieldDef(): FieldDef | undefined {
+    return undefined;
+  }
+
+  // MTOY todo might be able to use fieldDef for this,
+  // but this is replacing an internal property and
+  // I am being careful for now.
+  constructorFieldDef(): FieldDef | undefined {
     return undefined;
   }
 }

@@ -4,8 +4,8 @@ import {
   MalloyQueryData,
   QueryDataRow,
   QueryRunStats,
-  SQLBlock,
-  StructDef,
+  SQLSourceStruct,
+  TableSourceStruct,
 } from '../model/malloy_types';
 import {Dialect} from '../dialect';
 
@@ -36,7 +36,7 @@ export interface InfoConnection {
     tables: Record<string, string>,
     options: FetchSchemaOptions
   ): Promise<{
-    schemas: Record<string, StructDef>;
+    schemas: Record<string, TableSourceStruct>;
     errors: Record<string, string>;
   }>;
 
@@ -47,11 +47,11 @@ export interface InfoConnection {
    * @return A mapping of SQL block names to schemas.
    */
 
-  fetchSchemaForSQLBlock(
-    block: SQLBlock,
+  fetchSchemaForSQLStruct(
+    sentence: SQLSourceStruct,
     options: FetchSchemaOptions
   ): Promise<
-    | {structDef: StructDef; error?: undefined}
+    | {structDef: SQLSourceStruct; error?: undefined}
     | {error: string; structDef?: undefined}
   >;
 
@@ -59,6 +59,7 @@ export interface InfoConnection {
    * The name of the connection.
    */
   get name(): string;
+  get dialectName(): string;
 }
 
 export type ConnectionParameterValue =
@@ -124,8 +125,6 @@ export interface Connection extends InfoConnection {
   close(): Promise<void>;
 
   estimateQueryCost(sqlCommand: string): Promise<QueryRunStats>;
-
-  get dialectName(): string;
 
   fetchMetadata: () => Promise<ConnectionMetadata>;
 

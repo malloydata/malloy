@@ -21,11 +21,16 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {StructDef, StructSource} from '../../../model/malloy_types';
+import {
+  SourceStructDef,
+  QuerySourceStruct,
+  isSourceStructDef,
+} from '../../../model/malloy_types';
 import {Source} from './source';
 import {QueryElement} from '../types/query-element';
 import {ParameterSpace} from '../field-space/parameter-space';
 import {HasParameter} from '../parameters/has-parameter';
+import {v4 as uuidv4} from 'uuid';
 
 export class QuerySource extends Source {
   elementType = 'querySource';
@@ -33,18 +38,24 @@ export class QuerySource extends Source {
     super({query});
   }
 
-  structDef(parameterSpace: ParameterSpace | undefined): StructDef {
+  getStructDef(parameterSpace: ParameterSpace | undefined): SourceStructDef {
     return this.withParameters(parameterSpace, undefined);
   }
 
   withParameters(
     parameterSpace: ParameterSpace | undefined,
     pList: HasParameter[] | undefined
-  ): StructDef {
+  ): SourceStructDef {
     const comp = this.query.queryComp(false);
-    const queryStruct = {
-      ...comp.outputStruct,
-      structSource: {type: 'query', query: comp.query} as StructSource,
+    const queryStruct: QuerySourceStruct = {
+      name: uuidv4(),
+      type: 'query_source',
+      query: comp.query,
+      fields: comp.outputStruct.fields,
+      dialect: comp.outputStruct.dialect,
+      connection: isSourceStructDef(comp.outputStruct)
+        ? comp.outputStruct.connection
+        : 'unknown-dialect-query-comp',
     };
     this.document()?.rememberToAddModelAnnotations(queryStruct);
     return {

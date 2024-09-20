@@ -26,10 +26,10 @@ import {
   Argument,
   InvokedStructRef,
   isCastType,
-  isSQLBlockStruct,
+  isSourceStructDef,
   Parameter,
   paramHasValue,
-  StructDef,
+  SourceStructDef,
 } from '../../../model/malloy_types';
 
 import {Source} from './source';
@@ -68,7 +68,7 @@ export class NamedSource extends Source {
     // If we are not exporting the referenced structdef, don't use the reference
     if (modelEnt && !modelEnt.exported) {
       return {
-        structRef: this.structDef(parameterSpace),
+        structRef: this.getStructDef(parameterSpace),
       };
     }
     return {
@@ -85,7 +85,7 @@ export class NamedSource extends Source {
     }
   }
 
-  modelStruct(): StructDef | undefined {
+  modelStruct(): SourceStructDef | undefined {
     const modelEnt = this.modelEntry(this.ref);
     const entry = modelEnt?.entry;
     if (!entry) {
@@ -94,21 +94,22 @@ export class NamedSource extends Source {
       return;
     }
     if (entry.type === 'query') {
-      this.log(`Cannot construct a source from a query '${this.refName}'`);
+      // MTOY TODO techincally we could, if this code ever runs, investigate.
+      this.log(`Cannot construct a source from query '${this.refName}'`);
       return;
     } else if (entry.type === 'function') {
-      this.log(`Cannot construct a source from a function '${this.refName}'`);
+      this.log(`Cannot construct a source from function '${this.refName}'`);
       return;
     } else if (entry.type === 'connection') {
-      this.log(`Cannot construct a source from a connection '${this.refName}'`);
-      return;
-    } else if (isSQLBlockStruct(entry) && entry.declaredSQLBlock) {
-      this.log(`Must use 'from_sql()' for sql source '${this.refName}'`);
+      this.log(`Cannot construct a source from connection '${this.refName}'`);
       return;
     } else {
       this.document()?.checkExperimentalDialect(this, entry.dialect);
+      if (isSourceStructDef(entry)) {
+        return {...entry};
+      }
     }
-    return {...entry};
+    this.log(`Cannot construct a source from a ${entry.type}`);
   }
 
   private evaluateArgumentsForRef(
@@ -182,14 +183,14 @@ export class NamedSource extends Source {
     return outArguments;
   }
 
-  structDef(parameterSpace: ParameterSpace | undefined): StructDef {
+  getStructDef(parameterSpace: ParameterSpace | undefined): SourceStructDef {
     return this.withParameters(parameterSpace, []);
   }
 
   withParameters(
     parameterSpace: ParameterSpace | undefined,
     pList: HasParameter[] | undefined
-  ): StructDef {
+  ): SourceStructDef {
     /*
       Can't really generate the callback list until after all the
       things before me are translated, and that kinda screws up
