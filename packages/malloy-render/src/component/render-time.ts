@@ -4,17 +4,11 @@ function padZeros(num: number, length = 2) {
   return `${'0'.repeat(length - 1)}${num}`.slice(-length);
 }
 
-export function renderTime({field, dataColumn}: RendererProps) {
-  if (!field.isAtomicField())
-    throw new Error(
-      `Time renderer error: field ${field.name} is not an atomic field`
-    );
-  if (!field.isDate() && !field.isTimestamp())
-    throw new Error(
-      `Time renderer error: field ${field.name} is not a date or timestamp`
-    );
-
-  const value = dataColumn.value as Date;
+export function renderTimeString(
+  value: Date,
+  isDate: boolean,
+  timeframe?: string
+) {
   const fullYear = value.getUTCFullYear();
   const fullMonth = padZeros(value.getUTCMonth() + 1);
   const fullDate = padZeros(value.getUTCDate());
@@ -23,7 +17,7 @@ export function renderTime({field, dataColumn}: RendererProps) {
   const seconds = padZeros(value.getUTCSeconds());
   const time = `${hours}:${minutes}:${seconds}`;
   const dateDisplay = `${fullYear}-${fullMonth}-${fullDate}`;
-  switch (field.timeframe) {
+  switch (timeframe) {
     case 'minute': {
       return `${dateDisplay} ${hours}:${minutes}`;
     }
@@ -43,11 +37,25 @@ export function renderTime({field, dataColumn}: RendererProps) {
       return `${fullYear}-Q${Math.floor(value.getUTCMonth() / 3) + 1}`;
     }
     case 'year': {
-      return value.getUTCFullYear();
+      return value.getUTCFullYear().toString();
     }
     default: {
-      if (field.isDate()) return dateDisplay;
+      if (isDate) return dateDisplay;
       return `${dateDisplay} ${time}`;
     }
   }
+}
+
+export function renderTime({field, dataColumn}: RendererProps) {
+  if (!field.isAtomicField())
+    throw new Error(
+      `Time renderer error: field ${field.name} is not an atomic field`
+    );
+  if (!field.isDate() && !field.isTimestamp())
+    throw new Error(
+      `Time renderer error: field ${field.name} is not a date or timestamp`
+    );
+
+  const value = dataColumn.value as Date;
+  return renderTimeString(value, field.isDate(), field.timeframe);
 }

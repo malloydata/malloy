@@ -4,10 +4,12 @@ import {DataColumn, Explore, Field, QueryData, Tag} from '@malloydata/malloy';
 export type VegaSpec = any;
 export type VegaChartProps = {
   spec: VegaSpec;
+  specType: 'vega' | 'vega-lite';
   plotWidth: number;
   plotHeight: number;
   totalWidth: number;
   totalHeight: number;
+  chartType: string;
 };
 
 export type FieldHeaderRangeMap = Record<
@@ -21,7 +23,7 @@ export interface FieldRenderMetadata {
   max: number | null;
   minString: string | null;
   maxString: string | null;
-  values: Set<string>;
+  values: Set<string | number>;
   maxRecordCt: number | null;
   vegaChartProps?: VegaChartProps;
   renderAs: string;
@@ -48,3 +50,7 @@ export type MalloyClickEventPayload = {
   event: MouseEvent;
   type: 'dashboard-item' | 'table-cell';
 };
+
+export type VegaConfigHandler = (
+  chartType: string
+) => Record<string, unknown> | undefined;

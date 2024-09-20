@@ -67,6 +67,11 @@ describe('drill query', () => {
       query: by_origin is flights -> by_origin
       query: no_filter is flights -> no_filter
     `;
+
+  beforeEach(() => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
   test('can handle joined-in table fields', async () => {
     const result = duckdb
       .loadModel(model)

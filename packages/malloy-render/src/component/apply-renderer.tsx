@@ -37,9 +37,8 @@ export function shouldRenderAs(f: Field | Explore, tagOverride?: Tag) {
     return 'cell';
   }
   if (hasAny(tag, 'list', 'list_detail')) return 'list';
-  if (hasAny(tag, 'bar_chart')) return 'chart';
+  if (hasAny(tag, 'bar_chart', 'line_chart', 'area_chart')) return 'chart';
   if (tag.has('dashboard')) return 'dashboard';
-  if (tag.has('line_chart')) return 'line_chart';
   if (tag.has('scatter_chart')) return 'scatter_chart';
   if (tag.has('shape_map')) return 'shape_map';
   if (tag.has('segment_map')) return 'segment_map';
@@ -112,7 +111,6 @@ export function applyRenderer(props: RendererProps) {
           );
         break;
       }
-      case 'line_chart':
       case 'scatter_chart':
       case 'shape_map':
       case 'segment_map': {

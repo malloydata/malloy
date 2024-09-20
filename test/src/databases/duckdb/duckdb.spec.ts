@@ -101,6 +101,15 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
     await expect(query).malloyResultMatches(runtime, {n1: 1.234, n2: 1.234});
   });
 
+  it('dayname', async () => {
+    await expect(`
+      run: duckdb.sql('select 1') -> {
+        select:
+          x is dayname(@2024-09-12)
+          y is dayname(@2024-09-10 12:22:22)
+      }`).malloyResultMatches(runtime, {x: 'Thursday', y: 'Tuesday'});
+  });
+
   it('can open json files', async () => {
     await expect(`
       run: duckdb.table('test/data/duckdb/test.json') -> {

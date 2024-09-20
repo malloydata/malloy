@@ -727,6 +727,7 @@ class QueryField extends QueryNode {
           return `(${resultSet.getField(outputName).getAnalyticalSQL(false)})`;
         });
         return this.generateAnalyticFragment(
+          context.dialect.name,
           resultSet,
           context,
           funcCall,
@@ -1005,6 +1006,7 @@ class QueryField extends QueryNode {
   }
 
   generateAnalyticFragment(
+    dialect: string,
     resultStruct: FieldInstanceResult,
     context: QueryStruct,
     expr: Expr,
@@ -1029,7 +1031,8 @@ class QueryField extends QueryNode {
         : '';
 
     let orderBy = funcOrdering ?? '';
-    if (!funcOrdering && overload.needsWindowOrderBy) {
+    const dialectOverload = overload.dialect[dialect];
+    if (!funcOrdering && dialectOverload.needsWindowOrderBy) {
       // calculate the ordering.
       const obSQL: string[] = [];
       let orderingField;
@@ -1071,10 +1074,10 @@ class QueryField extends QueryNode {
     }
 
     let between = '';
-    if (overload.between) {
+    if (dialectOverload.between) {
       const [preceding, following] = [
-        overload.between.preceding,
-        overload.between.following,
+        dialectOverload.between.preceding,
+        dialectOverload.between.following,
       ].map(value => {
         if (value === -1) {
           return 'UNBOUNDED';
@@ -2792,17 +2795,31 @@ class QueryQuery extends QueryField {
           qf.generateExpression(this.rootResult)
         );
       }
-      if (ji.children.length === 0 || conditions === undefined) {
+
+      if (
+        ji.children.length === 0 ||
+        conditions === undefined ||
+        !this.parent.dialect.supportsComplexFilteredSources
+      ) {
+        // LTNOTE: need a check here to see the children's where: conditions are local
+        //  to the source and not to any of it's joined children.
+        //  In Presto, we're going to get a SQL error if in this case
+        //  for now.  We need to inspect the 'condition' of each of the children
+        //  to see if they reference subchildren and blow up if they do
+        //  or move them to the where clause with a (x.distnct_key is NULL or (condition))
+        //
+        // const childrenFiltersAreComplex = somethign(conditions)
+        // if (conditions && childrenFiltersAreComplex !this.parent.dialect.supportsComplexFilteredSources) {
+        //   throw new Error(
+        //     'Cannot join a source with a complex filter on a joined source'
+        //   );
+        // }
+
         if (conditions !== undefined && conditions.length >= 1) {
           filters = ` AND (${conditions.join(' AND ')})`;
         }
         s += ` ${matrixOperation} JOIN ${structSQL} AS ${ji.alias}\n  ON ${onCondition}${filters}\n`;
       } else {
-        if (!this.parent.dialect.supportsComplexFilteredSources) {
-          throw new Error(
-            'Cannot join a source with a filter on a joined source'
-          );
-        }
         let select = `SELECT ${ji.alias}.*`;
         let joins = '';
         for (const childJoin of ji.children) {
@@ -4483,17 +4500,20 @@ class QueryStruct extends QueryNode {
     refAnnoatation: Annotation | undefined
   ): QuerySomething {
     const field = this.getQueryFieldByName(name);
-    if (refAnnoatation) {
+    if (refAnnoatation !== undefined) {
       // Made the field object from the source, but the annotations were computed by the compiler
       // and have both the source and reference annotations included, use those.
       if (field instanceof QueryStruct) {
         const newDef = {...field.structDef};
         newDef.annotation = refAnnoatation;
+        // MTOY TODO ... return new QueryStruct(newDef, this);
         field.structDef = newDef;
+
+        // TOTO MTOY ask chris about what to do like this.makeQueryField ...
       } else {
         const newDef = {...field.fieldDef};
         newDef.annotation = refAnnoatation;
-        field.fieldDef = newDef;
+        return this.makeQueryField(newDef);
       }
     }
     return field;

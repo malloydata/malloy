@@ -134,6 +134,16 @@ describe('expressions', () => {
         '{"forty-two" !like "fifty-four"}'
       );
     });
+    test('regexp-match', () => {
+      expect("'forty-two' ~ r'fifty-four'").compilesTo(
+        '{"forty-two" regex-match /fifty-four/}'
+      );
+    });
+    test('not regexp-match', () => {
+      expect("'forty-two' !~ r'fifty-four'").compilesTo(
+        '{not {"forty-two" regex-match /fifty-four/}}'
+      );
+    });
     test('apply as equality', () => {
       expect("'forty-two' ? 'fifty-four'").compilesTo(
         '{"forty-two" = "fifty-four"}'

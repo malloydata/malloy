@@ -62,6 +62,10 @@ const duckdb = runtimeFor('duckdb');
 describe('rendering results', () => {
   const runtimes = new RuntimeList(databases);
 
+  beforeEach(() => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
   afterAll(async () => {
     await runtimes.closeAll();
   });
@@ -71,7 +75,7 @@ describe('rendering results', () => {
     expect(runtime).toBeDefined();
     if (runtime) {
       const src = `
-        run: bigquery.table('malloy-data.faa.flights') -> {
+        run: bigquery.table('malloydata-org.malloytest.flights') -> {
           group_by: carrier
           aggregate: flight_count is count()
         }

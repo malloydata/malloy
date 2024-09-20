@@ -258,6 +258,8 @@ function eToStr(e: Expr, symbols: ESymbols): string {
       return `"${e.literal}"`;
     case 'timeLiteral':
       return `@${e.literal}`;
+    case 'regexpLiteral':
+      return `/${e.literal}/`;
     case 'trunc':
       return `{timeTrunc-${e.units} ${subExpr(e.e)}}`;
     case 'delta':
@@ -267,6 +269,8 @@ function eToStr(e: Expr, symbols: ESymbols): string {
     case 'true':
     case 'false':
       return e.node;
+    case 'regexpMatch':
+      return `{${subExpr(e.kids.expr)} regex-match ${subExpr(e.kids.regex)}}`;
   }
   if (exprHasKids(e) && e.kids['left'] && e.kids['right']) {
     return `{${subExpr(e.kids['left'])} ${e.node} ${subExpr(e.kids['right'])}}`;

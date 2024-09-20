@@ -157,10 +157,9 @@ export abstract class Dialect {
 
   supportsCountApprox = false;
 
-  // return the definition of a function with the given name
-  abstract getGlobalFunctionDef(
-    name: string
-  ): DialectFunctionOverloadDef[] | undefined;
+  abstract getDialectFunctionOverrides(): {
+    [name: string]: DialectFunctionOverloadDef[];
+  };
 
   abstract getDialectFunctions(): {
     [name: string]: DialectFunctionOverloadDef[];

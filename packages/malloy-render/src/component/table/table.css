@@ -30,6 +30,7 @@
   max-height: 100%;
   position: relative;
   overflow: auto;
+  overflow-anchor: none;
   grid-template-columns: repeat(
     var(--total-header-size),
     minmax(auto, max-content)
@@ -135,6 +136,14 @@
   );
   text-wrap: wrap;
   word-break: normal;
+}
+
+.malloy-table .cell-content.chart {
+  padding-block: 0px;
+}
+
+.malloy-table .cell-content.chart svg {
+  display: block;
 }
 
 .malloy-table .th .cell-content {

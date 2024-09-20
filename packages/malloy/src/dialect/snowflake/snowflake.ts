@@ -36,10 +36,14 @@ import {
   MeasureTimeExpr,
   RegexMatchExpr,
 } from '../../model/malloy_types';
-import {SNOWFLAKE_FUNCTIONS} from './functions';
-import {DialectFunctionOverloadDef} from '../functions';
+import {
+  DialectFunctionOverloadDef,
+  expandOverrideMap,
+  expandBlueprintMap,
+} from '../functions';
 import {Dialect, DialectFieldList, QueryInfo, qtz} from '../dialect';
-import {SNOWFLAKE_DIALECT_FUNCTIONS} from './functions/dialect_functions';
+import {SNOWFLAKE_DIALECT_FUNCTIONS} from './dialect_functions';
+import {SNOWFLAKE_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
 const extractionMap: Record<string, string> = {
   'day_of_week': 'dayofweek',
@@ -99,7 +103,6 @@ export class SnowflakeDialect extends Dialect {
   supportsSafeCast = true;
   supportsNesting = true;
   defaultSampling = {rows: 50000};
-  globalFunctions = SNOWFLAKE_FUNCTIONS;
 
   // NOTE: safely setting all these to false for now
   // more many be implemented in future
@@ -110,6 +113,7 @@ export class SnowflakeDialect extends Dialect {
   dontUnionIndex = false;
   supportsQualify = false;
   supportsPipelinesInViews = false;
+  supportsComplexFilteredSources = false;
 
   // don't mess with the table pathing.
   quoteTablePath(tablePath: string): string {
@@ -442,12 +446,14 @@ ${indent(sql)}
     return "'" + noVirgule.replace(/'/g, "\\'") + "'";
   }
 
-  getGlobalFunctionDef(name: string): DialectFunctionOverloadDef[] | undefined {
-    return SNOWFLAKE_FUNCTIONS.get(name);
+  getDialectFunctionOverrides(): {
+    [name: string]: DialectFunctionOverloadDef[];
+  } {
+    return expandOverrideMap(SNOWFLAKE_MALLOY_STANDARD_OVERLOADS);
   }
 
   getDialectFunctions(): {[name: string]: DialectFunctionOverloadDef[]} {
-    return SNOWFLAKE_DIALECT_FUNCTIONS;
+    return expandBlueprintMap(SNOWFLAKE_DIALECT_FUNCTIONS);
   }
 
   malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string {

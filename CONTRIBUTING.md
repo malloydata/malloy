@@ -1,15 +1,31 @@
-## Contributor License Agreement
+## Project Committers
+Our committers are the following GitHub accounts:
 
-Contributions to this project must be accompanied by a Contributor License
-Agreement (CLA). You (or your employer) retain the copyright to your
-contribution; this simply gives us permission to use and redistribute your
-contributions as part of the project. Head over to
-<https://cla.developers.google.com/> to see your current agreements on file or
-to sign a new one.
+lloydtabb
+mtoy-googly-moogly
+carlineng
+christopherswenson
+nachoarreola
+skokenes
+whscullin
 
-You generally only need to submit a CLA once, so if you've already submitted one
-(even if it was for a different project), you probably don't need to do it
-again.
+## Developer Certificate of Origin
+
+All new inbound code contributions must also be accompanied by a Developer 
+Certificate of Origin (http://developercertificate.org) sign-off in the source 
+code system that is submitted through a TSC-approved contribution process which 
+will bind the authorized contributor and, if not self-employed, their employer 
+to the applicable license.
+
+Contributors sign-off that they adhere to these requirements by adding a 
+Signed-off-by line to commit messages.
+
+Git has a -s command line option to append this automatically to your commit
+message, for example:
+
+```
+$ git commit -s -m 'This is my commit message'
+``` 
 
 ## Code Reviews
 
@@ -18,7 +34,7 @@ use GitHub pull requests for this purpose. Consult
 [GitHub Help](https://help.github.com/articles/about-pull-requests/) for more
 information on using pull requests.
 
-## Community Guidelines
+## Code of Conduct
 
 This project follows
-[Google's Open Source Community Guidelines](https://opensource.google/conduct/).
+[The Linux Foundation's Code of Conduct](https://lfprojects.org/policies/code-of-conduct/).

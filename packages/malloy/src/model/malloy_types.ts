@@ -1135,16 +1135,16 @@ export interface FunctionParameterDef {
 export interface FunctionOverloadDef {
   // The expression type here is the MINIMUM return type
   returnType: TypeDesc;
-  needsWindowOrderBy?: boolean;
-  between?: {preceding: number | string; following: number | string};
   isSymmetric?: boolean;
   params: FunctionParameterDef[];
+  supportsOrderBy?: boolean | 'only_default';
+  supportsLimit?: boolean;
   dialect: {
     [dialect: string]: {
       e: Expr;
-      supportsOrderBy?: boolean | 'only_default';
+      between?: {preceding: number | string; following: number | string};
       defaultOrderByArgIndex?: number;
-      supportsLimit?: boolean;
+      needsWindowOrderBy?: boolean;
     };
   };
 }

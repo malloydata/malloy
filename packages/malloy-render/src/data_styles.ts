@@ -22,6 +22,7 @@
  */
 
 import * as lite from 'vega-lite';
+import {VegaSpec} from './component/types';
 
 export type DataStyles = {[fieldName: string]: RenderDef};
 export type ChartSize = 'small' | 'medium' | 'large';
@@ -184,6 +185,7 @@ export interface ChartRenderOptions extends DataRenderOptions {
     color?: string;
     shape?: string;
   };
+  vegaConfigOverride?: VegaSpec;
 }
 
 export interface CartesianChartRenderOptions extends ChartRenderOptions {

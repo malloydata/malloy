@@ -64,6 +64,13 @@ export const Test = {
   },
 };
 
+export const Series = {
+  args: {
+    source: 'products',
+    view: 'seriesCharts',
+  },
+};
+
 export const NestedTest = {
   args: {
     source: 'products',

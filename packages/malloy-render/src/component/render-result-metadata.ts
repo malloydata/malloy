@@ -32,12 +32,24 @@ import {
   Result,
   Tag,
 } from '@malloydata/malloy';
-import {getFieldKey, valueIsNumber, valueIsString} from './util';
-import {generateBarChartSpec} from './bar-chart/generate-bar_chart-spec';
-import {plotToVega} from './plot/plot-to-vega';
+import {
+  getFieldKey,
+  valueIsDateTime,
+  valueIsNumber,
+  valueIsString,
+} from './util';
 import {hasAny} from './tag-utils';
-import {RenderResultMetadata} from './types';
+import {RenderResultMetadata, VegaChartProps, VegaConfigHandler} from './types';
 import {shouldRenderAs} from './apply-renderer';
+import {getBarChartSettings} from './bar-chart/get-bar_chart-settings';
+import {generateBarChartVegaLiteSpec} from './bar-chart/generate-bar_chart-vega-lite-spec';
+import {mergeVegaConfigs} from './plot/merge-vega-configs';
+import {baseVegaConfig} from './plot/base-vega-config';
+import {renderTimeString} from './render-time';
+import {getLineChartSettings} from './line-chart/get-line_chart-settings';
+import {generateLineChartVegaLiteSpec} from './line-chart/generate-line_chart-vega-lite-spec';
+import {getAreaChartSettings} from './area-chart/get-area_chart-settings';
+import {generateAreaChartVegaLiteSpec} from './area-chart/generate-area_chart-vega-lite-spec';
 
 function createDataCache() {
   const dataCache = new WeakMap<DataColumn, QueryData>();
@@ -55,7 +67,14 @@ function createDataCache() {
   };
 }
 
-export function getResultMetadata(result: Result) {
+export type GetResultMetadataOptions = {
+  getVegaConfigOverride?: VegaConfigHandler;
+};
+
+export function getResultMetadata(
+  result: Result,
+  options: GetResultMetadataOptions = {}
+) {
   const fieldKeyMap: WeakMap<Field | Explore, string> = new WeakMap();
   const getCachedFieldKey = (f: Field | Explore) => {
     if (fieldKeyMap.has(f)) return fieldKeyMap.get(f)!;
@@ -95,9 +114,10 @@ export function getResultMetadata(result: Result) {
   Object.values(metadata.fields).forEach(m => {
     const f = m.field;
     // If explore, do some additional post-processing like determining chart settings
-    if (f.isExploreField()) populateExploreMeta(f, f.tagParse().tag, metadata);
+    if (f.isExploreField())
+      populateExploreMeta(f, f.tagParse().tag, metadata, options);
     else if (f.isExplore())
-      populateExploreMeta(f, result.tagParse().tag, metadata);
+      populateExploreMeta(f, result.tagParse().tag, metadata, options);
   });
 
   return metadata;
@@ -133,6 +153,9 @@ const populateFieldMeta = (data: DataArray, metadata: RenderResultMetadata) => {
         const n = value;
         fieldMeta.min = Math.min(fieldMeta.min ?? n, n);
         fieldMeta.max = Math.max(fieldMeta.max ?? n, n);
+        if (f.isAtomicField() && f.sourceWasDimension()) {
+          fieldMeta.values.add(n);
+        }
       } else if (valueIsString(f, value)) {
         const s = value;
         fieldMeta.values.add(s);
@@ -140,6 +163,31 @@ const populateFieldMeta = (data: DataArray, metadata: RenderResultMetadata) => {
           fieldMeta.minString = s;
         if (!fieldMeta.maxString || fieldMeta.maxString.length < s.length)
           fieldMeta.maxString = s;
+      } else if (valueIsDateTime(f, value)) {
+        const numericValue = Number(value);
+        fieldMeta.min = Math.min(fieldMeta.min ?? numericValue, numericValue);
+        fieldMeta.max = Math.max(fieldMeta.max ?? numericValue, numericValue);
+        const stringValue = renderTimeString(
+          value,
+          f.isAtomicField() && f.isDate(),
+          f.isAtomicField() && (f.isDate() || f.isTimestamp())
+            ? f.timeframe
+            : undefined
+        ).toString();
+        if (
+          !fieldMeta.minString ||
+          fieldMeta.minString.length > stringValue.length
+        )
+          fieldMeta.minString = stringValue;
+        if (
+          !fieldMeta.maxString ||
+          fieldMeta.maxString.length < stringValue.length
+        )
+          fieldMeta.maxString = stringValue;
+
+        if (f.isAtomicField() && f.sourceWasDimension()) {
+          fieldMeta.values.add(stringValue);
+        }
       } else if (f.isExploreField()) {
         const data = row.cell(f);
         if (data.isArray()) populateFieldMeta(data, metadata);
@@ -158,15 +206,51 @@ const populateFieldMeta = (data: DataArray, metadata: RenderResultMetadata) => {
 function populateExploreMeta(
   f: Explore | ExploreField,
   tag: Tag,
-  metadata: RenderResultMetadata
+  metadata: RenderResultMetadata,
+  options: GetResultMetadataOptions
 ) {
   const fieldMeta = metadata.field(f);
+  let vegaLiteProps: VegaChartProps | null = null;
   if (hasAny(tag, 'bar', 'bar_chart')) {
-    const plotSpec = generateBarChartSpec(f, tag);
-    fieldMeta.vegaChartProps = plotToVega(plotSpec, {
-      field: f,
+    const chartTag = (tag.tag('bar_chart') ?? tag.tag('bar'))!;
+    const barSettings = getBarChartSettings(f, tag);
+    vegaLiteProps = generateBarChartVegaLiteSpec(
+      f,
+      barSettings,
       metadata,
-      chartTag: (tag.tag('bar_chart') ?? tag.tag('bar'))!,
-    });
+      chartTag
+    );
+  } else if (tag.has('line_chart')) {
+    const chartTag = tag.tag('line_chart')!;
+    const lineSettings = getLineChartSettings(f, tag);
+    vegaLiteProps = generateLineChartVegaLiteSpec(
+      f,
+      lineSettings,
+      metadata,
+      chartTag
+    );
+  } else if (tag.has('area_chart')) {
+    const chartTag = tag.tag('area_chart')!;
+    const areaSettings = getAreaChartSettings(f, tag);
+    vegaLiteProps = generateAreaChartVegaLiteSpec(
+      f,
+      areaSettings,
+      metadata,
+      chartTag
+    );
+  }
+
+  if (vegaLiteProps) {
+    const vegaConfig = mergeVegaConfigs(
+      baseVegaConfig(),
+      options.getVegaConfigOverride?.(vegaLiteProps.chartType) ?? {}
+    );
+    fieldMeta.vegaChartProps = {
+      ...vegaLiteProps,
+      spec: {
+        ...vegaLiteProps.spec,
+        config: vegaConfig,
+      },
+    };
   }
 }

@@ -37,7 +37,7 @@ describe('BigQuery double truncation', () => {
     expect(runtime).toBeDefined();
     if (runtime) {
       const src = `
-        run: bigquery.table('malloy-data.faa.flights') -> {
+        run: bigquery.table('malloydata-org.malloytest.flights') -> {
           group_by: takeoff_week is dep_time.week
         }
       `;

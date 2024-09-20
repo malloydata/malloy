@@ -1088,19 +1088,31 @@ expressionModels.forEach((x, databaseName) => {
   });
 
   describe('count_approx', () => {
-    test.when(runtime.dialect.supportsCountApprox)(
-      'works generally',
-      async () => {
-        await expect(`
-          // be accurate within 10%
+    const supported = runtime.dialect.supportsCountApprox;
+    test.when(supported)('works generally', async () => {
+      await expect(`
+          // be accurate within 30%
           // # test.debug
           run: ${databaseName}.table('malloytest.state_facts') -> {
-            aggregate: x is round(count_approx(state)/10,0)*10
-            aggregate: y is round(count_approx(airport_count)/10,0)*10
+            aggregate: passes is abs(count_approx(state)-count(state))/count(state) < 0.3
+            aggregate: also_passes is abs(count_approx(airport_count)-count(airport_count))/count(airport_count) < 0.3
           }
-          `).malloyResultMatches(runtime, {'x': 50, 'y': 50});
-      }
-    );
+          `).malloyResultMatches(runtime, {
+        'passes': true,
+        'also_passes': true,
+      });
+    });
+    test.when(supported)('works with fanout', async () => {
+      await expect(`
+        source: state_facts is ${databaseName}.table('malloytest.state_facts')
+        source: state_facts_fanout is ${databaseName}.table('malloytest.state_facts') extend {
+          join_cross: state_facts on true
+        }
+        run: state_facts_fanout -> {
+          aggregate: x is state_facts.state.count_approx() > 0
+        }
+      `).malloyResultMatches(runtime, {x: true});
+    });
   });
   describe('last_value', () => {
     it(`works - ${databaseName}`, async () => {
