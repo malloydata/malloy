@@ -1,6 +1,6 @@
 import {createEffect} from 'solid-js';
 import {VegaJSON, asVegaLiteSpec, asVegaSpec} from '../vega-types';
-import {View, parse} from 'vega';
+import {EventListenerHandler, View, parse} from 'vega';
 import {compile} from 'vega-lite';
 
 type VegaChartProps = {
@@ -8,6 +8,7 @@ type VegaChartProps = {
   type: 'vega' | 'vega-lite';
   width?: number;
   height?: number;
+  onMouseOver?: EventListenerHandler;
 };
 
 export function VegaChart(props: VegaChartProps) {
@@ -23,6 +24,15 @@ export function VegaChart(props: VegaChartProps) {
         : asVegaSpec(props.spec);
 
     view = new View(parse(vegaspec)).initialize(el).renderer('svg').hover();
+    if (props.onMouseOver)
+      view.addEventListener('mouseover', props.onMouseOver);
+    // view.addSignalListener('signalA', console.log);
+    console.log({state: view.getState()});
+    // view.addSignalListener('signalC', console.log);
+    view.addSignalListener('t2', console.log);
+    // view.addSignalListener('interactions', (signal, value) =>
+    //   console.log('SIGNAL VALUE', value[0].value)
+    // );
     view.run();
   });
 

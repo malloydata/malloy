@@ -46,6 +46,16 @@ export function generateBarChartVegaLiteSpec(
     getYMinMax: () => [yDomainMin, yDomainMax],
   });
 
+  console.log({xField});
+
+  if (xField.isAtomicField()) {
+    console.log({
+      sourceWasDimension: xField.sourceWasDimension(),
+      // n: xField.
+      // source: xField.source,
+    });
+  }
+
   const xMeta = metadata.field(xField);
   const seriesMeta = seriesField ? metadata.field(seriesField) : null;
 
@@ -63,18 +73,9 @@ export function generateBarChartVegaLiteSpec(
     seriesField &&
     (forceSharedSeries || (autoSharedSeries && !forceIndependentSeries));
 
-  const spec: VegaSpec = {
-    '$schema': 'https://vega.github.io/schema/vega-lite/v5.json',
-    'width': chartSettings.plotWidth,
-    'height': chartSettings.plotHeight,
-    'autosize': {
-      type: 'none',
-      resize: true,
-      contains: 'content',
-    },
-    'padding': chartSettings.padding,
-    'data': {'values': []},
-    'mark': {'type': 'bar'},
+  const barMark: VegaSpec = {
+    'mark': {'type': 'bar', 'name': 'foo'},
+    'name': 'baz',
     'encoding': {
       'x': {
         'field': xFieldPath,
@@ -105,6 +106,88 @@ export function generateBarChartVegaLiteSpec(
         },
       },
     },
+    'params': [
+      {
+        'name': 'bar_hover',
+        'select': {
+          'type': 'point',
+          'on': 'pointerover',
+          'fields': ['brand', 'Sales $'],
+        },
+      },
+    ],
+  };
+
+  const barOverlayMark: VegaSpec = {
+    'mark': {'type': 'bar'},
+    'name': 'bar_overlay',
+    'encoding': {
+      'x': {
+        'field': xFieldPath,
+        'type': 'ordinal',
+        'axis': {
+          ...chartSettings.xAxis,
+          labelLimit: chartSettings.xAxis.labelSize,
+        },
+        'scale': {
+          'domain': shouldShareXDomain ? [...xMeta.values] : null,
+        },
+      },
+      'y': {
+        'field': yFieldPath,
+        'type': 'quantitative',
+        'axis': chartSettings.yAxis.hidden
+          ? null
+          : {
+              ...chartSettings.yAxis,
+              labelLimit: chartSettings.yAxis.width + 10,
+            },
+        'scale': chartSettings.yScale,
+      },
+      'color': {
+        'value': 'red',
+
+        // 'scale': {
+        //   'domain': shouldShareSeriesDomain ? [...seriesMeta!.values] : null,
+        //   'range': 'category',
+        // },
+      },
+      'stroke': {
+        'value': 'red',
+      },
+    },
+    'params': [],
+  };
+
+  const spec: VegaSpec = {
+    '$schema': 'https://vega.github.io/schema/vega-lite/v5.json',
+    'width': chartSettings.plotWidth,
+    'height': chartSettings.plotHeight,
+    'autosize': {
+      type: 'none',
+      resize: true,
+      contains: 'content',
+    },
+    'params': [
+      {
+        'name': 't2',
+        'select': {
+          'type': 'point',
+          'on': 'pointerover',
+          'fields': ['brand', 'Sales $'],
+        },
+      },
+      // {
+      //   'name': 'interactions',
+      //   'expr': '[{action: "bar_hover", value: bar_hover }]',
+      // },
+    ],
+    'padding': chartSettings.padding,
+    'data': {'values': []},
+    'layer': [
+      barOverlayMark,
+      // barMark
+    ],
   };
 
   const needsLegend = seriesField || settings.yChannel.fields.length > 1;
@@ -139,18 +222,18 @@ export function generateBarChartVegaLiteSpec(
   // todo: properly calculate max value for stacks
   // will also need this to determine padding
   if (settings.isStack) {
-    spec.encoding.y.scale.domain = null;
+    barMark.encoding.y.scale.domain = null;
   }
 
   // Field driven series
   if (seriesField) {
-    spec.encoding.color.field = seriesFieldPath;
-    spec.encoding.color.legend = legendSettings;
+    barMark.encoding.color.field = seriesFieldPath;
+    barMark.encoding.color.legend = legendSettings;
   } else {
-    spec.encoding.color.datum = '';
+    barMark.encoding.color.datum = '';
   }
   if (!settings.isStack && seriesField) {
-    spec.encoding.xOffset = {field: seriesFieldPath};
+    barMark.encoding.xOffset = {field: seriesFieldPath};
   }
 
   // Measure list series
@@ -160,15 +243,15 @@ export function generateBarChartVegaLiteSpec(
         'fold': [...settings.yChannel.fields],
       },
     ];
-    spec.encoding.y.field = 'value';
-    spec.encoding.color.field = 'key';
-    delete spec.encoding.color.datum;
+    barMark.encoding.y.field = 'value';
+    barMark.encoding.color.field = 'key';
+    delete barMark.encoding.color.datum;
     if (!settings.isStack) {
-      spec.encoding.xOffset = {field: 'key'};
+      barMark.encoding.xOffset = {field: 'key'};
     }
 
     legendSettings.title = '';
-    spec.encoding.color.legend = legendSettings;
+    barMark.encoding.color.legend = legendSettings;
   }
 
   return {

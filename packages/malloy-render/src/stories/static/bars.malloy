@@ -129,51 +129,53 @@ source: products is duckdb.table("data/products.parquet") extend {
       # bar_chart size=lg
       # size.height=220 size.width=300
       nested_column_1 is {
+        -- group_by: custom is concat(brand, '_foo')
+        -- group_by: custom is 'foo'
         group_by: brand
         aggregate: avg_retail is retail_price.avg()
         limit: 10
       }
-      # bar_chart size=lg
-      # size.height=220 size.width=300
-      nested_column_2 is {
-        group_by: brand
-        aggregate: avg_retail is retail_price.avg()
-        limit: 10
-      }
-      nested_column_3 is {
-        group_by: brand
-        aggregate: avg_retail is retail_price.avg()
-        limit: 10
-      }
-      another_nested is {
-        group_by: department
-        aggregate: avg_retail is retail_price.avg()
-        # bar_chart
-        nest:
-          deeply_nested is {
-            group_by: `sku`
-            aggregate: total_cost is cost.sum()
-            limit: 3
-          }
-        limit: 5
-      }
-      record is {
-        nest: nested_record is {
-          group_by: id
-          aggregate: total_cost is cost.sum()
-          limit: 5
-        }
-      }
-      another_nested2 is {
-        group_by: department
-        aggregate: avg_retail is retail_price.avg()
-        nest: deeply_nested is {
-          group_by: `sku`
-          aggregate: total_cost is cost.sum()
-          limit: 3
-        }
-        limit: 5
-      }
+      -- # bar_chart size=lg
+      -- # size.height=220 size.width=300
+      -- nested_column_2 is {
+      --   group_by: brand
+      --   aggregate: avg_retail is retail_price.avg()
+      --   limit: 10
+      -- }
+      -- nested_column_3 is {
+      --   group_by: brand
+      --   aggregate: avg_retail is retail_price.avg()
+      --   limit: 10
+      -- }
+      -- another_nested is {
+      --   group_by: department
+      --   aggregate: avg_retail is retail_price.avg()
+      --   # bar_chart
+      --   nest:
+      --     deeply_nested is {
+      --       group_by: `sku`
+      --       aggregate: total_cost is cost.sum()
+      --       limit: 3
+      --     }
+      --   limit: 5
+      -- }
+      -- record is {
+      --   nest: nested_record is {
+      --     group_by: id
+      --     aggregate: total_cost is cost.sum()
+      --     limit: 5
+      --   }
+      -- }
+      -- another_nested2 is {
+      --   group_by: department
+      --   aggregate: avg_retail is retail_price.avg()
+      --   nest: deeply_nested is {
+      --     group_by: `sku`
+      --     aggregate: total_cost is cost.sum()
+      --     limit: 3
+      --   }
+      --   limit: 5
+      -- }
   }
 
   view: nested_independent_axis is {

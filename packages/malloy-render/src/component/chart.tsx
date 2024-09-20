@@ -8,6 +8,8 @@ import {
 import {VegaChart} from './vega/vega-chart';
 import {RenderResultMetadata} from './types';
 import {renderTimeString} from './render-time';
+import {EventListenerHandler} from 'vega';
+import {useStore} from './store-context';
 
 export function Chart(props: {
   field: Explore | ExploreField;
@@ -37,12 +39,32 @@ export function Chart(props: {
     });
   });
 
+  const [store, setStore] = useStore();
+  const handleMouseOver: EventListenerHandler = (evt, item) => {
+    console.log({evt, item});
+    const xField = field.allFields.at(0)!;
+    if (item) {
+      setStore('interactions', interactions => {
+        return [
+          ...interactions,
+          // {
+          //   type: 'hover',
+          //   field: xField.name,
+          //   value: item.datum[xField.name],
+          //   source: xField.fieldPath.join('.'),
+          // },
+        ];
+      });
+    }
+  };
+
   return (
     <VegaChart
       spec={spec}
       type={chartProps.specType}
       width={chartProps.plotWidth}
       height={chartProps.plotHeight}
+      onMouseOver={handleMouseOver}
     />
   );
 }

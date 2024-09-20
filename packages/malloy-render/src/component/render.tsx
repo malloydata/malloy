@@ -18,6 +18,8 @@ import './render.css';
 import {ComponentOptions, ICustomElement} from 'component-register';
 import {applyRenderer} from './apply-renderer';
 import {MalloyClickEventPayload, VegaConfigHandler} from './types';
+import {createStore} from 'solid-js/store';
+import {createRenderStore, StoreContext} from './store-context';
 
 export type MalloyRenderProps = {
   result?: Result;
@@ -83,6 +85,9 @@ export function MalloyRenderInner(props: {
       getVegaConfigOverride: props.vegaConfigOverride,
     })
   );
+
+  const renderStore = createRenderStore();
+
   const tags = () => {
     const modelTag = metadata().modelTag;
     const resultTag = metadata().resultTag;
@@ -122,9 +127,15 @@ export function MalloyRenderInner(props: {
       },
     });
 
+  createEffect(() => {
+    console.log(JSON.parse(JSON.stringify(renderStore[0])));
+  });
+
   return (
     <ResultContext.Provider value={metadata()}>
-      {rendering().renderValue}
+      <StoreContext.Provider value={renderStore}>
+        {rendering().renderValue}
+      </StoreContext.Provider>
     </ResultContext.Provider>
   );
 }
