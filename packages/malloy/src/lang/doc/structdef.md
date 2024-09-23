@@ -52,12 +52,12 @@ CREATE TABLE 'malloydata.simple_table'
 ... as a `StructDef` ...
 
 ```TypeScript
-interface TableDef extends SourceDefBase {
+interface TableSourceDef extends SourceDefBase {
     type: 'table';
     tablePath: string;
 }
 
-const simpleTable: TableDef = {
+const simpleTable: TableSourceDef = {
     type: 'table';
     tablePath: 'malloydata.simple_table';
     connection: 'bigquery';
@@ -89,7 +89,7 @@ const simpleRecord: RecordDef {
 Now lets make a table which has that record ...
 
 ```TypeScript
-const table2: TableDef = {
+const table2: TableSourceDef = {
     ...simpleTable,
     fields: [
         {
@@ -138,7 +138,7 @@ interface ScalarArrayStruct extends ArrayTypeDef, StructDefBase, JoinBase {
 ```TypeScript
 const intType: NumberTypeDef = {type: 'number', numberType: 'integer'};
 const arrayOfInts: ArrayTypeDef = {type: 'array', dataType: intType};
-const table3: TableDef {
+const table3: TableSourceDef {
     name: 'table3',
     dialect: 'standardsql'
     tablePath: 'malloytest.table3',
@@ -172,7 +172,7 @@ interface RepeatedRecordStruct extends ScalarArrayStruct {
 Which, when joined into a table would look like this ...
 
 ```TypeScript
-const table4: TableDef {
+const table4: TableSourceDef {
     name: 'table4',
     dialect: 'standardsql'
     tablePath: 'malloytest.table4',
