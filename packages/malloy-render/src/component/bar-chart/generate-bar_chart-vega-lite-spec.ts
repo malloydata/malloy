@@ -113,6 +113,7 @@ export function generateBarChartVegaLiteSpec(
           'type': 'point',
           'on': 'pointerover',
           'fields': ['brand', 'Sales $'],
+          'clear': 'pointerout',
         },
       },
     ],
@@ -169,24 +170,24 @@ export function generateBarChartVegaLiteSpec(
       contains: 'content',
     },
     'params': [
-      {
-        'name': 't2',
-        'select': {
-          'type': 'point',
-          'on': 'pointerover',
-          'fields': ['brand', 'Sales $'],
-        },
-      },
       // {
-      //   'name': 'interactions',
-      //   'expr': '[{action: "bar_hover", value: bar_hover }]',
+      //   'name': 't2',
+      //   'select': {
+      //     'type': 'point',
+      //     'on': 'pointerover',
+      //     'fields': ['brand', 'Sales $'],
+      //   },
       // },
+      {
+        'name': 'interactions',
+        'expr': '[{action: "bar_hover", value: bar_hover }]',
+      },
     ],
     'padding': chartSettings.padding,
     'data': {'values': []},
     'layer': [
-      barOverlayMark,
-      // barMark
+      // barOverlayMark,
+      barMark,
     ],
   };
 
