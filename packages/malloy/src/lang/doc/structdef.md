@@ -52,7 +52,7 @@ CREATE TABLE 'malloydata.simple_table'
 ... as a `StructDef` ...
 
 ```TypeScript
-interface TableDef extends SourceDef {
+interface TableDef extends SourceDefBase {
     type: 'table';
     tablePath: string;
 }
@@ -71,7 +71,7 @@ const simpleTable: TableDef = {
 
 ### Simple Table, with a record
 
-Let's start by making a record which looks a like a row of simpletable ...
+Let's start by making a record which looks a like a row of `malloydata.simple_table`
 
 ```TypeScript
 const simpleRecord: RecordDef {
@@ -102,8 +102,14 @@ const table2: TableDef = {
 }
 ```
 
-> Everything which is treated like a join by the IR has a `join:` field. All records
-> are joined, so every record in a field list will have a `join:` keyword.
+> Everything which is treated like a join by the IR has a `join:` field. All records are joined, so every record in a field list will have a `join:` keyword. So a non-repeated record is actually
+```TypeScript
+interface NonRepeatedRecordStruct extends StructDefBase, JoinBase {
+    type: 'record';
+    join: 'one';
+    matrixOperation: 'left';
+}
+```
 
 ## Arrays
 
@@ -191,15 +197,15 @@ const table4: TableDef {
 ```TypeScript
 type SourceDef =
     | TableSourceDef
-    | SelecSourcetDef       // CONNECTION_NAME.sql("SELECT ....")
-    | QuerySourceDef
-    | QueryResultDef
+    | SelectSourceDef       // CONNECTION_NAME.sql("SELECT ....")
+    | QuerySourceDef        // A query as a source, contains the query
+    | QueryResultDef        // The computed output schema of a query without the query
     | NestSourceDef         // Special input to a nested query
     | FinalizeSourceDef;    // Use to re-write final stage of PostGres queries
 
 type StructDef =
     | SourceDef
-    | RecordDef
+    | NonRepeatedRecorsStruct
     | ScalarArrayStruct
     | RepeatedRecordStruct;
 ```
