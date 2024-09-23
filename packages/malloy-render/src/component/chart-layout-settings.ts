@@ -137,8 +137,8 @@ export function getChartLayoutSettings(
     const yLabelOffset = 5;
     yAxisWidth =
       Math.max(
-        getTextWidth(formattedMin, 'Inter, sans-serif 12px'),
-        getTextWidth(formattedMax, 'Inter, sans-serif 12px')
+        getTextWidth(formattedMin, '10px Inter, sans-serif') + 4,
+        getTextWidth(formattedMax, '10px Inter, sans-serif') + 4
       ) +
       yLabelOffset +
       yTitleSize;
@@ -164,8 +164,8 @@ export function getChartLayoutSettings(
     // TODO: add type checking here for axis. for now assume number, string
     const xKey = getFieldKey(xField);
     const maxString = metadata.fields[xKey]!.maxString!;
-    const maxStringSize = getTextWidth(maxString, 'Inter, sans-serif 12px');
-    const X_AXIS_THRESHOLD = 0.3;
+    const maxStringSize = getTextWidth(maxString, '10px Inter, sans-serif') + 4;
+    const X_AXIS_THRESHOLD = 1;
     xTitleSize = 26;
     xAxisHeight = Math.min(maxStringSize, X_AXIS_THRESHOLD * chartHeight);
     labelSize = xAxisHeight;
@@ -176,7 +176,7 @@ export function getChartLayoutSettings(
     const recordsToFit = isSharedDomain
       ? uniqueValuesCt
       : exploreMetadata.maxRecordCt!;
-    const xSpacePerLabel = (chartWidth - yAxisWidth) / recordsToFit;
+    const xSpacePerLabel = chartWidth / recordsToFit;
     if (xSpacePerLabel > xAxisHeight || xSpacePerLabel > maxStringSize) {
       labelAngle = 0;
       labelSize = xSpacePerLabel;
