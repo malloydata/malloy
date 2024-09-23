@@ -205,7 +205,7 @@ type SourceDef =
 
 type StructDef =
     | SourceDef
-    | NonRepeatedRecorsStruct
+    | NonRepeatedRecordStruct
     | ScalarArrayStruct
     | RepeatedRecordStruct;
 ```
