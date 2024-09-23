@@ -1,6 +1,6 @@
-# StructDef
+# `StructDef`
 
-This basic StructDef is just a namespace
+The most basic `StructDef` is a namespace. `StructDef`s are turned into "FieldSpaces" in the translator pass and into either "Explores" or "QueryStructs" in the compiler pass. These are then used to understand path based field references.
 
 ```TypeScript
 interface StructDefBase extends HasLocation, NamedObject {
@@ -11,6 +11,8 @@ interface StructDefBase extends HasLocation, NamedObject {
   dialect: string;
 }
 ```
+
+> [`FieldDef`](field.def.md) has an explainer page too.
 
 Some StructDefs are also sources, and to be a source, they need some additional properties
 
@@ -36,7 +38,7 @@ interface RecordDef extends StructDefBase {
 }
 ```
 
-> Confession: `type:` namespace for structs and fields is merged. Not every struct is a field, not every field is a struct, but there are entities which are both structs and fields. Old Malloy "All structs are legal in field lists",
+> Confession: The `type:` namespace for structs and fields is merged. Not every struct is a field, not every field is a struct, but there are entities which are both structs and fields. Old Malloy "All structs are legal in field lists",
 new Malloy is explicit about which are legal, but I didn't want to add two discriminators "structType" and "fieldType" for the many items which are both structs and can be in field lists.
 
 ## Simple Table
