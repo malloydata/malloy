@@ -19,15 +19,16 @@ export function Chart(props: {
   const {field, data} = props;
   const chartProps = props.metadata.field(field).vegaChartProps!;
   const spec = structuredClone(chartProps.spec);
+  const chartData = structuredClone(data);
   if (chartProps.specType === 'vega') {
-    spec.data[0].values = data;
-  } else spec.data.values = data;
+    spec.data[0].values = chartData;
+  } else spec.data.values = chartData;
 
   // TODO: improve handling date/times in chart axes
   const dateTimeFields = field.allFields.filter(
     f => f.isAtomicField() && (f.isDate() || f.isTimestamp())
   ) as (DateField | TimestampField)[];
-  data.forEach(row => {
+  chartData.forEach(row => {
     dateTimeFields.forEach(f => {
       const value = row[f.name];
       if (typeof value === 'number' || typeof value === 'string')
