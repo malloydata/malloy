@@ -1,6 +1,6 @@
 # StructDef
 
-StructDef, at it's simplest form, is a namespace.
+This basic StructDef is just a namespace
 
 ```TypeScript
 interface StructDefBase extends HasLocation, NamedObject {
@@ -12,7 +12,7 @@ interface StructDefBase extends HasLocation, NamedObject {
 }
 ```
 
-Some StructDefs are also sources, and they have these additional fields
+Some StructDefs are also sources, and to be a source, they need some additional properties
 
 ```TypeScript
 interface SourceDefBase
@@ -110,21 +110,21 @@ const table2: TableDef = {
 A simple array of integers has a data type like this
 
 ```TypeScript
-// An array is not always a struct, it can just be a data type
-interface ArrayTypeDef {
+// An array is not always a struct, it can just be a data type, so it does NOT extend StructDefbase
+interface ArrayTypeDef extends NamedObject {
     type: 'array';
     dataType: FieldAtomicType
 }
 
-// If an array is joined, so it un-nests, it will look like this, and fields will be filled out
-// at some point, maybe schema creation time, or maybe when the array object is "loaded" into
-// a QueryStruct ....
+// If an array is joined, so it un-nests, is a StructDef, it will look like this
 interface ScalarArrayStruct extends ArrayTypeDef, StructDefBase, JoinBase {
     type: 'array'
     dataType: FieldAtomicType,
     join: 'one'
     matrixOperation: 'left'
 };
+// fields[] will be filled out at some point, probably by the schema reader like it is
+// in the current schema readers
 ```
 
 ## Table with two arrays, one joined
@@ -138,7 +138,7 @@ const table3: TableDef {
     tablePath: 'malloytest.table3',
     connection: 'bigquery',
     fields: [
-        {name: 'un_joined_ints', ...arrayOfInts}, // Just a name and a type
+        {name: 'un_joined_ints', ...arrayOfInts}, // Just a name and a type, not a struct, no fields
         {
             name: 'joined_ints',                  // This will be a ScalarArrayStruct
             ...arrayOfInts,
@@ -191,7 +191,7 @@ const table4: TableDef {
 ```TypeScript
 type SourceDef =
     | TableSourceDef
-    | SelecSourcetDef             // CONNECTION_NAME.sql("SELECT ....")
+    | SelecSourcetDef       // CONNECTION_NAME.sql("SELECT ....")
     | QuerySourceDef
     | QueryResultDef
     | NestSourceDef         // Special input to a nested query
