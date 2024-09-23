@@ -43,21 +43,24 @@ export function Chart(props: {
   const [store, setStore] = useStore();
   const handleMouseOver: EventListenerHandler = (evt, item) => {
     console.log({evt, item});
-    const xField = field.allFields.at(0)!;
-    if (item) {
-      setStore('interactions', interactions => {
-        return [
-          ...interactions,
-          // {
-          //   type: 'hover',
-          //   field: xField.name,
-          //   value: item.datum[xField.name],
-          //   source: xField.fieldPath.join('.'),
-          // },
-        ];
-      });
-    }
+    // const xField = field.allFields.at(0)!;
+    // if (item) {
+    //   setStore('interactions', interactions => {
+    //     return [
+    //       ...interactions,
+    //       // {
+    //       //   type: 'hover',
+    //       //   field: xField.name,
+    //       //   value: item.datum[xField.name],
+    //       //   source: xField.fieldPath.join('.'),
+    //       // },
+    //     ];
+    //   });
+    // }
   };
+  const onMouseOver = chartProps.onMouseOverWithStore
+    ? chartProps.onMouseOverWithStore([store, setStore])
+    : undefined;
 
   return (
     <VegaChart
@@ -65,7 +68,7 @@ export function Chart(props: {
       type={chartProps.specType}
       width={chartProps.plotWidth}
       height={chartProps.plotHeight}
-      onMouseOver={handleMouseOver}
+      onMouseOver={onMouseOver}
     />
   );
 }

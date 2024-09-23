@@ -3,6 +3,7 @@ import {BarChartSettings} from './get-bar_chart-settings';
 import {RenderResultMetadata, VegaChartProps, VegaSpec} from '../types';
 import {getChartLayoutSettings} from '../chart-layout-settings';
 import {getFieldFromRootPath} from '../plot/util';
+import {useStore} from '../store-context';
 
 const LEGEND_PERC = 0.4;
 const LEGEND_MAX = 384;
@@ -75,7 +76,7 @@ export function generateBarChartVegaLiteSpec(
 
   const barMark: VegaSpec = {
     'mark': {'type': 'bar', 'name': 'foo'},
-    'name': 'baz',
+    'name': 'base_bar',
     'encoding': {
       'x': {
         'field': xFieldPath,
@@ -107,15 +108,15 @@ export function generateBarChartVegaLiteSpec(
       },
     },
     'params': [
-      {
-        'name': 'bar_hover',
-        'select': {
-          'type': 'point',
-          'on': 'pointerover',
-          'fields': ['brand', 'Sales $'],
-          'clear': 'pointerout',
-        },
-      },
+      // {
+      //   'name': 'bar_hover',
+      //   'select': {
+      //     'type': 'point',
+      //     'on': 'pointerover',
+      //     'fields': ['brand', 'Sales $'],
+      //     'clear': 'pointerout',
+      //   },
+      // },
     ],
   };
 
@@ -145,9 +146,9 @@ export function generateBarChartVegaLiteSpec(
             },
         'scale': chartSettings.yScale,
       },
+      // 'y2': {value: -100},
       'color': {
         'value': 'red',
-
         // 'scale': {
         //   'domain': shouldShareSeriesDomain ? [...seriesMeta!.values] : null,
         //   'range': 'category',
@@ -156,6 +157,7 @@ export function generateBarChartVegaLiteSpec(
       'stroke': {
         'value': 'red',
       },
+      'opacity': {value: 0.5},
     },
     'params': [],
   };
@@ -180,15 +182,29 @@ export function generateBarChartVegaLiteSpec(
       // },
       {
         'name': 'interactions',
-        'expr': '[{action: "bar_hover", value: bar_hover }]',
+        // 'expr': '[{action: "bar_hover", value: bar_hover }]',
       },
     ],
     'padding': chartSettings.padding,
     'data': {'values': []},
     'layer': [
-      // barOverlayMark,
       barMark,
+      // {
+      //   mark: {type: 'rect'},
+      //   encoding: {
+      //     x: {field: 'brand', type: 'ordinal'},
+      //     y: {field: 'Sales $', type: 'quantitative'},
+      //     // y: {value: chartSettings.plotHeight},
+      //     y2: {
+      //       value: chartSettings.plotHeight + chartSettings.xAxis.height,
+      //     },
+      //     color: {value: 'red'},
+      //     opacity: {value: 0.7},
+      //   },
+      // },
     ],
+    // 'layer': [barMark, barOverlayMark],
+    // 'layer': [barOverlayMark, barMark],
   };
 
   const needsLegend = seriesField || settings.yChannel.fields.length > 1;
@@ -263,5 +279,23 @@ export function generateBarChartVegaLiteSpec(
     totalWidth: chartSettings.totalWidth,
     totalHeight: chartSettings.totalHeight,
     chartType: 'bar_chart',
+    onMouseOverWithStore: storeCtx => (evt, item) => {
+      const [store, setStore] = storeCtx;
+      // for now, this way. later, do a transform to put prop in datum
+      if (item?.mark.name === 'base_bar_marks') {
+        setStore('interactions', interactions => {
+          return [
+            ...interactions,
+            {
+              type: 'hover',
+              field: xField.name,
+              value: item.datum[xField.name],
+              source: xField.fieldPath.join('.'),
+              itemData: item.datum,
+            },
+          ];
+        });
+      } else setStore('interactions', interactions => []);
+    },
   };
 }

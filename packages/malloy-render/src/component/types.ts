@@ -1,4 +1,6 @@
 import {DataColumn, Explore, Field, QueryData, Tag} from '@malloydata/malloy';
+import {EventListenerHandler} from 'vega';
+import {StoreContextValue} from './store-context';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Vega does not have good TS support
 export type VegaSpec = any;
@@ -10,6 +12,7 @@ export type VegaChartProps = {
   totalWidth: number;
   totalHeight: number;
   chartType: string;
+  onMouseOverWithStore?: (store: StoreContextValue) => EventListenerHandler;
 };
 
 export type FieldHeaderRangeMap = Record<

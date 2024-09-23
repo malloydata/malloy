@@ -10,6 +10,11 @@ type RenderStore = {
   }[];
 };
 
+export type StoreContextValue = [
+  get: RenderStore,
+  set: SetStoreFunction<RenderStore>,
+];
+
 export const createRenderStore = () =>
   createStore<RenderStore>({interactions: []});
 

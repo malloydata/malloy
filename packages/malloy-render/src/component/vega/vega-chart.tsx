@@ -25,14 +25,14 @@ export function VegaChart(props: VegaChartProps) {
 
     view = new View(parse(vegaspec)).initialize(el).renderer('svg').hover();
     if (props.onMouseOver)
-      // view.addEventListener('mouseover', props.onMouseOver);
-      // view.addSignalListener('signalA', console.log);
-      console.log({state: view.getState()});
+      view.addEventListener('mouseover', props.onMouseOver);
+    // view.addSignalListener('signalA', console.log);
+    // console.log({state: view.getState()});
     // view.addSignalListener('signalC', console.log);
     // view.addSignalListener('t2', console.log);
-    view.addSignalListener('interactions', (signal, value) =>
-      console.log('SIGNAL VALUE', value[0].value)
-    );
+    // view.addSignalListener('interactions', (signal, value) =>
+    //   console.log(signal, value[0].value)
+    // );
     view.run();
   });
 
