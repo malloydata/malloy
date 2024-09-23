@@ -12,7 +12,7 @@ interface StructDefBase extends HasLocation, NamedObject {
 }
 ```
 
-> [`FieldDef`](field.def.md) has an explainer page too.
+> [`FieldDef`](fielddef.md) has an explainer page too.
 
 Some StructDefs are also sources, and to be a source, they need some additional properties
 
