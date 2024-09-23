@@ -120,7 +120,7 @@ interface ArrayTypeDef extends NamedObject {
 interface ScalarArrayStruct extends ArrayTypeDef, StructDefBase, JoinBase {
     type: 'array'
     dataType: FieldAtomicType,
-    join: 'one'
+    join: 'many'
     matrixOperation: 'left'
 };
 // fields[] will be filled out at some point, probably by the schema reader like it is
@@ -142,7 +142,7 @@ const table3: TableDef {
         {
             name: 'joined_ints',                  // This will be a ScalarArrayStruct
             ...arrayOfInts,
-            join: 'one',
+            join: 'many',
             matrixOperation: 'left',
             dialect: 'standardsql',
             fields: [{name: 'each', type: intType, e: {node: 'array_unnest', arrayName: 'joined_ints' }}],
