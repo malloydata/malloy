@@ -53,7 +53,7 @@ export class ModelAnnotation extends ObjectAnnotation implements DocStatement {
         extending: existing,
       }
     );
-    tagParse.log.forEach(err => logTo.log(err));
+    tagParse.log.forEach(err => logTo.write(err));
     return tagParse.tag;
   }
 

@@ -210,9 +210,10 @@ export class ExprDuration extends ExpressionDef {
           resultGranularity
         );
       } else {
-        const code = 'invalid-timeframe-for-time-offset';
-        this.log(code, `Cannot offset date by ${this.timeframe}`);
-        return errorFor(code);
+        return this.logExpr(
+          'invalid-timeframe-for-time-offset',
+          `Cannot offset date by ${this.timeframe}`
+        );
       }
     }
     return super.apply(fs, op, left);
@@ -486,11 +487,10 @@ function delta(
       } else if (lhs.dataType === 'date') {
         duration = new ExprDuration(right, 'day');
       } else {
-        left.log(
+        return left.logExpr(
           'time-offset-type-mismatch',
           `Can not offset time by '${rhs.dataType}'`
         );
-        return errorFor(`time plus ${rhs.dataType}`);
       }
     }
     return duration.apply(fs, op, left);
@@ -569,8 +569,10 @@ export function applyBinary(
     }
     return errorFor('divide type mismatch');
   }
-  left.log('unexpected-binary-operator', `Cannot use ${op} operator here`);
-  return errorFor('applybinary bad operator');
+  return left.logExpr(
+    'unexpected-binary-operator',
+    `Cannot use ${op} operator here`
+  );
 }
 
 function errorCascade(

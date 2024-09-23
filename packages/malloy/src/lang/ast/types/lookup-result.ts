@@ -22,6 +22,7 @@
  */
 
 import {StructRelationship} from '../../../model';
+import {MessageCode} from '../../parse-log';
 import {SpaceEntry} from './space-entry';
 
 export interface LookupFound {
@@ -31,7 +32,7 @@ export interface LookupFound {
   isOutputField: boolean;
 }
 export interface LookupError {
-  error: {message: string; code: string};
+  error: {message: string; code: MessageCode};
   found: undefined;
 }
 

@@ -21,7 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {errorFor} from '../ast-utils';
 import {CompareMalloyOperator} from '../types/binary_operators';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
@@ -49,7 +48,9 @@ export class PartialCompare extends ExpressionDef {
   }
 
   getExpression(_fs: FieldSpace): ExprValue {
-    this.log('partial-as-value', 'Partial comparison does not have a value');
-    return errorFor('no value for partial compare');
+    return this.logExpr(
+      'partial-as-value',
+      'Partial comparison does not have a value'
+    );
   }
 }

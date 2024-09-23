@@ -45,7 +45,7 @@ import {MalloyLexer} from './lib/Malloy/MalloyLexer';
 import {MalloyParser} from './lib/Malloy/MalloyParser';
 import * as ast from './ast';
 import {MalloyToAST} from './malloy-to-ast';
-import {LogMessage, MessageLog, MessageLogger} from './parse-log';
+import {BaseMessageLogger, LogMessage, MessageLogger} from './parse-log';
 import {
   findReferences,
   FindReferencesData,
@@ -148,7 +148,7 @@ class ParseStep implements TranslationStep {
       } catch (e) {
         const msg = e instanceof Error ? e.message : '';
         that.urlIsFullPath = false;
-        that.root.logger.log({
+        that.root.logger.write({
           code: 'failed-to-compute-absolute-import-url',
           message: `Could not compute full path URL: ${msg}`,
           severity: 'error',
@@ -166,7 +166,7 @@ class ParseStep implements TranslationStep {
           ? `import error: ${srcEnt.message}`
           : `import '${that.sourceURL}' error: ${srcEnt.message}`;
         const at = srcEnt.firstReference || that.defaultLocation();
-        that.root.logger.log({
+        that.root.logger.write({
           code: 'import-error',
           message,
           at,
@@ -184,7 +184,7 @@ class ParseStep implements TranslationStep {
     try {
       parse = this.runParser(source, that);
     } catch (parseException) {
-      that.root.logger.log({
+      that.root.logger.write({
         code: 'parse-exception',
         message: `Malloy internal parser exception [${parseException.message}]`,
         severity: 'error',
@@ -315,7 +315,7 @@ class ImportsAndTablesStep implements TranslationStep {
           // This import spec is so bad the URL library threw up, this
           // may be impossible, because it will append any garbage
           // to the known good rootURL assuming it is relative
-          that.root.logger.log({
+          that.root.logger.write({
             code: 'invalid-import-url',
             message: `Malformed URL '${relativeRef}'"`,
             at: {url: that.sourceURL, range: firstRef},
@@ -639,7 +639,7 @@ class TranslateStep implements TranslationStep {
           }
         }
       } else {
-        that.root.logger.log({
+        that.root.logger.write({
           code: 'parsed-non-malloy-document',
           message: `'${that.sourceURL}' did not parse to malloy document`,
           at: that.defaultLocation(),
@@ -1024,7 +1024,7 @@ export class MalloyTranslator extends MalloyTranslation {
   schemaZone = new Zone<StructDef>();
   importZone = new Zone<string>();
   sqlQueryZone = new Zone<SQLBlockStructDef>();
-  logger = new MessageLog();
+  logger = new BaseMessageLogger();
   readonly root: MalloyTranslator;
   constructor(
     rootURL: string,
@@ -1089,6 +1089,6 @@ export class MalloyParserErrorHandler implements ANTLRErrorListener<Token> {
       at: {url: this.translator.sourceURL, range},
       severity: 'error',
     };
-    this.messages.log(error);
+    this.messages.write(error);
   }
 }

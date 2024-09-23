@@ -34,6 +34,11 @@ import {ColumnSpaceField} from './column-space-field';
 import {StructSpaceField} from './static-space';
 import {QueryInputSpace} from './query-input-space';
 import {SpaceEntry} from '../types/space-entry';
+import {
+  LogMessageOptions,
+  MessageCode,
+  MessageParameterType,
+} from '../../parse-log';
 
 /**
  * The output space of a query operation. It is not named "QueryOutputSpace"
@@ -63,10 +68,15 @@ export abstract class QueryOperationSpace
 
   abstract addRefineFromFields(refineThis: model.PipeSegment): void;
 
-  log(code: string, s: string): void {
+  log<T extends MessageCode>(
+    code: T,
+    parameters: MessageParameterType<T>,
+    options?: LogMessageOptions
+  ): T {
     if (this.astEl) {
-      this.astEl.log(code, s);
+      this.astEl.log(code, parameters, options);
     }
+    return code;
   }
 
   inputSpace(): QueryInputSpace {

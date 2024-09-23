@@ -349,7 +349,7 @@ export class TestTranslator extends MalloyTranslator {
       const whatImports = this.importZone.getUndefined();
       if (whatImports) {
         mysterious = false;
-        this.logger.log({
+        this.logger.write({
           code: 'missing-imports',
           at: this.defaultLocation(),
           message: `Missing imports: ${whatImports.join(',')}`,
@@ -359,7 +359,7 @@ export class TestTranslator extends MalloyTranslator {
       const needThese = this.schemaZone.getUndefined();
       if (needThese) {
         mysterious = false;
-        this.logger.log({
+        this.logger.write({
           code: 'missing-schema',
           at: this.defaultLocation(),
           message: `Missing schema: ${needThese.join(',')}`,
@@ -367,7 +367,7 @@ export class TestTranslator extends MalloyTranslator {
         });
       }
       if (mysterious) {
-        this.logger.log({
+        this.logger.write({
           code: 'mysterious-translation-failure',
           at: this.defaultLocation(),
           message: 'mysterious translation failure',

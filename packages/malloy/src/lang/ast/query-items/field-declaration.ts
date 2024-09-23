@@ -122,7 +122,7 @@ export abstract class AtomicFieldDeclaration
       this.expr.log(
         'null-typed-field-definition',
         'null value defaults to type number, use "null::TYPE" to specify correct type',
-        'warn'
+        {severity: 'warn'}
       );
       retType = 'number';
     }

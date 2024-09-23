@@ -27,13 +27,14 @@ import {
   expressionIsScalar,
   TypeDesc,
 } from '../../../model';
+import {MessageCode} from '../../parse-log';
 import {MalloyElement} from '../types/malloy-element';
 
 export function typecheckProject(type: TypeDesc, logTo: MalloyElement) {
   if (type.dataType === 'turtle' || !expressionIsScalar(type.expressionType)) {
     let useInstead: string;
     let kind: string;
-    let code: string;
+    let code: MessageCode;
     if (type.dataType === 'turtle') {
       useInstead = 'a nest';
       kind = 'a view';
@@ -61,7 +62,7 @@ export function typecheckProject(type: TypeDesc, logTo: MalloyElement) {
 export function typecheckIndex(type: TypeDesc, logTo: MalloyElement) {
   if (type.dataType === 'turtle' || !expressionIsScalar(type.expressionType)) {
     let kind: string;
-    let code: string;
+    let code: MessageCode;
     if (type.dataType === 'turtle') {
       kind = 'a view';
       code = 'index-of-view';
@@ -138,7 +139,7 @@ export function typecheckCalculate(type: TypeDesc, logTo: MalloyElement) {
   ) {
     let useInstead: string;
     let kind: string;
-    let code: string;
+    let code: MessageCode;
     if (type.dataType === 'turtle') {
       useInstead = 'a nest';
       kind = 'a view';
@@ -170,7 +171,7 @@ export function typecheckAggregate(type: TypeDesc, logTo: MalloyElement) {
   ) {
     let useInstead: string;
     let kind: string;
-    let code: string;
+    let code: MessageCode;
     if (type.dataType === 'turtle') {
       useInstead = 'a nest';
       kind = 'a view';
@@ -197,7 +198,7 @@ export function typecheckGroupBy(type: TypeDesc, logTo: MalloyElement) {
   if (type.dataType === 'turtle' || !expressionIsScalar(type.expressionType)) {
     let useInstead: string;
     let kind: string;
-    let code: string;
+    let code: MessageCode;
     if (type.dataType === 'turtle') {
       useInstead = 'a nest';
       kind = 'a view';

@@ -110,7 +110,7 @@ export class ExprFunc extends ExpressionDef {
       this.log(
         'case-insensitive-function',
         `Case insensitivity for function names is deprecated, use '${func.name}' instead`,
-        'warn'
+        {severity: 'warn'}
       );
     }
     return {found: func, error: undefined};
@@ -192,13 +192,12 @@ export class ExprFunc extends ExpressionDef {
     ];
     const result = findOverload(func, argExprs);
     if (result === undefined) {
-      this.log(
+      return this.logExpr(
         'no-matching-function-overload',
         `No matching overload for function ${this.name}(${argExprs
           .map(e => e.dataType)
           .join(', ')})`
       );
-      return errorFor('no matching overload');
     }
     const {overload, expressionTypeErrors, evalSpaceErrors, nullabilityErrors} =
       result;
@@ -253,13 +252,12 @@ export class ExprFunc extends ExpressionDef {
       !expressionIsAggregate(overload.returnType.expressionType) &&
       this.source !== undefined
     ) {
-      this.log(
+      return this.logExpr(
         'non-aggregate-function-with-source',
         `Cannot call function ${this.name}(${argExprs
           .map(e => e.dataType)
           .join(', ')}) with source`
       );
-      return errorFor('cannot call with source');
     }
     const frag: FunctionCallNode = {
       node: 'function_call',
@@ -345,12 +343,10 @@ export class ExprFunc extends ExpressionDef {
       ].includes(func.name)
     ) {
       if (!this.inExperiment('sql_functions', true)) {
-        const code = 'sql-functions-experiment-not-enabled';
-        this.log(
-          code,
+        return this.logExpr(
+          'sql-functions-experiment-not-enabled',
           `Cannot use sql_function \`${func.name}\`; use \`sql_functions\` experiment to enable this behavior`
         );
-        return errorFor(code);
       }
 
       const str = argExprs[0].value;
@@ -381,13 +377,9 @@ export class ExprFunc extends ExpressionDef {
               : `'.' paths are not yet supported in sql interpolations, found (${unsupportedInterpolations.join(
                   ', '
                 )})`;
-          this.log(
+          return this.logExpr(
             'unsupported-sql-function-interpolation',
             unsupportedInterpolationMsg
-          );
-
-          return errorFor(
-            `${unsupportedInterpolationMsg}. See LookML \${...} documentation at https://cloud.google.com/looker/docs/reference/param-field-sql#sql_for_dimensions`
           );
         }
 
@@ -402,11 +394,10 @@ export class ExprFunc extends ExpressionDef {
             this.has({name});
             const result = fs.lookup([name]);
             if (result.found === undefined) {
-              this.log(
+              return this.logExpr(
                 'sql-function-interpolation-not-found',
                 `Invalid interpolation: ${result.error}`
               );
-              return errorFor('invalid interpolated field');
             }
             if (result.found.refType === 'parameter') {
               expr.push({node: 'parameter', path: [part.name]});
@@ -420,11 +411,10 @@ export class ExprFunc extends ExpressionDef {
       }
     }
     if (type.dataType === 'any') {
-      this.log(
+      return this.logExpr(
         'function-returns-any',
         `Invalid return type ${type.dataType} for function '${this.name}'`
       );
-      return errorFor('invalid return type');
     }
     const maxEvalSpace = mergeEvalSpaces(...argExprs.map(e => e.evalSpace));
     // If the merged eval space of all args is constant, the result is constant.

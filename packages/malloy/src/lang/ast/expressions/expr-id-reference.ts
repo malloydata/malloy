@@ -22,7 +22,6 @@
  */
 
 import {expressionIsAggregate} from '../../../model/malloy_types';
-import {errorFor} from '../ast-utils';
 import {ExprValue} from '../types/expr-value';
 import {FieldReference} from '../query-items/field-references';
 import {FieldSpace} from '../types/field-space';
@@ -57,7 +56,6 @@ export class ExprIdReference extends ExpressionDef {
         : td.evalSpace;
       return {...td, value, evalSpace};
     }
-    this.log(def.error.code, def.error.message);
-    return errorFor(def.error.code);
+    return this.logExpr(def.error.code, def.error.message);
   }
 }

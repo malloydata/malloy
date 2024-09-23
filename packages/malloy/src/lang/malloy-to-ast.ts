@@ -113,7 +113,7 @@ export class MalloyToAST
     str: string,
     sev: LogSeverity = 'error'
   ): void {
-    this.msgLog.log({message: str, at: el.location, severity: sev, code});
+    this.msgLog.write({message: str, at: el.location, severity: sev, code});
   }
 
   protected getLocation(cx: ParserRuleContext): DocumentLocation {
@@ -132,7 +132,7 @@ export class MalloyToAST
     msg: string,
     sev: LogSeverity = 'error'
   ): void {
-    this.msgLog.log({
+    this.msgLog.write({
       message: msg,
       at: this.getLocation(cx),
       severity: sev,
@@ -146,7 +146,7 @@ export class MalloyToAST
     range: DocumentRange,
     replacement: string
   ): void {
-    this.msgLog.log({
+    this.msgLog.write({
       code,
       message,
       at: {url: this.parseInfo.sourceURL, range},

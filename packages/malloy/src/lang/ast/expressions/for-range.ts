@@ -118,7 +118,6 @@ export class ForRange extends ExpressionDef {
   }
 
   getExpression(_fs: FieldSpace): ExprValue {
-    this.log('range-as-value', 'A Range is not a value');
-    return errorFor('range has no value');
+    return this.logExpr('range-as-value', 'A Range is not a value');
   }
 }

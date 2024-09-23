@@ -32,6 +32,7 @@ import {
   AggregateExpr,
 } from '../../../model/malloy_types';
 import {exprWalk} from '../../../model/utils';
+import {MessageCode} from '../../parse-log';
 
 import {errorFor} from '../ast-utils';
 import {StructSpaceField} from '../field-space/static-space';
@@ -113,9 +114,10 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
           }
         } else {
           if (!(sourceFoot instanceof StructSpaceFieldBase)) {
-            const code = 'invalid-aggregate-source';
-            this.log(code, `Aggregate source cannot be a ${footType.dataType}`);
-            return errorFor(code);
+            return this.logExpr(
+              'invalid-aggregate-source',
+              `Aggregate source cannot be a ${footType.dataType}`
+            );
           }
         }
       } else {
@@ -125,14 +127,16 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
       }
     }
     if (exprVal === undefined) {
-      const code = 'missing-aggregate-expression';
-      this.log(code, 'Missing expression for aggregate function');
-      return errorFor(code);
+      return this.logExpr(
+        'missing-aggregate-expression',
+        'Missing expression for aggregate function'
+      );
     }
     if (expressionIsAggregate(exprVal.expressionType)) {
-      const code = 'aggregate-of-aggregate';
-      this.log(code, 'Aggregate expression cannot be aggregate');
-      return errorFor(code);
+      return this.logExpr(
+        'aggregate-of-aggregate',
+        'Aggregate expression cannot be aggregate'
+      );
     }
     const isAnError = exprVal.dataType === 'error';
     if (!isAnError) {
@@ -156,11 +160,10 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
               expr,
               this.elementType
             );
-            this.log(
-              joinError?.code ?? 'illegal-join-usage',
-              errorWithSuggestion,
-              joinError ? 'error' : 'warn'
-            );
+            const code = joinError?.code ?? 'bad-join-usage';
+            this.log(code, errorWithSuggestion, {
+              severity: joinError ? 'error' : 'warn',
+            });
           }
         }
       }
@@ -333,7 +336,7 @@ function validateUsagePaths(
     structRelationship: StructRelationship;
     reverse: boolean;
   }[][]
-): {message: string; code: string} | undefined {
+): {message: string; code: MessageCode} | undefined {
   for (const path of usagePaths) {
     for (const step of path) {
       if (step.structRelationship.type === 'cross') {

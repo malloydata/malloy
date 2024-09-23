@@ -240,10 +240,7 @@ export class WildcardFieldReference extends MalloyElement implements Noteable {
   }
 
   getFieldDef(): FieldDef {
-    throw this.internalError(
-      'wildcard-is-not-a-field',
-      'fielddef request from wildcard reference'
-    );
+    throw this.internalError('fielddef request from wildcard reference');
   }
 
   get refString(): string {

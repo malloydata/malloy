@@ -37,7 +37,11 @@ import {ErrorFactory} from '../error-factory';
 import {castTo} from '../time-utils';
 import {ModelEntryReference} from '../types/malloy-element';
 import {Argument as HasArgument} from '../parameters/argument';
-import {LogSeverity} from '../../parse-log';
+import {
+  LogMessageOptions,
+  MessageCode,
+  MessageParameterType,
+} from '../../parse-log';
 import {ExprIdReference} from '../expressions/expr-id-reference';
 import {ParameterSpace} from '../field-space/parameter-space';
 import {HasParameter} from '../parameters/has-parameter';
@@ -77,11 +81,15 @@ export class NamedSource extends Source {
     };
   }
 
-  refLog(code: string, message: string, severity?: LogSeverity) {
+  refLog<T extends MessageCode>(
+    code: T,
+    parameters: MessageParameterType<T>,
+    options?: LogMessageOptions
+  ) {
     if (typeof this.ref === 'string') {
-      this.log(code, message, severity);
+      this.log(code, parameters, options);
     } else {
-      this.ref.log(code, message, severity);
+      this.ref.log(code, parameters, options);
     }
   }
 
@@ -89,11 +97,7 @@ export class NamedSource extends Source {
     const modelEnt = this.modelEntry(this.ref);
     const entry = modelEnt?.entry;
     if (!entry) {
-      const undefMsg = `Undefined source '${this.refName}'`;
-      (this.ref instanceof ModelEntryReference ? this.ref : this).log(
-        'source-not-found',
-        undefMsg
-      );
+      this.refLog('source-not-found', `Undefined source '${this.refName}'`);
       return;
     }
     if (entry.type === 'query') {
