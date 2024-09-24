@@ -40,7 +40,7 @@ export interface LogMessage {
 }
 
 export interface MessageLogger {
-  write(logMsg: LogMessage): void;
+  log(logMsg: LogMessage): void;
   reset(): void;
   getLog(): LogMessage[];
   hasErrors(): boolean;
@@ -58,7 +58,7 @@ export class BaseMessageLogger implements MessageLogger {
   /**
    * Add a message to the log.
    */
-  write(logMsg: LogMessage): void {
+  log(logMsg: LogMessage): void {
     this.rawLog.push(logMsg);
   }
 
@@ -103,6 +103,11 @@ type MessageParameterTypes = {
     rawType: string | undefined;
   };
   'ambiguous-view-type': {};
+  'failed-to-compute-absolute-import-url': string;
+  'import-error': {message: string; url: string};
+  'parsed-non-malloy-document': {url: string};
+  'parse-exception': {message: string};
+  'syntax-error': {message: string};
   // Old Style
   'aggregate-source-not-found': string;
   'name-conflict-with-global': string;
@@ -339,6 +344,14 @@ export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
     `Experimental flag \`${e.experimentId}\` is not set, feature not available`,
   'ambiguous-view-type': () =>
     "Can't determine view type (`group_by` / `aggregate` / `nest`, `project`, `index`)",
+  'import-error': e =>
+    e.message.includes(e.url)
+      ? `import error: ${e.message}`
+      : `import '${e.url}' error: ${e.message}`,
+  'parsed-non-malloy-document': e =>
+    `'${e.url}' did not parse to malloy document`,
+  'parse-exception': e => `Malloy internal parser exception [${e.message}]`,
+  'syntax-error': e => e.message,
 };
 
 export type MessageCode = keyof MessageParameterTypes;

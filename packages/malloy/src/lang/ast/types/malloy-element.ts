@@ -219,7 +219,7 @@ export abstract class MalloyElement {
       }
       this.logged.add(log.message);
     }
-    this.logger.write(log);
+    this.logger.log(log);
     return code;
   }
 

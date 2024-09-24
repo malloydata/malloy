@@ -45,7 +45,15 @@ import {MalloyLexer} from './lib/Malloy/MalloyLexer';
 import {MalloyParser} from './lib/Malloy/MalloyParser';
 import * as ast from './ast';
 import {MalloyToAST} from './malloy-to-ast';
-import {BaseMessageLogger, LogMessage, MessageLogger} from './parse-log';
+import {
+  BaseMessageLogger,
+  LogMessage,
+  LogMessageOptions,
+  MessageCode,
+  MessageLogger,
+  MessageParameterType,
+  makeLogMessage,
+} from './parse-log';
 import {
   findReferences,
   FindReferencesData,
@@ -148,11 +156,10 @@ class ParseStep implements TranslationStep {
       } catch (e) {
         const msg = e instanceof Error ? e.message : '';
         that.urlIsFullPath = false;
-        that.root.logger.write({
-          code: 'failed-to-compute-absolute-import-url',
-          message: `Could not compute full path URL: ${msg}`,
-          severity: 'error',
-        });
+        that.root.logError(
+          'failed-to-compute-absolute-import-url',
+          `Could not compute full path URL: ${msg}`
+        );
       }
     }
     if (!that.urlIsFullPath) {
@@ -162,16 +169,15 @@ class ParseStep implements TranslationStep {
     const srcEnt = that.root.importZone.getEntry(that.sourceURL);
     if (srcEnt.status !== 'present') {
       if (srcEnt.status === 'error') {
-        const message = srcEnt.message.includes(that.sourceURL)
-          ? `import error: ${srcEnt.message}`
-          : `import '${that.sourceURL}' error: ${srcEnt.message}`;
         const at = srcEnt.firstReference || that.defaultLocation();
-        that.root.logger.write({
-          code: 'import-error',
-          message,
-          at,
-          severity: 'error',
-        });
+        that.root.logError(
+          'import-error',
+          {
+            message: srcEnt.message,
+            url: that.sourceURL,
+          },
+          {at}
+        );
         this.response = that.fatalResponse();
         return this.response;
       }
@@ -184,11 +190,7 @@ class ParseStep implements TranslationStep {
     try {
       parse = this.runParser(source, that);
     } catch (parseException) {
-      that.root.logger.write({
-        code: 'parse-exception',
-        message: `Malloy internal parser exception [${parseException.message}]`,
-        severity: 'error',
-      });
+      that.root.logError('parse-exception', {message: parseException.message});
       parse = undefined;
     }
 
@@ -315,12 +317,11 @@ class ImportsAndTablesStep implements TranslationStep {
           // This import spec is so bad the URL library threw up, this
           // may be impossible, because it will append any garbage
           // to the known good rootURL assuming it is relative
-          that.root.logger.write({
-            code: 'invalid-import-url',
-            message: `Malformed URL '${relativeRef}'"`,
-            at: {url: that.sourceURL, range: firstRef},
-            severity: 'error',
-          });
+          that.root.logError(
+            'invalid-import-url',
+            `Malformed URL '${relativeRef}'"`,
+            {at: {url: that.sourceURL, range: firstRef}}
+          );
         }
       }
     }
@@ -639,12 +640,11 @@ class TranslateStep implements TranslationStep {
           }
         }
       } else {
-        that.root.logger.write({
-          code: 'parsed-non-malloy-document',
-          message: `'${that.sourceURL}' did not parse to malloy document`,
-          at: that.defaultLocation(),
-          severity: 'error',
-        });
+        that.root.logError(
+          'parsed-non-malloy-document',
+          {url: that.sourceURL},
+          {at: that.defaultLocation()}
+        );
       }
     }
 
@@ -1043,6 +1043,17 @@ export class MalloyTranslator extends MalloyTranslation {
     this.importZone.updateFrom(dd.urls, dd.errors?.urls);
     this.sqlQueryZone.updateFrom(dd.compileSQL, dd.errors?.compileSQL);
   }
+
+  logError<T extends MessageCode>(
+    code: T,
+    parameters: MessageParameterType<T>,
+    options?: Omit<LogMessageOptions, 'severity'>
+  ): T {
+    this.logger.log(
+      makeLogMessage(code, parameters, {severity: 'error', ...options})
+    );
+    return code;
+  }
 }
 
 interface ErrorData {
@@ -1071,24 +1082,35 @@ export class MalloyParserErrorHandler implements ANTLRErrorListener<Token> {
     readonly messages: MessageLogger
   ) {}
 
+  logError<T extends MessageCode>(
+    code: T,
+    parameters: MessageParameterType<T>,
+    options?: Omit<LogMessageOptions, 'severity'>
+  ): T {
+    this.messages.log(
+      makeLogMessage(code, parameters, {severity: 'error', ...options})
+    );
+    return code;
+  }
+
   syntaxError(
     recognizer: unknown,
     offendingSymbol: Token | undefined,
     line: number,
     charPositionInLine: number,
-    msg: string,
+    message: string,
     _e: unknown
   ): void {
     const errAt = {line: line - 1, character: charPositionInLine};
     const range = offendingSymbol
       ? this.translator.rangeFromToken(offendingSymbol)
       : {start: errAt, end: errAt};
-    const error: LogMessage = {
-      code: 'syntax-error',
-      message: msg,
-      at: {url: this.translator.sourceURL, range},
-      severity: 'error',
-    };
-    this.messages.write(error);
+    this.logError(
+      'syntax-error',
+      {message},
+      {
+        at: {url: this.translator.sourceURL, range},
+      }
+    );
   }
 }
