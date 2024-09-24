@@ -92,9 +92,12 @@ export function getChartLayoutSettings(
 
   let chartWidth = 0,
     chartHeight = 0;
-  const customWidth = tag.numeric('size', 'width');
-  const customHeight = tag.numeric('size', 'height');
-  let presetSize = tag.text('size');
+  // For now, support legacy API of size being its own tag
+  const customWidth =
+    chartTag.numeric('size', 'width') ?? tag.numeric('size', 'width');
+  const customHeight =
+    chartTag.numeric('size', 'height') ?? tag.numeric('size', 'height');
+  let presetSize = chartTag.text('size') ?? tag.text('size');
   if (customWidth && customHeight) {
     chartWidth = customWidth;
     chartHeight = customHeight;
