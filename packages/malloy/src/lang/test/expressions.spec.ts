@@ -1127,9 +1127,7 @@ describe('sql native fields in schema', () => {
       'run: ab->{ where: aun = b.aun  select: * }'
     );
     expect(uModel).toLog(
-      errorMessage(
-        "Unsupported SQL native type 'undefined' not allowed in expression"
-      )
+      error('sql-native-not-allowed-in-expression', {rawType: undefined})
     );
   });
   test('flag unsupported compare', () => {
@@ -1138,9 +1136,7 @@ describe('sql native fields in schema', () => {
       'run: ab->{ where: aun > b.aun  select: * }'
     );
     expect(uModel).toLog(
-      errorMessage(
-        "Unsupported SQL native type 'undefined' not allowed in expression"
-      )
+      error('sql-native-not-allowed-in-expression', {rawType: undefined})
     );
   });
   test('allow unsupported equality when raw types match', () => {
@@ -1154,9 +1150,7 @@ describe('sql native fields in schema', () => {
       'source: x is a extend { dimension: notUn is not aun }'
     );
     expect(uModel).toLog(
-      errorMessage(
-        "Unsupported SQL native type 'undefined' not allowed in expression"
-      )
+      error('sql-native-not-allowed-in-expression', {rawType: undefined})
     );
   });
   test('allow unsupported to be cast', () => {

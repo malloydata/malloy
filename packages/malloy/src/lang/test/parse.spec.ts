@@ -115,9 +115,9 @@ describe('model statements', () => {
 
   test('experiment failures in second pass are flagged', () => {
     expect('##! experimental.compilerTestExperimentParse\n;;[ "x" ]').toLog(
-      errorMessage(
-        'Experimental flag `compilerTestExperimentTranslate` is not set, feature not available'
-      )
+      error('experiment-not-enabled', {
+        experimentId: 'compilerTestExperimentTranslate',
+      })
     );
   });
 });

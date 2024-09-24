@@ -28,6 +28,7 @@ import {
   model,
   errorMessage,
   warningMessage,
+  error,
 } from './test-translator';
 import './parse-expects';
 import {
@@ -740,11 +741,7 @@ describe('query:', () => {
     test('cannot use calculate with no other fields', () => {
       expect(`run: a -> {
         calculate: x is row_number()
-      }`).toLog(
-        errorMessage(
-          "Can't determine view type (`group_by` / `aggregate` / `nest`, `project`, `index`)"
-        )
-      );
+      }`).toLog(error('ambiguous-view-type', {}));
     });
     // TODO someday make it so we can order by an analytic function
     test('today: cannot order by analytic function', () => {

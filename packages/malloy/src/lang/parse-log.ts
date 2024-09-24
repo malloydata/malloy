@@ -400,7 +400,7 @@ export function makeLogMessage<T extends MessageCode>(
   }
   const template = typeof info === 'string' ? {message: info} : info;
   const data =
-    template.data ?? typeof parameters === 'string' ? {} : parameters;
+    template.data ?? typeof parameters === 'string' ? null : parameters;
   return {
     code,
     data,
