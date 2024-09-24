@@ -26,11 +26,11 @@ import {getDialect} from '../../../dialect/dialect_map';
 import {
   FieldDef,
   StructDef,
-  SourceStructDef,
+  SourceDef,
   hasJoin,
   isFieldStructDef,
   isTurtleDef,
-  isSourceStructDef,
+  isSourceDef,
   JoinFieldDef,
 } from '../../../model/malloy_types';
 
@@ -83,7 +83,7 @@ export class StaticSpace implements FieldSpace {
         const name = f.as || f.name;
         this.memoMap[name] = this.defToSpaceField(f);
       }
-      if (isSourceStructDef(this.fromStruct)) {
+      if (isSourceDef(this.fromStruct)) {
         if (this.fromStruct.parameters) {
           for (const [paramName, paramDef] of Object.entries(
             this.fromStruct.parameters
@@ -125,7 +125,7 @@ export class StaticSpace implements FieldSpace {
 
   emptyStructDef(): StructDef {
     const ret = {...this.fromStruct};
-    if (isSourceStructDef(ret)) {
+    if (isSourceDef(ret)) {
       ret.parameters = {};
     }
     ret.fields = [];
@@ -195,13 +195,13 @@ export class StructSpaceField extends StructSpaceFieldBase {
 }
 
 export class StaticSourceSpace extends StaticSpace implements SourceFieldSpace {
-  constructor(protected source: SourceStructDef) {
+  constructor(protected source: SourceDef) {
     super(source);
   }
-  structDef(): SourceStructDef {
+  structDef(): SourceDef {
     return this.source;
   }
-  emptyStructDef(): SourceStructDef {
+  emptyStructDef(): SourceDef {
     const ret = {...this.source};
     ret.parameters = {};
     ret.fields = [];

@@ -1,8 +1,8 @@
 import {
   MalloyQueryData,
   QueryRunStats,
-  SQLSourceStruct,
-  TableSourceStruct,
+  SQLSourceDef,
+  TableSourceDef,
 } from '../model/malloy_types';
 import {RunSQLOptions} from '../run_sql_options';
 import {
@@ -24,10 +24,10 @@ export abstract class BaseConnection implements Connection {
   abstract get dialectName(): string;
 
   abstract fetchSchemaForSQLStruct(
-    sqlStruct: SQLSourceStruct,
+    sqlStruct: SQLSourceDef,
     options: FetchSchemaOptions
   ): Promise<
-    | {structDef: SQLSourceStruct; error?: undefined}
+    | {structDef: SQLSourceDef; error?: undefined}
     | {error: string; structDef?: undefined}
   >;
 
@@ -35,7 +35,7 @@ export abstract class BaseConnection implements Connection {
     tables: Record<string, string>,
     options: FetchSchemaOptions
   ): Promise<{
-    schemas: Record<string, TableSourceStruct>;
+    schemas: Record<string, TableSourceDef>;
     errors: Record<string, string>;
   }>;
 

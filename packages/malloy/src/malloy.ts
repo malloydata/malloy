@@ -60,15 +60,15 @@ import {
   NamedModelObject,
   QueryValue,
   SQLSentence,
-  SQLSourceStruct,
+  SQLSourceDef,
   modelObjIsSource,
   isFieldStructDef,
-  FieldAtomicDef,
+  AtomicFieldDef,
   DateFieldDef,
   TimestampFieldDef,
   isAtomicFieldType,
-  SourceStructDef,
-  isSourceStructDef,
+  SourceDef,
+  isSourceDef,
 } from './model';
 import {
   ModelString,
@@ -376,7 +376,7 @@ export class Malloy {
     dialect: string,
     partialModel: ModelDef | undefined,
     toCompile: SQLSentence
-  ): SQLSourceStruct {
+  ): SQLSourceDef {
     let queryModel: QueryModel | undefined = undefined;
     let selectStr = '';
     let parenAlready = false;
@@ -429,22 +429,22 @@ export class Malloy {
   }): Promise<Result>;
   public static async run(params: {
     connection: Connection;
-    sqlStruct: SQLSourceStruct;
+    sqlStruct: SQLSourceDef;
     options?: RunSQLOptions;
   }): Promise<Result>;
   public static async run(params: {
     connections: LookupConnection<Connection>;
-    sqlStruct: SQLSourceStruct;
+    sqlStruct: SQLSourceDef;
     options?: RunSQLOptions;
   }): Promise<Result>;
   public static async run(params: {
     connection: Connection;
-    sqlStruct: SQLSourceStruct;
+    sqlStruct: SQLSourceDef;
     options?: RunSQLOptions;
   }): Promise<Result>;
   public static async run(params: {
     connections: LookupConnection<Connection>;
-    sqlStruct: SQLSourceStruct;
+    sqlStruct: SQLSourceDef;
     options?: RunSQLOptions;
   }): Promise<Result>;
   public static async run({
@@ -456,7 +456,7 @@ export class Malloy {
   }: {
     connection?: Connection;
     preparedResult?: PreparedResult;
-    sqlStruct?: SQLSourceStruct;
+    sqlStruct?: SQLSourceDef;
     connections?: LookupConnection<Connection>;
     options?: RunSQLOptions;
   }): Promise<Result> {
@@ -525,12 +525,12 @@ export class Malloy {
   }): AsyncIterableIterator<DataRecord>;
   public static runStream(params: {
     connection: Connection;
-    sqlStruct: SQLSourceStruct;
+    sqlStruct: SQLSourceDef;
     options?: RunSQLOptions;
   }): AsyncIterableIterator<DataRecord>;
   public static runStream(params: {
     connections: LookupConnection<Connection>;
-    sqlStruct: SQLSourceStruct;
+    sqlStruct: SQLSourceDef;
     options?: RunSQLOptions;
   }): AsyncIterableIterator<DataRecord>;
   public static async *runStream({
@@ -542,7 +542,7 @@ export class Malloy {
   }: {
     connection?: Connection;
     preparedResult?: PreparedResult;
-    sqlStruct?: SQLSourceStruct;
+    sqlStruct?: SQLSourceDef;
     connections?: LookupConnection<Connection>;
     options?: RunSQLOptions;
   }): AsyncIterableIterator<DataRecord> {
@@ -591,7 +591,7 @@ export class Malloy {
   }): Promise<QueryRunStats>;
   public static async estimateQueryCost(params: {
     connections: LookupConnection<Connection>;
-    sqlStruct: SQLSourceStruct;
+    sqlStruct: SQLSourceDef;
   }): Promise<QueryRunStats>;
   public static async estimateQueryCost({
     connections,
@@ -599,7 +599,7 @@ export class Malloy {
     sqlStruct,
   }: {
     preparedResult?: PreparedResult;
-    sqlStruct?: SQLSourceStruct;
+    sqlStruct?: SQLSourceDef;
     connections: LookupConnection<Connection>;
   }): Promise<QueryRunStats> {
     if (!connections) {
@@ -1610,7 +1610,10 @@ export class Explore extends Entity implements Taggable {
 
   // TODO wrapper type for FilterCondition
   get filters(): FilterCondition[] {
-    return this.structDef.resultMetadata?.filterList || [];
+    if (isSourceDef(this.structDef)) {
+      return this.structDef.resultMetadata?.filterList || [];
+    }
+    return [];
   }
 
   get limit(): number | undefined {
@@ -1625,8 +1628,8 @@ export class Explore extends Entity implements Taggable {
     return this.sourceStructDef?.queryTimezone;
   }
 
-  public get sourceStructDef(): SourceStructDef | undefined {
-    if (isSourceStructDef(this.structDef)) {
+  public get sourceStructDef(): SourceDef | undefined {
+    if (isSourceDef(this.structDef)) {
       return this.structDef;
     }
   }
@@ -1668,11 +1671,11 @@ export enum AtomicFieldType {
 }
 
 export class AtomicField extends Entity implements Taggable {
-  protected fieldTypeDef: FieldAtomicDef;
+  protected fieldTypeDef: AtomicFieldDef;
   protected parent: Explore;
 
   constructor(
-    fieldTypeDef: FieldAtomicDef,
+    fieldTypeDef: AtomicFieldDef,
     parent: Explore,
     source?: AtomicField
   ) {
@@ -2566,7 +2569,7 @@ export class ModelMaterializer extends FluentState<Model> {
     const model = await this.materialize();
     const queryModel = new QueryModel(model._modelDef);
     const schema = model.getExploreByName(sourceName).structDef;
-    if (!isSourceStructDef(schema)) {
+    if (!isSourceDef(schema)) {
       throw new Error('Source to be searched was unexpectedly, not a source');
     }
     const connectionName = schema.connection;
@@ -2588,7 +2591,7 @@ export class ModelMaterializer extends FluentState<Model> {
   ): Promise<SearchValueMapResult[] | undefined> {
     const model = await this.materialize();
     const schema = model.getExploreByName(sourceName);
-    if (!isSourceStructDef(schema.structDef)) {
+    if (!isSourceDef(schema.structDef)) {
       throw new Error('Source to be searched was unexpectedly, not a source');
     }
     let indexQuery = '{index: *}';

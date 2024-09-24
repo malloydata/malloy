@@ -39,8 +39,8 @@ import {
   modelObjIsSource,
   NamedModelObject,
   Query,
-  SourceStructDef,
-  SQLSourceStruct,
+  SourceDef,
+  SQLSourceDef,
 } from '../model/malloy_types';
 import {MalloyLexer} from './lib/Malloy/MalloyLexer';
 import {MalloyParser} from './lib/Malloy/MalloyParser';
@@ -660,7 +660,7 @@ export abstract class MalloyTranslation {
   childTranslators: Map<string, MalloyTranslation>;
   urlIsFullPath?: boolean;
   queryList: Query[] = [];
-  sqlBlocks: SQLSourceStruct[] = [];
+  sqlBlocks: SQLSourceDef[] = [];
   modelDef: ModelDef;
   imports: ImportLocation[] = [];
   compilerFlags = new Tag();
@@ -1007,9 +1007,9 @@ export class MalloyChildTranslator extends MalloyTranslation {
  * no need to call again, the translation is finished or error'd.
  */
 export class MalloyTranslator extends MalloyTranslation {
-  schemaZone = new Zone<SourceStructDef>();
+  schemaZone = new Zone<SourceDef>();
   importZone = new Zone<string>();
-  sqlQueryZone = new Zone<SQLSourceStruct>();
+  sqlQueryZone = new Zone<SQLSourceDef>();
   logger = new MessageLog();
   readonly root: MalloyTranslator;
   constructor(
@@ -1041,10 +1041,10 @@ export interface URLData {
   urls: ZoneData<string>;
 }
 export interface SchemaData {
-  tables: ZoneData<SourceStructDef>;
+  tables: ZoneData<SourceDef>;
 }
 export interface SQLSources {
-  compileSQL: ZoneData<SQLSourceStruct>;
+  compileSQL: ZoneData<SQLSourceDef>;
 }
 export interface UpdateData extends URLData, SchemaData, SQLSources {
   errors: Partial<ErrorData>;

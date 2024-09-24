@@ -38,7 +38,6 @@ import {
   Connection,
   ConnectionConfig,
   FetchSchemaOptions,
-  FieldTypeDef,
   Malloy,
   MalloyQueryData,
   NamedStructDefs,
@@ -48,13 +47,14 @@ import {
   QueryOptionsReader,
   QueryRunStats,
   RunSQLOptions,
-  SQLBlock,
   StandardSQLDialect,
   StreamingConnection,
-  StructDef,
+  SQLSourceStruct,
+  TableSourceStruct,
   toAsyncGenerator,
 } from '@malloydata/malloy';
 import {BaseConnection, TableMetadata} from '@malloydata/malloy/connection';
+import { ArrayFieldDef, ArrayTypeDef, JoinedArray, RecordTypeDef, SourceDef, StructDef } from '@malloydata/malloy/src/model';
 
 export interface BigQueryManagerOptions {
   credentials?: {
@@ -162,13 +162,13 @@ export class BigQueryConnection
 
   private schemaCache = new Map<
     string,
-    | {schema: StructDef; error?: undefined; timestamp: number}
+    | {schema: TableSourceStruct; error?: undefined; timestamp: number}
     | {error: string; schema?: undefined; timestamp: number}
   >();
   private sqlSchemaCache = new Map<
     string,
     | {
-        structDef: StructDef;
+        structDef: TableSourceStruct;
         error?: undefined;
         timestamp: number;
       }
@@ -310,9 +310,9 @@ export class BigQueryConnection
   }
 
   public async runSQLBlockAndFetchResultSchema(
-    sqlBlock: SQLBlock,
+    sqlBlock: SQLSourceStruct,
     options?: RunSQLOptions
-  ): Promise<{data: MalloyQueryData; schema: StructDef}> {
+  ): Promise<{data: MalloyQueryData; schema: SQLSourceStruct}> {
     const {data, schema: schemaRaw} = await this._runSQL(
       sqlBlock.selectStr,
       options
@@ -528,37 +528,32 @@ export class BigQueryConnection
       const type = field.type as string;
       const name = field.name as string;
 
-      // check for an array
-      if (field.mode === 'REPEATED' && !['STRUCT', 'RECORD'].includes(type)) {
+      const isRecord = ['STRUCT', 'RECORD'].includes(type);
+      if (field.mode === 'REPEATED' && !isRecord) {
+        // Malloy treats repeated values as an array of scalars.
         const malloyType = this.dialect.sqlTypeToMalloyType(type);
         if (malloyType) {
-          const innerStructDef: StructDef = {
-            type: 'struct',
+          const arrayType: ArrayTypeDef = {type: 'array', dataType: malloyType};
+          const arrayField: JoinedArray = {
+            ...arrayType,
+            join: 'one',
+            matrixOperation: 'left',
             name,
             dialect: this.dialectName,
-            structSource: {type: 'nested'},
-            structRelationship: {
-              type: 'nested',
-              fieldName: name,
-              isArray: true,
-            },
-            fields: [{...malloyType, name: 'value'} as FieldTypeDef],
+            fields: [{...malloyType, name: 'value'}],
           };
-          structDef.fields.push(innerStructDef);
+          structDef.fields.push(arrayField);
+          if (structDef.type === 'record') {
+            structDef.typeSchema[name] = arrayType;
+          }
         }
-      } else if (['STRUCT', 'RECORD'].includes(type)) {
-        const innerStructDef: StructDef = {
-          type: 'struct',
-          name,
-          dialect: this.dialectName,
-          structSource:
-            field.mode === 'REPEATED' ? {type: 'nested'} : {type: 'inline'},
-          structRelationship:
-            field.mode === 'REPEATED'
-              ? {type: 'nested', fieldName: name, isArray: false}
-              : {type: 'inline'},
-          fields: [],
+      } else if (isRecord) {
+        // First get a type schema from the record ...
+        const recordType: RecordTypeDef = {
+          type: 'record',
+          typeSchema: {},
         };
+        const
         this.addFieldsToStructDef(innerStructDef, field);
         structDef.fields.push(innerStructDef);
       } else {
@@ -566,7 +561,10 @@ export class BigQueryConnection
           type: 'sql native',
           rawType: type.toLowerCase(),
         };
-        structDef.fields.push({name, ...malloyType} as FieldTypeDef);
+        structDef.fields.push({name, ...malloyType});
+        if (structDef.type === 'record') {
+          structDef.typeSchema[name] = malloyType;
+        }
       }
     }
   }
@@ -613,24 +611,11 @@ export class BigQueryConnection
   }
 
   private structDefFromSQLSchema(
-    sqlBlock: SQLBlock,
+    needSchema: SQLSourceStruct,
     tableFieldSchema: bigquery.ITableFieldSchema
-  ): StructDef {
-    const structDef: StructDef = {
-      type: 'struct',
-      name: sqlBlock.name,
-      dialect: this.dialectName,
-      structSource: {
-        type: 'sql',
-        method: 'subquery',
-        sqlBlock,
-      },
-      structRelationship: {
-        type: 'basetable',
-        connectionName: this.name,
-      },
-      fields: [],
-    };
+  ): SQLSourceStruct {
+    const structDef: SQLSourceStruct = {...needSchema};
+    structDef.fields = [];
     this.addFieldsToStructDef(structDef, tableFieldSchema);
     return structDef;
   }
@@ -639,7 +624,7 @@ export class BigQueryConnection
     missing: Record<string, string>,
     {refreshTimestamp}: FetchSchemaOptions
   ): Promise<{
-    schemas: Record<string, StructDef>;
+    schemas: Record<string, TableSourceStruct>;
     errors: Record<string, string>;
   }> {
     const schemas: NamedStructDefs = {};

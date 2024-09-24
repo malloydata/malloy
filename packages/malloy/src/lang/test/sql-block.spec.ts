@@ -26,11 +26,11 @@ import {makeSQLSentence} from '../../model/sql_block';
 import {TestTranslator, aTableDef} from './test-translator';
 import './parse-expects';
 import {MalloyTranslator} from '../parse-malloy';
-import {isSegmentSQL, SQLSentence, SQLSourceStruct} from '../../model';
+import {isSegmentSQL, SQLSentence, SQLSourceDef} from '../../model';
 
 describe('connection sql()', () => {
   const selStmt = 'SELECT * FROM aTable';
-  function makeSchemaResponse(sql: SQLSentence): SQLSourceStruct {
+  function makeSchemaResponse(sql: SQLSentence): SQLSourceDef {
     const cname = sql.connection || 'bigquery';
     return {
       type: 'sql_select',

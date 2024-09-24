@@ -27,10 +27,10 @@ import {Segment} from '../../model/malloy_query';
 import {
   FieldDef,
   PipeSegment,
-  SourceStructDef,
+  SourceDef,
   StructDef,
   isPartialSegment,
-  isSourceStructDef,
+  isSourceDef,
   segmentHasErrors,
   structHasErrors,
 } from '../../model/malloy_types';
@@ -40,9 +40,9 @@ import {MalloyElement} from './types/malloy-element';
 
 export function opOutputStruct(
   logTo: MalloyElement,
-  inputStruct: SourceStructDef,
+  inputStruct: SourceDef,
   opDesc: PipeSegment
-): SourceStructDef {
+): SourceDef {
   const badModel =
     ErrorFactory.fromErrorFactory(inputStruct) || structHasErrors(inputStruct);
   // We don't want to expose partial segments to the compiler
@@ -54,7 +54,7 @@ export function opOutputStruct(
   if (!badModel && !badOpDesc) {
     try {
       const pipeOutputStruct = Segment.nextStructDef(inputStruct, opDesc);
-      if (isSourceStructDef(pipeOutputStruct)) {
+      if (isSourceDef(pipeOutputStruct)) {
         return pipeOutputStruct;
       }
       // Inconcievable, a pipe deosnt output a record or an array
@@ -77,9 +77,9 @@ export function opOutputStruct(
 
 export function getFinalStruct(
   logTo: MalloyElement,
-  walkStruct: SourceStructDef,
+  walkStruct: SourceDef,
   pipeline: PipeSegment[]
-): SourceStructDef {
+): SourceDef {
   for (const modelQop of pipeline) {
     walkStruct = opOutputStruct(logTo, walkStruct, modelQop);
   }

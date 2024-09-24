@@ -55,7 +55,7 @@ interface Expression {
 }
 ```
 
-You can identify a `FieldDef` which is computed by asking `hasExpression(fd: FieldDef)` this will return true and grant typed access to the `Expression` if the entry is a dimension, measure (or calculation actually).
+* You can identify a `FieldDef` which is computed by asking `hasExpression(fd: FieldDef)` this will return true and grant typed access to the `Expression` if the entry is a dimension, measure (or calculation actually).
 
 ## Join tree entries
 
@@ -70,9 +70,8 @@ interface JoinBase {
 }
 ```
 
-You can access this property of the FieldDef with `hasJoin(fd)` which will return true and grant typed access to the `JoinBase` properties of the `FieldDef`
-
-If `hasJoin()` is true on a `FieldDef` then that field is also guaranteed to be a `StructDef` which you verify with `isFieldStructDef()` which will return true and return type checked access to the portions of the field which describe the `StructDef`
+* You can access this property of the FieldDef with `hasJoin(fd)` which will return true and grant typed access to the `JoinBase` properties of the `FieldDef`
+* If `hasJoin()` is true on a `FieldDef` then that field is also guaranteed to be a `StructDef` which you verify with `isFieldStructDef()` which will return true and return type checked access to the portions of the field which describe the `StructDef`
 
 
 * Non repeated records are always joined, in all cases.

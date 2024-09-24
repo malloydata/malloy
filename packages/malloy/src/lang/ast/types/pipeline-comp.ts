@@ -24,11 +24,11 @@
 import {
   Annotation,
   PipeSegment,
-  SourceStructDef,
+  SourceDef,
 } from '../../../model/malloy_types';
 
 export interface PipelineComp {
-  outputStruct: SourceStructDef;
+  outputStruct: SourceDef;
   pipeline: PipeSegment[];
   annotation?: Annotation;
   name?: string;

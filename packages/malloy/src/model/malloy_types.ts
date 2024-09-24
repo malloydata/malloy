@@ -387,7 +387,7 @@ export interface DocumentJoinReference extends DocumentReferenceBase {
 
 export interface DocumentSQLBlockReference extends DocumentReferenceBase {
   type: 'sqlBlockReference';
-  definition: SQLSourceStruct;
+  definition: SQLSourceDef;
 }
 
 export interface DocumentQueryReference extends DocumentReferenceBase {
@@ -595,47 +595,67 @@ export interface StringTypeDef {
   bucketFilter?: string;
   bucketOther?: string;
 }
-export type StringFieldDef = StringTypeDef & FieldAtomicDef;
+export type StringFieldDef = StringTypeDef & AtomicFieldDef;
 
 export interface NumberTypeDef {
   type: 'number';
   numberType?: 'integer' | 'float';
 }
-export type NumberFieldDef = NumberTypeDef & FieldAtomicDef;
+export type NumberFieldDef = NumberTypeDef & AtomicFieldDef;
 
 export interface BooleanTypeDef {
   type: 'boolean';
 }
-export type BooleanFieldDef = BooleanTypeDef & FieldAtomicDef;
+export type BooleanFieldDef = BooleanTypeDef & AtomicFieldDef;
 
 export interface JSONTypeDef {
   type: 'json';
 }
-export type JSONFieldDef = JSONTypeDef & FieldAtomicDef;
+export type JSONFieldDef = JSONTypeDef & AtomicFieldDef;
 
 export interface NativeUnsupportedTypeDef {
   type: 'sql native';
   rawType?: string;
 }
 export type NativeUnsupportedFieldDef = NativeUnsupportedTypeDef &
-  FieldAtomicDef;
+  AtomicFieldDef;
 
 export interface ArrayTypeDef {
   type: 'array';
-  dataType: FieldAtomicTypeDef;
+  dataType: Exclude<AtomicTypeDef, RecordTypeDef> | RecordElementTypeDef;
 }
-export type ArrayFieldDef = ArrayTypeDef & FieldAtomicDef;
+export type ArrayFieldDef = ArrayTypeDef & AtomicFieldDef;
 
-export interface RecordTypeDef {
-  type: 'record';
-  typeSchema: Record<string, FieldAtomicTypeDef>;
+export interface JoinedArrayDef extends ArrayTypeDef, JoinBase, StructDefBase {
+  type: 'array';
+  join: 'many';
 }
-export type RecordFieldDef = RecordTypeDef & FieldAtomicDef;
+
+export interface RecordTypeDef extends StructDefBase, JoinBase {
+  type: 'record';
+  join: 'one';
+}
+
+// For an array of records, the record def isn't a struct def,
+// the array itself is the structdef. Currently experimenting
+// with this NOT being type: record
+
+export interface RecordElementTypeDef {
+  type: 'record_element';
+}
+
+export interface RepeatedRecordTypeDef extends JoinedArrayDef {
+  type: 'array';
+  dataType: RecordElementTypeDef;
+  join: 'many';
+}
+
+export type RecordFieldDef = RecordTypeDef & AtomicFieldDef;
 
 export interface ErrorTypeDef {
   type: 'error';
 }
-export type ErrorFieldDef = ErrorTypeDef & FieldAtomicDef;
+export type ErrorFieldDef = ErrorTypeDef & AtomicFieldDef;
 
 export type JoinType = 'one' | 'many' | 'cross';
 export type JoinRelationship =
@@ -660,16 +680,16 @@ export type JoinElementType =
 export interface JoinBase {
   type: JoinElementType;
   join: JoinType;
-  matrixOperation: MatrixOperation;
+  matrixOperation?: MatrixOperation;
   onExpression?: Expr;
 }
 
 export type Joinable =
-  | TableSourceStruct
-  | SQLSourceStruct
-  | QuerySourceStruct
-  | JoinedRecord
-  | JoinedArray;
+  | TableSourceDef
+  | SQLSourceDef
+  | QuerySourceDef
+  | RecordFieldDef
+  | JoinedArrayDef;
 export type JoinFieldDef = JoinBase & Joinable;
 
 export function isJoinable(sd: StructDef): sd is Joinable {
@@ -684,10 +704,8 @@ export function hasJoin<T extends FieldDef | StructDef>(
   return 'join' in fd;
 }
 
-export function isJoinedSource(
-  sd: StructDef
-): sd is SourceStructDef & JoinBase {
-  return isSourceStructDef(sd) && 'join' in sd;
+export function isJoinedSource(sd: StructDef): sd is SourceDef & JoinBase {
+  return isSourceDef(sd) && 'join' in sd;
 }
 
 export type DateUnit = 'day' | 'week' | 'month' | 'quarter' | 'year';
@@ -716,13 +734,13 @@ export interface DateTypeDef {
   type: 'date';
   timeframe?: DateUnit;
 }
-export type DateFieldDef = DateTypeDef & FieldAtomicDef;
+export type DateFieldDef = DateTypeDef & AtomicFieldDef;
 
 export interface TimestampTypeDef {
   type: 'timestamp';
   timeframe?: TimestampUnit;
 }
-export type TimestampFieldDef = TimestampTypeDef & FieldAtomicDef;
+export type TimestampFieldDef = TimestampTypeDef & AtomicFieldDef;
 
 /** parameter to order a query */
 export interface OrderBy {
@@ -769,8 +787,8 @@ export function isByExpression(by: By | undefined): by is ByExpression {
 }
 
 /** reference to a data source */
-export type StructRef = string | SourceStructDef;
-export function refIsStructDef(ref: StructRef): ref is SourceStructDef {
+export type StructRef = string | SourceDef;
+export function refIsStructDef(ref: StructRef): ref is SourceDef {
   return typeof ref !== 'string';
 }
 
@@ -929,10 +947,7 @@ interface StructDefBase extends HasLocation, NamedObject {
   dialect: string;
 }
 
-interface SourceStructBase
-  extends StructDefBase,
-    Filtered,
-    ResultStructMetadata {
+interface SourceDefBase extends StructDefBase, Filtered, ResultStructMetadata {
   arguments?: Record<string, Argument>;
   parameters?: Record<string, Parameter>;
   queryTimezone?: string;
@@ -940,7 +955,7 @@ interface SourceStructBase
   primaryKey?: PrimaryKeyRef;
 }
 
-export interface TableSourceStruct extends SourceStructBase {
+export interface TableSourceDef extends SourceDefBase {
   type: 'table';
   tablePath: string;
 }
@@ -969,28 +984,28 @@ export interface SQLSentence {
   select: SQLPhraseSegment[];
 }
 
-export interface SQLSourceStruct extends SourceStructBase {
+export interface SQLSourceDef extends SourceDefBase {
   type: 'sql_select';
   selectStr: string;
 }
 
-export interface QuerySourceStruct extends SourceStructBase {
+export interface QuerySourceDef extends SourceDefBase {
   type: 'query_source';
   query: Query;
 }
 
-export interface QueryResultStruct extends SourceStructBase {
+export interface QueryResultDef extends SourceDefBase {
   type: 'query_result';
 }
 
 // Describes the schema which flows between pipe elements
-export interface PipelineStruct extends SourceStructBase {
+export interface NestSourceDef extends SourceDefBase {
   type: 'pipeline_struct';
   pipeSQL: string;
 }
 
 // Used by PostGres to un-JSonify at the end of a query
-export interface FinalizeStruct extends SourceStructBase {
+export interface FinalizeSourceDef extends SourceDefBase {
   type: 'finalize';
 }
 
@@ -998,13 +1013,11 @@ export interface FinalizeStruct extends SourceStructBase {
 // structs aren't all identical, we need a way to make one from any of the
 // exisitng structs
 
-export function sourceBase(sd: SourceStructBase): SourceStructBase {
+export function sourceBase(sd: SourceDefBase): SourceDefBase {
   return {...sd};
 }
 
-export function isSourceStructDef(
-  sd: StructDef | FieldDef
-): sd is SourceStructDef {
+export function isSourceDef(sd: StructDef | FieldDef): sd is SourceDef {
   return (
     sd.type === 'table' ||
     sd.type === 'sql_select' ||
@@ -1014,50 +1027,38 @@ export function isSourceStructDef(
   );
 }
 
-export type SourceStructDef =
-  | TableSourceStruct
-  | SQLSourceStruct
-  | QuerySourceStruct
-  | QueryResultStruct
-  | PipelineStruct;
+export type SourceDef =
+  | TableSourceDef
+  | SQLSourceDef
+  | QuerySourceDef
+  | QueryResultDef
+  | NestSourceDef;
 
 /*
  * the expression formerly known as structRelationship.type == 'base_table'
  * mtoy todo RENAME WITHOUT CAPS WHEN YOU UNDERSTAND IT BETTER
  */
-export function IS_BASE_TABLE(
-  def: FieldDef | StructDef
-): def is SourceStructDef {
+export function IS_BASE_TABLE(def: FieldDef | StructDef): def is SourceDef {
   if (hasJoin(def)) {
     return false;
   }
-  if (isSourceStructDef(def)) {
+  if (isSourceDef(def)) {
     return true;
   }
   return false;
 }
 
 // mtoy todo NOT SURE ABOUT THIS FUNCTION EITHER
+// i.e. does this mean "joined and scalar"
 export function IS_SCALAR_ARRAY(def: FieldDef | StructDef) {
-  return def.type === 'array' && def.dataType.type !== 'record';
-}
-
-// I think all records are joined records, but I am leaving this
-// expressible just in case I am somehow wrong.
-export interface JoinedRecord extends StructDefBase, JoinBase, RecordFieldDef {
-  type: 'record';
-}
-
-// Not all arrays are joined arrays
-export interface JoinedArray extends StructDefBase, JoinBase, ArrayFieldDef {
-  type: 'array';
+  return def.type === 'array' && def.dataType.type !== 'record_element';
 }
 
 export type StructDef =
-  | SourceStructDef
-  | JoinedRecord
-  | JoinedArray
-  | FinalizeStruct;
+  | SourceDef
+  | RecordFieldDef
+  | JoinedArrayDef
+  | FinalizeSourceDef;
 
 export function isFieldStructDef(
   fd: FieldDef | StructDef
@@ -1158,16 +1159,8 @@ export interface ConnectionDef extends NamedObject {
   type: 'connection';
 }
 
-// /** the resulting structure of the query (and it's source) */
-// export interface QueryReultStructDef {
-//   type: 'result';
-//   fields: FieldDef[];
-//   primaryKey?: string;
-//   queryDef?: QueryDef;
-// }
-
 export type TemporalTypeDef = DateTypeDef | TimestampTypeDef;
-export type FieldAtomicTypeDef =
+export type AtomicTypeDef =
   | StringTypeDef
   | TemporalTypeDef
   | NumberTypeDef
@@ -1178,27 +1171,13 @@ export type FieldAtomicTypeDef =
   | RecordTypeDef
   | ErrorTypeDef;
 
-export type FieldAtomicDef = FieldAtomicTypeDef & FieldAtomicBase;
-
-export function isAtomicDef(f: FieldDef): f is FieldAtomicDef {
-  return (
-    f.type === 'string' ||
-    f.type === 'date' ||
-    f.type === 'number' ||
-    f.type === 'timestamp' ||
-    f.type === 'boolean' ||
-    f.type === 'record' ||
-    f.type === 'array' ||
-    f.type === 'sql native' ||
-    f.type === 'json'
-  );
-}
+export type AtomicFieldDef = AtomicTypeDef & FieldAtomicBase;
 
 // Queries have fields like this ..
-export type QueryFieldDef = FieldAtomicDef | TurtleDef | RefToField;
+export type QueryFieldDef = AtomicFieldDef | TurtleDef | RefToField;
 
 // Sources have fields like this ...
-export type FieldDef = FieldAtomicDef | JoinFieldDef | TurtleDef;
+export type FieldDef = AtomicFieldDef | JoinFieldDef | TurtleDef;
 // export type FieldDef = FieldTypeDef | StructDef | TurtleDef;
 /** reference to a field */
 
@@ -1225,10 +1204,8 @@ export type NamedModelObject =
   | FunctionDef
   | ConnectionDef;
 
-export function modelObjIsSource(
-  nmo: NamedModelObject
-): nmo is SourceStructDef {
-  return isSourceStructDef(nmo as StructDef);
+export function modelObjIsSource(nmo: NamedModelObject): nmo is SourceDef {
+  return isSourceDef(nmo as StructDef);
 }
 
 /** Result of parsing a model file */
@@ -1288,7 +1265,7 @@ export interface DrillSource {
 }
 
 export interface CompiledQuery extends DrillSource {
-  structs: SourceStructDef[];
+  structs: SourceDef[];
   sql: string;
   lastStageName: string;
   malloy: string;
@@ -1311,7 +1288,7 @@ export function isTurtleDef(def: FieldDef): def is TurtleDef {
   return def.type === 'turtle';
 }
 
-export function isAtomicField(def: FieldDef): def is FieldAtomicDef {
+export function isAtomic(def: FieldDef): def is AtomicFieldDef {
   return isAtomicFieldType(def.type);
 }
 
@@ -1323,8 +1300,8 @@ export interface SearchResultRow {
 
 export type SearchResult = SearchResultRow[];
 
-export function getPhysicalFields(structDef: StructDef): FieldAtomicDef[] {
-  return structDef.fields.filter(isAtomicField);
+export function getAtomicFields(structDef: StructDef): AtomicFieldDef[] {
+  return structDef.fields.filter(isAtomic);
 }
 
 export function isValueString(

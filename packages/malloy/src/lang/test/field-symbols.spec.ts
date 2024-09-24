@@ -34,7 +34,7 @@ import {DefinedParameter} from '../ast/types/space-param';
  */
 
 describe('structdef comprehension', () => {
-  function mkStructDef(field: model.FieldDef): model.SourceStructDef {
+  function mkStructDef(field: model.FieldDef): model.SourceDef {
     return {
       type: 'table',
       name: 'test',
@@ -112,11 +112,13 @@ describe('structdef comprehension', () => {
   });
 
   test('import repeated record', () => {
-    const field: model.FieldDef = {
+    const field: model.JoinedArrayDef = {
       name: 't',
       type: 'array',
       dialect: 'standardsql',
       dataType: {type: 'string'},
+      join: 'many',
+      matrixOperation: 'left',
       fields: [{type: 'string', name: 'b'}],
     };
     const struct = mkStructDef(field);
@@ -129,11 +131,12 @@ describe('structdef comprehension', () => {
   });
 
   test('import inline field', () => {
-    const field: model.FieldDef = {
+    const field: model.RecordFieldDef = {
       name: 't',
       type: 'record',
-      typeSchema: {a: {type: 'string'}},
       dialect: 'standardsql',
+      join: 'one',
+      matrixOperation: 'left',
       fields: [{type: 'string', name: 'a'}],
     };
     const struct = mkStructDef(field);

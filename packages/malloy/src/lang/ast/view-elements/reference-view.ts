@@ -23,7 +23,7 @@
 
 import {
   PipeSegment,
-  SourceStructDef,
+  SourceDef,
   isAtomicFieldType,
   isTurtleDef,
   sourceBase,
@@ -92,7 +92,7 @@ export class ReferenceView extends View {
         queryFields: [this.reference.refToField],
       };
       const name = this.reference.nameString;
-      const outputStruct: SourceStructDef = {
+      const outputStruct: SourceDef = {
         ...sourceBase(fs.structDef()),
         type: 'query_result',
         name,

@@ -30,7 +30,7 @@ import {
   ModelAnnotation,
   NamedModelObject,
   Query,
-  SQLSourceStruct,
+  SQLSourceDef,
   StructDef,
   modelObjIsSource,
 } from '../../../model/malloy_types';
@@ -478,7 +478,7 @@ export class Document extends MalloyElement implements NameSpace {
   globalNameSpace: NameSpace = new GlobalNameSpace();
   documentModel: Record<string, ModelEntry> = {};
   queryList: Query[] = [];
-  sqlBlocks: SQLSourceStruct[] = [];
+  sqlBlocks: SQLSourceDef[] = [];
   statements: DocStatementList;
   didInitModel = false;
   annotation: Annotation = {};
@@ -586,7 +586,7 @@ export class Document extends MalloyElement implements NameSpace {
     return def;
   }
 
-  defineSQL(sql: SQLSourceStruct, name?: string): boolean {
+  defineSQL(sql: SQLSourceDef, name?: string): boolean {
     const ret = {
       ...sql,
       as: `$${this.sqlBlocks.length}`,

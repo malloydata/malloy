@@ -28,7 +28,7 @@ import {
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
-  FieldAtomicTypeDef,
+  AtomicTypeDef,
   TimeDeltaExpr,
   TypecastExpr,
   RegexMatchExpr,
@@ -512,7 +512,7 @@ ${indent(sql)}
     return expandBlueprintMap(TRINO_DIALECT_FUNCTIONS);
   }
 
-  malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string {
+  malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
     if (malloyType.type === 'number') {
       if (malloyType.numberType === 'integer') {
         return 'BIGINT';
@@ -525,7 +525,7 @@ ${indent(sql)}
     return malloyType.type;
   }
 
-  sqlTypeToMalloyType(_sqlType: string): FieldAtomicTypeDef | undefined {
+  sqlTypeToMalloyType(_sqlType: string): AtomicTypeDef | undefined {
     // TODO(figutierrez): unimplemented.
     return undefined;
   }

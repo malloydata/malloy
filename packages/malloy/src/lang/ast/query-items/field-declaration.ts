@@ -28,9 +28,9 @@ import {
   StructDef,
   TypeDesc,
   FieldDef,
-  FieldAtomicDef,
+  AtomicFieldDef,
   TemporalTypeDef,
-  isAtomicDef,
+  isAtomic,
 } from '../../../model/malloy_types';
 
 import {FT} from '../fragtype-utils';
@@ -95,7 +95,7 @@ export abstract class AtomicFieldDeclaration
     return false;
   }
 
-  queryFieldDef(exprFS: FieldSpace, exprName: string): FieldAtomicDef {
+  queryFieldDef(exprFS: FieldSpace, exprName: string): AtomicFieldDef {
     let exprValue;
 
     function getOutputFS() {
@@ -125,11 +125,11 @@ export abstract class AtomicFieldDeclaration
     }
     if (isAtomicFieldType(retType) && retType !== 'error') {
       this.typecheckExprValue(exprValue);
-      let ret: FieldAtomicDef;
+      let ret: AtomicFieldDef;
       switch (retType) {
         case 'date':
         case 'timestamp': {
-          const timeRet: TemporalTypeDef & FieldAtomicDef = {
+          const timeRet: TemporalTypeDef & AtomicFieldDef = {
             name: exprName,
             type: retType,
             location: this.location,
@@ -321,8 +321,8 @@ export class FieldDefinitionValue extends SpaceField {
   }
 
   // A query will call this when it defines the field
-  private defInQuery?: FieldAtomicDef;
-  getQueryFieldDef(fs: FieldSpace): FieldAtomicDef {
+  private defInQuery?: AtomicFieldDef;
+  getQueryFieldDef(fs: FieldSpace): AtomicFieldDef {
     if (!this.defInQuery) {
       const def = this.exprDef.queryFieldDef(fs, this.name);
       this.defInQuery = def;
@@ -336,7 +336,7 @@ export class FieldDefinitionValue extends SpaceField {
   // some expressions being compiled twice.
   typeDesc(): TypeDesc {
     const typeFrom = this.defInQuery || this.fieldDef();
-    if (isAtomicDef(typeFrom)) {
+    if (isAtomic(typeFrom)) {
       return this.fieldTypeFromFieldDef(typeFrom);
     }
     throw new Error(`Can't get typeDesc for ${typeFrom.type}`);

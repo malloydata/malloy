@@ -24,7 +24,7 @@
 import {
   Expr,
   Sampling,
-  FieldAtomicTypeDef,
+  AtomicTypeDef,
   MeasureTimeExpr,
   TimeTruncExpr,
   TimeExtractExpr,
@@ -395,8 +395,8 @@ export abstract class Dialect {
     )`;
   }
 
-  abstract sqlTypeToMalloyType(sqlType: string): FieldAtomicTypeDef | undefined;
-  abstract malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string;
+  abstract sqlTypeToMalloyType(sqlType: string): AtomicTypeDef | undefined;
+  abstract malloyTypeToSQLType(malloyType: AtomicTypeDef): string;
 
   abstract validateTypeName(sqlType: string): boolean;
 }

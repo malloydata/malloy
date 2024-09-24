@@ -37,7 +37,7 @@ import {
   FunctionOverloadDef,
   FunctionParameterDef,
   getIdentifier,
-  getPhysicalFields,
+  getAtomicFields,
   hasExpression,
   IndexFieldDef,
   IndexSegment,
@@ -79,12 +79,12 @@ import {
   PickExpr,
   SpreadExpr,
   FilteredExpr,
-  SourceStructDef,
+  SourceDef,
   modelObjIsSource,
   isFieldStructDef,
-  isSourceStructDef,
+  isSourceDef,
   fieldIsIntrinsic,
-  FieldAtomicDef,
+  AtomicFieldDef,
   StringFieldDef,
   NumberFieldDef,
   BooleanFieldDef,
@@ -94,15 +94,15 @@ import {
   DateUnit,
   TimestampUnit,
   IS_BASE_TABLE,
-  PipelineStruct,
+  NestSourceDef,
   TimestampFieldDef,
   hasJoin,
   isJoinedSource,
-  QueryResultStruct,
+  QueryResultDef,
   IS_SCALAR_ARRAY,
   ArrayFieldDef,
   RecordFieldDef,
-  FinalizeStruct,
+  FinalizeSourceDef,
 } from './malloy_types';
 
 import {Connection} from '../connection/types';
@@ -1309,7 +1309,9 @@ class QueryField extends QueryNode {
   }
 
   isArrayElement(parentDef: FieldDef) {
-    return parentDef.type === 'array' && parentDef.dataType.type !== 'record';
+    return (
+      parentDef.type === 'array' && parentDef.dataType.type !== 'record_element'
+    );
   }
 
   getExpr(): Expr {
@@ -1318,7 +1320,7 @@ class QueryField extends QueryNode {
     }
     const parentIsRepeatedRecord =
       this.parent.structDef.type === 'array' &&
-      this.parent.structDef.dataType.type === 'record';
+      this.parent.structDef.dataType.type === 'record_element';
     return {
       node: 'genericSQLExpr',
       kids: {args: []},
@@ -1347,21 +1349,21 @@ class QueryField extends QueryNode {
 
 function isCalculatedField(
   f: QueryField
-): f is QueryAtomicField<FieldAtomicDef> {
+): f is QueryAtomicField<AtomicFieldDef> {
   return f instanceof QueryAtomicField && f.isCalculated();
 }
 
 function isAggregateField(
   f: QueryField
-): f is QueryAtomicField<FieldAtomicDef> {
+): f is QueryAtomicField<AtomicFieldDef> {
   return f instanceof QueryAtomicField && f.isAggregate();
 }
 
-function isScalarField(f: QueryField): f is QueryAtomicField<FieldAtomicDef> {
+function isScalarField(f: QueryField): f is QueryAtomicField<AtomicFieldDef> {
   return f instanceof QueryAtomicField && !f.isCalculated() && !f.isAggregate();
 }
 
-class QueryAtomicField<T extends FieldAtomicDef> extends QueryField {
+class QueryAtomicField<T extends AtomicFieldDef> extends QueryField {
   fieldDef: T;
 
   constructor(fieldDef: T, parent: QueryStruct) {
@@ -2067,7 +2069,7 @@ class JoinInstance {
     // convert the filter list into a list of boolean fields so we can
     //  generate dependancies and code for them.
     const sd = this.queryStruct.structDef;
-    if (isSourceStructDef(sd) && sd.filterList) {
+    if (isSourceDef(sd) && sd.filterList) {
       this.joinFilterConditions = sd.filterList.map(
         filter =>
           new QueryFieldBoolean(
@@ -2135,10 +2137,7 @@ class QueryTurtle extends QueryField {}
  * half translated to the new world of types ..
  */
 export class Segment {
-  static nextStructDef(
-    structDef: SourceStructDef,
-    segment: PipeSegment
-  ): SourceStructDef {
+  static nextStructDef(structDef: SourceDef, segment: PipeSegment): SourceDef {
     const qs = new QueryStruct(structDef, undefined, {
       model: new QueryModel(undefined),
     });
@@ -2239,7 +2238,7 @@ class QueryQuery extends QueryField {
     }
 
     if (
-      isSourceStructDef(sourceDef) &&
+      isSourceDef(sourceDef) &&
       sourceDef.queryTimezone &&
       isQuerySegment(firstStage) &&
       firstStage.queryTimezone === undefined
@@ -2624,7 +2623,7 @@ class QueryQuery extends QueryField {
   getResultStructDef(
     resultStruct: FieldInstanceResult = this.rootResult,
     isRoot = true
-  ): SourceStructDef {
+  ): SourceDef {
     const fields: FieldDef[] = [];
     let primaryKey;
     this.prepare(undefined);
@@ -2645,6 +2644,7 @@ class QueryQuery extends QueryField {
         const isArray = fi.getRepeatedResultType() === 'nested';
 
         // MTOY TODO COMPUTE DATATYPE FROM STRUCTDEF ... SOMEHOW
+        // MTOY TODO -- AND DEAL WITH REPEATED RECORDS
         if (isArray) {
           const nestedField: ArrayFieldDef = {
             type: 'array',
@@ -2656,12 +2656,14 @@ class QueryQuery extends QueryField {
           fields.push(nestedField);
         }
 
-        // MTOY TODO COMPUTE TYPE SCHEMA FROM STRUCTDEF SOMEHOW
         const inlineField: RecordFieldDef = {
           type: 'record',
-          typeSchema: {},
+          join: 'one',
+          matrixOperation: 'left',
+          dialect: this.parent.structDef.dialect,
           name,
           resultMetadata,
+          fields: [],
         };
         throw new Error('MTOY -- YOU FORGOT TO COMPUTE THE DATA TYPES');
         fields.push(inlineField);
@@ -2765,7 +2767,7 @@ class QueryQuery extends QueryField {
     const qsDef = qs.structDef;
     if (isJoinedSource(qsDef)) {
       let structSQL = qs.structSourceSQL(stageWriter);
-      const matrixOperation = qsDef.matrixOperation.toUpperCase();
+      const matrixOperation = (qsDef.matrixOperation || 'left').toUpperCase();
       if (ji.makeUniqueKey) {
         const passKeys = this.generateSQLPassthroughKeys(qs);
         structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as ${qs.dialect.sqlMaybeQuoteIdentifier(
@@ -3673,7 +3675,7 @@ class QueryQuery extends QueryField {
         repeatedResultType === 'inline_all_numbers',
         sourceSQLExpression
       );
-      const inputStruct: PipelineStruct = {
+      const inputStruct: NestSourceDef = {
         type: 'pipeline_struct',
         name: 'internal-error-look-in-pipeSQL-for-this-text',
         pipeSQL: this.parent.dialect.sqlUnnestPipelineHead(
@@ -3736,7 +3738,7 @@ class QueryQuery extends QueryField {
 
   generateSQLFromPipeline(stageWriter: StageWriter): {
     lastStageName: string;
-    outputStruct: SourceStructDef;
+    outputStruct: SourceDef;
   } {
     this.prepare(stageWriter);
     let lastStageName = this.generateSQL(stageWriter);
@@ -3744,7 +3746,7 @@ class QueryQuery extends QueryField {
     if (this.fieldDef.pipeline.length > 1) {
       // console.log(pretty(outputStruct));
       const pipeline = [...this.fieldDef.pipeline];
-      let structDef: FinalizeStruct = {
+      let structDef: FinalizeSourceDef = {
         ...outputStruct,
         type: 'finalize',
         name: 'lastStage',
@@ -3960,8 +3962,8 @@ class QueryQueryRaw extends QueryQuery {
     // Do nothing!
   }
 
-  getResultStructDef(): SourceStructDef {
-    if (!isSourceStructDef(this.parent.structDef)) {
+  getResultStructDef(): SourceDef {
+    if (!isSourceDef(this.parent.structDef)) {
       throw new Error(`Result cannot by type ${this.parent.structDef.type}`);
     }
     return this.parent.structDef;
@@ -4067,7 +4069,7 @@ class QueryQueryIndex extends QueryQuery {
    *   fieldName is deprecated, dots in fieldName may or may not be join nodes
    *   fieldPath is a URL encoded slash separated path
    */
-  getResultStructDef(): QueryResultStruct {
+  getResultStructDef(): QueryResultDef {
     const ret: StructDef = {
       type: 'query_result',
       name: this.resultStage || 'result',
@@ -4164,7 +4166,7 @@ class QueryStruct extends QueryNode {
       return this._arguments;
     }
     this._arguments = {};
-    if (isSourceStructDef(this.structDef)) {
+    if (isSourceDef(this.structDef)) {
       // First, copy over all parameters, to get default values
       const params = this.structDef.parameters ?? {};
       for (const parameterName in params) {
@@ -4315,7 +4317,7 @@ class QueryStruct extends QueryNode {
   }
 
   /** the the primary key or throw an error. */
-  getPrimaryKeyField(fieldDef: FieldDef): QueryAtomicField<FieldAtomicDef> {
+  getPrimaryKeyField(fieldDef: FieldDef): QueryAtomicField<AtomicFieldDef> {
     let pk;
     if ((pk = this.primaryKey())) {
       return pk;
@@ -4459,8 +4461,8 @@ class QueryStruct extends QueryNode {
     return this.parent ? this.parent.root() : this;
   }
 
-  primaryKey(): QueryAtomicField<FieldAtomicDef> | undefined {
-    if (isSourceStructDef(this.structDef) && this.structDef.primaryKey) {
+  primaryKey(): QueryAtomicField<AtomicFieldDef> | undefined {
+    if (isSourceDef(this.structDef) && this.structDef.primaryKey) {
       return this.getDimensionByName([this.structDef.primaryKey]);
     } else {
       return undefined;
@@ -4506,10 +4508,7 @@ class QueryStruct extends QueryNode {
       if (field instanceof QueryStruct) {
         const newDef = {...field.structDef};
         newDef.annotation = refAnnoatation;
-        // MTOY TODO ... return new QueryStruct(newDef, this);
-        field.structDef = newDef;
-
-        // TOTO MTOY ask chris about what to do like this.makeQueryField ...
+        return new QueryStruct(newDef, undefined, this);
       } else {
         const newDef = {...field.fieldDef};
         newDef.annotation = refAnnoatation;
@@ -4521,7 +4520,7 @@ class QueryStruct extends QueryNode {
 
   getDimensionOrMeasureByName(
     name: string[]
-  ): QueryAtomicField<FieldAtomicDef> {
+  ): QueryAtomicField<AtomicFieldDef> {
     const query = this.getFieldByName(name);
     if (query instanceof QueryAtomicField) {
       return query;
@@ -4530,7 +4529,7 @@ class QueryStruct extends QueryNode {
   }
 
   /** returns a query object for the given name */
-  getDimensionByName(name: string[]): QueryAtomicField<FieldAtomicDef> {
+  getDimensionByName(name: string[]): QueryAtomicField<AtomicFieldDef> {
     const query = this.getFieldByName(name);
 
     if (query instanceof QueryAtomicField && isScalarField(query)) {
@@ -4549,7 +4548,7 @@ class QueryStruct extends QueryNode {
     }
   }
 
-  getDistinctKey(): QueryAtomicField<FieldAtomicDef> {
+  getDistinctKey(): QueryAtomicField<AtomicFieldDef> {
     if (this.structDef.type !== 'record') {
       return this.getDimensionByName(['__distinct_key']);
     } else if (this.parent) {
@@ -4569,7 +4568,7 @@ class QueryStruct extends QueryNode {
     pipeline = structuredClone(pipeline);
     pipeline[0].filterList = addedFilters.concat(
       pipeline[0].filterList || [],
-      isSourceStructDef(this.structDef) ? this.structDef.filterList || [] : []
+      isSourceDef(this.structDef) ? this.structDef.filterList || [] : []
     );
 
     const flatTurtleDef: TurtleDef = {
@@ -4587,7 +4586,7 @@ class QueryStruct extends QueryNode {
 interface QueryResults {
   lastStageName: string;
   stageWriter: StageWriter;
-  structs: SourceStructDef[];
+  structs: SourceDef[];
   malloy: string;
   connectionName: string;
 }
@@ -4644,7 +4643,7 @@ export class QueryModel {
         );
       }
       return ret;
-    } else if (isSourceStructDef(structRef)) {
+    } else if (isSourceDef(structRef)) {
       return new QueryStruct(structRef, sourceArguments, {model: this});
     }
     throw new Error('Broken for now');
@@ -4682,7 +4681,7 @@ export class QueryModel {
       // for (const f of ret.outputStruct.fields) {
       //   fieldNames.push(getIdentifier(f));
       // }
-      const fieldNames = getPhysicalFields(ret.outputStruct).map(fieldDef =>
+      const fieldNames = getAtomicFields(ret.outputStruct).map(fieldDef =>
         q.parent.dialect.sqlMaybeQuoteIdentifier(fieldDef.name)
       );
       ret.lastStageName = stageWriter.addStage(

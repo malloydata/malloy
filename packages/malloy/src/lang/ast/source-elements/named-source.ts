@@ -26,10 +26,10 @@ import {
   Argument,
   InvokedStructRef,
   isCastType,
-  isSourceStructDef,
+  isSourceDef,
   Parameter,
   paramHasValue,
-  SourceStructDef,
+  SourceDef,
 } from '../../../model/malloy_types';
 
 import {Source} from './source';
@@ -85,7 +85,7 @@ export class NamedSource extends Source {
     }
   }
 
-  modelStruct(): SourceStructDef | undefined {
+  modelStruct(): SourceDef | undefined {
     const modelEnt = this.modelEntry(this.ref);
     const entry = modelEnt?.entry;
     if (!entry) {
@@ -105,7 +105,7 @@ export class NamedSource extends Source {
       return;
     } else {
       this.document()?.checkExperimentalDialect(this, entry.dialect);
-      if (isSourceStructDef(entry)) {
+      if (isSourceDef(entry)) {
         return {...entry};
       }
     }
@@ -183,14 +183,14 @@ export class NamedSource extends Source {
     return outArguments;
   }
 
-  getStructDef(parameterSpace: ParameterSpace | undefined): SourceStructDef {
+  getStructDef(parameterSpace: ParameterSpace | undefined): SourceDef {
     return this.withParameters(parameterSpace, []);
   }
 
   withParameters(
     parameterSpace: ParameterSpace | undefined,
     pList: HasParameter[] | undefined
-  ): SourceStructDef {
+  ): SourceDef {
     /*
       Can't really generate the callback list until after all the
       things before me are translated, and that kinda screws up

@@ -29,7 +29,7 @@
  * specialized QuerySpace for each type of query operation.
  */
 
-import {SourceStructDef} from '../../../model';
+import {SourceDef} from '../../../model';
 import {AtomicFieldDeclaration} from '../query-items/field-declaration';
 import {Join} from '../source-properties/join';
 import {QueryFieldSpace} from '../types/field-space';
@@ -46,7 +46,7 @@ export class QueryInputSpace extends RefinedSpace implements QueryFieldSpace {
    * @param queryOutput MUST BE A QuerySpace
    */
   constructor(
-    input: SourceStructDef,
+    input: SourceDef,
     private queryOutput: QueryOperationSpace
   ) {
     super(input);

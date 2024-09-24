@@ -35,21 +35,21 @@ import {AbstractParameter, SpaceParam} from '../types/space-param';
 import {StaticSpace} from './static-space';
 import {StructSpaceFieldBase} from './struct-space-field-base';
 import {ParameterSpace} from './parameter-space';
-import {SourceStructDef} from '../../../model/malloy_types';
+import {SourceDef} from '../../../model/malloy_types';
 import {SourceFieldSpace} from '../types/field-space';
 
 export abstract class DynamicSpace
   extends StaticSpace
   implements SourceFieldSpace
 {
-  protected final: model.SourceStructDef | undefined;
-  protected fromSource: model.SourceStructDef;
+  protected final: model.SourceDef | undefined;
+  protected fromSource: model.SourceDef;
   completions: (() => void)[] = [];
   private complete = false;
   private parameters: HasParameter[] = [];
   protected newTimezone?: string;
 
-  constructor(extending: SourceStructDef) {
+  constructor(extending: SourceDef) {
     super(structuredClone(extending));
     this.fromSource = extending;
     this.final = undefined;
@@ -101,7 +101,7 @@ export abstract class DynamicSpace
     this.newTimezone = tz;
   }
 
-  structDef(): model.SourceStructDef {
+  structDef(): model.SourceDef {
     if (this.final === undefined) {
       // Grab all the parameters so that we can populate the "final" structDef
       // with parameters immediately so that views can see them when they are translating
@@ -155,14 +155,14 @@ export abstract class DynamicSpace
         join.fixupJoinOn(this, missingOn);
       }
     }
-    if (this.newTimezone && model.isSourceStructDef(this.final)) {
+    if (this.newTimezone && model.isSourceDef(this.final)) {
       this.final.queryTimezone = this.newTimezone;
     }
     this.isComplete();
     return this.final;
   }
 
-  emptyStructDef(): SourceStructDef {
+  emptyStructDef(): SourceDef {
     const ret = {...this.fromSource};
     ret.fields = [];
     return ret;

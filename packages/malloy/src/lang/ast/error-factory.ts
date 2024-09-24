@@ -28,7 +28,7 @@
  */
 
 import {
-  TableSourceStruct,
+  TableSourceDef,
   IndexSegment,
   ProjectSegment,
   Query,
@@ -44,7 +44,7 @@ interface FactoryError {
 }
 
 export class ErrorFactory {
-  static get structDef(): TableSourceStruct {
+  static get structDef(): TableSourceDef {
     const factoryStruct: StructDef & FactoryError = {
       type: 'table',
       name: ERR_NAME,

@@ -26,7 +26,7 @@ import {
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
-  FieldAtomicTypeDef,
+  AtomicTypeDef,
   TimeDeltaExpr,
   RegexMatchExpr,
   MeasureTimeExpr,
@@ -45,7 +45,7 @@ import {DUCKDB_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 // need to refactor runSQL to take a SQLBlock instead of just a sql string.
 const hackSplitComment = '-- hack: split on this';
 
-const duckDBToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
+const duckDBToMalloyTypes: {[key: string]: AtomicTypeDef} = {
   'BIGINT': {type: 'number', numberType: 'integer'},
   'INTEGER': {type: 'number', numberType: 'integer'},
   'TINYINT': {type: 'number', numberType: 'integer'},
@@ -350,7 +350,7 @@ export class DuckDBDialect extends PostgresBase {
     return expandBlueprintMap(DUCKDB_DIALECT_FUNCTIONS);
   }
 
-  malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string {
+  malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
     if (malloyType.type === 'number') {
       if (malloyType.numberType === 'integer') {
         return 'integer';
@@ -363,7 +363,7 @@ export class DuckDBDialect extends PostgresBase {
     return malloyType.type;
   }
 
-  sqlTypeToMalloyType(sqlType: string): FieldAtomicTypeDef | undefined {
+  sqlTypeToMalloyType(sqlType: string): AtomicTypeDef | undefined {
     // Remove trailing params
     const baseSqlType = sqlType.match(/^(\w+)/)?.at(0) ?? sqlType;
     return duckDBToMalloyTypes[baseSqlType.toUpperCase()];

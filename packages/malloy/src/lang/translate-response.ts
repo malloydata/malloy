@@ -26,7 +26,7 @@ import {
   ModelDef,
   Query,
   SQLSentence,
-  SQLSourceStruct,
+  SQLSourceDef,
 } from '../model/malloy_types';
 import {MalloyElement} from './ast';
 import {LogMessage} from './parse-log';
@@ -101,7 +101,7 @@ interface TranslatedResponseData
   translated: {
     modelDef: ModelDef;
     queryList: Query[];
-    sqlBlocks: SQLSourceStruct[];
+    sqlBlocks: SQLSourceDef[];
   };
   fromSources: string[];
 }

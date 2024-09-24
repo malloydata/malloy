@@ -24,9 +24,9 @@
 import {
   FieldDef,
   QueryFieldDef,
-  isAtomicDef,
   TypeDesc,
-  FieldAtomicDef,
+  AtomicFieldDef,
+  isAtomic,
 } from '../../../model/malloy_types';
 import {SpaceEntry} from './space-entry';
 import {FieldSpace} from './field-space';
@@ -34,13 +34,13 @@ import {FieldSpace} from './field-space';
 export abstract class SpaceField extends SpaceEntry {
   readonly refType = 'field';
 
-  protected fieldTypeFromFieldDef(def: FieldAtomicDef): TypeDesc {
+  protected fieldTypeFromFieldDef(def: AtomicFieldDef): TypeDesc {
     const ref: TypeDesc = {
       dataType: def.type,
       expressionType: 'scalar',
       evalSpace: 'input',
     };
-    if (isAtomicDef(def) && def.expressionType) {
+    if (isAtomic(def) && def.expressionType) {
       ref.expressionType = def.expressionType;
     }
     if (

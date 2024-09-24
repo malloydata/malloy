@@ -23,7 +23,7 @@
 
 import {
   Annotation,
-  SourceStructDef,
+  SourceDef,
   expressionIsCalculation,
 } from '../../../model/malloy_types';
 
@@ -56,14 +56,14 @@ export class RefinedSource extends Source {
     super({source, refinement});
   }
 
-  getStructDef(parameterSpace: ParameterSpace | undefined): SourceStructDef {
+  getStructDef(parameterSpace: ParameterSpace | undefined): SourceDef {
     return this.withParameters(parameterSpace, []);
   }
 
   withParameters(
     parameterSpace: ParameterSpace | undefined,
     pList: HasParameter[] | undefined
-  ): SourceStructDef {
+  ): SourceDef {
     let primaryKey: PrimaryKey | undefined;
     let fieldListEdit: FieldListEdit | undefined;
     const fields: MakeEntry[] = [];

@@ -38,10 +38,10 @@ import {
   isQuerySegment,
   isSegmentSQL,
   modelObjIsSource,
-  SourceStructDef,
+  SourceDef,
   JoinBase,
-  TableSourceStruct,
-  SQLSourceStruct,
+  TableSourceDef,
+  SQLSourceDef,
   SQLSentence,
 } from '../../model/malloy_types';
 import {ExpressionDef, MalloyElement} from '../ast';
@@ -58,7 +58,7 @@ export function pretty(thing: any): string {
   return inspect(thing, {breakLength: 72, depth: Infinity});
 }
 
-const mockSchema: Record<string, SourceStructDef> = {
+const mockSchema: Record<string, SourceDef> = {
   'aTable': {
     type: 'table',
     name: 'aTable',
@@ -77,10 +77,7 @@ const mockSchema: Record<string, SourceStructDef> = {
       {
         type: 'array',
         name: 'astruct',
-        dataType: {
-          type: 'record',
-          typeSchema: {column: {type: 'number', numberType: 'integer'}},
-        },
+        dataType: {type: 'record_element'},
         join: 'many',
         fields: [
           {
@@ -93,10 +90,10 @@ const mockSchema: Record<string, SourceStructDef> = {
       },
       {
         type: 'record',
-        typeSchema: {column: {type: 'number', numberType: 'integer'}},
         name: 'aninline',
         fields: [{type: 'number', name: 'column', numberType: 'integer'}],
         join: 'one',
+        matrixOperation: 'left',
         dialect: 'standardsql',
       },
     ],
@@ -180,7 +177,7 @@ const mockSchema: Record<string, SourceStructDef> = {
 };
 export const aTableDef = mockSchema['aTable'];
 
-const bJoinedIntoA: TableSourceStruct & JoinBase = {
+const bJoinedIntoA: TableSourceDef & JoinBase = {
   type: 'table',
   name: 'aTable',
   dialect: 'standardsql',
@@ -408,7 +405,7 @@ export class TestTranslator extends MalloyTranslator {
     return this.importsAndTablesStep.step(this);
   }
 
-  getSourceDef(srcName: string): SourceStructDef | undefined {
+  getSourceDef(srcName: string): SourceDef | undefined {
     const t = this.translate().translated;
     const s = t?.modelDef?.contents[srcName];
     if (s && modelObjIsSource(s)) {
@@ -608,7 +605,7 @@ export function markSource(
   return {code, locations};
 }
 
-export function getSelectOneStruct(sqlBlock: SQLSentence): SQLSourceStruct {
+export function getSelectOneStruct(sqlBlock: SQLSentence): SQLSourceDef {
   const selectThis = sqlBlock.select[0];
   if (!isSegmentSQL(selectThis)) {
     throw new Error('weird test support error sorry');

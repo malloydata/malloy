@@ -24,10 +24,10 @@
 import {
   Annotation,
   JoinFieldDef,
-  isSourceStructDef,
+  isSourceDef,
   JoinType,
   MatrixOperation,
-  SourceStructDef,
+  SourceDef,
   isJoinable,
 } from '../../../model/malloy_types';
 import {DynamicSpace} from '../field-space/dynamic-space';
@@ -67,9 +67,7 @@ export abstract class Join
     );
   }
 
-  protected getStructDefFromExpr(
-    parameterSpace: ParameterSpace
-  ): SourceStructDef {
+  protected getStructDefFromExpr(parameterSpace: ParameterSpace): SourceDef {
     const source = this.sourceExpr.getSource();
     if (!source) {
       this.sourceExpr.sqLog('Cannot great a source to join from');
@@ -117,7 +115,7 @@ export class KeyJoin extends Join {
 
   fixupJoinOn(outer: FieldSpace, inStruct: JoinFieldDef): void {
     const exprX = this.keyExpr.getExpression(outer);
-    if (isSourceStructDef(inStruct) && inStruct.primaryKey) {
+    if (isSourceDef(inStruct) && inStruct.primaryKey) {
       const pkey = inStruct.fields.find(
         f => (f.as || f.name) === inStruct.primaryKey
       );

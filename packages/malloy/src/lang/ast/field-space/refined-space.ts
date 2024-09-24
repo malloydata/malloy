@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {SourceStructDef} from '../../../model/malloy_types';
+import {SourceDef} from '../../../model/malloy_types';
 import {FieldListEdit} from '../source-properties/field-list-edit';
 import {DynamicSpace} from './dynamic-space';
 import {canMakeEntry} from '../types/space-entry';
@@ -35,7 +35,7 @@ export class RefinedSpace extends DynamicSpace {
    * @param choose A accept/except edit of the "from" fields
    */
   static filteredFrom(
-    from: SourceStructDef,
+    from: SourceDef,
     choose: FieldListEdit | undefined,
     parameters: ParameterSpace | undefined
   ): RefinedSpace {

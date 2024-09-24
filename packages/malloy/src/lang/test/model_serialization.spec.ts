@@ -21,10 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {StructDef, TableSourceStruct} from '../../model/malloy_types';
+import {StructDef, TableSourceDef} from '../../model/malloy_types';
 import {Explore} from '../../malloy';
 
-export const CHILD_EXPLORE: TableSourceStruct = {
+export const CHILD_EXPLORE: TableSourceDef = {
   type: 'table',
   name: 'some_ns.child',
   as: 'child',
@@ -43,7 +43,7 @@ export const CHILD_EXPLORE: TableSourceStruct = {
   ],
 };
 
-export const PARENT_EXPLORE: TableSourceStruct = {
+export const PARENT_EXPLORE: TableSourceDef = {
   type: 'table',
   name: 'some_ns.parent',
   as: 'parent',
@@ -62,7 +62,7 @@ export const PARENT_EXPLORE: TableSourceStruct = {
   ],
 };
 
-export const GRANDPARENT_EXPLORE: TableSourceStruct = {
+export const GRANDPARENT_EXPLORE: TableSourceDef = {
   type: 'table',
   name: 'some_ns.gradparent',
   as: 'grandparent',

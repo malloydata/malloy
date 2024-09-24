@@ -21,11 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {TypeDesc, FieldAtomicDef} from '../../../model/malloy_types';
+import {TypeDesc, AtomicFieldDef} from '../../../model/malloy_types';
 
 import {SpaceField} from '../types/space-field';
 
-export class ColumnSpaceField<T extends FieldAtomicDef> extends SpaceField {
+export class ColumnSpaceField<T extends AtomicFieldDef> extends SpaceField {
   constructor(public sourceFieldDef: T) {
     super();
   }

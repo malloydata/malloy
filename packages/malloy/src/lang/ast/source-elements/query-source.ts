@@ -22,9 +22,9 @@
  */
 
 import {
-  SourceStructDef,
-  QuerySourceStruct,
-  isSourceStructDef,
+  SourceDef,
+  QuerySourceDef,
+  isSourceDef,
 } from '../../../model/malloy_types';
 import {Source} from './source';
 import {QueryElement} from '../types/query-element';
@@ -38,22 +38,22 @@ export class QuerySource extends Source {
     super({query});
   }
 
-  getStructDef(parameterSpace: ParameterSpace | undefined): SourceStructDef {
+  getStructDef(parameterSpace: ParameterSpace | undefined): SourceDef {
     return this.withParameters(parameterSpace, undefined);
   }
 
   withParameters(
     parameterSpace: ParameterSpace | undefined,
     pList: HasParameter[] | undefined
-  ): SourceStructDef {
+  ): SourceDef {
     const comp = this.query.queryComp(false);
-    const queryStruct: QuerySourceStruct = {
+    const queryStruct: QuerySourceDef = {
       name: uuidv4(),
       type: 'query_source',
       query: comp.query,
       fields: comp.outputStruct.fields,
       dialect: comp.outputStruct.dialect,
-      connection: isSourceStructDef(comp.outputStruct)
+      connection: isSourceDef(comp.outputStruct)
         ? comp.outputStruct.connection
         : 'unknown-dialect-query-comp',
     };

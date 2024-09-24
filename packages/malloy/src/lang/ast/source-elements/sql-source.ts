@@ -25,7 +25,7 @@ import {
   StructDef,
   SQLSentence,
   InvokedStructRef,
-  SourceStructDef,
+  SourceDef,
 } from '../../../model/malloy_types';
 import {makeSQLSentence} from '../../../model/sql_block';
 import {NeedCompileSQL} from '../../translate-response';
@@ -105,7 +105,7 @@ export class SQLSource extends Source {
     }
   }
 
-  getStructDef(): SourceStructDef {
+  getStructDef(): SourceDef {
     if (!this.validateConnectionName()) {
       return ErrorFactory.structDef;
     }

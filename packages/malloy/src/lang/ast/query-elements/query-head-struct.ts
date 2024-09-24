@@ -24,7 +24,7 @@
 import {
   Argument,
   InvokedStructRef,
-  SourceStructDef,
+  SourceDef,
   StructRef,
   refIsStructDef,
 } from '../../../model/malloy_types';
@@ -46,7 +46,7 @@ export class QueryHeadStruct extends Source {
     return {structRef: this.fromRef};
   }
 
-  getStructDef(parameterSpace: ParameterSpace | undefined): SourceStructDef {
+  getStructDef(parameterSpace: ParameterSpace | undefined): SourceDef {
     if (refIsStructDef(this.fromRef)) {
       return this.fromRef;
     }

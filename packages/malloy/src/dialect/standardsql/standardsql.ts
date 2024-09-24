@@ -27,7 +27,7 @@ import {
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
-  FieldAtomicTypeDef,
+  AtomicTypeDef,
   TimeTruncExpr,
   TimeExtractExpr,
   TimeDeltaExpr,
@@ -81,7 +81,7 @@ declare interface TimeMeasure {
   ratio: number;
 }
 
-const bqToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
+const bqToMalloyTypes: {[key: string]: AtomicTypeDef} = {
   'DATE': {type: 'date'},
   'STRING': {type: 'string'},
   'INTEGER': {type: 'number', numberType: 'integer'},
@@ -532,7 +532,7 @@ ${indent(sql)}
     return expandBlueprintMap(STANDARDSQL_DIALECT_FUNCTIONS);
   }
 
-  malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string {
+  malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
     if (malloyType.type === 'number') {
       if (malloyType.numberType === 'integer') {
         return 'INT64';
@@ -543,7 +543,7 @@ ${indent(sql)}
     return malloyType.type;
   }
 
-  sqlTypeToMalloyType(sqlType: string): FieldAtomicTypeDef | undefined {
+  sqlTypeToMalloyType(sqlType: string): AtomicTypeDef | undefined {
     // Remove trailing params
     const baseSqlType = sqlType.match(/^(\w+)/)?.at(0) ?? sqlType;
     return bqToMalloyTypes[baseSqlType.toUpperCase()];

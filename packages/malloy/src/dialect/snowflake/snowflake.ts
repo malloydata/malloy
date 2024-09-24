@@ -27,7 +27,7 @@ import {
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
-  FieldAtomicTypeDef,
+  AtomicTypeDef,
   TimeTruncExpr,
   TimeExtractExpr,
   TimeDeltaExpr,
@@ -50,7 +50,7 @@ const extractionMap: Record<string, string> = {
   'day_of_year': 'dayofyear',
 };
 
-const snowflakeToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
+const snowflakeToMalloyTypes: {[key: string]: AtomicTypeDef} = {
   // string
   'varchar': {type: 'string'},
   'text': {type: 'string'},
@@ -456,7 +456,7 @@ ${indent(sql)}
     return expandBlueprintMap(SNOWFLAKE_DIALECT_FUNCTIONS);
   }
 
-  malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string {
+  malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
     if (malloyType.type === 'number') {
       if (malloyType.numberType === 'integer') {
         return 'integer';
@@ -467,7 +467,7 @@ ${indent(sql)}
     return malloyType.type;
   }
 
-  sqlTypeToMalloyType(sqlType: string): FieldAtomicTypeDef | undefined {
+  sqlTypeToMalloyType(sqlType: string): AtomicTypeDef | undefined {
     // Remove trailing params
     const baseSqlType = sqlType.match(/^([\w\s]+)/)?.at(0) ?? sqlType;
     return snowflakeToMalloyTypes[baseSqlType.trim().toLowerCase()];

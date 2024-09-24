@@ -55,6 +55,9 @@ export type {
   QueryDataRow,
   // Needed for DB
   StructDef,
+  TableSourceDef as TableSourceStruct,
+  SQLSourceDef as SQLSourceStruct,
+  SourceDef as SourceStructDef,
   NamedStructDefs,
   MalloyQueryData,
   AtomicFieldType as AtomicFieldTypeInner,
@@ -97,7 +100,7 @@ export type {
   DocumentPosition,
   Sampling,
   Annotation,
-  FieldAtomicTypeDef,
+  AtomicTypeDef as FieldAtomicTypeDef,
 } from './model';
 export {
   // Used in Composer Demo

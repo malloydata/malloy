@@ -24,7 +24,7 @@
 import {
   InvokedStructRef,
   Parameter,
-  SourceStructDef,
+  SourceDef,
   StructDef,
 } from '../../../model/malloy_types';
 import {MalloyElement} from '../types/malloy-element';
@@ -38,7 +38,7 @@ import {ParameterSpace} from '../field-space/parameter-space';
 export abstract class Source extends MalloyElement {
   abstract getStructDef(
     parameterSpace: ParameterSpace | undefined
-  ): SourceStructDef;
+  ): SourceDef;
 
   structRef(parameterSpace: ParameterSpace | undefined): InvokedStructRef {
     return {

@@ -22,7 +22,7 @@
  */
 
 import {Dialect} from '../../../dialect/dialect';
-import {SourceStructDef, StructDef} from '../../../model/malloy_types';
+import {SourceDef, StructDef} from '../../../model/malloy_types';
 import {QueryOperationSpace} from '../field-space/query-spaces';
 import {LookupResult} from './lookup-result';
 import {MalloyElement} from './malloy-element';
@@ -44,8 +44,8 @@ export interface FieldSpace {
 }
 
 export interface SourceFieldSpace extends FieldSpace {
-  structDef(): SourceStructDef;
-  emptyStructDef(): SourceStructDef;
+  structDef(): SourceDef;
+  emptyStructDef(): SourceDef;
 }
 
 export interface QueryFieldSpace extends SourceFieldSpace {
