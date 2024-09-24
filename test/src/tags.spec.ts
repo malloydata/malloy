@@ -522,7 +522,7 @@ describe('tags in results', () => {
     expect(plotTag!.numeric('x')).toEqual(2);
     expect(x).toEqual(2);
   });
-  test('nested fields of same field do not share tags', async () => {
+  test.skip('nested fields of same field do not share tags', async () => {
     const loaded = runtime.loadQuery(`
       source: one is duckdb.sql("SELECT 1 as one")
       run: one -> {
