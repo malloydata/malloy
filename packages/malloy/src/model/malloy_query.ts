@@ -4507,10 +4507,14 @@ class QueryStruct extends QueryNode {
     const field = this.getQueryFieldByName(name);
     if (refAnnoatation) {
       // Made the field object from the source, but the annotations were computed by the compiler
-      // and have noth the source and reference annotations included, use those.
-      const newDef = {...field.fieldDef};
-      newDef.annotation = refAnnoatation;
-      field.fieldDef = newDef;
+      // and have none of the source and reference annotations included, use those.
+      if (field.parent === undefined) {
+        throw new Error('Expected field to have a parent');
+      }
+      return field.parent.makeQueryField({
+        ...field.fieldDef,
+        annotation: refAnnoatation,
+      });
     }
     return field;
   }

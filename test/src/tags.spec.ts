@@ -522,7 +522,7 @@ describe('tags in results', () => {
     expect(plotTag!.numeric('x')).toEqual(2);
     expect(x).toEqual(2);
   });
-  test.skip('nested fields of same field do not share tags', async () => {
+  test('nested fields of same field do not share tags', async () => {
     const loaded = runtime.loadQuery(`
       source: one is duckdb.sql("SELECT 1 as one")
       run: one -> {
@@ -542,6 +542,33 @@ describe('tags in results', () => {
     expect(a.isExploreField()).toBe(true);
     if (a.isExploreField()) {
       const one = a.getFieldByName('one');
+      expect(one.tagParse().tag).tagsAre({
+        a: {},
+      });
+    }
+  });
+  test('nested fields of same field which is join do not share tags', async () => {
+    const loaded = runtime.loadQuery(`
+      source: one is duckdb.sql("SELECT 1 as one") extend {
+        join_one: two is duckdb.sql("SELECT 2 as ignore") on true
+      }
+      run: one -> {
+        nest: a is {
+          # a
+          group_by: two
+        }
+        nest: b is {
+          # b
+          group_by: two
+        }
+      }
+    `);
+    const result = await loaded.run();
+    const shape = result.resultExplore;
+    const a = shape.getFieldByName('a');
+    expect(a.isExploreField()).toBe(true);
+    if (a.isExploreField()) {
+      const one = a.getFieldByName('two');
       expect(one.tagParse().tag).tagsAre({
         a: {},
       });
