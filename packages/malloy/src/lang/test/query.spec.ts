@@ -718,7 +718,7 @@ describe('query:', () => {
       expect(`run: a -> {
         select: astr
         calculate: p is lag(count())
-      }`).translationToFailWith('Cannot add aggregate analyics to project');
+      }`).translationToFailWith('Cannot add aggregate analyics to select');
     });
     test('reference field in join', () => {
       expect(`run: a -> {

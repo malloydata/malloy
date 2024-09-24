@@ -96,12 +96,16 @@ export abstract class ExpressionDef extends MalloyElement {
    */
   typeCheck(eNode: ExpressionDef, eVal: ExprValue): boolean {
     if (eVal.dataType !== 'error' && !FT.in(eVal, this.legalChildTypes)) {
-      eNode.log(
-        'sql-native-not-allowed-in-expression',
-        eVal.dataType === 'sql native'
-          ? `'${this.elementType}' Can't be used with unsupported SQL native type '${eVal.rawType}'`
-          : `'${this.elementType}' Can't use type ${FT.inspect(eVal)}`
-      );
+      if (eVal.dataType === 'sql native') {
+        eNode.log('sql-native-not-allowed-in-expression', {
+          rawType: eVal.rawType,
+        });
+      } else {
+        eNode.log(
+          'expression-type-error',
+          `'${this.elementType}' Can't use type ${FT.inspect(eVal)}`
+        );
+      }
       return false;
     }
     return true;
@@ -432,9 +436,8 @@ function numeric(
   if (err) return err;
 
   const noGo = unsupportError(left, lhs, right, rhs);
-  if (noGo) {
-    return noGo;
-  }
+  if (noGo) return noGo;
+
   const expressionType = maxExpressionType(
     lhs.expressionType,
     rhs.expressionType
@@ -531,13 +534,7 @@ export function applyBinary(
     const num = left.getExpression(fs);
     const denom = right.getExpression(fs);
     const noGo = unsupportError(left, num, right, denom);
-    if (noGo) {
-      left.log(
-        'sql-native-not-allowed-in-expression',
-        `Cannot use '${op}' with sql native type`
-      );
-      return noGo;
-    }
+    if (noGo) return noGo;
 
     const err = errorCascade('number', num, denom);
     if (err) return err;
@@ -605,18 +602,12 @@ function unsupportError(
     evalSpace: mergeEvalSpaces(lhs.evalSpace, rhs.evalSpace),
   };
   if (lhs.dataType === 'sql native') {
-    l.log(
-      'sql-native-not-allowed-in-expression',
-      `Unsupported SQL native type '${lhs.rawType}' not allowed in expression[unsupported-sql-native-type-not-allowed-in-expression]`
-    );
+    l.log('sql-native-not-allowed-in-expression', {rawType: lhs.rawType});
     ret.dataType = rhs.dataType;
     return ret;
   }
   if (rhs.dataType === 'sql native') {
-    r.log(
-      'sql-native-not-allowed-in-expression',
-      `Unsupported SQL native type '${rhs.rawType}' not allowed in expression[unsupported-sql-native-type-not-allowed-in-expression]`
-    );
+    r.log('sql-native-not-allowed-in-expression', {rawType: rhs.rawType});
     return ret;
   }
   return undefined;

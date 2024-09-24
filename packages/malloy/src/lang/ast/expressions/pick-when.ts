@@ -104,8 +104,8 @@ export class Pick extends ExpressionDef {
         thenExpr.evalSpace
       );
       if (returnType && !FT.typeEq(returnType, thenExpr, true)) {
-        return this.logExpr('pick-then-does-not-match', {
-          thenType: thenExpr.dataType,
+        return this.logExpr('pick-type-does-not-match', {
+          pickType: thenExpr.dataType,
           returnType: returnType.dataType,
         });
       }
@@ -118,12 +118,12 @@ export class Pick extends ExpressionDef {
     returnType = typeCoalesce(returnType, elseVal);
     if (!FT.typeEq(returnType, elseVal, true)) {
       if (this.elsePick) {
-        return this.logExpr('pick-else-does-not-match', {
+        return this.logExpr('pick-else-type-does-not-match', {
           elseType: elseVal.dataType,
           returnType: returnType.dataType,
         });
       } else {
-        return this.logExpr('pick-default-does-not-match', {
+        return this.logExpr('pick-default-type-does-not-match', {
           defaultType: elseVal.dataType,
           returnType: returnType.dataType,
         });
@@ -182,13 +182,13 @@ export class Pick extends ExpressionDef {
     let anyEvalSpace: EvalSpace = 'constant';
     for (const aChoice of choiceValues) {
       if (!FT.typeEq(aChoice.when, FT.boolT)) {
-        return this.logExpr('pick-then-must-be-boolean', {
-          thenType: aChoice.when.dataType,
+        return this.logExpr('pick-when-must-be-boolean', {
+          whenType: aChoice.when.dataType,
         });
       }
       if (returnType && !FT.typeEq(returnType, aChoice.pick, true)) {
-        return this.logExpr('pick-then-does-not-match', {
-          thenType: aChoice.pick.dataType,
+        return this.logExpr('pick-type-does-not-match', {
+          pickType: aChoice.pick.dataType,
           returnType: returnType.dataType,
         });
       }
@@ -216,7 +216,7 @@ export class Pick extends ExpressionDef {
     anyEvalSpace = mergeEvalSpaces(anyEvalSpace, defVal.evalSpace);
     returnType = typeCoalesce(returnType, defVal);
     if (!FT.typeEq(returnType, defVal, true)) {
-      return this.elsePick.logExpr('pick-else-does-not-match', {
+      return this.elsePick.logExpr('pick-else-type-does-not-match', {
         elseType: defVal.dataType,
         returnType: returnType.dataType,
       });

@@ -568,6 +568,7 @@ describe('expressions', () => {
         rename: nested is astruct
         rename: inline is aninline
         dimension: field is column * 2
+        dimension: field_and_one_field is column + one.column
         dimension: many_field is many.column * 2
         dimension: many_one_field is many.column + one.column
         join_one: one is a extend {
@@ -818,6 +819,12 @@ describe('expressions', () => {
       expect(modelX`many.sum(many.field + one.field)`).toTranslate();
     });
 
+    test('many_one_field.sum()', () => {
+      expect(modelX`many_one_field.sum()`).translationToFailWith(
+        'Aggregated dimensional expression contains multiple join paths; rewrite, for example `sum(first_join.field + second_join.field)` as `first_join.field.sum() + second_join.field.sum()`'
+      );
+    });
+
     test('sum(many_one_field)', () => {
       expect(modelX`sum(many_one_field)`).translationToFailWith(
         'Aggregated dimensional expression contains multiple join paths; rewrite, for example `sum(first_join.field + second_join.field)` as `first_join.field.sum() + second_join.field.sum()`'
@@ -958,7 +965,9 @@ describe('expressions', () => {
           pick '7' when true or true
           else 7
         }
-      `).translationToFailWith("pick type 'string', expected 'number'");
+      `).translationToFailWith(
+        'pick type `string` does not match return type `number`'
+      );
     });
     test('n-ary with mismatched else clause', () => {
       expect(markSource`
@@ -966,28 +975,36 @@ describe('expressions', () => {
           pick 7 when true and true
           else '7'
         }
-      `).translationToFailWith("else type 'string', expected 'number'");
+      `).translationToFailWith(
+        'else type `string` does not match return type `number`'
+      );
     });
     test('applied else mismatch', () => {
       expect(markSource`
         source: na is a extend { dimension: d is
           7 ? pick 7 when 7 else 'not seven'
         }
-      `).translationToFailWith("else type 'string', expected 'number'");
+      `).translationToFailWith(
+        'else type `string` does not match return type `number`'
+      );
     });
     test('applied default mismatch', () => {
       expect(markSource`
         source: na is a extend { dimension: d is
           7 ? pick 'seven' when 7
         }
-      `).translationToFailWith("pick default type 'number', expected 'string'");
+      `).translationToFailWith(
+        'default type `number` does not match return type `string`'
+      );
     });
     test('applied when mismatch', () => {
       expect(markSource`
         source: na is a extend { dimension: d is
           7 ? pick 'seven' when 7 pick 6 when 6
         }
-      `).translationToFailWith("pick type 'number', expected 'string'");
+      `).translationToFailWith(
+        'pick type `number` does not match return type `string`'
+      );
     });
   });
   test('paren and applied div', () => {
@@ -1043,7 +1060,7 @@ describe('sql native fields in schema', () => {
       'source: x is a extend { dimension: notUn is not aun }'
     );
     expect(uModel).translationToFailWith(
-      "'not' Can't be used with unsupported SQL native type 'undefined'"
+      "Unsupported SQL native type 'undefined' not allowed in expression"
     );
   });
   test('allow unsupported to be cast', () => {

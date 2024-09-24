@@ -81,24 +81,27 @@ export class BaseMessageLogger implements MessageLogger {
 }
 
 type MessageParameterTypes = {
-  'pick-then-does-not-match': {
-    thenType: FieldValueType;
+  'pick-type-does-not-match': {
+    pickType: FieldValueType;
     returnType: FieldValueType;
   };
-  'pick-else-does-not-match': {
+  'pick-else-type-does-not-match': {
     elseType: FieldValueType;
     returnType: FieldValueType;
   };
-  'pick-default-does-not-match': {
+  'pick-default-type-does-not-match': {
     defaultType: FieldValueType;
     returnType: FieldValueType;
   };
   'pick-missing-else': {};
   'pick-missing-value': {};
   'pick-illegal-partial': {};
-  'pick-then-must-be-boolean': {thenType: string};
+  'pick-when-must-be-boolean': {whenType: string};
   'experiment-not-enabled': {experimentId: string};
   'experimental-dialect-not-enabled': {dialect: string};
+  'sql-native-not-allowed-in-expression': {
+    rawType: string | undefined;
+  };
   // Old Style
   'aggregate-source-not-found': string;
   'name-conflict-with-global': string;
@@ -283,7 +286,6 @@ type MessageParameterTypes = {
   'name-conflict-on-indiscriminate-import': string;
   'failed-import': string;
   'failed-to-compute-output-schema': string;
-  'sql-native-not-allowed-in-expression': string;
   'invalid-timeframe-for-time-offset': string;
   'time-comparison-type-mismatch': string;
   'arithmetic-operation-type-mismatch': string;
@@ -305,19 +307,20 @@ type MessageParameterTypes = {
   'name-conflict-in-refinement': string;
   'refinement-with-multistage-view': string;
   'foreign-key-in-join-cross': string;
+  'expression-type-error': string;
 };
 
 export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
-  'pick-then-does-not-match': e => ({
-    message: `then type ${e.thenType} does not match return type ${e.returnType}`,
+  'pick-type-does-not-match': e => ({
+    message: `pick type \`${e.pickType}\` does not match return type \`${e.returnType}\``,
     tag: 'pick-values-must-match',
   }),
-  'pick-else-does-not-match': e => ({
-    message: `else type ${e.elseType} does not match return type ${e.returnType}`,
+  'pick-else-type-does-not-match': e => ({
+    message: `else type \`${e.elseType}\` does not match return type \`${e.returnType}\``,
     tag: 'pick-values-must-match',
   }),
-  'pick-default-does-not-match': e => ({
-    message: `default type ${e.defaultType} does not match return type ${e.returnType}`,
+  'pick-default-type-does-not-match': e => ({
+    message: `default type \`${e.defaultType}\` does not match return type \`${e.returnType}\``,
     tag: 'pick-values-must-match',
   }),
   'experimental-dialect-not-enabled': e =>
@@ -326,8 +329,14 @@ export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
   'pick-missing-value': () => 'pick with no value can only be used with apply',
   'pick-illegal-partial': () =>
     'pick with partial when can only be used with apply',
-  'pick-then-must-be-boolean': e =>
-    `when expression must be boolean, not ${e.thenType}`,
+  'pick-when-must-be-boolean': e =>
+    `when expression must be boolean, not ${e.whenType}`,
+  'sql-native-not-allowed-in-expression': e => ({
+    message: `Unsupported SQL native type '${e.rawType}' not allowed in expression`,
+    tag: 'unsupported-sql-native-type-not-allowed-in-expression',
+  }),
+  'experiment-not-enabled': e =>
+    `Experimental flag \`${e.experimentId}\` is not set, feature not available`,
 };
 
 export type MessageCode = keyof MessageParameterTypes;
@@ -385,7 +394,7 @@ export function makeLogMessage<T extends MessageCode>(
     ? parameters
     : undefined;
   if (info === undefined) {
-    throw new Error('Attempted to log data without code.');
+    throw new Error(`No message formatter for error code \`${code}\`.`);
   }
   const template = typeof info === 'string' ? {message: info} : info;
   const data =

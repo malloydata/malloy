@@ -108,7 +108,7 @@ describe('model statements', () => {
     expect(
       '##! experimental.compilerTestExperimentParse\n;;[ "x" ]'
     ).translationToFailWith(
-      "Experimental flag 'compilerTestExperimentTranslate' is not set, feature not available"
+      'Experimental flag `compilerTestExperimentTranslate` is not set, feature not available'
     );
   });
 });

@@ -205,7 +205,10 @@ export abstract class MalloyElement {
     parameters: MessageParameterType<T>,
     options?: LogMessageOptions
   ): T {
-    const log = makeLogMessage(code, parameters, options);
+    const log = makeLogMessage(code, parameters, {
+      at: this.location,
+      ...options,
+    });
     if (this.codeLocation) {
       /*
        * If this element has a location, then don't report the same

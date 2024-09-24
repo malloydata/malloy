@@ -396,7 +396,7 @@ export class ExprFunc extends ExpressionDef {
             if (result.found === undefined) {
               return this.logExpr(
                 'sql-function-interpolation-not-found',
-                `Invalid interpolation: ${result.error}`
+                `Invalid interpolation: ${result.error.message}`
               );
             }
             if (result.found.refType === 'parameter') {
