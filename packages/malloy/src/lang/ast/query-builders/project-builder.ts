@@ -76,7 +76,7 @@ export class ProjectBuilder
       if (isProjectSegment(fromSeg) || isPartialSegment(fromSeg)) {
         from = fromSeg;
       } else {
-        this.resultFS.log(
+        this.resultFS.logError(
           'incompatible-segment-for-select-refinement',
           `Can't refine select with ${fromSeg.type}`
         );

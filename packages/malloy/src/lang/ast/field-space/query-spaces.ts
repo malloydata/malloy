@@ -68,10 +68,10 @@ export abstract class QueryOperationSpace
 
   abstract addRefineFromFields(refineThis: model.PipeSegment): void;
 
-  log<T extends MessageCode>(
+  logError<T extends MessageCode>(
     code: T,
     parameters: MessageParameterType<T>,
-    options?: LogMessageOptions
+    options?: Omit<LogMessageOptions, 'severity'>
   ): T {
     if (this.astEl) {
       this.astEl.logError(code, parameters, options);
@@ -243,7 +243,7 @@ export abstract class QuerySpace extends QueryOperationSpace {
   ): model.PipeSegment {
     if (this.segmentType === 'index') {
       // come coding error made this "impossible" thing happen
-      this.log(
+      this.logError(
         'unexpected-index-segment',
         'internal error generating index segment from non index query'
       );

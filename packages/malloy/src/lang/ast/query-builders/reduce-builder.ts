@@ -166,7 +166,7 @@ export class ReduceBuilder extends QuerySegmentBuilder implements QueryBuilder {
       if (isReduceSegment(fromSeg) || isPartialSegment(fromSeg)) {
         from = fromSeg;
       } else {
-        this.resultFS.log(
+        this.resultFS.logError(
           'incompatible-segment-for-reduce-refinement',
           `Can't refine reduce with ${fromSeg.type}`
         );

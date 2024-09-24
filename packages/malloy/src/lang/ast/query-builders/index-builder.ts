@@ -95,7 +95,7 @@ export class IndexBuilder implements QueryBuilder {
 
   finalize(from: PipeSegment | undefined): PipeSegment {
     if (from && !isIndexSegment(from) && !isPartialSegment(from)) {
-      this.resultFS.log(
+      this.resultFS.logError(
         'refinement-of-index-segment',
         `Can't refine index with ${from.type}`
       );

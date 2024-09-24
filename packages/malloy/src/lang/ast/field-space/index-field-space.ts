@@ -61,7 +61,7 @@ export class IndexFieldSpace extends QueryOperationSpace {
 
   getPipeSegment(refineIndex?: PipeSegment): IndexSegment {
     if (refineIndex) {
-      this.log(
+      this.logError(
         'refinement-of-index-segment',
         'index query operations cannot be refined'
       );

@@ -81,10 +81,10 @@ export class NamedSource extends Source {
     };
   }
 
-  refLog<T extends MessageCode>(
+  refLogError<T extends MessageCode>(
     code: T,
     parameters: MessageParameterType<T>,
-    options?: LogMessageOptions
+    options?: Omit<LogMessageOptions, 'severity'>
   ) {
     if (typeof this.ref === 'string') {
       this.logError(code, parameters, options);
@@ -97,7 +97,10 @@ export class NamedSource extends Source {
     const modelEnt = this.modelEntry(this.ref);
     const entry = modelEnt?.entry;
     if (!entry) {
-      this.refLog('source-not-found', `Undefined source '${this.refName}'`);
+      this.refLogError(
+        'source-not-found',
+        `Undefined source '${this.refName}'`
+      );
       return;
     }
     if (entry.type === 'query') {
@@ -196,7 +199,7 @@ export class NamedSource extends Source {
         if (paramHasValue(parametersIn[paramName])) {
           outArguments[paramName] = {...parametersIn[paramName]};
         } else {
-          this.refLog(
+          this.refLogError(
             'missing-source-argument',
             `Argument not provided for required parameter \`${paramName}\``
           );

@@ -47,7 +47,7 @@ export class ProjectFieldSpace extends QuerySpace {
       expressionInvolvesAggregate(typeDesc.expressionType) &&
       expressionIsAnalytic(typeDesc.expressionType)
     ) {
-      this.log(
+      this.logError(
         'aggregate-analytic-in-select',
         'Cannot add aggregate analyics to select'
       );
