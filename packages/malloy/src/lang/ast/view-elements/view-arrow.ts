@@ -59,7 +59,7 @@ export class ViewArrow extends View {
     _pipeline: PipeSegment[],
     _isNestIn: QueryOperationSpace | undefined
   ): PipeSegment[] {
-    this.log(
+    this.logError(
       'refinement-with-multistage-view',
       'A multi-segment view cannot be used as a refinement'
     );

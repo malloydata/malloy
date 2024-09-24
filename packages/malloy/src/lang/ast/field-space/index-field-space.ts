@@ -51,7 +51,7 @@ export class IndexFieldSpace extends QueryOperationSpace {
       } else if (indexField instanceof WildcardFieldReference) {
         this.addWild(indexField);
       } else {
-        indexField.log(
+        indexField.logError(
           'invalid-field-in-index-query',
           'Internal error, not expected in index query'
         );
@@ -80,7 +80,7 @@ export class IndexFieldSpace extends QueryOperationSpace {
           const fieldRef = field.fieldRef;
           const check = fieldRef.getField(this.exprSpace);
           if (check.error) {
-            fieldRef.log(check.error.code, check.error.message);
+            fieldRef.logError(check.error.code, check.error.message);
           } else {
             indexFields.push(fieldRef.refToField);
           }
@@ -106,14 +106,14 @@ export class IndexFieldSpace extends QueryOperationSpace {
           if (ent instanceof StructSpaceField) {
             current = ent.fieldSpace;
           } else {
-            pathPart.log(
+            pathPart.logError(
               'invalid-wildcard-source',
               `Field '${part}' does not contain rows and cannot be expanded with '*'`
             );
             return;
           }
         } else {
-          pathPart.log(
+          pathPart.logError(
             'wildcard-source-not-found',
             `No such field as '${part}'`
           );
@@ -136,7 +136,7 @@ export class IndexFieldSpace extends QueryOperationSpace {
       ]);
       if (this.entry(indexName)) {
         const conflict = this.expandedWild[indexName]?.join('.');
-        wild.log(
+        wild.logError(
           'name-conflict-in-wildcard-expansion',
           `Cannot expand '${name}' in '${
             wild.refString

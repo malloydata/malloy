@@ -67,7 +67,7 @@ export abstract class FieldReference
   makeEntry(fs: DynamicSpace) {
     const refName = this.outputName;
     if (fs.entry(refName)) {
-      this.log(
+      this.logError(
         'output-name-conflict',
         `Output already has a field named '${refName}'`
       );

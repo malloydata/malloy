@@ -66,7 +66,7 @@ export class IndexBuilder implements QueryBuilder {
       this.filters.push(...qp.getFilterList(this.inputFS));
     } else if (qp instanceof Limit) {
       if (this.limit) {
-        this.limit.log(
+        this.limit.logError(
           'index-limit-already-specified',
           'Ignored, too many limit: statements'
         );
@@ -76,7 +76,7 @@ export class IndexBuilder implements QueryBuilder {
       this.resultFS.pushFields(...qp.fields.list);
       if (qp.weightBy) {
         if (this.indexOn) {
-          this.indexOn.log(
+          this.indexOn.logError(
             'index-by-already-specified',
             'Ignoring previous BY'
           );
@@ -86,7 +86,7 @@ export class IndexBuilder implements QueryBuilder {
     } else if (qp instanceof SampleProperty) {
       this.sample = qp.sampling();
     } else {
-      qp.log(
+      qp.logError(
         'illegal-operation-for-index',
         'Not legal in an index query operation'
       );

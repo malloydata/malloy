@@ -108,7 +108,7 @@ export abstract class AtomicFieldDeclaration
       const fs = this.executesInOutputSpace() ? getOutputFS() : exprFS;
       exprValue = this.expr.getExpression(fs);
     } catch (error) {
-      this.log(
+      this.logError(
         'failed-field-definition',
         `Cannot define '${exprName}', ${error.message}`
       );
@@ -119,10 +119,9 @@ export abstract class AtomicFieldDeclaration
     }
     let retType = exprValue.dataType;
     if (retType === 'null') {
-      this.expr.log(
+      this.expr.logWarning(
         'null-typed-field-definition',
-        'null value defaults to type number, use "null::TYPE" to specify correct type',
-        {severity: 'warn'}
+        'null value defaults to type number, use "null::TYPE" to specify correct type'
       );
       retType = 'number';
     }
@@ -155,7 +154,7 @@ export abstract class AtomicFieldDeclaration
     if (!circularDef) {
       if (exprValue.dataType !== 'error') {
         const badType = FT.inspect(exprValue);
-        this.log(
+        this.logError(
           'invalid-type-for-field-definition',
           `Cannot define '${exprName}', unexpected type: ${badType}`
         );

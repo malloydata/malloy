@@ -52,7 +52,7 @@ export class DefineQuery
   execute(doc: Document): void {
     const existing = doc.getEntry(this.name);
     if (existing) {
-      this.log(
+      this.logError(
         'query-definition-name-conflict',
         `'${this.name}' is already defined, cannot redefine`
       );

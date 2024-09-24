@@ -52,7 +52,7 @@ export function typecheckProject(type: TypeDesc, logTo: MalloyElement) {
         `Unexpected expression type ${type.expressionType} not handled here`
       );
     }
-    logTo.log(
+    logTo.logError(
       code,
       `Cannot use ${kind} field in a select operation, did you mean to use ${useInstead} operation instead?`
     );
@@ -77,19 +77,19 @@ export function typecheckIndex(type: TypeDesc, logTo: MalloyElement) {
         `Unexpected expression type ${type.expressionType} not handled here`
       );
     }
-    logTo.log(code, `Cannot use ${kind} field in an index operation`);
+    logTo.logError(code, `Cannot use ${kind} field in an index operation`);
   }
 }
 
 export function typecheckDimension(type: TypeDesc, logTo: MalloyElement) {
   if (!expressionIsScalar(type.expressionType)) {
     if (expressionIsAggregate(type.expressionType)) {
-      logTo.log(
+      logTo.logError(
         'aggregate-in-dimension',
         'Cannot use an aggregate field in a dimension declaration, did you mean to use a measure declaration instead?'
       );
     } else if (expressionIsAnalytic(type.expressionType)) {
-      logTo.log(
+      logTo.logError(
         'analytic-in-dimension',
         'Cannot use an analytic field in a dimension declaration'
       );
@@ -104,12 +104,12 @@ export function typecheckDimension(type: TypeDesc, logTo: MalloyElement) {
 export function typecheckMeasure(type: TypeDesc, logTo: MalloyElement) {
   if (!expressionIsAggregate(type.expressionType)) {
     if (expressionIsScalar(type.expressionType)) {
-      logTo.log(
+      logTo.logError(
         'scalar-in-measure',
         'Cannot use a scalar field in a measure declaration, did you mean to use a dimension declaration instead?'
       );
     } else if (expressionIsAnalytic(type.expressionType)) {
-      logTo.log(
+      logTo.logError(
         'analytic-in-measure',
         'Cannot use an analytic field in a measure declaration'
       );
@@ -123,9 +123,12 @@ export function typecheckMeasure(type: TypeDesc, logTo: MalloyElement) {
 
 export function typecheckDeclare(type: TypeDesc, logTo: MalloyElement) {
   if (type.dataType === 'turtle') {
-    logTo.log('view-in-declare', 'Views cannot be used in a declare block');
+    logTo.logError(
+      'view-in-declare',
+      'Views cannot be used in a declare block'
+    );
   } else if (expressionIsAnalytic(type.expressionType)) {
-    logTo.log(
+    logTo.logError(
       'analytic-in-declare',
       'Analytic expressions can not be used in a declare block'
     );
@@ -157,7 +160,7 @@ export function typecheckCalculate(type: TypeDesc, logTo: MalloyElement) {
         `Unexpected expression type ${type.expressionType} not handled here`
       );
     }
-    logTo.log(
+    logTo.logError(
       code,
       `Cannot use ${kind} field in a calculate operation, did you mean to use ${useInstead} operation instead?`
     );
@@ -187,7 +190,7 @@ export function typecheckAggregate(type: TypeDesc, logTo: MalloyElement) {
     } else {
       throw new Error(`Unexpected expression type ${type} not handled here`);
     }
-    logTo.log(
+    logTo.logError(
       code,
       `Cannot use ${kind} field in an aggregate operation, did you mean to use ${useInstead} operation instead?`
     );
@@ -216,7 +219,7 @@ export function typecheckGroupBy(type: TypeDesc, logTo: MalloyElement) {
         `Unexpected expression type ${type.expressionType} not handled here`
       );
     }
-    logTo.log(
+    logTo.logError(
       code,
       `Cannot use ${kind} field in a group_by operation, did you mean to use ${useInstead} operation instead?`
     );

@@ -39,7 +39,10 @@ export class RenameField extends MalloyElement implements MakeEntry {
   }
   makeEntry(fs: DynamicSpace) {
     if (this.oldName.refString === this.newName) {
-      this.log('invalid-rename-with-same-name', "Can't rename field to itself");
+      this.logError(
+        'invalid-rename-with-same-name',
+        "Can't rename field to itself"
+      );
       return;
     }
     const oldValue = this.oldName.getField(fs);
@@ -51,10 +54,10 @@ export class RenameField extends MalloyElement implements MakeEntry {
           new RenameSpaceField(oldValue.found, this.newName, this.location)
         );
       } else {
-        this.log('failed-rename', `'${this.oldName}' cannot be renamed`);
+        this.logError('failed-rename', `'${this.oldName}' cannot be renamed`);
       }
     } else {
-      this.log(
+      this.logError(
         'rename-field-not-found',
         `Can't rename '${this.oldName}', no such field`
       );

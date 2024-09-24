@@ -52,7 +52,7 @@ export class QueryReference extends MalloyElement implements QueryElement {
       };
     };
     if (!query) {
-      this.log(
+      this.logError(
         'query-reference-not-found',
         `Reference to undefined query '${this.name.refString}'`
       );
@@ -77,7 +77,7 @@ export class QueryReference extends MalloyElement implements QueryElement {
         inputStruct,
       };
     }
-    this.log(
+    this.logError(
       'non-query-used-as-query',
       `Illegal reference to '${this.name}', query expected`
     );

@@ -57,7 +57,7 @@ export class ReferenceField extends SpaceField {
     if (!this.queryFieldDef) {
       const check = this.fieldRef.getField(fs);
       if (check.error) {
-        this.fieldRef.log(check.error.code, check.error.message);
+        this.fieldRef.logError(check.error.code, check.error.message);
       }
 
       // TODO investigate removing 'fieldref' as a type, as it obscures the

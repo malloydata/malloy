@@ -87,9 +87,9 @@ export class NamedSource extends Source {
     options?: LogMessageOptions
   ) {
     if (typeof this.ref === 'string') {
-      this.log(code, parameters, options);
+      this.logError(code, parameters, options);
     } else {
-      this.ref.log(code, parameters, options);
+      this.ref.logError(code, parameters, options);
     }
   }
 
@@ -101,25 +101,25 @@ export class NamedSource extends Source {
       return;
     }
     if (entry.type === 'query') {
-      this.log(
+      this.logError(
         'invalid-source-from-query',
         `Cannot construct a source from a query '${this.refName}'`
       );
       return;
     } else if (entry.type === 'function') {
-      this.log(
+      this.logError(
         'invalid-source-from-function',
         `Cannot construct a source from a function '${this.refName}'`
       );
       return;
     } else if (entry.type === 'connection') {
-      this.log(
+      this.logError(
         'invalid-source-from-connection',
         `Cannot construct a source from a connection '${this.refName}'`
       );
       return;
     } else if (isSQLBlockStruct(entry) && entry.declaredSQLBlock) {
-      this.log(
+      this.logError(
         'invalid-source-from-sql-block',
         `Must use 'from_sql()' for sql source '${this.refName}'`
       );
@@ -155,7 +155,7 @@ export class NamedSource extends Source {
           ? argument.value.fieldReference
           : undefined);
       if (id === undefined) {
-        argument.value.log(
+        argument.value.logError(
           'unnamed-source-argument',
           'Parameterized source arguments must be named with `parameter_name is`'
         );
@@ -163,7 +163,7 @@ export class NamedSource extends Source {
       }
       const name = id.outputName;
       if (passedNames.has(name)) {
-        argument.log(
+        argument.logError(
           'duplicate-source-argument',
           `Cannot pass argument for \`${name}\` more than once`
         );
@@ -172,7 +172,7 @@ export class NamedSource extends Source {
       passedNames.add(name);
       const parameter = (parametersIn ?? {})[name];
       if (!parameter) {
-        id.log(
+        id.logError(
           'source-parameter-not-found',
           `\`${this.refName}\` has no declared parameter named \`${id.refString}\``
         );

@@ -72,7 +72,7 @@ export class ReferenceView extends View {
       };
     };
     if (!lookup.found) {
-      this.log(
+      this.logError(
         'view-not-found',
         `\`${this.reference.refString}\` is not defined`
       );
@@ -109,12 +109,12 @@ export class ReferenceView extends View {
     } else if (isTurtleDef(fieldDef)) {
       if (this.reference.list.length > 1) {
         if (forRefinement) {
-          this.log(
+          this.logError(
             'refinement-with-joined-view',
             'Cannot use view from join as refinement'
           );
         } else {
-          this.log('nest-of-joined-view', 'Cannot use view from join');
+          this.logError('nest-of-joined-view', 'Cannot use view from join');
         }
         return oops();
       }
@@ -130,12 +130,15 @@ export class ReferenceView extends View {
       };
     } else {
       if (forRefinement) {
-        this.reference.log(
+        this.reference.logError(
           'refinement-with-source',
           `named refinement \`${this.reference.refString}\` must be a view, found a ${fieldDef.type}`
         );
       } else {
-        this.reference.log('nest-of-source', 'This operation is not supported');
+        this.reference.logError(
+          'nest-of-source',
+          'This operation is not supported'
+        );
       }
       return oops();
     }
@@ -147,7 +150,7 @@ export class ReferenceView extends View {
     });
     if (error) return;
     if (pipeline.length !== 1) {
-      this.reference.log(
+      this.reference.logError(
         'refinement-with-multistage-view',
         `named refinement \`${this.reference.refString}\` must have exactly one stage`
       );

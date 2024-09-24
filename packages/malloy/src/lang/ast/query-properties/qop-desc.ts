@@ -57,7 +57,7 @@ export class QOpDesc extends ListOf<QueryProperty> {
       if (el.forceQueryClass) {
         if (guessType) {
           if (guessType !== el.forceQueryClass) {
-            el.log(
+            el.logError(
               `illegal-${guessType}-operation`,
               `Not legal in ${guessType} query`
             );
@@ -69,7 +69,7 @@ export class QOpDesc extends ListOf<QueryProperty> {
       needsExplicitQueryClass ||= el.needsExplicitQueryClass ?? false;
     }
     if (guessType === undefined && needsExplicitQueryClass) {
-      this.log('ambiguous-view-type', {});
+      this.logError('ambiguous-view-type', {});
       guessType = QueryClass.Project;
     }
     this.opClass = guessType;

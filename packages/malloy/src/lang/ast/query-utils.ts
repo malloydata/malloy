@@ -41,7 +41,7 @@ export function detectAndRemovePartialStages(
     }
   }
   if (hasPartials) {
-    logTo.log('ambiguous-view-type', {});
+    logTo.logError('ambiguous-view-type', {});
   }
   return cleaned;
 }

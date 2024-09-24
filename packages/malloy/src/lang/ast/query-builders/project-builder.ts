@@ -61,7 +61,7 @@ export class ProjectBuilder
 
   execute(qp: QueryProperty): void {
     if (qp.elementType === 'having' || qp instanceof GroupBy) {
-      qp.log(
+      qp.logError(
         'illegal-operation-in-select-segment',
         'Illegal statement in a select query operation'
       );

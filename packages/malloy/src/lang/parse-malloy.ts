@@ -401,7 +401,7 @@ class ASTStep implements TranslationStep {
     that.compilerFlags = secondPass.compilerFlags;
 
     if (newAst.elementType === 'unimplemented') {
-      newAst.log(
+      newAst.logError(
         'untranslated-parse-node',
         'INTERNAL COMPILER ERROR: Untranslated parse node'
       );
@@ -413,7 +413,7 @@ class ASTStep implements TranslationStep {
       // it should probably never be hit
       for (const walkedTo of newAst.walk()) {
         if (walkedTo instanceof ast.Unimplemented) {
-          walkedTo.log(
+          walkedTo.logError(
             'untranslated-parse-node',
             'INTERNAL COMPILER ERROR: Untranslated parse node'
           );

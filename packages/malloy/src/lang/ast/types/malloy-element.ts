@@ -200,7 +200,7 @@ export abstract class MalloyElement {
   }
 
   private readonly logged = new Set<string>();
-  log<T extends MessageCode>(
+  private log<T extends MessageCode>(
     code: T,
     parameters: MessageParameterType<T>,
     options?: LogMessageOptions
@@ -223,12 +223,28 @@ export abstract class MalloyElement {
     return code;
   }
 
-  logExpr<T extends MessageCode>(
+  logError<T extends MessageCode>(
+    code: T,
+    parameters: MessageParameterType<T>,
+    options?: Omit<LogMessageOptions, 'severity'>
+  ): T {
+    return this.log(code, parameters, {severity: 'error', ...options});
+  }
+
+  logWarning<T extends MessageCode>(
+    code: T,
+    parameters: MessageParameterType<T>,
+    options?: Omit<LogMessageOptions, 'severity'>
+  ): T {
+    return this.log(code, parameters, {severity: 'warn', ...options});
+  }
+
+  loggedErrorExpr<T extends MessageCode>(
     code: T,
     parameters: MessageParameterType<T>,
     options?: LogMessageOptions
   ): ExprValue {
-    return errorFor(this.log(code, parameters, options));
+    return errorFor(this.logError(code, parameters, options));
   }
 
   get logger(): MessageLogger {
@@ -316,7 +332,7 @@ export abstract class MalloyElement {
       return true;
     }
     if (!silent) {
-      this.log('experiment-not-enabled', {experimentId});
+      this.logError('experiment-not-enabled', {experimentId});
     }
     return false;
   }
@@ -625,7 +641,7 @@ export class Document extends MalloyElement implements NameSpace {
   setEntry(str: string, ent: ModelEntry): void {
     // TODO this error message is going to be in the wrong place everywhere...
     if (this.globalNameSpace.getEntry(str) !== undefined) {
-      this.log(
+      this.logError(
         'name-conflict-with-global',
         `Cannot redefine '${str}', which is in global namespace`
       );
@@ -651,7 +667,7 @@ export class Document extends MalloyElement implements NameSpace {
       getDialect(dialect).experimental &&
       !t.experimentalDialectEnabled(dialect)
     ) {
-      me.log('experimental-dialect-not-enabled', {dialect});
+      me.logError('experimental-dialect-not-enabled', {dialect});
     }
   }
 

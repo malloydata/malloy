@@ -40,7 +40,7 @@ export class TopBy extends MalloyElement {
     if (this.by instanceof ExpressionDef) {
       const byExpr = this.by.getExpression(fs);
       if (!expressionIsAggregate(byExpr.expressionType)) {
-        this.log(
+        this.logError(
           'top-by-non-aggregate',
           'top by expression must be an aggregate'
         );

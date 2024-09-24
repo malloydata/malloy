@@ -54,7 +54,7 @@ export class ExprProps extends ExpressionDef {
   ): ExprValue {
     if (wheres.length > 0) {
       if (!this.expr.supportsWhere(expr)) {
-        this.expr.log(
+        this.expr.logError(
           'filter-of-non-aggregate',
           'Filtered expression requires an aggregate computation'
         );
@@ -66,7 +66,7 @@ export class ExprProps extends ExpressionDef {
         if (
           testList.find(cond => expressionIsCalculation(cond.expressionType))
         ) {
-          where.log(
+          where.logError(
             'aggregate-filter-expression-not-scalar',
             'Cannot filter an expresion with an aggregate or analytical computation'
           );
@@ -83,7 +83,7 @@ export class ExprProps extends ExpressionDef {
           },
         };
       }
-      this.expr.log(
+      this.expr.logError(
         'filter-of-non-aggregate',
         `Cannot filter '${expr.expressionType}' data`
       );
@@ -100,7 +100,7 @@ export class ExprProps extends ExpressionDef {
     for (const statement of this.statements) {
       if (statement instanceof PartitionBy) {
         if (!this.expr.canSupportPartitionBy()) {
-          statement.log(
+          statement.logError(
             'partition-by-of-non-window-function',
             '`partition_by` is not supported for this kind of expression'
           );
@@ -109,12 +109,12 @@ export class ExprProps extends ExpressionDef {
         }
       } else if (statement instanceof Limit) {
         if (limit) {
-          statement.log(
+          statement.logError(
             'expression-limit-already-specified',
             'limit already specified'
           );
         } else if (!this.expr.canSupportLimit()) {
-          statement.log(
+          statement.logError(
             'limit-of-non-aggregate-function',
             '`limit` is not supported for this kind of expression'
           );
@@ -123,7 +123,7 @@ export class ExprProps extends ExpressionDef {
         }
       } else if (statement instanceof FunctionOrdering) {
         if (!this.expr.canSupportOrderBy()) {
-          statement.log(
+          statement.logError(
             'order-by-of-non-aggregate-function',
             '`order_by` is not supported for this kind of expression'
           );

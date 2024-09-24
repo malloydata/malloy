@@ -53,7 +53,7 @@ export function opOutputStruct(
     try {
       return Segment.nextStructDef(inputStruct, opDesc);
     } catch (e) {
-      logTo.log(
+      logTo.logError(
         'failed-to-compute-output-schema',
         `INTERNAL ERROR model/Segment.nextStructDef: ${e.message}\n` +
           `QUERY: ${inspect(opDesc, {breakLength: 72, depth: Infinity})}`

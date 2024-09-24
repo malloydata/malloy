@@ -97,11 +97,11 @@ export abstract class ExpressionDef extends MalloyElement {
   typeCheck(eNode: ExpressionDef, eVal: ExprValue): boolean {
     if (eVal.dataType !== 'error' && !FT.in(eVal, this.legalChildTypes)) {
       if (eVal.dataType === 'sql native') {
-        eNode.log('sql-native-not-allowed-in-expression', {
+        eNode.logError('sql-native-not-allowed-in-expression', {
           rawType: eVal.rawType,
         });
       } else {
-        eNode.log(
+        eNode.logError(
           'expression-type-error',
           `'${this.elementType}' Can't use type ${FT.inspect(eVal)}`
         );
@@ -166,7 +166,7 @@ export class ExprDuration extends ExpressionDef {
     if (isTimeFieldType(lhs.dataType) && (op === '+' || op === '-')) {
       const num = this.n.getExpression(fs);
       if (!FT.typeEq(num, FT.numberT)) {
-        this.log(
+        this.logError(
           'invalid-duration-quantity',
           `Duration quantity needs number not '${num.dataType}`
         );
@@ -214,7 +214,7 @@ export class ExprDuration extends ExpressionDef {
           resultGranularity
         );
       } else {
-        return this.logExpr(
+        return this.loggedErrorExpr(
           'invalid-timeframe-for-time-offset',
           `Cannot offset date by ${this.timeframe}`
         );
@@ -281,7 +281,7 @@ function timeCompare(
     lhs.dataType !== 'null' &&
     rhs.dataType !== 'null'
   ) {
-    left.log(
+    left.logError(
       'time-comparison-type-mismatch',
       `Cannot compare a ${lhs.dataType} to a ${rhs.dataType}`
     );
@@ -444,12 +444,12 @@ function numeric(
   );
 
   if (lhs.dataType !== 'number') {
-    left.log(
+    left.logError(
       'arithmetic-operation-type-mismatch',
       `The '${op}' operator requires a number, not a '${lhs.dataType}'`
     );
   } else if (rhs.dataType !== 'number') {
-    right.log(
+    right.logError(
       'arithmetic-operation-type-mismatch',
       `The '${op}' operator requires a number, not a '${rhs.dataType}'`
     );
@@ -490,7 +490,7 @@ function delta(
       } else if (lhs.dataType === 'date') {
         duration = new ExprDuration(right, 'day');
       } else {
-        return left.logExpr(
+        return left.loggedErrorExpr(
           'time-offset-type-mismatch',
           `Can not offset time by '${rhs.dataType}'`
         );
@@ -540,12 +540,12 @@ export function applyBinary(
     if (err) return err;
 
     if (num.dataType !== 'number') {
-      left.log(
+      left.logError(
         'arithmetic-operation-type-mismatch',
         'Numerator must be a number'
       );
     } else if (denom.dataType !== 'number') {
-      right.log(
+      right.logError(
         'arithmetic-operation-type-mismatch',
         'Denominator must be a number'
       );
@@ -566,7 +566,7 @@ export function applyBinary(
     }
     return errorFor('divide type mismatch');
   }
-  return left.logExpr(
+  return left.loggedErrorExpr(
     'unexpected-binary-operator',
     `Cannot use ${op} operator here`
   );
@@ -602,12 +602,12 @@ function unsupportError(
     evalSpace: mergeEvalSpaces(lhs.evalSpace, rhs.evalSpace),
   };
   if (lhs.dataType === 'sql native') {
-    l.log('sql-native-not-allowed-in-expression', {rawType: lhs.rawType});
+    l.logError('sql-native-not-allowed-in-expression', {rawType: lhs.rawType});
     ret.dataType = rhs.dataType;
     return ret;
   }
   if (rhs.dataType === 'sql native') {
-    r.log('sql-native-not-allowed-in-expression', {rawType: rhs.rawType});
+    r.logError('sql-native-not-allowed-in-expression', {rawType: rhs.rawType});
     return ret;
   }
   return undefined;

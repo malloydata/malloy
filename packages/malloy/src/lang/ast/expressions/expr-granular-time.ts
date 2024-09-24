@@ -80,7 +80,7 @@ export class ExprGranularTime extends ExpressionDef {
       return tsVal;
     }
     if (exprVal.dataType !== 'error') {
-      this.log(
+      this.logError(
         'unsupported-type-for-time-truncation',
         `Cannot do time truncation on type '${exprVal.dataType}'`
       );

@@ -71,7 +71,7 @@ export class SQLSource extends Source {
         true
       );
     } else if (connection.entry.type !== 'connection') {
-      this.connectionName.log(
+      this.connectionName.logError(
         'invalid-connection-for-sql-source',
         `${this.connectionName.refString} is not a connection`
       );
@@ -90,7 +90,7 @@ export class SQLSource extends Source {
     const sql = this.sqlBlock();
     const sqlDefEntry = this.translator()?.root.sqlQueryZone;
     if (!sqlDefEntry) {
-      this.log(
+      this.logError(
         'failed-to-fetch-sql-source-schema',
         "Cant't look up schema for sql block"
       );
@@ -114,7 +114,7 @@ export class SQLSource extends Source {
     }
     const sqlDefEntry = this.translator()?.root.sqlQueryZone;
     if (!sqlDefEntry) {
-      this.log(
+      this.logError(
         'failed-to-fetch-sql-source-schema',
         "Cant't look up schema for sql block"
       );
@@ -125,7 +125,7 @@ export class SQLSource extends Source {
     const lookup = sqlDefEntry.getEntry(sql.name);
     if (lookup.status === 'error') {
       const msgLines = lookup.message.split(/\r?\n/);
-      this.select.log(
+      this.select.logError(
         'invalid-sql-source',
         'Invalid SQL, ' + msgLines.join('\n    ')
       );
@@ -144,7 +144,7 @@ export class SQLSource extends Source {
       }
       return locStruct;
     } else {
-      this.log(
+      this.logError(
         'non-top-level-sql-source',
         '`connection_name.sql(...)` can currently only be used in top level source/query definitions'
       );

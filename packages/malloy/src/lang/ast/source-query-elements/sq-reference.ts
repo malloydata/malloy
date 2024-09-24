@@ -63,7 +63,7 @@ export class SQReference extends SourceQueryElement {
         );
       }
     } else {
-      this.ref.log(
+      this.ref.logError(
         'source-or-query-not-found',
         `Reference to undefined object '${this.ref.refString}'`
       );
@@ -82,7 +82,7 @@ export class SQReference extends SourceQueryElement {
     }
     const entry = this.ref.getNamed();
     if (!entry) {
-      this.ref.log(
+      this.ref.logError(
         'source-not-found',
         `Reference to undefined object '${this.ref.refString}'`
       );
@@ -91,7 +91,7 @@ export class SQReference extends SourceQueryElement {
     }
     if (entry.type === 'query') {
       if (this.args !== undefined) {
-        this.ref.log(
+        this.ref.logError(
           'illegal-query-argument',
           'Arguments cannot be passed to queries'
         );

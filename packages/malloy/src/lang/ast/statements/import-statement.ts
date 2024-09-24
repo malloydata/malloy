@@ -73,7 +73,7 @@ export class ImportStatement
     try {
       this.fullURL = decodeURI(new URL(url, baseURL).toString());
     } catch (e) {
-      this.log('invalid-import-url', 'Invalid URL in import statement');
+      this.logError('invalid-import-url', 'Invalid URL in import statement');
     }
   }
 
@@ -92,7 +92,7 @@ export class ImportStatement
   execute(doc: Document): void {
     const trans = this.translator();
     if (!trans) {
-      this.log(
+      this.logError(
         'no-translator-for-import',
         'Cannot import without translation context'
       );
@@ -105,7 +105,7 @@ export class ImportStatement
           for (const importOne of this.list) {
             const fetchName = importOne.from || importOne;
             if (doc.getEntry(importOne.text)) {
-              importOne.log(
+              importOne.logError(
                 'name-conflict-on-selective-import',
                 `Cannot redefine '${importOne.text}'`
               );
@@ -116,7 +116,7 @@ export class ImportStatement
               }
               doc.setEntry(importOne.text, {entry: importMe, exported: false});
             } else {
-              fetchName.log(
+              fetchName.logError(
                 'selective-import-not-found',
                 `Cannot find '${fetchName.text}', not imported`
               );
@@ -128,7 +128,7 @@ export class ImportStatement
             trans.getChildExports(this.fullURL)
           )) {
             if (doc.getEntry(importing)) {
-              this.log(
+              this.logError(
                 'name-conflict-on-indiscriminate-import',
                 `Cannot redefine '${importing}'`
               );
@@ -138,9 +138,12 @@ export class ImportStatement
           }
         }
       } else if (src.status === 'error') {
-        this.log('failed-import', `import failed: '${src.message}'`);
+        this.logError('failed-import', `import failed: '${src.message}'`);
       } else {
-        this.log('failed-import', `import failed with status: '${src.status}'`);
+        this.logError(
+          'failed-import',
+          `import failed with status: '${src.status}'`
+        );
       }
     }
   }

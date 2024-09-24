@@ -70,7 +70,7 @@ export class ExprTimeExtract extends ExpressionDef {
     const extractTo = ExprTimeExtract.extractor(this.extractText);
     if (extractTo) {
       if (this.args.length !== 1) {
-        return this.logExpr(
+        return this.loggedErrorExpr(
           'too-many-arguments-for-time-extraction',
           `Extraction function ${extractTo} requires one argument`
         );
@@ -93,13 +93,13 @@ export class ExprTimeExtract extends ExpressionDef {
           };
         }
         if (!isTimeFieldType(first.dataType)) {
-          return from.first.logExpr(
+          return from.first.loggedErrorExpr(
             'invalid-type-for-time-extraction',
             `Can't extract ${extractTo} from '${first.dataType}'`
           );
         }
         if (!isTimeFieldType(last.dataType)) {
-          return from.last.logExpr(
+          return from.last.loggedErrorExpr(
             'invalid-type-for-time-extraction',
             `Cannot extract ${extractTo} from '${last.dataType}'`
           );
@@ -122,20 +122,20 @@ export class ExprTimeExtract extends ExpressionDef {
             }
           }
           if (cannotMeasure) {
-            return from.first.logExpr(
+            return from.first.loggedErrorExpr(
               'invalid-types-for-time-measurement',
               `Cannot measure from ${first.dataType} to ${last.dataType}`
             );
           }
         }
         if (['week', 'month', 'quarter', 'year'].includes(extractTo)) {
-          return this.logExpr(
+          return this.loggedErrorExpr(
             'invalid-timeframe-for-time-measurement',
             `Cannot measure interval using '${extractTo}'`
           );
         }
         if (!isTimestampUnit(extractTo)) {
-          return this.logExpr(
+          return this.loggedErrorExpr(
             'invalid-time-extraction-unit',
             `Cannot extract ${extractTo} from a range`
           );
@@ -168,7 +168,7 @@ export class ExprTimeExtract extends ExpressionDef {
           };
         }
         if (argV.dataType !== 'error') {
-          this.log(
+          this.logError(
             'unsupported-type-for-time-extraction',
             `${this.extractText}() requires time type, not '${argV.dataType}'`
           );

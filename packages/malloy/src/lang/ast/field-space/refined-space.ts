@@ -47,12 +47,12 @@ export class RefinedSpace extends DynamicSpace {
         const existing = oldMap.find(([symb]) => symb === name.refString);
         if (existing === undefined) {
           if (parameters?.entry(name.refString)) {
-            name.log(
+            name.logError(
               `${choose.edit}-parameter`,
               `Illegal \`${choose.edit}:\` of parameter`
             );
           } else {
-            name.log(
+            name.logError(
               'field-list-edit-not-found',
               `\`${name.refString}\` is not defined`
             );
@@ -76,7 +76,7 @@ export class RefinedSpace extends DynamicSpace {
       if (canMakeEntry(me)) {
         me.makeEntry(this);
       } else {
-        me.log(
+        me.logError(
           'unexpected-element-type',
           `Internal error, ${me.elementType} not expected in this context`
         );

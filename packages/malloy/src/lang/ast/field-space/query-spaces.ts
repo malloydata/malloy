@@ -74,7 +74,7 @@ export abstract class QueryOperationSpace
     options?: LogMessageOptions
   ): T {
     if (this.astEl) {
-      this.astEl.log(code, parameters, options);
+      this.astEl.logError(code, parameters, options);
     }
     return code;
   }
@@ -101,14 +101,14 @@ export abstract class QueryOperationSpace
           if (ent instanceof StructSpaceField) {
             current = ent.fieldSpace;
           } else {
-            pathPart.log(
+            pathPart.logError(
               'invalid-wildcard-source',
               `Field '${part}' does not contain rows and cannot be expanded with '*'`
             );
             return;
           }
         } else {
-          pathPart.log(
+          pathPart.logError(
             'wildcard-source-not-defined',
             `No such field as '${part}'`
           );
@@ -127,7 +127,7 @@ export abstract class QueryOperationSpace
       }
       if (this.entry(name)) {
         const conflict = this.expandedWild[name]?.join('.');
-        wild.log(
+        wild.logError(
           'name-conflict-in-wildcard-expansion',
           `Cannot expand '${name}' in '${
             wild.refString

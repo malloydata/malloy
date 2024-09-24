@@ -37,7 +37,7 @@ export function refine(
 ): PipeSegment[] {
   // TODO we should probably support this
   if (refineTo.length !== 1) {
-    logTo.log(
+    logTo.logError(
       'refinement-with-multistage-view',
       'Named refinements of multi-stage views are not supported'
     );
@@ -47,7 +47,7 @@ export function refine(
   const to = {...refineTo[0]};
   const from = refineFrom;
   if (isRawSegment(to)) {
-    logTo.log(
+    logTo.logError(
       'refinement-of-raw-query',
       'Cannot refine raw query, must add an explicit query stage'
     );
@@ -56,7 +56,7 @@ export function refine(
     if (to.type === 'partial' && from.type !== 'index' && from.type !== 'raw') {
       to.type = from.type;
     } else if (from.type !== to.type) {
-      logTo.log(
+      logTo.logError(
         'mismatched-view-types-for-refinement',
         `cannot refine ${to.type} view with ${from.type} view`
       );
@@ -71,7 +71,7 @@ export function refine(
             to.by = from.by;
           }
         } else {
-          logTo.log(
+          logTo.logError(
             'ordering-overridden-in-refinement',
             'refinement cannot override existing ordering'
           );
@@ -82,7 +82,7 @@ export function refine(
         if (to.limit === undefined) {
           to.limit = from.limit;
         } else {
-          logTo.log(
+          logTo.logError(
             'limit-overridden-in-refinement',
             'refinement cannot override existing limit'
           );
@@ -113,7 +113,7 @@ export function refine(
       }
       to.queryFields = [...to.queryFields, ...nonOverlappingFields];
       if (overlappingFields.length > 0) {
-        logTo.log(
+        logTo.logError(
           'name-conflict-in-refinement',
           `overlapping fields in refinement: ${overlappingFields.map(
             nameFromDef

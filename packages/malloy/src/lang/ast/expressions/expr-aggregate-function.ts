@@ -114,26 +114,27 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
           }
         } else {
           if (!(sourceFoot instanceof StructSpaceFieldBase)) {
-            return this.logExpr(
+            return this.loggedErrorExpr(
               'invalid-aggregate-source',
               `Aggregate source cannot be a ${footType.dataType}`
             );
           }
         }
       } else {
-        const code = 'aggregate-source-not-found';
-        this.log(code, `Reference to undefined value ${this.source.refString}`);
-        return errorFor(code);
+        return this.loggedErrorExpr(
+          'aggregate-source-not-found',
+          `Reference to undefined value ${this.source.refString}`
+        );
       }
     }
     if (exprVal === undefined) {
-      return this.logExpr(
+      return this.loggedErrorExpr(
         'missing-aggregate-expression',
         'Missing expression for aggregate function'
       );
     }
     if (expressionIsAggregate(exprVal.expressionType)) {
-      return this.logExpr(
+      return this.loggedErrorExpr(
         'aggregate-of-aggregate',
         'Aggregate expression cannot be aggregate'
       );
@@ -161,9 +162,11 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
               this.elementType
             );
             const code = joinError?.code ?? 'bad-join-usage';
-            this.log(code, errorWithSuggestion, {
-              severity: joinError ? 'error' : 'warn',
-            });
+            if (joinError) {
+              this.logError(code, errorWithSuggestion);
+            } else {
+              this.logWarning(code, errorWithSuggestion);
+            }
           }
         }
       }

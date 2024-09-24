@@ -56,6 +56,6 @@ export class ExprIdReference extends ExpressionDef {
         : td.evalSpace;
       return {...td, value, evalSpace};
     }
-    return this.logExpr(def.error.code, def.error.message);
+    return this.loggedErrorExpr(def.error.code, def.error.message);
   }
 }

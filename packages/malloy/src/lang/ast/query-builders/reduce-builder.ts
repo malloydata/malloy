@@ -67,13 +67,16 @@ export abstract class QuerySegmentBuilder implements QueryBuilder {
       this.filters.push(...qp.getFilterList(filterFS));
     } else if (qp instanceof Top) {
       if (this.limit) {
-        qp.log('limit-already-specified', 'Query operation already limited');
+        qp.logError(
+          'limit-already-specified',
+          'Query operation already limited'
+        );
       } else {
         this.limit = qp.limit;
       }
       if (qp.by) {
         if (this.order) {
-          qp.log(
+          qp.logError(
             'ordering-already-specified',
             'Query operation is already sorted'
           );
@@ -83,13 +86,19 @@ export abstract class QuerySegmentBuilder implements QueryBuilder {
       }
     } else if (qp instanceof Limit) {
       if (this.limit) {
-        qp.log('limit-already-specified', 'Query operation already limited');
+        qp.logError(
+          'limit-already-specified',
+          'Query operation already limited'
+        );
       } else {
         this.limit = qp.limit;
       }
     } else if (qp instanceof Ordering) {
       if (this.order) {
-        qp.log('ordering-already-specified', 'Query operation already sorted');
+        qp.logError(
+          'ordering-already-specified',
+          'Query operation already sorted'
+        );
       } else {
         this.order = qp;
       }

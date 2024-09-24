@@ -531,7 +531,7 @@ export class MalloyToAST
         if (join instanceof ast.ExpressionJoin) {
           join.joinType = 'cross';
         } else {
-          join.log(
+          join.logError(
             'foreign-key-in-join-cross',
             'Foreign key join not legal in join_cross:'
           );

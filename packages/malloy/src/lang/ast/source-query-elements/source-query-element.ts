@@ -57,7 +57,7 @@ export abstract class SourceQueryElement extends MalloyElement {
     options?: LogMessageOptions
   ): T {
     if (this.isErrorFree()) {
-      this.log(code, parameters, options);
+      this.logError(code, parameters, options);
     }
     this.errored = true;
     return code;

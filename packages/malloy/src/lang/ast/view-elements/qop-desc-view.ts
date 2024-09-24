@@ -57,7 +57,7 @@ export class QOpDescView extends View {
     refineThis: PipeSegment
   ): PipeSegment {
     if (isRawSegment(refineThis)) {
-      this.log('refinement-of-raw-query', 'A raw query cannot be refined');
+      this.logError('refinement-of-raw-query', 'A raw query cannot be refined');
       return refineThis;
     }
     qOpDesc.refineFrom(refineThis);
@@ -85,7 +85,7 @@ export class QOpDescView extends View {
           headRefinements.push(qop);
           break;
         case LegalRefinementStage.Single:
-          qop.log(
+          qop.logError(
             'illegal-multistage-refinement-operation',
             'Illegal in refinement of a query with more than one stage'
           );
@@ -94,7 +94,10 @@ export class QOpDescView extends View {
           tailRefinements.push(qop);
           break;
         default:
-          qop.log('illegal-refinement-operation', 'Illegal query refinement');
+          qop.logError(
+            'illegal-refinement-operation',
+            'Illegal query refinement'
+          );
       }
     }
     if (headRefinements.notEmpty()) {

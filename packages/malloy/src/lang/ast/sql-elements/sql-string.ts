@@ -48,7 +48,7 @@ export class SQLString extends MalloyElement {
       this.containsQueries = true;
       el.parent = this;
     } else {
-      el.log(
+      el.logError(
         'invalid-sql-source-interpolation',
         'This element is not legal inside an SQL string'
       );

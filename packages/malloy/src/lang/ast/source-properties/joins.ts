@@ -136,19 +136,19 @@ export class KeyJoin extends Join {
           };
           return;
         } else {
-          this.log(
+          this.logError(
             'join-on-primary-key-type-mismatch',
             `join_one: with type mismatch with primary key: ${exprX.dataType}/${pkey.type}`
           );
         }
       } else {
-        this.log(
+        this.logError(
           'join-primary-key-not-found',
           `join_one: Primary key '${pkey}' not found in source`
         );
       }
     } else {
-      this.log(
+      this.logError(
         'join-with-without-primary-key',
         'join_one: Cannot use with unless source has a primary key'
       );
@@ -185,7 +185,7 @@ export class ExpressionJoin extends Join {
     }
     const exprX = this.expr.getExpression(outer);
     if (exprX.dataType !== 'boolean') {
-      this.log(
+      this.logError(
         'non-boolean-join-on',
         'join conditions must be boolean expressions'
       );
