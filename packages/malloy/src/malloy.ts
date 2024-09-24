@@ -1235,6 +1235,10 @@ export class PreparedResult implements Taggable {
     return this.inner.sql;
   }
 
+  public get queriesToMaterialize(): Record<string, string> | undefined {
+    return this.inner.queriesToMaterialize;
+  }
+
   /**
    * @return The `Explore` representing the data that will be returned by running this query.
    */

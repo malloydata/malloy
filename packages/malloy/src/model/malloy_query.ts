@@ -98,6 +98,7 @@ import {
   SQLExprElement,
 } from './utils';
 import {DialectFieldTypeStruct, QueryInfo} from '../dialect/dialect';
+import {Tag} from '../tags';
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
@@ -166,10 +167,16 @@ class UniqueKeyUse extends Set<UniqueKeyPossibleUse> {
   }
 }
 
+type NamedSql = {
+  name: string;
+  sql: string;
+};
+
 class StageWriter {
   withs: string[] = [];
   udfs: string[] = [];
   pdts: string[] = [];
+  queriesToMaterialize: Record<string, string> = {};
   stagePrefix = '__stage';
   useCTE: boolean;
 
@@ -223,10 +230,23 @@ class StageWriter {
     return id;
   }
 
-  addPDT(baseName: string, dialect: Dialect): string {
+  private namedSql(baseName: string): NamedSql {
     const sql =
       this.combineStages(false).sql + this.withs[this.withs.length - 1];
-    const tableName = 'scratch.' + baseName + generateHash(sql);
+    const name = baseName + generateHash(sql);
+
+    return {name, sql};
+  }
+
+  addMaterializedQuery(baseName: string): string {
+    const {name, sql} = this.namedSql(baseName);
+    this.root().queriesToMaterialize[name] = sql;
+    return name;
+  }
+
+  addPDT(baseName: string, dialect: Dialect): string {
+    const {name, sql} = this.namedSql(baseName);
+    const tableName = `scratch.${name}`;
     this.root().pdts.push(dialect.sqlCreateTableAsSelect(tableName, sql));
     return tableName;
   }
@@ -4429,10 +4449,20 @@ class QueryStruct extends QueryNode {
         return '';
       case 'query': {
         // cache derived table.
-        const name = getIdentifier(this.fieldDef);
+        const clonedAnnotation = structuredClone(
+          this.fieldDef.structSource.query.annotation
+        );
+
+        if (clonedAnnotation) {
+          clonedAnnotation.inherits = undefined;
+        }
+
+        const sourceTag = Tag.annotationToTag(clonedAnnotation).tag;
+
+        const name = this.fieldDef.structSource.query.name;
         // this is a hack for now.  Need some way to denote this table
         //  should be cached.
-        if (name.includes('cache')) {
+        if (name?.includes('cache')) {
           const dtStageWriter = new StageWriter(true, stageWriter);
           this.model.loadQuery(
             this.fieldDef.structSource.query,
@@ -4441,6 +4471,24 @@ class QueryStruct extends QueryNode {
             false
           );
           return dtStageWriter.addPDT(name, this.dialect);
+        } else if (sourceTag.has('materialize')) {
+          if (!name) {
+            throw new Error(
+              `Source ${getIdentifier(
+                this.fieldDef
+              )} on a unnamed query that is tagged as materialize, only named queries can be materialized.`
+            );
+          }
+
+          const dtStageWriter = new StageWriter(true, stageWriter);
+          this.model.loadQuery(
+            this.fieldDef.structSource.query,
+            dtStageWriter,
+            false,
+            false
+          );
+
+          return dtStageWriter.addMaterializedQuery(name);
         } else {
           // returns the stage name.
           return this.model.loadQuery(
@@ -4721,6 +4769,7 @@ export class QueryModel {
       lastStageName: ret.lastStageName,
       malloy: ret.malloy,
       sql: ret.stageWriter.generateSQLStages(),
+      queriesToMaterialize: ret.stageWriter.queriesToMaterialize,
       structs: ret.structs,
       sourceExplore,
       sourceFilters: query.filterList,

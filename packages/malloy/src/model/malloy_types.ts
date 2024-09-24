@@ -1215,6 +1215,8 @@ export interface CompiledQuery extends DrillSource {
   connectionName: string;
   queryTimezone?: string;
   annotation?: Annotation;
+  // Map of query unique id to the SQL.
+  queriesToMaterialize?: Record<string, string>;
 }
 
 /** Result type for running a Malloy query. */
