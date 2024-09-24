@@ -119,7 +119,7 @@ export class MalloySQLParser {
       ) {
         errors.push(
           this.createParseError(
-            '???',
+            'malloysql-illegal-statement-in-malloy-block',
             'Only comments are allowed after ">>>malloy"',
             parsedStatement.delimiterRange,
             url
