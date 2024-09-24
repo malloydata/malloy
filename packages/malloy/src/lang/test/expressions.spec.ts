@@ -31,6 +31,7 @@ import {
   getQueryFieldDef,
   getExplore,
   getFieldDef,
+  error,
 } from './test-translator';
 import './parse-expects';
 
@@ -952,11 +953,11 @@ describe('expressions', () => {
       `).toTranslate();
     });
     test('n-ary without else', () => {
-      expect(`
+      return expect(`
         source: na is a extend { dimension: d is
           pick 7 when true and true
         }
-      `).translationToFailWith("pick incomplete, missing 'else'");
+      `).toLog(error('pick-missing-else'));
     });
     test('n-ary with mismatch when clauses', () => {
       expect(markSource`
@@ -965,8 +966,11 @@ describe('expressions', () => {
           pick '7' when true or true
           else 7
         }
-      `).translationToFailWith(
-        'pick type `string` does not match return type `number`'
+      `).toLog(
+        error('pick-type-does-not-match', {
+          pickType: 'string',
+          returnType: 'number',
+        })
       );
     });
     test('n-ary with mismatched else clause', () => {
@@ -975,8 +979,11 @@ describe('expressions', () => {
           pick 7 when true and true
           else '7'
         }
-      `).translationToFailWith(
-        'else type `string` does not match return type `number`'
+      `).toLog(
+        error('pick-else-type-does-not-match', {
+          elseType: 'string',
+          returnType: 'number',
+        })
       );
     });
     test('applied else mismatch', () => {
@@ -984,8 +991,11 @@ describe('expressions', () => {
         source: na is a extend { dimension: d is
           7 ? pick 7 when 7 else 'not seven'
         }
-      `).translationToFailWith(
-        'else type `string` does not match return type `number`'
+      `).toLog(
+        error('pick-else-type-does-not-match', {
+          elseType: 'string',
+          returnType: 'number',
+        })
       );
     });
     test('applied default mismatch', () => {
@@ -993,8 +1003,11 @@ describe('expressions', () => {
         source: na is a extend { dimension: d is
           7 ? pick 'seven' when 7
         }
-      `).translationToFailWith(
-        'default type `number` does not match return type `string`'
+      `).toLog(
+        error('pick-default-type-does-not-match', {
+          defaultType: 'number',
+          returnType: 'string',
+        })
       );
     });
     test('applied when mismatch', () => {
@@ -1002,8 +1015,11 @@ describe('expressions', () => {
         source: na is a extend { dimension: d is
           7 ? pick 'seven' when 7 pick 6 when 6
         }
-      `).translationToFailWith(
-        'pick type `number` does not match return type `string`'
+      `).toLog(
+        error('pick-type-does-not-match', {
+          pickType: 'number',
+          returnType: 'string',
+        })
       );
     });
   });

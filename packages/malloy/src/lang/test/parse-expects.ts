@@ -39,9 +39,15 @@ import {
 } from './test-translator';
 import {LogSeverity} from '../parse-log';
 
-type SimpleProblemSpec = string | RegExp;
-type ComplexProblemSpec = {severity: LogSeverity; message: SimpleProblemSpec};
-type ProblemSpec = SimpleProblemSpec | ComplexProblemSpec;
+type MessageProblemSpec = {
+  severity: LogSeverity;
+  message: string | RegExp;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data?: any;
+};
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type CodeProblemSpec = {severity: LogSeverity; code: string; data?: any};
+type ProblemSpec = CodeProblemSpec | MessageProblemSpec;
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace jest {
@@ -75,7 +81,8 @@ declare global {
        * source, the errors which are found must match the locations of
        * the markings.
        */
-      toTranslateWithWarnings(...expectedWarnings: SimpleProblemSpec[]): R;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      toTranslateWithWarnings(...expectedWarnings: any[]): R;
       toReturnType(tp: string): R;
       /**
        * expect(X).translateToFailWith(expectedErrors)
@@ -87,7 +94,9 @@ declare global {
        * @param expectedErrors varargs list of strings which must match
        *        exactly, or regular expressions.
        */
-      translationToFailWith(...expectedErrors: ProblemSpec[]): R;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      translationToFailWith(...expectedErrors: any[]): R;
+      toLog(...expectedErrors: ProblemSpec[]): R;
       isLocationIn(at: DocumentLocation, txt: string): R;
       /**
        * expect(X).compilesTo('expression-string')
@@ -187,19 +196,19 @@ function highlightError(dl: DocumentLocation, txt: string): string {
   return output.join('\n');
 }
 
-function normalizeProblemSpec(
-  defaultSeverity: LogSeverity
-): (spec: ProblemSpec) => ComplexProblemSpec {
-  return function (spec: ProblemSpec) {
-    if (typeof spec === 'string') {
-      return {severity: defaultSeverity, message: spec};
-    } else if (spec instanceof RegExp) {
-      return {severity: defaultSeverity, message: spec};
-    } else {
-      return spec;
-    }
-  };
-}
+// function normalizeProblemSpec(
+//   defaultSeverity: LogSeverity
+// ): (spec: ProblemSpec) => ComplexProblemSpec {
+//   return function (spec: ProblemSpec) {
+//     if (typeof spec === 'string') {
+//       return {severity: defaultSeverity, message: spec};
+//     } else if (spec instanceof RegExp) {
+//       return {severity: defaultSeverity, message: spec};
+//     } else {
+//       return spec;
+//     }
+//   };
+// }
 
 type TestSource = string | MarkedSource | TestTranslator;
 
@@ -304,13 +313,15 @@ expect.extend({
     return {pass, message: () => msg};
   },
   translationToFailWith: function (s: TestSource, ...msgs: ProblemSpec[]) {
-    return checkForProblems(this, false, s, 'error', ...msgs);
+    return checkForProblems(this, false, s, ...msgs);
   },
-  toTranslateWithWarnings: function (
-    s: TestSource,
-    ...msgs: SimpleProblemSpec[]
-  ) {
-    return checkForProblems(this, true, s, 'warn', ...msgs);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  toTranslateWithWarnings: function (s: TestSource, ...msgs: any[]) {
+    return checkForProblems(this, true, s, ...msgs);
+  },
+  toLog: function (s: TestSource, ...msgs: ProblemSpec[]) {
+    const expectCompiles = !msgs.some(m => m.severity === 'error');
+    return checkForProblems(this, expectCompiles, s, ...msgs);
   },
   isLocationIn: function (
     checkAt: DocumentLocation,
@@ -367,18 +378,21 @@ expect.extend({
   },
 });
 
+function problemSpecSummary(s: ProblemSpec): string {
+  return `${s.severity} '${'message' in s ? s.message : s.code}' ${
+    s.data !== undefined ? pretty(s.data) : ''
+  }`;
+}
+
 function checkForProblems(
   context: jest.MatcherContext,
   expectCompiles: boolean,
   s: TestSource,
-  defaultSeverity: LogSeverity,
   ...msgs: ProblemSpec[]
 ) {
   let emsg = `Expected ${expectCompiles ? 'to' : 'to not'} compile with: `;
   const mSrc = isMarkedSource(s) ? s : undefined;
-  const normalize = normalizeProblemSpec(defaultSeverity);
-  const normMsgs = msgs.map(normalize);
-  const qmsgs = normMsgs.map(s => `${s.severity} '${s.message}'`);
+  const qmsgs = msgs.map(problemSpecSummary);
   if (msgs.length === 1) {
     emsg += ` ${qmsgs[0]}`;
   } else {
@@ -404,28 +418,49 @@ function checkForProblems(
     const explain: string[] = [];
     const errList = m.problemResponse().problems;
     let i;
-    for (i = 0; i < normMsgs.length && errList[i]; i += 1) {
-      const msg = normMsgs[i];
+    for (i = 0; i < msgs.length && errList[i]; i += 1) {
+      const msg = msgs[i];
       const err = errList[i];
-      const matched =
-        typeof msg.message === 'string'
-          ? msg.message === err.message
-          : err.message.match(msg.message);
+      let matched = true;
+      if ('message' in msg) {
+        if (typeof msg.message === 'string') {
+          if (msg.message !== err.message) {
+            matched = false;
+          }
+          explain.push(`Expected: ${msg.message}\nGot: ${err.message}`);
+        } else {
+          if (!err.message.match(msg.message)) {
+            matched = false;
+          }
+          explain.push(`Expected: ${msg.message}\nGot: ${err.message}`);
+        }
+      } else {
+        if (msg.code !== err.code) {
+          matched = false;
+          explain.push(`Expected: ${msg.code}\nGot: ${err.code}`);
+        }
+      }
       if (err.severity !== msg.severity) {
         explain.push(
           `Expected ${msg.severity}, got ${err.severity} ${err.message}`
         );
       }
-      if (!matched) {
-        explain.push(`Expected: ${msg.message}\nGot: ${err.message}`);
-      } else {
+      if (matched) {
         if (mSrc?.locations[i]) {
           const have = err.at?.range;
           const want = mSrc.locations[i].range;
           if (!context.equals(have, want)) {
             explain.push(
-              `Expected '${msg.message}' at location: ${rangeToStr(want)}\n` +
-                `Actual location: ${rangeToStr(have)}`
+              `Expected ${err.code} (${err.message}) at location: ${rangeToStr(
+                want
+              )}\n` + `Actual location: ${rangeToStr(have)}`
+            );
+          }
+        }
+        if (msg.data !== undefined) {
+          if (JSON.stringify(msg.data) !== JSON.stringify(err.data)) {
+            explain.push(
+              `Expected log data ${pretty(msg.data)}\nGot ${pretty(err.data)}`
             );
           }
         }

@@ -48,6 +48,7 @@ import {DataRequestResponse, TranslateResponse} from '../translate-response';
 import {StaticSpace} from '../ast/field-space/static-space';
 import {ExprValue} from '../ast/types/expr-value';
 import {GlobalNameSpace} from '../ast/types/global-name-space';
+import {LogSeverity, MessageCode, MessageParameterType} from '../parse-log';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types
 export function pretty(thing: any): string {
@@ -670,4 +671,25 @@ export function exprToString(
       return `${subExpr(e.kids.left)} ?? ${subExpr(e.kids.right)}`;
   }
   return `{${e.node}}`;
+}
+
+export function error<T extends MessageCode>(
+  code: T,
+  data?: MessageParameterType<T>
+): {code: T; data: MessageParameterType<T> | undefined; severity: LogSeverity} {
+  return {code, data, severity: 'error'};
+}
+
+export function warning<T extends MessageCode>(
+  code: T,
+  data?: MessageParameterType<T>
+): {code: T; data: MessageParameterType<T> | undefined; severity: LogSeverity} {
+  return {code, data, severity: 'warn'};
+}
+
+export function errorMessage(message: string): {
+  message: string;
+  severity: LogSeverity;
+} {
+  return {message, severity: 'error'};
 }
