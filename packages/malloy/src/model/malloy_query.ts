@@ -4516,7 +4516,10 @@ class QueryStruct extends QueryNode {
         annotation: refAnnoatation,
       });
     }
-    return field;
+    if (field.parent === undefined) {
+      throw new Error('Expected field to have a parent');
+    }
+    return field.parent.makeQueryField(field.fieldDef);
   }
 
   getDimensionOrMeasureByName(name: string[]): QueryAtomicField {
