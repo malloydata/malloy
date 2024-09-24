@@ -69,10 +69,7 @@ export class QOpDesc extends ListOf<QueryProperty> {
       needsExplicitQueryClass ||= el.needsExplicitQueryClass ?? false;
     }
     if (guessType === undefined && needsExplicitQueryClass) {
-      this.log(
-        'ambiguous-view-type',
-        "Can't determine view type (`group_by` / `aggregate` / `nest`, `project`, `index`)"
-      );
+      this.log('ambiguous-view-type', {});
       guessType = QueryClass.Project;
     }
     this.opClass = guessType;

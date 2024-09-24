@@ -32,6 +32,8 @@ import {
   getExplore,
   getFieldDef,
   error,
+  errorMessage,
+  warningMessage,
 } from './test-translator';
 import './parse-expects';
 
@@ -82,14 +84,14 @@ describe('expressions', () => {
     });
     test('typecheck addition lhs', () => {
       const wrong = expr`${'"string"'} + 1`;
-      expect(wrong).translationToFailWith(
-        "The '+' operator requires a number, not a 'string'"
+      expect(wrong).toLog(
+        errorMessage("The '+' operator requires a number, not a 'string'")
       );
     });
     test('typecheck addition rhs', () => {
       const wrong = expr`1 + ${'"string"'}`;
-      expect(wrong).translationToFailWith(
-        "The '+' operator requires a number, not a 'string'"
+      expect(wrong).toLog(
+        errorMessage("The '+' operator requires a number, not a 'string'")
       );
     });
     test('subtraction', () => {
@@ -153,23 +155,23 @@ describe('expressions', () => {
       expect('ai ?? 7').compilesTo('{ai coalesce 7}');
     });
     test('coalesce type mismatch', () => {
-      expect(new BetaExpression('ai ?? @2003')).translationToFailWith(
-        'Mismatched types for coalesce (number, date)'
+      expect(new BetaExpression('ai ?? @2003')).toLog(
+        errorMessage('Mismatched types for coalesce (number, date)')
       );
     });
     test('disallow date OP number', () => {
-      expect(new BetaExpression('@2001 = 7')).translationToFailWith(
-        'Cannot compare a date to a number'
+      expect(new BetaExpression('@2001 = 7')).toLog(
+        errorMessage('Cannot compare a date to a number')
       );
     });
     test('disallow date OP timestamp', () => {
-      expect(new BetaExpression('ad = ats')).translationToFailWith(
-        'Cannot compare a date to a timestamp'
+      expect(new BetaExpression('ad = ats')).toLog(
+        errorMessage('Cannot compare a date to a timestamp')
       );
     });
     test('disallow interval from date to timestamp', () => {
-      expect(new BetaExpression('days(ad to ats)')).translationToFailWith(
-        'Cannot measure from date to timestamp'
+      expect(new BetaExpression('days(ad to ats)')).toLog(
+        errorMessage('Cannot measure from date to timestamp')
       );
     });
     test('compare to truncation uses straight comparison', () => {
@@ -199,8 +201,8 @@ describe('expressions', () => {
     const noOffset = ['second', 'minute', 'hour'];
 
     test.each(noOffset.map(x => [x]))('disallow date delta %s', unit => {
-      expect(new BetaExpression(`ad + 10 ${unit}s`)).translationToFailWith(
-        `Cannot offset date by ${unit}`
+      expect(new BetaExpression(`ad + 10 ${unit}s`)).toLog(
+        errorMessage(`Cannot offset date by ${unit}`)
       );
     });
     test('apply with parens', () => {
@@ -209,8 +211,8 @@ describe('expressions', () => {
     describe('sql friendly warnings', () => {
       test('is null with warning', () => {
         const warnSrc = expr`ai is null`;
-        expect(warnSrc).toTranslateWithWarnings(
-          "Use '= NULL' to check for NULL instead of 'IS NULL'"
+        expect(warnSrc).toLog(
+          warningMessage("Use '= NULL' to check for NULL instead of 'IS NULL'")
         );
         expect(warnSrc).compilesTo('{is-null ai}');
         const warning = warnSrc.translator.problems()[0];
@@ -218,8 +220,10 @@ describe('expressions', () => {
       });
       test('is not null with warning', () => {
         const warnSrc = expr`ai is not null`;
-        expect(warnSrc).toTranslateWithWarnings(
-          "Use '!= NULL' to check for NULL instead of 'IS NOT NULL'"
+        expect(warnSrc).toLog(
+          warningMessage(
+            "Use '!= NULL' to check for NULL instead of 'IS NOT NULL'"
+          )
         );
         expect(warnSrc).compilesTo('{is-not-null ai}');
         const warning = warnSrc.translator.problems()[0];
@@ -227,8 +231,8 @@ describe('expressions', () => {
       });
       test('like with warning', () => {
         const warnSrc = expr`astr like 'a'`;
-        expect(warnSrc).toTranslateWithWarnings(
-          "Use Malloy operator '~' instead of 'LIKE'"
+        expect(warnSrc).toLog(
+          warningMessage("Use Malloy operator '~' instead of 'LIKE'")
         );
         expect(warnSrc).compilesTo('{astr like "a"}');
         const warning = warnSrc.translator.problems()[0];
@@ -236,8 +240,8 @@ describe('expressions', () => {
       });
       test('NOT LIKE with warning', () => {
         const warnSrc = expr`astr not like 'a'`;
-        expect(warnSrc).toTranslateWithWarnings(
-          "Use Malloy operator '!~' instead of 'NOT LIKE'"
+        expect(warnSrc).toLog(
+          warningMessage("Use Malloy operator '!~' instead of 'NOT LIKE'")
         );
         expect(warnSrc).compilesTo('{astr !like "a"}');
         const warning = warnSrc.translator.problems()[0];
@@ -245,8 +249,8 @@ describe('expressions', () => {
       });
       test('is is-null in a model', () => {
         const isNullSrc = model`source: xa is a extend { dimension: x1 is astr is null }`;
-        expect(isNullSrc).toTranslateWithWarnings(
-          "Use '= NULL' to check for NULL instead of 'IS NULL'"
+        expect(isNullSrc).toLog(
+          warningMessage("Use '= NULL' to check for NULL instead of 'IS NULL'")
         );
       });
       test('is not-null in a model', () => {
@@ -255,8 +259,8 @@ describe('expressions', () => {
       });
       test('is not-null is in a model', () => {
         const isNullSrc = model`source: xa is a extend { dimension: x1 is not null is null }`;
-        expect(isNullSrc).toTranslateWithWarnings(
-          "Use '= NULL' to check for NULL instead of 'IS NULL'"
+        expect(isNullSrc).toLog(
+          warningMessage("Use '= NULL' to check for NULL instead of 'IS NULL'")
         );
         const warning = isNullSrc.translator.problems()[0];
         expect(warning.replacement).toEqual('null = null');
@@ -273,7 +277,7 @@ describe('expressions', () => {
       });
       test('not null::number', () => {
         const notNull = expr`not null::number`;
-        expect(notNull).translationToFailWith("'not' Can't use type number");
+        expect(notNull).toLog(errorMessage("'not' Can't use type number"));
       });
       test('(not null)::number', () => {
         const notNull = expr`(not null)::number`;
@@ -295,8 +299,8 @@ describe('expressions', () => {
   });
   test('correctly flags filtered scalar', () => {
     const e = new BetaExpression('ai { where: true }');
-    expect(e).translationToFailWith(
-      'Filtered expression requires an aggregate computation'
+    expect(e).toLog(
+      errorMessage('Filtered expression requires an aggregate computation')
     );
   });
   test('correctly flags filtered analytic', () => {
@@ -305,8 +309,8 @@ describe('expressions', () => {
           group_by: ai
           calculate: l is lag(ai) { where: true }
         }
-      `).translationToFailWith(
-      'Filtered expression requires an aggregate computation'
+      `).toLog(
+      errorMessage('Filtered expression requires an aggregate computation')
     );
   });
 
@@ -317,8 +321,10 @@ describe('expressions', () => {
             group_by: ai
             aggregate: x1 is string_agg(astr) { order_by: ai }
           }
-        `).translationToFailWith(
-        'Enable experiment `aggregate_order_by` to use `order_by` with an aggregate function'
+        `).toLog(
+        errorMessage(
+          'Enable experiment `aggregate_order_by` to use `order_by` with an aggregate function'
+        )
       );
     });
 
@@ -328,8 +334,10 @@ describe('expressions', () => {
             group_by: ai
             aggregate: x3 is string_agg(astr) { limit: 10 }
           }
-        `).translationToFailWith(
-        "Experimental flag 'aggregate_limit' required to enable this feature"
+        `).toLog(
+        errorMessage(
+          "Experimental flag 'aggregate_limit' required to enable this feature"
+        )
       );
     });
 
@@ -340,8 +348,10 @@ describe('expressions', () => {
             group_by: ai
             aggregate: x1 is string_agg(astr) { order_by: ai }
           }
-        `).translationToFailWith(
-        'Enable experiment `aggregate_order_by` to use `order_by` with an aggregate function'
+        `).toLog(
+        errorMessage(
+          'Enable experiment `aggregate_order_by` to use `order_by` with an aggregate function'
+        )
       );
     });
 
@@ -352,25 +362,29 @@ describe('expressions', () => {
             group_by: ai
             group_by: x3 is string_agg(astr) { limit: 10 }
           }
-        `).translationToFailWith(
-        "Experimental flag 'aggregate_limit' required to enable this feature"
+        `).toLog(
+        errorMessage(
+          "Experimental flag 'aggregate_limit' required to enable this feature"
+        )
       );
     });
 
     test('props not allowed on most expressions', () => {
       expect(markSource`
-          ##! experimental { aggregate_order_by aggregate_limit }
-          run: a -> {
-            group_by: x1 is 1 { order_by: ai }
-            group_by: x2 is 1 { partition_by: ai }
-            group_by: x3 is 1 { limit: 10 }
-            group_by: x4 is 1 { where: ai }
-          }
-        `).translationToFailWith(
-        '`order_by` is not supported for this kind of expression',
-        '`partition_by` is not supported for this kind of expression',
-        '`limit` is not supported for this kind of expression',
-        'Filtered expression requires an aggregate computation'
+        ##! experimental { aggregate_order_by aggregate_limit }
+        run: a -> {
+          group_by: x1 is 1 { order_by: ai }
+          group_by: x2 is 1 { partition_by: ai }
+          group_by: x3 is 1 { limit: 10 }
+          group_by: x4 is 1 { where: ai }
+        }
+      `).toLog(
+        errorMessage('`order_by` is not supported for this kind of expression'),
+        errorMessage(
+          '`partition_by` is not supported for this kind of expression'
+        ),
+        errorMessage('`limit` is not supported for this kind of expression'),
+        errorMessage('Filtered expression requires an aggregate computation')
       );
     });
 
@@ -401,9 +415,9 @@ describe('expressions', () => {
           calculate: x is lag(ai) { partition_by: ac }
           calculate: y is lag(ai) { partition_by: x }
         }
-      `).translationToFailWith(
-        'Partition expression must be scalar or aggregate',
-        'Partition expression must be scalar or aggregate'
+      `).toLog(
+        errorMessage('Partition expression must be scalar or aggregate'),
+        errorMessage('Partition expression must be scalar or aggregate')
       );
     });
 
@@ -414,8 +428,10 @@ describe('expressions', () => {
           group_by: ai
           calculate: x is lag(ai) { order_by: asc }
         }
-      `).translationToFailWith(
-        'analytic `order_by` must specify an aggregate expression or output field reference'
+      `).toLog(
+        errorMessage(
+          'analytic `order_by` must specify an aggregate expression or output field reference'
+        )
       );
     });
 
@@ -426,8 +442,10 @@ describe('expressions', () => {
           group_by: ai
           aggregate: x is string_agg_distinct(astr) { order_by: ai }
         }
-      `).translationToFailWith(
-        '`order_by` must be only `asc` or `desc` with no expression'
+      `).toLog(
+        errorMessage(
+          '`order_by` must be only `asc` or `desc` with no expression'
+        )
       );
     });
 
@@ -484,7 +502,7 @@ describe('expressions', () => {
             order_by: sum(ai)
           }
         }
-      `).translationToFailWith('aggregate `order_by` must be scalar');
+      `).toLog(errorMessage('aggregate `order_by` must be scalar'));
     });
 
     test('aggregate order by cannot be analytic', () => {
@@ -495,7 +513,7 @@ describe('expressions', () => {
             order_by: rank()
           }
         }
-      `).translationToFailWith('aggregate `order_by` must be scalar');
+      `).toLog(errorMessage('aggregate `order_by` must be scalar'));
     });
 
     test('analytic order by can be an aggregate', () => {
@@ -531,8 +549,10 @@ describe('expressions', () => {
             order_by: ai
           }
         }
-      `).translationToFailWith(
-        'analytic `order_by` must be an aggregate or an output field reference'
+      `).toLog(
+        errorMessage(
+          'analytic `order_by` must be an aggregate or an output field reference'
+        )
       );
     });
 
@@ -611,8 +631,10 @@ describe('expressions', () => {
       expect(modelX`one.column.min()`).toTranslate();
     });
     test('one.min(one.column)', () => {
-      expect(modelX`one.min(one.column)`).translationToFailWith(
-        'Symmetric aggregate function `min` must be written as `min(expression)` or `path.to.field.min()`'
+      expect(modelX`one.min(one.column)`).toLog(
+        errorMessage(
+          'Symmetric aggregate function `min` must be written as `min(expression)` or `path.to.field.min()`'
+        )
       );
     });
     test('min(one.column)', () => {
@@ -622,8 +644,10 @@ describe('expressions', () => {
       expect(modelX`min(many.column)`).toTranslate();
     });
     test('min()', () => {
-      expect(modelX`min()`).translationToFailWith(
-        'Symmetric aggregate function `min` must be written as `min(expression)` or `path.to.field.min()`'
+      expect(modelX`min()`).toLog(
+        errorMessage(
+          'Symmetric aggregate function `min` must be written as `min(expression)` or `path.to.field.min()`'
+        )
       );
     });
     test('source.min(column)', () => {
@@ -636,8 +660,10 @@ describe('expressions', () => {
       expect(modelX`max(many.column)`).toTranslate();
     });
     test('max()', () => {
-      expect(modelX`max()`).translationToFailWith(
-        'Symmetric aggregate function `max` must be written as `max(expression)` or `path.to.field.max()`'
+      expect(modelX`max()`).toLog(
+        errorMessage(
+          'Symmetric aggregate function `max` must be written as `max(expression)` or `path.to.field.max()`'
+        )
       );
     });
     test('source.max(many.column)', () => {
@@ -659,8 +685,10 @@ describe('expressions', () => {
       expect(modelX`many.count()`).toTranslate();
     });
     test('sum()', () => {
-      expect(modelX`sum()`).translationToFailWith(
-        'Asymmetric aggregate function `sum` must be written as `path.to.field.sum()`, `path.to.join.sum(expression)`, or `sum(expression)`'
+      expect(modelX`sum()`).toLog(
+        errorMessage(
+          'Asymmetric aggregate function `sum` must be written as `path.to.field.sum()`, `path.to.join.sum(expression)`, or `sum(expression)`'
+        )
       );
     });
     test('sum(column)', () => {
@@ -676,13 +704,17 @@ describe('expressions', () => {
       expect(modelX`source.sum(column)`).toTranslate();
     });
     test('sum(many.column)', () => {
-      expect(modelX`sum(many.column)`).translationToFailWith(
-        'Join path is required for this calculation; use `many.column.sum()`'
+      expect(modelX`sum(many.column)`).toLog(
+        errorMessage(
+          'Join path is required for this calculation; use `many.column.sum()`'
+        )
       );
     });
     test('source.sum(many.column)', () => {
-      expect(modelX`source.sum(many.column)`).translationToFailWith(
-        'Cannot compute `sum` across `join_many` relationship `many`; use `many.column.sum()`'
+      expect(modelX`source.sum(many.column)`).toLog(
+        errorMessage(
+          'Cannot compute `sum` across `join_many` relationship `many`; use `many.column.sum()`'
+        )
       );
     });
     test('many.column.sum()', () => {
@@ -692,8 +724,10 @@ describe('expressions', () => {
       expect(modelX`many.sum(many.column)`).toTranslate();
     });
     test('sum(one.column)', () => {
-      expect(modelX`sum(one.column)`).toTranslateWithWarnings(
-        'Join path is required for this calculation; use `one.column.sum()` or `source.sum(one.column)` to get a result weighted with respect to `source`'
+      expect(modelX`sum(one.column)`).toLog(
+        warningMessage(
+          'Join path is required for this calculation; use `one.column.sum()` or `source.sum(one.column)` to get a result weighted with respect to `source`'
+        )
       );
     });
     test('sum(many.constant)', () => {
@@ -703,16 +737,20 @@ describe('expressions', () => {
       expect(modelX`source.sum(many.constant)`).toTranslate();
     });
     test('sum(nested.column)', () => {
-      expect(modelX`sum(nested.column)`).translationToFailWith(
-        'Join path is required for this calculation; use `nested.column.sum()`'
+      expect(modelX`sum(nested.column)`).toLog(
+        errorMessage(
+          'Join path is required for this calculation; use `nested.column.sum()`'
+        )
       );
     });
     test('nested.column.sum()', () => {
       expect(modelX`nested.column.sum()`).toTranslate();
     });
     test('source.sum(nested.column)', () => {
-      expect(modelX`source.sum(nested.column)`).translationToFailWith(
-        'Cannot compute `sum` across repeated relationship `nested`; use `nested.column.sum()`'
+      expect(modelX`source.sum(nested.column)`).toLog(
+        errorMessage(
+          'Cannot compute `sum` across repeated relationship `nested`; use `nested.column.sum()`'
+        )
       );
     });
     test('can aggregate field defined with no join usage', () => {
@@ -728,8 +766,10 @@ describe('expressions', () => {
       `).toTranslate();
     });
     test('sum(inline.column)', () => {
-      expect(modelX`sum(inline.column)`).toTranslateWithWarnings(
-        'Join path is required for this calculation; use `inline.column.sum()` or `source.sum(inline.column)` to get a result weighted with respect to `source`'
+      expect(modelX`sum(inline.column)`).toLog(
+        warningMessage(
+          'Join path is required for this calculation; use `inline.column.sum()` or `source.sum(inline.column)` to get a result weighted with respect to `source`'
+        )
       );
     });
     test('inline.column.sum()', () => {
@@ -739,13 +779,17 @@ describe('expressions', () => {
       expect(modelX`source.sum(inline.column)`).toTranslate();
     });
     test('sum(many.field)', () => {
-      expect(modelX`sum(many.field)`).translationToFailWith(
-        'Join path is required for this calculation; use `many.field.sum()`'
+      expect(modelX`sum(many.field)`).toLog(
+        errorMessage(
+          'Join path is required for this calculation; use `many.field.sum()`'
+        )
       );
     });
     test('source.sum(many.field)', () => {
-      expect(modelX`source.sum(many.field)`).translationToFailWith(
-        'Cannot compute `sum` across `join_many` relationship `many`; use `many.field.sum()`'
+      expect(modelX`source.sum(many.field)`).toLog(
+        errorMessage(
+          'Cannot compute `sum` across `join_many` relationship `many`; use `many.field.sum()`'
+        )
       );
     });
     test('many.field.sum()', () => {
@@ -756,13 +800,17 @@ describe('expressions', () => {
     });
 
     test('sum(many.field + many.field)', () => {
-      expect(modelX`sum(many.field + many.field)`).translationToFailWith(
-        'Join path is required for this calculation; use `many.sum(many.field + many.field)`'
+      expect(modelX`sum(many.field + many.field)`).toLog(
+        errorMessage(
+          'Join path is required for this calculation; use `many.sum(many.field + many.field)`'
+        )
       );
     });
     test('source.sum(many.field + many.field)', () => {
-      expect(modelX`source.sum(many.field + many.field)`).translationToFailWith(
-        'Cannot compute `sum` across `join_many` relationship `many`; use `many.sum(many.field + many.field)`'
+      expect(modelX`source.sum(many.field + many.field)`).toLog(
+        errorMessage(
+          'Cannot compute `sum` across `join_many` relationship `many`; use `many.sum(many.field + many.field)`'
+        )
       );
     });
     test('many.field + many.field.sum()', () => {
@@ -773,13 +821,17 @@ describe('expressions', () => {
     });
 
     test('sum(many_field)', () => {
-      expect(modelX`sum(many_field)`).translationToFailWith(
-        'Join path is required for this calculation; use `many_field.sum()`'
+      expect(modelX`sum(many_field)`).toLog(
+        errorMessage(
+          'Join path is required for this calculation; use `many_field.sum()`'
+        )
       );
     });
     test('source.sum(many_field)', () => {
-      expect(modelX`source.sum(many_field)`).translationToFailWith(
-        'Cannot compute `sum` across `join_many` relationship `many`; use `many_field.sum()`'
+      expect(modelX`source.sum(many_field)`).toLog(
+        errorMessage(
+          'Cannot compute `sum` across `join_many` relationship `many`; use `many_field.sum()`'
+        )
       );
     });
     test('many_field.sum()', () => {
@@ -790,13 +842,17 @@ describe('expressions', () => {
     });
 
     test('sum(one.many_field)', () => {
-      expect(modelX`sum(one.many_field)`).translationToFailWith(
-        'Join path is required for this calculation; use `one.many_field.sum()`'
+      expect(modelX`sum(one.many_field)`).toLog(
+        errorMessage(
+          'Join path is required for this calculation; use `one.many_field.sum()`'
+        )
       );
     });
     test('source.sum(one.many_field)', () => {
-      expect(modelX`source.sum(one.many_field)`).translationToFailWith(
-        'Cannot compute `sum` across `join_many` relationship `many`; use `one.many_field.sum()`'
+      expect(modelX`source.sum(one.many_field)`).toLog(
+        errorMessage(
+          'Cannot compute `sum` across `join_many` relationship `many`; use `one.many_field.sum()`'
+        )
       );
     });
     test('one.many_field.sum()', () => {
@@ -807,13 +863,17 @@ describe('expressions', () => {
     });
 
     test('sum(many.field + one.field)', () => {
-      expect(modelX`sum(many.field + one.field)`).translationToFailWith(
-        'Aggregated dimensional expression contains multiple join paths; rewrite, for example `sum(first_join.field + second_join.field)` as `first_join.field.sum() + second_join.field.sum()`'
+      expect(modelX`sum(many.field + one.field)`).toLog(
+        errorMessage(
+          'Aggregated dimensional expression contains multiple join paths; rewrite, for example `sum(first_join.field + second_join.field)` as `first_join.field.sum() + second_join.field.sum()`'
+        )
       );
     });
     test('source.sum(many.field + one.field)', () => {
-      expect(modelX`source.sum(many.field + one.field)`).translationToFailWith(
-        'Aggregated dimensional expression contains multiple join paths; rewrite, for example `sum(first_join.field + second_join.field)` as `first_join.field.sum() + second_join.field.sum()`'
+      expect(modelX`source.sum(many.field + one.field)`).toLog(
+        errorMessage(
+          'Aggregated dimensional expression contains multiple join paths; rewrite, for example `sum(first_join.field + second_join.field)` as `first_join.field.sum() + second_join.field.sum()`'
+        )
       );
     });
     test('many.sum(many.field + one.field)', () => {
@@ -821,19 +881,25 @@ describe('expressions', () => {
     });
 
     test('many_one_field.sum()', () => {
-      expect(modelX`many_one_field.sum()`).translationToFailWith(
-        'Aggregated dimensional expression contains multiple join paths; rewrite, for example `sum(first_join.field + second_join.field)` as `first_join.field.sum() + second_join.field.sum()`'
+      expect(modelX`many_one_field.sum()`).toLog(
+        errorMessage(
+          'Aggregated dimensional expression contains multiple join paths; rewrite, for example `sum(first_join.field + second_join.field)` as `first_join.field.sum() + second_join.field.sum()`'
+        )
       );
     });
 
     test('sum(many_one_field)', () => {
-      expect(modelX`sum(many_one_field)`).translationToFailWith(
-        'Aggregated dimensional expression contains multiple join paths; rewrite, for example `sum(first_join.field + second_join.field)` as `first_join.field.sum() + second_join.field.sum()`'
+      expect(modelX`sum(many_one_field)`).toLog(
+        errorMessage(
+          'Aggregated dimensional expression contains multiple join paths; rewrite, for example `sum(first_join.field + second_join.field)` as `first_join.field.sum() + second_join.field.sum()`'
+        )
       );
     });
     test('source.sum(many_one_field)', () => {
-      expect(modelX`source.sum(many_one_field)`).translationToFailWith(
-        'Aggregated dimensional expression contains multiple join paths; rewrite, for example `sum(first_join.field + second_join.field)` as `first_join.field.sum() + second_join.field.sum()`'
+      expect(modelX`source.sum(many_one_field)`).toLog(
+        errorMessage(
+          'Aggregated dimensional expression contains multiple join paths; rewrite, for example `sum(first_join.field + second_join.field)` as `first_join.field.sum() + second_join.field.sum()`'
+        )
       );
     });
     test('many.sum(many_one_field)', () => {
@@ -841,13 +907,17 @@ describe('expressions', () => {
     });
 
     test('sum(many.one.field)', () => {
-      expect(modelX`sum(many.one.field)`).translationToFailWith(
-        'Join path is required for this calculation; use `many.one.field.sum()` or `many.sum(many.one.field)` to get a result weighted with respect to `many`'
+      expect(modelX`sum(many.one.field)`).toLog(
+        errorMessage(
+          'Join path is required for this calculation; use `many.one.field.sum()` or `many.sum(many.one.field)` to get a result weighted with respect to `many`'
+        )
       );
     });
     test('sum(many.one.one.field)', () => {
-      expect(modelX`sum(many.one.one.field)`).translationToFailWith(
-        'Join path is required for this calculation; use `many.one.one.field.sum()` or `many.sum(many.one.one.field)` to get a result weighted with respect to `many`'
+      expect(modelX`sum(many.one.one.field)`).toLog(
+        errorMessage(
+          'Join path is required for this calculation; use `many.one.one.field.sum()` or `many.sum(many.one.one.field)` to get a result weighted with respect to `many`'
+        )
       );
     });
 
@@ -860,8 +930,10 @@ describe('expressions', () => {
     });
 
     test('cross.avg(field)', () => {
-      expect(modelX`cross.avg(field)`).translationToFailWith(
-        'Cannot compute `avg` across `join_cross` relationship `cross`; use `field.avg()`'
+      expect(modelX`cross.avg(field)`).toLog(
+        errorMessage(
+          'Cannot compute `avg` across `join_cross` relationship `cross`; use `field.avg()`'
+        )
       );
     });
 
@@ -879,8 +951,10 @@ describe('expressions', () => {
       expect(modelX`source.sum(one.column)`).toTranslate();
     });
     test('sum(one.column + one.column)', () => {
-      expect(modelX`sum(one.column + one.column)`).toTranslateWithWarnings(
-        'Join path is required for this calculation; use `one.sum(one.column + one.column)` or `source.sum(one.column + one.column)` to get a result weighted with respect to `source`'
+      expect(modelX`sum(one.column + one.column)`).toLog(
+        warningMessage(
+          'Join path is required for this calculation; use `one.sum(one.column + one.column)` or `source.sum(one.column + one.column)` to get a result weighted with respect to `source`'
+        )
       );
     });
     test('one.sum(one.column + one.column)', () => {
@@ -895,7 +969,7 @@ describe('expressions', () => {
       run: a -> {
         group_by: output is 1
         calculate: bar is lag(sum(output))
-      }`).translationToFailWith("'output' is not defined");
+      }`).toLog(errorMessage("'output' is not defined"));
     });
   });
 
@@ -1052,8 +1126,10 @@ describe('sql native fields in schema', () => {
     const uModel = new TestTranslator(
       'run: ab->{ where: aun = b.aun  select: * }'
     );
-    expect(uModel).translationToFailWith(
-      "Unsupported SQL native type 'undefined' not allowed in expression"
+    expect(uModel).toLog(
+      errorMessage(
+        "Unsupported SQL native type 'undefined' not allowed in expression"
+      )
     );
   });
   test('flag unsupported compare', () => {
@@ -1061,8 +1137,10 @@ describe('sql native fields in schema', () => {
     const uModel = new TestTranslator(
       'run: ab->{ where: aun > b.aun  select: * }'
     );
-    expect(uModel).translationToFailWith(
-      "Unsupported SQL native type 'undefined' not allowed in expression"
+    expect(uModel).toLog(
+      errorMessage(
+        "Unsupported SQL native type 'undefined' not allowed in expression"
+      )
     );
   });
   test('allow unsupported equality when raw types match', () => {
@@ -1075,8 +1153,10 @@ describe('sql native fields in schema', () => {
     const uModel = new TestTranslator(
       'source: x is a extend { dimension: notUn is not aun }'
     );
-    expect(uModel).translationToFailWith(
-      "Unsupported SQL native type 'undefined' not allowed in expression"
+    expect(uModel).toLog(
+      errorMessage(
+        "Unsupported SQL native type 'undefined' not allowed in expression"
+      )
     );
   });
   test('allow unsupported to be cast', () => {
@@ -1105,8 +1185,8 @@ describe('sql native fields in schema', () => {
         run: a -> {
           group_by: x is sql_number("\${asdfasdf} * 2")
         }
-      `).translationToFailWith(
-        "Invalid interpolation: 'asdfasdf' is not defined"
+      `).toLog(
+        errorMessage("Invalid interpolation: 'asdfasdf' is not defined")
       );
     });
 
@@ -1115,8 +1195,10 @@ describe('sql native fields in schema', () => {
         run: a -> {
           group_by: x is sql_number("\${asdfasdf} * 2")
         }
-      `).translationToFailWith(
-        'Cannot use sql_function `sql_number`; use `sql_functions` experiment to enable this behavior'
+      `).toLog(
+        errorMessage(
+          'Cannot use sql_function `sql_number`; use `sql_functions` experiment to enable this behavior'
+        )
       );
     });
   });
@@ -1141,8 +1223,10 @@ describe('sql native fields in schema', () => {
     });
 
     test('sql cast illegal type name', () => {
-      expect(expr`astr::"stuff 'n' things"`).translationToFailWith(
-        "Cast type `stuff 'n' things` is invalid for standardsql dialect"
+      expect(expr`astr::"stuff 'n' things"`).toLog(
+        errorMessage(
+          "Cast type `stuff 'n' things` is invalid for standardsql dialect"
+        )
       );
     });
   });

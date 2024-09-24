@@ -687,9 +687,16 @@ export function warning<T extends MessageCode>(
   return {code, data, severity: 'warn'};
 }
 
-export function errorMessage(message: string): {
-  message: string;
+export function errorMessage(message: string | RegExp): {
+  message: string | RegExp;
   severity: LogSeverity;
 } {
   return {message, severity: 'error'};
+}
+
+export function warningMessage(message: string | RegExp): {
+  message: string | RegExp;
+  severity: LogSeverity;
+} {
+  return {message, severity: 'warn'};
 }

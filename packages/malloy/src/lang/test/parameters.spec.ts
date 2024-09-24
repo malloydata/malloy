@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {markSource} from './test-translator';
+import {errorMessage, markSource} from './test-translator';
 import './parse-expects';
 
 describe('parameters', () => {
@@ -31,24 +31,28 @@ describe('parameters', () => {
     expect(markSource`
       ##! experimental.parameters
       source: ab_new(param::number is ${'"hello"'}) is ab
-    `).translationToFailWith(
-      'Default value for parameter does not match declared type `number`'
+    `).toLog(
+      errorMessage(
+        'Default value for parameter does not match declared type `number`'
+      )
     );
   });
   test('error if paramter has no type or value', () => {
     expect(markSource`
       ##! experimental.parameters
       source: ab_new(param) is ab
-    `).translationToFailWith(
-      'Parameter must have default value or declared type'
+    `).toLog(
+      errorMessage('Parameter must have default value or declared type')
     );
   });
   test('error if paramter type is null', () => {
     expect(markSource`
       ##! experimental.parameters
       source: ab_new(param is null) is ab
-    `).translationToFailWith(
-      'Default value cannot have type `null` unless parameter type is also specified'
+    `).toLog(
+      errorMessage(
+        'Default value cannot have type `null` unless parameter type is also specified'
+      )
     );
   });
   test('allowed to write null::string', () => {
@@ -76,14 +80,14 @@ describe('parameters', () => {
     expect(markSource`
       ##! experimental.parameters
       source: ab_new(param is 10 to 20) is ab
-    `).translationToFailWith('A Range is not a value');
+    `).toLog(errorMessage('A Range is not a value'));
   });
   test('no additional error if default value type is error', () => {
     expect(markSource`
       ##! experimental.parameters
       source: ab_new(param::number is 1 + ${'"foo"'}) is ab
-    `).translationToFailWith(
-      "The '+' operator requires a number, not a 'string'"
+    `).toLog(
+      errorMessage("The '+' operator requires a number, not a 'string'")
     );
   });
   test('can declare parameter with inferred type', () => {
@@ -250,21 +254,21 @@ describe('parameters', () => {
         view: all_fields is { select: * }
       }
       run: ab_new(param is 1) -> all_fields -> { select: ${'param'} }
-    `).translationToFailWith("'param' is not defined");
+    `).toLog(errorMessage("'param' is not defined"));
   });
   test('cannot reference renamed param in query against source', () => {
     expect(markSource`
       ##! experimental.parameters
       source: ab_new(param::number) is ab
       run: ab_new(param is 1) -> { select: p is ${'param'} }
-    `).translationToFailWith("'param' is not defined");
+    `).toLog(errorMessage("'param' is not defined"));
   });
   test('cannot reference param in query against source', () => {
     expect(markSource`
       ##! experimental.parameters
       source: ab_new(param::number) is ab
       run: ab_new(param is 1) -> { select: ${'param'} }
-    `).translationToFailWith("'param' is not defined");
+    `).toLog(errorMessage("'param' is not defined"));
   });
   test('cannot reference param in source extension', () => {
     expect(markSource`
@@ -273,7 +277,7 @@ describe('parameters', () => {
       source: x is ab_new(param is 1) extend {
         dimension: param_copy is ${'param'}
       }
-    `).translationToFailWith("'param' is not defined");
+    `).toLog(errorMessage("'param' is not defined"));
   });
   test('cannot reference param in in-query source extension', () => {
     expect(markSource`
@@ -285,14 +289,14 @@ describe('parameters', () => {
         }
         group_by: param_copy
       }
-    `).translationToFailWith("'param' is not defined");
+    `).toLog(errorMessage("'param' is not defined"));
   });
   test('can reference field in source in argument', () => {
     expect(markSource`
       ##! experimental.parameters
       source: ab_new(param::number) is ab
       run: ab_new(param is ${'ai'}) -> { select: * }
-    `).translationToFailWith('`ai` is not defined');
+    `).toLog(errorMessage('`ai` is not defined'));
   });
   test('can pass through parameter to joined source (shorthand)', () => {
     expect(`
@@ -392,7 +396,7 @@ describe('parameters', () => {
       ##! experimental.parameters
       source: ab_new(param::number) is ab
       run: ab_new(param is 1) -> { select: ${'param'} }
-    `).translationToFailWith("'param' is not defined");
+    `).toLog(errorMessage("'param' is not defined"));
   });
   test('can reference param in view in source', () => {
     expect(`
@@ -415,7 +419,7 @@ describe('parameters', () => {
       ##! experimental.parameters
       source: ab_new(param::number) is ab
       run: ab_new(param is 1) -> { select: p is ${'param'} }
-    `).translationToFailWith("'param' is not defined");
+    `).toLog(errorMessage("'param' is not defined"));
   });
   test('error when declaring parameter twice', () => {
     expect(
@@ -423,7 +427,7 @@ describe('parameters', () => {
         ##! experimental.parameters
         source: ab_new(param::number, ${'param::number'}) is ab
       `
-    ).translationToFailWith('Cannot redefine parameter `param`');
+    ).toLog(errorMessage('Cannot redefine parameter `param`'));
   });
   // This behavior will likely change in the future; but in the meantime, this
   // safeguards against some confusion about parameter scoping
@@ -435,9 +439,11 @@ describe('parameters', () => {
           dimension: foo is upper(ai)
         }
       `
-    ).translationToFailWith(
-      'No matching overload for function upper(number)',
-      'Illegal shadowing of field `ai` by parameter with the same name'
+    ).toLog(
+      errorMessage('No matching overload for function upper(number)'),
+      errorMessage(
+        'Illegal shadowing of field `ai` by parameter with the same name'
+      )
     );
   });
   test('can shadow field that is excepted', () => {
@@ -457,8 +463,10 @@ describe('parameters', () => {
         ##! experimental.parameters
         source: ab_new(${'ai::string'}) is ab
       `
-    ).translationToFailWith(
-      'Illegal shadowing of field `ai` by parameter with the same name'
+    ).toLog(
+      errorMessage(
+        'Illegal shadowing of field `ai` by parameter with the same name'
+      )
     );
   });
   test('do not inherit parameters from base source', () => {
@@ -469,8 +477,8 @@ describe('parameters', () => {
         source: ab_new_new is ab_new(param is 1)
         run: ab_new_new(${'param'} is 2) -> { select: * }
       `
-    ).translationToFailWith(
-      '`ab_new_new` has no declared parameter named `param`'
+    ).toLog(
+      errorMessage('`ab_new_new` has no declared parameter named `param`')
     );
   });
   test('error when declaring field with same name as parameter', () => {
@@ -481,15 +489,17 @@ describe('parameters', () => {
           dimension: param is 1
         }
       `
-    ).translationToFailWith("Cannot redefine 'param'");
+    ).toLog(errorMessage("Cannot redefine 'param'"));
   });
   test('error when declaring parameter without experiment enabled', () => {
     expect(
       markSource`
         source: ab_new(param::number) is ab
       `
-    ).translationToFailWith(
-      "Experimental flag 'parameters' required to enable this feature"
+    ).toLog(
+      errorMessage(
+        "Experimental flag 'parameters' required to enable this feature"
+      )
     );
   });
   test('cannot except parameter from extended source', () => {
@@ -501,7 +511,7 @@ describe('parameters', () => {
           except: param_a
         }
       `
-    ).translationToFailWith('`param_a` is not defined');
+    ).toLog(errorMessage('`param_a` is not defined'));
   });
   test('cannot except parameter in direct extend', () => {
     expect(
@@ -511,7 +521,7 @@ describe('parameters', () => {
           except: param
         }
       `
-    ).translationToFailWith('Illegal `except:` of parameter');
+    ).toLog(errorMessage('Illegal `except:` of parameter'));
   });
   test('cannot accept parameter', () => {
     expect(
@@ -521,15 +531,17 @@ describe('parameters', () => {
           accept: param
         }
       `
-    ).translationToFailWith('Illegal `accept:` of parameter');
+    ).toLog(errorMessage('Illegal `accept:` of parameter'));
   });
   test('error when using parameter without experiment enabled', () => {
     expect(
       markSource`
         run: ab_new${'(param is param)'} -> { select: * }
       `
-    ).translationToFailWith(
-      "Experimental flag 'parameters' required to enable this feature"
+    ).toLog(
+      errorMessage(
+        "Experimental flag 'parameters' required to enable this feature"
+      )
     );
   });
   test('parameters cannot reference themselves', () => {
@@ -539,7 +551,7 @@ describe('parameters', () => {
         source: ab_new(param::number) is ab
         run: ab_new(param is ${'param'}) -> { select: * }
       `
-    ).translationToFailWith('`param` is not defined');
+    ).toLog(errorMessage('`param` is not defined'));
   });
   // This just looks like circular referencing--in reality, you cannot reference other
   // parameters in parameter arguments, hence just "xxx is not defined"
@@ -550,7 +562,10 @@ describe('parameters', () => {
         source: ab_new(p_a::number, p_b::number) is ab
         run: ab_new(p_a is ${'p_b'}, p_b is ${'p_a'}) -> { select: * }
       `
-    ).translationToFailWith('`p_b` is not defined', '`p_a` is not defined');
+    ).toLog(
+      errorMessage('`p_b` is not defined'),
+      errorMessage('`p_a` is not defined')
+    );
   });
   test('error when passing param with no name', () => {
     expect(
@@ -559,9 +574,11 @@ describe('parameters', () => {
         source: ab_new(param::number) is ab
         run: ab_new(${'1'}) -> { select: * }
       `
-    ).translationToFailWith(
-      'Parameterized source arguments must be named with `parameter_name is`',
-      'Argument not provided for required parameter `param`'
+    ).toLog(
+      errorMessage(
+        'Parameterized source arguments must be named with `parameter_name is`'
+      ),
+      errorMessage('Argument not provided for required parameter `param`')
     );
   });
   test('error when passing param with incorrect name', () => {
@@ -571,8 +588,8 @@ describe('parameters', () => {
         source: ab_new(param::number) is ab
         run: ab_new(${'wrong_name'} is 1, param is 2) -> { select: * }
       `
-    ).translationToFailWith(
-      '`ab_new` has no declared parameter named `wrong_name`'
+    ).toLog(
+      errorMessage('`ab_new` has no declared parameter named `wrong_name`')
     );
   });
   test('error when passing param multiple times', () => {
@@ -582,7 +599,7 @@ describe('parameters', () => {
         source: ab_new(param::number) is ab
         run: ab_new(param is 1, ${'param is 2'}) -> { select: * }
       `
-    ).translationToFailWith('Cannot pass argument for `param` more than once');
+    ).toLog(errorMessage('Cannot pass argument for `param` more than once'));
   });
   test('error when not specifying argument for param with parentheses', () => {
     expect(
@@ -591,8 +608,8 @@ describe('parameters', () => {
         source: ab_new(param::number) is ab
         run: ${'ab_new'}() -> { select: * }
       `
-    ).translationToFailWith(
-      'Argument not provided for required parameter `param`'
+    ).toLog(
+      errorMessage('Argument not provided for required parameter `param`')
     );
   });
   test('error when not specifying argument for param without parentheses', () => {
@@ -602,8 +619,8 @@ describe('parameters', () => {
         source: ab_new(param::number) is ab
         run: ${'ab_new'} -> { select: * }
       `
-    ).translationToFailWith(
-      'Argument not provided for required parameter `param`'
+    ).toLog(
+      errorMessage('Argument not provided for required parameter `param`')
     );
   });
   test('error when not specifying argument for param second time', () => {
@@ -614,8 +631,8 @@ describe('parameters', () => {
         run: ab_new(param is 1) -> { select: * }
         run: ${'ab_new'} -> { select: * }
       `
-    ).translationToFailWith(
-      'Argument not provided for required parameter `param`'
+    ).toLog(
+      errorMessage('Argument not provided for required parameter `param`')
     );
   });
   test('error when referencing parameter that does not exist in join definition', () => {
@@ -627,7 +644,7 @@ describe('parameters', () => {
           join_one: ab_join is ab_new_1(param_1 is ${'param_3'})
         }
       `
-    ).translationToFailWith('`param_3` is not defined');
+    ).toLog(errorMessage('`param_3` is not defined'));
   });
   test('error when referencing identifier in default param value', () => {
     expect(
@@ -635,9 +652,7 @@ describe('parameters', () => {
         ##! experimental.parameters
         source: ab_new_1(param_1 is ${'ident'}) is ab
       `
-    ).translationToFailWith(
-      'Only constants allowed in parameter default values'
-    );
+    ).toLog(errorMessage('Only constants allowed in parameter default values'));
   });
   test.skip('can use param in multi-stage query', () => {
     expect(`
@@ -656,7 +671,7 @@ describe('parameters', () => {
       ##! experimental.parameters
       source: ab_new(param::number) is ab
       source: ab_new_new(param::number) is ab_new(${'param'}) -> { select: * }
-    `).translationToFailWith('`param` is not defined');
+    `).toLog(errorMessage('`param` is not defined'));
   });
   test.skip('can add an annotation to a param', () => {
     expect(`

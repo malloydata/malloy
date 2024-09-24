@@ -21,7 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {expr, TestTranslator, BetaExpression} from './test-translator';
+import {
+  expr,
+  TestTranslator,
+  BetaExpression,
+  errorMessage,
+} from './test-translator';
 import {parseString} from '../parse-utils';
 import './parse-expects';
 import {isGranularResult} from '../ast/types/granular-result';
@@ -224,9 +229,9 @@ describe('literals', () => {
       expect(m).toParse();
     });
     test('timezone with illegal query', () => {
-      expect(
-        `run: a->{timezone: """${tz}%{ab->aturtle}"""; select: *}`
-      ).translationToFailWith('%{ query } illegal in this string');
+      expect(`run: a->{timezone: """${tz}%{ab->aturtle}"""; select: *}`).toLog(
+        errorMessage('%{ query } illegal in this string')
+      );
     });
     test('table single quote', () => {
       const m = new TestTranslator("source: n is bigquery.table('n')");

@@ -102,6 +102,7 @@ type MessageParameterTypes = {
   'sql-native-not-allowed-in-expression': {
     rawType: string | undefined;
   };
+  'ambiguous-view-type': {};
   // Old Style
   'aggregate-source-not-found': string;
   'name-conflict-with-global': string;
@@ -228,7 +229,6 @@ type MessageParameterTypes = {
   'illegal-index-operation': string;
   'illegal-project-operation': string;
   'illegal-grouping-operation': string;
-  'ambiguous-view-type': string;
   'top-by-not-found-in-output': string;
   'top-by-analytic': string;
   'top-by-aggregate': string;
@@ -337,6 +337,8 @@ export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
   }),
   'experiment-not-enabled': e =>
     `Experimental flag \`${e.experimentId}\` is not set, feature not available`,
+  'ambiguous-view-type': () =>
+    "Can't determine view type (`group_by` / `aggregate` / `nest`, `project`, `index`)",
 };
 
 export type MessageCode = keyof MessageParameterTypes;

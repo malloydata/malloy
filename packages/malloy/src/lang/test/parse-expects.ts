@@ -69,33 +69,7 @@ declare global {
        * X can be a MarkedSource, a string, or a model.
        */
       toTranslate(): R;
-      /**
-       * expect(X).toTranslateWithWarnings(expectedWarnings)
-       *
-       * Passes if the source compiles to code which could be used to
-       * generate SQL, and the specified warnings appear. If X is a marked
-       * source, the warnings which are found must match the locations of
-       * the markings.
-       *
-       * X can be a MarkedSource, a string, or a model. If it is a marked
-       * source, the errors which are found must match the locations of
-       * the markings.
-       */
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      toTranslateWithWarnings(...expectedWarnings: any[]): R;
       toReturnType(tp: string): R;
-      /**
-       * expect(X).translateToFailWith(expectedErrors)
-       *
-       * X can be a MarkedSource, a string, or a model. If it is a marked
-       * source, the errors which are found must match the locations of
-       * the markings.
-       *
-       * @param expectedErrors varargs list of strings which must match
-       *        exactly, or regular expressions.
-       */
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      translationToFailWith(...expectedErrors: any[]): R;
       toLog(...expectedErrors: ProblemSpec[]): R;
       isLocationIn(at: DocumentLocation, txt: string): R;
       /**
@@ -195,20 +169,6 @@ function highlightError(dl: DocumentLocation, txt: string): string {
   }
   return output.join('\n');
 }
-
-// function normalizeProblemSpec(
-//   defaultSeverity: LogSeverity
-// ): (spec: ProblemSpec) => ComplexProblemSpec {
-//   return function (spec: ProblemSpec) {
-//     if (typeof spec === 'string') {
-//       return {severity: defaultSeverity, message: spec};
-//     } else if (spec instanceof RegExp) {
-//       return {severity: defaultSeverity, message: spec};
-//     } else {
-//       return spec;
-//     }
-//   };
-// }
 
 type TestSource = string | MarkedSource | TestTranslator;
 
@@ -311,13 +271,6 @@ expect.extend({
       pass ? '=' : '!='
     } $[returnType`;
     return {pass, message: () => msg};
-  },
-  translationToFailWith: function (s: TestSource, ...msgs: ProblemSpec[]) {
-    return checkForProblems(this, false, s, ...msgs);
-  },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  toTranslateWithWarnings: function (s: TestSource, ...msgs: any[]) {
-    return checkForProblems(this, true, s, ...msgs);
   },
   toLog: function (s: TestSource, ...msgs: ProblemSpec[]) {
     const expectCompiles = !msgs.some(m => m.severity === 'error');
@@ -425,14 +378,14 @@ function checkForProblems(
       if ('message' in msg) {
         if (typeof msg.message === 'string') {
           if (msg.message !== err.message) {
+            explain.push(`Expected: ${msg.message}\nGot: ${err.message}`);
             matched = false;
           }
-          explain.push(`Expected: ${msg.message}\nGot: ${err.message}`);
         } else {
           if (!err.message.match(msg.message)) {
+            explain.push(`Expected: ${msg.message}\nGot: ${err.message}`);
             matched = false;
           }
-          explain.push(`Expected: ${msg.message}\nGot: ${err.message}`);
         }
       } else {
         if (msg.code !== err.code) {
