@@ -28,7 +28,14 @@ import {AbstractParseTreeVisitor} from 'antlr4ts/tree/AbstractParseTreeVisitor';
 import {MalloyParserVisitor} from './lib/Malloy/MalloyParserVisitor';
 import * as parse from './lib/Malloy/MalloyParser';
 import * as ast from './ast';
-import {LogSeverity, MessageLogger} from './parse-log';
+import {
+  LogMessageOptions,
+  LogSeverity,
+  MessageCode,
+  MessageLogger,
+  MessageParameterType,
+  makeLogMessage,
+} from './parse-log';
 import {MalloyParseInfo} from './malloy-parse-info';
 import {Interval as StreamInterval} from 'antlr4ts/misc/Interval';
 import {FieldDeclarationConstructor, TableSource} from './ast';
@@ -98,22 +105,21 @@ export class MalloyToAST
    * are not compatible.
    * @return an error object to throw.
    */
-  protected internalError(cx: ParserRuleContext, msg: string): Error {
-    const tmsg = `Internal Translator Error: ${msg}`;
-    this.contextError(cx, 'internal-translator-error', tmsg);
-    return new Error(tmsg);
+  protected internalError(cx: ParserRuleContext, message: string): Error {
+    this.contextError(cx, 'internal-translator-error', {message});
+    return new Error(`Internal Translator Error: ${message}`);
   }
 
   /**
    * Log an error message relative to an AST node
    */
-  protected astError(
+  protected astError<T extends MessageCode>(
     el: ast.MalloyElement,
-    code: string,
-    str: string,
-    sev: LogSeverity = 'error'
+    code: T,
+    data: MessageParameterType<T>,
+    options?: LogMessageOptions
   ): void {
-    this.msgLog.log({message: str, at: el.location, severity: sev, code});
+    this.msgLog.log(makeLogMessage(code, data, {at: el.location, ...options}));
   }
 
   protected getLocation(cx: ParserRuleContext): DocumentLocation {
@@ -126,48 +132,44 @@ export class MalloyToAST
   /**
    * Log an error message relative to a parse node
    */
-  protected contextError(
+  protected contextError<T extends MessageCode>(
     cx: ParserRuleContext,
-    code: string,
-    msg: string,
-    sev: LogSeverity = 'error'
+    code: T,
+    data: MessageParameterType<T>,
+    options?: LogMessageOptions
   ): void {
-    this.msgLog.log({
-      message: msg,
-      at: this.getLocation(cx),
-      severity: sev,
-      code,
-    });
+    this.msgLog.log(
+      makeLogMessage(code, data, {
+        at: this.getLocation(cx),
+        ...options,
+      })
+    );
   }
 
-  protected warnWithReplacement(
-    code: string,
-    message: string,
+  protected warnWithReplacement<T extends MessageCode>(
+    code: T,
+    data: MessageParameterType<T>,
     range: DocumentRange,
     replacement: string
   ): void {
-    this.msgLog.log({
-      code,
-      message,
-      at: {url: this.parseInfo.sourceURL, range},
-      severity: 'warn',
-      replacement,
-    });
+    this.msgLog.log(
+      makeLogMessage(code, data, {
+        at: {url: this.parseInfo.sourceURL, range},
+        severity: 'warn',
+        replacement,
+      })
+    );
   }
 
-  protected inExperiment(experimentID: string, cx: ParserRuleContext): boolean {
+  protected inExperiment(experimentId: string, cx: ParserRuleContext): boolean {
     const experimental = this.compilerFlags.tag('experimental');
     if (
       experimental &&
-      (experimental.bare() || experimental.has(experimentID))
+      (experimental.bare() || experimental.has(experimentId))
     ) {
       return true;
     }
-    this.contextError(
-      cx,
-      'experiment-not-enabled',
-      `Experimental flag '${experimentID}' required to enable this feature`
-    );
+    this.contextError(cx, 'experiment-not-enabled', {experimentId});
     return false;
   }
 
@@ -179,10 +181,14 @@ export class MalloyToAST
     return false;
   }
 
-  protected m4advisory(cx: ParserRuleContext, code: string, msg: string): void {
+  protected m4advisory<T extends MessageCode>(
+    cx: ParserRuleContext,
+    code: T,
+    data: MessageParameterType<T>
+  ): void {
     const m4 = this.m4Severity();
     if (m4) {
-      this.contextError(cx, code, msg, m4);
+      this.contextError(cx, code, data, {severity: m4});
     }
   }
 
@@ -594,7 +600,7 @@ export class MalloyToAST
     } else {
       this.contextError(
         pcx,
-        'internal-error/translation-error/unknown-matrix-operation',
+        'unknown-matrix-operation',
         'Internal Error: Unknown matrixOperation'
       );
     }
@@ -777,11 +783,9 @@ export class MalloyToAST
     );
 
     if (!timezoneStatement.isValid) {
-      this.astError(
-        timezoneStatement,
-        'invalid-timezone',
-        `Invalid timezone: ${timezoneStatement.tz}`
-      );
+      this.astError(timezoneStatement, 'invalid-timezone', {
+        timezone: timezoneStatement.tz,
+      });
     }
 
     return this.astAt(timezoneStatement, cx);
@@ -1186,7 +1190,7 @@ export class MalloyToAST
       if (implicitName === undefined) {
         this.contextError(
           pcx,
-          'unnamed-nest',
+          'anonymous-nest',
           '`nest:` view requires a name (add `nest_name is ...`)'
         );
       }

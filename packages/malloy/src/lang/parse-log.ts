@@ -108,6 +108,8 @@ type MessageParameterTypes = {
   'parsed-non-malloy-document': {url: string};
   'parse-exception': {message: string};
   'syntax-error': {message: string};
+  'internal-translator-error': {message: string};
+  'invalid-timezone': {timezone: string};
   // Old Style
   'aggregate-source-not-found': string;
   'name-conflict-with-global': string;
@@ -313,6 +315,37 @@ type MessageParameterTypes = {
   'refinement-with-multistage-view': string;
   'foreign-key-in-join-cross': string;
   'expression-type-error': string;
+  'unexpected-statement-in-translation': string;
+  'filter-shortcut': string;
+  'illegal-query-interpolation-outside-sql-block': string;
+  'percent-terminated-query-interpolation': string;
+  'failed-to-parse-time-literal': string;
+  'table-function': string;
+  'missing-on-in-join-many': string;
+  'foreign-key-in-join-many': string;
+  'join-statement-in-view': string;
+  'unknown-matrix-operation': string;
+  'declare': string;
+  'query-in-source': string;
+  'invalid-reference-only-aggregation': string;
+  'project': string;
+  'top-by': string;
+  'anonymous-query': string;
+  'anonymous-nest': string;
+  'count-expression-with-locality': string;
+  'invalid-symmetric-aggregate': string;
+  'invalid-asymmetric-aggregate': string;
+  'aggregate-parse-error': string;
+  'wildcard-in-aggregate': string;
+  'unexpected-malloy-type': string;
+  'failed-to-parse-function-name': string;
+  'orphaned-object-annotation': string;
+  'misplaced-model-annotation': string;
+  'unexpected-non-source-query-expression-node': string;
+  'sql-not-like': string;
+  'sql-like': string;
+  'sql-is-not-null': string;
+  'sql-is-null': string;
 };
 
 export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
@@ -352,6 +385,8 @@ export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
     `'${e.url}' did not parse to malloy document`,
   'parse-exception': e => `Malloy internal parser exception [${e.message}]`,
   'syntax-error': e => e.message,
+  'internal-translator-error': e => `Internal Translator Error: ${e.message}`,
+  'invalid-timezone': e => `Invalid timezone: ${e.timezone}`,
 };
 
 export type MessageCode = keyof MessageParameterTypes;

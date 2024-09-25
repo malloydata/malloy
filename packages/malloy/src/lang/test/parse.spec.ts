@@ -107,9 +107,9 @@ describe('model statements', () => {
 
   test('experiment failures in parse are flagged', () => {
     expect(';;[ "x" ]').toLog(
-      errorMessage(
-        "Experimental flag 'compilerTestExperimentParse' required to enable this feature"
-      )
+      error('experiment-not-enabled', {
+        experimentId: 'compilerTestExperimentParse',
+      })
     );
   });
 
