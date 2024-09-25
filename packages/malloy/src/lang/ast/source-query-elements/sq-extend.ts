@@ -53,7 +53,10 @@ export class SQExtend extends SourceQueryElement {
       this.has({asSource: this.asSource});
       return this.asSource;
     }
-    this.sqLog('Could not compute source to extend');
+    this.sqLog(
+      'failed-to-compute-source-to-extend',
+      'Could not compute source to extend'
+    );
   }
 
   isSource() {

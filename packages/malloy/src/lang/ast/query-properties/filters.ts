@@ -47,7 +47,10 @@ export class FilterElement extends MalloyElement {
   filterCondition(fs: FieldSpace): FilterCondition {
     const exprVal = this.expr.getExpression(fs);
     if (exprVal.dataType !== 'boolean') {
-      this.expr.log('Filter expression must have boolean value');
+      this.expr.logError(
+        'non-boolean-filter',
+        'Filter expression must have boolean value'
+      );
       return {
         node: 'filterCondition',
         code: this.exprSrc,
@@ -97,15 +100,22 @@ export class Filter
         const isAnalytic = expressionIsAnalytic(fExpr.expressionType);
         if (this.havingClause) {
           if (isAnalytic) {
-            oneElement.log('Analytic expressions are not allowed in `having:`');
+            oneElement.logError(
+              'analytic-in-having',
+              'Analytic expressions are not allowed in `having:`'
+            );
             continue;
           }
         } else {
           if (isAnalytic) {
-            oneElement.log('Analytic expressions are not allowed in `where:`');
+            oneElement.logError(
+              'analytic-in-where',
+              'Analytic expressions are not allowed in `where:`'
+            );
             continue;
           } else if (isAggregate) {
-            oneElement.log(
+            oneElement.logError(
+              'aggregate-in-where',
               'Aggregate expressions are not allowed in `where:`; use `having:`'
             );
           }

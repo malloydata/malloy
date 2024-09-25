@@ -51,14 +51,20 @@ export class IndexFieldSpace extends QueryOperationSpace {
       } else if (indexField instanceof WildcardFieldReference) {
         this.addWild(indexField);
       } else {
-        indexField.log('Internal error, not expected in index query');
+        indexField.logError(
+          'invalid-field-in-index-query',
+          'Internal error, not expected in index query'
+        );
       }
     }
   }
 
   getPipeSegment(refineIndex?: PipeSegment): IndexSegment {
     if (refineIndex) {
-      this.log('index query operations cannot be refined');
+      this.logError(
+        'refinement-of-index-segment',
+        'index query operations cannot be refined'
+      );
       return {type: 'index', indexFields: []};
     }
     const indexFields: IndexFieldDef[] = [];
@@ -74,7 +80,7 @@ export class IndexFieldSpace extends QueryOperationSpace {
           const fieldRef = field.fieldRef;
           const check = fieldRef.getField(this.exprSpace);
           if (check.error) {
-            fieldRef.log(check.error);
+            fieldRef.logError(check.error.code, check.error.message);
           } else {
             indexFields.push(fieldRef.refToField);
           }
@@ -100,13 +106,17 @@ export class IndexFieldSpace extends QueryOperationSpace {
           if (ent instanceof StructSpaceField) {
             current = ent.fieldSpace;
           } else {
-            pathPart.log(
+            pathPart.logError(
+              'invalid-wildcard-source',
               `Field '${part}' does not contain rows and cannot be expanded with '*'`
             );
             return;
           }
         } else {
-          pathPart.log(`No such field as '${part}'`);
+          pathPart.logError(
+            'wildcard-source-not-found',
+            `No such field as '${part}'`
+          );
           return;
         }
       }
@@ -126,7 +136,8 @@ export class IndexFieldSpace extends QueryOperationSpace {
       ]);
       if (this.entry(indexName)) {
         const conflict = this.expandedWild[indexName]?.join('.');
-        wild.log(
+        wild.logError(
+          'name-conflict-in-wildcard-expansion',
           `Cannot expand '${name}' in '${
             wild.refString
           }' because a field with that name already exists${

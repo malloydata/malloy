@@ -70,8 +70,10 @@ export class ExprTimeExtract extends ExpressionDef {
     const extractTo = ExprTimeExtract.extractor(this.extractText);
     if (extractTo) {
       if (this.args.length !== 1) {
-        this.log(`Extraction function ${extractTo} requires one argument`);
-        return errorFor('{this.name} arg count');
+        return this.loggedErrorExpr(
+          'too-many-arguments-for-time-extraction',
+          `Extraction function ${extractTo} requires one argument`
+        );
       }
       const from = this.args[0];
       if (from instanceof Range) {
@@ -91,12 +93,16 @@ export class ExprTimeExtract extends ExpressionDef {
           };
         }
         if (!isTimeFieldType(first.dataType)) {
-          from.first.log(`Can't extract ${extractTo} from '${first.dataType}'`);
-          return errorFor(`${extractTo} bad type ${first.dataType}`);
+          return from.first.loggedErrorExpr(
+            'invalid-type-for-time-extraction',
+            `Can't extract ${extractTo} from '${first.dataType}'`
+          );
         }
         if (!isTimeFieldType(last.dataType)) {
-          from.last.log(`Cannot extract ${extractTo} from '${last.dataType}'`);
-          return errorFor(`${extractTo} bad type ${last.dataType}`);
+          return from.last.loggedErrorExpr(
+            'invalid-type-for-time-extraction',
+            `Cannot extract ${extractTo} from '${last.dataType}'`
+          );
         }
         let valueType = first.dataType;
         if (first.dataType !== last.dataType) {
@@ -116,19 +122,23 @@ export class ExprTimeExtract extends ExpressionDef {
             }
           }
           if (cannotMeasure) {
-            from.first.log(
+            return from.first.loggedErrorExpr(
+              'invalid-types-for-time-measurement',
               `Cannot measure from ${first.dataType} to ${last.dataType}`
             );
-            return errorFor(`${extractTo} range mismatch`);
           }
         }
         if (['week', 'month', 'quarter', 'year'].includes(extractTo)) {
-          this.log(`Cannot measure interval using '${extractTo}'`);
-          return errorFor(`${extractTo} civil extraction`);
+          return this.loggedErrorExpr(
+            'invalid-timeframe-for-time-measurement',
+            `Cannot measure interval using '${extractTo}'`
+          );
         }
         if (!isTimestampUnit(extractTo)) {
-          this.log(`Cannot extract ${extractTo} from a range`);
-          return errorFor(`${extractTo} bad extraction`);
+          return this.loggedErrorExpr(
+            'invalid-time-extraction-unit',
+            `Cannot extract ${extractTo} from a range`
+          );
         }
         return {
           dataType: 'number',
@@ -158,7 +168,8 @@ export class ExprTimeExtract extends ExpressionDef {
           };
         }
         if (argV.dataType !== 'error') {
-          this.log(
+          this.logError(
+            'unsupported-type-for-time-extraction',
             `${this.extractText}() requires time type, not '${argV.dataType}'`
           );
         }

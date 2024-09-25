@@ -45,7 +45,10 @@ export class AnonymousQuery
   execute(doc: Document): void {
     const queryObj = this.queryExpr.getQuery();
     if (!queryObj) {
-      this.queryExpr.sqLog('Cannot run this object as a query');
+      this.queryExpr.sqLog(
+        'non-query-used-as-query',
+        'Cannot run this object as a query'
+      );
       return;
     }
     const modelQuery = {...queryObj.query()};

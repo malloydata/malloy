@@ -71,7 +71,8 @@ export class SQLSource extends Source {
         true
       );
     } else if (connection.entry.type !== 'connection') {
-      this.connectionName.log(
+      this.connectionName.logError(
+        'invalid-connection-for-sql-source',
         `${this.connectionName.refString} is not a connection`
       );
       this.connectionNameInvalid = true;
@@ -89,7 +90,10 @@ export class SQLSource extends Source {
     const sql = this.sqlBlock();
     const sqlDefEntry = this.translator()?.root.sqlQueryZone;
     if (!sqlDefEntry) {
-      this.log("Cant't look up schema for sql block");
+      this.logError(
+        'failed-to-fetch-sql-source-schema',
+        "Cant't look up schema for sql block"
+      );
       return;
     }
     sqlDefEntry.reference(sql.name, this.location);
@@ -110,7 +114,10 @@ export class SQLSource extends Source {
     }
     const sqlDefEntry = this.translator()?.root.sqlQueryZone;
     if (!sqlDefEntry) {
-      this.log("Cant't look up schema for sql block");
+      this.logError(
+        'failed-to-fetch-sql-source-schema',
+        "Cant't look up schema for sql block"
+      );
       return ErrorFactory.structDef;
     }
     const sql = this.sqlBlock();
@@ -118,7 +125,10 @@ export class SQLSource extends Source {
     const lookup = sqlDefEntry.getEntry(sql.name);
     if (lookup.status === 'error') {
       const msgLines = lookup.message.split(/\r?\n/);
-      this.select.log('Invalid SQL, ' + msgLines.join('\n    '));
+      this.select.logError(
+        'invalid-sql-source',
+        'Invalid SQL, ' + msgLines.join('\n    ')
+      );
       return ErrorFactory.structDef;
     } else if (lookup.status === 'present') {
       const location = this.select.location;
@@ -134,7 +144,8 @@ export class SQLSource extends Source {
       }
       return locStruct;
     } else {
-      this.log(
+      this.logError(
+        'non-top-level-sql-source',
         '`connection_name.sql(...)` can currently only be used in top level source/query definitions'
       );
       return ErrorFactory.structDef;

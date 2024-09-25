@@ -32,6 +32,7 @@ import {
   AggregateExpr,
 } from '../../../model/malloy_types';
 import {exprWalk} from '../../../model/utils';
+import {MessageCode} from '../../parse-log';
 
 import {errorFor} from '../ast-utils';
 import {StructSpaceField} from '../field-space/static-space';
@@ -113,26 +114,30 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
           }
         } else {
           if (!(sourceFoot instanceof StructSpaceFieldBase)) {
-            this.log(`Aggregate source cannot be a ${footType.dataType}`);
-            return errorFor(
+            return this.loggedErrorExpr(
+              'invalid-aggregate-source',
               `Aggregate source cannot be a ${footType.dataType}`
             );
           }
         }
       } else {
-        this.log(`Reference to undefined value ${this.source.refString}`);
-        return errorFor(
+        return this.loggedErrorExpr(
+          'aggregate-source-not-found',
           `Reference to undefined value ${this.source.refString}`
         );
       }
     }
     if (exprVal === undefined) {
-      this.log('Missing expression for aggregate function');
-      return errorFor('agggregate without expression');
+      return this.loggedErrorExpr(
+        'missing-aggregate-expression',
+        'Missing expression for aggregate function'
+      );
     }
     if (expressionIsAggregate(exprVal.expressionType)) {
-      this.log('Aggregate expression cannot be aggregate');
-      return errorFor('reagggregate');
+      return this.loggedErrorExpr(
+        'aggregate-of-aggregate',
+        'Aggregate expression cannot be aggregate'
+      );
     }
     const isAnError = exprVal.dataType === 'error';
     if (!isAnError) {
@@ -147,7 +152,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
           const usagePaths = getJoinUsagePaths(sourceRelationship, joinUsage);
           const joinError = validateUsagePaths(this.elementType, usagePaths);
           const message = sourceSpecified
-            ? joinError
+            ? joinError?.message
             : 'Join path is required for this calculation';
           if (message) {
             const errorWithSuggestion = suggestNewVersion(
@@ -156,7 +161,12 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
               expr,
               this.elementType
             );
-            this.log(errorWithSuggestion, joinError ? 'error' : 'warn');
+            const code = joinError?.code ?? 'bad-join-usage';
+            if (joinError) {
+              this.logError(code, errorWithSuggestion);
+            } else {
+              this.logWarning(code, errorWithSuggestion);
+            }
           }
         }
       }
@@ -329,15 +339,24 @@ function validateUsagePaths(
     structRelationship: StructRelationship;
     reverse: boolean;
   }[][]
-) {
+): {message: string; code: MessageCode} | undefined {
   for (const path of usagePaths) {
     for (const step of path) {
       if (step.structRelationship.type === 'cross') {
-        return `Cannot compute \`${functionName}\` across \`join_cross\` relationship \`${step.name}\``;
+        return {
+          code: 'aggregate-traverses-join-cross',
+          message: `Cannot compute \`${functionName}\` across \`join_cross\` relationship \`${step.name}\``,
+        };
       } else if (step.structRelationship.type === 'many' && !step.reverse) {
-        return `Cannot compute \`${functionName}\` across \`join_many\` relationship \`${step.name}\``;
+        return {
+          code: 'aggregate-traverses-join-many',
+          message: `Cannot compute \`${functionName}\` across \`join_many\` relationship \`${step.name}\``,
+        };
       } else if (step.structRelationship.type === 'nested' && !step.reverse) {
-        return `Cannot compute \`${functionName}\` across repeated relationship \`${step.name}\``;
+        return {
+          code: 'aggregate-traverses-repeated-relationship',
+          message: `Cannot compute \`${functionName}\` across repeated relationship \`${step.name}\``,
+        };
       }
     }
   }

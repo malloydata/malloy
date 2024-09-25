@@ -45,7 +45,15 @@ import {MalloyLexer} from './lib/Malloy/MalloyLexer';
 import {MalloyParser} from './lib/Malloy/MalloyParser';
 import * as ast from './ast';
 import {MalloyToAST} from './malloy-to-ast';
-import {LogMessage, MessageLog, MessageLogger} from './parse-log';
+import {
+  BaseMessageLogger,
+  LogMessage,
+  LogMessageOptions,
+  MessageCode,
+  MessageLogger,
+  MessageParameterType,
+  makeLogMessage,
+} from './parse-log';
 import {
   findReferences,
   FindReferencesData,
@@ -148,10 +156,10 @@ class ParseStep implements TranslationStep {
       } catch (e) {
         const msg = e instanceof Error ? e.message : '';
         that.urlIsFullPath = false;
-        that.root.logger.log({
-          message: `Could not compute full path URL: ${msg}`,
-          severity: 'error',
-        });
+        that.root.logError(
+          'failed-to-compute-absolute-import-url',
+          `Could not compute full path URL: ${msg}`
+        );
       }
     }
     if (!that.urlIsFullPath) {
@@ -161,11 +169,15 @@ class ParseStep implements TranslationStep {
     const srcEnt = that.root.importZone.getEntry(that.sourceURL);
     if (srcEnt.status !== 'present') {
       if (srcEnt.status === 'error') {
-        const message = srcEnt.message.includes(that.sourceURL)
-          ? `import error: ${srcEnt.message}`
-          : `import '${that.sourceURL}' error: ${srcEnt.message}`;
         const at = srcEnt.firstReference || that.defaultLocation();
-        that.root.logger.log({message, at, severity: 'error'});
+        that.root.logError(
+          'import-error',
+          {
+            message: srcEnt.message,
+            url: that.sourceURL,
+          },
+          {at}
+        );
         this.response = that.fatalResponse();
         return this.response;
       }
@@ -178,10 +190,7 @@ class ParseStep implements TranslationStep {
     try {
       parse = this.runParser(source, that);
     } catch (parseException) {
-      that.root.logger.log({
-        message: `Malloy internal parser exception [${parseException.message}]`,
-        severity: 'error',
-      });
+      that.root.logError('parse-exception', {message: parseException.message});
       parse = undefined;
     }
 
@@ -308,11 +317,11 @@ class ImportsAndTablesStep implements TranslationStep {
           // This import spec is so bad the URL library threw up, this
           // may be impossible, because it will append any garbage
           // to the known good rootURL assuming it is relative
-          that.root.logger.log({
-            message: `Malformed URL '${relativeRef}'"`,
-            at: {url: that.sourceURL, range: firstRef},
-            severity: 'error',
-          });
+          that.root.logError(
+            'invalid-import-url',
+            `Malformed URL '${relativeRef}'"`,
+            {at: {url: that.sourceURL, range: firstRef}}
+          );
         }
       }
     }
@@ -393,7 +402,10 @@ class ASTStep implements TranslationStep {
     that.compilerFlags = secondPass.compilerFlags;
 
     if (newAst.elementType === 'unimplemented') {
-      newAst.log('INTERNAL COMPILER ERROR: Untranslated parse node');
+      newAst.logError(
+        'untranslated-parse-node',
+        'INTERNAL COMPILER ERROR: Untranslated parse node'
+      );
     }
 
     if (!this.walked) {
@@ -402,7 +414,10 @@ class ASTStep implements TranslationStep {
       // it should probably never be hit
       for (const walkedTo of newAst.walk()) {
         if (walkedTo instanceof ast.Unimplemented) {
-          walkedTo.log('INTERNAL COMPILER ERROR: Untranslated parse node');
+          walkedTo.logError(
+            'untranslated-parse-node',
+            'INTERNAL COMPILER ERROR: Untranslated parse node'
+          );
         }
       }
       this.walked = true;
@@ -625,11 +640,11 @@ class TranslateStep implements TranslationStep {
           }
         }
       } else {
-        that.root.logger.log({
-          message: `'${that.sourceURL}' did not parse to malloy document`,
-          at: that.defaultLocation(),
-          severity: 'error',
-        });
+        that.root.logError(
+          'parsed-non-malloy-document',
+          {url: that.sourceURL},
+          {at: that.defaultLocation()}
+        );
       }
     }
 
@@ -1009,7 +1024,7 @@ export class MalloyTranslator extends MalloyTranslation {
   schemaZone = new Zone<StructDef>();
   importZone = new Zone<string>();
   sqlQueryZone = new Zone<SQLBlockStructDef>();
-  logger = new MessageLog();
+  logger = new BaseMessageLogger();
   readonly root: MalloyTranslator;
   constructor(
     rootURL: string,
@@ -1027,6 +1042,17 @@ export class MalloyTranslator extends MalloyTranslation {
     this.schemaZone.updateFrom(dd.tables, dd.errors?.tables);
     this.importZone.updateFrom(dd.urls, dd.errors?.urls);
     this.sqlQueryZone.updateFrom(dd.compileSQL, dd.errors?.compileSQL);
+  }
+
+  logError<T extends MessageCode>(
+    code: T,
+    parameters: MessageParameterType<T>,
+    options?: Omit<LogMessageOptions, 'severity'>
+  ): T {
+    this.logger.log(
+      makeLogMessage(code, parameters, {severity: 'error', ...options})
+    );
+    return code;
   }
 }
 
@@ -1056,23 +1082,35 @@ export class MalloyParserErrorHandler implements ANTLRErrorListener<Token> {
     readonly messages: MessageLogger
   ) {}
 
+  logError<T extends MessageCode>(
+    code: T,
+    parameters: MessageParameterType<T>,
+    options?: Omit<LogMessageOptions, 'severity'>
+  ): T {
+    this.messages.log(
+      makeLogMessage(code, parameters, {severity: 'error', ...options})
+    );
+    return code;
+  }
+
   syntaxError(
     recognizer: unknown,
     offendingSymbol: Token | undefined,
     line: number,
     charPositionInLine: number,
-    msg: string,
+    message: string,
     _e: unknown
   ): void {
     const errAt = {line: line - 1, character: charPositionInLine};
     const range = offendingSymbol
       ? this.translator.rangeFromToken(offendingSymbol)
       : {start: errAt, end: errAt};
-    const error: LogMessage = {
-      message: msg,
-      at: {url: this.translator.sourceURL, range},
-      severity: 'error',
-    };
-    this.messages.log(error);
+    this.logError(
+      'syntax-error',
+      {message},
+      {
+        at: {url: this.translator.sourceURL, range},
+      }
+    );
   }
 }

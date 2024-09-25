@@ -28,7 +28,14 @@ import {AbstractParseTreeVisitor} from 'antlr4ts/tree/AbstractParseTreeVisitor';
 import {MalloyParserVisitor} from './lib/Malloy/MalloyParserVisitor';
 import * as parse from './lib/Malloy/MalloyParser';
 import * as ast from './ast';
-import {LogSeverity, MessageLogger} from './parse-log';
+import {
+  LogMessageOptions,
+  LogSeverity,
+  MessageCode,
+  MessageLogger,
+  MessageParameterType,
+  makeLogMessage,
+} from './parse-log';
 import {MalloyParseInfo} from './malloy-parse-info';
 import {Interval as StreamInterval} from 'antlr4ts/misc/Interval';
 import {FieldDeclarationConstructor, TableSource} from './ast';
@@ -98,21 +105,21 @@ export class MalloyToAST
    * are not compatible.
    * @return an error object to throw.
    */
-  protected internalError(cx: ParserRuleContext, msg: string): Error {
-    const tmsg = `Internal Translator Error: ${msg}`;
-    this.contextError(cx, tmsg);
-    return new Error(tmsg);
+  protected internalError(cx: ParserRuleContext, message: string): Error {
+    this.contextError(cx, 'internal-translator-error', {message});
+    return new Error(`Internal Translator Error: ${message}`);
   }
 
   /**
    * Log an error message relative to an AST node
    */
-  protected astError(
+  protected astError<T extends MessageCode>(
     el: ast.MalloyElement,
-    str: string,
-    sev: LogSeverity = 'error'
+    code: T,
+    data: MessageParameterType<T>,
+    options?: LogMessageOptions
   ): void {
-    this.msgLog.log({message: str, at: el.location, severity: sev});
+    this.msgLog.log(makeLogMessage(code, data, {at: el.location, ...options}));
   }
 
   protected getLocation(cx: ParserRuleContext): DocumentLocation {
@@ -125,43 +132,44 @@ export class MalloyToAST
   /**
    * Log an error message relative to a parse node
    */
-  protected contextError(
+  protected contextError<T extends MessageCode>(
     cx: ParserRuleContext,
-    msg: string,
-    sev: LogSeverity = 'error'
+    code: T,
+    data: MessageParameterType<T>,
+    options?: LogMessageOptions
   ): void {
-    this.msgLog.log({
-      message: msg,
-      at: this.getLocation(cx),
-      severity: sev,
-    });
+    this.msgLog.log(
+      makeLogMessage(code, data, {
+        at: this.getLocation(cx),
+        ...options,
+      })
+    );
   }
 
-  protected warnWithReplacement(
-    message: string,
+  protected warnWithReplacement<T extends MessageCode>(
+    code: T,
+    data: MessageParameterType<T>,
     range: DocumentRange,
     replacement: string
   ): void {
-    this.msgLog.log({
-      message,
-      at: {url: this.parseInfo.sourceURL, range},
-      severity: 'warn',
-      replacement,
-    });
+    this.msgLog.log(
+      makeLogMessage(code, data, {
+        at: {url: this.parseInfo.sourceURL, range},
+        severity: 'warn',
+        replacement,
+      })
+    );
   }
 
-  protected inExperiment(experimentID: string, cx: ParserRuleContext): boolean {
+  protected inExperiment(experimentId: string, cx: ParserRuleContext): boolean {
     const experimental = this.compilerFlags.tag('experimental');
     if (
       experimental &&
-      (experimental.bare() || experimental.has(experimentID))
+      (experimental.bare() || experimental.has(experimentId))
     ) {
       return true;
     }
-    this.contextError(
-      cx,
-      `Experimental flag '${experimentID}' required to enable this feature`
-    );
+    this.contextError(cx, 'experiment-not-enabled', {experimentId});
     return false;
   }
 
@@ -173,10 +181,14 @@ export class MalloyToAST
     return false;
   }
 
-  protected m4advisory(cx: ParserRuleContext, msg: string): void {
+  protected m4advisory<T extends MessageCode>(
+    cx: ParserRuleContext,
+    code: T,
+    data: MessageParameterType<T>
+  ): void {
     const m4 = this.m4Severity();
     if (m4) {
-      this.contextError(cx, msg, m4);
+      this.contextError(cx, code, data, {severity: m4});
     }
   }
 
@@ -193,6 +205,7 @@ export class MalloyToAST
       } else if (!(el instanceof IgnoredElement)) {
         this.astError(
           el,
+          'unexpected-statement-in-translation',
           `Parser enountered unexpected statement type '${el.elementType}' when it needed '${desc}'`
         );
       }
@@ -262,6 +275,7 @@ export class MalloyToAST
     const el = this.getFilterElement(cx.fieldExpr());
     this.m4advisory(
       cx,
+      'filter-shortcut',
       'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead'
     );
     return new ast.Filter([el]);
@@ -271,7 +285,11 @@ export class MalloyToAST
     const [result, errors] = getPlainString(cx);
     for (const error of errors) {
       if (error instanceof ParserRuleContext) {
-        this.contextError(error, '%{ query } illegal in this string');
+        this.contextError(
+          error,
+          'illegal-query-interpolation-outside-sql-block',
+          '%{ query } illegal in this string'
+        );
       }
     }
     return result || '';
@@ -283,7 +301,11 @@ export class MalloyToAST
   ): void {
     for (const part of pcx.sqlInterpolation()) {
       if (part.CLOSE_CODE()) {
-        this.m4advisory(part, 'Use %{ ... } instead of %{ ... }%');
+        this.m4advisory(
+          part,
+          'percent-terminated-query-interpolation',
+          'Use %{ ... } instead of %{ ... }%'
+        );
       }
     }
     for (const part of getStringParts(pcx)) {
@@ -310,7 +332,11 @@ export class MalloyToAST
   ): ast.ExpressionDef {
     let def = parse(pcx.text);
     if (!def) {
-      this.contextError(pcx, 'Time data parse error');
+      this.contextError(
+        pcx,
+        'failed-to-parse-time-literal',
+        'Time data parse error'
+      );
       // return a value node so the parse can continue
       def = new ast.LiteralTimestamp({text: pcx.text});
     }
@@ -425,6 +451,7 @@ export class MalloyToAST
     const el = this.astAt(new ast.TableFunctionSource(tableURI), pcx);
     this.m4advisory(
       pcx,
+      'table-function',
       "`table('connection_name:table_path')` is deprecated; use `connection_name.table('table_path')`"
     );
     return el;
@@ -465,10 +492,18 @@ export class MalloyToAST
         if (join instanceof ast.ExpressionJoin) {
           join.joinType = 'many';
           if (join.joinOn === undefined) {
-            this.contextError(pcx, 'join_many: requires ON expression');
+            this.contextError(
+              pcx,
+              'missing-on-in-join-many',
+              'join_many: requires ON expression'
+            );
           }
         } else if (join instanceof ast.KeyJoin) {
-          this.contextError(pcx, 'Foreign key join not legal in join_many:');
+          this.contextError(
+            pcx,
+            'foreign-key-in-join-many',
+            'Foreign key join not legal in join_many:'
+          );
         }
       }
     }
@@ -502,7 +537,10 @@ export class MalloyToAST
         if (join instanceof ast.ExpressionJoin) {
           join.joinType = 'cross';
         } else {
-          join.log('Foreign key join not legal in join_cross:');
+          join.logError(
+            'foreign-key-in-join-cross',
+            'Foreign key join not legal in join_cross:'
+          );
         }
       }
     }
@@ -546,6 +584,7 @@ export class MalloyToAST
     const result = this.astAt(this.visit(pcx.joinStatement()), pcx);
     this.m4advisory(
       pcx,
+      'join-statement-in-view',
       'Joins in queries are deprecated, move into an `extend:` block.'
     );
     return result;
@@ -559,7 +598,11 @@ export class MalloyToAST
     if (isMatrixOperation(mop)) {
       join.matrixOperation = mop;
     } else {
-      this.contextError(pcx, 'Internal Error: Unknown matrixOperation');
+      this.contextError(
+        pcx,
+        'unknown-matrix-operation',
+        'Internal Error: Unknown matrixOperation'
+      );
     }
     if (onCx) {
       join.joinOn = this.getFieldExpr(onCx);
@@ -640,6 +683,7 @@ export class MalloyToAST
     const result = this.astAt(stmt, pcx);
     this.m4advisory(
       pcx,
+      'declare',
       '`declare:` is deprecated; use `dimension:` or `measure:` inside a source or `extend:` block'
     );
     return result;
@@ -690,7 +734,11 @@ export class MalloyToAST
     const blockNotes = this.getNotes(pcx.tags());
     queryDefs.extendNote({blockNotes});
     if (pcx.QUERY()) {
-      this.m4advisory(pcx, 'Use view: inside of a source instead of query:');
+      this.m4advisory(
+        pcx,
+        'query-in-source',
+        'Use view: inside of a source instead of query:'
+      );
     }
     return queryDefs;
   }
@@ -735,10 +783,9 @@ export class MalloyToAST
     );
 
     if (!timezoneStatement.isValid) {
-      this.astError(
-        timezoneStatement,
-        `Invalid timezone: ${timezoneStatement.tz}`
-      );
+      this.astError(timezoneStatement, 'invalid-timezone', {
+        timezone: timezoneStatement.tz,
+      });
     }
 
     return this.astAt(timezoneStatement, cx);
@@ -871,8 +918,10 @@ export class MalloyToAST
         if (aggFunc === 'sum') {
           expr = new ast.ExprSum(undefined, ref);
         } else {
+          // TODO this error doesn't have any tests
           this.contextError(
             agg,
+            'invalid-reference-only-aggregation',
             `\`${aggFunc}\` is not legal in a reference-only aggregation`
           );
           return ref;
@@ -930,7 +979,11 @@ export class MalloyToAST
     pcx: parse.ProjectStatementContext
   ): ast.ProjectStatement {
     if (pcx.PROJECT()) {
-      this.m4advisory(pcx, 'project: keyword is deprecated, use select:');
+      this.m4advisory(
+        pcx,
+        'project',
+        'project: keyword is deprecated, use select:'
+      );
     }
     const stmt = this.visitFieldCollection(pcx.fieldCollection());
     stmt.extendNote({blockNotes: this.getNotes(pcx.tags())});
@@ -1037,6 +1090,7 @@ export class MalloyToAST
     if (byCx) {
       this.m4advisory(
         byCx,
+        'top-by',
         'by clause of top statement unupported. Use order_by instead'
       );
       const nameCx = byCx.fieldName();
@@ -1093,6 +1147,7 @@ export class MalloyToAST
     theQuery.extendNote({notes, blockNotes});
     this.m4advisory(
       defCx,
+      'anonymous-query',
       'Anonymous `query:` statements are deprecated, use `run:` instead'
     );
     return this.astAt(theQuery, pcx);
@@ -1135,6 +1190,7 @@ export class MalloyToAST
       if (implicitName === undefined) {
         this.contextError(
           pcx,
+          'anonymous-nest',
           '`nest:` view requires a name (add `nest_name is ...`)'
         );
       }
@@ -1317,7 +1373,11 @@ export class MalloyToAST
 
     if (pcx.aggregate().COUNT()) {
       if (exprDef) {
-        this.contextError(exprDef, 'Expression illegal inside path.count()');
+        this.contextError(
+          exprDef,
+          'count-expression-with-locality',
+          'Expression illegal inside path.count()'
+        );
       }
       return new ast.ExprCount(source);
     }
@@ -1326,7 +1386,11 @@ export class MalloyToAST
 
     if (aggFunc === 'min' || aggFunc === 'max') {
       if (expr) {
-        this.contextError(pcx, this.symmetricAggregateUsageError(aggFunc));
+        this.contextError(
+          pcx,
+          'invalid-symmetric-aggregate',
+          this.symmetricAggregateUsageError(aggFunc)
+        );
       } else {
         const idRef = this.astAt(new ast.ExprIdReference(path), pathCx);
         return aggFunc === 'min'
@@ -1338,7 +1402,11 @@ export class MalloyToAST
     } else if (aggFunc === 'sum') {
       return new ast.ExprSum(expr, source);
     } else {
-      this.contextError(pcx, `Cannot parse aggregate function ${aggFunc}`);
+      this.contextError(
+        pcx,
+        'aggregate-parse-error',
+        `Cannot parse aggregate function ${aggFunc}`
+      );
     }
     return new ast.ExprNULL();
   }
@@ -1365,7 +1433,11 @@ export class MalloyToAST
     const aggFunc = pcx.aggregate().text.toLowerCase();
 
     if (pcx.STAR()) {
-      this.m4advisory(pcx, `* illegal inside ${aggFunc}()`);
+      this.m4advisory(
+        pcx,
+        'wildcard-in-aggregate',
+        `* illegal inside ${aggFunc}()`
+      );
     }
     if (aggFunc === 'count') {
       return this.astAt(
@@ -1376,17 +1448,29 @@ export class MalloyToAST
       if (expr) {
         return new ast.ExprMin(expr);
       } else {
-        this.contextError(pcx, this.symmetricAggregateUsageError(aggFunc));
+        this.contextError(
+          pcx,
+          'invalid-symmetric-aggregate',
+          this.symmetricAggregateUsageError(aggFunc)
+        );
       }
     } else if (aggFunc === 'max') {
       if (expr) {
         return new ast.ExprMax(expr);
       } else {
-        this.contextError(pcx, this.symmetricAggregateUsageError(aggFunc));
+        this.contextError(
+          pcx,
+          'invalid-symmetric-aggregate',
+          this.symmetricAggregateUsageError(aggFunc)
+        );
       }
     } else {
       if (expr === undefined) {
-        this.contextError(pcx, this.asymmetricAggregateUsageError(aggFunc));
+        this.contextError(
+          pcx,
+          'invalid-asymmetric-aggregate',
+          this.asymmetricAggregateUsageError(aggFunc)
+        );
         return new ast.ExprNULL();
       }
       const explicitSource = pcx.SOURCE_KW() !== undefined;
@@ -1501,6 +1585,7 @@ export class MalloyToAST
       } else {
         this.contextError(
           pcx,
+          'unexpected-malloy-type',
           `'#' assertion for unknown type '${rawRawType}'`
         );
         rawType = undefined;
@@ -1509,7 +1594,11 @@ export class MalloyToAST
 
     let fn = getOptionalId(pcx) || pcx.timeframe()?.text;
     if (fn === undefined) {
-      this.contextError(pcx, 'Function name error');
+      this.contextError(
+        pcx,
+        'failed-to-parse-function-name',
+        'Function name error'
+      );
       fn = 'FUNCTION_NAME_ERROR';
     }
 
@@ -1653,14 +1742,22 @@ export class MalloyToAST
   visitIgnoredObjectAnnotations(
     pcx: parse.IgnoredObjectAnnotationsContext
   ): IgnoredElement {
-    this.contextError(pcx, 'Object annotation not connected to any object');
+    this.contextError(
+      pcx,
+      'orphaned-object-annotation',
+      'Object annotation not connected to any object'
+    );
     return new IgnoredElement(pcx.text);
   }
 
   visitIgnoredModelAnnotations(
     pcx: parse.IgnoredModelAnnotationsContext
   ): IgnoredElement {
-    this.contextError(pcx, 'Model annotations not allowed at this scope');
+    this.contextError(
+      pcx,
+      'misplaced-model-annotation',
+      'Model annotations not allowed at this scope'
+    );
     return new IgnoredElement(pcx.text);
   }
 
@@ -1711,6 +1808,7 @@ export class MalloyToAST
     }
     this.contextError(
       cx,
+      'unexpected-non-source-query-expression-node',
       `Expected a source/query expression, not '${result.elementType}'`
     );
     return new ErrorNode();
@@ -1814,12 +1912,14 @@ export class MalloyToAST
     if (pcx.NOT()) {
       op = '!~';
       this.warnWithReplacement(
+        'sql-not-like',
         "Use Malloy operator '!~' instead of 'NOT LIKE'",
         wholeRange,
         `${left.text} !~ ${right.text}`
       );
     } else {
       this.warnWithReplacement(
+        'sql-like',
         "Use Malloy operator '~' instead of 'LIKE'",
         wholeRange,
         `${left.text} ~ ${right.text}`
@@ -1842,12 +1942,14 @@ export class MalloyToAST
     if (pcx.NOT()) {
       op = '!=';
       this.warnWithReplacement(
+        'sql-is-not-null',
         "Use '!= NULL' to check for NULL instead of 'IS NOT NULL'",
         wholeRange,
         `${expr.text} != null`
       );
     } else {
       this.warnWithReplacement(
+        'sql-is-null',
         "Use '= NULL' to check for NULL instead of 'IS NULL'",
         wholeRange,
         `${expr.text} = null`

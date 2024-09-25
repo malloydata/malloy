@@ -23,6 +23,7 @@
 
 import {
   TestTranslator,
+  errorMessage,
   getFieldDef,
   getQueryFieldDef,
   model,
@@ -255,14 +256,14 @@ describe('document annotation', () => {
       # note1
       ## model1
     `);
-    expect(m).translationToFailWith(
-      'Object annotation not connected to any object'
+    expect(m).toLog(
+      errorMessage('Object annotation not connected to any object')
     );
   });
   test('errors reported from compiler flags', () => {
     expect(`
       ##! missingCloseQuote="...
-    `).translationToFailWith(/no viable alternative at input/);
+    `).toLog(errorMessage(/no viable alternative at input/));
   });
   test('checking compiler flags', () => {
     const m = model`
@@ -403,8 +404,8 @@ describe('source definition annotations', () => {
         ## model1
       }
     `);
-    expect(m).translationToFailWith(
-      'Model annotations not allowed at this scope'
+    expect(m).toLog(
+      errorMessage('Model annotations not allowed at this scope')
     );
   });
 });
@@ -415,7 +416,7 @@ describe('query operation annotations', () => {
         ## model1
         select: *
       }
-    `).translationToFailWith('Model annotations not allowed at this scope');
+    `).toLog(errorMessage('Model annotations not allowed at this scope'));
   });
   test('project new definition annotation', () => {
     const m = new TestTranslator(`

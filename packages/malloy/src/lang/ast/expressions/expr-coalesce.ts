@@ -52,7 +52,8 @@ export class ExprCoalesce extends ExpressionDef {
      * trees" rewrite happens.
      */
     if (!FT.typeEq(maybeNull, whenNull)) {
-      this.log(
+      this.logError(
+        'mismatched-coalesce-types',
         `Mismatched types for coalesce (${maybeNull.dataType}, ${whenNull.dataType})`
       );
     }

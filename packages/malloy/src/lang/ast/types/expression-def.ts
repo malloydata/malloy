@@ -96,11 +96,16 @@ export abstract class ExpressionDef extends MalloyElement {
    */
   typeCheck(eNode: ExpressionDef, eVal: ExprValue): boolean {
     if (eVal.dataType !== 'error' && !FT.in(eVal, this.legalChildTypes)) {
-      eNode.log(
-        eVal.dataType === 'sql native'
-          ? `'${this.elementType}' Can't be used with unsupported SQL native type '${eVal.rawType}'[unsupported-sql-native-type-not-allowed-in-expression]`
-          : `'${this.elementType}' Can't use type ${FT.inspect(eVal)}`
-      );
+      if (eVal.dataType === 'sql native') {
+        eNode.logError('sql-native-not-allowed-in-expression', {
+          rawType: eVal.rawType,
+        });
+      } else {
+        eNode.logError(
+          'expression-type-error',
+          `'${this.elementType}' Can't use type ${FT.inspect(eVal)}`
+        );
+      }
       return false;
     }
     return true;
@@ -161,7 +166,10 @@ export class ExprDuration extends ExpressionDef {
     if (isTimeFieldType(lhs.dataType) && (op === '+' || op === '-')) {
       const num = this.n.getExpression(fs);
       if (!FT.typeEq(num, FT.numberT)) {
-        this.log(`Duration units needs number not '${num.dataType}`);
+        this.logError(
+          'invalid-duration-quantity',
+          `Duration quantity needs number not '${num.dataType}`
+        );
         return errorFor('illegal unit expression');
       }
       let resultGranularity: TimestampUnit | undefined;
@@ -206,8 +214,10 @@ export class ExprDuration extends ExpressionDef {
           resultGranularity
         );
       } else {
-        this.log(`Cannot offset date by ${this.timeframe}`);
-        return errorFor('ofsset date error');
+        return this.loggedErrorExpr(
+          'invalid-timeframe-for-time-offset',
+          `Cannot offset date by ${this.timeframe}`
+        );
       }
     }
     return super.apply(fs, op, left);
@@ -271,7 +281,10 @@ function timeCompare(
     lhs.dataType !== 'null' &&
     rhs.dataType !== 'null'
   ) {
-    left.log(`Cannot compare a ${lhs.dataType} to a ${rhs.dataType}`);
+    left.logError(
+      'time-comparison-type-mismatch',
+      `Cannot compare a ${lhs.dataType} to a ${rhs.dataType}`
+    );
     return {node: 'false'};
   }
   return undefined;
@@ -427,18 +440,21 @@ function numeric(
   if (err) return err;
 
   const noGo = unsupportError(left, lhs, right, rhs);
-  if (noGo) {
-    return noGo;
-  }
+  if (noGo) return noGo;
+
   const expressionType = maxExpressionType(
     lhs.expressionType,
     rhs.expressionType
   );
 
   if (lhs.dataType !== 'number') {
-    left.log(`The '${op}' operator requires a number, not a '${lhs.dataType}'`);
+    left.logError(
+      'arithmetic-operation-type-mismatch',
+      `The '${op}' operator requires a number, not a '${lhs.dataType}'`
+    );
   } else if (rhs.dataType !== 'number') {
-    right.log(
+    right.logError(
+      'arithmetic-operation-type-mismatch',
       `The '${op}' operator requires a number, not a '${rhs.dataType}'`
     );
   } else {
@@ -478,8 +494,10 @@ function delta(
       } else if (lhs.dataType === 'date') {
         duration = new ExprDuration(right, 'day');
       } else {
-        left.log(`Can not offset time by '${rhs.dataType}'`);
-        return errorFor(`time plus ${rhs.dataType}`);
+        return left.loggedErrorExpr(
+          'time-offset-type-mismatch',
+          `Can not offset time by '${rhs.dataType}'`
+        );
       }
     }
     return duration.apply(fs, op, left);
@@ -520,18 +538,21 @@ export function applyBinary(
     const num = left.getExpression(fs);
     const denom = right.getExpression(fs);
     const noGo = unsupportError(left, num, right, denom);
-    if (noGo) {
-      left.log(`Cannot use '${op}' with sql native type`);
-      return noGo;
-    }
+    if (noGo) return noGo;
 
     const err = errorCascade('number', num, denom);
     if (err) return err;
 
     if (num.dataType !== 'number') {
-      left.log('Numerator must be a number');
+      left.logError(
+        'arithmetic-operation-type-mismatch',
+        'Numerator must be a number'
+      );
     } else if (denom.dataType !== 'number') {
-      right.log('Denominator must be a number');
+      right.logError(
+        'arithmetic-operation-type-mismatch',
+        'Denominator must be a number'
+      );
     } else {
       const divmod: Expr = {
         node: op,
@@ -549,8 +570,10 @@ export function applyBinary(
     }
     return errorFor('divide type mismatch');
   }
-  left.log(`Cannot use ${op} operator here`);
-  return errorFor('applybinary bad operator');
+  return left.loggedErrorExpr(
+    'unexpected-binary-operator',
+    `Cannot use ${op} operator here`
+  );
 }
 
 function errorCascade(
@@ -583,16 +606,12 @@ function unsupportError(
     evalSpace: mergeEvalSpaces(lhs.evalSpace, rhs.evalSpace),
   };
   if (lhs.dataType === 'sql native') {
-    l.log(
-      `Unsupported SQL native type '${lhs.rawType}' not allowed in expression[unsupported-sql-native-type-not-allowed-in-expression]`
-    );
+    l.logError('sql-native-not-allowed-in-expression', {rawType: lhs.rawType});
     ret.dataType = rhs.dataType;
     return ret;
   }
   if (rhs.dataType === 'sql native') {
-    r.log(
-      `Unsupported SQL native type '${rhs.rawType}' not allowed in expression[unsupported-sql-native-type-not-allowed-in-expression]`
-    );
+    r.logError('sql-native-not-allowed-in-expression', {rawType: rhs.rawType});
     return ret;
   }
   return undefined;

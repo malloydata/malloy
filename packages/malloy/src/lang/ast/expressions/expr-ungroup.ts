@@ -28,7 +28,6 @@ import {
   UngroupNode,
 } from '../../../model/malloy_types';
 
-import {errorFor} from '../ast-utils';
 import {QuerySpace} from '../field-space/query-spaces';
 import {FT} from '../fragtype-utils';
 import {ExprValue} from '../types/expr-value';
@@ -53,14 +52,16 @@ export class ExprUngroup extends ExpressionDef {
   getExpression(fs: FieldSpace): ExprValue {
     const exprVal = this.expr.getExpression(fs);
     if (!expressionIsAggregate(exprVal.expressionType)) {
-      this.expr.log(`${this.control}() expression must be an aggregate`);
-      return errorFor('ungrouped scalar');
+      return this.expr.loggedErrorExpr(
+        'ungroup-of-non-aggregate',
+        `${this.control}() expression must be an aggregate`
+      );
     }
     if (expressionIsUngroupedAggregate(exprVal.expressionType)) {
-      this.expr.log(
+      return this.expr.loggedErrorExpr(
+        'ungroup-of-ungrouped-aggregate',
         `${this.control}() expression must not already be ungrouped`
       );
-      return errorFor('doubly-ungrouped aggregate');
     }
     const ungroup: UngroupNode = {
       node: this.control,
@@ -90,7 +91,8 @@ export class ExprUngroup extends ExpressionDef {
           }
           if (notFound) {
             const uName = isExclude ? 'exclude()' : 'all()';
-            mentionedField.log(
+            mentionedField.logError(
+              'ungroup-field-not-in-output',
               `${uName} '${mentionedField.refString}' is missing from query output`
             );
           }
@@ -104,7 +106,9 @@ export class ExprUngroup extends ExpressionDef {
         evalSpace: 'output',
       };
     }
-    this.log(`${this.control}() incompatible type`);
-    return errorFor('ungrouped type check');
+    return this.loggedErrorExpr(
+      'ungroup-with-non-scalar',
+      `${this.control}() incompatible type`
+    );
   }
 }
