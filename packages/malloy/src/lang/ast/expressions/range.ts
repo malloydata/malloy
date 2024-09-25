@@ -91,7 +91,7 @@ export class Range extends ExpressionDef {
   }
 
   getExpression(_fs: FieldSpace): ExprValue {
-    this.log('A Range is not a value');
+    this.logError('range-as-value', 'A Range is not a value');
     return errorFor('a range is not a value');
   }
 }

@@ -23,6 +23,7 @@
 
 import {
   TestTranslator,
+  errorMessage,
   getExplore,
   getFieldDef,
   getJoinField,
@@ -245,31 +246,31 @@ describe('source locations', () => {
   });
 
   test('undefined query location', () => {
-    expect(model`run: ${'xyz'}`).translationToFailWith(
-      "Reference to undefined object 'xyz'"
+    expect(model`run: ${'xyz'}`).toLog(
+      errorMessage("Reference to undefined object 'xyz'")
     );
   });
   test('undefined field reference', () => {
-    expect(model`run: a -> { group_by: ${'xyz'} }`).translationToFailWith(
-      "'xyz' is not defined"
+    expect(model`run: a -> { group_by: ${'xyz'} }`).toLog(
+      errorMessage("'xyz' is not defined")
     );
   });
   test('bad query', () => {
-    expect(
-      model`run: a -> { group_by: astr; ${'select: *'} }`
-    ).translationToFailWith(/Not legal in grouping query/);
+    expect(model`run: a -> { group_by: astr; ${'select: *'} }`).toLog(
+      errorMessage(/Not legal in grouping query/)
+    );
   });
 
   test.skip('undefined field reference in top', () => {
-    expect(
-      model`run: a -> { group_by: one is 1; top: 1 by ${'xyz'} }`
-    ).translationToFailWith("'xyz' is not defined");
+    expect(model`run: a -> { group_by: one is 1; top: 1 by ${'xyz'} }`).toLog(
+      errorMessage("'xyz' is not defined")
+    );
   });
 
   test.skip('undefined field reference in order_by', () => {
-    expect(
-      model`run: a -> { group_by: one is 1; order_by: ${'xyz'} }`
-    ).translationToFailWith("'xyz' is not defined");
+    expect(model`run: a -> { group_by: one is 1; order_by: ${'xyz'} }`).toLog(
+      errorMessage("'xyz' is not defined")
+    );
   });
 });
 

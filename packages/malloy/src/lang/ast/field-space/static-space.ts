@@ -116,7 +116,13 @@ export class StaticSpace implements FieldSpace {
     const rest = path.slice(1);
     const found = this.entry(head.refString);
     if (!found) {
-      return {error: `'${head}' is not defined`, found};
+      return {
+        error: {
+          message: `'${head}' is not defined`,
+          code: 'field-not-found',
+        },
+        found,
+      };
     }
     if (found instanceof SpaceField) {
       const definition = found.fieldDef();
@@ -154,7 +160,10 @@ export class StaticSpace implements FieldSpace {
         }
       }
       return {
-        error: `'${head}' cannot contain a '${rest[0]}'`,
+        error: {
+          message: `'${head}' cannot contain a '${rest[0]}'`,
+          code: 'invalid-property-access-in-field-reference',
+        },
         found: undefined,
       };
     }

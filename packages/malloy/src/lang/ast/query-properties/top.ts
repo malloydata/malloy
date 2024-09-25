@@ -59,13 +59,17 @@ export class Top extends MalloyElement implements QueryPropertyInterface {
           const output = fs.outputSpace();
           const entry = this.by.getField(output);
           if (entry.error) {
-            this.by.log(entry.error);
+            this.by.logError(entry.error.code, entry.error.message);
           }
           if (!entry.found || !entry.isOutputField) {
-            this.by.log(`Unknown field ${this.by.refString} in output space`);
+            this.by.logError(
+              'top-by-not-found-in-output',
+              `Unknown field ${this.by.refString} in output space`
+            );
           }
           if (expressionIsAnalytic(entry.found?.typeDesc().expressionType)) {
-            this.by.log(
+            this.by.logError(
+              'top-by-analytic',
               `Illegal order by of analytic field ${this.by.refString}`
             );
           }
@@ -74,10 +78,16 @@ export class Top extends MalloyElement implements QueryPropertyInterface {
       } else {
         const byExpr = this.by.getExpression(fs);
         if (expressionIsAggregate(byExpr.expressionType)) {
-          this.by.log('top by expression must be an aggregate');
+          this.by.logError(
+            'top-by-aggregate',
+            'top by expression must not be an aggregate'
+          );
         }
         if (byExpr.evalSpace === 'output') {
-          this.by.log('top by expression must be an output expression');
+          this.by.logError(
+            'top-by-not-in-output',
+            'top by expression must be an output expression'
+          );
         }
         return {by: 'expression', e: byExpr.value};
       }

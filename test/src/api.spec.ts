@@ -108,23 +108,20 @@ describe('extendModel', () => {
     });
 
     it('does not throw when true', async () => {
-      await expect(
-        runtime.getModel('source: foo is bar', {noThrowOnError: true})
-      ).resolves.toEqual(
+      const model = await runtime.getModel('source: foo is bar', {
+        noThrowOnError: true,
+      });
+      expect(model.problems[0]).toEqual(
         expect.objectContaining({
-          'problems': [
-            {
-              'at': {
-                'range': {
-                  'end': {'character': 18, 'line': 0},
-                  'start': {'character': 15, 'line': 0},
-                },
-                'url': 'internal://internal.malloy',
-              },
-              'message': "Reference to undefined object 'bar'",
-              'severity': 'error',
+          'at': {
+            'range': {
+              'end': {'character': 18, 'line': 0},
+              'start': {'character': 15, 'line': 0},
             },
-          ],
+            'url': 'internal://internal.malloy',
+          },
+          'message': "Reference to undefined object 'bar'",
+          'severity': 'error',
         })
       );
     });

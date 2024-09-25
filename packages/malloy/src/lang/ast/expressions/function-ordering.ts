@@ -44,7 +44,8 @@ export class FunctionOrderBy extends MalloyElement {
 
   getAnalyticOrderBy(fs: FieldSpace): ModelFunctionOrderBy {
     if (!this.field) {
-      this.log(
+      this.logError(
+        'analytic-order-by-missing-field',
         'analytic `order_by` must specify an aggregate expression or output field reference'
       );
       return {node: 'functionOrderBy', e: {node: 'error'}, dir: this.dir};
@@ -57,12 +58,16 @@ export class FunctionOrderBy extends MalloyElement {
         !(this.field instanceof ExprIdReference) ||
         expr.evalSpace === 'input'
       ) {
-        this.field.log(
+        this.field.logError(
+          'analytic-order-by-not-output',
           'analytic `order_by` must be an aggregate or an output field reference'
         );
       }
     } else {
-      this.field.log('analytic `order_by` must be scalar or aggregate');
+      this.field.logError(
+        'analytic-order-by-not-aggregate-or-output',
+        'analytic `order_by` must be scalar or aggregate'
+      );
     }
     return {node: 'functionOrderBy', e: expr.value, dir: this.dir};
   }
@@ -74,10 +79,14 @@ export class FunctionOrderBy extends MalloyElement {
     if (this.field) {
       const expr = this.field.getExpression(fs);
       if (!expressionIsScalar(expr.expressionType)) {
-        this.field.log('aggregate `order_by` must be scalar');
+        this.field.logError(
+          'aggregate-order-by-not-scalar',
+          'aggregate `order_by` must be scalar'
+        );
       }
       if (!allowExpression) {
-        this.field.log(
+        this.field.logError(
+          'aggregate-order-by-expression-not-allowed',
           '`order_by` must be only `asc` or `desc` with no expression'
         );
       }
@@ -85,7 +94,10 @@ export class FunctionOrderBy extends MalloyElement {
     } else {
       if (this.dir === undefined) {
         // This error should technically never happen because it can't parse this way
-        this.log('field or order direction must be specified');
+        this.logError(
+          'aggregate-order-by-without-field-or-direction',
+          'field or order direction must be specified'
+        );
         return {node: 'functionDefaultOrderBy', dir: 'asc'};
       }
       return {node: 'functionDefaultOrderBy', dir: this.dir};

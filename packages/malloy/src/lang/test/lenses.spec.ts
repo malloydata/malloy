@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {markSource} from './test-translator';
+import {error, errorMessage, markSource} from './test-translator';
 import './parse-expects';
 
 describe('lenses', () => {
@@ -79,7 +79,7 @@ describe('lenses', () => {
         }
         run: x -> d + d
       `
-    ).translationToFailWith('overlapping fields in refinement: n');
+    ).toLog(errorMessage('overlapping fields in refinement: n'));
   });
   test('cannot override limit', () => {
     expect(
@@ -90,7 +90,7 @@ describe('lenses', () => {
         }
         run: x -> d1 + d2
       `
-    ).translationToFailWith('refinement cannot override existing limit');
+    ).toLog(errorMessage('refinement cannot override existing limit'));
   });
   test('cannot override ordering', () => {
     expect(
@@ -101,7 +101,7 @@ describe('lenses', () => {
         }
         run: x -> d1 + d2
       `
-    ).translationToFailWith('refinement cannot override existing ordering');
+    ).toLog(errorMessage('refinement cannot override existing ordering'));
   });
   test('weird issue with order by constant group by', () => {
     expect(
@@ -138,13 +138,13 @@ describe('lenses', () => {
         run: x -> idx + grp
         run: x -> idx + proj
       `
-    ).translationToFailWith(
-      'cannot refine reduce view with project view',
-      'cannot refine reduce view with index view',
-      'cannot refine project view with index view',
-      'cannot refine project view with reduce view',
-      'cannot refine index view with reduce view',
-      'cannot refine index view with project view'
+    ).toLog(
+      errorMessage('cannot refine reduce view with project view'),
+      errorMessage('cannot refine reduce view with index view'),
+      errorMessage('cannot refine project view with index view'),
+      errorMessage('cannot refine project view with reduce view'),
+      errorMessage('cannot refine index view with reduce view'),
+      errorMessage('cannot refine index view with project view')
     );
   });
   test('can reference dimension at head of query when experiment is enabled', () => {
@@ -189,8 +189,8 @@ describe('lenses', () => {
         }
         run: x -> one_stage + two_stage
       `
-    ).translationToFailWith(
-      'named refinement `two_stage` must have exactly one stage'
+    ).toLog(
+      errorMessage('named refinement `two_stage` must have exactly one stage')
     );
   });
   test('cannot refine with literal multi-stage', () => {
@@ -202,8 +202,8 @@ describe('lenses', () => {
         }
         run: x -> one_stage + ({ group_by: a is 1 } -> { group_by: a })
       `
-    ).translationToFailWith(
-      'A multi-segment view cannot be used as a refinement'
+    ).toLog(
+      errorMessage('A multi-segment view cannot be used as a refinement')
     );
   });
   test('can reference dimension in refinement when experiment is enabled', () => {
@@ -266,8 +266,8 @@ describe('lenses', () => {
           view: m is { aggregate: c is count() }
         }
         run: x -> m + y + { limit: 1 }`
-    ).translationToFailWith(
-      'named refinement `y` must be a view, found a struct'
+    ).toLog(
+      errorMessage('named refinement `y` must be a view, found a struct')
     );
   });
   test('cannot use view from join as whole pipeline', () => {
@@ -280,7 +280,7 @@ describe('lenses', () => {
         }
         run: x -> y.z
       `
-    ).translationToFailWith('Cannot use view from join');
+    ).toLog(errorMessage('Cannot use view from join'));
   });
   test('cannot use view from join in nest', () => {
     expect(
@@ -292,7 +292,7 @@ describe('lenses', () => {
         }
         run: x -> { nest: y.z }
       `
-    ).translationToFailWith('Cannot use view from join');
+    ).toLog(errorMessage('Cannot use view from join'));
   });
   test('cannot use view from join as nest view head', () => {
     expect(
@@ -304,7 +304,7 @@ describe('lenses', () => {
         }
         run: x -> { nest: y.z + { limit: 1 } }
       `
-    ).translationToFailWith('Cannot use view from join');
+    ).toLog(errorMessage('Cannot use view from join'));
   });
   test('cannot use view from join as lens in query', () => {
     expect(
@@ -316,7 +316,7 @@ describe('lenses', () => {
         }
         run: x -> ai + y.z
       `
-    ).translationToFailWith('Cannot use view from join as refinement');
+    ).toLog(errorMessage('Cannot use view from join as refinement'));
   });
   test('cannot use view from join as lens in nest', () => {
     expect(
@@ -328,7 +328,7 @@ describe('lenses', () => {
         }
         run: x -> { nest: ai + y.z }
       `
-    ).translationToFailWith('Cannot use view from join as refinement');
+    ).toLog(errorMessage('Cannot use view from join as refinement'));
   });
   test('can nest dimension with refinement when experiment is enabled', () => {
     expect(
@@ -351,8 +351,8 @@ describe('lenses', () => {
         }
         run: x -> d + b
       `
-    ).translationToFailWith(
-      'named refinement `b` must be a view, found a struct'
+    ).toLog(
+      errorMessage('named refinement `b` must be a view, found a struct')
     );
   });
   test('cannot reference field in LHS of refinement in group_by', () => {
@@ -363,7 +363,7 @@ describe('lenses', () => {
         }
         run: x -> v + { group_by: j is ${'i'} }
       `
-    ).translationToFailWith("'i' is not defined");
+    ).toLog(errorMessage("'i' is not defined"));
   });
   test('cannot named-refine multi-stage query', () => {
     expect(
@@ -377,9 +377,9 @@ describe('lenses', () => {
         run: x -> multi + d
         run: x -> d + multi
       `
-    ).translationToFailWith(
-      'Named refinements of multi-stage views are not supported',
-      'named refinement `multi` must have exactly one stage'
+    ).toLog(
+      errorMessage('Named refinements of multi-stage views are not supported'),
+      errorMessage('named refinement `multi` must have exactly one stage')
     );
   });
 });
@@ -425,8 +425,8 @@ describe('partial views', () => {
           nest: { group_by: astr }
         }
       `
-    ).translationToFailWith(
-      '`nest:` view requires a name (add `nest_name is ...`)'
+    ).toLog(
+      errorMessage('`nest:` view requires a name (add `nest_name is ...`)')
     );
   });
   test.skip('partial with index', () => {
@@ -447,10 +447,7 @@ describe('partial views', () => {
           view: bad2 is { where: true } + { where: false }
         }
       `
-    ).translationToFailWith(
-      "Can't determine view type (`group_by` / `aggregate` / `nest`, `project`, `index`)",
-      "Can't determine view type (`group_by` / `aggregate` / `nest`, `project`, `index`)"
-    );
+    ).toLog(error('ambiguous-view-type'), error('ambiguous-view-type'));
   });
   test('disallow chains that have no fields in multi-stage', () => {
     expect(
@@ -463,13 +460,13 @@ describe('partial views', () => {
         run: x -> v -> { where: true }
         run: x -> { where: true } -> { group_by: undef }
       `
-    ).translationToFailWith(
-      "Can't determine view type (`group_by` / `aggregate` / `nest`, `project`, `index`)",
-      "'undef' is not defined",
-      "Can't determine view type (`group_by` / `aggregate` / `nest`, `project`, `index`)",
-      "Can't determine view type (`group_by` / `aggregate` / `nest`, `project`, `index`)",
-      "'undef' is not defined",
-      "Can't determine view type (`group_by` / `aggregate` / `nest`, `project`, `index`)"
+    ).toLog(
+      error('ambiguous-view-type'),
+      errorMessage("'undef' is not defined"),
+      error('ambiguous-view-type'),
+      error('ambiguous-view-type'),
+      errorMessage("'undef' is not defined"),
+      error('ambiguous-view-type')
     );
   });
   test('copy of view with refinement should work', () => {

@@ -24,6 +24,11 @@
 import {QueryElement} from '../types/query-element';
 import {MalloyElement} from '../types/malloy-element';
 import {Source} from '../source-elements/source';
+import {
+  LogMessageOptions,
+  MessageCode,
+  MessageParameterType,
+} from '../../parse-log';
 
 /**
  * An AST element which can be treated as either a source or a query
@@ -46,11 +51,16 @@ export abstract class SourceQueryElement extends MalloyElement {
     return false;
   }
 
-  sqLog(message: string) {
+  sqLog<T extends MessageCode>(
+    code: T,
+    parameters: MessageParameterType<T>,
+    options?: LogMessageOptions
+  ): T {
     if (this.isErrorFree()) {
-      this.log(message);
+      this.logError(code, parameters, options);
     }
     this.errored = true;
+    return code;
   }
 
   isErrorFree(): boolean {

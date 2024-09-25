@@ -67,26 +67,38 @@ export abstract class QuerySegmentBuilder implements QueryBuilder {
       this.filters.push(...qp.getFilterList(filterFS));
     } else if (qp instanceof Top) {
       if (this.limit) {
-        qp.log('Query operation already limited');
+        qp.logError(
+          'limit-already-specified',
+          'Query operation already limited'
+        );
       } else {
         this.limit = qp.limit;
       }
       if (qp.by) {
         if (this.order) {
-          qp.log('Query operation is already sorted');
+          qp.logError(
+            'ordering-already-specified',
+            'Query operation is already sorted'
+          );
         } else {
           this.order = qp;
         }
       }
     } else if (qp instanceof Limit) {
       if (this.limit) {
-        qp.log('Query operation already limited');
+        qp.logError(
+          'limit-already-specified',
+          'Query operation already limited'
+        );
       } else {
         this.limit = qp.limit;
       }
     } else if (qp instanceof Ordering) {
       if (this.order) {
-        qp.log('Query operation already sorted');
+        qp.logError(
+          'ordering-already-specified',
+          'Query operation already sorted'
+        );
       } else {
         this.order = qp;
       }
@@ -154,7 +166,10 @@ export class ReduceBuilder extends QuerySegmentBuilder implements QueryBuilder {
       if (isReduceSegment(fromSeg) || isPartialSegment(fromSeg)) {
         from = fromSeg;
       } else {
-        this.resultFS.log(`Can't refine reduce with ${fromSeg.type}`);
+        this.resultFS.logError(
+          'incompatible-segment-for-reduce-refinement',
+          `Can't refine reduce with ${fromSeg.type}`
+        );
         return ErrorFactory.reduceSegment;
       }
     }

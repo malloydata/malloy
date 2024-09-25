@@ -108,7 +108,10 @@ export abstract class AtomicFieldDeclaration
       const fs = this.executesInOutputSpace() ? getOutputFS() : exprFS;
       exprValue = this.expr.getExpression(fs);
     } catch (error) {
-      this.log(`Cannot define '${exprName}', ${error.message}`);
+      this.logError(
+        'failed-field-definition',
+        `Cannot define '${exprName}', ${error.message}`
+      );
       return {
         name: exprName,
         type: 'error',
@@ -116,9 +119,9 @@ export abstract class AtomicFieldDeclaration
     }
     let retType = exprValue.dataType;
     if (retType === 'null') {
-      this.expr.log(
-        'null value defaults to type number, use "null::TYPE" to specify correct type',
-        'warn'
+      this.expr.logWarning(
+        'null-typed-field-definition',
+        'null value defaults to type number, use "null::TYPE" to specify correct type'
       );
       retType = 'number';
     }
@@ -151,7 +154,10 @@ export abstract class AtomicFieldDeclaration
     if (!circularDef) {
       if (exprValue.dataType !== 'error') {
         const badType = FT.inspect(exprValue);
-        this.log(`Cannot define '${exprName}', unexpected type: ${badType}`);
+        this.logError(
+          'invalid-type-for-field-definition',
+          `Cannot define '${exprName}', unexpected type: ${badType}`
+        );
       }
     }
     return {
@@ -240,7 +246,10 @@ export class DefSpace implements FieldSpace {
     if (symbol[0] && symbol[0].refString === this.circular.defineName) {
       this.foundCircle = true;
       return {
-        error: `Circular reference to '${this.circular.defineName}' in definition`,
+        error: {
+          message: `Circular reference to '${this.circular.defineName}' in definition`,
+          code: 'circular-reference-in-field-definition',
+        },
         found: undefined,
       };
     }
