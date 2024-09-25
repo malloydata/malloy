@@ -4,6 +4,7 @@ import {MalloyRender, MalloyRenderProps} from './render';
 import css from './render.css?raw';
 import tableCss from './table/table.css?raw';
 import dashboardCss from './dashboard/dashboard.css?raw';
+import tooltipCss from './tooltip/tooltip.css?raw';
 
 const withStyles = ComponentType => {
   return (props, options) => {
@@ -11,7 +12,9 @@ const withStyles = ComponentType => {
     const stylesheet = new CSSStyleSheet();
     stylesheet.replaceSync(css);
     const tableStylesheet = new CSSStyleSheet();
-    tableStylesheet.replaceSync([tableCss, dashboardCss].join('\n'));
+    tableStylesheet.replaceSync(
+      [tableCss, dashboardCss, tooltipCss].join('\n')
+    );
     element.renderRoot.adoptedStyleSheets = [stylesheet, tableStylesheet];
     return ComponentType(props, options);
   };
