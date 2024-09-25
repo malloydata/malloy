@@ -2541,19 +2541,6 @@ class QueryQuery extends QueryField {
       this.rootResult.findJoins(this);
       this.rootResult.calculateSymmetricAggregates();
       this.prepared = true;
-
-      const s = this.parent;
-      if (
-        s.fieldDef.parameters &&
-        Object.values(s.fieldDef.parameters).length > 0
-      ) {
-        s.eventStream?.emit({
-          id: 'parameterized-source-compiled',
-          data: {
-            parameters: s.fieldDef.parameters,
-          },
-        });
-      }
     }
   }
 
@@ -2769,6 +2756,7 @@ class QueryQuery extends QueryField {
         name: qs.fieldDef.as,
       },
     });
+    qs.maybeEmitParameterizedSourceUsage();
     const structRelationship = qs.fieldDef.structRelationship;
     let structSQL = qs.structSourceSQL(stageWriter);
     if (isJoinOn(structRelationship)) {
@@ -3747,6 +3735,7 @@ class QueryQuery extends QueryField {
     lastStageName: string;
     outputStruct: StructDef;
   } {
+    this.parent.maybeEmitParameterizedSourceUsage();
     this.prepare(stageWriter);
     let lastStageName = this.generateSQL(stageWriter);
     let outputStruct = this.getResultStructDef();
@@ -4136,6 +4125,20 @@ class QueryStruct extends QueryNode {
     this.dialect = getDialect(this.fieldDef.dialect);
 
     this.addFieldsFromFieldList(this.fieldDef.fields);
+  }
+
+  maybeEmitParameterizedSourceUsage() {
+    const paramsAndArgs = {
+      ...this.fieldDef.parameters,
+      ...this.fieldDef.arguments,
+    };
+    if (Object.values(paramsAndArgs).length === 0) return;
+    this.eventStream?.emit({
+      id: 'parameterized-source-compiled',
+      data: {
+        parameters: paramsAndArgs,
+      },
+    });
   }
 
   resolveParentParameterReferences(param: Parameter): Parameter {

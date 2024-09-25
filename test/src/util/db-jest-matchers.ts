@@ -303,25 +303,6 @@ async function toEmit(
   };
 }
 
-// function matchInOrderEvents(got: Event[], want: Event[]) {
-//   const matched: {got: Event; want: Event}[] = [];
-//   let gotIndex = 0;
-//   let wantIndex = 0;
-//   while (gotIndex < got.length && wantIndex < want.length) {
-//     const gotEvent = got[gotIndex];
-//     const wantEvent = want[wantIndex];
-//     if (gotEvent.id === wantEvent.id) {
-//       matched.push({got: gotEvent, want: wantEvent});
-//       wantIndex += 1;
-//     }
-//     gotIndex += 1;
-//   }
-//   if (wantIndex === want.length) {
-//     return matched;
-//   }
-//   return undefined;
-// }
-
 function errorLogToString(src: string, msgs: LogMessage[]) {
   let lovely = '';
   let lineNo = 0;

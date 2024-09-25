@@ -90,7 +90,10 @@ describe('emits events', () => {
           join_one: s0(x is "foo") on 1 = 1
           join_one: s0_copy is s0(x is "bar") on 1 = 1
         }
-        run: s1 -> { select: s0_copy.state }
+        run: s1 -> {
+          select: s0_copy.state
+          select: foo is s0_copy.state // only should be emitted once
+        }
       `).toEmitDuringCompile(runtime, {
         id: 'join-used',
         data: {name: 's0_copy'},
