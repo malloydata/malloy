@@ -726,6 +726,12 @@ describe('query:', () => {
         group_by: b.ai
       }`).toTranslate();
     });
+    test.skip('reference join as field', () => {
+      expect(`run: a -> {
+        extend: { join_one: b with astr }
+        group_by: b
+      }`).translationToFailWith('foo');
+    });
     test('can reference select: inline join.* field in calculate', () => {
       expect(`run: a -> {
         extend: { join_one: b with astr }
