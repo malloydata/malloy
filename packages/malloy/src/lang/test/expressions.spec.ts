@@ -335,9 +335,7 @@ describe('expressions', () => {
             aggregate: x3 is string_agg(astr) { limit: 10 }
           }
         `).toLog(
-        errorMessage(
-          "Experimental flag 'aggregate_limit' required to enable this feature"
-        )
+        error('experiment-not-enabled', {experimentId: 'aggregate_limit'})
       );
     });
 
@@ -363,9 +361,7 @@ describe('expressions', () => {
             group_by: x3 is string_agg(astr) { limit: 10 }
           }
         `).toLog(
-        errorMessage(
-          "Experimental flag 'aggregate_limit' required to enable this feature"
-        )
+        error('experiment-not-enabled', {experimentId: 'aggregate_limit'})
       );
     });
 

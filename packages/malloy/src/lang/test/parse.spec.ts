@@ -99,9 +99,9 @@ describe('model statements', () => {
     expect(
       '##! experimental { this_experiment_does_not_exist }\n;;[ "x" ]'
     ).toLog(
-      errorMessage(
-        "Experimental flag 'compilerTestExperimentParse' required to enable this feature"
-      )
+      error('experiment-not-enabled', {
+        experimentId: 'compilerTestExperimentParse',
+      })
     );
   });
 

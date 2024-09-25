@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {errorMessage, markSource} from './test-translator';
+import {error, errorMessage, markSource} from './test-translator';
 import './parse-expects';
 
 describe('parameters', () => {
@@ -496,11 +496,7 @@ describe('parameters', () => {
       markSource`
         source: ab_new(param::number) is ab
       `
-    ).toLog(
-      errorMessage(
-        "Experimental flag 'parameters' required to enable this feature"
-      )
-    );
+    ).toLog(error('experiment-not-enabled', {experimentId: 'parameters'}));
   });
   test('cannot except parameter from extended source', () => {
     expect(
@@ -538,11 +534,7 @@ describe('parameters', () => {
       markSource`
         run: ab_new${'(param is param)'} -> { select: * }
       `
-    ).toLog(
-      errorMessage(
-        "Experimental flag 'parameters' required to enable this feature"
-      )
-    );
+    ).toLog(error('experiment-not-enabled', {experimentId: 'parameters'}));
   });
   test('parameters cannot reference themselves', () => {
     expect(

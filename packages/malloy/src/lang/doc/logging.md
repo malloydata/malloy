@@ -18,6 +18,14 @@ The error formatter can return a plain `string` message, or an object that can h
 * `replacement`: suggested text to replace the erroring code
 * `data`: data to attach to the error; if not specified, the error parameters will be used for this value
 
+For errors which always have the same message, you can define the error parameter type to be `'the-error-code': {}` and provide an error formatter as just a string literal (instead of a function):
+
+```ts
+'the-error-code': 'Oh no! You did a bad thing!',
+```
+
+And then you call the log functions like: `this.logError('the-error-code', {});`
+
 ## Logging Errors
 
 Use `logError` or `logWarning` to log error/warnings.

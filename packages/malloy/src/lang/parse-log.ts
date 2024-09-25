@@ -363,10 +363,9 @@ export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
   }),
   'experimental-dialect-not-enabled': e =>
     `Requires compiler flag '##! experimental.dialect.${e.dialect}'`,
-  'pick-missing-else': () => "pick incomplete, missing 'else'",
-  'pick-missing-value': () => 'pick with no value can only be used with apply',
-  'pick-illegal-partial': () =>
-    'pick with partial when can only be used with apply',
+  'pick-missing-else': "pick incomplete, missing 'else'",
+  'pick-missing-value': 'pick with no value can only be used with apply',
+  'pick-illegal-partial': 'pick with partial when can only be used with apply',
   'pick-when-must-be-boolean': e =>
     `when expression must be boolean, not ${e.whenType}`,
   'sql-native-not-allowed-in-expression': e => ({
@@ -375,7 +374,7 @@ export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
   }),
   'experiment-not-enabled': e =>
     `Experimental flag \`${e.experimentId}\` is not set, feature not available`,
-  'ambiguous-view-type': () =>
+  'ambiguous-view-type':
     "Can't determine view type (`group_by` / `aggregate` / `nest`, `project`, `index`)",
   'import-error': e =>
     e.message.includes(e.url)
@@ -394,10 +393,12 @@ export type MessageCode = keyof MessageParameterTypes;
 export type MessageParameterType<T extends MessageCode> =
   MessageParameterTypes[T];
 
+type MessageFormatter<T extends MessageCode> =
+  | MessageInfo
+  | ((parameters: MessageParameterType<T>) => MessageInfo);
+
 type ErrorCodeMessageMap = {
-  [key in keyof MessageParameterTypes]: (
-    parameters: MessageParameterType<key>
-  ) => MessageInfo;
+  [key in keyof MessageParameterTypes]: MessageFormatter<key>;
 };
 
 type PartialErrorCodeMessageMap = Partial<ErrorCodeMessageMap>;
@@ -437,9 +438,11 @@ export function makeLogMessage<T extends MessageCode>(
   parameters: MessageParameterType<T>,
   options?: LogMessageOptions
 ): LogMessage {
-  const formatter = MESSAGE_FORMATTERS[code];
-  const info = formatter
-    ? formatter(parameters)
+  const format: MessageFormatter<T> | undefined = MESSAGE_FORMATTERS[code];
+  const info = format
+    ? format instanceof Function
+      ? format(parameters)
+      : format
     : typeof parameters === 'string'
     ? parameters
     : undefined;
