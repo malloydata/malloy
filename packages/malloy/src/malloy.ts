@@ -66,6 +66,7 @@ import {
   Annotation,
   NamedModelObject,
   QueryValue,
+  QueryToMaterialize,
 } from './model';
 import {
   ModelString,
@@ -1233,6 +1234,12 @@ export class PreparedResult implements Taggable {
    */
   public get sql(): string {
     return this.inner.sql;
+  }
+
+  public get dependenciesToMaterialize():
+    | Record<string, QueryToMaterialize>
+    | undefined {
+    return this.inner.dependenciesToMaterialize;
   }
 
   /**

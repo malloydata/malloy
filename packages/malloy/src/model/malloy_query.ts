@@ -84,6 +84,7 @@ import {
   PickExpr,
   SpreadExpr,
   FilteredExpr,
+  QueryToMaterialize,
 } from './malloy_types';
 
 import {Connection} from '../connection/types';
@@ -98,6 +99,7 @@ import {
   SQLExprElement,
 } from './utils';
 import {DialectFieldTypeStruct, QueryInfo} from '../dialect/dialect';
+import {Tag} from '../tags';
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
@@ -166,10 +168,16 @@ class UniqueKeyUse extends Set<UniqueKeyPossibleUse> {
   }
 }
 
+type NamedSql = {
+  name: string;
+  sql: string;
+};
+
 class StageWriter {
   withs: string[] = [];
   udfs: string[] = [];
   pdts: string[] = [];
+  dependenciesToMaterialize: Record<string, QueryToMaterialize> = {};
   stagePrefix = '__stage';
   useCTE: boolean;
 
@@ -223,10 +231,49 @@ class StageWriter {
     return id;
   }
 
-  addPDT(baseName: string, dialect: Dialect): string {
+  private namedSql(baseName: string): NamedSql {
     const sql =
       this.combineStages(false).sql + this.withs[this.withs.length - 1];
-    const tableName = 'scratch.' + baseName + generateHash(sql);
+    const name = baseName + generateHash(sql);
+
+    return {name, sql};
+  }
+
+  addMaterializedQuery(fieldName: string, query: Query): string {
+    const name = query.name;
+    if (!name) {
+      throw new Error(
+        `Source ${fieldName} on a unnamed query that is tagged as materialize, only named queries can be materialized.`
+      );
+    }
+
+    const path = query.location?.url;
+    if (!path) {
+      throw new Error(
+        `Trying to materialize query ${name}, but its path is not set.`
+      );
+    }
+
+    // Creating an object that should uniquely identify a query within a Malloy model repo.
+    const queryRep = {
+      path: path,
+      source: undefined,
+      queryName: name,
+    };
+
+    const id = generateHash(JSON.stringify(queryRep));
+    const uniqueName = `${name}-${id}`;
+    this.root().dependenciesToMaterialize[uniqueName] = {
+      ...queryRep,
+      id,
+    };
+
+    return uniqueName;
+  }
+
+  addPDT(baseName: string, dialect: Dialect): string {
+    const {name, sql} = this.namedSql(baseName);
+    const tableName = `scratch.${name}`;
     this.root().pdts.push(dialect.sqlCreateTableAsSelect(tableName, sql));
     return tableName;
   }
@@ -4429,10 +4476,20 @@ class QueryStruct extends QueryNode {
         return '';
       case 'query': {
         // cache derived table.
-        const name = getIdentifier(this.fieldDef);
+        const clonedAnnotation = structuredClone(
+          this.fieldDef.structSource.query.annotation
+        );
+
+        if (clonedAnnotation) {
+          clonedAnnotation.inherits = undefined;
+        }
+
+        const sourceTag = Tag.annotationToTag(clonedAnnotation).tag;
+
+        const name = this.fieldDef.structSource.query.name;
         // this is a hack for now.  Need some way to denote this table
         //  should be cached.
-        if (name.includes('cache')) {
+        if (name?.includes('cache')) {
           const dtStageWriter = new StageWriter(true, stageWriter);
           this.model.loadQuery(
             this.fieldDef.structSource.query,
@@ -4441,6 +4498,11 @@ class QueryStruct extends QueryNode {
             false
           );
           return dtStageWriter.addPDT(name, this.dialect);
+        } else if (sourceTag.has('materialize')) {
+          return stageWriter.addMaterializedQuery(
+            getIdentifier(this.fieldDef),
+            this.fieldDef.structSource.query
+          );
         } else {
           // returns the stage name.
           return this.model.loadQuery(
@@ -4725,6 +4787,7 @@ export class QueryModel {
       lastStageName: ret.lastStageName,
       malloy: ret.malloy,
       sql: ret.stageWriter.generateSQLStages(),
+      dependenciesToMaterialize: ret.stageWriter.dependenciesToMaterialize,
       structs: ret.structs,
       sourceExplore,
       sourceFilters: query.filterList,
