@@ -77,5 +77,8 @@
     "typescript": "5.3.3",
     "unified": "^10.1.2",
     "uuid": "^8.3.2"
+  },
+  "dependencies": {
+    "@floating-ui/dom": "^1.6.11"
   }
 }

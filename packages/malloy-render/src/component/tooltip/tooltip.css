@@ -5,7 +5,8 @@
   box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.1);
   height: fit-content;
   width: fit-content;
-  transform: translate(10px, 10px);
+  position: absolute;
+  /* transform: translate(10px, 10px); */
 }
 
 .malloy-tooltip--table {
