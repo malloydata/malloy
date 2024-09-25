@@ -216,11 +216,13 @@ export class Malloy {
     model,
     refreshSchemaCache,
     noThrowOnError,
+    eventStream,
   }: {
     urlReader: URLReader;
     connections: LookupConnection<InfoConnection>;
     parse: Parse;
     model?: Model;
+    eventStream?: EventStream;
   } & CompileOptions): Promise<Model> {
     let refreshTimestamp: number | undefined;
     if (refreshSchemaCache) {
@@ -343,7 +345,8 @@ export class Malloy {
             const conn = await connections.lookupConnection(connectionName);
             const expanded = Malloy.compileSQLBlock(
               result.partialModel,
-              toCompile
+              toCompile,
+              eventStream
             );
             const resolved = await conn.fetchSchemaForSQLBlock(expanded, {
               refreshTimestamp,
@@ -373,7 +376,8 @@ export class Malloy {
 
   static compileSQLBlock(
     partialModel: ModelDef | undefined,
-    toCompile: SQLBlockSource
+    toCompile: SQLBlockSource,
+    eventStream?: EventStream
   ): SQLBlock {
     let queryModel: QueryModel | undefined = undefined;
     let selectStr = '';
@@ -390,7 +394,7 @@ export class Malloy {
               'Internal error: Partial model missing when compiling SQL block'
             );
           }
-          queryModel = new QueryModel(partialModel);
+          queryModel = new QueryModel(partialModel, eventStream);
         }
         const compiledSql = queryModel.compileQuery(segment, false).sql;
         selectStr += parenAlready ? compiledSql : `(${compiledSql})`;
@@ -877,7 +881,19 @@ export class PreparedQuery implements Taggable {
    * @return A fully-prepared query (which contains the generated SQL).
    */
   public get preparedResult(): PreparedResult {
-    const queryModel = new QueryModel(this._modelDef);
+    return this.getPreparedResult();
+  }
+
+  /**
+   * Generate the SQL for this query.
+   *
+   * @return A fully-prepared query (which contains the generated SQL).
+   * @param options.eventStream An event stream to use when compiling the SQL
+   */
+  public getPreparedResult(options?: {
+    eventStream?: EventStream;
+  }): PreparedResult {
+    const queryModel = new QueryModel(this._modelDef, options?.eventStream);
     const translatedQuery = queryModel.compileQuery(this._query);
     return new PreparedResult(
       {
@@ -2256,10 +2272,12 @@ export class Runtime {
               url: source,
               urlReader: this.urlReader,
               options,
+              eventStream: this.eventStream,
             })
           : Malloy.parse({
               source,
               options,
+              eventStream: this.eventStream,
             });
       return Malloy.compile({
         urlReader: this.urlReader,
@@ -2267,6 +2285,7 @@ export class Runtime {
         parse,
         refreshSchemaCache,
         noThrowOnError,
+        eventStream: this.eventStream,
       });
     });
   }
@@ -2484,18 +2503,32 @@ export class SingleConnectionRuntime<
 > extends Runtime {
   public readonly connection: T;
 
-  constructor(urls: URLReader, connection: T);
+  constructor(urlReader: URLReader, connection: T);
   constructor(connection: T);
-  constructor(urlsOrConnections: URLReader | T, maybeConnections?: T) {
-    if (maybeConnections === undefined) {
-      const connection = urlsOrConnections as T;
-      super(connection);
-      this.connection = connection;
-    } else {
-      const connection = maybeConnections as T;
-      super(urlsOrConnections as URLReader, connection);
-      this.connection = connection;
+  constructor(connection: T, eventStream: EventStream);
+  constructor(urlReader: URLReader, connection: T, eventStream: EventStream);
+  constructor(...params: (URLReader | T | EventStream)[]) {
+    let urlReader: URLReader | undefined;
+    let connection: T | undefined;
+    let eventStream: EventStream | undefined;
+    for (const param of params) {
+      if (isURLReader(param)) {
+        urlReader = param;
+      }
+      if (isConnection(param)) {
+        connection = param;
+      }
+      if (isEventStream(param)) {
+        eventStream = param;
+      }
     }
+    if (connection === undefined) {
+      throw new Error(
+        'Expected connection to be passed into SingleConnectionRuntime'
+      );
+    }
+    super(urlReader as URLReader, connection, eventStream);
+    this.connection = connection;
   }
 
   get supportsNesting(): boolean {
@@ -2565,6 +2598,10 @@ class FluentState<T> {
     materialize: () => Promise<SQLBlockStructDef>
   ): SQLBlockMaterializer {
     return new SQLBlockMaterializer(this.runtime, materialize);
+  }
+
+  get eventStream(): EventStream | undefined {
+    return this.runtime.eventStream;
   }
 }
 
@@ -2707,10 +2744,11 @@ export class ModelMaterializer extends FluentState<Model> {
     sourceName: string,
     searchTerm: string,
     limit = 1000,
-    searchField: string | undefined = undefined
+    searchField: string | undefined = undefined,
+    eventStream?: EventStream
   ): Promise<SearchIndexResult[] | undefined> {
     const model = await this.materialize();
-    const queryModel = new QueryModel(model._modelDef);
+    const queryModel = new QueryModel(model._modelDef, eventStream);
     const schema = model.getExploreByName(sourceName).structDef;
     if (schema.structRelationship.type !== 'basetable') {
       throw new Error(
@@ -2944,7 +2982,9 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
    */
   public loadPreparedResult(): PreparedResultMaterializer {
     return this.makePreparedResultMaterializer(async () => {
-      return (await this.materialize()).preparedResult;
+      return (await this.materialize()).getPreparedResult({
+        eventStream: this.eventStream,
+      });
     });
   }
 
@@ -3903,6 +3943,17 @@ function isEventStream(
     | EventStream
 ): thing is EventStream {
   return 'emit' in thing;
+}
+
+function isConnection<T extends Connection>(
+  thing:
+    | URLReader
+    | LookupConnection<InfoConnection>
+    | LookupConnection<Connection>
+    | Connection
+    | EventStream
+): thing is T {
+  return 'runSQL' in thing;
 }
 
 export interface WriteStream {

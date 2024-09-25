@@ -75,7 +75,7 @@ export class MessageLog implements MessageLogger {
     this.rawLog.push(logMsg);
     this.eventStream?.emit({
       id: `translation-${logMsg.severity}`,
-      data: {code: logMsg.errorTag}, // TODO change to code
+      data: {code: logMsg.errorTag, data: null, message: logMsg.message}, // TODO change to code
     });
   }
 

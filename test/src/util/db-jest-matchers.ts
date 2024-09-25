@@ -30,8 +30,10 @@ import {
   MalloyError,
   LogMessage,
   SingleConnectionRuntime,
+  Event,
 } from '@malloydata/malloy';
 import {inspect} from 'util';
+import {TestEventStream} from '../runtimes';
 
 type ExpectedResultRow = Record<string, unknown>;
 type ExpectedResult = ExpectedResultRow | ExpectedResultRow[];
@@ -72,6 +74,8 @@ declare global {
         runtime: Runner,
         matchVals: ExpectedResult
       ): Promise<R>;
+      toEmitDuringCompile(runtime: Runtime, ...events: Event[]): Promise<R>;
+      toEmitDuringTranslation(runtime: Runtime, ...events: Event[]): Promise<R>;
     }
   }
 }
@@ -130,6 +134,7 @@ expect.extend({
 
     const queryTags = (await query.getPreparedQuery()).tagParse().tag;
     const queryTestTag = queryTags.tag('test');
+
     let result: Result;
     try {
       result = await query.run();
@@ -217,7 +222,105 @@ expect.extend({
       message: () => 'All rows matched expected results',
     };
   },
+  async toEmitDuringCompile(
+    querySrc: string,
+    runtime: Runtime,
+    ...expectedEvents: Event[]
+  ) {
+    return toEmit(this, querySrc, 'compile', runtime, ...expectedEvents);
+  },
+  async toEmitDuringTranslation(
+    querySrc: string,
+    runtime: Runtime,
+    ...expectedEvents: Event[]
+  ) {
+    return toEmit(this, querySrc, 'translate', runtime, ...expectedEvents);
+  },
 });
+
+async function toEmit(
+  context: jest.MatcherContext,
+  querySrc: string,
+  when: 'compile' | 'translate',
+  runtime: Runtime,
+  ...expectedEvents: Event[]
+) {
+  const eventStream = runtime.eventStream;
+  if (eventStream === undefined) {
+    return {
+      pass: false,
+      message: () => 'No event stream found',
+    };
+  }
+  if (!(eventStream instanceof TestEventStream)) {
+    return {
+      pass: false,
+      message: () =>
+        'Expected TestEventStream, but found some other implementation',
+    };
+  }
+  eventStream.clear();
+  const model = runtime.loadModel(querySrc, {
+    noThrowOnError: when === 'translate',
+  });
+  if (when === 'compile') {
+    const query = model.loadFinalQuery();
+    await query.getPreparedResult();
+  } else {
+    await model.getModel();
+  }
+
+  const eventIdsWeCareAbout = Object.fromEntries(
+    expectedEvents.map(e => [e.id, true])
+  );
+  const gotEvents = eventStream.getEmittedEvents();
+  const eventsWithRelevantIds = gotEvents.filter(
+    e => eventIdsWeCareAbout[e.id]
+  );
+  let matching = eventsWithRelevantIds.length === expectedEvents.length;
+  if (matching) {
+    for (let i = 0; i < expectedEvents.length; i++) {
+      const got = eventsWithRelevantIds[i];
+      const want = expectedEvents[i];
+      matching &&= objectsMatch(got, want);
+    }
+  }
+
+  if (!matching) {
+    return {
+      pass: false,
+      message: () =>
+        `Expected events ${context.utils.diff(
+          expectedEvents,
+          eventsWithRelevantIds
+        )}`,
+    };
+  }
+
+  return {
+    pass: true,
+    message: () => 'All rows matched expected results',
+  };
+}
+
+// function matchInOrderEvents(got: Event[], want: Event[]) {
+//   const matched: {got: Event; want: Event}[] = [];
+//   let gotIndex = 0;
+//   let wantIndex = 0;
+//   while (gotIndex < got.length && wantIndex < want.length) {
+//     const gotEvent = got[gotIndex];
+//     const wantEvent = want[wantIndex];
+//     if (gotEvent.id === wantEvent.id) {
+//       matched.push({got: gotEvent, want: wantEvent});
+//       wantIndex += 1;
+//     }
+//     gotIndex += 1;
+//   }
+//   if (wantIndex === want.length) {
+//     return matched;
+//   }
+//   return undefined;
+// }
 
 function errorLogToString(src: string, msgs: LogMessage[]) {
   let lovely = '';
@@ -239,4 +342,45 @@ function errorLogToString(src: string, msgs: LogMessage[]) {
 
 function humanReadable(thing: unknown): string {
   return inspect(thing, {breakLength: 72, depth: Infinity});
+}
+
+// b is "expected"
+// a is "actual"
+// If expected is an object, all of the keys should also
+// match, buy the expected is allowed to have other keys that are not matched
+function objectsMatch(a: unknown, b: unknown): boolean {
+  if (
+    typeof b === 'string' ||
+    typeof b === 'number' ||
+    typeof b === 'boolean' ||
+    typeof b === 'bigint' ||
+    b === undefined ||
+    b === null
+  ) {
+    return b === a;
+  } else if (Array.isArray(b)) {
+    if (Array.isArray(a)) {
+      return a.length === b.length && a.every((v, i) => objectsMatch(v, b[i]));
+    }
+    return false;
+  } else {
+    if (
+      typeof a === 'string' ||
+      typeof a === 'number' ||
+      typeof a === 'boolean' ||
+      typeof a === 'bigint' ||
+      a === undefined ||
+      a === null
+    ) {
+      return false;
+    }
+    if (Array.isArray(a)) return false;
+    const keys = Object.keys(b);
+    for (const key of keys) {
+      if (!objectsMatch(a[key], b[key])) {
+        return false;
+      }
+    }
+    return true;
+  }
 }

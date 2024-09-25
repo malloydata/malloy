@@ -98,6 +98,7 @@ import {
   SQLExprElement,
 } from './utils';
 import {DialectFieldTypeStruct, QueryInfo} from '../dialect/dialect';
+import {EventStream} from '../lang/events';
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
@@ -744,6 +745,10 @@ class QueryField extends QueryNode {
     state: GenerateState
   ): string {
     const name = expr.path[0];
+    context.eventStream?.emit({
+      id: 'argument-compiled',
+      data: {name},
+    });
     const argument = context.arguments()[name];
     if (argument.value) {
       return this.exprToSQL(resultSet, context, argument.value, state);
@@ -2536,6 +2541,19 @@ class QueryQuery extends QueryField {
       this.rootResult.findJoins(this);
       this.rootResult.calculateSymmetricAggregates();
       this.prepared = true;
+
+      const s = this.parent;
+      if (
+        s.fieldDef.parameters &&
+        Object.values(s.fieldDef.parameters).length > 0
+      ) {
+        s.eventStream?.emit({
+          id: 'parameterized-source-compiled',
+          data: {
+            parameters: s.fieldDef.parameters,
+          },
+        });
+      }
     }
   }
 
@@ -2745,6 +2763,12 @@ class QueryQuery extends QueryField {
   generateSQLJoinBlock(stageWriter: StageWriter, ji: JoinInstance): string {
     let s = '';
     const qs = ji.queryStruct;
+    qs.eventStream?.emit({
+      id: 'join-used',
+      data: {
+        name: qs.fieldDef.as,
+      },
+    });
     const structRelationship = qs.fieldDef.structRelationship;
     let structSQL = qs.structSourceSQL(stageWriter);
     if (isJoinOn(structRelationship)) {
@@ -4365,6 +4389,10 @@ class QueryStruct extends QueryNode {
     }
   }
 
+  get eventStream(): EventStream | undefined {
+    return this.getModel().eventStream;
+  }
+
   setParent(parent: ParentQueryStruct | ParentQueryModel) {
     if ('struct' in parent) {
       this.parent = parent.struct;
@@ -4596,7 +4624,10 @@ export class QueryModel {
   // dialect: Dialect = new PostgresDialect();
   modelDef: ModelDef | undefined = undefined;
   structs = new Map<string, QueryStruct>();
-  constructor(modelDef: ModelDef | undefined) {
+  constructor(
+    modelDef: ModelDef | undefined,
+    readonly eventStream?: EventStream
+  ) {
     if (modelDef) {
       this.loadModelFromDef(modelDef);
     }

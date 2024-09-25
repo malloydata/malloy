@@ -189,3 +189,4 @@ export type {
 } from './connection/types';
 export {toAsyncGenerator} from './connection_utils';
 export {type TagParse, Tag, type TagDict} from './tags';
+export type {Event, EventStream} from './lang/events';
