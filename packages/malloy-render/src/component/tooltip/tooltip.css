@@ -1,0 +1,22 @@
+.malloy-tooltip {
+  background: rgba(255, 255, 255, 0.95);
+  padding: 8px;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.1);
+  height: fit-content;
+  width: fit-content;
+  transform: translate(10px, 10px);
+}
+
+.malloy-tooltip--table {
+  th,
+  td {
+    text-wrap: nowrap;
+  }
+
+  th {
+    text-align: left;
+  }
+
+  font-size: 12px;
+}
