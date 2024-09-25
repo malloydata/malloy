@@ -38,7 +38,7 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
       select:
           two is one + 1
     }
-asdf
+a
     source: foo is myMaterializedQuery extend {
       view: fooview is {
         select:
