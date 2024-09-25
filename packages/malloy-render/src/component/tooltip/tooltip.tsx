@@ -1,6 +1,8 @@
-import {createSignal, JSXElement, onCleanup, Show} from 'solid-js';
+import {createSignal, JSXElement, onCleanup, onMount, Show} from 'solid-js';
 import {Portal} from 'solid-js/web';
-import './tooltip.css';
+import tooltipCss from './tooltip.css?raw';
+
+const TOOLTIP_STYLE_ID = 'malloy-tooltip-style';
 
 export function Tooltip(props: {show: boolean; children: JSXElement}) {
   const [pos, setPos] = createSignal([0, 0]);
@@ -13,6 +15,17 @@ export function Tooltip(props: {show: boolean; children: JSXElement}) {
 
   onCleanup(() => {
     document.removeEventListener('mousemove', handler);
+  });
+
+  // Tooltips are rendered in the body outside of the malloy-render component,
+  // so we need to append the styles to the head of the document, rather than scoped inside malloy-render.
+  onMount(() => {
+    if (!document.getElementById(TOOLTIP_STYLE_ID)) {
+      const style = document.createElement('style');
+      style.id = TOOLTIP_STYLE_ID;
+      style.textContent = tooltipCss;
+      document.head.appendChild(style);
+    }
   });
 
   return (
