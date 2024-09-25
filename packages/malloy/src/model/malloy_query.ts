@@ -84,6 +84,7 @@ import {
   PickExpr,
   SpreadExpr,
   FilteredExpr,
+  QueryToMaterialize,
 } from './malloy_types';
 
 import {Connection} from '../connection/types';
@@ -176,7 +177,7 @@ class StageWriter {
   withs: string[] = [];
   udfs: string[] = [];
   pdts: string[] = [];
-  queriesToMaterialize: Record<string, string> = {};
+  dependenciesToMaterialize: Record<string, QueryToMaterialize> = {};
   stagePrefix = '__stage';
   useCTE: boolean;
 
@@ -238,10 +239,36 @@ class StageWriter {
     return {name, sql};
   }
 
-  addMaterializedQuery(baseName: string): string {
-    const {name, sql} = this.namedSql(baseName);
-    this.root().queriesToMaterialize[name] = sql;
-    return name;
+  addMaterializedQuery(fieldName: string, query: Query): string {
+    const name = query.name;
+    if (!name) {
+      throw new Error(
+        `Source ${fieldName} on a unnamed query that is tagged as materialize, only named queries can be materialized.`
+      );
+    }
+
+    const path = query.location?.url;
+    if (!path) {
+      throw new Error(
+        `Trying to materialize query ${name}, but its path is not set.`
+      );
+    }
+
+    // Creating an object that should uniquely identify a query within a Malloy model repo.
+    const queryRep = {
+      path: path,
+      source: undefined,
+      queryName: name,
+    };
+
+    const id = generateHash(JSON.stringify(queryRep));
+    const uniqueName = `${name}-${id}`;
+    this.root().dependenciesToMaterialize[uniqueName] = {
+      ...queryRep,
+      id,
+    };
+
+    return uniqueName;
   }
 
   addPDT(baseName: string, dialect: Dialect): string {
@@ -4472,23 +4499,10 @@ class QueryStruct extends QueryNode {
           );
           return dtStageWriter.addPDT(name, this.dialect);
         } else if (sourceTag.has('materialize')) {
-          if (!name) {
-            throw new Error(
-              `Source ${getIdentifier(
-                this.fieldDef
-              )} on a unnamed query that is tagged as materialize, only named queries can be materialized.`
-            );
-          }
-
-          const dtStageWriter = new StageWriter(true, stageWriter);
-          this.model.loadQuery(
-            this.fieldDef.structSource.query,
-            dtStageWriter,
-            false,
-            false
+          return stageWriter.addMaterializedQuery(
+            getIdentifier(this.fieldDef),
+            this.fieldDef.structSource.query
           );
-
-          return dtStageWriter.addMaterializedQuery(name);
         } else {
           // returns the stage name.
           return this.model.loadQuery(
@@ -4769,7 +4783,7 @@ export class QueryModel {
       lastStageName: ret.lastStageName,
       malloy: ret.malloy,
       sql: ret.stageWriter.generateSQLStages(),
-      queriesToMaterialize: ret.stageWriter.queriesToMaterialize,
+      dependenciesToMaterialize: ret.stageWriter.dependenciesToMaterialize,
       structs: ret.structs,
       sourceExplore,
       sourceFilters: query.filterList,
