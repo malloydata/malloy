@@ -79,7 +79,7 @@ import {DateTime} from 'luxon';
 import {Tag, TagParse, TagParseSpec, Taggable} from './tags';
 import {Dialect, getDialect} from './dialect';
 import {PathInfo} from './lang/parse-tree-walkers/find-table-path-walker';
-import {MalloyEventStream} from './events';
+import EventEmitter from 'events';
 
 export interface Loggable {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -110,7 +110,7 @@ export class Malloy {
   private static _parse(
     source: string,
     url?: URL,
-    eventStream?: MalloyEventStream,
+    eventEmitter?: EventEmitter,
     options?: ParseOptions
   ): Parse {
     if (url === undefined) {
@@ -126,7 +126,7 @@ export class Malloy {
       {
         urls: {[url.toString()]: source},
       },
-      eventStream
+      eventEmitter
     );
     if (options?.testEnvironment) {
       translator.allDialectsEnabled = true;
@@ -144,12 +144,12 @@ export class Malloy {
   public static parse({
     url,
     urlReader,
-    eventStream,
+    eventEmitter,
     options,
   }: {
     url: URL;
     urlReader: URLReader;
-    eventStream?: MalloyEventStream;
+    eventEmitter?: EventEmitter;
     options?: ParseOptions;
   }): Promise<Parse>;
   /**
@@ -162,29 +162,29 @@ export class Malloy {
   public static parse({
     source,
     url,
-    eventStream,
+    eventEmitter,
     options,
   }: {
     url?: URL;
     source: string;
-    eventStream?: MalloyEventStream;
+    eventEmitter?: EventEmitter;
     options?: ParseOptions;
   }): Parse;
   public static parse({
     url,
     urlReader,
     source,
-    eventStream,
+    eventEmitter,
     options,
   }: {
     url?: URL;
     source?: string;
     urlReader?: URLReader;
-    eventStream?: MalloyEventStream;
+    eventEmitter?: EventEmitter;
     options?: ParseOptions;
   }): Parse | Promise<Parse> {
     if (source !== undefined) {
-      return Malloy._parse(source, url, eventStream, options);
+      return Malloy._parse(source, url, eventEmitter, options);
     } else {
       if (urlReader === undefined) {
         throw new Error('Internal Error: urlReader is required.');
@@ -195,7 +195,7 @@ export class Malloy {
         );
       }
       return urlReader.readURL(url).then(source => {
-        return Malloy._parse(source, url, eventStream, options);
+        return Malloy._parse(source, url, eventEmitter, options);
       });
     }
   }
@@ -216,13 +216,13 @@ export class Malloy {
     model,
     refreshSchemaCache,
     noThrowOnError,
-    eventStream,
+    eventEmitter,
   }: {
     urlReader: URLReader;
     connections: LookupConnection<InfoConnection>;
     parse: Parse;
     model?: Model;
-    eventStream?: MalloyEventStream;
+    eventEmitter?: EventEmitter;
   } & CompileOptions): Promise<Model> {
     let refreshTimestamp: number | undefined;
     if (refreshSchemaCache) {
@@ -346,7 +346,7 @@ export class Malloy {
             const expanded = Malloy.compileSQLBlock(
               result.partialModel,
               toCompile,
-              eventStream
+              eventEmitter
             );
             const resolved = await conn.fetchSchemaForSQLBlock(expanded, {
               refreshTimestamp,
@@ -377,7 +377,7 @@ export class Malloy {
   static compileSQLBlock(
     partialModel: ModelDef | undefined,
     toCompile: SQLBlockSource,
-    eventStream?: MalloyEventStream
+    eventEmitter?: EventEmitter
   ): SQLBlock {
     let queryModel: QueryModel | undefined = undefined;
     let selectStr = '';
@@ -394,7 +394,7 @@ export class Malloy {
               'Internal error: Partial model missing when compiling SQL block'
             );
           }
-          queryModel = new QueryModel(partialModel, eventStream);
+          queryModel = new QueryModel(partialModel, eventEmitter);
         }
         const compiledSql = queryModel.compileQuery(segment, false).sql;
         selectStr += parenAlready ? compiledSql : `(${compiledSql})`;
@@ -888,12 +888,12 @@ export class PreparedQuery implements Taggable {
    * Generate the SQL for this query.
    *
    * @return A fully-prepared query (which contains the generated SQL).
-   * @param options.eventStream An event stream to use when compiling the SQL
+   * @param options.eventEmitter An event stream to use when compiling the SQL
    */
   public getPreparedResult(options?: {
-    eventStream?: MalloyEventStream;
+    eventEmitter?: EventEmitter;
   }): PreparedResult {
-    const queryModel = new QueryModel(this._modelDef, options?.eventStream);
+    const queryModel = new QueryModel(this._modelDef, options?.eventEmitter);
     const translatedQuery = queryModel.compileQuery(this._query);
     return new PreparedResult(
       {
@@ -2167,36 +2167,36 @@ export class Runtime {
   isTestRuntime = false;
   private _urlReader: URLReader;
   private _connections: LookupConnection<Connection>;
-  private _eventStream: MalloyEventStream | undefined;
+  private _eventEmitter: EventEmitter | undefined;
 
   constructor(runtime: LookupConnection<Connection> & URLReader);
   constructor(
     urls: URLReader,
     connections: LookupConnection<Connection>,
-    eventStream?: MalloyEventStream
+    eventEmitter?: EventEmitter
   );
   constructor(
     urls: URLReader,
     connection: Connection,
-    eventStream?: MalloyEventStream
+    eventEmitter?: EventEmitter
   );
-  constructor(connection: Connection, eventStream?: MalloyEventStream);
+  constructor(connection: Connection, eventEmitter?: EventEmitter);
   constructor(
     connections: LookupConnection<Connection>,
-    eventStream?: MalloyEventStream
+    eventEmitter?: EventEmitter
   );
   constructor(
     ...args: (
       | URLReader
       | LookupConnection<Connection>
       | Connection
-      | MalloyEventStream
+      | EventEmitter
       | undefined
     )[]
   ) {
     let urlReader: URLReader | undefined;
     let connections: LookupConnection<Connection> | undefined;
-    let eventStream: MalloyEventStream | undefined;
+    let eventEmitter: EventEmitter | undefined;
     for (const arg of args) {
       if (arg === undefined) {
         continue;
@@ -2205,7 +2205,7 @@ export class Runtime {
       } else if (isLookupConnection<Connection>(arg)) {
         connections = arg;
       } else if (isEventStream(arg)) {
-        eventStream = arg;
+        eventEmitter = arg;
       } else {
         connections = {
           lookupConnection: () => Promise.resolve(arg),
@@ -2222,7 +2222,7 @@ export class Runtime {
     }
     this._urlReader = urlReader;
     this._connections = connections;
-    this._eventStream = eventStream;
+    this._eventEmitter = eventEmitter;
   }
 
   /**
@@ -2242,8 +2242,8 @@ export class Runtime {
   /**
    * @return The `EventStream` for this runtime instance.
    */
-  public get eventStream(): MalloyEventStream | undefined {
-    return this._eventStream;
+  public get eventEmitter(): EventEmitter | undefined {
+    return this._eventEmitter;
   }
 
   /**
@@ -2272,12 +2272,12 @@ export class Runtime {
               url: source,
               urlReader: this.urlReader,
               options,
-              eventStream: this.eventStream,
+              eventEmitter: this.eventEmitter,
             })
           : Malloy.parse({
               source,
               options,
-              eventStream: this.eventStream,
+              eventEmitter: this.eventEmitter,
             });
       return Malloy.compile({
         urlReader: this.urlReader,
@@ -2285,7 +2285,7 @@ export class Runtime {
         parse,
         refreshSchemaCache,
         noThrowOnError,
-        eventStream: this.eventStream,
+        eventEmitter: this.eventEmitter,
       });
     });
   }
@@ -2505,12 +2505,12 @@ export class SingleConnectionRuntime<
 
   constructor(urlReader: URLReader, connection: T);
   constructor(connection: T);
-  constructor(connection: T, eventStream: MalloyEventStream);
-  constructor(urlReader: URLReader, connection: T, eventStream: MalloyEventStream);
-  constructor(...params: (URLReader | T | MalloyEventStream)[]) {
+  constructor(connection: T, eventEmitter: EventEmitter);
+  constructor(urlReader: URLReader, connection: T, eventEmitter: EventEmitter);
+  constructor(...params: (URLReader | T | EventEmitter)[]) {
     let urlReader: URLReader | undefined;
     let connection: T | undefined;
-    let eventStream: MalloyEventStream | undefined;
+    let eventEmitter: EventEmitter | undefined;
     for (const param of params) {
       if (isURLReader(param)) {
         urlReader = param;
@@ -2519,7 +2519,7 @@ export class SingleConnectionRuntime<
         connection = param;
       }
       if (isEventStream(param)) {
-        eventStream = param;
+        eventEmitter = param;
       }
     }
     if (connection === undefined) {
@@ -2527,7 +2527,7 @@ export class SingleConnectionRuntime<
         'Expected connection to be passed into SingleConnectionRuntime'
       );
     }
-    super(urlReader as URLReader, connection, eventStream);
+    super(urlReader as URLReader, connection, eventEmitter);
     this.connection = connection;
   }
 
@@ -2600,8 +2600,8 @@ class FluentState<T> {
     return new SQLBlockMaterializer(this.runtime, materialize);
   }
 
-  get eventStream(): MalloyEventStream | undefined {
-    return this.runtime.eventStream;
+  get eventEmitter(): EventEmitter | undefined {
+    return this.runtime.eventEmitter;
   }
 }
 
@@ -2745,10 +2745,10 @@ export class ModelMaterializer extends FluentState<Model> {
     searchTerm: string,
     limit = 1000,
     searchField: string | undefined = undefined,
-    eventStream?: MalloyEventStream
+    eventEmitter?: EventEmitter
   ): Promise<SearchIndexResult[] | undefined> {
     const model = await this.materialize();
-    const queryModel = new QueryModel(model._modelDef, eventStream);
+    const queryModel = new QueryModel(model._modelDef, eventEmitter);
     const schema = model.getExploreByName(sourceName).structDef;
     if (schema.structRelationship.type !== 'basetable') {
       throw new Error(
@@ -2983,7 +2983,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
   public loadPreparedResult(): PreparedResultMaterializer {
     return this.makePreparedResultMaterializer(async () => {
       return (await this.materialize()).getPreparedResult({
-        eventStream: this.eventStream,
+        eventEmitter: this.eventEmitter,
       });
     });
   }
@@ -3918,7 +3918,7 @@ function isURLReader(
     | LookupConnection<InfoConnection>
     | LookupConnection<Connection>
     | Connection
-    | MalloyEventStream
+    | EventEmitter
 ): thing is URLReader {
   return 'readURL' in thing;
 }
@@ -3929,7 +3929,7 @@ function isLookupConnection<T extends InfoConnection = InfoConnection>(
     | LookupConnection<InfoConnection>
     | LookupConnection<Connection>
     | Connection
-    | MalloyEventStream
+    | EventEmitter
 ): thing is LookupConnection<T> {
   return 'lookupConnection' in thing;
 }
@@ -3940,8 +3940,8 @@ function isEventStream(
     | LookupConnection<InfoConnection>
     | LookupConnection<Connection>
     | Connection
-    | MalloyEventStream
-): thing is MalloyEventStream {
+    | EventEmitter
+): thing is EventEmitter {
   return 'emit' in thing;
 }
 
@@ -3951,7 +3951,7 @@ function isConnection<T extends Connection>(
     | LookupConnection<InfoConnection>
     | LookupConnection<Connection>
     | Connection
-    | MalloyEventStream
+    | EventEmitter
 ): thing is T {
   return 'runSQL' in thing;
 }

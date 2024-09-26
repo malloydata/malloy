@@ -48,7 +48,7 @@ import {DataRequestResponse, TranslateResponse} from '../translate-response';
 import {StaticSpace} from '../ast/field-space/static-space';
 import {ExprValue} from '../ast/types/expr-value';
 import {GlobalNameSpace} from '../ast/types/global-name-space';
-import {MalloyEventStream} from '../../events';
+import EventEmitter from 'events';
 import {LogSeverity, MessageCode, MessageParameterType} from '../parse-log';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types
@@ -308,11 +308,11 @@ export class TestTranslator extends MalloyTranslator {
   constructor(
     readonly testSrc: string,
     importBaseURL: string | null = null,
-    eventStream: MalloyEventStream | null = null,
+    eventEmitter: EventEmitter | null = null,
     rootRule = 'malloyDocument',
     internalModel?: ModelDef
   ) {
-    super(testURI, importBaseURL, null, eventStream);
+    super(testURI, importBaseURL, null, eventEmitter);
     this.grammarRule = rootRule;
     this.importZone.define(testURI, testSrc);
     if (internalModel !== undefined) {

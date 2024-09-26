@@ -98,7 +98,7 @@ import {
   SQLExprElement,
 } from './utils';
 import {DialectFieldTypeStruct, QueryInfo} from '../dialect/dialect';
-import {MalloyEventStream} from '../events';
+import EventEmitter from 'events';
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
@@ -745,10 +745,7 @@ class QueryField extends QueryNode {
     state: GenerateState
   ): string {
     const name = expr.path[0];
-    context.eventStream?.emit({
-      id: 'source-argument-compiled',
-      data: {name},
-    });
+    context.eventEmitter?.emit('source-argument-compiled', {name});
     const argument = context.arguments()[name];
     if (argument.value) {
       return this.exprToSQL(resultSet, context, argument.value, state);
@@ -2750,11 +2747,8 @@ class QueryQuery extends QueryField {
   generateSQLJoinBlock(stageWriter: StageWriter, ji: JoinInstance): string {
     let s = '';
     const qs = ji.queryStruct;
-    qs.eventStream?.emit({
-      id: 'join-used',
-      data: {
-        name: qs.fieldDef.as,
-      },
+    qs.eventEmitter?.emit('join-used', {
+      name: qs.fieldDef.as,
     });
     qs.maybeEmitParameterizedSourceUsage();
     const structRelationship = qs.fieldDef.structRelationship;
@@ -4133,11 +4127,8 @@ class QueryStruct extends QueryNode {
       ...this.fieldDef.arguments,
     };
     if (Object.values(paramsAndArgs).length === 0) return;
-    this.eventStream?.emit({
-      id: 'parameterized-source-compiled',
-      data: {
-        parameters: paramsAndArgs,
-      },
+    this.eventEmitter?.emit('parameterized-source-compiled', {
+      parameters: paramsAndArgs,
     });
   }
 
@@ -4392,8 +4383,8 @@ class QueryStruct extends QueryNode {
     }
   }
 
-  get eventStream(): MalloyEventStream | undefined {
-    return this.getModel().eventStream;
+  get eventEmitter(): EventEmitter | undefined {
+    return this.getModel().eventEmitter;
   }
 
   setParent(parent: ParentQueryStruct | ParentQueryModel) {
@@ -4633,7 +4624,7 @@ export class QueryModel {
   structs = new Map<string, QueryStruct>();
   constructor(
     modelDef: ModelDef | undefined,
-    readonly eventStream?: MalloyEventStream
+    readonly eventEmitter?: EventEmitter
   ) {
     if (modelDef) {
       this.loadModelFromDef(modelDef);

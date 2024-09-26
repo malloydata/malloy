@@ -24,8 +24,6 @@
 import {
   Connection,
   EmptyURLReader,
-  MalloyEvent,
-  MalloyEventStream,
   MalloyQueryData,
   QueryDataRow,
   Result,
@@ -40,6 +38,7 @@ import {PooledPostgresConnection} from '@malloydata/db-postgres';
 import {TrinoConnection, TrinoExecutor} from '@malloydata/db-trino';
 import {SnowflakeExecutor} from '@malloydata/db-snowflake/src/snowflake_executor';
 import {PrestoConnection} from '@malloydata/db-trino/src/trino_connection';
+import {EventEmitter} from 'stream';
 
 export class SnowflakeTestConnection extends SnowflakeConnection {
   public async runSQL(
@@ -194,24 +193,8 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
   }
 }
 
-export class TestEventStream implements MalloyEventStream {
-  private events: MalloyEvent[] = [];
-
-  emit(event: MalloyEvent) {
-    this.events.push(event);
-  }
-
-  getEmittedEvents(): MalloyEvent[] {
-    return this.events;
-  }
-
-  clear(): void {
-    this.events = [];
-  }
-}
-
 export function testRuntimeFor(connection: Connection) {
-  return new SingleConnectionRuntime(files, connection, new TestEventStream());
+  return new SingleConnectionRuntime(files, connection, new EventEmitter());
 }
 
 /**

@@ -30,14 +30,18 @@ import {
   MalloyError,
   LogMessage,
   SingleConnectionRuntime,
-  MalloyEvent,
 } from '@malloydata/malloy';
 import {inspect} from 'util';
-import {TestEventStream} from '../runtimes';
 
 type ExpectedResultRow = Record<string, unknown>;
 type ExpectedResult = ExpectedResultRow | ExpectedResultRow[];
 type Runner = Runtime | ModelMaterializer;
+
+interface ExpectedEvent {
+  id: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: any;
+}
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -74,8 +78,14 @@ declare global {
         runtime: Runner,
         matchVals: ExpectedResult
       ): Promise<R>;
-      toEmitDuringCompile(runtime: Runtime, ...events: MalloyEvent[]): Promise<R>;
-      toEmitDuringTranslation(runtime: Runtime, ...events: MalloyEvent[]): Promise<R>;
+      toEmitDuringCompile(
+        runtime: Runtime,
+        ...events: ExpectedEvent[]
+      ): Promise<R>;
+      toEmitDuringTranslation(
+        runtime: Runtime,
+        ...events: ExpectedEvent[]
+      ): Promise<R>;
     }
   }
 }
@@ -225,14 +235,14 @@ expect.extend({
   async toEmitDuringCompile(
     querySrc: string,
     runtime: Runtime,
-    ...expectedEvents: MalloyEvent[]
+    ...expectedEvents: ExpectedEvent[]
   ) {
     return toEmit(this, querySrc, 'compile', runtime, ...expectedEvents);
   },
   async toEmitDuringTranslation(
     querySrc: string,
     runtime: Runtime,
-    ...expectedEvents: MalloyEvent[]
+    ...expectedEvents: ExpectedEvent[]
   ) {
     return toEmit(this, querySrc, 'translate', runtime, ...expectedEvents);
   },
@@ -243,23 +253,22 @@ async function toEmit(
   querySrc: string,
   when: 'compile' | 'translate',
   runtime: Runtime,
-  ...expectedEvents: MalloyEvent[]
+  ...expectedEvents: ExpectedEvent[]
 ) {
-  const eventStream = runtime.eventStream;
-  if (eventStream === undefined) {
+  const eventEmitter = runtime.eventEmitter;
+  if (eventEmitter === undefined) {
     return {
       pass: false,
       message: () => 'No event stream found',
     };
   }
-  if (!(eventStream instanceof TestEventStream)) {
-    return {
-      pass: false,
-      message: () =>
-        'Expected TestEventStream, but found some other implementation',
-    };
+  const gotEvents: ExpectedEvent[] = [];
+  const eventIdsWeCareAbout = new Set(expectedEvents.map(e => e.id));
+  for (const id of eventIdsWeCareAbout) {
+    eventEmitter.on(id, data => {
+      gotEvents.push({id, data});
+    });
   }
-  eventStream.clear();
   const model = runtime.loadModel(querySrc, {
     noThrowOnError: when === 'translate',
   });
@@ -270,17 +279,10 @@ async function toEmit(
     await model.getModel();
   }
 
-  const eventIdsWeCareAbout = Object.fromEntries(
-    expectedEvents.map(e => [e.id, true])
-  );
-  const gotEvents = eventStream.getEmittedEvents();
-  const eventsWithRelevantIds = gotEvents.filter(
-    e => eventIdsWeCareAbout[e.id]
-  );
-  let matching = eventsWithRelevantIds.length === expectedEvents.length;
+  let matching = gotEvents.length === expectedEvents.length;
   if (matching) {
     for (let i = 0; i < expectedEvents.length; i++) {
-      const got = eventsWithRelevantIds[i];
+      const got = gotEvents[i];
       const want = expectedEvents[i];
       matching &&= objectsMatch(got, want);
     }
@@ -290,10 +292,7 @@ async function toEmit(
     return {
       pass: false,
       message: () =>
-        `Expected events ${context.utils.diff(
-          expectedEvents,
-          eventsWithRelevantIds
-        )}`,
+        `Expected events ${context.utils.diff(expectedEvents, gotEvents)}`,
     };
   }
 
