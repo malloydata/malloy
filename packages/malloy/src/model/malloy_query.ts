@@ -2158,8 +2158,9 @@ class QueryTurtle extends QueryField {}
  */
 export class Segment {
   static nextStructDef(structDef: StructDef, segment: PipeSegment): StructDef {
+    // TODO: Verify we dont never need to replace materialized references here.
     const qs = new QueryStruct(structDef, undefined, {
-      model: new QueryModel(undefined),
+      model: new QueryModel(undefined, false),
     });
     const turtleDef: TurtleDef = {
       type: 'turtle',
@@ -4475,7 +4476,10 @@ class QueryStruct extends QueryNode {
 
         const sourceTag = Tag.annotationToTag(clonedAnnotation).tag;
 
-        if (sourceTag.has('materialize')) {
+        if (
+          this.model.replaceMaterializedReferences &&
+          sourceTag.has('materialize')
+        ) {
           return stageWriter.addMaterializedQuery(
             getIdentifier(this.fieldDef),
             this.fieldDef.structSource.query
@@ -4639,7 +4643,10 @@ export class QueryModel {
   // dialect: Dialect = new PostgresDialect();
   modelDef: ModelDef | undefined = undefined;
   structs = new Map<string, QueryStruct>();
-  constructor(modelDef: ModelDef | undefined) {
+  constructor(
+    modelDef: ModelDef | undefined,
+    readonly replaceMaterializedReferences: boolean
+  ) {
     if (modelDef) {
       this.loadModelFromDef(modelDef);
     }

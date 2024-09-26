@@ -100,6 +100,7 @@ export interface ParseOptions {
 export interface CompileOptions {
   refreshSchemaCache?: boolean | number;
   noThrowOnError?: boolean;
+  replaceMaterializedReferences?: boolean;
 }
 
 export class Malloy {
@@ -219,6 +220,7 @@ export class Malloy {
     model,
     refreshSchemaCache,
     noThrowOnError,
+    replaceMaterializedReferences,
   }: {
     urlReader: URLReader;
     connections: LookupConnection<InfoConnection>;
@@ -244,6 +246,7 @@ export class Malloy {
             result.translated.sqlBlocks,
             result.problems || [],
             [...(model?.fromSources ?? []), ...(result.fromSources ?? [])],
+            replaceMaterializedReferences ?? false,
             (position: ModelDocumentPosition) =>
               translator.referenceAt(position),
             (position: ModelDocumentPosition) => translator.importAt(position)
@@ -261,6 +264,7 @@ export class Malloy {
             [],
             result.problems || [],
             [...(model?.fromSources ?? []), ...(result.fromSources ?? [])],
+            replaceMaterializedReferences ?? false,
             (position: ModelDocumentPosition) =>
               translator.referenceAt(position),
             (position: ModelDocumentPosition) => translator.importAt(position)
@@ -376,7 +380,8 @@ export class Malloy {
 
   static compileSQLBlock(
     partialModel: ModelDef | undefined,
-    toCompile: SQLBlockSource
+    toCompile: SQLBlockSource,
+    replaceMaterializedReferences?: boolean
   ): SQLBlock {
     let queryModel: QueryModel | undefined = undefined;
     let selectStr = '';
@@ -393,7 +398,10 @@ export class Malloy {
               'Internal error: Partial model missing when compiling SQL block'
             );
           }
-          queryModel = new QueryModel(partialModel);
+          queryModel = new QueryModel(
+            partialModel,
+            replaceMaterializedReferences ?? false
+          );
         }
         const compiledSql = queryModel.compileQuery(segment, false).sql;
         selectStr += parenAlready ? compiledSql : `(${compiledSql})`;
@@ -492,7 +500,8 @@ export class Malloy {
           name: 'empty_model',
           exports: [],
           contents: {},
-        }
+        },
+        options?.replaceMaterializedReferences ?? false
       );
     } else if (preparedResult) {
       const result = await connection.runSQL(preparedResult.sql, options);
@@ -504,7 +513,8 @@ export class Malloy {
           runStats: result.runStats,
           profilingUrl: result.profilingUrl,
         },
-        preparedResult._modelDef
+        preparedResult._modelDef,
+        options?.replaceMaterializedReferences ?? false
       );
     } else {
       throw new Error(
@@ -584,7 +594,10 @@ export class Malloy {
           "Expected schema's structRelationship type to be 'basetable'."
         );
       }
-      resultExplore = new Explore(sqlStruct);
+      resultExplore = new Explore(
+        sqlStruct,
+        options?.replaceMaterializedReferences
+      );
       sql = sqlStruct.structSource.sqlBlock.selectStr;
     } else if (preparedResult !== undefined) {
       resultExplore = preparedResult.resultExplore;
@@ -671,6 +684,7 @@ export class Model implements Taggable {
     private sqlBlocks: SQLBlockStructDef[],
     readonly problems: LogMessage[],
     readonly fromSources: string[],
+    readonly replaceMaterializedReferences: boolean,
     referenceAt: (
       location: ModelDocumentPosition
     ) => DocumentReference | undefined = () => undefined,
@@ -725,7 +739,13 @@ export class Model implements Taggable {
   public getPreparedQueryByName(queryName: string): PreparedQuery {
     const query = this.modelDef.contents[queryName];
     if (query?.type === 'query') {
-      return new PreparedQuery(query, this.modelDef, this.problems, queryName);
+      return new PreparedQuery(
+        query,
+        this.modelDef,
+        this.problems,
+        this.replaceMaterializedReferences,
+        queryName
+      );
     }
 
     throw new Error('Given query name does not refer to a named query.');
@@ -746,7 +766,8 @@ export class Model implements Taggable {
     return new PreparedQuery(
       this.queryList[index],
       this.modelDef,
-      this.problems
+      this.problems,
+      this.replaceMaterializedReferences
     );
   }
 
@@ -792,7 +813,8 @@ export class Model implements Taggable {
     return new PreparedQuery(
       this.queryList[this.queryList.length - 1],
       this.modelDef,
-      this.problems
+      this.problems,
+      this.replaceMaterializedReferences
     );
   }
 
@@ -805,7 +827,7 @@ export class Model implements Taggable {
   public getExploreByName(name: string): Explore {
     const struct = this.modelDef.contents[name];
     if (struct.type === 'struct') {
-      return new Explore(struct);
+      return new Explore(struct, this.replaceMaterializedReferences);
     }
     throw new Error("'name' is not an explore");
   }
@@ -821,7 +843,10 @@ export class Model implements Taggable {
 
     return Object.values(this.modelDef.contents)
       .filter(isStructDef)
-      .map(structDef => new Explore(structDef));
+      .map(
+        structDef =>
+          new Explore(structDef, this.replaceMaterializedReferences)
+      );
   }
 
   /**
@@ -858,6 +883,7 @@ export class PreparedQuery implements Taggable {
     query: InternalQuery,
     model: ModelDef,
     public problems: LogMessage[],
+    public replaceMaterializedReferences: boolean,
     public name?: string
   ) {
     this._query = query;
@@ -880,14 +906,18 @@ export class PreparedQuery implements Taggable {
    * @return A fully-prepared query (which contains the generated SQL).
    */
   public get preparedResult(): PreparedResult {
-    const queryModel = new QueryModel(this._modelDef);
+    const queryModel = new QueryModel(
+      this._modelDef,
+      this.replaceMaterializedReferences
+    );
     const translatedQuery = queryModel.compileQuery(this._query);
     return new PreparedResult(
       {
         ...translatedQuery,
         queryName: this.name || translatedQuery.queryName,
       },
-      this._modelDef
+      this._modelDef,
+      this.replaceMaterializedReferences
     );
   }
 
@@ -1175,7 +1205,8 @@ export class PreparedResult implements Taggable {
 
   constructor(
     query: CompiledQuery,
-    protected modelDef: ModelDef
+    protected modelDef: ModelDef,
+    private replaceMaterializedReferences: boolean
   ) {
     this.inner = query;
   }
@@ -1188,7 +1219,8 @@ export class PreparedResult implements Taggable {
     if (!query || !modelDef) {
       throw new Error('Missing required properties in JSON data');
     }
-    return new PreparedResult(query, modelDef);
+    // TODO: add parameter to provide replace materialized references.
+    return new PreparedResult(query, modelDef, false);
   }
 
   tagParse(spec?: TagParseSpec): TagParse {
@@ -1259,7 +1291,11 @@ export class PreparedResult implements Taggable {
     //      handle cases where the source of the query is something other than
     //      a named explore.
     try {
-      return new Explore(namedExplore, this.sourceExplore);
+      return new Explore(
+        namedExplore,
+        this.replaceMaterializedReferences,
+        this.sourceExplore
+      );
     } catch (error) {
       return new Explore(namedExplore);
     }
@@ -1272,7 +1308,7 @@ export class PreparedResult implements Taggable {
       throw new Error('Malformed query result.');
     }
     if (explore.type === 'struct') {
-      return new Explore(explore);
+      return new Explore(explore, this.replaceMaterializedReferences);
     }
     throw new Error(`'${name} is not an explore`);
   }
@@ -1461,12 +1497,20 @@ export class Explore extends Entity implements Taggable {
   private _fieldMap: Map<string, Field> | undefined;
   private sourceExplore: Explore | undefined;
   private _allFieldsWithOrder: SortableField[] | undefined;
+  private readonly replaceMaterializedReferences: boolean;
 
-  constructor(structDef: StructDef, parentExplore?: Explore, source?: Explore) {
+  constructor(
+    structDef: StructDef,
+    replaceMaterializedReferences?: boolean,
+    parentExplore?: Explore,
+    source?: Explore
+  ) {
     super(structDef.as || structDef.name, parentExplore, source);
     this._structDef = structDef;
     this._parentExplore = parentExplore;
     this.sourceExplore = source;
+    this.replaceMaterializedReferences =
+      replaceMaterializedReferences ?? false;
   }
 
   public get source(): Explore | undefined {
@@ -1515,7 +1559,13 @@ export class Explore extends Entity implements Taggable {
         },
       ],
     };
-    return new PreparedQuery(internalQuery, this.modelDef, [], name);
+    return new PreparedQuery(
+      internalQuery,
+      this.modelDef,
+      [],
+      this.replaceMaterializedReferences,
+      name
+    );
   }
 
   private get modelDef(): ModelDef {
@@ -1527,7 +1577,14 @@ export class Explore extends Entity implements Taggable {
   }
 
   public getSingleExploreModel(): Model {
-    return new Model(this.modelDef, [], [], [], []);
+    return new Model(
+      this.modelDef,
+      [],
+      [],
+      [],
+      [],
+      this.replaceMaterializedReferences
+    );
   }
 
   private get fieldMap(): Map<string, Field> {
@@ -1704,7 +1761,13 @@ export class Explore extends Entity implements Taggable {
       main_explore.sourceExplore !== undefined
         ? Explore.fromJSON(main_explore.sourceExplore)
         : undefined;
-    return new Explore(main_explore._structDef, parentExplore, sourceExplore);
+    // TODO: provide option to set replace materialization refs.
+    return new Explore(
+      main_explore._structDef,
+      false,
+      parentExplore,
+      sourceExplore
+    );
   }
 
   public get location(): DocumentLocation | undefined {
@@ -2097,8 +2160,13 @@ export enum JoinRelationship {
 export class ExploreField extends Explore {
   protected _parentExplore: Explore;
 
-  constructor(structDef: StructDef, parentExplore: Explore, source?: Explore) {
-    super(structDef, parentExplore, source);
+  constructor(
+    structDef: StructDef,
+    parentExplore: Explore,
+    replaceMaterializedReferences: boolean,
+    source?: Explore
+  ) {
+    super(structDef, replaceMaterializedReferences, parentExplore, source);
     this._parentExplore = parentExplore;
   }
 
@@ -2253,9 +2321,19 @@ export class Runtime {
   //      as well as a `Model.fromModelDefinition` if we choose to expose
   //      `ModelDef` to the world formally. For now, this should only
   //      be used in tests.
-  public _loadModelFromModelDef(modelDef: ModelDef): ModelMaterializer {
+  public _loadModelFromModelDef(
+    modelDef: ModelDef,
+    replaceMaterializedReferences?: boolean
+  ): ModelMaterializer {
     return new ModelMaterializer(this, async () => {
-      return new Model(modelDef, [], [], [], []);
+      return new Model(
+        modelDef,
+        [],
+        [],
+        [],
+        [],
+        replaceMaterializedReferences ?? false
+      );
     });
   }
 
@@ -2688,7 +2766,10 @@ export class ModelMaterializer extends FluentState<Model> {
     searchField: string | undefined = undefined
   ): Promise<SearchIndexResult[] | undefined> {
     const model = await this.materialize();
-    const queryModel = new QueryModel(model._modelDef);
+    const queryModel = new QueryModel(
+      model._modelDef,
+      model.replaceMaterializedReferences
+    );
     const schema = model.getExploreByName(sourceName).structDef;
     if (schema.structRelationship.type !== 'basetable') {
       throw new Error(
@@ -2845,7 +2926,12 @@ export class ModelMaterializer extends FluentState<Model> {
   public _loadQueryFromQueryDef(query: InternalQuery): QueryMaterializer {
     return this.makeQueryMaterializer(async () => {
       const model = await this.materialize();
-      return new PreparedQuery(query, model._modelDef, model.problems);
+      return new PreparedQuery(
+        query,
+        model._modelDef,
+        model.problems,
+        model.replaceMaterializedReferences
+      );
     });
   }
 
@@ -3143,8 +3229,12 @@ export type ResultJSON = {
 export class Result extends PreparedResult {
   protected inner: QueryResult;
 
-  constructor(queryResult: QueryResult, modelDef: ModelDef) {
-    super(queryResult, modelDef);
+  constructor(
+    queryResult: QueryResult,
+    modelDef: ModelDef,
+    replaceMaterializedReferences?: boolean
+  ) {
+    super(queryResult, modelDef, replaceMaterializedReferences ?? false);
     this.inner = queryResult;
   }
 
@@ -3181,7 +3271,8 @@ export class Result extends PreparedResult {
   }
 
   public static fromJSON({queryResult, modelDef}: ResultJSON): Result {
-    return new Result(queryResult, modelDef);
+    // TODO:
+    return new Result(queryResult, modelDef, false);
   }
 }
 

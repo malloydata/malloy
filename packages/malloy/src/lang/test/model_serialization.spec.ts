@@ -129,10 +129,15 @@ describe('serializeModel', () => {
 
   test('Having parent and source explores', async () => {
     const gradparent_explore = new Explore(GRADPARENT_EXPLORE);
-    const parent_explore = new Explore(PARENT_EXPLORE, gradparent_explore);
+    const parent_explore = new Explore(
+      PARENT_EXPLORE,
+      false,
+      gradparent_explore
+    );
     const source_explore = new Explore(SOURCE_EXPLORE);
     const child_explore = new Explore(
       CHILD_EXPLORE,
+      false,
       parent_explore,
       source_explore
     );
