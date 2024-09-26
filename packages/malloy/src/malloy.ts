@@ -79,7 +79,7 @@ import {DateTime} from 'luxon';
 import {Tag, TagParse, TagParseSpec, Taggable} from './tags';
 import {Dialect, getDialect} from './dialect';
 import {PathInfo} from './lang/parse-tree-walkers/find-table-path-walker';
-import {EventStream} from './lang/events';
+import {EventStream} from './events';
 
 export interface Loggable {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

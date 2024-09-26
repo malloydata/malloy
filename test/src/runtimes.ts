@@ -24,7 +24,7 @@
 import {
   Connection,
   EmptyURLReader,
-  Event,
+  MalloyEvent,
   EventStream,
   MalloyQueryData,
   QueryDataRow,
@@ -195,13 +195,13 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
 }
 
 export class TestEventStream implements EventStream {
-  private events: Event[] = [];
+  private events: MalloyEvent[] = [];
 
-  emit(event: Event) {
+  emit(event: MalloyEvent) {
     this.events.push(event);
   }
 
-  getEmittedEvents(): Event[] {
+  getEmittedEvents(): MalloyEvent[] {
     return this.events;
   }
 

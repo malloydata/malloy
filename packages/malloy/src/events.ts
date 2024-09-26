@@ -5,11 +5,11 @@
  *  LICENSE file in the root directory of this source tree.
  */
 
-export interface Event {
+export interface MalloyEvent {
   id: string;
   data: unknown;
 }
 
 export interface EventStream {
-  emit: (event: Event) => void;
+  emit: (event: MalloyEvent) => void;
 }

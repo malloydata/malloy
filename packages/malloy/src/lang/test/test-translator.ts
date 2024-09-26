@@ -48,7 +48,7 @@ import {DataRequestResponse, TranslateResponse} from '../translate-response';
 import {StaticSpace} from '../ast/field-space/static-space';
 import {ExprValue} from '../ast/types/expr-value';
 import {GlobalNameSpace} from '../ast/types/global-name-space';
-import {EventStream} from '../events';
+import {EventStream} from '../../events';
 import {LogSeverity, MessageCode, MessageParameterType} from '../parse-log';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types

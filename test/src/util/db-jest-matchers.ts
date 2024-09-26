@@ -30,7 +30,7 @@ import {
   MalloyError,
   LogMessage,
   SingleConnectionRuntime,
-  Event,
+  MalloyEvent,
 } from '@malloydata/malloy';
 import {inspect} from 'util';
 import {TestEventStream} from '../runtimes';
@@ -74,8 +74,8 @@ declare global {
         runtime: Runner,
         matchVals: ExpectedResult
       ): Promise<R>;
-      toEmitDuringCompile(runtime: Runtime, ...events: Event[]): Promise<R>;
-      toEmitDuringTranslation(runtime: Runtime, ...events: Event[]): Promise<R>;
+      toEmitDuringCompile(runtime: Runtime, ...events: MalloyEvent[]): Promise<R>;
+      toEmitDuringTranslation(runtime: Runtime, ...events: MalloyEvent[]): Promise<R>;
     }
   }
 }
@@ -225,14 +225,14 @@ expect.extend({
   async toEmitDuringCompile(
     querySrc: string,
     runtime: Runtime,
-    ...expectedEvents: Event[]
+    ...expectedEvents: MalloyEvent[]
   ) {
     return toEmit(this, querySrc, 'compile', runtime, ...expectedEvents);
   },
   async toEmitDuringTranslation(
     querySrc: string,
     runtime: Runtime,
-    ...expectedEvents: Event[]
+    ...expectedEvents: MalloyEvent[]
   ) {
     return toEmit(this, querySrc, 'translate', runtime, ...expectedEvents);
   },
@@ -243,7 +243,7 @@ async function toEmit(
   querySrc: string,
   when: 'compile' | 'translate',
   runtime: Runtime,
-  ...expectedEvents: Event[]
+  ...expectedEvents: MalloyEvent[]
 ) {
   const eventStream = runtime.eventStream;
   if (eventStream === undefined) {

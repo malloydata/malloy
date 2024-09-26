@@ -98,7 +98,7 @@ import {
   SQLExprElement,
 } from './utils';
 import {DialectFieldTypeStruct, QueryInfo} from '../dialect/dialect';
-import {EventStream} from '../lang/events';
+import {EventStream} from '../events';
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 

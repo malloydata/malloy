@@ -22,7 +22,7 @@
  */
 
 import {DocumentLocation, FieldValueType} from '../model/malloy_types';
-import {EventStream} from './events';
+import {EventStream} from '../events';
 
 export type LogSeverity = 'error' | 'warn' | 'debug';
 
