@@ -79,7 +79,7 @@ import {DateTime} from 'luxon';
 import {Tag, TagParse, TagParseSpec, Taggable} from './tags';
 import {Dialect, getDialect} from './dialect';
 import {PathInfo} from './lang/parse-tree-walkers/find-table-path-walker';
-import {EventStream} from './events';
+import {MalloyEventStream} from './events';
 
 export interface Loggable {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -110,7 +110,7 @@ export class Malloy {
   private static _parse(
     source: string,
     url?: URL,
-    eventStream?: EventStream,
+    eventStream?: MalloyEventStream,
     options?: ParseOptions
   ): Parse {
     if (url === undefined) {
@@ -149,7 +149,7 @@ export class Malloy {
   }: {
     url: URL;
     urlReader: URLReader;
-    eventStream?: EventStream;
+    eventStream?: MalloyEventStream;
     options?: ParseOptions;
   }): Promise<Parse>;
   /**
@@ -167,7 +167,7 @@ export class Malloy {
   }: {
     url?: URL;
     source: string;
-    eventStream?: EventStream;
+    eventStream?: MalloyEventStream;
     options?: ParseOptions;
   }): Parse;
   public static parse({
@@ -180,7 +180,7 @@ export class Malloy {
     url?: URL;
     source?: string;
     urlReader?: URLReader;
-    eventStream?: EventStream;
+    eventStream?: MalloyEventStream;
     options?: ParseOptions;
   }): Parse | Promise<Parse> {
     if (source !== undefined) {
@@ -222,7 +222,7 @@ export class Malloy {
     connections: LookupConnection<InfoConnection>;
     parse: Parse;
     model?: Model;
-    eventStream?: EventStream;
+    eventStream?: MalloyEventStream;
   } & CompileOptions): Promise<Model> {
     let refreshTimestamp: number | undefined;
     if (refreshSchemaCache) {
@@ -377,7 +377,7 @@ export class Malloy {
   static compileSQLBlock(
     partialModel: ModelDef | undefined,
     toCompile: SQLBlockSource,
-    eventStream?: EventStream
+    eventStream?: MalloyEventStream
   ): SQLBlock {
     let queryModel: QueryModel | undefined = undefined;
     let selectStr = '';
@@ -891,7 +891,7 @@ export class PreparedQuery implements Taggable {
    * @param options.eventStream An event stream to use when compiling the SQL
    */
   public getPreparedResult(options?: {
-    eventStream?: EventStream;
+    eventStream?: MalloyEventStream;
   }): PreparedResult {
     const queryModel = new QueryModel(this._modelDef, options?.eventStream);
     const translatedQuery = queryModel.compileQuery(this._query);
@@ -2167,36 +2167,36 @@ export class Runtime {
   isTestRuntime = false;
   private _urlReader: URLReader;
   private _connections: LookupConnection<Connection>;
-  private _eventStream: EventStream | undefined;
+  private _eventStream: MalloyEventStream | undefined;
 
   constructor(runtime: LookupConnection<Connection> & URLReader);
   constructor(
     urls: URLReader,
     connections: LookupConnection<Connection>,
-    eventStream?: EventStream
+    eventStream?: MalloyEventStream
   );
   constructor(
     urls: URLReader,
     connection: Connection,
-    eventStream?: EventStream
+    eventStream?: MalloyEventStream
   );
-  constructor(connection: Connection, eventStream?: EventStream);
+  constructor(connection: Connection, eventStream?: MalloyEventStream);
   constructor(
     connections: LookupConnection<Connection>,
-    eventStream?: EventStream
+    eventStream?: MalloyEventStream
   );
   constructor(
     ...args: (
       | URLReader
       | LookupConnection<Connection>
       | Connection
-      | EventStream
+      | MalloyEventStream
       | undefined
     )[]
   ) {
     let urlReader: URLReader | undefined;
     let connections: LookupConnection<Connection> | undefined;
-    let eventStream: EventStream | undefined;
+    let eventStream: MalloyEventStream | undefined;
     for (const arg of args) {
       if (arg === undefined) {
         continue;
@@ -2242,7 +2242,7 @@ export class Runtime {
   /**
    * @return The `EventStream` for this runtime instance.
    */
-  public get eventStream(): EventStream | undefined {
+  public get eventStream(): MalloyEventStream | undefined {
     return this._eventStream;
   }
 
@@ -2505,12 +2505,12 @@ export class SingleConnectionRuntime<
 
   constructor(urlReader: URLReader, connection: T);
   constructor(connection: T);
-  constructor(connection: T, eventStream: EventStream);
-  constructor(urlReader: URLReader, connection: T, eventStream: EventStream);
-  constructor(...params: (URLReader | T | EventStream)[]) {
+  constructor(connection: T, eventStream: MalloyEventStream);
+  constructor(urlReader: URLReader, connection: T, eventStream: MalloyEventStream);
+  constructor(...params: (URLReader | T | MalloyEventStream)[]) {
     let urlReader: URLReader | undefined;
     let connection: T | undefined;
-    let eventStream: EventStream | undefined;
+    let eventStream: MalloyEventStream | undefined;
     for (const param of params) {
       if (isURLReader(param)) {
         urlReader = param;
@@ -2600,7 +2600,7 @@ class FluentState<T> {
     return new SQLBlockMaterializer(this.runtime, materialize);
   }
 
-  get eventStream(): EventStream | undefined {
+  get eventStream(): MalloyEventStream | undefined {
     return this.runtime.eventStream;
   }
 }
@@ -2745,7 +2745,7 @@ export class ModelMaterializer extends FluentState<Model> {
     searchTerm: string,
     limit = 1000,
     searchField: string | undefined = undefined,
-    eventStream?: EventStream
+    eventStream?: MalloyEventStream
   ): Promise<SearchIndexResult[] | undefined> {
     const model = await this.materialize();
     const queryModel = new QueryModel(model._modelDef, eventStream);
@@ -3918,7 +3918,7 @@ function isURLReader(
     | LookupConnection<InfoConnection>
     | LookupConnection<Connection>
     | Connection
-    | EventStream
+    | MalloyEventStream
 ): thing is URLReader {
   return 'readURL' in thing;
 }
@@ -3929,7 +3929,7 @@ function isLookupConnection<T extends InfoConnection = InfoConnection>(
     | LookupConnection<InfoConnection>
     | LookupConnection<Connection>
     | Connection
-    | EventStream
+    | MalloyEventStream
 ): thing is LookupConnection<T> {
   return 'lookupConnection' in thing;
 }
@@ -3940,8 +3940,8 @@ function isEventStream(
     | LookupConnection<InfoConnection>
     | LookupConnection<Connection>
     | Connection
-    | EventStream
-): thing is EventStream {
+    | MalloyEventStream
+): thing is MalloyEventStream {
   return 'emit' in thing;
 }
 
@@ -3951,7 +3951,7 @@ function isConnection<T extends Connection>(
     | LookupConnection<InfoConnection>
     | LookupConnection<Connection>
     | Connection
-    | EventStream
+    | MalloyEventStream
 ): thing is T {
   return 'runSQL' in thing;
 }

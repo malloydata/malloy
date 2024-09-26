@@ -98,7 +98,7 @@ import {
   SQLExprElement,
 } from './utils';
 import {DialectFieldTypeStruct, QueryInfo} from '../dialect/dialect';
-import {EventStream} from '../events';
+import {MalloyEventStream} from '../events';
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
@@ -4392,7 +4392,7 @@ class QueryStruct extends QueryNode {
     }
   }
 
-  get eventStream(): EventStream | undefined {
+  get eventStream(): MalloyEventStream | undefined {
     return this.getModel().eventStream;
   }
 
@@ -4633,7 +4633,7 @@ export class QueryModel {
   structs = new Map<string, QueryStruct>();
   constructor(
     modelDef: ModelDef | undefined,
-    readonly eventStream?: EventStream
+    readonly eventStream?: MalloyEventStream
   ) {
     if (modelDef) {
       this.loadModelFromDef(modelDef);

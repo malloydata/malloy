@@ -10,6 +10,6 @@ export interface MalloyEvent {
   data: unknown;
 }
 
-export interface EventStream {
+export interface MalloyEventStream {
   emit: (event: MalloyEvent) => void;
 }

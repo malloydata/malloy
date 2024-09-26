@@ -90,7 +90,7 @@ import {Tag} from '../tags';
 import {MalloyParseInfo} from './malloy-parse-info';
 import {walkForModelAnnotation} from './parse-tree-walkers/model-annotation-walker';
 import {walkForTablePath} from './parse-tree-walkers/find-table-path-walker';
-import {EventStream} from '../events';
+import {MalloyEventStream} from '../events';
 
 export type StepResponses =
   | DataRequestResponse
@@ -1031,7 +1031,7 @@ export class MalloyTranslator extends MalloyTranslation {
     rootURL: string,
     importURL: string | null = null,
     preload: ParseUpdate | null = null,
-    private readonly eventStream: EventStream | null = null
+    private readonly eventStream: MalloyEventStream | null = null
   ) {
     super(rootURL, importURL);
     this.root = this;

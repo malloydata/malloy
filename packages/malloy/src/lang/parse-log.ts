@@ -22,7 +22,7 @@
  */
 
 import {DocumentLocation, FieldValueType} from '../model/malloy_types';
-import {EventStream} from '../events';
+import {MalloyEventStream} from '../events';
 
 export type LogSeverity = 'error' | 'warn' | 'debug';
 
@@ -52,7 +52,7 @@ export interface MessageLogger {
 export class BaseMessageLogger implements MessageLogger {
   private rawLog: LogMessage[] = [];
 
-  constructor(private readonly eventStream: EventStream | null) {}
+  constructor(private readonly eventStream: MalloyEventStream | null) {}
 
   getLog(): LogMessage[] {
     return this.rawLog;
