@@ -22,7 +22,6 @@
  */
 
 import {maxExpressionType, mergeEvalSpaces} from '../../../model/malloy_types';
-import {errorFor} from '../ast-utils';
 import {ExprValue} from '../types/expr-value';
 import {FieldSpace} from '../types/field-space';
 import {ExpressionDef} from '../types/expression-def';
@@ -65,7 +64,9 @@ export class ExprAlternationTree extends ExpressionDef {
   }
 
   getExpression(_fs: FieldSpace): ExprValue {
-    this.log('Alternation tree has no value');
-    return errorFor('no value from alternation tree');
+    return this.loggedErrorExpr(
+      'alternation-as-value',
+      'Alternation tree has no value'
+    );
   }
 }

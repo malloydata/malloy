@@ -1,5 +1,5 @@
 import {Explore, ExploreField, Tag} from '@malloydata/malloy';
-import {getChartSettings} from '../chart-settings';
+import {getChartLayoutSettings} from '../chart-layout-settings';
 import {PlotSpec} from './plot-spec';
 import {
   RenderResultMetadata,
@@ -23,10 +23,11 @@ export function plotToVega(
     getVegaConfigOverride?: VegaConfigHandler;
   }
 ): VegaChartProps {
-  const chartSettings = getChartSettings(
+  const chartSettings = getChartLayoutSettings(
     options.field,
     options.metadata,
-    options.chartTag
+    options.chartTag,
+    {chartType: 'plot'}
   );
 
   const vegaConfig = mergeVegaConfigs(

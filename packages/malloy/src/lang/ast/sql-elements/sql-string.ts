@@ -48,7 +48,10 @@ export class SQLString extends MalloyElement {
       this.containsQueries = true;
       el.parent = this;
     } else {
-      el.log('This element is not legal inside an SQL string');
+      el.logError(
+        'invalid-sql-source-interpolation',
+        'This element is not legal inside an SQL string'
+      );
     }
   }
 
@@ -62,7 +65,7 @@ export class SQLString extends MalloyElement {
         if (queryObject) {
           ret.push(queryObject.query());
         } else {
-          el.sqLog('Cannot expand into a query');
+          el.sqLog('failed-to-expand-sql-source', 'Cannot expand into a query');
         }
       }
     }

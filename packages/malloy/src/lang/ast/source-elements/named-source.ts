@@ -37,7 +37,11 @@ import {ErrorFactory} from '../error-factory';
 import {castTo} from '../time-utils';
 import {ModelEntryReference} from '../types/malloy-element';
 import {Argument as HasArgument} from '../parameters/argument';
-import {LogSeverity} from '../../parse-log';
+import {
+  LogMessageOptions,
+  MessageCode,
+  MessageParameterType,
+} from '../../parse-log';
 import {ExprIdReference} from '../expressions/expr-id-reference';
 import {ParameterSpace} from '../field-space/parameter-space';
 import {HasParameter} from '../parameters/has-parameter';
@@ -77,11 +81,15 @@ export class NamedSource extends Source {
     };
   }
 
-  refLog(message: string, severity?: LogSeverity) {
+  refLogError<T extends MessageCode>(
+    code: T,
+    parameters: MessageParameterType<T>,
+    options?: Omit<LogMessageOptions, 'severity'>
+  ) {
     if (typeof this.ref === 'string') {
-      this.log(message, severity);
+      this.logError(code, parameters, options);
     } else {
-      this.ref.log(message, severity);
+      this.ref.logError(code, parameters, options);
     }
   }
 
@@ -89,21 +97,35 @@ export class NamedSource extends Source {
     const modelEnt = this.modelEntry(this.ref);
     const entry = modelEnt?.entry;
     if (!entry) {
-      const undefMsg = `Undefined source '${this.refName}'`;
-      (this.ref instanceof ModelEntryReference ? this.ref : this).log(undefMsg);
+      this.refLogError(
+        'source-not-found',
+        `Undefined source '${this.refName}'`
+      );
       return;
     }
     if (entry.type === 'query') {
-      this.log(`Cannot construct a source from a query '${this.refName}'`);
+      this.logError(
+        'invalid-source-from-query',
+        `Cannot construct a source from a query '${this.refName}'`
+      );
       return;
     } else if (entry.type === 'function') {
-      this.log(`Cannot construct a source from a function '${this.refName}'`);
+      this.logError(
+        'invalid-source-from-function',
+        `Cannot construct a source from a function '${this.refName}'`
+      );
       return;
     } else if (entry.type === 'connection') {
-      this.log(`Cannot construct a source from a connection '${this.refName}'`);
+      this.logError(
+        'invalid-source-from-connection',
+        `Cannot construct a source from a connection '${this.refName}'`
+      );
       return;
     } else if (isSQLBlockStruct(entry) && entry.declaredSQLBlock) {
-      this.log(`Must use 'from_sql()' for sql source '${this.refName}'`);
+      this.logError(
+        'invalid-source-from-sql-block',
+        `Must use 'from_sql()' for sql source '${this.refName}'`
+      );
       return;
     } else {
       this.document()?.checkExperimentalDialect(this, entry.dialect);
@@ -136,20 +158,25 @@ export class NamedSource extends Source {
           ? argument.value.fieldReference
           : undefined);
       if (id === undefined) {
-        argument.value.log(
+        argument.value.logError(
+          'unnamed-source-argument',
           'Parameterized source arguments must be named with `parameter_name is`'
         );
         continue;
       }
       const name = id.outputName;
       if (passedNames.has(name)) {
-        argument.log(`Cannot pass argument for \`${name}\` more than once`);
+        argument.logError(
+          'duplicate-source-argument',
+          `Cannot pass argument for \`${name}\` more than once`
+        );
         continue;
       }
       passedNames.add(name);
       const parameter = (parametersIn ?? {})[name];
       if (!parameter) {
-        id.log(
+        id.logError(
+          'source-parameter-not-found',
           `\`${this.refName}\` has no declared parameter named \`${id.refString}\``
         );
       } else {
@@ -172,7 +199,8 @@ export class NamedSource extends Source {
         if (paramHasValue(parametersIn[paramName])) {
           outArguments[paramName] = {...parametersIn[paramName]};
         } else {
-          this.refLog(
+          this.refLogError(
+            'missing-source-argument',
             `Argument not provided for required parameter \`${paramName}\``
           );
         }

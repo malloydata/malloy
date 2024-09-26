@@ -52,7 +52,10 @@ export class SQArrow extends SourceQueryElement {
       ? this.applyTo.getSource()
       : this.applyTo.getQuery();
     if (lhs === undefined) {
-      this.sqLog('Could not get LHS of arrow operation');
+      this.sqLog(
+        'failed-to-compute-arrow-source',
+        'Could not get LHS of arrow operation'
+      );
       return;
     }
     const arr = new QueryArrow(lhs, this.operation);
@@ -63,7 +66,10 @@ export class SQArrow extends SourceQueryElement {
   getSource(): Source | undefined {
     const query = this.getQuery();
     if (!query) {
-      this.sqLog("Couldn't comprehend query well enough to make a source");
+      this.sqLog(
+        'failed-to-compute-source-from-query',
+        "Couldn't comprehend query well enough to make a source"
+      );
       return;
     }
     const asSource = new QuerySource(query);

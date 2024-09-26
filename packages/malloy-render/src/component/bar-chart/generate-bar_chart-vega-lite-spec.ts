@@ -1,8 +1,14 @@
 import {Explore, Tag} from '@malloydata/malloy';
 import {BarChartSettings} from './get-bar_chart-settings';
-import {RenderResultMetadata, VegaChartProps, VegaSpec} from '../types';
-import {getChartSettings} from '../chart-settings';
+import {
+  ChartTooltipEntry,
+  RenderResultMetadata,
+  VegaChartProps,
+  VegaSpec,
+} from '../types';
+import {getChartLayoutSettings} from '../chart-layout-settings';
 import {getFieldFromRootPath} from '../plot/util';
+import {Item} from 'vega';
 
 const LEGEND_PERC = 0.4;
 const LEGEND_MAX = 384;
@@ -26,10 +32,42 @@ export function generateBarChartVegaLiteSpec(
     ? getFieldFromRootPath(explore, seriesFieldPath)
     : null;
 
-  const chartSettings = getChartSettings(explore, metadata, chartTag, {
+  let yMin = Infinity;
+  let yMax = -Infinity;
+  for (const name of settings.yChannel.fields) {
+    const field = getFieldFromRootPath(explore, name);
+    const min = metadata.field(field).min;
+    if (min !== null) yMin = Math.min(yMin, min);
+    const max = metadata.field(field).max;
+    if (max !== null) yMax = Math.max(yMax, max);
+  }
+
+  const yDomainMin = Math.min(0, yMin);
+  const yDomainMax = Math.max(0, yMax);
+
+  const chartSettings = getChartLayoutSettings(explore, metadata, chartTag, {
     xField,
     yField,
+    chartType: 'bar_chart',
+    getYMinMax: () => [yDomainMin, yDomainMax],
   });
+
+  const xMeta = metadata.field(xField);
+  const seriesMeta = seriesField ? metadata.field(seriesField) : null;
+
+  const forceSharedX = chartTag.text('x', 'independent') === 'true';
+  const forceIndependentX = chartTag.has('x', 'independent') && !forceSharedX;
+  const autoSharedX = xMeta.values.size <= 20;
+  const shouldShareXDomain =
+    forceSharedX || (autoSharedX && !forceIndependentX);
+
+  const forceSharedSeries = chartTag.text('series', 'independent') === 'true';
+  const forceIndependentSeries =
+    chartTag.has('series', 'independent') && !forceSharedSeries;
+  const autoSharedSeries = seriesMeta && seriesMeta.values.size <= 20;
+  const shouldShareSeriesDomain =
+    seriesField &&
+    (forceSharedSeries || (autoSharedSeries && !forceIndependentSeries));
 
   const spec: VegaSpec = {
     '$schema': 'https://vega.github.io/schema/vega-lite/v5.json',
@@ -51,6 +89,9 @@ export function generateBarChartVegaLiteSpec(
           ...chartSettings.xAxis,
           labelLimit: chartSettings.xAxis.labelSize,
         },
+        'scale': {
+          'domain': shouldShareXDomain ? [...xMeta.values] : null,
+        },
       },
       'y': {
         'field': yFieldPath,
@@ -64,7 +105,10 @@ export function generateBarChartVegaLiteSpec(
         'scale': chartSettings.yScale,
       },
       'color': {
-        'scale': {'range': 'category'},
+        'scale': {
+          'domain': shouldShareSeriesDomain ? [...seriesMeta!.values] : null,
+          'range': 'category',
+        },
       },
     },
   };
@@ -89,10 +133,12 @@ export function generateBarChartVegaLiteSpec(
     chartSettings.totalWidth * LEGEND_PERC,
     maxCharCt * 10 + 20
   );
-  const legendSettings = () => ({
+  const legendSettings: VegaSpec = {
     titleLimit: legendSize - 20,
     labelLimit: legendSize - 40,
-  });
+    padding: 8,
+    offset: 4,
+  };
 
   if (needsLegend) spec.padding.right = legendSize;
 
@@ -105,7 +151,7 @@ export function generateBarChartVegaLiteSpec(
   // Field driven series
   if (seriesField) {
     spec.encoding.color.field = seriesFieldPath;
-    spec.encoding.color.legend = legendSettings();
+    spec.encoding.color.legend = legendSettings;
   } else {
     spec.encoding.color.datum = '';
   }
@@ -115,21 +161,20 @@ export function generateBarChartVegaLiteSpec(
 
   // Measure list series
   if (settings.yChannel.fields.length > 1) {
-    spec.repeat = {'layer': [...settings.yChannel.fields]};
-    spec.spec = {
-      mark: spec.mark,
-      encoding: spec.encoding,
-    };
-    spec.mark = undefined;
-    spec.encoding = undefined;
-    spec.spec.encoding.y.field = {'repeat': 'layer'};
-    spec.spec.encoding.color = {
-      'datum': {'repeat': 'layer'},
-      'title': '',
-      'legend': legendSettings(),
-    };
-    if (!settings.isStack)
-      spec.spec.encoding.xOffset = {'datum': {'repeat': 'layer'}};
+    spec.transform = [
+      {
+        'fold': [...settings.yChannel.fields],
+      },
+    ];
+    spec.encoding.y.field = 'value';
+    spec.encoding.color.field = 'key';
+    delete spec.encoding.color.datum;
+    if (!settings.isStack) {
+      spec.encoding.xOffset = {field: 'key'};
+    }
+
+    legendSettings.title = '';
+    spec.encoding.color.legend = legendSettings;
   }
 
   return {
@@ -140,5 +185,38 @@ export function generateBarChartVegaLiteSpec(
     totalWidth: chartSettings.totalWidth,
     totalHeight: chartSettings.totalHeight,
     chartType: 'bar_chart',
+    getTooltipData: (item: Item) => {
+      if (item.datum) {
+        const tooltipData: ChartTooltipEntry[] = [];
+        tooltipData.push({
+          field: xField,
+          fieldName: xField.name,
+          value: item.datum[xFieldPath],
+        });
+
+        if (seriesField)
+          tooltipData.push({
+            field: seriesField,
+            fieldName: seriesField.name,
+            value: item.datum[seriesFieldPath!],
+          });
+        if (Object.prototype.hasOwnProperty.call(item.datum, 'key')) {
+          tooltipData.push({
+            field: getFieldFromRootPath(explore, item.datum.key),
+            fieldName: item.datum.key,
+            value: item.datum.value,
+          });
+          tooltipData[item.datum.key] = item.datum.value;
+        } else {
+          tooltipData.push({
+            field: yField,
+            fieldName: yField.name,
+            value: item.datum[yFieldPath],
+          });
+        }
+        return tooltipData;
+      }
+      return null;
+    },
   };
 }

@@ -163,6 +163,9 @@ export type {
   ExploreMaterializer,
   WriteStream,
   SerializedExplore,
+  // Needed for renderer type narrowing
+  DateField,
+  TimestampField,
 } from './malloy';
 export type {QueryOptionsReader, RunSQLOptions} from './run_sql_options';
 export type {

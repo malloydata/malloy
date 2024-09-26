@@ -82,6 +82,7 @@ export class MalloySQLSQLParser {
             e.message,
             [
               {
+                code: 'malloy-sql-syntax-error',
                 message: e.message,
                 at: {url, range: this.convertRange(e.location, start)},
                 severity: 'error',

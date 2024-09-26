@@ -194,6 +194,7 @@ source: products is duckdb.table("data/products.parquet") extend {
     limit: 5
   }
 
+  # dashboard
   view: seriesCharts is {
     # bar_chart
     nest: grouped is {
@@ -227,7 +228,7 @@ source: products is duckdb.table("data/products.parquet") extend {
         `Cost $` is retail_price.avg()*300
       limit: 10
     }
-    # bar_chart { x=brand y=['Sales $', 'Cost $'] }
+    # bar_chart { x=brand y=['Cost $', 'Sales $'] }
     nest: ySeriesExplicit is {
       group_by: brand
       aggregate:
@@ -236,5 +237,80 @@ source: products is duckdb.table("data/products.parquet") extend {
       limit: 10
     }
 
+    # bar_chart
+    nest: negative is {
+      group_by: brand
+      aggregate: `Sales $` is retail_price.avg()-500
+      limit: 10
+    }
+
+    nest: negative_data is {
+      group_by: brand
+      aggregate: `Sales $` is retail_price.avg()-500
+      limit: 10
+    }
+
+    # bar_chart
+    nest: grouped_negative is {
+      group_by: brand, department_long_label is department
+      aggregate: `Sales $` is retail_price.avg()-1000
+      limit: 10
+    }
+    # bar_chart.stack
+    nest: stacked_negative is {
+      group_by: brand, department
+      aggregate: `Sales $` is avg(retail_price)-700
+      limit: 10
+    }
+
+    # bar_chart
+    nest: numericAxis is {
+      group_by: id
+      aggregate:
+        `Sales $` is retail_price.avg()*500
+      limit: 10
+      order_by: id
+    }
+
+    # bar_chart
+    nest: dateAxis is {
+      group_by:
+        `date` is @2001-02-03 + id day
+      aggregate:
+        `Sales $` is retail_price.avg()*500
+      limit: 10
+      order_by: `date`
+    }
+
+    # bar_chart size=xl
+    nest: yearExtract is {
+      group_by:
+        `date` is year(@2001-02-03 + id year)
+      aggregate:
+        `Sales $` is retail_price.avg()*500
+      limit: 10
+      order_by: `date`
+    }
+
+    # bar_chart size=xl
+    nest: yearTruncate is {
+      group_by:
+        `date` is (@2001-02-03 + id year).year
+      aggregate:
+        `Sales $` is retail_price.avg()*500
+      limit: 10
+      order_by: `date`
+    }
+
+    nest: n is {
+      group_by: brand
+       # bar_chart
+      nest: grouped is {
+        group_by: brand, department
+        aggregate: `Sales $` is retail_price.avg()*500
+        limit: 10
+      }
+      limit: 10
+    }
   }
 }

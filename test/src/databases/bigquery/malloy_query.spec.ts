@@ -592,7 +592,7 @@ describe('BigQuery expression tests', () => {
 });
 
 const airportModelText = `
-source: airports is bigquery.table('malloy-data.malloytest.airports') extend {
+source: airports is bigquery.table('malloydata-org.malloytest.airports') extend {
   primary_key: code
   measure: airport_count is count()
 

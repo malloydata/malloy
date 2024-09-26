@@ -39,9 +39,15 @@ import {
 } from './test-translator';
 import {LogSeverity} from '../parse-log';
 
-type SimpleProblemSpec = string | RegExp;
-type ComplexProblemSpec = {severity: LogSeverity; message: SimpleProblemSpec};
-type ProblemSpec = SimpleProblemSpec | ComplexProblemSpec;
+type MessageProblemSpec = {
+  severity: LogSeverity;
+  message: string | RegExp;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data?: any;
+};
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type CodeProblemSpec = {severity: LogSeverity; code: string; data?: any};
+type ProblemSpec = CodeProblemSpec | MessageProblemSpec;
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace jest {
@@ -63,31 +69,8 @@ declare global {
        * X can be a MarkedSource, a string, or a model.
        */
       toTranslate(): R;
-      /**
-       * expect(X).toTranslateWithWarnings(expectedWarnings)
-       *
-       * Passes if the source compiles to code which could be used to
-       * generate SQL, and the specified warnings appear. If X is a marked
-       * source, the warnings which are found must match the locations of
-       * the markings.
-       *
-       * X can be a MarkedSource, a string, or a model. If it is a marked
-       * source, the errors which are found must match the locations of
-       * the markings.
-       */
-      toTranslateWithWarnings(...expectedWarnings: SimpleProblemSpec[]): R;
       toReturnType(tp: string): R;
-      /**
-       * expect(X).translateToFailWith(expectedErrors)
-       *
-       * X can be a MarkedSource, a string, or a model. If it is a marked
-       * source, the errors which are found must match the locations of
-       * the markings.
-       *
-       * @param expectedErrors varargs list of strings which must match
-       *        exactly, or regular expressions.
-       */
-      translationToFailWith(...expectedErrors: ProblemSpec[]): R;
+      toLog(...expectedErrors: ProblemSpec[]): R;
       isLocationIn(at: DocumentLocation, txt: string): R;
       /**
        * expect(X).compilesTo('expression-string')
@@ -187,20 +170,6 @@ function highlightError(dl: DocumentLocation, txt: string): string {
   return output.join('\n');
 }
 
-function normalizeProblemSpec(
-  defaultSeverity: LogSeverity
-): (spec: ProblemSpec) => ComplexProblemSpec {
-  return function (spec: ProblemSpec) {
-    if (typeof spec === 'string') {
-      return {severity: defaultSeverity, message: spec};
-    } else if (spec instanceof RegExp) {
-      return {severity: defaultSeverity, message: spec};
-    } else {
-      return spec;
-    }
-  };
-}
-
 type TestSource = string | MarkedSource | TestTranslator;
 
 function isMarkedSource(ts: TestSource): ts is MarkedSource {
@@ -258,6 +227,8 @@ function eToStr(e: Expr, symbols: ESymbols): string {
       return `"${e.literal}"`;
     case 'timeLiteral':
       return `@${e.literal}`;
+    case 'regexpLiteral':
+      return `/${e.literal}/`;
     case 'trunc':
       return `{timeTrunc-${e.units} ${subExpr(e.e)}}`;
     case 'delta':
@@ -267,6 +238,8 @@ function eToStr(e: Expr, symbols: ESymbols): string {
     case 'true':
     case 'false':
       return e.node;
+    case 'regexpMatch':
+      return `{${subExpr(e.kids.expr)} regex-match ${subExpr(e.kids.regex)}}`;
   }
   if (exprHasKids(e) && e.kids['left'] && e.kids['right']) {
     return `{${subExpr(e.kids['left'])} ${e.node} ${subExpr(e.kids['right'])}}`;
@@ -303,14 +276,9 @@ expect.extend({
     } $[returnType`;
     return {pass, message: () => msg};
   },
-  translationToFailWith: function (s: TestSource, ...msgs: ProblemSpec[]) {
-    return checkForProblems(this, false, s, 'error', ...msgs);
-  },
-  toTranslateWithWarnings: function (
-    s: TestSource,
-    ...msgs: SimpleProblemSpec[]
-  ) {
-    return checkForProblems(this, true, s, 'warn', ...msgs);
+  toLog: function (s: TestSource, ...msgs: ProblemSpec[]) {
+    const expectCompiles = !msgs.some(m => m.severity === 'error');
+    return checkForProblems(this, expectCompiles, s, ...msgs);
   },
   isLocationIn: function (
     checkAt: DocumentLocation,
@@ -367,18 +335,21 @@ expect.extend({
   },
 });
 
+function problemSpecSummary(s: ProblemSpec): string {
+  return `${s.severity} '${'message' in s ? s.message : s.code}' ${
+    s.data !== undefined ? pretty(s.data) : ''
+  }`;
+}
+
 function checkForProblems(
   context: jest.MatcherContext,
   expectCompiles: boolean,
   s: TestSource,
-  defaultSeverity: LogSeverity,
   ...msgs: ProblemSpec[]
 ) {
   let emsg = `Expected ${expectCompiles ? 'to' : 'to not'} compile with: `;
   const mSrc = isMarkedSource(s) ? s : undefined;
-  const normalize = normalizeProblemSpec(defaultSeverity);
-  const normMsgs = msgs.map(normalize);
-  const qmsgs = normMsgs.map(s => `${s.severity} '${s.message}'`);
+  const qmsgs = msgs.map(problemSpecSummary);
   if (msgs.length === 1) {
     emsg += ` ${qmsgs[0]}`;
   } else {
@@ -404,28 +375,49 @@ function checkForProblems(
     const explain: string[] = [];
     const errList = m.problemResponse().problems;
     let i;
-    for (i = 0; i < normMsgs.length && errList[i]; i += 1) {
-      const msg = normMsgs[i];
+    for (i = 0; i < msgs.length && errList[i]; i += 1) {
+      const msg = msgs[i];
       const err = errList[i];
-      const matched =
-        typeof msg.message === 'string'
-          ? msg.message === err.message
-          : err.message.match(msg.message);
+      let matched = true;
+      if ('message' in msg) {
+        if (typeof msg.message === 'string') {
+          if (msg.message !== err.message) {
+            explain.push(`Expected: ${msg.message}\nGot: ${err.message}`);
+            matched = false;
+          }
+        } else {
+          if (!err.message.match(msg.message)) {
+            explain.push(`Expected: ${msg.message}\nGot: ${err.message}`);
+            matched = false;
+          }
+        }
+      } else {
+        if (msg.code !== err.code) {
+          matched = false;
+          explain.push(`Expected: ${msg.code}\nGot: ${err.code}`);
+        }
+      }
       if (err.severity !== msg.severity) {
         explain.push(
           `Expected ${msg.severity}, got ${err.severity} ${err.message}`
         );
       }
-      if (!matched) {
-        explain.push(`Expected: ${msg.message}\nGot: ${err.message}`);
-      } else {
+      if (matched) {
         if (mSrc?.locations[i]) {
           const have = err.at?.range;
           const want = mSrc.locations[i].range;
           if (!context.equals(have, want)) {
             explain.push(
-              `Expected '${msg.message}' at location: ${rangeToStr(want)}\n` +
-                `Actual location: ${rangeToStr(have)}`
+              `Expected ${err.code} (${err.message}) at location: ${rangeToStr(
+                want
+              )}\n` + `Actual location: ${rangeToStr(have)}`
+            );
+          }
+        }
+        if (msg.data !== undefined) {
+          if (JSON.stringify(msg.data) !== JSON.stringify(err.data)) {
+            explain.push(
+              `Expected log data ${pretty(msg.data)}\nGot ${pretty(err.data)}`
             );
           }
         }
