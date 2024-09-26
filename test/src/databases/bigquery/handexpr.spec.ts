@@ -40,21 +40,25 @@ describe('BigQuery hand-built expression test', () => {
   function withJoin(
     sd: malloy.TableSourceDef,
     join: 'one' | 'many',
-    leftKey: string[],
-    rightKey: string[]
+    as: string,
+    keyExpr: string
   ): malloy.JoinFieldDef {
-    return {
+    const [leftKey, rightKey] = keyExpr.split('=');
+    const ret: malloy.JoinFieldDef = {
       ...sd,
       join,
-      matrixOperation: 'left',
       onExpression: {
         node: '=',
         kids: {
-          left: {node: 'field', path: leftKey},
-          right: {node: 'field', path: rightKey},
+          left: {node: 'field', path: leftKey.split('.')},
+          right: {node: 'field', path: rightKey.split('.')},
         },
       },
     };
+    if (as !== ret.name) {
+      ret.as = as;
+    }
+    return ret;
   }
 
   async function validateCompilation(
@@ -253,8 +257,8 @@ describe('BigQuery hand-built expression test', () => {
   const aircraftHandStructDef = withJoin(
     aircraftHandBase,
     'one',
-    ['aircraft_model_code'],
-    ['aircraft_models', 'aircraft_model_code']
+    'aircraft_models',
+    'aircraft_model_code=aircraft_models.aircraft_model_code'
   );
 
   const handCodedModel: ModelDef = {
@@ -702,8 +706,8 @@ describe('BigQuery hand-built expression test', () => {
       withJoin(
         aircraftHandBase,
         'many',
-        ['aircraft_model_code'],
-        ['aircraft', 'aircraft_model_code']
+        'aircraft',
+        'aircraft_model_code=aircraft.aircraft_model_code'
       ),
     ],
   };

@@ -36,9 +36,9 @@ function withJoin(
   sd: TableSourceDef,
   join: 'one' | 'many',
   as: string,
-  leftKey: string,
-  rightKey: string
+  keyExpr: string
 ): JoinFieldDef {
+  const [leftKey, rightKey] = keyExpr.split('=');
   const ret: JoinFieldDef = {
     ...sd,
     join,
@@ -222,8 +222,7 @@ const AIRCRAFT: TableSourceDef = {
       AIRCRAFT_MODELS,
       'one',
       'aircraft_models',
-      'aircraft_model_code',
-      'aircraft_models.aircraft_model_code'
+      'aircraft_model_code=aircraft_models.aircraft_model_code'
     ),
   ],
 };
@@ -271,21 +270,20 @@ export const FLIGHTS_EXPLORE: StructDef = {
       },
     },
 
-    withJoin(CARRIERS, 'one', 'carriers', 'carrier', 'carriers.code'),
+    withJoin(CARRIERS, 'one', 'carriers', 'carrier=carriers.code'),
 
     // aircraft
-    withJoin(AIRCRAFT, 'one', 'aircraft', 'tail_num', 'aircraft.tail_num'),
+    withJoin(AIRCRAFT, 'one', 'aircraft', 'tail_num=aircraft.tail_num'),
 
     // origin
-    withJoin(AIRPORTS, 'one', 'origin', 'origin_code', 'origin,code'),
+    withJoin(AIRPORTS, 'one', 'origin', 'origin_code=origin,code'),
 
     // destination
     withJoin(
       AIRPORTS,
       'one',
       'destination',
-      'destination_code',
-      'destination.code'
+      'destination_code=destination.code'
     ),
 
     // derived table from a named query.
