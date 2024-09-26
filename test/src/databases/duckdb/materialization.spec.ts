@@ -33,7 +33,7 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
     run: foo -> fooview;
     `;
 
-    const qm = runtime.loadQuery(query);
+    const qm = runtime.loadQuery(query, {replaceMaterializedReferences: true});
     const pq = await qm.getPreparedQuery();
 
     expect(pq.preparedResult.sql).toBe(
@@ -73,7 +73,7 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
     run: foo -> fooview;
     `;
 
-    const qm = runtime.loadQuery(query);
+    const qm = runtime.loadQuery(query, {replaceMaterializedReferences: true});
     const pq = await qm.getPreparedQuery();
 
     expect(pq.preparedResult.sql).toBe(
