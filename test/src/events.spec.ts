@@ -110,9 +110,12 @@ describe('emits events', () => {
       `).toEmitDuringTranslation(runtime, {
         id: 'translation-error',
         data: {
-          code: 'pick-values-must-match',
-          data: null,
-          message: "else type 'number', expected 'string'",
+          code: 'pick-else-type-does-not-match',
+          data: {
+            elseType: 'number',
+            returnType: 'string',
+          },
+          message: 'else type `number` does not match return type `string`',
         },
       });
     });
