@@ -23,17 +23,11 @@
 
 /* eslint-disable no-console */
 
-import {
-  ModelDef,
-  Query,
-  StructDef,
-  StructRelationship,
-} from '@malloydata/malloy';
+import {ModelDef, Query, StructDef} from '@malloydata/malloy';
 import {describeIfDatabaseAvailable, fStringLike, fToQF} from '../../util';
 
 import * as malloy from '@malloydata/malloy';
 import {RuntimeList} from '../../runtimes';
-
 const [describe] = describeIfDatabaseAvailable(['bigquery']);
 
 describe('BigQuery hand-built expression test', () => {
@@ -43,9 +37,15 @@ describe('BigQuery hand-built expression test', () => {
     await runtimes.closeAll();
   });
 
-  function withJoin(leftKey: string[], rightKey: string[]): StructRelationship {
+  function withJoin(
+    sd: malloy.TableSourceDef,
+    join: 'one' | 'many',
+    leftKey: string[],
+    rightKey: string[]
+  ): malloy.JoinFieldDef {
     return {
-      type: 'one',
+      ...sd,
+      join,
       matrixOperation: 'left',
       onExpression: {
         node: '=',
@@ -83,16 +83,13 @@ describe('BigQuery hand-built expression test', () => {
     return model._loadQueryFromQueryDef(queryDef).getSQL();
   }
 
-  const modelHandBase: StructDef = {
+  const modelHandBase: malloy.TableSourceDef = {
     name: 'malloydata-org.malloytest.aircraft_models',
     as: 'aircraft_models',
-    type: 'struct',
+    type: 'table',
     dialect: 'standardsql',
-    structSource: {
-      type: 'table',
-      tablePath: 'malloydata-org.malloytest.aircraft_models',
-    },
-    structRelationship: {type: 'basetable', connectionName: 'bigquery'},
+    tablePath: 'malloydata-org.malloytest.aircraft_models',
+    connection: 'bigquery',
     fields: [
       {type: 'string', name: 'aircraft_model_code'},
       {type: 'string', name: 'manufacturer'},
@@ -190,14 +187,11 @@ describe('BigQuery hand-built expression test', () => {
   };
 
   const aircraftHandBase: StructDef = {
-    type: 'struct',
     name: 'malloydata-org.malloytest.aircraft',
     dialect: 'standardsql',
-    structSource: {
-      type: 'table',
-      tablePath: 'malloydata-org.malloytest.aircraft',
-    },
-    structRelationship: {type: 'basetable', connectionName: 'bigquery'},
+    type: 'table',
+    tablePath: 'malloydata-org.malloytest.aircraft',
+    connection: 'bigquery',
     fields: [
       {type: 'string', name: 'tail_num'},
       {type: 'string', name: 'aircraft_serial'},
@@ -256,19 +250,12 @@ describe('BigQuery hand-built expression test', () => {
     as: 'aircraft',
   };
 
-  const aircraftHandStructDef: StructDef = {
-    ...aircraftHandBase,
-    fields: [
-      ...aircraftHandBase.fields,
-      {
-        ...modelHandBase,
-        structRelationship: withJoin(
-          ['aircraft_model_code'],
-          ['aircraft_models', 'aircraft_model_code']
-        ),
-      },
-    ],
-  };
+  const aircraftHandStructDef = withJoin(
+    aircraftHandBase,
+    'one',
+    ['aircraft_model_code'],
+    ['aircraft_models', 'aircraft_model_code']
+  );
 
   const handCodedModel: ModelDef = {
     name: 'Hand Coded Models',
@@ -712,18 +699,12 @@ describe('BigQuery hand-built expression test', () => {
     as: 'model_aircraft',
     fields: [
       ...modelHandBase.fields,
-      {
-        ...aircraftHandBase,
-        structRelationship: {
-          type: 'many',
-          matrixOperation: 'left',
-          onExpression: malloy.composeSQLExpr([
-            {node: 'field', path: ['aircraft_model_code']},
-            '=',
-            {node: 'field', path: ['aircraft', 'aircraft_model_code']},
-          ]),
-        },
-      },
+      withJoin(
+        aircraftHandBase,
+        'many',
+        ['aircraft_model_code'],
+        ['aircraft', 'aircraft_model_code']
+      ),
     ],
   };
 

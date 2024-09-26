@@ -58,6 +58,7 @@ export type {
   TableSourceDef,
   SQLSourceDef,
   SourceDef,
+  JoinFieldDef,
   NamedStructDefs,
   MalloyQueryData,
   DateUnit,
@@ -109,6 +110,7 @@ export type {
 export {
   arrayEachFields,
   isRepeatedRecord,
+  isSourceDef,
   // Used in Composer Demo
   Segment,
   isSamplingEnable,

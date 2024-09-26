@@ -36,7 +36,6 @@ import {
   StructDef,
   TableSourceDef,
   SQLSourceDef,
-  SimpleAtomic,
   AtomicTypeDef,
   JoinedArrayDef,
   RepeatedRecordTypeDef,
@@ -165,46 +164,6 @@ export abstract class TrinoPrestoConnection
   extends BaseConnection
   implements Connection, PersistSQLResults
 {
-  trinoToMalloyTypes: {[key: string]: SimpleAtomic} = {
-    'varchar': {type: 'string'},
-    'integer': {type: 'number', numberType: 'integer'},
-    'bigint': {type: 'number', numberType: 'integer'},
-    'smallint': {type: 'number', numberType: 'integer'},
-    'tinyint': {type: 'number', numberType: 'integer'},
-    'double': {type: 'number', numberType: 'float'},
-    'decimal': {type: 'number', numberType: 'float'},
-    'string': {type: 'string'},
-    'date': {type: 'date'},
-    'timestamp': {type: 'timestamp'},
-    'boolean': {type: 'boolean'},
-
-    // TODO(figutierrez0): cleanup.
-    /* 'INT64': {type: 'number', numberType: 'integer'},
-    'FLOAT': {type: 'number', numberType: 'float'},
-    'FLOAT64': {type: 'number', numberType: 'float'},
-    'NUMERIC': {type: 'number', numberType: 'float'},
-    'BIGNUMERIC': {type: 'number', numberType: 'float'},
-    'TIMESTAMP': {type: 'timestamp'},
-    'BOOLEAN': {type: 'boolean'},
-    'BOOL': {type: 'boolean'},
-    'JSON': {type: 'json'},*/
-    // TODO (https://cloud.google.com/bigquery/docs/reference/rest/v2/tables#tablefieldschema):
-    // BYTES
-    // DATETIME
-    // TIME
-    // GEOGRAPHY
-  };
-
-  private sqlToMalloyType(sqlType: string): SimpleAtomic {
-    const baseSqlType = sqlType.match(/^(\w+)/)?.at(0) ?? sqlType;
-    return (
-      this.trinoToMalloyTypes[baseSqlType] ?? {
-        type: 'sql native',
-        rawType: sqlType,
-      }
-    );
-  }
-
   public name: string;
   private readonly dialect = new StandardSQLDialect();
   static DEFAULT_QUERY_OPTIONS: RunSQLOptions = {
@@ -518,7 +477,7 @@ export abstract class TrinoPrestoConnection
       }
       return recordType;
     }
-    return this.sqlToMalloyType(trinoType);
+    return this.dialect.sqlTypeToMalloyType(trinoType);
   }
 
   structDefFromSchema(rows: string[][], structDef: StructDef): void {

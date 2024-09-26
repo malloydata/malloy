@@ -134,7 +134,9 @@ export abstract class DuckDBCommon
     options: RunSQLOptions
   ): AsyncIterableIterator<QueryDataRow>;
 
-  async fetchSelectSchema(sqlRef: SQLSourceDef): Promise<SQLSourceDef> {
+  async fetchSelectSchema(
+    sqlRef: SQLSourceDef
+  ): Promise<SQLSourceDef | string> {
     const sqlDef = {...sqlRef};
     await this.schemaFromQuery(
       `DESCRIBE SELECT * FROM (${sqlRef.selectStr})`,
@@ -267,7 +269,7 @@ export abstract class DuckDBCommon
     this.fillStructDefFromTypeMap(structDef, typeMap);
   }
 
-  async fetchTableShema(
+  async fetchTableSchema(
     tableKey: string,
     tablePath: string
   ): Promise<TableSourceDef> {
