@@ -31,7 +31,7 @@ export interface RunSQLOptions {
   /* This is an experimental feature */
   queryAnnotation?: Annotation;
   /* Should we replace materialization with its references. */
-  replaceMaterializationReferences?: boolean;
+  replaceMaterializedReferences?: boolean;
 }
 
 export type QueryOptionsReader = RunSQLOptions | (() => RunSQLOptions);

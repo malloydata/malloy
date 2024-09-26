@@ -82,7 +82,7 @@ describe('expressions', () => {
     test('addition', () => {
       expect('42 + 7').compilesTo('{42 + 7}');
     });
-    /*test('typecheck addition lhs', () => {
+    test('typecheck addition lhs', () => {
       const wrong = expr`${'"string"'} + 1`;
       expect(wrong).toLog(
         errorMessage("The '+' operator requires a number, not a 'string'")
@@ -93,7 +93,7 @@ describe('expressions', () => {
       expect(wrong).toLog(
         errorMessage("The '+' operator requires a number, not a 'string'")
       );
-    });*/
+    });
     test('subtraction', () => {
       expect('42 - 7').compilesTo('{42 - 7}');
     });
