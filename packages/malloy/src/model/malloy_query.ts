@@ -746,7 +746,7 @@ class QueryField extends QueryNode {
   ): string {
     const name = expr.path[0];
     context.eventStream?.emit({
-      id: 'argument-compiled',
+      id: 'source-argument-compiled',
       data: {name},
     });
     const argument = context.arguments()[name];

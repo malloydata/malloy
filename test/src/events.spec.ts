@@ -32,7 +32,7 @@ describe('emits events', () => {
         }
         run: s(x is "foo") -> { select: * }
       `).toEmitDuringCompile(runtime, {
-        id: 'argument-compiled',
+        id: 'source-argument-compiled',
         data: {name: 'x'},
       });
     });
