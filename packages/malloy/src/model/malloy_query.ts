@@ -168,11 +168,6 @@ class UniqueKeyUse extends Set<UniqueKeyPossibleUse> {
   }
 }
 
-type NamedSql = {
-  name: string;
-  sql: string;
-};
-
 class StageWriter {
   withs: string[] = [];
   udfs: string[] = [];
@@ -231,14 +226,6 @@ class StageWriter {
     return id;
   }
 
-  private namedSql(baseName: string): NamedSql {
-    const sql =
-      this.combineStages(false).sql + this.withs[this.withs.length - 1];
-    const name = baseName + generateHash(sql);
-
-    return {name, sql};
-  }
-
   addMaterializedQuery(fieldName: string, query: Query): string {
     const name = query.name;
     if (!name) {
@@ -272,7 +259,9 @@ class StageWriter {
   }
 
   addPDT(baseName: string, dialect: Dialect): string {
-    const {name, sql} = this.namedSql(baseName);
+    const sql =
+      this.combineStages(false).sql + this.withs[this.withs.length - 1];
+    const name = baseName + generateHash(sql);
     const tableName = `scratch.${name}`;
     this.root().pdts.push(dialect.sqlCreateTableAsSelect(tableName, sql));
     return tableName;
@@ -4486,19 +4475,7 @@ class QueryStruct extends QueryNode {
 
         const sourceTag = Tag.annotationToTag(clonedAnnotation).tag;
 
-        const name = this.fieldDef.structSource.query.name;
-        // this is a hack for now.  Need some way to denote this table
-        //  should be cached.
-        if (name?.includes('cache')) {
-          const dtStageWriter = new StageWriter(true, stageWriter);
-          this.model.loadQuery(
-            this.fieldDef.structSource.query,
-            dtStageWriter,
-            false,
-            false
-          );
-          return dtStageWriter.addPDT(name, this.dialect);
-        } else if (sourceTag.has('materialize')) {
+        if (sourceTag.has('materialize')) {
           return stageWriter.addMaterializedQuery(
             getIdentifier(this.fieldDef),
             this.fieldDef.structSource.query
