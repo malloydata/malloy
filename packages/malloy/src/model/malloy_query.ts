@@ -2158,10 +2158,14 @@ class QueryTurtle extends QueryField {}
  */
 export class Segment {
   static nextStructDef(structDef: StructDef, segment: PipeSegment): StructDef {
-    // TODO: Verify we dont never need to replace materialized references here.
-    const qs = new QueryStruct(structDef, undefined, {
-      model: new QueryModel(undefined, false),
-    });
+    const qs = new QueryStruct(
+      structDef,
+      undefined,
+      {
+        model: new QueryModel(undefined),
+      },
+      false
+    );
     const turtleDef: TurtleDef = {
       type: 'turtle',
       name: 'ignoreme',
@@ -2244,7 +2248,8 @@ class QueryQuery extends QueryField {
           fields: [...sourceDef.fields, ...firstStage.extendSource],
         },
         parentStruct.sourceArguments,
-        parent.parent ? {struct: parent} : {model: parent.model}
+        parent.parent ? {struct: parent} : {model: parent.model},
+        parent.replaceMaterializedReferences
       );
       turtleWithFilters = {
         ...turtleWithFilters,
@@ -3700,9 +3705,14 @@ class QueryQuery extends QueryField {
         sourceSQLExpression
       );
       structDef.structSource = {type: 'sql', method: 'nested'};
-      const qs = new QueryStruct(structDef, undefined, {
-        model: this.parent.getModel(),
-      });
+      const qs = new QueryStruct(
+        structDef,
+        undefined,
+        {
+          model: this.parent.getModel(),
+        },
+        this.parent.replaceMaterializedReferences
+      );
       const q = QueryQuery.makeQuery(
         newTurtle,
         qs,
@@ -3772,9 +3782,14 @@ class QueryQuery extends QueryField {
       };
       pipeline.shift();
       for (const transform of pipeline) {
-        const s = new QueryStruct(structDef, undefined, {
-          model: this.parent.getModel(),
-        });
+        const s = new QueryStruct(
+          structDef,
+          undefined,
+          {
+            model: this.parent.getModel(),
+          },
+          this.parent.replaceMaterializedReferences
+        );
         const q = QueryQuery.makeQuery(
           {type: 'turtle', name: 'ignoreme', pipeline: [transform]},
           s,
@@ -4124,7 +4139,8 @@ class QueryStruct extends QueryNode {
   constructor(
     fieldDef: StructDef,
     readonly sourceArguments: Record<string, Argument> | undefined,
-    parent: ParentQueryStruct | ParentQueryModel
+    parent: ParentQueryStruct | ParentQueryModel,
+    readonly replaceMaterializedReferences: boolean
   ) {
     super(fieldDef);
     this.setParent(parent);
@@ -4207,9 +4223,14 @@ class QueryStruct extends QueryNode {
         case 'struct': {
           this.addFieldToNameMap(
             as,
-            new QueryStruct(field as StructDef, undefined, {
-              struct: this,
-            })
+            new QueryStruct(
+              field as StructDef,
+              undefined,
+              {
+                struct: this,
+              },
+              this.replaceMaterializedReferences
+            )
           );
           break;
         }
@@ -4361,7 +4382,11 @@ class QueryStruct extends QueryNode {
   resolveQueryFields() {
     if (this.fieldDef.structSource.type === 'query') {
       const structDef = this.model
-        .loadQuery(this.fieldDef.structSource.query, undefined)
+        .loadQuery(
+          this.fieldDef.structSource.query,
+          undefined,
+          this.replaceMaterializedReferences
+        )
         .structs.pop();
 
       // should never happen.
@@ -4477,7 +4502,7 @@ class QueryStruct extends QueryNode {
         const sourceTag = Tag.annotationToTag(clonedAnnotation).tag;
 
         if (
-          this.model.replaceMaterializedReferences &&
+          this.replaceMaterializedReferences &&
           sourceTag.has('materialize')
         ) {
           return stageWriter.addMaterializedQuery(
@@ -4490,7 +4515,8 @@ class QueryStruct extends QueryNode {
             this.fieldDef.structSource.query,
             stageWriter,
             false,
-            true // this is an intermediate stage.
+            true, // this is an intermediate stage.
+            this.replaceMaterializedReferences
           ).lastStageName;
         }
       }
@@ -4643,10 +4669,7 @@ export class QueryModel {
   // dialect: Dialect = new PostgresDialect();
   modelDef: ModelDef | undefined = undefined;
   structs = new Map<string, QueryStruct>();
-  constructor(
-    modelDef: ModelDef | undefined,
-    readonly replaceMaterializedReferences: boolean
-  ) {
+  constructor(modelDef: ModelDef | undefined) {
     if (modelDef) {
       this.loadModelFromDef(modelDef);
     }
@@ -4657,7 +4680,7 @@ export class QueryModel {
     for (const s of Object.values(this.modelDef.contents)) {
       let qs;
       if (s.type === 'struct') {
-        qs = new QueryStruct(s, undefined, {model: this});
+        qs = new QueryStruct(s, undefined, {model: this}, false);
         this.structs.set(getIdentifier(s), qs);
         qs.resolveQueryFields();
       } else if (s.type === 'query') {
@@ -4679,7 +4702,8 @@ export class QueryModel {
 
   getStructFromRef(
     structRef: StructRef,
-    sourceArguments: Record<string, Argument> | undefined
+    sourceArguments: Record<string, Argument> | undefined,
+    replaceMaterializedReferences = false
   ): QueryStruct {
     let structDef;
     if (typeof structRef === 'string') {
@@ -4688,7 +4712,8 @@ export class QueryModel {
         return new QueryStruct(
           ret.fieldDef,
           sourceArguments,
-          ret.parent ?? {model: this}
+          ret.parent ?? {model: this},
+          replaceMaterializedReferences
         );
       }
       return ret;
@@ -4697,14 +4722,20 @@ export class QueryModel {
     } else {
       throw new Error('Broken for now');
     }
-    return new QueryStruct(structDef, sourceArguments, {model: this});
+    return new QueryStruct(
+      structDef,
+      sourceArguments,
+      {model: this},
+      replaceMaterializedReferences
+    );
   }
 
   loadQuery(
     query: Query,
     stageWriter: StageWriter | undefined,
     emitFinalStage = false,
-    isJoinedSubquery = false
+    isJoinedSubquery = false,
+    replaceMaterializedReferences = false
   ): QueryResults {
     const malloy = '';
 
@@ -4721,7 +4752,11 @@ export class QueryModel {
 
     const q = QueryQuery.makeQuery(
       turtleDef,
-      this.getStructFromRef(query.structRef, query.sourceArguments),
+      this.getStructFromRef(
+        query.structRef,
+        query.sourceArguments,
+        replaceMaterializedReferences
+      ),
       stageWriter,
       isJoinedSubquery
     );
@@ -4748,10 +4783,20 @@ export class QueryModel {
     };
   }
 
-  compileQuery(query: Query, finalize = true): CompiledQuery {
+  compileQuery(
+    query: Query,
+    finalize = true,
+    replaceMaterializedReferences = false
+  ): CompiledQuery {
     let newModel: QueryModel | undefined;
     const m = newModel || this;
-    const ret = m.loadQuery(query, undefined, finalize, false);
+    const ret = m.loadQuery(
+      query,
+      undefined,
+      finalize,
+      false,
+      replaceMaterializedReferences
+    );
     const sourceExplore =
       typeof query.structRef === 'string'
         ? query.structRef
