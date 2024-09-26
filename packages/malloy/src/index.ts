@@ -55,12 +55,11 @@ export type {
   QueryDataRow,
   // Needed for DB
   StructDef,
-  TableSourceDef as TableSourceStruct,
-  SQLSourceDef as SQLSourceStruct,
-  SourceDef as SourceStructDef,
+  TableSourceDef,
+  SQLSourceDef,
+  SourceDef,
   NamedStructDefs,
   MalloyQueryData,
-  AtomicFieldType as AtomicFieldTypeInner,
   DateUnit,
   ExtractUnit,
   TimestampUnit,
@@ -100,9 +99,16 @@ export type {
   DocumentPosition,
   Sampling,
   Annotation,
-  AtomicTypeDef as FieldAtomicTypeDef,
+  SimpleAtomic,
+  AtomicTypeDef,
+  AtomicFieldDef,
+  JoinedArrayDef,
+  RecordTypeDef,
+  RepeatedRecordTypeDef,
 } from './model';
 export {
+  arrayEachFields,
+  isRepeatedRecord,
   // Used in Composer Demo
   Segment,
   isSamplingEnable,

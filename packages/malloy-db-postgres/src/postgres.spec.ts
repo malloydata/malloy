@@ -22,7 +22,7 @@
  */
 
 import {PostgresConnection} from './postgres_connection';
-import {SQLBlock} from '@malloydata/malloy';
+import {SQLSourceDef} from '@malloydata/malloy';
 import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
 
 const [describe] = describeIfDatabaseAvailable(['postgres']);
@@ -122,9 +122,12 @@ describe('PostgresConnection', () => {
   });
 });
 
-const SQL_BLOCK_1 = {
-  type: 'sqlBlock',
+const SQL_BLOCK_1: SQLSourceDef = {
+  type: 'sql_select',
   name: 'block1',
+  dialect: 'postgres',
+  connection: 'postgres',
+  fields: [],
   selectStr: `
 SELECT
 created_at,
@@ -138,11 +141,14 @@ product_category,
 created_at AS inventory_items_created_at
 FROM "inventory_items.parquet"
 `,
-} as SQLBlock;
+};
 
-const SQL_BLOCK_2 = {
-  type: 'sqlBlock',
+const SQL_BLOCK_2: SQLSourceDef = {
+  type: 'sql_select',
   name: 'block2',
+  dialect: 'postgres',
+  connection: 'postgres',
+  fields: [],
   selectStr: `
 SELECT
 created_at,
@@ -156,4 +162,4 @@ product_category,
 created_at AS inventory_items_created_at
 FROM read_parquet("inventory_items2.parquet")
 `,
-} as SQLBlock;
+};

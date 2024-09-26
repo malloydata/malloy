@@ -34,6 +34,7 @@ import {
   TimeLiteralNode,
   RecordLiteralNode,
   ArrayLiteralNode,
+  SimpleAtomic,
 } from '../model/malloy_types';
 import {DialectFunctionOverloadDef} from './functions';
 
@@ -395,7 +396,7 @@ export abstract class Dialect {
     )`;
   }
 
-  abstract sqlTypeToMalloyType(sqlType: string): AtomicTypeDef | undefined;
+  abstract sqlTypeToMalloyType(sqlType: string): SimpleAtomic;
   abstract malloyTypeToSQLType(malloyType: AtomicTypeDef): string;
 
   abstract validateTypeName(sqlType: string): boolean;

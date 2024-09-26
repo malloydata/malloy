@@ -30,6 +30,7 @@ import {
   TimeDeltaExpr,
   RegexMatchExpr,
   MeasureTimeExpr,
+  SimpleAtomic,
 } from '../../model/malloy_types';
 import {indent} from '../../model/utils';
 import {
@@ -45,7 +46,7 @@ import {DUCKDB_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 // need to refactor runSQL to take a SQLBlock instead of just a sql string.
 const hackSplitComment = '-- hack: split on this';
 
-const duckDBToMalloyTypes: {[key: string]: AtomicTypeDef} = {
+const duckDBToMalloyTypes: {[key: string]: SimpleAtomic} = {
   'BIGINT': {type: 'number', numberType: 'integer'},
   'INTEGER': {type: 'number', numberType: 'integer'},
   'TINYINT': {type: 'number', numberType: 'integer'},
@@ -363,10 +364,17 @@ export class DuckDBDialect extends PostgresBase {
     return malloyType.type;
   }
 
-  sqlTypeToMalloyType(sqlType: string): AtomicTypeDef | undefined {
+  sqlTypeToMalloyType(sqlType: string): SimpleAtomic {
+    // Remove decimal precision
+    const ddbType = sqlType.replace(/^DECIMAL\(\d+,\d+\)/g, 'DECIMAL');
     // Remove trailing params
-    const baseSqlType = sqlType.match(/^(\w+)/)?.at(0) ?? sqlType;
-    return duckDBToMalloyTypes[baseSqlType.toUpperCase()];
+    const baseSqlType = ddbType.match(/^(\w+)/)?.at(0) ?? ddbType;
+    return (
+      duckDBToMalloyTypes[baseSqlType.toUpperCase()] ?? {
+        type: 'sql native',
+        rawType: sqlType.toLowerCase(),
+      }
+    );
   }
 
   castToString(expression: string): string {

@@ -35,6 +35,7 @@ import {
   RegexMatchExpr,
   TimeLiteralNode,
   MeasureTimeExpr,
+  SimpleAtomic,
 } from '../../model/malloy_types';
 import {
   DialectFunctionOverloadDef,
@@ -81,7 +82,7 @@ declare interface TimeMeasure {
   ratio: number;
 }
 
-const bqToMalloyTypes: {[key: string]: AtomicTypeDef} = {
+const bqToMalloyTypes: {[key: string]: SimpleAtomic} = {
   'DATE': {type: 'date'},
   'STRING': {type: 'string'},
   'INTEGER': {type: 'number', numberType: 'integer'},
@@ -543,10 +544,15 @@ ${indent(sql)}
     return malloyType.type;
   }
 
-  sqlTypeToMalloyType(sqlType: string): AtomicTypeDef | undefined {
+  sqlTypeToMalloyType(sqlType: string): SimpleAtomic {
     // Remove trailing params
     const baseSqlType = sqlType.match(/^(\w+)/)?.at(0) ?? sqlType;
-    return bqToMalloyTypes[baseSqlType.toUpperCase()];
+    return (
+      bqToMalloyTypes[baseSqlType.toUpperCase()] ?? {
+        type: 'sql native',
+        rawType: sqlType.toLowerCase(),
+      }
+    );
   }
 
   castToString(expression: string): string {

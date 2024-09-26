@@ -92,6 +92,7 @@ export type Expr =
   | GenericSQLExpr
   | NullNode
   | PickExpr
+  | ArrayEachExpr
   | ErrorNode;
 
 interface HasDataType {
@@ -323,6 +324,11 @@ export interface PickExpr extends ExprWithKids {
   node: 'pick';
   kids: {pickWhen: Expr[]; pickThen: Expr[]; pickElse: Expr};
 }
+
+export interface ArrayEachExpr extends ExprLeaf {
+  node: 'arrayEach';
+}
+
 export type ExpressionType =
   | 'scalar'
   | 'aggregate'
@@ -631,6 +637,13 @@ export interface JoinedArrayDef extends ArrayTypeDef, JoinBase, StructDefBase {
   join: 'many';
 }
 
+export function arrayEachFields(arrayOf: AtomicTypeDef): AtomicFieldDef[] {
+  return [
+    {name: 'each', ...arrayOf, e: {node: 'arrayEach'}},
+    {name: 'value', ...arrayOf, e: {node: 'arrayEach'}},
+  ];
+}
+
 export interface RecordTypeDef extends StructDefBase, JoinBase {
   type: 'record';
   join: 'one';
@@ -644,10 +657,19 @@ export interface RecordElementTypeDef {
   type: 'record_element';
 }
 
+// MTOY todo structdef is already here, but maybe i need
+// to abstract out the struct parts .... so that "RepeatedRecordDef"
+// is a useful distinction.
 export interface RepeatedRecordTypeDef extends JoinedArrayDef {
   type: 'array';
   dataType: RecordElementTypeDef;
   join: 'many';
+}
+
+export function isRepeatedRecord(
+  fd: FieldDef
+): fd is RepeatedRecordTypeDef & AtomicFieldDef {
+  return fd.type === 'array' && fd.dataType.type === 'record_element';
 }
 
 export type RecordFieldDef = RecordTypeDef & AtomicFieldDef;
@@ -705,7 +727,7 @@ export function hasJoin<T extends FieldDef | StructDef>(
 }
 
 export function isJoinedSource(sd: StructDef): sd is SourceDef & JoinBase {
-  return isSourceDef(sd) && 'join' in sd;
+  return isSourceDef(sd) && hasJoin(sd);
 }
 
 export type DateUnit = 'day' | 'week' | 'month' | 'quarter' | 'year';
@@ -1085,7 +1107,7 @@ export type ExpressionValueType =
   | 'any'
   | 'regular expression';
 
-export type FieldValueType = ExpressionValueType | 'turtle' | 'struct';
+export type FieldValueType = ExpressionValueType | 'turtle';
 
 export interface ExpressionTypeDesc {
   dataType: FieldValueType;
@@ -1160,16 +1182,15 @@ export interface ConnectionDef extends NamedObject {
 }
 
 export type TemporalTypeDef = DateTypeDef | TimestampTypeDef;
-export type AtomicTypeDef =
+export type SimpleAtomic =
   | StringTypeDef
   | TemporalTypeDef
   | NumberTypeDef
   | BooleanTypeDef
   | JSONTypeDef
   | NativeUnsupportedTypeDef
-  | ArrayTypeDef
-  | RecordTypeDef
   | ErrorTypeDef;
+export type AtomicTypeDef = SimpleAtomic | ArrayTypeDef | RecordTypeDef;
 
 export type AtomicFieldDef = AtomicTypeDef & FieldAtomicBase;
 
@@ -1217,7 +1238,7 @@ export interface ModelDef {
 }
 
 /** Very common record type */
-export type NamedStructDefs = Record<string, StructDef>;
+export type NamedStructDefs = Record<string, SourceDef>;
 export type NamedModelObjects = Record<string, NamedModelObject>;
 
 /** Malloy source annotations attached to objects */

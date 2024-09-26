@@ -23,7 +23,7 @@
 
 import {DuckDBCommon} from './duckdb_common';
 import {DuckDBConnection} from './duckdb_connection';
-import {SQLBlock, StructDef} from '@malloydata/malloy';
+import {SQLSourceDef, StructDef} from '@malloydata/malloy';
 import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
 
 const [describe] = describeIfDatabaseAvailable(['duckdb']);
@@ -226,14 +226,11 @@ describe('DuckDBConnection', () => {
  */
 const makeStructDef = (): StructDef => {
   return {
-    type: 'struct',
+    type: 'table',
     name: 'test',
     dialect: 'duckdb',
-    structSource: {type: 'table', tablePath: 'test'},
-    structRelationship: {
-      type: 'basetable',
-      connectionName: 'duckdb',
-    },
+    tablePath: 'test',
+    connection: 'duckdb',
     fields: [],
   };
 };
@@ -244,9 +241,12 @@ const makeStructDef = (): StructDef => {
 //
 
 // Uses string value for table
-const SQL_BLOCK_1 = {
-  type: 'sqlBlock',
+const SQL_BLOCK_1: SQLSourceDef = {
+  type: 'sql_select',
   name: 'block1',
+  dialect: 'duckdb',
+  connection: 'duckdb',
+  fields: [],
   selectStr: `
 SELECT
 created_at,
@@ -260,12 +260,15 @@ product_category,
 created_at AS inventory_items_created_at
 FROM "inventory_items.parquet"
 `,
-} as SQLBlock;
+};
 
 // Uses read_parquet() for table
-const SQL_BLOCK_2 = {
-  type: 'sqlBlock',
+const SQL_BLOCK_2: SQLSourceDef = {
+  type: 'sql_select',
   name: 'block2',
+  dialect: 'duckdb',
+  connection: 'duckdb',
+  fields: [],
   selectStr: `
 SELECT
 created_at,
@@ -279,7 +282,7 @@ product_category,
 created_at AS inventory_items_created_at
 FROM read_parquet("inventory_items2.parquet")
 `,
-} as SQLBlock;
+};
 
 //
 // Type strings for testing DuckDBConnection.fillStructDefFromTypeMap()
