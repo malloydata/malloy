@@ -100,7 +100,6 @@ export interface ParseOptions {
 export interface CompileOptions {
   refreshSchemaCache?: boolean | number;
   noThrowOnError?: boolean;
-  replaceMaterializedReferences?: boolean;
 }
 
 type PrepareQueryOptions = {
@@ -804,7 +803,7 @@ export class Model implements Taggable {
    * @return A prepared query.
    */
   public get preparedQuery(): PreparedQuery {
-    return this.getPreparedQuery();
+    return this.getPreparedQuery({});
   }
 
   /**
@@ -910,7 +909,11 @@ export class PreparedQuery implements Taggable {
    */
   public get preparedResult(): PreparedResult {
     const queryModel = new QueryModel(this._modelDef);
-    const translatedQuery = queryModel.compileQuery(this._query);
+    const translatedQuery = queryModel.compileQuery(
+      this._query,
+      false,
+      this.replaceMaterializedReferences
+    );
     return new PreparedResult(
       {
         ...translatedQuery,
@@ -2306,9 +2309,9 @@ export class Runtime {
    */
   public loadQuery(
     query: QueryURL | QueryString,
-    options?: ParseOptions & CompileOptions
+    options?: ParseOptions & CompileOptions & PrepareQueryOptions
   ): QueryMaterializer {
-    return this.loadModel(query, options).loadFinalQuery();
+    return this.loadModel(query, options).loadFinalQuery(options);
   }
 
   /**
@@ -2596,7 +2599,7 @@ export class ModelMaterializer extends FluentState<Model> {
    * @return A `QueryMaterializer` capable of materializing the requested query, running it,
    * or loading further related objects.
    */
-  public loadFinalQuery(options?: CompileOptions): QueryMaterializer {
+  public loadFinalQuery(options?: PrepareQueryOptions): QueryMaterializer {
     return this.makeQueryMaterializer(async () => {
       return (await this.materialize()).getPreparedQuery(options);
     });
