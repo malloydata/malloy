@@ -87,6 +87,33 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
       },
     });
   });
+
+  it('replaceMaterializedReferences = false compiles the whole sql', async () => {
+    const query = `
+    # materialize
+    query: myMaterializedQuery is duckdb.sql("select 1 as one, 'word' as word") -> {
+      select:
+          two is one + 1
+    }
+
+    source: foo is myMaterializedQuery extend {
+      view: fooview is {
+        select:
+          three is two + 1
+      }
+    }
+
+    run: foo -> fooview;
+    `;
+
+    const qm = runtime.loadQuery(query, {replaceMaterializedReferences: false});
+    const pq = await qm.getPreparedQuery();
+
+    expect(pq.preparedResult.sql).toBe(
+      'WITH __stage0 AS (\n  SELECT \n     base."one"+1 as "two"\n  FROM (select 1 as one, \'word\' as word) as base\n)\nSELECT \n   base."two"+1 as "three"\nFROM __stage0 as base\n'
+    );
+    expect(pq.preparedResult.dependenciesToMaterialize).toStrictEqual({});
+  });
 });
 
 afterAll(async () => {
