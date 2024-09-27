@@ -4381,8 +4381,8 @@ class QueryStruct extends QueryNode {
         .loadQuery(
           this.fieldDef.structSource.query,
           undefined,
-          false,
-          false,
+          undefined,
+          undefined,
           this.prepareResultOptions
         )
         .structs.pop();
