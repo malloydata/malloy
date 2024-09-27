@@ -33,12 +33,12 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
     `;
 
     const qm = runtime.loadQuery(query, {replaceMaterializedReferences: true});
-    const pq = await qm.getPreparedQuery();
+    const preparedResult = await qm.getPreparedResult();
 
-    expect(pq.preparedResult.sql).toBe(
+    expect(preparedResult.sql).toBe(
       'SELECT \n   base."two"+1 as "three"\nFROM myMaterializedQuery-6037d4be-8b92-5ea7-95a0-27bd26c240ca as base\n'
     );
-    expect(pq.preparedResult.dependenciesToMaterialize).toStrictEqual({
+    expect(preparedResult.dependenciesToMaterialize).toStrictEqual({
       'myMaterializedQuery-6037d4be-8b92-5ea7-95a0-27bd26c240ca': {
         'id': '6037d4be-8b92-5ea7-95a0-27bd26c240ca',
         'path': 'internal://internal.malloy',
@@ -73,12 +73,12 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
     `;
 
     const qm = runtime.loadQuery(query, {replaceMaterializedReferences: true});
-    const pq = await qm.getPreparedQuery();
+    const preparedResult = await qm.getPreparedResult();
 
-    expect(pq.preparedResult.sql).toBe(
+    expect(preparedResult.sql).toBe(
       'SELECT \n   base."three"+1 as "four"\nFROM secondLevelMaterializedQuery-bd80d526-f867-587e-933e-89353d26d022 as base\n'
     );
-    expect(pq.preparedResult.dependenciesToMaterialize).toStrictEqual({
+    expect(preparedResult.dependenciesToMaterialize).toStrictEqual({
       'secondLevelMaterializedQuery-bd80d526-f867-587e-933e-89353d26d022': {
         id: 'bd80d526-f867-587e-933e-89353d26d022',
         path: 'internal://internal.malloy',
@@ -106,12 +106,12 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
     run: foo -> fooview;`;
 
     const qm = runtime.loadQuery(query, {replaceMaterializedReferences: false});
-    const pq = await qm.getPreparedQuery();
+    const preparedResult = await qm.getPreparedResult();
 
-    expect(pq.preparedResult.sql).toBe(
+    expect(preparedResult.sql).toBe(
       'WITH __stage0 AS (\n  SELECT \n     base."one"+1 as "two"\n  FROM (select 1 as one, \'word\' as word) as base\n)\nSELECT \n   base."two"+1 as "three"\nFROM __stage0 as base\n'
     );
-    expect(pq.preparedResult.dependenciesToMaterialize).toStrictEqual({});
+    expect(preparedResult.dependenciesToMaterialize).toStrictEqual({});
   });
 });
 
