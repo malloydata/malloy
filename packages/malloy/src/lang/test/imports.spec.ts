@@ -22,7 +22,7 @@
  */
 import {isFieldStructDef} from '../../model';
 import './parse-expects';
-import {TestTranslator, model} from './test-translator';
+import {TestTranslator, errorMessage, model} from './test-translator';
 import escapeRegEx from 'lodash/escapeRegExp';
 
 describe('import:', () => {
@@ -111,8 +111,8 @@ source: botProjQSrc is botProjQ
       },
     });
     docParse.translate();
-    expect(docParse).translationToFailWith(
-      new RegExp(escapeRegEx(reportedError))
+    expect(docParse).toLog(
+      errorMessage(new RegExp(escapeRegEx(reportedError)))
     );
   });
   test('chained imports', () => {
@@ -159,7 +159,7 @@ source: botProjQSrc is botProjQ
           }`,
       },
     });
-    expect(docParse).translationToFailWith("Cannot redefine 'astr'");
+    expect(docParse).toLog(errorMessage("Cannot redefine 'astr'"));
   });
   test('source references expanded when not exported', () => {
     const srcFiles = {
@@ -225,8 +225,8 @@ source: botProjQSrc is botProjQ
         'internal://test/langtests/child': 'source: aa is a',
       },
     });
-    expect(doc.translator).translationToFailWith(
-      "Cannot find 'bb', not imported"
+    expect(doc.translator).toLog(
+      errorMessage("Cannot find 'bb', not imported")
     );
   });
   test('selective renamed import of source, not found', () => {
@@ -239,8 +239,8 @@ source: botProjQSrc is botProjQ
         'internal://test/langtests/child': 'source: aa is a',
       },
     });
-    expect(doc.translator).translationToFailWith(
-      "Cannot find 'bb', not imported"
+    expect(doc.translator).toLog(
+      errorMessage("Cannot find 'bb', not imported")
     );
   });
   test('selective import of source, no-redefinition', () => {
@@ -255,6 +255,6 @@ source: botProjQSrc is botProjQ
         'internal://test/langtests/child': 'source: bb is a',
       },
     });
-    expect(doc.translator).translationToFailWith("Cannot redefine 'cc'");
+    expect(doc.translator).toLog(errorMessage("Cannot redefine 'cc'"));
   });
 });

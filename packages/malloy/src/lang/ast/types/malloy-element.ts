@@ -35,11 +35,19 @@ import {
   modelObjIsSource,
 } from '../../../model/malloy_types';
 import {Tag} from '../../../tags';
-import {LogSeverity, MessageLogger} from '../../parse-log';
+import {
+  LogMessageOptions,
+  MessageLogger,
+  MessageParameterType,
+  makeLogMessage,
+  MessageCode,
+} from '../../parse-log';
 import {MalloyTranslation} from '../../parse-malloy';
 import {ModelDataRequest} from '../../translate-response';
+import {errorFor} from '../ast-utils';
 import {DialectNameSpace} from './dialect-name-space';
 import {DocumentCompileResult} from './document-compile-result';
+import {ExprValue} from './expr-value';
 import {GlobalNameSpace} from './global-name-space';
 import {ModelEntry} from './model-entry';
 import {NameSpace} from './name-space';
@@ -182,43 +190,60 @@ export abstract class MalloyElement {
     return trans?.sourceURL || '(missing)';
   }
 
-  errorsExist(): boolean {
-    const logger = this.logger();
-    if (logger) {
-      return logger.hasErrors();
-    }
-    return false;
-  }
-
   private readonly logged = new Set<string>();
-  log(message: string, severity: LogSeverity = 'error'): void {
+  private log<T extends MessageCode>(
+    code: T,
+    parameters: MessageParameterType<T>,
+    options?: LogMessageOptions
+  ): T {
+    const log = makeLogMessage(code, parameters, {
+      at: this.location,
+      ...options,
+    });
     if (this.codeLocation) {
       /*
        * If this element has a location, then don't report the same
        * error message at the same location more than once
        */
-      if (this.logged.has(message)) {
-        return;
+      if (this.logged.has(log.message)) {
+        return code;
       }
-      this.logged.add(message);
+      this.logged.add(log.message);
     }
-    const msg = {at: this.location, message, severity};
-    const logTo = this.logger();
-    if (logTo) {
-      logTo.log(msg);
-      return;
-    }
-    throw new Error(
-      `Translation error (without error reporter):\n${JSON.stringify(
-        msg,
-        null,
-        2
-      )}`
-    );
+    this.logger.log(log);
+    return code;
   }
 
-  logger(): MessageLogger | undefined {
-    return this.translator()?.root.logger;
+  logError<T extends MessageCode>(
+    code: T,
+    parameters: MessageParameterType<T>,
+    options?: Omit<LogMessageOptions, 'severity'>
+  ): T {
+    return this.log(code, parameters, {severity: 'error', ...options});
+  }
+
+  logWarning<T extends MessageCode>(
+    code: T,
+    parameters: MessageParameterType<T>,
+    options?: Omit<LogMessageOptions, 'severity'>
+  ): T {
+    return this.log(code, parameters, {severity: 'warn', ...options});
+  }
+
+  loggedErrorExpr<T extends MessageCode>(
+    code: T,
+    parameters: MessageParameterType<T>,
+    options?: LogMessageOptions
+  ): ExprValue {
+    return errorFor(this.logError(code, parameters, options));
+  }
+
+  get logger(): MessageLogger {
+    const logger = this.translator()?.root.logger;
+    if (logger === undefined) {
+      throw new Error('Attempted to access logger without a translator');
+    }
+    return logger;
   }
 
   /**
@@ -280,8 +305,7 @@ export abstract class MalloyElement {
   }
 
   protected internalError(msg: string): Error {
-    this.log(`INTERNAL ERROR IN TRANSLATION: ${msg}`);
-    return new Error(msg);
+    return new Error(`INTERNAL ERROR IN TRANSLATION: ${msg}`);
   }
 
   needs(doc: Document): ModelDataRequest | undefined {
@@ -291,17 +315,15 @@ export abstract class MalloyElement {
     }
   }
 
-  inExperiment(experimentID: string, silent = false) {
+  inExperiment(experimentId: string, silent = false) {
     const experimental = this.translator()?.compilerFlags.tag('experimental');
     const enabled =
-      experimental && (experimental.bare() || experimental.has(experimentID));
+      experimental && (experimental.bare() || experimental.has(experimentId));
     if (enabled) {
       return true;
     }
     if (!silent) {
-      this.log(
-        `Experimental flag '${experimentID}' is not set, feature not available`
-      );
+      this.logError('experiment-not-enabled', {experimentId});
     }
     return false;
   }
@@ -609,7 +631,10 @@ export class Document extends MalloyElement implements NameSpace {
   setEntry(str: string, ent: ModelEntry): void {
     // TODO this error message is going to be in the wrong place everywhere...
     if (this.globalNameSpace.getEntry(str) !== undefined) {
-      this.log(`Cannot redefine '${str}', which is in global namespace`);
+      this.logError(
+        'name-conflict-with-global',
+        `Cannot redefine '${str}', which is in global namespace`
+      );
     }
     if (modelObjIsSource(ent.entry)) {
       this.checkExperimentalDialect(this, ent.entry.dialect);
@@ -632,10 +657,7 @@ export class Document extends MalloyElement implements NameSpace {
       getDialect(dialect).experimental &&
       !t.experimentalDialectEnabled(dialect)
     ) {
-      me.log(
-        `Requires compiler flag '##! experimental.dialect.${dialect}'`,
-        'error'
-      );
+      me.logError('experimental-dialect-not-enabled', {dialect});
     }
   }
 

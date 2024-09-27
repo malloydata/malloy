@@ -52,12 +52,18 @@ export class DefineQuery
   execute(doc: Document): void {
     const existing = doc.getEntry(this.name);
     if (existing) {
-      this.log(`'${this.name}' is already defined, cannot redefine`);
+      this.logError(
+        'query-definition-name-conflict',
+        `'${this.name}' is already defined, cannot redefine`
+      );
       return;
     }
     const queryEl = this.queryExpr.getQuery();
     if (!queryEl) {
-      this.queryExpr.sqLog('Cannot define a query from this expression');
+      this.queryExpr.sqLog(
+        'query-definition-from-non-query',
+        'Cannot define a query from this expression'
+      );
       return;
     }
     const entry: NamedQuery = {

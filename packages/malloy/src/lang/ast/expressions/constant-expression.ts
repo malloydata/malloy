@@ -40,7 +40,10 @@ export class ConstantFieldSpace implements FieldSpace {
   }
   lookup(_name: unknown): LookupResult {
     return {
-      error: 'Only constants allowed in parameter default values',
+      error: {
+        message: 'Only constants allowed in parameter default values',
+        code: 'illegal-reference-in-parameter-default',
+      },
       found: undefined,
     };
   }

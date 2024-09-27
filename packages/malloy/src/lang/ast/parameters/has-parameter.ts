@@ -59,7 +59,8 @@ export class HasParameter extends MalloyElement {
         constant.dataType !== 'null' &&
         constant.dataType !== 'error'
       ) {
-        this.default.log(
+        this.default.logError(
+          'parameter-default-does-not-match-declared-type',
           `Default value for parameter does not match declared type \`${this.type}\``
         );
       }
@@ -71,7 +72,8 @@ export class HasParameter extends MalloyElement {
             type: this.type,
           };
         } else {
-          this.default.log(
+          this.default.logError(
+            'parameter-null-default-without-declared-type',
             'Default value cannot have type `null` unless parameter type is also specified'
           );
           return {
@@ -82,7 +84,8 @@ export class HasParameter extends MalloyElement {
         }
       }
       if (!isCastType(constant.dataType) && constant.dataType !== 'error') {
-        this.default.log(
+        this.default.logError(
+          'parameter-illegal-default-type',
           `Default value cannot have type \`${constant.dataType}\``
         );
         return {
@@ -98,7 +101,10 @@ export class HasParameter extends MalloyElement {
       };
     }
     if (this.type === undefined) {
-      this.log('Parameter must have default value or declared type');
+      this.logError(
+        'parameter-missing-default-or-type',
+        'Parameter must have default value or declared type'
+      );
     }
     return {
       value: null,

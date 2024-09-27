@@ -39,6 +39,11 @@ import {ColumnSpaceField} from './column-space-field';
 import {StructSpaceField} from './static-space';
 import {QueryInputSpace} from './query-input-space';
 import {SpaceEntry} from '../types/space-entry';
+import {
+  LogMessageOptions,
+  MessageCode,
+  MessageParameterType,
+} from '../../parse-log';
 
 /**
  * The output space of a query operation. It is not named "QueryOutputSpace"
@@ -68,10 +73,15 @@ export abstract class QueryOperationSpace
 
   abstract addRefineFromFields(refineThis: model.PipeSegment): void;
 
-  log(s: string): void {
+  logError<T extends MessageCode>(
+    code: T,
+    parameters: MessageParameterType<T>,
+    options?: Omit<LogMessageOptions, 'severity'>
+  ): T {
     if (this.astEl) {
-      this.astEl.log(s);
+      this.astEl.logError(code, parameters, options);
     }
+    return code;
   }
 
   inputSpace(): QueryInputSpace {
@@ -96,13 +106,17 @@ export abstract class QueryOperationSpace
           if (ent instanceof StructSpaceField) {
             current = ent.fieldSpace;
           } else {
-            pathPart.log(
+            pathPart.logError(
+              'invalid-wildcard-source',
               `Field '${part}' does not contain rows and cannot be expanded with '*'`
             );
             return;
           }
         } else {
-          pathPart.log(`No such field as '${part}'`);
+          pathPart.logError(
+            'wildcard-source-not-defined',
+            `No such field as '${part}'`
+          );
           return;
         }
       }
@@ -118,7 +132,8 @@ export abstract class QueryOperationSpace
       }
       if (this.entry(name)) {
         const conflict = this.expandedWild[name]?.join('.');
-        wild.log(
+        wild.logError(
+          'name-conflict-in-wildcard-expansion',
           `Cannot expand '${name}' in '${
             wild.refString
           }' because a field with that name already exists${
@@ -233,7 +248,10 @@ export abstract class QuerySpace extends QueryOperationSpace {
   ): model.PipeSegment {
     if (this.segmentType === 'index') {
       // come coding error made this "impossible" thing happen
-      this.log('internal error generating index segment from non index query');
+      this.logError(
+        'unexpected-index-segment',
+        'internal error generating index segment from non index query'
+      );
       return {type: 'reduce', queryFields: []};
     }
 

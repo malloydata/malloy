@@ -82,7 +82,7 @@ export abstract class DynamicSpace
 
   newEntry(name: string, logTo: MalloyElement, entry: SpaceEntry): void {
     if (this.entry(name)) {
-      logTo.log(`Cannot redefine '${name}'`);
+      logTo.logError('definition-name-conflict', `Cannot redefine '${name}'`);
       return;
     }
     this.setEntry(name, entry);

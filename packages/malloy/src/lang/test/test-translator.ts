@@ -52,6 +52,7 @@ import {DataRequestResponse, TranslateResponse} from '../translate-response';
 import {StaticSourceSpace} from '../ast/field-space/static-space';
 import {ExprValue} from '../ast/types/expr-value';
 import {GlobalNameSpace} from '../ast/types/global-name-space';
+import {LogSeverity, MessageCode, MessageParameterType} from '../parse-log';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types
 export function pretty(thing: any): string {
@@ -354,6 +355,7 @@ export class TestTranslator extends MalloyTranslator {
       if (whatImports) {
         mysterious = false;
         this.logger.log({
+          code: 'missing-imports',
           at: this.defaultLocation(),
           message: `Missing imports: ${whatImports.join(',')}`,
           severity: 'error',
@@ -363,6 +365,7 @@ export class TestTranslator extends MalloyTranslator {
       if (needThese) {
         mysterious = false;
         this.logger.log({
+          code: 'missing-schema',
           at: this.defaultLocation(),
           message: `Missing schema: ${needThese.join(',')}`,
           severity: 'error',
@@ -370,6 +373,7 @@ export class TestTranslator extends MalloyTranslator {
       }
       if (mysterious) {
         this.logger.log({
+          code: 'mysterious-translation-failure',
           at: this.defaultLocation(),
           message: 'mysterious translation failure',
           severity: 'error',
@@ -661,4 +665,32 @@ export function exprToString(
       return `${subExpr(e.kids.left)} ?? ${subExpr(e.kids.right)}`;
   }
   return `{${e.node}}`;
+}
+
+export function error<T extends MessageCode>(
+  code: T,
+  data?: MessageParameterType<T>
+): {code: T; data: MessageParameterType<T> | undefined; severity: LogSeverity} {
+  return {code, data, severity: 'error'};
+}
+
+export function warning<T extends MessageCode>(
+  code: T,
+  data?: MessageParameterType<T>
+): {code: T; data: MessageParameterType<T> | undefined; severity: LogSeverity} {
+  return {code, data, severity: 'warn'};
+}
+
+export function errorMessage(message: string | RegExp): {
+  message: string | RegExp;
+  severity: LogSeverity;
+} {
+  return {message, severity: 'error'};
+}
+
+export function warningMessage(message: string | RegExp): {
+  message: string | RegExp;
+  severity: LogSeverity;
+} {
+  return {message, severity: 'warn'};
 }

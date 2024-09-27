@@ -69,7 +69,10 @@ export class ViewRefine extends View {
   ): PipeSegment[] {
     const refineFrom = this.pipeline(inputFS, isNestIn);
     if (refineFrom.length !== 1) {
-      this.refinement.log('refinement must have exactly one stage');
+      this.refinement.logError(
+        'refinement-with-multistage-view',
+        'refinement must have exactly one stage'
+      );
       // TODO better error pipeline?
       return pipeline;
     }

@@ -81,6 +81,17 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
   });
 
+  it('bug with wrong join being used with annotation', async () => {
+    await expect(`
+      run: aircraft -> {
+        # foo
+        group_by: aircraft_models.seats
+      }
+    `).malloyResultMatches(expressionModel, {
+      seats: 0,
+    });
+  });
+
   // Floor was broken (wouldn't compile because the expression returned isn't an aggregate.)
   it('Floor() -or any function bustage with aggregates', async () => {
     await expect(`

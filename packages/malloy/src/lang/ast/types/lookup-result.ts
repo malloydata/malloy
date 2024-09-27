@@ -22,6 +22,7 @@
  */
 
 import {JoinElementType, JoinType} from '../../../model';
+import {MessageCode} from '../../parse-log';
 import {SpaceEntry} from './space-entry';
 
 export interface JoinPathElement {
@@ -38,7 +39,7 @@ export interface LookupFound {
   isOutputField: boolean;
 }
 export interface LookupError {
-  error: string;
+  error: {message: string; code: MessageCode};
   found: undefined;
 }
 

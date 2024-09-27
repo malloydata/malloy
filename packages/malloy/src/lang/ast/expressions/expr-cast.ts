@@ -50,7 +50,8 @@ export class ExprCast extends ExpressionDef {
           // but `TypeDesc` does not support them.
           dataType = dialect.sqlTypeToMalloyType(this.castType.raw).type;
         } else {
-          this.log(
+          this.logError(
+            'invalid-sql-native-type',
             `Cast type \`${this.castType.raw}\` is invalid for ${dialect.name} dialect`
           );
         }

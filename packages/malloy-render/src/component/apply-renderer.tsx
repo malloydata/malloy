@@ -12,7 +12,7 @@ import {valueIsNumber, valueIsString} from './util';
 import {JSXElement} from 'solid-js';
 import {renderNumericField} from './render-numeric-field';
 import {renderLink} from './render-link';
-import {Chart} from './chart';
+import {Chart} from './chart/chart';
 import MalloyTable from './table/table';
 import {renderList} from './render-list';
 import {renderImage} from './render-image';

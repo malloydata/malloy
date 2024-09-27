@@ -70,7 +70,10 @@ export abstract class Join
   protected getStructDefFromExpr(parameterSpace: ParameterSpace): SourceDef {
     const source = this.sourceExpr.getSource();
     if (!source) {
-      this.sourceExpr.sqLog('Cannot great a source to join from');
+      this.sourceExpr.sqLog(
+        'invalid-join-source',
+        'Cannot create a source to join from'
+      );
       return ErrorFactory.structDef;
     }
     return source.getStructDef(parameterSpace);
@@ -135,15 +138,22 @@ export class KeyJoin extends Join {
           };
           return;
         } else {
-          this.log(
+          this.logError(
+            'join-on-primary-key-type-mismatch',
             `join_one: with type mismatch with primary key: ${exprX.dataType}/${pkey.type}`
           );
         }
       } else {
-        this.log(`join_one: Primary key '${pkey}' not found in source`);
+        this.logError(
+          'join-primary-key-not-found',
+          `join_one: Primary key '${pkey}' not found in source`
+        );
       }
     } else {
-      this.log('join_one: Cannot use with unless source has a primary key');
+      this.logError(
+        'join-with-without-primary-key',
+        'join_one: Cannot use with unless source has a primary key'
+      );
     }
   }
 }
@@ -175,7 +185,10 @@ export class ExpressionJoin extends Join {
     }
     const exprX = this.expr.getExpression(outer);
     if (exprX.dataType !== 'boolean') {
-      this.log('join conditions must be boolean expressions');
+      this.logError(
+        'non-boolean-join-on',
+        'join conditions must be boolean expressions'
+      );
       return;
     }
     inStruct.onExpression = exprX.value;
@@ -184,7 +197,10 @@ export class ExpressionJoin extends Join {
   structDef(parameterSpace: ParameterSpace): JoinFieldDef {
     const source = this.sourceExpr.getSource();
     if (!source) {
-      this.sourceExpr.sqLog('Cannot create a source to join from');
+      this.sourceExpr.sqLog(
+        'invalid-join-source',
+        'Cannot create a source to join from'
+      );
       return ErrorFactory.joinDef;
     }
     const sourceDef = source.getStructDef(parameterSpace);

@@ -22,7 +22,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {model, TestTranslator, markSource} from './test-translator';
+import {
+  model,
+  TestTranslator,
+  markSource,
+  errorMessage,
+  warningMessage,
+} from './test-translator';
 import './parse-expects';
 
 describe('source:', () => {
@@ -38,8 +44,10 @@ describe('source:', () => {
     expect(`
       ##! m4warnings=warn
       source: xA is _db_.table('aTable') extend {? astr ~ 'a%' }
-    `).toTranslateWithWarnings(
-      'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead'
+    `).toLog(
+      warningMessage(
+        'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead'
+      )
     );
   });
   test('fitlered table', () => {
@@ -76,8 +84,10 @@ describe('source:', () => {
     test('field def with null value', () => {
       expect(
         markSource`source: aa is a extend { dimension: x is ${'null'} }`
-      ).toTranslateWithWarnings(
-        'null value defaults to type number, use "null::TYPE" to specify correct type'
+      ).toLog(
+        warningMessage(
+          'null value defaults to type number, use "null::TYPE" to specify correct type'
+        )
       );
     });
     test('multiple dimensions', () => {
@@ -171,7 +181,7 @@ describe('source:', () => {
       test('many with', () => {
         expect(
           model`source: nab is a extend { ${'join_many: b with astr'} }`
-        ).translationToFailWith('Foreign key join not legal in join_many:');
+        ).toLog(errorMessage('Foreign key join not legal in join_many:'));
       });
       test('many is on', () => {
         expect(
@@ -205,8 +215,10 @@ describe('source:', () => {
               join_one: ${'bb is _db_.table("aTable") with astr'}
             }
           `
-        ).translationToFailWith(
-          'join_one: Cannot use with unless source has a primary key'
+        ).toLog(
+          errorMessage(
+            'join_one: Cannot use with unless source has a primary key'
+          )
         );
       });
       test('can join a query without a rename', () => {
@@ -261,9 +273,7 @@ describe('source:', () => {
         `##! m4warnings=warn
           source: c is a extend {query: q is { group_by: astr } }
         `
-      ).toTranslateWithWarnings(
-        'Use view: inside of a source instead of query:'
-      );
+      ).toLog(warningMessage('Use view: inside of a source instead of query:'));
     });
     test('refined explore-query', () => {
       expect(`
@@ -278,8 +288,10 @@ describe('source:', () => {
         source: abNew is ab extend {
           view: for1 is aturtle + {? ai = 1 }
         }
-      `).toTranslateWithWarnings(
-        'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead'
+      `).toLog(
+        warningMessage(
+          'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead'
+        )
       );
     });
     test('chained explore-query', () => {
