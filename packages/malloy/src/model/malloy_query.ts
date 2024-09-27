@@ -4512,7 +4512,7 @@ class QueryStruct extends QueryNode {
             stageWriter,
             this.prepareResultOptions,
             false,
-            true, // this is an intermediate stage.
+            true // this is an intermediate stage.
           ).lastStageName;
         }
       }
@@ -4731,7 +4731,7 @@ export class QueryModel {
     stageWriter: StageWriter | undefined,
     prepareResultOptions?: PrepareResultOptions,
     emitFinalStage = false,
-    isJoinedSubquery = false,
+    isJoinedSubquery = false
   ): QueryResults {
     const malloy = '';
 
