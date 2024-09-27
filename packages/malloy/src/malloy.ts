@@ -899,7 +899,7 @@ export class PreparedQuery implements Taggable {
 
   public getPreparedResult(options?: PrepareResultOptions): PreparedResult {
     const queryModel = new QueryModel(this._modelDef);
-    const translatedQuery = queryModel.compileQuery(this._query, options);
+    const translatedQuery = queryModel.compileQuery(this._query, options, false);
     return new PreparedResult(
       {
         ...translatedQuery,
