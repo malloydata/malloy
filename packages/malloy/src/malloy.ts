@@ -66,6 +66,8 @@ import {
   Annotation,
   NamedModelObject,
   QueryValue,
+  QueryToMaterialize,
+  PrepareResultOptions,
 } from './model';
 import {
   ModelString,
@@ -218,12 +220,14 @@ export class Malloy {
     model,
     refreshSchemaCache,
     noThrowOnError,
+    replaceMaterializedReferences,
   }: {
     urlReader: URLReader;
     connections: LookupConnection<InfoConnection>;
     parse: Parse;
     model?: Model;
-  } & CompileOptions): Promise<Model> {
+  } & CompileOptions &
+    PrepareResultOptions): Promise<Model> {
     let refreshTimestamp: number | undefined;
     if (refreshSchemaCache) {
       refreshTimestamp =
@@ -345,7 +349,8 @@ export class Malloy {
             const conn = await connections.lookupConnection(connectionName);
             const expanded = Malloy.compileSQLBlock(
               result.partialModel,
-              toCompile
+              toCompile,
+              {replaceMaterializedReferences}
             );
             const resolved = await conn.fetchSchemaForSQLBlock(expanded, {
               refreshTimestamp,
@@ -375,7 +380,8 @@ export class Malloy {
 
   static compileSQLBlock(
     partialModel: ModelDef | undefined,
-    toCompile: SQLBlockSource
+    toCompile: SQLBlockSource,
+    options?: {replaceMaterializedReferences?: boolean}
   ): SQLBlock {
     let queryModel: QueryModel | undefined = undefined;
     let selectStr = '';
@@ -394,7 +400,11 @@ export class Malloy {
           }
           queryModel = new QueryModel(partialModel);
         }
-        const compiledSql = queryModel.compileQuery(segment, false).sql;
+        const compiledSql = queryModel.compileQuery(
+          segment,
+          options,
+          false
+        ).sql;
         selectStr += parenAlready ? compiledSql : `(${compiledSql})`;
         parenAlready = false;
       }
@@ -785,6 +795,15 @@ export class Model implements Taggable {
    * @return A prepared query.
    */
   public get preparedQuery(): PreparedQuery {
+    return this.getPreparedQuery();
+  }
+
+  /**
+   * Retrieve a prepared query for the final unnamed query at the top level of a model.
+   *
+   * @return A prepared query.
+   */
+  public getPreparedQuery(): PreparedQuery {
     if (this.queryList.length === 0) {
       throw new Error('Model has no queries.');
     }
@@ -879,8 +898,12 @@ export class PreparedQuery implements Taggable {
    * @return A fully-prepared query (which contains the generated SQL).
    */
   public get preparedResult(): PreparedResult {
+    return this.getPreparedResult();
+  }
+
+  public getPreparedResult(options?: PrepareResultOptions): PreparedResult {
     const queryModel = new QueryModel(this._modelDef);
-    const translatedQuery = queryModel.compileQuery(this._query);
+    const translatedQuery = queryModel.compileQuery(this._query, options);
     return new PreparedResult(
       {
         ...translatedQuery,
@@ -1233,6 +1256,12 @@ export class PreparedResult implements Taggable {
    */
   public get sql(): string {
     return this.inner.sql;
+  }
+
+  public get dependenciesToMaterialize():
+    | Record<string, QueryToMaterialize>
+    | undefined {
+    return this.inner.dependenciesToMaterialize;
   }
 
   /**
@@ -2210,7 +2239,7 @@ export class Runtime {
    */
   public loadModel(
     source: ModelURL | ModelString,
-    options?: ParseOptions & CompileOptions
+    options?: ParseOptions & CompileOptions & PrepareResultOptions
   ): ModelMaterializer {
     const {refreshSchemaCache, noThrowOnError} = options || {};
     if (this.isTestRuntime) {
@@ -2220,36 +2249,48 @@ export class Runtime {
         options = {...options, testEnvironment: true};
       }
     }
-    return new ModelMaterializer(this, async () => {
-      const parse =
-        source instanceof URL
-          ? await Malloy.parse({
-              url: source,
-              urlReader: this.urlReader,
-              options,
-            })
-          : Malloy.parse({
-              source,
-              options,
-            });
-      return Malloy.compile({
-        urlReader: this.urlReader,
-        connections: this.connections,
-        parse,
-        refreshSchemaCache,
-        noThrowOnError,
-      });
-    });
+    return new ModelMaterializer(
+      this,
+      async () => {
+        const parse =
+          source instanceof URL
+            ? await Malloy.parse({
+                url: source,
+                urlReader: this.urlReader,
+                options,
+              })
+            : Malloy.parse({
+                source,
+                options,
+              });
+        return Malloy.compile({
+          urlReader: this.urlReader,
+          connections: this.connections,
+          parse,
+          refreshSchemaCache,
+          noThrowOnError,
+          replaceMaterializedReferences: options?.replaceMaterializedReferences,
+        });
+      },
+      options
+    );
   }
 
   // TODO Consider formalizing this. Perhaps as a `withModel` method,
   //      as well as a `Model.fromModelDefinition` if we choose to expose
   //      `ModelDef` to the world formally. For now, this should only
   //      be used in tests.
-  public _loadModelFromModelDef(modelDef: ModelDef): ModelMaterializer {
-    return new ModelMaterializer(this, async () => {
-      return new Model(modelDef, [], [], [], []);
-    });
+  public _loadModelFromModelDef(
+    modelDef: ModelDef,
+    options?: PrepareResultOptions
+  ): ModelMaterializer {
+    return new ModelMaterializer(
+      this,
+      async () => {
+        return new Model(modelDef, [], [], [], []);
+      },
+      options
+    );
   }
 
   /**
@@ -2261,7 +2302,7 @@ export class Runtime {
    */
   public loadQuery(
     query: QueryURL | QueryString,
-    options?: ParseOptions & CompileOptions
+    options?: ParseOptions & CompileOptions & PrepareResultOptions
   ): QueryMaterializer {
     return this.loadModel(query, options).loadFinalQuery();
   }
@@ -2278,9 +2319,9 @@ export class Runtime {
   public loadQueryByIndex(
     model: ModelURL | ModelString,
     index: number,
-    options?: ParseOptions & CompileOptions
+    options?: ParseOptions & CompileOptions & PrepareResultOptions
   ): QueryMaterializer {
-    return this.loadModel(model, options).loadQueryByIndex(index);
+    return this.loadModel(model, options).loadQueryByIndex(index, options);
   }
 
   /**
@@ -2295,9 +2336,9 @@ export class Runtime {
   public loadQueryByName(
     model: ModelURL | ModelString,
     name: string,
-    options?: ParseOptions & CompileOptions
+    options?: ParseOptions & CompileOptions & PrepareResultOptions
   ): QueryMaterializer {
-    return this.loadModel(model, options).loadQueryByName(name);
+    return this.loadModel(model, options).loadQueryByName(name, options);
   }
 
   /**
@@ -2312,7 +2353,7 @@ export class Runtime {
   public loadSQLBlockByName(
     model: ModelURL | ModelString,
     name: string,
-    options?: ParseOptions & CompileOptions
+    options?: ParseOptions & CompileOptions & PrepareResultOptions
   ): SQLBlockMaterializer {
     return this.loadModel(model, options).loadSQLBlockByName(name);
   }
@@ -2515,15 +2556,17 @@ class FluentState<T> {
   }
 
   protected makeQueryMaterializer(
-    materialize: () => Promise<PreparedQuery>
+    materialize: () => Promise<PreparedQuery>,
+    options?: PrepareResultOptions
   ): QueryMaterializer {
-    return new QueryMaterializer(this.runtime, materialize);
+    return new QueryMaterializer(this.runtime, materialize, options);
   }
 
   protected makeExploreMaterializer(
-    materialize: () => Promise<Explore>
+    materialize: () => Promise<Explore>,
+    options?: PrepareResultOptions
   ): ExploreMaterializer {
-    return new ExploreMaterializer(this.runtime, materialize);
+    return new ExploreMaterializer(this.runtime, materialize, options);
   }
 
   protected makePreparedResultMaterializer(
@@ -2545,16 +2588,33 @@ class FluentState<T> {
  * queries or explores (via e.g. `loadFinalQuery()`, `loadQuery`, `loadExploreByName`, etc.).
  */
 export class ModelMaterializer extends FluentState<Model> {
+  private readonly replaceMaterializedReferences: boolean;
+  constructor(
+    protected runtime: Runtime,
+    materialize: () => Promise<Model>,
+    options?: PrepareResultOptions
+  ) {
+    super(runtime, materialize);
+    this.replaceMaterializedReferences =
+      options?.replaceMaterializedReferences ?? false;
+  }
+
   /**
    * Load the final (unnamed) Malloy query contained within this loaded `Model`.
    *
    * @return A `QueryMaterializer` capable of materializing the requested query, running it,
    * or loading further related objects.
    */
-  public loadFinalQuery(): QueryMaterializer {
-    return this.makeQueryMaterializer(async () => {
-      return (await this.materialize()).preparedQuery;
-    });
+  public loadFinalQuery(options?: PrepareResultOptions): QueryMaterializer {
+    return this.makeQueryMaterializer(
+      async () => {
+        return (await this.materialize()).getPreparedQuery();
+      },
+      {
+        replaceMaterializedReferences: this.replaceMaterializedReferences,
+        ...options,
+      }
+    );
   }
 
   /**
@@ -2564,10 +2624,19 @@ export class ModelMaterializer extends FluentState<Model> {
    * @return A `QueryMaterializer` capable of materializing the requested query, running it,
    * or loading further related objects.
    */
-  public loadQueryByIndex(index: number): QueryMaterializer {
-    return this.makeQueryMaterializer(async () => {
-      return (await this.materialize()).getPreparedQueryByIndex(index);
-    });
+  public loadQueryByIndex(
+    index: number,
+    options?: PrepareResultOptions
+  ): QueryMaterializer {
+    return this.makeQueryMaterializer(
+      async () => {
+        return (await this.materialize()).getPreparedQueryByIndex(index);
+      },
+      {
+        replaceMaterializedReferences: this.replaceMaterializedReferences,
+        ...options,
+      }
+    );
   }
 
   /**
@@ -2577,10 +2646,19 @@ export class ModelMaterializer extends FluentState<Model> {
    * @return A `QueryMaterializer` capable of materializing the requested query, running it,
    * or loading further related objects.
    */
-  public loadQueryByName(name: string): QueryMaterializer {
-    return this.makeQueryMaterializer(async () => {
-      return (await this.materialize()).getPreparedQueryByName(name);
-    });
+  public loadQueryByName(
+    name: string,
+    options?: PrepareResultOptions
+  ): QueryMaterializer {
+    return this.makeQueryMaterializer(
+      async () => {
+        return (await this.materialize()).getPreparedQueryByName(name);
+      },
+      {
+        replaceMaterializedReferences: this.replaceMaterializedReferences,
+        ...options,
+      }
+    );
   }
 
   /**
@@ -2592,7 +2670,7 @@ export class ModelMaterializer extends FluentState<Model> {
    */
   public loadQuery(
     query: QueryString | QueryURL,
-    options?: ParseOptions & CompileOptions
+    options?: ParseOptions & CompileOptions & PrepareResultOptions
   ): QueryMaterializer {
     const {refreshSchemaCache, noThrowOnError} = options || {};
     return this.makeQueryMaterializer(async () => {
@@ -2624,6 +2702,9 @@ export class ModelMaterializer extends FluentState<Model> {
         model,
         refreshSchemaCache,
         noThrowOnError,
+        replaceMaterializedReferences:
+          options?.replaceMaterializedReferences ??
+          this.replaceMaterializedReferences,
       });
       return queryModel.preparedQuery;
     });
@@ -2638,7 +2719,7 @@ export class ModelMaterializer extends FluentState<Model> {
    */
   public extendModel(
     query: QueryString | QueryURL,
-    options?: ParseOptions & CompileOptions
+    options?: ParseOptions & CompileOptions & PrepareResultOptions
   ): ModelMaterializer {
     if (this.runtime.isTestRuntime) {
       if (options === undefined) {
@@ -2647,31 +2728,38 @@ export class ModelMaterializer extends FluentState<Model> {
         options = {...options, testEnvironment: true};
       }
     }
-    return new ModelMaterializer(this.runtime, async () => {
-      const urlReader = this.runtime.urlReader;
-      const connections = this.runtime.connections;
-      const parse =
-        query instanceof URL
-          ? await Malloy.parse({
-              url: query,
-              urlReader,
-              options,
-            })
-          : Malloy.parse({
-              source: query,
-              options,
-            });
-      const model = await this.getModel();
-      const queryModel = await Malloy.compile({
-        urlReader,
-        connections,
-        parse,
-        model,
-        refreshSchemaCache: options?.refreshSchemaCache,
-        noThrowOnError: options?.noThrowOnError,
-      });
-      return queryModel;
-    });
+    return new ModelMaterializer(
+      this.runtime,
+      async () => {
+        const urlReader = this.runtime.urlReader;
+        const connections = this.runtime.connections;
+        const parse =
+          query instanceof URL
+            ? await Malloy.parse({
+                url: query,
+                urlReader,
+                options,
+              })
+            : Malloy.parse({
+                source: query,
+                options,
+              });
+        const model = await this.getModel();
+        const queryModel = await Malloy.compile({
+          urlReader,
+          connections,
+          parse,
+          model,
+          refreshSchemaCache: options?.refreshSchemaCache,
+          noThrowOnError: options?.noThrowOnError,
+          replaceMaterializedReferences:
+            options?.replaceMaterializedReferences ??
+            this.replaceMaterializedReferences,
+        });
+        return queryModel;
+      },
+      options
+    );
   }
 
   public async search(
@@ -2835,11 +2923,20 @@ export class ModelMaterializer extends FluentState<Model> {
   //      as well as a `PreparedQuery.fromQueryDefinition` if we choose to expose
   //      `InternalQuery` to the world formally. For now, this should only
   //      be used in tests.
-  public _loadQueryFromQueryDef(query: InternalQuery): QueryMaterializer {
-    return this.makeQueryMaterializer(async () => {
-      const model = await this.materialize();
-      return new PreparedQuery(query, model._modelDef, model.problems);
-    });
+  public _loadQueryFromQueryDef(
+    query: InternalQuery,
+    options?: PrepareResultOptions
+  ): QueryMaterializer {
+    return this.makeQueryMaterializer(
+      async () => {
+        const model = await this.materialize();
+        return new PreparedQuery(query, model._modelDef, model.problems);
+      },
+      {
+        replaceMaterializedReferences: this.replaceMaterializedReferences,
+        ...options,
+      }
+    );
   }
 
   /**
@@ -2850,9 +2947,14 @@ export class ModelMaterializer extends FluentState<Model> {
    * or loading further related objects.
    */
   public loadExploreByName(name: string): ExploreMaterializer {
-    return this.makeExploreMaterializer(async () => {
-      return (await this.materialize()).getExploreByName(name);
-    });
+    return this.makeExploreMaterializer(
+      async () => {
+        return (await this.materialize()).getExploreByName(name);
+      },
+      {
+        replaceMaterializedReferences: this.replaceMaterializedReferences,
+      }
+    );
   }
 
   /**
@@ -2881,20 +2983,39 @@ export class ModelMaterializer extends FluentState<Model> {
  * prepared results or run the query (via e.g. `loadPreparedResult()` or `run()`).
  */
 export class QueryMaterializer extends FluentState<PreparedQuery> {
+  private readonly replaceMaterializedReferences: boolean;
+  constructor(
+    protected runtime: Runtime,
+    materialize: () => Promise<PreparedQuery>,
+    options?: PrepareResultOptions
+  ) {
+    super(runtime, materialize);
+    this.replaceMaterializedReferences =
+      options?.replaceMaterializedReferences ?? false;
+  }
+
   /**
    * Run this loaded `Query`.
    *
    * @return The query results from running this loaded query.
    */
-  async run(options?: RunSQLOptions): Promise<Result> {
+  async run(options?: RunSQLOptions & PrepareResultOptions): Promise<Result> {
     const connections = this.runtime.connections;
-    const preparedResult = await this.getPreparedResult();
+    const preparedResult = await this.getPreparedResult({
+      replaceMaterializedReferences: this.replaceMaterializedReferences,
+      ...options,
+    });
     const finalOptions = runSQLOptionsWithAnnotations(preparedResult, options);
     return Malloy.run({connections, preparedResult, options: finalOptions});
   }
 
-  async *runStream(options?: RunSQLOptions): AsyncIterableIterator<DataRecord> {
-    const preparedResult = await this.getPreparedResult();
+  async *runStream(
+    options?: RunSQLOptions & PrepareResultOptions
+  ): AsyncIterableIterator<DataRecord> {
+    const preparedResult = await this.getPreparedResult({
+      replaceMaterializedReferences: this.replaceMaterializedReferences,
+      ...options,
+    });
     const connections = this.runtime.connections;
     const finalOptions = runSQLOptionsWithAnnotations(preparedResult, options);
     const stream = Malloy.runStream({
@@ -2913,9 +3034,14 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
    * @return A `PreparedResultMaterializer` capable of materializing the requested
    * prepared query or running it.
    */
-  public loadPreparedResult(): PreparedResultMaterializer {
+  public loadPreparedResult(
+    options?: PrepareResultOptions
+  ): PreparedResultMaterializer {
     return this.makePreparedResultMaterializer(async () => {
-      return (await this.materialize()).preparedResult;
+      return (await this.materialize()).getPreparedResult({
+        replaceMaterializedReferences: this.replaceMaterializedReferences,
+        ...options,
+      });
     });
   }
 
@@ -2924,8 +3050,13 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
    *
    * @return A promise of the prepared result of this loaded query.
    */
-  public getPreparedResult(): Promise<PreparedResult> {
-    return this.loadPreparedResult().getPreparedResult();
+  public getPreparedResult(
+    options?: PrepareResultOptions
+  ): Promise<PreparedResult> {
+    return this.loadPreparedResult({
+      replaceMaterializedReferences: this.replaceMaterializedReferences,
+      ...options,
+    }).getPreparedResult();
   }
 
   /**
@@ -2933,8 +3064,13 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
    *
    * @return A promise of the SQL string.
    */
-  public async getSQL(): Promise<string> {
-    return (await this.getPreparedResult()).sql;
+  public async getSQL(options?: PrepareResultOptions): Promise<string> {
+    return (
+      await this.getPreparedResult({
+        replaceMaterializedReferences: this.replaceMaterializedReferences,
+        ...options,
+      })
+    ).sql;
   }
 
   /**
@@ -2951,9 +3087,14 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
    *
    * @return The estimated cost of running this loaded query.
    */
-  public async estimateQueryCost(): Promise<QueryRunStats> {
+  public async estimateQueryCost(
+    options?: PrepareResultOptions
+  ): Promise<QueryRunStats> {
     const connections = this.runtime.connections;
-    const preparedResult = await this.getPreparedResult();
+    const preparedResult = await this.getPreparedResult({
+      replaceMaterializedReferences: this.replaceMaterializedReferences,
+      ...options,
+    });
     return Malloy.estimateQueryCost({connections, preparedResult});
   }
 }
@@ -3090,6 +3231,17 @@ export class SQLBlockMaterializer extends FluentState<SQLBlockStructDef> {
  * related queries.
  */
 export class ExploreMaterializer extends FluentState<Explore> {
+  private readonly replaceMaterializedReferences: boolean;
+  constructor(
+    protected runtime: Runtime,
+    materialize: () => Promise<Explore>,
+    options?: PrepareResultOptions
+  ) {
+    super(runtime, materialize);
+    this.replaceMaterializedReferences =
+      options?.replaceMaterializedReferences ?? false;
+  }
+
   /**
    * Load a query contained within this loaded explore.
    *
@@ -3097,10 +3249,13 @@ export class ExploreMaterializer extends FluentState<Explore> {
    * @return A `QueryMaterializer` capable of materializing the requested query, running it,
    * or loading further related objects.
    */
-  public loadQueryByName(name: string): QueryMaterializer {
+  public loadQueryByName(
+    name: string,
+    options?: PrepareResultOptions
+  ): QueryMaterializer {
     return this.makeQueryMaterializer(async () => {
       return (await this.materialize()).getQueryByName(name);
-    });
+    }, options);
   }
 
   /**
