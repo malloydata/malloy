@@ -402,7 +402,7 @@ export class Malloy {
         }
         const compiledSql = queryModel.compileQuery(
           segment,
-          false,
+          undefined,
           options
         ).sql;
         selectStr += parenAlready ? compiledSql : `(${compiledSql})`;
@@ -905,7 +905,7 @@ export class PreparedQuery implements Taggable {
     const queryModel = new QueryModel(this._modelDef);
     const translatedQuery = queryModel.compileQuery(
       this._query,
-      false,
+      undefined,
       options
     );
     return new PreparedResult(
