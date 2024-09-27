@@ -103,8 +103,7 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
       }
     }
 
-    run: foo -> fooview;
-    `;
+    run: foo -> fooview;`;
 
     const qm = runtime.loadQuery(query, {replaceMaterializedReferences: false});
     const pq = await qm.getPreparedQuery();
