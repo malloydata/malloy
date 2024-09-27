@@ -1332,4 +1332,9 @@ export interface SearchValueMapResult {
   cardinality: number;
   values: {fieldValue: string; weight: number}[];
 }
+
+export interface PrepareResultOptions {
+  replaceMaterializedReferences?: boolean;
+}
+
 // clang-format on

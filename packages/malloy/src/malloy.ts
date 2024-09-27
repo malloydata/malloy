@@ -67,6 +67,7 @@ import {
   NamedModelObject,
   QueryValue,
   QueryToMaterialize,
+  PrepareResultOptions,
 } from './model';
 import {
   ModelString,
@@ -100,10 +101,6 @@ export interface ParseOptions {
 export interface CompileOptions {
   refreshSchemaCache?: boolean | number;
   noThrowOnError?: boolean;
-}
-
-interface PrepareResultOptions {
-  replaceMaterializedReferences?: boolean;
 }
 
 export class Malloy {
@@ -406,7 +403,7 @@ export class Malloy {
         const compiledSql = queryModel.compileQuery(
           segment,
           false,
-          options?.replaceMaterializedReferences
+          options
         ).sql;
         selectStr += parenAlready ? compiledSql : `(${compiledSql})`;
         parenAlready = false;
@@ -909,7 +906,7 @@ export class PreparedQuery implements Taggable {
     const translatedQuery = queryModel.compileQuery(
       this._query,
       false,
-      options?.replaceMaterializedReferences ?? false
+      options
     );
     return new PreparedResult(
       {
