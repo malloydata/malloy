@@ -122,19 +122,16 @@ export class NamedSource extends Source {
         `Cannot construct a source from a connection '${this.refName}'`
       );
       return;
-    } else if (isSQLBlockStruct(entry) && entry.declaredSQLBlock) {
-      this.logError(
-        'invalid-source-from-sql-block',
-        `Must use 'from_sql()' for sql source '${this.refName}'`
-      );
-      return;
     } else {
       this.document()?.checkExperimentalDialect(this, entry.dialect);
       if (isSourceDef(entry)) {
         return {...entry};
       }
     }
-    this.log(`Cannot construct a source from a ${entry.type}`);
+    this.logError(
+      'invalid-source-source',
+      `Cannot construct a source from a ${entry.type}`
+    );
   }
 
   private evaluateArgumentsForRef(

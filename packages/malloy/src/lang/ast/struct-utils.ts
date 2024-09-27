@@ -58,7 +58,8 @@ export function opOutputStruct(
         return pipeOutputStruct;
       }
       // Inconcievable, a pipe deosnt output a record or an array
-      logTo.log(
+      logTo.logError(
+        'failed-to-compute-output-schema',
         'INTERNAL ERROR model/Segment.nextStructDef: RETURNED A NON SOURCE\n' +
           `STRUCTDEF: ${inspect(pipeOutputStruct, {
             breakLength: 72,

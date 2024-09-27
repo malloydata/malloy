@@ -34,7 +34,6 @@ import {
   isAtomic,
 } from '../../../model/malloy_types';
 import {exprWalk} from '../../../model/utils';
-import {MessageCode} from '../../parse-log';
 
 import {errorFor} from '../ast-utils';
 import {StructSpaceField} from '../field-space/static-space';
@@ -47,6 +46,7 @@ import {FieldSpace} from '../types/field-space';
 import {SpaceField} from '../types/space-field';
 import {ExprIdReference} from './expr-id-reference';
 import {JoinPath, JoinPathElement} from '../types/lookup-result';
+import {MessageCode} from '../../parse-log';
 
 export abstract class ExprAggregateFunction extends ExpressionDef {
   elementType: string;
@@ -318,20 +318,23 @@ function getJoinUsagePaths(
   return sourceToUsagePaths;
 }
 
-function validateUsagePaths(functionName: string, usagePaths: UsagePath[]) {
+function validateUsagePaths(
+  functionName: string,
+  usagePaths: UsagePath[]
+): {message: string; code: MessageCode} | undefined {
   for (const path of usagePaths) {
     for (const step of path) {
-      if (step.structRelationship.type === 'cross') {
+      if (step.joinType === 'cross') {
         return {
           code: 'aggregate-traverses-join-cross',
           message: `Cannot compute \`${functionName}\` across \`join_cross\` relationship \`${step.name}\``,
         };
-      } else if (step.structRelationship.type === 'many' && !step.reverse) {
+      } else if (step.joinType === 'many' && !step.reverse) {
         return {
           code: 'aggregate-traverses-join-many',
           message: `Cannot compute \`${functionName}\` across \`join_many\` relationship \`${step.name}\``,
         };
-      } else if (step.structRelationship.type === 'nested' && !step.reverse) {
+      } else if (step.joinElementType === 'array' && !step.reverse) {
         return {
           code: 'aggregate-traverses-repeated-relationship',
           message: `Cannot compute \`${functionName}\` across repeated relationship \`${step.name}\``,
