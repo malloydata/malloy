@@ -4381,8 +4381,6 @@ class QueryStruct extends QueryNode {
         .loadQuery(
           this.fieldDef.structSource.query,
           undefined,
-          undefined,
-          undefined,
           this.prepareResultOptions
         )
         .structs.pop();
@@ -4512,9 +4510,9 @@ class QueryStruct extends QueryNode {
           return this.model.loadQuery(
             this.fieldDef.structSource.query,
             stageWriter,
+            this.prepareResultOptions,
             false,
             true, // this is an intermediate stage.
-            this.prepareResultOptions
           ).lastStageName;
         }
       }
@@ -4731,9 +4729,9 @@ export class QueryModel {
   loadQuery(
     query: Query,
     stageWriter: StageWriter | undefined,
+    prepareResultOptions?: PrepareResultOptions,
     emitFinalStage = false,
     isJoinedSubquery = false,
-    prepareResultOptions?: PrepareResultOptions
   ): QueryResults {
     const malloy = '';
 
@@ -4783,17 +4781,17 @@ export class QueryModel {
 
   compileQuery(
     query: Query,
-    finalize = true,
-    prepareResultOptions?: PrepareResultOptions
+    prepareResultOptions?: PrepareResultOptions,
+    finalize = true
   ): CompiledQuery {
     let newModel: QueryModel | undefined;
     const m = newModel || this;
     const ret = m.loadQuery(
       query,
       undefined,
+      prepareResultOptions,
       finalize,
-      false,
-      prepareResultOptions
+      false
     );
     const sourceExplore =
       typeof query.structRef === 'string'
@@ -4867,7 +4865,7 @@ export class QueryModel {
     // if we've compiled the SQL before use it otherwise
     let sqlPDT = this.exploreSearchSQLMap.get(explore);
     if (sqlPDT === undefined) {
-      sqlPDT = this.compileQuery(indexQuery, false).sql;
+      sqlPDT = this.compileQuery(indexQuery, undefined, false).sql;
       this.exploreSearchSQLMap.set(explore, sqlPDT);
     }
 
