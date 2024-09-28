@@ -5,7 +5,13 @@
  *  LICENSE file in the root directory of this source tree.
  */
 
-import {isAtomicFieldType, RecordLiteralNode, TypedExpr} from '../../../model';
+import {
+  ExpressionType,
+  isAtomicFieldType,
+  maxExpressionType,
+  RecordLiteralNode,
+  TypedExpr,
+} from '../../../model';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
@@ -34,6 +40,7 @@ export class RecordLiteral extends ExpressionDef {
       node: 'recordLiteral',
       kids: {},
     };
+    let resultExprType: ExpressionType = 'scalar';
     for (const el of this.pairs) {
       const xVal = el.value.getExpression(fs);
       const expr: TypedExpr = {dataType: 'error', ...xVal.value};
@@ -47,11 +54,12 @@ export class RecordLiteral extends ExpressionDef {
         );
       }
       recLit.kids[el.key] = expr;
+      resultExprType = maxExpressionType(xVal.expressionType, resultExprType);
     }
     return {
       dataType: 'record',
       value: recLit,
-      expressionType: 'scalar',
+      expressionType: resultExprType,
       evalSpace: 'literal',
     };
   }
