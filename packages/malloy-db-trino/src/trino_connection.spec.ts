@@ -107,7 +107,7 @@ describe('Trino connection', () => {
     it('parses deep nesting', () => {
       expect(connection.malloyTypeFromTrinoType('test', DEEP_SCHEMA)).toEqual({
         'name': 'test',
-        'type': 'arrasy',
+        'type': 'array',
         'dialect': 'trino',
         'dataType': {type: 'record_element'},
         'join': 'many',

@@ -32,7 +32,7 @@ import {
   QueryOptionsReader,
   QueryRunStats,
   RunSQLOptions,
-  StandardSQLDialect,
+  TrinoDialect,
   StructDef,
   TableSourceDef,
   SQLSourceDef,
@@ -165,7 +165,7 @@ export abstract class TrinoPrestoConnection
   implements Connection, PersistSQLResults
 {
   public name: string;
-  private readonly dialect = new StandardSQLDialect();
+  private readonly dialect = new TrinoDialect();
   static DEFAULT_QUERY_OPTIONS: RunSQLOptions = {
     rowLimit: 10,
   };

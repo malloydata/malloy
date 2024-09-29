@@ -23,6 +23,7 @@
 export {
   DuckDBDialect,
   StandardSQLDialect,
+  TrinoDialect,
   PostgresDialect,
   SnowflakeDialect,
   registerDialect,
