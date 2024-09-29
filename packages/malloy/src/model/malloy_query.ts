@@ -4237,7 +4237,12 @@ class QueryStruct extends QueryNode {
       if (hasJoin(field)) {
         this.addFieldToNameMap(
           as,
-          new QueryStruct(field, undefined, {struct: this}, this.prepareResultOptions)
+          new QueryStruct(
+            field,
+            undefined,
+            {struct: this},
+            this.prepareResultOptions
+          )
         );
       } else if (field.type === 'turtle') {
         this.addFieldToNameMap(
@@ -4471,7 +4476,7 @@ class QueryStruct extends QueryNode {
       case 'query_source': {
         // cache derived table.
         const clonedAnnotation = structuredClone(
-          this.fieldDef.structSource.query.annotation
+          this.structDef.query.annotation
         );
 
         if (clonedAnnotation) {
