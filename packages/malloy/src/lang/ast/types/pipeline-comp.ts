@@ -21,11 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  Annotation,
-  PipeSegment,
-  SourceDef,
-} from '../../../model/malloy_types';
+import {Annotation, PipeSegment, SourceDef} from '../../../model/malloy_types';
 
 export interface PipelineComp {
   outputStruct: SourceDef;
