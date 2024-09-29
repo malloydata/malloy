@@ -159,7 +159,6 @@ class TrinoRunner implements BaseRunner {
   }
 }
 
-// manage access to BQ, control costs, enforce global data/API limits
 export abstract class TrinoPrestoConnection
   extends BaseConnection
   implements Connection, PersistSQLResults
