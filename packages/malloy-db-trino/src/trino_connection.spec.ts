@@ -68,6 +68,7 @@ describe('Trino connection', () => {
         'type': 'array',
         'dialect': 'trino',
         'dataType': intType,
+        'join': 'many',
         'fields': arrayEachFields(intType),
       });
     });
@@ -89,9 +90,9 @@ describe('Trino connection', () => {
         {
           'name': 'test',
           'type': 'array',
-          'dataType': {type: 'record-element'},
+          'dataType': {type: 'record_element'},
           'dialect': 'trino',
-          'join': 'one',
+          'join': 'many',
           'fields': recordSchema,
         }
       );
