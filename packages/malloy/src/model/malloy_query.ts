@@ -103,6 +103,8 @@ import {
   ArrayFieldDef,
   RecordFieldDef,
   FinalizeSourceDef,
+  QueryToMaterialize,
+  PrepareResultOptions,
 } from './malloy_types';
 
 import {Connection} from '../connection/types';
@@ -117,6 +119,7 @@ import {
   SQLExprElement,
 } from './utils';
 import {DialectFieldTypeStruct, QueryInfo} from '../dialect/dialect';
+import {Tag} from '../tags';
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
@@ -189,6 +192,7 @@ class StageWriter {
   withs: string[] = [];
   udfs: string[] = [];
   pdts: string[] = [];
+  dependenciesToMaterialize: Record<string, QueryToMaterialize> = {};
   stagePrefix = '__stage';
   useCTE: boolean;
 
@@ -242,10 +246,43 @@ class StageWriter {
     return id;
   }
 
+  addMaterializedQuery(fieldName: string, query: Query): string {
+    const name = query.name;
+    if (!name) {
+      throw new Error(
+        `Source ${fieldName} on a unnamed query that is tagged as materialize, only named queries can be materialized.`
+      );
+    }
+
+    const path = query.location?.url;
+    if (!path) {
+      throw new Error(
+        `Trying to materialize query ${name}, but its path is not set.`
+      );
+    }
+
+    // Creating an object that should uniquely identify a query within a Malloy model repo.
+    const queryRep = {
+      path: path,
+      source: undefined,
+      queryName: name,
+    };
+
+    const id = generateHash(JSON.stringify(queryRep));
+    const uniqueName = `${name}-${id}`;
+    this.root().dependenciesToMaterialize[uniqueName] = {
+      ...queryRep,
+      id,
+    };
+
+    return uniqueName;
+  }
+
   addPDT(baseName: string, dialect: Dialect): string {
     const sql =
       this.combineStages(false).sql + this.withs[this.withs.length - 1];
-    const tableName = 'scratch.' + baseName + generateHash(sql);
+    const name = baseName + generateHash(sql);
+    const tableName = `scratch.${name}`;
     this.root().pdts.push(dialect.sqlCreateTableAsSelect(tableName, sql));
     return tableName;
   }
@@ -2223,7 +2260,8 @@ class QueryQuery extends QueryField {
           fields: [...sourceDef.fields, ...firstStage.extendSource],
         },
         parentStruct.sourceArguments,
-        parent.parent ? {struct: parent} : {model: parent.model}
+        parent.parent ? {struct: parent} : {model: parent.model},
+        parent.prepareResultOptions
       );
       turtleWithFilters = {
         ...turtleWithFilters,
@@ -3686,9 +3724,12 @@ class QueryQuery extends QueryField {
         connection: structDef.connection,
         dialect: structDef.dialect,
       };
-      const qs = new QueryStruct(inputStruct, undefined, {
-        model: this.parent.getModel(),
-      });
+      const qs = new QueryStruct(
+        inputStruct,
+        undefined,
+        {model: this.parent.getModel()},
+        this.parent.prepareResultOptions
+      );
       const q = QueryQuery.makeQuery(
         newTurtle,
         qs,
@@ -3753,9 +3794,14 @@ class QueryQuery extends QueryField {
       };
       pipeline.shift();
       for (const transform of pipeline) {
-        const s = new QueryStruct(structDef, undefined, {
-          model: this.parent.getModel(),
-        });
+        const s = new QueryStruct(
+          structDef,
+          undefined,
+          {
+            model: this.parent.getModel(),
+          },
+          this.parent.prepareResultOptions
+        );
         const q = QueryQuery.makeQuery(
           {type: 'turtle', name: '~computeLastStage~', pipeline: [transform]},
           s,
@@ -4110,7 +4156,8 @@ class QueryStruct extends QueryNode {
   constructor(
     public structDef: StructDef,
     readonly sourceArguments: Record<string, Argument> | undefined,
-    parent: ParentQueryStruct | ParentQueryModel
+    parent: ParentQueryStruct | ParentQueryModel,
+    readonly prepareResultOptions?: PrepareResultOptions
   ) {
     super();
     this.setParent(parent);
@@ -4190,7 +4237,7 @@ class QueryStruct extends QueryNode {
       if (hasJoin(field)) {
         this.addFieldToNameMap(
           as,
-          new QueryStruct(field, undefined, {struct: this})
+          new QueryStruct(field, undefined, {struct: this}, this.prepareResultOptions)
         );
       } else if (field.type === 'turtle') {
         this.addFieldToNameMap(
@@ -4334,7 +4381,7 @@ class QueryStruct extends QueryNode {
   resolveQueryFields() {
     if (this.structDef.type === 'query_source') {
       const resultStruct = this.model
-        .loadQuery(this.structDef.query, undefined)
+        .loadQuery(this.structDef.query, undefined, this.prepareResultOptions)
         .structs.pop();
 
       // should never happen.
@@ -4423,23 +4470,30 @@ class QueryStruct extends QueryNode {
         return `(${this.structDef.selectStr})`;
       case 'query_source': {
         // cache derived table.
-        const name = getIdentifier(this.structDef);
-        // this is a hack for now.  Need some way to denote this table
-        //  should be cached.
-        if (name.includes('cache')) {
-          const dtStageWriter = new StageWriter(true, stageWriter);
-          this.model.loadQuery(
-            this.structDef.query,
-            dtStageWriter,
-            false,
-            false
+        const clonedAnnotation = structuredClone(
+          this.fieldDef.structSource.query.annotation
+        );
+
+        if (clonedAnnotation) {
+          clonedAnnotation.inherits = undefined;
+        }
+
+        const sourceTag = Tag.annotationToTag(clonedAnnotation).tag;
+
+        if (
+          this.prepareResultOptions?.replaceMaterializedReferences &&
+          sourceTag.has('materialize')
+        ) {
+          return stageWriter.addMaterializedQuery(
+            getIdentifier(this.structDef),
+            this.structDef.query
           );
-          return dtStageWriter.addPDT(name, this.dialect);
         } else {
           // returns the stage name.
           return this.model.loadQuery(
             this.structDef.query,
             stageWriter,
+            this.prepareResultOptions,
             false,
             true // this is an intermediate stage.
           ).lastStageName;
@@ -4631,7 +4685,8 @@ export class QueryModel {
 
   getStructFromRef(
     structRef: StructRef,
-    sourceArguments: Record<string, Argument> | undefined
+    sourceArguments: Record<string, Argument> | undefined,
+    prepareResultOptions?: PrepareResultOptions
   ): QueryStruct {
     if (typeof structRef === 'string') {
       const ret = this.getStructByName(structRef);
@@ -4639,19 +4694,24 @@ export class QueryModel {
         return new QueryStruct(
           ret.structDef,
           sourceArguments,
-          ret.parent ?? {model: this}
+          ret.parent ?? {model: this},
+          prepareResultOptions
         );
       }
       return ret;
-    } else if (isSourceDef(structRef)) {
-      return new QueryStruct(structRef, sourceArguments, {model: this});
     }
-    throw new Error('Broken for now');
+    return new QueryStruct(
+      structRef,
+      sourceArguments,
+      {model: this},
+      prepareResultOptions
+    );
   }
 
   loadQuery(
     query: Query,
     stageWriter: StageWriter | undefined,
+    prepareResultOptions?: PrepareResultOptions,
     emitFinalStage = false,
     isJoinedSubquery = false
   ): QueryResults {
@@ -4670,7 +4730,11 @@ export class QueryModel {
 
     const q = QueryQuery.makeQuery(
       turtleDef,
-      this.getStructFromRef(query.structRef, query.sourceArguments),
+      this.getStructFromRef(
+        query.structRef,
+        query.sourceArguments,
+        prepareResultOptions
+      ),
       stageWriter,
       isJoinedSubquery
     );
@@ -4697,10 +4761,20 @@ export class QueryModel {
     };
   }
 
-  compileQuery(query: Query, finalize = true): CompiledQuery {
+  compileQuery(
+    query: Query,
+    prepareResultOptions?: PrepareResultOptions,
+    finalize = true
+  ): CompiledQuery {
     let newModel: QueryModel | undefined;
     const m = newModel || this;
-    const ret = m.loadQuery(query, undefined, finalize, false);
+    const ret = m.loadQuery(
+      query,
+      undefined,
+      prepareResultOptions,
+      finalize,
+      false
+    );
     const sourceExplore =
       typeof query.structRef === 'string'
         ? query.structRef
@@ -4716,6 +4790,7 @@ export class QueryModel {
       lastStageName: ret.lastStageName,
       malloy: ret.malloy,
       sql: ret.stageWriter.generateSQLStages(),
+      dependenciesToMaterialize: ret.stageWriter.dependenciesToMaterialize,
       structs: ret.structs,
       sourceExplore,
       sourceFilters: query.filterList,
@@ -4768,7 +4843,7 @@ export class QueryModel {
     // if we've compiled the SQL before use it otherwise
     let sqlPDT = this.exploreSearchSQLMap.get(explore);
     if (sqlPDT === undefined) {
-      sqlPDT = this.compileQuery(indexQuery, false).sql;
+      sqlPDT = this.compileQuery(indexQuery, undefined, false).sql;
       this.exploreSearchSQLMap.set(explore, sqlPDT);
     }
 

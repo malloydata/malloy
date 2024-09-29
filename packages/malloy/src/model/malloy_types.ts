@@ -1285,6 +1285,13 @@ export interface DrillSource {
   sourceFilters?: FilterCondition[];
 }
 
+export type QueryToMaterialize = {
+  id: string;
+  path: string;
+  source: string | undefined;
+  queryName: string;
+};
+
 export interface CompiledQuery extends DrillSource {
   structs: SourceDef[];
   sql: string;
@@ -1294,6 +1301,8 @@ export interface CompiledQuery extends DrillSource {
   connectionName: string;
   queryTimezone?: string;
   annotation?: Annotation;
+  // Map of query unique id to the SQL.
+  dependenciesToMaterialize?: Record<string, QueryToMaterialize>;
 }
 
 /** Result type for running a Malloy query. */
@@ -1372,4 +1381,9 @@ export interface SearchValueMapResult {
   cardinality: number;
   values: {fieldValue: string; weight: number}[];
 }
+
+export interface PrepareResultOptions {
+  replaceMaterializedReferences?: boolean;
+}
+
 // clang-format on
