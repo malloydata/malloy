@@ -4,7 +4,9 @@ A [`StructDef`](structdef.md) has an array of `fields: FieldDef[]`
 
 `FieldDef` as described here is slightly simplified from the actual implementations, but this is exactly how everything works.
 
-## Atomic fields (`FieldAtomicTypeDef`)
+> Older version of Malloy have these same types, but the taxonomy was obscured by some historical artifacts in the way things were named. New Malloy has attempted to clean up the naming to make it consistent and more concise.
+
+## Atomic fields (`AtomicTypeDef`)
 
 The simplest `FieldDef` is simply a schema entry, describing a named column which is known to be in a source and it's type. For example, here is `BooleanTypeDef`
 
@@ -41,7 +43,7 @@ type AtomicFieldDef =
   | RecordFieldDef;
 ```
 
-* isAtomicTypeDef(fd) -- Returns true if the `type:` of this fielddef matches one of the atomic types
+* `isAtomicTypeDef(fd)` -- Returns true if the `type:` of this fielddef matches one of the atomic types
 
 ## Dimensions and Measures and Calculations
 
@@ -70,10 +72,7 @@ interface JoinBase {
 }
 ```
 
-* You can access this property of the FieldDef with `hasJoin(fd)` which will return true and grant typed access to the `JoinBase` properties of the `FieldDef`
-* If `hasJoin()` is true on a `FieldDef` then that field is also guaranteed to be a `StructDef` which you verify with `isFieldStructDef()` which will return true and return type checked access to the portions of the field which describe the `StructDef`
-
-
+* `hasJoin(fd)` which will return true and grant typed access to the `JoinBase` properties of the `FieldDef`, and because all joined fields are structs, also the `StructDef` properties as well.
 * Non repeated records are always joined, in all cases.
 * Repeated records ... I am assuming we also always join them.
 * Arrays are always joined by default when read from a schema, but a computed dimension with an array value is NOT automatically joined. It can be joined with the (TBD) `join_array: fieldName is arrayExpression` syntax.
@@ -81,6 +80,9 @@ interface JoinBase {
 ## Views
 
 The other entry in a field list is a view, which in the source is `{type: 'turtle'}`
+
+## All the FieldDef
+
 
 # QueryFieldDef ...
 

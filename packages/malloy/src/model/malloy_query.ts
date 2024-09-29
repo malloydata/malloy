@@ -81,7 +81,6 @@ import {
   FilteredExpr,
   SourceDef,
   modelObjIsSource,
-  isFieldStructDef,
   isSourceDef,
   fieldIsIntrinsic,
   AtomicFieldDef,
@@ -1833,7 +1832,7 @@ class FieldInstanceResult implements FieldInstance {
         if (fi.fieldUsage.type === 'result') {
           if (
             fi.f.fieldDef.type === 'turtle' ||
-            isFieldStructDef(fi.f.fieldDef) ||
+            hasJoin(fi.f.fieldDef) ||
             expressionIsAnalytic(fi.f.fieldDef.expressionType)
           ) {
             continue;

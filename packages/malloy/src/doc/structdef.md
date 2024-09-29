@@ -1,6 +1,6 @@
 # `StructDef`
 
-The most basic `StructDef` is a namespace. `StructDef`s are turned into "FieldSpaces" in the translator pass and into either "Explores" or "QueryStructs" in the compiler pass. These are then used to understand path based field references.
+The most basic `StructDef` is a namespace. `StructDef`s become a `FieldSpace`" in the translator pass and `QueryStruct` in the compiler.
 
 ```TypeScript
 interface StructDefBase extends HasLocation, NamedObject {
@@ -14,7 +14,7 @@ interface StructDefBase extends HasLocation, NamedObject {
 
 > [`FieldDef`](fielddef.md) has an explainer page too.
 
-Some StructDefs are also sources, and to be a source, they need some additional properties
+Some StructDefs are also "sources" in the Malloy meaning of that word, and to be a source, they need some additional properties.
 
 ```TypeScript
 interface SourceDefBase
@@ -28,9 +28,7 @@ interface SourceDefBase
 }
 ```
 
-A record, for example, is a structdef which is not a source, and doesn't have the properties required in a source,
-but it is a namespace, so it is a StructDef but not a SourceDef, this isn't REALLY what a record struct def looks like,
-(more on the later) but at this point in the document, pretend it is
+A record, for example, is a structdef which is not a source, and doesn't have the properties required in a source, but it is a namespace, so it is a StructDef but not a SourceDef, this isn't REALLY what a record struct def looks like, (more on the later) but at this point in the document, pretend it is
 
 ```TypeScript
 interface RecordDef extends StructDefBase {
@@ -38,8 +36,8 @@ interface RecordDef extends StructDefBase {
 }
 ```
 
-> Confession: The `type:` namespace for structs and fields is merged. Not every struct is a field, not every field is a struct, but there are entities which are both structs and fields. Old Malloy "All structs are legal in field lists",
-new Malloy is explicit about which are legal, but I didn't want to add two discriminators "structType" and "fieldType" for the many items which are both structs and can be in field lists.
+> Confession: The `type:` namespace for structs and fields is merged. Not every struct is a field, not every field is a struct, but there are entities which are both structs and fields. Old Malloy said "All structs are legal in field lists" but some of them will never happen we promise,
+new Malloy is explicit about which are legal. I didn't want to add two discriminators "structType" and "fieldType" for the many items which are both structs and can be in field lists, so, like Old Malloy, new Malloy shares the 'type:' namespace betweens structs and fields.
 
 ## Simple Table
 
@@ -109,7 +107,7 @@ const table2: TableSourceDef = {
 interface NonRepeatedRecordStruct extends StructDefBase, JoinBase {
     type: 'record';
     join: 'one';
-    matrixOperation: 'left';
+    matrixOperation: 'left'; // this is optional and defaults to left
 }
 ```
 
@@ -121,18 +119,16 @@ A simple array of integers has a data type like this
 // An array is not always a struct, it can just be a data type, so it does NOT extend StructDefbase
 interface ArrayTypeDef extends NamedObject {
     type: 'array';
-    dataType: FieldAtomicType
+    dataType: AtomicFieldType;
 }
 
 // If an array is joined, so it un-nests, is a StructDef, it will look like this
 interface ScalarArrayStruct extends ArrayTypeDef, StructDefBase, JoinBase {
     type: 'array'
-    dataType: FieldAtomicType,
+    dataType: AtomicFieldType;
     join: 'many'
-    matrixOperation: 'left'
+    fields: [] // will be filled with the magic value to un-nest on ".each"
 };
-// fields[] will be filled out at some point, probably by the schema reader like it is
-// in the current schema readers
 ```
 
 ## Table with two arrays, one joined
@@ -151,7 +147,6 @@ const table3: TableSourceDef {
             name: 'joined_ints',                  // This will be a ScalarArrayStruct
             ...arrayOfInts,
             join: 'many',
-            matrixOperation: 'left',
             dialect: 'standardsql',
             fields: [{name: 'each', type: intType, e: {node: 'array_unnest', arrayName: 'joined_ints' }}],
         }
@@ -162,12 +157,14 @@ const table3: TableSourceDef {
 ## Table with repeated records
 
 Repeated records are represented as an array of records. The fields array of a repeated record is
-the schema for each row, just as it is for a non-repeated record.
+the schema for each row, just as it is for a non-repeated record. We use `'record_element'` as the `dataType:` for this because the schema for the record is still in THIS `StructDef`, not inside a `{type: record ...`
+definition in the `dataType:` field. Which is a little weird, but a side effect of how nested data is
+treated like a join in the compiler.
 
 ```TypeScript
 interface RepeatedRecordStruct extends ScalarArrayStruct {
     type: 'array'
-    dataType: 'record'
+    dataType: {type: 'record_element'}
 }
 ```
 
@@ -184,7 +181,7 @@ const table4: TableSourceDef {
         {                                             // RepeatedRecordStruct & FieldDefBase
             name: 'eachRowHasARepeatedSimpleReord',
             type: 'array',
-            dataType: 'record',
+            dataType: 'record_element',
             join: 'many',
             matrixOperation: 'left',
             dialect: 'standardsql',

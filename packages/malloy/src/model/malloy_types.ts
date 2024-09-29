@@ -976,6 +976,8 @@ interface SourceDefBase extends StructDefBase, Filtered, ResultStructMetadata {
   connection: string;
   primaryKey?: PrimaryKeyRef;
 }
+/** which field is the primary key in this struct */
+export type PrimaryKeyRef = string;
 
 export interface TableSourceDef extends SourceDefBase {
   type: 'table';
@@ -1082,24 +1084,6 @@ export type StructDef =
   | JoinedArrayDef
   | FinalizeSourceDef;
 
-export function isFieldStructDef(
-  fd: FieldDef | StructDef
-): fd is StructDef & FieldDef {
-  switch (fd.type) {
-    case 'table':
-    case 'sql_select':
-    case 'query_source':
-    case 'query_result':
-      return true;
-    case 'record':
-    case 'array':
-      if ('join' in fd) {
-        return true;
-      }
-  }
-  return false;
-}
-
 export type ExpressionValueType =
   | AtomicFieldType
   | 'null'
@@ -1194,22 +1178,17 @@ export type AtomicTypeDef = SimpleAtomic | ArrayTypeDef | RecordTypeDef;
 
 export type AtomicFieldDef = AtomicTypeDef & FieldAtomicBase;
 
-// Queries have fields like this ..
-export type QueryFieldDef = AtomicFieldDef | TurtleDef | RefToField;
-
 // Sources have fields like this ...
 export type FieldDef = AtomicFieldDef | JoinFieldDef | TurtleDef;
-// export type FieldDef = FieldTypeDef | StructDef | TurtleDef;
-/** reference to a field */
+
+// Queries have fields like this ..
 
 export interface RefToField {
   type: 'fieldref';
   path: string[];
   annotation?: Annotation;
 }
-
-/** which field is the primary key in this struct */
-export type PrimaryKeyRef = string;
+export type QueryFieldDef = AtomicFieldDef | TurtleDef | RefToField;
 
 /** Get the output name for a NamedObject */
 export function getIdentifier(n: AliasedName): string {
