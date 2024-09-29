@@ -4504,14 +4504,11 @@ class QueryStruct extends QueryNode {
           ).lastStageName;
         }
       }
-      case 'array':
-      case 'record':
-        return 'internal-error-if-you-see-this-in-generated-sql';
       default:
         throw new Error(
-          `unknown structSource '${getIdentifier(this.structDef)}' type '${
-            this.structDef.type
-          }'`
+          `Cannot create SQL StageWriter from '${getIdentifier(
+            this.structDef
+          )}' type '${this.structDef.type}`
         );
     }
   }
