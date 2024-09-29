@@ -41,6 +41,7 @@ import {ObjectAnnotation} from '../types/annotation-elements';
 import {Renames} from '../source-properties/renames';
 import {MakeEntry} from '../types/space-entry';
 import {ParameterSpace} from '../field-space/parameter-space';
+import {JoinStatement} from '../source-properties/join';
 
 /**
  * A Source made from a source reference and a set of refinements
@@ -92,6 +93,7 @@ export class RefinedSource extends Source {
         fieldListEdit = el;
       } else if (
         el instanceof DeclareFields ||
+        el instanceof JoinStatement ||
         el instanceof Views ||
         el instanceof Renames
       ) {

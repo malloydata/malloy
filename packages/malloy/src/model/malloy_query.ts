@@ -4547,7 +4547,7 @@ class QueryStruct extends QueryNode {
   getQueryFieldByName(name: string[]): QuerySomething {
     const field = this.getFieldByName(name);
     if (field instanceof QueryStruct) {
-      throw new Error(`Cannot reference ${name} as a scalar'`);
+      throw new Error(`Cannot reference ${name.join('.')} as a scalar'`);
     }
     return field;
   }
@@ -4556,7 +4556,7 @@ class QueryStruct extends QueryNode {
     name: string[],
     refAnnoatation: Annotation | undefined
   ): QuerySomething {
-    const field = this.getQueryFieldByName(name);
+    const field = this.getFieldByName(name);
     if (refAnnoatation) {
       // Made the field object from the source, but the annotations were computed by the compiler
       // and have both the source and reference annotations included, use those.
