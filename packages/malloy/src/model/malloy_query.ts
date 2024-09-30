@@ -2686,6 +2686,7 @@ class QueryQuery extends QueryField {
             fields: structDef.fields,
           };
           fields.push(multiLineNest);
+          continue;
         }
 
         const oneLineNest: RecordFieldDef = {
@@ -3701,13 +3702,9 @@ class QueryQuery extends QueryField {
         name: 'starthere',
         pipeline,
       };
-      structDef.name = this.parent.dialect.sqlUnnestPipelineHead(
-        repeatedResultType === 'inline_all_numbers',
-        sourceSQLExpression
-      );
       const inputStruct: NestSourceDef = {
         type: 'pipeline_struct',
-        name: 'internal-error-look-in-pipeSQL-for-this-text',
+        name: '~pipe~',
         pipeSQL: this.parent.dialect.sqlUnnestPipelineHead(
           repeatedResultType === 'inline_all_numbers',
           sourceSQLExpression
@@ -4465,6 +4462,8 @@ class QueryStruct extends QueryNode {
         return this.structDef.name;
       case 'sql_select':
         return `(${this.structDef.selectStr})`;
+      case 'pipeline_struct':
+        return this.structDef.pipeSQL;
       case 'query_source': {
         // cache derived table.
         const clonedAnnotation = structuredClone(
