@@ -445,7 +445,7 @@ describe('query operation annotations', () => {
       expect(note_a?.annotation).matchesAnnotation(defaultTags);
     }
   });
-  test('project ref inherits annotation', () => {
+  test('select: ref inherits annotation', () => {
     const m = new TestTranslator(`
       run: a extend {
         # blockNote

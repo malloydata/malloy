@@ -4547,20 +4547,21 @@ class QueryStruct extends QueryNode {
 
   getQueryFieldReference(
     name: string[],
-    refAnnoatation: Annotation | undefined
+    annotation: Annotation | undefined
   ): QuerySomething {
     const field = this.getFieldByName(name);
-    if (refAnnoatation) {
-      // Made the field object from the source, but the annotations were computed by the compiler
-      // and have both the source and reference annotations included, use those.
+    if (annotation) {
+      if (field.parent === undefined) {
+        throw new Error('Field reference without parent? Inconcievable!');
+      }
+      // Made a field object from the source, but the annotations were computed by the compiler
+      // when it generated the reference, and has both the source and reference annotations included.
       if (field instanceof QueryStruct) {
-        const newDef = {...field.structDef};
-        newDef.annotation = refAnnoatation;
-        return new QueryStruct(newDef, undefined, this);
+        const newDef = {...field.structDef, annotation};
+        return new QueryStruct(newDef, undefined, field.parent);
       } else {
-        const newDef = {...field.fieldDef};
-        newDef.annotation = refAnnoatation;
-        return this.makeQueryField(newDef);
+        const newDef = {...field.fieldDef, annotation};
+        return field.parent.makeQueryField(newDef);
       }
     }
     return field;
