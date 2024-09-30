@@ -4571,7 +4571,7 @@ class QueryStruct extends QueryNode {
     if (query instanceof QueryAtomicField) {
       return query;
     }
-    throw new Error(`${name} is not of type a scalar'`);
+    throw new Error(`${name} is not an atomic field? Inconceivable!`);
   }
 
   /** returns a query object for the given name */
@@ -4581,7 +4581,7 @@ class QueryStruct extends QueryNode {
     if (query instanceof QueryAtomicField && isScalarField(query)) {
       return query;
     }
-    throw new Error(`${name} is not of type a scalar'`);
+    throw new Error(`${name} is not an atomic scalar field? Inconceivable!`);
   }
 
   /** returns a query object for the given name */
@@ -4600,7 +4600,7 @@ class QueryStruct extends QueryNode {
     } else if (this.parent) {
       return this.parent.getDistinctKey();
     } else {
-      throw new Error('Internal Error.  inline struct can not be top level');
+      throw new Error('Asking a record for a primary key? Inconceivable!');
     }
   }
 
