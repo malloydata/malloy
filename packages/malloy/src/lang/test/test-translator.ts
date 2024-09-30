@@ -279,6 +279,7 @@ export class TestTranslator extends MalloyTranslator {
       b: {...aTableDef, primaryKey: 'astr', as: 'b'},
       ab: {
         ...aTableDef,
+        primaryKey: 'astr',
         fields: [
           ...aTableDef.fields,
           bJoinedIntoA,

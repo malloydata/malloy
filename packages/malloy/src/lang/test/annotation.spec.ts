@@ -62,6 +62,12 @@ expect.extend({
       }
       return clean;
     }
+    if (result === undefined) {
+      return {
+        pass: false,
+        message: () => 'Annotation was undefined',
+      };
+    }
     const got = stripAt(result);
     if (!this.equals(got, shouldBe)) {
       return {
