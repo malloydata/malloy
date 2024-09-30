@@ -717,6 +717,12 @@ export type Joinable =
   | RecordFieldDef
   | JoinedArrayDef;
 export type JoinFieldDef = JoinBase & Joinable;
+export type JoinFieldTypes =
+  | 'table'
+  | 'sql_select'
+  | 'query_source'
+  | 'array'
+  | 'record';
 
 export function isJoinable(sd: StructDef): sd is Joinable {
   return ['table', 'sql_select', 'query_source', 'array', 'record'].includes(
@@ -1095,7 +1101,7 @@ export type ExpressionValueType =
   | 'any'
   | 'regular expression';
 
-export type FieldValueType = ExpressionValueType | 'turtle';
+export type FieldValueType = ExpressionValueType | 'turtle' | JoinFieldTypes;
 
 export interface ExpressionTypeDesc {
   dataType: FieldValueType;

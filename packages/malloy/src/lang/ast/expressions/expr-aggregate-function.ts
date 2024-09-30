@@ -329,15 +329,15 @@ function validateUsagePaths(
           code: 'aggregate-traverses-join-cross',
           message: `Cannot compute \`${functionName}\` across \`join_cross\` relationship \`${step.name}\``,
         };
-      } else if (step.joinType === 'many' && !step.reverse) {
-        return {
-          code: 'aggregate-traverses-join-many',
-          message: `Cannot compute \`${functionName}\` across \`join_many\` relationship \`${step.name}\``,
-        };
       } else if (step.joinElementType === 'array' && !step.reverse) {
         return {
           code: 'aggregate-traverses-repeated-relationship',
           message: `Cannot compute \`${functionName}\` across repeated relationship \`${step.name}\``,
+        };
+      } else if (step.joinType === 'many' && !step.reverse) {
+        return {
+          code: 'aggregate-traverses-join-many',
+          message: `Cannot compute \`${functionName}\` across \`join_many\` relationship \`${step.name}\``,
         };
       }
     }

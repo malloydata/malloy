@@ -673,7 +673,7 @@ describe('query:', () => {
           group_by: b.astr
           calculate: foo is lag(b)
         }`
-      ).toLog(errorMessage('No matching overload for function lag(struct)'));
+      ).toLog(errorMessage('No matching overload for function lag(table)'));
     });
     // TODO this doesn't work today, we're not rigorous enough with integer
     // subtypes. But we should probably make this typecheck properly.
