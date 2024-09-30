@@ -99,11 +99,11 @@ import {
   isJoinedSource,
   QueryResultDef,
   IS_SCALAR_ARRAY,
-  ArrayFieldDef,
   RecordFieldDef,
   FinalizeSourceDef,
   QueryToMaterialize,
   PrepareResultOptions,
+  JoinedArrayDef,
 } from './malloy_types';
 
 import {Connection} from '../connection/types';
@@ -2669,41 +2669,34 @@ class QueryQuery extends QueryField {
     for (const [name, fi] of resultStruct.allFields) {
       const resultMetadata = this.getResultMetadata(fi);
       if (fi instanceof FieldInstanceResult) {
-        // const {structDef} = this.generateTurtlePipelineSQL(
-        //   fi,
-        //   new StageWriter(true, undefined),
-        //   '<nosource>'
-        // );
+        const {structDef} = this.generateTurtlePipelineSQL(
+          fi,
+          new StageWriter(true, undefined),
+          '<nosource>'
+        );
 
-        // LTNOTE: This is probably broken now.  Need to look at the last stage
-        //  to figure out the resulting nested/inline state...
-
-        const isArray = fi.getRepeatedResultType() === 'nested';
-
-        // MTOY TODO COMPUTE DATATYPE FROM STRUCTDEF ... SOMEHOW
-        // MTOY TODO -- AND DEAL WITH REPEATED RECORDS
-        if (isArray) {
-          const nestedField: ArrayFieldDef = {
+        if (fi.getRepeatedResultType() === 'nested') {
+          const multiLineNest: JoinedArrayDef = {
             type: 'array',
             name,
             resultMetadata,
-            dataType: {type: 'number'},
+            dataType: {type: 'record_element'},
+            join: 'many',
+            dialect: structDef.dialect,
+            fields: structDef.fields,
           };
-          throw new Error('MTOY -- YOU FORGOT TO COMPUTE THE DATA TYPES');
-          fields.push(nestedField);
+          fields.push(multiLineNest);
         }
 
-        const inlineField: RecordFieldDef = {
+        const oneLineNest: RecordFieldDef = {
           type: 'record',
           join: 'one',
-          matrixOperation: 'left',
           dialect: this.parent.structDef.dialect,
           name,
           resultMetadata,
-          fields: [],
+          fields: structDef.fields,
         };
-        throw new Error('MTOY -- YOU FORGOT TO COMPUTE THE DATA TYPES');
-        fields.push(inlineField);
+        fields.push(oneLineNest);
       } else if (fi instanceof FieldInstanceField) {
         if (fi.fieldUsage.type === 'result') {
           // no constructor for this so maybe it doesn't exist

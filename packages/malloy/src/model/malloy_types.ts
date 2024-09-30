@@ -632,10 +632,14 @@ export interface ArrayTypeDef {
 }
 export type ArrayFieldDef = ArrayTypeDef & AtomicFieldDef;
 
-export interface JoinedArrayDef extends ArrayTypeDef, JoinBase, StructDefBase {
+export interface JoinedArrayTypeDef
+  extends ArrayTypeDef,
+    JoinBase,
+    StructDefBase {
   type: 'array';
   join: 'many';
 }
+export type JoinedArrayDef = JoinedArrayTypeDef & AtomicFieldDef;
 
 export function arrayEachFields(arrayOf: AtomicTypeDef): AtomicFieldDef[] {
   return [
@@ -660,7 +664,7 @@ export interface RecordElementTypeDef {
 // MTOY todo structdef is already here, but maybe i need
 // to abstract out the struct parts .... so that "RepeatedRecordDef"
 // is a useful distinction.
-export interface RepeatedRecordTypeDef extends JoinedArrayDef {
+export interface RepeatedRecordTypeDef extends JoinedArrayTypeDef {
   type: 'array';
   dataType: RecordElementTypeDef;
   join: 'many';
