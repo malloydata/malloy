@@ -26,7 +26,6 @@ import {
   QueryFieldDef,
   TypeDesc,
   AtomicFieldDef,
-  isAtomic,
 } from '../../../model/malloy_types';
 import {SpaceEntry} from './space-entry';
 import {FieldSpace} from './field-space';
@@ -40,7 +39,7 @@ export abstract class SpaceField extends SpaceEntry {
       expressionType: 'scalar',
       evalSpace: 'input',
     };
-    if (isAtomic(def) && def.expressionType) {
+    if (def.expressionType) {
       ref.expressionType = def.expressionType;
     }
     if (
@@ -61,9 +60,13 @@ export abstract class SpaceField extends SpaceEntry {
     return undefined;
   }
 
-  // MTOY todo might be able to use fieldDef for this,
-  // but this is replacing an internal property and
-  // I am being careful for now.
+  /**
+   * Called by field reference code generation to gain access to the
+   * annotation properties on the field being referenced. ColumnSpaceFields
+   * will have the original field def, and will implement this method,
+   * nothing else should be referencable, but if somehow one of those is
+   * referenced, don't bother to compute the fieldDef.
+   */
   constructorFieldDef(): FieldDef | undefined {
     return undefined;
   }
