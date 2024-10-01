@@ -53,6 +53,35 @@ describe.each(dbs.runtimeList)('%s', (dbName, runtime) => {
       );
     });
 
+    it('is correct for measures', async () => {
+      const query = `
+        run: duckdb.sql("SELECT 1 as one") extend {
+          measure: c is count()
+        } -> {
+          aggregate: c
+          nest: a is {
+            aggregate: c
+          }
+          nest: b is {
+            aggregate: c is count() * 2
+          }
+          nest: d is {
+            # this reference has an annotation
+            aggregate: c
+          }
+        }
+      `;
+
+      const result = await runtime.loadQuery(query).run();
+      const actual = referenceId(result.data.path(0, 'c').field);
+      expect(actual).not.toBeUndefined();
+      expect(referenceId(result.data.path(0, 'a', 'c').field)).toBe(actual);
+      const bC = referenceId(result.data.path(0, 'b', 'c').field);
+      expect(bC).not.toBe(undefined);
+      expect(bC).not.toBe(actual);
+      expect(referenceId(result.data.path(0, 'd', 'c').field)).toBe(actual);
+    });
+
     it('is correct for field references from extend block', async () => {
       const query = `
         run: duckdb.sql("SELECT 1 as one") -> {
