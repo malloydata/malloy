@@ -79,7 +79,15 @@ export function generateBarChartVegaLiteSpec(
       contains: 'content',
     },
     'padding': chartSettings.padding,
-    'data': {'values': []},
+    'params': [
+      {
+        'name': 'b',
+        'value': [],
+      },
+    ],
+    'data': {
+      'values': [],
+    },
     'mark': {'type': 'bar'},
     'encoding': {
       'x': {
@@ -109,6 +117,19 @@ export function generateBarChartVegaLiteSpec(
           'domain': shouldShareSeriesDomain ? [...seriesMeta!.values] : null,
           'range': 'category',
         },
+      },
+      'fillOpacity': {
+        'condition': [
+          {
+            'test': 'indexof(b, datum.brand) > -1',
+            'value': 1,
+          },
+          {
+            'test': 'length(b) > 0 && indexof(b, datum.brand) === -1',
+            'value': 0.5,
+          },
+        ],
+        'value': 1,
       },
     },
   };

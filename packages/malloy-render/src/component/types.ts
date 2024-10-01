@@ -1,5 +1,6 @@
 import {DataColumn, Explore, Field, QueryData, Tag} from '@malloydata/malloy';
 import {Item} from 'vega';
+import {ResultStore} from './result-store/result-store';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Vega does not have good TS support
 export type VegaSpec = any;
@@ -40,6 +41,7 @@ export interface RenderResultMetadata {
   modelTag: Tag;
   resultTag: Tag;
   rootField: Field | Explore;
+  store: ResultStore;
 }
 
 export type MalloyClickEventPayload = {

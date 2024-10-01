@@ -1,7 +1,8 @@
-import {createEffect} from 'solid-js';
+import {createEffect, createSignal, untrack} from 'solid-js';
 import {VegaJSON, asVegaLiteSpec, asVegaSpec} from '../vega-types';
 import {EventListenerHandler, View, parse} from 'vega';
 import {compile} from 'vega-lite';
+import {useResultStore} from '../result-store/result-store';
 
 type VegaChartProps = {
   spec: VegaJSON;
@@ -14,26 +15,45 @@ type VegaChartProps = {
 export function VegaChart(props: VegaChartProps) {
   let el!: HTMLDivElement;
 
-  let view: View | null = null;
+  const [view, setView] = createSignal<View | null>(null);
 
   createEffect(() => {
-    if (view) view.finalize();
+    const prevView = untrack(() => view());
+    if (prevView) prevView.finalize();
     const vegaspec =
       props.type === 'vega-lite'
         ? compile(asVegaLiteSpec(props.spec)).spec
         : asVegaSpec(props.spec);
 
-    view = new View(parse(vegaspec)).initialize(el).renderer('svg').hover();
+    const _view = setView(
+      new View(parse(vegaspec)).initialize(el).renderer('svg').hover()
+    );
     if (props.onMouseOver)
-      view.addEventListener('mousemove', props.onMouseOver);
-    view.run();
+      _view.addEventListener('mousemove', props.onMouseOver);
+    _view.run();
+    setView(_view);
   });
 
   createEffect(() => {
-    if (view) {
-      if (props.width) view.width(props.width);
-      if (props.height) view.height(props.height);
-      view.run();
+    const _view = view();
+    if (_view) {
+      if (props.width) _view.width(props.width);
+      if (props.height) _view.height(props.height);
+      _view.run();
+    }
+  });
+
+  const store = useResultStore();
+  createEffect(() => {
+    const brushes = store.store.brushes;
+    const brushValues: any[] = [];
+    Object.entries(brushes).forEach(([fieldName, brushData]) => {
+      brushValues.push(...brushData.map(b => b.value));
+    });
+    console.log({brushValues});
+    if (view()) {
+      view()!.signal('b', brushValues);
+      view()!.run();
     }
   });
 
