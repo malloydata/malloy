@@ -103,6 +103,7 @@ export class KeyJoin extends Join {
       onExpression: {node: 'error', message: "('join fixup'='not done yet')"},
       location: this.location,
     };
+    delete joinStruct.as;
 
     if (this.note) {
       joinStruct.annotation = this.note;
@@ -208,17 +209,12 @@ export class ExpressionJoin extends Join {
     }
     const joinStruct: JoinFieldDef = {
       ...sourceDef,
+      name: this.name.refString,
       join: this.joinType,
       matrixOperation,
       location: this.location,
     };
-    if (sourceDef.type === 'query_source') {
-      // the name from query does not need to be preserved
-      joinStruct.name = this.name.refString;
-      delete joinStruct.as;
-    } else {
-      joinStruct.as = this.name.refString;
-    }
+    delete joinStruct.as;
     if (this.note) {
       joinStruct.annotation = this.note;
     }
