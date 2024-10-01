@@ -97,17 +97,12 @@ export class KeyJoin extends Join {
     }
     const joinStruct: JoinFieldDef = {
       ...sourceDef,
+      name: this.name.refString,
       join: 'one',
       matrixOperation: 'left',
       onExpression: {node: 'error', message: "('join fixup'='not done yet')"},
       location: this.location,
     };
-    if (sourceDef.type === 'query_source') {
-      // the name from query does not need to be preserved
-      joinStruct.name = this.name.refString;
-    } else {
-      joinStruct.as = this.name.refString;
-    }
 
     if (this.note) {
       joinStruct.annotation = this.note;
@@ -125,7 +120,6 @@ export class KeyJoin extends Join {
       if (pkey) {
         if (pkey.type === exprX.dataType) {
           inStruct.join = 'one';
-          inStruct.matrixOperation = 'left';
           inStruct.onExpression = {
             node: '=',
             kids: {

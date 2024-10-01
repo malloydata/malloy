@@ -48,7 +48,7 @@ export class QuerySource extends Source {
   ): SourceDef {
     const comp = this.query.queryComp(false);
     const queryStruct: QuerySourceDef = {
-      name: uuidv4(),
+      name: `QuerySource-${uuidv4()}`,
       type: 'query_source',
       query: comp.query,
       fields: comp.outputStruct.fields,
@@ -57,6 +57,9 @@ export class QuerySource extends Source {
         ? comp.outputStruct.connection
         : 'unknown-dialect-query-comp',
     };
+    if (comp.outputStruct.primaryKey) {
+      queryStruct.primaryKey = comp.outputStruct.primaryKey;
+    }
     this.document()?.rememberToAddModelAnnotations(queryStruct);
     return {
       ...queryStruct,

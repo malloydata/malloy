@@ -2694,10 +2694,11 @@ class QueryQuery extends QueryField {
         fields.push(oneLineNest);
       } else if (fi instanceof FieldInstanceField) {
         if (fi.fieldUsage.type === 'result') {
-          // no constructor for this so maybe it doesn't exist
+          // mtoy todo
           // if (fi.f instanceof QueryFieldStruct) {
           //   fields.push(fi.f.getAsJoinedStructDef(name));
           // }
+
           // if there is only one dimension, it is the primaryKey
           //  if there are more, primaryKey is undefined.
           if (isScalarField(fi.f)) {

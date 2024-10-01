@@ -229,6 +229,13 @@ describe('source:', () => {
           }
         `).toTranslate();
       });
+      test('can with join a single column query', () => {
+        expect(`
+          source: awith is a extend {
+            join_one: has_primary_key is a -> { group_by: one_val is astr } with astr
+          }
+        `).toTranslate();
+      });
     });
     test('primary_key', () => {
       expect('source: c is a extend { primary_key: ai }').toTranslate();
