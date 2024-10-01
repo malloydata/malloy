@@ -40,7 +40,7 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
     );
     expect(preparedResult.dependenciesToMaterialize).toStrictEqual({
       'myMaterializedQuery-6037d4be-8b92-5ea7-95a0-27bd26c240ca': {
-        'id': '6037d4be-8b92-5ea7-95a0-27bd26c240ca',
+        'id': 'myMaterializedQuery-6037d4be-8b92-5ea7-95a0-27bd26c240ca',
         'path': 'internal://internal.malloy',
         'queryName': 'myMaterializedQuery',
         'source': undefined,
@@ -80,7 +80,7 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
     );
     expect(preparedResult.dependenciesToMaterialize).toStrictEqual({
       'secondLevelMaterializedQuery-bd80d526-f867-587e-933e-89353d26d022': {
-        id: 'bd80d526-f867-587e-933e-89353d26d022',
+        id: 'secondLevelMaterializedQuery-bd80d526-f867-587e-933e-89353d26d022',
         path: 'internal://internal.malloy',
         queryName: 'secondLevelMaterializedQuery',
         source: undefined,

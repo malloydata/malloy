@@ -118,7 +118,10 @@ import {
   SQLExprElement,
 } from './utils';
 import {DialectFieldTypeStruct, QueryInfo} from '../dialect/dialect';
-import {Tag} from '../tags';
+import {
+  buildQueryMaterializationSpec,
+  shouldMaterialize,
+} from './materialization/utils';
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
@@ -261,20 +264,11 @@ class StageWriter {
     }
 
     // Creating an object that should uniquely identify a query within a Malloy model repo.
-    const queryRep = {
-      path: path,
-      source: undefined,
-      queryName: name,
-    };
+    const queryMaterializationSpec = buildQueryMaterializationSpec(path, name);
+    this.root().dependenciesToMaterialize[queryMaterializationSpec.id] =
+      queryMaterializationSpec;
 
-    const id = generateHash(JSON.stringify(queryRep));
-    const uniqueName = `${name}-${id}`;
-    this.root().dependenciesToMaterialize[uniqueName] = {
-      ...queryRep,
-      id,
-    };
-
-    return uniqueName;
+    return queryMaterializationSpec.id;
   }
 
   addPDT(baseName: string, dialect: Dialect): string {
@@ -4466,19 +4460,9 @@ class QueryStruct extends QueryNode {
         return this.structDef.pipeSQL;
       case 'query_source': {
         // cache derived table.
-        const clonedAnnotation = structuredClone(
-          this.structDef.query.annotation
-        );
-
-        if (clonedAnnotation) {
-          clonedAnnotation.inherits = undefined;
-        }
-
-        const sourceTag = Tag.annotationToTag(clonedAnnotation).tag;
-
         if (
           this.prepareResultOptions?.replaceMaterializedReferences &&
-          sourceTag.has('materialize')
+          shouldMaterialize(this.structDef.query.annotation)
         ) {
           return stageWriter.addMaterializedQuery(
             getIdentifier(this.structDef),
@@ -4782,6 +4766,9 @@ export class QueryModel {
       malloy: ret.malloy,
       sql: ret.stageWriter.generateSQLStages(),
       dependenciesToMaterialize: ret.stageWriter.dependenciesToMaterialize,
+      materialization: shouldMaterialize(query.annotation)
+        ? buildQueryMaterializationSpec(query.location?.url, query.name)
+        : undefined,
       structs: ret.structs,
       sourceExplore,
       sourceFilters: query.filterList,
