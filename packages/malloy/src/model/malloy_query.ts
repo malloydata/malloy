@@ -20,7 +20,7 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-
+import {v4 as uuidv4} from 'uuid';
 import {Dialect, DialectFieldList, getDialect} from '../dialect';
 import {StandardSQLDialect} from '../dialect/standardsql/standardsql';
 import {
@@ -248,7 +248,11 @@ class StageWriter {
     return id;
   }
 
-  addMaterializedQuery(fieldName: string, query: Query): string {
+  addMaterializedQuery(
+    fieldName: string,
+    query: Query,
+    materializatedTablePrefix?: string
+  ): string {
     const name = query.name;
     if (!name) {
       throw new Error(
@@ -264,7 +268,11 @@ class StageWriter {
     }
 
     // Creating an object that should uniquely identify a query within a Malloy model repo.
-    const queryMaterializationSpec = buildQueryMaterializationSpec(path, name);
+    const queryMaterializationSpec = buildQueryMaterializationSpec(
+      path,
+      name,
+      materializatedTablePrefix
+    );
     this.root().dependenciesToMaterialize[queryMaterializationSpec.id] =
       queryMaterializationSpec;
 
@@ -377,6 +385,10 @@ class GenerateState {
 }
 
 abstract class QueryNode {
+  readonly referenceId: string;
+  constructor(referenceId?: string) {
+    this.referenceId = referenceId ?? uuidv4();
+  }
   abstract getIdentifier(): string;
   getChildByName(_name: string): QuerySomething | undefined {
     return undefined;
@@ -387,8 +399,8 @@ class QueryField extends QueryNode {
   fieldDef: FieldDef;
   parent: QueryStruct;
 
-  constructor(fieldDef: FieldDef, parent: QueryStruct) {
-    super();
+  constructor(fieldDef: FieldDef, parent: QueryStruct, referenceId?: string) {
+    super(referenceId);
     this.fieldDef = fieldDef;
     this.parent = parent;
     this.fieldDef = fieldDef;
@@ -1396,8 +1408,8 @@ function isScalarField(f: QueryField): f is QueryAtomicField<AtomicFieldDef> {
 class QueryAtomicField<T extends AtomicFieldDef> extends QueryField {
   fieldDef: T;
 
-  constructor(fieldDef: T, parent: QueryStruct) {
-    super(fieldDef, parent);
+  constructor(fieldDef: T, parent: QueryStruct, refId?: string) {
+    super(fieldDef, parent, refId);
     this.fieldDef = fieldDef; // wish I didn't have to do this
   }
 
@@ -2168,9 +2180,14 @@ class QueryTurtle extends QueryField {}
  */
 export class Segment {
   static nextStructDef(structDef: SourceDef, segment: PipeSegment): SourceDef {
-    const qs = new QueryStruct(structDef, undefined, {
-      model: new QueryModel(undefined),
-    });
+    const qs = new QueryStruct(
+      structDef,
+      undefined,
+      {
+        model: new QueryModel(undefined),
+      },
+      {}
+    );
     const turtleDef: TurtleDef = {
       type: 'turtle',
       name: 'ignoreme',
@@ -2600,22 +2617,25 @@ class QueryQuery extends QueryField {
           ? fieldDef.code
           : undefined;
         const sourceClasses = [sourceField];
+        const referenceId = fi.f.referenceId;
+        const base = {
+          sourceField,
+          sourceExpression,
+          sourceClasses,
+          referenceId,
+        };
         if (isCalculatedField(fi.f)) {
           filterList = fi.f.getFilterList();
           return {
-            sourceField,
-            sourceExpression,
+            ...base,
             filterList,
-            sourceClasses,
             fieldKind: 'measure',
           };
         }
         if (isScalarField(fi.f)) {
           return {
-            sourceField,
-            sourceExpression,
+            ...base,
             filterList,
-            sourceClasses,
             fieldKind: 'dimension',
           };
         } else {
@@ -4139,9 +4159,10 @@ class QueryStruct extends QueryNode {
     public structDef: StructDef,
     readonly sourceArguments: Record<string, Argument> | undefined,
     parent: ParentQueryStruct | ParentQueryModel,
-    readonly prepareResultOptions?: PrepareResultOptions
+    readonly prepareResultOptions: PrepareResultOptions,
+    referenceId?: string
   ) {
-    super();
+    super(referenceId);
     this.setParent(parent);
 
     if ('model' in parent) {
@@ -4421,27 +4442,27 @@ class QueryStruct extends QueryNode {
   }
 
   /** makes a new queryable field object from a fieldDef */
-  makeQueryField(field: FieldDef): QueryField {
+  makeQueryField(field: FieldDef, referenceId?: string): QueryField {
     switch (field.type) {
       case 'string':
-        return new QueryFieldString(field, this);
+        return new QueryFieldString(field, this, referenceId);
       case 'date':
-        return new QueryFieldDate(field, this);
+        return new QueryFieldDate(field, this, referenceId);
       case 'timestamp':
-        return new QueryFieldTimestamp(field, this);
+        return new QueryFieldTimestamp(field, this, referenceId);
       case 'number':
-        return new QueryFieldNumber(field, this);
+        return new QueryFieldNumber(field, this, referenceId);
       case 'boolean':
-        return new QueryFieldBoolean(field, this);
+        return new QueryFieldBoolean(field, this, referenceId);
       case 'json':
-        return new QueryFieldJSON(field, this);
+        return new QueryFieldJSON(field, this, referenceId);
       case 'sql native':
-        return new QueryFieldUnsupported(field, this);
+        return new QueryFieldUnsupported(field, this, referenceId);
       // case "reduce":
       // case "project":
       // case "index":
       case 'turtle':
-        return new QueryTurtle(field, this);
+        return new QueryTurtle(field, this, referenceId);
       default:
         throw new Error(`unknown field definition ${JSON.stringify(field)}`);
     }
@@ -4465,7 +4486,8 @@ class QueryStruct extends QueryNode {
         ) {
           return stageWriter.addMaterializedQuery(
             getIdentifier(this.structDef),
-            this.structDef.query
+            this.structDef.query,
+            this.prepareResultOptions?.materializedTablePrefix
           );
         } else {
           // returns the stage name.
@@ -4540,10 +4562,16 @@ class QueryStruct extends QueryNode {
       // when it generated the reference, and has both the source and reference annotations included.
       if (field instanceof QueryStruct) {
         const newDef = {...field.structDef, annotation};
-        return new QueryStruct(newDef, undefined, field.parent);
+        return new QueryStruct(
+          newDef,
+          undefined,
+          field.parent,
+          {},
+          field.referenceId
+        );
       } else {
         const newDef = {...field.fieldDef, annotation};
-        return field.parent.makeQueryField(newDef);
+        return field.parent.makeQueryField(newDef, field.referenceId);
       }
     }
     return field;
@@ -4641,7 +4669,7 @@ export class QueryModel {
     for (const s of Object.values(this.modelDef.contents)) {
       let qs;
       if (modelObjIsSource(s)) {
-        qs = new QueryStruct(s, undefined, {model: this});
+        qs = new QueryStruct(s, undefined, {model: this}, {});
         this.structs.set(getIdentifier(s), qs);
         qs.resolveQueryFields();
       } else if (s.type === 'query') {
@@ -4665,6 +4693,7 @@ export class QueryModel {
     sourceArguments: Record<string, Argument> | undefined,
     prepareResultOptions?: PrepareResultOptions
   ): QueryStruct {
+    prepareResultOptions ??= {};
     if (typeof structRef === 'string') {
       const ret = this.getStructByName(structRef);
       if (sourceArguments !== undefined) {
@@ -4769,7 +4798,11 @@ export class QueryModel {
       sql: ret.stageWriter.generateSQLStages(),
       dependenciesToMaterialize: ret.stageWriter.dependenciesToMaterialize,
       materialization: shouldMaterialize(query.annotation)
-        ? buildQueryMaterializationSpec(query.location?.url, query.name)
+        ? buildQueryMaterializationSpec(
+            query.location?.url,
+            query.name,
+            prepareResultOptions?.materializedTablePrefix
+          )
         : undefined,
       structs: ret.structs,
       sourceExplore,
