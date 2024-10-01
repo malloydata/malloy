@@ -3391,7 +3391,7 @@ class QueryQuery extends QueryField {
       for (const m of output.groupsAggregated) {
         output.sql[0] += `WHEN group_set=${m.fromGroup} THEN ${m.toGroup} `;
       }
-      output.sql[0] += ' ELSE group_set END as group_set';
+      output.sql[0] += 'ELSE group_set END as group_set';
     }
   }
 

@@ -643,8 +643,8 @@ export type JoinedArrayDef = JoinedArrayTypeDef & AtomicFieldDef;
 
 export function arrayEachFields(arrayOf: AtomicTypeDef): AtomicFieldDef[] {
   return [
-    {name: 'each', ...arrayOf, e: {node: 'arrayEach'}},
-    {name: 'value', ...arrayOf, e: {node: 'arrayEach'}},
+    {name: 'each', ...arrayOf, e: {node: 'field', path: ['value']}},
+    {name: 'value', ...arrayOf},
   ];
 }
 
