@@ -100,7 +100,6 @@ import {
   SQLExprElement,
 } from './utils';
 import {DialectFieldTypeStruct, QueryInfo} from '../dialect/dialect';
-import {Tag} from '../tags';
 import {
   buildQueryMaterializationSpec,
   shouldMaterialize,
