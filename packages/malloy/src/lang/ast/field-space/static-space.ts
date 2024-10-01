@@ -27,7 +27,7 @@ import {
   FieldDef,
   StructDef,
   SourceDef,
-  hasJoin,
+  isJoined,
   isTurtleDef,
   isSourceDef,
   JoinFieldDef,
@@ -67,7 +67,7 @@ export class StaticSpace implements FieldSpace {
   }
 
   defToSpaceField(from: FieldDef): SpaceField {
-    if (hasJoin(from)) {
+    if (isJoined(from)) {
       return new StructSpaceField(from, this.fromStruct.dialect);
     } else if (isTurtleDef(from)) {
       return new IRViewField(this, from);

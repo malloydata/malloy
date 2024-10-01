@@ -730,14 +730,14 @@ export function isJoinable(sd: StructDef): sd is Joinable {
   );
 }
 
-export function hasJoin<T extends FieldDef | StructDef>(
+export function isJoined<T extends FieldDef | StructDef>(
   fd: T
 ): fd is T & Joinable & JoinBase {
   return 'join' in fd;
 }
 
 export function isJoinedSource(sd: StructDef): sd is SourceDef & JoinBase {
-  return isSourceDef(sd) && hasJoin(sd);
+  return isSourceDef(sd) && isJoined(sd);
 }
 
 export type DateUnit = 'day' | 'week' | 'month' | 'quarter' | 'year';
@@ -1073,7 +1073,7 @@ export type SourceDef =
  * mtoy todo RENAME WITHOUT CAPS WHEN YOU UNDERSTAND IT BETTER
  */
 export function IS_BASE_TABLE(def: FieldDef | StructDef): def is SourceDef {
-  if (hasJoin(def)) {
+  if (isJoined(def)) {
     return false;
   }
   if (isSourceDef(def)) {

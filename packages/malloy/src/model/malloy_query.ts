@@ -95,7 +95,7 @@ import {
   IS_BASE_TABLE,
   NestSourceDef,
   TimestampFieldDef,
-  hasJoin,
+  isJoined,
   isJoinedSource,
   QueryResultDef,
   IS_SCALAR_ARRAY,
@@ -1826,7 +1826,7 @@ class FieldInstanceResult implements FieldInstance {
         if (fi.fieldUsage.type === 'result') {
           if (
             fi.f.fieldDef.type === 'turtle' ||
-            hasJoin(fi.f.fieldDef) ||
+            isJoined(fi.f.fieldDef) ||
             expressionIsAnalytic(fi.f.fieldDef.expressionType)
           ) {
             continue;
@@ -2119,7 +2119,7 @@ class JoinInstance {
       return 'root';
     }
     const thisStruct = this.queryStruct.structDef;
-    if (hasJoin(thisStruct)) {
+    if (isJoined(thisStruct)) {
       switch (thisStruct.join) {
         case 'one':
           return 'many_to_one';
@@ -2143,7 +2143,7 @@ class JoinInstance {
       return false;
     }
     const thisStruct = this.queryStruct.structDef;
-    if (hasJoin(thisStruct)) {
+    if (isJoined(thisStruct)) {
       return (
         thisStruct.matrixOperation === 'right' ||
         thisStruct.matrixOperation === 'full'
@@ -4038,7 +4038,7 @@ class QueryQueryIndex extends QueryQuery {
           const f = this.parent.nameMap.get(fref.path[0]);
           if (
             f instanceof QueryStruct &&
-            hasJoin(f.structDef) &&
+            isJoined(f.structDef) &&
             f.structDef.join === 'many' &&
             f.structDef.fields.length > 1
           ) {
@@ -4217,7 +4217,7 @@ class QueryStruct extends QueryNode {
     for (const field of fields) {
       const as = getIdentifier(field);
 
-      if (hasJoin(field)) {
+      if (isJoined(field)) {
         this.addFieldToNameMap(
           as,
           new QueryStruct(
