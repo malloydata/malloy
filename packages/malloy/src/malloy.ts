@@ -1264,6 +1264,10 @@ export class PreparedResult implements Taggable {
     return this.inner.dependenciesToMaterialize;
   }
 
+  public get materialization(): QueryToMaterialize | undefined {
+    return this.inner.materialization;
+  }
+
   /**
    * @return The `Explore` representing the data that will be returned by running this query.
    */
