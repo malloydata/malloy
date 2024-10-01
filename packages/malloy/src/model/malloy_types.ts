@@ -1337,6 +1337,7 @@ export interface SearchValueMapResult {
 
 export interface PrepareResultOptions {
   replaceMaterializedReferences?: boolean;
+  materializedTablePrefix?: string;
 }
 
 // clang-format on

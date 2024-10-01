@@ -221,6 +221,7 @@ export class Malloy {
     refreshSchemaCache,
     noThrowOnError,
     replaceMaterializedReferences,
+    materializedTablePrefix,
   }: {
     urlReader: URLReader;
     connections: LookupConnection<InfoConnection>;
@@ -350,7 +351,7 @@ export class Malloy {
             const expanded = Malloy.compileSQLBlock(
               result.partialModel,
               toCompile,
-              {replaceMaterializedReferences}
+              {replaceMaterializedReferences, materializedTablePrefix}
             );
             const resolved = await conn.fetchSchemaForSQLBlock(expanded, {
               refreshTimestamp,
@@ -381,7 +382,7 @@ export class Malloy {
   static compileSQLBlock(
     partialModel: ModelDef | undefined,
     toCompile: SQLBlockSource,
-    options?: {replaceMaterializedReferences?: boolean}
+    options?: PrepareResultOptions
   ): SQLBlock {
     let queryModel: QueryModel | undefined = undefined;
     let selectStr = '';
@@ -2282,6 +2283,7 @@ export class Runtime {
           refreshSchemaCache,
           noThrowOnError,
           replaceMaterializedReferences: options?.replaceMaterializedReferences,
+          materializedTablePrefix: options?.materializedTablePrefix,
         });
       },
       options
@@ -2600,15 +2602,14 @@ class FluentState<T> {
  * queries or explores (via e.g. `loadFinalQuery()`, `loadQuery`, `loadExploreByName`, etc.).
  */
 export class ModelMaterializer extends FluentState<Model> {
-  private readonly replaceMaterializedReferences: boolean;
+  private readonly prepareResultOptions: PrepareResultOptions | undefined;
   constructor(
     protected runtime: Runtime,
     materialize: () => Promise<Model>,
     options?: PrepareResultOptions
   ) {
     super(runtime, materialize);
-    this.replaceMaterializedReferences =
-      options?.replaceMaterializedReferences ?? false;
+    this.prepareResultOptions = options;
   }
 
   /**
@@ -2623,7 +2624,7 @@ export class ModelMaterializer extends FluentState<Model> {
         return (await this.materialize()).getPreparedQuery();
       },
       {
-        replaceMaterializedReferences: this.replaceMaterializedReferences,
+        ...this.prepareResultOptions,
         ...options,
       }
     );
@@ -2645,7 +2646,7 @@ export class ModelMaterializer extends FluentState<Model> {
         return (await this.materialize()).getPreparedQueryByIndex(index);
       },
       {
-        replaceMaterializedReferences: this.replaceMaterializedReferences,
+        ...this.prepareResultOptions,
         ...options,
       }
     );
@@ -2667,7 +2668,7 @@ export class ModelMaterializer extends FluentState<Model> {
         return (await this.materialize()).getPreparedQueryByName(name);
       },
       {
-        replaceMaterializedReferences: this.replaceMaterializedReferences,
+        ...this.prepareResultOptions,
         ...options,
       }
     );
@@ -2714,9 +2715,7 @@ export class ModelMaterializer extends FluentState<Model> {
         model,
         refreshSchemaCache,
         noThrowOnError,
-        replaceMaterializedReferences:
-          options?.replaceMaterializedReferences ??
-          this.replaceMaterializedReferences,
+        ...this.prepareResultOptions,
       });
       return queryModel.preparedQuery;
     });
@@ -2764,9 +2763,7 @@ export class ModelMaterializer extends FluentState<Model> {
           model,
           refreshSchemaCache: options?.refreshSchemaCache,
           noThrowOnError: options?.noThrowOnError,
-          replaceMaterializedReferences:
-            options?.replaceMaterializedReferences ??
-            this.replaceMaterializedReferences,
+          ...this.prepareResultOptions,
         });
         return queryModel;
       },
@@ -2945,7 +2942,7 @@ export class ModelMaterializer extends FluentState<Model> {
         return new PreparedQuery(query, model._modelDef, model.problems);
       },
       {
-        replaceMaterializedReferences: this.replaceMaterializedReferences,
+        ...this.prepareResultOptions,
         ...options,
       }
     );
@@ -2959,14 +2956,9 @@ export class ModelMaterializer extends FluentState<Model> {
    * or loading further related objects.
    */
   public loadExploreByName(name: string): ExploreMaterializer {
-    return this.makeExploreMaterializer(
-      async () => {
-        return (await this.materialize()).getExploreByName(name);
-      },
-      {
-        replaceMaterializedReferences: this.replaceMaterializedReferences,
-      }
-    );
+    return this.makeExploreMaterializer(async () => {
+      return (await this.materialize()).getExploreByName(name);
+    }, this.prepareResultOptions);
   }
 
   /**
@@ -2995,15 +2987,14 @@ export class ModelMaterializer extends FluentState<Model> {
  * prepared results or run the query (via e.g. `loadPreparedResult()` or `run()`).
  */
 export class QueryMaterializer extends FluentState<PreparedQuery> {
-  private readonly replaceMaterializedReferences: boolean;
+  private readonly prepareResultOptions: PrepareResultOptions | undefined;
   constructor(
     protected runtime: Runtime,
     materialize: () => Promise<PreparedQuery>,
     options?: PrepareResultOptions
   ) {
     super(runtime, materialize);
-    this.replaceMaterializedReferences =
-      options?.replaceMaterializedReferences ?? false;
+    this.prepareResultOptions = options;
   }
 
   /**
@@ -3014,7 +3005,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
   async run(options?: RunSQLOptions & PrepareResultOptions): Promise<Result> {
     const connections = this.runtime.connections;
     const preparedResult = await this.getPreparedResult({
-      replaceMaterializedReferences: this.replaceMaterializedReferences,
+      ...this.prepareResultOptions,
       ...options,
     });
     const finalOptions = runSQLOptionsWithAnnotations(preparedResult, options);
@@ -3025,7 +3016,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
     options?: RunSQLOptions & PrepareResultOptions
   ): AsyncIterableIterator<DataRecord> {
     const preparedResult = await this.getPreparedResult({
-      replaceMaterializedReferences: this.replaceMaterializedReferences,
+      ...this.prepareResultOptions,
       ...options,
     });
     const connections = this.runtime.connections;
@@ -3051,7 +3042,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
   ): PreparedResultMaterializer {
     return this.makePreparedResultMaterializer(async () => {
       return (await this.materialize()).getPreparedResult({
-        replaceMaterializedReferences: this.replaceMaterializedReferences,
+        ...this.prepareResultOptions,
         ...options,
       });
     });
@@ -3066,7 +3057,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
     options?: PrepareResultOptions
   ): Promise<PreparedResult> {
     return this.loadPreparedResult({
-      replaceMaterializedReferences: this.replaceMaterializedReferences,
+      ...this.prepareResultOptions,
       ...options,
     }).getPreparedResult();
   }
@@ -3079,7 +3070,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
   public async getSQL(options?: PrepareResultOptions): Promise<string> {
     return (
       await this.getPreparedResult({
-        replaceMaterializedReferences: this.replaceMaterializedReferences,
+        ...this.prepareResultOptions,
         ...options,
       })
     ).sql;
@@ -3104,7 +3095,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
   ): Promise<QueryRunStats> {
     const connections = this.runtime.connections;
     const preparedResult = await this.getPreparedResult({
-      replaceMaterializedReferences: this.replaceMaterializedReferences,
+      ...this.prepareResultOptions,
       ...options,
     });
     return Malloy.estimateQueryCost({connections, preparedResult});
