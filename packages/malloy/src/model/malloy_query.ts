@@ -20,7 +20,7 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-
+import {v4 as uuidv4} from 'uuid';
 import {Dialect, DialectFieldList, getDialect} from '../dialect';
 import {StandardSQLDialect} from '../dialect/standardsql/standardsql';
 import {
@@ -373,11 +373,13 @@ abstract class QueryNode {
 class QueryField extends QueryNode {
   fieldDef: FieldDef;
   parent: QueryStruct;
+  readonly referenceId: string;
 
-  constructor(fieldDef: FieldDef, parent: QueryStruct) {
+  constructor(fieldDef: FieldDef, parent: QueryStruct, referenceId?: string) {
     super(fieldDef);
     this.parent = parent;
     this.fieldDef = fieldDef;
+    this.referenceId = referenceId ?? uuidv4();
   }
 
   uniqueKeyPossibleUse(): UniqueKeyPossibleUse | undefined {
@@ -2584,22 +2586,25 @@ class QueryQuery extends QueryField {
           (fieldDef.name || fieldDef.as || 'undefined');
         const sourceExpression: string | undefined = fieldDef.code;
         const sourceClasses = [sourceField];
+        const referenceId = fi.f.referenceId;
+        const base = {
+          sourceField,
+          sourceExpression,
+          sourceClasses,
+          referenceId,
+        };
         if (isCalculatedField(fi.f)) {
           filterList = fi.f.getFilterList();
           return {
-            sourceField,
-            sourceExpression,
+            ...base,
             filterList,
-            sourceClasses,
             fieldKind: 'measure',
           };
         }
         if (isScalarField(fi.f)) {
           return {
-            sourceField,
-            sourceExpression,
+            ...base,
             filterList,
-            sourceClasses,
             fieldKind: 'dimension',
           };
         } else {
@@ -4429,27 +4434,27 @@ class QueryStruct extends QueryNode {
   }
 
   /** makes a new queryable field object from a fieldDef */
-  makeQueryField(field: FieldDef): QueryField {
+  makeQueryField(field: FieldDef, referenceId?: string): QueryField {
     switch (field.type) {
       case 'string':
-        return new QueryFieldString(field, this);
+        return new QueryFieldString(field, this, referenceId);
       case 'date':
-        return new QueryFieldDate(field, this);
+        return new QueryFieldDate(field, this, referenceId);
       case 'timestamp':
-        return new QueryFieldTimestamp(field, this);
+        return new QueryFieldTimestamp(field, this, referenceId);
       case 'number':
-        return new QueryFieldNumber(field, this);
+        return new QueryFieldNumber(field, this, referenceId);
       case 'boolean':
-        return new QueryFieldBoolean(field, this);
+        return new QueryFieldBoolean(field, this, referenceId);
       case 'json':
-        return new QueryFieldJSON(field, this);
+        return new QueryFieldJSON(field, this, referenceId);
       case 'sql native':
-        return new QueryFieldUnsupported(field, this);
+        return new QueryFieldUnsupported(field, this, referenceId);
       // case "reduce":
       // case "project":
       // case "index":
       case 'turtle':
-        return new QueryTurtle(field, this);
+        return new QueryTurtle(field, this, referenceId);
       default:
         throw new Error(`unknown field definition ${JSON.stringify(field)}`);
     }
@@ -4560,10 +4565,16 @@ class QueryStruct extends QueryNode {
       if (field.parent === undefined) {
         throw new Error('Expected field to have a parent');
       }
-      return field.parent.makeQueryField({
-        ...field.fieldDef,
-        annotation: refAnnoatation,
-      });
+      if (!(field instanceof QueryField)) {
+        throw new Error('Expected fieldref to reference a QueryField');
+      }
+      return field.parent.makeQueryField(
+        {
+          ...field.fieldDef,
+          annotation: refAnnoatation,
+        },
+        field.referenceId
+      );
     }
     return field;
   }

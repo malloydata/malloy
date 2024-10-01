@@ -1820,6 +1820,14 @@ export class AtomicField extends Entity implements Taggable {
     return sourceField ? [sourceField] : [];
   }
 
+  /**
+   * A unique ID of this field within the context of a result; undefined
+   * for fields that are not derived from a Result.
+   */
+  public get referenceId(): string | undefined {
+    return this.fieldTypeDef.resultMetadata?.referenceId;
+  }
+
   // was the field generated from a measure in the previous query
   public sourceWasMeasure(): boolean {
     return this.fieldTypeDef.resultMetadata?.fieldKind === 'measure';
