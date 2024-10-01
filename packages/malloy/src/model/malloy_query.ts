@@ -3773,7 +3773,6 @@ class QueryQuery extends QueryField {
       let structDef: FinalizeSourceDef = {
         ...outputStruct,
         type: 'finalize',
-        name: 'lastStage',
       };
       pipeline.shift();
       for (const transform of pipeline) {
@@ -3797,7 +3796,6 @@ class QueryQuery extends QueryField {
         structDef = {
           ...outputStruct,
           type: 'finalize',
-          name: 'lastStage',
         };
       }
     }

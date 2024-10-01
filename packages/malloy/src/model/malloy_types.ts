@@ -1057,6 +1057,7 @@ export function isSourceDef(sd: StructDef | FieldDef): sd is SourceDef {
     sd.type === 'sql_select' ||
     sd.type === 'query_source' ||
     sd.type === 'query_result' ||
+    sd.type === 'finalize' ||
     sd.type === 'pipeline_struct'
   );
 }
