@@ -421,6 +421,7 @@ export interface ResultMetadataDef {
   sourceClasses: string[];
   filterList?: FilterCondition[];
   fieldKind: 'measure' | 'dimension' | 'struct';
+  referenceId?: string;
 }
 
 // struct specific metadta
