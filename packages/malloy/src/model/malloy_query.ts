@@ -4530,7 +4530,7 @@ class QueryStruct extends QueryNode {
     name: string[],
     annotation: Annotation | undefined
   ): QuerySomething {
-    const field = this.getQueryFieldByName(name);
+    const field = this.getFieldByName(name);
     if (annotation) {
       if (field.parent === undefined) {
         throw new Error('Unexpected reference to orphaned query field');
