@@ -21,11 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  SourceDef,
-  QuerySourceDef,
-  isSourceDef,
-} from '../../../model/malloy_types';
+import {SourceDef, QuerySourceDef} from '../../../model/malloy_types';
 import {Source} from './source';
 import {QueryElement} from '../types/query-element';
 import {ParameterSpace} from '../field-space/parameter-space';
