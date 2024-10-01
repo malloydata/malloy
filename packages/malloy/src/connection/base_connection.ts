@@ -24,11 +24,10 @@ import {
 export interface SchemaFound<T extends StructDef> {
   schema: T;
   error?: undefined;
-  expires?: number;
+  timestamp: number;
 }
 export interface SchemaNotFound {
   schema?: undefined;
-  expires?: undefined;
   error: string;
 }
 export type CachedSchema<T extends StructDef> = SchemaFound<T> | SchemaNotFound;
@@ -66,21 +65,26 @@ export abstract class BaseConnection implements Connection {
     refreshTimestamp: number | undefined
   ): Promise<CachedSchema<T>> {
     let cached = this.schemaCache[schemaKey];
-    if (!cached || (cached.expires && cached.expires > Date.now())) {
+    if (
+      !cached ||
+      (cached.schema && refreshTimestamp && refreshTimestamp > cached.timestamp)
+    ) {
       const cacheResponse = await fillCache();
       if (typeof cacheResponse === 'string') {
         cached = {error: cacheResponse};
       } else {
-        cached = {schema: cacheResponse};
+        cached = {
+          schema: cacheResponse,
+          timestamp: refreshTimestamp ?? Date.now(),
+        };
       }
-      cached.expires = refreshTimestamp;
       this.schemaCache[schemaKey] = cached;
     }
     if (cached.error) {
       return cached;
     }
     if (cached.schema && cached.schema.type === schemaType) {
-      return {schema: cached.schema as T};
+      return {...cached, schema: cached.schema as T};
     }
     return {error: 'Wrong type found in schema cache'};
   }

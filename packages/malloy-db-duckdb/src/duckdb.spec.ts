@@ -23,7 +23,7 @@
 
 import {DuckDBCommon} from './duckdb_common';
 import {DuckDBConnection} from './duckdb_connection';
-import {SQLSourceDef, StructDef} from '@malloydata/malloy';
+import {arrayEachFields, SQLSourceDef, StructDef} from '@malloydata/malloy';
 import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
 
 const [describe] = describeIfDatabaseAvailable(['duckdb']);
@@ -133,24 +133,12 @@ describe('DuckDBConnection', () => {
       const structDef = makeStructDef();
       connection.fillStructDefFromTypeMap(structDef, {test: ARRAY_SCHEMA});
       expect(structDef.fields[0]).toEqual({
-        'name': 'test',
-        'type': 'struct',
-        'dialect': 'duckdb',
-        'structRelationship': {
-          'fieldName': 'test',
-          'isArray': true,
-          'type': 'nested',
-        },
-        'structSource': {
-          'type': 'nested',
-        },
-        'fields': [
-          {
-            'name': 'value',
-            'type': 'number',
-            'numberType': 'integer',
-          },
-        ],
+        name: 'test',
+        type: 'array',
+        dataType: intTyp,
+        join: 'many',
+        dialect: 'duckdb',
+        fields: arrayEachFields({type: 'number', numberType: 'integer'}),
       });
     });
 
@@ -159,29 +147,13 @@ describe('DuckDBConnection', () => {
       connection.fillStructDefFromTypeMap(structDef, {test: INLINE_SCHEMA});
       expect(structDef.fields[0]).toEqual({
         'name': 'test',
-        'type': 'struct',
+        'type': 'record',
         'dialect': 'duckdb',
-        'structRelationship': {
-          'type': 'inline',
-        },
-        'structSource': {
-          'type': 'inline',
-        },
+        'join': 'one',
         'fields': [
-          {
-            'name': 'a',
-            'type': 'number',
-            'numberType': 'float',
-          },
-          {
-            'name': 'b',
-            'type': 'number',
-            'numberType': 'integer',
-          },
-          {
-            'name': 'c',
-            'type': 'string',
-          },
+          {'name': 'a', ...dblType},
+          {'name': 'b', ...intTyp},
+          {'name': 'c', ...strTyp},
         ],
       });
     });
@@ -191,14 +163,10 @@ describe('DuckDBConnection', () => {
       connection.fillStructDefFromTypeMap(structDef, {test: NESTED_SCHEMA});
       expect(structDef.fields[0]).toEqual({
         'name': 'test',
-        'type': 'struct',
+        'type': 'array',
+        'dataType': {type: 'record_element'},
         'dialect': 'duckdb',
-        'structRelationship': {
-          'fieldName': 'test',
-          'isArray': false,
-          'type': 'nested',
-        },
-        'structSource': {'type': 'nested'},
+        'join': 'many',
         'fields': [
           {'name': 'a', 'numberType': 'float', 'type': 'number'},
           {'name': 'b', 'numberType': 'integer', 'type': 'number'},
@@ -296,3 +264,7 @@ const INLINE_SCHEMA = 'STRUCT(a double, b integer, c varchar(60))';
 
 // STRUCT(....)[] is nested
 const NESTED_SCHEMA = 'STRUCT(a double, b integer, c varchar(60))[]';
+
+const intTyp = {type: 'number', numberType: 'integer'};
+const strTyp = {type: 'string'};
+const dblType = {type: 'number', numberType: 'float'};
