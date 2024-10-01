@@ -79,7 +79,12 @@ import {
   QueryURL,
   URLReader,
 } from './runtime_types';
-import {Connection, InfoConnection, LookupConnection} from './connection/types';
+import {
+  Connection,
+  FetchSchemaOptions,
+  InfoConnection,
+  LookupConnection,
+} from './connection/types';
 import {DateTime} from 'luxon';
 import {Tag, TagParse, TagParseSpec, Taggable} from './tags';
 import {Dialect, getDialect} from './dialect';
@@ -324,10 +329,14 @@ export class Malloy {
               //      as `Object.keys(tablePathByKey)`, i.e. that all tables are accounted for. Otherwise
               //      the translator runs into an infinite loop fetching tables.
               const {schemas: tables, errors} =
-                await connection.fetchSchemaForTables(tablePathByKey, {
-                  refreshTimestamp,
-                  modelAnnotation,
-                });
+                await Malloy.safelyFetchTableSchema(
+                  connection,
+                  tablePathByKey,
+                  {
+                    refreshTimestamp,
+                    modelAnnotation,
+                  }
+                );
               translator.update({tables, errors: {tables: errors}});
             } catch (error) {
               // There was an exception getting the connection, associate that error
@@ -375,6 +384,22 @@ export class Malloy {
         }
       }
     }
+  }
+
+  static async safelyFetchTableSchema(
+    connection: InfoConnection,
+    toFetch: Record<string, string>,
+    opts: FetchSchemaOptions
+  ) {
+    const ret = await connection.fetchSchemaForTables(toFetch, opts);
+    for (const req of Object.keys(toFetch)) {
+      if (ret.schemas[req] === undefined && ret.errors[req] === undefined) {
+        throw new Error(
+          `Schema fetch error for ${connection.name}, no response for ${req}`
+        );
+      }
+    }
+    return ret;
   }
 
   static compileSQLBlock(

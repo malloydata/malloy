@@ -103,10 +103,10 @@ export abstract class BaseConnection implements Connection {
         refreshTimestamp
       );
       if (inCache.schema) {
-        schemas[tablePath] = inCache.schema;
+        schemas[tableName] = inCache.schema;
       }
       if (inCache.error) {
-        errors[tablePath] = inCache.error;
+        errors[tableName] = inCache.error;
       }
     }
     return {schemas, errors};
