@@ -4532,16 +4532,19 @@ class QueryStruct extends QueryNode {
     name: string[],
     annotation: Annotation | undefined
   ): QuerySomething {
-    const field = this.getFieldByName(name);
+    const field = this.getQueryFieldByName(name);
     if (annotation) {
+      if (field.parent === undefined) {
+        throw new Error('Unexpected reference to orphaned query field');
+      }
       // Made a field object from the source, but the annotations were computed by the compiler
       // when it generated the reference, and has both the source and reference annotations included.
       if (field instanceof QueryStruct) {
         const newDef = {...field.structDef, annotation};
-        return new QueryStruct(newDef, undefined, this);
+        return new QueryStruct(newDef, undefined, field.parent);
       } else {
         const newDef = {...field.fieldDef, annotation};
-        return this.makeQueryField(newDef);
+        return field.parent.makeQueryField(newDef);
       }
     }
     return field;
