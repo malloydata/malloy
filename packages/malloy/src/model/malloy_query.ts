@@ -230,7 +230,11 @@ class StageWriter {
     return id;
   }
 
-  addMaterializedQuery(fieldName: string, query: Query): string {
+  addMaterializedQuery(
+    fieldName: string,
+    query: Query,
+    materializatedTablePrefix?: string
+  ): string {
     const name = query.name;
     if (!name) {
       throw new Error(
@@ -246,7 +250,11 @@ class StageWriter {
     }
 
     // Creating an object that should uniquely identify a query within a Malloy model repo.
-    const queryMaterializationSpec = buildQueryMaterializationSpec(path, name);
+    const queryMaterializationSpec = buildQueryMaterializationSpec(
+      path,
+      name,
+      materializatedTablePrefix
+    );
     this.root().dependenciesToMaterialize[queryMaterializationSpec.id] =
       queryMaterializationSpec;
 
@@ -4126,6 +4134,8 @@ class QueryStruct extends QueryNode {
   dialect: Dialect;
   connectionName: string;
 
+  readonly stacki: string;
+
   constructor(
     fieldDef: StructDef,
     readonly sourceArguments: Record<string, Argument> | undefined,
@@ -4133,6 +4143,7 @@ class QueryStruct extends QueryNode {
     readonly prepareResultOptions?: PrepareResultOptions
   ) {
     super(fieldDef);
+    this.stacki = new Error('').stack!;
     this.setParent(parent);
 
     if ('model' in parent) {
@@ -4487,7 +4498,8 @@ class QueryStruct extends QueryNode {
         ) {
           return stageWriter.addMaterializedQuery(
             getIdentifier(this.fieldDef),
-            this.fieldDef.structSource.query
+            this.fieldDef.structSource.query,
+            this.prepareResultOptions?.materializedTablePrefix
           );
         } else {
           // returns the stage name.
@@ -4798,7 +4810,11 @@ export class QueryModel {
       sql: ret.stageWriter.generateSQLStages(),
       dependenciesToMaterialize: ret.stageWriter.dependenciesToMaterialize,
       materialization: shouldMaterialize(query.annotation)
-        ? buildQueryMaterializationSpec(query.location?.url, query.name)
+        ? buildQueryMaterializationSpec(
+            query.location?.url,
+            query.name,
+            prepareResultOptions?.materializedTablePrefix
+          )
         : undefined,
       structs: ret.structs,
       sourceExplore,
