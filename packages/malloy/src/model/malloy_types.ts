@@ -1224,6 +1224,7 @@ export interface CompiledQuery extends DrillSource {
   annotation?: Annotation;
   // Map of query unique id to the SQL.
   dependenciesToMaterialize?: Record<string, QueryToMaterialize>;
+  materialization?: QueryToMaterialize;
 }
 
 /** Result type for running a Malloy query. */
