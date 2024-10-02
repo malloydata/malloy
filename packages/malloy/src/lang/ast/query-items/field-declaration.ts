@@ -96,7 +96,7 @@ export abstract class AtomicFieldDeclaration
   }
 
   queryFieldDef(exprFS: FieldSpace, exprName: string): AtomicFieldDef {
-    let exprValue;
+    let exprValue: ExprValue;
 
     function getOutputFS() {
       if (exprFS.isQueryFieldSpace()) {
@@ -157,10 +157,22 @@ export abstract class AtomicFieldDeclaration
           };
           break;
         }
-        case 'record':
+        case 'record': {
+          const fields: FieldDef[] = [];
+          ret = {
+            type: 'record',
+            name: exprName,
+            location: this.location,
+            join: 'one',
+            fields,
+            e: exprValue.value,
+            dialect: exprFS.dialectName(),
+          };
+          break;
+        }
         case 'array':
           throw this.internalError(
-            'Cannot return a record or array result from a query yet'
+            'Cannot return an array result from a query (yet)'
           );
       }
       if (exprValue.expressionType) {
@@ -281,6 +293,9 @@ export class DefSpace implements FieldSpace {
   }
   entries(): [string, SpaceEntry][] {
     return this.realFS.entries();
+  }
+  dialectName() {
+    return this.realFS.dialectName();
   }
   dialectObj(): Dialect | undefined {
     return this.realFS.dialectObj();

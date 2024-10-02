@@ -78,7 +78,7 @@ const mockSchema: Record<string, SourceDef> = {
       {
         type: 'array',
         name: 'astruct',
-        dataType: {type: 'record_element'},
+        elementTypeDef: {type: 'record_element'},
         join: 'many',
         fields: [
           {

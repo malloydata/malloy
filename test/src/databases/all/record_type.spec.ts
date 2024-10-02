@@ -12,9 +12,10 @@ import {databasesFromEnvironmentOr} from '../../util';
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(['duckdb']));
 
 describe.each(runtimes.runtimeList)('%s record types', (dbName, runtime) => {
-  const sqlTestData = "{ first: 'Mark', surname: 'Tonka' }";
+  const markData = "{ first: 'Mark', surname: 'Tonka' }";
+  const mackData = "{ first: 'Mack', surname: 'Truck' }";
   const model = runtime.loadModel(
-    `source: people is ${dbName}.sql("SELECT ${sqlTestData} AS name, [ ${sqlTestData}, ${sqlTestData} ] as zznames")`
+    `source: people is ${dbName}.sql("SELECT ${markData} AS name, [ ${markData}, ${mackData} ] as zznames")`
   );
   test('record access', async () => {
     await expect(

@@ -224,7 +224,7 @@ export abstract class DuckDBCommon
         if (arrayMatch) {
           innerStructDef = {
             type: 'array',
-            dataType: {type: 'record_element'},
+            elementTypeDef: {type: 'record_element'},
             join: 'many',
             ...structhead,
           };
@@ -242,7 +242,7 @@ export abstract class DuckDBCommon
           malloyType = this.dialect.sqlTypeToMalloyType(duckDBType);
           const innerStructDef: StructDef = {
             type: 'array',
-            dataType: malloyType,
+            elementTypeDef: malloyType,
             name,
             dialect: this.dialectName,
             join: 'many',

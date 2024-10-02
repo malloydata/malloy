@@ -1352,7 +1352,8 @@ class QueryField extends QueryNode {
 
   isArrayElement(parentDef: FieldDef) {
     return (
-      parentDef.type === 'array' && parentDef.dataType.type !== 'record_element'
+      parentDef.type === 'array' &&
+      parentDef.elementTypeDef.type !== 'record_element'
     );
   }
 
@@ -1362,7 +1363,7 @@ class QueryField extends QueryNode {
     }
     const parentIsRepeatedRecord =
       this.parent.structDef.type === 'array' &&
-      this.parent.structDef.dataType.type === 'record_element';
+      this.parent.structDef.elementTypeDef.type === 'record_element';
     return {
       node: 'genericSQLExpr',
       kids: {args: []},
@@ -2693,7 +2694,7 @@ class QueryQuery extends QueryField {
           const multiLineNest: RepeatedRecordFieldDef = {
             ...structDef,
             type: 'array',
-            dataType: {type: 'record_element'},
+            elementTypeDef: {type: 'record_element'},
             join: 'many',
             name,
             resultMetadata,

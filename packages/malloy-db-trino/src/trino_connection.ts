@@ -426,7 +426,7 @@ export abstract class TrinoPrestoConnection
         const complexStruct: RepeatedRecordTypeDef = {
           type: 'array',
           name,
-          dataType: {type: 'record_element'},
+          elementTypeDef: {type: 'record_element'},
           dialect: this.dialectName,
           join: 'many',
           fields: innerType.fields,
@@ -436,7 +436,7 @@ export abstract class TrinoPrestoConnection
         const arrayStruct: JoinedArrayDef = {
           type: 'array',
           name,
-          dataType: innerType,
+          elementTypeDef: innerType,
           dialect: this.dialectName,
           join: 'many',
           fields: arrayEachFields(innerType),

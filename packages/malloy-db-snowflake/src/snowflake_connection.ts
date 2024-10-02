@@ -199,7 +199,7 @@ export class SnowflakeConnection
           name,
           dialect: this.dialectName,
           join: 'many',
-          dataType: malloyType,
+          elementTypeDef: malloyType,
           fields: arrayEachFields(malloyType),
         };
         structDef.fields.push(innerStructDef);
@@ -209,7 +209,7 @@ export class SnowflakeConnection
           ? {
               ...structParts,
               type: 'array',
-              dataType: {type: 'record_element'},
+              elementTypeDef: {type: 'record_element'},
               join: 'many',
             }
           : {

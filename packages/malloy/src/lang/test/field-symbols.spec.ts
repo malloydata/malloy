@@ -116,7 +116,7 @@ describe('structdef comprehension', () => {
       name: 't',
       type: 'array',
       dialect: 'standardsql',
-      dataType: {type: 'string'},
+      elementTypeDef: {type: 'string'},
       join: 'many',
       matrixOperation: 'left',
       fields: [{type: 'string', name: 'b'}],

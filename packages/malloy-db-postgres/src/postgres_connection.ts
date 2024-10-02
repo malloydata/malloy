@@ -239,7 +239,7 @@ export class PostgresConnection
         );
         structDef.fields.push({
           type: 'array',
-          dataType: elementType,
+          elementTypeDef: elementType,
           name,
           dialect: this.dialectName,
           join: 'many',

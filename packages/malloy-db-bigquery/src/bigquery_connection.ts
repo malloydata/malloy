@@ -523,7 +523,7 @@ export class BigQueryConnection
           const arrayField: StructDef = {
             ...structShared,
             type: 'array',
-            dataType: malloyType,
+            elementTypeDef: malloyType,
             join: 'many',
             fields: arrayEachFields(malloyType),
           };
@@ -533,7 +533,7 @@ export class BigQueryConnection
         const ifRepeatedRecord: StructDef = {
           ...structShared,
           type: 'array',
-          dataType: {type: 'record_element'},
+          elementTypeDef: {type: 'record_element'},
           join: 'many',
         };
         const elseRecord: StructDef = {

@@ -629,7 +629,7 @@ export type NativeUnsupportedFieldDef = NativeUnsupportedTypeDef &
 
 export interface ArrayTypeDef {
   type: 'array';
-  dataType: Exclude<AtomicTypeDef, RecordTypeDef> | RecordElementTypeDef;
+  elementTypeDef: Exclude<AtomicTypeDef, RecordTypeDef> | RecordElementTypeDef;
 }
 export type ArrayFieldDef = ArrayTypeDef & AtomicFieldDef;
 
@@ -667,14 +667,14 @@ export interface RecordElementTypeDef {
 // is a useful distinction.
 export interface RepeatedRecordTypeDef extends JoinedArrayTypeDef {
   type: 'array';
-  dataType: RecordElementTypeDef;
+  elementTypeDef: RecordElementTypeDef;
   join: 'many';
 }
 
 export function isRepeatedRecord(
   fd: FieldDef
 ): fd is RepeatedRecordTypeDef & AtomicFieldDef {
-  return fd.type === 'array' && fd.dataType.type === 'record_element';
+  return fd.type === 'array' && fd.elementTypeDef.type === 'record_element';
 }
 
 export type RecordFieldDef = RecordTypeDef & AtomicFieldDef;
@@ -1088,7 +1088,7 @@ export function IS_BASE_TABLE(def: FieldDef | StructDef): def is SourceDef {
 // mtoy todo NOT SURE ABOUT THIS FUNCTION EITHER
 // i.e. does this mean "joined and scalar"
 export function IS_SCALAR_ARRAY(def: FieldDef | StructDef) {
-  return def.type === 'array' && def.dataType.type !== 'record_element';
+  return def.type === 'array' && def.elementTypeDef.type !== 'record_element';
 }
 
 export type StructDef =

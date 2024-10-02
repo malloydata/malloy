@@ -58,6 +58,10 @@ export class StaticSpace implements FieldSpace {
 
   constructor(protected fromStruct: StructDef) {}
 
+  dialectName(): string {
+    return this.fromStruct.dialect;
+  }
+
   dialectObj(): Dialect | undefined {
     try {
       return getDialect(this.fromStruct.dialect);
