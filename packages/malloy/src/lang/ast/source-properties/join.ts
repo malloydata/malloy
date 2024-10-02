@@ -76,7 +76,7 @@ export abstract class Join
       );
       return ErrorFactory.structDef;
     }
-    return source.getStructDef(parameterSpace);
+    return source.getSourceDef(parameterSpace);
   }
 }
 
@@ -198,7 +198,7 @@ export class ExpressionJoin extends Join {
       );
       return ErrorFactory.joinDef;
     }
-    const sourceDef = source.getStructDef(parameterSpace);
+    const sourceDef = source.getSourceDef(parameterSpace);
     let matrixOperation: MatrixOperation = 'left';
     if (this.inExperiment('join_types', true)) {
       matrixOperation = this.matrixOperation;

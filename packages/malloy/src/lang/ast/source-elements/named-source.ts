@@ -72,7 +72,7 @@ export class NamedSource extends Source {
     // If we are not exporting the referenced structdef, don't use the reference
     if (modelEnt && !modelEnt.exported) {
       return {
-        structRef: this.getStructDef(parameterSpace),
+        structRef: this.getSourceDef(parameterSpace),
       };
     }
     return {
@@ -219,7 +219,7 @@ export class NamedSource extends Source {
     return outArguments;
   }
 
-  getStructDef(parameterSpace: ParameterSpace | undefined): SourceDef {
+  getSourceDef(parameterSpace: ParameterSpace | undefined): SourceDef {
     return this.withParameters(parameterSpace, []);
   }
 

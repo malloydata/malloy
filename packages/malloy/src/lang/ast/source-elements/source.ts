@@ -36,11 +36,11 @@ import {ParameterSpace} from '../field-space/parameter-space';
  * function of a source is to represent an eventual StructDef
  */
 export abstract class Source extends MalloyElement {
-  abstract getStructDef(parameterSpace: ParameterSpace | undefined): SourceDef;
+  abstract getSourceDef(parameterSpace: ParameterSpace | undefined): SourceDef;
 
   structRef(parameterSpace: ParameterSpace | undefined): InvokedStructRef {
     return {
-      structRef: this.getStructDef(parameterSpace),
+      structRef: this.getSourceDef(parameterSpace),
     };
   }
 
@@ -60,7 +60,7 @@ export abstract class Source extends MalloyElement {
     parameterSpace: ParameterSpace | undefined,
     pList: HasParameter[] | undefined
   ): StructDef {
-    const before = this.getStructDef(parameterSpace);
+    const before = this.getSourceDef(parameterSpace);
     return {
       ...before,
       parameters: this.packParameters(pList),

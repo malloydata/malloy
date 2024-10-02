@@ -57,7 +57,7 @@ export class SQLSource extends Source {
 
   structRef(): InvokedStructRef {
     return {
-      structRef: this.getStructDef(),
+      structRef: this.getSourceDef(),
     };
   }
 
@@ -109,7 +109,7 @@ export class SQLSource extends Source {
     }
   }
 
-  getStructDef(): SourceDef {
+  getSourceDef(): SourceDef {
     if (!this.validateConnectionName()) {
       return ErrorFactory.structDef;
     }

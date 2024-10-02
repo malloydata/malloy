@@ -34,7 +34,7 @@ export class QuerySource extends Source {
     super({query});
   }
 
-  getStructDef(parameterSpace: ParameterSpace | undefined): SourceDef {
+  getSourceDef(parameterSpace: ParameterSpace | undefined): SourceDef {
     return this.withParameters(parameterSpace, undefined);
   }
 

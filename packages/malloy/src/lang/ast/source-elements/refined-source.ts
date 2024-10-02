@@ -57,7 +57,7 @@ export class RefinedSource extends Source {
     super({source, refinement});
   }
 
-  getStructDef(parameterSpace: ParameterSpace | undefined): SourceDef {
+  getSourceDef(parameterSpace: ParameterSpace | undefined): SourceDef {
     return this.withParameters(parameterSpace, []);
   }
 
@@ -111,7 +111,7 @@ export class RefinedSource extends Source {
     }
 
     const paramSpace = pList ? new ParameterSpace(pList) : undefined;
-    const from = structuredClone(this.source.getStructDef(paramSpace));
+    const from = structuredClone(this.source.getSourceDef(paramSpace));
     // Note that this is explicitly not:
     // const from = structuredClone(this.source.withParameters(parameterSpace, pList));
     // Because the parameters are added to the resulting struct, not the base struct

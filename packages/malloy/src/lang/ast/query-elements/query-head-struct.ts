@@ -46,12 +46,12 @@ export class QueryHeadStruct extends Source {
     return {structRef: this.fromRef};
   }
 
-  getStructDef(parameterSpace: ParameterSpace | undefined): SourceDef {
+  getSourceDef(parameterSpace: ParameterSpace | undefined): SourceDef {
     if (refIsStructDef(this.fromRef)) {
       return this.fromRef;
     }
     const ns = new NamedSource(this.fromRef, this.sourceArguments, undefined);
     this.has({exploreReference: ns});
-    return ns.getStructDef(parameterSpace);
+    return ns.getSourceDef(parameterSpace);
   }
 }

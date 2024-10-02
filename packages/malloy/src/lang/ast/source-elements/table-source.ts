@@ -34,7 +34,7 @@ type TableInfo = {tablePath: string; connectionName?: string | undefined};
 export abstract class TableSource extends Source {
   abstract getTableInfo(): TableInfo | undefined;
 
-  getStructDef(): SourceDef {
+  getSourceDef(): SourceDef {
     const info = this.getTableInfo();
     if (info === undefined) {
       return ErrorFactory.structDef;

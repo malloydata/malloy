@@ -45,10 +45,10 @@ export class QueryRaw extends MalloyElement implements QueryElement {
   queryComp(isRefOk: boolean): QueryComp {
     const invoked = isRefOk
       ? this.source.structRef(undefined)
-      : {structRef: this.source.getStructDef(undefined)};
+      : {structRef: this.source.getSourceDef(undefined)};
     const structDef = refIsStructDef(invoked.structRef)
       ? invoked.structRef
-      : this.source.getStructDef(undefined);
+      : this.source.getSourceDef(undefined);
     return {
       query: {
         type: 'query',
