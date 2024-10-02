@@ -67,7 +67,7 @@ describe('Trino connection', () => {
         'name': 'test',
         'type': 'array',
         'dialect': 'trino',
-        'dataType': intType,
+        'elementTypeDef': intType,
         'join': 'many',
         'fields': arrayEachFields(intType),
       });
@@ -90,7 +90,7 @@ describe('Trino connection', () => {
         {
           'name': 'test',
           'type': 'array',
-          'dataType': {type: 'record_element'},
+          'elementTypeDef': {type: 'record_element'},
           'dialect': 'trino',
           'join': 'many',
           'fields': recordSchema,
@@ -109,7 +109,7 @@ describe('Trino connection', () => {
         'name': 'test',
         'type': 'array',
         'dialect': 'trino',
-        'dataType': {type: 'record_element'},
+        'elementTypeDef': {type: 'record_element'},
         'join': 'many',
         'fields': [
           {'name': 'a', ...doubleType},
@@ -117,7 +117,7 @@ describe('Trino connection', () => {
             'name': 'b',
             'type': 'array',
             'dialect': 'trino',
-            'dataType': {type: 'record_element'},
+            'elementTypeDef': {type: 'record_element'},
             'join': 'many',
             'fields': [
               {'name': 'c', ...intType},

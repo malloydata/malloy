@@ -135,7 +135,7 @@ describe('DuckDBConnection', () => {
       expect(structDef.fields[0]).toEqual({
         name: 'test',
         type: 'array',
-        dataType: intTyp,
+        elementTypeDef: intTyp,
         join: 'many',
         dialect: 'duckdb',
         fields: arrayEachFields({type: 'number', numberType: 'integer'}),
@@ -164,7 +164,7 @@ describe('DuckDBConnection', () => {
       expect(structDef.fields[0]).toEqual({
         'name': 'test',
         'type': 'array',
-        'dataType': {type: 'record_element'},
+        'elementTypeDef': {type: 'record_element'},
         'dialect': 'duckdb',
         'join': 'many',
         'fields': [
