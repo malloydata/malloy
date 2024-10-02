@@ -537,7 +537,7 @@ malloyOrSQLType
 fieldExpr
   : fieldPath                                              # exprFieldPath
   | literal                                                # exprLiteral
-  | OCURLY recordElement (COMMA recordElement)* CCURLY     # exprLiteralRecord
+  //| OCURLY recordElement (COMMA recordElement)* CCURLY     # exprLiteralRecord
   | fieldExpr fieldProperties                              # exprFieldProps
   | fieldExpr timeframe                                    # exprDuration
   | fieldExpr DOT timeframe                                # exprTimeTrunc
