@@ -36,6 +36,7 @@ import {
   QueryFieldDef,
   QuerySegment,
   expressionIsCalculation,
+  isJoined,
   isAtomicFieldType,
   isQuerySegment,
 } from '../../model';
@@ -672,7 +673,7 @@ describe('query:', () => {
           group_by: b.astr
           calculate: foo is lag(b)
         }`
-      ).toLog(errorMessage('No matching overload for function lag(struct)'));
+      ).toLog(errorMessage('No matching overload for function lag(table)'));
     });
     // TODO this doesn't work today, we're not rigorous enough with integer
     // subtypes. But we should probably make this typecheck properly.
@@ -1300,7 +1301,8 @@ describe('query:', () => {
         const q = t.translated.queryList[0].pipeline[0];
         if (q.type === 'reduce' && q.extendSource) {
           expect(q.extendSource.length).toBe(1);
-          expect(q.extendSource[0].type).toBe('struct');
+          expect(isJoined(q.extendSource[0])).toBeTruthy();
+          expect(q.extendSource[0].type).toBe('table');
         } else {
           fail('Did not generate extendSource');
         }

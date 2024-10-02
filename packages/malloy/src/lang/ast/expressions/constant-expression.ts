@@ -53,6 +53,9 @@ export class ConstantFieldSpace implements FieldSpace {
   entry(): undefined {
     return undefined;
   }
+  dialectName() {
+    return '~constant-space-unknown-dialect~';
+  }
   dialectObj(): undefined {
     return undefined;
   }

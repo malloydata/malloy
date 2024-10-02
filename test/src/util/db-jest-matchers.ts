@@ -53,8 +53,6 @@ declare global {
        *
        *   * If you use an array, the number of rows in the result must match the rows in the match
        *   * The empty match {} accepts ANY data, but will errror if there is not a row
-       *   * If the query is tagged with # test.debug then the test will fail and the result will be printed
-       *   * If the query is tagged with # test.verbose then the result will be printed only if the test fails
        *   * A match key of nestName.colName expects nestName to be a query which returns multiple rows, it will match
        *     fields from the first row of the rows of nestName
        *   * A match key of nestName/colName expects nestName to be a record/struct type

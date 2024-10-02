@@ -20,6 +20,7 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+import {isJoined} from '../../model';
 import './parse-expects';
 import {TestTranslator, errorMessage, model} from './test-translator';
 import escapeRegEx from 'lodash/escapeRegExp';
@@ -87,13 +88,14 @@ source: botProjQSrc is botProjQ
     });
     expect(docParse).toTranslate();
     const newSrc = docParse.getSourceDef('newSrc');
-    const f = newSrc?.fields.find(f => f.name === 'b');
-    expect(f?.type).toBe('struct');
-    if (f?.type === 'struct') {
-      const ss = f.structSource;
-      expect(ss.type).toBe('query');
-      if (ss.type === 'query') {
-        expect(typeof ss.query.structRef).not.toBe('string');
+    const maybeField = newSrc?.fields.find(f => f.name === 'b');
+    expect(maybeField).toBeDefined();
+    const f = maybeField!;
+    expect(isJoined(f)).toBeTruthy();
+    if (isJoined(f)) {
+      expect(f.type).toBe('query_source');
+      if (f.type === 'query_source') {
+        expect(typeof f.query.structRef).not.toBe('string');
       }
     }
   });
@@ -178,9 +180,9 @@ source: botProjQSrc is botProjQ
     const ms = fullModel.getSourceDef('midSrc');
     expect(ms).toBeDefined();
     if (ms) {
-      expect(ms.structSource.type).toBe('query');
-      if (ms.structSource.type === 'query') {
-        const qs = ms.structSource.query.structRef;
+      expect(ms.type).toBe('query_source');
+      if (ms.type === 'query_source') {
+        const qs = ms.query.structRef;
         expect(typeof qs).not.toBe('string');
       }
     }

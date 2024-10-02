@@ -25,8 +25,8 @@ import {
   Annotation,
   ModelDef,
   Query,
-  SQLBlockSource,
-  SQLBlockStructDef,
+  SQLSentence,
+  SQLSourceDef,
 } from '../model/malloy_types';
 import {MalloyElement} from './ast';
 import {LogMessage} from './parse-log';
@@ -62,7 +62,7 @@ export interface NeedURLData {
 }
 
 export interface NeedCompileSQL {
-  compileSQL: SQLBlockSource;
+  compileSQL: SQLSentence;
   partialModel: ModelDef | undefined;
 }
 interface NeededData extends NeedURLData, NeedSchemaData, NeedCompileSQL {}
@@ -101,7 +101,7 @@ interface TranslatedResponseData
   translated: {
     modelDef: ModelDef;
     queryList: Query[];
-    sqlBlocks: SQLBlockStructDef[];
+    sqlBlocks: SQLSourceDef[];
   };
   fromSources: string[];
 }

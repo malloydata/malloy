@@ -30,7 +30,7 @@ import {
 } from '../../../model/malloy_types';
 
 import {ErrorFactory} from '../error-factory';
-import {FieldSpace} from '../types/field-space';
+import {SourceFieldSpace} from '../types/field-space';
 import {GroupBy} from '../query-properties/group-by';
 import {ProjectFieldSpace} from '../field-space/project-field-space';
 import {QueryProperty} from '../types/query-property';
@@ -49,7 +49,7 @@ export class ProjectBuilder
   readonly type = 'project';
 
   constructor(
-    baseFS: FieldSpace,
+    baseFS: SourceFieldSpace,
     refineThis: PipeSegment | undefined,
     isNestIn: QueryOperationSpace | undefined,
     astEl: MalloyElement

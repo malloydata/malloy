@@ -145,10 +145,14 @@ export class IndexFieldSpace extends QueryOperationSpace {
           }`
         );
       } else {
-        const eType = entry.typeDesc();
+        const eTypeDesc = entry.typeDesc();
+        const eType = eTypeDesc.dataType;
+        // Don't index arrays and records
+        const canIndex =
+          isAtomicFieldType(eType) && eType !== 'record' && eType !== 'array';
         if (
-          isAtomicFieldType(eType.dataType) &&
-          expressionIsScalar(eType.expressionType) &&
+          canIndex &&
+          expressionIsScalar(eTypeDesc.expressionType) &&
           (dialect === undefined || !dialect.ignoreInProject(name))
         ) {
           expandEntries.push({name: indexName, entry});

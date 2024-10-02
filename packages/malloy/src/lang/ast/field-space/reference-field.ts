@@ -75,15 +75,17 @@ export class ReferenceField extends SpaceField {
       this.queryFieldDef = queryFieldDef;
 
       const refTo = this.referenceTo;
-      if (refTo instanceof SpaceField && refTo.haveFieldDef) {
-        const origFd = refTo.haveFieldDef;
-        const notes = this.fieldRef.note;
-        if (origFd.annotation || notes) {
-          const annotation: Annotation = notes || {};
-          if (origFd.annotation) {
-            annotation.inherits = origFd.annotation;
+      if (refTo instanceof SpaceField) {
+        const origFd = refTo.constructorFieldDef();
+        if (origFd) {
+          const notes = this.fieldRef.note;
+          if (origFd.annotation || notes) {
+            const annotation: Annotation = notes || {};
+            if (origFd.annotation) {
+              annotation.inherits = origFd.annotation;
+            }
+            this.queryFieldDef.annotation = annotation;
           }
-          this.queryFieldDef.annotation = annotation;
         }
       }
     }

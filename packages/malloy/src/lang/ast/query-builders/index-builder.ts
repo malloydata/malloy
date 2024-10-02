@@ -30,7 +30,7 @@ import {
 } from '../../../model/malloy_types';
 
 import {ErrorFactory} from '../error-factory';
-import {FieldName, FieldSpace} from '../types/field-space';
+import {FieldName, SourceFieldSpace} from '../types/field-space';
 import {Filter} from '../query-properties/filters';
 import {Index} from '../query-properties/indexing';
 import {Limit} from '../query-properties/limit';
@@ -52,7 +52,7 @@ export class IndexBuilder implements QueryBuilder {
   readonly type = 'index';
 
   constructor(
-    inputFS: FieldSpace,
+    inputFS: SourceFieldSpace,
     refineThis: PipeSegment | undefined,
     isNestIn: QueryOperationSpace | undefined,
     astEl: MalloyElement

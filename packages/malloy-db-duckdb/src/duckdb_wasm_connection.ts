@@ -28,9 +28,9 @@ import {
   QueryDataRow,
   QueryOptionsReader,
   RunSQLOptions,
-  StructDef,
-  SQLBlock,
+  SQLSourceDef,
   ConnectionConfig,
+  TableSourceDef,
 } from '@malloydata/malloy';
 import {StructRow, Table} from 'apache-arrow';
 import {DuckDBCommon} from './duckdb_common';
@@ -370,11 +370,11 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
     }
   }
 
-  public async fetchSchemaForSQLBlock(
-    sqlRef: SQLBlock,
+  public async fetchSchemaForSQLStruct(
+    sqlRef: SQLSourceDef,
     options: FetchSchemaOptions
   ): Promise<
-    | {structDef: StructDef; error?: undefined}
+    | {structDef: SQLSourceDef; error?: undefined}
     | {error: string; structDef?: undefined}
   > {
     const tables: string[] = [];
@@ -385,14 +385,14 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
       tables.push(match[2] || match[3]);
     }
     await this.findTables(tables, options);
-    return super.fetchSchemaForSQLBlock(sqlRef, options);
+    return super.fetchSchemaForSQLStruct(sqlRef, options);
   }
 
   async fetchSchemaForTables(
     missing: Record<string, string>,
     options: FetchSchemaOptions
   ): Promise<{
-    schemas: Record<string, StructDef>;
+    schemas: Record<string, TableSourceDef>;
     errors: Record<string, string>;
   }> {
     const tables = Object.values(missing);

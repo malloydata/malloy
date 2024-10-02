@@ -29,6 +29,7 @@ import {QuerySource} from '../source-elements/query-source';
 import {NamedSource} from '../source-elements/named-source';
 import {QueryReference} from '../query-elements/query-reference';
 import {Argument} from '../parameters/argument';
+import {modelObjIsSource} from '../../../model';
 
 /**
  * A reference to either a source or a query.
@@ -58,7 +59,7 @@ export class SQReference extends SourceQueryElement {
         return query;
       } else {
         this.sqLog(
-          `cannot-use-${entry.type}-as-query`,
+          'cannot-use-as-query',
           `Illegal reference to '${entry.as || entry.name}', query expected`
         );
       }
@@ -73,7 +74,8 @@ export class SQReference extends SourceQueryElement {
   }
 
   isSource() {
-    return this.ref.getNamed()?.type === 'struct';
+    const refTo = this.ref.getNamed();
+    return refTo !== undefined && modelObjIsSource(refTo);
   }
 
   getSource(): Source | undefined {
@@ -98,11 +100,11 @@ export class SQReference extends SourceQueryElement {
       }
       const existingQuery = new QueryReference(this.ref);
       this.asSource = new QuerySource(existingQuery);
-    } else if (entry.type === 'struct') {
+    } else if (modelObjIsSource(entry)) {
       this.asSource = new NamedSource(this.ref, undefined, this.args);
     } else {
       this.sqLog(
-        `cannot-use-${entry.type}-as-source`,
+        'cannot-use-struct-as-source',
         `Expected '${this.ref.refString}' to be of type query or source, not '${entry.type}'`
       );
       return;

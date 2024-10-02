@@ -21,10 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Annotation, PipeSegment, StructDef} from '../../../model/malloy_types';
+import {Annotation, PipeSegment, SourceDef} from '../../../model/malloy_types';
 
 export interface PipelineComp {
-  outputStruct: StructDef;
+  outputStruct: SourceDef;
   pipeline: PipeSegment[];
   annotation?: Annotation;
   name?: string;

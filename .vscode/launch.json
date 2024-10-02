@@ -3,6 +3,27 @@
 // Hover to view descriptions of existing attributes.
 // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
 {
-  "version": "0.2.0",
-  "configurations": []
+  "version": "2.0.0",
+  "configurations": [
+    {
+      "name": "Malloy Expression in /tmp/malloyExpr",
+      "type": "antlr-debug",
+      "request": "launch",
+      "input": "/tmp/malloyExpr",
+      "grammar": "packages/malloy/src/lang/grammar/MalloyParser.g4",
+      "startRule": "fieldExpr",
+      "printParseTree": true,
+      "visualParseTree": true
+    },
+    {
+      "name": "Malloy Model in /tmp/malloyModel",
+      "type": "antlr-debug",
+      "request": "launch",
+      "input": "/tmp/malloyModel",
+      "grammar": "packages/malloy/src/lang/grammar/MalloyParser.g4",
+      "startRule": "malloyDocument",
+      "printParseTree": true,
+      "visualParseTree": true
+    }
+  ]
 }

@@ -23,10 +23,10 @@
 
 import {PipeSegment, isRawSegment} from '../../../model/malloy_types';
 import {QueryOperationSpace} from '../field-space/query-spaces';
-import {StaticSpace} from '../field-space/static-space';
+import {StaticSourceSpace} from '../field-space/static-space';
 import {QOpDesc} from '../query-properties/qop-desc';
 import {getFinalStruct} from '../struct-utils';
-import {FieldSpace} from '../types/field-space';
+import {SourceFieldSpace} from '../types/field-space';
 import {PipelineComp} from '../types/pipeline-comp';
 import {LegalRefinementStage} from '../types/query-property-interface';
 import {View} from './view';
@@ -42,7 +42,10 @@ export class QOpDescView extends View {
     super({operation});
   }
 
-  pipelineComp(fs: FieldSpace, isNestIn?: QueryOperationSpace): PipelineComp {
+  pipelineComp(
+    fs: SourceFieldSpace,
+    isNestIn?: QueryOperationSpace
+  ): PipelineComp {
     const newOperation = this.operation.getOp(fs, isNestIn);
     return {
       pipeline: [newOperation.segment],
@@ -51,7 +54,7 @@ export class QOpDescView extends View {
   }
 
   private getOp(
-    inputFS: FieldSpace,
+    inputFS: SourceFieldSpace,
     isNestIn: QueryOperationSpace | undefined,
     qOpDesc: QOpDesc,
     refineThis: PipeSegment
@@ -65,7 +68,7 @@ export class QOpDescView extends View {
   }
 
   refine(
-    inputFS: FieldSpace,
+    inputFS: SourceFieldSpace,
     _pipeline: PipeSegment[],
     isNestIn: QueryOperationSpace | undefined
   ): PipeSegment[] {
@@ -118,7 +121,7 @@ export class QOpDescView extends View {
         pipeline.slice(-1)
       );
       pipeline[last] = this.getOp(
-        new StaticSpace(finalIn),
+        new StaticSourceSpace(finalIn),
         undefined,
         tailRefinements,
         pipeline[last]

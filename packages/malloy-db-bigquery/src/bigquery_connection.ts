@@ -35,26 +35,26 @@ import {ResourceStream} from '@google-cloud/paginator';
 import * as googleCommon from '@google-cloud/common';
 import {GaxiosError} from 'gaxios';
 import {
+  arrayEachFields,
   Connection,
   ConnectionConfig,
-  FetchSchemaOptions,
-  FieldTypeDef,
   Malloy,
   MalloyQueryData,
-  NamedStructDefs,
   PersistSQLResults,
   QueryData,
   QueryDataRow,
   QueryOptionsReader,
   QueryRunStats,
   RunSQLOptions,
-  SQLBlock,
   StandardSQLDialect,
   StreamingConnection,
-  StructDef,
+  TableSourceDef,
   toAsyncGenerator,
+  StructDef,
+  SQLSourceDef,
 } from '@malloydata/malloy';
 import {BaseConnection, TableMetadata} from '@malloydata/malloy/connection';
+// eslint-disable-next-line no-restricted-imports
 
 export interface BigQueryManagerOptions {
   credentials?: {
@@ -159,21 +159,6 @@ export class BigQueryConnection
   // is querying a set of tables that is not in their billing project, this allows them to
   // not write the full path to the tables in every source
   private projectId;
-
-  private schemaCache = new Map<
-    string,
-    | {schema: StructDef; error?: undefined; timestamp: number}
-    | {error: string; schema?: undefined; timestamp: number}
-  >();
-  private sqlSchemaCache = new Map<
-    string,
-    | {
-        structDef: StructDef;
-        error?: undefined;
-        timestamp: number;
-      }
-    | {error: string; structDef?: undefined; timestamp: number}
-  >();
 
   private queryOptions?: QueryOptionsReader;
 
@@ -310,9 +295,9 @@ export class BigQueryConnection
   }
 
   public async runSQLBlockAndFetchResultSchema(
-    sqlBlock: SQLBlock,
+    sqlBlock: SQLSourceDef,
     options?: RunSQLOptions
-  ): Promise<{data: MalloyQueryData; schema: StructDef}> {
+  ): Promise<{data: MalloyQueryData; schema: SQLSourceDef}> {
     const {data, schema: schemaRaw} = await this._runSQL(
       sqlBlock.selectStr,
       options
@@ -323,7 +308,8 @@ export class BigQueryConnection
       throw new Error('Schema not present');
     }
 
-    const schema = this.structDefFromSQLSchema(sqlBlock, schemaRaw);
+    const schema: SQLSourceDef = {...sqlBlock, fields: []};
+    this.addFieldsToStructDef(schema, schemaRaw);
     return {data, schema};
   }
 
@@ -528,156 +514,101 @@ export class BigQueryConnection
       const type = field.type as string;
       const name = field.name as string;
 
-      // check for an array
-      if (field.mode === 'REPEATED' && !['STRUCT', 'RECORD'].includes(type)) {
+      const isRecord = ['STRUCT', 'RECORD'].includes(type);
+      const structShared = {name, dialect: this.dialectName, fields: []};
+      if (field.mode === 'REPEATED' && !isRecord) {
+        // Malloy treats repeated values as an array of scalars.
         const malloyType = this.dialect.sqlTypeToMalloyType(type);
         if (malloyType) {
-          const innerStructDef: StructDef = {
-            type: 'struct',
-            name,
-            dialect: this.dialectName,
-            structSource: {type: 'nested'},
-            structRelationship: {
-              type: 'nested',
-              fieldName: name,
-              isArray: true,
-            },
-            fields: [{...malloyType, name: 'value'} as FieldTypeDef],
+          const arrayField: StructDef = {
+            ...structShared,
+            type: 'array',
+            elementTypeDef: malloyType,
+            join: 'many',
+            fields: arrayEachFields(malloyType),
           };
-          structDef.fields.push(innerStructDef);
+          structDef.fields.push(arrayField);
         }
-      } else if (['STRUCT', 'RECORD'].includes(type)) {
-        const innerStructDef: StructDef = {
-          type: 'struct',
-          name,
-          dialect: this.dialectName,
-          structSource:
-            field.mode === 'REPEATED' ? {type: 'nested'} : {type: 'inline'},
-          structRelationship:
-            field.mode === 'REPEATED'
-              ? {type: 'nested', fieldName: name, isArray: false}
-              : {type: 'inline'},
-          fields: [],
+      } else if (isRecord) {
+        const ifRepeatedRecord: StructDef = {
+          ...structShared,
+          type: 'array',
+          elementTypeDef: {type: 'record_element'},
+          join: 'many',
         };
-        this.addFieldsToStructDef(innerStructDef, field);
-        structDef.fields.push(innerStructDef);
+        const elseRecord: StructDef = {
+          ...structShared,
+          type: 'record',
+          join: 'one',
+        };
+        const recStruct =
+          field.mode === 'REPEATED' ? ifRepeatedRecord : elseRecord;
+        this.addFieldsToStructDef(recStruct, field);
+        structDef.fields.push(recStruct);
       } else {
         const malloyType = this.dialect.sqlTypeToMalloyType(type) ?? {
           type: 'sql native',
           rawType: type.toLowerCase(),
         };
-        structDef.fields.push({name, ...malloyType} as FieldTypeDef);
+        structDef.fields.push({name, ...malloyType});
       }
     }
   }
 
-  private structDefFromTableSchema(
-    tableKey: string,
-    tablePath: string,
-    schemaInfo: SchemaInfo
-  ): StructDef {
-    const structDef: StructDef = {
-      type: 'struct',
-      name: tableKey,
-      dialect: this.dialectName,
-      structSource: {
+  async fetchSelectSchema(
+    sqlSource: SQLSourceDef
+  ): Promise<SQLSourceDef | string> {
+    try {
+      const ret: SQLSourceDef = {...sqlSource};
+      ret.fields = [];
+      this.addFieldsToStructDef(ret, await this.getSQLBlockSchema(sqlSource));
+      return ret;
+    } catch (error) {
+      return error.message;
+    }
+  }
+
+  async fetchTableSchema(
+    tableName: string,
+    tablePath: string
+  ): Promise<TableSourceDef | string> {
+    tablePath = this.normalizeTablePath(tablePath);
+    try {
+      const tableFieldSchema = await this.getTableFieldSchema(tablePath);
+      const tableDef: TableSourceDef = {
         type: 'table',
+        name: tableName,
+        dialect: this.dialectName,
         tablePath,
-      },
-      structRelationship: {
-        type: 'basetable',
-        connectionName: this.name,
-      },
-      fields: [],
-    };
-    this.addFieldsToStructDef(structDef, schemaInfo.schema);
-    if (schemaInfo.needsTableSuffixPseudoColumn) {
-      structDef.fields.push({
-        type: 'string',
-        name: '_TABLE_SUFFIX',
-      });
-    }
-    if (schemaInfo.needsPartitionTimePseudoColumn) {
-      structDef.fields.push({
-        type: 'timestamp',
-        name: '_PARTITIONTIME',
-      });
-    }
-    if (schemaInfo.needsPartitionDatePseudoColumn) {
-      structDef.fields.push({
-        type: 'date',
-        name: '_PARTITIONDATE',
-      });
-    }
-    return structDef;
-  }
-
-  private structDefFromSQLSchema(
-    sqlBlock: SQLBlock,
-    tableFieldSchema: bigquery.ITableFieldSchema
-  ): StructDef {
-    const structDef: StructDef = {
-      type: 'struct',
-      name: sqlBlock.name,
-      dialect: this.dialectName,
-      structSource: {
-        type: 'sql',
-        method: 'subquery',
-        sqlBlock,
-      },
-      structRelationship: {
-        type: 'basetable',
-        connectionName: this.name,
-      },
-      fields: [],
-    };
-    this.addFieldsToStructDef(structDef, tableFieldSchema);
-    return structDef;
-  }
-
-  public async fetchSchemaForTables(
-    missing: Record<string, string>,
-    {refreshTimestamp}: FetchSchemaOptions
-  ): Promise<{
-    schemas: Record<string, StructDef>;
-    errors: Record<string, string>;
-  }> {
-    const schemas: NamedStructDefs = {};
-    const errors: {[name: string]: string} = {};
-
-    for (const tableKey in missing) {
-      let inCache = this.schemaCache.get(tableKey);
-      if (
-        !inCache ||
-        (refreshTimestamp && refreshTimestamp > inCache.timestamp)
-      ) {
-        const timestamp = refreshTimestamp ?? Date.now();
-        const tablePath = this.normalizeTablePath(missing[tableKey]);
-        try {
-          const tableFieldSchema = await this.getTableFieldSchema(tablePath);
-          inCache = {
-            schema: this.structDefFromTableSchema(
-              tableKey,
-              tablePath,
-              tableFieldSchema
-            ),
-            timestamp,
-          };
-          this.schemaCache.set(tableKey, inCache);
-        } catch (error) {
-          inCache = {error: error.message, timestamp};
-        }
+        connection: this.name,
+        fields: [],
+      };
+      this.addFieldsToStructDef(tableDef, tableFieldSchema.schema);
+      if (tableFieldSchema.needsTableSuffixPseudoColumn) {
+        tableDef.fields.push({
+          type: 'string',
+          name: '_TABLE_SUFFIX',
+        });
       }
-      if (inCache.schema !== undefined) {
-        schemas[tableKey] = inCache.schema;
-      } else {
-        errors[tableKey] = inCache.error || 'Unknown schema fetch error';
+      if (tableFieldSchema.needsPartitionTimePseudoColumn) {
+        tableDef.fields.push({
+          type: 'timestamp',
+          name: '_PARTITIONTIME',
+        });
       }
+      if (tableFieldSchema.needsPartitionDatePseudoColumn) {
+        tableDef.fields.push({
+          type: 'date',
+          name: '_PARTITIONDATE',
+        });
+      }
+      return tableDef;
+    } catch (error) {
+      return error.message;
     }
-    return {schemas, errors};
   }
 
-  private async getSQLBlockSchema(sqlRef: SQLBlock) {
+  private async getSQLBlockSchema(sqlRef: SQLSourceDef) {
     // We do a simple retry-loop here, as a temporary fix for a transient
     // error in which sometimes requesting results from a job yields an
     // access denied error. It seems that in these cases, simply trying again
@@ -698,34 +629,6 @@ export class BigQueryConnection
       }
     }
     throw lastFetchError;
-  }
-
-  public async fetchSchemaForSQLBlock(
-    sqlRef: SQLBlock,
-    {refreshTimestamp}: FetchSchemaOptions
-  ): Promise<
-    | {structDef: StructDef; error?: undefined}
-    | {error: string; structDef?: undefined}
-  > {
-    const key = sqlRef.name;
-    let inCache = this.sqlSchemaCache.get(key);
-    if (
-      !inCache ||
-      (refreshTimestamp && refreshTimestamp > inCache.timestamp)
-    ) {
-      const timestamp = refreshTimestamp ?? Date.now();
-      try {
-        const tableFieldSchema = await this.getSQLBlockSchema(sqlRef);
-        inCache = {
-          structDef: this.structDefFromSQLSchema(sqlRef, tableFieldSchema),
-          timestamp,
-        };
-      } catch (error) {
-        inCache = {error: error.message, timestamp};
-      }
-      this.sqlSchemaCache.set(key, inCache);
-    }
-    return inCache;
   }
 
   // TODO this needs to extend the wait for results using a timeout set by the user,

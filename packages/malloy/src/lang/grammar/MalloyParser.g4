@@ -536,8 +536,9 @@ malloyOrSQLType
 
 fieldExpr
   : fieldPath                                              # exprFieldPath
-  | fieldExpr fieldProperties                              # exprFieldProps
   | literal                                                # exprLiteral
+  | OCURLY recordElement (COMMA recordElement)* CCURLY     # exprLiteralRecord
+  | fieldExpr fieldProperties                              # exprFieldProps
   | fieldExpr timeframe                                    # exprDuration
   | fieldExpr DOT timeframe                                # exprTimeTrunc
   | fieldExpr DOUBLECOLON malloyOrSQLType                  # exprCast
@@ -582,6 +583,12 @@ pickStatement
 
 pick
   : PICK (pickValue=fieldExpr)? WHEN pickWhen=partialAllowedFieldExpr
+  ;
+
+recordKey: id;
+recordElement
+  : fieldPath         # recordRef
+  | recordKey IS fieldExpr   # recordExpr
   ;
 
 argumentList

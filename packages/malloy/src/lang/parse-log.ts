@@ -131,9 +131,7 @@ type MessageParameterTypes = {
   'mismatched-coalesce-types': string;
   'function-not-found': string;
   'case-insensitive-function': string;
-  'struct-not-callable': string;
-  'connection-not-callable': string;
-  'query-not-callable': string;
+  'call-of-non-function': string;
   'no-matching-function-overload': string;
   'invalid-function-argument-expression-type': string;
   'invalid-function-argument-evaluation-space': string;
@@ -244,7 +242,7 @@ type MessageParameterTypes = {
   'invalid-source-from-query': string;
   'invalid-source-from-function': string;
   'invalid-source-from-connection': string;
-  'invalid-source-from-sql-block': string;
+  'invalid-source-source': string;
   'unnamed-source-argument': string;
   'duplicate-source-argument': string;
   'source-parameter-not-found': string;
@@ -270,13 +268,10 @@ type MessageParameterTypes = {
   'failed-to-compute-arrow-source': string;
   'failed-to-compute-source-from-query': string;
   'failed-to-compute-source-to-extend': string;
-  'cannot-use-function-as-query': string;
-  'cannot-use-struct-as-query': string;
-  'cannot-use-connection-as-query': string;
+  'cannot-use-as-query': string;
   'source-or-query-not-found': string;
   'illegal-query-argument': string;
-  'cannot-use-function-as-source': string;
-  'cannot-use-connection-as-source': string;
+  'cannot-use-struct-as-source': string;
   'illegal-refinement-of-source': string;
   'invalid-source-as-query': string;
   'invalid-sql-source-interpolation': string;
@@ -346,6 +341,7 @@ type MessageParameterTypes = {
   'sql-like': string;
   'sql-is-not-null': string;
   'sql-is-null': string;
+  'illegal-record-property-type': string;
 };
 
 export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
