@@ -3,6 +3,7 @@ import {Item} from 'vega';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Vega does not have good TS support
 export type VegaSpec = any;
+export type DataInjector = (data: QueryData, spec: VegaSpec) => void;
 export type VegaChartProps = {
   spec: VegaSpec;
   specType: 'vega' | 'vega-lite';
@@ -11,6 +12,7 @@ export type VegaChartProps = {
   totalWidth: number;
   totalHeight: number;
   chartType: string;
+  injectData: DataInjector;
   getTooltipData?: (item: Item) => ChartTooltipEntry[] | null;
 };
 

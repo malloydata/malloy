@@ -22,9 +22,14 @@ export function Chart(props: {
   const chartProps = props.metadata.field(field).vegaChartProps!;
   const spec = structuredClone(chartProps.spec);
   const chartData = structuredClone(data);
-  if (chartProps.specType === 'vega') {
-    spec.data[0].values = chartData;
-  } else spec.data.values = chartData;
+  chartProps.injectData(chartData, spec);
+  // if (chartProps.specType === 'vega') {
+  //   spec.data[0].values = chartData.map(row => ({
+  //     ...row,
+  //     x: row['brand'],
+  //     y: row['Sales $'],
+  //   }));
+  // } else spec.data.values = chartData;
 
   // TODO: improve handling date/times in chart axes
   const dateTimeFields = field.allFields.filter(
@@ -59,6 +64,8 @@ export function Chart(props: {
       setTooltipDataDebounce(data);
     } else setTooltipDataDebounce(null);
   };
+
+  console.log({spec});
 
   return (
     <div
