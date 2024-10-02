@@ -10,11 +10,27 @@ source: products is duckdb.table("data/products.parquet") extend {
     limit: 10
   }
 
-  # bar_chart
+  # dashboard -- # bar_chart
   view: topSellingBrandsTest is {
-    group_by: brand
-    aggregate: `Sales $` is retail_price.avg()*500
-    limit: 10
+    nest:
+      # bar_chart
+      a is {
+        group_by: brand
+        aggregate: `Sales $` is retail_price.avg()*500
+        limit: 10
+      }
+      # bar_chart
+      b is {
+        group_by: brand, department_long_label is department
+        aggregate: `Sales $` is retail_price.avg()*500
+        limit: 10
+      }
+      # bar_chart.stack
+      c is {
+        group_by: brand, department_long_label is department
+        aggregate: `Sales $` is retail_price.avg()*500
+        limit: 10
+      }
   }
 
    # bar_chart

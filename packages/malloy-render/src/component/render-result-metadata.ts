@@ -50,6 +50,7 @@ import {getLineChartSettings} from './line-chart/get-line_chart-settings';
 import {generateLineChartVegaLiteSpec} from './line-chart/generate-line_chart-vega-lite-spec';
 import {getAreaChartSettings} from './area-chart/get-area_chart-settings';
 import {generateAreaChartVegaLiteSpec} from './area-chart/generate-area_chart-vega-lite-spec';
+import {generateBarChartVegaSpec} from './bar-chart/generate-bar_chart-vega-spec';
 
 function createDataCache() {
   const dataCache = new WeakMap<DataColumn, QueryData>();
@@ -214,7 +215,13 @@ function populateExploreMeta(
   if (hasAny(tag, 'bar', 'bar_chart')) {
     const chartTag = (tag.tag('bar_chart') ?? tag.tag('bar'))!;
     const barSettings = getBarChartSettings(f, tag);
-    vegaLiteProps = generateBarChartVegaLiteSpec(
+    // vegaLiteProps = generateBarChartVegaLiteSpec(
+    //   f,
+    //   barSettings,
+    //   metadata,
+    //   chartTag
+    // );
+    vegaLiteProps = generateBarChartVegaSpec(
       f,
       barSettings,
       metadata,
