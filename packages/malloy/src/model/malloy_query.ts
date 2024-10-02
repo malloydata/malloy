@@ -103,7 +103,7 @@ import {
   FinalizeSourceDef,
   QueryToMaterialize,
   PrepareResultOptions,
-  JoinedArrayDef,
+  RepeatedRecordFieldDef,
 } from './malloy_types';
 
 import {Connection} from '../connection/types';
@@ -2690,26 +2690,25 @@ class QueryQuery extends QueryField {
         );
 
         if (fi.getRepeatedResultType() === 'nested') {
-          const multiLineNest: JoinedArrayDef = {
+          const multiLineNest: RepeatedRecordFieldDef = {
             ...structDef,
             type: 'array',
-            name,
-            resultMetadata,
             dataType: {type: 'record_element'},
             join: 'many',
+            name,
+            resultMetadata,
           };
           fields.push(multiLineNest);
-          continue;
+        } else {
+          const oneLineNest: RecordFieldDef = {
+            ...structDef,
+            type: 'record',
+            join: 'one',
+            name,
+            resultMetadata,
+          };
+          fields.push(oneLineNest);
         }
-
-        const oneLineNest: RecordFieldDef = {
-          ...structDef,
-          type: 'record',
-          join: 'one',
-          name,
-          resultMetadata,
-        };
-        fields.push(oneLineNest);
       } else if (fi instanceof FieldInstanceField) {
         if (fi.fieldUsage.type === 'result') {
           // mtoy todo

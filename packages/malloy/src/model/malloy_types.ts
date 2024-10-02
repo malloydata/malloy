@@ -678,6 +678,7 @@ export function isRepeatedRecord(
 }
 
 export type RecordFieldDef = RecordTypeDef & AtomicFieldDef;
+export type RepeatedRecordFieldDef = RepeatedRecordTypeDef & AtomicFieldDef;
 
 export interface ErrorTypeDef {
   type: 'error';
