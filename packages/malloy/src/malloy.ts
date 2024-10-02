@@ -387,6 +387,11 @@ export class Malloy {
     }
   }
 
+  /**
+   * A dialect must provide a response for every table, or the translator loop
+   * will never exit. Because there was a time when this happened, we throw
+   * instead of looping forever, but the fix is to correct the dialect.
+   */
   static async safelyFetchTableSchema(
     connection: InfoConnection,
     toFetch: Record<string, string>,
@@ -396,7 +401,7 @@ export class Malloy {
     for (const req of Object.keys(toFetch)) {
       if (ret.schemas[req] === undefined && ret.errors[req] === undefined) {
         throw new Error(
-          `Schema fetch error for ${connection.name}, no response for ${req}`
+          `Schema fetch error for ${connection.name}, no response for ${req} from ${connection.dialectName}`
         );
       }
     }
