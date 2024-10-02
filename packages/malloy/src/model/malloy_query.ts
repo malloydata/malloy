@@ -2691,25 +2691,23 @@ class QueryQuery extends QueryField {
 
         if (fi.getRepeatedResultType() === 'nested') {
           const multiLineNest: JoinedArrayDef = {
+            ...structDef,
             type: 'array',
             name,
             resultMetadata,
             dataType: {type: 'record_element'},
             join: 'many',
-            dialect: structDef.dialect,
-            fields: structDef.fields,
           };
           fields.push(multiLineNest);
           continue;
         }
 
         const oneLineNest: RecordFieldDef = {
+          ...structDef,
           type: 'record',
           join: 'one',
-          dialect: this.parent.structDef.dialect,
           name,
           resultMetadata,
-          fields: structDef.fields,
         };
         fields.push(oneLineNest);
       } else if (fi instanceof FieldInstanceField) {
