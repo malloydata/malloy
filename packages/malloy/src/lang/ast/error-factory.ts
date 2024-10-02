@@ -72,7 +72,7 @@ export class ErrorFactory {
     return factoryJoin;
   }
 
-  static fromErrorFactory(s: StructDef | JoinFieldDef): boolean {
+  static didCreate(s: StructDef | JoinFieldDef): boolean {
     return s.type === 'table' && 'errorFactory' in s;
   }
 

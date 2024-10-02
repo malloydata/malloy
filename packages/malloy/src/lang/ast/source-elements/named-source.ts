@@ -104,7 +104,15 @@ export class NamedSource extends Source {
       return;
     }
     if (entry.type === 'query') {
-      // MTOY TODO techincally we could, if this code ever runs, investigate.
+      // I don't understand under what circumstance this code would be
+      // executed, what Malloy you would write to generate this error,
+      // but the error exists so I am leaving it for now.
+      //
+      // Someone with time and courage should either remove this error
+      // because it isn't possible, or go ahead and make a source out
+      // of a query, which is a thing you can do, although when you
+      // do that it currently doesn't go through this path, so I don't
+      // know how you would test that change.
       this.logError(
         'invalid-source-from-query',
         `Cannot construct a source from query '${this.refName}'`

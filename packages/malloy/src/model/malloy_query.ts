@@ -1375,7 +1375,7 @@ class QueryField extends QueryNode {
 
           // isNested
           parentIsRepeatedRecord ||
-            this.parent.structDef.type === 'pipeline_struct' ||
+            this.parent.structDef.type === 'nest_source' ||
             this.parent.structDef.type === 'record',
 
           // isArray
@@ -2330,7 +2330,7 @@ class QueryQuery extends QueryField {
   }
 
   inNestedPipeline(): boolean {
-    return this.parent.structDef.type === 'pipeline_struct';
+    return this.parent.structDef.type === 'nest_source';
   }
 
   // get a field ref and expand it.
@@ -3716,7 +3716,7 @@ class QueryQuery extends QueryField {
         pipeline,
       };
       const inputStruct: NestSourceDef = {
-        type: 'pipeline_struct',
+        type: 'nest_source',
         name: '~pipe~',
         pipeSQL: this.parent.dialect.sqlUnnestPipelineHead(
           repeatedResultType === 'inline_all_numbers',
@@ -4474,7 +4474,7 @@ class QueryStruct extends QueryNode {
         return this.structDef.name;
       case 'sql_select':
         return `(${this.structDef.selectStr})`;
-      case 'pipeline_struct':
+      case 'nest_source':
         return this.structDef.pipeSQL;
       case 'query_source': {
         // cache derived table.

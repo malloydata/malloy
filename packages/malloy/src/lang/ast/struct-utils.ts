@@ -44,7 +44,7 @@ export function opOutputStruct(
   opDesc: PipeSegment
 ): SourceDef {
   const badModel =
-    ErrorFactory.fromErrorFactory(inputStruct) || structHasErrors(inputStruct);
+    ErrorFactory.didCreate(inputStruct) || structHasErrors(inputStruct);
   // We don't want to expose partial segments to the compiler
   if (isPartialSegment(opDesc)) {
     opDesc = {...opDesc, type: 'reduce'};

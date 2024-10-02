@@ -1004,7 +1004,7 @@ export interface TableSourceDef extends SourceDefBase {
  * The data types for this are:
  *  SQLPhrase -- A phrase, used to make a sentence
  *  SQLSentence -- Used to request a schema from the connection
- *  SQLSelectStruct -- Returned from a query, contains the scehma
+ *  SQLSelectSource -- Returned from a query, contains the scehma
  */
 export interface SQLStringSegment {
   sql: string;
@@ -1036,7 +1036,7 @@ export interface QueryResultDef extends SourceDefBase {
 
 // Describes the schema which flows between pipe elements
 export interface NestSourceDef extends SourceDefBase {
-  type: 'pipeline_struct';
+  type: 'nest_source';
   pipeSQL: string;
 }
 
@@ -1060,7 +1060,7 @@ export function isSourceDef(sd: StructDef | FieldDef): sd is SourceDef {
     sd.type === 'query_source' ||
     sd.type === 'query_result' ||
     sd.type === 'finalize' ||
-    sd.type === 'pipeline_struct'
+    sd.type === 'nest_source'
   );
 }
 
@@ -1069,6 +1069,7 @@ export type SourceDef =
   | SQLSourceDef
   | QuerySourceDef
   | QueryResultDef
+  | FinalizeSourceDef
   | NestSourceDef;
 
 /*
@@ -1091,11 +1092,7 @@ export function IS_SCALAR_ARRAY(def: FieldDef | StructDef) {
   return def.type === 'array' && def.elementTypeDef.type !== 'record_element';
 }
 
-export type StructDef =
-  | SourceDef
-  | RecordFieldDef
-  | JoinedArrayDef
-  | FinalizeSourceDef;
+export type StructDef = SourceDef | RecordFieldDef | JoinedArrayDef;
 
 export type ExpressionValueType =
   | AtomicFieldType
@@ -1230,7 +1227,7 @@ export interface ModelDef {
 }
 
 /** Very common record type */
-export type NamedStructDefs = Record<string, SourceDef>;
+export type NamedSourceDefs = Record<string, SourceDef>;
 export type NamedModelObjects = Record<string, NamedModelObject>;
 
 /** Malloy source annotations attached to objects */

@@ -133,7 +133,7 @@ export abstract class DynamicSpace
       for (const [, field] of reorderFields) {
         if (field instanceof JoinSpaceField) {
           const joinStruct = field.join.structDef(parameterSpace);
-          if (!ErrorFactory.fromErrorFactory(joinStruct)) {
+          if (!ErrorFactory.didCreate(joinStruct)) {
             this.final.fields.push(joinStruct);
             fixupJoins.push([field.join, joinStruct]);
           }

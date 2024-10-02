@@ -60,7 +60,7 @@ export type {
   SQLSourceDef,
   SourceDef,
   JoinFieldDef,
-  NamedStructDefs,
+  NamedSourceDefs as NamedStructDefs,
   MalloyQueryData,
   DateUnit,
   ExtractUnit,

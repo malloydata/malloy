@@ -71,7 +71,7 @@ export class DefineSource
       const parameters = this.deduplicatedParameters();
       const structDef = theSource.withParameters(undefined, this.parameters);
       this.validateParameterShadowing(parameters, structDef);
-      if (ErrorFactory.fromErrorFactory(structDef)) {
+      if (ErrorFactory.didCreate(structDef)) {
         return;
       }
       const entry: StructDef = {
