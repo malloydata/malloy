@@ -2129,16 +2129,16 @@ export class ExploreField extends Explore {
   }
 
   public get joinRelationship(): JoinRelationship {
-    const joinType = this.structDef['join'];
-    switch (joinType) {
-      case 'one':
-        return JoinRelationship.OneToMany;
-      case 'many':
-      case 'cross':
-        return JoinRelationship.ManyToOne;
-      default:
-        throw new Error('A source field must have a join relationship.');
+    if (isJoined(this.structDef)) {
+      switch (this.structDef.join) {
+        case 'one':
+          return JoinRelationship.OneToOne;
+        case 'many':
+        case 'cross':
+          return JoinRelationship.ManyToOne;
+      }
     }
+    throw new Error('A source field must have a join relationship.');
   }
 
   public get isRecord(): boolean {
