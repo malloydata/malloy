@@ -276,7 +276,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
     withJoin(AIRCRAFT, 'one', 'aircraft', 'tail_num=aircraft.tail_num'),
 
     // origin
-    withJoin(AIRPORTS, 'one', 'origin', 'origin_code=origin,code'),
+    withJoin(AIRPORTS, 'one', 'origin', 'origin_code=origin.code'),
 
     // destination
     withJoin(
