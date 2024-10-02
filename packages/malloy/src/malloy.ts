@@ -105,7 +105,6 @@ export interface CompileOptions {
 }
 
 export class Malloy {
-  // TODO load from file built during release
   public static get version(): string {
     return MALLOY_VERSION;
   }
