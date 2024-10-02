@@ -88,7 +88,7 @@ export function generateAreaChartVegaLiteSpec(
         'type': 'ordinal',
         'axis': {
           ...chartSettings.xAxis,
-          labelLimit: chartSettings.xAxis.labelSize,
+          labelLimit: chartSettings.xAxis.labelLimit,
           title: settings.xChannel.fields.join(', '),
         },
         'scale': {
