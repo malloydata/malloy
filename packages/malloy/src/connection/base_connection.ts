@@ -69,14 +69,18 @@ export abstract class BaseConnection implements Connection {
       !cached ||
       (cached.schema && refreshTimestamp && refreshTimestamp > cached.timestamp)
     ) {
-      const cacheResponse = await fillCache();
-      if (typeof cacheResponse === 'string') {
-        cached = {error: cacheResponse};
-      } else {
-        cached = {
-          schema: cacheResponse,
-          timestamp: refreshTimestamp ?? Date.now(),
-        };
+      try {
+        const cacheResponse = await fillCache();
+        if (typeof cacheResponse === 'string') {
+          cached = {error: cacheResponse};
+        } else {
+          cached = {
+            schema: cacheResponse,
+            timestamp: refreshTimestamp ?? Date.now(),
+          };
+        }
+      } catch (uncaught) {
+        cached = {error: uncaught.message};
       }
       this.schemaCache[schemaKey] = cached;
     }
