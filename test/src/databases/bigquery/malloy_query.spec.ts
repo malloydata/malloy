@@ -724,6 +724,7 @@ describe('airport_tests', () => {
 
   it('pipeline_as_declared_turtle', async () => {
     await expect(`
+      # test.verbose
       run: airports extend {
         view: pipe_turtle is {
           aggregate: a is airport_count
@@ -735,9 +736,7 @@ describe('airport_tests', () => {
   });
 
   it('pipeline Turtle', async () => {
-    const result = await runQuery(
-      model,
-      `
+    await expect(`
       run: bigquery.table('malloytest.airports')->{
         aggregate: airport_count is count()
         nest: pipe_turtle is {
@@ -754,13 +753,7 @@ describe('airport_tests', () => {
           aggregate: total_airports is a.sum()
         }
       }
-      `
-    );
-
-    expect(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (result.data.value[0] as any).pipe_turtle[0].total_airports
-    ).toBe(1845);
+    `).malloyResultMatches(model, {'pipe_turtle.total_airports': 1845});
   });
 
   it.skip('crossjoined turtles', async () => {
