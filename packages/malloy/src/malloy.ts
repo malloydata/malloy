@@ -81,6 +81,7 @@ import {DateTime} from 'luxon';
 import {Tag, TagParse, TagParseSpec, Taggable} from './tags';
 import {Dialect, getDialect} from './dialect';
 import {PathInfo} from './lang/parse-tree-walkers/find-table-path-walker';
+import {MALLOY_VERSION} from './version';
 
 export interface Loggable {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -112,9 +113,8 @@ interface CompileQueryOptions {
 }
 
 export class Malloy {
-  // TODO load from file built during release
   public static get version(): string {
-    return '0.0.1';
+    return MALLOY_VERSION;
   }
   private static _parse(
     source: string,
