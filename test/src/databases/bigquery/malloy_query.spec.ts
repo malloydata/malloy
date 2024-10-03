@@ -702,9 +702,7 @@ describe('airport_tests', () => {
   });
 
   it('nested_sums', async () => {
-    const result = await runQuery(
-      model,
-      `
+    expect(`
       run: airports->{
         aggregate: airport_count
         nest: by_state is {
@@ -721,11 +719,7 @@ describe('airport_tests', () => {
           sum_state is by_state.sum(by_state.airport_count),
           sum_fac is by_state.by_fac_type.sum(by_state.by_fac_type.airport_count)
       }
-    `
-    );
-    // console.log(result.sql);
-    expect(result.data.value[0]['sum_state']).toBe(19793);
-    expect(result.data.value[0]['sum_fac']).toBe(19793);
+    `).malloyResultMatches(model, {sum_state: 19783, sum_fac: 19793});
   });
 
   it('pipeline_as_declared_turtle', async () => {
