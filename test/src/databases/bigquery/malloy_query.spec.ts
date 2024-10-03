@@ -702,7 +702,7 @@ describe('airport_tests', () => {
   });
 
   it('nested_sums', async () => {
-    expect(`
+    await expect(`
       run: airports->{
         aggregate: airport_count
         nest: by_state is {
@@ -723,20 +723,15 @@ describe('airport_tests', () => {
   });
 
   it('pipeline_as_declared_turtle', async () => {
-    const result = await runQuery(
-      model,
-      `
-        source: my_airports is airports extend {
-          view: pipe_turtle is {
-            aggregate: a is airport_count
-          } -> {
-            select: a
-          }
+    await expect(`
+      run: airports extend {
+        view: pipe_turtle is {
+          aggregate: a is airport_count
+        } -> {
+          select: a
         }
-        run: my_airports->pipe_turtle
-    `
-    );
-    expect(result.data.value[0]['a']).toBe(19793);
+      } -> pipe_turtle
+    `).malloyResultMatches(model, {'pipe_turtle.a': 19783});
   });
 
   it('pipeline Turtle', async () => {
