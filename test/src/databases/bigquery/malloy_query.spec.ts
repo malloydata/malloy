@@ -719,7 +719,7 @@ describe('airport_tests', () => {
           sum_state is by_state.sum(by_state.airport_count),
           sum_fac is by_state.by_fac_type.sum(by_state.by_fac_type.airport_count)
       }
-    `).malloyResultMatches(model, {sum_state: 19783, sum_fac: 19793});
+    `).malloyResultMatches(model, {sum_state: 19793, sum_fac: 19793});
   });
 
   it('pipeline_as_declared_turtle', async () => {
