@@ -48,8 +48,8 @@ import {DataRequestResponse, TranslateResponse} from '../translate-response';
 import {StaticSpace} from '../ast/field-space/static-space';
 import {ExprValue} from '../ast/types/expr-value';
 import {GlobalNameSpace} from '../ast/types/global-name-space';
-import EventEmitter from 'events';
 import {LogSeverity, MessageCode, MessageParameterType} from '../parse-log';
+import {EventStream} from '../../runtime_types';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types
 export function pretty(thing: any): string {
@@ -308,11 +308,11 @@ export class TestTranslator extends MalloyTranslator {
   constructor(
     readonly testSrc: string,
     importBaseURL: string | null = null,
-    eventEmitter: EventEmitter | null = null,
+    eventStream: EventStream | null = null,
     rootRule = 'malloyDocument',
     internalModel?: ModelDef
   ) {
-    super(testURI, importBaseURL, null, eventEmitter);
+    super(testURI, importBaseURL, null, eventStream);
     this.grammarRule = rootRule;
     this.importZone.define(testURI, testSrc);
     if (internalModel !== undefined) {

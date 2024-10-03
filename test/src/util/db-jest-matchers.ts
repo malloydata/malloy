@@ -31,6 +31,7 @@ import {
   LogMessage,
   SingleConnectionRuntime,
 } from '@malloydata/malloy';
+import EventEmitter from 'events';
 import {inspect} from 'util';
 
 type ExpectedResultRow = Record<string, unknown>;
@@ -255,17 +256,23 @@ async function toEmit(
   runtime: Runtime,
   ...expectedEvents: ExpectedEvent[]
 ) {
-  const eventEmitter = runtime.eventEmitter;
-  if (eventEmitter === undefined) {
+  const eventStream = runtime.eventStream;
+  if (eventStream === undefined) {
     return {
       pass: false,
       message: () => 'No event stream found',
     };
   }
+  if (!(eventStream instanceof EventEmitter)) {
+    return {
+      pass: false,
+      message: () => 'Event stream is not an EventEmitter',
+    };
+  }
   const gotEvents: ExpectedEvent[] = [];
   const eventIdsWeCareAbout = new Set(expectedEvents.map(e => e.id));
   for (const id of eventIdsWeCareAbout) {
-    eventEmitter.on(id, data => {
+    eventStream.on(id, data => {
       gotEvents.push({id, data});
     });
   }

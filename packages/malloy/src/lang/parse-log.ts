@@ -21,8 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import EventEmitter from 'events';
 import {DocumentLocation, FieldValueType} from '../model/malloy_types';
+import {EventStream} from '../runtime_types';
 
 export type LogSeverity = 'error' | 'warn' | 'debug';
 
@@ -52,7 +52,7 @@ export interface MessageLogger {
 export class BaseMessageLogger implements MessageLogger {
   private rawLog: LogMessage[] = [];
 
-  constructor(private readonly eventEmitter: EventEmitter | null) {}
+  constructor(private readonly eventStream: EventStream | null) {}
 
   getLog(): LogMessage[] {
     return this.rawLog;
@@ -63,7 +63,7 @@ export class BaseMessageLogger implements MessageLogger {
    */
   log(logMsg: LogMessage): void {
     this.rawLog.push(logMsg);
-    this.eventEmitter?.emit(`translation-${logMsg.severity}`, {
+    this.eventStream?.emit(`translation-${logMsg.severity}`, {
       code: logMsg.code,
       data: logMsg.data,
       message: logMsg.message,

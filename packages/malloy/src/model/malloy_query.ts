@@ -100,11 +100,11 @@ import {
   SQLExprElement,
 } from './utils';
 import {DialectFieldTypeStruct, QueryInfo} from '../dialect/dialect';
-import EventEmitter from 'events';
 import {
   buildQueryMaterializationSpec,
   shouldMaterialize,
 } from './materialization/utils';
+import {EventStream} from '../runtime_types';
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
@@ -776,7 +776,7 @@ class QueryField extends QueryNode {
     state: GenerateState
   ): string {
     const name = expr.path[0];
-    context.eventEmitter?.emit('source-argument-compiled', {name});
+    context.eventStream?.emit('source-argument-compiled', {name});
     const argument = context.arguments()[name];
     if (argument.value) {
       return this.exprToSQL(resultSet, context, argument.value, state);
@@ -2779,7 +2779,7 @@ class QueryQuery extends QueryField {
   generateSQLJoinBlock(stageWriter: StageWriter, ji: JoinInstance): string {
     let s = '';
     const qs = ji.queryStruct;
-    qs.eventEmitter?.emit('join-used', {
+    qs.eventStream?.emit('join-used', {
       name: qs.fieldDef.as,
     });
     qs.maybeEmitParameterizedSourceUsage();
@@ -4170,7 +4170,7 @@ class QueryStruct extends QueryNode {
       ...this.fieldDef.arguments,
     };
     if (Object.values(paramsAndArgs).length === 0) return;
-    this.eventEmitter?.emit('parameterized-source-compiled', {
+    this.eventStream?.emit('parameterized-source-compiled', {
       parameters: paramsAndArgs,
     });
   }
@@ -4435,8 +4435,8 @@ class QueryStruct extends QueryNode {
     }
   }
 
-  get eventEmitter(): EventEmitter | undefined {
-    return this.getModel().eventEmitter;
+  get eventStream(): EventStream | undefined {
+    return this.getModel().eventStream;
   }
 
   setParent(parent: ParentQueryStruct | ParentQueryModel) {
@@ -4673,7 +4673,7 @@ export class QueryModel {
   structs = new Map<string, QueryStruct>();
   constructor(
     modelDef: ModelDef | undefined,
-    readonly eventEmitter?: EventEmitter
+    readonly eventStream?: EventStream
   ) {
     if (modelDef) {
       this.loadModelFromDef(modelDef);
