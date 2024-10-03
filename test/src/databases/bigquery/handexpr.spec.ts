@@ -249,23 +249,22 @@ describe('BigQuery hand-built expression test', () => {
           {type: 'reduce', queryFields: fToQF(['aircraft_count'])},
         ],
       },
+      withJoin(
+        modelHandBase,
+        'one',
+        'aircraft_models',
+        'aircraft_model_code=aircraft_models.aircraft_model_code'
+      ),
     ],
     primaryKey: 'tail_num',
     as: 'aircraft',
   };
 
-  const aircraftHandStructDef = withJoin(
-    aircraftHandBase,
-    'one',
-    'aircraft_models',
-    'aircraft_model_code=aircraft_models.aircraft_model_code'
-  );
-
   const handCodedModel: ModelDef = {
     name: 'Hand Coded Models',
     exports: ['aircraft'],
     contents: {
-      aircraft: aircraftHandStructDef,
+      aircraft: aircraftHandBase,
     },
   };
 

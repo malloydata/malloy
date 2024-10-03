@@ -4166,7 +4166,7 @@ class QueryStruct extends QueryNode {
     if ('model' in parent) {
       this.model = parent.model;
       this.pathAliasMap = new Map<string, string>();
-      if (IS_BASE_TABLE(structDef)) {
+      if (isSourceDef(structDef)) {
         this.connectionName = structDef.connection;
       } else {
         throw new Error('All root StructDefs should be a baseTable');
