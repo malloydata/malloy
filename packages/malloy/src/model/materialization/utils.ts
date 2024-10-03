@@ -23,7 +23,8 @@ export function shouldMaterialize(annotation?: Annotation): boolean {
 
 export function buildQueryMaterializationSpec(
   path?: string,
-  queryName?: string
+  queryName?: string,
+  materializatedTablePrefix?: string
 ): QueryToMaterialize {
   if (!queryName) {
     throw new Error(
@@ -44,8 +45,10 @@ export function buildQueryMaterializationSpec(
     queryName,
   };
 
-  const objectHash = generateHash(JSON.stringify(queryRep));
-  const id = `${queryName}-${objectHash}`;
+  const objectHash = generateHash(JSON.stringify(queryRep)).replace(/-/g, '_');
+  const id = `${
+    materializatedTablePrefix ? `${materializatedTablePrefix}_` : ''
+  }${queryName}_${objectHash}`;
   return {
     ...queryRep,
     id,

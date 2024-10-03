@@ -421,6 +421,7 @@ export interface ResultMetadataDef {
   sourceClasses: string[];
   filterList?: FilterCondition[];
   fieldKind: 'measure' | 'dimension' | 'struct';
+  referenceId?: string;
 }
 
 // struct specific metadta
@@ -1336,6 +1337,7 @@ export interface SearchValueMapResult {
 
 export interface PrepareResultOptions {
   replaceMaterializedReferences?: boolean;
+  materializedTablePrefix?: string;
 }
 
 // clang-format on

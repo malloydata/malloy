@@ -90,7 +90,7 @@ import {Tag} from '../tags';
 import {MalloyParseInfo} from './malloy-parse-info';
 import {walkForModelAnnotation} from './parse-tree-walkers/model-annotation-walker';
 import {walkForTablePath} from './parse-tree-walkers/find-table-path-walker';
-import { EventStream } from '../runtime_types';
+import {EventStream} from '../runtime_types';
 
 export type StepResponses =
   | DataRequestResponse
