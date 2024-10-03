@@ -67,9 +67,9 @@ import {
   NamedModelObject,
   QueryValue,
   QueryToMaterialize,
-  PrepareResultOptions,
 } from './model';
 import {
+  EventStream,
   ModelString,
   ModelURL,
   QueryString,
@@ -98,9 +98,17 @@ export interface ParseOptions {
   testEnvironment?: boolean;
 }
 
+/** Options for how to run the Malloy semantic checker/translator */
 export interface CompileOptions {
   refreshSchemaCache?: boolean | number;
   noThrowOnError?: boolean;
+}
+
+/** Options given to the Malloy compiler (QueryModel) */
+interface CompileQueryOptions {
+  replaceMaterializedReferences?: boolean;
+  materializedTablePrefix?: string;
+  eventStream?: EventStream;
 }
 
 export class Malloy {
@@ -108,20 +116,10 @@ export class Malloy {
   public static get version(): string {
     return '0.0.1';
   }
-
-  private static _log: Loggable;
-
-  public static get log(): Loggable {
-    return Malloy._log || console;
-  }
-
-  public static setLogger(log: Loggable): void {
-    Malloy._log = log;
-  }
-
   private static _parse(
     source: string,
     url?: URL,
+    eventStream?: EventStream,
     options?: ParseOptions
   ): Parse {
     if (url === undefined) {
@@ -136,7 +134,8 @@ export class Malloy {
       importBaseURL.toString(),
       {
         urls: {[url.toString()]: source},
-      }
+      },
+      eventStream
     );
     if (options?.testEnvironment) {
       translator.allDialectsEnabled = true;
@@ -154,10 +153,12 @@ export class Malloy {
   public static parse({
     url,
     urlReader,
+    eventStream,
     options,
   }: {
     url: URL;
     urlReader: URLReader;
+    eventStream?: EventStream;
     options?: ParseOptions;
   }): Promise<Parse>;
   /**
@@ -170,25 +171,29 @@ export class Malloy {
   public static parse({
     source,
     url,
+    eventStream,
     options,
   }: {
     url?: URL;
     source: string;
+    eventStream?: EventStream;
     options?: ParseOptions;
   }): Parse;
   public static parse({
     url,
     urlReader,
     source,
+    eventStream,
     options,
   }: {
     url?: URL;
     source?: string;
     urlReader?: URLReader;
+    eventStream?: EventStream;
     options?: ParseOptions;
   }): Parse | Promise<Parse> {
     if (source !== undefined) {
-      return Malloy._parse(source, url, options);
+      return Malloy._parse(source, url, eventStream, options);
     } else {
       if (urlReader === undefined) {
         throw new Error('Internal Error: urlReader is required.');
@@ -199,7 +204,7 @@ export class Malloy {
         );
       }
       return urlReader.readURL(url).then(source => {
-        return Malloy._parse(source, url, options);
+        return Malloy._parse(source, url, eventStream, options);
       });
     }
   }
@@ -220,6 +225,7 @@ export class Malloy {
     model,
     refreshSchemaCache,
     noThrowOnError,
+    eventStream,
     replaceMaterializedReferences,
     materializedTablePrefix,
   }: {
@@ -227,8 +233,9 @@ export class Malloy {
     connections: LookupConnection<InfoConnection>;
     parse: Parse;
     model?: Model;
+    replaceMaterializedReferences?: boolean;
   } & CompileOptions &
-    PrepareResultOptions): Promise<Model> {
+    CompileQueryOptions): Promise<Model> {
     let refreshTimestamp: number | undefined;
     if (refreshSchemaCache) {
       refreshTimestamp =
@@ -351,7 +358,11 @@ export class Malloy {
             const expanded = Malloy.compileSQLBlock(
               result.partialModel,
               toCompile,
-              {replaceMaterializedReferences, materializedTablePrefix}
+              {
+                replaceMaterializedReferences,
+                materializedTablePrefix,
+                eventStream,
+              }
             );
             const resolved = await conn.fetchSchemaForSQLBlock(expanded, {
               refreshTimestamp,
@@ -382,7 +393,7 @@ export class Malloy {
   static compileSQLBlock(
     partialModel: ModelDef | undefined,
     toCompile: SQLBlockSource,
-    options?: PrepareResultOptions
+    options?: CompileQueryOptions
   ): SQLBlock {
     let queryModel: QueryModel | undefined = undefined;
     let selectStr = '';
@@ -399,7 +410,7 @@ export class Malloy {
               'Internal error: Partial model missing when compiling SQL block'
             );
           }
-          queryModel = new QueryModel(partialModel);
+          queryModel = new QueryModel(partialModel, options?.eventStream);
         }
         const compiledSql = queryModel.compileQuery(
           segment,
@@ -902,8 +913,14 @@ export class PreparedQuery implements Taggable {
     return this.getPreparedResult();
   }
 
-  public getPreparedResult(options?: PrepareResultOptions): PreparedResult {
-    const queryModel = new QueryModel(this._modelDef);
+  /**
+   * Generate the SQL for this query.
+   *
+   * @return A fully-prepared query (which contains the generated SQL).
+   * @param options.eventStream An event stream to use when compiling the SQL
+   */
+  public getPreparedResult(options?: CompileQueryOptions): PreparedResult {
+    const queryModel = new QueryModel(this._modelDef, options?.eventStream);
     const translatedQuery = queryModel.compileQuery(this._query, options);
     return new PreparedResult(
       {
@@ -2195,22 +2212,45 @@ export class Runtime {
   isTestRuntime = false;
   private _urlReader: URLReader;
   private _connections: LookupConnection<Connection>;
+  private _eventStream: EventStream | undefined;
 
   constructor(runtime: LookupConnection<Connection> & URLReader);
-  constructor(urls: URLReader, connections: LookupConnection<Connection>);
-  constructor(urls: URLReader, connection: Connection);
-  constructor(connection: Connection);
-  constructor(connections: LookupConnection<Connection>);
   constructor(
-    ...args: (URLReader | LookupConnection<Connection> | Connection)[]
+    urls: URLReader,
+    connections: LookupConnection<Connection>,
+    eventStream?: EventStream
+  );
+  constructor(
+    urls: URLReader,
+    connection: Connection,
+    eventStream?: EventStream
+  );
+  constructor(connection: Connection, eventStream?: EventStream);
+  constructor(
+    connections: LookupConnection<Connection>,
+    eventStream?: EventStream
+  );
+  constructor(
+    ...args: (
+      | URLReader
+      | LookupConnection<Connection>
+      | Connection
+      | EventStream
+      | undefined
+    )[]
   ) {
     let urlReader: URLReader | undefined;
     let connections: LookupConnection<Connection> | undefined;
+    let eventStream: EventStream | undefined;
     for (const arg of args) {
-      if (isURLReader(arg)) {
+      if (arg === undefined) {
+        continue;
+      } else if (isURLReader(arg)) {
         urlReader = arg;
       } else if (isLookupConnection<Connection>(arg)) {
         connections = arg;
+      } else if (isEventStream(arg)) {
+        eventStream = arg;
       } else {
         connections = {
           lookupConnection: () => Promise.resolve(arg),
@@ -2227,6 +2267,7 @@ export class Runtime {
     }
     this._urlReader = urlReader;
     this._connections = connections;
+    this._eventStream = eventStream;
   }
 
   /**
@@ -2244,6 +2285,13 @@ export class Runtime {
   }
 
   /**
+   * @return The `EventStream` for this runtime instance.
+   */
+  public get eventStream(): EventStream | undefined {
+    return this._eventStream;
+  }
+
+  /**
    * Load a Malloy model by URL or contents.
    *
    * @param source The model URL or contents to load and (eventually) compile.
@@ -2252,7 +2300,7 @@ export class Runtime {
    */
   public loadModel(
     source: ModelURL | ModelString,
-    options?: ParseOptions & CompileOptions & PrepareResultOptions
+    options?: ParseOptions & CompileOptions & CompileQueryOptions
   ): ModelMaterializer {
     const {refreshSchemaCache, noThrowOnError} = options || {};
     if (this.isTestRuntime) {
@@ -2270,10 +2318,12 @@ export class Runtime {
             ? await Malloy.parse({
                 url: source,
                 urlReader: this.urlReader,
+                eventStream: this.eventStream,
                 options,
               })
             : Malloy.parse({
                 source,
+                eventStream: this.eventStream,
                 options,
               });
         return Malloy.compile({
@@ -2282,6 +2332,7 @@ export class Runtime {
           parse,
           refreshSchemaCache,
           noThrowOnError,
+          eventStream: this.eventStream,
           replaceMaterializedReferences: options?.replaceMaterializedReferences,
           materializedTablePrefix: options?.materializedTablePrefix,
         });
@@ -2296,7 +2347,7 @@ export class Runtime {
   //      be used in tests.
   public _loadModelFromModelDef(
     modelDef: ModelDef,
-    options?: PrepareResultOptions
+    options?: CompileQueryOptions
   ): ModelMaterializer {
     return new ModelMaterializer(
       this,
@@ -2316,7 +2367,7 @@ export class Runtime {
    */
   public loadQuery(
     query: QueryURL | QueryString,
-    options?: ParseOptions & CompileOptions & PrepareResultOptions
+    options?: ParseOptions & CompileOptions & CompileQueryOptions
   ): QueryMaterializer {
     return this.loadModel(query, options).loadFinalQuery();
   }
@@ -2333,7 +2384,7 @@ export class Runtime {
   public loadQueryByIndex(
     model: ModelURL | ModelString,
     index: number,
-    options?: ParseOptions & CompileOptions & PrepareResultOptions
+    options?: ParseOptions & CompileOptions & CompileQueryOptions
   ): QueryMaterializer {
     return this.loadModel(model, options).loadQueryByIndex(index, options);
   }
@@ -2350,7 +2401,7 @@ export class Runtime {
   public loadQueryByName(
     model: ModelURL | ModelString,
     name: string,
-    options?: ParseOptions & CompileOptions & PrepareResultOptions
+    options?: ParseOptions & CompileOptions & CompileQueryOptions
   ): QueryMaterializer {
     return this.loadModel(model, options).loadQueryByName(name, options);
   }
@@ -2367,7 +2418,7 @@ export class Runtime {
   public loadSQLBlockByName(
     model: ModelURL | ModelString,
     name: string,
-    options?: ParseOptions & CompileOptions & PrepareResultOptions
+    options?: ParseOptions & CompileOptions & CompileQueryOptions
   ): SQLBlockMaterializer {
     return this.loadModel(model, options).loadSQLBlockByName(name);
   }
@@ -2510,18 +2561,32 @@ export class SingleConnectionRuntime<
 > extends Runtime {
   public readonly connection: T;
 
-  constructor(urls: URLReader, connection: T);
+  constructor(urlReader: URLReader, connection: T);
   constructor(connection: T);
-  constructor(urlsOrConnections: URLReader | T, maybeConnections?: T) {
-    if (maybeConnections === undefined) {
-      const connection = urlsOrConnections as T;
-      super(connection);
-      this.connection = connection;
-    } else {
-      const connection = maybeConnections as T;
-      super(urlsOrConnections as URLReader, connection);
-      this.connection = connection;
+  constructor(connection: T, eventStream: EventStream);
+  constructor(urlReader: URLReader, connection: T, eventStream: EventStream);
+  constructor(...params: (URLReader | T | EventStream)[]) {
+    let urlReader: URLReader | undefined;
+    let connection: T | undefined;
+    let eventStream: EventStream | undefined;
+    for (const param of params) {
+      if (isURLReader(param)) {
+        urlReader = param;
+      }
+      if (isConnection(param)) {
+        connection = param;
+      }
+      if (isEventStream(param)) {
+        eventStream = param;
+      }
     }
+    if (connection === undefined) {
+      throw new Error(
+        'Expected connection to be passed into SingleConnectionRuntime'
+      );
+    }
+    super(urlReader as URLReader, connection, eventStream);
+    this.connection = connection;
   }
 
   get supportsNesting(): boolean {
@@ -2571,14 +2636,14 @@ class FluentState<T> {
 
   protected makeQueryMaterializer(
     materialize: () => Promise<PreparedQuery>,
-    options?: PrepareResultOptions
+    options?: CompileQueryOptions
   ): QueryMaterializer {
     return new QueryMaterializer(this.runtime, materialize, options);
   }
 
   protected makeExploreMaterializer(
     materialize: () => Promise<Explore>,
-    options?: PrepareResultOptions
+    options?: CompileQueryOptions
   ): ExploreMaterializer {
     return new ExploreMaterializer(this.runtime, materialize, options);
   }
@@ -2594,6 +2659,10 @@ class FluentState<T> {
   ): SQLBlockMaterializer {
     return new SQLBlockMaterializer(this.runtime, materialize);
   }
+
+  get eventStream(): EventStream | undefined {
+    return this.runtime.eventStream;
+  }
 }
 
 /**
@@ -2602,14 +2671,14 @@ class FluentState<T> {
  * queries or explores (via e.g. `loadFinalQuery()`, `loadQuery`, `loadExploreByName`, etc.).
  */
 export class ModelMaterializer extends FluentState<Model> {
-  private readonly prepareResultOptions: PrepareResultOptions | undefined;
+  private readonly compileQueryOptions: CompileQueryOptions | undefined;
   constructor(
     protected runtime: Runtime,
     materialize: () => Promise<Model>,
-    options?: PrepareResultOptions
+    options?: CompileQueryOptions
   ) {
     super(runtime, materialize);
-    this.prepareResultOptions = options;
+    this.compileQueryOptions = options;
   }
 
   /**
@@ -2618,13 +2687,13 @@ export class ModelMaterializer extends FluentState<Model> {
    * @return A `QueryMaterializer` capable of materializing the requested query, running it,
    * or loading further related objects.
    */
-  public loadFinalQuery(options?: PrepareResultOptions): QueryMaterializer {
+  public loadFinalQuery(options?: CompileQueryOptions): QueryMaterializer {
     return this.makeQueryMaterializer(
       async () => {
         return (await this.materialize()).getPreparedQuery();
       },
       {
-        ...this.prepareResultOptions,
+        ...this.compileQueryOptions,
         ...options,
       }
     );
@@ -2639,14 +2708,14 @@ export class ModelMaterializer extends FluentState<Model> {
    */
   public loadQueryByIndex(
     index: number,
-    options?: PrepareResultOptions
+    options?: CompileQueryOptions
   ): QueryMaterializer {
     return this.makeQueryMaterializer(
       async () => {
         return (await this.materialize()).getPreparedQueryByIndex(index);
       },
       {
-        ...this.prepareResultOptions,
+        ...this.compileQueryOptions,
         ...options,
       }
     );
@@ -2661,14 +2730,14 @@ export class ModelMaterializer extends FluentState<Model> {
    */
   public loadQueryByName(
     name: string,
-    options?: PrepareResultOptions
+    options?: CompileQueryOptions
   ): QueryMaterializer {
     return this.makeQueryMaterializer(
       async () => {
         return (await this.materialize()).getPreparedQueryByName(name);
       },
       {
-        ...this.prepareResultOptions,
+        ...this.compileQueryOptions,
         ...options,
       }
     );
@@ -2683,7 +2752,7 @@ export class ModelMaterializer extends FluentState<Model> {
    */
   public loadQuery(
     query: QueryString | QueryURL,
-    options?: ParseOptions & CompileOptions & PrepareResultOptions
+    options?: ParseOptions & CompileOptions & CompileQueryOptions
   ): QueryMaterializer {
     const {refreshSchemaCache, noThrowOnError} = options || {};
     return this.makeQueryMaterializer(async () => {
@@ -2715,7 +2784,7 @@ export class ModelMaterializer extends FluentState<Model> {
         model,
         refreshSchemaCache,
         noThrowOnError,
-        ...this.prepareResultOptions,
+        ...this.compileQueryOptions,
       });
       return queryModel.preparedQuery;
     });
@@ -2730,7 +2799,7 @@ export class ModelMaterializer extends FluentState<Model> {
    */
   public extendModel(
     query: QueryString | QueryURL,
-    options?: ParseOptions & CompileOptions & PrepareResultOptions
+    options?: ParseOptions & CompileOptions & CompileQueryOptions
   ): ModelMaterializer {
     if (this.runtime.isTestRuntime) {
       if (options === undefined) {
@@ -2763,7 +2832,7 @@ export class ModelMaterializer extends FluentState<Model> {
           model,
           refreshSchemaCache: options?.refreshSchemaCache,
           noThrowOnError: options?.noThrowOnError,
-          ...this.prepareResultOptions,
+          ...this.compileQueryOptions,
         });
         return queryModel;
       },
@@ -2775,10 +2844,11 @@ export class ModelMaterializer extends FluentState<Model> {
     sourceName: string,
     searchTerm: string,
     limit = 1000,
-    searchField: string | undefined = undefined
+    searchField: string | undefined = undefined,
+    eventStream?: EventStream
   ): Promise<SearchIndexResult[] | undefined> {
     const model = await this.materialize();
-    const queryModel = new QueryModel(model._modelDef);
+    const queryModel = new QueryModel(model._modelDef, eventStream);
     const schema = model.getExploreByName(sourceName).structDef;
     if (schema.structRelationship.type !== 'basetable') {
       throw new Error(
@@ -2934,7 +3004,7 @@ export class ModelMaterializer extends FluentState<Model> {
   //      be used in tests.
   public _loadQueryFromQueryDef(
     query: InternalQuery,
-    options?: PrepareResultOptions
+    options?: CompileQueryOptions
   ): QueryMaterializer {
     return this.makeQueryMaterializer(
       async () => {
@@ -2942,7 +3012,7 @@ export class ModelMaterializer extends FluentState<Model> {
         return new PreparedQuery(query, model._modelDef, model.problems);
       },
       {
-        ...this.prepareResultOptions,
+        ...this.compileQueryOptions,
         ...options,
       }
     );
@@ -2958,7 +3028,7 @@ export class ModelMaterializer extends FluentState<Model> {
   public loadExploreByName(name: string): ExploreMaterializer {
     return this.makeExploreMaterializer(async () => {
       return (await this.materialize()).getExploreByName(name);
-    }, this.prepareResultOptions);
+    }, this.compileQueryOptions);
   }
 
   /**
@@ -2987,14 +3057,14 @@ export class ModelMaterializer extends FluentState<Model> {
  * prepared results or run the query (via e.g. `loadPreparedResult()` or `run()`).
  */
 export class QueryMaterializer extends FluentState<PreparedQuery> {
-  private readonly prepareResultOptions: PrepareResultOptions | undefined;
+  private readonly compileQueryOptions: CompileQueryOptions | undefined;
   constructor(
     protected runtime: Runtime,
     materialize: () => Promise<PreparedQuery>,
-    options?: PrepareResultOptions
+    options?: CompileQueryOptions
   ) {
     super(runtime, materialize);
-    this.prepareResultOptions = options;
+    this.compileQueryOptions = options;
   }
 
   /**
@@ -3002,23 +3072,17 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
    *
    * @return The query results from running this loaded query.
    */
-  async run(options?: RunSQLOptions & PrepareResultOptions): Promise<Result> {
+  async run(options?: RunSQLOptions & CompileQueryOptions): Promise<Result> {
     const connections = this.runtime.connections;
-    const preparedResult = await this.getPreparedResult({
-      ...this.prepareResultOptions,
-      ...options,
-    });
+    const preparedResult = await this.getPreparedResult(options);
     const finalOptions = runSQLOptionsWithAnnotations(preparedResult, options);
     return Malloy.run({connections, preparedResult, options: finalOptions});
   }
 
   async *runStream(
-    options?: RunSQLOptions & PrepareResultOptions
+    options?: RunSQLOptions & CompileQueryOptions
   ): AsyncIterableIterator<DataRecord> {
-    const preparedResult = await this.getPreparedResult({
-      ...this.prepareResultOptions,
-      ...options,
-    });
+    const preparedResult = await this.getPreparedResult(options);
     const connections = this.runtime.connections;
     const finalOptions = runSQLOptionsWithAnnotations(preparedResult, options);
     const stream = Malloy.runStream({
@@ -3038,11 +3102,12 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
    * prepared query or running it.
    */
   public loadPreparedResult(
-    options?: PrepareResultOptions
+    options?: CompileQueryOptions
   ): PreparedResultMaterializer {
     return this.makePreparedResultMaterializer(async () => {
       return (await this.materialize()).getPreparedResult({
-        ...this.prepareResultOptions,
+        eventStream: this.eventStream,
+        ...this.compileQueryOptions,
         ...options,
       });
     });
@@ -3054,12 +3119,9 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
    * @return A promise of the prepared result of this loaded query.
    */
   public getPreparedResult(
-    options?: PrepareResultOptions
+    options?: CompileQueryOptions
   ): Promise<PreparedResult> {
-    return this.loadPreparedResult({
-      ...this.prepareResultOptions,
-      ...options,
-    }).getPreparedResult();
+    return this.loadPreparedResult(options).getPreparedResult();
   }
 
   /**
@@ -3067,13 +3129,8 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
    *
    * @return A promise of the SQL string.
    */
-  public async getSQL(options?: PrepareResultOptions): Promise<string> {
-    return (
-      await this.getPreparedResult({
-        ...this.prepareResultOptions,
-        ...options,
-      })
-    ).sql;
+  public async getSQL(options?: CompileQueryOptions): Promise<string> {
+    return (await this.getPreparedResult(options)).sql;
   }
 
   /**
@@ -3091,13 +3148,10 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
    * @return The estimated cost of running this loaded query.
    */
   public async estimateQueryCost(
-    options?: PrepareResultOptions
+    options?: CompileQueryOptions
   ): Promise<QueryRunStats> {
     const connections = this.runtime.connections;
-    const preparedResult = await this.getPreparedResult({
-      ...this.prepareResultOptions,
-      ...options,
-    });
+    const preparedResult = await this.getPreparedResult(options);
     return Malloy.estimateQueryCost({connections, preparedResult});
   }
 }
@@ -3238,7 +3292,7 @@ export class ExploreMaterializer extends FluentState<Explore> {
   constructor(
     protected runtime: Runtime,
     materialize: () => Promise<Explore>,
-    options?: PrepareResultOptions
+    options?: CompileQueryOptions
   ) {
     super(runtime, materialize);
     this.replaceMaterializedReferences =
@@ -3254,7 +3308,7 @@ export class ExploreMaterializer extends FluentState<Explore> {
    */
   public loadQueryByName(
     name: string,
-    options?: PrepareResultOptions
+    options?: CompileQueryOptions
   ): QueryMaterializer {
     return this.makeQueryMaterializer(async () => {
       return (await this.materialize()).getQueryByName(name);
@@ -4007,6 +4061,7 @@ function isURLReader(
     | LookupConnection<InfoConnection>
     | LookupConnection<Connection>
     | Connection
+    | EventStream
 ): thing is URLReader {
   return 'readURL' in thing;
 }
@@ -4017,8 +4072,31 @@ function isLookupConnection<T extends InfoConnection = InfoConnection>(
     | LookupConnection<InfoConnection>
     | LookupConnection<Connection>
     | Connection
+    | EventStream
 ): thing is LookupConnection<T> {
   return 'lookupConnection' in thing;
+}
+
+function isEventStream(
+  thing:
+    | URLReader
+    | LookupConnection<InfoConnection>
+    | LookupConnection<Connection>
+    | Connection
+    | EventStream
+): thing is EventStream {
+  return 'emit' in thing;
+}
+
+function isConnection<T extends Connection>(
+  thing:
+    | URLReader
+    | LookupConnection<InfoConnection>
+    | LookupConnection<Connection>
+    | Connection
+    | EventStream
+): thing is T {
+  return 'runSQL' in thing;
 }
 
 export interface WriteStream {

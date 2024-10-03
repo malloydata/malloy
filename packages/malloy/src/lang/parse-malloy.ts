@@ -90,6 +90,7 @@ import {Tag} from '../tags';
 import {MalloyParseInfo} from './malloy-parse-info';
 import {walkForModelAnnotation} from './parse-tree-walkers/model-annotation-walker';
 import {walkForTablePath} from './parse-tree-walkers/find-table-path-walker';
+import {EventStream} from '../runtime_types';
 
 export type StepResponses =
   | DataRequestResponse
@@ -1024,15 +1025,17 @@ export class MalloyTranslator extends MalloyTranslation {
   schemaZone = new Zone<StructDef>();
   importZone = new Zone<string>();
   sqlQueryZone = new Zone<SQLBlockStructDef>();
-  logger = new BaseMessageLogger();
+  logger: MessageLogger;
   readonly root: MalloyTranslator;
   constructor(
     rootURL: string,
     importURL: string | null = null,
-    preload: ParseUpdate | null = null
+    preload: ParseUpdate | null = null,
+    private readonly eventStream: EventStream | null = null
   ) {
     super(rootURL, importURL);
     this.root = this;
+    this.logger = new BaseMessageLogger(eventStream);
     if (preload) {
       this.update(preload);
     }

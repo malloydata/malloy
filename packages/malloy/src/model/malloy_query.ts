@@ -104,6 +104,7 @@ import {
   buildQueryMaterializationSpec,
   shouldMaterialize,
 } from './materialization/utils';
+import {EventStream} from '../runtime_types';
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
@@ -785,6 +786,7 @@ class QueryField extends QueryNode {
     state: GenerateState
   ): string {
     const name = expr.path[0];
+    context.eventStream?.emit('source-argument-compiled', {name});
     const argument = context.arguments()[name];
     if (argument.value) {
       return this.exprToSQL(resultSet, context, argument.value, state);
@@ -2790,6 +2792,10 @@ class QueryQuery extends QueryField {
   generateSQLJoinBlock(stageWriter: StageWriter, ji: JoinInstance): string {
     let s = '';
     const qs = ji.queryStruct;
+    qs.eventStream?.emit('join-used', {
+      name: qs.fieldDef.as,
+    });
+    qs.maybeEmitParameterizedSourceUsage();
     const structRelationship = qs.fieldDef.structRelationship;
     let structSQL = qs.structSourceSQL(stageWriter);
     if (isJoinOn(structRelationship)) {
@@ -3773,6 +3779,7 @@ class QueryQuery extends QueryField {
     lastStageName: string;
     outputStruct: StructDef;
   } {
+    this.parent.maybeEmitParameterizedSourceUsage();
     this.prepare(stageWriter);
     let lastStageName = this.generateSQL(stageWriter);
     let outputStruct = this.getResultStructDef();
@@ -4173,6 +4180,17 @@ class QueryStruct extends QueryNode {
     this.addFieldsFromFieldList(this.fieldDef.fields);
   }
 
+  maybeEmitParameterizedSourceUsage() {
+    const paramsAndArgs = {
+      ...this.fieldDef.parameters,
+      ...this.fieldDef.arguments,
+    };
+    if (Object.values(paramsAndArgs).length === 0) return;
+    this.eventStream?.emit('parameterized-source-compiled', {
+      parameters: paramsAndArgs,
+    });
+  }
+
   resolveParentParameterReferences(param: Parameter): Parameter {
     return {
       ...param,
@@ -4433,6 +4451,10 @@ class QueryStruct extends QueryNode {
     }
   }
 
+  get eventStream(): EventStream | undefined {
+    return this.getModel().eventStream;
+  }
+
   setParent(parent: ParentQueryStruct | ParentQueryModel) {
     if ('struct' in parent) {
       this.parent = parent.struct;
@@ -4672,7 +4694,10 @@ export class QueryModel {
   // dialect: Dialect = new PostgresDialect();
   modelDef: ModelDef | undefined = undefined;
   structs = new Map<string, QueryStruct>();
-  constructor(modelDef: ModelDef | undefined) {
+  constructor(
+    modelDef: ModelDef | undefined,
+    readonly eventStream?: EventStream
+  ) {
     if (modelDef) {
       this.loadModelFromDef(modelDef);
     }
