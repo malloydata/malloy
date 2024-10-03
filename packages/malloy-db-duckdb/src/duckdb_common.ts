@@ -66,7 +66,7 @@ export abstract class DuckDBCommon
   public readonly name: string = 'duckdb_common';
 
   get dialectName(): string {
-    return 'duckdb';
+    return this.dialect.name;
   }
 
   protected readQueryOptions(): DuckDBQueryOptions {
@@ -276,7 +276,7 @@ export abstract class DuckDBCommon
     const structDef: TableSourceDef = {
       type: 'table',
       name: tableKey,
-      dialect: 'duckdb',
+      dialect: this.dialectName,
       tablePath,
       connection: this.name,
       fields: [],

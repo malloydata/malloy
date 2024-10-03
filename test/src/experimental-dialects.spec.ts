@@ -56,6 +56,7 @@ async function getError<T>(promise: Promise<T>): Promise<Error | undefined> {
 describe('experimental dialects', () => {
   const duckdbX = 'duckdb_experimental';
   class DuckdbXConnection extends DuckDBConnection {
+    name = duckdbX;
     public async festchSchemaFOrSQLSource(
       sqlRef: SQLSourceDef,
       options: FetchSchemaOptions
@@ -69,6 +70,9 @@ describe('experimental dialects', () => {
       }
       return result;
     }
+    get dialectName(): string {
+      return duckdbX;
+    }
   }
 
   const connection = new DuckdbXConnection(
@@ -79,6 +83,9 @@ describe('experimental dialects', () => {
   class DuckdbXDialect extends DuckDBDialect {
     experimental = true;
     name = duckdbX;
+    get dialectName(): string {
+      return duckdbX;
+    }
   }
 
   registerDialect(new DuckdbXDialect());
