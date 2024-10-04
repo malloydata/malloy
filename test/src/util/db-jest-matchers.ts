@@ -30,6 +30,7 @@ import {
   MalloyError,
   LogMessage,
   SingleConnectionRuntime,
+  Tag,
 } from '@malloydata/malloy';
 import {inspect} from 'util';
 
@@ -117,8 +118,11 @@ expect.extend({
     }
 
     let query: QueryMaterializer;
+    let queryTestTag: Tag | undefined = undefined;
     try {
       query = runtime.loadQuery(querySrc);
+      const queryTags = (await query.getPreparedQuery()).tagParse().tag;
+      queryTestTag = queryTags.tag('test');
     } catch (e) {
       return {
         pass: false,
@@ -126,8 +130,6 @@ expect.extend({
       };
     }
 
-    const queryTags = (await query.getPreparedQuery()).tagParse().tag;
-    const queryTestTag = queryTags.tag('test');
     let result: Result;
     try {
       result = await query.run();
