@@ -126,7 +126,7 @@ expect.extend({
     } catch (e) {
       return {
         pass: false,
-        message: () => `loadQuery failed: ${e.message}`,
+        message: () => `Could not prepare query to run: ${e.message}`,
       };
     }
 

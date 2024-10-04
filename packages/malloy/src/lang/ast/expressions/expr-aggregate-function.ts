@@ -86,7 +86,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
         sourceRelationship = result.joinPath;
         const sourceFoot = result.found;
         const footType = sourceFoot.typeDesc();
-        if (isAtomicFieldType(footType.dataType)) {
+        if (!(sourceFoot instanceof StructSpaceFieldBase)) {
           expr = this.source;
           exprVal = {
             dataType: footType.dataType,
@@ -111,7 +111,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
             sourceRelationship = joinUsage[0];
           }
         } else {
-          if (!(sourceFoot instanceof StructSpaceFieldBase)) {
+          if (!isAtomicFieldType(footType.dataType)) {
             return this.loggedErrorExpr(
               'invalid-aggregate-source',
               `Aggregate source cannot be a ${footType.dataType}`
