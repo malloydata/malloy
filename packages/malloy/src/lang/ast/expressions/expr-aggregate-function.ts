@@ -37,7 +37,6 @@ import {exprWalk} from '../../../model/utils';
 
 import {errorFor} from '../ast-utils';
 import {StructSpaceField} from '../field-space/static-space';
-import {StructSpaceFieldBase} from '../field-space/struct-space-field-base';
 import {FT} from '../fragtype-utils';
 import {FieldReference} from '../query-items/field-references';
 import {ExprValue} from '../types/expr-value';
@@ -86,9 +85,8 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
         sourceRelationship = result.joinPath;
         const sourceFoot = result.found;
         const footType = sourceFoot.typeDesc();
-        const sourceIsJoined = sourceFoot instanceof StructSpaceField;
-        if (isAtomicFieldType(footType.dataType) && !sourceIsJoined) {
-          if (!(sourceFoot instanceof StructSpaceFieldBase)) {
+        if (!(sourceFoot instanceof StructSpaceField)) {
+          if (isAtomicFieldType(footType.dataType)) {
             expr = this.source;
             exprVal = {
               dataType: footType.dataType,
@@ -112,9 +110,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
               structPath = joinUsage[0].map(p => p.name);
               sourceRelationship = joinUsage[0];
             }
-          }
-        } else {
-          if (!sourceIsJoined) {
+          } else {
             return this.loggedErrorExpr(
               'invalid-aggregate-source',
               `Aggregate source cannot be a ${footType.dataType}`
