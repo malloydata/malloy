@@ -235,17 +235,15 @@ export abstract class TrinoPrestoConnection
       if (field.type === 'record') {
         retRow[field.name] = this.convertRow(field, row[i]);
       } else if (isRepeatedRecord(field)) {
-        // mtoy todo if you don't have tests which end up testing this, test this
-        throw new Error(
-          "Trino dialect can't convert a repeated record in a result"
-        );
-        // retRow[field.name] = this.convertNest(field, row[i]);
+        retRow[field.name] = this.convertNest(field, row[i]);
       } else if (field.type === 'array') {
-        // mtoy todo fail a test then fix this too
-        throw new Error(
-          "Trino dialect can't convert an array in the result set"
-        );
-        // retRow[field.name] = this.convertNest(field, row[i]);
+        const newArray: JoinedArrayTypeDef = {
+          fields: [],
+          dialect: '',
+          ...field,
+          join: 'many',
+        };
+        retRow[field.name] = this.convertNest(newArray, row[i]);
       } else {
         retRow[field.name] = row[i] ?? null;
       }
