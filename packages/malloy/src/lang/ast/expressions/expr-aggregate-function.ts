@@ -86,37 +86,37 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
         sourceRelationship = result.joinPath;
         const sourceFoot = result.found;
         const footType = sourceFoot.typeDesc();
-        if (!(sourceFoot instanceof StructSpaceFieldBase)) {
-          expr = this.source;
-          exprVal = {
-            dataType: footType.dataType,
-            expressionType: footType.expressionType,
-            value:
-              footType.evalSpace === 'output'
-                ? {node: 'outputField', name: this.source.refString}
-                : {node: 'field', path: this.source.path},
-            evalSpace: footType.evalSpace,
-          };
-          structPath = this.source.path;
-          // Here we handle a special case where you write `foo.agg()` and `foo` is a
-          // dimension which uses only one distinct join path; in this case, we set the
-          // locality to be that join path
-          const joinUsage = this.getJoinUsage(inputFS);
-          const allUsagesSame =
-            joinUsage.length === 1 ||
-            (joinUsage.length > 1 &&
-              joinUsage.slice(1).every(p => joinPathEq(p, joinUsage[0])));
-          if (allUsagesSame) {
-            structPath = joinUsage[0].map(p => p.name);
-            sourceRelationship = joinUsage[0];
+        if (isAtomicFieldType(footType.dataType)) {
+          if (!(sourceFoot instanceof StructSpaceFieldBase)) {
+            expr = this.source;
+            exprVal = {
+              dataType: footType.dataType,
+              expressionType: footType.expressionType,
+              value:
+                footType.evalSpace === 'output'
+                  ? {node: 'outputField', name: this.source.refString}
+                  : {node: 'field', path: this.source.path},
+              evalSpace: footType.evalSpace,
+            };
+            structPath = this.source.path;
+            // Here we handle a special case where you write `foo.agg()` and `foo` is a
+            // dimension which uses only one distinct join path; in this case, we set the
+            // locality to be that join path
+            const joinUsage = this.getJoinUsage(inputFS);
+            const allUsagesSame =
+              joinUsage.length === 1 ||
+              (joinUsage.length > 1 &&
+                joinUsage.slice(1).every(p => joinPathEq(p, joinUsage[0])));
+            if (allUsagesSame) {
+              structPath = joinUsage[0].map(p => p.name);
+              sourceRelationship = joinUsage[0];
+            }
           }
         } else {
-          if (!isAtomicFieldType(footType.dataType)) {
-            return this.loggedErrorExpr(
-              'invalid-aggregate-source',
-              `Aggregate source cannot be a ${footType.dataType}`
-            );
-          }
+          return this.loggedErrorExpr(
+            'invalid-aggregate-source',
+            `Aggregate source cannot be a ${footType.dataType}`
+          );
         }
       } else {
         return this.loggedErrorExpr(
