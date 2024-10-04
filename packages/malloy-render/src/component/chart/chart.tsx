@@ -9,9 +9,9 @@ import {VegaChart} from '../vega/vega-chart';
 import {ChartTooltipEntry, RenderResultMetadata} from '../types';
 import {renderTimeString} from '../render-time';
 import {Tooltip} from '../tooltip/tooltip';
-import {createSignal} from 'solid-js';
+import {createEffect, createSignal, onMount} from 'solid-js';
 import {DefaultChartTooltip} from './default-chart-tooltip';
-import {EventListenerHandler} from 'vega';
+import {EventListenerHandler, View} from 'vega';
 
 export function Chart(props: {
   field: Explore | ExploreField;
@@ -22,7 +22,7 @@ export function Chart(props: {
   const chartProps = props.metadata.field(field).vegaChartProps!;
   const spec = structuredClone(chartProps.spec);
   const chartData = structuredClone(data);
-  chartProps.injectData(chartData, spec);
+  chartProps.injectData(field, chartData, spec);
   // if (chartProps.specType === 'vega') {
   //   spec.data[0].values = chartData.map(row => ({
   //     ...row,
@@ -47,20 +47,22 @@ export function Chart(props: {
     });
   });
 
-  const [tooltipData, setTooltipData] = createSignal<
-    null | ChartTooltipEntry[]
-  >(null);
+  const [tooltipData, setTooltipData] = createSignal<null | ChartTooltipEntry>(
+    null
+  );
 
   let tId: NodeJS.Timeout | null = null;
-  const setTooltipDataDebounce = (data: ChartTooltipEntry[] | null) => {
+  const setTooltipDataDebounce = (data: ChartTooltipEntry | null) => {
     if (tId) clearTimeout(tId);
     if (data !== null) setTooltipData(data);
-    else tId = setTimeout(() => setTooltipData(null), 50);
+    else tId = setTimeout(() => setTooltipData(null), 0);
   };
 
+  const [view, setView] = createSignal<View | null>(null);
+
   const mouseOverHandler: EventListenerHandler = (event, item) => {
-    if (item?.datum && chartProps.getTooltipData) {
-      const data = chartProps.getTooltipData(item);
+    if (view() && item && chartProps.getTooltipData) {
+      const data = chartProps.getTooltipData(item, view()!);
       setTooltipDataDebounce(data);
     } else setTooltipDataDebounce(null);
   };
@@ -80,6 +82,8 @@ export function Chart(props: {
         width={chartProps.plotWidth}
         height={chartProps.plotHeight}
         onMouseOver={mouseOverHandler}
+        onView={setView}
+        explore={props.field}
       />
       <Tooltip show={!!tooltipData()}>
         <DefaultChartTooltip data={tooltipData()!} />

@@ -16,6 +16,7 @@ source: products is duckdb.table("data/products.parquet") extend {
       # bar_chart
       a is {
         group_by: brand
+        # number="#,##0.000"
         aggregate: `Sales $` is retail_price.avg()*500
         limit: 10
       }
@@ -28,7 +29,28 @@ source: products is duckdb.table("data/products.parquet") extend {
       # bar_chart.stack
       c is {
         group_by: brand, department_long_label is department
+        # currency
         aggregate: `Sales $` is retail_price.avg()*500
+        limit: 10
+      }
+      # bar_chart
+      d is {
+        group_by: brand
+        aggregate:
+          # y
+          `Sales $` is retail_price.avg()*500
+          # y
+          `Cost $ really long label` is retail_price.avg()*300
+        limit: 10
+      }
+      # bar_chart.stack
+      e is {
+        group_by: brand
+        aggregate:
+          # y
+          `Sales $` is retail_price.avg()*500
+          # y
+          `Cost $ really long label` is retail_price.avg()*300
         limit: 10
       }
   }

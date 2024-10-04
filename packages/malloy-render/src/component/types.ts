@@ -1,9 +1,14 @@
 import {DataColumn, Explore, Field, QueryData, Tag} from '@malloydata/malloy';
-import {Item} from 'vega';
+import {Item, View} from 'vega';
+import {ResultStore} from './result-store/result-store';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Vega does not have good TS support
 export type VegaSpec = any;
-export type DataInjector = (data: QueryData, spec: VegaSpec) => void;
+export type DataInjector = (
+  field: Explore,
+  data: QueryData,
+  spec: VegaSpec
+) => void;
 export type VegaChartProps = {
   spec: VegaSpec;
   specType: 'vega' | 'vega-lite';
@@ -13,7 +18,7 @@ export type VegaChartProps = {
   totalHeight: number;
   chartType: string;
   injectData: DataInjector;
-  getTooltipData?: (item: Item) => ChartTooltipEntry[] | null;
+  getTooltipData?: (item: Item, view: View) => ChartTooltipEntry | null;
 };
 
 export type FieldHeaderRangeMap = Record<
@@ -42,6 +47,7 @@ export interface RenderResultMetadata {
   modelTag: Tag;
   resultTag: Tag;
   rootField: Field | Explore;
+  store: ResultStore;
 }
 
 export type MalloyClickEventPayload = {
@@ -59,8 +65,18 @@ export type VegaConfigHandler = (
   chartType: string
 ) => Record<string, unknown> | undefined;
 
+// export type ChartTooltipEntry = {
+//   field: Field;
+//   fieldName: string;
+//   value: unknown;
+// };
+
 export type ChartTooltipEntry = {
-  field: Field;
-  fieldName: string;
-  value: unknown;
+  title: string[];
+  entries: {
+    label: string;
+    value: string;
+    highlight: boolean;
+    color?: string;
+  }[];
 };

@@ -29,8 +29,8 @@ export function Tooltip(props: {show: boolean; children: JSXElement}) {
   });
 
   return (
-    <Portal>
-      <Show when={props.show}>
+    <Show when={props.show}>
+      <Portal>
         <div
           style={`position: fixed; top: ${pos()[1]}px; left: ${
             pos()[0]
@@ -38,7 +38,7 @@ export function Tooltip(props: {show: boolean; children: JSXElement}) {
         >
           <div class="malloy-tooltip">{props.children}</div>
         </div>
-      </Show>
-    </Portal>
+      </Portal>
+    </Show>
   );
 }

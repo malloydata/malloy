@@ -1,4 +1,4 @@
-import {Explore, Tag} from '@malloydata/malloy';
+import {DateField, Explore, Tag, TimestampField} from '@malloydata/malloy';
 import {BarChartSettings} from './get-bar_chart-settings';
 import {
   ChartTooltipEntry,
@@ -9,8 +9,9 @@ import {
 } from '../types';
 import {getChartLayoutSettings} from '../chart-layout-settings';
 import {getFieldFromRootPath} from '../plot/util';
-import {field, Item} from 'vega';
-import {update} from 'lodash';
+import {Item, scale, View} from 'vega';
+import {renderTimeString} from '../render-time';
+import {renderNumericField} from '../render-numeric-field';
 
 const LEGEND_PERC = 0.4;
 const LEGEND_MAX = 384;
@@ -34,6 +35,7 @@ export function generateBarChartVegaSpec(
     ? getFieldFromRootPath(explore, seriesFieldPath)
     : null;
 
+  // TODO: how to calculate shared stack min/maxes?
   let yMin = Infinity;
   let yMax = -Infinity;
   for (const name of settings.yChannel.fields) {
@@ -71,33 +73,111 @@ export function generateBarChartVegaSpec(
     seriesField &&
     (forceSharedSeries || (autoSharedSeries && !forceIndependentSeries));
 
-  let yAxis;
-  if (!chartSettings.yAxis.hidden) {
-    yAxis = {
-      'orient': 'left',
-      'scale': 'yscale',
-      ...chartSettings.yAxis,
-      labelLimit: chartSettings.yAxis.width + 10,
-    };
+  const isDimensionalSeries = Boolean(seriesField);
+  const isMeasureSeries = Boolean(settings.yChannel.fields.length > 1);
+  const hasSeries = isDimensionalSeries || isMeasureSeries;
+  const isGrouping = hasSeries && !settings.isStack;
+  const isStacking = hasSeries && settings.isStack;
+
+  const yAxis = !chartSettings.yAxis.hidden && {
+    'orient': 'left',
+    'scale': 'yscale',
+    ...chartSettings.yAxis,
+    'tickCount': chartSettings.yAxis.tickCount ?? {
+      'signal': 'ceil(height/40)',
+    },
+    labelLimit: chartSettings.yAxis.width + 10,
+    encode: {
+      labels: {
+        update: {
+          text: {
+            // Always use first y number style
+            signal: `renderMalloyNumber(malloyExplore, '${yFieldPath}', datum.value)`,
+          },
+        },
+      },
+    },
+  };
+
+  const barGroupPadding = 0.25;
+  const barPadding = 0;
+
+  let xOffset: VegaSpec = {};
+  let xWidth: VegaSpec = {};
+  if (isStacking) {
+    xOffset.signal = `bandwidth("xscale")*${barGroupPadding / 2}`;
+    xWidth = {scale: 'xscale', 'band': 1 - barGroupPadding};
+  } else if (isGrouping) {
+    xOffset.signal = `scale('xOffset', datum.series)+bandwidth("xscale")*${
+      barGroupPadding / 2
+    }`;
+    xWidth = {scale: 'xOffset', 'band': 1 - barPadding};
+  } else {
+    xOffset.signal = `scale('xOffset', datum.series)+bandwidth("xscale")*${
+      barGroupPadding / 2
+    }`;
+    xWidth = {scale: 'xOffset', 'band': 1 - barGroupPadding};
   }
 
-  const barMark: VegaSpec = {
-    name: 'bars',
-    from: {data: 'values'},
-    type: 'rect',
-    'encode': {
+  const groupMark: VegaSpec = {
+    name: 'x_group',
+    from: {
+      facet: {
+        data: 'values',
+        name: 'fa',
+        groupby: ['x'],
+        aggregate: {
+          'fields': ['x'],
+          ops: ['values'],
+          as: ['v'],
+        },
+      },
+    },
+    data: [
+      {
+        name: 'test',
+        source: 'fa',
+        transform: [
+          {
+            type: 'aggregate',
+            ops: ['values', 'min'],
+            as: ['v', 'x'],
+            fields: ['x', 'x'],
+          },
+        ],
+      },
+    ],
+    type: 'group',
+    interactive: false,
+    encode: {
       'enter': {
         'x': {
           'scale': 'xscale',
           'field': 'x',
-          offset: settings.isStack
-            ? undefined
-            : {scale: 'xOffset', field: 'series'},
         },
-        'width': settings.isStack
-          ? {scale: 'xscale', 'band': 1}
-          : {scale: 'xOffset', 'band': 1},
-        'y': {'scale': 'yscale', 'field': settings.isStack ? 'y0' : 'y'},
+      },
+    },
+    marks: [],
+  };
+
+  // Bars
+  const barMark: VegaSpec = {
+    name: 'bars',
+    type: 'rect',
+    from: {
+      data: 'fa',
+    },
+    zindex: 2,
+    'encode': {
+      'enter': {
+        'x': {
+          offset: xOffset,
+        },
+        'width': xWidth,
+        'y': {
+          'scale': 'yscale',
+          'field': settings.isStack ? 'y0' : 'y',
+        },
         'y2': settings.isStack
           ? {'scale': 'yscale', 'field': 'y1'}
           : {'scale': 'yscale', 'value': 0},
@@ -105,13 +185,67 @@ export function generateBarChartVegaSpec(
       'update': {
         'fill': {
           'scale': 'color',
+          'field': 'series',
         },
       },
     },
   };
 
+  const highlightMark: VegaSpec = {
+    name: 'x_highlight',
+    type: 'rect',
+    from: {
+      data: 'test',
+    },
+    zindex: 1,
+    'encode': {
+      'enter': {
+        'x': {
+          value: 0,
+        },
+        'width': {'scale': 'xscale', 'band': 1},
+        'y': {
+          'value': 0,
+        },
+        // 'y2': {signal: 'height + length(datum.x)*8'},
+        'y2': {signal: 'height'},
+      },
+      'update': {
+        'fill': {
+          'value': '#ccc',
+        },
+        'stroke': {
+          value: 'black',
+        },
+        opacity: {value: 0.5},
+      },
+      'hover': {
+        'fill': {
+          'value': 'red',
+        },
+      },
+    },
+  };
+
+  groupMark.marks.push(highlightMark, barMark);
+
+  // Data  and transforms
   const valuesData: VegaSpec = {name: 'values', values: [], transform: []};
-  if (settings.isStack) {
+  if (isMeasureSeries) {
+    valuesData.transform.push({
+      type: 'fold',
+      fields: [...settings.yChannel.fields.map(f => `__source.${f}`)],
+      as: ['series', 'y'],
+    });
+    settings.yChannel.fields.forEach(f => {
+      valuesData.transform.push({
+        type: 'formula',
+        as: 'series',
+        expr: "replace(datum.series, '__source.', '')",
+      });
+    });
+  }
+  if (isStacking) {
     valuesData.transform.push({
       type: 'stack',
       groupby: ['x'],
@@ -121,7 +255,7 @@ export function generateBarChartVegaSpec(
   }
 
   const spec: VegaSpec = {
-    '$schema': 'https://vega.github.io/schema/vega-lite/v5.json',
+    '$schema': 'https://vega.github.io/schema/vega/v5.json',
     'width': chartSettings.plotWidth,
     'height': chartSettings.plotHeight,
     'autosize': {
@@ -139,7 +273,7 @@ export function generateBarChartVegaSpec(
           ? [...xMeta.values]
           : {data: 'values', field: 'x'},
         'range': 'width',
-        'padding': 0.1,
+        'paddingOuter': 0.05,
         'round': true,
       },
       {
@@ -152,13 +286,24 @@ export function generateBarChartVegaSpec(
         'name': 'color',
         'type': 'ordinal',
         'range': 'category',
-        'domain': shouldShareSeriesDomain ? [...seriesMeta!.values] : undefined,
+        'domain': shouldShareSeriesDomain
+          ? [...seriesMeta!.values]
+          : {
+              'data': 'values',
+              'field': 'series',
+            },
       },
       {
         'name': 'xOffset',
         'type': 'band',
-        'domain': {'data': 'values', 'field': 'series'},
-        'range': {'signal': "[0,bandwidth('xscale')]"},
+        'domain': shouldShareSeriesDomain
+          ? [...seriesMeta!.values]
+          : {'data': 'values', 'field': 'series'},
+        'range': {
+          'signal': `[0,bandwidth('xscale') * ${
+            isGrouping ? 1 - barGroupPadding : 1
+          }]`,
+        },
       },
     ],
 
@@ -167,24 +312,39 @@ export function generateBarChartVegaSpec(
         'orient': 'bottom',
         'scale': 'xscale',
         ...chartSettings.xAxis,
-        labelLimit: chartSettings.xAxis.labelSize,
       },
       yAxis,
     ],
     legends: [],
-    'marks': [
-      barMark,
-
+    'marks': [groupMark],
+    signals: [
+      {
+        name: 'malloyExplore',
+      },
+      {
+        name: 'brushX',
+        on: [
+          {
+            events: '@x_highlight:mouseover',
+            update: 'datum.x',
+          },
+          {
+            events: '@x_highlight:mouseout',
+            update: 'null',
+          },
+        ],
+      },
+    ],
   };
 
-  const needsLegend = seriesField || settings.yChannel.fields.length > 1;
+  // Legend
   // TODO: No legend for sparks
   let maxCharCt = 0;
-  if (needsLegend) {
-    if (seriesField) {
-      const meta = metadata.field(seriesField);
+  if (hasSeries) {
+    if (isDimensionalSeries) {
+      const meta = metadata.field(seriesField!);
       maxCharCt = meta.maxString?.length ?? 0;
-      maxCharCt = Math.max(maxCharCt, seriesField.name.length);
+      maxCharCt = Math.max(maxCharCt, seriesField!.name.length);
     } else {
       maxCharCt = settings.yChannel.fields.reduce(
         (max, f) => Math.max(max, f.length),
@@ -205,54 +365,42 @@ export function generateBarChartVegaSpec(
     };
 
     spec.padding.right = legendSize;
+    spec.legends.push({
+      fill: 'color',
+      title: seriesField ? seriesField.name : '',
+      ...legendSettings,
+    });
   }
 
-  // // todo: properly calculate max value for stacks
-  // // will also need this to determine padding
-  // if (settings.isStack) {
-  //   spec.encoding.y.scale.domain = null;
-  // }
-
-  // Field driven series
-  if (seriesField) {
-    barMark.encode.update.fill.field = 'series';
-    // spec.encoding.color.field = seriesFieldPath;
-    // spec.encoding.color.legend = legendSettings;
-  } else {
-    barMark.encode.update.fill.value = '';
-  }
-  // if (!settings.isStack && seriesField) {
-  //   spec.encoding.xOffset = {field: seriesFieldPath};
-  // }
-
-  // // Measure list series
-  // if (settings.yChannel.fields.length > 1) {
-  //   spec.transform = [
-  //     {
-  //       'fold': [...settings.yChannel.fields],
-  //     },
-  //   ];
-  //   spec.encoding.y.field = 'value';
-  //   spec.encoding.color.field = 'key';
-  //   delete spec.encoding.color.datum;
-  //   if (!settings.isStack) {
-  //     spec.encoding.xOffset = {field: 'key'};
-  //   }
-
-  //   legendSettings.title = '';
-  //   spec.encoding.color.legend = legendSettings;
-  // }
-
-  const injectData: DataInjector = (data, spec) => {
-    // TODO: measure series...
+  const injectData: DataInjector = (field, data, spec) => {
+    const dateTimeFields = field.allFields.filter(
+      f => f.isAtomicField() && (f.isDate() || f.isTimestamp())
+    ) as (DateField | TimestampField)[];
+    data.forEach(row => {
+      dateTimeFields.forEach(f => {
+        const value = row[f.name];
+        if (typeof value === 'number' || typeof value === 'string')
+          row[f.name] = renderTimeString(
+            new Date(value),
+            f.isDate(),
+            f.timeframe
+          );
+      });
+    });
     const mappedData = data.map(row => ({
       __source: row,
       x: row[xFieldPath],
       y: row[yFieldPath],
-      series: seriesFieldPath ? row[seriesFieldPath] : '',
+      // TODO: could we put the yFieldPath here instead of '', and treat single bar charts like a series chart with no legend?
+      series: seriesFieldPath ? row[seriesFieldPath] : yFieldPath,
     }));
     spec.data[0].values = mappedData;
   };
+
+  // const colorScale = scale('ordinal')
+  //   .domain([minVal, maxVal])
+  //   .nice()
+  //   .range([chartHeight, 0]);
 
   return {
     spec,
@@ -263,39 +411,48 @@ export function generateBarChartVegaSpec(
     totalHeight: chartSettings.totalHeight,
     chartType: 'bar_chart',
     injectData,
-    getTooltipData: (item: Item) => {
-      if (item.datum) {
-        const rowData = item.datum.__source;
-        const tooltipData: ChartTooltipEntry[] = [];
-        tooltipData.push({
-          field: xField,
-          fieldName: xField.name,
-          value: rowData[xFieldPath],
-        });
+    getTooltipData: (item: Item, view: View) => {
+      let tooltipData: ChartTooltipEntry | null = null;
+      const colorScale = view.scale('color');
+      const formatY = rec => {
+        const fieldName = rec.series;
+        const field = isDimensionalSeries
+          ? yField
+          : getFieldFromRootPath(explore, fieldName);
+        const value = rec.y;
+        return field.isAtomicField()
+          ? renderNumericField(field, value)
+          : String(value);
+      };
+      if (item.mark.name === 'x_highlight') {
+        const x = item.datum.x;
+        const records = item.datum.v;
 
-        if (seriesField)
-          tooltipData.push({
-            field: seriesField,
-            fieldName: seriesField.name,
-            value: rowData[seriesFieldPath!],
-          });
-        if (Object.prototype.hasOwnProperty.call(rowData, 'key')) {
-          tooltipData.push({
-            field: getFieldFromRootPath(explore, rowData.key),
-            fieldName: rowData.key,
-            value: rowData.value,
-          });
-          tooltipData[rowData.key] = rowData.value;
-        } else {
-          tooltipData.push({
-            field: yField,
-            fieldName: yField.name,
-            value: rowData[yFieldPath],
-          });
-        }
-        return tooltipData;
+        tooltipData = {
+          title: [x],
+          entries: records.map(rec => ({
+            label: rec.series,
+            value: formatY(rec),
+            highlight: false,
+            color: colorScale(rec.series),
+          })),
+        };
       }
-      return null;
+      // Have to figure out how to handle faceted stuff which is missing relevant row information...
+      if (item.datum && ['bars'].includes(item.mark.name)) {
+        const itemData = item.datum;
+        const groupRecords = item.mark.group.datum.v;
+        tooltipData = {
+          title: [itemData.x],
+          entries: groupRecords.map(rec => ({
+            label: rec.series,
+            value: formatY(rec),
+            highlight: itemData.series === rec.series,
+            color: colorScale(rec.series),
+          })),
+        };
+      }
+      return tooltipData;
     },
   };
 }

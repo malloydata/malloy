@@ -33,7 +33,7 @@ export type ChartLayoutSettings = {
     labelAngle: number;
     labelAlign?: string;
     labelBaseline?: string;
-    labelSize: number;
+    labelLimit: number;
     height: number;
     titleSize: number;
     hidden: boolean;
@@ -112,7 +112,7 @@ export function getChartLayoutSettings(
   let labelAngle = -90;
   let labelAlign: string | undefined = 'right';
   let labelBaseline = 'middle';
-  let labelSize = 0;
+  let labelLimit = 0;
   let xTitleSize = 0;
   const hasXAxis = presetSize !== 'spark';
   const hasYAxis = presetSize !== 'spark';
@@ -171,7 +171,7 @@ export function getChartLayoutSettings(
     const X_AXIS_THRESHOLD = 1;
     xTitleSize = 26;
     xAxisHeight = Math.min(maxStringSize, X_AXIS_THRESHOLD * chartHeight);
-    labelSize = xAxisHeight;
+    labelLimit = xAxisHeight;
 
     // TODO: improve this, this logic exists in more detail in generate vega spec. this is a hacky partial solution for now :/
     const uniqueValuesCt = metadata.fields[xKey]!.values.size;
@@ -182,7 +182,7 @@ export function getChartLayoutSettings(
     const xSpacePerLabel = chartWidth / recordsToFit;
     if (xSpacePerLabel > xAxisHeight || xSpacePerLabel > maxStringSize) {
       labelAngle = 0;
-      labelSize = xSpacePerLabel;
+      labelLimit = xSpacePerLabel;
       labelAlign = undefined;
       labelBaseline = 'top';
       xTitleSize = 22;
@@ -204,7 +204,7 @@ export function getChartLayoutSettings(
       labelAngle,
       labelAlign,
       labelBaseline,
-      labelSize,
+      labelLimit,
       height: xAxisHeight,
       titleSize: xTitleSize,
       hidden: isSpark,

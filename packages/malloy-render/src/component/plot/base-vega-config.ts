@@ -43,9 +43,9 @@ export const baseVegaConfig = () => ({
   },
   'axisY': {
     gridColor: gridGray,
+    grid: true,
     tickColor: gridGray,
     domain: false,
-
     labelFont: 'Inter, sans-serif',
     labelFontSize: 10,
     labelFontWeight: 'normal',
