@@ -38,6 +38,7 @@ import {
   SQLSourceDef,
   AtomicTypeDef,
   JoinedArrayDef,
+  JoinedArrayTypeDef,
   RepeatedRecordTypeDef,
   RecordTypeDef,
   arrayEachFields,
@@ -253,15 +254,15 @@ export abstract class TrinoPrestoConnection
     return retRow;
   }
 
-  // convertNest(structDef: StructDef, _data: unknown) {
-  //   const data = this.unpackArray(_data);
-  //   const ret: unknown[] = [];
-  //   const rows = (data === null || data === undefined ? [] : data) as unknown[];
-  //   for (const row of rows) {
-  //     ret.push(this.convertRow(structDef, row));
-  //   }
-  //   return ret;
-  // }
+  convertNest(structDef: StructDef, _data: unknown) {
+    const data = this.unpackArray(_data);
+    const ret: unknown[] = [];
+    const rows = (data === null || data === undefined ? [] : data) as unknown[];
+    for (const row of rows) {
+      ret.push(this.convertRow(structDef, row));
+    }
+    return ret;
+  }
 
   public async runSQL(
     sqlCommand: string,
@@ -269,18 +270,6 @@ export abstract class TrinoPrestoConnection
     // TODO(figutierrez): Use.
     _rowIndex = 0
   ): Promise<MalloyQueryData> {
-    // const result = await this.trino.query(sqlCommand);
-    // let queryResult = await result.next();
-    // if (queryResult.value.error) {
-    //   // TODO: handle.
-    //   const {failureInfo: _, ...error} = queryResult.value.error;
-    //   throw new Error(
-    //     `Failed to execute sql: ${sqlCommand}. \n Error: ${JSON.stringify(
-    //       error
-    //     )}`
-    //   );
-    // }
-
     const r = await this.client.runSQL(sqlCommand, options.rowLimit);
 
     if (r.error) {
@@ -293,11 +282,6 @@ export abstract class TrinoPrestoConnection
       this.malloyTypeFromTrinoType(c.name, c.type)
     );
 
-    // Debugging types
-    // const _x = queryResult.value.columns.map(c => console.log(c.type));
-    // console.log(JSON.stringify(malloyColumns, null, 2));
-    // console.log(JSON.stringify(queryResult.value.data, null, 2));
-
     const malloyRows: QueryDataRow[] = [];
     const rows = inputRows ?? [];
     for (const row of rows) {
@@ -308,7 +292,17 @@ export abstract class TrinoPrestoConnection
         if (schemaColumn.type === 'record') {
           malloyRow[column.name] = this.convertRow(schemaColumn, row[i]);
         } else if (schemaColumn.type === 'array') {
-          throw new Error('Trino runSQL array in result set not handled');
+          const newArray: JoinedArrayTypeDef = {
+            name: '',
+            fields: [],
+            dialect: '',
+            ...schemaColumn,
+            join: 'many',
+          };
+          malloyRow[column.name] = this.convertNest(
+            newArray,
+            row[i]
+          ) as QueryValue;
         } else if (
           schemaColumn.type === 'number' &&
           typeof row[i] === 'string'
@@ -329,8 +323,6 @@ export abstract class TrinoPrestoConnection
       malloyRows.push(malloyRow);
     }
 
-    // TODO(figutierrez): Remove.
-    // TODO: handle totalrows.
     return {rows: malloyRows, totalRows: malloyRows.length};
   }
 
