@@ -36,7 +36,7 @@ import {
 import {exprWalk} from '../../../model/utils';
 
 import {errorFor} from '../ast-utils';
-import {StructSpaceField} from '../field-space/static-space';
+import {StructSpaceFieldBase} from '../field-space/static-space';
 import {FT} from '../fragtype-utils';
 import {FieldReference} from '../query-items/field-references';
 import {ExprValue} from '../types/expr-value';
@@ -85,7 +85,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
         sourceRelationship = result.joinPath;
         const sourceFoot = result.found;
         const footType = sourceFoot.typeDesc();
-        if (!(sourceFoot instanceof StructSpaceField)) {
+        if (!(sourceFoot instanceof StructSpaceFieldBase)) {
           if (isAtomicFieldType(footType.dataType)) {
             expr = this.source;
             exprVal = {
