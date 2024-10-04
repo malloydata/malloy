@@ -12,7 +12,6 @@ import {
   NamedStructDefs,
   PersistSQLResults,
   PooledConnection,
-  QueryDataRow,
   QueryRunStats,
   RunSQLOptions,
   SQLBlock,
@@ -21,13 +20,14 @@ import {
   TestableConnection,
   MySQLDialect,
   QueryOptionsReader,
+  QueryData,
 } from '../../malloy'; // '@malloydata/malloy';
 import {randomUUID, createHash} from 'crypto';
 import {
   //FieldInfo,
   createConnection,
   Connection as mySqlConnection,
-} from 'mysql2';
+} from 'mysql2/promise';
 
 import {DateTime} from 'luxon';
 import {decode} from 'fastestsmallesttextencoderdecoder';
@@ -65,7 +65,7 @@ export class MySQLConnection
   implements Connection, TestableConnection, PersistSQLResults
 {
   private readonly dialect = new MySQLDialect();
-  readonly connection: mySqlConnection;
+  private connection: mySqlConnection | undefined;
   config: MySQLConfiguration;
   queryOptions: QueryOptionsReader | undefined;
   public name: string;
@@ -96,16 +96,22 @@ export class MySQLConnection
     this.name = name;
 
     // TODO: handle when connection fails.
-    this.connection = createConnection({
-      host: this.config.host,
-      port: this.config.port ?? 3306,
-      user: this.config.user,
-      password: this.config.password,
-      // TODO: Figure out how to allow users not to provide database.
-      database: this.config.database,
-      multipleStatements: true,
-      decimalNumbers: true,
-    });
+  }
+
+  async getClient() {
+    if (!this.connection) {
+      this.connection = await createConnection({
+        host: this.config.host,
+        port: this.config.port ?? 3306,
+        user: this.config.user,
+        password: this.config.password,
+        database: this.config.database,
+        //multipleStatements: true,
+        decimalNumbers: true,
+      });
+      this.connection.query("set @@session.time_zone = 'UTC';");
+    }
+    return this.connection;
   }
 
   async manifestTemporaryTable(sqlCommand: string): Promise<string> {
@@ -141,7 +147,10 @@ export class MySQLConnection
   }
 
   async close(): Promise<void> {
-    return this.connection.end();
+    if (this.connection) {
+      this.connection.end();
+    }
+    return undefined;
   }
 
   estimateQueryCost(_sqlCommand: string): Promise<QueryRunStats> {
@@ -273,80 +282,16 @@ export class MySQLConnection
     _options?: RunSQLOptions
   ): Promise<MalloyQueryData> {
     // TODO: what are options here?
-    return new Promise((resolve, reject) =>
-      // TODO: Remove hack.
-      this.connection.query(
-        `set @@session.time_zone = 'UTC'; \n ${sql}`,
-        (error, result, fields) => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          let resultSets: Array<Array<Record<string, any>> | null> = [];
-          let fieldsSet: Array<Array<any> | null> = [];
-          /*if (fields instanceof Array<FieldInfo>) {
-          resultSets = [result];
-          fieldsSet = [fields];
-        } else {*/
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          resultSets = result as Array<Array<Record<string, any>> | null>;
-          fieldsSet = fields as unknown as Array<Array<any> | null>;
-          //}
+    const client = await this.getClient();
 
-          if (error) {
-            // TODO: how to parse this error?
-            return reject(
-              new Error(
-                `Failed to execute MySQL query: ${error} \n For Query: ${sql}`
-              )
-            );
-          }
+    const [results, _fields] = await client.query(sql);
 
-          // TODO: use proper type instead of any.
-          const rows: QueryDataRow[] = [];
-          for (const resultSetIndex in resultSets) {
-            const resultSet = resultSets[resultSetIndex];
-            if (Array.isArray(resultSet)) {
-              for (const entry of resultSet) {
-                const dataRow: QueryDataRow = {};
-                // TODO: report fix to types.
-                for (const field of fieldsSet![resultSetIndex]!) {
-                  // TODO: proper parsing here. also recursive (nest); MEGA HACK
-                  if (field.type === 245) {
-                    // TODO: this is needed due to limitations with JSON array/object manipulation in mysql.
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    dataRow[field.name] = MySQLConnection.removeNulls(
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      JSON.parse(entry[field.name]) as Record<string, any>
-                    );
-                  } else {
-                    if (entry[field.name] instanceof Date) {
-                      const abc = entry[field.name] as Date;
-                      const date = DateTime.fromJSDate(abc);
-                      dataRow[field.name] = date
-                        .plus({minutes: date.offset})
-                        .toUTC()
-                        .toJSDate();
-                    } else if (
-                      entry[field.name] instanceof Uint8Array ||
-                      entry[field.name] instanceof Uint16Array ||
-                      entry[field.name] instanceof Uint32Array
-                    ) {
-                      dataRow[field.name] = decode(
-                        entry[field.name] as Uint32Array
-                      );
-                    } else {
-                      dataRow[field.name] = entry[field.name];
-                    }
-                  }
-                }
-                rows.push(dataRow);
-              }
-            }
-          }
+    // console.log(results); // results contains rows returned by server
+    // console.log(fields); // fields contains extra meta data about results, if available
 
-          // TODO: Parse result.
-          resolve({rows: rows, totalRows: rows.length});
-        }
-      )
-    );
+    const rows = results as QueryData;
+
+    return {rows, totalRows: rows.length};
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

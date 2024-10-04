@@ -106,7 +106,7 @@ export class MySQLDialect extends Dialect {
   supportsSafeCast = false;
   dontUnionIndex = false;
   supportsQualify = false;
-  supportsNesting = false;
+  supportsNesting = true;
   experimental = true;
 
   malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string {
@@ -141,19 +141,24 @@ export class MySQLDialect extends Dialect {
     return `MAX(${fieldName})`;
   }
 
-  mapFields(fieldList: DialectFieldList): string {
-    return fieldList
-      .map(f => `\n  ${f.sqlExpression} as ${f.sqlOutputName}`)
-      .join(', ');
+  private mapFields(fieldList: DialectFieldList): string {
+    return fieldList.map(f => `"${f.rawName}", ${f.sqlExpression}`).join(', ');
   }
 
   sqlAggregateTurtle(
-    _groupSet: number,
-    _fieldList: DialectFieldList,
+    groupSet: number,
+    fieldList: DialectFieldList,
     _orderBy: string | undefined,
     _limit: number | undefined
   ): string {
-    throw new Error('MySQL dialect does not support nesting.');
+    return `JSON_EXTRACT(CONCAT('[',
+      GROUP_CONCAT(
+        IF(group_set=${groupSet},
+           JSON_OBJECT(${this.mapFields(fieldList)})
+           , null
+          )
+      ),
+    ']'),'$')`;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
