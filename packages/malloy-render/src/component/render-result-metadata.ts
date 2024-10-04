@@ -51,6 +51,7 @@ import {generateLineChartVegaLiteSpec} from './line-chart/generate-line_chart-ve
 import {getAreaChartSettings} from './area-chart/get-area_chart-settings';
 import {generateAreaChartVegaLiteSpec} from './area-chart/generate-area_chart-vega-lite-spec';
 import {generateBarChartVegaSpec} from './bar-chart/generate-bar_chart-vega-spec';
+import {createResultStore} from './result-store/result-store';
 
 function createDataCache() {
   const dataCache = new WeakMap<DataColumn, QueryData>();
@@ -95,6 +96,7 @@ export function getResultMetadata(
     modelTag: result.modelTag,
     resultTag: result.tagParse().tag,
     rootField,
+    store: createResultStore(),
   };
 
   const fieldKey = metadata.getFieldKey(rootField);
