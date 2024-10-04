@@ -35,6 +35,16 @@ function rootDbPath(databaseName: string) {
   return databaseName === 'bigquery' ? 'malloydata-org.' : '';
 }
 
+function trueBoolean(dbName: string) {
+  if (dbName === 'mysql') {
+    return 1;
+  }
+  else {
+    return true;
+  }
+}
+
+
 // TODO: Figure out how to generalize this.
 function getSplitFunction(db: string) {
   return {
@@ -61,6 +71,7 @@ afterAll(async () => {
   await runtimes.closeAll();
 });
 
+
 runtimes.runtimeMap.forEach((runtime, databaseName) => {
   const q = runtime.getQuoter();
   // Issue #1824
@@ -73,14 +84,14 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         select:
           is_true is not n
       }
-    `).malloyResultMatches(runtime, {is_true: true});
+    `).malloyResultMatches(runtime, {is_true: trueBoolean(databaseName)});
   });
 
   // Issue: #1284
   it(`parenthesize output field values - ${databaseName}`, async () => {
     await expect(`
       run: ${databaseName}.table('malloytest.aircraft') -> {
-        group_by: r is 1
+        group_by: r is 1.0
 
         calculate:
           zero is 1 - rank()

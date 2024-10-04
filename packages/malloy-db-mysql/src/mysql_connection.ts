@@ -29,8 +29,8 @@ import {
   Connection as mySqlConnection,
 } from 'mysql2/promise';
 
-import {DateTime} from 'luxon';
-import {decode} from 'fastestsmallesttextencoderdecoder';
+// import {DateTime} from 'luxon';
+// import {decode} from 'fastestsmallesttextencoderdecoder';
 import {BaseConnection} from '@malloydata/malloy/connection';
 
 export interface MySQLConfiguration {
@@ -106,7 +106,7 @@ export class MySQLConnection
         user: this.config.user,
         password: this.config.password,
         database: this.config.database,
-        //multipleStatements: true,
+        multipleStatements: true,
         decimalNumbers: true,
       });
       this.connection.query("set @@session.time_zone = 'UTC';");

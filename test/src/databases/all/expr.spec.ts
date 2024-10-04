@@ -129,6 +129,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   // simple turtle expressions
   it('simple turtle', async () => {
     await expect(`
+      // # test.debug
       run:  ${databaseName}.table('malloytest.state_facts') -> {
         group_by: popular_name
         aggregate: airport_count.sum()

@@ -148,17 +148,24 @@ export class MySQLDialect extends Dialect {
   sqlAggregateTurtle(
     groupSet: number,
     fieldList: DialectFieldList,
-    _orderBy: string | undefined,
-    _limit: number | undefined
+    orderBy: string | undefined,
+    limit: number | undefined
   ): string {
-    return `JSON_EXTRACT(CONCAT('[',
-      GROUP_CONCAT(
-        IF(group_set=${groupSet},
-           JSON_OBJECT(${this.mapFields(fieldList)})
-           , null
-          )
-      ),
-    ']'),'$')`;
+    const separator = limit ? ',xrmmex' : ',';
+    let gc = `GROUP_CONCAT(
+      IF(group_set=${groupSet},
+        JSON_OBJECT(${this.mapFields(fieldList)})
+        , null
+        )
+      ${orderBy}
+      SEPARATOR '${separator}'
+    )`;
+    if (limit) {
+      gc = `SUBSTRING_INDEX(${gc}, '${separator}', ${limit})`;
+      gc = `REPLACE(${gc},'${separator}',',')`;
+    }
+    gc = `JSON_EXTRACT(CONCAT('[',${gc},']'),'$')`;
+    return gc;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
