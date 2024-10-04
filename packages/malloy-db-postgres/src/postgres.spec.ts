@@ -51,35 +51,24 @@ describe('PostgresConnection', () => {
   beforeEach(async () => {
     getTableSchema = jest
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .spyOn(PostgresConnection.prototype as any, 'getTableSchema')
+      .spyOn(PostgresConnection.prototype as any, 'fetchTableSchema')
       .mockResolvedValue({
-        type: 'struct',
+        type: 'table',
         dialect: 'postgres',
         name: 'name',
-        structSource: {type: 'table', tablePath: 'test'},
-        structRelationship: {
-          type: 'basetable',
-          connectionName: 'postgres',
-        },
-        fields: [],
+        tablePath: 'test',
+        connection: 'postgres',
       });
 
     getSQLBlockSchema = jest
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .spyOn(PostgresConnection.prototype as any, 'getSQLBlockSchema')
+      .spyOn(PostgresConnection.prototype as any, 'fetchSelectSchema')
       .mockResolvedValue({
-        type: 'struct',
+        type: 'sql select',
         dialect: 'postgres',
         name: 'name',
-        structSource: {
-          type: 'sql',
-          method: 'subquery',
-          sqlBlock: SQL_BLOCK_1,
-        },
-        structRelationship: {
-          type: 'basetable',
-          connectionName: 'postgres',
-        },
+        selectStr: SQL_BLOCK_1.selectStr,
+        connection: 'postgres',
         fields: [],
       });
   });
