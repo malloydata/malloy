@@ -12,6 +12,7 @@ import {Tooltip} from '../tooltip/tooltip';
 import {createEffect, createSignal, onMount} from 'solid-js';
 import {DefaultChartTooltip} from './default-chart-tooltip';
 import {EventListenerHandler, View} from 'vega';
+import {BrushData, useResultStore} from '../result-store/result-store';
 
 export function Chart(props: {
   field: Explore | ExploreField;
@@ -66,6 +67,50 @@ export function Chart(props: {
       setTooltipDataDebounce(data);
     } else setTooltipDataDebounce(null);
   };
+
+  const chartId = crypto.randomUUID();
+  const resultStore = useResultStore();
+  createEffect(() => {
+    view()?.addSignalListener(
+      'brushOut',
+      (name, brushes: {sourceId: string; data: BrushData | null}[]) => {
+        brushes.forEach(brush => {
+          if (!Boolean(brush.data))
+            resultStore.clearBrushesBySourceId(brush.sourceId);
+          else resultStore.addFieldBrush(brush.data!);
+        });
+      }
+    );
+    view()?.addSignalListener('brushIn', (name, values) => {
+      console.log('brushIn-' + chartId, values);
+    });
+
+    view()?.addSignalListener('brushSeriesIn', console.log);
+    // console.log("added brushIn listener")
+  });
+
+  // createEffect(() => {
+  //   console.log('CHART-' + chartId, view());
+  // });
+
+  createEffect(() => {
+    const fieldRefIds = props.field.allFields.map(f =>
+      f.isAtomicField() ? f.referenceId : null
+    );
+
+    const relevantBrushes = resultStore.store.brushes.filter(brush =>
+      fieldRefIds.includes(brush.fieldRefId)
+    );
+    view()?.signal('brushIn', JSON.parse(JSON.stringify(relevantBrushes)));
+    view()?.run();
+  });
+
+  // Update explore signal
+  createEffect(() => {
+    const _view = view();
+    _view?.signal('malloyExplore', props.field);
+    _view?.run();
+  });
 
   console.log({spec});
 

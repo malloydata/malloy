@@ -30,10 +30,21 @@ export function generateBarChartVegaSpec(
   if (!yFieldPath) throw new Error('Malloy Bar Chart: Missing y field');
 
   const xField = getFieldFromRootPath(explore, xFieldPath);
+  const xRef = xField.isAtomicField() ? xField.referenceId : null;
   const yField = getFieldFromRootPath(explore, yFieldPath);
+  const yRef = yField.isAtomicField() ? yField.referenceId : null;
   const seriesField = seriesFieldPath
     ? getFieldFromRootPath(explore, seriesFieldPath)
     : null;
+  const seriesRef =
+    seriesField && seriesField.isAtomicField() ? seriesField.referenceId : null;
+  const yRefsMap = settings.yChannel.fields.reduce((map, fieldPath) => {
+    const field = getFieldFromRootPath(explore, fieldPath);
+    return {
+      ...map,
+      [fieldPath]: field && field.isAtomicField() ? field.referenceId : null,
+    };
+  }, {});
 
   // TODO: how to calculate shared stack min/maxes?
   let yMin = Infinity;
@@ -187,6 +198,17 @@ export function generateBarChartVegaSpec(
           'scale': 'color',
           'field': 'series',
         },
+        fillOpacity: [
+          {
+            test: 'brushSeriesIn === datum.series',
+            value: 1,
+          },
+          {
+            test: 'brushSeriesIn && brushSeriesIn != datum.series',
+            value: 0.35,
+          },
+          {value: 1},
+        ],
       },
     },
   };
@@ -207,22 +229,19 @@ export function generateBarChartVegaSpec(
         'y': {
           'value': 0,
         },
-        // 'y2': {signal: 'height + length(datum.x)*8'},
         'y2': {signal: 'height'},
       },
       'update': {
         'fill': {
-          'value': '#ccc',
+          'value': '#4c72ba',
         },
-        'stroke': {
-          value: 'black',
-        },
-        opacity: {value: 0.5},
-      },
-      'hover': {
-        'fill': {
-          'value': 'red',
-        },
+        'fillOpacity': [
+          {
+            'test': 'brushXIn === datum.x',
+            value: 0.075,
+          },
+          {value: 0},
+        ],
       },
     },
   };
@@ -253,6 +272,10 @@ export function generateBarChartVegaSpec(
       sort: {field: 'series'},
     });
   }
+
+  const brushXSourceId = crypto.randomUUID();
+  const brushSeriesSourceId = crypto.randomUUID();
+  const brushMeasureSourceId = crypto.randomUUID();
 
   const spec: VegaSpec = {
     '$schema': 'https://vega.github.io/schema/vega/v5.json',
@@ -323,16 +346,79 @@ export function generateBarChartVegaSpec(
       },
       {
         name: 'brushX',
+        on: xRef
+          ? [
+              {
+                events: '@x_highlight:mouseover, @bars:mouseover',
+                update: `{ fieldRefId: '${xRef}', value: datum.x, sourceId: '${brushXSourceId}', type: 'dimension'}`,
+              },
+              {
+                events: '@x_highlight:mouseout, @bars:mouseout',
+                update: 'null',
+              },
+            ]
+          : [],
+      },
+      {
+        name: 'brushSeries',
+        on:
+          isDimensionalSeries && seriesRef
+            ? [
+                {
+                  events: '@bars:mouseover',
+                  update: `{ fieldRefId: '${seriesRef}', value: datum.series, sourceId: '${brushSeriesSourceId}', type: 'dimension'}`,
+                },
+                {
+                  events: '@bars:mouseout',
+                  update: 'null',
+                },
+              ]
+            : [],
+      },
+      {
+        name: 'brushMeasure',
         on: [
           {
-            events: '@x_highlight:mouseover',
-            update: 'datum.x',
+            events: '@bars:mouseover',
+            update: isMeasureSeries
+              ? `{ fieldRefId: ${JSON.stringify(
+                  yRefsMap
+                )}[datum.series], value: datum['${
+                  isStacking ? 'y1' : 'y'
+                }'], sourceId: '${brushMeasureSourceId}', type: 'measure'}`
+              : `{ fieldRefId: '${yRef}', value: datum['${
+                  isStacking ? 'y1' : 'y'
+                }'], sourceId: '${brushMeasureSourceId}', type: 'measure'}`,
           },
           {
-            events: '@x_highlight:mouseout',
+            events: '@bars:mouseout',
             update: 'null',
           },
         ],
+      },
+      {
+        name: 'brushOut',
+        update: `[{ sourceId: '${brushXSourceId}', data: brushX }, { sourceId: '${brushSeriesSourceId}', data: brushSeries },{ sourceId: '${brushMeasureSourceId}', data: brushMeasure }]`,
+      },
+      {
+        name: 'brushIn',
+        value: [],
+      },
+      {
+        name: 'xFieldRefId',
+        value: xRef,
+      },
+      {
+        name: 'seriesFieldRefId',
+        value: seriesRef,
+      },
+      {
+        name: 'brushXIn',
+        update: 'getMalloyBrush(brushIn, xFieldRefId)',
+      },
+      {
+        name: 'brushSeriesIn',
+        update: 'getMalloyBrush(brushIn, seriesFieldRefId)',
       },
     ],
   };
