@@ -81,17 +81,7 @@ export function Chart(props: {
         });
       }
     );
-    view()?.addSignalListener('brushIn', (name, values) => {
-      console.log('brushIn-' + chartId, values);
-    });
-
-    view()?.addSignalListener('brushSeriesIn', console.log);
-    // console.log("added brushIn listener")
   });
-
-  // createEffect(() => {
-  //   console.log('CHART-' + chartId, view());
-  // });
 
   createEffect(() => {
     const fieldRefIds = props.field.allFields.map(f =>

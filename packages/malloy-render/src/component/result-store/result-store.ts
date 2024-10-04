@@ -31,7 +31,6 @@ export function createResultStore() {
   };
 
   const addFieldBrush = (brush: BrushData) => {
-    console.log('ADD FIELD BRUSH', brush);
     setStore(
       produce(s => {
         const brushEntry = getFieldBrushBySourceId(brush.sourceId, s);
