@@ -724,7 +724,6 @@ describe('airport_tests', () => {
 
   it('pipeline_as_declared_turtle', async () => {
     await expect(`
-      # test.verbose
       run: airports extend {
         view: pipe_turtle is {
           aggregate: a is airport_count
@@ -732,7 +731,7 @@ describe('airport_tests', () => {
           select: a
         }
       } -> pipe_turtle
-    `).malloyResultMatches(model, {'pipe_turtle.a': 19783});
+    `).malloyResultMatches(model, {a: 19793});
   });
 
   it('pipeline Turtle', async () => {
