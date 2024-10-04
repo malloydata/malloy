@@ -3,64 +3,60 @@ import {useResultContext} from '../result-context';
 
 export interface BrushData {
   value: string | number | boolean | Date;
-  id: string;
+  fieldRefId: string;
+  sourceId: string;
+  type: 'dimension' | 'measure';
 }
 
 export interface ResultStoreData {
-  brushes: Record<string, BrushData[]>;
-  // TODO: measure references
-  // references: ...
+  brushes: BrushData[];
 }
 
 export function createResultStore() {
   const [store, setStore] = createStore<ResultStoreData>({
-    brushes: {},
+    brushes: [],
   });
 
   const getFieldBrushes = (fieldRefId: string, _store?: ResultStoreData) => {
     const localStore = _store ?? store;
-    if (!localStore.brushes[fieldRefId]) localStore.brushes[fieldRefId] = [];
-    return localStore.brushes[fieldRefId]!;
+    return localStore.brushes.filter(brush => brush.fieldRefId === fieldRefId);
   };
 
-  const getFieldBrushById = (
-    fieldRefId: string,
-    id: string,
+  const getFieldBrushBySourceId = (
+    sourceId: string,
     _store?: ResultStoreData
   ) => {
-    return getFieldBrushes(fieldRefId, _store).find(b => b.id === id);
+    const localStore = _store ?? store;
+    return localStore.brushes.find(b => b.sourceId === sourceId);
   };
 
-  const addFieldBrush = (fieldRefId: string, brush: BrushData) => {
+  const addFieldBrush = (brush: BrushData) => {
+    console.log('ADD FIELD BRUSH', brush);
     setStore(
       produce(s => {
-        const brushEntry = getFieldBrushById(fieldRefId, brush.id, s);
+        const brushEntry = getFieldBrushBySourceId(brush.sourceId, s);
         if (brushEntry) brushEntry.value = brush.value;
         else {
-          const brushes = getFieldBrushes(fieldRefId, s);
-          brushes.push(brush);
+          s.brushes.push(brush);
         }
       })
     );
   };
 
-  const removeFieldBrush = (fieldRefId: string, id: string) => {
+  const removeFieldBrush = (sourceId: string) => {
     setStore(
       produce(s => {
-        const brushes = getFieldBrushes(fieldRefId, s);
-        const idx = brushes.findIndex(b => b.id === id);
-        if (idx !== -1) brushes.splice(idx, 1);
+        const idx = s.brushes.findIndex(b => b.sourceId === sourceId);
+        if (idx !== -1) s.brushes.splice(idx, 1);
       })
     );
   };
 
-  const clearBrushesById = (id: string) => {
+  const clearBrushesBySourceId = (sourceId: string) => {
     setStore(
       produce(s => {
-        Object.entries(s.brushes).forEach(([fieldRefId, brushes]) => {
-          const idx = brushes.findIndex(b => b.id === id);
-          if (idx !== -1) brushes.splice(idx, 1);
-        });
+        const idx = s.brushes.findIndex(b => b.sourceId === sourceId);
+        if (idx !== -1) s.brushes.splice(idx, 1);
       })
     );
   };
@@ -68,10 +64,10 @@ export function createResultStore() {
   return {
     store,
     getFieldBrushes,
-    getFieldBrushById,
+    getFieldBrushBySourceId,
     addFieldBrush,
     removeFieldBrush,
-    clearBrushesById,
+    clearBrushesBySourceId,
   };
 }
 

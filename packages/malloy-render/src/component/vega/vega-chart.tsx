@@ -5,6 +5,7 @@ import {compile} from 'vega-lite';
 import {renderNumericField} from '../render-numeric-field';
 import {Explore, ExploreField} from '@malloydata/malloy';
 import {getFieldFromRootPath} from '../plot/util';
+import {BrushData} from '../result-store/result-store';
 
 if (!expressionFunction('renderMalloyNumber')) {
   expressionFunction(
@@ -18,6 +19,14 @@ if (!expressionFunction('renderMalloyNumber')) {
       }
       return String(value);
     }
+  );
+}
+
+if (!expressionFunction('getMalloyBrush')) {
+  expressionFunction(
+    'getMalloyBrush',
+    (brushArray: BrushData[], fieldRefId: string) =>
+      brushArray.find(brush => brush.fieldRefId === fieldRefId)?.value ?? null
   );
 }
 
@@ -51,17 +60,13 @@ export function VegaChart(props: VegaChartProps) {
       .hover();
     if (props.onMouseOver)
       nextView.addEventListener('mousemove', props.onMouseOver);
-    nextView.addSignalListener('brushX', console.log);
+    // nextView.addSignalListener('brushX', console.log);
+    // nextView.addSignalListener('brushSeries', console.log);
+    // nextView.addSignalListener('brushMeasure', console.log);
+    // nextView.addSignalListener('brushOut', console.log);
     nextView.run();
     setView(nextView);
     props.onView?.(nextView);
-  });
-
-  // Update explore signal
-  // TODO: Maybe put this in Chart.tsx, to keep this component fairly generic
-  createEffect(() => {
-    const _view = view();
-    _view?.signal('malloyExplore', props.explore);
   });
 
   // Update size

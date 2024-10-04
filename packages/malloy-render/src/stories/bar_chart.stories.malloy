@@ -3,12 +3,68 @@ source: products is duckdb.table("data/products.parquet") extend {
   measure: avg_margin is avg(retail_price - cost)
   dimension: product is name
   dimension: dcId is distribution_center_id::number
+  measure:
+    `Sales $` is retail_price.avg()*500
+    `Cost $ really long label` is retail_price.avg()*300
+  dimension:
+    `sales_year` is year(@2001-02-03 + round(id/5000) year)
+
+  view: x is {
+    aggregate: c is count()
+  }
 
   # bar_chart
   view: topSellingBrands is {
     group_by: brand
     aggregate: `Sales $` is retail_price.avg()*500
     limit: 10
+  }
+
+  # dashboard -- # bar_chart
+  view: topSellingBrandsTest is {
+    nest:
+      # bar_chart
+      a is {
+        group_by: brand
+        -- # number="#,##0.000"
+        aggregate: `Sales $`
+        limit: 10
+        -- order_by: sales_year
+      }
+      # bar_chart
+      b is {
+        group_by: brand, department
+        aggregate: `Sales $`
+        limit: 10
+        -- order_by: sales_year
+      }
+      # bar_chart.stack
+      c is {
+        group_by: brand, department
+        # currency
+        aggregate: `Sales $`
+        limit: 10
+      }
+      # bar_chart
+      d is {
+        group_by: brand
+        aggregate:
+          # y
+          `Sales $`
+          # y
+          `Cost $ really long label`
+        limit: 10
+      }
+      # bar_chart.stack
+      e is {
+        group_by: brand
+        aggregate:
+          # y
+          `Sales $`
+          # y
+          `Cost $ really long label`
+        limit: 10
+      }
   }
 
    # bar_chart
