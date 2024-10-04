@@ -2,6 +2,11 @@
 rm -rf .tmp
 mkdir .tmp
 
+
+if [ "x${BQ_CREDENTIALS_KEY}" = x ]; then
+  echo "######### BQ_CREDENTIALS_KEY is not set. Cannot start Trino"
+  exit 1
+fi
 # generate config file
 > ./.tmp/bigquery.properties
 cat << EOF > ./.tmp/bigquery.properties
