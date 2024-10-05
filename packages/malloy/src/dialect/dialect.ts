@@ -155,6 +155,8 @@ export abstract class Dialect {
 
   supportsCountApprox = false;
 
+  nativeBoolean = true;
+
   abstract getDialectFunctionOverrides(): {
     [name: string]: DialectFunctionOverloadDef[];
   };
