@@ -97,7 +97,7 @@ export class MySQLDialect extends Dialect {
   // TODO: this may not be enough for lager casts.
   stringTypeName = 'VARCHAR(255)';
   divisionIsInteger = true;
-  supportsSumDistinctFunction = false;
+  supportsSumDistinctFunction = true;
   unnestWithNumbers = false;
   defaultSampling = {rows: 50000};
   supportUnnestArrayAgg = true;
@@ -108,6 +108,7 @@ export class MySQLDialect extends Dialect {
   supportsQualify = false;
   supportsNesting = true;
   experimental = true;
+  nativeBoolean = false;
 
   malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string {
     if (malloyType.type === 'number') {
@@ -210,13 +211,23 @@ export class MySQLDialect extends Dialect {
     } */
   }
 
-  sqlSumDistinctHashedKey(sqlDistinctKey: string): string {
-    sqlDistinctKey = `CONCAT(${sqlDistinctKey}, '')`;
-    const upperPart = `CAST(CONV(SUBSTRING(MD5(${sqlDistinctKey}), 1, 16), 16, 10) AS DECIMAL(38, 0)) * 4294967296`;
-    const lowerPart = `CAST(CONV(SUBSTRING(MD5(${sqlDistinctKey}), 16, 8), 16, 10) AS DECIMAL(38, 0))`;
-    // See the comment below on `sql_sum_distinct` for why we multiply by this decimal
-    const precisionShiftMultiplier = '0.000000001';
-    return `(${upperPart} + ${lowerPart}) * ${precisionShiftMultiplier}`;
+  sqlSumDistinctHashedKey(_sqlDistinctKey: string): string {
+    return 'UNUSED';
+  }
+
+  sqlSumDistinct(key: string, value: string, funcName: string): string {
+    const sqlDistinctKey = `CONCAT(${key}, '')`;
+    const upperPart = `CAST(CONV(SUBSTRING(MD5(${sqlDistinctKey}), 1, 16), 16, 10) AS DECIMAL(65, 0)) * 4294967296`;
+    const lowerPart = `CAST(CONV(SUBSTRING(MD5(${sqlDistinctKey}), 16, 8), 16, 10) AS DECIMAL(65, 0))`;
+    const hashkey = `(${upperPart} + ${lowerPart})`;
+    const v = `COALESCE(${value},0)`;
+    const sqlSum = `(SUM(DISTINCT ${hashkey} + ${v}) - SUM(DISTINCT ${hashkey}))`;
+    if (funcName === 'SUM') {
+      return sqlSum;
+    } else if (funcName === 'AVG') {
+      return `(${sqlSum})/NULLIF(COUNT(DISTINCT CASE WHEN ${value} IS NOT NULL THEN ${key} END),0)`;
+    }
+    throw new Error(`Unknown Symmetric Aggregate function ${funcName}`);
   }
 
   sqlGenerateUUID(): string {
@@ -417,10 +428,6 @@ export class MySQLDialect extends Dialect {
         : `FLOOR((${duration})/${inSeconds[df.units].toString()}.0)`;
     }
     throw new Error(`Unknown or unhandled MySQL time unit: ${df.units}`);
-  }
-
-  sqlSumDistinct(_key: string, _value: string, _funcName: string): string {
-    throw new Error('MySQL dialect does not support nesting.');
   }
 
   sqlAggDistinct(
