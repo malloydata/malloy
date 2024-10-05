@@ -25,7 +25,11 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 
 import {RuntimeList, allDatabases} from '../../runtimes';
-import {databasesFromEnvironmentOr} from '../../util';
+import {
+  booleanCode,
+  booleanResult,
+  databasesFromEnvironmentOr,
+} from '../../util';
 import '../../util/db-jest-matchers';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
@@ -33,14 +37,6 @@ const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 // No prebuilt shared model, each test is complete.  Makes debugging easier.
 function rootDbPath(databaseName: string) {
   return databaseName === 'bigquery' ? 'malloydata-org.' : '';
-}
-
-function trueBoolean(dbName: string) {
-  if (dbName === 'mysql') {
-    return 1;
-  } else {
-    return true;
-  }
 }
 
 // TODO: Figure out how to generalize this.
@@ -72,8 +68,10 @@ afterAll(async () => {
 runtimes.runtimeMap.forEach((runtime, databaseName) => {
   const q = runtime.getQuoter();
   // Issue #1824
-  it(`not boolean field with null - ${databaseName}`, async () => {
-    await expect(`
+  it.when(runtime.dialect.nativeBoolean)(
+    `not boolean field with null - ${databaseName}`,
+    async () => {
+      await expect(`
       run: ${databaseName}.sql("""
           SELECT
             CASE WHEN 1=1 THEN NULL ELSE false END as ${q`n`}
@@ -81,8 +79,11 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         select:
           is_true is not n
       }
-    `).malloyResultMatches(runtime, {is_true: trueBoolean(databaseName)});
-  });
+    `).malloyResultMatches(runtime, {
+        is_true: true,
+      });
+    }
+  );
 
   // Issue: #1284
   it(`parenthesize output field values - ${databaseName}`, async () => {
