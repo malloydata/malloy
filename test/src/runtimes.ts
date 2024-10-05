@@ -38,6 +38,7 @@ import {PooledPostgresConnection} from '@malloydata/db-postgres';
 import {TrinoConnection, TrinoExecutor} from '@malloydata/db-trino';
 import {SnowflakeExecutor} from '@malloydata/db-snowflake/src/snowflake_executor';
 import {PrestoConnection} from '@malloydata/db-trino/src/trino_connection';
+import {EventEmitter} from 'events';
 
 export class SnowflakeTestConnection extends SnowflakeConnection {
   public async runSQL(
@@ -193,7 +194,7 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
 }
 
 export function testRuntimeFor(connection: Connection) {
-  return new SingleConnectionRuntime(files, connection);
+  return new SingleConnectionRuntime(files, connection, new EventEmitter());
 }
 
 /**

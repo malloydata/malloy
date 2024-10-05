@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/malloy",
-  "version": "0.0.194",
+  "version": "0.0.195",
   "license": "MIT",
   "exports": {
     ".": "./dist/index.js",
@@ -37,7 +37,8 @@
     "clean": "tsc --build --clean && rm -rf src/lang/lib dist",
     "build": "npm run build-parser && tsc --build",
     "malloyc": "ts-node ../../scripts/malloy-to-json",
-    "prepublishOnly": "npm run clean && npm run build"
+    "prepublishOnly": "npm run clean && npm run build",
+    "generate-version-file": "VERSION=$(npm pkg get version --workspaces=false | tr -d \\\")\necho \"// generated with 'generate-version-file' script; do not edit manually\\nexport const MALLOY_VERSION = '$VERSION';\" > src/version.ts"
   },
   "dependencies": {
     "antlr4ts": "^0.5.0-alpha.4",
