@@ -654,31 +654,35 @@ export interface RecordTypeDef extends StructDefBase, JoinBase {
   join: 'one';
 }
 
-// For an array of records, the record def isn't a struct def,
-// the array itself is the structdef. Currently experimenting
-// with this NOT being type: record
+// While repeated records are mostly treated like arrays of records,
+// for historical reasons in the IR, a field which is a repeated record
+// and a field which is record both have the record schema in "fields"
+//
+// This is signified by the datatype of a array of records being
+//  {elementType: record_element, fields: [schema]}
+//     instead of
+//  {elementType: record{record schema}}
+//
+// This made it easier to re-factor structdef, however this might make
+// actual record types more difficult, so this might get re-visited
+// when record types are finalized.
 
 export interface RecordElementTypeDef {
   type: 'record_element';
 }
 
-// MTOY todo structdef is already here, but maybe i need
-// to abstract out the struct parts .... so that "RepeatedRecordDef"
-// is a useful distinction.
 export interface RepeatedRecordTypeDef extends JoinedArrayTypeDef {
   type: 'array';
   elementTypeDef: RecordElementTypeDef;
   join: 'many';
 }
 
-export function isRepeatedRecord(
-  fd: FieldDef
-): fd is RepeatedRecordTypeDef & AtomicFieldDef {
-  return fd.type === 'array' && fd.elementTypeDef.type === 'record_element';
-}
-
 export type RecordFieldDef = RecordTypeDef & AtomicFieldDef;
 export type RepeatedRecordFieldDef = RepeatedRecordTypeDef & AtomicFieldDef;
+
+export function isRepeatedRecord(fd: FieldDef): fd is RepeatedRecordFieldDef {
+  return fd.type === 'array' && fd.elementTypeDef.type === 'record_element';
+}
 
 export interface ErrorTypeDef {
   type: 'error';
@@ -973,11 +977,6 @@ interface StructDefBase extends HasLocation, NamedObject {
   annotation?: Annotation;
   modelAnnotation?: ModelAnnotation;
   fields: FieldDef[];
-  // MTOY TODO, because the compiler FieldSpace needs a dialect, it turns out
-  // that even though for arrays and records the dialect is just a copy of the
-  // parent dialect, making that copy available here prevents us from having to
-  // add a parent argument in a million places. Leaving myself a note to look
-  // at this again later.
   dialect: string;
 }
 
@@ -1072,11 +1071,8 @@ export type SourceDef =
   | FinalizeSourceDef
   | NestSourceDef;
 
-/*
- * the expression formerly known as structRelationship.type == 'base_table'
- * mtoy todo RENAME WITHOUT CAPS WHEN YOU UNDERSTAND IT BETTER
- */
-export function IS_BASE_TABLE(def: FieldDef | StructDef): def is SourceDef {
+/** Is this the "FROM" table of a query tree */
+export function isBaseTable(def: StructDef): def is SourceDef {
   if (isJoined(def)) {
     return false;
   }
@@ -1086,9 +1082,7 @@ export function IS_BASE_TABLE(def: FieldDef | StructDef): def is SourceDef {
   return false;
 }
 
-// mtoy todo NOT SURE ABOUT THIS FUNCTION EITHER
-// i.e. does this mean "joined and scalar"
-export function IS_SCALAR_ARRAY(def: FieldDef | StructDef) {
+export function isScalarArray(def: FieldDef | StructDef) {
   return def.type === 'array' && def.elementTypeDef.type !== 'record_element';
 }
 

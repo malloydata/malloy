@@ -92,13 +92,13 @@ import {
   DateFieldDef,
   DateUnit,
   TimestampUnit,
-  IS_BASE_TABLE,
+  isBaseTable,
   NestSourceDef,
   TimestampFieldDef,
   isJoined,
   isJoinedSource,
   QueryResultDef,
-  IS_SCALAR_ARRAY,
+  isScalarArray,
   RecordFieldDef,
   FinalizeSourceDef,
   QueryToMaterialize,
@@ -1372,13 +1372,8 @@ class QueryField extends QueryNode {
           this.parent.getSQLIdentifier(),
           this.fieldDef.name,
           this.fieldDef.type,
-
-          // isNested
           pType === 'record' || pType === 'array' || pType === 'nest_source',
-
-          // isArray
-          pType === 'array' &&
-            this.parent.structDef.elementTypeDef.type !== 'record_element'
+          isScalarArray(this.parent.structDef)
         ),
       ],
     };
@@ -2711,7 +2706,7 @@ class QueryQuery extends QueryField {
         }
       } else if (fi instanceof FieldInstanceField) {
         if (fi.fieldUsage.type === 'result') {
-          // mtoy todo
+          // mtoy todo -- remember why you commented this out
           // if (fi.f instanceof QueryFieldStruct) {
           //   fields.push(fi.f.getAsJoinedStructDef(name));
           // }
@@ -2893,7 +2888,7 @@ class QueryQuery extends QueryField {
         qsDef.name,
         'struct',
         qs.parent.structDef.type === 'array',
-        IS_SCALAR_ARRAY(this.parent.structDef)
+        isScalarArray(this.parent.structDef)
       );
       // we need to generate primary key.  If parent has a primary key combine
       // console.log(ji.alias, fieldExpression, this.inNestedPipeline());
@@ -2902,7 +2897,7 @@ class QueryQuery extends QueryField {
         ji.alias,
         ji.getDialectFieldList(),
         ji.makeUniqueKey,
-        IS_SCALAR_ARRAY(qsDef),
+        isScalarArray(qsDef),
         this.inNestedPipeline()
       )}\n`;
     } else if (qsDef.type === 'record') {
@@ -2956,7 +2951,7 @@ class QueryQuery extends QueryField {
         );
       }
     }
-    if (IS_BASE_TABLE(qs.structDef)) {
+    if (isBaseTable(qs.structDef)) {
       if (ji.makeUniqueKey) {
         const passKeys = this.generateSQLPassthroughKeys(qs);
         structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as ${qs.dialect.sqlMaybeQuoteIdentifier(
@@ -4328,7 +4323,7 @@ class QueryStruct extends QueryNode {
   // return the name of the field in SQL
   getIdentifier(): string {
     // if it is the root table, use provided alias if we have one.
-    if (IS_BASE_TABLE(this.structDef)) {
+    if (isBaseTable(this.structDef)) {
       return 'base';
     }
     // if this is an inline object, include the parents alias.
