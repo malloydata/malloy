@@ -1361,9 +1361,7 @@ class QueryField extends QueryNode {
     if (hasExpression(this.fieldDef)) {
       return this.fieldDef.e;
     }
-    const parentIsRepeatedRecord =
-      this.parent.structDef.type === 'array' &&
-      this.parent.structDef.elementTypeDef.type === 'record_element';
+    const pType = this.parent.structDef.type;
     return {
       node: 'genericSQLExpr',
       kids: {args: []},
@@ -1374,12 +1372,11 @@ class QueryField extends QueryNode {
           this.fieldDef.type,
 
           // isNested
-          parentIsRepeatedRecord ||
-            this.parent.structDef.type === 'nest_source' ||
-            this.parent.structDef.type === 'record',
+          pType === 'record' || pType === 'array' || pType === 'nest_source',
 
           // isArray
-          this.parent.structDef.type === 'array' && !parentIsRepeatedRecord
+          pType === 'array' &&
+            this.parent.structDef.elementTypeDef.type !== 'record_element'
         ),
       ],
     };
