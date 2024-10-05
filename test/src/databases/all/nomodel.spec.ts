@@ -38,12 +38,10 @@ function rootDbPath(databaseName: string) {
 function trueBoolean(dbName: string) {
   if (dbName === 'mysql') {
     return 1;
-  }
-  else {
+  } else {
     return true;
   }
 }
-
 
 // TODO: Figure out how to generalize this.
 function getSplitFunction(db: string) {
@@ -70,7 +68,6 @@ function getSplitFunction(db: string) {
 afterAll(async () => {
   await runtimes.closeAll();
 });
-
 
 runtimes.runtimeMap.forEach((runtime, databaseName) => {
   const q = runtime.getQuoter();

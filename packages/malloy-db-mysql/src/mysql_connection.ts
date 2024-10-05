@@ -231,7 +231,8 @@ export class MySQLConnection
       ? `\`${tablePath}\``
       : tablePath;
     const infoQuery = `DESCRIBE ${quotedTablePath}`;
-    await this.schemaFromQuery(infoQuery, structDef);
+    const result = await this.runRawSQL(infoQuery);
+    await this.schemaFromResult(result, structDef);
     return structDef;
   }
 
@@ -254,23 +255,28 @@ export class MySQLConnection
     };
 
     const tempTableName = `tmp${randomUUID()}`.replace(/-/g, '');
-    await this.schemaFromQuery(
-      `DROP TABLE IF EXISTS ${tempTableName};
-       CREATE TEMPORARY TABLE ${tempTableName} AS (${sqlRef.selectStr});
-       DESCRIBE ${tempTableName};
-       DROP TABLE IF EXISTS ${tempTableName};`,
-      structDef
+
+    const client = await this.getClient();
+    await client.query(
+      `CREATE TEMPORARY TABLE ${tempTableName} AS (${sqlRef.selectStr});`
     );
+    const [results, _fields] = await client.query(`DESCRIBE ${tempTableName};`);
+
+    // console.log(results); // results contains rows returned by server
+    // console.log(fields); // fields contains extra meta data about results, if available
+
+    const rows = results as QueryData;
+
+    this.schemaFromResult({rows, totalRows: rows.length}, structDef);
     return structDef;
   }
 
-  private async schemaFromQuery(
-    infoQuery: string,
+  private async schemaFromResult(
+    result: MalloyQueryData,
     structDef: StructDef
   ): Promise<void> {
     const typeMap: {[key: string]: string} = {};
 
-    const result = await this.runRawSQL(infoQuery);
     for (const row of result.rows) {
       typeMap[row['Field'] as string] = row['Type'] as string;
     }
