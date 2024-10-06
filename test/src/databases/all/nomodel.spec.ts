@@ -956,12 +956,13 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
     ).malloyResultMatches(runtime, {a: 1});
   });
 
+  // weirdly '*' must be the first thing in the select list in MySQL
   it(`sql with turducken- ${databaseName}`, async () => {
     const turduckenQuery = `
       run: ${databaseName}.sql("""
         SELECT
-          'something' as SOMETHING,
           *
+          , 'something' as SOMETHING
         FROM %{
           ${databaseName}.table('malloytest.state_facts') -> {
             group_by: popular_name
