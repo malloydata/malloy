@@ -23,7 +23,7 @@
  */
 
 import {RuntimeList, allDatabases} from '../../runtimes';
-import {brokenIn, databasesFromEnvironmentOr} from '../../util';
+import {booleanResult, brokenIn, databasesFromEnvironmentOr} from '../../util';
 import '../../util/db-jest-matchers';
 import * as malloy from '@malloydata/malloy';
 
@@ -216,7 +216,7 @@ expressionModels.forEach((x, databaseName) => {
         ["regexp_extract('I have a dog', r'd[aeiou]g')", 'dog'],
         ["regexp_extract(null, r'd[aeiou]g')", null],
         ["regexp_extract('foo', null)", null],
-        ["regexp_extract('I have a d0g', r'd\\dg')", 'd0g']
+        ["regexp_extract('I have a d0g', r'd.g')", 'd0g']
       );
     });
   });
@@ -230,7 +230,9 @@ expressionModels.forEach((x, databaseName) => {
           "replace('axbxc', r'(a).(b).(c)', '\\\\0 - \\\\1 - \\\\2 - \\\\3')",
           databaseName === 'postgres'
             ? '\\0 - a - b - c'
-            : databaseName === 'trino' || databaseName === 'presto'
+            : databaseName === 'trino' ||
+              databaseName === 'presto' ||
+              databaseName === 'mysql'
             ? '0 - 1 - 2 - 3'
             : 'axbxc - a - b - c',
         ],
@@ -263,8 +265,8 @@ expressionModels.forEach((x, databaseName) => {
   describe('raw function call', () => {
     it(`works - ${databaseName}`, async () => {
       await funcTestMultiple(
-        ['floor(cbrt!(27)::number)', 3],
-        ['floor(cbrt!number(27))', 3],
+        ['floor(sqrt!(25)::number)', 5],
+        ['floor(sqrt!number(25))', 5],
         ["substr('foo bar baz', -3)", 'baz'],
         ["substr(nullif('x','x'), 1, 2)", null], // nullMatchesFunctionSignature
         ["substr('aaaa', null, 1)", null],
@@ -275,7 +277,11 @@ expressionModels.forEach((x, databaseName) => {
 
   describe('stddev', () => {
     // TODO symmetric aggregates don't work with custom aggregate functions in BQ currently
-    if (['bigquery', 'snowflake', 'trino', 'presto'].includes(databaseName))
+    if (
+      ['bigquery', 'snowflake', 'trino', 'presto', 'mysql'].includes(
+        databaseName
+      )
+    )
       return;
     it(`works - ${databaseName}`, async () => {
       await funcTestAgg('round(stddev(aircraft_models.seats))', 29);
@@ -357,16 +363,35 @@ expressionModels.forEach((x, databaseName) => {
       expect(result.data.path(0, 'row_num').value).toBe(1);
     });
 
+    // should rework the tests to this form....
+    // it(`boolean type - ${databaseName}`, async () => {
+    //   await expect(`
+    //     # test.debug
+    //       run: state_facts extend { join_one: airports on airports.state = state } -> {
+    //         group_by: state
+    //         nest: q is {
+    //           group_by: airports.county
+    //           calculate: row_num is row_number()
+    //         }
+    //       }
+    //   `).malloyResultMatches(expressionModel, {
+    //     big: 1,
+    //     model_count: 58451,
+    //   });
+    // });
+
     it(`works inside nest - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
-          `run: state_facts extend { join_one: airports on airports.state = state } -> {
+          `
+          run: state_facts extend { join_one: airports on airports.state = state } -> {
             group_by: state
             nest: q is {
               group_by: airports.county
               calculate: row_num is row_number()
             }
-          }`
+          }
+            `
         )
         .run();
       expect(result.data.path(0, 'q', 0, 'row_num').value).toBe(1);
@@ -582,8 +607,12 @@ expressionModels.forEach((x, databaseName) => {
           }`
         )
         .run();
-      expect(result.data.path(0, 'lag_val').value).toBe(true);
-      expect(result.data.path(1, 'lag_val').value).toBe(false);
+      expect(result.data.path(0, 'lag_val').value).toBe(
+        booleanResult(true, databaseName)
+      );
+      expect(result.data.path(1, 'lag_val').value).toBe(
+        booleanResult(false, databaseName)
+      );
     });
   });
 

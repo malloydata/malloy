@@ -111,7 +111,11 @@ export class MySQLConnection
       });
       this.connection.query(
         // LTNOTE: Need to make the group_concat_max_len configurable.
-        "set @@session.time_zone = 'UTC';SET SESSION group_concat_max_len = 1000000;"
+        "set @@session.time_zone = 'UTC';" +
+          // LTNOTE: for nesting this is the max buffer size.  Currently set to 10M, have to figure out perf implications.
+          'SET SESSION group_concat_max_len = 10000000;' +
+          // Need this to make NULL LAST in order by (ISNULL(exp) can't appear in an ORDER BY without it)
+          "SET SESSION sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''));"
       );
     }
     return this.connection;

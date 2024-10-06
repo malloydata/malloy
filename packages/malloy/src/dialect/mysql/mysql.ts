@@ -43,6 +43,9 @@ import {
   TypecastExpr,
   FieldAtomicTypeDef,
 } from '../../model';
+import {expandBlueprintMap, expandOverrideMap} from '../functions';
+import {MYSQL_DIALECT_FUNCTIONS} from './dialect_functions';
+import {MYSQL_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
 const castMap: Record<string, string> = {
   number: 'double precision',
@@ -209,7 +212,9 @@ export class MySQLDialect extends Dialect {
     const fields: string[] = [];
     for (const f of fieldList) {
       fields.push(
-        `${f.sqlOutputName} ${this.malloyToSQL(f.type)} PATH "$.${f.rawName}"`
+        `${this.sqlMaybeQuoteIdentifier(f.sqlOutputName)} ${this.malloyToSQL(
+          f.type
+        )} PATH "$.${f.rawName}"`
       );
     }
     return fields.join(',\n');
@@ -500,11 +505,11 @@ export class MySQLDialect extends Dialect {
   getDialectFunctionOverrides(): {
     [name: string]: DialectFunctionOverloadDef[];
   } {
-    return {};
+    return expandOverrideMap(MYSQL_MALLOY_STANDARD_OVERLOADS);
   }
 
   getDialectFunctions(): {[name: string]: DialectFunctionOverloadDef[]} {
-    return {};
+    return expandBlueprintMap(MYSQL_DIALECT_FUNCTIONS);
   }
 
   mapFieldsForJsonObject(fieldList: DialectFieldList, nullValues?: boolean) {
