@@ -15,4 +15,15 @@ export const MYSQL_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
       sql: 'REGEXP_REPLACE(${value}, ${pattern}, ${replacement}, 1,0)',
     },
   },
+  trunc: {
+    to_integer: {
+      sql: '(FLOOR(${value}) + IF(${value} < 0,1,0))',
+    },
+    to_precision: {
+      sql: '(ABS(FLOOR(${value} * POW(10,${precision}))/POW(10,${precision}))*IF(${value} < 0, -1, 1))',
+    },
+  },
+  log: {
+    sql: 'log(${base},${value})',
+  },
 };
