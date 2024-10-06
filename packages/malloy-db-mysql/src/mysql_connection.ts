@@ -109,7 +109,10 @@ export class MySQLConnection
         multipleStatements: true,
         decimalNumbers: true,
       });
-      this.connection.query("set @@session.time_zone = 'UTC';");
+      this.connection.query(
+        // LTNOTE: Need to make the group_concat_max_len configurable.
+        "set @@session.time_zone = 'UTC';SET SESSION group_concat_max_len = 1000000;"
+      );
     }
     return this.connection;
   }
