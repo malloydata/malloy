@@ -397,30 +397,28 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     `).malloyResultMatches(expressionModel, {m_count: 63});
   });
 
+  const nativeInt = databaseName === 'mysql' ? 'signed' : 'integer';
   it('sql cast', async () => {
     await expect(`
       run: aircraft -> {
-        group_by: a is "312"::"integer"
+        group_by: a is "312"::"${nativeInt}"
       }
     `).malloyResultMatches(expressionModel, {a: 312});
   });
 
-  test.when(!['postgres'].includes(runtime.connection.name))(
-    'sql safe cast',
-    async () => {
-      await expect(`
+  test.when(runtime.dialect.supportsSafeCast)('sql safe cast', async () => {
+    await expect(`
       run: ${databaseName}.sql('SELECT 1 as one') -> { select:
         bad_date is '12a':::date
         bad_number is 'abc':::number
-        good_number is "312":::"integer"
+        good_number is "312":::"${nativeInt}"
       }
     `).malloyResultMatches(expressionModel, {
-        bad_date: null,
-        bad_number: null,
-        good_number: 312,
-      });
-    }
-  );
+      bad_date: null,
+      bad_number: null,
+      good_number: 312,
+    });
+  });
 
   it('many_field.sum() has correct locality', async () => {
     await expect(`

@@ -112,6 +112,7 @@ export class MySQLDialect extends Dialect {
   supportsFullJoin = false;
   supportsPipelinesInViews = false;
   readsNestedData = false;
+  supportsComplexFilteredSources = false;
 
   malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string {
     if (malloyType.type === 'number') {
@@ -200,6 +201,8 @@ export class MySQLDialect extends Dialect {
       return 'DOUBLE';
     } else if (t === 'string') {
       return 'TEXT';
+    } else if (t === 'struct') {
+      return 'JSON';
     } else return t;
   }
   unnestColumns(fieldList: DialectFieldList) {
