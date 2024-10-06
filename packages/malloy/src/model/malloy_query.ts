@@ -3701,7 +3701,8 @@ class QueryQuery extends QueryField {
       };
       structDef.name = this.parent.dialect.sqlUnnestPipelineHead(
         repeatedResultType === 'inline_all_numbers',
-        sourceSQLExpression
+        sourceSQLExpression,
+        getDialectFieldList(structDef)
       );
       structDef.structSource = {type: 'sql', method: 'nested'};
       const qs = new QueryStruct(

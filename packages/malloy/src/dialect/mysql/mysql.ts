@@ -110,6 +110,8 @@ export class MySQLDialect extends Dialect {
   experimental = true;
   nativeBoolean = false;
   supportsFullJoin = false;
+  supportsPipelinesInViews = false;
+  readsNestedData = false;
 
   malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string {
     if (malloyType.type === 'number') {
@@ -210,6 +212,15 @@ export class MySQLDialect extends Dialect {
     return fields.join(',\n');
   }
 
+  jsonTable(source: string, fieldList: DialectFieldList): string {
+    return `JSON_TABLE(${source}, '$[*]'
+        COLUMNS (
+          __row_id FOR ORDINALITY,
+          ${this.unnestColumns(fieldList)}
+        )
+      )`;
+  }
+
   // LTNOTE: We'll make this work with Arrays once MToy's changes land.
   sqlUnnestAlias(
     source: string,
@@ -220,12 +231,15 @@ export class MySQLDialect extends Dialect {
     _isInNestedPipeline: boolean
   ): string {
     return `
-      LEFT JOIN JSON_TABLE(${source}, '$[*]'
-        COLUMNS (
-          __row_id FOR ORDINALITY,
-          ${this.unnestColumns(fieldList)}
-        )
-      ) as ${alias} ON 1=1`;
+      LEFT JOIN ${this.jsonTable(source, fieldList)} as ${alias} ON 1=1`;
+  }
+
+  sqlUnnestPipelineHead(
+    _isSingleton: boolean,
+    sourceSQLExpression: string,
+    fieldList: DialectFieldList
+  ): string {
+    return this.jsonTable(sourceSQLExpression, fieldList);
   }
 
   sqlSumDistinctHashedKey(_sqlDistinctKey: string): string {
@@ -277,13 +291,6 @@ export class MySQLDialect extends Dialect {
     } else {
       return `${alias}.\`${fieldName}\``;
     }
-  }
-
-  sqlUnnestPipelineHead(
-    _isSingleton: boolean,
-    _sourceSQLExpression: string
-  ): string {
-    throw new Error('MySQL dialect does not support nesting.');
   }
 
   sqlCreateFunction(id: string, funcText: string): string {

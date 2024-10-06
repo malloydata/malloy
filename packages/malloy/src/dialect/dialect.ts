@@ -224,7 +224,8 @@ export abstract class Dialect {
 
   abstract sqlUnnestPipelineHead(
     isSingleton: boolean,
-    sourceSQLExpression: string
+    sourceSQLExpression: string,
+    fieldList?: DialectFieldList
   ): string;
 
   abstract sqlCreateFunction(id: string, funcText: string): string;
