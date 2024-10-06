@@ -109,6 +109,7 @@ export class MySQLDialect extends Dialect {
   supportsNesting = true;
   experimental = true;
   nativeBoolean = false;
+  supportsFullJoin = false;
 
   malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string {
     if (malloyType.type === 'number') {
@@ -192,23 +193,39 @@ export class MySQLDialect extends Dialect {
     return `COALESCE(MAX(CASE WHEN group_set=${groupSet} THEN JSON_OBJECT(${fields}) END),JSON_OBJECT(${nullValues}))`;
   }
 
-  // TODO: investigate if its possible to make it work when source is table.field.
+  malloyToSQL(t: string) {
+    if (t === 'number') {
+      return 'DOUBLE';
+    } else if (t === 'string') {
+      return 'TEXT';
+    } else return t;
+  }
+  unnestColumns(fieldList: DialectFieldList) {
+    const fields: string[] = [];
+    for (const f of fieldList) {
+      fields.push(
+        `${f.sqlOutputName} ${this.malloyToSQL(f.type)} PATH "$.${f.rawName}"`
+      );
+    }
+    return fields.join(',\n');
+  }
+
+  // LTNOTE: We'll make this work with Arrays once MToy's changes land.
   sqlUnnestAlias(
-    _source: string,
-    _alias: string,
-    _fieldList: DialectFieldList,
+    source: string,
+    alias: string,
+    fieldList: DialectFieldList,
     _needDistinctKey: boolean,
     _isArray: boolean,
     _isInNestedPipeline: boolean
   ): string {
-    throw new Error('MySQL dialect does not support unnest.');
-    /* if (isArray) {
-      throw new Error('MySQL dialect does not support unnest.');
-    } else if (needDistinctKey) {
-      return `LEFT JOIN JSON_TABLE(cast(concat("[1",repeat(",1",JSON_LENGTH(${source})),"]") as JSON),"$[*]" COLUMNS(__row_id FOR ORDINALITY)) as ${alias} ON ${alias}.\`__row_id\` <= JSON_LENGTH(${source})`;
-    } else {
-      return `LEFT JOIN (SELECT json_unquote(json_extract(${source}, CONCAT('$[', __row_id - 1, ']'))) as ${alias}  FROM (SELECT json_unquote(json_extract(${source}, CONCAT('$[', __row_id, ']'))) as d) as b LEFT JOIN JSON_TABLE(cast(concat("[1",repeat(",1",JSON_LENGTH(${source}) - 1),"]") as JSON),"$[*]" COLUMNS(__row_id FOR ORDINALITY)) as e on TRUE) as __tbl ON true`;
-    } */
+    return `
+      LEFT JOIN JSON_TABLE(${source}, '$[*]'
+        COLUMNS (
+          __row_id FOR ORDINALITY,
+          ${this.unnestColumns(fieldList)}
+        )
+      ) as ${alias} ON 1=1`;
   }
 
   sqlSumDistinctHashedKey(_sqlDistinctKey: string): string {

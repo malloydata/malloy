@@ -2787,6 +2787,9 @@ class QueryQuery extends QueryField {
     let structSQL = qs.structSourceSQL(stageWriter);
     if (isJoinOn(structRelationship)) {
       const matrixOperation = structRelationship.matrixOperation.toUpperCase();
+      if (!this.parent.dialect.supportsFullJoin && matrixOperation === 'FULL') {
+        throw new Error('FULL JOIN not supported');
+      }
       if (ji.makeUniqueKey) {
         const passKeys = this.generateSQLPassthroughKeys(qs);
         structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as ${qs.dialect.sqlMaybeQuoteIdentifier(

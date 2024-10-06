@@ -25,11 +25,7 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 
 import {RuntimeList, allDatabases} from '../../runtimes';
-import {
-  booleanCode,
-  booleanResult,
-  databasesFromEnvironmentOr,
-} from '../../util';
+import {databasesFromEnvironmentOr} from '../../util';
 import '../../util/db-jest-matchers';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
@@ -422,11 +418,13 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     });
   });
 
-  it(`join full - ${databaseName}`, async () => {
-    // a cross join produces a Many to Many result.
-    // symmetric aggregate are needed on both sides of the join
-    // Check the row count and that sums on each side work properly.
-    await expect(`
+  it.when(runtime.dialect.supportsFullJoin)(
+    `join full - ${databaseName}`,
+    async () => {
+      // a cross join produces a Many to Many result.
+      // symmetric aggregate are needed on both sides of the join
+      // Check the row count and that sums on each side work properly.
+      await expect(`
       ${matrixModel}
       run: ac_states -> {
         extend: {
@@ -440,12 +438,13 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
 
       }
       `).malloyResultMatches(runtime, {
-      ac_count: 49,
-      ac_sum: 21336,
-      am_count: 12,
-      am_sum: 4139,
-    });
-  });
+        ac_count: 49,
+        ac_sum: 21336,
+        am_count: 12,
+        am_sum: 4139,
+      });
+    }
+  );
 
   it(`leafy count - ${databaseName}`, async () => {
     // in a joined table when the joined is leafiest

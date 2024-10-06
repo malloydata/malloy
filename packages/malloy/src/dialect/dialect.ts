@@ -155,6 +155,9 @@ export abstract class Dialect {
 
   supportsCountApprox = false;
 
+  // MYSQL doesn't have full join, maybe others.
+  supportsFullJoin = true;
+
   nativeBoolean = true;
 
   abstract getDialectFunctionOverrides(): {
