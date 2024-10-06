@@ -24,7 +24,11 @@
 
 import {RuntimeList, allDatabases} from '../../runtimes';
 import '../../util/db-jest-matchers';
-import {databasesFromEnvironmentOr, mkSqlEqWith} from '../../util';
+import {
+  booleanResult,
+  databasesFromEnvironmentOr,
+  mkSqlEqWith,
+} from '../../util';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
@@ -493,8 +497,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           group_by: boolean_2 is sql_boolean("\${engines} = 2")
         }
   `).malloyResultMatches(expressionModel, {
-        boolean_1: true,
-        boolean_2: false,
+        boolean_1: booleanResult(true, databaseName),
+        boolean_2: booleanResult(false, databaseName),
       });
     });
 
@@ -816,7 +820,10 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           no_paren is false and fot
           paren is    false and (fot)
       }`
-    ).malloyResultMatches(runtime, {paren: false, no_paren: false});
+    ).malloyResultMatches(runtime, {
+      paren: booleanResult(false, databaseName),
+      no_paren: booleanResult(false, databaseName),
+    });
   });
 });
 
