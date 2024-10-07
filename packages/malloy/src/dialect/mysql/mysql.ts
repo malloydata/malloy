@@ -41,7 +41,8 @@ import {
   TimeTruncExpr,
   TimeExtractExpr,
   TypecastExpr,
-  FieldAtomicTypeDef,
+  LeafAtomicDef,
+  AtomicTypeDef,
 } from '../../model';
 import {expandBlueprintMap, expandOverrideMap} from '../functions';
 import {MYSQL_DIALECT_FUNCTIONS} from './dialect_functions';
@@ -65,7 +66,7 @@ const inSeconds: Record<string, number> = {
   week: 7 * 24 * 3600,
 };
 
-const mysqlToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
+const mysqlToMalloyTypes: {[key: string]: LeafAtomicDef} = {
   // TODO: This assumes tinyint is always going to be a boolean.
   'tinyint': {type: 'boolean'},
   'smallint': {type: 'number', numberType: 'integer'},
@@ -117,7 +118,7 @@ export class MySQLDialect extends Dialect {
   readsNestedData = false;
   supportsComplexFilteredSources = false;
 
-  malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string {
+  malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
     if (malloyType.type === 'number') {
       if (malloyType.numberType === 'integer') {
         return 'BIGINT';
@@ -128,10 +129,15 @@ export class MySQLDialect extends Dialect {
     return malloyType.type;
   }
 
-  sqlTypeToMalloyType(sqlType: string): FieldAtomicTypeDef | undefined {
+  sqlTypeToMalloyType(sqlType: string): LeafAtomicDef {
     // Remove trailing params
     const baseSqlType = sqlType.match(/^(\w+)/)?.at(0) ?? sqlType;
-    return mysqlToMalloyTypes[baseSqlType.toLowerCase()];
+    return (
+      mysqlToMalloyTypes[baseSqlType.toLowerCase()] || {
+        type: 'sql native',
+        rawType: baseSqlType,
+      }
+    );
   }
 
   quoteTablePath(tablePath: string): string {

@@ -25,18 +25,27 @@ describe('MySQL Connection', () => {
   });
 
   it('fetches schema', async () => {
-    const res = await connection.fetchSchemaForTables({
-      'malloytest.airports': 'malloytest.airports',
-    });
+    const res = await connection.fetchSchemaForTables(
+      {
+        'malloytest.airports': 'malloytest.airports',
+      },
+      {}
+    );
     expect(res.schemas['malloytest.airports'].dialect).toBe('mysql');
   });
 
   it('fetches schema for SQL block', async () => {
-    const res = await connection.fetchSchemaForSQLBlock({
-      name: 'foo',
-      type: 'sqlBlock',
-      selectStr: 'SELECT 1 as one',
-    });
+    const res = await connection.fetchSchemaForSQLStruct(
+      {
+        name: 'foo',
+        type: 'sql_select',
+        selectStr: 'SELECT 1 as one',
+        connection: 'mysql',
+        fields: [],
+        dialect: 'mysql',
+      },
+      {}
+    );
     expect(res.structDef?.fields[0].name).toBe('one');
   });
 });
