@@ -137,7 +137,11 @@ expressionModels.forEach((x, databaseName) => {
         ["concat(1, 'bar')", '1bar'],
         [
           "concat('cons', true)",
-          databaseName === 'postgres' ? 'const' : 'construe',
+          databaseName === 'postgres'
+            ? 'const'
+            : databaseName === 'mysql'
+            ? 'cons1'
+            : 'construe',
         ],
         ["concat('foo', @2003)", 'foo2003-01-01'],
         [
@@ -832,7 +836,7 @@ expressionModels.forEach((x, databaseName) => {
     const inf = ['trino', 'presto'].includes(databaseName)
       ? 'infinity!()'
       : "'+inf'::number";
-    it(`works - ${databaseName}`, async () => {
+    it.when(databaseName !== 'mysql')(`works - ${databaseName}`, async () => {
       await funcTestMultiple(
         [`is_inf(${inf})`, true],
         ['is_inf(100)', false],
@@ -841,7 +845,7 @@ expressionModels.forEach((x, databaseName) => {
     });
   });
   describe('is_nan', () => {
-    it(`works - ${databaseName}`, async () => {
+    it.when(databaseName !== 'mysql')(`works - ${databaseName}`, async () => {
       await funcTestMultiple(
         ["is_nan('NaN'::number)", true],
         ['is_nan(100)', false],
@@ -853,10 +857,13 @@ expressionModels.forEach((x, databaseName) => {
     it(`works - ${databaseName}`, async () => {
       await funcTestMultiple(
         ['greatest(1, 10, -100)', 10],
-        ['greatest(@2003, @2004, @1994) = @2004', true],
+        [
+          'greatest(@2003, @2004, @1994) = @2004',
+          booleanResult(true, databaseName),
+        ],
         [
           'greatest(@2023-05-26 11:58:00, @2023-05-26 11:59:00) = @2023-05-26 11:59:00',
-          true,
+          booleanResult(true, databaseName),
         ],
         ["greatest('a', 'b')", 'b'],
         ['greatest(1, null, 0)', null],
@@ -868,10 +875,13 @@ expressionModels.forEach((x, databaseName) => {
     it(`works - ${databaseName}`, async () => {
       await funcTestMultiple(
         ['least(1, 10, -100)', -100],
-        ['least(@2003, @2004, @1994) = @1994', true],
+        [
+          'least(@2003, @2004, @1994) = @1994',
+          booleanResult(true, databaseName),
+        ],
         [
           'least(@2023-05-26 11:58:00, @2023-05-26 11:59:00) = @2023-05-26 11:58:00',
-          true,
+          booleanResult(true, databaseName),
         ],
         ["least('a', 'b')", 'a'],
         ['least(1, null, 0)', null],
@@ -901,20 +911,32 @@ expressionModels.forEach((x, databaseName) => {
   describe('starts_with', () => {
     it(`works - ${databaseName}`, async () => {
       await funcTestMultiple(
-        ["starts_with('hello world', 'hello')", true],
-        ["starts_with('hello world', 'world')", false],
-        ["starts_with(null, 'world')", false],
-        ["starts_with('hello world', null)", false]
+        [
+          "starts_with('hello world', 'hello')",
+          booleanResult(true, databaseName),
+        ],
+        [
+          "starts_with('hello world', 'world')",
+          booleanResult(false, databaseName),
+        ],
+        ["starts_with(null, 'world')", booleanResult(false, databaseName)],
+        ["starts_with('hello world', null)", booleanResult(false, databaseName)]
       );
     });
   });
   describe('ends_with', () => {
     it(`works - ${databaseName}`, async () => {
       await funcTestMultiple(
-        ["ends_with('hello world', 'world')", true],
-        ["ends_with('hello world', 'hello')", false],
-        ["ends_with(null, 'world')", false],
-        ["ends_with('hello world', null)", false]
+        [
+          "ends_with('hello world', 'world')",
+          booleanResult(true, databaseName),
+        ],
+        [
+          "ends_with('hello world', 'hello')",
+          booleanResult(false, databaseName),
+        ],
+        ["ends_with(null, 'world')", booleanResult(false, databaseName)],
+        ["ends_with('hello world', null)", booleanResult(false, databaseName)]
       );
     });
   });
@@ -964,7 +986,10 @@ expressionModels.forEach((x, databaseName) => {
   });
   describe('pi', () => {
     it(`is pi - ${databaseName}`, async () => {
-      await funcTest('abs(pi() - 3.141592653589793) < 0.0000000000001', true);
+      await funcTest(
+        'abs(pi() - 3.141592653589793) < 0.0000000000001',
+        booleanResult(true, databaseName)
+      );
     });
   });
 
@@ -1127,8 +1152,8 @@ expressionModels.forEach((x, databaseName) => {
             aggregate: also_passes is abs(count_approx(airport_count)-count(airport_count))/count(airport_count) < 0.3
           }
           `).malloyResultMatches(runtime, {
-        'passes': true,
-        'also_passes': true,
+        'passes': booleanResult(true, databaseName),
+        'also_passes': booleanResult(true, databaseName),
       });
     });
     test.when(supported)('works with fanout', async () => {
@@ -1140,7 +1165,7 @@ expressionModels.forEach((x, databaseName) => {
         run: state_facts_fanout -> {
           aggregate: x is state_facts.state.count_approx() > 0
         }
-      `).malloyResultMatches(runtime, {x: true});
+      `).malloyResultMatches(runtime, {x: booleanResult(true, databaseName)});
     });
   });
   describe('last_value', () => {
@@ -1291,7 +1316,10 @@ expressionModels.forEach((x, databaseName) => {
     describe('duckdb', () => {
       const duckdb = it.when(databaseName === 'duckdb');
       duckdb('to_timestamp', async () => {
-        await funcTest('to_timestamp(1725555835) = @2024-09-05 17:03:55', true);
+        await funcTest(
+          'to_timestamp(1725555835) = @2024-09-05 17:03:55',
+          booleanResult(true, databaseName)
+        );
       });
     });
 
@@ -1300,7 +1328,7 @@ expressionModels.forEach((x, databaseName) => {
       trino('from_unixtime', async () => {
         await funcTest(
           'from_unixtime(1725555835) = @2024-09-05 17:03:55',
-          true
+          booleanResult(true, databaseName)
         );
       });
     });
