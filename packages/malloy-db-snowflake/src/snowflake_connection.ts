@@ -37,7 +37,7 @@ import {
   SnowflakeDialect,
   TestableConnection,
   arrayEachFields,
-  SimpleAtomic,
+  LeafAtomicDef,
 } from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 
@@ -188,7 +188,7 @@ export class SnowflakeConnection
       if (value.isArray && type !== 'object') {
         // Apparently there can only be arrays of integers, strings, or unknowns?
         // TODO is this true or is this just all that got implemented?
-        const malloyType: SimpleAtomic =
+        const malloyType: LeafAtomicDef =
           type === 'integer'
             ? {type: 'number', numberType: 'integer'}
             : type === 'varchar'

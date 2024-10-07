@@ -208,3 +208,12 @@ type StructDef =
     | ScalarArrayStruct
     | RepeatedRecordStruct;
 ```
+
+## Discrimintators
+
+* `isSourceDef` -- Is the structdef a sourcedef
+* `isBaseTable` -- Is this the "FROM" clause structdef.
+* `isJoined` -- Is this NOT the FROM clause structdef
+* `isJoinable` -- Is the something which could be joined
+* `isJoinedSource` --- Is this joined AND a SourceDef
+* `isScalarArray` -- Is this an array, and is this an array of non-records

@@ -31,7 +31,7 @@ import {
   TimeDeltaExpr,
   TypecastExpr,
   MeasureTimeExpr,
-  SimpleAtomic,
+  LeafAtomicDef,
 } from '../../model/malloy_types';
 import {
   DialectFunctionOverloadDef,
@@ -61,7 +61,7 @@ const inSeconds: Record<string, number> = {
   'week': 7 * 24 * 3600,
 };
 
-const postgresToMalloyTypes: {[key: string]: SimpleAtomic} = {
+const postgresToMalloyTypes: {[key: string]: LeafAtomicDef} = {
   'character varying': {type: 'string'},
   'name': {type: 'string'},
   'text': {type: 'string'},
@@ -419,7 +419,7 @@ export class PostgresDialect extends PostgresBase {
     return malloyType.type;
   }
 
-  sqlTypeToMalloyType(sqlType: string): SimpleAtomic {
+  sqlTypeToMalloyType(sqlType: string): LeafAtomicDef {
     // Remove trailing params
     const baseSqlType = sqlType.match(/^([\w\s]+)/)?.at(0) ?? sqlType;
     return (

@@ -24,9 +24,9 @@
 import {DateTime as LuxonDateTime} from 'luxon';
 
 import {
-  TimeFieldType,
+  TemporalFieldType,
   TimestampUnit,
-  isTimeFieldType,
+  isTemporalField,
   TimeLiteralNode,
 } from '../../../model/malloy_types';
 
@@ -82,7 +82,7 @@ abstract class TimeLiteral extends ExpressionDef {
   constructor(
     tm: TimeText,
     readonly units: TimestampUnit | undefined,
-    readonly timeType: TimeFieldType
+    readonly timeType: TemporalFieldType
   ) {
     super();
     this.literalPart = tm.text;
@@ -91,7 +91,7 @@ abstract class TimeLiteral extends ExpressionDef {
     }
   }
 
-  protected makeLiteral(val: string, typ: TimeFieldType): TimeLiteralNode {
+  protected makeLiteral(val: string, typ: TemporalFieldType): TimeLiteralNode {
     const timeFrag: TimeLiteralNode = {
       node: 'timeLiteral',
       literal: val,
@@ -103,7 +103,7 @@ abstract class TimeLiteral extends ExpressionDef {
     return timeFrag;
   }
 
-  protected makeValue(val: string, dataType: TimeFieldType): TimeResult {
+  protected makeValue(val: string, dataType: TemporalFieldType): TimeResult {
     const timeFrag = this.makeLiteral(val, dataType);
     const expressionType = 'scalar';
     const value = timeFrag;
@@ -183,7 +183,7 @@ class GranularLiteral extends TimeLiteral {
   constructor(
     tm: TimeText,
     units: TimestampUnit | undefined,
-    timeType: TimeFieldType,
+    timeType: TemporalFieldType,
     readonly nextLit: string
   ) {
     super(tm, units, timeType);
@@ -212,7 +212,7 @@ class GranularLiteral extends TimeLiteral {
         }
       }
 
-      if (isTimeFieldType(testValue.dataType)) {
+      if (isTemporalField(testValue.dataType)) {
         const rangeType = testValue.dataType;
         const range = new Range(
           new ExprTime(rangeType, rangeStart.value),

@@ -23,7 +23,7 @@
 
 import {
   Expr,
-  TimeFieldType,
+  TemporalFieldType,
   TimestampUnit,
   isAtomicFieldType,
   FieldValueType,
@@ -35,7 +35,7 @@ import {
 import {TimeResult} from './types/time-result';
 
 export function timeOffset(
-  timeType: TimeFieldType,
+  timeType: TemporalFieldType,
   from: Expr,
   op: '+' | '-',
   n: Expr,
@@ -92,7 +92,7 @@ export function castDateToTimestamp(from: Expr, safe = false): TypecastExpr {
   return cast;
 }
 
-export function resolution(timeframe: string): TimeFieldType {
+export function resolution(timeframe: string): TemporalFieldType {
   switch (timeframe) {
     case 'hour':
     case 'minute':

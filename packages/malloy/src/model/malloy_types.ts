@@ -226,7 +226,7 @@ export interface NowNode extends ExprLeaf {
 }
 
 interface HasTimeValue {
-  dataType: TimeFieldType;
+  dataType: TemporalFieldType;
 }
 type TimeExpr = Expr & HasTimeValue;
 
@@ -271,7 +271,7 @@ export interface RegexMatchExpr extends ExprWithKids {
 export interface TimeLiteralNode extends ExprLeaf {
   node: 'timeLiteral';
   literal: string;
-  dataType: TimeFieldType;
+  dataType: TemporalFieldType;
   timezone?: string;
 }
 
@@ -547,11 +547,16 @@ export function hasExpression<T extends FieldDef>(
   return 'e' in f;
 }
 
-export type TimeFieldType = 'date' | 'timestamp';
-export function isTimeFieldType(s: string): s is TimeFieldType {
+export type TemporalFieldType = 'date' | 'timestamp';
+export function isTemporalField(s: string): s is TemporalFieldType {
   return s === 'date' || s === 'timestamp';
 }
-export type CastType = 'string' | 'number' | TimeFieldType | 'boolean' | 'json';
+export type CastType =
+  | 'string'
+  | 'number'
+  | TemporalFieldType
+  | 'boolean'
+  | 'json';
 export type AtomicFieldType =
   | CastType
   | 'sql native'
@@ -1170,7 +1175,7 @@ export interface ConnectionDef extends NamedObject {
 }
 
 export type TemporalTypeDef = DateTypeDef | TimestampTypeDef;
-export type SimpleAtomic =
+export type LeafAtomicDef =
   | StringTypeDef
   | TemporalTypeDef
   | NumberTypeDef
@@ -1178,7 +1183,7 @@ export type SimpleAtomic =
   | JSONTypeDef
   | NativeUnsupportedTypeDef
   | ErrorTypeDef;
-export type AtomicTypeDef = SimpleAtomic | ArrayTypeDef | RecordTypeDef;
+export type AtomicTypeDef = LeafAtomicDef | ArrayTypeDef | RecordTypeDef;
 
 export type AtomicFieldDef = AtomicTypeDef & FieldAtomicBase;
 

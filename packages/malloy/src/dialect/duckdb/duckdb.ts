@@ -30,7 +30,7 @@ import {
   TimeDeltaExpr,
   RegexMatchExpr,
   MeasureTimeExpr,
-  SimpleAtomic,
+  LeafAtomicDef,
 } from '../../model/malloy_types';
 import {indent} from '../../model/utils';
 import {
@@ -46,7 +46,7 @@ import {DUCKDB_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 // need to refactor runSQL to take a SQLBlock instead of just a sql string.
 const hackSplitComment = '-- hack: split on this';
 
-const duckDBToMalloyTypes: {[key: string]: SimpleAtomic} = {
+const duckDBToMalloyTypes: {[key: string]: LeafAtomicDef} = {
   'BIGINT': {type: 'number', numberType: 'integer'},
   'INTEGER': {type: 'number', numberType: 'integer'},
   'TINYINT': {type: 'number', numberType: 'integer'},
@@ -364,7 +364,7 @@ export class DuckDBDialect extends PostgresBase {
     return malloyType.type;
   }
 
-  sqlTypeToMalloyType(sqlType: string): SimpleAtomic {
+  sqlTypeToMalloyType(sqlType: string): LeafAtomicDef {
     // Remove decimal precision
     const ddbType = sqlType.replace(/^DECIMAL\(\d+,\d+\)/g, 'DECIMAL');
     // Remove trailing params

@@ -91,3 +91,12 @@ Once upon a time queries also had an array called `fields:` which contained a sl
 * Computations just like in `FieldDef` with `Expression` proeprties, which came from either `select:`, `group_by:`, `aggregate:` or `calculate:`
 * `QueryFieldReference` which is just a path, which is inferred to be one of the above, on context
 * `nest:` invocations (or 'turtles' as we affectionately call them internally)
+
+
+## Descriminators
+
+* `isTemporalField` -- `date` or `timestamp` type
+* `isAtomicFieldType` -- essentially "not join or dimension or measure"
+* `isRepeatedRecord`
+* `isScalarArray` -- Is a ".each" array
+* `isAtomic` -- Like `isAtomicFieldType` for `FieldDef` instead
