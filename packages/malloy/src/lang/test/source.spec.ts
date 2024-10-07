@@ -178,6 +178,11 @@ describe('source:', () => {
           'source: nab is a extend { join_many: b on astr = b.astr }'
         ).toTranslate();
       });
+      test('many with', () => {
+        expect(
+          model`source: nab is a extend { ${'join_many: b with astr'} }`
+        ).toLog(errorMessage('Foreign key join not legal in join_many:'));
+      });
       test('many is on', () => {
         expect(
           'source: y is a extend { join_many: x is b on astr = x.astr }'
@@ -228,13 +233,6 @@ describe('source:', () => {
         expect(`
           source: awith is a extend {
             join_one: has_primary_key is a -> { group_by: one_val is astr } with astr
-          }
-        `).toTranslate();
-      });
-      test('join-many: with is ok', () => {
-        expect(`
-          source: awithmany is a extend {
-            join_many: manyb is a with astr
           }
         `).toTranslate();
       });
