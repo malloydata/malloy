@@ -26,4 +26,23 @@ export const MYSQL_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
   log: {
     sql: 'log(${base},${value})',
   },
+  div: {sql: 'FLOOR(${dividend} / ${divisor})'},
+  strpos: {sql: 'LOCATE(${search_string},${test_string})'},
+  starts_with: {sql: "COALESCE(${value} LIKE CONCAT(${prefix}, '%'),0)"},
+  ends_with: {sql: "COALESCE(${value} LIKE CONCAT('%',${suffix}),0)"},
+  trim: {
+    characters: {
+      sql: 'TRIM(BOTH ${trim_characters} FROM ${value})',
+    },
+  },
+  ltrim: {
+    characters: {
+      sql: 'TRIM(LEADING ${trim_characters} FROM ${value})',
+    },
+  },
+  rtrim: {
+    characters: {
+      sql: 'TRIM(TRAILING ${trim_characters} FROM ${value})',
+    },
+  },
 };

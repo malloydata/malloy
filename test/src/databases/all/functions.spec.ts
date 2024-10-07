@@ -107,7 +107,7 @@ expressionModels.forEach((x, databaseName) => {
       return await expressionModel
         .loadQuery(
           `
-      run: aircraft -> { ${testCases.map(
+      run: state_facts -> { ${testCases.map(
         (testCase, i) => `group_by: f${i} is ${testCase[0]}`
       )} }`
         )
@@ -941,7 +941,7 @@ expressionModels.forEach((x, databaseName) => {
     });
   });
   describe('trim', () => {
-    it(`works - ${databaseName}`, async () => {
+    it(`trim works - ${databaseName}`, async () => {
       await funcTestMultiple(
         ["trim('  keep this  ')", 'keep this'],
         ["trim('_ _keep_this_ _', '_ ')", 'keep_this'],
@@ -953,7 +953,7 @@ expressionModels.forEach((x, databaseName) => {
     });
   });
   describe('ltrim', () => {
-    it(`works - ${databaseName}`, async () => {
+    it(`ltrim works - ${databaseName}`, async () => {
       await funcTestMultiple(
         ["ltrim('  keep this ->  ')", 'keep this ->  '],
         ["ltrim('_ _keep_this -> _ _', '_ ')", 'keep_this -> _ _'],
@@ -965,7 +965,7 @@ expressionModels.forEach((x, databaseName) => {
     });
   });
   describe('rtrim', () => {
-    it(`works - ${databaseName}`, async () => {
+    it(`rtrim works - ${databaseName}`, async () => {
       await funcTestMultiple(
         ["rtrim('  <- keep this  ')", '  <- keep this'],
         ["rtrim('_ _ <- keep_this_ _', '_ ')", '_ _ <- keep_this'],
@@ -981,7 +981,7 @@ expressionModels.forEach((x, databaseName) => {
       // There are around a billion values that rand() can be, so if this
       // test fails, most likely something is broken. Otherwise, you're the lucky
       // one in a billion!
-      await funcTest('rand() = rand()', false);
+      await funcTest('rand() = rand()', booleanResult(false, databaseName));
     });
   });
   describe('pi', () => {
