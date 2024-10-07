@@ -7,31 +7,22 @@
 
 import {
   Connection,
-  FieldTypeDef,
   MalloyQueryData,
-  NamedStructDefs,
   PersistSQLResults,
   PooledConnection,
   QueryRunStats,
   RunSQLOptions,
-  SQLBlock,
   StreamingConnection,
   StructDef,
-  TestableConnection,
   MySQLDialect,
   QueryOptionsReader,
   QueryData,
-} from '../../malloy'; // '@malloydata/malloy';
-import {randomUUID, createHash} from 'crypto';
-import {
-  //FieldInfo,
-  createConnection,
-  Connection as mySqlConnection,
-} from 'mysql2/promise';
-
-// import {DateTime} from 'luxon';
-// import {decode} from 'fastestsmallesttextencoderdecoder';
+  SQLSourceDef,
+  TableSourceDef,
+} from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
+import {randomUUID, createHash} from 'crypto';
+import * as MYSQL from 'mysql2/promise';
 
 export interface MySQLConfiguration {
   host?: string;
@@ -60,26 +51,16 @@ export class MySQLExecutor {
     return {};
   }
 }
+
 export class MySQLConnection
   extends BaseConnection
-  implements Connection, TestableConnection, PersistSQLResults
+  implements Connection, PersistSQLResults
 {
   private readonly dialect = new MySQLDialect();
-  private connection: mySqlConnection | undefined;
+  private connection?: MYSQL.Connection;
   config: MySQLConfiguration;
   queryOptions: QueryOptionsReader | undefined;
   public name: string;
-
-  private schemaCache = new Map<
-    string,
-    {schema: StructDef; error?: undefined} | {error: string; schema?: undefined}
-  >();
-
-  private sqlSchemaCache = new Map<
-    string,
-    | {structDef: StructDef; error?: undefined}
-    | {error: string; structDef?: undefined}
-  >();
 
   get dialectName(): string {
     return this.dialect.name;
@@ -100,7 +81,7 @@ export class MySQLConnection
 
   async getClient() {
     if (!this.connection) {
-      this.connection = await createConnection({
+      this.connection = await MYSQL.createConnection({
         host: this.config.host,
         port: this.config.port ?? 3306,
         user: this.config.user,
@@ -165,72 +146,18 @@ export class MySQLConnection
     throw new Error('Method not implemented.3');
   }
 
-  async fetchSchemaForTables(tables: Record<string, string>): Promise<{
-    schemas: Record<string, StructDef>;
-    errors: Record<string, string>;
-  }> {
-    const schemas: NamedStructDefs = {};
-    const errors: {[name: string]: string} = {};
-
-    for (const tableKey in tables) {
-      let inCache = this.schemaCache.get(tableKey);
-      if (!inCache) {
-        const tablePath = tables[tableKey];
-        try {
-          inCache = {
-            schema: await this.getTableSchema(tableKey, tablePath),
-          };
-          this.schemaCache.set(tableKey, inCache);
-        } catch (error) {
-          inCache = {error: (error as Error).message};
-        }
-      }
-      if (inCache.schema !== undefined) {
-        schemas[tableKey] = inCache.schema;
-      } else {
-        errors[tableKey] = inCache.error || 'Unknown schema fetch error';
-      }
-    }
-    return {schemas, errors};
-  }
-
-  public async fetchSchemaForSQLBlock(
-    sqlRef: SQLBlock
-  ): Promise<
-    | {structDef: StructDef; error?: undefined}
-    | {error: string; structDef?: undefined}
-  > {
-    const key = sqlRef.name;
-    let inCache = this.sqlSchemaCache.get(key);
-    if (!inCache) {
-      try {
-        inCache = {
-          structDef: await this.getSQLBlockSchema(sqlRef),
-        };
-      } catch (error) {
-        inCache = {error: (error as Error).message};
-      }
-      this.sqlSchemaCache.set(key, inCache);
-    }
-    return inCache;
-  }
-
   // get name(): string {
   //   return connectionFactory.connectionName;
   // }
 
   // TODO: make sure this is exercised.
-  async getTableSchema(tableName: string, tablePath: string) {
-    const structDef: StructDef = {
-      type: 'struct',
+  async fetchTableSchema(tableName: string, tablePath: string) {
+    const structDef: TableSourceDef = {
+      type: 'table',
       name: tableName,
-      // TODO: Should this be an enum or similar?
+      tablePath,
       dialect: this.dialectName,
-      structSource: {type: 'table', tablePath},
-      structRelationship: {
-        type: 'basetable',
-        connectionName: this.name,
-      },
+      connection: this.name,
       fields: [],
     };
 
@@ -243,22 +170,10 @@ export class MySQLConnection
     return structDef;
   }
 
-  private async getSQLBlockSchema(sqlRef: SQLBlock): Promise<StructDef> {
+  async fetchSelectSchema(sqlRef: SQLSourceDef): Promise<SQLSourceDef> {
     const structDef: StructDef = {
-      type: 'struct',
-      dialect: this.dialectName,
+      ...sqlRef,
       name: sqlRef.name,
-      structSource: {
-        type: 'sql',
-        method: 'subquery',
-        sqlBlock: sqlRef,
-      },
-      structRelationship: {
-        // TODO: check what is this.
-        type: 'basetable',
-        connectionName: this.name,
-      },
-      fields: [],
     };
 
     const tempTableName = `tmp${randomUUID()}`.replace(/-/g, '');
@@ -297,14 +212,18 @@ export class MySQLConnection
     // TODO: what are options here?
     const client = await this.getClient();
 
-    const [results, _fields] = await client.query(sql);
+    try {
+      const [results, _fields] = await client.query(sql);
 
-    // console.log(results); // results contains rows returned by server
-    // console.log(fields); // fields contains extra meta data about results, if available
+      // console.log(results); // results contains rows returned by server
+      // console.log(fields); // fields contains extra meta data about results, if available
 
-    const rows = results as QueryData;
+      const rows = results as QueryData;
 
-    return {rows, totalRows: rows.length};
+      return {rows, totalRows: rows.length};
+    } catch (e) {
+      throw new Error('BADNESS');
+    }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -361,65 +280,17 @@ export class MySQLConnection
       jsonObj['_is_malloy_metadata']
     );
   }
+
   private fillStructDefFromTypeMap(
     structDef: StructDef,
     typeMap: {[name: string]: string}
   ) {
-    // TODO: handle mysql types properly.
     for (const fieldName in typeMap) {
       let mySqlType = typeMap[fieldName].toLocaleLowerCase();
       mySqlType = mySqlType.trim().split('(')[0];
-      let malloyType = this.dialect.sqlTypeToMalloyType(mySqlType);
-      const arrayMatch = mySqlType.startsWith('json');
-      if (arrayMatch) {
-        // TODO: Is not having inner type a problem?
-        const innerStructDef: StructDef = {
-          type: 'struct',
-          name: fieldName,
-          dialect: this.dialectName,
-          structSource: {type: 'nested'},
-          structRelationship: {
-            type: 'nested',
-            fieldName,
-            isArray: false,
-          },
-          // TODO: this makes the tests pass but is weak.
-          fields: [
-            {
-              ...this.dialect.sqlTypeToMalloyType('text'),
-              name: 'value',
-            } as FieldTypeDef,
-          ],
-        };
-        structDef.fields.push(innerStructDef);
-      } else {
-        if (arrayMatch) {
-          malloyType = this.dialect.sqlTypeToMalloyType(mySqlType);
-          const innerStructDef: StructDef = {
-            type: 'struct',
-            name: fieldName,
-            dialect: this.dialectName,
-            structSource: {type: 'nested'},
-            structRelationship: {
-              type: 'nested',
-              fieldName,
-              isArray: true,
-            },
-            fields: [{...malloyType, name: 'value'} as FieldTypeDef],
-          };
-          structDef.fields.push(innerStructDef);
-        } else {
-          if (malloyType) {
-            structDef.fields.push({...malloyType, name: fieldName});
-          } else {
-            structDef.fields.push({
-              type: 'sql native',
-              rawType: mySqlType.toLowerCase(),
-              name: fieldName,
-            });
-          }
-        }
-      }
+      const malloyType = this.dialect.sqlTypeToMalloyType(mySqlType);
+      // no arrays or records exist in mysql
+      structDef.fields.push({...malloyType, name: fieldName});
     }
   }
 }
