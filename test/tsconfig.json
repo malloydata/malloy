@@ -25,6 +25,9 @@
       "path": "../packages/malloy-db-trino"
     },
     {
+      "path": "../packages/malloy-db-mysql"
+    },
+    {
       "path": "../packages/malloy-db-duckdb"
     },
     {

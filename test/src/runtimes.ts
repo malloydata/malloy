@@ -38,6 +38,10 @@ import {PooledPostgresConnection} from '@malloydata/db-postgres';
 import {TrinoConnection, TrinoExecutor} from '@malloydata/db-trino';
 import {SnowflakeExecutor} from '@malloydata/db-snowflake/src/snowflake_executor';
 import {PrestoConnection} from '@malloydata/db-trino/src/trino_connection';
+import {
+  MySQLConnection,
+  MySQLExecutor,
+} from '@malloydata/db-mysql/src/mysql_connection';
 import {EventEmitter} from 'events';
 
 export class SnowflakeTestConnection extends SnowflakeConnection {
@@ -56,6 +60,23 @@ export class SnowflakeTestConnection extends SnowflakeConnection {
 }
 
 export class BigQueryTestConnection extends BigQueryConnection {
+  // we probably need a better way to do this.
+
+  public async runSQL(
+    sqlCommand: string,
+    options?: RunSQLOptions
+  ): Promise<MalloyQueryData> {
+    try {
+      return await super.runSQL(sqlCommand, options);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.log(`Error in SQL:\n ${sqlCommand}`);
+      throw e;
+    }
+  }
+}
+
+export class MySQLTestConnection extends MySQLConnection {
   // we probably need a better way to do this.
 
   public async runSQL(
@@ -175,6 +196,13 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
           TrinoExecutor.getConnectionOptionsFromEnv(dbName)
         );
         break;
+      case 'mysql':
+        connection = new MySQLConnection(
+          dbName,
+          MySQLExecutor.getConnectionOptionsFromEnv(),
+          {}
+        );
+        break;
       case 'presto':
         connection = new PrestoConnection(
           dbName,
@@ -208,6 +236,7 @@ export const allDatabases = [
   'duckdb_wasm',
   'snowflake',
   'trino',
+  'mysql',
 ];
 
 type RuntimeDatabaseNames = (typeof allDatabases)[number];

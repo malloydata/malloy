@@ -1,0 +1,31 @@
+{
+  "name": "@malloydata/db-mysql",
+  "version": "0.0.196",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "engines": {
+    "node": ">=18"
+  },
+  "homepage": "https://github.com/malloydata/malloy#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/malloydata/malloy"
+  },
+  "scripts": {
+    "lint": "eslint '**/*.ts{,x}'",
+    "lint-fix": "eslint '**/*.ts{,x}' --fix",
+    "test": "jest --config=../../jest.config.js",
+    "build": "tsc --build",
+    "clean": "tsc --build --clean",
+    "malloyc": "ts-node ../../scripts/malloy-to-json",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@malloydata/malloy": "^0.0.196",
+    "@types/node": "^22.7.4",
+    "fastestsmallesttextencoderdecoder": "^1.0.22",
+    "luxon": "^3.5.0",
+    "mysql2": "^3.11.3"
+  }
+}

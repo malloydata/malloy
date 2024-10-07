@@ -198,3 +198,19 @@ export async function runQuery(runtime: Runtime, querySrc: string) {
 
   return result;
 }
+
+export function booleanResult(value: boolean, dbName: string) {
+  if (dbName === 'mysql') {
+    return value ? 1 : 0;
+  } else {
+    return value;
+  }
+}
+
+export function booleanCode(value: boolean, dbName: string) {
+  if (dbName === 'mysql') {
+    return value ? '1' : '0';
+  } else {
+    return value ? 'true' : 'false';
+  }
+}

@@ -64,8 +64,10 @@ afterAll(async () => {
 runtimes.runtimeMap.forEach((runtime, databaseName) => {
   const q = runtime.getQuoter();
   // Issue #1824
-  it(`not boolean field with null - ${databaseName}`, async () => {
-    await expect(`
+  it.when(runtime.dialect.nativeBoolean)(
+    `not boolean field with null - ${databaseName}`,
+    async () => {
+      await expect(`
       run: ${databaseName}.sql("""
           SELECT
             CASE WHEN 1=1 THEN NULL ELSE false END as ${q`n`}
@@ -73,14 +75,17 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         select:
           is_true is not n
       }
-    `).malloyResultMatches(runtime, {is_true: true});
-  });
+    `).malloyResultMatches(runtime, {
+        is_true: true,
+      });
+    }
+  );
 
   // Issue: #1284
   it(`parenthesize output field values - ${databaseName}`, async () => {
     await expect(`
       run: ${databaseName}.table('malloytest.aircraft') -> {
-        group_by: r is 1
+        group_by: r is 1.0
 
         calculate:
           zero is 1 - rank()
@@ -413,11 +418,13 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     });
   });
 
-  it(`join full - ${databaseName}`, async () => {
-    // a cross join produces a Many to Many result.
-    // symmetric aggregate are needed on both sides of the join
-    // Check the row count and that sums on each side work properly.
-    await expect(`
+  it.when(runtime.dialect.supportsFullJoin)(
+    `join full - ${databaseName}`,
+    async () => {
+      // a cross join produces a Many to Many result.
+      // symmetric aggregate are needed on both sides of the join
+      // Check the row count and that sums on each side work properly.
+      await expect(`
       ${matrixModel}
       run: ac_states -> {
         extend: {
@@ -431,12 +438,13 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
 
       }
       `).malloyResultMatches(runtime, {
-      ac_count: 49,
-      ac_sum: 21336,
-      am_count: 12,
-      am_sum: 4139,
-    });
-  });
+        ac_count: 49,
+        ac_sum: 21336,
+        am_count: 12,
+        am_sum: 4139,
+      });
+    }
+  );
 
   it(`leafy count - ${databaseName}`, async () => {
     // in a joined table when the joined is leafiest
@@ -948,12 +956,13 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
     ).malloyResultMatches(runtime, {a: 1});
   });
 
+  // weirdly '*' must be the first thing in the select list in MySQL
   it(`sql with turducken- ${databaseName}`, async () => {
     const turduckenQuery = `
       run: ${databaseName}.sql("""
         SELECT
-          'something' as SOMETHING,
           *
+          , 'something' as SOMETHING
         FROM %{
           ${databaseName}.table('malloytest.state_facts') -> {
             group_by: popular_name

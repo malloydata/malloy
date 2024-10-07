@@ -23,7 +23,7 @@
  */
 
 import {RuntimeList, allDatabases} from '../../runtimes';
-import {databasesFromEnvironmentOr} from '../../util';
+import {booleanResult, databasesFromEnvironmentOr} from '../../util';
 import '../../util/db-jest-matchers';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
@@ -45,7 +45,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         aggregate: model_count is count()
       }
     `).malloyResultMatches(orderByModel, {
-      big: false,
+      big: booleanResult(false, databaseName),
       model_count: 58451,
     });
   });
@@ -62,7 +62,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         aggregate: model_count is model_count.sum()
       }
     `).malloyResultMatches(orderByModel, {
-      big: false,
+      big: booleanResult(false, databaseName),
       model_count: 58500,
     });
   });
@@ -91,9 +91,9 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     `reserved words are quoted in turtles - ${databaseName}`,
     async () => {
       await expect(`
-      run: models->{
+      run: ${databaseName}.table('malloytest.state_facts')->{
         nest: withx is {
-          group_by: select is UPPER(manufacturer)
+          group_by: select is upper(popular_name)
           aggregate: fetch is count()
         }
       } -> {

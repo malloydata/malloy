@@ -24,7 +24,11 @@
 
 import {RuntimeList, allDatabases} from '../../runtimes';
 import '../../util/db-jest-matchers';
-import {databasesFromEnvironmentOr, mkSqlEqWith} from '../../util';
+import {
+  booleanResult,
+  databasesFromEnvironmentOr,
+  mkSqlEqWith,
+} from '../../util';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
@@ -129,6 +133,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   // simple turtle expressions
   it('simple turtle', async () => {
     await expect(`
+      // # test.debug
       run:  ${databaseName}.table('malloytest.state_facts') -> {
         group_by: popular_name
         aggregate: airport_count.sum()
@@ -396,30 +401,28 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     `).malloyResultMatches(expressionModel, {m_count: 63});
   });
 
+  const nativeInt = databaseName === 'mysql' ? 'signed' : 'integer';
   it('sql cast', async () => {
     await expect(`
       run: aircraft -> {
-        group_by: a is "312"::"integer"
+        group_by: a is "312"::"${nativeInt}"
       }
     `).malloyResultMatches(expressionModel, {a: 312});
   });
 
-  test.when(!['postgres'].includes(runtime.connection.name))(
-    'sql safe cast',
-    async () => {
-      await expect(`
+  test.when(runtime.dialect.supportsSafeCast)('sql safe cast', async () => {
+    await expect(`
       run: ${databaseName}.sql('SELECT 1 as one') -> { select:
         bad_date is '12a':::date
         bad_number is 'abc':::number
-        good_number is "312":::"integer"
+        good_number is "312":::"${nativeInt}"
       }
     `).malloyResultMatches(expressionModel, {
-        bad_date: null,
-        bad_number: null,
-        good_number: 312,
-      });
-    }
-  );
+      bad_date: null,
+      bad_number: null,
+      good_number: 312,
+    });
+  });
 
   it('many_field.sum() has correct locality', async () => {
     await expect(`
@@ -494,8 +497,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           group_by: boolean_2 is sql_boolean("\${engines} = 2")
         }
   `).malloyResultMatches(expressionModel, {
-        boolean_1: true,
-        boolean_2: false,
+        boolean_1: booleanResult(true, databaseName),
+        boolean_2: booleanResult(false, databaseName),
       });
     });
 
@@ -817,7 +820,10 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           no_paren is false and fot
           paren is    false and (fot)
       }`
-    ).malloyResultMatches(runtime, {paren: false, no_paren: false});
+    ).malloyResultMatches(runtime, {
+      paren: booleanResult(false, databaseName),
+      no_paren: booleanResult(false, databaseName),
+    });
   });
 });
 

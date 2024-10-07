@@ -2808,6 +2808,9 @@ class QueryQuery extends QueryField {
     if (isJoinedSource(qsDef)) {
       let structSQL = qs.structSourceSQL(stageWriter);
       const matrixOperation = (qsDef.matrixOperation || 'left').toUpperCase();
+      if (!this.parent.dialect.supportsFullJoin && matrixOperation === 'FULL') {
+        throw new Error('FULL JOIN not supported');
+      }
       if (ji.makeUniqueKey) {
         const passKeys = this.generateSQLPassthroughKeys(qs);
         structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as ${qs.dialect.sqlMaybeQuoteIdentifier(
@@ -3716,7 +3719,8 @@ class QueryQuery extends QueryField {
         name: '~pipe~',
         pipeSQL: this.parent.dialect.sqlUnnestPipelineHead(
           repeatedResultType === 'inline_all_numbers',
-          sourceSQLExpression
+          sourceSQLExpression,
+          getDialectFieldList(structDef)
         ),
         fields: structDef.fields,
         connection: structDef.connection,

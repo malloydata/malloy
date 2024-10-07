@@ -26,6 +26,7 @@ export {
   TrinoDialect,
   PostgresDialect,
   SnowflakeDialect,
+  MySQLDialect,
   registerDialect,
   arg,
   qtz,

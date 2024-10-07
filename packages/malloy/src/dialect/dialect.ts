@@ -158,6 +158,11 @@ export abstract class Dialect {
 
   supportsCountApprox = false;
 
+  // MYSQL doesn't have full join, maybe others.
+  supportsFullJoin = true;
+
+  nativeBoolean = true;
+
   abstract getDialectFunctionOverrides(): {
     [name: string]: DialectFunctionOverloadDef[];
   };
@@ -222,7 +227,8 @@ export abstract class Dialect {
 
   abstract sqlUnnestPipelineHead(
     isSingleton: boolean,
-    sourceSQLExpression: string
+    sourceSQLExpression: string,
+    fieldList?: DialectFieldList
   ): string;
 
   abstract sqlCreateFunction(id: string, funcText: string): string;
