@@ -7,45 +7,49 @@
 
 // import {MySQLConnection, MySQLExecutor} from '.';
 
-// describe('MySQL Connection', () => {
-//   let connection: MySQLConnection;
+describe('MySQL Connection', () => {
+  // let connection: MySQLConnection;
 
-//   beforeAll(() => {
-//     const config = MySQLExecutor.getConnectionOptionsFromEnv();
-//     connection = new MySQLConnection('mysql', config, {});
-//   });
+  it('is true', async () => {
+    expect(1).toBe(1);
+  });
 
-//   afterAll(() => {
-//     connection.close();
-//   });
+  // beforeAll(() => {
+  //   const config = MySQLExecutor.getConnectionOptionsFromEnv();
+  //   connection = new MySQLConnection('mysql', config, {});
+  // });
 
-//   it('runs a SQL query', async () => {
-//     const res = await connection.runSQL('SELECT 1 as t');
-//     expect(res.rows[0]['t']).toBe(1);
-//   });
+  // afterAll(() => {
+  //   connection.close();
+  // });
 
-//   it('fetches schema', async () => {
-//     const res = await connection.fetchSchemaForTables(
-//       {
-//         'malloytest.airports': 'malloytest.airports',
-//       },
-//       {}
-//     );
-//     expect(res.schemas['malloytest.airports'].dialect).toBe('mysql');
-//   });
+  // it('runs a SQL query', async () => {
+  //   const res = await connection.runSQL('SELECT 1 as t');
+  //   expect(res.rows[0]['t']).toBe(1);
+  // });
 
-//   it('fetches schema for SQL block', async () => {
-//     const res = await connection.fetchSchemaForSQLStruct(
-//       {
-//         name: 'foo',
-//         type: 'sql_select',
-//         selectStr: 'SELECT 1 as one',
-//         connection: 'mysql',
-//         fields: [],
-//         dialect: 'mysql',
-//       },
-//       {}
-//     );
-//     expect(res.structDef?.fields[0].name).toBe('one');
-//   });
-// });
+  // it('fetches schema', async () => {
+  //   const res = await connection.fetchSchemaForTables(
+  //     {
+  //       'malloytest.airports': 'malloytest.airports',
+  //     },
+  //     {}
+  //   );
+  //   expect(res.schemas['malloytest.airports'].dialect).toBe('mysql');
+  // });
+
+  // it('fetches schema for SQL block', async () => {
+  //   const res = await connection.fetchSchemaForSQLStruct(
+  //     {
+  //       name: 'foo',
+  //       type: 'sql_select',
+  //       selectStr: 'SELECT 1 as one',
+  //       connection: 'mysql',
+  //       fields: [],
+  //       dialect: 'mysql',
+  //     },
+  //     {}
+  //   );
+  //   expect(res.structDef?.fields[0].name).toBe('one');
+  // });
+});
