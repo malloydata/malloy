@@ -81,12 +81,12 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
   });
 
-  it('bug with wrong join being used with annotation', async () => {
+  it('join dependencies tracked from annotated references', async () => {
     await expect(`
-      run: aircraft -> {
-        # foo
-        group_by: aircraft_models.seats
-      }
+       run: aircraft -> {
+          # ThisShouldNotAffectTheQuery
+          group_by: aircraft_models.seats
+        }
     `).malloyResultMatches(expressionModel, {
       seats: 0,
     });

@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {arrayEachFields, AtomicTypeDef, FieldDef} from '@malloydata/malloy';
 import {TrinoConnection, TrinoExecutor} from '.';
 
 // array(varchar) is array
@@ -35,6 +36,15 @@ const NESTED_SCHEMA = 'array(row(a double, b integer, c varchar(60)))';
 // array(row(..., array(row(....)))) is deeply nested
 const DEEP_SCHEMA =
   'array(row(a double, b array(row(c integer, d varchar(60)))))';
+
+const intType: AtomicTypeDef = {type: 'number', numberType: 'integer'};
+const doubleType: AtomicTypeDef = {type: 'number', numberType: 'float'};
+const stringType: AtomicTypeDef = {type: 'string'};
+const recordSchema: FieldDef[] = [
+  {name: 'a', ...doubleType},
+  {name: 'b', ...intType},
+  {name: 'c', ...stringType},
+];
 
 describe('Trino connection', () => {
   let connection: TrinoConnection;
@@ -55,23 +65,11 @@ describe('Trino connection', () => {
     it('parses arrays', () => {
       expect(connection.malloyTypeFromTrinoType('test', ARRAY_SCHEMA)).toEqual({
         'name': 'test',
-        'type': 'struct',
+        'type': 'array',
         'dialect': 'trino',
-        'structRelationship': {
-          'fieldName': 'test',
-          'isArray': true,
-          'type': 'nested',
-        },
-        'structSource': {
-          'type': 'nested',
-        },
-        'fields': [
-          {
-            'name': 'value',
-            'type': 'number',
-            'numberType': 'integer',
-          },
-        ],
+        'elementTypeDef': intType,
+        'join': 'many',
+        'fields': arrayEachFields(intType),
       });
     });
 
@@ -79,30 +77,10 @@ describe('Trino connection', () => {
       expect(connection.malloyTypeFromTrinoType('test', INLINE_SCHEMA)).toEqual(
         {
           'name': 'test',
-          'type': 'struct',
+          'type': 'record',
           'dialect': 'trino',
-          'structRelationship': {
-            'type': 'inline',
-          },
-          'structSource': {
-            'type': 'inline',
-          },
-          'fields': [
-            {
-              'name': 'a',
-              'type': 'number',
-              'numberType': 'float',
-            },
-            {
-              'name': 'b',
-              'type': 'number',
-              'numberType': 'integer',
-            },
-            {
-              'name': 'c',
-              'type': 'string',
-            },
-          ],
+          'join': 'one',
+          'fields': recordSchema,
         }
       );
     });
@@ -111,72 +89,39 @@ describe('Trino connection', () => {
       expect(connection.malloyTypeFromTrinoType('test', NESTED_SCHEMA)).toEqual(
         {
           'name': 'test',
-          'type': 'struct',
+          'type': 'array',
+          'elementTypeDef': {type: 'record_element'},
           'dialect': 'trino',
-          'structRelationship': {
-            'fieldName': 'test',
-            'isArray': false,
-            'type': 'nested',
-          },
-          'structSource': {'type': 'nested'},
-          'fields': [
-            {'name': 'a', 'numberType': 'float', 'type': 'number'},
-            {'name': 'b', 'numberType': 'integer', 'type': 'number'},
-            {'name': 'c', 'type': 'string'},
-          ],
+          'join': 'many',
+          'fields': recordSchema,
         }
       );
     });
 
     it('parses a simple type', () => {
       expect(connection.malloyTypeFromTrinoType('test', 'varchar(60)')).toEqual(
-        {
-          'type': 'string',
-        }
+        stringType
       );
     });
 
     it('parses deep nesting', () => {
       expect(connection.malloyTypeFromTrinoType('test', DEEP_SCHEMA)).toEqual({
         'name': 'test',
-        'type': 'struct',
+        'type': 'array',
         'dialect': 'trino',
-        'structRelationship': {
-          'fieldName': 'test',
-          'isArray': false,
-          'type': 'nested',
-        },
-        'structSource': {
-          'type': 'nested',
-        },
+        'elementTypeDef': {type: 'record_element'},
+        'join': 'many',
         'fields': [
-          {
-            'name': 'a',
-            'numberType': 'float',
-            'type': 'number',
-          },
+          {'name': 'a', ...doubleType},
           {
             'name': 'b',
-            'type': 'struct',
+            'type': 'array',
             'dialect': 'trino',
-            'structRelationship': {
-              'fieldName': 'b',
-              'isArray': false,
-              'type': 'nested',
-            },
-            'structSource': {
-              'type': 'nested',
-            },
+            'elementTypeDef': {type: 'record_element'},
+            'join': 'many',
             'fields': [
-              {
-                'name': 'c',
-                'numberType': 'integer',
-                'type': 'number',
-              },
-              {
-                'name': 'd',
-                'type': 'string',
-              },
+              {'name': 'c', ...intType},
+              {'name': 'd', ...stringType},
             ],
           },
         ],

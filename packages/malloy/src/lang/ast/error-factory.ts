@@ -28,35 +28,52 @@
  */
 
 import {
+  TableSourceDef,
   IndexSegment,
   ProjectSegment,
   Query,
   ReduceSegment,
   StructDef,
+  JoinFieldDef,
 } from '../../model/malloy_types';
 
-const theErrorStruct: StructDef = {
-  type: 'struct',
-  name: '~malformed~',
-  dialect: '~malformed~',
-  structSource: {
-    type: 'table',
-    tablePath: '//undefined_error_table_path',
-  },
-  structRelationship: {
-    type: 'basetable',
-    connectionName: '//undefined_error_connection',
-  },
-  fields: [],
-};
+const ERR_NAME = '~malformed~';
+
+interface FactoryError {
+  errorFactory: true;
+}
 
 export class ErrorFactory {
-  static get structDef(): StructDef {
-    return {...theErrorStruct};
+  static get structDef(): TableSourceDef {
+    const factoryStruct: StructDef & FactoryError = {
+      type: 'table',
+      name: ERR_NAME,
+      dialect: '~malformed~',
+      connection: '~unknown~',
+      tablePath: '//undefined_error_table_path',
+      fields: [],
+      errorFactory: true,
+    };
+    return factoryStruct;
   }
 
-  static isErrorStructDef(s: StructDef): boolean {
-    return s.name.includes(theErrorStruct.name);
+  static get joinDef(): JoinFieldDef {
+    const factoryJoin: JoinFieldDef & FactoryError = {
+      type: 'table',
+      name: ERR_NAME,
+      dialect: '~malformed~',
+      connection: '~unknown~',
+      tablePath: '//undefined_error_table_path',
+      fields: [],
+      join: 'one',
+      matrixOperation: 'left',
+      errorFactory: true,
+    };
+    return factoryJoin;
+  }
+
+  static didCreate(s: StructDef | JoinFieldDef): boolean {
+    return s.type === 'table' && 'errorFactory' in s;
   }
 
   static get query(): Query {

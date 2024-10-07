@@ -252,18 +252,18 @@ describe('db:BigQuery', () => {
     });
 
     it('caches sql schema', async () => {
-      await bq.fetchSchemaForSQLBlock(SQL_BLOCK_1, {});
+      await bq.fetchSchemaForSQLStruct(SQL_BLOCK_1, {});
       expect(getSQLBlockSchema).toBeCalledTimes(1);
       await new Promise(resolve => setTimeout(resolve));
-      await bq.fetchSchemaForSQLBlock(SQL_BLOCK_1, {});
+      await bq.fetchSchemaForSQLStruct(SQL_BLOCK_1, {});
       expect(getSQLBlockSchema).toBeCalledTimes(1);
     });
 
     it('refreshes sql schema', async () => {
-      await bq.fetchSchemaForSQLBlock(SQL_BLOCK_2, {});
+      await bq.fetchSchemaForSQLStruct(SQL_BLOCK_2, {});
       expect(getSQLBlockSchema).toBeCalledTimes(1);
       await new Promise(resolve => setTimeout(resolve));
-      await bq.fetchSchemaForSQLBlock(SQL_BLOCK_2, {
+      await bq.fetchSchemaForSQLStruct(SQL_BLOCK_2, {
         refreshTimestamp: Date.now() + 10,
       });
       expect(getSQLBlockSchema).toBeCalledTimes(2);
@@ -271,9 +271,12 @@ describe('db:BigQuery', () => {
   });
 });
 
-const SQL_BLOCK_1 = {
-  type: 'sqlBlock',
+const SQL_BLOCK_1: malloy.SQLSourceDef = {
+  type: 'sql_select',
   name: 'block1',
+  dialect: 'standardsql',
+  connection: 'bigquery',
+  fields: [],
   selectStr: `
 SELECT
 created_at,
@@ -287,11 +290,14 @@ product_category,
 created_at AS inventory_items_created_at
 FROM "inventory_items.parquet"
 `,
-} as malloy.SQLBlock;
+};
 
-const SQL_BLOCK_2 = {
-  type: 'sqlBlock',
+const SQL_BLOCK_2: malloy.SQLSourceDef = {
+  type: 'sql_select',
   name: 'block2',
+  dialect: 'standardsql',
+  connection: 'bigquery',
+  fields: [],
   selectStr: `
 SELECT
 created_at,
@@ -305,4 +311,4 @@ product_category,
 created_at AS inventory_items_created_at
 FROM read_parquet("inventory_items2.parquet")
 `,
-} as malloy.SQLBlock;
+};

@@ -24,23 +24,22 @@
 import {
   FieldDef,
   QueryFieldDef,
-  isFieldTypeDef,
   TypeDesc,
+  AtomicFieldDef,
 } from '../../../model/malloy_types';
 import {SpaceEntry} from './space-entry';
 import {FieldSpace} from './field-space';
 
 export abstract class SpaceField extends SpaceEntry {
   readonly refType = 'field';
-  haveFieldDef?: FieldDef;
 
-  protected fieldTypeFromFieldDef(def: FieldDef): TypeDesc {
+  protected fieldTypeFromFieldDef(def: AtomicFieldDef): TypeDesc {
     const ref: TypeDesc = {
       dataType: def.type,
       expressionType: 'scalar',
       evalSpace: 'input',
     };
-    if (isFieldTypeDef(def) && def.expressionType) {
+    if (def.expressionType) {
       ref.expressionType = def.expressionType;
     }
     if (
@@ -58,6 +57,17 @@ export abstract class SpaceField extends SpaceEntry {
   }
 
   fieldDef(): FieldDef | undefined {
+    return undefined;
+  }
+
+  /**
+   * Called by field reference code generation to gain access to the
+   * annotation properties on the field being referenced. ColumnSpaceFields
+   * will have the original field def, and will implement this method,
+   * nothing else should be referencable, but if somehow one of those is
+   * referenced, don't bother to compute the fieldDef.
+   */
+  constructorFieldDef(): FieldDef | undefined {
     return undefined;
   }
 }

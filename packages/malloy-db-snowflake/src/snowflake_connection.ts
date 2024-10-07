@@ -23,7 +23,6 @@
 
 import * as crypto from 'crypto';
 import {
-  FetchSchemaOptions,
   RunSQLOptions,
   MalloyQueryData,
   QueryRunStats,
@@ -31,13 +30,14 @@ import {
   PersistSQLResults,
   StreamingConnection,
   PooledConnection,
-  SQLBlock,
+  SQLSourceDef,
+  TableSourceDef,
   StructDef,
   QueryDataRow,
   SnowflakeDialect,
-  NamedStructDefs,
-  FieldTypeDef,
   TestableConnection,
+  arrayEachFields,
+  LeafAtomicDef,
 } from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 
@@ -88,20 +88,6 @@ export class SnowflakeConnection
 {
   private readonly dialect = new SnowflakeDialect();
   private executor: SnowflakeExecutor;
-  private schemaCache = new Map<
-    string,
-    | {schema: StructDef; error?: undefined; timestamp: number}
-    | {error: string; schema?: undefined; timestamp: number}
-  >();
-  private sqlSchemaCache = new Map<
-    string,
-    | {
-        structDef: StructDef;
-        error?: undefined;
-        timestamp: number;
-      }
-    | {error: string; structDef?: undefined; timestamp: number}
-  >();
 
   // the database & schema where we do temporary operations like creating a temp table
   private scratchSpace?: namespace;
@@ -189,16 +175,6 @@ export class SnowflakeConnection
     await this.executor.batch('SELECT 1 as one');
   }
 
-  private variantToMalloyType(type: string): string {
-    if (type === 'integer') {
-      return 'number';
-    } else if (type === 'varchar') {
-      return 'string';
-    } else {
-      return 'sql native';
-    }
-  }
-
   private addFieldsToStructDef(
     structDef: StructDef,
     structMap: StructMap
@@ -210,41 +186,42 @@ export class SnowflakeConnection
 
       // check for an array
       if (value.isArray && type !== 'object') {
-        const malloyType = this.variantToMalloyType(type);
-        if (malloyType) {
-          const innerStructDef: StructDef = {
-            type: 'struct',
-            name,
-            dialect: this.dialectName,
-            structSource: {type: 'nested'},
-            structRelationship: {
-              type: 'nested',
-              fieldName: name,
-              isArray: true,
-            },
-            fields: [{type: malloyType, name: 'value'} as FieldTypeDef],
-          };
-          structDef.fields.push(innerStructDef);
-        }
-      } else if (type === 'object') {
+        // Apparently there can only be arrays of integers, strings, or unknowns?
+        // TODO is this true or is this just all that got implemented?
+        const malloyType: LeafAtomicDef =
+          type === 'integer'
+            ? {type: 'number', numberType: 'integer'}
+            : type === 'varchar'
+            ? {type: 'string'}
+            : {type: 'sql native', rawType: type};
         const innerStructDef: StructDef = {
-          type: 'struct',
+          type: 'array',
           name,
           dialect: this.dialectName,
-          structSource: value.isArray ? {type: 'nested'} : {type: 'inline'},
-          structRelationship: value.isArray
-            ? {type: 'nested', fieldName: name, isArray: false}
-            : {type: 'inline'},
-          fields: [],
+          join: 'many',
+          elementTypeDef: malloyType,
+          fields: arrayEachFields(malloyType),
         };
+        structDef.fields.push(innerStructDef);
+      } else if (type === 'object') {
+        const structParts = {name, dialect: this.dialectName, fields: []};
+        const innerStructDef: StructDef = value.isArray
+          ? {
+              ...structParts,
+              type: 'array',
+              elementTypeDef: {type: 'record_element'},
+              join: 'many',
+            }
+          : {
+              ...structParts,
+              type: 'record',
+              join: 'one',
+            };
         this.addFieldsToStructDef(innerStructDef, value);
         structDef.fields.push(innerStructDef);
       } else {
-        const malloyType = this.dialect.sqlTypeToMalloyType(type) ?? {
-          type: 'sql native',
-          rawType: type.toLowerCase(),
-        };
-        structDef.fields.push({name, ...malloyType} as FieldTypeDef);
+        const malloyType = this.dialect.sqlTypeToMalloyType(type);
+        structDef.fields.push({...malloyType, name});
       }
     }
   }
@@ -326,116 +303,32 @@ export class SnowflakeConnection
     }
   }
 
-  private async getTableSchema(
+  async fetchTableSchema(
     tableKey: string,
     tablePath: string
-  ): Promise<StructDef> {
-    const structDef: StructDef = {
-      type: 'struct',
+  ): Promise<TableSourceDef> {
+    const structDef: TableSourceDef = {
+      type: 'table',
       dialect: 'snowflake',
       name: tableKey,
-      structSource: {type: 'table', tablePath},
-      structRelationship: {
-        type: 'basetable',
-        connectionName: this.name,
-      },
+      tablePath,
+      connection: this.name,
       fields: [],
     };
     await this.schemaFromTablePath(tablePath, structDef);
     return structDef;
   }
 
-  public async fetchSchemaForTables(
-    missing: Record<string, string>,
-    {refreshTimestamp}: FetchSchemaOptions
-  ): Promise<{
-    schemas: Record<string, StructDef>;
-    errors: Record<string, string>;
-  }> {
-    const schemas: NamedStructDefs = {};
-    const errors: {[name: string]: string} = {};
-
-    for (const tableKey in missing) {
-      let inCache = this.schemaCache.get(tableKey);
-      if (
-        !inCache ||
-        (refreshTimestamp && refreshTimestamp > inCache.timestamp)
-      ) {
-        const tablePath = missing[tableKey];
-        const timestamp = refreshTimestamp || Date.now();
-        try {
-          inCache = {
-            schema: await this.getTableSchema(tableKey, tablePath),
-            timestamp,
-          };
-          this.schemaCache.set(tableKey, inCache);
-        } catch (error) {
-          inCache = {error: error.message, timestamp};
-        }
-      }
-      if (inCache.schema !== undefined) {
-        schemas[tableKey] = inCache.schema;
-      } else {
-        errors[tableKey] = inCache.error || 'Unknown schema fetch error';
-      }
-    }
-    return {schemas, errors};
-  }
-
-  private async getSQLBlockSchema(sqlRef: SQLBlock): Promise<StructDef> {
-    const structDef: StructDef = {
-      type: 'struct',
-      dialect: 'snowflake',
-      name: sqlRef.name,
-      structSource: {
-        type: 'sql',
-        method: 'subquery',
-        sqlBlock: sqlRef,
-      },
-      structRelationship: {
-        type: 'basetable',
-        connectionName: this.name,
-      },
-      fields: [],
-    };
-
+  async fetchSelectSchema(sqlRef: SQLSourceDef): Promise<SQLSourceDef> {
+    const structDef = {...sqlRef, fields: []};
     // create temp table with same schema as the query
     const tempTableName = this.getTempViewName(sqlRef.selectStr);
     this.runSQL(
-      `
-      CREATE OR REPLACE TEMP VIEW ${tempTableName} as ${sqlRef.selectStr};
-      `
+      `CREATE OR REPLACE TEMP VIEW ${tempTableName} AS (${sqlRef.selectStr});`
     );
 
     await this.schemaFromTablePath(tempTableName, structDef);
     return structDef;
-  }
-
-  public async fetchSchemaForSQLBlock(
-    sqlRef: SQLBlock,
-    {refreshTimestamp}: FetchSchemaOptions
-  ): Promise<
-    | {structDef: StructDef; error?: undefined}
-    | {error: string; structDef?: undefined}
-  > {
-    const key = sqlRef.name;
-    let inCache = this.sqlSchemaCache.get(key);
-    if (
-      !inCache ||
-      (refreshTimestamp && refreshTimestamp > inCache.timestamp)
-    ) {
-      const timestamp = refreshTimestamp ?? Date.now();
-      try {
-        inCache = {
-          structDef: await this.getSQLBlockSchema(sqlRef),
-          timestamp,
-        };
-      } catch (error) {
-        inCache = {error: error.message, timestamp};
-      }
-      this.sqlSchemaCache.set(key, inCache);
-    }
-    return inCache;
   }
 
   public async manifestTemporaryTable(sqlCommand: string): Promise<string> {

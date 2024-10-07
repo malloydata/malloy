@@ -27,29 +27,32 @@ import {SpaceEntry} from '../types/space-entry';
 import {ErrorFactory} from '../error-factory';
 import {HasParameter} from '../parameters/has-parameter';
 import {MalloyElement} from '../types/malloy-element';
-import {Join} from '../source-properties/joins';
+import {Join} from '../source-properties/join';
 import {SpaceField} from '../types/space-field';
 import {JoinSpaceField} from './join-space-field';
 import {ViewField} from './view-field';
 import {AbstractParameter, SpaceParam} from '../types/space-param';
-import {SourceSpec, SpaceSeed} from '../space-seed';
 import {StaticSpace} from './static-space';
 import {StructSpaceFieldBase} from './struct-space-field-base';
 import {ParameterSpace} from './parameter-space';
+import {SourceDef} from '../../../model/malloy_types';
+import {SourceFieldSpace} from '../types/field-space';
 
-export abstract class DynamicSpace extends StaticSpace {
-  protected final: model.StructDef | undefined;
-  protected source: SpaceSeed;
+export abstract class DynamicSpace
+  extends StaticSpace
+  implements SourceFieldSpace
+{
+  protected final: model.SourceDef | undefined;
+  protected fromSource: model.SourceDef;
   completions: (() => void)[] = [];
   private complete = false;
   private parameters: HasParameter[] = [];
   protected newTimezone?: string;
 
-  constructor(extending: SourceSpec) {
-    const source = new SpaceSeed(extending);
-    super(structuredClone(source.structDef));
+  constructor(extending: SourceDef) {
+    super(structuredClone(extending));
+    this.fromSource = extending;
     this.final = undefined;
-    this.source = source;
   }
 
   isComplete(): void {
@@ -98,7 +101,7 @@ export abstract class DynamicSpace extends StaticSpace {
     this.newTimezone = tz;
   }
 
-  structDef(): model.StructDef {
+  structDef(): model.SourceDef {
     if (this.final === undefined) {
       // Grab all the parameters so that we can populate the "final" structDef
       // with parameters immediately so that views can see them when they are translating
@@ -109,16 +112,13 @@ export abstract class DynamicSpace extends StaticSpace {
         }
       }
 
-      this.final = {
-        ...this.fromStruct,
-        fields: [],
-        parameters,
-      };
+      this.final = {...this.fromSource, fields: []};
+      this.final.parameters = parameters;
       // Need to process the entities in specific order
       const fields: [string, SpaceField][] = [];
       const joins: [string, SpaceField][] = [];
       const turtles: [string, SpaceField][] = [];
-      const fixupJoins: [Join, model.StructDef][] = [];
+      const fixupJoins: [Join, model.JoinFieldDef][] = [];
       for (const [name, spaceEntry] of this.entries()) {
         if (spaceEntry instanceof StructSpaceFieldBase) {
           joins.push([name, spaceEntry]);
@@ -133,7 +133,7 @@ export abstract class DynamicSpace extends StaticSpace {
       for (const [, field] of reorderFields) {
         if (field instanceof JoinSpaceField) {
           const joinStruct = field.join.structDef(parameterSpace);
-          if (!ErrorFactory.isErrorStructDef(joinStruct)) {
+          if (!ErrorFactory.didCreate(joinStruct)) {
             this.final.fields.push(joinStruct);
             fixupJoins.push([field.join, joinStruct]);
           }
@@ -155,10 +155,16 @@ export abstract class DynamicSpace extends StaticSpace {
         join.fixupJoinOn(this, missingOn);
       }
     }
-    if (this.newTimezone) {
+    if (this.newTimezone && model.isSourceDef(this.final)) {
       this.final.queryTimezone = this.newTimezone;
     }
     this.isComplete();
     return this.final;
+  }
+
+  emptyStructDef(): SourceDef {
+    const ret = {...this.fromSource};
+    ret.fields = [];
+    return ret;
   }
 }

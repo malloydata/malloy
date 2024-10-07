@@ -26,13 +26,13 @@ import {
   Annotation,
   DocumentLocation,
   DocumentReference,
-  isSQLBlockStruct,
   ModelDef,
   ModelAnnotation,
   NamedModelObject,
   Query,
-  SQLBlockStructDef,
+  SQLSourceDef,
   StructDef,
+  modelObjIsSource,
 } from '../../../model/malloy_types';
 import {Tag} from '../../../tags';
 import {
@@ -146,22 +146,13 @@ export abstract class MalloyElement {
           definition: result.entry,
           location: reference.location,
         });
-      } else if (result?.entry.type === 'struct') {
-        if (isSQLBlockStruct(result.entry) && result.entry.declaredSQLBlock) {
-          this.addReference({
-            type: 'sqlBlockReference',
-            text: key,
-            definition: result.entry,
-            location: reference.location,
-          });
-        } else {
-          this.addReference({
-            type: 'exploreReference',
-            text: key,
-            definition: result.entry,
-            location: reference.location,
-          });
-        }
+      } else if (result && modelObjIsSource(result.entry)) {
+        this.addReference({
+          type: 'exploreReference',
+          text: key,
+          definition: result.entry,
+          location: reference.location,
+        });
       }
     }
     return result;
@@ -509,7 +500,7 @@ export class Document extends MalloyElement implements NameSpace {
   globalNameSpace: NameSpace = new GlobalNameSpace();
   documentModel: Record<string, ModelEntry> = {};
   queryList: Query[] = [];
-  sqlBlocks: SQLBlockStructDef[] = [];
+  sqlBlocks: SQLSourceDef[] = [];
   statements: DocStatementList;
   didInitModel = false;
   annotation: Annotation = {};
@@ -535,7 +526,7 @@ export class Document extends MalloyElement implements NameSpace {
       for (const [nm, orig] of Object.entries(extendingModelDef.contents)) {
         const entry = structuredClone(orig);
         if (
-          entry.type === 'struct' ||
+          modelObjIsSource(entry) ||
           entry.type === 'query' ||
           entry.type === 'function'
         ) {
@@ -603,7 +594,7 @@ export class Document extends MalloyElement implements NameSpace {
     }
     for (const entry in this.documentModel) {
       const entryDef = this.documentModel[entry].entry;
-      if (entryDef.type === 'struct' || entryDef.type === 'query') {
+      if (modelObjIsSource(entryDef) || entryDef.type === 'query') {
         if (this.documentModel[entry].exported) {
           def.exports.push(entry);
         }
@@ -617,11 +608,10 @@ export class Document extends MalloyElement implements NameSpace {
     return def;
   }
 
-  defineSQL(sql: SQLBlockStructDef, name?: string): boolean {
+  defineSQL(sql: SQLSourceDef, name?: string): boolean {
     const ret = {
       ...sql,
       as: `$${this.sqlBlocks.length}`,
-      declaredSQLBlock: true,
     };
     if (name) {
       if (this.getEntry(name)) {
@@ -646,7 +636,7 @@ export class Document extends MalloyElement implements NameSpace {
         `Cannot redefine '${str}', which is in global namespace`
       );
     }
-    if (ent.entry.type === 'struct') {
+    if (modelObjIsSource(ent.entry)) {
       this.checkExperimentalDialect(this, ent.entry.dialect);
     }
 

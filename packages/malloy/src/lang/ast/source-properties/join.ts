@@ -23,9 +23,12 @@
 
 import {
   Annotation,
-  Expr,
-  isJoinOn,
-  StructDef,
+  JoinFieldDef,
+  isSourceDef,
+  JoinType,
+  MatrixOperation,
+  SourceDef,
+  isJoinable,
 } from '../../../model/malloy_types';
 import {DynamicSpace} from '../field-space/dynamic-space';
 import {JoinSpaceField} from '../field-space/join-space-field';
@@ -35,22 +38,22 @@ import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 import {MalloyElement, ModelEntryReference} from '../types/malloy-element';
 import {extendNoteMethod, Noteable} from '../types/noteable';
-import {
-  LegalRefinementStage,
-  QueryPropertyInterface,
-} from '../types/query-property-interface';
 import {MakeEntry} from '../types/space-entry';
 import {SourceQueryElement} from '../source-query-elements/source-query-element';
 import {ErrorFactory} from '../error-factory';
 import {ParameterSpace} from '../field-space/parameter-space';
+import {
+  LegalRefinementStage,
+  QueryPropertyInterface,
+} from '../types/query-property-interface';
 
 export abstract class Join
   extends MalloyElement
   implements Noteable, MakeEntry
 {
   abstract name: ModelEntryReference;
-  abstract structDef(parameterSpace: ParameterSpace): StructDef;
-  abstract fixupJoinOn(outer: FieldSpace, inStruct: StructDef): void;
+  abstract structDef(parameterSpace: ParameterSpace): JoinFieldDef;
+  abstract fixupJoinOn(outer: FieldSpace, inStruct: JoinFieldDef): void;
   readonly isNoteableObj = true;
   extendNote = extendNoteMethod;
   abstract sourceExpr: SourceQueryElement;
@@ -60,11 +63,11 @@ export abstract class Join
     fs.newEntry(
       this.name.refString,
       this,
-      new JoinSpaceField(fs.parameterSpace(), this)
+      new JoinSpaceField(fs.parameterSpace(), this, fs.dialect)
     );
   }
 
-  protected getStructDefFromExpr(parameterSpace: ParameterSpace) {
+  protected getStructDefFromExpr(parameterSpace: ParameterSpace): SourceDef {
     const source = this.sourceExpr.getSource();
     if (!source) {
       this.sourceExpr.sqLog(
@@ -73,7 +76,7 @@ export abstract class Join
       );
       return ErrorFactory.structDef;
     }
-    return source.structDef(parameterSpace);
+    return source.getSourceDef(parameterSpace);
   }
 }
 
@@ -87,23 +90,20 @@ export class KeyJoin extends Join {
     super({name, sourceExpr, keyExpr});
   }
 
-  structDef(parameterSpace: ParameterSpace): StructDef {
+  structDef(parameterSpace: ParameterSpace): JoinFieldDef {
     const sourceDef = this.getStructDefFromExpr(parameterSpace);
-    const joinStruct: StructDef = {
+    if (!isJoinable(sourceDef)) {
+      throw this.internalError(`Cannot join struct type '${sourceDef.type}'`);
+    }
+    const joinStruct: JoinFieldDef = {
       ...sourceDef,
-      structRelationship: {
-        type: 'one',
-        matrixOperation: 'left',
-        onExpression: {node: 'error', message: "('join fixup'='not done yet')"},
-      },
+      name: this.name.refString,
+      join: 'one',
+      matrixOperation: 'left',
+      onExpression: {node: 'error', message: "('join fixup'='not done yet')"},
       location: this.location,
     };
-    if (sourceDef.structSource.type === 'query') {
-      // the name from query does not need to be preserved
-      joinStruct.name = this.name.refString;
-    } else {
-      joinStruct.as = this.name.refString;
-    }
+    delete joinStruct.as;
 
     if (this.note) {
       joinStruct.annotation = this.note;
@@ -112,26 +112,23 @@ export class KeyJoin extends Join {
     return joinStruct;
   }
 
-  fixupJoinOn(outer: FieldSpace, inStruct: StructDef): void {
+  fixupJoinOn(outer: FieldSpace, inStruct: JoinFieldDef): void {
     const exprX = this.keyExpr.getExpression(outer);
-    if (inStruct.primaryKey) {
+    if (isSourceDef(inStruct) && inStruct.primaryKey) {
       const pkey = inStruct.fields.find(
         f => (f.as || f.name) === inStruct.primaryKey
       );
       if (pkey) {
         if (pkey.type === exprX.dataType) {
-          inStruct.structRelationship = {
-            type: 'one',
-            matrixOperation: 'left',
-            onExpression: {
-              node: '=',
-              kids: {
-                left: {
-                  node: 'field',
-                  path: [this.name.refString, inStruct.primaryKey],
-                },
-                right: exprX.value,
+          inStruct.join = 'one';
+          inStruct.onExpression = {
+            node: '=',
+            kids: {
+              left: {
+                node: 'field',
+                path: [this.name.refString, inStruct.primaryKey],
               },
+              right: exprX.value,
             },
           };
           return;
@@ -156,11 +153,9 @@ export class KeyJoin extends Join {
   }
 }
 
-type ExpressionJoinType = 'many' | 'one' | 'cross';
-export type MatrixOperation = 'left' | 'inner' | 'right' | 'full';
 export class ExpressionJoin extends Join {
   elementType = 'joinOnExpr';
-  joinType: ExpressionJoinType = 'one';
+  joinType: JoinType = 'one';
   matrixOperation: MatrixOperation = 'left';
   private expr?: ExpressionDef;
   constructor(
@@ -179,7 +174,7 @@ export class ExpressionJoin extends Join {
     return this.expr;
   }
 
-  fixupJoinOn(outer: FieldSpace, inStruct: StructDef): Expr | undefined {
+  fixupJoinOn(outer: FieldSpace, inStruct: JoinFieldDef) {
     if (this.expr === undefined) {
       return;
     }
@@ -191,43 +186,35 @@ export class ExpressionJoin extends Join {
       );
       return;
     }
-    const joinRel = inStruct.structRelationship;
-    if (isJoinOn(joinRel)) {
-      joinRel.onExpression = exprX.value;
-    }
+    inStruct.onExpression = exprX.value;
   }
 
-  structDef(parameterSpace: ParameterSpace): StructDef {
+  structDef(parameterSpace: ParameterSpace): JoinFieldDef {
     const source = this.sourceExpr.getSource();
     if (!source) {
       this.sourceExpr.sqLog(
         'invalid-join-source',
         'Cannot create a source to join from'
       );
-      return ErrorFactory.structDef;
+      return ErrorFactory.joinDef;
     }
-    const sourceDef = source.structDef(parameterSpace);
+    const sourceDef = source.getSourceDef(parameterSpace);
     let matrixOperation: MatrixOperation = 'left';
     if (this.inExperiment('join_types', true)) {
       matrixOperation = this.matrixOperation;
     }
 
-    const joinStruct: StructDef = {
+    if (!isJoinable(sourceDef)) {
+      throw this.internalError(`Can't join struct type ${sourceDef.type}`);
+    }
+    const joinStruct: JoinFieldDef = {
       ...sourceDef,
-      // MTOY: add matrix type here
-      structRelationship: {
-        type: this.joinType,
-        matrixOperation,
-      },
+      name: this.name.refString,
+      join: this.joinType,
+      matrixOperation,
       location: this.location,
     };
-    if (sourceDef.structSource.type === 'query') {
-      // the name from query does not need to be preserved
-      joinStruct.name = this.name.refString;
-      delete joinStruct.as;
-    } else {
-      joinStruct.as = this.name.refString;
-    }
+    delete joinStruct.as;
     if (this.note) {
       joinStruct.annotation = this.note;
     }
@@ -236,12 +223,11 @@ export class ExpressionJoin extends Join {
   }
 }
 
-// mtoy todo m0 goes away
-export class Joins
+export class JoinStatement
   extends DefinitionList<Join>
   implements QueryPropertyInterface
 {
-  elementType = 'joinList';
+  elementType = 'joinStatement';
   forceQueryClass = undefined;
   queryRefinementStage = LegalRefinementStage.Single;
 

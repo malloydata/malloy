@@ -22,7 +22,6 @@
  */
 
 import {Filter} from '../query-properties/filters';
-import {Joins} from '../source-properties/joins';
 import {DeclareFields} from '../query-properties/declare-fields';
 import {FieldListEdit} from '../source-properties/field-list-edit';
 import {Renames} from '../source-properties/renames';
@@ -31,10 +30,11 @@ import {Views} from '../source-properties/views';
 import {MalloyElement} from './malloy-element';
 import {TimezoneStatement} from '../source-properties/timezone-statement';
 import {ObjectAnnotation} from './annotation-elements';
+import {JoinStatement} from '../source-properties/join';
 
 export type SourceProperty =
   | Filter
-  | Joins
+  | JoinStatement
   | DeclareFields
   | FieldListEdit
   | Renames
@@ -45,7 +45,7 @@ export type SourceProperty =
 export function isSourceProperty(p: MalloyElement): p is SourceProperty {
   return (
     p instanceof Filter ||
-    p instanceof Joins ||
+    p instanceof JoinStatement ||
     p instanceof DeclareFields ||
     p instanceof FieldListEdit ||
     p instanceof Renames ||

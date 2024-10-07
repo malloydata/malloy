@@ -27,10 +27,11 @@ import {
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
-  FieldAtomicTypeDef,
+  AtomicTypeDef,
   TimeDeltaExpr,
   TypecastExpr,
   MeasureTimeExpr,
+  LeafAtomicDef,
 } from '../../model/malloy_types';
 import {
   DialectFunctionOverloadDef,
@@ -60,7 +61,7 @@ const inSeconds: Record<string, number> = {
   'week': 7 * 24 * 3600,
 };
 
-const postgresToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
+const postgresToMalloyTypes: {[key: string]: LeafAtomicDef} = {
   'character varying': {type: 'string'},
   'name': {type: 'string'},
   'text': {type: 'string'},
@@ -405,7 +406,7 @@ export class PostgresDialect extends PostgresBase {
     return expandBlueprintMap(POSTGRES_DIALECT_FUNCTIONS);
   }
 
-  malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string {
+  malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
     if (malloyType.type === 'number') {
       if (malloyType.numberType === 'integer') {
         return 'integer';
@@ -418,10 +419,15 @@ export class PostgresDialect extends PostgresBase {
     return malloyType.type;
   }
 
-  sqlTypeToMalloyType(sqlType: string): FieldAtomicTypeDef | undefined {
+  sqlTypeToMalloyType(sqlType: string): LeafAtomicDef {
     // Remove trailing params
     const baseSqlType = sqlType.match(/^([\w\s]+)/)?.at(0) ?? sqlType;
-    return postgresToMalloyTypes[baseSqlType.trim().toLowerCase()];
+    return (
+      postgresToMalloyTypes[baseSqlType.trim().toLowerCase()] ?? {
+        type: 'sql native',
+        rawType: sqlType,
+      }
+    );
   }
 
   castToString(expression: string): string {

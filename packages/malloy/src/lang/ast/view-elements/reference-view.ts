@@ -23,15 +23,16 @@
 
 import {
   PipeSegment,
-  StructDef,
+  SourceDef,
   isAtomicFieldType,
   isTurtleDef,
+  sourceBase,
 } from '../../../model/malloy_types';
 import {ErrorFactory} from '../error-factory';
 import {QueryOperationSpace} from '../field-space/query-spaces';
 import {ViewOrScalarFieldReference} from '../query-items/field-references';
 import {getFinalStruct} from '../struct-utils';
-import {FieldSpace} from '../types/field-space';
+import {SourceFieldSpace} from '../types/field-space';
 import {PipelineComp} from '../types/pipeline-comp';
 import {SpaceField} from '../types/space-field';
 import {refine} from './refine-utils';
@@ -54,12 +55,15 @@ export class ReferenceView extends View {
   // `isNestIn` is not needed because `ReferenceView`s never create a field space
   // that would use it; this operation is already compiled, and `isNestIn` is only
   // used for checking `exclude` references.
-  pipelineComp(fs: FieldSpace, _isNestIn: QueryOperationSpace): PipelineComp {
+  pipelineComp(
+    fs: SourceFieldSpace,
+    _isNestIn: QueryOperationSpace
+  ): PipelineComp {
     return this._pipelineComp(fs);
   }
 
   _pipelineComp(
-    fs: FieldSpace,
+    fs: SourceFieldSpace,
     {forRefinement} = {forRefinement: false}
   ): PipelineComp & {error?: boolean} {
     const lookup = this.reference.getField(fs);
@@ -90,16 +94,12 @@ export class ReferenceView extends View {
         type: 'reduce',
         queryFields: [this.reference.refToField],
       };
-      const {dialect, queryTimezone, structRelationship} = fs.structDef();
       const name = this.reference.nameString;
-      const outputStruct: StructDef = {
-        type: 'struct',
-        dialect,
-        queryTimezone,
+      const outputStruct: SourceDef = {
+        ...sourceBase(fs.structDef()),
+        type: 'query_result',
         name,
         fields: [fieldDef],
-        structRelationship,
-        structSource: {type: 'query_result'},
       };
       return {
         pipeline: [newSegment],
@@ -144,7 +144,7 @@ export class ReferenceView extends View {
     }
   }
 
-  private getRefinementSegment(inputFS: FieldSpace) {
+  private getRefinementSegment(inputFS: SourceFieldSpace) {
     const {pipeline, error} = this._pipelineComp(inputFS, {
       forRefinement: true,
     });
@@ -163,7 +163,7 @@ export class ReferenceView extends View {
   // that would use it; this operation is already compiled, and `isNestIn` is only
   // used for checking `exclude` references.
   refine(
-    inputFS: FieldSpace,
+    inputFS: SourceFieldSpace,
     pipeline: PipeSegment[],
     _isNestIn: QueryOperationSpace | undefined
   ): PipeSegment[] {

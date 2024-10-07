@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {SQLPhrase} from '../../../model/malloy_types';
+import {SQLPhraseSegment} from '../../../model/malloy_types';
 
 import {MalloyElement} from '../types/malloy-element';
 import {SourceQueryElement} from '../source-query-elements/source-query-element';
@@ -55,8 +55,8 @@ export class SQLString extends MalloyElement {
     }
   }
 
-  sqlPhrases(): SQLPhrase[] {
-    const ret: SQLPhrase[] = [];
+  sqlPhrases(): SQLPhraseSegment[] {
+    const ret: SQLPhraseSegment[] = [];
     for (const el of this.elements) {
       if (typeof el === 'string') {
         ret.push({sql: el});
