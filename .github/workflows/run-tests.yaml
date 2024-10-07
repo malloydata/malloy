@@ -11,6 +11,8 @@ jobs:
     uses: './.github/workflows/db-motherduck.yaml'
     secrets:
       MOTHERDUCK_TOKEN_10: ${{ secrets.MOTHERDUCK_TOKEN_10 }}
+  db-mysql:
+    uses: './.github/workflows/db-mysql.yaml'
   db-postgres:
     uses: './.github/workflows/db-postgres.yaml'
   db-snowflake:
@@ -24,6 +26,7 @@ jobs:
     needs:
       - db-bigquery
       - db-motherduck
+      - db-mysql
       - db-postgres
       - db-snowflake
       - main
