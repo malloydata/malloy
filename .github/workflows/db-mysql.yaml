@@ -1,8 +1,6 @@
 name: MySQL DB
 
-on:
-  pull_request:
-  workflow_call:
+on: [pull_request, workflow_call]
 
 jobs:
   # Label of the container job
