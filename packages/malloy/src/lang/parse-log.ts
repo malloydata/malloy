@@ -325,7 +325,6 @@ type MessageParameterTypes = {
   'failed-to-parse-time-literal': string;
   'table-function': string;
   'missing-on-in-join-many': string;
-  'foreign-key-in-join-many': string;
   'join-statement-in-view': string;
   'unknown-matrix-operation': string;
   'declare': string;

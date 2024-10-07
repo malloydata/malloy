@@ -498,12 +498,6 @@ export class MalloyToAST
               'join_many: requires ON expression'
             );
           }
-        } else if (join instanceof ast.KeyJoin) {
-          this.contextError(
-            pcx,
-            'foreign-key-in-join-many',
-            'Foreign key join not legal in join_many:'
-          );
         }
       }
     }
