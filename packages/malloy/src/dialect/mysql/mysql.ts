@@ -21,15 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+// import {
+//   Dialect,
+//   DialectFieldList,
+//   QueryInfo,
+//   qtz,
+//   DialectFunctionOverloadDef,
+// } from '..';
 import {
-  Dialect,
-  DialectFieldList,
-  QueryInfo,
-  qtz,
-  DialectFunctionOverloadDef,
-} from '..';
-import {
-  indent,
   Sampling,
   isSamplingEnable,
   isSamplingRows,
@@ -43,8 +42,14 @@ import {
   TypecastExpr,
   LeafAtomicDef,
   AtomicTypeDef,
-} from '../../model';
-import {expandBlueprintMap, expandOverrideMap} from '../functions';
+} from '../../model/malloy_types';
+import {indent} from '../../model/utils';
+import {Dialect, DialectFieldList, qtz, QueryInfo} from '../dialect';
+import {
+  DialectFunctionOverloadDef,
+  expandBlueprintMap,
+  expandOverrideMap,
+} from '../functions';
 import {MYSQL_DIALECT_FUNCTIONS} from './dialect_functions';
 import {MYSQL_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
