@@ -45,4 +45,6 @@ export const MYSQL_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
       sql: 'TRIM(TRAILING ${trim_characters} FROM ${value})',
     },
   },
+  byte_length: {sql: '(LENGTH(CAST(${value} AS VARBINARY)))'},
+  chr: {sql: "CASE WHEN ${value} = 0 THEN '' ELSE CHR(${value}) END"},
 };
