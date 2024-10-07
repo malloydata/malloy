@@ -22,35 +22,22 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  SQLBlockSource,
-  SQLBlockStructDef,
-  isSQLBlockStruct,
-  isSQLFragment,
-} from '../../model';
-import {makeSQLBlock} from '../../model/sql_block';
+import {makeSQLSentence} from '../../model/sql_block';
 import {TestTranslator, aTableDef} from './test-translator';
 import './parse-expects';
 import {MalloyTranslator} from '../parse-malloy';
+import {isSegmentSQL, SQLSentence, SQLSourceDef} from '../../model';
 
 describe('connection sql()', () => {
   const selStmt = 'SELECT * FROM aTable';
-  function makeSchemaResponse(sql: SQLBlockSource): SQLBlockStructDef {
+  function makeSchemaResponse(sql: SQLSentence): SQLSourceDef {
     const cname = sql.connection || 'bigquery';
     return {
-      type: 'struct',
+      type: 'sql_select',
       name: sql.name,
       dialect: 'standardsql',
-      structSource: {
-        type: 'sql',
-        method: 'subquery',
-        sqlBlock: {
-          type: 'sqlBlock',
-          ...sql,
-          selectStr: sql.select.filter(s => typeof s === 'string').join(''),
-        },
-      },
-      structRelationship: {type: 'basetable', connectionName: cname},
+      connection: cname,
+      selectStr: selStmt,
       fields: aTableDef.fields,
     };
   }
@@ -65,15 +52,12 @@ describe('connection sql()', () => {
     const needs = needReq?.compileSQL;
     expect(needs).toBeDefined();
     if (needs) {
-      const sql = makeSQLBlock([{sql: selStmt}], 'aConnection');
+      const sql = makeSQLSentence([{sql: selStmt}], 'aConnection');
       const refKey = needs.name;
       model.update({compileSQL: {[refKey]: makeSchemaResponse(sql)}});
       expect(model).toTranslate();
       const users = model.getSourceDef('malloyUsers');
       expect(users).toBeDefined();
-      if (users && isSQLBlockStruct(users)) {
-        expect(users.declaredSQLBlock).toBeUndefined();
-      }
     }
   });
 
@@ -95,7 +79,7 @@ describe('connection sql()', () => {
     const needReq = model.translate();
     const needs = needReq?.compileSQL;
     expect(needs).toBeDefined();
-    const sql = makeSQLBlock([{sql: selStmt}], '_db_');
+    const sql = makeSQLSentence([{sql: selStmt}], '_db_');
     model.update({compileSQL: {[sql.name]: makeSchemaResponse(sql)}});
     expect(model).toTranslate();
   });
@@ -112,7 +96,7 @@ describe('connection sql()', () => {
       const star = compileSql.select[1];
       const where = compileSql.select[2];
       expect(select).toEqual({sql: 'SELECT * FROM '});
-      expect(isSQLFragment(star)).toBeFalsy();
+      expect(isSegmentSQL(star)).toBeFalsy();
       expect(where).toEqual({sql: ' WHERE 1=1'});
     }
   });
@@ -153,7 +137,7 @@ describe('connection sql()', () => {
       source: sql_block is aConnection.sql("""${selStmt}""")
       source: malloy_source is sql_block extend { primary_key: ai }
     `);
-    const sql = makeSQLBlock([{sql: selStmt}], 'aConnection');
+    const sql = makeSQLSentence([{sql: selStmt}], 'aConnection');
     model.update({compileSQL: {[sql.name]: makeSchemaResponse(sql)}});
     expect(model).toTranslate();
     const modelDef = model?.translate()?.translated?.modelDef;

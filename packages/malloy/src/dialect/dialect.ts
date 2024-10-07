@@ -24,7 +24,7 @@
 import {
   Expr,
   Sampling,
-  FieldAtomicTypeDef,
+  AtomicTypeDef,
   MeasureTimeExpr,
   TimeTruncExpr,
   TimeExtractExpr,
@@ -32,6 +32,9 @@ import {
   TypecastExpr,
   RegexMatchExpr,
   TimeLiteralNode,
+  RecordLiteralNode,
+  ArrayLiteralNode,
+  LeafAtomicDef,
 } from '../model/malloy_types';
 import {DialectFunctionOverloadDef} from './functions';
 
@@ -274,7 +277,23 @@ export abstract class Dialect {
   abstract sqlLiteralTime(qi: QueryInfo, df: TimeLiteralNode): string;
   abstract sqlLiteralString(literal: string): string;
   abstract sqlLiteralRegexp(literal: string): string;
+
   abstract sqlRegexpMatch(df: RegexMatchExpr): string;
+  // abstract sqlLiteralRecord(lit: RecordLiteralNode): string;
+  // abstract sqlLiteralArray(lit: ArrayLiteralNode): string;
+  // SHOULD BE ABSTRACT BUT A PLACEHOLDER FOR NOW
+  sqlLiteralArray(lit: ArrayLiteralNode): string {
+    const array = lit.kids.values.map(val => val.sql);
+    return '[' + array.join(',') + ']';
+  }
+
+  sqlLiteralRecord(lit: RecordLiteralNode): string {
+    const pairs = Object.entries(lit.kids).map(
+      ([propName, propVal]) =>
+        `${this.sqlMaybeQuoteIdentifier(propName)}:${propVal.sql}`
+    );
+    return '{' + pairs.join(',') + '}';
+  }
 
   /**
    * The dialect has a chance to over-ride how expressions are translated. If
@@ -322,6 +341,10 @@ export abstract class Dialect {
         return this.sqlLiteralNumber(df.literal);
       case 'regexpLiteral':
         return this.sqlLiteralRegexp(df.literal);
+      case 'recordLiteral':
+        return this.sqlLiteralRecord(df);
+      case 'arrayLiteral':
+        return this.sqlLiteralArray(df);
     }
   }
 
@@ -379,8 +402,8 @@ export abstract class Dialect {
     )`;
   }
 
-  abstract sqlTypeToMalloyType(sqlType: string): FieldAtomicTypeDef | undefined;
-  abstract malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string;
+  abstract sqlTypeToMalloyType(sqlType: string): LeafAtomicDef;
+  abstract malloyTypeToSQLType(malloyType: AtomicTypeDef): string;
 
   abstract validateTypeName(sqlType: string): boolean;
 }

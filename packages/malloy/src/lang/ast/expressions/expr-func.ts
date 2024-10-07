@@ -101,8 +101,8 @@ export class ExprFunc extends ExpressionDef {
       return {found: undefined, error: 'unknown function'};
     } else if (func.type !== 'function') {
       this.logError(
-        `${func.type}-not-callable`,
-        `Cannot call '${this.name}', which is of type ${func.type}`
+        'call-of-non-function',
+        `'${this.name}' (with type ${func.type}) is not a function`
       );
       return {found: undefined, error: 'called non function'};
     }

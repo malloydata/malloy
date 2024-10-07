@@ -53,3 +53,8 @@ export interface URLReader {
    */
   readURL: (url: URL) => Promise<string>;
 }
+
+export interface EventStream {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  emit(id: string, data: any): void;
+}

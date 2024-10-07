@@ -25,7 +25,7 @@ import {
   Expr,
   TimestampUnit,
   isDateUnit,
-  isTimeFieldType,
+  isTemporalField,
   maxExpressionType,
   FieldValueType,
   mergeEvalSpaces,
@@ -163,7 +163,7 @@ export class ExprDuration extends ExpressionDef {
   ): ExprValue {
     const lhs = left.getExpression(fs);
     this.typeCheck(this, lhs);
-    if (isTimeFieldType(lhs.dataType) && (op === '+' || op === '-')) {
+    if (isTemporalField(lhs.dataType) && (op === '+' || op === '-')) {
       const num = this.n.getExpression(fs);
       if (!FT.typeEq(num, FT.numberT)) {
         this.logError(
@@ -262,8 +262,8 @@ function timeCompare(
   op: CompareMalloyOperator,
   rhs: ExprValue
 ): Expr | undefined {
-  const leftIsTime = isTimeFieldType(lhs.dataType);
-  const rightIsTime = isTimeFieldType(rhs.dataType);
+  const leftIsTime = isTemporalField(lhs.dataType);
+  const rightIsTime = isTemporalField(rhs.dataType);
   const node = getExprNode(op);
   if (leftIsTime && rightIsTime) {
     if (lhs.dataType !== rhs.dataType) {
@@ -481,7 +481,7 @@ function delta(
     return noGo;
   }
 
-  const timeLHS = isTimeFieldType(lhs.dataType);
+  const timeLHS = isTemporalField(lhs.dataType);
 
   const err = errorCascade(timeLHS ? 'error' : 'number', lhs, rhs);
   if (err) return err;

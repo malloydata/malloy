@@ -32,7 +32,6 @@ export class IRViewField extends ViewField {
     protected turtleDef: TurtleDef
   ) {
     super(fs);
-    this.haveFieldDef = turtleDef;
   }
 
   rename(name: string): void {
@@ -43,6 +42,10 @@ export class IRViewField extends ViewField {
   }
 
   fieldDef(): TurtleDef {
+    return this.turtleDef;
+  }
+
+  constructorFieldDef(): TurtleDef {
     return this.turtleDef;
   }
 

@@ -42,6 +42,7 @@ import {
   MySQLConnection,
   MySQLExecutor,
 } from '@malloydata/db-mysql/src/mysql_connection';
+import {EventEmitter} from 'events';
 
 export class SnowflakeTestConnection extends SnowflakeConnection {
   public async runSQL(
@@ -221,7 +222,7 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
 }
 
 export function testRuntimeFor(connection: Connection) {
-  return new SingleConnectionRuntime(files, connection);
+  return new SingleConnectionRuntime(files, connection, new EventEmitter());
 }
 
 /**

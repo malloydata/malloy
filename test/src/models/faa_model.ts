@@ -22,39 +22,219 @@
  */
 
 import {
-  composeSQLExpr,
   ModelDef,
   StructDef,
-  StructRelationship,
+  TableSourceDef,
+  JoinFieldDef,
 } from '@malloydata/malloy';
 
 import {fStringEq, fToIF, fToQF, fYearEq} from '../util';
 
 import {medicareModel, medicareStateFacts} from './medicare_model';
 
-function withJoin(leftKey: string, rightKey: string): StructRelationship {
-  return {
-    type: 'one',
-    matrixOperation: 'left',
-    onExpression: composeSQLExpr([
-      {node: 'field', path: leftKey.split('.')},
-      '=',
-      {node: 'field', path: rightKey.split('.')},
-    ]),
+function withJoin(
+  sd: TableSourceDef,
+  join: 'one' | 'many',
+  as: string,
+  keyExpr: string
+): JoinFieldDef {
+  const [leftKey, rightKey] = keyExpr.split('=');
+  const ret: JoinFieldDef = {
+    ...sd,
+    join,
+    onExpression: {
+      node: '=',
+      kids: {
+        left: {node: 'field', path: leftKey.split('.')},
+        right: {node: 'field', path: rightKey.split('.')},
+      },
+    },
   };
+  if (as !== ret.name) {
+    ret.as = as;
+  }
+  return ret;
 }
+
+const AIRCRAFT_MODELS: TableSourceDef = {
+  name: 'malloydata-org.malloytest.aircraft_models',
+  as: 'aircraft_models',
+  dialect: 'standardsql',
+  connection: 'bigquery',
+  primaryKey: 'aircraft_model_code',
+  type: 'table',
+  tablePath: 'malloydata-org.malloytest.aircraft_models',
+  fields: [
+    {type: 'string', name: 'aircraft_model_code'},
+    {type: 'string', name: 'manufacturer'},
+    {type: 'string', name: 'model'},
+    {
+      type: 'number',
+      name: 'aircraft_type_id',
+      numberType: 'integer',
+    },
+    {
+      type: 'number',
+      name: 'aircraft_engine_type_id',
+      numberType: 'integer',
+    },
+    {
+      type: 'number',
+      name: 'aircraft_category_id',
+      numberType: 'integer',
+    },
+    {type: 'number', name: 'amateur', numberType: 'integer'},
+    {type: 'number', name: 'engines', numberType: 'integer'},
+    {type: 'number', name: 'seats', numberType: 'integer'},
+    {type: 'number', name: 'weight', numberType: 'integer'},
+    {type: 'number', name: 'speed', numberType: 'integer'},
+    {
+      type: 'number',
+      expressionType: 'aggregate',
+      name: 'total_seats',
+      e: {
+        node: 'aggregate',
+        function: 'sum',
+        e: {node: 'field', path: ['seats']},
+      },
+    },
+  ],
+};
+
+const AIRPORTS: TableSourceDef = {
+  name: 'malloydata-org.malloytest.airports',
+  as: 'airports',
+  dialect: 'standardsql',
+  type: 'table',
+  tablePath: 'malloydata-org.malloytest.airports',
+  connection: 'bigquery',
+  primaryKey: 'code',
+  fields: [
+    {type: 'number', name: 'id', numberType: 'integer'},
+    {type: 'string', name: 'code'},
+    {type: 'string', name: 'site_number'},
+    {type: 'string', name: 'fac_type', as: 'facility_type'},
+    {type: 'string', name: 'fac_use', as: 'facility_use'},
+    {type: 'string', name: 'faa_region'},
+    {type: 'string', name: 'faa_dist'},
+    {type: 'string', name: 'city'},
+    {type: 'string', name: 'county'},
+    {type: 'string', name: 'state'},
+    {type: 'string', name: 'full_name'},
+    {type: 'string', name: 'own_type'},
+    {type: 'number', name: 'longitude', numberType: 'float'},
+    {type: 'number', name: 'latitude', numberType: 'float'},
+    {type: 'number', name: 'elevation', numberType: 'integer'},
+    {type: 'string', name: 'aero_cht'},
+    {type: 'number', name: 'cbd_dist', numberType: 'integer'},
+    {type: 'string', name: 'cbd_dir'},
+    {type: 'string', name: 'act_date'},
+    {type: 'string', name: 'cert'},
+    {type: 'string', name: 'fed_agree'},
+    {type: 'string', name: 'cust_intl'},
+    {type: 'string', name: 'c_ldg_rts'},
+    {type: 'string', name: 'joint_use'},
+    {type: 'string', name: 'mil_rts'},
+    {type: 'string', name: 'cntl_twr'},
+    {type: 'string', name: 'major'},
+    {
+      type: 'number',
+      name: 'count',
+      expressionType: 'aggregate',
+      e: {node: 'aggregate', function: 'count', e: {node: ''}},
+    },
+  ],
+};
+
+const CARRIERS: TableSourceDef = {
+  name: 'carriers',
+  dialect: 'standardsql',
+  type: 'table',
+  tablePath: 'malloydata-org.malloytest.carriers',
+  connection: 'bigquery',
+  primaryKey: 'code',
+  fields: [
+    {type: 'string', name: 'code'},
+    {type: 'string', name: 'name'},
+    {type: 'string', name: 'nickname'},
+  ],
+};
+const AIRCRAFT: TableSourceDef = {
+  name: 'aircraft',
+  dialect: 'standardsql',
+  type: 'table',
+  tablePath: 'malloydata-org.malloytest.aircraft',
+  primaryKey: 'tail_num',
+  connection: 'bigquery',
+  fields: [
+    {type: 'string', name: 'tail_num'},
+    {type: 'string', name: 'aircraft_serial'},
+    {type: 'string', name: 'aircraft_model_code'},
+    {type: 'string', name: 'aircraft_engine_code'},
+    {type: 'number', name: 'year_built', numberType: 'integer'},
+    {
+      type: 'number',
+      name: 'aircraft_type_id',
+      numberType: 'integer',
+    },
+    {
+      type: 'number',
+      name: 'aircraft_engine_type_id',
+      numberType: 'integer',
+    },
+    {
+      type: 'number',
+      name: 'registrant_type_id',
+      numberType: 'integer',
+    },
+    {type: 'string', name: 'name'},
+    {type: 'string', name: 'address1'},
+    {type: 'string', name: 'address2'},
+    {type: 'string', name: 'city'},
+    {type: 'string', name: 'state'},
+    {type: 'string', name: 'zip'},
+    {type: 'string', name: 'region'},
+    {type: 'string', name: 'county'},
+    {type: 'string', name: 'country'},
+    {type: 'string', name: 'certification'},
+    {type: 'string', name: 'status_code'},
+    {type: 'string', name: 'mode_s_code'},
+    {type: 'string', name: 'fract_owner'},
+    {
+      type: 'number',
+      name: 'aircraft_count',
+      expressionType: 'aggregate',
+      e: {node: 'aggregate', function: 'count', e: {node: ''}},
+    },
+    {
+      type: 'number',
+      name: 'total_engines',
+      expressionType: 'aggregate',
+      e: {
+        node: 'aggregate',
+        function: 'sum',
+        e: {node: 'field', path: ['aircraft_models', 'engines']},
+      },
+    },
+
+    // subjoin aircraft models
+    withJoin(
+      AIRCRAFT_MODELS,
+      'one',
+      'aircraft_models',
+      'aircraft_model_code=aircraft_models.aircraft_model_code'
+    ),
+  ],
+};
 
 /** Flight Model */
 export const FLIGHTS_EXPLORE: StructDef = {
-  type: 'struct',
   name: 'malloydata-org.malloytest.flights',
   as: 'flights',
   dialect: 'standardsql',
-  structSource: {
-    type: 'table',
-    tablePath: 'malloydata-org.malloytest.flights',
-  },
-  structRelationship: {type: 'basetable', connectionName: 'bigquery'},
+  type: 'table',
+  tablePath: 'malloydata-org.malloytest.flights',
+  connection: 'bigquery',
   primaryKey: 'id2',
   fields: [
     // Fields in the flights table.
@@ -90,280 +270,59 @@ export const FLIGHTS_EXPLORE: StructDef = {
       },
     },
 
-    // carriers
-    {
-      type: 'struct',
-      name: 'malloydata-org.malloytest.carriers',
-      as: 'carriers',
-      dialect: 'standardsql',
-      structSource: {
-        type: 'table',
-        tablePath: 'malloydata-org.malloytest.carriers',
-      },
-      structRelationship: {
-        type: 'one',
-        matrixOperation: 'left',
-        onExpression: composeSQLExpr([
-          {node: 'field', path: ['carrier']},
-          '=',
-          {node: 'field', path: ['carriers', 'code']},
-        ]),
-      },
-      primaryKey: 'code',
-      fields: [
-        {type: 'string', name: 'code'},
-        {type: 'string', name: 'name'},
-        {type: 'string', name: 'nickname'},
-      ],
-    },
+    withJoin(CARRIERS, 'one', 'carriers', 'carrier=carriers.code'),
 
     // aircraft
-    {
-      type: 'struct',
-      name: 'malloydata-org.malloytest.aircraft',
-      as: 'aircraft',
-      dialect: 'standardsql',
-      structSource: {
-        type: 'table',
-        tablePath: 'malloydata-org.malloytest.aircraft',
-      },
-      structRelationship: withJoin('tail_num', 'aircraft.tail_num'),
-      primaryKey: 'tail_num',
-      fields: [
-        {type: 'string', name: 'tail_num'},
-        {type: 'string', name: 'aircraft_serial'},
-        {type: 'string', name: 'aircraft_model_code'},
-        {type: 'string', name: 'aircraft_engine_code'},
-        {type: 'number', name: 'year_built', numberType: 'integer'},
-        {
-          type: 'number',
-          name: 'aircraft_type_id',
-          numberType: 'integer',
-        },
-        {
-          type: 'number',
-          name: 'aircraft_engine_type_id',
-          numberType: 'integer',
-        },
-        {
-          type: 'number',
-          name: 'registrant_type_id',
-          numberType: 'integer',
-        },
-        {type: 'string', name: 'name'},
-        {type: 'string', name: 'address1'},
-        {type: 'string', name: 'address2'},
-        {type: 'string', name: 'city'},
-        {type: 'string', name: 'state'},
-        {type: 'string', name: 'zip'},
-        {type: 'string', name: 'region'},
-        {type: 'string', name: 'county'},
-        {type: 'string', name: 'country'},
-        {type: 'string', name: 'certification'},
-        {type: 'string', name: 'status_code'},
-        {type: 'string', name: 'mode_s_code'},
-        {type: 'string', name: 'fract_owner'},
-        {
-          type: 'number',
-          name: 'aircraft_count',
-          expressionType: 'aggregate',
-          e: {node: 'aggregate', function: 'count', e: {node: ''}},
-        },
-        {
-          type: 'number',
-          name: 'total_engines',
-          expressionType: 'aggregate',
-          e: {
-            node: 'aggregate',
-            function: 'sum',
-            e: {node: 'field', path: ['aircraft_models', 'engines']},
-          },
-        },
-
-        // subjoin aircraft models
-        {
-          type: 'struct',
-          name: 'malloydata-org.malloytest.aircraft_models',
-          as: 'aircraft_models',
-          dialect: 'standardsql',
-          primaryKey: 'aircraft_model_code',
-          structSource: {
-            type: 'table',
-            tablePath: 'malloydata-org.malloytest.aircraft_models',
-          },
-          structRelationship: withJoin(
-            'aircraft_model_code',
-            'aircraft_models.aircraft_model_code'
-          ),
-          fields: [
-            {type: 'string', name: 'aircraft_model_code'},
-            {type: 'string', name: 'manufacturer'},
-            {type: 'string', name: 'model'},
-            {
-              type: 'number',
-              name: 'aircraft_type_id',
-              numberType: 'integer',
-            },
-            {
-              type: 'number',
-              name: 'aircraft_engine_type_id',
-              numberType: 'integer',
-            },
-            {
-              type: 'number',
-              name: 'aircraft_category_id',
-              numberType: 'integer',
-            },
-            {type: 'number', name: 'amateur', numberType: 'integer'},
-            {type: 'number', name: 'engines', numberType: 'integer'},
-            {type: 'number', name: 'seats', numberType: 'integer'},
-            {type: 'number', name: 'weight', numberType: 'integer'},
-            {type: 'number', name: 'speed', numberType: 'integer'},
-            {
-              type: 'number',
-              expressionType: 'aggregate',
-              name: 'total_seats',
-              e: {
-                node: 'aggregate',
-                function: 'sum',
-                e: {node: 'field', path: ['seats']},
-              },
-            },
-          ],
-        },
-      ],
-    },
+    withJoin(AIRCRAFT, 'one', 'aircraft', 'tail_num=aircraft.tail_num'),
 
     // origin
-    {
-      type: 'struct',
-      name: 'malloydata-org.malloytest.airports',
-      as: 'origin',
-      dialect: 'standardsql',
-      structSource: {
-        type: 'table',
-        tablePath: 'malloydata-org.malloytest.airports',
-      },
-      structRelationship: withJoin('origin_code', 'origin.code'),
-      primaryKey: 'code',
-      fields: [
-        {type: 'number', name: 'id', numberType: 'integer'},
-        {type: 'string', name: 'code'},
-        {type: 'string', name: 'site_number'},
-        {type: 'string', name: 'fac_type', as: 'facility_type'},
-        {type: 'string', name: 'fac_use', as: 'facility_use'},
-        {type: 'string', name: 'faa_region'},
-        {type: 'string', name: 'faa_dist'},
-        {type: 'string', name: 'city'},
-        {type: 'string', name: 'county'},
-        {type: 'string', name: 'state'},
-        {type: 'string', name: 'full_name'},
-        {type: 'string', name: 'own_type'},
-        {type: 'number', name: 'longitude', numberType: 'float'},
-        {type: 'number', name: 'latitude', numberType: 'float'},
-        {type: 'number', name: 'elevation', numberType: 'integer'},
-        {type: 'string', name: 'aero_cht'},
-        {type: 'number', name: 'cbd_dist', numberType: 'integer'},
-        {type: 'string', name: 'cbd_dir'},
-        {type: 'string', name: 'act_date'},
-        {type: 'string', name: 'cert'},
-        {type: 'string', name: 'fed_agree'},
-        {type: 'string', name: 'cust_intl'},
-        {type: 'string', name: 'c_ldg_rts'},
-        {type: 'string', name: 'joint_use'},
-        {type: 'string', name: 'mil_rts'},
-        {type: 'string', name: 'cntl_twr'},
-        {type: 'string', name: 'major'},
-        {
-          type: 'number',
-          name: 'count',
-          expressionType: 'aggregate',
-          e: {node: 'aggregate', function: 'count', e: {node: ''}},
-        },
-      ],
-    },
+    withJoin(AIRPORTS, 'one', 'origin', 'origin_code=origin.code'),
 
     // destination
-    {
-      type: 'struct',
-      name: 'malloydata-org.malloytest.airports',
-      as: 'destination',
-      dialect: 'standardsql',
-      structSource: {
-        type: 'table',
-        tablePath: 'malloydata-org.malloytest.airports',
-      },
-      structRelationship: withJoin('destination_code', 'destination.code'),
-      primaryKey: 'code',
-      fields: [
-        {type: 'number', name: 'id', numberType: 'integer'},
-        {type: 'string', name: 'code'},
-        {type: 'string', name: 'site_number'},
-        {type: 'string', name: 'fac_type', as: 'facility_type'},
-        {type: 'string', name: 'fac_use', as: 'facility_use'},
-        {type: 'string', name: 'faa_region'},
-        {type: 'string', name: 'faa_dist'},
-        {type: 'string', name: 'city'},
-        {type: 'string', name: 'county'},
-        {type: 'string', name: 'state'},
-        {type: 'string', name: 'full_name'},
-        {type: 'string', name: 'own_type'},
-        {type: 'number', name: 'longitude', numberType: 'float'},
-        {type: 'number', name: 'latitude', numberType: 'float'},
-        {type: 'number', name: 'elevation', numberType: 'integer'},
-        {type: 'string', name: 'aero_cht'},
-        {type: 'number', name: 'cbd_dist', numberType: 'integer'},
-        {type: 'string', name: 'cbd_dir'},
-        {type: 'string', name: 'act_date'},
-        {type: 'string', name: 'cert'},
-        {type: 'string', name: 'fed_agree'},
-        {type: 'string', name: 'cust_intl'},
-        {type: 'string', name: 'c_ldg_rts'},
-        {type: 'string', name: 'joint_use'},
-        {type: 'string', name: 'mil_rts'},
-        {type: 'string', name: 'cntl_twr'},
-        {type: 'string', name: 'major'},
-        {
-          type: 'number',
-          name: 'count',
-          expressionType: 'aggregate',
-          e: {node: 'aggregate', function: 'count', e: {node: ''}},
-        },
-      ],
-    },
+    withJoin(
+      AIRPORTS,
+      'one',
+      'destination',
+      'destination_code=destination.code'
+    ),
 
     // derived table from a named query.
     {
-      type: 'struct',
+      type: 'query_source',
       name: 'aircraft_facts',
       dialect: 'standardsql',
-      structSource: {
+      connection: 'bigquery',
+      query: {
         type: 'query',
-        query: {
-          type: 'query',
-          structRef: 'flights',
-          name: 'aircraft_facts_query',
-          pipeline: [
-            {
-              type: 'reduce',
-              queryFields: fToQF([
-                'tail_num',
-                {
-                  type: 'number',
-                  name: 'lifetime_distance',
-                  expressionType: 'aggregate',
-                  e: {
-                    node: 'aggregate',
-                    function: 'sum',
-                    e: {node: 'field', path: ['distance']},
-                  },
+        structRef: 'flights',
+        name: 'aircraft_facts_query',
+        pipeline: [
+          {
+            type: 'reduce',
+            queryFields: fToQF([
+              'tail_num',
+              {
+                type: 'number',
+                name: 'lifetime_distance',
+                expressionType: 'aggregate',
+                e: {
+                  node: 'aggregate',
+                  function: 'sum',
+                  e: {node: 'field', path: ['distance']},
                 },
-              ]),
-            },
-          ],
+              },
+            ]),
+          },
+        ],
+      },
+      join: 'one',
+      onExpression: {
+        node: '=',
+        kids: {
+          left: {node: 'field', path: ['tail_num']},
+          right: {node: 'field', path: ['aircraft_facts', 'tail_num']},
         },
       },
-      structRelationship: withJoin('tail_num', 'aircraft_facts.tail_num'),
       primaryKey: 'tail_num',
       fields: [
         {type: 'string', name: 'tail_num'},
@@ -922,53 +881,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
   ],
 };
 
-const tableAirports: StructDef = {
-  type: 'struct',
-  name: 'malloydata-org.malloytest.airports',
-  as: 'table_airports',
-  dialect: 'standardsql',
-  structSource: {
-    type: 'table',
-    tablePath: 'malloydata-org.malloytest.airports',
-  },
-  structRelationship: {type: 'basetable', connectionName: 'bigquery'},
-  primaryKey: 'code',
-  fields: [
-    {type: 'number', name: 'id', numberType: 'integer'},
-    {type: 'string', name: 'code'},
-    {type: 'string', name: 'site_number'},
-    {type: 'string', name: 'fac_type', as: 'facility_type'},
-    {type: 'string', name: 'fac_use', as: 'facility_use'},
-    {type: 'string', name: 'faa_region'},
-    {type: 'string', name: 'faa_dist'},
-    {type: 'string', name: 'city'},
-    {type: 'string', name: 'county'},
-    {type: 'string', name: 'state'},
-    {type: 'string', name: 'full_name'},
-    {type: 'string', name: 'own_type'},
-    {type: 'number', name: 'longitude', numberType: 'float'},
-    {type: 'number', name: 'latitude', numberType: 'float'},
-    {type: 'number', name: 'elevation', numberType: 'integer'},
-    {type: 'string', name: 'aero_cht'},
-    {type: 'number', name: 'cbd_dist', numberType: 'integer'},
-    {type: 'string', name: 'cbd_dir'},
-    {type: 'string', name: 'act_date'},
-    {type: 'string', name: 'cert'},
-    {type: 'string', name: 'fed_agree'},
-    {type: 'string', name: 'cust_intl'},
-    {type: 'string', name: 'c_ldg_rts'},
-    {type: 'string', name: 'joint_use'},
-    {type: 'string', name: 'mil_rts'},
-    {type: 'string', name: 'cntl_twr'},
-    {type: 'string', name: 'major'},
-    {
-      type: 'number',
-      name: 'count',
-      expressionType: 'aggregate',
-      e: {node: 'aggregate', function: 'count', e: {node: ''}},
-    },
-  ],
-};
+const tableAirports = {...AIRPORTS, as: 'table_airports'};
 
 /** Test model */
 export const testModel: ModelDef = {

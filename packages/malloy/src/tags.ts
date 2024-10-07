@@ -384,10 +384,10 @@ class TagErrorListener implements ANTLRErrorListener<Token> {
   }
 
   semanticError(cx: ParserRuleContext, code: string, msg: string): void {
+    const left = this.fromChar + cx.start.charPositionInLine;
     const errAt = {
       line: this.atLine,
-      // mtoy TODO get this right
-      character: 0,
+      character: left,
     };
     const range = {start: errAt, end: errAt};
     const logMsg: LogMessage = {

@@ -28,13 +28,14 @@ import {
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
-  FieldAtomicTypeDef,
+  AtomicTypeDef,
   TimeDeltaExpr,
   TypecastExpr,
   RegexMatchExpr,
   MeasureTimeExpr,
   TimeLiteralNode,
   TimeExtractExpr,
+  LeafAtomicDef,
 } from '../../model/malloy_types';
 import {
   DialectFunctionOverloadDef,
@@ -81,6 +82,36 @@ declare interface TimeMeasure {
 const trinoTypeMap = {
   'string': 'VARCHAR',
   'number': 'DOUBLE',
+};
+
+const trinoToMalloyTypes: {[key: string]: LeafAtomicDef} = {
+  'varchar': {type: 'string'},
+  'integer': {type: 'number', numberType: 'integer'},
+  'bigint': {type: 'number', numberType: 'integer'},
+  'smallint': {type: 'number', numberType: 'integer'},
+  'tinyint': {type: 'number', numberType: 'integer'},
+  'double': {type: 'number', numberType: 'float'},
+  'decimal': {type: 'number', numberType: 'float'},
+  'string': {type: 'string'},
+  'date': {type: 'date'},
+  'timestamp': {type: 'timestamp'},
+  'boolean': {type: 'boolean'},
+
+  // TODO(figutierrez0): cleanup.
+  /* 'INT64': {type: 'number', numberType: 'integer'},
+  'FLOAT': {type: 'number', numberType: 'float'},
+  'FLOAT64': {type: 'number', numberType: 'float'},
+  'NUMERIC': {type: 'number', numberType: 'float'},
+  'BIGNUMERIC': {type: 'number', numberType: 'float'},
+  'TIMESTAMP': {type: 'timestamp'},
+  'BOOLEAN': {type: 'boolean'},
+  'BOOL': {type: 'boolean'},
+  'JSON': {type: 'json'},*/
+  // TODO (https://cloud.google.com/bigquery/docs/reference/rest/v2/tables#tablefieldschema):
+  // BYTES
+  // DATETIME
+  // TIME
+  // GEOGRAPHY
 };
 
 export class TrinoDialect extends PostgresBase {
@@ -512,7 +543,7 @@ ${indent(sql)}
     return expandBlueprintMap(TRINO_DIALECT_FUNCTIONS);
   }
 
-  malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string {
+  malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
     if (malloyType.type === 'number') {
       if (malloyType.numberType === 'integer') {
         return 'BIGINT';
@@ -525,9 +556,14 @@ ${indent(sql)}
     return malloyType.type;
   }
 
-  sqlTypeToMalloyType(_sqlType: string): FieldAtomicTypeDef | undefined {
-    // TODO(figutierrez): unimplemented.
-    return undefined;
+  sqlTypeToMalloyType(sqlType: string): LeafAtomicDef {
+    const baseSqlType = sqlType.match(/^(\w+)/)?.at(0) ?? sqlType;
+    return (
+      trinoToMalloyTypes[baseSqlType] ?? {
+        type: 'sql native',
+        rawType: sqlType,
+      }
+    );
   }
 
   castToString(expression: string): string {

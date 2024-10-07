@@ -21,31 +21,35 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  FieldDef,
-  StructDef,
-  StructRelationship,
-  TypeDesc,
-} from '../../../model/malloy_types';
+import {JoinFieldDef, TypeDesc} from '../../../model/malloy_types';
 import {FieldSpace} from '../types/field-space';
+import {JoinPathElement} from '../types/lookup-result';
 import {SpaceField} from '../types/space-field';
 
 export abstract class StructSpaceFieldBase extends SpaceField {
-  constructor(protected sourceDef: StructDef) {
+  constructor(protected sourceDef: JoinFieldDef) {
     super();
   }
 
   abstract get fieldSpace(): FieldSpace;
 
-  get structRelationship(): StructRelationship {
-    return this.sourceDef.structRelationship;
-  }
-
-  fieldDef(): FieldDef {
+  fieldDef(): JoinFieldDef {
     return this.sourceDef;
   }
 
+  get joinPathElement(): JoinPathElement {
+    return {
+      name: this.sourceDef.as || this.sourceDef.name,
+      joinType: this.sourceDef.join,
+      joinElementType: this.sourceDef.type,
+    };
+  }
+
   typeDesc(): TypeDesc {
-    return {dataType: 'struct', expressionType: 'scalar', evalSpace: 'input'};
+    return {
+      dataType: this.sourceDef.type,
+      expressionType: 'scalar',
+      evalSpace: 'input',
+    };
   }
 }

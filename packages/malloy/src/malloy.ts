@@ -33,14 +33,11 @@ import {
   CompiledQuery,
   DocumentLocation,
   DocumentReference,
-  FieldBooleanDef,
-  FieldDateDef,
-  FieldIsIntrinsic,
-  FieldJSONDef,
-  FieldNumberDef,
-  FieldStringDef,
-  FieldTimestampDef,
-  FieldTypeDef,
+  BooleanFieldDef,
+  fieldIsIntrinsic,
+  JSONFieldDef,
+  NumberFieldDef,
+  StringFieldDef,
   FilterCondition,
   Query as InternalQuery,
   ModelDef,
@@ -50,37 +47,49 @@ import {
   QueryDataRow,
   QueryModel,
   QueryResult,
-  SQLBlock,
-  SQLBlockSource,
-  SQLBlockStructDef,
   SearchIndexResult,
   SearchValueMapResult,
   StructDef,
   TurtleDef,
   expressionIsCalculation,
-  isSQLBlockStruct,
-  isSQLFragment,
-  FeldNativeUnsupportedDef,
+  isSegmentSQL,
+  NativeUnsupportedFieldDef,
   QueryRunStats,
   ImportLocation,
   Annotation,
   NamedModelObject,
   QueryValue,
+  SQLSentence,
+  SQLSourceDef,
+  modelObjIsSource,
+  AtomicFieldDef,
+  DateFieldDef,
+  TimestampFieldDef,
+  isAtomicFieldType,
+  SourceDef,
+  isSourceDef,
   QueryToMaterialize,
-  PrepareResultOptions,
+  isJoined,
 } from './model';
 import {
+  EventStream,
   ModelString,
   ModelURL,
   QueryString,
   QueryURL,
   URLReader,
 } from './runtime_types';
-import {Connection, InfoConnection, LookupConnection} from './connection/types';
+import {
+  Connection,
+  FetchSchemaOptions,
+  InfoConnection,
+  LookupConnection,
+} from './connection/types';
 import {DateTime} from 'luxon';
 import {Tag, TagParse, TagParseSpec, Taggable} from './tags';
 import {Dialect, getDialect} from './dialect';
 import {PathInfo} from './lang/parse-tree-walkers/find-table-path-walker';
+import {MALLOY_VERSION} from './version';
 
 export interface Loggable {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -98,30 +107,27 @@ export interface ParseOptions {
   testEnvironment?: boolean;
 }
 
+/** Options for how to run the Malloy semantic checker/translator */
 export interface CompileOptions {
   refreshSchemaCache?: boolean | number;
   noThrowOnError?: boolean;
 }
 
+/** Options given to the Malloy compiler (QueryModel) */
+interface CompileQueryOptions {
+  replaceMaterializedReferences?: boolean;
+  materializedTablePrefix?: string;
+  eventStream?: EventStream;
+}
+
 export class Malloy {
-  // TODO load from file built during release
   public static get version(): string {
-    return '0.0.1';
+    return MALLOY_VERSION;
   }
-
-  private static _log: Loggable;
-
-  public static get log(): Loggable {
-    return Malloy._log || console;
-  }
-
-  public static setLogger(log: Loggable): void {
-    Malloy._log = log;
-  }
-
   private static _parse(
     source: string,
     url?: URL,
+    eventStream?: EventStream,
     options?: ParseOptions
   ): Parse {
     if (url === undefined) {
@@ -136,7 +142,8 @@ export class Malloy {
       importBaseURL.toString(),
       {
         urls: {[url.toString()]: source},
-      }
+      },
+      eventStream
     );
     if (options?.testEnvironment) {
       translator.allDialectsEnabled = true;
@@ -154,10 +161,12 @@ export class Malloy {
   public static parse({
     url,
     urlReader,
+    eventStream,
     options,
   }: {
     url: URL;
     urlReader: URLReader;
+    eventStream?: EventStream;
     options?: ParseOptions;
   }): Promise<Parse>;
   /**
@@ -170,25 +179,29 @@ export class Malloy {
   public static parse({
     source,
     url,
+    eventStream,
     options,
   }: {
     url?: URL;
     source: string;
+    eventStream?: EventStream;
     options?: ParseOptions;
   }): Parse;
   public static parse({
     url,
     urlReader,
     source,
+    eventStream,
     options,
   }: {
     url?: URL;
     source?: string;
     urlReader?: URLReader;
+    eventStream?: EventStream;
     options?: ParseOptions;
   }): Parse | Promise<Parse> {
     if (source !== undefined) {
-      return Malloy._parse(source, url, options);
+      return Malloy._parse(source, url, eventStream, options);
     } else {
       if (urlReader === undefined) {
         throw new Error('Internal Error: urlReader is required.');
@@ -199,7 +212,7 @@ export class Malloy {
         );
       }
       return urlReader.readURL(url).then(source => {
-        return Malloy._parse(source, url, options);
+        return Malloy._parse(source, url, eventStream, options);
       });
     }
   }
@@ -220,14 +233,17 @@ export class Malloy {
     model,
     refreshSchemaCache,
     noThrowOnError,
+    eventStream,
     replaceMaterializedReferences,
+    materializedTablePrefix,
   }: {
     urlReader: URLReader;
     connections: LookupConnection<InfoConnection>;
     parse: Parse;
     model?: Model;
+    replaceMaterializedReferences?: boolean;
   } & CompileOptions &
-    PrepareResultOptions): Promise<Model> {
+    CompileQueryOptions): Promise<Model> {
     let refreshTimestamp: number | undefined;
     if (refreshSchemaCache) {
       refreshTimestamp =
@@ -236,15 +252,13 @@ export class Malloy {
           : Date.now();
     }
     const translator = parse._translator;
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
+    for (;;) {
       const result = translator.translate(model?._modelDef);
       if (result.final) {
         if (result.translated) {
           return new Model(
             result.translated.modelDef,
             result.translated.queryList,
-            result.translated.sqlBlocks,
             result.problems || [],
             [...(model?.fromSources ?? []), ...(result.fromSources ?? [])],
             (position: ModelDocumentPosition) =>
@@ -260,7 +274,6 @@ export class Malloy {
           const modelFromCompile = model?._modelDef || emptyModel;
           return new Model(
             modelFromCompile,
-            [],
             [],
             result.problems || [],
             [...(model?.fromSources ?? []), ...(result.fromSources ?? [])],
@@ -324,10 +337,14 @@ export class Malloy {
               //      as `Object.keys(tablePathByKey)`, i.e. that all tables are accounted for. Otherwise
               //      the translator runs into an infinite loop fetching tables.
               const {schemas: tables, errors} =
-                await connection.fetchSchemaForTables(tablePathByKey, {
-                  refreshTimestamp,
-                  modelAnnotation,
-                });
+                await Malloy.safelyFetchTableSchema(
+                  connection,
+                  tablePathByKey,
+                  {
+                    refreshTimestamp,
+                    modelAnnotation,
+                  }
+                );
               translator.update({tables, errors: {tables: errors}});
             } catch (error) {
               // There was an exception getting the connection, associate that error
@@ -348,11 +365,16 @@ export class Malloy {
           try {
             const conn = await connections.lookupConnection(connectionName);
             const expanded = Malloy.compileSQLBlock(
+              conn.dialectName,
               result.partialModel,
               toCompile,
-              {replaceMaterializedReferences}
+              {
+                replaceMaterializedReferences,
+                materializedTablePrefix,
+                eventStream,
+              }
             );
-            const resolved = await conn.fetchSchemaForSQLBlock(expanded, {
+            const resolved = await conn.fetchSchemaForSQLStruct(expanded, {
               refreshTimestamp,
               modelAnnotation,
             });
@@ -362,11 +384,9 @@ export class Malloy {
               });
             }
             if (resolved.structDef) {
-              if (isSQLBlockStruct(resolved.structDef)) {
-                translator.update({
-                  compileSQL: {[expanded.name]: resolved.structDef},
-                });
-              }
+              translator.update({
+                compileSQL: {[expanded.name]: resolved.structDef},
+              });
             }
           } catch (error) {
             const errors: {[name: string]: string} = {};
@@ -378,16 +398,38 @@ export class Malloy {
     }
   }
 
+  /**
+   * A dialect must provide a response for every table, or the translator loop
+   * will never exit. Because there was a time when this happened, we throw
+   * instead of looping forever, but the fix is to correct the dialect.
+   */
+  static async safelyFetchTableSchema(
+    connection: InfoConnection,
+    toFetch: Record<string, string>,
+    opts: FetchSchemaOptions
+  ) {
+    const ret = await connection.fetchSchemaForTables(toFetch, opts);
+    for (const req of Object.keys(toFetch)) {
+      if (ret.schemas[req] === undefined && ret.errors[req] === undefined) {
+        throw new Error(
+          `Schema fetch error for ${connection.name}, no response for ${req} from ${connection.dialectName}`
+        );
+      }
+    }
+    return ret;
+  }
+
   static compileSQLBlock(
+    dialect: string,
     partialModel: ModelDef | undefined,
-    toCompile: SQLBlockSource,
-    options?: {replaceMaterializedReferences?: boolean}
-  ): SQLBlock {
+    toCompile: SQLSentence,
+    options?: CompileQueryOptions
+  ): SQLSourceDef {
     let queryModel: QueryModel | undefined = undefined;
     let selectStr = '';
     let parenAlready = false;
     for (const segment of toCompile.select) {
-      if (isSQLFragment(segment)) {
+      if (isSegmentSQL(segment)) {
         selectStr += segment.sql;
         parenAlready = segment.sql.match(/\(\s*$/) !== null;
       } else {
@@ -398,7 +440,7 @@ export class Malloy {
               'Internal error: Partial model missing when compiling SQL block'
             );
           }
-          queryModel = new QueryModel(partialModel);
+          queryModel = new QueryModel(partialModel, options?.eventStream);
         }
         const compiledSql = queryModel.compileQuery(
           segment,
@@ -410,7 +452,14 @@ export class Malloy {
       }
     }
     const {name, connection} = toCompile;
-    return {type: 'sqlBlock', name, connection, selectStr};
+    return {
+      type: 'sql_select',
+      name,
+      connection,
+      dialect,
+      selectStr,
+      fields: [],
+    };
   }
 
   /**
@@ -432,22 +481,22 @@ export class Malloy {
   }): Promise<Result>;
   public static async run(params: {
     connection: Connection;
-    sqlStruct: SQLBlockStructDef;
+    sqlStruct: SQLSourceDef;
     options?: RunSQLOptions;
   }): Promise<Result>;
   public static async run(params: {
     connections: LookupConnection<Connection>;
-    sqlStruct: SQLBlockStructDef;
+    sqlStruct: SQLSourceDef;
     options?: RunSQLOptions;
   }): Promise<Result>;
   public static async run(params: {
     connection: Connection;
-    sqlStruct: SQLBlockStructDef;
+    sqlStruct: SQLSourceDef;
     options?: RunSQLOptions;
   }): Promise<Result>;
   public static async run(params: {
     connections: LookupConnection<Connection>;
-    sqlStruct: SQLBlockStructDef;
+    sqlStruct: SQLSourceDef;
     options?: RunSQLOptions;
   }): Promise<Result>;
   public static async run({
@@ -459,11 +508,10 @@ export class Malloy {
   }: {
     connection?: Connection;
     preparedResult?: PreparedResult;
-    sqlStruct?: SQLBlockStructDef;
+    sqlStruct?: SQLSourceDef;
     connections?: LookupConnection<Connection>;
     options?: RunSQLOptions;
   }): Promise<Result> {
-    const sqlBlock = sqlStruct?.structSource.sqlBlock;
     if (!connection) {
       if (!connections) {
         throw new Error(
@@ -471,27 +519,22 @@ export class Malloy {
         );
       }
       const connectionName =
-        sqlBlock?.connection || preparedResult?.connectionName;
+        sqlStruct?.connection || preparedResult?.connectionName;
       connection = await connections.lookupConnection(connectionName);
     }
-    if (sqlStruct && sqlBlock) {
-      if (sqlStruct.structRelationship.type !== 'basetable') {
-        throw new Error(
-          "Expected schema's structRelationship type to be 'basetable'."
-        );
-      }
-      const data = await connection.runSQL(sqlBlock.selectStr);
+    if (sqlStruct) {
+      const data = await connection.runSQL(sqlStruct.selectStr);
       return new Result(
         {
           structs: [sqlStruct],
-          sql: sqlBlock.selectStr,
+          sql: sqlStruct.selectStr,
           result: data.rows,
           totalRows: data.totalRows,
           runStats: data.runStats,
-          lastStageName: sqlBlock.name,
+          lastStageName: sqlStruct.name,
           // TODO feature-sql-block There is no malloy code...
           malloy: '',
-          connectionName: sqlStruct.structRelationship.connectionName,
+          connectionName: sqlStruct.connection,
           // TODO feature-sql-block There is no source explore...
           sourceExplore: '',
           sourceFilters: [],
@@ -534,22 +577,12 @@ export class Malloy {
   }): AsyncIterableIterator<DataRecord>;
   public static runStream(params: {
     connection: Connection;
-    sqlStruct: SQLBlockStructDef;
+    sqlStruct: SQLSourceDef;
     options?: RunSQLOptions;
   }): AsyncIterableIterator<DataRecord>;
   public static runStream(params: {
     connections: LookupConnection<Connection>;
-    sqlBlock: SQLBlock;
-    options?: RunSQLOptions;
-  }): AsyncIterableIterator<DataRecord>;
-  public static runStream(params: {
-    connection: Connection;
-    sqlStruct: SQLBlockStructDef;
-    options?: RunSQLOptions;
-  }): AsyncIterableIterator<DataRecord>;
-  public static runStream(params: {
-    connections: LookupConnection<Connection>;
-    sqlStruct: SQLBlockStructDef;
+    sqlStruct: SQLSourceDef;
     options?: RunSQLOptions;
   }): AsyncIterableIterator<DataRecord>;
   public static async *runStream({
@@ -561,18 +594,17 @@ export class Malloy {
   }: {
     connection?: Connection;
     preparedResult?: PreparedResult;
-    sqlStruct?: SQLBlockStructDef;
+    sqlStruct?: SQLSourceDef;
     connections?: LookupConnection<Connection>;
     options?: RunSQLOptions;
   }): AsyncIterableIterator<DataRecord> {
-    const sqlBlock = sqlStruct?.structSource.sqlBlock;
-    if (sqlBlock === undefined && preparedResult === undefined) {
+    if (sqlStruct === undefined && preparedResult === undefined) {
       throw new Error(
         'Internal error: sqlBlock or preparedResult must be provided.'
       );
     }
     const connectionName =
-      sqlBlock?.connection || preparedResult?.connectionName;
+      sqlStruct?.connection || preparedResult?.connectionName;
     if (connection === undefined) {
       if (connections === undefined) {
         throw new Error(
@@ -588,13 +620,8 @@ export class Malloy {
     let sql: string;
     let resultExplore: Explore;
     if (sqlStruct) {
-      if (sqlStruct.structRelationship.type !== 'basetable') {
-        throw new Error(
-          "Expected schema's structRelationship type to be 'basetable'."
-        );
-      }
       resultExplore = new Explore(sqlStruct);
-      sql = sqlStruct.structSource.sqlBlock.selectStr;
+      sql = sqlStruct.selectStr;
     } else if (preparedResult !== undefined) {
       resultExplore = preparedResult.resultExplore;
       sql = preparedResult.sql;
@@ -616,7 +643,7 @@ export class Malloy {
   }): Promise<QueryRunStats>;
   public static async estimateQueryCost(params: {
     connections: LookupConnection<Connection>;
-    sqlStruct: SQLBlockStructDef;
+    sqlStruct: SQLSourceDef;
   }): Promise<QueryRunStats>;
   public static async estimateQueryCost({
     connections,
@@ -624,10 +651,9 @@ export class Malloy {
     sqlStruct,
   }: {
     preparedResult?: PreparedResult;
-    sqlStruct?: SQLBlockStructDef;
+    sqlStruct?: SQLSourceDef;
     connections: LookupConnection<Connection>;
   }): Promise<QueryRunStats> {
-    const sqlBlock = sqlStruct?.structSource.sqlBlock;
     if (!connections) {
       throw new Error(
         'Internal Error: Connection or LookupConnection<Connection> must be provided.'
@@ -635,13 +661,13 @@ export class Malloy {
     }
 
     const connectionName =
-      sqlBlock?.connection || preparedResult?.connectionName;
+      sqlStruct?.connection || preparedResult?.connectionName;
     const connection = await connections.lookupConnection(connectionName);
 
-    if (sqlBlock) {
-      return await connection.estimateQueryCost(sqlBlock?.selectStr);
+    if (sqlStruct) {
+      return await connection.estimateQueryCost(sqlStruct.selectStr);
     } else if (preparedResult) {
-      return await connection.estimateQueryCost(preparedResult?.sql);
+      return await connection.estimateQueryCost(preparedResult.sql);
     } else {
       throw new Error(
         'Internal error: sqlStruct or preparedResult must be provided.'
@@ -677,7 +703,6 @@ export class Model implements Taggable {
   constructor(
     private modelDef: ModelDef,
     private queryList: InternalQuery[],
-    private sqlBlocks: SQLBlockStructDef[],
     readonly problems: LogMessage[],
     readonly fromSources: string[],
     referenceAt: (
@@ -760,36 +785,6 @@ export class Model implements Taggable {
   }
 
   /**
-   * Retrieve a prepared query by the name of a query at the top level of the model.
-   *
-   * @param queryName Name of the query to retrieve.
-   * @return A prepared query.
-   */
-  public getSQLBlockByName(sqlBlockName: string): SQLBlockStructDef {
-    const sqlBlock = this.sqlBlocks.find(
-      sqlBlock => sqlBlock.as === sqlBlockName
-    );
-    if (sqlBlock === undefined) {
-      throw new Error(`No SQL Block named '${sqlBlockName}'`);
-    }
-    return sqlBlock;
-  }
-
-  /**
-   * Retrieve a prepared query by the name of a query at the top level of the model.
-   *
-   * @param index Index of the SQL Block to retrieve.
-   * @return A prepared query.
-   */
-  public getSQLBlockByIndex(index: number): SQLBlockStructDef {
-    const sqlBlock = this.sqlBlocks[index];
-    if (sqlBlock === undefined) {
-      throw new Error(`No SQL Block at index ${index}`);
-    }
-    return sqlBlock;
-  }
-
-  /**
    * Retrieve a prepared query for the final unnamed query at the top level of a model.
    *
    * @return A prepared query.
@@ -822,7 +817,7 @@ export class Model implements Taggable {
    */
   public getExploreByName(name: string): Explore {
     const struct = this.modelDef.contents[name];
-    if (struct.type === 'struct') {
+    if (modelObjIsSource(struct)) {
       return new Explore(struct);
     }
     throw new Error("'name' is not an explore");
@@ -834,11 +829,8 @@ export class Model implements Taggable {
    * @return An array of `Explore`s contained in the model.
    */
   public get explores(): Explore[] {
-    const isStructDef = (object: NamedModelObject): object is StructDef =>
-      object.type === 'struct';
-
     return Object.values(this.modelDef.contents)
-      .filter(isStructDef)
+      .filter(modelObjIsSource)
       .map(structDef => new Explore(structDef));
   }
 
@@ -901,8 +893,14 @@ export class PreparedQuery implements Taggable {
     return this.getPreparedResult();
   }
 
-  public getPreparedResult(options?: PrepareResultOptions): PreparedResult {
-    const queryModel = new QueryModel(this._modelDef);
+  /**
+   * Generate the SQL for this query.
+   *
+   * @return A fully-prepared query (which contains the generated SQL).
+   * @param options.eventStream An event stream to use when compiling the SQL
+   */
+  public getPreparedResult(options?: CompileQueryOptions): PreparedResult {
+    const queryModel = new QueryModel(this._modelDef, options?.eventStream);
     const translatedQuery = queryModel.compileQuery(this._query, options);
     return new PreparedResult(
       {
@@ -919,7 +917,7 @@ export class PreparedQuery implements Taggable {
       typeof sourceRef === 'string'
         ? this._modelDef.contents[sourceRef]
         : sourceRef;
-    if (source.type !== 'struct') {
+    if (!modelObjIsSource(source)) {
       throw new Error('Invalid source for query');
     }
     return source.dialect;
@@ -1264,6 +1262,10 @@ export class PreparedResult implements Taggable {
     return this.inner.dependenciesToMaterialize;
   }
 
+  public get materialization(): QueryToMaterialize | undefined {
+    return this.inner.materialization;
+  }
+
   /**
    * @return The `Explore` representing the data that will be returned by running this query.
    */
@@ -1293,7 +1295,7 @@ export class PreparedResult implements Taggable {
     if (explore === undefined) {
       throw new Error('Malformed query result.');
     }
-    if (explore.type === 'struct') {
+    if (modelObjIsSource(explore)) {
       return new Explore(explore);
     }
     throw new Error(`'${name} is not an explore`);
@@ -1496,7 +1498,13 @@ export class Explore extends Entity implements Taggable {
   }
 
   public isIntrinsic(): boolean {
-    return FieldIsIntrinsic(this._structDef);
+    // Don't have the right discriminator, if this was a field def at some point, the field-defness ahs been lost.
+    // A record or an array might be atomic, AND be a structdef, unless they are a dimension (i.e. have a an
+    // expression)
+    if (isAtomicFieldType(this._structDef.type)) {
+      return !('e' in this._structDef);
+    }
+    return false;
   }
 
   public isExploreField(): this is ExploreField {
@@ -1527,9 +1535,15 @@ export class Explore extends Entity implements Taggable {
   }
 
   public getQueryByName(name: string): PreparedQuery {
+    const structRef = this.sourceStructDef;
+    if (!structRef) {
+      throw new Error(
+        `Cannot get query by name from a struct of type ${this.structDef.type}`
+      );
+    }
     const internalQuery: InternalQuery = {
       type: 'query',
-      structRef: this.structDef,
+      structRef,
       pipeline: [
         {
           type: 'reduce',
@@ -1549,7 +1563,7 @@ export class Explore extends Entity implements Taggable {
   }
 
   public getSingleExploreModel(): Model {
-    return new Model(this.modelDef, [], [], [], []);
+    return new Model(this.modelDef, [], [], []);
   }
 
   private get fieldMap(): Map<string, Field> {
@@ -1559,7 +1573,7 @@ export class Explore extends Entity implements Taggable {
         this.structDef.fields.map(fieldDef => {
           const name = fieldDef.as || fieldDef.name;
           const sourceField = sourceFields.get(fieldDef.name);
-          if (fieldDef.type === 'struct') {
+          if (isJoined(fieldDef)) {
             return [name, new ExploreField(fieldDef, this, sourceField)];
           } else if (fieldDef.type === 'turtle') {
             return [name, new QueryField(fieldDef, this, sourceField)];
@@ -1611,7 +1625,7 @@ export class Explore extends Entity implements Taggable {
   public get allFieldsWithOrder(): SortableField[] {
     if (!this._allFieldsWithOrder) {
       const orderByFields = [
-        ...(this.structDef.resultMetadata?.orderBy?.map(f => {
+        ...(this.sourceStructDef?.resultMetadata?.orderBy?.map(f => {
           if (typeof f.field === 'string') {
             const a = {
               field: this.fieldMap.get(f.field as string)!,
@@ -1664,28 +1678,11 @@ export class Explore extends Entity implements Taggable {
   }
 
   public get primaryKey(): string | undefined {
-    return this.structDef.primaryKey;
+    return this.sourceStructDef?.primaryKey;
   }
 
   public get parentExplore(): Explore | undefined {
     return this._parentExplore;
-  }
-
-  public get sourceRelationship(): SourceRelationship {
-    switch (this.structDef.structRelationship.type) {
-      case 'many':
-        return SourceRelationship.Many;
-      case 'one':
-        return SourceRelationship.One;
-      case 'cross':
-        return SourceRelationship.Cross;
-      case 'inline':
-        return SourceRelationship.Inline;
-      case 'nested':
-        return SourceRelationship.Nested;
-      case 'basetable':
-        return SourceRelationship.BaseTable;
-    }
   }
 
   public hasParentExplore(): this is ExploreField {
@@ -1694,11 +1691,14 @@ export class Explore extends Entity implements Taggable {
 
   // TODO wrapper type for FilterCondition
   get filters(): FilterCondition[] {
-    return this.structDef.resultMetadata?.filterList || [];
+    if (isSourceDef(this.structDef)) {
+      return this.structDef.resultMetadata?.filterList || [];
+    }
+    return [];
   }
 
   get limit(): number | undefined {
-    return this.structDef.resultMetadata?.limit;
+    return this.sourceStructDef?.resultMetadata?.limit;
   }
 
   public get structDef(): StructDef {
@@ -1706,7 +1706,13 @@ export class Explore extends Entity implements Taggable {
   }
 
   public get queryTimezone(): string | undefined {
-    return this.structDef.queryTimezone;
+    return this.sourceStructDef?.queryTimezone;
+  }
+
+  public get sourceStructDef(): SourceDef | undefined {
+    if (isSourceDef(this.structDef)) {
+      return this.structDef;
+    }
   }
 
   public toJSON(): SerializedExplore {
@@ -1746,11 +1752,11 @@ export enum AtomicFieldType {
 }
 
 export class AtomicField extends Entity implements Taggable {
-  protected fieldTypeDef: FieldTypeDef;
+  protected fieldTypeDef: AtomicFieldDef;
   protected parent: Explore;
 
   constructor(
-    fieldTypeDef: FieldTypeDef,
+    fieldTypeDef: AtomicFieldDef,
     parent: Explore,
     source?: AtomicField
   ) {
@@ -1777,6 +1783,13 @@ export class AtomicField extends Entity implements Taggable {
         return AtomicFieldType.NativeUnsupported;
       case 'error':
         return AtomicFieldType.Error;
+      case 'record':
+      case 'array':
+        throw new Error(`MTOY TODO IMPLEMENT Atomic ${this.fieldTypeDef.type}`);
+      default: {
+        const x: never = this.fieldTypeDef;
+        throw new Error(`Can't make an atomic field from ${x}`);
+      }
     }
   }
 
@@ -1790,7 +1803,7 @@ export class AtomicField extends Entity implements Taggable {
   }
 
   public isIntrinsic(): boolean {
-    return FieldIsIntrinsic(this.fieldTypeDef);
+    return fieldIsIntrinsic(this.fieldTypeDef);
   }
 
   public isQueryField(): this is QueryField {
@@ -1818,6 +1831,14 @@ export class AtomicField extends Entity implements Taggable {
   public get sourceClasses(): string[] {
     const sourceField = this.fieldTypeDef.name || this.fieldTypeDef.as;
     return sourceField ? [sourceField] : [];
+  }
+
+  /**
+   * A unique ID of this field within the context of a result; undefined
+   * for fields that are not derived from a Result.
+   */
+  public get referenceId(): string | undefined {
+    return this.fieldTypeDef.resultMetadata?.referenceId;
   }
 
   // was the field generated from a measure in the previous query
@@ -1913,9 +1934,9 @@ export enum TimestampTimeframe {
 }
 
 export class DateField extends AtomicField {
-  private fieldDateDef: FieldDateDef;
+  private fieldDateDef: DateFieldDef;
   constructor(
-    fieldDateDef: FieldDateDef,
+    fieldDateDef: DateFieldDef,
     parent: Explore,
     source?: AtomicField
   ) {
@@ -1943,9 +1964,9 @@ export class DateField extends AtomicField {
 }
 
 export class TimestampField extends AtomicField {
-  private fieldTimestampDef: FieldTimestampDef;
+  private fieldTimestampDef: TimestampFieldDef;
   constructor(
-    fieldTimestampDef: FieldTimestampDef,
+    fieldTimestampDef: TimestampFieldDef,
     parent: Explore,
     source?: AtomicField
   ) {
@@ -1979,9 +2000,9 @@ export class TimestampField extends AtomicField {
 }
 
 export class NumberField extends AtomicField {
-  private fieldNumberDef: FieldNumberDef;
+  private fieldNumberDef: NumberFieldDef;
   constructor(
-    fieldNumberDef: FieldNumberDef,
+    fieldNumberDef: NumberFieldDef,
     parent: Explore,
     source?: AtomicField
   ) {
@@ -1991,9 +2012,9 @@ export class NumberField extends AtomicField {
 }
 
 export class BooleanField extends AtomicField {
-  private fieldBooleanDef: FieldBooleanDef;
+  private fieldBooleanDef: BooleanFieldDef;
   constructor(
-    fieldBooleanDef: FieldBooleanDef,
+    fieldBooleanDef: BooleanFieldDef,
     parent: Explore,
     source?: AtomicField
   ) {
@@ -2003,9 +2024,9 @@ export class BooleanField extends AtomicField {
 }
 
 export class JSONField extends AtomicField {
-  private fieldJSONDef: FieldJSONDef;
+  private fieldJSONDef: JSONFieldDef;
   constructor(
-    fieldJSONDef: FieldJSONDef,
+    fieldJSONDef: JSONFieldDef,
     parent: Explore,
     source?: AtomicField
   ) {
@@ -2015,9 +2036,9 @@ export class JSONField extends AtomicField {
 }
 
 export class UnsupportedField extends AtomicField {
-  private fieldUnsupportedDef: FeldNativeUnsupportedDef;
+  private fieldUnsupportedDef: NativeUnsupportedFieldDef;
   constructor(
-    fieldUnsupportedDef: FeldNativeUnsupportedDef,
+    fieldUnsupportedDef: NativeUnsupportedFieldDef,
     parent: Explore,
     source?: AtomicField
   ) {
@@ -2030,9 +2051,9 @@ export class UnsupportedField extends AtomicField {
 }
 
 export class StringField extends AtomicField {
-  private fieldStringDef: FieldStringDef;
+  private fieldStringDef: StringFieldDef;
   constructor(
-    fieldStringDef: FieldStringDef,
+    fieldStringDef: StringFieldDef,
     parent: Explore,
     source?: AtomicField
   ) {
@@ -2125,19 +2146,16 @@ export class ExploreField extends Explore {
   }
 
   public get joinRelationship(): JoinRelationship {
-    switch (this.structDef.structRelationship.type) {
-      case 'one':
-        return JoinRelationship.OneToMany;
-      case 'many':
-      case 'cross':
-        return JoinRelationship.ManyToOne;
-      case 'inline':
-        return JoinRelationship.OneToOne;
-      case 'nested':
-        return JoinRelationship.ManyToOne;
-      default:
-        throw new Error('A source field must have a join relationship.');
+    if (isJoined(this.structDef)) {
+      switch (this.structDef.join) {
+        case 'one':
+          return JoinRelationship.OneToOne;
+        case 'many':
+        case 'cross':
+          return JoinRelationship.ManyToOne;
+      }
     }
+    throw new Error('A source field must have a join relationship.');
   }
 
   public get isRecord(): boolean {
@@ -2182,22 +2200,45 @@ export class Runtime {
   isTestRuntime = false;
   private _urlReader: URLReader;
   private _connections: LookupConnection<Connection>;
+  private _eventStream: EventStream | undefined;
 
   constructor(runtime: LookupConnection<Connection> & URLReader);
-  constructor(urls: URLReader, connections: LookupConnection<Connection>);
-  constructor(urls: URLReader, connection: Connection);
-  constructor(connection: Connection);
-  constructor(connections: LookupConnection<Connection>);
   constructor(
-    ...args: (URLReader | LookupConnection<Connection> | Connection)[]
+    urls: URLReader,
+    connections: LookupConnection<Connection>,
+    eventStream?: EventStream
+  );
+  constructor(
+    urls: URLReader,
+    connection: Connection,
+    eventStream?: EventStream
+  );
+  constructor(connection: Connection, eventStream?: EventStream);
+  constructor(
+    connections: LookupConnection<Connection>,
+    eventStream?: EventStream
+  );
+  constructor(
+    ...args: (
+      | URLReader
+      | LookupConnection<Connection>
+      | Connection
+      | EventStream
+      | undefined
+    )[]
   ) {
     let urlReader: URLReader | undefined;
     let connections: LookupConnection<Connection> | undefined;
+    let eventStream: EventStream | undefined;
     for (const arg of args) {
-      if (isURLReader(arg)) {
+      if (arg === undefined) {
+        continue;
+      } else if (isURLReader(arg)) {
         urlReader = arg;
       } else if (isLookupConnection<Connection>(arg)) {
         connections = arg;
+      } else if (isEventStream(arg)) {
+        eventStream = arg;
       } else {
         connections = {
           lookupConnection: () => Promise.resolve(arg),
@@ -2214,6 +2255,7 @@ export class Runtime {
     }
     this._urlReader = urlReader;
     this._connections = connections;
+    this._eventStream = eventStream;
   }
 
   /**
@@ -2231,6 +2273,13 @@ export class Runtime {
   }
 
   /**
+   * @return The `EventStream` for this runtime instance.
+   */
+  public get eventStream(): EventStream | undefined {
+    return this._eventStream;
+  }
+
+  /**
    * Load a Malloy model by URL or contents.
    *
    * @param source The model URL or contents to load and (eventually) compile.
@@ -2239,7 +2288,7 @@ export class Runtime {
    */
   public loadModel(
     source: ModelURL | ModelString,
-    options?: ParseOptions & CompileOptions & PrepareResultOptions
+    options?: ParseOptions & CompileOptions & CompileQueryOptions
   ): ModelMaterializer {
     const {refreshSchemaCache, noThrowOnError} = options || {};
     if (this.isTestRuntime) {
@@ -2257,10 +2306,12 @@ export class Runtime {
             ? await Malloy.parse({
                 url: source,
                 urlReader: this.urlReader,
+                eventStream: this.eventStream,
                 options,
               })
             : Malloy.parse({
                 source,
+                eventStream: this.eventStream,
                 options,
               });
         return Malloy.compile({
@@ -2269,7 +2320,9 @@ export class Runtime {
           parse,
           refreshSchemaCache,
           noThrowOnError,
+          eventStream: this.eventStream,
           replaceMaterializedReferences: options?.replaceMaterializedReferences,
+          materializedTablePrefix: options?.materializedTablePrefix,
         });
       },
       options
@@ -2282,12 +2335,12 @@ export class Runtime {
   //      be used in tests.
   public _loadModelFromModelDef(
     modelDef: ModelDef,
-    options?: PrepareResultOptions
+    options?: CompileQueryOptions
   ): ModelMaterializer {
     return new ModelMaterializer(
       this,
       async () => {
-        return new Model(modelDef, [], [], [], []);
+        return new Model(modelDef, [], [], []);
       },
       options
     );
@@ -2302,7 +2355,7 @@ export class Runtime {
    */
   public loadQuery(
     query: QueryURL | QueryString,
-    options?: ParseOptions & CompileOptions & PrepareResultOptions
+    options?: ParseOptions & CompileOptions & CompileQueryOptions
   ): QueryMaterializer {
     return this.loadModel(query, options).loadFinalQuery();
   }
@@ -2319,7 +2372,7 @@ export class Runtime {
   public loadQueryByIndex(
     model: ModelURL | ModelString,
     index: number,
-    options?: ParseOptions & CompileOptions & PrepareResultOptions
+    options?: ParseOptions & CompileOptions & CompileQueryOptions
   ): QueryMaterializer {
     return this.loadModel(model, options).loadQueryByIndex(index, options);
   }
@@ -2336,43 +2389,9 @@ export class Runtime {
   public loadQueryByName(
     model: ModelURL | ModelString,
     name: string,
-    options?: ParseOptions & CompileOptions & PrepareResultOptions
+    options?: ParseOptions & CompileOptions & CompileQueryOptions
   ): QueryMaterializer {
     return this.loadModel(model, options).loadQueryByName(name, options);
-  }
-
-  /**
-   * Load a SQL block by the URL or contents of a Malloy model document
-   * and the name of a query contained in the model.
-   *
-   * @param model The model URL or contents to load and (eventually) compile to retrieve the requested query.
-   * @param name The name of the sql block to use within the model.
-   * @return A `SQLBlockMaterializer` capable of materializing the requested query, running it,
-   * or loading further related objects.
-   */
-  public loadSQLBlockByName(
-    model: ModelURL | ModelString,
-    name: string,
-    options?: ParseOptions & CompileOptions & PrepareResultOptions
-  ): SQLBlockMaterializer {
-    return this.loadModel(model, options).loadSQLBlockByName(name);
-  }
-
-  /**
-   * Load a SQL block by the URL or contents of a Malloy model document
-   * and the name of a query contained in the model.
-   *
-   * @param model The model URL or contents to load and (eventually) compile to retrieve the requested query.
-   * @param index The index of the SQL block to use within the model. Note: named blocks are indexable, too.
-   * @return A `SQLBlockMaterializer` capable of materializing the requested query, running it,
-   * or loading further related objects.
-   */
-  public loadSQLBlockByIndex(
-    model: ModelURL | ModelString,
-    index: number,
-    options?: ParseOptions & CompileOptions
-  ): SQLBlockMaterializer {
-    return this.loadModel(model, options).loadSQLBlockByIndex(index);
   }
 
   // TODO maybe use overloads for the alternative parameters
@@ -2433,38 +2452,6 @@ export class Runtime {
   ): Promise<PreparedQuery> {
     return this.loadQueryByName(model, name, options).getPreparedQuery();
   }
-
-  /**
-   * Get a SQL block by the URL or contents of a Malloy model document
-   * and the name of a SQL block contained in the model.
-   *
-   * @param model The model URL or contents to load and (eventually) compile to retrieve the requested query.
-   * @param name The name of the sql block to use within the model.
-   * @return A promise of a `CompiledSQLBlock`.
-   */
-  public getSQLBlockByName(
-    model: ModelURL | ModelString,
-    name: string,
-    options?: ParseOptions & CompileOptions
-  ): Promise<SQLBlockStructDef> {
-    return this.loadSQLBlockByName(model, name, options).getSQLBlock();
-  }
-
-  /**
-   * Get a SQL block by the URL or contents of a Malloy model document
-   * and the name of a query contained in the model.
-   *
-   * @param model The model URL or contents to load and (eventually) compile to retrieve the requested query.
-   * @param index The index of the SQL block to use within the model. Note: named blocks are indexable, too.
-   * @return A promise of a `SQLBlock`.
-   */
-  public getSQLBlockByIndex(
-    model: ModelURL | ModelString,
-    index: number,
-    options?: ParseOptions & CompileOptions
-  ): Promise<SQLBlockStructDef> {
-    return this.loadSQLBlockByIndex(model, index, options).getSQLBlock();
-  }
 }
 
 export class ConnectionRuntime extends Runtime {
@@ -2496,18 +2483,32 @@ export class SingleConnectionRuntime<
 > extends Runtime {
   public readonly connection: T;
 
-  constructor(urls: URLReader, connection: T);
+  constructor(urlReader: URLReader, connection: T);
   constructor(connection: T);
-  constructor(urlsOrConnections: URLReader | T, maybeConnections?: T) {
-    if (maybeConnections === undefined) {
-      const connection = urlsOrConnections as T;
-      super(connection);
-      this.connection = connection;
-    } else {
-      const connection = maybeConnections as T;
-      super(urlsOrConnections as URLReader, connection);
-      this.connection = connection;
+  constructor(connection: T, eventStream: EventStream);
+  constructor(urlReader: URLReader, connection: T, eventStream: EventStream);
+  constructor(...params: (URLReader | T | EventStream)[]) {
+    let urlReader: URLReader | undefined;
+    let connection: T | undefined;
+    let eventStream: EventStream | undefined;
+    for (const param of params) {
+      if (isURLReader(param)) {
+        urlReader = param;
+      }
+      if (isConnection(param)) {
+        connection = param;
+      }
+      if (isEventStream(param)) {
+        eventStream = param;
+      }
     }
+    if (connection === undefined) {
+      throw new Error(
+        'Expected connection to be passed into SingleConnectionRuntime'
+      );
+    }
+    super(urlReader as URLReader, connection, eventStream);
+    this.connection = connection;
   }
 
   get supportsNesting(): boolean {
@@ -2557,14 +2558,14 @@ class FluentState<T> {
 
   protected makeQueryMaterializer(
     materialize: () => Promise<PreparedQuery>,
-    options?: PrepareResultOptions
+    options?: CompileQueryOptions
   ): QueryMaterializer {
     return new QueryMaterializer(this.runtime, materialize, options);
   }
 
   protected makeExploreMaterializer(
     materialize: () => Promise<Explore>,
-    options?: PrepareResultOptions
+    options?: CompileQueryOptions
   ): ExploreMaterializer {
     return new ExploreMaterializer(this.runtime, materialize, options);
   }
@@ -2574,12 +2575,6 @@ class FluentState<T> {
   ): PreparedResultMaterializer {
     return new PreparedResultMaterializer(this.runtime, materialize);
   }
-
-  protected makeSQLBlockMaterializer(
-    materialize: () => Promise<SQLBlockStructDef>
-  ): SQLBlockMaterializer {
-    return new SQLBlockMaterializer(this.runtime, materialize);
-  }
 }
 
 /**
@@ -2588,15 +2583,14 @@ class FluentState<T> {
  * queries or explores (via e.g. `loadFinalQuery()`, `loadQuery`, `loadExploreByName`, etc.).
  */
 export class ModelMaterializer extends FluentState<Model> {
-  private readonly replaceMaterializedReferences: boolean;
+  private readonly compileQueryOptions: CompileQueryOptions | undefined;
   constructor(
     protected runtime: Runtime,
     materialize: () => Promise<Model>,
-    options?: PrepareResultOptions
+    options?: CompileQueryOptions
   ) {
     super(runtime, materialize);
-    this.replaceMaterializedReferences =
-      options?.replaceMaterializedReferences ?? false;
+    this.compileQueryOptions = options;
   }
 
   /**
@@ -2605,13 +2599,13 @@ export class ModelMaterializer extends FluentState<Model> {
    * @return A `QueryMaterializer` capable of materializing the requested query, running it,
    * or loading further related objects.
    */
-  public loadFinalQuery(options?: PrepareResultOptions): QueryMaterializer {
+  public loadFinalQuery(options?: CompileQueryOptions): QueryMaterializer {
     return this.makeQueryMaterializer(
       async () => {
         return (await this.materialize()).getPreparedQuery();
       },
       {
-        replaceMaterializedReferences: this.replaceMaterializedReferences,
+        ...this.compileQueryOptions,
         ...options,
       }
     );
@@ -2626,14 +2620,14 @@ export class ModelMaterializer extends FluentState<Model> {
    */
   public loadQueryByIndex(
     index: number,
-    options?: PrepareResultOptions
+    options?: CompileQueryOptions
   ): QueryMaterializer {
     return this.makeQueryMaterializer(
       async () => {
         return (await this.materialize()).getPreparedQueryByIndex(index);
       },
       {
-        replaceMaterializedReferences: this.replaceMaterializedReferences,
+        ...this.compileQueryOptions,
         ...options,
       }
     );
@@ -2648,14 +2642,14 @@ export class ModelMaterializer extends FluentState<Model> {
    */
   public loadQueryByName(
     name: string,
-    options?: PrepareResultOptions
+    options?: CompileQueryOptions
   ): QueryMaterializer {
     return this.makeQueryMaterializer(
       async () => {
         return (await this.materialize()).getPreparedQueryByName(name);
       },
       {
-        replaceMaterializedReferences: this.replaceMaterializedReferences,
+        ...this.compileQueryOptions,
         ...options,
       }
     );
@@ -2670,7 +2664,7 @@ export class ModelMaterializer extends FluentState<Model> {
    */
   public loadQuery(
     query: QueryString | QueryURL,
-    options?: ParseOptions & CompileOptions & PrepareResultOptions
+    options?: ParseOptions & CompileOptions & CompileQueryOptions
   ): QueryMaterializer {
     const {refreshSchemaCache, noThrowOnError} = options || {};
     return this.makeQueryMaterializer(async () => {
@@ -2702,9 +2696,7 @@ export class ModelMaterializer extends FluentState<Model> {
         model,
         refreshSchemaCache,
         noThrowOnError,
-        replaceMaterializedReferences:
-          options?.replaceMaterializedReferences ??
-          this.replaceMaterializedReferences,
+        ...this.compileQueryOptions,
       });
       return queryModel.preparedQuery;
     });
@@ -2719,7 +2711,7 @@ export class ModelMaterializer extends FluentState<Model> {
    */
   public extendModel(
     query: QueryString | QueryURL,
-    options?: ParseOptions & CompileOptions & PrepareResultOptions
+    options?: ParseOptions & CompileOptions & CompileQueryOptions
   ): ModelMaterializer {
     if (this.runtime.isTestRuntime) {
       if (options === undefined) {
@@ -2752,9 +2744,7 @@ export class ModelMaterializer extends FluentState<Model> {
           model,
           refreshSchemaCache: options?.refreshSchemaCache,
           noThrowOnError: options?.noThrowOnError,
-          replaceMaterializedReferences:
-            options?.replaceMaterializedReferences ??
-            this.replaceMaterializedReferences,
+          ...this.compileQueryOptions,
         });
         return queryModel;
       },
@@ -2766,17 +2756,16 @@ export class ModelMaterializer extends FluentState<Model> {
     sourceName: string,
     searchTerm: string,
     limit = 1000,
-    searchField: string | undefined = undefined
+    searchField: string | undefined = undefined,
+    eventStream?: EventStream
   ): Promise<SearchIndexResult[] | undefined> {
     const model = await this.materialize();
-    const queryModel = new QueryModel(model._modelDef);
+    const queryModel = new QueryModel(model._modelDef, eventStream);
     const schema = model.getExploreByName(sourceName).structDef;
-    if (schema.structRelationship.type !== 'basetable') {
-      throw new Error(
-        "Expected schema's structRelationship type to be 'basetable'."
-      );
+    if (!isSourceDef(schema)) {
+      throw new Error('Source to be searched was unexpectedly, not a source');
     }
-    const connectionName = schema.structRelationship.connectionName;
+    const connectionName = schema.connection;
     const connection =
       await this.runtime.connections.lookupConnection(connectionName);
     return await queryModel.searchIndex(
@@ -2795,10 +2784,8 @@ export class ModelMaterializer extends FluentState<Model> {
   ): Promise<SearchValueMapResult[] | undefined> {
     const model = await this.materialize();
     const schema = model.getExploreByName(sourceName);
-    if (schema.structDef.structRelationship.type !== 'basetable') {
-      throw new Error(
-        "Expected schema's structRelationship type to be 'basetable'."
-      );
+    if (!isSourceDef(schema.structDef)) {
+      throw new Error('Source to be searched was unexpectedly, not a source');
     }
     let indexQuery = '{index: *}';
 
@@ -2825,34 +2812,6 @@ export class ModelMaterializer extends FluentState<Model> {
       rowLimit: 1000,
     });
     return result._queryResult.result as unknown as SearchValueMapResult[];
-  }
-
-  /**
-   * Load a SQL Block by name.
-   *
-   * @param name The name of the SQL Block to load.
-   * @return A `SQLBlockMaterializer` capable of materializing the requested sql block, running it,
-   * or loading further related objects.
-   */
-  public loadSQLBlockByName(name: string): SQLBlockMaterializer {
-    return this.makeSQLBlockMaterializer(async () => {
-      return (await this.materialize()).getSQLBlockByName(name);
-    });
-  }
-
-  /**
-   * Load a SQL Block by index.
-   *
-   * @param index The index of the SQL Block to load. Note: named SQL blocks are indexable, too.
-   * @return A `SQLBlockMaterializer` capable of materializing the requested sql block, running it,
-   * or loading further related objects.
-   *
-   * TODO feature-sql-block Should named SQL blocks be indexable? This is not the way unnamed queries work.
-   */
-  public loadSQLBlockByIndex(index: number): SQLBlockMaterializer {
-    return this.makeSQLBlockMaterializer(async () => {
-      return (await this.materialize()).getSQLBlockByIndex(index);
-    });
   }
 
   /**
@@ -2897,35 +2856,13 @@ export class ModelMaterializer extends FluentState<Model> {
     return this.loadQuery(query, options).getPreparedQuery();
   }
 
-  /**
-   * Get a SQL Block by name.
-   *
-   * @param name The name of the SQL Block to load.
-   * @return A promise of a `SQLBlock`.
-   */
-  public getSQLBlockByName(name: string): Promise<SQLBlockStructDef> {
-    return this.loadSQLBlockByName(name).getSQLBlock();
-  }
-
-  /**
-   * Get a SQL Block by index.
-   *
-   * @param index The index of the SQL Block to load. Note: named SQL blocks are indexable, too.
-   * @return A promise of a `SQLBlock`.
-   *
-   * TODO feature-sql-block Should named SQL blocks be indexable? This is not the way unnamed queries work.
-   */
-  public getSQLBlockByIndex(index: number): Promise<SQLBlockStructDef> {
-    return this.loadSQLBlockByIndex(index).getSQLBlock();
-  }
-
   // TODO Consider formalizing this. Perhaps as a `withQuery` method,
   //      as well as a `PreparedQuery.fromQueryDefinition` if we choose to expose
   //      `InternalQuery` to the world formally. For now, this should only
   //      be used in tests.
   public _loadQueryFromQueryDef(
     query: InternalQuery,
-    options?: PrepareResultOptions
+    options?: CompileQueryOptions
   ): QueryMaterializer {
     return this.makeQueryMaterializer(
       async () => {
@@ -2933,7 +2870,7 @@ export class ModelMaterializer extends FluentState<Model> {
         return new PreparedQuery(query, model._modelDef, model.problems);
       },
       {
-        replaceMaterializedReferences: this.replaceMaterializedReferences,
+        ...this.compileQueryOptions,
         ...options,
       }
     );
@@ -2947,14 +2884,9 @@ export class ModelMaterializer extends FluentState<Model> {
    * or loading further related objects.
    */
   public loadExploreByName(name: string): ExploreMaterializer {
-    return this.makeExploreMaterializer(
-      async () => {
-        return (await this.materialize()).getExploreByName(name);
-      },
-      {
-        replaceMaterializedReferences: this.replaceMaterializedReferences,
-      }
-    );
+    return this.makeExploreMaterializer(async () => {
+      return (await this.materialize()).getExploreByName(name);
+    }, this.compileQueryOptions);
   }
 
   /**
@@ -2983,15 +2915,14 @@ export class ModelMaterializer extends FluentState<Model> {
  * prepared results or run the query (via e.g. `loadPreparedResult()` or `run()`).
  */
 export class QueryMaterializer extends FluentState<PreparedQuery> {
-  private readonly replaceMaterializedReferences: boolean;
+  private readonly compileQueryOptions: CompileQueryOptions | undefined;
   constructor(
     protected runtime: Runtime,
     materialize: () => Promise<PreparedQuery>,
-    options?: PrepareResultOptions
+    options?: CompileQueryOptions
   ) {
     super(runtime, materialize);
-    this.replaceMaterializedReferences =
-      options?.replaceMaterializedReferences ?? false;
+    this.compileQueryOptions = options;
   }
 
   /**
@@ -2999,23 +2930,17 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
    *
    * @return The query results from running this loaded query.
    */
-  async run(options?: RunSQLOptions & PrepareResultOptions): Promise<Result> {
+  async run(options?: RunSQLOptions & CompileQueryOptions): Promise<Result> {
     const connections = this.runtime.connections;
-    const preparedResult = await this.getPreparedResult({
-      replaceMaterializedReferences: this.replaceMaterializedReferences,
-      ...options,
-    });
+    const preparedResult = await this.getPreparedResult(options);
     const finalOptions = runSQLOptionsWithAnnotations(preparedResult, options);
     return Malloy.run({connections, preparedResult, options: finalOptions});
   }
 
   async *runStream(
-    options?: RunSQLOptions & PrepareResultOptions
+    options?: RunSQLOptions & CompileQueryOptions
   ): AsyncIterableIterator<DataRecord> {
-    const preparedResult = await this.getPreparedResult({
-      replaceMaterializedReferences: this.replaceMaterializedReferences,
-      ...options,
-    });
+    const preparedResult = await this.getPreparedResult(options);
     const connections = this.runtime.connections;
     const finalOptions = runSQLOptionsWithAnnotations(preparedResult, options);
     const stream = Malloy.runStream({
@@ -3035,11 +2960,12 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
    * prepared query or running it.
    */
   public loadPreparedResult(
-    options?: PrepareResultOptions
+    options?: CompileQueryOptions
   ): PreparedResultMaterializer {
     return this.makePreparedResultMaterializer(async () => {
       return (await this.materialize()).getPreparedResult({
-        replaceMaterializedReferences: this.replaceMaterializedReferences,
+        eventStream: this.eventStream,
+        ...this.compileQueryOptions,
         ...options,
       });
     });
@@ -3051,12 +2977,9 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
    * @return A promise of the prepared result of this loaded query.
    */
   public getPreparedResult(
-    options?: PrepareResultOptions
+    options?: CompileQueryOptions
   ): Promise<PreparedResult> {
-    return this.loadPreparedResult({
-      replaceMaterializedReferences: this.replaceMaterializedReferences,
-      ...options,
-    }).getPreparedResult();
+    return this.loadPreparedResult(options).getPreparedResult();
   }
 
   /**
@@ -3064,13 +2987,8 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
    *
    * @return A promise of the SQL string.
    */
-  public async getSQL(options?: PrepareResultOptions): Promise<string> {
-    return (
-      await this.getPreparedResult({
-        replaceMaterializedReferences: this.replaceMaterializedReferences,
-        ...options,
-      })
-    ).sql;
+  public async getSQL(options?: CompileQueryOptions): Promise<string> {
+    return (await this.getPreparedResult(options)).sql;
   }
 
   /**
@@ -3088,14 +3006,15 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
    * @return The estimated cost of running this loaded query.
    */
   public async estimateQueryCost(
-    options?: PrepareResultOptions
+    options?: CompileQueryOptions
   ): Promise<QueryRunStats> {
     const connections = this.runtime.connections;
-    const preparedResult = await this.getPreparedResult({
-      replaceMaterializedReferences: this.replaceMaterializedReferences,
-      ...options,
-    });
+    const preparedResult = await this.getPreparedResult(options);
     return Malloy.estimateQueryCost({connections, preparedResult});
+  }
+
+  get eventStream(): EventStream | undefined {
+    return this.runtime.eventStream;
   }
 }
 
@@ -3168,64 +3087,6 @@ export class PreparedResultMaterializer extends FluentState<PreparedResult> {
 }
 
 /**
- * An object representing the task of loading a `SQLBlock`, capable of
- * materializing the SQLBlock (via `getSQLBlock()`) or extending the task run
- * the query.
- */
-export class SQLBlockMaterializer extends FluentState<SQLBlockStructDef> {
-  /**
-   * Run this SQL block.
-   *
-   * @return A promise to the query result data.
-   */
-  async run(options?: RunSQLOptions): Promise<Result> {
-    const sqlBlock = await this.getSQLBlock();
-    const connections = this.runtime.connections;
-    return Malloy.run({
-      connections,
-      sqlStruct: sqlBlock,
-      options,
-    });
-  }
-
-  async *runStream(options?: {
-    rowLimit?: number;
-  }): AsyncIterableIterator<DataRecord> {
-    const sqlStruct = await this.getSQLBlock();
-    const connections = this.runtime.connections;
-    const stream = Malloy.runStream({connections, sqlStruct, options});
-    for await (const row of stream) {
-      yield row;
-    }
-  }
-
-  /**
-   * Materialize this loaded SQL block.
-   *
-   * @return A promise of a SQL block.
-   */
-  public getSQLBlock(): Promise<SQLBlockStructDef> {
-    return this.materialize();
-  }
-
-  /**
-   * Materialize the SQL of this loaded SQL block.
-   *
-   * @return A promise to the SQL string.
-   */
-  public async getSQL(): Promise<string> {
-    const sqlStruct = await this.getSQLBlock();
-    return sqlStruct.structSource.sqlBlock.selectStr;
-  }
-
-  public async estimateQueryCost(): Promise<QueryRunStats> {
-    const connections = this.runtime.connections;
-    const sqlStruct = await this.getSQLBlock();
-    return Malloy.estimateQueryCost({connections, sqlStruct});
-  }
-}
-
-/**
  * An object representing the task of loading an `Explore`, capable of
  * materializing the explore (via `getExplore()`) or extending the task to produce
  * related queries.
@@ -3235,7 +3096,7 @@ export class ExploreMaterializer extends FluentState<Explore> {
   constructor(
     protected runtime: Runtime,
     materialize: () => Promise<Explore>,
-    options?: PrepareResultOptions
+    options?: CompileQueryOptions
   ) {
     super(runtime, materialize);
     this.replaceMaterializedReferences =
@@ -3251,7 +3112,7 @@ export class ExploreMaterializer extends FluentState<Explore> {
    */
   public loadQueryByName(
     name: string,
-    options?: PrepareResultOptions
+    options?: CompileQueryOptions
   ): QueryMaterializer {
     return this.makeQueryMaterializer(async () => {
       return (await this.materialize()).getQueryByName(name);
@@ -4004,6 +3865,7 @@ function isURLReader(
     | LookupConnection<InfoConnection>
     | LookupConnection<Connection>
     | Connection
+    | EventStream
 ): thing is URLReader {
   return 'readURL' in thing;
 }
@@ -4014,8 +3876,31 @@ function isLookupConnection<T extends InfoConnection = InfoConnection>(
     | LookupConnection<InfoConnection>
     | LookupConnection<Connection>
     | Connection
+    | EventStream
 ): thing is LookupConnection<T> {
   return 'lookupConnection' in thing;
+}
+
+function isEventStream(
+  thing:
+    | URLReader
+    | LookupConnection<InfoConnection>
+    | LookupConnection<Connection>
+    | Connection
+    | EventStream
+): thing is EventStream {
+  return 'emit' in thing;
+}
+
+function isConnection<T extends Connection>(
+  thing:
+    | URLReader
+    | LookupConnection<InfoConnection>
+    | LookupConnection<Connection>
+    | Connection
+    | EventStream
+): thing is T {
+  return 'runSQL' in thing;
 }
 
 export interface WriteStream {

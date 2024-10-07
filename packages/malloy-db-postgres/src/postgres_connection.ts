@@ -31,9 +31,7 @@ import * as crypto from 'crypto';
 import {
   Connection,
   ConnectionConfig,
-  FetchSchemaOptions,
   MalloyQueryData,
-  NamedStructDefs,
   PersistSQLResults,
   PooledConnection,
   PostgresDialect,
@@ -42,7 +40,9 @@ import {
   QueryOptionsReader,
   QueryRunStats,
   RunSQLOptions,
-  SQLBlock,
+  SQLSourceDef,
+  TableSourceDef,
+  arrayEachFields,
   StreamingConnection,
   StructDef,
 } from '@malloydata/malloy';
@@ -81,16 +81,6 @@ export class PostgresConnection
   private configReader: PostgresConnectionConfigurationReader = {};
 
   private readonly dialect = new PostgresDialect();
-  private schemaCache = new Map<
-    string,
-    | {schema: StructDef; error?: undefined; timestamp: number}
-    | {error: string; schema?: undefined; timestamp: number}
-  >();
-  private sqlSchemaCache = new Map<
-    string,
-    | {structDef: StructDef; error?: undefined; timestamp: number}
-    | {error: string; structDef?: undefined; timestamp: number}
-  >();
 
   constructor(
     options: PostgresConnectionOptions,
@@ -158,70 +148,6 @@ export class PostgresConnection
     return true;
   }
 
-  public async fetchSchemaForTables(
-    missing: Record<string, string>,
-    {refreshTimestamp}: FetchSchemaOptions
-  ): Promise<{
-    schemas: Record<string, StructDef>;
-    errors: Record<string, string>;
-  }> {
-    const schemas: NamedStructDefs = {};
-    const errors: {[name: string]: string} = {};
-
-    for (const tableKey in missing) {
-      let inCache = this.schemaCache.get(tableKey);
-      if (
-        !inCache ||
-        (refreshTimestamp && refreshTimestamp > inCache.timestamp)
-      ) {
-        const tablePath = missing[tableKey];
-        const timestamp = refreshTimestamp || Date.now();
-        try {
-          inCache = {
-            schema: await this.getTableSchema(tableKey, tablePath),
-            timestamp,
-          };
-          this.schemaCache.set(tableKey, inCache);
-        } catch (error) {
-          inCache = {error: error.message, timestamp};
-        }
-      }
-      if (inCache.schema !== undefined) {
-        schemas[tableKey] = inCache.schema;
-      } else {
-        errors[tableKey] = inCache.error || 'Unknown schema fetch error';
-      }
-    }
-    return {schemas, errors};
-  }
-
-  public async fetchSchemaForSQLBlock(
-    sqlRef: SQLBlock,
-    {refreshTimestamp}: FetchSchemaOptions
-  ): Promise<
-    | {structDef: StructDef; error?: undefined}
-    | {error: string; structDef?: undefined}
-  > {
-    const key = sqlRef.name;
-    let inCache = this.sqlSchemaCache.get(key);
-    if (
-      !inCache ||
-      (refreshTimestamp && refreshTimestamp > inCache.timestamp)
-    ) {
-      const timestamp = refreshTimestamp ?? Date.now();
-      try {
-        inCache = {
-          structDef: await this.getSQLBlockSchema(sqlRef),
-          timestamp,
-        };
-      } catch (error) {
-        inCache = {error: error.message, timestamp};
-      }
-      this.sqlSchemaCache.set(key, inCache);
-    }
-    return inCache;
-  }
-
   protected async getClient(): Promise<Client> {
     const {
       username: user,
@@ -267,23 +193,10 @@ export class PostgresConnection
     };
   }
 
-  private async getSQLBlockSchema(sqlRef: SQLBlock): Promise<StructDef> {
-    const structDef: StructDef = {
-      type: 'struct',
-      dialect: 'postgres',
-      name: sqlRef.name,
-      structSource: {
-        type: 'sql',
-        method: 'subquery',
-        sqlBlock: sqlRef,
-      },
-      structRelationship: {
-        type: 'basetable',
-        connectionName: this.name,
-      },
-      fields: [],
-    };
-
+  async fetchSelectSchema(
+    sqlRef: SQLSourceDef
+  ): Promise<SQLSourceDef | string> {
+    const structDef: SQLSourceDef = {...sqlRef, fields: []};
     const tempTableName = `tmp${randomUUID()}`.replace(/-/g, '');
     const infoQuery = `
       drop table if exists ${tempTableName};
@@ -299,7 +212,7 @@ export class PostgresConnection
     try {
       await this.schemaFromQuery(infoQuery, structDef);
     } catch (error) {
-      throw new Error(`Error fetching schema for ${sqlRef.name}: ${error}`);
+      return `Error fetching schema for ${sqlRef.name}: ${error}`;
     }
     return structDef;
   }
@@ -319,58 +232,41 @@ export class PostgresConnection
     }
     for (const row of rows) {
       const postgresDataType = row['data_type'] as string;
-      let s = structDef;
-      let malloyType = this.dialect.sqlTypeToMalloyType(postgresDataType);
-      let name = row['column_name'] as string;
+      const name = row['column_name'] as string;
       if (postgresDataType === 'ARRAY') {
-        malloyType = this.dialect.sqlTypeToMalloyType(
+        const elementType = this.dialect.sqlTypeToMalloyType(
           row['element_type'] as string
         );
-        s = {
-          type: 'struct',
-          name: row['column_name'] as string,
-          dialect: this.dialectName,
-          structRelationship: {
-            type: 'nested',
-            fieldName: name,
-            isArray: true,
-          },
-          structSource: {type: 'nested'},
-          fields: [],
-        };
-        structDef.fields.push(s);
-        name = 'value';
-      }
-      if (malloyType) {
-        s.fields.push({...malloyType, name});
-      } else {
-        s.fields.push({
-          type: 'sql native',
-          rawType: postgresDataType.toLowerCase(),
+        structDef.fields.push({
+          type: 'array',
+          elementTypeDef: elementType,
           name,
+          dialect: this.dialectName,
+          join: 'many',
+          fields: arrayEachFields(elementType),
         });
+      } else {
+        const malloyType = this.dialect.sqlTypeToMalloyType(postgresDataType);
+        structDef.fields.push({...malloyType, name});
       }
     }
   }
 
-  private async getTableSchema(
+  async fetchTableSchema(
     tableKey: string,
     tablePath: string
-  ): Promise<StructDef> {
+  ): Promise<TableSourceDef | string> {
     const structDef: StructDef = {
-      type: 'struct',
+      type: 'table',
       name: tableKey,
       dialect: 'postgres',
-      structSource: {type: 'table', tablePath},
-      structRelationship: {
-        type: 'basetable',
-        connectionName: this.name,
-      },
+      tablePath,
+      connection: this.name,
       fields: [],
     };
     const [schema, table] = tablePath.split('.');
     if (table === undefined) {
-      throw new Error('Default schema not yet supported in Postgres');
+      return 'Default schema not yet supported in Postgres';
     }
     const infoQuery = `
       SELECT column_name, c.data_type, e.data_type as element_type
@@ -384,7 +280,7 @@ export class PostgresConnection
     try {
       await this.schemaFromQuery(infoQuery, structDef);
     } catch (error) {
-      throw new Error(`Error fetching schema for ${tablePath}: ${error}`);
+      return `Error fetching schema for ${tablePath}: ${error.message}`;
     }
     return structDef;
   }

@@ -506,12 +506,11 @@ describe('pipeline comprehension', () => {
   test('new query can refine and append to exisiting query', () => {
     expect(`
       source: aq is _db_.table('aTable') extend {
-        view: by_region is { group_by: astr }
-        view: by_region2 is by_region + {
+        view: by_region is {
+          group_by: region is astr
           nest: dateNest is { group_by: ad }
-        } -> {
-          select: astr, dateNest.ad
         }
+        -> { select: dateNest.ad }
       }
     `).toTranslate();
   });

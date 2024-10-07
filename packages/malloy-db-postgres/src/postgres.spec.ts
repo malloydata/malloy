@@ -22,7 +22,7 @@
  */
 
 import {PostgresConnection} from './postgres_connection';
-import {SQLBlock} from '@malloydata/malloy';
+import {SQLSourceDef} from '@malloydata/malloy';
 import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
 
 const [describe] = describeIfDatabaseAvailable(['postgres']);
@@ -51,35 +51,24 @@ describe('PostgresConnection', () => {
   beforeEach(async () => {
     getTableSchema = jest
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .spyOn(PostgresConnection.prototype as any, 'getTableSchema')
+      .spyOn(PostgresConnection.prototype as any, 'fetchTableSchema')
       .mockResolvedValue({
-        type: 'struct',
+        type: 'table',
         dialect: 'postgres',
         name: 'name',
-        structSource: {type: 'table', tablePath: 'test'},
-        structRelationship: {
-          type: 'basetable',
-          connectionName: 'postgres',
-        },
-        fields: [],
+        tablePath: 'test',
+        connection: 'postgres',
       });
 
     getSQLBlockSchema = jest
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .spyOn(PostgresConnection.prototype as any, 'getSQLBlockSchema')
+      .spyOn(PostgresConnection.prototype as any, 'fetchSelectSchema')
       .mockResolvedValue({
-        type: 'struct',
+        type: 'sql select',
         dialect: 'postgres',
         name: 'name',
-        structSource: {
-          type: 'sql',
-          method: 'subquery',
-          sqlBlock: SQL_BLOCK_1,
-        },
-        structRelationship: {
-          type: 'basetable',
-          connectionName: 'postgres',
-        },
+        selectStr: SQL_BLOCK_1.selectStr,
+        connection: 'postgres',
         fields: [],
       });
   });
@@ -106,25 +95,28 @@ describe('PostgresConnection', () => {
   });
 
   it('caches sql schema', async () => {
-    await connection.fetchSchemaForSQLBlock(SQL_BLOCK_1, {});
+    await connection.fetchSchemaForSQLStruct(SQL_BLOCK_1, {});
     expect(getSQLBlockSchema).toBeCalledTimes(1);
-    await connection.fetchSchemaForSQLBlock(SQL_BLOCK_1, {});
+    await connection.fetchSchemaForSQLStruct(SQL_BLOCK_1, {});
     expect(getSQLBlockSchema).toBeCalledTimes(1);
   });
 
   it('refreshes sql schema', async () => {
-    await connection.fetchSchemaForSQLBlock(SQL_BLOCK_2, {});
+    await connection.fetchSchemaForSQLStruct(SQL_BLOCK_2, {});
     expect(getSQLBlockSchema).toBeCalledTimes(1);
-    await connection.fetchSchemaForSQLBlock(SQL_BLOCK_2, {
+    await connection.fetchSchemaForSQLStruct(SQL_BLOCK_2, {
       refreshTimestamp: Date.now() + 10,
     });
     expect(getSQLBlockSchema).toBeCalledTimes(2);
   });
 });
 
-const SQL_BLOCK_1 = {
-  type: 'sqlBlock',
+const SQL_BLOCK_1: SQLSourceDef = {
+  type: 'sql_select',
   name: 'block1',
+  dialect: 'postgres',
+  connection: 'postgres',
+  fields: [],
   selectStr: `
 SELECT
 created_at,
@@ -138,11 +130,14 @@ product_category,
 created_at AS inventory_items_created_at
 FROM "inventory_items.parquet"
 `,
-} as SQLBlock;
+};
 
-const SQL_BLOCK_2 = {
-  type: 'sqlBlock',
+const SQL_BLOCK_2: SQLSourceDef = {
+  type: 'sql_select',
   name: 'block2',
+  dialect: 'postgres',
+  connection: 'postgres',
+  fields: [],
   selectStr: `
 SELECT
 created_at,
@@ -156,4 +151,4 @@ product_category,
 created_at AS inventory_items_created_at
 FROM read_parquet("inventory_items2.parquet")
 `,
-} as SQLBlock;
+};

@@ -23,6 +23,7 @@
 export {
   DuckDBDialect,
   StandardSQLDialect,
+  TrinoDialect,
   PostgresDialect,
   SnowflakeDialect,
   MySQLDialect,
@@ -56,23 +57,23 @@ export type {
   QueryDataRow,
   // Needed for DB
   StructDef,
-  StructRelationship,
-  NamedStructDefs,
+  TableSourceDef,
+  SQLSourceDef,
+  SourceDef,
+  JoinFieldDef,
+  NamedSourceDefs as NamedStructDefs,
   MalloyQueryData,
-  AtomicFieldType as AtomicFieldTypeInner,
   DateUnit,
   ExtractUnit,
   TimestampUnit,
-  TimeFieldType,
+  TemporalFieldType as TimeFieldType,
   QueryData,
   QueryValue,
-  FieldTypeDef,
   Expr,
   // Needed for drills in render
   FilterCondition,
-  SQLBlock,
+  SQLSentence,
   // Used in Composer Demo
-  FieldAtomicDef,
   FieldDef,
   PipeSegment,
   QueryFieldDef,
@@ -101,10 +102,18 @@ export type {
   DocumentPosition,
   Sampling,
   Annotation,
-  FieldAtomicTypeDef,
-  SQLBlockStructDef,
+  LeafAtomicDef,
+  AtomicTypeDef,
+  AtomicFieldDef,
+  JoinedArrayDef,
+  JoinedArrayTypeDef,
+  RecordTypeDef,
+  RepeatedRecordTypeDef,
 } from './model';
 export {
+  arrayEachFields,
+  isRepeatedRecord,
+  isSourceDef,
   // Used in Composer Demo
   Segment,
   isSamplingEnable,
@@ -160,7 +169,6 @@ export type {
   DocumentSymbol,
   ResultJSON,
   PreparedResultMaterializer,
-  SQLBlockMaterializer,
   ExploreMaterializer,
   WriteStream,
   SerializedExplore,
@@ -170,6 +178,7 @@ export type {
 } from './malloy';
 export type {QueryOptionsReader, RunSQLOptions} from './run_sql_options';
 export type {
+  EventStream,
   ModelString,
   ModelURL,
   QueryString,

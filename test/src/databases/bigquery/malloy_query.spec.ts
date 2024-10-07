@@ -52,12 +52,7 @@ async function runQuery(model: malloy.ModelMaterializer, query: string) {
 }
 
 async function bqCompile(sql: string): Promise<boolean> {
-  try {
-    await bq.executeSQLRaw(`WITH test AS(\n${sql}) SELECT 1 as one`);
-  } catch (e) {
-    malloy.Malloy.log.error(`SQL: didn't compile\n=============\n${sql}`);
-    throw e;
-  }
+  await bq.executeSQLRaw(`WITH test AS(\n${sql}) SELECT 1 as one`);
   return true;
 }
 
@@ -702,9 +697,7 @@ describe('airport_tests', () => {
   });
 
   it('nested_sums', async () => {
-    const result = await runQuery(
-      model,
-      `
+    await expect(`
       run: airports->{
         aggregate: airport_count
         nest: by_state is {
@@ -721,34 +714,23 @@ describe('airport_tests', () => {
           sum_state is by_state.sum(by_state.airport_count),
           sum_fac is by_state.by_fac_type.sum(by_state.by_fac_type.airport_count)
       }
-    `
-    );
-    // console.log(result.sql);
-    expect(result.data.value[0]['sum_state']).toBe(19793);
-    expect(result.data.value[0]['sum_fac']).toBe(19793);
+    `).malloyResultMatches(model, {sum_state: 19793, sum_fac: 19793});
   });
 
   it('pipeline_as_declared_turtle', async () => {
-    const result = await runQuery(
-      model,
-      `
-        source: my_airports is airports extend {
-          view: pipe_turtle is {
-            aggregate: a is airport_count
-          } -> {
-            select: a
-          }
+    await expect(`
+      run: airports extend {
+        view: pipe_turtle is {
+          aggregate: a is airport_count
+        } -> {
+          select: a
         }
-        run: my_airports->pipe_turtle
-    `
-    );
-    expect(result.data.value[0]['a']).toBe(19793);
+      } -> pipe_turtle
+    `).malloyResultMatches(model, {a: 19793});
   });
 
   it('pipeline Turtle', async () => {
-    const result = await runQuery(
-      model,
-      `
+    await expect(`
       run: bigquery.table('malloytest.airports')->{
         aggregate: airport_count is count()
         nest: pipe_turtle is {
@@ -765,13 +747,7 @@ describe('airport_tests', () => {
           aggregate: total_airports is a.sum()
         }
       }
-      `
-    );
-
-    expect(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (result.data.value[0] as any).pipe_turtle[0].total_airports
-    ).toBe(1845);
+    `).malloyResultMatches(model, {'pipe_turtle.total_airports': 1845});
   });
 
   it.skip('crossjoined turtles', async () => {

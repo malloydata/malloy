@@ -32,19 +32,23 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
     run: foo -> fooview;
     `;
 
-    const qm = runtime.loadQuery(query, {replaceMaterializedReferences: true});
+    const qm = runtime.loadQuery(query, {
+      replaceMaterializedReferences: true,
+      materializedTablePrefix: 'myPipelinePrefix',
+    });
     const preparedResult = await qm.getPreparedResult();
 
     expect(preparedResult.sql).toBe(
-      'SELECT \n   base."two"+1 as "three"\nFROM myMaterializedQuery-6037d4be-8b92-5ea7-95a0-27bd26c240ca as base\n'
+      'SELECT \n   base."two"+1 as "three"\nFROM myPipelinePrefix_myMaterializedQuery_6037d4be_8b92_5ea7_95a0_27bd26c240ca as base\n'
     );
     expect(preparedResult.dependenciesToMaterialize).toStrictEqual({
-      'myMaterializedQuery-6037d4be-8b92-5ea7-95a0-27bd26c240ca': {
-        'id': '6037d4be-8b92-5ea7-95a0-27bd26c240ca',
-        'path': 'internal://internal.malloy',
-        'queryName': 'myMaterializedQuery',
-        'source': undefined,
-      },
+      'myPipelinePrefix_myMaterializedQuery_6037d4be_8b92_5ea7_95a0_27bd26c240ca':
+        {
+          'id': 'myPipelinePrefix_myMaterializedQuery_6037d4be_8b92_5ea7_95a0_27bd26c240ca',
+          'path': 'internal://internal.malloy',
+          'queryName': 'myMaterializedQuery',
+          'source': undefined,
+        },
     });
   });
 
@@ -76,11 +80,11 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
     const preparedResult = await qm.getPreparedResult();
 
     expect(preparedResult.sql).toBe(
-      'SELECT \n   base."three"+1 as "four"\nFROM secondLevelMaterializedQuery-bd80d526-f867-587e-933e-89353d26d022 as base\n'
+      'SELECT \n   base."three"+1 as "four"\nFROM secondLevelMaterializedQuery_bd80d526_f867_587e_933e_89353d26d022 as base\n'
     );
     expect(preparedResult.dependenciesToMaterialize).toStrictEqual({
-      'secondLevelMaterializedQuery-bd80d526-f867-587e-933e-89353d26d022': {
-        id: 'bd80d526-f867-587e-933e-89353d26d022',
+      'secondLevelMaterializedQuery_bd80d526_f867_587e_933e_89353d26d022': {
+        id: 'secondLevelMaterializedQuery_bd80d526_f867_587e_933e_89353d26d022',
         path: 'internal://internal.malloy',
         queryName: 'secondLevelMaterializedQuery',
         source: undefined,

@@ -24,7 +24,7 @@
 import {
   Expr,
   isDateUnit,
-  isTimeFieldType,
+  isTemporalField,
   TimestampUnit,
 } from '../../../model/malloy_types';
 
@@ -64,7 +64,7 @@ export class ExprGranularTime extends ExpressionDef {
   getExpression(fs: FieldSpace): ExprValue {
     const timeframe = this.units;
     const exprVal = this.expr.getExpression(fs);
-    if (isTimeFieldType(exprVal.dataType)) {
+    if (isTemporalField(exprVal.dataType)) {
       const tsVal: GranularResult = {
         ...exprVal,
         dataType: exprVal.dataType,

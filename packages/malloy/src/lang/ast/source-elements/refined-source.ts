@@ -23,7 +23,7 @@
 
 import {
   Annotation,
-  StructDef,
+  SourceDef,
   expressionIsCalculation,
 } from '../../../model/malloy_types';
 
@@ -31,7 +31,6 @@ import {RefinedSpace} from '../field-space/refined-space';
 import {HasParameter} from '../parameters/has-parameter';
 import {DeclareFields} from '../query-properties/declare-fields';
 import {Filter} from '../query-properties/filters';
-import {Joins} from '../source-properties/joins';
 import {FieldListEdit} from '../source-properties/field-list-edit';
 import {PrimaryKey} from '../source-properties/primary-key';
 import {Views} from '../source-properties/views';
@@ -42,6 +41,7 @@ import {ObjectAnnotation} from '../types/annotation-elements';
 import {Renames} from '../source-properties/renames';
 import {MakeEntry} from '../types/space-entry';
 import {ParameterSpace} from '../field-space/parameter-space';
+import {JoinStatement} from '../source-properties/join';
 
 /**
  * A Source made from a source reference and a set of refinements
@@ -57,14 +57,14 @@ export class RefinedSource extends Source {
     super({source, refinement});
   }
 
-  structDef(parameterSpace: ParameterSpace | undefined): StructDef {
+  getSourceDef(parameterSpace: ParameterSpace | undefined): SourceDef {
     return this.withParameters(parameterSpace, []);
   }
 
   withParameters(
     parameterSpace: ParameterSpace | undefined,
     pList: HasParameter[] | undefined
-  ): StructDef {
+  ): SourceDef {
     let primaryKey: PrimaryKey | undefined;
     let fieldListEdit: FieldListEdit | undefined;
     const fields: MakeEntry[] = [];
@@ -93,7 +93,7 @@ export class RefinedSource extends Source {
         fieldListEdit = el;
       } else if (
         el instanceof DeclareFields ||
-        el instanceof Joins ||
+        el instanceof JoinStatement ||
         el instanceof Views ||
         el instanceof Renames
       ) {
@@ -111,7 +111,7 @@ export class RefinedSource extends Source {
     }
 
     const paramSpace = pList ? new ParameterSpace(pList) : undefined;
-    const from = structuredClone(this.source.structDef(paramSpace));
+    const from = structuredClone(this.source.getSourceDef(paramSpace));
     // Note that this is explicitly not:
     // const from = structuredClone(this.source.withParameters(parameterSpace, pList));
     // Because the parameters are added to the resulting struct, not the base struct

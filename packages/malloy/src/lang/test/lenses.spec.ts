@@ -266,9 +266,7 @@ describe('lenses', () => {
           view: m is { aggregate: c is count() }
         }
         run: x -> m + y + { limit: 1 }`
-    ).toLog(
-      errorMessage('named refinement `y` must be a view, found a struct')
-    );
+    ).toLog(errorMessage('named refinement `y` must be a view, found a table'));
   });
   test('cannot use view from join as whole pipeline', () => {
     expect(
@@ -351,9 +349,7 @@ describe('lenses', () => {
         }
         run: x -> d + b
       `
-    ).toLog(
-      errorMessage('named refinement `b` must be a view, found a struct')
-    );
+    ).toLog(errorMessage('named refinement `b` must be a view, found a table'));
   });
   test('cannot reference field in LHS of refinement in group_by', () => {
     expect(

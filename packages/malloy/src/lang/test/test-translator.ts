@@ -32,36 +32,41 @@ import {
   PipeSegment,
   Query,
   QueryFieldDef,
-  SQLBlockSource,
-  SQLBlockStructDef,
   StructDef,
   TurtleDef,
   exprIsLeaf,
   isQuerySegment,
-  isSQLFragment,
+  isSegmentSQL,
+  modelObjIsSource,
+  SourceDef,
+  JoinBase,
+  TableSourceDef,
+  SQLSourceDef,
+  SQLSentence,
 } from '../../model/malloy_types';
 import {ExpressionDef, MalloyElement} from '../ast';
 import {NameSpace} from '../ast/types/name-space';
 import {ModelEntry} from '../ast/types/model-entry';
 import {MalloyChildTranslator, MalloyTranslator} from '../parse-malloy';
 import {DataRequestResponse, TranslateResponse} from '../translate-response';
-import {StaticSpace} from '../ast/field-space/static-space';
+import {StaticSourceSpace} from '../ast/field-space/static-space';
 import {ExprValue} from '../ast/types/expr-value';
 import {GlobalNameSpace} from '../ast/types/global-name-space';
 import {LogSeverity, MessageCode, MessageParameterType} from '../parse-log';
+import {EventStream} from '../../runtime_types';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types
 export function pretty(thing: any): string {
   return inspect(thing, {breakLength: 72, depth: Infinity});
 }
 
-const mockSchema: Record<string, StructDef> = {
+const mockSchema: Record<string, SourceDef> = {
   'aTable': {
-    type: 'struct',
+    type: 'table',
     name: 'aTable',
     dialect: 'standardsql',
-    structSource: {type: 'table', tablePath: 'aTable'},
-    structRelationship: {type: 'basetable', connectionName: 'test'},
+    tablePath: 'aTable',
+    connection: 'test',
     fields: [
       {type: 'string', name: 'astr'},
       {type: 'number', name: 'af', numberType: 'float'},
@@ -72,32 +77,35 @@ const mockSchema: Record<string, StructDef> = {
       {type: 'sql native', name: 'aun'},
       {type: 'sql native', name: 'aweird', rawType: 'weird'},
       {
-        type: 'struct',
+        type: 'array',
         name: 'astruct',
-        structSource: {type: 'nested'},
-        structRelationship: {type: 'nested', isArray: true, fieldName: 'foo'},
-        fields: [{type: 'number', name: 'column', numberType: 'integer'}],
+        elementTypeDef: {type: 'record_element'},
+        join: 'many',
+        fields: [
+          {
+            name: 'column',
+            type: 'number',
+            numberType: 'integer',
+          },
+        ],
         dialect: 'standardsql',
       },
       {
-        type: 'struct',
+        type: 'record',
         name: 'aninline',
-        structSource: {type: 'nested'},
-        structRelationship: {type: 'inline'},
         fields: [{type: 'number', name: 'column', numberType: 'integer'}],
+        join: 'one',
+        matrixOperation: 'left',
         dialect: 'standardsql',
       },
     ],
   },
   'malloytest.carriers': {
-    type: 'struct',
+    type: 'table',
     name: 'malloytest.carriers',
     dialect: 'standardsql',
-    structSource: {
-      type: 'table',
-      tablePath: 'malloytest.carriers',
-    },
-    structRelationship: {type: 'basetable', connectionName: 'bigquery'},
+    tablePath: 'malloytest.carriers',
+    connection: 'bigquery',
     fields: [
       {name: 'code', type: 'string'},
       {name: 'name', type: 'string'},
@@ -106,14 +114,11 @@ const mockSchema: Record<string, StructDef> = {
     as: 'carriers',
   },
   'malloytest.flights': {
-    type: 'struct',
+    type: 'table',
     name: 'malloytest.flights',
     dialect: 'standardsql',
-    structSource: {
-      type: 'table',
-      tablePath: 'malloytest.flights',
-    },
-    structRelationship: {type: 'basetable', connectionName: 'bigquery'},
+    tablePath: 'malloytest.flights',
+    connection: 'bigquery',
     fields: [
       {name: 'carrier', type: 'string'},
       {name: 'origin', type: 'string'},
@@ -135,14 +140,11 @@ const mockSchema: Record<string, StructDef> = {
     as: 'flights',
   },
   'malloytest.airports': {
-    type: 'struct',
+    type: 'table',
     name: 'malloytest.airports',
     dialect: 'standardsql',
-    structSource: {
-      type: 'table',
-      tablePath: 'malloytest.airports',
-    },
-    structRelationship: {type: 'basetable', connectionName: 'bigquery'},
+    tablePath: 'malloytest.airports',
+    connection: 'bigquery',
     fields: [
       {name: 'id', type: 'number', numberType: 'integer'},
       {name: 'code', type: 'string'},
@@ -177,6 +179,25 @@ const mockSchema: Record<string, StructDef> = {
 };
 export const aTableDef = mockSchema['aTable'];
 
+const bJoinedIntoA: TableSourceDef & JoinBase = {
+  type: 'table',
+  name: 'aTable',
+  dialect: 'standardsql',
+  tablePath: 'aTable',
+  connection: 'test',
+  as: 'b',
+  join: 'one',
+  matrixOperation: 'left',
+  onExpression: {
+    node: '=',
+    kids: {
+      left: {node: 'field', path: ['astr']},
+      right: {node: 'field', path: ['b', 'astr']},
+    },
+  },
+  fields: aTableDef.fields,
+};
+
 /**
  * When translating partial trees, there will not be a document node
  * to handle namespace requests, this stands in for document in that case.
@@ -202,7 +223,7 @@ class TestRoot extends MalloyElement implements NameSpace {
     const global = this.globalNameSpace.getEntry(name);
     if (global) return global;
     const struct = this.modelDef.contents[name];
-    if (struct.type === 'struct') {
+    if (modelObjIsSource(struct)) {
       const exported = this.modelDef.exports.includes(name);
       return {entry: struct, exported};
     }
@@ -259,25 +280,10 @@ export class TestTranslator extends MalloyTranslator {
       b: {...aTableDef, primaryKey: 'astr', as: 'b'},
       ab: {
         ...aTableDef,
-        as: 'ab',
         primaryKey: 'astr',
         fields: [
           ...aTableDef.fields,
-          {
-            ...aTableDef,
-            as: 'b',
-            structRelationship: {
-              type: 'one',
-              matrixOperation: 'left',
-              onExpression: {
-                node: '=',
-                kids: {
-                  left: {node: 'field', path: ['astr']},
-                  right: {node: 'field', path: ['b', 'astr']},
-                },
-              },
-            },
-          },
+          bJoinedIntoA,
           {
             type: 'number',
             name: 'acount',
@@ -307,10 +313,11 @@ export class TestTranslator extends MalloyTranslator {
   constructor(
     readonly testSrc: string,
     importBaseURL: string | null = null,
+    eventStream: EventStream | null = null,
     rootRule = 'malloyDocument',
     internalModel?: ModelDef
   ) {
-    super(testURI, importBaseURL);
+    super(testURI, importBaseURL, null, eventStream);
     this.grammarRule = rootRule;
     this.importZone.define(testURI, testSrc);
     if (internalModel !== undefined) {
@@ -385,7 +392,7 @@ export class TestTranslator extends MalloyTranslator {
 
   exploreFor(exploreName: string): StructDef {
     const explore = this.nameSpace[exploreName];
-    if (explore && explore.type === 'struct') {
+    if (explore && modelObjIsSource(explore)) {
       return explore;
     }
     throw new Error(`Expected model to contain source '${exploreName}'`);
@@ -405,10 +412,10 @@ export class TestTranslator extends MalloyTranslator {
     return this.importsAndTablesStep.step(this);
   }
 
-  getSourceDef(srcName: string): StructDef | undefined {
+  getSourceDef(srcName: string): SourceDef | undefined {
     const t = this.translate().translated;
     const s = t?.modelDef?.contents[srcName];
-    if (s && s.type === 'struct') {
+    if (s && modelObjIsSource(s)) {
       return s;
     }
     return undefined;
@@ -432,13 +439,13 @@ export class TestTranslator extends MalloyTranslator {
 export class BetaExpression extends TestTranslator {
   private compiled?: ExprValue;
   constructor(src: string) {
-    super(src, null, 'justExpr');
+    super(src, null, null, 'justExpr');
   }
 
   private testFS() {
     const aStruct = this.internalModel.contents['ab'];
-    if (aStruct.type === 'struct') {
-      const tstFS = new StaticSpace(aStruct);
+    if (modelObjIsSource(aStruct)) {
+      const tstFS = new StaticSourceSpace(aStruct);
       return tstFS;
     } else {
       throw new Error("Can't get simple namespace for expression tests");
@@ -563,6 +570,7 @@ export function makeModelFunc(options: {
         (options.prefix ?? '') +
           (options.wrap ? options.wrap(ms.code) : ms.code),
         null,
+        null,
         undefined,
         options?.model
       ),
@@ -605,27 +613,17 @@ export function markSource(
   return {code, locations};
 }
 
-export function getSelectOneStruct(
-  sqlBlock: SQLBlockSource
-): SQLBlockStructDef {
+export function getSelectOneStruct(sqlBlock: SQLSentence): SQLSourceDef {
   const selectThis = sqlBlock.select[0];
-  if (!isSQLFragment(selectThis)) {
+  if (!isSegmentSQL(selectThis)) {
     throw new Error('weird test support error sorry');
   }
   return {
-    type: 'struct',
+    type: 'sql_select',
     name: sqlBlock.name,
     dialect: 'standardsql',
-    structSource: {
-      type: 'sql',
-      method: 'subquery',
-      sqlBlock: {
-        type: 'sqlBlock',
-        name: sqlBlock.name,
-        selectStr: selectThis.sql,
-      },
-    },
-    structRelationship: {type: 'basetable', connectionName: 'bigquery'},
+    connection: 'bigquery',
+    selectStr: selectThis.sql,
     fields: [{type: 'number', name: 'one'}],
   };
 }

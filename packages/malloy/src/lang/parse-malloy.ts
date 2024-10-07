@@ -36,10 +36,11 @@ import {
   DocumentReference,
   ImportLocation,
   ModelDef,
+  modelObjIsSource,
   NamedModelObject,
   Query,
-  SQLBlockStructDef,
-  StructDef,
+  SourceDef,
+  SQLSourceDef,
 } from '../model/malloy_types';
 import {MalloyLexer} from './lib/Malloy/MalloyLexer';
 import {MalloyParser} from './lib/Malloy/MalloyParser';
@@ -90,6 +91,7 @@ import {Tag} from '../tags';
 import {MalloyParseInfo} from './malloy-parse-info';
 import {walkForModelAnnotation} from './parse-tree-walkers/model-annotation-walker';
 import {walkForTablePath} from './parse-tree-walkers/find-table-path-walker';
+import {EventStream} from '../runtime_types';
 
 export type StepResponses =
   | DataRequestResponse
@@ -674,7 +676,7 @@ export abstract class MalloyTranslation {
   childTranslators: Map<string, MalloyTranslation>;
   urlIsFullPath?: boolean;
   queryList: Query[] = [];
-  sqlBlocks: SQLBlockStructDef[] = [];
+  sqlBlocks: SQLSourceDef[] = [];
   modelDef: ModelDef;
   imports: ImportLocation[] = [];
   compilerFlags = new Tag();
@@ -857,7 +859,7 @@ export abstract class MalloyTranslation {
       if (did.translated) {
         for (const fromChild of child.modelDef.exports) {
           const modelEntry = child.modelDef.contents[fromChild];
-          if (modelEntry.type === 'struct' || modelEntry.type === 'query') {
+          if (modelObjIsSource(modelEntry) || modelEntry.type === 'query') {
             exports[fromChild] = modelEntry;
           }
         }
@@ -1021,18 +1023,20 @@ export class MalloyChildTranslator extends MalloyTranslation {
  * no need to call again, the translation is finished or error'd.
  */
 export class MalloyTranslator extends MalloyTranslation {
-  schemaZone = new Zone<StructDef>();
+  schemaZone = new Zone<SourceDef>();
   importZone = new Zone<string>();
-  sqlQueryZone = new Zone<SQLBlockStructDef>();
-  logger = new BaseMessageLogger();
+  sqlQueryZone = new Zone<SQLSourceDef>();
+  logger: BaseMessageLogger;
   readonly root: MalloyTranslator;
   constructor(
     rootURL: string,
     importURL: string | null = null,
-    preload: ParseUpdate | null = null
+    preload: ParseUpdate | null = null,
+    private readonly eventStream: EventStream | null = null
   ) {
     super(rootURL, importURL);
     this.root = this;
+    this.logger = new BaseMessageLogger(eventStream);
     if (preload) {
       this.update(preload);
     }
@@ -1066,12 +1070,12 @@ export interface URLData {
   urls: ZoneData<string>;
 }
 export interface SchemaData {
-  tables: ZoneData<StructDef>;
+  tables: ZoneData<SourceDef>;
 }
-export interface SQLBlockData {
-  compileSQL: ZoneData<SQLBlockStructDef>;
+export interface SQLSources {
+  compileSQL: ZoneData<SQLSourceDef>;
 }
-export interface UpdateData extends URLData, SchemaData, SQLBlockData {
+export interface UpdateData extends URLData, SchemaData, SQLSources {
   errors: Partial<ErrorData>;
 }
 export type ParseUpdate = Partial<UpdateData>;

@@ -25,8 +25,7 @@ import {
   DuckDBDialect,
   FetchSchemaOptions,
   MalloyError,
-  SQLBlock,
-  StructDef,
+  SQLSourceDef,
   registerDialect,
 } from '@malloydata/malloy';
 import {testRuntimeFor} from './runtimes';
@@ -57,18 +56,22 @@ async function getError<T>(promise: Promise<T>): Promise<Error | undefined> {
 describe('experimental dialects', () => {
   const duckdbX = 'duckdb_experimental';
   class DuckdbXConnection extends DuckDBConnection {
-    public async fetchSchemaForSQLBlock(
-      sqlRef: SQLBlock,
+    name = duckdbX;
+    public async festchSchemaFOrSQLSource(
+      sqlRef: SQLSourceDef,
       options: FetchSchemaOptions
     ): Promise<
-      | {structDef: StructDef; error?: undefined}
+      | {structDef: SQLSourceDef; error?: undefined}
       | {error: string; structDef?: undefined}
     > {
-      const result = await super.fetchSchemaForSQLBlock(sqlRef, options);
+      const result = await super.fetchSchemaForSQLStruct(sqlRef, options);
       if (result.error === undefined) {
         return {structDef: {...result.structDef, dialect: duckdbX}};
       }
       return result;
+    }
+    get dialectName(): string {
+      return duckdbX;
     }
   }
 
@@ -80,6 +83,9 @@ describe('experimental dialects', () => {
   class DuckdbXDialect extends DuckDBDialect {
     experimental = true;
     name = duckdbX;
+    get dialectName(): string {
+      return duckdbX;
+    }
   }
 
   registerDialect(new DuckdbXDialect());
