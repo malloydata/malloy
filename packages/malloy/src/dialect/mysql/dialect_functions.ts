@@ -15,7 +15,7 @@ const string_agg: OverloadedDefinitionBlueprint = {
     takes: {'value': {dimension: 'string'}},
     returns: {measure: 'string'},
     supportsOrderBy: true,
-    impl: {sql: 'GROUP_CONCAT(${value} ${order_by})'},
+    impl: {sql: 'GROUP_CONCAT(${value} ${order_by:})'},
   },
   with_separator: {
     takes: {
@@ -24,7 +24,7 @@ const string_agg: OverloadedDefinitionBlueprint = {
     },
     returns: {measure: 'string'},
     supportsOrderBy: true,
-    impl: {sql: 'GROUP_CONCAT(${value} ${separator}${order_by})'},
+    impl: {sql: 'GROUP_CONCAT(${value} ${order_by:} SEPARATOR ${separator})'},
   },
 };
 
@@ -43,7 +43,7 @@ const string_agg_distinct: OverloadedDefinitionBlueprint = {
     isSymmetric: true,
     supportsOrderBy: 'only_default',
     impl: {
-      sql: 'GROUP_CONCAT(DISTINCT ${value} ${separator}${order_by:})',
+      sql: 'GROUP_CONCAT(DISTINCT ${value} ${order_by:} SEPARATOR ${separator})',
       defaultOrderByArgIndex: 0,
     },
   },
