@@ -29,7 +29,7 @@ jobs:
           ./test/mysql/mysql_stop.sh
         env:
           MALLOY_DATABASES: mysql
-          MYSQL_HOST=127.0.0.1
-          MYSQL_PORT=3306
-          MYSQL_USER=root
-          MYSQL_DATABASE=malloytest
+          MYSQL_HOST: '127.0.0.1'
+          MYSQL_PORT: 3306
+          MYSQL_USER: root
+          MYSQL_DATABASE: malloytest
