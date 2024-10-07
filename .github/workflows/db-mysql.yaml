@@ -1,4 +1,4 @@
-name: Presto DB
+name: MySQL DB
 
 on:
   pull_request:
@@ -6,7 +6,7 @@ on:
 
 jobs:
   # Label of the container job
-  test-presto:
+  test-mysql:
     runs-on: ubuntu-latest
 
     strategy:
@@ -27,7 +27,7 @@ jobs:
           npm run build
           npm run build-duckdb-db
           ./test/mysql/mysql_start.sh
-          npm run test-silent -- -- packages/malloy-db-trino
+          npm run test-silent -- -- packages/malloy-db-mysql
           npm run test-silent -- -- test
           ./test/mysql/mysql_stop.sh
         env:

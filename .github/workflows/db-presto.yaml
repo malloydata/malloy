@@ -30,7 +30,7 @@ jobs:
           npm run build
           npm run build-duckdb-db
           ./test/presto/presto_start.sh
-          npm run test-silent -- -- packages/malloy-db-trino
+          npm run test-silent -- -- packages/malloy-db-presto
           npm run test-silent -- -- test
           ./test/presto/presto_stop.sh
         env:
