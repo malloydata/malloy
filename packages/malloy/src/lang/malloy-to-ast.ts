@@ -1634,8 +1634,10 @@ export class MalloyToAST
       'Use a `pick` statement instead of `case`',
       this.parseInfo.rangeFromContext(pcx),
       `${[
-        ...whenCxs.map(whenCx => `pick ${whenCx._result.text} when ${whenCx._condition.text}`),
-        elseCx ? `else ${elseCx.text}` : 'else null'
+        ...whenCxs.map(
+          whenCx => `pick ${whenCx._result.text} when ${whenCx._condition.text}`
+        ),
+        elseCx ? `else ${elseCx.text}` : 'else null',
       ].join(' ')}`
     );
     return new ast.Case(whens, theElse);

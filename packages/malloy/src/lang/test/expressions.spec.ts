@@ -1102,7 +1102,9 @@ describe('expressions', () => {
         else 'random'
       end`;
       e.translator.translate();
-      expect(e.translator.logger.getLog()[0].replacement).toBe(`pick 'the answer' when ai = 42 pick 'the questionable answer' when ai = 54 else 'random'`);
+      expect(e.translator.logger.getLog()[0].replacement).toBe(
+        "pick 'the answer' when ai = 42 pick 'the questionable answer' when ai = 54 else 'random'"
+      );
     });
     test.skip('replacement for case with no else', () => {
       const e = expr`case
@@ -1110,7 +1112,9 @@ describe('expressions', () => {
         when ai = 54 then 'the questionable answer'
       end`;
       e.translator.translate();
-      expect(e.translator.logger.getLog()[0].replacement).toBe(`pick 'the answer' when ai = 42 pick 'the questionable answer' when ai = 54 else null`);
+      expect(e.translator.logger.getLog()[0].replacement).toBe(
+        "pick 'the answer' when ai = 42 pick 'the questionable answer' when ai = 54 else null"
+      );
     });
     test('interaction with pick', () => {
       expect(expr`
