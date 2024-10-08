@@ -1095,7 +1095,7 @@ describe('expressions', () => {
         end
       `).toReturnType('string');
     });
-    test.skip('replacement for full case', () => {
+    test('replacement for full case', () => {
       const e = expr`case
         when ai = 42 then 'the answer'
         when ai = 54 then 'the questionable answer'
@@ -1106,7 +1106,7 @@ describe('expressions', () => {
         "pick 'the answer' when ai = 42 pick 'the questionable answer' when ai = 54 else 'random'"
       );
     });
-    test.skip('replacement for case with no else', () => {
+    test('replacement for case with no else', () => {
       const e = expr`case
         when ai = 42 then 'the answer'
         when ai = 54 then 'the questionable answer'

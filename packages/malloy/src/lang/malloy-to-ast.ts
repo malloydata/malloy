@@ -129,6 +129,12 @@ export class MalloyToAST
     };
   }
 
+  protected getSourceString(cx: ParserRuleContext): string {
+    return this.parseInfo.sourceStream.getText(
+      new StreamInterval(cx.start.startIndex, cx.stop ? cx.stop.stopIndex : cx.start.startIndex)
+    );
+  }
+
   /**
    * Log an error message relative to a parse node
    */
@@ -1635,7 +1641,7 @@ export class MalloyToAST
       this.parseInfo.rangeFromContext(pcx),
       `${[
         ...whenCxs.map(
-          whenCx => `pick ${whenCx._result.text} when ${whenCx._condition.text}`
+          whenCx => `pick ${this.getSourceCode(whenCx._result)} when ${this.getSourceCode(whenCx._condition)}`
         ),
         elseCx ? `else ${elseCx.text}` : 'else null',
       ].join(' ')}`
@@ -1974,14 +1980,14 @@ export class MalloyToAST
         'sql-not-like',
         "Use Malloy operator '!~' instead of 'NOT LIKE'",
         wholeRange,
-        `${left.text} !~ ${right.text}`
+        `${this.getSourceCode(left)} !~ ${this.getSourceCode(right)}`
       );
     } else {
       this.warnWithReplacement(
         'sql-like',
         "Use Malloy operator '~' instead of 'LIKE'",
         wholeRange,
-        `${left.text} ~ ${right.text}`
+        `${this.getSourceCode(left)} ~ ${this.getSourceCode(right)}`
       );
     }
     return this.astAt(
@@ -2004,14 +2010,14 @@ export class MalloyToAST
         'sql-is-not-null',
         "Use '!= NULL' to check for NULL instead of 'IS NOT NULL'",
         wholeRange,
-        `${expr.text} != null`
+        `${this.getSourceCode(expr)} != null`
       );
     } else {
       this.warnWithReplacement(
         'sql-is-null',
         "Use '= NULL' to check for NULL instead of 'IS NULL'",
         wholeRange,
-        `${expr.text} = null`
+        `${this.getSourceCode(expr)} = null`
       );
     }
     const nullExpr = new ast.ExprNULL();
