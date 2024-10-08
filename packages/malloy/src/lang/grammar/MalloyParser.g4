@@ -587,7 +587,7 @@ pick
   ;
 
 caseStatement
-  : CASE (caseWhen)+ (ELSE caseElse=fieldExpr)? END
+  : CASE (valueExpr=fieldExpr)? (caseWhen)+ (ELSE caseElse=fieldExpr)? END
   ;
 
 caseWhen

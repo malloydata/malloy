@@ -990,6 +990,15 @@ describe('expressions', () => {
         end
       `).toLog(warning('sql-case'));
     });
+    test('with value', () => {
+      expect(expr`
+        case ai
+          when 42 then 'the answer'
+          when 54 then 'the questionable answer'
+          else 'random'
+        end
+      `).toLog(warning('sql-case'));
+    });
     test('no else', () => {
       expect(expr`
         case
@@ -1009,6 +1018,20 @@ describe('expressions', () => {
         error('case-then-type-does-not-match', {
           thenType: 'number',
           returnType: 'string',
+        })
+      );
+    });
+    test('wrong when type', () => {
+      expect(expr`
+        case ai
+          when 42 then 'the answer'
+          when 'forty-two' then 'the answer but string'
+        end
+      `).toLog(
+        warning('sql-case'),
+        error('case-when-type-does-not-match', {
+          whenType: 'string',
+          valueType: 'number',
         })
       );
     });
@@ -1114,6 +1137,16 @@ describe('expressions', () => {
       e.translator.translate();
       expect(e.translator.logger.getLog()[0].replacement).toBe(
         "pick 'the answer' when ai = 42 pick 'the questionable answer' when ai = 54 else null"
+      );
+    });
+    test('replacement for case with value', () => {
+      const e = expr`case ai
+        when 42 then 'a'
+        when 54 then 'b'
+      end`;
+      e.translator.translate();
+      expect(e.translator.logger.getLog()[0].replacement).toBe(
+        "ai ? pick 'a' when 42 pick 'b' when 54 else null"
       );
     });
     test('interaction with pick', () => {

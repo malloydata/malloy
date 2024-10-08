@@ -34,22 +34,33 @@ function typeCoalesce(ev1: ExprValue | undefined, ev2: ExprValue): ExprValue {
 export class Case extends ExpressionDef {
   elementType = 'case';
   constructor(
+    readonly value: ExpressionDef | undefined,
     readonly choices: CaseWhen[],
     readonly elseValue?: ExpressionDef
   ) {
     super({choices});
-    this.has({elseValue});
+    this.has({elseValue, value});
   }
 
   getExpression(fs: FieldSpace): ExprValue {
-    const caseValue: CaseExpr = {
+    const resultExpr: CaseExpr = {
       node: 'case',
       kids: {
+        caseValue: null,
         caseWhen: [],
         caseThen: [],
         caseElse: null,
       },
     };
+    let expressionType: ExpressionType = 'scalar';
+    let evalSpace: EvalSpace = 'constant';
+    let value: ExprValue | undefined = undefined;
+    if (this.value) {
+      value = this.value.getExpression(fs);
+      expressionType = maxExpressionType(expressionType, value.expressionType);
+      evalSpace = mergeEvalSpaces(evalSpace, value.evalSpace);
+      resultExpr.kids.caseValue = value.value;
+    }
     const choiceValues: Choice[] = [];
     for (const c of this.choices) {
       const when = c.when.getExpression(fs);
@@ -57,13 +68,20 @@ export class Case extends ExpressionDef {
       choiceValues.push({when, then});
     }
     let returnType: ExprValue | undefined;
-    let expressionType: ExpressionType = 'scalar';
-    let evalSpace: EvalSpace = 'constant';
     for (const aChoice of choiceValues) {
-      if (!FT.typeEq(aChoice.when, FT.boolT)) {
-        return this.loggedErrorExpr('case-when-must-be-boolean', {
-          whenType: aChoice.when.dataType,
-        });
+      if (value !== undefined) {
+        if (!FT.typeEq(aChoice.when, value)) {
+          return this.loggedErrorExpr('case-when-type-does-not-match', {
+            whenType: aChoice.when.dataType,
+            valueType: value.dataType,
+          });
+        }
+      } else {
+        if (!FT.typeEq(aChoice.when, FT.boolT)) {
+          return this.loggedErrorExpr('case-when-must-be-boolean', {
+            whenType: aChoice.when.dataType,
+          });
+        }
       }
       if (returnType && !FT.typeEq(returnType, aChoice.then, true)) {
         return this.loggedErrorExpr('case-then-type-does-not-match', {
@@ -84,8 +102,8 @@ export class Case extends ExpressionDef {
         aChoice.then.evalSpace,
         aChoice.when.evalSpace
       );
-      caseValue.kids.caseWhen.push(aChoice.when.value);
-      caseValue.kids.caseThen.push(aChoice.then.value);
+      resultExpr.kids.caseWhen.push(aChoice.when.value);
+      resultExpr.kids.caseThen.push(aChoice.then.value);
     }
     if (this.elseValue) {
       const elseValue = this.elseValue.getExpression(fs);
@@ -101,10 +119,10 @@ export class Case extends ExpressionDef {
         elseValue.expressionType
       );
       evalSpace = mergeEvalSpaces(evalSpace, elseValue.evalSpace);
-      caseValue.kids.caseElse = elseValue.value;
+      resultExpr.kids.caseElse = elseValue.value;
     }
     return {
-      value: caseValue,
+      value: resultExpr,
       dataType: returnType?.dataType ?? 'null',
       expressionType,
       evalSpace,

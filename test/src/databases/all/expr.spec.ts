@@ -418,10 +418,12 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           other is case when manufacturer = 'BOEING' then 'BOEING' else 'OTHER' end
         group_by:
           nully is case when manufacturer = 'BOEING' then 'BOEING' end
+        group_by:
+          valuey is case manufacturer when 'BOEING' then 'BOEING' else 'NOT BOEING' end
       }
     `).malloyResultMatches(expressionModel, [
-      {other: 'BOEING', nully: 'BOEING'},
-      {other: 'OTHER', nully: null},
+      {other: 'BOEING', nully: 'BOEING', valuey: 'BOEING'},
+      {other: 'OTHER', nully: null, valuey: 'NOT BOEING'},
     ]);
   });
 

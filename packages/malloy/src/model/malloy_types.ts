@@ -322,7 +322,12 @@ export interface NullNode extends ExprLeaf {
 
 export interface CaseExpr extends ExprWithKids {
   node: 'case';
-  kids: {caseWhen: Expr[]; caseThen: Expr[]; caseElse: Expr | null};
+  kids: {
+    caseValue: Expr | null;
+    caseWhen: Expr[];
+    caseThen: Expr[];
+    caseElse: Expr | null;
+  };
 }
 
 export interface ArrayEachExpr extends ExprLeaf {

@@ -1153,6 +1153,9 @@ class QueryField extends QueryNode {
 
   generateCaseSQL(pf: CaseExpr): string {
     const caseStmt = ['CASE'];
+    if (pf.kids.caseValue !== null) {
+      caseStmt.push(`${pf.kids.caseValue.sql}`);
+    }
     for (let i = 0; i < pf.kids.caseWhen.length; i += 1) {
       caseStmt.push(
         `WHEN ${pf.kids.caseWhen[i].sql} THEN ${pf.kids.caseThen[i].sql}`

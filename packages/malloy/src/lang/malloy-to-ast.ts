@@ -1629,6 +1629,8 @@ export class MalloyToAST
   }
 
   visitCaseStatement(pcx: parse.CaseStatementContext): ast.Case {
+    const valueCx = pcx._valueExpr;
+    const value = valueCx ? this.getFieldExpr(valueCx) : undefined;
     const whenCxs = pcx.caseWhen();
     const whens = whenCxs.map(whenCx => {
       return new ast.CaseWhen(
@@ -1643,6 +1645,7 @@ export class MalloyToAST
       'Use a `pick` statement instead of `case`',
       this.parseInfo.rangeFromContext(pcx),
       `${[
+        ...(valueCx ? [`${this.getSourceCode(valueCx)} ?`]: []),
         ...whenCxs.map(
           whenCx =>
             `pick ${this.getSourceCode(
@@ -1652,7 +1655,7 @@ export class MalloyToAST
         elseCx ? `else ${elseCx.text}` : 'else null',
       ].join(' ')}`
     );
-    return new ast.Case(whens, theElse);
+    return new ast.Case(value, whens, theElse);
   }
 
   visitPickStatement(pcx: parse.PickStatementContext): ast.Pick {

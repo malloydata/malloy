@@ -360,6 +360,10 @@ type MessageParameterTypes = {
     returnType: FieldValueType;
   };
   'case-when-must-be-boolean': {whenType: FieldValueType};
+  'case-when-type-does-not-match': {
+    whenType: FieldValueType;
+    valueType: FieldValueType;
+  };
 };
 
 export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
@@ -406,6 +410,8 @@ export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
     `Case else type ${e.elseType} does not match return type ${e.returnType}`,
   'case-when-must-be-boolean': e =>
     `Case when expression must be boolean, not ${e.whenType}`,
+  'case-when-type-does-not-match': e =>
+    `Case when type ${e.whenType} does not match value type ${e.valueType}`,
 };
 
 export type MessageCode = keyof MessageParameterTypes;
