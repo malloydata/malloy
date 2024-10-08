@@ -11,12 +11,22 @@ jobs:
     uses: './.github/workflows/db-motherduck.yaml'
     secrets:
       MOTHERDUCK_TOKEN_10: ${{ secrets.MOTHERDUCK_TOKEN_10 }}
+  db-mysql:
+    uses: './.github/workflows/db-mysql.yaml'
   db-postgres:
     uses: './.github/workflows/db-postgres.yaml'
+  db-presto:
+    uses: './.github/workflows/db-presto.yaml'
+    secrets:
+      BQ_PRESTO_TRINO_KEY: ${{ secrets.BQ_PRESTO_TRINO_KEY }}
   db-snowflake:
     uses: './.github/workflows/db-snowflake.yaml'
     secrets:
       SNOWFLAKE_CONNECTION: ${{ secrets.SNOWFLAKE_CONNECTION }}
+  db-trino:
+    uses: './.github/workflows/db-trino.yaml'
+    secrets:
+      BQ_PRESTO_TRINO_KEY: ${{ secrets.BQ_PRESTO_TRINO_KEY }}
   main:
     uses: './.github/workflows/main.yaml'
 
@@ -24,8 +34,11 @@ jobs:
     needs:
       - db-bigquery
       - db-motherduck
+      - db-mysql
       - db-postgres
+      - db-presto
       - db-snowflake
+      - db-trino
       - main
     runs-on: ubuntu-latest
     steps:
