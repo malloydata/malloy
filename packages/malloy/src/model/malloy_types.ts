@@ -43,7 +43,7 @@ export interface ExprOptionalE extends ExprLeaf {
 }
 
 export interface ExprWithKids extends ExprLeaf {
-  kids: Record<string, Expr | Expr[]>;
+  kids: Record<string, Expr | Expr[] | null>;
 }
 export type AnyExpr = ExprE | ExprOptionalE | ExprWithKids | ExprLeaf;
 
@@ -91,7 +91,7 @@ export type Expr =
   | FunctionOrderBy
   | GenericSQLExpr
   | NullNode
-  | PickExpr
+  | CaseExpr
   | ArrayEachExpr
   | ErrorNode;
 
@@ -320,9 +320,9 @@ export interface NullNode extends ExprLeaf {
   node: 'null';
 }
 
-export interface PickExpr extends ExprWithKids {
-  node: 'pick';
-  kids: {pickWhen: Expr[]; pickThen: Expr[]; pickElse: Expr};
+export interface CaseExpr extends ExprWithKids {
+  node: 'case';
+  kids: {caseWhen: Expr[]; caseThen: Expr[]; caseElse: Expr | null};
 }
 
 export interface ArrayEachExpr extends ExprLeaf {

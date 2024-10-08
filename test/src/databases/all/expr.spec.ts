@@ -410,6 +410,21 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     `).malloyResultMatches(expressionModel, {a: 312});
   });
 
+  it('case expressions', async () => {
+    await expect(`
+      run: aircraft_models -> {
+        where: manufacturer ? 'BOEING' | 'CESSNA'
+        group_by:
+          other is case when manufacturer = 'BOEING' then 'BOEING' else 'OTHER' end
+        group_by:
+          nully is case when manufacturer = 'BOEING' then 'BOEING' end
+      }
+    `).malloyResultMatches(expressionModel, [
+      {other: 'BOEING', nully: 'BOEING'},
+      {other: 'OTHER', nully: null},
+    ]);
+  });
+
   test.when(runtime.dialect.supportsSafeCast)('sql safe cast', async () => {
     await expect(`
       run: ${databaseName}.sql('SELECT 1 as one') -> { select:

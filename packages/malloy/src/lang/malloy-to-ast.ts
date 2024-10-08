@@ -1619,6 +1619,28 @@ export class MalloyToAST
     );
   }
 
+  visitCaseStatement(pcx: parse.CaseStatementContext): ast.Case {
+    const whenCxs = pcx.caseWhen();
+    const whens = whenCxs.map(whenCx => {
+      return new ast.CaseWhen(
+        this.getFieldExpr(whenCx._condition),
+        this.getFieldExpr(whenCx._result)
+      );
+    });
+    const elseCx = pcx._caseElse;
+    const theElse = elseCx ? this.getFieldExpr(elseCx) : undefined;
+    this.warnWithReplacement(
+      'sql-case',
+      'Use a `pick` statement instead of `case`',
+      this.parseInfo.rangeFromContext(pcx),
+      `${[
+        ...whenCxs.map(whenCx => `pick ${whenCx._result.text} when ${whenCx._condition.text}`),
+        elseCx ? `else ${elseCx.text}` : 'else null'
+      ].join(' ')}`
+    );
+    return new ast.Case(whens, theElse);
+  }
+
   visitPickStatement(pcx: parse.PickStatementContext): ast.Pick {
     const picks = pcx.pick().map(pwCx => {
       let pickExpr: ast.ExpressionDef | undefined;

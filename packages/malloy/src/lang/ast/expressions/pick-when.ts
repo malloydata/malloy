@@ -22,11 +22,11 @@
  */
 
 import {
+  CaseExpr,
   EvalSpace,
   ExpressionType,
   maxExpressionType,
   mergeEvalSpaces,
-  PickExpr,
 } from '../../../model/malloy_types';
 
 import {FT} from '../fragtype-utils';
@@ -78,12 +78,12 @@ export class Pick extends ExpressionDef {
   }
 
   apply(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {
-    const caseValue: PickExpr = {
-      node: 'pick',
+    const caseValue: CaseExpr = {
+      node: 'case',
       kids: {
-        pickWhen: [],
-        pickThen: [],
-        pickElse: {node: 'error', message: 'pick statement not complete'},
+        caseWhen: [],
+        caseThen: [],
+        caseElse: null,
       },
     };
     let returnType: ExprValue | undefined;
@@ -110,8 +110,8 @@ export class Pick extends ExpressionDef {
         });
       }
       returnType = typeCoalesce(returnType, thenExpr);
-      caseValue.kids.pickWhen.push(whenExpr.value);
-      caseValue.kids.pickThen.push(thenExpr.value);
+      caseValue.kids.caseWhen.push(whenExpr.value);
+      caseValue.kids.caseThen.push(thenExpr.value);
     }
     const elsePart = this.elsePick || expr;
     const elseVal = elsePart.getExpression(fs);
@@ -129,7 +129,7 @@ export class Pick extends ExpressionDef {
         });
       }
     }
-    caseValue.kids.pickElse = elseVal.value;
+    caseValue.kids.caseElse = elseVal.value;
     return {
       dataType: returnType.dataType,
       expressionType: maxExpressionType(
@@ -142,12 +142,12 @@ export class Pick extends ExpressionDef {
   }
 
   getExpression(fs: FieldSpace): ExprValue {
-    const pick: PickExpr = {
-      node: 'pick',
+    const pick: CaseExpr = {
+      node: 'case',
       kids: {
-        pickWhen: [],
-        pickThen: [],
-        pickElse: {node: 'error', message: 'pick statement not complete'},
+        caseWhen: [],
+        caseThen: [],
+        caseElse: null,
       },
     };
     if (this.elsePick === undefined) {
@@ -165,8 +165,8 @@ export class Pick extends ExpressionDef {
           'pick with no value can only be used with apply'
         );
       }
-      const pickWhen = c.when.requestExpression(fs);
-      if (pickWhen === undefined) {
+      const caseWhen = c.when.requestExpression(fs);
+      if (caseWhen === undefined) {
         this.loggedErrorExpr(
           'pick-illegal-partial',
           'pick with partial when can only be used with apply'
@@ -205,8 +205,8 @@ export class Pick extends ExpressionDef {
         aChoice.pick.evalSpace,
         aChoice.when.evalSpace
       );
-      pick.kids.pickWhen.push(aChoice.when.value);
-      pick.kids.pickThen.push(aChoice.pick.value);
+      pick.kids.caseWhen.push(aChoice.when.value);
+      pick.kids.caseThen.push(aChoice.pick.value);
     }
     const defVal = this.elsePick.getExpression(fs);
     anyExpressionType = maxExpressionType(
@@ -221,7 +221,7 @@ export class Pick extends ExpressionDef {
         returnType: returnType.dataType,
       });
     }
-    pick.kids.pickElse = defVal.value;
+    pick.kids.caseElse = defVal.value;
     return {
       dataType: returnType.dataType,
       expressionType: anyExpressionType,
@@ -232,7 +232,7 @@ export class Pick extends ExpressionDef {
 }
 
 export class PickWhen extends MalloyElement {
-  elementType = 'pickWhen';
+  elementType = 'caseWhen';
   constructor(
     readonly pick: ExpressionDef | undefined,
     readonly when: ExpressionDef

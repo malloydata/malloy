@@ -131,7 +131,7 @@ export function* exprKids(eNode: Expr): IterableIterator<Expr> {
     for (const kidEnt of Object.values(eNode.kids)) {
       if (Array.isArray(kidEnt)) {
         yield* kidEnt;
-      } else {
+      } else if (kidEnt !== null) {
         yield kidEnt;
       }
     }
@@ -162,7 +162,7 @@ export function exprMap(eNode: Expr, mapFunc: (e: Expr) => Expr): Expr {
     for (const [name, kidEnt] of Object.entries(eNode.kids)) {
       if (Array.isArray(kidEnt)) {
         parentNode.kids[name] = kidEnt.map(kidEl => mapFunc(kidEl));
-      } else {
+      } else if (kidEnt !== null) {
         parentNode.kids[name] = mapFunc(kidEnt);
       }
     }

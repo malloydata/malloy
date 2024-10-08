@@ -76,7 +76,6 @@ import {
   UngroupNode,
   SourceReferenceNode,
   TimeTruncExpr,
-  PickExpr,
   SpreadExpr,
   FilteredExpr,
   SourceDef,
@@ -104,6 +103,7 @@ import {
   QueryToMaterialize,
   PrepareResultOptions,
   RepeatedRecordFieldDef,
+  CaseExpr,
 } from './malloy_types';
 
 import {Connection} from '../connection/types';
@@ -1151,14 +1151,17 @@ class QueryField extends QueryNode {
     return retExpr;
   }
 
-  generatePickSQL(pf: PickExpr): string {
+  generateCaseSQL(pf: CaseExpr): string {
     const caseStmt = ['CASE'];
-    for (let i = 0; i < pf.kids.pickWhen.length; i += 1) {
+    for (let i = 0; i < pf.kids.caseWhen.length; i += 1) {
       caseStmt.push(
-        `WHEN ${pf.kids.pickWhen[i].sql} THEN ${pf.kids.pickThen[i].sql}`
+        `WHEN ${pf.kids.caseWhen[i].sql} THEN ${pf.kids.caseThen[i].sql}`
       );
     }
-    caseStmt.push(`ELSE ${pf.kids.pickElse.sql}`, 'END');
+    if (pf.kids.caseElse !== null) {
+      caseStmt.push(`ELSE ${pf.kids.caseElse.sql}`);
+    }
+    caseStmt.push('END');
     return caseStmt.join(' ');
   }
 
@@ -1191,6 +1194,7 @@ class QueryField extends QueryNode {
       expr = {...exprToTranslate};
       const oldKids = exprToTranslate.kids;
       for (const [name, kidExpr] of Object.entries(oldKids)) {
+        if (kidExpr === null) continue;
         if (Array.isArray(kidExpr)) {
           expr.kids[name] = kidExpr.map(e => {
             return {...e, sql: subExpr(this, e)};
@@ -1318,8 +1322,8 @@ class QueryField extends QueryNode {
         return expr.node;
       case 'null':
         return 'NULL';
-      case 'pick':
-        return this.generatePickSQL(expr);
+      case 'case':
+        return this.generateCaseSQL(expr);
       case '':
         return '';
       case 'filterCondition':
