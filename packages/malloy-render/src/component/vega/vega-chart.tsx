@@ -1,11 +1,19 @@
 import {createEffect, createSignal, untrack} from 'solid-js';
 import {VegaJSON, asVegaLiteSpec, asVegaSpec} from '../vega-types';
-import {EventListenerHandler, View, parse, expressionFunction} from 'vega';
+import {
+  EventListenerHandler,
+  View,
+  parse,
+  expressionFunction,
+  SignalListenerHandler,
+  scale,
+} from 'vega';
 import {compile} from 'vega-lite';
 import {renderNumericField} from '../render-numeric-field';
 import {Explore, ExploreField} from '@malloydata/malloy';
 import {getFieldFromRootPath} from '../plot/util';
 import {BrushData} from '../result-store/result-store';
+import {scaleLinear} from 'd3-scale';
 
 if (!expressionFunction('renderMalloyNumber')) {
   expressionFunction(
@@ -25,9 +33,39 @@ if (!expressionFunction('renderMalloyNumber')) {
 if (!expressionFunction('getMalloyBrush')) {
   expressionFunction(
     'getMalloyBrush',
-    (brushArray: BrushData[], fieldRefId: string) =>
-      brushArray.find(brush => brush.fieldRefId === fieldRefId)?.value ?? null
+    (brushArray: BrushData[], fieldRefId: string, type?: string) =>
+      brushArray.find(brush => {
+        const isField = brush.fieldRefId === fieldRefId;
+        const isType = type ? brush.type === type : true;
+        return isField && isType;
+      })?.value ?? null
   );
+}
+
+if (!expressionFunction('getMalloyMeasureBrushes')) {
+  expressionFunction(
+    'getMalloyMeasureBrushes',
+    (
+      brushArray: BrushData[],
+      fieldRefIds: string[],
+      refsToFieldMap: Record<string, string>
+    ) =>
+      brushArray
+        .filter(brush => fieldRefIds.includes(brush.fieldRefId))
+        .map(brush => ({
+          ...brush,
+          fieldPath: refsToFieldMap[brush.fieldRefId],
+        })) ?? []
+  );
+}
+
+export function addSignalListenerIfExists(
+  view: View,
+  signal: string,
+  cb: SignalListenerHandler
+) {
+  if (view.getState().signals?.hasOwnProperty(signal))
+    view.addSignalListener(signal, cb);
 }
 
 type VegaChartProps = {
@@ -45,6 +83,8 @@ export function VegaChart(props: VegaChartProps) {
 
   const [view, setView] = createSignal<View | null>(null);
 
+  const chartId = crypto.randomUUID();
+
   // Create new view on spec change
   createEffect(() => {
     const _view = untrack(() => view());
@@ -58,12 +98,49 @@ export function VegaChart(props: VegaChartProps) {
       .initialize(el)
       .renderer('svg')
       .hover();
+
+    const logSignals = (...signals: string[]) => {
+      signals.forEach(signal => {
+        addSignalListenerIfExists(nextView, signal, (...args) =>
+          console.log(chartId, ...args)
+        );
+      });
+    };
+    // TODO: consider making this configurable from outside, rather than hardcoded here?
+    // maybe same with the malloy add-ons
+    nextView.signal('malloyExplore', props.explore);
     if (props.onMouseOver)
       nextView.addEventListener('mousemove', props.onMouseOver);
+    // addSignalListenerIfExists(nextView, 'yRangeBrushValues', console.log);
+    // nextView.addSignalListener('xRangeBrush', console.log);
+    // nextView.addSignalListener('xRangeBrushValues', console.log);
+    // nextView.addSignalListener('brushSeriesIn', console.log);
+    // nextView.addDataListener('referenceLineData', console.log);
+    // nextView.addSignalListener('testOverlay', console.log);
     // nextView.addSignalListener('brushX', console.log);
-    // nextView.addSignalListener('brushSeries', console.log);
     // nextView.addSignalListener('brushMeasure', console.log);
-    // nextView.addSignalListener('brushOut', console.log);
+    // nextView.addSignalListener('brushMeasureListIn', console.log);
+
+    // nextView.addSignalListener('brushOut', (...args) =>
+    //   console.log(chartId, ...args)
+    // );
+
+    // nextView.addSignalListener('brushIn', (...args) => {
+    //   console.log(chartId, ...args);
+    // });
+
+    // nextView.addSignalListener('brushIn', console.log);
+    // // nextView.addSignalListener('testLegend', console.log);
+
+    logSignals(
+      // keep line breaks
+      ''
+      // 'brushOut',
+      // 'brushIn',
+      // 'brushMeasureRangeIn',
+      // 'brushMeasureRangeValuesIn'
+    );
+
     nextView.run();
     setView(nextView);
     props.onView?.(nextView);

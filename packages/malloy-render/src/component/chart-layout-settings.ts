@@ -25,6 +25,7 @@ import {Explore, ExploreField, Field, Tag} from '@malloydata/malloy';
 import {scale, locale} from 'vega';
 import {getFieldKey, getTextWidth} from './util';
 import {RenderResultMetadata} from './types';
+import {renderNumericField} from './render-numeric-field';
 
 export type ChartLayoutSettings = {
   plotWidth: number;
@@ -42,6 +43,7 @@ export type ChartLayoutSettings = {
     width: number;
     tickCount?: number;
     hidden: boolean;
+    yTitleSize: number;
   };
   yScale: {
     domain: number[];
@@ -114,6 +116,7 @@ export function getChartLayoutSettings(
   let labelBaseline = 'middle';
   let labelLimit = 0;
   let xTitleSize = 0;
+  let yTitleSize = 0;
   const hasXAxis = presetSize !== 'spark';
   const hasYAxis = presetSize !== 'spark';
   const exploreMetadata = metadata.fields[getFieldKey(field)];
@@ -134,9 +137,15 @@ export function getChartLayoutSettings(
     const maxAxisVal = yScale.domain().at(1);
     const minAxisVal = yScale.domain().at(0);
     const l = locale();
-    const formattedMin = l.format(',')(minAxisVal);
-    const formattedMax = l.format(',')(maxAxisVal);
-    const yTitleSize = 31; // Estimate for now, can be dynamic later
+    const formattedMin = yField.isAtomicField()
+      ? renderNumericField(yField, minAxisVal)
+      : l.format(',')(minAxisVal);
+    const formattedMax = yField.isAtomicField()
+      ? renderNumericField(yField, maxAxisVal)
+      : l.format(',')(maxAxisVal);
+    // const formattedMin = l.format(',')(minAxisVal);
+    // const formattedMax = l.format(',')(maxAxisVal);
+    yTitleSize = 31; // Estimate for now, can be dynamic later
     const yLabelOffset = 5;
     yAxisWidth =
       Math.max(
@@ -213,6 +222,7 @@ export function getChartLayoutSettings(
       width: yAxisWidth,
       tickCount: yTickCount,
       hidden: isSpark,
+      yTitleSize,
     },
     yScale: {
       domain: chartTag.has('y', 'independent') ? null : yDomain,

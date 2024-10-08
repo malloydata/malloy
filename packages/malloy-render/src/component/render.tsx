@@ -10,6 +10,7 @@ import {
   createContext,
   createEffect,
   createMemo,
+  onMount,
   useContext,
 } from 'solid-js';
 import {getResultMetadata} from './render-result-metadata';
@@ -105,8 +106,8 @@ export function MalloyRenderInner(props: {
     }
   });
 
-  const rendering = () =>
-    applyRenderer({
+  const rendering = () => {
+    return applyRenderer({
       // TODO: figure out what to do about the diffs between top level Explore vs. ExploreFields/AtomicFields
       field: props.result.resultExplore as ExploreField,
       dataColumn: props.result.data,
@@ -121,6 +122,7 @@ export function MalloyRenderInner(props: {
         },
       },
     });
+  };
 
   return (
     <ResultContext.Provider value={metadata()}>

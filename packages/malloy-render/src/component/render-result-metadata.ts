@@ -60,7 +60,9 @@ function createDataCache() {
       if (!dataCache.has(cell) && cell.isArray()) {
         const data: QueryDataRow[] = [];
         for (const row of cell) {
-          data.push(row.toObject());
+          const rec = row.toObject();
+          rec.__malloyDataRecord = row;
+          data.push(rec);
         }
         dataCache.set(cell, data);
       }

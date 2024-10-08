@@ -6,6 +6,23 @@
   height: fit-content;
   width: fit-content;
   transform: translate(10px, 10px);
+
+  /* TODO: get rid of this hacky way of styling nested table
+      also figure out why the table didnt get the normal styles...
+  */
+  .header {
+    font-weight: bold;
+  }
+  .header,
+  .td {
+    padding: 2px 4px;
+  }
+
+  .td .cell-content {
+    text-overflow: ellipsis;
+    max-width: 200px;
+    overflow: hidden;
+  }
 }
 
 .malloy-tooltip--header {
@@ -55,4 +72,29 @@
   width: 8px;
   height: 8px;
   border-radius: 8px;
+}
+
+.malloy-tooltip--list-item-row {
+  grid-column: 2 / span 2;
+  grid: auto / subgrid;
+  display: grid;
+  padding-block: 1px;
+}
+
+.malloy-tooltip--block-row {
+  grid-column: 2 / span 2;
+  /* border-top: 1px solid #e5e7eb; */
+  /* margin-top: 8px; */
+  /* margin-block: 6px; */
+}
+
+.malloy-tooltip--block-label {
+  background: #eceff6;
+  width: fit-content;
+  padding: 3px 8px;
+  border-radius: 4px;
+  margin-bottom: 4px;
+}
+
+.malloy-tooltip--block-value {
 }

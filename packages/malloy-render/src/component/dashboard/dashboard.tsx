@@ -1,6 +1,6 @@
 import {DataArray, DataRecord, Field} from '@malloydata/malloy';
 import './dashboard.css';
-import {createMemo, For} from 'solid-js';
+import {createMemo, For, onMount} from 'solid-js';
 import {applyRenderer} from '../apply-renderer';
 import {useResultContext} from '../result-context';
 import {RenderResultMetadata} from '../types';
