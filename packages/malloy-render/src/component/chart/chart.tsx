@@ -5,14 +5,21 @@ import {
   DateField,
   TimestampField,
 } from '@malloydata/malloy';
-import {VegaChart} from '../vega/vega-chart';
+import {addSignalListenerIfExists, VegaChart} from '../vega/vega-chart';
 import {ChartTooltipEntry, RenderResultMetadata} from '../types';
 import {renderTimeString} from '../render-time';
 import {Tooltip} from '../tooltip/tooltip';
 import {createEffect, createSignal, onMount} from 'solid-js';
 import {DefaultChartTooltip} from './default-chart-tooltip';
 import {EventListenerHandler, View} from 'vega';
-import {BrushData, useResultStore} from '../result-store/result-store';
+import {
+  BrushData,
+  ModifyBrushOp,
+  useResultStore,
+  VegaBrushOut,
+} from '../result-store/result-store';
+import {createStore, produce} from 'solid-js/store';
+import {create} from 'lodash';
 
 export function Chart(props: {
   field: Explore | ExploreField;
@@ -22,7 +29,13 @@ export function Chart(props: {
   const {field, data} = props;
   const chartProps = props.metadata.field(field).vegaChartProps!;
   const spec = structuredClone(chartProps.spec);
-  const chartData = structuredClone(data);
+  // const chartData = structuredClone(data);
+  const chartData = data.map(row => {
+    const rec = structuredClone(row);
+    // prevent structured clone from ripping this out
+    rec.__malloyDataRecord = row.__malloyDataRecord;
+    return rec;
+  });
   chartProps.injectData(field, chartData, spec);
   // if (chartProps.specType === 'vega') {
   //   spec.data[0].values = chartData.map(row => ({
@@ -70,17 +83,79 @@ export function Chart(props: {
 
   const chartId = crypto.randomUUID();
   const resultStore = useResultStore();
+
+  const timeouts = new Map();
+  const debouncedProcessBrush = (brush: VegaBrushOut) => {
+    // console.log('process brush', brush.sourceId, brush.data?.value);
+    const shouldDebounce = brush.hasOwnProperty('debounce');
+    if (timeouts.has(brush.sourceId)) {
+      clearTimeout(timeouts.get(brush.sourceId));
+      timeouts.delete(brush.sourceId);
+    }
+
+    let debounceStrategy = 'always';
+    if (typeof brush.debounce === 'object' && brush.debounce.strategy)
+      debounceStrategy = brush.debounce.strategy;
+    let debounceTime = 100;
+    if (typeof brush.debounce === 'number') debounceTime = brush.debounce;
+    else if (
+      typeof brush.debounce === 'object' &&
+      typeof brush.debounce.time === 'number'
+    )
+      debounceTime = brush.debounce.time;
+
+    const isEmptyBrush = !Boolean(brush.data);
+
+    if (isEmptyBrush) {
+      if (shouldDebounce) {
+        // console.count('debouncing empty');
+        // empty gets debounced in either strategy
+        timeouts.set(
+          brush.sourceId,
+          setTimeout(() => {
+            // resultStore.clearBrushesBySourceId(brush.sourceId);
+            resultStore.processBrushOps([
+              {type: 'remove', sourceId: brush.sourceId},
+            ]);
+          }, debounceTime)
+        );
+      } else
+        resultStore.processBrushOps([
+          {type: 'remove', sourceId: brush.sourceId},
+        ]); // resultStore.clearBrushesBySourceId(brush.sourceId);
+    } else if (shouldDebounce && debounceStrategy === 'always')
+      timeouts.set(
+        brush.sourceId,
+        setTimeout(() => {
+          // resultStore.addFieldBrush(brush.data!);
+          resultStore.processBrushOps([
+            {type: 'add', sourceId: brush.sourceId, value: brush.data!},
+          ]);
+        }, debounceTime)
+      );
+    else
+      resultStore.processBrushOps([
+        {type: 'add', sourceId: brush.sourceId, value: brush.data!},
+      ]); // resultStore.addFieldBrush(brush.data!);
+  };
+
+  let brushOuts: VegaBrushOut[] = [];
   createEffect(() => {
-    view()?.addSignalListener(
-      'brushOut',
-      (name, brushes: {sourceId: string; data: BrushData | null}[]) => {
-        brushes.forEach(brush => {
-          if (!Boolean(brush.data))
-            resultStore.clearBrushesBySourceId(brush.sourceId);
-          else resultStore.addFieldBrush(brush.data!);
-        });
-      }
-    );
+    if (view()) {
+      addSignalListenerIfExists(
+        view()!,
+        'brushOut',
+        (name, brushes: VegaBrushOut[]) => {
+          brushOuts = brushes;
+          brushes.forEach(brush => {
+            debouncedProcessBrush(brush);
+            // if (!Boolean(brush.data))
+            // resultStore.clearBrushesBySourceId(brush.sourceId);
+            // else resultStore.addFieldBrush(brush.data!);
+          });
+        }
+      );
+    }
   });
 
   createEffect(() => {
@@ -92,14 +167,31 @@ export function Chart(props: {
       fieldRefIds.includes(brush.fieldRefId)
     );
     view()?.signal('brushIn', JSON.parse(JSON.stringify(relevantBrushes)));
-    view()?.run();
+    debouncedRunView();
+    // view()?.run();
   });
+
+  let runViewTimeId: NodeJS.Timeout | null = null;
+  let lastAsyncRun: Promise<View | null> = Promise.resolve(null);
+  const debouncedRunView = () => {
+    if (runViewTimeId) clearTimeout(runViewTimeId);
+    runViewTimeId = setTimeout(() => {
+      const _view = view();
+      if (_view) {
+        lastAsyncRun = lastAsyncRun.then(v => {
+          // console.count('run vega view');
+          return v?.runAsync() || _view.runAsync();
+        });
+      }
+    });
+  };
 
   // Update explore signal
   createEffect(() => {
     const _view = view();
     _view?.signal('malloyExplore', props.field);
-    _view?.run();
+    // _view?.run();
+    debouncedRunView();
   });
 
   console.log({spec});
@@ -108,6 +200,14 @@ export function Chart(props: {
     <div
       onMouseLeave={() => {
         setTooltipData(null);
+        // immediately clear brush out
+        // don't know the brush names because they are defined in the spec :/
+        // for now, hacky store the
+        resultStore.processBrushOps(
+          brushOuts
+            .filter(brush => brush.data?.type !== 'measure-range')
+            .map(brush => ({type: 'remove', sourceId: brush.sourceId}))
+        );
       }}
       style="width: fit-content; height: fit-content;"
     >

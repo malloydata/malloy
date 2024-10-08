@@ -1,6 +1,7 @@
-import {For, Show} from 'solid-js';
+import {For, Match, Show, Switch} from 'solid-js';
 import {ChartTooltipEntry} from '../types';
 import {renderNumericField} from '../render-numeric-field';
+import {useResultContext} from '../result-context';
 
 export function DefaultChartTooltip(props: {data: ChartTooltipEntry}) {
   const hasAttributes = () =>
@@ -21,12 +22,21 @@ export function DefaultChartTooltip(props: {data: ChartTooltipEntry}) {
       </div>
       <div class="malloy-tooltip--grid">
         <For each={props.data.entries}>
-          {({label, value, highlight, color}) => (
+          {({
+            label,
+            value,
+            highlight,
+            color,
+            ignoreHighlightState = false,
+            entryType,
+          }) => (
             <div
               class="malloy-tooltip--grid-row"
               classList={{
                 'malloy-tooltip--entry-fade':
-                  hasAttributes().highlight && !highlight,
+                  hasAttributes().highlight &&
+                  !highlight &&
+                  !ignoreHighlightState,
               }}
             >
               <Show when={hasAttributes().color}>
@@ -37,8 +47,24 @@ export function DefaultChartTooltip(props: {data: ChartTooltipEntry}) {
                   ></div>
                 </div>
               </Show>
-              <div class="malloy-tooltip--entry-label">{label}</div>
-              <div class="malloy-tooltip--entry-value">{String(value)}</div>
+              <Switch>
+                <Match when={entryType === 'list-item'}>
+                  <div class="malloy-tooltip--list-item-row">
+                    <div class="malloy-tooltip--entry-label">{label}</div>
+                    <div class="malloy-tooltip--entry-value">
+                      {typeof value === 'function' ? value() : value}
+                    </div>
+                  </div>
+                </Match>
+                <Match when={entryType === 'block'}>
+                  <div class="malloy-tooltip--block-row">
+                    <div class="malloy-tooltip--block-label">{label}</div>
+                    <div class="malloy-tooltip--block-value">
+                      {typeof value === 'function' ? value() : value}
+                    </div>
+                  </div>
+                </Match>
+              </Switch>
             </div>
           )}
         </For>

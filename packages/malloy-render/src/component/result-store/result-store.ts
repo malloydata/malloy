@@ -1,12 +1,50 @@
 import {createStore, produce} from 'solid-js/store';
 import {useResultContext} from '../result-context';
+import {createEffect} from 'solid-js';
 
-export interface BrushData {
-  value: string | number | boolean | Date;
+interface BrushDataBase {
   fieldRefId: string;
   sourceId: string;
-  type: 'dimension' | 'measure';
 }
+
+interface BrushDataDimension extends BrushDataBase {
+  type: 'dimension';
+  value: (string | number | boolean | Date)[];
+}
+
+interface BrushDataMeasure extends BrushDataBase {
+  type: 'measure';
+  value: number[];
+}
+
+export interface ModifyBrushOp {
+  type: 'add' | 'remove';
+  sourceId: string;
+  value?: BrushData;
+}
+
+// This doesn't really make sense if you want to support ranges and ref lines at the same time.
+// which maybe you don't. instead, you could have BrushDataMeasure with sig like value: {type: "point", "range", value: number | [number, number]}[]
+interface BrushDataMeasureRange extends BrushDataBase {
+  type: 'measure-range';
+  value: [number, number];
+}
+
+export type BrushData =
+  | BrushDataDimension
+  | BrushDataMeasure
+  | BrushDataMeasureRange;
+
+export type VegaBrushOut = {
+  sourceId: string;
+  data: BrushData | null;
+  debounce?:
+    | number
+    | {
+        time?: number;
+        strategy?: 'always' | 'on-empty';
+      };
+};
 
 export interface ResultStoreData {
   brushes: BrushData[];
@@ -30,11 +68,57 @@ export function createResultStore() {
     return localStore.brushes.find(b => b.sourceId === sourceId);
   };
 
+  const brushOps: ModifyBrushOp[] = [];
+  let processQueued = false;
+  const processBrushOps = (ops: ModifyBrushOp[]) => {
+    brushOps.push(...ops);
+    if (!processQueued) {
+      setTimeout(() => {
+        modifyBrushes(brushOps);
+        brushOps.length = 0;
+        processQueued = false;
+      }, 0);
+      processQueued = true;
+    }
+  };
+
+  const areBrushesEqual = (a?: BrushData, b?: BrushData) => {
+    // TODO: probably need to do manual checks so we can handle data types like Dates
+    return JSON.stringify(a) === JSON.stringify(b);
+  };
+
+  const modifyBrushes = (ops: ModifyBrushOp[]) => {
+    setStore(
+      produce(state => {
+        ops.forEach(op => {
+          if (op.type === 'add') {
+            const brushEntry = getFieldBrushBySourceId(
+              op.value!.sourceId,
+              state
+            );
+            // Do equality check before processing
+            if (brushEntry) {
+              if (!areBrushesEqual(brushEntry, op.value))
+                Object.assign(brushEntry, op.value);
+            } else {
+              state.brushes.push(op.value!);
+            }
+          } else if (op.type === 'remove') {
+            const idx = state.brushes.findIndex(
+              b => b.sourceId === op.sourceId
+            );
+            if (idx !== -1) state.brushes.splice(idx, 1);
+          }
+        });
+      })
+    );
+  };
+
   const addFieldBrush = (brush: BrushData) => {
     setStore(
       produce(s => {
         const brushEntry = getFieldBrushBySourceId(brush.sourceId, s);
-        if (brushEntry) brushEntry.value = brush.value;
+        if (brushEntry) Object.assign(brushEntry, brush);
         else {
           s.brushes.push(brush);
         }
@@ -60,13 +144,20 @@ export function createResultStore() {
     );
   };
 
+  // createEffect(() => {
+  //   console.count('store changed');
+  //   console.log(JSON.stringify(store, null, 2));
+  // });
+
   return {
     store,
     getFieldBrushes,
     getFieldBrushBySourceId,
     addFieldBrush,
     removeFieldBrush,
+    modifyBrushes,
     clearBrushesBySourceId,
+    processBrushOps,
   };
 }
 

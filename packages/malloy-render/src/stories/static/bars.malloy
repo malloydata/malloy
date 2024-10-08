@@ -3,8 +3,8 @@ source: products is duckdb.table("data/products.parquet") extend {
   measure: avg_margin is avg(retail_price - cost)
   dimension: product is name
   measure:
-    `Sales $` is retail_price.avg()*500
-    `Cost $ really long label` is retail_price.avg()*300
+    `Sales $` is retail_price.sum()*500
+    `Cost $ really long label` is retail_price.sum()*300
   dimension:
     `sales_year` is year(@2001-02-03 + round(id/5000) year)
 
@@ -15,7 +15,7 @@ source: products is duckdb.table("data/products.parquet") extend {
   # bar_chart
   view: topSellingBrands is {
     group_by: brand
-    aggregate: `Sales $` is retail_price.avg()*500
+    aggregate: `Sales $`
     limit: 10
   }
 
@@ -25,10 +25,29 @@ source: products is duckdb.table("data/products.parquet") extend {
       # bar_chart
       a is {
         group_by: brand
-        -- # number="#,##0.000"
+
+        # number="#,##0"
         aggregate: `Sales $`
+
+        # tooltip bar_chart.size=xs
+        nest: `Top Products` is {
+          group_by: product
+          # currency
+          aggregate: `Sales $`
+          limit: 10
+        }
+
+        # tooltip
+        nest: `Top 3 Categories` is {
+          group_by: category
+          # currency
+          aggregate: `Sales $`
+          limit: 3
+        }
         limit: 10
         -- order_by: sales_year
+        -- # tooltip currency
+        -- aggregate: `Cost $ really long label`
       }
       # bar_chart
       b is {
@@ -42,6 +61,15 @@ source: products is duckdb.table("data/products.parquet") extend {
         group_by: brand, department
         # currency
         aggregate: `Sales $`
+        # tooltip currency
+        aggregate: `Cost $ really long label`
+        # tooltip bar_chart.size=spark
+        nest: departments is {
+          group_by: product
+          # currency
+          aggregate: `Sales $`
+          limit: 10
+        }
         limit: 10
       }
       # bar_chart
@@ -122,7 +150,6 @@ source: products is duckdb.table("data/products.parquet") extend {
       aggregate: `Avg Retail` is retail_price.avg()
       limit: 5
     }
-    # size=lg
     `Top Selling Brands` is topSellingBrands
     `Top Products` is {
       group_by: name
