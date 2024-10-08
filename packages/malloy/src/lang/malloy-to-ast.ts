@@ -131,7 +131,10 @@ export class MalloyToAST
 
   protected getSourceString(cx: ParserRuleContext): string {
     return this.parseInfo.sourceStream.getText(
-      new StreamInterval(cx.start.startIndex, cx.stop ? cx.stop.stopIndex : cx.start.startIndex)
+      new StreamInterval(
+        cx.start.startIndex,
+        cx.stop ? cx.stop.stopIndex : cx.start.startIndex
+      )
     );
   }
 
@@ -1641,7 +1644,10 @@ export class MalloyToAST
       this.parseInfo.rangeFromContext(pcx),
       `${[
         ...whenCxs.map(
-          whenCx => `pick ${this.getSourceCode(whenCx._result)} when ${this.getSourceCode(whenCx._condition)}`
+          whenCx =>
+            `pick ${this.getSourceCode(
+              whenCx._result
+            )} when ${this.getSourceCode(whenCx._condition)}`
         ),
         elseCx ? `else ${elseCx.text}` : 'else null',
       ].join(' ')}`
