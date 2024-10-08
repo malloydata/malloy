@@ -122,6 +122,7 @@ export class MySQLDialect extends Dialect {
   supportsPipelinesInViews = false;
   readsNestedData = false;
   supportsComplexFilteredSources = false;
+  supportsArraysInData = false;
 
   malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
     if (malloyType.type === 'number') {
@@ -183,7 +184,7 @@ export class MySQLDialect extends Dialect {
       gc = `SUBSTRING_INDEX(${gc}, '${separator}', ${limit})`;
       gc = `REPLACE(${gc},'${separator}',',')`;
     }
-    gc = `JSON_EXTRACT(CONCAT('[',${gc},']'),'$')`;
+    gc = `COALESCE(JSON_EXTRACT(CONCAT('[',${gc},']'),'$'),JSON_ARRAY())`;
     return gc;
   }
 
@@ -215,7 +216,7 @@ export class MySQLDialect extends Dialect {
       return 'DOUBLE';
     } else if (t === 'string') {
       return 'TEXT';
-    } else if (t === 'struct') {
+    } else if (t === 'struct' || t === 'array') {
       return 'JSON';
     } else return t;
   }

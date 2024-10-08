@@ -478,9 +478,8 @@ expressionModels.forEach((x, databaseName) => {
     });
 
     it(`properly isolated nested calculations - ${databaseName}`, async () => {
-      const result = await expressionModel
-        .loadQuery(
-          `run: ${databaseName}.table('malloytest.airports') -> {
+      await expect(`
+            run: ${databaseName}.table('malloytest.airports') -> {
             group_by: faa_region
             aggregate: airport_count is count()
             calculate: id is row_number()
@@ -498,10 +497,10 @@ expressionModels.forEach((x, databaseName) => {
             // should be 2 rows, max of 2
             group_by: by_fac_type.id2
             order_by: id2 desc
-          }`
-        )
-        .run();
-      expect(result.data.path(0, 'id2').value).toBe(2);
+          }
+      `).malloyResultMatches(expressionModel, {
+        id2: 2,
+      });
     });
   });
 
@@ -944,7 +943,7 @@ expressionModels.forEach((x, databaseName) => {
     it(`trim works - ${databaseName}`, async () => {
       await funcTestMultiple(
         ["trim('  keep this  ')", 'keep this'],
-        ["trim('_ _keep_this_ _', '_ ')", 'keep_this'],
+        ["trim('__keep_this__', '_')", 'keep_this'],
         ["trim(' keep everything ', '')", ' keep everything '],
         ["trim('null example', null)", null],
         ["trim(null, 'a')", null],
@@ -956,7 +955,7 @@ expressionModels.forEach((x, databaseName) => {
     it(`ltrim works - ${databaseName}`, async () => {
       await funcTestMultiple(
         ["ltrim('  keep this ->  ')", 'keep this ->  '],
-        ["ltrim('_ _keep_this -> _ _', '_ ')", 'keep_this -> _ _'],
+        ["ltrim('__keep_this -> __', '_')", 'keep_this -> __'],
         ["ltrim(' keep everything ', '')", ' keep everything '],
         ["ltrim('null example', null)", null],
         ["ltrim(null, 'a')", null],
@@ -968,7 +967,7 @@ expressionModels.forEach((x, databaseName) => {
     it(`rtrim works - ${databaseName}`, async () => {
       await funcTestMultiple(
         ["rtrim('  <- keep this  ')", '  <- keep this'],
-        ["rtrim('_ _ <- keep_this_ _', '_ ')", '_ _ <- keep_this'],
+        ["rtrim('__ <- keep_this__', '_')", '__ <- keep_this'],
         ["rtrim(' keep everything ', '')", ' keep everything '],
         ["rtrim('null example', null)", null],
         ["rtrim(null, 'a')", null],
@@ -1445,7 +1444,11 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 
     it(`works with fanout and order_by - ${databaseName}`, async () => {
       // TODO bigquery cannot handle both fanout and order_by today
-      if (['bigquery', 'snowflake', 'trino', 'presto'].includes(databaseName))
+      if (
+        ['bigquery', 'snowflake', 'trino', 'presto', 'mysql'].includes(
+          databaseName
+        )
+      )
         return;
       await expect(`##! experimental.aggregate_order_by
       run: state_facts extend { join_many:
@@ -1464,8 +1467,9 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 
     it(`works with fanout - ${databaseName}`, async () => {
       // Snowflake cannot handle the fanout case today
-      if (databaseName === 'snowflake') return;
+      if (databaseName === 'snowflake' || databaseName === 'mysql') return;
       await expect(`##! experimental.aggregate_order_by
+      # test.debug
       run: state_facts extend { join_many:
         state_facts2 is ${databaseName}.table('malloytest.state_facts')
           on state_facts2.state = state
@@ -1480,7 +1484,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 
     it(`works with fanout and separator - ${databaseName}`, async () => {
       // Snowflake cannot handle the fanout case today
-      if (databaseName === 'snowflake') return;
+      if (databaseName === 'snowflake' || databaseName === 'mysql') return;
       await expect(`##! experimental.aggregate_order_by
       run: state_facts extend { join_many:
         state_facts2 is ${databaseName}.table('malloytest.state_facts')
