@@ -104,6 +104,7 @@ import {
   QueryToMaterialize,
   PrepareResultOptions,
   RepeatedRecordFieldDef,
+  TemporalTypeDef,
 } from './malloy_types';
 
 import {Connection} from '../connection/types';
@@ -2741,24 +2742,17 @@ class QueryQuery extends QueryField {
             case 'date':
             case 'timestamp': {
               const timeframe = fi.f.fieldDef.timeframe;
+              const fd: TemporalTypeDef = {type: fi.f.fieldDef.type};
               if (timeframe) {
-                fields.push({
-                  name,
-                  type: 'timestamp',
-                  timeframe,
-                  resultMetadata,
-                  location,
-                  annotation,
-                });
-              } else {
-                fields.push({
-                  name,
-                  type: 'timestamp',
-                  resultMetadata,
-                  location,
-                  annotation,
-                });
+                fd.timeframe = timeframe;
               }
+              fields.push({
+                name,
+                ...fd,
+                resultMetadata,
+                location,
+                annotation,
+              });
               break;
             }
             case 'number':
