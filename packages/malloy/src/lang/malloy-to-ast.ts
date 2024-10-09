@@ -1645,7 +1645,7 @@ export class MalloyToAST
       'Use a `pick` statement instead of `case`',
       this.parseInfo.rangeFromContext(pcx),
       `${[
-        ...(valueCx ? [`${this.getSourceCode(valueCx)} ?`]: []),
+        ...(valueCx ? [`${this.getSourceCode(valueCx)} ?`] : []),
         ...whenCxs.map(
           whenCx =>
             `pick ${this.getSourceCode(

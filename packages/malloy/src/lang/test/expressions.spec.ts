@@ -982,30 +982,42 @@ describe('expressions', () => {
 
   describe('case statements', () => {
     test('full', () => {
-      expect(expr`
+      const e = expr`
         case
           when ai = 42 then 'the answer'
           when ai = 54 then 'the questionable answer'
           else 'random'
         end
-      `).toLog(warning('sql-case'));
+      `;
+      expect(e).toLog(warning('sql-case'));
+      expect(e).compilesTo(
+        '{case when {ai = 42} then "the answer" when {ai = 54} then "the questionable answer" else "random"}'
+      );
     });
     test('with value', () => {
-      expect(expr`
+      const e = expr`
         case ai
           when 42 then 'the answer'
           when 54 then 'the questionable answer'
           else 'random'
         end
-      `).toLog(warning('sql-case'));
+      `;
+      expect(e).toLog(warning('sql-case'));
+      expect(e).compilesTo(
+        '{case ai when 42 then "the answer" when 54 then "the questionable answer" else "random"}'
+      );
     });
     test('no else', () => {
-      expect(expr`
+      const e = expr`
         case
           when ai = 42 then 'the answer'
           when ai = 54 then 'the questionable answer'
         end
-      `).toLog(warning('sql-case'));
+      `;
+      expect(e).toLog(warning('sql-case'));
+      expect(e).compilesTo(
+        '{case when {ai = 42} then "the answer" when {ai = 54} then "the questionable answer"}'
+      );
     });
     test('wrong then type', () => {
       expect(expr`

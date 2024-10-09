@@ -238,6 +238,23 @@ function eToStr(e: Expr, symbols: ESymbols): string {
     case 'true':
     case 'false':
       return e.node;
+    case 'case': {
+      const caseStmt = ['case'];
+      if (e.kids.caseValue !== null) {
+        caseStmt.push(`${subExpr(e.kids.caseValue)}`);
+      }
+      for (let i = 0; i < e.kids.caseWhen.length; i += 1) {
+        caseStmt.push(
+          `when ${subExpr(e.kids.caseWhen[i])} then ${subExpr(
+            e.kids.caseThen[i]
+          )}`
+        );
+      }
+      if (e.kids.caseElse !== null) {
+        caseStmt.push(`else ${subExpr(e.kids.caseElse)}`);
+      }
+      return `{${caseStmt.join(' ')}}`;
+    }
     case 'regexpMatch':
       return `{${subExpr(e.kids.expr)} regex-match ${subExpr(e.kids.regex)}}`;
   }
