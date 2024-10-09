@@ -1312,7 +1312,7 @@ export class MalloyToAST
   }
 
   visitExprExpr(pcx: parse.ExprExprContext): ast.ExprParens {
-    return new ast.ExprParens(this.getFieldExpr(pcx.partialAllowedFieldExpr()));
+    return new ast.ExprParens(this.getFieldExpr(pcx.fieldExpr()));
   }
 
   visitExprMinus(pcx: parse.ExprMinusContext): ast.ExprMinus {

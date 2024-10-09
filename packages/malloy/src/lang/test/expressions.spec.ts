@@ -1116,6 +1116,39 @@ describe('expressions', () => {
     expect(expr`${name} = NULL`).toTranslate();
   });
 });
+describe('alternations as in', () => {
+  test('a=b|c', () => {
+    expect('ai=1|2').compilesTo('{ai in {1},{2}}');
+  });
+  test('a!=b|c', () => {
+    expect('ai!=1|2').compilesTo('{ai not in {1},{2}}');
+  });
+  // this might be that ExprExpr thing with partialAllowed ....
+  test('a=(b|c)', () => {
+    expect('ai=(1|2)').compilesTo('{ai in {1},{2}}');
+  });
+  test('a?b|c', () => {
+    expect('ai?1|2').compilesTo('{ai in {1},{2}}');
+  });
+  test('a=(b)|c)', () => {
+    expect('ai=(1)|2').compilesTo('{ai in {1},{2}}');
+  });
+  test('a=b|c|d', () => {
+    expect('ai=1|2|3').compilesTo('{ai in {1},{2},{3}}');
+  });
+  test('a=(b|c)|d', () => {
+    expect('ai=(1|2)|3').compilesTo('{ai in {1},{2},{3}}');
+  });
+  test('a=b|(c|d)', () => {
+    expect('ai=1|(2|3)').compilesTo('{ai in {1},{2},{3}}');
+  });
+  test('a=b|c&d', () => {
+    expect('ai=1|2&3').compilesTo('{{ai = 1} or {{ai = 2} and {ai = 3}}}');
+  });
+  test('a=b|>d', () => {
+    expect('ai=1|>2').compilesTo('{{ai = 1} or {ai > 2}}');
+  });
+});
 describe('sql native fields in schema', () => {
   test('sql native reference in result allowed', () => {
     const uModel = new TestTranslator('run: a->{ group_by: aun }');

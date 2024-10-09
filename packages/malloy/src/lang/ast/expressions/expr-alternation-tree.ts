@@ -26,6 +26,29 @@ import {ExprValue} from '../types/expr-value';
 import {FieldSpace} from '../types/field-space';
 import {ExpressionDef} from '../types/expression-def';
 import {BinaryMalloyOperator} from '../types/binary_operators';
+import {PartialCompare} from './partial-compare';
+import {ExprParens} from './expr-parens';
+
+function getInList(node: ExpressionDef): ExpressionDef[] | undefined {
+  if (node instanceof ExprAlternationTree) {
+    if (node.op === '&') {
+      return undefined;
+    }
+    const left = getInList(node.left);
+    if (left) {
+      const right = getInList(node.right);
+      if (right) {
+        return [...left, ...right];
+      }
+    }
+    return undefined;
+  } else if (node instanceof PartialCompare) {
+    return undefined;
+  } else if (node instanceof ExprParens) {
+    return getInList(node.expr);
+  }
+  return [node];
+}
 
 export class ExprAlternationTree extends ExpressionDef {
   elementType = 'alternation';
@@ -43,6 +66,29 @@ export class ExprAlternationTree extends ExpressionDef {
     applyOp: BinaryMalloyOperator,
     expr: ExpressionDef
   ): ExprValue {
+    const inList = getInList(this);
+    if (inList && (applyOp === '=' || applyOp === '!=')) {
+      const isIn = expr.getExpression(fs);
+      const values = inList.map(v => v.getExpression(fs));
+      let {evalSpace, expressionType} = isIn;
+      for (const value of values) {
+        evalSpace = mergeEvalSpaces(evalSpace, value.evalSpace);
+        expressionType = maxExpressionType(
+          expressionType,
+          value.expressionType
+        );
+      }
+      return {
+        dataType: 'boolean',
+        evalSpace,
+        expressionType,
+        value: {
+          node: 'in',
+          not: applyOp === '!=',
+          kids: {e: isIn.value, oneOf: values.map(v => v.value)},
+        },
+      };
+    }
     const choice1 = this.left.apply(fs, applyOp, expr);
     const choice2 = this.right.apply(fs, applyOp, expr);
     return {

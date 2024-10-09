@@ -563,7 +563,7 @@ fieldExpr
       OPAREN (fieldExpr | STAR)? CPAREN                    # exprPathlessAggregate
   | fieldPath DOT aggregate
       OPAREN fieldExpr? CPAREN                             # exprAggregate
-  | OPAREN partialAllowedFieldExpr CPAREN                  # exprExpr
+  | OPAREN fieldExpr CPAREN                                # exprExpr
   | fieldPath DOT id
       OPAREN ( argumentList? ) CPAREN                      # exprAggFunc
   | ((id (EXCLAM malloyType?)?) | timeframe)

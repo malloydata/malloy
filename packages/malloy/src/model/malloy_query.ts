@@ -1297,6 +1297,10 @@ class QueryField extends QueryNode {
         return `COALESCE(${expr.kids.left.sql},${expr.kids.right.sql})`;
       case 'like':
         return `${expr.kids.left.sql} LIKE ${expr.kids.right.sql}`;
+      case 'in': {
+        const oneOf = expr.kids.oneOf.map(o => o.sql).join(',');
+        return `${expr.kids.e.sql} ${expr.not ? 'NOT IN' : 'IN'} (${oneOf})`;
+      }
       // Malloy inequality comparisons always return a boolean
       case '!like': {
         const notLike = `${expr.kids.left.sql} NOT LIKE ${expr.kids.right.sql}`;
