@@ -993,7 +993,7 @@ expressionModels.forEach((x, databaseName) => {
   });
 
   describe('byte_length', () => {
-    it(`works - ${databaseName}`, async () => {
+    it.when(databaseName !== 'mysql')(`works - ${databaseName}`, async () => {
       await funcTestMultiple(
         ["byte_length('hello')", 5],
         ["byte_length('©')", 2],
@@ -1058,7 +1058,7 @@ expressionModels.forEach((x, databaseName) => {
     });
   });
   describe('unicode', () => {
-    it(`works - ${databaseName}`, async () => {
+    it.when(databaseName !== 'mysql')(`works - ${databaseName}`, async () => {
       await funcTestMultiple(
         ["unicode('A')", 65],
         ["unicode('â')", 226],

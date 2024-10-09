@@ -216,7 +216,7 @@ export class MySQLDialect extends Dialect {
       return 'DOUBLE';
     } else if (t === 'string') {
       return 'TEXT';
-    } else if (t === 'struct' || t === 'array') {
+    } else if (t === 'struct' || t === 'array' || t === 'record') {
       return 'JSON';
     } else return t;
   }
