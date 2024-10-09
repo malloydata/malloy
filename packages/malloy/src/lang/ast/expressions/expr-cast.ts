@@ -55,6 +55,12 @@ export class ExprCast extends ExpressionDef {
             `Cast type \`${this.castType.raw}\` is invalid for ${dialect.name} dialect`
           );
         }
+        if (this.safe && !dialect.supportsSafeCast) {
+          this.logError(
+            'dialect-cast-unsafe-only',
+            `The SQL dialect '${fs.dialectName()}' does not supply a safe cast operator`
+          );
+        }
       }
     }
     return {
