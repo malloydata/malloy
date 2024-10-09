@@ -89,8 +89,9 @@ export class MySQLConnection
         database: this.config.database,
         multipleStatements: true,
         decimalNumbers: true,
+        timezone: '+00:00',
       });
-      this.connection.query(
+      await this.connection.query(
         // LTNOTE: Need to make the group_concat_max_len configurable.
         "set @@session.time_zone = 'UTC';" +
           // LTNOTE: for nesting this is the max buffer size.  Currently set to 10M, have to figure out perf implications.
