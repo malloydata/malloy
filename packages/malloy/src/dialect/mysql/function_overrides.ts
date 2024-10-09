@@ -46,5 +46,7 @@ export const MYSQL_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
     },
   },
   byte_length: {sql: '(LENGTH(CAST(${value} AS VARBINARY)))'},
-  chr: {sql: "CASE WHEN ${value} = 0 THEN '' ELSE CHR(${value}) END"},
+  chr: {
+    sql: "CASE WHEN ${value} = 0 THEN '' ELSE CHAR(${value} USING latin1) END",
+  },
 };

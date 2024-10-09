@@ -222,7 +222,7 @@ export class MySQLConnection
 
       return {rows, totalRows: rows.length};
     } catch (e) {
-      throw new Error('BADNESS');
+      throw new Error(e);
     }
   }
 

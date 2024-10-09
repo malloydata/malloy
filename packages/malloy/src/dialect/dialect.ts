@@ -130,7 +130,7 @@ export abstract class Dialect {
   // Snowflake can't yet support pipelines in nested views.
   supportsPipelinesInViews = true;
 
-  // Some dialects don't supporrt arrays.
+  // Some dialects don't supporrt arrays (mysql)
   supportsArraysInData = true;
 
   // can read some version of ga_sample

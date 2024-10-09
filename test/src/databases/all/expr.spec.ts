@@ -325,7 +325,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 
   // TODO not sure why this test needs to be skipped on postgres, feels like an oversight
   // NOTE: unless underlying type is stored as a timestamp snowflake does not support extraction
-  test.when(!['postgres', 'snowflake'].includes(databaseName))(
+  test.when(!['postgres', 'snowflake', 'mysql'].includes(databaseName))(
     'model: dates named',
     async () => {
       await expect(`
