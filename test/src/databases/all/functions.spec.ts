@@ -1145,7 +1145,6 @@ expressionModels.forEach((x, databaseName) => {
     test.when(supported)('works generally', async () => {
       await expect(`
           // be accurate within 30%
-          // # test.debug
           run: ${databaseName}.table('malloytest.state_facts') -> {
             aggregate: passes is abs(count_approx(state)-count(state))/count(state) < 0.3
             aggregate: also_passes is abs(count_approx(airport_count)-count(airport_count))/count(airport_count) < 0.3
@@ -1469,7 +1468,6 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       // Snowflake cannot handle the fanout case today
       if (databaseName === 'snowflake' || databaseName === 'mysql') return;
       await expect(`##! experimental.aggregate_order_by
-      # test.debug
       run: state_facts extend { join_many:
         state_facts2 is ${databaseName}.table('malloytest.state_facts')
           on state_facts2.state = state
