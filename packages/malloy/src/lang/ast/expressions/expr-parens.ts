@@ -44,10 +44,11 @@ export class ExprParens extends ExpressionDef {
   apply(
     fs: FieldSpace,
     op: BinaryMalloyOperator,
-    left: ExpressionDef
+    left: ExpressionDef,
+    doWarn: boolean
   ): ExprValue {
     if (this.expr.atNodeType() === ATNodeType.Or) {
-      return this.expr.apply(fs, op, left);
+      return this.expr.apply(fs, op, left, doWarn);
     }
     return applyBinary(fs, left, op, this);
   }
