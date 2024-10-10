@@ -28,6 +28,7 @@ import {
   markSource,
   errorMessage,
   warningMessage,
+  getFieldDef,
 } from './test-translator';
 import './parse-expects';
 
@@ -366,5 +367,13 @@ describe('source:', () => {
         }
       `).toTranslate();
     });
+  });
+  test('dates do not become timestamps', () => {
+    const dateThing = model`source: hasDate is a -> { select: ad }`;
+    expect(dateThing).toTranslate();
+    const hasDate = dateThing.translator.getSourceDef('hasDate');
+    expect(hasDate).toBeDefined();
+    const ad = getFieldDef(hasDate!, 'ad');
+    expect(ad).toMatchObject({name: 'ad', type: 'date'});
   });
 });

@@ -352,6 +352,7 @@ type MessageParameterTypes = {
   'illegal-record-property-type': string;
   'or-choices-only': string;
   'sql-in': string;
+  'dialect-cast-unsafe-only': string;
 };
 
 export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {

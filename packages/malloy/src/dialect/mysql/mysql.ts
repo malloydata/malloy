@@ -53,11 +53,6 @@ import {
 import {MYSQL_DIALECT_FUNCTIONS} from './dialect_functions';
 import {MYSQL_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
-const castMap: Record<string, string> = {
-  number: 'double precision',
-  string: 'varchar(255)',
-};
-
 const msExtractionMap: Record<string, string> = {
   day_of_week: 'DAYOFWEEK',
   day_of_year: 'DAYOFYEAR',
@@ -122,16 +117,19 @@ export class MySQLDialect extends Dialect {
   supportsPipelinesInViews = false;
   readsNestedData = false;
   supportsComplexFilteredSources = false;
+  supportsArraysInData = false;
 
   malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
-    if (malloyType.type === 'number') {
-      if (malloyType.numberType === 'integer') {
-        return 'BIGINT';
-      } else {
-        return 'DOUBLE';
-      }
+    switch (malloyType.type) {
+      case 'number':
+        return malloyType.numberType === 'integer' ? 'BIGINT' : 'DOUBLE';
+      case 'string':
+        return 'CHAR';
+      case 'date':
+      case 'timestamp':
+      default:
+        return malloyType.type;
     }
-    return malloyType.type;
   }
 
   sqlTypeToMalloyType(sqlType: string): LeafAtomicDef {
@@ -183,7 +181,7 @@ export class MySQLDialect extends Dialect {
       gc = `SUBSTRING_INDEX(${gc}, '${separator}', ${limit})`;
       gc = `REPLACE(${gc},'${separator}',',')`;
     }
-    gc = `JSON_EXTRACT(CONCAT('[',${gc},']'),'$')`;
+    gc = `COALESCE(JSON_EXTRACT(CONCAT('[',${gc},']'),'$'),JSON_ARRAY())`;
     return gc;
   }
 
@@ -215,7 +213,7 @@ export class MySQLDialect extends Dialect {
       return 'DOUBLE';
     } else if (t === 'string') {
       return 'TEXT';
-    } else if (t === 'struct') {
+    } else if (t === 'struct' || t === 'array' || t === 'record') {
       return 'JSON';
     } else return t;
   }
@@ -430,7 +428,7 @@ export class MySQLDialect extends Dialect {
     if (cast.srcType !== cast.dstType) {
       const dstType =
         typeof cast.dstType === 'string'
-          ? castMap[cast.dstType]
+          ? this.malloyTypeToSQLType({type: cast.dstType})
           : cast.dstType.raw;
       if (cast.safe) {
         throw new Error("Mysql dialect doesn't support Safe Cast");

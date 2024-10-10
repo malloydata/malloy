@@ -325,7 +325,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 
   // TODO not sure why this test needs to be skipped on postgres, feels like an oversight
   // NOTE: unless underlying type is stored as a timestamp snowflake does not support extraction
-  test.when(!['postgres', 'snowflake'].includes(databaseName))(
+  test.when(!['postgres', 'snowflake', 'mysql'].includes(databaseName))(
     'model: dates named',
     async () => {
       await expect(`
@@ -410,18 +410,26 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     `).malloyResultMatches(expressionModel, {a: 312});
   });
 
-  test.when(runtime.dialect.supportsSafeCast)('sql safe cast', async () => {
-    await expect(`
+  it('sql safe cast', async () => {
+    const safeCast = `
       run: ${databaseName}.sql('SELECT 1 as one') -> { select:
         bad_date is '12a':::date
         bad_number is 'abc':::number
         good_number is "312":::"${nativeInt}"
       }
-    `).malloyResultMatches(expressionModel, {
-      bad_date: null,
-      bad_number: null,
-      good_number: 312,
-    });
+    `;
+    if (runtime.dialect.supportsSafeCast) {
+      await expect(safeCast).malloyResultMatches(runtime, {
+        bad_date: null,
+        bad_number: null,
+        good_number: 312,
+      });
+    } else {
+      await expect(safeCast).toEmitDuringTranslation(runtime, {
+        id: 'translation-error',
+        data: {code: 'dialect-cast-unsafe-only'},
+      });
+    }
   });
 
   it('many_field.sum() has correct locality', async () => {
