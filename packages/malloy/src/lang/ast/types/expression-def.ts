@@ -132,7 +132,8 @@ export abstract class ExpressionDef extends MalloyElement {
   apply(
     fs: FieldSpace,
     op: BinaryMalloyOperator,
-    left: ExpressionDef
+    left: ExpressionDef,
+    _warnOnComplexTree = false
   ): ExprValue {
     return applyBinary(fs, left, op, this);
   }

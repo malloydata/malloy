@@ -22,7 +22,11 @@
  */
 
 import {FT} from '../fragtype-utils';
-import {CompareMalloyOperator} from '../types/binary_operators';
+import {
+  BinaryMalloyOperator,
+  CompareMalloyOperator,
+  EqualityMalloyOperator,
+} from '../types/binary_operators';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
@@ -52,5 +56,33 @@ export class ExprCompare extends BinaryBoolean<CompareMalloyOperator> {
 
   getExpression(fs: FieldSpace): ExprValue {
     return this.right.apply(fs, this.op, this.left);
+  }
+}
+
+/**
+ * The parser makes equality nodes, an application of ?
+ * makes an ExprCompare node with operator =. This is how
+ * the special rules for how apply works for equality
+ * nodes gets implemented.
+ */
+export class ExprEquality extends ExprCompare {
+  constructor(
+    left: ExpressionDef,
+    op: EqualityMalloyOperator,
+    right: ExpressionDef
+  ) {
+    super(left, op, right);
+  }
+
+  getExpression(fs: FieldSpace): ExprValue {
+    return this.right.apply(fs, this.op, this.left, true);
+  }
+
+  apply(
+    fs: FieldSpace,
+    op: BinaryMalloyOperator,
+    left: ExpressionDef
+  ): ExprValue {
+    return super.apply(fs, op, left, true);
   }
 }

@@ -1146,7 +1146,17 @@ describe('alternations as in', () => {
   });
   test('a=b|>d', () => {
     expect('ai=1|>2').compilesTo('{{ai = 1} or {ai > 2}}');
+    expect(expr`ai=1|>2`).toLog(
+      warningMessage(
+        'Only | seperated values are legal when used with = operator'
+      )
+    );
   });
+  test('a ? = (b | c)', () => {
+    expect('ai ? (= 1 | 2)').compilesTo('{ai in {1},{2}}');
+  });
+  // mtoy todo this hits "alternation tree has no value"
+  test.todo('a ? (= 1) | 2');
 });
 describe('rigor around ? and =', () => {});
 describe('sql native fields in schema', () => {

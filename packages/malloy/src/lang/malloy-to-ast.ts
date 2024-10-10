@@ -1337,12 +1337,12 @@ export class MalloyToAST
 
   visitExprCompare(pcx: parse.ExprCompareContext): ast.ExprCompare {
     const op = pcx.compareOp().text;
-    if (ast.isComparison(op)) {
-      return new ast.ExprCompare(
-        this.getFieldExpr(pcx.fieldExpr(0)),
-        op,
-        this.getFieldExpr(pcx.fieldExpr(1))
-      );
+    const left = this.getFieldExpr(pcx.fieldExpr(0));
+    const right = this.getFieldExpr(pcx.fieldExpr(1));
+    if (ast.isEquality(op)) {
+      return this.astAt(new ast.ExprEquality(left, op, right), pcx);
+    } else if (ast.isComparison(op)) {
+      return this.astAt(new ast.ExprCompare(left, op, right), pcx);
     }
     throw this.internalError(pcx, `untranslatable comparison operator '${op}'`);
   }
