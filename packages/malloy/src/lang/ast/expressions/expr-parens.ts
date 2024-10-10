@@ -23,9 +23,8 @@
 
 import {BinaryMalloyOperator} from '../types/binary_operators';
 import {ExprValue} from '../types/expr-value';
-import {applyBinary, ExpressionDef} from '../types/expression-def';
+import {applyBinary, ATNodeType, ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
-import {ExprAlternationTree} from './expr-alternation-tree';
 
 export class ExprParens extends ExpressionDef {
   elementType = '(expression)';
@@ -47,10 +46,17 @@ export class ExprParens extends ExpressionDef {
     op: BinaryMalloyOperator,
     left: ExpressionDef
   ): ExprValue {
-    if (this.expr instanceof ExprAlternationTree) {
+    if (this.expr.atNodeType() === ATNodeType.Or) {
       return this.expr.apply(fs, op, left);
-    } else {
-      return applyBinary(fs, left, op, this);
     }
+    return applyBinary(fs, left, op, this);
+  }
+
+  atNodeType(): ATNodeType {
+    return ATNodeType.Paren;
+  }
+
+  atExpr(): ExpressionDef {
+    return this.expr;
   }
 }

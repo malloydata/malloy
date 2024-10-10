@@ -24,30 +24,37 @@
 import {maxExpressionType, mergeEvalSpaces} from '../../../model/malloy_types';
 import {ExprValue} from '../types/expr-value';
 import {FieldSpace} from '../types/field-space';
-import {ExpressionDef} from '../types/expression-def';
+import {ATNodeType, ExpressionDef} from '../types/expression-def';
 import {BinaryMalloyOperator} from '../types/binary_operators';
-import {PartialCompare} from './partial-compare';
-import {ExprParens} from './expr-parens';
 
-function getInList(node: ExpressionDef): ExpressionDef[] | undefined {
-  if (node instanceof ExprAlternationTree) {
-    if (node.op === '&') {
+/**
+ * Return a flattened version of an alternation tree, if the tree is
+ * composed entirely values and "or"s.
+ *
+ * @param node Root of the tree
+ * @returns Undefined if other nodes are found in the tree
+ */
+function flattenOrTree(inNode: ExpressionDef): ExpressionDef[] | undefined {
+  const node = inNode.atExpr();
+  switch (node.atNodeType()) {
+    case ATNodeType.And:
+    case ATNodeType.Partial:
+      return undefined;
+    case ATNodeType.Or: {
+      if (node instanceof ExprAlternationTree) {
+        const left = flattenOrTree(node.left);
+        if (left) {
+          const right = flattenOrTree(node.right);
+          if (right) {
+            return [...left, ...right];
+          }
+        }
+      }
       return undefined;
     }
-    const left = getInList(node.left);
-    if (left) {
-      const right = getInList(node.right);
-      if (right) {
-        return [...left, ...right];
-      }
-    }
-    return undefined;
-  } else if (node instanceof PartialCompare) {
-    return undefined;
-  } else if (node instanceof ExprParens) {
-    return getInList(node.expr);
+    default:
+      return [node];
   }
-  return [node];
 }
 
 export class ExprAlternationTree extends ExpressionDef {
@@ -66,7 +73,7 @@ export class ExprAlternationTree extends ExpressionDef {
     applyOp: BinaryMalloyOperator,
     expr: ExpressionDef
   ): ExprValue {
-    const inList = getInList(this);
+    const inList = flattenOrTree(this);
     if (inList && (applyOp === '=' || applyOp === '!=')) {
       const isIn = expr.getExpression(fs);
       const values = inList.map(v => v.getExpression(fs));
@@ -114,5 +121,9 @@ export class ExprAlternationTree extends ExpressionDef {
       'alternation-as-value',
       'Alternation tree has no value'
     );
+  }
+
+  atNodeType(): ATNodeType {
+    return this.op === '|' ? ATNodeType.Or : ATNodeType.And;
   }
 }

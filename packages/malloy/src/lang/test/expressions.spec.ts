@@ -1123,14 +1123,13 @@ describe('alternations as in', () => {
   test('a!=b|c', () => {
     expect('ai!=1|2').compilesTo('{ai not in {1},{2}}');
   });
-  // this might be that ExprExpr thing with partialAllowed ....
   test('a=(b|c)', () => {
     expect('ai=(1|2)').compilesTo('{ai in {1},{2}}');
   });
   test('a?b|c', () => {
     expect('ai?1|2').compilesTo('{ai in {1},{2}}');
   });
-  test('a=(b)|c)', () => {
+  test('a=(b)|c', () => {
     expect('ai=(1)|2').compilesTo('{ai in {1},{2}}');
   });
   test('a=b|c|d', () => {
@@ -1149,6 +1148,7 @@ describe('alternations as in', () => {
     expect('ai=1|>2').compilesTo('{{ai = 1} or {ai > 2}}');
   });
 });
+describe('rigor around ? and =', () => {});
 describe('sql native fields in schema', () => {
   test('sql native reference in result allowed', () => {
     const uModel = new TestTranslator('run: a->{ group_by: aun }');
