@@ -46,10 +46,8 @@ export class Case extends ExpressionDef {
     const resultExpr: CaseExpr = {
       node: 'case',
       kids: {
-        caseValue: null,
         caseWhen: [],
         caseThen: [],
-        caseElse: null,
       },
     };
     let expressionType: ExpressionType = 'scalar';

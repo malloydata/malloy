@@ -81,10 +81,8 @@ export class Pick extends ExpressionDef {
     const caseValue: CaseExpr = {
       node: 'case',
       kids: {
-        caseValue: null,
         caseWhen: [],
         caseThen: [],
-        caseElse: null,
       },
     };
     let returnType: ExprValue | undefined;
@@ -146,10 +144,8 @@ export class Pick extends ExpressionDef {
     const pick: CaseExpr = {
       node: 'case',
       kids: {
-        caseValue: null,
         caseWhen: [],
         caseThen: [],
-        caseElse: null,
       },
     };
     if (this.elsePick === undefined) {

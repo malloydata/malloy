@@ -43,7 +43,7 @@ export interface ExprOptionalE extends ExprLeaf {
 }
 
 export interface ExprWithKids extends ExprLeaf {
-  kids: Record<string, Expr | Expr[] | null>;
+  kids: Record<string, Expr | Expr[]>;
 }
 export type AnyExpr = ExprE | ExprOptionalE | ExprWithKids | ExprLeaf;
 
@@ -323,10 +323,10 @@ export interface NullNode extends ExprLeaf {
 export interface CaseExpr extends ExprWithKids {
   node: 'case';
   kids: {
-    caseValue: Expr | null;
+    caseValue?: Expr;
     caseWhen: Expr[];
     caseThen: Expr[];
-    caseElse: Expr | null;
+    caseElse?: Expr;
   };
 }
 

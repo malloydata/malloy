@@ -240,7 +240,7 @@ function eToStr(e: Expr, symbols: ESymbols): string {
       return e.node;
     case 'case': {
       const caseStmt = ['case'];
-      if (e.kids.caseValue !== null) {
+      if (e.kids.caseValue !== undefined) {
         caseStmt.push(`${subExpr(e.kids.caseValue)}`);
       }
       for (let i = 0; i < e.kids.caseWhen.length; i += 1) {
@@ -250,7 +250,7 @@ function eToStr(e: Expr, symbols: ESymbols): string {
           )}`
         );
       }
-      if (e.kids.caseElse !== null) {
+      if (e.kids.caseElse !== undefined) {
         caseStmt.push(`else ${subExpr(e.kids.caseElse)}`);
       }
       return `{${caseStmt.join(' ')}}`;
