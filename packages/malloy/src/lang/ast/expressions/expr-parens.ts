@@ -53,7 +53,7 @@ export class ExprParens extends ExpressionDef {
   }
 
   atNodeType(): ATNodeType {
-    return ATNodeType.Paren;
+    return this.expr.atNodeType();
   }
 
   atExpr(): ExpressionDef {

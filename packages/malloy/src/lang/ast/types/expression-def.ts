@@ -59,7 +59,6 @@ export enum ATNodeType {
   Or,
   Value,
   Partial,
-  Paren,
 }
 
 /**
