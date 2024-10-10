@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {maxExpressionType, mergeEvalSpaces} from '../../../model';
 import {FT} from '../fragtype-utils';
 import {
   BinaryMalloyOperator,
@@ -66,6 +67,7 @@ export class ExprCompare extends BinaryBoolean<CompareMalloyOperator> {
  * nodes gets implemented.
  */
 export class ExprEquality extends ExprCompare {
+  elementType = 'a~=b';
   constructor(
     left: ExpressionDef,
     op: EqualityMalloyOperator,
@@ -84,5 +86,38 @@ export class ExprEquality extends ExprCompare {
     left: ExpressionDef
   ): ExprValue {
     return super.apply(fs, op, left, true);
+  }
+}
+
+export class ExprLegacyIn extends ExpressionDef {
+  elementType = 'in';
+  constructor(
+    readonly expr: ExpressionDef,
+    readonly notIn: boolean,
+    readonly choices: ExpressionDef[]
+  ) {
+    super();
+    this.has({expr, choices});
+  }
+
+  getExpression(fs: FieldSpace): ExprValue {
+    const lookFor = this.expr.getExpression(fs);
+    let {evalSpace, expressionType} = lookFor;
+    const oneOf = this.choices.map(e => {
+      const choice = e.getExpression(fs);
+      expressionType = maxExpressionType(expressionType, choice.expressionType);
+      evalSpace = mergeEvalSpaces(evalSpace, choice.evalSpace);
+      return choice.value;
+    });
+    return {
+      dataType: 'boolean',
+      expressionType,
+      evalSpace,
+      value: {
+        node: 'in',
+        not: this.notIn,
+        kids: {e: lookFor.value, oneOf},
+      },
+    };
   }
 }

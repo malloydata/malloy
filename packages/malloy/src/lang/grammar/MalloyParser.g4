@@ -553,6 +553,7 @@ fieldExpr
   | fieldExpr compareOp fieldExpr                          # exprCompare
   | fieldExpr NOT? LIKE fieldExpr                          # exprWarnLike
   | fieldExpr IS NOT? NULL                                 # exprWarnNullCmp
+  | fieldExpr NOT? IN OPAREN fieldExprList CPAREN          # exprWarnIn
   | fieldExpr QMARK partialAllowedFieldExpr                # exprApply
   | NOT fieldExpr                                          # exprNot
   | fieldExpr AND fieldExpr                                # exprLogicalAnd
@@ -575,6 +576,10 @@ fieldExpr
 partialAllowedFieldExpr
   : OPAREN compareOp? fieldExpr CPAREN
   | compareOp? fieldExpr
+  ;
+
+fieldExprList
+  : fieldExpr (COMMA fieldExpr)*
   ;
 
 pickStatement

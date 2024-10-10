@@ -1155,6 +1155,11 @@ describe('alternations as in', () => {
   test('a ? = (b | c)', () => {
     expect('ai ? (= 1 | 2)').compilesTo('{ai in {1},{2}}');
   });
+  test('legacy in', () => {
+    const inExpr = expr`ai in (1,2,3)`;
+    expect(inExpr).compilesTo('{ai in {1},{2},{3}}');
+    expect(inExpr).toLog(warningMessage('Use = (a|b|c) instead of IN (a,b,c)'));
+  });
   // mtoy todo this hits "alternation tree has no value"
   test.todo('a ? (= 1) | 2');
 });

@@ -351,6 +351,7 @@ type MessageParameterTypes = {
   'sql-is-null': string;
   'illegal-record-property-type': string;
   'or-choices-only': string;
+  'sql-in': string;
 };
 
 export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {

@@ -1980,14 +1980,14 @@ export class MalloyToAST
         'sql-is-not-null',
         "Use '!= NULL' to check for NULL instead of 'IS NOT NULL'",
         wholeRange,
-        `${expr.text} != null`
+        `${this.getSourceCode(expr)} != null`
       );
     } else {
       this.warnWithReplacement(
         'sql-is-null',
         "Use '= NULL' to check for NULL instead of 'IS NULL'",
         wholeRange,
-        `${expr.text} = null`
+        `${this.getSourceCode(expr)} = null`
       );
     }
     const nullExpr = new ast.ExprNULL();
@@ -1995,5 +1995,28 @@ export class MalloyToAST
       new ast.ExprCompare(this.getFieldExpr(expr), op, nullExpr),
       pcx
     );
+  }
+
+  visitExprWarnIn(pcx: parse.ExprWarnInContext): ast.ExprLegacyIn {
+    const expr = this.getFieldExpr(pcx.fieldExpr());
+    const isNot = !!pcx.NOT();
+    const from = pcx.fieldExprList().fieldExpr();
+    const inStmt = this.astAt(
+      new ast.ExprLegacyIn(
+        expr,
+        isNot,
+        from.map(f => this.getFieldExpr(f))
+      ),
+      pcx
+    );
+    this.warnWithReplacement(
+      'sql-in',
+      `Use = (a|b|c) instead of${isNot ? ' NOT' : ''} IN (a,b,c)`,
+      this.parseInfo.rangeFromContext(pcx),
+      `${this.getSourceCode(pcx.fieldExpr())} ${isNot ? '!=' : '='} (${from
+        .map(f => this.getSourceCode(f))
+        .join('|')})`
+    );
+    return inStmt;
   }
 }
