@@ -364,6 +364,7 @@ type MessageParameterTypes = {
     whenType: FieldValueType;
     valueType: FieldValueType;
   };
+  'dialect-cast-unsafe-only': string;
 };
 
 export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
