@@ -91,7 +91,7 @@ export type Expr =
   | FunctionOrderBy
   | GenericSQLExpr
   | NullNode
-  | PickExpr
+  | CaseExpr
   | ArrayEachExpr
   | ErrorNode;
 
@@ -320,9 +320,14 @@ export interface NullNode extends ExprLeaf {
   node: 'null';
 }
 
-export interface PickExpr extends ExprWithKids {
-  node: 'pick';
-  kids: {pickWhen: Expr[]; pickThen: Expr[]; pickElse: Expr};
+export interface CaseExpr extends ExprWithKids {
+  node: 'case';
+  kids: {
+    caseValue?: Expr;
+    caseWhen: Expr[];
+    caseThen: Expr[];
+    caseElse?: Expr;
+  };
 }
 
 export interface ArrayEachExpr extends ExprLeaf {

@@ -34,6 +34,7 @@ import {
   error,
   errorMessage,
   warningMessage,
+  warning,
 } from './test-translator';
 import './parse-expects';
 
@@ -976,6 +977,194 @@ describe('expressions', () => {
         group_by: output is 1
         calculate: bar is lag(sum(output))
       }`).toLog(errorMessage("'output' is not defined"));
+    });
+  });
+
+  describe('case statements', () => {
+    test('full', () => {
+      const e = expr`
+        case
+          when ai = 42 then 'the answer'
+          when ai = 54 then 'the questionable answer'
+          else 'random'
+        end
+      `;
+      expect(e).toLog(warning('sql-case'));
+      expect(e).compilesTo(
+        '{case when {ai = 42} then "the answer" when {ai = 54} then "the questionable answer" else "random"}'
+      );
+    });
+    test('with value', () => {
+      const e = expr`
+        case ai
+          when 42 then 'the answer'
+          when 54 then 'the questionable answer'
+          else 'random'
+        end
+      `;
+      expect(e).toLog(warning('sql-case'));
+      expect(e).compilesTo(
+        '{case ai when 42 then "the answer" when 54 then "the questionable answer" else "random"}'
+      );
+    });
+    test('no else', () => {
+      const e = expr`
+        case
+          when ai = 42 then 'the answer'
+          when ai = 54 then 'the questionable answer'
+        end
+      `;
+      expect(e).toLog(warning('sql-case'));
+      expect(e).compilesTo(
+        '{case when {ai = 42} then "the answer" when {ai = 54} then "the questionable answer"}'
+      );
+    });
+    test('wrong then type', () => {
+      expect(expr`
+        case
+          when ai = 42 then 'the answer'
+          when ai = 54 then 7
+        end
+      `).toLog(
+        warning('sql-case'),
+        error('case-then-type-does-not-match', {
+          thenType: 'number',
+          returnType: 'string',
+        })
+      );
+    });
+    test('wrong when type', () => {
+      expect(expr`
+        case ai
+          when 42 then 'the answer'
+          when 'forty-two' then 'the answer but string'
+        end
+      `).toLog(
+        warning('sql-case'),
+        error('case-when-type-does-not-match', {
+          whenType: 'string',
+          valueType: 'number',
+        })
+      );
+    });
+    test('wrong else type', () => {
+      expect(expr`
+        case
+          when ai = 42 then 'the answer'
+          else @2020
+        end
+      `).toLog(
+        warning('sql-case'),
+        error('case-else-type-does-not-match', {
+          elseType: 'date',
+          returnType: 'string',
+        })
+      );
+    });
+    test('null then type okay second', () => {
+      expect(expr`
+        case
+          when ai = 42 then 'the answer'
+          when ai = 54 then null
+        end
+      `).toLog(warning('sql-case'));
+    });
+    test('null then type okay first', () => {
+      expect(expr`
+        case
+          when ai = 54 then null
+          when ai = 42 then 'the answer'
+        end
+      `).toLog(warning('sql-case'));
+    });
+    test('null else type okay', () => {
+      expect(expr`
+        case
+          when ai = 42 then 'the answer'
+          else null
+        end
+      `).toLog(warning('sql-case'));
+    });
+    test('null then type before else okay', () => {
+      expect(expr`
+        case
+          when ai = 42 then null
+          else 'not the answer'
+        end
+      `).toLog(warning('sql-case'));
+    });
+    test('non boolean when', () => {
+      expect(expr`
+        case when ai then null end
+      `).toLog(warning('sql-case'), error('case-when-must-be-boolean'));
+    });
+    test('type of null then second', () => {
+      expect(`
+        case
+          when ai = 42 then 'the answer'
+          when ai = 54 then null
+        end
+      `).toReturnType('string');
+    });
+    test('type of null then first', () => {
+      expect(`
+        case
+          when ai = 54 then null
+          when ai = 42 then 'the answer'
+        end
+      `).toReturnType('string');
+    });
+    test('type of null else', () => {
+      expect(`
+        case
+          when ai = 42 then 'the answer'
+          else null
+        end
+      `).toReturnType('string');
+    });
+    test('type of null then type before else', () => {
+      expect(`
+        case
+          when ai = 42 then null
+          else 'not the answer'
+        end
+      `).toReturnType('string');
+    });
+    test('replacement for full case', () => {
+      const e = expr`case
+        when ai = 42 then 'the answer'
+        when ai = 54 then 'the questionable answer'
+        else 'random'
+      end`;
+      e.translator.translate();
+      expect(e.translator.logger.getLog()[0].replacement).toBe(
+        "pick 'the answer' when ai = 42 pick 'the questionable answer' when ai = 54 else 'random'"
+      );
+    });
+    test('replacement for case with no else', () => {
+      const e = expr`case
+        when ai = 42 then 'the answer'
+        when ai = 54 then 'the questionable answer'
+      end`;
+      e.translator.translate();
+      expect(e.translator.logger.getLog()[0].replacement).toBe(
+        "pick 'the answer' when ai = 42 pick 'the questionable answer' when ai = 54 else null"
+      );
+    });
+    test('replacement for case with value', () => {
+      const e = expr`case ai
+        when 42 then 'a'
+        when 54 then 'b'
+      end`;
+      e.translator.translate();
+      expect(e.translator.logger.getLog()[0].replacement).toBe(
+        "ai ? pick 'a' when 42 pick 'b' when 54 else null"
+      );
+    });
+    test('interaction with pick', () => {
+      expect(expr`
+        pick case when true then 'hooray' end when true else null
+      `).toLog(warning('sql-case'));
     });
   });
 

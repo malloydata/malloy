@@ -104,7 +104,7 @@ type MessageParameterTypes = {
   'pick-missing-else': {};
   'pick-missing-value': {};
   'pick-illegal-partial': {};
-  'pick-when-must-be-boolean': {whenType: string};
+  'pick-when-must-be-boolean': {whenType: FieldValueType};
   'experiment-not-enabled': {experimentId: string};
   'experimental-dialect-not-enabled': {dialect: string};
   'sql-native-not-allowed-in-expression': {
@@ -350,6 +350,20 @@ type MessageParameterTypes = {
   'sql-is-not-null': string;
   'sql-is-null': string;
   'illegal-record-property-type': string;
+  'sql-case': string;
+  'case-then-type-does-not-match': {
+    thenType: FieldValueType;
+    returnType: FieldValueType;
+  };
+  'case-else-type-does-not-match': {
+    elseType: FieldValueType;
+    returnType: FieldValueType;
+  };
+  'case-when-must-be-boolean': {whenType: FieldValueType};
+  'case-when-type-does-not-match': {
+    whenType: FieldValueType;
+    valueType: FieldValueType;
+  };
   'dialect-cast-unsafe-only': string;
 };
 
@@ -391,6 +405,14 @@ export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
   'syntax-error': e => e.message,
   'internal-translator-error': e => `Internal Translator Error: ${e.message}`,
   'invalid-timezone': e => `Invalid timezone: ${e.timezone}`,
+  'case-then-type-does-not-match': e =>
+    `Case then type ${e.thenType} does not match return type ${e.returnType}`,
+  'case-else-type-does-not-match': e =>
+    `Case else type ${e.elseType} does not match return type ${e.returnType}`,
+  'case-when-must-be-boolean': e =>
+    `Case when expression must be boolean, not ${e.whenType}`,
+  'case-when-type-does-not-match': e =>
+    `Case when type ${e.whenType} does not match value type ${e.valueType}`,
 };
 
 export type MessageCode = keyof MessageParameterTypes;
