@@ -88,6 +88,7 @@ HOUR: H O U R S?;
 IMPORT: I M P O R T;
 INNER: I N N E R;
 IS: I S ;
+IN: I N ;
 JSON: J S O N;
 LAST: L A S T ;
 LEFT: L E F T ;

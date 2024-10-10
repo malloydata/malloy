@@ -92,7 +92,7 @@ export type Expr =
   | GenericSQLExpr
   | NullNode
   | PickExpr
-  | ArrayEachExpr
+  | InCompareExpr
   | ErrorNode;
 
 interface HasDataType {
@@ -325,8 +325,10 @@ export interface PickExpr extends ExprWithKids {
   kids: {pickWhen: Expr[]; pickThen: Expr[]; pickElse: Expr};
 }
 
-export interface ArrayEachExpr extends ExprLeaf {
-  node: 'arrayEach';
+export interface InCompareExpr extends ExprWithKids {
+  node: 'in';
+  not: boolean;
+  kids: {e: Expr; oneOf: Expr[]};
 }
 
 export type ExpressionType =

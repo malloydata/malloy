@@ -350,6 +350,8 @@ type MessageParameterTypes = {
   'sql-is-not-null': string;
   'sql-is-null': string;
   'illegal-record-property-type': string;
+  'or-choices-only': string;
+  'sql-in': string;
   'dialect-cast-unsafe-only': string;
 };
 

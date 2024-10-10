@@ -53,6 +53,14 @@ import {
 
 class TypeMismatch extends Error {}
 
+/** Node types in an alternation tree */
+export enum ATNodeType {
+  And,
+  Or,
+  Value,
+  Partial,
+}
+
 /**
  * Root node for any element in an expression. These essentially
  * create a sub-tree in the larger AST. Expression nodes know
@@ -124,7 +132,8 @@ export abstract class ExpressionDef extends MalloyElement {
   apply(
     fs: FieldSpace,
     op: BinaryMalloyOperator,
-    left: ExpressionDef
+    left: ExpressionDef,
+    _warnOnComplexTree = false
   ): ExprValue {
     return applyBinary(fs, left, op, this);
   }
@@ -143,6 +152,14 @@ export abstract class ExpressionDef extends MalloyElement {
 
   supportsWhere(expr: ExprValue) {
     return expressionIsAggregate(expr.expressionType);
+  }
+
+  atNodeType(): ATNodeType {
+    return ATNodeType.Value;
+  }
+
+  atExpr(): ExpressionDef {
+    return this;
   }
 }
 
