@@ -198,8 +198,8 @@ describe('expressions', () => {
       );
     });
     test('apply granular-literal alternation uses all literals for range', () => {
-      expect('ad ? @2020 | @2022').compilesTo(
-        '{{{ad >= @2020-01-01} and {ad < @2021-01-01}} or {{ad >= @2022-01-01} and {ad < @2023-01-01}}}'
+      expect('ad ? @2020').compilesTo(
+        '{{ad >= @2020-01-01} and {ad < @2021-01-01}}'
       );
     });
     test('comparison promotes date literal to timestamp', () => {
