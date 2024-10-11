@@ -199,6 +199,11 @@ describe('expressions', () => {
       );
     });
     test('apply granular-literal alternation uses all literals for range', () => {
+      expect('ad ? @2020').compilesTo(
+        '{{ad >= @2020-01-01} and {ad < @2021-01-01}}'
+      );
+    });
+    test('apply or-tree granular-literal doesnt turn into IN', () => {
       expect('ad ? @2020 | @2022').compilesTo(
         '{{{ad >= @2020-01-01} and {ad < @2021-01-01}} or {{ad >= @2022-01-01} and {ad < @2023-01-01}}}'
       );
@@ -1305,6 +1310,57 @@ describe('expressions', () => {
     expect(expr`${name} = NULL`).toTranslate();
   });
 });
+describe('alternations as in', () => {
+  test('a=b|c', () => {
+    expect('ai=1|2').compilesTo('{ai in {1,2}}');
+  });
+  test('a!=b|c', () => {
+    expect('ai!=1|2').compilesTo('{ai not in {1,2}}');
+  });
+  test('a=(b|c)', () => {
+    expect('ai=(1|2)').compilesTo('{ai in {1,2}}');
+  });
+  test('a?b|c', () => {
+    expect('ai?1|2').compilesTo('{ai in {1,2}}');
+  });
+  test('a=(b)|c', () => {
+    expect('ai=(1)|2').compilesTo('{ai in {1,2}}');
+  });
+  test('a=b|c|d', () => {
+    expect('ai=1|2|3').compilesTo('{ai in {1,2,3}}');
+  });
+  test('a=(b|c)|d', () => {
+    expect('ai=(1|2)|3').compilesTo('{ai in {1,2,3}}');
+  });
+  test('a=b|(c|d)', () => {
+    expect('ai=1|(2|3)').compilesTo('{ai in {1,2,3}}');
+  });
+  test('a=b|c&d', () => {
+    expect('ai=1|2&3').compilesTo('{{ai = 1} or {{ai = 2} and {ai = 3}}}');
+  });
+  test('a=b|>d', () => {
+    expect('ai=1|>2').compilesTo('{{ai = 1} or {ai > 2}}');
+    expect(expr`ai=1|>2`).toLog(
+      warningMessage(
+        'Only | seperated values are legal when used with = operator'
+      )
+    );
+  });
+  test('a ? (= (b | c))', () => {
+    expect('ai ? (= (1 | 2))').compilesTo('{ai in {1,2}}');
+  });
+  test.skip('a ? (( =1) | 2)', () => {
+    // Current grammar doesn't allow a partial on the LHS of an orbar
+    // mtoy todo turn this test on or delete it when we fix the grammar
+    expect('ai ? (( =1) | 2)').compilesTo('{{a1 = 1} or {ai = 2}}');
+  });
+  test('legacy in', () => {
+    const inExpr = expr`ai in (1,2,3)`;
+    expect(inExpr).compilesTo('{ai in {1,2,3}}');
+    expect(inExpr).toLog(warningMessage('Use = (a|b|c) instead of IN (a,b,c)'));
+  });
+});
+describe('rigor around ? and =', () => {});
 describe('sql native fields in schema', () => {
   test('sql native reference in result allowed', () => {
     const uModel = new TestTranslator('run: a->{ group_by: aun }');

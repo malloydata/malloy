@@ -553,6 +553,7 @@ fieldExpr
   | fieldExpr compareOp fieldExpr                          # exprCompare
   | fieldExpr NOT? LIKE fieldExpr                          # exprWarnLike
   | fieldExpr IS NOT? NULL                                 # exprWarnNullCmp
+  | fieldExpr NOT? IN OPAREN fieldExprList CPAREN          # exprWarnIn
   | fieldExpr QMARK partialAllowedFieldExpr                # exprApply
   | NOT fieldExpr                                          # exprNot
   | fieldExpr AND fieldExpr                                # exprLogicalAnd
@@ -563,7 +564,7 @@ fieldExpr
       OPAREN (fieldExpr | STAR)? CPAREN                    # exprPathlessAggregate
   | fieldPath DOT aggregate
       OPAREN fieldExpr? CPAREN                             # exprAggregate
-  | OPAREN partialAllowedFieldExpr CPAREN                  # exprExpr
+  | OPAREN fieldExpr CPAREN                                # exprExpr
   | fieldPath DOT id
       OPAREN ( argumentList? ) CPAREN                      # exprAggFunc
   | ((id (EXCLAM malloyType?)?) | timeframe)
@@ -576,6 +577,10 @@ fieldExpr
 partialAllowedFieldExpr
   : OPAREN compareOp? fieldExpr CPAREN
   | compareOp? fieldExpr
+  ;
+
+fieldExprList
+  : fieldExpr (COMMA fieldExpr)*
   ;
 
 pickStatement

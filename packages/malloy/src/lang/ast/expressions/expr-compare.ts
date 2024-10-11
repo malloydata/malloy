@@ -21,8 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {maxExpressionType, mergeEvalSpaces} from '../../../model';
 import {FT} from '../fragtype-utils';
-import {CompareMalloyOperator} from '../types/binary_operators';
+import {
+  BinaryMalloyOperator,
+  CompareMalloyOperator,
+  EqualityMalloyOperator,
+} from '../types/binary_operators';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
@@ -52,5 +57,67 @@ export class ExprCompare extends BinaryBoolean<CompareMalloyOperator> {
 
   getExpression(fs: FieldSpace): ExprValue {
     return this.right.apply(fs, this.op, this.left);
+  }
+}
+
+/**
+ * The parser makes equality nodes, an application of ?
+ * makes an ExprCompare node with operator =. This is how
+ * the special rules for how apply works for equality
+ * nodes gets implemented.
+ */
+export class ExprEquality extends ExprCompare {
+  elementType = 'a~=b';
+  constructor(
+    left: ExpressionDef,
+    op: EqualityMalloyOperator,
+    right: ExpressionDef
+  ) {
+    super(left, op, right);
+  }
+
+  getExpression(fs: FieldSpace): ExprValue {
+    return this.right.apply(fs, this.op, this.left, true);
+  }
+
+  apply(
+    fs: FieldSpace,
+    op: BinaryMalloyOperator,
+    left: ExpressionDef
+  ): ExprValue {
+    return super.apply(fs, op, left, true);
+  }
+}
+
+export class ExprLegacyIn extends ExpressionDef {
+  elementType = 'in';
+  constructor(
+    readonly expr: ExpressionDef,
+    readonly notIn: boolean,
+    readonly choices: ExpressionDef[]
+  ) {
+    super();
+    this.has({expr, choices});
+  }
+
+  getExpression(fs: FieldSpace): ExprValue {
+    const lookFor = this.expr.getExpression(fs);
+    let {evalSpace, expressionType} = lookFor;
+    const oneOf = this.choices.map(e => {
+      const choice = e.getExpression(fs);
+      expressionType = maxExpressionType(expressionType, choice.expressionType);
+      evalSpace = mergeEvalSpaces(evalSpace, choice.evalSpace);
+      return choice.value;
+    });
+    return {
+      dataType: 'boolean',
+      expressionType,
+      evalSpace,
+      value: {
+        node: 'in',
+        not: this.notIn,
+        kids: {e: lookFor.value, oneOf},
+      },
+    };
   }
 }

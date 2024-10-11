@@ -24,11 +24,42 @@
 import {maxExpressionType, mergeEvalSpaces} from '../../../model/malloy_types';
 import {ExprValue} from '../types/expr-value';
 import {FieldSpace} from '../types/field-space';
-import {ExpressionDef} from '../types/expression-def';
-import {BinaryMalloyOperator} from '../types/binary_operators';
+import {ATNodeType, ExpressionDef} from '../types/expression-def';
+import {BinaryMalloyOperator, isEquality} from '../types/binary_operators';
+
+/**
+ * Return a flattened version of an alternation tree, if the tree is
+ * composed entirely values and "or"s.
+ *
+ * @param node Root of the tree
+ * @returns Undefined if other nodes are found in the tree
+ */
+function flattenOrTree(inNode: ExpressionDef): ExpressionDef[] | undefined {
+  const node = inNode.atExpr();
+  switch (node.atNodeType()) {
+    case ATNodeType.And:
+    case ATNodeType.Partial:
+      return undefined;
+    case ATNodeType.Or: {
+      if (node instanceof ExprAlternationTree) {
+        const left = flattenOrTree(node.left);
+        if (left) {
+          const right = flattenOrTree(node.right);
+          if (right) {
+            return [...left, ...right];
+          }
+        }
+      }
+      return undefined;
+    }
+    default:
+      return node.granular() ? undefined : [node];
+  }
+}
 
 export class ExprAlternationTree extends ExpressionDef {
   elementType = 'alternation';
+  inList?: ExpressionDef[];
   constructor(
     readonly left: ExpressionDef,
     readonly op: '|' | '&',
@@ -38,11 +69,50 @@ export class ExprAlternationTree extends ExpressionDef {
     this.elementType = `${op}alternation${op}`;
   }
 
+  equalityList(): ExpressionDef[] {
+    if (this.inList === undefined) {
+      this.inList = flattenOrTree(this) || [];
+    }
+    return this.inList;
+  }
+
   apply(
     fs: FieldSpace,
     applyOp: BinaryMalloyOperator,
-    expr: ExpressionDef
+    expr: ExpressionDef,
+    warnOnComplexTree: boolean
   ): ExprValue {
+    if (isEquality(applyOp)) {
+      const inList = this.equalityList();
+      if (inList.length > 0 && (applyOp === '=' || applyOp === '!=')) {
+        const isIn = expr.getExpression(fs);
+        const values = inList.map(v => v.getExpression(fs));
+        let {evalSpace, expressionType} = isIn;
+        for (const value of values) {
+          evalSpace = mergeEvalSpaces(evalSpace, value.evalSpace);
+          expressionType = maxExpressionType(
+            expressionType,
+            value.expressionType
+          );
+        }
+        return {
+          dataType: 'boolean',
+          evalSpace,
+          expressionType,
+          value: {
+            node: 'in',
+            not: applyOp === '!=',
+            kids: {e: isIn.value, oneOf: values.map(v => v.value)},
+          },
+        };
+      }
+      if (inList.length === 0 && warnOnComplexTree) {
+        this.logWarning(
+          'or-choices-only',
+          `Only | seperated values are legal when used with ${applyOp} operator`
+        );
+      }
+    }
     const choice1 = this.left.apply(fs, applyOp, expr);
     const choice2 = this.right.apply(fs, applyOp, expr);
     return {
@@ -68,5 +138,9 @@ export class ExprAlternationTree extends ExpressionDef {
       'alternation-as-value',
       'Alternation tree has no value'
     );
+  }
+
+  atNodeType(): ATNodeType {
+    return this.op === '|' ? ATNodeType.Or : ATNodeType.And;
   }
 }

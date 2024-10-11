@@ -364,6 +364,8 @@ type MessageParameterTypes = {
     whenType: FieldValueType;
     valueType: FieldValueType;
   };
+  'or-choices-only': string;
+  'sql-in': string;
   'dialect-cast-unsafe-only': string;
 };
 
