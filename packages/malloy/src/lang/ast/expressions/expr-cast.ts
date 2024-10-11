@@ -23,7 +23,7 @@
 
 import {AtomicFieldType, CastType} from '../../../model';
 import {castTo} from '../time-utils';
-import {ExprValue} from '../types/expr-value';
+import {ExprValue, computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 
@@ -63,11 +63,10 @@ export class ExprCast extends ExpressionDef {
         }
       }
     }
-    return {
+    return computedExprValue({
       dataType,
-      expressionType: expr.expressionType,
       value: castTo(this.castType, expr.value, expr.dataType, this.safe),
-      evalSpace: expr.evalSpace,
-    };
+      from: [expr],
+    });
   }
 }

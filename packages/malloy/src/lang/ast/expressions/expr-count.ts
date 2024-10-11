@@ -55,6 +55,8 @@ export class ExprCount extends ExprAggregateFunction {
       expressionType: 'aggregate',
       value: ret,
       evalSpace: 'output',
+      // TODO this doesn't actually matter, since you cannot reaggregate an aggregate
+      joinUsage: [],
     };
   }
 }

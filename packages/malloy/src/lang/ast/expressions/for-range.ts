@@ -21,12 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {maxExpressionType, mergeEvalSpaces} from '../../../model';
 import {errorFor} from '../ast-utils';
 import {FT} from '../fragtype-utils';
 import {castDateToTimestamp, resolution, timeOffset} from '../time-utils';
 import {BinaryMalloyOperator} from '../types/binary_operators';
-import {ExprValue} from '../types/expr-value';
+import {ExprValue, computedErrorExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 import {ExprTime} from './expr-time';
@@ -62,15 +61,11 @@ export class ForRange extends ExpressionDef {
           `FOR duration count must be a number, not '${nV.dataType}'`
         );
       }
-      return {
+      return computedErrorExprValue({
         dataType: 'boolean',
-        evalSpace: mergeEvalSpaces(startV.evalSpace, checkV.evalSpace),
-        expressionType: maxExpressionType(
-          startV.expressionType,
-          checkV.expressionType
-        ),
-        value: errorFor('for not number').value,
-      };
+        error: 'for not number',
+        from: [startV, checkV],
+      });
     }
     const units = this.timeframe.text;
 
@@ -105,10 +100,10 @@ export class ForRange extends ExpressionDef {
       } else {
         from = castDateToTimestamp(from);
       }
-      rangeStart = new ExprTime('timestamp', from, startV.expressionType);
+      rangeStart = new ExprTime('timestamp', from, [startV]);
     }
     const to = timeOffset('timestamp', from, '+', nV.value, units);
-    const rangeEnd = new ExprTime('timestamp', to, startV.expressionType);
+    const rangeEnd = new ExprTime('timestamp', to, [startV, nV]);
 
     return new Range(rangeStart, rangeEnd).apply(fs, op, applyTo);
   }

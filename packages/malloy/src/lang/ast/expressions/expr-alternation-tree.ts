@@ -21,8 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {maxExpressionType, mergeEvalSpaces} from '../../../model/malloy_types';
-import {ExprValue} from '../types/expr-value';
+import {ExprValue, computedExprValue} from '../types/expr-value';
 import {FieldSpace} from '../types/field-space';
 import {ExpressionDef} from '../types/expression-def';
 import {BinaryMalloyOperator} from '../types/binary_operators';
@@ -45,18 +44,14 @@ export class ExprAlternationTree extends ExpressionDef {
   ): ExprValue {
     const choice1 = this.left.apply(fs, applyOp, expr);
     const choice2 = this.right.apply(fs, applyOp, expr);
-    return {
+    return computedExprValue({
       dataType: 'boolean',
-      expressionType: maxExpressionType(
-        choice1.expressionType,
-        choice2.expressionType
-      ),
-      evalSpace: mergeEvalSpaces(choice1.evalSpace, choice2.evalSpace),
       value: {
         node: this.op === '&' ? 'and' : 'or',
         kids: {left: choice1.value, right: choice2.value},
       },
-    };
+      from: [choice1, choice2],
+    });
   }
 
   requestExpression(_fs: FieldSpace): ExprValue | undefined {
