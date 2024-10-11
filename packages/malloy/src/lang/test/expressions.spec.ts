@@ -1346,11 +1346,14 @@ describe('alternations as in', () => {
       )
     );
   });
-  test('a ? (= b | c)', () => {
-    expect('ai ? (= 1 | 2)').compilesTo('{ai in {1,2}}');
+  test('a ? (= (b | c))', () => {
+    expect('ai ? (= (1 | 2))').compilesTo('{ai in {1,2}}');
   });
-  // mtoy todo this hits "alternation tree has no value"
-  test.todo('a ? (= 1) | 2');
+  test.skip('a ? (( =1) | 2)', () => {
+    // Current grammar doesn't allow a partial on the LHS of an orbar
+    // mtoy todo turn this test on or delete it when we fix the grammar
+    expect('ai ? (( =1) | 2)').compilesTo('{{a1 = 1} or {ai = 2}}');
+  });
   test('legacy in', () => {
     const inExpr = expr`ai in (1,2,3)`;
     expect(inExpr).compilesTo('{ai in {1,2,3}}');
