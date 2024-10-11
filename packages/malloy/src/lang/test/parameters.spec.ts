@@ -298,6 +298,20 @@ describe('parameters', () => {
       run: ab_new(param is ${'ai'}) -> { select: * }
     `).toLog(errorMessage('`ai` is not defined'));
   });
+  test.skip('can pass parameter to source extended twice', () => {
+    expect(`
+      ##! experimental.parameters
+      source: ab_ext_1(a_1::string) is ab extend {
+        where: ai = a_1
+      }
+
+      source: ab_ext_2(a_2::string) is ab_ext_1(a_1 is a_2) extend {
+        where: ai + 1 = a_2
+      } extend {
+        where: ai + 2 = a_2
+      }
+    `).toTranslate();
+  });
   test('can pass through parameter to joined source (shorthand)', () => {
     expect(`
       ##! experimental.parameters
@@ -328,6 +342,48 @@ describe('parameters', () => {
       source: ab_ext_2(a_2::string) is ab extend {
         where: ai = a_2
         join_many: ab_ext_1 is ab_ext_1(a_1 is a_2) on 1 = 1
+      }
+
+      run: ab_ext_2(a_2 is "CA") -> {
+        group_by:
+          a1 is ai,
+          a2 is ab_ext_1.ai
+        aggregate: c is count()
+      }
+    `).toTranslate();
+  });
+  test('can pass through parameter to joined extended source', () => {
+    expect(`
+      ##! experimental.parameters
+      source: ab_ext_1(a_1::string) is ab extend {
+        where: ai = a_1
+      }
+
+      source: ab_ext_2(a_2::string) is ab extend {
+        where: ai = a_2
+        join_many: ab_ext_1 is ab_ext_1(a_1 is a_2) extend {} on 1 = 1
+      }
+
+      run: ab_ext_2(a_2 is "CA") -> {
+        group_by:
+          a1 is ai,
+          a2 is ab_ext_1.ai
+        aggregate: c is count()
+      }
+    `).toTranslate();
+  });
+  test('can pass through parameter to joined source in joined extended source', () => {
+    expect(`
+      ##! experimental.parameters
+      source: ab_ext_1(a_1::string) is ab extend {
+        where: ai = a_1
+      }
+
+      source: ab_ext_2(a_2::string) is ab extend {
+        where: ai = a_2
+        join_many: ab_ext_1 is ab_ext_1(a_1 is a_2) extend {
+          join_many: ab_ext_1 is ab_ext_1(a_1 is a_2) on 1 = 1
+        } on 1 = 1
       }
 
       run: ab_ext_2(a_2 is "CA") -> {

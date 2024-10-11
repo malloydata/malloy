@@ -58,7 +58,7 @@ export class RefinedSource extends Source {
   }
 
   getSourceDef(parameterSpace: ParameterSpace | undefined): SourceDef {
-    return this.withParameters(parameterSpace, []);
+    return this.withParameters(parameterSpace, undefined);
   }
 
   withParameters(
@@ -110,11 +110,8 @@ export class RefinedSource extends Source {
       }
     }
 
-    const paramSpace = pList ? new ParameterSpace(pList) : undefined;
+    const paramSpace = pList ? new ParameterSpace(pList) : parameterSpace;
     const from = structuredClone(this.source.getSourceDef(paramSpace));
-    // Note that this is explicitly not:
-    // const from = structuredClone(this.source.withParameters(parameterSpace, pList));
-    // Because the parameters are added to the resulting struct, not the base struct
     if (primaryKey) {
       from.primaryKey = primaryKey.field.name;
     }
@@ -124,6 +121,8 @@ export class RefinedSource extends Source {
     }
     if (pList) {
       fs.addParameters(pList);
+    } else if (parameterSpace) {
+      fs.setParameterSpace(parameterSpace);
     }
     fs.pushFields(...fields);
     if (primaryKey) {

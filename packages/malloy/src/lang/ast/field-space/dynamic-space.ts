@@ -76,8 +76,13 @@ export abstract class DynamicSpace
     return this;
   }
 
+  _parameterSpace: ParameterSpace | undefined;
+  setParameterSpace(parameterSpace: ParameterSpace): void {
+    this._parameterSpace = parameterSpace;
+  }
+
   parameterSpace(): ParameterSpace {
-    return new ParameterSpace(this.parameters);
+    return this._parameterSpace ?? new ParameterSpace(this.parameters);
   }
 
   newEntry(name: string, logTo: MalloyElement, entry: SpaceEntry): void {
