@@ -111,7 +111,7 @@ export class MySQLDialect extends Dialect {
   dontUnionIndex = false;
   supportsQualify = false;
   supportsNesting = true;
-  experimental = true;
+  experimental = false;
   nativeBoolean = false;
   supportsFullJoin = false;
   supportsPipelinesInViews = false;

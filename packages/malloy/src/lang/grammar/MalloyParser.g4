@@ -570,6 +570,7 @@ fieldExpr
   | ((id (EXCLAM malloyType?)?) | timeframe)
       OPAREN ( argumentList? ) CPAREN                      # exprFunc
   | pickStatement                                          # exprPick
+  | caseStatement                                          # exprCase
   | ungroup OPAREN fieldExpr (COMMA fieldName)* CPAREN     # exprUngroup
   ;
 
@@ -588,6 +589,14 @@ pickStatement
 
 pick
   : PICK (pickValue=fieldExpr)? WHEN pickWhen=partialAllowedFieldExpr
+  ;
+
+caseStatement
+  : CASE (valueExpr=fieldExpr)? (caseWhen)+ (ELSE caseElse=fieldExpr)? END
+  ;
+
+caseWhen
+  : WHEN condition=fieldExpr THEN result=fieldExpr
   ;
 
 recordKey: id;

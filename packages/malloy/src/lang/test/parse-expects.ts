@@ -96,11 +96,11 @@ function rangeToStr(loc?: DocumentRange): string {
   return 'undefined';
 }
 
-function ensureNoProblems(trans: MalloyTranslator) {
+function ensureNoProblems(trans: MalloyTranslator, warningsOkay = false) {
   if (trans.logger === undefined) {
     throw new Error('JESTERY BROKEN, CANT FIND ERORR LOG');
   }
-  if (!trans.logger.empty()) {
+  if (warningsOkay ? trans.logger.hasErrors() : !trans.logger.empty()) {
     return {
       message: () => `Translation problems:\n${trans.prettyErrors()}`,
       pass: false,
@@ -186,8 +186,8 @@ function xlator(ts: TestSource) {
   return ts.translator || new TestTranslator(ts.code);
 }
 
-function xlated(tt: TestTranslator) {
-  const errorCheck = ensureNoProblems(tt);
+function xlated(tt: TestTranslator, warningsOkay = false) {
+  const errorCheck = ensureNoProblems(tt, warningsOkay);
   if (!errorCheck.pass) {
     return errorCheck;
   }
@@ -238,6 +238,23 @@ function eToStr(e: Expr, symbols: ESymbols): string {
     case 'true':
     case 'false':
       return e.node;
+    case 'case': {
+      const caseStmt = ['case'];
+      if (e.kids.caseValue !== undefined) {
+        caseStmt.push(`${subExpr(e.kids.caseValue)}`);
+      }
+      for (let i = 0; i < e.kids.caseWhen.length; i += 1) {
+        caseStmt.push(
+          `when ${subExpr(e.kids.caseWhen[i])} then ${subExpr(
+            e.kids.caseThen[i]
+          )}`
+        );
+      }
+      if (e.kids.caseElse !== undefined) {
+        caseStmt.push(`else ${subExpr(e.kids.caseElse)}`);
+      }
+      return `{${caseStmt.join(' ')}}`;
+    }
     case 'regexpMatch':
       return `{${subExpr(e.kids.expr)} regex-match ${subExpr(e.kids.regex)}}`;
     case 'in': {
@@ -270,7 +287,7 @@ expect.extend({
   toReturnType: function (exprText: string, returnType: string) {
     const exprModel = new BetaExpression(exprText);
     exprModel.compile();
-    const ok = xlated(exprModel);
+    const ok = xlated(exprModel, true);
     if (!ok.pass) {
       return ok;
     }
@@ -278,7 +295,7 @@ expect.extend({
     const pass = d.dataType === returnType;
     const msg = `Expression type ${d.dataType} ${
       pass ? '=' : '!='
-    } $[returnType`;
+    } ${returnType}`;
     return {pass, message: () => msg};
   },
   toLog: function (s: TestSource, ...msgs: ProblemSpec[]) {
