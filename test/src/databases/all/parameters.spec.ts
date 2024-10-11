@@ -77,6 +77,43 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       }
     `).malloyResultMatches(runtime, {s1: 'CA', s2: 'CA', c: 1});
   });
+  it(`can pass param into joined source correctly up to four hops - ${databaseName}`, async () => {
+    await expect(`
+      ##! experimental.parameters
+      source: sf(
+        state_filter::string
+      ) is ${databaseName}.table('malloytest.state_facts') extend {
+        where: state = state_filter
+      }
+
+      source: sf1(
+        state_filter::string
+      ) is ${databaseName}.table('malloytest.state_facts') extend {
+        where: state = state_filter
+
+        join_many: sf2 is sf(state_filter) extend {
+          join_many: sf3 is sf(state_filter) extend {
+            join_many: sf4 is sf(state_filter) on 1 = 1
+          } on 1 = 1
+        } on 1 = 1
+      }
+
+      run: sf1(state_filter is "CA") -> {
+        group_by:
+          s1 is state,
+          s2 is sf2.state
+          s3 is sf2.sf3.state
+          s4 is sf2.sf3.sf4.state
+        aggregate: c is count()
+      }
+    `).malloyResultMatches(runtime, {
+      s1: 'CA',
+      s2: 'CA',
+      s3: 'CA',
+      s4: 'CA',
+      c: 1,
+    });
+  });
   it(`can pass param into extended source - ${databaseName}`, async () => {
     await expect(`
       ##! experimental.parameters
