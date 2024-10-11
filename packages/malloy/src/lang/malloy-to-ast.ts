@@ -2054,7 +2054,7 @@ export class MalloyToAST
       this.parseInfo.rangeFromContext(pcx),
       `${this.getSourceCode(pcx.fieldExpr())} ${isNot ? '!=' : '='} (${from
         .map(f => this.getSourceCode(f))
-        .join('|')})`
+        .join(' | ')})`
     );
     return inStmt;
   }
