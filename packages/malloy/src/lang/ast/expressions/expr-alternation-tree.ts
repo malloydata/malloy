@@ -53,7 +53,7 @@ function flattenOrTree(inNode: ExpressionDef): ExpressionDef[] | undefined {
       return undefined;
     }
     default:
-      return [node];
+      return node.granular() ? undefined : [node];
   }
 }
 

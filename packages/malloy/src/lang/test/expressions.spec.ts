@@ -203,6 +203,11 @@ describe('expressions', () => {
         '{{ad >= @2020-01-01} and {ad < @2021-01-01}}'
       );
     });
+    test('apply or-tree granular-literal doesnt turn into IN', () => {
+      expect('ad ? @2020 | @2022').compilesTo(
+        '{{{ad >= @2020-01-01} and {ad < @2021-01-01}} or {{ad >= @2022-01-01} and {ad < @2023-01-01}}}'
+      );
+    });
     test('comparison promotes date literal to timestamp', () => {
       expect(expr`@2001 = ats`).toTranslate();
     });
@@ -1307,28 +1312,28 @@ describe('expressions', () => {
 });
 describe('alternations as in', () => {
   test('a=b|c', () => {
-    expect('ai=1|2').compilesTo('{ai in {1},{2}}');
+    expect('ai=1|2').compilesTo('{ai in {1,2}}');
   });
   test('a!=b|c', () => {
-    expect('ai!=1|2').compilesTo('{ai not in {1},{2}}');
+    expect('ai!=1|2').compilesTo('{ai not in {1,2}}');
   });
   test('a=(b|c)', () => {
-    expect('ai=(1|2)').compilesTo('{ai in {1},{2}}');
+    expect('ai=(1|2)').compilesTo('{ai in {1,2}}');
   });
   test('a?b|c', () => {
-    expect('ai?1|2').compilesTo('{ai in {1},{2}}');
+    expect('ai?1|2').compilesTo('{ai in {1,2}}');
   });
   test('a=(b)|c', () => {
-    expect('ai=(1)|2').compilesTo('{ai in {1},{2}}');
+    expect('ai=(1)|2').compilesTo('{ai in {1,2}}');
   });
   test('a=b|c|d', () => {
-    expect('ai=1|2|3').compilesTo('{ai in {1},{2},{3}}');
+    expect('ai=1|2|3').compilesTo('{ai in {1,2,3}}');
   });
   test('a=(b|c)|d', () => {
-    expect('ai=(1|2)|3').compilesTo('{ai in {1},{2},{3}}');
+    expect('ai=(1|2)|3').compilesTo('{ai in {1,2,3}}');
   });
   test('a=b|(c|d)', () => {
-    expect('ai=1|(2|3)').compilesTo('{ai in {1},{2},{3}}');
+    expect('ai=1|(2|3)').compilesTo('{ai in {1,2,3}}');
   });
   test('a=b|c&d', () => {
     expect('ai=1|2&3').compilesTo('{{ai = 1} or {{ai = 2} and {ai = 3}}}');
@@ -1341,16 +1346,16 @@ describe('alternations as in', () => {
       )
     );
   });
-  test('a ? = (b | c)', () => {
-    expect('ai ? (= 1 | 2)').compilesTo('{ai in {1},{2}}');
-  });
-  test('legacy in', () => {
-    const inExpr = expr`ai in (1,2,3)`;
-    expect(inExpr).compilesTo('{ai in {1},{2},{3}}');
-    expect(inExpr).toLog(warningMessage('Use = (a|b|c) instead of IN (a,b,c)'));
+  test('a ? (= b | c)', () => {
+    expect('ai ? (= 1 | 2)').compilesTo('{ai in {1,2}}');
   });
   // mtoy todo this hits "alternation tree has no value"
   test.todo('a ? (= 1) | 2');
+  test('legacy in', () => {
+    const inExpr = expr`ai in (1,2,3)`;
+    expect(inExpr).compilesTo('{ai in {1,2,3}}');
+    expect(inExpr).toLog(warningMessage('Use = (a|b|c) instead of IN (a,b,c)'));
+  });
 });
 describe('rigor around ? and =', () => {});
 describe('sql native fields in schema', () => {
