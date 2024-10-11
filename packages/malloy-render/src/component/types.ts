@@ -18,7 +18,7 @@ export type VegaChartProps = {
   totalWidth: number;
   totalHeight: number;
   chartType: string;
-  injectData: DataInjector;
+  injectData?: DataInjector;
   getTooltipData?: (item: Item, view: View) => ChartTooltipEntry | null;
 };
 
@@ -74,6 +74,7 @@ export type VegaConfigHandler = (
 
 export type ChartTooltipEntry = {
   title: string[];
+  // field?: Field;
   entries: {
     label: string;
     value: string | (() => JSX.Element);

@@ -131,7 +131,7 @@ export function generateBarChartVegaSpec(
               },
               fillOpacity: [
                 {
-                  test: '(false || length(data("referenceLineData")) > 0) && datum.index !== 0 && datum.index !== 1',
+                  test: 'brushMeasureIn !== "empty" ? (datum.index !== 0 && datum.index !== 1) : false',
                   value: 0,
                 },
                 {
@@ -435,6 +435,11 @@ export function generateBarChartVegaSpec(
     ],
   };
 
+  const opacityRefLineSignal = {
+    // TODO: won't this break with a value of 0?
+    signal: 'brushMeasureIn === "empty" || yIsBrushing ? 0 : 1',
+  };
+
   const referenceLines: VegaSpec = {
     name: 'y_reference_line_group',
     type: 'group',
@@ -442,9 +447,9 @@ export function generateBarChartVegaSpec(
       {
         name: 'y_reference_lines_backdrop',
         type: 'rect',
-        from: {
-          data: 'referenceLineData',
-        },
+        // from: {
+        //   data: 'referenceLineData',
+        // },
         encode: {
           enter: {
             x: {
@@ -470,16 +475,21 @@ export function generateBarChartVegaSpec(
             height: {value: 40},
           },
           update: {
-            y: {scale: 'yscale', field: 'value', offset: -25},
+            y: {
+              signal: `brushMeasureIn ? scale("yscale",brushMeasureIn)-25 : 0`,
+            },
+            opacity: opacityRefLineSignal,
+
+            // y: {scale: 'yscale', field: 'value', offset: -25},
           },
         },
       },
       {
         name: 'y_reference_lines',
         type: 'rule',
-        from: {
-          data: 'referenceLineData',
-        },
+        // from: {
+        //   data: 'referenceLineData',
+        // },
         encode: {
           enter: {
             x: {
@@ -492,17 +502,24 @@ export function generateBarChartVegaSpec(
             strokeDash: {value: [4, 2]},
           },
           update: {
-            y: {scale: 'yscale', field: 'value'},
-            y2: {scale: 'yscale', field: 'value'},
+            y: {
+              // scale: 'yscale', field: 'value'
+              signal: `brushMeasureIn ? scale("yscale",brushMeasureIn) : 0`,
+            },
+            y2: {
+              // scale: 'yscale', field: 'value'
+              signal: `brushMeasureIn ? scale("yscale",brushMeasureIn) : 0`,
+            },
+            opacity: opacityRefLineSignal,
           },
         },
       },
       {
         name: 'y_reference_line_label_backdrop',
         type: 'text',
-        from: {
-          data: 'referenceLineData',
-        },
+        // from: {
+        //   data: 'referenceLineData',
+        // },
         encode: {
           // TODO: reuse across marks, get values from config?
           enter: {
@@ -522,19 +539,23 @@ export function generateBarChartVegaSpec(
             strokeOpacity: {value: 1},
           },
           update: {
-            y: {scale: 'yscale', field: 'value'},
-            text: {
-              signal: `renderMalloyNumber(malloyExplore, '${yFieldPath}', datum.value)`,
+            y: {
+              signal: `brushMeasureIn ? scale("yscale",brushMeasureIn) : 0`,
+              // scale: 'yscale', field: 'value'
             },
+            text: {
+              signal: `brushMeasureIn ? renderMalloyNumber(malloyExplore, '${yFieldPath}', brushMeasureIn) : ''`,
+            },
+            opacity: opacityRefLineSignal,
           },
         },
       },
       {
         name: 'y_reference_line_label',
         type: 'text',
-        from: {
-          data: 'referenceLineData',
-        },
+        // from: {
+        //   data: 'referenceLineData',
+        // },
         encode: {
           enter: {
             x: {
@@ -550,10 +571,14 @@ export function generateBarChartVegaSpec(
             font: {value: 'Inter, sans-serif'},
           },
           update: {
-            y: {scale: 'yscale', field: 'value'},
-            text: {
-              signal: `renderMalloyNumber(malloyExplore, '${yFieldPath}', datum.value)`,
+            y: {
+              // scale: 'yscale', field: 'value'
+              signal: `brushMeasureIn ? scale("yscale",brushMeasureIn) : 0`,
             },
+            text: {
+              signal: `brushMeasureIn ? renderMalloyNumber(malloyExplore, '${yFieldPath}', brushMeasureIn) : ''`,
+            },
+            opacity: opacityRefLineSignal,
           },
         },
       },
@@ -969,7 +994,8 @@ export function generateBarChartVegaSpec(
             },
             {
               events: '@y_axis_overlay:mousemove',
-              update: `{ fieldRefId: '${yRef}', sourceId: '${brushMeasureSourceId}', value: invert("yscale",y(item())), type: 'measure'}`,
+              // TODO: could snap stepCt be data driven and axis size driven? Think [0,15_000_000] vs. [0, 0.02]. What should step sizes be for those? 10k for both? seems excessive
+              update: `yIsBrushing ? null : { fieldRefId: '${yRef}', sourceId: '${brushMeasureSourceId}', value: event.shiftKey ? invert("yscale",y(item())) : snapValue([domain('yscale')[0],domain('yscale')[1]], 1000,invert("yscale",y(item()))), type: 'measure'}`,
             },
             {
               events: '@y_axis_overlay:mouseout',
@@ -1063,12 +1089,12 @@ export function generateBarChartVegaSpec(
           on: [
             {
               events: '@y_axis_overlay:mousedown',
-              update: '[y(), y()]',
+              update: `event.shiftKey ? [invert('yscale',y()), invert('yscale',y())] : [snapValue([domain('yscale')[0],domain('yscale')[1]], 1000,invert('yscale',y())), snapValue([domain('yscale')[0],domain('yscale')[1]], 1000,invert('yscale',y()))]`,
             },
             {
               'events':
                 '[@y_axis_overlay:mousedown, window:mouseup] > window:mousemove!',
-              'update': '[yRangeBrush[0], clamp(y(), 0, height)]',
+              'update': `event.shiftKey ? [yRangeBrush[0], invert('yscale',clamp(y(), 0, height))]: [snapValue([domain('yscale')[0],domain('yscale')[1]], 1000,yRangeBrush[0]), snapValue([domain('yscale')[0],domain('yscale')[1]], 1000,invert('yscale',clamp(y(), 0, height)))]`,
             },
             // shortcut to clear it? if click clears it, then we can't move it
             // TODO for now, double click. later can work in moving, edge move handle semantics
@@ -1087,18 +1113,10 @@ export function generateBarChartVegaSpec(
           name: 'yRangeBrushSorted',
           update: 'yRangeBrush ? extent(yRangeBrush) : null',
         },
-        //   {
-        //     name: 'yRangeBrushIndices',
-        //     update: `yRangeBrushSorted ? [
-        //         indexof(domain('yscale'), invert('yscale', yRangeBrushSorted[0])) < 0 ? 0 : indexof(domain('yscale'), invert('yscale', yRangeBrushSorted[0])),
-        //         indexof(domain('yscale'), invert('yscale', yRangeBrushSorted[1])) < 0 ? length(domain('yscale')) : indexof(domain('yscale'), invert('yscale', yRangeBrushSorted[1])),
-        // ]
-        //       : null`,
-        //   },
         {
           name: 'yRangeBrushValues',
-          update:
-            'yRangeBrushSorted ? [invert("yscale", yRangeBrushSorted[1]), invert("yscale", yRangeBrushSorted[0])] : null',
+          update: `yRangeBrushSorted`,
+          //'yRangeBrushSorted ? [invert("yscale", yRangeBrushSorted[1]), invert("yscale", yRangeBrushSorted[0])] : null',
         },
         {
           // TODO: label the outs as Out
@@ -1147,17 +1165,17 @@ export function generateBarChartVegaSpec(
     'padding': chartSettings.padding,
     'data': [
       valuesData,
-      {
-        name: 'referenceLineData',
-        on: [
-          {trigger: 'brushMeasureIn', remove: true},
-          {
-            trigger: 'brushMeasureIn',
-            insert:
-              'brushMeasureIn === "empty" || yIsBrushing ? [] : [{"value": brushMeasureIn }]',
-          },
-        ],
-      },
+      // {
+      //   name: 'referenceLineData',
+      //   on: [
+      //     {trigger: 'brushMeasureIn', remove: true},
+      //     {
+      //       trigger: 'brushMeasureIn',
+      //       insert:
+      //         'brushMeasureIn === "empty" || yIsBrushing ? [] : [{"value": brushMeasureIn }]',
+      //     },
+      //   ],
+      // },
     ],
     'scales': [
       {
@@ -1391,6 +1409,7 @@ export function generateBarChartVegaSpec(
           ? renderNumericField(field, value)
           : String(value);
       };
+      // @ts-ignore
       if (item.mark.name === 'x_highlight') {
         const x = item.datum.x;
         records = item.datum.v;
@@ -1408,6 +1427,7 @@ export function generateBarChartVegaSpec(
       }
       let highlightedSeries: string | null = null;
       // Have to figure out how to handle faceted stuff which is missing relevant row information...
+      // @ts-ignore
       if (item.datum && ['bars'].includes(item.mark.name)) {
         const itemData = item.datum;
         highlightedSeries = itemData.series;

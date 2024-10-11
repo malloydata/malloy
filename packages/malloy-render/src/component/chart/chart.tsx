@@ -33,10 +33,11 @@ export function Chart(props: {
   const chartData = data.map(row => {
     const rec = structuredClone(row);
     // prevent structured clone from ripping this out
+    // @ts-ignore
     rec.__malloyDataRecord = row.__malloyDataRecord;
     return rec;
   });
-  chartProps.injectData(field, chartData, spec);
+  chartProps.injectData?.(field, chartData, spec);
   // if (chartProps.specType === 'vega') {
   //   spec.data[0].values = chartData.map(row => ({
   //     ...row,

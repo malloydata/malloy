@@ -42,7 +42,7 @@ import {hasAny} from './tag-utils';
 import {RenderResultMetadata, VegaChartProps, VegaConfigHandler} from './types';
 import {shouldRenderAs} from './apply-renderer';
 import {getBarChartSettings} from './bar-chart/get-bar_chart-settings';
-import {generateBarChartVegaLiteSpec} from './bar-chart/generate-bar_chart-vega-lite-spec';
+// import {generateBarChartVegaLiteSpec} from './bar-chart/generate-bar_chart-vega-lite-spec';
 import {mergeVegaConfigs} from './plot/merge-vega-configs';
 import {baseVegaConfig} from './plot/base-vega-config';
 import {renderTimeString} from './render-time';
@@ -61,6 +61,7 @@ function createDataCache() {
         const data: QueryDataRow[] = [];
         for (const row of cell) {
           const rec = row.toObject();
+          // @ts-ignore
           rec.__malloyDataRecord = row;
           data.push(rec);
         }

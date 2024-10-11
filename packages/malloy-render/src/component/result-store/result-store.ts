@@ -73,11 +73,16 @@ export function createResultStore() {
   const processBrushOps = (ops: ModifyBrushOp[]) => {
     brushOps.push(...ops);
     if (!processQueued) {
-      setTimeout(() => {
+      // setTimeout(() => {
+      //   modifyBrushes(brushOps);
+      //   brushOps.length = 0;
+      //   processQueued = false;
+      // }, 0);
+      requestAnimationFrame(() => {
         modifyBrushes(brushOps);
         brushOps.length = 0;
         processQueued = false;
-      }, 0);
+      });
       processQueued = true;
     }
   };

@@ -93,6 +93,14 @@ source: products is duckdb.table("data/products.parquet") extend {
           `Cost $ really long label`
         limit: 10
       }
+      # bar_chart
+      f is {
+        group_by: brand
+
+        # percentx
+        aggregate: percent_of_sales is `Sales $` / all(`Sales $`)
+        limit: 10
+      }
   }
 
    # bar_chart

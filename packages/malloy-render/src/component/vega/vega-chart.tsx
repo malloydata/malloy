@@ -59,6 +59,22 @@ if (!expressionFunction('getMalloyMeasureBrushes')) {
   );
 }
 
+if (!expressionFunction('snapValue')) {
+  expressionFunction(
+    'snapValue',
+    function snapValue(range, stepCt, valueToSnap) {
+      const min = range[0];
+      const max = range[1];
+      const stepSize = (max - min) / stepCt;
+
+      // Round the value to the nearest step size
+      const snappedValue = Math.round(valueToSnap / stepSize) * stepSize;
+      return snappedValue;
+      // Make sure the snapped value is within the range
+      // return Math.min(Math.max(snappedValue, min), max);
+    }
+  );
+}
 export function addSignalListenerIfExists(
   view: View,
   signal: string,
@@ -134,10 +150,10 @@ export function VegaChart(props: VegaChartProps) {
 
     logSignals(
       // keep line breaks
-      ''
+      '',
       // 'brushOut',
       // 'brushIn',
-      // 'brushMeasureRangeIn',
+      'brushMeasureRangeIn'
       // 'brushMeasureRangeValuesIn'
     );
 

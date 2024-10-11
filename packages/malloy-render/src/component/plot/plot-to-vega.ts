@@ -123,7 +123,7 @@ export function plotToVega(
       scale: 'xscale',
       title: plotSpec.x.fields.join(', '),
       labelAngle: chartSettings.xAxis.labelAngle,
-      labelLimit: chartSettings.xAxis.labelSize,
+      labelLimit: chartSettings.xAxis.labelLimit,
       labelAlign: chartSettings.xAxis.labelAlign,
       labelBaseline: chartSettings.xAxis.labelBaseline,
       maxExtent: chartSettings.xAxis.height,

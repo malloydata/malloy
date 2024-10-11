@@ -87,7 +87,7 @@ export function generateBarChartVegaLiteSpec(
         'type': 'ordinal',
         'axis': {
           ...chartSettings.xAxis,
-          labelLimit: chartSettings.xAxis.labelSize,
+          labelLimit: chartSettings.xAxis.labelLimit,
         },
         'scale': {
           'domain': shouldShareXDomain ? [...xMeta.values] : null,
@@ -185,38 +185,38 @@ export function generateBarChartVegaLiteSpec(
     totalWidth: chartSettings.totalWidth,
     totalHeight: chartSettings.totalHeight,
     chartType: 'bar_chart',
-    getTooltipData: (item: Item) => {
-      if (item.datum) {
-        const tooltipData: ChartTooltipEntry[] = [];
-        tooltipData.push({
-          field: xField,
-          fieldName: xField.name,
-          value: item.datum[xFieldPath],
-        });
+    // getTooltipData: (item: Item) => {
+    //   if (item.datum) {
+    //     const tooltipData: ChartTooltipEntry[] = [];
+    //     tooltipData.push({
+    //       field: xField,
+    //       fieldName: xField.name,
+    //       value: item.datum[xFieldPath],
+    //     });
 
-        if (seriesField)
-          tooltipData.push({
-            field: seriesField,
-            fieldName: seriesField.name,
-            value: item.datum[seriesFieldPath!],
-          });
-        if (Object.prototype.hasOwnProperty.call(item.datum, 'key')) {
-          tooltipData.push({
-            field: getFieldFromRootPath(explore, item.datum.key),
-            fieldName: item.datum.key,
-            value: item.datum.value,
-          });
-          tooltipData[item.datum.key] = item.datum.value;
-        } else {
-          tooltipData.push({
-            field: yField,
-            fieldName: yField.name,
-            value: item.datum[yFieldPath],
-          });
-        }
-        return tooltipData;
-      }
-      return null;
-    },
+    //     if (seriesField)
+    //       tooltipData.push({
+    //         field: seriesField,
+    //         fieldName: seriesField.name,
+    //         value: item.datum[seriesFieldPath!],
+    //       });
+    //     if (Object.prototype.hasOwnProperty.call(item.datum, 'key')) {
+    //       tooltipData.push({
+    //         field: getFieldFromRootPath(explore, item.datum.key),
+    //         fieldName: item.datum.key,
+    //         value: item.datum.value,
+    //       });
+    //       tooltipData[item.datum.key] = item.datum.value;
+    //     } else {
+    //       tooltipData.push({
+    //         field: yField,
+    //         fieldName: yField.name,
+    //         value: item.datum[yFieldPath],
+    //       });
+    //     }
+    //     return tooltipData;
+    //   }
+    //   return null;
+    // },
   };
 }
