@@ -61,7 +61,7 @@ interface Expression {
 
 ## Join tree entries
 
-For any entry which participates in join treee (joined table, joined query, joined array, joined record(s)) in the field list, the `FieldDef` for that entry will also have properties from `JoinBase`
+For any entry which participates in join treee (joined table, joined query, array, record(s)) in the field list, the `FieldDef` for that entry will also have properties from `JoinBase`
 
 ```TypeScript
 interface JoinBase {
@@ -72,31 +72,30 @@ interface JoinBase {
 }
 ```
 
-* `hasJoin(fd)` which will return true and grant typed access to the `JoinBase` properties of the `FieldDef`, and because all joined fields are structs, also the `StructDef` properties as well.
-* Non repeated records are always joined, in all cases.
-* Repeated records ... I am assuming we also always join them.
-* Arrays are always joined by default when read from a schema, but a computed dimension with an array value is NOT automatically joined. It can be joined with the (TBD) `join_array: fieldName is arrayExpression` syntax.
+* `isJoined(fd)` which will return true and grant typed access to the `JoinBase` properties of the `FieldDef`, and because all joined fields are structs, also the `StructDef` properties as well.
 
 ## Views
 
-The other entry in a field list is a view, which in the source is `{type: 'turtle'}`
+The other entry in a field list is a `view:` which in the source is `{type: 'turtle'}`
 
 ## All the FieldDef
 
-
 # QueryFieldDef ...
 
-Once upon a time queries also had an array called `fields:` which contained a slightly different set of field-like entities. For a while now this has not been true. A query has `queryFields: QueryFieldDef[]`. These are an array of
+Once upon a time queries also had an array called `fields:` which contained a slightly different set of field-like entities. For a while now this has not been true. A query has `queryFields: QueryFieldDef[]`. These
+are an array of ...
 
 * Computations just like in `FieldDef` with `Expression` proeprties, which came from either `select:`, `group_by:`, `aggregate:` or `calculate:`
 * `QueryFieldReference` which is just a path, which is inferred to be one of the above, on context
 * `nest:` invocations (or 'turtles' as we affectionately call them internally)
+* `join_XXX:` always on query joins
 
 
 ## Descriminators
 
 * `isTemporalField` -- `date` or `timestamp` type
-* `isAtomicFieldType` -- essentially "not join or dimension or measure"
-* `isRepeatedRecord`
-* `isScalarArray` -- Is a ".each" array
-* `isAtomic` -- Like `isAtomicFieldType` for `FieldDef` instead
+* `isAtomicFieldType` -- Does the data in this field fit in one column of a table
+* `isRepeatedRecord(FieldDef)` -- In some databases this is a type, in other this is an array of record
+* `isScalarArray(FieldDef|SrtuctDef)` -- Is a ".each" array
+* `isAtomic(FieldDef)` -- Like `isAtomicFieldType` for `FieldDef` instead
+* `isLeafAtomic(FieldDef | QueryFieldDef)` -- an Atomic field can be stored in a column, a LeafAtomic is one which isn't a join

@@ -37,8 +37,8 @@ import {
   QuerySegment,
   expressionIsCalculation,
   isJoined,
-  isAtomicFieldType,
   isQuerySegment,
+  isAtomic,
 } from '../../model';
 
 function getFirstQuerySegment(q: Query | undefined): QuerySegment | undefined {
@@ -870,7 +870,7 @@ describe('query:', () => {
       expect('run:ab->{ select: b.astr }').toTranslate();
     });
     const afields = aTableDef.fields
-      .filter(f => isAtomicFieldType(f.type))
+      .filter(f => isAtomic(f))
       .map(f => f.name)
       .sort();
     test('expands star correctly', () => {
