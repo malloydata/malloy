@@ -106,8 +106,8 @@ export type {
   LeafAtomicDef,
   AtomicTypeDef,
   AtomicFieldDef,
-  JoinedArrayDef,
-  JoinedArrayTypeDef,
+  ArrayDef,
+  ArrayTypeDef,
   RecordTypeDef,
   RepeatedRecordTypeDef,
 } from './model';

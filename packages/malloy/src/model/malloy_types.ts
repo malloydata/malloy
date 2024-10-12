@@ -639,20 +639,12 @@ export interface NativeUnsupportedTypeDef {
 export type NativeUnsupportedFieldDef = NativeUnsupportedTypeDef &
   AtomicFieldDef;
 
-export interface ArrayTypeDef {
+export interface ArrayTypeDef extends JoinBase, StructDefBase {
   type: 'array';
   elementTypeDef: Exclude<AtomicTypeDef, RecordTypeDef> | RecordElementTypeDef;
-}
-export type ArrayFieldDef = ArrayTypeDef & AtomicFieldDef;
-
-export interface JoinedArrayTypeDef
-  extends ArrayTypeDef,
-    JoinBase,
-    StructDefBase {
-  type: 'array';
   join: 'many';
 }
-export type JoinedArrayDef = JoinedArrayTypeDef & AtomicFieldDef;
+export type ArrayDef = ArrayTypeDef & AtomicFieldDef;
 
 export function arrayEachFields(arrayOf: AtomicTypeDef): AtomicFieldDef[] {
   return [
@@ -683,7 +675,7 @@ export interface RecordElementTypeDef {
   type: 'record_element';
 }
 
-export interface RepeatedRecordTypeDef extends JoinedArrayTypeDef {
+export interface RepeatedRecordTypeDef extends ArrayDef {
   type: 'array';
   elementTypeDef: RecordElementTypeDef;
   join: 'many';
@@ -733,7 +725,7 @@ export type Joinable =
   | SQLSourceDef
   | QuerySourceDef
   | RecordFieldDef
-  | JoinedArrayDef;
+  | ArrayDef;
 export type JoinFieldDef = JoinBase & Joinable;
 export type JoinFieldTypes =
   | 'table'
@@ -1098,7 +1090,7 @@ export function isScalarArray(def: FieldDef | StructDef) {
   return def.type === 'array' && def.elementTypeDef.type !== 'record_element';
 }
 
-export type StructDef = SourceDef | RecordFieldDef | JoinedArrayDef;
+export type StructDef = SourceDef | RecordFieldDef | ArrayDef;
 
 export type ExpressionValueType =
   | AtomicFieldType
