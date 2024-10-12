@@ -1182,7 +1182,7 @@ export interface ConnectionDef extends NamedObject {
 }
 
 export type TemporalTypeDef = DateTypeDef | TimestampTypeDef;
-export type LeafAtomicDef =
+export type LeafAtomicTypeDef =
   | StringTypeDef
   | TemporalTypeDef
   | NumberTypeDef
@@ -1190,9 +1190,24 @@ export type LeafAtomicDef =
   | JSONTypeDef
   | NativeUnsupportedTypeDef
   | ErrorTypeDef;
-export type AtomicTypeDef = LeafAtomicDef | ArrayTypeDef | RecordTypeDef;
+export type AtomicTypeDef = LeafAtomicTypeDef | ArrayTypeDef | RecordTypeDef;
 
+export type LeafAtomicDef = LeafAtomicTypeDef & FieldAtomicBase;
 export type AtomicFieldDef = AtomicTypeDef & FieldAtomicBase;
+
+export function isLeafAtomic(
+  fd: FieldDef | QueryFieldDef
+): fd is LeafAtomicDef {
+  return (
+    fd.type === 'string' ||
+    isTemporalField(fd.type) ||
+    fd.type === 'number' ||
+    fd.type === 'boolean' ||
+    fd.type === 'json' ||
+    fd.type === 'sql native' ||
+    fd.type === 'error'
+  );
+}
 
 // Sources have fields like this ...
 export type FieldDef = AtomicFieldDef | JoinFieldDef | TurtleDef;
