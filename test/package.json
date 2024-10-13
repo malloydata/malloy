@@ -21,13 +21,13 @@
   },
   "dependencies": {
     "@jest/globals": "^29.4.3",
-    "@malloydata/db-bigquery": "^0.0.201",
-    "@malloydata/db-duckdb": "^0.0.201",
-    "@malloydata/db-postgres": "^0.0.201",
-    "@malloydata/db-snowflake": "^0.0.201",
-    "@malloydata/db-trino": "^0.0.201",
-    "@malloydata/malloy": "^0.0.201",
-    "@malloydata/render": "^0.0.201",
+    "@malloydata/db-bigquery": "^0.0.202",
+    "@malloydata/db-duckdb": "^0.0.202",
+    "@malloydata/db-postgres": "^0.0.202",
+    "@malloydata/db-snowflake": "^0.0.202",
+    "@malloydata/db-trino": "^0.0.202",
+    "@malloydata/malloy": "^0.0.202",
+    "@malloydata/render": "^0.0.202",
     "events": "^3.3.0",
     "jsdom": "^22.1.0",
     "luxon": "^2.4.0",
@@ -37,5 +37,5 @@
     "@types/jsdom": "^21.1.1",
     "@types/luxon": "^2.4.0"
   },
-  "version": "0.0.201"
+  "version": "0.0.202"
 }
