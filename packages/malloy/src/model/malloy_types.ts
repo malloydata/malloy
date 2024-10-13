@@ -1056,7 +1056,7 @@ export function sourceBase(sd: SourceDefBase): SourceDefBase {
   return {...sd};
 }
 
-export function isSourceDef(sd: StructDef | FieldDef): sd is SourceDef {
+export function isSourceDef(sd: NamedModelObject | FieldDef): sd is SourceDef {
   return (
     sd.type === 'table' ||
     sd.type === 'sql_select' ||
@@ -1226,10 +1226,6 @@ export type NamedModelObject =
   | NamedQuery
   | FunctionDef
   | ConnectionDef;
-
-export function modelObjIsSource(nmo: NamedModelObject): nmo is SourceDef {
-  return isSourceDef(nmo as StructDef);
-}
 
 /** Result of parsing a model file */
 export interface ModelDef {

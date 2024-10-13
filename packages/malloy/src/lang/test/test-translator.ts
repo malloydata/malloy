@@ -35,7 +35,7 @@ import {
   TurtleDef,
   isQuerySegment,
   isSegmentSQL,
-  modelObjIsSource,
+  isSourceDef,
   SourceDef,
   JoinBase,
   TableSourceDef,
@@ -221,7 +221,7 @@ class TestRoot extends MalloyElement implements NameSpace {
     const global = this.globalNameSpace.getEntry(name);
     if (global) return global;
     const struct = this.modelDef.contents[name];
-    if (modelObjIsSource(struct)) {
+    if (isSourceDef(struct)) {
       const exported = this.modelDef.exports.includes(name);
       return {entry: struct, exported};
     }
@@ -390,7 +390,7 @@ export class TestTranslator extends MalloyTranslator {
 
   exploreFor(exploreName: string): StructDef {
     const explore = this.nameSpace[exploreName];
-    if (explore && modelObjIsSource(explore)) {
+    if (explore && isSourceDef(explore)) {
       return explore;
     }
     throw new Error(`Expected model to contain source '${exploreName}'`);
@@ -413,7 +413,7 @@ export class TestTranslator extends MalloyTranslator {
   getSourceDef(srcName: string): SourceDef | undefined {
     const t = this.translate().translated;
     const s = t?.modelDef?.contents[srcName];
-    if (s && modelObjIsSource(s)) {
+    if (s && isSourceDef(s)) {
       return s;
     }
     return undefined;
@@ -442,7 +442,7 @@ export class BetaExpression extends TestTranslator {
 
   private testFS() {
     const aStruct = this.internalModel.contents['ab'];
-    if (modelObjIsSource(aStruct)) {
+    if (isSourceDef(aStruct)) {
       const tstFS = new StaticSourceSpace(aStruct);
       return tstFS;
     } else {

@@ -79,7 +79,6 @@ import {
   SpreadExpr,
   FilteredExpr,
   SourceDef,
-  modelObjIsSource,
   isSourceDef,
   fieldIsIntrinsic,
   AtomicFieldDef,
@@ -4692,7 +4691,7 @@ export class QueryModel {
     this.modelDef = modelDef;
     for (const s of Object.values(this.modelDef.contents)) {
       let qs;
-      if (modelObjIsSource(s)) {
+      if (isSourceDef(s)) {
         qs = new QueryStruct(s, undefined, {model: this}, {});
         this.structs.set(getIdentifier(s), qs);
         qs.resolveQueryFields();
