@@ -61,7 +61,6 @@ import {
   QueryValue,
   SQLSentence,
   SQLSourceDef,
-  modelObjIsSource,
   AtomicFieldDef,
   DateFieldDef,
   TimestampFieldDef,
@@ -817,7 +816,7 @@ export class Model implements Taggable {
    */
   public getExploreByName(name: string): Explore {
     const struct = this.modelDef.contents[name];
-    if (modelObjIsSource(struct)) {
+    if (isSourceDef(struct)) {
       return new Explore(struct);
     }
     throw new Error("'name' is not an explore");
@@ -830,7 +829,7 @@ export class Model implements Taggable {
    */
   public get explores(): Explore[] {
     return Object.values(this.modelDef.contents)
-      .filter(modelObjIsSource)
+      .filter(isSourceDef)
       .map(structDef => new Explore(structDef));
   }
 
@@ -917,7 +916,7 @@ export class PreparedQuery implements Taggable {
       typeof sourceRef === 'string'
         ? this._modelDef.contents[sourceRef]
         : sourceRef;
-    if (!modelObjIsSource(source)) {
+    if (!isSourceDef(source)) {
       throw new Error('Invalid source for query');
     }
     return source.dialect;
@@ -1295,7 +1294,7 @@ export class PreparedResult implements Taggable {
     if (explore === undefined) {
       throw new Error('Malformed query result.');
     }
-    if (modelObjIsSource(explore)) {
+    if (isSourceDef(explore)) {
       return new Explore(explore);
     }
     throw new Error(`'${name} is not an explore`);

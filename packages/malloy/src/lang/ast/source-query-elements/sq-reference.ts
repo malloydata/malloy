@@ -29,7 +29,7 @@ import {QuerySource} from '../source-elements/query-source';
 import {NamedSource} from '../source-elements/named-source';
 import {QueryReference} from '../query-elements/query-reference';
 import {Argument} from '../parameters/argument';
-import {modelObjIsSource} from '../../../model';
+import {isSourceDef} from '../../../model';
 
 /**
  * A reference to either a source or a query.
@@ -75,7 +75,7 @@ export class SQReference extends SourceQueryElement {
 
   isSource() {
     const refTo = this.ref.getNamed();
-    return refTo !== undefined && modelObjIsSource(refTo);
+    return refTo !== undefined && isSourceDef(refTo);
   }
 
   getSource(): Source | undefined {
@@ -100,7 +100,7 @@ export class SQReference extends SourceQueryElement {
       }
       const existingQuery = new QueryReference(this.ref);
       this.asSource = new QuerySource(existingQuery);
-    } else if (modelObjIsSource(entry)) {
+    } else if (isSourceDef(entry)) {
       this.asSource = new NamedSource(this.ref, undefined, this.args);
     } else {
       this.sqLog(
