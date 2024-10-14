@@ -1,7 +1,8 @@
 source: products is duckdb.table("data/products.parquet") extend {
 
+  #(story)
   # dashboard
-  view: dash is {
+  view: dashboard is {
     group_by:
       category
     # currency
@@ -16,8 +17,9 @@ source: products is duckdb.table("data/products.parquet") extend {
       }
   }
 
+  #(story)
   # dashboard
-  view: dash_dense is {
+  view: dashboard_dense is {
     group_by:
       category
     # currency
@@ -45,8 +47,9 @@ source: products is duckdb.table("data/products.parquet") extend {
       }
   }
 
+  #(story)
   # dashboard
-  view: dash_with_break is {
+  view: dashboard_with_break is {
     group_by:
       category
     # currency
