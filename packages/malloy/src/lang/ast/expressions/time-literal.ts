@@ -114,9 +114,16 @@ abstract class TimeLiteral extends ExpressionDef {
         value,
         timeframe: this.units,
         evalSpace: 'literal',
+        joinUsage: [],
       };
     }
-    return {dataType, expressionType, value, evalSpace: 'literal'};
+    return {
+      dataType,
+      expressionType,
+      value,
+      evalSpace: 'literal',
+      joinUsage: [],
+    };
   }
 
   getExpression(_fs: FieldSpace): ExprValue {

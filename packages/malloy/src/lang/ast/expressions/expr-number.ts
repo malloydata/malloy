@@ -21,9 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ExprValue} from '../types/expr-value';
+import {ExprValue, literalExprValue} from '../types/expr-value';
 import {FieldSpace} from '../types/field-space';
-import {FT} from '../fragtype-utils';
 import {ExpressionDef} from '../types/expression-def';
 
 export class ExprNumber extends ExpressionDef {
@@ -37,10 +36,9 @@ export class ExprNumber extends ExpressionDef {
   }
 
   constantExpression(): ExprValue {
-    return {
-      ...FT.numberT,
-      evalSpace: 'literal',
+    return literalExprValue({
+      dataType: 'number',
       value: {node: 'numberLiteral', literal: this.n},
-    };
+    });
   }
 }

@@ -36,7 +36,6 @@ import {
   FunctionParameterDef,
   isAtomicFieldType,
   isExpressionTypeLEQ,
-  maxExpressionType,
   maxOfExpressionTypes,
   mergeEvalSpaces,
 } from '../../../model/malloy_types';
@@ -47,7 +46,7 @@ import {FieldReference} from '../query-items/field-references';
 import {FunctionOrdering} from './function-ordering';
 import {Limit} from '../query-properties/limit';
 import {PartitionBy} from './partition_by';
-import {ExprValue} from '../types/expr-value';
+import {computedExprValue, ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldName, FieldSpace} from '../types/field-space';
 import {composeSQLExpr, SQLExprElement} from '../../../model/utils';
@@ -125,12 +124,9 @@ export class ExprFunc extends ExpressionDef {
   ): ExprValue {
     const argExprsWithoutImplicit = this.args.map(arg => arg.getExpression(fs));
     if (this.isRaw) {
-      let expressionType: ExpressionType = 'scalar';
       let collectType: FieldValueType | undefined;
       const funcCall: SQLExprElement[] = [`${this.name}(`];
       for (const expr of argExprsWithoutImplicit) {
-        expressionType = maxExpressionType(expressionType, expr.expressionType);
-
         if (collectType) {
           funcCall.push(',');
         } else {
@@ -141,14 +137,11 @@ export class ExprFunc extends ExpressionDef {
       funcCall.push(')');
 
       const dataType = this.rawType ?? collectType ?? 'number';
-      return {
+      return computedExprValue({
         dataType,
-        expressionType,
         value: composeSQLExpr(funcCall),
-        evalSpace: mergeEvalSpaces(
-          ...argExprsWithoutImplicit.map(e => e.evalSpace)
-        ),
-      };
+        from: argExprsWithoutImplicit,
+      });
     }
     const dialect = fs.dialectObj()?.name;
     const {found: func, error} = this.findFunctionDef(dialect);
@@ -160,7 +153,8 @@ export class ExprFunc extends ExpressionDef {
     let implicitExpr: ExprValue | undefined = undefined;
     let structPath = this.source?.path;
     if (this.source) {
-      const sourceFoot = this.source.getField(fs).found;
+      const lookup = this.source.getField(fs);
+      const sourceFoot = lookup.found;
       if (sourceFoot) {
         const footType = sourceFoot.typeDesc();
         if (isAtomicFieldType(footType.dataType)) {
@@ -169,6 +163,7 @@ export class ExprFunc extends ExpressionDef {
             expressionType: footType.expressionType,
             value: {node: 'field', path: this.source.path},
             evalSpace: footType.evalSpace,
+            joinUsage: [lookup.joinPath],
           };
           structPath = this.source.path.slice(0, -1);
         } else {
@@ -429,11 +424,15 @@ export class ExprFunc extends ExpressionDef {
         : expressionIsScalar(expressionType)
         ? maxEvalSpace
         : 'output';
+    const joinUsage = argExprs.flatMap(e => e.joinUsage);
+    // TODO consider if I can use `computedExprValue` here...
+    // seems like the rules for the evalSpace is a bit different from normal though
     return {
       dataType: type.dataType,
       expressionType,
       value: funcCall,
       evalSpace,
+      joinUsage,
     };
   }
 }

@@ -23,32 +23,26 @@
 
 import {
   Expr,
-  ExpressionType,
   TemporalFieldType,
   TypecastExpr,
   isTemporalField,
 } from '../../../model/malloy_types';
 
 import {FieldSpace} from '../types/field-space';
-import {ExprValue} from '../types/expr-value';
+import {ExprValue, computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 
 export class ExprTime extends ExpressionDef {
   elementType = 'timestampOrDate';
   readonly translationValue: ExprValue;
-  constructor(
-    timeType: TemporalFieldType,
-    value: Expr,
-    expressionType: ExpressionType = 'scalar'
-  ) {
+  constructor(timeType: TemporalFieldType, value: Expr, from?: ExprValue[]) {
     super();
     this.elementType = timeType;
-    this.translationValue = {
+    this.translationValue = computedExprValue({
       dataType: timeType,
-      expressionType,
       value,
-      evalSpace: 'constant',
-    };
+      from: from ?? [],
+    });
   }
 
   getExpression(_fs: FieldSpace): ExprValue {
@@ -69,6 +63,6 @@ export class ExprTime extends ExpressionDef {
       }
       value = toTs;
     }
-    return new ExprTime(timeType, value, expr.expressionType);
+    return new ExprTime(timeType, value, [expr]);
   }
 }
