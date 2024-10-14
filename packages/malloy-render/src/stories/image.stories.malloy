@@ -1,4 +1,5 @@
 source: logos is duckdb.table("data/logos.csv") extend {
+  #(story) story="Image Alt from Record"
   view: img_from_record is {
     group_by:
       brand
@@ -6,6 +7,7 @@ source: logos is duckdb.table("data/logos.csv") extend {
       logo
   }
 
+  #(story) story="Image Alt from Parent"
   view: img_from_parent is {
     group_by:
       brand
@@ -17,6 +19,7 @@ source: logos is duckdb.table("data/logos.csv") extend {
       }
   }
 
+  #(story) story="Image Alt from Grandparent"
   view: img_from_grandparent is {
     group_by:
       brand

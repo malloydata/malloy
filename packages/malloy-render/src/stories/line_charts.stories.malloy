@@ -1,0 +1,168 @@
+source: products is duckdb.table("data/products.parquet") extend {
+  measure: total_sales is retail_price.sum()
+  measure: avg_margin is avg(retail_price - cost)
+  dimension: product is name
+  dimension: dcId is distribution_center_id::number
+
+  # line_chart
+  view: topSellingBrands is {
+    group_by: brand
+    aggregate: `Sales $` is retail_price.avg()*500
+    limit: 10
+  }
+
+   # line_chart
+  view: topSellingBrandsSeries is {
+    group_by: brand, department
+    aggregate: `Sales $` is retail_price.avg()*500
+    limit: 10
+  }
+
+  view: trailing_12_sales_trend is {
+    group_by: brand
+    aggregate: `Sales $` is retail_price.avg()*500
+    limit: 12
+    order_by: 1
+  }
+
+  view: baseLineData is {
+    group_by: dcId
+    aggregate: `Sales $` is retail_price.avg()
+    order_by: dcId
+  }
+
+  # dashboard
+  view: seriesCharts is {
+    group_by: ` ` is 'Line Charts'
+    # line_chart
+    nest: basic is baseLineData
+    # line_chart.zero_baseline=false
+    nest: basicNoZero is baseLineData
+    # line_chart
+    nest: dimensionSeries is baseLineData + { group_by: department }
+    # line_chart { interpolate=step }
+    nest: dimensionSeriesStep is baseLineData + { group_by: department }
+    # line_chart { y=['Sales $', 'Cost $']}
+    nest: ySeries is  baseLineData + { aggregate: `Cost $` is retail_price.avg()*0.5 }
+    # line_chart.zero_baseline=false
+    nest: negativeData is {
+      group_by: dcId, department
+    aggregate: `Sales $` is retail_price.avg()-170
+    order_by: dcId
+    }
+    # line_chart
+    nest: onePoint is baseLineData + { limit: 1 }
+    # line_chart { y=['Sales $', 'Cost $']}
+    nest: onePointMultiY is baseLineData + { aggregate: `Cost $` is retail_price.avg()*0.5 limit: 1 }
+    # line_chart
+    nest: onePointSeries is baseLineData + { group_by: department limit: 2 }
+
+    # line_chart
+    nest: numericAxis is {
+      group_by: id
+      aggregate:
+        `Sales $` is retail_price.avg()*500
+      limit: 10
+      order_by: id
+    }
+
+    # line_chart
+    nest: dateAxis is {
+      group_by:
+        `date` is @2001-02-03 + id day
+      aggregate:
+        `Sales $` is retail_price.avg()*500
+      limit: 10
+      order_by: `date`
+    }
+
+    nest: nested is {
+      group_by: category
+       # line_chart
+      nest: dimensionSeries is baseLineData + { group_by: department }
+      limit: 10
+    }
+  }
+
+  #(story)
+  view: root_chart is topSellingBrands
+
+  #(story)
+  # line_chart
+  view: dimension_series is baseLineData + { group_by: department }
+
+  #(story)
+  view: single_nest is {
+    nest: topSellingBrands
+  }
+
+  #(story)
+  view: sparks is {
+    group_by: category
+    # currency
+    aggregate: `Avg Retail` is retail_price.avg()
+    nest:
+    # size="spark"
+    `Top Brands` is topSellingBrands
+  }
+
+  #(story)
+  view: sparks_nested is {
+    group_by: `Department` is department
+    # currency
+    aggregate: `Avg Retail` is retail_price.avg()
+    nest:
+      `Top 5 Categories` is {
+        group_by: category
+        limit: 5
+        # currency
+        aggregate: `Avg Retail` is retail_price.avg()
+        # line_chart size="spark"
+        nest: `Trailing 12mo Sales` is trailing_12_sales_trend
+      }
+  }
+
+  #(story)
+  view: indepenent_axis is {
+    group_by: category
+    aggregate: avg_retail is retail_price.avg()
+    # line_chart
+    nest: top_brands is {
+      group_by: brand
+      aggregate: avg_retail is retail_price.avg()
+      limit: 10
+    }
+    # line_chart { y.independent }
+    nest: top_brands_independent is {
+      group_by: brand
+      aggregate: avg_retail is retail_price.avg()
+      limit: 10
+    }
+    limit: 5
+  }
+
+  #(story)
+  view: series_dashboard is seriesCharts
+
+  #(story)
+  view: size_sheet is {
+    limit: 2
+    group_by: category
+    nest:
+    `Top Selling Brands` is topSellingBrands
+    # size=spark
+    spark is topSellingBrands
+    # size=sm
+    sm is topSellingBrands
+    # size=md
+    md is topSellingBrands
+    # size=lg
+    lg is topSellingBrands
+    # size=xl
+    xl is topSellingBrands
+    # size=2xl
+    `2xl` is topSellingBrands
+  }
+}
+
+run: products -> { group_by: distribution_center_id}
