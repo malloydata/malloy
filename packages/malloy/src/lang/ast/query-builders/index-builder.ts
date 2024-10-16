@@ -49,6 +49,7 @@ export class IndexBuilder implements QueryBuilder {
   sample?: Sampling;
   resultFS: IndexFieldSpace;
   inputFS: QueryInputSpace;
+  alwaysJoins: string[] = [];
   readonly type = 'index';
 
   constructor(
@@ -127,6 +128,10 @@ export class IndexBuilder implements QueryBuilder {
     }
     if (this.sample) {
       indexSegment.sample = this.sample;
+    }
+
+    if (this.alwaysJoins.length > 0) {
+      indexSegment.alwaysJoins = [...this.alwaysJoins];
     }
 
     return indexSegment;

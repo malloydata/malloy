@@ -238,6 +238,7 @@ export class JoinStatement
   queryExecute(executeFor: QueryBuilder) {
     for (const qel of this.list) {
       executeFor.inputFS.extendSource(qel);
+      executeFor.alwaysJoins.push(qel.name.refString);
     }
   }
 }

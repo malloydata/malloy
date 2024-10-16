@@ -30,6 +30,7 @@ export interface QueryBuilder {
   type: 'grouping' | 'index' | 'project';
   inputFS: QueryInputSpace;
   resultFS: QueryOperationSpace;
+  alwaysJoins: string[];
   execute(qp: QueryProperty): void;
   finalize(refineFrom: PipeSegment | undefined): PipeSegment;
 }
