@@ -2602,8 +2602,22 @@ class QueryQuery extends QueryField {
       this.expandFields(this.rootResult);
       this.rootResult.addStructToJoin(this.parent, this, undefined, []);
       this.rootResult.findJoins(this);
+      this.addAlwaysJoins(this.rootResult);
       this.rootResult.calculateSymmetricAggregates();
       this.prepared = true;
+    }
+  }
+
+  addAlwaysJoins(rootResult: FieldInstanceResultRoot) {
+    const stage = this.fieldDef.pipeline[0];
+    if (stage.type !== 'raw') {
+      const alwaysJoins = stage.alwaysJoins ?? [];
+      for (const joinName of alwaysJoins) {
+        const qs = this.parent.getChildByName(joinName);
+        if (qs instanceof QueryStruct) {
+          rootResult.addStructToJoin(qs, this, undefined, []);
+        }
+      }
     }
   }
 

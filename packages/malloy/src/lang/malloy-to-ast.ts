@@ -594,13 +594,7 @@ export class MalloyToAST
   visitQueryJoinStatement(
     pcx: parse.QueryJoinStatementContext
   ): ast.MalloyElement {
-    const result = this.astAt(this.visit(pcx.joinStatement()), pcx);
-    this.m4advisory(
-      pcx,
-      'join-statement-in-view',
-      'Joins in queries are deprecated, move into an `extend:` block.'
-    );
-    return result;
+    return this.astAt(this.visit(pcx.joinStatement()), pcx);
   }
 
   visitJoinOn(pcx: parse.JoinOnContext): ast.Join {

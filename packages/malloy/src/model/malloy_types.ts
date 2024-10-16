@@ -956,6 +956,7 @@ export interface IndexSegment extends Filtered {
   limit?: number;
   weightMeasure?: string; // only allow the name of the field to use for weights
   sample?: Sampling;
+  alwaysJoins?: string[];
 }
 export function isIndexSegment(pe: PipeSegment): pe is IndexSegment {
   return (pe as IndexSegment).type === 'index';
@@ -969,6 +970,7 @@ export interface QuerySegment extends Filtered {
   by?: By;
   orderBy?: OrderBy[]; // uses output field name or index.
   queryTimezone?: string;
+  alwaysJoins?: string[];
 }
 
 export interface TurtleDef extends NamedObject, Pipeline {
