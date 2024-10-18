@@ -437,7 +437,7 @@ export class TestTranslator extends MalloyTranslator {
 export class BetaExpression extends TestTranslator {
   private compiled?: ExprValue;
   constructor(src: string) {
-    super(src, null, null, 'justExpr');
+    super(src, null, null, 'debugExpr');
   }
 
   private testFS() {
