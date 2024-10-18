@@ -537,7 +537,8 @@ malloyOrSQLType
 fieldExpr
   : fieldPath                                              # exprFieldPath
   | literal                                                # exprLiteral
-  //| OCURLY recordElement (COMMA recordElement)* CCURLY     # exprLiteralRecord
+  | OBRACK fieldExpr (COMMA fieldExpr)* COMMA? CBRACK      # exprArrayLiteral
+  | OCURLY recordElement (COMMA recordElement)* CCURLY     # exprLiteralRecord
   | fieldExpr fieldProperties                              # exprFieldProps
   | fieldExpr timeframe                                    # exprDuration
   | fieldExpr DOT timeframe                                # exprTimeTrunc
@@ -650,11 +651,15 @@ fieldPath
 joinName: id;
 fieldName: id;
 
-justExpr: fieldExpr EOF;
-
 sqlExploreNameRef: id;
 nameSQLBlock: id;
 connectionName: string;
+
+// These are for debug launch configs. Without the EOF a parse can stop without
+// parsing the entire input, if it is legal up to some token, for the debuger
+// we want to make sure the entire expression parses.
+debugExpr: fieldExpr EOF;
+debugPartial: partialAllowedFieldExpr EOF;
 
 experimentalStatementForTesting // this only exists to enable tests for the experimental compiler flag
   : SEMI SEMI OBRACK string CBRACK
