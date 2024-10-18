@@ -123,7 +123,11 @@ export {
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
+  expressionIsAggregate,
+  expressionIsAnalytic,
   expressionIsCalculation,
+  expressionIsScalar,
+  expressionIsUngroupedAggregate,
   indent,
   composeSQLExpr,
 } from './model';
