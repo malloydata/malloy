@@ -105,6 +105,7 @@ export function getResultMetadata(
     maxString: null,
     values: new Set(),
     maxRecordCt: null,
+    maxUniqueFieldValueCounts: new Map(),
     renderAs: shouldRenderAs(rootField, result.tagParse().tag),
   };
 
@@ -134,6 +135,7 @@ function initFieldMeta(e: Explore, metadata: RenderResultMetadata) {
       maxString: null,
       values: new Set(),
       maxRecordCt: null,
+      maxUniqueFieldValueCounts: new Map<string, number>(),
       renderAs: shouldRenderAs(f),
     };
     if (f.isExploreField()) {
@@ -144,21 +146,32 @@ function initFieldMeta(e: Explore, metadata: RenderResultMetadata) {
 
 const populateFieldMeta = (data: DataArray, metadata: RenderResultMetadata) => {
   let currExploreRecordCt = 0;
+  const currentExploreField = data.field;
+  const currentExploreFieldMeta = metadata.field(currentExploreField);
+  const maxUniqueFieldValueSets = new Map<string, Set<unknown>>();
+  data.field.allFields.forEach(f => {
+    maxUniqueFieldValueSets.set(getFieldKey(f), new Set());
+  });
   for (const row of data) {
     currExploreRecordCt++;
     for (const f of data.field.allFields) {
-      const value = f.isAtomicField() ? row.cell(f).value : undefined;
       const fieldMeta = metadata.field(f);
+      const fieldSet = maxUniqueFieldValueSets.get(getFieldKey(f))!;
+
+      const value = f.isAtomicField() ? row.cell(f).value : undefined;
+
       if (valueIsNumber(f, value)) {
         const n = value;
         fieldMeta.min = Math.min(fieldMeta.min ?? n, n);
         fieldMeta.max = Math.max(fieldMeta.max ?? n, n);
         if (f.isAtomicField() && f.sourceWasDimension()) {
           fieldMeta.values.add(n);
+          fieldSet.add(n);
         }
       } else if (valueIsString(f, value)) {
         const s = value;
         fieldMeta.values.add(s);
+        fieldSet.add(s);
         if (!fieldMeta.minString || fieldMeta.minString.length > s.length)
           fieldMeta.minString = s;
         if (!fieldMeta.maxString || fieldMeta.maxString.length < s.length)
@@ -187,6 +200,7 @@ const populateFieldMeta = (data: DataArray, metadata: RenderResultMetadata) => {
 
         if (f.isAtomicField() && f.sourceWasDimension()) {
           fieldMeta.values.add(stringValue);
+          fieldSet.add(stringValue);
         }
       } else if (f.isExploreField()) {
         const data = row.cell(f);
@@ -194,11 +208,20 @@ const populateFieldMeta = (data: DataArray, metadata: RenderResultMetadata) => {
       }
     }
   }
-  // root explore
-  const rootField = data.field;
-  const fieldMeta = metadata.field(rootField);
-  fieldMeta.maxRecordCt = Math.max(
-    fieldMeta.maxRecordCt ?? currExploreRecordCt,
+
+  // Update the max number of unique values for a field in nested explores
+  for (const [fieldKey, set] of maxUniqueFieldValueSets) {
+    currentExploreFieldMeta.maxUniqueFieldValueCounts.set(
+      fieldKey,
+      Math.max(
+        currentExploreFieldMeta.maxUniqueFieldValueCounts.get(fieldKey) ?? 0,
+        set.size
+      )
+    );
+  }
+
+  currentExploreFieldMeta.maxRecordCt = Math.max(
+    currentExploreFieldMeta.maxRecordCt ?? currExploreRecordCt,
     currExploreRecordCt
   );
 };
