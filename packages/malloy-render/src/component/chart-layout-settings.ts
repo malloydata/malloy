@@ -178,7 +178,9 @@ export function getChartLayoutSettings(
     const isSharedDomain = uniqueValuesCt <= 20;
     const recordsToFit = isSharedDomain
       ? uniqueValuesCt
-      : exploreMetadata.maxRecordCt!;
+      : exploreMetadata.maxUniqueFieldValueCounts.get(
+          metadata.getFieldKey(xField)
+        )!;
     const xSpacePerLabel = chartWidth / recordsToFit;
     if (xSpacePerLabel > xAxisHeight || xSpacePerLabel > maxStringSize) {
       labelAngle = 0;
