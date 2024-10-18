@@ -20,8 +20,8 @@ source: products is duckdb.table("data/products.parquet") extend {
     limit: 10
   }
 
-  # dashboard -- # bar_chart
-  view: topSellingBrandsTest is {
+  # dashboard
+  view: interactions is {
     nest:
       # bar_chart
       a is {
@@ -455,6 +455,9 @@ source: products is duckdb.table("data/products.parquet") extend {
     # size=2xl
     `2xl` is topSellingBrands
   }
+
+  #(story)
+  view: interactions_sandbox is interactions;
 }
 
 run: products -> { group_by: distribution_center_id}

@@ -124,6 +124,10 @@ export function MalloyRenderInner(props: {
     });
   };
 
+  createEffect(() => {
+    console.log('STORE', JSON.stringify(metadata().store, null, 2));
+  });
+
   return (
     <ResultContext.Provider value={metadata()}>
       {rendering().renderValue}

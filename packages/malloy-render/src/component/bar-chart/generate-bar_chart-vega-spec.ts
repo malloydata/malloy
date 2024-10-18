@@ -15,6 +15,7 @@ import {renderNumericField} from '../render-numeric-field';
 import {grayMedium, gridGray} from '../plot/base-vega-config';
 import {applyRenderer} from '../apply-renderer';
 import {useResultContext} from '../result-context';
+import {createMeasureAxis} from '../vega/measure-axis';
 
 const LEGEND_PERC = 0.4;
 const LEGEND_MAX = 384;
@@ -109,44 +110,19 @@ export function generateBarChartVegaSpec(
   const yAxisTickCt = chartSettings.yAxis.tickCount ?? 'ceil(height/40)';
 
   const yAxis = !chartSettings.yAxis.hidden
-    ? {
-        'orient': 'left',
-        'scale': 'yscale',
-        'title': settings.yChannel.fields.join(', '),
-        ...chartSettings.yAxis,
-        'tickCount': {'signal': `${yAxisTickCt}`},
+    ? createMeasureAxis({
+        type: 'y',
+        title: settings.yChannel.fields.join(', '),
+        tickCount: chartSettings.yAxis.tickCount ?? 'ceil(height/40)',
         labelLimit: chartSettings.yAxis.width + 10,
-        encode: {
-          labels: {
-            enter: {
-              text: {
-                // Always use first y number style
-                signal: `renderMalloyNumber(malloyExplore, '${yFieldPath}', datum.value, datum, item)`,
-              },
-            },
-            update: {
-              text: {
-                // Always use first y number style
-                signal: `renderMalloyNumber(malloyExplore, '${yFieldPath}', datum.value, datum, item)`,
-              },
-              fillOpacity: [
-                {
-                  test: 'brushMeasureIn !== "empty" ? (datum.index !== 0 && datum.index !== 1) : false',
-                  value: 0,
-                },
-                {
-                  test: 'brushMeasureRangeIn && datum.value >= (brushMeasureRangeIn[0] - (invert("yscale", 0)-invert("yscale", 20))) && datum.value <= (brushMeasureRangeIn[1] + (invert("yscale", 0)-invert("yscale", 20)))',
-                  value: 0,
-                },
-                {
-                  value: 1,
-                },
-              ],
-            },
-          },
-        },
-      }
-    : null;
+        // Use first y number style
+        fieldPath: yFieldPath,
+        axisSettings: chartSettings.yAxis,
+      })
+    : {
+        axis: null,
+        axisOverlayMark: null,
+      };
 
   const barGroupPadding = 0.25;
   const barPadding = 0;
@@ -309,21 +285,21 @@ export function generateBarChartVegaSpec(
     },
   };
 
-  const yAxisOverlay: VegaSpec = {
-    name: 'y_axis_overlay',
-    type: 'rect',
-    encode: {
-      enter: {
-        x: {
-          value: -chartSettings.yAxis.width + chartSettings.yAxis.yTitleSize,
-        },
-        x2: {value: 0},
-        y: {value: 0},
-        y2: {signal: 'height'},
-        fill: {value: 'transparent'},
-      },
-    },
-  };
+  // const yAxisOverlay: VegaSpec = {
+  //   name: 'y_axis_overlay',
+  //   type: 'rect',
+  //   encode: {
+  //     enter: {
+  //       x: {
+  //         value: -chartSettings.yAxis.width + chartSettings.yAxis.yTitleSize,
+  //       },
+  //       x2: {value: 0},
+  //       y: {value: 0},
+  //       y2: {signal: 'height'},
+  //       fill: {value: 'transparent'},
+  //     },
+  //   },
+  // };
 
   const xAxisOverlay: VegaSpec = {
     name: 'x_axis_overlay',
@@ -916,7 +892,8 @@ export function generateBarChartVegaSpec(
   ];
   if (settings.interactive) {
     if (!settings.hideReferences) marks.push(referenceLines);
-    marks.push(yAxisOverlay, yAxisRangeBrush, xAxisOverlay, xAxisRangeBrush);
+    if (yAxis.axisOverlayMark) marks.push(yAxis.axisOverlayMark);
+    marks.push(yAxisRangeBrush, xAxisOverlay, xAxisRangeBrush);
     signals.push(
       ...[
         {
@@ -1245,7 +1222,7 @@ export function generateBarChartVegaSpec(
         },
       },
       // TODO clean this stuff up
-      ...(yAxis ? [yAxis] : []),
+      ...(yAxis.axis ? [yAxis.axis] : []),
     ],
     legends: [],
     marks,

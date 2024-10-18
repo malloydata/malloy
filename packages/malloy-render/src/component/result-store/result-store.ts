@@ -1,6 +1,5 @@
 import {createStore, produce} from 'solid-js/store';
 import {useResultContext} from '../result-context';
-import {createEffect} from 'solid-js';
 
 interface BrushDataBase {
   fieldRefId: string;
@@ -35,7 +34,7 @@ export type BrushData =
   | BrushDataMeasure
   | BrushDataMeasureRange;
 
-export type VegaBrushOut = {
+export type VegaBrushOutput = {
   sourceId: string;
   data: BrushData | null;
   debounce?:
@@ -48,17 +47,14 @@ export type VegaBrushOut = {
 
 export interface ResultStoreData {
   brushes: BrushData[];
+  highlights: BrushData[];
 }
 
 export function createResultStore() {
   const [store, setStore] = createStore<ResultStoreData>({
     brushes: [],
+    highlights: [],
   });
-
-  const getFieldBrushes = (fieldRefId: string, _store?: ResultStoreData) => {
-    const localStore = _store ?? store;
-    return localStore.brushes.filter(brush => brush.fieldRefId === fieldRefId);
-  };
 
   const getFieldBrushBySourceId = (
     sourceId: string,
@@ -70,14 +66,9 @@ export function createResultStore() {
 
   const brushOps: ModifyBrushOp[] = [];
   let processQueued = false;
-  const processBrushOps = (ops: ModifyBrushOp[]) => {
+  const applyBrushOps = (ops: ModifyBrushOp[]) => {
     brushOps.push(...ops);
     if (!processQueued) {
-      // setTimeout(() => {
-      //   modifyBrushes(brushOps);
-      //   brushOps.length = 0;
-      //   processQueued = false;
-      // }, 0);
       requestAnimationFrame(() => {
         modifyBrushes(brushOps);
         brushOps.length = 0;
@@ -119,50 +110,9 @@ export function createResultStore() {
     );
   };
 
-  const addFieldBrush = (brush: BrushData) => {
-    setStore(
-      produce(s => {
-        const brushEntry = getFieldBrushBySourceId(brush.sourceId, s);
-        if (brushEntry) Object.assign(brushEntry, brush);
-        else {
-          s.brushes.push(brush);
-        }
-      })
-    );
-  };
-
-  const removeFieldBrush = (sourceId: string) => {
-    setStore(
-      produce(s => {
-        const idx = s.brushes.findIndex(b => b.sourceId === sourceId);
-        if (idx !== -1) s.brushes.splice(idx, 1);
-      })
-    );
-  };
-
-  const clearBrushesBySourceId = (sourceId: string) => {
-    setStore(
-      produce(s => {
-        const idx = s.brushes.findIndex(b => b.sourceId === sourceId);
-        if (idx !== -1) s.brushes.splice(idx, 1);
-      })
-    );
-  };
-
-  // createEffect(() => {
-  //   console.count('store changed');
-  //   console.log(JSON.stringify(store, null, 2));
-  // });
-
   return {
     store,
-    getFieldBrushes,
-    getFieldBrushBySourceId,
-    addFieldBrush,
-    removeFieldBrush,
-    modifyBrushes,
-    clearBrushesBySourceId,
-    processBrushOps,
+    applyBrushOps,
   };
 }
 

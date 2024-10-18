@@ -1,88 +1,10 @@
 import {createEffect, createSignal, untrack} from 'solid-js';
 import {VegaJSON, asVegaLiteSpec, asVegaSpec} from '../vega-types';
-import {
-  EventListenerHandler,
-  View,
-  parse,
-  expressionFunction,
-  SignalListenerHandler,
-  scale,
-} from 'vega';
+import {EventListenerHandler, View, parse, SignalListenerHandler} from 'vega';
 import {compile} from 'vega-lite';
-import {renderNumericField} from '../render-numeric-field';
+import './vega-expr-addons';
 import {Explore, ExploreField} from '@malloydata/malloy';
-import {getFieldFromRootPath} from '../plot/util';
-import {BrushData} from '../result-store/result-store';
-import {scaleLinear} from 'd3-scale';
-
-if (!expressionFunction('renderMalloyNumber')) {
-  expressionFunction(
-    'renderMalloyNumber',
-    (explore: Explore | ExploreField, fieldPath: string, value: number) => {
-      if (explore) {
-        const field = getFieldFromRootPath(explore, fieldPath);
-        return field.isAtomicField()
-          ? renderNumericField(field, value)
-          : String(value);
-      }
-      return String(value);
-    }
-  );
-}
-
-if (!expressionFunction('getMalloyBrush')) {
-  expressionFunction(
-    'getMalloyBrush',
-    (brushArray: BrushData[], fieldRefId: string, type?: string) =>
-      brushArray.find(brush => {
-        const isField = brush.fieldRefId === fieldRefId;
-        const isType = type ? brush.type === type : true;
-        return isField && isType;
-      })?.value ?? null
-  );
-}
-
-if (!expressionFunction('getMalloyMeasureBrushes')) {
-  expressionFunction(
-    'getMalloyMeasureBrushes',
-    (
-      brushArray: BrushData[],
-      fieldRefIds: string[],
-      refsToFieldMap: Record<string, string>
-    ) =>
-      brushArray
-        .filter(brush => fieldRefIds.includes(brush.fieldRefId))
-        .map(brush => ({
-          ...brush,
-          fieldPath: refsToFieldMap[brush.fieldRefId],
-        })) ?? []
-  );
-}
-
-if (!expressionFunction('snapValue')) {
-  expressionFunction(
-    'snapValue',
-    function snapValue(range, stepCt, valueToSnap) {
-      const min = range[0];
-      const max = range[1];
-      const stepSize = (max - min) / stepCt;
-
-      // Round the value to the nearest step size
-      const snappedValue = Math.round(valueToSnap / stepSize) * stepSize;
-      return snappedValue;
-      // Make sure the snapped value is within the range
-      // return Math.min(Math.max(snappedValue, min), max);
-    }
-  );
-}
-export function addSignalListenerIfExists(
-  view: View,
-  signal: string,
-  cb: SignalListenerHandler
-) {
-  if (view.getState().signals?.hasOwnProperty(signal))
-    view.addSignalListener(signal, cb);
-}
+import {addSignalListenerIfExists, setSignalIfExists} from './vega-utils';
 
 type VegaChartProps = {
   spec: VegaJSON;
@@ -92,6 +14,13 @@ type VegaChartProps = {
   height?: number;
   onMouseOver?: EventListenerHandler;
   onView?: (view: View) => void;
+  onViewInterface?: (viewInterface: ViewInterface) => void;
+};
+
+export type ViewInterface = {
+  view: View;
+  setSignalAndRun: (name: string, value: unknown) => void;
+  onSignal: (name: string, cb: SignalListenerHandler) => void;
 };
 
 export function VegaChart(props: VegaChartProps) {
@@ -99,7 +28,33 @@ export function VegaChart(props: VegaChartProps) {
 
   const [view, setView] = createSignal<View | null>(null);
 
-  const chartId = crypto.randomUUID();
+  let runViewTimeId: number | null = null;
+  let lastAsyncRun: Promise<View | null> = Promise.resolve(null);
+  const debouncedRunView = () => {
+    if (runViewTimeId) cancelAnimationFrame(runViewTimeId);
+    runViewTimeId = requestAnimationFrame(() => {
+      const _view = view();
+      if (_view) {
+        lastAsyncRun = lastAsyncRun.then(v => {
+          return v?.runAsync() || _view.runAsync();
+        });
+      }
+    });
+  };
+
+  createEffect(() => {
+    if (view()) {
+      props.onViewInterface?.({
+        view: view()!,
+        setSignalAndRun: (name: string, value: unknown) => {
+          setSignalIfExists(view()!, name, value);
+          debouncedRunView();
+        },
+        onSignal: (name: string, cb: SignalListenerHandler) =>
+          addSignalListenerIfExists(view()!, name, cb),
+      });
+    }
+  });
 
   // Create new view on spec change
   createEffect(() => {
@@ -110,11 +65,10 @@ export function VegaChart(props: VegaChartProps) {
         ? compile(asVegaLiteSpec(props.spec)).spec
         : asVegaSpec(props.spec);
 
-    const nextView = new View(parse(vegaspec))
-      .initialize(el)
-      .renderer('svg')
-      .hover();
+    const nextView = new View(parse(vegaspec)).initialize(el).renderer('svg');
 
+    // Dev tool
+    const chartId = crypto.randomUUID(); // Could this be passed into vega spec as signal for sourceId?
     const logSignals = (...signals: string[]) => {
       signals.forEach(signal => {
         addSignalListenerIfExists(nextView, signal, (...args) =>
@@ -122,41 +76,13 @@ export function VegaChart(props: VegaChartProps) {
         );
       });
     };
-    // TODO: consider making this configurable from outside, rather than hardcoded here?
-    // maybe same with the malloy add-ons
+
+    // This signal is needed before running the view for the first time
+    // TODO may need way to handle other signals that need to be part of initialization in future
     nextView.signal('malloyExplore', props.explore);
     if (props.onMouseOver)
       nextView.addEventListener('mousemove', props.onMouseOver);
-    // addSignalListenerIfExists(nextView, 'yRangeBrushValues', console.log);
-    // nextView.addSignalListener('xRangeBrush', console.log);
-    // nextView.addSignalListener('xRangeBrushValues', console.log);
-    // nextView.addSignalListener('brushSeriesIn', console.log);
-    // nextView.addDataListener('referenceLineData', console.log);
-    // nextView.addSignalListener('testOverlay', console.log);
-    // nextView.addSignalListener('brushX', console.log);
-    // nextView.addSignalListener('brushMeasure', console.log);
-    // nextView.addSignalListener('brushMeasureListIn', console.log);
-
-    // nextView.addSignalListener('brushOut', (...args) =>
-    //   console.log(chartId, ...args)
-    // );
-
-    // nextView.addSignalListener('brushIn', (...args) => {
-    //   console.log(chartId, ...args);
-    // });
-
-    // nextView.addSignalListener('brushIn', console.log);
-    // // nextView.addSignalListener('testLegend', console.log);
-
-    logSignals(
-      // keep line breaks
-      '',
-      // 'brushOut',
-      // 'brushIn',
-      'brushMeasureRangeIn'
-      // 'brushMeasureRangeValuesIn'
-    );
-
+    // logSignals('');
     nextView.run();
     setView(nextView);
     props.onView?.(nextView);
