@@ -36,6 +36,7 @@ import {
   TimeLiteralNode,
   MeasureTimeExpr,
   LeafAtomicTypeDef,
+  TD,
 } from '../../model/malloy_types';
 import {
   DialectFunctionOverloadDef,
@@ -379,7 +380,7 @@ ${indent(sql)}
   sqlTruncExpr(qi: QueryInfo, trunc: TimeTruncExpr): string {
     const tz = qtz(qi);
     const tzAdd = tz ? `, "${tz}"` : '';
-    if (trunc.e.dataType === 'date') {
+    if (TD.isDate(trunc.e.typeDef)) {
       if (dateMeasureable(trunc.units)) {
         return `DATE_TRUNC(${trunc.e.sql},${trunc.units})`;
       }
@@ -390,14 +391,14 @@ ${indent(sql)}
 
   sqlTimeExtractExpr(qi: QueryInfo, te: TimeExtractExpr): string {
     const extractTo = extractMap[te.units] || te.units;
-    const tz = te.e.dataType === 'timestamp' && qtz(qi);
+    const tz = TD.isTimestamp(te.e.typeDef) && qtz(qi);
     const tzAdd = tz ? ` AT TIME ZONE '${tz}'` : '';
     return `EXTRACT(${extractTo} FROM ${te.e.sql}${tzAdd})`;
   }
 
   sqlAlterTimeExpr(df: TimeDeltaExpr): string {
     const from = df.kids.base;
-    let dataType: string = from.dataType;
+    let dataType: string = from?.typeDef.type;
     let sql = from.sql;
     if (df.units !== 'day' && timestampMeasureable(df.units)) {
       // The units must be done in timestamp, no matter the input type
@@ -412,10 +413,10 @@ ${indent(sql)}
     const funcTail = df.op === '+' ? '_ADD' : '_SUB';
     const funcName = `${dataType.toUpperCase()}${funcTail}`;
     const newTime = `${funcName}(${sql}, INTERVAL ${df.kids.delta.sql} ${df.units})`;
-    if (dataType === from.dataType) {
+    if (dataType === from.typeDef.type) {
       return newTime;
     }
-    return `${from.dataType.toUpperCase()}(${newTime})`;
+    return `${from.typeDef.type.toUpperCase()}(${newTime})`;
   }
 
   ignoreInProject(fieldName: string): boolean {
@@ -423,7 +424,7 @@ ${indent(sql)}
   }
 
   sqlCast(qi: QueryInfo, cast: TypecastExpr): string {
-    const op = `${cast.srcType}::${cast.dstType}`;
+    const {op, srcTypeDef, dstTypeDef, dstSQLType} = this.sqlCastPrep(cast);
     const tz = qtz(qi);
     const src = cast.e.sql || '';
     if (op === 'timestamp::date' && tz) {
@@ -432,13 +433,9 @@ ${indent(sql)}
     if (op === 'date::timestamp' && tz) {
       return `TIMESTAMP(${src}, '${tz}')`;
     }
-    if (cast.srcType !== cast.dstType) {
-      const dstType =
-        typeof cast.dstType === 'string'
-          ? this.malloyTypeToSQLType({type: cast.dstType})
-          : cast.dstType.raw;
+    if (!TD.eq(srcTypeDef, dstTypeDef)) {
       const castFunc = cast.safe ? 'SAFE_CAST' : 'CAST';
-      return `${castFunc}(${src} AS ${dstType})`;
+      return `${castFunc}(${src} AS ${dstSQLType})`;
     }
     return src;
   }
@@ -448,9 +445,9 @@ ${indent(sql)}
   }
 
   sqlLiteralTime(qi: QueryInfo, lit: TimeLiteralNode): string {
-    if (lit.dataType === 'date') {
+    if (TD.isDate(lit.typeDef)) {
       return `DATE('${lit.literal}')`;
-    } else if (lit.dataType === 'timestamp') {
+    } else if (TD.isTimestamp(lit.typeDef)) {
       let timestampArgs = `'${lit.literal}'`;
       const tz = lit.timezone || qtz(qi);
       if (tz && tz !== 'UTC') {
@@ -458,7 +455,7 @@ ${indent(sql)}
       }
       return `TIMESTAMP(${timestampArgs})`;
     } else {
-      throw new Error(`Unsupported Literal time format ${lit.dataType}`);
+      throw new Error(`Unsupported Literal time format ${lit.typeDef}`);
     }
   }
 
@@ -481,10 +478,10 @@ ${indent(sql)}
       if (!timestampMeasureable(measureIn)) {
         throw new Error(`Measure in '${measureIn} not implemented`);
       }
-      if (from.dataType !== to.dataType) {
+      if (from.typeDef !== to.typeDef) {
         throw new Error("Can't measure difference between different types");
       }
-      if (from.dataType === 'date') {
+      if (TD.isDate(from.typeDef)) {
         lVal = `TIMESTAMP(${lVal})`;
         rVal = `TIMESTAMP(${rVal})`;
       }

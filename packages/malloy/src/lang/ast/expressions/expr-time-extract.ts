@@ -28,6 +28,7 @@ import {
   isTimestampUnit,
   maxExpressionType,
   mergeEvalSpaces,
+  mkTemporal,
 } from '../../../model/malloy_types';
 
 import {errorFor} from '../ast-utils';
@@ -148,8 +149,8 @@ export class ExprTimeExtract extends ExpressionDef {
             node: 'timeDiff',
             units: extractTo,
             kids: {
-              left: {...first.value, dataType: valueType},
-              right: {...last.value, dataType: valueType},
+              left: mkTemporal(first.value, valueType),
+              right: mkTemporal(last.value, valueType),
             },
           },
         };
@@ -162,7 +163,7 @@ export class ExprTimeExtract extends ExpressionDef {
             evalSpace: argV.evalSpace,
             value: {
               node: 'extract',
-              e: {...argV.value, dataType: argV.dataType},
+              e: mkTemporal(argV.value, argV.dataType),
               units: extractTo,
             },
           };

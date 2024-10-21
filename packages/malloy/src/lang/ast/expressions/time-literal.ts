@@ -95,7 +95,7 @@ abstract class TimeLiteral extends ExpressionDef {
     const timeFrag: TimeLiteralNode = {
       node: 'timeLiteral',
       literal: val,
-      dataType: typ,
+      typeDef: {type: typ},
     };
     if (this.timeZone) {
       timeFrag.timezone = this.timeZone;

@@ -36,7 +36,7 @@ import {
 
 import {errorFor} from '../ast-utils';
 import {FT} from '../fragtype-utils';
-import {timeOffset, timeResult} from '../time-utils';
+import {timeOffset, mkTimeResult} from '../time-utils';
 import {ExprValue} from './expr-value';
 import {FieldSpace} from './field-space';
 import {isGranularResult} from './granular-result';
@@ -204,7 +204,7 @@ export class ExprDuration extends ExpressionDef {
           num.value,
           this.timeframe
         );
-        return timeResult(
+        return mkTimeResult(
           {
             dataType: 'timestamp',
             expressionType: maxExpressionType(
@@ -218,7 +218,7 @@ export class ExprDuration extends ExpressionDef {
         );
       }
       if (isDateUnit(this.timeframe)) {
-        return timeResult(
+        return mkTimeResult(
           {
             dataType: 'date',
             expressionType: maxExpressionType(

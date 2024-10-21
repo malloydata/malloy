@@ -36,6 +36,7 @@ import {
   MeasureTimeExpr,
   RegexMatchExpr,
   LeafAtomicTypeDef,
+  TD,
 } from '../../model/malloy_types';
 import {
   DialectFunctionOverloadDef,
@@ -301,7 +302,7 @@ ${indent(sql)}
   sqlTruncExpr(qi: QueryInfo, te: TimeTruncExpr): string {
     const tz = qtz(qi);
     let truncThis = te.e.sql;
-    if (tz && te.e.dataType === 'timestamp') {
+    if (tz && TD.isTimestamp(te.e.typeDef)) {
       truncThis = `CONVERT_TIMEZONE('${tz}',${truncThis})`;
     }
     return `DATE_TRUNC('${te.units}',${truncThis})`;
@@ -312,7 +313,7 @@ ${indent(sql)}
     let extractFrom = from.e.sql;
     const tz = qtz(qi);
 
-    if (tz && from.e.dataType === 'timestamp') {
+    if (tz && TD.isTimestamp(from.e.typeDef)) {
       extractFrom = `CONVERT_TIMEZONE('${tz}', ${extractFrom})`;
     }
     return `EXTRACT(${extractUnits} FROM ${extractFrom})`;
@@ -339,10 +340,11 @@ ${indent(sql)}
 
   sqlCast(qi: QueryInfo, cast: TypecastExpr): string {
     const src = cast.e.sql || '';
-    if (cast.srcType === cast.dstType) {
+    const {op, srcTypeDef, dstTypeDef, dstSQLType} = this.sqlCastPrep(cast);
+    if (TD.eq(srcTypeDef, dstTypeDef)) {
       return src;
     }
-    if (cast.safe && typeof cast.srcType !== 'string') {
+    if (cast.safe && !TD.isString(srcTypeDef)) {
       // safe cast is only supported for a few combinations of src -> dst types
       // so we will not support it in the general case
       // see: https://docs.snowflake.com/en/sql-reference/functions/try_cast
@@ -355,23 +357,19 @@ ${indent(sql)}
 
     const tz = qtz(qi);
     // casting timestamps and dates
-    if (cast.dstType === 'date' && cast.srcType === 'timestamp') {
+    if (op === 'date::timestamp') {
       let castExpr = src;
       if (tz) {
         castExpr = `CONVERT_TIMEZONE('${tz}', ${castExpr})`;
       }
       return `TO_DATE(${castExpr})`;
-    } else if (cast.dstType === 'timestamp' && cast.srcType === 'date') {
+    } else if (op === 'timestamp::date') {
       const retExpr = `TO_TIMESTAMP(${src})`;
       return this.atTz(retExpr, tz);
     }
 
-    const dstType =
-      typeof cast.dstType === 'string'
-        ? this.malloyTypeToSQLType({type: cast.dstType})
-        : cast.dstType.raw;
     const castFunc = cast.safe ? 'TRY_CAST' : 'CAST';
-    return `${castFunc}(${src} AS ${dstType})`;
+    return `${castFunc}(${src} AS ${dstSQLType})`;
   }
 
   sqlLiteralTime(qi: QueryInfo, lf: TimeLiteralNode): string {
@@ -387,20 +385,17 @@ ${indent(sql)}
       ret = `(${ret})::TIMESTAMP_TZ`;
     }
 
-    switch (lf.dataType) {
-      case 'date':
-        return `TO_DATE(${ret})`;
-      case 'timestamp': {
-        return ret;
-      }
+    if (TD.isDate(lf.typeDef)) {
+      return `TO_DATE(${ret})`;
     }
+    return ret;
   }
 
   sqlMeasureTimeExpr(df: MeasureTimeExpr): string {
     const from = df.kids.left;
     const to = df.kids.right;
     let extractUnits = 'nanoseconds';
-    if (from.dataType === 'date' || to.dataType === 'date') {
+    if (TD.isDate(from.typeDef) || TD.isDate(to.typeDef)) {
       extractUnits = 'seconds';
     }
 

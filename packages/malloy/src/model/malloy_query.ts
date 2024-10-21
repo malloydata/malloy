@@ -104,6 +104,7 @@ import {
   RepeatedRecordFieldDef,
   CaseExpr,
   TemporalTypeDef,
+  mkTemporal,
 } from './malloy_types';
 
 import {Connection} from '../connection/types';
@@ -1462,7 +1463,7 @@ class QueryFieldDate extends QueryAtomicField<DateFieldDef> {
     } else {
       const truncated: TimeTruncExpr = {
         node: 'trunc',
-        e: {...this.getExpr(), dataType: 'date'},
+        e: mkTemporal(this.getExpr(), 'date'),
         units: fd.timeframe,
       };
       return this.exprToSQL(resultSet, this.parent, truncated);

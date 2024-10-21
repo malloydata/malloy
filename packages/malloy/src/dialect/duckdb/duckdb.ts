@@ -31,6 +31,7 @@ import {
   RegexMatchExpr,
   MeasureTimeExpr,
   LeafAtomicTypeDef,
+  TD,
 } from '../../model/malloy_types';
 import {indent} from '../../model/utils';
 import {
@@ -418,10 +419,10 @@ export class DuckDBDialect extends PostgresBase {
     let lVal = from.sql || '';
     let rVal = to.sql || '';
     if (!inDays(df.units)) {
-      if (from.dataType === 'date') {
+      if (TD.isDate(from.typeDef)) {
         lVal = `${lVal}::TIMESTAMP`;
       }
-      if (to.dataType === 'date') {
+      if (TD.isDate(to.typeDef)) {
         rVal = `${rVal}::TIMESTAMP`;
       }
     }

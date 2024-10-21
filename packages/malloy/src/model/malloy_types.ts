@@ -32,7 +32,7 @@
  */
 export interface ExprLeaf {
   node: string;
-  dataType?: AtomicFieldType;
+  typeDef?: AtomicTypeDef;
   sql?: string;
 }
 export interface ExprE extends ExprLeaf {
@@ -95,10 +95,10 @@ export type Expr =
   | InCompareExpr
   | ErrorNode;
 
-interface HasDataType {
-  dataType: AtomicFieldType;
+interface HasTypeDef {
+  typeDef: AtomicTypeDef;
 }
-export type TypedExpr = Expr & HasDataType;
+export type TypedExpr = Expr & HasTypeDef;
 
 export type BinaryOperator =
   | '+'
@@ -226,9 +226,27 @@ export interface NowNode extends ExprLeaf {
 }
 
 interface HasTimeValue {
-  dataType: TemporalFieldType;
+  typeDef: TemporalTypeDef;
 }
 type TimeExpr = Expr & HasTimeValue;
+/**
+ * mtoy TODO add discriminator in the typecheck code to avoid this
+ * should just be able to say {...expr, type} because we know that
+ * expr is already a time type ...
+ */
+export function mkTemporal(
+  e: Expr,
+  timeType: TemporalTypeDef | TemporalFieldType
+): TimeExpr {
+  const ttd = typeof timeType === 'string' ? {type: timeType} : timeType;
+  const timeE = {...e, typeDef: {...ttd}};
+  if (timeE.node === 'arrayLiteral') {
+    throw new Error(
+      'Tried to turn an array literal into a temporal field type'
+    );
+  }
+  return timeE;
+}
 
 export interface MeasureTimeExpr extends ExprWithKids {
   node: 'timeDiff';
@@ -255,12 +273,24 @@ export interface TimeExtractExpr extends ExprE {
   units: ExtractUnit;
 }
 
-export interface TypecastExpr extends ExprE {
+export interface MalloyTypecastExpr extends ExprE {
   node: 'cast';
   safe: boolean;
   e: Expr;
-  dstType: CastType | {raw: string};
-  srcType?: AtomicFieldType;
+  dstType: LeafAtomicTypeDef;
+  srcType?: LeafAtomicTypeDef;
+}
+
+interface RawTypeCastExpr extends ExprE {
+  node: 'cast';
+  safe: boolean;
+  e: Expr;
+  dstSQLType: string;
+  srcType?: LeafAtomicTypeDef;
+}
+export type TypecastExpr = MalloyTypecastExpr | RawTypeCastExpr;
+export function isRawCast(te: TypecastExpr): te is RawTypeCastExpr {
+  return 'dstSQLType' in te;
 }
 
 export interface RegexMatchExpr extends ExprWithKids {
@@ -271,7 +301,7 @@ export interface RegexMatchExpr extends ExprWithKids {
 export interface TimeLiteralNode extends ExprLeaf {
   node: 'timeLiteral';
   literal: string;
-  dataType: TemporalFieldType;
+  typeDef: TemporalTypeDef;
   timezone?: string;
 }
 
@@ -302,7 +332,7 @@ export interface RecordLiteralNode extends ExprWithKids {
 export interface ArrayLiteralNode extends ExprWithKids {
   node: 'arrayLiteral';
   kids: {values: Expr[]};
-  dataType: AtomicFieldType;
+  typeDef: ArrayTypeDef;
 }
 
 export interface ErrorNode extends ExprLeaf {
@@ -1188,7 +1218,7 @@ export type LeafAtomicDef = LeafAtomicTypeDef & FieldAtomicBase;
 export type AtomicFieldDef = AtomicTypeDef & FieldAtomicBase;
 
 export function isLeafAtomic(
-  fd: FieldDef | QueryFieldDef
+  fd: FieldDef | QueryFieldDef | AtomicTypeDef
 ): fd is LeafAtomicDef {
   return (
     fd.type === 'string' ||
@@ -1385,5 +1415,68 @@ export interface PrepareResultOptions {
   replaceMaterializedReferences?: boolean;
   materializedTablePrefix?: string;
 }
+
+type UTD = AtomicTypeDef | undefined;
+export const TD = {
+  isA: (td: UTD, ...tList: string[]) => td && tList.includes(td.type),
+  notA: (td: UTD, ...tList: string[]) => td && !tList.includes(td.type),
+  isString: (td: UTD): td is StringTypeDef =>
+    td !== undefined && td.type === 'string',
+  isNumber: (td: UTD): td is NumberTypeDef =>
+    td !== undefined && td.type === 'number',
+  isBoolean: (td: UTD): td is BooleanTypeDef =>
+    td !== undefined && td.type === 'boolean',
+  isJSON: (td: UTD): td is JSONTypeDef =>
+    td !== undefined && td.type === 'json',
+  isSQL: (td: UTD): td is NativeUnsupportedTypeDef =>
+    td !== undefined && td.type === 'sql native',
+  isDate: (td: UTD): td is DateTypeDef =>
+    td !== undefined && td.type === 'date',
+  isTimestamp: (td: UTD): td is TimestampTypeDef =>
+    td !== undefined && td.type === 'timestamp',
+  isError: (td: UTD): td is ErrorTypeDef =>
+    td !== undefined && td.type === 'error',
+  eq: function (a: UTD, b: UTD): boolean {
+    if (a === undefined || b === undefined) {
+      return false;
+    }
+    function checkFields(a: AtomicTypeDef, b: AtomicTypeDef): boolean {
+      const aSchema: Record<string, AtomicTypeDef> = {};
+      for (const aEnt of a['fields'] || []) {
+        if (aEnt.name) {
+          aSchema[aEnt.name] = aEnt;
+        } else {
+          return false;
+        }
+      }
+      for (const bEnt of b['fields'] || []) {
+        if (!TD.eq(aSchema[bEnt.name], bEnt)) {
+          return false;
+        }
+      }
+      return true;
+    }
+    if (a.type !== b.type) {
+      return false;
+    }
+    if (a.type === 'array') {
+      if (a.elementTypeDef !== b['elementTypeDef']) {
+        return false;
+      }
+      if (a.elementTypeDef.type !== 'record_element') {
+        return true;
+      }
+      return checkFields(a, b);
+    } else if (a.type === 'record') {
+      return checkFields(a, b);
+    }
+    return true;
+  },
+  timestamp: (): TimestampTypeDef => ({type: 'timestamp'}),
+  date: (): DateTypeDef => ({type: 'date'}),
+  string: (): StringTypeDef => ({type: 'string'}),
+  number: (): NumberTypeDef => ({type: 'number', numberType: 'float'}),
+  error: (): ErrorTypeDef => ({type: 'error'}),
+};
 
 // clang-format on
