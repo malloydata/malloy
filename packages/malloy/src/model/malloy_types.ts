@@ -1459,8 +1459,8 @@ export const TD = {
     if (a.type !== b.type) {
       return false;
     }
-    if (a.type === 'array') {
-      if (a.elementTypeDef !== b['elementTypeDef']) {
+    if (a.type === 'array' && b.type === 'array') {
+      if (a.elementTypeDef.type !== b.elementTypeDef.type) {
         return false;
       }
       if (a.elementTypeDef.type !== 'record_element') {
