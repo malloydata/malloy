@@ -492,7 +492,7 @@ ${indent(sql)}
       if (!timestampMeasureable(measureIn)) {
         throw new Error(`Measure in '${measureIn} not implemented`);
       }
-      if (from.typeDef !== to.typeDef) {
+      if (!TD.eq(from.typeDef, to.typeDef)) {
         throw new Error("Can't measure difference between different types");
       }
       if (TD.isDate(from.typeDef)) {
