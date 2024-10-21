@@ -357,13 +357,13 @@ ${indent(sql)}
 
     const tz = qtz(qi);
     // casting timestamps and dates
-    if (op === 'date::timestamp') {
+    if (op === 'timestamp::date') {
       let castExpr = src;
       if (tz) {
         castExpr = `CONVERT_TIMEZONE('${tz}', ${castExpr})`;
       }
       return `TO_DATE(${castExpr})`;
-    } else if (op === 'timestamp::date') {
+    } else if (op === 'date::timestamp') {
       const retExpr = `TO_TIMESTAMP(${src})`;
       return this.atTz(retExpr, tz);
     }
