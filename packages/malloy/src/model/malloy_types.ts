@@ -229,21 +229,32 @@ interface HasTimeValue {
   typeDef: TemporalTypeDef;
 }
 type TimeExpr = Expr & HasTimeValue;
-export function canMakeTemporal(e: Expr): e is Exclude<Expr, ArrayLiteralNode> {
-  return e.node !== 'arrayLiteral';
+/**
+ * Return true if this node can be turned into a temporal node by simply
+ * appending a time type to the typedef. The type systsem makes this hard
+ * because while it is theoretically possible to pass an array typed Expr,
+ * the reality is that type checking will stop this from ever happening.
+ *
+ * The list here is the list of Expr types which have a fixed typeDef,
+ * which are not of time type.
+ *
+ * If !canMakeTemporal then mkTemporal is going to return something
+ * which will probably error at SQL generation time, so don't do that.
+ */
+function canMakeTemporal(
+  e: Expr
+): e is Exclude<Expr, ArrayLiteralNode | RecordLiteralNode> {
+  return e.node !== 'arrayLiteral' && e.node !== 'recordLiteral';
 }
 export function mkTemporal(
   e: Expr,
   timeType: TemporalTypeDef | TemporalFieldType
 ): TimeExpr {
   const ttd = typeof timeType === 'string' ? {type: timeType} : timeType;
-  const timeE = {...e, typeDef: {...ttd}};
-  if (timeE.node === 'arrayLiteral') {
-    throw new Error(
-      'Tried to turn an array literal into a temporal field type'
-    );
+  if (canMakeTemporal(e)) {
+    return {...e, typeDef: {...ttd}};
   }
-  return timeE;
+  return e as TimeExpr;
 }
 
 export interface MeasureTimeExpr extends ExprWithKids {
@@ -1458,9 +1469,11 @@ export const TD = {
       if (x.elementTypeDef.type !== y.elementTypeDef.type) {
         return false;
       }
-      if (x.elementTypeDef.type !== 'record_element') {
-        // "as" is ok because we know type-names are equal
-        return TD.eq(x.elementTypeDef, y.elementTypeDef as AtomicTypeDef);
+      if (
+        x.elementTypeDef.type !== 'record_element' && // Both are equal, but to make this
+        y.elementTypeDef.type !== 'record_element' //    typecheck, we need the && clause.
+      ) {
+        return TD.eq(x.elementTypeDef, y.elementTypeDef);
       }
       return checkFields(x, y);
     } else if (x.type === 'record' && y.type === 'record') {
