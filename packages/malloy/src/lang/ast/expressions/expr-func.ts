@@ -163,7 +163,6 @@ export class ExprFunc extends ExpressionDef {
             expressionType: footType.expressionType,
             value: {node: 'field', path: this.source.path},
             evalSpace: footType.evalSpace,
-            joinUsage: [lookup.joinPath],
           };
           structPath = this.source.path.slice(0, -1);
         } else {
@@ -424,7 +423,6 @@ export class ExprFunc extends ExpressionDef {
         : expressionIsScalar(expressionType)
         ? maxEvalSpace
         : 'output';
-    const joinUsage = argExprs.flatMap(e => e.joinUsage);
     // TODO consider if I can use `computedExprValue` here...
     // seems like the rules for the evalSpace is a bit different from normal though
     return {
@@ -432,7 +430,6 @@ export class ExprFunc extends ExpressionDef {
       expressionType,
       value: funcCall,
       evalSpace,
-      joinUsage,
     };
   }
 }

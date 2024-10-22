@@ -22,11 +22,9 @@
  */
 
 import {Expr, TypeDesc} from '../../../model/malloy_types';
-import {JoinPath} from './lookup-result';
 
 type MorphicValues = Record<string, Expr>;
 export interface ExprResult extends TypeDesc {
   value: Expr;
   morphic?: MorphicValues;
-  joinUsage: JoinPath[];
 }

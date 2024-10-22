@@ -96,7 +96,6 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
                   ? {node: 'outputField', name: this.source.refString}
                   : {node: 'field', path: this.source.path},
               evalSpace: footType.evalSpace,
-              joinUsage: [result.joinPath],
             };
             structPath = this.source.path;
             // Here we handle a special case where you write `foo.agg()` and `foo` is a
@@ -188,8 +187,6 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
         expressionType: 'aggregate',
         value: f,
         evalSpace: 'output',
-        // TODO the join usage doesn't matter since you cannot reaggregate aggregates
-        joinUsage: [],
       };
     }
     return errorFor('aggregate type check');

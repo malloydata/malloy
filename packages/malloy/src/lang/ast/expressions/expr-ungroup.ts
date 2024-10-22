@@ -104,8 +104,6 @@ export class ExprUngroup extends ExpressionDef {
         expressionType: 'ungrouped_aggregate',
         value: ungroup,
         evalSpace: 'output',
-        // TODO unsure?
-        joinUsage: exprVal.joinUsage,
       };
     }
     return this.loggedErrorExpr(

@@ -51,7 +51,6 @@ export function computedExprValue({
     rawType,
     expressionType: maxOfExpressionTypes(from.map(e => e.expressionType)),
     evalSpace: mergeEvalSpaces(...from.map(e => e.evalSpace)),
-    joinUsage: from.flatMap(e => e.joinUsage),
   };
 }
 
@@ -97,4 +96,22 @@ export function literalExprValue(options: {
 }): ExprValue {
   // Makes literal, output, scalar because from is empty
   return computedExprValue({...options, from: []});
+}
+
+export function literalTimeResult({
+  value,
+  dataType,
+  rawType,
+  timeframe,
+}: {
+  value: Expr;
+  rawType?: string;
+  dataType: TemporalFieldType;
+  timeframe?: TimestampUnit;
+}): TimeResult {
+  return {
+    ...computedExprValue({value, dataType, rawType, from: []}),
+    dataType,
+    timeframe,
+  };
 }
