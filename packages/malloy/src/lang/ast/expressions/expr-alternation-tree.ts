@@ -86,24 +86,15 @@ export class ExprAlternationTree extends ExpressionDef {
       if (inList.length > 0 && (applyOp === '=' || applyOp === '!=')) {
         const isIn = expr.getExpression(fs);
         const values = inList.map(v => v.getExpression(fs));
-        let {evalSpace, expressionType} = isIn;
-        for (const value of values) {
-          evalSpace = mergeEvalSpaces(evalSpace, value.evalSpace);
-          expressionType = maxExpressionType(
-            expressionType,
-            value.expressionType
-          );
-        }
-        return {
+        return computedExprValue({
           dataType: 'boolean',
-          evalSpace,
-          expressionType,
           value: {
             node: 'in',
             not: applyOp === '!=',
             kids: {e: isIn.value, oneOf: values.map(v => v.value)},
           },
-        };
+          from: [isIn, ...values],
+        });
       }
       if (inList.length === 0 && warnOnComplexTree) {
         this.logWarning(
