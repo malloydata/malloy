@@ -1964,12 +1964,26 @@ export class MalloyToAST
   }
 
   visitExprLiteralRecord(pcx: parse.ExprLiteralRecordContext) {
+    this.contextError(
+      pcx,
+      'not-yet-implemented',
+      'Record data is not yet implemented'
+    );
     const els = this.only<ast.RecordElement>(
       pcx.recordElement().map(elCx => this.astAt(this.visit(elCx), elCx)),
       visited => visited instanceof ast.RecordElement && visited,
       'a key value pair'
     );
     return new ast.RecordLiteral(els);
+  }
+
+  visitExprArrayLiteral(pcx: parse.ExprArrayLiteralContext): ast.Unimplemented {
+    this.contextError(
+      pcx,
+      'not-yet-implemented',
+      'Array data is not yet implemented'
+    );
+    return new ast.Unimplemented();
   }
 
   visitExprWarnLike(pcx: parse.ExprWarnLikeContext): ast.ExprCompare {
