@@ -70,7 +70,8 @@ export function opOutputStruct(
       logTo.logError(
         'failed-to-compute-output-schema',
         `INTERNAL ERROR model/Segment.nextStructDef: ${e.message}\n` +
-          `QUERY: ${inspect(opDesc, {breakLength: 72, depth: Infinity})}`
+          `QUERY: ${inspect(opDesc, {breakLength: 72, depth: Infinity})}\n` +
+          `STACK: ${e.stack}`
       );
     }
   }

@@ -241,13 +241,14 @@ sourceArgument
   ;
 
 sqExpr
-  : id sourceArguments?                       # SQID
-  | OPAREN sqExpr CPAREN                      # SQParens
-  | sqExpr PLUS segExpr                       # SQRefinedQuery
-  | sqExpr ARROW segExpr                      # SQArrow
-  | sqExpr EXTEND exploreProperties           # SQExtendedSource
-  | exploreTable                              # SQTable
-  | sqlSource                                 # SQSQL
+  : id sourceArguments?                             # SQID
+  | OPAREN sqExpr CPAREN                            # SQParens
+  | CUBE OPAREN (sqExpr (COMMA sqExpr)*)? CPAREN    # SQCube
+  | sqExpr PLUS segExpr                             # SQRefinedQuery
+  | sqExpr ARROW segExpr                            # SQArrow
+  | sqExpr EXTEND exploreProperties                 # SQExtendedSource
+  | exploreTable                                    # SQTable
+  | sqlSource                                       # SQSQL
   ;
 
 segExpr

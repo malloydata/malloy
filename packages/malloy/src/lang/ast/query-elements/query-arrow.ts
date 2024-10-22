@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Query, StructDef, refIsStructDef} from '../../../model/malloy_types';
+import {Query, StructDef, StructRef, isSourceDef, refIsStructDef} from '../../../model/malloy_types';
 import {Source} from '../source-elements/source';
 import {StaticSpace} from '../field-space/static-space';
 import {FieldSpace} from '../types/field-space';
@@ -45,6 +45,29 @@ export class QueryArrow extends QueryBase implements QueryElement {
     super({source, view});
   }
 
+  private resolveSourceRef(sourceRef: StructRef): StructDef {
+    if (refIsStructDef(sourceRef)) return sourceRef;
+    const entry = this.modelEntry(sourceRef); // TODO what about parameters?
+    if (entry === undefined) {
+      throw new Error(`Could not find source ${sourceRef}`);
+    }
+    if (isSourceDef(entry.entry)) {
+      return entry.entry;
+    }
+    throw new Error(`Not a source: ${sourceRef}`);
+  }
+
+  private resolveCubeSource(sources: StructRef[]): StructRef {
+    const pickedRef = sources[0]; // TODO actually pick the right one
+    const pickedDef = refIsStructDef(pickedRef)
+      ? pickedRef
+      : this.resolveSourceRef(pickedRef);
+    if (pickedDef.type === 'cube') {
+      return this.resolveCubeSource(pickedDef.sources);
+    }
+    return pickedRef;
+  }
+
   queryComp(isRefOk: boolean): QueryComp {
     let inputStruct: StructDef;
     let queryBase: Query;
@@ -65,6 +88,15 @@ export class QueryArrow extends QueryBase implements QueryElement {
         ? invoked.structRef
         : this.source.getSourceDef(undefined);
       fieldSpace = new StaticSpace(inputStruct);
+      // TODO this is for demo purposes only...
+      if (inputStruct.type === 'cube') {
+        const structRef = this.resolveCubeSource(inputStruct.sources);
+        queryBase = {
+          ...queryBase,
+          structRef,
+        };
+        // fieldSpace = new StaticSpace(this.resolveSourceRef(structRef));
+      }
     } else {
       // We are adding a second stage to the given "source" query; we get the query and add a segment
       const lhsQuery = this.source.queryComp(isRefOk);
@@ -74,6 +106,7 @@ export class QueryArrow extends QueryBase implements QueryElement {
     }
     const {pipeline, annotation, outputStruct, name} =
       this.view.pipelineComp(fieldSpace);
+
     return {
       query: {
         ...queryBase,

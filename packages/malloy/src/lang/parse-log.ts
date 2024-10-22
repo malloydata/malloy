@@ -191,6 +191,11 @@ type MessageParameterTypes = {
   'field-list-edit-not-found': string;
   'unexpected-element-type': string;
   'field-not-found': string;
+  'invalid-cube-input': string;
+  'empty-cube-source': string;
+  'unnecessary-cube-source': string;
+  'cube-source-atomic-only': string;
+  'cube-source-connection-mismatch': string;
   'invalid-property-access-in-field-reference': string;
   'parameter-default-does-not-match-declared-type': string;
   'parameter-null-default-without-declared-type': string;

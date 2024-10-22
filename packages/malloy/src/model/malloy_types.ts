@@ -829,6 +829,7 @@ export function isByExpression(by: By | undefined): by is ByExpression {
 }
 
 /** reference to a data source */
+// TODO this should be renamed to `SourceRef`
 export type StructRef = string | SourceDef;
 export function refIsStructDef(ref: StructRef): ref is SourceDef {
   return typeof ref !== 'string';
@@ -999,6 +1000,11 @@ export interface TableSourceDef extends SourceDefBase {
   tablePath: string;
 }
 
+export interface CubeSourceDef extends SourceDefBase {
+  type: 'cube';
+  sources: StructRef[];
+}
+
 /*
  * Malloy has a kind of "strings" which is a list of segments. Each segment
  * is either a string, or a query, which is meant to be replaced
@@ -1063,7 +1069,8 @@ export function isSourceDef(sd: NamedModelObject | FieldDef): sd is SourceDef {
     sd.type === 'query_source' ||
     sd.type === 'query_result' ||
     sd.type === 'finalize' ||
-    sd.type === 'nest_source'
+    sd.type === 'nest_source' ||
+    sd.type === 'cube'
   );
 }
 
@@ -1073,7 +1080,8 @@ export type SourceDef =
   | QuerySourceDef
   | QueryResultDef
   | FinalizeSourceDef
-  | NestSourceDef;
+  | NestSourceDef
+  | CubeSourceDef;
 
 /** Is this the "FROM" table of a query tree */
 export function isBaseTable(def: StructDef): def is SourceDef {
