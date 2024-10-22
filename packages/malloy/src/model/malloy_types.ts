@@ -76,13 +76,13 @@ export type Expr =
   | ParameterNode
   | NowNode
   | MeasureTimeExpr
+  | TimeExtractExpr
   | TimeDeltaExpr
   | TimeTruncExpr
-  | TimeExtractExpr
+  | TimeLiteralNode
   | TypecastExpr
   | RegexMatchExpr
   | RegexLiteralNode
-  | TimeLiteralNode
   | StringLiteralNode
   | NumberLiteralNode
   | BooleanLiteralNode
@@ -229,11 +229,9 @@ interface HasTimeValue {
   typeDef: TemporalTypeDef;
 }
 type TimeExpr = Expr & HasTimeValue;
-/**
- * mtoy TODO add discriminator in the typecheck code to avoid this
- * should just be able to say {...expr, type} because we know that
- * expr is already a time type ...
- */
+export function canMakeTemporal(e: Expr): e is Exclude<Expr, ArrayLiteralNode> {
+  return e.node !== 'arrayLiteral';
+}
 export function mkTemporal(
   e: Expr,
   timeType: TemporalTypeDef | TemporalFieldType
@@ -1436,8 +1434,8 @@ export const TD = {
     td !== undefined && td.type === 'timestamp',
   isError: (td: UTD): td is ErrorTypeDef =>
     td !== undefined && td.type === 'error',
-  eq: function (a: UTD, b: UTD): boolean {
-    if (a === undefined || b === undefined) {
+  eq: function (x: UTD, y: UTD): boolean {
+    if (x === undefined || y === undefined) {
       return false;
     }
     function checkFields(a: AtomicTypeDef, b: AtomicTypeDef): boolean {
@@ -1456,21 +1454,19 @@ export const TD = {
       }
       return true;
     }
-    if (a.type !== b.type) {
-      return false;
-    }
-    if (a.type === 'array' && b.type === 'array') {
-      if (a.elementTypeDef.type !== b.elementTypeDef.type) {
+    if (x.type === 'array' && y.type === 'array') {
+      if (x.elementTypeDef.type !== y.elementTypeDef.type) {
         return false;
       }
-      if (a.elementTypeDef.type !== 'record_element') {
-        return true;
+      if (x.elementTypeDef.type !== 'record_element') {
+        // "as" is ok because we know type-names are equal
+        return TD.eq(x.elementTypeDef, y.elementTypeDef as AtomicTypeDef);
       }
-      return checkFields(a, b);
-    } else if (a.type === 'record') {
-      return checkFields(a, b);
+      return checkFields(x, y);
+    } else if (x.type === 'record' && y.type === 'record') {
+      return checkFields(x, y);
     }
-    return true;
+    return x.type === y.type;
   },
   timestamp: (): TimestampTypeDef => ({type: 'timestamp'}),
   date: (): DateTypeDef => ({type: 'date'}),
