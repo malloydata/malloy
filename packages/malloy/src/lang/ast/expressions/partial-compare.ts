@@ -23,7 +23,7 @@
 
 import {CompareMalloyOperator} from '../types/binary_operators';
 import {ExprValue} from '../types/expr-value';
-import {ExpressionDef} from '../types/expression-def';
+import {ATNodeType, ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 
 export class PartialCompare extends ExpressionDef {
@@ -52,5 +52,9 @@ export class PartialCompare extends ExpressionDef {
       'partial-as-value',
       'Partial comparison does not have a value'
     );
+  }
+
+  atNodeType(): ATNodeType {
+    return ATNodeType.Partial;
   }
 }

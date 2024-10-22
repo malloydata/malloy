@@ -37,8 +37,7 @@ import {
   TableSourceDef,
   SQLSourceDef,
   AtomicTypeDef,
-  JoinedArrayDef,
-  JoinedArrayTypeDef,
+  ArrayDef,
   RepeatedRecordTypeDef,
   RecordTypeDef,
   arrayEachFields,
@@ -237,13 +236,7 @@ export abstract class TrinoPrestoConnection
       } else if (isRepeatedRecord(field)) {
         retRow[field.name] = this.convertNest(field, row[i]);
       } else if (field.type === 'array') {
-        const newArray: JoinedArrayTypeDef = {
-          fields: [],
-          dialect: '',
-          ...field,
-          join: 'many',
-        };
-        retRow[field.name] = this.convertNest(newArray, row[i]);
+        retRow[field.name] = this.convertNest(field, row[i]);
       } else {
         retRow[field.name] = row[i] ?? null;
       }
@@ -290,15 +283,8 @@ export abstract class TrinoPrestoConnection
         if (schemaColumn.type === 'record') {
           malloyRow[column.name] = this.convertRow(schemaColumn, row[i]);
         } else if (schemaColumn.type === 'array') {
-          const newArray: JoinedArrayTypeDef = {
-            name: '',
-            fields: [],
-            dialect: '',
-            ...schemaColumn,
-            join: 'many',
-          };
           malloyRow[column.name] = this.convertNest(
-            newArray,
+            schemaColumn,
             row[i]
           ) as QueryValue;
         } else if (
@@ -423,7 +409,7 @@ export abstract class TrinoPrestoConnection
         };
         return complexStruct;
       } else {
-        const arrayStruct: JoinedArrayDef = {
+        const arrayStruct: ArrayDef = {
           type: 'array',
           name,
           elementTypeDef: innerType,

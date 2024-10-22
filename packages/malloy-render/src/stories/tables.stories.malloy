@@ -1,11 +1,13 @@
 source: products is duckdb.table("data/products.parquet") extend {
 
-  view: records is{
+  #(story)
+  view: products_table is{
     select: *
     limit: 1000
     order_by: id
   }
 
+  #(story)
   view: long_column is {
     select:
       brand,
@@ -19,6 +21,7 @@ source: products is duckdb.table("data/products.parquet") extend {
     aggregate: avg_retail is retail_price.avg()
   }
 
+  #(story)
   view: simple_nested is {
     group_by: category
     aggregate: avg_retail is retail_price.avg()
@@ -48,6 +51,7 @@ source: products is duckdb.table("data/products.parquet") extend {
       }
   }
 
+  #(story)
   view: nested is {
     group_by: category
     aggregate: avg_retail is retail_price.avg()
@@ -87,6 +91,7 @@ source: products is duckdb.table("data/products.parquet") extend {
       }
   }
 
+  #(story)
   view: nested_2 is {
     group_by: category
     aggregate: avg_retail is retail_price.avg()
@@ -103,6 +108,7 @@ source: products is duckdb.table("data/products.parquet") extend {
       }
   }
 
+  #(story)
   view: number_formats is {
     group_by: category
     aggregate:
@@ -118,6 +124,7 @@ source: products is duckdb.table("data/products.parquet") extend {
       avg_retail_duration_terse is round(retail_price.avg())
   }
 
+  #(story)
   # transpose
   view: date_and_time is {
     group_by:
@@ -140,4 +147,7 @@ source: products is duckdb.table("data/products.parquet") extend {
   }
 }
 
-source: null_test is duckdb.sql("select unnest([1,null,3]) as i") extend {}
+source: null_test is duckdb.sql("select unnest([1,null,3]) as i") extend {
+  #(story)
+  view: null_field is {select: *}
+}

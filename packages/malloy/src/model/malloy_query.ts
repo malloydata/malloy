@@ -79,7 +79,6 @@ import {
   SpreadExpr,
   FilteredExpr,
   SourceDef,
-  modelObjIsSource,
   isSourceDef,
   fieldIsIntrinsic,
   AtomicFieldDef,
@@ -1305,6 +1304,10 @@ class QueryField extends QueryNode {
         return `COALESCE(${expr.kids.left.sql},${expr.kids.right.sql})`;
       case 'like':
         return `${expr.kids.left.sql} LIKE ${expr.kids.right.sql}`;
+      case 'in': {
+        const oneOf = expr.kids.oneOf.map(o => o.sql).join(',');
+        return `${expr.kids.e.sql} ${expr.not ? 'NOT IN' : 'IN'} (${oneOf})`;
+      }
       // Malloy inequality comparisons always return a boolean
       case '!like': {
         const notLike = `${expr.kids.left.sql} NOT LIKE ${expr.kids.right.sql}`;
@@ -2599,8 +2602,22 @@ class QueryQuery extends QueryField {
       this.expandFields(this.rootResult);
       this.rootResult.addStructToJoin(this.parent, this, undefined, []);
       this.rootResult.findJoins(this);
+      this.addAlwaysJoins(this.rootResult);
       this.rootResult.calculateSymmetricAggregates();
       this.prepared = true;
+    }
+  }
+
+  addAlwaysJoins(rootResult: FieldInstanceResultRoot) {
+    const stage = this.fieldDef.pipeline[0];
+    if (stage.type !== 'raw') {
+      const alwaysJoins = stage.alwaysJoins ?? [];
+      for (const joinName of alwaysJoins) {
+        const qs = this.parent.getChildByName(joinName);
+        if (qs instanceof QueryStruct) {
+          rootResult.addStructToJoin(qs, this, undefined, []);
+        }
+      }
     }
   }
 
@@ -4688,7 +4705,7 @@ export class QueryModel {
     this.modelDef = modelDef;
     for (const s of Object.values(this.modelDef.contents)) {
       let qs;
-      if (modelObjIsSource(s)) {
+      if (isSourceDef(s)) {
         qs = new QueryStruct(s, undefined, {model: this}, {});
         this.structs.set(getIdentifier(s), qs);
         qs.resolveQueryFields();

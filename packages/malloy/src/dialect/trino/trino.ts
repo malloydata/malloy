@@ -35,7 +35,7 @@ import {
   MeasureTimeExpr,
   TimeLiteralNode,
   TimeExtractExpr,
-  LeafAtomicDef,
+  LeafAtomicTypeDef,
 } from '../../model/malloy_types';
 import {
   DialectFunctionOverloadDef,
@@ -84,7 +84,7 @@ const trinoTypeMap = {
   'number': 'DOUBLE',
 };
 
-const trinoToMalloyTypes: {[key: string]: LeafAtomicDef} = {
+const trinoToMalloyTypes: {[key: string]: LeafAtomicTypeDef} = {
   'varchar': {type: 'string'},
   'integer': {type: 'number', numberType: 'integer'},
   'bigint': {type: 'number', numberType: 'integer'},
@@ -556,7 +556,7 @@ ${indent(sql)}
     return malloyType.type;
   }
 
-  sqlTypeToMalloyType(sqlType: string): LeafAtomicDef {
+  sqlTypeToMalloyType(sqlType: string): LeafAtomicTypeDef {
     const baseSqlType = sqlType.match(/^(\w+)/)?.at(0) ?? sqlType;
     return (
       trinoToMalloyTypes[baseSqlType] ?? {

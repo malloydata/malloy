@@ -6,7 +6,7 @@
   "version": "2.0.0",
   "configurations": [
     {
-      "name": "Malloy Expression in /tmp/malloyExpr",
+      "name": "fieldExpr@/tmp/malloyExpr",
       "type": "antlr-debug",
       "request": "launch",
       "input": "/tmp/malloyExpr",
@@ -16,7 +16,17 @@
       "visualParseTree": true
     },
     {
-      "name": "Malloy Model in /tmp/malloyModel",
+      "name": "partialAllowedFieldExpr@/tmp/malloyExpr",
+      "type": "antlr-debug",
+      "request": "launch",
+      "input": "/tmp/malloyExpr",
+      "grammar": "packages/malloy/src/lang/grammar/MalloyParser.g4",
+      "startRule": "partialAllowedFieldExpr",
+      "printParseTree": true,
+      "visualParseTree": true
+    },
+    {
+      "name": "Malloy Model@/tmp/malloyModel",
       "type": "antlr-debug",
       "request": "launch",
       "input": "/tmp/malloyModel",

@@ -36,7 +36,7 @@ import {
   DocumentReference,
   ImportLocation,
   ModelDef,
-  modelObjIsSource,
+  isSourceDef,
   NamedModelObject,
   Query,
   SourceDef,
@@ -859,7 +859,7 @@ export abstract class MalloyTranslation {
       if (did.translated) {
         for (const fromChild of child.modelDef.exports) {
           const modelEntry = child.modelDef.contents[fromChild];
-          if (modelObjIsSource(modelEntry) || modelEntry.type === 'query') {
+          if (isSourceDef(modelEntry) || modelEntry.type === 'query') {
             exports[fromChild] = modelEntry;
           }
         }

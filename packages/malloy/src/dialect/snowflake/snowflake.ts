@@ -35,7 +35,7 @@ import {
   TimeLiteralNode,
   MeasureTimeExpr,
   RegexMatchExpr,
-  LeafAtomicDef,
+  LeafAtomicTypeDef,
 } from '../../model/malloy_types';
 import {
   DialectFunctionOverloadDef,
@@ -51,7 +51,7 @@ const extractionMap: Record<string, string> = {
   'day_of_year': 'dayofyear',
 };
 
-const snowflakeToMalloyTypes: {[key: string]: LeafAtomicDef} = {
+const snowflakeToMalloyTypes: {[key: string]: LeafAtomicTypeDef} = {
   // string
   'varchar': {type: 'string'},
   'text': {type: 'string'},
@@ -468,7 +468,7 @@ ${indent(sql)}
     return malloyType.type;
   }
 
-  sqlTypeToMalloyType(sqlType: string): LeafAtomicDef {
+  sqlTypeToMalloyType(sqlType: string): LeafAtomicTypeDef {
     // Remove trailing params
     const baseSqlType = sqlType.match(/^([\w\s]+)/)?.at(0) ?? sqlType;
     return (

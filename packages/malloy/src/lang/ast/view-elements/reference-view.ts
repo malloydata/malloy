@@ -24,7 +24,7 @@
 import {
   PipeSegment,
   SourceDef,
-  isAtomicFieldType,
+  isAtomic,
   isTurtleDef,
   sourceBase,
 } from '../../../model/malloy_types';
@@ -89,7 +89,7 @@ export class ReferenceView extends View {
     if (fieldDef === undefined) {
       throw new Error('Expected field to have definition');
     }
-    if (isAtomicFieldType(fieldDef.type)) {
+    if (isAtomic(fieldDef)) {
       const newSegment: PipeSegment = {
         type: 'reduce',
         queryFields: [this.reference.refToField],

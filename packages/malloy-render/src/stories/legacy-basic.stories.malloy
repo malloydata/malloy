@@ -1,16 +1,23 @@
+## renderer_legacy
+
+##(story) component=Table
+
 source: products is duckdb.table("data/products.parquet") extend {
 
-  view: records is {
+  #(story)
+  view: flat_table is {
     select: *
-    limit: 1000
+    limit: 100
   }
 
+  #(story)
   # bar_chart
-  view: category_bar is {
+  view: bar_chart is {
     group_by: category
     aggregate: avg_retail is retail_price.avg()
   }
 
+  #(story) story="Flatten Nested Measures"
   view: flatten is {
     group_by: category
     aggregate: avg_retail is retail_price.avg()
@@ -53,6 +60,7 @@ source: products is duckdb.table("data/products.parquet") extend {
       }
   }
 
+  #(story)
   view: formats is {
     group_by:
       `Test number` is "0.0123730499"
@@ -69,7 +77,8 @@ source: products is duckdb.table("data/products.parquet") extend {
 };
 
 source: uuid is duckdb.sql("SELECT 'Sample Text' AS text_column, 42 AS number_column, '123e4567-e89b-12d3-a456-426614174000'::UUID AS uuid_column, {'name': 'foo'} AS user") extend {
-  view: details is {
+  #(story)
+  view: unsupported_field is {
     group_by: id is uuid_column,
     name is user.name,
   }

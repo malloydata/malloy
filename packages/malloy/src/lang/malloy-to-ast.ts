@@ -594,13 +594,7 @@ export class MalloyToAST
   visitQueryJoinStatement(
     pcx: parse.QueryJoinStatementContext
   ): ast.MalloyElement {
-    const result = this.astAt(this.visit(pcx.joinStatement()), pcx);
-    this.m4advisory(
-      pcx,
-      'join-statement-in-view',
-      'Joins in queries are deprecated, move into an `extend:` block.'
-    );
-    return result;
+    return this.astAt(this.visit(pcx.joinStatement()), pcx);
   }
 
   visitJoinOn(pcx: parse.JoinOnContext): ast.Join {
@@ -1321,7 +1315,7 @@ export class MalloyToAST
   }
 
   visitExprExpr(pcx: parse.ExprExprContext): ast.ExprParens {
-    return new ast.ExprParens(this.getFieldExpr(pcx.partialAllowedFieldExpr()));
+    return new ast.ExprParens(this.getFieldExpr(pcx.fieldExpr()));
   }
 
   visitExprMinus(pcx: parse.ExprMinusContext): ast.ExprMinus {
@@ -1346,12 +1340,12 @@ export class MalloyToAST
 
   visitExprCompare(pcx: parse.ExprCompareContext): ast.ExprCompare {
     const op = pcx.compareOp().text;
-    if (ast.isComparison(op)) {
-      return new ast.ExprCompare(
-        this.getFieldExpr(pcx.fieldExpr(0)),
-        op,
-        this.getFieldExpr(pcx.fieldExpr(1))
-      );
+    const left = this.getFieldExpr(pcx.fieldExpr(0));
+    const right = this.getFieldExpr(pcx.fieldExpr(1));
+    if (ast.isEquality(op)) {
+      return this.astAt(new ast.ExprEquality(left, op, right), pcx);
+    } else if (ast.isComparison(op)) {
+      return this.astAt(new ast.ExprCompare(left, op, right), pcx);
     }
     throw this.internalError(pcx, `untranslatable comparison operator '${op}'`);
   }
@@ -2034,5 +2028,28 @@ export class MalloyToAST
       new ast.ExprCompare(this.getFieldExpr(expr), op, nullExpr),
       pcx
     );
+  }
+
+  visitExprWarnIn(pcx: parse.ExprWarnInContext): ast.ExprLegacyIn {
+    const expr = this.getFieldExpr(pcx.fieldExpr());
+    const isNot = !!pcx.NOT();
+    const from = pcx.fieldExprList().fieldExpr();
+    const inStmt = this.astAt(
+      new ast.ExprLegacyIn(
+        expr,
+        isNot,
+        from.map(f => this.getFieldExpr(f))
+      ),
+      pcx
+    );
+    this.warnWithReplacement(
+      'sql-in',
+      `Use = (a|b|c) instead of${isNot ? ' NOT' : ''} IN (a,b,c)`,
+      this.parseInfo.rangeFromContext(pcx),
+      `${this.getSourceCode(pcx.fieldExpr())} ${isNot ? '!=' : '='} (${from
+        .map(f => this.getSourceCode(f))
+        .join(' | ')})`
+    );
+    return inStmt;
   }
 }

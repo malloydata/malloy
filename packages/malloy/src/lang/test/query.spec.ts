@@ -37,8 +37,8 @@ import {
   QuerySegment,
   expressionIsCalculation,
   isJoined,
-  isAtomicFieldType,
   isQuerySegment,
+  isAtomic,
 } from '../../model';
 
 function getFirstQuerySegment(q: Query | undefined): QuerySegment | undefined {
@@ -870,7 +870,7 @@ describe('query:', () => {
       expect('run:ab->{ select: b.astr }').toTranslate();
     });
     const afields = aTableDef.fields
-      .filter(f => isAtomicFieldType(f.type))
+      .filter(f => isAtomic(f))
       .map(f => f.name)
       .sort();
     test('expands star correctly', () => {
@@ -1225,19 +1225,14 @@ describe('query:', () => {
       });
       test('joins in query', () => {
         expect(
-          markSource`##! m4warnings=warn
-          run: a -> { ${'join_one: b on true'}; ${'join_many: c is b on true'}; ${'join_cross: d is b on true'}; group_by: b.astr }`
-        ).toLog(
-          warningMessage(
-            'Joins in queries are deprecated, move into an `extend:` block.'
-          ),
-          warningMessage(
-            'Joins in queries are deprecated, move into an `extend:` block.'
-          ),
-          warningMessage(
-            'Joins in queries are deprecated, move into an `extend:` block.'
-          )
-        );
+          markSource`
+          run: a -> {
+            join_one: b on true
+            join_many: c is b on true
+            join_cross: d is b on true
+            group_by: b.astr
+          }`
+        ).toTranslate();
       });
     });
     test('refine query with extended source', () => {

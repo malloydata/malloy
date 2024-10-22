@@ -50,6 +50,7 @@ import {MalloyElement} from '../types/malloy-element';
 export abstract class QuerySegmentBuilder implements QueryBuilder {
   order?: Top | Ordering;
   limit?: number;
+  alwaysJoins: string[] = [];
   abstract inputFS: QueryInputSpace;
   abstract resultFS: QueryOperationSpace;
   abstract readonly type: 'grouping' | 'project';
@@ -140,6 +141,10 @@ export abstract class QuerySegmentBuilder implements QueryBuilder {
       to.filterList = this.filters;
     } else if (oldFilters) {
       to.filterList = [...oldFilters, ...this.filters];
+    }
+
+    if (this.alwaysJoins.length > 0) {
+      to.alwaysJoins = [...this.alwaysJoins];
     }
   }
 }

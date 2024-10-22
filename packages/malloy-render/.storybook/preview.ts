@@ -3,7 +3,9 @@ import {Preview} from '@storybook/html';
 import registeredData from './registered_data.json';
 import theme from './theme';
 
+let memoConnection: DuckDBWASMConnection | null = null;
 async function createConnection() {
+  if (memoConnection) return memoConnection;
   const connection = new DuckDBWASMConnection('duckdb', null, undefined, {
     rowLimit: 1000,
   });
@@ -15,12 +17,15 @@ async function createConnection() {
       new window.URL(fullTableName, window.location.href).toString()
     );
   }
+  memoConnection = connection;
   return connection;
 }
 
 const preview: Preview = {
   parameters: {
-    actions: {argTypesRegex: '^on[A-Z].*'},
+    actions: {
+      // argTypesRegex: '^on[A-Z].*'
+    },
     controls: {
       matchers: {
         color: /(background|color)$/i,
@@ -31,8 +36,10 @@ const preview: Preview = {
       theme,
     },
   },
-  globals: {
-    connection: createConnection(),
+  initialGlobals: {
+    // Doing this with a lazy callback in the context because otherwise
+    // Storybook was providing an empty Promise on first render when trying to directly createConnection here
+    getConnection: () => createConnection(),
   },
 };
 

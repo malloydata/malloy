@@ -1,6 +1,10 @@
 import {join, dirname} from 'path';
 import {mergeConfig, InlineConfig} from 'vite';
 import {StorybookConfig} from '@storybook/html-vite';
+import {
+  malloyStoriesIndexer,
+  viteMalloyStoriesPlugin,
+} from './malloy-stories-indexer';
 
 /**
  * This function is used to resolve the absolute path of a package.
@@ -13,7 +17,12 @@ function getAbsolutePath(value) {
 const config: StorybookConfig = {
   'stories': [
     '../src/stories/*.mdx',
+    '../src/**/*.stories.malloy',
     '../src/**/*.stories.@(js|jsx|mjs|ts|tsx)',
+  ],
+  experimental_indexers: async existingIndexers => [
+    ...(existingIndexers ?? []),
+    malloyStoriesIndexer,
   ],
   staticDirs: ['../src/stories/static'],
   'addons': [
@@ -21,13 +30,15 @@ const config: StorybookConfig = {
     getAbsolutePath('@storybook/addon-essentials'),
     getAbsolutePath('@storybook/addon-interactions'),
   ],
+  core: {
+    builder: '@storybook/builder-vite',
+    disableTelemetry: true,
+  },
   'framework': {
     'name': '@storybook/html-vite',
     'options': {},
   },
-  'docs': {
-    'autodocs': 'tag',
-  },
+  'docs': {},
   async viteFinal(config, {configType}) {
     if (configType === 'DEVELOPMENT') {
       // Your development configuration goes here
@@ -54,6 +65,7 @@ const config: StorybookConfig = {
         'process.env': {},
       },
       assetsInclude: ['/sb-preview/runtime.js'],
+      plugins: [viteMalloyStoriesPlugin()],
     };
     const finalConfig = mergeConfig(config, configOverride);
     return finalConfig;

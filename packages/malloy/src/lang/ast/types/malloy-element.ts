@@ -32,7 +32,7 @@ import {
   Query,
   SQLSourceDef,
   StructDef,
-  modelObjIsSource,
+  isSourceDef,
 } from '../../../model/malloy_types';
 import {Tag} from '../../../tags';
 import {
@@ -146,7 +146,7 @@ export abstract class MalloyElement {
           definition: result.entry,
           location: reference.location,
         });
-      } else if (result && modelObjIsSource(result.entry)) {
+      } else if (result && isSourceDef(result.entry)) {
         this.addReference({
           type: 'exploreReference',
           text: key,
@@ -526,7 +526,7 @@ export class Document extends MalloyElement implements NameSpace {
       for (const [nm, orig] of Object.entries(extendingModelDef.contents)) {
         const entry = structuredClone(orig);
         if (
-          modelObjIsSource(entry) ||
+          isSourceDef(entry) ||
           entry.type === 'query' ||
           entry.type === 'function'
         ) {
@@ -594,7 +594,7 @@ export class Document extends MalloyElement implements NameSpace {
     }
     for (const entry in this.documentModel) {
       const entryDef = this.documentModel[entry].entry;
-      if (modelObjIsSource(entryDef) || entryDef.type === 'query') {
+      if (isSourceDef(entryDef) || entryDef.type === 'query') {
         if (this.documentModel[entry].exported) {
           def.exports.push(entry);
         }
@@ -636,7 +636,7 @@ export class Document extends MalloyElement implements NameSpace {
         `Cannot redefine '${str}', which is in global namespace`
       );
     }
-    if (modelObjIsSource(ent.entry)) {
+    if (isSourceDef(ent.entry)) {
       this.checkExperimentalDialect(this, ent.entry.dialect);
     }
 

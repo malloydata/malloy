@@ -257,6 +257,11 @@ function eToStr(e: Expr, symbols: ESymbols): string {
     }
     case 'regexpMatch':
       return `{${subExpr(e.kids.expr)} regex-match ${subExpr(e.kids.regex)}}`;
+    case 'in': {
+      return `{${subExpr(e.kids.e)} ${e.not ? 'not in' : 'in'} {${e.kids.oneOf
+        .map(o => `${subExpr(o)}`)
+        .join(',')}}}`;
+    }
   }
   if (exprHasKids(e) && e.kids['left'] && e.kids['right']) {
     return `{${subExpr(e.kids['left'])} ${e.node} ${subExpr(e.kids['right'])}}`;

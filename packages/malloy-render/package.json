@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/render",
-  "version": "0.0.198",
+  "version": "0.0.203",
   "license": "MIT",
   "main": "dist/module/index.umd.js",
   "types": "dist/index.d.ts",
@@ -32,7 +32,7 @@
     "build-types": "tsc --build --declaration --emitDeclarationOnly"
   },
   "dependencies": {
-    "@malloydata/malloy": "^0.0.198",
+    "@malloydata/malloy": "^0.0.203",
     "@tanstack/solid-virtual": "^3.10.4",
     "component-register": "^0.8.6",
     "lodash": "^4.17.20",
@@ -45,17 +45,20 @@
     "vega-lite": "^5.2.0"
   },
   "devDependencies": {
-    "@storybook/addon-essentials": "^7.5.0",
-    "@storybook/addon-interactions": "^7.5.0",
-    "@storybook/addon-links": "^7.5.0",
-    "@storybook/blocks": "^7.5.0",
-    "@storybook/html": "^7.5.0",
-    "@storybook/html-vite": "^7.5.0",
-    "@storybook/testing-library": "^0.2.2",
-    "@storybook/types": "^7.5.3",
+    "@storybook/addon-essentials": "^8.3.5",
+    "@storybook/addon-interactions": "^8.3.5",
+    "@storybook/addon-links": "^8.3.5",
+    "@storybook/blocks": "^8.3.5",
+    "@storybook/builder-vite": "^8.3.5",
+    "@storybook/html": "^8.3.5",
+    "@storybook/html-vite": "^8.3.5",
+    "@storybook/manager-api": "^8.3.5",
+    "@storybook/test": "^8.3.5",
+    "@storybook/theming": "^8.3.5",
+    "@storybook/types": "^8.3.5",
     "@types/luxon": "^2.4.0",
     "esbuild": "0.19.11",
-    "storybook": "^7.5.0",
+    "storybook": "^8.3.5",
     "vite": "^5.1.5",
     "vite-plugin-solid": "^2.10.1"
   }

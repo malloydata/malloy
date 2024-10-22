@@ -92,7 +92,7 @@ export type Expr =
   | GenericSQLExpr
   | NullNode
   | CaseExpr
-  | ArrayEachExpr
+  | InCompareExpr
   | ErrorNode;
 
 interface HasDataType {
@@ -330,8 +330,10 @@ export interface CaseExpr extends ExprWithKids {
   };
 }
 
-export interface ArrayEachExpr extends ExprLeaf {
-  node: 'arrayEach';
+export interface InCompareExpr extends ExprWithKids {
+  node: 'in';
+  not: boolean;
+  kids: {e: Expr; oneOf: Expr[]};
 }
 
 export type ExpressionType =
@@ -637,20 +639,12 @@ export interface NativeUnsupportedTypeDef {
 export type NativeUnsupportedFieldDef = NativeUnsupportedTypeDef &
   AtomicFieldDef;
 
-export interface ArrayTypeDef {
+export interface ArrayTypeDef extends JoinBase, StructDefBase {
   type: 'array';
   elementTypeDef: Exclude<AtomicTypeDef, RecordTypeDef> | RecordElementTypeDef;
-}
-export type ArrayFieldDef = ArrayTypeDef & AtomicFieldDef;
-
-export interface JoinedArrayTypeDef
-  extends ArrayTypeDef,
-    JoinBase,
-    StructDefBase {
-  type: 'array';
   join: 'many';
 }
-export type JoinedArrayDef = JoinedArrayTypeDef & AtomicFieldDef;
+export type ArrayDef = ArrayTypeDef & AtomicFieldDef;
 
 export function arrayEachFields(arrayOf: AtomicTypeDef): AtomicFieldDef[] {
   return [
@@ -681,7 +675,7 @@ export interface RecordElementTypeDef {
   type: 'record_element';
 }
 
-export interface RepeatedRecordTypeDef extends JoinedArrayTypeDef {
+export interface RepeatedRecordTypeDef extends ArrayDef {
   type: 'array';
   elementTypeDef: RecordElementTypeDef;
   join: 'many';
@@ -731,7 +725,7 @@ export type Joinable =
   | SQLSourceDef
   | QuerySourceDef
   | RecordFieldDef
-  | JoinedArrayDef;
+  | ArrayDef;
 export type JoinFieldDef = JoinBase & Joinable;
 export type JoinFieldTypes =
   | 'table'
@@ -962,6 +956,7 @@ export interface IndexSegment extends Filtered {
   limit?: number;
   weightMeasure?: string; // only allow the name of the field to use for weights
   sample?: Sampling;
+  alwaysJoins?: string[];
 }
 export function isIndexSegment(pe: PipeSegment): pe is IndexSegment {
   return (pe as IndexSegment).type === 'index';
@@ -975,6 +970,7 @@ export interface QuerySegment extends Filtered {
   by?: By;
   orderBy?: OrderBy[]; // uses output field name or index.
   queryTimezone?: string;
+  alwaysJoins?: string[];
 }
 
 export interface TurtleDef extends NamedObject, Pipeline {
@@ -1062,7 +1058,7 @@ export function sourceBase(sd: SourceDefBase): SourceDefBase {
   return {...sd};
 }
 
-export function isSourceDef(sd: StructDef | FieldDef): sd is SourceDef {
+export function isSourceDef(sd: NamedModelObject | FieldDef): sd is SourceDef {
   return (
     sd.type === 'table' ||
     sd.type === 'sql_select' ||
@@ -1096,7 +1092,7 @@ export function isScalarArray(def: FieldDef | StructDef) {
   return def.type === 'array' && def.elementTypeDef.type !== 'record_element';
 }
 
-export type StructDef = SourceDef | RecordFieldDef | JoinedArrayDef;
+export type StructDef = SourceDef | RecordFieldDef | ArrayDef;
 
 export type ExpressionValueType =
   | AtomicFieldType
@@ -1182,7 +1178,7 @@ export interface ConnectionDef extends NamedObject {
 }
 
 export type TemporalTypeDef = DateTypeDef | TimestampTypeDef;
-export type LeafAtomicDef =
+export type LeafAtomicTypeDef =
   | StringTypeDef
   | TemporalTypeDef
   | NumberTypeDef
@@ -1190,9 +1186,24 @@ export type LeafAtomicDef =
   | JSONTypeDef
   | NativeUnsupportedTypeDef
   | ErrorTypeDef;
-export type AtomicTypeDef = LeafAtomicDef | ArrayTypeDef | RecordTypeDef;
+export type AtomicTypeDef = LeafAtomicTypeDef | ArrayTypeDef | RecordTypeDef;
 
+export type LeafAtomicDef = LeafAtomicTypeDef & FieldAtomicBase;
 export type AtomicFieldDef = AtomicTypeDef & FieldAtomicBase;
+
+export function isLeafAtomic(
+  fd: FieldDef | QueryFieldDef
+): fd is LeafAtomicDef {
+  return (
+    fd.type === 'string' ||
+    isTemporalField(fd.type) ||
+    fd.type === 'number' ||
+    fd.type === 'boolean' ||
+    fd.type === 'json' ||
+    fd.type === 'sql native' ||
+    fd.type === 'error'
+  );
+}
 
 // Sources have fields like this ...
 export type FieldDef = AtomicFieldDef | JoinFieldDef | TurtleDef;
@@ -1219,10 +1230,6 @@ export type NamedModelObject =
   | NamedQuery
   | FunctionDef
   | ConnectionDef;
-
-export function modelObjIsSource(nmo: NamedModelObject): nmo is SourceDef {
-  return isSourceDef(nmo as StructDef);
-}
 
 /** Result of parsing a model file */
 export interface ModelDef {
