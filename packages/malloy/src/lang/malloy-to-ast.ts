@@ -1747,7 +1747,7 @@ export class MalloyToAST
     return importStmt;
   }
 
-  visitJustExpr(pcx: parse.JustExprContext): ast.ExpressionDef {
+  visitDebugExpr(pcx: parse.DebugExprContext): ast.ExpressionDef {
     return this.getFieldExpr(pcx.fieldExpr());
   }
 
@@ -1941,36 +1941,36 @@ export class MalloyToAST
     );
   }
 
-  // visitRecordRef(pcx: parse.RecordRefContext) {
-  //   const pathCx = pcx.fieldPath();
-  //   const tailEl = pathCx.fieldName().at(-1);
-  //   if (tailEl) {
-  //     const elementKey = getId(tailEl);
-  //     const idRef = new ast.ExprIdReference(
-  //       this.getFieldPath(pathCx, ast.ExpressionFieldReference)
-  //     );
-  //     return new ast.RecordElement(elementKey, idRef);
-  //   }
-  //   throw this.internalError(
-  //     pathCx,
-  //     'IMPOSSIBLY A PATH CONTAINED ZERO ELEMENTS'
-  //   );
-  // }
+  visitRecordRef(pcx: parse.RecordRefContext) {
+    const pathCx = pcx.fieldPath();
+    const tailEl = pathCx.fieldName().at(-1);
+    if (tailEl) {
+      const elementKey = getId(tailEl);
+      const idRef = new ast.ExprIdReference(
+        this.getFieldPath(pathCx, ast.ExpressionFieldReference)
+      );
+      return new ast.RecordElement(elementKey, idRef);
+    }
+    throw this.internalError(
+      pathCx,
+      'IMPOSSIBLY A PATH CONTAINED ZERO ELEMENTS'
+    );
+  }
 
-  // visitRecordExpr(pcx: parse.RecordExprContext) {
-  //   const elementKey = getId(pcx.recordKey());
-  //   const elementVal = this.getFieldExpr(pcx.fieldExpr());
-  //   return new ast.RecordElement(elementKey, elementVal);
-  // }
+  visitRecordExpr(pcx: parse.RecordExprContext) {
+    const elementKey = getId(pcx.recordKey());
+    const elementVal = this.getFieldExpr(pcx.fieldExpr());
+    return new ast.RecordElement(elementKey, elementVal);
+  }
 
-  // visitExprLiteralRecord(pcx: parse.ExprLiteralRecordContext) {
-  //   const els = this.only<ast.RecordElement>(
-  //     pcx.recordElement().map(elCx => this.astAt(this.visit(elCx), elCx)),
-  //     visited => visited instanceof ast.RecordElement && visited,
-  //     'a key value pair'
-  //   );
-  //   return new ast.RecordLiteral(els);
-  // }
+  visitExprLiteralRecord(pcx: parse.ExprLiteralRecordContext) {
+    const els = this.only<ast.RecordElement>(
+      pcx.recordElement().map(elCx => this.astAt(this.visit(elCx), elCx)),
+      visited => visited instanceof ast.RecordElement && visited,
+      'a key value pair'
+    );
+    return new ast.RecordLiteral(els);
+  }
 
   visitExprWarnLike(pcx: parse.ExprWarnLikeContext): ast.ExprCompare {
     let op: ast.CompareMalloyOperator = '~';

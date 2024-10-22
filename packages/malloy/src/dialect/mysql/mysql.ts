@@ -41,6 +41,7 @@ import {
   TimeExtractExpr,
   TypecastExpr,
   LeafAtomicTypeDef,
+  TD,
   AtomicTypeDef,
 } from '../../model/malloy_types';
 import {indent} from '../../model/utils';
@@ -351,7 +352,7 @@ export class MySQLDialect extends Dialect {
     if (trunc.units === 'week') {
       truncThis = `DATE_SUB(${truncThis}, INTERVAL DAYOFWEEK(${truncThis}) - 1 DAY)`;
     }
-    if (trunc.e.dataType === 'timestamp') {
+    if (TD.isTimestamp(trunc.e.typeDef)) {
       const tz = qtz(qi);
       if (tz) {
         const civilSource = `(CONVERT_TZ(${truncThis}, 'UTC','${tz}'))`;
@@ -394,7 +395,7 @@ export class MySQLDialect extends Dialect {
   sqlTimeExtractExpr(qi: QueryInfo, te: TimeExtractExpr): string {
     const msUnits = msExtractionMap[te.units] || te.units;
     let extractFrom = te.e.sql;
-    if (te.e.dataType === 'timestamp') {
+    if (TD.isTimestamp(te.e.typeDef)) {
       const tz = qtz(qi);
       if (tz) {
         extractFrom = `CONVERT_TZ(${extractFrom}, 'UTC', '${tz}')`;
@@ -418,28 +419,24 @@ export class MySQLDialect extends Dialect {
   }
 
   sqlCast(qi: QueryInfo, cast: TypecastExpr): string {
-    const op = `${cast.srcType}::${cast.dstType}`;
+    const srcSQL = cast.e.sql || 'internal-error-in-sql-generation';
+    const {op, srcTypeDef, dstTypeDef, dstSQLType} = this.sqlCastPrep(cast);
     const tz = qtz(qi);
     if (op === 'timestamp::date' && tz) {
-      return `CAST(CONVERT_TZ(${cast.e.sql}, 'UTC', '${tz}') AS DATE) `;
+      return `CAST(CONVERT_TZ(${srcSQL}, 'UTC', '${tz}') AS DATE) `;
     } else if (op === 'date::timestamp' && tz) {
-      return ` CONVERT_TZ(${cast.e.sql}, '${tz}', 'UTC')`;
+      return ` CONVERT_TZ(${srcSQL}, '${tz}', 'UTC')`;
     }
-    if (cast.srcType !== cast.dstType) {
-      const dstType =
-        typeof cast.dstType === 'string'
-          ? this.malloyTypeToSQLType({type: cast.dstType})
-          : cast.dstType.raw;
+    if (!TD.eq(srcTypeDef, dstTypeDef)) {
       if (cast.safe) {
         throw new Error("Mysql dialect doesn't support Safe Cast");
       }
-      if (cast.dstType === 'string') {
-        return `CONCAT(${cast.e.sql}, '')`;
+      if (TD.isString(dstTypeDef)) {
+        return `CONCAT(${srcSQL}, '')`;
       }
-      return `CAST(${cast.e.sql}  AS ${dstType})`;
+      return `CAST(${srcSQL} AS ${dstSQLType})`;
     }
-    // LTNOTE: I don't understand how this could be undefined.
-    return cast.e.sql || 'weirdly undefined';
+    return srcSQL;
   }
 
   sqlRegexpMatch(df: RegexMatchExpr): string {
@@ -447,7 +444,7 @@ export class MySQLDialect extends Dialect {
   }
 
   sqlLiteralTime(qi: QueryInfo, lt: TimeLiteralNode): string {
-    if (lt.dataType === 'date') {
+    if (TD.isDate(lt.typeDef)) {
       return `DATE '${lt.literal}'`;
     }
     const tz = lt.timezone || qtz(qi);

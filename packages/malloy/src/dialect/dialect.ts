@@ -35,6 +35,8 @@ import {
   RecordLiteralNode,
   ArrayLiteralNode,
   LeafAtomicTypeDef,
+  isRawCast,
+  isLeafAtomic,
 } from '../model/malloy_types';
 import {DialectFunctionOverloadDef} from './functions';
 
@@ -406,4 +408,36 @@ export abstract class Dialect {
   abstract malloyTypeToSQLType(malloyType: AtomicTypeDef): string;
 
   abstract validateTypeName(sqlType: string): boolean;
+
+  /**
+   * Helper function for sql cast implementations. Handles the
+   * wrangling of the raw type and also inferring the source
+   * type if it was not provided.
+   */
+  sqlCastPrep(cast: TypecastExpr): {
+    op: string;
+    srcTypeDef: LeafAtomicTypeDef | undefined;
+    dstTypeDef: LeafAtomicTypeDef | undefined;
+    dstSQLType: string;
+  } {
+    let srcTypeDef = cast.srcType || cast.e.typeDef;
+    const src = srcTypeDef?.type || 'unknown';
+    if (srcTypeDef && !isLeafAtomic(srcTypeDef)) {
+      srcTypeDef = undefined;
+    }
+    if (isRawCast(cast)) {
+      return {
+        op: `${src}::'${cast.dstSQLType}'`,
+        srcTypeDef,
+        dstTypeDef: undefined,
+        dstSQLType: cast.dstSQLType,
+      };
+    }
+    return {
+      op: `${src}::${cast.dstType.type}`,
+      srcTypeDef,
+      dstTypeDef: cast.dstType,
+      dstSQLType: this.malloyTypeToSQLType(cast.dstType),
+    };
+  }
 }
