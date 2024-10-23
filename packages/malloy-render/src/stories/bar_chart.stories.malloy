@@ -3,12 +3,106 @@ source: products is duckdb.table("data/products.parquet") extend {
   measure: avg_margin is avg(retail_price - cost)
   dimension: product is name
   dimension: dcId is distribution_center_id::number
+  measure:
+    `Sales $` is retail_price.sum()*500
+    `Cost $ really long label` is retail_price.sum()*300
+  dimension:
+    `sales_year` is year(@2001-02-03 + round(id/5000) year)
+
+  view: x is {
+    aggregate: c is count()
+  }
 
   # bar_chart
   view: topSellingBrands is {
     group_by: brand
-    aggregate: `Sales $` is retail_price.avg()*500
+    aggregate: `Sales $`
     limit: 10
+  }
+
+  # dashboard
+  view: interactions is {
+    nest:
+      # bar_chart
+      a is {
+        group_by: brand
+
+        # number="#,##0"
+        aggregate: `Sales $`
+
+        # tooltip bar_chart.size=xs
+        nest: `Top Products` is {
+          group_by: product
+          # currency
+          aggregate: `Sales $`
+          limit: 10
+        }
+
+        # tooltip
+        nest: `Top 3 Categories` is {
+          group_by: category
+          # currency
+          aggregate: `Sales $`
+          limit: 3
+        }
+        limit: 10
+        -- order_by: sales_year
+        -- # tooltip currency
+        -- aggregate: `Cost $ really long label`
+      }
+      # bar_chart
+      b is {
+        group_by: brand, department
+        aggregate: `Sales $`
+        limit: 10
+        -- order_by: sales_year
+      }
+      # bar_chart.stack
+      c is {
+        group_by: brand, department
+        # currency
+        aggregate: `Sales $`
+        # tooltip currency
+        aggregate: `Cost $ really long label`
+        # tooltip bar_chart.size=spark
+        nest: departments is {
+          group_by: product
+          # currency
+          aggregate: `Sales $`
+          limit: 10
+        }
+        limit: 10
+      }
+      # bar_chart
+      d is {
+        group_by: brand
+        aggregate:
+          # y
+          `Sales $`
+          # y
+          `Cost $ really long label`
+        # tooltip currency
+        aggregate: ct is count()
+        limit: 10
+      }
+      # bar_chart.stack
+      e is {
+        group_by: brand
+        aggregate:
+          # y
+          `Sales $`
+          # y
+          `Cost $ really long label`
+        limit: 10
+      }
+      # bar_chart
+      f is {
+        group_by: brand
+
+        # percent
+        aggregate: percent_of_sales is `Sales $` / all(`Sales $`)
+        limit: 10
+      }
   }
 
    # bar_chart
@@ -29,6 +123,139 @@ source: products is duckdb.table("data/products.parquet") extend {
     group_by: dcId
     aggregate: `Sales $` is retail_price.avg()
     order_by: dcId
+  }
+
+  view: category_bar is {
+    limit: 2
+    group_by: category
+    # currency
+    aggregate: `Avg Retail` is retail_price.avg()
+
+    nest:
+    `Top Departments` is {
+      group_by: department
+      # currency
+      aggregate: `Avg Retail` is retail_price.avg()
+      limit: 5
+    }
+    `Top Selling Brands` is topSellingBrands
+    `Top Products` is {
+      group_by: name
+      # currency
+      aggregate: `Sales` is retail_price.avg()
+      limit: 10
+    }
+    # size=spark
+    spark is topSellingBrands
+    # size=sm
+    sm is topSellingBrands
+    # size=md
+    md is topSellingBrands
+    # size=lg
+    lg is topSellingBrands
+    # size=xl
+    xl is topSellingBrands
+    # size=2xl
+    `2xl` is topSellingBrands
+  }
+
+  view: nested_test is {
+    group_by: category
+    aggregate: avg_retail is retail_price.avg()
+    nest:
+      # bar_chart size=lg
+      # size.height=220 size.width=300
+      nested_column_1 is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 10
+      }
+      # bar_chart size=lg
+      # size.height=220 size.width=300
+      nested_column_2 is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 10
+      }
+      nested_column_3 is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 10
+      }
+    limit: 2
+  }
+
+
+  view: nested is {
+    group_by: category
+    aggregate: avg_retail is retail_price.avg()
+    nest:
+      # bar_chart size=lg
+      # size.height=220 size.width=300
+      nested_column_1 is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 10
+      }
+      # bar_chart size=lg
+      # size.height=220 size.width=300
+      nested_column_2 is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 10
+      }
+      nested_column_3 is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 10
+      }
+      another_nested is {
+        group_by: department
+        aggregate: avg_retail is retail_price.avg()
+        # bar_chart
+        nest:
+          deeply_nested is {
+            group_by: `sku`
+            aggregate: total_cost is cost.sum()
+            limit: 3
+          }
+        limit: 5
+      }
+      record is {
+        nest: nested_record is {
+          group_by: id
+          aggregate: total_cost is cost.sum()
+          limit: 5
+        }
+      }
+      another_nested2 is {
+        group_by: department
+        aggregate: avg_retail is retail_price.avg()
+        nest: deeply_nested is {
+          group_by: `sku`
+          aggregate: total_cost is cost.sum()
+          limit: 3
+        }
+        limit: 5
+      }
+  }
+
+  view: nested_independent_axis is {
+    group_by: category
+    aggregate: avg_retail is retail_price.avg()
+    # bar_chart
+    nest: top_brands is {
+      group_by: brand
+      aggregate: avg_retail is retail_price.avg()
+      limit: 10
+    }
+    # bar_chart { y.independent }
+    nest: top_brands_independent is {
+      group_by: brand
+      aggregate: avg_retail is retail_price.avg()
+      limit: 10
+    }
+    limit: 5
   }
 
   # dashboard
@@ -230,6 +457,9 @@ source: products is duckdb.table("data/products.parquet") extend {
     # size=2xl
     `2xl` is topSellingBrands
   }
+
+  #(story)
+  view: interactions_sandbox is interactions;
 }
 
 run: products -> { group_by: distribution_center_id}
