@@ -52,6 +52,7 @@ function DashboardItem(props: {
         class="dashboard-item-value"
         classList={{
           'dashboard-item-value-measure': props.isMeasure,
+          'dashboard-item-value-table': rendering.renderAs === 'table',
         }}
       >
         {rendering.renderValue}
