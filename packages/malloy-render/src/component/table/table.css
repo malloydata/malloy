@@ -37,6 +37,10 @@
   );
 }
 
+.malloy-table.root.full-width {
+  width: 100%;
+}
+
 .malloy-table:not(.root) {
   grid-column: 1 / span var(--table-row-span);
 }
