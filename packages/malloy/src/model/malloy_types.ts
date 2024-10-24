@@ -93,6 +93,7 @@ export type Expr =
   | NullNode
   | CaseExpr
   | InCompareExpr
+  | CubeFieldExpr
   | ErrorNode;
 
 interface HasDataType {
@@ -328,6 +329,10 @@ export interface CaseExpr extends ExprWithKids {
     caseThen: Expr[];
     caseElse?: Expr;
   };
+}
+
+export interface CubeFieldExpr extends ExprLeaf {
+  node: 'cubeField';
 }
 
 export interface InCompareExpr extends ExprWithKids {

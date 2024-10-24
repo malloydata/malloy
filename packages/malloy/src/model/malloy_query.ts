@@ -1343,6 +1343,8 @@ class QueryField extends QueryNode {
       case 'functionDefaultOrderBy':
       case 'functionOrderBy':
         return '';
+      case 'cubeField':
+        return `{CUBE FIELD IN ${context.getIdentifier()}}`;
       default:
         throw new Error(
           `Internal Error: Unknown expression node '${
@@ -4199,7 +4201,7 @@ class QueryStruct extends QueryNode {
     }
   }
 
-  resolveParentParameterReferences(param: Parameter): Parameter {
+  private resolveParentParameterReferences(param: Parameter): Parameter {
     return {
       ...param,
       value:
@@ -4249,7 +4251,7 @@ class QueryStruct extends QueryNode {
     return this._arguments;
   }
 
-  addFieldsFromFieldList(fields: FieldDef[]) {
+  private addFieldsFromFieldList(fields: FieldDef[]) {
     for (const field of fields) {
       const as = getIdentifier(field);
 
@@ -4492,6 +4494,8 @@ class QueryStruct extends QueryNode {
     switch (this.structDef.type) {
       case 'table':
         return this.dialect.quoteTablePath(this.structDef.tablePath);
+      case 'cube':
+        return `{CUBE SOURCE ${this.getIdentifier()}}`;
       case 'finalize':
         return this.structDef.name;
       case 'sql_select':
