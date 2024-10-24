@@ -225,6 +225,8 @@ const MalloyTableRoot = (_props: {
   const props = mergeProps({rowLimit: Infinity}, _props);
   const tableCtx = useTableContext()!;
   const resultMetadata = useResultContext();
+  const shouldFillWidth =
+    tableCtx.root && props.data.field.tagParse().tag.text('size') === 'fill';
 
   const pinnedFields = createMemo(() => {
     const fields = Object.entries(tableCtx.layout.fieldHeaderRangeMap)
@@ -287,6 +289,7 @@ const MalloyTableRoot = (_props: {
       const templateColumns = fieldsToSize()
         .map(([key]) => {
           const maybeSize = tableCtx.store.columnWidths[key];
+          if (shouldFillWidth) return maybeSize ? maybeSize + 'px' : 'auto';
           return `minmax(${
             maybeSize ? maybeSize + 'px' : 'auto'
           }, max-content)`;
@@ -412,59 +415,61 @@ const MalloyTableRoot = (_props: {
     }, 2000);
   };
 
-  // We want an initial measurement even if not scrolling
-  let measureInitial = true;
-  // Observe column width sizes
+  // Observe column width sizes and save them as they expand on scroll. Don't let them shrink as its jarring.
   onMount(() => {
     if (pinnedHeaderRow) {
+      function updateColumnWidths() {
+        const pinnedHeaders = pinnedHeaderRow.querySelectorAll(
+          '[data-pinned-header]'
+        );
+        const updates: [string, number][] = [];
+        pinnedHeaders.forEach(node => {
+          const key = node.getAttribute('data-pinned-header')!;
+          const value = node.clientWidth;
+          const currWidth = tableCtx.store.columnWidths[key];
+          if (typeof currWidth === 'undefined' || value > currWidth)
+            updates.push([key, value]);
+        });
+        if (updates.length > 0) {
+          tableCtx.setStore(
+            'columnWidths',
+            produce((widths: Record<string, number>) => {
+              updates.forEach(([key, value]) => (widths[key] = value));
+            })
+          );
+        }
+      }
       const resizeObserver = new ResizeObserver(() => {
         // select all nodes with data-pinned-header attribute
-        if (isScrolling || measureInitial) {
-          const pinnedHeaders = pinnedHeaderRow.querySelectorAll(
-            '[data-pinned-header]'
-          );
-          const updates: [string, number][] = [];
-          pinnedHeaders.forEach(node => {
-            const key = node.getAttribute('data-pinned-header')!;
-            const value = node.clientWidth;
-            const currWidth = tableCtx.store.columnWidths[key];
-            if (typeof currWidth === 'undefined' || value > currWidth)
-              updates.push([key, value]);
-          });
-          if (updates.length > 0) {
-            tableCtx.setStore(
-              'columnWidths',
-              produce((widths: Record<string, number>) => {
-                updates.forEach(([key, value]) => (widths[key] = value));
-              })
-            );
-          }
-          // Update measureInitial on next tick so that table sizes don't immediately get cleared by other ResizeObserver
-          setTimeout(() => (measureInitial = false), 0);
+        if (isScrolling) {
+          // Measure while scrolling
+          updateColumnWidths();
         }
       });
       resizeObserver.observe(pinnedHeaderRow);
+      // Initial measurement
+      requestAnimationFrame(() => updateColumnWidths());
     }
   });
 
   // Observe table width resize
   // Clear width cache if table changes size due to something besides scroll position (fetching new data)
   // Meant to handle when the table resizes due to less available real estate, like a viewport change
-  // TODO find a better way to handle this scenario
   onMount(() => {
     if (tableCtx.root) {
       let priorWidth: number | null = null;
       const resizeObserver = new ResizeObserver(entries => {
-        if (!isScrolling && !measureInitial) {
-          const [entry] = entries;
+        const [entry] = entries;
+        // Not scrolling and skip the initial measurement, it's handled by header row observer
+        if (!isScrolling && priorWidth !== null) {
           if (priorWidth !== entry.contentRect.width) {
-            priorWidth = entry.contentRect.width;
             tableCtx.setStore(s => ({
               ...s,
               columnWidths: {},
             }));
           }
         }
+        priorWidth = entry.contentRect.width;
       });
       resizeObserver.observe(scrollEl);
     }
@@ -482,6 +487,7 @@ const MalloyTableRoot = (_props: {
       }}
       classList={{
         'root': tableCtx.root,
+        'full-width': shouldFillWidth,
         'pinned': pinned(),
       }}
       part={tableCtx.root ? 'table-container' : ''}
