@@ -1162,7 +1162,9 @@ export function isLiteral(evalSpace: EvalSpace) {
 }
 
 export function mergeEvalSpaces(...evalSpaces: EvalSpace[]): EvalSpace {
-  if (evalSpaces.every(e => e === 'constant' || e === 'literal')) {
+  if (evalSpaces.length <= 1 && evalSpaces.every(e => e === 'literal')) {
+    return 'literal';
+  } else if (evalSpaces.every(e => e === 'constant' || e === 'literal')) {
     return 'constant';
   } else if (
     evalSpaces.every(e => e === 'output' || e === 'constant' || e === 'literal')

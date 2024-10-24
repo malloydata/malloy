@@ -128,13 +128,13 @@ export class ExprGranularTime extends ExpressionDef {
       const endTS = new ExprTime(
         'timestamp',
         timeOffset('timestamp', begin.value, '+', one, this.units),
-        begin.expressionType
+        [begin]
       );
       return new Range(beginTS, endTS);
     }
-    const beginDate = new ExprTime('date', begin.value, begin.expressionType);
+    const beginDate = new ExprTime('date', begin.value, [begin]);
     const endAt = timeOffset('date', begin.value, '+', one, this.units);
-    const endDate = new ExprTime('date', endAt, begin.expressionType);
+    const endDate = new ExprTime('date', endAt, [begin]);
     return new Range(beginDate, endDate);
   }
 }

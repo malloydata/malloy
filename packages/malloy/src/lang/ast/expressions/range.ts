@@ -21,11 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {maxExpressionType, mergeEvalSpaces} from '../../../model/malloy_types';
-
 import {errorFor} from '../ast-utils';
 import {BinaryMalloyOperator} from '../types/binary_operators';
-import {ExprValue} from '../types/expr-value';
+import {ExprValue, computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 
@@ -51,18 +49,14 @@ export class Range extends ExpressionDef {
         const op3 = op === '=' ? '<' : '>=';
         const fromValue = this.first.apply(fs, op1, expr);
         const toValue = this.last.apply(fs, op3, expr);
-        return {
+        return computedExprValue({
           dataType: 'boolean',
-          expressionType: maxExpressionType(
-            fromValue.expressionType,
-            toValue.expressionType
-          ),
-          evalSpace: mergeEvalSpaces(fromValue.evalSpace, toValue.evalSpace),
           value: {
             node: op2,
             kids: {left: fromValue.value, right: toValue.value},
           },
-        };
+          from: [fromValue, toValue],
+        });
       }
 
       /**

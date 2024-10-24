@@ -30,7 +30,7 @@ import {
   TimeLiteralNode,
 } from '../../../model/malloy_types';
 
-import {ExprValue} from '../types/expr-value';
+import {ExprValue, literalTimeResult} from '../types/expr-value';
 import {FieldSpace} from '../types/field-space';
 import {Range} from './range';
 import {ExprTime} from './expr-time';
@@ -104,19 +104,8 @@ abstract class TimeLiteral extends ExpressionDef {
   }
 
   protected makeValue(val: string, dataType: TemporalFieldType): TimeResult {
-    const timeFrag = this.makeLiteral(val, dataType);
-    const expressionType = 'scalar';
-    const value = timeFrag;
-    if (this.units) {
-      return {
-        dataType,
-        expressionType,
-        value,
-        timeframe: this.units,
-        evalSpace: 'literal',
-      };
-    }
-    return {dataType, expressionType, value, evalSpace: 'literal'};
+    const value = this.makeLiteral(val, dataType);
+    return literalTimeResult({value, dataType, timeframe: this.units});
   }
 
   getExpression(_fs: FieldSpace): ExprValue {

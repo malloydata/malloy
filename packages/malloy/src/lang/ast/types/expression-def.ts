@@ -26,18 +26,20 @@ import {
   TimestampUnit,
   isDateUnit,
   isTemporalField,
-  maxExpressionType,
   FieldValueType,
-  mergeEvalSpaces,
-  maxOfExpressionTypes,
   ExpressionValueType,
   expressionIsAggregate,
 } from '../../../model/malloy_types';
 
 import {errorFor} from '../ast-utils';
 import {FT} from '../fragtype-utils';
-import {timeOffset, mkTimeResult} from '../time-utils';
-import {ExprValue} from './expr-value';
+import {
+  ExprValue,
+  computedErrorExprValue,
+  computedExprValue,
+  computedTimeResult,
+} from './expr-value';
+import {timeOffset} from '../time-utils';
 import {FieldSpace} from './field-space';
 import {isGranularResult} from './granular-result';
 import {MalloyElement} from './malloy-element';
@@ -196,57 +198,35 @@ export class ExprDuration extends ExpressionDef {
       if (isGranularResult(lhs) && lhs.timeframe === this.timeframe) {
         resultGranularity = lhs.timeframe;
       }
-      if (lhs.dataType === 'timestamp') {
-        const result = timeOffset(
-          'timestamp',
-          lhs.value,
-          op,
-          num.value,
-          this.timeframe
-        );
-        return mkTimeResult(
-          {
-            dataType: 'timestamp',
-            expressionType: maxExpressionType(
-              lhs.expressionType,
-              num.expressionType
-            ),
-            evalSpace: mergeEvalSpaces(lhs.evalSpace, num.evalSpace),
-            value: result,
-          },
-          resultGranularity
-        );
-      }
-      if (isDateUnit(this.timeframe)) {
-        return mkTimeResult(
-          {
-            dataType: 'date',
-            expressionType: maxExpressionType(
-              lhs.expressionType,
-              num.expressionType
-            ),
-            evalSpace: mergeEvalSpaces(lhs.evalSpace, num.evalSpace),
-            value: timeOffset('date', lhs.value, op, num.value, this.timeframe),
-          },
-          resultGranularity
-        );
-      } else {
+      if (lhs.dataType === 'date' && !isDateUnit(this.timeframe)) {
         return this.loggedErrorExpr(
           'invalid-timeframe-for-time-offset',
           `Cannot offset date by ${this.timeframe}`
         );
       }
+      return computedTimeResult({
+        dataType: lhs.dataType,
+        value: timeOffset(
+          lhs.dataType,
+          lhs.value,
+          op,
+          num.value,
+          this.timeframe
+        ),
+        timeframe: resultGranularity,
+        from: [lhs, num],
+      });
     }
     return super.apply(fs, op, left);
   }
 
-  getExpression(_fs: FieldSpace): ExprValue {
-    return {
+  getExpression(fs: FieldSpace): ExprValue {
+    const num = this.n.getExpression(fs);
+    return computedErrorExprValue({
       dataType: 'duration',
-      expressionType: 'scalar',
-      value: {node: 'error', message: 'Duration is not a value'},
-      evalSpace: 'constant',
-    };
+      error: 'Duration is not a value',
+      from: [num],
+    });
   }
 }
 
@@ -403,12 +383,11 @@ function equality(
     }
   }
 
-  return {
+  return computedExprValue({
     dataType: 'boolean',
-    expressionType: maxExpressionType(lhs.expressionType, rhs.expressionType),
-    evalSpace: mergeEvalSpaces(lhs.evalSpace, rhs.evalSpace),
     value,
-  };
+    from: [lhs, rhs],
+  });
 }
 
 function compare(
@@ -423,10 +402,6 @@ function compare(
   const err = errorCascade('boolean', lhs, rhs);
   if (err) return err;
 
-  const expressionType = maxExpressionType(
-    lhs.expressionType,
-    rhs.expressionType
-  );
   const noCompare = unsupportError(left, lhs, right, rhs);
   if (noCompare) {
     return {...noCompare, dataType: 'boolean'};
@@ -436,12 +411,11 @@ function compare(
     kids: {left: lhs.value, right: rhs.value},
   };
 
-  return {
+  return computedExprValue({
     dataType: 'boolean',
-    expressionType,
-    evalSpace: mergeEvalSpaces(lhs.evalSpace, rhs.evalSpace),
-    value: value,
-  };
+    value,
+    from: [lhs, rhs],
+  });
 }
 
 function numeric(
@@ -459,11 +433,6 @@ function numeric(
   const noGo = unsupportError(left, lhs, right, rhs);
   if (noGo) return noGo;
 
-  const expressionType = maxExpressionType(
-    lhs.expressionType,
-    rhs.expressionType
-  );
-
   if (lhs.dataType !== 'number') {
     left.logError(
       'arithmetic-operation-type-mismatch',
@@ -475,12 +444,11 @@ function numeric(
       `The '${op}' operator requires a number, not a '${rhs.dataType}'`
     );
   } else {
-    return {
+    return computedExprValue({
       dataType: 'number',
-      expressionType,
       value: {node: op, kids: {left: lhs.value, right: rhs.value}},
-      evalSpace: mergeEvalSpaces(lhs.evalSpace, rhs.evalSpace),
-    };
+      from: [lhs, rhs],
+    });
   }
   return errorFor('numbers required');
 }
@@ -575,15 +543,11 @@ export function applyBinary(
         node: op,
         kids: {left: num.value, right: denom.value},
       };
-      return {
+      return computedExprValue({
         dataType: 'number',
-        expressionType: maxExpressionType(
-          num.expressionType,
-          denom.expressionType
-        ),
-        evalSpace: mergeEvalSpaces(num.evalSpace, denom.evalSpace),
         value: divmod,
-      };
+        from: [num, denom],
+      });
     }
     return errorFor('divide type mismatch');
   }
@@ -598,12 +562,11 @@ function errorCascade(
   ...es: ExprValue[]
 ): ExprValue | undefined {
   if (es.some(e => e.dataType === 'error')) {
-    return {
+    return computedExprValue({
       dataType,
-      expressionType: maxOfExpressionTypes(es.map(e => e.expressionType)),
       value: {node: 'error', message: 'cascading error'},
-      evalSpace: mergeEvalSpaces(...es.map(e => e.evalSpace)),
-    };
+      from: es,
+    });
   }
 }
 
@@ -616,12 +579,11 @@ function unsupportError(
   r: ExpressionDef,
   rhs: ExprValue
 ): ExprValue | undefined {
-  const ret: ExprValue = {
+  const ret = computedExprValue({
     dataType: lhs.dataType,
-    expressionType: maxExpressionType(lhs.expressionType, rhs.expressionType),
     value: {node: 'error', message: 'sql-native unsupported'},
-    evalSpace: mergeEvalSpaces(lhs.evalSpace, rhs.evalSpace),
-  };
+    from: [lhs, rhs],
+  });
   if (lhs.dataType === 'sql native') {
     l.logError('sql-native-not-allowed-in-expression', {rawType: lhs.rawType});
     ret.dataType = rhs.dataType;

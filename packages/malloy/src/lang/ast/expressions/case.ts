@@ -5,18 +5,12 @@
  *  LICENSE file in the root directory of this source tree.
  */
 
-import {ExprValue} from '../types/expr-value';
+import {ExprValue, computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
 import {FT} from '../fragtype-utils';
-import {
-  CaseExpr,
-  EvalSpace,
-  ExpressionType,
-  maxExpressionType,
-  mergeEvalSpaces,
-} from '../../../model';
+import {CaseExpr} from '../../../model';
 
 interface Choice {
   then: ExprValue;
@@ -50,13 +44,11 @@ export class Case extends ExpressionDef {
         caseThen: [],
       },
     };
-    let expressionType: ExpressionType = 'scalar';
-    let evalSpace: EvalSpace = 'constant';
+    const dependents: ExprValue[] = [];
     let value: ExprValue | undefined = undefined;
     if (this.value) {
       value = this.value.getExpression(fs);
-      expressionType = maxExpressionType(expressionType, value.expressionType);
-      evalSpace = mergeEvalSpaces(evalSpace, value.evalSpace);
+      dependents.push(value);
       resultExpr.kids.caseValue = value.value;
     }
     const choiceValues: Choice[] = [];
@@ -64,6 +56,7 @@ export class Case extends ExpressionDef {
       const when = c.when.getExpression(fs);
       const then = c.then.getExpression(fs);
       choiceValues.push({when, then});
+      dependents.push(when, then);
     }
     let returnType: ExprValue | undefined;
     for (const aChoice of choiceValues) {
@@ -88,18 +81,6 @@ export class Case extends ExpressionDef {
         });
       }
       returnType = typeCoalesce(returnType, aChoice.then);
-      expressionType = maxExpressionType(
-        expressionType,
-        maxExpressionType(
-          aChoice.then.expressionType,
-          aChoice.when.expressionType
-        )
-      );
-      evalSpace = mergeEvalSpaces(
-        evalSpace,
-        aChoice.then.evalSpace,
-        aChoice.when.evalSpace
-      );
       resultExpr.kids.caseWhen.push(aChoice.when.value);
       resultExpr.kids.caseThen.push(aChoice.then.value);
     }
@@ -112,19 +93,14 @@ export class Case extends ExpressionDef {
         });
       }
       returnType = typeCoalesce(returnType, elseValue);
-      expressionType = maxExpressionType(
-        expressionType,
-        elseValue.expressionType
-      );
-      evalSpace = mergeEvalSpaces(evalSpace, elseValue.evalSpace);
+      dependents.push(elseValue);
       resultExpr.kids.caseElse = elseValue.value;
     }
-    return {
+    return computedExprValue({
       value: resultExpr,
       dataType: returnType?.dataType ?? 'null',
-      expressionType,
-      evalSpace,
-    };
+      from: dependents,
+    });
   }
 }
 

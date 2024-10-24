@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ExprValue} from '../types/expr-value';
+import {ExprValue, literalExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 
 export class ExprRegEx extends ExpressionDef {
@@ -31,11 +31,9 @@ export class ExprRegEx extends ExpressionDef {
   }
 
   getExpression(): ExprValue {
-    return {
+    return literalExprValue({
       dataType: 'regular expression',
-      expressionType: 'scalar',
       value: {node: 'regexpLiteral', literal: this.regex},
-      evalSpace: 'literal',
-    };
+    });
   }
 }
