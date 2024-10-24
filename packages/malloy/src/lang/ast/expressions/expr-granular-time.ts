@@ -25,6 +25,7 @@ import {
   Expr,
   isDateUnit,
   isTemporalField,
+  mkTemporal,
   TimestampUnit,
 } from '../../../model/malloy_types';
 
@@ -73,7 +74,7 @@ export class ExprGranularTime extends ExpressionDef {
       if (this.truncate) {
         tsVal.value = {
           node: 'trunc',
-          e: {...exprVal.value, dataType: exprVal.dataType},
+          e: mkTemporal(exprVal.value, exprVal.dataType),
           units: timeframe,
         };
       }

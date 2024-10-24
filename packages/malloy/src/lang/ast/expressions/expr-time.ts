@@ -55,11 +55,11 @@ export class ExprTime extends ExpressionDef {
       const toTs: TypecastExpr = {
         node: 'cast',
         safe: false,
-        dstType: timeType,
+        dstType: {type: timeType},
         e: expr.value,
       };
       if (isTemporalField(expr.dataType)) {
-        toTs.srcType = expr.dataType;
+        toTs.srcType = {type: expr.dataType};
       }
       value = toTs;
     }

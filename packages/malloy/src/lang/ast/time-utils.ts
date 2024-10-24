@@ -25,11 +25,12 @@ import {
   Expr,
   TemporalFieldType,
   TimestampUnit,
-  isAtomicFieldType,
   FieldValueType,
   CastType,
   TypecastExpr,
   TimeDeltaExpr,
+  mkTemporal,
+  isCastType,
 } from '../../model/malloy_types';
 
 import {TimeResult} from './types/time-result';
@@ -44,7 +45,7 @@ export function timeOffset(
   return {
     node: 'delta',
     kids: {
-      base: {...from, dataType: timeType},
+      base: mkTemporal(from, timeType),
       delta: n,
     },
     op,
@@ -58,37 +59,26 @@ export function castTo(
   fromType: FieldValueType,
   safe = false
 ): TypecastExpr {
-  const cast: TypecastExpr = {
-    node: 'cast',
-    dstType: castType,
-    e: from,
-    safe,
-  };
-  if (isAtomicFieldType(fromType)) {
-    cast.srcType = fromType;
+  let cast: TypecastExpr;
+  if (typeof castType !== 'string') {
+    cast = {
+      node: 'cast',
+      dstSQLType: castType.raw,
+      e: from,
+      safe,
+    };
+  } else {
+    const dstType = {type: castType};
+    cast = {
+      node: 'cast',
+      dstType,
+      e: from,
+      safe,
+    };
   }
-  return cast;
-}
-
-export function castTimestampToDate(from: Expr, safe = false): TypecastExpr {
-  const cast: TypecastExpr = {
-    node: 'cast',
-    dstType: 'date',
-    srcType: 'timestamp',
-    e: from,
-    safe,
-  };
-  return cast;
-}
-
-export function castDateToTimestamp(from: Expr, safe = false): TypecastExpr {
-  const cast: TypecastExpr = {
-    node: 'cast',
-    dstType: 'timestamp',
-    srcType: 'date',
-    e: from,
-    safe,
-  };
+  if (isCastType(fromType)) {
+    cast.srcType = {type: fromType};
+  }
   return cast;
 }
 
@@ -104,7 +94,7 @@ export function resolution(timeframe: string): TemporalFieldType {
   return 'date';
 }
 
-export function timeResult(
+export function mkTimeResult(
   t: TimeResult,
   tt: TimestampUnit | undefined
 ): TimeResult {

@@ -5,8 +5,13 @@
  *  LICENSE file in the root directory of this source tree.
  */
 
-import {isAtomicFieldType, RecordLiteralNode, TypedExpr} from '../../../model';
-import {computedExprValue, ExprValue} from '../types/expr-value';
+// import {
+//   isAtomicFieldType,
+//   TD,
+//   RecordLiteralNode,
+//   TypedExpr,
+// } from '../../../model';
+import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
@@ -29,31 +34,32 @@ export class RecordLiteral extends ExpressionDef {
     this.has({pairs});
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
-    const recLit: RecordLiteralNode = {
-      node: 'recordLiteral',
-      kids: {},
-    };
-    const dependents: ExprValue[] = [];
-    for (const el of this.pairs) {
-      const xVal = el.value.getExpression(fs);
-      const expr: TypedExpr = {dataType: 'error', ...xVal.value};
-      if (expr.dataType === 'error' && isAtomicFieldType(xVal.dataType)) {
-        expr.dataType = xVal.dataType;
-      }
-      if (expr.dataType === 'error' && xVal.dataType !== 'error') {
-        this.logError(
-          'illegal-record-property-type',
-          `Type '${xVal.dataType}' not a legal record value`
-        );
-      }
-      recLit.kids[el.key] = expr;
-      dependents.push(xVal);
-    }
-    return computedExprValue({
-      dataType: 'record',
-      value: recLit,
-      from: dependents,
-    });
+  getExpression(_fs: FieldSpace): ExprValue {
+    throw new Error('get expression on record todo');
+    // const recLit: RecordLiteralNode = {
+    //   node: 'recordLiteral',
+    //   kids: {},
+    // };
+    // const dependents: ExprValue[] = [];
+    // for (const el of this.pairs) {
+    //   const xVal = el.value.getExpression(fs);
+    //   const expr: TypedExpr = {typeDef: {type: 'error'}, ...xVal.value};
+    //   if (TD.isError(expr.typeDef) && isAtomicFieldType(xVal.dataType)) {
+    //     expr.typeDef = xVal.dataType;
+    //   }
+    //   if (TD.isError(expr.typeDef) && xVal.dataType !== 'error') {
+    //     this.logError(
+    //       'illegal-record-property-type',
+    //       `Type '${xVal.dataType}' not a legal record value`
+    //     );
+    //   }
+    //   recLit.kids[el.key] = expr;
+    //   dependents.push(xVal);
+    // }
+    // return computedExprValue({
+    //   dataType: 'record',
+    //   value: recLit,
+    //   from: dependents,
+    // });
   }
 }

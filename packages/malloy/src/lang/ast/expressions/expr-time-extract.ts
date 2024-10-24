@@ -26,6 +26,7 @@ import {
   isExtractUnit,
   isTemporalField,
   isTimestampUnit,
+  mkTemporal,
 } from '../../../model/malloy_types';
 
 import {
@@ -141,8 +142,8 @@ export class ExprTimeExtract extends ExpressionDef {
             node: 'timeDiff',
             units: extractTo,
             kids: {
-              left: {...first.value, dataType: valueType},
-              right: {...last.value, dataType: valueType},
+              left: mkTemporal(first.value, valueType),
+              right: mkTemporal(last.value, valueType),
             },
           },
           from: [first, last],
@@ -154,7 +155,7 @@ export class ExprTimeExtract extends ExpressionDef {
             dataType: 'number',
             value: {
               node: 'extract',
-              e: {...argV.value, dataType: argV.dataType},
+              e: mkTemporal(argV.value, argV.dataType),
               units: extractTo,
             },
             from: [argV],

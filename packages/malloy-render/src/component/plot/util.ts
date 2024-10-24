@@ -57,3 +57,7 @@ export function getFieldFromRootPath(root: Explore, path: string): Field {
     throw new Error('Tried to get field from path, but got root Explore');
   return curr;
 }
+
+export function getFieldReferenceId(field: Field) {
+  return field.isAtomicField() ? field.referenceId ?? null : null;
+}

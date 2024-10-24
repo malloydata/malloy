@@ -33,13 +33,13 @@ import {
 
 import {errorFor} from '../ast-utils';
 import {FT} from '../fragtype-utils';
-import {timeOffset} from '../time-utils';
 import {
   ExprValue,
   computedErrorExprValue,
   computedExprValue,
   computedTimeResult,
 } from './expr-value';
+import {timeOffset} from '../time-utils';
 import {FieldSpace} from './field-space';
 import {isGranularResult} from './granular-result';
 import {MalloyElement} from './malloy-element';

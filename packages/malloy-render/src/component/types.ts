@@ -1,8 +1,30 @@
-import {DataColumn, Explore, Field, QueryData, Tag} from '@malloydata/malloy';
-import {Item} from 'vega';
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ *  LICENSE file in the root directory of this source tree.
+ */
+
+import {
+  DataColumn,
+  DataRecord,
+  Explore,
+  Field,
+  QueryData,
+  QueryDataRow,
+  Tag,
+} from '@malloydata/malloy';
+import {Item, View} from 'vega';
+import {JSX} from 'solid-js';
+import {ResultStore} from './result-store/result-store';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Vega does not have good TS support
 export type VegaSpec = any;
+export type DataInjector = (
+  field: Explore,
+  data: QueryData,
+  spec: VegaSpec
+) => void;
 export type VegaChartProps = {
   spec: VegaSpec;
   specType: 'vega' | 'vega-lite';
@@ -11,7 +33,8 @@ export type VegaChartProps = {
   totalWidth: number;
   totalHeight: number;
   chartType: string;
-  getTooltipData?: (item: Item) => ChartTooltipEntry[] | null;
+  injectData?: DataInjector;
+  getTooltipData?: (item: Item, view: View) => ChartTooltipEntry | null;
 };
 
 export type FieldHeaderRangeMap = Record<
@@ -41,6 +64,7 @@ export interface RenderResultMetadata {
   modelTag: Tag;
   resultTag: Tag;
   rootField: Field | Explore;
+  store: ResultStore;
 }
 
 export type MalloyClickEventPayload = {
@@ -59,7 +83,22 @@ export type VegaConfigHandler = (
 ) => Record<string, unknown> | undefined;
 
 export type ChartTooltipEntry = {
-  field: Field;
-  fieldName: string;
-  value: unknown;
+  title: string[];
+  // field?: Field;
+  entries: {
+    label: string;
+    value: string | (() => JSX.Element);
+    highlight: boolean;
+    entryType: 'list-item' | 'block';
+    ignoreHighlightState?: boolean;
+    color?: string;
+  }[];
+};
+
+export type DataRowWithRecord = QueryDataRow & {
+  __malloyDataRecord: DataRecord;
+};
+
+export type MalloyVegaDataRecord = {
+  __source: QueryDataRow & {__malloyDataRecord: DataRecord};
 };

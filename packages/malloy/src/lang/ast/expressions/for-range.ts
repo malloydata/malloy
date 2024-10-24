@@ -23,7 +23,7 @@
 
 import {errorFor} from '../ast-utils';
 import {FT} from '../fragtype-utils';
-import {castDateToTimestamp, resolution, timeOffset} from '../time-utils';
+import {castTo, resolution, timeOffset} from '../time-utils';
 import {BinaryMalloyOperator} from '../types/binary_operators';
 import {ExprValue, computedErrorExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
@@ -98,7 +98,7 @@ export class ForRange extends ExpressionDef {
       if (tsVersion) {
         from = tsVersion;
       } else {
-        from = castDateToTimestamp(from);
+        from = castTo('timestamp', from, 'date');
       }
       rangeStart = new ExprTime('timestamp', from, [startV]);
     }
