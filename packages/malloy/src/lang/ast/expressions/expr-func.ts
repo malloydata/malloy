@@ -22,6 +22,7 @@
  */
 
 import {
+  CastType,
   EvalSpace,
   Expr,
   expressionIsAggregate,
@@ -29,16 +30,17 @@ import {
   expressionIsScalar,
   expressionIsUngroupedAggregate,
   ExpressionType,
-  FieldValueType,
   FunctionCallNode,
   FunctionDef,
   FunctionOverloadDef,
   FunctionParameterDef,
   isAtomicFieldType,
+  isCastType,
   isExpressionTypeLEQ,
   maxExpressionType,
   maxOfExpressionTypes,
   mergeEvalSpaces,
+  TD,
 } from '../../../model/malloy_types';
 import {errorFor} from '../ast-utils';
 import {StructSpaceFieldBase} from '../field-space/struct-space-field-base';
@@ -58,7 +60,7 @@ export class ExprFunc extends ExpressionDef {
     readonly name: string,
     readonly args: ExpressionDef[],
     readonly isRaw: boolean,
-    readonly rawType: FieldValueType | undefined,
+    readonly rawType: CastType | undefined,
     readonly source?: FieldReference
   ) {
     super({args: args});
@@ -77,7 +79,7 @@ export class ExprFunc extends ExpressionDef {
     return true;
   }
 
-  getExpression(fs: FieldSpace) {
+  getExpression(fs: FieldSpace): ExprValue {
     return this.getPropsExpression(fs);
   }
 
@@ -126,7 +128,7 @@ export class ExprFunc extends ExpressionDef {
     const argExprsWithoutImplicit = this.args.map(arg => arg.getExpression(fs));
     if (this.isRaw) {
       let expressionType: ExpressionType = 'scalar';
-      let collectType: FieldValueType | undefined;
+      let collectType: CastType | undefined;
       const funcCall: SQLExprElement[] = [`${this.name}(`];
       for (const expr of argExprsWithoutImplicit) {
         expressionType = maxExpressionType(expressionType, expr.expressionType);
@@ -134,7 +136,9 @@ export class ExprFunc extends ExpressionDef {
         if (collectType) {
           funcCall.push(',');
         } else {
-          collectType = expr.dataType;
+          if (isCastType(expr.type)) {
+            collectType = expr.type;
+          }
         }
         funcCall.push(expr.value);
       }
@@ -142,7 +146,7 @@ export class ExprFunc extends ExpressionDef {
 
       const dataType = this.rawType ?? collectType ?? 'number';
       return {
-        dataType,
+        type: dataType,
         expressionType,
         value: composeSQLExpr(funcCall),
         evalSpace: mergeEvalSpaces(
@@ -163,9 +167,9 @@ export class ExprFunc extends ExpressionDef {
       const sourceFoot = this.source.getField(fs).found;
       if (sourceFoot) {
         const footType = sourceFoot.typeDesc();
-        if (isAtomicFieldType(footType.dataType)) {
+        if (isAtomicFieldType(footType.type)) {
           implicitExpr = {
-            dataType: footType.dataType,
+            ...TD.def(footType),
             expressionType: footType.expressionType,
             value: {node: 'field', path: this.source.path},
             evalSpace: footType.evalSpace,
@@ -175,7 +179,7 @@ export class ExprFunc extends ExpressionDef {
           if (!(sourceFoot instanceof StructSpaceFieldBase)) {
             return this.loggedErrorExpr(
               'invalid-aggregate-source',
-              `Aggregate source cannot be a ${footType.dataType}`
+              `Aggregate source cannot be a ${footType.type}`
             );
           }
         }
@@ -196,7 +200,7 @@ export class ExprFunc extends ExpressionDef {
       return this.loggedErrorExpr(
         'no-matching-function-overload',
         `No matching overload for function ${this.name}(${argExprs
-          .map(e => e.dataType)
+          .map(e => e.type)
           .join(', ')})`
       );
     }
@@ -256,7 +260,7 @@ export class ExprFunc extends ExpressionDef {
       return this.loggedErrorExpr(
         'non-aggregate-function-with-source',
         `Cannot call function ${this.name}(${argExprs
-          .map(e => e.dataType)
+          .map(e => e.type)
           .join(', ')}) with source`
       );
     }
@@ -411,10 +415,10 @@ export class ExprFunc extends ExpressionDef {
         funcCall = composeSQLExpr(expr);
       }
     }
-    if (type.dataType === 'any') {
+    if (type.type === 'any') {
       return this.loggedErrorExpr(
         'function-returns-any',
-        `Invalid return type ${type.dataType} for function '${this.name}'`
+        `Invalid return type ${type.type} for function '${this.name}'`
       );
     }
     const maxEvalSpace = mergeEvalSpaces(...argExprs.map(e => e.evalSpace));
@@ -430,7 +434,7 @@ export class ExprFunc extends ExpressionDef {
         ? maxEvalSpace
         : 'output';
     return {
-      dataType: type.dataType,
+      ...TD.def(type),
       expressionType,
       value: funcCall,
       evalSpace,
@@ -486,13 +490,13 @@ function findOverload(
         // Check whether types match (allowing for nullability errors, expression type errors,
         // eval space errors, and unknown types due to prior errors in args)
         const dataTypeMatch =
-          paramT.dataType === arg.dataType ||
-          paramT.dataType === 'any' ||
+          TD.eq(paramT, arg) ||
+          paramT.type === 'any' ||
           // TODO We should consider whether `nulls` should always be allowed. It probably
           // does not make sense to limit function calls to not allow nulls, since have
           // so little control over nullability.
-          arg.dataType === 'null' ||
-          arg.dataType === 'error';
+          arg.type === 'null' ||
+          arg.type === 'error';
         // Check expression type errors
         if (paramT.expressionType) {
           const expressionTypeMatch = isExpressionTypeLEQ(
@@ -530,7 +534,7 @@ function findOverload(
         // Check nullability errors. For now we only require that literal arguments must be
         // non-null, but in the future we may allow parameters to say whether they can accept literal
         // nulls.
-        if (paramT.evalSpace === 'literal' && arg.dataType === 'null') {
+        if (paramT.evalSpace === 'literal' && arg.type === 'null') {
           nullabilityErrors.push({
             argIndex,
             param,

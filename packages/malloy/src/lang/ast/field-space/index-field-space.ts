@@ -25,8 +25,8 @@ import {
   IndexSegment,
   PipeSegment,
   IndexFieldDef,
-  isAtomicFieldType,
   expressionIsScalar,
+  TD,
 } from '../../../model/malloy_types';
 import {
   FieldReference,
@@ -146,12 +146,9 @@ export class IndexFieldSpace extends QueryOperationSpace {
         );
       } else {
         const eTypeDesc = entry.typeDesc();
-        const eType = eTypeDesc.dataType;
         // Don't index arrays and records
-        const canIndex =
-          isAtomicFieldType(eType) && eType !== 'record' && eType !== 'array';
         if (
-          canIndex &&
+          TD.isLeafAtomic(eTypeDesc) &&
           expressionIsScalar(eTypeDesc.expressionType) &&
           (dialect === undefined || !dialect.ignoreInProject(name))
         ) {

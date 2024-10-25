@@ -23,7 +23,7 @@
 
 import {ExprValue} from '../types/expr-value';
 import {FieldSpace} from '../types/field-space';
-import {FT} from '../fragtype-utils';
+import {TDU} from '../typedesc-utils';
 import {ExpressionDef} from '../types/expression-def';
 
 export class ExprNumber extends ExpressionDef {
@@ -38,7 +38,7 @@ export class ExprNumber extends ExpressionDef {
 
   constantExpression(): ExprValue {
     return {
-      ...FT.numberT,
+      ...TDU.numberT,
       evalSpace: 'literal',
       value: {node: 'numberLiteral', literal: this.n},
     };

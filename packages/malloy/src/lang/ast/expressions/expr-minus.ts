@@ -22,7 +22,7 @@
  */
 
 import {errorFor} from '../ast-utils';
-import {FT} from '../fragtype-utils';
+import {TDU} from '../typedesc-utils';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
@@ -32,15 +32,15 @@ export class ExprMinus extends ExpressionDef {
   constructor(readonly expr: ExpressionDef) {
     super({expr: expr});
 
-    this.legalChildTypes = [FT.numberT];
+    this.legalChildTypes = [TDU.numberT];
   }
 
   getExpression(fs: FieldSpace): ExprValue {
     const expr = this.expr.getExpression(fs);
-    if (FT.typeIn(expr, this.legalChildTypes)) {
+    if (TDU.typeIn(expr, this.legalChildTypes)) {
       return {
         ...expr,
-        dataType: 'number',
+        type: 'number',
         value: {node: 'unary-', e: expr.value},
       };
     }

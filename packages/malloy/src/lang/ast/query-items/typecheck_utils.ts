@@ -31,11 +31,11 @@ import {MessageCode} from '../../parse-log';
 import {MalloyElement} from '../types/malloy-element';
 
 export function typecheckProject(type: TypeDesc, logTo: MalloyElement) {
-  if (type.dataType === 'turtle' || !expressionIsScalar(type.expressionType)) {
+  if (type.type === 'xview' || !expressionIsScalar(type.expressionType)) {
     let useInstead: string;
     let kind: string;
     let code: MessageCode;
-    if (type.dataType === 'turtle') {
+    if (type.type === 'xview') {
       useInstead = 'a nest';
       kind = 'a view';
       code = 'select-of-view';
@@ -60,10 +60,10 @@ export function typecheckProject(type: TypeDesc, logTo: MalloyElement) {
 }
 
 export function typecheckIndex(type: TypeDesc, logTo: MalloyElement) {
-  if (type.dataType === 'turtle' || !expressionIsScalar(type.expressionType)) {
+  if (type.type === 'xview' || !expressionIsScalar(type.expressionType)) {
     let kind: string;
     let code: MessageCode;
-    if (type.dataType === 'turtle') {
+    if (type.type === 'xview') {
       kind = 'a view';
       code = 'index-of-view';
     } else if (expressionIsAnalytic(type.expressionType)) {
@@ -122,7 +122,7 @@ export function typecheckMeasure(type: TypeDesc, logTo: MalloyElement) {
 }
 
 export function typecheckDeclare(type: TypeDesc, logTo: MalloyElement) {
-  if (type.dataType === 'turtle') {
+  if (type.type === 'xview') {
     logTo.logError(
       'view-in-declare',
       'Views cannot be used in a declare block'
@@ -136,14 +136,11 @@ export function typecheckDeclare(type: TypeDesc, logTo: MalloyElement) {
 }
 
 export function typecheckCalculate(type: TypeDesc, logTo: MalloyElement) {
-  if (
-    type.dataType === 'turtle' ||
-    !expressionIsAnalytic(type.expressionType)
-  ) {
+  if (type.type === 'xview' || !expressionIsAnalytic(type.expressionType)) {
     let useInstead: string;
     let kind: string;
     let code: MessageCode;
-    if (type.dataType === 'turtle') {
+    if (type.type === 'xview') {
       useInstead = 'a nest';
       kind = 'a view';
       code = 'calculate-of-view';
@@ -168,14 +165,11 @@ export function typecheckCalculate(type: TypeDesc, logTo: MalloyElement) {
 }
 
 export function typecheckAggregate(type: TypeDesc, logTo: MalloyElement) {
-  if (
-    type.dataType === 'turtle' ||
-    !expressionIsAggregate(type.expressionType)
-  ) {
+  if (type.type === 'xview' || !expressionIsAggregate(type.expressionType)) {
     let useInstead: string;
     let kind: string;
     let code: MessageCode;
-    if (type.dataType === 'turtle') {
+    if (type.type === 'xview') {
       useInstead = 'a nest';
       kind = 'a view';
       code = 'aggregate-of-view';
@@ -198,11 +192,11 @@ export function typecheckAggregate(type: TypeDesc, logTo: MalloyElement) {
 }
 
 export function typecheckGroupBy(type: TypeDesc, logTo: MalloyElement) {
-  if (type.dataType === 'turtle' || !expressionIsScalar(type.expressionType)) {
+  if (type.type === 'xview' || !expressionIsScalar(type.expressionType)) {
     let useInstead: string;
     let kind: string;
     let code: MessageCode;
-    if (type.dataType === 'turtle') {
+    if (type.type === 'xview') {
       useInstead = 'a nest';
       kind = 'a view';
       code = 'group-by-view';

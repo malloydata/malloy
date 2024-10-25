@@ -32,7 +32,7 @@ export class ExprRegEx extends ExpressionDef {
 
   getExpression(): ExprValue {
     return {
-      dataType: 'regular expression',
+      type: 'regular expression',
       expressionType: 'scalar',
       value: {node: 'regexpLiteral', literal: this.regex},
       evalSpace: 'literal',

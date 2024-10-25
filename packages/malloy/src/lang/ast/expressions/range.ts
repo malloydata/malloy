@@ -52,7 +52,7 @@ export class Range extends ExpressionDef {
         const fromValue = this.first.apply(fs, op1, expr);
         const toValue = this.last.apply(fs, op3, expr);
         return {
-          dataType: 'boolean',
+          type: 'boolean',
           expressionType: maxExpressionType(
             fromValue.expressionType,
             toValue.expressionType

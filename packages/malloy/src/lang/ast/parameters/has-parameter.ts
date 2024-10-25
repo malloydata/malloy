@@ -21,14 +21,20 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Parameter, CastType, isCastType} from '../../../model/malloy_types';
+import {
+  TD,
+  Parameter,
+  CastType,
+  isCastType,
+  LeafAtomicTypeDef,
+} from '../../../model/malloy_types';
 
 import {ConstantExpression} from '../expressions/constant-expression';
 import {MalloyElement} from '../types/malloy-element';
 
 interface HasInit {
   name: string;
-  type?: string;
+  type?: CastType;
   default?: ConstantExpression;
 }
 
@@ -55,21 +61,21 @@ export class HasParameter extends MalloyElement {
       const constant = this.default.constantValue();
       if (
         this.type &&
-        this.type !== constant.dataType &&
-        constant.dataType !== 'null' &&
-        constant.dataType !== 'error'
+        this.type !== constant.type &&
+        constant.type !== 'null' &&
+        constant.type !== 'error'
       ) {
         this.default.logError(
           'parameter-default-does-not-match-declared-type',
           `Default value for parameter does not match declared type \`${this.type}\``
         );
       }
-      if (constant.dataType === 'null') {
+      if (constant.type === 'null') {
         if (this.type) {
           return {
+            type: this.type,
             value: constant.value,
             name: this.name,
-            type: this.type,
           };
         } else {
           this.default.logError(
@@ -83,10 +89,10 @@ export class HasParameter extends MalloyElement {
           };
         }
       }
-      if (!isCastType(constant.dataType) && constant.dataType !== 'error') {
+      if (!isCastType(constant.type) && constant.type !== 'error') {
         this.default.logError(
           'parameter-illegal-default-type',
-          `Default value cannot have type \`${constant.dataType}\``
+          `Default value cannot have type \`${constant.type}\``
         );
         return {
           value: constant.value,
@@ -97,7 +103,7 @@ export class HasParameter extends MalloyElement {
       return {
         value: constant.value,
         name: this.name,
-        type: constant.dataType,
+        type: constant.type,
       };
     }
     if (this.type === undefined) {

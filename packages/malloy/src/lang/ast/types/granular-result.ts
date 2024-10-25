@@ -26,11 +26,12 @@ import {TimestampUnit} from '../../../model/malloy_types';
 import {ExprValue} from './expr-value';
 import {TimeResult} from './time-result';
 
-export interface GranularResult extends TimeResult {
+export type GranularResult = TimeResult & {
   timeframe: TimestampUnit;
-}
+};
+
 export function isGranularResult(v: ExprValue): v is GranularResult {
-  if (v.dataType === 'date' || v.dataType === 'timestamp') {
+  if (v.type === 'date' || v.type === 'timestamp') {
     return (v as GranularResult).timeframe !== undefined;
   }
   return false;

@@ -29,6 +29,7 @@ import {
   maxExpressionType,
   mergeEvalSpaces,
   mkTemporal,
+  TD,
 } from '../../../model/malloy_types';
 
 import {errorFor} from '../ast-utils';
@@ -85,31 +86,31 @@ export class ExprTimeExtract extends ExpressionDef {
           last.expressionType
         );
         const evalSpace = mergeEvalSpaces(first.evalSpace, last.evalSpace);
-        if (first.dataType === 'error' || last.dataType === 'error') {
+        if (first.type === 'error' || last.type === 'error') {
           return {
-            dataType: 'number',
+            type: 'number',
             expressionType,
             evalSpace,
             value: errorFor('extract from error').value,
           };
         }
-        if (!isTemporalField(first.dataType)) {
+        if (!isTemporalField(first.type)) {
           return from.first.loggedErrorExpr(
             'invalid-type-for-time-extraction',
-            `Can't extract ${extractTo} from '${first.dataType}'`
+            `Can't extract ${extractTo} from '${first.type}'`
           );
         }
-        if (!isTemporalField(last.dataType)) {
+        if (!isTemporalField(last.type)) {
           return from.last.loggedErrorExpr(
             'invalid-type-for-time-extraction',
-            `Cannot extract ${extractTo} from '${last.dataType}'`
+            `Cannot extract ${extractTo} from '${last.type}'`
           );
         }
-        let valueType = first.dataType;
-        if (first.dataType !== last.dataType) {
+        let valueType = first.type;
+        if (!TD.eq(first, last)) {
           let cannotMeasure = true;
           valueType = 'timestamp';
-          if (first.dataType === 'date') {
+          if (first.type === 'date') {
             const newFirst = getMorphicValue(first, 'timestamp');
             if (newFirst) {
               first = newFirst;
@@ -125,7 +126,7 @@ export class ExprTimeExtract extends ExpressionDef {
           if (cannotMeasure) {
             return from.first.loggedErrorExpr(
               'invalid-types-for-time-measurement',
-              `Cannot measure from ${first.dataType} to ${last.dataType}`
+              `Cannot measure from ${first.type} to ${last.type}`
             );
           }
         }
@@ -142,7 +143,7 @@ export class ExprTimeExtract extends ExpressionDef {
           );
         }
         return {
-          dataType: 'number',
+          type: 'number',
           expressionType,
           evalSpace,
           value: {
@@ -156,30 +157,29 @@ export class ExprTimeExtract extends ExpressionDef {
         };
       } else {
         const argV = from.getExpression(fs);
-        if (isTemporalField(argV.dataType)) {
+        if (isTemporalField(argV.type)) {
           return {
-            dataType: 'number',
+            type: 'number',
             expressionType: argV.expressionType,
             evalSpace: argV.evalSpace,
             value: {
               node: 'extract',
-              e: mkTemporal(argV.value, argV.dataType),
+              e: mkTemporal(argV.value, argV.type),
               units: extractTo,
             },
           };
         }
-        if (argV.dataType !== 'error') {
+        if (argV.type !== 'error') {
           this.logError(
             'unsupported-type-for-time-extraction',
-            `${this.extractText}() requires time type, not '${argV.dataType}'`
+            `${this.extractText}() requires time type, not '${argV.type}'`
           );
         }
         return {
-          dataType: 'number',
+          type: 'number',
           expressionType: argV.expressionType,
           evalSpace: argV.evalSpace,
-          value: errorFor(`${this.extractText} bad type ${argV.dataType}`)
-            .value,
+          value: errorFor(`${this.extractText} bad type ${argV.type}`).value,
         };
       }
     }

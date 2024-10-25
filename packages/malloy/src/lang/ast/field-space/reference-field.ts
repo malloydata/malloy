@@ -23,11 +23,11 @@
 
 import {
   Annotation,
-  CastType,
   QueryFieldDef,
+  TD,
   TypeDesc,
 } from '../../../model/malloy_types';
-
+import {TDU} from '../typedesc-utils';
 import {FieldReference} from '../query-items/field-references';
 import {FieldSpace} from '../types/field-space';
 import {SpaceEntry} from '../types/space-entry';
@@ -63,17 +63,22 @@ export class ReferenceField extends SpaceField {
       // TODO investigate removing 'fieldref' as a type, as it obscures the
       //      actual type of the field and is redundant with the slightly
       //      more verbose `{ e: [{ type: 'field', path }] }`
-      const path = this.fieldRef.list.map(f => f.name);
-      const queryFieldDef: QueryFieldDef =
-        check.found?.refType === 'parameter'
-          ? {
-              type: check.found.typeDesc().dataType as CastType,
-              name: path[0],
-              e: {node: 'parameter', path},
-            }
-          : {type: 'fieldref', path};
-      this.queryFieldDef = queryFieldDef;
-
+      const path = this.fieldRef.path;
+      if (check.found && check.found.refType === 'parameter') {
+        const foundType = check.found.typeDesc();
+        if (TD.isAtomic(foundType)) {
+          this.queryFieldDef = {
+            ...TD.def(foundType),
+            name: path[0],
+            e: {node: 'parameter', path},
+          };
+        } else {
+          // mtoy todo
+          throw new Error('impossible turtle/join parameter');
+        }
+      } else {
+        this.queryFieldDef = {type: 'fieldref', path};
+      }
       const refTo = this.referenceTo;
       if (refTo instanceof SpaceField) {
         const origFd = refTo.constructorFieldDef();
@@ -99,6 +104,6 @@ export class ReferenceField extends SpaceField {
       this.memoTypeDesc = refTo.typeDesc();
       return this.memoTypeDesc;
     }
-    return {dataType: 'error', expressionType: 'scalar', evalSpace: 'input'};
+    return TDU.errorT;
   }
 }

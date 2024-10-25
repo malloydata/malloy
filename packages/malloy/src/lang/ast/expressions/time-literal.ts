@@ -28,6 +28,8 @@ import {
   TimestampUnit,
   isTemporalField,
   TimeLiteralNode,
+  TemporalTypeDef,
+  isDateUnit,
 } from '../../../model/malloy_types';
 
 import {ExprValue} from '../types/expr-value';
@@ -108,15 +110,20 @@ abstract class TimeLiteral extends ExpressionDef {
     const expressionType = 'scalar';
     const value = timeFrag;
     if (this.units) {
+      const ret: TemporalTypeDef = {
+        type: dataType,
+      };
+      if (dataType === 'timestamp' || isDateUnit(this.units)) {
+        ret.timeframe = this.units;
+      }
       return {
-        dataType,
+        ...ret,
         expressionType,
         value,
-        timeframe: this.units,
         evalSpace: 'literal',
       };
     }
-    return {dataType, expressionType, value, evalSpace: 'literal'};
+    return {type: dataType, expressionType, value, evalSpace: 'literal'};
   }
 
   getExpression(_fs: FieldSpace): ExprValue {
@@ -201,7 +208,7 @@ class GranularLiteral extends TimeLiteral {
     if (rangeEnd) {
       const testValue = left.getExpression(fs);
 
-      if (testValue.dataType === 'timestamp') {
+      if (testValue.type === 'timestamp') {
         const newStart = getMorphicValue(rangeStart, 'timestamp');
         const newEnd = getMorphicValue(rangeEnd, 'timestamp');
         if (newStart && newEnd) {
@@ -212,11 +219,12 @@ class GranularLiteral extends TimeLiteral {
         }
       }
 
-      if (isTemporalField(testValue.dataType)) {
-        const rangeType = testValue.dataType;
+      if (isTemporalField(testValue.type)) {
+        const rangeType = testValue.type;
         const range = new Range(
           new ExprTime(rangeType, rangeStart.value),
-          new ExprTime(rangeType, rangeEnd.value)
+          // mtoy todo why rangeEnd! looks like if (rangeEnd) should protect here
+          new ExprTime(rangeType, rangeEnd!.value)
         );
         return range.apply(fs, op, left);
       }

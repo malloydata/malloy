@@ -21,7 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FieldDef, QueryFieldDef, TypeDesc} from '../../../model/malloy_types';
+import {FieldDef, QueryFieldDef} from '../../../model/malloy_types';
+import {TDU} from '../typedesc-utils';
 
 import {FieldSpace} from '../types/field-space';
 import {SpaceField} from '../types/space-field';
@@ -34,7 +35,7 @@ export abstract class ViewField extends SpaceField {
   abstract getQueryFieldDef(fs: FieldSpace): QueryFieldDef | undefined;
   abstract fieldDef(): FieldDef;
 
-  typeDesc(): TypeDesc {
-    return {dataType: 'turtle', expressionType: 'scalar', evalSpace: 'input'};
+  typeDesc() {
+    return TDU.viewT;
   }
 }

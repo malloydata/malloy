@@ -390,11 +390,11 @@ export interface Expression {
 
 type ConstantExpr = Expr;
 
-export interface Parameter {
-  value: ConstantExpr | null;
+interface ParameterInfo {
   name: string;
-  type: AtomicFieldType;
+  value: ConstantExpr | null;
 }
+export type Parameter = AtomicTypeDef & ParameterInfo;
 export type Argument = Parameter;
 
 export function paramHasValue(p: Parameter): boolean {
@@ -637,10 +637,6 @@ export function isCastType(s: string): s is CastType {
 
 export interface FieldBase extends NamedObject, Expression, ResultMetadata {
   annotation?: Annotation;
-}
-
-interface FieldAtomicBase extends FieldBase {
-  type: AtomicFieldType;
 }
 
 // this field definition represents something in the database.
@@ -1133,27 +1129,39 @@ export function isScalarArray(def: FieldDef | StructDef) {
 
 export type StructDef = SourceDef | RecordFieldDef | ArrayDef;
 
-export type ExpressionValueType =
-  | AtomicFieldType
+// "NonAtomic" are types that a name lookup or a computation might
+// have which are not AtomicFieldDefs. I asked an AI for a word for
+// for "non-atomic" and even the AI couldn't think of the right word.
+export type NonAtomicType =
+  | Exclude<JoinElementType, 'array' | 'record'>
+  | 'xview' //   do NOT have the full type info, just noting the type
   | 'null'
   | 'duration'
   | 'any'
   | 'regular expression';
-
-export type FieldValueType = ExpressionValueType | 'turtle' | JoinFieldTypes;
-
-export interface ExpressionTypeDesc {
-  dataType: FieldValueType;
-  expressionType: ExpressionType;
-  rawType?: string;
-  evalSpace: EvalSpace;
+export interface NonAtomicTypeDef {
+  type: NonAtomicType;
 }
 
-export interface FunctionParamTypeDesc {
-  dataType: FieldValueType;
+export type ExpressionValueType = AtomicFieldType | NonAtomicType;
+export type ExpressionValueTypeDef = AtomicTypeDef | NonAtomicTypeDef;
+export type LeafExpressionType = Exclude<
+  ExpressionValueType,
+  JoinElementType | 'xview'
+>;
+
+export type TypeInfo = {
+  expressionType: ExpressionType;
+  evalSpace: EvalSpace;
+};
+
+export type TypeDesc = ExpressionValueTypeDef & TypeInfo;
+
+export type FunctionParamType = ExpressionValueTypeDef | {type: 'any'};
+export type FunctionParamTypeDesc = FunctionParamType & {
   expressionType: ExpressionType | undefined;
   evalSpace: EvalSpace;
-}
+};
 
 export type EvalSpace = 'constant' | 'input' | 'output' | 'literal';
 
@@ -1170,13 +1178,6 @@ export function mergeEvalSpaces(...evalSpaces: EvalSpace[]): EvalSpace {
     return 'output';
   }
   return 'input';
-}
-
-export interface TypeDesc {
-  dataType: FieldValueType;
-  expressionType: ExpressionType;
-  rawType?: string;
-  evalSpace: EvalSpace;
 }
 
 export interface FunctionParameterDef {
@@ -1225,8 +1226,8 @@ export type LeafAtomicTypeDef =
   | ErrorTypeDef;
 export type AtomicTypeDef = LeafAtomicTypeDef | ArrayTypeDef | RecordTypeDef;
 
-export type LeafAtomicDef = LeafAtomicTypeDef & FieldAtomicBase;
-export type AtomicFieldDef = AtomicTypeDef & FieldAtomicBase;
+export type LeafAtomicDef = LeafAtomicTypeDef & FieldBase;
+export type AtomicFieldDef = AtomicTypeDef & FieldBase;
 
 export function isLeafAtomic(
   fd: FieldDef | QueryFieldDef | AtomicTypeDef
@@ -1244,6 +1245,7 @@ export function isLeafAtomic(
 
 // Sources have fields like this ...
 export type FieldDef = AtomicFieldDef | JoinFieldDef | TurtleDef;
+export type FieldDefType = AtomicFieldType | 'turtle' | JoinElementType;
 
 // Queries have fields like this ..
 
@@ -1427,27 +1429,30 @@ export interface PrepareResultOptions {
   materializedTablePrefix?: string;
 }
 
-type UTD = AtomicTypeDef | undefined;
+type UTD = AtomicTypeDef | FunctionParamTypeDesc | undefined;
+/**
+ * A set of utilities for asking questions TypeDef/TypeDesc
+ * (which is OK because TypeDesc is an extension of a TypeDef)
+ */
 export const TD = {
-  isA: (td: UTD, ...tList: string[]) => td && tList.includes(td.type),
-  notA: (td: UTD, ...tList: string[]) => td && !tList.includes(td.type),
-  isString: (td: UTD): td is StringTypeDef =>
-    td !== undefined && td.type === 'string',
-  isNumber: (td: UTD): td is NumberTypeDef =>
-    td !== undefined && td.type === 'number',
-  isBoolean: (td: UTD): td is BooleanTypeDef =>
-    td !== undefined && td.type === 'boolean',
-  isJSON: (td: UTD): td is JSONTypeDef =>
-    td !== undefined && td.type === 'json',
-  isSQL: (td: UTD): td is NativeUnsupportedTypeDef =>
-    td !== undefined && td.type === 'sql native',
-  isDate: (td: UTD): td is DateTypeDef =>
-    td !== undefined && td.type === 'date',
-  isTimestamp: (td: UTD): td is TimestampTypeDef =>
-    td !== undefined && td.type === 'timestamp',
-  isError: (td: UTD): td is ErrorTypeDef =>
-    td !== undefined && td.type === 'error',
-  eq: function (x: UTD, y: UTD): boolean {
+  isAtomic(td: UTD): td is AtomicTypeDef {
+    return td !== undefined && isAtomicFieldType(td.type);
+  },
+  isLeafAtomic(td: UTD): td is LeafAtomicTypeDef {
+    return td !== undefined && isLeafAtomic({type: td.type} as AtomicTypeDef);
+  },
+  isString: (td: UTD): td is StringTypeDef => td?.type === 'string',
+  isNumber: (td: UTD): td is NumberTypeDef => td?.type === 'number',
+  isBoolean: (td: UTD): td is BooleanTypeDef => td?.type === 'boolean',
+  isJSON: (td: UTD): td is JSONTypeDef => td?.type === 'json',
+  isSQL: (td: UTD): td is NativeUnsupportedTypeDef => td?.type === 'sql native',
+  isDate: (td: UTD): td is DateTypeDef => td?.type === 'date',
+  isTimestamp: (td: UTD): td is TimestampTypeDef => td?.type === 'timestamp',
+  isTemporal(td: UTD): td is TimestampTypeDef {
+    return td?.type === 'timestamp' || td?.type === 'date';
+  },
+  isError: (td: UTD): td is ErrorTypeDef => td?.type === 'error',
+  eq(x: UTD, y: UTD): boolean {
     if (x === undefined || y === undefined) {
       return false;
     }
@@ -1483,11 +1488,45 @@ export const TD = {
     }
     return x.type === y.type;
   },
-  timestamp: (): TimestampTypeDef => ({type: 'timestamp'}),
-  date: (): DateTypeDef => ({type: 'date'}),
-  string: (): StringTypeDef => ({type: 'string'}),
-  number: (): NumberTypeDef => ({type: 'number', numberType: 'float'}),
-  error: (): ErrorTypeDef => ({type: 'error'}),
+  /**
+   * Used when using a TypeDesc in comprehension to create a field,
+   * generates an object where only the type properties exist.
+   */
+  def(td: UTD): AtomicTypeDef {
+    if (TD.isAtomic(td)) {
+      switch (td.type) {
+        case 'array': {
+          return {
+            name: '',
+            type: 'array',
+            join: 'many',
+            elementTypeDef: td.elementTypeDef,
+            dialect: td.dialect,
+            fields: td.fields,
+          };
+        }
+        case 'record': {
+          return {
+            name: '',
+            type: 'record',
+            join: 'one',
+            dialect: td.dialect,
+            fields: td.fields,
+          };
+        }
+        case 'number': {
+          const nd: NumberTypeDef = {type: 'number'};
+          if (td.numberType) {
+            nd.numberType = td.numberType;
+          }
+          return nd;
+        }
+        default:
+          return {type: td.type};
+      }
+    }
+    return {type: 'error'};
+  },
 };
 
 // clang-format on

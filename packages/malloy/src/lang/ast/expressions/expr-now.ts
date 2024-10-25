@@ -30,7 +30,7 @@ export class ExprNow extends ExpressionDef {
 
   getExpression(_fs: FieldSpace): ExprValue {
     return {
-      dataType: 'timestamp',
+      type: 'timestamp',
       expressionType: 'scalar',
       // `now` is considered to be a constant, at least in the dialects we support today
       evalSpace: 'constant',

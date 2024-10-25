@@ -96,7 +96,7 @@ export class ExprAlternationTree extends ExpressionDef {
           );
         }
         return {
-          dataType: 'boolean',
+          type: 'boolean',
           evalSpace,
           expressionType,
           value: {
@@ -116,7 +116,7 @@ export class ExprAlternationTree extends ExpressionDef {
     const choice1 = this.left.apply(fs, applyOp, expr);
     const choice2 = this.right.apply(fs, applyOp, expr);
     return {
-      dataType: 'boolean',
+      type: 'boolean',
       expressionType: maxExpressionType(
         choice1.expressionType,
         choice2.expressionType

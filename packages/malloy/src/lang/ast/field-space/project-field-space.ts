@@ -26,6 +26,7 @@ import {
   expressionInvolvesAggregate,
   expressionIsAnalytic,
   TypeDesc,
+  TD,
 } from '../../../model/malloy_types';
 
 import {QuerySpace} from './query-spaces';
@@ -33,9 +34,10 @@ import {QuerySpace} from './query-spaces';
 export class ProjectFieldSpace extends QuerySpace {
   readonly segmentType = 'project';
 
-  canContain(typeDesc: TypeDesc): boolean {
+  canContain(typeDesc: TypeDesc | undefined): boolean {
     if (
-      typeDesc.dataType === 'turtle' ||
+      typeDesc === undefined ||
+      !TD.isLeafAtomic(typeDesc) ||
       expressionIsAggregate(typeDesc.expressionType)
     ) {
       // We don't need to log here, because an error should have already been logged.

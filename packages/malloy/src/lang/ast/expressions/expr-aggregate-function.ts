@@ -25,19 +25,19 @@ import {
   AggregateFunctionType,
   expressionIsAggregate,
   FieldDef,
-  FieldValueType,
   isAtomicFieldType,
   AggregateExpr,
   Expr,
   hasExpression,
   isJoined,
   isAtomic,
+  TD,
 } from '../../../model/malloy_types';
 import {exprWalk} from '../../../model/utils';
 
 import {errorFor} from '../ast-utils';
 import {StructSpaceField} from '../field-space/static-space';
-import {FT} from '../fragtype-utils';
+import {TDU} from '../typedesc-utils';
 import {FieldReference} from '../query-items/field-references';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
@@ -52,7 +52,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
   source?: FieldReference;
   expr?: ExpressionDef;
   explicitSource?: boolean;
-  legalChildTypes = [FT.numberT];
+  legalChildTypes = [TDU.numberT];
   constructor(
     readonly func: AggregateFunctionType,
     expr?: ExpressionDef,
@@ -66,10 +66,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
       this.has({expr: expr});
     }
   }
-
-  returns(_forExpression: ExprValue): FieldValueType {
-    return 'number';
-  }
+  abstract returns(fromExpr: ExprValue): ExprValue;
 
   getExpression(fs: FieldSpace): ExprValue {
     // It is never useful to use output fields in an aggregate expression
@@ -86,10 +83,10 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
         const sourceFoot = result.found;
         const footType = sourceFoot.typeDesc();
         if (!(sourceFoot instanceof StructSpaceField)) {
-          if (isAtomicFieldType(footType.dataType)) {
+          if (isAtomicFieldType(footType.type)) {
             expr = this.source;
             exprVal = {
-              dataType: footType.dataType,
+              ...TD.def(footType),
               expressionType: footType.expressionType,
               value:
                 footType.evalSpace === 'output'
@@ -113,7 +110,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
           } else {
             return this.loggedErrorExpr(
               'invalid-aggregate-source',
-              `Aggregate source cannot be a ${footType.dataType}`
+              `Aggregate source cannot be a ${footType.type}`
             );
           }
         }
@@ -136,7 +133,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
         'Aggregate expression cannot be aggregate'
       );
     }
-    const isAnError = exprVal.dataType === 'error';
+    const isAnError = exprVal.type === 'error';
     if (!isAnError) {
       const joinUsage = this.getJoinUsage(inputFS);
       // Did the user spceify a source, either as `source.agg()` or `path.to.join.agg()` or `path.to.field.agg()`
@@ -183,7 +180,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
         f.structPath = structPath;
       }
       return {
-        dataType: this.returns(exprVal),
+        ...this.returns(exprVal),
         expressionType: 'aggregate',
         value: f,
         evalSpace: 'output',

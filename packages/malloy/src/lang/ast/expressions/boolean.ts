@@ -23,7 +23,7 @@
 
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import {FT} from '../fragtype-utils';
+import {TDU} from '../typedesc-utils';
 
 export class Boolean extends ExpressionDef {
   elementType = 'boolean literal';
@@ -32,6 +32,6 @@ export class Boolean extends ExpressionDef {
   }
 
   getExpression(): ExprValue {
-    return {...FT.boolT, value: {node: this.value}};
+    return {...TDU.boolT, value: {node: this.value}};
   }
 }

@@ -25,80 +25,93 @@ import {
   EvalSpace,
   expressionIsScalar,
   ExpressionType,
-  FieldValueType,
+  ExpressionValueType,
+  TD,
   TypeDesc,
 } from '../../model';
 
-function mkFragType(
-  dataType: FieldValueType,
+function mkTypeDesc(
+  // The problem is that record and array, as currently defined, require a dialect
+  // which isn't available. In retrospect the dialect shouldn't be in the type,
+  // it should only be in the field, which I wil do eventually.
+  dataType: Exclude<ExpressionValueType, 'record' | 'array'>,
   expressionType: ExpressionType = 'scalar',
   evalSpace: EvalSpace = 'constant'
 ): TypeDesc {
-  return {dataType, expressionType, evalSpace};
+  return {type: dataType, expressionType, evalSpace};
 }
 
+const nullT = mkTypeDesc('null');
+const numberT = mkTypeDesc('number');
+const stringT = mkTypeDesc('string');
+const dateT = mkTypeDesc('date');
+const timestampT = mkTypeDesc('timestamp');
+const boolT = mkTypeDesc('boolean');
+const errorT = mkTypeDesc('error');
+const viewT = mkTypeDesc('xview');
 /**
- * Collects functions which operate on fragtype compatible objects
+ * Collects functions which operate on TypeDesc compatible objects
+ * The compiler also has a TD object which works on "TypeDef"
+ * compatible objects, which includes TypeDesc.
  */
-export class FT {
+export const TDU = {
   /**
    * Checks if a given type is in a list
    * @param check The type to check (can be undefined)
    * @param from List of types which are OK
    */
-  static in(check: TypeDesc | undefined, from: TypeDesc[]): boolean {
+  in(check: TypeDesc | undefined, from: TypeDesc[]): boolean {
     if (check) {
-      const found = from.find(okType => FT.eq(okType, check));
+      const found = from.find(okType => TDU.eq(okType, check));
       return found !== undefined;
     }
     return false;
-  }
+  },
 
   /**
    * Checks if a possibly undefined candidate matches a type
    * @param good The real type
    * @param checkThis The possibly undefined candidate
    */
-  static eq(good: TypeDesc, checkThis: TypeDesc | undefined): boolean {
+  eq(good: TypeDesc, checkThis: TypeDesc | undefined): boolean {
     return (
       checkThis !== undefined &&
-      good.dataType === checkThis.dataType &&
+      TD.eq(good, checkThis) &&
       good.expressionType === checkThis.expressionType
     );
-  }
+  },
 
   /**
    * Checks if a given type is in a list, ignoring aggregate
    * @param check The type to check (can be undefined)
    * @param from List of types which are OK
    */
-  static typeIn(check: TypeDesc | undefined, from: TypeDesc[]): boolean {
+  typeIn(check: TypeDesc | undefined, from: TypeDesc[]): boolean {
     if (check) {
-      const found = from.find(okType => FT.typeEq(okType, check));
+      const found = from.find(okType => TDU.typeEq(okType, check));
       return found !== undefined;
     }
     return false;
-  }
+  },
 
   /**
-   * Checks if the base types, ignoring aggregate, are equal
+   * Checks if the base types, ignoring expressionType, are equal
    * @param left Left type
    * @param right Right type
    * @param nullOk True if a NULL is an acceptable match
    */
-  static typeEq(
+  typeEq(
     left: TypeDesc,
     right: TypeDesc,
     nullOk = false,
     errorOk = true
   ): boolean {
-    const maybeEq = left.dataType === right.dataType;
-    const nullEq =
-      nullOk && (left.dataType === 'null' || right.dataType === 'null');
+    const maybeEq = TD.eq(left, right);
+    const nullEq = nullOk && (left.type === 'null' || right.type === 'null');
     const errorEq =
-      errorOk && (left.dataType === 'error' || right.dataType === 'error');
+      errorOk && (left.type === 'error' || right.type === 'error');
     return maybeEq || nullEq || errorEq;
-  }
+  },
 
   /**
    *
@@ -106,10 +119,10 @@ export class FT {
    * for a list of types.
    * @param types List of type or objects with types
    */
-  static inspect(...types: (TypeDesc | undefined)[]): string {
+  inspect(...types: (TypeDesc | undefined)[]): string {
     const strings = types.map(type => {
       if (type) {
-        let inspected: string = type.dataType;
+        let inspected: string = type.type;
         if (!expressionIsScalar(type.expressionType)) {
           inspected = `${type.expressionType} ${inspected}`;
         }
@@ -118,20 +131,26 @@ export class FT {
       return 'undefined';
     });
     return strings.join(',');
-  }
+  },
 
-  static nullT = mkFragType('null');
-  static numberT = mkFragType('number');
-  static stringT = mkFragType('string');
-  static dateT = mkFragType('date');
-  static timestampT = mkFragType('timestamp');
-  static boolT = mkFragType('boolean');
-  static anyAtomicT = [
-    FT.numberT,
-    FT.stringT,
-    FT.dateT,
-    FT.timestampT,
-    FT.boolT,
-  ];
-  static aggregateBoolT = mkFragType('boolean', 'aggregate');
-}
+  nullT,
+  numberT,
+  stringT,
+  dateT,
+  timestampT,
+  boolT,
+  errorT,
+  viewT,
+  anyAtomicT: [numberT, stringT, dateT, timestampT, boolT],
+  aggregateBoolT: mkTypeDesc('boolean', 'aggregate'),
+  make(
+    dataType: ExpressionValueType,
+    expressionType: ExpressionType = 'scalar',
+    evalSpace: EvalSpace = 'constant'
+  ): TypeDesc {
+    if (dataType === 'record' || dataType === 'array') {
+      return {type: 'error', expressionType, evalSpace};
+    }
+    return {type: dataType, expressionType, evalSpace};
+  },
+};

@@ -24,7 +24,7 @@
 import {maxExpressionType, mergeEvalSpaces} from '../../../model/malloy_types';
 
 import {errorFor} from '../ast-utils';
-import {FT} from '../fragtype-utils';
+import {TDU} from '../typedesc-utils';
 import {BinaryMalloyOperator, getExprNode} from '../types/binary_operators';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
@@ -34,7 +34,7 @@ export abstract class BinaryBoolean<
   opType extends BinaryMalloyOperator,
 > extends ExpressionDef {
   elementType = 'abstract boolean binary';
-  legalChildTypes = [FT.boolT];
+  legalChildTypes = [TDU.boolT];
   constructor(
     readonly left: ExpressionDef,
     readonly op: opType,
@@ -49,7 +49,7 @@ export abstract class BinaryBoolean<
     if (this.typeCheck(this.left, left) && this.typeCheck(this.right, right)) {
       const evalSpace = mergeEvalSpaces(left.evalSpace, right.evalSpace);
       return {
-        dataType: 'boolean',
+        type: 'boolean',
         expressionType: maxExpressionType(
           left.expressionType,
           right.expressionType

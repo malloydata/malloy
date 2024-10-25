@@ -23,12 +23,11 @@
 
 import {
   FunctionParameterDef,
-  FieldValueType,
   TypeDesc,
   Expr,
   FunctionParamTypeDesc,
   GenericSQLExpr,
-  ExpressionValueType,
+  LeafExpressionType,
 } from '../../model/malloy_types';
 import {SQLExprElement} from '../../model/utils';
 
@@ -140,70 +139,39 @@ export function makeParam(
   return {param: param(name, ...allowedTypes), arg: arg(name)};
 }
 
-export function maxScalar(dataType: FieldValueType): TypeDesc {
-  return {
-    dataType,
-    expressionType: 'scalar',
-    evalSpace: 'input',
-  };
+export function maxScalar(type: LeafExpressionType): TypeDesc {
+  return {type, expressionType: 'scalar', evalSpace: 'input'};
 }
 
-export function maxAggregate(dataType: FieldValueType): TypeDesc {
-  return {
-    dataType,
-    expressionType: 'aggregate',
-    evalSpace: 'input',
-  };
+export function maxAggregate(type: LeafExpressionType): TypeDesc {
+  return {type, expressionType: 'aggregate', evalSpace: 'input'};
 }
 
-export function anyExprType(dataType: FieldValueType): FunctionParamTypeDesc {
-  return {
-    dataType,
-    expressionType: undefined,
-    evalSpace: 'input',
-  };
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function anyExprType(type: LeafExpressionType): FunctionParamTypeDesc {
+  return {type, expressionType: undefined, evalSpace: 'input'};
 }
 
 export function maxUngroupedAggregate(
-  dataType: FieldValueType
+  type: LeafExpressionType
 ): FunctionParamTypeDesc {
-  return {
-    dataType,
-    expressionType: 'ungrouped_aggregate',
-    evalSpace: 'input',
-  };
+  return {type, expressionType: 'ungrouped_aggregate', evalSpace: 'input'};
 }
 
-export function maxAnalytic(dataType: FieldValueType): FunctionParamTypeDesc {
-  return {
-    dataType,
-    expressionType: 'aggregate_analytic',
-    evalSpace: 'input',
-  };
+export function maxAnalytic(type: LeafExpressionType): FunctionParamTypeDesc {
+  return {type, expressionType: 'aggregate_analytic', evalSpace: 'input'};
 }
 
-export function minScalar(dataType: FieldValueType): TypeDesc {
-  return {
-    dataType,
-    expressionType: 'scalar',
-    evalSpace: 'input',
-  };
+export function minScalar(type: LeafExpressionType): TypeDesc {
+  return {type, expressionType: 'scalar', evalSpace: 'input'};
 }
 
-export function minAggregate(dataType: FieldValueType): TypeDesc {
-  return {
-    dataType,
-    expressionType: 'aggregate',
-    evalSpace: 'input',
-  };
+export function minAggregate(type: LeafExpressionType): TypeDesc {
+  return {type, expressionType: 'aggregate', evalSpace: 'input'};
 }
 
-export function minAnalytic(dataType: FieldValueType): TypeDesc {
-  return {
-    dataType,
-    expressionType: 'scalar_analytic',
-    evalSpace: 'input',
-  };
+export function minAnalytic(type: LeafExpressionType): TypeDesc {
+  return {type, expressionType: 'scalar_analytic', evalSpace: 'input'};
 }
 
 export function overload(
@@ -235,13 +203,13 @@ export function overload(
 export type TypeDescBlueprint =
   // default for return type is min scalar
   // default for param type is any expression type (max input)
-  | ExpressionValueType
+  | LeafExpressionType
   | {generic: string}
-  | {literal: ExpressionValueType | {generic: string}}
-  | {constant: ExpressionValueType | {generic: string}}
-  | {dimension: ExpressionValueType | {generic: string}}
-  | {measure: ExpressionValueType | {generic: string}}
-  | {calculation: ExpressionValueType | {generic: string}};
+  | {literal: LeafExpressionType | {generic: string}}
+  | {constant: LeafExpressionType | {generic: string}}
+  | {dimension: LeafExpressionType | {generic: string}}
+  | {measure: LeafExpressionType | {generic: string}}
+  | {calculation: LeafExpressionType | {generic: string}};
 
 type ParamTypeBlueprint =
   | TypeDescBlueprint
@@ -251,7 +219,7 @@ type ParamTypeBlueprint =
 export interface SignatureBlueprint {
   // today only one generic is allowed, but if we need more
   // we could change this to `{[name: string]: ExpressionValueType[]}`
-  generic?: [string, ExpressionValueType[]];
+  generic?: [string, LeafExpressionType[]];
   takes: {[name: string]: ParamTypeBlueprint};
   returns: TypeDescBlueprint;
   supportsOrderBy?: boolean | 'only_default';
@@ -303,8 +271,8 @@ export type OverrideMap = {
 };
 
 function removeGeneric(
-  type: ExpressionValueType | {generic: string},
-  generic: {name: string; type: ExpressionValueType} | undefined
+  type: LeafExpressionType | {generic: string},
+  generic: {name: string; type: LeafExpressionType} | undefined
 ) {
   if (typeof type === 'string') {
     return type;
@@ -317,7 +285,7 @@ function removeGeneric(
 
 function expandReturnTypeBlueprint(
   blueprint: TypeDescBlueprint,
-  generic: {name: string; type: ExpressionValueType} | undefined
+  generic: {name: string; type: LeafExpressionType} | undefined
 ): TypeDesc {
   if (typeof blueprint === 'string') {
     return minScalar(blueprint);
@@ -366,7 +334,7 @@ function extractParamTypeBlueprints(
 
 function expandParamTypeBlueprint(
   blueprint: TypeDescBlueprint,
-  generic: {name: string; type: ExpressionValueType} | undefined
+  generic: {name: string; type: LeafExpressionType} | undefined
 ): FunctionParamTypeDesc {
   if (typeof blueprint === 'string') {
     return anyExprType(blueprint);
@@ -387,7 +355,7 @@ function expandParamTypeBlueprint(
 
 function expandParamTypeBlueprints(
   blueprints: TypeDescBlueprint[],
-  generic: {name: string; type: ExpressionValueType} | undefined
+  generic: {name: string; type: LeafExpressionType} | undefined
 ) {
   return blueprints.map(blueprint =>
     expandParamTypeBlueprint(blueprint, generic)
@@ -401,7 +369,7 @@ function isVariadicParamBlueprint(blueprint: ParamTypeBlueprint): boolean {
 function expandParamBlueprint(
   name: string,
   blueprint: ParamTypeBlueprint,
-  generic: {name: string; type: ExpressionValueType} | undefined
+  generic: {name: string; type: LeafExpressionType} | undefined
 ): FunctionParameterDef {
   return {
     name,
@@ -415,7 +383,7 @@ function expandParamBlueprint(
 
 function expandParamsBlueprints(
   blueprints: {[name: string]: ParamTypeBlueprint},
-  generic: {name: string; type: ExpressionValueType} | undefined
+  generic: {name: string; type: LeafExpressionType} | undefined
 ) {
   const paramsArray = Object.entries(blueprints);
   return paramsArray.map(blueprint =>
@@ -522,7 +490,7 @@ function expandImplBlueprint(blueprint: DefinitionBlueprint): {
 
 function expandOneBlueprint(
   blueprint: DefinitionBlueprint,
-  generic?: {name: string; type: ExpressionValueType}
+  generic?: {name: string; type: LeafExpressionType}
 ): DialectFunctionOverloadDef {
   return {
     returnType: expandReturnTypeBlueprint(blueprint.returns, generic),

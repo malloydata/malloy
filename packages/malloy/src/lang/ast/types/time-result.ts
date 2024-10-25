@@ -21,11 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {TemporalFieldType, TimestampUnit} from '../../../model/malloy_types';
+import {TemporalTypeDef, TimestampUnit} from '../../../model/malloy_types';
 
 import {ExprResult} from './expr-result';
 
-export interface TimeResult extends ExprResult {
-  dataType: TemporalFieldType;
-  timeframe?: TimestampUnit;
-}
+export type TimeResult = TemporalTypeDef &
+  ExprResult & {
+    timeframe?: TimestampUnit;
+  };

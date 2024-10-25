@@ -292,10 +292,8 @@ expect.extend({
       return ok;
     }
     const d = exprModel.generated();
-    const pass = d.dataType === returnType;
-    const msg = `Expression type ${d.dataType} ${
-      pass ? '=' : '!='
-    } ${returnType}`;
+    const pass = d.type === returnType;
+    const msg = `Expression type ${d.type} ${pass ? '=' : '!='} ${returnType}`;
     return {pass, message: () => msg};
   },
   toLog: function (s: TestSource, ...msgs: ProblemSpec[]) {

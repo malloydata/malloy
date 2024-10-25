@@ -24,7 +24,7 @@
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 import {ExprValue} from '../types/expr-value';
-import {FT} from '../fragtype-utils';
+import {TDU} from '../typedesc-utils';
 
 export class ExprString extends ExpressionDef {
   elementType = 'string literal';
@@ -36,7 +36,7 @@ export class ExprString extends ExpressionDef {
 
   getExpression(_fs: FieldSpace): ExprValue {
     return {
-      ...FT.stringT,
+      ...TDU.stringT,
       value: {node: 'stringLiteral', literal: this.value},
       evalSpace: 'literal',
     };
