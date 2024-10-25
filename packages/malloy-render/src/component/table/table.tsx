@@ -10,6 +10,7 @@ import {
   JSXElement,
   JSX,
   onMount,
+  createEffect,
 } from 'solid-js';
 import {DataArrayOrRecord, DataRecord, Field} from '@malloydata/malloy';
 import {getRangeSize, isFirstChild, isLastChild} from '../util';
@@ -159,6 +160,8 @@ const HeaderField = (props: {field: Field; isPinned?: boolean}) => {
 const TableField = (props: {field: Field; row: DataRecord}) => {
   let renderValue: JSXElement = '';
   let renderAs = '';
+  const cellId = props.field.fieldPath;
+  console.log({cellId});
   ({renderValue, renderAs} = applyRenderer({
     field: props.field,
     dataColumn: props.row.cell(props.field),
@@ -401,11 +404,26 @@ const MalloyTableRoot = (_props: {
     virtualizer = createVirtualizer({
       count: data().length,
       getScrollElement: () => scrollEl,
-      estimateSize: () => rowEstimate(), // need better size estimate
+      /**
+       * need better size estimate. Could we attempt to precalculate per index based on nested depth / renderers?
+       * Might help avoid perf issues with deeply nested but uneven structures, where measurements have to repeat multiple times, causing bad lag on scroll
+       * The only thing we couldn't precalculate is text wrapping columns
+       */
+      estimateSize: () => rowEstimate(),
     });
   }
 
   const items = virtualizer?.getVirtualItems();
+
+  // createEffect(() => {
+  //   if (tableCtx.root) {
+  //     if (items) {
+  //       JSON.parse(JSON.stringify(items));
+  //       console.log(JSON.stringify([...items], null, 2));
+  //       console.log('range', virtualizer?.calculateRange());
+  //     }
+  //   }
+  // });
 
   let pinnedHeaderRow!: HTMLDivElement;
 
@@ -571,6 +589,8 @@ const MalloyTableRoot = (_props: {
                         <TableField
                           field={field}
                           row={data()[virtualRow.index]}
+                          // how to get nested indices?
+                          index={virtualRow.index}
                         />
                       )}
                     </For>

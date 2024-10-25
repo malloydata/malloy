@@ -16,7 +16,7 @@ import {
 } from '@malloydata/malloy';
 import {RenderResultMetadata} from './types';
 import {valueIsNumber, valueIsString} from './util';
-import {JSXElement} from 'solid-js';
+import {JSXElement, Show, createEffect, createSignal} from 'solid-js';
 import {renderNumericField} from './render-numeric-field';
 import {renderLink} from './render-link';
 import {Chart} from './chart/chart';
@@ -35,6 +35,38 @@ export type RendererProps = {
   tag: Tag;
   customProps?: Record<string, Record<string, unknown>>;
 };
+
+// TODO read this for performance
+// Would need way to clear cache when chart is cleared
+// maybe cacheing can live in table code. this just returns the chart renderValue, but then we check if its a chart and do cache stuff in TableField
+// need a cellId for cacheing. needs to be a full index path from root to nested cell
+// one problem with storing chart nodes: they will get all signal updates :/. so would need a way to "disconnect" them?
+const chartRenderCache = new Set();
+// Could we store Chart nodes off screen so we could re-render them?
+function DebounceChart(props) {
+  const [show, setShow] = createSignal(chartRenderCache.has(props.data));
+  // setTimeout(() => {
+  //   setShow(true);
+  // }, 0);
+  requestAnimationFrame(() => {
+    setShow(true);
+  });
+  console.log('has cache entry', chartRenderCache.has(props.data));
+  chartRenderCache.add(props.data);
+  let node = (() => 'loading node')();
+  createEffect(() => {
+    // need a cell id to fetch from cache
+    if (show()) {
+      // Comp =
+    }
+  });
+  return (
+    <Show when={show()} fallback={'loading'}>
+      {/* {node} */}
+      <Chart {...props} />
+    </Show>
+  );
+}
 
 export function shouldRenderAs(f: Field | Explore, tagOverride?: Tag) {
   const tag = tagOverride ?? f.tagParse().tag;
@@ -100,7 +132,7 @@ export function applyRenderer(props: RendererProps) {
       }
       case 'chart': {
         renderValue = (
-          <Chart
+          <DebounceChart
             field={field as ExploreField}
             data={resultMetadata.getData(dataColumn)}
             metadata={resultMetadata}

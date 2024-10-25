@@ -207,7 +207,7 @@ source: products is duckdb.table("data/products.parquet") extend {
     nest: a is {
       group_by: category
       aggregate: sales
-      limit: 24
+      limit: 3 //24
     },
     nest: b is {
       group_by: category
