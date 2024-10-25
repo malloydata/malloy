@@ -40,6 +40,7 @@ const Cell = (props: {
 }) => {
   const style = () => {
     const layout = useTableContext()!.layout;
+    const columnTag = props.field.tagParse().tag.tag('column');
     const width = layout.fieldLayout(props.field).width;
     const height = layout.fieldLayout(props.field).height;
     const style: JSX.CSSProperties = {};
@@ -48,9 +49,12 @@ const Cell = (props: {
         style.width = `${width}px`;
         style['min-width'] = `${width}px`;
         style['max-width'] = `${width}px;`;
-        if (typeof height === 'number') {
-          style.height = `${height}px;`;
-        }
+      }
+      if (height) {
+        style.height = `${height}px`;
+      }
+      if (columnTag?.text('word_break') === 'break_all') {
+        style['word-break'] = 'break-all';
       }
     }
     return style;
@@ -183,7 +187,6 @@ const TableField = (props: {field: Field; row: DataRecord}) => {
     style.position = 'sticky';
     style.top = `var(--malloy-render--table-header-cumulative-height-${fieldLayout.depth})`;
   }
-  // const fieldKey = metadata.getFieldKey()
 
   const tableGutterLeft = fieldLayout.depth > 0 && isFirstChild(props.field);
   const tableGutterRight = fieldLayout.depth > 0 && isLastChild(props.field);
@@ -226,7 +229,8 @@ const MalloyTableRoot = (_props: {
   const tableCtx = useTableContext()!;
   const resultMetadata = useResultContext();
   const shouldFillWidth =
-    tableCtx.root && props.data.field.tagParse().tag.text('size') === 'fill';
+    tableCtx.root &&
+    props.data.field.tagParse().tag.tag('table')?.text('size') === 'fill';
 
   const pinnedFields = createMemo(() => {
     const fields = Object.entries(tableCtx.layout.fieldHeaderRangeMap)
@@ -415,30 +419,31 @@ const MalloyTableRoot = (_props: {
     }, 2000);
   };
 
+  function updateColumnWidths() {
+    const pinnedHeaders = pinnedHeaderRow.querySelectorAll(
+      '[data-pinned-header]'
+    );
+    const updates: [string, number][] = [];
+    pinnedHeaders.forEach(node => {
+      const key = node.getAttribute('data-pinned-header')!;
+      const value = node.clientWidth;
+      const currWidth = tableCtx.store.columnWidths[key];
+      if (typeof currWidth === 'undefined' || value > currWidth)
+        updates.push([key, value]);
+    });
+    if (updates.length > 0) {
+      tableCtx.setStore(
+        'columnWidths',
+        produce((widths: Record<string, number>) => {
+          updates.forEach(([key, value]) => (widths[key] = value));
+        })
+      );
+    }
+  }
+
   // Observe column width sizes and save them as they expand on scroll. Don't let them shrink as its jarring.
   onMount(() => {
     if (pinnedHeaderRow) {
-      function updateColumnWidths() {
-        const pinnedHeaders = pinnedHeaderRow.querySelectorAll(
-          '[data-pinned-header]'
-        );
-        const updates: [string, number][] = [];
-        pinnedHeaders.forEach(node => {
-          const key = node.getAttribute('data-pinned-header')!;
-          const value = node.clientWidth;
-          const currWidth = tableCtx.store.columnWidths[key];
-          if (typeof currWidth === 'undefined' || value > currWidth)
-            updates.push([key, value]);
-        });
-        if (updates.length > 0) {
-          tableCtx.setStore(
-            'columnWidths',
-            produce((widths: Record<string, number>) => {
-              updates.forEach(([key, value]) => (widths[key] = value));
-            })
-          );
-        }
-      }
       const resizeObserver = new ResizeObserver(() => {
         // select all nodes with data-pinned-header attribute
         if (isScrolling) {

@@ -1,7 +1,7 @@
 source: products is duckdb.table("data/products.parquet") extend {
 
   #(story)
-  view: products_table is{
+  view: products_table is {
     select: *
     limit: 1000
     order_by: id
@@ -11,8 +11,10 @@ source: products is duckdb.table("data/products.parquet") extend {
   view: long_column is {
     select:
       brand,
-      # width=lg
+      # column {width=lg}
       name
+      # column {width=200 word_break=break_all }
+      f is 'asdfasdfasdfasdfasdfasdflkahdfsgoaisdfoijadsfgoiahjosdijgaodfsgijao;sdijfgoaidjsgaodsigjao;dsfgija;odfigjoaisdfj'
   }
 
   # bar_chart
@@ -147,7 +149,7 @@ source: products is duckdb.table("data/products.parquet") extend {
   }
 
    #(story)
-   # size=fill
+   # table.size=fill
   view: products_table_full_width is {
     select: *
     limit: 1000
@@ -155,7 +157,7 @@ source: products is duckdb.table("data/products.parquet") extend {
   }
 
   #(story)
-  # size=fill
+  # table.size=fill
   view: nested_full_width is {
     group_by: category
     aggregate: avg_retail is retail_price.avg()

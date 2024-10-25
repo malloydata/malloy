@@ -131,13 +131,17 @@ export function getTableLayout(
     };
     layout.maxDepth = Math.max(layout.maxDepth, layoutEntry.depth);
     const {tag} = field.tagParse();
+    const columnTag = tag.tag('column');
+
     // Allow overriding size
-    const textWidth = tag.text('width');
+    const textWidth = columnTag?.text('width');
+    const numericWidth = columnTag?.numeric('width');
     if (textWidth && NAMED_COLUMN_WIDTHS[textWidth])
       layoutEntry.width = NAMED_COLUMN_WIDTHS[textWidth];
-    else if (tag.numeric('width')) layoutEntry.width = tag.numeric('width')!;
+    else if (numericWidth) layoutEntry.width = numericWidth;
 
-    if (tag.numeric('height')) layoutEntry.height = tag.numeric('height')!;
+    if (columnTag?.numeric('height'))
+      layoutEntry.height = columnTag.numeric('height')!;
 
     layout.fields[key] = layoutEntry;
   }
