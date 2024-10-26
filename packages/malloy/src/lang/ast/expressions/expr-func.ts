@@ -52,6 +52,7 @@ import {computedExprValue, ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldName, FieldSpace} from '../types/field-space';
 import {composeSQLExpr, SQLExprElement} from '../../../model/utils';
+import {TDU} from '../typedesc-utils';
 
 export class ExprFunc extends ExpressionDef {
   elementType = 'function call()';
@@ -163,7 +164,7 @@ export class ExprFunc extends ExpressionDef {
         const footType = sourceFoot.typeDesc();
         if (isAtomicFieldType(footType.type)) {
           implicitExpr = {
-            ...TD.def(footType),
+            ...TDU.atomicDef(footType),
             expressionType: footType.expressionType,
             value: {node: 'field', path: this.source.path},
             evalSpace: footType.evalSpace,
@@ -430,7 +431,7 @@ export class ExprFunc extends ExpressionDef {
     // TODO consider if I can use `computedExprValue` here...
     // seems like the rules for the evalSpace is a bit different from normal though
     return {
-      ...TD.def(type),
+      ...TDU.atomicDef(type),
       expressionType,
       value: funcCall,
       evalSpace,

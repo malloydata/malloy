@@ -1493,48 +1493,6 @@ export const TD = {
     }
     return x.type === y.type;
   },
-  /**
-   * Used when using a TypeDesc in comprehension to create a field,
-   * generates an object where only the type properties exist.
-   */
-  def(td: UTD): AtomicTypeDef {
-    if (TD.isAtomic(td)) {
-      switch (td.type) {
-        case 'array': {
-          return {
-            name: '',
-            type: 'array',
-            join: 'many',
-            elementTypeDef: td.elementTypeDef,
-            dialect: td.dialect,
-            fields: td.fields,
-          };
-        }
-        case 'record': {
-          return {
-            name: '',
-            type: 'record',
-            join: 'one',
-            dialect: td.dialect,
-            fields: td.fields,
-          };
-        }
-        case 'number': {
-          return td.numberType
-            ? {type: 'number', numberType: td.numberType}
-            : {type: 'number'};
-        }
-        case 'sql native': {
-          return td.rawType
-            ? {type: 'sql native', rawType: td.rawType}
-            : {type: 'sql native'};
-        }
-        default:
-          return {type: td.type};
-      }
-    }
-    return {type: 'error'};
-  },
 };
 
 // clang-format on

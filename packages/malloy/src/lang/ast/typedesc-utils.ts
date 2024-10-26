@@ -22,6 +22,7 @@
  */
 
 import {
+  AtomicTypeDef,
   EvalSpace,
   expressionIsScalar,
   ExpressionType,
@@ -152,5 +153,47 @@ export const TDU = {
       return {type: 'error', expressionType, evalSpace};
     }
     return {type: dataType, expressionType, evalSpace};
+  },
+  /**
+   * Used when using a TypeDesc or TypeDesc-like interface to
+   * create a field, don't copy the non type fields.
+   */
+  atomicDef(td: AtomicTypeDef | TypeDesc): AtomicTypeDef {
+    if (TD.isAtomic(td)) {
+      switch (td.type) {
+        case 'array': {
+          return {
+            name: '',
+            type: 'array',
+            join: 'many',
+            elementTypeDef: td.elementTypeDef,
+            dialect: td.dialect,
+            fields: td.fields,
+          };
+        }
+        case 'record': {
+          return {
+            name: '',
+            type: 'record',
+            join: 'one',
+            dialect: td.dialect,
+            fields: td.fields,
+          };
+        }
+        case 'number': {
+          return td.numberType
+            ? {type: 'number', numberType: td.numberType}
+            : {type: 'number'};
+        }
+        case 'sql native': {
+          return td.rawType
+            ? {type: 'sql native', rawType: td.rawType}
+            : {type: 'sql native'};
+        }
+        default:
+          return {type: td.type};
+      }
+    }
+    return {type: 'error'};
   },
 };

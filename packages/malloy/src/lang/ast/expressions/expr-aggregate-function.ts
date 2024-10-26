@@ -86,7 +86,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
           if (isAtomicFieldType(footType.type)) {
             expr = this.source;
             exprVal = {
-              ...TD.def(footType),
+              ...TDU.atomicDef(footType),
               expressionType: footType.expressionType,
               value:
                 footType.evalSpace === 'output'

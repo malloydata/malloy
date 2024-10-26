@@ -96,7 +96,7 @@ export class ExprUngroup extends ExpressionDef {
         ungroup.fields = dstFields;
       }
       return {
-        ...TD.def(exprVal),
+        ...TDU.atomicDef(exprVal),
         expressionType: 'ungrouped_aggregate',
         value: ungroup,
         evalSpace: 'output',

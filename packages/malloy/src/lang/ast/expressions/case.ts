@@ -10,7 +10,7 @@ import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
 import {TDU} from '../typedesc-utils';
-import {CaseExpr, TD} from '../../../model';
+import {CaseExpr} from '../../../model';
 
 interface Choice {
   then: ExprValue;
@@ -97,7 +97,7 @@ export class Case extends ExpressionDef {
     }
     return computedExprValue({
       value: resultExpr,
-      dataType: returnType ? TD.def(returnType) : {type: 'null'},
+      dataType: returnType ? TDU.atomicDef(returnType) : {type: 'null'},
       from: dependents,
     });
   }

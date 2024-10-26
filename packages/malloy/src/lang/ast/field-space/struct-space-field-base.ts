@@ -21,12 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  isSourceDef,
-  JoinFieldDef,
-  TypeDesc,
-  TD,
-} from '../../../model/malloy_types';
+import {isSourceDef, JoinFieldDef, TypeDesc} from '../../../model/malloy_types';
+import {TDU} from '../typedesc-utils';
 import {FieldSpace} from '../types/field-space';
 import {JoinPathElement} from '../types/lookup-result';
 import {SpaceField} from '../types/space-field';
@@ -59,7 +55,7 @@ export abstract class StructSpaceFieldBase extends SpaceField {
       };
     }
     return {
-      ...TD.def(this.structDef),
+      ...TDU.atomicDef(this.structDef),
       evalSpace: 'input',
       expressionType: 'scalar',
     };

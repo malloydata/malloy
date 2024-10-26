@@ -68,7 +68,7 @@ export class ReferenceField extends SpaceField {
         const foundType = check.found.typeDesc();
         if (TD.isAtomic(foundType)) {
           this.queryFieldDef = {
-            ...TD.def(foundType),
+            ...TDU.atomicDef(foundType),
             name: path[0],
             e: {node: 'parameter', path},
           };
