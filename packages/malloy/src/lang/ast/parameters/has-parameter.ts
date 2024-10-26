@@ -21,13 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  TD,
-  Parameter,
-  CastType,
-  isCastType,
-  LeafAtomicTypeDef,
-} from '../../../model/malloy_types';
+import {Parameter, CastType, isCastType} from '../../../model/malloy_types';
 
 import {ConstantExpression} from '../expressions/constant-expression';
 import {MalloyElement} from '../types/malloy-element';
