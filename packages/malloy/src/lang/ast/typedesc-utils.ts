@@ -49,6 +49,7 @@ const dateT = mkTypeDesc('date');
 const timestampT = mkTypeDesc('timestamp');
 const boolT = mkTypeDesc('boolean');
 const errorT = mkTypeDesc('error');
+
 const viewT = mkTypeDesc('turtle');
 /**
  * Collects functions which operate on TypeDesc compatible objects
@@ -133,27 +134,7 @@ export const TDU = {
     });
     return strings.join(',');
   },
-
-  nullT,
-  numberT,
-  stringT,
-  dateT,
-  timestampT,
-  boolT,
-  errorT,
-  viewT,
-  anyAtomicT: [numberT, stringT, dateT, timestampT, boolT],
   aggregateBoolT: mkTypeDesc('boolean', 'aggregate'),
-  make(
-    dataType: ExpressionValueType,
-    expressionType: ExpressionType = 'scalar',
-    evalSpace: EvalSpace = 'constant'
-  ): TypeDesc {
-    if (dataType === 'record' || dataType === 'array') {
-      return {type: 'error', expressionType, evalSpace};
-    }
-    return {type: dataType, expressionType, evalSpace};
-  },
   /**
    * Used when using a TypeDesc or TypeDesc-like interface to
    * create a field, don't copy the non type fields.
@@ -196,4 +177,13 @@ export const TDU = {
     }
     return {type: 'error'};
   },
+  nullT,
+  numberT,
+  stringT,
+  dateT,
+  timestampT,
+  boolT,
+  errorT,
+  viewT,
+  anyAtomicT: [numberT, stringT, dateT, timestampT, boolT],
 };
