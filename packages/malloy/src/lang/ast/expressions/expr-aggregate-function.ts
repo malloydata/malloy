@@ -31,7 +31,6 @@ import {
   hasExpression,
   isJoined,
   isAtomic,
-  TD,
 } from '../../../model/malloy_types';
 import {exprWalk} from '../../../model/utils';
 

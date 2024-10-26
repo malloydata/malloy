@@ -24,7 +24,6 @@
 import {
   expressionIsAggregate,
   expressionIsUngroupedAggregate,
-  TD,
   UngroupNode,
 } from '../../../model/malloy_types';
 
