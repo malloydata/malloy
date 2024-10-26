@@ -48,7 +48,7 @@ const dateT = mkTypeDesc('date');
 const timestampT = mkTypeDesc('timestamp');
 const boolT = mkTypeDesc('boolean');
 const errorT = mkTypeDesc('error');
-const viewT = mkTypeDesc('xview');
+const viewT = mkTypeDesc('turtle');
 /**
  * Collects functions which operate on TypeDesc compatible objects
  * The compiler also has a TD object which works on "TypeDef"

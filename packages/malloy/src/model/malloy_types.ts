@@ -1134,7 +1134,7 @@ export type StructDef = SourceDef | RecordFieldDef | ArrayDef;
 // for "non-atomic" and even the AI couldn't think of the right word.
 export type NonAtomicType =
   | Exclude<JoinElementType, 'array' | 'record'>
-  | 'xview' //   do NOT have the full type info, just noting the type
+  | 'turtle' //   do NOT have the full type info, just noting the type
   | 'null'
   | 'duration'
   | 'any'
@@ -1147,7 +1147,7 @@ export type ExpressionValueType = AtomicFieldType | NonAtomicType;
 export type ExpressionValueTypeDef = AtomicTypeDef | NonAtomicTypeDef;
 export type LeafExpressionType = Exclude<
   ExpressionValueType,
-  JoinElementType | 'xview'
+  JoinElementType | 'turtle'
 >;
 
 export type TypeInfo = {
