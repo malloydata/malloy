@@ -25,7 +25,7 @@ import {FieldDefType, Parameter, TypeDesc} from '../../../model/malloy_types';
 
 import {SpaceEntry} from './space-entry';
 import {HasParameter} from '../parameters/has-parameter';
-import {TDU} from '../typedesc-utils';
+import * as TDU from '../typedesc-utils';
 
 export abstract class SpaceParam extends SpaceEntry {
   abstract parameter(): Parameter;

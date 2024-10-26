@@ -30,7 +30,7 @@ import {
 } from '../../../model/malloy_types';
 
 import {errorFor} from '../ast-utils';
-import {TDU} from '../typedesc-utils';
+import * as TDU from '../typedesc-utils';
 import {timeOffset} from '../time-utils';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';

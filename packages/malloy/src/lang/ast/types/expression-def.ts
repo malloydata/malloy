@@ -30,7 +30,7 @@ import {
   TD,
   LeafExpressionType,
 } from '../../../model/malloy_types';
-import {TDU} from '../typedesc-utils';
+import * as TDU from '../typedesc-utils';
 import {errorFor} from '../ast-utils';
 import {
   ExprValue,
@@ -104,7 +104,7 @@ export abstract class ExpressionDef extends MalloyElement {
    * @param eVal ...list of expressions that must match legalChildTypes
    */
   typeCheck(eNode: ExpressionDef, eVal: ExprValue): boolean {
-    if (eVal.type !== 'error' && !TDU.in(eVal, this.legalChildTypes)) {
+    if (eVal.type !== 'error' && !TDU.any(eVal, this.legalChildTypes)) {
       if (eVal.type === 'sql native') {
         eNode.logError('sql-native-not-allowed-in-expression', {
           rawType: eVal.rawType,

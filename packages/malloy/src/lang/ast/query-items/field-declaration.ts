@@ -34,7 +34,7 @@ import {
   FieldDefType,
 } from '../../../model/malloy_types';
 
-import {TDU} from '../typedesc-utils';
+import * as TDU from '../typedesc-utils';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldName, FieldSpace, QueryFieldSpace} from '../types/field-space';

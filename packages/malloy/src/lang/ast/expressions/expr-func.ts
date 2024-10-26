@@ -52,7 +52,7 @@ import {computedExprValue, ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldName, FieldSpace} from '../types/field-space';
 import {composeSQLExpr, SQLExprElement} from '../../../model/utils';
-import {TDU} from '../typedesc-utils';
+import * as TDU from '../typedesc-utils';
 
 export class ExprFunc extends ExpressionDef {
   elementType = 'function call()';

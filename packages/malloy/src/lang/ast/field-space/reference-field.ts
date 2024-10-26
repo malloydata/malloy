@@ -27,7 +27,7 @@ import {
   TD,
   TypeDesc,
 } from '../../../model/malloy_types';
-import {TDU} from '../typedesc-utils';
+import * as TDU from '../typedesc-utils';
 import {FieldReference} from '../query-items/field-references';
 import {FieldSpace} from '../types/field-space';
 import {SpaceEntry} from '../types/space-entry';

@@ -9,7 +9,7 @@ import {ExprValue, computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
-import {TDU} from '../typedesc-utils';
+import * as TDU from '../typedesc-utils';
 import {CaseExpr} from '../../../model';
 
 interface Choice {

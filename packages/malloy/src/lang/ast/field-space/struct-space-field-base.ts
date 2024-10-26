@@ -22,7 +22,7 @@
  */
 
 import {isSourceDef, JoinFieldDef, TypeDesc} from '../../../model/malloy_types';
-import {TDU} from '../typedesc-utils';
+import * as TDU from '../typedesc-utils';
 import {FieldSpace} from '../types/field-space';
 import {JoinPathElement} from '../types/lookup-result';
 import {SpaceField} from '../types/space-field';

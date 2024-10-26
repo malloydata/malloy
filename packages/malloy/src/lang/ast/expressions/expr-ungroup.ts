@@ -28,7 +28,7 @@ import {
 } from '../../../model/malloy_types';
 
 import {QuerySpace} from '../field-space/query-spaces';
-import {TDU} from '../typedesc-utils';
+import * as TDU from '../typedesc-utils';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldName, FieldSpace} from '../types/field-space';

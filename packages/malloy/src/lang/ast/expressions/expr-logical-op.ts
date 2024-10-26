@@ -22,7 +22,7 @@
  */
 
 import {BinaryBoolean} from './binary-boolean';
-import {TDU} from '../typedesc-utils';
+import * as TDU from '../typedesc-utils';
 
 export class ExprLogicalOp extends BinaryBoolean<'and' | 'or'> {
   elementType = 'logical operator';

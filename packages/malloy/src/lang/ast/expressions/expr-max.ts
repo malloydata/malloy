@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {TDU} from '../typedesc-utils';
+import * as TDU from '../typedesc-utils';
 import {ExprAggregateFunction} from './expr-aggregate-function';
 import {ExpressionDef} from '../types/expression-def';
 import {ExprValue} from '../types/expr-value';

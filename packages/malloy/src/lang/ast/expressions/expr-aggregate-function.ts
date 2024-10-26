@@ -36,7 +36,7 @@ import {exprWalk} from '../../../model/utils';
 
 import {errorFor} from '../ast-utils';
 import {StructSpaceField} from '../field-space/static-space';
-import {TDU} from '../typedesc-utils';
+import * as TDU from '../typedesc-utils';
 import {FieldReference} from '../query-items/field-references';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';

@@ -22,7 +22,7 @@
  */
 
 import {maxExpressionType, mergeEvalSpaces} from '../../../model';
-import {TDU} from '../typedesc-utils';
+import * as TDU from '../typedesc-utils';
 import {
   BinaryMalloyOperator,
   CompareMalloyOperator,

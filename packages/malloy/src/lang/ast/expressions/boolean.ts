@@ -23,7 +23,7 @@
 
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import {TDU} from '../typedesc-utils';
+import * as TDU from '../typedesc-utils';
 
 export class Boolean extends ExpressionDef {
   elementType = 'boolean literal';

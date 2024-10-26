@@ -22,7 +22,7 @@
  */
 
 import {errorFor} from '../ast-utils';
-import {TDU} from '../typedesc-utils';
+import * as TDU from '../typedesc-utils';
 import {BinaryMalloyOperator, getExprNode} from '../types/binary_operators';
 import {ExprValue, computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';

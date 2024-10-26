@@ -42,148 +42,133 @@ function mkTypeDesc(
   return {type: dataType, expressionType, evalSpace};
 }
 
-const nullT = mkTypeDesc('null');
-const numberT = mkTypeDesc('number');
-const stringT = mkTypeDesc('string');
-const dateT = mkTypeDesc('date');
-const timestampT = mkTypeDesc('timestamp');
-const boolT = mkTypeDesc('boolean');
-const errorT = mkTypeDesc('error');
+export const nullT = mkTypeDesc('null');
+export const numberT = mkTypeDesc('number');
+export const stringT = mkTypeDesc('string');
+export const dateT = mkTypeDesc('date');
+export const timestampT = mkTypeDesc('timestamp');
+export const boolT = mkTypeDesc('boolean');
+export const errorT = mkTypeDesc('error');
+export const viewT = mkTypeDesc('turtle');
+export const aggregateBoolT = mkTypeDesc('boolean', 'aggregate');
+export const anyAtomicT = [numberT, stringT, dateT, timestampT, boolT];
 
-const viewT = mkTypeDesc('turtle');
 /**
- * Collects functions which operate on TypeDesc compatible objects
- * The compiler also has a TD object which works on "TypeDef"
- * compatible objects, which includes TypeDesc.
+ * Checks if a given type is in a list
+ * @param check The type to check (can be undefined)
+ * @param from List of types which are OK
  */
-export const TDU = {
-  /**
-   * Checks if a given type is in a list
-   * @param check The type to check (can be undefined)
-   * @param from List of types which are OK
-   */
-  in(check: TypeDesc | undefined, from: TypeDesc[]): boolean {
-    if (check) {
-      const found = from.find(okType => TDU.eq(okType, check));
-      return found !== undefined;
-    }
-    return false;
-  },
+export function any(check: TypeDesc | undefined, from: TypeDesc[]): boolean {
+  if (check) {
+    const found = from.find(okType => eq(okType, check));
+    return found !== undefined;
+  }
+  return false;
+}
 
-  /**
-   * Checks if a possibly undefined candidate matches a type
-   * @param good The real type
-   * @param checkThis The possibly undefined candidate
-   */
-  eq(good: TypeDesc, checkThis: TypeDesc | undefined): boolean {
-    return (
-      checkThis !== undefined &&
-      TD.eq(good, checkThis) &&
-      good.expressionType === checkThis.expressionType
-    );
-  },
+/**
+ * Checks if a possibly undefined candidate matches a type
+ * @param good The real type
+ * @param checkThis The possibly undefined candidate
+ */
+export function eq(good: TypeDesc, checkThis: TypeDesc | undefined): boolean {
+  return (
+    checkThis !== undefined &&
+    TD.eq(good, checkThis) &&
+    good.expressionType === checkThis.expressionType
+  );
+}
 
-  /**
-   * Checks if a given type is in a list, ignoring aggregate
-   * @param check The type to check (can be undefined)
-   * @param from List of types which are OK
-   */
-  typeIn(check: TypeDesc | undefined, from: TypeDesc[]): boolean {
-    if (check) {
-      const found = from.find(okType => TDU.typeEq(okType, check));
-      return found !== undefined;
-    }
-    return false;
-  },
+/**
+ * Checks if a given type is in a list, ignoring aggregate
+ * @param check The type to check (can be undefined)
+ * @param from List of types which are OK
+ */
+export function typeIn(check: TypeDesc | undefined, from: TypeDesc[]): boolean {
+  if (check) {
+    const found = from.find(okType => typeEq(okType, check));
+    return found !== undefined;
+  }
+  return false;
+}
 
-  /**
-   * Checks if the base types, ignoring expressionType, are equal
-   * @param left Left type
-   * @param right Right type
-   * @param nullOk True if a NULL is an acceptable match
-   */
-  typeEq(
-    left: TypeDesc,
-    right: TypeDesc,
-    nullOk = false,
-    errorOk = true
-  ): boolean {
-    const maybeEq = TD.eq(left, right);
-    const nullEq = nullOk && (left.type === 'null' || right.type === 'null');
-    const errorEq =
-      errorOk && (left.type === 'error' || right.type === 'error');
-    return maybeEq || nullEq || errorEq;
-  },
+/**
+ * Checks if the base types, ignoring expressionType, are equal
+ * @param left Left type
+ * @param right Right type
+ * @param nullOk True if a NULL is an acceptable match
+ */
+export function typeEq(
+  left: TypeDesc,
+  right: TypeDesc,
+  nullOk = false,
+  errorOk = true
+): boolean {
+  const maybeEq = TD.eq(left, right);
+  const nullEq = nullOk && (left.type === 'null' || right.type === 'null');
+  const errorEq = errorOk && (left.type === 'error' || right.type === 'error');
+  return maybeEq || nullEq || errorEq;
+}
 
-  /**
-   *
-   * For error messages, returns a comma seperated list of readable names
-   * for a list of types.
-   * @param types List of type or objects with types
-   */
-  inspect(...types: (TypeDesc | undefined)[]): string {
-    const strings = types.map(type => {
-      if (type) {
-        let inspected: string = type.type;
-        if (!expressionIsScalar(type.expressionType)) {
-          inspected = `${type.expressionType} ${inspected}`;
-        }
-        return inspected;
+/**
+ *
+ * For error messages, returns a comma seperated list of readable names
+ * for a list of types.
+ * @param types List of type or objects with types
+ */
+export function inspect(...types: (TypeDesc | undefined)[]): string {
+  const strings = types.map(type => {
+    if (type) {
+      let inspected: string = type.type;
+      if (!expressionIsScalar(type.expressionType)) {
+        inspected = `${type.expressionType} ${inspected}`;
       }
-      return 'undefined';
-    });
-    return strings.join(',');
-  },
-  aggregateBoolT: mkTypeDesc('boolean', 'aggregate'),
-  /**
-   * Used when using a TypeDesc or TypeDesc-like interface to
-   * create a field, don't copy the non type fields.
-   */
-  atomicDef(td: AtomicTypeDef | TypeDesc): AtomicTypeDef {
-    if (TD.isAtomic(td)) {
-      switch (td.type) {
-        case 'array': {
-          return {
-            name: '',
-            type: 'array',
-            join: 'many',
-            elementTypeDef: td.elementTypeDef,
-            dialect: td.dialect,
-            fields: td.fields,
-          };
-        }
-        case 'record': {
-          return {
-            name: '',
-            type: 'record',
-            join: 'one',
-            dialect: td.dialect,
-            fields: td.fields,
-          };
-        }
-        case 'number': {
-          return td.numberType
-            ? {type: 'number', numberType: td.numberType}
-            : {type: 'number'};
-        }
-        case 'sql native': {
-          return td.rawType
-            ? {type: 'sql native', rawType: td.rawType}
-            : {type: 'sql native'};
-        }
-        default:
-          return {type: td.type};
-      }
+      return inspected;
     }
-    return {type: 'error'};
-  },
-  nullT,
-  numberT,
-  stringT,
-  dateT,
-  timestampT,
-  boolT,
-  errorT,
-  viewT,
-  anyAtomicT: [numberT, stringT, dateT, timestampT, boolT],
-};
+    return 'undefined';
+  });
+  return strings.join(',');
+}
+
+/**
+ * Used when using a TypeDesc or TypeDesc-like interface to
+ * create a field, don't copy the non type fields.
+ */
+export function atomicDef(td: AtomicTypeDef | TypeDesc): AtomicTypeDef {
+  if (TD.isAtomic(td)) {
+    switch (td.type) {
+      case 'array': {
+        return {
+          name: '',
+          type: 'array',
+          join: 'many',
+          elementTypeDef: td.elementTypeDef,
+          dialect: td.dialect,
+          fields: td.fields,
+        };
+      }
+      case 'record': {
+        return {
+          name: '',
+          type: 'record',
+          join: 'one',
+          dialect: td.dialect,
+          fields: td.fields,
+        };
+      }
+      case 'number': {
+        return td.numberType
+          ? {type: 'number', numberType: td.numberType}
+          : {type: 'number'};
+      }
+      case 'sql native': {
+        return td.rawType
+          ? {type: 'sql native', rawType: td.rawType}
+          : {type: 'sql native'};
+      }
+      default:
+        return {type: td.type};
+    }
+  }
+  return {type: 'error'};
+}
