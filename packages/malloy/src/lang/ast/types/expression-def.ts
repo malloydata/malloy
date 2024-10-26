@@ -28,6 +28,7 @@ import {
   isTemporalField,
   expressionIsAggregate,
   TD,
+  LeafExpressionType,
 } from '../../../model/malloy_types';
 import {TDU} from '../typedesc-utils';
 import {errorFor} from '../ast-utils';
@@ -551,7 +552,7 @@ export function applyBinary(
 }
 
 function errorCascade(
-  type: 'boolean' | 'number' | 'date' | 'timestamp' | 'error',
+  type: LeafExpressionType,
   ...es: ExprValue[]
 ): ExprValue | undefined {
   if (es.some(e => e.type === 'error')) {
