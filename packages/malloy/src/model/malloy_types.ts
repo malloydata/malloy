@@ -1170,7 +1170,9 @@ export function isLiteral(evalSpace: EvalSpace) {
 }
 
 export function mergeEvalSpaces(...evalSpaces: EvalSpace[]): EvalSpace {
-  if (evalSpaces.every(e => e === 'constant' || e === 'literal')) {
+  if (evalSpaces.length <= 1 && evalSpaces.every(e => e === 'literal')) {
+    return 'literal';
+  } else if (evalSpaces.every(e => e === 'constant' || e === 'literal')) {
     return 'constant';
   } else if (
     evalSpaces.every(e => e === 'output' || e === 'constant' || e === 'literal')
@@ -1486,6 +1488,9 @@ export const TD = {
     } else if (x.type === 'record' && y.type === 'record') {
       return checkFields(x, y);
     }
+    if (x.type === 'sql native' && y.type === 'sql native') {
+      return x.rawType !== undefined && x.rawType === y.rawType;
+    }
     return x.type === y.type;
   },
   /**
@@ -1515,11 +1520,14 @@ export const TD = {
           };
         }
         case 'number': {
-          const nd: NumberTypeDef = {type: 'number'};
-          if (td.numberType) {
-            nd.numberType = td.numberType;
-          }
-          return nd;
+          return td.numberType
+            ? {type: 'number', numberType: td.numberType}
+            : {type: 'number'};
+        }
+        case 'sql native': {
+          return td.rawType
+            ? {type: 'sql native', rawType: td.rawType}
+            : {type: 'sql native'};
         }
         default:
           return {type: td.type};

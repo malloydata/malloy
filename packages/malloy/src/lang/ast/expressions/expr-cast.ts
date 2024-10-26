@@ -23,7 +23,7 @@
 
 import {CastType, LeafAtomicTypeDef} from '../../../model';
 import {castTo} from '../time-utils';
-import {ExprValue} from '../types/expr-value';
+import {ExprValue, computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 
@@ -61,11 +61,10 @@ export class ExprCast extends ExpressionDef {
         }
       }
     }
-    return {
-      ...dataType,
-      expressionType: expr.expressionType,
+    return computedExprValue({
+      dataType,
       value: castTo(this.castType, expr.value, expr.type, this.safe),
-      evalSpace: expr.evalSpace,
-    };
+      from: [expr],
+    });
   }
 }

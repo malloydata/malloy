@@ -21,8 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {maxExpressionType, mergeEvalSpaces} from '../../../model/malloy_types';
-import {ExprValue} from '../types/expr-value';
+import {ExprValue, computedExprValue} from '../types/expr-value';
 import {FieldSpace} from '../types/field-space';
 import {ATNodeType, ExpressionDef} from '../types/expression-def';
 import {BinaryMalloyOperator, isEquality} from '../types/binary_operators';
@@ -87,24 +86,15 @@ export class ExprAlternationTree extends ExpressionDef {
       if (inList.length > 0 && (applyOp === '=' || applyOp === '!=')) {
         const isIn = expr.getExpression(fs);
         const values = inList.map(v => v.getExpression(fs));
-        let {evalSpace, expressionType} = isIn;
-        for (const value of values) {
-          evalSpace = mergeEvalSpaces(evalSpace, value.evalSpace);
-          expressionType = maxExpressionType(
-            expressionType,
-            value.expressionType
-          );
-        }
-        return {
-          type: 'boolean',
-          evalSpace,
-          expressionType,
+        return computedExprValue({
+          dataType: {type: 'boolean'},
           value: {
             node: 'in',
             not: applyOp === '!=',
             kids: {e: isIn.value, oneOf: values.map(v => v.value)},
           },
-        };
+          from: [isIn, ...values],
+        });
       }
       if (inList.length === 0 && warnOnComplexTree) {
         this.logWarning(
@@ -115,18 +105,14 @@ export class ExprAlternationTree extends ExpressionDef {
     }
     const choice1 = this.left.apply(fs, applyOp, expr);
     const choice2 = this.right.apply(fs, applyOp, expr);
-    return {
-      type: 'boolean',
-      expressionType: maxExpressionType(
-        choice1.expressionType,
-        choice2.expressionType
-      ),
-      evalSpace: mergeEvalSpaces(choice1.evalSpace, choice2.evalSpace),
+    return computedExprValue({
+      dataType: {type: 'boolean'},
       value: {
         node: this.op === '&' ? 'and' : 'or',
         kids: {left: choice1.value, right: choice2.value},
       },
-    };
+      from: [choice1, choice2],
+    });
   }
 
   requestExpression(_fs: FieldSpace): ExprValue | undefined {

@@ -1,7 +1,7 @@
 source: products is duckdb.table("data/products.parquet") extend {
 
   #(story)
-  view: products_table is{
+  view: products_table is {
     select: *
     limit: 1000
     order_by: id
@@ -11,8 +11,10 @@ source: products is duckdb.table("data/products.parquet") extend {
   view: long_column is {
     select:
       brand,
-      # width=lg
+      # column {width=lg}
       name
+      # column {width=200 word_break=break_all }
+      f is 'asdfasdfasdfasdfasdfasdflkahdfsgoaisdfoijadsfgoiahjosdijgaodfsgijao;sdijfgoaidjsgaodsigjao;dsfgija;odfigjoaisdfj'
   }
 
   # bar_chart
@@ -144,6 +146,81 @@ source: products is duckdb.table("data/products.parquet") extend {
       `@2001-02-03 04:05:06.001.quarter` is @2001-02-03 04:05:06.001.quarter
       `@2001-02-03 04:05:06.001.year` is @2001-02-03 04:05:06.001.year
     limit: 1
+  }
+
+   #(story)
+   # table.size=fill
+  view: products_table_full_width is {
+    select: *
+    limit: 1000
+    order_by: id
+  }
+
+  #(story)
+  # table.size=fill
+  view: nested_full_width is {
+    group_by: category
+    aggregate: avg_retail is retail_price.avg()
+    nest:
+      nested_column_1 is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 10
+      }
+      another_nested is {
+        group_by: department
+        aggregate: avg_retail is retail_price.avg()
+        nest:
+          deeply_nested is {
+            group_by: `sku`
+            aggregate: total_cost is cost.sum()
+            limit: 3
+          }
+        limit: 5
+      }
+      record is {
+        nest: nested_record is {
+          group_by: id
+          aggregate: total_cost is cost.sum()
+          limit: 5
+        }
+      }
+      another_nested2 is {
+        group_by: department
+        aggregate: avg_retail is retail_price.avg()
+        nest: deeply_nested is {
+          group_by: `sku`
+          aggregate: total_cost is cost.sum()
+          limit: 3
+        }
+        limit: 5
+      }
+  }
+
+  measure: sales is retail_price.sum()
+
+  #(story)
+  view: perf is {
+    group_by: brand
+    aggregate: sales
+    -- # bar_chartx
+    nest: a is {
+      group_by: category
+      aggregate: sales
+      limit: 24
+    },
+    nest: b is {
+      group_by: category
+      aggregate: sales
+      # bar_chart { size=spark }
+      nest: c is {
+        group_by: id
+        aggregate: sales
+        limit: 24
+      }
+      limit: 5
+    }
+    limit: 10
   }
 }
 

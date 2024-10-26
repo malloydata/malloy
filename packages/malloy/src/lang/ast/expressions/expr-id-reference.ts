@@ -45,6 +45,7 @@ export class ExprIdReference extends ExpressionDef {
       if (def.isOutputField) {
         return {
           ...td,
+          // TODO what about literal??
           evalSpace: td.evalSpace === 'constant' ? 'constant' : 'output',
           value: {node: 'outputField', name: this.refString},
         };

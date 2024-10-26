@@ -28,7 +28,6 @@ import {
   ExploreField,
   Field,
   QueryData,
-  QueryDataRow,
   Result,
   Tag,
 } from '@malloydata/malloy';
@@ -39,10 +38,14 @@ import {
   valueIsString,
 } from './util';
 import {hasAny} from './tag-utils';
-import {RenderResultMetadata, VegaChartProps, VegaConfigHandler} from './types';
+import {
+  DataRowWithRecord,
+  RenderResultMetadata,
+  VegaChartProps,
+  VegaConfigHandler,
+} from './types';
 import {shouldRenderAs} from './apply-renderer';
 import {getBarChartSettings} from './bar-chart/get-bar_chart-settings';
-import {generateBarChartVegaLiteSpec} from './bar-chart/generate-bar_chart-vega-lite-spec';
 import {mergeVegaConfigs} from './plot/merge-vega-configs';
 import {baseVegaConfig} from './plot/base-vega-config';
 import {renderTimeString} from './render-time';
@@ -50,15 +53,20 @@ import {getLineChartSettings} from './line-chart/get-line_chart-settings';
 import {generateLineChartVegaLiteSpec} from './line-chart/generate-line_chart-vega-lite-spec';
 import {getAreaChartSettings} from './area-chart/get-area_chart-settings';
 import {generateAreaChartVegaLiteSpec} from './area-chart/generate-area_chart-vega-lite-spec';
+import {generateBarChartVegaSpec} from './bar-chart/generate-bar_chart-vega-spec';
+import {createResultStore} from './result-store/result-store';
 
 function createDataCache() {
   const dataCache = new WeakMap<DataColumn, QueryData>();
   return {
     get: (cell: DataColumn) => {
       if (!dataCache.has(cell) && cell.isArray()) {
-        const data: QueryDataRow[] = [];
+        const data: DataRowWithRecord[] = [];
         for (const row of cell) {
-          data.push(row.toObject());
+          const record = Object.assign(row.toObject(), {
+            __malloyDataRecord: row,
+          });
+          data.push(record);
         }
         dataCache.set(cell, data);
       }
@@ -94,6 +102,7 @@ export function getResultMetadata(
     modelTag: result.modelTag,
     resultTag: result.tagParse().tag,
     rootField,
+    store: createResultStore(),
   };
 
   const fieldKey = metadata.getFieldKey(rootField);
@@ -237,7 +246,13 @@ function populateExploreMeta(
   if (hasAny(tag, 'bar', 'bar_chart')) {
     const chartTag = (tag.tag('bar_chart') ?? tag.tag('bar'))!;
     const barSettings = getBarChartSettings(f, tag);
-    vegaLiteProps = generateBarChartVegaLiteSpec(
+    // vegaLiteProps = generateBarChartVegaLiteSpec(
+    //   f,
+    //   barSettings,
+    //   metadata,
+    //   chartTag
+    // );
+    vegaLiteProps = generateBarChartVegaSpec(
       f,
       barSettings,
       metadata,

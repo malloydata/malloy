@@ -26,14 +26,15 @@ import {
   isExtractUnit,
   isTemporalField,
   isTimestampUnit,
-  maxExpressionType,
-  mergeEvalSpaces,
   mkTemporal,
   TD,
 } from '../../../model/malloy_types';
 
-import {errorFor} from '../ast-utils';
-import {ExprValue} from '../types/expr-value';
+import {
+  ExprValue,
+  computedErrorExprValue,
+  computedExprValue,
+} from '../types/expr-value';
 import {ExpressionDef, getMorphicValue} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 import {Range} from './range';
@@ -81,18 +82,12 @@ export class ExprTimeExtract extends ExpressionDef {
       if (from instanceof Range) {
         let first = from.first.getExpression(fs);
         let last = from.last.getExpression(fs);
-        const expressionType = maxExpressionType(
-          first.expressionType,
-          last.expressionType
-        );
-        const evalSpace = mergeEvalSpaces(first.evalSpace, last.evalSpace);
         if (first.type === 'error' || last.type === 'error') {
-          return {
-            type: 'number',
-            expressionType,
-            evalSpace,
-            value: errorFor('extract from error').value,
-          };
+          return computedErrorExprValue({
+            dataType: {type: 'number'},
+            error: 'extract from error',
+            from: [first, last],
+          });
         }
         if (!isTemporalField(first.type)) {
           return from.first.loggedErrorExpr(
@@ -142,10 +137,8 @@ export class ExprTimeExtract extends ExpressionDef {
             `Cannot extract ${extractTo} from a range`
           );
         }
-        return {
-          type: 'number',
-          expressionType,
-          evalSpace,
+        return computedExprValue({
+          dataType: {type: 'number', numberType: 'integer'},
           value: {
             node: 'timeDiff',
             units: extractTo,
@@ -154,20 +147,20 @@ export class ExprTimeExtract extends ExpressionDef {
               right: mkTemporal(last.value, valueType),
             },
           },
-        };
+          from: [first, last],
+        });
       } else {
         const argV = from.getExpression(fs);
         if (isTemporalField(argV.type)) {
-          return {
-            type: 'number',
-            expressionType: argV.expressionType,
-            evalSpace: argV.evalSpace,
+          return computedExprValue({
+            dataType: {type: 'number', numberType: 'integer'},
             value: {
               node: 'extract',
               e: mkTemporal(argV.value, argV.type),
               units: extractTo,
             },
-          };
+            from: [argV],
+          });
         }
         if (argV.type !== 'error') {
           this.logError(
@@ -175,12 +168,11 @@ export class ExprTimeExtract extends ExpressionDef {
             `${this.extractText}() requires time type, not '${argV.type}'`
           );
         }
-        return {
-          type: 'number',
-          expressionType: argV.expressionType,
-          evalSpace: argV.evalSpace,
-          value: errorFor(`${this.extractText} bad type ${argV.type}`).value,
-        };
+        return computedErrorExprValue({
+          dataType: {type: 'number', numberType: 'integer'},
+          error: `${this.extractText} bad type ${argV.type}`,
+          from: [argV],
+        });
       }
     }
     throw this.internalError(`Illegal extraction unit '${this.extractText}'`);

@@ -25,6 +25,7 @@ import {Explore, ExploreField, Field, Tag} from '@malloydata/malloy';
 import {scale, locale} from 'vega';
 import {getFieldKey, getTextWidth} from './util';
 import {RenderResultMetadata} from './types';
+import {renderNumericField} from './render-numeric-field';
 
 export type ChartLayoutSettings = {
   plotWidth: number;
@@ -33,7 +34,7 @@ export type ChartLayoutSettings = {
     labelAngle: number;
     labelAlign?: string;
     labelBaseline?: string;
-    labelSize: number;
+    labelLimit: number;
     height: number;
     titleSize: number;
     hidden: boolean;
@@ -42,6 +43,7 @@ export type ChartLayoutSettings = {
     width: number;
     tickCount?: number;
     hidden: boolean;
+    yTitleSize: number;
   };
   yScale: {
     domain: number[];
@@ -112,8 +114,9 @@ export function getChartLayoutSettings(
   let labelAngle = -90;
   let labelAlign: string | undefined = 'right';
   let labelBaseline = 'middle';
-  let labelSize = 0;
+  let labelLimit = 0;
   let xTitleSize = 0;
+  let yTitleSize = 0;
   const hasXAxis = presetSize !== 'spark';
   const hasYAxis = presetSize !== 'spark';
   const exploreMetadata = metadata.fields[getFieldKey(field)];
@@ -134,9 +137,15 @@ export function getChartLayoutSettings(
     const maxAxisVal = yScale.domain().at(1);
     const minAxisVal = yScale.domain().at(0);
     const l = locale();
-    const formattedMin = l.format(',')(minAxisVal);
-    const formattedMax = l.format(',')(maxAxisVal);
-    const yTitleSize = 31; // Estimate for now, can be dynamic later
+    const formattedMin = yField.isAtomicField()
+      ? renderNumericField(yField, minAxisVal)
+      : l.format(',')(minAxisVal);
+    const formattedMax = yField.isAtomicField()
+      ? renderNumericField(yField, maxAxisVal)
+      : l.format(',')(maxAxisVal);
+    // const formattedMin = l.format(',')(minAxisVal);
+    // const formattedMax = l.format(',')(maxAxisVal);
+    yTitleSize = 31; // Estimate for now, can be dynamic later
     const yLabelOffset = 5;
     yAxisWidth =
       Math.max(
@@ -171,7 +180,7 @@ export function getChartLayoutSettings(
     const X_AXIS_THRESHOLD = 1;
     xTitleSize = 26;
     xAxisHeight = Math.min(maxStringSize, X_AXIS_THRESHOLD * chartHeight);
-    labelSize = xAxisHeight;
+    labelLimit = xAxisHeight;
 
     // TODO: improve this, this logic exists in more detail in generate vega spec. this is a hacky partial solution for now :/
     const uniqueValuesCt = metadata.fields[xKey]!.values.size;
@@ -184,7 +193,7 @@ export function getChartLayoutSettings(
     const xSpacePerLabel = chartWidth / recordsToFit;
     if (xSpacePerLabel > xAxisHeight || xSpacePerLabel > maxStringSize) {
       labelAngle = 0;
-      labelSize = xSpacePerLabel;
+      labelLimit = xSpacePerLabel;
       labelAlign = undefined;
       labelBaseline = 'top';
       xTitleSize = 22;
@@ -206,7 +215,7 @@ export function getChartLayoutSettings(
       labelAngle,
       labelAlign,
       labelBaseline,
-      labelSize,
+      labelLimit,
       height: xAxisHeight,
       titleSize: xTitleSize,
       hidden: isSpark,
@@ -215,6 +224,7 @@ export function getChartLayoutSettings(
       width: yAxisWidth,
       tickCount: yTickCount,
       hidden: isSpark,
+      yTitleSize,
     },
     yScale: {
       domain: chartTag.has('y', 'independent') ? null : yDomain,

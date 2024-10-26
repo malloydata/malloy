@@ -6,11 +6,9 @@
  */
 
 // import {
-//   ExpressionType,
 //   isAtomicFieldType,
-//   maxExpressionType,
-//   RecordLiteralNode,
 //   TD,
+//   RecordLiteralNode,
 //   TypedExpr,
 // } from '../../../model';
 import {ExprValue} from '../types/expr-value';
@@ -42,10 +40,10 @@ export class RecordLiteral extends ExpressionDef {
     //   node: 'recordLiteral',
     //   kids: {},
     // };
-    // let resultExprType: ExpressionType = 'scalar';
+    // const dependents: ExprValue[] = [];
     // for (const el of this.pairs) {
     //   const xVal = el.value.getExpression(fs);
-    //   const expr: TypedExpr = {typeDef: 'error', ...xVal.value};
+    //   const expr: TypedExpr = {typeDef: {type: 'error'}, ...xVal.value};
     //   if (TD.isError(expr.typeDef) && isAtomicFieldType(xVal.dataType)) {
     //     expr.typeDef = xVal.dataType;
     //   }
@@ -56,13 +54,12 @@ export class RecordLiteral extends ExpressionDef {
     //     );
     //   }
     //   recLit.kids[el.key] = expr;
-    //   resultExprType = maxExpressionType(xVal.expressionType, resultExprType);
+    //   dependents.push(xVal);
     // }
-    // return {
+    // return computedExprValue({
     //   dataType: 'record',
     //   value: recLit,
-    //   expressionType: resultExprType,
-    //   evalSpace: 'literal',
-    // };
+    //   from: dependents,
+    // });
   }
 }
