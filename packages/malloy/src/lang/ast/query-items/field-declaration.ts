@@ -337,13 +337,10 @@ export class FieldDefinitionValue extends SpaceField {
   // A source will call this when it defines the field
   private defInSource?: FieldDef;
   fieldDef(): FieldDef {
-    let def = this.defInSource;
-    if (def === undefined) {
-      def = this.exprDef.fieldDef(this.space, this.name);
-      this.defInSource = def;
-    }
-    // mtoy todo i don't know how i was comfotable with the !
-    return def!;
+    const def =
+      this.defInSource ?? this.exprDef.fieldDef(this.space, this.name);
+    this.defInSource = def;
+    return def;
   }
 
   // A query will call this when it defines the field

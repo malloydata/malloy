@@ -147,7 +147,6 @@ export function maxAggregate(type: LeafExpressionType): TypeDesc {
   return {type, expressionType: 'aggregate', evalSpace: 'input'};
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function anyExprType(type: LeafExpressionType): FunctionParamTypeDesc {
   return {type, expressionType: undefined, evalSpace: 'input'};
 }

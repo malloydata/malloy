@@ -205,12 +205,12 @@ class GranularLiteral extends TimeLiteral {
         }
       }
 
-      if (isTemporalField(testValue.type)) {
+      // Compiler is unsure about rangeEnd = newEnd for some reason
+      if (rangeEnd && isTemporalField(testValue.type)) {
         const rangeType = testValue.type;
         const range = new Range(
           new ExprTime(rangeType, rangeStart.value),
-          // mtoy todo why rangeEnd! looks like if (rangeEnd) should protect here
-          new ExprTime(rangeType, rangeEnd!.value)
+          new ExprTime(rangeType, rangeEnd.value)
         );
         return range.apply(fs, op, left);
       }
