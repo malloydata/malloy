@@ -27,6 +27,13 @@ options { tokenVocab=MalloyLexer; }
 
 malloyDocument: (malloyStatement | SEMI)* EOF;
 
+closeCurly
+  : CCURLY
+  // ANTLR VSCode plugin loses it's tiny mind if { } aren't matched
+  // even in the error string below
+  | { this.notifyErrorListeners("'{' missing a '}'"); }
+  ;
+
 malloyStatement
   : defineSourceStatement
   | defineQuery
@@ -67,7 +74,7 @@ sqlString
   ;
 
 sqlInterpolation
-  : OPEN_CODE sqExpr (CCURLY | CLOSE_CODE)
+  : OPEN_CODE sqExpr (closeCurly | CLOSE_CODE)
   ;
 
 importStatement
@@ -77,7 +84,7 @@ importStatement
 importSelect
   : OCURLY
     importItem (COMMA importItem)*
-    CCURLY FROM
+    closeCurly FROM
   ;
 
 importItem
@@ -127,11 +134,11 @@ connectionId
 
 queryProperties
   : filterShortcut
-  | OCURLY (queryStatement | SEMI)* CCURLY
+  | OCURLY (queryStatement | SEMI)* closeCurly
   ;
 
 filterShortcut
-  : OCURLY QMARK fieldExpr CCURLY
+  : OCURLY QMARK fieldExpr closeCurly
   ;
 
 queryName : id;
@@ -161,7 +168,7 @@ parameterNameDef: id;
 sourceNameDef: id;
 
 exploreProperties
-  : OCURLY (exploreStatement | SEMI)* CCURLY
+  : OCURLY (exploreStatement | SEMI)* closeCurly
   | filterShortcut
   ;
 
@@ -269,7 +276,7 @@ queryExtendStatement
   ;
 
 queryExtendStatementList
-  : OCURLY (queryExtendStatement | SEMI)* CCURLY
+  : OCURLY (queryExtendStatement | SEMI)* closeCurly
   ;
 
 joinList
@@ -301,7 +308,7 @@ filterStatement
   ;
 
 fieldProperties
-  : OCURLY (fieldPropertyStatement | SEMI)* CCURLY
+  : OCURLY (fieldPropertyStatement | SEMI)* closeCurly
   ;
 
 aggregateOrdering
@@ -538,7 +545,7 @@ fieldExpr
   : fieldPath                                              # exprFieldPath
   | literal                                                # exprLiteral
   | OBRACK fieldExpr (COMMA fieldExpr)* COMMA? CBRACK      # exprArrayLiteral
-  | OCURLY recordElement (COMMA recordElement)* CCURLY     # exprLiteralRecord
+  | OCURLY recordElement (COMMA recordElement)* closeCurly     # exprLiteralRecord
   | fieldExpr fieldProperties                              # exprFieldProps
   | fieldExpr timeframe                                    # exprDuration
   | fieldExpr DOT timeframe                                # exprTimeTrunc
@@ -626,7 +633,7 @@ starQualified
   : OCURLY (
       (EXCEPT fieldNameList)
     | COMMA
-  )+ CCURLY
+  )+ closeCurly
   ;
 
 taggedRef
