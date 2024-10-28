@@ -29,12 +29,10 @@ export function Chart(props: {
   const {field, data} = props;
   const chartProps = props.metadata.field(field).vegaChartProps!;
   const spec = structuredClone(chartProps.spec);
-  const chartData = data.map(row => {
-    const rec = structuredClone(row);
-    // prevent structured clone from ripping out the QueryDataRow class
-    rec['__malloyDataRecord'] = row['__malloyDataRecord'];
-    return rec;
-  });
+  const chartData = structuredClone(data);
+  for (let i = 0; i < chartData.length; i++) {
+    chartData[i]['__malloyDataRecord'] = data[i]['__malloyDataRecord'];
+  }
   // New vega charts use injectData handlers
   if (chartProps.injectData && chartProps.specType === 'vega') {
     chartProps.injectData(field, chartData, spec);
