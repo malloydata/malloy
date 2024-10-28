@@ -24,7 +24,9 @@
 import {Expr, TypeDesc} from '../../../model/malloy_types';
 
 type MorphicValues = Record<string, Expr>;
-export interface ExprResult extends TypeDesc {
+export interface WithValue {
   value: Expr;
   morphic?: MorphicValues;
 }
+
+export type ExprResult = TypeDesc & WithValue;

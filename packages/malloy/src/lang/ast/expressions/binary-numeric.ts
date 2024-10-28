@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FT} from '../fragtype-utils';
+import * as TDU from '../typedesc-utils';
 import {ArithmeticMalloyOperator} from '../types/binary_operators';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
@@ -37,7 +37,7 @@ export abstract class BinaryNumeric<
     readonly right: ExpressionDef
   ) {
     super({left: left, right: right});
-    this.legalChildTypes = [FT.numberT];
+    this.legalChildTypes = [TDU.numberT];
   }
 
   getExpression(fs: FieldSpace): ExprValue {

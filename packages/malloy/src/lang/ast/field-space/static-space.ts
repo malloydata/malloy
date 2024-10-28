@@ -202,7 +202,7 @@ export class StructSpaceField extends StructSpaceFieldBase {
   }
 
   get fieldSpace(): FieldSpace {
-    return new StaticSpace(this.sourceDef);
+    return new StaticSpace(this.structDef);
   }
 }
 

@@ -24,18 +24,17 @@
 import {
   expressionIsAggregate,
   expressionIsUngroupedAggregate,
-  FieldValueType,
   UngroupNode,
 } from '../../../model/malloy_types';
 
 import {QuerySpace} from '../field-space/query-spaces';
-import {FT} from '../fragtype-utils';
+import * as TDU from '../typedesc-utils';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldName, FieldSpace} from '../types/field-space';
 
 export class ExprUngroup extends ExpressionDef {
-  legalChildTypes = FT.anyAtomicT;
+  legalChildTypes = TDU.anyAtomicT;
   elementType = 'ungroup';
   constructor(
     readonly control: 'all' | 'exclude',
@@ -43,10 +42,6 @@ export class ExprUngroup extends ExpressionDef {
     readonly fields: FieldName[]
   ) {
     super({expr: expr, fields: fields});
-  }
-
-  returns(_forExpression: ExprValue): FieldValueType {
-    return 'number';
   }
 
   getExpression(fs: FieldSpace): ExprValue {
@@ -100,7 +95,7 @@ export class ExprUngroup extends ExpressionDef {
         ungroup.fields = dstFields;
       }
       return {
-        dataType: this.returns(exprVal),
+        ...TDU.atomicDef(exprVal),
         expressionType: 'ungrouped_aggregate',
         value: ungroup,
         evalSpace: 'output',

@@ -24,13 +24,13 @@
 import {
   Expr,
   isDateUnit,
-  isTemporalField,
   mkTemporal,
   TimestampUnit,
+  TD,
 } from '../../../model/malloy_types';
 
 import {errorFor} from '../ast-utils';
-import {FT} from '../fragtype-utils';
+import * as TDU from '../typedesc-utils';
 import {timeOffset} from '../time-utils';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
@@ -49,7 +49,7 @@ import {Range} from './range';
 
 export class ExprGranularTime extends ExpressionDef {
   elementType = 'granularTime';
-  legalChildTypes = [FT.timestampT, FT.dateT];
+  legalChildTypes = [TDU.timestampT, TDU.dateT];
   constructor(
     readonly expr: ExpressionDef,
     readonly units: TimestampUnit,
@@ -65,36 +65,34 @@ export class ExprGranularTime extends ExpressionDef {
   getExpression(fs: FieldSpace): ExprValue {
     const timeframe = this.units;
     const exprVal = this.expr.getExpression(fs);
-    if (isTemporalField(exprVal.dataType)) {
+    if (TD.isTemporal(exprVal)) {
       const tsVal: GranularResult = {
         ...exprVal,
-        dataType: exprVal.dataType,
         timeframe: timeframe,
       };
       if (this.truncate) {
         tsVal.value = {
           node: 'trunc',
-          e: mkTemporal(exprVal.value, exprVal.dataType),
+          e: mkTemporal(exprVal.value, exprVal.type),
           units: timeframe,
         };
       }
       return tsVal;
     }
-    if (exprVal.dataType !== 'error') {
+    if (exprVal.type !== 'error') {
       this.logError(
         'unsupported-type-for-time-truncation',
-        `Cannot do time truncation on type '${exprVal.dataType}'`
+        `Cannot do time truncation on type '${exprVal.type}'`
       );
     }
-    const returnType =
-      exprVal.dataType === 'error'
-        ? isDateUnit(timeframe)
-          ? 'date'
-          : 'timestamp'
-        : exprVal.dataType;
+    const returnType = {...exprVal};
+    if (exprVal.type === 'error') {
+      (returnType as ExprValue).type = isDateUnit(timeframe)
+        ? 'date'
+        : 'timestamp';
+    }
     return {
-      ...exprVal,
-      dataType: returnType,
+      ...returnType,
       value: errorFor('granularity typecheck').value,
       evalSpace: 'constant',
     };
@@ -123,7 +121,7 @@ export class ExprGranularTime extends ExpressionDef {
   toRange(fs: FieldSpace): Range {
     const begin = this.getExpression(fs);
     const one: Expr = {node: 'numberLiteral', literal: '1'};
-    if (begin.dataType === 'timestamp') {
+    if (begin.type === 'timestamp') {
       const beginTS = ExprTime.fromValue('timestamp', begin);
       const endTS = new ExprTime(
         'timestamp',

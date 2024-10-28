@@ -22,7 +22,7 @@
  */
 
 import {errorFor} from '../ast-utils';
-import {FT} from '../fragtype-utils';
+import * as TDU from '../typedesc-utils';
 import {castTo, resolution, timeOffset} from '../time-utils';
 import {BinaryMalloyOperator} from '../types/binary_operators';
 import {ExprValue, computedErrorExprValue} from '../types/expr-value';
@@ -34,7 +34,7 @@ import {Timeframe} from './time-frame';
 
 export class ForRange extends ExpressionDef {
   elementType = 'forRange';
-  legalChildTypes = [FT.timestampT, FT.dateT];
+  legalChildTypes = [TDU.timestampT, TDU.dateT];
   constructor(
     readonly from: ExpressionDef,
     readonly duration: ExpressionDef,
@@ -54,15 +54,15 @@ export class ForRange extends ExpressionDef {
       return errorFor('no time for range');
     }
     const nV = this.duration.getExpression(fs);
-    if (nV.dataType !== 'number') {
-      if (nV.dataType !== 'error') {
+    if (nV.type !== 'number') {
+      if (nV.type !== 'error') {
         this.logError(
           'invalid-duration-quantity',
-          `FOR duration count must be a number, not '${nV.dataType}'`
+          `FOR duration count must be a number, not '${nV.type}'`
         );
       }
       return computedErrorExprValue({
-        dataType: 'boolean',
+        dataType: {type: 'boolean'},
         error: 'for not number',
         from: [startV, checkV],
       });
@@ -75,12 +75,12 @@ export class ForRange extends ExpressionDef {
 
     // Next, if the beginning of the range is a timestamp, then we
     // also have to do the computation as a timestamp
-    if (startV.dataType === 'timestamp') {
+    if (startV.type === 'timestamp') {
       rangeType = 'timestamp';
     }
 
     // everything is dates, do date math
-    if (checkV.dataType === 'date' && rangeType === 'date') {
+    if (checkV.type === 'date' && rangeType === 'date') {
       const rangeStart = this.from;
       const rangeEndV = timeOffset('date', startV.value, '+', nV.value, units);
       const rangeEnd = new ExprTime('date', rangeEndV);
@@ -93,7 +93,7 @@ export class ForRange extends ExpressionDef {
 
     let rangeStart = this.from;
     let from = startV.value;
-    if (startV.dataType === 'date') {
+    if (startV.type === 'date') {
       const tsVersion = startV.morphic && startV.morphic['timestamp'];
       if (tsVersion) {
         from = tsVersion;

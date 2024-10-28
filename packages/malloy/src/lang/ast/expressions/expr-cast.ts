@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {AtomicFieldType, CastType} from '../../../model';
+import {CastType, LeafAtomicTypeDef} from '../../../model';
 import {castTo} from '../time-utils';
 import {ExprValue, computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
@@ -39,16 +39,14 @@ export class ExprCast extends ExpressionDef {
 
   getExpression(fs: FieldSpace): ExprValue {
     const expr = this.expr.getExpression(fs);
-    let dataType: AtomicFieldType = 'error';
+    let dataType: LeafAtomicTypeDef = {type: 'error'};
     if (typeof this.castType === 'string') {
-      dataType = this.castType;
+      dataType = {type: this.castType};
     } else {
       const dialect = fs.dialectObj();
       if (dialect) {
         if (dialect.validateTypeName(this.castType.raw)) {
-          // TODO theoretically `sqlTypeToMalloyType` can get number subtypes,
-          // but `TypeDesc` does not support them.
-          dataType = dialect.sqlTypeToMalloyType(this.castType.raw).type;
+          dataType = dialect.sqlTypeToMalloyType(this.castType.raw);
         } else {
           this.logError(
             'invalid-sql-native-type',
@@ -65,7 +63,7 @@ export class ExprCast extends ExpressionDef {
     }
     return computedExprValue({
       dataType,
-      value: castTo(this.castType, expr.value, expr.dataType, this.safe),
+      value: castTo(this.castType, expr.value, expr.type, this.safe),
       from: [expr],
     });
   }

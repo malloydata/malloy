@@ -28,7 +28,7 @@ export class ExprNULL extends ExpressionDef {
   elementType = 'NULL';
   getExpression(): ExprValue {
     return literalExprValue({
-      dataType: 'null',
+      dataType: {type: 'null'},
       value: {node: 'null'},
     });
   }

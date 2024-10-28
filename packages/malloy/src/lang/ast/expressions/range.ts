@@ -50,7 +50,7 @@ export class Range extends ExpressionDef {
         const fromValue = this.first.apply(fs, op1, expr);
         const toValue = this.last.apply(fs, op3, expr);
         return computedExprValue({
-          dataType: 'boolean',
+          dataType: {type: 'boolean'},
           value: {
             node: op2,
             kids: {left: fromValue.value, right: toValue.value},

@@ -46,7 +46,7 @@ export class FilterElement extends MalloyElement {
 
   filterCondition(fs: FieldSpace): FilterCondition {
     const exprVal = this.expr.getExpression(fs);
-    if (exprVal.dataType !== 'boolean') {
+    if (exprVal.type !== 'boolean') {
       this.expr.logError(
         'non-boolean-filter',
         'Filter expression must have boolean value'

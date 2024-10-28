@@ -21,35 +21,43 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {JoinFieldDef, TypeDesc} from '../../../model/malloy_types';
+import {isSourceDef, JoinFieldDef, TypeDesc} from '../../../model/malloy_types';
+import * as TDU from '../typedesc-utils';
 import {FieldSpace} from '../types/field-space';
 import {JoinPathElement} from '../types/lookup-result';
 import {SpaceField} from '../types/space-field';
 
 export abstract class StructSpaceFieldBase extends SpaceField {
-  constructor(protected sourceDef: JoinFieldDef) {
+  constructor(protected structDef: JoinFieldDef) {
     super();
   }
 
   abstract get fieldSpace(): FieldSpace;
 
   fieldDef(): JoinFieldDef {
-    return this.sourceDef;
+    return this.structDef;
   }
 
   get joinPathElement(): JoinPathElement {
     return {
-      name: this.sourceDef.as || this.sourceDef.name,
-      joinType: this.sourceDef.join,
-      joinElementType: this.sourceDef.type,
+      name: this.structDef.as || this.structDef.name,
+      joinType: this.structDef.join,
+      joinElementType: this.structDef.type,
     };
   }
 
   typeDesc(): TypeDesc {
+    if (isSourceDef(this.structDef)) {
+      return {
+        type: this.structDef.type,
+        evalSpace: 'input',
+        expressionType: 'scalar',
+      };
+    }
     return {
-      dataType: this.sourceDef.type,
-      expressionType: 'scalar',
+      ...TDU.atomicDef(this.structDef),
       evalSpace: 'input',
+      expressionType: 'scalar',
     };
   }
 }

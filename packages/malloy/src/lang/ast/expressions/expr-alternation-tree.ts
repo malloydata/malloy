@@ -87,7 +87,7 @@ export class ExprAlternationTree extends ExpressionDef {
         const isIn = expr.getExpression(fs);
         const values = inList.map(v => v.getExpression(fs));
         return computedExprValue({
-          dataType: 'boolean',
+          dataType: {type: 'boolean'},
           value: {
             node: 'in',
             not: applyOp === '!=',
@@ -106,7 +106,7 @@ export class ExprAlternationTree extends ExpressionDef {
     const choice1 = this.left.apply(fs, applyOp, expr);
     const choice2 = this.right.apply(fs, applyOp, expr);
     return computedExprValue({
-      dataType: 'boolean',
+      dataType: {type: 'boolean'},
       value: {
         node: this.op === '&' ? 'and' : 'or',
         kids: {left: choice1.value, right: choice2.value},

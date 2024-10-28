@@ -22,7 +22,7 @@
  */
 
 import {errorFor} from '../ast-utils';
-import {FT} from '../fragtype-utils';
+import * as TDU from '../typedesc-utils';
 import {BinaryMalloyOperator, getExprNode} from '../types/binary_operators';
 import {ExprValue, computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
@@ -32,7 +32,7 @@ export abstract class BinaryBoolean<
   opType extends BinaryMalloyOperator,
 > extends ExpressionDef {
   elementType = 'abstract boolean binary';
-  legalChildTypes = [FT.boolT];
+  legalChildTypes = [TDU.boolT];
   constructor(
     readonly left: ExpressionDef,
     readonly op: opType,
@@ -46,7 +46,7 @@ export abstract class BinaryBoolean<
     const right = this.right.getExpression(fs);
     if (this.typeCheck(this.left, left) && this.typeCheck(this.right, right)) {
       return computedExprValue({
-        dataType: 'boolean',
+        dataType: {type: 'boolean'},
         value: {
           node: getExprNode(this.op),
           kids: {left: left.value, right: right.value},
@@ -54,6 +54,6 @@ export abstract class BinaryBoolean<
         from: [left, right],
       });
     }
-    return errorFor('logial required boolean');
+    return errorFor('logical-op expected boolean');
   }
 }

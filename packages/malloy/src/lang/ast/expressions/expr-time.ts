@@ -39,7 +39,7 @@ export class ExprTime extends ExpressionDef {
     super();
     this.elementType = timeType;
     this.translationValue = computedExprValue({
-      dataType: timeType,
+      dataType: {type: timeType},
       value,
       from: from ?? [],
     });
@@ -51,15 +51,15 @@ export class ExprTime extends ExpressionDef {
 
   static fromValue(timeType: TemporalFieldType, expr: ExprValue): ExprTime {
     let value = expr.value;
-    if (timeType !== expr.dataType) {
+    if (timeType !== expr.type) {
       const toTs: TypecastExpr = {
         node: 'cast',
         safe: false,
         dstType: {type: timeType},
         e: expr.value,
       };
-      if (isTemporalField(expr.dataType)) {
-        toTs.srcType = {type: expr.dataType};
+      if (isTemporalField(expr.type)) {
+        toTs.srcType = {type: expr.type};
       }
       value = toTs;
     }

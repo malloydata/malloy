@@ -23,8 +23,8 @@
 
 import {
   Expr,
-  FieldValueType,
-  TemporalFieldType,
+  ExpressionValueTypeDef,
+  TemporalTypeDef,
   TimestampUnit,
   maxOfExpressionTypes,
   mergeEvalSpaces,
@@ -37,18 +37,15 @@ export type ExprValue = ExprResult | TimeResult;
 export function computedExprValue({
   value,
   dataType,
-  rawType,
   from,
 }: {
   value: Expr;
-  dataType: FieldValueType;
-  rawType?: string;
+  dataType: ExpressionValueTypeDef;
   from: ExprValue[];
 }): ExprValue {
   return {
+    ...dataType,
     value,
-    dataType,
-    rawType,
     expressionType: maxOfExpressionTypes(from.map(e => e.expressionType)),
     evalSpace: mergeEvalSpaces(...from.map(e => e.evalSpace)),
   };
@@ -57,33 +54,38 @@ export function computedExprValue({
 export function computedTimeResult({
   value,
   dataType,
-  rawType,
   from,
   timeframe,
 }: {
   value: Expr;
-  rawType?: string;
-  dataType: TemporalFieldType;
+  dataType: TemporalTypeDef;
   timeframe?: TimestampUnit;
   from: ExprValue[];
-}) {
-  return {...computedExprValue({value, dataType, rawType, from}), timeframe};
+}): TimeResult {
+  const xv = computedExprValue({value, dataType, from});
+  const y: TimeResult = {
+    ...dataType,
+    expressionType: xv.expressionType,
+    evalSpace: xv.evalSpace,
+    value: xv.value,
+  };
+  if (timeframe) {
+    y.timeframe = timeframe;
+  }
+  return y;
 }
 
 export function computedErrorExprValue({
   dataType,
-  rawType,
   from,
   error,
 }: {
   error: string;
-  rawType?: string;
-  dataType?: FieldValueType;
+  dataType?: ExpressionValueTypeDef;
   from: ExprValue[];
-}) {
+}): ExprValue {
   return computedExprValue({
-    dataType: dataType || 'error',
-    rawType,
+    dataType: dataType ?? {type: 'error'},
     value: {node: 'error', message: error},
     from,
   });
@@ -91,8 +93,7 @@ export function computedErrorExprValue({
 
 export function literalExprValue(options: {
   value: Expr;
-  rawType?: string;
-  dataType: FieldValueType;
+  dataType: ExpressionValueTypeDef;
 }): ExprValue {
   // Makes literal, output, scalar because from is empty
   return computedExprValue({...options, from: []});
@@ -101,17 +102,21 @@ export function literalExprValue(options: {
 export function literalTimeResult({
   value,
   dataType,
-  rawType,
   timeframe,
 }: {
   value: Expr;
-  rawType?: string;
-  dataType: TemporalFieldType;
+  dataType: TemporalTypeDef;
   timeframe?: TimestampUnit;
 }): TimeResult {
-  return {
-    ...computedExprValue({value, dataType, rawType, from: []}),
-    dataType,
-    timeframe,
+  const xv = computedExprValue({value, dataType, from: []});
+  const y: TimeResult = {
+    ...dataType,
+    expressionType: xv.expressionType,
+    evalSpace: xv.evalSpace,
+    value: xv.value,
   };
+  if (timeframe) {
+    y.timeframe = timeframe;
+  }
+  return y;
 }

@@ -24,6 +24,7 @@
 import {ExprValue, literalExprValue} from '../types/expr-value';
 import {FieldSpace} from '../types/field-space';
 import {ExpressionDef} from '../types/expression-def';
+import {NumberTypeDef} from '../../../model';
 
 export class ExprNumber extends ExpressionDef {
   elementType = 'numeric literal';
@@ -36,8 +37,12 @@ export class ExprNumber extends ExpressionDef {
   }
 
   constantExpression(): ExprValue {
+    const n = Number(this.n);
+    const dataType: NumberTypeDef = Number.isNaN(n)
+      ? {type: 'number'}
+      : {type: 'number', numberType: Number.isInteger(n) ? 'integer' : 'float'};
     return literalExprValue({
-      dataType: 'number',
+      dataType,
       value: {node: 'numberLiteral', literal: this.n},
     });
   }

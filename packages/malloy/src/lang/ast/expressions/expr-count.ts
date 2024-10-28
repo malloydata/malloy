@@ -41,6 +41,16 @@ export class ExprCount extends ExprAggregateFunction {
     return undefined;
   }
 
+  returns(ev: ExprValue): ExprValue {
+    return {
+      type: 'number',
+      numberType: 'integer',
+      evalSpace: ev.evalSpace,
+      expressionType: 'aggregate',
+      value: ev.value,
+    };
+  }
+
   getExpression(_fs: FieldSpace): ExprValue {
     const ret: AggregateExpr = {
       node: 'aggregate',
@@ -51,7 +61,8 @@ export class ExprCount extends ExprAggregateFunction {
       ret.structPath = this.source.path;
     }
     return {
-      dataType: 'number',
+      type: 'number',
+      numberType: 'integer',
       expressionType: 'aggregate',
       value: ret,
       evalSpace: 'output',

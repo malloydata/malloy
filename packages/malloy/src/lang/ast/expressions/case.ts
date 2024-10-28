@@ -9,7 +9,7 @@ import {ExprValue, computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
-import {FT} from '../fragtype-utils';
+import * as TDU from '../typedesc-utils';
 import {CaseExpr} from '../../../model';
 
 interface Choice {
@@ -18,9 +18,7 @@ interface Choice {
 }
 
 function typeCoalesce(ev1: ExprValue | undefined, ev2: ExprValue): ExprValue {
-  return ev1 === undefined ||
-    ev1.dataType === 'null' ||
-    ev1.dataType === 'error'
+  return ev1 === undefined || ev1.type === 'null' || ev1.type === 'error'
     ? ev2
     : ev1;
 }
@@ -47,9 +45,10 @@ export class Case extends ExpressionDef {
     const dependents: ExprValue[] = [];
     let value: ExprValue | undefined = undefined;
     if (this.value) {
-      value = this.value.getExpression(fs);
-      dependents.push(value);
-      resultExpr.kids.caseValue = value.value;
+      const v = this.value.getExpression(fs);
+      dependents.push(v);
+      resultExpr.kids.caseValue = v.value;
+      value = v;
     }
     const choiceValues: Choice[] = [];
     for (const c of this.choices) {
@@ -61,23 +60,23 @@ export class Case extends ExpressionDef {
     let returnType: ExprValue | undefined;
     for (const aChoice of choiceValues) {
       if (value !== undefined) {
-        if (!FT.typeEq(aChoice.when, value)) {
+        if (!TDU.typeEq(aChoice.when, value)) {
           return this.loggedErrorExpr('case-when-type-does-not-match', {
-            whenType: aChoice.when.dataType,
-            valueType: value.dataType,
+            whenType: aChoice.when.type,
+            valueType: value.type,
           });
         }
       } else {
-        if (!FT.typeEq(aChoice.when, FT.boolT)) {
+        if (!TDU.typeEq(aChoice.when, TDU.boolT)) {
           return this.loggedErrorExpr('case-when-must-be-boolean', {
-            whenType: aChoice.when.dataType,
+            whenType: aChoice.when.type,
           });
         }
       }
-      if (returnType && !FT.typeEq(returnType, aChoice.then, true)) {
+      if (returnType && !TDU.typeEq(returnType, aChoice.then, true)) {
         return this.loggedErrorExpr('case-then-type-does-not-match', {
-          thenType: aChoice.then.dataType,
-          returnType: returnType.dataType,
+          thenType: aChoice.then.type,
+          returnType: returnType.type,
         });
       }
       returnType = typeCoalesce(returnType, aChoice.then);
@@ -86,10 +85,10 @@ export class Case extends ExpressionDef {
     }
     if (this.elseValue) {
       const elseValue = this.elseValue.getExpression(fs);
-      if (returnType && !FT.typeEq(returnType, elseValue, true)) {
+      if (returnType && !TDU.typeEq(returnType, elseValue, true)) {
         return this.loggedErrorExpr('case-else-type-does-not-match', {
-          elseType: elseValue.dataType,
-          returnType: returnType.dataType,
+          elseType: elseValue.type,
+          returnType: returnType.type,
         });
       }
       returnType = typeCoalesce(returnType, elseValue);
@@ -98,7 +97,7 @@ export class Case extends ExpressionDef {
     }
     return computedExprValue({
       value: resultExpr,
-      dataType: returnType?.dataType ?? 'null',
+      dataType: returnType ? TDU.atomicDef(returnType) : {type: 'null'},
       from: dependents,
     });
   }

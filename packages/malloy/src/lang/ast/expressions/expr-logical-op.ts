@@ -22,9 +22,9 @@
  */
 
 import {BinaryBoolean} from './binary-boolean';
-import {FT} from '../fragtype-utils';
+import * as TDU from '../typedesc-utils';
 
 export class ExprLogicalOp extends BinaryBoolean<'and' | 'or'> {
   elementType = 'logical operator';
-  legalChildTypes = [FT.boolT, FT.aggregateBoolT];
+  legalChildTypes = [TDU.boolT, TDU.aggregateBoolT];
 }

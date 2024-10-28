@@ -93,8 +93,6 @@ export type {
   FunctionParameterDef,
   ExpressionValueType,
   TypeDesc,
-  FieldValueType,
-  ExpressionTypeDesc,
   FunctionParamTypeDesc,
   // used in MalloyError.log
   DocumentLocation,

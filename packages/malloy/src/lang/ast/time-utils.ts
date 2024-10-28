@@ -25,12 +25,13 @@ import {
   Expr,
   TemporalFieldType,
   TimestampUnit,
-  FieldValueType,
   CastType,
   TypecastExpr,
   TimeDeltaExpr,
   mkTemporal,
   isCastType,
+  ExpressionValueType,
+  isDateUnit,
 } from '../../model/malloy_types';
 
 import {TimeResult} from './types/time-result';
@@ -56,7 +57,7 @@ export function timeOffset(
 export function castTo(
   castType: CastType | {raw: string},
   from: Expr,
-  fromType: FieldValueType,
+  fromType: ExpressionValueType,
   safe = false
 ): TypecastExpr {
   let cast: TypecastExpr;
@@ -99,7 +100,12 @@ export function mkTimeResult(
   tt: TimestampUnit | undefined
 ): TimeResult {
   if (tt) {
-    return {...t, timeframe: tt};
+    if (t.type === 'timestamp') {
+      return {...t, timeframe: tt};
+    }
+    if (isDateUnit(tt)) {
+      return {...t, timeframe: tt};
+    }
   }
   return t;
 }

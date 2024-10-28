@@ -193,8 +193,8 @@ export class NamedSource extends Source {
           parameterSpace ?? new ParameterSpace(parametersOut ?? []);
         const pVal = argument.value.getExpression(paramSpace);
         let value = pVal.value;
-        if (pVal.dataType !== parameter.type && isCastType(parameter.type)) {
-          value = castTo(parameter.type, pVal.value, pVal.dataType, true);
+        if (pVal.type !== parameter.type && isCastType(parameter.type)) {
+          value = castTo(parameter.type, pVal.value, pVal.type, true);
         }
         outArguments[name] = {
           ...parameter,

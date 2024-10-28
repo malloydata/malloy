@@ -23,7 +23,7 @@
 
 import {CaseExpr} from '../../../model/malloy_types';
 
-import {FT} from '../fragtype-utils';
+import * as TDU from '../typedesc-utils';
 import {ExprValue, computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
@@ -35,9 +35,7 @@ interface Choice {
 }
 
 function typeCoalesce(ev1: ExprValue | undefined, ev2: ExprValue): ExprValue {
-  return ev1 === undefined ||
-    ev1.dataType === 'null' ||
-    ev1.dataType === 'error'
+  return ev1 === undefined || ev1.type === 'null' || ev1.type === 'error'
     ? ev2
     : ev1;
 }
@@ -63,7 +61,7 @@ export class Pick extends ExpressionDef {
         return undefined;
       }
       const whenResp = c.when.requestExpression(fs);
-      if (whenResp === undefined || whenResp.dataType !== 'boolean') {
+      if (whenResp === undefined || whenResp.type !== 'boolean') {
         // If when is not a boolean, we'll treat it like a partial compare
         return undefined;
       }
@@ -87,10 +85,10 @@ export class Pick extends ExpressionDef {
         ? choice.pick.getExpression(fs)
         : expr.getExpression(fs);
       dependents.push(whenExpr, thenExpr);
-      if (returnType && !FT.typeEq(returnType, thenExpr, true)) {
+      if (returnType && !TDU.typeEq(returnType, thenExpr, true)) {
         return this.loggedErrorExpr('pick-type-does-not-match', {
-          pickType: thenExpr.dataType,
-          returnType: returnType.dataType,
+          pickType: thenExpr.type,
+          returnType: returnType.type,
         });
       }
       returnType = typeCoalesce(returnType, thenExpr);
@@ -102,23 +100,23 @@ export class Pick extends ExpressionDef {
     dependents.push(exprVal);
     if (elseVal) dependents.push(elseVal);
     const defaultVal = elseVal ?? exprVal;
-    returnType = typeCoalesce(returnType, defaultVal);
-    if (!FT.typeEq(returnType, defaultVal, true)) {
+    const definedReturnType = typeCoalesce(returnType, defaultVal);
+    if (!TDU.typeEq(definedReturnType, defaultVal, true)) {
       if (this.elsePick) {
         return this.loggedErrorExpr('pick-else-type-does-not-match', {
-          elseType: defaultVal.dataType,
-          returnType: returnType.dataType,
+          elseType: defaultVal.type,
+          returnType: definedReturnType.type,
         });
       } else {
         return this.loggedErrorExpr('pick-default-type-does-not-match', {
-          defaultType: defaultVal.dataType,
-          returnType: returnType.dataType,
+          defaultType: defaultVal.type,
+          returnType: definedReturnType.type,
         });
       }
     }
     caseValue.kids.caseElse = defaultVal.value;
     return computedExprValue({
-      dataType: returnType.dataType,
+      dataType: definedReturnType,
       value: caseValue,
       from: dependents,
     });
@@ -162,15 +160,15 @@ export class Pick extends ExpressionDef {
     }
     let returnType: ExprValue | undefined;
     for (const aChoice of choiceValues) {
-      if (!FT.typeEq(aChoice.when, FT.boolT)) {
+      if (!TDU.typeEq(aChoice.when, TDU.boolT)) {
         return this.loggedErrorExpr('pick-when-must-be-boolean', {
-          whenType: aChoice.when.dataType,
+          whenType: aChoice.when.type,
         });
       }
-      if (returnType && !FT.typeEq(returnType, aChoice.pick, true)) {
+      if (returnType && !TDU.typeEq(returnType, aChoice.pick, true)) {
         return this.loggedErrorExpr('pick-type-does-not-match', {
-          pickType: aChoice.pick.dataType,
-          returnType: returnType.dataType,
+          pickType: aChoice.pick.type,
+          returnType: returnType.type,
         });
       }
       returnType = typeCoalesce(returnType, aChoice.pick);
@@ -179,16 +177,16 @@ export class Pick extends ExpressionDef {
     }
     const defVal = this.elsePick.getExpression(fs);
     dependents.push(defVal);
-    returnType = typeCoalesce(returnType, defVal);
-    if (!FT.typeEq(returnType, defVal, true)) {
+    const definedReturnType = typeCoalesce(returnType, defVal);
+    if (!TDU.typeEq(definedReturnType, defVal, true)) {
       return this.elsePick.loggedErrorExpr('pick-else-type-does-not-match', {
-        elseType: defVal.dataType,
-        returnType: returnType.dataType,
+        elseType: defVal.type,
+        returnType: definedReturnType.type,
       });
     }
     pick.kids.caseElse = defVal.value;
     return computedExprValue({
-      dataType: returnType.dataType,
+      dataType: definedReturnType,
       value: pick,
       from: dependents,
     });

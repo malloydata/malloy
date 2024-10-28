@@ -95,7 +95,7 @@ describe('literals', () => {
     const exprModel = new BetaExpression(expr);
     expect(exprModel).toTranslate();
     const ir = exprModel.generated();
-    expect(ir.dataType).toEqual(timeType);
+    expect(ir.type).toEqual(timeType);
     if (timeframe) {
       expect(isGranularResult(ir)).toBeTruthy();
       if (isGranularResult(ir)) {

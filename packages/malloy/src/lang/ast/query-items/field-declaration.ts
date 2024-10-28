@@ -31,9 +31,10 @@ import {
   AtomicFieldDef,
   TemporalTypeDef,
   isAtomic,
+  FieldDefType,
 } from '../../../model/malloy_types';
 
-import {FT} from '../fragtype-utils';
+import * as TDU from '../typedesc-utils';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldName, FieldSpace, QueryFieldSpace} from '../types/field-space';
@@ -118,7 +119,7 @@ export abstract class AtomicFieldDeclaration
         type: 'error',
       };
     }
-    let retType = exprValue.dataType;
+    let retType = exprValue.type;
     if (retType === 'null') {
       this.expr.logWarning(
         'null-typed-field-definition',
@@ -188,8 +189,8 @@ export abstract class AtomicFieldDeclaration
     }
     const circularDef = exprFS instanceof DefSpace && exprFS.foundCircle;
     if (!circularDef) {
-      if (exprValue.dataType !== 'error') {
-        const badType = FT.inspect(exprValue);
+      if (exprValue.type !== 'error') {
+        const badType = TDU.inspect(exprValue);
         this.logError(
           'invalid-type-for-field-definition',
           `Cannot define '${exprName}', unexpected type: ${badType}`
@@ -336,12 +337,10 @@ export class FieldDefinitionValue extends SpaceField {
   // A source will call this when it defines the field
   private defInSource?: FieldDef;
   fieldDef(): FieldDef {
-    let def = this.defInSource;
-    if (def === undefined) {
-      this.defInSource = def;
-      def = this.exprDef.fieldDef(this.space, this.name);
-    }
-    return def!;
+    const def =
+      this.defInSource ?? this.exprDef.fieldDef(this.space, this.name);
+    this.defInSource = def;
+    return def;
   }
 
   // A query will call this when it defines the field
@@ -364,5 +363,10 @@ export class FieldDefinitionValue extends SpaceField {
       return this.fieldTypeFromFieldDef(typeFrom);
     }
     throw new Error(`Can't get typeDesc for ${typeFrom.type}`);
+  }
+
+  entryType(): FieldDefType {
+    const typeFrom = this.defInQuery || this.fieldDef();
+    return typeFrom.type;
   }
 }

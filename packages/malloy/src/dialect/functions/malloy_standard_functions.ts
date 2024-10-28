@@ -5,7 +5,7 @@
  *  LICENSE file in the root directory of this source tree.
  */
 
-import {ExpressionValueType} from '../../model';
+import {LeafExpressionType} from '../../model/malloy_types';
 import {
   DefinitionBlueprint,
   DialectFunctionOverloadDef,
@@ -505,7 +505,7 @@ const first_value: DefinitionFor<Standard['first_value']> = {
   impl: {function: 'FIRST_VALUE', needsWindowOrderBy: true},
 };
 
-const LAG_TYPES: ExpressionValueType[] = [
+const LAG_TYPES: LeafExpressionType[] = [
   'string',
   'number',
   'timestamp',

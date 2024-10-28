@@ -21,19 +21,17 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ExprValue} from '../types/expr-value';
-import {FieldValueType} from '../../../model';
-import {FT} from '../fragtype-utils';
+import * as TDU from '../typedesc-utils';
 import {ExprAggregateFunction} from './expr-aggregate-function';
 import {ExpressionDef} from '../types/expression-def';
+import {ExprValue} from '../types/expr-value';
 
 export class ExprMax extends ExprAggregateFunction {
-  legalChildTypes = [FT.numberT, FT.stringT, FT.dateT, FT.timestampT];
+  legalChildTypes = [TDU.numberT, TDU.stringT, TDU.dateT, TDU.timestampT];
   constructor(expr: ExpressionDef) {
     super('max', expr);
   }
-
-  returns(forExpression: ExprValue): FieldValueType {
-    return forExpression.dataType;
+  returns(ev: ExprValue): ExprValue {
+    return ev;
   }
 }

@@ -33,7 +33,7 @@ import {ExprValue} from './types/expr-value';
  */
 export function errorFor(reason: string): ExprValue {
   return {
-    dataType: 'error',
+    type: 'error',
     expressionType: 'scalar',
     value: {node: 'error', message: reason},
     evalSpace: 'constant',

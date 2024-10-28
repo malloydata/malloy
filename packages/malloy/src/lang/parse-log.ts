@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DocumentLocation, FieldValueType} from '../model/malloy_types';
+import {DocumentLocation, ExpressionValueType} from '../model/malloy_types';
 import {EventStream} from '../runtime_types';
 
 export type LogSeverity = 'error' | 'warn' | 'debug';
@@ -90,21 +90,21 @@ export class BaseMessageLogger implements MessageLogger {
 
 type MessageParameterTypes = {
   'pick-type-does-not-match': {
-    pickType: FieldValueType;
-    returnType: FieldValueType;
+    pickType: ExpressionValueType;
+    returnType: ExpressionValueType;
   };
   'pick-else-type-does-not-match': {
-    elseType: FieldValueType;
-    returnType: FieldValueType;
+    elseType: ExpressionValueType;
+    returnType: ExpressionValueType;
   };
   'pick-default-type-does-not-match': {
-    defaultType: FieldValueType;
-    returnType: FieldValueType;
+    defaultType: ExpressionValueType;
+    returnType: ExpressionValueType;
   };
   'pick-missing-else': {};
   'pick-missing-value': {};
   'pick-illegal-partial': {};
-  'pick-when-must-be-boolean': {whenType: FieldValueType};
+  'pick-when-must-be-boolean': {whenType: ExpressionValueType};
   'experiment-not-enabled': {experimentId: string};
   'experimental-dialect-not-enabled': {dialect: string};
   'sql-native-not-allowed-in-expression': {
@@ -353,17 +353,17 @@ type MessageParameterTypes = {
   'not-yet-implemented': string;
   'sql-case': string;
   'case-then-type-does-not-match': {
-    thenType: FieldValueType;
-    returnType: FieldValueType;
+    thenType: ExpressionValueType;
+    returnType: ExpressionValueType;
   };
   'case-else-type-does-not-match': {
-    elseType: FieldValueType;
-    returnType: FieldValueType;
+    elseType: ExpressionValueType;
+    returnType: ExpressionValueType;
   };
-  'case-when-must-be-boolean': {whenType: FieldValueType};
+  'case-when-must-be-boolean': {whenType: ExpressionValueType};
   'case-when-type-does-not-match': {
-    whenType: FieldValueType;
-    valueType: FieldValueType;
+    whenType: ExpressionValueType;
+    valueType: ExpressionValueType;
   };
   'or-choices-only': string;
   'sql-in': string;

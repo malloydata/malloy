@@ -35,7 +35,7 @@ export class ExprString extends ExpressionDef {
 
   getExpression(_fs: FieldSpace): ExprValue {
     return literalExprValue({
-      dataType: 'string',
+      dataType: {type: 'string'},
       value: {node: 'stringLiteral', literal: this.value},
     });
   }

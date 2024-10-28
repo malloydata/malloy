@@ -105,7 +105,11 @@ abstract class TimeLiteral extends ExpressionDef {
 
   protected makeValue(val: string, dataType: TemporalFieldType): TimeResult {
     const value = this.makeLiteral(val, dataType);
-    return literalTimeResult({value, dataType, timeframe: this.units});
+    return literalTimeResult({
+      value,
+      dataType: {type: dataType},
+      timeframe: this.units,
+    });
   }
 
   getExpression(_fs: FieldSpace): ExprValue {
@@ -190,7 +194,7 @@ class GranularLiteral extends TimeLiteral {
     if (rangeEnd) {
       const testValue = left.getExpression(fs);
 
-      if (testValue.dataType === 'timestamp') {
+      if (testValue.type === 'timestamp') {
         const newStart = getMorphicValue(rangeStart, 'timestamp');
         const newEnd = getMorphicValue(rangeEnd, 'timestamp');
         if (newStart && newEnd) {
@@ -201,8 +205,9 @@ class GranularLiteral extends TimeLiteral {
         }
       }
 
-      if (isTemporalField(testValue.dataType)) {
-        const rangeType = testValue.dataType;
+      // Compiler is unsure about rangeEnd = newEnd for some reason
+      if (rangeEnd && isTemporalField(testValue.type)) {
+        const rangeType = testValue.type;
         const range = new Range(
           new ExprTime(rangeType, rangeStart.value),
           new ExprTime(rangeType, rangeEnd.value)
