@@ -55,6 +55,7 @@ import {getAreaChartSettings} from './area-chart/get-area_chart-settings';
 import {generateAreaChartVegaLiteSpec} from './area-chart/generate-area_chart-vega-lite-spec';
 import {generateBarChartVegaSpec} from './bar-chart/generate-bar_chart-vega-spec';
 import {createResultStore} from './result-store/result-store';
+import {generateLineChartVegaSpec} from './line-chart/generate-line_chart-vega-spec';
 
 function createDataCache() {
   const dataCache = new WeakMap<DataColumn, QueryData>();
@@ -175,12 +176,12 @@ const populateFieldMeta = (data: DataArray, metadata: RenderResultMetadata) => {
         fieldMeta.max = Math.max(fieldMeta.max ?? n, n);
         if (f.isAtomicField() && f.sourceWasDimension()) {
           fieldMeta.values.add(n);
-          fieldSet.add(n);
+          // fieldSet.add(n);
         }
       } else if (valueIsString(f, value)) {
         const s = value;
         fieldMeta.values.add(s);
-        fieldSet.add(s);
+        // fieldSet.add(s);
         if (!fieldMeta.minString || fieldMeta.minString.length > s.length)
           fieldMeta.minString = s;
         if (!fieldMeta.maxString || fieldMeta.maxString.length < s.length)
@@ -209,7 +210,7 @@ const populateFieldMeta = (data: DataArray, metadata: RenderResultMetadata) => {
 
         if (f.isAtomicField() && f.sourceWasDimension()) {
           fieldMeta.values.add(stringValue);
-          fieldSet.add(stringValue);
+          // fieldSet.add(stringValue);
         }
       } else if (f.isExploreField()) {
         const data = row.cell(f);
@@ -219,15 +220,15 @@ const populateFieldMeta = (data: DataArray, metadata: RenderResultMetadata) => {
   }
 
   // Update the max number of unique values for a field in nested explores
-  for (const [fieldKey, set] of maxUniqueFieldValueSets) {
-    currentExploreFieldMeta.maxUniqueFieldValueCounts.set(
-      fieldKey,
-      Math.max(
-        currentExploreFieldMeta.maxUniqueFieldValueCounts.get(fieldKey) ?? 0,
-        set.size
-      )
-    );
-  }
+  // for (const [fieldKey, set] of maxUniqueFieldValueSets) {
+  //   currentExploreFieldMeta.maxUniqueFieldValueCounts.set(
+  //     fieldKey,
+  //     Math.max(
+  //       currentExploreFieldMeta.maxUniqueFieldValueCounts.get(fieldKey) ?? 0,
+  //       set.size
+  //     )
+  //   );
+  // }
 
   currentExploreFieldMeta.maxRecordCt = Math.max(
     currentExploreFieldMeta.maxRecordCt ?? currExploreRecordCt,
@@ -261,7 +262,13 @@ function populateExploreMeta(
   } else if (tag.has('line_chart')) {
     const chartTag = tag.tag('line_chart')!;
     const lineSettings = getLineChartSettings(f, tag);
-    vegaLiteProps = generateLineChartVegaLiteSpec(
+    // vegaLiteProps = generateLineChartVegaLiteSpec(
+    //   f,
+    //   lineSettings,
+    //   metadata,
+    //   chartTag
+    // );
+    vegaLiteProps = generateLineChartVegaSpec(
       f,
       lineSettings,
       metadata,

@@ -36,7 +36,7 @@ source: products is duckdb.table("data/products.parquet") extend {
     group_by: ` ` is 'Line Charts'
     # line_chart
     nest: basic is baseLineData
-    # line_chart.zero_baseline=false
+    # bar_chart.zero_baseline=false
     nest: basicNoZero is baseLineData
     # line_chart
     nest: dimensionSeries is baseLineData + { group_by: department }

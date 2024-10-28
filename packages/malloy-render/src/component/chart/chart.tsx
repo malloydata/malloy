@@ -164,6 +164,9 @@ export function Chart(props: {
     );
   });
 
+  console.log({spec});
+  // console.log(JSON.stringify(spec));
+
   return (
     <div
       onMouseLeave={() => {

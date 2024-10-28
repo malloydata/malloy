@@ -235,7 +235,7 @@ export function getChartLayoutSettings(
           top: topPadding + 1,
           left: yAxisWidth,
           bottom: xAxisHeight + xTitleSize,
-          right: 0,
+          right: 8,
         },
     xField,
     yField,
