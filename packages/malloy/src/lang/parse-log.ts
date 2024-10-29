@@ -319,7 +319,6 @@ type MessageParameterTypes = {
   'foreign-key-in-join-cross': string;
   'expression-type-error': string;
   'unexpected-statement-in-translation': string;
-  'filter-shortcut': string;
   'illegal-query-interpolation-outside-sql-block': string;
   'percent-terminated-query-interpolation': string;
   'failed-to-parse-time-literal': string;
