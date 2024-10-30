@@ -23,7 +23,7 @@
 
 import snowflake, {
   SnowflakeError,
-  Statement,
+  RowStatement,
   Connection,
   ConnectionOptions,
 } from 'snowflake-sdk';
@@ -155,7 +155,7 @@ export class SnowflakeExecutor {
         sqlText,
         complete: (
           err: SnowflakeError | undefined,
-          _stmt: Statement,
+          _stmt: RowStatement,
           rows?: QueryData
         ) => {
           if (err) {
@@ -205,7 +205,7 @@ export class SnowflakeExecutor {
         conn.execute({
           sqlText,
           streamResult: true,
-          complete: (err: SnowflakeError | undefined, stmt: Statement) => {
+          complete: (err: SnowflakeError | undefined, stmt: RowStatement) => {
             if (err) {
               reject(err);
             }
