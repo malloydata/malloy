@@ -49,6 +49,7 @@ export class AbstractParameter extends SpaceParam {
       ...TDU.atomicDef(this.parameter()),
       expressionType: 'scalar',
       evalSpace: 'constant',
+      cubeUsage: [],
     };
   }
 
@@ -73,6 +74,7 @@ export class DefinedParameter extends SpaceParam {
       // TODO Not sure whether params are considered "input space". It seems like they
       // could be input or constant, depending on usage (same as above).
       evalSpace: 'input',
+      cubeUsage: [],
     };
   }
 

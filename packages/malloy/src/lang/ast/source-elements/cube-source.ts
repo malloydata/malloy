@@ -94,6 +94,7 @@ export class CubeSource extends Source {
             name: fieldName,
             as: undefined,
             e: {node: 'cubeField'},
+            cubeUsage: [[fieldName]],
             // TODO code and location are wrong...
           };
           fields.push(cubeField);

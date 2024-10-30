@@ -168,6 +168,7 @@ export class ExprFunc extends ExpressionDef {
             expressionType: footType.expressionType,
             value: {node: 'field', path: this.source.path},
             evalSpace: footType.evalSpace,
+            cubeUsage: footType.cubeUsage,
           };
           structPath = this.source.path.slice(0, -1);
         } else {
@@ -435,6 +436,7 @@ export class ExprFunc extends ExpressionDef {
       expressionType,
       value: funcCall,
       evalSpace,
+      cubeUsage: argExprs.map(e => e.cubeUsage).flat(),
     };
   }
 }

@@ -40,14 +40,20 @@ export class ExprIdReference extends ExpressionDef {
 
   getExpression(fs: FieldSpace): ExprValue {
     const def = this.fieldReference.getField(fs);
+    // TODO is this too hacky?
+    const cubeJoinUsage = this.fieldReference.list
+      .map(n => n.name)
+      .slice(0, -1);
     if (def.found) {
       const td = def.found.typeDesc();
+      const cubeUsage = td.cubeUsage.map(use => [...cubeJoinUsage, ...use]);
       if (def.isOutputField) {
         return {
           ...td,
           // TODO what about literal??
           evalSpace: td.evalSpace === 'constant' ? 'constant' : 'output',
           value: {node: 'outputField', name: this.refString},
+          cubeUsage,
         };
       }
       const value = {node: def.found.refType, path: this.fieldReference.path};
@@ -55,7 +61,7 @@ export class ExprIdReference extends ExpressionDef {
       const evalSpace = expressionIsAggregate(td.expressionType)
         ? 'output'
         : td.evalSpace;
-      return {...td, value, evalSpace};
+      return {...td, value, evalSpace, cubeUsage};
     }
     return this.loggedErrorExpr(def.error.code, def.error.message);
   }

@@ -138,6 +138,7 @@ export abstract class AtomicFieldDeclaration
             type: retType,
             location: this.location,
             e: exprValue.value,
+            cubeUsage: exprValue.cubeUsage,
           };
           if (isGranularResult(exprValue)) {
             timeRet.timeframe = exprValue.timeframe;
@@ -155,6 +156,7 @@ export abstract class AtomicFieldDeclaration
             name: exprName,
             location: this.location,
             e: exprValue.value,
+            cubeUsage: exprValue.cubeUsage,
           };
           break;
         }
@@ -167,6 +169,7 @@ export abstract class AtomicFieldDeclaration
             join: 'one',
             fields,
             e: exprValue.value,
+            cubeUsage: exprValue.cubeUsage,
             dialect: exprFS.dialectName(),
           };
           break;

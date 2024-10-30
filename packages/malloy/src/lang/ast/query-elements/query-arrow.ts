@@ -21,7 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Query, StructDef, StructRef, isSourceDef, refIsStructDef} from '../../../model/malloy_types';
+import {
+  Query,
+  StructDef,
+  StructRef,
+  isQuerySegment,
+  isSourceDef,
+  refIsStructDef,
+} from '../../../model/malloy_types';
 import {Source} from '../source-elements/source';
 import {StaticSpace} from '../field-space/static-space';
 import {FieldSpace} from '../types/field-space';
@@ -45,28 +52,53 @@ export class QueryArrow extends QueryBase implements QueryElement {
     super({source, view});
   }
 
-  // private resolveSourceRef(sourceRef: StructRef): StructDef {
-  //   if (refIsStructDef(sourceRef)) return sourceRef;
-  //   const entry = this.modelEntry(sourceRef); // TODO what about parameters?
-  //   if (entry === undefined) {
-  //     throw new Error(`Could not find source ${sourceRef}`);
-  //   }
-  //   if (isSourceDef(entry.entry)) {
-  //     return entry.entry;
-  //   }
-  //   throw new Error(`Not a source: ${sourceRef}`);
-  // }
+  private resolveSourceRef(sourceRef: StructRef): StructDef {
+    if (refIsStructDef(sourceRef)) return sourceRef;
+    const entry = this.modelEntry(sourceRef); // TODO what about parameters?
+    if (entry === undefined) {
+      throw new Error(`Could not find source ${sourceRef}`);
+    }
+    if (isSourceDef(entry.entry)) {
+      return entry.entry;
+    }
+    throw new Error(`Not a source: ${sourceRef}`);
+  }
 
-  // private resolveCubeSource(sources: StructRef[]): StructRef {
-  //   const pickedRef = sources[0]; // TODO actually pick the right one
-  //   const pickedDef = refIsStructDef(pickedRef)
-  //     ? pickedRef
-  //     : this.resolveSourceRef(pickedRef);
-  //   if (pickedDef.type === 'cube') {
-  //     return this.resolveCubeSource(pickedDef.sources);
-  //   }
-  //   return pickedRef;
-  // }
+  private resolveCubeSource(
+    sources: StructRef[],
+    cubeUsage: string[][]
+  ): StructRef {
+    const pickedRef = this.pickCube(sources, cubeUsage); // TODO actually pick the right one
+    if (pickedRef === undefined) {
+      this.logError('invalid-cube-usage', 'Could not resolve cube source');
+      return sources[0];
+    }
+    const pickedDef = refIsStructDef(pickedRef)
+      ? pickedRef
+      : this.resolveSourceRef(pickedRef);
+    if (pickedDef.type === 'cube') {
+      return this.resolveCubeSource(pickedDef.sources, cubeUsage);
+    }
+    return pickedRef;
+  }
+
+  private pickCube(
+    sources: StructRef[],
+    cubeUsage: string[][]
+  ): StructRef | undefined {
+    overSources: for (const source of sources) {
+      const def = this.resolveSourceRef(source);
+      for (const usage of cubeUsage) {
+        // TODO handle joins
+        if (usage.length === 1) {
+          if (def.fields.find(f => f.as ?? f.name === usage[0]) === undefined) {
+            continue overSources;
+          }
+        }
+      }
+      return source;
+    }
+  }
 
   queryComp(isRefOk: boolean): QueryComp {
     let inputStruct: StructDef;
@@ -88,15 +120,6 @@ export class QueryArrow extends QueryBase implements QueryElement {
         ? invoked.structRef
         : this.source.getSourceDef(undefined);
       fieldSpace = new StaticSpace(inputStruct);
-      // // TODO this is for demo purposes only...
-      // if (inputStruct.type === 'cube') {
-      //   const structRef = this.resolveCubeSource(inputStruct.sources);
-      //   queryBase = {
-      //     ...queryBase,
-      //     structRef,
-      //   };
-      //   // fieldSpace = new StaticSpace(this.resolveSourceRef(structRef));
-      // }
     } else {
       // We are adding a second stage to the given "source" query; we get the query and add a segment
       const lhsQuery = this.source.queryComp(isRefOk);
@@ -106,6 +129,21 @@ export class QueryArrow extends QueryBase implements QueryElement {
     }
     const {pipeline, annotation, outputStruct, name} =
       this.view.pipelineComp(fieldSpace);
+
+    // TODO add an error if a raw/index query is done against a cube
+
+    // TODO move the selected cube into a "cubeResolvedStructRef"
+    if (inputStruct.type === 'cube' && isQuerySegment(pipeline[0])) {
+      const structRef = this.resolveCubeSource(
+        inputStruct.sources,
+        pipeline[0].cubeUsage ?? []
+      );
+      queryBase = {
+        ...queryBase,
+        structRef,
+      };
+      // fieldSpace = new StaticSpace(this.resolveSourceRef(structRef));
+    }
 
     return {
       query: {

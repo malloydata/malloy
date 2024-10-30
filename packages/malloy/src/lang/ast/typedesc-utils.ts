@@ -39,7 +39,7 @@ function mkTypeDesc(
   expressionType: ExpressionType = 'scalar',
   evalSpace: EvalSpace = 'constant'
 ): TypeDesc {
-  return {type: dataType, expressionType, evalSpace};
+  return {type: dataType, expressionType, evalSpace, cubeUsage: []};
 }
 
 export const nullT = mkTypeDesc('null');

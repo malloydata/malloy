@@ -35,6 +35,7 @@ export class ExprNow extends ExpressionDef {
       // `now` is considered to be a constant, at least in the dialects we support today
       evalSpace: 'constant',
       value: {node: 'now'},
+      cubeUsage: [],
     };
   }
 }

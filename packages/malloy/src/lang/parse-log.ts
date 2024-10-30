@@ -192,6 +192,7 @@ type MessageParameterTypes = {
   'unexpected-element-type': string;
   'field-not-found': string;
   'invalid-cube-input': string;
+  'invalid-cube-usage': string;
   'empty-cube-source': string;
   'unnecessary-cube-source': string;
   'cube-source-atomic-only': string;

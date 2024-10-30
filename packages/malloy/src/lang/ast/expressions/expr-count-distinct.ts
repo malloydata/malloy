@@ -39,6 +39,7 @@ export class ExprCountDistinct extends ExprAggregateFunction {
       evalSpace: ev.evalSpace,
       expressionType: 'aggregate',
       value: ev.value,
+      cubeUsage: ev.cubeUsage,
     };
   }
 }

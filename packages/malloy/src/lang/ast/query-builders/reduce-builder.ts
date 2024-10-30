@@ -28,6 +28,7 @@ import {
   QuerySegment,
   ReduceSegment,
   isPartialSegment,
+  isQuerySegment,
   isReduceSegment,
 } from '../../../model/malloy_types';
 
@@ -51,6 +52,7 @@ export abstract class QuerySegmentBuilder implements QueryBuilder {
   order?: Top | Ordering;
   limit?: number;
   alwaysJoins: string[] = [];
+  cubeUsage: string[][] = [];
   abstract inputFS: QueryInputSpace;
   abstract resultFS: QueryOperationSpace;
   abstract readonly type: 'grouping' | 'project';
@@ -146,6 +148,10 @@ export abstract class QuerySegmentBuilder implements QueryBuilder {
     if (this.alwaysJoins.length > 0) {
       to.alwaysJoins = [...this.alwaysJoins];
     }
+
+    const fromCubeUsage =
+      from && isQuerySegment(from) ? from.cubeUsage ?? [] : [];
+    to.cubeUsage = [...fromCubeUsage, ...this.cubeUsage];
   }
 }
 
@@ -166,6 +172,13 @@ export class ReduceBuilder extends QuerySegmentBuilder implements QueryBuilder {
   }
 
   finalize(fromSeg: PipeSegment | undefined): PipeSegment {
+    // TODO this should probably go somewhere in the field adding code
+    for (const [, field] of this.resultFS.entries()) {
+      const td = field.typeDesc();
+      this.cubeUsage.push(...td.cubeUsage);
+    }
+    // this.cubeUsage.push(...this.filters.map(f => f.cubeUsage));
+    // END TODO
     let from: ReduceSegment | PartialSegment | undefined;
     if (fromSeg) {
       if (isReduceSegment(fromSeg) || isPartialSegment(fromSeg)) {

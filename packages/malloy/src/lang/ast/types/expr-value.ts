@@ -48,6 +48,7 @@ export function computedExprValue({
     value,
     expressionType: maxOfExpressionTypes(from.map(e => e.expressionType)),
     evalSpace: mergeEvalSpaces(...from.map(e => e.evalSpace)),
+    cubeUsage: from.map(e => e.cubeUsage).flat(),
   };
 }
 
@@ -68,6 +69,7 @@ export function computedTimeResult({
     expressionType: xv.expressionType,
     evalSpace: xv.evalSpace,
     value: xv.value,
+    cubeUsage: from.map(e => e.cubeUsage).flat(),
   };
   if (timeframe) {
     y.timeframe = timeframe;
@@ -114,6 +116,7 @@ export function literalTimeResult({
     expressionType: xv.expressionType,
     evalSpace: xv.evalSpace,
     value: xv.value,
+    cubeUsage: [],
   };
   if (timeframe) {
     y.timeframe = timeframe;

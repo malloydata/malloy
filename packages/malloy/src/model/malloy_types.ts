@@ -389,6 +389,7 @@ export type ExpressionType =
 
 export interface Expression {
   e?: Expr;
+  cubeUsage?: string[][]; // TODO maybe make required?
   expressionType?: ExpressionType;
   code?: string;
 }
@@ -688,7 +689,11 @@ export type ArrayDef = ArrayTypeDef & AtomicFieldDef;
 
 export function arrayEachFields(arrayOf: AtomicTypeDef): AtomicFieldDef[] {
   return [
-    {name: 'each', ...arrayOf, e: {node: 'field', path: ['value']}},
+    {
+      name: 'each',
+      ...arrayOf,
+      e: {node: 'field', path: ['value']},
+    },
     {name: 'value', ...arrayOf},
   ];
 }
@@ -758,6 +763,7 @@ export interface JoinBase {
   join: JoinType;
   matrixOperation?: MatrixOperation;
   onExpression?: Expr;
+  onCubeUsage?: string[][];
 }
 
 export type Joinable =
@@ -1012,6 +1018,7 @@ export interface QuerySegment extends Filtered {
   orderBy?: OrderBy[]; // uses output field name or index.
   queryTimezone?: string;
   alwaysJoins?: string[];
+  cubeUsage?: string[][];
 }
 
 export interface TurtleDef extends NamedObject, Pipeline {
@@ -1166,6 +1173,7 @@ export type LeafExpressionType = Exclude<
 export type TypeInfo = {
   expressionType: ExpressionType;
   evalSpace: EvalSpace;
+  cubeUsage: string[][];
 };
 
 export type TypeDesc = ExpressionValueTypeDef & TypeInfo;

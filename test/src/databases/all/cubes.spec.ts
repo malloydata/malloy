@@ -21,7 +21,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       ##! experimental.cube_sources
       source: state_facts is ${databaseName}.table('malloytest.state_facts')
       source: x is cube(state_facts, state_facts extend { dimension: foo is 1 })
-      run: x -> { select: foo }
+      run: x -> { group_by: foo }
     `).malloyResultMatches(runtime, {foo: 1});
   });
 });

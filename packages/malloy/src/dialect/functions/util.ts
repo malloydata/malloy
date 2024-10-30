@@ -86,21 +86,21 @@ export function sql(
   return ret;
 }
 
-export function constant(type: TypeDesc): TypeDesc {
+export function constant(type: FunctionParamTypeDesc): FunctionParamTypeDesc {
   return {
     ...type,
     evalSpace: 'constant',
   };
 }
 
-export function output(type: TypeDesc): TypeDesc {
+export function output(type: FunctionParamTypeDesc): FunctionParamTypeDesc {
   return {
     ...type,
     evalSpace: 'output',
   };
 }
 
-export function literal(type: TypeDesc): TypeDesc {
+export function literal(type: FunctionParamTypeDesc): FunctionParamTypeDesc {
   return {
     ...type,
     evalSpace: 'literal',
@@ -139,11 +139,11 @@ export function makeParam(
   return {param: param(name, ...allowedTypes), arg: arg(name)};
 }
 
-export function maxScalar(type: LeafExpressionType): TypeDesc {
+export function maxScalar(type: LeafExpressionType): FunctionParamTypeDesc {
   return {type, expressionType: 'scalar', evalSpace: 'input'};
 }
 
-export function maxAggregate(type: LeafExpressionType): TypeDesc {
+export function maxAggregate(type: LeafExpressionType): FunctionParamTypeDesc {
   return {type, expressionType: 'aggregate', evalSpace: 'input'};
 }
 
@@ -161,15 +161,15 @@ export function maxAnalytic(type: LeafExpressionType): FunctionParamTypeDesc {
   return {type, expressionType: 'aggregate_analytic', evalSpace: 'input'};
 }
 
-export function minScalar(type: LeafExpressionType): TypeDesc {
+export function minScalar(type: LeafExpressionType): FunctionParamTypeDesc {
   return {type, expressionType: 'scalar', evalSpace: 'input'};
 }
 
-export function minAggregate(type: LeafExpressionType): TypeDesc {
+export function minAggregate(type: LeafExpressionType): FunctionParamTypeDesc {
   return {type, expressionType: 'aggregate', evalSpace: 'input'};
 }
 
-export function minAnalytic(type: LeafExpressionType): TypeDesc {
+export function minAnalytic(type: LeafExpressionType): FunctionParamTypeDesc {
   return {type, expressionType: 'scalar_analytic', evalSpace: 'input'};
 }
 
@@ -286,21 +286,27 @@ function expandReturnTypeBlueprint(
   blueprint: TypeDescBlueprint,
   generic: {name: string; type: LeafExpressionType} | undefined
 ): TypeDesc {
+  let base: FunctionParamTypeDesc;
   if (typeof blueprint === 'string') {
-    return minScalar(blueprint);
+    base = minScalar(blueprint);
   } else if ('generic' in blueprint) {
-    return minScalar(removeGeneric(blueprint, generic));
+    base = minScalar(removeGeneric(blueprint, generic));
   } else if ('literal' in blueprint) {
-    return literal(minScalar(removeGeneric(blueprint.literal, generic)));
+    base = literal(minScalar(removeGeneric(blueprint.literal, generic)));
   } else if ('constant' in blueprint) {
-    return constant(minScalar(removeGeneric(blueprint.constant, generic)));
+    base = constant(minScalar(removeGeneric(blueprint.constant, generic)));
   } else if ('dimension' in blueprint) {
-    return minScalar(removeGeneric(blueprint.dimension, generic));
+    base = minScalar(removeGeneric(blueprint.dimension, generic));
   } else if ('measure' in blueprint) {
-    return minAggregate(removeGeneric(blueprint.measure, generic));
+    base = minAggregate(removeGeneric(blueprint.measure, generic));
   } else {
-    return minAnalytic(removeGeneric(blueprint.calculation, generic));
+    base = minAnalytic(removeGeneric(blueprint.calculation, generic));
   }
+  return {
+    ...base,
+    cubeUsage: [],
+    expressionType: base.expressionType ?? 'scalar',
+  };
 }
 
 function isTypeDescBlueprint(
