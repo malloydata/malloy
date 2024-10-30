@@ -227,7 +227,7 @@ const to_unixtime: DefinitionBlueprint = {
   impl: {function: 'TO_UNIXTIME'},
 };
 
-const percente_rank: DefinitionBlueprint = {
+const percent_rank: DefinitionBlueprint = {
   takes: {},
   returns: {calculation: 'number'},
   impl: {function: 'PERCENT_RANK', needsWindowOrderBy: true},
@@ -262,5 +262,5 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   to_unixtime,
 
   // window functions
-  percente_rank,
+  percent_rank,
 };
