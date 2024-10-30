@@ -7,6 +7,7 @@
 
 import {
   RegexMatchExpr,
+  TD,
   TimeExtractExpr,
   TimeLiteralNode,
   TimeTruncExpr,
@@ -28,7 +29,7 @@ export abstract class PostgresBase extends Dialect {
     // adjusting for monday/sunday weeks
     const week = df.units === 'week';
     const truncThis = week ? `${df.e.sql} + INTERVAL '1' DAY` : df.e.sql;
-    if (df.e.dataType === 'timestamp') {
+    if (TD.isTimestamp(df.e.typeDef)) {
       const tz = qtz(qi);
       if (tz) {
         const civilSource = `(${truncThis}::TIMESTAMPTZ AT TIME ZONE '${tz}')`;
@@ -53,7 +54,7 @@ export abstract class PostgresBase extends Dialect {
   sqlTimeExtractExpr(qi: QueryInfo, from: TimeExtractExpr): string {
     const units = timeExtractMap[from.units] || from.units;
     let extractFrom = from.e.sql;
-    if (from.e.dataType === 'timestamp') {
+    if (TD.isTimestamp(from.e.typeDef)) {
       const tz = qtz(qi);
       if (tz) {
         extractFrom = `(${extractFrom}::TIMESTAMPTZ AT TIME ZONE '${tz}')`;
@@ -65,7 +66,7 @@ export abstract class PostgresBase extends Dialect {
 
   sqlCast(qi: QueryInfo, cast: TypecastExpr): string {
     const expr = cast.e.sql || '';
-    const op = `${cast.srcType}::${cast.dstType}`;
+    const {op, srcTypeDef, dstTypeDef, dstSQLType} = this.sqlCastPrep(cast);
     const tz = qtz(qi);
     if (op === 'timestamp::date' && tz) {
       const tstz = `${expr}::TIMESTAMPTZ`;
@@ -73,13 +74,9 @@ export abstract class PostgresBase extends Dialect {
     } else if (op === 'date::timestamp' && tz) {
       return `CAST((${expr})::TIMESTAMP AT TIME ZONE '${tz}' AS TIMESTAMP)`;
     }
-    if (cast.srcType !== cast.dstType) {
-      const dstType =
-        typeof cast.dstType === 'string'
-          ? this.malloyTypeToSQLType({type: cast.dstType})
-          : cast.dstType.raw;
+    if (!TD.eq(srcTypeDef, dstTypeDef)) {
       const castFunc = cast.safe ? 'TRY_CAST' : 'CAST';
-      return `${castFunc}(${expr} AS ${dstType})`;
+      return `${castFunc}(${expr} AS ${dstSQLType})`;
     }
     return expr;
   }
@@ -89,7 +86,7 @@ export abstract class PostgresBase extends Dialect {
   }
 
   sqlLiteralTime(qi: QueryInfo, lt: TimeLiteralNode): string {
-    if (lt.dataType === 'date') {
+    if (TD.isDate(lt.typeDef)) {
       return `DATE '${lt.literal}'`;
     }
     const tz = lt.timezone || qtz(qi);

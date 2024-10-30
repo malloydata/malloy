@@ -7,11 +7,20 @@ export type BarChartSettings = {
   yChannel: Channel;
   seriesChannel: Channel;
   isStack: boolean;
+  interactive: boolean;
+  hideReferences: boolean;
 };
 
-export function getBarChartSettings(explore: Explore, tagOverride?: Tag) {
+export function getBarChartSettings(
+  explore: Explore,
+  tagOverride?: Tag
+): BarChartSettings {
   const tag = tagOverride ?? explore.tagParse().tag;
   const chart = tag.tag('bar_chart') ?? tag.tag('bar');
+  // if tooltip, disable interactions
+  const interactive = !tag.has('tooltip');
+  const isSpark =
+    chart?.text('size') === 'spark' || tag.text('size') === 'spark';
   if (!chart) {
     throw new Error(
       'Tried to render a bar_chart, but no bar_chart tag was found'
@@ -120,5 +129,7 @@ export function getBarChartSettings(explore: Explore, tagOverride?: Tag) {
     yChannel,
     seriesChannel,
     isStack,
+    interactive,
+    hideReferences: isSpark,
   };
 }

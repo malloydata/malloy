@@ -26,7 +26,7 @@ import {
   expressionIsCalculation,
 } from '../../../model/malloy_types';
 import {errorFor} from '../ast-utils';
-import {FT} from '../fragtype-utils';
+import * as TDU from '../typedesc-utils';
 import {FunctionOrdering} from './function-ordering';
 import {Filter} from '../query-properties/filters';
 import {Limit} from '../query-properties/limit';
@@ -39,7 +39,7 @@ import {ExprFunc} from './expr-func';
 
 export class ExprProps extends ExpressionDef {
   elementType = 'expression with props';
-  legalChildTypes = FT.anyAtomicT;
+  legalChildTypes = TDU.anyAtomicT;
   constructor(
     readonly expr: ExpressionDef,
     readonly statements: FieldPropStatement[]

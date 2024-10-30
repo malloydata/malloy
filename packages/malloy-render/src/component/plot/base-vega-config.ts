@@ -43,9 +43,9 @@ export const baseVegaConfig = () => ({
   },
   'axisY': {
     gridColor: gridGray,
+    grid: true,
     tickColor: gridGray,
     domain: false,
-
     labelFont: 'Inter, sans-serif',
     labelFontSize: 10,
     labelFontWeight: 'normal',
@@ -53,7 +53,7 @@ export const baseVegaConfig = () => ({
     labelPadding: 5,
     titleColor: grayMedium,
     titleFont: 'Inter, sans-serif',
-    titleFontSize: 12,
+    titleFontSize: 10,
     titleFontWeight: 500,
     titlePadding: 10,
     labelOverlap: false,
@@ -70,7 +70,7 @@ export const baseVegaConfig = () => ({
     labelColor: grayMedium,
     titleColor: grayMedium,
     titleFont: 'Inter, sans-serif',
-    titleFontSize: 12,
+    titleFontSize: 10,
     titleFontWeight: 500,
     titlePadding: 10,
   },

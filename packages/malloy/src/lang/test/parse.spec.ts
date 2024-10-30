@@ -123,6 +123,9 @@ describe('model statements', () => {
 });
 
 describe('error handling', () => {
+  test('no close brace', () => {
+    expect('run: a -> { group_by: ai').toLog(errorMessage("'{' missing a '}'"));
+  });
   test('field and query with same name does not overflow', () => {
     expect(`
       source: flights is _db_.table('malloytest.flights') extend {

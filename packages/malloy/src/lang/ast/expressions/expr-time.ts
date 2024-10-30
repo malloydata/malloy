@@ -23,32 +23,26 @@
 
 import {
   Expr,
-  ExpressionType,
   TemporalFieldType,
   TypecastExpr,
   isTemporalField,
 } from '../../../model/malloy_types';
 
 import {FieldSpace} from '../types/field-space';
-import {ExprValue} from '../types/expr-value';
+import {ExprValue, computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 
 export class ExprTime extends ExpressionDef {
   elementType = 'timestampOrDate';
   readonly translationValue: ExprValue;
-  constructor(
-    timeType: TemporalFieldType,
-    value: Expr,
-    expressionType: ExpressionType = 'scalar'
-  ) {
+  constructor(timeType: TemporalFieldType, value: Expr, from?: ExprValue[]) {
     super();
     this.elementType = timeType;
-    this.translationValue = {
-      dataType: timeType,
-      expressionType,
+    this.translationValue = computedExprValue({
+      dataType: {type: timeType},
       value,
-      evalSpace: 'constant',
-    };
+      from: from ?? [],
+    });
   }
 
   getExpression(_fs: FieldSpace): ExprValue {
@@ -57,18 +51,18 @@ export class ExprTime extends ExpressionDef {
 
   static fromValue(timeType: TemporalFieldType, expr: ExprValue): ExprTime {
     let value = expr.value;
-    if (timeType !== expr.dataType) {
+    if (timeType !== expr.type) {
       const toTs: TypecastExpr = {
         node: 'cast',
         safe: false,
-        dstType: timeType,
+        dstType: {type: timeType},
         e: expr.value,
       };
-      if (isTemporalField(expr.dataType)) {
-        toTs.srcType = expr.dataType;
+      if (isTemporalField(expr.type)) {
+        toTs.srcType = {type: expr.type};
       }
       value = toTs;
     }
-    return new ExprTime(timeType, value, expr.expressionType);
+    return new ExprTime(timeType, value, [expr]);
   }
 }

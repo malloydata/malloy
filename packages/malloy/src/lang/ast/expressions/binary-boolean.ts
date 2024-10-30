@@ -21,12 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {maxExpressionType, mergeEvalSpaces} from '../../../model/malloy_types';
-
 import {errorFor} from '../ast-utils';
-import {FT} from '../fragtype-utils';
+import * as TDU from '../typedesc-utils';
 import {BinaryMalloyOperator, getExprNode} from '../types/binary_operators';
-import {ExprValue} from '../types/expr-value';
+import {ExprValue, computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 
@@ -34,7 +32,7 @@ export abstract class BinaryBoolean<
   opType extends BinaryMalloyOperator,
 > extends ExpressionDef {
   elementType = 'abstract boolean binary';
-  legalChildTypes = [FT.boolT];
+  legalChildTypes = [TDU.boolT];
   constructor(
     readonly left: ExpressionDef,
     readonly op: opType,
@@ -47,20 +45,15 @@ export abstract class BinaryBoolean<
     const left = this.left.getExpression(fs);
     const right = this.right.getExpression(fs);
     if (this.typeCheck(this.left, left) && this.typeCheck(this.right, right)) {
-      const evalSpace = mergeEvalSpaces(left.evalSpace, right.evalSpace);
-      return {
-        dataType: 'boolean',
-        expressionType: maxExpressionType(
-          left.expressionType,
-          right.expressionType
-        ),
+      return computedExprValue({
+        dataType: {type: 'boolean'},
         value: {
           node: getExprNode(this.op),
           kids: {left: left.value, right: right.value},
         },
-        evalSpace,
-      };
+        from: [left, right],
+      });
     }
-    return errorFor('logial required boolean');
+    return errorFor('logical-op expected boolean');
   }
 }

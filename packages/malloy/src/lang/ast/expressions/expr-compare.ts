@@ -22,7 +22,7 @@
  */
 
 import {maxExpressionType, mergeEvalSpaces} from '../../../model';
-import {FT} from '../fragtype-utils';
+import * as TDU from '../typedesc-utils';
 import {
   BinaryMalloyOperator,
   CompareMalloyOperator,
@@ -34,14 +34,14 @@ import {FieldSpace} from '../types/field-space';
 import {BinaryBoolean} from './binary-boolean';
 
 const compareTypes = {
-  '~': [FT.stringT],
-  '!~': [FT.stringT],
-  '<': [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
-  '<=': [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
-  '=': [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
-  '!=': [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
-  '>=': [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
-  '>': [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
+  '~': [TDU.stringT],
+  '!~': [TDU.stringT],
+  '<': [TDU.numberT, TDU.stringT, TDU.dateT, TDU.timestampT],
+  '<=': [TDU.numberT, TDU.stringT, TDU.dateT, TDU.timestampT],
+  '=': [TDU.numberT, TDU.stringT, TDU.dateT, TDU.timestampT],
+  '!=': [TDU.numberT, TDU.stringT, TDU.dateT, TDU.timestampT],
+  '>=': [TDU.numberT, TDU.stringT, TDU.dateT, TDU.timestampT],
+  '>': [TDU.numberT, TDU.stringT, TDU.dateT, TDU.timestampT],
 };
 
 export class ExprCompare extends BinaryBoolean<CompareMalloyOperator> {
@@ -110,7 +110,7 @@ export class ExprLegacyIn extends ExpressionDef {
       return choice.value;
     });
     return {
-      dataType: 'boolean',
+      type: 'boolean',
       expressionType,
       evalSpace,
       value: {

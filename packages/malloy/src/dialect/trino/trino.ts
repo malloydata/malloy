@@ -36,6 +36,7 @@ import {
   TimeLiteralNode,
   TimeExtractExpr,
   LeafAtomicTypeDef,
+  TD,
 } from '../../model/malloy_types';
 import {
   DialectFunctionOverloadDef,
@@ -452,22 +453,18 @@ ${indent(sql)}
   }
 
   sqlCast(qi: QueryInfo, cast: TypecastExpr): string {
-    const op = `${cast.srcType}=>${cast.dstType}`;
+    const {op, srcTypeDef, dstTypeDef, dstSQLType} = this.sqlCastPrep(cast);
     const tz = qtz(qi);
     const expr = cast.e.sql || '';
-    if (op === 'timestamp=>date' && tz) {
+    if (op === 'timestamp::date' && tz) {
       const tstz = `CAST(${expr} as TIMESTAMP)`;
       return `CAST((${tstz}) AT TIME ZONE '${tz}' AS DATE)`;
-    } else if (op === 'date=>timestamp' && tz) {
+    } else if (op === 'date::timestamp' && tz) {
       return `CAST(CONCAT(CAST(CAST(${expr} AS TIMESTAMP) AS VARCHAR), ' ${tz}') AS TIMESTAMP WITH TIME ZONE)`;
     }
-    if (cast.srcType !== cast.dstType) {
-      const dstType =
-        typeof cast.dstType === 'string'
-          ? this.malloyTypeToSQLType({type: cast.dstType})
-          : cast.dstType.raw;
+    if (!TD.eq(srcTypeDef, dstTypeDef)) {
       const castFunc = cast.safe ? 'TRY_CAST' : 'CAST';
-      return `${castFunc}(${expr} AS ${dstType})`;
+      return `${castFunc}(${expr} AS ${dstSQLType})`;
     }
     return expr;
   }
@@ -495,10 +492,10 @@ ${indent(sql)}
       if (!timestampMeasureable(measureIn)) {
         throw new Error(`Measure in '${measureIn} not implemented`);
       }
-      if (from.dataType !== to.dataType) {
+      if (!TD.eq(from.typeDef, to.typeDef)) {
         throw new Error("Can't measure difference between different types");
       }
-      if (from.dataType === 'date') {
+      if (TD.isDate(from.typeDef)) {
         lVal = `CAST(${lVal} AS TIMESTAMP)`;
         rVal = `CAST(${rVal} AS TIMESTAMP)`;
       }
@@ -599,7 +596,7 @@ ${indent(sql)}
   }
 
   sqlLiteralTime(qi: QueryInfo, lit: TimeLiteralNode): string {
-    if (lit.dataType === 'date') {
+    if (TD.isDate(lit.typeDef)) {
       return `DATE '${lit.literal}'`;
     }
     const tz = lit.timezone || qtz(qi);
@@ -612,7 +609,7 @@ ${indent(sql)}
   sqlTimeExtractExpr(qi: QueryInfo, from: TimeExtractExpr): string {
     const pgUnits = timeExtractMap[from.units] || from.units;
     let extractFrom = from.e.sql || '';
-    if (from.e.dataType === 'timestamp') {
+    if (TD.isTimestamp(from.e.typeDef)) {
       const tz = qtz(qi);
       if (tz) {
         extractFrom = `at_timezone(${extractFrom},'${tz}')`;

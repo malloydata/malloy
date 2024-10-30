@@ -34,21 +34,8 @@ export abstract class SpaceField extends SpaceEntry {
   readonly refType = 'field';
 
   protected fieldTypeFromFieldDef(def: AtomicFieldDef): TypeDesc {
-    const ref: TypeDesc = {
-      dataType: def.type,
-      expressionType: 'scalar',
-      evalSpace: 'input',
-    };
-    if (def.expressionType) {
-      ref.expressionType = def.expressionType;
-    }
-    if (
-      ref.dataType === 'sql native' &&
-      def.type === 'sql native' &&
-      def.rawType
-    ) {
-      ref.rawType = def.rawType;
-    }
+    const expressionType = def.expressionType || 'scalar';
+    const ref: TypeDesc = {...def, expressionType, evalSpace: 'input'};
     return ref;
   }
 

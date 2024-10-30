@@ -21,16 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  CaseExpr,
-  EvalSpace,
-  ExpressionType,
-  maxExpressionType,
-  mergeEvalSpaces,
-} from '../../../model/malloy_types';
+import {CaseExpr} from '../../../model/malloy_types';
 
-import {FT} from '../fragtype-utils';
-import {ExprValue} from '../types/expr-value';
+import * as TDU from '../typedesc-utils';
+import {ExprValue, computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
@@ -41,9 +35,7 @@ interface Choice {
 }
 
 function typeCoalesce(ev1: ExprValue | undefined, ev2: ExprValue): ExprValue {
-  return ev1 === undefined ||
-    ev1.dataType === 'null' ||
-    ev1.dataType === 'error'
+  return ev1 === undefined || ev1.type === 'null' || ev1.type === 'error'
     ? ev2
     : ev1;
 }
@@ -69,7 +61,7 @@ export class Pick extends ExpressionDef {
         return undefined;
       }
       const whenResp = c.when.requestExpression(fs);
-      if (whenResp === undefined || whenResp.dataType !== 'boolean') {
+      if (whenResp === undefined || whenResp.type !== 'boolean') {
         // If when is not a boolean, we'll treat it like a partial compare
         return undefined;
       }
@@ -86,58 +78,48 @@ export class Pick extends ExpressionDef {
       },
     };
     let returnType: ExprValue | undefined;
-    let anyExpressionType: ExpressionType = 'scalar';
-    let anyEvalSpace: EvalSpace = 'constant';
+    const dependents: ExprValue[] = [];
     for (const choice of this.choices) {
       const whenExpr = choice.when.apply(fs, '=', expr);
       const thenExpr = choice.pick
         ? choice.pick.getExpression(fs)
         : expr.getExpression(fs);
-      anyExpressionType = maxExpressionType(
-        anyExpressionType,
-        maxExpressionType(whenExpr.expressionType, thenExpr.expressionType)
-      );
-      anyEvalSpace = mergeEvalSpaces(
-        anyEvalSpace,
-        whenExpr.evalSpace,
-        thenExpr.evalSpace
-      );
-      if (returnType && !FT.typeEq(returnType, thenExpr, true)) {
+      dependents.push(whenExpr, thenExpr);
+      if (returnType && !TDU.typeEq(returnType, thenExpr, true)) {
         return this.loggedErrorExpr('pick-type-does-not-match', {
-          pickType: thenExpr.dataType,
-          returnType: returnType.dataType,
+          pickType: thenExpr.type,
+          returnType: returnType.type,
         });
       }
       returnType = typeCoalesce(returnType, thenExpr);
       caseValue.kids.caseWhen.push(whenExpr.value);
       caseValue.kids.caseThen.push(thenExpr.value);
     }
-    const elsePart = this.elsePick || expr;
-    const elseVal = elsePart.getExpression(fs);
-    returnType = typeCoalesce(returnType, elseVal);
-    if (!FT.typeEq(returnType, elseVal, true)) {
+    const elseVal = this.elsePick?.getExpression(fs);
+    const exprVal = expr.getExpression(fs);
+    dependents.push(exprVal);
+    if (elseVal) dependents.push(elseVal);
+    const defaultVal = elseVal ?? exprVal;
+    const definedReturnType = typeCoalesce(returnType, defaultVal);
+    if (!TDU.typeEq(definedReturnType, defaultVal, true)) {
       if (this.elsePick) {
         return this.loggedErrorExpr('pick-else-type-does-not-match', {
-          elseType: elseVal.dataType,
-          returnType: returnType.dataType,
+          elseType: defaultVal.type,
+          returnType: definedReturnType.type,
         });
       } else {
         return this.loggedErrorExpr('pick-default-type-does-not-match', {
-          defaultType: elseVal.dataType,
-          returnType: returnType.dataType,
+          defaultType: defaultVal.type,
+          returnType: definedReturnType.type,
         });
       }
     }
-    caseValue.kids.caseElse = elseVal.value;
-    return {
-      dataType: returnType.dataType,
-      expressionType: maxExpressionType(
-        anyExpressionType,
-        elseVal.expressionType
-      ),
-      evalSpace: mergeEvalSpaces(anyEvalSpace, elseVal.evalSpace),
+    caseValue.kids.caseElse = defaultVal.value;
+    return computedExprValue({
+      dataType: definedReturnType,
       value: caseValue,
-    };
+      from: dependents,
+    });
   }
 
   getExpression(fs: FieldSpace): ExprValue {
@@ -156,6 +138,7 @@ export class Pick extends ExpressionDef {
     }
 
     const choiceValues: Choice[] = [];
+    const dependents: ExprValue[] = [];
     for (const c of this.choices) {
       if (c.pick === undefined) {
         return this.loggedErrorExpr(
@@ -170,62 +153,43 @@ export class Pick extends ExpressionDef {
           'pick with partial when can only be used with apply'
         );
       }
-      choiceValues.push({
-        pick: c.pick.getExpression(fs),
-        when: c.when.getExpression(fs),
-      });
+      const pick = c.pick.getExpression(fs);
+      const when = c.when.getExpression(fs);
+      choiceValues.push({pick, when});
+      dependents.push(pick, when);
     }
     let returnType: ExprValue | undefined;
-    let anyExpressionType: ExpressionType = 'scalar';
-    let anyEvalSpace: EvalSpace = 'constant';
     for (const aChoice of choiceValues) {
-      if (!FT.typeEq(aChoice.when, FT.boolT)) {
+      if (!TDU.typeEq(aChoice.when, TDU.boolT)) {
         return this.loggedErrorExpr('pick-when-must-be-boolean', {
-          whenType: aChoice.when.dataType,
+          whenType: aChoice.when.type,
         });
       }
-      if (returnType && !FT.typeEq(returnType, aChoice.pick, true)) {
+      if (returnType && !TDU.typeEq(returnType, aChoice.pick, true)) {
         return this.loggedErrorExpr('pick-type-does-not-match', {
-          pickType: aChoice.pick.dataType,
-          returnType: returnType.dataType,
+          pickType: aChoice.pick.type,
+          returnType: returnType.type,
         });
       }
       returnType = typeCoalesce(returnType, aChoice.pick);
-      anyExpressionType = maxExpressionType(
-        anyExpressionType,
-        maxExpressionType(
-          aChoice.pick.expressionType,
-          aChoice.when.expressionType
-        )
-      );
-      anyEvalSpace = mergeEvalSpaces(
-        anyEvalSpace,
-        aChoice.pick.evalSpace,
-        aChoice.when.evalSpace
-      );
       pick.kids.caseWhen.push(aChoice.when.value);
       pick.kids.caseThen.push(aChoice.pick.value);
     }
     const defVal = this.elsePick.getExpression(fs);
-    anyExpressionType = maxExpressionType(
-      anyExpressionType,
-      defVal.expressionType
-    );
-    anyEvalSpace = mergeEvalSpaces(anyEvalSpace, defVal.evalSpace);
-    returnType = typeCoalesce(returnType, defVal);
-    if (!FT.typeEq(returnType, defVal, true)) {
+    dependents.push(defVal);
+    const definedReturnType = typeCoalesce(returnType, defVal);
+    if (!TDU.typeEq(definedReturnType, defVal, true)) {
       return this.elsePick.loggedErrorExpr('pick-else-type-does-not-match', {
-        elseType: defVal.dataType,
-        returnType: returnType.dataType,
+        elseType: defVal.type,
+        returnType: definedReturnType.type,
       });
     }
     pick.kids.caseElse = defVal.value;
-    return {
-      dataType: returnType.dataType,
-      expressionType: anyExpressionType,
+    return computedExprValue({
+      dataType: definedReturnType,
       value: pick,
-      evalSpace: anyEvalSpace,
-    };
+      from: dependents,
+    });
   }
 }
 

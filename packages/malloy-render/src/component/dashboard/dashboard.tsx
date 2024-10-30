@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ *  LICENSE file in the root directory of this source tree.
+ */
+
 import {DataArray, DataRecord, Field} from '@malloydata/malloy';
 import './dashboard.css';
 import {createMemo, For} from 'solid-js';
@@ -52,6 +59,7 @@ function DashboardItem(props: {
         class="dashboard-item-value"
         classList={{
           'dashboard-item-value-measure': props.isMeasure,
+          'dashboard-item-value-table': rendering.renderAs === 'table',
         }}
       >
         {rendering.renderValue}

@@ -119,7 +119,7 @@ export class KeyJoin extends Join {
         f => (f.as || f.name) === inStruct.primaryKey
       );
       if (pkey) {
-        if (pkey.type === exprX.dataType) {
+        if (pkey.type === exprX.type) {
           inStruct.join = 'one';
           inStruct.onExpression = {
             node: '=',
@@ -135,7 +135,7 @@ export class KeyJoin extends Join {
         } else {
           this.logError(
             'join-on-primary-key-type-mismatch',
-            `join_one: with type mismatch with primary key: ${exprX.dataType}/${pkey.type}`
+            `join_one: with type mismatch with primary key: ${exprX.type}/${pkey.type}`
           );
         }
       } else {
@@ -179,7 +179,7 @@ export class ExpressionJoin extends Join {
       return;
     }
     const exprX = this.expr.getExpression(outer);
-    if (exprX.dataType !== 'boolean') {
+    if (exprX.type !== 'boolean') {
       this.logError(
         'non-boolean-join-on',
         'join conditions must be boolean expressions'
@@ -238,6 +238,7 @@ export class JoinStatement
   queryExecute(executeFor: QueryBuilder) {
     for (const qel of this.list) {
       executeFor.inputFS.extendSource(qel);
+      executeFor.alwaysJoins.push(qel.name.refString);
     }
   }
 }

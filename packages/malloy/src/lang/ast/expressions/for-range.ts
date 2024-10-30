@@ -21,12 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {maxExpressionType, mergeEvalSpaces} from '../../../model';
 import {errorFor} from '../ast-utils';
-import {FT} from '../fragtype-utils';
-import {castDateToTimestamp, resolution, timeOffset} from '../time-utils';
+import * as TDU from '../typedesc-utils';
+import {castTo, resolution, timeOffset} from '../time-utils';
 import {BinaryMalloyOperator} from '../types/binary_operators';
-import {ExprValue} from '../types/expr-value';
+import {ExprValue, computedErrorExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 import {ExprTime} from './expr-time';
@@ -35,7 +34,7 @@ import {Timeframe} from './time-frame';
 
 export class ForRange extends ExpressionDef {
   elementType = 'forRange';
-  legalChildTypes = [FT.timestampT, FT.dateT];
+  legalChildTypes = [TDU.timestampT, TDU.dateT];
   constructor(
     readonly from: ExpressionDef,
     readonly duration: ExpressionDef,
@@ -55,22 +54,18 @@ export class ForRange extends ExpressionDef {
       return errorFor('no time for range');
     }
     const nV = this.duration.getExpression(fs);
-    if (nV.dataType !== 'number') {
-      if (nV.dataType !== 'error') {
+    if (nV.type !== 'number') {
+      if (nV.type !== 'error') {
         this.logError(
           'invalid-duration-quantity',
-          `FOR duration count must be a number, not '${nV.dataType}'`
+          `FOR duration count must be a number, not '${nV.type}'`
         );
       }
-      return {
-        dataType: 'boolean',
-        evalSpace: mergeEvalSpaces(startV.evalSpace, checkV.evalSpace),
-        expressionType: maxExpressionType(
-          startV.expressionType,
-          checkV.expressionType
-        ),
-        value: errorFor('for not number').value,
-      };
+      return computedErrorExprValue({
+        dataType: {type: 'boolean'},
+        error: 'for not number',
+        from: [startV, checkV],
+      });
     }
     const units = this.timeframe.text;
 
@@ -80,12 +75,12 @@ export class ForRange extends ExpressionDef {
 
     // Next, if the beginning of the range is a timestamp, then we
     // also have to do the computation as a timestamp
-    if (startV.dataType === 'timestamp') {
+    if (startV.type === 'timestamp') {
       rangeType = 'timestamp';
     }
 
     // everything is dates, do date math
-    if (checkV.dataType === 'date' && rangeType === 'date') {
+    if (checkV.type === 'date' && rangeType === 'date') {
       const rangeStart = this.from;
       const rangeEndV = timeOffset('date', startV.value, '+', nV.value, units);
       const rangeEnd = new ExprTime('date', rangeEndV);
@@ -98,17 +93,17 @@ export class ForRange extends ExpressionDef {
 
     let rangeStart = this.from;
     let from = startV.value;
-    if (startV.dataType === 'date') {
+    if (startV.type === 'date') {
       const tsVersion = startV.morphic && startV.morphic['timestamp'];
       if (tsVersion) {
         from = tsVersion;
       } else {
-        from = castDateToTimestamp(from);
+        from = castTo('timestamp', from, 'date');
       }
-      rangeStart = new ExprTime('timestamp', from, startV.expressionType);
+      rangeStart = new ExprTime('timestamp', from, [startV]);
     }
     const to = timeOffset('timestamp', from, '+', nV.value, units);
-    const rangeEnd = new ExprTime('timestamp', to, startV.expressionType);
+    const rangeEnd = new ExprTime('timestamp', to, [startV, nV]);
 
     return new Range(rangeStart, rangeEnd).apply(fs, op, applyTo);
   }

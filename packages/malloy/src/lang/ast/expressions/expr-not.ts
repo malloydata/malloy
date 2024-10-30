@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FT} from '../fragtype-utils';
+import * as TDU from '../typedesc-utils';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
@@ -29,7 +29,7 @@ import {Unary} from './unary';
 
 export class ExprNot extends Unary {
   elementType = 'not';
-  legalChildTypes = [FT.boolT, FT.nullT];
+  legalChildTypes = [TDU.boolT, TDU.nullT];
   constructor(expr: ExpressionDef) {
     super(expr);
   }
@@ -39,7 +39,7 @@ export class ExprNot extends Unary {
     const doNot = this.typeCheck(this.expr, notThis);
     return {
       ...notThis,
-      dataType: 'boolean',
+      type: 'boolean',
       value: {node: 'not', e: doNot ? notThis.value : {node: 'false'}},
     };
   }

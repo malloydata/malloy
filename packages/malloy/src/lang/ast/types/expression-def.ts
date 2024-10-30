@@ -26,18 +26,19 @@ import {
   TimestampUnit,
   isDateUnit,
   isTemporalField,
-  maxExpressionType,
-  FieldValueType,
-  mergeEvalSpaces,
-  maxOfExpressionTypes,
-  ExpressionValueType,
   expressionIsAggregate,
+  TD,
+  LeafExpressionType,
 } from '../../../model/malloy_types';
-
+import * as TDU from '../typedesc-utils';
 import {errorFor} from '../ast-utils';
-import {FT} from '../fragtype-utils';
-import {timeOffset, timeResult} from '../time-utils';
-import {ExprValue} from './expr-value';
+import {
+  ExprValue,
+  computedErrorExprValue,
+  computedExprValue,
+  computedTimeResult,
+} from './expr-value';
+import {timeOffset} from '../time-utils';
 import {FieldSpace} from './field-space';
 import {isGranularResult} from './granular-result';
 import {MalloyElement} from './malloy-element';
@@ -80,7 +81,7 @@ export abstract class ExpressionDef extends MalloyElement {
    * @param space Namespace for looking up field references
    */
   abstract getExpression(fs: FieldSpace): ExprValue;
-  legalChildTypes = FT.anyAtomicT;
+  legalChildTypes = TDU.anyAtomicT;
 
   /**
    * Some operators want to give the right hand value a chance to
@@ -103,15 +104,15 @@ export abstract class ExpressionDef extends MalloyElement {
    * @param eVal ...list of expressions that must match legalChildTypes
    */
   typeCheck(eNode: ExpressionDef, eVal: ExprValue): boolean {
-    if (eVal.dataType !== 'error' && !FT.in(eVal, this.legalChildTypes)) {
-      if (eVal.dataType === 'sql native') {
+    if (eVal.type !== 'error' && !TDU.any(eVal, this.legalChildTypes)) {
+      if (eVal.type === 'sql native') {
         eNode.logError('sql-native-not-allowed-in-expression', {
           rawType: eVal.rawType,
         });
       } else {
         eNode.logError(
           'expression-type-error',
-          `'${this.elementType}' Can't use type ${FT.inspect(eVal)}`
+          `'${this.elementType}' Can't use type ${TDU.inspect(eVal)}`
         );
       }
       return false;
@@ -165,7 +166,7 @@ export abstract class ExpressionDef extends MalloyElement {
 
 export class ExprDuration extends ExpressionDef {
   elementType = 'duration';
-  legalChildTypes = [FT.timestampT, FT.dateT];
+  legalChildTypes = [TDU.timestampT, TDU.dateT];
   constructor(
     readonly n: ExpressionDef,
     readonly timeframe: TimestampUnit
@@ -180,12 +181,12 @@ export class ExprDuration extends ExpressionDef {
   ): ExprValue {
     const lhs = left.getExpression(fs);
     this.typeCheck(this, lhs);
-    if (isTemporalField(lhs.dataType) && (op === '+' || op === '-')) {
+    if (isTemporalField(lhs.type) && (op === '+' || op === '-')) {
       const num = this.n.getExpression(fs);
-      if (!FT.typeEq(num, FT.numberT)) {
+      if (!TDU.typeEq(num, TDU.numberT)) {
         this.logError(
           'invalid-duration-quantity',
-          `Duration quantity needs number not '${num.dataType}`
+          `Duration quantity needs number not '${num.type}`
         );
         return errorFor('illegal unit expression');
       }
@@ -196,79 +197,53 @@ export class ExprDuration extends ExpressionDef {
       if (isGranularResult(lhs) && lhs.timeframe === this.timeframe) {
         resultGranularity = lhs.timeframe;
       }
-      if (lhs.dataType === 'timestamp') {
-        const result = timeOffset(
-          'timestamp',
-          lhs.value,
-          op,
-          num.value,
-          this.timeframe
-        );
-        return timeResult(
-          {
-            dataType: 'timestamp',
-            expressionType: maxExpressionType(
-              lhs.expressionType,
-              num.expressionType
-            ),
-            evalSpace: mergeEvalSpaces(lhs.evalSpace, num.evalSpace),
-            value: result,
-          },
-          resultGranularity
-        );
-      }
-      if (isDateUnit(this.timeframe)) {
-        return timeResult(
-          {
-            dataType: 'date',
-            expressionType: maxExpressionType(
-              lhs.expressionType,
-              num.expressionType
-            ),
-            evalSpace: mergeEvalSpaces(lhs.evalSpace, num.evalSpace),
-            value: timeOffset('date', lhs.value, op, num.value, this.timeframe),
-          },
-          resultGranularity
-        );
-      } else {
+      if (lhs.type === 'date' && !isDateUnit(this.timeframe)) {
         return this.loggedErrorExpr(
           'invalid-timeframe-for-time-offset',
           `Cannot offset date by ${this.timeframe}`
         );
       }
+      return computedTimeResult({
+        dataType: {type: lhs.type},
+        value: timeOffset(lhs.type, lhs.value, op, num.value, this.timeframe),
+        timeframe: resultGranularity,
+        from: [lhs, num],
+      });
     }
     return super.apply(fs, op, left);
   }
 
-  getExpression(_fs: FieldSpace): ExprValue {
-    return {
-      dataType: 'duration',
-      expressionType: 'scalar',
-      value: {node: 'error', message: 'Duration is not a value'},
-      evalSpace: 'constant',
-    };
+  getExpression(fs: FieldSpace): ExprValue {
+    const num = this.n.getExpression(fs);
+    return computedErrorExprValue({
+      dataType: {type: 'duration'},
+      error: 'Duration is not a value',
+      from: [num],
+    });
   }
 }
 
-function willMorphTo(ev: ExprValue, t: string): Expr | undefined {
-  if (ev.dataType === t) {
+function willMorphTo(ev: ExprValue, t: MorphicType): Expr | undefined {
+  if (ev.type === t) {
     return ev.value;
   }
   return ev.morphic && ev.morphic[t];
 }
 
+export type MorphicType = 'date' | 'timestamp';
 export function getMorphicValue(
   mv: ExprValue,
-  mt: FieldValueType
+  mt: MorphicType
 ): ExprValue | undefined {
-  if (mv.dataType === mt) {
+  if (mv.type === mt) {
     return mv;
   }
   if (mv.morphic && mv.morphic[mt]) {
     return {
-      ...mv,
-      dataType: mt,
+      type: mt,
       value: mv.morphic[mt],
+      expressionType: mv.expressionType,
+      evalSpace: mv.evalSpace,
     };
   }
 }
@@ -279,11 +254,11 @@ function timeCompare(
   op: CompareMalloyOperator,
   rhs: ExprValue
 ): Expr | undefined {
-  const leftIsTime = isTemporalField(lhs.dataType);
-  const rightIsTime = isTemporalField(rhs.dataType);
+  const leftIsTime = isTemporalField(lhs.type);
+  const rightIsTime = isTemporalField(rhs.type);
   const node = getExprNode(op);
   if (leftIsTime && rightIsTime) {
-    if (lhs.dataType !== rhs.dataType) {
+    if (lhs.type !== rhs.type) {
       const lval = willMorphTo(lhs, 'timestamp');
       const rval = willMorphTo(rhs, 'timestamp');
       if (lval && rval) {
@@ -295,12 +270,12 @@ function timeCompare(
   }
   if (
     (leftIsTime || rightIsTime) &&
-    lhs.dataType !== 'null' &&
-    rhs.dataType !== 'null'
+    lhs.type !== 'null' &&
+    rhs.type !== 'null'
   ) {
     left.logError(
       'time-comparison-type-mismatch',
-      `Cannot compare a ${lhs.dataType} to a ${rhs.dataType}`
+      `Cannot compare a ${lhs.type} to a ${rhs.type}`
     );
     return {node: 'false'};
   }
@@ -308,15 +283,15 @@ function timeCompare(
 }
 
 function regexEqual(left: ExprValue, right: ExprValue): Expr | undefined {
-  if (left.dataType === 'string') {
-    if (right.dataType === 'regular expression') {
+  if (left.type === 'string') {
+    if (right.type === 'regular expression') {
       return {
         node: 'regexpMatch',
         kids: {expr: left.value, regex: right.value},
       };
     }
-  } else if (right.dataType === 'string') {
-    if (left.dataType === 'regular expression') {
+  } else if (right.type === 'string') {
+    if (left.type === 'regular expression') {
       return {
         node: 'regexpMatch',
         kids: {expr: right.value, regex: left.value},
@@ -333,11 +308,11 @@ function nullCompare(
 ): Expr | undefined {
   const not = op === '!=' || op === '!~';
   const nullCmp = not ? 'is-not-null' : 'is-null';
-  if (left.dataType === 'null' || right.dataType === 'null') {
-    if (left.dataType !== 'null') {
+  if (left.type === 'null' || right.type === 'null') {
+    if (left.type !== 'null') {
       return {node: nullCmp, e: left.value};
     }
-    if (right.dataType !== 'null') {
+    if (right.type !== 'null') {
       return {node: nullCmp, e: right.value};
     }
     return {node: not ? 'false' : 'true'};
@@ -359,15 +334,14 @@ function equality(
   if (err) return err;
 
   // Unsupported types can be compare with null
-  const checkUnsupport =
-    lhs.dataType === 'sql native' || rhs.dataType === 'sql native';
-  if (checkUnsupport) {
-    const oneNull = lhs.dataType === 'null' || rhs.dataType === 'null';
-    const rawMatch = lhs.rawType && lhs.rawType === rhs.rawType;
-    if (!(oneNull || rawMatch)) {
+  const lhRaw = TD.isSQL(lhs) ? lhs.rawType || 'typeless-left' : undefined;
+  const rhRaw = TD.isSQL(rhs) ? rhs.rawType || 'typeless-right' : undefined;
+  if (lhRaw || rhRaw) {
+    const oneNull = lhs.type === 'null' || rhs.type === 'null';
+    if (!(oneNull || lhRaw === rhRaw)) {
       const noGo = unsupportError(left, lhs, right, rhs);
       if (noGo) {
-        return {...noGo, dataType: 'boolean'};
+        return {...noGo, type: 'boolean'};
       }
     }
   }
@@ -376,11 +350,11 @@ function equality(
     kids: {left: lhs.value, right: rhs.value},
   };
 
-  if (lhs.dataType !== 'error' && rhs.dataType !== 'error') {
+  if (lhs.type !== 'error' && rhs.type !== 'error') {
     switch (op) {
       case '~':
       case '!~': {
-        if (lhs.dataType !== 'string' || rhs.dataType !== 'string') {
+        if (lhs.type !== 'string' || rhs.type !== 'string') {
           let regexCmp = regexEqual(lhs, rhs);
           if (regexCmp) {
             if (op[0] === '!') {
@@ -403,12 +377,11 @@ function equality(
     }
   }
 
-  return {
-    dataType: 'boolean',
-    expressionType: maxExpressionType(lhs.expressionType, rhs.expressionType),
-    evalSpace: mergeEvalSpaces(lhs.evalSpace, rhs.evalSpace),
+  return computedExprValue({
+    dataType: {type: 'boolean'},
     value,
-  };
+    from: [lhs, rhs],
+  });
 }
 
 function compare(
@@ -423,25 +396,20 @@ function compare(
   const err = errorCascade('boolean', lhs, rhs);
   if (err) return err;
 
-  const expressionType = maxExpressionType(
-    lhs.expressionType,
-    rhs.expressionType
-  );
   const noCompare = unsupportError(left, lhs, right, rhs);
   if (noCompare) {
-    return {...noCompare, dataType: 'boolean'};
+    return {...noCompare, type: 'boolean'};
   }
   const value = timeCompare(left, lhs, op, rhs) || {
     node: getExprNode(op),
     kids: {left: lhs.value, right: rhs.value},
   };
 
-  return {
-    dataType: 'boolean',
-    expressionType,
-    evalSpace: mergeEvalSpaces(lhs.evalSpace, rhs.evalSpace),
-    value: value,
-  };
+  return computedExprValue({
+    dataType: {type: 'boolean'},
+    value,
+    from: [lhs, rhs],
+  });
 }
 
 function numeric(
@@ -459,28 +427,22 @@ function numeric(
   const noGo = unsupportError(left, lhs, right, rhs);
   if (noGo) return noGo;
 
-  const expressionType = maxExpressionType(
-    lhs.expressionType,
-    rhs.expressionType
-  );
-
-  if (lhs.dataType !== 'number') {
+  if (lhs.type !== 'number') {
     left.logError(
       'arithmetic-operation-type-mismatch',
-      `The '${op}' operator requires a number, not a '${lhs.dataType}'`
+      `The '${op}' operator requires a number, not a '${lhs.type}'`
     );
-  } else if (rhs.dataType !== 'number') {
+  } else if (rhs.type !== 'number') {
     right.logError(
       'arithmetic-operation-type-mismatch',
-      `The '${op}' operator requires a number, not a '${rhs.dataType}'`
+      `The '${op}' operator requires a number, not a '${rhs.type}'`
     );
   } else {
-    return {
-      dataType: 'number',
-      expressionType,
+    return computedExprValue({
+      dataType: {type: 'number'},
       value: {node: op, kids: {left: lhs.value, right: rhs.value}},
-      evalSpace: mergeEvalSpaces(lhs.evalSpace, rhs.evalSpace),
-    };
+      from: [lhs, rhs],
+    });
   }
   return errorFor('numbers required');
 }
@@ -498,22 +460,22 @@ function delta(
     return noGo;
   }
 
-  const timeLHS = isTemporalField(lhs.dataType);
+  const timeLHS = isTemporalField(lhs.type);
 
   const err = errorCascade(timeLHS ? 'error' : 'number', lhs, rhs);
   if (err) return err;
 
   if (timeLHS) {
     let duration: ExpressionDef = right;
-    if (rhs.dataType !== 'duration') {
+    if (rhs.type !== 'duration') {
       if (isGranularResult(lhs)) {
         duration = new ExprDuration(right, lhs.timeframe);
-      } else if (lhs.dataType === 'date') {
+      } else if (lhs.type === 'date') {
         duration = new ExprDuration(right, 'day');
       } else {
         return left.loggedErrorExpr(
           'time-offset-type-mismatch',
-          `Can not offset time by '${rhs.dataType}'`
+          `Can not offset time by '${rhs.type}'`
         );
       }
     }
@@ -560,12 +522,12 @@ export function applyBinary(
     const err = errorCascade('number', num, denom);
     if (err) return err;
 
-    if (num.dataType !== 'number') {
+    if (num.type !== 'number') {
       left.logError(
         'arithmetic-operation-type-mismatch',
         'Numerator must be a number'
       );
-    } else if (denom.dataType !== 'number') {
+    } else if (denom.type !== 'number') {
       right.logError(
         'arithmetic-operation-type-mismatch',
         'Denominator must be a number'
@@ -575,15 +537,11 @@ export function applyBinary(
         node: op,
         kids: {left: num.value, right: denom.value},
       };
-      return {
-        dataType: 'number',
-        expressionType: maxExpressionType(
-          num.expressionType,
-          denom.expressionType
-        ),
-        evalSpace: mergeEvalSpaces(num.evalSpace, denom.evalSpace),
+      return computedExprValue({
+        dataType: {type: 'number'},
         value: divmod,
-      };
+        from: [num, denom],
+      });
     }
     return errorFor('divide type mismatch');
   }
@@ -594,16 +552,15 @@ export function applyBinary(
 }
 
 function errorCascade(
-  dataType: ExpressionValueType,
+  type: LeafExpressionType,
   ...es: ExprValue[]
 ): ExprValue | undefined {
-  if (es.some(e => e.dataType === 'error')) {
-    return {
-      dataType,
-      expressionType: maxOfExpressionTypes(es.map(e => e.expressionType)),
+  if (es.some(e => e.type === 'error')) {
+    return computedExprValue({
+      dataType: {type},
       value: {node: 'error', message: 'cascading error'},
-      evalSpace: mergeEvalSpaces(...es.map(e => e.evalSpace)),
-    };
+      from: es,
+    });
   }
 }
 
@@ -616,18 +573,17 @@ function unsupportError(
   r: ExpressionDef,
   rhs: ExprValue
 ): ExprValue | undefined {
-  const ret: ExprValue = {
-    dataType: lhs.dataType,
-    expressionType: maxExpressionType(lhs.expressionType, rhs.expressionType),
+  const ret = computedExprValue({
+    dataType: lhs,
     value: {node: 'error', message: 'sql-native unsupported'},
-    evalSpace: mergeEvalSpaces(lhs.evalSpace, rhs.evalSpace),
-  };
-  if (lhs.dataType === 'sql native') {
+    from: [lhs, rhs],
+  });
+  if (lhs.type === 'sql native') {
     l.logError('sql-native-not-allowed-in-expression', {rawType: lhs.rawType});
-    ret.dataType = rhs.dataType;
+    ret.type = rhs.type;
     return ret;
   }
-  if (rhs.dataType === 'sql native') {
+  if (rhs.type === 'sql native') {
     r.logError('sql-native-not-allowed-in-expression', {rawType: rhs.rawType});
     return ret;
   }

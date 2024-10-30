@@ -26,7 +26,7 @@ import {
   getMalloyStandardFunctions,
 } from '../../../dialect';
 import {getDialects} from '../../../dialect/dialect_map';
-import {FunctionDef, FunctionOverloadDef} from '../../../model';
+import {TD, FunctionDef, FunctionOverloadDef} from '../../../model';
 import {ModelEntry} from './model-entry';
 import {NameSpace} from './name-space';
 
@@ -70,9 +70,7 @@ function paramsEqual(
         param.allowedTypes.length === otherParam.allowedTypes.length &&
         param.allowedTypes.every(t =>
           otherParam.allowedTypes.some(
-            ot =>
-              t.dataType === ot.dataType &&
-              t.expressionType === ot.expressionType
+            ot => TD.eq(t, ot) && t.expressionType === ot.expressionType
           )
         )
       );
