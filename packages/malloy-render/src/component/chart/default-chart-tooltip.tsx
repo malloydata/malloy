@@ -19,14 +19,13 @@ export function DefaultChartTooltip(props: {data: ChartTooltipEntry}) {
       {highlight: false, color: false}
     );
 
-  // Example of performance improvement. But better to debounce tooltip data? Seems to be unnecessarily changing
-  // maybe there is some way to key it so it doesn't repeat render. This already feels much smoother though.
-  let tId;
+  // For performance, only render on next frame. Tooltips can rapidly mount as user quickly mouses through a chart.
+  let tId: number | undefined;
   createEffect(() => {
-    // Repeat on every data
+    // Run effect on every new set of data
     props.data;
     setRender(false);
-    cancelAnimationFrame(tId);
+    if (tId) cancelAnimationFrame(tId);
     tId = requestAnimationFrame(() => {
       setRender(true);
     });

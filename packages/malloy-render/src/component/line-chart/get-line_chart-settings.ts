@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ *  LICENSE file in the root directory of this source tree.
+ */
+
 import {Explore, Tag} from '@malloydata/malloy';
 import {Channel} from '../plot/plot-spec';
 import {getFieldPathBetweenFields, walkFields} from '../plot/util';
@@ -7,7 +14,7 @@ export type LineChartSettings = {
   yChannel: Channel;
   seriesChannel: Channel;
   zeroBaseline: boolean;
-  interpolate?: string;
+  interactive: boolean;
 };
 
 export function getLineChartSettings(
@@ -26,7 +33,8 @@ export function getLineChartSettings(
     ? chart.text('zero_baseline') !== 'false'
     : true;
 
-  const interpolate = chart.text('interpolate');
+  // if tooltip, disable interactions
+  const interactive = !tag.has('tooltip');
 
   const xChannel: Channel = {
     fields: [],
@@ -128,6 +136,6 @@ export function getLineChartSettings(
     yChannel,
     seriesChannel,
     zeroBaseline,
-    interpolate,
+    interactive,
   };
 }

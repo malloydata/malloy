@@ -14,26 +14,24 @@ import {
   QueryDataRow,
   Tag,
 } from '@malloydata/malloy';
-import {Item, View} from 'vega';
+import {Item, Runtime, View} from 'vega';
 import {JSX} from 'solid-js';
 import {ResultStore} from './result-store/result-store';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Vega does not have good TS support
 export type VegaSpec = any;
-export type DataInjector = (
+export type MalloyDataToChartDataHandler = (
   field: Explore,
-  data: QueryData,
-  spec: VegaSpec
-) => void;
+  data: QueryData
+) => unknown[];
 export type VegaChartProps = {
   spec: VegaSpec;
-  specType: 'vega' | 'vega-lite';
   plotWidth: number;
   plotHeight: number;
   totalWidth: number;
   totalHeight: number;
   chartType: string;
-  injectData?: DataInjector;
+  mapMalloyDataToChartData: MalloyDataToChartDataHandler;
   getTooltipData?: (item: Item, view: View) => ChartTooltipEntry | null;
 };
 
@@ -52,6 +50,7 @@ export interface FieldRenderMetadata {
   maxRecordCt: number | null;
   maxUniqueFieldValueCounts: Map<string, number>;
   vegaChartProps?: VegaChartProps;
+  runtime?: Runtime;
   renderAs: string;
 }
 

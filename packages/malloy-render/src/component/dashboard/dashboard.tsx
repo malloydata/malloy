@@ -18,6 +18,7 @@ function DashboardItem(props: {
   field: Field;
   row: DataRecord;
   resultMetadata: RenderResultMetadata;
+  maxTableHeight: number | null;
   isMeasure?: boolean;
 }) {
   const rendering = applyRenderer({
@@ -27,7 +28,7 @@ function DashboardItem(props: {
     resultMetadata: props.resultMetadata,
     customProps: {
       table: {
-        disableVirtualization: true,
+        disableVirtualization: props.maxTableHeight,
       },
     },
   });
@@ -49,6 +50,10 @@ function DashboardItem(props: {
       });
   };
 
+  const itemStyle = {};
+  if (rendering.renderAs === 'table' && props.maxTableHeight)
+    itemStyle['max-height'] = `${props.maxTableHeight}px`;
+
   return (
     <div
       class="dashboard-item"
@@ -59,8 +64,8 @@ function DashboardItem(props: {
         class="dashboard-item-value"
         classList={{
           'dashboard-item-value-measure': props.isMeasure,
-          'dashboard-item-value-table': rendering.renderAs === 'table',
         }}
+        style={itemStyle}
       >
         {rendering.renderValue}
       </div>
@@ -70,6 +75,12 @@ function DashboardItem(props: {
 
 export function Dashboard(props: {data: DataArray; scrollEl?: HTMLElement}) {
   const field = () => props.data.field;
+  const dashboardTag = field().tagParse().tag.tag('dashboard');
+  let maxTableHeight: number | null = 361;
+  const maxTableHeightTag = dashboardTag?.tag('table', 'max_height');
+  if (maxTableHeightTag?.text() === 'none') maxTableHeight = null;
+  else if (maxTableHeightTag?.numeric())
+    maxTableHeight = maxTableHeightTag!.numeric()!;
 
   const dimensions = () =>
     field().allFields.filter(f => {
@@ -186,6 +197,7 @@ export function Dashboard(props: {data: DataArray; scrollEl?: HTMLElement}) {
                               field.isAtomicField() &&
                               field.sourceWasMeasureLike()
                             }
+                            maxTableHeight={maxTableHeight}
                           />
                         )}
                       </For>

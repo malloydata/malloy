@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ *  LICENSE file in the root directory of this source tree.
+ */
+
 .malloy-tooltip {
   background: rgba(255, 255, 255, 0.95);
   padding: 8px;
@@ -8,7 +15,7 @@
   transform: translate(10px, 10px);
 
   /* TODO: get rid of this hacky way of styling nested table
-      also figure out why the table didnt get the normal styles...
+      Also figure out how to pass normal styles to table. CSS is in shadow DOM while tooltip content is rendered outside
   */
   .header {
     font-weight: bold;
@@ -83,9 +90,7 @@
 
 .malloy-tooltip--block-row {
   grid-column: 2 / span 2;
-  /* border-top: 1px solid #e5e7eb; */
-  /* margin-top: 8px; */
-  /* margin-block: 6px; */
+  margin-block: 6px;
 }
 
 .malloy-tooltip--block-label {

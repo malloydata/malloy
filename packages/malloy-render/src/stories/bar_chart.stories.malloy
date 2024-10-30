@@ -45,17 +45,15 @@ source: products is duckdb.table("data/products.parquet") extend {
           aggregate: `Sales $`
           limit: 3
         }
+        # tooltip currency
+        aggregate: `Cost $ really long label`
         limit: 10
-        -- order_by: sales_year
-        -- # tooltip currency
-        -- aggregate: `Cost $ really long label`
       }
       # bar_chart
       b is {
         group_by: brand, department
         aggregate: `Sales $`
         limit: 10
-        -- order_by: sales_year
       }
       # bar_chart.stack
       c is {

@@ -5,19 +5,24 @@
  *  LICENSE file in the root directory of this source tree.
  */
 
-import {DateField, Explore, Tag, TimestampField} from '@malloydata/malloy';
+import {DateField, Explore, TimestampField} from '@malloydata/malloy';
 import {
-  DataInjector,
+  ChartTooltipEntry,
+  MalloyDataToChartDataHandler,
   MalloyVegaDataRecord,
   RenderResultMetadata,
   VegaChartProps,
   VegaSpec,
 } from '../types';
-import {LineChartSettings} from './get-line_chart-settings';
+import {getLineChartSettings} from './get-line_chart-settings';
 import {getFieldFromRootPath, getFieldReferenceId} from '../plot/util';
 import {getChartLayoutSettings} from '../chart-layout-settings';
 import {renderTimeString} from '../render-time';
 import {createMeasureAxis} from '../vega/measure-axis';
+import {Item} from 'vega';
+import {renderNumericField} from '../render-numeric-field';
+import {getMarkName} from '../vega/vega-utils';
+import {getCustomTooltipEntries} from '../bar-chart/get-custom-tooltips-entries';
 
 type LineDataRecord = {
   x: string | number;
@@ -41,10 +46,13 @@ function invertObject(obj: Record<string, string>): Record<string, string> {
 
 export function generateLineChartVegaSpec(
   explore: Explore,
-  settings: LineChartSettings,
-  metadata: RenderResultMetadata,
-  chartTag: Tag
+  metadata: RenderResultMetadata
 ): VegaChartProps {
+  const tag = explore.tagParse().tag;
+  const chartTag = tag.tag('line_chart');
+  if (!chartTag)
+    throw new Error('Line chart should only be rendered for line_chart tag');
+  const settings = getLineChartSettings(explore, tag);
   /**************************************
    *
    * Chart data fields
@@ -124,6 +132,14 @@ export function generateLineChartVegaSpec(
   const shouldShareXDomain =
     forceSharedX || (autoSharedX && !forceIndependentX);
 
+  // series legends across rows should auto share when distinct values <=20, unless user has explicitly set independent setting
+  const autoSharedSeries = seriesMeta && seriesMeta.values.size <= 20;
+  const forceSharedSeries = chartTag.text('series', 'independent') === 'false';
+  const forceIndependentSeries =
+    chartTag.has('series', 'independent') && !forceSharedSeries;
+  const shouldShareSeriesDomain =
+    forceSharedSeries || (autoSharedSeries && !forceIndependentSeries);
+
   /**************************************
    *
    * Chart marks
@@ -143,7 +159,7 @@ export function generateLineChartVegaSpec(
       })
     : null;
 
-  const marks = [];
+  const marks: VegaSpec[] = [];
 
   const seriesGroupMark: VegaSpec = {
     name: 'series_group',
@@ -152,7 +168,6 @@ export function generateLineChartVegaSpec(
         data: 'values',
         name: 'series_facet',
         groupby: ['series'],
-        //
         aggregate: {
           ops: ['count'],
           as: ['count'],
@@ -164,44 +179,46 @@ export function generateLineChartVegaSpec(
     marks: [],
   };
 
+  const LINE_FADE_OPACITY = 0.35;
+
   const lineMark: VegaSpec = {
     name: 'lines',
     type: 'line',
     from: {
       data: 'series_facet',
     },
-    'encode': {
-      'enter': {
-        'x': {'scale': 'xscale', 'field': 'x'},
-        'y': {'scale': 'yscale', 'field': 'y'},
-        'stroke': {'scale': 'color', 'field': 'series'},
-        'strokeWidth': {'value': 2},
+    encode: {
+      enter: {
+        x: {scale: 'xscale', field: 'x'},
+        y: {scale: 'yscale', field: 'y'},
+        stroke: {scale: 'color', field: 'series'},
+        strokeWidth: {value: 2},
+        zindex: {value: 0},
       },
-      'update': {
-        // 'interpolate': {'signal': 'interpolate'},
-        'strokeOpacity': {'value': 1},
-      },
-      'hover': {
-        'strokeOpacity': {'value': 0.5},
+      update: {
+        strokeOpacity: [
+          {
+            test: 'brushSeriesIn && brushSeriesIn != datum.series',
+            value: LINE_FADE_OPACITY,
+          },
+          {value: 1},
+        ],
+        // TODO figure out why this isn't working. We need highlighted line to appear above other lines
+        zindex: [
+          {test: 'brushSeriesIn && brushSeriesIn === datum.series', value: 1},
+          {value: 0},
+        ],
       },
     },
   };
 
-  const highlightGroupMark: VegaSpec = {
-    name: 'highlight_group',
+  const highlightRuleMark: VegaSpec = {
+    name: 'x_highlight_rule',
+    type: 'rule',
     from: {
-      facet: {
-        data: 'values',
-        name: 'x_facet',
-        groupby: ['x'],
-        //
-        aggregate: {
-          ops: ['count'],
-          as: ['count'],
-        },
-      },
+      data: 'x_data',
     },
-    type: 'group',
+    zindex: 1,
     interactive: false,
     encode: {
       enter: {
@@ -209,78 +226,84 @@ export function generateLineChartVegaSpec(
           scale: 'xscale',
           field: 'x',
         },
+        y: {
+          value: 0,
+        },
+        y2: {signal: 'height'},
+      },
+      update: {
+        stroke: {value: '#4c72ba'},
+        fill: {
+          value: '#4c72ba',
+        },
+        strokeOpacity: [
+          {
+            test: 'brushXIn ? indexof(brushXIn,datum.x) > -1 : false',
+            value: 0.2,
+          },
+          {value: 0},
+        ],
       },
     },
+  };
+
+  // Use voronoi hit targets based on mid point of each x position so that it draws nicely spaced boxes
+  // This works well with a point scale, where there aren't even bands around each point since first and last points don't have outer edge padding
+  const xHitTargets: VegaSpec = {
+    name: 'x_hit_target_group',
+    type: 'group',
     marks: [
       {
-        name: 'x_highlight',
-        type: 'rule',
-        from: {
-          data: 'x_facet',
-        },
+        name: 'mid_points',
+        type: 'symbol',
         zindex: 1,
+        from: {data: 'x_data'},
+        interactive: false,
         encode: {
           enter: {
-            x: {
-              value: 0,
-            },
-            y: {
-              value: 0,
-            },
-            y2: {signal: 'height'},
-          },
-          update: {
-            stroke: {value: '#4c72ba'},
-            fill: {
-              value: '#4c72ba',
-            },
-            strokeOpacity: [
-              {
-                test: 'brushXIn ? indexof(brushXIn,datum.x) > -1 : false',
-                value: 0.2,
-              },
-              {value: 0},
-            ],
+            fill: {value: 'transparent'},
+            size: {value: 36},
+            x: {scale: 'xscale', field: 'x'},
+            y: {signal: 'height /2'},
           },
         },
       },
       {
-        name: 'mid_points',
-        'type': 'symbol',
-        'zindex': 1,
-        'from': {'data': 'x_facet'},
-        'interactive': false,
-        'encode': {
-          'enter': {
-            'fill': {'value': 'black'},
-            'size': {'value': 36},
-            'x': {value: 0},
-            'y': {signal: 'height /2'},
+        name: 'x_hit_target',
+        type: 'path',
+        from: {data: 'mid_points'},
+        encode: {
+          enter: {
+            fill: {value: 'transparent'},
           },
         },
-      },
-      {
-        'type': 'path',
-        'from': {'data': 'mid_points'},
-        'encode': {
-          'enter': {
-            'stroke': {'value': 'firebrick'},
-            'fill': {'value': 'transparent'},
-          },
-          'hover': {
-            fill: {value: 'rgba(0,0,0,0.25)'},
-          },
-        },
-        'transform': [
+        transform: [
           {
-            'type': 'voronoi',
-            'x': 'datum.x',
-            'y': 'datum.y',
-            'size': [{'signal': 'width'}, {'signal': 'height'}],
+            type: 'voronoi',
+            x: 'datum.x',
+            y: 'datum.y',
+            size: [{'signal': 'width'}, {'signal': 'height'}],
           },
         ],
       },
     ],
+  };
+
+  // Drag bigger circles for targeting ref lines so user can more easily hit with mouse
+  const refLineTargets: VegaSpec = {
+    name: 'ref_line_targets',
+    type: 'symbol',
+    from: {
+      data: 'values',
+    },
+    encode: {
+      enter: {
+        x: {scale: 'xscale', field: 'x'},
+        y: {scale: 'yscale', field: 'y'},
+        fill: {value: 'transparent'},
+        size: {value: 256},
+      },
+    },
   };
 
   const pointMarks: VegaSpec = {
@@ -289,19 +312,20 @@ export function generateLineChartVegaSpec(
     from: {
       data: 'series_facet',
     },
-    'encode': {
-      'enter': {
-        'x': {'scale': 'xscale', 'field': 'x'},
-        'y': {'scale': 'yscale', 'field': 'y'},
-        'fill': {'scale': 'color', 'field': 'series'},
+    encode: {
+      enter: {
+        x: {scale: 'xscale', field: 'x'},
+        y: {scale: 'yscale', field: 'y'},
+        fill: {scale: 'color', field: 'series'},
       },
-      'update': {
-        'fillOpacity': [
+      update: {
+        fillOpacity: [
           {
             test: 'brushXIn ? indexof(brushXIn,datum.x) > -1 : false',
             value: 1,
           },
-          {'signal': 'item.mark.group.datum.count > 1 ? 0 : 1'},
+          // If only one point in a line, show the point
+          {signal: 'item.mark.group.datum.count > 1 ? 0 : 1'},
         ],
       },
     },
@@ -310,7 +334,12 @@ export function generateLineChartVegaSpec(
   seriesGroupMark.marks.push(lineMark);
   seriesGroupMark.marks.push(pointMarks);
 
-  marks.push(seriesGroupMark, highlightGroupMark);
+  marks.push(seriesGroupMark);
+
+  if (settings.interactive) {
+    if (yAxis) marks.push(...yAxis.interactiveMarks);
+  }
+  marks.push(highlightRuleMark, xHitTargets, refLineTargets);
 
   // Source data and transforms
   const valuesData: VegaSpec = {name: 'values', values: [], transform: []};
@@ -334,6 +363,8 @@ export function generateLineChartVegaSpec(
    * Chart signals
    *
    *************************************/
+
+  const interactiveSignals = yAxis ? yAxis.interactiveSignals : [];
 
   // Base signals
   const signals: VegaSpec[] = [
@@ -406,6 +437,91 @@ export function generateLineChartVegaSpec(
         : '[]',
     },
   ];
+  if (settings.interactive) {
+    // Interactive signals
+    signals.push(
+      {
+        name: 'brushX',
+        on: xRef
+          ? [
+              {
+                events: '@x_hit_target:mouseover', // points too?
+                update:
+                  "{ fieldRefId: xFieldRefId, value: [datum.datum.x], sourceId: brushXSourceId, type: 'dimension'}",
+              },
+              {
+                events: '@ref_line_targets:mouseover', // points too?
+                update:
+                  "{ fieldRefId: xFieldRefId, value: [datum.x], sourceId: brushXSourceId, type: 'dimension'}",
+              },
+              {
+                events: '@x_hit_target:mouseout', // points too? @bars:mouseout
+                update: 'null',
+              },
+              {
+                events: '@ref_line_targets:mouseout', // points too? @bars:mouseout
+                update: 'null',
+              },
+            ]
+          : [],
+      },
+      {
+        name: 'brushSeries',
+        on:
+          isDimensionalSeries && seriesRef
+            ? [
+                {
+                  events: '@ref_line_targets:mouseover',
+                  update:
+                    "{ fieldRefId: seriesFieldRefId, value: datum.series, sourceId: brushSeriesSourceId, type: 'dimension' }",
+                },
+                {
+                  events: '@ref_line_targets:mouseout',
+                  update: 'null',
+                },
+                {
+                  events: '@legend_labels:mouseover, @legend_symbols:mouseover',
+                  update:
+                    "{ fieldRefId: seriesFieldRefId, value: datum.value, sourceId: brushSeriesSourceId, type: 'dimension' }",
+                },
+                {
+                  events: '@legend_labels:mouseout, @legend_symbols:mouseout',
+                  update: 'null',
+                },
+              ]
+            : [],
+      },
+      {
+        name: 'brushMeasure',
+        on: yRef
+          ? [
+              {
+                events: '@ref_line_targets:mouseover',
+                update:
+                  "{ fieldRefId: measureFieldRefId, value: [datum.y], sourceId: brushMeasureSourceId, type: 'measure'}",
+              },
+              ...(yAxis?.brushMeasureEvents ?? []),
+              {
+                events: '@ref_line_targets:mouseout',
+                update: 'null',
+              },
+            ]
+          : [],
+      },
+
+      // Export this chart's brushes. Series / measure brushes are debounced when set to empty to avoid flickering while moving mouse from one item to the next
+      {
+        name: 'brushOut',
+        update:
+          "[{ sourceId: brushXSourceId, data: brushX }, { sourceId: brushSeriesSourceId, data: brushSeries, debounce: { time: 100, strategy: 'on-empty' } }, { sourceId: brushMeasureSourceId, data: brushMeasure } ]",
+      },
+      ...interactiveSignals,
+      {
+        name: 'yIsBrushing',
+        value: false,
+      }
+    );
+  }
 
   /**************************************
    *
@@ -422,7 +538,22 @@ export function generateLineChartVegaSpec(
       contains: 'content',
     },
     padding: chartSettings.padding,
-    data: [valuesData],
+    data: [
+      valuesData,
+      {
+        name: 'x_data',
+        source: 'values',
+        transform: [
+          {
+            type: 'aggregate',
+            groupby: ['x'],
+            fields: ['x'],
+            ops: ['values'],
+            as: ['v'],
+          },
+        ],
+      },
+    ],
     scales: [
       {
         name: 'xscale',
@@ -432,7 +563,6 @@ export function generateLineChartVegaSpec(
           : {data: 'values', field: 'x'},
         range: 'width',
         paddingOuter: 0.05,
-        // round: true,
       },
       {
         name: 'yscale',
@@ -440,58 +570,26 @@ export function generateLineChartVegaSpec(
         range: 'height',
         zero: settings.zeroBaseline,
         domain: chartSettings.yScale.domain ?? {data: 'values', field: 'y'},
-        // settings.isStack
-        //   ? {data: 'values', field: 'y1'}
-        //   : chartSettings.yScale.domain ?? {data: 'values', field: 'y'},
       },
       {
         name: 'color',
         type: 'ordinal',
         range: 'category',
-        domain: {
-          data: 'values',
-          field: 'series',
-        },
-        // shouldShareSeriesDomain
-        //   ? [...seriesMeta!.values]
-        //   : {
-        //       data: 'values',
-        //       field: 'series',
-        //     },
+        domain: shouldShareSeriesDomain
+          ? [...seriesMeta!.values]
+          : {
+              data: 'values',
+              field: 'series',
+            },
       },
-      // {
-      //   name: 'xOffset',
-      //   type: 'band',
-      //   domain: shouldShareSeriesDomain
-      //     ? [...seriesMeta!.values]
-      //     : {data: 'values', field: 'series'},
-      //   range: {
-      //     signal: `[0,bandwidth('xscale') * ${1 - barGroupPadding}]`,
-      //   },
-      // },
     ],
-
     axes: [
       {
         orient: 'bottom',
         scale: 'xscale',
         title: xFieldPath,
+        labelOverlap: 'greedy',
         ...chartSettings.xAxis,
-        // encode: {
-        //   labels: {
-        //     update: {
-        //       fillOpacity: [
-        //         {
-        //           test: 'brushXIn ? indexof(brushXIn,datum.value) === -1 : false',
-        //           value: 0.35,
-        //         },
-        //         {
-        //           value: 1,
-        //         },
-        //       ],
-        //     },
-        //   },
-        // },
       },
       ...(yAxis ? [yAxis.axis] : []),
     ],
@@ -500,7 +598,101 @@ export function generateLineChartVegaSpec(
     signals,
   };
 
-  const injectData: DataInjector = (field, data, spec) => {
+  // Legend
+  let maxCharCt = 0;
+  if (hasSeries) {
+    // Get legend dimensions
+    if (isDimensionalSeries) {
+      // Legend size is by legend title or the longest legend value
+      maxCharCt = seriesMeta!.maxString?.length ?? 0;
+      maxCharCt = Math.max(maxCharCt, seriesField!.name.length);
+    } else {
+      maxCharCt = settings.yChannel.fields.reduce(
+        (max, f) => Math.max(max, f.length),
+        maxCharCt
+      );
+    }
+
+    // Limit legend size to a hard max, then percentage of chart width, then the max text size
+    const legendSize = Math.min(
+      LEGEND_MAX,
+      chartSettings.totalWidth * LEGEND_PERC,
+      maxCharCt * 10 + 20
+    );
+
+    const legendSettings: VegaSpec = {
+      // Provide padding around legend entries
+      titleLimit: legendSize - 20,
+      labelLimit: legendSize - 40,
+      padding: 8,
+      offset: 4,
+    };
+
+    spec.padding.right = legendSize;
+    spec.legends.push({
+      fill: 'color',
+      // No title for measure list legends
+      title: seriesField ? seriesField.name : '',
+      ...legendSettings,
+      encode: {
+        entries: {
+          name: 'legend_entries',
+          interactive: true,
+        },
+        labels: {
+          name: 'legend_labels',
+          interactive: true,
+          update: {
+            fillOpacity: [
+              {
+                test: 'brushSeriesIn === datum.value',
+                value: 1,
+              },
+              {
+                test: 'brushSeriesIn && brushSeriesIn != datum.value',
+                value: 0.35,
+              },
+              ...(isMeasureSeries
+                ? [
+                    {
+                      test: 'length(brushMeasureListIn) > 0 && indexof(brushMeasureListIn, datum.value) > -1',
+                      value: 1,
+                    },
+                    {
+                      test: 'length(brushMeasureListIn) > 0 && indexof(brushMeasureListIn, datum.value) === -1',
+                      value: 0.35,
+                    },
+                  ]
+                : []),
+              {value: 1},
+            ],
+          },
+        },
+        symbols: {
+          name: 'legend_symbols',
+          interactive: true,
+          update: {
+            fillOpacity: [
+              {
+                test: 'brushSeriesIn === datum.value',
+                value: 1,
+              },
+              {
+                test: 'brushSeriesIn && brushSeriesIn != datum.value',
+                value: 0.35,
+              },
+              {value: 1},
+            ],
+          },
+        },
+      },
+    });
+  }
+
+  const mapMalloyDataToChartData: MalloyDataToChartDataHandler = (
+    field,
+    data
+  ) => {
     // Capture dates as strings for now. TODO time axes
     const dateTimeFields = field.allFields.filter(
       f => f.isAtomicField() && (f.isDate() || f.isTimestamp())
@@ -526,20 +718,123 @@ export function generateLineChartVegaSpec(
     }));
 
     spec.data[0].values = mappedData;
+    return mappedData;
   };
+
+  // Memoize tooltip data
+  const tooltipEntryMemo = new Map<Item, ChartTooltipEntry | null>();
 
   return {
     spec,
-    specType: 'vega',
     plotWidth: chartSettings.plotWidth,
     plotHeight: chartSettings.plotHeight,
     totalWidth: chartSettings.totalWidth,
     totalHeight: chartSettings.totalHeight,
     chartType: 'line_chart',
-    injectData,
+    mapMalloyDataToChartData,
     getTooltipData(item, view) {
-      if (item.mark.name === 'points') console.log(item);
-      return null;
+      if (tooltipEntryMemo.has(item)) {
+        return tooltipEntryMemo.get(item)!;
+      }
+      const markName = getMarkName(item);
+      let tooltipData: ChartTooltipEntry | null = null;
+      let records: LineDataRecord[] = [];
+      const colorScale = view.scale('color');
+      const formatY = (rec: LineDataRecord) => {
+        const fieldName = rec.series;
+        // If dimensional, use the first yField for formatting. Else the series value is the field path of the field to use
+        const field = isDimensionalSeries
+          ? yField
+          : getFieldFromRootPath(explore, fieldName);
+
+        const value = rec.y;
+        return field.isAtomicField()
+          ? renderNumericField(field, value)
+          : String(value);
+      };
+
+      // Tooltip records for the highlighted points
+      if (['x_hit_target', 'ref_line_targets'].includes(markName)) {
+        const x =
+          markName === 'x_hit_target' ? item.datum.datum.x : item.datum.x;
+        records = markName === 'x_hit_target' ? item.datum.datum.v : [];
+
+        tooltipData = {
+          title: [x],
+          entries: records.map(rec => ({
+            label: rec.series,
+            value: formatY(rec),
+            highlight: false,
+            color: colorScale(rec.series),
+            entryType: 'list-item',
+          })),
+        };
+      }
+
+      // Tooltip records for the actual points
+      let highlightedSeries: string | null = null;
+      if (item.datum && ['ref_line_targets'].includes(getMarkName(item))) {
+        const itemData = item.datum;
+        highlightedSeries = itemData.series;
+        records = [];
+        for (const sourceItem of item.mark.items) {
+          const lineDataRecord = sourceItem.datum as LineDataRecord;
+          if (lineDataRecord.x === itemData.x) {
+            records.push(lineDataRecord);
+          }
+        }
+        tooltipData = {
+          title: [itemData.x],
+          entries: records.map(rec => {
+            return {
+              label: rec.series,
+              value: formatY(rec),
+              highlight: highlightedSeries === rec.series,
+              color: colorScale(rec.series),
+              entryType: 'list-item',
+            };
+          }),
+        };
+      }
+
+      const highlightedRecords = records.filter(
+        rec => rec.series === highlightedSeries
+      );
+
+      // Custom tooltips can only be shown for lowest granularity of the data
+      let customTooltipRecords: LineDataRecord[] = [];
+      // Series can only show custom tooltips when a single highlighted record
+      if (isDimensionalSeries && highlightedRecords.length === 1)
+        customTooltipRecords = highlightedRecords;
+      // If measure series, pick first measure record to pull custom tooltip data from
+      else if (isMeasureSeries) customTooltipRecords = records.slice(0, 1);
+      // Non series can only show custom tooltips when a single record
+      else if (
+        !isDimensionalSeries &&
+        !isMeasureSeries &&
+        records.length === 1
+      ) {
+        customTooltipRecords = records;
+      }
+
+      if (tooltipData) {
+        const customEntries: ChartTooltipEntry['entries'] =
+          getCustomTooltipEntries({
+            explore,
+            records: customTooltipRecords,
+            metadata,
+          });
+
+        // If not series, put custom entries at end
+        // If series, add data under the highlighted series. Note this only works for 1 series value highlight
+        const insertPosition = !seriesRef
+          ? tooltipData.entries.length
+          : tooltipData.entries.findIndex(e => e.highlight) + 1;
+        tooltipData.entries.splice(insertPosition, 0, ...customEntries);
+      }
+
+      tooltipEntryMemo.set(item, tooltipData);
+      return tooltipData;
     },
   };
 }

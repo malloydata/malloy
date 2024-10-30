@@ -5,11 +5,11 @@
  *  LICENSE file in the root directory of this source tree.
  */
 
-import {DateField, Explore, Tag, TimestampField} from '@malloydata/malloy';
-import {BarChartSettings} from './get-bar_chart-settings';
+import {DateField, Explore, TimestampField} from '@malloydata/malloy';
+import {getBarChartSettings} from './get-bar_chart-settings';
 import {
   ChartTooltipEntry,
-  DataInjector,
+  MalloyDataToChartDataHandler,
   MalloyVegaDataRecord,
   RenderResultMetadata,
   VegaChartProps,
@@ -46,10 +46,15 @@ function invertObject(obj: Record<string, string>): Record<string, string> {
 
 export function generateBarChartVegaSpec(
   explore: Explore,
-  settings: BarChartSettings,
-  metadata: RenderResultMetadata,
-  chartTag: Tag
+  metadata: RenderResultMetadata
 ): VegaChartProps {
+  const tag = explore.tagParse().tag;
+  const chartTag = tag.tag('bar_chart') ?? tag.tag('bar');
+  if (!chartTag)
+    throw new Error(
+      'Bar chart should only be rendered for bar_chart or bar tag'
+    );
+  const settings = getBarChartSettings(explore, tag);
   // TODO: check that there are <=2 dimension fields, throw error otherwise
   /**************************************
    *
@@ -726,7 +731,10 @@ export function generateBarChartVegaSpec(
     });
   }
 
-  const injectData: DataInjector = (field, data, spec) => {
+  const mapMalloyDataToChartData: MalloyDataToChartDataHandler = (
+    field,
+    data
+  ) => {
     // Capture dates as strings for now. TODO time axes
     const dateTimeFields = field.allFields.filter(
       f => f.isAtomicField() && (f.isDate() || f.isTimestamp())
@@ -752,6 +760,7 @@ export function generateBarChartVegaSpec(
     }));
 
     spec.data[0].values = mappedData;
+    return mappedData;
   };
 
   // Memoize tooltip data
@@ -759,13 +768,12 @@ export function generateBarChartVegaSpec(
 
   return {
     spec,
-    specType: 'vega',
     plotWidth: chartSettings.plotWidth,
     plotHeight: chartSettings.plotHeight,
     totalWidth: chartSettings.totalWidth,
     totalHeight: chartSettings.totalHeight,
     chartType: 'bar_chart',
-    injectData,
+    mapMalloyDataToChartData,
     getTooltipData: (item: Item, view: View) => {
       if (tooltipEntryMemo.has(item)) {
         return tooltipEntryMemo.get(item)!;
@@ -864,155 +872,3 @@ export function generateBarChartVegaSpec(
     },
   };
 }
-
-// TODO: x range brushes
-// const xAxisOverlay: VegaSpec = {
-//   name: 'x_axis_overlay',
-//   type: 'rect',
-//   encode: {
-//     enter: {
-//       y: {
-//         signal: `height + ${chartSettings.xAxis.height} + 4`,
-//       },
-//       y2: {signal: 'height'},
-//       x: {value: 0},
-//       x2: {signal: 'width'},
-//       fill: {value: 'transparent'},
-//     },
-//   },
-// };
-// const xAxisRangeBrushRect: VegaSpec = {
-//   name: 'x_axis_range_brush',
-//   type: 'rect',
-//   encode: {
-//     enter: {
-//       y: {
-//         signal: `height + ${chartSettings.xAxis.height} + 4`,
-//       },
-//       y2: {signal: 'height'},
-//       fill: {
-//         'value': '#4c72ba',
-//       },
-//       fillOpacity: {value: 0.1},
-//     },
-//     update: {
-//       x: {
-//         signal:
-//           'xRangeBrushValues ? scale("xscale",xRangeBrushValues[0]) : 0',
-//       },
-//       x2: {
-//         signal:
-//           'xRangeBrushValues ? scale("xscale",xRangeBrushValues[xRangeBrushValues.length-1]) + bandwidth("xscale") : 0',
-//       },
-//     },
-//   },
-// };
-
-// const xAxisRangeBrush: VegaSpec = {
-//   type: 'group',
-//   marks: [
-//     xAxisRangeBrushRect,
-//     {
-//       type: 'rule',
-//       encode: {
-//         enter: {
-//           y: {
-//             signal: `height + ${chartSettings.xAxis.height} + 4`,
-//           },
-//           y2: {signal: 'height'},
-//           stroke: {value: '#b5bcc9'},
-//           strokeWidth: {value: 0.5},
-//         },
-//         update: {
-//           x: {
-//             signal:
-//               'xRangeBrushValues ? scale("xscale",xRangeBrushValues[0])+0.5 : 0',
-//           },
-//           x2: {
-//             signal:
-//               'xRangeBrushValues ? scale("xscale",xRangeBrushValues[0])+0.5 : 0',
-//           },
-//           opacity: [
-//             {
-//               test: 'xRangeBrushValues',
-//               value: 1,
-//             },
-//             {value: 0},
-//           ],
-//         },
-//       },
-//     },
-//     {
-//       type: 'rule',
-//       encode: {
-//         enter: {
-//           y: {
-//             signal: `height + ${chartSettings.xAxis.height} + 4`,
-//           },
-//           y2: {signal: 'height'},
-//           stroke: {value: '#b5bcc9'},
-//           strokeWidth: {value: 0.5},
-//         },
-//         update: {
-//           x: {
-//             signal:
-//               'xRangeBrushValues ? scale("xscale",xRangeBrushValues[xRangeBrushValues.length-1])-0.5  + bandwidth("xscale") : 0',
-//           },
-//           x2: {
-//             signal:
-//               'xRangeBrushValues ? scale("xscale",xRangeBrushValues[xRangeBrushValues.length-1])-0.5  + bandwidth("xscale") : 0',
-//           },
-//           opacity: [
-//             {
-//               test: 'xRangeBrushValues',
-//               value: 1,
-//             },
-//             {value: 0},
-//           ],
-//         },
-//       },
-//     },
-//   ],
-// };
-
-/*
-  x range brush signals
-  {
-          name: 'xRangeBrush',
-          on: [
-            {
-              events: '@x_axis_overlay:mousedown',
-              update: '[x(), x()]',
-            },
-            {
-              'events':
-                '[@x_axis_overlay:mousedown, window:mouseup] > window:mousemove!',
-              'update': '[xRangeBrush[0], clamp(x(), 0, width)]',
-            },
-            // shortcut to clear it? if click clears it, then we can't move it
-            // TODO for now, double click. later can work in moving, edge move handle semantics
-            {
-              'events': '@x_axis_range_brush:dblclick',
-              'update': 'null',
-            },
-          ],
-        },
-        {
-          name: 'xRangeBrushSorted',
-          update: 'xRangeBrush ? extent(xRangeBrush) : null',
-        },
-        {
-          name: 'xRangeBrushIndices',
-          update: `xRangeBrushSorted ? [
-              indexof(domain('xscale'), invert('xscale', xRangeBrushSorted[0])) < 0 ? 0 : indexof(domain('xscale'), invert('xscale', xRangeBrushSorted[0])),
-              indexof(domain('xscale'), invert('xscale', xRangeBrushSorted[1])) < 0 ? length(domain('xscale')) : indexof(domain('xscale'), invert('xscale', xRangeBrushSorted[1])),
-      ]
-            : null`,
-        },
-        {
-          name: 'xRangeBrushValues',
-          update:
-            'xRangeBrushIndices ? slice(domain("xscale"), xRangeBrushIndices[0], xRangeBrushIndices[1]+1) : null',
-        },
-
-*/
