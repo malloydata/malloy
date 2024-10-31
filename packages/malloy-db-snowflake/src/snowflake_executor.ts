@@ -23,7 +23,7 @@
 
 import snowflake, {
   SnowflakeError,
-  Statement,
+  RowStatement,
   Connection,
   ConnectionOptions,
 } from 'snowflake-sdk';
@@ -155,7 +155,7 @@ export class SnowflakeExecutor {
         sqlText,
         complete: (
           err: SnowflakeError | undefined,
-          _stmt: Statement,
+          _stmt: RowStatement,
           rows?: QueryData
         ) => {
           if (err) {
@@ -200,34 +200,46 @@ export class SnowflakeExecutor {
     const pool: Pool<Connection> = this.pool_;
     return await pool.acquire().then(async (conn: Connection) => {
       await this._setSessionParams(conn);
-      const stmt: Statement = conn.execute({
-        sqlText,
-        streamResult: true,
-      });
-      const stream: Readable = stmt.streamRows();
-      function streamSnowflake(
-        onError: (error: Error) => void,
-        onData: (data: QueryDataRow) => void,
-        onEnd: () => void
-      ) {
-        function handleEnd() {
-          onEnd();
-          pool.release(conn);
-        }
 
-        let index = 0;
-        function handleData(this: Readable, row: QueryDataRow) {
-          onData(row);
-          index += 1;
-          if (options?.rowLimit !== undefined && index >= options.rowLimit) {
-            onEnd();
-          }
-        }
-        stream.on('error', onError);
-        stream.on('data', handleData);
-        stream.on('end', handleEnd);
-      }
-      return Promise.resolve(toAsyncGenerator<QueryDataRow>(streamSnowflake));
+      return new Promise((resolve, reject) => {
+        conn.execute({
+          sqlText,
+          streamResult: true,
+          complete: (err: SnowflakeError | undefined, stmt: RowStatement) => {
+            if (err) {
+              reject(err);
+            }
+
+            const stream: Readable = stmt.streamRows();
+            function streamSnowflake(
+              onError: (error: Error) => void,
+              onData: (data: QueryDataRow) => void,
+              onEnd: () => void
+            ) {
+              function handleEnd() {
+                onEnd();
+                pool.release(conn);
+              }
+
+              let index = 0;
+              function handleData(this: Readable, row: QueryDataRow) {
+                onData(row);
+                index += 1;
+                if (
+                  options?.rowLimit !== undefined &&
+                  index >= options.rowLimit
+                ) {
+                  onEnd();
+                }
+              }
+              stream.on('error', onError);
+              stream.on('data', handleData);
+              stream.on('end', handleEnd);
+            }
+            return resolve(toAsyncGenerator<QueryDataRow>(streamSnowflake));
+          },
+        });
+      });
     });
   }
 }
