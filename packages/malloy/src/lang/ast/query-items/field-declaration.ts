@@ -119,23 +119,28 @@ export abstract class AtomicFieldDeclaration
         type: 'error',
       };
     }
-    let retType = exprValue.type;
-    if (retType === 'null') {
+    if (exprValue.type === 'null') {
       this.expr.logWarning(
         'null-typed-field-definition',
         'null value defaults to type number, use "null::TYPE" to specify correct type'
       );
-      retType = 'number';
+      const nullAsNumber: ExprValue = {
+        type: 'number',
+        value: exprValue.value,
+        expressionType: exprValue.expressionType,
+        evalSpace: exprValue.evalSpace,
+      };
+      exprValue = nullAsNumber;
     }
-    if (isAtomicFieldType(retType) && retType !== 'error') {
+    if (isAtomicFieldType(exprValue.type) && exprValue.type !== 'error') {
       this.typecheckExprValue(exprValue);
       let ret: AtomicFieldDef;
-      switch (retType) {
+      switch (exprValue.type) {
         case 'date':
         case 'timestamp': {
           const timeRet: TemporalTypeDef & AtomicFieldDef = {
             name: exprName,
-            type: retType,
+            type: exprValue.type,
             location: this.location,
             e: exprValue.value,
           };
@@ -151,7 +156,7 @@ export abstract class AtomicFieldDeclaration
         case 'number':
         case 'sql native': {
           ret = {
-            type: retType,
+            type: exprValue.type,
             name: exprName,
             location: this.location,
             e: exprValue.value,
@@ -159,22 +164,28 @@ export abstract class AtomicFieldDeclaration
           break;
         }
         case 'record': {
-          const fields: FieldDef[] = [];
           ret = {
             type: 'record',
             name: exprName,
             location: this.location,
             join: 'one',
-            fields,
+            fields: exprValue.fields,
             e: exprValue.value,
             dialect: exprFS.dialectName(),
           };
           break;
         }
-        case 'array':
-          throw this.internalError(
-            'Cannot return an array result from a query (yet)'
-          );
+        case 'array': {
+          ret = {
+            type: 'array',
+            elementTypeDef: exprValue.elementTypeDef,
+            name: exprName,
+            join: 'many',
+            fields: exprValue.fields,
+            e: exprValue.value,
+            dialect: exprValue.dialect,
+          };
+        }
       }
       if (exprValue.expressionType) {
         ret.expressionType = exprValue.expressionType;

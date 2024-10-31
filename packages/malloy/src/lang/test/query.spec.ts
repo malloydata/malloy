@@ -898,6 +898,12 @@ describe('query:', () => {
       const fields = getFirstSegmentFieldNames(selstar.translator.getQuery(0));
       expect(fields).toEqual(filterdFields);
     });
+    test('array in query is passed into fields', () => {
+      const selArray = model`run: a -> { select: ais }`;
+      expect(selArray).toTranslate();
+      const fields = getFirstSegmentFieldNames(selArray.translator.getQuery(0));
+      expect(fields).toEqual(['ais']);
+    });
     test('star error checking', () => {
       expect(markSource`run: a->{select: ${'zzz'}.*}`).toLog(
         errorMessage("No such field as 'zzz'")
