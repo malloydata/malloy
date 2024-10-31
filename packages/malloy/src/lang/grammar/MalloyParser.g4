@@ -545,7 +545,7 @@ fieldExpr
   : fieldPath                                              # exprFieldPath
   | literal                                                # exprLiteral
   | OBRACK fieldExpr (COMMA fieldExpr)* COMMA? CBRACK      # exprArrayLiteral
-  | OCURLY recordElement (COMMA recordElement)* closeCurly     # exprLiteralRecord
+  | OCURLY recordElement (COMMA recordElement)* CCURLY     # exprLiteralRecord
   | fieldExpr fieldProperties                              # exprFieldProps
   | fieldExpr timeframe                                    # exprDuration
   | fieldExpr DOT timeframe                                # exprTimeTrunc

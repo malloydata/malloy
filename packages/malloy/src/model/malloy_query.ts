@@ -2352,6 +2352,9 @@ class QueryQuery extends QueryField {
     uniqueKeyPossibleUse: UniqueKeyPossibleUse | undefined,
     joinStack: string[]
   ) {
+    if (path.length === 0) {
+      return;
+    }
     const node = context.getFieldByName(path);
     let struct;
     if (node instanceof QueryFieldStruct) {
@@ -2784,6 +2787,7 @@ class QueryQuery extends QueryField {
             case 'sql native':
               fields.push({...fi.f.fieldDef, resultMetadata, location});
               break;
+            case 'record':
             case 'array': {
               const f = fi.f.fieldDef;
               fields.push({...f, resultMetadata, location, annotation});
@@ -4286,8 +4290,10 @@ class QueryStruct {
           as,
           QueryQuery.makeQuery(field, this, undefined, false)
         );
-      } else if (isAtomic(field)) {
+      } else if (isAtomic(field) || isJoinedSource(field)) {
         this.addFieldToNameMap(as, this.makeQueryField(field));
+      } else {
+        throw new Error('mtoy did nit add field');
       }
     }
     // if we don't have distinct key yet for this struct, add it.
@@ -4484,6 +4490,9 @@ class QueryStruct {
     switch (field.type) {
       case 'array':
       case 'record':
+      case 'query_source':
+      case 'table':
+      case 'sql_select':
         return new QueryFieldStruct(
           field,
           undefined,
