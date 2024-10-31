@@ -6,8 +6,8 @@
  */
 
 import {Explore, Tag} from '@malloydata/malloy';
-import {Channel} from '../plot/plot-spec';
 import {getFieldPathBetweenFields, walkFields} from '../plot/util';
+import {Channel} from '../types';
 
 export type LineChartSettings = {
   xChannel: Channel;

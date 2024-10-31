@@ -101,3 +101,10 @@ export type DataRowWithRecord = QueryDataRow & {
 export type MalloyVegaDataRecord = {
   __source: QueryDataRow & {__malloyDataRecord: DataRecord};
 };
+
+type ScaleType = 'quantitative' | 'nominal';
+
+export type Channel = {
+  fields: string[];
+  type: ScaleType | null;
+};
