@@ -42,6 +42,7 @@ import {
   IndexFieldDef,
   IndexSegment,
   isLiteral,
+  isAtomic,
   isIndexSegment,
   isQuerySegment,
   isRawSegment,
@@ -413,6 +414,10 @@ class QueryField extends QueryNode {
       return parent.getJoinableParent();
     }
     return parent;
+  }
+
+  isAtomic() {
+    return isAtomic(this.fieldDef);
   }
 
   caseGroup(groupSets: number[], s: string): string {
@@ -1387,19 +1392,22 @@ class QueryField extends QueryNode {
   }
 }
 
-function isCalculatedField(f: QueryField): f is QueryAtomicLeaf<LeafAtomicDef> {
-  return f instanceof QueryAtomicLeaf && f.isCalculated();
+function isCalculatedField(f: QueryField): f is QueryFieldAtomic {
+  return f instanceof AbstractQueryAtomic && f.isCalculated();
 }
 
-function isAggregateField(f: QueryField): f is QueryAtomicLeaf<LeafAtomicDef> {
-  return f instanceof QueryAtomicLeaf && f.isAggregate();
+function isAggregateField(f: QueryField): f is QueryFieldAtomic {
+  return f instanceof AbstractQueryAtomic && f.isAggregate();
 }
 
-function isScalarField(f: QueryField): f is QueryAtomicLeaf<LeafAtomicDef> {
-  return f instanceof QueryAtomicLeaf && !f.isCalculated() && !f.isAggregate();
+function isScalarField(f: QueryField): f is QueryFieldAtomic {
+  return (
+    f instanceof AbstractQueryAtomic && !f.isCalculated() && !f.isAggregate()
+  );
 }
 
-class QueryAtomicLeaf<T extends LeafAtomicDef> extends QueryField {
+type QueryFieldAtomic = AbstractQueryAtomic<LeafAtomicDef>;
+class AbstractQueryAtomic<T extends LeafAtomicDef> extends QueryField {
   fieldDef: T;
 
   constructor(fieldDef: T, parent: QueryStruct, refId?: string) {
@@ -1432,17 +1440,21 @@ class QueryAtomicLeaf<T extends LeafAtomicDef> extends QueryField {
   hasExpression(): boolean {
     return hasExpression(this.fieldDef);
   }
+
+  isAtomic() {
+    return true;
+  }
 }
 
 // class QueryMeasure extends QueryField {}
 
-class QueryFieldString extends QueryAtomicLeaf<StringFieldDef> {}
-class QueryFieldNumber extends QueryAtomicLeaf<NumberFieldDef> {}
-class QueryFieldBoolean extends QueryAtomicLeaf<BooleanFieldDef> {}
-class QueryFieldJSON extends QueryAtomicLeaf<JSONFieldDef> {}
-class QueryFieldUnsupported extends QueryAtomicLeaf<NativeUnsupportedFieldDef> {}
+class QueryFieldString extends AbstractQueryAtomic<StringFieldDef> {}
+class QueryFieldNumber extends AbstractQueryAtomic<NumberFieldDef> {}
+class QueryFieldBoolean extends AbstractQueryAtomic<BooleanFieldDef> {}
+class QueryFieldJSON extends AbstractQueryAtomic<JSONFieldDef> {}
+class QueryFieldUnsupported extends AbstractQueryAtomic<NativeUnsupportedFieldDef> {}
 
-class QueryFieldDate extends QueryAtomicLeaf<DateFieldDef> {
+class QueryFieldDate extends AbstractQueryAtomic<DateFieldDef> {
   generateExpression(resultSet: FieldInstanceResult): string {
     const fd = this.fieldDef;
     if (!fd.timeframe) {
@@ -1468,7 +1480,7 @@ class QueryFieldDate extends QueryAtomicLeaf<DateFieldDef> {
   }
 }
 
-class QueryFieldTimestamp extends QueryAtomicLeaf<TimestampFieldDef> {
+class QueryFieldTimestamp extends AbstractQueryAtomic<TimestampFieldDef> {
   // clone ourselves on demand as a timeframe.
   getChildByName(name: TimestampUnit): QueryFieldTimestamp {
     const fieldDef = {
@@ -1480,7 +1492,7 @@ class QueryFieldTimestamp extends QueryAtomicLeaf<TimestampFieldDef> {
   }
 }
 
-class QueryFieldDistinctKey extends QueryAtomicLeaf<StringFieldDef> {
+class QueryFieldDistinctKey extends AbstractQueryAtomic<StringFieldDef> {
   generateExpression(resultSet: FieldInstanceResult): string {
     if (this.parent.primaryKey()) {
       const pk = this.parent.getPrimaryKeyField(this.fieldDef);
@@ -2492,7 +2504,7 @@ class QueryQuery extends QueryField {
         );
         this.expandFields(fir);
         resultStruct.add(as, fir);
-      } else if (field instanceof QueryAtomicLeaf) {
+      } else if (field instanceof AbstractQueryAtomic) {
         resultStruct.addField(as, field, {
           resultIndex,
           type: 'result',
@@ -3864,7 +3876,7 @@ class QueryQueryIndexStage extends QueryQuery {
         resultIndex,
         type: 'result',
       });
-      if (field instanceof QueryAtomicLeaf) {
+      if (field instanceof AbstractQueryAtomic) {
         this.addDependancies(resultStruct, field);
       }
       resultIndex++;
@@ -4274,7 +4286,7 @@ class QueryStruct {
           as,
           QueryQuery.makeQuery(field, this, undefined, false)
         );
-      } else {
+      } else if (isAtomic(field)) {
         this.addFieldToNameMap(as, this.makeQueryField(field));
       }
     }
@@ -4394,7 +4406,7 @@ class QueryStruct {
   }
 
   /** the the primary key or throw an error. */
-  getPrimaryKeyField(fieldDef: FieldDef): QueryAtomicLeaf<LeafAtomicDef> {
+  getPrimaryKeyField(fieldDef: FieldDef): QueryFieldAtomic {
     let pk;
     if ((pk = this.primaryKey())) {
       return pk;
@@ -4544,7 +4556,7 @@ class QueryStruct {
     return this.parent ? this.parent.root() : this;
   }
 
-  primaryKey(): QueryAtomicLeaf<LeafAtomicDef> | undefined {
+  primaryKey(): QueryFieldAtomic | undefined {
     if (isSourceDef(this.structDef) && this.structDef.primaryKey) {
       return this.getDimensionByName([this.structDef.primaryKey]);
     } else {
@@ -4614,20 +4626,20 @@ class QueryStruct {
     return field;
   }
 
-  getDimensionOrMeasureByName(name: string[]): QueryAtomicLeaf<LeafAtomicDef> {
-    const query = this.getFieldByName(name);
-    if (query instanceof QueryAtomicLeaf) {
-      return query;
+  getDimensionOrMeasureByName(name: string[]) {
+    const field = this.getFieldByName(name);
+    if (!field.isAtomic()) {
+      throw new Error(`${name} is not an atomic field? Inconceivable!`);
     }
-    throw new Error(`${name} is not an atomic field? Inconceivable!`);
+    return field;
   }
 
   /** returns a query object for the given name */
-  getDimensionByName(name: string[]): QueryAtomicLeaf<LeafAtomicDef> {
-    const query = this.getFieldByName(name);
+  getDimensionByName(name: string[]): QueryFieldAtomic {
+    const field = this.getFieldByName(name);
 
-    if (query instanceof QueryAtomicLeaf && isScalarField(query)) {
-      return query;
+    if (field.isAtomic() && isScalarField(field)) {
+      return field;
     }
     throw new Error(`${name} is not an atomic scalar field? Inconceivable!`);
   }
@@ -4642,7 +4654,7 @@ class QueryStruct {
     }
   }
 
-  getDistinctKey(): QueryAtomicLeaf<LeafAtomicDef> {
+  getDistinctKey(): QueryFieldAtomic {
     if (this.structDef.type !== 'record') {
       return this.getDimensionByName(['__distinct_key']);
     } else if (this.parent) {

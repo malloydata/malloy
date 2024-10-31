@@ -1977,13 +1977,10 @@ export class MalloyToAST
     return new ast.RecordLiteral(els);
   }
 
-  visitExprArrayLiteral(pcx: parse.ExprArrayLiteralContext): ast.Unimplemented {
-    this.contextError(
-      pcx,
-      'not-yet-implemented',
-      'Array data is not yet implemented'
-    );
-    return new ast.Unimplemented();
+  visitExprArrayLiteral(pcx: parse.ExprArrayLiteralContext): ast.ArrayLiteral {
+    const contents = pcx.fieldExpr().map(fcx => this.getFieldExpr(fcx));
+    const literal = new ast.ArrayLiteral(contents);
+    return this.astAt(literal, pcx);
   }
 
   visitExprWarnLike(pcx: parse.ExprWarnLikeContext): ast.ExprCompare {

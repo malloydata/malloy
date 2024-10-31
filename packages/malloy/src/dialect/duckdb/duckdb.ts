@@ -32,6 +32,7 @@ import {
   MeasureTimeExpr,
   LeafAtomicTypeDef,
   TD,
+  ArrayLiteralNode,
 } from '../../model/malloy_types';
 import {indent} from '../../model/utils';
 import {
@@ -427,5 +428,10 @@ export class DuckDBDialect extends PostgresBase {
       }
     }
     return `DATE_SUB('${df.units}', ${lVal}, ${rVal})`;
+  }
+
+  sqlLiteralArray(lit: ArrayLiteralNode): string {
+    const values = lit.kids.values.map(v => v.sql).join(',');
+    return `[${values}]`;
   }
 }

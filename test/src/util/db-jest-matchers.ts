@@ -203,7 +203,7 @@ expect.extend({
           const actuallyGot = got instanceof Date ? got.getTime() : got;
           if (typeof mustBe === 'number' && typeof actuallyGot !== 'number') {
             fails.push(`${expected} Got: Non Numeric '${pGot}'`);
-          } else if (actuallyGot !== mustBe) {
+          } else if (!objectsMatch(actuallyGot, mustBe)) {
             fails.push(`${expected} Got: ${pGot}`);
           }
         } catch (e) {
@@ -332,8 +332,8 @@ function humanReadable(thing: unknown): string {
 
 // b is "expected"
 // a is "actual"
-// If expected is an object, all of the keys should also
-// match, buy the expected is allowed to have other keys that are not matched
+// If expected is an object, all of the keys should also match,
+// but the expected is allowed to have other keys that are not matched
 function objectsMatch(a: unknown, b: unknown): boolean {
   if (
     typeof b === 'string' ||
