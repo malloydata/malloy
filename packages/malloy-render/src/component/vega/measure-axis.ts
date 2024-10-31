@@ -6,7 +6,7 @@
  */
 
 import {ChartLayoutSettings} from '../chart-layout-settings';
-import {grayMedium} from '../plot/base-vega-config';
+import {grayMedium} from './base-vega-config';
 import {VegaSpec} from '../types';
 
 type MeasureAxisOptions = {

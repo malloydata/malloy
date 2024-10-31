@@ -28,18 +28,17 @@ export function Chart(props: {
 }) {
   const {field, data} = props;
   const chartProps = props.metadata.field(field).vegaChartProps!;
-  const spec = structuredClone(chartProps.spec);
-  const chartData = structuredClone(data);
+  const runtime = props.metadata.field(field).runtime;
+  if (!runtime)
+    throw new Error('Charts must have a runtime defined in their metadata');
+  const chartData = data;
   for (let i = 0; i < chartData.length; i++) {
     chartData[i]['__malloyDataRecord'] = data[i]['__malloyDataRecord'];
   }
-  // New vega charts use injectData handlers
-  if (chartProps.injectData && chartProps.specType === 'vega') {
-    chartProps.injectData(field, chartData, spec);
-  }
-  // Pass data for legacy vega-lite charts
-  else {
-    spec.data.values = chartData;
+  let values: unknown[] = [];
+  // New vega charts use mapMalloyDataToChartData handlers
+  if (chartProps.mapMalloyDataToChartData) {
+    values = chartProps.mapMalloyDataToChartData(field, chartData);
   }
 
   // TODO: improve handling date/times in chart axes
@@ -62,6 +61,15 @@ export function Chart(props: {
     null
   );
   const view = () => viewInterface()?.view;
+
+  createEffect(() => {
+    const _view = view();
+
+    if (_view) {
+      _view.data('values', values);
+      _view.runAsync();
+    }
+  });
 
   // Tooltip data
   const [tooltipData, setTooltipData] = createSignal<null | ChartTooltipEntry>(
@@ -178,14 +186,12 @@ export function Chart(props: {
       style="width: fit-content; height: fit-content;"
     >
       <VegaChart
-        spec={spec}
-        type={chartProps.specType}
         width={chartProps.plotWidth}
         height={chartProps.plotHeight}
         onMouseOver={mouseOverHandler}
-        // onView={setView}
         onViewInterface={setViewInterface}
         explore={props.field}
+        runtime={runtime}
       />
       <Tooltip show={!!tooltipData()}>
         <DefaultChartTooltip data={tooltipData()!} />

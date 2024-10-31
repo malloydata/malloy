@@ -1,6 +1,13 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ *  LICENSE file in the root directory of this source tree.
+ */
+
 import {Explore, Tag} from '@malloydata/malloy';
-import {Channel} from '../plot/plot-spec';
 import {getFieldPathBetweenFields, walkFields} from '../plot/util';
+import {Channel} from '../types';
 
 export type BarChartSettings = {
   xChannel: Channel;
