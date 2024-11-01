@@ -52,7 +52,6 @@ export abstract class QuerySegmentBuilder implements QueryBuilder {
   order?: Top | Ordering;
   limit?: number;
   alwaysJoins: string[] = [];
-  cubeUsage: string[][] = [];
   abstract inputFS: QueryInputSpace;
   abstract resultFS: QueryOperationSpace;
   abstract readonly type: 'grouping' | 'project';
@@ -109,6 +108,13 @@ export abstract class QuerySegmentBuilder implements QueryBuilder {
   }
 
   abstract finalize(fromSeg: PipeSegment | undefined): PipeSegment;
+
+  get cubeUsage(): string[][] {
+    return [
+      ...this.resultFS.cubeUsage,
+      ...this.filters.map(f => f.cubeUsage ?? []).flat(),
+    ];
+  }
 
   refineFrom(from: PipeSegment | undefined, to: QuerySegment): void {
     if (from && from.type !== 'index' && from.type !== 'raw') {
@@ -172,13 +178,6 @@ export class ReduceBuilder extends QuerySegmentBuilder implements QueryBuilder {
   }
 
   finalize(fromSeg: PipeSegment | undefined): PipeSegment {
-    // TODO this should probably go somewhere in the field adding code
-    for (const [, field] of this.resultFS.entries()) {
-      const td = field.typeDesc();
-      this.cubeUsage.push(...td.cubeUsage);
-    }
-    // this.cubeUsage.push(...this.filters.map(f => f.cubeUsage));
-    // END TODO
     let from: ReduceSegment | PartialSegment | undefined;
     if (fromSeg) {
       if (isReduceSegment(fromSeg) || isPartialSegment(fromSeg)) {

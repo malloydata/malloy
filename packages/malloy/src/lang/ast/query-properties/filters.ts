@@ -56,6 +56,7 @@ export class FilterElement extends MalloyElement {
         code: this.exprSrc,
         e: {node: 'false'},
         expressionType: 'scalar',
+        cubeUsage: exprVal.cubeUsage,
       };
     }
     const exprCond: FilterCondition = {
@@ -63,6 +64,7 @@ export class FilterElement extends MalloyElement {
       code: this.exprSrc,
       e: exprVal.value,
       expressionType: exprVal.expressionType,
+      cubeUsage: exprVal.cubeUsage,
     };
     return exprCond;
   }

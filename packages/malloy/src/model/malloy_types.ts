@@ -150,6 +150,7 @@ export interface FilterCondition extends ExprE {
   node: 'filterCondition';
   code: string;
   expressionType: ExpressionType;
+  cubeUsage?: string[][];
 }
 
 export interface FilteredExpr extends ExprWithKids {

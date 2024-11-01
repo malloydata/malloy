@@ -58,6 +58,7 @@ export abstract class QueryOperationSpace
   protected exprSpace: QueryInputSpace;
   abstract readonly segmentType: 'reduce' | 'project' | 'index';
   expandedWild: Record<string, string[]> = {};
+  cubeUsage: string[][] = [];
 
   constructor(
     readonly queryInputSpace: SourceFieldSpace,
@@ -157,6 +158,14 @@ export abstract class QueryOperationSpace
       a.name.localeCompare(b.name)
     )) {
       this.setEntry(x.name, x.entry);
+    }
+  }
+
+  protected setEntry(name: string, value: SpaceEntry): void {
+    super.setEntry(name, value);
+    if (value instanceof SpaceField) {
+      const cubeUsage = value.typeDesc().cubeUsage ?? [];
+      this.cubeUsage.push(...cubeUsage);
     }
   }
 }
