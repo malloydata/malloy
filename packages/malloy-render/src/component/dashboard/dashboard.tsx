@@ -28,7 +28,7 @@ function DashboardItem(props: {
     resultMetadata: props.resultMetadata,
     customProps: {
       table: {
-        disableVirtualization: props.maxTableHeight,
+        disableVirtualization: !props.maxTableHeight,
       },
     },
   });

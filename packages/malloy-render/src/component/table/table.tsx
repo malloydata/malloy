@@ -393,7 +393,9 @@ const MalloyTableRoot = (_props: {
   if (props.scrollEl) scrollEl = props.scrollEl;
   let virtualizer: Virtualizer<HTMLElement, Element> | undefined;
 
-  const [rowEstimate, setRowEstimate] = createSignal(28);
+  // Set arbitrarily large initial height to deal with weird measurement bug https://github.com/TanStack/virtual/issues/869
+  // Could possibly try to pre-calculate a height estimate using metadata, but may be hard to do with potentially wrapping text so would have to add a buffer
+  const [rowEstimate, setRowEstimate] = createSignal(1000);
 
   const shouldVirtualize = tableCtx.root && !props.disableVirtualization;
 

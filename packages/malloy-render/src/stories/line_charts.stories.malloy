@@ -34,7 +34,7 @@ source: products is duckdb.table("data/products.parquet") extend {
     order_by: dcId
   }
 
-  # dashboard { table.max_heightX=100000 }
+  # dashboard { table.max_height=100000 }
   view: seriesCharts is {
     group_by: ` ` is 'Line Charts'
     # line_chart
