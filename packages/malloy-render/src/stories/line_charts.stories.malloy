@@ -195,6 +195,47 @@ source: products is duckdb.table("data/products.parquet") extend {
     # size=2xl
     `2xl` is topSellingBrands
   }
+
+  #(story)
+  view: Dates is {
+    # line_chart
+    nest: dateAxis is {
+      group_by:
+        `date` is @2001-02-03 + id day
+      aggregate:
+        `Sales $` is retail_price.avg()*500
+      limit: 20
+      order_by: `date`
+    }
+     # line_chart
+    nest: dateAxisMany is {
+      group_by:
+        `date` is @2001-02-03 + id day
+      aggregate:
+        `Sales $` is retail_price.avg()*500
+      limit: 60
+      order_by: `date`
+    }
+    # line_chart
+    nest: dateMonth is {
+      group_by:
+        `date` is (@2001-02-03 + id day).month
+      aggregate:
+        `Sales $` is retail_price.avg()*500
+      limit: 60
+      order_by: `date`
+    }
+    # line_chart
+    nest: dateYear is {
+      group_by:
+        `date` is (@2001-02-03 + id day).year
+      aggregate:
+        `Sales $` is retail_price.avg()*500
+      limit: 5
+      order_by: `date`
+    }
+  }
+
 }
 
 run: products -> { group_by: distribution_center_id}

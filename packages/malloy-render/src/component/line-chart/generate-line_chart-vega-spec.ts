@@ -66,6 +66,8 @@ export function generateLineChartVegaSpec(
   if (!yFieldPath) throw new Error('Malloy Bar Chart: Missing y field');
 
   const xField = getFieldFromRootPath(explore, xFieldPath);
+  const xIsDateorTime =
+    xField.isAtomicField() && (xField.isDate() || xField.isTimestamp());
   const yField = getFieldFromRootPath(explore, yFieldPath);
   const seriesField = seriesFieldPath
     ? getFieldFromRootPath(explore, seriesFieldPath)
@@ -557,9 +559,11 @@ export function generateLineChartVegaSpec(
     scales: [
       {
         name: 'xscale',
-        type: 'point',
+        type: xIsDateorTime ? 'time' : 'point',
         domain: shouldShareXDomain
-          ? [...xMeta.values]
+          ? xIsDateorTime
+            ? [xMeta.min, xMeta.max]
+            : [...xMeta.values]
           : {data: 'values', field: 'x'},
         range: 'width',
         paddingOuter: 0.05,
@@ -589,7 +593,26 @@ export function generateLineChartVegaSpec(
         scale: 'xscale',
         title: xFieldPath,
         labelOverlap: 'greedy',
+        labelSeparation: 4,
         ...chartSettings.xAxis,
+        encode: {
+          ...(xIsDateorTime
+            ? {
+                labels: {
+                  enter: {
+                    text: {
+                      signal: `renderMalloyTime(malloyExplore, '${xFieldPath}', datum.value)`,
+                    },
+                  },
+                  update: {
+                    text: {
+                      signal: `renderMalloyTime(malloyExplore, '${xFieldPath}', datum.value)`,
+                    },
+                  },
+                },
+              }
+            : {}),
+        },
       },
       ...(yAxis ? [yAxis.axis] : []),
     ],
@@ -693,22 +716,6 @@ export function generateLineChartVegaSpec(
     field,
     data
   ) => {
-    // Capture dates as strings for now. TODO time axes
-    const dateTimeFields = field.allFields.filter(
-      f => f.isAtomicField() && (f.isDate() || f.isTimestamp())
-    ) as (DateField | TimestampField)[];
-    data.forEach(row => {
-      dateTimeFields.forEach(f => {
-        const value = row[f.name];
-        if (typeof value === 'number' || typeof value === 'string')
-          row[f.name] = renderTimeString(
-            new Date(value),
-            f.isDate(),
-            f.timeframe
-          );
-      });
-    });
-
     // Map data fields to bar chart properties
     const mappedData = data.map(row => ({
       __source: row,
@@ -759,8 +766,16 @@ export function generateLineChartVegaSpec(
           markName === 'x_hit_target' ? item.datum.datum.x : item.datum.x;
         records = markName === 'x_hit_target' ? item.datum.datum.v : [];
 
+        const title = xIsDateorTime
+          ? renderTimeString(
+              new Date(x),
+              xField.isAtomicField() && xField.isDate(),
+              xField.timeframe
+            )
+          : x;
+
         tooltipData = {
-          title: [x],
+          title: [title],
           entries: records.map(rec => ({
             label: rec.series,
             value: formatY(rec),
@@ -783,8 +798,16 @@ export function generateLineChartVegaSpec(
             records.push(lineDataRecord);
           }
         }
+        const title = xIsDateorTime
+          ? renderTimeString(
+              new Date(itemData.x),
+              xField.isAtomicField() && xField.isDate(),
+              xField.timeframe
+            )
+          : itemData.x;
+
         tooltipData = {
-          title: [itemData.x],
+          title: [title],
           entries: records.map(rec => {
             return {
               label: rec.series,
