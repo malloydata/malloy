@@ -20,7 +20,6 @@ import {createEffect, createSignal} from 'solid-js';
 import {DefaultChartTooltip} from './default-chart-tooltip';
 import {EventListenerHandler} from 'vega';
 import {useResultStore, VegaBrushOutput} from '../result-store/result-store';
-import {unwrap} from 'solid-js/store';
 
 export function Chart(props: {
   field: Explore | ExploreField;
@@ -167,7 +166,13 @@ export function Chart(props: {
     const relevantBrushes = resultStore.store.brushes.filter(brush =>
       fieldRefIds.includes(brush.fieldRefId)
     );
-    viewInterface()?.setSignalAndRun('brushIn', unwrap(relevantBrushes));
+
+    viewInterface()?.setSignalAndRun(
+      'brushIn',
+      // TODO this is kindof a hack to make sure we react to any changes in the brush array, since our proxy updates won't react if we just listen on the field ref ids and one of them is updated.
+      // Is there a better way in Solid stores to react to "any sub-property of this object changes"?
+      JSON.parse(JSON.stringify(relevantBrushes))
+    );
   });
 
   return (
@@ -181,7 +186,7 @@ export function Chart(props: {
             .map(brush => ({type: 'remove', sourceId: brush.sourceId}))
         );
       }}
-      style="width: fit-content; height: fit-content;"
+      style="width: fit-content; height: fit-content; font-variant-numeric: tabular-nums;"
     >
       <VegaChart
         width={chartProps.plotWidth}

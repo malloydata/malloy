@@ -5,7 +5,7 @@
  *  LICENSE file in the root directory of this source tree.
  */
 
-import {DateField, Explore, TimestampField} from '@malloydata/malloy';
+import {Explore} from '@malloydata/malloy';
 import {getBarChartSettings} from './get-bar_chart-settings';
 import {
   ChartTooltipEntry,
@@ -70,6 +70,8 @@ export function generateBarChartVegaSpec(
   if (!yFieldPath) throw new Error('Malloy Bar Chart: Missing y field');
 
   const xField = getFieldFromRootPath(explore, xFieldPath);
+  const xIsDateorTime =
+    xField.isAtomicField() && (xField.isDate() || xField.isTimestamp());
   const yField = getFieldFromRootPath(explore, yFieldPath);
   const seriesField = seriesFieldPath
     ? getFieldFromRootPath(explore, seriesFieldPath)
@@ -616,10 +618,28 @@ export function generateBarChartVegaSpec(
         orient: 'bottom',
         scale: 'xscale',
         title: xFieldPath,
+        labelOverlap: 'greedy',
+        labelSeparation: 4,
         ...chartSettings.xAxis,
         encode: {
           labels: {
+            enter: {
+              ...(xIsDateorTime
+                ? {
+                    text: {
+                      signal: `renderMalloyTime(malloyExplore, '${xFieldPath}', datum.value)`,
+                    },
+                  }
+                : {}),
+            },
             update: {
+              ...(xIsDateorTime
+                ? {
+                    text: {
+                      signal: `renderMalloyTime(malloyExplore, '${xFieldPath}', datum.value)`,
+                    },
+                  }
+                : {}),
               fillOpacity: [
                 {
                   test: 'brushXIn ? indexof(brushXIn,datum.value) === -1 : false',
@@ -735,22 +755,6 @@ export function generateBarChartVegaSpec(
     field,
     data
   ) => {
-    // Capture dates as strings for now. TODO time axes
-    const dateTimeFields = field.allFields.filter(
-      f => f.isAtomicField() && (f.isDate() || f.isTimestamp())
-    ) as (DateField | TimestampField)[];
-    data.forEach(row => {
-      dateTimeFields.forEach(f => {
-        const value = row[f.name];
-        if (typeof value === 'number' || typeof value === 'string')
-          row[f.name] = renderTimeString(
-            new Date(value),
-            f.isDate(),
-            f.timeframe
-          );
-      });
-    });
-
     // Map data fields to bar chart properties
     const mappedData = data.map(row => ({
       __source: row,
@@ -800,8 +804,16 @@ export function generateBarChartVegaSpec(
         const x = item.datum.x;
         records = item.datum.v;
 
+        const title = xIsDateorTime
+          ? renderTimeString(
+              new Date(x),
+              xField.isAtomicField() && xField.isDate(),
+              xField.timeframe
+            )
+          : x;
+
         tooltipData = {
-          title: [x],
+          title: [title],
           entries: records.map(rec => ({
             label: rec.series,
             value: formatY(rec),
@@ -818,8 +830,16 @@ export function generateBarChartVegaSpec(
         const itemData = item.datum;
         highlightedSeries = itemData.series;
         records = item.mark.group.datum.v;
+        const title = xIsDateorTime
+          ? renderTimeString(
+              new Date(itemData.x),
+              xField.isAtomicField() && xField.isDate(),
+              xField.timeframe
+            )
+          : itemData.x;
+
         tooltipData = {
-          title: [itemData.x],
+          title: [title],
           entries: records.map(rec => {
             return {
               label: rec.series,

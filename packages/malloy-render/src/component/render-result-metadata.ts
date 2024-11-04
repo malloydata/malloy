@@ -205,8 +205,8 @@ const populateFieldMeta = (data: DataArray, metadata: RenderResultMetadata) => {
           fieldMeta.maxString = stringValue;
 
         if (f.isAtomicField() && f.sourceWasDimension()) {
-          fieldMeta.values.add(stringValue);
-          fieldSet.add(stringValue);
+          fieldMeta.values.add(numericValue);
+          fieldSet.add(numericValue);
         }
       } else if (f.isExploreField()) {
         const data = row.cell(f);
