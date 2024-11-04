@@ -206,7 +206,7 @@ const populateFieldMeta = (data: DataArray, metadata: RenderResultMetadata) => {
 
         if (f.isAtomicField() && f.sourceWasDimension()) {
           fieldMeta.values.add(stringValue);
-          // fieldSet.add(stringValue);
+          fieldSet.add(stringValue);
         }
       } else if (f.isExploreField()) {
         const data = row.cell(f);
