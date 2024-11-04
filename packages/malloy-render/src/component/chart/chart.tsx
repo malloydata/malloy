@@ -20,6 +20,7 @@ import {createEffect, createSignal} from 'solid-js';
 import {DefaultChartTooltip} from './default-chart-tooltip';
 import {EventListenerHandler} from 'vega';
 import {useResultStore, VegaBrushOutput} from '../result-store/result-store';
+import {unwrap} from 'solid-js/store';
 
 export function Chart(props: {
   field: Explore | ExploreField;
@@ -166,10 +167,7 @@ export function Chart(props: {
     const relevantBrushes = resultStore.store.brushes.filter(brush =>
       fieldRefIds.includes(brush.fieldRefId)
     );
-    viewInterface()?.setSignalAndRun(
-      'brushIn',
-      JSON.parse(JSON.stringify(relevantBrushes))
-    );
+    viewInterface()?.setSignalAndRun('brushIn', unwrap(relevantBrushes));
   });
 
   return (
