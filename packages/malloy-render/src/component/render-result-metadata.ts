@@ -60,7 +60,7 @@ function createDataCache() {
       if (!dataCache.has(cell) && cell.isArray()) {
         const data: DataRowWithRecord[] = [];
         for (const row of cell) {
-          const record = Object.assign(row.toObject(), {
+          const record = Object.assign({}, row.toObject(), {
             __malloyDataRecord: row,
           });
           data.push(record);
