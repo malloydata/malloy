@@ -72,7 +72,7 @@ export const baseVegaConfig = () => ({
     titleFont: 'Inter, sans-serif',
     titleFontSize: 10,
     titleFontWeight: 500,
-    titlePadding: 10,
+    titlePadding: 16,
   },
   'view': {
     strokeWidth: 0,
