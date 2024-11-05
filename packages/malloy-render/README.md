@@ -1,6 +1,6 @@
-# Malloy
+# Malloy Renderer
 
-Malloy is an experimental language for describing data relationships and transformations. It is both a semantic modeling language and a querying language that runs queries against a relational database. Malloy currently connects to BigQuery and Postgres, and natively supports DuckDB. We've built a Visual Studio Code extension to facilitate building Malloy data models, querying and transforming data, and creating simple visualizations and dashboards.
+The Malloy Renderer is a web component for rendering Malloy query results. It is included by default in the Malloy VSCode extension, but can also be embedded by developers into their own applications that use Malloy query results. To learn more about how to use the renderer in a Malloy model, see [the Renderer docs](https://docs.malloydata.dev/documentation/visualizations/overview).
 
 ## This package
 
