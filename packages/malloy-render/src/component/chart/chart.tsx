@@ -5,16 +5,9 @@
  *  LICENSE file in the root directory of this source tree.
  */
 
-import {
-  Explore,
-  ExploreField,
-  QueryData,
-  DateField,
-  TimestampField,
-} from '@malloydata/malloy';
+import {Explore, ExploreField, QueryData} from '@malloydata/malloy';
 import {VegaChart, ViewInterface} from '../vega/vega-chart';
 import {ChartTooltipEntry, RenderResultMetadata} from '../types';
-import {renderTimeString} from '../render-time';
 import {Tooltip} from '../tooltip/tooltip';
 import {createEffect, createSignal} from 'solid-js';
 import {DefaultChartTooltip} from './default-chart-tooltip';
