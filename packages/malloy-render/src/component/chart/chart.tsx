@@ -41,21 +41,7 @@ export function Chart(props: {
     values = chartProps.mapMalloyDataToChartData(field, chartData);
   }
 
-  // TODO: improve handling date/times in chart axes
-  const dateTimeFields = field.allFields.filter(
-    f => f.isAtomicField() && (f.isDate() || f.isTimestamp())
-  ) as (DateField | TimestampField)[];
-  chartData.forEach(row => {
-    dateTimeFields.forEach(f => {
-      const value = row[f.name];
-      if (typeof value === 'number' || typeof value === 'string')
-        row[f.name] = renderTimeString(
-          new Date(value),
-          f.isDate(),
-          f.timeframe
-        );
-    });
-  });
+  // TODO: improve handling date/times in chart axe
 
   const [viewInterface, setViewInterface] = createSignal<ViewInterface | null>(
     null

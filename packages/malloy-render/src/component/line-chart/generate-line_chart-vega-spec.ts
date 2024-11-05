@@ -5,7 +5,7 @@
  *  LICENSE file in the root directory of this source tree.
  */
 
-import {Explore} from '@malloydata/malloy';
+import {Explore, QueryDataRow, QueryValue} from '@malloydata/malloy';
 import {
   ChartTooltipEntry,
   MalloyDataToChartDataHandler,
@@ -716,15 +716,33 @@ export function generateLineChartVegaSpec(
     field,
     data
   ) => {
-    // Map data fields to bar chart properties
-    const mappedData = data.map(row => ({
-      __source: row,
-      x: row[xFieldPath],
-      y: row[yFieldPath],
-      series: seriesFieldPath ? row[seriesFieldPath] : yFieldPath,
-    }));
+    const getXValue = (row: QueryDataRow) =>
+      xIsDateorTime
+        ? new Date(row[xFieldPath] as string | number).valueOf()
+        : row[xFieldPath];
 
-    spec.data[0].values = mappedData;
+    const mappedData: {
+      __source: QueryDataRow;
+      x: QueryValue;
+      y: QueryValue;
+      series: QueryValue;
+    }[] = [];
+    data.forEach(row => {
+      // Filter out missing date/time values
+      if (
+        xIsDateorTime &&
+        (row[xFieldPath] === null || typeof row[xFieldPath] === 'undefined')
+      ) {
+        return;
+      }
+      // Map data fields to chart properties
+      mappedData.push({
+        __source: row,
+        x: getXValue(row),
+        y: row[yFieldPath],
+        series: seriesFieldPath ? row[seriesFieldPath] : yFieldPath,
+      });
+    });
     return mappedData;
   };
 
