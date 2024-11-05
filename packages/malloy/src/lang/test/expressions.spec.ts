@@ -78,6 +78,11 @@ describe('expressions', () => {
   test('function call', () => {
     expect(expr`concat('foo')`).toTranslate();
   });
+  test('raw function call codegen', () => {
+    expect(expr`special_function!(aweird, 'foo')`).compilesTo(
+      'special_function({aweird},{"foo"})'
+    );
+  });
 
   describe('operators', () => {
     test('addition', () => {
