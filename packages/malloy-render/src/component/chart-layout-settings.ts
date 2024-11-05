@@ -23,7 +23,7 @@
 
 import {Explore, ExploreField, Field, Tag} from '@malloydata/malloy';
 import {scale, locale} from 'vega';
-import {getFieldKey, getTextWidth} from './util';
+import {getFieldKey, getTextWidthDOM} from './util';
 import {RenderResultMetadata} from './types';
 import {renderNumericField} from './render-numeric-field';
 
@@ -146,8 +146,22 @@ export function getChartLayoutSettings(
     const yLabelOffset = 5;
     yAxisWidth =
       Math.max(
-        getTextWidth(formattedMin, '10px Inter, sans-serif') + 4,
-        getTextWidth(formattedMax, '10px Inter, sans-serif') + 4
+        getTextWidthDOM(formattedMin, {
+          fontFamily: 'Inter, sans-serif',
+          fontSize: '10px',
+          width: 'fit-content',
+          opacity: '0',
+          fontVariantNumeric: 'tabular-nums',
+          position: 'absolute',
+        }) + 4,
+        getTextWidthDOM(formattedMax, {
+          fontFamily: 'Inter, sans-serif',
+          fontSize: '10px',
+          width: 'fit-content',
+          opacity: '0',
+          fontVariantNumeric: 'tabular-nums',
+          position: 'absolute',
+        }) + 4
       ) +
       yLabelOffset +
       yTitleSize;
@@ -173,7 +187,16 @@ export function getChartLayoutSettings(
     // TODO: add type checking here for axis. for now assume number, string
     const xKey = getFieldKey(xField);
     const maxString = metadata.fields[xKey]!.maxString!;
-    const maxStringSize = getTextWidth(maxString, '10px Inter, sans-serif') + 4;
+    const maxStringSize =
+      getTextWidthDOM(maxString, {
+        fontFamily: 'Inter, sans-serif',
+        fontSize: '10px',
+        width: 'fit-content',
+        opacity: '0',
+        fontVariantNumeric: 'tabular-nums',
+        position: 'absolute',
+      }) + 4;
+
     const X_AXIS_THRESHOLD = 1;
     xTitleSize = 26;
     xAxisHeight = Math.min(maxStringSize, X_AXIS_THRESHOLD * chartHeight);
