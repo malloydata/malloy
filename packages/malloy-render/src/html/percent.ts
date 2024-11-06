@@ -23,10 +23,10 @@
 
 import {DataColumn, Explore, Field} from '@malloydata/malloy';
 import {HTMLNumberRenderer} from './number';
-import {PercentRenderOptions, StyleDefaults} from '../data_styles';
-import {RendererOptions} from '../renderer_types';
-import {Renderer} from '../renderer';
-import {RendererFactory} from '../renderer_factory';
+import {PercentRenderOptions, StyleDefaults} from './data_styles';
+import {RendererOptions} from './renderer_types';
+import {Renderer} from './renderer';
+import {RendererFactory} from './renderer_factory';
 
 export class HTMLPercentRenderer extends HTMLNumberRenderer {
   override getText(data: DataColumn): string | null {

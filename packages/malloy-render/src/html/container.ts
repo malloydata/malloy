@@ -22,9 +22,9 @@
  */
 
 import {Explore, Tag} from '@malloydata/malloy';
-import {StyleDefaults} from '../data_styles';
-import {ChildRenderers, RenderTree} from '../renderer';
-import {RendererOptions} from '../renderer_types';
+import {StyleDefaults} from './data_styles';
+import {ChildRenderers, RenderTree} from './renderer';
+import {RendererOptions} from './renderer_types';
 
 export abstract class ContainerRenderer extends RenderTree {
   childRenderers: ChildRenderers = {};

@@ -3,7 +3,7 @@ import {HtmlRenderer} from '@storybook/html';
 import {SingleConnectionRuntime} from '@malloydata/malloy';
 import {DuckDBWASMConnection} from '@malloydata/db-duckdb/wasm';
 import {HTMLView} from '../html';
-import {RendererOptions} from '../renderer_types';
+import {RendererOptions} from '../html/renderer_types';
 
 export type QueryOptions = {
   script: string;

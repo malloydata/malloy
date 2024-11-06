@@ -29,7 +29,7 @@ import {
   Explore,
   TimestampTimeframe,
 } from '@malloydata/malloy';
-import {timeToString} from './html/utils';
+import {timeToString} from './utils';
 
 type FilterItem = {key: string; value: string | undefined};
 

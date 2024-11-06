@@ -27,10 +27,10 @@ import {
   LineChartRenderOptions,
   ScatterChartRenderOptions,
   StyleDefaults,
-} from '../data_styles';
-import {RendererOptions} from '../renderer_types';
-import {Renderer} from '../renderer';
-import {RendererFactory} from '../renderer_factory';
+} from './data_styles';
+import {RendererOptions} from './renderer_types';
+import {Renderer} from './renderer';
+import {RendererFactory} from './renderer_factory';
 
 export class HTMLScatterChartRenderer extends HTMLCartesianChartRenderer {
   getMark(): 'point' {

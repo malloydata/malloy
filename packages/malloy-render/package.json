@@ -14,10 +14,8 @@
   },
   "exports": {
     ".": "./dist/module/index.umd.js",
-    "./style": "./dist/module/style.css",
     "./webcomponent": "./dist/webcomponent/malloy-render.umd.js",
-    "./webcomponent/register": "./dist/register/register.umd.js",
-    "./webcomponent/style": "./dist/webcomponent/style.css"
+    "./webcomponent/register": "./dist/register/register.umd.js"
   },
   "scripts": {
     "bundle_renderer": "node src/bundle/esbuild_bundler.js",

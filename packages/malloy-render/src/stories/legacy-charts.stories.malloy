@@ -1,4 +1,4 @@
-source: products is duckdb.table("data/products.parquet") extend {
+source: products is duckdb.table("static/data/products.parquet") extend {
 
   #(story)
   # scatter_chart

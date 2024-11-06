@@ -2,9 +2,49 @@
 
 The Malloy Renderer is a web component for rendering Malloy query results. It is included by default in the Malloy VSCode extension, but can also be embedded by developers into their own applications that use Malloy query results. To learn more about how to use the renderer in a Malloy model, see [the Renderer docs](https://docs.malloydata.dev/documentation/visualizations/overview).
 
-## This package
+## Using the Renderer in Web Apps
 
-This package provides a simple mechanism to render charts based on results from using the `malloydata/malloy` library. See [here](https://github.com/malloydata/malloy/blob/main/packages/malloy/README.md) for additional information.
+1. Install the renderer package
+
+```bash
+$ npm i @malloydata/render
+```
+
+2. Import the web component somewhere in your project. This will automatically register the `<malloy-render>` web component on your document.
+
+```javascript
+import '@malloydata/render/webcomponent';
+```
+
+3. Use the web component in your app by creating a `<malloy-render>` node and passing it Malloy query results:
+
+```javascript
+const malloyRenderElement = document.createElement('malloy-render');
+// Pass a Malloy Result object to the renderer
+malloyRenderElement.result = myMalloyResult;
+
+/*
+Alternatively, you can pass Malloy QueryResult and ModelDef objects to the renderer,
+which will then construct the Result object. This is useful when you are receiving serialiazed Malloy results via an API.
+*/
+malloyRenderElement.queryResult = myQueryResult;
+malloyRenderElement.modelDef = myModelDef;
+```
+
+### Explicitly registering the web component
+
+In some situations, such as using Malloy Render with a mock DOM like JSDOM, you may want to explicitly register the web component on a document. This can be done using the `@malloydata/render/webcomponent/register` import like so:
+
+```javascript
+import registerMalloyRender from '@malloydata/malloy-render/webcomponent/register';
+
+const {window} = new JSDOM(`...`);
+
+registerMalloyRender({
+  customElements: window.customElements,
+  HTMLElement: window.HTMLElement,
+});
+```
 
 ## Developing locally with Storybook
 
@@ -21,22 +61,3 @@ Stories are written in the `src/stories` directory. To add more data and Malloy 
 ### On Reloading Changes
 
 When running `npm run storybook`, only changes in the malloy-render package will hot reload properly. Changes to dependencies like the core `malloy` package may require a browser reload to work properly.
-
-## Using the Bundled Renderer
-
-Any web browser with JSON results from a DB query execution and a PreparedResult object from the Malloy library should be able to use the bundled renderer to create an HTML Malloy Result. The renderer bundle is available from v0.0.118 onwards. Example usage:
-
-```js
-var script = document.createElement('script');
-script.src =
-  'https://cdn.jsdelivr.net/npm/@malloydata/render@0.0.118/dist/bundle/bundled_renderer.min.js';
-document.head.appendChild(script);
-var resultElement = document.getElementById('result_div');
-renderMalloyResults(result, total_rows, preparedResult).then(
-  function (malloyResElement) {
-    resultElement.appendChild(malloyResElement);
-  }
-);
-```
-
-To build the bundle from source, run `npm run bundle_renderer`. This will create the bundled js files in in `dist/bundle`.
