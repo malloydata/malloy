@@ -26,10 +26,10 @@ import * as lite from 'vega-lite';
 import {getColorScale} from './utils';
 import {DEFAULT_SPEC} from './vega_spec';
 import {HTMLBarChartRenderer} from './bar_chart';
-import {BarSparkLineRenderOptions, StyleDefaults} from '../data_styles';
-import {RendererFactory} from '../renderer_factory';
-import {RendererOptions} from '../renderer_types';
-import {Renderer} from '../renderer';
+import {BarSparkLineRenderOptions, StyleDefaults} from './data_styles';
+import {RendererFactory} from './renderer_factory';
+import {RendererOptions} from './renderer_types';
+import {Renderer} from './renderer';
 
 export class HTMLBarSparkLineRenderer extends HTMLBarChartRenderer {
   override getSize(): {height: number; width: number} {

@@ -34,8 +34,6 @@ export function Chart(props: {
     values = chartProps.mapMalloyDataToChartData(field, chartData);
   }
 
-  // TODO: improve handling date/times in chart axe
-
   const [viewInterface, setViewInterface] = createSignal<ViewInterface | null>(
     null
   );

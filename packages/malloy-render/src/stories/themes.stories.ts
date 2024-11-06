@@ -1,5 +1,5 @@
 import {Meta} from '@storybook/html';
-import script from './static/themes.malloy?raw';
+import script from './themes.malloy?raw';
 import {createLoader} from './util';
 import './themes.css';
 import '../component/render-webcomponent';

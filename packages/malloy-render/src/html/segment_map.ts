@@ -26,10 +26,10 @@ import {DataArray, DataColumn, Explore, Field} from '@malloydata/malloy';
 import usAtlas from 'us-atlas/states-10m.json';
 import {HTMLChartRenderer} from './chart';
 import {formatTitle, getColorScale} from './utils';
-import {RendererFactory} from '../renderer_factory';
-import {SegmentMapRenderOptions, StyleDefaults} from '../data_styles';
-import {RendererOptions} from '../renderer_types';
-import {Renderer} from '../renderer';
+import {RendererFactory} from './renderer_factory';
+import {SegmentMapRenderOptions, StyleDefaults} from './data_styles';
+import {RendererOptions} from './renderer_types';
+import {Renderer} from './renderer';
 
 export class HTMLSegmentMapRenderer extends HTMLChartRenderer {
   getDataValue(data: DataColumn): string | number | null {

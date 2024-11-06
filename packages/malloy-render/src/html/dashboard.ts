@@ -22,8 +22,8 @@
  */
 
 import {DataArrayOrRecord} from '@malloydata/malloy';
-import {StyleDefaults} from '../data_styles';
-import {getDrillQuery} from '../drill';
+import {StyleDefaults} from './data_styles';
+import {getDrillQuery} from './drill';
 import {ContainerRenderer} from './container';
 import {HTMLTextRenderer} from './text';
 import {

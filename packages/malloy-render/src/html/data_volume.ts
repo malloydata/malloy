@@ -28,10 +28,10 @@ import {
   DataVolumeUnit,
   NumberRenderOptions,
   StyleDefaults,
-} from '../data_styles';
-import {RendererOptions} from '../renderer_types';
-import {Renderer} from '../renderer';
-import {RendererFactory} from '../renderer_factory';
+} from './data_styles';
+import {RendererOptions} from './renderer_types';
+import {Renderer} from './renderer';
+import {RendererFactory} from './renderer_factory';
 
 export class HTMLDataVolumeRenderer extends HTMLTextRenderer {
   constructor(

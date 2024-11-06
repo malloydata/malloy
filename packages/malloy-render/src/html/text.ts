@@ -22,15 +22,15 @@
  */
 
 import {DataColumn, Explore, Field} from '@malloydata/malloy';
-import {Renderer} from '../renderer';
+import {Renderer} from './renderer';
 import {createErrorElement, createNullElement} from './utils';
 import {
   DataRenderOptions,
   StyleDefaults,
   TextRenderOptions,
-} from '../data_styles';
-import {RendererFactory} from '../renderer_factory';
-import {RendererOptions} from '../renderer_types';
+} from './data_styles';
+import {RendererFactory} from './renderer_factory';
+import {RendererOptions} from './renderer_types';
 
 export class HTMLTextRenderer implements Renderer {
   constructor(private readonly document: Document) {}
