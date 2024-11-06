@@ -2358,7 +2358,7 @@ class QueryQuery extends QueryField {
     const node = context.getFieldByName(path);
     let struct;
     if (node instanceof QueryFieldStruct) {
-      struct = node;
+      struct = node.queryStruct;
     } else if (node instanceof QueryField) {
       struct = node.parent;
     } else {
@@ -4180,6 +4180,24 @@ class QueryFieldStruct extends QueryField {
       {struct: parent},
       prepareResultOptions
     );
+  }
+
+  /*
+   * Proxy the field-like methods that QueryStruct implements, eventually
+   * those probably should be in here ... I thought this would be important
+   * but maybe it isn't, it doesn't fix the problem I am working on ...
+   */
+
+  getIdentifier() {
+    return this.queryStruct.getIdentifier();
+  }
+
+  getJoinableParent() {
+    return this.queryStruct.getJoinableParent();
+  }
+
+  getFullOutputName() {
+    return this.queryStruct.getFullOutputName();
   }
 }
 
