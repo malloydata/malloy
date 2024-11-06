@@ -48,4 +48,4 @@ registerMalloyRender({
 
 # Developing
 
-See [DEVELOPING.readme](./DEVELOPING.md)
+See the [Developing README](./DEVELOPING.md)
