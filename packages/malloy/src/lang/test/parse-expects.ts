@@ -262,6 +262,17 @@ function eToStr(e: Expr, symbols: ESymbols): string {
         .map(o => `${subExpr(o)}`)
         .join(',')}}}`;
     }
+    case 'genericSQLExpr': {
+      let sql = '';
+      let i = 0;
+      for (; i < e.kids.args.length; i++) {
+        sql += `${e.src[i]}{${subExpr(e.kids.args[i])}}`;
+      }
+      if (i < e.src.length) {
+        sql += e.src[i];
+      }
+      return sql;
+    }
   }
   if (exprHasKids(e) && e.kids['left'] && e.kids['right']) {
     return `{${subExpr(e.kids['left'])} ${e.node} ${subExpr(e.kids['right'])}}`;

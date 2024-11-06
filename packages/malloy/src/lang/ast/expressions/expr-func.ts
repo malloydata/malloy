@@ -30,12 +30,12 @@ import {
   expressionIsScalar,
   expressionIsUngroupedAggregate,
   ExpressionType,
+  ExpressionValueTypeDef,
   FunctionCallNode,
   FunctionDef,
   FunctionOverloadDef,
   FunctionParameterDef,
   isAtomicFieldType,
-  isCastType,
   isExpressionTypeLEQ,
   maxOfExpressionTypes,
   mergeEvalSpaces,
@@ -127,23 +127,21 @@ export class ExprFunc extends ExpressionDef {
   ): ExprValue {
     const argExprsWithoutImplicit = this.args.map(arg => arg.getExpression(fs));
     if (this.isRaw) {
-      let collectType: CastType | undefined;
       const funcCall: SQLExprElement[] = [`${this.name}(`];
-      for (const expr of argExprsWithoutImplicit) {
-        if (collectType) {
+      argExprsWithoutImplicit.forEach((expr, i) => {
+        if (i !== 0) {
           funcCall.push(',');
-        } else {
-          if (isCastType(expr.type)) {
-            collectType = expr.type;
-          }
         }
         funcCall.push(expr.value);
-      }
+      });
       funcCall.push(')');
 
-      const dataType = this.rawType ?? collectType ?? 'number';
+      const inferredType = argExprsWithoutImplicit[0] ?? {type: 'number'};
+      const dataType: ExpressionValueTypeDef = this.rawType
+        ? {type: this.rawType}
+        : inferredType;
       return computedExprValue({
-        dataType: {type: dataType},
+        dataType,
         value: composeSQLExpr(funcCall),
         from: argExprsWithoutImplicit,
       });
