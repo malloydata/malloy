@@ -2356,22 +2356,13 @@ class QueryQuery extends QueryField {
       return;
     }
     const node = context.getFieldByName(path);
-    let struct;
-    if (node instanceof QueryFieldStruct) {
-      struct = node.queryStruct;
-    } else if (node instanceof QueryField) {
-      struct = node.parent;
-    } else {
-      throw new Error('Internal Error:  Unknown object type');
-    }
+    const joinableParent =
+      node instanceof QueryFieldStruct
+        ? node.queryStruct.getJoinableParent()
+        : node.parent.getJoinableParent();
     resultStruct
       .root()
-      .addStructToJoin(
-        struct.getJoinableParent(),
-        this,
-        uniqueKeyPossibleUse,
-        joinStack
-      );
+      .addStructToJoin(joinableParent, this, uniqueKeyPossibleUse, joinStack);
   }
 
   addDependantExpr(
@@ -4673,12 +4664,14 @@ class QueryStruct {
 
   /** returns a query object for the given name */
   getStructByName(name: string[]): QueryStruct {
+    if (name.length === 0) {
+      return this;
+    }
     const struct = this.getFieldByName(name);
     if (struct instanceof QueryFieldStruct) {
       return struct.queryStruct;
-    } else {
-      throw new Error(`Error: Path to structure not found '${name.join('.')}'`);
     }
+    throw new Error(`Error: Path to structure not found '${name.join('.')}'`);
   }
 
   getDistinctKey(): QueryFieldAtomic {
