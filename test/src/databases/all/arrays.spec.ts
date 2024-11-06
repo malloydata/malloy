@@ -12,22 +12,27 @@ import '../../util/db-jest-matchers';
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 describe.each(runtimes.runtimeList)('arrays %s', (databaseName, runtime) => {
-  const head = `${databaseName}.sql("select null")`;
-  const digits = `${head} -> {select: digits is [1,2]}`;
+  const evens = 'duckdb.sql("SELECT [2,4] as evens")';
   test('array literal', async () => {
-    await expect(`run: ${digits}`).malloyResultMatches(runtime, {
-      digits: [1, 2],
-    });
+    await expect(`
+      # test.debug
+      run: duckdb.sql("SELECT 1 AS row") -> { select: odds is [1,3] }
+    `).malloyResultMatches(runtime, {odds: [1, 3]});
   });
   test('array-un-nest', async () => {
-    expect(`run: ${digits}->{ select: n is digits.each }`).malloyResultMatches(
-      runtime,
-      [{n: 1}, {n: 2}]
-    );
+    await expect(`
+      run: ${evens}->{ select: n is evens.each }
+    `).malloyResultMatches(runtime, [{n: 2}, {n: 4}]);
   });
   test('array columns can be passed to functions', async () => {
     await expect(
-      `run: ${digits}->{ select: two is len!number(digits); } `
+      `run: ${evens}->{ select: two is len!number(evens); } `
     ).malloyResultMatches(runtime, {two: 2});
+  });
+  test('array columns can be selected', async () => {
+    await expect(`run: ${evens}->{ select: evens }`).malloyResultMatches(
+      runtime,
+      {evens: [2, 4]}
+    );
   });
 });

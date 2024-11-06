@@ -1915,12 +1915,14 @@ class FieldInstanceResult implements FieldInstance {
 
   findJoins(query: QueryQuery) {
     for (const dim of this.fields()) {
-      this.addStructToJoin(
-        dim.f.getJoinableParent(),
-        query,
-        dim.f.uniqueKeyPossibleUse(),
-        []
-      );
+      if (!(dim.f instanceof QueryFieldStruct)) {
+        this.addStructToJoin(
+          dim.f.getJoinableParent(),
+          query,
+          dim.f.uniqueKeyPossibleUse(),
+          []
+        );
+      }
     }
     for (const s of this.structs()) {
       s.findJoins(query);
