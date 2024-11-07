@@ -95,11 +95,6 @@ export type Expr =
   | InCompareExpr
   | ErrorNode;
 
-interface HasTypeDef {
-  typeDef: AtomicTypeDef;
-}
-export type TypedExpr = Expr & HasTypeDef;
-
 export type BinaryOperator =
   | '+'
   | '-'
@@ -335,7 +330,8 @@ export interface BooleanLiteralNode extends ExprLeaf {
 
 export interface RecordLiteralNode extends ExprWithKids {
   node: 'recordLiteral';
-  kids: Record<string, TypedExpr>;
+  kids: Record<string, Expr>;
+  typeDef: RecordTypeDef;
 }
 
 export interface ArrayLiteralNode extends ExprWithKids {

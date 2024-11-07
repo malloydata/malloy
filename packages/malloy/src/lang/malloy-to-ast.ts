@@ -1964,11 +1964,6 @@ export class MalloyToAST
   }
 
   visitExprLiteralRecord(pcx: parse.ExprLiteralRecordContext) {
-    this.contextError(
-      pcx,
-      'not-yet-implemented',
-      'Record data is not yet implemented'
-    );
     const els = this.only<ast.RecordElement>(
       pcx.recordElement().map(elCx => this.astAt(this.visit(elCx), elCx)),
       visited => visited instanceof ast.RecordElement && visited,

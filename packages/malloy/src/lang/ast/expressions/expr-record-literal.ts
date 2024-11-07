@@ -5,16 +5,12 @@
  *  LICENSE file in the root directory of this source tree.
  */
 
-// import {
-//   isAtomicFieldType,
-//   TD,
-//   RecordLiteralNode,
-//   TypedExpr,
-// } from '../../../model';
-import {ExprValue} from '../types/expr-value';
+import {TD, RecordLiteralNode, RecordTypeDef} from '../../../model';
+import {ExprValue, computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
+import * as TDU from '../typedesc-utils';
 
 export class RecordElement extends MalloyElement {
   elementType = 'record element';
@@ -34,32 +30,36 @@ export class RecordLiteral extends ExpressionDef {
     this.has({pairs});
   }
 
-  getExpression(_fs: FieldSpace): ExprValue {
-    throw new Error('get expression on record todo');
-    // const recLit: RecordLiteralNode = {
-    //   node: 'recordLiteral',
-    //   kids: {},
-    // };
-    // const dependents: ExprValue[] = [];
-    // for (const el of this.pairs) {
-    //   const xVal = el.value.getExpression(fs);
-    //   const expr: TypedExpr = {typeDef: {type: 'error'}, ...xVal.value};
-    //   if (TD.isError(expr.typeDef) && isAtomicFieldType(xVal.dataType)) {
-    //     expr.typeDef = xVal.dataType;
-    //   }
-    //   if (TD.isError(expr.typeDef) && xVal.dataType !== 'error') {
-    //     this.logError(
-    //       'illegal-record-property-type',
-    //       `Type '${xVal.dataType}' not a legal record value`
-    //     );
-    //   }
-    //   recLit.kids[el.key] = expr;
-    //   dependents.push(xVal);
-    // }
-    // return computedExprValue({
-    //   dataType: 'record',
-    //   value: recLit,
-    //   from: dependents,
-    // });
+  getExpression(fs: FieldSpace): ExprValue {
+    const recLit: RecordLiteralNode = {
+      node: 'recordLiteral',
+      kids: {},
+      typeDef: {
+        name: '',
+        type: 'record',
+        join: 'one',
+        dialect: fs.dialectName(),
+        fields: [],
+      },
+    };
+    const dependents: ExprValue[] = [];
+    for (const el of this.pairs) {
+      const xVal = el.value.getExpression(fs);
+      if (TD.isAtomic(xVal)) {
+        dependents.push(xVal);
+        recLit.kids[el.key] = xVal.value;
+        recLit.typeDef.fields.push({...TDU.atomicDef(xVal), name: el.key});
+      } else {
+        this.logError(
+          'illegal-record-property-type',
+          `Record property '${el.key} is type '${xVal.type}', which is not a legal property value type`
+        );
+      }
+    }
+    return computedExprValue({
+      value: recLit,
+      dataType: recLit.typeDef,
+      from: dependents,
+    });
   }
 }
