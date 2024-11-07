@@ -3060,7 +3060,7 @@ class QueryQuery extends QueryField {
       const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
       if (fi.fieldUsage.type === 'result') {
         fields.push(
-          ` ${fi.f.generateExpression(this.rootResult)} as ${sqlName}`
+          ` ${fi.f.generateExpression(this.rootResult)} aS ${sqlName}`
         );
       }
     }
@@ -4181,9 +4181,10 @@ class QueryFieldStruct extends QueryField {
    * but maybe it isn't, it doesn't fix the problem I am working on ...
    */
 
-  getIdentifier() {
-    return this.queryStruct.getIdentifier();
-  }
+  // mtoy todo review with lloyd if any of these are needed
+  // getIdentifier() {
+  //   return this.queryStruct.getIdentifier();
+  // }
 
   getJoinableParent() {
     return this.queryStruct.getJoinableParent();
