@@ -5,7 +5,7 @@
  *  LICENSE file in the root directory of this source tree.
  */
 
-import {TD, RecordLiteralNode, RecordTypeDef} from '../../../model';
+import {TD, RecordLiteralNode} from '../../../model';
 import {ExprValue, computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
