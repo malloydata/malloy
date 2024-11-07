@@ -51,6 +51,20 @@ describe.each(runtimes.runtimeList)(
           'record/xl': 3,
         });
       });
+      test.skip('record literal', async () => {
+        await expect(`
+          run: duckdb.sql("select 1") -> {
+            select: record is {s is 0, m is 1, l is 2, xl is 3}
+          }
+        `).malloyResultMatches(runtime, {
+          'record/s': 0,
+          'record/m': 1,
+          'record/l': 2,
+          'record/xl': 3,
+        });
+      });
+      test.skip('array of records can be seclted');
+      test.skip('array of records literal');
     });
   }
 );
