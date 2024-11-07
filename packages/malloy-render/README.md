@@ -46,18 +46,6 @@ registerMalloyRender({
 });
 ```
 
-## Developing locally with Storybook
+# Developing
 
-Run `npm run storybook` to launch a Storybook app in your browser. This app will hot reload as you make changes to the renderer source.
-
-Stories are written in the `src/stories` directory. To add more data and Malloy files for your stories to consume, you must:
-
-- put .malloy files in `src/stories/static`
-- put data files in `src/stories/static/data`
-- register data files be loaded into the DuckDB WASM connection by adding the file name to `.storybook/registered_data.json`
-
-[Take a look at the Basic story as an example.](./src/stories/basic.stories.ts)
-
-### On Reloading Changes
-
-When running `npm run storybook`, only changes in the malloy-render package will hot reload properly. Changes to dependencies like the core `malloy` package may require a browser reload to work properly.
+See the [Developing README](./DEVELOPING.md)
