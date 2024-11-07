@@ -63,8 +63,8 @@ describe.each(runtimes.runtimeList)(
           'record/xl': 3,
         });
       });
-      test.skip('array of records can be seclted');
-      test.skip('array of records literal');
+      test.todo('array of records can be seclted');
+      test.todo('array of records literal');
     });
   }
 );
