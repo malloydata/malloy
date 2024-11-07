@@ -18,7 +18,6 @@ describe.each(runtimes.runtimeList)(
       const evens = 'duckdb.sql("SELECT [2,4] as evens")';
       test('array literal', async () => {
         await expect(`
-      # test.debug
       run: duckdb.sql("SELECT 1 AS row") -> { select: odds is [1,3] }
     `).malloyResultMatches(runtime, {odds: [1, 3]});
       });
