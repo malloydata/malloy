@@ -11,6 +11,11 @@ import '../../util/db-jest-matchers';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
+/*
+ * Tests for the composite atomic data types "record", "array of values",
+ * and "array of records".
+ */
+
 describe.each(runtimes.runtimeList)(
   'composite fields %s',
   (databaseName, runtime) => {
@@ -39,9 +44,7 @@ describe.each(runtimes.runtimeList)(
       });
       test('array literal in source', async () => {
         await expect(`
-          # test.debug
           run: duckdb.sql("select 1") extend { dimension: d1 is [1,2,3,4,5,6] }
-          // -> { select: d1 }
           -> { select: die_roll is d1.each }
         `).malloyResultMatches(runtime, [
           {die_roll: 1},
@@ -79,7 +82,7 @@ describe.each(runtimes.runtimeList)(
           'record/xl': 3,
         });
       });
-      test.todo('array of records can be seclted');
+      test.todo('array of records can be selected');
       test.todo('array of records literal');
     });
   }
