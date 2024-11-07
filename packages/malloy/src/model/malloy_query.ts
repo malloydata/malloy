@@ -2898,13 +2898,15 @@ class QueryQuery extends QueryField {
       if (qs.parent === undefined || ji.parent === undefined) {
         throw new Error('Internal Error, nested structure with no parent.');
       }
-      const fieldExpression = this.parent.dialect.sqlFieldReference(
-        qs.parent.getSQLIdentifier(),
-        qsDef.name,
-        'struct',
-        qs.parent.structDef.type === 'array',
-        isScalarArray(this.parent.structDef)
-      );
+      const fieldExpression = hasExpression(qsDef)
+        ? this.exprToSQL(this.rootResult, this.parent, qsDef.e)
+        : this.parent.dialect.sqlFieldReference(
+            qs.parent.getSQLIdentifier(),
+            qsDef.name,
+            'struct',
+            qs.parent.structDef.type === 'array',
+            isScalarArray(this.parent.structDef)
+          );
       // we need to generate primary key.  If parent has a primary key combine
       // console.log(ji.alias, fieldExpression, this.inNestedPipeline());
       s += `${this.parent.dialect.sqlUnnestAlias(
