@@ -160,7 +160,7 @@ export class StaticSpace implements FieldSpace {
         }
         head.addReference({
           type:
-            found instanceof StructSpaceFieldBase && path.length > 1
+            found instanceof StructSpaceFieldBase
               ? 'joinReference'
               : 'fieldReference',
           definition,
@@ -168,7 +168,7 @@ export class StaticSpace implements FieldSpace {
           text: head.refString,
         });
       }
-    }
+    } // cswenson review todo { else this is SpaceEntry not a field which can only be a param and what is going on? }
     const joinPath =
       found instanceof StructSpaceFieldBase
         ? [{...found.joinPathElement, name: head.refString}]
