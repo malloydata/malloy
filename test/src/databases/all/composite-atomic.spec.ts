@@ -8,41 +8,97 @@
 import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
 import '../../util/db-jest-matchers';
+import {FieldDef, Expr} from '@malloydata/malloy';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 /*
  * Tests for the composite atomic data types "record", "array of values",
- * and "array of records".
+ * and "array of records". Each starts with a test that the dialect functions
+ * for literals work, and then bases the rest of the tests on literals,
+ * so fix that one first if the tests are failing.
  */
 
+type NumberLiteralNodeType = 'numberLiteral'; // Do not understand why this is needed
 describe.each(runtimes.runtimeList)(
   'composite fields %s',
   (databaseName, runtime) => {
+    function literalNum(num: Number) {
+      const literal = num.toString();
+      const node: NumberLiteralNodeType = 'numberLiteral';
+      return {node, literal, sql: literal};
+    }
+    function arraySelectVal(...val: Number[]): string {
+      return runtime.dialect.sqlLiteralArray({
+        node: 'arrayLiteral',
+        typeDef: {
+          type: 'array',
+          name: 'evens',
+          join: 'many',
+          elementTypeDef: {type: 'number'},
+          fields: [],
+          dialect: runtime.dialect.name,
+        },
+        kids: {values: val.map(v => literalNum(v))},
+      });
+    }
+    function recordSelectVal(fromObj: Record<string, number>): string {
+      const kids: Record<string, Expr> = {};
+      const fields: FieldDef[] = Object.keys(fromObj).map(name => {
+        kids[name] = literalNum(fromObj[name]);
+        return {
+          type: 'number',
+          name,
+        };
+      });
+      return runtime.dialect.sqlLiteralRecord({
+        node: 'recordLiteral',
+        typeDef: {
+          type: 'record',
+          name: 'evens',
+          join: 'one',
+          dialect: runtime.dialect.name,
+          fields,
+        },
+        kids,
+      });
+    }
+
+    const sizesObj = {s: 0, m: 1, l: 2, xl: 3};
+    const sizes = `${databaseName}.sql("""SELECT ${recordSelectVal(
+      sizesObj
+    )} as sizes""")`;
+
+    const evensObj = [2, 4, 6, 8];
+    const evens = `${databaseName}.sql("SELECT ${arraySelectVal(
+      ...evensObj
+    )} as evens")`;
+
     describe('simple arrays', () => {
-      const evens = 'duckdb.sql("SELECT [2,4] as evens")';
-      test('select array literal', async () => {
+      test('array literal dialect function', async () => {
+        await expect(`run: ${evens}`).malloyResultMatches(runtime, {
+          evens: evensObj,
+        });
+      });
+      test('select array', async () => {
         await expect(`
-      run: duckdb.sql("SELECT 1 AS row") -> { select: odds is [1,3] }
-    `).malloyResultMatches(runtime, {odds: [1, 3]});
+          run: ${evens}->{select: nn is evens}
+          `).malloyResultMatches(runtime, {nn: evensObj});
       });
       test('array-un-nest on each', async () => {
         await expect(`
       run: ${evens}->{ select: n is evens.each }
-    `).malloyResultMatches(runtime, [{n: 2}, {n: 4}]);
-      });
-      test('array columns can be passed to functions', async () => {
-        await expect(
-          `run: ${evens}->{ select: two is len!number(evens); } `
-        ).malloyResultMatches(runtime, {two: 2});
-      });
-      test('select array columns', async () => {
-        await expect(`run: ${evens}->{ select: evens }`).malloyResultMatches(
+    `).malloyResultMatches(
           runtime,
-          {evens: [2, 4]}
+          evensObj.map(n => ({n}))
         );
       });
-      test('array literal in source', async () => {
+      test('array can be passed to functions', async () => {
+        await expect(
+          `run: ${evens}->{ select: nby2 is len!number(evens); } `
+        ).malloyResultMatches(runtime, {nby2: evensObj.length});
+      });
+      test('array.each in source', async () => {
         await expect(`
           run: duckdb.sql("select 1")
           extend { dimension: d4 is [1,2,3,4] }
@@ -54,7 +110,7 @@ describe.each(runtimes.runtimeList)(
           {die_roll: 4},
         ]);
       });
-      test('array literal in extend block', async () => {
+      test('array.each in extend block', async () => {
         await expect(`
           run: duckdb.sql("select 1") -> {
             extend: { dimension: d4 is [1,2,3,4] }
@@ -88,42 +144,59 @@ describe.each(runtimes.runtimeList)(
       });
     });
     describe('record', () => {
-      const record = 'duckdb.sql("SELECT {s: 0, m: 1, l:2, xl: 3} as record")';
+      function rec_eq(as?: string): Record<string, Number> {
+        const name = as ?? 'sizes';
+        return {
+          [`${name}/s`]: 0,
+          [`${name}/m`]: 1,
+          [`${name}/l`]: 2,
+          [`${name}/xl`]: 3,
+        };
+      }
+      test('record literal dialect function', async () => {
+        await expect(`run: ${sizes}`).malloyResultMatches(runtime, rec_eq());
+      });
+      test('record.property access', async () => {
+        await expect(`
+          run: ${sizes} -> { select: small is sizes.s }`).malloyResultMatches(
+          runtime,
+          {small: 0}
+        );
+      });
       test('record can be selected', async () => {
         await expect(
           `
-          run: ${record} -> { select: record }`
-        ).malloyResultMatches(runtime, {
-          'record/s': 0,
-          'record/m': 1,
-          'record/l': 2,
-          'record/xl': 3,
-        });
+          run: ${sizes} -> { select: sizes }`
+        ).malloyResultMatches(runtime, rec_eq());
       });
       test('record literal can be selected', async () => {
         await expect(`
-          run: duckdb.sql("select 1") -> {
-            select: record is {s is 0, m is 1, l is 2, xl is 3}
-          }
-        `).malloyResultMatches(runtime, {
-          'record/s': 0,
-          'record/m': 1,
-          'record/l': 2,
-          'record/xl': 3,
-        });
+          run: ${sizes} -> { select: record is sizes }
+        `).malloyResultMatches(runtime, rec_eq('record'));
       });
-      test('record literal from a source', async () => {
+      test('select record literal from a source', async () => {
+        await expect(`
+          run: duckdb.sql("select 1") -> {
+            extend: { dimension: sizes is {s is 0, m is 1, l is 2, xl is 3} }
+            select: sizes
+          }
+        `).malloyResultMatches(runtime, rec_eq());
+      });
+      test('record.property from a source', async () => {
+        await expect(`
+          #! test.debug
+          run: duckdb.sql("select 1")
+            extend { dimension: record is {s is 0, m is 1, l is 2, xl is 3} }
+            -> { select: small is record.s }
+        `).malloyResultMatches(runtime, {small: 0});
+      });
+      test('record.property from an extend block', async () => {
         await expect(`
           run: duckdb.sql("select 1") -> {
             extend: { dimension: record is {s is 0, m is 1, l is 2, xl is 3} }
-            select: record
+            select: small is record.s
           }
-        `).malloyResultMatches(runtime, {
-          'record/s': 0,
-          'record/m': 1,
-          'record/l': 2,
-          'record/xl': 3,
-        });
+        `).malloyResultMatches(runtime, {small: 0});
       });
       test.todo('array of records can be selected');
       test.todo('array of records literal');
