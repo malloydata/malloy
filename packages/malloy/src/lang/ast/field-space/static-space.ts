@@ -154,10 +154,11 @@ export class StaticSpace implements FieldSpace {
         if (!(found instanceof StructSpaceFieldBase) && isJoined(definition)) {
           // We have looked up a field which is a join, but not a StructSpaceField
           // because it is someting like "dimension: joinedArray is arrayComputation"
-          // so it is a FieldDefinitionValue.
+          // which wasn't known to be a join when the fieldspace was constructed.
           // TODO don't make one of these every time you do a lookup
           found = new StructSpaceField(definition);
         }
+        // cswenson review todo I don't know how to count the reference properly now
         head.addReference({
           type:
             found instanceof StructSpaceFieldBase
