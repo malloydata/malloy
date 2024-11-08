@@ -44,18 +44,48 @@ describe.each(runtimes.runtimeList)(
       });
       test('array literal in source', async () => {
         await expect(`
-          run: duckdb.sql("select 1") extend { dimension: d1 is [1,2,3,4,5,6] }
-          -> { select: die_roll is d1.each }
+          run: duckdb.sql("select 1")
+          extend { dimension: d4 is [1,2,3,4] }
+          -> { select: die_roll is d4.each }
         `).malloyResultMatches(runtime, [
           {die_roll: 1},
           {die_roll: 2},
           {die_roll: 3},
           {die_roll: 4},
-          {die_roll: 5},
-          {die_roll: 6},
         ]);
       });
-      test.todo('cross join two arrays');
+      test('array literal in extend block', async () => {
+        await expect(`
+          run: duckdb.sql("select 1") -> {
+            extend: { dimension: d4 is [1,2,3,4] }
+            select: die_roll is d4.each
+          }
+        `).malloyResultMatches(runtime, [
+          {die_roll: 1},
+          {die_roll: 2},
+          {die_roll: 3},
+          {die_roll: 4},
+        ]);
+      });
+      test.skip('cross join arrays', async () => {
+        await expect(`
+          # test.verbose
+          run: duckdb.sql("select 1") extend {
+            dimension: d1 is [1,2,3,4], d2 is [1,2,3,4]
+          } -> {
+            group_by: roll is d1.each + d2.each
+            aggregate: rolls is count()
+          }
+        `).malloyResultMatches(runtime, [
+          {roll: 2, rolls: 1},
+          {roll: 3, rolls: 2},
+          {roll: 4, rolls: 3},
+          {roll: 5, rolls: 4},
+          {roll: 6, rolls: 3},
+          {roll: 7, rolls: 2},
+          {roll: 8, rolls: 1},
+        ]);
+      });
     });
     describe('record', () => {
       const record = 'duckdb.sql("SELECT {s: 0, m: 1, l:2, xl: 3} as record")';
@@ -70,10 +100,23 @@ describe.each(runtimes.runtimeList)(
           'record/xl': 3,
         });
       });
-      test('record literal', async () => {
+      test('record literal can be selected', async () => {
         await expect(`
           run: duckdb.sql("select 1") -> {
             select: record is {s is 0, m is 1, l is 2, xl is 3}
+          }
+        `).malloyResultMatches(runtime, {
+          'record/s': 0,
+          'record/m': 1,
+          'record/l': 2,
+          'record/xl': 3,
+        });
+      });
+      test('record literal from a source', async () => {
+        await expect(`
+          run: duckdb.sql("select 1") -> {
+            extend: { dimension: record is {s is 0, m is 1, l is 2, xl is 3} }
+            select: record
           }
         `).malloyResultMatches(runtime, {
           'record/s': 0,

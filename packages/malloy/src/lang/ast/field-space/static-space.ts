@@ -72,7 +72,7 @@ export class StaticSpace implements FieldSpace {
 
   defToSpaceField(from: FieldDef): SpaceField {
     if (isJoined(from)) {
-      return new StructSpaceField(from, this.fromStruct.dialect);
+      return new StructSpaceField(from);
     } else if (isTurtleDef(from)) {
       return new IRViewField(this, from);
     }
@@ -138,7 +138,7 @@ export class StaticSpace implements FieldSpace {
   lookup(path: FieldName[]): LookupResult {
     const head = path[0];
     const rest = path.slice(1);
-    const found = this.entry(head.refString);
+    let found = this.entry(head.refString);
     if (!found) {
       return {
         error: {
@@ -151,9 +151,16 @@ export class StaticSpace implements FieldSpace {
     if (found instanceof SpaceField) {
       const definition = found.fieldDef();
       if (definition) {
+        if (isJoined(definition)) {
+          // We have looked up a field which is a join, but not a StructSpaceField
+          // because it is someting like "dimension: joinedArray is arrayComputation"
+          // so it is a FieldDefinitionValue.
+          // TODO don't make one of these every time you do a lookup
+          found = new StructSpaceField(definition);
+        }
         head.addReference({
           type:
-            found instanceof StructSpaceFieldBase
+            found instanceof StructSpaceFieldBase && path.length > 1
               ? 'joinReference'
               : 'fieldReference',
           definition,
@@ -195,10 +202,8 @@ export class StaticSpace implements FieldSpace {
 }
 
 export class StructSpaceField extends StructSpaceFieldBase {
-  private parentDialect: string;
-  constructor(def: JoinFieldDef, dialect: string) {
+  constructor(def: JoinFieldDef) {
     super(def);
-    this.parentDialect = dialect;
   }
 
   get fieldSpace(): FieldSpace {
