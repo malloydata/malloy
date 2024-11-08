@@ -1052,7 +1052,7 @@ export interface TableSourceDef extends SourceDefBase {
 
 export interface CubeSourceDef extends SourceDefBase {
   type: 'cube';
-  sources: StructRef[];
+  sources: SourceDef[]; // TODO maybe this should be StructRef[], but that makes a lot of stuff harder.
 }
 
 /*

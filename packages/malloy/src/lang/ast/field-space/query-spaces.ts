@@ -44,6 +44,7 @@ import {
   MessageCode,
   MessageParameterType,
 } from '../../parse-log';
+import {resolveCubeSource} from '../../../model/cube_utils';
 
 /**
  * The output space of a query operation. It is not named "QueryOutputSpace"
@@ -157,16 +158,72 @@ export abstract class QueryOperationSpace
     for (const x of expandEntries.sort((a, b) =>
       a.name.localeCompare(b.name)
     )) {
-      this.setEntry(x.name, x.entry);
+      this.newEntry(x.name, wild, x.entry);
     }
   }
 
-  protected setEntry(name: string, value: SpaceEntry): void {
-    super.setEntry(name, value);
-    if (value instanceof SpaceField) {
-      const cubeUsage = value.typeDesc().cubeUsage ?? [];
-      this.cubeUsage.push(...cubeUsage);
+  protected cubeUsageFromEntry(entry: SpaceEntry) {
+    if (entry instanceof SpaceField) {
+      const cubeUsage = entry.typeDesc().cubeUsage ?? [];
+      return cubeUsage;
     }
+    return [];
+  }
+
+  protected addCubeUsageFromEntry(entry: SpaceEntry) {
+    this.addCubeUsage(this.cubeUsageFromEntry(entry));
+  }
+
+  protected addCubeUsage(cubeUsage: string[][]) {
+    this.cubeUsage.push(...cubeUsage);
+  }
+
+  protected addAndValidateCubeUsage(
+    cubeUsage: string[][],
+    logTo: MalloyElement
+  ) {
+    const newCubeUsage = cubeUsage.filter(usage => {
+      return !this.cubeUsage.some(existingUsage => {
+        return existingUsage.every(
+          (pathElement, index) => pathElement === usage[index]
+        );
+      });
+    });
+    this.addCubeUsage(cubeUsage);
+    this.validateCubeUsage(newCubeUsage, logTo);
+  }
+
+  public addCubeUsageFromFilter(
+    filter: model.FilterCondition,
+    logTo: MalloyElement
+  ) {
+    if (filter.cubeUsage !== undefined) {
+      this.addAndValidateCubeUsage(filter.cubeUsage, logTo);
+    }
+  }
+
+  // TODO this will need to be a map from paths to booleans once I support joins...
+  private alreadyInvalidCubeUsage = false;
+  protected validateCubeUsage(newCubeUsage: string[][], logTo: MalloyElement) {
+    if (this.alreadyInvalidCubeUsage) return;
+
+    const source = this.inputSpace().structDef();
+    if (source.type !== 'cube') return; // TODO unless joins are cubes...
+
+    const isValid =
+      resolveCubeSource(source.sources, this.cubeUsage) !== undefined;
+
+    if (!isValid) {
+      logTo.logError('invalid-cube-usage', {
+        newUsage: newCubeUsage,
+        allUsage: [...this.cubeUsage],
+      });
+    }
+  }
+
+  newEntry(name: string, logTo: MalloyElement, entry: SpaceEntry): void {
+    this.addAndValidateCubeUsage(this.cubeUsageFromEntry(entry), logTo);
+    super.newEntry(name, logTo, entry);
   }
 }
 
@@ -184,11 +241,15 @@ export abstract class QuerySpace extends QueryOperationSpace {
         );
         if (refTo.found) {
           this.setEntry(field.path[field.path.length - 1], refTo.found);
+          // TODO check that other extensions of QueryOperationSpace do this too...
+          this.addCubeUsageFromEntry(refTo.found);
         }
       } else if (field.type !== 'turtle') {
         // TODO can you reference fields in a turtle as fields in the output space,
         // e.g. order_by: my_turtle.foo, or lag(my_turtle.foo)
-        this.setEntry(field.as ?? field.name, new ColumnSpaceField(field));
+        const entry = new ColumnSpaceField(field);
+        this.setEntry(field.as ?? field.name, entry);
+        this.addCubeUsageFromEntry(entry);
       }
     }
   }

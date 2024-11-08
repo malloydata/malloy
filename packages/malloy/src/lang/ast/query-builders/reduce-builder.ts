@@ -64,9 +64,6 @@ export abstract class QuerySegmentBuilder implements QueryBuilder {
     }
     if (qp instanceof DefinitionList) {
       this.resultFS.pushFields(...qp.list);
-    } else if (qp instanceof Filter) {
-      const filterFS = qp.havingClause ? this.resultFS : this.inputFS;
-      this.filters.push(...qp.getFilterList(filterFS));
     } else if (qp instanceof Top) {
       if (this.limit) {
         qp.logError(

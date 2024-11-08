@@ -26,10 +26,12 @@ import {
   expressionIsAnalytic,
   FilterCondition,
 } from '../../../model/malloy_types';
+import {isNotUndefined} from '../../utils';
 
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 import {ListOf, MalloyElement} from '../types/malloy-element';
+import {QueryBuilder} from '../types/query-builder';
 import {
   LegalRefinementStage,
   QueryPropertyInterface,
@@ -87,44 +89,62 @@ export class Filter
       : LegalRefinementStage.Head;
   }
 
-  getFilterList(fs: FieldSpace): FilterCondition[] {
-    const checked: FilterCondition[] = [];
-    for (const oneElement of this.list) {
-      const fExpr = oneElement.filterCondition(fs);
+  protected checkedFilterCondition(
+    fs: FieldSpace,
+    filter: FilterElement
+  ): FilterCondition | undefined {
+    const fExpr = filter.filterCondition(fs);
 
-      // mtoy todo is having we never set then queryRefinementStage might be wrong
-      // ... calculations and aggregations must go last
+    // mtoy todo is having we never set then queryRefinementStage might be wrong
+    // ... calculations and aggregations must go last
 
-      // Aggregates are ALSO checked at SQL generation time, but checking
-      // here allows better reflection of errors back to user.
-      if (this.havingClause !== undefined) {
-        const isAggregate = expressionIsAggregate(fExpr.expressionType);
-        const isAnalytic = expressionIsAnalytic(fExpr.expressionType);
-        if (this.havingClause) {
-          if (isAnalytic) {
-            oneElement.logError(
-              'analytic-in-having',
-              'Analytic expressions are not allowed in `having:`'
-            );
-            continue;
-          }
-        } else {
-          if (isAnalytic) {
-            oneElement.logError(
-              'analytic-in-where',
-              'Analytic expressions are not allowed in `where:`'
-            );
-            continue;
-          } else if (isAggregate) {
-            oneElement.logError(
-              'aggregate-in-where',
-              'Aggregate expressions are not allowed in `where:`; use `having:`'
-            );
-          }
+    // Aggregates are ALSO checked at SQL generation time, but checking
+    // here allows better reflection of errors back to user.
+    if (this.havingClause !== undefined) {
+      const isAggregate = expressionIsAggregate(fExpr.expressionType);
+      const isAnalytic = expressionIsAnalytic(fExpr.expressionType);
+      if (this.havingClause) {
+        if (isAnalytic) {
+          filter.logError(
+            'analytic-in-having',
+            'Analytic expressions are not allowed in `having:`'
+          );
+          return;
+        }
+      } else {
+        if (isAnalytic) {
+          filter.logError(
+            'analytic-in-where',
+            'Analytic expressions are not allowed in `where:`'
+          );
+          return;
+        } else if (isAggregate) {
+          filter.logError(
+            'aggregate-in-where',
+            'Aggregate expressions are not allowed in `where:`; use `having:`'
+          );
         }
       }
-      checked.push(fExpr);
     }
-    return checked;
+    return fExpr;
+  }
+
+  getFilterList(fs: FieldSpace): FilterCondition[] {
+    return this.list
+      .map(filter => this.checkedFilterCondition(fs, filter))
+      .filter(isNotUndefined);
+  }
+
+  queryExecute(executeFor: QueryBuilder) {
+    const filterFS = this.havingClause
+      ? executeFor.resultFS
+      : executeFor.inputFS;
+    for (const filter of this.list) {
+      const fExpr = this.checkedFilterCondition(filterFS, filter);
+      if (fExpr !== undefined) {
+        executeFor.filters.push(fExpr);
+        executeFor.resultFS.addCubeUsageFromFilter(fExpr, filter);
+      }
+    }
   }
 }

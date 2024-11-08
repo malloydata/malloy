@@ -23,6 +23,7 @@
 
 import {
   Query,
+  SourceDef,
   StructDef,
   StructRef,
   isQuerySegment,
@@ -36,6 +37,7 @@ import {QueryComp} from '../types/query-comp';
 import {QueryElement} from '../types/query-element';
 import {QueryBase} from './query-base';
 import {View} from '../view-elements/view';
+import {resolveCubeSource} from '../../../model/cube_utils';
 
 /**
  * A query operation that adds segments to a LHS source or query.
@@ -52,7 +54,7 @@ export class QueryArrow extends QueryBase implements QueryElement {
     super({source, view});
   }
 
-  private resolveSourceRef(sourceRef: StructRef): StructDef {
+  private resolveSourceRef(sourceRef: StructRef): SourceDef {
     if (refIsStructDef(sourceRef)) return sourceRef;
     const entry = this.modelEntry(sourceRef); // TODO what about parameters?
     if (entry === undefined) {
@@ -62,42 +64,6 @@ export class QueryArrow extends QueryBase implements QueryElement {
       return entry.entry;
     }
     throw new Error(`Not a source: ${sourceRef}`);
-  }
-
-  private resolveCubeSource(
-    sources: StructRef[],
-    cubeUsage: string[][]
-  ): StructRef {
-    const pickedRef = this.pickCube(sources, cubeUsage); // TODO actually pick the right one
-    if (pickedRef === undefined) {
-      this.logError('invalid-cube-usage', 'Could not resolve cube source');
-      return sources[0];
-    }
-    const pickedDef = refIsStructDef(pickedRef)
-      ? pickedRef
-      : this.resolveSourceRef(pickedRef);
-    if (pickedDef.type === 'cube') {
-      return this.resolveCubeSource(pickedDef.sources, cubeUsage);
-    }
-    return pickedRef;
-  }
-
-  private pickCube(
-    sources: StructRef[],
-    cubeUsage: string[][]
-  ): StructRef | undefined {
-    overSources: for (const source of sources) {
-      const def = this.resolveSourceRef(source);
-      for (const usage of cubeUsage) {
-        // TODO handle joins
-        if (usage.length === 1) {
-          if (def.fields.find(f => f.as ?? f.name === usage[0]) === undefined) {
-            continue overSources;
-          }
-        }
-      }
-      return source;
-    }
   }
 
   queryComp(isRefOk: boolean): QueryComp {
@@ -134,14 +100,19 @@ export class QueryArrow extends QueryBase implements QueryElement {
 
     // TODO move the selected cube into a "cubeResolvedStructRef"
     if (inputStruct.type === 'cube' && isQuerySegment(pipeline[0])) {
-      const structRef = this.resolveCubeSource(
+      // const cubeSources = inputStruct.sources.map(ref =>
+      //   this.resolveSourceRef(ref)
+      // );
+      const structRef = resolveCubeSource(
         inputStruct.sources,
         pipeline[0].cubeUsage ?? []
       );
-      queryBase = {
-        ...queryBase,
-        structRef,
-      };
+      if (structRef !== undefined) {
+        queryBase = {
+          ...queryBase,
+          structRef,
+        };
+      }
       // fieldSpace = new StaticSpace(this.resolveSourceRef(structRef));
     }
 

@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {formatCubeUsages} from '../model/cube_utils';
 import {DocumentLocation, ExpressionValueType} from '../model/malloy_types';
 import {EventStream} from '../runtime_types';
 
@@ -192,7 +193,7 @@ type MessageParameterTypes = {
   'unexpected-element-type': string;
   'field-not-found': string;
   'invalid-cube-input': string;
-  'invalid-cube-usage': string;
+  'invalid-cube-usage': {newUsage: string[][]; allUsage: string[][]};
   'empty-cube-source': string;
   'unnecessary-cube-source': string;
   'cube-source-atomic-only': string;
@@ -422,6 +423,12 @@ export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
     `Case when expression must be boolean, not ${e.whenType}`,
   'case-when-type-does-not-match': e =>
     `Case when type ${e.whenType} does not match value type ${e.valueType}`,
+  'invalid-cube-usage': e => {
+    const formattedNewCubeUsage = formatCubeUsages(e.newUsage);
+    const formattedAllCubeUsage = formatCubeUsages(e.allUsage);
+    const pluralUse = e.newUsage.length > 1 ? 's' : '';
+    return `This operation uses cube field${pluralUse} ${formattedNewCubeUsage}, resulting in invalid usage of the a cube source, as there is no cube input source which defines all of ${formattedAllCubeUsage}`;
+  },
 };
 
 export type MessageCode = keyof MessageParameterTypes;

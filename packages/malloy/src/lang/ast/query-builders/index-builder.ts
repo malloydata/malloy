@@ -64,7 +64,7 @@ export class IndexBuilder implements QueryBuilder {
 
   execute(qp: QueryProperty): void {
     if (qp instanceof Filter) {
-      this.filters.push(...qp.getFilterList(this.inputFS));
+      qp.queryExecute(this);
     } else if (qp instanceof Limit) {
       if (this.limit) {
         this.limit.logError(
