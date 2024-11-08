@@ -159,6 +159,9 @@ export class StaticSpace implements FieldSpace {
           found = new StructSpaceField(definition);
         }
         // cswenson review todo I don't know how to count the reference properly now
+        // i tried only writing it as a join reference if there was more in the path
+        // but that failed because lookup([JOINNAME]) is called when translating JOINNAME.AGGREGATE(...)
+        // with a 1-length-path but that IS a join reference and there is a test
         head.addReference({
           type:
             found instanceof StructSpaceFieldBase
