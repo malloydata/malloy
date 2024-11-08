@@ -16,7 +16,7 @@ import {getRangeSize, isFirstChild, isLastChild} from '../util';
 import {getTableLayout} from './table-layout';
 import {useResultContext} from '../result-context';
 import {createTableStore, TableContext, useTableContext} from './table-context';
-import './table.css';
+import tableCss from './table.css?raw';
 import {applyRenderer, shouldRenderAs} from '../apply-renderer';
 import {isFieldHidden} from '../../tags_utils';
 import {createStore, produce} from 'solid-js/store';
@@ -640,6 +640,11 @@ const MalloyTable: Component<{
       headerSizeStore: createStore({}),
     };
   });
+
+  if (tableCtx().root) {
+    const config = useConfig();
+    config.addCSSToShadowRoot(tableCss);
+  }
 
   return (
     <TableContext.Provider value={tableCtx()}>

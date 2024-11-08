@@ -1,0 +1,14 @@
+.malloy-chart {
+  width: fit-content;
+  height: fit-content;
+  font-variant-numeric: tabular-nums;
+  position: relative;
+}
+
+.malloy-chart_debug_menu {
+  border: 1px solid black;
+  width: fit-content;
+  position: absolute;
+  top: 0px;
+  right: 0px;
+}

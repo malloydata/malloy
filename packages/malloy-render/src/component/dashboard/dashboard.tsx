@@ -6,13 +6,13 @@
  */
 
 import {DataArray, DataRecord, Field} from '@malloydata/malloy';
-import './dashboard.css';
 import {createMemo, For} from 'solid-js';
 import {applyRenderer} from '../apply-renderer';
 import {useResultContext} from '../result-context';
 import {RenderResultMetadata} from '../types';
 import {createVirtualizer, Virtualizer} from '@tanstack/solid-virtual';
 import {useConfig} from '../render';
+import dashboardCss from './dashboard.css?raw';
 
 function DashboardItem(props: {
   field: Field;
@@ -133,6 +133,9 @@ export function Dashboard(props: {data: DataArray; scrollEl?: HTMLElement}) {
   const items = virtualizer.getVirtualItems();
 
   const resultMetadata = useResultContext();
+
+  const config = useConfig();
+  config.addCSSToShadowRoot(dashboardCss);
 
   return (
     <div
