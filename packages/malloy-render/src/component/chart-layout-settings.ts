@@ -22,7 +22,7 @@
  */
 
 import {Explore, ExploreField, Field, Tag} from '@malloydata/malloy';
-import {scale, locale} from 'vega';
+import {scale, locale, AlignValue, TextBaselineValue} from 'vega';
 import {getFieldKey, getTextWidthDOM} from './util';
 import {RenderResultMetadata} from './types';
 import {renderNumericField} from './render-numeric-field';
@@ -32,8 +32,8 @@ export type ChartLayoutSettings = {
   plotHeight: number;
   xAxis: {
     labelAngle: number;
-    labelAlign?: string;
-    labelBaseline?: string;
+    labelAlign?: AlignValue;
+    labelBaseline?: TextBaselineValue;
     labelLimit: number;
     height: number;
     titleSize: number;
@@ -109,8 +109,8 @@ export function getChartLayoutSettings(
   let xAxisHeight = 0;
   let yAxisWidth = 0;
   let labelAngle = -90;
-  let labelAlign: string | undefined = 'right';
-  let labelBaseline = 'middle';
+  let labelAlign: AlignValue | undefined = 'right';
+  let labelBaseline: TextBaselineValue | undefined = 'middle';
   let labelLimit = 0;
   let xTitleSize = 0;
   let yTitleSize = 0;

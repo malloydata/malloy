@@ -14,18 +14,23 @@ import {
   QueryDataRow,
   Tag,
 } from '@malloydata/malloy';
-import {Item, Runtime, View} from 'vega';
+import {Item, Runtime, Spec, View} from 'vega';
 import {JSX} from 'solid-js';
 import {ResultStore} from './result-store/result-store';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Vega does not have good TS support
-export type VegaSpec = any;
+export type VegaSignalRef = {signal: string};
+export type VegaPadding = {
+  top?: number;
+  left?: number;
+  right?: number;
+  bottom?: number;
+};
 export type MalloyDataToChartDataHandler = (
   field: Explore,
   data: QueryData
 ) => unknown[];
 export type VegaChartProps = {
-  spec: VegaSpec;
+  spec: Spec;
   plotWidth: number;
   plotHeight: number;
   totalWidth: number;

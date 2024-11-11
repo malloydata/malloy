@@ -5,9 +5,9 @@
  *  LICENSE file in the root directory of this source tree.
  */
 
+import {Axis, GroupMark, RectMark} from 'vega';
 import {ChartLayoutSettings} from '../chart-layout-settings';
 import {grayMedium} from './base-vega-config';
-import {VegaSpec} from '../types';
 
 type MeasureAxisOptions = {
   type: 'y';
@@ -30,7 +30,7 @@ export function createMeasureAxis({
   showBrushes = true,
   axisSettings,
 }: MeasureAxisOptions) {
-  const axis: VegaSpec = {
+  const axis: Axis = {
     orient: 'left',
     scale: 'yscale',
     title: title,
@@ -120,7 +120,7 @@ type AxisOverlayOptions = {
 };
 
 function createAxisOverlay(options: AxisOverlayOptions) {
-  const axisOverlay: VegaSpec = {
+  const axisOverlay: RectMark = {
     name: `${options.type}_axis_overlay`,
     type: 'rect',
     encode: {
@@ -128,7 +128,7 @@ function createAxisOverlay(options: AxisOverlayOptions) {
     },
   };
 
-  axisOverlay.encode.enter = {
+  axisOverlay.encode!.enter = {
     x: {
       value: -options.axisSettings.width! + options.axisSettings.yTitleSize!,
     },
@@ -161,7 +161,7 @@ function createAxisReferenceLines(options: AxisReferenceLineOptions) {
   const yPositionSignalWithOffset = (offset = 0) =>
     `brushMeasureIn !== "empty" ? (scale("yscale",brushMeasureIn) + ${offset}) : 0`;
 
-  const referenceLines: VegaSpec = {
+  const referenceLines: GroupMark = {
     name: 'y_reference_line_group',
     type: 'group',
     marks: [
