@@ -45,7 +45,7 @@ export abstract class SpaceField extends SpaceEntry {
         // field has an e whic is a cube field, then the cube usage should be just the name of the field.
         def.cubeUsage ??
         (def.e?.node === 'cubeField'
-          ? {fields: {[def.as ?? def.name]: true}, joinedUsage: {}}
+          ? {fields: [def.as ?? def.name], joinedUsage: {}}
           : emptyCubeUsage()),
     };
     return ref;

@@ -6,15 +6,15 @@
  */
 
 import {isNotUndefined} from '../lang/utils';
-import {CubeUsage, RecordSet, SourceDef} from './malloy_types';
+import {CubeUsage, SourceDef} from './malloy_types';
 
 // TODO handle joins...
-export function resolveCubeSource(
+export function resolveCubeSources(
   sources: SourceDef[],
   cubeUsage: CubeUsage
 ): SourceDef | undefined {
   overSources: for (const source of sources) {
-    for (const usage in cubeUsage.fields) {
+    for (const usage of cubeUsage.fields) {
       // TODO handle joins
       if (source.fields.find(f => f.as ?? f.name === usage) === undefined) {
         continue overSources;
@@ -26,7 +26,7 @@ export function resolveCubeSource(
 
 export function cubeUsagePaths(cubeUsage: CubeUsage): string[][] {
   return [
-    ...Object.keys(cubeUsage.fields).map(f => [f]),
+    ...cubeUsage.fields.map(f => [f]),
     ...Object.entries(cubeUsage.joinedUsage)
       .map(([joinName, joinedUsage]) =>
         cubeUsagePaths(joinedUsage).map(path => [joinName, ...path])
@@ -44,7 +44,7 @@ export function formatCubeUsages(cubeUsage: CubeUsage) {
 function countCubeUsage(cubeUsage: CubeUsage): number {
   return Object.values(cubeUsage.joinedUsage).reduce(
     (a, b) => a + countCubeUsage(b),
-    Object.keys(cubeUsage.fields).length
+    cubeUsage.fields.length
   );
 }
 
@@ -56,14 +56,8 @@ export function formatCubeUsage(cubeUsage: string[]) {
   return `\`${cubeUsage.join('.')}\``;
 }
 
-export function makeRecordSet<T extends number | string | symbol>(
-  ...values: T[]
-): RecordSet<T> {
-  const ret: RecordSet<T> = {};
-  for (const value of values) {
-    ret[value] = true;
-  }
-  return ret;
+export function unique<T>(values: T[]): T[] {
+  return Array.from(new Set(values));
 }
 
 export function mergeCubeUsage(...usages: CubeUsage[]): CubeUsage {
@@ -75,30 +69,31 @@ export function mergeCubeUsage(...usages: CubeUsage[]): CubeUsage {
     );
   }
   return {
-    fields: makeRecordSet(...usages.map(u => Object.keys(u.fields)).flat()),
+    fields: unique(usages.map(u => u.fields).flat()),
     joinedUsage,
   };
 }
 
 export function emptyCubeUsage(): CubeUsage {
-  return {fields: {}, joinedUsage: {}};
+  return {fields: [], joinedUsage: {}};
 }
 
-function recordSetDifference<T extends string | number | symbol>(
-  a: RecordSet<T>,
-  b: RecordSet<T>
-): RecordSet<T> {
-  const ret: RecordSet<T> = {};
-  for (const key in a) {
-    if (key in b) continue;
-    ret[key] = true;
+function arrayDifference<T extends string | number | symbol>(
+  a: T[],
+  b: T[]
+): T[] {
+  const bSet = new Set(b);
+  const ret: T[] = [];
+  for (const value of a) {
+    if (value in bSet) continue;
+    ret.push(value);
   }
   return ret;
 }
 
 export function cubeUsageDifference(a: CubeUsage, b: CubeUsage): CubeUsage {
   return {
-    fields: recordSetDifference(a.fields, b.fields),
+    fields: arrayDifference(a.fields, b.fields),
     joinedUsage: Object.fromEntries(
       Object.entries(a.joinedUsage)
         .map(
@@ -121,7 +116,7 @@ export function joinedCubeUsage(
 ): CubeUsage {
   if (joinPath.length === 0) return cubeUsage;
   return joinedCubeUsage(joinPath.slice(0, -1), {
-    fields: {},
+    fields: [],
     joinedUsage: {[joinPath[joinPath.length - 1]]: cubeUsage},
   });
 }

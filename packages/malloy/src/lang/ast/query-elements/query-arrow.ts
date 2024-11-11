@@ -34,7 +34,7 @@ import {QueryComp} from '../types/query-comp';
 import {QueryElement} from '../types/query-element';
 import {QueryBase} from './query-base';
 import {View} from '../view-elements/view';
-import {emptyCubeUsage, resolveCubeSource} from '../../../model/cube_utils';
+import {emptyCubeUsage, resolveCubeSources} from '../../../model/cube_utils';
 
 /**
  * A query operation that adds segments to a LHS source or query.
@@ -84,7 +84,7 @@ export class QueryArrow extends QueryBase implements QueryElement {
     // TODO add an error if a raw/index query is done against a cube
 
     if (inputStruct.type === 'cube' && isQuerySegment(pipeline[0])) {
-      const sourceDef = resolveCubeSource(
+      const sourceDef = resolveCubeSources(
         inputStruct.sources,
         pipeline[0].cubeUsage ?? emptyCubeUsage()
       );

@@ -48,7 +48,7 @@ import {
   cubeUsageDifference,
   emptyCubeUsage,
   mergeCubeUsage,
-  resolveCubeSource,
+  resolveCubeSources,
 } from '../../../model/cube_utils';
 
 /**
@@ -213,7 +213,7 @@ export abstract class QueryOperationSpace
     if (source.type !== 'cube') return; // TODO unless joins are cubes...
 
     const isValid =
-      resolveCubeSource(source.sources, this.cubeUsage) !== undefined;
+      resolveCubeSources(source.sources, this.cubeUsage) !== undefined;
 
     if (!isValid) {
       logTo.logError('invalid-cube-usage', {

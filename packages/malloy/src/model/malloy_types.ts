@@ -1010,12 +1010,8 @@ export function isIndexSegment(pe: PipeSegment): pe is IndexSegment {
   return (pe as IndexSegment).type === 'index';
 }
 
-export type RecordSet<T extends string | number | symbol> = Partial<
-  Record<T, true>
->;
-
 export interface CubeUsage {
-  fields: RecordSet<string>;
+  fields: string[];
   joinedUsage: Record<string, CubeUsage>;
 }
 

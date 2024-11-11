@@ -94,7 +94,7 @@ export class CubeSource extends Source {
             name: fieldName,
             as: undefined,
             e: {node: 'cubeField'},
-            cubeUsage: {fields: {[fieldName]: true}, joinedUsage: {}},
+            cubeUsage: {fields: [fieldName], joinedUsage: {}},
             // TODO code and location are wrong...
           };
           fields.push(cubeField);
