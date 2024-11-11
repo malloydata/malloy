@@ -1452,12 +1452,16 @@ class QueryFieldUnsupported extends AbstractQueryAtomic<NativeUnsupportedFieldDe
 class QueryFieldDate extends AbstractQueryAtomic<DateFieldDef> {
   generateExpression(resultSet: FieldInstanceResult): string {
     const fd = this.fieldDef;
+    const superExpr = super.generateExpression(resultSet);
     if (!fd.timeframe) {
-      return super.generateExpression(resultSet);
+      return superExpr;
     } else {
       const truncated: TimeTruncExpr = {
         node: 'trunc',
-        e: mkTemporal(this.getExpr(), 'date'),
+        e: mkTemporal(
+          {node: 'genericSQLExpr', src: [superExpr], kids: {args: []}},
+          'date'
+        ),
         units: fd.timeframe,
       };
       return this.exprToSQL(resultSet, this.parent, truncated);
