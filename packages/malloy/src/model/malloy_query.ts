@@ -1367,45 +1367,23 @@ class QueryField extends QueryNode {
     );
   }
 
-  getExpr(): Expr {
-    if (hasExpression(this.fieldDef)) {
-      return this.fieldDef.e;
-    }
-    const pType = this.parent.structDef.type;
-    return {
-      node: 'genericSQLExpr',
-      kids: {args: []},
-      src: [
-        this.parent.dialect.sqlFieldReference(
-          this.parent.getSQLIdentifier(),
-          this.fieldDef.name,
-          this.fieldDef.type,
-          pType === 'record' || pType === 'array' || pType === 'nest_source',
-          isScalarArray(this.parent.structDef)
-        ),
-      ],
-    };
-  }
-
   generateExpression(resultSet: FieldInstanceResult): string {
-    const parentDef = this.parent.structDef;
-    if (
-      !hasExpression(this.fieldDef) &&
-      parentDef.type === 'record' &&
-      hasExpression(parentDef)
-    ) {
-      // mtoy todo verify "context" with lloyd
-      const name = this.exprToSQL(resultSet, this.parent, parentDef.e);
-      const pType = parentDef.type;
-      return this.parent.dialect.sqlFieldReference(
-        name,
-        this.fieldDef.name,
-        this.fieldDef.type,
-        pType === 'record' || pType === 'array' || pType === 'nest_source',
-        isScalarArray(this.parent.structDef)
-      );
+    if (hasExpression(this.fieldDef)) {
+      return this.exprToSQL(resultSet, this.parent, this.fieldDef.e);
     }
-    return this.exprToSQL(resultSet, this.parent, this.getExpr());
+    const parentDef = this.parent.structDef;
+    const pType = parentDef.type;
+    const name =
+      parentDef.type === 'record' && hasExpression(parentDef)
+        ? this.exprToSQL(resultSet, this.parent, parentDef.e)
+        : this.parent.getSQLIdentifier();
+    return this.parent.dialect.sqlFieldReference(
+      name,
+      this.fieldDef.name,
+      this.fieldDef.type,
+      pType === 'record' || pType === 'array' || pType === 'nest_source',
+      isScalarArray(this.parent.structDef)
+    );
   }
 }
 
