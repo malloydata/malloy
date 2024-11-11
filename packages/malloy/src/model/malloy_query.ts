@@ -1388,6 +1388,23 @@ class QueryField extends QueryNode {
   }
 
   generateExpression(resultSet: FieldInstanceResult): string {
+    const parentDef = this.parent.structDef;
+    if (
+      !hasExpression(this.fieldDef) &&
+      parentDef.type === 'record' &&
+      hasExpression(parentDef)
+    ) {
+      // mtoy todo verify "context" with lloyd
+      const name = this.exprToSQL(resultSet, this.parent, parentDef.e);
+      const pType = parentDef.type;
+      return this.parent.dialect.sqlFieldReference(
+        name,
+        this.fieldDef.name,
+        this.fieldDef.type,
+        pType === 'record' || pType === 'array' || pType === 'nest_source',
+        isScalarArray(this.parent.structDef)
+      );
+    }
     return this.exprToSQL(resultSet, this.parent, this.getExpr());
   }
 }

@@ -2,7 +2,7 @@
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
- *  LICENSE file in the root directory of this source tree.
+ * LICENSE file in the root directory of this source tree.
  */
 
 import {RuntimeList, allDatabases} from '../../runtimes';
@@ -127,7 +127,8 @@ describe.each(runtimes.runtimeList)(
         await expect(`
           # test.verbose
           run: duckdb.sql("select 1") extend {
-            dimension: d1 is [1,2,3,4], d2 is [1,2,3,4]
+            dimension: d1 is [1,2,3,4]
+            join_cross: d2 is [1,2,3,4]
           } -> {
             group_by: roll is d1.each + d2.each
             aggregate: rolls is count()
@@ -182,12 +183,16 @@ describe.each(runtimes.runtimeList)(
           }
         `).malloyResultMatches(runtime, rec_eq());
       });
-      test('record.property from a source', async () => {
+      test('computed record.property from a source', async () => {
         await expect(`
-          #! test.debug
           run: duckdb.sql("select 1")
             extend { dimension: record is {s is 0, m is 1, l is 2, xl is 3} }
             -> { select: small is record.s }
+        `).malloyResultMatches(runtime, {small: 0});
+      });
+      test('record.property normal', async () => {
+        await expect(`
+          run: ${sizes} -> { select: small is sizes.s }
         `).malloyResultMatches(runtime, {small: 0});
       });
       test('record.property from an extend block', async () => {
