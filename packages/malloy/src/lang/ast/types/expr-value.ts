@@ -29,6 +29,7 @@ import {
   maxOfExpressionTypes,
   mergeEvalSpaces,
 } from '../../../model';
+import {emptyCubeUsage, mergeCubeUsage} from '../../../model/cube_utils';
 import {ExprResult} from './expr-result';
 import {TimeResult} from './time-result';
 
@@ -48,7 +49,7 @@ export function computedExprValue({
     value,
     expressionType: maxOfExpressionTypes(from.map(e => e.expressionType)),
     evalSpace: mergeEvalSpaces(...from.map(e => e.evalSpace)),
-    cubeUsage: from.map(e => e.cubeUsage).flat(),
+    cubeUsage: mergeCubeUsage(...from.map(e => e.cubeUsage)),
   };
 }
 
@@ -69,7 +70,7 @@ export function computedTimeResult({
     expressionType: xv.expressionType,
     evalSpace: xv.evalSpace,
     value: xv.value,
-    cubeUsage: from.map(e => e.cubeUsage).flat(),
+    cubeUsage: mergeCubeUsage(...from.map(e => e.cubeUsage)),
   };
   if (timeframe) {
     y.timeframe = timeframe;
@@ -116,7 +117,7 @@ export function literalTimeResult({
     expressionType: xv.expressionType,
     evalSpace: xv.evalSpace,
     value: xv.value,
-    cubeUsage: [],
+    cubeUsage: emptyCubeUsage(),
   };
   if (timeframe) {
     y.timeframe = timeframe;

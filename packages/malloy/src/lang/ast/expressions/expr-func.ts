@@ -53,6 +53,7 @@ import {ExpressionDef} from '../types/expression-def';
 import {FieldName, FieldSpace} from '../types/field-space';
 import {composeSQLExpr, SQLExprElement} from '../../../model/utils';
 import * as TDU from '../typedesc-utils';
+import {mergeCubeUsage} from '../../../model/cube_utils';
 
 export class ExprFunc extends ExpressionDef {
   elementType = 'function call()';
@@ -436,7 +437,7 @@ export class ExprFunc extends ExpressionDef {
       expressionType,
       value: funcCall,
       evalSpace,
-      cubeUsage: argExprs.map(e => e.cubeUsage).flat(),
+      cubeUsage: mergeCubeUsage(...argExprs.map(e => e.cubeUsage)),
     };
   }
 }

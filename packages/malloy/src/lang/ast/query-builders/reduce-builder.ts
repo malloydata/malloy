@@ -22,6 +22,7 @@
  */
 
 import {
+  CubeUsage,
   FilterCondition,
   PartialSegment,
   PipeSegment,
@@ -47,6 +48,7 @@ import {
 import {DefinitionList} from '../types/definition-list';
 import {QueryInputSpace} from '../field-space/query-input-space';
 import {MalloyElement} from '../types/malloy-element';
+import {emptyCubeUsage, mergeCubeUsage} from '../../../model/cube_utils';
 
 export abstract class QuerySegmentBuilder implements QueryBuilder {
   order?: Top | Ordering;
@@ -106,11 +108,11 @@ export abstract class QuerySegmentBuilder implements QueryBuilder {
 
   abstract finalize(fromSeg: PipeSegment | undefined): PipeSegment;
 
-  get cubeUsage(): string[][] {
-    return [
-      ...this.resultFS.cubeUsage,
-      ...this.filters.map(f => f.cubeUsage ?? []).flat(),
-    ];
+  get cubeUsage(): CubeUsage {
+    return mergeCubeUsage(
+      this.resultFS.cubeUsage,
+      ...this.filters.map(f => f.cubeUsage ?? emptyCubeUsage())
+    );
   }
 
   refineFrom(from: PipeSegment | undefined, to: QuerySegment): void {
@@ -153,8 +155,10 @@ export abstract class QuerySegmentBuilder implements QueryBuilder {
     }
 
     const fromCubeUsage =
-      from && isQuerySegment(from) ? from.cubeUsage ?? [] : [];
-    to.cubeUsage = [...fromCubeUsage, ...this.cubeUsage];
+      from && isQuerySegment(from)
+        ? from.cubeUsage ?? emptyCubeUsage()
+        : emptyCubeUsage();
+    to.cubeUsage = mergeCubeUsage(fromCubeUsage, this.cubeUsage);
   }
 }
 

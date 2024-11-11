@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {emptyCubeUsage} from '../../../model/cube_utils';
 import {isSourceDef, JoinFieldDef, TypeDesc} from '../../../model/malloy_types';
 import * as TDU from '../typedesc-utils';
 import {FieldSpace} from '../types/field-space';
@@ -52,14 +53,14 @@ export abstract class StructSpaceFieldBase extends SpaceField {
         type: this.structDef.type,
         evalSpace: 'input',
         expressionType: 'scalar',
-        cubeUsage: this.structDef.onCubeUsage ?? [],
+        cubeUsage: this.structDef.onCubeUsage ?? emptyCubeUsage(),
       };
     }
     return {
       ...TDU.atomicDef(this.structDef),
       evalSpace: 'input',
       expressionType: 'scalar',
-      cubeUsage: this.structDef.onCubeUsage ?? [],
+      cubeUsage: this.structDef.onCubeUsage ?? emptyCubeUsage(),
     };
   }
 }

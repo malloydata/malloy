@@ -150,7 +150,7 @@ export interface FilterCondition extends ExprE {
   node: 'filterCondition';
   code: string;
   expressionType: ExpressionType;
-  cubeUsage?: string[][];
+  cubeUsage?: CubeUsage;
 }
 
 export interface FilteredExpr extends ExprWithKids {
@@ -390,7 +390,7 @@ export type ExpressionType =
 
 export interface Expression {
   e?: Expr;
-  cubeUsage?: string[][]; // TODO maybe make required?
+  cubeUsage?: CubeUsage; // TODO maybe make required?
   expressionType?: ExpressionType;
   code?: string;
 }
@@ -764,7 +764,7 @@ export interface JoinBase {
   join: JoinType;
   matrixOperation?: MatrixOperation;
   onExpression?: Expr;
-  onCubeUsage?: string[][];
+  onCubeUsage?: CubeUsage;
 }
 
 export type Joinable =
@@ -1010,6 +1010,15 @@ export function isIndexSegment(pe: PipeSegment): pe is IndexSegment {
   return (pe as IndexSegment).type === 'index';
 }
 
+export type RecordSet<T extends string | number | symbol> = Partial<
+  Record<T, true>
+>;
+
+export interface CubeUsage {
+  fields: RecordSet<string>;
+  joinedUsage: Record<string, CubeUsage>;
+}
+
 export interface QuerySegment extends Filtered {
   type: 'reduce' | 'project' | 'partial';
   queryFields: QueryFieldDef[];
@@ -1019,7 +1028,7 @@ export interface QuerySegment extends Filtered {
   orderBy?: OrderBy[]; // uses output field name or index.
   queryTimezone?: string;
   alwaysJoins?: string[];
-  cubeUsage?: string[][];
+  cubeUsage?: CubeUsage;
 }
 
 export interface TurtleDef extends NamedObject, Pipeline {
@@ -1174,7 +1183,7 @@ export type LeafExpressionType = Exclude<
 export type TypeInfo = {
   expressionType: ExpressionType;
   evalSpace: EvalSpace;
-  cubeUsage: string[][];
+  cubeUsage: CubeUsage;
 };
 
 export type TypeDesc = ExpressionValueTypeDef & TypeInfo;

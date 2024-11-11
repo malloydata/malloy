@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {emptyCubeUsage} from '../../model/cube_utils';
 import {ExprValue} from './types/expr-value';
 
 /**
@@ -37,6 +38,6 @@ export function errorFor(reason: string): ExprValue {
     expressionType: 'scalar',
     value: {node: 'error', message: reason},
     evalSpace: 'constant',
-    cubeUsage: [],
+    cubeUsage: emptyCubeUsage(),
   };
 }

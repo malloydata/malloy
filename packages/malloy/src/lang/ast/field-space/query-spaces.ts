@@ -44,7 +44,12 @@ import {
   MessageCode,
   MessageParameterType,
 } from '../../parse-log';
-import {resolveCubeSource} from '../../../model/cube_utils';
+import {
+  cubeUsageDifference,
+  emptyCubeUsage,
+  mergeCubeUsage,
+  resolveCubeSource,
+} from '../../../model/cube_utils';
 
 /**
  * The output space of a query operation. It is not named "QueryOutputSpace"
@@ -59,7 +64,7 @@ export abstract class QueryOperationSpace
   protected exprSpace: QueryInputSpace;
   abstract readonly segmentType: 'reduce' | 'project' | 'index';
   expandedWild: Record<string, string[]> = {};
-  cubeUsage: string[][] = [];
+  cubeUsage: model.CubeUsage = emptyCubeUsage();
 
   constructor(
     readonly queryInputSpace: SourceFieldSpace,
@@ -167,28 +172,22 @@ export abstract class QueryOperationSpace
       const cubeUsage = entry.typeDesc().cubeUsage ?? [];
       return cubeUsage;
     }
-    return [];
+    return emptyCubeUsage();
   }
 
   protected addCubeUsageFromEntry(entry: SpaceEntry) {
     this.addCubeUsage(this.cubeUsageFromEntry(entry));
   }
 
-  protected addCubeUsage(cubeUsage: string[][]) {
-    this.cubeUsage.push(...cubeUsage);
+  protected addCubeUsage(cubeUsage: model.CubeUsage) {
+    this.cubeUsage = mergeCubeUsage(this.cubeUsage, cubeUsage);
   }
 
   protected addAndValidateCubeUsage(
-    cubeUsage: string[][],
+    cubeUsage: model.CubeUsage,
     logTo: MalloyElement
   ) {
-    const newCubeUsage = cubeUsage.filter(usage => {
-      return !this.cubeUsage.some(existingUsage => {
-        return existingUsage.every(
-          (pathElement, index) => pathElement === usage[index]
-        );
-      });
-    });
+    const newCubeUsage = cubeUsageDifference(cubeUsage, this.cubeUsage);
     this.addCubeUsage(cubeUsage);
     this.validateCubeUsage(newCubeUsage, logTo);
   }
@@ -204,7 +203,10 @@ export abstract class QueryOperationSpace
 
   // TODO this will need to be a map from paths to booleans once I support joins...
   private alreadyInvalidCubeUsage = false;
-  protected validateCubeUsage(newCubeUsage: string[][], logTo: MalloyElement) {
+  protected validateCubeUsage(
+    newCubeUsage: model.CubeUsage,
+    logTo: MalloyElement
+  ) {
     if (this.alreadyInvalidCubeUsage) return;
 
     const source = this.inputSpace().structDef();
@@ -216,7 +218,7 @@ export abstract class QueryOperationSpace
     if (!isValid) {
       logTo.logError('invalid-cube-usage', {
         newUsage: newCubeUsage,
-        allUsage: [...this.cubeUsage],
+        allUsage: this.cubeUsage,
       });
     }
   }

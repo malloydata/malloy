@@ -26,6 +26,7 @@ import {ExprValue} from '../types/expr-value';
 import {FieldReference} from '../query-items/field-references';
 import {FieldSpace} from '../types/field-space';
 import {ExpressionDef} from '../types/expression-def';
+import { joinedCubeUsage } from '../../../model/cube_utils';
 
 export class ExprIdReference extends ExpressionDef {
   elementType = 'ExpressionIdReference';
@@ -46,7 +47,7 @@ export class ExprIdReference extends ExpressionDef {
       .slice(0, -1);
     if (def.found) {
       const td = def.found.typeDesc();
-      const cubeUsage = td.cubeUsage.map(use => [...cubeJoinUsage, ...use]);
+      const cubeUsage = joinedCubeUsage(cubeJoinUsage, td.cubeUsage);
       if (def.isOutputField) {
         return {
           ...td,

@@ -29,6 +29,7 @@ import {
 } from '../../../model/malloy_types';
 import {SpaceEntry} from './space-entry';
 import {FieldSpace} from './field-space';
+import {emptyCubeUsage} from '../../../model/cube_utils';
 
 export abstract class SpaceField extends SpaceEntry {
   readonly refType = 'field';
@@ -43,7 +44,9 @@ export abstract class SpaceField extends SpaceEntry {
         // Use the cube usage in the def if it exists, otherwise, if the
         // field has an e whic is a cube field, then the cube usage should be just the name of the field.
         def.cubeUsage ??
-        (def.e?.node === 'cubeField' ? [[def.as ?? def.name]] : []),
+        (def.e?.node === 'cubeField'
+          ? {fields: {[def.as ?? def.name]: true}, joinedUsage: {}}
+          : emptyCubeUsage()),
     };
     return ref;
   }

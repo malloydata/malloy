@@ -30,6 +30,7 @@ import {
   TD,
   TypeDesc,
 } from '../../model';
+import {emptyCubeUsage} from '../../model/cube_utils';
 
 function mkTypeDesc(
   // The problem is that record and array, as currently defined, require a dialect
@@ -39,7 +40,12 @@ function mkTypeDesc(
   expressionType: ExpressionType = 'scalar',
   evalSpace: EvalSpace = 'constant'
 ): TypeDesc {
-  return {type: dataType, expressionType, evalSpace, cubeUsage: []};
+  return {
+    type: dataType,
+    expressionType,
+    evalSpace,
+    cubeUsage: emptyCubeUsage(),
+  };
 }
 
 export const nullT = mkTypeDesc('null');

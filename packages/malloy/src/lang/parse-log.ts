@@ -21,8 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {formatCubeUsages} from '../model/cube_utils';
-import {DocumentLocation, ExpressionValueType} from '../model/malloy_types';
+import {cubeUsageIsPlural, formatCubeUsages} from '../model/cube_utils';
+import {CubeUsage, DocumentLocation, ExpressionValueType} from '../model/malloy_types';
 import {EventStream} from '../runtime_types';
 
 export type LogSeverity = 'error' | 'warn' | 'debug';
@@ -193,7 +193,7 @@ type MessageParameterTypes = {
   'unexpected-element-type': string;
   'field-not-found': string;
   'invalid-cube-input': string;
-  'invalid-cube-usage': {newUsage: string[][]; allUsage: string[][]};
+  'invalid-cube-usage': {newUsage: CubeUsage; allUsage: CubeUsage};
   'empty-cube-source': string;
   'unnecessary-cube-source': string;
   'cube-source-atomic-only': string;
@@ -426,7 +426,7 @@ export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
   'invalid-cube-usage': e => {
     const formattedNewCubeUsage = formatCubeUsages(e.newUsage);
     const formattedAllCubeUsage = formatCubeUsages(e.allUsage);
-    const pluralUse = e.newUsage.length > 1 ? 's' : '';
+    const pluralUse = cubeUsageIsPlural(e.newUsage) ? 's' : '';
     return `This operation uses cube field${pluralUse} ${formattedNewCubeUsage}, resulting in invalid usage of the a cube source, as there is no cube input source which defines all of ${formattedAllCubeUsage}`;
   },
 };

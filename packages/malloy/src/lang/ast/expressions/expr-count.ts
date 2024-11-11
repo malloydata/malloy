@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import { emptyCubeUsage } from '../../../model/cube_utils';
 import {AggregateExpr} from '../../../model/malloy_types';
 import {FieldReference} from '../query-items/field-references';
 import {ExprValue} from '../types/expr-value';
@@ -67,7 +68,7 @@ export class ExprCount extends ExprAggregateFunction {
       expressionType: 'aggregate',
       value: ret,
       evalSpace: 'output',
-      cubeUsage: [],
+      cubeUsage: emptyCubeUsage(),
     };
   }
 }
