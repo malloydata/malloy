@@ -75,6 +75,44 @@ Renderers are applied based on tags parsed on an Explore or Field. This is done 
 1. Update the `shouldRenderAs` function that looks at the field tags and returns an enum for your renderer type
 2. Update the switch statement in the `applyRenderer` function to add a case for your new renderer. Your case statement should update the `renderValue` variable using your renderer.
 
+## Adding component CSS
+
+The renderer is shipped as webcomponent, and any stylesheets should be appended to the ShadowDOM root instead of to the document. A utility is provided for doing this like so:
+
+```typescript
+// in file my-component.ts
+
+// import your stylesheet as a string
+import myCss from "./style.css?raw";
+
+export function MyComponent() {
+  // Add your imported CSS to the ShadowRoot
+  const config = useConfig();
+  config.addCSSToShadowRoot(myCSS);
+
+  // Use your classes in your markup
+  return <div class="my-component-class">hello world</div>
+}
+```
+
+There are certain cases where you may need to append CSS to the document; for example, when rendering a tooltip or modal that is attached to the DOM outside of the web component. You can add this document CSS like so:
+
+```typescript
+// in file my-component.ts
+
+// import your stylesheet as a string
+import myCss from "./style.css?raw";
+
+export function MyComponent() {
+  // Add your imported CSS to the document
+  const config = useConfig();
+  config.addCSSToDocument(myCSS);
+
+  // Use your classes in your markup
+  return <div class="my-component-class">hello world</div>
+}
+```
+
 ## Renderer Metadata
 
 Some of the renderers, especially charts, benefit from having metadata about the data table being rendered. This can include attributes like the min and max values in a numeric column, the number of rows in a nested table, etc. This metadata is derived in `src/component/render-result-metadata.ts`. The `getResultMetadata` function is used to create the `RenderResultMetadata` object. This object is shared throughout our SolidJS component tree using the Context api. To access the metadata, use the `useResultContext()` method in a component.
@@ -120,6 +158,7 @@ For examples of how to use brushIn data and export brushOut data, see the bar ch
 
 TODO
 
+- chart debug tool
 - signal logging
 - vega introspection
 
