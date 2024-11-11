@@ -900,7 +900,6 @@ export interface TurtleSegment extends Filtered {
 export interface Pipeline {
   pipeline: PipeSegment[];
 }
-
 export interface Query extends Pipeline, Filtered, HasLocation {
   type?: 'query';
   name?: string;
@@ -908,6 +907,7 @@ export interface Query extends Pipeline, Filtered, HasLocation {
   sourceArguments?: Record<string, Argument>;
   annotation?: Annotation;
   modelAnnotation?: Annotation;
+  cubeResolvedSourceDef?: SourceDef;
 }
 
 export type NamedQuery = Query & NamedObject;

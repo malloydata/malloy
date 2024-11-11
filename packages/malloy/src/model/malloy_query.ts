@@ -4776,10 +4776,12 @@ export class QueryModel {
       filterList: query.filterList,
     };
 
+    const structRef = query.cubeResolvedSourceDef ?? query.structRef;
+
     const q = QueryQuery.makeQuery(
       turtleDef,
       this.getStructFromRef(
-        query.structRef,
+        structRef,
         query.sourceArguments,
         prepareResultOptions
       ),
@@ -4823,10 +4825,11 @@ export class QueryModel {
       finalize,
       false
     );
+    const structRef = query.cubeResolvedSourceDef ?? query.structRef;
     const sourceExplore =
-      typeof query.structRef === 'string'
-        ? query.structRef
-        : query.structRef.as || query.structRef.name;
+      typeof structRef === 'string'
+        ? structRef
+        : structRef.as || structRef.name;
     // LTNote:  I don't understand why this might be here.  It should have happened in loadQuery...
     if (finalize && this.dialect.hasFinalStage) {
       ret.lastStageName = ret.stageWriter.addStage(

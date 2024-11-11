@@ -55,7 +55,7 @@ describe('cubes', () => {
   });
 
   describe('cube resolution and validation', () => {
-    test('cube fails on line that is relevant', () => {
+    test('cube fails on group_by that is relevant', () => {
       expect(`
         ##! experimental.cube_sources
         run: cube(
@@ -65,6 +65,23 @@ describe('cubes', () => {
           group_by: one
           group_by: three
           group_by: ${'two'}
+        }
+      `).toLog(
+        errorMessage(
+          'This operation uses cube field `two`, resulting in invalid usage of the a cube source, as there is no cube input source which defines all of `one`, `three`, `two`'
+        )
+      );
+    });
+    test('cube fails on filter that is relevant', () => {
+      expect(`
+        ##! experimental.cube_sources
+        run: cube(
+          a extend { dimension: one is 1, two is 2 },
+          a extend { dimension: one is 1, three is 3 }
+        ) -> {
+          group_by: one
+          group_by: three
+          where: ${'two = 2'}
         }
       `).toLog(
         errorMessage(

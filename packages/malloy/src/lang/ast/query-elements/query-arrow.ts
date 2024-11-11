@@ -23,11 +23,8 @@
 
 import {
   Query,
-  SourceDef,
   StructDef,
-  StructRef,
   isQuerySegment,
-  isSourceDef,
   refIsStructDef,
 } from '../../../model/malloy_types';
 import {Source} from '../source-elements/source';
@@ -52,18 +49,6 @@ export class QueryArrow extends QueryBase implements QueryElement {
     readonly view: View
   ) {
     super({source, view});
-  }
-
-  private resolveSourceRef(sourceRef: StructRef): SourceDef {
-    if (refIsStructDef(sourceRef)) return sourceRef;
-    const entry = this.modelEntry(sourceRef); // TODO what about parameters?
-    if (entry === undefined) {
-      throw new Error(`Could not find source ${sourceRef}`);
-    }
-    if (isSourceDef(entry.entry)) {
-      return entry.entry;
-    }
-    throw new Error(`Not a source: ${sourceRef}`);
   }
 
   queryComp(isRefOk: boolean): QueryComp {
@@ -98,22 +83,14 @@ export class QueryArrow extends QueryBase implements QueryElement {
 
     // TODO add an error if a raw/index query is done against a cube
 
-    // TODO move the selected cube into a "cubeResolvedStructRef"
     if (inputStruct.type === 'cube' && isQuerySegment(pipeline[0])) {
-      // const cubeSources = inputStruct.sources.map(ref =>
-      //   this.resolveSourceRef(ref)
-      // );
-      const structRef = resolveCubeSource(
+      const sourceDef = resolveCubeSource(
         inputStruct.sources,
         pipeline[0].cubeUsage ?? []
       );
-      if (structRef !== undefined) {
-        queryBase = {
-          ...queryBase,
-          structRef,
-        };
+      if (sourceDef !== undefined) {
+        queryBase.cubeResolvedSourceDef = sourceDef;
       }
-      // fieldSpace = new StaticSpace(this.resolveSourceRef(structRef));
     }
 
     return {
