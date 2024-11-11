@@ -21,10 +21,14 @@ const ChartDevTool = lazy(() => import('./chart-dev-tool'));
 
 let IS_STORYBOOK = false;
 try {
-  const storybookConfig = (process.env as any).IS_STORYBOOK;
+  const storybookConfig = (process.env as Record<string, string>)[
+    'IS_STORYBOOK'
+  ];
   if (typeof storybookConfig !== 'undefined')
     IS_STORYBOOK = Boolean(storybookConfig);
-} catch (e) {}
+} catch (e) {
+  // Continue with storybook flag off
+}
 
 export type ChartProps = {
   field: Explore | ExploreField;
@@ -200,10 +204,10 @@ export function Chart(props: ChartProps) {
         explore={props.field}
         runtime={runtime}
       />
-      <Tooltip show={!!tooltipData()}>
+      <Tooltip show={Boolean(tooltipData())}>
         <DefaultChartTooltip data={tooltipData()!} />
       </Tooltip>
-      <Show when={IS_STORYBOOK && !Boolean(props.devMode)}>
+      <Show when={IS_STORYBOOK && !props.devMode}>
         <button class="malloy-chart_debug_menu" onClick={openDebug}>
           <DebugIcon />
         </button>

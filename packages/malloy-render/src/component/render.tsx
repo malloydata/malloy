@@ -68,6 +68,7 @@ export function MalloyRender(
   function addCSSToShadowRoot(css: string) {
     const root = element.renderRoot;
     if (!(root instanceof ShadowRoot)) {
+      // eslint-disable-next-line no-console
       console.warn(
         "Couldn't add CSS to render element, it is not rendering in a ShadowRoot"
       );

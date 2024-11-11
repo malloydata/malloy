@@ -20,7 +20,6 @@ import {getChartLayoutSettings} from '../chart-layout-settings';
 import {renderTimeString} from '../render-time';
 import {createMeasureAxis} from '../vega/measure-axis';
 import {
-  BaseMark,
   Data,
   GroupMark,
   Item,

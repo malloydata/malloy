@@ -9,14 +9,14 @@ import {
 } from 'solid-js';
 import {Chart, ChartProps} from './chart';
 import {View, parse} from 'vega';
-import {createStore, unwrap} from 'solid-js/store';
+import {createStore} from 'solid-js/store';
 import {addSignalListenerIfExists} from '../vega/vega-utils';
 
 type ChartDevToolProps = {
   onClose: () => void;
 } & ChartProps;
 
-function stripMalloyRecord(record: Record<string, any>) {
+function stripMalloyRecord(record: Record<string, unknown>) {
   for (const [key, value] of Object.entries(record)) {
     if (key === '__malloyDataRecord') {
       delete record['__malloyDataRecord'];
@@ -25,7 +25,7 @@ function stripMalloyRecord(record: Record<string, any>) {
       if (Array.isArray(value)) {
         value.forEach(stripMalloyRecord);
       } else {
-        stripMalloyRecord(value);
+        stripMalloyRecord(value as Record<string, unknown>);
       }
     }
   }
@@ -43,8 +43,10 @@ export default function ChartDevTool(props: ChartDevToolProps) {
 
   const [view, setView] = createSignal<View | undefined>();
 
-  const [vegaSignals, setVegaSignals] = createStore<Record<string, any>>({});
-  const [vegaData, setVegaData] = createStore<Record<string, any[]>>({});
+  const [vegaSignals, setVegaSignals] = createStore<Record<string, unknown>>(
+    {}
+  );
+  const [vegaData, setVegaData] = createStore<Record<string, unknown[]>>({});
 
   createEffect(() => {
     const _view = view();
@@ -66,11 +68,13 @@ export default function ChartDevTool(props: ChartDevToolProps) {
         });
       }
 
-      const runtimeData = (_view as any)._runtime.data ?? {};
+      const runtimeData =
+        (_view as unknown as {_runtime: {data: Record<string, unknown>}})
+          ._runtime.data ?? {};
 
       for (const [dataName, initValue] of Object.entries(runtimeData)) {
         if (dataName === 'root') continue;
-        let dataValues: Record<string, any>[] = [];
+        let dataValues: Record<string, unknown>[] = [];
         const valueEntry = initValue?.['values']?.['value'];
         if (Array.isArray(valueEntry)) {
           dataValues = valueEntry.map(entry => {
@@ -98,8 +102,8 @@ export default function ChartDevTool(props: ChartDevToolProps) {
   const getDataRowValues = values => {
     return Object.entries(values).map(([key, value]) => {
       if (key === '__source') {
-        const entry: any = Object.assign({}, value);
-        delete entry.__malloyDataRecord;
+        const entry: Record<string, string> = Object.assign({}, value);
+        delete entry['__malloyDataRecord'];
         return entry;
       }
       return value;
@@ -111,7 +115,7 @@ export default function ChartDevTool(props: ChartDevToolProps) {
   return (
     <div
       style={{
-        'z-index': 1000,
+        ['z-index']: 1000,
         height: '100vh',
         width: '100vw',
         position: 'fixed',
@@ -124,14 +128,14 @@ export default function ChartDevTool(props: ChartDevToolProps) {
       <div
         style={{
           display: 'grid',
-          'grid-template-columns': 'minmax(0, 640px) 1fr',
-          'height': '100%',
+          ['grid-template-columns']: 'minmax(0, 640px) 1fr',
+          height: '100%',
         }}
       >
         <div style="display: flex; flex-direction: column;">
           <textarea
             style={{
-              padding: '16px',
+              'padding': '16px',
               'box-sizing': 'border-box',
               'flex-grow': 1,
             }}
@@ -152,13 +156,13 @@ export default function ChartDevTool(props: ChartDevToolProps) {
         </div>
         <div
           style={{
-            padding: '16px',
-            background: '#eee',
-            height: '100%',
+            'padding': '16px',
+            'background': '#eee',
+            'height': '100%',
             'box-sizing': 'border-box',
-            display: 'grid',
+            'display': 'grid',
             'grid-template-rows': 'max-content 1fr',
-            overflow: 'hidden',
+            'overflow': 'hidden',
           }}
         >
           <div style="background: white">
