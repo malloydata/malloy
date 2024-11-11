@@ -15,6 +15,7 @@ import {EventListenerHandler, Runtime, View} from 'vega';
 import {useResultStore, VegaBrushOutput} from '../result-store/result-store';
 import css from './chart.css?raw';
 import {useConfig} from '../render';
+import {DebugIcon} from './debug_icon';
 
 const ChartDevTool = lazy(() => import('./chart-dev-tool'));
 
@@ -180,6 +181,7 @@ export function Chart(props: ChartProps) {
 
   return (
     <div
+      class="malloy-chart"
       onMouseLeave={() => {
         // immediately clear tooltips and highlights on leaving chart
         setTooltipData(null);
@@ -189,7 +191,6 @@ export function Chart(props: ChartProps) {
             .map(brush => ({type: 'remove', sourceId: brush.sourceId}))
         );
       }}
-      class="malloy-chart"
     >
       <VegaChart
         width={chartProps.plotWidth}
@@ -203,16 +204,16 @@ export function Chart(props: ChartProps) {
         <DefaultChartTooltip data={tooltipData()!} />
       </Tooltip>
       <Show when={IS_STORYBOOK && !Boolean(props.devMode)}>
-        <div class="malloy-chart_debug_menu">
-          <button onClick={openDebug}>debug</button>
-          <Show when={showDebugModal()}>
-            <ChartDevTool
-              onClose={() => setShowDebugModal(false)}
-              {...props}
-              devMode={true}
-            />
-          </Show>
-        </div>
+        <button class="malloy-chart_debug_menu" onClick={openDebug}>
+          <DebugIcon />
+        </button>
+        <Show when={showDebugModal()}>
+          <ChartDevTool
+            onClose={() => setShowDebugModal(false)}
+            {...props}
+            devMode={true}
+          />
+        </Show>
       </Show>
     </div>
   );
