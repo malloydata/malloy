@@ -156,11 +156,18 @@ For examples of how to use brushIn data and export brushOut data, see the bar ch
 
 ## Debugging tips
 
-TODO
+In the Storybook, hovering any of the new charts will show a debug icon in the top right. Clicking the debug icon will open that chart with a text editor of the spec and a signal and data inspector. This UI can be used to see what is happening under the hood with the Vega chart, and allow you to experiment with changing the spec.
 
-- chart debug tool
-- signal logging
-- vega introspection
+You can also use the signal logger utility to log signal changes. This can be done in `chart.tsx` or `vega-chart.tsx` like so:
+
+```typescript
+import {signalLogger} from './vega-utils';
+
+// Somewhere in component code where View is accessible, create logger and log some signals
+const logger = signalLogger(view, optionalId); // Optional string id which will be logged as well
+
+logger('signalA', 'signalB'); // Logs any value changes to signalA or signalB
+```
 
 ## Generating builds
 
