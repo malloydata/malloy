@@ -1,19 +1,14 @@
-import {fileURLToPath} from 'node:url';
-import {defineConfig} from 'vite';
+import {PluginOption, defineConfig} from 'vite';
 import solidPlugin from 'vite-plugin-solid';
 
 export default defineConfig({
-  plugins: [solidPlugin()],
+  plugins: [viteStripMalloyDevToolsPlugin(), solidPlugin()],
   optimizeDeps: {
     include: ['@malloydata/malloy'],
   },
   build: {
     rollupOptions: {
-      external: [
-        fileURLToPath(
-          new URL('src/component/chart/chart-dev-tool.tsx', import.meta.url)
-        ),
-      ],
+      external: [],
       output: {},
     },
     commonjsOptions: {
@@ -24,3 +19,18 @@ export default defineConfig({
     'process.env': {},
   },
 });
+
+function viteStripMalloyDevToolsPlugin(): PluginOption {
+  return {
+    name: 'vite-plugin-strip-malloy-dev-tools',
+    async transform(code, id) {
+      if (id.endsWith('chart-dev-tool.tsx')) {
+        return `
+        export default function noop() {
+          return null;
+        }
+        `;
+      }
+    },
+  };
+}
