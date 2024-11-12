@@ -35,6 +35,8 @@ describe.each(runtimes.runtimeList)(
     // this is just a standin for "unknown function"
     const arrayLen = {
       'duckdb': 'LEN',
+      'duckdb-wasm': 'LEN',
+      'motherduck': 'LEN',
       'bigquery': 'ARRAY_LENGTH',
       'postgres': 'ARRAY_LENGTH',
       'presto': 'LENGTH',
