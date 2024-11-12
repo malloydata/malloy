@@ -546,11 +546,16 @@ export class MySQLDialect extends Dialect {
     return sqlType.match(/^[A-Za-z\s(),0-9]*$/) !== null;
   }
 
-  sqlLiteralArray(_lit: ArrayLiteralNode): string {
-    throw new Error('No literal arrays in MySQL');
+  sqlLiteralArray(lit: ArrayLiteralNode): string {
+    const array = lit.kids.values.map(val => val.sql);
+    return '[' + array.join(',') + ']';
   }
 
-  sqlLiteralRecord(_lit: RecordLiteralNode): string {
-    throw new Error('No literal records in MySQL');
+  sqlLiteralRecord(lit: RecordLiteralNode): string {
+    const pairs = Object.entries(lit.kids).map(
+      ([propName, propVal]) =>
+        `${this.sqlMaybeQuoteIdentifier(propName)}:${propVal.sql}`
+    );
+    return '{' + pairs.join(',') + '}';
   }
 }
