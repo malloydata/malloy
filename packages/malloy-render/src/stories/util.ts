@@ -83,33 +83,3 @@ export function renderMalloyLegacy(options: RenderOptions) {
   });
   return div;
 }
-
-export async function copyMalloyRenderHTML(element: Element) {
-  let html = '';
-  if (element.shadowRoot) {
-    let styles = '';
-    for (const stylesheet of [...element.shadowRoot.adoptedStyleSheets]) {
-      for (let i = 0; i < stylesheet.cssRules.length; i++) {
-        const cssRule = stylesheet.cssRules.item(i);
-        if (cssRule) styles += '\n' + cssRule.cssText;
-      }
-
-      styles = styles.replaceAll(':host', '.malloy_html_host');
-      const shadowStyle = element.getAttribute('style');
-      html = `<div>
-  <style>${styles}</style>
-  <div class="XXX_malloy_html_host">
-  <div class="malloy_html_host" style="${shadowStyle}">
-    ${element.shadowRoot.innerHTML}</div>
-  </div>
-</div>`;
-    }
-  } else html = element.innerHTML;
-
-  try {
-    await navigator.clipboard.writeText(html);
-  } catch (error) {
-    /* eslint-disable no-console */
-    console.error('Failed to copy text: ', error);
-  }
-}

@@ -139,7 +139,8 @@ export function viteMalloyStoriesPlugin(): PluginOption {
           };`
           : `
           import script from '${id}?raw';
-          import {createLoader, copyMalloyRenderHTML} from './util';
+          import {createLoader} from './util';
+          import {copyMalloyRenderHTML} from '../component/copy-to-html';
           import './themes.css';
           import '../component/render-webcomponent';
 
