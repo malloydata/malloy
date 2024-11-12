@@ -70,6 +70,10 @@ const config: StorybookConfig = {
       plugins: [viteMalloyStoriesPlugin()],
     };
     const finalConfig = mergeConfig(config, configOverride);
+    // Filter out dev tools plugin
+    finalConfig.plugins = finalConfig.plugins.filter(
+      plugin => plugin.name !== 'vite-plugin-strip-malloy-dev-tools'
+    );
     return finalConfig;
   },
 };
