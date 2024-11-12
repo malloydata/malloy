@@ -5,16 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {
-  Explore,
-  ExploreField,
-  QueryData,
-  DateField,
-  TimestampField,
-} from '@malloydata/malloy';
+import {Explore, ExploreField, QueryData} from '@malloydata/malloy';
 import {VegaChart, ViewInterface} from '../vega/vega-chart';
 import {ChartTooltipEntry, RenderResultMetadata} from '../types';
-import {renderTimeString} from '../render-time';
 import {Tooltip} from '../tooltip/tooltip';
 import {createEffect, createSignal} from 'solid-js';
 import {DefaultChartTooltip} from './default-chart-tooltip';
@@ -28,42 +21,32 @@ export function Chart(props: {
 }) {
   const {field, data} = props;
   const chartProps = props.metadata.field(field).vegaChartProps!;
-  const spec = structuredClone(chartProps.spec);
-  const chartData = data.map(row => {
-    const rec = structuredClone(row);
-    // prevent structured clone from ripping out the QueryDataRow class
-    rec['__malloyDataRecord'] = row['__malloyDataRecord'];
-    return rec;
-  });
-  // New vega charts use injectData handlers
-  if (chartProps.injectData && chartProps.specType === 'vega') {
-    chartProps.injectData(field, chartData, spec);
+  const runtime = props.metadata.field(field).runtime;
+  if (!runtime)
+    throw new Error('Charts must have a runtime defined in their metadata');
+  const chartData = data;
+  for (let i = 0; i < chartData.length; i++) {
+    chartData[i]['__malloyDataRecord'] = data[i]['__malloyDataRecord'];
   }
-  // Pass data for legacy vega-lite charts
-  else {
-    spec.data.values = chartData;
+  let values: unknown[] = [];
+  // New vega charts use mapMalloyDataToChartData handlers
+  if (chartProps.mapMalloyDataToChartData) {
+    values = chartProps.mapMalloyDataToChartData(field, chartData);
   }
-
-  // TODO: improve handling date/times in chart axes
-  const dateTimeFields = field.allFields.filter(
-    f => f.isAtomicField() && (f.isDate() || f.isTimestamp())
-  ) as (DateField | TimestampField)[];
-  chartData.forEach(row => {
-    dateTimeFields.forEach(f => {
-      const value = row[f.name];
-      if (typeof value === 'number' || typeof value === 'string')
-        row[f.name] = renderTimeString(
-          new Date(value),
-          f.isDate(),
-          f.timeframe
-        );
-    });
-  });
 
   const [viewInterface, setViewInterface] = createSignal<ViewInterface | null>(
     null
   );
   const view = () => viewInterface()?.view;
+
+  createEffect(() => {
+    const _view = view();
+
+    if (_view) {
+      _view.data('values', values);
+      _view.runAsync();
+    }
+  });
 
   // Tooltip data
   const [tooltipData, setTooltipData] = createSignal<null | ChartTooltipEntry>(
@@ -160,8 +143,11 @@ export function Chart(props: {
     const relevantBrushes = resultStore.store.brushes.filter(brush =>
       fieldRefIds.includes(brush.fieldRefId)
     );
+
     viewInterface()?.setSignalAndRun(
       'brushIn',
+      // TODO this is kindof a hack to make sure we react to any changes in the brush array, since our proxy updates won't react if we just listen on the field ref ids and one of them is updated.
+      // Is there a better way in Solid stores to react to "any sub-property of this object changes"?
       JSON.parse(JSON.stringify(relevantBrushes))
     );
   });
@@ -177,17 +163,15 @@ export function Chart(props: {
             .map(brush => ({type: 'remove', sourceId: brush.sourceId}))
         );
       }}
-      style="width: fit-content; height: fit-content;"
+      style="width: fit-content; height: fit-content; font-variant-numeric: tabular-nums;"
     >
       <VegaChart
-        spec={spec}
-        type={chartProps.specType}
         width={chartProps.plotWidth}
         height={chartProps.plotHeight}
         onMouseOver={mouseOverHandler}
-        // onView={setView}
         onViewInterface={setViewInterface}
         explore={props.field}
+        runtime={runtime}
       />
       <Tooltip show={!!tooltipData()}>
         <DefaultChartTooltip data={tooltipData()!} />

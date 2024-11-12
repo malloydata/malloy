@@ -1,4 +1,4 @@
-source: logos is duckdb.table("data/logos.csv") extend {
+source: logos is duckdb.table("static/data/logos.csv") extend {
   #(story) story="Image Alt from Record"
   view: img_from_record is {
     group_by:

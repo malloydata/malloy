@@ -29,8 +29,8 @@ import {
   TimestampTimeframe,
 } from '@malloydata/malloy';
 import startCase from 'lodash/startCase';
-import {RenderDef} from '../data_styles';
-import {RendererOptions} from '../renderer_types';
+import {RenderDef} from './data_styles';
+import {RendererOptions} from './renderer_types';
 import {DateTime} from 'luxon';
 
 export function getColorScale(

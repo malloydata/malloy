@@ -22,11 +22,11 @@
  */
 
 import {DataColumn, Explore, Field} from '@malloydata/malloy';
-import {Renderer} from '../renderer';
+import {Renderer} from './renderer';
 import {createErrorElement, createNullElement, getDynamicValue} from './utils';
-import {LinkRenderOptions, StyleDefaults} from '../data_styles';
-import {RendererOptions} from '../renderer_types';
-import {RendererFactory} from '../renderer_factory';
+import {LinkRenderOptions, StyleDefaults} from './data_styles';
+import {RendererOptions} from './renderer_types';
+import {RendererFactory} from './renderer_factory';
 
 export class HTMLLinkRenderer implements Renderer {
   constructor(private readonly document: Document) {}

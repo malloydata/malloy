@@ -22,7 +22,7 @@
  */
 
 import {AtomicField} from '@malloydata/malloy';
-import {Currency, DurationUnit} from '../data_styles';
+import {Currency, DurationUnit} from '../html/data_styles';
 import {format} from 'ssf';
 import {getText} from '../html/duration';
 

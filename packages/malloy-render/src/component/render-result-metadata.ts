@@ -45,16 +45,13 @@ import {
   VegaConfigHandler,
 } from './types';
 import {shouldRenderAs} from './apply-renderer';
-import {getBarChartSettings} from './bar-chart/get-bar_chart-settings';
-import {mergeVegaConfigs} from './plot/merge-vega-configs';
-import {baseVegaConfig} from './plot/base-vega-config';
+import {mergeVegaConfigs} from './vega/merge-vega-configs';
+import {baseVegaConfig} from './vega/base-vega-config';
 import {renderTimeString} from './render-time';
-import {getLineChartSettings} from './line-chart/get-line_chart-settings';
-import {generateLineChartVegaLiteSpec} from './line-chart/generate-line_chart-vega-lite-spec';
-import {getAreaChartSettings} from './area-chart/get-area_chart-settings';
-import {generateAreaChartVegaLiteSpec} from './area-chart/generate-area_chart-vega-lite-spec';
 import {generateBarChartVegaSpec} from './bar-chart/generate-bar_chart-vega-spec';
 import {createResultStore} from './result-store/result-store';
+import {generateLineChartVegaSpec} from './line-chart/generate-line_chart-vega-spec';
+import {parse} from 'vega';
 
 function createDataCache() {
   const dataCache = new WeakMap<DataColumn, QueryData>();
@@ -63,7 +60,7 @@ function createDataCache() {
       if (!dataCache.has(cell) && cell.isArray()) {
         const data: DataRowWithRecord[] = [];
         for (const row of cell) {
-          const record = Object.assign(row.toObject(), {
+          const record = Object.assign({}, row.toObject(), {
             __malloyDataRecord: row,
           });
           data.push(record);
@@ -208,8 +205,8 @@ const populateFieldMeta = (data: DataArray, metadata: RenderResultMetadata) => {
           fieldMeta.maxString = stringValue;
 
         if (f.isAtomicField() && f.sourceWasDimension()) {
-          fieldMeta.values.add(stringValue);
-          fieldSet.add(stringValue);
+          fieldMeta.values.add(numericValue);
+          fieldSet.add(numericValue);
         }
       } else if (f.isExploreField()) {
         const data = row.cell(f);
@@ -242,53 +239,26 @@ function populateExploreMeta(
   options: GetResultMetadataOptions
 ) {
   const fieldMeta = metadata.field(f);
-  let vegaLiteProps: VegaChartProps | null = null;
+  let vegaChartProps: VegaChartProps | null = null;
   if (hasAny(tag, 'bar', 'bar_chart')) {
-    const chartTag = (tag.tag('bar_chart') ?? tag.tag('bar'))!;
-    const barSettings = getBarChartSettings(f, tag);
-    // vegaLiteProps = generateBarChartVegaLiteSpec(
-    //   f,
-    //   barSettings,
-    //   metadata,
-    //   chartTag
-    // );
-    vegaLiteProps = generateBarChartVegaSpec(
-      f,
-      barSettings,
-      metadata,
-      chartTag
-    );
+    vegaChartProps = generateBarChartVegaSpec(f, metadata);
   } else if (tag.has('line_chart')) {
-    const chartTag = tag.tag('line_chart')!;
-    const lineSettings = getLineChartSettings(f, tag);
-    vegaLiteProps = generateLineChartVegaLiteSpec(
-      f,
-      lineSettings,
-      metadata,
-      chartTag
-    );
-  } else if (tag.has('area_chart')) {
-    const chartTag = tag.tag('area_chart')!;
-    const areaSettings = getAreaChartSettings(f, tag);
-    vegaLiteProps = generateAreaChartVegaLiteSpec(
-      f,
-      areaSettings,
-      metadata,
-      chartTag
-    );
+    vegaChartProps = generateLineChartVegaSpec(f, metadata);
   }
 
-  if (vegaLiteProps) {
+  if (vegaChartProps) {
     const vegaConfig = mergeVegaConfigs(
       baseVegaConfig(),
-      options.getVegaConfigOverride?.(vegaLiteProps.chartType) ?? {}
+      options.getVegaConfigOverride?.(vegaChartProps.chartType) ?? {}
     );
     fieldMeta.vegaChartProps = {
-      ...vegaLiteProps,
+      ...vegaChartProps,
       spec: {
-        ...vegaLiteProps.spec,
+        ...vegaChartProps.spec,
         config: vegaConfig,
       },
     };
+    if (fieldMeta.vegaChartProps?.spec)
+      fieldMeta.runtime = parse(fieldMeta.vegaChartProps?.spec);
   }
 }

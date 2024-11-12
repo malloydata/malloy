@@ -44,11 +44,10 @@ export function shouldRenderAs(f: Field | Explore, tagOverride?: Tag) {
     return 'cell';
   }
   if (hasAny(tag, 'list', 'list_detail')) return 'list';
-  if (hasAny(tag, 'bar_chart', 'line_chart', 'area_chart')) return 'chart';
+  if (hasAny(tag, 'bar_chart', 'line_chart')) return 'chart';
   if (tag.has('dashboard')) return 'dashboard';
-  if (tag.has('scatter_chart')) return 'scatter_chart';
-  if (tag.has('shape_map')) return 'shape_map';
-  if (tag.has('segment_map')) return 'segment_map';
+  if (hasAny(tag, 'scatter_chart', 'shape_map', 'segment_map'))
+    return 'legacy_chart';
   else return 'table';
 }
 
@@ -118,9 +117,7 @@ export function applyRenderer(props: RendererProps) {
           );
         break;
       }
-      case 'scatter_chart':
-      case 'shape_map':
-      case 'segment_map': {
+      case 'legacy_chart': {
         if (dataColumn.isArray())
           renderValue = <LegacyChart type={renderAs} data={dataColumn} />;
         else

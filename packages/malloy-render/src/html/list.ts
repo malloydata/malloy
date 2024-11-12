@@ -22,7 +22,7 @@
  */
 
 import {DataColumn, Explore, Field} from '@malloydata/malloy';
-import {StyleDefaults} from '../data_styles';
+import {StyleDefaults} from './data_styles';
 import {ContainerRenderer} from './container';
 import {createErrorElement, yieldTask} from './utils';
 

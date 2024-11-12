@@ -1,4 +1,4 @@
-import {createStore, produce} from 'solid-js/store';
+import {createStore, produce, unwrap} from 'solid-js/store';
 import {useResultContext} from '../result-context';
 
 interface BrushDataBase {
@@ -75,7 +75,7 @@ export function createResultStore() {
   };
 
   const areBrushesEqual = (a?: BrushData, b?: BrushData) => {
-    return JSON.stringify(a) === JSON.stringify(b);
+    return JSON.stringify(unwrap(a)) === JSON.stringify(unwrap(b));
   };
 
   const modifyBrushes = (ops: ModifyBrushOp[]) => {

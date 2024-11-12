@@ -23,10 +23,10 @@
 
 import {DataColumn, Explore, Field} from '@malloydata/malloy';
 import {HTMLCartesianChartRenderer} from './cartesian_chart';
-import {LineChartRenderOptions, StyleDefaults} from '../data_styles';
-import {RendererFactory} from '../renderer_factory';
-import {RendererOptions} from '../renderer_types';
-import {Renderer} from '../renderer';
+import {LineChartRenderOptions, StyleDefaults} from './data_styles';
+import {RendererFactory} from './renderer_factory';
+import {RendererOptions} from './renderer_types';
+import {Renderer} from './renderer';
 
 export class HTMLLineChartRenderer extends HTMLCartesianChartRenderer {
   getMark(): 'line' {

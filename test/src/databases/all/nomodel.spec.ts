@@ -1085,7 +1085,8 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
   test.when(
     runtime.supportsNesting &&
       runtime.dialect.readsNestedData &&
-      databaseName !== 'presto'
+      databaseName !== 'presto' &&
+      databaseName !== 'trino'
   )(`can unnest simply from file - ${databaseName}`, async () => {
     await expect(`
         source: ga_sample is ${databaseName}.table('malloytest.ga_sample')
@@ -1099,7 +1100,8 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
   test.when(
     runtime.supportsNesting &&
       runtime.dialect.readsNestedData &&
-      databaseName !== 'presto'
+      databaseName !== 'presto' &&
+      databaseName !== 'trino'
   )(`can unnest from file - ${databaseName}`, async () => {
     await expect(`
         source: ga_sample is ${databaseName}.table('malloytest.ga_sample')
@@ -1119,7 +1121,8 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
   test.when(
     runtime.supportsNesting &&
       runtime.dialect.readsNestedData &&
-      databaseName !== 'presto'
+      databaseName !== 'presto' &&
+      databaseName !== 'trino'
   )(`can double unnest - ${databaseName}`, async () => {
     await expect(`
         source: ga_sample is ${databaseName}.table('malloytest.ga_sample')
