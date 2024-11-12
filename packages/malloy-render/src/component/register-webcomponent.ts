@@ -17,6 +17,8 @@ export default function registerWebComponent({
           scrollEl: undefined,
           onClick: undefined,
           vegaConfigOverride: undefined,
+          tableConfig: undefined,
+          dashboardConfig: undefined,
         },
         {customElements, BaseElement: HTMLElement}
       ),

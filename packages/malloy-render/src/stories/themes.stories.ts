@@ -1,8 +1,9 @@
 import {Meta} from '@storybook/html';
 import script from './themes.malloy?raw';
-import {copyMalloyRenderHTML, createLoader} from './util';
+import {createLoader} from './util';
 import './themes.css';
 import '../component/render-webcomponent';
+import {copyMalloyRenderHTML} from '../component/copy-to-html';
 
 const meta: Meta = {
   title: 'Malloy Next/Themes',

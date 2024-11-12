@@ -113,3 +113,11 @@ export type Channel = {
   fields: string[];
   type: ScaleType | null;
 };
+
+export type TableConfig = {
+  disableVirtualization: boolean;
+  rowLimit: number;
+};
+export type DashboardConfig = {
+  disableVirtualization: boolean;
+};

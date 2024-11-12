@@ -115,21 +115,21 @@ export default function ChartDevTool(props: ChartDevToolProps) {
   return (
     <div
       style={{
-        ['z-index']: 1000,
-        height: '100vh',
-        width: '100vw',
-        position: 'fixed',
-        top: '0px',
-        left: '0px',
-        background: 'white',
+        'z-index': 1000,
+        'height': '100vh',
+        'width': '100vw',
+        'position': 'fixed',
+        'top': '0px',
+        'left': '0px',
+        'background': 'white',
       }}
     >
       <button onClick={props.onClose}>Close dev tool</button>
       <div
         style={{
-          display: 'grid',
-          ['grid-template-columns']: 'minmax(0, 640px) 1fr',
-          height: '100%',
+          'display': 'grid',
+          'grid-template-columns': 'minmax(0, 640px) 1fr',
+          'height': '100%',
         }}
       >
         <div style="display: flex; flex-direction: column;">

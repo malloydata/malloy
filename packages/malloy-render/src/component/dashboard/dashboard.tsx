@@ -6,7 +6,7 @@
  */
 
 import {DataArray, DataRecord, Field} from '@malloydata/malloy';
-import {createMemo, For} from 'solid-js';
+import {createMemo, For, Show} from 'solid-js';
 import {applyRenderer} from '../apply-renderer';
 import {useResultContext} from '../result-context';
 import {RenderResultMetadata} from '../types';
@@ -21,6 +21,16 @@ function DashboardItem(props: {
   maxTableHeight: number | null;
   isMeasure?: boolean;
 }) {
+  const config = useConfig();
+  const shouldVirtualizeTable = () => {
+    // If dashboard is disabling virtualization, disable table virtualization as well
+    // This is done mainly to support Copy to HTML; not sure if this is correct approach for other scenarios
+    if (config.dashboardConfig().disableVirtualization) return false;
+    // If a max height is provided for tables, virtualize them
+    else if (props.maxTableHeight) return true;
+    // If no max height is set, then don't virtualize
+    else return false;
+  };
   const rendering = applyRenderer({
     field: props.field,
     dataColumn: props.row.cell(props.field),
@@ -28,12 +38,11 @@ function DashboardItem(props: {
     resultMetadata: props.resultMetadata,
     customProps: {
       table: {
-        disableVirtualization: !props.maxTableHeight,
+        disableVirtualization: !shouldVirtualizeTable(),
       },
     },
   });
 
-  const config = useConfig();
   const handleClick = (evt: MouseEvent) => {
     if (config.onClick)
       config.onClick({
@@ -125,12 +134,17 @@ export function Dashboard(props: {data: DataArray; scrollEl?: HTMLElement}) {
 
   let scrollEl!: HTMLElement;
   if (props.scrollEl) scrollEl = props.scrollEl;
-  const virtualizer: Virtualizer<HTMLElement, Element> = createVirtualizer({
-    count: data().length,
-    getScrollElement: () => scrollEl,
-    estimateSize: () => 192,
-  });
-  const items = virtualizer.getVirtualItems();
+  const shouldVirtualize = () =>
+    !useConfig().dashboardConfig().disableVirtualization;
+  let virtualizer: Virtualizer<HTMLElement, Element> | undefined;
+  if (shouldVirtualize()) {
+    virtualizer = createVirtualizer({
+      count: data().length,
+      getScrollElement: () => scrollEl,
+      estimateSize: () => 192,
+    });
+  }
+  const items = virtualizer?.getVirtualItems();
 
   const resultMetadata = useResultContext();
 
@@ -144,74 +158,128 @@ export function Dashboard(props: {data: DataArray; scrollEl?: HTMLElement}) {
         if (!props.scrollEl) scrollEl = el;
       }}
     >
-      <div
-        style={{
-          height: virtualizer.getTotalSize() + 'px',
-          width: '100%',
-          position: 'relative',
-        }}
-      >
+      <Show when={shouldVirtualize()}>
         <div
           style={{
-            'height': 'fit-content',
-            'width': '100%',
-            'padding-top': `${items![0]?.start ?? 0}px`,
+            height: virtualizer!.getTotalSize() + 'px',
+            width: '100%',
+            position: 'relative',
           }}
         >
-          <For each={items}>
-            {virtualRow => (
-              <div
-                class="dashboard-row"
-                data-index={virtualRow.index}
-                ref={el => queueMicrotask(() => virtualizer.measureElement(el))}
-              >
-                <div class="dashboard-row-header">
-                  <div class="dashboard-row-header-dimension-list">
-                    <For each={dimensions()}>
-                      {d => (
-                        <div class="dashboard-dimension-wrapper">
-                          <div class="dashboard-dimension-name">{d.name}</div>
-                          <div class="dashboard-dimension-value">
-                            {
-                              applyRenderer({
-                                field: d,
-                                dataColumn: data()[virtualRow.index].cell(d),
-                                tag: d.tagParse().tag,
-                                resultMetadata,
-                              }).renderValue
-                            }
+          <div
+            style={{
+              'height': 'fit-content',
+              'width': '100%',
+              'padding-top': `${items![0]?.start ?? 0}px`,
+            }}
+          >
+            <For each={items}>
+              {virtualRow => (
+                <div
+                  class="dashboard-row"
+                  data-index={virtualRow.index}
+                  ref={el =>
+                    queueMicrotask(() => virtualizer!.measureElement(el))
+                  }
+                >
+                  <div class="dashboard-row-header">
+                    <div class="dashboard-row-header-dimension-list">
+                      <For each={dimensions()}>
+                        {d => (
+                          <div class="dashboard-dimension-wrapper">
+                            <div class="dashboard-dimension-name">{d.name}</div>
+                            <div class="dashboard-dimension-value">
+                              {
+                                applyRenderer({
+                                  field: d,
+                                  dataColumn: data()[virtualRow.index].cell(d),
+                                  tag: d.tagParse().tag,
+                                  resultMetadata,
+                                }).renderValue
+                              }
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </For>
-                  </div>
-                  <div class="dashboard-row-header-separator" />
-                </div>
-                <For each={nonDimensionsGrouped()}>
-                  {group => (
-                    <div class="dashboard-row-body">
-                      <For each={group}>
-                        {field => (
-                          <DashboardItem
-                            field={field}
-                            row={data()[virtualRow.index]}
-                            resultMetadata={resultMetadata}
-                            isMeasure={
-                              field.isAtomicField() &&
-                              field.sourceWasMeasureLike()
-                            }
-                            maxTableHeight={maxTableHeight}
-                          />
                         )}
                       </For>
                     </div>
-                  )}
-                </For>
-              </div>
-            )}
-          </For>
+                    <div class="dashboard-row-header-separator" />
+                  </div>
+                  <For each={nonDimensionsGrouped()}>
+                    {group => (
+                      <div class="dashboard-row-body">
+                        <For each={group}>
+                          {field => (
+                            <DashboardItem
+                              field={field}
+                              row={data()[virtualRow.index]}
+                              resultMetadata={resultMetadata}
+                              isMeasure={
+                                field.isAtomicField() &&
+                                field.sourceWasMeasureLike()
+                              }
+                              maxTableHeight={maxTableHeight}
+                            />
+                          )}
+                        </For>
+                      </div>
+                    )}
+                  </For>
+                </div>
+              )}
+            </For>
+          </div>
         </div>
-      </div>
+      </Show>
+      <Show when={!shouldVirtualize()}>
+        <For each={data()}>
+          {row => (
+            <div class="dashboard-row">
+              <div class="dashboard-row-header">
+                <div class="dashboard-row-header-dimension-list">
+                  <For each={dimensions()}>
+                    {d => (
+                      <div class="dashboard-dimension-wrapper">
+                        <div class="dashboard-dimension-name">{d.name}</div>
+                        <div class="dashboard-dimension-value">
+                          {
+                            applyRenderer({
+                              field: d,
+                              dataColumn: row.cell(d),
+                              tag: d.tagParse().tag,
+                              resultMetadata,
+                            }).renderValue
+                          }
+                        </div>
+                      </div>
+                    )}
+                  </For>
+                </div>
+                <div class="dashboard-row-header-separator" />
+              </div>
+              <For each={nonDimensionsGrouped()}>
+                {group => (
+                  <div class="dashboard-row-body">
+                    <For each={group}>
+                      {field => (
+                        <DashboardItem
+                          field={field}
+                          row={row}
+                          resultMetadata={resultMetadata}
+                          isMeasure={
+                            field.isAtomicField() &&
+                            field.sourceWasMeasureLike()
+                          }
+                          maxTableHeight={maxTableHeight}
+                        />
+                      )}
+                    </For>
+                  </div>
+                )}
+              </For>
+            </div>
+          )}
+        </For>
+      </Show>
     </div>
   );
 }
