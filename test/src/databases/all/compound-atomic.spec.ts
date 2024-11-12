@@ -32,6 +32,15 @@ describe.each(runtimes.runtimeList)(
       const literal = num.toString();
       return {node: 'numberLiteral', literal, sql: literal};
     }
+    // this is just a standin for "unknown function"
+    const arrayLen = {
+      'duckdb': 'LEN',
+      'bigquery': 'ARRAY_LENGTH',
+      'postgres': 'ARRAY_LENGTH',
+      'presto': 'LENGTH',
+      'trino': 'LENGTH',
+      'mysql': 'JSON_LENGTH',
+    };
     const empty = `${databaseName}.sql("SELECT 0")`;
     function arraySelectVal(...val: Number[]): string {
       const literal: ArrayLiteralNode = {
@@ -106,8 +115,10 @@ describe.each(runtimes.runtimeList)(
         );
       });
       test('array can be passed to functions', async () => {
+        const fn = arrayLen[databaseName];
+        expect(fn).toBeDefined();
         await expect(
-          `run: ${evens}->{ select: nby2 is len!number(evens); } `
+          `run: ${evens}->{ select: nby2 is ${fn}!number(evens); } `
         ).malloyResultMatches(runtime, {nby2: evensObj.length});
       });
       test('array.each in source', async () => {
@@ -154,6 +165,7 @@ describe.each(runtimes.runtimeList)(
           {roll: 8, rolls: 1},
         ]);
       });
+      test.todo('array of array');
     });
     describe('record', () => {
       function rec_eq(as?: string): Record<string, Number> {
@@ -214,6 +226,19 @@ describe.each(runtimes.runtimeList)(
           }
         `).malloyResultMatches(runtime, {small: 0});
       });
+      test('record with an array property', async () => {
+        await expect(`
+          run: ${empty} -> { select: nums is { odds is [1,3], evens is [2,4]} }
+          -> { select: odd is nums.odds.each }
+        `).malloyResultMatches(runtime, [{odd: 1}, {odd: 3}]);
+      });
+      test('record with an array property in source', async () => {
+        await expect(`
+          run: ${empty} extend { dimension: nums is { odds is [1,3], evens is [2,4]} }
+          -> { select: odd is nums.odds.each }
+        `).malloyResultMatches(runtime, [{odd: 1}, {odd: 3}]);
+      });
+      test.todo('record with record property');
     });
     describe('repeated record', () => {
       const abType: ArrayTypeDef = {
