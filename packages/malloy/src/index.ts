@@ -108,6 +108,9 @@ export type {
   ArrayTypeDef,
   RecordTypeDef,
   RepeatedRecordTypeDef,
+  // Used in array/record tests
+  RecordLiteralNode,
+  ArrayLiteralNode,
 } from './model';
 export {
   arrayEachFields,

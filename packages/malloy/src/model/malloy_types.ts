@@ -583,9 +583,12 @@ export function maxOfExpressionTypes(types: ExpressionType[]): ExpressionType {
 }
 
 /**  Grants access to the expression properties of a FieldDef */
+export interface HasExpression {
+  e: Expr;
+}
 export function hasExpression<T extends FieldDef>(
   f: T
-): f is T & Expression & {e: Expr} {
+): f is T & Expression & HasExpression {
   return 'e' in f;
 }
 

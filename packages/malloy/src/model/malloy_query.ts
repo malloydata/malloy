@@ -107,6 +107,7 @@ import {
   mkTemporal,
   JoinFieldDef,
   LeafAtomicDef,
+  Expression,
 } from './malloy_types';
 
 import {Connection} from '../connection/types';
@@ -2734,17 +2735,27 @@ class QueryQuery extends QueryField {
             dimCount++;
           }
 
-          const location = fi.f.fieldDef.location;
-          const annotation = fi.f.fieldDef.annotation;
+          // Remove computations because they are all resolved
+          let fOut = fi.f.fieldDef;
+          if (hasExpression(fOut)) {
+            fOut = {...fOut};
+            // "as" because delete needs the property to be optional
+            delete (fOut as Expression).e;
+            delete (fOut as Expression).code;
+            delete (fOut as Expression).expressionType;
+          }
+
+          const location = fOut.location;
+          const annotation = fOut.annotation;
 
           // build out the result fields...
-          switch (fi.f.fieldDef.type) {
+          switch (fOut.type) {
             case 'boolean':
             case 'json':
             case 'string':
               fields.push({
                 name,
-                type: fi.f.fieldDef.type,
+                type: fOut.type,
                 resultMetadata,
                 location,
                 annotation,
@@ -2752,8 +2763,8 @@ class QueryQuery extends QueryField {
               break;
             case 'date':
             case 'timestamp': {
-              const timeframe = fi.f.fieldDef.timeframe;
-              const fd: TemporalTypeDef = {type: fi.f.fieldDef.type};
+              const timeframe = fOut.timeframe;
+              const fd: TemporalTypeDef = {type: fOut.type};
               if (timeframe) {
                 fd.timeframe = timeframe;
               }
@@ -2769,7 +2780,7 @@ class QueryQuery extends QueryField {
             case 'number':
               fields.push({
                 name,
-                numberType: fi.f.fieldDef.numberType,
+                numberType: fOut.numberType,
                 type: 'number',
                 resultMetadata,
                 location,
@@ -2777,17 +2788,14 @@ class QueryQuery extends QueryField {
               });
               break;
             case 'sql native':
-              fields.push({...fi.f.fieldDef, resultMetadata, location});
-              break;
             case 'record':
             case 'array': {
-              const f = fi.f.fieldDef;
-              fields.push({...f, resultMetadata, location, annotation});
+              fields.push({...fOut, resultMetadata, location, annotation});
               break;
             }
             default:
               throw new Error(
-                `unknown Field Type in query ${JSON.stringify(fi.f.fieldDef)}`
+                `unknown Field Type in query ${JSON.stringify(fOut)}`
               );
           }
         }
@@ -2898,7 +2906,7 @@ class QueryQuery extends QueryField {
         throw new Error('Internal Error, nested structure with no parent.');
       }
       const fieldExpression = hasExpression(qsDef)
-        ? this.exprToSQL(this.rootResult, this.parent, qsDef.e)
+        ? this.exprToSQL(this.rootResult, qs.parent, qsDef.e)
         : this.parent.dialect.sqlFieldReference(
             qs.parent.getSQLIdentifier(),
             qsDef.name,
@@ -3809,12 +3817,13 @@ class QueryQuery extends QueryField {
       };
       pipeline.shift();
       for (const transform of pipeline) {
+        const parent = this.parent.parent
+          ? {struct: this.parent.parent}
+          : {model: this.parent.getModel()};
         const s = new QueryStruct(
           structDef,
           undefined,
-          {
-            model: this.parent.getModel(),
-          },
+          parent,
           this.parent.prepareResultOptions
         );
         const q = QueryQuery.makeQuery(
@@ -4182,7 +4191,8 @@ class QueryFieldStruct extends QueryField {
    * but maybe it isn't, it doesn't fix the problem I am working on ...
    */
 
-  // mtoy todo review with lloyd if any of these are needed
+  // mtoy todo review with lloyd if any of these are needed, had to NOT
+  // do getIdentifier to pass a test, didn't stop to think why.
   // getIdentifier() {
   //   return this.queryStruct.getIdentifier();
   // }

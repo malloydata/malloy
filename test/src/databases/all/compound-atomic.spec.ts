@@ -8,7 +8,13 @@
 import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
 import '../../util/db-jest-matchers';
-import {FieldDef, Expr} from '@malloydata/malloy';
+import {
+  RecordLiteralNode,
+  ArrayLiteralNode,
+  ArrayTypeDef,
+  FieldDef,
+  Expr,
+} from '@malloydata/malloy';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
@@ -19,17 +25,15 @@ const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
  * so fix that one first if the tests are failing.
  */
 
-type NumberLiteralNodeType = 'numberLiteral'; // Do not understand why this is needed
 describe.each(runtimes.runtimeList)(
-  'composite fields %s',
+  'compound atomic datatypes %s',
   (databaseName, runtime) => {
-    function literalNum(num: Number) {
+    function literalNum(num: Number): Expr {
       const literal = num.toString();
-      const node: NumberLiteralNodeType = 'numberLiteral';
-      return {node, literal, sql: literal};
+      return {node: 'numberLiteral', literal, sql: literal};
     }
     function arraySelectVal(...val: Number[]): string {
-      return runtime.dialect.sqlLiteralArray({
+      const literal: ArrayLiteralNode = {
         node: 'arrayLiteral',
         typeDef: {
           type: 'array',
@@ -40,9 +44,10 @@ describe.each(runtimes.runtimeList)(
           dialect: runtime.dialect.name,
         },
         kids: {values: val.map(v => literalNum(v))},
-      });
+      };
+      return runtime.dialect.sqlLiteralArray(literal);
     }
-    function recordSelectVal(fromObj: Record<string, number>): string {
+    function recordLiteral(fromObj: Record<string, number>): RecordLiteralNode {
       const kids: Record<string, Expr> = {};
       const fields: FieldDef[] = Object.keys(fromObj).map(name => {
         kids[name] = literalNum(fromObj[name]);
@@ -51,7 +56,7 @@ describe.each(runtimes.runtimeList)(
           name,
         };
       });
-      return runtime.dialect.sqlLiteralRecord({
+      const literal: RecordLiteralNode = {
         node: 'recordLiteral',
         typeDef: {
           type: 'record',
@@ -61,7 +66,13 @@ describe.each(runtimes.runtimeList)(
           fields,
         },
         kids,
-      });
+      };
+      literal.sql = runtime.dialect.sqlLiteralRecord(literal);
+      return literal;
+    }
+
+    function recordSelectVal(fromObj: Record<string, number>): string {
+      return runtime.dialect.sqlLiteralRecord(recordLiteral(fromObj));
     }
 
     const sizesObj = {s: 0, m: 1, l: 2, xl: 3};
@@ -203,8 +214,85 @@ describe.each(runtimes.runtimeList)(
           }
         `).malloyResultMatches(runtime, {small: 0});
       });
-      test.todo('array of records can be selected');
-      test.todo('array of records literal');
+    });
+    describe('repeated record', () => {
+      const abType: ArrayTypeDef = {
+        type: 'array',
+        dialect: runtime.dialect.name,
+        join: 'many',
+        elementTypeDef: {type: 'record_element'},
+        fields: [
+          {name: 'a', type: 'number'},
+          {name: 'b', type: 'number'},
+        ],
+        name: '',
+      };
+      const values = [
+        recordLiteral({a: 10, b: 11}),
+        recordLiteral({a: 20, b: 21}),
+      ];
+
+      const ab = runtime.dialect.sqlLiteralArray({
+        node: 'arrayLiteral',
+        typeDef: abType,
+        kids: {values},
+      });
+      const ab_eq = [
+        {a: 10, b: 11},
+        {a: 20, b: 21},
+      ];
+
+      test('repeated record from literal dialect functions', async () => {
+        await expect(`
+          # test.debug
+          run: duckdb.sql("""SELECT ${ab} as ab""") -> { select: ab.a, ab.b }
+        `).malloyResultMatches(runtime, ab_eq);
+      });
+      test('repeated record from nest', async () => {
+        await expect(`
+          # test.verbose
+            run: duckdb.sql("""SELECT 10 as a, 11 as b UNION ALL SELECT 20 as a, 21 as b""")
+            -> { nest: ab is { select: a, b } }
+            -> { select: ab.a, ab.b }
+        `).malloyResultMatches(runtime, ab_eq);
+      });
+      test('select repeated record from literal dialect functions', async () => {
+        await expect(`
+          # test.verbose
+          run: duckdb.sql("""SELECT ${ab} as ab""")
+        `).malloyResultMatches(runtime, {ab: ab_eq});
+      });
+      test('repeat record from malloy literal', async () => {
+        await expect(`
+          # test.verbose
+          run: duckdb.sql("select null")
+          -> { select: ab is [{a is 10, b is 11}, {a is 20, b is 21}] }
+        `).malloyResultMatches(runtime, {ab: ab_eq});
+      });
+      test('repeated record can be selected and renamed', async () => {
+        await expect(`
+          # test.verbose
+          run: duckdb.sql("""SELECT ${ab} as sqlAB""")
+          -> { select: ab is sqlAB }
+        `).malloyResultMatches(runtime, {ab: ab_eq});
+      });
+      test('select repeated record passed down pipeline', async () => {
+        await expect(`
+          # test.verbose
+          run: duckdb.sql("select null")
+          -> { select: pipeAb is [{a is 10, b is 11}, {a is 20, b is 21}] }
+          -> { select: ab is pipeAb }
+        `).malloyResultMatches(runtime, {ab: ab_eq});
+      });
+      test('deref repeat record passed down pipeline', async () => {
+        await expect(`
+          run: duckdb.sql("""SELECT ${ab} as sqlAB""")
+          -> { select: ab is sqlAB }
+          -> { select: ab.a, ab.b }
+        `).malloyResultMatches(runtime, ab_eq);
+      });
+      test.todo('select array of records from source');
+      test.todo('select property from array of records from source');
     });
   }
 );

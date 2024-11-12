@@ -30,16 +30,19 @@ export class ArrayLiteral extends ExpressionDef {
       }
     }
     const elementTypeDef = TDU.atomicDef(values[0]);
-    if (elementTypeDef.type === 'record') {
-      throw new Error('mtoy todo array of records not yet');
-    }
     const typeDef: ArrayTypeDef = {
       type: 'array',
       join: 'many',
       name: '',
       dialect: fs.dialectName(),
-      elementTypeDef,
-      fields: arrayEachFields(elementTypeDef),
+      elementTypeDef:
+        elementTypeDef.type !== 'record'
+          ? elementTypeDef
+          : {type: 'record_element'},
+      fields:
+        elementTypeDef.type === 'record'
+          ? elementTypeDef.fields
+          : arrayEachFields(elementTypeDef),
     };
     const aLit: ArrayLiteralNode = {
       node: 'arrayLiteral',
