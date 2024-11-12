@@ -2790,7 +2790,7 @@ class QueryQuery extends QueryField {
             case 'sql native':
             case 'record':
             case 'array': {
-              fields.push({...fOut, resultMetadata, location, annotation});
+              fields.push({...fOut, resultMetadata});
               break;
             }
             default:

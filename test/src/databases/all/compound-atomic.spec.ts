@@ -32,6 +32,7 @@ describe.each(runtimes.runtimeList)(
       const literal = num.toString();
       return {node: 'numberLiteral', literal, sql: literal};
     }
+    const empty = `${databaseName}.sql("SELECT 0")`;
     function arraySelectVal(...val: Number[]): string {
       const literal: ArrayLiteralNode = {
         node: 'arrayLiteral',
@@ -111,7 +112,7 @@ describe.each(runtimes.runtimeList)(
       });
       test('array.each in source', async () => {
         await expect(`
-          run: duckdb.sql("select 1")
+          run: ${empty}
           extend { dimension: d4 is [1,2,3,4] }
           -> { select: die_roll is d4.each }
         `).malloyResultMatches(runtime, [
@@ -123,7 +124,7 @@ describe.each(runtimes.runtimeList)(
       });
       test('array.each in extend block', async () => {
         await expect(`
-          run: duckdb.sql("select 1") -> {
+          run: ${empty} -> {
             extend: { dimension: d4 is [1,2,3,4] }
             select: die_roll is d4.each
           }
@@ -136,8 +137,7 @@ describe.each(runtimes.runtimeList)(
       });
       test.skip('cross join arrays', async () => {
         await expect(`
-          # test.verbose
-          run: duckdb.sql("select 1") extend {
+          run: ${empty} extend {
             dimension: d1 is [1,2,3,4]
             join_cross: d2 is [1,2,3,4]
           } -> {
@@ -188,7 +188,7 @@ describe.each(runtimes.runtimeList)(
       });
       test('select record literal from a source', async () => {
         await expect(`
-          run: duckdb.sql("select 1") -> {
+          run: ${empty} -> {
             extend: { dimension: sizes is {s is 0, m is 1, l is 2, xl is 3} }
             select: sizes
           }
@@ -196,7 +196,7 @@ describe.each(runtimes.runtimeList)(
       });
       test('computed record.property from a source', async () => {
         await expect(`
-          run: duckdb.sql("select 1")
+          run: ${empty}
             extend { dimension: record is {s is 0, m is 1, l is 2, xl is 3} }
             -> { select: small is record.s }
         `).malloyResultMatches(runtime, {small: 0});
@@ -208,7 +208,7 @@ describe.each(runtimes.runtimeList)(
       });
       test('record.property from an extend block', async () => {
         await expect(`
-          run: duckdb.sql("select 1") -> {
+          run: ${empty} -> {
             extend: { dimension: record is {s is 0, m is 1, l is 2, xl is 3} }
             select: small is record.s
           }
@@ -241,58 +241,65 @@ describe.each(runtimes.runtimeList)(
         {a: 10, b: 11},
         {a: 20, b: 21},
       ];
+      const abMalloy = '[{a is 10, b is 11}, {a is 20, b is 21}]';
 
       test('repeated record from literal dialect functions', async () => {
         await expect(`
-          # test.debug
-          run: duckdb.sql("""SELECT ${ab} as ab""") -> { select: ab.a, ab.b }
+          run: ${databaseName}.sql("""SELECT ${ab} as ab""") -> { select: ab.a, ab.b }
         `).malloyResultMatches(runtime, ab_eq);
       });
       test('repeated record from nest', async () => {
         await expect(`
-          # test.verbose
-            run: duckdb.sql("""SELECT 10 as a, 11 as b UNION ALL SELECT 20 as a, 21 as b""")
+            run: ${databaseName}.sql("""SELECT 10 as a, 11 as b UNION ALL SELECT 20 as a, 21 as b""")
             -> { nest: ab is { select: a, b } }
             -> { select: ab.a, ab.b }
         `).malloyResultMatches(runtime, ab_eq);
       });
       test('select repeated record from literal dialect functions', async () => {
         await expect(`
-          # test.verbose
-          run: duckdb.sql("""SELECT ${ab} as ab""")
+          run: ${databaseName}.sql("""SELECT ${ab} as ab""")
         `).malloyResultMatches(runtime, {ab: ab_eq});
       });
       test('repeat record from malloy literal', async () => {
         await expect(`
-          # test.verbose
-          run: duckdb.sql("select null")
-          -> { select: ab is [{a is 10, b is 11}, {a is 20, b is 21}] }
+          run: ${empty}
+          -> { select: ab is ${abMalloy} }
         `).malloyResultMatches(runtime, {ab: ab_eq});
       });
       test('repeated record can be selected and renamed', async () => {
         await expect(`
-          # test.verbose
-          run: duckdb.sql("""SELECT ${ab} as sqlAB""")
+          run: ${databaseName}.sql("""SELECT ${ab} as sqlAB""")
           -> { select: ab is sqlAB }
         `).malloyResultMatches(runtime, {ab: ab_eq});
       });
       test('select repeated record passed down pipeline', async () => {
         await expect(`
-          # test.verbose
-          run: duckdb.sql("select null")
-          -> { select: pipeAb is [{a is 10, b is 11}, {a is 20, b is 21}] }
+          run: ${empty}
+          -> { select: pipeAb is ${abMalloy} }
           -> { select: ab is pipeAb }
         `).malloyResultMatches(runtime, {ab: ab_eq});
       });
       test('deref repeat record passed down pipeline', async () => {
         await expect(`
-          run: duckdb.sql("""SELECT ${ab} as sqlAB""")
+          run: ${databaseName}.sql("""SELECT ${ab} as sqlAB""")
           -> { select: ab is sqlAB }
           -> { select: ab.a, ab.b }
         `).malloyResultMatches(runtime, ab_eq);
       });
-      test.todo('select array of records from source');
-      test.todo('select property from array of records from source');
+      test('select array of records from source', async () => {
+        await expect(`
+          run: ${empty}
+          extend { dimension: abSrc is ${abMalloy} }
+          -> { select: ab is abSrc }
+        `).malloyResultMatches(runtime, {ab: ab_eq});
+      });
+      test('deref array of records from source', async () => {
+        await expect(`
+          run: ${empty}
+          extend { dimension: ab is ${abMalloy} }
+          -> { select: ab.a, ab.b }
+        `).malloyResultMatches(runtime, ab_eq);
+      });
     });
   }
 );
