@@ -3,6 +3,18 @@ import {MalloyRenderProps} from './render';
 export async function copyMalloyRenderHTML(
   element: HTMLElement & MalloyRenderProps
 ) {
+  const html = await getMalloyRenderHTML(element);
+  try {
+    await navigator.clipboard.writeText(html);
+  } catch (error) {
+    /* eslint-disable no-console */
+    console.error('Failed to copy text: ', error);
+  }
+}
+
+export async function getMalloyRenderHTML(
+  element: HTMLElement & MalloyRenderProps
+) {
   let html = '';
 
   const originalTableConfig = element.tableConfig ?? {};
@@ -23,6 +35,9 @@ export async function copyMalloyRenderHTML(
   );
   element.dashboardConfig = copyHTMLDashboardConfig;
 
+  // Give charts time to re-render after configuration changes
+  await sleep(1000);
+
   if (element.shadowRoot) {
     let styles = '';
     for (const stylesheet of [...element.shadowRoot.adoptedStyleSheets]) {
@@ -34,29 +49,31 @@ export async function copyMalloyRenderHTML(
       styles = styles.replaceAll(':host', '.malloy_html_host');
       const shadowStyle = element.getAttribute('style');
       html = `
-<div>
-  <style>
-    ${styles}
+  <div>
+    <style>
+      ${styles}
 
-    form.vega-bindings {
-      margin-block: 0em;
-    }
-  </style>
-  <div class="malloy_html_host" style="${shadowStyle}">
-    ${element.shadowRoot.innerHTML}
+      form.vega-bindings {
+        margin-block: 0em;
+      }
+    </style>
+    <div class="malloy_html_host" style="${shadowStyle}">
+      ${element.shadowRoot.innerHTML}
+    </div>
   </div>
-</div>
-  `;
+    `;
     }
   } else html = element.innerHTML;
-  try {
-    await navigator.clipboard.writeText(html);
-    element.tableConfig = originalTableConfig;
-    element.dashboardConfig = originalDashboardConfig;
-  } catch (error) {
-    /* eslint-disable no-console */
-    console.error('Failed to copy text: ', error);
-    element.tableConfig = originalTableConfig;
-    element.dashboardConfig = originalDashboardConfig;
-  }
+
+  // Reset element configuration
+  element.tableConfig = originalTableConfig;
+  element.dashboardConfig = originalDashboardConfig;
+
+  return html;
+}
+
+function sleep(n: number) {
+  return new Promise(resolve => {
+    setTimeout(resolve, n);
+  });
 }
