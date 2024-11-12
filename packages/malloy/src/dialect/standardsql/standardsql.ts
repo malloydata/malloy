@@ -37,6 +37,8 @@ import {
   MeasureTimeExpr,
   LeafAtomicTypeDef,
   TD,
+  RecordLiteralNode,
+  ArrayLiteralNode,
 } from '../../model/malloy_types';
 import {
   DialectFunctionOverloadDef,
@@ -567,5 +569,19 @@ ${indent(sql)}
     // Parentheses, Commas:  NUMERIC(5, 2)
     // Angle Brackets:       ARRAY<INT64>
     return sqlType.match(/^[A-Za-z\s(),<>0-9]*$/) !== null;
+  }
+
+  sqlLiteralRecord(lit: RecordLiteralNode): string {
+    const ents: string[] = [];
+    for (const [name, val] of Object.entries(lit.kids)) {
+      const expr = val.sql || 'internal-error-literal-record';
+      ents.push(`${expr} AS ${this.sqlMaybeQuoteIdentifier(name)}`);
+    }
+    return `STRUCT(${ents.join(',')})`;
+  }
+
+  sqlLiteralArray(lit: ArrayLiteralNode): string {
+    const array = lit.kids.values.map(val => val.sql);
+    return '[' + array.join(',') + ']';
   }
 }

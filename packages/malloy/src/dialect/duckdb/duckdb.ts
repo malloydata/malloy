@@ -33,6 +33,7 @@ import {
   LeafAtomicTypeDef,
   TD,
   ArrayLiteralNode,
+  RecordLiteralNode,
 } from '../../model/malloy_types';
 import {indent} from '../../model/utils';
 import {
@@ -431,7 +432,15 @@ export class DuckDBDialect extends PostgresBase {
   }
 
   sqlLiteralArray(lit: ArrayLiteralNode): string {
-    const values = lit.kids.values.map(v => v.sql).join(',');
-    return `[${values}]`;
+    const array = lit.kids.values.map(val => val.sql);
+    return '[' + array.join(',') + ']';
+  }
+
+  sqlLiteralRecord(lit: RecordLiteralNode): string {
+    const pairs = Object.entries(lit.kids).map(
+      ([propName, propVal]) =>
+        `${this.sqlMaybeQuoteIdentifier(propName)}:${propVal.sql}`
+    );
+    return '{' + pairs.join(',') + '}';
   }
 }

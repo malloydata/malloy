@@ -6,6 +6,8 @@
  */
 
 import {
+  ArrayLiteralNode,
+  RecordLiteralNode,
   RegexMatchExpr,
   TD,
   TimeExtractExpr,
@@ -94,5 +96,14 @@ export abstract class PostgresBase extends Dialect {
       return `TIMESTAMPTZ '${lt.literal} ${tz}'::TIMESTAMP`;
     }
     return `TIMESTAMP '${lt.literal}'`;
+  }
+
+  sqlLiteralRecord(_lit: RecordLiteralNode): string {
+    throw new Error('Cannot create a record literal for postgres');
+  }
+
+  sqlLiteralArray(lit: ArrayLiteralNode): string {
+    const array = lit.kids.values.map(val => val.sql);
+    return '{' + array.join(',') + '}';
   }
 }

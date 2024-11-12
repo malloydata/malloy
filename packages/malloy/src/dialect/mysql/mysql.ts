@@ -43,6 +43,8 @@ import {
   LeafAtomicTypeDef,
   TD,
   AtomicTypeDef,
+  ArrayLiteralNode,
+  RecordLiteralNode,
 } from '../../model/malloy_types';
 import {indent} from '../../model/utils';
 import {Dialect, DialectFieldList, qtz, QueryInfo} from '../dialect';
@@ -542,5 +544,13 @@ export class MySQLDialect extends Dialect {
     // Spaces,
     // Parentheses, Commas:  NUMERIC(5, 2)
     return sqlType.match(/^[A-Za-z\s(),0-9]*$/) !== null;
+  }
+
+  sqlLiteralArray(_lit: ArrayLiteralNode): string {
+    throw new Error('No literal arrays in MySQL');
+  }
+
+  sqlLiteralRecord(_lit: RecordLiteralNode): string {
+    throw new Error('No literal records in MySQL');
   }
 }

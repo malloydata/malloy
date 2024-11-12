@@ -37,6 +37,9 @@ import {
   RegexMatchExpr,
   LeafAtomicTypeDef,
   TD,
+  ArrayLiteralNode,
+  RecordLiteralNode,
+  isAtomic,
 } from '../../model/malloy_types';
 import {
   DialectFunctionOverloadDef,
@@ -489,5 +492,25 @@ ${indent(sql)}
     // Parentheses, Commas:  NUMERIC(5, 2)
     // Square Brackets:      INT64[]
     return sqlType.match(/^[A-Za-z\s(),[\]0-9]*$/) !== null;
+  }
+
+  sqlLiteralRecord(lit: RecordLiteralNode): string {
+    const rowVals: string[] = [];
+    const rowTypes: string[] = [];
+    for (const f of lit.typeDef.fields) {
+      if (isAtomic(f)) {
+        const name = f.as ?? f.name;
+        const propName = this.sqlMaybeQuoteIdentifier(name);
+        const propVal = lit.kids[name].sql ?? 'internal-error-record-literal';
+        rowVals.push(`${propName}:${propVal}`);
+        rowTypes.push(this.malloyTypeToSQLType(f));
+      }
+    }
+    return `{${rowVals.join(',')}}::OBJECT{${rowTypes.join(',')}}`;
+  }
+
+  sqlLiteralArray(lit: ArrayLiteralNode): string {
+    const array = lit.kids.values.map(val => val.sql);
+    return '[' + array.join(',') + ']';
   }
 }

@@ -37,6 +37,9 @@ import {
   TimeExtractExpr,
   LeafAtomicTypeDef,
   TD,
+  ArrayLiteralNode,
+  RecordLiteralNode,
+  isAtomic,
 } from '../../model/malloy_types';
 import {
   DialectFunctionOverloadDef,
@@ -541,16 +544,18 @@ ${indent(sql)}
   }
 
   malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
-    if (malloyType.type === 'number') {
-      if (malloyType.numberType === 'integer') {
-        return 'BIGINT';
-      } else {
-        return 'DOUBLE';
-      }
-    } else if (malloyType.type === 'string') {
-      return 'VARCHAR';
+    switch (malloyType.type) {
+      case 'number':
+        return malloyType.numberType === 'integer' ? 'BIGINT' : 'DOUBLE';
+      case 'string':
+        return 'VARCHAR';
+      case 'record':
+        return 'ROW';
+      case 'sql native':
+        return malloyType.rawType || 'UNKNOWN-NATIVE';
+      default:
+        return malloyType.type.toUpperCase();
     }
-    return malloyType.type;
   }
 
   sqlTypeToMalloyType(sqlType: string): LeafAtomicTypeDef {
@@ -617,6 +622,25 @@ ${indent(sql)}
     }
     const extracted = `EXTRACT(${pgUnits} FROM ${extractFrom})`;
     return from.units === 'day_of_week' ? `mod(${extracted}+1,7)` : extracted;
+  }
+
+  sqlLiteralArray(lit: ArrayLiteralNode): string {
+    const array = lit.kids.values.map(val => val.sql);
+    return 'ARRAY[' + array.join(',') + ']';
+  }
+
+  sqlLiteralRecord(lit: RecordLiteralNode): string {
+    const rowVals: string[] = [];
+    const rowTypes: string[] = [];
+    for (const f of lit.typeDef.fields) {
+      if (isAtomic(f)) {
+        const name = f.as ?? f.name;
+        rowVals.push(lit.kids[name].sql ?? 'internal-error-record-literal');
+        const elType = this.malloyTypeToSQLType(f);
+        rowTypes.push(`${name} ${elType}`);
+      }
+    }
+    return `CAST(ROW(${rowVals.join(',')}) AS ROW(${rowTypes.join(',')}))`;
   }
 }
 

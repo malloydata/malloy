@@ -281,21 +281,8 @@ export abstract class Dialect {
   abstract sqlLiteralRegexp(literal: string): string;
 
   abstract sqlRegexpMatch(df: RegexMatchExpr): string;
-  // abstract sqlLiteralRecord(lit: RecordLiteralNode): string;
-  // abstract sqlLiteralArray(lit: ArrayLiteralNode): string;
-  // SHOULD BE ABSTRACT BUT A PLACEHOLDER FOR NOW
-  sqlLiteralArray(lit: ArrayLiteralNode): string {
-    const array = lit.kids.values.map(val => val.sql);
-    return '[' + array.join(',') + ']';
-  }
-
-  sqlLiteralRecord(lit: RecordLiteralNode): string {
-    const pairs = Object.entries(lit.kids).map(
-      ([propName, propVal]) =>
-        `${this.sqlMaybeQuoteIdentifier(propName)}:${propVal.sql}`
-    );
-    return '{' + pairs.join(',') + '}';
-  }
+  abstract sqlLiteralArray(lit: ArrayLiteralNode): string;
+  abstract sqlLiteralRecord(lit: RecordLiteralNode): string;
 
   /**
    * The dialect has a chance to over-ride how expressions are translated. If
