@@ -35,6 +35,7 @@ import {renderNumericField} from '../render-numeric-field';
 import {createMeasureAxis} from '../vega/measure-axis';
 import {getCustomTooltipEntries} from './get-custom-tooltips-entries';
 import {getMarkName} from '../vega/vega-utils';
+import {NULL_SYMBOL} from '../apply-renderer';
 
 type BarDataRecord = {
   x: string | number;
@@ -426,7 +427,7 @@ export function generateBarChartVegaSpec(
     },
     {
       name: 'brushMeasureIn',
-      update: 'getMalloyBrush(brushIn, yRefsList, \'measure\') || "empty"',
+      update: "getMalloyBrush(brushIn, yRefsList, 'measure') || null",
     },
     {
       name: 'brushMeasureRangeIn',
@@ -780,6 +781,7 @@ export function generateBarChartVegaSpec(
     }[] = [];
     data.forEach(row => {
       // Filter out missing date/time values
+      // TODO: figure out how we can show null values in continuous axes
       if (
         xIsDateorTime &&
         (row[xFieldPath] === null || typeof row[xFieldPath] === 'undefined')
@@ -789,7 +791,7 @@ export function generateBarChartVegaSpec(
       // Map data fields to chart properties
       mappedData.push({
         __source: row,
-        x: getXValue(row),
+        x: getXValue(row) ?? NULL_SYMBOL,
         y: row[yFieldPath],
         series: seriesFieldPath ? row[seriesFieldPath] : yFieldPath,
       });

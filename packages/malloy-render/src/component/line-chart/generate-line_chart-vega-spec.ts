@@ -34,6 +34,7 @@ import {
 import {renderNumericField} from '../render-numeric-field';
 import {getMarkName} from '../vega/vega-utils';
 import {getCustomTooltipEntries} from '../bar-chart/get-custom-tooltips-entries';
+import {NULL_SYMBOL} from '../apply-renderer';
 
 type LineDataRecord = {
   x: string | number;
@@ -437,7 +438,7 @@ export function generateLineChartVegaSpec(
     },
     {
       name: 'brushMeasureIn',
-      update: 'getMalloyBrush(brushIn, yRefsList, \'measure\') || "empty"',
+      update: "getMalloyBrush(brushIn, yRefsList, 'measure') || null",
     },
     {
       name: 'brushMeasureRangeIn',
@@ -750,7 +751,7 @@ export function generateLineChartVegaSpec(
       // Map data fields to chart properties
       mappedData.push({
         __source: row,
-        x: getXValue(row),
+        x: getXValue(row) ?? NULL_SYMBOL,
         y: row[yFieldPath],
         series: seriesFieldPath ? row[seriesFieldPath] : yFieldPath,
       });
