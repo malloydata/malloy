@@ -107,6 +107,7 @@ export function MalloyRender(
       {
         disableVirtualization: false,
         rowLimit: Infinity,
+        shouldFillWidth: false,
       },
       props.tableConfig
     );

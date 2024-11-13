@@ -224,13 +224,16 @@ const MalloyTableRoot = (_props: {
   rowLimit?: number;
   scrollEl?: HTMLElement;
   disableVirtualization?: boolean;
+  shouldFillWidth?: boolean;
 }) => {
   const props = mergeProps({rowLimit: Infinity}, _props);
   const tableCtx = useTableContext()!;
   const resultMetadata = useResultContext();
   const shouldFillWidth =
-    tableCtx.root &&
-    props.data.field.tagParse().tag.tag('table')?.text('size') === 'fill';
+    typeof props.shouldFillWidth === 'boolean'
+      ? props.shouldFillWidth
+      : tableCtx.root &&
+        props.data.field.tagParse().tag.tag('table')?.text('size') === 'fill';
 
   const pinnedFields = createMemo(() => {
     const fields = Object.entries(tableCtx.layout.fieldHeaderRangeMap)
@@ -618,6 +621,7 @@ const MalloyTable: Component<{
   rowLimit?: number;
   scrollEl?: HTMLElement;
   disableVirtualization?: boolean;
+  shouldFillWidth?: boolean;
 }> = props => {
   const metadata = useResultContext();
   const hasTableCtx = !!useTableContext();
@@ -651,13 +655,17 @@ const MalloyTable: Component<{
   const tableProps = () =>
     mergeProps(props, {
       disableVirtualization:
-        typeof props.disableVirtualization !== 'undefined'
+        typeof props.disableVirtualization === 'boolean'
           ? props.disableVirtualization
           : tableConfig().disableVirtualization,
       rowLimit:
-        typeof props.rowLimit !== 'undefined'
+        typeof props.rowLimit === 'number'
           ? props.rowLimit
           : tableConfig().rowLimit,
+      shouldFillWidth:
+        typeof props.shouldFillWidth === 'boolean'
+          ? props.shouldFillWidth
+          : tableConfig().shouldFillWidth,
     });
 
   return (
