@@ -46,10 +46,13 @@ import {
 } from '../../parse-log';
 import {
   cubeUsageDifference,
+  cubeUsageJoinPaths,
   emptyCubeUsage,
+  isEmptyCubeUsage,
   mergeCubeUsage,
   resolveCubeSources,
 } from '../../../model/cube_utils';
+import {StructSpaceFieldBase} from './struct-space-field-base';
 
 /**
  * The output space of a query operation. It is not named "QueryOutputSpace"
@@ -169,14 +172,40 @@ export abstract class QueryOperationSpace
 
   protected cubeUsageFromEntry(entry: SpaceEntry) {
     if (entry instanceof SpaceField) {
-      const cubeUsage = entry.typeDesc().cubeUsage ?? [];
-      return cubeUsage;
+      return entry.typeDesc().cubeUsage;
     }
     return emptyCubeUsage();
   }
 
   protected addCubeUsageFromEntry(entry: SpaceEntry) {
-    this.addCubeUsage(this.cubeUsageFromEntry(entry));
+    this.addCubeUsage(
+      this.getCubeUsageIncludingJoinOns(this.cubeUsageFromEntry(entry))
+    );
+  }
+
+  private getJoinOnCubeUsage(joinPath: string[]): model.CubeUsage {
+    const reference = joinPath.map(n => new FieldName(n));
+    this.astEl.has({reference});
+    const lookup = this.queryInputSpace.lookup(reference);
+    // Should always be found...
+    if (lookup.found && lookup.found instanceof StructSpaceFieldBase) {
+      return lookup.found.fieldDef().onCubeUsage ?? emptyCubeUsage();
+    }
+    throw new Error('Unexpected join lookup was not found or not a struct');
+  }
+
+  protected getCubeUsageIncludingJoinOns(
+    cubeUsage: model.CubeUsage
+  ): model.CubeUsage {
+    let cubeUsageIncludingJoinOns = cubeUsage;
+    const joinPaths = cubeUsageJoinPaths(cubeUsage);
+    for (const joinPath of joinPaths) {
+      cubeUsageIncludingJoinOns = mergeCubeUsage(
+        this.getJoinOnCubeUsage(joinPath),
+        cubeUsageIncludingJoinOns
+      );
+    }
+    return cubeUsageIncludingJoinOns;
   }
 
   protected addCubeUsage(cubeUsage: model.CubeUsage) {
@@ -188,8 +217,9 @@ export abstract class QueryOperationSpace
     logTo: MalloyElement
   ) {
     const newCubeUsage = cubeUsageDifference(cubeUsage, this.cubeUsage);
-    this.addCubeUsage(cubeUsage);
-    this.validateCubeUsage(newCubeUsage, logTo);
+    const includingJoinOns = this.getCubeUsageIncludingJoinOns(newCubeUsage);
+    this.addCubeUsage(includingJoinOns);
+    this.validateCubeUsage(includingJoinOns, logTo);
   }
 
   public addCubeUsageFromFilter(
@@ -210,12 +240,11 @@ export abstract class QueryOperationSpace
     if (this.alreadyInvalidCubeUsage) return;
 
     const source = this.inputSpace().structDef();
-    if (source.type !== 'cube') return; // TODO unless joins are cubes...
+    if (isEmptyCubeUsage(this.cubeUsage)) return;
 
-    const isValid =
-      resolveCubeSources(source.sources, this.cubeUsage) !== undefined;
+    const resolved = resolveCubeSources(source, this.cubeUsage);
 
-    if (!isValid) {
+    if (resolved.error) {
       logTo.logError('invalid-cube-usage', {
         newUsage: newCubeUsage,
         allUsage: this.cubeUsage,

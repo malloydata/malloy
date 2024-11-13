@@ -22,7 +22,11 @@
  */
 
 import {cubeUsageIsPlural, formatCubeUsages} from '../model/cube_utils';
-import {CubeUsage, DocumentLocation, ExpressionValueType} from '../model/malloy_types';
+import {
+  CubeUsage,
+  DocumentLocation,
+  ExpressionValueType,
+} from '../model/malloy_types';
 import {EventStream} from '../runtime_types';
 
 export type LogSeverity = 'error' | 'warn' | 'debug';

@@ -35,7 +35,6 @@ import {
 
 import {ErrorFactory} from '../error-factory';
 import {SourceFieldSpace} from '../types/field-space';
-import {Filter} from '../query-properties/filters';
 import {Limit} from '../query-properties/limit';
 import {Ordering} from '../query-properties/ordering';
 import {Top} from '../query-properties/top';

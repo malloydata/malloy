@@ -16,7 +16,7 @@ afterAll(async () => {
 });
 
 runtimes.runtimeMap.forEach((runtime, databaseName) => {
-  it(`number param used in dimension - ${databaseName}`, async () => {
+  it(`basic cube usage - ${databaseName}`, async () => {
     await expect(`
       ##! experimental.cube_sources
       source: state_facts is ${databaseName}.table('malloytest.state_facts')
@@ -24,4 +24,56 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: x -> { group_by: foo }
     `).malloyResultMatches(runtime, {foo: 1});
   });
+  it(`cube used in join - ${databaseName}`, async () => {
+    await expect(`
+      ##! experimental.cube_sources
+      source: state_facts is ${databaseName}.table('malloytest.state_facts')
+      source: x is cube(state_facts, state_facts extend { dimension: foo is 1 })
+      source: y is ${databaseName}.table('malloytest.state_facts') extend {
+        join_one: x on x.state = state
+      }
+      run: y -> { group_by: x.foo }
+    `).malloyResultMatches(runtime, {foo: 1});
+  });
+  it(`cube used in join on - ${databaseName}`, async () => {
+    await expect(`
+      ##! experimental.cube_sources
+      source: state_facts is ${databaseName}.table('malloytest.state_facts')
+      source: x is cube(state_facts, state_facts extend { dimension: state_copy is state })
+      source: y is ${databaseName}.table('malloytest.state_facts') extend {
+        // Join california by testing state copy;
+        // cube usage is in join on, so the cube with state_copy should
+        // be selected whenever this join is used
+        join_one: ca is x on ca.state_copy = 'CA'
+      }
+      run: y -> { group_by: ca.state; where: state = 'IL' }
+    `).malloyResultMatches(runtime, {state: 'CA'});
+  });
+  // TODO test always join cube usage
+  // TODO test cube of a cube
+  it(`cube used in view - ${databaseName}`, async () => {
+    await expect(`
+      ##! experimental.cube_sources
+      source: state_facts is ${databaseName}.table('malloytest.state_facts')
+      source: x is cube(state_facts, state_facts extend { dimension: foo is 1 }) extend {
+        view: v is { group_by: foo }
+      }
+      run: x -> v
+    `).malloyResultMatches(runtime, {foo: 1});
+  });
+  it(`cube used in view - ${databaseName}`, async () => {
+    await expect(`
+      ##! experimental.cube_sources
+      source: state_facts is ${databaseName}.table('malloytest.state_facts')
+      source: x is cube(state_facts, state_facts extend { dimension: foo is 1 }) extend {
+        view: v is {
+          group_by: state
+          where: state = 'CA'
+          limit: 1
+        }
+      }
+      run: x -> v + foo
+    `).malloyResultMatches(runtime, {foo: 1, state: 'CA'});
+  });
+  // TODO test refining a _query_ (not a view)
 });

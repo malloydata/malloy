@@ -131,6 +131,7 @@ export class KeyJoin extends Join {
               right: exprX.value,
             },
           };
+          inStruct.onCubeUsage = exprX.cubeUsage;
           return;
         } else {
           this.logError(
@@ -187,6 +188,7 @@ export class ExpressionJoin extends Join {
       return;
     }
     inStruct.onExpression = exprX.value;
+    inStruct.onCubeUsage = exprX.cubeUsage;
   }
 
   structDef(parameterSpace: ParameterSpace): JoinFieldDef {

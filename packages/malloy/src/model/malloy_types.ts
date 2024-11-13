@@ -782,9 +782,14 @@ export type JoinFieldTypes =
   | 'record';
 
 export function isJoinable(sd: StructDef): sd is Joinable {
-  return ['table', 'sql_select', 'query_source', 'array', 'record'].includes(
-    sd.type
-  );
+  return [
+    'table',
+    'sql_select',
+    'query_source',
+    'array',
+    'record',
+    'cube',
+  ].includes(sd.type);
 }
 
 export function isJoined<T extends FieldDef | StructDef>(

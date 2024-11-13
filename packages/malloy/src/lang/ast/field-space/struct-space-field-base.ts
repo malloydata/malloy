@@ -53,6 +53,7 @@ export abstract class StructSpaceFieldBase extends SpaceField {
         type: this.structDef.type,
         evalSpace: 'input',
         expressionType: 'scalar',
+        // TODO Oh, I guess I don't have to just use the onCubeUsage in query-spaces, I can just use the cubeUsage :)
         cubeUsage: this.structDef.onCubeUsage ?? emptyCubeUsage(),
       };
     }

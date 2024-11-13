@@ -6,22 +6,99 @@
  */
 
 import {isNotUndefined} from '../lang/utils';
-import {CubeUsage, SourceDef} from './malloy_types';
+import {
+  CubeUsage,
+  FieldDef,
+  isJoinable,
+  isJoined,
+  isSourceDef,
+  SourceDef,
+} from './malloy_types';
 
 // TODO handle joins...
-export function resolveCubeSources(
-  sources: SourceDef[],
+
+type CubeError =
+  | {code: 'not_a_cube'; data: {path: string[]}}
+  | {code: 'cube_not_defined'; data: {path: string[]}}
+  | {code: 'cube_not_a_join'; data: {path: string[]}}
+  | {code: 'cube_is_not_joinable'; data: {path: string[]}}
+  | {code: 'no_suitable_cube'; data: {path: string[]; fields: string[]}};
+
+function _resolveCubeSources(
+  path: string[],
+  source: SourceDef,
   cubeUsage: CubeUsage
-): SourceDef | undefined {
-  overSources: for (const source of sources) {
-    for (const usage of cubeUsage.fields) {
-      // TODO handle joins
-      if (source.fields.find(f => f.as ?? f.name === usage) === undefined) {
-        continue overSources;
+): {success: SourceDef} | {error: CubeError} {
+  let base = {...source};
+  if (cubeUsage.fields.length > 0) {
+    if (source.type === 'cube') {
+      let found = false;
+      overSources: for (const inputSource of source.sources) {
+        for (const usage of cubeUsage.fields) {
+          // TODO handle joins
+          if (
+            inputSource.fields.find(f => f.as ?? f.name === usage) === undefined
+          ) {
+            continue overSources;
+          }
+        }
+        found = true;
+        base = {...inputSource};
+        break;
       }
+      if (!found) {
+        return {
+          error: {
+            code: 'no_suitable_cube',
+            data: {fields: cubeUsage.fields, path},
+          },
+        };
+      }
+    } else {
+      return {error: {code: 'not_a_cube', data: {path}}};
     }
-    return source;
   }
+  const fieldsByName: {[name: string]: FieldDef} = {};
+  for (const field of base.fields) {
+    fieldsByName[field.as ?? field.name] = field;
+  }
+  for (const [joinName, joinedUsage] of Object.entries(cubeUsage.joinedUsage)) {
+    const join = fieldsByName[joinName];
+    const newPath = [...path, joinName];
+    if (join === undefined) {
+      return {error: {code: 'cube_not_defined', data: {path: newPath}}};
+    }
+    if (!isJoined(join) || !isSourceDef(join)) {
+      return {error: {code: 'cube_not_a_join', data: {path: newPath}}};
+    }
+    const resolved = _resolveCubeSources(newPath, join, joinedUsage);
+    if ('error' in resolved) {
+      return resolved;
+    }
+    if (!isJoinable(resolved.success)) {
+      return {error: {code: 'cube_is_not_joinable', data: {path: newPath}}};
+    }
+    fieldsByName[joinName] = {
+      ...resolved.success,
+      join: join.join,
+      as: join.as ?? join.name,
+      onExpression: join.onExpression,
+    };
+  }
+  return {success: {...base, fields: Object.values(fieldsByName)}};
+}
+
+export function resolveCubeSources(
+  source: SourceDef,
+  cubeUsage: CubeUsage
+):
+  | {sourceDef: SourceDef; error: undefined}
+  | {error: CubeError; sourceDef: undefined} {
+  const result = _resolveCubeSources([], source, cubeUsage);
+  if ('success' in result) {
+    return {sourceDef: result.success, error: undefined};
+  }
+  return {sourceDef: undefined, error: result.error};
 }
 
 export function cubeUsagePaths(cubeUsage: CubeUsage): string[][] {
@@ -46,6 +123,10 @@ function countCubeUsage(cubeUsage: CubeUsage): number {
     (a, b) => a + countCubeUsage(b),
     cubeUsage.fields.length
   );
+}
+
+export function isEmptyCubeUsage(cubeUsage: CubeUsage): boolean {
+  return countCubeUsage(cubeUsage) === 0;
 }
 
 export function cubeUsageIsPlural(cubeUsage: CubeUsage): boolean {
@@ -119,4 +200,19 @@ export function joinedCubeUsage(
     fields: [],
     joinedUsage: {[joinPath[joinPath.length - 1]]: cubeUsage},
   });
+}
+
+export function cubeUsageJoinPaths(cubeUsage: CubeUsage): string[][] {
+  const joinsUsed = Object.keys(cubeUsage.joinedUsage);
+  return [
+    ...joinsUsed.map(joinName => [joinName]),
+    ...joinsUsed
+      .map(joinName =>
+        cubeUsageJoinPaths(cubeUsage.joinedUsage[joinName]).map(path => [
+          joinName,
+          ...path,
+        ])
+      )
+      .flat(),
+  ];
 }
