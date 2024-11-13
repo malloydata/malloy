@@ -167,7 +167,12 @@ describe.each(runtimes.runtimeList)(
           {roll: 8, rolls: 1},
         ]);
       });
-      test.todo('array of array');
+      test('bare array of array', async () => {
+        await expect(`
+          run: ${empty} -> { select: aoa is [[1,2]] }
+        `).malloyResultMatches(runtime, {aoa: [[1, 2]]});
+      });
+      test.todo('array of array .each.each');
     });
     describe('record', () => {
       function rec_eq(as?: string): Record<string, Number> {
@@ -228,19 +233,34 @@ describe.each(runtimes.runtimeList)(
           }
         `).malloyResultMatches(runtime, {small: 0});
       });
-      test('record with an array property', async () => {
+      test('each on array property inside record', async () => {
         await expect(`
           run: ${empty} -> { select: nums is { odds is [1,3], evens is [2,4]} }
           -> { select: odd is nums.odds.each }
         `).malloyResultMatches(runtime, [{odd: 1}, {odd: 3}]);
       });
-      test('record with an array property in source', async () => {
+      test('each on array property inside record from source', async () => {
         await expect(`
           run: ${empty} extend { dimension: nums is { odds is [1,3], evens is [2,4]} }
           -> { select: odd is nums.odds.each }
         `).malloyResultMatches(runtime, [{odd: 1}, {odd: 3}]);
       });
-      test.todo('record with record property');
+      const abc = "rec is {a is 'a', bc is {b is 'b', c is 'c'}}";
+      test('record with a record property', async () => {
+        await expect(`
+          run: ${empty} -> { select: ${abc} }
+          -> { select: rec.a, rec.bc.b, rec.bc.c }
+        `).malloyResultMatches(runtime, {a: 'a', b: 'b', c: 'c'});
+      });
+      /// ----------------------------------------------------------
+      test('record in source wth record property', async () => {
+        await expect(`
+          run: ${empty} extend { dimension: ${abc} }
+          // -> { select: rec.a, rec.bc.b, rec.bc.c }
+          -> { select: rec.bc.b }
+        `).malloyResultMatches(runtime, {b: 'b'});
+      });
+      /// ----------------------------------------------------------
     });
     describe('repeated record', () => {
       const abType: ArrayTypeDef = {
@@ -327,6 +347,7 @@ describe.each(runtimes.runtimeList)(
           -> { select: ab.a, ab.b }
         `).malloyResultMatches(runtime, ab_eq);
       });
+      test.todo('repeated record containing an array');
     });
   }
 );

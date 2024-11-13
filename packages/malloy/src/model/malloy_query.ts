@@ -1369,9 +1369,28 @@ class QueryField extends QueryNode {
   }
 
   generateExpression(resultSet: FieldInstanceResult): string {
+    // If the field itself is an expression, generate it ..
     if (hasExpression(this.fieldDef)) {
       return this.exprToSQL(resultSet, this.parent, this.fieldDef.e);
     }
+    // ok the field is just a name, but is it a resolveable name ...
+    for (
+      let ancestor: QueryStruct | undefined = this.parent;
+      ancestor !== undefined;
+      ancestor = ancestor.parent
+    ) {
+      if (isJoined(ancestor.structDef) && hasExpression(ancestor.structDef)) {
+        /*
+         * In the test in question rec.bc.c, the parent "bc" is not an expression
+         * but the grandparent IS an expression and we could have an
+         * infinitelt long change of a.b.c.d.e.f.g with ANY of the intermediate
+         * parents not actually existing and so even though I can ask
+         * the parent for it's name, (in this case 'bc')
+         */
+        throw new Error('Figure out what to do with non intrinsic ancestors');
+      }
+    }
+    // if we get here all parents are just named things
     const parentDef = this.parent.structDef;
     const pType = parentDef.type;
     const name =
@@ -2905,15 +2924,55 @@ class QueryQuery extends QueryField {
       if (qs.parent === undefined || ji.parent === undefined) {
         throw new Error('Internal Error, nested structure with no parent.');
       }
-      const fieldExpression = hasExpression(qsDef)
-        ? this.exprToSQL(this.rootResult, qs.parent, qsDef.e)
-        : this.parent.dialect.sqlFieldReference(
-            qs.parent.getSQLIdentifier(),
-            qsDef.name,
-            'struct',
-            qs.parent.structDef.type === 'array',
-            isScalarArray(this.parent.structDef)
-          );
+      let fieldExpression: string;
+      if (hasExpression(qsDef)) {
+        // There are two interesting cases here. One is that this array object
+        // itself is an expression
+        // => arrayValue is the fieldExpression
+        fieldExpression = this.exprToSQL(this.rootResult, qs.parent, qsDef.e);
+      } else if (
+        isJoined(qs.parent.structDef) &&
+        hasExpression(qs.parent.structDef)
+      ) {
+        // Ok, this is an array object, with a name, inside some parent.
+        //
+        // The other intersting case is if the parent is not intrinsic
+        // so when we "DOT" the parent, we need to DOT the expression
+        // of the parent, not the name of the parent.
+        //
+        // Ideally when we asked qs.parent.getSQLIdentifier() we would get
+        // back something that would work as the name, either the name
+        // or the expression which generates the parent, but we can't
+        // do that because qs.parent doesn't have access to the QueryQuery
+        // to call exprToSQL, so we do it here
+        // => PARENT_EXPRESSION.arrayname as the fieldExpression
+        if (qs.parent.parent === undefined) {
+          // Can't get the context for expression evaluation, should not be possible
+          throw new Error('Inconcievable, base table is an expression');
+        }
+        const parentReference = this.exprToSQL(
+          this.rootResult,
+          qs.parent.parent,
+          qs.parent.structDef.e
+        );
+        fieldExpression = this.parent.dialect.sqlFieldReference(
+          parentReference,
+          qsDef.name,
+          'struct',
+          qs.parent.structDef.type === 'array',
+          isScalarArray(this.parent.structDef)
+        );
+      } else {
+        // The boring case
+        // => parentName.arrayName is the fieldExpression
+        fieldExpression = this.parent.dialect.sqlFieldReference(
+          qs.parent.getSQLIdentifier(),
+          qsDef.name,
+          'struct',
+          qs.parent.structDef.type === 'array',
+          isScalarArray(this.parent.structDef)
+        );
+      }
       // we need to generate primary key.  If parent has a primary key combine
       // console.log(ji.alias, fieldExpression, this.inNestedPipeline());
       s += `${this.parent.dialect.sqlUnnestAlias(
@@ -4631,13 +4690,15 @@ class QueryStruct {
   }
 
   getQueryFieldReference(
-    name: string[],
+    path: string[],
     annotation: Annotation | undefined
   ): QueryField {
-    const field = this.getFieldByName(name);
+    const field = this.getFieldByName(path);
     if (annotation) {
       if (field.parent === undefined) {
-        throw new Error('Unexpected reference to orphaned query field');
+        throw new Error(
+          'Inconcievable, field reference to orphaned query field'
+        );
       }
       // Made a field object from the source, but the annotations were computed by the compiler
       // when it generated the reference, and has both the source and reference annotations included.
