@@ -61,7 +61,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: x -> v
     `).malloyResultMatches(runtime, {foo: 1});
   });
-  it(`cube used in view - ${databaseName}`, async () => {
+  it(`cube used in view refined with scalar - ${databaseName}`, async () => {
     await expect(`
       ##! experimental.cube_sources
       source: state_facts is ${databaseName}.table('malloytest.state_facts')
@@ -75,5 +75,33 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: x -> v + foo
     `).malloyResultMatches(runtime, {foo: 1, state: 'CA'});
   });
-  // TODO test refining a _query_ (not a view)
+  it(`cube used in view refined with literal view - ${databaseName}`, async () => {
+    await expect(`
+      ##! experimental.cube_sources
+      source: state_facts is ${databaseName}.table('malloytest.state_facts')
+      source: x is cube(state_facts, state_facts extend { dimension: foo is 1 }) extend {
+        view: v is {
+          group_by: state
+          where: state = 'CA'
+          limit: 1
+        }
+      }
+      run: x -> v + { group_by: foo }
+    `).malloyResultMatches(runtime, {foo: 1, state: 'CA'});
+  });
+  it(`cube used in refined query - ${databaseName}`, async () => {
+    await expect(`
+      ##! experimental.cube_sources
+      source: state_facts is ${databaseName}.table('malloytest.state_facts')
+      source: x is cube(state_facts, state_facts extend { dimension: foo is 1 }) extend {
+        view: v is {
+          group_by: state
+          where: state = 'CA'
+          limit: 1
+        }
+      }
+      query: v is x -> v
+      run: v + { group_by: foo }
+    `).malloyResultMatches(runtime, {foo: 1, state: 'CA'});
+  });
 });

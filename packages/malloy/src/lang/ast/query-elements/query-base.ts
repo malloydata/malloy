@@ -21,7 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Query} from '../../../model/malloy_types';
+import {isEmptyCubeUsage, resolveCubeSources} from '../../../model/cube_utils';
+import {isQuerySegment, Query, SourceDef} from '../../../model/malloy_types';
 import {detectAndRemovePartialStages} from '../query-utils';
 import {MalloyElement} from '../types/malloy-element';
 import {QueryComp} from '../types/query-comp';
@@ -30,10 +31,22 @@ export abstract class QueryBase extends MalloyElement {
   abstract queryComp(isRefOk: boolean): QueryComp;
 
   query(): Query {
-    const q = this.queryComp(true).query;
+    const {inputStruct, query} = this.queryComp(true);
+    // TODO add an error if a raw/index query is done against a cube
+
+    let cubeResolvedSourceDef: SourceDef | undefined = undefined;
+    if (isQuerySegment(query.pipeline[0])) {
+      const cubeUsage = query.pipeline[0].cubeUsage;
+      if (cubeUsage !== undefined && !isEmptyCubeUsage(cubeUsage)) {
+        const resolved = resolveCubeSources(inputStruct, cubeUsage);
+        cubeResolvedSourceDef = resolved.sourceDef;
+      }
+    }
+
     return {
-      ...q,
-      pipeline: detectAndRemovePartialStages(q.pipeline, this),
+      ...query,
+      cubeResolvedSourceDef,
+      pipeline: detectAndRemovePartialStages(query.pipeline, this),
     };
   }
 }

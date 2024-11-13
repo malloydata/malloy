@@ -21,12 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  Query,
-  StructDef,
-  isQuerySegment,
-  refIsStructDef,
-} from '../../../model/malloy_types';
+import {Query, StructDef, refIsStructDef} from '../../../model/malloy_types';
 import {Source} from '../source-elements/source';
 import {StaticSpace} from '../field-space/static-space';
 import {FieldSpace} from '../types/field-space';
@@ -34,7 +29,6 @@ import {QueryComp} from '../types/query-comp';
 import {QueryElement} from '../types/query-element';
 import {QueryBase} from './query-base';
 import {View} from '../view-elements/view';
-import {emptyCubeUsage, isEmptyCubeUsage, resolveCubeSources} from '../../../model/cube_utils';
 
 /**
  * A query operation that adds segments to a LHS source or query.
@@ -80,18 +74,6 @@ export class QueryArrow extends QueryBase implements QueryElement {
     }
     const {pipeline, annotation, outputStruct, name} =
       this.view.pipelineComp(fieldSpace);
-
-    // TODO add an error if a raw/index query is done against a cube
-
-    if (isQuerySegment(pipeline[0])) {
-      const cubeUsage = pipeline[0].cubeUsage;
-      if (cubeUsage !== undefined && !isEmptyCubeUsage(cubeUsage)) {
-        const resolved = resolveCubeSources(inputStruct, cubeUsage);
-        if (resolved.sourceDef !== undefined) {
-          queryBase.cubeResolvedSourceDef = resolved.sourceDef;
-        }
-      }
-    }
 
     return {
       query: {

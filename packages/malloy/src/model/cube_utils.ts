@@ -141,16 +141,23 @@ export function unique<T>(values: T[]): T[] {
   return Array.from(new Set(values));
 }
 
-export function mergeCubeUsage(...usages: CubeUsage[]): CubeUsage {
-  const joinNames = new Set(usages.map(u => Object.keys(u.joinedUsage)).flat());
+export function mergeCubeUsage(
+  ...usages: (CubeUsage | undefined)[]
+): CubeUsage {
+  const nonEmptyUsages = usages.filter(isNotUndefined);
+  const joinNames = new Set(
+    nonEmptyUsages.map(u => Object.keys(u.joinedUsage)).flat()
+  );
   const joinedUsage = {};
   for (const joinName of joinNames) {
     joinedUsage[joinName] = mergeCubeUsage(
-      ...usages.map(u => u.joinedUsage[joinName]).filter(isNotUndefined)
+      ...nonEmptyUsages
+        .map(u => u?.joinedUsage[joinName])
+        .filter(isNotUndefined)
     );
   }
   return {
-    fields: unique(usages.map(u => u.fields).flat()),
+    fields: unique(nonEmptyUsages.map(u => u.fields).flat()),
     joinedUsage,
   };
 }
