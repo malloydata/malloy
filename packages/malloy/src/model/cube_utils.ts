@@ -42,7 +42,6 @@ function _resolveCubeSources(
             continue overSources;
           }
         }
-        found = true;
         const nonCubeFields = getNonCubeFields(source);
         if (inputSource.type === 'cube') {
           const resolveInner = _resolveCubeSources(
@@ -51,12 +50,13 @@ function _resolveCubeSources(
             cubeUsageWithoutNonCubeFields(cubeUsage, inputSource)
           );
           if ('error' in resolveInner) {
-            return resolveInner;
+            continue overSources;
           }
           base = {...resolveInner.success};
         } else {
           base = {...inputSource};
         }
+        found = true;
         base = {
           ...base,
           fields: [...nonCubeFields, ...base.fields],

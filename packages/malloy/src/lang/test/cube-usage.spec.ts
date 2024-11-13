@@ -89,6 +89,20 @@ describe('cubes', () => {
         )
       );
     });
+    test('cube resolution fails on inner cube', () => {
+      expect(`
+        ##! experimental.cube_sources
+        run: cube(
+          cube(
+            a extend { dimension: one is 1, two is 2 },
+            a extend { dimension: one is 1, three is 3 }
+          ),
+          a extend { dimension: one is 1, two is 2, three is 3 }
+        ) -> {
+          group_by: one, two ${'three'}
+        }
+      `).toTranslate();
+    });
     test('good cube usage works', () =>
       expect(`
         ##! experimental.cube_sources

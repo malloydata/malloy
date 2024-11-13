@@ -121,9 +121,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: y -> { group_by: foo, bar }
     `).malloyResultMatches(runtime, {foo: 1, bar: 2});
   });
-  // TODO test a case in translator where inner cube resolution fails
-  // TODO is there theoretically a case where the inner cube resoltion fails, but would have
-  // succeeded if a different outer cube had been used? Do we care?
   it(`definitions from cube extension carry through - ${databaseName}`, async () => {
     await expect(`
       ##! experimental.cube_sources
@@ -149,5 +146,22 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       }
       run: x -> { group_by: foo, state }
     `).malloyResultMatches(runtime, {foo: 1, state: 'CA'});
+  });
+  it(`cube of a cube where greedy is bad- ${databaseName}`, async () => {
+    await expect(`
+      ##! experimental.cube_sources
+      source: state_facts is ${databaseName}.table('malloytest.state_facts')
+      source: x is cube(
+        cube(
+          state_facts extend { dimension: foo is 1.1, bar is 2.1 },
+          state_facts extend { dimension: foo is 1.2, baz is 3.2 }
+        ),
+        state_facts extend { dimension: foo is 1.3, bar is 2.3, baz is 3.3 }
+      )
+      // even though the first cube has all the fields foo, bar, baz; it is impossible
+      // to resolve it using the first cube, because you can't have both bar and baz
+      // so the second input source is used instead
+      run: x -> { group_by: foo, bar, baz }
+    `).malloyResultMatches(runtime, {foo: 1.3, bar: 2.3, baz: 3.3});
   });
 });
