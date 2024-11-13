@@ -2401,7 +2401,7 @@ class QueryQuery extends QueryField {
 
   findRecordAliases(context: QueryStruct, path: string[]) {
     for (const seg of path) {
-      const field = context.getDimensionOrMeasureByName([seg]);
+      const field = context.getFieldByName([seg]);
       if (field instanceof QueryFieldStruct) {
         const qs = field.queryStruct;
         if (
