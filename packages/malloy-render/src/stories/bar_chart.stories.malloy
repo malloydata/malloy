@@ -458,6 +458,17 @@ source: products is duckdb.table("static/data/products.parquet") extend {
 
   #(story)
   view: interactions_sandbox is interactions;
+
+  #(story)
+  # bar_chart.stack
+  view: null_values is {
+    group_by:
+      x is pick null when id = 8 else id
+      id
+    aggregate: `Sales $`
+    limit: 10
+    order_by: id
+  }
 }
 
 run: products -> { group_by: distribution_center_id}
