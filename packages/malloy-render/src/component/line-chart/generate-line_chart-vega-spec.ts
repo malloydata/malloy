@@ -437,7 +437,7 @@ export function generateLineChartVegaSpec(
     },
     {
       name: 'brushMeasureIn',
-      update: 'getMalloyBrush(brushIn, yRefsList, \'measure\') || "empty"',
+      update: "getMalloyBrush(brushIn, yRefsList, 'measure') || null",
     },
     {
       name: 'brushMeasureRangeIn',
