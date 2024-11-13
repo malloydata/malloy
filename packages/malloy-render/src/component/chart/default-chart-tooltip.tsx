@@ -7,11 +7,6 @@
 
 import {For, Match, Show, Switch, createEffect, createSignal} from 'solid-js';
 import {ChartTooltipEntry} from '../types';
-// TODO: This is a hacky way to get table CSS applied at global level so it affects tables in tooltips
-// Need a better strategy here for how we render things inside of tooltips. Is it possible to keep
-// tooltips and modals inside of the <malloy-render> component? Or can we render <malloy-render> with
-// subsets of the Result set?
-import '../table/table.css';
 
 export function DefaultChartTooltip(props: {data: ChartTooltipEntry}) {
   const [render, setRender] = createSignal(false);
