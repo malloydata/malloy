@@ -7,6 +7,37 @@
 
 import {errorMessage, makeExprFunc, model} from './test-translator';
 import './parse-expects';
+import {CubeUsage} from '../../model';
+import {emptyCubeUsage} from '../../model/cube_utils';
+
+function addPathToCubeUsage(path: string[], cubeUsage: CubeUsage): CubeUsage {
+  if (path.length === 0) throw new Error('empty path');
+  if (path.length === 1) {
+    return {
+      fields: [...cubeUsage.fields, path[0]],
+      joinedUsage: cubeUsage.joinedUsage,
+    };
+  } else {
+    return {
+      fields: cubeUsage.fields,
+      joinedUsage: {
+        ...cubeUsage.joinedUsage,
+        [path[0]]: addPathToCubeUsage(
+          path.slice(1),
+          cubeUsage.joinedUsage[path[0]] ?? emptyCubeUsage()
+        ),
+      },
+    };
+  }
+}
+
+function paths(paths: string[][]): CubeUsage {
+  let cu = emptyCubeUsage();
+  for (const path of paths) {
+    cu = addPathToCubeUsage(path, cu);
+  }
+  return cu;
+}
 
 describe('cubes', () => {
   describe('cube usage', () => {
@@ -27,30 +58,32 @@ describe('cubes', () => {
 
     test('looked up value', () => {
       const mexpr = makeExprFunc(m.translator.modelDef, 'y');
-      expect(mexpr`ai`).hasCubeUsage([['ai']]);
+      expect(mexpr`ai`).hasCubeUsage(paths([['ai']]));
     });
 
     test('multiple values', () => {
       const mexpr = makeExprFunc(m.translator.modelDef, 'y');
-      expect(mexpr`ai + af`).hasCubeUsage([['ai'], ['af']]);
+      expect(mexpr`ai + af`).hasCubeUsage(paths([['ai'], ['af']]));
     });
 
     test('value plus constant', () => {
       const mexpr = makeExprFunc(m.translator.modelDef, 'y');
-      expect(mexpr`ai + 1`).hasCubeUsage([['ai']]);
+      expect(mexpr`ai + 1`).hasCubeUsage(paths([['ai']]));
     });
 
     test('join usage', () => {
       const mexpr = makeExprFunc(m.translator.modelDef, 'y');
-      expect(mexpr`b.ai + 1`).hasCubeUsage([['b', 'ai']]);
+      expect(mexpr`x.ai + 1`).hasCubeUsage(paths([['x', 'ai']]));
     });
 
     test('join usage complex', () => {
       const mexpr = makeExprFunc(m.translator.modelDef, 'y');
-      expect(mexpr`x.aif`).hasCubeUsage([
-        ['x', 'ai'],
-        ['x', 'af'],
-      ]);
+      expect(mexpr`x.aif`).hasCubeUsage(
+        paths([
+          ['x', 'ai'],
+          ['x', 'af'],
+        ])
+      );
     });
   });
 

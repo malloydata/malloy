@@ -24,6 +24,7 @@
 
 import {MalloyTranslator, TranslateResponse} from '..';
 import {
+  CubeUsage,
   DocumentLocation,
   DocumentRange,
   Expr,
@@ -83,7 +84,7 @@ declare global {
        * Warnings are ignored, so need to be checked seperately
        */
       compilesTo(exprString: string): R;
-      hasCubeUsage(cubeUsage: string[][]): R;
+      hasCubeUsage(cubeUsage: CubeUsage): R;
     }
   }
 }
@@ -354,7 +355,7 @@ expect.extend({
     const msg = pass ? `Matched: ${rcvExpr}` : this.utils.diff(expr, rcvExpr);
     return {pass, message: () => `${msg}`};
   },
-  hasCubeUsage: function (tx: TestSource, cubeUsage: string[][]) {
+  hasCubeUsage: function (tx: TestSource, cubeUsage: CubeUsage) {
     let bx: BetaExpression;
     if (typeof tx === 'string') {
       bx = new BetaExpression(tx);
