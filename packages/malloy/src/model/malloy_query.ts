@@ -2499,6 +2499,7 @@ class QueryQuery extends QueryField {
       } else if (expr.node === 'aggregate') {
         if (isAsymmetricExpr(expr)) {
           if (expr.structPath) {
+            this.findRecordAliases(context, expr.structPath);
             this.addDependantPath(
               resultStruct,
               context,
