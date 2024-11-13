@@ -444,7 +444,7 @@ class QueryField extends QueryNode {
     state: GenerateState
   ): string {
     // find the structDef and return the path to the field...
-    const field = context.getFieldByName(expr.path) as QueryField;
+    const field = context.getFieldByName(expr.path);
     if (hasExpression(field.fieldDef)) {
       const ret = this.exprToSQL(
         resultSet,
@@ -1373,24 +1373,37 @@ class QueryField extends QueryNode {
     if (hasExpression(this.fieldDef)) {
       return this.exprToSQL(resultSet, this.parent, this.fieldDef.e);
     }
-    // ok the field is just a name, but is it a resolveable name ...
+    // The field itself is not an expression, so we would like
+    // to generate a dotted path to the field, EXCEPT ...
+    // some of the steps in the dotting might not exist
+    // in the namespace of their parent, but rather be record
+    // expressions which should be evaluated in the namespace
+    // of their parent.
+
+    // So we walk the tree and ask each one to compute itself
     for (
       let ancestor: QueryStruct | undefined = this.parent;
       ancestor !== undefined;
       ancestor = ancestor.parent
     ) {
-      if (isJoined(ancestor.structDef) && hasExpression(ancestor.structDef)) {
-        /*
-         * In the test in question rec.bc.c, the parent "bc" is not an expression
-         * but the grandparent IS an expression and we could have an
-         * infinitelt long change of a.b.c.d.e.f.g with ANY of the intermediate
-         * parents not actually existing and so even though I can ask
-         * the parent for it's name, (in this case 'bc')
-         */
-        throw new Error('Figure out what to do with non intrinsic ancestors');
+      if (
+        ancestor.structDef.type === 'record' &&
+        hasExpression(ancestor.structDef) &&
+        ancestor.recordAlias === undefined
+      ) {
+        if (!ancestor.parent) {
+          throw new Error(
+            'Inconcievable record ancestor with expression but no parent'
+          );
+        }
+        const aliasValue = this.exprToSQL(
+          resultSet,
+          ancestor.parent,
+          ancestor.structDef.e
+        );
+        ancestor.informOfAliasValue(aliasValue);
       }
     }
-    // if we get here all parents are just named things
     const parentDef = this.parent.structDef;
     const pType = parentDef.type;
     const name =
@@ -2386,6 +2399,25 @@ class QueryQuery extends QueryField {
       .addStructToJoin(joinableParent, this, uniqueKeyPossibleUse, joinStack);
   }
 
+  findRecordAliases(context: QueryStruct, path: string[]) {
+    for (const seg of path) {
+      const field = context.getDimensionOrMeasureByName([seg]);
+      if (field instanceof QueryFieldStruct) {
+        const qs = field.queryStruct;
+        if (
+          qs.structDef.type === 'record' &&
+          hasExpression(qs.structDef) &&
+          qs.parent
+        ) {
+          qs.informOfAliasValue(
+            this.exprToSQL(this.rootResult, qs.parent, qs.structDef.e)
+          );
+        }
+        context = qs;
+      }
+    }
+  }
+
   addDependantExpr(
     resultStruct: FieldInstanceResult,
     context: QueryStruct,
@@ -2445,6 +2477,7 @@ class QueryQuery extends QueryField {
         }
       }
       if (expr.node === 'field') {
+        this.findRecordAliases(context, expr.path);
         const field = context.getDimensionOrMeasureByName(expr.path);
         if (hasExpression(field.fieldDef)) {
           this.addDependantExpr(
@@ -4273,6 +4306,7 @@ class QueryStruct {
   pathAliasMap: Map<string, string>;
   dialect: Dialect;
   connectionName: string;
+  recordAlias?: string;
 
   constructor(
     public structDef: StructDef,
@@ -4298,6 +4332,10 @@ class QueryStruct {
 
     this.dialect = getDialect(structDef.dialect);
     this.addFieldsFromFieldList(structDef.fields);
+  }
+
+  informOfAliasValue(av: string): void {
+    this.recordAlias = av;
   }
 
   maybeEmitParameterizedSourceUsage() {
@@ -4440,6 +4478,18 @@ class QueryStruct {
     if (isBaseTable(this.structDef)) {
       return 'base';
     }
+
+    // If this is a synthetic column, return the expression rather than the name
+    // because the name will not exist. Only for records because the other types
+    // will have joins and thus be in the namespace. We can't compute it here
+    // because we don't have access to the Query to call exprToSQL.
+    if (this.structDef.type === 'record' && hasExpression(this.structDef)) {
+      if (this.recordAlias) {
+        return this.recordAlias;
+      }
+      throw new Error('INTERNAL ERROR, record field alias not pre-computed');
+    }
+
     // if this is an inline object, include the parents alias.
     if (this.structDef.type === 'record' && this.parent) {
       return (

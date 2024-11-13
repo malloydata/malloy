@@ -252,15 +252,18 @@ describe.each(runtimes.runtimeList)(
           -> { select: rec.a, rec.bc.b, rec.bc.c }
         `).malloyResultMatches(runtime, {a: 'a', b: 'b', c: 'c'});
       });
-      /// ----------------------------------------------------------
-      test('record in source wth record property', async () => {
+      test('record in source with a record property', async () => {
         await expect(`
           run: ${empty} extend { dimension: ${abc} }
-          // -> { select: rec.a, rec.bc.b, rec.bc.c }
-          -> { select: rec.bc.b }
+          -> { select: rec.a, rec.bc.b, rec.bc.c }
+        `).malloyResultMatches(runtime, {a: 'a', b: 'b', c: 'c'});
+      });
+      test('record dref in source with a record property', async () => {
+        await expect(`
+          run: ${empty} extend { dimension: ${abc} }
+          -> { select: b is pick rec.bc.b when true else 'b' }
         `).malloyResultMatches(runtime, {b: 'b'});
       });
-      /// ----------------------------------------------------------
     });
     describe('repeated record', () => {
       const abType: ArrayTypeDef = {
@@ -346,6 +349,12 @@ describe.each(runtimes.runtimeList)(
           extend { dimension: ab is ${abMalloy} }
           -> { select: ab.a, ab.b }
         `).malloyResultMatches(runtime, ab_eq);
+      });
+      test('repeated record in source wth record property', async () => {
+        await expect(`
+          run: ${empty} extend { dimension: rec is [ {bc is  {b is 'b'}} ] }
+          -> { select: rec.bc.b }
+        `).malloyResultMatches(runtime, {b: 'b'});
       });
       test.todo('repeated record containing an array');
     });
