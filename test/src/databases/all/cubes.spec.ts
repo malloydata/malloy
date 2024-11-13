@@ -104,4 +104,50 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: v + { group_by: foo }
     `).malloyResultMatches(runtime, {foo: 1, state: 'CA'});
   });
+  it(`cube of a cube - ${databaseName}`, async () => {
+    await expect(`
+      ##! experimental.cube_sources
+      source: state_facts is ${databaseName}.table('malloytest.state_facts')
+      source: x is cube(
+        state_facts,
+        state_facts extend { dimension: foo is 1 }
+      )
+      source: y is cube(
+        x,
+        x extend { dimension: bar is 2 }
+      )
+      // in order to get bar, we need to use the second cube input, which is itself a cube
+      // then in order to get foo, we need to resolve the inner cube to its second input
+      run: y -> { group_by: foo, bar }
+    `).malloyResultMatches(runtime, {foo: 1, bar: 2});
+  });
+  // TODO test a case in translator where inner cube resolution fails
+  // TODO is there theoretically a case where the inner cube resoltion fails, but would have
+  // succeeded if a different outer cube had been used? Do we care?
+  it(`definitions from cube extension carry through - ${databaseName}`, async () => {
+    await expect(`
+      ##! experimental.cube_sources
+      source: state_facts is ${databaseName}.table('malloytest.state_facts')
+      source: x is cube(
+        state_facts,
+        state_facts extend { dimension: foo is 1 }
+      ) extend {
+        dimension: bar is 2
+      }
+      run: x -> { group_by: foo, bar }
+    `).malloyResultMatches(runtime, {foo: 1, bar: 2});
+  });
+  it(`filters from cube extension carry through - ${databaseName}`, async () => {
+    await expect(`
+      ##! experimental.cube_sources
+      source: state_facts is ${databaseName}.table('malloytest.state_facts')
+      source: x is cube(
+        state_facts,
+        state_facts extend { dimension: foo is 1 }
+      ) extend {
+        where: state = 'CA'
+      }
+      run: x -> { group_by: foo, state }
+    `).malloyResultMatches(runtime, {foo: 1, state: 'CA'});
+  });
 });

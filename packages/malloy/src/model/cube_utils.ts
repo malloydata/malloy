@@ -43,7 +43,28 @@ function _resolveCubeSources(
           }
         }
         found = true;
-        base = {...inputSource};
+        const nonCubeFields = getNonCubeFields(source);
+        if (inputSource.type === 'cube') {
+          const resolveInner = _resolveCubeSources(
+            path,
+            inputSource,
+            cubeUsageWithoutNonCubeFields(cubeUsage, inputSource)
+          );
+          if ('error' in resolveInner) {
+            return resolveInner;
+          }
+          base = {...resolveInner.success};
+        } else {
+          base = {...inputSource};
+        }
+        base = {
+          ...base,
+          fields: [...nonCubeFields, ...base.fields],
+          filterList: [
+            ...(source.filterList ?? []),
+            ...(base.filterList ?? []),
+          ],
+        };
         break;
       }
       if (!found) {
@@ -222,4 +243,30 @@ export function cubeUsageJoinPaths(cubeUsage: CubeUsage): string[][] {
       )
       .flat(),
   ];
+}
+
+function isCubeField(fieldDef: FieldDef): boolean {
+  return 'e' in fieldDef && fieldDef.e?.node === 'cubeField';
+}
+
+function getNonCubeFields(source: SourceDef): FieldDef[] {
+  return source.fields.filter(f => !isCubeField(f));
+}
+
+// This is specifically for the case where the source `source` is a cube and the chosen input
+// source is also a cube; if the `source` defines some fields outright, when resolving the inner
+// cube, we don't want to include those fields.
+function cubeUsageWithoutNonCubeFields(
+  cubeUsage: CubeUsage,
+  source: SourceDef
+): CubeUsage {
+  const sourceFieldsByName = {};
+  for (const field of source.fields) {
+    sourceFieldsByName[field.as ?? field.name] = field;
+  }
+  return {
+    fields: cubeUsage.fields.filter(f => isCubeField(sourceFieldsByName[f])),
+    // TODO not sure about this?
+    joinedUsage: cubeUsage.joinedUsage,
+  };
 }
