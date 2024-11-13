@@ -165,7 +165,10 @@ const populateFieldMeta = (data: DataArray, metadata: RenderResultMetadata) => {
       const fieldSet = maxUniqueFieldValueSets.get(getFieldKey(f))!;
 
       const value = f.isAtomicField() ? row.cell(f).value : undefined;
-      if (value === null || typeof value === 'undefined') {
+      if (
+        f.isAtomicField() &&
+        (value === null || typeof value === 'undefined')
+      ) {
         fieldMeta.values.add(NULL_SYMBOL);
         fieldSet.add(NULL_SYMBOL);
       } else if (valueIsNumber(f, value)) {
