@@ -682,8 +682,8 @@ export type ArrayDef = ArrayTypeDef & AtomicFieldDef;
 
 export function arrayEachFields(arrayOf: AtomicTypeDef): AtomicFieldDef[] {
   return [
-    {name: 'each', ...arrayOf, e: {node: 'field', path: ['value']}},
-    {name: 'value', ...arrayOf},
+    {...arrayOf, e: {node: 'field', path: ['value']}, name: 'each'},
+    {...arrayOf, name: 'value'},
   ];
 }
 

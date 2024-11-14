@@ -172,7 +172,12 @@ describe.each(runtimes.runtimeList)(
           run: ${empty} -> { select: aoa is [[1,2]] }
         `).malloyResultMatches(runtime, {aoa: [[1, 2]]});
       });
-      test.todo('array of array .each.each');
+      test('each.each array of array', async () => {
+        await expect(`
+          run: ${empty} extend { dimension: aoa is [[1,2]] }
+          -> { select: aoa.each.each }
+        `).malloyResultMatches(runtime, [{each: 1}, {each: 2}]);
+      });
     });
     describe('record', () => {
       function rec_eq(as?: string): Record<string, Number> {
@@ -356,7 +361,43 @@ describe.each(runtimes.runtimeList)(
           -> { select: rec.bc.b }
         `).malloyResultMatches(runtime, {b: 'b'});
       });
-      test.todo('repeated record containing an array');
+      test('piped repeated record containing an array', async () => {
+        await expect(`
+          run: ${empty} -> {
+            select: rrec is [
+              { val is 1, names is ['uno', 'one'] },
+              { val is 2, names is ['due', 'two'] }
+            ]
+          } -> {
+            select: rrec.val, rrec.names.each
+            order_by: 1 desc, 2 asc
+          }
+        `).malloyResultMatches(runtime, [
+          {val: 2, each: 'due'},
+          {val: 2, each: 'two'},
+          {val: 1, each: 'one'},
+          {val: 1, each: 'uno'},
+        ]);
+      });
+      test('source repeated record containing an array', async () => {
+        await expect(`
+          # test.verbose
+          run: ${empty} extend {
+            dimension: rrec is [
+              { val is 1, names is ['uno', 'one'] },
+              { val is 2, names is ['due', 'two'] }
+            ]
+          } -> {
+            select: rrec.val, rrec.names.each
+            order_by: 1 desc, 2 asc
+          }
+        `).malloyResultMatches(runtime, [
+          {val: 2, each: 'due'},
+          {val: 2, each: 'two'},
+          {val: 1, each: 'one'},
+          {val: 1, each: 'uno'},
+        ]);
+      });
     });
   }
 );
