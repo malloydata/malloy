@@ -229,11 +229,14 @@ const MalloyTableRoot = (_props: {
   const props = mergeProps({rowLimit: Infinity}, _props);
   const tableCtx = useTableContext()!;
   const resultMetadata = useResultContext();
-  const shouldFillWidth =
-    typeof props.shouldFillWidth === 'boolean'
-      ? props.shouldFillWidth
-      : tableCtx.root &&
-        props.data.field.tagParse().tag.tag('table')?.text('size') === 'fill';
+
+  let shouldFillWidth = false;
+  if (tableCtx.root) {
+    const sizeTag = props.data.field.tagParse().tag.tag('table')?.tag('size');
+    if (sizeTag && sizeTag.text() === 'fill') shouldFillWidth = true;
+    else if (typeof props.shouldFillWidth === 'boolean')
+      shouldFillWidth = props.shouldFillWidth;
+  }
 
   const pinnedFields = createMemo(() => {
     const fields = Object.entries(tableCtx.layout.fieldHeaderRangeMap)
