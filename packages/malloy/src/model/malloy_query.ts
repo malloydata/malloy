@@ -2958,6 +2958,11 @@ class QueryQuery extends QueryField {
       if (qs.parent === undefined || ji.parent === undefined) {
         throw new Error('Internal Error, nested structure with no parent.');
       }
+      // mtoy todo i think there should be a better way to decide if
+      // a parent name should be expanded, but for now we only expand
+      // expression values parent names on top level joins, believing
+      // all lower levels will be in the name space from the top level
+      const topLevelJoin = ji.parent.parent === undefined;
       let fieldExpression: string;
       if (hasExpression(qsDef)) {
         // There are two interesting cases here. One is that this array object
@@ -2966,7 +2971,8 @@ class QueryQuery extends QueryField {
         fieldExpression = this.exprToSQL(this.rootResult, qs.parent, qsDef.e);
       } else if (
         isJoined(qs.parent.structDef) &&
-        hasExpression(qs.parent.structDef)
+        hasExpression(qs.parent.structDef) &&
+        topLevelJoin
       ) {
         // Ok, this is an array object, with a name, inside some parent.
         //

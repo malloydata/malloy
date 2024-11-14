@@ -381,7 +381,6 @@ describe.each(runtimes.runtimeList)(
       });
       test('source repeated record containing an array', async () => {
         await expect(`
-          # test.verbose
           run: ${empty} extend {
             dimension: rrec is [
               { val is 1, names is ['uno', 'one'] },
