@@ -28,6 +28,7 @@ const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 describe.each(runtimes.runtimeList)(
   'compound atomic datatypes %s',
   (databaseName, runtime) => {
+    const supportsNestedArrays = !['bigquery'].includes(databaseName);
     function literalNum(num: Number): Expr {
       const literal = num.toString();
       return {node: 'numberLiteral', literal, sql: literal};
@@ -167,12 +168,12 @@ describe.each(runtimes.runtimeList)(
           {roll: 8, rolls: 1},
         ]);
       });
-      test('bare array of array', async () => {
+      test.when(supportsNestedArrays)('bare array of array', async () => {
         await expect(`
           run: ${empty} -> { select: aoa is [[1,2]] }
         `).malloyResultMatches(runtime, {aoa: [[1, 2]]});
       });
-      test('each.each array of array', async () => {
+      test.when(supportsNestedArrays)('each.each array of array', async () => {
         await expect(`
           run: ${empty} extend { dimension: aoa is [[1,2]] }
           -> { select: aoa.each.each }

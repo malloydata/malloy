@@ -2958,21 +2958,28 @@ class QueryQuery extends QueryField {
       if (qs.parent === undefined || ji.parent === undefined) {
         throw new Error('Internal Error, nested structure with no parent.');
       }
-      // mtoy todo i think there should be a better way to decide if
-      // a parent name should be expanded, but for now we only expand
-      // expression values parent names on top level joins, believing
-      // all lower levels will be in the name space from the top level
-      const topLevelJoin = ji.parent.parent === undefined;
+      // Compute the field expression being passed the un-nest. It is made
+      // up of a parent name, and a child name, either of which could
+      // be expressions, not references
       let fieldExpression: string;
+
+      // mtoy todo dont like the way parent name expansion is decided
+      // If this is a top level join with an expression value, then
+      // we may have to replace the name with the expression. There is a
+      // test where a top level join with an expression has a join inside
+      // of it, and in that case, we don't need to expand the name
+      // of the parent join when making the child join, because it would have been done
+      // at a higher level, only I am not 100% confident that is correct
+      const shouldExpandExpressionParent = ji.parent.parent === undefined;
       if (hasExpression(qsDef)) {
         // There are two interesting cases here. One is that this array object
-        // itself is an expression
+        // itself is an expression. We don't need the parent name, we just do
         // => arrayValue is the fieldExpression
         fieldExpression = this.exprToSQL(this.rootResult, qs.parent, qsDef.e);
       } else if (
         isJoined(qs.parent.structDef) &&
         hasExpression(qs.parent.structDef) &&
-        topLevelJoin
+        shouldExpandExpressionParent
       ) {
         // Ok, this is an array object, with a name, inside some parent.
         //
