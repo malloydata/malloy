@@ -85,6 +85,7 @@ const max_by: DefinitionBlueprint = {
   },
   returns: {measure: {generic: 'T'}},
   impl: {function: 'MAX_BY'},
+  isSymmetric: true,
 };
 
 const min_by: DefinitionBlueprint = {
@@ -95,6 +96,7 @@ const min_by: DefinitionBlueprint = {
   },
   returns: {measure: {generic: 'T'}},
   impl: {function: 'MIN_BY'},
+  isSymmetric: true,
 };
 
 const string_agg: OverloadedDefinitionBlueprint = {
