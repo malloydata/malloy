@@ -40,8 +40,8 @@ describe.each(runtimes.runtimeList)(
       'motherduck': 'LEN',
       'bigquery': 'ARRAY_LENGTH',
       'postgres': 'ARRAY_LENGTH',
-      'presto': 'LENGTH',
-      'trino': 'LENGTH',
+      'presto': 'CARDINALITY',
+      'trino': 'CARDINALITY',
       'mysql': 'JSON_LENGTH',
     };
     const empty = `${databaseName}.sql("SELECT 0")`;
@@ -100,7 +100,8 @@ describe.each(runtimes.runtimeList)(
 
     describe('simple arrays', () => {
       test('array literal dialect function', async () => {
-        await expect(`run: ${evens}`).malloyResultMatches(runtime, {
+        await expect(`
+          run: ${evens}`).malloyResultMatches(runtime, {
           evens: evensObj,
         });
       });

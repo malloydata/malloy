@@ -549,10 +549,25 @@ ${indent(sql)}
         return malloyType.numberType === 'integer' ? 'BIGINT' : 'DOUBLE';
       case 'string':
         return 'VARCHAR';
-      case 'record':
-        return 'ROW';
+      case 'record': {
+        const typeSpec: string[] = [];
+        for (const f of malloyType.fields) {
+          if (isAtomic(f)) {
+            typeSpec.push(`${f.name} ${this.malloyTypeToSQLType(f)}`);
+          }
+        }
+        return `ROW(${typeSpec.join(',')})`;
+      }
       case 'sql native':
         return malloyType.rawType || 'UNKNOWN-NATIVE';
+      case 'array': {
+        if (malloyType.elementTypeDef.type !== 'record_element') {
+          return `ARRAY<${this.malloyTypeToSQLType(
+            malloyType.elementTypeDef
+          )}>`;
+        }
+        return malloyType.type.toUpperCase();
+      }
       default:
         return malloyType.type.toUpperCase();
     }

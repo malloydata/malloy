@@ -282,11 +282,17 @@ export abstract class TrinoPrestoConnection
         const schemaColumn = malloyColumns[i];
         if (schemaColumn.type === 'record') {
           malloyRow[column.name] = this.convertRow(schemaColumn, row[i]);
-        } else if (schemaColumn.type === 'array') {
+        } else if (
+          schemaColumn.type === 'array' &&
+          schemaColumn.elementTypeDef.type === 'record_element'
+        ) {
           malloyRow[column.name] = this.convertNest(
             schemaColumn,
             row[i]
           ) as QueryValue;
+        } else if (schemaColumn.type === 'array') {
+          // mtoy TODO this works but violates the types, i suspect the types
+          malloyRow[column.name] = row[i] as QueryValue;
         } else if (
           schemaColumn.type === 'number' &&
           typeof row[i] === 'string'
