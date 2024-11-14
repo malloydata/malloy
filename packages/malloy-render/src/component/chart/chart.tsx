@@ -9,7 +9,7 @@ import {Explore, ExploreField, QueryData} from '@malloydata/malloy';
 import {VegaChart, ViewInterface} from '../vega/vega-chart';
 import {ChartTooltipEntry, RenderResultMetadata} from '../types';
 import {Tooltip} from '../tooltip/tooltip';
-import {createEffect, createSignal, lazy, Show} from 'solid-js';
+import {createEffect, createSignal, createMemo, lazy, Show} from 'solid-js';
 import {DefaultChartTooltip} from './default-chart-tooltip';
 import {EventListenerHandler, Runtime, View} from 'vega';
 import {useResultStore, VegaBrushOutput} from '../result-store/result-store';
@@ -183,6 +183,8 @@ export function Chart(props: ChartProps) {
     setShowDebugModal(true);
   };
 
+  const showTooltip = createMemo(() => Boolean(tooltipData()));
+
   return (
     <div
       class="malloy-chart"
@@ -204,7 +206,7 @@ export function Chart(props: ChartProps) {
         explore={props.field}
         runtime={runtime}
       />
-      <Tooltip show={Boolean(tooltipData())}>
+      <Tooltip show={showTooltip()}>
         <DefaultChartTooltip data={tooltipData()!} />
       </Tooltip>
       <Show when={IS_STORYBOOK && !props.devMode}>
