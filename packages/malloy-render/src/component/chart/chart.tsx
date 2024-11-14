@@ -9,15 +9,14 @@ import {Explore, ExploreField, QueryData} from '@malloydata/malloy';
 import {VegaChart, ViewInterface} from '../vega/vega-chart';
 import {ChartTooltipEntry, RenderResultMetadata} from '../types';
 import {Tooltip} from '../tooltip/tooltip';
-import {createEffect, createSignal, createMemo, lazy, Show} from 'solid-js';
+import {createEffect, createSignal, createMemo, Show} from 'solid-js';
 import {DefaultChartTooltip} from './default-chart-tooltip';
 import {EventListenerHandler, Runtime, View} from 'vega';
 import {useResultStore, VegaBrushOutput} from '../result-store/result-store';
 import css from './chart.css?raw';
 import {useConfig} from '../render';
 import {DebugIcon} from './debug_icon';
-
-const ChartDevTool = lazy(() => import('./chart-dev-tool'));
+import ChartDevTool from './chart-dev-tool';
 
 let IS_STORYBOOK = false;
 try {
