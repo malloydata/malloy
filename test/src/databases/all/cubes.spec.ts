@@ -50,7 +50,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     `).malloyResultMatches(runtime, {state: 'CA'});
   });
   // TODO test always join cube usage
-  // TODO test cube of a cube
   it(`cube used in view - ${databaseName}`, async () => {
     await expect(`
       ##! experimental.cube_sources
