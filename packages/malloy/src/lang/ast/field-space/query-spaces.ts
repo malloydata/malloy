@@ -268,6 +268,11 @@ export abstract class QuerySpace extends QueryOperationSpace {
       // TODO mtoy raw,partial,index
       return;
     }
+    if (refineThis?.extendSource) {
+      for (const xField of refineThis.extendSource) {
+        this.exprSpace.addFieldDef(xField);
+      }
+    }
     for (const field of refineThis.queryFields) {
       if (field.type === 'fieldref') {
         const refTo = this.exprSpace.lookup(
@@ -357,12 +362,6 @@ export abstract class QuerySpace extends QueryOperationSpace {
         'internal error generating index segment from non index query'
       );
       return {type: 'reduce', queryFields: []};
-    }
-
-    if (refineFrom?.extendSource) {
-      for (const xField of refineFrom.extendSource) {
-        this.exprSpace.addFieldDef(xField);
-      }
     }
 
     const segment: model.QuerySegment = {
