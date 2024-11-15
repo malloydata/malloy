@@ -41,7 +41,9 @@ export class ExprIdReference extends ExpressionDef {
 
   getExpression(fs: FieldSpace): ExprValue {
     const def = this.fieldReference.getField(fs);
-    // TODO is this too hacky?
+    // TODO Currently the join usage is always equivalent to the reference path here;
+    // if/when we add namespaces, this will not be the case, and we will need to get the
+    // join path from `getField` / `lookup`
     const cubeJoinUsage = this.fieldReference.list
       .map(n => n.name)
       .slice(0, -1);

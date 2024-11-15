@@ -280,7 +280,6 @@ export abstract class QuerySpace extends QueryOperationSpace {
         );
         if (refTo.found) {
           this.setEntry(field.path[field.path.length - 1], refTo.found);
-          // TODO check that other extensions of QueryOperationSpace do this too...
           this.addCubeUsageFromEntry(refTo.found);
         }
       } else if (field.type !== 'turtle') {

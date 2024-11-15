@@ -141,5 +141,15 @@ describe('cubes', () => {
         ##! experimental.cube_sources
         run: cube(a, a extend { dimension: one is 1 }) -> { group_by: one }
     `).toTranslate());
+    test.skip('index on cube fails', () =>
+      expect(`
+        ##! experimental.cube_sources
+        run: cube(a extend { dimension: two is 2 }, a extend { dimension: one is 1 }) -> { index: * }
+    `).toLog(errorMessage('Cannot index on a cube source')));
+    test('raw run of cube fails', () =>
+      expect(`
+        ##! experimental.cube_sources
+        run: cube(a extend { dimension: two is 2 }, a extend { dimension: one is 1 })
+    `).toLog(errorMessage('Cannot run this object as a query')));
   });
 });
