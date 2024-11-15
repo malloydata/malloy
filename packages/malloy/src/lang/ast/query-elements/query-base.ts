@@ -33,9 +33,8 @@ export abstract class QueryBase extends MalloyElement {
   query(): Query {
     const {inputStruct, query} = this.queryComp(true);
     // TODO add an error if a raw/index query is done against a cube
-
     let cubeResolvedSourceDef: SourceDef | undefined = undefined;
-    if (isQuerySegment(query.pipeline[0])) {
+    if (query.pipeline[0] && isQuerySegment(query.pipeline[0])) {
       const cubeUsage = query.pipeline[0].cubeUsage;
       if (cubeUsage !== undefined && !isEmptyCubeUsage(cubeUsage)) {
         const resolved = resolveCubeSources(inputStruct, cubeUsage);
