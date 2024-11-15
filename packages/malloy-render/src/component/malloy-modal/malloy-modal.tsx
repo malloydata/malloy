@@ -11,11 +11,9 @@ export function MalloyModal(props: {
   return (
     <Portal mount={config.modalElement}>
       <div ref={props.ref} style={props.style}>
-        <div>
-          <malloy-modal stylesheet={config.stylesheet}>
-            <div>{props.children}</div>
-          </malloy-modal>
-        </div>
+        <malloy-modal stylesheet={config.stylesheet}>
+          <div>{props.children}</div>
+        </malloy-modal>
       </div>
     </Portal>
   );
