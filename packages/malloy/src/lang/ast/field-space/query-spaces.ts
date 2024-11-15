@@ -247,6 +247,7 @@ export abstract class QueryOperationSpace
         newUsage: newCubeUsage,
         allUsage: this.cubeUsage,
       });
+      this.alreadyInvalidCubeUsage = true;
     }
   }
 
