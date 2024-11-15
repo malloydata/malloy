@@ -28,10 +28,10 @@ import {
   DurationUnit,
   isDurationUnit,
   StyleDefaults,
-} from '../data_styles';
-import {RendererOptions} from '../renderer_types';
-import {Renderer} from '../renderer';
-import {RendererFactory} from '../renderer_factory';
+} from './data_styles';
+import {RendererOptions} from './renderer_types';
+import {Renderer} from './renderer';
+import {RendererFactory} from './renderer_factory';
 import {format} from 'ssf';
 
 export function formatTimeUnit(

@@ -22,8 +22,8 @@
  */
 
 import {Explore, ExploreField, Field, Tag} from '@malloydata/malloy';
-import {scale, locale} from 'vega';
-import {getFieldKey, getTextWidth} from './util';
+import {scale, locale, AlignValue, TextBaselineValue} from 'vega';
+import {getFieldKey, getTextWidthDOM} from './util';
 import {RenderResultMetadata} from './types';
 import {renderNumericField} from './render-numeric-field';
 
@@ -32,8 +32,8 @@ export type ChartLayoutSettings = {
   plotHeight: number;
   xAxis: {
     labelAngle: number;
-    labelAlign?: string;
-    labelBaseline?: string;
+    labelAlign?: AlignValue;
+    labelBaseline?: TextBaselineValue;
     labelLimit: number;
     height: number;
     titleSize: number;
@@ -92,28 +92,25 @@ export function getChartLayoutSettings(
   const yField = options?.yField ?? field.allFields.at(1)!;
   const {tag} = field.tagParse();
 
-  let chartWidth = 0,
-    chartHeight = 0;
   // For now, support legacy API of size being its own tag
   const customWidth =
     chartTag.numeric('size', 'width') ?? tag.numeric('size', 'width');
   const customHeight =
     chartTag.numeric('size', 'height') ?? tag.numeric('size', 'height');
-  let presetSize = chartTag.text('size') ?? tag.text('size');
-  if (customWidth && customHeight) {
-    chartWidth = customWidth;
-    chartHeight = customHeight;
-  } else {
-    presetSize = presetSize || 'md';
-    [chartWidth, chartHeight] = CHART_SIZES[presetSize];
-    chartHeight = chartHeight * ROW_HEIGHT;
-  }
+  const presetSize = (chartTag.text('size') ?? tag.text('size')) || 'md';
+  let chartWidth = 0,
+    chartHeight = 0,
+    heightRows = 0;
+  [chartWidth, heightRows] = CHART_SIZES[presetSize];
+  chartHeight = heightRows * ROW_HEIGHT;
+  if (customWidth) chartWidth = customWidth;
+  if (customHeight) chartHeight = customHeight;
 
   let xAxisHeight = 0;
   let yAxisWidth = 0;
   let labelAngle = -90;
-  let labelAlign: string | undefined = 'right';
-  let labelBaseline = 'middle';
+  let labelAlign: AlignValue | undefined = 'right';
+  let labelBaseline: TextBaselineValue | undefined = 'middle';
   let labelLimit = 0;
   let xTitleSize = 0;
   let yTitleSize = 0;
@@ -149,8 +146,22 @@ export function getChartLayoutSettings(
     const yLabelOffset = 5;
     yAxisWidth =
       Math.max(
-        getTextWidth(formattedMin, '10px Inter, sans-serif') + 4,
-        getTextWidth(formattedMax, '10px Inter, sans-serif') + 4
+        getTextWidthDOM(formattedMin, {
+          fontFamily: 'Inter, sans-serif',
+          fontSize: '10px',
+          width: 'fit-content',
+          opacity: '0',
+          fontVariantNumeric: 'tabular-nums',
+          position: 'absolute',
+        }) + 4,
+        getTextWidthDOM(formattedMax, {
+          fontFamily: 'Inter, sans-serif',
+          fontSize: '10px',
+          width: 'fit-content',
+          opacity: '0',
+          fontVariantNumeric: 'tabular-nums',
+          position: 'absolute',
+        }) + 4
       ) +
       yLabelOffset +
       yTitleSize;
@@ -176,7 +187,16 @@ export function getChartLayoutSettings(
     // TODO: add type checking here for axis. for now assume number, string
     const xKey = getFieldKey(xField);
     const maxString = metadata.fields[xKey]!.maxString!;
-    const maxStringSize = getTextWidth(maxString, '10px Inter, sans-serif') + 4;
+    const maxStringSize =
+      getTextWidthDOM(maxString, {
+        fontFamily: 'Inter, sans-serif',
+        fontSize: '10px',
+        width: 'fit-content',
+        opacity: '0',
+        fontVariantNumeric: 'tabular-nums',
+        position: 'absolute',
+      }) + 4;
+
     const X_AXIS_THRESHOLD = 1;
     xTitleSize = 26;
     xAxisHeight = Math.min(maxStringSize, X_AXIS_THRESHOLD * chartHeight);
@@ -193,7 +213,8 @@ export function getChartLayoutSettings(
     const xSpacePerLabel = chartWidth / recordsToFit;
     if (xSpacePerLabel > xAxisHeight || xSpacePerLabel > maxStringSize) {
       labelAngle = 0;
-      labelLimit = xSpacePerLabel;
+      // Remove label limit; our vega specs should use labelOverlap setting to hide overlapping labels
+      labelLimit = 0;
       labelAlign = undefined;
       labelBaseline = 'top';
       xTitleSize = 22;
@@ -235,7 +256,7 @@ export function getChartLayoutSettings(
           top: topPadding + 1,
           left: yAxisWidth,
           bottom: xAxisHeight + xTitleSize,
-          right: 0,
+          right: 8,
         },
     xField,
     yField,

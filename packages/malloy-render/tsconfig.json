@@ -6,7 +6,8 @@
     "composite": true,
     "noImplicitReturns": true,
     "jsx": "react-jsx",
-    "jsxImportSource": "solid-js"
+    "jsxImportSource": "solid-js",
+    "lib": ["dom", "es2021"]
   },
   "include": ["./src", "./src/**/*.d.ts", "node_modules/us-atlas"],
   "references": [

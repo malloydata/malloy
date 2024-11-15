@@ -49,7 +49,7 @@ export function valueIsDateTime(f: Field, v: unknown): v is Date {
   return f.isAtomicField() && (f.isDate() || f.isTimestamp()) && v !== null;
 }
 
-export function getTextWidth(
+export function getTextWidthCanvas(
   text: string,
   font: string,
   canvasToUse?: HTMLCanvasElement
@@ -59,6 +59,18 @@ export function getTextWidth(
   context.font = font;
   const metrics = context.measureText(text);
   return metrics.width;
+}
+
+export function getTextWidthDOM(text: string, styles: Record<string, string>) {
+  const measureDiv = document.createElement('div');
+  measureDiv.innerHTML = text;
+  for (const [key, value] of Object.entries(styles)) {
+    measureDiv.style[key] = value;
+  }
+  document.body.appendChild(measureDiv);
+  const rect = measureDiv.getBoundingClientRect();
+  document.body.removeChild(measureDiv);
+  return rect.width;
 }
 
 export function clamp(s: number, e: number, v: number) {

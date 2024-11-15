@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/render",
-  "version": "0.0.206",
+  "version": "0.0.215",
   "license": "MIT",
   "main": "dist/module/index.umd.js",
   "types": "dist/index.d.ts",
@@ -14,10 +14,8 @@
   },
   "exports": {
     ".": "./dist/module/index.umd.js",
-    "./style": "./dist/module/style.css",
     "./webcomponent": "./dist/webcomponent/malloy-render.umd.js",
-    "./webcomponent/register": "./dist/register/register.umd.js",
-    "./webcomponent/style": "./dist/webcomponent/style.css"
+    "./webcomponent/register": "./dist/register/register.umd.js"
   },
   "scripts": {
     "bundle_renderer": "node src/bundle/esbuild_bundler.js",
@@ -32,7 +30,7 @@
     "build-types": "tsc --build --declaration --emitDeclarationOnly"
   },
   "dependencies": {
-    "@malloydata/malloy": "^0.0.206",
+    "@malloydata/malloy": "^0.0.215",
     "@tanstack/solid-virtual": "^3.10.4",
     "component-register": "^0.8.6",
     "lodash": "^4.17.20",

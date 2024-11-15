@@ -28,13 +28,13 @@ import {
   Field,
   SortableField,
 } from '@malloydata/malloy';
-import {StyleDefaults} from '../data_styles';
-import {getDrillQuery} from '../drill';
+import {StyleDefaults} from './data_styles';
+import {getDrillQuery} from './drill';
 import {ContainerRenderer} from './container';
 import {HTMLNumberRenderer} from './number';
 import {createDrillIcon, formatTitle, yieldTask} from './utils';
 import {isFieldHidden} from '../tags_utils';
-import {ChildRenderers, Renderer} from '../renderer';
+import {ChildRenderers, Renderer} from './renderer';
 
 class PivotedField {
   readonly key: string;

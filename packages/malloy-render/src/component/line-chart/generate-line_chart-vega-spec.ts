@@ -6,7 +6,6 @@
  */
 
 import {Explore, QueryDataRow, QueryValue} from '@malloydata/malloy';
-import {getBarChartSettings} from './get-bar_chart-settings';
 import {
   ChartTooltipEntry,
   MalloyDataToChartDataHandler,
@@ -14,30 +13,30 @@ import {
   RenderResultMetadata,
   VegaChartProps,
   VegaPadding,
-  VegaSignalRef,
 } from '../types';
-import {getChartLayoutSettings} from '../chart-layout-settings';
+import {getLineChartSettings} from './get-line_chart-settings';
 import {getFieldFromRootPath, getFieldReferenceId} from '../plot/util';
+import {getChartLayoutSettings} from '../chart-layout-settings';
+import {renderTimeString} from '../render-time';
+import {createMeasureAxis} from '../vega/measure-axis';
 import {
   Data,
-  EncodeEntry,
   GroupMark,
   Item,
   Legend,
+  LineMark,
   Mark,
-  RectMark,
+  RuleMark,
   Signal,
   Spec,
-  View,
+  SymbolMark,
 } from 'vega';
-import {renderTimeString} from '../render-time';
 import {renderNumericField} from '../render-numeric-field';
-import {createMeasureAxis} from '../vega/measure-axis';
-import {getCustomTooltipEntries} from './get-custom-tooltips-entries';
 import {getMarkName} from '../vega/vega-utils';
+import {getCustomTooltipEntries} from '../bar-chart/get-custom-tooltips-entries';
 import {NULL_SYMBOL} from '../apply-renderer';
 
-type BarDataRecord = {
+type LineDataRecord = {
   x: string | number;
   y: number;
   series: string;
@@ -57,24 +56,20 @@ function invertObject(obj: Record<string, string>): Record<string, string> {
   return inverted;
 }
 
-export function generateBarChartVegaSpec(
+export function generateLineChartVegaSpec(
   explore: Explore,
   metadata: RenderResultMetadata
 ): VegaChartProps {
   const tag = explore.tagParse().tag;
-  const chartTag = tag.tag('bar_chart') ?? tag.tag('bar');
+  const chartTag = tag.tag('line_chart');
   if (!chartTag)
-    throw new Error(
-      'Bar chart should only be rendered for bar_chart or bar tag'
-    );
-  const settings = getBarChartSettings(explore, tag);
-  // TODO: check that there are <=2 dimension fields, throw error otherwise
+    throw new Error('Line chart should only be rendered for line_chart tag');
+  const settings = getLineChartSettings(explore, tag);
   /**************************************
    *
    * Chart data fields
    *
    *************************************/
-
   const xFieldPath = settings.xChannel.fields.at(0);
   const yFieldPath = settings.yChannel.fields.at(0);
   const seriesFieldPath = settings.seriesChannel.fields.at(0);
@@ -124,12 +119,6 @@ export function generateBarChartVegaSpec(
    * Chart layout
    *
    *************************************/
-
-  const isGrouping = hasSeries && !settings.isStack;
-  const isStacking = hasSeries && settings.isStack;
-
-  // Calculate min/max across all y columns
-  // TODO: how to calculate shared stack min/maxes?
   let yMin = Infinity;
   let yMax = -Infinity;
   for (const name of settings.yChannel.fields) {
@@ -140,14 +129,13 @@ export function generateBarChartVegaSpec(
     if (max !== null) yMax = Math.max(yMax, max);
   }
 
-  // Final axis domain, with 0 boundary so bars always start at 0
-  const yDomainMin = Math.min(0, yMin);
-  const yDomainMax = Math.max(0, yMax);
+  const yDomainMin = settings.zeroBaseline ? Math.min(0, yMin) : yMin;
+  const yDomainMax = settings.zeroBaseline ? Math.max(0, yMax) : yMax;
 
   const chartSettings = getChartLayoutSettings(explore, metadata, chartTag, {
     xField,
     yField,
-    chartType: 'bar_chart',
+    chartType: 'line_chart',
     getYMinMax: () => [yDomainMin, yDomainMax],
   });
 
@@ -171,7 +159,6 @@ export function generateBarChartVegaSpec(
    * Chart marks
    *
    *************************************/
-
   const yAxis = !chartSettings.yAxis.hidden
     ? createMeasureAxis({
         type: 'y',
@@ -186,57 +173,67 @@ export function generateBarChartVegaSpec(
       })
     : null;
 
-  // This separate each group set of bars, whether series or single bars
-  const barGroupPadding = 0.25;
-  // This separates bars within a group
-  const barPadding = 0;
+  const marks: Mark[] = [];
 
-  // Spacing for bar groups, depending on whether grouped or not
-  // Manually calculating offsets and widths for bars because we need x highlight event targets to be full bandwidth
-  const xOffset: VegaSignalRef = {signal: ''};
-  let xWidth: EncodeEntry['width'] = {};
-  if (isGrouping) {
-    xOffset.signal = `scale('xOffset', datum.series)+bandwidth("xscale")*${
-      barGroupPadding / 2
-    }`;
-    xWidth = {'scale': 'xOffset', 'band': 1 - barPadding};
-  } else {
-    xOffset.signal = `bandwidth("xscale")*${barGroupPadding / 2}`;
-    xWidth = {'scale': 'xscale', 'band': 1 - barGroupPadding};
-  }
-
-  // Create groups for each unique x value via faceting
-  const groupMark: GroupMark = {
-    name: 'x_group',
+  const seriesGroupMark: GroupMark = {
+    name: 'series_group',
     from: {
       facet: {
         data: 'values',
-        name: 'x_facet',
-        groupby: ['x'],
-        // Collect all records for each bar, for feeding into tooltip in series charts
+        name: 'series_facet',
+        groupby: ['series'],
         aggregate: {
-          fields: ['x', 'x'],
-          ops: ['values', 'min'],
-          as: ['v', 'x'],
+          fields: [''],
+          ops: ['count'],
+          as: ['count'],
         },
       },
     },
-    data: [
-      // For highlight marks, collect all records into 1 record per x, for feeding into tooltip
-      {
-        name: 'x_facet_values',
-        source: 'x_facet',
-        transform: [
+    type: 'group',
+    interactive: false,
+    marks: [],
+  };
+
+  const LINE_FADE_OPACITY = 0.35;
+
+  const lineMark: LineMark = {
+    name: 'lines',
+    type: 'line',
+    from: {
+      data: 'series_facet',
+    },
+    encode: {
+      enter: {
+        x: {scale: 'xscale', field: 'x'},
+        y: {scale: 'yscale', field: 'y'},
+        stroke: {scale: 'color', field: 'series'},
+        strokeWidth: {value: 2},
+        zindex: {value: 0},
+      },
+      update: {
+        strokeOpacity: [
           {
-            type: 'aggregate',
-            fields: ['x', 'x'],
-            ops: ['values', 'min'],
-            as: ['v', 'x'],
+            test: 'brushSeriesIn && brushSeriesIn != datum.series',
+            value: LINE_FADE_OPACITY,
           },
+          {value: 1},
+        ],
+        // TODO figure out why this isn't working. We need highlighted line to appear above other lines
+        zindex: [
+          {test: 'brushSeriesIn && brushSeriesIn === datum.series', value: 1},
+          {value: 0},
         ],
       },
-    ],
-    type: 'group',
+    },
+  };
+
+  const highlightRuleMark: RuleMark = {
+    name: 'x_highlight_rule',
+    type: 'rule',
+    from: {
+      data: 'x_data',
+    },
+    zindex: 1,
     interactive: false,
     encode: {
       enter: {
@@ -244,90 +241,20 @@ export function generateBarChartVegaSpec(
           scale: 'xscale',
           field: 'x',
         },
-      },
-    },
-    marks: [],
-  };
-
-  const BAR_FADE_OPACITY = 0.35;
-
-  const barMark: RectMark = {
-    name: 'bars',
-    type: 'rect',
-    from: {
-      data: 'x_facet',
-    },
-    zindex: 2,
-    encode: {
-      enter: {
-        x: {
-          offset: xOffset,
-        },
-        width: xWidth,
-        y: {
-          scale: 'yscale',
-          field: settings.isStack ? 'y0' : 'y',
-        },
-        y2: settings.isStack
-          ? {'scale': 'yscale', 'field': 'y1'}
-          : {'scale': 'yscale', 'value': 0},
-      },
-      update: {
-        fill: {
-          scale: 'color',
-          field: 'series',
-        },
-        fillOpacity: [
-          {
-            test: 'brushSeriesIn && brushSeriesIn != datum.series',
-            value: BAR_FADE_OPACITY,
-          },
-          {
-            test: isMeasureSeries
-              ? 'length(brushMeasureListIn) > 0 && indexof(brushMeasureListIn, datum.series) === -1'
-              : 'false',
-            value: BAR_FADE_OPACITY,
-          },
-          {
-            test: 'brushXIn && length(brushXIn) > 0 && indexof(brushXIn, datum.x) === -1',
-            value: BAR_FADE_OPACITY,
-          },
-          {
-            test: 'brushMeasureRangeIn && (datum.y < brushMeasureRangeIn[0] || datum.y > brushMeasureRangeIn[1])',
-            value: BAR_FADE_OPACITY,
-          },
-          {value: 1},
-        ],
-      },
-    },
-  };
-
-  const highlightMark: RectMark = {
-    name: 'x_highlight',
-    type: 'rect',
-    from: {
-      data: 'x_facet_values',
-    },
-    zindex: 1,
-    encode: {
-      enter: {
-        x: {
-          value: 0,
-        },
-        width: {scale: 'xscale', band: 1},
         y: {
           value: 0,
         },
         y2: {signal: 'height'},
       },
       update: {
+        stroke: {value: '#4c72ba'},
         fill: {
           value: '#4c72ba',
         },
-        fillOpacity: [
+        strokeOpacity: [
           {
             test: 'brushXIn ? indexof(brushXIn,datum.x) > -1 : false',
-            value: 0.1,
+            value: 0.2,
           },
           {value: 0},
         ],
@@ -335,7 +262,99 @@ export function generateBarChartVegaSpec(
     },
   };
 
-  groupMark.marks!.push(highlightMark, barMark);
+  // Use voronoi hit targets based on mid point of each x position so that it draws nicely spaced boxes
+  // This works well with a point scale, where there aren't even bands around each point since first and last points don't have outer edge padding
+  const xHitTargets: GroupMark = {
+    name: 'x_hit_target_group',
+    type: 'group',
+    marks: [
+      {
+        name: 'mid_points',
+        type: 'symbol',
+        zindex: 1,
+        from: {data: 'x_data'},
+        interactive: false,
+        encode: {
+          enter: {
+            fill: {value: 'transparent'},
+            size: {value: 36},
+            x: {scale: 'xscale', field: 'x'},
+            y: {signal: 'height /2'},
+          },
+        },
+      },
+      {
+        name: 'x_hit_target',
+        type: 'path',
+        from: {data: 'mid_points'},
+        encode: {
+          enter: {
+            fill: {value: 'transparent'},
+          },
+        },
+        transform: [
+          {
+            type: 'voronoi',
+            x: 'datum.x',
+            y: 'datum.y',
+            size: [{'signal': 'width'}, {'signal': 'height'}],
+          },
+        ],
+      },
+    ],
+  };
+
+  // Drag bigger circles for targeting ref lines so user can more easily hit with mouse
+  const refLineTargets: SymbolMark = {
+    name: 'ref_line_targets',
+    type: 'symbol',
+    from: {
+      data: 'values',
+    },
+    encode: {
+      enter: {
+        x: {scale: 'xscale', field: 'x'},
+        y: {scale: 'yscale', field: 'y'},
+        fill: {value: 'transparent'},
+        size: {value: 256},
+      },
+    },
+  };
+
+  const pointMarks: SymbolMark = {
+    name: 'points',
+    type: 'symbol',
+    from: {
+      data: 'series_facet',
+    },
+    encode: {
+      enter: {
+        x: {scale: 'xscale', field: 'x'},
+        y: {scale: 'yscale', field: 'y'},
+        fill: {scale: 'color', field: 'series'},
+      },
+      update: {
+        fillOpacity: [
+          {
+            test: 'brushXIn ? indexof(brushXIn,datum.x) > -1 : false',
+            value: 1,
+          },
+          // If only one point in a line, show the point
+          {signal: 'item.mark.group.datum.count > 1 ? 0 : 1'},
+        ],
+      },
+    },
+  };
+
+  seriesGroupMark.marks!.push(lineMark);
+  seriesGroupMark.marks!.push(pointMarks);
+
+  marks.push(seriesGroupMark);
+
+  if (settings.interactive) {
+    if (yAxis) marks.push(...yAxis.interactiveMarks);
+  }
+  marks.push(highlightRuleMark, xHitTargets, refLineTargets);
 
   // Source data and transforms
   const valuesData: Data = {name: 'values', values: [], transform: []};
@@ -353,22 +372,14 @@ export function generateBarChartVegaSpec(
       expr: "replace(datum.series, '__source.', '')",
     });
   }
-  if (isStacking) {
-    valuesData.transform!.push({
-      type: 'stack',
-      groupby: ['x'],
-      field: 'y',
-      sort: {field: 'series'},
-    });
-  }
-
-  const marks: Mark[] = [groupMark];
 
   /**************************************
    *
    * Chart signals
    *
    *************************************/
+
+  const interactiveSignals = yAxis ? yAxis.interactiveSignals : [];
 
   // Base signals
   const signals: Signal[] = [
@@ -441,130 +452,90 @@ export function generateBarChartVegaSpec(
         : '[]',
     },
   ];
-
   if (settings.interactive) {
-    if (yAxis) marks.push(...yAxis.interactiveMarks);
-
-    // TODO add xAxisRangeBrush
-    // marks.push(xAxisOverlay, xAxisRangeBrush);
-
-    const interactiveSignals = yAxis ? yAxis.interactiveSignals : [];
+    // Interactive signals
     signals.push(
-      ...[
-        {
-          name: 'brushX',
-          on: xRef
+      {
+        name: 'brushX',
+        on: xRef
+          ? [
+              {
+                events: '@x_hit_target:mouseover', // points too?
+                update:
+                  "{ fieldRefId: xFieldRefId, value: [datum.datum.x], sourceId: brushXSourceId, type: 'dimension'}",
+              },
+              {
+                events: '@ref_line_targets:mouseover', // points too?
+                update:
+                  "{ fieldRefId: xFieldRefId, value: [datum.x], sourceId: brushXSourceId, type: 'dimension'}",
+              },
+              {
+                events: '@x_hit_target:mouseout', // points too? @bars:mouseout
+                update: 'null',
+              },
+              {
+                events: '@ref_line_targets:mouseout', // points too? @bars:mouseout
+                update: 'null',
+              },
+            ]
+          : [],
+      },
+      {
+        name: 'brushSeries',
+        on:
+          isDimensionalSeries && seriesRef
             ? [
                 {
-                  events: '@x_highlight:mouseover, @bars:mouseover',
+                  events: '@ref_line_targets:mouseover',
                   update:
-                    "{ fieldRefId: xFieldRefId, value: [datum.x], sourceId: brushXSourceId, type: 'dimension'}",
+                    "{ fieldRefId: seriesFieldRefId, value: datum.series, sourceId: brushSeriesSourceId, type: 'dimension' }",
                 },
                 {
-                  events: '@x_highlight:mouseout, @bars:mouseout',
+                  events: '@ref_line_targets:mouseout',
                   update: 'null',
                 },
-                // TODO: x range brushing
-                // {
-                //   events: {signal: 'xRangeBrushValues'},
-                //   update: `xRangeBrushValues ? { fieldRefId: xFieldRefId, sourceId: brushXSourceId, value: xRangeBrushValues, type: 'dimension' } : null`,
-                // },
+                {
+                  events: '@legend_labels:mouseover, @legend_symbols:mouseover',
+                  update:
+                    "{ fieldRefId: seriesFieldRefId, value: datum.value, sourceId: brushSeriesSourceId, type: 'dimension' }",
+                },
+                {
+                  events: '@legend_labels:mouseout, @legend_symbols:mouseout',
+                  update: 'null',
+                },
               ]
             : [],
-        },
-        {
-          name: 'brushSeries',
-          on:
-            isDimensionalSeries && seriesRef
-              ? [
-                  {
-                    events: '@bars:mouseover',
-                    update:
-                      "{ fieldRefId: seriesFieldRefId, value: datum.series, sourceId: brushSeriesSourceId, type: 'dimension' }",
-                  },
-                  {
-                    events: '@bars:mouseout',
-                    update: 'null',
-                  },
-                  {
-                    events:
-                      '@legend_labels:mouseover, @legend_symbols:mouseover',
-                    update:
-                      "{ fieldRefId: seriesFieldRefId, value: datum.value, sourceId: brushSeriesSourceId, type: 'dimension' }",
-                  },
-                  {
-                    events: '@legend_labels:mouseout, @legend_symbols:mouseout',
-                    update: 'null',
-                  },
-                ]
-              : [],
-        },
-        {
-          name: 'brushMeasure',
-          on: [
-            {
-              events: '@bars:mouseover',
-              update: isMeasureSeries
-                ? `{ fieldRefId: yRefsMap[datum.series], value: datum['${
-                    isStacking ? 'y1' : 'y'
-                  }'], sourceId: brushMeasureSourceId, type: 'measure'}`
-                : `{ fieldRefId: measureFieldRefId, value: datum['${
-                    isStacking ? 'y1' : 'y'
-                  }'], sourceId: brushMeasureSourceId, type: 'measure'}`,
-            },
-            {
-              events: '@bars:mouseout',
-              update: 'null',
-            },
-            ...(yAxis?.brushMeasureEvents ?? []),
-            ...(isMeasureSeries
-              ? [
-                  {
-                    events:
-                      '@legend_labels:mouseover, @legend_symbols:mouseover',
-                    update:
-                      "{ fieldRefId: yRefsMap[datum.value], value: null, sourceId: brushMeasureSourceId, type: 'measure' }",
-                  },
-                  {
-                    events: '@legend_labels:mouseout, @legend_symbols:mouseout',
-                    update: 'null',
-                  },
-                ]
-              : []),
-          ],
-        },
-        // Export this chart's brushes. Series / measure brushes are debounced when set to empty to avoid flickering
-        {
-          name: 'brushOut',
-          update:
-            "[{ sourceId: brushXSourceId, data: brushX }, { sourceId: brushSeriesSourceId, data: brushSeries, debounce: { time: 100, strategy: 'on-empty' } },{ sourceId: brushMeasureSourceId, data: brushMeasure, debounce: { time: 100, strategy: 'on-empty' } } ]",
-          // TODO: For now, not including brushMeasureRange ({ sourceId: '${brushMeasureRangeSourceId}', data: brushMeasureRange }) as there are issues to work through
-        },
-        ...interactiveSignals,
-        {
-          name: 'yIsBrushing',
-          value: false,
-          // TODO: for now, disabling brushing ranges as there are issues to work through
-          // on: [
-          //   {
-          //     'events':
-          //       '[@y_axis_overlay:mousedown, window:mouseup] > window:mousemove!',
-          //     'update': 'true',
-          //   },
-          //   {
-          //     'events': 'window:mouseup',
-          //     'update': 'false',
-          //   },
-          // ],
-        },
-      ]
+      },
+      {
+        name: 'brushMeasure',
+        on: yRef
+          ? [
+              {
+                events: '@ref_line_targets:mouseover',
+                update:
+                  "{ fieldRefId: measureFieldRefId, value: [datum.y], sourceId: brushMeasureSourceId, type: 'measure'}",
+              },
+              ...(yAxis?.brushMeasureEvents ?? []),
+              {
+                events: '@ref_line_targets:mouseout',
+                update: 'null',
+              },
+            ]
+          : [],
+      },
+
+      // Export this chart's brushes. Series / measure brushes are debounced when set to empty to avoid flickering while moving mouse from one item to the next
+      {
+        name: 'brushOut',
+        update:
+          "[{ sourceId: brushXSourceId, data: brushX }, { sourceId: brushSeriesSourceId, data: brushSeries, debounce: { time: 100, strategy: 'on-empty' } }, { sourceId: brushMeasureSourceId, data: brushMeasure } ]",
+      },
+      ...interactiveSignals,
+      {
+        name: 'yIsBrushing',
+        value: false,
+      }
     );
-  } else {
-    // Some marks rely on yIsBrushing to exist regardless of interactive state
-    signals.push({
-      name: 'yIsBrushing',
-      value: false,
-    });
   }
 
   /**************************************
@@ -572,7 +543,6 @@ export function generateBarChartVegaSpec(
    * Chart spec
    *
    *************************************/
-
   const spec: Spec = {
     $schema: 'https://vega.github.io/schema/vega/v5.json',
     width: chartSettings.plotWidth,
@@ -583,25 +553,40 @@ export function generateBarChartVegaSpec(
       contains: 'content',
     },
     padding: chartSettings.padding,
-    data: [valuesData],
+    data: [
+      valuesData,
+      {
+        name: 'x_data',
+        source: 'values',
+        transform: [
+          {
+            type: 'aggregate',
+            groupby: ['x'],
+            fields: ['x'],
+            ops: ['values'],
+            as: ['v'],
+          },
+        ],
+      },
+    ],
     scales: [
       {
         name: 'xscale',
-        type: 'band',
+        type: xIsDateorTime ? 'time' : 'point',
         domain: shouldShareXDomain
-          ? [...xMeta.values]
+          ? xIsDateorTime
+            ? [xMeta.min, xMeta.max]
+            : [...xMeta.values]
           : {data: 'values', field: 'x'},
         range: 'width',
         paddingOuter: 0.05,
-        round: true,
       },
       {
         name: 'yscale',
         nice: true,
         range: 'height',
-        domain: settings.isStack
-          ? {data: 'values', field: 'y1'}
-          : chartSettings.yScale.domain ?? {data: 'values', field: 'y'},
+        zero: settings.zeroBaseline,
+        domain: chartSettings.yScale.domain ?? {data: 'values', field: 'y'},
       },
       {
         name: 'color',
@@ -614,18 +599,7 @@ export function generateBarChartVegaSpec(
               field: 'series',
             },
       },
-      {
-        name: 'xOffset',
-        type: 'band',
-        domain: shouldShareSeriesDomain
-          ? [...seriesMeta!.values]
-          : {data: 'values', field: 'series'},
-        range: {
-          signal: `[0,bandwidth('xscale') * ${1 - barGroupPadding}]`,
-        },
-      },
     ],
-
     axes: [
       {
         orient: 'bottom',
@@ -635,35 +609,22 @@ export function generateBarChartVegaSpec(
         labelSeparation: 4,
         ...chartSettings.xAxis,
         encode: {
-          labels: {
-            enter: {
-              ...(xIsDateorTime
-                ? {
+          ...(xIsDateorTime
+            ? {
+                labels: {
+                  enter: {
                     text: {
                       signal: `renderMalloyTime(malloyExplore, '${xFieldPath}', datum.value)`,
                     },
-                  }
-                : {}),
-            },
-            update: {
-              ...(xIsDateorTime
-                ? {
+                  },
+                  update: {
                     text: {
                       signal: `renderMalloyTime(malloyExplore, '${xFieldPath}', datum.value)`,
                     },
-                  }
-                : {}),
-              fillOpacity: [
-                {
-                  test: 'brushXIn ? indexof(brushXIn,datum.value) === -1 : false',
-                  value: 0.35,
+                  },
                 },
-                {
-                  value: 1,
-                },
-              ],
-            },
-          },
+              }
+            : {}),
         },
       },
       ...(yAxis ? [yAxis.axis] : []),
@@ -781,7 +742,6 @@ export function generateBarChartVegaSpec(
     }[] = [];
     data.forEach(row => {
       // Filter out missing date/time values
-      // TODO: figure out how we can show null values in continuous axes
       if (
         xIsDateorTime &&
         (row[xFieldPath] === null || typeof row[xFieldPath] === 'undefined')
@@ -808,17 +768,17 @@ export function generateBarChartVegaSpec(
     plotHeight: chartSettings.plotHeight,
     totalWidth: chartSettings.totalWidth,
     totalHeight: chartSettings.totalHeight,
-    chartType: 'bar_chart',
+    chartType: 'line_chart',
     mapMalloyDataToChartData,
-    getTooltipData: (item: Item, view: View) => {
+    getTooltipData(item, view) {
       if (tooltipEntryMemo.has(item)) {
         return tooltipEntryMemo.get(item)!;
       }
-
+      const markName = getMarkName(item);
       let tooltipData: ChartTooltipEntry | null = null;
-      let records: BarDataRecord[] = [];
+      let records: LineDataRecord[] = [];
       const colorScale = view.scale('color');
-      const formatY = (rec: BarDataRecord) => {
+      const formatY = (rec: LineDataRecord) => {
         const fieldName = rec.series;
         // If dimensional, use the first yField for formatting. Else the series value is the field path of the field to use
         const field = isDimensionalSeries
@@ -831,10 +791,11 @@ export function generateBarChartVegaSpec(
           : String(value);
       };
 
-      // Tooltip records for the highlight bars
-      if (getMarkName(item) === 'x_highlight') {
-        const x = item.datum.x;
-        records = item.datum.v;
+      // Tooltip records for the highlighted points
+      if (['x_hit_target', 'ref_line_targets'].includes(markName)) {
+        const x =
+          markName === 'x_hit_target' ? item.datum.datum.x : item.datum.x;
+        records = markName === 'x_hit_target' ? item.datum.datum.v : [];
 
         const title = xIsDateorTime
           ? renderTimeString(
@@ -856,12 +817,18 @@ export function generateBarChartVegaSpec(
         };
       }
 
-      // Tooltip records for the actual bars
+      // Tooltip records for the actual points
       let highlightedSeries: string | null = null;
-      if (item.datum && ['bars'].includes(getMarkName(item))) {
+      if (item.datum && ['ref_line_targets'].includes(getMarkName(item))) {
         const itemData = item.datum;
         highlightedSeries = itemData.series;
-        records = item.mark.group.datum.v;
+        records = [];
+        for (const sourceItem of item.mark.items) {
+          const lineDataRecord = sourceItem.datum as LineDataRecord;
+          if (lineDataRecord.x === itemData.x) {
+            records.push(lineDataRecord);
+          }
+        }
         const title = xIsDateorTime
           ? renderTimeString(
               new Date(itemData.x),
@@ -889,7 +856,7 @@ export function generateBarChartVegaSpec(
       );
 
       // Custom tooltips can only be shown for lowest granularity of the data
-      let customTooltipRecords: BarDataRecord[] = [];
+      let customTooltipRecords: LineDataRecord[] = [];
       // Series can only show custom tooltips when a single highlighted record
       if (isDimensionalSeries && highlightedRecords.length === 1)
         customTooltipRecords = highlightedRecords;
@@ -919,6 +886,7 @@ export function generateBarChartVegaSpec(
           : tooltipData.entries.findIndex(e => e.highlight) + 1;
         tooltipData.entries.splice(insertPosition, 0, ...customEntries);
       }
+
       tooltipEntryMemo.set(item, tooltipData);
       return tooltipData;
     },

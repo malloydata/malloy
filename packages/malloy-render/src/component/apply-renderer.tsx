@@ -44,15 +44,15 @@ export function shouldRenderAs(f: Field | Explore, tagOverride?: Tag) {
     return 'cell';
   }
   if (hasAny(tag, 'list', 'list_detail')) return 'list';
-  if (hasAny(tag, 'bar_chart', 'line_chart', 'area_chart')) return 'chart';
+  if (hasAny(tag, 'bar_chart', 'line_chart')) return 'chart';
   if (tag.has('dashboard')) return 'dashboard';
-  if (tag.has('scatter_chart')) return 'scatter_chart';
-  if (tag.has('shape_map')) return 'shape_map';
-  if (tag.has('segment_map')) return 'segment_map';
+  if (hasAny(tag, 'scatter_chart')) return 'scatter_chart';
+  if (hasAny(tag, 'shape_map')) return 'shape_map';
+  if (hasAny(tag, 'segment_map')) return 'segment_map';
   else return 'table';
 }
 
-const NULL_SYMBOL = '∅';
+export const NULL_SYMBOL = '∅';
 
 export function applyRenderer(props: RendererProps) {
   const {field, dataColumn, resultMetadata, tag, customProps = {}} = props;

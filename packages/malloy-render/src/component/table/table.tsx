@@ -16,7 +16,7 @@ import {getRangeSize, isFirstChild, isLastChild} from '../util';
 import {getTableLayout} from './table-layout';
 import {useResultContext} from '../result-context';
 import {createTableStore, TableContext, useTableContext} from './table-context';
-import './table.css';
+import tableCss from './table.css?raw';
 import {applyRenderer, shouldRenderAs} from '../apply-renderer';
 import {isFieldHidden} from '../../tags_utils';
 import {createStore, produce} from 'solid-js/store';
@@ -224,13 +224,19 @@ const MalloyTableRoot = (_props: {
   rowLimit?: number;
   scrollEl?: HTMLElement;
   disableVirtualization?: boolean;
+  shouldFillWidth?: boolean;
 }) => {
   const props = mergeProps({rowLimit: Infinity}, _props);
   const tableCtx = useTableContext()!;
   const resultMetadata = useResultContext();
-  const shouldFillWidth =
-    tableCtx.root &&
-    props.data.field.tagParse().tag.tag('table')?.text('size') === 'fill';
+
+  let shouldFillWidth = false;
+  if (tableCtx.root) {
+    const sizeTag = props.data.field.tagParse().tag.tag('table')?.tag('size');
+    if (sizeTag && sizeTag.text() === 'fill') shouldFillWidth = true;
+    else if (typeof props.shouldFillWidth === 'boolean')
+      shouldFillWidth = props.shouldFillWidth;
+  }
 
   const pinnedFields = createMemo(() => {
     const fields = Object.entries(tableCtx.layout.fieldHeaderRangeMap)
@@ -393,11 +399,13 @@ const MalloyTableRoot = (_props: {
   if (props.scrollEl) scrollEl = props.scrollEl;
   let virtualizer: Virtualizer<HTMLElement, Element> | undefined;
 
-  const [rowEstimate, setRowEstimate] = createSignal(28);
+  // Set arbitrarily large initial height to deal with weird measurement bug https://github.com/TanStack/virtual/issues/869
+  // Could possibly try to pre-calculate a height estimate using metadata, but may be hard to do with potentially wrapping text so would have to add a buffer
+  const [rowEstimate, setRowEstimate] = createSignal(1000);
 
-  const shouldVirtualize = tableCtx.root && !props.disableVirtualization;
+  const shouldVirtualize = () => tableCtx.root && !props.disableVirtualization;
 
-  if (shouldVirtualize) {
+  if (shouldVirtualize()) {
     virtualizer = createVirtualizer({
       count: data().length,
       getScrollElement: () => scrollEl,
@@ -532,7 +540,7 @@ const MalloyTableRoot = (_props: {
         </div>
       </Show>
       {/* virtualized table */}
-      <Show when={shouldVirtualize}>
+      <Show when={shouldVirtualize()}>
         <div
           class="table-row"
           style={{
@@ -582,7 +590,7 @@ const MalloyTableRoot = (_props: {
         </div>
       </Show>
       {/* non-virtualized table */}
-      <Show when={!shouldVirtualize}>
+      <Show when={!shouldVirtualize()}>
         {/* header */}
         <Show when={!tableCtx.root}>
           <div class="table-row">
@@ -616,6 +624,7 @@ const MalloyTable: Component<{
   rowLimit?: number;
   scrollEl?: HTMLElement;
   disableVirtualization?: boolean;
+  shouldFillWidth?: boolean;
 }> = props => {
   const metadata = useResultContext();
   const hasTableCtx = !!useTableContext();
@@ -639,9 +648,32 @@ const MalloyTable: Component<{
     };
   });
 
+  if (tableCtx().root) {
+    const config = useConfig();
+    config.addCSSToShadowRoot(tableCss);
+  }
+
+  const tableConfig = useConfig().tableConfig;
+
+  const tableProps = () =>
+    mergeProps(props, {
+      disableVirtualization:
+        typeof props.disableVirtualization === 'boolean'
+          ? props.disableVirtualization
+          : tableConfig().disableVirtualization,
+      rowLimit:
+        typeof props.rowLimit === 'number'
+          ? props.rowLimit
+          : tableConfig().rowLimit,
+      shouldFillWidth:
+        typeof props.shouldFillWidth === 'boolean'
+          ? props.shouldFillWidth
+          : tableConfig().shouldFillWidth,
+    });
+
   return (
     <TableContext.Provider value={tableCtx()}>
-      <MalloyTableRoot {...props} />
+      <MalloyTableRoot {...tableProps()} />
     </TableContext.Provider>
   );
 };

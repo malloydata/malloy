@@ -10,6 +10,7 @@ import {renderNumericField} from '../render-numeric-field';
 import {Explore, ExploreField} from '@malloydata/malloy';
 import {getFieldFromRootPath} from '../plot/util';
 import {BrushData} from '../result-store/result-store';
+import {renderTimeString} from '../render-time';
 
 if (!expressionFunction('renderMalloyNumber')) {
   expressionFunction(
@@ -20,6 +21,24 @@ if (!expressionFunction('renderMalloyNumber')) {
         return field.isAtomicField()
           ? renderNumericField(field, value)
           : String(value);
+      }
+      return String(value);
+    }
+  );
+}
+
+if (!expressionFunction('renderMalloyTime')) {
+  expressionFunction(
+    'renderMalloyTime',
+    (explore: Explore | ExploreField, fieldPath: string, value: number) => {
+      if (explore) {
+        const field = getFieldFromRootPath(explore, fieldPath);
+        if (field.isAtomicField() && (field.isDate() || field.isTimestamp()))
+          return renderTimeString(
+            new Date(value),
+            field.isAtomicField() && field.isDate(),
+            field.timeframe
+          );
       }
       return String(value);
     }

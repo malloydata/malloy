@@ -27,10 +27,10 @@ import {
   BarChartRenderOptions,
   SparkLineRenderOptions,
   StyleDefaults,
-} from '../data_styles';
-import {RendererFactory} from '../renderer_factory';
-import {RendererOptions} from '../renderer_types';
-import {Renderer} from '../renderer';
+} from './data_styles';
+import {RendererFactory} from './renderer_factory';
+import {RendererOptions} from './renderer_types';
+import {Renderer} from './renderer';
 import {timeToString} from './utils';
 
 export class HTMLBarChartRenderer extends HTMLCartesianChartRenderer {

@@ -1,4 +1,4 @@
-source: products is duckdb.table("data/products.parquet") extend {
+source: products is duckdb.table("static/data/products.parquet") extend {
   measure: total_sales is retail_price.sum()
   measure: avg_margin is avg(retail_price - cost)
   dimension: product is name
@@ -45,17 +45,15 @@ source: products is duckdb.table("data/products.parquet") extend {
           aggregate: `Sales $`
           limit: 3
         }
+        # tooltip currency
+        aggregate: `Cost $ really long label`
         limit: 10
-        -- order_by: sales_year
-        -- # tooltip currency
-        -- aggregate: `Cost $ really long label`
       }
       # bar_chart
       b is {
         group_by: brand, department
         aggregate: `Sales $`
         limit: 10
-        -- order_by: sales_year
       }
       # bar_chart.stack
       c is {
@@ -460,6 +458,17 @@ source: products is duckdb.table("data/products.parquet") extend {
 
   #(story)
   view: interactions_sandbox is interactions;
+
+  #(story)
+  # bar_chart.stack
+  view: null_values is {
+    group_by:
+      x is pick null when id = 8 else id
+      id
+    aggregate: `Sales $`
+    limit: 10
+    order_by: id
+  }
 }
 
 run: products -> { group_by: distribution_center_id}

@@ -1,0 +1,39 @@
+.malloy-chart {
+  width: fit-content;
+  height: fit-content;
+  font-variant-numeric: tabular-nums;
+  position: relative;
+}
+
+.malloy-chart_debug_menu {
+  width: fit-content;
+  position: absolute;
+  top: 0px;
+  right: 0px;
+  color: #666;
+  padding: 2px;
+  border-radius: 4px;
+  background: white;
+  width: 28px;
+  height: 28px;
+  border: 1px solid #eee;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+}
+
+.malloy-chart:hover .malloy-chart_debug_menu,
+.malloy-chart_debug_menu:hover {
+  display: flex;
+}
+
+.malloy-chart_debug_menu:hover {
+  color: black;
+  border-color: #246ae9;
+}
+
+.malloy-chart_debug_icon {
+  width: 16px;
+}

@@ -232,6 +232,46 @@ describe.each(runtimes.runtimeList)(
         m2 is min_by(y, x)
       }`).malloyResultMatches(runtime, {m1: 55, m2: 100});
     });
+
+    it(`runs the percent_rank function - ${databaseName}`, async () => {
+      await expect(`# debug
+          run: ${databaseName}.sql(
+            """
+                      SELECT 55 as x
+            UNION ALL SELECT 22 as x
+            UNION ALL SELECT 1 as x
+            """
+          ) -> {
+            group_by: x
+            order_by: x desc
+            calculate: pctrnk is percent_rank()
+          }
+        `).malloyResultMatches(runtime, [
+        {x: 55, pctrnk: 0},
+        {x: 22, pctrnk: 0.5},
+        {x: 1, pctrnk: 1},
+      ]);
+    });
+
+    it(`runs the percent_rank function with order_by - ${databaseName}`, async () => {
+      await expect(`# debug
+        run: ${databaseName}.sql(
+          """
+                    SELECT 55 as x
+          UNION ALL SELECT 22 as x
+          UNION ALL SELECT 1 as x
+          """
+        ) -> {
+          group_by: x
+          order_by: x desc
+          calculate: pctrnk is percent_rank() { order_by: x asc }
+        }
+        `).malloyResultMatches(runtime, [
+        {x: 55, pctrnk: 1},
+        {x: 22, pctrnk: 0.5},
+        {x: 1, pctrnk: 0},
+      ]);
+    });
   }
 );
 

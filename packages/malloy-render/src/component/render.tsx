@@ -13,6 +13,7 @@ import {
   Tag,
 } from '@malloydata/malloy';
 import {
+  Accessor,
   Show,
   createContext,
   createEffect,
@@ -24,7 +25,13 @@ import {ResultContext} from './result-context';
 import './render.css';
 import {ComponentOptions, ICustomElement} from 'component-register';
 import {applyRenderer} from './apply-renderer';
-import {MalloyClickEventPayload, VegaConfigHandler} from './types';
+import {
+  DashboardConfig,
+  MalloyClickEventPayload,
+  TableConfig,
+  VegaConfigHandler,
+} from './types';
+import css from './render.css?raw';
 
 export type MalloyRenderProps = {
   result?: Result;
@@ -33,9 +40,16 @@ export type MalloyRenderProps = {
   scrollEl?: HTMLElement;
   onClick?: (payload: MalloyClickEventPayload) => void;
   vegaConfigOverride?: VegaConfigHandler;
+  tableConfig?: Partial<TableConfig>;
+  dashboardConfig?: Partial<DashboardConfig>;
 };
 
 const ConfigContext = createContext<{
+  tableConfig: Accessor<TableConfig>;
+  dashboardConfig: Accessor<DashboardConfig>;
+  element: ICustomElement;
+  addCSSToShadowRoot: (css: string) => void;
+  addCSSToDocument: (id: string, css: string) => void;
   onClick?: (payload: MalloyClickEventPayload) => void;
   vegaConfigOverride?: VegaConfigHandler;
 }>();
@@ -60,12 +74,63 @@ export function MalloyRender(
     else return null;
   });
 
+  const addedStylesheets = new Set();
+  function addCSSToShadowRoot(css: string) {
+    const root = element.renderRoot;
+    if (!(root instanceof ShadowRoot)) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        "Couldn't add CSS to render element, it is not rendering in a ShadowRoot"
+      );
+      return;
+    }
+    if (!addedStylesheets.has(css)) {
+      const stylesheet = new CSSStyleSheet();
+      stylesheet.replaceSync(css);
+      root.adoptedStyleSheets.push(stylesheet);
+      addedStylesheets.add(css);
+    }
+  }
+
+  function addCSSToDocument(id: string, css: string) {
+    if (!document.getElementById(id)) {
+      const style = document.createElement('style');
+      style.id = id;
+      style.textContent = css;
+      document.head.appendChild(style);
+    }
+  }
+  addCSSToShadowRoot(css);
+
+  const tableConfig: Accessor<TableConfig> = () =>
+    Object.assign(
+      {
+        disableVirtualization: false,
+        rowLimit: Infinity,
+        shouldFillWidth: false,
+      },
+      props.tableConfig
+    );
+
+  const dashboardConfig: Accessor<DashboardConfig> = () =>
+    Object.assign(
+      {
+        disableVirtualization: false,
+      },
+      props.dashboardConfig
+    );
+
   return (
     <Show when={result()}>
       <ConfigContext.Provider
         value={{
           onClick: props.onClick,
           vegaConfigOverride: props.vegaConfigOverride,
+          element,
+          addCSSToShadowRoot,
+          addCSSToDocument,
+          tableConfig,
+          dashboardConfig,
         }}
       >
         <MalloyRenderInner

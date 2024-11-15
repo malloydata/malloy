@@ -85,6 +85,7 @@ const max_by: DefinitionBlueprint = {
   },
   returns: {measure: {generic: 'T'}},
   impl: {function: 'MAX_BY'},
+  isSymmetric: true,
 };
 
 const min_by: DefinitionBlueprint = {
@@ -95,6 +96,7 @@ const min_by: DefinitionBlueprint = {
   },
   returns: {measure: {generic: 'T'}},
   impl: {function: 'MIN_BY'},
+  isSymmetric: true,
 };
 
 const string_agg: OverloadedDefinitionBlueprint = {
@@ -227,6 +229,12 @@ const to_unixtime: DefinitionBlueprint = {
   impl: {function: 'TO_UNIXTIME'},
 };
 
+const percent_rank: DefinitionBlueprint = {
+  takes: {},
+  returns: {calculation: 'number'},
+  impl: {function: 'PERCENT_RANK', needsWindowOrderBy: true},
+};
+
 export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   // aggregate functions
   approx_percentile,
@@ -254,4 +262,7 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   regexp_like,
   regexp_replace,
   to_unixtime,
+
+  // window functions
+  percent_rank,
 };

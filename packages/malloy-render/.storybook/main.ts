@@ -58,16 +58,22 @@ const config: StorybookConfig = {
         },
       },
       server: {
-        // Disable HMR for now, as we can't seem to get malloy core nor Lit to fully support it
+        // Disable HMR for now, as we can't seem to get malloy core nor web component to fully support it
         hmr: false,
       },
       define: {
-        'process.env': {},
+        'process.env': {
+          'IS_STORYBOOK': true,
+        },
       },
       assetsInclude: ['/sb-preview/runtime.js'],
       plugins: [viteMalloyStoriesPlugin()],
     };
     const finalConfig = mergeConfig(config, configOverride);
+    // Filter out dev tools plugin
+    finalConfig.plugins = finalConfig.plugins.filter(
+      plugin => plugin.name !== 'vite-plugin-strip-malloy-dev-tools'
+    );
     return finalConfig;
   },
 };

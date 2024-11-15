@@ -140,6 +140,7 @@ export function viteMalloyStoriesPlugin(): PluginOption {
           : `
           import script from '${id}?raw';
           import {createLoader} from './util';
+          import {copyMalloyRenderHTML} from '../component/copy-to-html';
           import './themes.css';
           import '../component/render-webcomponent';
 
@@ -152,6 +153,12 @@ export function viteMalloyStoriesPlugin(): PluginOption {
               const el = document.createElement('malloy-render');
               if (classes) el.classList.add(classes);
               el.result = context.loaded['result'];
+
+              const button = document.createElement('button');
+              button.innerHTML = "Copy HTML";
+              button.addEventListener("click", () => copyMalloyRenderHTML(el));
+
+              parent.appendChild(button);
               parent.appendChild(el);
               return parent;
             },
