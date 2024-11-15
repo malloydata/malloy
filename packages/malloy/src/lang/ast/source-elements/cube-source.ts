@@ -87,12 +87,14 @@ export class CubeSource extends Source {
     });
     return {
       type: 'cube',
-      // TODO for sources that are refs, actually use the ref rather than the def
+      // TODO Use sourceRefs rather than sourceDefs when possible to avoid potential
+      // explosion of source defs...
       sources: sourceDefs,
       connection,
       fields,
       dialect,
       name,
+      parameters: sourceDefs[0].parameters,
     };
   }
 }

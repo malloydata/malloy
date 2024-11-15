@@ -151,5 +151,15 @@ describe('cubes', () => {
         ##! experimental.cube_sources
         run: cube(a extend { dimension: two is 2 }, a extend { dimension: one is 1 })
     `).toLog(errorMessage('Cannot run this object as a query')));
+    test('cube with parameter', () => {
+      expect(`
+        ##! experimental { cube_sources parameters }
+        source: foo(param is 1) is cube(
+          a extend { dimension: x is param },
+          a extend { dimension: y is param + 1 }
+        )
+        run: foo(param is 2) -> { group_by: y }
+      `).toTranslate();
+    });
   });
 });

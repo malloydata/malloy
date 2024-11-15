@@ -163,4 +163,15 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: x -> { group_by: foo, bar, baz }
     `).malloyResultMatches(runtime, {foo: 1.3, bar: 2.3, baz: 3.3});
   });
+  it(`cube with parameters - ${databaseName}`, async () => {
+    await expect(`
+      ##! experimental { cube_sources parameters }
+      source: state_facts is ${databaseName}.table('malloytest.state_facts')
+      source: x(param is 1) is cube(
+        state_facts extend { dimension: a is param },
+        state_facts extend { dimension: b is param + 1 }
+      )
+      run: x(param is 2) -> { group_by: b }
+    `).malloyResultMatches(runtime, {b: 3});
+  });
 });
