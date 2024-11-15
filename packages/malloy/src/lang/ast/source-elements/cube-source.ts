@@ -37,13 +37,6 @@ export class CubeSource extends Source {
     parameterSpace: ParameterSpace | undefined,
     pList: HasParameter[] | undefined
   ): SourceDef {
-    // TODO think about params for cube sources and test that this works...
-    /**
-     * source: foo(a is 1) is cube(
-     *   duckdb.table('foo') extend { dimension: x is a },
-     *   duckdb.table('bar') extend { dimension: x is a }
-     * )
-     */
     const sourceDefs = this.sources.map(source =>
       source.withParameters(parameterSpace, pList)
     );
@@ -79,7 +72,8 @@ export class CubeSource extends Source {
             as: undefined,
             e: {node: 'cubeField'},
             cubeUsage: {fields: [fieldName], joinedUsage: {}},
-            // TODO code and location are wrong...
+            code: this.code,
+            location: this.codeLocation,
           };
           fields.push(cubeField);
         }

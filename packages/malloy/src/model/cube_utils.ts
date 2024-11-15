@@ -15,8 +15,6 @@ import {
   SourceDef,
 } from './malloy_types';
 
-// TODO handle joins...
-
 type CubeError =
   | {code: 'not_a_cube'; data: {path: string[]}}
   | {code: 'cube_not_defined'; data: {path: string[]}}
@@ -34,11 +32,12 @@ function _resolveCubeSources(
     if (source.type === 'cube') {
       let found = false;
       overSources: for (const inputSource of source.sources) {
+        const fieldNames = new Set<string>();
+        for (const field of inputSource.fields) {
+          fieldNames.add(field.as ?? field.name);
+        }
         for (const usage of cubeUsage.fields) {
-          // TODO handle joins
-          if (
-            inputSource.fields.find(f => f.as ?? f.name === usage) === undefined
-          ) {
+          if (!fieldNames.has(usage)) {
             continue overSources;
           }
         }
@@ -266,7 +265,6 @@ function cubeUsageWithoutNonCubeFields(
   }
   return {
     fields: cubeUsage.fields.filter(f => isCubeField(sourceFieldsByName[f])),
-    // TODO not sure about this?
     joinedUsage: cubeUsage.joinedUsage,
   };
 }
