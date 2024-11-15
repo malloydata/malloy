@@ -38,6 +38,7 @@ export type MalloyRenderProps = {
   queryResult?: QueryResult;
   modelDef?: ModelDef;
   scrollEl?: HTMLElement;
+  modalElement?: HTMLElement;
   onClick?: (payload: MalloyClickEventPayload) => void;
   vegaConfigOverride?: VegaConfigHandler;
   tableConfig?: Partial<TableConfig>;
@@ -48,10 +49,12 @@ const ConfigContext = createContext<{
   tableConfig: Accessor<TableConfig>;
   dashboardConfig: Accessor<DashboardConfig>;
   element: ICustomElement;
+  stylesheet: CSSStyleSheet;
   addCSSToShadowRoot: (css: string) => void;
   addCSSToDocument: (id: string, css: string) => void;
   onClick?: (payload: MalloyClickEventPayload) => void;
   vegaConfigOverride?: VegaConfigHandler;
+  modalElement?: HTMLElement;
 }>();
 
 export const useConfig = () => {
@@ -74,6 +77,12 @@ export function MalloyRender(
     else return null;
   });
 
+  // Create one stylesheet for web component to use for all styles
+  // This is so we can pass the stylesheet to other components to share, like <malloy-modal>
+  const stylesheet = new CSSStyleSheet();
+  if (element.renderRoot instanceof ShadowRoot)
+    element.renderRoot.adoptedStyleSheets.push(stylesheet);
+
   const addedStylesheets = new Set();
   function addCSSToShadowRoot(css: string) {
     const root = element.renderRoot;
@@ -85,9 +94,13 @@ export function MalloyRender(
       return;
     }
     if (!addedStylesheets.has(css)) {
-      const stylesheet = new CSSStyleSheet();
-      stylesheet.replaceSync(css);
-      root.adoptedStyleSheets.push(stylesheet);
+      const newStyleSheetTexts: string[] = [];
+      for (let i = 0; i < stylesheet.cssRules.length; i++) {
+        const cssText = stylesheet.cssRules.item(i)?.cssText;
+        if (cssText) newStyleSheetTexts.push(cssText);
+      }
+      newStyleSheetTexts.push(css);
+      stylesheet.replaceSync(newStyleSheetTexts.join('\n'));
       addedStylesheets.add(css);
     }
   }
@@ -100,6 +113,7 @@ export function MalloyRender(
       document.head.appendChild(style);
     }
   }
+
   addCSSToShadowRoot(css);
 
   const tableConfig: Accessor<TableConfig> = () =>
@@ -127,10 +141,12 @@ export function MalloyRender(
           onClick: props.onClick,
           vegaConfigOverride: props.vegaConfigOverride,
           element,
+          stylesheet,
           addCSSToShadowRoot,
           addCSSToDocument,
           tableConfig,
           dashboardConfig,
+          modalElement: props.modalElement,
         }}
       >
         <MalloyRenderInner
@@ -168,12 +184,12 @@ export function MalloyRenderInner(props: {
     };
   };
 
+  const config = useConfig();
+
   createEffect(() => {
     if (props.element) {
       const style = generateThemeStyle(tags().modelTheme, tags().localTheme);
-      for (const [key, value] of Object.entries(style)) {
-        props.element['style'].setProperty(key, value);
-      }
+      config.addCSSToShadowRoot(style);
     }
   });
 
@@ -219,8 +235,6 @@ function getThemeValue(prop: string, ...themes: Array<Tag | undefined>) {
 }
 
 function generateThemeStyle(modelTheme?: Tag, localTheme?: Tag) {
-  const style: Record<string, string> = {};
-
   const tableRowHeight = getThemeValue(
     'tableRowHeight',
     localTheme,
@@ -270,17 +284,21 @@ function generateThemeStyle(modelTheme?: Tag, localTheme?: Tag) {
   );
   const fontFamily = getThemeValue('fontFamily', localTheme, modelTheme);
 
-  style['--malloy-render--table-row-height'] = tableRowHeight;
-  style['--malloy-render--table-body-color'] = tableBodyColor;
-  style['--malloy-render--table-font-size'] = tableFontSize;
-  style['--malloy-render--font-family'] = fontFamily;
-  style['--malloy-render--table-header-color'] = tableHeaderColor;
-  style['--malloy-render--table-header-weight'] = tableHeaderWeight;
-  style['--malloy-render--table-body-weight'] = tableBodyWeight;
-  style['--malloy-render--table-border'] = tableBorder;
-  style['--malloy-render--table-background'] = tableBackground;
-  style['--malloy-render--table-gutter-size'] = tableGutterSize;
-  style['--malloy-render--table-pinned-background'] = tablePinnedBackground;
-  style['--malloy-render--table-pinned-border'] = tablePinnedBorder;
-  return style;
+  const css = `
+  :host {
+    --malloy-render--table-row-height: ${tableRowHeight};
+    --malloy-render--table-body-color: ${tableBodyColor};
+    --malloy-render--table-font-size: ${tableFontSize};
+    --malloy-render--font-family: ${fontFamily};
+    --malloy-render--table-header-color: ${tableHeaderColor};
+    --malloy-render--table-header-weight: ${tableHeaderWeight};
+    --malloy-render--table-body-weight: ${tableBodyWeight};
+    --malloy-render--table-border: ${tableBorder};
+    --malloy-render--table-background: ${tableBackground};
+    --malloy-render--table-gutter-size: ${tableGutterSize};
+    --malloy-render--table-pinned-background: ${tablePinnedBackground};
+    --malloy-render--table-pinned-border: ${tablePinnedBorder};
+  }
+`;
+  return css;
 }

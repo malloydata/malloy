@@ -7,6 +7,7 @@ import {
 } from 'solid-js';
 import tooltipCss from './tooltip.css?raw';
 import {useConfig} from '../render';
+import {MalloyModal} from '../malloy-modal/malloy-modal';
 
 export function Tooltip(props: {show: boolean; children: JSXElement}) {
   const [pos, setPos] = createSignal<[number, number]>([0, 0]);
@@ -57,17 +58,16 @@ export function Tooltip(props: {show: boolean; children: JSXElement}) {
       });
     }
   });
-
   return (
     <Show when={props.show}>
-      <div
+      <MalloyModal
         ref={tip}
         style={`position: fixed; top: ${pos()[1] + yOffset()}px; left: ${
           pos()[0] + xOffset()
         }px; pointer-events: none; z-index: 1000`}
       >
         <div class="malloy-tooltip">{props.children}</div>
-      </div>
+      </MalloyModal>
     </Show>
   );
 }
