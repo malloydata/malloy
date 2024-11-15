@@ -172,7 +172,11 @@ export abstract class QueryOperationSpace
 
   protected cubeUsageFromEntry(entry: SpaceEntry) {
     if (entry instanceof SpaceField) {
-      return entry.typeDesc().cubeUsage;
+      const queryFieldDef = entry.getQueryFieldDef(this.exprSpace);
+      if (queryFieldDef) {
+        const usage = entry.typeDesc().cubeUsage;
+        return usage;
+      }
     }
     return emptyCubeUsage();
   }
