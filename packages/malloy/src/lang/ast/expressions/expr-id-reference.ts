@@ -26,7 +26,7 @@ import {ExprValue} from '../types/expr-value';
 import {FieldReference} from '../query-items/field-references';
 import {FieldSpace} from '../types/field-space';
 import {ExpressionDef} from '../types/expression-def';
-import { joinedCubeUsage } from '../../../model/cube_utils';
+import {joinedCubeUsage} from '../../../model/cube_utils';
 
 export class ExprIdReference extends ExpressionDef {
   elementType = 'ExpressionIdReference';
