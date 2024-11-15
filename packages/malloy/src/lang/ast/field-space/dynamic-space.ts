@@ -42,9 +42,8 @@ export abstract class DynamicSpace
   extends StaticSpace
   implements SourceFieldSpace
 {
-  protected final: model.SourceDef | undefined;
+  protected sourceDef: model.SourceDef | undefined;
   protected fromSource: model.SourceDef;
-  completions: (() => void)[] = [];
   private complete = false;
   private parameters: HasParameter[] = [];
   protected newTimezone?: string;
@@ -52,15 +51,11 @@ export abstract class DynamicSpace
   constructor(extending: SourceDef) {
     super(structuredClone(extending));
     this.fromSource = extending;
-    this.final = undefined;
-  }
-
-  isComplete(): void {
-    this.complete = true;
+    this.sourceDef = undefined;
   }
 
   protected setEntry(name: string, value: SpaceEntry): void {
-    if (this.final) {
+    if (this.complete) {
       throw new Error('Space already final');
     }
     super.setEntry(name, value);
@@ -101,8 +96,16 @@ export abstract class DynamicSpace
     this.newTimezone = tz;
   }
 
-  structDef(): model.SourceDef {
-    if (this.final === undefined) {
+  // Used to compute the current structDef, but not making any claims that it is the
+  // final structDef;
+  partialStructDef(): model.SourceDef {
+    const result = this.generateSourceDef();
+    this.sourceDef = undefined;
+    return result;
+  }
+
+  private generateSourceDef(): model.SourceDef {
+    if (this.sourceDef === undefined) {
       // Grab all the parameters so that we can populate the "final" structDef
       // with parameters immediately so that views can see them when they are translating
       const parameters = {};
@@ -112,8 +115,8 @@ export abstract class DynamicSpace
         }
       }
 
-      this.final = {...this.fromSource, fields: []};
-      this.final.parameters = parameters;
+      this.sourceDef = {...this.fromSource, fields: []};
+      this.sourceDef.parameters = parameters;
       // Need to process the entities in specific order
       const fields: [string, SpaceField][] = [];
       const joins: [string, SpaceField][] = [];
@@ -134,13 +137,13 @@ export abstract class DynamicSpace
         if (field instanceof JoinSpaceField) {
           const joinStruct = field.join.structDef(parameterSpace);
           if (!ErrorFactory.didCreate(joinStruct)) {
-            this.final.fields.push(joinStruct);
+            this.sourceDef.fields.push(joinStruct);
             fixupJoins.push([field.join, joinStruct]);
           }
         } else {
           const fieldDef = field.fieldDef();
           if (fieldDef) {
-            this.final.fields.push(fieldDef);
+            this.sourceDef.fields.push(fieldDef);
           }
           // TODO I'm just removing this, but perhaps instead I should just filter
           // out ReferenceFields and still make this check.
@@ -155,11 +158,15 @@ export abstract class DynamicSpace
         join.fixupJoinOn(this, missingOn);
       }
     }
-    if (this.newTimezone && model.isSourceDef(this.final)) {
-      this.final.queryTimezone = this.newTimezone;
+    if (this.newTimezone && model.isSourceDef(this.sourceDef)) {
+      this.sourceDef.queryTimezone = this.newTimezone;
     }
-    this.isComplete();
-    return this.final;
+    return this.sourceDef;
+  }
+
+  structDef(): model.SourceDef {
+    this.complete = true;
+    return this.generateSourceDef();
   }
 
   emptyStructDef(): SourceDef {

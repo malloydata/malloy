@@ -231,16 +231,14 @@ export abstract class QueryOperationSpace
     }
   }
 
-  // TODO this will need to be a map from paths to booleans once I support joins...
   private alreadyInvalidCubeUsage = false;
   protected validateCubeUsage(
     newCubeUsage: model.CubeUsage,
     logTo: MalloyElement
   ) {
     if (this.alreadyInvalidCubeUsage) return;
-
-    const source = this.inputSpace().structDef();
-    if (isEmptyCubeUsage(this.cubeUsage)) return;
+    if (isEmptyCubeUsage(newCubeUsage)) return;
+    const source = this.inputSpace().partialStructDef();
 
     const resolved = resolveCubeSources(source, this.cubeUsage);
 
@@ -333,7 +331,6 @@ export abstract class QuerySpace extends QueryOperationSpace {
         // fields, but the individual fields didn't have field defs.
       }
     }
-    this.isComplete();
     return fields;
   }
 
@@ -393,7 +390,6 @@ export abstract class QuerySpace extends QueryOperationSpace {
     if (this.newTimezone) {
       segment.queryTimezone = this.newTimezone;
     }
-    this.isComplete();
     return segment;
   }
 
