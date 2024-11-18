@@ -73,14 +73,18 @@ export class RefinedSpace extends DynamicSpace {
 
   pushFields(...defs: MalloyElement[]): void {
     for (const me of defs) {
-      if (canMakeEntry(me)) {
-        me.makeEntry(this);
-      } else {
-        me.logError(
-          'unexpected-element-type',
-          `Internal error, ${me.elementType} not expected in this context`
-        );
-      }
+      this.addField(me);
+    }
+  }
+
+  addField(def: MalloyElement): void {
+    if (canMakeEntry(def)) {
+      def.makeEntry(this);
+    } else {
+      def.logError(
+        'unexpected-element-type',
+        `Internal error, ${def.elementType} not expected in this context`
+      );
     }
   }
 }

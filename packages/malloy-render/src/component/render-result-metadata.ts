@@ -44,7 +44,7 @@ import {
   VegaChartProps,
   VegaConfigHandler,
 } from './types';
-import {shouldRenderAs} from './apply-renderer';
+import {NULL_SYMBOL, shouldRenderAs} from './apply-renderer';
 import {mergeVegaConfigs} from './vega/merge-vega-configs';
 import {baseVegaConfig} from './vega/base-vega-config';
 import {renderTimeString} from './render-time';
@@ -165,8 +165,13 @@ const populateFieldMeta = (data: DataArray, metadata: RenderResultMetadata) => {
       const fieldSet = maxUniqueFieldValueSets.get(getFieldKey(f))!;
 
       const value = f.isAtomicField() ? row.cell(f).value : undefined;
-
-      if (valueIsNumber(f, value)) {
+      if (
+        f.isAtomicField() &&
+        (value === null || typeof value === 'undefined')
+      ) {
+        fieldMeta.values.add(NULL_SYMBOL);
+        fieldSet.add(NULL_SYMBOL);
+      } else if (valueIsNumber(f, value)) {
         const n = value;
         fieldMeta.min = Math.min(fieldMeta.min ?? n, n);
         fieldMeta.max = Math.max(fieldMeta.max ?? n, n);

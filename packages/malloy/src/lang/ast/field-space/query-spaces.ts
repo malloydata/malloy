@@ -44,6 +44,16 @@ import {
   MessageCode,
   MessageParameterType,
 } from '../../parse-log';
+import {
+  compositeFieldUsageDifference,
+  compositeFieldUsageJoinPaths,
+  emptyCompositeFieldUsage,
+  emptyNarrowedCompositeFieldResolution,
+  isEmptyCompositeFieldUsage,
+  mergeCompositeFieldUsage,
+  narrowCompositeFieldResolution,
+} from '../../../model/composite_source_utils';
+import {StructSpaceFieldBase} from './struct-space-field-base';
 
 /**
  * The output space of a query operation. It is not named "QueryOutputSpace"
@@ -58,6 +68,25 @@ export abstract class QueryOperationSpace
   protected exprSpace: QueryInputSpace;
   abstract readonly segmentType: 'reduce' | 'project' | 'index';
   expandedWild: Record<string, string[]> = {};
+  compositeFieldUsers: (
+    | {type: 'filter'; filter: model.FilterCondition; logTo: MalloyElement}
+    | {
+        type: 'field';
+        name: string;
+        field: SpaceField;
+        logTo: MalloyElement | undefined;
+      }
+  )[] = [];
+
+  // Composite field usage is not computed until `queryFieldDefs` is called; if anyone
+  // tries to access it before that, they'll get an error
+  _compositeFieldUsage: model.CompositeFieldUsage | undefined = undefined;
+  get compositeFieldUsage(): model.CompositeFieldUsage {
+    if (this._compositeFieldUsage === undefined) {
+      throw new Error('Composite field usage accessed before computed');
+    }
+    return this._compositeFieldUsage;
+  }
 
   constructor(
     readonly queryInputSpace: SourceFieldSpace,
@@ -156,8 +185,68 @@ export abstract class QueryOperationSpace
     for (const x of expandEntries.sort((a, b) =>
       a.name.localeCompare(b.name)
     )) {
-      this.setEntry(x.name, x.entry);
+      this.newEntry(x.name, wild, x.entry);
     }
+  }
+
+  protected addValidatedCompositeFieldUserFromEntry(
+    name: string,
+    entry: SpaceEntry
+  ) {
+    if (entry instanceof SpaceField) {
+      this.compositeFieldUsers.push({
+        type: 'field',
+        name,
+        field: entry,
+        logTo: undefined,
+      });
+    }
+  }
+
+  private getJoinOnCompositeFieldUsage(
+    joinPath: string[]
+  ): model.CompositeFieldUsage {
+    const reference = joinPath.map(n => new FieldName(n));
+    this.astEl.has({reference});
+    const lookup = this.queryInputSpace.lookup(reference);
+    // Should always be found...
+    if (lookup.found && lookup.found instanceof StructSpaceFieldBase) {
+      return (
+        lookup.found.fieldDef().onCompositeFieldUsage ??
+        emptyCompositeFieldUsage()
+      );
+    }
+    throw new Error('Unexpected join lookup was not found or not a struct');
+  }
+
+  protected getCompositeFieldUsageIncludingJoinOns(
+    compositeFieldUsage: model.CompositeFieldUsage
+  ): model.CompositeFieldUsage {
+    let compositeFieldUsageIncludingJoinOns = compositeFieldUsage;
+    const joinPaths = compositeFieldUsageJoinPaths(compositeFieldUsage);
+    for (const joinPath of joinPaths) {
+      compositeFieldUsageIncludingJoinOns = mergeCompositeFieldUsage(
+        this.getJoinOnCompositeFieldUsage(joinPath),
+        compositeFieldUsageIncludingJoinOns
+      );
+    }
+    return compositeFieldUsageIncludingJoinOns;
+  }
+
+  public addCompositeFieldUserFromFilter(
+    filter: model.FilterCondition,
+    logTo: MalloyElement
+  ) {
+    if (filter.compositeFieldUsage !== undefined) {
+      this.compositeFieldUsers.push({type: 'filter', filter, logTo});
+    }
+  }
+
+  newEntry(name: string, logTo: MalloyElement, entry: SpaceEntry): void {
+    if (entry instanceof SpaceField) {
+      this.compositeFieldUsers.push({type: 'field', name, field: entry, logTo});
+    }
+    super.newEntry(name, logTo, entry);
   }
 }
 
@@ -168,18 +257,28 @@ export abstract class QuerySpace extends QueryOperationSpace {
       // TODO mtoy raw,partial,index
       return;
     }
+    if (refineThis?.extendSource) {
+      for (const xField of refineThis.extendSource) {
+        this.exprSpace.addFieldDef(xField);
+      }
+    }
     for (const field of refineThis.queryFields) {
       if (field.type === 'fieldref') {
         const refTo = this.exprSpace.lookup(
           field.path.map(f => new FieldName(f))
         );
         if (refTo.found) {
-          this.setEntry(field.path[field.path.length - 1], refTo.found);
+          const name = field.path[field.path.length - 1];
+          this.setEntry(name, refTo.found);
+          this.addValidatedCompositeFieldUserFromEntry(name, refTo.found);
         }
       } else if (field.type !== 'turtle') {
         // TODO can you reference fields in a turtle as fields in the output space,
         // e.g. order_by: my_turtle.foo, or lag(my_turtle.foo)
-        this.setEntry(field.as ?? field.name, new ColumnSpaceField(field));
+        const entry = new ColumnSpaceField(field);
+        const name = field.as ?? field.name;
+        this.setEntry(name, entry);
+        this.addValidatedCompositeFieldUserFromEntry(name, entry);
       }
     }
   }
@@ -200,16 +299,29 @@ export abstract class QuerySpace extends QueryOperationSpace {
 
   protected queryFieldDefs(): model.QueryFieldDef[] {
     const fields: model.QueryFieldDef[] = [];
-    for (const [name, field] of this.entries()) {
-      if (field instanceof SpaceField) {
+    let compositeFieldUsage = emptyCompositeFieldUsage();
+    let narrowedCompositeFieldResolution =
+      emptyNarrowedCompositeFieldResolution();
+    const source = this.inputSpace().structDef();
+    for (const user of this.compositeFieldUsers) {
+      let nextCompositeFieldUsage: model.CompositeFieldUsage | undefined =
+        undefined;
+      if (user.type === 'filter') {
+        if (user.filter.compositeFieldUsage) {
+          nextCompositeFieldUsage = user.filter.compositeFieldUsage;
+        }
+      } else {
+        const {name, field} = user;
         const wildPath = this.expandedWild[name];
         if (wildPath) {
           fields.push({type: 'fieldref', path: wildPath});
           continue;
         }
+        // TODO handle wildcards for composite sources
         const fieldQueryDef = field.getQueryFieldDef(this.exprSpace);
         if (fieldQueryDef) {
           const typeDesc = field.typeDesc();
+          nextCompositeFieldUsage = typeDesc.compositeFieldUsage;
           // Filter out fields whose type is 'error', which means that a totally bad field
           // isn't sent to the compiler, where it will wig out.
           // TODO Figure out how to make errors generated by `canContain` go in the right place,
@@ -231,8 +343,43 @@ export abstract class QuerySpace extends QueryOperationSpace {
         // project statements, where we added "*" as a field and also all the individual
         // fields, but the individual fields didn't have field defs.
       }
+      if (nextCompositeFieldUsage) {
+        const newCompositeFieldUsage =
+          this.getCompositeFieldUsageIncludingJoinOns(
+            compositeFieldUsageDifference(
+              nextCompositeFieldUsage,
+              compositeFieldUsage
+            )
+          );
+        compositeFieldUsage = mergeCompositeFieldUsage(
+          compositeFieldUsage,
+          newCompositeFieldUsage
+        );
+        if (!isEmptyCompositeFieldUsage(newCompositeFieldUsage)) {
+          const result = narrowCompositeFieldResolution(
+            source,
+            compositeFieldUsage,
+            narrowedCompositeFieldResolution
+          );
+          if (result.error) {
+            if (user.logTo) {
+              user.logTo.logError('invalid-composite-field-usage', {
+                newUsage: newCompositeFieldUsage,
+                allUsage: compositeFieldUsage,
+              });
+            } else {
+              // This should not happen; logTo should only be not set for a field from a refinement,
+              // which should never fail the composite resolution
+              throw new Error('Unexpected invalid composite field resolution');
+            }
+          } else {
+            narrowedCompositeFieldResolution =
+              result.narrowedCompositeFieldResolution;
+          }
+        }
+      }
     }
-    this.isComplete();
+    this._compositeFieldUsage = compositeFieldUsage;
     return fields;
   }
 
@@ -254,12 +401,6 @@ export abstract class QuerySpace extends QueryOperationSpace {
         'internal error generating index segment from non index query'
       );
       return {type: 'reduce', queryFields: []};
-    }
-
-    if (refineFrom?.extendSource) {
-      for (const xField of refineFrom.extendSource) {
-        this.exprSpace.addFieldDef(xField);
-      }
     }
 
     const segment: model.QuerySegment = {
@@ -292,7 +433,6 @@ export abstract class QuerySpace extends QueryOperationSpace {
     if (this.newTimezone) {
       segment.queryTimezone = this.newTimezone;
     }
-    this.isComplete();
     return segment;
   }
 

@@ -117,6 +117,7 @@ export type Channel = {
 export type TableConfig = {
   disableVirtualization: boolean;
   rowLimit: number;
+  shouldFillWidth: boolean;
 };
 export type DashboardConfig = {
   disableVirtualization: boolean;

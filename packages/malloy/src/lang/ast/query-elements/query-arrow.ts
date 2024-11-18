@@ -74,6 +74,7 @@ export class QueryArrow extends QueryBase implements QueryElement {
     }
     const {pipeline, annotation, outputStruct, name} =
       this.view.pipelineComp(fieldSpace);
+
     return {
       query: {
         ...queryBase,

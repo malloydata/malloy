@@ -93,6 +93,7 @@ export type Expr =
   | NullNode
   | CaseExpr
   | InCompareExpr
+  | CompositeFieldExpr
   | ErrorNode;
 
 export type BinaryOperator =
@@ -144,6 +145,7 @@ export interface FilterCondition extends ExprE {
   node: 'filterCondition';
   code: string;
   expressionType: ExpressionType;
+  compositeFieldUsage?: CompositeFieldUsage;
 }
 
 export interface FilteredExpr extends ExprWithKids {
@@ -365,6 +367,10 @@ export interface CaseExpr extends ExprWithKids {
   };
 }
 
+export interface CompositeFieldExpr extends ExprLeaf {
+  node: 'compositeField';
+}
+
 export interface InCompareExpr extends ExprWithKids {
   node: 'in';
   not: boolean;
@@ -380,6 +386,7 @@ export type ExpressionType =
 
 export interface Expression {
   e?: Expr;
+  compositeFieldUsage?: CompositeFieldUsage; // TODO maybe make required?
   expressionType?: ExpressionType;
   code?: string;
 }
@@ -752,6 +759,7 @@ export interface JoinBase {
   join: JoinType;
   matrixOperation?: MatrixOperation;
   onExpression?: Expr;
+  onCompositeFieldUsage?: CompositeFieldUsage;
 }
 
 export type Joinable =
@@ -769,9 +777,14 @@ export type JoinFieldTypes =
   | 'record';
 
 export function isJoinable(sd: StructDef): sd is Joinable {
-  return ['table', 'sql_select', 'query_source', 'array', 'record'].includes(
-    sd.type
-  );
+  return [
+    'table',
+    'sql_select',
+    'query_source',
+    'array',
+    'record',
+    'composite',
+  ].includes(sd.type);
 }
 
 export function isJoined<T extends FieldDef | StructDef>(
@@ -863,6 +876,7 @@ export function isByExpression(by: By | undefined): by is ByExpression {
 }
 
 /** reference to a data source */
+// TODO this should be renamed to `SourceRef`
 export type StructRef = string | SourceDef;
 export function refIsStructDef(ref: StructRef): ref is SourceDef {
   return typeof ref !== 'string';
@@ -886,7 +900,6 @@ export interface TurtleSegment extends Filtered {
 export interface Pipeline {
   pipeline: PipeSegment[];
 }
-
 export interface Query extends Pipeline, Filtered, HasLocation {
   type?: 'query';
   name?: string;
@@ -894,6 +907,7 @@ export interface Query extends Pipeline, Filtered, HasLocation {
   sourceArguments?: Record<string, Argument>;
   annotation?: Annotation;
   modelAnnotation?: Annotation;
+  compositeResolvedSourceDef?: SourceDef;
 }
 
 export type NamedQuery = Query & NamedObject;
@@ -996,6 +1010,11 @@ export function isIndexSegment(pe: PipeSegment): pe is IndexSegment {
   return (pe as IndexSegment).type === 'index';
 }
 
+export interface CompositeFieldUsage {
+  fields: string[];
+  joinedUsage: Record<string, CompositeFieldUsage>;
+}
+
 export interface QuerySegment extends Filtered {
   type: 'reduce' | 'project' | 'partial';
   queryFields: QueryFieldDef[];
@@ -1005,6 +1024,7 @@ export interface QuerySegment extends Filtered {
   orderBy?: OrderBy[]; // uses output field name or index.
   queryTimezone?: string;
   alwaysJoins?: string[];
+  compositeFieldUsage?: CompositeFieldUsage;
 }
 
 export interface TurtleDef extends NamedObject, Pipeline {
@@ -1033,6 +1053,12 @@ export type PrimaryKeyRef = string;
 export interface TableSourceDef extends SourceDefBase {
   type: 'table';
   tablePath: string;
+}
+
+export interface CompositeSourceDef extends SourceDefBase {
+  type: 'composite';
+  // TODO make composite sources support StructRefs
+  sources: SourceDef[];
 }
 
 /*
@@ -1099,7 +1125,8 @@ export function isSourceDef(sd: NamedModelObject | FieldDef): sd is SourceDef {
     sd.type === 'query_source' ||
     sd.type === 'query_result' ||
     sd.type === 'finalize' ||
-    sd.type === 'nest_source'
+    sd.type === 'nest_source' ||
+    sd.type === 'composite'
   );
 }
 
@@ -1109,7 +1136,8 @@ export type SourceDef =
   | QuerySourceDef
   | QueryResultDef
   | FinalizeSourceDef
-  | NestSourceDef;
+  | NestSourceDef
+  | CompositeSourceDef;
 
 /** Is this the "FROM" table of a query tree */
 export function isBaseTable(def: StructDef): def is SourceDef {
@@ -1152,6 +1180,7 @@ export type LeafExpressionType = Exclude<
 export type TypeInfo = {
   expressionType: ExpressionType;
   evalSpace: EvalSpace;
+  compositeFieldUsage: CompositeFieldUsage;
 };
 
 export type TypeDesc = ExpressionValueTypeDef & TypeInfo;

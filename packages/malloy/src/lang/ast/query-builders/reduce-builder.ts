@@ -22,18 +22,19 @@
  */
 
 import {
+  CompositeFieldUsage,
   FilterCondition,
   PartialSegment,
   PipeSegment,
   QuerySegment,
   ReduceSegment,
   isPartialSegment,
+  isQuerySegment,
   isReduceSegment,
 } from '../../../model/malloy_types';
 
 import {ErrorFactory} from '../error-factory';
 import {SourceFieldSpace} from '../types/field-space';
-import {Filter} from '../query-properties/filters';
 import {Limit} from '../query-properties/limit';
 import {Ordering} from '../query-properties/ordering';
 import {Top} from '../query-properties/top';
@@ -46,6 +47,10 @@ import {
 import {DefinitionList} from '../types/definition-list';
 import {QueryInputSpace} from '../field-space/query-input-space';
 import {MalloyElement} from '../types/malloy-element';
+import {
+  emptyCompositeFieldUsage,
+  mergeCompositeFieldUsage,
+} from '../../../model/composite_source_utils';
 
 export abstract class QuerySegmentBuilder implements QueryBuilder {
   order?: Top | Ordering;
@@ -63,9 +68,6 @@ export abstract class QuerySegmentBuilder implements QueryBuilder {
     }
     if (qp instanceof DefinitionList) {
       this.resultFS.pushFields(...qp.list);
-    } else if (qp instanceof Filter) {
-      const filterFS = qp.havingClause ? this.resultFS : this.inputFS;
-      this.filters.push(...qp.getFilterList(filterFS));
     } else if (qp instanceof Top) {
       if (this.limit) {
         qp.logError(
@@ -108,6 +110,10 @@ export abstract class QuerySegmentBuilder implements QueryBuilder {
 
   abstract finalize(fromSeg: PipeSegment | undefined): PipeSegment;
 
+  get compositeFieldUsage(): CompositeFieldUsage {
+    return this.resultFS.compositeFieldUsage;
+  }
+
   refineFrom(from: PipeSegment | undefined, to: QuerySegment): void {
     if (from && from.type !== 'index' && from.type !== 'raw') {
       if (!this.order) {
@@ -146,6 +152,15 @@ export abstract class QuerySegmentBuilder implements QueryBuilder {
     if (this.alwaysJoins.length > 0) {
       to.alwaysJoins = [...this.alwaysJoins];
     }
+
+    const fromCompositeFieldUsage =
+      from && isQuerySegment(from)
+        ? from.compositeFieldUsage ?? emptyCompositeFieldUsage()
+        : emptyCompositeFieldUsage();
+    to.compositeFieldUsage = mergeCompositeFieldUsage(
+      fromCompositeFieldUsage,
+      this.compositeFieldUsage
+    );
   }
 }
 

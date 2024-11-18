@@ -21,7 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Query} from '../../../model/malloy_types';
+import {
+  isEmptyCompositeFieldUsage,
+  resolveCompositeSources,
+} from '../../../model/composite_source_utils';
+import {isQuerySegment, Query, SourceDef} from '../../../model/malloy_types';
 import {detectAndRemovePartialStages} from '../query-utils';
 import {MalloyElement} from '../types/malloy-element';
 import {QueryComp} from '../types/query-comp';
@@ -30,10 +34,27 @@ export abstract class QueryBase extends MalloyElement {
   abstract queryComp(isRefOk: boolean): QueryComp;
 
   query(): Query {
-    const q = this.queryComp(true).query;
+    const {inputStruct, query} = this.queryComp(true);
+    // TODO add an error if a raw/index query is done against a composite source
+    let compositeResolvedSourceDef: SourceDef | undefined = undefined;
+    if (query.pipeline[0] && isQuerySegment(query.pipeline[0])) {
+      const compositeFieldUsage = query.pipeline[0].compositeFieldUsage;
+      if (
+        compositeFieldUsage !== undefined &&
+        !isEmptyCompositeFieldUsage(compositeFieldUsage)
+      ) {
+        const resolved = resolveCompositeSources(
+          inputStruct,
+          compositeFieldUsage
+        );
+        compositeResolvedSourceDef = resolved.sourceDef;
+      }
+    }
+
     return {
-      ...q,
-      pipeline: detectAndRemovePartialStages(q.pipeline, this),
+      ...query,
+      compositeResolvedSourceDef,
+      pipeline: detectAndRemovePartialStages(query.pipeline, this),
     };
   }
 }

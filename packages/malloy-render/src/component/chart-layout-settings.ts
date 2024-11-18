@@ -213,7 +213,8 @@ export function getChartLayoutSettings(
     const xSpacePerLabel = chartWidth / recordsToFit;
     if (xSpacePerLabel > xAxisHeight || xSpacePerLabel > maxStringSize) {
       labelAngle = 0;
-      labelLimit = xSpacePerLabel;
+      // Remove label limit; our vega specs should use labelOverlap setting to hide overlapping labels
+      labelLimit = 0;
       labelAlign = undefined;
       labelBaseline = 'top';
       xTitleSize = 22;

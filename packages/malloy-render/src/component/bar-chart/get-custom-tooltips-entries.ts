@@ -39,6 +39,13 @@ export function getCustomTooltipEntries({
               dataColumn: rec.__source.__malloyDataRecord.cell(f.name),
               resultMetadata: metadata,
               tag: f.tagParse().tag,
+              customProps: {
+                table: {
+                  shouldFillWidth: true,
+                  disableVirtualization: true,
+                  rowLimit: 20,
+                },
+              },
             }).renderValue,
           highlight: false,
           color: '',

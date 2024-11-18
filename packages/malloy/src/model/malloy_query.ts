@@ -1341,6 +1341,8 @@ class QueryField extends QueryNode {
       case 'functionDefaultOrderBy':
       case 'functionOrderBy':
         return '';
+      case 'compositeField':
+        return '{COMPOSITE_FIELD}';
       default:
         throw new Error(
           `Internal Error: Unknown expression node '${
@@ -4365,7 +4367,7 @@ class QueryStruct {
     }
   }
 
-  resolveParentParameterReferences(param: Parameter): Parameter {
+  private resolveParentParameterReferences(param: Parameter): Parameter {
     return {
       ...param,
       value:
@@ -4415,7 +4417,7 @@ class QueryStruct {
     return this._arguments;
   }
 
-  addFieldsFromFieldList(fields: FieldDef[]) {
+  private addFieldsFromFieldList(fields: FieldDef[]) {
     for (const field of fields) {
       const as = getIdentifier(field);
 
@@ -4670,6 +4672,8 @@ class QueryStruct {
     switch (this.structDef.type) {
       case 'table':
         return this.dialect.quoteTablePath(this.structDef.tablePath);
+      case 'composite':
+        return '{COMPOSITE SOURCE}';
       case 'finalize':
         return this.structDef.name;
       case 'sql_select':
@@ -4943,10 +4947,12 @@ export class QueryModel {
       filterList: query.filterList,
     };
 
+    const structRef = query.compositeResolvedSourceDef ?? query.structRef;
+
     const q = QueryQuery.makeQuery(
       turtleDef,
       this.getStructFromRef(
-        query.structRef,
+        structRef,
         query.sourceArguments,
         prepareResultOptions
       ),
@@ -4990,10 +4996,11 @@ export class QueryModel {
       finalize,
       false
     );
+    const structRef = query.compositeResolvedSourceDef ?? query.structRef;
     const sourceExplore =
-      typeof query.structRef === 'string'
-        ? query.structRef
-        : query.structRef.as || query.structRef.name;
+      typeof structRef === 'string'
+        ? structRef
+        : structRef.as || structRef.name;
     // LTNote:  I don't understand why this might be here.  It should have happened in loadQuery...
     if (finalize && this.dialect.hasFinalStage) {
       ret.lastStageName = ret.stageWriter.addStage(

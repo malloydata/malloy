@@ -143,6 +143,7 @@ export abstract class AtomicFieldDeclaration
             type: exprValue.type,
             location: this.location,
             e: exprValue.value,
+            compositeFieldUsage: exprValue.compositeFieldUsage,
           };
           if (isGranularResult(exprValue)) {
             timeRet.timeframe = exprValue.timeframe;
@@ -160,6 +161,7 @@ export abstract class AtomicFieldDeclaration
             name: exprName,
             location: this.location,
             e: exprValue.value,
+            compositeFieldUsage: exprValue.compositeFieldUsage,
           };
           break;
         }
@@ -171,6 +173,7 @@ export abstract class AtomicFieldDeclaration
             join: 'one',
             fields: exprValue.fields,
             e: exprValue.value,
+            compositeFieldUsage: exprValue.compositeFieldUsage,
             dialect: exprFS.dialectName(),
           };
           break;

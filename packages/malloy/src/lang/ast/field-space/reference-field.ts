@@ -32,6 +32,7 @@ import {FieldReference} from '../query-items/field-references';
 import {FieldSpace} from '../types/field-space';
 import {SpaceEntry} from '../types/space-entry';
 import {SpaceField} from '../types/space-field';
+import {joinedCompositeFieldUsage} from '../../../model/composite_source_utils';
 
 export class ReferenceField extends SpaceField {
   private didLookup = false;
@@ -101,7 +102,15 @@ export class ReferenceField extends SpaceField {
     if (this.memoTypeDesc) return this.memoTypeDesc;
     const refTo = this.referenceTo;
     if (refTo) {
-      this.memoTypeDesc = refTo.typeDesc();
+      const joinPath = this.fieldRef.list.slice(0, -1).map(x => x.refString);
+      const typeDesc = refTo.typeDesc();
+      this.memoTypeDesc = {
+        ...typeDesc,
+        compositeFieldUsage: joinedCompositeFieldUsage(
+          joinPath,
+          typeDesc.compositeFieldUsage
+        ),
+      };
       return this.memoTypeDesc;
     }
     return TDU.errorT;

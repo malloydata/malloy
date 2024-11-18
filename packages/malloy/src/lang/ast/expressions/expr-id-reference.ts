@@ -26,6 +26,7 @@ import {ExprValue} from '../types/expr-value';
 import {FieldReference} from '../query-items/field-references';
 import {FieldSpace} from '../types/field-space';
 import {ExpressionDef} from '../types/expression-def';
+import {joinedCompositeFieldUsage} from '../../../model/composite_source_utils';
 
 export class ExprIdReference extends ExpressionDef {
   elementType = 'ExpressionIdReference';
@@ -40,14 +41,25 @@ export class ExprIdReference extends ExpressionDef {
 
   getExpression(fs: FieldSpace): ExprValue {
     const def = this.fieldReference.getField(fs);
+    // TODO Currently the join usage is always equivalent to the reference path here;
+    // if/when we add namespaces, this will not be the case, and we will need to get the
+    // join path from `getField` / `lookup`
+    const compositeJoinUsage = this.fieldReference.list
+      .map(n => n.name)
+      .slice(0, -1);
     if (def.found) {
       const td = def.found.typeDesc();
+      const compositeFieldUsage = joinedCompositeFieldUsage(
+        compositeJoinUsage,
+        td.compositeFieldUsage
+      );
       if (def.isOutputField) {
         return {
           ...td,
           // TODO what about literal??
           evalSpace: td.evalSpace === 'constant' ? 'constant' : 'output',
           value: {node: 'outputField', name: this.refString},
+          compositeFieldUsage,
         };
       }
       const value = {node: def.found.refType, path: this.fieldReference.path};
@@ -55,7 +67,7 @@ export class ExprIdReference extends ExpressionDef {
       const evalSpace = expressionIsAggregate(td.expressionType)
         ? 'output'
         : td.evalSpace;
-      return {...td, value, evalSpace};
+      return {...td, value, evalSpace, compositeFieldUsage};
     }
     return this.loggedErrorExpr(def.error.code, def.error.message);
   }

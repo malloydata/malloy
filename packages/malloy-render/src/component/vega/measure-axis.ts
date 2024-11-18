@@ -52,7 +52,7 @@ export function createMeasureAxis({
             ...(showBrushes
               ? [
                   {
-                    test: 'brushMeasureIn !== "empty" ? (datum.index !== 0 && datum.index !== 1) : false',
+                    test: 'brushMeasureIn !== null ? (datum.index !== 0 && datum.index !== 1) : false',
                     value: 0,
                   },
                   {
@@ -152,14 +152,14 @@ type AxisReferenceLineOptions = {
 
 function createAxisReferenceLines(options: AxisReferenceLineOptions) {
   const opacityRefLineSignal = {
-    signal: 'brushMeasureIn === "empty" || yIsBrushing ? 0 : 1',
+    signal: 'brushMeasureIn === null || yIsBrushing ? 0 : 1',
   };
 
   const startingXPosition =
     -options.axisSettings.width + options.axisSettings.yTitleSize;
 
   const yPositionSignalWithOffset = (offset = 0) =>
-    `brushMeasureIn !== "empty" ? (scale("yscale",brushMeasureIn) + ${offset}) : 0`;
+    `brushMeasureIn !== null ? (scale("yscale",brushMeasureIn) + ${offset}) : 0`;
 
   const referenceLines: GroupMark = {
     name: 'y_reference_line_group',
