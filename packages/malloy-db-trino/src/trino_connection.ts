@@ -693,7 +693,7 @@ class PrestoExplainParser {
     const errText =
       `INTERAL ERROR parsing presto schema: ${str}\n` +
       `${this.input}\n` +
-      `${' '.repeat(this.parseCursor)}`;
+      `${' '.repeat(this.parseCursor)}^`;
     return new Error(errText);
   }
 
