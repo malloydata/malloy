@@ -548,14 +548,14 @@ export class MySQLDialect extends Dialect {
 
   sqlLiteralArray(lit: ArrayLiteralNode): string {
     const array = lit.kids.values.map(val => val.sql);
-    return '[' + array.join(',') + ']';
+    return `JSON_ARRAY(${array.join(',')})`;
   }
 
   sqlLiteralRecord(lit: RecordLiteralNode): string {
     const pairs = Object.entries(lit.kids).map(
       ([propName, propVal]) =>
-        `${this.sqlMaybeQuoteIdentifier(propName)}:${propVal.sql}`
+        `${this.sqlLiteralString(propName)},${propVal.sql}`
     );
-    return '{' + pairs.join(',') + '}';
+    return `JSON_OBJECT(${pairs.join(', ')})`;
   }
 }
