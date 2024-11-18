@@ -5,8 +5,9 @@ rm -rf .tmp
 mkdir .tmp
 
 # run docker
-SCRIPTDIR=$(dirname $0)
-docker run -p 3306:3306 -d -v $SCRIPTDIR/../data/mysql:/init_data --name mysql-malloy -e MYSQL_ALLOW_EMPTY_PASSWORD=yes -d mysql:8.4.2
+SCRIPTDIR=$(cd $(dirname $0); pwd)
+DATADIR=$(dirname $SCRIPTDIR)/data/mysql
+docker run -p 3306:3306 -d -v $DATADIR:/init_data --name mysql-malloy -e MYSQL_ALLOW_EMPTY_PASSWORD=yes -d mysql:8.4.2
 
 # wait for server to start
 counter=0
@@ -26,6 +27,7 @@ do
 done
 
 # load the test data.
+docker exec mysql-malloy ls /init_data
 docker exec mysql-malloy cp /init_data/malloytest.mysql.gz /tmp
 docker exec mysql-malloy gunzip /tmp/malloytest.mysql.gz
 docker exec mysql-malloy mysql -P3306 -h127.0.0.1 -uroot -e 'drop database if exists malloytest; create database malloytest; use malloytest; source /tmp/malloytest.mysql;'
