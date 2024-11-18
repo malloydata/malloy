@@ -125,6 +125,22 @@ describe('composite sources', () => {
         )
       );
     });
+    test('compose fails in case where second field has overlap with first', () => {
+      expect(`
+        ##! experimental.composite_sources
+        run: compose(
+          a extend { dimension: one is 1 },
+          a extend { dimension: two is 3 }
+        ) -> {
+          group_by: one
+          group_by: ${'three is one + two'}
+        }
+      `).toLog(
+        errorMessage(
+          'This operation uses composite field `two`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `one`, `two`'
+        )
+      );
+    });
     test('compose resolution succeeds nested', () => {
       expect(`
         ##! experimental.composite_sources

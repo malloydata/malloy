@@ -358,7 +358,7 @@ export abstract class QuerySpace extends QueryOperationSpace {
         if (!isEmptyCompositeFieldUsage(newCompositeFieldUsage)) {
           const result = narrowCompositeFieldResolution(
             source,
-            newCompositeFieldUsage,
+            compositeFieldUsage,
             narrowedCompositeFieldResolution
           );
           if (result.error) {

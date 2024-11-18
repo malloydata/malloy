@@ -192,10 +192,12 @@ interface NarrowedCompositeFieldResolution {
 export function emptyNarrowedCompositeFieldResolution(): NarrowedCompositeFieldResolution {
   return {source: undefined, joined: {}};
 }
-
+// Should always give the _full_ `compositeFieldUsage`, because we only
+// cross off sources until we find one that works, but that does not
+// guarantee that all the remaining sources will work.
 export function narrowCompositeFieldResolution(
   source: SourceDef,
-  newCompositeFieldUsage: CompositeFieldUsage,
+  compositeFieldUsage: CompositeFieldUsage,
   narrowedCompositeFieldResolution: NarrowedCompositeFieldResolution
 ):
   | {
@@ -206,7 +208,7 @@ export function narrowCompositeFieldResolution(
   const result = _resolveCompositeSources(
     [],
     source,
-    newCompositeFieldUsage,
+    compositeFieldUsage,
     narrowedCompositeFieldResolution
   );
   if ('success' in result) {
@@ -313,12 +315,13 @@ function arrayDifference<T extends string | number | symbol>(
   const bSet = new Set(b);
   const ret: T[] = [];
   for (const value of a) {
-    if (value in bSet) continue;
+    if (bSet.has(value)) continue;
     ret.push(value);
   }
   return ret;
 }
 
+// Return all of `a`'s usage without any of `b`'s usage
 export function compositeFieldUsageDifference(
   a: CompositeFieldUsage,
   b: CompositeFieldUsage
