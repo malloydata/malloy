@@ -506,11 +506,11 @@ ${indent(sql)}
         rowTypes.push(this.malloyTypeToSQLType(f));
       }
     }
-    return `{${rowVals.join(',')}}::OBJECT{${rowTypes.join(',')}}`;
+    return `{${rowVals.join(',')}}::OBJECT(${rowTypes.join(',')})`;
   }
 
   sqlLiteralArray(lit: ArrayLiteralNode): string {
     const array = lit.kids.values.map(val => val.sql);
-    return '[' + array.join(',') + ']';
+    return `ARRAY_CONSTRUCT(${array.join(',')})`;
   }
 }
