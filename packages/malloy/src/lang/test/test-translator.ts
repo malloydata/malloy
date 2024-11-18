@@ -436,12 +436,16 @@ export class TestTranslator extends MalloyTranslator {
 
 export class BetaExpression extends TestTranslator {
   private compiled?: ExprValue;
-  constructor(src: string) {
-    super(src, null, null, 'debugExpr');
+  constructor(
+    src: string,
+    model?: ModelDef,
+    readonly sourceName: string = 'ab'
+  ) {
+    super(src, null, null, 'debugExpr', model);
   }
 
   private testFS() {
-    const aStruct = this.internalModel.contents['ab'];
+    const aStruct = this.internalModel.contents[this.sourceName];
     if (isSourceDef(aStruct)) {
       const tstFS = new StaticSourceSpace(aStruct);
       return tstFS;
@@ -572,6 +576,19 @@ export function makeModelFunc(options: {
         undefined,
         options?.model
       ),
+    };
+  };
+}
+
+export function makeExprFunc(model: ModelDef, sourceName: string) {
+  return function expr(
+    unmarked: TemplateStringsArray,
+    ...marked: string[]
+  ): HasTranslator<TestTranslator> {
+    const ms = markSource(unmarked, ...marked);
+    return {
+      ...ms,
+      translator: new BetaExpression(ms.code, model, sourceName),
     };
   };
 }

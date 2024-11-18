@@ -1866,6 +1866,12 @@ export class MalloyToAST
     return this.astAt(sqExpr, pcx);
   }
 
+  visitSQCompose(pcx: parse.SQComposeContext) {
+    const sources = pcx.sqExpr().map(sqExpr => this.getSqExpr(sqExpr));
+    this.inExperiment('composite_sources', pcx);
+    return this.astAt(new ast.SQCompose(sources), pcx);
+  }
+
   visitSQArrow(pcx: parse.SQArrowContext) {
     const applyTo = this.getSqExpr(pcx.sqExpr());
     const headCx = pcx.segExpr();

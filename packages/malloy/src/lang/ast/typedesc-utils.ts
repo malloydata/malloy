@@ -30,6 +30,7 @@ import {
   TD,
   TypeDesc,
 } from '../../model';
+import {emptyCompositeFieldUsage} from '../../model/composite_source_utils';
 
 function mkTypeDesc(
   // The problem is that record and array, as currently defined, require a dialect
@@ -39,7 +40,12 @@ function mkTypeDesc(
   expressionType: ExpressionType = 'scalar',
   evalSpace: EvalSpace = 'constant'
 ): TypeDesc {
-  return {type: dataType, expressionType, evalSpace};
+  return {
+    type: dataType,
+    expressionType,
+    evalSpace,
+    compositeFieldUsage: emptyCompositeFieldUsage(),
+  };
 }
 
 export const nullT = mkTypeDesc('null');

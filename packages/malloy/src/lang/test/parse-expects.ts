@@ -24,6 +24,7 @@
 
 import {MalloyTranslator, TranslateResponse} from '..';
 import {
+  CompositeFieldUsage,
   DocumentLocation,
   DocumentRange,
   Expr,
@@ -83,6 +84,7 @@ declare global {
        * Warnings are ignored, so need to be checked seperately
        */
       compilesTo(exprString: string): R;
+      hasCompositeUsage(compositeUsage: CompositeFieldUsage): R;
     }
   }
 }
@@ -362,6 +364,44 @@ expect.extend({
     const rcvExpr = eToStr(bx.generated().value, undefined);
     const pass = this.equals(rcvExpr, expr);
     const msg = pass ? `Matched: ${rcvExpr}` : this.utils.diff(expr, rcvExpr);
+    return {pass, message: () => `${msg}`};
+  },
+  hasCompositeUsage: function (
+    tx: TestSource,
+    compositeFieldUsage: CompositeFieldUsage
+  ) {
+    let bx: BetaExpression;
+    if (typeof tx === 'string') {
+      bx = new BetaExpression(tx);
+    } else {
+      const x = xlator(tx);
+      if (x instanceof BetaExpression) {
+        bx = x;
+      } else {
+        return {
+          pass: false,
+          message: () =>
+            'Must pass expr`EXPRESSION` to expect(EXPRSSION).compilesTo()',
+        };
+      }
+    }
+    bx.compile();
+    // Only report errors, callers will need to test for warnings
+    if (bx.logger.hasErrors()) {
+      return {
+        message: () => `Translation problems:\n${bx.prettyErrors()}`,
+        pass: false,
+      };
+    }
+    const badRefs = checkForNeededs(bx);
+    if (!badRefs.pass) {
+      return badRefs;
+    }
+    const actual = bx.generated().compositeFieldUsage;
+    const pass = this.equals(actual, compositeFieldUsage);
+    const msg = pass
+      ? `Matched: ${actual}`
+      : this.utils.diff(compositeFieldUsage, actual);
     return {pass, message: () => `${msg}`};
   },
 });

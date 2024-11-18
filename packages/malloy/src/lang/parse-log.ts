@@ -21,7 +21,15 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DocumentLocation, ExpressionValueType} from '../model/malloy_types';
+import {
+  compositeFieldUsageIsPlural,
+  formatCompositeFieldUsages,
+} from '../model/composite_source_utils';
+import {
+  CompositeFieldUsage,
+  DocumentLocation,
+  ExpressionValueType,
+} from '../model/malloy_types';
 import {EventStream} from '../runtime_types';
 
 export type LogSeverity = 'error' | 'warn' | 'debug';
@@ -191,6 +199,15 @@ type MessageParameterTypes = {
   'field-list-edit-not-found': string;
   'unexpected-element-type': string;
   'field-not-found': string;
+  'invalid-composite-source-input': string;
+  'invalid-composite-field-usage': {
+    newUsage: CompositeFieldUsage;
+    allUsage: CompositeFieldUsage;
+  };
+  'empty-composite-source': string;
+  'unnecessary-composite-source': string;
+  'composite-source-atomic-fields-only': string;
+  'composite-source-connection-mismatch': string;
   'invalid-property-access-in-field-reference': string;
   'parameter-default-does-not-match-declared-type': string;
   'parameter-null-default-without-declared-type': string;
@@ -416,6 +433,12 @@ export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
     `Case when expression must be boolean, not ${e.whenType}`,
   'case-when-type-does-not-match': e =>
     `Case when type ${e.whenType} does not match value type ${e.valueType}`,
+  'invalid-composite-field-usage': e => {
+    const formattedNewCompositeUsage = formatCompositeFieldUsages(e.newUsage);
+    const formattedAllCompositeUsage = formatCompositeFieldUsages(e.allUsage);
+    const pluralUse = compositeFieldUsageIsPlural(e.newUsage) ? 's' : '';
+    return `This operation uses composite field${pluralUse} ${formattedNewCompositeUsage}, resulting in invalid usage of the composite source, as there is no composite input source which defines all of ${formattedAllCompositeUsage}`;
+  },
 };
 
 export type MessageCode = keyof MessageParameterTypes;

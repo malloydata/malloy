@@ -239,12 +239,11 @@ export function getMorphicValue(
     return mv;
   }
   if (mv.morphic && mv.morphic[mt]) {
-    return {
-      type: mt,
+    return computedExprValue({
+      dataType: {type: mt},
       value: mv.morphic[mt],
-      expressionType: mv.expressionType,
-      evalSpace: mv.evalSpace,
-    };
+      from: [mv],
+    });
   }
 }
 

@@ -29,13 +29,26 @@ import {
 } from '../../../model/malloy_types';
 import {SpaceEntry} from './space-entry';
 import {FieldSpace} from './field-space';
+import {emptyCompositeFieldUsage} from '../../../model/composite_source_utils';
 
 export abstract class SpaceField extends SpaceEntry {
   readonly refType = 'field';
 
   protected fieldTypeFromFieldDef(def: AtomicFieldDef): TypeDesc {
     const expressionType = def.expressionType || 'scalar';
-    const ref: TypeDesc = {...def, expressionType, evalSpace: 'input'};
+    const ref: TypeDesc = {
+      ...def,
+      expressionType,
+      evalSpace: 'input',
+      compositeFieldUsage:
+        // Use the composite field usage in the def if it exists, otherwise, if the
+        // field has an e whic is a composite field, then the composite field usage
+        // should be just the name of the field.
+        def.compositeFieldUsage ??
+        (def.e?.node === 'compositeField'
+          ? {fields: [def.as ?? def.name], joinedUsage: {}}
+          : emptyCompositeFieldUsage()),
+    };
     return ref;
   }
 

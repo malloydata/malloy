@@ -376,4 +376,13 @@ describe('source:', () => {
     const ad = getFieldDef(hasDate!, 'ad');
     expect(ad).toMatchObject({name: 'ad', type: 'date'});
   });
+  describe('composite sources', () => {
+    test('basic composite source', () => {
+      expect(`
+        ##! experimental.composite_sources
+        source: x is compose(a, a extend { dimension: foo is 1 })
+        run: x -> { select: foo }
+      `).toTranslate();
+    });
+  });
 });

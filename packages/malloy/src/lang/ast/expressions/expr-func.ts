@@ -53,6 +53,7 @@ import {ExpressionDef} from '../types/expression-def';
 import {FieldName, FieldSpace} from '../types/field-space';
 import {composeSQLExpr, SQLExprElement} from '../../../model/utils';
 import * as TDU from '../typedesc-utils';
+import {mergeCompositeFieldUsage} from '../../../model/composite_source_utils';
 
 export class ExprFunc extends ExpressionDef {
   elementType = 'function call()';
@@ -166,6 +167,7 @@ export class ExprFunc extends ExpressionDef {
             expressionType: footType.expressionType,
             value: {node: 'field', path: this.source.path},
             evalSpace: footType.evalSpace,
+            compositeFieldUsage: footType.compositeFieldUsage,
           };
           structPath = this.source.path.slice(0, -1);
         } else {
@@ -433,6 +435,9 @@ export class ExprFunc extends ExpressionDef {
       expressionType,
       value: funcCall,
       evalSpace,
+      compositeFieldUsage: mergeCompositeFieldUsage(
+        ...argExprs.map(e => e.compositeFieldUsage)
+      ),
     };
   }
 }
