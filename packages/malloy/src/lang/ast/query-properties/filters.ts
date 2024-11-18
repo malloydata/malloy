@@ -143,7 +143,7 @@ export class Filter
       const fExpr = this.checkedFilterCondition(filterFS, filter);
       if (fExpr !== undefined) {
         executeFor.filters.push(fExpr);
-        executeFor.resultFS.addCompositeFieldUsageFromFilter(fExpr, filter);
+        executeFor.resultFS.addCompositeFieldUserFromFilter(fExpr, filter);
       }
     }
   }

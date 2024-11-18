@@ -96,15 +96,8 @@ export abstract class DynamicSpace
     this.newTimezone = tz;
   }
 
-  // Used to compute the current structDef, but not making any claims that it is the
-  // final structDef;
-  partialStructDef(): model.SourceDef {
-    const result = this.generateSourceDef();
-    this.sourceDef = undefined;
-    return result;
-  }
-
-  private generateSourceDef(): model.SourceDef {
+  structDef(): model.SourceDef {
+    this.complete = true;
     if (this.sourceDef === undefined) {
       // Grab all the parameters so that we can populate the "final" structDef
       // with parameters immediately so that views can see them when they are translating
@@ -162,11 +155,6 @@ export abstract class DynamicSpace
       this.sourceDef.queryTimezone = this.newTimezone;
     }
     return this.sourceDef;
-  }
-
-  structDef(): model.SourceDef {
-    this.complete = true;
-    return this.generateSourceDef();
   }
 
   emptyStructDef(): SourceDef {

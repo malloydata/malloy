@@ -28,19 +28,43 @@ type CompositeError =
 function _resolveCompositeSources(
   path: string[],
   source: SourceDef,
-  compositeFieldUsage: CompositeFieldUsage
-): {success: SourceDef} | {error: CompositeError} {
+  compositeFieldUsage: CompositeFieldUsage,
+  narrowedCompositeFieldResolution:
+    | NarrowedCompositeFieldResolution
+    | undefined = undefined
+):
+  | {
+      success: SourceDef;
+      narrowedCompositeFieldResolution: NarrowedCompositeFieldResolution;
+    }
+  | {error: CompositeError} {
   let base = {...source};
+  let narrowedSources: SingleNarrowedCompositeFieldResolution | undefined =
+    undefined;
   if (compositeFieldUsage.fields.length > 0) {
     if (source.type === 'composite') {
       let found = false;
-      overSources: for (const inputSource of source.sources) {
+      // The narrowed source list is either the one given when this function was called,
+      // or we construct a new one from the given composite source's input sources.
+      narrowedSources =
+        narrowedCompositeFieldResolution?.source ??
+        source.sources.map(s => ({source: s, nested: undefined}));
+      // Make a copy, which we will mutate: if a source is invalid, we remove it from the list
+      // and move on; if the source is a nested composite source, we narrow the resolution of
+      // the inner sources and update the element in the list
+      const newNarrowedSources = [...narrowedSources];
+      // We iterate over the list of narrowed sources;
+      overSources: for (const {
+        source: inputSource,
+        nested,
+      } of narrowedSources) {
         const fieldNames = new Set<string>();
         for (const field of inputSource.fields) {
           fieldNames.add(field.as ?? field.name);
         }
         for (const usage of compositeFieldUsage.fields) {
           if (!fieldNames.has(usage)) {
+            newNarrowedSources.shift();
             continue overSources;
           }
         }
@@ -52,12 +76,28 @@ function _resolveCompositeSources(
             compositeFieldUsageWithoutNonCompositeFields(
               compositeFieldUsage,
               inputSource
-            )
+            ),
+            // This looks wonky, but what we're doing is taking the nested sources
+            // and "promoting" them to look like they're top level sources; we will
+            // then reverse this when we update the real narrowed resolution.
+            {
+              source:
+                nested ??
+                inputSource.sources.map(s => ({source: s, nested: []})),
+              // Composite source inputs cannot have joins, so we don't need to
+              // pass in the narrowed resolution
+              joined: {},
+            }
           );
           if ('error' in resolveInner) {
+            newNarrowedSources.shift();
             continue overSources;
           }
           base = {...resolveInner.success};
+          newNarrowedSources[0] = {
+            source: inputSource,
+            nested: resolveInner.narrowedCompositeFieldResolution.source,
+          };
         } else {
           base = {...inputSource};
         }
@@ -80,11 +120,13 @@ function _resolveCompositeSources(
           },
         };
       }
+      narrowedSources = newNarrowedSources;
     } else {
       return {error: {code: 'not_a_composite_source', data: {path}}};
     }
   }
   const fieldsByName: {[name: string]: FieldDef} = {};
+  const narrowedJoinedSources = narrowedCompositeFieldResolution?.joined ?? {};
   for (const field of base.fields) {
     fieldsByName[field.as ?? field.name] = field;
   }
@@ -103,7 +145,12 @@ function _resolveCompositeSources(
         error: {code: 'composite_source_not_a_join', data: {path: newPath}},
       };
     }
-    const resolved = _resolveCompositeSources(newPath, join, joinedUsage);
+    const resolved = _resolveCompositeSources(
+      newPath,
+      join,
+      joinedUsage,
+      narrowedJoinedSources[joinName]
+    );
     if ('error' in resolved) {
       return resolved;
     }
@@ -121,8 +168,54 @@ function _resolveCompositeSources(
       as: join.as ?? join.name,
       onExpression: join.onExpression,
     };
+    narrowedJoinedSources[joinName] = resolved.narrowedCompositeFieldResolution;
   }
-  return {success: {...base, fields: Object.values(fieldsByName)}};
+  return {
+    success: {...base, fields: Object.values(fieldsByName)},
+    narrowedCompositeFieldResolution: {
+      source: narrowedSources,
+      joined: narrowedJoinedSources,
+    },
+  };
+}
+
+type SingleNarrowedCompositeFieldResolution = {
+  source: SourceDef;
+  nested?: SingleNarrowedCompositeFieldResolution | undefined;
+}[];
+
+interface NarrowedCompositeFieldResolution {
+  source: SingleNarrowedCompositeFieldResolution | undefined;
+  joined: {[name: string]: NarrowedCompositeFieldResolution};
+}
+
+export function emptyNarrowedCompositeFieldResolution(): NarrowedCompositeFieldResolution {
+  return {source: undefined, joined: {}};
+}
+
+export function narrowCompositeFieldResolution(
+  source: SourceDef,
+  newCompositeFieldUsage: CompositeFieldUsage,
+  narrowedCompositeFieldResolution: NarrowedCompositeFieldResolution
+):
+  | {
+      narrowedCompositeFieldResolution: NarrowedCompositeFieldResolution;
+      error: undefined;
+    }
+  | {error: CompositeError; narrowedCompositeFieldResolution: undefined} {
+  const result = _resolveCompositeSources(
+    [],
+    source,
+    newCompositeFieldUsage,
+    narrowedCompositeFieldResolution
+  );
+  if ('success' in result) {
+    return {
+      narrowedCompositeFieldResolution: result.narrowedCompositeFieldResolution,
+      error: undefined,
+    };
+  }
+  return {narrowedCompositeFieldResolution: undefined, error: result.error};
 }
 
 export function resolveCompositeSources(

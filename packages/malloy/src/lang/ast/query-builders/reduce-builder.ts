@@ -111,12 +111,7 @@ export abstract class QuerySegmentBuilder implements QueryBuilder {
   abstract finalize(fromSeg: PipeSegment | undefined): PipeSegment;
 
   get compositeFieldUsage(): CompositeFieldUsage {
-    return mergeCompositeFieldUsage(
-      this.resultFS.compositeFieldUsage,
-      ...this.filters.map(
-        f => f.compositeFieldUsage ?? emptyCompositeFieldUsage()
-      )
-    );
+    return this.resultFS.compositeFieldUsage;
   }
 
   refineFrom(from: PipeSegment | undefined, to: QuerySegment): void {
