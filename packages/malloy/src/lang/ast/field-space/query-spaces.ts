@@ -52,7 +52,6 @@ import {
   isEmptyCompositeFieldUsage,
   mergeCompositeFieldUsage,
   narrowCompositeFieldResolution,
-  resolveCompositeSources,
 } from '../../../model/composite_source_utils';
 import {StructSpaceFieldBase} from './struct-space-field-base';
 
@@ -70,8 +69,13 @@ export abstract class QueryOperationSpace
   abstract readonly segmentType: 'reduce' | 'project' | 'index';
   expandedWild: Record<string, string[]> = {};
   compositeFieldUsers: (
-    {type: 'filter', filter: model.FilterCondition, logTo: MalloyElement}
-    | {type: 'field', name: string, field: SpaceField, logTo: MalloyElement | undefined }
+    | {type: 'filter'; filter: model.FilterCondition; logTo: MalloyElement}
+    | {
+        type: 'field';
+        name: string;
+        field: SpaceField;
+        logTo: MalloyElement | undefined;
+      }
   )[] = [];
 
   // Composite field usage is not computed until `queryFieldDefs` is called; if anyone
@@ -79,7 +83,7 @@ export abstract class QueryOperationSpace
   _compositeFieldUsage: model.CompositeFieldUsage | undefined = undefined;
   get compositeFieldUsage(): model.CompositeFieldUsage {
     if (this._compositeFieldUsage === undefined) {
-      throw new Error("Composite field usage accessed before computed");
+      throw new Error('Composite field usage accessed before computed');
     }
     return this._compositeFieldUsage;
   }
@@ -185,9 +189,17 @@ export abstract class QueryOperationSpace
     }
   }
 
-  protected addValidatedCompositeFieldUserFromEntry(name: string, entry: SpaceEntry) {
+  protected addValidatedCompositeFieldUserFromEntry(
+    name: string,
+    entry: SpaceEntry
+  ) {
     if (entry instanceof SpaceField) {
-      this.compositeFieldUsers.push({type: 'field', name, field: entry, logTo: undefined});
+      this.compositeFieldUsers.push({
+        type: 'field',
+        name,
+        field: entry,
+        logTo: undefined,
+      });
     }
   }
 
@@ -288,10 +300,12 @@ export abstract class QuerySpace extends QueryOperationSpace {
   protected queryFieldDefs(): model.QueryFieldDef[] {
     const fields: model.QueryFieldDef[] = [];
     let compositeFieldUsage = emptyCompositeFieldUsage();
-    let narrowedCompositeFieldResolution = emptyNarrowedCompositeFieldResolution();
+    let narrowedCompositeFieldResolution =
+      emptyNarrowedCompositeFieldResolution();
     const source = this.inputSpace().structDef();
     for (const user of this.compositeFieldUsers) {
-      let nextCompositeFieldUsage: model.CompositeFieldUsage | undefined = undefined;
+      let nextCompositeFieldUsage: model.CompositeFieldUsage | undefined =
+        undefined;
       if (user.type === 'filter') {
         if (user.filter.compositeFieldUsage) {
           nextCompositeFieldUsage = user.filter.compositeFieldUsage;
@@ -330,10 +344,23 @@ export abstract class QuerySpace extends QueryOperationSpace {
         // fields, but the individual fields didn't have field defs.
       }
       if (nextCompositeFieldUsage) {
-        const newCompositeFieldUsage = this.getCompositeFieldUsageIncludingJoinOns(compositeFieldUsageDifference(nextCompositeFieldUsage, compositeFieldUsage));
-        compositeFieldUsage = mergeCompositeFieldUsage(compositeFieldUsage, newCompositeFieldUsage);
+        const newCompositeFieldUsage =
+          this.getCompositeFieldUsageIncludingJoinOns(
+            compositeFieldUsageDifference(
+              nextCompositeFieldUsage,
+              compositeFieldUsage
+            )
+          );
+        compositeFieldUsage = mergeCompositeFieldUsage(
+          compositeFieldUsage,
+          newCompositeFieldUsage
+        );
         if (!isEmptyCompositeFieldUsage(newCompositeFieldUsage)) {
-          const result = narrowCompositeFieldResolution(source, newCompositeFieldUsage, narrowedCompositeFieldResolution)
+          const result = narrowCompositeFieldResolution(
+            source,
+            newCompositeFieldUsage,
+            narrowedCompositeFieldResolution
+          );
           if (result.error) {
             if (user.logTo) {
               user.logTo.logError('invalid-composite-field-usage', {
@@ -343,10 +370,11 @@ export abstract class QuerySpace extends QueryOperationSpace {
             } else {
               // This should not happen; logTo should only be not set for a field from a refinement,
               // which should never fail the composite resolution
-              throw new Error("Unexpected invalid composite field resolution");
+              throw new Error('Unexpected invalid composite field resolution');
             }
           } else {
-            narrowedCompositeFieldResolution = result.narrowedCompositeFieldResolution;
+            narrowedCompositeFieldResolution =
+              result.narrowedCompositeFieldResolution;
           }
         }
       }
