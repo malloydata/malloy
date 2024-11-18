@@ -88,6 +88,9 @@ describe.each(runtimes.runtimeList)(
       return runtime.dialect.sqlLiteralRecord(recordLiteral(fromObj));
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const ab = recordSelectVal({a: 0, b: 1});
+
     const sizesObj = {s: 0, m: 1, l: 2, xl: 3};
     const sizes = `${databaseName}.sql("""SELECT ${recordSelectVal(
       sizesObj
@@ -171,6 +174,7 @@ describe.each(runtimes.runtimeList)(
       });
       test.when(supportsNestedArrays)('bare array of array', async () => {
         await expect(`
+          # test.verbose
           run: ${empty} -> { select: aoa is [[1,2]] }
         `).malloyResultMatches(runtime, {aoa: [[1, 2]]});
       });
