@@ -129,6 +129,7 @@ export abstract class AtomicFieldDeclaration
         value: exprValue.value,
         expressionType: exprValue.expressionType,
         evalSpace: exprValue.evalSpace,
+        compositeFieldUsage: exprValue.compositeFieldUsage,
       };
       exprValue = nullAsNumber;
     }
