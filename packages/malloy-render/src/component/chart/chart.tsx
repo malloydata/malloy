@@ -9,19 +9,43 @@ import {Explore, ExploreField, QueryData} from '@malloydata/malloy';
 import {VegaChart, ViewInterface} from '../vega/vega-chart';
 import {ChartTooltipEntry, RenderResultMetadata} from '../types';
 import {Tooltip} from '../tooltip/tooltip';
-import {createEffect, createSignal} from 'solid-js';
+import {createEffect, createSignal, lazy, Show} from 'solid-js';
 import {DefaultChartTooltip} from './default-chart-tooltip';
-import {EventListenerHandler} from 'vega';
+import {EventListenerHandler, Runtime, View} from 'vega';
 import {useResultStore, VegaBrushOutput} from '../result-store/result-store';
+import css from './chart.css?raw';
+import {useConfig} from '../render';
+import {DebugIcon} from './debug_icon';
 
-export function Chart(props: {
+const ChartDevTool = lazy(() => import('./chart-dev-tool'));
+
+let IS_STORYBOOK = false;
+try {
+  const storybookConfig = (process.env as Record<string, string>)[
+    'IS_STORYBOOK'
+  ];
+  if (typeof storybookConfig !== 'undefined')
+    IS_STORYBOOK = Boolean(storybookConfig);
+} catch (e) {
+  // Continue with storybook flag off
+}
+
+export type ChartProps = {
   field: Explore | ExploreField;
   data: QueryData;
   metadata: RenderResultMetadata;
-}) {
+  // Debugging properties
+  devMode?: boolean;
+  runtime?: Runtime;
+  onView?: (view: View) => void;
+};
+
+export function Chart(props: ChartProps) {
+  const config = useConfig();
+  config.addCSSToShadowRoot(css);
   const {field, data} = props;
   const chartProps = props.metadata.field(field).vegaChartProps!;
-  const runtime = props.metadata.field(field).runtime;
+  const runtime = props.runtime ?? props.metadata.field(field).runtime;
   if (!runtime)
     throw new Error('Charts must have a runtime defined in their metadata');
   const chartData = data;
@@ -45,6 +69,7 @@ export function Chart(props: {
     if (_view) {
       _view.data('values', values);
       _view.runAsync();
+      props.onView?.(_view);
     }
   });
 
@@ -152,8 +177,15 @@ export function Chart(props: {
     );
   });
 
+  const [showDebugModal, setShowDebugModal] = createSignal(false);
+  const openDebug = () => {
+    setTooltipData(null);
+    setShowDebugModal(true);
+  };
+
   return (
     <div
+      class="malloy-chart"
       onMouseLeave={() => {
         // immediately clear tooltips and highlights on leaving chart
         setTooltipData(null);
@@ -163,7 +195,6 @@ export function Chart(props: {
             .map(brush => ({type: 'remove', sourceId: brush.sourceId}))
         );
       }}
-      style="width: fit-content; height: fit-content; font-variant-numeric: tabular-nums;"
     >
       <VegaChart
         width={chartProps.plotWidth}
@@ -173,9 +204,21 @@ export function Chart(props: {
         explore={props.field}
         runtime={runtime}
       />
-      <Tooltip show={!!tooltipData()}>
+      <Tooltip show={Boolean(tooltipData())}>
         <DefaultChartTooltip data={tooltipData()!} />
       </Tooltip>
+      <Show when={IS_STORYBOOK && !props.devMode}>
+        <button class="malloy-chart_debug_menu" onClick={openDebug}>
+          <DebugIcon />
+        </button>
+        <Show when={showDebugModal()}>
+          <ChartDevTool
+            onClose={() => setShowDebugModal(false)}
+            {...props}
+            devMode={true}
+          />
+        </Show>
+      </Show>
     </div>
   );
 }

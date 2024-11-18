@@ -26,3 +26,7 @@ export * from './html/data_styles';
 export type {MalloyRenderProps} from './component/render';
 // Needed for test only.
 export {getDrillQuery} from './html/drill';
+export {
+  copyMalloyRenderHTML,
+  getMalloyRenderHTML,
+} from './component/copy-to-html';

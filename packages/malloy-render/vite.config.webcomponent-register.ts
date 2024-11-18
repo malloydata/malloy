@@ -1,26 +1,12 @@
-import {defineConfig} from 'vite';
-import solidPlugin from 'vite-plugin-solid';
+import {mergeConfig} from 'vite';
+import baseViteConfig from './vite.config.base';
 
-export default defineConfig({
-  plugins: [solidPlugin()],
-  optimizeDeps: {
-    include: ['@malloydata/malloy'],
-  },
+export default mergeConfig(baseViteConfig, {
   build: {
     lib: {
       entry: 'src/component/register-webcomponent.ts',
       name: 'register',
       fileName: 'register',
     },
-    rollupOptions: {
-      external: [],
-      output: {},
-    },
-    commonjsOptions: {
-      include: [/malloy/, /node_modules/],
-    },
-  },
-  define: {
-    'process.env': {},
   },
 });

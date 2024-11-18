@@ -3,6 +3,7 @@ import script from './themes.malloy?raw';
 import {createLoader} from './util';
 import './themes.css';
 import '../component/render-webcomponent';
+import {copyMalloyRenderHTML} from '../component/copy-to-html';
 
 const meta: Meta = {
   title: 'Malloy Next/Themes',
@@ -13,7 +14,15 @@ const meta: Meta = {
     const el = document.createElement('malloy-render');
     if (classes) el.classList.add(classes);
     el.result = context.loaded['result'];
+
+    // copy to html test
+    const button = document.createElement('button');
+    button.innerHTML = 'Copy HTML';
+    button.addEventListener('click', () => copyMalloyRenderHTML(el));
+
+    parent.appendChild(button);
     parent.appendChild(el);
+
     return parent;
   },
   loaders: [createLoader(script)],

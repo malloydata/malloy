@@ -16,7 +16,7 @@ import {getRangeSize, isFirstChild, isLastChild} from '../util';
 import {getTableLayout} from './table-layout';
 import {useResultContext} from '../result-context';
 import {createTableStore, TableContext, useTableContext} from './table-context';
-import './table.css';
+import tableCss from './table.css?raw';
 import {applyRenderer, shouldRenderAs} from '../apply-renderer';
 import {isFieldHidden} from '../../tags_utils';
 import {createStore, produce} from 'solid-js/store';
@@ -397,9 +397,9 @@ const MalloyTableRoot = (_props: {
   // Could possibly try to pre-calculate a height estimate using metadata, but may be hard to do with potentially wrapping text so would have to add a buffer
   const [rowEstimate, setRowEstimate] = createSignal(1000);
 
-  const shouldVirtualize = tableCtx.root && !props.disableVirtualization;
+  const shouldVirtualize = () => tableCtx.root && !props.disableVirtualization;
 
-  if (shouldVirtualize) {
+  if (shouldVirtualize()) {
     virtualizer = createVirtualizer({
       count: data().length,
       getScrollElement: () => scrollEl,
@@ -534,7 +534,7 @@ const MalloyTableRoot = (_props: {
         </div>
       </Show>
       {/* virtualized table */}
-      <Show when={shouldVirtualize}>
+      <Show when={shouldVirtualize()}>
         <div
           class="table-row"
           style={{
@@ -584,7 +584,7 @@ const MalloyTableRoot = (_props: {
         </div>
       </Show>
       {/* non-virtualized table */}
-      <Show when={!shouldVirtualize}>
+      <Show when={!shouldVirtualize()}>
         {/* header */}
         <Show when={!tableCtx.root}>
           <div class="table-row">
@@ -641,9 +641,28 @@ const MalloyTable: Component<{
     };
   });
 
+  if (tableCtx().root) {
+    const config = useConfig();
+    config.addCSSToShadowRoot(tableCss);
+  }
+
+  const tableConfig = useConfig().tableConfig;
+
+  const tableProps = () =>
+    mergeProps(props, {
+      disableVirtualization:
+        typeof props.disableVirtualization !== 'undefined'
+          ? props.disableVirtualization
+          : tableConfig().disableVirtualization,
+      rowLimit:
+        typeof props.rowLimit !== 'undefined'
+          ? props.rowLimit
+          : tableConfig().rowLimit,
+    });
+
   return (
     <TableContext.Provider value={tableCtx()}>
-      <MalloyTableRoot {...props} />
+      <MalloyTableRoot {...tableProps()} />
     </TableContext.Provider>
   );
 };

@@ -1,21 +1,6 @@
 import {compose, register} from 'component-register';
 import {withSolid} from 'solid-element';
 import {MalloyRender, MalloyRenderProps} from './render';
-import css from './render.css?raw';
-import tableCss from './table/table.css?raw';
-import dashboardCss from './dashboard/dashboard.css?raw';
-
-const withStyles = ComponentType => {
-  return (props, options) => {
-    const {element} = options;
-    const stylesheet = new CSSStyleSheet();
-    stylesheet.replaceSync(css);
-    const tableStylesheet = new CSSStyleSheet();
-    tableStylesheet.replaceSync([tableCss, dashboardCss].join('\n'));
-    element.renderRoot.adoptedStyleSheets = [stylesheet, tableStylesheet];
-    return ComponentType(props, options);
-  };
-};
 
 export default function registerWebComponent({
   customElements = window.customElements,
@@ -32,10 +17,11 @@ export default function registerWebComponent({
           scrollEl: undefined,
           onClick: undefined,
           vegaConfigOverride: undefined,
+          tableConfig: undefined,
+          dashboardConfig: undefined,
         },
         {customElements, BaseElement: HTMLElement}
       ),
-      withStyles,
       withSolid
     )(MalloyRender);
   } else {

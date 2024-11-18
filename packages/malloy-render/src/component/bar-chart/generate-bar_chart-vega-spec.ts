@@ -13,11 +13,23 @@ import {
   MalloyVegaDataRecord,
   RenderResultMetadata,
   VegaChartProps,
-  VegaSpec,
+  VegaPadding,
+  VegaSignalRef,
 } from '../types';
 import {getChartLayoutSettings} from '../chart-layout-settings';
 import {getFieldFromRootPath, getFieldReferenceId} from '../plot/util';
-import {Item, View} from 'vega';
+import {
+  Data,
+  EncodeEntry,
+  GroupMark,
+  Item,
+  Legend,
+  Mark,
+  RectMark,
+  Signal,
+  Spec,
+  View,
+} from 'vega';
 import {renderTimeString} from '../render-time';
 import {renderNumericField} from '../render-numeric-field';
 import {createMeasureAxis} from '../vega/measure-axis';
@@ -180,8 +192,8 @@ export function generateBarChartVegaSpec(
 
   // Spacing for bar groups, depending on whether grouped or not
   // Manually calculating offsets and widths for bars because we need x highlight event targets to be full bandwidth
-  const xOffset: VegaSpec = {};
-  let xWidth: VegaSpec = {};
+  const xOffset: VegaSignalRef = {signal: ''};
+  let xWidth: EncodeEntry['width'] = {};
   if (isGrouping) {
     xOffset.signal = `scale('xOffset', datum.series)+bandwidth("xscale")*${
       barGroupPadding / 2
@@ -193,7 +205,7 @@ export function generateBarChartVegaSpec(
   }
 
   // Create groups for each unique x value via faceting
-  const groupMark: VegaSpec = {
+  const groupMark: GroupMark = {
     name: 'x_group',
     from: {
       facet: {
@@ -238,7 +250,7 @@ export function generateBarChartVegaSpec(
 
   const BAR_FADE_OPACITY = 0.35;
 
-  const barMark: VegaSpec = {
+  const barMark: RectMark = {
     name: 'bars',
     type: 'rect',
     from: {
@@ -289,7 +301,7 @@ export function generateBarChartVegaSpec(
     },
   };
 
-  const highlightMark: VegaSpec = {
+  const highlightMark: RectMark = {
     name: 'x_highlight',
     type: 'rect',
     from: {
@@ -322,26 +334,26 @@ export function generateBarChartVegaSpec(
     },
   };
 
-  groupMark.marks.push(highlightMark, barMark);
+  groupMark.marks!.push(highlightMark, barMark);
 
   // Source data and transforms
-  const valuesData: VegaSpec = {name: 'values', values: [], transform: []};
+  const valuesData: Data = {name: 'values', values: [], transform: []};
   // For measure series, unpivot the measures into the series column
   if (isMeasureSeries) {
     // Pull the series values from the source record, then remap the names to remove __source
-    valuesData.transform.push({
+    valuesData.transform!.push({
       type: 'fold',
       fields: settings.yChannel.fields.map(f => `__source.${f}`),
       as: ['series', 'y'],
     });
-    valuesData.transform.push({
+    valuesData.transform!.push({
       type: 'formula',
       as: 'series',
       expr: "replace(datum.series, '__source.', '')",
     });
   }
   if (isStacking) {
-    valuesData.transform.push({
+    valuesData.transform!.push({
       type: 'stack',
       groupby: ['x'],
       field: 'y',
@@ -349,7 +361,7 @@ export function generateBarChartVegaSpec(
     });
   }
 
-  const marks = [groupMark];
+  const marks: Mark[] = [groupMark];
 
   /**************************************
    *
@@ -358,7 +370,7 @@ export function generateBarChartVegaSpec(
    *************************************/
 
   // Base signals
-  const signals: VegaSpec[] = [
+  const signals: Signal[] = [
     {
       name: 'malloyExplore',
     },
@@ -560,7 +572,7 @@ export function generateBarChartVegaSpec(
    *
    *************************************/
 
-  const spec: VegaSpec = {
+  const spec: Spec = {
     $schema: 'https://vega.github.io/schema/vega/v5.json',
     width: chartSettings.plotWidth,
     height: chartSettings.plotHeight,
@@ -682,7 +694,7 @@ export function generateBarChartVegaSpec(
       maxCharCt * 10 + 20
     );
 
-    const legendSettings: VegaSpec = {
+    const legendSettings: Legend = {
       // Provide padding around legend entries
       titleLimit: legendSize - 20,
       labelLimit: legendSize - 40,
@@ -690,8 +702,8 @@ export function generateBarChartVegaSpec(
       offset: 4,
     };
 
-    spec.padding.right = legendSize;
-    spec.legends.push({
+    (spec.padding as VegaPadding).right = legendSize;
+    spec.legends!.push({
       fill: 'color',
       // No title for measure list legends
       title: seriesField ? seriesField.name : '',

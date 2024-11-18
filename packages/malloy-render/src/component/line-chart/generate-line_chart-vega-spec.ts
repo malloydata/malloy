@@ -12,14 +12,25 @@ import {
   MalloyVegaDataRecord,
   RenderResultMetadata,
   VegaChartProps,
-  VegaSpec,
+  VegaPadding,
 } from '../types';
 import {getLineChartSettings} from './get-line_chart-settings';
 import {getFieldFromRootPath, getFieldReferenceId} from '../plot/util';
 import {getChartLayoutSettings} from '../chart-layout-settings';
 import {renderTimeString} from '../render-time';
 import {createMeasureAxis} from '../vega/measure-axis';
-import {Item} from 'vega';
+import {
+  Data,
+  GroupMark,
+  Item,
+  Legend,
+  LineMark,
+  Mark,
+  RuleMark,
+  Signal,
+  Spec,
+  SymbolMark,
+} from 'vega';
 import {renderNumericField} from '../render-numeric-field';
 import {getMarkName} from '../vega/vega-utils';
 import {getCustomTooltipEntries} from '../bar-chart/get-custom-tooltips-entries';
@@ -161,9 +172,9 @@ export function generateLineChartVegaSpec(
       })
     : null;
 
-  const marks: VegaSpec[] = [];
+  const marks: Mark[] = [];
 
-  const seriesGroupMark: VegaSpec = {
+  const seriesGroupMark: GroupMark = {
     name: 'series_group',
     from: {
       facet: {
@@ -171,6 +182,7 @@ export function generateLineChartVegaSpec(
         name: 'series_facet',
         groupby: ['series'],
         aggregate: {
+          fields: [''],
           ops: ['count'],
           as: ['count'],
         },
@@ -183,7 +195,7 @@ export function generateLineChartVegaSpec(
 
   const LINE_FADE_OPACITY = 0.35;
 
-  const lineMark: VegaSpec = {
+  const lineMark: LineMark = {
     name: 'lines',
     type: 'line',
     from: {
@@ -214,7 +226,7 @@ export function generateLineChartVegaSpec(
     },
   };
 
-  const highlightRuleMark: VegaSpec = {
+  const highlightRuleMark: RuleMark = {
     name: 'x_highlight_rule',
     type: 'rule',
     from: {
@@ -251,7 +263,7 @@ export function generateLineChartVegaSpec(
 
   // Use voronoi hit targets based on mid point of each x position so that it draws nicely spaced boxes
   // This works well with a point scale, where there aren't even bands around each point since first and last points don't have outer edge padding
-  const xHitTargets: VegaSpec = {
+  const xHitTargets: GroupMark = {
     name: 'x_hit_target_group',
     type: 'group',
     marks: [
@@ -292,7 +304,7 @@ export function generateLineChartVegaSpec(
   };
 
   // Drag bigger circles for targeting ref lines so user can more easily hit with mouse
-  const refLineTargets: VegaSpec = {
+  const refLineTargets: SymbolMark = {
     name: 'ref_line_targets',
     type: 'symbol',
     from: {
@@ -308,7 +320,7 @@ export function generateLineChartVegaSpec(
     },
   };
 
-  const pointMarks: VegaSpec = {
+  const pointMarks: SymbolMark = {
     name: 'points',
     type: 'symbol',
     from: {
@@ -333,8 +345,8 @@ export function generateLineChartVegaSpec(
     },
   };
 
-  seriesGroupMark.marks.push(lineMark);
-  seriesGroupMark.marks.push(pointMarks);
+  seriesGroupMark.marks!.push(lineMark);
+  seriesGroupMark.marks!.push(pointMarks);
 
   marks.push(seriesGroupMark);
 
@@ -344,16 +356,16 @@ export function generateLineChartVegaSpec(
   marks.push(highlightRuleMark, xHitTargets, refLineTargets);
 
   // Source data and transforms
-  const valuesData: VegaSpec = {name: 'values', values: [], transform: []};
+  const valuesData: Data = {name: 'values', values: [], transform: []};
   // For measure series, unpivot the measures into the series column
   if (isMeasureSeries) {
     // Pull the series values from the source record, then remap the names to remove __source
-    valuesData.transform.push({
+    valuesData.transform!.push({
       type: 'fold',
       fields: settings.yChannel.fields.map(f => `__source.${f}`),
       as: ['series', 'y'],
     });
-    valuesData.transform.push({
+    valuesData.transform!.push({
       type: 'formula',
       as: 'series',
       expr: "replace(datum.series, '__source.', '')",
@@ -369,7 +381,7 @@ export function generateLineChartVegaSpec(
   const interactiveSignals = yAxis ? yAxis.interactiveSignals : [];
 
   // Base signals
-  const signals: VegaSpec[] = [
+  const signals: Signal[] = [
     {
       name: 'malloyExplore',
     },
@@ -530,7 +542,7 @@ export function generateLineChartVegaSpec(
    * Chart spec
    *
    *************************************/
-  const spec: VegaSpec = {
+  const spec: Spec = {
     $schema: 'https://vega.github.io/schema/vega/v5.json',
     width: chartSettings.plotWidth,
     height: chartSettings.plotHeight,
@@ -643,7 +655,7 @@ export function generateLineChartVegaSpec(
       maxCharCt * 10 + 20
     );
 
-    const legendSettings: VegaSpec = {
+    const legendSettings: Legend = {
       // Provide padding around legend entries
       titleLimit: legendSize - 20,
       labelLimit: legendSize - 40,
@@ -651,8 +663,8 @@ export function generateLineChartVegaSpec(
       offset: 4,
     };
 
-    spec.padding.right = legendSize;
-    spec.legends.push({
+    (spec.padding as VegaPadding).right = legendSize;
+    spec.legends!.push({
       fill: 'color',
       // No title for measure list legends
       title: seriesField ? seriesField.name : '',
