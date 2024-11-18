@@ -250,7 +250,7 @@ sourceArgument
 sqExpr
   : id sourceArguments?                             # SQID
   | OPAREN sqExpr CPAREN                            # SQParens
-  | CUBE OPAREN (sqExpr (COMMA sqExpr)*)? CPAREN    # SQCube
+  | COMPOSE OPAREN (sqExpr (COMMA sqExpr)*)? CPAREN # SQCompose
   | sqExpr PLUS segExpr                             # SQRefinedQuery
   | sqExpr ARROW segExpr                            # SQArrow
   | sqExpr EXTEND exploreProperties                 # SQExtendedSource

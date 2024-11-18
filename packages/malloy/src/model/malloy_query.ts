@@ -1344,8 +1344,8 @@ class QueryField extends QueryNode {
       case 'functionDefaultOrderBy':
       case 'functionOrderBy':
         return '';
-      case 'cubeField':
-        return `{CUBE FIELD IN ${context.getIdentifier()}}`;
+      case 'compositeField':
+        return '{COMPOSITE_FIELD}';
       default:
         throw new Error(
           `Internal Error: Unknown expression node '${
@@ -4509,8 +4509,8 @@ class QueryStruct extends QueryNode {
     switch (this.structDef.type) {
       case 'table':
         return this.dialect.quoteTablePath(this.structDef.tablePath);
-      case 'cube':
-        return `{CUBE SOURCE ${this.getIdentifier()}}`;
+      case 'composite':
+        return '{COMPOSITE SOURCE}';
       case 'finalize':
         return this.structDef.name;
       case 'sql_select':
@@ -4776,7 +4776,7 @@ export class QueryModel {
       filterList: query.filterList,
     };
 
-    const structRef = query.cubeResolvedSourceDef ?? query.structRef;
+    const structRef = query.compositeResolvedSourceDef ?? query.structRef;
 
     const q = QueryQuery.makeQuery(
       turtleDef,
@@ -4825,7 +4825,7 @@ export class QueryModel {
       finalize,
       false
     );
-    const structRef = query.cubeResolvedSourceDef ?? query.structRef;
+    const structRef = query.compositeResolvedSourceDef ?? query.structRef;
     const sourceExplore =
       typeof structRef === 'string'
         ? structRef

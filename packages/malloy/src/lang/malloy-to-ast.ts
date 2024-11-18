@@ -1866,10 +1866,10 @@ export class MalloyToAST
     return this.astAt(sqExpr, pcx);
   }
 
-  visitSQCube(pcx: parse.SQCubeContext) {
+  visitSQCompose(pcx: parse.SQComposeContext) {
     const sources = pcx.sqExpr().map(sqExpr => this.getSqExpr(sqExpr));
-    this.inExperiment('cube_sources', pcx);
-    return this.astAt(new ast.SQCube(sources), pcx);
+    this.inExperiment('composite_sources', pcx);
+    return this.astAt(new ast.SQCompose(sources), pcx);
   }
 
   visitSQArrow(pcx: parse.SQArrowContext) {

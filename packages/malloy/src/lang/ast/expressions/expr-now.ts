@@ -24,7 +24,7 @@
 import {ExprValue} from '../types/expr-value';
 import {FieldSpace} from '../types/field-space';
 import {ExpressionDef} from '../types/expression-def';
-import {emptyCubeUsage} from '../../../model/cube_utils';
+import {emptyCompositeFieldUsage} from '../../../model/composite_source_utils';
 
 export class ExprNow extends ExpressionDef {
   elementType = 'timestamp';
@@ -36,7 +36,7 @@ export class ExprNow extends ExpressionDef {
       // `now` is considered to be a constant, at least in the dialects we support today
       evalSpace: 'constant',
       value: {node: 'now'},
-      cubeUsage: emptyCubeUsage(),
+      compositeFieldUsage: emptyCompositeFieldUsage(),
     };
   }
 }

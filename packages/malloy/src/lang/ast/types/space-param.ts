@@ -26,7 +26,7 @@ import {FieldDefType, Parameter, TypeDesc} from '../../../model/malloy_types';
 import {SpaceEntry} from './space-entry';
 import {HasParameter} from '../parameters/has-parameter';
 import * as TDU from '../typedesc-utils';
-import {emptyCubeUsage} from '../../../model/cube_utils';
+import {emptyCompositeFieldUsage} from '../../../model/composite_source_utils';
 
 export abstract class SpaceParam extends SpaceEntry {
   abstract parameter(): Parameter;
@@ -50,7 +50,7 @@ export class AbstractParameter extends SpaceParam {
       ...TDU.atomicDef(this.parameter()),
       expressionType: 'scalar',
       evalSpace: 'constant',
-      cubeUsage: emptyCubeUsage(),
+      compositeFieldUsage: emptyCompositeFieldUsage(),
     };
   }
 
@@ -75,7 +75,7 @@ export class DefinedParameter extends SpaceParam {
       // TODO Not sure whether params are considered "input space". It seems like they
       // could be input or constant, depending on usage (same as above).
       evalSpace: 'input',
-      cubeUsage: emptyCubeUsage(),
+      compositeFieldUsage: emptyCompositeFieldUsage(),
     };
   }
 

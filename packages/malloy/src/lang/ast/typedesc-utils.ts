@@ -30,7 +30,7 @@ import {
   TD,
   TypeDesc,
 } from '../../model';
-import {emptyCubeUsage} from '../../model/cube_utils';
+import {emptyCompositeFieldUsage} from '../../model/composite_source_utils';
 
 function mkTypeDesc(
   // The problem is that record and array, as currently defined, require a dialect
@@ -44,7 +44,7 @@ function mkTypeDesc(
     type: dataType,
     expressionType,
     evalSpace,
-    cubeUsage: emptyCubeUsage(),
+    compositeFieldUsage: emptyCompositeFieldUsage(),
   };
 }
 

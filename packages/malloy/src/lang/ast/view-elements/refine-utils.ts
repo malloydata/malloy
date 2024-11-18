@@ -27,7 +27,7 @@ import {
   isQuerySegment,
   isRawSegment,
 } from '../../../model';
-import {mergeCubeUsage} from '../../../model/cube_utils';
+import {mergeCompositeFieldUsage} from '../../../model/composite_source_utils';
 import {nameFromDef} from '../../field-utils';
 import {MalloyElement} from '../types/malloy-element';
 
@@ -121,7 +121,10 @@ export function refine(
           )}`
         );
       }
-      to.cubeUsage = mergeCubeUsage(to.cubeUsage, from.cubeUsage);
+      to.compositeFieldUsage = mergeCompositeFieldUsage(
+        to.compositeFieldUsage,
+        from.compositeFieldUsage
+      );
     } else if (from.type === 'index' && to.type === 'index') {
       to.indexFields = [...from.indexFields, ...to.indexFields];
     }

@@ -71,7 +71,7 @@ CASE: C A S E ;
 CAST: C A S T ;
 CONDITION: C O N D I T I O N ;
 COUNT: C O U N T ;
-CUBE: C U B E ;
+COMPOSE: C O M P O S E ;
 DATE: D A T E;
 DAY: D A Y S?;
 DESC: D E S C ;

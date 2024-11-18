@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {emptyCubeUsage} from '../../model/cube_utils';
+import {emptyCompositeFieldUsage} from '../../model/composite_source_utils';
 import {
   FunctionParameterDef,
   TypeDesc,
@@ -305,7 +305,7 @@ function expandReturnTypeBlueprint(
   }
   return {
     ...base,
-    cubeUsage: emptyCubeUsage(),
+    compositeFieldUsage: emptyCompositeFieldUsage(),
     expressionType: base.expressionType ?? 'scalar',
   };
 }

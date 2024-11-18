@@ -92,7 +92,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
                   ? {node: 'outputField', name: this.source.refString}
                   : {node: 'field', path: this.source.path},
               evalSpace: footType.evalSpace,
-              cubeUsage: footType.cubeUsage,
+              compositeFieldUsage: footType.compositeFieldUsage,
             };
             structPath = this.source.path;
             // Here we handle a special case where you write `foo.agg()` and `foo` is a

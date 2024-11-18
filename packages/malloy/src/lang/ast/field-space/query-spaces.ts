@@ -45,13 +45,13 @@ import {
   MessageParameterType,
 } from '../../parse-log';
 import {
-  cubeUsageDifference,
-  cubeUsageJoinPaths,
-  emptyCubeUsage,
-  isEmptyCubeUsage,
-  mergeCubeUsage,
-  resolveCubeSources,
-} from '../../../model/cube_utils';
+  compositeFieldUsageDifference,
+  compositeFieldUsageJoinPaths,
+  emptyCompositeFieldUsage,
+  isEmptyCompositeFieldUsage,
+  mergeCompositeFieldUsage,
+  resolveCompositeSources,
+} from '../../../model/composite_source_utils';
 import {StructSpaceFieldBase} from './struct-space-field-base';
 
 /**
@@ -67,7 +67,7 @@ export abstract class QueryOperationSpace
   protected exprSpace: QueryInputSpace;
   abstract readonly segmentType: 'reduce' | 'project' | 'index';
   expandedWild: Record<string, string[]> = {};
-  cubeUsage: model.CubeUsage = emptyCubeUsage();
+  compositeFieldUsage: model.CompositeFieldUsage = emptyCompositeFieldUsage();
 
   constructor(
     readonly queryInputSpace: SourceFieldSpace,
@@ -170,93 +170,113 @@ export abstract class QueryOperationSpace
     }
   }
 
-  protected cubeUsageFromEntry(entry: SpaceEntry) {
+  protected compositeFieldUsageFromEntry(entry: SpaceEntry) {
     if (entry instanceof SpaceField) {
       const queryFieldDef = entry.getQueryFieldDef(this.exprSpace);
       if (queryFieldDef) {
-        const usage = entry.typeDesc().cubeUsage;
+        const usage = entry.typeDesc().compositeFieldUsage;
         return usage;
       }
     }
-    return emptyCubeUsage();
+    return emptyCompositeFieldUsage();
   }
 
-  protected addCubeUsageFromEntry(entry: SpaceEntry) {
-    this.addCubeUsage(
-      this.getCubeUsageIncludingJoinOns(this.cubeUsageFromEntry(entry))
+  protected addCompositeFieldUsageFromEntry(entry: SpaceEntry) {
+    this.addCompositeFieldUsage(
+      this.getCompositeFieldUsageIncludingJoinOns(
+        this.compositeFieldUsageFromEntry(entry)
+      )
     );
   }
 
-  private getJoinOnCubeUsage(joinPath: string[]): model.CubeUsage {
+  private getJoinOnCompositeFieldUsage(
+    joinPath: string[]
+  ): model.CompositeFieldUsage {
     const reference = joinPath.map(n => new FieldName(n));
     this.astEl.has({reference});
     const lookup = this.queryInputSpace.lookup(reference);
     // Should always be found...
     if (lookup.found && lookup.found instanceof StructSpaceFieldBase) {
-      return lookup.found.fieldDef().onCubeUsage ?? emptyCubeUsage();
+      return (
+        lookup.found.fieldDef().onCompositeFieldUsage ??
+        emptyCompositeFieldUsage()
+      );
     }
     throw new Error('Unexpected join lookup was not found or not a struct');
   }
 
-  protected getCubeUsageIncludingJoinOns(
-    cubeUsage: model.CubeUsage
-  ): model.CubeUsage {
-    let cubeUsageIncludingJoinOns = cubeUsage;
-    const joinPaths = cubeUsageJoinPaths(cubeUsage);
+  protected getCompositeFieldUsageIncludingJoinOns(
+    compositeFieldUsage: model.CompositeFieldUsage
+  ): model.CompositeFieldUsage {
+    let compositeFieldUsageIncludingJoinOns = compositeFieldUsage;
+    const joinPaths = compositeFieldUsageJoinPaths(compositeFieldUsage);
     for (const joinPath of joinPaths) {
-      cubeUsageIncludingJoinOns = mergeCubeUsage(
-        this.getJoinOnCubeUsage(joinPath),
-        cubeUsageIncludingJoinOns
+      compositeFieldUsageIncludingJoinOns = mergeCompositeFieldUsage(
+        this.getJoinOnCompositeFieldUsage(joinPath),
+        compositeFieldUsageIncludingJoinOns
       );
     }
-    return cubeUsageIncludingJoinOns;
+    return compositeFieldUsageIncludingJoinOns;
   }
 
-  protected addCubeUsage(cubeUsage: model.CubeUsage) {
-    this.cubeUsage = mergeCubeUsage(this.cubeUsage, cubeUsage);
+  protected addCompositeFieldUsage(
+    compositeFieldUsage: model.CompositeFieldUsage
+  ) {
+    this.compositeFieldUsage = mergeCompositeFieldUsage(
+      this.compositeFieldUsage,
+      compositeFieldUsage
+    );
   }
 
-  protected addAndValidateCubeUsage(
-    cubeUsage: model.CubeUsage,
+  protected addAndValidateCompositeFieldUsage(
+    compositeFieldUsage: model.CompositeFieldUsage,
     logTo: MalloyElement
   ) {
-    const newCubeUsage = cubeUsageDifference(cubeUsage, this.cubeUsage);
-    const includingJoinOns = this.getCubeUsageIncludingJoinOns(newCubeUsage);
-    this.addCubeUsage(includingJoinOns);
-    this.validateCubeUsage(includingJoinOns, logTo);
+    const newCompositeFieldUsage = compositeFieldUsageDifference(
+      compositeFieldUsage,
+      this.compositeFieldUsage
+    );
+    const includingJoinOns = this.getCompositeFieldUsageIncludingJoinOns(
+      newCompositeFieldUsage
+    );
+    this.addCompositeFieldUsage(includingJoinOns);
+    this.validateCompositeFieldUsage(includingJoinOns, logTo);
   }
 
-  public addCubeUsageFromFilter(
+  public addCompositeFieldUsageFromFilter(
     filter: model.FilterCondition,
     logTo: MalloyElement
   ) {
-    if (filter.cubeUsage !== undefined) {
-      this.addAndValidateCubeUsage(filter.cubeUsage, logTo);
+    if (filter.compositeFieldUsage !== undefined) {
+      this.addAndValidateCompositeFieldUsage(filter.compositeFieldUsage, logTo);
     }
   }
 
-  private alreadyInvalidCubeUsage = false;
-  protected validateCubeUsage(
-    newCubeUsage: model.CubeUsage,
+  private alreadyInvalidCompositeFieldUsage = false;
+  protected validateCompositeFieldUsage(
+    newCompositeFieldUsage: model.CompositeFieldUsage,
     logTo: MalloyElement
   ) {
-    if (this.alreadyInvalidCubeUsage) return;
-    if (isEmptyCubeUsage(newCubeUsage)) return;
+    if (this.alreadyInvalidCompositeFieldUsage) return;
+    if (isEmptyCompositeFieldUsage(newCompositeFieldUsage)) return;
     const source = this.inputSpace().partialStructDef();
 
-    const resolved = resolveCubeSources(source, this.cubeUsage);
+    const resolved = resolveCompositeSources(source, this.compositeFieldUsage);
 
     if (resolved.error) {
-      logTo.logError('invalid-cube-usage', {
-        newUsage: newCubeUsage,
-        allUsage: this.cubeUsage,
+      logTo.logError('invalid-composite-field-usage', {
+        newUsage: newCompositeFieldUsage,
+        allUsage: this.compositeFieldUsage,
       });
-      this.alreadyInvalidCubeUsage = true;
+      this.alreadyInvalidCompositeFieldUsage = true;
     }
   }
 
   newEntry(name: string, logTo: MalloyElement, entry: SpaceEntry): void {
-    this.addAndValidateCubeUsage(this.cubeUsageFromEntry(entry), logTo);
+    this.addAndValidateCompositeFieldUsage(
+      this.compositeFieldUsageFromEntry(entry),
+      logTo
+    );
     super.newEntry(name, logTo, entry);
   }
 }
@@ -280,14 +300,14 @@ export abstract class QuerySpace extends QueryOperationSpace {
         );
         if (refTo.found) {
           this.setEntry(field.path[field.path.length - 1], refTo.found);
-          this.addCubeUsageFromEntry(refTo.found);
+          this.addCompositeFieldUsageFromEntry(refTo.found);
         }
       } else if (field.type !== 'turtle') {
         // TODO can you reference fields in a turtle as fields in the output space,
         // e.g. order_by: my_turtle.foo, or lag(my_turtle.foo)
         const entry = new ColumnSpaceField(field);
         this.setEntry(field.as ?? field.name, entry);
-        this.addCubeUsageFromEntry(entry);
+        this.addCompositeFieldUsageFromEntry(entry);
       }
     }
   }

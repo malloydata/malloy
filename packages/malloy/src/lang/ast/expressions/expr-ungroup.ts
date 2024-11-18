@@ -99,7 +99,7 @@ export class ExprUngroup extends ExpressionDef {
         expressionType: 'ungrouped_aggregate',
         value: ungroup,
         evalSpace: 'output',
-        cubeUsage: exprVal.cubeUsage,
+        compositeFieldUsage: exprVal.compositeFieldUsage,
       };
     }
     return this.loggedErrorExpr(

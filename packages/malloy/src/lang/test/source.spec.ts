@@ -376,11 +376,11 @@ describe('source:', () => {
     const ad = getFieldDef(hasDate!, 'ad');
     expect(ad).toMatchObject({name: 'ad', type: 'date'});
   });
-  describe('cube sources', () => {
-    test('basic cube', () => {
+  describe('composite sources', () => {
+    test('basic composite source', () => {
       expect(`
-        ##! experimental.cube_sources
-        source: x is cube(a, a extend { dimension: foo is 1 })
+        ##! experimental.composite_sources
+        source: x is compose(a, a extend { dimension: foo is 1 })
         run: x -> { select: foo }
       `).toTranslate();
     });

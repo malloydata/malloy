@@ -58,7 +58,7 @@ export class FilterElement extends MalloyElement {
         code: this.exprSrc,
         e: {node: 'false'},
         expressionType: 'scalar',
-        cubeUsage: exprVal.cubeUsage,
+        compositeFieldUsage: exprVal.compositeFieldUsage,
       };
     }
     const exprCond: FilterCondition = {
@@ -66,7 +66,7 @@ export class FilterElement extends MalloyElement {
       code: this.exprSrc,
       e: exprVal.value,
       expressionType: exprVal.expressionType,
-      cubeUsage: exprVal.cubeUsage,
+      compositeFieldUsage: exprVal.compositeFieldUsage,
     };
     return exprCond;
   }
@@ -143,7 +143,7 @@ export class Filter
       const fExpr = this.checkedFilterCondition(filterFS, filter);
       if (fExpr !== undefined) {
         executeFor.filters.push(fExpr);
-        executeFor.resultFS.addCubeUsageFromFilter(fExpr, filter);
+        executeFor.resultFS.addCompositeFieldUsageFromFilter(fExpr, filter);
       }
     }
   }

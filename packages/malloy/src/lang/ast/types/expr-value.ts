@@ -29,7 +29,10 @@ import {
   maxOfExpressionTypes,
   mergeEvalSpaces,
 } from '../../../model';
-import {emptyCubeUsage, mergeCubeUsage} from '../../../model/cube_utils';
+import {
+  emptyCompositeFieldUsage,
+  mergeCompositeFieldUsage,
+} from '../../../model/composite_source_utils';
 import {ExprResult} from './expr-result';
 import {TimeResult} from './time-result';
 
@@ -49,7 +52,9 @@ export function computedExprValue({
     value,
     expressionType: maxOfExpressionTypes(from.map(e => e.expressionType)),
     evalSpace: mergeEvalSpaces(...from.map(e => e.evalSpace)),
-    cubeUsage: mergeCubeUsage(...from.map(e => e.cubeUsage)),
+    compositeFieldUsage: mergeCompositeFieldUsage(
+      ...from.map(e => e.compositeFieldUsage)
+    ),
   };
 }
 
@@ -70,7 +75,9 @@ export function computedTimeResult({
     expressionType: xv.expressionType,
     evalSpace: xv.evalSpace,
     value: xv.value,
-    cubeUsage: mergeCubeUsage(...from.map(e => e.cubeUsage)),
+    compositeFieldUsage: mergeCompositeFieldUsage(
+      ...from.map(e => e.compositeFieldUsage)
+    ),
   };
   if (timeframe) {
     y.timeframe = timeframe;
@@ -117,7 +124,7 @@ export function literalTimeResult({
     expressionType: xv.expressionType,
     evalSpace: xv.evalSpace,
     value: xv.value,
-    cubeUsage: emptyCubeUsage(),
+    compositeFieldUsage: emptyCompositeFieldUsage(),
   };
   if (timeframe) {
     y.timeframe = timeframe;

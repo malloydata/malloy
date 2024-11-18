@@ -93,7 +93,7 @@ export type Expr =
   | NullNode
   | CaseExpr
   | InCompareExpr
-  | CubeFieldExpr
+  | CompositeFieldExpr
   | ErrorNode;
 
 interface HasTypeDef {
@@ -150,7 +150,7 @@ export interface FilterCondition extends ExprE {
   node: 'filterCondition';
   code: string;
   expressionType: ExpressionType;
-  cubeUsage?: CubeUsage;
+  compositeFieldUsage?: CompositeFieldUsage;
 }
 
 export interface FilteredExpr extends ExprWithKids {
@@ -371,8 +371,8 @@ export interface CaseExpr extends ExprWithKids {
   };
 }
 
-export interface CubeFieldExpr extends ExprLeaf {
-  node: 'cubeField';
+export interface CompositeFieldExpr extends ExprLeaf {
+  node: 'compositeField';
 }
 
 export interface InCompareExpr extends ExprWithKids {
@@ -390,7 +390,7 @@ export type ExpressionType =
 
 export interface Expression {
   e?: Expr;
-  cubeUsage?: CubeUsage; // TODO maybe make required?
+  compositeFieldUsage?: CompositeFieldUsage; // TODO maybe make required?
   expressionType?: ExpressionType;
   code?: string;
 }
@@ -764,7 +764,7 @@ export interface JoinBase {
   join: JoinType;
   matrixOperation?: MatrixOperation;
   onExpression?: Expr;
-  onCubeUsage?: CubeUsage;
+  onCompositeFieldUsage?: CompositeFieldUsage;
 }
 
 export type Joinable =
@@ -788,7 +788,7 @@ export function isJoinable(sd: StructDef): sd is Joinable {
     'query_source',
     'array',
     'record',
-    'cube',
+    'composite',
   ].includes(sd.type);
 }
 
@@ -912,7 +912,7 @@ export interface Query extends Pipeline, Filtered, HasLocation {
   sourceArguments?: Record<string, Argument>;
   annotation?: Annotation;
   modelAnnotation?: Annotation;
-  cubeResolvedSourceDef?: SourceDef;
+  compositeResolvedSourceDef?: SourceDef;
 }
 
 export type NamedQuery = Query & NamedObject;
@@ -1015,9 +1015,9 @@ export function isIndexSegment(pe: PipeSegment): pe is IndexSegment {
   return (pe as IndexSegment).type === 'index';
 }
 
-export interface CubeUsage {
+export interface CompositeFieldUsage {
   fields: string[];
-  joinedUsage: Record<string, CubeUsage>;
+  joinedUsage: Record<string, CompositeFieldUsage>;
 }
 
 export interface QuerySegment extends Filtered {
@@ -1029,7 +1029,7 @@ export interface QuerySegment extends Filtered {
   orderBy?: OrderBy[]; // uses output field name or index.
   queryTimezone?: string;
   alwaysJoins?: string[];
-  cubeUsage?: CubeUsage;
+  compositeFieldUsage?: CompositeFieldUsage;
 }
 
 export interface TurtleDef extends NamedObject, Pipeline {
@@ -1060,9 +1060,9 @@ export interface TableSourceDef extends SourceDefBase {
   tablePath: string;
 }
 
-export interface CubeSourceDef extends SourceDefBase {
-  type: 'cube';
-  // TODO make cube sources support StructRefs
+export interface CompositeSourceDef extends SourceDefBase {
+  type: 'composite';
+  // TODO make composite sources support StructRefs
   sources: SourceDef[];
 }
 
@@ -1131,7 +1131,7 @@ export function isSourceDef(sd: NamedModelObject | FieldDef): sd is SourceDef {
     sd.type === 'query_result' ||
     sd.type === 'finalize' ||
     sd.type === 'nest_source' ||
-    sd.type === 'cube'
+    sd.type === 'composite'
   );
 }
 
@@ -1142,7 +1142,7 @@ export type SourceDef =
   | QueryResultDef
   | FinalizeSourceDef
   | NestSourceDef
-  | CubeSourceDef;
+  | CompositeSourceDef;
 
 /** Is this the "FROM" table of a query tree */
 export function isBaseTable(def: StructDef): def is SourceDef {
@@ -1185,7 +1185,7 @@ export type LeafExpressionType = Exclude<
 export type TypeInfo = {
   expressionType: ExpressionType;
   evalSpace: EvalSpace;
-  cubeUsage: CubeUsage;
+  compositeFieldUsage: CompositeFieldUsage;
 };
 
 export type TypeDesc = ExpressionValueTypeDef & TypeInfo;

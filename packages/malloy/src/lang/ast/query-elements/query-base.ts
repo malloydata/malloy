@@ -21,7 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {isEmptyCubeUsage, resolveCubeSources} from '../../../model/cube_utils';
+import {
+  isEmptyCompositeFieldUsage,
+  resolveCompositeSources,
+} from '../../../model/composite_source_utils';
 import {isQuerySegment, Query, SourceDef} from '../../../model/malloy_types';
 import {detectAndRemovePartialStages} from '../query-utils';
 import {MalloyElement} from '../types/malloy-element';
@@ -32,19 +35,25 @@ export abstract class QueryBase extends MalloyElement {
 
   query(): Query {
     const {inputStruct, query} = this.queryComp(true);
-    // TODO add an error if a raw/index query is done against a cube
-    let cubeResolvedSourceDef: SourceDef | undefined = undefined;
+    // TODO add an error if a raw/index query is done against a composite source
+    let compositeResolvedSourceDef: SourceDef | undefined = undefined;
     if (query.pipeline[0] && isQuerySegment(query.pipeline[0])) {
-      const cubeUsage = query.pipeline[0].cubeUsage;
-      if (cubeUsage !== undefined && !isEmptyCubeUsage(cubeUsage)) {
-        const resolved = resolveCubeSources(inputStruct, cubeUsage);
-        cubeResolvedSourceDef = resolved.sourceDef;
+      const compositeFieldUsage = query.pipeline[0].compositeFieldUsage;
+      if (
+        compositeFieldUsage !== undefined &&
+        !isEmptyCompositeFieldUsage(compositeFieldUsage)
+      ) {
+        const resolved = resolveCompositeSources(
+          inputStruct,
+          compositeFieldUsage
+        );
+        compositeResolvedSourceDef = resolved.sourceDef;
       }
     }
 
     return {
       ...query,
-      cubeResolvedSourceDef,
+      compositeResolvedSourceDef,
       pipeline: detectAndRemovePartialStages(query.pipeline, this),
     };
   }

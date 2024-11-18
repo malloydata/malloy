@@ -22,7 +22,7 @@
  */
 
 import {
-  CubeUsage,
+  CompositeFieldUsage,
   FilterCondition,
   PartialSegment,
   PipeSegment,
@@ -47,7 +47,10 @@ import {
 import {DefinitionList} from '../types/definition-list';
 import {QueryInputSpace} from '../field-space/query-input-space';
 import {MalloyElement} from '../types/malloy-element';
-import {emptyCubeUsage, mergeCubeUsage} from '../../../model/cube_utils';
+import {
+  emptyCompositeFieldUsage,
+  mergeCompositeFieldUsage,
+} from '../../../model/composite_source_utils';
 
 export abstract class QuerySegmentBuilder implements QueryBuilder {
   order?: Top | Ordering;
@@ -107,10 +110,12 @@ export abstract class QuerySegmentBuilder implements QueryBuilder {
 
   abstract finalize(fromSeg: PipeSegment | undefined): PipeSegment;
 
-  get cubeUsage(): CubeUsage {
-    return mergeCubeUsage(
-      this.resultFS.cubeUsage,
-      ...this.filters.map(f => f.cubeUsage ?? emptyCubeUsage())
+  get compositeFieldUsage(): CompositeFieldUsage {
+    return mergeCompositeFieldUsage(
+      this.resultFS.compositeFieldUsage,
+      ...this.filters.map(
+        f => f.compositeFieldUsage ?? emptyCompositeFieldUsage()
+      )
     );
   }
 
@@ -153,11 +158,14 @@ export abstract class QuerySegmentBuilder implements QueryBuilder {
       to.alwaysJoins = [...this.alwaysJoins];
     }
 
-    const fromCubeUsage =
+    const fromCompositeFieldUsage =
       from && isQuerySegment(from)
-        ? from.cubeUsage ?? emptyCubeUsage()
-        : emptyCubeUsage();
-    to.cubeUsage = mergeCubeUsage(fromCubeUsage, this.cubeUsage);
+        ? from.compositeFieldUsage ?? emptyCompositeFieldUsage()
+        : emptyCompositeFieldUsage();
+    to.compositeFieldUsage = mergeCompositeFieldUsage(
+      fromCompositeFieldUsage,
+      this.compositeFieldUsage
+    );
   }
 }
 

@@ -24,7 +24,7 @@
 
 import {MalloyTranslator, TranslateResponse} from '..';
 import {
-  CubeUsage,
+  CompositeFieldUsage,
   DocumentLocation,
   DocumentRange,
   Expr,
@@ -84,7 +84,7 @@ declare global {
        * Warnings are ignored, so need to be checked seperately
        */
       compilesTo(exprString: string): R;
-      hasCubeUsage(cubeUsage: CubeUsage): R;
+      hasCompositeUsage(compositeUsage: CompositeFieldUsage): R;
     }
   }
 }
@@ -366,7 +366,10 @@ expect.extend({
     const msg = pass ? `Matched: ${rcvExpr}` : this.utils.diff(expr, rcvExpr);
     return {pass, message: () => `${msg}`};
   },
-  hasCubeUsage: function (tx: TestSource, cubeUsage: CubeUsage) {
+  hasCompositeUsage: function (
+    tx: TestSource,
+    compositeFieldUsage: CompositeFieldUsage
+  ) {
     let bx: BetaExpression;
     if (typeof tx === 'string') {
       bx = new BetaExpression(tx);
@@ -394,11 +397,11 @@ expect.extend({
     if (!badRefs.pass) {
       return badRefs;
     }
-    const actual = bx.generated().cubeUsage;
-    const pass = this.equals(actual, cubeUsage);
+    const actual = bx.generated().compositeFieldUsage;
+    const pass = this.equals(actual, compositeFieldUsage);
     const msg = pass
       ? `Matched: ${actual}`
-      : this.utils.diff(cubeUsage, actual);
+      : this.utils.diff(compositeFieldUsage, actual);
     return {pass, message: () => `${msg}`};
   },
 });

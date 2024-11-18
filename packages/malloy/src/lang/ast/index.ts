@@ -32,7 +32,7 @@ export * from './source-query-elements/sq-refine';
 export * from './source-query-elements/sq-source';
 export * from './source-query-elements/sq-reference';
 export * from './source-query-elements/sq-extend';
-export * from './source-query-elements/sq-cube';
+export * from './source-query-elements/sq-compose';
 
 export * from './source-properties/field-list-edit';
 export * from './source-properties/primary-key';

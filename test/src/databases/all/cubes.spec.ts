@@ -16,55 +16,55 @@ afterAll(async () => {
 });
 
 runtimes.runtimeMap.forEach((runtime, databaseName) => {
-  it(`basic cube usage - ${databaseName}`, async () => {
+  it(`basic composite usage - ${databaseName}`, async () => {
     await expect(`
-      ##! experimental.cube_sources
+      ##! experimental.composite_sources
       source: state_facts is ${databaseName}.table('malloytest.state_facts')
-      source: x is cube(state_facts, state_facts extend { dimension: foo is 1 })
+      source: x is compose(state_facts, state_facts extend { dimension: foo is 1 })
       run: x -> { group_by: foo }
     `).malloyResultMatches(runtime, {foo: 1});
   });
-  it(`cube used in join - ${databaseName}`, async () => {
+  it(`composite source used in join - ${databaseName}`, async () => {
     await expect(`
-      ##! experimental.cube_sources
+      ##! experimental.composite_sources
       source: state_facts is ${databaseName}.table('malloytest.state_facts')
-      source: x is cube(state_facts, state_facts extend { dimension: foo is 1 })
+      source: x is compose(state_facts, state_facts extend { dimension: foo is 1 })
       source: y is ${databaseName}.table('malloytest.state_facts') extend {
         join_one: x on x.state = state
       }
       run: y -> { group_by: x.foo }
     `).malloyResultMatches(runtime, {foo: 1});
   });
-  it(`cube used in join on - ${databaseName}`, async () => {
+  it(`composite used in join on - ${databaseName}`, async () => {
     await expect(`
-      ##! experimental.cube_sources
+      ##! experimental.composite_sources
       source: state_facts is ${databaseName}.table('malloytest.state_facts')
-      source: x is cube(state_facts, state_facts extend { dimension: state_copy is state })
+      source: x is compose(state_facts, state_facts extend { dimension: state_copy is state })
       source: y is ${databaseName}.table('malloytest.state_facts') extend {
         // Join california by testing state copy;
-        // cube usage is in join on, so the cube with state_copy should
+        // composite field usage is in join on, so the composite source with state_copy should
         // be selected whenever this join is used
         join_one: ca is x on ca.state_copy = 'CA'
       }
       run: y -> { group_by: ca.state; where: state = 'IL' }
     `).malloyResultMatches(runtime, {state: 'CA'});
   });
-  // TODO test always join cube usage
-  it(`cube used in view - ${databaseName}`, async () => {
+  // TODO test always join composite field usage
+  it(`composite field used in view - ${databaseName}`, async () => {
     await expect(`
-      ##! experimental.cube_sources
+      ##! experimental.composite_sources
       source: state_facts is ${databaseName}.table('malloytest.state_facts')
-      source: x is cube(state_facts, state_facts extend { dimension: foo is 1 }) extend {
+      source: x is compose(state_facts, state_facts extend { dimension: foo is 1 }) extend {
         view: v is { group_by: foo }
       }
       run: x -> v
     `).malloyResultMatches(runtime, {foo: 1});
   });
-  it(`cube used in view refined with scalar - ${databaseName}`, async () => {
+  it(`composite field used in view refined with scalar - ${databaseName}`, async () => {
     await expect(`
-      ##! experimental.cube_sources
+      ##! experimental.composite_sources
       source: state_facts is ${databaseName}.table('malloytest.state_facts')
-      source: x is cube(state_facts, state_facts extend { dimension: foo is 1 }) extend {
+      source: x is compose(state_facts, state_facts extend { dimension: foo is 1 }) extend {
         view: v is {
           group_by: state
           where: state = 'CA'
@@ -74,11 +74,11 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: x -> v + foo
     `).malloyResultMatches(runtime, {foo: 1, state: 'CA'});
   });
-  it(`cube used in view refined with literal view - ${databaseName}`, async () => {
+  it(`composite field used in view refined with literal view - ${databaseName}`, async () => {
     await expect(`
-      ##! experimental.cube_sources
+      ##! experimental.composite_sources
       source: state_facts is ${databaseName}.table('malloytest.state_facts')
-      source: x is cube(state_facts, state_facts extend { dimension: foo is 1 }) extend {
+      source: x is compose(state_facts, state_facts extend { dimension: foo is 1 }) extend {
         view: v is {
           group_by: state
           where: state = 'CA'
@@ -88,11 +88,11 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: x -> v + { group_by: foo }
     `).malloyResultMatches(runtime, {foo: 1, state: 'CA'});
   });
-  it(`cube used in refined query - ${databaseName}`, async () => {
+  it(`composite field used in refined query - ${databaseName}`, async () => {
     await expect(`
-      ##! experimental.cube_sources
+      ##! experimental.composite_sources
       source: state_facts is ${databaseName}.table('malloytest.state_facts')
-      source: x is cube(state_facts, state_facts extend { dimension: foo is 1 }) extend {
+      source: x is compose(state_facts, state_facts extend { dimension: foo is 1 }) extend {
         view: v is {
           group_by: state
           where: state = 'CA'
@@ -103,28 +103,28 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: v + { group_by: foo }
     `).malloyResultMatches(runtime, {foo: 1, state: 'CA'});
   });
-  it(`cube of a cube - ${databaseName}`, async () => {
+  it(`composite of a composite - ${databaseName}`, async () => {
     await expect(`
-      ##! experimental.cube_sources
+      ##! experimental.composite_sources
       source: state_facts is ${databaseName}.table('malloytest.state_facts')
-      source: x is cube(
+      source: x is compose(
         state_facts,
         state_facts extend { dimension: foo is 1 }
       )
-      source: y is cube(
+      source: y is compose(
         x,
         x extend { dimension: bar is 2 }
       )
-      // in order to get bar, we need to use the second cube input, which is itself a cube
-      // then in order to get foo, we need to resolve the inner cube to its second input
+      // in order to get bar, we need to use the second composite input, which is itself a composite source
+      // then in order to get foo, we need to resolve the inner composite source to its second input
       run: y -> { group_by: foo, bar }
     `).malloyResultMatches(runtime, {foo: 1, bar: 2});
   });
-  it(`definitions from cube extension carry through - ${databaseName}`, async () => {
+  it(`definitions from composite extension carry through - ${databaseName}`, async () => {
     await expect(`
-      ##! experimental.cube_sources
+      ##! experimental.composite_sources
       source: state_facts is ${databaseName}.table('malloytest.state_facts')
-      source: x is cube(
+      source: x is compose(
         state_facts,
         state_facts extend { dimension: foo is 1 }
       ) extend {
@@ -133,11 +133,11 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: x -> { group_by: foo, bar }
     `).malloyResultMatches(runtime, {foo: 1, bar: 2});
   });
-  it(`filters from cube extension carry through - ${databaseName}`, async () => {
+  it(`filters from composite extension carry through - ${databaseName}`, async () => {
     await expect(`
-      ##! experimental.cube_sources
+      ##! experimental.composite_sources
       source: state_facts is ${databaseName}.table('malloytest.state_facts')
-      source: x is cube(
+      source: x is compose(
         state_facts,
         state_facts extend { dimension: foo is 1 }
       ) extend {
@@ -146,28 +146,28 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: x -> { group_by: foo, state }
     `).malloyResultMatches(runtime, {foo: 1, state: 'CA'});
   });
-  it(`cube of a cube where greedy is bad- ${databaseName}`, async () => {
+  it(`composite of a composite where greedy is bad- ${databaseName}`, async () => {
     await expect(`
-      ##! experimental.cube_sources
+      ##! experimental.composite_sources
       source: state_facts is ${databaseName}.table('malloytest.state_facts')
-      source: x is cube(
-        cube(
+      source: x is compose(
+        compose(
           state_facts extend { dimension: foo is 1.1, bar is 2.1 },
           state_facts extend { dimension: foo is 1.2, baz is 3.2 }
         ),
         state_facts extend { dimension: foo is 1.3, bar is 2.3, baz is 3.3 }
       )
-      // even though the first cube has all the fields foo, bar, baz; it is impossible
-      // to resolve it using the first cube, because you can't have both bar and baz
+      // even though the first composite has all the fields foo, bar, baz; it is impossible
+      // to resolve it using the first composite, because you can't have both bar and baz
       // so the second input source is used instead
       run: x -> { group_by: foo, bar, baz }
     `).malloyResultMatches(runtime, {foo: 1.3, bar: 2.3, baz: 3.3});
   });
-  it(`cube with parameters - ${databaseName}`, async () => {
+  it(`composite with parameters - ${databaseName}`, async () => {
     await expect(`
-      ##! experimental { cube_sources parameters }
+      ##! experimental { composite_sources parameters }
       source: state_facts is ${databaseName}.table('malloytest.state_facts')
-      source: x(param is 1) is cube(
+      source: x(param is 1) is compose(
         state_facts extend { dimension: a is param },
         state_facts extend { dimension: b is param + 1 }
       )
