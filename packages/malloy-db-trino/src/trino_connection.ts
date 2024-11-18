@@ -582,7 +582,7 @@ export class PrestoConnection extends TrinoPrestoConnection {
 
     /*
      * Here's a hand built parser for schema lines, roughly this grammar
-     * SCHEMA_LINE: '- Output [PlanName N]' [NAME_LIST] => [TYPE_LIST]
+     * SCHEMA_LINE: PrestoExplainParser => [TYPE_LIST]
      * NAME_LIST: NAME (, NAME)*
      * TYPE_LIST: TYPE_SPEC (, TYPE_SPEC)*
      * TYPE_SPEC: exprN ':' TYPE
@@ -592,13 +592,15 @@ export class PrestoConnection extends TrinoPrestoConnection {
      */
     const schemaDesc = new PrestoExplainParser(lines[0], this.dialect);
     if (schemaDesc.containsNo(']') || schemaDesc.missingExpected('[')) {
-      throw new Error('Missing name list');
+      throw schemaDesc.parseError(
+        "Expected something like '- Output [PlanName N] [NAME_LIST]'"
+      );
     }
     const fieldNames: string[] = [];
     for (;;) {
       const nmToken = schemaDesc.next();
       if (nmToken.type !== 'id') {
-        throw new Error('Expected name of field');
+        throw schemaDesc.parseError('Expected name of field');
       }
       fieldNames.push(nmToken.text);
       const sep = schemaDesc.next();
@@ -606,17 +608,21 @@ export class PrestoConnection extends TrinoPrestoConnection {
         continue;
       }
       if (sep.type !== ']') {
-        throw new Error(`Unexpected '${sep.text}' while getting name list`);
+        throw schemaDesc.parseError(
+          `Unexpected '${sep.text}' while getting name list`
+        );
       }
       break;
     }
     if (schemaDesc.missingExpected('arrow', '[')) {
-      throw new Error("Expected '=> [' to begin type definition");
+      throw schemaDesc.parseError("Expected '=> [' to begin type definition");
     }
     for (let nameIndex = 0; ; nameIndex += 1) {
       const name = fieldNames[nameIndex];
       if (schemaDesc.missingExpected('id', ':')) {
-        throw new Error("Expected 'exprN:' before each type in schema");
+        throw schemaDesc.parseError(
+          "Expected 'exprN:' before each type in schema"
+        );
       }
       const nextType = schemaDesc.typeDef();
       structDef.fields.push({...nextType, name});
@@ -625,13 +631,15 @@ export class PrestoConnection extends TrinoPrestoConnection {
         continue;
       }
       if (sep.text !== ']') {
-        throw new Error(`Unexpected '${sep.text}' between field types`);
+        throw schemaDesc.parseError(
+          `Unexpected '${sep.text}' between field types`
+        );
       }
       break;
     }
     if (structDef.fields.length !== fieldNames.length) {
       throw new Error(
-        `schema error ${structDef.fields.length} types and ${fieldNames.length} fields`
+        `presto schema error mismatched ${structDef.fields.length} types and ${fieldNames.length} fields`
       );
     }
   }
