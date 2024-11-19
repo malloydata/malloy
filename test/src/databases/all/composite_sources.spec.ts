@@ -9,7 +9,7 @@ import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
 import '../../util/db-jest-matchers';
 
-const runtimes = new RuntimeList(databasesFromEnvironmentOr([allDatabases]));
+const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 afterAll(async () => {
   await runtimes.closeAll();
@@ -185,5 +185,16 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         where: state = 'CA'
       }
     `).malloyResultMatches(runtime, {total_airport_count: 984});
+  });
+  it('issue where query against composite source with no composite field usage does not resolve the source', async () => {
+    await expect(`
+      ##! experimental { composite_sources parameters }
+      source: state_facts is ${databaseName}.table('malloytest.state_facts')
+      run: compose(state_facts, state_facts) extend {
+        measure: total_airport_count is airport_count.sum()
+      } -> {
+        group_by: x is 1
+      }
+    `).malloyResultMatches(runtime, {x: 1});
   });
 });
