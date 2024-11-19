@@ -9,14 +9,14 @@ import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
 import '../../util/db-jest-matchers';
 
-const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
+const runtimes = new RuntimeList(databasesFromEnvironmentOr([allDatabases]));
 
 afterAll(async () => {
   await runtimes.closeAll();
 });
 
-runtimes.runtimeMap.forEach((runtime, databaseName) => {
-  it(`basic composite usage - ${databaseName}`, async () => {
+describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
+  it('basic composite usage', async () => {
     await expect(`
       ##! experimental.composite_sources
       source: state_facts is ${databaseName}.table('malloytest.state_facts')
@@ -24,7 +24,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: x -> { group_by: foo }
     `).malloyResultMatches(runtime, {foo: 1});
   });
-  it(`composite source used in join - ${databaseName}`, async () => {
+  it('composite source used in join', async () => {
     await expect(`
       ##! experimental.composite_sources
       source: state_facts is ${databaseName}.table('malloytest.state_facts')
@@ -35,7 +35,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: y -> { group_by: x.foo }
     `).malloyResultMatches(runtime, {foo: 1});
   });
-  it(`composite used in join on - ${databaseName}`, async () => {
+  it('composite used in join on', async () => {
     await expect(`
       ##! experimental.composite_sources
       source: state_facts is ${databaseName}.table('malloytest.state_facts')
@@ -50,7 +50,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     `).malloyResultMatches(runtime, {state: 'CA'});
   });
   // TODO test always join composite field usage
-  it(`composite field used in view - ${databaseName}`, async () => {
+  it('composite field used in view', async () => {
     await expect(`
       ##! experimental.composite_sources
       source: state_facts is ${databaseName}.table('malloytest.state_facts')
@@ -60,7 +60,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: x -> v
     `).malloyResultMatches(runtime, {foo: 1});
   });
-  it(`composite field used in view refined with scalar - ${databaseName}`, async () => {
+  it('composite field used in view refined with scalar', async () => {
     await expect(`
       ##! experimental.composite_sources
       source: state_facts is ${databaseName}.table('malloytest.state_facts')
@@ -74,7 +74,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: x -> v + foo
     `).malloyResultMatches(runtime, {foo: 1, state: 'CA'});
   });
-  it(`composite field used in view refined with literal view - ${databaseName}`, async () => {
+  it('composite field used in view refined with literal view', async () => {
     await expect(`
       ##! experimental.composite_sources
       source: state_facts is ${databaseName}.table('malloytest.state_facts')
@@ -88,7 +88,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: x -> v + { group_by: foo }
     `).malloyResultMatches(runtime, {foo: 1, state: 'CA'});
   });
-  it(`composite field used in refined query - ${databaseName}`, async () => {
+  it('composite field used in refined query', async () => {
     await expect(`
       ##! experimental.composite_sources
       source: state_facts is ${databaseName}.table('malloytest.state_facts')
@@ -103,7 +103,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: v + { group_by: foo }
     `).malloyResultMatches(runtime, {foo: 1, state: 'CA'});
   });
-  it(`composite of a composite - ${databaseName}`, async () => {
+  it('composite of a composite', async () => {
     await expect(`
       ##! experimental.composite_sources
       source: state_facts is ${databaseName}.table('malloytest.state_facts')
@@ -120,7 +120,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: y -> { group_by: foo, bar }
     `).malloyResultMatches(runtime, {foo: 1, bar: 2});
   });
-  it(`definitions from composite extension carry through - ${databaseName}`, async () => {
+  it('definitions from composite extension carry through', async () => {
     await expect(`
       ##! experimental.composite_sources
       source: state_facts is ${databaseName}.table('malloytest.state_facts')
@@ -133,7 +133,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: x -> { group_by: foo, bar }
     `).malloyResultMatches(runtime, {foo: 1, bar: 2});
   });
-  it(`filters from composite extension carry through - ${databaseName}`, async () => {
+  it('filters from composite extension carry through', async () => {
     await expect(`
       ##! experimental.composite_sources
       source: state_facts is ${databaseName}.table('malloytest.state_facts')
@@ -163,7 +163,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: x -> { group_by: foo, bar, baz }
     `).malloyResultMatches(runtime, {foo: 1.3, bar: 2.3, baz: 3.3});
   });
-  it(`composite with parameters - ${databaseName}`, async () => {
+  it('composite with parameters', async () => {
     await expect(`
       ##! experimental { composite_sources parameters }
       source: state_facts is ${databaseName}.table('malloytest.state_facts')
@@ -173,5 +173,17 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       )
       run: x(param is 2) -> { group_by: b }
     `).malloyResultMatches(runtime, {b: 3});
+  });
+  it('issue where measure defined on composite source has the wrong structPath', async () => {
+    await expect(`
+      ##! experimental { composite_sources parameters }
+      source: state_facts is ${databaseName}.table('malloytest.state_facts')
+      run: compose(state_facts, state_facts) extend {
+        measure: total_airport_count is airport_count.sum()
+      } -> {
+        aggregate: total_airport_count
+        where: state = 'CA'
+      }
+    `).malloyResultMatches(runtime, {total_airport_count: 984});
   });
 });
