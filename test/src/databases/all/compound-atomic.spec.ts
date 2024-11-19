@@ -43,6 +43,7 @@ describe.each(runtimes.runtimeList)(
       'presto': 'CARDINALITY',
       'trino': 'CARDINALITY',
       'mysql': 'JSON_LENGTH',
+      'snowflake': 'ARRAY_SIZE',
     };
     const empty = `${databaseName}.sql("SELECT 0")`;
     function arraySelectVal(...val: Number[]): string {
@@ -92,14 +93,15 @@ describe.each(runtimes.runtimeList)(
     const ab = recordSelectVal({a: 0, b: 1});
 
     const sizesObj = {s: 0, m: 1, l: 2, xl: 3};
-    const sizes = `${databaseName}.sql("""SELECT ${recordSelectVal(
-      sizesObj
-    )} as sizes""")`;
-
+    const sizesSQL = recordSelectVal(sizesObj);
+    const sizes = `${databaseName}.sql("""
+      SELECT ${sizesSQL} AS ${runtime.dialect.sqlMaybeQuoteIdentifier('sizes')}
+    """)`;
     const evensObj = [2, 4, 6, 8];
-    const evens = `${databaseName}.sql("SELECT ${arraySelectVal(
-      ...evensObj
-    )} as evens")`;
+    const evensSQL = arraySelectVal(...evensObj);
+    const evens = `${databaseName}.sql("""
+      SELECT ${evensSQL} AS ${runtime.dialect.sqlMaybeQuoteIdentifier('evens')}
+    """)`;
 
     describe('simple arrays', () => {
       test('array literal dialect function', async () => {
