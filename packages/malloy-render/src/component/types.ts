@@ -36,6 +36,7 @@ export type VegaChartProps = {
   totalWidth: number;
   totalHeight: number;
   chartType: string;
+  chartTag: Tag;
   mapMalloyDataToChartData: MalloyDataToChartDataHandler;
   getTooltipData?: (item: Item, view: View) => ChartTooltipEntry | null;
 };

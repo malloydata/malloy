@@ -37,3 +37,21 @@
 .malloy-chart_debug_icon {
   width: 16px;
 }
+
+.malloy-chart__titles-bar {
+  padding-inline: 8px;
+  padding-top: 8px;
+  /* TODO: this feels hacky.
+    Maybe we need to configure the top padding of a chart to have more/less space
+    based on whether we detect there will be a title or not
+  */
+  margin-bottom: -8px;
+  display: flex;
+  flex-direction: column;
+  gap: 0px;
+  line-height: calc(var(--malloy-render--table-row-height) * 5 / 7 - 1px);
+}
+
+.malloy-chart__title {
+  font-weight: bold;
+}
