@@ -769,6 +769,7 @@ export function generateLineChartVegaSpec(
     totalWidth: chartSettings.totalWidth,
     totalHeight: chartSettings.totalHeight,
     chartType: 'line_chart',
+    chartTag,
     mapMalloyDataToChartData,
     getTooltipData(item, view) {
       if (tooltipEntryMemo.has(item)) {
