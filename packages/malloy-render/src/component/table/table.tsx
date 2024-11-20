@@ -122,6 +122,9 @@ const HeaderField = (props: {field: Field; isPinned?: boolean}) => {
     (fieldLayout.depth > 0 && isLastChild(props.field)) ||
     (fieldLayout.depth === 0 && fieldLayout.metadata.renderAs === 'table');
 
+  const customLabel = props.field.tagParse().tag.text('label');
+  const value = customLabel ?? props.field.name.replace(/_/g, '_\u200b');
+
   return (
     <div
       class="column-cell th"
@@ -144,7 +147,7 @@ const HeaderField = (props: {field: Field; isPinned?: boolean}) => {
       <Cell
         field={props.field}
         // Add zero-width space so header name will wrap on _
-        value={props.field.name.replace(/_/g, '_\u200b')}
+        value={value}
         hideStartGutter={hideStartGutter}
         hideEndGutter={hideEndGutter}
         tableGutterLeft={tableGutterLeft}
