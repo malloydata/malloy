@@ -458,10 +458,34 @@ ${indent(sql)}
   malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
     if (malloyType.type === 'number') {
       if (malloyType.numberType === 'integer') {
-        return 'integer';
+        return 'INTEGER';
       } else {
-        return 'double';
+        return 'DOUBLE';
       }
+    } else if (
+      malloyType.type === 'record' ||
+      (malloyType.type === 'array' &&
+        malloyType.elementTypeDef.type === 'record_element')
+    ) {
+      const sqlFields = malloyType.fields.reduce((ret, f) => {
+        if (isAtomic(f)) {
+          const name = f.as ?? f.name;
+          const oneSchema = `${this.sqlMaybeQuoteIdentifier(
+            name
+          )} ${this.malloyTypeToSQLType(f)}`;
+          ret.push(oneSchema);
+        }
+        return ret;
+      }, [] as string[]);
+      const recordScehma = `OBJECT(${sqlFields.join(',')})`;
+      return malloyType.type === 'record'
+        ? recordScehma
+        : `ARRAY(${recordScehma})`;
+    } else if (
+      malloyType.type === 'array' &&
+      malloyType.elementTypeDef.type !== 'record_element'
+    ) {
+      return `ARRAY(${this.malloyTypeToSQLType(malloyType.elementTypeDef)})`;
     }
     return malloyType.type;
   }
@@ -496,23 +520,22 @@ ${indent(sql)}
 
   sqlLiteralRecord(lit: RecordLiteralNode): string {
     const rowVals: string[] = [];
-    const rowTypes: string[] = [];
     for (const f of lit.typeDef.fields) {
       if (isAtomic(f)) {
         const name = f.as ?? f.name;
         const propName = `'${name}'`;
         const propVal = lit.kids[name].sql ?? 'internal-error-record-literal';
         rowVals.push(`${propName}:${propVal}`);
-        rowTypes.push(
-          `${this.sqlMaybeQuoteIdentifier(name)} ${this.malloyTypeToSQLType(f)}`
-        );
       }
     }
-    return `{${rowVals.join(',')}}::OBJECT(${rowTypes.join(',')})`;
+    return `{${rowVals.join(',')}}::${this.malloyTypeToSQLType(lit.typeDef)}`;
   }
 
   sqlLiteralArray(lit: ArrayLiteralNode): string {
     const array = lit.kids.values.map(val => val.sql);
-    return `[${array.join(',')}]`;
+    const arraySchema = `[${array.join(',')}]`;
+    return lit.typeDef.elementTypeDef.type === 'record_element'
+      ? `${arraySchema}::${this.malloyTypeToSQLType(lit.typeDef)}`
+      : arraySchema;
   }
 }

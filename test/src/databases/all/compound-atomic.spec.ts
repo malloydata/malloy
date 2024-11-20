@@ -45,7 +45,7 @@ describe.each(runtimes.runtimeList)(
       'mysql': 'JSON_LENGTH',
       'snowflake': 'ARRAY_SIZE',
     };
-    const empty = `${databaseName}.sql("SELECT 0")`;
+    const empty = `${databaseName}.sql("SELECT 0 as z")`;
     function arraySelectVal(...val: Number[]): string {
       const literal: ArrayLiteralNode = {
         node: 'arrayLiteral',
@@ -408,3 +408,7 @@ describe.each(runtimes.runtimeList)(
     });
   }
 );
+
+afterAll(async () => {
+  await runtimes.closeAll();
+});
