@@ -306,6 +306,26 @@ test('run lenses go before block annotations', () => {
   );
 });
 
+test('multiline unnamed queries include last line', () => {
+  // The trailing } being in column 0 is significant
+  testLens(
+    markSource`${`run: flights -> {
+  group_by: carrier
+}`}`,
+    [0]
+  );
+});
+
+test('multiline named queries include last line', () => {
+  // The trailing } being in column 0 is significant
+  testLens(
+    markSource`${`query: by_carrier is flights -> {
+  group_by: carrier
+}`}`,
+    [0]
+  );
+});
+
 test('(regression) query does not use source block range', () => {
   testLens(
     markSource`source: a is DB.table('b') extend {

@@ -943,7 +943,7 @@ export abstract class MalloyTranslation {
       const lastLine = this.parseStep.sourceInfo.lines.length - 1;
       for (let lineNo = startToken.line - 1; lineNo <= lastLine; lineNo++) {
         const at = this.parseStep.sourceInfo.at[lineNo];
-        if (stopToken.stopIndex >= at.begin && stopToken.stopIndex <= at.end) {
+        if (stopToken.stopIndex >= at.begin && stopToken.stopIndex < at.end) {
           return {
             start,
             end: {
@@ -1013,9 +1013,9 @@ export class MalloyChildTranslator extends MalloyTranslation {
 }
 
 /**
- * The main interface to Malloy tranlsation. It has a call pattern
+ * The main interface to Malloy translation. It has a call pattern
  * similar to a server. Once a translator is instantiated
- * you can request tralnsations repeatedly. Responses to that request
+ * you can request translations repeatedly. Responses to that request
  * will either be "NeedResponse" or "TranslateResponse" objects. The
  * correct pattern is to call "translation" in a loop, calling
  * "update" in response to each "NeedResponse" until a "TranslateResponse"
