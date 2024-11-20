@@ -94,7 +94,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
               evalSpace: footType.evalSpace,
               compositeFieldUsage: footType.compositeFieldUsage,
             };
-            structPath = this.source.path;
+            structPath = this.source.path.slice(0, -1);
             // Here we handle a special case where you write `foo.agg()` and `foo` is a
             // dimension which uses only one distinct join path; in this case, we set the
             // locality to be that join path
