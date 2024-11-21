@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { AccessModifierLabel } from '../../../model';
+import {AccessModifierLabel} from '../../../model';
 import {DynamicSpace} from '../field-space/dynamic-space';
 import {RenameSpaceField} from '../field-space/rename-space-field';
 import {FieldName} from '../types/field-space';
