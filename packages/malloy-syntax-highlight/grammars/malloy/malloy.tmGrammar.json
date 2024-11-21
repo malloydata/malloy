@@ -521,6 +521,18 @@
         {
           "match": "(?i)\\bimport\\b",
           "name": "keyword.control.import"
+        },
+        {
+          "match": "(?i)\\binternal\\b",
+          "name": "keyword.control.internal"
+        },
+        {
+          "match": "(?i)\\bpublic\\b",
+          "name": "keyword.control.public"
+        },
+        {
+          "match": "(?i)\\bprivate\\b",
+          "name": "keyword.control.private"
         }
       ]
     }
