@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {errorMessage, makeExprFunc, model, warningMessage} from './test-translator';
+import {errorMessage, makeExprFunc, model} from './test-translator';
 import './parse-expects';
 import {CompositeFieldUsage} from '../../model';
 import {emptyCompositeFieldUsage} from '../../model/composite_source_utils';
