@@ -91,11 +91,23 @@ export class RefinedSpace extends DynamicSpace {
 
   setAccessModifiers(ams: AccessModifier[]): void {
     for (const am of ams) {
-      for (const fieldName of am.refs.list) {
-        this.newAccessModifiers[fieldName.refString] = {
+      if (am.refs !== undefined) {
+        for (const fieldName of am.refs.list) {
+          this.newAccessModifiers.push({
+            access: am.access,
+            logTo: fieldName,
+            fieldName: fieldName.refString,
+          });
+        }
+      } else {
+        this.newAccessModifiers.push({
           access: am.access,
-          logTo: fieldName,
-        };
+          logTo: am,
+          except:
+            am.except?.flatMap(ex =>
+              ex.list.map(exInner => exInner.refString)
+            ) ?? [],
+        });
       }
     }
   }

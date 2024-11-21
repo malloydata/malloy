@@ -47,9 +47,18 @@ export abstract class DynamicSpace
   private complete = false;
   private parameters: HasParameter[] = [];
   protected newTimezone?: string;
-  protected newAccessModifiers: {
-    [name: string]: {access: 'private' | 'protected'; logTo: MalloyElement};
-  } = {};
+  protected newAccessModifiers: (
+    | {
+        access: 'private' | 'protected';
+        logTo: MalloyElement;
+        fieldName: string;
+      }
+    | {
+        access: 'private' | 'protected';
+        logTo: MalloyElement;
+        except: string[];
+      }
+  )[] = [];
 
   constructor(extending: SourceDef) {
     super(structuredClone(extending));
@@ -157,24 +166,29 @@ export abstract class DynamicSpace
         join.fixupJoinOn(this, missingOn);
       }
       // Add access modifiers at the end so views don't obey them
-      for (const field in this.newAccessModifiers) {
-        const idx = fieldIndices.get(field);
-        if (idx !== undefined) {
-          const newAccessModifier = this.newAccessModifiers[field];
-          const fieldDef = this.sourceDef.fields[idx];
-          if (
-            fieldDef.accessModifier === 'private' &&
-            newAccessModifier.access === 'protected'
-          ) {
-            newAccessModifier.logTo.logError(
-              'cannot-expand-access',
-              "Can't expand access from 'private' to 'protected'"
+      for (const mod of this.newAccessModifiers) {
+        if ('fieldName' in mod) {
+          const idx = fieldIndices.get(mod.fieldName);
+          if (idx !== undefined) {
+            this.processAccessModifier(
+              mod,
+              idx,
+              this.sourceDef.fields,
+              mod.fieldName
             );
-          } else {
-            this.sourceDef.fields[idx] = {
-              ...fieldDef,
-              accessModifier: newAccessModifier.access,
-            };
+          }
+        } else {
+          for (const field of fieldIndices.keys()) {
+            if (mod.except.indexOf(field) !== -1) continue;
+            const idx = fieldIndices.get(field);
+            if (idx !== undefined) {
+              this.processAccessModifier(
+                mod,
+                idx,
+                this.sourceDef.fields,
+                field
+              );
+            }
           }
         }
       }
@@ -189,5 +203,28 @@ export abstract class DynamicSpace
     const ret = {...this.fromSource};
     ret.fields = [];
     return ret;
+  }
+
+  private processAccessModifier(
+    info: {
+      access: 'private' | 'protected';
+      logTo: MalloyElement;
+    },
+    idx: number,
+    fields: model.FieldDef[],
+    name: string
+  ) {
+    const fieldDef = fields[idx];
+    if (fieldDef.accessModifier === 'private' && info.access === 'protected') {
+      info.logTo.logError(
+        'cannot-expand-access',
+        `Can't expand access of \`${name}\` from 'private' to 'protected'`
+      );
+    } else {
+      fields[idx] = {
+        ...fieldDef,
+        accessModifier: info.access,
+      };
+    }
   }
 }

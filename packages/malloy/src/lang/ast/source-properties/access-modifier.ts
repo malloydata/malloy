@@ -12,8 +12,15 @@ export class AccessModifier extends MalloyElement {
   elementType = 'access_modifier';
   constructor(
     readonly access: 'private' | 'protected',
-    readonly refs: FieldReferences
+    readonly refs: FieldReferences | undefined,
+    readonly except: FieldReferences[] | undefined
   ) {
-    super({refs: refs});
+    super({});
+    if (refs) {
+      this.has({refs});
+    }
+    if (except) {
+      this.has({except});
+    }
   }
 }

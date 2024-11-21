@@ -343,7 +343,56 @@ describe('source:', () => {
             protected: ${'ai'}
           }
         `).toLog(
-          errorMessage("Can't expand access from 'private' to 'protected'")
+          errorMessage(
+            "Can't expand access of `ai` from 'private' to 'protected'"
+          )
+        );
+      });
+      test('access modifier *', () => {
+        expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a extend {
+            private: *
+          }
+          run: c -> { group_by: ai }
+        `).toLog(errorMessage("'ai' is private"));
+      });
+      test('access modifier * except', () => {
+        expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a extend {
+            private: * { except: ai }
+          }
+          run: c -> { group_by: ai, abool }
+        `).toLog(errorMessage("'abool' is private"));
+      });
+      test('access modifier * nonconflicting use', () => {
+        expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a extend {
+            protected: ai
+            private: * { except: ai }
+          }
+          run: c -> { group_by: ai }
+          source: d is c extend {
+            dimension: x is abool
+          }
+        `).toLog(
+          errorMessage("'ai' is protected"),
+          errorMessage("'abool' is private")
+        );
+      });
+      test('access modifier * conflicting use', () => {
+        return expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a extend {
+            private: ai
+            ${'protected: *'}
+          }
+        `).toLog(
+          errorMessage(
+            "Can't expand access of `ai` from 'private' to 'protected'"
+          )
         );
       });
     });

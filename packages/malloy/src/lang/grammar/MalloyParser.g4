@@ -173,19 +173,24 @@ exploreProperties
   ;
 
 exploreStatement
-  : defDimensions                         # defExploreDimension_stub
-  | defMeasures                           # defExploreMeasure_stub
-  | declareStatement                      # defDeclare_stub
-  | joinStatement                         # defJoin_stub
-  | whereStatement                        # defExploreWhere_stub
-  | PRIMARY_KEY fieldName                 # defExplorePrimaryKey
-  | RENAME renameList                     # defExploreRename
-  | (ACCEPT | EXCEPT) fieldNameList       # defExploreEditField
-  | (PROTECTED | PRIVATE) fieldNameList   # defAccessModifier
-  | tags (QUERY | VIEW) subQueryDefList   # defExploreQuery
-  | timezoneStatement                     # defExploreTimezone
-  | ANNOTATION+                           # defExploreAnnotation
-  | ignoredModelAnnotations               # defIgnoreModel_stub
+  : defDimensions                            # defExploreDimension_stub
+  | defMeasures                              # defExploreMeasure_stub
+  | declareStatement                         # defDeclare_stub
+  | joinStatement                            # defJoin_stub
+  | whereStatement                           # defExploreWhere_stub
+  | PRIMARY_KEY fieldName                    # defExplorePrimaryKey
+  | RENAME renameList                        # defExploreRename
+  | (ACCEPT | EXCEPT) fieldNameList          # defExploreEditField
+  | (PROTECTED | PRIVATE) accessModifierList # defAccessModifier
+  | tags (QUERY | VIEW) subQueryDefList      # defExploreQuery
+  | timezoneStatement                        # defExploreTimezone
+  | ANNOTATION+                              # defExploreAnnotation
+  | ignoredModelAnnotations                  # defIgnoreModel_stub
+  ;
+
+accessModifierList
+  : fieldNameList
+  | STAR starQualified?
   ;
 
 defMeasures

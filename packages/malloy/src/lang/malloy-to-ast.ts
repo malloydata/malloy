@@ -782,13 +782,27 @@ export class MalloyToAST
   ): ast.AccessModifier {
     const access = pcx.PROTECTED() ? 'protected' : 'private';
     this.inExperiment('access_modifiers', pcx);
-    return new ast.AccessModifier(
-      access,
-      this.getFieldNameList(
-        pcx.fieldNameList(),
-        ast.AccessModifierFieldReference
-      )
-    );
+    const accessModifier = pcx.accessModifierList();
+    const list = accessModifier.fieldNameList();
+    if (list) {
+      return this.astAt(
+        new ast.AccessModifier(
+          access,
+          this.getFieldNameList(list, ast.AccessModifierFieldReference),
+          undefined
+        ),
+        pcx
+      );
+    } else {
+      const exceptStmts = accessModifier.starQualified()?.fieldNameList() || [];
+      const exceptLists = exceptStmts.map(exc =>
+        this.getFieldNameList(exc, ast.AccessModifierFieldReference)
+      );
+      return this.astAt(
+        new ast.AccessModifier(access, undefined, exceptLists),
+        pcx
+      );
+    }
   }
 
   visitDefExploreTimezone(
