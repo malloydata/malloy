@@ -27,6 +27,7 @@ import {DynamicSpace} from './dynamic-space';
 import {canMakeEntry} from '../types/space-entry';
 import {MalloyElement} from '../types/malloy-element';
 import {ParameterSpace} from './parameter-space';
+import {AccessModifier} from '../source-properties/access-modifier';
 
 export class RefinedSpace extends DynamicSpace {
   /**
@@ -86,5 +87,20 @@ export class RefinedSpace extends DynamicSpace {
         `Internal error, ${def.elementType} not expected in this context`
       );
     }
+  }
+
+  setAccessModifiers(ams: AccessModifier[]): void {
+    for (const am of ams) {
+      for (const fieldName of am.refs.list) {
+        this.newAccessModifiers[fieldName.refString] = {
+          access: am.access,
+          logTo: fieldName,
+        };
+      }
+    }
+  }
+
+  isProtectedAccessSpace(): boolean {
+    return true;
   }
 }

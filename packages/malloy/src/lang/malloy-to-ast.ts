@@ -757,10 +757,13 @@ export class MalloyToAST
     return this.astAt(node, pcx);
   }
 
-  visitFieldNameList(pcx: parse.FieldNameListContext): ast.FieldReferences {
+  getFieldNameList(
+    pcx: parse.FieldNameListContext,
+    makeFieldRef: ast.FieldReferenceConstructor
+  ): ast.FieldReferences {
     const members = pcx
       .fieldName()
-      .map(cx => new ast.AcceptExceptFieldReference([this.getFieldName(cx)]));
+      .map(cx => this.astAt(new makeFieldRef([this.getFieldName(cx)]), cx));
     return new ast.FieldReferences(members);
   }
 
@@ -770,7 +773,21 @@ export class MalloyToAST
     const action = pcx.ACCEPT() ? 'accept' : 'except';
     return new ast.FieldListEdit(
       action,
-      this.visitFieldNameList(pcx.fieldNameList())
+      this.getFieldNameList(pcx.fieldNameList(), ast.AcceptExceptFieldReference)
+    );
+  }
+
+  visitDefAccessModifier(
+    pcx: parse.DefAccessModifierContext
+  ): ast.AccessModifier {
+    const access = pcx.PROTECTED() ? 'protected' : 'private';
+    this.inExperiment('access_modifiers', pcx);
+    return new ast.AccessModifier(
+      access,
+      this.getFieldNameList(
+        pcx.fieldNameList(),
+        ast.AccessModifierFieldReference
+      )
     );
   }
 

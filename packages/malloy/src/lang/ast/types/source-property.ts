@@ -31,6 +31,7 @@ import {MalloyElement} from './malloy-element';
 import {TimezoneStatement} from '../source-properties/timezone-statement';
 import {ObjectAnnotation} from './annotation-elements';
 import {JoinStatement} from '../source-properties/join';
+import {AccessModifier} from '../source-properties/access-modifier';
 
 export type SourceProperty =
   | Filter
@@ -41,7 +42,8 @@ export type SourceProperty =
   | PrimaryKey
   | ObjectAnnotation
   | Views
-  | TimezoneStatement;
+  | TimezoneStatement
+  | AccessModifier;
 export function isSourceProperty(p: MalloyElement): p is SourceProperty {
   return (
     p instanceof Filter ||
@@ -52,6 +54,7 @@ export function isSourceProperty(p: MalloyElement): p is SourceProperty {
     p instanceof PrimaryKey ||
     p instanceof ObjectAnnotation ||
     p instanceof Views ||
-    p instanceof TimezoneStatement
+    p instanceof TimezoneStatement ||
+    p instanceof AccessModifier
   );
 }

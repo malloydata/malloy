@@ -47,6 +47,9 @@ export abstract class DynamicSpace
   private complete = false;
   private parameters: HasParameter[] = [];
   protected newTimezone?: string;
+  protected newAccessModifiers: {
+    [name: string]: {access: 'private' | 'protected'; logTo: MalloyElement};
+  } = {};
 
   constructor(extending: SourceDef) {
     super(structuredClone(extending));
@@ -110,6 +113,7 @@ export abstract class DynamicSpace
 
       this.sourceDef = {...this.fromSource, fields: []};
       this.sourceDef.parameters = parameters;
+      const fieldIndices = new Map<string, number>();
       // Need to process the entities in specific order
       const fields: [string, SpaceField][] = [];
       const joins: [string, SpaceField][] = [];
@@ -126,16 +130,18 @@ export abstract class DynamicSpace
       }
       const reorderFields = [...fields, ...joins, ...turtles];
       const parameterSpace = this.parameterSpace();
-      for (const [, field] of reorderFields) {
+      for (const [name, field] of reorderFields) {
         if (field instanceof JoinSpaceField) {
           const joinStruct = field.join.structDef(parameterSpace);
           if (!ErrorFactory.didCreate(joinStruct)) {
+            fieldIndices.set(name, this.sourceDef.fields.length);
             this.sourceDef.fields.push(joinStruct);
             fixupJoins.push([field.join, joinStruct]);
           }
         } else {
           const fieldDef = field.fieldDef();
           if (fieldDef) {
+            fieldIndices.set(name, this.sourceDef.fields.length);
             this.sourceDef.fields.push(fieldDef);
           }
           // TODO I'm just removing this, but perhaps instead I should just filter
@@ -149,6 +155,28 @@ export abstract class DynamicSpace
       // If we have join expressions, we need to now go back and fill them in
       for (const [join, missingOn] of fixupJoins) {
         join.fixupJoinOn(this, missingOn);
+      }
+      // Add access modifiers at the end so views don't obey them
+      for (const field in this.newAccessModifiers) {
+        const idx = fieldIndices.get(field);
+        if (idx !== undefined) {
+          const newAccessModifier = this.newAccessModifiers[field];
+          const fieldDef = this.sourceDef.fields[idx];
+          if (
+            fieldDef.accessModifier === 'private' &&
+            newAccessModifier.access === 'protected'
+          ) {
+            newAccessModifier.logTo.logError(
+              'cannot-expand-access',
+              "Can't expand access from 'private' to 'protected'"
+            );
+          } else {
+            this.sourceDef.fields[idx] = {
+              ...fieldDef,
+              accessModifier: newAccessModifier.access,
+            };
+          }
+        }
       }
     }
     if (this.newTimezone && model.isSourceDef(this.sourceDef)) {

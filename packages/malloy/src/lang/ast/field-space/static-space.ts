@@ -101,6 +101,10 @@ export class StaticSpace implements FieldSpace {
     return this.memoMap;
   }
 
+  isProtectedAccessSpace(): boolean {
+    return false;
+  }
+
   protected dropEntries(): void {
     this.memoMap = {};
   }
@@ -160,6 +164,24 @@ export class StaticSpace implements FieldSpace {
           location: head.location,
           text: head.refString,
         });
+      }
+      if (definition?.accessModifier) {
+        // TODO path.length === 1 will not work with namespaces
+        if (
+          !(
+            this.isProtectedAccessSpace() &&
+            definition.accessModifier === 'protected' &&
+            path.length === 1
+          )
+        ) {
+          return {
+            error: {
+              message: `'${head}' is ${definition?.accessModifier}`,
+              code: 'field-not-accessible',
+            },
+            found: undefined,
+          };
+        }
       }
     }
     const joinPath =

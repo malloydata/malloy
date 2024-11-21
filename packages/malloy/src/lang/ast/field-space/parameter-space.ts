@@ -90,4 +90,8 @@ export class ParameterSpace implements FieldSpace {
   isQueryFieldSpace(): this is QueryFieldSpace {
     return false;
   }
+
+  isProtectedAccessSpace(): boolean {
+    return false;
+  }
 }

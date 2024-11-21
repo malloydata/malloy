@@ -72,4 +72,8 @@ export class QueryInputSpace extends RefinedSpace implements QueryFieldSpace {
   inputSpace() {
     return this;
   }
+
+  isProtectedAccessSpace(): boolean {
+    return false;
+  }
 }

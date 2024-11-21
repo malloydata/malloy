@@ -42,6 +42,7 @@ import {Renames} from '../source-properties/renames';
 import {MakeEntry} from '../types/space-entry';
 import {ParameterSpace} from '../field-space/parameter-space';
 import {JoinStatement} from '../source-properties/join';
+import {AccessModifier} from '../source-properties/access-modifier';
 
 /**
  * A Source made from a source reference and a set of refinements
@@ -67,6 +68,7 @@ export class RefinedSource extends Source {
   ): SourceDef {
     let primaryKey: PrimaryKey | undefined;
     let fieldListEdit: FieldListEdit | undefined;
+    const accessModifiers: AccessModifier[] = [];
     const fields: MakeEntry[] = [];
     const filters: Filter[] = [];
     let newTimezone: string | undefined;
@@ -91,6 +93,8 @@ export class RefinedSource extends Source {
           el.logError(code, 'Too many accept/except statements');
         }
         fieldListEdit = el;
+      } else if (el instanceof AccessModifier) {
+        accessModifiers.push(el);
       } else if (
         el instanceof DeclareFields ||
         el instanceof JoinStatement ||
@@ -132,6 +136,7 @@ export class RefinedSource extends Source {
         primaryKey.logError(keyDef.error.code, keyDef.error.message);
       }
     }
+    fs.setAccessModifiers(accessModifiers);
     const retStruct = fs.structDef();
 
     const filterList = retStruct.filterList || [];

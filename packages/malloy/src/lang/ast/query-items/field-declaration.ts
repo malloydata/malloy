@@ -321,6 +321,10 @@ export class DefSpace implements FieldSpace {
     }
     throw new Error('Not a query field space');
   }
+
+  isProtectedAccessSpace(): boolean {
+    return true;
+  }
 }
 
 export class FieldDefinitionValue extends SpaceField {

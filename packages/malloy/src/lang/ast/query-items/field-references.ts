@@ -134,6 +134,14 @@ export class AcceptExceptFieldReference extends FieldReference {
   }
 }
 
+export class AccessModifierFieldReference extends FieldReference {
+  elementType = 'accessModifierFieldReference';
+  // Nothing to typecheck here
+  typecheck() {
+    return;
+  }
+}
+
 export class ExpressionFieldReference extends FieldReference {
   elementType = 'expressionFieldReference';
   // We assume that the outer expression will typecheck this
