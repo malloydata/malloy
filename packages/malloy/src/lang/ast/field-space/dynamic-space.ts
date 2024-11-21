@@ -49,12 +49,12 @@ export abstract class DynamicSpace
   protected newTimezone?: string;
   protected newAccessModifiers: (
     | {
-        access: 'private' | 'internal';
+        access: model.AccessModifierLabel;
         logTo: MalloyElement;
         fieldName: string;
       }
     | {
-        access: 'private' | 'internal';
+        access: model.AccessModifierLabel;
         logTo: MalloyElement;
         except: string[];
       }
@@ -166,6 +166,7 @@ export abstract class DynamicSpace
         join.fixupJoinOn(this, missingOn);
       }
       // Add access modifiers at the end so views don't obey them
+      const existingModifiers = new Map<string, model.AccessModifierLabel>();
       for (const mod of this.newAccessModifiers) {
         if ('fieldName' in mod) {
           const idx = fieldIndices.get(mod.fieldName);
@@ -174,19 +175,21 @@ export abstract class DynamicSpace
               mod,
               idx,
               this.sourceDef.fields,
-              mod.fieldName
+              mod.fieldName,
+              existingModifiers
             );
           }
         } else {
-          for (const field of fieldIndices.keys()) {
-            if (mod.except.indexOf(field) !== -1) continue;
-            const idx = fieldIndices.get(field);
+          for (const fieldName of fieldIndices.keys()) {
+            if (mod.except.indexOf(fieldName) !== -1) continue;
+            const idx = fieldIndices.get(fieldName);
             if (idx !== undefined) {
               this.processAccessModifier(
                 mod,
                 idx,
                 this.sourceDef.fields,
-                field
+                fieldName,
+                existingModifiers
               );
             }
           }
@@ -207,24 +210,38 @@ export abstract class DynamicSpace
 
   private processAccessModifier(
     info: {
-      access: 'private' | 'internal';
+      access: model.AccessModifierLabel;
       logTo: MalloyElement;
     },
     idx: number,
     fields: model.FieldDef[],
-    name: string
+    name: string,
+    existingModifiers: Map<string, model.AccessModifierLabel>
   ) {
+    const existing = existingModifiers.get(name);
+    if (existing !== undefined && existing !== info.access) {
+      info.logTo.logError(
+        'conflicting-access-modifier',
+        `Access modifier for \`${name}\` was already specified as ${existing}`
+      );
+      return;
+    }
     const fieldDef = fields[idx];
-    if (fieldDef.accessModifier === 'private' && info.access === 'internal') {
+    if (
+      (fieldDef.accessModifier === 'private' && info.access === 'internal') ||
+      (fieldDef.accessModifier !== undefined && info.access === 'public')
+    ) {
       info.logTo.logError(
         'cannot-expand-access',
-        `Can't expand access of \`${name}\` from 'private' to 'internal'`
+        `Can't expand access of \`${name}\` from ${fieldDef.accessModifier} to ${info.access}`
       );
     } else {
+      const setAccess = info.access === 'public' ? undefined : info.access;
       fields[idx] = {
         ...fieldDef,
-        accessModifier: info.access,
+        accessModifier: setAccess,
       };
+      existingModifiers.set(name, info.access);
     }
   }
 }

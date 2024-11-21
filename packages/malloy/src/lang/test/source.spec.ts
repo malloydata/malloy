@@ -343,9 +343,7 @@ describe('source:', () => {
             internal: ${'ai'}
           }
         `).toLog(
-          errorMessage(
-            "Can't expand access of `ai` from 'private' to 'internal'"
-          )
+          errorMessage("Can't expand access of `ai` from private to internal")
         );
       });
       test('access modifier *', () => {
@@ -387,11 +385,24 @@ describe('source:', () => {
           ##! experimental.access_modifiers
           source: c is a extend {
             private: ai
+          }
+          source: d is c extend {
+            ${'internal: *'}
+          }
+        `).toLog(
+          errorMessage("Can't expand access of `ai` from private to internal")
+        );
+      });
+      test('cannot override in same source', () => {
+        return expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a extend {
+            public: ai
             ${'internal: *'}
           }
         `).toLog(
           errorMessage(
-            "Can't expand access of `ai` from 'private' to 'internal'"
+            'Access modifier for `ai` was already specified as public'
           )
         );
       });
