@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {errorMessage, makeExprFunc, model} from './test-translator';
+import {errorMessage, makeExprFunc, model, warningMessage} from './test-translator';
 import './parse-expects';
 import {CompositeFieldUsage} from '../../model';
 import {emptyCompositeFieldUsage} from '../../model/composite_source_utils';
@@ -185,6 +185,81 @@ describe('composite sources', () => {
         )
         run: foo(param is 2) -> { group_by: y }
       `).toTranslate();
+    });
+    test('composite source does not include private field', () => {
+      expect(`
+        ##! experimental { composite_sources access_modifiers }
+        source: foo is compose(
+          a extend {
+            dimension: x is 1
+            private: x
+          },
+          a
+        )
+        run: foo -> { group_by: x }
+      `).toLog(errorMessage("'x' is not defined"));
+    });
+    test('composite source does not resolve to private field', () => {
+      expect(`
+        ##! experimental { composite_sources access_modifiers }
+        source: foo is compose(
+          a extend {
+            dimension: x is 1, y is 1
+            private: x
+          },
+          a extend { dimension: x is 1 }
+        )
+        run: foo -> { group_by: x, y }
+      `).toLog(
+        errorMessage(
+          'This operation uses composite field `y`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `x`, `y`'
+        )
+      );
+    });
+    test('composite source does include protected field', () => {
+      expect(`
+        ##! experimental { composite_sources access_modifiers }
+        source: foo is compose(
+          a extend {
+            dimension: x is 1
+            protected: x
+          },
+          a
+        ) extend {
+          view: v is { group_by: x }
+        }
+        run: foo -> v
+      `).toTranslate();
+    });
+    test('access level mismatch in composite (before)', () => {
+      expect(`
+        ##! experimental { composite_sources access_modifiers }
+        source: foo is compose(
+          a extend {
+            dimension: x is 1
+            protected: x
+          },
+          a extend {
+            dimension: x is 1
+          }
+        )
+        run: foo -> { group_by: x }
+      `).toLog(errorMessage("'x' is protected"));
+    });
+    test('access level mismatch in composite (after)', () => {
+      expect(`
+        ##! experimental { composite_sources access_modifiers }
+        source: foo is compose(
+          a extend {
+            dimension: x is 1
+          },
+          a extend {
+            dimension: x is 1
+            protected: x
+          }
+        )
+        run: foo -> { group_by: x }
+      `).toLog(errorMessage("'x' is protected"));
     });
   });
 });

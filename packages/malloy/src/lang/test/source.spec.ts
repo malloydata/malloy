@@ -322,6 +322,16 @@ describe('source:', () => {
           run: c -> v
         `).toTranslate();
       });
+      test('use protected field in query in extension', () => {
+        expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a extend {
+            protected: ai
+          } extend {
+            view: v is { group_by: ai }
+          }
+        `).toTranslate();
+      });
       test('cannot expand access', () => {
         expect(markSource`
           ##! experimental.access_modifiers

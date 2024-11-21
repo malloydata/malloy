@@ -96,7 +96,11 @@ export abstract class QueryOperationSpace
   ) {
     super(queryInputSpace.emptyStructDef());
 
-    this.exprSpace = new QueryInputSpace(queryInputSpace.structDef(), this);
+    this.exprSpace = new QueryInputSpace(
+      queryInputSpace.structDef(),
+      this,
+      queryInputSpace.isProtectedAccessSpace()
+    );
     if (refineThis) this.addRefineFromFields(refineThis);
   }
 
