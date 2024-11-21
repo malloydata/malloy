@@ -76,10 +76,7 @@ export class ReferenceView extends View {
       };
     };
     if (!lookup.found) {
-      this.logError(
-        'view-not-found',
-        `\`${this.reference.refString}\` is not defined`
-      );
+      this.reference.logError(lookup.error.code, lookup.error.message);
       return oops();
     }
     if (!(lookup.found instanceof SpaceField)) {

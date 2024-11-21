@@ -78,6 +78,10 @@ export abstract class FieldReference
     }
   }
 
+  getName(): string {
+    return this.nameString;
+  }
+
   get refToField(): RefToField {
     return {
       type: 'fieldref',
@@ -128,6 +132,14 @@ export abstract class FieldReference
 
 export class AcceptExceptFieldReference extends FieldReference {
   elementType = 'acceptExceptFieldReference';
+  // Nothing to typecheck here
+  typecheck() {
+    return;
+  }
+}
+
+export class AccessModifierFieldReference extends FieldReference {
+  elementType = 'accessModifierFieldReference';
   // Nothing to typecheck here
   typecheck() {
     return;

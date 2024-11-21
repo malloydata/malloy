@@ -52,6 +52,10 @@ export class ViewFieldDeclaration
     fs.newEntry(this.name, this, qf);
   }
 
+  getName(): string {
+    return this.name;
+  }
+
   getFieldDef(fs: FieldSpace): model.TurtleDef {
     const {pipeline, annotation} = this.view.pipelineComp(fs);
     const checkedPipeline = detectAndRemovePartialStages(pipeline, this);

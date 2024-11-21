@@ -173,26 +173,40 @@ exploreProperties
   ;
 
 exploreStatement
-  : defDimensions                         # defExploreDimension_stub
-  | defMeasures                           # defExploreMeasure_stub
-  | declareStatement                      # defDeclare_stub
-  | joinStatement                         # defJoin_stub
-  | whereStatement                        # defExploreWhere_stub
-  | PRIMARY_KEY fieldName                 # defExplorePrimaryKey
-  | RENAME renameList                     # defExploreRename
-  | (ACCEPT | EXCEPT) fieldNameList       # defExploreEditField
-  | tags (QUERY | VIEW) subQueryDefList   # defExploreQuery
-  | timezoneStatement                     # defExploreTimezone
-  | ANNOTATION+                           # defExploreAnnotation
-  | ignoredModelAnnotations               # defIgnoreModel_stub
+  : defDimensions                            # defExploreDimension_stub
+  | defMeasures                              # defExploreMeasure_stub
+  | declareStatement                         # defDeclare_stub
+  | joinStatement                            # defJoin_stub
+  | whereStatement                           # defExploreWhere_stub
+  | PRIMARY_KEY fieldName                    # defExplorePrimaryKey
+  | accessLabel? RENAME renameList            # defExploreRename
+  | (ACCEPT | EXCEPT) fieldNameList          # defExploreEditField
+  | (PUBLIC | INTERNAL | PRIVATE) accessModifierList
+                                             # defAccessModifier
+  | tags accessLabel? (QUERY | VIEW) subQueryDefList
+                                             # defExploreQuery
+  | timezoneStatement                        # defExploreTimezone
+  | ANNOTATION+                              # defExploreAnnotation
+  | ignoredModelAnnotations                  # defIgnoreModel_stub
+  ;
+
+accessLabel
+  : PUBLIC_KW
+  | PRIVATE_KW
+  | INTERNAL_KW
+  ;
+
+accessModifierList
+  : fieldNameList
+  | STAR starQualified?
   ;
 
 defMeasures
-  : tags MEASURE defList
+  : tags accessLabel? MEASURE defList
   ;
 
 defDimensions
-  : tags DIMENSION defList
+  : tags accessLabel? DIMENSION defList
   ;
 
 renameList
@@ -215,13 +229,13 @@ fieldNameDef: id;
 joinNameDef: id;
 
 declareStatement
-  : DECLARE defList
+  : DECLARE accessLabel? defList
   ;
 
 joinStatement
-  : tags JOIN_ONE joinList                  # defJoinOne
-  | tags JOIN_MANY joinList                 # defJoinMany
-  | tags JOIN_CROSS joinList                # defJoinCross
+  : tags accessLabel? JOIN_ONE joinList                  # defJoinOne
+  | tags accessLabel? JOIN_MANY joinList                 # defJoinMany
+  | tags accessLabel? JOIN_CROSS joinList                # defJoinCross
   ;
 
 queryExtend

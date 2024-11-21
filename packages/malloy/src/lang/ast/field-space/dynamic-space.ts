@@ -37,6 +37,7 @@ import {StructSpaceFieldBase} from './struct-space-field-base';
 import {ParameterSpace} from './parameter-space';
 import {SourceDef} from '../../../model/malloy_types';
 import {SourceFieldSpace} from '../types/field-space';
+import {AccessModifierSpec} from '../source-properties/access-modifier';
 
 export abstract class DynamicSpace
   extends StaticSpace
@@ -47,6 +48,7 @@ export abstract class DynamicSpace
   private complete = false;
   private parameters: HasParameter[] = [];
   protected newTimezone?: string;
+  protected newAccessModifiers: AccessModifierSpec[] = [];
 
   constructor(extending: SourceDef) {
     super(structuredClone(extending));
@@ -110,6 +112,7 @@ export abstract class DynamicSpace
 
       this.sourceDef = {...this.fromSource, fields: []};
       this.sourceDef.parameters = parameters;
+      const fieldIndices = new Map<string, number>();
       // Need to process the entities in specific order
       const fields: [string, SpaceField][] = [];
       const joins: [string, SpaceField][] = [];
@@ -126,16 +129,18 @@ export abstract class DynamicSpace
       }
       const reorderFields = [...fields, ...joins, ...turtles];
       const parameterSpace = this.parameterSpace();
-      for (const [, field] of reorderFields) {
+      for (const [name, field] of reorderFields) {
         if (field instanceof JoinSpaceField) {
           const joinStruct = field.join.structDef(parameterSpace);
           if (!ErrorFactory.didCreate(joinStruct)) {
+            fieldIndices.set(name, this.sourceDef.fields.length);
             this.sourceDef.fields.push(joinStruct);
             fixupJoins.push([field.join, joinStruct]);
           }
         } else {
           const fieldDef = field.fieldDef();
           if (fieldDef) {
+            fieldIndices.set(name, this.sourceDef.fields.length);
             this.sourceDef.fields.push(fieldDef);
           }
           // TODO I'm just removing this, but perhaps instead I should just filter
@@ -150,6 +155,36 @@ export abstract class DynamicSpace
       for (const [join, missingOn] of fixupJoins) {
         join.fixupJoinOn(this, missingOn);
       }
+      // Add access modifiers at the end so views don't obey them
+      const existingModifiers = new Map<string, model.AccessModifierLabel>();
+      for (const mod of this.newAccessModifiers) {
+        if ('fieldName' in mod) {
+          const idx = fieldIndices.get(mod.fieldName);
+          if (idx !== undefined) {
+            this.processAccessModifier(
+              mod,
+              idx,
+              this.sourceDef.fields,
+              mod.fieldName,
+              existingModifiers
+            );
+          }
+        } else {
+          for (const fieldName of fieldIndices.keys()) {
+            if (mod.except.indexOf(fieldName) !== -1) continue;
+            const idx = fieldIndices.get(fieldName);
+            if (idx !== undefined) {
+              this.processAccessModifier(
+                mod,
+                idx,
+                this.sourceDef.fields,
+                fieldName,
+                existingModifiers
+              );
+            }
+          }
+        }
+      }
     }
     if (this.newTimezone && model.isSourceDef(this.sourceDef)) {
       this.sourceDef.queryTimezone = this.newTimezone;
@@ -161,5 +196,42 @@ export abstract class DynamicSpace
     const ret = {...this.fromSource};
     ret.fields = [];
     return ret;
+  }
+
+  private processAccessModifier(
+    info: {
+      access: model.AccessModifierLabel;
+      logTo: MalloyElement;
+    },
+    idx: number,
+    fields: model.FieldDef[],
+    name: string,
+    existingModifiers: Map<string, model.AccessModifierLabel>
+  ) {
+    const existing = existingModifiers.get(name);
+    if (existing !== undefined && existing !== info.access) {
+      info.logTo.logError(
+        'conflicting-access-modifier',
+        `Access modifier for \`${name}\` was already specified as ${existing}`
+      );
+      return;
+    }
+    const fieldDef = fields[idx];
+    if (
+      (fieldDef.accessModifier === 'private' && info.access === 'internal') ||
+      (fieldDef.accessModifier !== undefined && info.access === 'public')
+    ) {
+      info.logTo.logError(
+        'cannot-expand-access',
+        `Can't expand access of \`${name}\` from ${fieldDef.accessModifier} to ${info.access}`
+      );
+    } else {
+      const setAccess = info.access === 'public' ? undefined : info.access;
+      fields[idx] = {
+        ...fieldDef,
+        accessModifier: setAccess,
+      };
+      existingModifiers.set(name, info.access);
+    }
   }
 }

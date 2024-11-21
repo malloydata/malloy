@@ -42,6 +42,7 @@ export interface FieldSpace {
   dialectObj(): Dialect | undefined;
   dialectName(): string;
   isQueryFieldSpace(): this is QueryFieldSpace;
+  isProtectedAccessSpace(): boolean;
 }
 
 export interface SourceFieldSpace extends FieldSpace {

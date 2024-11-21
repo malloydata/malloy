@@ -385,6 +385,9 @@ type MessageParameterTypes = {
   'or-choices-only': string;
   'sql-in': string;
   'dialect-cast-unsafe-only': string;
+  'field-not-accessible': string;
+  'cannot-expand-access': string;
+  'conflicting-access-modifier': string;
 };
 
 export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {

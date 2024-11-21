@@ -44,7 +44,7 @@ export class CompositeSource extends Source {
     const dialect = sourceDefs[0].dialect;
     const name = 'composite_source';
     const fields: FieldDef[] = [];
-    const fieldNames = new Set<string>();
+    const fieldsByName = new Map<string, FieldDef>();
     this.sources.forEach((source, index) => {
       const sourceDef = sourceDefs[index];
       // Check that connections all match; don't bother checking dialect, since it will
@@ -63,9 +63,12 @@ export class CompositeSource extends Source {
           );
           continue;
         }
+        if (field.accessModifier === 'private') {
+          continue;
+        }
         const fieldName = field.as ?? field.name;
-        if (!fieldNames.has(fieldName)) {
-          fieldNames.add(fieldName);
+        const existing = fieldsByName.get(fieldName);
+        if (existing === undefined) {
           const compositeField: AtomicFieldDef = {
             ...field,
             name: fieldName,
@@ -75,7 +78,10 @@ export class CompositeSource extends Source {
             code: this.code,
             location: this.codeLocation,
           };
+          fieldsByName.set(fieldName, compositeField);
           fields.push(compositeField);
+        } else if (field.accessModifier === 'internal') {
+          existing.accessModifier = 'internal';
         }
       }
     });

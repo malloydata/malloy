@@ -77,6 +77,10 @@ export abstract class AtomicFieldDeclaration
     super({expr: expr});
   }
 
+  getName(): string {
+    return this.defineName;
+  }
+
   fieldDef(fs: FieldSpace, exprName: string): FieldDef {
     /*
      * In an explore we cannot reference the thing we are defining, you need
@@ -320,6 +324,10 @@ export class DefSpace implements FieldSpace {
       return this.realFS.inputSpace();
     }
     throw new Error('Not a query field space');
+  }
+
+  isProtectedAccessSpace(): boolean {
+    return true;
   }
 }
 

@@ -47,7 +47,8 @@ export class QueryInputSpace extends RefinedSpace implements QueryFieldSpace {
    */
   constructor(
     input: SourceDef,
-    private queryOutput: QueryOperationSpace
+    private queryOutput: QueryOperationSpace,
+    public readonly _isProtectedAccessSpace: boolean
   ) {
     super(input);
   }
@@ -71,5 +72,9 @@ export class QueryInputSpace extends RefinedSpace implements QueryFieldSpace {
 
   inputSpace() {
     return this;
+  }
+
+  isProtectedAccessSpace(): boolean {
+    return this._isProtectedAccessSpace;
   }
 }

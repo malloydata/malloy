@@ -42,6 +42,10 @@ import {Renames} from '../source-properties/renames';
 import {MakeEntry} from '../types/space-entry';
 import {ParameterSpace} from '../field-space/parameter-space';
 import {JoinStatement} from '../source-properties/join';
+import {
+  AccessModifier,
+  AccessModifierSpec,
+} from '../source-properties/access-modifier';
 
 /**
  * A Source made from a source reference and a set of refinements
@@ -71,6 +75,7 @@ export class RefinedSource extends Source {
     const filters: Filter[] = [];
     let newTimezone: string | undefined;
 
+    const accessModifiers: AccessModifierSpec[] = [];
     for (const el of this.refinement.list) {
       if (el instanceof ObjectAnnotation) {
         // Treat lone annotations as comments
@@ -91,6 +96,25 @@ export class RefinedSource extends Source {
           el.logError(code, 'Too many accept/except statements');
         }
         fieldListEdit = el;
+      } else if (el instanceof AccessModifier) {
+        if (el.refs !== undefined) {
+          for (const fieldName of el.refs.list) {
+            accessModifiers.push({
+              access: el.access,
+              logTo: fieldName,
+              fieldName: fieldName.refString,
+            });
+          }
+        } else {
+          accessModifiers.push({
+            access: el.access,
+            logTo: el,
+            except:
+              el.except?.flatMap(ex =>
+                ex.list.map(exInner => exInner.refString)
+              ) ?? [],
+          });
+        }
       } else if (
         el instanceof DeclareFields ||
         el instanceof JoinStatement ||
@@ -98,6 +122,15 @@ export class RefinedSource extends Source {
         el instanceof Renames
       ) {
         fields.push(...el.list);
+        if (el.accessModifier) {
+          for (const field of el.list) {
+            accessModifiers.push({
+              fieldName: field.getName(),
+              access: el.accessModifier,
+              logTo: el,
+            });
+          }
+        }
       } else if (el instanceof Filter) {
         filters.push(el);
       } else if (el instanceof TimezoneStatement) {
@@ -132,6 +165,7 @@ export class RefinedSource extends Source {
         primaryKey.logError(keyDef.error.code, keyDef.error.message);
       }
     }
+    fs.addAccessModifiers(accessModifiers);
     const retStruct = fs.structDef();
 
     const filterList = retStruct.filterList || [];

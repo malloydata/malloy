@@ -32,6 +32,7 @@ export abstract class SpaceEntry {
 
 export interface MakeEntry extends MalloyElement {
   makeEntry: (fs: DynamicSpace) => void;
+  getName(): string;
 }
 
 export function canMakeEntry<T extends MalloyElement>(
