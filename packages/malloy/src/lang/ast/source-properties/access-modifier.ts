@@ -25,3 +25,15 @@ export class AccessModifier extends MalloyElement {
     }
   }
 }
+
+export type AccessModifierSpec =
+  | {
+      access: AccessModifierLabel;
+      logTo: MalloyElement;
+      fieldName: string;
+    }
+  | {
+      access: AccessModifierLabel;
+      logTo: MalloyElement;
+      except: string[];
+    };

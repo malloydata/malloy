@@ -51,6 +51,7 @@ import {
 } from './parse-utils';
 import {CastType} from '../model';
 import {
+  AccessModifierLabel,
   DocumentLocation,
   DocumentRange,
   isCastType,
@@ -493,6 +494,7 @@ export class MalloyToAST
   }
 
   visitDefJoinMany(pcx: parse.DefJoinManyContext): ast.JoinStatement {
+    const accessLabel = this.getAccessLabel(pcx.accessLabel());
     const joins: ast.Join[] = [];
     for (const joinCx of pcx.joinList().joinDef()) {
       const join = this.visit(joinCx);
@@ -516,12 +518,13 @@ export class MalloyToAST
         }
       }
     }
-    const joinMany = new ast.JoinStatement(joins);
+    const joinMany = new ast.JoinStatement(joins, accessLabel);
     joinMany.extendNote({blockNotes: this.getNotes(pcx.tags())});
     return joinMany;
   }
 
   visitDefJoinOne(pcx: parse.DefJoinOneContext): ast.JoinStatement {
+    const accessLabel = this.getAccessLabel(pcx.accessLabel());
     const joinList = this.getJoinList(pcx.joinList());
     const joins: ast.Join[] = [];
     for (const join of joinList) {
@@ -532,12 +535,13 @@ export class MalloyToAST
         }
       }
     }
-    const joinOne = new ast.JoinStatement(joins);
+    const joinOne = new ast.JoinStatement(joins, accessLabel);
     joinOne.extendNote({blockNotes: this.getNotes(pcx.tags())});
     return joinOne;
   }
 
   visitDefJoinCross(pcx: parse.DefJoinCrossContext): ast.JoinStatement {
+    const accessLabel = this.getAccessLabel(pcx.accessLabel());
     const joinList = this.getJoinList(pcx.joinList());
     const joins: ast.Join[] = [];
     for (const join of joinList) {
@@ -553,7 +557,7 @@ export class MalloyToAST
         }
       }
     }
-    const joinCross = new ast.JoinStatement(joins);
+    const joinCross = new ast.JoinStatement(joins, accessLabel);
     joinCross.extendNote({blockNotes: this.getNotes(pcx.tags())});
     return joinCross;
   }
@@ -642,21 +646,33 @@ export class MalloyToAST
   }
 
   visitDefDimensions(pcx: parse.DefDimensionsContext): ast.Dimensions {
+    const accessLabel = this.getAccessLabel(pcx.accessLabel());
     const defs = this.getFieldDefs(
       pcx.defList().fieldDef(),
       ast.DimensionFieldDeclaration
     );
-    const stmt = new ast.Dimensions(defs);
+    const stmt = new ast.Dimensions(defs, accessLabel);
     stmt.extendNote({blockNotes: this.getNotes(pcx.tags())});
     return this.astAt(stmt, pcx);
   }
 
+  getAccessLabel(
+    pcx: parse.AccessLabelContext | undefined
+  ): AccessModifierLabel | undefined {
+    if (pcx === undefined) return undefined;
+    if (pcx.INTERNAL_KW()) return 'internal';
+    if (pcx.PRIVATE_KW()) return 'private';
+    if (pcx.PUBLIC_KW()) return 'public';
+    throw this.internalError(pcx, `Unknown access modifier label ${pcx.text}`);
+  }
+
   visitDefMeasures(pcx: parse.DefMeasuresContext): ast.Measures {
+    const accessLabel = this.getAccessLabel(pcx.accessLabel());
     const defs = this.getFieldDefs(
       pcx.defList().fieldDef(),
       ast.MeasureFieldDeclaration
     );
-    const stmt = new ast.Measures(defs);
+    const stmt = new ast.Measures(defs, accessLabel);
     stmt.extendNote({blockNotes: this.getNotes(pcx.tags())});
     return this.astAt(stmt, pcx);
   }
@@ -682,11 +698,12 @@ export class MalloyToAST
   }
 
   visitDeclareStatement(pcx: parse.DeclareStatementContext): ast.DeclareFields {
+    const accessLabel = this.getAccessLabel(pcx.accessLabel());
     const defs = this.getFieldDefs(
       pcx.defList().fieldDef(),
       ast.DeclareFieldDeclaration
     );
-    const stmt = new ast.DeclareFields(defs);
+    const stmt = new ast.DeclareFields(defs, accessLabel);
     const result = this.astAt(stmt, pcx);
     this.m4advisory(
       pcx,
@@ -707,9 +724,10 @@ export class MalloyToAST
   }
 
   visitDefExploreRename(pcx: parse.DefExploreRenameContext): ast.Renames {
+    const accessLabel = this.getAccessLabel(pcx.accessLabel());
     const rcxs = pcx.renameList().exploreRenameDef();
     const renames = rcxs.map(rcx => this.visitExploreRenameDef(rcx));
-    const stmt = new ast.Renames(renames);
+    const stmt = new ast.Renames(renames, accessLabel);
     return this.astAt(stmt, pcx);
   }
 
@@ -729,15 +747,13 @@ export class MalloyToAST
     return this.astAt(having, pcx);
   }
 
-  visitSubQueryDefList(pcx: parse.SubQueryDefListContext): ast.Views {
+  visitDefExploreQuery(pcx: parse.DefExploreQueryContext): ast.Views {
+    const accessLabel = this.getAccessLabel(pcx.accessLabel());
     const babyTurtles = pcx
+      .subQueryDefList()
       .exploreQueryDef()
       .map(cx => this.visitExploreQueryDef(cx));
-    return new ast.Views(babyTurtles);
-  }
-
-  visitDefExploreQuery(pcx: parse.DefExploreQueryContext): ast.MalloyElement {
-    const queryDefs = this.visitSubQueryDefList(pcx.subQueryDefList());
+    const queryDefs = new ast.Views(babyTurtles, accessLabel);
     const blockNotes = this.getNotes(pcx.tags());
     queryDefs.extendNote({blockNotes});
     if (pcx.QUERY()) {

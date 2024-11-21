@@ -78,6 +78,10 @@ export abstract class FieldReference
     }
   }
 
+  getName(): string {
+    return this.nameString;
+  }
+
   get refToField(): RefToField {
     return {
       type: 'fieldref',

@@ -77,6 +77,10 @@ export abstract class AtomicFieldDeclaration
     super({expr: expr});
   }
 
+  getName(): string {
+    return this.defineName;
+  }
+
   fieldDef(fs: FieldSpace, exprName: string): FieldDef {
     /*
      * In an explore we cannot reference the thing we are defining, you need

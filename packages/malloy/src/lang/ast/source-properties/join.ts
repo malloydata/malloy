@@ -29,6 +29,7 @@ import {
   MatrixOperation,
   SourceDef,
   isJoinable,
+  AccessModifierLabel,
 } from '../../../model/malloy_types';
 import {DynamicSpace} from '../field-space/dynamic-space';
 import {JoinSpaceField} from '../field-space/join-space-field';
@@ -65,6 +66,10 @@ export abstract class Join
       this,
       new JoinSpaceField(fs.parameterSpace(), this, fs.dialect)
     );
+  }
+
+  getName(): string {
+    return this.name.refString;
   }
 
   protected getStructDefFromExpr(parameterSpace: ParameterSpace): SourceDef {
@@ -233,7 +238,10 @@ export class JoinStatement
   forceQueryClass = undefined;
   queryRefinementStage = LegalRefinementStage.Single;
 
-  constructor(joins: Join[]) {
+  constructor(
+    joins: Join[],
+    readonly accessModifier: AccessModifierLabel | undefined
+  ) {
     super(joins);
   }
 

@@ -37,6 +37,7 @@ import {StructSpaceFieldBase} from './struct-space-field-base';
 import {ParameterSpace} from './parameter-space';
 import {SourceDef} from '../../../model/malloy_types';
 import {SourceFieldSpace} from '../types/field-space';
+import {AccessModifierSpec} from '../source-properties/access-modifier';
 
 export abstract class DynamicSpace
   extends StaticSpace
@@ -47,18 +48,7 @@ export abstract class DynamicSpace
   private complete = false;
   private parameters: HasParameter[] = [];
   protected newTimezone?: string;
-  protected newAccessModifiers: (
-    | {
-        access: model.AccessModifierLabel;
-        logTo: MalloyElement;
-        fieldName: string;
-      }
-    | {
-        access: model.AccessModifierLabel;
-        logTo: MalloyElement;
-        except: string[];
-      }
-  )[] = [];
+  protected newAccessModifiers: AccessModifierSpec[] = [];
 
   constructor(extending: SourceDef) {
     super(structuredClone(extending));

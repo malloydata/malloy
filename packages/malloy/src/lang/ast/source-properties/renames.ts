@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import { AccessModifierLabel } from '../../../model';
 import {DynamicSpace} from '../field-space/dynamic-space';
 import {RenameSpaceField} from '../field-space/rename-space-field';
 import {FieldName} from '../types/field-space';
@@ -63,8 +64,19 @@ export class RenameField extends MalloyElement implements MakeEntry {
       );
     }
   }
+
+  getName(): string {
+    return this.newName;
+  }
 }
 
 export class Renames extends ListOf<RenameField> {
   elementType = 'renameFields';
+
+  constructor(
+    fields: RenameField[],
+    readonly accessModifier: AccessModifierLabel | undefined
+  ) {
+    super(fields);
+  }
 }

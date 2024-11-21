@@ -27,7 +27,7 @@ import {DynamicSpace} from './dynamic-space';
 import {canMakeEntry} from '../types/space-entry';
 import {MalloyElement} from '../types/malloy-element';
 import {ParameterSpace} from './parameter-space';
-import {AccessModifier} from '../source-properties/access-modifier';
+import {AccessModifierSpec} from '../source-properties/access-modifier';
 
 export class RefinedSpace extends DynamicSpace {
   /**
@@ -89,27 +89,8 @@ export class RefinedSpace extends DynamicSpace {
     }
   }
 
-  setAccessModifiers(ams: AccessModifier[]): void {
-    for (const am of ams) {
-      if (am.refs !== undefined) {
-        for (const fieldName of am.refs.list) {
-          this.newAccessModifiers.push({
-            access: am.access,
-            logTo: fieldName,
-            fieldName: fieldName.refString,
-          });
-        }
-      } else {
-        this.newAccessModifiers.push({
-          access: am.access,
-          logTo: am,
-          except:
-            am.except?.flatMap(ex =>
-              ex.list.map(exInner => exInner.refString)
-            ) ?? [],
-        });
-      }
-    }
+  addAccessModifiers(ams: AccessModifierSpec[]): void {
+    this.newAccessModifiers.push(...ams);
   }
 
   isProtectedAccessSpace(): boolean {

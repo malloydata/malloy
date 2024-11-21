@@ -290,6 +290,28 @@ describe('source:', () => {
           }
         `).toLog(errorMessage("'ai' is internal"));
       });
+      test('internal at definition time', () => {
+        expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a extend {
+            internal dimension: x is 1
+          }
+          run: c -> x
+        `).toLog(errorMessage("'x' is internal"));
+      });
+      test('conflicting star before definition label', () => {
+        expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a extend {
+            public: *
+            internal dimension: x is 1
+          }
+        `).toLog(
+          errorMessage(
+            'Access modifier for `x` was already specified as public'
+          )
+        );
+      });
       test('internal is inaccessible in joining source field', () => {
         expect(markSource`
           ##! experimental.access_modifiers

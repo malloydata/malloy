@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {AccessModifierLabel} from '../../../model';
 import {AtomicFieldDeclaration} from '../query-items/field-declaration';
 import {DefinitionList} from '../types/definition-list';
 import {QueryBuilder} from '../types/query-builder';
@@ -37,7 +38,10 @@ export class DeclareFields
   queryRefinementStage = LegalRefinementStage.Single;
   forceQueryClass = undefined;
 
-  constructor(fields: AtomicFieldDeclaration[]) {
+  constructor(
+    fields: AtomicFieldDeclaration[],
+    readonly accessModifier: AccessModifierLabel | undefined
+  ) {
     super(fields);
   }
 
