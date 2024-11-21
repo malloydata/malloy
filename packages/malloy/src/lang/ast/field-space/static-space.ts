@@ -170,7 +170,7 @@ export class StaticSpace implements FieldSpace {
         if (
           !(
             this.isProtectedAccessSpace() &&
-            definition.accessModifier === 'protected' &&
+            definition.accessModifier === 'internal' &&
             path.length === 1
           )
         ) {

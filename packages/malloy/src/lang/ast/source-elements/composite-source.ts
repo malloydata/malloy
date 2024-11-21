@@ -80,8 +80,8 @@ export class CompositeSource extends Source {
           };
           fieldsByName.set(fieldName, compositeField);
           fields.push(compositeField);
-        } else if (field.accessModifier === 'protected') {
-          existing.accessModifier = 'protected';
+        } else if (field.accessModifier === 'internal') {
+          existing.accessModifier = 'internal';
         }
       }
     });

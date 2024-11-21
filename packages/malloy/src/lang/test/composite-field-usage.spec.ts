@@ -216,13 +216,13 @@ describe('composite sources', () => {
         )
       );
     });
-    test('composite source does include protected field', () => {
+    test('composite source does include internal field', () => {
       expect(`
         ##! experimental { composite_sources access_modifiers }
         source: foo is compose(
           a extend {
             dimension: x is 1
-            protected: x
+            internal: x
           },
           a
         ) extend {
@@ -237,14 +237,14 @@ describe('composite sources', () => {
         source: foo is compose(
           a extend {
             dimension: x is 1
-            protected: x
+            internal: x
           },
           a extend {
             dimension: x is 1
           }
         )
         run: foo -> { group_by: x }
-      `).toLog(errorMessage("'x' is protected"));
+      `).toLog(errorMessage("'x' is internal"));
     });
     test('access level mismatch in composite (after)', () => {
       expect(`
@@ -255,11 +255,11 @@ describe('composite sources', () => {
           },
           a extend {
             dimension: x is 1
-            protected: x
+            internal: x
           }
         )
         run: foo -> { group_by: x }
-      `).toLog(errorMessage("'x' is protected"));
+      `).toLog(errorMessage("'x' is internal"));
     });
   });
 });

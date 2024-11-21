@@ -248,20 +248,20 @@ describe('source:', () => {
           run: c -> { select: ${'ai'} }
         `).toLog(errorMessage("'ai' is private"));
       });
-      test('protected not accessible in query', () => {
+      test('internal not accessible in query', () => {
         expect(markSource`
           ##! experimental.access_modifiers
           source: c is a extend {
-            protected: ai
+            internal: ai
           }
           run: c -> { select: ${'ai'} }
-        `).toLog(errorMessage("'ai' is protected"));
+        `).toLog(errorMessage("'ai' is internal"));
       });
-      test('protected is accessible in source extension', () => {
+      test('internal is accessible in source extension', () => {
         expect(markSource`
           ##! experimental.access_modifiers
           source: c is a extend {
-            protected: ai
+            internal: ai
           }
           source: d is c extend {
             dimension: ai2 is ai
@@ -279,38 +279,38 @@ describe('source:', () => {
           }
         `).toLog(errorMessage("'ai' is private"));
       });
-      test('protected is inaccessible in joining source on', () => {
+      test('internal is inaccessible in joining source on', () => {
         expect(markSource`
           ##! experimental.access_modifiers
           source: c is a extend {
-            protected: ai
+            internal: ai
           }
           source: d is a extend {
             join_one: c on ai = ${'c.ai'}
           }
-        `).toLog(errorMessage("'ai' is protected"));
+        `).toLog(errorMessage("'ai' is internal"));
       });
-      test('protected is inaccessible in joining source field', () => {
+      test('internal is inaccessible in joining source field', () => {
         expect(markSource`
           ##! experimental.access_modifiers
           source: c is a extend {
-            protected: ai
+            internal: ai
           }
           source: d is a extend {
             join_one: c on true
             dimension: cai is ${'c.ai'}
           }
-        `).toLog(errorMessage("'ai' is protected"));
+        `).toLog(errorMessage("'ai' is internal"));
       });
-      test('protected is inaccessible in view reference', () => {
+      test('internal is inaccessible in view reference', () => {
         expect(markSource`
           ##! experimental.access_modifiers
           source: c is a extend {
             view: v is { group_by: ai }
-            protected: v
+            internal: v
           }
           run: c -> ${'v'}
-        `).toLog(errorMessage("'v' is protected"));
+        `).toLog(errorMessage("'v' is internal"));
       });
       test('private field used in view is accessible outside via view', () => {
         expect(markSource`
@@ -322,11 +322,11 @@ describe('source:', () => {
           run: c -> v
         `).toTranslate();
       });
-      test('use protected field in query in extension', () => {
+      test('use internal field in query in extension', () => {
         expect(markSource`
           ##! experimental.access_modifiers
           source: c is a extend {
-            protected: ai
+            internal: ai
           } extend {
             view: v is { group_by: ai }
           }
@@ -340,11 +340,11 @@ describe('source:', () => {
             private: ai
           }
           source: d is c extend {
-            protected: ${'ai'}
+            internal: ${'ai'}
           }
         `).toLog(
           errorMessage(
-            "Can't expand access of `ai` from 'private' to 'protected'"
+            "Can't expand access of `ai` from 'private' to 'internal'"
           )
         );
       });
@@ -370,7 +370,7 @@ describe('source:', () => {
         expect(markSource`
           ##! experimental.access_modifiers
           source: c is a extend {
-            protected: ai
+            internal: ai
             private: * { except: ai }
           }
           run: c -> { group_by: ai }
@@ -378,7 +378,7 @@ describe('source:', () => {
             dimension: x is abool
           }
         `).toLog(
-          errorMessage("'ai' is protected"),
+          errorMessage("'ai' is internal"),
           errorMessage("'abool' is private")
         );
       });
@@ -387,11 +387,11 @@ describe('source:', () => {
           ##! experimental.access_modifiers
           source: c is a extend {
             private: ai
-            ${'protected: *'}
+            ${'internal: *'}
           }
         `).toLog(
           errorMessage(
-            "Can't expand access of `ai` from 'private' to 'protected'"
+            "Can't expand access of `ai` from 'private' to 'internal'"
           )
         );
       });

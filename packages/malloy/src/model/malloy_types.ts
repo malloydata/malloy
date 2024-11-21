@@ -644,7 +644,7 @@ export function isCastType(s: string): s is CastType {
 
 export interface FieldBase extends NamedObject, Expression, ResultMetadata {
   annotation?: Annotation;
-  accessModifier?: 'protected' | 'private' | undefined;
+  accessModifier?: 'internal' | 'private' | undefined;
 }
 
 // this field definition represents something in the database.
@@ -766,7 +766,7 @@ export interface JoinBase {
   matrixOperation?: MatrixOperation;
   onExpression?: Expr;
   onCompositeFieldUsage?: CompositeFieldUsage;
-  accessModifier?: 'protected' | 'private' | undefined;
+  accessModifier?: 'internal' | 'private' | undefined;
 }
 
 export type Joinable =
@@ -1037,7 +1037,7 @@ export interface QuerySegment extends Filtered {
 export interface TurtleDef extends NamedObject, Pipeline {
   type: 'turtle';
   annotation?: Annotation;
-  accessModifier?: 'protected' | 'private' | undefined;
+  accessModifier?: 'internal' | 'private' | undefined;
 }
 
 interface StructDefBase extends HasLocation, NamedObject {

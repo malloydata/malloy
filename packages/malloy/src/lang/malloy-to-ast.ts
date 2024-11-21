@@ -780,7 +780,7 @@ export class MalloyToAST
   visitDefAccessModifier(
     pcx: parse.DefAccessModifierContext
   ): ast.AccessModifier {
-    const access = pcx.PROTECTED() ? 'protected' : 'private';
+    const access = pcx.INTERNAL() ? 'internal' : 'private';
     this.inExperiment('access_modifiers', pcx);
     const accessModifier = pcx.accessModifierList();
     const list = accessModifier.fieldNameList();

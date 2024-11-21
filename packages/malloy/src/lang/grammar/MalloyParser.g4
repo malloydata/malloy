@@ -181,7 +181,8 @@ exploreStatement
   | PRIMARY_KEY fieldName                    # defExplorePrimaryKey
   | RENAME renameList                        # defExploreRename
   | (ACCEPT | EXCEPT) fieldNameList          # defExploreEditField
-  | (PROTECTED | PRIVATE) accessModifierList # defAccessModifier
+  | (INTERNAL | PRIVATE) accessModifierList
+                                             # defAccessModifier
   | tags (QUERY | VIEW) subQueryDefList      # defExploreQuery
   | timezoneStatement                        # defExploreTimezone
   | ANNOTATION+                              # defExploreAnnotation

@@ -49,12 +49,12 @@ export abstract class DynamicSpace
   protected newTimezone?: string;
   protected newAccessModifiers: (
     | {
-        access: 'private' | 'protected';
+        access: 'private' | 'internal';
         logTo: MalloyElement;
         fieldName: string;
       }
     | {
-        access: 'private' | 'protected';
+        access: 'private' | 'internal';
         logTo: MalloyElement;
         except: string[];
       }
@@ -207,7 +207,7 @@ export abstract class DynamicSpace
 
   private processAccessModifier(
     info: {
-      access: 'private' | 'protected';
+      access: 'private' | 'internal';
       logTo: MalloyElement;
     },
     idx: number,
@@ -215,10 +215,10 @@ export abstract class DynamicSpace
     name: string
   ) {
     const fieldDef = fields[idx];
-    if (fieldDef.accessModifier === 'private' && info.access === 'protected') {
+    if (fieldDef.accessModifier === 'private' && info.access === 'internal') {
       info.logTo.logError(
         'cannot-expand-access',
-        `Can't expand access of \`${name}\` from 'private' to 'protected'`
+        `Can't expand access of \`${name}\` from 'private' to 'internal'`
       );
     } else {
       fields[idx] = {

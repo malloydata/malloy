@@ -11,7 +11,7 @@ import {MalloyElement} from '../types/malloy-element';
 export class AccessModifier extends MalloyElement {
   elementType = 'access_modifier';
   constructor(
-    readonly access: 'private' | 'protected',
+    readonly access: 'private' | 'internal',
     readonly refs: FieldReferences | undefined,
     readonly except: FieldReferences[] | undefined
   ) {
