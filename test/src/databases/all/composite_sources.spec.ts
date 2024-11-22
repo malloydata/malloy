@@ -197,4 +197,15 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       }
     `).malloyResultMatches(runtime, {x: 1});
   });
+  it('reference composite field in nest', async () => {
+    await expect(`
+      ##! experimental { composite_sources parameters }
+      source: state_facts is ${databaseName}.table('malloytest.state_facts')
+      run: compose(state_facts, state_facts extend { dimension: x is 1 }) -> {
+        nest: foo is {
+          group_by: x
+        }
+      }
+    `).malloyResultMatches(runtime, {'foo.x': 1});
+  });
 });
