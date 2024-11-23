@@ -37,7 +37,7 @@ import {
   SnowflakeDialect,
   TestableConnection,
   arrayEachFields,
-  LeafAtomicTypeDef,
+  TinyParser,
 } from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 
@@ -63,18 +63,18 @@ export interface SnowflakeConnectionOptions {
 
 class StructMap {
   fieldMap = new Map<string, StructMap>();
-  type = 'record';
-  isArray = false;
 
-  constructor(type: string, isArray: boolean) {
-    this.type = type;
-    this.isArray = isArray;
-  }
+  constructor(public type: string) {}
 
-  addChild(name: string, type: string): StructMap {
-    const s = new StructMap(type, false);
+  setChild(name: string, type: string) {
+    // Really only need a fieldmap for array or object types, but whatever
+    const s = new StructMap(type);
     this.fieldMap.set(name, s);
     return s;
+  }
+
+  getChild(name: string) {
+    return this.fieldMap.get(name);
   }
 }
 
@@ -179,21 +179,13 @@ export class SnowflakeConnection
     structDef: StructDef,
     structMap: StructMap
   ): void {
-    if (structMap.fieldMap.size === 0) return;
     for (const [field, value] of structMap.fieldMap) {
       const type = value.type;
       const name = field;
 
-      // check for an array
-      if (value.isArray && type !== 'object') {
-        // Apparently there can only be arrays of integers, strings, or unknowns?
-        // TODO is this true or is this just all that got implemented?
-        const malloyType: LeafAtomicTypeDef =
-          type === 'integer'
-            ? {type: 'number', numberType: 'integer'}
-            : type === 'varchar'
-            ? {type: 'string'}
-            : {type: 'sql native', rawType: type};
+      const inArray = structMap.type === 'array';
+      if (inArray && type !== 'object') {
+        const malloyType = this.dialect.sqlTypeToMalloyType(type);
         const innerStructDef: StructDef = {
           type: 'array',
           name,
@@ -205,7 +197,7 @@ export class SnowflakeConnection
         structDef.fields.push(innerStructDef);
       } else if (type === 'object') {
         const structParts = {name, dialect: this.dialectName, fields: []};
-        const innerStructDef: StructDef = value.isArray
+        const innerStructDef: StructDef = inArray
           ? {
               ...structParts,
               type: 'array',
@@ -218,7 +210,7 @@ export class SnowflakeConnection
               join: 'one',
             };
         this.addFieldsToStructDef(innerStructDef, value);
-        structDef.fields.push(innerStructDef);
+        structDef.fields.push({...innerStructDef, name});
       } else {
         const malloyType = this.dialect.sqlTypeToMalloyType(type);
         structDef.fields.push({...malloyType, name});
@@ -236,29 +228,20 @@ export class SnowflakeConnection
     const notVariant = new Map<string, boolean>();
     for (const row of rows) {
       // data types look like `VARCHAR(1234)`
-      let snowflakeDataType = row['type'] as string;
-      snowflakeDataType = snowflakeDataType.toLocaleLowerCase().split('(')[0];
-      const s = structDef;
-      const malloyType = this.dialect.sqlTypeToMalloyType(snowflakeDataType);
+      const snowflakeDataType = (row['type'] as string)
+        .toLocaleLowerCase()
+        .split('(')[0];
       const name = row['name'] as string;
 
-      if (snowflakeDataType === 'variant' || snowflakeDataType === 'array') {
+      if (['variant', 'array', 'object'].includes(snowflakeDataType)) {
         variants.push(name);
-        continue;
-      }
-
-      notVariant.set(name, true);
-      if (malloyType) {
-        s.fields.push({...malloyType, name});
       } else {
-        s.fields.push({
-          type: 'sql native',
-          rawType: snowflakeDataType,
-          name,
-        });
+        notVariant.set(name, true);
+        const malloyType = this.dialect.sqlTypeToMalloyType(snowflakeDataType);
+        structDef.fields.push({...malloyType, name});
       }
     }
-    // if we have variants, sample the data
+    // For these things, we need to sample the data to know the schema
     if (variants.length > 0) {
       const sampleQuery = `
         SELECT regexp_replace(PATH, '\\\\[[0-9]*\\\\]', '') as PATH, lower(TYPEOF(value)) as type
@@ -271,32 +254,33 @@ export class SnowflakeConnection
 
       // take the schema in list form an convert it into a tree.
 
-      const structMap = new StructMap('object', true);
+      const structMap = new StructMap('object');
 
       for (const f of fieldPathRows) {
         const pathString = f['PATH']?.valueOf().toString();
         const fieldType = f['TYPE']?.valueOf().toString();
         if (pathString === undefined || fieldType === undefined) continue;
-        const path = pathString.split('.');
-        let parent = structMap;
-
+        const pathParser = new PathParser(pathString);
+        const zPath = pathParser.pathChain();
         // ignore the fields we've already added.
-        if (path.length === 1 && notVariant.get(pathString)) continue;
+        if (zPath.next === undefined && notVariant.get(zPath.name)) continue;
 
-        let index = 0;
-        for (const segment of path) {
-          let thisNode = parent.fieldMap.get(segment);
-          if (thisNode === undefined) {
-            thisNode = parent.addChild(segment, fieldType);
+        for (
+          let segment: PathChain | undefined = zPath, parent = structMap;
+          segment;
+          segment = segment.next
+        ) {
+          if (segment.next === undefined) {
+            // if this is the last element in the path, that is where the type goes
+            parent.setChild(segment.name, fieldType);
+          } else {
+            // just walking the tree to part the knows
+            const nxtP = parent.getChild(segment.name);
+            if (!nxtP) {
+              throw new Error('paarse pickle spfndkjlfsd');
+            }
+            parent = nxtP;
           }
-          if (fieldType === 'array') {
-            thisNode.isArray = true;
-            // if this is the last
-          } else if (index === path.length - 1) {
-            thisNode.type = fieldType;
-          }
-          parent = thisNode;
-          index += 1;
         }
       }
       this.addFieldsToStructDef(structDef, structMap);
@@ -336,5 +320,70 @@ export class SnowflakeConnection
     const cmd = `CREATE OR REPLACE TEMP TABLE ${tableName} AS (${sqlCommand});`;
     await this.runSQL(cmd);
     return tableName;
+  }
+}
+
+/**
+ * Instead of an array of names, we return a path as a linked list.
+ */
+interface PathChain {
+  name: string;
+  next?: PathChain;
+}
+
+export class PathParser extends TinyParser {
+  constructor(pathName: string) {
+    super(pathName, {
+      quoted: /^'(\\'|[^'])*'/,
+      char: /^[[.\]]/,
+      number: /^\d+/,
+      word: /^\w+/,
+    });
+  }
+
+  getName() {
+    const nameStart = this.next();
+    if (nameStart.type === 'word') {
+      return nameStart.text;
+    }
+    if (nameStart.type === '[') {
+      const quotedName = this.next('quoted');
+      this.next(']');
+      return quotedName.text;
+    }
+    throw this.parseError('Expected column name');
+  }
+
+  getSubscript(node: PathChain): PathChain {
+    const index = this.next();
+    if (index.type === 'number') {
+      node.next = {name: index.text};
+      return node.next;
+    } else if (index.type === 'quoted') {
+      node.next = {name: index.text};
+      return node.next;
+    } else {
+      throw this.parseError(`Unexpected ${index.type}`);
+    }
+  }
+
+  pathChain(): PathChain {
+    const chain: PathChain = {name: this.getName()};
+    let node = chain;
+    for (;;) {
+      const sep = this.next();
+      if (sep.type === 'eof') {
+        return chain;
+      }
+      if (sep.type === '.') {
+        node.next = {name: this.next('word').text};
+        node = node.next;
+      } else if (sep.type === '[') {
+        node = this.getSubscript(node);
+        this.next(']');
+      } else {
+        throw this.parseError(`Unexpected ${sep.type}`);
+      }
+    }
   }
 }

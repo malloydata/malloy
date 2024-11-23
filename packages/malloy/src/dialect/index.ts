@@ -52,3 +52,5 @@ export {MySQLDialect} from './mysql';
 export {getDialect, registerDialect} from './dialect_map';
 export {getMalloyStandardFunctions} from './functions';
 export type {MalloyStandardFunctionImplementations} from './functions';
+export type {TinyToken} from './tiny_parser';
+export {TinyParser} from './tiny_parser';

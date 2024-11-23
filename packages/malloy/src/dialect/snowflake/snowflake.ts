@@ -521,14 +521,12 @@ ${indent(sql)}
   sqlLiteralRecord(lit: RecordLiteralNode): string {
     const rowVals: string[] = [];
     for (const f of lit.typeDef.fields) {
-      if (isAtomic(f)) {
-        const name = f.as ?? f.name;
-        const propName = `'${name}'`;
-        const propVal = lit.kids[name].sql ?? 'internal-error-record-literal';
-        rowVals.push(`${propName}:${propVal}`);
-      }
+      const name = f.as ?? f.name;
+      const propName = `'${name}'`;
+      const propVal = lit.kids[name].sql ?? 'internal-error-record-literal';
+      rowVals.push(`${propName}:${propVal}`);
     }
-    return `{${rowVals.join(',')}}::${this.malloyTypeToSQLType(lit.typeDef)}`;
+    return `{${rowVals.join(',')}}`;
   }
 
   sqlLiteralArray(lit: ArrayLiteralNode): string {

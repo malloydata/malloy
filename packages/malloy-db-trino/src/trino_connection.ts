@@ -45,6 +45,7 @@ import {
   Dialect,
   ArrayTypeDef,
   FieldDef,
+  TinyParser,
 } from '@malloydata/malloy';
 
 import {BaseConnection} from '@malloydata/malloy/connection';
@@ -580,68 +581,8 @@ export class PrestoConnection extends TrinoPrestoConnection {
       );
     }
 
-    /*
-     * Here's a hand built parser for schema lines, roughly this grammar
-     * SCHEMA_LINE: PrestoExplainParser => [TYPE_LIST]
-     * NAME_LIST: NAME (, NAME)*
-     * TYPE_LIST: TYPE_SPEC (, TYPE_SPEC)*
-     * TYPE_SPEC: exprN ':' TYPE
-     * TYPE: REC_TYPE | ARRAY_TYPE | SQL_TYPE
-     * ARRAY_TYPE: ARRAY '(' TYPE ')'
-     * REC_TYPE: REC '(' "name" TYPE (, "name" TYPE)* ')'
-     */
     const schemaDesc = new PrestoExplainParser(lines[0], this.dialect);
-    if (schemaDesc.containsNo(']') || schemaDesc.missingExpected('[')) {
-      throw schemaDesc.parseError(
-        "Expected something like '- Output [PlanName N] [NAME_LIST]'"
-      );
-    }
-    const fieldNames: string[] = [];
-    for (;;) {
-      const nmToken = schemaDesc.next();
-      if (nmToken.type !== 'id') {
-        throw schemaDesc.parseError('Expected name of field');
-      }
-      fieldNames.push(nmToken.text);
-      const sep = schemaDesc.next();
-      if (sep.type === ',') {
-        continue;
-      }
-      if (sep.type !== ']') {
-        throw schemaDesc.parseError(
-          `Unexpected '${sep.text}' while getting name list`
-        );
-      }
-      break;
-    }
-    if (schemaDesc.missingExpected('arrow', '[')) {
-      throw schemaDesc.parseError("Expected '=> [' to begin type definition");
-    }
-    for (let nameIndex = 0; ; nameIndex += 1) {
-      const name = fieldNames[nameIndex];
-      if (schemaDesc.missingExpected('id', ':')) {
-        throw schemaDesc.parseError(
-          "Expected 'exprN:' before each type in schema"
-        );
-      }
-      const nextType = schemaDesc.typeDef();
-      structDef.fields.push({...nextType, name});
-      const sep = schemaDesc.next();
-      if (sep.text === ',') {
-        continue;
-      }
-      if (sep.text !== ']') {
-        throw schemaDesc.parseError(
-          `Unexpected '${sep.text}' between field types`
-        );
-      }
-      break;
-    }
-    if (structDef.fields.length !== fieldNames.length) {
-      throw new Error(
-        `presto schema error mismatched ${structDef.fields.length} types and ${fieldNames.length} fields`
-      );
-    }
+    structDef.fields = schemaDesc.parseExplain();
   }
 
   unpackArray(data: unknown): unknown[] {
@@ -681,77 +622,76 @@ export class TrinoConnection extends TrinoPrestoConnection {
   }
 }
 
-interface Token {
-  type: string;
-  text: string;
-}
-
-class PrestoExplainParser {
-  tokens: Generator<Token>;
-  parseCursor = 0;
-  peeked?: Token;
+/**
+ * A hand built parser for schema lines, roughly this grammar
+ * SCHEMA_LINE: - Output [PlanName N] [NAME_LIST] => [TYPE_LIST]
+ * NAME_LIST: NAME (, NAME)*
+ * TYPE_LIST: TYPE_SPEC (, TYPE_SPEC)*
+ * TYPE_SPEC: exprN ':' TYPE
+ * TYPE: REC_TYPE | ARRAY_TYPE | SQL_TYPE
+ * ARRAY_TYPE: ARRAY '(' TYPE ')'
+ * REC_TYPE: REC '(' "name" TYPE (, "name" TYPE)* ')'
+ */
+class PrestoExplainParser extends TinyParser {
   constructor(
     readonly input: string,
     readonly dialect: Dialect
   ) {
-    this.tokens = this.tokenize(input);
+    super(input, {
+      space: /^\s+/,
+      arrow: /^=>/,
+      char: /^[,:[\]()-]/,
+      id: /^\w+/,
+      // mtoy todo check what happens if a name has quotes in it
+      quoted_name: /^"\w+"/,
+    });
   }
 
-  parseError(str: string) {
-    const errText =
-      `INTERAL ERROR parsing presto schema: ${str}\n` +
-      `${this.input}\n` +
-      `${' '.repeat(this.parseCursor)}^`;
-    return new Error(errText);
-  }
-
-  peek(): Token {
-    if (this.peeked) {
-      return this.peeked;
-    } else {
-      const {value} = this.tokens.next();
-      const peekVal = value ?? {type: 'eof', text: ''};
-      this.peeked = peekVal;
-      return peekVal;
-    }
-  }
-
-  next(): Token {
-    let next = this.peeked;
-    if (next) {
-      this.peeked = undefined;
-      return next;
-    } else {
-      next = this.peek();
-      this.peeked = undefined;
-      return next;
-    }
-  }
-
-  hasExpected(...type: string[]) {
-    for (const t of type) {
-      const next = this.next();
-      if (next.type !== t) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  containsNo(type: string) {
+  fieldNameList(): string[] {
+    this.skipTo(']'); // Skip to end of plan
+    this.next('['); // Expect start of name list
+    const fieldNames: string[] = [];
     for (;;) {
-      const next = this.next();
-      if (next.type === 'eof') {
-        return true;
+      const nmToken = this.next('id');
+      fieldNames.push(nmToken.text);
+      const sep = this.next();
+      if (sep.type === ',') {
+        continue;
       }
-      if (next.type === type) {
-        return false;
+      if (sep.type !== ']') {
+        throw this.parseError(
+          `Unexpected '${sep.text}' while getting field name list`
+        );
       }
+      break;
     }
+    return fieldNames;
   }
 
-  missingExpected(...type: string[]) {
-    return !this.hasExpected(...type);
+  parseExplain(): FieldDef[] {
+    const fieldNames = this.fieldNameList();
+    const fields: FieldDef[] = [];
+    this.next('arrow', '[');
+    for (let nameIndex = 0; ; nameIndex += 1) {
+      const name = fieldNames[nameIndex];
+      this.next('id', ':');
+      const nextType = this.typeDef();
+      fields.push({...nextType, name});
+      const sep = this.next();
+      if (sep.text === ',') {
+        continue;
+      }
+      if (sep.text !== ']') {
+        throw this.parseError(`Unexpected '${sep.text}' between field types`);
+      }
+      break;
+    }
+    if (fields.length !== fieldNames.length) {
+      throw new Error(
+        `Presto schema error mismatched ${fields.length} types and ${fieldNames.length} fields`
+      );
+    }
+    return fields;
   }
 
   typeDef(): AtomicTypeDef {
@@ -760,58 +700,42 @@ class PrestoExplainParser {
       throw this.parseError(
         'Unexpected EOF parsing type, expected a type name'
       );
-    } else if (typToken.text === 'row') {
-      if (this.hasExpected('(')) {
-        const fields: FieldDef[] = [];
-        for (;;) {
-          const name = this.next();
-          if (name.type !== 'name') {
-            throw this.parseError('Expected quoted "name" for record property');
-          }
-          const getDef = this.typeDef();
-          fields.push({...getDef, name: name.text});
-          const sep = this.next();
-          if (sep.text === ')') {
-            break;
-          }
-          if (sep.text === ',') {
-            continue;
-          }
-          throw this.parseError(
-            `Unexpected '${sep.text}' while parsing record type`
-          );
+    } else if (typToken.text === 'row' && this.next('(')) {
+      const fields: FieldDef[] = [];
+      for (;;) {
+        const name = this.next('quoted_name');
+        const getDef = this.typeDef();
+        fields.push({...getDef, name: name.text});
+        const sep = this.next();
+        if (sep.text === ')') {
+          break;
         }
-        const def: RecordTypeDef = {
-          type: 'record',
-          name: '',
-          join: 'one',
-          dialect: this.dialect.name,
-          fields,
-        };
-        return def;
-      } else {
-        throw new Error('Expected rec followed by(');
-      }
-    } else if (typToken.text === 'array') {
-      if (this.hasExpected('(')) {
-        const elType = this.typeDef();
-        if (this.missingExpected(')')) {
-          throw this.parseError("Expected ')' at end of array type");
+        if (sep.text === ',') {
+          continue;
         }
-        const def: ArrayTypeDef = {
-          type: 'array',
-          name: '',
-          dialect: this.dialect.name,
-          join: 'many',
-          elementTypeDef:
-            elType.type === 'record' ? {type: 'record_element'} : elType,
-          fields:
-            elType.type === 'record' ? elType.fields : arrayEachFields(elType),
-        };
-        return def;
-      } else {
-        throw this.parseError('Expected array followed by (');
       }
+      const def: RecordTypeDef = {
+        type: 'record',
+        name: '',
+        join: 'one',
+        dialect: this.dialect.name,
+        fields,
+      };
+      return def;
+    } else if (typToken.text === 'array' && this.next('(')) {
+      const elType = this.typeDef();
+      this.next(')');
+      const def: ArrayTypeDef = {
+        type: 'array',
+        name: '',
+        dialect: this.dialect.name,
+        join: 'many',
+        elementTypeDef:
+          elType.type === 'record' ? {type: 'record_element'} : elType,
+        fields:
+          elType.type === 'record' ? elType.fields : arrayEachFields(elType),
+      };
+      return def;
     } else if (typToken.type === 'id') {
       const sqlType = typToken.text;
       const def = this.dialect.sqlTypeToMalloyType(sqlType);
@@ -820,9 +744,7 @@ class PrestoExplainParser {
       }
       if (sqlType === 'varchar') {
         if (this.peek().type === '(') {
-          if (this.missingExpected('(', 'id', ')')) {
-            throw this.parseError('Error parsing varchar()');
-          }
+          this.next('(', 'id', ')');
         }
       }
       return def;
@@ -830,43 +752,5 @@ class PrestoExplainParser {
     throw this.parseError(
       `'${typToken.text}' unexpected while looking for a type`
     );
-  }
-
-  private *tokenize(src: string): Generator<Token> {
-    const tokenRegex = {
-      space: /^\s+/,
-      arrow: /^=>/,
-      char: /^[,:[\]()-]/,
-      id: /^\w+/,
-      name: /^"\w+"/,
-    };
-    for (;;) {
-      let notFound = true;
-      for (const tokenType in tokenRegex) {
-        const foundToken = src.match(tokenRegex[tokenType]);
-        if (foundToken) {
-          let tokenText = foundToken[0];
-          src = src.slice(tokenText.length);
-          this.parseCursor = this.input.length - src.length;
-          if (tokenType !== 'space') {
-            if (tokenType === 'name') {
-              tokenText = tokenText.slice(1, -1); // strip quotes
-            }
-            yield {
-              type: tokenType === 'char' ? tokenText : tokenType,
-              text: tokenText,
-            };
-            notFound = false;
-          }
-        }
-      }
-      if (notFound) {
-        yield {type: 'unexpected token', text: src};
-        return;
-      }
-      if (src === '') {
-        return;
-      }
-    }
   }
 }
