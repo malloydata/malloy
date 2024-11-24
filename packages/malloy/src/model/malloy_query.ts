@@ -4509,7 +4509,9 @@ class QueryStruct {
     // if this is an inline object, include the parents alias.
     if (this.structDef.type === 'record' && this.parent) {
       return (
-        this.parent.getSQLIdentifier() + '.' + getIdentifier(this.structDef)
+        this.parent.getSQLIdentifier() +
+        '.' +
+        this.dialect.sqlMaybeQuoteIdentifier(getIdentifier(this.structDef))
       );
     }
     // we are somewhere in the join tree.  Make sure the alias is unique.

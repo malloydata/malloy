@@ -207,6 +207,22 @@ describe.each(runtimes.runtimeList)(
           {small: 0}
         );
       });
+      // mtoy todo remove this
+      test('nested data looks like a record', async () => {
+        await expect(`
+          run: ${databaseName}.sql('SELECT 1 as "o"') -> {
+            group_by: row is 'one_row'
+            nest: sizes is {
+              aggregate:
+                s is sum(o) - 1,
+                m is sum(o),
+                x is sum(o) + 1,
+                xl is sum(o) + 2
+            }
+          } -> { select: small is sizes.s }`).malloyResultMatches(runtime, {
+          small: 0,
+        });
+      });
       test('record can be selected', async () => {
         await expect(
           `
@@ -279,6 +295,7 @@ describe.each(runtimes.runtimeList)(
       });
       test.todo('record field with quote in name');
       test.todo('record field with double quote in name');
+      test.todo('array or record where first entries are null');
     });
     describe('repeated record', () => {
       const abType: ArrayTypeDef = {

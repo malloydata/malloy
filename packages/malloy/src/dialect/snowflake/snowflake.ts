@@ -195,7 +195,8 @@ export class SnowflakeDialect extends Dialect {
     _isInNestedPipeline: boolean
   ): string {
     if (isArray) {
-      return `,LATERAL FLATTEN(INPUT => ${source}) AS ${alias}_1, LATERAL (SELECT ${alias}_1.INDEX, object_construct('value', ${alias}_1.value) as value ) as ${alias}`;
+      const as = this.sqlMaybeQuoteIdentifier(alias);
+      return `,LATERAL FLATTEN(INPUT => ${source}) AS ${alias}_1, LATERAL (SELECT ${alias}_1.INDEX, object_construct('value', ${alias}_1.value) as value ) as ${as}`;
     } else {
       // have to have a non empty row or it treats it like an inner join :barf-emoji:
       return `LEFT JOIN LATERAL FLATTEN(INPUT => ifnull(${source},[1])) AS ${alias}`;
@@ -247,23 +248,16 @@ export class SnowflakeDialect extends Dialect {
   sqlFieldReference(
     alias: string,
     fieldName: string,
-    fieldType: string,
+    _fieldType: string,
     isNested: boolean,
     _isArray: boolean
   ): string {
     if (fieldName === '__row_id') {
       return `${alias}.INDEX::varchar`;
-    } else if (!isNested) {
-      return `${alias}."${fieldName}"`;
-    } else {
-      let snowflakeType = fieldType;
-      if (fieldType === 'string') {
-        snowflakeType = 'varchar';
-      } else if (fieldType === 'struct') {
-        snowflakeType = 'variant';
-      }
-      return `${alias}.value:"${fieldName}"::${snowflakeType}`;
+    } else if (isNested) {
+      return `${alias}['${fieldName}']`;
     }
+    return `${alias}.${this.sqlMaybeQuoteIdentifier(fieldName)}`;
   }
 
   sqlUnnestPipelineHead(
@@ -524,9 +518,9 @@ ${indent(sql)}
       const name = f.as ?? f.name;
       const propName = `'${name}'`;
       const propVal = lit.kids[name].sql ?? 'internal-error-record-literal';
-      rowVals.push(`${propName}:${propVal}`);
+      rowVals.push(`${propName},${propVal}`);
     }
-    return `{${rowVals.join(',')}}`;
+    return `OBJECT_CONSTRUCT_KEEP_NULL(${rowVals.join(',')})`;
   }
 
   sqlLiteralArray(lit: ArrayLiteralNode): string {
