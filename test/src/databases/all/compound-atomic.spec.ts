@@ -277,6 +277,8 @@ describe.each(runtimes.runtimeList)(
           -> { select: b is pick rec.bc.b when true else 'b' }
         `).malloyResultMatches(runtime, {b: 'b'});
       });
+      test.todo('record field with quote in name');
+      test.todo('record field with double quote in name');
     });
     describe('repeated record', () => {
       const abType: ArrayTypeDef = {

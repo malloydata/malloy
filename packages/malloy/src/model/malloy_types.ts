@@ -722,10 +722,10 @@ export interface RepeatedRecordTypeDef extends ArrayDef {
   join: 'many';
 }
 
-export type RecordFieldDef = RecordTypeDef & AtomicFieldDef;
-export type RepeatedRecordFieldDef = RepeatedRecordTypeDef & AtomicFieldDef;
+export type RecordDef = RecordTypeDef & AtomicFieldDef;
+export type RepeatedRecordDef = RepeatedRecordTypeDef & AtomicFieldDef;
 
-export function isRepeatedRecord(fd: FieldDef): fd is RepeatedRecordFieldDef {
+export function isRepeatedRecord(fd: FieldDef): fd is RepeatedRecordDef {
   return fd.type === 'array' && fd.elementTypeDef.type === 'record_element';
 }
 
@@ -766,7 +766,7 @@ export type Joinable =
   | TableSourceDef
   | SQLSourceDef
   | QuerySourceDef
-  | RecordFieldDef
+  | RecordDef
   | ArrayDef;
 export type JoinFieldDef = JoinBase & Joinable;
 export type JoinFieldTypes =
@@ -1155,7 +1155,7 @@ export function isScalarArray(def: FieldDef | StructDef) {
   return def.type === 'array' && def.elementTypeDef.type !== 'record_element';
 }
 
-export type StructDef = SourceDef | RecordFieldDef | ArrayDef;
+export type StructDef = SourceDef | RecordDef | ArrayDef;
 
 // "NonAtomic" are types that a name lookup or a computation might
 // have which are not AtomicFieldDefs. I asked an AI for a word for

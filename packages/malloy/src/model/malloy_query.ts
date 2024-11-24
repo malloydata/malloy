@@ -97,11 +97,11 @@ import {
   isJoinedSource,
   QueryResultDef,
   isScalarArray,
-  RecordFieldDef,
+  RecordDef,
   FinalizeSourceDef,
   QueryToMaterialize,
   PrepareResultOptions,
-  RepeatedRecordFieldDef,
+  RepeatedRecordDef,
   CaseExpr,
   TemporalTypeDef,
   mkTemporal,
@@ -2753,7 +2753,7 @@ class QueryQuery extends QueryField {
         );
 
         if (fi.getRepeatedResultType() === 'nested') {
-          const multiLineNest: RepeatedRecordFieldDef = {
+          const multiLineNest: RepeatedRecordDef = {
             ...structDef,
             type: 'array',
             elementTypeDef: {type: 'record_element'},
@@ -2763,7 +2763,7 @@ class QueryQuery extends QueryField {
           };
           fields.push(multiLineNest);
         } else {
-          const oneLineNest: RecordFieldDef = {
+          const oneLineNest: RecordDef = {
             ...structDef,
             type: 'record',
             join: 'one',

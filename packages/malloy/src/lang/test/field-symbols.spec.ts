@@ -131,7 +131,7 @@ describe('structdef comprehension', () => {
   });
 
   test('import inline field', () => {
-    const field: model.RecordFieldDef = {
+    const field: model.RecordDef = {
       name: 't',
       type: 'record',
       dialect: 'standardsql',

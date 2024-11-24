@@ -38,6 +38,10 @@ import {
   TestableConnection,
   arrayEachFields,
   TinyParser,
+  Dialect,
+  FieldDef,
+  RecordDef,
+  ArrayTypeDef,
 } from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 
@@ -61,20 +65,150 @@ export interface SnowflakeConnectionOptions {
   queryOptions?: RunSQLOptions;
 }
 
-class StructMap {
-  fieldMap = new Map<string, StructMap>();
+type PathChain =
+  | {arrayRef: true; next?: PathChain}
+  | {name: string; next?: PathChain};
 
-  constructor(public type: string) {}
+class SnowField {
+  constructor(
+    readonly name: string,
+    readonly type: string,
+    readonly dialect: Dialect
+  ) {}
+  fieldDef(): FieldDef {
+    return {
+      ...this.dialect.sqlTypeToMalloyType(this.type),
+      name: this.name,
+    };
+  }
+  walk(_path: PathChain, _fieldType: string): void {
+    throw new Error(
+      'SNOWWFLAKE SCHEMA PARSE ERROR: Should not walk through fields'
+    );
+  }
+  static make(name: string, fieldType: string, d: Dialect) {
+    if (fieldType === 'array') {
+      return new SnowArray(name, d);
+    } else if (fieldType === 'object') {
+      return new SnowObject(name, d);
+    }
+    return new SnowField(name, fieldType, d);
+  }
+}
 
-  setChild(name: string, type: string) {
-    // Really only need a fieldmap for array or object types, but whatever
-    const s = new StructMap(type);
-    this.fieldMap.set(name, s);
-    return s;
+class SnowObject extends SnowField {
+  fieldMap = new Map<string, SnowField>();
+  constructor(name: string, d: Dialect) {
+    super(name, 'object', d);
   }
 
-  getChild(name: string) {
-    return this.fieldMap.get(name);
+  get fields(): FieldDef[] {
+    const fields: FieldDef[] = [];
+    for (const [_, fieldObj] of this.fieldMap) {
+      fields.push(fieldObj.fieldDef());
+    }
+    return fields;
+  }
+
+  fieldDef() {
+    const rec: RecordDef = {
+      type: 'record',
+      name: this.name,
+      fields: this.fields,
+      join: 'one',
+      dialect: this.dialect.name,
+    };
+    return rec;
+  }
+
+  walk(path: PathChain, fieldType: string) {
+    if ('name' in path) {
+      const field = this.fieldMap.get(path.name);
+      if (path.next) {
+        if (field) {
+          field.walk(path.next, fieldType);
+          return;
+        }
+        throw new Error(
+          'SNOWFLAKE SCHEMA PARSER ERROR: Walk through undefined'
+        );
+      } else {
+        if (field) {
+          // mtoy todo Variant record value
+        } else {
+          this.fieldMap.set(
+            path.name,
+            SnowField.make(path.name, fieldType, this.dialect)
+          );
+          return;
+        }
+      }
+    }
+    throw new Error(
+      'SNOWFLAKE SCHEMA PARSER ERROR: Walk object reference through array reference'
+    );
+  }
+}
+
+class SnowArray extends SnowField {
+  arrayOf = 'unknown';
+  objectChild?: SnowObject;
+  arrayChild?: SnowArray;
+  constructor(name: string, d: Dialect) {
+    super(name, 'array', d);
+  }
+
+  isArrayOf(type: string) {
+    if (this.arrayOf !== 'unknown') {
+      this.arrayOf = 'variant';
+      return;
+    }
+    this.arrayOf = type;
+    if (type === 'object') {
+      this.objectChild = new SnowObject('', this.dialect);
+    } else if (type === 'array') {
+      this.arrayChild = new SnowArray('', this.dialect);
+    }
+  }
+
+  fieldDef(): ArrayTypeDef {
+    const arr: ArrayTypeDef = {
+      type: 'array',
+      name: this.name,
+      join: 'many',
+      dialect: this.dialect.name,
+      elementTypeDef: {type: 'string'},
+      fields: [],
+    };
+    if (this.objectChild) {
+      arr.fields = this.objectChild.fieldDef().fields;
+      arr.elementTypeDef = {type: 'record_element'};
+    } else if (this.arrayChild) {
+      arr.elementTypeDef = this.arrayChild.fieldDef();
+      arr.fields = arrayEachFields(arr.elementTypeDef);
+    } else {
+      arr.elementTypeDef = this.dialect.sqlTypeToMalloyType(this.arrayOf);
+      arr.fields = arrayEachFields(arr.elementTypeDef);
+    }
+    return arr;
+  }
+
+  walk(path: PathChain, fieldType: string) {
+    if ('arrayRef' in path) {
+      if (path.next) {
+        const next = this.arrayChild || this.objectChild;
+        if (next) {
+          next.walk(path.next, fieldType);
+        }
+        throw new Error(
+          'SNOWFLAKE SCHEMA PARSER ERROR: Array walk through leaf'
+        );
+      } else {
+        this.isArrayOf(fieldType);
+        return;
+      }
+    }
+    throw new Error('SNOWFLAKE SCHEMA PARSER ERROR: Array walk through name');
   }
 }
 
@@ -175,49 +309,6 @@ export class SnowflakeConnection
     await this.executor.batch('SELECT 1 as one');
   }
 
-  private addFieldsToStructDef(
-    structDef: StructDef,
-    structMap: StructMap
-  ): void {
-    for (const [field, value] of structMap.fieldMap) {
-      const type = value.type;
-      const name = field;
-
-      const inArray = structMap.type === 'array';
-      if (inArray && type !== 'object') {
-        const malloyType = this.dialect.sqlTypeToMalloyType(type);
-        const innerStructDef: StructDef = {
-          type: 'array',
-          name,
-          dialect: this.dialectName,
-          join: 'many',
-          elementTypeDef: malloyType,
-          fields: arrayEachFields(malloyType),
-        };
-        structDef.fields.push(innerStructDef);
-      } else if (type === 'object') {
-        const structParts = {name, dialect: this.dialectName, fields: []};
-        const innerStructDef: StructDef = inArray
-          ? {
-              ...structParts,
-              type: 'array',
-              elementTypeDef: {type: 'record_element'},
-              join: 'many',
-            }
-          : {
-              ...structParts,
-              type: 'record',
-              join: 'one',
-            };
-        this.addFieldsToStructDef(innerStructDef, value);
-        structDef.fields.push({...innerStructDef, name});
-      } else {
-        const malloyType = this.dialect.sqlTypeToMalloyType(type);
-        structDef.fields.push({...malloyType, name});
-      }
-    }
-  }
-
   private async schemaFromTablePath(
     tablePath: string,
     structDef: StructDef
@@ -244,46 +335,32 @@ export class SnowflakeConnection
     // For these things, we need to sample the data to know the schema
     if (variants.length > 0) {
       const sampleQuery = `
-        SELECT regexp_replace(PATH, '\\\\[[0-9]*\\\\]', '') as PATH, lower(TYPEOF(value)) as type
-        FROM (select object_construct(*) o from  ${tablePath} limit 100)
+      SELECT regexp_replace(PATH, '\\[[0-9]+\\]', '[*]') as PATH, lower(TYPEOF(value)) as type
+      FROM (select object_construct(*) o from  ${tablePath} limit 100)
             ,table(flatten(input => o, recursive => true)) as meta
-        GROUP BY 1,2
-        ORDER BY PATH;
+      GROUP BY 1,2
+      ORDER BY PATH;
       `;
       const fieldPathRows = await this.executor.batch(sampleQuery);
 
       // take the schema in list form an convert it into a tree.
 
-      const structMap = new StructMap('object');
+      const rootObject = new SnowObject('__root__', this.dialect);
 
       for (const f of fieldPathRows) {
         const pathString = f['PATH']?.valueOf().toString();
         const fieldType = f['TYPE']?.valueOf().toString();
         if (pathString === undefined || fieldType === undefined) continue;
         const pathParser = new PathParser(pathString);
-        const zPath = pathParser.pathChain();
-        // ignore the fields we've already added.
-        if (zPath.next === undefined && notVariant.get(zPath.name)) continue;
-
-        for (
-          let segment: PathChain | undefined = zPath, parent = structMap;
-          segment;
-          segment = segment.next
-        ) {
-          if (segment.next === undefined) {
-            // if this is the last element in the path, that is where the type goes
-            parent.setChild(segment.name, fieldType);
-          } else {
-            // just walking the tree to part the knows
-            const nxtP = parent.getChild(segment.name);
-            if (!nxtP) {
-              throw new Error('paarse pickle spfndkjlfsd');
-            }
-            parent = nxtP;
-          }
+        const path = pathParser.pathChain();
+        if ('name' in path && notVariant.get(path.name)) {
+          // Name will already be in the structdef
+          continue;
         }
+        // Walk the path and mark the type at the end
+        rootObject.walk(path, fieldType);
       }
-      this.addFieldsToStructDef(structDef, structMap);
+      structDef.fields.push(...rootObject.fields);
     }
   }
 
@@ -323,18 +400,11 @@ export class SnowflakeConnection
   }
 }
 
-/**
- * Instead of an array of names, we return a path as a linked list.
- */
-interface PathChain {
-  name: string;
-  next?: PathChain;
-}
-
 export class PathParser extends TinyParser {
   constructor(pathName: string) {
     super(pathName, {
       quoted: /^'(\\'|[^'])*'/,
+      array_of: /^\[\*]/,
       char: /^[[.\]]/,
       number: /^\d+/,
       word: /^\w+/,
@@ -354,22 +424,9 @@ export class PathParser extends TinyParser {
     throw this.parseError('Expected column name');
   }
 
-  getSubscript(node: PathChain): PathChain {
-    const index = this.next();
-    if (index.type === 'number') {
-      node.next = {name: index.text};
-      return node.next;
-    } else if (index.type === 'quoted') {
-      node.next = {name: index.text};
-      return node.next;
-    } else {
-      throw this.parseError(`Unexpected ${index.type}`);
-    }
-  }
-
   pathChain(): PathChain {
     const chain: PathChain = {name: this.getName()};
-    let node = chain;
+    let node: PathChain = chain;
     for (;;) {
       const sep = this.next();
       if (sep.type === 'eof') {
@@ -378,8 +435,14 @@ export class PathParser extends TinyParser {
       if (sep.type === '.') {
         node.next = {name: this.next('word').text};
         node = node.next;
+      } else if (sep.type === 'array_of') {
+        node.next = {arrayRef: true};
+        node = node.next;
       } else if (sep.type === '[') {
-        node = this.getSubscript(node);
+        // Actually a dot access through a quoted name
+        const quoted = this.next('quoted');
+        node.next = {name: quoted.text};
+        node = node.next;
         this.next(']');
       } else {
         throw this.parseError(`Unexpected ${sep.type}`);

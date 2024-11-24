@@ -110,6 +110,8 @@ export type {
   ArrayTypeDef,
   RecordTypeDef,
   RepeatedRecordTypeDef,
+  RecordDef,
+  RepeatedRecordDef,
   // Used in array/record tests
   RecordLiteralNode,
   ArrayLiteralNode,
