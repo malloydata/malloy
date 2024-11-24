@@ -48,6 +48,7 @@ describe('composite sources', () => {
       ##! experimental.composite_sources
       source: x is compose(ab, ab) extend {
         dimension: aif is ai + af
+        measure: ss is ai.sum()
       }
 
       source: y is compose(ab, ab) extend {
@@ -87,6 +88,11 @@ describe('composite sources', () => {
           ['x', 'af'],
         ])
       );
+    });
+
+    test('measure defined in composite source', () => {
+      const mexpr = makeExprFunc(m.translator.modelDef, 'x');
+      expect(mexpr`ss`).hasCompositeUsage(paths([['ai']]));
     });
   });
 

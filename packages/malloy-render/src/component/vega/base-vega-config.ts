@@ -1,7 +1,9 @@
+import {Config} from 'vega';
+
 export const grayMedium = '#727883';
 export const gridGray = '#E5E7EB';
 
-export const baseVegaConfig = () => ({
+export const baseVegaConfig: () => Config = () => ({
   'range': {
     'category': [
       '#1877F2',

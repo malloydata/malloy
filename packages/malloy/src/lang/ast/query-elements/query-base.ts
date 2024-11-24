@@ -22,6 +22,7 @@
  */
 
 import {
+  emptyCompositeFieldUsage,
   isEmptyCompositeFieldUsage,
   resolveCompositeSources,
 } from '../../../model/composite_source_utils';
@@ -38,10 +39,11 @@ export abstract class QueryBase extends MalloyElement {
     // TODO add an error if a raw/index query is done against a composite source
     let compositeResolvedSourceDef: SourceDef | undefined = undefined;
     if (query.pipeline[0] && isQuerySegment(query.pipeline[0])) {
-      const compositeFieldUsage = query.pipeline[0].compositeFieldUsage;
+      const compositeFieldUsage =
+        query.pipeline[0].compositeFieldUsage ?? emptyCompositeFieldUsage();
       if (
-        compositeFieldUsage !== undefined &&
-        !isEmptyCompositeFieldUsage(compositeFieldUsage)
+        !isEmptyCompositeFieldUsage(compositeFieldUsage) ||
+        inputStruct.type === 'composite'
       ) {
         const resolved = resolveCompositeSources(
           inputStruct,

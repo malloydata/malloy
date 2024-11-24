@@ -582,8 +582,8 @@ export function generateBarChartVegaSpec(
       resize: true,
       contains: 'content',
     },
-    padding: chartSettings.padding,
     data: [valuesData],
+    padding: {...chartSettings.padding},
     scales: [
       {
         name: 'xscale',
@@ -809,6 +809,7 @@ export function generateBarChartVegaSpec(
     totalWidth: chartSettings.totalWidth,
     totalHeight: chartSettings.totalHeight,
     chartType: 'bar_chart',
+    chartTag,
     mapMalloyDataToChartData,
     getTooltipData: (item: Item, view: View) => {
       if (tooltipEntryMemo.has(item)) {

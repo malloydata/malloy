@@ -1030,6 +1030,7 @@ export interface QuerySegment extends Filtered {
 export interface TurtleDef extends NamedObject, Pipeline {
   type: 'turtle';
   annotation?: Annotation;
+  compositeFieldUsage?: CompositeFieldUsage;
 }
 
 interface StructDefBase extends HasLocation, NamedObject {

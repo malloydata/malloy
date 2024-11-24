@@ -184,6 +184,10 @@ export function Chart(props: ChartProps) {
 
   const showTooltip = createMemo(() => Boolean(tooltipData()));
 
+  const chartTitle = chartProps.chartTag.text('title');
+  const chartSubtitle = chartProps.chartTag.text('subtitle');
+  const hasTitleBar = chartTitle || chartSubtitle;
+
   return (
     <div
       class="malloy-chart"
@@ -197,6 +201,14 @@ export function Chart(props: ChartProps) {
         );
       }}
     >
+      <Show when={hasTitleBar}>
+        <div class="malloy-chart__titles-bar">
+          {chartTitle && <div class="malloy-chart__title">{chartTitle}</div>}
+          {chartSubtitle && (
+            <div class="malloy-chart__subtitle">{chartSubtitle}</div>
+          )}
+        </div>
+      </Show>
       <VegaChart
         width={chartProps.plotWidth}
         height={chartProps.plotHeight}

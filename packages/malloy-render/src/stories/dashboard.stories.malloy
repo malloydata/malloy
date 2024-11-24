@@ -25,6 +25,7 @@ source: products is duckdb.table("static/data/products.parquet") extend {
     # currency
     aggregate:
       avg_retail is retail_price.avg()
+      # label='Custom kpi label'
       sum_retail is retail_price.sum()
       avg_retail2 is retail_price.avg()
       avg_retail3 is retail_price.avg()
@@ -33,6 +34,7 @@ source: products is duckdb.table("static/data/products.parquet") extend {
       avg_retail6 is retail_price.avg()
       avg_retail7 is retail_price.avg()
     nest:
+      # label='Custom item label'
       by_brand is {
         group_by: brand
         aggregate:

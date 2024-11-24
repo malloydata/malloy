@@ -41,6 +41,7 @@ function _resolveCompositeSources(
   let base = {...source};
   let narrowedSources: SingleNarrowedCompositeFieldResolution | undefined =
     undefined;
+  const nonCompositeFields = getNonCompositeFields(source);
   if (compositeFieldUsage.fields.length > 0) {
     if (source.type === 'composite') {
       let found = false;
@@ -68,7 +69,6 @@ function _resolveCompositeSources(
             continue overSources;
           }
         }
-        const nonCompositeFields = getNonCompositeFields(source);
         if (inputSource.type === 'composite') {
           const resolveInner = _resolveCompositeSources(
             path,
@@ -124,6 +124,13 @@ function _resolveCompositeSources(
     } else {
       return {error: {code: 'not_a_composite_source', data: {path}}};
     }
+  } else if (source.type === 'composite') {
+    const first = source.sources[0];
+    base = {
+      ...first,
+      fields: [...nonCompositeFields, ...base.fields],
+      filterList: [...(source.filterList ?? []), ...(first.filterList ?? [])],
+    };
   }
   const fieldsByName: {[name: string]: FieldDef} = {};
   const narrowedJoinedSources = narrowedCompositeFieldResolution?.joined ?? {};

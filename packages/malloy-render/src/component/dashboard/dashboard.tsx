@@ -63,12 +63,15 @@ function DashboardItem(props: {
   if (rendering.renderAs === 'table' && props.maxTableHeight)
     itemStyle['max-height'] = `${props.maxTableHeight}px`;
 
+  const customLabel = props.field.tagParse().tag.text('label');
+  const title = customLabel ?? props.field.name;
+
   return (
     <div
       class="dashboard-item"
       onClick={config.onClick ? handleClick : undefined}
     >
-      <div class="dashboard-item-title">{props.field.name}</div>
+      <div class="dashboard-item-title">{title}</div>
       <div
         class="dashboard-item-value"
         classList={{
