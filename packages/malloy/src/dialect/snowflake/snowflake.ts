@@ -248,12 +248,16 @@ export class SnowflakeDialect extends Dialect {
   sqlFieldReference(
     alias: string,
     fieldName: string,
-    _fieldType: string,
+    fieldType: string,
     isNested: boolean,
-    _isArray: boolean
+    isArray: boolean
   ): string {
     if (fieldName === '__row_id') {
       return `${alias}.INDEX::varchar`;
+    } else if (isArray) {
+      return `${this.sqlMaybeQuoteIdentifier(
+        alias
+      )}.value:"${fieldName}"::${fieldType}`;
     } else if (isNested) {
       return `${alias}['${fieldName}']`;
     }

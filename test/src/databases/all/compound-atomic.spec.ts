@@ -117,8 +117,8 @@ describe.each(runtimes.runtimeList)(
       });
       test('array-un-nest on each', async () => {
         await expect(`
-      run: ${evens}->{ select: n is evens.each }
-    `).malloyResultMatches(
+          run: ${evens}->{ select: n is evens.each }
+        `).malloyResultMatches(
           runtime,
           evensObj.map(n => ({n}))
         );
