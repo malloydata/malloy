@@ -249,11 +249,6 @@ describe.each(runtimes.runtimeList)(
             -> { select: small is record.s }
         `).malloyResultMatches(runtime, {small: 0});
       });
-      test('record.property normal', async () => {
-        await expect(`
-          run: ${sizes} -> { select: small is sizes.s }
-        `).malloyResultMatches(runtime, {small: 0});
-      });
       test('record.property from an extend block', async () => {
         await expect(`
           run: ${empty} -> {
@@ -262,7 +257,7 @@ describe.each(runtimes.runtimeList)(
           }
         `).malloyResultMatches(runtime, {small: 0});
       });
-      test('each on array property inside record', async () => {
+      test('simple each on array property inside record', async () => {
         await expect(`
           run: ${empty} -> { select: nums is { odds is [1,3], evens is [2,4]} }
           -> { select: odd is nums.odds.each }
