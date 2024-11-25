@@ -255,12 +255,26 @@ export class SnowflakeDialect extends Dialect {
     if (fieldName === '__row_id') {
       return `${alias}.INDEX::varchar`;
     } else if (isArray) {
-      return `${this.sqlMaybeQuoteIdentifier(
-        alias
-      )}.value:"${fieldName}"::${fieldType}`;
+      const arrayRef = `"${alias}".value:"${fieldName}"`;
+      switch (fieldType) {
+        case 'struct':
+        case 'record':
+        case 'array':
+          fieldType = 'VARIANT';
+          break;
+        case 'string':
+          fieldType = 'VARCHAR';
+          break;
+        case 'number':
+          fieldType = 'DOUBLE';
+          break;
+        // boolean and timestamp and date are all ok
+      }
+      return `${arrayRef}::${fieldType}`;
     } else if (isNested) {
       return `${alias}['${fieldName}']`;
     }
+    // MTOY TODO THIS SHOULD BE A JOIN
     return `${alias}.${this.sqlMaybeQuoteIdentifier(fieldName)}`;
   }
 
@@ -454,7 +468,9 @@ ${indent(sql)}
   }
 
   malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
-    if (malloyType.type === 'number') {
+    if (malloyType.type === 'string') {
+      return 'VARCHAR';
+    } else if (malloyType.type === 'number') {
       if (malloyType.numberType === 'integer') {
         return 'INTEGER';
       } else {
