@@ -211,7 +211,7 @@ export class ReduceBuilder extends QuerySegmentBuilder implements QueryBuilder {
       // In the modern world, we will ONLY allow names and not numbers in order by lists
       for (const by of reduceSegment.orderBy) {
         if (typeof by.field === 'number') {
-          const by_field = reduceSegment.queryFields[by.field + 1];
+          const by_field = reduceSegment.queryFields[by.field - 1];
           by.field = queryFieldName(by_field);
         }
       }
@@ -238,7 +238,10 @@ export class ReduceBuilder extends QuerySegmentBuilder implements QueryBuilder {
           break;
         }
       }
-      if (reduceSegment.orderBy === undefined) {
+      if (
+        reduceSegment.orderBy === undefined &&
+        reduceSegment.queryFields.length > 0
+      ) {
         reduceSegment.orderBy = [
           {field: queryFieldName(reduceSegment.queryFields[0]), dir: 'asc'},
         ];
