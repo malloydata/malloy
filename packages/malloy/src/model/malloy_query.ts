@@ -2873,7 +2873,11 @@ class QueryQuery extends QueryField {
     return outputStruct;
   }
 
-  generateSQLJoinBlock(stageWriter: StageWriter, ji: JoinInstance): string {
+  generateSQLJoinBlock(
+    stageWriter: StageWriter,
+    ji: JoinInstance,
+    depth: number
+  ): string {
     let s = '';
     const qs = ji.queryStruct;
     const qsDef = qs.structDef;
@@ -2942,7 +2946,7 @@ class QueryQuery extends QueryField {
         let select = `SELECT ${ji.alias}.*`;
         let joins = '';
         for (const childJoin of ji.children) {
-          joins += this.generateSQLJoinBlock(stageWriter, childJoin);
+          joins += this.generateSQLJoinBlock(stageWriter, childJoin, depth + 1);
           select += `, ${this.parent.dialect.sqlSelectAliasAsStruct(
             childJoin.alias,
             getDialectFieldList(childJoin.queryStruct.structDef)
@@ -2960,72 +2964,27 @@ class QueryQuery extends QueryField {
       if (qs.parent === undefined || ji.parent === undefined) {
         throw new Error('Internal Error, nested structure with no parent.');
       }
-      // Compute the field expression being passed the un-nest. It is made
-      // up of a parent name, and a child name, either of which could
-      // be expressions, not references
-      let fieldExpression: string;
+      // We need an SQL expression which results in the array for us to pass to un-nest
+      let arrayExpression: string;
 
-      // mtoy todo dont like the way parent name expansion is decided
-      // If this is a top level join with an expression value, then
-      // we may have to replace the name with the expression. There is a
-      // test where a top level join with an expression has a join inside
-      // of it, and in that case, we don't need to expand the name
-      // of the parent join when making the child join, because it would have been done
-      // at a higher level, only I am not 100% confident that is correct
-      const shouldExpandExpressionParent = ji.parent.parent === undefined;
       if (hasExpression(qsDef)) {
-        // There are two interesting cases here. One is that this array object
-        // itself is an expression. We don't need the parent name, we just do
-        // => arrayValue is the fieldExpression
-        fieldExpression = this.exprToSQL(this.rootResult, qs.parent, qsDef.e);
-      } else if (
-        isJoined(qs.parent.structDef) &&
-        hasExpression(qs.parent.structDef) &&
-        shouldExpandExpressionParent
-      ) {
-        // Ok, this is an array object, with a name, inside some parent.
-        //
-        // The other intersting case is if the parent is not intrinsic
-        // so when we "DOT" the parent, we need to DOT the expression
-        // of the parent, not the name of the parent.
-        //
-        // Ideally when we asked qs.parent.getSQLIdentifier() we would get
-        // back something that would work as the name, either the name
-        // or the expression which generates the parent, but we can't
-        // do that because qs.parent doesn't have access to the QueryQuery
-        // to call exprToSQL, so we do it here
-        // => PARENT_EXPRESSION.arrayname as the fieldExpression
-        if (qs.parent.parent === undefined) {
-          // Can't get the context for expression evaluation, should not be possible
-          throw new Error('Inconcievable, base table is an expression');
-        }
-        const parentReference = this.exprToSQL(
-          this.rootResult,
-          qs.parent.parent,
-          qs.parent.structDef.e
-        );
-        fieldExpression = this.parent.dialect.sqlFieldReference(
-          parentReference,
-          qsDef.name,
-          'struct',
-          qs.parent.structDef.type === 'array',
-          isScalarArray(this.parent.structDef)
-        );
+        // If this array is NOT contained in the parent, but a computed entity
+        // then the thing we are joining is not "parent.childName", but
+        // the expression which is built in that namespace
+        arrayExpression = this.exprToSQL(this.rootResult, qs.parent, qsDef.e);
       } else {
-        // The boring case
-        // => parentName.arrayName is the fieldExpression
-        fieldExpression = this.parent.dialect.sqlFieldReference(
-          qs.parent.getSQLIdentifier(),
+        // We are going to ask SOMEONE to write this field reference. I think
+        // the right person to ask is the parent of this join.
+        arrayExpression = qs.parent.sqlChildReference(
           qsDef.name,
-          'struct',
-          qs.parent.structDef.type === 'array',
-          isScalarArray(this.parent.structDef)
+          this,
+          depth === 0
         );
       }
       // we need to generate primary key.  If parent has a primary key combine
       // console.log(ji.alias, fieldExpression, this.inNestedPipeline());
       s += `${this.parent.dialect.sqlUnnestAlias(
-        fieldExpression,
+        arrayExpression,
         ji.alias,
         ji.getDialectFieldList(),
         ji.makeUniqueKey,
@@ -3040,7 +2999,7 @@ class QueryQuery extends QueryField {
       throw new Error(`Join type not implemented ${qs.structDef.type}`);
     }
     for (const childJoin of ji.children) {
-      s += this.generateSQLJoinBlock(stageWriter, childJoin);
+      s += this.generateSQLJoinBlock(stageWriter, childJoin, depth + 1);
     }
     return s;
   }
@@ -3096,7 +3055,7 @@ class QueryQuery extends QueryField {
     }
 
     for (const childJoin of ji.children) {
-      s += this.generateSQLJoinBlock(stageWriter, childJoin);
+      s += this.generateSQLJoinBlock(stageWriter, childJoin, 0);
     }
     return s;
   }
@@ -4486,6 +4445,35 @@ class QueryStruct {
     } else {
       return this.getIdentifier();
     }
+  }
+
+  sqlChildReference(
+    name: string,
+    forQuery: QueryQuery,
+    topLevel: boolean
+  ): string {
+    let parentRef = this.getSQLIdentifier();
+    // If this is a reference through an expression at the top level,
+    // need to generate the expression because the expression is written
+    // in the top level, this call is being used to generate the join.
+    // Below the top level, the expression will have been written into
+    // a join at the top level, and the name will exist.
+    // ... not sure this is the right way to do this
+    // ... the test for this is called "source repeated record containing an array"
+    if (topLevel && isAtomic(this.structDef) && hasExpression(this.structDef)) {
+      parentRef = forQuery.exprToSQL(
+        forQuery.rootResult,
+        this,
+        this.structDef.e
+      );
+    }
+    return this.dialect.sqlFieldReference(
+      parentRef,
+      name,
+      this.structDef.type,
+      this.structDef.type === 'array' || this.structDef.type === 'record',
+      isScalarArray(this.structDef)
+    );
   }
 
   // return the name of the field in SQL

@@ -1391,7 +1391,7 @@ export function isTurtleDef(def: FieldDef): def is TurtleDef {
   return def.type === 'turtle';
 }
 
-export function isAtomic(def: FieldDef): def is AtomicFieldDef {
+export function isAtomic(def: FieldDef | StructDef): def is AtomicFieldDef {
   return isAtomicFieldType(def.type);
 }
 

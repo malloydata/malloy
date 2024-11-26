@@ -176,7 +176,6 @@ describe.each(runtimes.runtimeList)(
       });
       test.when(supportsNestedArrays)('bare array of array', async () => {
         await expect(`
-          # test.verbose
           run: ${empty} -> { select: aoa is [[1,2]] }
         `).malloyResultMatches(runtime, {aoa: [[1, 2]]});
       });
@@ -260,7 +259,7 @@ describe.each(runtimes.runtimeList)(
       test('simple each on array property inside record', async () => {
         await expect(`
           run: ${empty} -> { select: nums is { odds is [1,3], evens is [2,4]} }
-          -> { select: odd is nums.odds.each }
+          -> { select: odd is nums.odds.value }
         `).malloyResultMatches(runtime, [{odd: 1}, {odd: 3}]);
       });
       test('each on array property inside record from source', async () => {
