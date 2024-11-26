@@ -1018,50 +1018,75 @@ describe('query:', () => {
     test('top N', () => {
       expect('run: a->{ top: 5; group_by: astr }').toTranslate();
     });
-    test('top N by field', () => {
-      expect(
-        `##! m4warnings=warn
-        run: a->{top: 5 ${'by astr'}; group_by: astr}`
-      ).toLog(
-        warningMessage(
-          'by clause of top statement unupported. Use order_by instead'
-        )
-      );
-    });
-    test('top N by expression', () => {
-      expect(
-        `##! m4warnings=warn
-        run: ab->{top: 5 by ai + 1; group_by: ai}`
-      ).toLog(
-        warningMessage(
-          'by clause of top statement unupported. Use order_by instead'
-        )
-      );
-    });
     test('limit N', () => {
       expect('run: a->{ limit: 5; group_by: astr }').toTranslate();
     });
-    test('order by', () => {
-      expect('run: a->{ order_by: astr; group_by: astr }').toTranslate();
-    });
-    test('order by preserved over refinement', () => {
-      expect(`
-        query: a1 is a -> { group_by: astr }
-        run: a1 + { order_by: astr }
-      `).toTranslate();
-    });
-    test('order by must be in the output space', () =>
-      expect('run: a -> { order_by: af; group_by: astr }').toLog(
-        errorMessage('Unknown field af in output space')
-      ));
-    test('order by asc', () => {
-      expect('run: a->{ order_by: astr asc; group_by: astr }').toTranslate();
-    });
-    test('order by desc', () => {
-      expect('run: a->{ order_by: astr desc; group_by: astr }').toTranslate();
-    });
-    test('order by N', () => {
-      expect('run: a->{ order_by: 1 asc; group_by: astr }').toTranslate();
+    describe('order by variations', () => {
+      test('order by', () => {
+        expect('run: a->{ order_by: astr; group_by: astr }').toTranslate();
+      });
+      test('order by preserved over refinement', () => {
+        expect(`
+          query: a1 is a -> { group_by: astr }
+          run: a1 + { order_by: astr }
+        `).toTranslate();
+      });
+      test('order by must be in the output space', () =>
+        expect('run: a -> { order_by: af; group_by: astr }').toLog(
+          errorMessage('Unknown field af in output space')
+        ));
+      test('order by asc', () => {
+        expect('run: a->{ order_by: astr asc; group_by: astr }').toTranslate();
+      });
+      test('order by desc', () => {
+        expect('run: a->{ order_by: astr desc; group_by: astr }').toTranslate();
+      });
+      test('order by N', () => {
+        expect('run: a->{ order_by: 1 asc; group_by: astr }').toTranslate();
+      });
+      test('first aggregate used for default ordering', () => {
+        const m = model`run: a->{
+          group_by: astr
+          aggregate: t is ai.sum()
+        }`;
+        expect(m).toTranslate();
+        const runStmt = m.translator.getQuery(0)!;
+        expect(runStmt).toBeDefined();
+        const reduce = runStmt.pipeline[0];
+        expect(reduce.type).toEqual('reduce');
+        if (reduce.type === 'reduce') {
+          expect(reduce.defaultOrderBy).toBeTruthy();
+          expect(reduce.orderBy).toEqual([{field: 't', dir: 'desc'}]);
+        }
+      });
+      test('first temporal used for default ordering', () => {
+        const m = model`run: a->{
+          group_by: astr, ats
+        }`;
+        expect(m).toTranslate();
+        const runStmt = m.translator.getQuery(0)!;
+        expect(runStmt).toBeDefined();
+        const reduce = runStmt.pipeline[0];
+        expect(reduce.type).toEqual('reduce');
+        if (reduce.type === 'reduce') {
+          expect(reduce.defaultOrderBy).toBeTruthy();
+          expect(reduce.orderBy).toEqual([{field: 'ats', dir: 'desc'}]);
+        }
+      });
+      test('first used for ordering when appropriate', () => {
+        const m = model`run: a->{
+          group_by: astr, big is upper(astr)
+        }`;
+        expect(m).toTranslate();
+        const runStmt = m.translator.getQuery(0)!;
+        expect(runStmt).toBeDefined();
+        const reduce = runStmt.pipeline[0];
+        expect(reduce.type).toEqual('reduce');
+        if (reduce.type === 'reduce') {
+          expect(reduce.defaultOrderBy).toBeTruthy();
+          expect(reduce.orderBy).toEqual([{field: 'astr', dir: 'asc'}]);
+        }
+      });
     });
     test('order by multiple', () => {
       expect(`

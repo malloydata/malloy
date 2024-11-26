@@ -41,7 +41,6 @@ import {ErrorFactory} from '../error-factory';
 import {FieldName, SourceFieldSpace} from '../types/field-space';
 import {Limit} from '../query-properties/limit';
 import {Ordering} from '../query-properties/ordering';
-import {Top} from '../query-properties/top';
 import {QueryProperty} from '../types/query-property';
 import {QueryBuilder} from '../types/query-builder';
 import {
@@ -64,7 +63,7 @@ function queryFieldName(qf: QueryFieldDef): string {
 }
 
 export abstract class QuerySegmentBuilder implements QueryBuilder {
-  order?: Top | Ordering;
+  order?: Ordering;
   limit?: number;
   alwaysJoins: string[] = [];
   abstract inputFS: QueryInputSpace;
@@ -79,25 +78,6 @@ export abstract class QuerySegmentBuilder implements QueryBuilder {
     }
     if (qp instanceof DefinitionList) {
       this.resultFS.pushFields(...qp.list);
-    } else if (qp instanceof Top) {
-      if (this.limit) {
-        qp.logError(
-          'limit-already-specified',
-          'Query operation already limited'
-        );
-      } else {
-        this.limit = qp.limit;
-      }
-      if (qp.by) {
-        if (this.order) {
-          qp.logError(
-            'ordering-already-specified',
-            'Query operation is already sorted'
-          );
-        } else {
-          this.order = qp;
-        }
-      }
     } else if (qp instanceof Limit) {
       if (this.limit) {
         qp.logError(
@@ -127,30 +107,21 @@ export abstract class QuerySegmentBuilder implements QueryBuilder {
 
   refineFrom(from: PipeSegment | undefined, to: QuerySegment): void {
     if (from && from.type !== 'index' && from.type !== 'raw') {
-      if (!this.order) {
-        if (from.orderBy) {
-          to.orderBy = from.orderBy;
-        } else if (from.by) {
-          to.by = from.by;
-        }
+      if (!this.limit && from.orderBy && !from.defaultOrderBy) {
+        to.orderBy = from.orderBy;
       }
       if (!this.limit && from.limit) {
         to.limit = from.limit;
       }
     }
 
-    if (this.limit) {
-      to.limit = this.limit;
+    if (this.order) {
+      to.orderBy = this.order.getOrderBy(this.inputFS);
+      delete to.defaultOrderBy;
     }
 
-    if (this.order instanceof Top) {
-      const topBy = this.order.getBy(this.inputFS);
-      if (topBy) {
-        to.by = topBy;
-      }
-    }
-    if (this.order instanceof Ordering) {
-      to.orderBy = this.order.getOrderBy(this.inputFS);
+    if (this.limit) {
+      to.limit = this.limit;
     }
 
     const oldFilters = from?.filterList || [];
@@ -215,25 +186,31 @@ export class ReduceBuilder extends QuerySegmentBuilder implements QueryBuilder {
           by.field = queryFieldName(by_field);
         }
       }
-    } else {
+    }
+    if (reduceSegment.orderBy === undefined || reduceSegment.defaultOrderBy) {
       // In the modern world, we will order all reduce segments with the default ordering
+      reduceSegment.orderBy = undefined;
       for (const field of reduceSegment.queryFields) {
         let fieldAggregate = false;
+        let fieldType: string;
         const fieldName = queryFieldName(field);
         if (field.type === 'fieldref') {
           const lookupPath = field.path.map(el => new FieldName(el));
           const refField = this.inputFS.lookup(lookupPath).found;
           if (refField) {
             const typeDesc = refField.typeDesc();
+            fieldType = typeDesc.type;
             fieldAggregate = expressionIsAggregate(typeDesc.expressionType);
           } else {
             continue;
           }
         } else {
+          fieldType = field.type;
           fieldAggregate =
             hasExpression(field) && expressionIsAggregate(field.expressionType);
         }
-        if (isTemporalField(field.type) || fieldAggregate) {
+        if (isTemporalField(fieldType) || fieldAggregate) {
+          reduceSegment.defaultOrderBy = true;
           reduceSegment.orderBy = [{field: fieldName, dir: 'desc'}];
           break;
         }
@@ -242,6 +219,7 @@ export class ReduceBuilder extends QuerySegmentBuilder implements QueryBuilder {
         reduceSegment.orderBy === undefined &&
         reduceSegment.queryFields.length > 0
       ) {
+        reduceSegment.defaultOrderBy = true;
         reduceSegment.orderBy = [
           {field: queryFieldName(reduceSegment.queryFields[0]), dir: 'asc'},
         ];

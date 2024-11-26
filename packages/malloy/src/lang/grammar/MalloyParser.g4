@@ -448,7 +448,7 @@ bySpec
   ;
 
 topStatement
-  : TOP INTEGER_LITERAL bySpec?
+  : TOP INTEGER_LITERAL
   ;
 
 indexElement
