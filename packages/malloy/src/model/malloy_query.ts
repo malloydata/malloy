@@ -2973,12 +2973,16 @@ class QueryQuery extends QueryField {
         // the expression which is built in that namespace
         arrayExpression = this.exprToSQL(this.rootResult, qs.parent, qsDef.e);
       } else {
-        // We are going to ask SOMEONE to write this field reference. I think
-        // the right person to ask is the parent of this join.
+        // If this is a reference through an expression at the top level,
+        // need to generate the expression because the expression is written
+        // in the top level, this call is being used to generate the join.
+        // Below the top level, the expression will have been written into
+        // a join at the top level, and the name will exist.
+        // ... not sure this is the right way to do this
+        // ... the test for this is called "source repeated record containing an array"
         arrayExpression = qs.parent.sqlChildReference(
           qsDef.name,
-          this,
-          depth === 0
+          depth === 0 ? this : undefined
         );
       }
       // we need to generate primary key.  If parent has a primary key combine
@@ -4447,20 +4451,9 @@ class QueryStruct {
     }
   }
 
-  sqlChildReference(
-    name: string,
-    forQuery: QueryQuery,
-    topLevel: boolean
-  ): string {
+  sqlChildReference(name: string, forQuery: QueryQuery | undefined): string {
     let parentRef = this.getSQLIdentifier();
-    // If this is a reference through an expression at the top level,
-    // need to generate the expression because the expression is written
-    // in the top level, this call is being used to generate the join.
-    // Below the top level, the expression will have been written into
-    // a join at the top level, and the name will exist.
-    // ... not sure this is the right way to do this
-    // ... the test for this is called "source repeated record containing an array"
-    if (topLevel && isAtomic(this.structDef) && hasExpression(this.structDef)) {
+    if (forQuery && isAtomic(this.structDef) && hasExpression(this.structDef)) {
       parentRef = forQuery.exprToSQL(
         forQuery.rootResult,
         this,
@@ -4496,10 +4489,9 @@ class QueryStruct {
 
     // if this is an inline object, include the parents alias.
     if (this.structDef.type === 'record' && this.parent) {
-      return (
-        this.parent.getSQLIdentifier() +
-        '.' +
-        this.dialect.sqlMaybeQuoteIdentifier(getIdentifier(this.structDef))
+      return this.parent.sqlChildReference(
+        getIdentifier(this.structDef),
+        undefined
       );
     }
     // we are somewhere in the join tree.  Make sure the alias is unique.
