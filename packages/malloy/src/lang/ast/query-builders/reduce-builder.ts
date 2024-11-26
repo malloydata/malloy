@@ -26,15 +26,19 @@ import {
   FilterCondition,
   PartialSegment,
   PipeSegment,
+  QueryFieldDef,
   QuerySegment,
   ReduceSegment,
+  expressionIsAggregate,
+  hasExpression,
   isPartialSegment,
   isQuerySegment,
   isReduceSegment,
+  isTemporalField,
 } from '../../../model/malloy_types';
 
 import {ErrorFactory} from '../error-factory';
-import {SourceFieldSpace} from '../types/field-space';
+import {FieldName, SourceFieldSpace} from '../types/field-space';
 import {Limit} from '../query-properties/limit';
 import {Ordering} from '../query-properties/ordering';
 import {Top} from '../query-properties/top';
@@ -51,6 +55,13 @@ import {
   emptyCompositeFieldUsage,
   mergeCompositeFieldUsage,
 } from '../../../model/composite_source_utils';
+
+function queryFieldName(qf: QueryFieldDef): string {
+  if (qf.type === 'fieldref') {
+    return qf.path[qf.path.length - 1];
+  }
+  return qf.name;
+}
 
 export abstract class QuerySegmentBuilder implements QueryBuilder {
   order?: Top | Ordering;
@@ -196,6 +207,43 @@ export class ReduceBuilder extends QuerySegmentBuilder implements QueryBuilder {
     const reduceSegment = this.resultFS.getQuerySegment(from);
     this.refineFrom(from, reduceSegment);
 
+    if (reduceSegment.orderBy) {
+      // In the modern world, we will ONLY allow names and not numbers in order by lists
+      for (const by of reduceSegment.orderBy) {
+        if (typeof by.field === 'number') {
+          const by_field = reduceSegment.queryFields[by.field + 1];
+          by.field = queryFieldName(by_field);
+        }
+      }
+    } else {
+      // In the modern world, we will order all reduce segments with the default ordering
+      for (const field of reduceSegment.queryFields) {
+        let fieldAggregate = false;
+        const fieldName = queryFieldName(field);
+        if (field.type === 'fieldref') {
+          const lookupPath = field.path.map(el => new FieldName(el));
+          const refField = this.inputFS.lookup(lookupPath).found;
+          if (refField) {
+            const typeDesc = refField.typeDesc();
+            fieldAggregate = expressionIsAggregate(typeDesc.expressionType);
+          } else {
+            continue;
+          }
+        } else {
+          fieldAggregate =
+            hasExpression(field) && expressionIsAggregate(field.expressionType);
+        }
+        if (isTemporalField(field.type) || fieldAggregate) {
+          reduceSegment.orderBy = [{field: fieldName, dir: 'desc'}];
+          break;
+        }
+      }
+      if (reduceSegment.orderBy === undefined) {
+        reduceSegment.orderBy = [
+          {field: queryFieldName(reduceSegment.queryFields[0]), dir: 'asc'},
+        ];
+      }
+    }
     return reduceSegment;
   }
 }
