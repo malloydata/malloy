@@ -35,18 +35,6 @@ describe.each(runtimes.runtimeList)(
       const literal = num.toString();
       return {node: 'numberLiteral', literal, sql: literal};
     }
-    // this is just a standin for "unknown function"
-    const arrayLen = {
-      'duckdb': 'LEN',
-      'duckdb_wasm': 'LEN',
-      'motherduck': 'LEN',
-      'bigquery': 'ARRAY_LENGTH',
-      'postgres': 'ARRAY_LENGTH',
-      'presto': 'CARDINALITY',
-      'trino': 'CARDINALITY',
-      'mysql': 'JSON_LENGTH',
-      'snowflake': 'ARRAY_SIZE',
-    };
     const empty = `${databaseName}.sql("SELECT 0 as z")`;
     function arraySelectVal(...val: Number[]): string {
       const literal: ArrayLiteralNode = {
@@ -125,9 +113,21 @@ describe.each(runtimes.runtimeList)(
           evensObj.map(n => ({n}))
         );
       });
-      test('array can be passed to functions', async () => {
-        const fn = arrayLen[databaseName];
-        expect(fn).toBeDefined();
+      test('array can be passed to !function', async () => {
+        // Used as a standin for "unknown function user might call"
+        const nameOfArrayLenFunction = {
+          'duckdb': 'LEN',
+          'standardsql': 'ARRAY_LENGTH',
+          'postgres': 'ARRAY_LENGTH',
+          'presto': 'CARDINALITY',
+          'trino': 'CARDINALITY',
+          'mysql': 'JSON_LENGTH',
+          'snowflake': 'ARRAY_SIZE',
+        };
+        const dialect = runtime.dialect.name;
+        const missing = `Dialect '${dialect}' missing array length function in nameOfArrayLenFunction`;
+        const fn = nameOfArrayLenFunction[dialect] ?? missing;
+        expect(fn).not.toEqual(missing);
         await expect(
           `run: ${evens}->{ select: nby2 is ${fn}!number(evens); } `
         ).malloyResultMatches(runtime, {nby2: evensObj.length});

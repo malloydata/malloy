@@ -133,9 +133,9 @@ class SnowObject extends SnowField {
           'SNOWFLAKE SCHEMA PARSER ERROR: Walk through undefined'
         );
       } else {
-        if (field) {
-          // mtoy todo Variant record value
-        } else {
+        // If we get multiple type for a field, ignore them, should
+        // which will do until we support viarant data
+        if (!field) {
           this.fieldMap.set(
             path.name,
             SnowField.make(path.name, fieldType, this.dialect)

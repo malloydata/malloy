@@ -200,10 +200,8 @@ export class SnowflakeDialect extends Dialect {
     isArray: boolean,
     _isInNestedPipeline: boolean
   ): string {
-    // mtoy todo would like to NOT do this
     const as = this.sqlMaybeQuoteIdentifier(alias);
     if (isArray) {
-      const as = this.sqlMaybeQuoteIdentifier(alias);
       return `,LATERAL FLATTEN(INPUT => ${source}) AS ${alias}_1, LATERAL (SELECT ${alias}_1.INDEX, object_construct('value', ${alias}_1.value) as value ) as ${as}`;
     } else {
       // have to have a non empty row or it treats it like an inner join :barf-emoji:
