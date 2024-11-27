@@ -28,7 +28,9 @@ const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 describe.each(runtimes.runtimeList)(
   'compound atomic datatypes %s',
   (databaseName, runtime) => {
+    // mtoy todo dialect flag
     const supportsNestedArrays = !['bigquery'].includes(databaseName);
+    const quote = runtime.dialect.sqlMaybeQuoteIdentifier;
     function literalNum(num: Number): Expr {
       const literal = num.toString();
       return {node: 'numberLiteral', literal, sql: literal};
@@ -95,12 +97,12 @@ describe.each(runtimes.runtimeList)(
     const sizesObj = {s: 0, m: 1, l: 2, xl: 3};
     const sizesSQL = recordSelectVal(sizesObj);
     const sizes = `${databaseName}.sql("""
-      SELECT ${sizesSQL} AS ${runtime.dialect.sqlMaybeQuoteIdentifier('sizes')}
+      SELECT ${sizesSQL} AS ${quote('sizes')}
     """)`;
     const evensObj = [2, 4, 6, 8];
     const evensSQL = arraySelectVal(...evensObj);
     const evens = `${databaseName}.sql("""
-      SELECT ${evensSQL} AS ${runtime.dialect.sqlMaybeQuoteIdentifier('evens')}
+      SELECT ${evensSQL} AS ${quote('evens')}
     """)`;
 
     describe('simple arrays', () => {
@@ -209,7 +211,7 @@ describe.each(runtimes.runtimeList)(
       // mtoy todo remove this
       test('nested data looks like a record', async () => {
         await expect(`
-          run: ${databaseName}.sql('SELECT 1 as "o"') -> {
+          run: ${databaseName}.sql('SELECT 1 as ${quote('o')}') -> {
             group_by: row is 'one_row'
             nest: sizes is {
               aggregate:
@@ -319,14 +321,18 @@ describe.each(runtimes.runtimeList)(
       ];
       const abMalloy = '[{a is 10, b is 11}, {a is 20, b is 21}]';
       function selectAB(n: string) {
-        return `SELECT ${ab} AS ${runtime.dialect.sqlMaybeQuoteIdentifier(n)}`;
+        return `SELECT ${ab} AS ${quote(n)}`;
       }
 
       test('repeated record from nest', async () => {
         await expect(`
-            run: ${databaseName}.sql("""SELECT 10 as "a", 11 as "b" UNION ALL SELECT 20 , 21""")
-            -> { nest: ab is { select: a, b } }
-            -> { select: ab.a, ab.b }
+            run: ${databaseName}.sql("""
+              SELECT
+                10 as ${quote('a')},
+                11 as ${quote('b')}
+              UNION ALL SELECT 20 , 21
+            """) -> { nest: ab is { select: a, b } }
+                 -> { select: ab.a, ab.b }
         `).malloyResultMatches(runtime, ab_eq);
       });
       test('select repeated record from literal dialect functions', async () => {
