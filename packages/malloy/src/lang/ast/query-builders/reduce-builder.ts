@@ -190,7 +190,7 @@ export class ReduceBuilder extends QuerySegmentBuilder implements QueryBuilder {
     }
     if (reduceSegment.orderBy === undefined || reduceSegment.defaultOrderBy) {
       // In the modern world, we will order all reduce segments with the default ordering
-      let usableDefaultOrderField: QueryFieldDef | undefined;
+      let usableDefaultOrderField: string | undefined;
       for (const field of reduceSegment.queryFields) {
         let fieldAggregate = false;
         let fieldType: string;
@@ -217,14 +217,12 @@ export class ReduceBuilder extends QuerySegmentBuilder implements QueryBuilder {
           break;
         }
         if (canOrderBy(fieldType)) {
-          usableDefaultOrderField = field;
+          usableDefaultOrderField = fieldName;
         }
       }
       if (usableDefaultOrderField) {
         reduceSegment.defaultOrderBy = true;
-        reduceSegment.orderBy = [
-          {field: queryFieldName(usableDefaultOrderField), dir: 'asc'},
-        ];
+        reduceSegment.orderBy = [{field: usableDefaultOrderField, dir: 'asc'}];
       }
     }
     return reduceSegment;
