@@ -261,7 +261,7 @@ export class SnowflakeDialect extends Dialect {
   ): string {
     const sqlName = this.sqlMaybeQuoteIdentifier(childName);
     if (childName === '__row_id') {
-      return `${parentAlias}.INDEX::varchar`;
+      return `"${parentAlias}".INDEX::varchar`;
     } else if (
       parentType === 'array[scalar]' ||
       parentType === 'array[record]'
