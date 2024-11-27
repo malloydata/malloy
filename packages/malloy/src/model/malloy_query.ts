@@ -4626,6 +4626,7 @@ class QueryStruct {
       case 'query_source':
       case 'table':
       case 'sql_select':
+      case 'composite':
         return new QueryFieldStruct(
           field,
           undefined,
@@ -4649,7 +4650,9 @@ class QueryStruct {
       case 'turtle':
         return QueryQuery.makeQuery(field, this, undefined, false);
       default:
-        throw new Error(`unknown field definition ${JSON.stringify(field)}`);
+        throw new Error(
+          `unknown field definition ${(JSON.stringify(field), undefined, 2)}`
+        );
     }
   }
 

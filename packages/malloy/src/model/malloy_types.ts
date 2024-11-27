@@ -748,6 +748,7 @@ export function isMatrixOperation(x: string): x is MatrixOperation {
 }
 
 export type JoinElementType =
+  | 'composite'
   | 'table'
   | 'sql_select'
   | 'query_source'
@@ -763,18 +764,13 @@ export interface JoinBase {
 }
 
 export type Joinable =
+  | CompositeSourceDef
   | TableSourceDef
   | SQLSourceDef
   | QuerySourceDef
   | RecordDef
   | ArrayDef;
 export type JoinFieldDef = JoinBase & Joinable;
-export type JoinFieldTypes =
-  | 'table'
-  | 'sql_select'
-  | 'query_source'
-  | 'array'
-  | 'record';
 
 export function isJoinable(sd: StructDef): sd is Joinable {
   return [
