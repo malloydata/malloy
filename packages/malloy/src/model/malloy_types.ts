@@ -492,10 +492,13 @@ export interface ResultMetadataDef {
   referenceId?: string;
 }
 
-// struct specific metadta
-export interface ResultStructMetadataDef extends ResultMetadataDef {
-  limit?: number;
+export interface Ordered {
   orderBy?: OrderBy[];
+  defaultOrderBy?: boolean;
+}
+// struct specific metadta
+export interface ResultStructMetadataDef extends ResultMetadataDef, Ordered {
+  limit?: number;
 }
 
 export interface ResultMetadata {
@@ -630,6 +633,12 @@ export function isAtomicFieldType(s: string): s is AtomicFieldType {
     'error',
   ].includes(s);
 }
+export function canOrderBy(s: string) {
+  return ['string', 'number', 'date', 'boolean', 'date', 'timestamp'].includes(
+    s
+  );
+}
+
 export function isCastType(s: string): s is CastType {
   return ['string', 'number', 'date', 'timestamp', 'boolean', 'json'].includes(
     s
@@ -1020,13 +1029,11 @@ export interface CompositeFieldUsage {
   joinedUsage: Record<string, CompositeFieldUsage>;
 }
 
-export interface QuerySegment extends Filtered {
+export interface QuerySegment extends Filtered, Ordered {
   type: 'reduce' | 'project' | 'partial';
   queryFields: QueryFieldDef[];
   extendSource?: FieldDef[];
   limit?: number;
-  by?: By;
-  orderBy?: OrderBy[]; // uses output field name or index.
   queryTimezone?: string;
   alwaysJoins?: string[];
   compositeFieldUsage?: CompositeFieldUsage;

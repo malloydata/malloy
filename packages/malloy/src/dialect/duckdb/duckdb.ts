@@ -32,6 +32,7 @@ import {
   MeasureTimeExpr,
   LeafAtomicTypeDef,
   TD,
+  OrderBy,
 } from '../../model/malloy_types';
 import {indent} from '../../model/utils';
 import {
@@ -247,11 +248,28 @@ export class DuckDBDialect extends PostgresBase {
 
   sqlCreateFunctionCombineLastStage(
     lastStageName: string,
-    dialectFieldList: DialectFieldList
+    dialectFieldList: DialectFieldList,
+    orderBy: OrderBy[] | undefined
   ): string {
+    let o = '';
+    if (orderBy) {
+      const clauses: string[] = [];
+      for (const c of orderBy) {
+        if (typeof c.field === 'string') {
+          clauses.push(`${c.field} ${c.dir || 'asc'}`);
+        } else {
+          clauses.push(
+            `${dialectFieldList[c.field].sqlOutputName} ${c.dir || 'asc'}`
+          );
+        }
+      }
+      if (clauses.length > 0) {
+        o = ` ORDER BY ${clauses.join(', ')}`;
+      }
+    }
     return `SELECT LIST(STRUCT_PACK(${dialectFieldList
       .map(d => this.sqlMaybeQuoteIdentifier(d.sqlOutputName))
-      .join(',')})) FROM ${lastStageName}\n`;
+      .join(',')})${o}) FROM ${lastStageName}\n`;
   }
 
   sqlSelectAliasAsStruct(
