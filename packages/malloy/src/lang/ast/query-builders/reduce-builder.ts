@@ -216,7 +216,7 @@ export class ReduceBuilder extends QuerySegmentBuilder implements QueryBuilder {
           usableDefaultOrderField = undefined;
           break;
         }
-        if (canOrderBy(fieldType)) {
+        if (canOrderBy(fieldType) && !usableDefaultOrderField) {
           usableDefaultOrderField = fieldName;
         }
       }
