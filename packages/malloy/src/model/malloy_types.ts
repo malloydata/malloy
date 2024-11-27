@@ -633,6 +633,12 @@ export function isAtomicFieldType(s: string): s is AtomicFieldType {
     'error',
   ].includes(s);
 }
+export function canOrderBy(s: string) {
+  return ['string', 'number', 'date', 'boolean', 'date', 'timestamp'].includes(
+    s
+  );
+}
+
 export function isCastType(s: string): s is CastType {
   return ['string', 'number', 'date', 'timestamp', 'boolean', 'json'].includes(
     s
