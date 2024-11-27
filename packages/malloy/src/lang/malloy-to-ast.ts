@@ -1090,30 +1090,9 @@ export class MalloyToAST
     return this.astAt(new ast.Ordering(orderList), pcx);
   }
 
-  visitTopStatement(pcx: parse.TopStatementContext): ast.Top {
-    const byCx = pcx.bySpec();
+  visitTopStatement(pcx: parse.TopStatementContext): ast.Limit {
     const topN = this.getNumber(pcx.INTEGER_LITERAL());
-    let top: ast.Top | undefined;
-    if (byCx) {
-      this.m4advisory(
-        byCx,
-        'top-by',
-        'by clause of top statement unupported. Use order_by instead'
-      );
-      const nameCx = byCx.fieldName();
-      if (nameCx) {
-        const name = this.getFieldName(nameCx);
-        top = new ast.Top(topN, name);
-      }
-      const exprCx = byCx.fieldExpr();
-      if (exprCx) {
-        top = new ast.Top(topN, this.getFieldExpr(exprCx));
-      }
-    }
-    if (!top) {
-      top = new ast.Top(topN, undefined);
-    }
-    return this.astAt(top, pcx);
+    return this.astAt(new ast.Limit(topN), pcx);
   }
 
   visitTopLevelQueryDefs(

@@ -116,7 +116,6 @@ export * from './query-properties/ordering';
 export * from './query-properties/project-statement';
 export * from './query-properties/qop-desc';
 export * from './query-properties/sampling';
-export * from './query-properties/top';
 export * from './source-elements/named-source';
 export * from './source-elements/query-source';
 export * from './source-elements/sql-source';

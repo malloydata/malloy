@@ -249,7 +249,8 @@ class StageWriter {
     }
     sql += dialect.sqlCreateFunctionCombineLastStage(
       lastStageName,
-      getDialectFieldList(structDef)
+      getDialectFieldList(structDef),
+      (structDef.resultMetadata as ResultStructMetadataDef)?.orderBy
     );
 
     const id = `${dialect.udfPrefix}${this.root().udfs.length}`;
@@ -340,14 +341,16 @@ class StageWriter {
     if (!this.useCTE) {
       return dialect.sqlCreateFunctionCombineLastStage(
         `(${this.withs[0]})`,
-        getDialectFieldList(structDef)
+        getDialectFieldList(structDef),
+        (structDef.resultMetadata as ResultStructMetadataDef)?.orderBy
       );
     } else {
       return (
         this.combineStages(true).sql +
         dialect.sqlCreateFunctionCombineLastStage(
           this.getName(this.withs.length - 1),
-          getDialectFieldList(structDef)
+          getDialectFieldList(structDef),
+          (structDef.resultMetadata as ResultStructMetadataDef)?.orderBy
         )
       );
     }
@@ -2217,7 +2220,10 @@ class JoinInstance {
  * half translated to the new world of types ..
  */
 export class Segment {
-  static nextStructDef(structDef: SourceDef, segment: PipeSegment): SourceDef {
+  static nextStructDef(
+    structDef: SourceDef,
+    segment: PipeSegment
+  ): QueryResultDef {
     const qs = new QueryStruct(
       structDef,
       undefined,
@@ -2736,7 +2742,7 @@ class QueryQuery extends QueryField {
   getResultStructDef(
     resultStruct: FieldInstanceResult = this.rootResult,
     isRoot = true
-  ): SourceDef {
+  ): QueryResultDef {
     const fields: FieldDef[] = [];
     let primaryKey;
     this.prepare(undefined);
@@ -3872,7 +3878,7 @@ class QueryQuery extends QueryField {
 
   generateSQLFromPipeline(stageWriter: StageWriter): {
     lastStageName: string;
-    outputStruct: SourceDef;
+    outputStruct: QueryResultDef;
   } {
     this.parent.maybeEmitParameterizedSourceUsage();
     this.prepare(stageWriter);
@@ -4101,11 +4107,11 @@ class QueryQueryRaw extends QueryQuery {
     // Do nothing!
   }
 
-  getResultStructDef(): SourceDef {
+  getResultStructDef(): QueryResultDef {
     if (!isSourceDef(this.parent.structDef)) {
       throw new Error(`Result cannot be type ${this.parent.structDef.type}`);
     }
-    return this.parent.structDef;
+    return {...this.parent.structDef, type: 'query_result'};
   }
 
   getResultMetadata(

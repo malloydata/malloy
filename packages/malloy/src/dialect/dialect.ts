@@ -37,6 +37,7 @@ import {
   LeafAtomicTypeDef,
   isRawCast,
   isLeafAtomic,
+  OrderBy,
 } from '../model/malloy_types';
 import {DialectFunctionOverloadDef} from './functions';
 
@@ -242,7 +243,8 @@ export abstract class Dialect {
 
   abstract sqlCreateFunctionCombineLastStage(
     lastStageName: string,
-    fieldList: DialectFieldList
+    fieldList: DialectFieldList,
+    orderBy: OrderBy[] | undefined
   ): string;
   abstract sqlCreateTableAsSelect(tableName: string, sql: string): string;
 
