@@ -21,7 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 import {v4 as uuidv4} from 'uuid';
-import {Dialect, DialectFieldList, getDialect} from '../dialect';
+import {
+  Dialect,
+  DialectFieldList,
+  FieldReferenceType,
+  getDialect,
+} from '../dialect';
 import {StandardSQLDialect} from '../dialect/standardsql/standardsql';
 import {
   AggregateFunctionType,
@@ -1406,18 +1411,14 @@ class QueryField extends QueryNode {
         ancestor.informOfAliasValue(aliasValue);
       }
     }
-    const parentDef = this.parent.structDef;
-    const pType = parentDef.type;
-    const name =
-      parentDef.type === 'record' && hasExpression(parentDef)
-        ? this.exprToSQL(resultSet, this.parent, parentDef.e)
-        : this.parent.getSQLIdentifier();
-    return this.parent.dialect.sqlFieldReference(
-      name,
+    return this.parent.sqlChildReference(
       this.fieldDef.name,
-      this.fieldDef.type,
-      pType === 'record' || pType === 'array' || pType === 'nest_source',
-      isScalarArray(this.parent.structDef)
+      this.parent.structDef.type === 'record'
+        ? {
+            result: resultSet,
+            field: this,
+          }
+        : undefined
     );
   }
 }
@@ -1539,20 +1540,18 @@ class QueryFieldDistinctKey extends AbstractQueryAtomic<StringFieldDef> {
         parentKey || '', // shouldn't have to do this...
         this.parent.dialect.sqlFieldReference(
           this.parent.getIdentifier(),
+          'table',
           '__row_id',
-          'string',
-          true,
-          false
+          'string'
         )
       );
     } else {
       // return this.parent.getIdentifier() + "." + "__distinct_key";
       return this.parent.dialect.sqlFieldReference(
         this.parent.getIdentifier(),
+        'table',
         '__distinct_key',
-        'string',
-        false,
-        false
+        'string'
       );
     }
   }
@@ -2982,7 +2981,7 @@ class QueryQuery extends QueryField {
         // ... the test for this is called "source repeated record containing an array"
         arrayExpression = qs.parent.sqlChildReference(
           qsDef.name,
-          depth === 0 ? this : undefined
+          depth === 0 ? {result: this.rootResult, field: this} : undefined
         );
       }
       // we need to generate primary key.  If parent has a primary key combine
@@ -4451,22 +4450,26 @@ class QueryStruct {
     }
   }
 
-  sqlChildReference(name: string, forQuery: QueryQuery | undefined): string {
+  sqlChildReference(
+    name: string,
+    expand: {result: FieldInstanceResult; field: QueryField} | undefined
+  ) {
     let parentRef = this.getSQLIdentifier();
-    if (forQuery && isAtomic(this.structDef) && hasExpression(this.structDef)) {
-      parentRef = forQuery.exprToSQL(
-        forQuery.rootResult,
-        this,
-        this.structDef.e
-      );
+    if (expand && isAtomic(this.structDef) && hasExpression(this.structDef)) {
+      parentRef = expand.field.exprToSQL(expand.result, this, this.structDef.e);
     }
-    return this.dialect.sqlFieldReference(
-      parentRef,
-      name,
-      this.structDef.type,
-      this.structDef.type === 'array' || this.structDef.type === 'record',
-      isScalarArray(this.structDef)
-    );
+    let refType: FieldReferenceType = 'table';
+    if (this.structDef.type === 'record') {
+      refType = 'record';
+    } else if (this.structDef.type === 'array') {
+      refType =
+        this.structDef.elementTypeDef.type === 'record_element'
+          ? 'array[record]'
+          : 'array[scalar]';
+    }
+    const child = this.getChildByName(name);
+    const childType = child?.fieldDef.type || 'unknown';
+    return this.dialect.sqlFieldReference(parentRef, refType, name, childType);
   }
 
   // return the name of the field in SQL

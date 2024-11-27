@@ -279,17 +279,16 @@ export class TrinoDialect extends PostgresBase {
   }
 
   sqlFieldReference(
-    alias: string,
-    fieldName: string,
-    _fieldType: string,
-    _isNested: boolean,
-    _isArray: boolean
+    parentAlias: string,
+    _parentType: unknown,
+    childName: string,
+    _childType: string
   ): string {
     // LTNOTE: hack, in duckdb we can't have structs as tables so we kind of simulate it.
-    if (fieldName === '__row_id') {
-      return `__row_id_from_${alias}`;
+    if (childName === '__row_id') {
+      return `__row_id_from_${parentAlias}`;
     }
-    return `${alias}.${this.sqlMaybeQuoteIdentifier(fieldName)}`;
+    return `${parentAlias}.${this.sqlMaybeQuoteIdentifier(childName)}`;
   }
 
   sqlUnnestPipelineHead(

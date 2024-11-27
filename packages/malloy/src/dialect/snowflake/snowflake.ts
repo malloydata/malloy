@@ -46,7 +46,13 @@ import {
   expandOverrideMap,
   expandBlueprintMap,
 } from '../functions';
-import {Dialect, DialectFieldList, QueryInfo, qtz} from '../dialect';
+import {
+  Dialect,
+  DialectFieldList,
+  FieldReferenceType,
+  QueryInfo,
+  qtz,
+} from '../dialect';
 import {SNOWFLAKE_DIALECT_FUNCTIONS} from './dialect_functions';
 import {SNOWFLAKE_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
@@ -194,12 +200,14 @@ export class SnowflakeDialect extends Dialect {
     isArray: boolean,
     _isInNestedPipeline: boolean
   ): string {
+    // mtoy todo would like to NOT do this
+    const as = this.sqlMaybeQuoteIdentifier(alias);
     if (isArray) {
       const as = this.sqlMaybeQuoteIdentifier(alias);
       return `,LATERAL FLATTEN(INPUT => ${source}) AS ${alias}_1, LATERAL (SELECT ${alias}_1.INDEX, object_construct('value', ${alias}_1.value) as value ) as ${as}`;
     } else {
       // have to have a non empty row or it treats it like an inner join :barf-emoji:
-      return `LEFT JOIN LATERAL FLATTEN(INPUT => ifnull(${source},[1])) AS ${alias}`;
+      return `LEFT JOIN LATERAL FLATTEN(INPUT => ifnull(${source},[1])) AS ${as}`;
     }
   }
 
@@ -246,36 +254,39 @@ export class SnowflakeDialect extends Dialect {
   }
 
   sqlFieldReference(
-    alias: string,
-    fieldName: string,
-    fieldType: string,
-    isNested: boolean,
-    isArray: boolean
+    parentAlias: string,
+    parentType: FieldReferenceType,
+    childName: string,
+    childType: string
   ): string {
-    if (fieldName === '__row_id') {
-      return `${alias}.INDEX::varchar`;
-    } else if (isArray) {
-      const arrayRef = `"${alias}".value:"${fieldName}"`;
-      switch (fieldType) {
-        case 'struct':
+    const sqlName = this.sqlMaybeQuoteIdentifier(childName);
+    if (childName === '__row_id') {
+      return `${parentAlias}.INDEX::varchar`;
+    } else if (
+      parentType === 'array[scalar]' ||
+      parentType === 'array[record]'
+    ) {
+      const arrayRef = `"${parentAlias}".value:${sqlName}`;
+      switch (childType) {
         case 'record':
         case 'array':
-          fieldType = 'VARIANT';
+          childType = 'VARIANT';
           break;
         case 'string':
-          fieldType = 'VARCHAR';
+          childType = 'VARCHAR';
           break;
         case 'number':
-          fieldType = 'DOUBLE';
+          childType = 'DOUBLE';
           break;
+        case 'struct':
+          throw new Error('NOT STRUCT PLEASE');
         // boolean and timestamp and date are all ok
       }
-      return `${arrayRef}::${fieldType}`;
-    } else if (isNested) {
-      return `${alias}['${fieldName}']`;
+      return `${arrayRef}::${childType}`;
+    } else if (parentType === 'record') {
+      return `${parentAlias}:${sqlName}`;
     }
-    // MTOY TODO THIS SHOULD BE A JOIN
-    return `${alias}.${this.sqlMaybeQuoteIdentifier(fieldName)}`;
+    return `${parentAlias}.${sqlName}`;
   }
 
   sqlUnnestPipelineHead(
@@ -546,8 +557,9 @@ ${indent(sql)}
   sqlLiteralArray(lit: ArrayLiteralNode): string {
     const array = lit.kids.values.map(val => val.sql);
     const arraySchema = `[${array.join(',')}]`;
-    return lit.typeDef.elementTypeDef.type === 'record_element'
-      ? `${arraySchema}::${this.malloyTypeToSQLType(lit.typeDef)}`
-      : arraySchema;
+    return arraySchema;
+    // return lit.typeDef.elementTypeDef.type === 'record_element'
+    //   ? `${arraySchema}::${this.malloyTypeToSQLType(lit.typeDef)}`
+    //   : arraySchema;
   }
 }

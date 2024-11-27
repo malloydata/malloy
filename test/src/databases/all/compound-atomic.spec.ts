@@ -199,7 +199,7 @@ describe.each(runtimes.runtimeList)(
       test('record literal dialect function', async () => {
         await expect(`run: ${sizes}`).malloyResultMatches(runtime, rec_eq());
       });
-      test('record.property access', async () => {
+      test('simple record.property access', async () => {
         await expect(`
           run: ${sizes} -> { select: small is sizes.s }`).malloyResultMatches(
           runtime,
@@ -318,22 +318,20 @@ describe.each(runtimes.runtimeList)(
         {a: 20, b: 21},
       ];
       const abMalloy = '[{a is 10, b is 11}, {a is 20, b is 21}]';
+      function selectAB(n: string) {
+        return `SELECT ${ab} AS ${runtime.dialect.sqlMaybeQuoteIdentifier(n)}`;
+      }
 
-      test('repeated record from literal dialect functions', async () => {
-        await expect(`
-          run: ${databaseName}.sql("""SELECT ${ab} as ab""") -> { select: ab.a, ab.b }
-        `).malloyResultMatches(runtime, ab_eq);
-      });
       test('repeated record from nest', async () => {
         await expect(`
-            run: ${databaseName}.sql("""SELECT 10 as a, 11 as b UNION ALL SELECT 20 as a, 21 as b""")
+            run: ${databaseName}.sql("""SELECT 10 as "a", 11 as "b" UNION ALL SELECT 20 , 21""")
             -> { nest: ab is { select: a, b } }
             -> { select: ab.a, ab.b }
         `).malloyResultMatches(runtime, ab_eq);
       });
       test('select repeated record from literal dialect functions', async () => {
         await expect(`
-          run: ${databaseName}.sql("""SELECT ${ab} as ab""")
+          run: ${databaseName}.sql(""" ${selectAB('ab')} """)
         `).malloyResultMatches(runtime, {ab: ab_eq});
       });
       test('repeat record from malloy literal', async () => {
@@ -343,10 +341,12 @@ describe.each(runtimes.runtimeList)(
         `).malloyResultMatches(runtime, {ab: ab_eq});
       });
       test('repeated record can be selected and renamed', async () => {
-        await expect(`
-          run: ${databaseName}.sql("""SELECT ${ab} as sqlAB""")
-          -> { select: ab is sqlAB }
-        `).malloyResultMatches(runtime, {ab: ab_eq});
+        const src = `
+          run: ${databaseName}.sql("""
+            ${selectAB('sqlAB')}
+          """) -> { select: ab is sqlAB }
+      `;
+        await expect(src).malloyResultMatches(runtime, {ab: ab_eq});
       });
       test('select repeated record passed down pipeline', async () => {
         await expect(`
@@ -357,8 +357,9 @@ describe.each(runtimes.runtimeList)(
       });
       test('deref repeat record passed down pipeline', async () => {
         await expect(`
-          run: ${databaseName}.sql("""SELECT ${ab} as sqlAB""")
-          -> { select: ab is sqlAB }
+          run: ${databaseName}.sql("""
+            ${selectAB('sqlAB')}
+          """) -> { select: ab is sqlAB }
           -> { select: ab.a, ab.b }
         `).malloyResultMatches(runtime, ab_eq);
       });

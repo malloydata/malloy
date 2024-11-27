@@ -38,7 +38,7 @@ import {
   expandOverrideMap,
   expandBlueprintMap,
 } from '../functions';
-import {DialectFieldList, QueryInfo} from '../dialect';
+import {DialectFieldList, FieldReferenceType, QueryInfo} from '../dialect';
 import {PostgresBase} from '../pg_impl';
 import {POSTGRES_DIALECT_FUNCTIONS} from './dialect_functions';
 import {POSTGRES_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
@@ -241,15 +241,14 @@ export class PostgresDialect extends PostgresBase {
   }
 
   sqlFieldReference(
-    alias: string,
-    fieldName: string,
-    fieldType: string,
-    isNested: boolean,
-    _isArray: boolean
+    parentAlias: string,
+    parentType: FieldReferenceType,
+    childName: string,
+    childType: string
   ): string {
-    let ret = `(${alias}->>'${fieldName}')`;
-    if (isNested) {
-      switch (fieldType) {
+    if (parentType !== 'table') {
+      let ret = `(${parentAlias}->>'${childName}')`;
+      switch (childType) {
         case 'string':
           break;
         case 'number':
@@ -261,7 +260,7 @@ export class PostgresDialect extends PostgresBase {
       }
       return ret;
     } else {
-      return `${alias}."${fieldName}"`;
+      return `${parentAlias}."${childName}"`;
     }
   }
 

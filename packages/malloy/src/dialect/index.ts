@@ -42,7 +42,7 @@ export {
   sql,
 } from './functions/util';
 export {Dialect, qtz} from './dialect';
-export type {DialectFieldList, QueryInfo} from './dialect';
+export type {DialectFieldList, QueryInfo, FieldReferenceType} from './dialect';
 export {StandardSQLDialect} from './standardsql';
 export {PostgresDialect} from './postgres';
 export {DuckDBDialect} from './duckdb';

@@ -41,7 +41,7 @@ import {
   expandOverrideMap,
   expandBlueprintMap,
 } from '../functions';
-import {DialectFieldList, inDays} from '../dialect';
+import {DialectFieldList, FieldReferenceType, inDays} from '../dialect';
 import {PostgresBase} from '../pg_impl';
 import {DUCKDB_DIALECT_FUNCTIONS} from './dialect_functions';
 import {DUCKDB_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
@@ -214,19 +214,18 @@ export class DuckDBDialect extends PostgresBase {
   }
 
   sqlFieldReference(
-    alias: string,
-    fieldName: string,
-    _fieldType: string,
-    _isNested: boolean,
-    isArray: boolean
+    parentAlias: string,
+    parentType: FieldReferenceType,
+    childName: string,
+    _childType: string
   ): string {
     // LTNOTE: hack, in duckdb we can't have structs as tables so we kind of simulate it.
-    if (!this.unnestWithNumbers && fieldName === '__row_id') {
-      return `${alias}_outer.__row_id`;
-    } else if (isArray) {
-      return alias;
+    if (!this.unnestWithNumbers && childName === '__row_id') {
+      return `${parentAlias}_outer.__row_id`;
+    } else if (parentType === 'array[scalar]') {
+      return parentAlias;
     } else {
-      return `${alias}.${this.sqlMaybeQuoteIdentifier(fieldName)}`;
+      return `${parentAlias}.${this.sqlMaybeQuoteIdentifier(childName)}`;
     }
   }
 

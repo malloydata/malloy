@@ -73,6 +73,12 @@ export interface QueryInfo {
   systemTimezone?: string;
 }
 
+export type FieldReferenceType =
+  | 'table'
+  | 'array[scalar]'
+  | 'array[record]'
+  | 'record';
+
 const allUnits = [
   'microsecond',
   'millisecond',
@@ -220,11 +226,10 @@ export abstract class Dialect {
   abstract sqlGenerateUUID(): string;
 
   abstract sqlFieldReference(
-    alias: string,
-    fieldName: string,
-    fieldType: string,
-    isNested: boolean,
-    isArray: boolean
+    parentAlias: string,
+    parentType: FieldReferenceType,
+    childName: string,
+    childType: string
   ): string;
 
   abstract sqlUnnestPipelineHead(

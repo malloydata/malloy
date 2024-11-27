@@ -199,6 +199,7 @@ class SnowArray extends SnowField {
         const next = this.arrayChild || this.objectChild;
         if (next) {
           next.walk(path.next, fieldType);
+          return;
         }
         throw new Error(
           'SNOWFLAKE SCHEMA PARSER ERROR: Array walk through leaf'

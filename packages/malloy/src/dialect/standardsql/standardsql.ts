@@ -225,13 +225,12 @@ export class StandardSQLDialect extends Dialect {
   }
 
   sqlFieldReference(
-    alias: string,
-    fieldName: string,
-    _fieldType: string,
-    _isNested: boolean,
-    _isArray: boolean
+    parentAlias: string,
+    _parentType: unknown,
+    childName: string,
+    _childType: string
   ): string {
-    return `${alias}.${fieldName}`;
+    return `${parentAlias}.${childName}`;
   }
 
   sqlUnnestPipelineHead(

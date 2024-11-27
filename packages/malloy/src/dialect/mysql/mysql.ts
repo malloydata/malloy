@@ -47,7 +47,13 @@ import {
   RecordLiteralNode,
 } from '../../model/malloy_types';
 import {indent} from '../../model/utils';
-import {Dialect, DialectFieldList, qtz, QueryInfo} from '../dialect';
+import {
+  Dialect,
+  DialectFieldList,
+  FieldReferenceType,
+  qtz,
+  QueryInfo,
+} from '../dialect';
 import {
   DialectFunctionOverloadDef,
   expandBlueprintMap,
@@ -287,15 +293,14 @@ export class MySQLDialect extends Dialect {
   }
 
   sqlFieldReference(
-    alias: string,
-    fieldName: string,
-    fieldType: string,
-    isNested: boolean,
-    _isArray: boolean
+    parentAlias: string,
+    parentType: FieldReferenceType,
+    childName: string,
+    childType: string
   ): string {
-    let ret = `${alias}.\`${fieldName}\``;
-    if (isNested) {
-      switch (fieldType) {
+    let ret = `${parentAlias}.\`${childName}\``;
+    if (parentType !== 'table') {
+      switch (childType) {
         case 'string':
           ret = `CONCAT(${ret}, '')`;
           break;
@@ -309,7 +314,7 @@ export class MySQLDialect extends Dialect {
       }
       return ret;
     } else {
-      return `${alias}.\`${fieldName}\``;
+      return `${parentAlias}.\`${childName}\``;
     }
   }
 
