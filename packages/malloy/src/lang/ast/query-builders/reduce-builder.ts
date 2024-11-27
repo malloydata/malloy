@@ -31,6 +31,7 @@ import {
   ReduceSegment,
   canOrderBy,
   expressionIsAggregate,
+  expressionIsAnalytic,
   hasExpression,
   isPartialSegment,
   isQuerySegment,
@@ -193,6 +194,7 @@ export class ReduceBuilder extends QuerySegmentBuilder implements QueryBuilder {
       let usableDefaultOrderField: string | undefined;
       for (const field of reduceSegment.queryFields) {
         let fieldAggregate = false;
+        let fieldAnalytic = false;
         let fieldType: string;
         const fieldName = queryFieldName(field);
         if (field.type === 'fieldref') {
@@ -202,6 +204,7 @@ export class ReduceBuilder extends QuerySegmentBuilder implements QueryBuilder {
             const typeDesc = refField.typeDesc();
             fieldType = typeDesc.type;
             fieldAggregate = expressionIsAggregate(typeDesc.expressionType);
+            fieldAnalytic = expressionIsAnalytic(typeDesc.expressionType);
           } else {
             continue;
           }
@@ -209,6 +212,8 @@ export class ReduceBuilder extends QuerySegmentBuilder implements QueryBuilder {
           fieldType = field.type;
           fieldAggregate =
             hasExpression(field) && expressionIsAggregate(field.expressionType);
+          fieldAnalytic =
+            hasExpression(field) && expressionIsAnalytic(field.expressionType);
         }
         if (isTemporalField(fieldType) || fieldAggregate) {
           reduceSegment.defaultOrderBy = true;
@@ -216,7 +221,11 @@ export class ReduceBuilder extends QuerySegmentBuilder implements QueryBuilder {
           usableDefaultOrderField = undefined;
           break;
         }
-        if (canOrderBy(fieldType) && !usableDefaultOrderField) {
+        if (
+          canOrderBy(fieldType) &&
+          !fieldAnalytic &&
+          !usableDefaultOrderField
+        ) {
           usableDefaultOrderField = fieldName;
         }
       }
