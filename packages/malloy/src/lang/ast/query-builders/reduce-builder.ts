@@ -29,6 +29,7 @@ import {
   QueryFieldDef,
   QuerySegment,
   ReduceSegment,
+  canOrderBy,
   expressionIsAggregate,
   hasExpression,
   isPartialSegment,
@@ -189,7 +190,7 @@ export class ReduceBuilder extends QuerySegmentBuilder implements QueryBuilder {
     }
     if (reduceSegment.orderBy === undefined || reduceSegment.defaultOrderBy) {
       // In the modern world, we will order all reduce segments with the default ordering
-      reduceSegment.orderBy = undefined;
+      let usableDefaultOrderField: QueryFieldDef | undefined;
       for (const field of reduceSegment.queryFields) {
         let fieldAggregate = false;
         let fieldType: string;
@@ -212,16 +213,17 @@ export class ReduceBuilder extends QuerySegmentBuilder implements QueryBuilder {
         if (isTemporalField(fieldType) || fieldAggregate) {
           reduceSegment.defaultOrderBy = true;
           reduceSegment.orderBy = [{field: fieldName, dir: 'desc'}];
+          usableDefaultOrderField = undefined;
           break;
         }
+        if (canOrderBy(fieldType)) {
+          usableDefaultOrderField = field;
+        }
       }
-      if (
-        reduceSegment.orderBy === undefined &&
-        reduceSegment.queryFields.length > 0
-      ) {
+      if (usableDefaultOrderField) {
         reduceSegment.defaultOrderBy = true;
         reduceSegment.orderBy = [
-          {field: queryFieldName(reduceSegment.queryFields[0]), dir: 'asc'},
+          {field: queryFieldName(usableDefaultOrderField), dir: 'asc'},
         ];
       }
     }
