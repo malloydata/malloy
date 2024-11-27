@@ -208,7 +208,6 @@ describe.each(runtimes.runtimeList)(
           {small: 0}
         );
       });
-      // mtoy todo remove this
       test('nested data looks like a record', async () => {
         await expect(`
           run: ${databaseName}.sql('SELECT 1 as ${quote('o')}') -> {

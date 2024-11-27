@@ -574,7 +574,6 @@ fieldExpr
   | fieldPath DOT aggregate
       OPAREN fieldExpr? CPAREN                             # exprAggregate
   | OPAREN fieldExpr CPAREN                                # exprExpr
-  // mtoy todo should allow expr DOT expr, since expr can now be a record
   | fieldPath DOT id
       OPAREN ( argumentList? ) CPAREN                      # exprAggFunc
   | ((id (EXCLAM malloyType?)?) | timeframe)

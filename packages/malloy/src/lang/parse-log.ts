@@ -385,6 +385,7 @@ type MessageParameterTypes = {
   'or-choices-only': string;
   'sql-in': string;
   'dialect-cast-unsafe-only': string;
+  'array-values-incompatible': string;
 };
 
 export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {

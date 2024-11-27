@@ -5,7 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {ArrayLiteralNode, arrayEachFields, ArrayTypeDef} from '../../../model';
+import {
+  ArrayLiteralNode,
+  arrayEachFields,
+  ArrayTypeDef,
+  Expr,
+} from '../../../model';
 import {ExprValue, computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
@@ -19,17 +24,31 @@ export class ArrayLiteral extends ExpressionDef {
   }
 
   getExpression(fs: FieldSpace): ExprValue {
-    const values = this.elements.map(v => v.getExpression(fs));
-    const type = values[0];
-    const checkedValues = [values[0].value];
-    for (const newType of values.slice(1)) {
-      if (TDU.typeEq(type, newType)) {
-        checkedValues.push(newType.value);
-      } else {
-        throw new Error('mtoy todo array elements should be same type');
+    const values: Expr[] = [];
+    const fromValues: ExprValue[] = [];
+    let firstValue: ExprValue | undefined = undefined;
+    if (this.elements.length > 0) {
+      for (const nextElement of this.elements) {
+        const v = nextElement.getExpression(fs);
+        fromValues.push(v);
+        if (v.type === 'error') {
+          continue;
+        }
+        if (firstValue) {
+          if (!TDU.typeEq(firstValue, v)) {
+            nextElement.logError(
+              'array-values-incompatible',
+              'All array elements must be same type'
+            );
+            continue;
+          }
+        } else {
+          firstValue = v;
+        }
+        values.push(v.value);
       }
     }
-    const elementTypeDef = TDU.atomicDef(values[0]);
+    const elementTypeDef = TDU.atomicDef(firstValue || {type: 'number'});
     const typeDef: ArrayTypeDef = {
       type: 'array',
       join: 'many',
@@ -46,13 +65,13 @@ export class ArrayLiteral extends ExpressionDef {
     };
     const aLit: ArrayLiteralNode = {
       node: 'arrayLiteral',
-      kids: {values: checkedValues},
+      kids: {values},
       typeDef,
     };
     return computedExprValue({
       dataType: typeDef,
       value: aLit,
-      from: values,
+      from: fromValues,
     });
   }
 }
