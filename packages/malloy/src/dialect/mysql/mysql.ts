@@ -238,11 +238,20 @@ export class MySQLDialect extends Dialect {
     return fields.join(',\n');
   }
 
-  jsonTable(source: string, fieldList: DialectFieldList): string {
+  jsonTable(
+    source: string,
+    fieldList: DialectFieldList,
+    isSingleton: boolean
+  ): string {
+    let fields = this.unnestColumns(fieldList);
+    if (isSingleton) {
+      // LTNOTE: we need the type of array here.
+      fields = "`value` JSON PATH '$'";
+    }
     return `JSON_TABLE(${source}, '$[*]'
         COLUMNS (
           __row_id FOR ORDINALITY,
-          ${this.unnestColumns(fieldList)}
+          ${fields}
         )
       )`;
   }
@@ -253,19 +262,23 @@ export class MySQLDialect extends Dialect {
     alias: string,
     fieldList: DialectFieldList,
     _needDistinctKey: boolean,
-    _isArray: boolean,
+    isArray: boolean,
     _isInNestedPipeline: boolean
   ): string {
     return `
-      LEFT JOIN ${this.jsonTable(source, fieldList)} as ${alias} ON 1=1`;
+      LEFT JOIN ${this.jsonTable(
+        source,
+        fieldList,
+        isArray
+      )} as ${alias} ON 1=1`;
   }
 
   sqlUnnestPipelineHead(
-    _isSingleton: boolean,
+    isSingleton: boolean,
     sourceSQLExpression: string,
     fieldList: DialectFieldList
   ): string {
-    return this.jsonTable(sourceSQLExpression, fieldList);
+    return this.jsonTable(sourceSQLExpression, fieldList, isSingleton);
   }
 
   sqlSumDistinctHashedKey(_sqlDistinctKey: string): string {
@@ -300,8 +313,12 @@ export class MySQLDialect extends Dialect {
   ): string {
     const parent = parentAlias;
     const child = childName;
+
     if (parentType !== 'table') {
-      const ret = `${parent}->>'$.${child}'`;
+      let ret = `${parent}->>'$.${child}'`;
+      if (parentType === 'array[scalar]') {
+        ret = `${parent}.\`value\``;
+      }
       switch (childType) {
         case 'string':
           return `CONCAT(${ret}, '')`;
