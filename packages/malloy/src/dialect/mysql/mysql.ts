@@ -301,7 +301,7 @@ export class MySQLDialect extends Dialect {
     const parent = parentAlias;
     const child = childName;
     if (parentType !== 'table') {
-      const ret = `${parent} ->> '$.${child}'`;
+      const ret = `${parent}->>'$.${child}'`;
       switch (childType) {
         case 'string':
           return `CONCAT(${ret}, '')`;
