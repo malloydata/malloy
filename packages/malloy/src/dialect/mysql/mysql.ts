@@ -298,24 +298,21 @@ export class MySQLDialect extends Dialect {
     childName: string,
     childType: string
   ): string {
-    let ret = `${parentAlias}.\`${childName}\``;
+    const parent = parentAlias;
+    const child = childName;
     if (parentType !== 'table') {
+      const ret = `${parent} ->> '$.${child}'`;
       switch (childType) {
         case 'string':
-          ret = `CONCAT(${ret}, '')`;
-          break;
-        // TODO: Fix this.
+          return `CONCAT(${ret}, '')`;
         case 'number':
-          ret = `CAST(${ret} as double)`;
-          break;
-        case 'struct':
-          ret = `CAST(${ret} as JSON)`;
-          break;
+          return `CAST(${ret} as double)`;
+        case 'record':
+        case 'array':
+          return `CAST(${ret} as JSON)`;
       }
-      return ret;
-    } else {
-      return `${parentAlias}.\`${childName}\``;
     }
+    return `${parent}.${child}`;
   }
 
   sqlCreateFunction(id: string, funcText: string): string {
