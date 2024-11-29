@@ -125,7 +125,7 @@ export class StandardSQLDialect extends Dialect {
   supportsNesting = true;
   cantPartitionWindowFunctionsOnExpressions = true;
   hasModOperator = false;
-  nestedArays = false; // Can't have an array of arrays for some reason
+  nestedArrays = false; // Can't have an array of arrays for some reason
 
   quoteTablePath(tablePath: string): string {
     return `\`${tablePath}\``;
