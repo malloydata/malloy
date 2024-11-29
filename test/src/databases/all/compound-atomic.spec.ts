@@ -183,6 +183,22 @@ describe.each(runtimes.runtimeList)(
           {roll: 8, rolls: 1},
         ]);
       });
+      test('array stored field with special chars in name', async () => {
+        const special_chars = ["'", '"', '.', '`'];
+        for (const c of special_chars) {
+          const qname = '`_\\' + c + '_`';
+          const malloySrc = `
+            run: ${empty}
+            ->{ select: ${qname} is [1]}
+            -> { select: num is ${qname}.each }`;
+          const result = await runtime.loadQuery(malloySrc).run();
+          const ok =
+            result.data.path(0, 'num').value === 1
+              ? 'ok'
+              : `Array containing ${c} character is not ok`;
+          expect(ok).toEqual('ok');
+        }
+      });
       test.when(supportsNestedArrays)('bare array of array', async () => {
         await expect(`
           run: ${empty} -> { select: aoa is [[1,2]] }
@@ -224,6 +240,22 @@ describe.each(runtimes.runtimeList)(
               ? 'ok'
               : `Name containing the ${c} character was not ok`;
           expect(p).toEqual('ok');
+        }
+      });
+      test('record stored in field with special chars in name', async () => {
+        const special_chars = ["'", '"', '.', '`'];
+        for (const c of special_chars) {
+          const qname = '`_\\' + c + '_`';
+          const malloySrc = `
+            run: ${empty}
+            ->{ select: ${qname} is {rnum is 1}}
+            -> { select: num is ${qname}.rnum }`;
+          const result = await runtime.loadQuery(malloySrc).run();
+          const ok =
+            result.data.path(0, 'num').value === 1
+              ? 'ok'
+              : `Array containing ${c} character is not ok`;
+          expect(ok).toEqual('ok');
         }
       });
       test.when(canReadCompoundSchema)(
