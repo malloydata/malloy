@@ -190,8 +190,7 @@ describe.each(runtimes.runtimeList)(
       });
       test.when(supportsNestedArrays)('each.each array of array', async () => {
         await expect(`
-          run: ${empty} extend { dimension: aoa is [[1,2]] }
-          -> { select: aoa.each.each }
+          run: ${empty} extend { dimension: aoa is [[1,2]] } -> { select: aoa.each.each }
         `).malloyResultMatches(runtime, [{each: 1}, {each: 2}]);
       });
     });
@@ -210,6 +209,22 @@ describe.each(runtimes.runtimeList)(
           run: ${conName}.sql("select 0 as o")
           -> { select: ${malloySizes}}
         `).malloyResultMatches(runtime, rec_eq());
+      });
+      test('special character in record property name', async () => {
+        const special_chars = ["'", '"', '.', '`'];
+        for (const c of special_chars) {
+          const qname = '_\\' + c + '_';
+          const name = '_' + c + '_';
+          const malloySrc = `run: ${empty} -> { select: \`${qname}\` is 'ok' }`;
+          // no malloyResultMatches because it treats a special in an expect key
+          const query = runtime.loadQuery(malloySrc);
+          const result = await query.run();
+          const p =
+            result.data.path(0, name).value === 'ok'
+              ? 'ok'
+              : `Name containing the ${c} character was not ok`;
+          expect(p).toEqual('ok');
+        }
       });
       test.when(canReadCompoundSchema)(
         'can read schema of record object',
