@@ -27,15 +27,15 @@ const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 describe.each(runtimes.runtimeList)(
   'compound atomic datatypes %s',
-  (databaseName, runtime) => {
+  (conName, runtime) => {
     // mtoy todo dialect flag
-    const supportsNestedArrays = !['bigquery'].includes(databaseName);
+    const supportsNestedArrays = !['bigquery'].includes(conName);
     const quote = runtime.dialect.sqlMaybeQuoteIdentifier;
     function literalNum(num: Number): Expr {
       const literal = num.toString();
       return {node: 'numberLiteral', literal, sql: literal};
     }
-    const empty = `${databaseName}.sql("SELECT 0 as z")`;
+    const empty = `${conName}.sql("SELECT 0 as z")`;
     function arraySelectVal(...val: Number[]): string {
       const literal: ArrayLiteralNode = {
         node: 'arrayLiteral',
@@ -78,18 +78,22 @@ describe.each(runtimes.runtimeList)(
     function recordSelectVal(fromObj: Record<string, number>): string {
       return runtime.dialect.sqlLiteralRecord(recordLiteral(fromObj));
     }
+    const canReadCompoungSchema = conName !== 'mysql' && conName !== 'postgres';
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const ab = recordSelectVal({a: 0, b: 1});
 
+    const malloySizes = 'sizes is {s is 0, m is 1, l is 2, xl is 3}';
     const sizesObj = {s: 0, m: 1, l: 2, xl: 3};
     const sizesSQL = recordSelectVal(sizesObj);
-    const sizes = `${databaseName}.sql("""
-      SELECT ${sizesSQL} AS ${quote('sizes')}
-    """)`;
+    // Keeping the pipeline simpler makes debugging easier, so don't add
+    // and extra stage unless you have to
+    const sizes = canReadCompoungSchema
+      ? `${conName}.sql(""" SELECT ${sizesSQL} AS ${quote('sizes')} """)`
+      : `${conName}.sql('SELECT 0 AS O') -> { select: ${malloySizes}}`;
     const evensObj = [2, 4, 6, 8];
     const evensSQL = arraySelectVal(...evensObj);
-    const evens = `${databaseName}.sql("""
+    const evens = `${conName}.sql("""
       SELECT ${evensSQL} AS ${quote('evens')}
     """)`;
 
@@ -105,7 +109,7 @@ describe.each(runtimes.runtimeList)(
           run: ${evens}->{select: nn is evens}
           `).malloyResultMatches(runtime, {nn: evensObj});
       });
-      test('array-un-nest on each', async () => {
+      test('schema read allows array-un-nest on each', async () => {
         await expect(`
           run: ${evens}->{ select: n is evens.each }
         `).malloyResultMatches(
@@ -198,8 +202,16 @@ describe.each(runtimes.runtimeList)(
           [`${name}/xl`]: 3,
         };
       }
-      test('record literal dialect function', async () => {
-        await expect(`run: ${sizes}`).malloyResultMatches(runtime, rec_eq());
+      test('record literal object', async () => {
+        await expect(`
+          run: ${conName}.sql("select 0 as o")
+          -> { select: ${malloySizes}}
+        `).malloyResultMatches(runtime, rec_eq());
+      });
+      test('can read schema of record object', async () => {
+        await expect(`run: ${conName}.sql("""
+          SELECT ${sizesSQL} AS ${quote('sizes')}
+        """)`).malloyResultMatches(runtime, rec_eq());
       });
       test('simple record.property access', async () => {
         await expect(`
@@ -210,7 +222,7 @@ describe.each(runtimes.runtimeList)(
       });
       test('nested data looks like a record', async () => {
         await expect(`
-          run: ${databaseName}.sql('SELECT 1 as ${quote('o')}') -> {
+          run: ${conName}.sql('SELECT 1 as ${quote('o')}') -> {
             group_by: row is 'one_row'
             nest: sizes is {
               aggregate:
@@ -237,7 +249,7 @@ describe.each(runtimes.runtimeList)(
       test('select record literal from a source', async () => {
         await expect(`
           run: ${empty} -> {
-            extend: { dimension: sizes is {s is 0, m is 1, l is 2, xl is 3} }
+            extend: { dimension: ${malloySizes} }
             select: sizes
           }
         `).malloyResultMatches(runtime, rec_eq());
@@ -325,7 +337,7 @@ describe.each(runtimes.runtimeList)(
 
       test('repeated record from nest', async () => {
         await expect(`
-            run: ${databaseName}.sql("""
+            run: ${conName}.sql("""
               SELECT
                 10 as ${quote('a')},
                 11 as ${quote('b')}
@@ -336,7 +348,7 @@ describe.each(runtimes.runtimeList)(
       });
       test('select repeated record from literal dialect functions', async () => {
         await expect(`
-          run: ${databaseName}.sql(""" ${selectAB('ab')} """)
+          run: ${conName}.sql(""" ${selectAB('ab')} """)
         `).malloyResultMatches(runtime, {ab: ab_eq});
       });
       test('repeat record from malloy literal', async () => {
@@ -347,7 +359,7 @@ describe.each(runtimes.runtimeList)(
       });
       test('repeated record can be selected and renamed', async () => {
         const src = `
-          run: ${databaseName}.sql("""
+          run: ${conName}.sql("""
             ${selectAB('sqlAB')}
           """) -> { select: ab is sqlAB }
       `;
@@ -362,7 +374,7 @@ describe.each(runtimes.runtimeList)(
       });
       test('deref repeat record passed down pipeline', async () => {
         await expect(`
-          run: ${databaseName}.sql("""
+          run: ${conName}.sql("""
             ${selectAB('sqlAB')}
           """) -> { select: ab is sqlAB }
           -> { select: ab.a, ab.b }
