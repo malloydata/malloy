@@ -122,7 +122,7 @@ describe.each(runtimes.runtimeList)(
         const nameOfArrayLenFunction = {
           'duckdb': 'LEN',
           'standardsql': 'ARRAY_LENGTH',
-          'postgres': 'ARRAY_LENGTH',
+          'postgres': 'JSONB_ARRAY_LENGTH',
           'presto': 'CARDINALITY',
           'trino': 'CARDINALITY',
           'mysql': 'JSON_LENGTH',
