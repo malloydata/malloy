@@ -310,8 +310,9 @@ export class SnowflakeDialect extends Dialect {
   sqlSelectAliasAsStruct(alias: string): string {
     return `OBJECT_CONSTRUCT_KEEP_NULL(${alias}.*)`;
   }
+
   sqlMaybeQuoteIdentifier(identifier: string): string {
-    return `"${identifier}"`;
+    return '"' + identifier.replace(/"/g, '""') + '"';
   }
 
   sqlCreateTableAsSelect(tableName: string, sql: string): string {
