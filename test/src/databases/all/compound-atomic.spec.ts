@@ -413,14 +413,14 @@ describe.each(runtimes.runtimeList)(
               { val is 2, names is ['due', 'two'] }
             ]
           } -> {
-            select: rrec.val, rrec.names.each
-            order_by: 1 desc, 2 asc
+            select: val is rrec.val, name is rrec.names.each
+            order_by: val desc, name asc
           }
         `).malloyResultMatches(runtime, [
-          {val: 2, each: 'due'},
-          {val: 2, each: 'two'},
-          {val: 1, each: 'one'},
-          {val: 1, each: 'uno'},
+          {val: 2, name: 'due'},
+          {val: 2, name: 'two'},
+          {val: 1, name: 'one'},
+          {val: 1, name: 'uno'},
         ]);
       });
       test('source repeated record containing an array', async () => {
@@ -431,14 +431,14 @@ describe.each(runtimes.runtimeList)(
               { val is 2, names is ['due', 'two'] }
             ]
           } -> {
-            select: rrec.val, rrec.names.each
-            order_by: 1 desc, 2 asc
+            select: val is rrec.val, name is rrec.names.each
+            order_by: val desc, name asc
           }
         `).malloyResultMatches(runtime, [
-          {val: 2, each: 'due'},
-          {val: 2, each: 'two'},
-          {val: 1, each: 'one'},
-          {val: 1, each: 'uno'},
+          {val: 2, name: 'due'},
+          {val: 2, name: 'two'},
+          {val: 1, name: 'one'},
+          {val: 1, name: 'uno'},
         ]);
       });
     });
