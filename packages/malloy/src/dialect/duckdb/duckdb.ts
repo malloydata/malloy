@@ -280,17 +280,6 @@ export class DuckDBDialect extends PostgresBase {
       .map(d => `${alias}.${d.sqlOutputName}`)
       .join(', ')})`;
   }
-  // TODO
-  // sqlMaybeQuoteIdentifier(identifier: string): string {
-  //   return keywords.indexOf(identifier.toUpperCase()) > 0 ||
-  //     identifier.match(/[a-zA-Z][a-zA-Z0-9]*/) === null || true
-  //     ? '"' + identifier + '"'
-  //     : identifier;
-  // }
-
-  sqlMaybeQuoteIdentifier(identifier: string): string {
-    return '"' + identifier + '"';
-  }
 
   // The simple way to do this is to add a comment on the table
   //  with the expiration time. https://www.postgresql.org/docs/current/sql-comment.html

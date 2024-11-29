@@ -106,4 +106,8 @@ export abstract class PostgresBase extends Dialect {
     const array = lit.kids.values.map(val => val.sql);
     return 'ARRAY[' + array.join(',') + ']';
   }
+
+  sqlMaybeQuoteIdentifier(identifier: string): string {
+    return '"' + identifier.replace(/"/g, '""') + '"';
+  }
 }
