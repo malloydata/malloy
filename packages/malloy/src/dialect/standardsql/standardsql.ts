@@ -231,7 +231,8 @@ export class StandardSQLDialect extends Dialect {
     childName: string,
     _childType: string
   ): string {
-    return `${parentAlias}.${childName}`;
+    const child = this.sqlMaybeQuoteIdentifier(childName);
+    return `${parentAlias}.${child}`;
   }
 
   sqlUnnestPipelineHead(
