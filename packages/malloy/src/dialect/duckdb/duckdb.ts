@@ -448,11 +448,6 @@ export class DuckDBDialect extends PostgresBase {
     return `DATE_SUB('${df.units}', ${lVal}, ${rVal})`;
   }
 
-  sqlLiteralArray(lit: ArrayLiteralNode): string {
-    const array = lit.kids.values.map(val => val.sql);
-    return '[' + array.join(',') + ']';
-  }
-
   sqlLiteralRecord(lit: RecordLiteralNode): string {
     const pairs = Object.entries(lit.kids).map(
       ([propName, propVal]) =>

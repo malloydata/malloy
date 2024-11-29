@@ -102,7 +102,8 @@ export abstract class PostgresBase extends Dialect {
     throw new Error('Cannot create a record literal for postgres base dialect');
   }
 
-  sqlLiteralArray(_lit: ArrayLiteralNode): string {
-    throw new Error('Cannot create array literal for postgres base dialect');
+  sqlLiteralArray(lit: ArrayLiteralNode): string {
+    const array = lit.kids.values.map(val => val.sql);
+    return 'ARRAY[' + array.join(',') + ']';
   }
 }

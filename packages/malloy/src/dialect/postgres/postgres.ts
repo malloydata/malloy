@@ -33,7 +33,6 @@ import {
   MeasureTimeExpr,
   LeafAtomicTypeDef,
   RecordLiteralNode,
-  ArrayLiteralNode,
 } from '../../model/malloy_types';
 import {
   DialectFunctionOverloadDef,
@@ -454,10 +453,5 @@ export class PostgresDialect extends PostgresBase {
       props.push(`'${kName}',${kVal.sql}`);
     }
     return `JSONB_BUILD_OBJECT(${props.join(', ')})`;
-  }
-
-  sqlLiteralArray(lit: ArrayLiteralNode): string {
-    const array = lit.kids.values.map(val => val.sql);
-    return `ARRAY[${array.join(',')}]`;
   }
 }

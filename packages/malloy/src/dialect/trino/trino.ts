@@ -37,7 +37,6 @@ import {
   TimeExtractExpr,
   LeafAtomicTypeDef,
   TD,
-  ArrayLiteralNode,
   RecordLiteralNode,
   isAtomic,
 } from '../../model/malloy_types';
@@ -636,11 +635,6 @@ ${indent(sql)}
     }
     const extracted = `EXTRACT(${pgUnits} FROM ${extractFrom})`;
     return from.units === 'day_of_week' ? `mod(${extracted}+1,7)` : extracted;
-  }
-
-  sqlLiteralArray(lit: ArrayLiteralNode): string {
-    const array = lit.kids.values.map(val => val.sql);
-    return 'ARRAY[' + array.join(',') + ']';
   }
 
   sqlLiteralRecord(lit: RecordLiteralNode): string {
