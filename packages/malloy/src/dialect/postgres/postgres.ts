@@ -457,8 +457,7 @@ export class PostgresDialect extends PostgresBase {
   }
 
   sqlLiteralArray(lit: ArrayLiteralNode): string {
-    // mtoy todo real quoting of values ... strings with quotes will break thi
     const array = lit.kids.values.map(val => val.sql);
-    return `'${JSON.stringify(array)}'::jsonb`;
+    return `ARRAY[${array.join(',')}]`;
   }
 }
