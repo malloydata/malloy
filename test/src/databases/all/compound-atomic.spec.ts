@@ -105,6 +105,7 @@ describe.each(runtimes.runtimeList)(
       });
       test('select array', async () => {
         await expect(`
+          # test.verbose
           run: ${evens}->{select: nn is evens}
           `).malloyResultMatches(runtime, {nn: evensObj});
       });

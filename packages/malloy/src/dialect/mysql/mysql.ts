@@ -311,13 +311,10 @@ export class MySQLDialect extends Dialect {
     childName: string,
     childType: string
   ): string {
-    const parent = parentAlias;
-    const child = childName;
-
     if (parentType !== 'table' && parentType !== 'array[record]') {
-      let ret = `JSON_UNQUOTE(JSON_EXTRACT(${parent},'$.${child}'))`;
+      let ret = `JSON_UNQUOTE(JSON_EXTRACT(${parentAlias},'$.${childName}'))`;
       if (parentType === 'array[scalar]') {
-        ret = `JSON_UNQUOTE(${parent}.\`value\`)`;
+        ret = `JSON_UNQUOTE(${parentAlias}.\`value\`)`;
       }
       switch (childType) {
         case 'string':
@@ -329,7 +326,8 @@ export class MySQLDialect extends Dialect {
           return `CAST(${ret} as JSON)`;
       }
     }
-    return `${parent}.${child}`;
+    const child = this.sqlMaybeQuoteIdentifier(childName);
+    return `${parentAlias}.${child}`;
   }
 
   sqlCreateFunction(id: string, funcText: string): string {
@@ -352,7 +350,7 @@ export class MySQLDialect extends Dialect {
   }
 
   sqlMaybeQuoteIdentifier(identifier: string): string {
-    return '"' + identifier.replace(/"/g, '""') + '"';
+    return '`' + identifier.replace(/`/g, '``') + '`';
   }
 
   // TODO: Check what this is.
