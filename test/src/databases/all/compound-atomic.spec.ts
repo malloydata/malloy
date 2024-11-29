@@ -380,10 +380,9 @@ describe.each(runtimes.runtimeList)(
       });
       test('deref repeat record passed down pipeline', async () => {
         await expect(`
-          run: ${conName}.sql("""
-            ${selectAB('sqlAB')}
-          """) -> { select: ab is sqlAB }
-          -> { select: ab.a, ab.b }
+          run: ${empty}
+          -> { select: pipeAb is ${abMalloy} }
+          -> { select: pipeAb.a, pipeAb.b }
         `).malloyResultMatches(runtime, ab_eq);
       });
       test('select array of records from source', async () => {
