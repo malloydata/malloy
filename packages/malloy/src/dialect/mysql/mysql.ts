@@ -127,6 +127,7 @@ export class MySQLDialect extends Dialect {
   readsNestedData = false;
   supportsComplexFilteredSources = false;
   supportsArraysInData = false;
+  compoundObjectInSchema = false;
 
   malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
     switch (malloyType.type) {

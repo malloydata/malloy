@@ -172,6 +172,11 @@ export abstract class Dialect {
 
   nativeBoolean = true;
 
+  // Can have arrays of arrays
+  nestedArrays = true;
+  // An array or record will reveal type of contents on schema read
+  compoundObjectInSchema = true;
+
   abstract getDialectFunctionOverrides(): {
     [name: string]: DialectFunctionOverloadDef[];
   };

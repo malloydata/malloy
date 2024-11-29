@@ -28,8 +28,7 @@ const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 describe.each(runtimes.runtimeList)(
   'compound atomic datatypes %s',
   (conName, runtime) => {
-    // mtoy todo dialect flag
-    const supportsNestedArrays = !['bigquery'].includes(conName);
+    const supportsNestedArrays = runtime.dialect.nestedArrays;
     const quote = runtime.dialect.sqlMaybeQuoteIdentifier;
     function literalNum(num: Number): Expr {
       const literal = num.toString();
@@ -78,7 +77,7 @@ describe.each(runtimes.runtimeList)(
     function recordSelectVal(fromObj: Record<string, number>): string {
       return runtime.dialect.sqlLiteralRecord(recordLiteral(fromObj));
     }
-    const canReadCompoundSchema = conName !== 'mysql' && conName !== 'postgres';
+    const canReadCompoundSchema = runtime.dialect.compoundObjectInSchema;
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const ab = recordSelectVal({a: 0, b: 1});

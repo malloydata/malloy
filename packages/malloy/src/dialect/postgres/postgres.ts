@@ -109,6 +109,7 @@ export class PostgresDialect extends PostgresBase {
   experimental = false;
   readsNestedData = false;
   supportsComplexFilteredSources = false;
+  compoundObjectInSchema = false;
 
   quoteTablePath(tablePath: string): string {
     return tablePath
