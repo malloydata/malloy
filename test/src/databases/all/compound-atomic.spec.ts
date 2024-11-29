@@ -78,7 +78,7 @@ describe.each(runtimes.runtimeList)(
     function recordSelectVal(fromObj: Record<string, number>): string {
       return runtime.dialect.sqlLiteralRecord(recordLiteral(fromObj));
     }
-    const canReadCompoungSchema = conName !== 'mysql' && conName !== 'postgres';
+    const canReadCompoundSchema = conName !== 'mysql' && conName !== 'postgres';
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const ab = recordSelectVal({a: 0, b: 1});
@@ -88,7 +88,7 @@ describe.each(runtimes.runtimeList)(
     const sizesSQL = recordSelectVal(sizesObj);
     // Keeping the pipeline simpler makes debugging easier, so don't add
     // and extra stage unless you have to
-    const sizes = canReadCompoungSchema
+    const sizes = canReadCompoundSchema
       ? `${conName}.sql(""" SELECT ${sizesSQL} AS ${quote('sizes')} """)`
       : `${conName}.sql('SELECT 0 AS O') -> { select: ${malloySizes}}`;
     const evensObj = [2, 4, 6, 8];
@@ -109,14 +109,17 @@ describe.each(runtimes.runtimeList)(
           run: ${evens}->{select: nn is evens}
           `).malloyResultMatches(runtime, {nn: evensObj});
       });
-      test('schema read allows array-un-nest on each', async () => {
-        await expect(`
+      test.when(canReadCompoundSchema)(
+        'schema read allows array-un-nest on each',
+        async () => {
+          await expect(`
           run: ${evens}->{ select: n is evens.each }
         `).malloyResultMatches(
-          runtime,
-          evensObj.map(n => ({n}))
-        );
-      });
+            runtime,
+            evensObj.map(n => ({n}))
+          );
+        }
+      );
       test('array can be passed to !function', async () => {
         // Used as a standin for "unknown function user might call"
         const nameOfArrayLenFunction = {
@@ -208,11 +211,14 @@ describe.each(runtimes.runtimeList)(
           -> { select: ${malloySizes}}
         `).malloyResultMatches(runtime, rec_eq());
       });
-      test('can read schema of record object', async () => {
-        await expect(`run: ${conName}.sql("""
+      test.when(canReadCompoundSchema)(
+        'can read schema of record object',
+        async () => {
+          await expect(`run: ${conName}.sql("""
           SELECT ${sizesSQL} AS ${quote('sizes')}
         """)`).malloyResultMatches(runtime, rec_eq());
-      });
+        }
+      );
       test('simple record.property access', async () => {
         await expect(`
           run: ${sizes} -> { select: small is sizes.s }`).malloyResultMatches(
