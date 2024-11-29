@@ -317,7 +317,7 @@ export class MySQLDialect extends Dialect {
     if (parentType !== 'table' && parentType !== 'array[record]') {
       let ret = `JSON_UNQUOTE(JSON_EXTRACT(${parent},'$.${child}'))`;
       if (parentType === 'array[scalar]') {
-        ret = `${parent}.\`value\``;
+        ret = `JSON_UNQUOTE(${parent}.\`value\`)`;
       }
       switch (childType) {
         case 'string':
