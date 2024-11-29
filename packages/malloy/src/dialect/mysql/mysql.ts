@@ -248,7 +248,7 @@ export class MySQLDialect extends Dialect {
       // LTNOTE: we need the type of array here.
       fields = "`value` JSON PATH '$'";
     }
-    return `JSON_TABLE(${source}, '$[*]'
+    return `JSON_TABLE(CAST(${source} AS JSON), '$[*]'
         COLUMNS (
           __row_id FOR ORDINALITY,
           ${fields}
@@ -256,7 +256,6 @@ export class MySQLDialect extends Dialect {
       )`;
   }
 
-  // LTNOTE: We'll make this work with Arrays once MToy's changes land.
   sqlUnnestAlias(
     source: string,
     alias: string,
