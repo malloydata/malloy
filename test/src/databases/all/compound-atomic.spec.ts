@@ -343,7 +343,7 @@ describe.each(runtimes.runtimeList)(
                 11 as ${quote('b')}
               UNION ALL SELECT 20 , 21
             """) -> { nest: ab is { select: a, b } }
-                 -> { select: ab.a, ab.b }
+                 -> { select: ab.a, ab.b ; order_by: a}
         `).malloyResultMatches(runtime, ab_eq);
       });
       test('select repeated record from literal dialect functions', async () => {
