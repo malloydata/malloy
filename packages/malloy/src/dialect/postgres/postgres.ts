@@ -449,11 +449,11 @@ export class PostgresDialect extends PostgresBase {
   }
 
   sqlLiteralRecord(lit: RecordLiteralNode): string {
-    const props = {};
+    const props: string[] = [];
     for (const [kName, kVal] of Object.entries(lit.kids)) {
-      props[kName] = kVal.sql;
+      props.push(`${kName},${kVal.sql}`);
     }
-    return `'${JSON.stringify(props)}'::jsonb`;
+    return `JSONB_BUILD_OBJECT(${props.join(', ')})`;
   }
 
   sqlLiteralArray(lit: ArrayLiteralNode): string {
