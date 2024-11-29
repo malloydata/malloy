@@ -32,6 +32,8 @@ import {
   TypecastExpr,
   MeasureTimeExpr,
   LeafAtomicTypeDef,
+  RecordLiteralNode,
+  ArrayLiteralNode,
 } from '../../model/malloy_types';
 import {
   DialectFunctionOverloadDef,
@@ -444,5 +446,19 @@ export class PostgresDialect extends PostgresBase {
     // Parentheses, Commas:  NUMERIC(5, 2)
     // Square Brackets:      INT64[]
     return sqlType.match(/^[A-Za-z\s(),[\]0-9]*$/) !== null;
+  }
+
+  sqlLiteralRecord(lit: RecordLiteralNode): string {
+    const props: string[] = [];
+    for (const [kName, kVal] of Object.entries(lit.kids)) {
+      props.push(`"${kName}": ${kVal.sql}`);
+    }
+    return `{${props.join(',')}}::jsonb`;
+  }
+
+  sqlLiteralArray(lit: ArrayLiteralNode): string {
+    // mtoy todo real quoting of values ... strings with quotes will break thi
+    const array = lit.kids.values.map(val => val.sql);
+    return `'[${array.join(',')}]'::jsonb`;
   }
 }
