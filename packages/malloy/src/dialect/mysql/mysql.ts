@@ -351,7 +351,7 @@ export class MySQLDialect extends Dialect {
   }
 
   sqlMaybeQuoteIdentifier(identifier: string): string {
-    return `\`${identifier}\``;
+    return '"' + identifier.replace(/"/g, '""') + '"';
   }
 
   // TODO: Check what this is.
