@@ -432,10 +432,6 @@ ${indent(sql)}
   WITH
   WITHIN`.split(/\s/);
 
-  sqlMaybeQuoteIdentifier(identifier: string): string {
-    return '"' + identifier + '"';
-  }
-
   sqlAlterTimeExpr(df: TimeDeltaExpr): string {
     let timeframe = df.units;
     let n = df.kids.delta.sql;

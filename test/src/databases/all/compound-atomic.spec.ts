@@ -187,9 +187,11 @@ describe.each(runtimes.runtimeList)(
         for (const c of special_chars) {
           const qname = '`_\\' + c + '_`';
           const malloySrc = `
+            # test.verbose
             run: ${empty}
             ->{ select: ${qname} is [1]}
             -> { select: num is ${qname}.each }`;
+          await expect(malloySrc).malloyResultMatches(runtime, {});
           const result = await runtime.loadQuery(malloySrc).run();
           const ok =
             result.data.path(0, 'num').value === 1

@@ -642,7 +642,6 @@ class PrestoExplainParser extends TinyParser {
       arrow: /^=>/,
       char: /^[,:[\]()-]/,
       id: /^\w+/,
-      // mtoy todo check what happens if a name has quotes in it
       quoted_name: /^"\w+"/,
     });
   }
