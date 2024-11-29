@@ -2779,11 +2779,6 @@ class QueryQuery extends QueryField {
         }
       } else if (fi instanceof FieldInstanceField) {
         if (fi.fieldUsage.type === 'result') {
-          // mtoy todo -- remember why you commented this out
-          // if (fi.f instanceof QueryFieldStruct) {
-          //   fields.push(fi.f.getAsJoinedStructDef(name));
-          // }
-
           // if there is only one dimension, it is the primaryKey
           //  if there are more, primaryKey is undefined.
           if (isScalarField(fi.f)) {
