@@ -221,9 +221,9 @@ export class PostgresDialect extends PostgresBase {
   ): string {
     if (isArray) {
       if (needDistinctKey) {
-        return `LEFT JOIN UNNEST(ARRAY((SELECT jsonb_build_object('__row_id', row_number() over (), 'value', v) FROM UNNEST(${source}) as v))) as ${alias} ON true`;
+        return `LEFT JOIN UNNEST(ARRAY((SELECT jsonb_build_object('__row_id', row_number() over (), 'value', v) FROM JSONB_ARRAY_ELEMENTS(TO_JSONB(${source})) as v))) as ${alias} ON true`;
       } else {
-        return `LEFT JOIN UNNEST(ARRAY((SELECT jsonb_build_object('value', v) FROM UNNEST(${source}) as v))) as ${alias} ON true`;
+        return `LEFT JOIN UNNEST(ARRAY((SELECT jsonb_build_object('value', v) FROM JSONB_ARRAY_ELEMENTS(TO_JSONB(${source})) as v))) as ${alias} ON true`;
       }
     } else if (needDistinctKey) {
       // return `UNNEST(ARRAY(( SELECT AS STRUCT GENERATE_UUID() as __distinct_key, * FROM UNNEST(${source})))) as ${alias}`;
@@ -249,7 +249,7 @@ export class PostgresDialect extends PostgresBase {
     childType: string
   ): string {
     if (parentType !== 'table') {
-      let ret = `(${parentAlias}->>'${childName}')`;
+      let ret = `JSONB_EXTRACT_PATH_TEXT(${parentAlias},'${childName}')`;
       switch (childType) {
         case 'string':
           break;
@@ -257,7 +257,9 @@ export class PostgresDialect extends PostgresBase {
           ret = `${ret}::double precision`;
           break;
         case 'struct':
-          ret = `${ret}::jsonb`;
+        case 'array':
+        case 'record':
+          ret = `JSONB_EXTRACT_PATH(${parentAlias},'${childName}')`;
           break;
       }
       return ret;
