@@ -76,6 +76,7 @@ export interface QueryInfo {
 
 export type FieldReferenceType =
   | 'table'
+  | 'nest source'
   | 'array[scalar]'
   | 'array[record]'
   | 'record';

@@ -4467,6 +4467,8 @@ class QueryStruct {
         this.structDef.elementTypeDef.type === 'record_element'
           ? 'array[record]'
           : 'array[scalar]';
+    } else if (this.structDef.type === 'nest_source') {
+      refType = 'nest source';
     }
     const child = this.getChildByName(name);
     const childType = child?.fieldDef.type || 'unknown';
