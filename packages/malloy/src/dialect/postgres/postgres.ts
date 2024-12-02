@@ -33,6 +33,7 @@ import {
   MeasureTimeExpr,
   LeafAtomicTypeDef,
   RecordLiteralNode,
+  ArrayLiteralNode,
 } from '../../model/malloy_types';
 import {
   DialectFunctionOverloadDef,
@@ -259,6 +260,7 @@ export class PostgresDialect extends PostgresBase {
         case 'struct':
         case 'array':
         case 'record':
+        case 'array[record]':
           ret = `JSONB_EXTRACT_PATH(${parentAlias},'${childName}')`;
           break;
       }
@@ -295,10 +297,6 @@ export class PostgresDialect extends PostgresBase {
 
   sqlSelectAliasAsStruct(alias: string): string {
     return `ROW(${alias})`;
-  }
-  // TODO
-  sqlMaybeQuoteIdentifier(identifier: string): string {
-    return `"${identifier}"`;
   }
 
   // The simple way to do this is to add a comment on the table
@@ -456,5 +454,10 @@ export class PostgresDialect extends PostgresBase {
       props.push(`'${kName}',${kVal.sql}`);
     }
     return `JSONB_BUILD_OBJECT(${props.join(', ')})`;
+  }
+
+  sqlLiteralArray(lit: ArrayLiteralNode): string {
+    const array = lit.kids.values.map(val => val.sql);
+    return 'JSONB_BUILD_ARRAY(' + array.join(',') + ')';
   }
 }
