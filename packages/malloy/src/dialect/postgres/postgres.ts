@@ -249,6 +249,9 @@ export class PostgresDialect extends PostgresBase {
     childName: string,
     childType: string
   ): string {
+    if (childName === '__row_id') {
+      return `(${parentAlias}->>'__row_id')`;
+    }
     if (parentType !== 'table') {
       let ret = `JSONB_EXTRACT_PATH_TEXT(${parentAlias},'${childName}')`;
       switch (childType) {
