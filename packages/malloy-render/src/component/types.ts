@@ -119,6 +119,7 @@ export type TableConfig = {
   disableVirtualization: boolean;
   rowLimit: number;
   shouldFillWidth: boolean;
+  enableDrill: boolean;
 };
 export type DashboardConfig = {
   disableVirtualization: boolean;

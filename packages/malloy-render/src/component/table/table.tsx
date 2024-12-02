@@ -239,10 +239,13 @@ const TableField = (props: {
     }));
   };
 
+  const config = useConfig();
+  const isDrillingEnabled = config.tableConfig().enableDrill;
+
   const handleClick = async evt => {
     evt.stopPropagation();
 
-    if (!DRILL_RENDERER_IGNORE_LIST.includes(renderAs)) {
+    if (isDrillingEnabled && !DRILL_RENDERER_IGNORE_LIST.includes(renderAs)) {
       tableCtx!.copyExplorePathQueryToClipboard(
         tableCtx!,
         props.field,
@@ -257,7 +260,9 @@ const TableField = (props: {
       classList={{
         numeric: props.field.isAtomicField() && props.field.isNumber(),
         highlight:
-          !DRILL_RENDERER_IGNORE_LIST.includes(renderAs) && isHighlightedRow(),
+          isDrillingEnabled &&
+          !DRILL_RENDERER_IGNORE_LIST.includes(renderAs) &&
+          isHighlightedRow(),
       }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
