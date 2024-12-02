@@ -266,7 +266,8 @@ export class PostgresDialect extends PostgresBase {
       }
       return ret;
     } else {
-      return `${parentAlias}."${childName}"`;
+      const child = this.sqlMaybeQuoteIdentifier(childName);
+      return `${parentAlias}.${child}`;
     }
   }
 
