@@ -133,12 +133,7 @@ connectionId
   : id;
 
 queryProperties
-  : filterShortcut
-  | OCURLY (queryStatement | SEMI)* closeCurly
-  ;
-
-filterShortcut
-  : OCURLY QMARK fieldExpr closeCurly
+  : OCURLY (queryStatement | SEMI)* closeCurly
   ;
 
 queryName : id;
@@ -169,7 +164,6 @@ sourceNameDef: id;
 
 exploreProperties
   : OCURLY (exploreStatement | SEMI)* closeCurly
-  | filterShortcut
   ;
 
 exploreStatement
