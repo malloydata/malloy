@@ -153,6 +153,9 @@ export function viteMalloyStoriesPlugin(): PluginOption {
               const el = document.createElement('malloy-render');
               if (classes) el.classList.add(classes);
               el.result = context.loaded['result'];
+              el.tableConfig = {
+                enableDrill: true
+              };
 
               const button = document.createElement('button');
               button.innerHTML = "Copy HTML";
