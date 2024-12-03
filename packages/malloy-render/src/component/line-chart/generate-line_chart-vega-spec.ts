@@ -669,6 +669,7 @@ export function generateLineChartVegaSpec(
       fill: 'color',
       // No title for measure list legends
       title: seriesField ? seriesField.name : '',
+      orient: 'right',
       ...legendSettings,
       encode: {
         entries: {
