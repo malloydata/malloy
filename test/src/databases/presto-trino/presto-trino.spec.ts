@@ -277,7 +277,7 @@ describe.each(runtimes.runtimeList)(
       await expect(`
         run: ${databaseName}.sql(
           """
-            SELECT 'http://websitehost.com:80/path_comp/my_test?first_param=val_one&second_param=2#example_frag' as test_url
+            SELECT 'http://websitetesthost.com:80/path_comp/my_test?first_param=val_one&second_param=2#example_frag' as test_url
           """
         ) -> {
           select:
@@ -292,7 +292,7 @@ describe.each(runtimes.runtimeList)(
         }
         `).malloyResultMatches(runtime, {
         fragment: 'example_frag',
-        host: 'websitehost.com',
+        host: 'websitetesthost.com',
         param_one: 'val_one',
         param_two: '2',
         path: '/path_comp/my_test',
