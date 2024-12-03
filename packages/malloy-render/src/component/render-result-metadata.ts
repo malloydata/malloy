@@ -59,11 +59,16 @@ function createDataCache() {
     get: (cell: DataColumn) => {
       if (!dataCache.has(cell) && cell.isArray()) {
         const data: DataRowWithRecord[] = [];
+        const fields = cell.field.allFields;
         for (const row of cell) {
-          const record = Object.assign({}, row.toObject(), {
-            __malloyDataRecord: row,
-          });
-          data.push(record);
+          const record = {__malloyDataRecord: row};
+          for (const field of fields) {
+            const value = row.cell(field).value;
+            // TODO: can we store Date objects as is? Downstream chart code would need to be updated
+            record[field.name] =
+              value instanceof Date ? value.valueOf() : row.cell(field).value;
+          }
+          data.push(record as DataRowWithRecord);
         }
         dataCache.set(cell, data);
       }
