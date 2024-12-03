@@ -606,6 +606,11 @@ export type TemporalFieldType = 'date' | 'timestamp';
 export function isTemporalField(s: string): s is TemporalFieldType {
   return s === 'date' || s === 'timestamp';
 }
+export function isTemporal(
+  fd: FieldDef
+): fd is TimestampFieldDef | DateFieldDef {
+  return isTemporalField(fd.type);
+}
 export type CastType =
   | 'string'
   | 'number'
@@ -664,84 +669,89 @@ export interface StringTypeDef {
   bucketFilter?: string;
   bucketOther?: string;
 }
-export type StringFieldDef = StringTypeDef & AtomicFieldDef;
+export type StringFieldDef = StringTypeDef & FieldBase;
 
 export interface NumberTypeDef {
   type: 'number';
   numberType?: 'integer' | 'float';
 }
-export type NumberFieldDef = NumberTypeDef & AtomicFieldDef;
+export type NumberFieldDef = NumberTypeDef & FieldBase;
 
 export interface BooleanTypeDef {
   type: 'boolean';
 }
-export type BooleanFieldDef = BooleanTypeDef & AtomicFieldDef;
+export type BooleanFieldDef = BooleanTypeDef & FieldBase;
 
 export interface JSONTypeDef {
   type: 'json';
 }
-export type JSONFieldDef = JSONTypeDef & AtomicFieldDef;
+export type JSONFieldDef = JSONTypeDef & FieldBase;
+
+/*
+
+hey mtoy
+we are in the middle of making ArrayTypeDef and RecordTypeDef NOT be strucdefs
+
+currenly the definiion of FieldDef is wrong as it doesn't correclty include
+joined fields because we are strill working on the taxonomy
+
+*/
 
 export interface NativeUnsupportedTypeDef {
   type: 'sql native';
   rawType?: string;
 }
-export type NativeUnsupportedFieldDef = NativeUnsupportedTypeDef &
-  AtomicFieldDef;
+export type NativeUnsupportedFieldDef = NativeUnsupportedTypeDef & FieldBase;
 
-export interface ArrayTypeDef extends JoinBase, StructDefBase {
+export interface ArrayTypeDef {
   type: 'array';
-  elementTypeDef: Exclude<AtomicTypeDef, RecordTypeDef> | RecordElementTypeDef;
+  elementTypeDef: AtomicTypeDef;
+}
+
+export interface ArrayDef
+  extends ArrayTypeDef,
+    JoinBase,
+    StructDefBase,
+    FieldBase {
+  type: 'array';
   join: 'many';
 }
-export type ArrayDef = ArrayTypeDef & AtomicFieldDef;
 
-export function arrayEachFields(arrayOf: AtomicTypeDef): AtomicFieldDef[] {
-  return [
-    {...arrayOf, e: {node: 'field', path: ['value']}, name: 'each'},
-    {...arrayOf, name: 'value'},
-  ];
+export type RecordSchema = Record<string, AtomicTypeDef>;
+export interface RecordTypeDef {
+  type: 'record';
+  schema: RecordSchema;
 }
 
-export interface RecordTypeDef extends StructDefBase, JoinBase {
+export interface RecordDef
+  extends RecordTypeDef,
+    JoinBase,
+    StructDefBase,
+    FieldBase {
   type: 'record';
   join: 'one';
 }
 
-// While repeated records are mostly treated like arrays of records,
-// for historical reasons in the IR, a field which is a repeated record
-// and a field which is record both have the record schema in "fields"
-//
-// This is signified by the datatype of a array of records being
-//  {elementType: record_element, fields: [schema]}
-//     instead of
-//  {elementType: record{record schema}}
-//
-// This made it easier to re-factor structdef, however this might make
-// actual record types more difficult, so this might get re-visited
-// when record types are finalized.
-
-export interface RecordElementTypeDef {
-  type: 'record_element';
-}
-
-export interface RepeatedRecordTypeDef extends ArrayDef {
+export interface RepeatedRecordTypeDef extends ArrayTypeDef {
   type: 'array';
-  elementTypeDef: RecordElementTypeDef;
-  join: 'many';
+  elementTypeDef: RecordTypeDef;
 }
 
-export type RecordDef = RecordTypeDef & AtomicFieldDef;
-export type RepeatedRecordDef = RepeatedRecordTypeDef & AtomicFieldDef;
+export interface RepeatedRecordDef extends ArrayDef {
+  type: 'array';
+  elementTypeDef: RecordTypeDef;
+}
 
 export function isRepeatedRecord(fd: FieldDef): fd is RepeatedRecordDef {
-  return fd.type === 'array' && fd.elementTypeDef.type === 'record_element';
+  return fd.type === 'array' && fd.elementTypeDef.type === 'record';
 }
 
 export interface ErrorTypeDef {
   type: 'error';
 }
-export type ErrorFieldDef = ErrorTypeDef & AtomicFieldDef;
+export interface ErrorFieldDef extends ErrorTypeDef, FieldBase {
+  type: 'error';
+}
 
 export type JoinType = 'one' | 'many' | 'cross';
 export type JoinRelationship =
@@ -779,8 +789,8 @@ export type Joinable =
   | QuerySourceDef
   | RecordDef
   | ArrayDef;
-export type JoinFieldDef = JoinBase & Joinable;
 
+// Not all structs are legally joinable
 export function isJoinable(sd: StructDef): sd is Joinable {
   return [
     'table',
@@ -792,14 +802,120 @@ export function isJoinable(sd: StructDef): sd is Joinable {
   ].includes(sd.type);
 }
 
-export function isJoined<T extends FieldDef | StructDef>(
-  fd: T
-): fd is T & Joinable & JoinBase {
+export type JoinFieldDef = Joinable & JoinBase;
+export function isJoined(fd: FieldDef): fd is JoinFieldDef {
   return 'join' in fd;
 }
 
 export function isJoinedSource(sd: StructDef): sd is SourceDef & JoinBase {
-  return isSourceDef(sd) && isJoined(sd);
+  return isSourceDef(sd) && 'join' in sd;
+}
+
+export function schemaToFields(
+  schema: RecordSchema,
+  dialect: string
+): AtomicFieldDef[] {
+  return Object.keys(schema).map(n =>
+    mkFieldDefFromType(schema[n], n, dialect)
+  );
+}
+
+export function addArrayFields(theArray: ArrayDef) {
+  if (theArray.elementTypeDef.type === 'record') {
+    theArray.fields = schemaToFields(
+      theArray.elementTypeDef.schema,
+      theArray.dialect
+    );
+  } else {
+    const valueEnt = mkFieldDefFromType(
+      theArray.elementTypeDef,
+      'value',
+      theArray.dialect
+    );
+    theArray.fields = [
+      valueEnt,
+      {...valueEnt, name: 'each', e: {node: 'field', path: ['value']}},
+    ];
+  }
+}
+
+/**
+ * Create a FieldDef from a TypeDef. It at least adds the name to
+ * the typedef, and for arrays and records it fills out
+ * some other things that StructDefs need.
+ */
+export function mkFieldDefFromType(
+  atd: AtomicTypeDef,
+  name: string,
+  dialect: string
+): AtomicFieldDef {
+  switch (atd.type) {
+    case 'record': {
+      const ret: RecordDef = {
+        ...atd,
+        join: 'one',
+        name,
+        dialect,
+        fields: schemaToFields(atd.schema, dialect),
+      };
+      return ret;
+    }
+    case 'array': {
+      const ret: ArrayDef = {
+        ...atd,
+        join: 'many',
+        name,
+        dialect,
+        fields: [],
+      };
+      addArrayFields(ret);
+      return ret;
+    }
+    default:
+      return {...atd, name};
+  }
+}
+
+export function schemaFromFields(sd: StructDef): RecordSchema {
+  const schema: RecordSchema = {};
+  for (const field of sd.fields) {
+    updateSchemaFromFieldDef(schema, field);
+  }
+  return schema;
+}
+
+function updateSchemaFromFieldDef(schema: RecordSchema, field: FieldDef): void {
+  const name = field.as || field.name;
+  if (field.type === 'number') {
+    schema[name] = field.numberType
+      ? {type: 'number', numberType: field.numberType}
+      : {type: 'number'};
+  } else if (field.type === 'sql native') {
+    schema[name] = field.rawType
+      ? {type: 'sql native', rawType: field.rawType}
+      : {type: 'sql native'};
+  } else if (field.type === 'record') {
+    schema[name] = {type: 'record', schema: field.schema};
+  } else if (field.type === 'array') {
+    schema[name] = {type: 'array', elementTypeDef: field.elementTypeDef};
+  } else if (isLeafAtomic(field)) {
+    schema[name] = {type: field.type};
+  }
+}
+
+/**
+ * Add a field to the fields[] array and update the schema, if the StructDef
+ * is the kind which needs to keep a schema.
+ * @param sd StructDef getting the new field
+ * @param fd The new field
+ */
+export function pushFieldAndSchema(sd: StructDef, fd: FieldDef): void {
+  sd.fields.push(fd);
+  if (sd.type === 'array' && sd.elementTypeDef.type === 'record') {
+    updateSchemaFromFieldDef(sd.elementTypeDef.schema, fd);
+  } else if (sd.type === 'record') {
+    updateSchemaFromFieldDef(sd.schema, fd);
+  }
 }
 
 export type DateUnit = 'day' | 'week' | 'month' | 'quarter' | 'year';
@@ -828,13 +944,13 @@ export interface DateTypeDef {
   type: 'date';
   timeframe?: DateUnit;
 }
-export type DateFieldDef = DateTypeDef & AtomicFieldDef;
+export type DateFieldDef = DateTypeDef & FieldBase;
 
 export interface TimestampTypeDef {
   type: 'timestamp';
   timeframe?: TimestampUnit;
 }
-export type TimestampFieldDef = TimestampTypeDef & AtomicFieldDef;
+export type TimestampFieldDef = TimestampTypeDef & FieldBase;
 
 /** parameter to order a query */
 export interface OrderBy {
@@ -1145,7 +1261,7 @@ export type SourceDef =
 
 /** Is this the "FROM" table of a query tree */
 export function isBaseTable(def: StructDef): def is SourceDef {
-  if (isJoined(def)) {
+  if (isJoinedSource(def)) {
     return false;
   }
   if (isSourceDef(def)) {
@@ -1155,7 +1271,7 @@ export function isBaseTable(def: StructDef): def is SourceDef {
 }
 
 export function isScalarArray(def: FieldDef | StructDef) {
-  return def.type === 'array' && def.elementTypeDef.type !== 'record_element';
+  return def.type === 'array' && def.elementTypeDef.type !== 'record';
 }
 
 export type StructDef = SourceDef | RecordDef | ArrayDef;
@@ -1260,8 +1376,16 @@ export type LeafAtomicTypeDef =
   | ErrorTypeDef;
 export type AtomicTypeDef = LeafAtomicTypeDef | ArrayTypeDef | RecordTypeDef;
 
-export type LeafAtomicDef = LeafAtomicTypeDef & FieldBase;
-export type AtomicFieldDef = AtomicTypeDef & FieldBase;
+export type LeafAtomicDef =
+  | StringFieldDef
+  | DateFieldDef
+  | TimestampFieldDef
+  | NumberFieldDef
+  | BooleanFieldDef
+  | JSONFieldDef
+  | NativeUnsupportedFieldDef
+  | ErrorFieldDef;
+export type AtomicFieldDef = LeafAtomicDef | ArrayDef | RecordDef;
 
 export function isLeafAtomic(
   fd: FieldDef | QueryFieldDef | AtomicTypeDef
@@ -1511,8 +1635,8 @@ export const TD = {
         return false;
       }
       if (
-        x.elementTypeDef.type !== 'record_element' && // Both are equal, but to make this
-        y.elementTypeDef.type !== 'record_element' //    typecheck, we need the && clause.
+        x.elementTypeDef.type !== 'record' && // Both are equal, but to make this
+        y.elementTypeDef.type !== 'record' //    typecheck, we need the && clause.
       ) {
         return TD.eq(x.elementTypeDef, y.elementTypeDef);
       }

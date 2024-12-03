@@ -34,13 +34,7 @@ export class RecordLiteral extends ExpressionDef {
     const recLit: RecordLiteralNode = {
       node: 'recordLiteral',
       kids: {},
-      typeDef: {
-        name: '',
-        type: 'record',
-        join: 'one',
-        dialect: fs.dialectName(),
-        fields: [],
-      },
+      typeDef: {type: 'record', schema: {}},
     };
     const dependents: ExprValue[] = [];
     for (const el of this.pairs) {
@@ -48,7 +42,7 @@ export class RecordLiteral extends ExpressionDef {
       if (TD.isAtomic(xVal)) {
         dependents.push(xVal);
         recLit.kids[el.key] = xVal.value;
-        recLit.typeDef.fields.push({...TDU.atomicDef(xVal), name: el.key});
+        recLit.typeDef.schema[el.key] = TDU.atomicDef(xVal);
       } else {
         this.logError(
           'illegal-record-property-type',

@@ -137,6 +137,7 @@ describe('structdef comprehension', () => {
       dialect: 'standardsql',
       join: 'one',
       matrixOperation: 'left',
+      schema: {a: {type: 'string'}},
       fields: [{type: 'string', name: 'a'}],
     };
     const struct = mkStructDef(field);

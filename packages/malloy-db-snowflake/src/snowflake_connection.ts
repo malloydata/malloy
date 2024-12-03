@@ -36,12 +36,13 @@ import {
   QueryDataRow,
   SnowflakeDialect,
   TestableConnection,
-  arrayEachFields,
   TinyParser,
   Dialect,
   FieldDef,
   RecordDef,
-  ArrayTypeDef,
+  mkFieldDefFromType,
+  ArrayDef,
+  schemaFromFields,
 } from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 
@@ -114,10 +115,12 @@ class SnowObject extends SnowField {
     const rec: RecordDef = {
       type: 'record',
       name: this.name,
+      schema: {},
       fields: this.fields,
       join: 'one',
       dialect: this.dialect.name,
     };
+    rec.schema = schemaFromFields(rec);
     return rec;
   }
 
@@ -171,26 +174,30 @@ class SnowArray extends SnowField {
     }
   }
 
-  fieldDef(): ArrayTypeDef {
-    const arr: ArrayTypeDef = {
-      type: 'array',
-      name: this.name,
-      join: 'many',
-      dialect: this.dialect.name,
-      elementTypeDef: {type: 'string'},
-      fields: [],
-    };
+  fieldDef(): ArrayDef {
     if (this.objectChild) {
-      arr.fields = this.objectChild.fieldDef().fields;
-      arr.elementTypeDef = {type: 'record_element'};
+      const {type, schema} = this.objectChild.fieldDef();
+      return mkFieldDefFromType(
+        {type: 'array', elementTypeDef: {type, schema}},
+        this.name,
+        this.dialect.name
+      ) as ArrayDef;
     } else if (this.arrayChild) {
-      arr.elementTypeDef = this.arrayChild.fieldDef();
-      arr.fields = arrayEachFields(arr.elementTypeDef);
-    } else {
-      arr.elementTypeDef = this.dialect.sqlTypeToMalloyType(this.arrayOf);
-      arr.fields = arrayEachFields(arr.elementTypeDef);
+      const {elementTypeDef} = this.arrayChild.fieldDef();
+      return mkFieldDefFromType(
+        {type: 'array', elementTypeDef},
+        this.name,
+        this.dialect.name
+      ) as ArrayDef;
     }
-    return arr;
+    return mkFieldDefFromType(
+      {
+        type: 'array',
+        elementTypeDef: this.dialect.sqlTypeToMalloyType(this.arrayOf),
+      },
+      this.name,
+      this.dialect.name
+    ) as ArrayDef;
   }
 
   walk(path: PathChain, fieldType: string) {

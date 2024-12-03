@@ -102,17 +102,18 @@ import {
   isJoinedSource,
   QueryResultDef,
   isScalarArray,
-  RecordDef,
   FinalizeSourceDef,
   QueryToMaterialize,
   PrepareResultOptions,
-  RepeatedRecordDef,
   CaseExpr,
   TemporalTypeDef,
   mkTemporal,
   JoinFieldDef,
   LeafAtomicDef,
   Expression,
+  mkFieldDefFromType,
+  RecordTypeDef,
+  schemaFromFields,
 } from './malloy_types';
 
 import {Connection} from '../connection/types';
@@ -1371,13 +1372,6 @@ class QueryField extends QueryNode {
     }
   }
 
-  isArrayElement(parentDef: FieldDef) {
-    return (
-      parentDef.type === 'array' &&
-      parentDef.elementTypeDef.type !== 'record_element'
-    );
-  }
-
   generateExpression(resultSet: FieldInstanceResult): string {
     // If the field itself is an expression, generate it ..
     if (hasExpression(this.fieldDef)) {
@@ -2175,7 +2169,7 @@ class JoinInstance {
       return 'root';
     }
     const thisStruct = this.queryStruct.structDef;
-    if (isJoined(thisStruct)) {
+    if (isJoinedSource(thisStruct)) {
       switch (thisStruct.join) {
         case 'one':
           return 'many_to_one';
@@ -2199,7 +2193,7 @@ class JoinInstance {
       return false;
     }
     const thisStruct = this.queryStruct.structDef;
-    if (isJoined(thisStruct)) {
+    if (isJoinedSource(thisStruct)) {
       return (
         thisStruct.matrixOperation === 'right' ||
         thisStruct.matrixOperation === 'full'
@@ -2757,26 +2751,20 @@ class QueryQuery extends QueryField {
           '<nosource>'
         );
 
-        if (fi.getRepeatedResultType() === 'nested') {
-          const multiLineNest: RepeatedRecordDef = {
-            ...structDef,
-            type: 'array',
-            elementTypeDef: {type: 'record_element'},
-            join: 'many',
-            name,
-            resultMetadata,
-          };
-          fields.push(multiLineNest);
-        } else {
-          const oneLineNest: RecordDef = {
-            ...structDef,
-            type: 'record',
-            join: 'one',
-            name,
-            resultMetadata,
-          };
-          fields.push(oneLineNest);
-        }
+        const recordType: RecordTypeDef = {
+          type: 'record',
+          schema: schemaFromFields(structDef),
+        };
+        const nest =
+          fi.getRepeatedResultType() === 'nested'
+            ? mkFieldDefFromType(
+                {type: 'array', elementTypeDef: recordType},
+                name,
+                structDef.dialect
+              )
+            : mkFieldDefFromType(recordType, name, structDef.dialect);
+        nest.resultMetadata = resultMetadata;
+        fields.push(nest);
       } else if (fi instanceof FieldInstanceField) {
         if (fi.fieldUsage.type === 'result') {
           // if there is only one dimension, it is the primaryKey
@@ -4464,7 +4452,7 @@ class QueryStruct {
       refType = 'record';
     } else if (this.structDef.type === 'array') {
       refType =
-        this.structDef.elementTypeDef.type === 'record_element'
+        this.structDef.elementTypeDef.type === 'record'
           ? 'array[record]'
           : 'array[scalar]';
     } else if (this.structDef.type === 'nest_source') {

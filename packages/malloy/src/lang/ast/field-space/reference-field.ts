@@ -26,6 +26,7 @@ import {
   QueryFieldDef,
   TD,
   TypeDesc,
+  mkFieldDefFromType,
 } from '../../../model/malloy_types';
 import * as TDU from '../typedesc-utils';
 import {FieldReference} from '../query-items/field-references';
@@ -69,8 +70,11 @@ export class ReferenceField extends SpaceField {
         const foundType = check.found.typeDesc();
         if (TD.isAtomic(foundType)) {
           this.queryFieldDef = {
-            ...TDU.atomicDef(foundType),
-            name: path[0],
+            ...mkFieldDefFromType(
+              TDU.atomicDef(foundType),
+              path[0],
+              fs.dialectName()
+            ),
             e: {node: 'parameter', path},
           };
         } else {

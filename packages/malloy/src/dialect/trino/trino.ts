@@ -38,7 +38,6 @@ import {
   LeafAtomicTypeDef,
   TD,
   RecordLiteralNode,
-  isAtomic,
 } from '../../model/malloy_types';
 import {
   DialectFunctionOverloadDef,
@@ -545,22 +544,21 @@ ${indent(sql)}
         return 'VARCHAR';
       case 'record': {
         const typeSpec: string[] = [];
-        for (const f of malloyType.fields) {
-          if (isAtomic(f)) {
-            typeSpec.push(`${f.name} ${this.malloyTypeToSQLType(f)}`);
-          }
+        for (const name in malloyType.schema) {
+          typeSpec.push(
+            `${name} ${this.malloyTypeToSQLType(malloyType.schema[name])}`
+          );
         }
         return `ROW(${typeSpec.join(',')})`;
       }
       case 'sql native':
         return malloyType.rawType || 'UNKNOWN-NATIVE';
       case 'array': {
-        if (malloyType.elementTypeDef.type !== 'record_element') {
-          return `ARRAY<${this.malloyTypeToSQLType(
-            malloyType.elementTypeDef
-          )}>`;
-        }
-        return malloyType.type.toUpperCase();
+        // mtoy todo maybe put the if back or delete the commands
+        // if (malloyType.elementTypeDef.type !== 'record') {
+        return `ARRAY<${this.malloyTypeToSQLType(malloyType.elementTypeDef)}>`;
+        // }
+        // return malloyType.type.toUpperCase();
       }
       default:
         return malloyType.type.toUpperCase();
@@ -636,13 +634,10 @@ ${indent(sql)}
   sqlLiteralRecord(lit: RecordLiteralNode): string {
     const rowVals: string[] = [];
     const rowTypes: string[] = [];
-    for (const f of lit.typeDef.fields) {
-      if (isAtomic(f)) {
-        const name = f.as ?? f.name;
-        rowVals.push(lit.kids[name].sql ?? 'internal-error-record-literal');
-        const elType = this.malloyTypeToSQLType(f);
-        rowTypes.push(`${name} ${elType}`);
-      }
+    for (const name in lit.typeDef.schema) {
+      rowVals.push(lit.kids[name].sql ?? 'internal-error-record-literal');
+      const elType = this.malloyTypeToSQLType(lit.typeDef.schema[name]);
+      rowTypes.push(`${name} ${elType}`);
     }
     return `CAST(ROW(${rowVals.join(',')}) AS ROW(${rowTypes.join(',')}))`;
   }

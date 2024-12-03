@@ -69,6 +69,7 @@ import {
   isSourceDef,
   QueryToMaterialize,
   isJoined,
+  isJoinedSource,
 } from './model';
 import {
   EventStream,
@@ -2145,7 +2146,7 @@ export class ExploreField extends Explore {
   }
 
   public get joinRelationship(): JoinRelationship {
-    if (isJoined(this.structDef)) {
+    if (isJoinedSource(this.structDef)) {
       switch (this.structDef.join) {
         case 'one':
           return JoinRelationship.OneToOne;

@@ -35,7 +35,6 @@ import {ResourceStream} from '@google-cloud/paginator';
 import * as googleCommon from '@google-cloud/common';
 import {GaxiosError} from 'gaxios';
 import {
-  arrayEachFields,
   Connection,
   ConnectionConfig,
   Malloy,
@@ -52,6 +51,9 @@ import {
   toAsyncGenerator,
   StructDef,
   SQLSourceDef,
+  RecordTypeDef,
+  mkFieldDefFromType,
+  pushFieldAndSchema,
 } from '@malloydata/malloy';
 import {BaseConnection, TableMetadata} from '@malloydata/malloy/connection';
 // eslint-disable-next-line no-restricted-imports
@@ -515,42 +517,40 @@ export class BigQueryConnection
       const name = field.name as string;
 
       const isRecord = ['STRUCT', 'RECORD'].includes(type);
-      const structShared = {name, dialect: this.dialectName, fields: []};
       if (field.mode === 'REPEATED' && !isRecord) {
         // Malloy treats repeated values as an array of scalars.
         const malloyType = this.dialect.sqlTypeToMalloyType(type);
-        if (malloyType) {
-          const arrayField: StructDef = {
-            ...structShared,
-            type: 'array',
-            elementTypeDef: malloyType,
-            join: 'many',
-            fields: arrayEachFields(malloyType),
-          };
-          structDef.fields.push(arrayField);
-        }
+        pushFieldAndSchema(
+          structDef,
+          mkFieldDefFromType(
+            {type: 'array', elementTypeDef: malloyType},
+            name,
+            this.dialectName
+          )
+        );
       } else if (isRecord) {
-        const ifRepeatedRecord: StructDef = {
-          ...structShared,
-          type: 'array',
-          elementTypeDef: {type: 'record_element'},
-          join: 'many',
-        };
-        const elseRecord: StructDef = {
-          ...structShared,
-          type: 'record',
-          join: 'one',
-        };
-        const recStruct =
-          field.mode === 'REPEATED' ? ifRepeatedRecord : elseRecord;
-        this.addFieldsToStructDef(recStruct, field);
-        structDef.fields.push(recStruct);
+        const recType: RecordTypeDef = {type: 'record', schema: {}};
+        const rec =
+          field.mode === 'REPEATED'
+            ? mkFieldDefFromType(
+                {type: 'array', elementTypeDef: recType},
+                name,
+                this.dialectName
+              )
+            : mkFieldDefFromType(recType, name, this.dialectName);
+        if (rec.type === 'array' || rec.type === 'record') {
+          this.addFieldsToStructDef(rec, field);
+        }
+        pushFieldAndSchema(structDef, rec);
       } else {
         const malloyType = this.dialect.sqlTypeToMalloyType(type) ?? {
           type: 'sql native',
           rawType: type.toLowerCase(),
         };
-        structDef.fields.push({name, ...malloyType});
+        pushFieldAndSchema(
+          structDef,
+          mkFieldDefFromType(malloyType, name, this.dialectName)
+        );
       }
     }
   }

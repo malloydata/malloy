@@ -35,7 +35,8 @@ import {
   DuckDBDialect,
   SQLSourceDef,
   TableSourceDef,
-  arrayEachFields,
+  mkFieldDefFromType,
+  pushFieldAndSchema,
 } from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 
@@ -219,38 +220,35 @@ export abstract class DuckDBCommon
       const structMatch = duckDBType.match(/^STRUCT\((?<fields>.*)\)$/);
       if (structMatch && structMatch.groups) {
         const newTypeMap = this.stringToTypeMap(structMatch.groups['fields']);
-        let innerStructDef: StructDef;
-        const structhead = {name, dialect: this.dialectName, fields: []};
-        if (arrayMatch) {
-          innerStructDef = {
-            type: 'array',
-            elementTypeDef: {type: 'record_element'},
-            join: 'many',
-            ...structhead,
-          };
-        } else {
-          innerStructDef = {
-            type: 'record',
-            join: 'one',
-            ...structhead,
-          };
+        const fieldDef = arrayMatch
+          ? mkFieldDefFromType(
+              {type: 'array', elementTypeDef: {type: 'record', schema: {}}},
+              name,
+              this.dialectName
+            )
+          : mkFieldDefFromType(
+              {type: 'record', schema: {}},
+              name,
+              this.dialectName
+            );
+        if (fieldDef.type === 'record' || fieldDef.type === 'array') {
+          this.fillStructDefFromTypeMap(fieldDef, newTypeMap);
         }
-        this.fillStructDefFromTypeMap(innerStructDef, newTypeMap);
-        structDef.fields.push(innerStructDef);
+        pushFieldAndSchema(structDef, fieldDef);
       } else {
         if (arrayMatch) {
           malloyType = this.dialect.sqlTypeToMalloyType(duckDBType);
-          const innerStructDef: StructDef = {
-            type: 'array',
-            elementTypeDef: malloyType,
+          const innerStructDef = mkFieldDefFromType(
+            {type: 'array', elementTypeDef: malloyType},
             name,
-            dialect: this.dialectName,
-            join: 'many',
-            fields: arrayEachFields(malloyType),
-          };
-          structDef.fields.push(innerStructDef);
+            this.dialectName
+          );
+          pushFieldAndSchema(structDef, innerStructDef);
         } else {
-          structDef.fields.push({...malloyType, name});
+          pushFieldAndSchema(
+            structDef,
+            mkFieldDefFromType(malloyType, name, this.dialectName)
+          );
         }
       }
     }

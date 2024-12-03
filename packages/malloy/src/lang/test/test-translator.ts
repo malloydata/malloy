@@ -41,8 +41,8 @@ import {
   TableSourceDef,
   SQLSourceDef,
   SQLSentence,
-  arrayEachFields,
   NumberTypeDef,
+  mkFieldDefFromType,
 } from '../../model/malloy_types';
 import {ExpressionDef, MalloyElement} from '../ast';
 import {NameSpace} from '../ast/types/name-space';
@@ -79,7 +79,10 @@ const mockSchema: Record<string, SourceDef> = {
       {
         type: 'array',
         name: 'astruct',
-        elementTypeDef: {type: 'record_element'},
+        elementTypeDef: {
+          type: 'record',
+          schema: {column: {type: 'number', numberType: 'integer'}},
+        },
         join: 'many',
         fields: [
           {
@@ -90,22 +93,16 @@ const mockSchema: Record<string, SourceDef> = {
         ],
         dialect: 'standardsql',
       },
-      {
-        type: 'record',
-        name: 'aninline',
-        fields: [{...intType, name: 'column'}],
-        join: 'one',
-        matrixOperation: 'left',
-        dialect: 'standardsql',
-      },
-      {
-        type: 'array',
-        name: 'ais',
-        elementTypeDef: intType,
-        join: 'many',
-        fields: arrayEachFields(intType),
-        dialect: 'standardsql',
-      },
+      mkFieldDefFromType(
+        {type: 'record', schema: {column: intType}},
+        'aninline',
+        'standardsql'
+      ),
+      mkFieldDefFromType(
+        {type: 'array', elementTypeDef: intType},
+        'ais',
+        'standardsql'
+      ),
     ],
   },
   'malloytest.carriers': {

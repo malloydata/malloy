@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {arrayEachFields, AtomicTypeDef, FieldDef} from '@malloydata/malloy';
+import {AtomicTypeDef, mkFieldDefFromType} from '@malloydata/malloy';
 import {TrinoConnection, TrinoExecutor} from '.';
 
 // array(varchar) is array
@@ -40,11 +40,11 @@ const DEEP_SCHEMA =
 const intType: AtomicTypeDef = {type: 'number', numberType: 'integer'};
 const doubleType: AtomicTypeDef = {type: 'number', numberType: 'float'};
 const stringType: AtomicTypeDef = {type: 'string'};
-const recordSchema: FieldDef[] = [
-  {name: 'a', ...doubleType},
-  {name: 'b', ...intType},
-  {name: 'c', ...stringType},
-];
+const recordSchema = {
+  a: doubleType,
+  b: intType,
+  c: stringType,
+};
 
 describe('Trino connection', () => {
   let connection: TrinoConnection;
@@ -63,38 +63,35 @@ describe('Trino connection', () => {
 
   describe('schema parser', () => {
     it('parses arrays', () => {
-      expect(connection.malloyTypeFromTrinoType('test', ARRAY_SCHEMA)).toEqual({
-        'name': 'test',
-        'type': 'array',
-        'dialect': 'trino',
-        'elementTypeDef': intType,
-        'join': 'many',
-        'fields': arrayEachFields(intType),
-      });
+      expect(connection.malloyTypeFromTrinoType('test', ARRAY_SCHEMA)).toEqual(
+        mkFieldDefFromType(
+          {type: 'array', elementTypeDef: intType},
+          'test',
+          'trino'
+        )
+      );
     });
 
     it('parses inline', () => {
       expect(connection.malloyTypeFromTrinoType('test', INLINE_SCHEMA)).toEqual(
-        {
-          'name': 'test',
-          'type': 'record',
-          'dialect': 'trino',
-          'join': 'one',
-          'fields': recordSchema,
-        }
+        mkFieldDefFromType(
+          {type: 'record', schema: recordSchema},
+          'test',
+          'trino'
+        )
       );
     });
 
     it('parses nested', () => {
       expect(connection.malloyTypeFromTrinoType('test', NESTED_SCHEMA)).toEqual(
-        {
-          'name': 'test',
-          'type': 'array',
-          'elementTypeDef': {type: 'record_element'},
-          'dialect': 'trino',
-          'join': 'many',
-          'fields': recordSchema,
-        }
+        mkFieldDefFromType(
+          {
+            type: 'array',
+            elementTypeDef: {type: 'record', schema: recordSchema},
+          },
+          'test',
+          'trino'
+        )
       );
     });
 
@@ -105,27 +102,31 @@ describe('Trino connection', () => {
     });
 
     it('parses deep nesting', () => {
-      expect(connection.malloyTypeFromTrinoType('test', DEEP_SCHEMA)).toEqual({
-        'name': 'test',
-        'type': 'array',
-        'dialect': 'trino',
-        'elementTypeDef': {type: 'record_element'},
-        'join': 'many',
-        'fields': [
-          {'name': 'a', ...doubleType},
+      expect(connection.malloyTypeFromTrinoType('test', DEEP_SCHEMA)).toEqual(
+        mkFieldDefFromType(
           {
-            'name': 'b',
-            'type': 'array',
-            'dialect': 'trino',
-            'elementTypeDef': {type: 'record_element'},
-            'join': 'many',
-            'fields': [
-              {'name': 'c', ...intType},
-              {'name': 'd', ...stringType},
-            ],
+            type: 'array',
+            elementTypeDef: {
+              type: 'record',
+              schema: {
+                a: doubleType,
+                b: {
+                  type: 'array',
+                  elementTypeDef: {
+                    type: 'record',
+                    schema: {
+                      c: intType,
+                      d: stringType,
+                    },
+                  },
+                },
+              },
+            },
           },
-        ],
-      });
+          'test',
+          'trino'
+        )
+      );
     });
   });
 

@@ -29,9 +29,10 @@ import {
   TypeDesc,
   FieldDef,
   AtomicFieldDef,
-  TemporalTypeDef,
   isAtomic,
   FieldDefType,
+  mkFieldDefFromType,
+  isTemporal,
 } from '../../../model/malloy_types';
 
 import * as TDU from '../typedesc-utils';
@@ -135,61 +136,18 @@ export abstract class AtomicFieldDeclaration
     }
     if (isAtomicFieldType(exprValue.type) && exprValue.type !== 'error') {
       this.typecheckExprValue(exprValue);
-      let ret: AtomicFieldDef;
-      switch (exprValue.type) {
-        case 'date':
-        case 'timestamp': {
-          const timeRet: TemporalTypeDef & AtomicFieldDef = {
-            name: exprName,
-            type: exprValue.type,
-            location: this.location,
-            e: exprValue.value,
-            compositeFieldUsage: exprValue.compositeFieldUsage,
-          };
-          if (isGranularResult(exprValue)) {
-            timeRet.timeframe = exprValue.timeframe;
-          }
-          ret = timeRet;
-          break;
-        }
-        case 'json':
-        case 'boolean':
-        case 'string':
-        case 'number':
-        case 'sql native': {
-          ret = {
-            type: exprValue.type,
-            name: exprName,
-            location: this.location,
-            e: exprValue.value,
-            compositeFieldUsage: exprValue.compositeFieldUsage,
-          };
-          break;
-        }
-        case 'record': {
-          ret = {
-            type: 'record',
-            name: exprName,
-            location: this.location,
-            join: 'one',
-            fields: exprValue.fields,
-            e: exprValue.value,
-            compositeFieldUsage: exprValue.compositeFieldUsage,
-            dialect: exprFS.dialectName(),
-          };
-          break;
-        }
-        case 'array': {
-          ret = {
-            type: 'array',
-            elementTypeDef: exprValue.elementTypeDef,
-            name: exprName,
-            join: 'many',
-            fields: exprValue.fields,
-            e: exprValue.value,
-            dialect: exprValue.dialect,
-          };
-        }
+      const ret: AtomicFieldDef = {
+        ...mkFieldDefFromType(
+          TDU.atomicDef(exprValue),
+          exprName,
+          exprFS.dialectName()
+        ),
+        location: this.location,
+        e: exprValue.value,
+        compositeFieldUsage: exprValue.compositeFieldUsage,
+      };
+      if (isTemporal(ret) && isGranularResult(exprValue)) {
+        ret.timeframe = exprValue.timeframe;
       }
       if (exprValue.expressionType) {
         ret.expressionType = exprValue.expressionType;

@@ -39,7 +39,6 @@ import {
   TD,
   ArrayLiteralNode,
   RecordLiteralNode,
-  isAtomic,
 } from '../../model/malloy_types';
 import {
   DialectFunctionOverloadDef,
@@ -486,29 +485,17 @@ ${indent(sql)}
       } else {
         return 'DOUBLE';
       }
-    } else if (
-      malloyType.type === 'record' ||
-      (malloyType.type === 'array' &&
-        malloyType.elementTypeDef.type === 'record_element')
-    ) {
-      const sqlFields = malloyType.fields.reduce((ret, f) => {
-        if (isAtomic(f)) {
-          const name = f.as ?? f.name;
-          const oneSchema = `${this.sqlMaybeQuoteIdentifier(
-            name
-          )} ${this.malloyTypeToSQLType(f)}`;
-          ret.push(oneSchema);
-        }
-        return ret;
-      }, [] as string[]);
-      const recordScehma = `OBJECT(${sqlFields.join(',')})`;
-      return malloyType.type === 'record'
-        ? recordScehma
-        : `ARRAY(${recordScehma})`;
-    } else if (
-      malloyType.type === 'array' &&
-      malloyType.elementTypeDef.type !== 'record_element'
-    ) {
+    } else if (malloyType.type === 'record') {
+      const props = Object.keys(malloyType.schema)
+        .map(
+          name =>
+            `${this.sqlMaybeQuoteIdentifier(name)} ${this.malloyTypeToSQLType(
+              malloyType.schema[name]
+            )}`
+        )
+        .join(',');
+      return `OBJECT(${props})`;
+    } else if (malloyType.type === 'array') {
       return `ARRAY(${this.malloyTypeToSQLType(malloyType.elementTypeDef)})`;
     }
     return malloyType.type;
@@ -544,8 +531,7 @@ ${indent(sql)}
 
   sqlLiteralRecord(lit: RecordLiteralNode): string {
     const rowVals: string[] = [];
-    for (const f of lit.typeDef.fields) {
-      const name = f.as ?? f.name;
+    for (const name in lit.typeDef.schema) {
       const propName = `'${name}'`;
       const propVal = lit.kids[name].sql ?? 'internal-error-record-literal';
       rowVals.push(`${propName},${propVal}`);

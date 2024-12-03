@@ -42,9 +42,10 @@ import {
   RunSQLOptions,
   SQLSourceDef,
   TableSourceDef,
-  arrayEachFields,
   StreamingConnection,
   StructDef,
+  mkFieldDefFromType,
+  pushFieldAndSchema,
 } from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 
@@ -234,20 +235,17 @@ export class PostgresConnection
       const postgresDataType = row['data_type'] as string;
       const name = row['column_name'] as string;
       if (postgresDataType === 'ARRAY') {
-        const elementType = this.dialect.sqlTypeToMalloyType(
-          row['element_type'] as string
-        );
-        structDef.fields.push({
-          type: 'array',
-          elementTypeDef: elementType,
-          name,
-          dialect: this.dialectName,
-          join: 'many',
-          fields: arrayEachFields(elementType),
-        });
+        /*
+         * postgres arrays not compatible with malloy simulated arrays
+         * so we just make then one of the unsupported types
+         */
+        pushFieldAndSchema(structDef, {type: 'sql native', name});
       } else {
         const malloyType = this.dialect.sqlTypeToMalloyType(postgresDataType);
-        structDef.fields.push({...malloyType, name});
+        pushFieldAndSchema(
+          structDef,
+          mkFieldDefFromType(malloyType, name, this.dialectName)
+        );
       }
     }
   }

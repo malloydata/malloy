@@ -145,21 +145,14 @@ export function atomicDef(td: AtomicTypeDef | TypeDesc): AtomicTypeDef {
     switch (td.type) {
       case 'array': {
         return {
-          name: '',
           type: 'array',
-          join: 'many',
           elementTypeDef: td.elementTypeDef,
-          dialect: td.dialect,
-          fields: td.fields,
         };
       }
       case 'record': {
         return {
-          name: '',
           type: 'record',
-          join: 'one',
-          dialect: td.dialect,
-          fields: td.fields,
+          schema: td.schema,
         };
       }
       case 'number': {

@@ -117,7 +117,7 @@ export type {
   ArrayLiteralNode,
 } from './model';
 export {
-  arrayEachFields,
+  addArrayFields,
   isRepeatedRecord,
   isSourceDef,
   // Used in Composer Demo
@@ -135,6 +135,10 @@ export {
   expressionIsUngroupedAggregate,
   indent,
   composeSQLExpr,
+  mkFieldDefFromType,
+  pushFieldAndSchema,
+  schemaFromFields,
+  schemaToFields,
 } from './model';
 export {
   // Needed for tests only
