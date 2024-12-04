@@ -96,11 +96,6 @@ export type Expr =
   | CompositeFieldExpr
   | ErrorNode;
 
-interface HasTypeDef {
-  typeDef: AtomicTypeDef;
-}
-export type TypedExpr = Expr & HasTypeDef;
-
 export type BinaryOperator =
   | '+'
   | '-'
@@ -337,7 +332,8 @@ export interface BooleanLiteralNode extends ExprLeaf {
 
 export interface RecordLiteralNode extends ExprWithKids {
   node: 'recordLiteral';
-  kids: Record<string, TypedExpr>;
+  kids: Record<string, Expr>;
+  typeDef: RecordTypeDef;
 }
 
 export interface ArrayLiteralNode extends ExprWithKids {
@@ -597,9 +593,12 @@ export function maxOfExpressionTypes(types: ExpressionType[]): ExpressionType {
 }
 
 /**  Grants access to the expression properties of a FieldDef */
+export interface HasExpression {
+  e: Expr;
+}
 export function hasExpression<T extends FieldDef>(
   f: T
-): f is T & Expression & {e: Expr} {
+): f is T & Expression & HasExpression {
   return 'e' in f;
 }
 
@@ -699,12 +698,8 @@ export type ArrayDef = ArrayTypeDef & AtomicFieldDef;
 
 export function arrayEachFields(arrayOf: AtomicTypeDef): AtomicFieldDef[] {
   return [
-    {
-      name: 'each',
-      ...arrayOf,
-      e: {node: 'field', path: ['value']},
-    },
-    {name: 'value', ...arrayOf},
+    {...arrayOf, e: {node: 'field', path: ['value']}, name: 'each'},
+    {...arrayOf, name: 'value'},
   ];
 }
 
@@ -736,10 +731,10 @@ export interface RepeatedRecordTypeDef extends ArrayDef {
   join: 'many';
 }
 
-export type RecordFieldDef = RecordTypeDef & AtomicFieldDef;
-export type RepeatedRecordFieldDef = RepeatedRecordTypeDef & AtomicFieldDef;
+export type RecordDef = RecordTypeDef & AtomicFieldDef;
+export type RepeatedRecordDef = RepeatedRecordTypeDef & AtomicFieldDef;
 
-export function isRepeatedRecord(fd: FieldDef): fd is RepeatedRecordFieldDef {
+export function isRepeatedRecord(fd: FieldDef): fd is RepeatedRecordDef {
   return fd.type === 'array' && fd.elementTypeDef.type === 'record_element';
 }
 
@@ -762,6 +757,7 @@ export function isMatrixOperation(x: string): x is MatrixOperation {
 }
 
 export type JoinElementType =
+  | 'composite'
   | 'table'
   | 'sql_select'
   | 'query_source'
@@ -777,18 +773,13 @@ export interface JoinBase {
 }
 
 export type Joinable =
+  | CompositeSourceDef
   | TableSourceDef
   | SQLSourceDef
   | QuerySourceDef
-  | RecordFieldDef
+  | RecordDef
   | ArrayDef;
 export type JoinFieldDef = JoinBase & Joinable;
-export type JoinFieldTypes =
-  | 'table'
-  | 'sql_select'
-  | 'query_source'
-  | 'array'
-  | 'record';
 
 export function isJoinable(sd: StructDef): sd is Joinable {
   return [
@@ -1167,7 +1158,7 @@ export function isScalarArray(def: FieldDef | StructDef) {
   return def.type === 'array' && def.elementTypeDef.type !== 'record_element';
 }
 
-export type StructDef = SourceDef | RecordFieldDef | ArrayDef;
+export type StructDef = SourceDef | RecordDef | ArrayDef;
 
 // "NonAtomic" are types that a name lookup or a computation might
 // have which are not AtomicFieldDefs. I asked an AI for a word for
@@ -1403,7 +1394,7 @@ export function isTurtleDef(def: FieldDef): def is TurtleDef {
   return def.type === 'turtle';
 }
 
-export function isAtomic(def: FieldDef): def is AtomicFieldDef {
+export function isAtomic(def: FieldDef | StructDef): def is AtomicFieldDef {
   return isAtomicFieldType(def.type);
 }
 

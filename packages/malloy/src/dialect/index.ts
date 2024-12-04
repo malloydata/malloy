@@ -42,7 +42,7 @@ export {
   sql,
 } from './functions/util';
 export {Dialect, qtz} from './dialect';
-export type {DialectFieldList, QueryInfo} from './dialect';
+export type {DialectFieldList, QueryInfo, FieldReferenceType} from './dialect';
 export {StandardSQLDialect} from './standardsql';
 export {PostgresDialect} from './postgres';
 export {DuckDBDialect} from './duckdb';
@@ -52,3 +52,5 @@ export {MySQLDialect} from './mysql';
 export {getDialect, registerDialect} from './dialect_map';
 export {getMalloyStandardFunctions} from './functions';
 export type {MalloyStandardFunctionImplementations} from './functions';
+export type {TinyToken} from './tiny_parser';
+export {TinyParser} from './tiny_parser';

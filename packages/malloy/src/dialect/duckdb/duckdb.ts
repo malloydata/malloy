@@ -32,6 +32,7 @@ import {
   MeasureTimeExpr,
   LeafAtomicTypeDef,
   TD,
+  RecordLiteralNode,
   OrderBy,
 } from '../../model/malloy_types';
 import {indent} from '../../model/utils';
@@ -40,7 +41,7 @@ import {
   expandOverrideMap,
   expandBlueprintMap,
 } from '../functions';
-import {DialectFieldList, inDays} from '../dialect';
+import {DialectFieldList, FieldReferenceType, inDays} from '../dialect';
 import {PostgresBase} from '../pg_impl';
 import {DUCKDB_DIALECT_FUNCTIONS} from './dialect_functions';
 import {DUCKDB_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
@@ -213,19 +214,18 @@ export class DuckDBDialect extends PostgresBase {
   }
 
   sqlFieldReference(
-    alias: string,
-    fieldName: string,
-    _fieldType: string,
-    _isNested: boolean,
-    isArray: boolean
+    parentAlias: string,
+    parentType: FieldReferenceType,
+    childName: string,
+    _childType: string
   ): string {
     // LTNOTE: hack, in duckdb we can't have structs as tables so we kind of simulate it.
-    if (!this.unnestWithNumbers && fieldName === '__row_id') {
-      return `${alias}_outer.__row_id`;
-    } else if (isArray) {
-      return alias;
+    if (!this.unnestWithNumbers && childName === '__row_id') {
+      return `${parentAlias}_outer.__row_id`;
+    } else if (parentType === 'array[scalar]') {
+      return parentAlias;
     } else {
-      return `${alias}.${this.sqlMaybeQuoteIdentifier(fieldName)}`;
+      return `${parentAlias}.${this.sqlMaybeQuoteIdentifier(childName)}`;
     }
   }
 
@@ -279,17 +279,6 @@ export class DuckDBDialect extends PostgresBase {
     return `STRUCT_PACK(${dialectFieldList
       .map(d => `${alias}.${d.sqlOutputName}`)
       .join(', ')})`;
-  }
-  // TODO
-  // sqlMaybeQuoteIdentifier(identifier: string): string {
-  //   return keywords.indexOf(identifier.toUpperCase()) > 0 ||
-  //     identifier.match(/[a-zA-Z][a-zA-Z0-9]*/) === null || true
-  //     ? '"' + identifier + '"'
-  //     : identifier;
-  // }
-
-  sqlMaybeQuoteIdentifier(identifier: string): string {
-    return '"' + identifier + '"';
   }
 
   // The simple way to do this is to add a comment on the table
@@ -445,5 +434,13 @@ export class DuckDBDialect extends PostgresBase {
       }
     }
     return `DATE_SUB('${df.units}', ${lVal}, ${rVal})`;
+  }
+
+  sqlLiteralRecord(lit: RecordLiteralNode): string {
+    const pairs = Object.entries(lit.kids).map(
+      ([propName, propVal]) =>
+        `${this.sqlMaybeQuoteIdentifier(propName)}:${propVal.sql}`
+    );
+    return '{' + pairs.join(',') + '}';
   }
 }

@@ -42,6 +42,10 @@ import {
   RecordTypeDef,
   arrayEachFields,
   isRepeatedRecord,
+  Dialect,
+  ArrayTypeDef,
+  FieldDef,
+  TinyParser,
 } from '@malloydata/malloy';
 
 import {BaseConnection} from '@malloydata/malloy/connection';
@@ -164,7 +168,7 @@ export abstract class TrinoPrestoConnection
   implements Connection, PersistSQLResults
 {
   public name: string;
-  private readonly dialect = new TrinoDialect();
+  protected readonly dialect = new TrinoDialect();
   static DEFAULT_QUERY_OPTIONS: RunSQLOptions = {
     rowLimit: 10,
   };
@@ -280,34 +284,37 @@ export abstract class TrinoPrestoConnection
       for (let i = 0; i < columns.length; i++) {
         const column = columns[i];
         const schemaColumn = malloyColumns[i];
-        if (schemaColumn.type === 'record') {
-          malloyRow[column.name] = this.convertRow(schemaColumn, row[i]);
-        } else if (schemaColumn.type === 'array') {
-          malloyRow[column.name] = this.convertNest(
-            schemaColumn,
-            row[i]
-          ) as QueryValue;
-        } else if (
-          schemaColumn.type === 'number' &&
-          typeof row[i] === 'string'
-        ) {
-          // decimal numbers come back as strings
-          malloyRow[column.name] = Number(row[i]);
-        } else if (
-          schemaColumn.type === 'timestamp' &&
-          typeof row[i] === 'string'
-        ) {
-          // timestamps come back as strings
-          malloyRow[column.name] = new Date(row[i] as string);
-        } else {
-          malloyRow[column.name] = row[i] as QueryValue;
-        }
+        malloyRow[column.name] = this.resultRow(schemaColumn, row[i]);
       }
 
       malloyRows.push(malloyRow);
     }
 
     return {rows: malloyRows, totalRows: malloyRows.length};
+  }
+
+  private resultRow(colSchema: AtomicTypeDef, rawRow: unknown) {
+    if (colSchema.type === 'record') {
+      return this.convertRow(colSchema, rawRow);
+    } else if (colSchema.type === 'array') {
+      const elType = colSchema.elementTypeDef;
+      if (elType.type === 'record_element') {
+        return this.convertNest(colSchema, rawRow) as QueryValue;
+      }
+      let theArray = this.unpackArray(rawRow);
+      if (elType.type === 'array') {
+        theArray = theArray.map(el => this.resultRow(elType, el));
+      }
+      return theArray as QueryData;
+    } else if (colSchema.type === 'number' && typeof rawRow === 'string') {
+      // decimal numbers come back as strings
+      return Number(rawRow);
+    } else if (colSchema.type === 'timestamp' && typeof rawRow === 'string') {
+      // timestamps come back as strings
+      return new Date(rawRow as string);
+    } else {
+      return rawRow as QueryValue;
+    }
   }
 
   public async runSQLBlockAndFetchResultSchema(
@@ -574,41 +581,8 @@ export class PrestoConnection extends TrinoPrestoConnection {
       );
     }
 
-    let outputLine = lines[0];
-
-    const namesIndex = outputLine.indexOf('][');
-    outputLine = outputLine.substring(namesIndex + 2);
-
-    const lineParts = outputLine.split('] => [');
-
-    if (lineParts.length !== 2) {
-      throw new Error('There was a problem parsing schema from Explain.');
-    }
-
-    const fieldNamesPart = lineParts[0];
-    const fieldNames = fieldNamesPart.split(',').map(e => e.trim());
-
-    let schemaData = lineParts[1];
-    schemaData = schemaData.substring(0, schemaData.length - 1);
-    const rawFieldsTarget = schemaData
-      .split(',')
-      .map(e => e.trim())
-      .map(e => e.split(':'));
-
-    if (rawFieldsTarget.length !== fieldNames.length) {
-      throw new Error(
-        'There was a problem parsing schema from Explain. Field names size do not match target fields with types.'
-      );
-    }
-
-    for (let index = 0; index < fieldNames.length; index++) {
-      const name = fieldNames[index];
-      const type = rawFieldsTarget[index][1];
-      structDef.fields.push({
-        name,
-        ...this.malloyTypeFromTrinoType(name, type),
-      });
-    }
+    const schemaDesc = new PrestoExplainParser(lines[0], this.dialect);
+    structDef.fields = schemaDesc.parseExplain();
   }
 
   unpackArray(data: unknown): unknown[] {
@@ -644,6 +618,138 @@ export class TrinoConnection extends TrinoPrestoConnection {
       `DESCRIBE OUTPUT ${tmpQueryName}`,
       structDef,
       `query ${sql.substring(0, 50)}`
+    );
+  }
+}
+
+/**
+ * A hand built parser for schema lines, roughly this grammar
+ * SCHEMA_LINE: - Output [PlanName N] [NAME_LIST] => [TYPE_LIST]
+ * NAME_LIST: NAME (, NAME)*
+ * TYPE_LIST: TYPE_SPEC (, TYPE_SPEC)*
+ * TYPE_SPEC: exprN ':' TYPE
+ * TYPE: REC_TYPE | ARRAY_TYPE | SQL_TYPE
+ * ARRAY_TYPE: ARRAY '(' TYPE ')'
+ * REC_TYPE: REC '(' "name" TYPE (, "name" TYPE)* ')'
+ */
+class PrestoExplainParser extends TinyParser {
+  constructor(
+    readonly input: string,
+    readonly dialect: Dialect
+  ) {
+    super(input, {
+      space: /^\s+/,
+      arrow: /^=>/,
+      char: /^[,:[\]()-]/,
+      id: /^\w+/,
+      quoted_name: /^"\w+"/,
+    });
+  }
+
+  fieldNameList(): string[] {
+    this.skipTo(']'); // Skip to end of plan
+    this.next('['); // Expect start of name list
+    const fieldNames: string[] = [];
+    for (;;) {
+      const nmToken = this.next('id');
+      fieldNames.push(nmToken.text);
+      const sep = this.next();
+      if (sep.type === ',') {
+        continue;
+      }
+      if (sep.type !== ']') {
+        throw this.parseError(
+          `Unexpected '${sep.text}' while getting field name list`
+        );
+      }
+      break;
+    }
+    return fieldNames;
+  }
+
+  parseExplain(): FieldDef[] {
+    const fieldNames = this.fieldNameList();
+    const fields: FieldDef[] = [];
+    this.next('arrow', '[');
+    for (let nameIndex = 0; ; nameIndex += 1) {
+      const name = fieldNames[nameIndex];
+      this.next('id', ':');
+      const nextType = this.typeDef();
+      fields.push({...nextType, name});
+      const sep = this.next();
+      if (sep.text === ',') {
+        continue;
+      }
+      if (sep.text !== ']') {
+        throw this.parseError(`Unexpected '${sep.text}' between field types`);
+      }
+      break;
+    }
+    if (fields.length !== fieldNames.length) {
+      throw new Error(
+        `Presto schema error mismatched ${fields.length} types and ${fieldNames.length} fields`
+      );
+    }
+    return fields;
+  }
+
+  typeDef(): AtomicTypeDef {
+    const typToken = this.next();
+    if (typToken.type === 'eof') {
+      throw this.parseError(
+        'Unexpected EOF parsing type, expected a type name'
+      );
+    } else if (typToken.text === 'row' && this.next('(')) {
+      const fields: FieldDef[] = [];
+      for (;;) {
+        const name = this.next('quoted_name');
+        const getDef = this.typeDef();
+        fields.push({...getDef, name: name.text});
+        const sep = this.next();
+        if (sep.text === ')') {
+          break;
+        }
+        if (sep.text === ',') {
+          continue;
+        }
+      }
+      const def: RecordTypeDef = {
+        type: 'record',
+        name: '',
+        join: 'one',
+        dialect: this.dialect.name,
+        fields,
+      };
+      return def;
+    } else if (typToken.text === 'array' && this.next('(')) {
+      const elType = this.typeDef();
+      this.next(')');
+      const def: ArrayTypeDef = {
+        type: 'array',
+        name: '',
+        dialect: this.dialect.name,
+        join: 'many',
+        elementTypeDef:
+          elType.type === 'record' ? {type: 'record_element'} : elType,
+        fields:
+          elType.type === 'record' ? elType.fields : arrayEachFields(elType),
+      };
+      return def;
+    } else if (typToken.type === 'id') {
+      const sqlType = typToken.text;
+      const def = this.dialect.sqlTypeToMalloyType(sqlType);
+      if (def === undefined) {
+        throw this.parseError(`Can't parse presto type ${sqlType}`);
+      }
+      if (sqlType === 'varchar') {
+        if (this.peek().type === '(') {
+          this.next('(', 'id', ')');
+        }
+      }
+      return def;
+    }
+    throw this.parseError(
+      `'${typToken.text}' unexpected while looking for a type`
     );
   }
 }

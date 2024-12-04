@@ -72,7 +72,7 @@ export class StaticSpace implements FieldSpace {
 
   defToSpaceField(from: FieldDef): SpaceField {
     if (isJoined(from)) {
-      return new StructSpaceField(from, this.fromStruct.dialect);
+      return new StructSpaceField(from);
     } else if (isTurtleDef(from)) {
       return new IRViewField(this, from);
     }
@@ -138,7 +138,7 @@ export class StaticSpace implements FieldSpace {
   lookup(path: FieldName[]): LookupResult {
     const head = path[0];
     const rest = path.slice(1);
-    const found = this.entry(head.refString);
+    let found = this.entry(head.refString);
     if (!found) {
       return {
         error: {
@@ -151,6 +151,17 @@ export class StaticSpace implements FieldSpace {
     if (found instanceof SpaceField) {
       const definition = found.fieldDef();
       if (definition) {
+        if (!(found instanceof StructSpaceFieldBase) && isJoined(definition)) {
+          // We have looked up a field which is a join, but not a StructSpaceField
+          // because it is someting like "dimension: joinedArray is arrayComputation"
+          // which wasn't known to be a join when the fieldspace was constructed.
+          // TODO don't make one of these every time you do a lookup
+          found = new StructSpaceField(definition);
+        }
+        // cswenson review todo I don't know how to count the reference properly now
+        // i tried only writing it as a join reference if there was more in the path
+        // but that failed because lookup([JOINNAME]) is called when translating JOINNAME.AGGREGATE(...)
+        // with a 1-length-path but that IS a join reference and there is a test
         head.addReference({
           type:
             found instanceof StructSpaceFieldBase
@@ -161,7 +172,7 @@ export class StaticSpace implements FieldSpace {
           text: head.refString,
         });
       }
-    }
+    } // cswenson review todo { else this is SpaceEntry not a field which can only be a param and what is going on? }
     const joinPath =
       found instanceof StructSpaceFieldBase
         ? [{...found.joinPathElement, name: head.refString}]
@@ -195,10 +206,8 @@ export class StaticSpace implements FieldSpace {
 }
 
 export class StructSpaceField extends StructSpaceFieldBase {
-  private parentDialect: string;
-  constructor(def: JoinFieldDef, dialect: string) {
+  constructor(def: JoinFieldDef) {
     super(def);
-    this.parentDialect = dialect;
   }
 
   get fieldSpace(): FieldSpace {

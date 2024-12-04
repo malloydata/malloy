@@ -74,7 +74,7 @@ export class ReferenceField extends SpaceField {
             e: {node: 'parameter', path},
           };
         } else {
-          // mtoy todo
+          // not sure what to do here, if we get here
           throw new Error('impossible turtle/join parameter');
         }
       } else {

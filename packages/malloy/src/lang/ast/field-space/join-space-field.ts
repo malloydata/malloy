@@ -28,9 +28,8 @@ import {StructSpaceField} from './static-space';
 export class JoinSpaceField extends StructSpaceField {
   constructor(
     readonly parameterSpace: ParameterSpace,
-    readonly join: Join,
-    parentDialect: string
+    readonly join: Join
   ) {
-    super(join.structDef(parameterSpace), parentDialect);
+    super(join.structDef(parameterSpace));
   }
 }

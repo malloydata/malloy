@@ -42,6 +42,7 @@ export {
   literal,
   spread,
   Dialect,
+  TinyParser,
 } from './dialect';
 export type {
   DialectFieldList,
@@ -51,6 +52,7 @@ export type {
   DefinitionBlueprint,
   DefinitionBlueprintMap,
   OverloadedDefinitionBlueprint,
+  TinyToken,
 } from './dialect';
 // TODO tighten up exports
 export type {
@@ -108,6 +110,11 @@ export type {
   ArrayTypeDef,
   RecordTypeDef,
   RepeatedRecordTypeDef,
+  RecordDef,
+  RepeatedRecordDef,
+  // Used in array/record tests
+  RecordLiteralNode,
+  ArrayLiteralNode,
 } from './model';
 export {
   arrayEachFields,

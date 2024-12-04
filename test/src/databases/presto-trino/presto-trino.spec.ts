@@ -2,7 +2,7 @@
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
- *  LICENSE file in the root directory of this source tree.
+ * LICENSE file in the root directory of this source tree.
  */
 
 /* eslint-disable no-console */
@@ -22,6 +22,18 @@ describe.each(runtimes.runtimeList)(
       throw new Error("Couldn't build runtime");
     }
 
+    test.when(databaseName === 'presto')('presto explain parser', async () => {
+      const abrec = 'CAST(ROW(0,1) AS ROW(a DOUBLE,b DOUBLE))';
+      await expect(`
+        run: ${databaseName}.sql("""
+          SELECT
+            ${abrec} as "abrec",
+            ARRAY['c', 'd'] as str_array,
+            array[1,2,3] as int_array,
+            ARRAY[${abrec}] as array_of_abrec
+        """)
+      `).malloyResultMatches(runtime, {});
+    });
     it(`runs an sql query - ${databaseName}`, async () => {
       await expect(
         `run: ${databaseName}.sql("SELECT 1 as n") -> { select: n }`
