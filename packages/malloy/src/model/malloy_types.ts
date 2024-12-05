@@ -689,21 +689,76 @@ export interface NativeUnsupportedTypeDef {
 export type NativeUnsupportedFieldDef = NativeUnsupportedTypeDef &
   AtomicFieldDef;
 
-export interface ArrayTypeDef extends JoinBase, StructDefBase {
+export interface LeafArrayTypeDef {
   type: 'array';
-  elementTypeDef: Exclude<AtomicTypeDef, RecordTypeDef> | RecordElementTypeDef;
+  elementTypeDef: Exclude<AtomicTypeDef, RecordTypeDef>;
+}
+export interface LeafArrayDef
+  extends LeafArrayTypeDef,
+    StructDefBase,
+    JoinBase,
+    FieldBase {
+  type: 'array';
   join: 'many';
 }
-export type ArrayDef = ArrayTypeDef & AtomicFieldDef;
 
-export function arrayEachFields(arrayOf: AtomicTypeDef): AtomicFieldDef[] {
-  return [
-    {...arrayOf, e: {node: 'field', path: ['value']}, name: 'each'},
-    {...arrayOf, name: 'value'},
-  ];
+export function mkFieldDef(
+  atd: AtomicTypeDef,
+  name: string,
+  dialect: string
+): AtomicFieldDef {
+  if (isScalarArrayType(atd)) {
+    return mkArrayDef(atd.elementTypeDef, name, dialect);
+  }
+  if (isRepeatedRecordType(atd)) {
+    const {type, fields, elementTypeDef} = atd;
+    return {type, fields, elementTypeDef, join: 'many', name, dialect};
+  }
+  if (atd.type === 'record') {
+    const {type, fields} = atd;
+    return {type, fields, join: 'one', dialect, name};
+  }
+  return {...atd, name};
 }
 
-export interface RecordTypeDef extends StructDefBase, JoinBase {
+export function mkArrayDef(
+  ofType: AtomicTypeDef,
+  name: string,
+  dialect: string
+): ArrayDef {
+  if (ofType.type === 'record') {
+    return {
+      type: 'array',
+      join: 'many',
+      name,
+      dialect,
+      elementTypeDef: {type: 'record_element'},
+      fields: ofType.fields,
+    };
+  }
+  const valueEnt = mkFieldDef(ofType, 'value', dialect);
+  return {
+    type: 'array',
+    join: 'many',
+    name,
+    dialect,
+    elementTypeDef: ofType,
+    fields: [
+      valueEnt,
+      {...valueEnt, name: 'each', e: {node: 'field', path: ['value']}},
+    ],
+  };
+}
+
+export interface RecordTypeDef {
+  type: 'record';
+  fields: FieldDef[];
+}
+export interface RecordDef
+  extends RecordTypeDef,
+    StructDefBase,
+    JoinBase,
+    FieldBase {
   type: 'record';
   join: 'one';
 }
@@ -725,17 +780,42 @@ export interface RecordElementTypeDef {
   type: 'record_element';
 }
 
-export interface RepeatedRecordTypeDef extends ArrayDef {
+export interface RepeatedRecordTypeDef {
   type: 'array';
   elementTypeDef: RecordElementTypeDef;
+  fields: FieldDef[];
+}
+export interface RepeatedRecordDef
+  extends RepeatedRecordTypeDef,
+    StructDefBase,
+    JoinBase,
+    FieldBase {
+  type: 'array';
   join: 'many';
 }
+export type ArrayTypeDef = LeafArrayTypeDef | RepeatedRecordTypeDef;
+export type ArrayDef = LeafArrayDef | RepeatedRecordDef;
 
-export type RecordDef = RecordTypeDef & AtomicFieldDef;
-export type RepeatedRecordDef = RepeatedRecordTypeDef & AtomicFieldDef;
+export function isRepeatedRecordType(
+  td: AtomicTypeDef
+): td is RepeatedRecordTypeDef {
+  return td.type === 'array' && td.elementTypeDef.type === 'record_element';
+}
 
-export function isRepeatedRecord(fd: FieldDef): fd is RepeatedRecordDef {
+export function isRepeatedRecord(
+  fd: FieldDef | QueryFieldDef | StructDef
+): fd is RepeatedRecordDef {
   return fd.type === 'array' && fd.elementTypeDef.type === 'record_element';
+}
+
+export function isScalarArrayType(td: AtomicTypeDef): td is LeafArrayTypeDef {
+  return td.type === 'array' && td.elementTypeDef.type !== 'record_element';
+}
+
+export function isScalarArray(
+  fd: FieldDef | QueryFieldDef | StructDef
+): fd is LeafArrayDef {
+  return fd.type === 'array' && fd.elementTypeDef.type !== 'record_element';
 }
 
 export interface ErrorTypeDef {
@@ -777,29 +857,32 @@ export type Joinable =
   | TableSourceDef
   | SQLSourceDef
   | QuerySourceDef
+  | RepeatedRecordDef
   | RecordDef
   | ArrayDef;
-export type JoinFieldDef = JoinBase & Joinable;
+export type JoinFieldDef = Joinable & JoinBase;
 
 export function isJoinable(sd: StructDef): sd is Joinable {
   return [
+    'composite',
     'table',
     'sql_select',
     'query_source',
     'array',
     'record',
-    'composite',
   ].includes(sd.type);
 }
 
-export function isJoined<T extends FieldDef | StructDef>(
-  fd: T
-): fd is T & Joinable & JoinBase {
+export function isJoinedField(fd: FieldDef): fd is JoinFieldDef {
   return 'join' in fd;
 }
 
+export function isJoined(sd: StructDef): sd is JoinFieldDef {
+  return 'join' in sd;
+}
+
 export function isJoinedSource(sd: StructDef): sd is SourceDef & JoinBase {
-  return isSourceDef(sd) && isJoined(sd);
+  return isSourceDef(sd) && 'join' in sd;
 }
 
 export type DateUnit = 'day' | 'week' | 'month' | 'quarter' | 'year';
@@ -1145,17 +1228,13 @@ export type SourceDef =
 
 /** Is this the "FROM" table of a query tree */
 export function isBaseTable(def: StructDef): def is SourceDef {
-  if (isJoined(def)) {
+  if (isJoinedSource(def)) {
     return false;
   }
   if (isSourceDef(def)) {
     return true;
   }
   return false;
-}
-
-export function isScalarArray(def: FieldDef | StructDef) {
-  return def.type === 'array' && def.elementTypeDef.type !== 'record_element';
 }
 
 export type StructDef = SourceDef | RecordDef | ArrayDef;
@@ -1258,10 +1337,18 @@ export type LeafAtomicTypeDef =
   | JSONTypeDef
   | NativeUnsupportedTypeDef
   | ErrorTypeDef;
-export type AtomicTypeDef = LeafAtomicTypeDef | ArrayTypeDef | RecordTypeDef;
-
 export type LeafAtomicDef = LeafAtomicTypeDef & FieldBase;
-export type AtomicFieldDef = AtomicTypeDef & FieldBase;
+
+export type AtomicTypeDef =
+  | LeafAtomicTypeDef
+  | LeafArrayTypeDef
+  | RecordTypeDef
+  | RepeatedRecordTypeDef;
+export type AtomicFieldDef =
+  | LeafAtomicDef
+  | LeafArrayDef
+  | RecordDef
+  | RepeatedRecordDef;
 
 export function isLeafAtomic(
   fd: FieldDef | QueryFieldDef | AtomicTypeDef
@@ -1278,7 +1365,7 @@ export function isLeafAtomic(
 }
 
 // Sources have fields like this ...
-export type FieldDef = AtomicFieldDef | JoinFieldDef | TurtleDef;
+export type FieldDef = LeafAtomicDef | JoinFieldDef | TurtleDef;
 export type FieldDefType = AtomicFieldType | 'turtle' | JoinElementType;
 
 // Queries have fields like this ..

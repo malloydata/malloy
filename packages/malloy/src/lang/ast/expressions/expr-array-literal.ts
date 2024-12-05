@@ -5,12 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {
-  ArrayLiteralNode,
-  arrayEachFields,
-  ArrayTypeDef,
-  Expr,
-} from '../../../model';
+import {ArrayLiteralNode, ArrayTypeDef, Expr} from '../../../model';
 import {ExprValue, computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
@@ -49,20 +44,17 @@ export class ArrayLiteral extends ExpressionDef {
       }
     }
     const elementTypeDef = TDU.atomicDef(firstValue || {type: 'number'});
-    const typeDef: ArrayTypeDef = {
-      type: 'array',
-      join: 'many',
-      name: '',
-      dialect: fs.dialectName(),
-      elementTypeDef:
-        elementTypeDef.type !== 'record'
-          ? elementTypeDef
-          : {type: 'record_element'},
-      fields:
-        elementTypeDef.type === 'record'
-          ? elementTypeDef.fields
-          : arrayEachFields(elementTypeDef),
-    };
+    const typeDef: ArrayTypeDef =
+      elementTypeDef.type === 'record'
+        ? {
+            type: 'array',
+            elementTypeDef: {type: 'record_element'},
+            fields: elementTypeDef.fields,
+          }
+        : {
+            type: 'array',
+            elementTypeDef,
+          };
     const aLit: ArrayLiteralNode = {
       node: 'arrayLiteral',
       kids: {values},

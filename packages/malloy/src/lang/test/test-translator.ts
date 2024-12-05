@@ -41,8 +41,8 @@ import {
   TableSourceDef,
   SQLSourceDef,
   SQLSentence,
-  arrayEachFields,
   NumberTypeDef,
+  mkArrayDef,
 } from '../../model/malloy_types';
 import {ExpressionDef, MalloyElement} from '../ast';
 import {NameSpace} from '../ast/types/name-space';
@@ -98,14 +98,7 @@ const mockSchema: Record<string, SourceDef> = {
         matrixOperation: 'left',
         dialect: 'standardsql',
       },
-      {
-        type: 'array',
-        name: 'ais',
-        elementTypeDef: intType,
-        join: 'many',
-        fields: arrayEachFields(intType),
-        dialect: 'standardsql',
-      },
+      mkArrayDef(intType, 'ais', 'standardsql'),
     ],
   },
   'malloytest.carriers': {

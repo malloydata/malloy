@@ -68,6 +68,7 @@ import {
   SourceDef,
   isSourceDef,
   QueryToMaterialize,
+  isJoinedField,
   isJoined,
 } from './model';
 import {
@@ -1572,7 +1573,7 @@ export class Explore extends Entity implements Taggable {
         this.structDef.fields.map(fieldDef => {
           const name = fieldDef.as || fieldDef.name;
           const sourceField = sourceFields.get(fieldDef.name);
-          if (isJoined(fieldDef)) {
+          if (isJoinedField(fieldDef)) {
             return [name, new ExploreField(fieldDef, this, sourceField)];
           } else if (fieldDef.type === 'turtle') {
             return [name, new QueryField(fieldDef, this, sourceField)];

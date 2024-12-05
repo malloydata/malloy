@@ -40,11 +40,7 @@ describe.each(runtimes.runtimeList)(
         node: 'arrayLiteral',
         typeDef: {
           type: 'array',
-          name: 'evens',
-          join: 'many',
           elementTypeDef: {type: 'number'},
-          fields: [],
-          dialect: runtime.dialect.name,
         },
         kids: {values: val.map(v => literalNum(v))},
       };
@@ -63,9 +59,6 @@ describe.each(runtimes.runtimeList)(
         node: 'recordLiteral',
         typeDef: {
           type: 'record',
-          name: 'evens',
-          join: 'one',
-          dialect: runtime.dialect.name,
           fields,
         },
         kids,
@@ -372,14 +365,11 @@ describe.each(runtimes.runtimeList)(
     describe('repeated record', () => {
       const abType: ArrayTypeDef = {
         type: 'array',
-        dialect: runtime.dialect.name,
-        join: 'many',
         elementTypeDef: {type: 'record_element'},
         fields: [
           {name: 'a', type: 'number'},
           {name: 'b', type: 'number'},
         ],
-        name: '',
       };
       const values = [
         recordLiteral({a: 10, b: 11}),

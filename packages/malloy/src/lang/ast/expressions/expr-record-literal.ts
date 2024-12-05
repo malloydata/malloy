@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {TD, RecordLiteralNode} from '../../../model';
+import {TD, RecordLiteralNode, mkFieldDef} from '../../../model';
 import {ExprValue, computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
@@ -35,10 +35,7 @@ export class RecordLiteral extends ExpressionDef {
       node: 'recordLiteral',
       kids: {},
       typeDef: {
-        name: '',
         type: 'record',
-        join: 'one',
-        dialect: fs.dialectName(),
         fields: [],
       },
     };
@@ -48,7 +45,9 @@ export class RecordLiteral extends ExpressionDef {
       if (TD.isAtomic(xVal)) {
         dependents.push(xVal);
         recLit.kids[el.key] = xVal.value;
-        recLit.typeDef.fields.push({...TDU.atomicDef(xVal), name: el.key});
+        recLit.typeDef.fields.push(
+          mkFieldDef(TDU.atomicDef(xVal), el.key, fs.dialectName())
+        );
       } else {
         this.logError(
           'illegal-record-property-type',

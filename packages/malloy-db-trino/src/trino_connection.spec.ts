@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {arrayEachFields, AtomicTypeDef, FieldDef} from '@malloydata/malloy';
+import {AtomicTypeDef, FieldDef} from '@malloydata/malloy';
 import {TrinoConnection, TrinoExecutor} from '.';
 
 // array(varchar) is array
@@ -64,22 +64,15 @@ describe('Trino connection', () => {
   describe('schema parser', () => {
     it('parses arrays', () => {
       expect(connection.malloyTypeFromTrinoType('test', ARRAY_SCHEMA)).toEqual({
-        'name': 'test',
-        'type': 'array',
-        'dialect': 'trino',
-        'elementTypeDef': intType,
-        'join': 'many',
-        'fields': arrayEachFields(intType),
+        type: 'array',
+        elementTypeDef: intType,
       });
     });
 
     it('parses inline', () => {
       expect(connection.malloyTypeFromTrinoType('test', INLINE_SCHEMA)).toEqual(
         {
-          'name': 'test',
           'type': 'record',
-          'dialect': 'trino',
-          'join': 'one',
           'fields': recordSchema,
         }
       );
@@ -88,11 +81,8 @@ describe('Trino connection', () => {
     it('parses nested', () => {
       expect(connection.malloyTypeFromTrinoType('test', NESTED_SCHEMA)).toEqual(
         {
-          'name': 'test',
           'type': 'array',
           'elementTypeDef': {type: 'record_element'},
-          'dialect': 'trino',
-          'join': 'many',
           'fields': recordSchema,
         }
       );
@@ -106,11 +96,8 @@ describe('Trino connection', () => {
 
     it('parses deep nesting', () => {
       expect(connection.malloyTypeFromTrinoType('test', DEEP_SCHEMA)).toEqual({
-        'name': 'test',
         'type': 'array',
-        'dialect': 'trino',
         'elementTypeDef': {type: 'record_element'},
-        'join': 'many',
         'fields': [
           {'name': 'a', ...doubleType},
           {

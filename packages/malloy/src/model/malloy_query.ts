@@ -98,7 +98,7 @@ import {
   isBaseTable,
   NestSourceDef,
   TimestampFieldDef,
-  isJoined,
+  isJoinedField,
   isJoinedSource,
   QueryResultDef,
   isScalarArray,
@@ -113,6 +113,7 @@ import {
   JoinFieldDef,
   LeafAtomicDef,
   Expression,
+  isJoined,
 } from './malloy_types';
 
 import {Connection} from '../connection/types';
@@ -1880,7 +1881,7 @@ class FieldInstanceResult implements FieldInstance {
         if (fi.fieldUsage.type === 'result') {
           if (
             fi.f.fieldDef.type === 'turtle' ||
-            isJoined(fi.f.fieldDef) ||
+            isJoinedField(fi.f.fieldDef) ||
             expressionIsAnalytic(fi.f.fieldDef.expressionType)
           ) {
             continue;

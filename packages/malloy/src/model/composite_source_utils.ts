@@ -10,7 +10,7 @@ import {
   CompositeFieldUsage,
   FieldDef,
   isJoinable,
-  isJoined,
+  isJoinedField,
   isSourceDef,
   SourceDef,
 } from './malloy_types';
@@ -147,7 +147,7 @@ function _resolveCompositeSources(
         error: {code: 'composite_source_not_defined', data: {path: newPath}},
       };
     }
-    if (!isJoined(join) || !isSourceDef(join)) {
+    if (!isJoinedField(join) || !isSourceDef(join)) {
       return {
         error: {code: 'composite_source_not_a_join', data: {path: newPath}},
       };
