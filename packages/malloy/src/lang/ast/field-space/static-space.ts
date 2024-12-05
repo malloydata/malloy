@@ -151,10 +151,7 @@ export class StaticSpace implements FieldSpace {
     if (found instanceof SpaceField) {
       const definition = found.fieldDef();
       if (definition) {
-        if (
-          !(found instanceof StructSpaceFieldBase) &&
-          isJoined(definition)
-        ) {
+        if (!(found instanceof StructSpaceFieldBase) && isJoined(definition)) {
           // We have looked up a field which is a join, but not a StructSpaceField
           // because it is someting like "dimension: joinedArray is arrayComputation"
           // which wasn't known to be a join when the fieldspace was constructed.
