@@ -874,6 +874,16 @@ export function isJoined(sd: StructDef): sd is Joinable & JoinBase {
   return 'join' in sd;
 }
 
+export function canJoin(sd: StructDef): sd is Joinable {
+  return [
+    'composite',
+    'table',
+    'sql_select',
+    'query_source',
+    'array',
+    'record',
+  ].includes(sd.type);
+}
 export function isJoinedSource(sd: StructDef): sd is SourceDef & JoinBase {
   return isSourceDef(sd) && 'join' in sd;
 }
