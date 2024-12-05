@@ -863,18 +863,9 @@ export type Joinable =
   | RepeatedRecordDef
   | RecordDef
   | ArrayDef;
-
 export type JoinFieldDef = Joinable & JoinBase;
 
-export function isJoinedField(fd: FieldDef): fd is Joinable & JoinBase {
-  return 'join' in fd;
-}
-
-export function isJoined(sd: StructDef): sd is Joinable & JoinBase {
-  return 'join' in sd;
-}
-
-export function canJoin(sd: StructDef): sd is Joinable {
+export function isJoinable(sd: StructDef): sd is Joinable {
   return [
     'composite',
     'table',
@@ -884,6 +875,15 @@ export function canJoin(sd: StructDef): sd is Joinable {
     'record',
   ].includes(sd.type);
 }
+
+export function isJoinedField(fd: FieldDef): fd is JoinFieldDef {
+  return 'join' in fd;
+}
+
+export function isJoined(sd: StructDef): sd is JoinFieldDef {
+  return 'join' in sd;
+}
+
 export function isJoinedSource(sd: StructDef): sd is SourceDef & JoinBase {
   return isSourceDef(sd) && 'join' in sd;
 }

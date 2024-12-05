@@ -28,7 +28,7 @@ import {
   JoinType,
   MatrixOperation,
   SourceDef,
-  canJoin,
+  isJoinable,
 } from '../../../model/malloy_types';
 import {DynamicSpace} from '../field-space/dynamic-space';
 import {JoinSpaceField} from '../field-space/join-space-field';
@@ -92,7 +92,7 @@ export class KeyJoin extends Join {
 
   structDef(parameterSpace: ParameterSpace): JoinFieldDef {
     const sourceDef = this.getStructDefFromExpr(parameterSpace);
-    if (!canJoin(sourceDef)) {
+    if (!isJoinable(sourceDef)) {
       throw this.internalError(`Cannot join struct type '${sourceDef.type}'`);
     }
     const joinStruct: JoinFieldDef = {
@@ -206,7 +206,7 @@ export class ExpressionJoin extends Join {
       matrixOperation = this.matrixOperation;
     }
 
-    if (!canJoin(sourceDef)) {
+    if (!isJoinable(sourceDef)) {
       throw this.internalError(`Can't join struct type ${sourceDef.type}`);
     }
     const joinStruct: JoinFieldDef = {
