@@ -92,11 +92,11 @@ are an array of ...
 * `join_XXX:` always on query joins
 
 
-## Descriminators
+## Discriminators
 
 * `isTemporalField` -- `date` or `timestamp` type
 * `isAtomicFieldType` -- Does the data in this field fit in one column of a table
 * `isRepeatedRecord(FieldDef)` -- In some databases this is a type, in other this is an array of record
-* `isScalarArray(FieldDef|SrtuctDef)` -- Is a ".each" array
+* `isLeafArray(FieldDef|SrtuctDef)` -- Is a ".each" array
 * `isAtomic(FieldDef)` -- Like `isAtomicFieldType` for `FieldDef` instead
 * `isLeafAtomic(FieldDef | QueryFieldDef)` -- an Atomic field can be stored in a column, a LeafAtomic is one which isn't a join

@@ -36,7 +36,7 @@ import {
   QueryFieldDef,
   QuerySegment,
   expressionIsCalculation,
-  isJoinedField,
+  isJoined,
   isQuerySegment,
   isAtomic,
 } from '../../model';
@@ -1327,7 +1327,7 @@ describe('query:', () => {
         const q = t.translated.queryList[0].pipeline[0];
         if (q.type === 'reduce' && q.extendSource) {
           expect(q.extendSource.length).toBe(1);
-          expect(isJoinedField(q.extendSource[0])).toBeTruthy();
+          expect(isJoined(q.extendSource[0])).toBeTruthy();
           expect(q.extendSource[0].type).toBe('table');
         } else {
           fail('Did not generate extendSource');

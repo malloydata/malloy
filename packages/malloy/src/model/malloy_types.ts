@@ -707,10 +707,10 @@ export function mkFieldDef(
   name: string,
   dialect: string
 ): AtomicFieldDef {
-  if (isScalarArrayType(atd)) {
+  if (isLeafArray(atd)) {
     return mkArrayDef(atd.elementTypeDef, name, dialect);
   }
-  if (isRepeatedRecordType(atd)) {
+  if (isRepeatedRecord(atd)) {
     const {type, fields, elementTypeDef} = atd;
     return {type, fields, elementTypeDef, join: 'many', name, dialect};
   }
@@ -796,26 +796,16 @@ export interface RepeatedRecordDef
 export type ArrayTypeDef = LeafArrayTypeDef | RepeatedRecordTypeDef;
 export type ArrayDef = LeafArrayDef | RepeatedRecordDef;
 
-export function isRepeatedRecordType(
-  td: AtomicTypeDef
-): td is RepeatedRecordTypeDef {
-  return td.type === 'array' && td.elementTypeDef.type === 'record_element';
-}
-
 export function isRepeatedRecord(
-  fd: FieldDef | QueryFieldDef | StructDef
-): fd is RepeatedRecordDef {
+  fd: FieldDef | QueryFieldDef | StructDef | AtomicTypeDef
+): fd is RepeatedRecordTypeDef {
   return fd.type === 'array' && fd.elementTypeDef.type === 'record_element';
 }
 
-export function isScalarArrayType(td: AtomicTypeDef): td is LeafArrayTypeDef {
+export function isLeafArray(
+  td: AtomicTypeDef | FieldDef | QueryFieldDef | StructDef
+): td is LeafArrayTypeDef {
   return td.type === 'array' && td.elementTypeDef.type !== 'record_element';
-}
-
-export function isScalarArray(
-  fd: FieldDef | QueryFieldDef | StructDef
-): fd is LeafArrayDef {
-  return fd.type === 'array' && fd.elementTypeDef.type !== 'record_element';
 }
 
 export interface ErrorTypeDef {
@@ -873,16 +863,12 @@ export function isJoinable(sd: StructDef): sd is Joinable {
   ].includes(sd.type);
 }
 
-export function isJoinedField(fd: FieldDef): fd is JoinFieldDef {
-  return 'join' in fd;
-}
-
-export function isJoined(sd: StructDef): sd is JoinFieldDef {
+export function isJoined(sd: TypedDef): sd is JoinFieldDef {
   return 'join' in sd;
 }
 
 export function isJoinedSource(sd: StructDef): sd is SourceDef & JoinBase {
-  return isSourceDef(sd) && 'join' in sd;
+  return isSourceDef(sd) && isJoined(sd);
 }
 
 export type DateUnit = 'day' | 'week' | 'month' | 'quarter' | 'year';
@@ -1377,6 +1363,14 @@ export interface RefToField {
 }
 export type QueryFieldDef = AtomicFieldDef | TurtleDef | RefToField;
 
+// All these share the same "type" space
+export type TypedDef =
+  | AtomicTypeDef
+  | JoinFieldDef
+  | TurtleDef
+  | RefToField
+  | StructDef;
+
 /** Get the output name for a NamedObject */
 export function getIdentifier(n: AliasedName): string {
   if (n.as !== undefined) {
@@ -1477,11 +1471,11 @@ export interface QueryResult extends CompiledQuery {
   profilingUrl?: string;
 }
 
-export function isTurtleDef(def: FieldDef): def is TurtleDef {
+export function isTurtle(def: TypedDef): def is TurtleDef {
   return def.type === 'turtle';
 }
 
-export function isAtomic(def: FieldDef | StructDef): def is AtomicFieldDef {
+export function isAtomic(def: TypedDef): def is AtomicTypeDef {
   return isAtomicFieldType(def.type);
 }
 
@@ -1492,10 +1486,6 @@ export interface SearchResultRow {
 }
 
 export type SearchResult = SearchResultRow[];
-
-export function getAtomicFields(structDef: StructDef): AtomicFieldDef[] {
-  return structDef.fields.filter(isAtomic);
-}
 
 export function isValueString(
   value: QueryValue,

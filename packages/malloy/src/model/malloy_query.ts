@@ -42,7 +42,6 @@ import {
   FunctionOverloadDef,
   FunctionParameterDef,
   getIdentifier,
-  getAtomicFields,
   hasExpression,
   IndexFieldDef,
   IndexSegment,
@@ -98,10 +97,10 @@ import {
   isBaseTable,
   NestSourceDef,
   TimestampFieldDef,
-  isJoinedField,
+  isJoined,
   isJoinedSource,
   QueryResultDef,
-  isScalarArray,
+  isLeafArray,
   RecordDef,
   FinalizeSourceDef,
   QueryToMaterialize,
@@ -113,7 +112,6 @@ import {
   JoinFieldDef,
   LeafAtomicDef,
   Expression,
-  isJoined,
 } from './malloy_types';
 
 import {Connection} from '../connection/types';
@@ -1881,7 +1879,7 @@ class FieldInstanceResult implements FieldInstance {
         if (fi.fieldUsage.type === 'result') {
           if (
             fi.f.fieldDef.type === 'turtle' ||
-            isJoinedField(fi.f.fieldDef) ||
+            isJoined(fi.f.fieldDef) ||
             expressionIsAnalytic(fi.f.fieldDef.expressionType)
           ) {
             continue;
@@ -2993,7 +2991,7 @@ class QueryQuery extends QueryField {
         ji.alias,
         ji.getDialectFieldList(),
         ji.makeUniqueKey,
-        isScalarArray(qsDef),
+        isLeafArray(qsDef),
         this.inNestedPipeline()
       )}\n`;
     } else if (qsDef.type === 'record') {
@@ -4958,9 +4956,16 @@ export class QueryModel {
       // for (const f of ret.outputStruct.fields) {
       //   fieldNames.push(getIdentifier(f));
       // }
-      const fieldNames = getAtomicFields(ret.outputStruct).map(fieldDef =>
-        q.parent.dialect.sqlMaybeQuoteIdentifier(fieldDef.name)
-      );
+      const fieldNames: string[] = [];
+      for (const f of ret.outputStruct.fields) {
+        if (isAtomic(f)) {
+          const quoted = q.parent.dialect.sqlMaybeQuoteIdentifier(f.name);
+          fieldNames.push(quoted);
+        }
+      }
+      // const fieldNames = getAtomicFields(ret.outputStruct).map(fieldDef =>
+      //   q.parent.dialect.sqlMaybeQuoteIdentifier(fieldDef.name)
+      // );
       ret.lastStageName = stageWriter.addStage(
         q.parent.dialect.sqlFinalStage(ret.lastStageName, fieldNames)
       );

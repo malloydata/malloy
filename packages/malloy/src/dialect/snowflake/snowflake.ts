@@ -40,8 +40,8 @@ import {
   ArrayLiteralNode,
   RecordLiteralNode,
   isAtomic,
-  isRepeatedRecordType,
-  isScalarArrayType,
+  isRepeatedRecord,
+  isLeafArray,
 } from '../../model/malloy_types';
 import {
   DialectFunctionOverloadDef,
@@ -488,10 +488,7 @@ ${indent(sql)}
       } else {
         return 'DOUBLE';
       }
-    } else if (
-      malloyType.type === 'record' ||
-      isRepeatedRecordType(malloyType)
-    ) {
+    } else if (malloyType.type === 'record' || isRepeatedRecord(malloyType)) {
       const sqlFields = malloyType.fields.reduce((ret, f) => {
         if (isAtomic(f)) {
           const name = f.as ?? f.name;
@@ -506,7 +503,7 @@ ${indent(sql)}
       return malloyType.type === 'record'
         ? recordScehma
         : `ARRAY(${recordScehma})`;
-    } else if (isScalarArrayType(malloyType)) {
+    } else if (isLeafArray(malloyType)) {
       return `ARRAY(${this.malloyTypeToSQLType(malloyType.elementTypeDef)})`;
     }
     return malloyType.type;

@@ -27,8 +27,8 @@ import {
   FieldDef,
   StructDef,
   SourceDef,
-  isJoinedField,
-  isTurtleDef,
+  isJoined,
+  isTurtle,
   isSourceDef,
   JoinFieldDef,
 } from '../../../model/malloy_types';
@@ -71,9 +71,9 @@ export class StaticSpace implements FieldSpace {
   }
 
   defToSpaceField(from: FieldDef): SpaceField {
-    if (isJoinedField(from)) {
+    if (isJoined(from)) {
       return new StructSpaceField(from);
-    } else if (isTurtleDef(from)) {
+    } else if (isTurtle(from)) {
       return new IRViewField(this, from);
     }
     return new ColumnSpaceField(from);
@@ -153,7 +153,7 @@ export class StaticSpace implements FieldSpace {
       if (definition) {
         if (
           !(found instanceof StructSpaceFieldBase) &&
-          isJoinedField(definition)
+          isJoined(definition)
         ) {
           // We have looked up a field which is a join, but not a StructSpaceField
           // because it is someting like "dimension: joinedArray is arrayComputation"

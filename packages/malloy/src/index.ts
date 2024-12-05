@@ -117,19 +117,17 @@ export type {
   ArrayLiteralNode,
 } from './model';
 export {
-  isRepeatedRecord,
   isSourceDef,
   // Used in Composer Demo
   Segment,
   isLeafAtomic,
-  isJoinedField,
+  isJoined,
   isJoinedSource,
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
-  isRepeatedRecordType,
-  isScalarArrayType,
-  isScalarArray,
+  isRepeatedRecord,
+  isLeafArray,
   mkArrayDef,
   mkFieldDef,
   expressionIsAggregate,
