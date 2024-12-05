@@ -736,10 +736,7 @@ export function mkArrayDef(
       fields: ofType.fields,
     };
   }
-  const valueEnt =
-    ofType.type === 'array'
-      ? mkArrayDef(ofType, 'value', dialect)
-      : {...ofType, name: 'value'};
+  const valueEnt = mkFieldDef(ofType, 'value', dialect);
   return {
     type: 'array',
     join: 'many',
