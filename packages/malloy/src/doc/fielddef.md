@@ -72,6 +72,7 @@ interface JoinBase {
 }
 ```
 
+MTOY TODO FIX THE DISCRIMINATORS AGAIN
 * `isJoined(fd)` which will return true and grant typed access to the `JoinBase` properties of the `FieldDef`, and because all joined fields are structs, also the `StructDef` properties as well.
 
 ## Views

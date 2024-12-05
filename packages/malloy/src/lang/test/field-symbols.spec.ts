@@ -112,7 +112,7 @@ describe('structdef comprehension', () => {
   });
 
   test('import repeated record', () => {
-    const field: model.ArrayDef = {
+    const field: model.LeafArrayDef = {
       name: 't',
       type: 'array',
       dialect: 'standardsql',

@@ -35,7 +35,7 @@ import {
   DuckDBDialect,
   SQLSourceDef,
   TableSourceDef,
-  arrayEachFields,
+  mkArrayDef,
 } from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 
@@ -240,15 +240,7 @@ export abstract class DuckDBCommon
       } else {
         if (arrayMatch) {
           malloyType = this.dialect.sqlTypeToMalloyType(duckDBType);
-          const innerStructDef: StructDef = {
-            type: 'array',
-            elementTypeDef: malloyType,
-            name,
-            dialect: this.dialectName,
-            join: 'many',
-            fields: arrayEachFields(malloyType),
-          };
-          structDef.fields.push(innerStructDef);
+          structDef.fields.push(mkArrayDef(malloyType, name, this.dialectName));
         } else {
           structDef.fields.push({...malloyType, name});
         }

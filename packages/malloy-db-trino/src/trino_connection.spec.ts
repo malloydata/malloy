@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {arrayEachFields, AtomicTypeDef, FieldDef} from '@malloydata/malloy';
+import {AtomicTypeDef, FieldDef, mkArrayDef} from '@malloydata/malloy';
 import {TrinoConnection, TrinoExecutor} from '.';
 
 // array(varchar) is array
@@ -63,14 +63,9 @@ describe('Trino connection', () => {
 
   describe('schema parser', () => {
     it('parses arrays', () => {
-      expect(connection.malloyTypeFromTrinoType('test', ARRAY_SCHEMA)).toEqual({
-        'name': 'test',
-        'type': 'array',
-        'dialect': 'trino',
-        'elementTypeDef': intType,
-        'join': 'many',
-        'fields': arrayEachFields(intType),
-      });
+      expect(connection.malloyTypeFromTrinoType('test', ARRAY_SCHEMA)).toEqual(
+        mkArrayDef(intType, 'test', 'trino')
+      );
     });
 
     it('parses inline', () => {

@@ -36,12 +36,12 @@ import {
   QueryDataRow,
   SnowflakeDialect,
   TestableConnection,
-  arrayEachFields,
   TinyParser,
   Dialect,
-  FieldDef,
   RecordDef,
-  ArrayTypeDef,
+  mkArrayDef,
+  AtomicFieldDef,
+  ArrayDef,
 } from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 
@@ -75,7 +75,7 @@ class SnowField {
     readonly type: string,
     readonly dialect: Dialect
   ) {}
-  fieldDef(): FieldDef {
+  fieldDef(): AtomicFieldDef {
     return {
       ...this.dialect.sqlTypeToMalloyType(this.type),
       name: this.name,
@@ -102,15 +102,15 @@ class SnowObject extends SnowField {
     super(name, 'object', d);
   }
 
-  get fields(): FieldDef[] {
-    const fields: FieldDef[] = [];
+  get fields(): AtomicFieldDef[] {
+    const fields: AtomicFieldDef[] = [];
     for (const [_, fieldObj] of this.fieldMap) {
       fields.push(fieldObj.fieldDef());
     }
     return fields;
   }
 
-  fieldDef() {
+  fieldDef(): RecordDef {
     const rec: RecordDef = {
       type: 'record',
       name: this.name,
@@ -171,26 +171,27 @@ class SnowArray extends SnowField {
     }
   }
 
-  fieldDef(): ArrayTypeDef {
-    const arr: ArrayTypeDef = {
-      type: 'array',
-      name: this.name,
-      join: 'many',
-      dialect: this.dialect.name,
-      elementTypeDef: {type: 'string'},
-      fields: [],
-    };
+  fieldDef(): ArrayDef {
     if (this.objectChild) {
-      arr.fields = this.objectChild.fieldDef().fields;
-      arr.elementTypeDef = {type: 'record_element'};
-    } else if (this.arrayChild) {
-      arr.elementTypeDef = this.arrayChild.fieldDef();
-      arr.fields = arrayEachFields(arr.elementTypeDef);
-    } else {
-      arr.elementTypeDef = this.dialect.sqlTypeToMalloyType(this.arrayOf);
-      arr.fields = arrayEachFields(arr.elementTypeDef);
+      const t = mkArrayDef(
+        {type: 'record', fields: this.objectChild.fields},
+        this.name,
+        this.dialect.name
+      );
+      return t;
     }
-    return arr;
+    if (this.arrayChild) {
+      return mkArrayDef(
+        this.arrayChild.fieldDef(),
+        this.name,
+        this.dialect.name
+      );
+    }
+    return mkArrayDef(
+      this.dialect.sqlTypeToMalloyType(this.arrayOf),
+      this.name,
+      this.dialect.name
+    );
   }
 
   walk(path: PathChain, fieldType: string) {

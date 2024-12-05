@@ -37,15 +37,16 @@ import {
   TableSourceDef,
   SQLSourceDef,
   AtomicTypeDef,
-  ArrayDef,
+  mkFieldDef,
+  isScalarArrayType,
   RepeatedRecordTypeDef,
   RecordTypeDef,
-  arrayEachFields,
   isRepeatedRecord,
   Dialect,
   ArrayTypeDef,
   FieldDef,
   TinyParser,
+  isRepeatedRecordType,
 } from '@malloydata/malloy';
 
 import {BaseConnection} from '@malloydata/malloy/connection';
@@ -229,18 +230,19 @@ export abstract class TrinoPrestoConnection
     return data as unknown[];
   }
 
-  convertRow(structDef: StructDef, rawRow: unknown) {
+  convertRow(fields: FieldDef[], rawRow: unknown) {
     const retRow = {};
     const row = this.unpackArray(rawRow);
-    for (let i = 0; i < structDef.fields.length; i++) {
-      const field = structDef.fields[i];
+    for (let i = 0; i < fields.length; i++) {
+      const field = fields[i];
 
       if (field.type === 'record') {
-        retRow[field.name] = this.convertRow(field, row[i]);
+        retRow[field.name] = this.convertRow(field.fields, row[i]);
       } else if (isRepeatedRecord(field)) {
-        retRow[field.name] = this.convertNest(field, row[i]);
+        retRow[field.name] = this.convertNest(field.fields, row[i]);
       } else if (field.type === 'array') {
-        retRow[field.name] = this.convertNest(field, row[i]);
+        // mtoy todo don't understand this line actually
+        retRow[field.name] = this.convertNest(field.fields.slice(0, 1), row[i]);
       } else {
         retRow[field.name] = row[i] ?? null;
       }
@@ -249,12 +251,12 @@ export abstract class TrinoPrestoConnection
     return retRow;
   }
 
-  convertNest(structDef: StructDef, _data: unknown) {
+  convertNest(fields: FieldDef[], _data: unknown) {
     const data = this.unpackArray(_data);
     const ret: unknown[] = [];
     const rows = (data === null || data === undefined ? [] : data) as unknown[];
     for (const row of rows) {
-      ret.push(this.convertRow(structDef, row));
+      ret.push(this.convertRow(fields, row));
     }
     return ret;
   }
@@ -295,12 +297,11 @@ export abstract class TrinoPrestoConnection
 
   private resultRow(colSchema: AtomicTypeDef, rawRow: unknown) {
     if (colSchema.type === 'record') {
-      return this.convertRow(colSchema, rawRow);
-    } else if (colSchema.type === 'array') {
+      return this.convertRow(colSchema.fields, rawRow);
+    } else if (isRepeatedRecordType(colSchema)) {
+      return this.convertNest(colSchema.fields, rawRow) as QueryValue;
+    } else if (isScalarArrayType(colSchema)) {
       const elType = colSchema.elementTypeDef;
-      if (elType.type === 'record_element') {
-        return this.convertNest(colSchema, rawRow) as QueryValue;
-      }
       let theArray = this.unpackArray(rawRow);
       if (elType.type === 'array') {
         theArray = theArray.map(el => this.resultRow(elType, el));
@@ -408,21 +409,14 @@ export abstract class TrinoPrestoConnection
       if (innerType.type === 'record') {
         const complexStruct: RepeatedRecordTypeDef = {
           type: 'array',
-          name,
           elementTypeDef: {type: 'record_element'},
-          dialect: this.dialectName,
-          join: 'many',
           fields: innerType.fields,
         };
         return complexStruct;
       } else {
-        const arrayStruct: ArrayDef = {
+        const arrayStruct: ArrayTypeDef = {
           type: 'array',
-          name,
           elementTypeDef: innerType,
-          dialect: this.dialectName,
-          join: 'many',
-          fields: arrayEachFields(innerType),
         };
         return arrayStruct;
       }
@@ -433,9 +427,6 @@ export abstract class TrinoPrestoConnection
       const innerTypes = this.splitColumns(structMatch[3]);
       const recordType: RecordTypeDef = {
         type: 'record',
-        name,
-        dialect: this.dialectName,
-        join: 'one',
         fields: [],
       };
       for (let innerType of innerTypes) {
@@ -454,7 +445,9 @@ export abstract class TrinoPrestoConnection
             innerName,
             innerTrinoType
           );
-          recordType.fields.push({...innerMalloyType, name: innerName});
+          recordType.fields.push(
+            mkFieldDef(innerMalloyType, innerName, this.dialectName)
+          );
         }
       }
       return recordType;
@@ -468,7 +461,7 @@ export abstract class TrinoPrestoConnection
       const type = row[4] || row[1];
       const malloyType = this.malloyTypeFromTrinoType(name, type);
       // console.log('>', row, '\n<', malloyType);
-      structDef.fields.push({name, ...malloyType});
+      structDef.fields.push(mkFieldDef(malloyType, name, this.dialectName));
     }
   }
 
@@ -675,7 +668,7 @@ class PrestoExplainParser extends TinyParser {
       const name = fieldNames[nameIndex];
       this.next('id', ':');
       const nextType = this.typeDef();
-      fields.push({...nextType, name});
+      fields.push(mkFieldDef(nextType, name, this.dialect.name));
       const sep = this.next();
       if (sep.text === ',') {
         continue;
@@ -704,7 +697,7 @@ class PrestoExplainParser extends TinyParser {
       for (;;) {
         const name = this.next('quoted_name');
         const getDef = this.typeDef();
-        fields.push({...getDef, name: name.text});
+        fields.push(mkFieldDef(getDef, name.text, this.dialect.name));
         const sep = this.next();
         if (sep.text === ')') {
           break;
@@ -715,26 +708,19 @@ class PrestoExplainParser extends TinyParser {
       }
       const def: RecordTypeDef = {
         type: 'record',
-        name: '',
-        join: 'one',
-        dialect: this.dialect.name,
         fields,
       };
       return def;
     } else if (typToken.text === 'array' && this.next('(')) {
       const elType = this.typeDef();
       this.next(')');
-      const def: ArrayTypeDef = {
-        type: 'array',
-        name: '',
-        dialect: this.dialect.name,
-        join: 'many',
-        elementTypeDef:
-          elType.type === 'record' ? {type: 'record_element'} : elType,
-        fields:
-          elType.type === 'record' ? elType.fields : arrayEachFields(elType),
-      };
-      return def;
+      return elType.type === 'record'
+        ? {
+            type: 'array',
+            elementTypeDef: {type: 'record_element'},
+            fields: elType.fields,
+          }
+        : {type: 'array', elementTypeDef: elType};
     } else if (typToken.type === 'id') {
       const sqlType = typToken.text;
       const def = this.dialect.sqlTypeToMalloyType(sqlType);

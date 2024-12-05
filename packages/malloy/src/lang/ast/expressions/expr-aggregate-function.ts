@@ -29,7 +29,7 @@ import {
   AggregateExpr,
   Expr,
   hasExpression,
-  isJoined,
+  isJoinedField,
   isAtomic,
 } from '../../../model/malloy_types';
 import {exprWalk} from '../../../model/utils';
@@ -267,7 +267,7 @@ function getJoinUsage(fs: FieldSpace, expr: Expr): JoinPath[] {
     if (frag.node === 'field') {
       const def = lookupWithPath(fs, frag.path);
       const field = def.def;
-      if (isAtomic(field) && !isJoined(field)) {
+      if (isAtomic(field) && !isJoinedField(field)) {
         if (hasExpression(field)) {
           const defUsage = getJoinUsage(def.fs, field.e);
           result.push(...defUsage.map(r => [...def.joinPath, ...r]));

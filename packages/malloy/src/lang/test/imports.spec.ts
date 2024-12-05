@@ -20,7 +20,7 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-import {isJoined} from '../../model';
+import {isJoinedField} from '../../model';
 import './parse-expects';
 import {TestTranslator, errorMessage, model} from './test-translator';
 import escapeRegEx from 'lodash/escapeRegExp';
@@ -91,8 +91,8 @@ source: botProjQSrc is botProjQ
     const maybeField = newSrc?.fields.find(f => f.name === 'b');
     expect(maybeField).toBeDefined();
     const f = maybeField!;
-    expect(isJoined(f)).toBeTruthy();
-    if (isJoined(f)) {
+    expect(isJoinedField(f)).toBeTruthy();
+    if (isJoinedField(f)) {
       expect(f.type).toBe('query_source');
       if (f.type === 'query_source') {
         expect(typeof f.query.structRef).not.toBe('string');
