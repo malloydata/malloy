@@ -93,7 +93,7 @@ are an array of ...
 
 ## Discriminators
 
-* `isTemporalField` -- `date` or `timestamp` type
+* `isTemporalType` -- `date` or `timestamp` type
 * `isAtomicFieldType` -- Does type string match the type of one of the atomiv types
 * `isRepeatedRecord` -- In some databases this is a type, in other this is an array of record
 * `isScalarArray` -- Is a ".each" array

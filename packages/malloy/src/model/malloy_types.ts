@@ -603,7 +603,7 @@ export function hasExpression<T extends FieldDef>(
 }
 
 export type TemporalFieldType = 'date' | 'timestamp';
-export function isTemporalField(s: string): s is TemporalFieldType {
+export function isTemporalType(s: string): s is TemporalFieldType {
   return s === 'date' || s === 'timestamp';
 }
 export type CastType =
@@ -1341,7 +1341,7 @@ export function isLeafAtomic(
 ): fd is LeafAtomicDef {
   return (
     fd.type === 'string' ||
-    isTemporalField(fd.type) ||
+    isTemporalType(fd.type) ||
     fd.type === 'number' ||
     fd.type === 'boolean' ||
     fd.type === 'json' ||
@@ -1560,7 +1560,8 @@ export const TD = {
   isDate: (td: UTD): td is DateTypeDef => td?.type === 'date',
   isTimestamp: (td: UTD): td is TimestampTypeDef => td?.type === 'timestamp',
   isTemporal(td: UTD): td is TimestampTypeDef {
-    return td?.type === 'timestamp' || td?.type === 'date';
+    const typ = td?.type ?? '';
+    return isTemporalType(typ);
   },
   isError: (td: UTD): td is ErrorTypeDef => td?.type === 'error',
   eq(x: UTD, y: UTD): boolean {
