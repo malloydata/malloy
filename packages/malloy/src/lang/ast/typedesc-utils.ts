@@ -27,7 +27,7 @@ import {
   expressionIsScalar,
   ExpressionType,
   ExpressionValueType,
-  isRepeatedRecordType,
+  isRepeatedRecord,
   TD,
   TypeDesc,
 } from '../../model';
@@ -145,7 +145,7 @@ export function atomicDef(td: AtomicTypeDef | TypeDesc): AtomicTypeDef {
   if (TD.isAtomic(td)) {
     switch (td.type) {
       case 'array': {
-        return isRepeatedRecordType(td)
+        return isRepeatedRecord(td)
           ? {
               type: 'array',
               elementTypeDef: td.elementTypeDef,

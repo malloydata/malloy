@@ -36,7 +36,7 @@ import {
   isPartialSegment,
   isQuerySegment,
   isReduceSegment,
-  isTemporalField,
+  isTemporalType,
 } from '../../../model/malloy_types';
 
 import {ErrorFactory} from '../error-factory';
@@ -215,7 +215,7 @@ export class ReduceBuilder extends QuerySegmentBuilder implements QueryBuilder {
           fieldAnalytic =
             hasExpression(field) && expressionIsAnalytic(field.expressionType);
         }
-        if (isTemporalField(fieldType) || fieldAggregate) {
+        if (isTemporalType(fieldType) || fieldAggregate) {
           reduceSegment.defaultOrderBy = true;
           reduceSegment.orderBy = [{field: fieldName, dir: 'desc'}];
           usableDefaultOrderField = undefined;

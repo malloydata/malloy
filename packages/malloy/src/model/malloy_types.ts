@@ -603,7 +603,7 @@ export function hasExpression<T extends FieldDef>(
 }
 
 export type TemporalFieldType = 'date' | 'timestamp';
-export function isTemporalField(s: string): s is TemporalFieldType {
+export function isTemporalType(s: string): s is TemporalFieldType {
   return s === 'date' || s === 'timestamp';
 }
 export type CastType =
@@ -689,12 +689,12 @@ export interface NativeUnsupportedTypeDef {
 export type NativeUnsupportedFieldDef = NativeUnsupportedTypeDef &
   AtomicFieldDef;
 
-export interface LeafArrayTypeDef {
+export interface ScalarArrayTypeDef {
   type: 'array';
   elementTypeDef: Exclude<AtomicTypeDef, RecordTypeDef>;
 }
-export interface LeafArrayDef
-  extends LeafArrayTypeDef,
+export interface ScalarArrayDef
+  extends ScalarArrayTypeDef,
     StructDefBase,
     JoinBase,
     FieldBase {
@@ -707,10 +707,10 @@ export function mkFieldDef(
   name: string,
   dialect: string
 ): AtomicFieldDef {
-  if (isScalarArrayType(atd)) {
+  if (isScalarArray(atd)) {
     return mkArrayDef(atd.elementTypeDef, name, dialect);
   }
-  if (isRepeatedRecordType(atd)) {
+  if (isRepeatedRecord(atd)) {
     const {type, fields, elementTypeDef} = atd;
     return {type, fields, elementTypeDef, join: 'many', name, dialect};
   }
@@ -793,29 +793,19 @@ export interface RepeatedRecordDef
   type: 'array';
   join: 'many';
 }
-export type ArrayTypeDef = LeafArrayTypeDef | RepeatedRecordTypeDef;
-export type ArrayDef = LeafArrayDef | RepeatedRecordDef;
-
-export function isRepeatedRecordType(
-  td: AtomicTypeDef
-): td is RepeatedRecordTypeDef {
-  return td.type === 'array' && td.elementTypeDef.type === 'record_element';
-}
+export type ArrayTypeDef = ScalarArrayTypeDef | RepeatedRecordTypeDef;
+export type ArrayDef = ScalarArrayDef | RepeatedRecordDef;
 
 export function isRepeatedRecord(
-  fd: FieldDef | QueryFieldDef | StructDef
-): fd is RepeatedRecordDef {
+  fd: FieldDef | QueryFieldDef | StructDef | AtomicTypeDef
+): fd is RepeatedRecordTypeDef {
   return fd.type === 'array' && fd.elementTypeDef.type === 'record_element';
 }
 
-export function isScalarArrayType(td: AtomicTypeDef): td is LeafArrayTypeDef {
-  return td.type === 'array' && td.elementTypeDef.type !== 'record_element';
-}
-
 export function isScalarArray(
-  fd: FieldDef | QueryFieldDef | StructDef
-): fd is LeafArrayDef {
-  return fd.type === 'array' && fd.elementTypeDef.type !== 'record_element';
+  td: AtomicTypeDef | FieldDef | QueryFieldDef | StructDef
+): td is ScalarArrayTypeDef {
+  return td.type === 'array' && td.elementTypeDef.type !== 'record_element';
 }
 
 export interface ErrorTypeDef {
@@ -873,16 +863,12 @@ export function isJoinable(sd: StructDef): sd is Joinable {
   ].includes(sd.type);
 }
 
-export function isJoinedField(fd: FieldDef): fd is JoinFieldDef {
-  return 'join' in fd;
-}
-
-export function isJoined(sd: StructDef): sd is JoinFieldDef {
+export function isJoined(sd: TypedDef): sd is JoinFieldDef {
   return 'join' in sd;
 }
 
 export function isJoinedSource(sd: StructDef): sd is SourceDef & JoinBase {
-  return isSourceDef(sd) && 'join' in sd;
+  return isSourceDef(sd) && isJoined(sd);
 }
 
 export type DateUnit = 'day' | 'week' | 'month' | 'quarter' | 'year';
@@ -1341,12 +1327,12 @@ export type LeafAtomicDef = LeafAtomicTypeDef & FieldBase;
 
 export type AtomicTypeDef =
   | LeafAtomicTypeDef
-  | LeafArrayTypeDef
+  | ScalarArrayTypeDef
   | RecordTypeDef
   | RepeatedRecordTypeDef;
 export type AtomicFieldDef =
   | LeafAtomicDef
-  | LeafArrayDef
+  | ScalarArrayDef
   | RecordDef
   | RepeatedRecordDef;
 
@@ -1355,7 +1341,7 @@ export function isLeafAtomic(
 ): fd is LeafAtomicDef {
   return (
     fd.type === 'string' ||
-    isTemporalField(fd.type) ||
+    isTemporalType(fd.type) ||
     fd.type === 'number' ||
     fd.type === 'boolean' ||
     fd.type === 'json' ||
@@ -1376,6 +1362,14 @@ export interface RefToField {
   annotation?: Annotation;
 }
 export type QueryFieldDef = AtomicFieldDef | TurtleDef | RefToField;
+
+// All these share the same "type" space
+export type TypedDef =
+  | AtomicTypeDef
+  | JoinFieldDef
+  | TurtleDef
+  | RefToField
+  | StructDef;
 
 /** Get the output name for a NamedObject */
 export function getIdentifier(n: AliasedName): string {
@@ -1477,11 +1471,11 @@ export interface QueryResult extends CompiledQuery {
   profilingUrl?: string;
 }
 
-export function isTurtleDef(def: FieldDef): def is TurtleDef {
+export function isTurtle(def: TypedDef): def is TurtleDef {
   return def.type === 'turtle';
 }
 
-export function isAtomic(def: FieldDef | StructDef): def is AtomicFieldDef {
+export function isAtomic(def: TypedDef): def is AtomicTypeDef {
   return isAtomicFieldType(def.type);
 }
 
@@ -1492,10 +1486,6 @@ export interface SearchResultRow {
 }
 
 export type SearchResult = SearchResultRow[];
-
-export function getAtomicFields(structDef: StructDef): AtomicFieldDef[] {
-  return structDef.fields.filter(isAtomic);
-}
 
 export function isValueString(
   value: QueryValue,
@@ -1570,7 +1560,8 @@ export const TD = {
   isDate: (td: UTD): td is DateTypeDef => td?.type === 'date',
   isTimestamp: (td: UTD): td is TimestampTypeDef => td?.type === 'timestamp',
   isTemporal(td: UTD): td is TimestampTypeDef {
-    return td?.type === 'timestamp' || td?.type === 'date';
+    const typ = td?.type ?? '';
+    return isTemporalType(typ);
   },
   isError: (td: UTD): td is ErrorTypeDef => td?.type === 'error',
   eq(x: UTD, y: UTD): boolean {

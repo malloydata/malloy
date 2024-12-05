@@ -38,15 +38,14 @@ import {
   SQLSourceDef,
   AtomicTypeDef,
   mkFieldDef,
-  isScalarArrayType,
+  isScalarArray,
   RepeatedRecordTypeDef,
   RecordTypeDef,
-  isRepeatedRecord,
   Dialect,
   ArrayTypeDef,
   FieldDef,
   TinyParser,
-  isRepeatedRecordType,
+  isRepeatedRecord,
 } from '@malloydata/malloy';
 
 import {BaseConnection} from '@malloydata/malloy/connection';
@@ -298,9 +297,9 @@ export abstract class TrinoPrestoConnection
   private resultRow(colSchema: AtomicTypeDef, rawRow: unknown) {
     if (colSchema.type === 'record') {
       return this.convertRow(colSchema.fields, rawRow);
-    } else if (isRepeatedRecordType(colSchema)) {
+    } else if (isRepeatedRecord(colSchema)) {
       return this.convertNest(colSchema.fields, rawRow) as QueryValue;
-    } else if (isScalarArrayType(colSchema)) {
+    } else if (isScalarArray(colSchema)) {
       const elType = colSchema.elementTypeDef;
       let theArray = this.unpackArray(rawRow);
       if (elType.type === 'array') {

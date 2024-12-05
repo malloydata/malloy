@@ -26,7 +26,7 @@ import {DateTime as LuxonDateTime} from 'luxon';
 import {
   TemporalFieldType,
   TimestampUnit,
-  isTemporalField,
+  isTemporalType,
   TimeLiteralNode,
 } from '../../../model/malloy_types';
 
@@ -206,7 +206,7 @@ class GranularLiteral extends TimeLiteral {
       }
 
       // Compiler is unsure about rangeEnd = newEnd for some reason
-      if (rangeEnd && isTemporalField(testValue.type)) {
+      if (rangeEnd && isTemporalType(testValue.type)) {
         const rangeType = testValue.type;
         const range = new Range(
           new ExprTime(rangeType, rangeStart.value),
