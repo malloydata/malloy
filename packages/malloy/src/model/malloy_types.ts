@@ -689,12 +689,12 @@ export interface NativeUnsupportedTypeDef {
 export type NativeUnsupportedFieldDef = NativeUnsupportedTypeDef &
   AtomicFieldDef;
 
-export interface LeafArrayTypeDef {
+export interface ScalarArrayTypeDef {
   type: 'array';
   elementTypeDef: Exclude<AtomicTypeDef, RecordTypeDef>;
 }
-export interface LeafArrayDef
-  extends LeafArrayTypeDef,
+export interface ScalarArrayDef
+  extends ScalarArrayTypeDef,
     StructDefBase,
     JoinBase,
     FieldBase {
@@ -707,7 +707,7 @@ export function mkFieldDef(
   name: string,
   dialect: string
 ): AtomicFieldDef {
-  if (isLeafArray(atd)) {
+  if (isScalarArray(atd)) {
     return mkArrayDef(atd.elementTypeDef, name, dialect);
   }
   if (isRepeatedRecord(atd)) {
@@ -793,8 +793,8 @@ export interface RepeatedRecordDef
   type: 'array';
   join: 'many';
 }
-export type ArrayTypeDef = LeafArrayTypeDef | RepeatedRecordTypeDef;
-export type ArrayDef = LeafArrayDef | RepeatedRecordDef;
+export type ArrayTypeDef = ScalarArrayTypeDef | RepeatedRecordTypeDef;
+export type ArrayDef = ScalarArrayDef | RepeatedRecordDef;
 
 export function isRepeatedRecord(
   fd: FieldDef | QueryFieldDef | StructDef | AtomicTypeDef
@@ -802,9 +802,9 @@ export function isRepeatedRecord(
   return fd.type === 'array' && fd.elementTypeDef.type === 'record_element';
 }
 
-export function isLeafArray(
+export function isScalarArray(
   td: AtomicTypeDef | FieldDef | QueryFieldDef | StructDef
-): td is LeafArrayTypeDef {
+): td is ScalarArrayTypeDef {
   return td.type === 'array' && td.elementTypeDef.type !== 'record_element';
 }
 
@@ -1327,12 +1327,12 @@ export type LeafAtomicDef = LeafAtomicTypeDef & FieldBase;
 
 export type AtomicTypeDef =
   | LeafAtomicTypeDef
-  | LeafArrayTypeDef
+  | ScalarArrayTypeDef
   | RecordTypeDef
   | RepeatedRecordTypeDef;
 export type AtomicFieldDef =
   | LeafAtomicDef
-  | LeafArrayDef
+  | ScalarArrayDef
   | RecordDef
   | RepeatedRecordDef;
 

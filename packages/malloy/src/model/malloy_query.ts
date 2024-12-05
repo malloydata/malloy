@@ -100,7 +100,7 @@ import {
   isJoined,
   isJoinedSource,
   QueryResultDef,
-  isLeafArray,
+  isScalarArray,
   RecordDef,
   FinalizeSourceDef,
   QueryToMaterialize,
@@ -2991,7 +2991,7 @@ class QueryQuery extends QueryField {
         ji.alias,
         ji.getDialectFieldList(),
         ji.makeUniqueKey,
-        isLeafArray(qsDef),
+        isScalarArray(qsDef),
         this.inNestedPipeline()
       )}\n`;
     } else if (qsDef.type === 'record') {

@@ -41,7 +41,7 @@ import {
   RecordLiteralNode,
   isAtomic,
   isRepeatedRecord,
-  isLeafArray,
+  isScalarArray,
 } from '../../model/malloy_types';
 import {
   DialectFunctionOverloadDef,
@@ -503,7 +503,7 @@ ${indent(sql)}
       return malloyType.type === 'record'
         ? recordScehma
         : `ARRAY(${recordScehma})`;
-    } else if (isLeafArray(malloyType)) {
+    } else if (isScalarArray(malloyType)) {
       return `ARRAY(${this.malloyTypeToSQLType(malloyType.elementTypeDef)})`;
     }
     return malloyType.type;

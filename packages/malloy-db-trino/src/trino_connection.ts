@@ -38,7 +38,7 @@ import {
   SQLSourceDef,
   AtomicTypeDef,
   mkFieldDef,
-  isLeafArray,
+  isScalarArray,
   RepeatedRecordTypeDef,
   RecordTypeDef,
   Dialect,
@@ -299,7 +299,7 @@ export abstract class TrinoPrestoConnection
       return this.convertRow(colSchema.fields, rawRow);
     } else if (isRepeatedRecord(colSchema)) {
       return this.convertNest(colSchema.fields, rawRow) as QueryValue;
-    } else if (isLeafArray(colSchema)) {
+    } else if (isScalarArray(colSchema)) {
       const elType = colSchema.elementTypeDef;
       let theArray = this.unpackArray(rawRow);
       if (elType.type === 'array') {

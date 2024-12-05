@@ -127,7 +127,7 @@ export {
   isSamplingPercent,
   isSamplingRows,
   isRepeatedRecord,
-  isLeafArray,
+  isScalarArray,
   mkArrayDef,
   mkFieldDef,
   expressionIsAggregate,
