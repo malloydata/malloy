@@ -52,6 +52,10 @@ export class HTMLView {
       if (hasNextRenderer) {
         const el = this.document.createElement('malloy-render');
         el.result = result;
+        const nextRendererOptions = options.nextRendererOptions ?? {};
+        for (const [key, val] of Object.entries(nextRendererOptions)) {
+          el[key] = val;
+        }
         return el;
       } else {
         // eslint-disable-next-line no-console

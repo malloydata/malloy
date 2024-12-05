@@ -20,19 +20,15 @@ import {
 import {getRangeSize, isFirstChild, isLastChild} from '../util';
 import {getTableLayout} from './table-layout';
 import {useResultContext} from '../result-context';
-import {
-  copyExplorePathQueryToClipboard,
-  createTableStore,
-  DimensionContextEntry,
-  TableContext,
-  useTableContext,
-} from './table-context';
+import {createTableStore, TableContext, useTableContext} from './table-context';
 import tableCss from './table.css?raw';
-import {applyRenderer, shouldRenderAs} from '../apply-renderer';
+import {applyRenderer} from '../apply-renderer';
 import {isFieldHidden} from '../../tags_utils';
 import {createStore, produce} from 'solid-js/store';
 import {createVirtualizer, Virtualizer} from '@tanstack/solid-virtual';
 import {useConfig} from '../render';
+import {DimensionContextEntry} from '../types';
+import {copyExplorePathQueryToClipboard} from '../result-store/result-store';
 
 const IS_CHROMIUM = navigator.userAgent.toLowerCase().indexOf('chrome') >= 0;
 // CSS Subgrid + Sticky Positioning only seems to work reliably in Chrome
@@ -241,16 +237,19 @@ const TableField = (props: {
 
   const config = useConfig();
   const isDrillingEnabled = config.tableConfig().enableDrill;
-
+  const metadata = useResultContext();
   const handleClick = async evt => {
     evt.stopPropagation();
-
     if (isDrillingEnabled && !DRILL_RENDERER_IGNORE_LIST.includes(renderAs)) {
-      tableCtx!.copyExplorePathQueryToClipboard(
-        tableCtx!,
-        props.field,
-        props.dimensionContext
-      );
+      copyExplorePathQueryToClipboard({
+        metadata,
+        field: props.field,
+        dimensionContext: [
+          ...tableCtx!.dimensionContext,
+          ...props.dimensionContext,
+        ],
+        onDrill: config.onDrill,
+      });
     }
   };
 
@@ -318,11 +317,12 @@ const MalloyTableRoot = (_props: {
         else return 0;
       })
       .filter(([key, value]) => {
+        const field = resultMetadata.fields[key].field;
+        const parentFieldRenderer = field.parentExplore
+          ? resultMetadata.field(field.parentExplore)?.renderAs
+          : null;
         const isNotRoot = value.depth >= 0;
-        const isPartOfTable =
-          isNotRoot &&
-          shouldRenderAs(resultMetadata.fields[key].field.parentExplore!) ===
-            'table';
+        const isPartOfTable = isNotRoot && parentFieldRenderer === 'table';
         return isPartOfTable;
       })
       .map(([key, value]) => ({
@@ -729,9 +729,6 @@ const MalloyTableRoot = (_props: {
           </div>
         </Show>
       </Show>
-      <Show when={tableCtx.root && tableCtx.store.showCopiedModal}>
-        <div class="copied-modal">Copied query to clipboard!</div>
-      </Show>
     </div>
   );
 };
@@ -786,7 +783,6 @@ const MalloyTable: Component<{
       currentRow: [],
       currentExplore: props.data.field.fieldPath,
       dimensionContext: [],
-      copyExplorePathQueryToClipboard,
     };
   });
 

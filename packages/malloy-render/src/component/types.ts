@@ -124,3 +124,15 @@ export type TableConfig = {
 export type DashboardConfig = {
   disableVirtualization: boolean;
 };
+
+export type DrillData = {
+  dimensionFilters: DimensionContextEntry[];
+  copyQueryToClipboard: () => Promise<void>;
+  query: string;
+  whereClause: string;
+};
+
+export type DimensionContextEntry = {
+  fieldDef: string;
+  value: string | number | boolean | Date;
+};
