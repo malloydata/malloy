@@ -32,6 +32,7 @@ import {
   TableConfig,
   VegaConfigHandler,
 } from './types';
+export type {DimensionContextEntry, DrillData} from './types';
 import css from './render.css?raw';
 
 export type MalloyRenderProps = {

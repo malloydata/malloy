@@ -75,7 +75,9 @@ export type {
   // Needed for drills in render
   FilterCondition,
   SQLSentence,
-  // Used in Composer Demo
+  // Used in Composer
+  Argument,
+  Parameter,
   FieldDef,
   PipeSegment,
   QueryFieldDef,
