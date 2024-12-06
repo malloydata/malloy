@@ -82,7 +82,6 @@ export * from './expressions/expr-array-literal';
 export * from './expressions/expr-record-literal';
 export * from './expressions/range';
 export * from './expressions/time-frame';
-export * from './expressions/top-by';
 export * from './expressions/unary';
 export * from './statements/import-statement';
 export * from './query-properties/extend';

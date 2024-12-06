@@ -925,30 +925,6 @@ export type FunctionOrderBy =
   | FunctionOrderByExpression
   | FunctionOrderByDefaultExpression;
 
-export interface ByName {
-  by: 'name';
-  name: string;
-}
-export interface ByExpression {
-  by: 'expression';
-  e: Expr;
-}
-export type By = ByName | ByExpression;
-
-export function isByName(by: By | undefined): by is ByName {
-  if (by === undefined) {
-    return false;
-  }
-  return by.by === 'name';
-}
-
-export function isByExpression(by: By | undefined): by is ByExpression {
-  if (by === undefined) {
-    return false;
-  }
-  return by.by === 'name';
-}
-
 /** reference to a data source */
 // TODO this should be renamed to `SourceRef`
 export type StructRef = string | SourceDef;
