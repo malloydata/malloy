@@ -239,7 +239,7 @@ function createAxisReferenceLines(options: AxisReferenceLineOptions) {
             strokeWidth: {value: 3},
             fontSize: {value: 10},
             fontWeight: {value: 'normal'},
-            font: {value: 'Inter, sans-serif'},
+            font: {signal: 'referenceLineFont'},
             strokeOpacity: {value: 1},
           },
           update: {
@@ -267,7 +267,7 @@ function createAxisReferenceLines(options: AxisReferenceLineOptions) {
             fill: {value: grayMedium},
             fontSize: {value: 10},
             fontWeight: {value: 'normal'},
-            font: {value: 'Inter, sans-serif'},
+            font: {signal: 'referenceLineFont'},
           },
           update: {
             y: {
@@ -409,7 +409,7 @@ function createAxisReferenceLines(options: AxisReferenceLineOptions) {
 //             strokeWidth: {value: 3},
 //             fontSize: {value: 10},
 //             fontWeight: {value: 'normal'},
-//             font: {value: 'Inter, sans-serif'},
+//             font: {signal: "referenceLineFont"},
 //             strokeOpacity: {value: 1},
 //           },
 //           update: {
@@ -443,7 +443,7 @@ function createAxisReferenceLines(options: AxisReferenceLineOptions) {
 //             fill: {value: grayMedium},
 //             fontSize: {value: 10},
 //             fontWeight: {value: 'normal'},
-//             font: {value: 'Inter, sans-serif'},
+//             font: {signal: "referenceLineFont"},
 //           },
 //           update: {
 //             y: {
@@ -479,7 +479,7 @@ function createAxisReferenceLines(options: AxisReferenceLineOptions) {
 //             strokeWidth: {value: 3},
 //             fontSize: {value: 10},
 //             fontWeight: {value: 'normal'},
-//             font: {value: 'Inter, sans-serif'},
+//             font: {signal: "referenceLineFont"},
 //             strokeOpacity: {value: 1},
 //           },
 //           update: {
@@ -513,7 +513,7 @@ function createAxisReferenceLines(options: AxisReferenceLineOptions) {
 //             fill: {value: grayMedium},
 //             fontSize: {value: 10},
 //             fontWeight: {value: 'normal'},
-//             font: {value: 'Inter, sans-serif'},
+//             font: {signal: "referenceLineFont"},
 //           },
 //           update: {
 //             y: {

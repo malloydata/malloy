@@ -20,6 +20,7 @@ export default function registerWebComponent({
           modelDef: undefined,
           scrollEl: undefined,
           onClick: undefined,
+          onDrill: undefined,
           vegaConfigOverride: undefined,
           tableConfig: undefined,
           dashboardConfig: undefined,

@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {MalloyRenderProps} from '../component/render';
 import {DataStyles} from './data_styles';
 
 export interface RendererOptions {
@@ -29,6 +30,7 @@ export interface RendererOptions {
   onDrill?: DrillFunction;
   titleCase?: boolean;
   queryTimezone?: string;
+  nextRendererOptions?: Partial<MalloyRenderProps>;
 }
 
 export type DrillFunction = (

@@ -69,4 +69,10 @@ export const baseVegaConfig: () => Config = () => ({
   'view': {
     strokeWidth: 0,
   },
+  'signals': [
+    {
+      name: 'referenceLineFont',
+      value: 'Inter, sans-serif',
+    },
+  ],
 });

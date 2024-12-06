@@ -37,21 +37,24 @@ import {
   valueIsNumber,
   valueIsString,
 } from './util';
-import {hasAny} from './tag-utils';
 import {
   DataRowWithRecord,
   RenderResultMetadata,
   VegaChartProps,
   VegaConfigHandler,
 } from './types';
-import {NULL_SYMBOL, shouldRenderAs} from './apply-renderer';
+import {
+  NULL_SYMBOL,
+  shouldRenderAs,
+  shouldRenderChartAs,
+} from './apply-renderer';
 import {mergeVegaConfigs} from './vega/merge-vega-configs';
 import {baseVegaConfig} from './vega/base-vega-config';
 import {renderTimeString} from './render-time';
 import {generateBarChartVegaSpec} from './bar-chart/generate-bar_chart-vega-spec';
 import {createResultStore} from './result-store/result-store';
 import {generateLineChartVegaSpec} from './line-chart/generate-line_chart-vega-spec';
-import {parse} from 'vega';
+import {parse, Config} from 'vega';
 
 function createDataCache() {
   const dataCache = new WeakMap<DataColumn, QueryData>();
@@ -250,17 +253,32 @@ function populateExploreMeta(
 ) {
   const fieldMeta = metadata.field(f);
   let vegaChartProps: VegaChartProps | null = null;
-  if (hasAny(tag, 'bar', 'bar_chart')) {
+  const chartType = shouldRenderChartAs(tag);
+  if (chartType === 'bar_chart') {
     vegaChartProps = generateBarChartVegaSpec(f, metadata);
-  } else if (tag.has('line_chart')) {
+  } else if (chartType === 'line_chart') {
     vegaChartProps = generateLineChartVegaSpec(f, metadata);
   }
 
   if (vegaChartProps) {
-    const vegaConfig = mergeVegaConfigs(
+    const vegaConfigOverride =
+      options.getVegaConfigOverride?.(vegaChartProps.chartType) ?? {};
+
+    const vegaConfig: Config = mergeVegaConfigs(
       baseVegaConfig(),
       options.getVegaConfigOverride?.(vegaChartProps.chartType) ?? {}
     );
+
+    const maybeAxisYLabelFont = vegaConfigOverride['axisY']?.['labelFont'];
+    const maybeAxisLabelFont = vegaConfigOverride['axis']?.['labelFont'];
+    if (maybeAxisYLabelFont || maybeAxisLabelFont) {
+      const refLineFontSignal = vegaConfig.signals?.find(
+        signal => signal.name === 'referenceLineFont'
+      );
+      if (refLineFontSignal)
+        refLineFontSignal.value = maybeAxisYLabelFont ?? maybeAxisLabelFont;
+    }
+
     fieldMeta.vegaChartProps = {
       ...vegaChartProps,
       spec: {

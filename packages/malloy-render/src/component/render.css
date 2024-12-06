@@ -28,3 +28,19 @@
       'calt' 1;
   }
 }
+
+.malloy-copied-modal {
+  position: fixed;
+  background: #333;
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 4px;
+  box-shadow: rgba(100, 100, 111, 0.2) 0px 7px 29px 0px;
+  color: white;
+  bottom: 24px;
+  left: 100%;
+  text-wrap: nowrap;
+
+  transition: all 0s;
+  animation: modal-slide-in 2s forwards;
+}
