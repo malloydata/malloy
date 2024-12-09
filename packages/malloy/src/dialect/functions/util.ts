@@ -29,6 +29,9 @@ import {
   FunctionParamTypeDesc,
   GenericSQLExpr,
   LeafExpressionType,
+  TD,
+  mkFieldDef,
+  FieldDef,
 } from '../../model/malloy_types';
 import {SQLExprElement} from '../../model/utils';
 
@@ -200,10 +203,18 @@ export function overload(
   };
 }
 
+export interface ArrayBlueprint {
+  array: TypeDescBlueprint;
+}
+export interface RecordBlueprint {
+  record: Record<string, TypeDescBlueprint>;
+}
 export type TypeDescBlueprint =
   // default for return type is min scalar
   // default for param type is any expression type (max input)
   | LeafExpressionType
+  | ArrayBlueprint
+  | RecordBlueprint
   | {generic: string}
   | {literal: LeafExpressionType | {generic: string}}
   | {constant: LeafExpressionType | {generic: string}}
@@ -290,6 +301,47 @@ function expandReturnTypeBlueprint(
   let base: FunctionParamTypeDesc;
   if (typeof blueprint === 'string') {
     base = minScalar(blueprint);
+  } else if ('array' in blueprint) {
+    const innerType = expandReturnTypeBlueprint(blueprint.array, undefined);
+    const {expressionType, evalSpace} = innerType;
+    if (TD.isAtomic(innerType)) {
+      if (innerType.type !== 'record') {
+        base = {
+          type: 'array',
+          elementTypeDef: innerType,
+          expressionType,
+          evalSpace,
+        };
+      } else {
+        base = {
+          type: 'array',
+          elementTypeDef: {type: 'record_element'},
+          fields: innerType.fields,
+          expressionType,
+          evalSpace,
+        };
+      }
+    } else {
+      throw new Error('CHRIS WHAT DO I DO WITH AN ARRAY OF WHATEVER');
+    }
+  } else if ('record' in blueprint) {
+    const fields: FieldDef[] = [];
+    for (const [fieldName, fieldBlueprint] of Object.entries(
+      blueprint.record
+    )) {
+      const fieldDesc = expandReturnTypeBlueprint(fieldBlueprint, undefined);
+      if (TD.isAtomic(fieldDesc)) {
+        fields.push(
+          mkFieldDef(fieldDesc, fieldName, 'HELP CHRIS I NEED THE DIALECT')
+        );
+      }
+    }
+    base = {
+      type: 'record',
+      fields,
+      evalSpace: 'input',
+      expressionType: 'scalar',
+    };
   } else if ('generic' in blueprint) {
     base = minScalar(removeGeneric(blueprint, generic));
   } else if ('literal' in blueprint) {
@@ -315,6 +367,8 @@ function isTypeDescBlueprint(
 ): blueprint is TypeDescBlueprint {
   return (
     typeof blueprint === 'string' ||
+    'array' in blueprint ||
+    'record' in blueprint ||
     'generic' in blueprint ||
     'literal' in blueprint ||
     'constant' in blueprint ||
