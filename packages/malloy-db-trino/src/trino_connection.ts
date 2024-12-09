@@ -167,33 +167,19 @@ export abstract class TrinoPrestoConnection
   extends BaseConnection
   implements Connection, PersistSQLResults
 {
-  public name: string;
   protected readonly dialect = new TrinoDialect();
   static DEFAULT_QUERY_OPTIONS: RunSQLOptions = {
     rowLimit: 10,
   };
 
-  private queryOptions?: QueryOptionsReader;
-
-  //private config: TrinoConnectionConfiguration;
-
-  private client: BaseRunner;
-
   constructor(
-    name: string,
-    queryOptions?: QueryOptionsReader,
-    pConfig?: TrinoConnectionConfiguration
+    public name: string,
+    private client: BaseRunner,
+    private queryOptions?: QueryOptionsReader
   ) {
     super();
-    const config = pConfig || {};
     this.name = name;
-    if (name === 'trino') {
-      this.client = new TrinoRunner(config);
-    } else {
-      this.client = new PrestoRunner(config);
-    }
     this.queryOptions = queryOptions;
-    //this.config = config;
   }
 
   get dialectName(): string {
@@ -535,7 +521,11 @@ export class PrestoConnection extends TrinoPrestoConnection {
     queryOptions?: QueryOptionsReader,
     config: TrinoConnectionConfiguration = {}
   ) {
-    super('presto', queryOptions, config);
+    super(
+      typeof arg === 'string' ? arg : arg.name,
+      new PrestoRunner(config),
+      queryOptions
+    );
   }
 
   protected async fillStructDefForSqlBlockSchema(
@@ -597,7 +587,11 @@ export class TrinoConnection extends TrinoPrestoConnection {
     queryOptions?: QueryOptionsReader,
     config: TrinoConnectionConfiguration = {}
   ) {
-    super('trino', queryOptions, config);
+    super(
+      typeof arg === 'string' ? arg : arg.name,
+      new TrinoRunner(config),
+      queryOptions
+    );
   }
 
   protected async fillStructDefForSqlBlockSchema(
