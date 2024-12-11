@@ -52,6 +52,7 @@ import {
   isEmptyCompositeFieldUsage,
   mergeCompositeFieldUsage,
   narrowCompositeFieldResolution,
+  NarrowedCompositeFieldResolution,
 } from '../../../model/composite_source_utils';
 import {StructSpaceFieldBase} from './struct-space-field-base';
 
@@ -67,7 +68,7 @@ export abstract class QueryOperationSpace
 {
   protected exprSpace: QueryInputSpace;
   abstract readonly segmentType: 'reduce' | 'project' | 'index';
-  expandedWild: Record<string, string[]> = {};
+  expandedWild: Record<string, {path: string[]; entry: SpaceEntry}> = {};
   compositeFieldUsers: (
     | {type: 'filter'; filter: model.FilterCondition; logTo: MalloyElement}
     | {
@@ -78,7 +79,8 @@ export abstract class QueryOperationSpace
       }
   )[] = [];
 
-  // Composite field usage is not computed until `queryFieldDefs` is called; if anyone
+  // Composite field usage is not computed until `queryFieldDefs` is called
+  // (or `getPipeSegment` for index segments); if anyone
   // tries to access it before that, they'll get an error
   _compositeFieldUsage: model.CompositeFieldUsage | undefined = undefined;
   get compositeFieldUsage(): model.CompositeFieldUsage {
@@ -160,7 +162,7 @@ export abstract class QueryOperationSpace
         continue;
       }
       if (this.entry(name)) {
-        const conflict = this.expandedWild[name]?.join('.');
+        const conflict = this.expandedWild[name].path?.join('.');
         wild.logError(
           'name-conflict-in-wildcard-expansion',
           `Cannot expand '${name}' in '${
@@ -177,7 +179,10 @@ export abstract class QueryOperationSpace
           (dialect === undefined || !dialect.ignoreInProject(name))
         ) {
           expandEntries.push({name, entry});
-          this.expandedWild[name] = joinPath.concat(name);
+          this.expandedWild[name] = {
+            path: joinPath.concat(name),
+            entry,
+          };
         }
       }
     }
@@ -248,6 +253,45 @@ export abstract class QueryOperationSpace
     }
     super.newEntry(name, logTo, entry);
   }
+
+  protected applyNextCompositeFieldUsage(
+    source: model.SourceDef,
+    compositeFieldUsage: model.CompositeFieldUsage,
+    narrowedCompositeFieldResolution: NarrowedCompositeFieldResolution,
+    nextCompositeFieldUsage: model.CompositeFieldUsage | undefined,
+    logTo: MalloyElement | undefined
+  ) {
+    if (nextCompositeFieldUsage) {
+      const newCompositeFieldUsage =
+        this.getCompositeFieldUsageIncludingJoinOns(
+          compositeFieldUsageDifference(
+            nextCompositeFieldUsage,
+            compositeFieldUsage
+          )
+        );
+      compositeFieldUsage = mergeCompositeFieldUsage(
+        compositeFieldUsage,
+        newCompositeFieldUsage
+      );
+      if (!isEmptyCompositeFieldUsage(newCompositeFieldUsage)) {
+        const result = narrowCompositeFieldResolution(
+          source,
+          compositeFieldUsage,
+          narrowedCompositeFieldResolution
+        );
+        if (result.error) {
+          (logTo ?? this).logError('invalid-composite-field-usage', {
+            newUsage: newCompositeFieldUsage,
+            allUsage: compositeFieldUsage,
+          });
+        } else {
+          narrowedCompositeFieldResolution =
+            result.narrowedCompositeFieldResolution;
+        }
+      }
+    }
+    return {compositeFieldUsage, narrowedCompositeFieldResolution};
+  }
 }
 
 // Project and Reduce or "QuerySegments" are built from a QuerySpace
@@ -312,7 +356,7 @@ export abstract class QuerySpace extends QueryOperationSpace {
         }
       } else {
         const {name, field} = user;
-        const wildPath = this.expandedWild[name];
+        const wildPath = this.expandedWild[name].path;
         if (wildPath) {
           fields.push({type: 'fieldref', path: wildPath});
           continue;
@@ -343,41 +387,15 @@ export abstract class QuerySpace extends QueryOperationSpace {
         // project statements, where we added "*" as a field and also all the individual
         // fields, but the individual fields didn't have field defs.
       }
-      if (nextCompositeFieldUsage) {
-        const newCompositeFieldUsage =
-          this.getCompositeFieldUsageIncludingJoinOns(
-            compositeFieldUsageDifference(
-              nextCompositeFieldUsage,
-              compositeFieldUsage
-            )
-          );
-        compositeFieldUsage = mergeCompositeFieldUsage(
-          compositeFieldUsage,
-          newCompositeFieldUsage
-        );
-        if (!isEmptyCompositeFieldUsage(newCompositeFieldUsage)) {
-          const result = narrowCompositeFieldResolution(
-            source,
-            compositeFieldUsage,
-            narrowedCompositeFieldResolution
-          );
-          if (result.error) {
-            if (user.logTo) {
-              user.logTo.logError('invalid-composite-field-usage', {
-                newUsage: newCompositeFieldUsage,
-                allUsage: compositeFieldUsage,
-              });
-            } else {
-              // This should not happen; logTo should only be not set for a field from a refinement,
-              // which should never fail the composite resolution
-              throw new Error('Unexpected invalid composite field resolution');
-            }
-          } else {
-            narrowedCompositeFieldResolution =
-              result.narrowedCompositeFieldResolution;
-          }
-        }
-      }
+      const next = this.applyNextCompositeFieldUsage(
+        source,
+        compositeFieldUsage,
+        narrowedCompositeFieldResolution,
+        nextCompositeFieldUsage,
+        user.logTo
+      );
+      compositeFieldUsage = next.compositeFieldUsage;
+      narrowedCompositeFieldResolution = next.narrowedCompositeFieldResolution;
     }
     this._compositeFieldUsage = compositeFieldUsage;
     return fields;

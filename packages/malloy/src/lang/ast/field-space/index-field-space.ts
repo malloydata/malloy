@@ -22,11 +22,16 @@
  */
 
 import {
+  emptyCompositeFieldUsage,
+  emptyNarrowedCompositeFieldResolution,
+} from '../../../model/composite_source_utils';
+import {
   IndexSegment,
   PipeSegment,
   IndexFieldDef,
   expressionIsScalar,
   TD,
+  CompositeFieldUsage,
 } from '../../../model/malloy_types';
 import {
   FieldReference,
@@ -67,15 +72,21 @@ export class IndexFieldSpace extends QueryOperationSpace {
       );
       return {type: 'index', indexFields: []};
     }
+    let compositeFieldUsage = emptyCompositeFieldUsage();
+    let narrowedCompositeFieldResolution =
+      emptyNarrowedCompositeFieldResolution();
     const indexFields: IndexFieldDef[] = [];
+    const source = this.inputSpace().structDef();
     for (const [name, field] of this.entries()) {
       if (field instanceof SpaceField) {
-        const wildPath = this.expandedWild[name];
-        if (wildPath) {
-          indexFields.push({type: 'fieldref', path: wildPath});
-          continue;
-        }
-        if (field instanceof ReferenceField) {
+        let nextCompositeFieldUsage: CompositeFieldUsage | undefined =
+          undefined;
+        let logTo: MalloyElement | undefined = undefined;
+        const wild = this.expandedWild[name];
+        if (wild) {
+          indexFields.push({type: 'fieldref', path: wild.path});
+          nextCompositeFieldUsage = wild.entry.typeDesc().compositeFieldUsage;
+        } else if (field instanceof ReferenceField) {
           // attempt to cause a type check
           const fieldRef = field.fieldRef;
           const check = fieldRef.getField(this.exprSpace);
@@ -83,10 +94,24 @@ export class IndexFieldSpace extends QueryOperationSpace {
             fieldRef.logError(check.error.code, check.error.message);
           } else {
             indexFields.push(fieldRef.refToField);
+            nextCompositeFieldUsage =
+              check.found.typeDesc().compositeFieldUsage;
+            logTo = fieldRef;
           }
         }
+        const next = this.applyNextCompositeFieldUsage(
+          source,
+          compositeFieldUsage,
+          narrowedCompositeFieldResolution,
+          nextCompositeFieldUsage,
+          logTo
+        );
+        compositeFieldUsage = next.compositeFieldUsage;
+        narrowedCompositeFieldResolution =
+          next.narrowedCompositeFieldResolution;
       }
     }
+    this._compositeFieldUsage = compositeFieldUsage;
     return {type: 'index', indexFields};
   }
 
@@ -135,7 +160,7 @@ export class IndexFieldSpace extends QueryOperationSpace {
         name,
       ]);
       if (this.entry(indexName)) {
-        const conflict = this.expandedWild[indexName]?.join('.');
+        const conflict = this.expandedWild[indexName].path?.join('.');
         wild.logError(
           'name-conflict-in-wildcard-expansion',
           `Cannot expand '${name}' in '${
@@ -153,7 +178,10 @@ export class IndexFieldSpace extends QueryOperationSpace {
           (dialect === undefined || !dialect.ignoreInProject(name))
         ) {
           expandEntries.push({name: indexName, entry});
-          this.expandedWild[indexName] = joinPath.concat(name);
+          this.expandedWild[indexName] = {
+            path: joinPath.concat(name),
+            entry,
+          };
         }
       }
     }

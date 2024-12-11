@@ -184,7 +184,7 @@ type SingleNarrowedCompositeFieldResolution = {
   nested?: SingleNarrowedCompositeFieldResolution | undefined;
 }[];
 
-interface NarrowedCompositeFieldResolution {
+export interface NarrowedCompositeFieldResolution {
   source: SingleNarrowedCompositeFieldResolution | undefined;
   joined: {[name: string]: NarrowedCompositeFieldResolution};
 }
