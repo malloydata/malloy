@@ -155,8 +155,11 @@ export function anyExprType(type: LeafExpressionType): FunctionParamTypeDesc {
   return {type, expressionType: undefined, evalSpace: 'input'};
 }
 
-export function anyExprTypeBP(type: TypeDescBlueprint): FunctionParamTypeDesc {
-  const typeDesc = expandReturnTypeBlueprint(type, undefined);
+function anyExprTypeBP(
+  type: TypeDescBlueprint,
+  generic: {name: string; type: LeafExpressionType} | undefined
+): FunctionParamTypeDesc {
+  const typeDesc = expandReturnTypeBlueprint(type, generic);
   return {...typeDesc, expressionType: undefined, evalSpace: 'input'};
 }
 
@@ -416,9 +419,9 @@ function expandParamTypeBlueprint(
   } else if ('measure' in blueprint) {
     return maxAggregate(removeGeneric(blueprint.measure, generic));
   } else if ('array' in blueprint) {
-    return anyExprTypeBP(blueprint);
+    return anyExprTypeBP(blueprint, generic);
   } else if ('record' in blueprint) {
-    return anyExprTypeBP(blueprint);
+    return anyExprTypeBP(blueprint, generic);
   } else {
     return maxAnalytic(removeGeneric(blueprint.calculation, generic));
   }
