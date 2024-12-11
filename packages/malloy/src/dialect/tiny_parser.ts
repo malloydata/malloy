@@ -17,9 +17,10 @@ export interface TinyToken {
  *
  * NOTE: All parse errors are exceptions.
  */
+export class TinyParseError extends Error {}
 export class TinyParser {
   private tokens: Generator<TinyToken>;
-  private parseCursor = 0;
+  protected parseCursor = 0;
   private lookAhead?: TinyToken;
   private tokenMap: Record<string, RegExp>;
 
@@ -37,13 +38,13 @@ export class TinyParser {
     readonly input: string,
     tokenMap?: Record<string, RegExp>
   ) {
-    this.tokens = this.tokenize(input);
     this.tokenMap = tokenMap ?? {
       space: /^\s+/,
       char: /^[,:[\]()-]/,
       id: /^\w+/,
       qstr: /^"\w+"/,
     };
+    this.tokens = this.tokenize(input);
   }
 
   parseError(str: string) {
@@ -51,7 +52,7 @@ export class TinyParser {
       `INTERNAL ERROR parsing schema: ${str}\n` +
       `${this.input}\n` +
       `${' '.repeat(this.parseCursor)}^`;
-    return new Error(errText);
+    return new TinyParseError(errText);
   }
 
   peek(): TinyToken {

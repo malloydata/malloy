@@ -35,7 +35,7 @@ import {
   DuckDBDialect,
   SQLSourceDef,
   TableSourceDef,
-  mkArrayDef,
+  mkFieldDef,
 } from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 
@@ -149,102 +149,16 @@ export abstract class DuckDBCommon
     return {};
   }
 
-  /**
-   * Split's a structs columns declaration into individual columns
-   * to be fed back into fillStructDefFromTypeMap(). Handles commas
-   * within nested STRUCT() declarations.
-   *
-   * (https://github.com/malloydata/malloy/issues/635)
-   *
-   * @param s struct's column declaration
-   * @return Array of column type declarations
-   */
-  private splitColumns(s: string) {
-    const columns: string[] = [];
-    let parens = 0;
-    let column = '';
-    let eatSpaces = true;
-    for (let idx = 0; idx < s.length; idx++) {
-      const c = s.charAt(idx);
-      if (eatSpaces && c === ' ') {
-        // Eat space
-      } else {
-        eatSpaces = false;
-        if (!parens && c === ',') {
-          columns.push(column);
-          column = '';
-          eatSpaces = true;
-        } else {
-          column += c;
-        }
-        if (c === '(') {
-          parens += 1;
-        } else if (c === ')') {
-          parens -= 1;
-        }
-      }
-    }
-    columns.push(column);
-    return columns;
-  }
-
-  private stringToTypeMap(s: string): {[name: string]: string} {
-    const ret: {[name: string]: string} = {};
-    const columns = this.splitColumns(s);
-    for (const c of columns) {
-      //const [name, type] = c.split(" ", 1);
-      const columnMatch = c.match(/^(?<name>[^\s]+) (?<type>.*)$/);
-      if (columnMatch && columnMatch.groups) {
-        ret[columnMatch.groups['name']] = columnMatch.groups['type'];
-      } else {
-        throw new Error(`Badly form Structure definition ${s}`);
-      }
-    }
-    return ret;
-  }
-
   fillStructDefFromTypeMap(
     structDef: StructDef,
     typeMap: {[name: string]: string}
   ) {
     for (const fieldName in typeMap) {
-      let duckDBType = typeMap[fieldName];
       // Remove quotes from field name
       const name = unquoteName(fieldName);
-      let malloyType = this.dialect.sqlTypeToMalloyType(duckDBType);
-      const arrayMatch = duckDBType.match(/(?<duckDBType>.*)\[\]$/);
-      if (arrayMatch && arrayMatch.groups) {
-        duckDBType = arrayMatch.groups['duckDBType'];
-      }
-      const structMatch = duckDBType.match(/^STRUCT\((?<fields>.*)\)$/);
-      if (structMatch && structMatch.groups) {
-        const newTypeMap = this.stringToTypeMap(structMatch.groups['fields']);
-        let innerStructDef: StructDef;
-        const structhead = {name, dialect: this.dialectName, fields: []};
-        if (arrayMatch) {
-          innerStructDef = {
-            type: 'array',
-            elementTypeDef: {type: 'record_element'},
-            join: 'many',
-            ...structhead,
-          };
-        } else {
-          innerStructDef = {
-            type: 'record',
-            join: 'one',
-            ...structhead,
-          };
-        }
-        this.fillStructDefFromTypeMap(innerStructDef, newTypeMap);
-        structDef.fields.push(innerStructDef);
-      } else {
-        if (arrayMatch) {
-          malloyType = this.dialect.sqlTypeToMalloyType(duckDBType);
-          structDef.fields.push(mkArrayDef(malloyType, name, this.dialectName));
-        } else {
-          structDef.fields.push({...malloyType, name});
-        }
-      }
+      const dbType = typeMap[fieldName];
+      const malloyType = this.dialect.parseDuckDBType(dbType);
+      structDef.fields.push(mkFieldDef(malloyType, name, 'duckdb'));
     }
   }
 
