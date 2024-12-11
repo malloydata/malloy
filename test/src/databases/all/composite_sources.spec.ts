@@ -243,4 +243,14 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       }
     `).malloyResultMatches(runtime, {'foo.x': 1});
   });
+  it('composite with select *', async () => {
+    await expect(`
+      ##! experimental.composite_sources
+      source: state_facts is ${databaseName}.table('malloytest.state_facts')
+      source: x is compose(state_facts, state_facts extend { dimension: foo is 1 }) extend {
+        accept: foo
+      }
+      run: x -> { select: * }
+    `).malloyResultMatches(runtime, {foo: 1});
+  });
 });
