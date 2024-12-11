@@ -166,7 +166,7 @@ const HeaderField = (props: {field: Field; isPinned?: boolean}) => {
   );
 };
 
-const DRILL_RENDERER_IGNORE_LIST = ['chart'];
+const DRILL_RENDERER_IGNORE_LIST = ['chart', 'link'];
 const TableField = (props: {
   field: Field;
   row: DataRecord;
