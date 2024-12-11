@@ -277,24 +277,11 @@ const url_extract_query: DefinitionBlueprint = {
   impl: {function: 'URL_EXTRACT_QUERY'},
 };
 
-const split: OverloadedDefinitionBlueprint = {
-  'string': {
-    takes: {'src': 'string', 'splitChar': 'string'},
-    returns: {array: 'string'},
-    impl: {function: 'SPLIT'},
-  },
-  'regex': {
-    takes: {'src': 'string', 'splitExpr': 'regular expression'},
-    returns: {array: 'string'},
-    impl: {function: 'REGEX_SPLIT'},
-  },
+const split: DefinitionBlueprint = {
+  takes: {'src': 'string', 'splitChar': 'string'},
+  returns: {array: 'string'},
+  impl: {function: 'SPLIT'},
 };
-
-// const contains: DefinitionBlueprint = {
-//   takes: {'inspect': {array: 'any'}, 'lookFor': 'any'},
-//   returns: 'boolean',
-//   impl: {function: 'CONTAINS'},
-// };
 
 export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   // aggregate functions
@@ -334,7 +321,5 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   // window functions
   percent_rank,
 
-  // mtoy todo array stuff should maybe be in standard
   split,
-  // contains,
 };
