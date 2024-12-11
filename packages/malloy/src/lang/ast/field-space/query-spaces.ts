@@ -162,7 +162,7 @@ export abstract class QueryOperationSpace
         continue;
       }
       if (this.entry(name)) {
-        const conflict = this.expandedWild[name].path?.join('.');
+        const conflict = this.expandedWild[name]?.path.join('.');
         wild.logError(
           'name-conflict-in-wildcard-expansion',
           `Cannot expand '${name}' in '${
@@ -213,7 +213,7 @@ export abstract class QueryOperationSpace
   ): model.CompositeFieldUsage {
     const reference = joinPath.map(n => new FieldName(n));
     this.astEl.has({reference});
-    const lookup = this.queryInputSpace.lookup(reference);
+    const lookup = this.exprSpace.lookup(reference);
     // Should always be found...
     if (lookup.found && lookup.found instanceof StructSpaceFieldBase) {
       return (
@@ -356,9 +356,9 @@ export abstract class QuerySpace extends QueryOperationSpace {
         }
       } else {
         const {name, field} = user;
-        const wildPath = this.expandedWild[name].path;
+        const wildPath = this.expandedWild[name];
         if (wildPath) {
-          fields.push({type: 'fieldref', path: wildPath});
+          fields.push({type: 'fieldref', path: wildPath.path});
           continue;
         }
         // TODO handle wildcards for composite sources
