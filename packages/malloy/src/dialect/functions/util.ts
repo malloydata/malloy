@@ -155,6 +155,11 @@ export function anyExprType(type: LeafExpressionType): FunctionParamTypeDesc {
   return {type, expressionType: undefined, evalSpace: 'input'};
 }
 
+export function anyExprTypeBP(type: TypeDescBlueprint): FunctionParamTypeDesc {
+  const typeDesc = expandReturnTypeBlueprint(type, undefined);
+  return {...typeDesc, expressionType: undefined, evalSpace: 'input'};
+}
+
 export function maxUngroupedAggregate(
   type: LeafExpressionType
 ): FunctionParamTypeDesc {
@@ -411,9 +416,9 @@ function expandParamTypeBlueprint(
   } else if ('measure' in blueprint) {
     return maxAggregate(removeGeneric(blueprint.measure, generic));
   } else if ('array' in blueprint) {
-    throw new Error('mtoy todo understand expand param type blueprint');
+    return anyExprTypeBP(blueprint);
   } else if ('record' in blueprint) {
-    throw new Error('mtoy todo understand expand param type blueprint');
+    return anyExprTypeBP(blueprint);
   } else {
     return maxAnalytic(removeGeneric(blueprint.calculation, generic));
   }
