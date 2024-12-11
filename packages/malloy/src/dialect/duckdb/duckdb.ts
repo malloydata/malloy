@@ -500,11 +500,9 @@ class DuckDBTypeParser extends TinyParser {
       };
     } else if (id.text === 'TIMESTAMP') {
       if (this.peek().text === 'WITH') {
-        this.next('WITH', 'TIME', 'ZONE');
-        baseType = {type: 'sql native', rawType: 'TIMESTAMP WITH TIME ZONE'};
-      } else {
-        baseType = {type: 'timestamp'};
+        this.next('id', 'id', 'id'); // WITH TIME ZONE
       }
+      baseType = {type: 'timestamp'};
     } else if (duckDBToMalloyTypes[id.text]) {
       baseType = duckDBToMalloyTypes[id.text];
     } else if (id.text === 'STRUCT') {
