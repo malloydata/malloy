@@ -481,14 +481,21 @@ class DuckDBTypeParser extends TinyParser {
     return token.text;
   }
 
+  sqlID(token: TinyToken) {
+    return token.text.toUpperCase();
+  }
+
   typeDef(): AtomicTypeDef {
     const unknownStart = this.parseCursor;
-    const id = this.next('id');
+    const wantID = this.next('id');
+    const id = this.sqlID(wantID);
     let baseType: AtomicTypeDef;
-    if (
-      (id.text === 'DECIMAL' || id.type === 'NUMERIC') &&
-      this.peek().text === '('
-    ) {
+    if (id === 'VARCHAR') {
+      if (this.peek().type === '(') {
+        this.next('(', 'number', ')');
+      }
+    }
+    if ((id === 'DECIMAL' || id === 'NUMERIC') && this.peek().text === '(') {
       this.next('(');
       const _prec0 = this.next('number');
       this.next(',');
@@ -498,14 +505,14 @@ class DuckDBTypeParser extends TinyParser {
         type: 'number',
         numberType: Number.parseInt(prec1.text) > 0 ? 'float' : 'integer',
       };
-    } else if (id.text === 'TIMESTAMP') {
+    } else if (id === 'TIMESTAMP') {
       if (this.peek().text === 'WITH') {
         this.next('id', 'id', 'id'); // WITH TIME ZONE
       }
       baseType = {type: 'timestamp'};
-    } else if (duckDBToMalloyTypes[id.text]) {
-      baseType = duckDBToMalloyTypes[id.text];
-    } else if (id.text === 'STRUCT') {
+    } else if (duckDBToMalloyTypes[id]) {
+      baseType = duckDBToMalloyTypes[id];
+    } else if (id === 'STRUCT') {
       this.next('(');
       baseType = {type: 'record', fields: []};
       for (;;) {
@@ -530,7 +537,7 @@ class DuckDBTypeParser extends TinyParser {
         }
       }
     } else {
-      if (id.type === 'id') {
+      if (wantID.type === 'id') {
         for (;;) {
           const next = this.peek();
           // Might be WEIRDTYP(a,b)[] ... stop at the [
