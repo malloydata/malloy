@@ -79,4 +79,8 @@ export class Renames extends ListOf<RenameField> {
   ) {
     super(fields);
   }
+
+  get delarationNames(): string[] {
+    return this.list.map(el => el.getName());
+  }
 }

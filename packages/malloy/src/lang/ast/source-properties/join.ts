@@ -251,4 +251,8 @@ export class JoinStatement
       executeFor.alwaysJoins.push(qel.name.refString);
     }
   }
+
+  get delarationNames(): string[] {
+    return this.list.map(el => el.name.refString);
+  }
 }

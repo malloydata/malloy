@@ -388,6 +388,14 @@ type MessageParameterTypes = {
   'field-not-accessible': string;
   'cannot-expand-access': string;
   'conflicting-access-modifier': string;
+  'accept-except-not-compatible-with-include': string;
+  'already-renamed': string;
+  'wildcard-except-redundant': string;
+  'already-used-star-in-include': string;
+  'include-after-exclude': string;
+  'duplicate-include': string;
+  'exclude-after-include': string;
+  'cannot-rename-non-field': string;
 };
 
 export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {

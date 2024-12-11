@@ -666,6 +666,16 @@ export class MalloyToAST
     throw this.internalError(pcx, `Unknown access modifier label ${pcx.text}`);
   }
 
+  getAccessLabelProp(
+    pcx: parse.AccessLabelPropContext | undefined
+  ): AccessModifierLabel | undefined {
+    if (pcx === undefined) return undefined;
+    if (pcx.INTERNAL()) return 'internal';
+    if (pcx.PRIVATE()) return 'private';
+    if (pcx.PUBLIC()) return 'public';
+    throw this.internalError(pcx, `Unknown access modifier label ${pcx.text}`);
+  }
+
   visitDefMeasures(pcx: parse.DefMeasuresContext): ast.Measures {
     const accessLabel = this.getAccessLabel(pcx.accessLabel());
     const defs = this.getFieldDefs(
@@ -793,36 +803,18 @@ export class MalloyToAST
     );
   }
 
-  visitDefAccessModifier(
-    pcx: parse.DefAccessModifierContext
-  ): ast.AccessModifier {
-    const access = pcx.INTERNAL()
-      ? 'internal'
-      : pcx.PUBLIC()
-      ? 'public'
-      : 'private';
-    this.inExperiment('access_modifiers', pcx);
-    const accessModifier = pcx.accessModifierList();
-    const list = accessModifier.fieldNameList();
-    if (list) {
-      return this.astAt(
-        new ast.AccessModifier(
-          access,
-          this.getFieldNameList(list, ast.AccessModifierFieldReference),
-          undefined
-        ),
-        pcx
-      );
-    } else {
-      const exceptStmts = accessModifier.starQualified()?.fieldNameList() || [];
-      const exceptLists = exceptStmts.map(exc =>
-        this.getFieldNameList(exc, ast.AccessModifierFieldReference)
-      );
-      return this.astAt(
-        new ast.AccessModifier(access, undefined, exceptLists),
-        pcx
-      );
-    }
+  visitSQInclude(pcx: parse.SQIncludeContext): ast.SQExtend {
+    const extendSrc = this.getSqExpr(pcx.sqExpr());
+    const includeBlock = pcx.includeBlock();
+    const includeList = includeBlock
+      ? this.getIncludeItems(includeBlock)
+      : undefined;
+    const src = new ast.SQExtend(
+      extendSrc,
+      new ast.SourceDesc([]),
+      includeList
+    );
+    return this.astAt(src, pcx);
   }
 
   visitDefExploreTimezone(
@@ -1904,11 +1896,73 @@ export class MalloyToAST
 
   visitSQExtendedSource(pcx: parse.SQExtendedSourceContext) {
     const extendSrc = this.getSqExpr(pcx.sqExpr());
+    const includeBlock = pcx.includeBlock();
+    const includeList = includeBlock
+      ? this.getIncludeItems(includeBlock)
+      : undefined;
     const src = new ast.SQExtend(
       extendSrc,
-      this.getSourceExtensions(pcx.exploreProperties())
+      this.getSourceExtensions(pcx.exploreProperties()),
+      includeList
     );
     return this.astAt(src, pcx);
+  }
+
+  getIncludeItems(pcx: parse.IncludeBlockContext): ast.IncludeItem[] {
+    this.inExperiment('access_modifiers', pcx);
+    return pcx.includeItem().map(item => this.visitIncludeItem(item));
+  }
+
+  visitIncludeItem(pcx: parse.IncludeItemContext) {
+    if (pcx.EXCEPT()) {
+      const listCx = pcx.fieldNameList();
+      if (listCx === undefined) {
+        return this.astAt(new ast.IncludeExceptItem('*'), pcx);
+      }
+      const fieldList = this.getExcludeList(listCx);
+      return this.astAt(new ast.IncludeExceptItem(fieldList), pcx);
+    } else {
+      const listCx = pcx.includeList();
+      if (listCx === undefined) {
+        throw this.internalError(pcx, 'Expected an include list');
+      }
+      const kind = this.getAccessLabelProp(pcx.accessLabelProp());
+      const fieldList = this.getIncludeList(listCx);
+      return this.astAt(new ast.IncludeAccessItem(kind, fieldList), pcx);
+    }
+  }
+
+  getIncludeList(pcx: parse.IncludeListContext): ast.IncludeListItem[] | '*' {
+    if (pcx.STAR()) return '*';
+    const listCx = pcx.includeField();
+    if (listCx === undefined) {
+      throw this.internalError(pcx, 'Expected a field name list');
+    }
+    return listCx.map(fieldCx => this.getIncludeListItem(fieldCx));
+  }
+
+  getExcludeList(pcx: parse.FieldNameListContext): ast.FieldReference[] {
+    return pcx
+      .fieldName()
+      .map(fcx =>
+        this.astAt(
+          new ast.AccessModifierFieldReference([
+            this.astAt(new ast.FieldName(fcx.text), fcx),
+          ]),
+          fcx
+        )
+      );
+  }
+
+  getIncludeListItem(pcx: parse.IncludeFieldContext): ast.IncludeListItem {
+    const as = pcx._as ? pcx._as.text : undefined;
+    const name = this.astAt(
+      new ast.AccessModifierFieldReference([
+        this.astAt(this.getFieldName(pcx._name), pcx._name),
+      ]),
+      pcx._name
+    );
+    return this.astAt(new ast.IncludeListItem(name, as), pcx);
   }
 
   visitSQParens(pcx: parse.SQParensContext) {

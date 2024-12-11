@@ -37,7 +37,6 @@ import {StructSpaceFieldBase} from './struct-space-field-base';
 import {ParameterSpace} from './parameter-space';
 import {SourceDef} from '../../../model/malloy_types';
 import {SourceFieldSpace} from '../types/field-space';
-import {AccessModifierSpec} from '../source-properties/access-modifier';
 
 export abstract class DynamicSpace
   extends StaticSpace
@@ -48,7 +47,7 @@ export abstract class DynamicSpace
   private complete = false;
   private parameters: HasParameter[] = [];
   protected newTimezone?: string;
-  protected newAccessModifiers: AccessModifierSpec[] = [];
+  protected newAccessModifiers = new Map<string, model.AccessModifierLabel>();
 
   constructor(extending: SourceDef) {
     super(structuredClone(extending));
@@ -156,33 +155,20 @@ export abstract class DynamicSpace
         join.fixupJoinOn(this, missingOn);
       }
       // Add access modifiers at the end so views don't obey them
-      const existingModifiers = new Map<string, model.AccessModifierLabel>();
-      for (const mod of this.newAccessModifiers) {
-        if ('fieldName' in mod) {
-          const idx = fieldIndices.get(mod.fieldName);
-          if (idx !== undefined) {
-            this.processAccessModifier(
-              mod,
-              idx,
-              this.sourceDef.fields,
-              mod.fieldName,
-              existingModifiers
-            );
-          }
+      for (const [name, access] of this.newAccessModifiers) {
+        const index = this.sourceDef.fields.findIndex(
+          f => f.as ?? f.name === name
+        );
+        if (index === -1) {
+          throw new Error(`Can't find field '${name}' to set access modifier`);
+        }
+        if (access === 'public') {
+          delete this.sourceDef.fields[index].accessModifier;
         } else {
-          for (const fieldName of fieldIndices.keys()) {
-            if (mod.except.indexOf(fieldName) !== -1) continue;
-            const idx = fieldIndices.get(fieldName);
-            if (idx !== undefined) {
-              this.processAccessModifier(
-                mod,
-                idx,
-                this.sourceDef.fields,
-                fieldName,
-                existingModifiers
-              );
-            }
-          }
+          this.sourceDef.fields[index] = {
+            ...this.sourceDef.fields[index],
+            accessModifier: access,
+          };
         }
       }
     }
@@ -196,42 +182,5 @@ export abstract class DynamicSpace
     const ret = {...this.fromSource};
     ret.fields = [];
     return ret;
-  }
-
-  private processAccessModifier(
-    info: {
-      access: model.AccessModifierLabel;
-      logTo: MalloyElement;
-    },
-    idx: number,
-    fields: model.FieldDef[],
-    name: string,
-    existingModifiers: Map<string, model.AccessModifierLabel>
-  ) {
-    const existing = existingModifiers.get(name);
-    if (existing !== undefined && existing !== info.access) {
-      info.logTo.logError(
-        'conflicting-access-modifier',
-        `Access modifier for \`${name}\` was already specified as ${existing}`
-      );
-      return;
-    }
-    const fieldDef = fields[idx];
-    if (
-      (fieldDef.accessModifier === 'private' && info.access === 'internal') ||
-      (fieldDef.accessModifier !== undefined && info.access === 'public')
-    ) {
-      info.logTo.logError(
-        'cannot-expand-access',
-        `Can't expand access of \`${name}\` from ${fieldDef.accessModifier} to ${info.access}`
-      );
-    } else {
-      const setAccess = info.access === 'public' ? undefined : info.access;
-      fields[idx] = {
-        ...fieldDef,
-        accessModifier: setAccess,
-      };
-      existingModifiers.set(name, info.access);
-    }
   }
 }

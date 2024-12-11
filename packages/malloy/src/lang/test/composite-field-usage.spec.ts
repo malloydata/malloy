@@ -191,8 +191,7 @@ describe('composite sources', () => {
         ##! experimental { composite_sources access_modifiers }
         source: foo is compose(
           a extend {
-            dimension: x is 1
-            private: x
+            private dimension: x is 1
           },
           a
         )
@@ -204,8 +203,8 @@ describe('composite sources', () => {
         ##! experimental { composite_sources access_modifiers }
         source: foo is compose(
           a extend {
-            dimension: x is 1, y is 1
-            private: x
+            private dimension: x is 1
+            dimension: y is 1
           },
           a extend { dimension: x is 1 }
         )
@@ -221,8 +220,7 @@ describe('composite sources', () => {
         ##! experimental { composite_sources access_modifiers }
         source: foo is compose(
           a extend {
-            dimension: x is 1
-            internal: x
+            internal dimension: x is 1
           },
           a
         ) extend {
@@ -236,8 +234,7 @@ describe('composite sources', () => {
         ##! experimental { composite_sources access_modifiers }
         source: foo is compose(
           a extend {
-            dimension: x is 1
-            internal: x
+            internal dimension: x is 1
           },
           a extend {
             dimension: x is 1
@@ -254,8 +251,7 @@ describe('composite sources', () => {
             dimension: x is 1
           },
           a extend {
-            dimension: x is 1
-            internal: x
+            internal dimension: x is 1
           }
         )
         run: foo -> { group_by: x }

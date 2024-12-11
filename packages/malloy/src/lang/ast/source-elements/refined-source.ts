@@ -22,7 +22,9 @@
  */
 
 import {
+  AccessModifierLabel,
   Annotation,
+  DocumentLocation,
   SourceDef,
   expressionIsCalculation,
 } from '../../../model/malloy_types';
@@ -42,10 +44,8 @@ import {Renames} from '../source-properties/renames';
 import {MakeEntry} from '../types/space-entry';
 import {ParameterSpace} from '../field-space/parameter-space';
 import {JoinStatement} from '../source-properties/join';
-import {
-  AccessModifier,
-  AccessModifierSpec,
-} from '../source-properties/access-modifier';
+import {IncludeItem} from '../source-query-elements/include-item';
+import {FieldReference} from '../query-items/field-references';
 
 /**
  * A Source made from a source reference and a set of refinements
@@ -56,9 +56,13 @@ export class RefinedSource extends Source {
 
   constructor(
     readonly source: Source,
-    readonly refinement: SourceDesc
+    readonly refinement: SourceDesc,
+    readonly includeList: IncludeItem[] | undefined
   ) {
     super({source, refinement});
+    if (includeList) {
+      this.has({includeList});
+    }
   }
 
   getSourceDef(parameterSpace: ParameterSpace | undefined): SourceDef {
@@ -75,7 +79,10 @@ export class RefinedSource extends Source {
     const filters: Filter[] = [];
     let newTimezone: string | undefined;
 
-    const accessModifiers: AccessModifierSpec[] = [];
+    const inlineAccessModifiers: {
+      access: AccessModifierLabel;
+      fields: string[];
+    }[] = [];
     for (const el of this.refinement.list) {
       if (el instanceof ObjectAnnotation) {
         // Treat lone annotations as comments
@@ -96,25 +103,6 @@ export class RefinedSource extends Source {
           el.logError(code, 'Too many accept/except statements');
         }
         fieldListEdit = el;
-      } else if (el instanceof AccessModifier) {
-        if (el.refs !== undefined) {
-          for (const fieldName of el.refs.list) {
-            accessModifiers.push({
-              access: el.access,
-              logTo: fieldName,
-              fieldName: fieldName.refString,
-            });
-          }
-        } else {
-          accessModifiers.push({
-            access: el.access,
-            logTo: el,
-            except:
-              el.except?.flatMap(ex =>
-                ex.list.map(exInner => exInner.refString)
-              ) ?? [],
-          });
-        }
       } else if (
         el instanceof DeclareFields ||
         el instanceof JoinStatement ||
@@ -123,13 +111,10 @@ export class RefinedSource extends Source {
       ) {
         fields.push(...el.list);
         if (el.accessModifier) {
-          for (const field of el.list) {
-            accessModifiers.push({
-              fieldName: field.getName(),
-              access: el.accessModifier,
-              logTo: el,
-            });
-          }
+          inlineAccessModifiers.push({
+            fields: el.delarationNames,
+            access: el.accessModifier,
+          });
         }
       } else if (el instanceof Filter) {
         filters.push(el);
@@ -145,13 +130,28 @@ export class RefinedSource extends Source {
 
     const paramSpace = pList ? new ParameterSpace(pList) : undefined;
     const from = structuredClone(this.source.getSourceDef(paramSpace));
+    const {fieldsToInclude, modifiers, renames} = processIncludeList(
+      this.includeList,
+      from
+    );
+    for (const modifier of inlineAccessModifiers) {
+      for (const field of modifier.fields) {
+        modifiers.set(field, modifier.access);
+      }
+    }
     // Note that this is explicitly not:
     // const from = structuredClone(this.source.withParameters(parameterSpace, pList));
     // Because the parameters are added to the resulting struct, not the base struct
     if (primaryKey) {
       from.primaryKey = primaryKey.field.name;
     }
-    const fs = RefinedSpace.filteredFrom(from, fieldListEdit, paramSpace);
+    const fs = RefinedSpace.filteredFrom(
+      from,
+      fieldListEdit,
+      fieldsToInclude,
+      renames,
+      paramSpace
+    );
     if (newTimezone) {
       fs.setTimezone(newTimezone);
     }
@@ -165,7 +165,7 @@ export class RefinedSource extends Source {
         primaryKey.logError(keyDef.error.code, keyDef.error.message);
       }
     }
-    fs.addAccessModifiers(accessModifiers);
+    fs.addAccessModifiers(modifiers);
     const retStruct = fs.structDef();
 
     const filterList = retStruct.filterList || [];
@@ -190,4 +190,111 @@ export class RefinedSource extends Source {
     this.document()?.rememberToAddModelAnnotations(retStruct);
     return retStruct;
   }
+}
+
+function processIncludeList(
+  includeItems: IncludeItem[] | undefined,
+  from: SourceDef
+) {
+  const allFields = new Set(from.fields.map(f => f.name));
+  const alreadyPrivateFields = new Set(
+    from.fields.filter(f => f.accessModifier === 'private').map(f => f.name)
+  );
+  let mode: 'exclude' | 'include' | undefined = undefined;
+  const fieldsMentioned = new Set<string>();
+  let star: AccessModifierLabel | 'inherit' | undefined = undefined;
+  const modifiers = new Map<string, AccessModifierLabel>();
+  const renames: {
+    as: string;
+    name: FieldReference;
+    location: DocumentLocation;
+  }[] = [];
+  if (includeItems === undefined) {
+    return {fieldsToInclude: undefined, modifiers, renames};
+  }
+  for (const item of includeItems) {
+    if (item.isStar) {
+      if (item.kind === 'except') {
+        item.logWarning(
+          'wildcard-except-redundant',
+          '`except: *` is implied, unless another clause uses *'
+        );
+      } else if (star !== undefined) {
+        item.logError(
+          'already-used-star-in-include',
+          'Wildcard already used in this include block'
+        );
+      } else {
+        star = item.kind ?? 'inherit';
+      }
+    } else if (item.kind !== 'except') {
+      if (mode === 'exclude') {
+        item.logError(
+          'include-after-exclude',
+          'Cannot include specific fields if specific fields are already excluded'
+        );
+        continue;
+      }
+      mode = 'include';
+      for (const f of item.getFields()) {
+        const name = f.refString;
+        if (alreadyPrivateFields.has(name)) {
+          f.logError(
+            'cannot-expand-access',
+            `Cannot expand access of \`${name}\` from private to ${item.kind}`
+          );
+        }
+        if (modifiers.has(name)) {
+          f.logError(
+            'duplicate-include',
+            `Field \`${name}\` already referenced in include list`
+          );
+        } else {
+          if (item.kind !== undefined) {
+            modifiers.set(name, item.kind);
+          }
+          fieldsMentioned.add(name);
+        }
+      }
+      for (const rename of item.getRenames()) {
+        renames.push(rename);
+      }
+    } else {
+      if (mode === 'include') {
+        item.logError(
+          'exclude-after-include',
+          'Cannot exclude specific fields if specific fields are already included'
+        );
+      } else {
+        mode = 'exclude';
+        star = 'inherit';
+        for (const f of item.getFields()) {
+          fieldsMentioned.add(f.refString);
+        }
+      }
+    }
+  }
+  const starFields: Set<string> = new Set(allFields);
+  fieldsMentioned.forEach(f => starFields.delete(f));
+  alreadyPrivateFields.forEach(f => starFields.delete(f));
+  let fieldsToInclude: Set<string>;
+  if (star !== undefined && star !== 'inherit') {
+    for (const field of starFields) {
+      modifiers.set(field, star);
+    }
+  }
+  if (mode !== 'exclude') {
+    if (star !== undefined) {
+      fieldsToInclude = allFields;
+    } else {
+      fieldsToInclude = fieldsMentioned;
+    }
+  } else {
+    fieldsToInclude = starFields;
+  }
+  // TODO: validate that a field isn't renamed more than once
+  // TODO: validate that excluded fields are not referenced by included fields
+  // TODO: make renames fields work in existing references
+  // TODO: make renames that would replace an excluded field don't do that
+  return {fieldsToInclude, modifiers, renames};
 }

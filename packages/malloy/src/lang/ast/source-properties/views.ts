@@ -34,4 +34,8 @@ export class Views extends DefinitionList<ViewFieldDeclaration> {
   ) {
     super(views);
   }
+
+  get delarationNames(): string[] {
+    return this.list.map(el => el.name);
+  }
 }

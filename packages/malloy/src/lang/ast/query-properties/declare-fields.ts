@@ -50,4 +50,8 @@ export class DeclareFields
       executeFor.inputFS.extendSource(qel);
     }
   }
+
+  get delarationNames(): string[] {
+    return this.list.map(el => el.defineName);
+  }
 }

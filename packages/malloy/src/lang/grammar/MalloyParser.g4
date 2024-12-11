@@ -179,16 +179,15 @@ exploreStatement
   | joinStatement                            # defJoin_stub
   | whereStatement                           # defExploreWhere_stub
   | PRIMARY_KEY fieldName                    # defExplorePrimaryKey
-  | accessLabel? RENAME renameList            # defExploreRename
+  | accessLabel? RENAME renameList           # defExploreRename
   | (ACCEPT | EXCEPT) fieldNameList          # defExploreEditField
-  | (PUBLIC | INTERNAL | PRIVATE) accessModifierList
-                                             # defAccessModifier
   | tags accessLabel? (QUERY | VIEW) subQueryDefList
                                              # defExploreQuery
   | timezoneStatement                        # defExploreTimezone
   | ANNOTATION+                              # defExploreAnnotation
   | ignoredModelAnnotations                  # defIgnoreModel_stub
   ;
+
 
 accessLabel
   : PUBLIC_KW
@@ -262,14 +261,40 @@ sourceArgument
   ;
 
 sqExpr
-  : id sourceArguments?                             # SQID
-  | OPAREN sqExpr CPAREN                            # SQParens
-  | COMPOSE OPAREN (sqExpr (COMMA sqExpr)*)? CPAREN # SQCompose
-  | sqExpr PLUS segExpr                             # SQRefinedQuery
-  | sqExpr ARROW segExpr                            # SQArrow
-  | sqExpr EXTEND exploreProperties                 # SQExtendedSource
-  | exploreTable                                    # SQTable
-  | sqlSource                                       # SQSQL
+  : id sourceArguments?                                      # SQID
+  | OPAREN sqExpr CPAREN                                     # SQParens
+  | COMPOSE OPAREN (sqExpr (COMMA sqExpr)*)? CPAREN          # SQCompose
+  | sqExpr PLUS segExpr                                      # SQRefinedQuery
+  | sqExpr ARROW segExpr                                     # SQArrow
+  | sqExpr (INCLUDE includeBlock)? EXTEND exploreProperties  # SQExtendedSource
+  | sqExpr INCLUDE includeBlock                              # SQInclude
+  | exploreTable                                             # SQTable
+  | sqlSource                                                # SQSQL
+  ;
+
+includeBlock
+  : OCURLY (includeItem | SEMI)* closeCurly
+  ;
+
+includeItem
+  : accessLabelProp? includeList
+  | EXCEPT fieldNameList
+  | EXCEPT STAR
+  ;
+
+accessLabelProp
+  : PUBLIC
+  | PRIVATE
+  | INTERNAL
+  ;
+
+includeList
+  : includeField (COMMA? includeField)* COMMA?
+  | STAR
+  ;
+
+includeField
+  : (as=fieldName isDefine)? name=fieldName
   ;
 
 segExpr
