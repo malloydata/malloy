@@ -35,7 +35,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       run: y -> { group_by: x.foo }
     `).malloyResultMatches(runtime, {foo: 1});
   });
-  it('composite used in join on', async () => {
+  it('composite field from joined source used in join on', async () => {
     await expect(`
       ##! experimental.composite_sources
       source: state_facts is ${databaseName}.table('malloytest.state_facts')
@@ -48,6 +48,41 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       }
       run: y -> { group_by: ca.state; where: state = 'IL' }
     `).malloyResultMatches(runtime, {state: 'CA'});
+  });
+  it('composite field from joining source used in join on', async () => {
+    await expect(`
+      ##! experimental.composite_sources
+      source: state_facts is ${databaseName}.table('malloytest.state_facts')
+      source: x is compose(
+        state_facts extend {
+          dimension:
+            state_one is 'CA'
+            state_two is 'IL'
+        },
+        state_facts extend {
+          dimension: state_one is 'IL'
+        }
+      ) extend {
+        join_one: state_facts on state_one = state_facts.state
+      }
+      run: x -> { group_by: state_facts.state }
+    `).malloyResultMatches(runtime, {state: 'CA'});
+  });
+  it('query against composite resolves nested composite source even when no composite fields', async () => {
+    await expect(`
+      ##! experimental.composite_sources
+      source: state_facts is ${databaseName}.table('malloytest.state_facts')
+      source: x is compose(
+        compose(
+          state_facts,
+          state_facts
+        ),
+        state_facts
+      ) extend {
+        dimension: a is 1
+      }
+      run: x -> { group_by: a }
+    `).malloyResultMatches(runtime, {a: 1});
   });
   // TODO test always join composite field usage
   it('composite field used in view', async () => {
@@ -207,5 +242,15 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         }
       }
     `).malloyResultMatches(runtime, {'foo.x': 1});
+  });
+  it('composite with select *', async () => {
+    await expect(`
+      ##! experimental.composite_sources
+      source: state_facts is ${databaseName}.table('malloytest.state_facts')
+      source: x is compose(state_facts, state_facts extend { dimension: foo is 1 }) extend {
+        accept: foo
+      }
+      run: x -> { select: * }
+    `).malloyResultMatches(runtime, {foo: 1});
   });
 });
