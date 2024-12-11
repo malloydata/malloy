@@ -23,7 +23,7 @@
 
 import {PipeSegment} from '../../../model/malloy_types';
 import {QueryOperationSpace} from '../field-space/query-spaces';
-import {StaticSpace} from '../field-space/static-space';
+import {StaticSourceSpace} from '../field-space/static-space';
 import {FieldSpace} from '../types/field-space';
 import {PipelineComp} from '../types/pipeline-comp';
 import {View} from './view';
@@ -46,7 +46,7 @@ export class ViewArrow extends View {
 
   pipelineComp(fs: FieldSpace): PipelineComp {
     const baseComp = this.base.pipelineComp(fs);
-    const nextFS = new StaticSpace(baseComp.outputStruct);
+    const nextFS = new StaticSourceSpace(baseComp.outputStruct);
     const finalComp = this.operation.pipelineComp(nextFS);
     return {
       pipeline: [...baseComp.pipeline, ...finalComp.pipeline],

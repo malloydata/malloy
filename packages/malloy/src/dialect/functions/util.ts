@@ -204,17 +204,18 @@ export function overload(
 }
 
 export interface ArrayBlueprint {
-  array: TypeDescBlueprint;
+  array: TypeDescElementBlueprint;
 }
 export interface RecordBlueprint {
-  record: Record<string, TypeDescBlueprint>;
+  record: Record<string, TypeDescElementBlueprint>;
 }
-export type TypeDescBlueprint =
-  // default for return type is min scalar
-  // default for param type is any expression type (max input)
+export type TypeDescElementBlueprint =
   | LeafExpressionType
   | ArrayBlueprint
-  | RecordBlueprint
+  | RecordBlueprint;
+
+export type TypeDescBlueprint =
+  | TypeDescElementBlueprint
   | {generic: string}
   | {literal: LeafExpressionType | {generic: string}}
   | {constant: LeafExpressionType | {generic: string}}
@@ -302,7 +303,7 @@ function expandReturnTypeBlueprint(
   if (typeof blueprint === 'string') {
     base = minScalar(blueprint);
   } else if ('array' in blueprint) {
-    const innerType = expandReturnTypeBlueprint(blueprint.array, undefined);
+    const innerType = expandReturnTypeBlueprint(blueprint.array, generic);
     const {expressionType, evalSpace} = innerType;
     if (TD.isAtomic(innerType)) {
       if (innerType.type !== 'record') {
@@ -322,18 +323,19 @@ function expandReturnTypeBlueprint(
         };
       }
     } else {
-      throw new Error('CHRIS WHAT DO I DO WITH AN ARRAY OF WHATEVER');
+      // mtoy todo  fix by doing "exapndElementBlueprint" ...
+      throw new Error(
+        `TypeDescElementBlueprint should never allow ${blueprint.array}`
+      );
     }
   } else if ('record' in blueprint) {
     const fields: FieldDef[] = [];
     for (const [fieldName, fieldBlueprint] of Object.entries(
       blueprint.record
     )) {
-      const fieldDesc = expandReturnTypeBlueprint(fieldBlueprint, undefined);
+      const fieldDesc = expandReturnTypeBlueprint(fieldBlueprint, generic);
       if (TD.isAtomic(fieldDesc)) {
-        fields.push(
-          mkFieldDef(fieldDesc, fieldName, 'HELP CHRIS I NEED THE DIALECT')
-        );
+        fields.push(mkFieldDef(fieldDesc, fieldName));
       }
     }
     base = {
@@ -408,6 +410,10 @@ function expandParamTypeBlueprint(
     return maxScalar(removeGeneric(blueprint.dimension, generic));
   } else if ('measure' in blueprint) {
     return maxAggregate(removeGeneric(blueprint.measure, generic));
+  } else if ('array' in blueprint) {
+    throw new Error('mtoy todo understand expand param type blueprint');
+  } else if ('record' in blueprint) {
+    throw new Error('mtoy todo understand expand param type blueprint');
   } else {
     return maxAnalytic(removeGeneric(blueprint.calculation, generic));
   }

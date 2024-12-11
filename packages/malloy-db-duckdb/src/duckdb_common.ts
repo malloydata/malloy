@@ -240,7 +240,7 @@ export abstract class DuckDBCommon
       } else {
         if (arrayMatch) {
           malloyType = this.dialect.sqlTypeToMalloyType(duckDBType);
-          structDef.fields.push(mkArrayDef(malloyType, name, this.dialectName));
+          structDef.fields.push(mkArrayDef(malloyType, name));
         } else {
           structDef.fields.push({...malloyType, name});
         }

@@ -133,7 +133,7 @@ describe('DuckDBConnection', () => {
       const structDef = makeStructDef();
       connection.fillStructDefFromTypeMap(structDef, {test: ARRAY_SCHEMA});
       expect(structDef.fields[0]).toEqual(
-        mkArrayDef({type: 'number', numberType: 'integer'}, 'test', 'duckdb')
+        mkArrayDef({type: 'number', numberType: 'integer'}, 'test')
       );
     });
 

@@ -444,9 +444,7 @@ export abstract class TrinoPrestoConnection
             innerName,
             innerTrinoType
           );
-          recordType.fields.push(
-            mkFieldDef(innerMalloyType, innerName, this.dialectName)
-          );
+          recordType.fields.push(mkFieldDef(innerMalloyType, innerName));
         }
       }
       return recordType;
@@ -460,7 +458,7 @@ export abstract class TrinoPrestoConnection
       const type = row[4] || row[1];
       const malloyType = this.malloyTypeFromTrinoType(name, type);
       // console.log('>', row, '\n<', malloyType);
-      structDef.fields.push(mkFieldDef(malloyType, name, this.dialectName));
+      structDef.fields.push(mkFieldDef(malloyType, name));
     }
   }
 
@@ -667,7 +665,7 @@ class PrestoExplainParser extends TinyParser {
       const name = fieldNames[nameIndex];
       this.next('id', ':');
       const nextType = this.typeDef();
-      fields.push(mkFieldDef(nextType, name, this.dialect.name));
+      fields.push(mkFieldDef(nextType, name));
       const sep = this.next();
       if (sep.text === ',') {
         continue;
@@ -696,7 +694,7 @@ class PrestoExplainParser extends TinyParser {
       for (;;) {
         const name = this.next('quoted_name');
         const getDef = this.typeDef();
-        fields.push(mkFieldDef(getDef, name.text, this.dialect.name));
+        fields.push(mkFieldDef(getDef, name.text));
         const sep = this.next();
         if (sep.text === ')') {
           break;

@@ -702,46 +702,36 @@ export interface ScalarArrayDef
   join: 'many';
 }
 
-export function mkFieldDef(
-  atd: AtomicTypeDef,
-  name: string,
-  dialect: string
-): AtomicFieldDef {
+export function mkFieldDef(atd: AtomicTypeDef, name: string): AtomicFieldDef {
   if (isScalarArray(atd)) {
-    return mkArrayDef(atd.elementTypeDef, name, dialect);
+    return mkArrayDef(atd.elementTypeDef, name);
   }
   if (isRepeatedRecord(atd)) {
     const {type, fields, elementTypeDef} = atd;
-    return {type, fields, elementTypeDef, join: 'many', name, dialect};
+    return {type, fields, elementTypeDef, join: 'many', name};
   }
   if (atd.type === 'record') {
     const {type, fields} = atd;
-    return {type, fields, join: 'one', dialect, name};
+    return {type, fields, join: 'one', name};
   }
   return {...atd, name};
 }
 
-export function mkArrayDef(
-  ofType: AtomicTypeDef,
-  name: string,
-  dialect: string
-): ArrayDef {
+export function mkArrayDef(ofType: AtomicTypeDef, name: string): ArrayDef {
   if (ofType.type === 'record') {
     return {
       type: 'array',
       join: 'many',
       name,
-      dialect,
       elementTypeDef: {type: 'record_element'},
       fields: ofType.fields,
     };
   }
-  const valueEnt = mkFieldDef(ofType, 'value', dialect);
+  const valueEnt = mkFieldDef(ofType, 'value');
   return {
     type: 'array',
     join: 'many',
     name,
-    dialect,
     elementTypeDef: ofType,
     fields: [
       valueEnt,
@@ -1086,7 +1076,6 @@ interface StructDefBase extends HasLocation, NamedObject {
   annotation?: Annotation;
   modelAnnotation?: ModelAnnotation;
   fields: FieldDef[];
-  dialect: string;
 }
 
 interface SourceDefBase extends StructDefBase, Filtered, ResultStructMetadata {
@@ -1095,6 +1084,7 @@ interface SourceDefBase extends StructDefBase, Filtered, ResultStructMetadata {
   queryTimezone?: string;
   connection: string;
   primaryKey?: PrimaryKeyRef;
+  dialect: string;
 }
 /** which field is the primary key in this struct */
 export type PrimaryKeyRef = string;
@@ -1356,7 +1346,7 @@ export function getIdentifier(n: AliasedName): string {
 }
 
 export type NamedModelObject =
-  | StructDef
+  | SourceDef
   | NamedQuery
   | FunctionDef
   | ConnectionDef;

@@ -23,7 +23,7 @@
 
 import {Query, StructDef, refIsStructDef} from '../../../model/malloy_types';
 import {Source} from '../source-elements/source';
-import {StaticSpace} from '../field-space/static-space';
+import {StaticSourceSpace} from '../field-space/static-space';
 import {FieldSpace} from '../types/field-space';
 import {QueryComp} from '../types/query-comp';
 import {QueryElement} from '../types/query-element';
@@ -64,13 +64,13 @@ export class QueryArrow extends QueryBase implements QueryElement {
       inputStruct = refIsStructDef(invoked.structRef)
         ? invoked.structRef
         : this.source.getSourceDef(undefined);
-      fieldSpace = new StaticSpace(inputStruct);
+      fieldSpace = new StaticSourceSpace(inputStruct);
     } else {
       // We are adding a second stage to the given "source" query; we get the query and add a segment
       const lhsQuery = this.source.queryComp(isRefOk);
       queryBase = lhsQuery.query;
       inputStruct = lhsQuery.outputStruct;
-      fieldSpace = new StaticSpace(lhsQuery.outputStruct);
+      fieldSpace = new StaticSourceSpace(lhsQuery.outputStruct);
     }
     const {pipeline, annotation, outputStruct, name} =
       this.view.pipelineComp(fieldSpace);
