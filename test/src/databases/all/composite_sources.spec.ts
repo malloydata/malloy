@@ -253,4 +253,17 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       run: x -> { select: * }
     `).malloyResultMatches(runtime, {foo: 1});
   });
+  it('composite with each', async () => {
+    await expect(`
+      ##! experimental.composite_sources
+      source: state_facts is ${databaseName}.table('malloytest.state_facts')
+      source: x is compose(
+        state_facts extend { measure: foo is sum(0); dimension: bar is 1 },
+        state_facts extend { measure: foo is count() }
+      ) extend {
+        dimension: arr is [1, 2, 3]
+      }
+      run: x -> { aggregate: foo; group_by: bar, arr.each }
+    `).malloyResultMatches(runtime, {foo: 0});
+  });
 });

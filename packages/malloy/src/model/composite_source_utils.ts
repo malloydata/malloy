@@ -140,10 +140,13 @@ function _resolveCompositeSources(
         error: {code: 'composite_source_not_defined', data: {path: newPath}},
       };
     }
-    if (!isJoined(join) || !isSourceDef(join)) {
+    if (!isJoined(join)) {
       return {
         error: {code: 'composite_source_not_a_join', data: {path: newPath}},
       };
+    } else if (!isSourceDef(join)) {
+      // Non-source join, like an array, skip it (no need to resolve)
+      continue;
     }
     const resolved = _resolveCompositeSources(
       newPath,
