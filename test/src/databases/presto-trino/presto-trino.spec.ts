@@ -2,7 +2,7 @@
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
- *  LICENSE file in the root directory of this source tree.
+ * LICENSE file in the root directory of this source tree.
  */
 
 /* eslint-disable no-console */
@@ -22,6 +22,18 @@ describe.each(runtimes.runtimeList)(
       throw new Error("Couldn't build runtime");
     }
 
+    test.when(databaseName === 'presto')('presto explain parser', async () => {
+      const abrec = 'CAST(ROW(0,1) AS ROW(a DOUBLE,b DOUBLE))';
+      await expect(`
+        run: ${databaseName}.sql("""
+          SELECT
+            ${abrec} as "abrec",
+            ARRAY['c', 'd'] as str_array,
+            array[1,2,3] as int_array,
+            ARRAY[${abrec}] as array_of_abrec
+        """)
+      `).malloyResultMatches(runtime, {});
+    });
     it(`runs an sql query - ${databaseName}`, async () => {
       await expect(
         `run: ${databaseName}.sql("SELECT 1 as n") -> { select: n }`
@@ -271,6 +283,35 @@ describe.each(runtimes.runtimeList)(
         {x: 22, pctrnk: 0.5},
         {x: 1, pctrnk: 0},
       ]);
+    });
+
+    it(`runs the url_extract functions - ${databaseName}`, async () => {
+      await expect(`
+        run: ${databaseName}.sql(
+          """
+            SELECT 'http://websitetesthost.com:80/path_comp/my_test?first_param=val_one&second_param=2#example_frag' as test_url
+          """
+        ) -> {
+          select:
+            fragment is url_extract_fragment(test_url)
+            host is url_extract_host(test_url)
+            param_one is url_extract_parameter(test_url, 'first_param')
+            param_two is url_extract_parameter(test_url, 'second_param')
+            path is url_extract_path(test_url)
+            port is url_extract_port(test_url)
+            protocol is url_extract_protocol(test_url)
+            query is url_extract_query(test_url)
+        }
+        `).malloyResultMatches(runtime, {
+        fragment: 'example_frag',
+        host: 'websitetesthost.com',
+        param_one: 'val_one',
+        param_two: '2',
+        path: '/path_comp/my_test',
+        port: 80,
+        protocol: 'http',
+        query: 'first_param=val_one&second_param=2',
+      });
     });
   }
 );

@@ -1133,30 +1133,9 @@ export class MalloyToAST
     return this.astAt(new ast.Ordering(orderList), pcx);
   }
 
-  visitTopStatement(pcx: parse.TopStatementContext): ast.Top {
-    const byCx = pcx.bySpec();
+  visitTopStatement(pcx: parse.TopStatementContext): ast.Limit {
     const topN = this.getNumber(pcx.INTEGER_LITERAL());
-    let top: ast.Top | undefined;
-    if (byCx) {
-      this.m4advisory(
-        byCx,
-        'top-by',
-        'by clause of top statement unupported. Use order_by instead'
-      );
-      const nameCx = byCx.fieldName();
-      if (nameCx) {
-        const name = this.getFieldName(nameCx);
-        top = new ast.Top(topN, name);
-      }
-      const exprCx = byCx.fieldExpr();
-      if (exprCx) {
-        top = new ast.Top(topN, this.getFieldExpr(exprCx));
-      }
-    }
-    if (!top) {
-      top = new ast.Top(topN, undefined);
-    }
-    return this.astAt(top, pcx);
+    return this.astAt(new ast.Limit(topN), pcx);
   }
 
   visitTopLevelQueryDefs(
@@ -2075,11 +2054,6 @@ export class MalloyToAST
   }
 
   visitExprLiteralRecord(pcx: parse.ExprLiteralRecordContext) {
-    this.contextError(
-      pcx,
-      'not-yet-implemented',
-      'Record data is not yet implemented'
-    );
     const els = this.only<ast.RecordElement>(
       pcx.recordElement().map(elCx => this.astAt(this.visit(elCx), elCx)),
       visited => visited instanceof ast.RecordElement && visited,
@@ -2088,13 +2062,10 @@ export class MalloyToAST
     return new ast.RecordLiteral(els);
   }
 
-  visitExprArrayLiteral(pcx: parse.ExprArrayLiteralContext): ast.Unimplemented {
-    this.contextError(
-      pcx,
-      'not-yet-implemented',
-      'Array data is not yet implemented'
-    );
-    return new ast.Unimplemented();
+  visitExprArrayLiteral(pcx: parse.ExprArrayLiteralContext): ast.ArrayLiteral {
+    const contents = pcx.fieldExpr().map(fcx => this.getFieldExpr(fcx));
+    const literal = new ast.ArrayLiteral(contents);
+    return this.astAt(literal, pcx);
   }
 
   visitExprWarnLike(pcx: parse.ExprWarnLikeContext): ast.ExprCompare {

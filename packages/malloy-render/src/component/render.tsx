@@ -2,7 +2,7 @@
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
- *  LICENSE file in the root directory of this source tree.
+ * LICENSE file in the root directory of this source tree.
  */
 
 import {
@@ -27,10 +27,12 @@ import {ComponentOptions, ICustomElement} from 'component-register';
 import {applyRenderer} from './apply-renderer';
 import {
   DashboardConfig,
+  DrillData,
   MalloyClickEventPayload,
   TableConfig,
   VegaConfigHandler,
 } from './types';
+export type {DimensionContextEntry, DrillData} from './types';
 import css from './render.css?raw';
 
 export type MalloyRenderProps = {
@@ -40,6 +42,7 @@ export type MalloyRenderProps = {
   scrollEl?: HTMLElement;
   modalElement?: HTMLElement;
   onClick?: (payload: MalloyClickEventPayload) => void;
+  onDrill?: (drillData: DrillData) => void;
   vegaConfigOverride?: VegaConfigHandler;
   tableConfig?: Partial<TableConfig>;
   dashboardConfig?: Partial<DashboardConfig>;
@@ -53,6 +56,7 @@ const ConfigContext = createContext<{
   addCSSToShadowRoot: (css: string) => void;
   addCSSToDocument: (id: string, css: string) => void;
   onClick?: (payload: MalloyClickEventPayload) => void;
+  onDrill?: (drillData: DrillData) => void;
   vegaConfigOverride?: VegaConfigHandler;
   modalElement?: HTMLElement;
 }>();
@@ -122,6 +126,7 @@ export function MalloyRender(
         disableVirtualization: false,
         rowLimit: Infinity,
         shouldFillWidth: false,
+        enableDrill: false,
       },
       props.tableConfig
     );
@@ -139,6 +144,7 @@ export function MalloyRender(
       <ConfigContext.Provider
         value={{
           onClick: props.onClick,
+          onDrill: props.onDrill,
           vegaConfigOverride: props.vegaConfigOverride,
           element,
           stylesheet,
@@ -212,9 +218,14 @@ export function MalloyRenderInner(props: {
   };
 
   return (
-    <ResultContext.Provider value={metadata()}>
-      {rendering().renderValue}
-    </ResultContext.Provider>
+    <>
+      <ResultContext.Provider value={metadata()}>
+        {rendering().renderValue}
+      </ResultContext.Provider>
+      <Show when={metadata().store.store.showCopiedModal}>
+        <div class="malloy-copied-modal">Copied query to clipboard!</div>
+      </Show>
+    </>
   );
 }
 

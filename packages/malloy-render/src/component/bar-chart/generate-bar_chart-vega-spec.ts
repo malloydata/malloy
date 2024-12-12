@@ -2,7 +2,7 @@
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
- *  LICENSE file in the root directory of this source tree.
+ * LICENSE file in the root directory of this source tree.
  */
 
 import {Explore, QueryDataRow, QueryValue} from '@malloydata/malloy';
@@ -708,6 +708,7 @@ export function generateBarChartVegaSpec(
       fill: 'color',
       // No title for measure list legends
       title: seriesField ? seriesField.name : '',
+      orient: 'right',
       ...legendSettings,
       encode: {
         entries: {

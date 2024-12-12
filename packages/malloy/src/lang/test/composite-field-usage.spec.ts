@@ -166,11 +166,16 @@ describe('composite sources', () => {
         ##! experimental.composite_sources
         run: compose(a, a extend { dimension: one is 1 }) -> { group_by: one }
     `).toTranslate());
-    test.skip('index on composite fails', () =>
+    test('index on composite translates', () =>
       expect(`
         ##! experimental.composite_sources
-        run: compose(a extend { dimension: two is 2 }, a extend { dimension: one is 1 }) -> { index: * }
-    `).toLog(errorMessage('Cannot index on a composite source')));
+        source: x is compose(
+          a extend { except: ai },
+          a
+        )
+        run: x -> { index: ai }
+        run: x -> { index: * }
+    `).toTranslate());
     test('raw run of composite source fails', () =>
       expect(`
         ##! experimental.composite_sources
@@ -256,6 +261,30 @@ describe('composite sources', () => {
         )
         run: foo -> { group_by: x }
       `).toLog(errorMessage("'x' is internal"));
+    });
+    test('array.each is okay', () => {
+      expect(`
+        ##! experimental { composite_sources }
+        source: foo is compose(
+          a extend { dimension: x is 1 },
+          a extend { dimension: y is 2 }
+        ) extend {
+          dimension: arr is [1, 2, 3]
+        }
+        run: foo -> { group_by: y, arr.each }
+      `).toTranslate();
+    });
+    test('timevalue extract okay', () => {
+      expect(`
+        ##! experimental { composite_sources }
+        source: foo is compose(
+          a extend { dimension: x is 1 },
+          a extend { dimension: y is 2 }
+        ) extend {
+          dimension: time is now
+        }
+        run: foo -> { group_by: y, time.day }
+      `).toTranslate();
     });
   });
 });

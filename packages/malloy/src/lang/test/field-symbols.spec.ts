@@ -112,7 +112,7 @@ describe('structdef comprehension', () => {
   });
 
   test('import repeated record', () => {
-    const field: model.ArrayDef = {
+    const field: model.ScalarArrayDef = {
       name: 't',
       type: 'array',
       dialect: 'standardsql',
@@ -131,7 +131,7 @@ describe('structdef comprehension', () => {
   });
 
   test('import inline field', () => {
-    const field: model.RecordFieldDef = {
+    const field: model.RecordDef = {
       name: 't',
       type: 'record',
       dialect: 'standardsql',

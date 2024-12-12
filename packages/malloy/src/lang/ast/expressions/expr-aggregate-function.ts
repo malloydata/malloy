@@ -29,8 +29,8 @@ import {
   AggregateExpr,
   Expr,
   hasExpression,
-  isJoined,
   isAtomic,
+  isJoined,
 } from '../../../model/malloy_types';
 import {exprWalk} from '../../../model/utils';
 

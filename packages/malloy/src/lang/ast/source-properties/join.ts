@@ -64,7 +64,7 @@ export abstract class Join
     fs.newEntry(
       this.name.refString,
       this,
-      new JoinSpaceField(fs.parameterSpace(), this, fs.dialect)
+      new JoinSpaceField(fs.parameterSpace(), this)
     );
   }
 

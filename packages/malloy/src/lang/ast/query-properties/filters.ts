@@ -95,9 +95,6 @@ export class Filter
   ): FilterCondition | undefined {
     const fExpr = filter.filterCondition(fs);
 
-    // mtoy todo is having we never set then queryRefinementStage might be wrong
-    // ... calculations and aggregations must go last
-
     // Aggregates are ALSO checked at SQL generation time, but checking
     // here allows better reflection of errors back to user.
     if (this.havingClause !== undefined) {

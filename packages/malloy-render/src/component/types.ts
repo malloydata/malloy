@@ -2,7 +2,7 @@
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
- *  LICENSE file in the root directory of this source tree.
+ * LICENSE file in the root directory of this source tree.
  */
 
 import {
@@ -119,7 +119,20 @@ export type TableConfig = {
   disableVirtualization: boolean;
   rowLimit: number;
   shouldFillWidth: boolean;
+  enableDrill: boolean;
 };
 export type DashboardConfig = {
   disableVirtualization: boolean;
+};
+
+export type DrillData = {
+  dimensionFilters: DimensionContextEntry[];
+  copyQueryToClipboard: () => Promise<void>;
+  query: string;
+  whereClause: string;
+};
+
+export type DimensionContextEntry = {
+  fieldDef: string;
+  value: string | number | boolean | Date;
 };

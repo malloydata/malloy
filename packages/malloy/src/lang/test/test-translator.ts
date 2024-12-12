@@ -41,6 +41,8 @@ import {
   TableSourceDef,
   SQLSourceDef,
   SQLSentence,
+  NumberTypeDef,
+  mkArrayDef,
 } from '../../model/malloy_types';
 import {ExpressionDef, MalloyElement} from '../ast';
 import {NameSpace} from '../ast/types/name-space';
@@ -57,7 +59,7 @@ import {EventStream} from '../../runtime_types';
 export function pretty(thing: any): string {
   return inspect(thing, {breakLength: 72, depth: Infinity});
 }
-
+const intType: NumberTypeDef = {type: 'number', numberType: 'integer'};
 const mockSchema: Record<string, SourceDef> = {
   'aTable': {
     type: 'table',
@@ -68,7 +70,7 @@ const mockSchema: Record<string, SourceDef> = {
     fields: [
       {type: 'string', name: 'astr'},
       {type: 'number', name: 'af', numberType: 'float'},
-      {type: 'number', name: 'ai', numberType: 'integer'},
+      {...intType, name: 'ai'},
       {type: 'date', name: 'ad'},
       {type: 'boolean', name: 'abool'},
       {type: 'timestamp', name: 'ats'},
@@ -91,11 +93,12 @@ const mockSchema: Record<string, SourceDef> = {
       {
         type: 'record',
         name: 'aninline',
-        fields: [{type: 'number', name: 'column', numberType: 'integer'}],
+        fields: [{...intType, name: 'column'}],
         join: 'one',
         matrixOperation: 'left',
         dialect: 'standardsql',
       },
+      mkArrayDef(intType, 'ais', 'standardsql'),
     ],
   },
   'malloytest.carriers': {

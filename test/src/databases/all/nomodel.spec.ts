@@ -1167,6 +1167,85 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
     }
   );
 
+  test.when(
+    runtime.supportsNesting && runtime.dialect.supportsPipelinesInViews
+  )(`Nested pipelines sort properly - ${databaseName}`, async () => {
+    const doTrace = false; // Have to turn this on to debug this test
+    const result = await runtime
+      .loadQuery(
+        `
+        source: state_facts is ${databaseName}.table('malloytest.state_facts')
+        extend {
+            view: base_view is {
+                group_by: state
+                aggregate: airports is sum(airport_count)
+                order_by: airports asc
+            }
+            ->
+            {
+                group_by: state
+                aggregate: airports.sum()
+                order_by: airports
+            }
+            view: base_view2 is {
+                group_by: state
+                aggregate: aircrafts is sum(aircraft_count)
+                order_by: aircrafts asc
+            }
+            ->
+            {
+                group_by: state
+                aggregate: aircrafts.sum()
+                order_by: aircrafts
+            }
+            view: base_view3 is {
+                group_by: state
+                aggregate: aircrafts is sum(aircraft_count)
+            }
+            -> {
+              group_by: state
+              aggregate: aircrafts.sum()
+            }
+            view: sort_issue is {
+                where: popular_name ~ r'I'
+                group_by: popular_name
+                nest: base_view
+                nest: base_view2
+                nest: base_view3
+            }
+        }
+        run: state_facts -> sort_issue
+      `
+      )
+      .run();
+    if (doTrace) console.log(result.sql);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const d: any = result.data.toObject();
+    const baseView: {state: string; airports: number}[] = d[0]['base_view'];
+    if (doTrace) console.log(baseView);
+    let baseMax = baseView[0];
+    for (const b of baseView) {
+      expect(b.airports).toBeGreaterThanOrEqual(baseMax.airports);
+      baseMax = b;
+    }
+
+    const baseView2: {state: string; aircrafts: number}[] = d[0]['base_view2'];
+    if (doTrace) console.log(baseView2);
+    let baseMax2 = baseView2[0];
+    for (const b of baseView2) {
+      expect(b.aircrafts).toBeGreaterThanOrEqual(baseMax2.aircrafts);
+      baseMax2 = b;
+    }
+    // implicit order by
+    const baseView3: {state: string; aircrafts: number}[] = d[0]['base_view3'];
+    if (doTrace) console.log(baseView3);
+    let baseMax3 = baseView3[0];
+    for (const b of baseView3) {
+      expect(b.aircrafts).toBeLessThanOrEqual(baseMax3.aircrafts);
+      baseMax3 = b;
+    }
+  });
+
   test.when(runtime.supportsNesting)(
     'number as null- ${databaseName}',
     async () => {

@@ -37,7 +37,7 @@ export class ProjectFieldSpace extends QuerySpace {
   canContain(typeDesc: TypeDesc | undefined): boolean {
     if (
       typeDesc === undefined ||
-      !TD.isLeafAtomic(typeDesc) ||
+      !TD.isAtomic(typeDesc) ||
       expressionIsAggregate(typeDesc.expressionType)
     ) {
       // We don't need to log here, because an error should have already been logged.

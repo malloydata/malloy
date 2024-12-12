@@ -2,10 +2,12 @@
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
- *  LICENSE file in the root directory of this source tree.
+ * LICENSE file in the root directory of this source tree.
  */
 
 import {
+  ArrayLiteralNode,
+  RecordLiteralNode,
   RegexMatchExpr,
   TD,
   TimeExtractExpr,
@@ -94,5 +96,18 @@ export abstract class PostgresBase extends Dialect {
       return `TIMESTAMPTZ '${lt.literal} ${tz}'::TIMESTAMP`;
     }
     return `TIMESTAMP '${lt.literal}'`;
+  }
+
+  sqlLiteralRecord(_lit: RecordLiteralNode): string {
+    throw new Error('Cannot create a record literal for postgres base dialect');
+  }
+
+  sqlLiteralArray(lit: ArrayLiteralNode): string {
+    const array = lit.kids.values.map(val => val.sql);
+    return 'ARRAY[' + array.join(',') + ']';
+  }
+
+  sqlMaybeQuoteIdentifier(identifier: string): string {
+    return '"' + identifier.replace(/"/g, '""') + '"';
   }
 }

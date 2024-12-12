@@ -22,6 +22,7 @@
  */
 
 import {
+  CompositeFieldUsage,
   FilterCondition,
   PipeSegment,
   Sampling,
@@ -41,6 +42,10 @@ import {QueryBuilder} from '../types/query-builder';
 import {QueryInputSpace} from '../field-space/query-input-space';
 import {QueryOperationSpace} from '../field-space/query-spaces';
 import {MalloyElement} from '../types/malloy-element';
+import {
+  emptyCompositeFieldUsage,
+  mergeCompositeFieldUsage,
+} from '../../../model/composite_source_utils';
 
 export class IndexBuilder implements QueryBuilder {
   filters: FilterCondition[] = [];
@@ -94,6 +99,10 @@ export class IndexBuilder implements QueryBuilder {
     }
   }
 
+  get compositeFieldUsage(): CompositeFieldUsage {
+    return this.resultFS.compositeFieldUsage;
+  }
+
   finalize(from: PipeSegment | undefined): PipeSegment {
     if (from && !isIndexSegment(from) && !isPartialSegment(from)) {
       this.resultFS.logError(
@@ -133,6 +142,15 @@ export class IndexBuilder implements QueryBuilder {
     if (this.alwaysJoins.length > 0) {
       indexSegment.alwaysJoins = [...this.alwaysJoins];
     }
+
+    const fromCompositeFieldUsage =
+      from && from.type === 'index'
+        ? from.compositeFieldUsage ?? emptyCompositeFieldUsage()
+        : emptyCompositeFieldUsage();
+    indexSegment.compositeFieldUsage = mergeCompositeFieldUsage(
+      fromCompositeFieldUsage,
+      this.compositeFieldUsage
+    );
 
     return indexSegment;
   }

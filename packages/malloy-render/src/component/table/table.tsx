@@ -11,17 +11,24 @@ import {
   JSX,
   onMount,
 } from 'solid-js';
-import {DataArrayOrRecord, DataRecord, Field} from '@malloydata/malloy';
+import {
+  AtomicField,
+  DataArrayOrRecord,
+  DataRecord,
+  Field,
+} from '@malloydata/malloy';
 import {getRangeSize, isFirstChild, isLastChild} from '../util';
 import {getTableLayout} from './table-layout';
 import {useResultContext} from '../result-context';
 import {createTableStore, TableContext, useTableContext} from './table-context';
 import tableCss from './table.css?raw';
-import {applyRenderer, shouldRenderAs} from '../apply-renderer';
+import {applyRenderer} from '../apply-renderer';
 import {isFieldHidden} from '../../tags_utils';
 import {createStore, produce} from 'solid-js/store';
 import {createVirtualizer, Virtualizer} from '@tanstack/solid-virtual';
 import {useConfig} from '../render';
+import {DimensionContextEntry} from '../types';
+import {copyExplorePathQueryToClipboard} from '../result-store/result-store';
 
 const IS_CHROMIUM = navigator.userAgent.toLowerCase().indexOf('chrome') >= 0;
 // CSS Subgrid + Sticky Positioning only seems to work reliably in Chrome
@@ -159,7 +166,13 @@ const HeaderField = (props: {field: Field; isPinned?: boolean}) => {
   );
 };
 
-const TableField = (props: {field: Field; row: DataRecord}) => {
+const DRILL_RENDERER_IGNORE_LIST = ['chart', 'link'];
+const TableField = (props: {
+  field: Field;
+  row: DataRecord;
+  rowPath: number[];
+  dimensionContext: DimensionContextEntry[];
+}) => {
   let renderValue: JSXElement = '';
   let renderAs = '';
   ({renderValue, renderAs} = applyRenderer({
@@ -170,12 +183,23 @@ const TableField = (props: {field: Field; row: DataRecord}) => {
     customProps: {
       table: {
         rowLimit: 100, // Limit nested tables to 100 records
+        currentRow: [...props.rowPath],
+        // dimensionContext,
       },
     },
   }));
   const tableLayout = useTableContext()!.layout;
   const fieldLayout = tableLayout.fieldLayout(props.field);
   const columnRange = fieldLayout.relativeColumnRange;
+  const tableCtx = useTableContext();
+  const isHighlightedRow = () => {
+    return (
+      JSON.stringify(props.rowPath) ===
+        JSON.stringify(tableCtx?.store.highlightedRow) &&
+      JSON.stringify(tableCtx?.currentExplore) ===
+        JSON.stringify(tableCtx?.store.highlightedExplore)
+    );
+  };
   const style: JSX.CSSProperties = {
     'grid-column': `${columnRange[0] + 1} / span ${getRangeSize(columnRange)}`,
     'height': 'fit-content',
@@ -194,12 +218,54 @@ const TableField = (props: {field: Field; row: DataRecord}) => {
   const tableGutterLeft = fieldLayout.depth > 0 && isFirstChild(props.field);
   const tableGutterRight = fieldLayout.depth > 0 && isLastChild(props.field);
 
+  const handleMouseEnter = () => {
+    if (tableCtx && !DRILL_RENDERER_IGNORE_LIST.includes(renderAs)) {
+      // TODO: only update if changed; need to check change via stringify
+      tableCtx.setStore(s => ({
+        ...s,
+        highlightedRow: props.rowPath,
+      }));
+    }
+  };
+
+  const handleMouseLeave = () => {
+    tableCtx!.setStore(s => ({
+      ...s,
+      highlightedRow: null,
+    }));
+  };
+
+  const config = useConfig();
+  const isDrillingEnabled = config.tableConfig().enableDrill;
+  const metadata = useResultContext();
+  const handleClick = async evt => {
+    evt.stopPropagation();
+    if (isDrillingEnabled && !DRILL_RENDERER_IGNORE_LIST.includes(renderAs)) {
+      copyExplorePathQueryToClipboard({
+        metadata,
+        field: props.field,
+        dimensionContext: [
+          ...tableCtx!.dimensionContext,
+          ...props.dimensionContext,
+        ],
+        onDrill: config.onDrill,
+      });
+    }
+  };
+
   return (
     <div
       class="column-cell td"
       classList={{
         numeric: props.field.isAtomicField() && props.field.isNumber(),
+        highlight:
+          isDrillingEnabled &&
+          !DRILL_RENDERER_IGNORE_LIST.includes(renderAs) &&
+          isHighlightedRow(),
       }}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      onClick={handleClick}
       style={style}
     >
       <Switch>
@@ -251,11 +317,12 @@ const MalloyTableRoot = (_props: {
         else return 0;
       })
       .filter(([key, value]) => {
+        const field = resultMetadata.fields[key].field;
+        const parentFieldRenderer = field.parentExplore
+          ? resultMetadata.field(field.parentExplore)?.renderAs
+          : null;
         const isNotRoot = value.depth >= 0;
-        const isPartOfTable =
-          isNotRoot &&
-          shouldRenderAs(resultMetadata.fields[key].field.parentExplore!) ===
-            'table';
+        const isPartOfTable = isNotRoot && parentFieldRenderer === 'table';
         return isPartOfTable;
       })
       .map(([key, value]) => ({
@@ -495,6 +562,35 @@ const MalloyTableRoot = (_props: {
     'margin-bottom': `calc(-1 * (var(--malloy-render--table-header-cumulative-height-${maxPinnedHeaderDepth()}) - var(--malloy-render--table-header-height-0)))`,
   });
 
+  const getRowPath = (rowIndex?: number) => {
+    if (typeof rowIndex === 'number') return [...tableCtx.currentRow, rowIndex];
+    return tableCtx.currentRow;
+  };
+
+  const handleTableMouseOver = (evt: MouseEvent) => {
+    evt.stopPropagation();
+
+    tableCtx.setStore(s => ({
+      ...s,
+      highlightedExplore: props.data.field.fieldPath,
+    }));
+  };
+
+  const getRowDimensionContext = (row: DataRecord) => {
+    const dimensionContext: DimensionContextEntry[] = [];
+
+    const dimensions = row.field.allFields.filter(
+      f => f.isAtomicField() && f.sourceWasDimension()
+    ) as AtomicField[];
+    dimensions.forEach(field => {
+      dimensionContext.push({
+        fieldDef: field.expression,
+        value: row.cell(field).value as string | number | boolean | Date,
+      });
+    });
+    return dimensionContext;
+  };
+
   return (
     <div
       class="malloy-table"
@@ -509,6 +605,9 @@ const MalloyTableRoot = (_props: {
       part={tableCtx.root ? 'table-container' : ''}
       style={getContainerStyle()}
       onScroll={handleScroll}
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      on:mouseover={handleTableMouseOver}
     >
       {/* pinned header */}
       <Show when={tableCtx.root}>
@@ -566,6 +665,7 @@ const MalloyTableRoot = (_props: {
                 <div
                   class="table-row"
                   data-index={virtualRow.index}
+                  data-row={JSON.stringify(getRowPath(virtualRow.index))}
                   ref={el =>
                     queueMicrotask(() => {
                       virtualizer!.measureElement(el);
@@ -582,6 +682,10 @@ const MalloyTableRoot = (_props: {
                         <TableField
                           field={field}
                           row={data()[virtualRow.index]}
+                          rowPath={getRowPath(virtualRow.index)}
+                          dimensionContext={getRowDimensionContext(
+                            data()[virtualRow.index]
+                          )}
                         />
                       )}
                     </For>
@@ -596,7 +700,7 @@ const MalloyTableRoot = (_props: {
       <Show when={!shouldVirtualize()}>
         {/* header */}
         <Show when={!tableCtx.root}>
-          <div class="table-row">
+          <div class="table-row" data-row={JSON.stringify(getRowPath())}>
             <For each={visibleFields()}>
               {field => <HeaderField field={field} />}
             </For>
@@ -604,10 +708,17 @@ const MalloyTableRoot = (_props: {
         </Show>
         {/* rows */}
         <For each={data()}>
-          {row => (
-            <div class="table-row">
+          {(row, idx) => (
+            <div class="table-row" data-row={JSON.stringify(getRowPath(idx()))}>
               <For each={visibleFields()}>
-                {field => <TableField field={field} row={row} />}
+                {field => (
+                  <TableField
+                    field={field}
+                    row={row}
+                    rowPath={getRowPath(idx())}
+                    dimensionContext={getRowDimensionContext(row)}
+                  />
+                )}
               </For>
             </div>
           )}
@@ -628,16 +739,37 @@ const MalloyTable: Component<{
   scrollEl?: HTMLElement;
   disableVirtualization?: boolean;
   shouldFillWidth?: boolean;
+  currentRow?: number[];
+  dimensionContext?: DimensionContextEntry[];
 }> = props => {
   const metadata = useResultContext();
   const hasTableCtx = !!useTableContext();
-  const tableCtx = createMemo(() => {
+  const tableCtx = createMemo<TableContext>(() => {
     if (hasTableCtx) {
       const parentCtx = useTableContext()!;
-
+      const parentRecord = props.data.parentRecord;
+      const dimensionContext: DimensionContextEntry[] = [];
+      if (parentRecord) {
+        const dimensions = parentRecord.field.allFields.filter(
+          f => f.isAtomicField() && f.sourceWasDimension()
+        ) as AtomicField[];
+        dimensions.forEach(field => {
+          dimensionContext.push({
+            fieldDef: field.expression,
+            value: parentRecord.cell(field).value as
+              | string
+              | number
+              | boolean
+              | Date,
+          });
+        });
+      }
       return {
         ...parentCtx,
         root: false,
+        currentRow: props.currentRow ?? parentCtx.currentRow,
+        currentExplore: props.data.field.fieldPath,
+        dimensionContext: [...parentCtx.dimensionContext, ...dimensionContext],
       };
     }
 
@@ -648,6 +780,9 @@ const MalloyTable: Component<{
       store,
       setStore,
       headerSizeStore: createStore({}),
+      currentRow: [],
+      currentExplore: props.data.field.fieldPath,
+      dimensionContext: [],
     };
   });
 

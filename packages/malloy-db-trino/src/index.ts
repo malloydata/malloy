@@ -21,6 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export {TrinoConnection} from './trino_connection';
-export {PrestoConnection} from './trino_connection';
+export type {BaseRunner} from './trino_connection';
+export {
+  PrestoConnection,
+  PrestoExplainParser,
+  TrinoConnection,
+  TrinoPrestoConnection,
+} from './trino_connection';
 export {TrinoExecutor} from './trino_executor';

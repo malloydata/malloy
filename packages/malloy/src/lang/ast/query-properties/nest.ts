@@ -52,6 +52,10 @@ export class NestFieldDeclaration
         fs,
         fs.outputSpace()
       );
+      const compositeFieldUsage =
+        pipeline[0] && model.isQuerySegment(pipeline[0])
+          ? pipeline[0].compositeFieldUsage
+          : undefined;
       const checkedPipeline = detectAndRemovePartialStages(pipeline, this);
       this.turtleDef = {
         type: 'turtle',
@@ -59,6 +63,7 @@ export class NestFieldDeclaration
         pipeline: checkedPipeline,
         annotation: {...this.note, inherits: annotation},
         location: this.location,
+        compositeFieldUsage,
       };
       return this.turtleDef;
     }

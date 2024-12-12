@@ -396,6 +396,7 @@ type MessageParameterTypes = {
   'duplicate-include': string;
   'exclude-after-include': string;
   'cannot-rename-non-field': string;
+  'array-values-incompatible': string;
 };
 
 export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {

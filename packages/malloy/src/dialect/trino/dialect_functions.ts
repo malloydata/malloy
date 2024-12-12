@@ -2,7 +2,7 @@
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
- *  LICENSE file in the root directory of this source tree.
+ * LICENSE file in the root directory of this source tree.
  */
 
 import {
@@ -235,6 +235,48 @@ const percent_rank: DefinitionBlueprint = {
   impl: {function: 'PERCENT_RANK', needsWindowOrderBy: true},
 };
 
+const url_extract_fragment: DefinitionBlueprint = {
+  takes: {'url': 'string'},
+  returns: 'string',
+  impl: {function: 'URL_EXTRACT_FRAGMENT'},
+};
+
+const url_extract_host: DefinitionBlueprint = {
+  takes: {'url': 'string'},
+  returns: 'string',
+  impl: {function: 'URL_EXTRACT_HOST'},
+};
+
+const url_extract_parameter: DefinitionBlueprint = {
+  takes: {'url': 'string', 'parameter': 'string'},
+  returns: 'string',
+  impl: {function: 'URL_EXTRACT_PARAMETER'},
+};
+
+const url_extract_path: DefinitionBlueprint = {
+  takes: {'url': 'string'},
+  returns: 'string',
+  impl: {function: 'URL_EXTRACT_PATH'},
+};
+
+const url_extract_port: DefinitionBlueprint = {
+  takes: {'url': 'string'},
+  returns: 'number',
+  impl: {function: 'URL_EXTRACT_PORT'},
+};
+
+const url_extract_protocol: DefinitionBlueprint = {
+  takes: {'url': 'string'},
+  returns: 'string',
+  impl: {function: 'URL_EXTRACT_PROTOCOL'},
+};
+
+const url_extract_query: DefinitionBlueprint = {
+  takes: {'url': 'string'},
+  returns: 'string',
+  impl: {function: 'URL_EXTRACT_QUERY'},
+};
+
 export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   // aggregate functions
   approx_percentile,
@@ -262,6 +304,13 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   regexp_like,
   regexp_replace,
   to_unixtime,
+  url_extract_fragment,
+  url_extract_host,
+  url_extract_parameter,
+  url_extract_path,
+  url_extract_port,
+  url_extract_protocol,
+  url_extract_query,
 
   // window functions
   percent_rank,

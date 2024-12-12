@@ -25,7 +25,7 @@ import {
   PipeSegment,
   SourceDef,
   isAtomic,
-  isTurtleDef,
+  isTurtle,
   sourceBase,
 } from '../../../model/malloy_types';
 import {ErrorFactory} from '../error-factory';
@@ -104,7 +104,7 @@ export class ReferenceView extends View {
         name,
         outputStruct,
       };
-    } else if (isTurtleDef(fieldDef)) {
+    } else if (isTurtle(fieldDef)) {
       if (this.reference.list.length > 1) {
         if (forRefinement) {
           this.logError(

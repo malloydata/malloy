@@ -96,11 +96,6 @@ export type Expr =
   | CompositeFieldExpr
   | ErrorNode;
 
-interface HasTypeDef {
-  typeDef: AtomicTypeDef;
-}
-export type TypedExpr = Expr & HasTypeDef;
-
 export type BinaryOperator =
   | '+'
   | '-'
@@ -337,7 +332,8 @@ export interface BooleanLiteralNode extends ExprLeaf {
 
 export interface RecordLiteralNode extends ExprWithKids {
   node: 'recordLiteral';
-  kids: Record<string, TypedExpr>;
+  kids: Record<string, Expr>;
+  typeDef: RecordTypeDef;
 }
 
 export interface ArrayLiteralNode extends ExprWithKids {
@@ -492,10 +488,13 @@ export interface ResultMetadataDef {
   referenceId?: string;
 }
 
-// struct specific metadta
-export interface ResultStructMetadataDef extends ResultMetadataDef {
-  limit?: number;
+export interface Ordered {
   orderBy?: OrderBy[];
+  defaultOrderBy?: boolean;
+}
+// struct specific metadta
+export interface ResultStructMetadataDef extends ResultMetadataDef, Ordered {
+  limit?: number;
 }
 
 export interface ResultMetadata {
@@ -594,14 +593,17 @@ export function maxOfExpressionTypes(types: ExpressionType[]): ExpressionType {
 }
 
 /**  Grants access to the expression properties of a FieldDef */
+export interface HasExpression {
+  e: Expr;
+}
 export function hasExpression<T extends FieldDef>(
   f: T
-): f is T & Expression & {e: Expr} {
+): f is T & Expression & HasExpression {
   return 'e' in f;
 }
 
 export type TemporalFieldType = 'date' | 'timestamp';
-export function isTemporalField(s: string): s is TemporalFieldType {
+export function isTemporalType(s: string): s is TemporalFieldType {
   return s === 'date' || s === 'timestamp';
 }
 export type CastType =
@@ -630,6 +632,12 @@ export function isAtomicFieldType(s: string): s is AtomicFieldType {
     'error',
   ].includes(s);
 }
+export function canOrderBy(s: string) {
+  return ['string', 'number', 'date', 'boolean', 'date', 'timestamp'].includes(
+    s
+  );
+}
+
 export function isCastType(s: string): s is CastType {
   return ['string', 'number', 'date', 'timestamp', 'boolean', 'json'].includes(
     s
@@ -682,25 +690,76 @@ export interface NativeUnsupportedTypeDef {
 export type NativeUnsupportedFieldDef = NativeUnsupportedTypeDef &
   AtomicFieldDef;
 
-export interface ArrayTypeDef extends JoinBase, StructDefBase {
+export interface ScalarArrayTypeDef {
   type: 'array';
-  elementTypeDef: Exclude<AtomicTypeDef, RecordTypeDef> | RecordElementTypeDef;
+  elementTypeDef: Exclude<AtomicTypeDef, RecordTypeDef>;
+}
+export interface ScalarArrayDef
+  extends ScalarArrayTypeDef,
+    StructDefBase,
+    JoinBase,
+    FieldBase {
+  type: 'array';
   join: 'many';
 }
-export type ArrayDef = ArrayTypeDef & AtomicFieldDef;
 
-export function arrayEachFields(arrayOf: AtomicTypeDef): AtomicFieldDef[] {
-  return [
-    {
-      name: 'each',
-      ...arrayOf,
-      e: {node: 'field', path: ['value']},
-    },
-    {name: 'value', ...arrayOf},
-  ];
+export function mkFieldDef(
+  atd: AtomicTypeDef,
+  name: string,
+  dialect: string
+): AtomicFieldDef {
+  if (isScalarArray(atd)) {
+    return mkArrayDef(atd.elementTypeDef, name, dialect);
+  }
+  if (isRepeatedRecord(atd)) {
+    const {type, fields, elementTypeDef} = atd;
+    return {type, fields, elementTypeDef, join: 'many', name, dialect};
+  }
+  if (atd.type === 'record') {
+    const {type, fields} = atd;
+    return {type, fields, join: 'one', dialect, name};
+  }
+  return {...atd, name};
 }
 
-export interface RecordTypeDef extends StructDefBase, JoinBase {
+export function mkArrayDef(
+  ofType: AtomicTypeDef,
+  name: string,
+  dialect: string
+): ArrayDef {
+  if (ofType.type === 'record') {
+    return {
+      type: 'array',
+      join: 'many',
+      name,
+      dialect,
+      elementTypeDef: {type: 'record_element'},
+      fields: ofType.fields,
+    };
+  }
+  const valueEnt = mkFieldDef(ofType, 'value', dialect);
+  return {
+    type: 'array',
+    join: 'many',
+    name,
+    dialect,
+    elementTypeDef: ofType,
+    fields: [
+      valueEnt,
+      {...valueEnt, name: 'each', e: {node: 'field', path: ['value']}},
+    ],
+  };
+}
+
+export interface RecordTypeDef {
+  type: 'record';
+  fields: FieldDef[];
+}
+export interface RecordDef
+  extends RecordTypeDef,
+    StructDefBase,
+    JoinBase,
+    FieldBase {
   type: 'record';
   join: 'one';
 }
@@ -722,17 +781,32 @@ export interface RecordElementTypeDef {
   type: 'record_element';
 }
 
-export interface RepeatedRecordTypeDef extends ArrayDef {
+export interface RepeatedRecordTypeDef {
   type: 'array';
   elementTypeDef: RecordElementTypeDef;
+  fields: FieldDef[];
+}
+export interface RepeatedRecordDef
+  extends RepeatedRecordTypeDef,
+    StructDefBase,
+    JoinBase,
+    FieldBase {
+  type: 'array';
   join: 'many';
 }
+export type ArrayTypeDef = ScalarArrayTypeDef | RepeatedRecordTypeDef;
+export type ArrayDef = ScalarArrayDef | RepeatedRecordDef;
 
-export type RecordFieldDef = RecordTypeDef & AtomicFieldDef;
-export type RepeatedRecordFieldDef = RepeatedRecordTypeDef & AtomicFieldDef;
-
-export function isRepeatedRecord(fd: FieldDef): fd is RepeatedRecordFieldDef {
+export function isRepeatedRecord(
+  fd: FieldDef | QueryFieldDef | StructDef | AtomicTypeDef
+): fd is RepeatedRecordTypeDef {
   return fd.type === 'array' && fd.elementTypeDef.type === 'record_element';
+}
+
+export function isScalarArray(
+  td: AtomicTypeDef | FieldDef | QueryFieldDef | StructDef
+): td is ScalarArrayTypeDef {
+  return td.type === 'array' && td.elementTypeDef.type !== 'record_element';
 }
 
 export interface ErrorTypeDef {
@@ -754,6 +828,7 @@ export function isMatrixOperation(x: string): x is MatrixOperation {
 }
 
 export type JoinElementType =
+  | 'composite'
   | 'table'
   | 'sql_select'
   | 'query_source'
@@ -770,34 +845,28 @@ export interface JoinBase {
 }
 
 export type Joinable =
+  | CompositeSourceDef
   | TableSourceDef
   | SQLSourceDef
   | QuerySourceDef
-  | RecordFieldDef
+  | RepeatedRecordDef
+  | RecordDef
   | ArrayDef;
-export type JoinFieldDef = JoinBase & Joinable;
-export type JoinFieldTypes =
-  | 'table'
-  | 'sql_select'
-  | 'query_source'
-  | 'array'
-  | 'record';
+export type JoinFieldDef = Joinable & JoinBase;
 
 export function isJoinable(sd: StructDef): sd is Joinable {
   return [
+    'composite',
     'table',
     'sql_select',
     'query_source',
     'array',
     'record',
-    'composite',
   ].includes(sd.type);
 }
 
-export function isJoined<T extends FieldDef | StructDef>(
-  fd: T
-): fd is T & Joinable & JoinBase {
-  return 'join' in fd;
+export function isJoined(sd: TypedDef): sd is JoinFieldDef {
+  return 'join' in sd;
 }
 
 export function isJoinedSource(sd: StructDef): sd is SourceDef & JoinBase {
@@ -857,30 +926,6 @@ export interface FunctionOrderByDefaultExpression extends ExprLeaf {
 export type FunctionOrderBy =
   | FunctionOrderByExpression
   | FunctionOrderByDefaultExpression;
-
-export interface ByName {
-  by: 'name';
-  name: string;
-}
-export interface ByExpression {
-  by: 'expression';
-  e: Expr;
-}
-export type By = ByName | ByExpression;
-
-export function isByName(by: By | undefined): by is ByName {
-  if (by === undefined) {
-    return false;
-  }
-  return by.by === 'name';
-}
-
-export function isByExpression(by: By | undefined): by is ByExpression {
-  if (by === undefined) {
-    return false;
-  }
-  return by.by === 'name';
-}
 
 /** reference to a data source */
 // TODO this should be renamed to `SourceRef`
@@ -1012,6 +1057,7 @@ export interface IndexSegment extends Filtered {
   weightMeasure?: string; // only allow the name of the field to use for weights
   sample?: Sampling;
   alwaysJoins?: string[];
+  compositeFieldUsage?: CompositeFieldUsage;
 }
 export function isIndexSegment(pe: PipeSegment): pe is IndexSegment {
   return (pe as IndexSegment).type === 'index';
@@ -1022,13 +1068,11 @@ export interface CompositeFieldUsage {
   joinedUsage: Record<string, CompositeFieldUsage>;
 }
 
-export interface QuerySegment extends Filtered {
+export interface QuerySegment extends Filtered, Ordered {
   type: 'reduce' | 'project' | 'partial';
   queryFields: QueryFieldDef[];
   extendSource?: FieldDef[];
   limit?: number;
-  by?: By;
-  orderBy?: OrderBy[]; // uses output field name or index.
   queryTimezone?: string;
   alwaysJoins?: string[];
   compositeFieldUsage?: CompositeFieldUsage;
@@ -1041,6 +1085,7 @@ export interface TurtleDef extends NamedObject, Pipeline {
   type: 'turtle';
   annotation?: Annotation;
   accessModifier?: NonDefaultAccessModifierLabel | undefined;
+  compositeFieldUsage?: CompositeFieldUsage;
 }
 
 interface StructDefBase extends HasLocation, NamedObject {
@@ -1152,7 +1197,7 @@ export type SourceDef =
 
 /** Is this the "FROM" table of a query tree */
 export function isBaseTable(def: StructDef): def is SourceDef {
-  if (isJoined(def)) {
+  if (isJoinedSource(def)) {
     return false;
   }
   if (isSourceDef(def)) {
@@ -1161,11 +1206,7 @@ export function isBaseTable(def: StructDef): def is SourceDef {
   return false;
 }
 
-export function isScalarArray(def: FieldDef | StructDef) {
-  return def.type === 'array' && def.elementTypeDef.type !== 'record_element';
-}
-
-export type StructDef = SourceDef | RecordFieldDef | ArrayDef;
+export type StructDef = SourceDef | RecordDef | ArrayDef;
 
 // "NonAtomic" are types that a name lookup or a computation might
 // have which are not AtomicFieldDefs. I asked an AI for a word for
@@ -1265,17 +1306,25 @@ export type LeafAtomicTypeDef =
   | JSONTypeDef
   | NativeUnsupportedTypeDef
   | ErrorTypeDef;
-export type AtomicTypeDef = LeafAtomicTypeDef | ArrayTypeDef | RecordTypeDef;
-
 export type LeafAtomicDef = LeafAtomicTypeDef & FieldBase;
-export type AtomicFieldDef = AtomicTypeDef & FieldBase;
+
+export type AtomicTypeDef =
+  | LeafAtomicTypeDef
+  | ScalarArrayTypeDef
+  | RecordTypeDef
+  | RepeatedRecordTypeDef;
+export type AtomicFieldDef =
+  | LeafAtomicDef
+  | ScalarArrayDef
+  | RecordDef
+  | RepeatedRecordDef;
 
 export function isLeafAtomic(
   fd: FieldDef | QueryFieldDef | AtomicTypeDef
 ): fd is LeafAtomicDef {
   return (
     fd.type === 'string' ||
-    isTemporalField(fd.type) ||
+    isTemporalType(fd.type) ||
     fd.type === 'number' ||
     fd.type === 'boolean' ||
     fd.type === 'json' ||
@@ -1285,7 +1334,7 @@ export function isLeafAtomic(
 }
 
 // Sources have fields like this ...
-export type FieldDef = AtomicFieldDef | JoinFieldDef | TurtleDef;
+export type FieldDef = LeafAtomicDef | JoinFieldDef | TurtleDef;
 export type FieldDefType = AtomicFieldType | 'turtle' | JoinElementType;
 
 // Queries have fields like this ..
@@ -1296,6 +1345,14 @@ export interface RefToField {
   annotation?: Annotation;
 }
 export type QueryFieldDef = AtomicFieldDef | TurtleDef | RefToField;
+
+// All these share the same "type" space
+export type TypedDef =
+  | AtomicTypeDef
+  | JoinFieldDef
+  | TurtleDef
+  | RefToField
+  | StructDef;
 
 /** Get the output name for a NamedObject */
 export function getIdentifier(n: AliasedName): string {
@@ -1397,11 +1454,11 @@ export interface QueryResult extends CompiledQuery {
   profilingUrl?: string;
 }
 
-export function isTurtleDef(def: FieldDef): def is TurtleDef {
+export function isTurtle(def: TypedDef): def is TurtleDef {
   return def.type === 'turtle';
 }
 
-export function isAtomic(def: FieldDef): def is AtomicFieldDef {
+export function isAtomic(def: TypedDef): def is AtomicTypeDef {
   return isAtomicFieldType(def.type);
 }
 
@@ -1412,10 +1469,6 @@ export interface SearchResultRow {
 }
 
 export type SearchResult = SearchResultRow[];
-
-export function getAtomicFields(structDef: StructDef): AtomicFieldDef[] {
-  return structDef.fields.filter(isAtomic);
-}
 
 export function isValueString(
   value: QueryValue,
@@ -1490,7 +1543,8 @@ export const TD = {
   isDate: (td: UTD): td is DateTypeDef => td?.type === 'date',
   isTimestamp: (td: UTD): td is TimestampTypeDef => td?.type === 'timestamp',
   isTemporal(td: UTD): td is TimestampTypeDef {
-    return td?.type === 'timestamp' || td?.type === 'date';
+    const typ = td?.type ?? '';
+    return isTemporalType(typ);
   },
   isError: (td: UTD): td is ErrorTypeDef => td?.type === 'error',
   eq(x: UTD, y: UTD): boolean {

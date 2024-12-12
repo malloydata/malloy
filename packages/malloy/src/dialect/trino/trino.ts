@@ -37,6 +37,8 @@ import {
   TimeExtractExpr,
   LeafAtomicTypeDef,
   TD,
+  RecordLiteralNode,
+  isAtomic,
 } from '../../model/malloy_types';
 import {
   DialectFunctionOverloadDef,
@@ -276,17 +278,16 @@ export class TrinoDialect extends PostgresBase {
   }
 
   sqlFieldReference(
-    alias: string,
-    fieldName: string,
-    _fieldType: string,
-    _isNested: boolean,
-    _isArray: boolean
+    parentAlias: string,
+    _parentType: unknown,
+    childName: string,
+    _childType: string
   ): string {
     // LTNOTE: hack, in duckdb we can't have structs as tables so we kind of simulate it.
-    if (fieldName === '__row_id') {
-      return `__row_id_from_${alias}`;
+    if (childName === '__row_id') {
+      return `__row_id_from_${parentAlias}`;
     }
-    return `${alias}.${this.sqlMaybeQuoteIdentifier(fieldName)}`;
+    return `${parentAlias}.${this.sqlMaybeQuoteIdentifier(childName)}`;
   }
 
   sqlUnnestPipelineHead(
@@ -431,10 +432,6 @@ ${indent(sql)}
   WITH
   WITHIN`.split(/\s/);
 
-  sqlMaybeQuoteIdentifier(identifier: string): string {
-    return '"' + identifier + '"';
-  }
-
   sqlAlterTimeExpr(df: TimeDeltaExpr): string {
     let timeframe = df.units;
     let n = df.kids.delta.sql;
@@ -541,16 +538,33 @@ ${indent(sql)}
   }
 
   malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
-    if (malloyType.type === 'number') {
-      if (malloyType.numberType === 'integer') {
-        return 'BIGINT';
-      } else {
-        return 'DOUBLE';
+    switch (malloyType.type) {
+      case 'number':
+        return malloyType.numberType === 'integer' ? 'BIGINT' : 'DOUBLE';
+      case 'string':
+        return 'VARCHAR';
+      case 'record': {
+        const typeSpec: string[] = [];
+        for (const f of malloyType.fields) {
+          if (isAtomic(f)) {
+            typeSpec.push(`${f.name} ${this.malloyTypeToSQLType(f)}`);
+          }
+        }
+        return `ROW(${typeSpec.join(',')})`;
       }
-    } else if (malloyType.type === 'string') {
-      return 'VARCHAR';
+      case 'sql native':
+        return malloyType.rawType || 'UNKNOWN-NATIVE';
+      case 'array': {
+        if (malloyType.elementTypeDef.type !== 'record_element') {
+          return `ARRAY<${this.malloyTypeToSQLType(
+            malloyType.elementTypeDef
+          )}>`;
+        }
+        return malloyType.type.toUpperCase();
+      }
+      default:
+        return malloyType.type.toUpperCase();
     }
-    return malloyType.type;
   }
 
   sqlTypeToMalloyType(sqlType: string): LeafAtomicTypeDef {
@@ -617,6 +631,20 @@ ${indent(sql)}
     }
     const extracted = `EXTRACT(${pgUnits} FROM ${extractFrom})`;
     return from.units === 'day_of_week' ? `mod(${extracted}+1,7)` : extracted;
+  }
+
+  sqlLiteralRecord(lit: RecordLiteralNode): string {
+    const rowVals: string[] = [];
+    const rowTypes: string[] = [];
+    for (const f of lit.typeDef.fields) {
+      if (isAtomic(f)) {
+        const name = f.as ?? f.name;
+        rowVals.push(lit.kids[name].sql ?? 'internal-error-record-literal');
+        const elType = this.malloyTypeToSQLType(f);
+        rowTypes.push(`${name} ${elType}`);
+      }
+    }
+    return `CAST(ROW(${rowVals.join(',')}) AS ROW(${rowTypes.join(',')}))`;
   }
 }
 

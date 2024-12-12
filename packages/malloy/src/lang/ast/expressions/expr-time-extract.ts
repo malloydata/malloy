@@ -24,7 +24,7 @@
 import {
   ExtractUnit,
   isExtractUnit,
-  isTemporalField,
+  isTemporalType,
   isTimestampUnit,
   mkTemporal,
   TD,
@@ -89,13 +89,13 @@ export class ExprTimeExtract extends ExpressionDef {
             from: [first, last],
           });
         }
-        if (!isTemporalField(first.type)) {
+        if (!isTemporalType(first.type)) {
           return from.first.loggedErrorExpr(
             'invalid-type-for-time-extraction',
             `Can't extract ${extractTo} from '${first.type}'`
           );
         }
-        if (!isTemporalField(last.type)) {
+        if (!isTemporalType(last.type)) {
           return from.last.loggedErrorExpr(
             'invalid-type-for-time-extraction',
             `Cannot extract ${extractTo} from '${last.type}'`
@@ -151,7 +151,7 @@ export class ExprTimeExtract extends ExpressionDef {
         });
       } else {
         const argV = from.getExpression(fs);
-        if (isTemporalField(argV.type)) {
+        if (isTemporalType(argV.type)) {
           return computedExprValue({
             dataType: {type: 'number', numberType: 'integer'},
             value: {

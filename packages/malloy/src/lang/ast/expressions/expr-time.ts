@@ -25,7 +25,7 @@ import {
   Expr,
   TemporalFieldType,
   TypecastExpr,
-  isTemporalField,
+  isTemporalType,
 } from '../../../model/malloy_types';
 
 import {FieldSpace} from '../types/field-space';
@@ -58,7 +58,7 @@ export class ExprTime extends ExpressionDef {
         dstType: {type: timeType},
         e: expr.value,
       };
-      if (isTemporalField(expr.type)) {
+      if (isTemporalType(expr.type)) {
         toTs.srcType = {type: expr.type};
       }
       value = toTs;
