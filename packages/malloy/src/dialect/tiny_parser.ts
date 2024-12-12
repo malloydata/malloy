@@ -106,6 +106,13 @@ export class TinyParser {
     }
   }
 
+  dump(): TinyToken[] {
+    const p = this.parseCursor;
+    const parts = [...this.tokenize(this.input)];
+    this.parseCursor = p;
+    return parts;
+  }
+
   private *tokenize(src: string): Generator<TinyToken> {
     const tokenList = this.tokenMap;
     while (this.parseCursor < src.length) {
@@ -125,6 +132,7 @@ export class TinyParser {
               type: tokenType === 'char' ? tokenText : tokenType,
               text: tokenText,
             };
+            break;
           }
         }
       }
