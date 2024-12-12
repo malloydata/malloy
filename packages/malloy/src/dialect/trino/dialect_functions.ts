@@ -277,6 +277,12 @@ const url_extract_query: DefinitionBlueprint = {
   impl: {function: 'URL_EXTRACT_QUERY'},
 };
 
+const split: DefinitionBlueprint = {
+  takes: {'src': 'string', 'splitChar': 'string'},
+  returns: {array: 'string'},
+  impl: {function: 'SPLIT'},
+};
+
 export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   // aggregate functions
   approx_percentile,
@@ -314,4 +320,6 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
 
   // window functions
   percent_rank,
+
+  split,
 };

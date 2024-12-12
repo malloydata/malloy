@@ -21,13 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {composeSQLExpr, StructDef} from '@malloydata/malloy';
+import {composeSQLExpr, SourceDef} from '@malloydata/malloy';
 import {fToQF} from '../util';
 
 // will it build?
 
 /** Medicare Model */
-export const medicareModel: StructDef = {
+export const medicareModel: SourceDef = {
   as: 'medicare_test',
   dialect: 'standardsql',
   fields: [
@@ -218,7 +218,7 @@ export const medicareModel: StructDef = {
   tablePath: 'malloydata-org.malloytest.bq_medicare_test',
 };
 
-export const medicareStateFacts: StructDef = {
+export const medicareStateFacts: SourceDef = {
   fields: [],
   name: 'medicare_state_facts',
   dialect: 'standardsql',

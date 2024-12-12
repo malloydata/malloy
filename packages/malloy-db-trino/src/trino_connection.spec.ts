@@ -103,7 +103,6 @@ describe('Trino connection', () => {
           {
             'name': 'b',
             'type': 'array',
-            'dialect': 'trino',
             'elementTypeDef': {type: 'record_element'},
             'join': 'many',
             'fields': [

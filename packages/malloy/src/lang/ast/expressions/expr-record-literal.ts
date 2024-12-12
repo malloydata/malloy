@@ -45,9 +45,7 @@ export class RecordLiteral extends ExpressionDef {
       if (TD.isAtomic(xVal)) {
         dependents.push(xVal);
         recLit.kids[el.key] = xVal.value;
-        recLit.typeDef.fields.push(
-          mkFieldDef(TDU.atomicDef(xVal), el.key, fs.dialectName())
-        );
+        recLit.typeDef.fields.push(mkFieldDef(TDU.atomicDef(xVal), el.key));
       } else {
         this.logError(
           'illegal-record-property-type',

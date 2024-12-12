@@ -2859,7 +2859,7 @@ class QueryQuery extends QueryField {
       type: 'query_result',
       name: this.resultStage || 'result',
       fields,
-      dialect: this.parent.structDef.dialect,
+      dialect: this.parent.dialect.name,
       primaryKey,
       connection: this.parent.connectionName,
       resultMetadata: this.getResultMetadata(this.rootResult),
@@ -4211,7 +4211,7 @@ class QueryQueryIndex extends QueryQuery {
     const ret: StructDef = {
       type: 'query_result',
       name: this.resultStage || 'result',
-      dialect: this.parent.structDef.dialect,
+      dialect: this.parent.dialect.name,
       fields: [
         {type: 'string', name: 'fieldName'},
         {type: 'string', name: 'fieldPath'},
@@ -4308,8 +4308,18 @@ class QueryStruct {
       this.connectionName = this.root().connectionName;
     }
 
-    this.dialect = getDialect(structDef.dialect);
+    this.dialect = getDialect(this.findFirstDialect());
     this.addFieldsFromFieldList(structDef.fields);
+  }
+
+  protected findFirstDialect(): string {
+    if (isSourceDef(this.structDef)) {
+      return this.structDef.dialect;
+    }
+    if (this.parent) {
+      return this.parent.findFirstDialect();
+    }
+    throw new Error('Cannot create QueryStruct from record with model parent');
   }
 
   informOfAliasValue(av: string): void {

@@ -237,7 +237,7 @@ export class PostgresConnection
         const elementType = this.dialect.sqlTypeToMalloyType(
           row['element_type'] as string
         );
-        structDef.fields.push(mkArrayDef(elementType, name, this.dialectName));
+        structDef.fields.push(mkArrayDef(elementType, name));
       } else {
         const malloyType = this.dialect.sqlTypeToMalloyType(postgresDataType);
         structDef.fields.push({...malloyType, name});

@@ -520,7 +520,7 @@ export class BigQueryConnection
         // Malloy treats repeated values as an array of scalars.
         const malloyType = this.dialect.sqlTypeToMalloyType(type);
         if (malloyType) {
-          structDef.fields.push(mkArrayDef(malloyType, name, this.dialectName));
+          structDef.fields.push(mkArrayDef(malloyType, name));
         }
       } else if (isRecord) {
         const ifRepeatedRecord: StructDef = {

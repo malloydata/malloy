@@ -135,11 +135,7 @@ export abstract class AtomicFieldDeclaration
     }
     if (isAtomicFieldType(exprValue.type) && exprValue.type !== 'error') {
       this.typecheckExprValue(exprValue);
-      const ret = mkFieldDef(
-        TDU.atomicDef(exprValue),
-        exprName,
-        exprFS.dialectName()
-      );
+      const ret = mkFieldDef(TDU.atomicDef(exprValue), exprName);
       if (
         (ret.type === 'date' || ret.type === 'timestamp') &&
         isGranularResult(exprValue)

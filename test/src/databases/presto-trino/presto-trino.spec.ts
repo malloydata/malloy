@@ -313,6 +313,13 @@ describe.each(runtimes.runtimeList)(
         query: 'first_param=val_one&second_param=2',
       });
     });
+    test('string split function in tresto', async () => {
+      await expect(`
+        run: ${databaseName}.sql("SELECT 1 AS N") -> {
+          select: some_words is split('hello world', ' ')
+        }
+      `).malloyResultMatches(runtime, {some_words: ['hello', 'world']});
+    });
   }
 );
 

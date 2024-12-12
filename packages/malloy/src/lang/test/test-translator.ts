@@ -88,7 +88,6 @@ const mockSchema: Record<string, SourceDef> = {
             numberType: 'integer',
           },
         ],
-        dialect: 'standardsql',
       },
       {
         type: 'record',
@@ -96,9 +95,8 @@ const mockSchema: Record<string, SourceDef> = {
         fields: [{...intType, name: 'column'}],
         join: 'one',
         matrixOperation: 'left',
-        dialect: 'standardsql',
       },
-      mkArrayDef(intType, 'ais', 'standardsql'),
+      mkArrayDef(intType, 'ais'),
     ],
   },
   'malloytest.carriers': {

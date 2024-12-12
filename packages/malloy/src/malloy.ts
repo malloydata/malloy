@@ -1554,6 +1554,11 @@ export class Explore extends Entity implements Taggable {
   }
 
   private get modelDef(): ModelDef {
+    if (!isSourceDef(this.structDef)) {
+      throw new Error(
+        `Cannot create pseudo model for struct type ${this.structDef.type}`
+      );
+    }
     return {
       name: 'generated_model',
       exports: [],

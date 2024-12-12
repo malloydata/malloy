@@ -136,9 +136,10 @@ export class NamedSource extends Source {
         return {...entry};
       }
     }
+    // I think this is now a never
     this.logError(
       'invalid-source-source',
-      `Cannot construct a source from a ${entry.type}`
+      'Cannot construct a source from a never type'
     );
   }
 
