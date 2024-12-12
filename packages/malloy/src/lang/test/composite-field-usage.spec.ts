@@ -191,5 +191,29 @@ describe('composite sources', () => {
         run: foo(param is 2) -> { group_by: y }
       `).toTranslate();
     });
+    test('array.each is okay', () => {
+      expect(`
+        ##! experimental { composite_sources }
+        source: foo is compose(
+          a extend { dimension: x is 1 },
+          a extend { dimension: y is 2 }
+        ) extend {
+          dimension: arr is [1, 2, 3]
+        }
+        run: foo -> { group_by: y, arr.each }
+      `).toTranslate();
+    });
+    test('timevalue extract okay', () => {
+      expect(`
+        ##! experimental { composite_sources }
+        source: foo is compose(
+          a extend { dimension: x is 1 },
+          a extend { dimension: y is 2 }
+        ) extend {
+          dimension: time is now
+        }
+        run: foo -> { group_by: y, time.day }
+      `).toTranslate();
+    });
   });
 });
