@@ -14,6 +14,7 @@ import {
   ArrayTypeDef,
   FieldDef,
   Expr,
+  SQLSourceDef,
 } from '@malloydata/malloy';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
@@ -196,6 +197,44 @@ describe.each(runtimes.runtimeList)(
                 : `Array containing ${c} character is not ok`;
             expect(ok).toEqual('ok');
           }
+        }
+      );
+      test.when(supportsNestedArrays && canReadCompoundSchema)(
+        'Can read schema for array of arrays',
+        async () => {
+          // a lot of work to make [[1],[2]] on all dialects
+          const aLit: ArrayLiteralNode = {
+            node: 'arrayLiteral',
+            typeDef: {type: 'array', elementTypeDef: {type: 'number'}},
+            kids: {values: []},
+          };
+          const aOne = {...aLit};
+          aOne.kids.values[0] = {node: 'numberLiteral', literal: '1', sql: '1'};
+          aOne.sql = runtime.dialect.sqlLiteralArray(aOne);
+          const aTwo = {...aLit, sql: '2'};
+          aTwo.kids.values[0] = {node: 'numberLiteral', literal: '2', sql: '2'};
+          aTwo.sql = runtime.dialect.sqlLiteralArray(aTwo);
+          const aoa: ArrayLiteralNode = {
+            node: 'arrayLiteral',
+            typeDef: {type: 'array', elementTypeDef: aLit.typeDef},
+            kids: {values: [aOne, aTwo]},
+          };
+          const sql_aoa = runtime.dialect.sqlLiteralArray(aoa);
+          const asStruct: SQLSourceDef = {
+            name: 'select_with_aoa',
+            type: 'sql_select',
+            connection: conName,
+            dialect: runtime.dialect.name,
+            selectStr: `SELECT ${sql_aoa} AS aoa`,
+            fields: [],
+          };
+          const ret = await runtime.connection.fetchSchemaForSQLStruct(
+            asStruct,
+            {}
+          );
+          expect(ret.structDef).toBeDefined();
+          const aoa_ent = ret.structDef!.fields[0];
+          expect(aoa_ent).toMatchObject(aoa.typeDef);
         }
       );
       test.when(supportsNestedArrays)('bare array of array', async () => {
