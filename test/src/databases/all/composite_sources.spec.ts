@@ -266,4 +266,45 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       run: x -> { aggregate: foo; group_by: bar, arr.each }
     `).malloyResultMatches(runtime, {foo: 0});
   });
+  it('complex nesting composite without join', async () => {
+    await expect(`
+      ##! experimental.composite_sources
+      source: state_facts is ${databaseName}.table('malloytest.state_facts')
+      source: x is compose(
+        compose(
+          state_facts,
+          state_facts extend {
+            dimension: bar is 1
+          }
+        ) extend {
+          measure: foo is sum(0)
+        },
+        state_facts extend {
+          measure: foo is sum(0) + 1
+          dimension: bar is 2
+        }
+      )
+      run: x -> { aggregate: foo; group_by: bar }
+    `).malloyResultMatches(runtime, {foo: 0, bar: 1});
+  });
+  it('complex nesting composite with join', async () => {
+    await expect(`
+      ##! experimental.composite_sources
+      source: state_facts is ${databaseName}.table('malloytest.state_facts')
+      source: x is compose(
+        compose(
+          state_facts,
+          state_facts extend {
+            dimension: the_state is 'CA'
+          }
+        ),
+        state_facts extend {
+          dimension: the_state is 'IL'
+        }
+      ) extend {
+        join_one: state_facts on the_state = state_facts.state
+      }
+      run: x -> { group_by: state_facts.state }
+    `).malloyResultMatches(runtime, {state: 'CA'});
+  });
 });
