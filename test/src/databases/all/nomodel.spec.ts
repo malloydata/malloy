@@ -1170,6 +1170,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
   test.when(
     runtime.supportsNesting && runtime.dialect.supportsPipelinesInViews
   )(`Nested pipelines sort properly - ${databaseName}`, async () => {
+    const doTrace = false; // Have to turn this on to debug this test
     const result = await runtime
       .loadQuery(
         `
@@ -1217,11 +1218,11 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
       `
       )
       .run();
-    console.log(result.sql);
+    if (doTrace) console.log(result.sql);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const d: any = result.data.toObject();
     const baseView: {state: string; airports: number}[] = d[0]['base_view'];
-    console.log(baseView);
+    if (doTrace) console.log(baseView);
     let baseMax = baseView[0];
     for (const b of baseView) {
       expect(b.airports).toBeGreaterThanOrEqual(baseMax.airports);
@@ -1229,7 +1230,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
     }
 
     const baseView2: {state: string; aircrafts: number}[] = d[0]['base_view2'];
-    console.log(baseView2);
+    if (doTrace) console.log(baseView2);
     let baseMax2 = baseView2[0];
     for (const b of baseView2) {
       expect(b.aircrafts).toBeGreaterThanOrEqual(baseMax2.aircrafts);
@@ -1237,8 +1238,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
     }
     // implicit order by
     const baseView3: {state: string; aircrafts: number}[] = d[0]['base_view3'];
-    // You will have to uncomment this if the expect fails
-    // console.log(baseView3);
+    if (doTrace) console.log(baseView3);
     let baseMax3 = baseView3[0];
     for (const b of baseView3) {
       expect(b.aircrafts).toBeLessThanOrEqual(baseMax3.aircrafts);
