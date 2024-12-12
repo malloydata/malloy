@@ -398,6 +398,10 @@ function compositeFieldUsageWithoutNonCompositeFields(
     fields: compositeFieldUsage.fields.filter(f =>
       isCompositeField(sourceFieldsByName[f])
     ),
-    joinedUsage: compositeFieldUsage.joinedUsage,
+    // Today it is not possible for a join to be composite, so we can safely throw
+    // away all join usage here...; if we ever allow joins in composite source
+    // inputs, then this will need to be updated to be the joinUsage with joins
+    // that are not composite filtered out...
+    joinedUsage: {},
   };
 }
