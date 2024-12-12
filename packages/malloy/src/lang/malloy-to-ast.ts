@@ -51,6 +51,7 @@ import {
 } from './parse-utils';
 import {CastType} from '../model';
 import {
+  AccessModifierLabel,
   DocumentLocation,
   DocumentRange,
   isCastType,
@@ -59,6 +60,7 @@ import {
 } from '../model/malloy_types';
 import {Tag} from '../tags';
 import {ConstantExpression} from './ast/expressions/constant-expression';
+import {isNotUndefined} from './utils';
 
 class ErrorNode extends ast.SourceQueryElement {
   elementType = 'parseErrorSourceQuery';
@@ -493,6 +495,7 @@ export class MalloyToAST
   }
 
   visitDefJoinMany(pcx: parse.DefJoinManyContext): ast.JoinStatement {
+    const accessLabel = this.getAccessLabel(pcx.accessLabel());
     const joins: ast.Join[] = [];
     for (const joinCx of pcx.joinList().joinDef()) {
       const join = this.visit(joinCx);
@@ -516,12 +519,13 @@ export class MalloyToAST
         }
       }
     }
-    const joinMany = new ast.JoinStatement(joins);
+    const joinMany = new ast.JoinStatement(joins, accessLabel);
     joinMany.extendNote({blockNotes: this.getNotes(pcx.tags())});
     return joinMany;
   }
 
   visitDefJoinOne(pcx: parse.DefJoinOneContext): ast.JoinStatement {
+    const accessLabel = this.getAccessLabel(pcx.accessLabel());
     const joinList = this.getJoinList(pcx.joinList());
     const joins: ast.Join[] = [];
     for (const join of joinList) {
@@ -532,12 +536,13 @@ export class MalloyToAST
         }
       }
     }
-    const joinOne = new ast.JoinStatement(joins);
+    const joinOne = new ast.JoinStatement(joins, accessLabel);
     joinOne.extendNote({blockNotes: this.getNotes(pcx.tags())});
     return joinOne;
   }
 
   visitDefJoinCross(pcx: parse.DefJoinCrossContext): ast.JoinStatement {
+    const accessLabel = this.getAccessLabel(pcx.accessLabel());
     const joinList = this.getJoinList(pcx.joinList());
     const joins: ast.Join[] = [];
     for (const join of joinList) {
@@ -553,7 +558,7 @@ export class MalloyToAST
         }
       }
     }
-    const joinCross = new ast.JoinStatement(joins);
+    const joinCross = new ast.JoinStatement(joins, accessLabel);
     joinCross.extendNote({blockNotes: this.getNotes(pcx.tags())});
     return joinCross;
   }
@@ -642,21 +647,43 @@ export class MalloyToAST
   }
 
   visitDefDimensions(pcx: parse.DefDimensionsContext): ast.Dimensions {
+    const accessLabel = this.getAccessLabel(pcx.accessLabel());
     const defs = this.getFieldDefs(
       pcx.defList().fieldDef(),
       ast.DimensionFieldDeclaration
     );
-    const stmt = new ast.Dimensions(defs);
+    const stmt = new ast.Dimensions(defs, accessLabel);
     stmt.extendNote({blockNotes: this.getNotes(pcx.tags())});
     return this.astAt(stmt, pcx);
   }
 
+  getAccessLabel(
+    pcx: parse.AccessLabelContext | undefined
+  ): AccessModifierLabel | undefined {
+    if (pcx === undefined) return undefined;
+    if (pcx.INTERNAL_KW()) return 'internal';
+    if (pcx.PRIVATE_KW()) return 'private';
+    if (pcx.PUBLIC_KW()) return 'public';
+    throw this.internalError(pcx, `Unknown access modifier label ${pcx.text}`);
+  }
+
+  getAccessLabelProp(
+    pcx: parse.AccessLabelPropContext | undefined
+  ): AccessModifierLabel | undefined {
+    if (pcx === undefined) return undefined;
+    if (pcx.INTERNAL()) return 'internal';
+    if (pcx.PRIVATE()) return 'private';
+    if (pcx.PUBLIC()) return 'public';
+    throw this.internalError(pcx, `Unknown access modifier label ${pcx.text}`);
+  }
+
   visitDefMeasures(pcx: parse.DefMeasuresContext): ast.Measures {
+    const accessLabel = this.getAccessLabel(pcx.accessLabel());
     const defs = this.getFieldDefs(
       pcx.defList().fieldDef(),
       ast.MeasureFieldDeclaration
     );
-    const stmt = new ast.Measures(defs);
+    const stmt = new ast.Measures(defs, accessLabel);
     stmt.extendNote({blockNotes: this.getNotes(pcx.tags())});
     return this.astAt(stmt, pcx);
   }
@@ -682,11 +709,12 @@ export class MalloyToAST
   }
 
   visitDeclareStatement(pcx: parse.DeclareStatementContext): ast.DeclareFields {
+    const accessLabel = this.getAccessLabel(pcx.accessLabel());
     const defs = this.getFieldDefs(
       pcx.defList().fieldDef(),
       ast.DeclareFieldDeclaration
     );
-    const stmt = new ast.DeclareFields(defs);
+    const stmt = new ast.DeclareFields(defs, accessLabel);
     const result = this.astAt(stmt, pcx);
     this.m4advisory(
       pcx,
@@ -707,9 +735,10 @@ export class MalloyToAST
   }
 
   visitDefExploreRename(pcx: parse.DefExploreRenameContext): ast.Renames {
+    const accessLabel = this.getAccessLabel(pcx.accessLabel());
     const rcxs = pcx.renameList().exploreRenameDef();
     const renames = rcxs.map(rcx => this.visitExploreRenameDef(rcx));
-    const stmt = new ast.Renames(renames);
+    const stmt = new ast.Renames(renames, accessLabel);
     return this.astAt(stmt, pcx);
   }
 
@@ -729,15 +758,13 @@ export class MalloyToAST
     return this.astAt(having, pcx);
   }
 
-  visitSubQueryDefList(pcx: parse.SubQueryDefListContext): ast.Views {
+  visitDefExploreQuery(pcx: parse.DefExploreQueryContext): ast.Views {
+    const accessLabel = this.getAccessLabel(pcx.accessLabel());
     const babyTurtles = pcx
+      .subQueryDefList()
       .exploreQueryDef()
       .map(cx => this.visitExploreQueryDef(cx));
-    return new ast.Views(babyTurtles);
-  }
-
-  visitDefExploreQuery(pcx: parse.DefExploreQueryContext): ast.MalloyElement {
-    const queryDefs = this.visitSubQueryDefList(pcx.subQueryDefList());
+    const queryDefs = new ast.Views(babyTurtles, accessLabel);
     const blockNotes = this.getNotes(pcx.tags());
     queryDefs.extendNote({blockNotes});
     if (pcx.QUERY()) {
@@ -757,10 +784,13 @@ export class MalloyToAST
     return this.astAt(node, pcx);
   }
 
-  visitFieldNameList(pcx: parse.FieldNameListContext): ast.FieldReferences {
+  getFieldNameList(
+    pcx: parse.FieldNameListContext,
+    makeFieldRef: ast.FieldReferenceConstructor
+  ): ast.FieldReferences {
     const members = pcx
       .fieldName()
-      .map(cx => new ast.AcceptExceptFieldReference([this.getFieldName(cx)]));
+      .map(cx => this.astAt(new makeFieldRef([this.getFieldName(cx)]), cx));
     return new ast.FieldReferences(members);
   }
 
@@ -770,8 +800,22 @@ export class MalloyToAST
     const action = pcx.ACCEPT() ? 'accept' : 'except';
     return new ast.FieldListEdit(
       action,
-      this.visitFieldNameList(pcx.fieldNameList())
+      this.getFieldNameList(pcx.fieldNameList(), ast.AcceptExceptFieldReference)
     );
+  }
+
+  visitSQInclude(pcx: parse.SQIncludeContext): ast.SQExtend {
+    const extendSrc = this.getSqExpr(pcx.sqExpr());
+    const includeBlock = pcx.includeBlock();
+    const includeList = includeBlock
+      ? this.getIncludeItems(includeBlock)
+      : undefined;
+    const src = new ast.SQExtend(
+      extendSrc,
+      new ast.SourceDesc([]),
+      includeList
+    );
+    return this.astAt(src, pcx);
   }
 
   visitDefExploreTimezone(
@@ -999,7 +1043,7 @@ export class MalloyToAST
 
   visitCollectionWildCard(
     pcx: parse.CollectionWildCardContext
-  ): ast.FieldReferenceElement {
+  ): ast.WildcardFieldReference {
     const nameCx = pcx.fieldPath();
     const join = nameCx
       ? this.getFieldPath(nameCx, ast.ProjectFieldReference)
@@ -1832,11 +1876,123 @@ export class MalloyToAST
 
   visitSQExtendedSource(pcx: parse.SQExtendedSourceContext) {
     const extendSrc = this.getSqExpr(pcx.sqExpr());
+    const includeBlock = pcx.includeBlock();
+    const includeList = includeBlock
+      ? this.getIncludeItems(includeBlock)
+      : undefined;
     const src = new ast.SQExtend(
       extendSrc,
-      this.getSourceExtensions(pcx.exploreProperties())
+      this.getSourceExtensions(pcx.exploreProperties()),
+      includeList
     );
     return this.astAt(src, pcx);
+  }
+
+  getIncludeItems(pcx: parse.IncludeBlockContext): ast.IncludeItem[] {
+    this.inExperiment('access_modifiers', pcx);
+    return pcx
+      .includeItem()
+      .map(item => this.getIncludeItem(item))
+      .filter(isNotUndefined);
+  }
+
+  getIncludeItem(pcx: parse.IncludeItemContext): ast.IncludeItem | undefined {
+    const tagsCx = pcx.tags();
+    const blockNotes = tagsCx ? this.getNotes(tagsCx) : [];
+    const exceptList = pcx.includeExceptList();
+    if (exceptList) {
+      if (tagsCx && blockNotes.length > 0) {
+        this.contextError(
+          tagsCx,
+          'cannot-tag-include-except',
+          'Tags on `except:` are ignored',
+          {severity: 'warn'}
+        );
+      }
+      const fieldList = this.getExcludeList(exceptList);
+      return this.astAt(new ast.IncludeExceptItem(fieldList), pcx);
+    } else {
+      const listCx = pcx.includeList();
+      if (listCx === undefined) {
+        this.contextError(
+          pcx.orphanedAnnotation() ?? pcx,
+          'orphaned-object-annotation',
+          'This tag is not attached to anything',
+          {severity: 'warn'}
+        );
+        return undefined;
+      }
+      const kind = this.getAccessLabelProp(pcx.accessLabelProp());
+      const fieldList = this.getIncludeList(listCx);
+      const item = this.astAt(new ast.IncludeAccessItem(kind, fieldList), pcx);
+      item.extendNote({blockNotes});
+      return item;
+    }
+  }
+
+  getIncludeList(pcx: parse.IncludeListContext): ast.IncludeListItem[] {
+    const listCx = pcx.includeField();
+    if (listCx === undefined) {
+      throw this.internalError(pcx, 'Expected a field name list');
+    }
+    return listCx.map(fieldCx => this.getIncludeListItem(fieldCx));
+  }
+
+  getExcludeList(
+    pcx: parse.IncludeExceptListContext
+  ): (ast.AccessModifierFieldReference | ast.WildcardFieldReference)[] {
+    return pcx.includeExceptListItem().map(fcx => {
+      if (fcx.tags().ANNOTATION().length > 0) {
+        this.contextError(
+          fcx.tags(),
+          'cannot-tag-include-except',
+          'Tags on `except:` are ignored',
+          {severity: 'warn'}
+        );
+      }
+      const fieldNameCx = fcx.fieldName();
+      if (fieldNameCx) {
+        return this.astAt(
+          new ast.AccessModifierFieldReference([
+            this.astAt(new ast.FieldName(fcx.text), fcx),
+          ]),
+          fieldNameCx
+        );
+      }
+      const wildcardCx = fcx.collectionWildCard();
+      if (wildcardCx) {
+        return this.astAt(this.visitCollectionWildCard(wildcardCx), wildcardCx);
+      }
+      throw this.internalError(fcx, 'Expected a field name or wildcard');
+    });
+  }
+
+  getIncludeListItem(pcx: parse.IncludeFieldContext): ast.IncludeListItem {
+    const wildcardCx = pcx.collectionWildCard();
+    const wildcard = wildcardCx
+      ? this.visitCollectionWildCard(wildcardCx)
+      : undefined;
+    const as = pcx._as ? pcx._as.text : undefined;
+    const tags1cx = pcx.tags();
+    const tags1 = tags1cx ? this.getNotes(tags1cx) : [];
+    const tags2cx = pcx.isDefine();
+    const tags2 = tags2cx ? this.getIsNotes(tags2cx) : [];
+    const notes = [...tags1, ...tags2];
+    const name = pcx._name
+      ? this.astAt(
+          new ast.AccessModifierFieldReference([
+            this.astAt(this.getFieldName(pcx._name), pcx._name),
+          ]),
+          pcx._name
+        )
+      : undefined;
+    const reference = name ?? wildcard;
+    if (reference === undefined) {
+      throw this.internalError(pcx, 'Expected a field name or wildcard');
+    }
+    const item = this.astAt(new ast.IncludeListItem(reference, as), pcx);
+    item.extendNote({notes});
+    return item;
   }
 
   visitSQParens(pcx: parse.SQParensContext) {

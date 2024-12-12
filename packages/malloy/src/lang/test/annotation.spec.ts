@@ -27,6 +27,7 @@ import {
   getFieldDef,
   getQueryFieldDef,
   model,
+  warningMessage,
 } from './test-translator';
 import './parse-expects';
 import {diff} from 'jest-diff';
@@ -682,5 +683,161 @@ describe('query operation annotations', () => {
         notes: ['# note\n'],
       });
     }
+  });
+  describe('include annotations', () => {
+    test('inherit: star', () => {
+      const m = new TestTranslator(`
+        ##! experimental.access_modifiers
+        source: na is a include {
+          # ai
+          *
+        }
+      `);
+      expect(m).toTranslate();
+      const na = m.getSourceDef('na');
+      expect(na).toBeDefined();
+      if (na) {
+        const ai = getFieldDef(na, 'ai');
+        expect(ai?.annotation).matchesAnnotation({
+          blockNotes: [],
+          notes: ['# ai\n'],
+        });
+      }
+    });
+    test('new tags are inherited, not added', () => {
+      const m = new TestTranslator(`
+        ##! experimental.access_modifiers
+        source: na is a include {
+          # ai
+          ai
+        } include {
+          # ai_2
+          ai
+        }
+      `);
+      expect(m).toTranslate();
+      const na = m.getSourceDef('na');
+      expect(na).toBeDefined();
+      if (na) {
+        const ai = getFieldDef(na, 'ai');
+        expect(ai?.annotation).matchesAnnotation({
+          blockNotes: [],
+          notes: ['# ai_2\n'],
+          inherits: {notes: ['# ai\n'], blockNotes: []},
+        });
+      }
+    });
+    test('modifier: star', () => {
+      const m = new TestTranslator(`
+        ##! experimental.access_modifiers
+        source: na is a include {
+          # ai_a
+          public:
+            # ai_b
+            *
+        }
+      `);
+      expect(m).toTranslate();
+      const na = m.getSourceDef('na');
+      expect(na).toBeDefined();
+      if (na) {
+        const ai = getFieldDef(na, 'ai');
+        expect(ai?.annotation).matchesAnnotation({
+          blockNotes: ['# ai_a\n'],
+          notes: ['# ai_b\n'],
+        });
+      }
+    });
+    test('inherit: list', () => {
+      const m = new TestTranslator(`
+        ##! experimental.access_modifiers
+        source: na is a include {
+          # ai
+          ai
+          af
+        }
+      `);
+      expect(m).toTranslate();
+      const na = m.getSourceDef('na');
+      expect(na).toBeDefined();
+      if (na) {
+        const ai = getFieldDef(na, 'ai');
+        expect(ai?.annotation).matchesAnnotation({
+          blockNotes: [],
+          notes: ['# ai\n'],
+        });
+        const af = getFieldDef(na, 'af');
+        expect(af).toBeDefined();
+        expect(af?.annotation).toBeUndefined();
+      }
+    });
+    test('modifier: list', () => {
+      const m = new TestTranslator(`
+        ##! experimental.access_modifiers
+        source: na is a include {
+          # a
+          public:
+            # ai
+            ai
+            af
+        }
+      `);
+      expect(m).toTranslate();
+      const na = m.getSourceDef('na');
+      expect(na).toBeDefined();
+      if (na) {
+        const ai = getFieldDef(na, 'ai');
+        expect(ai?.annotation).matchesAnnotation({
+          blockNotes: ['# a\n'],
+          notes: ['# ai\n'],
+        });
+        const af = getFieldDef(na, 'af');
+        expect(af?.annotation).matchesAnnotation({
+          blockNotes: ['# a\n'],
+          notes: [],
+        });
+      }
+    });
+    test('tags except: list', () => {
+      const m = new TestTranslator(`
+        ##! experimental.access_modifiers
+        source: na is a include {
+          # error_1
+          except:
+            # error_2
+            ai
+        }
+      `);
+      expect(m).toLog(
+        warningMessage('Tags on `except:` are ignored'),
+        warningMessage('Tags on `except:` are ignored')
+      );
+    });
+    test('tags except: star', () => {
+      const m = new TestTranslator(`
+        ##! experimental.access_modifiers
+        source: na is a include {
+          # error_1
+          except:
+            # error_2
+            *
+        }
+      `);
+      expect(m).toLog(
+        warningMessage('Tags on `except:` are ignored'),
+        warningMessage('Tags on `except:` are ignored'),
+        warningMessage('`except: *` is implied, unless another clause uses *')
+      );
+    });
+    test('oprhaned annotation', () => {
+      const m = new TestTranslator(`
+        ##! experimental.access_modifiers
+        source: na is a include {
+          ai
+          ${'# orphaned'}
+        }
+      `);
+      expect(m).toLog(warningMessage('This tag is not attached to anything'));
+    });
   });
 });

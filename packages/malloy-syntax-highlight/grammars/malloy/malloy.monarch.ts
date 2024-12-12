@@ -181,6 +181,10 @@ export const monarch: Monaco.IMonarchLanguage = {
       [/\bwhen\b/, 'keyword.other.when'],
       [/\bpick\b/, 'keyword.other.pick'],
       [/\bimport\b/, 'keyword.control.import'],
+      [/\binternal\b/, 'keyword.control.internal'],
+      [/\bpublic\b/, 'keyword.control.public'],
+      [/\bprivate\b/, 'keyword.control.private'],
+      [/\binclude\b/, 'keyword.control.include'],
     ],
     properties: [
       [/\baccept\b/, 'keyword.control.accept'],

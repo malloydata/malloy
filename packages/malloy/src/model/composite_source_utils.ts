@@ -61,7 +61,9 @@ function _resolveCompositeSources(
       } of narrowedSources) {
         const fieldNames = new Set<string>();
         for (const field of inputSource.fields) {
-          fieldNames.add(field.as ?? field.name);
+          if (field.accessModifier !== 'private') {
+            fieldNames.add(field.as ?? field.name);
+          }
         }
         for (const usage of compositeFieldUsage.fields) {
           if (!fieldNames.has(usage)) {

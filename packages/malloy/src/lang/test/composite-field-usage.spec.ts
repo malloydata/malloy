@@ -191,6 +191,77 @@ describe('composite sources', () => {
         run: foo(param is 2) -> { group_by: y }
       `).toTranslate();
     });
+    test('composite source does not include private field', () => {
+      expect(`
+        ##! experimental { composite_sources access_modifiers }
+        source: foo is compose(
+          a extend {
+            private dimension: x is 1
+          },
+          a
+        )
+        run: foo -> { group_by: x }
+      `).toLog(errorMessage("'x' is not defined"));
+    });
+    test('composite source does not resolve to private field', () => {
+      expect(`
+        ##! experimental { composite_sources access_modifiers }
+        source: foo is compose(
+          a extend {
+            private dimension: x is 1
+            dimension: y is 1
+          },
+          a extend { dimension: x is 1 }
+        )
+        run: foo -> { group_by: x, y }
+      `).toLog(
+        errorMessage(
+          'This operation uses composite field `y`, resulting in invalid usage of the composite source, as there is no composite input source which defines all of `x`, `y`'
+        )
+      );
+    });
+    test('composite source does include internal field', () => {
+      expect(`
+        ##! experimental { composite_sources access_modifiers }
+        source: foo is compose(
+          a extend {
+            internal dimension: x is 1
+          },
+          a
+        ) extend {
+          view: v is { group_by: x }
+        }
+        run: foo -> v
+      `).toTranslate();
+    });
+    test('access level mismatch in composite (before)', () => {
+      expect(`
+        ##! experimental { composite_sources access_modifiers }
+        source: foo is compose(
+          a extend {
+            internal dimension: x is 1
+          },
+          a extend {
+            dimension: x is 1
+          }
+        )
+        run: foo -> { group_by: x }
+      `).toLog(errorMessage("'x' is internal"));
+    });
+    test('access level mismatch in composite (after)', () => {
+      expect(`
+        ##! experimental { composite_sources access_modifiers }
+        source: foo is compose(
+          a extend {
+            dimension: x is 1
+          },
+          a extend {
+            internal dimension: x is 1
+          }
+        )
+        run: foo -> { group_by: x }
+      `).toLog(errorMessage("'x' is internal"));
+    });
     test('array.each is okay', () => {
       expect(`
         ##! experimental { composite_sources }
