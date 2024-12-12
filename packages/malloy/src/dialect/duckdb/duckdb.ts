@@ -466,6 +466,8 @@ class DuckDBTypeParser extends TinyParser {
       space: /^\s+/,
       qsingle: /^'([^']|'')*'/,
       qdouble: /^"([^"]|"")*"/,
+      size: /^\(\d+\)/,
+      precision: /^\(\d+,\d+\)/,
       char: /^[,:[\]()-]/,
       id: /^[A-Z-a-z]\w*/,
       number: /^\d+/,
@@ -491,23 +493,19 @@ class DuckDBTypeParser extends TinyParser {
     const id = this.sqlID(wantID);
     let baseType: AtomicTypeDef;
     if (id === 'VARCHAR') {
-      if (this.peek().type === '(') {
-        this.next('(', 'number', ')');
+      if (this.peek().type === 'size') {
+        this.next();
       }
     }
-    if ((id === 'DECIMAL' || id === 'NUMERIC') && this.peek().text === '(') {
-      this.next('(');
-      const _prec0 = this.next('number');
-      this.next(',');
-      const prec1 = this.next('number');
-      this.next(')');
-      baseType = {
-        type: 'number',
-        numberType: Number.parseInt(prec1.text) > 0 ? 'float' : 'integer',
-      };
+    if (
+      (id === 'DECIMAL' || id === 'NUMERIC') &&
+      this.peek().type === 'precision'
+    ) {
+      this.next();
+      baseType = {type: 'number', numberType: 'float'};
     } else if (id === 'TIMESTAMP') {
       if (this.peek().text === 'WITH') {
-        this.next('id', 'id', 'id'); // WITH TIME ZONE
+        this.nextText('WITH', 'TIME', 'ZONE');
       }
       baseType = {type: 'timestamp'};
     } else if (duckDBToMalloyTypes[id]) {

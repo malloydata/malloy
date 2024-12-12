@@ -91,7 +91,23 @@ export class TinyParser {
       }
     }
     if (next) return next;
-    throw this.parseError(`Expected ${expected}`);
+    throw this.parseError(`Expected token type '${expected}'`);
+  }
+
+  nextText(...texts: string[]): TinyToken {
+    if (texts.length === 0) return this.getNext();
+    let next: TinyToken | undefined = undefined;
+    let expected = texts[0];
+    for (const txt of texts) {
+      next = this.getNext();
+      expected = txt;
+      if (next.text !== txt) {
+        next = undefined;
+        break;
+      }
+    }
+    if (next) return next;
+    throw this.parseError(`Expected '${expected}'`);
   }
 
   skipTo(type: string) {
