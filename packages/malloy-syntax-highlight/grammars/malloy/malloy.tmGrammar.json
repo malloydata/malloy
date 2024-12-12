@@ -533,6 +533,10 @@
         {
           "match": "(?i)\\bprivate\\b",
           "name": "keyword.control.private"
+        },
+        {
+          "match": "(?i)\\binclude\\b",
+          "name": "keyword.control.include"
         }
       ]
     }
