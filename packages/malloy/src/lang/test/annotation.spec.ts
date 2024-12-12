@@ -705,6 +705,30 @@ describe('query operation annotations', () => {
         });
       }
     });
+    test('new tags are inherited, not added', () => {
+      const m = new TestTranslator(`
+        ##! experimental.access_modifiers
+        source: na is a include {
+          # ai
+          ai
+        } include {
+          # ai_2
+          ai
+        }
+      `);
+      expect(m).toTranslate();
+      const na = m.getSourceDef('na');
+      expect(na).toBeDefined();
+      if (na) {
+        const ai = getFieldDef(na, 'ai');
+        expect(ai?.annotation).matchesAnnotation({
+          // TODO is blockNotes supposed to be empty or undefined here?
+          blockNotes: [],
+          notes: ['# ai_2\n'],
+          inherits: {notes: ['# ai\n'], blockNotes: []},
+        });
+      }
+    });
     test('modifier: star', () => {
       const m = new TestTranslator(`
         ##! experimental.access_modifiers
@@ -811,6 +835,5 @@ describe('query operation annotations', () => {
         warningMessage('`except: *` is implied, unless another clause uses *')
       );
     });
-    // TODO include tag include tag: does this inherit or add? probably add...
   });
 });

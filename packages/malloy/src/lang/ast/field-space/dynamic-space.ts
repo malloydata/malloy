@@ -183,12 +183,8 @@ export abstract class DynamicSpace
         this.sourceDef.fields[index] = {
           ...field,
           annotation: {
-            ...field.annotation,
-            notes: [...(field.annotation?.notes ?? []), ...(note.notes ?? [])],
-            blockNotes: [
-              ...(field.annotation?.blockNotes ?? []),
-              ...(note.blockNotes ?? []),
-            ],
+            ...note,
+            inherits: field.annotation,
           },
         };
       }
