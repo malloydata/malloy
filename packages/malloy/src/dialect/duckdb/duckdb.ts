@@ -463,14 +463,14 @@ export class DuckDBDialect extends PostgresBase {
 class DuckDBTypeParser extends TinyParser {
   constructor(input: string) {
     super(input, {
-      space: /^\s+/,
-      qsingle: /^'([^']|'')*'/,
-      qdouble: /^"([^"]|"")*"/,
-      size: /^\(\d+\)/,
-      precision: /^\(\d+,\d+\)/,
-      char: /^[,:[\]()-]/,
-      id: /^[A-Z-a-z]\w*/,
-      number: /^\d+/,
+      /* whitespace           */ space: /^\s+/,
+      /* single quoted string */ qsingle: /^'([^']|'')*'/,
+      /* double quoted string */ qdouble: /^"([^"]|"")*"/,
+      /* (n) size             */ size: /^\(\d+\)/,
+      /* (n1,n2) precision    */ precision: /^\(\d+,\d+\)/,
+      /* T[] -> array of T    */ arrayOf: /^\[]/,
+      /* other punctuation    */ char: /^[,:[\]()-]/,
+      /* unquoted word        */ id: /^\w+/,
     });
   }
 
@@ -538,8 +538,8 @@ class DuckDBTypeParser extends TinyParser {
       if (wantID.type === 'id') {
         for (;;) {
           const next = this.peek();
-          // Might be WEIRDTYP(a,b)[] ... stop at the [
-          if (next.type === '[' || next.type === 'eof') {
+          // Might be WEIRDTYP(a,b)[] ... stop at the []
+          if (next.type === 'arrayOf' || next.type === 'eof') {
             break;
           }
           this.next();
@@ -555,8 +555,8 @@ class DuckDBTypeParser extends TinyParser {
         throw this.parseError('Could not understand type');
       }
     }
-    while (this.peek().type === '[') {
-      this.next('[', ']');
+    while (this.peek().type === 'arrayOf') {
+      this.next();
       if (baseType.type === 'record') {
         baseType = {
           type: 'array',
