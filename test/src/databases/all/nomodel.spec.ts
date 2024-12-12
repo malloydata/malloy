@@ -1237,7 +1237,8 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
     }
     // implicit order by
     const baseView3: {state: string; aircrafts: number}[] = d[0]['base_view3'];
-    console.log(baseView3);
+    // You will have to uncomment this if the expect fails
+    // console.log(baseView3);
     let baseMax3 = baseView3[0];
     for (const b of baseView3) {
       expect(b.aircrafts).toBeLessThanOrEqual(baseMax3.aircrafts);
