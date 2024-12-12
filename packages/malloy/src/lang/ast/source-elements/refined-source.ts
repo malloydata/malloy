@@ -271,10 +271,12 @@ function processIncludeList(
               modifiers.set(name, item.kind);
             }
             fieldsMentioned.add(name);
-            notes.set(name, {
-              notes: f.note?.notes ?? [],
-              blockNotes: item.note?.blockNotes ?? [],
-            });
+            if (f.note || item.note) {
+              notes.set(name, {
+                notes: f.note?.notes ?? [],
+                blockNotes: item.note?.blockNotes ?? [],
+              });
+            }
           }
           if (f.as) {
             if (f.name instanceof WildcardFieldReference) {
@@ -331,14 +333,7 @@ function processIncludeList(
         modifiers.set(field, star);
       }
       if (starNote) {
-        const note = notes.get(field);
-        notes.set(field, {
-          blockNotes: [
-            ...(note?.blockNotes ?? []),
-            ...(starNote.blockNotes ?? []),
-          ],
-          notes: [...(note?.notes ?? []), ...(starNote.notes ?? [])],
-        });
+        notes.set(field, {...starNote});
       }
     }
   }

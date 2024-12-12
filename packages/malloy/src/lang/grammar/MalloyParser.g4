@@ -280,6 +280,11 @@ includeItem
   : tags accessLabelProp includeList
   | includeList
   | tags EXCEPT includeExceptList
+  | orphanedAnnotation
+  ;
+
+orphanedAnnotation
+  : ANNOTATION
   ;
 
 accessLabelProp
@@ -302,7 +307,7 @@ includeList
   ;
 
 includeField
-  : (as=fieldName isDefine)? name=fieldName
+  : tags (as=fieldName isDefine)? name=fieldName
   | tags name=fieldName
   | tags collectionWildCard
   ;

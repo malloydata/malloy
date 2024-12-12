@@ -60,6 +60,7 @@ import {
 } from '../model/malloy_types';
 import {Tag} from '../tags';
 import {ConstantExpression} from './ast/expressions/constant-expression';
+import {isNotUndefined} from './utils';
 
 class ErrorNode extends ast.SourceQueryElement {
   elementType = 'parseErrorSourceQuery';
@@ -1889,10 +1890,13 @@ export class MalloyToAST
 
   getIncludeItems(pcx: parse.IncludeBlockContext): ast.IncludeItem[] {
     this.inExperiment('access_modifiers', pcx);
-    return pcx.includeItem().map(item => this.visitIncludeItem(item));
+    return pcx
+      .includeItem()
+      .map(item => this.getIncludeItem(item))
+      .filter(isNotUndefined);
   }
 
-  visitIncludeItem(pcx: parse.IncludeItemContext) {
+  getIncludeItem(pcx: parse.IncludeItemContext): ast.IncludeItem | undefined {
     const tagsCx = pcx.tags();
     const blockNotes = tagsCx ? this.getNotes(tagsCx) : [];
     const exceptList = pcx.includeExceptList();
@@ -1910,7 +1914,13 @@ export class MalloyToAST
     } else {
       const listCx = pcx.includeList();
       if (listCx === undefined) {
-        throw this.internalError(pcx, 'Expected an include list');
+        this.contextError(
+          pcx.orphanedAnnotation() ?? pcx,
+          'orphaned-object-annotation',
+          'This tag is not attached to anything',
+          {severity: 'warn'}
+        );
+        return undefined;
       }
       const kind = this.getAccessLabelProp(pcx.accessLabelProp());
       const fieldList = this.getIncludeList(listCx);

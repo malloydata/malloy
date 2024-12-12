@@ -699,7 +699,6 @@ describe('query operation annotations', () => {
       if (na) {
         const ai = getFieldDef(na, 'ai');
         expect(ai?.annotation).matchesAnnotation({
-          // TODO is blockNotes supposed to be empty or undefined here?
           blockNotes: [],
           notes: ['# ai\n'],
         });
@@ -722,7 +721,6 @@ describe('query operation annotations', () => {
       if (na) {
         const ai = getFieldDef(na, 'ai');
         expect(ai?.annotation).matchesAnnotation({
-          // TODO is blockNotes supposed to be empty or undefined here?
           blockNotes: [],
           notes: ['# ai_2\n'],
           inherits: {notes: ['# ai\n'], blockNotes: []},
@@ -769,11 +767,8 @@ describe('query operation annotations', () => {
           notes: ['# ai\n'],
         });
         const af = getFieldDef(na, 'af');
-        // TODO empty or undefined?
-        expect(af?.annotation).matchesAnnotation({
-          blockNotes: [],
-          notes: [],
-        });
+        expect(af).toBeDefined();
+        expect(af?.annotation).toBeUndefined();
       }
     });
     test('modifier: list', () => {
@@ -799,7 +794,6 @@ describe('query operation annotations', () => {
         const af = getFieldDef(na, 'af');
         expect(af?.annotation).matchesAnnotation({
           blockNotes: ['# a\n'],
-          // TODO undefined or empty?
           notes: [],
         });
       }
@@ -834,6 +828,16 @@ describe('query operation annotations', () => {
         warningMessage('Tags on `except:` are ignored'),
         warningMessage('`except: *` is implied, unless another clause uses *')
       );
+    });
+    test('oprhaned annotation', () => {
+      const m = new TestTranslator(`
+        ##! experimental.access_modifiers
+        source: na is a include {
+          ai
+          ${'# orphaned'}
+        }
+      `);
+      expect(m).toLog(warningMessage('This tag is not attached to anything'));
     });
   });
 });

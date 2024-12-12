@@ -172,6 +172,8 @@ export abstract class DynamicSpace
           };
         }
       }
+      // TODO does this need to be done when the space is instantiated?
+      // e.g. if a field had a compiler flag on it...
       for (const [name, note] of this.newNotes) {
         const index = this.sourceDef.fields.findIndex(
           f => f.as ?? f.name === name
