@@ -522,7 +522,7 @@ class DuckDBTypeParser extends TinyParser {
         ) {
           const fieldType = this.typeDef();
           baseType.fields.push(
-            mkFieldDef(fieldType, this.unquoteName(fieldName), 'duckdb')
+            mkFieldDef(fieldType, this.unquoteName(fieldName))
           );
         } else {
           if (fieldName.type !== ')') {

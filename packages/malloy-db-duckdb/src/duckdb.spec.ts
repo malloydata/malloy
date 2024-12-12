@@ -133,7 +133,7 @@ describe('DuckDBConnection', () => {
       const structDef = makeStructDef();
       connection.fillStructDefFromTypeMap(structDef, {test: ARRAY_SCHEMA});
       expect(structDef.fields[0]).toEqual(
-        mkArrayDef({type: 'number', numberType: 'integer'}, 'test', 'duckdb')
+        mkArrayDef({type: 'number', numberType: 'integer'}, 'test')
       );
     });
 
@@ -143,7 +143,6 @@ describe('DuckDBConnection', () => {
       expect(structDef.fields[0]).toEqual({
         'name': 'test',
         'type': 'record',
-        'dialect': 'duckdb',
         'join': 'one',
         'fields': [
           {'name': 'a', ...dblType},
@@ -160,7 +159,6 @@ describe('DuckDBConnection', () => {
         'name': 'test',
         'type': 'array',
         'elementTypeDef': {type: 'record_element'},
-        'dialect': 'duckdb',
         'join': 'many',
         'fields': [
           {'name': 'a', 'numberType': 'float', 'type': 'number'},

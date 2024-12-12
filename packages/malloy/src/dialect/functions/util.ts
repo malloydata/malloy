@@ -29,6 +29,9 @@ import {
   FunctionParamTypeDesc,
   GenericSQLExpr,
   LeafExpressionType,
+  TD,
+  mkFieldDef,
+  FieldDef,
 } from '../../model/malloy_types';
 import {SQLExprElement} from '../../model/utils';
 
@@ -152,6 +155,14 @@ export function anyExprType(type: LeafExpressionType): FunctionParamTypeDesc {
   return {type, expressionType: undefined, evalSpace: 'input'};
 }
 
+function anyExprTypeBP(
+  type: TypeDescBlueprint,
+  generic: {name: string; type: LeafExpressionType} | undefined
+): FunctionParamTypeDesc {
+  const typeDesc = expandReturnTypeBlueprint(type, generic);
+  return {...typeDesc, expressionType: undefined, evalSpace: 'input'};
+}
+
 export function maxUngroupedAggregate(
   type: LeafExpressionType
 ): FunctionParamTypeDesc {
@@ -200,10 +211,19 @@ export function overload(
   };
 }
 
-export type TypeDescBlueprint =
-  // default for return type is min scalar
-  // default for param type is any expression type (max input)
+export interface ArrayBlueprint {
+  array: TypeDescElementBlueprint;
+}
+export interface RecordBlueprint {
+  record: Record<string, TypeDescElementBlueprint>;
+}
+export type TypeDescElementBlueprint =
   | LeafExpressionType
+  | ArrayBlueprint
+  | RecordBlueprint;
+
+export type TypeDescBlueprint =
+  | TypeDescElementBlueprint
   | {generic: string}
   | {literal: LeafExpressionType | {generic: string}}
   | {constant: LeafExpressionType | {generic: string}}
@@ -290,6 +310,48 @@ function expandReturnTypeBlueprint(
   let base: FunctionParamTypeDesc;
   if (typeof blueprint === 'string') {
     base = minScalar(blueprint);
+  } else if ('array' in blueprint) {
+    const innerType = expandReturnTypeBlueprint(blueprint.array, generic);
+    const {expressionType, evalSpace} = innerType;
+    if (TD.isAtomic(innerType)) {
+      if (innerType.type !== 'record') {
+        base = {
+          type: 'array',
+          elementTypeDef: innerType,
+          expressionType,
+          evalSpace,
+        };
+      } else {
+        base = {
+          type: 'array',
+          elementTypeDef: {type: 'record_element'},
+          fields: innerType.fields,
+          expressionType,
+          evalSpace,
+        };
+      }
+    } else {
+      // mtoy todo  fix by doing "exapndElementBlueprint" ...
+      throw new Error(
+        `TypeDescElementBlueprint should never allow ${blueprint.array}`
+      );
+    }
+  } else if ('record' in blueprint) {
+    const fields: FieldDef[] = [];
+    for (const [fieldName, fieldBlueprint] of Object.entries(
+      blueprint.record
+    )) {
+      const fieldDesc = expandReturnTypeBlueprint(fieldBlueprint, generic);
+      if (TD.isAtomic(fieldDesc)) {
+        fields.push(mkFieldDef(fieldDesc, fieldName));
+      }
+    }
+    base = {
+      type: 'record',
+      fields,
+      evalSpace: 'input',
+      expressionType: 'scalar',
+    };
   } else if ('generic' in blueprint) {
     base = minScalar(removeGeneric(blueprint, generic));
   } else if ('literal' in blueprint) {
@@ -315,6 +377,8 @@ function isTypeDescBlueprint(
 ): blueprint is TypeDescBlueprint {
   return (
     typeof blueprint === 'string' ||
+    'array' in blueprint ||
+    'record' in blueprint ||
     'generic' in blueprint ||
     'literal' in blueprint ||
     'constant' in blueprint ||
@@ -354,6 +418,10 @@ function expandParamTypeBlueprint(
     return maxScalar(removeGeneric(blueprint.dimension, generic));
   } else if ('measure' in blueprint) {
     return maxAggregate(removeGeneric(blueprint.measure, generic));
+  } else if ('array' in blueprint) {
+    return anyExprTypeBP(blueprint, generic);
+  } else if ('record' in blueprint) {
+    return anyExprTypeBP(blueprint, generic);
   } else {
     return maxAnalytic(removeGeneric(blueprint.calculation, generic));
   }

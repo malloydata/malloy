@@ -116,7 +116,6 @@ class SnowObject extends SnowField {
       name: this.name,
       fields: this.fields,
       join: 'one',
-      dialect: this.dialect.name,
     };
     return rec;
   }
@@ -175,22 +174,16 @@ class SnowArray extends SnowField {
     if (this.objectChild) {
       const t = mkArrayDef(
         {type: 'record', fields: this.objectChild.fields},
-        this.name,
-        this.dialect.name
+        this.name
       );
       return t;
     }
     if (this.arrayChild) {
-      return mkArrayDef(
-        this.arrayChild.fieldDef(),
-        this.name,
-        this.dialect.name
-      );
+      return mkArrayDef(this.arrayChild.fieldDef(), this.name);
     }
     return mkArrayDef(
       this.dialect.sqlTypeToMalloyType(this.arrayOf),
-      this.name,
-      this.dialect.name
+      this.name
     );
   }
 

@@ -49,7 +49,7 @@ export abstract class DynamicSpace
   protected newTimezone?: string;
 
   constructor(extending: SourceDef) {
-    super(structuredClone(extending));
+    super(structuredClone(extending), extending.dialect);
     this.fromSource = extending;
     this.sourceDef = undefined;
   }

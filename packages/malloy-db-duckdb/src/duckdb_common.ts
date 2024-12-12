@@ -158,7 +158,7 @@ export abstract class DuckDBCommon
       const name = unquoteName(fieldName);
       const dbType = typeMap[fieldName];
       const malloyType = this.dialect.parseDuckDBType(dbType);
-      structDef.fields.push(mkFieldDef(malloyType, name, 'duckdb'));
+      structDef.fields.push(mkFieldDef(malloyType, name));
     }
   }
 
