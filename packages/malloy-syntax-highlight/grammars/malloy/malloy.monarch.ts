@@ -184,6 +184,7 @@ export const monarch: Monaco.IMonarchLanguage = {
       [/\binternal\b/, 'keyword.control.internal'],
       [/\bpublic\b/, 'keyword.control.public'],
       [/\bprivate\b/, 'keyword.control.private'],
+      [/\binclude\b/, 'keyword.control.include'],
     ],
     properties: [
       [/\baccept\b/, 'keyword.control.accept'],
