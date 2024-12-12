@@ -1042,7 +1042,7 @@ export class MalloyToAST
 
   visitCollectionWildCard(
     pcx: parse.CollectionWildCardContext
-  ): ast.FieldReferenceElement {
+  ): ast.WildcardFieldReference {
     const nameCx = pcx.fieldPath();
     const join = nameCx
       ? this.getFieldPath(nameCx, ast.ProjectFieldReference)
@@ -1893,12 +1893,19 @@ export class MalloyToAST
   }
 
   visitIncludeItem(pcx: parse.IncludeItemContext) {
-    if (pcx.EXCEPT()) {
-      const listCx = pcx.fieldNameList();
-      if (listCx === undefined) {
-        return this.astAt(new ast.IncludeExceptItem('*'), pcx);
+    const tagsCx = pcx.tags();
+    const blockNotes = tagsCx ? this.getNotes(tagsCx) : [];
+    const exceptList = pcx.includeExceptList();
+    if (exceptList) {
+      if (tagsCx && blockNotes.length > 0) {
+        this.contextError(
+          tagsCx,
+          'cannot-tag-include-except',
+          'Tags on `except:` are ignored',
+          {severity: 'warn'}
+        );
       }
-      const fieldList = this.getExcludeList(listCx);
+      const fieldList = this.getExcludeList(exceptList);
       return this.astAt(new ast.IncludeExceptItem(fieldList), pcx);
     } else {
       const listCx = pcx.includeList();
@@ -1907,12 +1914,13 @@ export class MalloyToAST
       }
       const kind = this.getAccessLabelProp(pcx.accessLabelProp());
       const fieldList = this.getIncludeList(listCx);
-      return this.astAt(new ast.IncludeAccessItem(kind, fieldList), pcx);
+      const item = this.astAt(new ast.IncludeAccessItem(kind, fieldList), pcx);
+      item.extendNote({blockNotes});
+      return item;
     }
   }
 
-  getIncludeList(pcx: parse.IncludeListContext): ast.IncludeListItem[] | '*' {
-    if (pcx.STAR()) return '*';
+  getIncludeList(pcx: parse.IncludeListContext): ast.IncludeListItem[] {
     const listCx = pcx.includeField();
     if (listCx === undefined) {
       throw this.internalError(pcx, 'Expected a field name list');
@@ -1920,28 +1928,61 @@ export class MalloyToAST
     return listCx.map(fieldCx => this.getIncludeListItem(fieldCx));
   }
 
-  getExcludeList(pcx: parse.FieldNameListContext): ast.FieldReference[] {
-    return pcx
-      .fieldName()
-      .map(fcx =>
-        this.astAt(
+  getExcludeList(
+    pcx: parse.IncludeExceptListContext
+  ): (ast.AccessModifierFieldReference | ast.WildcardFieldReference)[] {
+    return pcx.includeExceptListItem().map(fcx => {
+      if (fcx.tags().ANNOTATION().length > 0) {
+        this.contextError(
+          fcx.tags(),
+          'cannot-tag-include-except',
+          'Tags on `except:` are ignored',
+          {severity: 'warn'}
+        );
+      }
+      const fieldNameCx = fcx.fieldName();
+      if (fieldNameCx) {
+        return this.astAt(
           new ast.AccessModifierFieldReference([
             this.astAt(new ast.FieldName(fcx.text), fcx),
           ]),
-          fcx
-        )
-      );
+          fieldNameCx
+        );
+      }
+      const wildcardCx = fcx.collectionWildCard();
+      if (wildcardCx) {
+        return this.astAt(this.visitCollectionWildCard(wildcardCx), wildcardCx);
+      }
+      throw this.internalError(fcx, 'Expected a field name or wildcard');
+    });
   }
 
   getIncludeListItem(pcx: parse.IncludeFieldContext): ast.IncludeListItem {
+    const wildcardCx = pcx.collectionWildCard();
+    const wildcard = wildcardCx
+      ? this.visitCollectionWildCard(wildcardCx)
+      : undefined;
     const as = pcx._as ? pcx._as.text : undefined;
-    const name = this.astAt(
-      new ast.AccessModifierFieldReference([
-        this.astAt(this.getFieldName(pcx._name), pcx._name),
-      ]),
-      pcx._name
-    );
-    return this.astAt(new ast.IncludeListItem(name, as), pcx);
+    const tags1cx = pcx.tags();
+    const tags1 = tags1cx ? this.getNotes(tags1cx) : [];
+    const tags2cx = pcx.isDefine();
+    const tags2 = tags2cx ? this.getIsNotes(tags2cx) : [];
+    const notes = [...tags1, ...tags2];
+    const name = pcx._name
+      ? this.astAt(
+          new ast.AccessModifierFieldReference([
+            this.astAt(this.getFieldName(pcx._name), pcx._name),
+          ]),
+          pcx._name
+        )
+      : undefined;
+    const reference = name ?? wildcard;
+    if (reference === undefined) {
+      throw this.internalError(pcx, 'Expected a field name or wildcard');
+    }
+    const item = this.astAt(new ast.IncludeListItem(reference, as), pcx);
+    item.extendNote({notes});
+    return item;
   }
 
   visitSQParens(pcx: parse.SQParensContext) {

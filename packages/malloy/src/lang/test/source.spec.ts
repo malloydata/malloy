@@ -463,17 +463,46 @@ describe('source:', () => {
           run: c -> { group_by: ${'ai'} }
         `).toLog(errorMessage("'ai' is not defined"));
       });
-      test.skip('tags in include', () => {
+      test('commas optional in include', () => {
         return expect(markSource`
           ##! experimental.access_modifiers
           source: c is a include {
-            public:
-              # tag one
-              a
-              # tag two
-              b, c
+            ai
+            astr
+            abool
+            private:
+              af
+              aweird
           }
-        `).toTranslate();
+          run: c -> { group_by: astr }
+          run: c -> { group_by: ${'af'} }
+        `).toLog(errorMessage("'af' is private"));
+      });
+      test('include and except list', () => {
+        return expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a include {
+            ai
+            except: astr
+          }
+        `).toLog(
+          errorMessage(
+            'Cannot exclude specific fields if specific fields are already included'
+          )
+        );
+      });
+      test('except and include list', () => {
+        return expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a include {
+            except: astr
+            public: ai
+          }
+        `).toLog(
+          errorMessage(
+            'Cannot include specific fields if specific fields are already excluded'
+          )
+        );
       });
       // TODO test conflict with `rename:` and `except:` and `accept:`
     });

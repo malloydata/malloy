@@ -9,78 +9,63 @@ import {MalloyElement} from '../types/malloy-element';
 import {
   AccessModifierFieldReference,
   FieldReference,
+  WildcardFieldReference,
 } from '../query-items/field-references';
-import {DocumentLocation} from '../../../model';
+import {Annotation} from '../../../model';
+import {extendNoteMethod, Noteable} from '../types/noteable';
 
-type RenameSpec = {
-  as: string;
-  name: FieldReference;
-  location: DocumentLocation;
-};
+// type RenameSpec = {
+//   as: string;
+//   name: FieldReference;
+//   location: DocumentLocation;
+// };
 
 export abstract class IncludeItem extends MalloyElement {
   abstract kind: 'private' | 'public' | 'internal' | 'except' | undefined;
-  constructor(readonly isStar: boolean) {
-    super();
-  }
-
-  abstract getFields(): FieldReference[];
-
-  getRenames(): RenameSpec[] {
-    return [];
-  }
 }
 
-export class IncludeAccessItem extends IncludeItem {
+export class IncludeAccessItem extends IncludeItem implements Noteable {
   elementType = 'include-access-item';
+  readonly isNoteableObj = true;
+  extendNote = extendNoteMethod;
+  note?: Annotation;
   constructor(
     readonly kind: 'private' | 'public' | 'internal' | undefined,
-    readonly fields: IncludeListItem[] | '*'
+    readonly fields: IncludeListItem[]
   ) {
-    super(fields === '*');
-    if (fields !== '*') {
-      this.has({fields});
-    }
+    super();
+    this.has({fields});
   }
 
-  getFields(): FieldReference[] {
-    if (this.fields === '*') return [];
-    return this.fields.map(f => f.name);
-  }
-
-  getRenames(): RenameSpec[] {
-    const renames: RenameSpec[] = [];
-    if (this.fields === '*') return renames;
-    for (const item of this.fields) {
-      if (item.as) {
-        renames.push({as: item.as, name: item.name, location: item.location});
-      }
-    }
-    return renames;
-  }
+  // getRenames(): RenameSpec[] {
+  //   const renames: RenameSpec[] = [];
+  //   if (this.fields === '*') return renames;
+  //   for (const item of this.fields) {
+  //     if (item.as) {
+  //       renames.push({as: item.as, name: item.name, location: item.location});
+  //     }
+  //   }
+  //   return renames;
+  // }
 }
 
 export class IncludeExceptItem extends IncludeItem {
   elementType = 'include-except-item';
   kind = 'except' as const;
-  constructor(readonly fields: FieldReference[] | '*') {
-    super(fields === '*');
-    if (fields !== '*') {
-      this.has({fields});
-    }
-  }
-
-  getFields(): FieldReference[] {
-    if (this.fields === '*') return [];
-    return this.fields;
+  constructor(readonly fields: (FieldReference | WildcardFieldReference)[]) {
+    super();
+    this.has({fields});
   }
 }
 
-export class IncludeListItem extends MalloyElement {
+export class IncludeListItem extends MalloyElement implements Noteable {
   elementType = 'include-list-item';
+  readonly isNoteableObj = true;
+  extendNote = extendNoteMethod;
+  note?: Annotation;
 
   constructor(
-    readonly name: AccessModifierFieldReference,
+    readonly name: AccessModifierFieldReference | WildcardFieldReference,
     readonly as: string | undefined
   ) {
     super({name});

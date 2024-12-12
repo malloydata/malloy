@@ -277,9 +277,9 @@ includeBlock
   ;
 
 includeItem
-  : accessLabelProp? includeList
-  | EXCEPT fieldNameList
-  | EXCEPT STAR
+  : tags accessLabelProp includeList
+  | includeList
+  | tags EXCEPT includeExceptList
   ;
 
 accessLabelProp
@@ -288,13 +288,23 @@ accessLabelProp
   | INTERNAL
   ;
 
+includeExceptList
+  : includeExceptListItem (COMMA? includeExceptListItem)* COMMA?
+  ;
+
+includeExceptListItem
+  : tags fieldName
+  | tags collectionWildCard
+  ;
+
 includeList
   : includeField (COMMA? includeField)* COMMA?
-  | STAR
   ;
 
 includeField
   : (as=fieldName isDefine)? name=fieldName
+  | tags name=fieldName
+  | tags collectionWildCard
   ;
 
 segExpr

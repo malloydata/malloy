@@ -23,6 +23,7 @@
 
 import {
   AccessModifierLabel,
+  Annotation,
   DocumentLocation,
   SourceDef,
 } from '../../../model/malloy_types';
@@ -153,6 +154,12 @@ export class RefinedSpace extends DynamicSpace {
   addAccessModifiers(ams: Map<string, AccessModifierLabel>): void {
     for (const [symbol, am] of ams) {
       this.newAccessModifiers.set(symbol, am);
+    }
+  }
+
+  addNotes(notes: Map<string, Annotation>): void {
+    for (const [symbol, note] of notes) {
+      this.newNotes.set(symbol, note);
     }
   }
 

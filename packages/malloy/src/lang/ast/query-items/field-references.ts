@@ -248,7 +248,7 @@ export class WildcardFieldReference extends MalloyElement implements Noteable {
   except = new Set<string>();
   constructor(readonly joinPath: FieldReference | undefined) {
     super();
-    this.has({joinPath: joinPath});
+    this.has({joinPath});
   }
 
   getFieldDef(): FieldDef {

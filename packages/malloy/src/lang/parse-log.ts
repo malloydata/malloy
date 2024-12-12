@@ -397,6 +397,9 @@ type MessageParameterTypes = {
   'exclude-after-include': string;
   'cannot-rename-non-field': string;
   'array-values-incompatible': string;
+  'cannot-tag-include-except': string;
+  'unsupported-path-in-include': string;
+  'wildcard-include-rename': string;
 };
 
 export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {

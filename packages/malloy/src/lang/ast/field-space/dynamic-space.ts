@@ -48,6 +48,7 @@ export abstract class DynamicSpace
   private parameters: HasParameter[] = [];
   protected newTimezone?: string;
   protected newAccessModifiers = new Map<string, model.AccessModifierLabel>();
+  protected newNotes = new Map<string, model.Annotation>();
 
   constructor(extending: SourceDef) {
     super(structuredClone(extending));
@@ -170,6 +171,26 @@ export abstract class DynamicSpace
             accessModifier: access,
           };
         }
+      }
+      for (const [name, note] of this.newNotes) {
+        const index = this.sourceDef.fields.findIndex(
+          f => f.as ?? f.name === name
+        );
+        if (index === -1) {
+          throw new Error(`Can't find field '${name}' to set access modifier`);
+        }
+        const field = this.sourceDef.fields[index];
+        this.sourceDef.fields[index] = {
+          ...field,
+          annotation: {
+            ...field.annotation,
+            notes: [...(field.annotation?.notes ?? []), ...(note.notes ?? [])],
+            blockNotes: [
+              ...(field.annotation?.blockNotes ?? []),
+              ...(note.blockNotes ?? []),
+            ],
+          },
+        };
       }
     }
     if (this.newTimezone && model.isSourceDef(this.sourceDef)) {
