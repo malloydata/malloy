@@ -45,6 +45,12 @@
   },
   "overrides": [
     {
+      "files": ["scripts/**"],
+      "rules": {
+        "no-console": "off"
+      }
+    },
+    {
       "files": ["**/vite.config.*", "scripts/**"],
       "rules": {
         "node/no-unpublished-import": "off"

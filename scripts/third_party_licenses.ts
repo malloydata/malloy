@@ -21,9 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable no-console */
-
 /*
  * This script produces a CSV useful for evaluating licenses for third-party software incuded in a binary, and
  * is a bit more complex than it might need to be because we need to satisfy lawyers with direct links to license files for packages
@@ -94,6 +91,19 @@ const licenseFoundElsewhere: {[id: string]: string} = {
 
 const packagesWithoutLocationsSpecified: {[id: string]: string} = {};
 
+interface YarnLicenses {
+  data: {
+    body: [
+      name: string,
+      version: string,
+      license: string,
+      url: string,
+      vendorUrl: string,
+      vendorName: string,
+    ][];
+  };
+}
+
 const getLicenses = async () => {
   const out: outputRow[] = [];
   const errors: [string, Error][] = [];
@@ -101,12 +111,11 @@ const getLicenses = async () => {
   // dependencyList.data.head is [ 'Name', 'Version', 'License', 'URL', 'VendorUrl', 'VendorName' ]
   const dependencyList = JSON.parse(
     execSync('yarn --prod true --no-progress licenses list --json').toString()
-  );
+  ) as YarnLicenses;
 
   // if specific versions are required they might be duped in list - de-deup here
   const dedupedDependencies = dependencyList.data.body.filter(
-    (arr: any, index: any, self: any) =>
-      self.findIndex((t: any) => t[0] === arr[0]) === index
+    (arr, index, self) => self.findIndex(t => t[0] === arr[0]) === index
   );
 
   for (const dependency of dedupedDependencies) {
@@ -237,7 +246,7 @@ const getLicenses = async () => {
         'sourceCodeIncluded',
       ],
     },
-    (err: any, output: string) => {
+    (_err, output) => {
       fs.writeFileSync(outputFile, output);
     }
   );

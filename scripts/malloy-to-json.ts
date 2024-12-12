@@ -21,7 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/* eslint-disable no-console */
 import * as readline from 'readline';
 import {inspect} from 'util';
 import {Connection, Malloy} from '@malloydata/malloy';
