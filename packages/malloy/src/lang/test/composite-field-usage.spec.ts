@@ -166,11 +166,16 @@ describe('composite sources', () => {
         ##! experimental.composite_sources
         run: compose(a, a extend { dimension: one is 1 }) -> { group_by: one }
     `).toTranslate());
-    test.skip('index on composite fails', () =>
+    test('index on composite translates', () =>
       expect(`
         ##! experimental.composite_sources
-        run: compose(a extend { dimension: two is 2 }, a extend { dimension: one is 1 }) -> { index: * }
-    `).toLog(errorMessage('Cannot index on a composite source')));
+        source: x is compose(
+          a extend { except: ai },
+          a
+        )
+        run: x -> { index: ai }
+        run: x -> { index: * }
+    `).toTranslate());
     test('raw run of composite source fails', () =>
       expect(`
         ##! experimental.composite_sources

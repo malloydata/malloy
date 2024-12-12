@@ -17,9 +17,10 @@ export interface TinyToken {
  *
  * NOTE: All parse errors are exceptions.
  */
+export class TinyParseError extends Error {}
 export class TinyParser {
   private tokens: Generator<TinyToken>;
-  private parseCursor = 0;
+  protected parseCursor = 0;
   private lookAhead?: TinyToken;
   private tokenMap: Record<string, RegExp>;
 
@@ -37,13 +38,13 @@ export class TinyParser {
     readonly input: string,
     tokenMap?: Record<string, RegExp>
   ) {
-    this.tokens = this.tokenize(input);
     this.tokenMap = tokenMap ?? {
       space: /^\s+/,
       char: /^[,:[\]()-]/,
       id: /^\w+/,
       qstr: /^"\w+"/,
     };
+    this.tokens = this.tokenize(input);
   }
 
   parseError(str: string) {
@@ -51,7 +52,7 @@ export class TinyParser {
       `INTERNAL ERROR parsing schema: ${str}\n` +
       `${this.input}\n` +
       `${' '.repeat(this.parseCursor)}^`;
-    return new Error(errText);
+    return new TinyParseError(errText);
   }
 
   peek(): TinyToken {
@@ -90,7 +91,23 @@ export class TinyParser {
       }
     }
     if (next) return next;
-    throw this.parseError(`Expected ${expected}`);
+    throw this.parseError(`Expected token type '${expected}'`);
+  }
+
+  nextText(...texts: string[]): TinyToken {
+    if (texts.length === 0) return this.getNext();
+    let next: TinyToken | undefined = undefined;
+    let expected = texts[0];
+    for (const txt of texts) {
+      next = this.getNext();
+      expected = txt;
+      if (next.text !== txt) {
+        next = undefined;
+        break;
+      }
+    }
+    if (next) return next;
+    throw this.parseError(`Expected '${expected}'`);
   }
 
   skipTo(type: string) {
@@ -103,6 +120,13 @@ export class TinyParser {
         return;
       }
     }
+  }
+
+  dump(): TinyToken[] {
+    const p = this.parseCursor;
+    const parts = [...this.tokenize(this.input)];
+    this.parseCursor = p;
+    return parts;
   }
 
   private *tokenize(src: string): Generator<TinyToken> {
@@ -124,6 +148,7 @@ export class TinyParser {
               type: tokenType === 'char' ? tokenText : tokenType,
               text: tokenText,
             };
+            break;
           }
         }
       }

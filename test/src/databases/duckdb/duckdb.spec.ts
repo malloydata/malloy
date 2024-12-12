@@ -131,7 +131,7 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
     ).malloyResultMatches(runtime, {abc: 'a', abc3: 'a3'});
   });
 
-  describe('time', () => {
+  describe('time oddities', () => {
     const zone = 'America/Mexico_City'; // -06:00 no DST
     const zone_2020 = DateTime.fromObject(
       {
@@ -147,13 +147,12 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
       }
     );
     test('can cast TIMESTAMPTZ to timestamp', async () => {
-      await expect(
-        `run: duckdb.sql("""
+      await expect(`
+        run: duckdb.sql("""
               SELECT TIMESTAMPTZ '2020-02-20 00:00:00 ${zone}' as t_tstz
           """) -> {
             select: mex_220 is t_tstz::timestamp
-          }`
-      ).malloyResultMatches(runtime, {mex_220: zone_2020.toJSDate()});
+          }`).malloyResultMatches(runtime, {mex_220: zone_2020.toJSDate()});
     });
   });
 });

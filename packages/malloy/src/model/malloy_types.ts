@@ -1045,6 +1045,7 @@ export interface IndexSegment extends Filtered {
   weightMeasure?: string; // only allow the name of the field to use for weights
   sample?: Sampling;
   alwaysJoins?: string[];
+  compositeFieldUsage?: CompositeFieldUsage;
 }
 export function isIndexSegment(pe: PipeSegment): pe is IndexSegment {
   return (pe as IndexSegment).type === 'index';

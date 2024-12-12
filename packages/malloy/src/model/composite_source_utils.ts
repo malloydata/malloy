@@ -42,7 +42,7 @@ function _resolveCompositeSources(
   let narrowedSources: SingleNarrowedCompositeFieldResolution | undefined =
     undefined;
   const nonCompositeFields = getNonCompositeFields(source);
-  if (compositeFieldUsage.fields.length > 0) {
+  if (compositeFieldUsage.fields.length > 0 || source.type === 'composite') {
     if (source.type === 'composite') {
       let found = false;
       // The narrowed source list is either the one given when this function was called,
@@ -124,13 +124,6 @@ function _resolveCompositeSources(
     } else {
       return {error: {code: 'not_a_composite_source', data: {path}}};
     }
-  } else if (source.type === 'composite') {
-    const first = source.sources[0];
-    base = {
-      ...first,
-      fields: [...nonCompositeFields, ...base.fields],
-      filterList: [...(source.filterList ?? []), ...(first.filterList ?? [])],
-    };
   }
   const fieldsByName: {[name: string]: FieldDef} = {};
   const narrowedJoinedSources = narrowedCompositeFieldResolution?.joined ?? {};
@@ -191,7 +184,7 @@ type SingleNarrowedCompositeFieldResolution = {
   nested?: SingleNarrowedCompositeFieldResolution | undefined;
 }[];
 
-interface NarrowedCompositeFieldResolution {
+export interface NarrowedCompositeFieldResolution {
   source: SingleNarrowedCompositeFieldResolution | undefined;
   joined: {[name: string]: NarrowedCompositeFieldResolution};
 }
@@ -336,20 +329,18 @@ export function compositeFieldUsageDifference(
   return {
     fields: arrayDifference(a.fields, b.fields),
     joinedUsage: Object.fromEntries(
-      Object.entries(a.joinedUsage)
-        .map(
-          ([joinName, joinedUsage]) =>
-            [
-              joinName,
-              joinName in b.joinedUsage
-                ? compositeFieldUsageDifference(
-                    joinedUsage,
-                    b.joinedUsage[joinName]
-                  )
-                : joinedUsage,
-            ] as [string, CompositeFieldUsage]
-        )
-        .filter(([_, joinedUsage]) => countCompositeFieldUsage(joinedUsage) > 0)
+      Object.entries(a.joinedUsage).map(
+        ([joinName, joinedUsage]) =>
+          [
+            joinName,
+            joinName in b.joinedUsage
+              ? compositeFieldUsageDifference(
+                  joinedUsage,
+                  b.joinedUsage[joinName]
+                )
+              : joinedUsage,
+          ] as [string, CompositeFieldUsage]
+      )
     ),
   };
 }
