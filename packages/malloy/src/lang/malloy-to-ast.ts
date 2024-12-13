@@ -1927,32 +1927,24 @@ export class MalloyToAST
   }
 
   visitRecordRef(pcx: parse.RecordRefContext) {
-    const pathCx = pcx.fieldPath();
-    const tailEl = pathCx.fieldName().at(-1);
-    if (tailEl) {
-      const elementKey = getId(tailEl);
-      const idRef = new ast.ExprIdReference(
-        this.getFieldPath(pathCx, ast.ExpressionFieldReference)
-      );
-      return new ast.RecordElement(elementKey, idRef);
-    }
-    throw this.internalError(
-      pathCx,
-      'IMPOSSIBLY A PATH CONTAINED ZERO ELEMENTS'
+    const idRef = new ast.ExprIdReference(
+      this.getFieldPath(pcx.fieldPath(), ast.ExpressionFieldReference)
     );
+    return this.astAt(new ast.RecordElement({path: idRef}), pcx);
   }
 
   visitRecordExpr(pcx: parse.RecordExprContext) {
-    const elementKey = getId(pcx.recordKey());
-    const elementVal = this.getFieldExpr(pcx.fieldExpr());
-    return new ast.RecordElement(elementKey, elementVal);
+    const value = this.getFieldExpr(pcx.fieldExpr());
+    const keyCx = pcx.recordKey();
+    const recInit = keyCx ? {key: getId(keyCx), value} : {value};
+    return this.astAt(new ast.RecordElement(recInit), pcx);
   }
 
   visitExprLiteralRecord(pcx: parse.ExprLiteralRecordContext) {
     const els = this.only<ast.RecordElement>(
       pcx.recordElement().map(elCx => this.astAt(this.visit(elCx), elCx)),
       visited => visited instanceof ast.RecordElement && visited,
-      'a key value pair'
+      'a legal record property description'
     );
     return new ast.RecordLiteral(els);
   }

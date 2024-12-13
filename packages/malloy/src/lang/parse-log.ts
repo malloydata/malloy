@@ -367,6 +367,7 @@ type MessageParameterTypes = {
   'sql-is-not-null': string;
   'sql-is-null': string;
   'illegal-record-property-type': string;
+  'record-literal-needs-keys': string;
   'not-yet-implemented': string;
   'sql-case': string;
   'case-then-type-does-not-match': {

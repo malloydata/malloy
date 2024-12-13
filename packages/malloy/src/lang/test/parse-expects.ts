@@ -229,6 +229,17 @@ function eToStr(e: Expr, symbols: ESymbols): string {
       return `"${e.literal}"`;
     case 'timeLiteral':
       return `@${e.literal}`;
+    case 'recordLiteral': {
+      const parts: string[] = [];
+      for (const [name, val] of Object.entries(e.kids)) {
+        parts.push(`${name}:${subExpr(val)}`);
+      }
+      return `{${parts.join(', ')}}`;
+    }
+    case 'arrayLiteral': {
+      const parts = e.kids.values.map(k => subExpr(k));
+      return `[${parts.join(', ')}]`;
+    }
     case 'regexpLiteral':
       return `/${e.literal}/`;
     case 'trunc':
