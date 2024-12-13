@@ -11,6 +11,13 @@ import {
   OverloadedDefinitionBlueprint,
 } from '../functions/util';
 
+const array_first: DefinitionBlueprint = {
+  takes: {'value': {array: {generic: 'T'}}},
+  generic: ['T', ['any']],
+  returns: {generic: 'T'},
+  impl: {sql: 'list_extract(${value}, 1)'},
+};
+
 const dayname: DefinitionBlueprint = {
   takes: {'date_value': ['date', 'timestamp']},
   returns: 'string',
@@ -74,6 +81,7 @@ const string_agg_distinct: OverloadedDefinitionBlueprint = {
 };
 
 export const DUCKDB_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
+  array_first,
   count_approx,
   dayname,
   to_timestamp,

@@ -359,6 +359,68 @@ export class DuckDBDialect extends PostgresBase {
 
   getDialectFunctions(): {[name: string]: DialectFunctionOverloadDef[]} {
     return expandBlueprintMap(DUCKDB_DIALECT_FUNCTIONS);
+    // {
+      // ...expandBlueprintMap(DUCKDB_DIALECT_FUNCTIONS),
+    //   'test_foo': [
+    //     {
+    //       returnType: {
+    //         type: 'generic',
+    //         generic: 'T',
+    //         expressionType: 'scalar',
+    //         evalSpace: 'constant',
+    //       },
+    //       params: [
+    //         {
+    //           name: 'foo',
+    //           allowedTypes: [
+    //             {
+    //               type: 'generic',
+    //               generic: 'T',
+    //               expressionType: 'scalar',
+    //               evalSpace: 'constant',
+    //             },
+    //           ],
+    //           isVariadic: false,
+    //         },
+    //       ],
+    //       genericTypes: [
+    //         {name: 'T', acceptibleTypes: [{type: 'string'}, {type: 'number'}]},
+    //       ],
+    //       e: {node: 'function_parameter', name: 'foo'},
+    //       between: undefined,
+    //     },
+    //   ],
+    //   'test_first': [
+    //     {
+    //       returnType: {
+    //         type: 'generic',
+    //         generic: 'T',
+    //         expressionType: 'scalar',
+    //         evalSpace: 'constant',
+    //       },
+    //       params: [
+    //         {
+    //           name: 'foo',
+    //           allowedTypes: [
+    //             {
+    //               type: 'array',
+    //               elementTypeDef: {
+    //                 type: 'generic',
+    //                 generic: 'T',
+    //               },
+    //               expressionType: 'scalar',
+    //               evalSpace: 'constant',
+    //             },
+    //           ],
+    //           isVariadic: false,
+    //         },
+    //       ],
+    //       genericTypes: [{name: 'T', acceptibleTypes: [{type: 'any'}]}],
+    //       e: {node: 'function_parameter', name: 'foo'},
+    //       between: undefined,
+    //     },
+    //   ],
+    // };
   }
 
   malloyTypeToSQLType(malloyType: AtomicTypeDef): string {

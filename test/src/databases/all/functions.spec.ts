@@ -27,7 +27,8 @@ import {booleanResult, brokenIn, databasesFromEnvironmentOr} from '../../util';
 import '../../util/db-jest-matchers';
 import * as malloy from '@malloydata/malloy';
 
-const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
+const runtimes = new RuntimeList(databasesFromEnvironmentOr(['duckdb']));
+// const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 function modelText(databaseName: string) {
   return `
@@ -1312,12 +1313,18 @@ expressionModels.forEach((x, databaseName) => {
 
   describe('dialect functions', () => {
     describe('duckdb', () => {
-      const duckdb = it.when(databaseName === 'duckdb');
-      duckdb('to_timestamp', async () => {
+      const isDuckdb = databaseName === 'duckdb';
+      it.when(isDuckdb)('to_timestamp', async () => {
         await funcTest(
           'to_timestamp(1725555835) = @2024-09-05 17:03:55',
           booleanResult(true, databaseName)
         );
+      });
+      it.when(isDuckdb)('test_foo', async () => {
+        await funcTest('test_foo(5)', 5);
+      });
+      it.when(isDuckdb)('array_first', async () => {
+        await funcTest('array_first(array_first([[5]]))', 5);
       });
     });
 

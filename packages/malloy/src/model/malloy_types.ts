@@ -786,6 +786,30 @@ export interface RepeatedRecordDef
 export type ArrayTypeDef = ScalarArrayTypeDef | RepeatedRecordTypeDef;
 export type ArrayDef = ScalarArrayDef | RepeatedRecordDef;
 
+// function isRepeatedRecordXYZ<XYZ>(
+//   paramT: XYZTypeDef<XYZ>
+// ): paramT is RepeatedRecordXYZTypeDef<XYZ> {
+//   return (
+//     paramT.type === 'array' && paramT.elementTypeDef.type === 'record_element'
+//   );
+// }
+
+// function isScalarArrayXYZ<XYZ>(
+//   paramT: XYZTypeDef<XYZ>
+// ): paramT is ScalarArrayXYZTypeDef<XYZ> {
+//   return (
+//     paramT.type === 'array' && paramT.elementTypeDef.type !== 'record_element'
+//   );
+// }
+
+export function isRepeatedRecordFunctionParam(
+  paramT: FunctionParamTypeDef
+): paramT is RepeatedRecordFunctionParamTypeDef {
+  return (
+    paramT.type === 'array' && paramT.elementTypeDef.type === 'record_element'
+  );
+}
+
 export function isRepeatedRecord(
   fd: FieldDef | QueryFieldDef | StructDef | AtomicTypeDef
 ): fd is RepeatedRecordTypeDef {
@@ -1200,7 +1224,6 @@ export type NonAtomicType =
   | 'turtle' //   do NOT have the full type info, just noting the type
   | 'null'
   | 'duration'
-  | 'any'
   | 'regular expression';
 export interface NonAtomicTypeDef {
   type: NonAtomicType;
@@ -1221,11 +1244,100 @@ export type TypeInfo = {
 
 export type TypeDesc = ExpressionValueTypeDef & TypeInfo;
 
-export type FunctionParamType = ExpressionValueTypeDef | {type: 'any'};
-export type FunctionParamTypeDesc = FunctionParamType & {
+export type FunctionParamTypeDef = XYZTypeDef<ParamTypeExtensions>;
+export type FunctionParamTypeDesc = FunctionParamTypeDef & {
   expressionType: ExpressionType | undefined;
   evalSpace: EvalSpace;
 };
+//
+export interface ScalarArrayXYZTypeDef<XYZ> {
+  type: 'array';
+  elementTypeDef: Exclude<XYZTypeDef<XYZ>, RecordXYZTypeDef<XYZ>>;
+}
+
+// TODO?
+export type FieldTypeDef = LeafAtomicTypeDef;
+// | Join
+// | Turtle;
+
+// export type XYZTypeDef<XYZ> = FieldTypeDef | XYZ;
+export type XYZTypeDef<XYZ> =
+  | AtomicTypeDef
+  | NonAtomicTypeDef
+  | ScalarArrayXYZTypeDef<XYZ>
+  | RecordXYZTypeDef<XYZ>
+  | RepeatedRecordXYZTypeDef<XYZ>
+  | XYZ;
+
+export interface RecordXYZTypeDef<XYZ> {
+  type: 'record';
+  fields: XYZFieldDef<XYZ>[];
+}
+
+export type XYZFieldDef<XYZ> = FieldDef | (XYZ & FieldBase);
+
+export interface RepeatedRecordXYZTypeDef<XYZ> {
+  type: 'array';
+  elementTypeDef: RecordElementTypeDef;
+  fields: XYZFieldDef<XYZ>[];
+}
+
+//
+
+type ReturnTypeExtensions = GenericTypeDef;
+
+export type ScalarArrayFunctionReturnTypeDef =
+  ScalarArrayXYZTypeDef<ReturnTypeExtensions>;
+
+export type FunctionReturnFieldDef = XYZFieldDef<ReturnTypeExtensions>;
+
+export type RecordFunctionReturnTypeDef =
+  RecordXYZTypeDef<ReturnTypeExtensions>;
+
+export type RepeatedRecordFunctionReturnTypeDef =
+  RepeatedRecordXYZTypeDef<ReturnTypeExtensions>;
+
+type ParamTypeExtensions = GenericTypeDef | AnyTypeDef;
+
+export type ScalarArrayFunctionParamTypeDef =
+  ScalarArrayXYZTypeDef<ParamTypeExtensions>;
+
+export type FunctionParamFieldDef = XYZFieldDef<ParamTypeExtensions>;
+
+export type RecordFunctionParamTypeDef = RecordXYZTypeDef<ParamTypeExtensions>;
+
+export type RepeatedRecordFunctionParamTypeDef =
+  RepeatedRecordXYZTypeDef<ParamTypeExtensions>;
+
+type GenericTypeExtensions = AnyTypeDef;
+
+export type ScalarArrayFunctionGenericTypeDef =
+  ScalarArrayXYZTypeDef<GenericTypeExtensions>;
+
+export type FunctionGenericFieldDef = XYZFieldDef<GenericTypeExtensions>;
+
+export type RecordFunctionGenericTypeDef =
+  RecordXYZTypeDef<GenericTypeExtensions>;
+
+export type RepeatedRecordFunctionGenericTypeDef =
+  RepeatedRecordXYZTypeDef<GenericTypeExtensions>;
+
+export interface GenericTypeDef {
+  type: 'generic';
+  generic: string;
+}
+
+export interface AnyTypeDef {
+  type: 'any';
+}
+
+export type TypeDescExtensions = {
+  expressionType: ExpressionType | undefined;
+  evalSpace: EvalSpace;
+};
+
+export type FunctionReturnTypeDef = XYZTypeDef<ReturnTypeExtensions>;
+export type FunctionReturnTypeDesc = FunctionReturnTypeDef & TypeDescExtensions;
 
 export type EvalSpace = 'constant' | 'input' | 'output' | 'literal';
 
@@ -1255,13 +1367,19 @@ export interface FunctionParameterDef {
   isVariadic: boolean;
 }
 
+// TODO name?
+export type FunctionGenericNonAnyTypeDef = XYZTypeDef<never>;
+
+export type FunctionGenericTypeDef = XYZTypeDef<GenericTypeExtensions>;
+
 export interface FunctionOverloadDef {
   // The expression type here is the MINIMUM return type
-  returnType: TypeDesc;
+  returnType: FunctionReturnTypeDesc;
   isSymmetric?: boolean;
   params: FunctionParameterDef[];
   supportsOrderBy?: boolean | 'only_default';
   supportsLimit?: boolean;
+  genericTypes?: {name: string; acceptibleTypes: FunctionGenericTypeDef[]}[];
   dialect: {
     [dialect: string]: {
       e: Expr;
@@ -1442,7 +1560,16 @@ export function isTurtle(def: TypedDef): def is TurtleDef {
   return def.type === 'turtle';
 }
 
-export function isAtomic(def: TypedDef): def is AtomicTypeDef {
+export function isAtomicXYZ<
+  T extends object,
+  XYZ extends TypedDef | ExpressionValueTypeDef | XYZTypeDef<T>,
+>(def: XYZTypeDef<XYZ>): def is AtomicTypeDef {
+  return 'type' in def && isAtomicFieldType(def.type);
+}
+
+export function isAtomic(
+  def: TypedDef | ExpressionValueTypeDef
+): def is AtomicTypeDef {
   return isAtomicFieldType(def.type);
 }
 
@@ -1507,7 +1634,12 @@ export interface PrepareResultOptions {
   materializedTablePrefix?: string;
 }
 
-type UTD = AtomicTypeDef | FunctionParamTypeDesc | undefined;
+type UTD =
+  | AtomicTypeDef
+  | TypedDef
+  | FunctionParamTypeDef
+  | FunctionReturnTypeDef
+  | undefined;
 /**
  * A set of utilities for asking questions TypeDef/TypeDesc
  * (which is OK because TypeDesc is an extension of a TypeDef)
@@ -1561,9 +1693,9 @@ export const TD = {
       ) {
         return TD.eq(x.elementTypeDef, y.elementTypeDef);
       }
-      return checkFields(x, y);
+      return TD.isAtomic(x) && TD.isAtomic(y) && checkFields(x, y);
     } else if (x.type === 'record' && y.type === 'record') {
-      return checkFields(x, y);
+      return TD.isAtomic(x) && TD.isAtomic(y) && checkFields(x, y);
     }
     if (x.type === 'sql native' && y.type === 'sql native') {
       return x.rawType !== undefined && x.rawType === y.rawType;
