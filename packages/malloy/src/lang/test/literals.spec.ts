@@ -283,4 +283,22 @@ describe('literals', () => {
     });
     test('a string containing a tab', () => expect(expr`'\t'`).toParse());
   });
+  describe('compound literals', () => {
+    test('simple record literal', () => {
+      expect('{answer is 42}').compilesTo('{answer:42}');
+    });
+    test('record literal with path', () => {
+      expect('{aninline.column}').compilesTo('{column:aninline.column}');
+    });
+    test('array of records with same schema', () => {
+      expect(
+        '[{name is "one", val is 1},{name is "two", val is 2}]'
+      ).compilesTo('[{name:"one", val:1}, {name:"two", val:2}]');
+    });
+    test('array of records with head schema', () => {
+      expect('[{name is "one", val is 1},{"two", 2}]').compilesTo(
+        '[{name:"one", val:1}, {name:"two", val:2}]'
+      );
+    });
+  });
 });

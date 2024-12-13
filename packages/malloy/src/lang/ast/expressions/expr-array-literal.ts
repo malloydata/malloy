@@ -10,6 +10,7 @@ import {ExprValue, computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 import * as TDU from '../typedesc-utils';
+import {RecordLiteral} from './expr-record-literal';
 
 export class ArrayLiteral extends ExpressionDef {
   elementType = 'array literal';
@@ -24,7 +25,10 @@ export class ArrayLiteral extends ExpressionDef {
     let firstValue: ExprValue | undefined = undefined;
     if (this.elements.length > 0) {
       for (const nextElement of this.elements) {
-        const v = nextElement.getExpression(fs);
+        const v =
+          firstValue && nextElement instanceof RecordLiteral
+            ? nextElement.getNextElement(fs, firstValue)
+            : nextElement.getExpression(fs);
         fromValues.push(v);
         if (v.type === 'error') {
           continue;

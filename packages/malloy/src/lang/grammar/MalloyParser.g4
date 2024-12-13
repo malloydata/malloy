@@ -664,8 +664,8 @@ caseWhen
 
 recordKey: id;
 recordElement
-  : fieldPath         # recordRef
-  | recordKey IS fieldExpr   # recordExpr
+  : fieldPath                   # recordRef
+  | (recordKey IS)? fieldExpr   # recordExpr
   ;
 
 argumentList
