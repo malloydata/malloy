@@ -22,23 +22,26 @@ describe.each(runtimes.runtimeList)(
       throw new Error("Couldn't build runtime");
     }
 
-    test.when(databaseName === 'presto')('presto explain parser', async () => {
-      const abrec = 'CAST(ROW(0,1) AS ROW(a DOUBLE,b DOUBLE))';
-      await expect(`
-        run: ${databaseName}.sql("""
-          SELECT
-            ${abrec} as "abrec",
-            ARRAY['c', 'd'] as str_array,
-            array[1,2,3] as int_array,
-            ARRAY[${abrec}] as array_of_abrec
-        """)
-      `).malloyResultMatches(runtime, {});
-    });
     it(`runs an sql query - ${databaseName}`, async () => {
       await expect(
         `run: ${databaseName}.sql("SELECT 1 as n") -> { select: n }`
       ).malloyResultMatches(runtime, {n: 1});
     });
+    test.when(databaseName === 'presto')(
+      'schema parser does not throw on compound types',
+      async () => {
+        const abrec = 'CAST(ROW(0,1) AS ROW(a DOUBLE,b DOUBLE))';
+        await expect(`
+          run: ${databaseName}.sql("""
+            SELECT
+              ${abrec} as "abrec",
+              ARRAY['c', 'd'] as str_array,
+              array[1,2,3] as int_array,
+              ARRAY[${abrec}] as array_of_abrec
+          """)
+      `).malloyResultMatches(runtime, {});
+      }
+    );
 
     it(`runs the to_unixtime function - ${databaseName}`, async () => {
       await expect(`run: ${databaseName}.sql("SELECT 1 as n") -> {
@@ -313,12 +316,69 @@ describe.each(runtimes.runtimeList)(
         query: 'first_param=val_one&second_param=2',
       });
     });
-    test('string split function in tresto', async () => {
-      await expect(`
-        run: ${databaseName}.sql("SELECT 1 AS N") -> {
-          select: some_words is split('hello world', ' ')
-        }
-      `).malloyResultMatches(runtime, {some_words: ['hello', 'world']});
+    describe('various array functions', () => {
+      const nums = `${databaseName}.sql('SELECT ARRAY[4,1,1] as "nums"')`;
+      it('runs split function', async () => {
+        await expect(`
+          run: ${databaseName}.sql("SELECT 1 AS N") -> {
+            select: some_words is split('hello world', ' ')
+          }
+        `).malloyResultMatches(runtime, {some_words: ['hello', 'world']});
+      });
+      it('runs array_average', async () => {
+        await expect(
+          `run: ${nums}->{select tavg is array_average(nums)}`
+        ).malloyResultMatches(runtime, {tavg: 2});
+      });
+      it('runs array_distinct', async () => {
+        await expect(
+          `run: ${nums}->{select t is array_distinct(nums)}`
+        ).malloyResultMatches(runtime, {t: [1, 4]});
+      });
+      it('runs array_has_duplicates', async () => {
+        await expect(
+          `run: ${nums}->{select t is array_has_duplicates(nums)}`
+        ).malloyResultMatches(runtime, {t: true});
+      });
+      it('runs array_max', async () => {
+        await expect(
+          `run: ${nums}->{select t is array_max(nums)}`
+        ).malloyResultMatches(runtime, {t: 4});
+      });
+      it('runs array_min', async () => {
+        await expect(
+          `run: ${nums}->{select t is array_min(nums)}`
+        ).malloyResultMatches(runtime, {t: 1});
+      });
+      /*
+define('array_cum_sum', arrayOfT, 'number');
+define('array_duplicates', arrayOfT, arrayOfT);
+define('array_except', arrayOfT, arrayOfT, arrayOfT);
+define('array_normalize', arrayOfT, 'number', arrayOfT);
+define('array_position', arrayOfT, {generic: 'T'}, 'number');
+define('array_remove', arrayOfT, {generic: 'T'}, arrayOfT);
+// mtoy todo document missing lambda sort
+define('array_sort', arrayOfT, arrayOfT);
+define('array_sort_desc', arrayOfT, arrayOfT);
+define('array_split_into_chunks', arrayOfT, 'number', arrayOfArrayOfT);
+define('array_sum', arrayOfT, arrayOfT);
+define('arrays_overlap', arrayOfT, arrayOfT, 'boolean');
+define('array_union', arrayOfT, arrayOfT, arrayOfT);
+define('cardinality', arrayOfT, 'number');
+define('remove_nulls', arrayOfT, arrayOfT);
+define('reverse', arrayOfT, arrayOfT);
+define('shuffle', arrayOfT, arrayOfT);
+define('array_top_n', arrayOfT, 'number', arrayOfT);
+define('combinations', arrayOfT, 'number', arrayOfArrayOfT);
+define('contains', arrayOfT, {generic: 'T'}, 'boolean');
+define('element_at', arrayOfT, 'number', {generic: 'T'});
+// hard to believe, but this is what flatten does
+define('flatten', arrayOfArrayOfT, arrayOfT);
+define('ngrams', arrayOfT, 'number', arrayOfArrayOfT);
+define('repeat', {generic: 'T'}, 'number', arrayOfT);
+define('slice', arrayOfT, 'number', 'number', arrayOfT);
+define('trim_array', arrayOfT, 'number', arrayOfT);
+*/
     });
   }
 );
