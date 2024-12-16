@@ -1,5 +1,6 @@
 /*
  * Copyright 2023 Google LLC
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files
@@ -167,11 +168,6 @@ export function maxAggregate<T>(type: T): T & TypeDescExtras {
 export function anyExprType<T>(type: T): T & TypeDescExtras {
   return {...type, expressionType: undefined, evalSpace: 'input'};
 }
-
-// function anyExprTypeBP<T>(type: T): T & TypeDescExtras {
-//   const typeDesc = expandReturnTypeBlueprint(type);
-//   return {...typeDesc, expressionType: undefined, evalSpace: 'input'};
-// }
 
 export function maxUngroupedAggregate(
   type: FunctionParameterTypeDef
