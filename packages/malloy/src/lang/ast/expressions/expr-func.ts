@@ -632,7 +632,7 @@ function parseSQLInterpolation(template: string): InterpolationPart[] {
   return parts;
 }
 
-type OneSetGeneric = {name: string; type: ExpressionValueTypeDef};
+type GenericAssignment = {name: string; type: ExpressionValueTypeDef};
 
 function isDataTypeMatch(
   genericTypes: {name: string; acceptibleTypes: FunctionGenericTypeDef[]}[],
@@ -640,7 +640,7 @@ function isDataTypeMatch(
   paramT: FunctionGenericTypeDef | FunctionParameterTypeDef
 ): {
   dataTypeMatch: boolean;
-  genericsSet: OneSetGeneric[];
+  genericsSet: GenericAssignment[];
 } {
   if (
     TD.eq(paramT, arg) ||
@@ -678,7 +678,7 @@ function isDataTypeMatch(
       return {dataTypeMatch: false, genericsSet: []};
     }
   } else if (paramT.type === 'record' && arg.type === 'record') {
-    const genericsSet: OneSetGeneric[] = [];
+    const genericsSet: GenericAssignment[] = [];
     const paramFieldsByName = new Map<string, FunctionParameterFieldDef>();
     for (const field of paramT.fields) {
       paramFieldsByName.set(field.as ?? field.name, field);
@@ -701,7 +701,7 @@ function isDataTypeMatch(
         if (!isAtomic(arg)) {
           continue;
         }
-        const newGenericSet: OneSetGeneric = {
+        const newGenericSet: GenericAssignment = {
           name: paramT.generic,
           type: arg,
         };
