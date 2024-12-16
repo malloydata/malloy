@@ -1230,78 +1230,81 @@ export type TypeInfo = {
 export type TypeDesc = ExpressionValueTypeDef & TypeInfo;
 
 export type FunctionParameterTypeDef =
-  XYZTypeDef<FunctionParameterTypeExtensions>;
+  ExpressionValueExtTypeDef<FunctionParameterTypeExtensions>;
 export type FunctionParamTypeDesc = FunctionParameterTypeDef & {
   expressionType: ExpressionType | undefined;
   evalSpace: EvalSpace;
 };
 
-interface ScalarArrayXYZTypeDef<XYZ> {
+interface ScalarArrayExtTypeDef<TypeExtensions> {
   type: 'array';
-  elementTypeDef: Exclude<XYZTypeDef<XYZ>, RecordXYZTypeDef<XYZ>>;
+  elementTypeDef: Exclude<
+    ExpressionValueExtTypeDef<TypeExtensions>,
+    RecordExtTypeDef<TypeExtensions>
+  >;
 }
 
-type XYZTypeDef<XYZ> =
+type ExpressionValueExtTypeDef<TypeExtensions> =
   | AtomicTypeDef
   | NonAtomicTypeDef
-  | ScalarArrayXYZTypeDef<XYZ>
-  | RecordXYZTypeDef<XYZ>
-  | RepeatedRecordXYZTypeDef<XYZ>
-  | XYZ;
+  | ScalarArrayExtTypeDef<TypeExtensions>
+  | RecordExtTypeDef<TypeExtensions>
+  | RepeatedRecordExtTypeDef<TypeExtensions>
+  | TypeExtensions;
 
-interface RecordXYZTypeDef<XYZ> {
+interface RecordExtTypeDef<TypeExtensions> {
   type: 'record';
-  fields: XYZFieldDef<XYZ>[];
+  fields: ExtFieldDef<TypeExtensions>[];
 }
 
-type XYZFieldDef<XYZ> = FieldDef | (XYZ & FieldBase);
+type ExtFieldDef<TypeExtensions> = FieldDef | (TypeExtensions & FieldBase);
 
-interface RepeatedRecordXYZTypeDef<XYZ> {
+interface RepeatedRecordExtTypeDef<TypeExtensions> {
   type: 'array';
   elementTypeDef: RecordElementTypeDef;
-  fields: XYZFieldDef<XYZ>[];
+  fields: ExtFieldDef<TypeExtensions>[];
 }
 
 type FunctionReturnTypeExtensions = GenericTypeDef;
 
 export type ScalarArrayFunctionReturnTypeDef =
-  ScalarArrayXYZTypeDef<FunctionReturnTypeExtensions>;
+  ScalarArrayExtTypeDef<FunctionReturnTypeExtensions>;
 
-export type FunctionReturnFieldDef = XYZFieldDef<FunctionReturnTypeExtensions>;
+export type FunctionReturnFieldDef = ExtFieldDef<FunctionReturnTypeExtensions>;
 
 export type RecordFunctionReturnTypeDef =
-  RecordXYZTypeDef<FunctionReturnTypeExtensions>;
+  RecordExtTypeDef<FunctionReturnTypeExtensions>;
 
 export type RepeatedRecordFunctionReturnTypeDef =
-  RepeatedRecordXYZTypeDef<FunctionReturnTypeExtensions>;
+  RepeatedRecordExtTypeDef<FunctionReturnTypeExtensions>;
 
 type FunctionParameterTypeExtensions = GenericTypeDef | AnyTypeDef;
 
 export type ScalarArrayFunctionParameterTypeDef =
-  ScalarArrayXYZTypeDef<FunctionParameterTypeExtensions>;
+  ScalarArrayExtTypeDef<FunctionParameterTypeExtensions>;
 
 export type FunctionParameterFieldDef =
-  XYZFieldDef<FunctionParameterTypeExtensions>;
+  ExtFieldDef<FunctionParameterTypeExtensions>;
 
 export type RecordFunctionParameterTypeDef =
-  RecordXYZTypeDef<FunctionParameterTypeExtensions>;
+  RecordExtTypeDef<FunctionParameterTypeExtensions>;
 
 export type RepeatedRecordFunctionParameterTypeDef =
-  RepeatedRecordXYZTypeDef<FunctionParameterTypeExtensions>;
+  RepeatedRecordExtTypeDef<FunctionParameterTypeExtensions>;
 
 type FunctionGenericTypeExtensions = AnyTypeDef;
 
 export type ScalarArrayFunctionGenericTypeDef =
-  ScalarArrayXYZTypeDef<FunctionGenericTypeExtensions>;
+  ScalarArrayExtTypeDef<FunctionGenericTypeExtensions>;
 
 export type FunctionGenericFieldDef =
-  XYZFieldDef<FunctionGenericTypeExtensions>;
+  ExtFieldDef<FunctionGenericTypeExtensions>;
 
 export type RecordFunctionGenericTypeDef =
-  RecordXYZTypeDef<FunctionGenericTypeExtensions>;
+  RecordExtTypeDef<FunctionGenericTypeExtensions>;
 
 export type RepeatedRecordFunctionGenericTypeDef =
-  RepeatedRecordXYZTypeDef<FunctionGenericTypeExtensions>;
+  RepeatedRecordExtTypeDef<FunctionGenericTypeExtensions>;
 
 export interface GenericTypeDef {
   type: 'generic';
@@ -1317,7 +1320,8 @@ export type TypeDescExtensions = {
   evalSpace: EvalSpace;
 };
 
-export type FunctionReturnTypeDef = XYZTypeDef<FunctionReturnTypeExtensions>;
+export type FunctionReturnTypeDef =
+  ExpressionValueExtTypeDef<FunctionReturnTypeExtensions>;
 export type FunctionReturnTypeDesc = FunctionReturnTypeDef & TypeDescExtensions;
 
 export type EvalSpace = 'constant' | 'input' | 'output' | 'literal';
@@ -1348,7 +1352,8 @@ export interface FunctionParameterDef {
   isVariadic: boolean;
 }
 
-export type FunctionGenericTypeDef = XYZTypeDef<FunctionGenericTypeExtensions>;
+export type FunctionGenericTypeDef =
+  ExpressionValueExtTypeDef<FunctionGenericTypeExtensions>;
 
 export interface FunctionOverloadDef {
   // The expression type here is the MINIMUM return type
