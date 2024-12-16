@@ -418,17 +418,17 @@ describe.each(runtimes.runtimeList)(
       });
       it('runs array_split_into_chunks', async () => {
         await expect(
-          `run: ${nums}->{select: t is array_split_into_chunks(num, 1)}`
+          `run: ${nums}->{select: t is array_split_into_chunks(nums, 1)}`
         ).malloyResultMatches(runtime, {t: [[4], [1], [1]]});
       });
       it('runs arrays_overlap', async () => {
         await expect(
-          `run: ${nums}->{select: t is arrays_overlap(num, [2,3,4])}`
+          `run: ${nums}->{select: t is arrays_overlap(nums, [2,3,4])}`
         ).malloyResultMatches(runtime, {t: true});
       });
       it('runs arrays_union', async () => {
         await expect(
-          `run: ${nums}->{select: t is array_union(num, [2])}`
+          `run: ${nums}->{select: t is array_union(nums, [2])}`
         ).malloyResultMatches(runtime, {t: [4, 1, 2]});
       });
       it('runs remove_nulls', async () => {
