@@ -386,6 +386,8 @@ type MessageParameterTypes = {
   'sql-in': string;
   'dialect-cast-unsafe-only': string;
   'array-values-incompatible': string;
+  'invalid-resolved-type-for-array': string;
+  'generic-not-resolved': string;
 };
 
 export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
@@ -446,6 +448,13 @@ export type MessageCode = keyof MessageParameterTypes;
 
 export type MessageParameterType<T extends MessageCode> =
   MessageParameterTypes[T];
+
+type MessageCodeAndParameters<T extends MessageCode> = {
+  code: T;
+  parameters: MessageParameterType<T>;
+};
+
+export type AnyMessageCodeAndParameters = MessageCodeAndParameters<MessageCode>;
 
 type MessageFormatter<T extends MessageCode> =
   | MessageInfo

@@ -65,6 +65,7 @@ import {FieldName, FieldSpace} from '../types/field-space';
 import {composeSQLExpr, SQLExprElement} from '../../../model/utils';
 import * as TDU from '../typedesc-utils';
 import {mergeCompositeFieldUsage} from '../../../model/composite_source_utils';
+import {AnyMessageCodeAndParameters} from '../../parse-log';
 
 export class ExprFunc extends ExpressionDef {
   elementType = 'function call()';
@@ -257,6 +258,13 @@ export class ExprFunc extends ExpressionDef {
         `Parameter ${error.argIndex + 1} ('${error.param.name}') of ${
           this.name
         } must not be a literal null`
+      );
+    }
+    // Report return type error
+    if (result.returnTypeError) {
+      this.logError(
+        result.returnTypeError.code,
+        result.returnTypeError.parameters
       );
     }
     const type = overload.returnType;
@@ -472,12 +480,6 @@ type NullabilityError = {
   param: FunctionParameterDef;
 };
 
-type ReturnTypeError = {
-  // TODO
-  code: string;
-  data: string;
-};
-
 function findOverload(
   func: FunctionDef,
   args: ExprValue[]
@@ -488,7 +490,7 @@ function findOverload(
       evalSpaceErrors: EvalSpaceError[];
       nullabilityErrors: NullabilityError[];
       returnType: ExpressionValueTypeDef;
-      returnTypeError?: ReturnTypeError;
+      returnTypeError?: AnyMessageCodeAndParameters;
     }
   | undefined {
   for (const overload of func.overloads) {
@@ -593,8 +595,7 @@ function findOverload(
         evalSpaceErrors,
         nullabilityErrors,
         returnTypeError: resolveReturnType.error,
-        // TODO don't be bad!!!
-        returnType: returnType,
+        returnType,
       };
     }
   }
@@ -721,7 +722,7 @@ function resolveGenerics(
   genericsSelected: Map<string, ExpressionValueTypeDef>
 ):
   | {error: undefined; returnType: ExpressionValueTypeDef}
-  | {error: {code: string; data: string}; returnType: undefined} {
+  | {error: AnyMessageCodeAndParameters; returnType: undefined} {
   switch (returnType.type) {
     case 'array': {
       if ('fields' in returnType) {
@@ -750,20 +751,20 @@ function resolveGenerics(
       }
       const elementTypeDef = resolve.returnType;
       if (elementTypeDef.type === 'record') {
-        // TODO if this happens, construct the repeated record
         return {
-          error: {
-            code: 'invalid-resolved-type-for-array',
-            data: 'Invalid resolved type for array; cannot be record',
+          error: undefined,
+          returnType: {
+            type: 'array',
+            elementTypeDef: {type: 'record_element'},
+            fields: elementTypeDef.fields,
           },
-          returnType: undefined,
         };
       }
       if (!isAtomic(elementTypeDef)) {
         return {
           error: {
             code: 'invalid-resolved-type-for-array',
-            data: 'Invalid resolved type for array; cannot be non-atomic',
+            parameters: 'Invalid resolved type for array; cannot be non-atomic',
           },
           returnType: undefined,
         };
@@ -789,7 +790,7 @@ function resolveGenerics(
         return {
           error: {
             code: 'generic-not-resolved',
-            data: `Generic ${returnType.generic} in return type could not be resolved`,
+            parameters: `Generic ${returnType.generic} in return type could not be resolved`,
           },
           returnType: undefined,
         };
