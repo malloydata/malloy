@@ -41,7 +41,7 @@ export class ArrayLiteral extends ExpressionDef {
             );
             continue;
           }
-        } else {
+        } else if (v.type !== 'null') {
           firstValue = v;
         }
         values.push(v.value);

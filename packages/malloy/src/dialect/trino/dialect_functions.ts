@@ -282,49 +282,49 @@ const arrayOfT: TypeDescBlueprint = {array: {generic: 'T'}};
 const arrayOfArrayOfT: TypeDescBlueprint = {array: arrayOfT};
 
 const array_intersect: OverloadedDefinitionBlueprint = {
-  twoArrays: {
+  two_arrays: {
     takes: {
       'a': arrayOfT,
       'b': arrayOfT,
     },
-    generic: ['T', ['any']],
+    generic: {'T': ['any']},
     returns: arrayOfT,
     impl: {function: 'ARRAY_INTERSECT'},
   },
-  nestedArray: {
+  nested_array: {
     takes: {'a': arrayOfArrayOfT},
-    generic: ['T', ['any']],
+    generic: {'T': ['any']},
     returns: arrayOfT,
     impl: {function: 'ARRAY_INTERSECT'},
   },
 };
 
 const array_join: OverloadedDefinitionBlueprint = {
-  skipNulls: {
+  skip_nulls: {
     takes: {
       'theArray': arrayOfT,
       'sep': 'string',
     },
-    generic: ['T', ['any']],
+    generic: {'T': ['any']},
     returns: 'string',
     impl: {function: 'ARRAY_JOIN'},
   },
-  nullAware: {
+  null_aware: {
     takes: {
       'theArray': arrayOfT,
       'sep': 'string',
-      'nullStr': 'string',
+      'nullStr': {generic: 'T'},
     },
-    generic: ['T', ['any']],
+    generic: {'T': ['any']},
     returns: 'string',
     impl: {function: 'ARRAY_JOIN'},
   },
 };
 
 const array_least_frequent: OverloadedDefinitionBlueprint = {
-  arrayOnly: {
+  array_only: {
     takes: {'theArray': arrayOfT},
-    generic: ['T', ['any']],
+    generic: {'T': ['any']},
     returns: arrayOfT,
     impl: {function: 'ARRAY_LEAST_FREQUENT'},
   },
@@ -333,38 +333,32 @@ const array_least_frequent: OverloadedDefinitionBlueprint = {
       'theArray': arrayOfT,
       'count': 'number',
     },
-    generic: ['T', ['any']],
+    generic: {'T': ['any']},
     returns: arrayOfT,
     impl: {function: 'ARRAY_LEAST_FREQUENT'},
   },
 };
 
 const sequence: OverloadedDefinitionBlueprint = {
-  fromTo: {
+  num_to_num: {
     takes: {'start': 'number', 'stop': 'number'},
-    generic: ['T', ['any']],
+    generic: {'T': ['any']},
     returns: {array: 'number'},
     impl: {function: 'SEQUENCE'},
   },
-  fromToStep: {
+  num_to_num_step: {
     takes: {'start': 'number', 'stop': 'number', 'step': 'number'},
-    generic: ['T', ['any']],
+    generic: {'T': ['any']},
     returns: {array: 'number'},
     impl: {function: 'SEQUENCE'},
   },
-  fromToDate: {
+  date_to_date: {
     takes: {'start': 'date', 'stop': 'date'},
-    generic: ['T', ['any']],
+    generic: {'T': ['any']},
     returns: {array: 'date'},
     impl: {function: 'SEQUENCE'},
   },
-  // mtoy todo there is a step version of the date SEQUENCE
-  fromToTimestamp: {
-    takes: {'start': 'timestamp', 'stop': 'timestamp'},
-    generic: ['T', ['any']],
-    returns: {array: 'timestamp'},
-    impl: {function: 'SEQUENCE'},
-  },
+  // mtoy todo document missing sequence
 };
 
 export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
@@ -418,51 +412,70 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
  * @param name function name
  * @param types list of types, last is return type
  */
-function define(name: string, ...types: TypeDescBlueprint[]): void {
-  const takes = {};
-  // last type is return type;
-  const returnIndex = types.length - 1;
-  for (let i = 0; i < returnIndex; i++) {
-    takes[`arg${i + 1}`] = types[i];
-  }
+function define(
+  name: string,
+  takes: Record<string, TypeDescBlueprint>,
+  returns: TypeDescBlueprint
+): void {
   const newDef: DefinitionBlueprint = {
     takes,
-    generic: ['T', ['any']],
-    returns: types[returnIndex],
+    generic: {'T': ['any']},
+    returns,
     impl: {function: name.toUpperCase()},
   };
   TRINO_DIALECT_FUNCTIONS[name] = newDef;
 }
 
-define('array_average', arrayOfT, 'number');
-define('array_cum_sum', arrayOfT, {array: 'number'});
-define('array_distinct', arrayOfT, arrayOfT);
-define('array_duplicates', arrayOfT, arrayOfT);
-define('array_except', arrayOfT, arrayOfT, arrayOfT);
-define('array_has_duplicates', arrayOfT, 'boolean');
-define('array_max', arrayOfT, {generic: 'T'});
-define('array_min', arrayOfT, {generic: 'T'});
-define('array_normalize', arrayOfT, 'number', arrayOfT);
-define('array_position', arrayOfT, {generic: 'T'}, 'number');
-define('array_remove', arrayOfT, {generic: 'T'}, arrayOfT);
+define('array_average', {any_array: arrayOfT}, 'number');
+define('array_cum_sum', {numeric_array: arrayOfT}, {array: 'number'});
+define('array_distinct', {any_array: arrayOfT}, arrayOfT);
+define('array_duplicates', {any_array: arrayOfT}, arrayOfT);
+define('array_except', {src_array: arrayOfT, except_array: arrayOfT}, arrayOfT);
+define('array_has_duplicates', {any_array: arrayOfT}, 'boolean');
+define('array_max', {any_array: arrayOfT}, {generic: 'T'});
+define('array_min', {any_array: arrayOfT}, {generic: 'T'});
+define('array_normalize', {numeric_array: arrayOfT, p: 'number'}, arrayOfT);
+define(
+  'array_position',
+  {any_array: arrayOfT, element: {generic: 'T'}},
+  'number'
+);
+define(
+  'array_remove',
+  {any_array: arrayOfT, element: {generic: 'T'}},
+  arrayOfT
+);
 // mtoy todo document missing lambda sort
-define('array_sort', arrayOfT, arrayOfT);
-define('array_sort_desc', arrayOfT, arrayOfT);
-define('array_split_into_chunks', arrayOfT, 'number', arrayOfArrayOfT);
-define('array_sum', arrayOfT, arrayOfT);
-define('arrays_overlap', arrayOfT, arrayOfT, 'boolean');
-define('array_union', arrayOfT, arrayOfT, arrayOfT);
-define('cardinality', arrayOfT, 'number');
-define('remove_nulls', arrayOfT, arrayOfT);
-define('reverse', arrayOfT, arrayOfT);
-define('shuffle', arrayOfT, arrayOfT);
-define('array_top_n', arrayOfT, 'number', arrayOfT);
-define('combinations', arrayOfT, 'number', arrayOfArrayOfT);
-define('contains', arrayOfT, {generic: 'T'}, 'boolean');
-define('element_at', arrayOfT, 'number', {generic: 'T'});
+define('array_sort', {any_sortable_array: arrayOfT}, arrayOfT);
+define('array_sort_desc', {any_sortable_array: arrayOfT}, arrayOfT);
+define(
+  'array_split_into_chunks',
+  {any_array: arrayOfT, chunkSize: 'number'},
+  arrayOfArrayOfT
+);
+define('array_sum', {numeric_array: arrayOfT}, 'number');
+define(
+  'arrays_overlap',
+  {left_array: arrayOfT, right_array: arrayOfT},
+  'boolean'
+);
+define('array_union', {left_array: arrayOfT, right_array: arrayOfT}, arrayOfT);
+define('cardinality', {any_array: arrayOfT}, 'number');
+define('remove_nulls', {any_array: arrayOfT}, arrayOfT);
+define('reverse', {any_array: arrayOfT}, arrayOfT);
+define('shuffle', {any_array: arrayOfT}, arrayOfT);
+define('array_top_n', {sortable_array: arrayOfT, n: 'number'}, arrayOfT);
+define('combinations', {any_array: arrayOfT, n: 'number'}, arrayOfArrayOfT);
+define('contains', {any_array: arrayOfT, element: {generic: 'T'}}, 'boolean');
+define('element_at', {any_array: arrayOfT, oridnal: 'number'}, {generic: 'T'});
 // hard to believe, but this is what flatten does
-define('flatten', arrayOfArrayOfT, arrayOfT);
-define('ngrams', arrayOfT, 'number', arrayOfArrayOfT);
-define('repeat', {generic: 'T'}, 'number', arrayOfT);
-define('slice', arrayOfT, 'number', 'number', arrayOfT);
-define('trim_array', arrayOfT, 'number', arrayOfT);
+define('flatten', {nested_array: arrayOfArrayOfT}, arrayOfT);
+define('ngrams', {any_array: arrayOfT, n: 'number'}, arrayOfArrayOfT);
+define('repeat', {element: {generic: 'T'}, n: 'number'}, arrayOfT);
+define(
+  'slice',
+  {any_array: arrayOfT, start: 'number', len: 'number'},
+  arrayOfT
+);
+define('split', {to_split: 'string', seperator: 'string'}, {array: 'string'});
+define('trim_array', {any_array: arrayOfT, n: 'number'}, arrayOfT);
