@@ -360,7 +360,7 @@ export class DuckDBDialect extends PostgresBase {
   getDialectFunctions(): {[name: string]: DialectFunctionOverloadDef[]} {
     return expandBlueprintMap(DUCKDB_DIALECT_FUNCTIONS);
     // {
-      // ...expandBlueprintMap(DUCKDB_DIALECT_FUNCTIONS),
+    // ...expandBlueprintMap(DUCKDB_DIALECT_FUNCTIONS),
     //   'test_foo': [
     //     {
     //       returnType: {
