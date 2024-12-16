@@ -252,9 +252,7 @@ type ParamTypeBlueprint =
   | {variadic: TypeDescBlueprint | TypeDescBlueprint[]};
 
 export interface SignatureBlueprint {
-  // today only one generic is allowed, but if we need more
-  // we could change this to `{[name: string]: ExpressionValueType[]}`
-  generic?: [string, TypeDescElementBlueprintOrNamedGeneric[]];
+  generic?: {[name: string]: TypeDescElementBlueprintOrNamedGeneric[]};
   takes: {[name: string]: ParamTypeBlueprint};
   returns: TypeDescBlueprint;
   supportsOrderBy?: boolean | 'only_default';
@@ -591,17 +589,17 @@ function expandImplBlueprint(blueprint: DefinitionBlueprint): {
 }
 
 function expandGenericDefinitions(
-  blueprint: [string, TypeDescElementBlueprintOrNamedGeneric[]] | undefined
+  blueprint:
+    | {[name: string]: TypeDescElementBlueprintOrNamedGeneric[]}
+    | undefined
 ): {name: string; acceptibleTypes: FunctionGenericTypeDef[]}[] | undefined {
   if (blueprint === undefined) return undefined;
-  return [
-    {
-      name: blueprint[0],
-      acceptibleTypes: blueprint[1].map(t =>
-        expandTypeDescElementBlueprint(t, true, false)
-      ),
-    },
-  ];
+  return Object.entries(blueprint).map(([name, acceptibleTypes]) => ({
+    name: name,
+    acceptibleTypes: acceptibleTypes.map(t =>
+      expandTypeDescElementBlueprint(t, true, false)
+    ),
+  }));
 }
 
 function expandBlueprint(

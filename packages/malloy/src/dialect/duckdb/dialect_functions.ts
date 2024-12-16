@@ -13,7 +13,7 @@ import {
 
 const list_extract: DefinitionBlueprint = {
   takes: {'value': {array: {generic: 'T'}}, 'index': 'number'},
-  generic: ['T', ['any']],
+  generic: {'T': ['any']},
   returns: {generic: 'T'},
   impl: {sql: 'list_extract(${value}, ${index})'},
 };

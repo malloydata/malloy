@@ -513,6 +513,7 @@ function findOverload(
         // Check whether types match (allowing for nullability errors, expression type errors,
         // eval space errors, and unknown types due to prior errors in args)
         const {dataTypeMatch, genericsSet} = isDataTypeMatch(
+          genericsSelected,
           overload.genericTypes ?? [],
           arg,
           paramT
@@ -635,6 +636,7 @@ function parseSQLInterpolation(template: string): InterpolationPart[] {
 type GenericAssignment = {name: string; type: ExpressionValueTypeDef};
 
 function isDataTypeMatch(
+  genericsAlreadySelected: Map<string, ExpressionValueTypeDef>,
   genericTypes: {name: string; acceptibleTypes: FunctionGenericTypeDef[]}[],
   arg: ExpressionValueTypeDef,
   paramT: FunctionGenericTypeDef | FunctionParameterTypeDef
@@ -648,8 +650,7 @@ function isDataTypeMatch(
     // TODO We should consider whether `nulls` should always be allowed. It probably
     // does not make sense to limit function calls to not allow nulls, since have
     // so little control over nullability.
-    arg.type === 'null' ||
-    arg.type === 'error'
+    (paramT.type !== 'generic' && (arg.type === 'null' || arg.type === 'error'))
   ) {
     return {dataTypeMatch: true, genericsSet: []};
   }
@@ -657,6 +658,7 @@ function isDataTypeMatch(
     if (isScalarArray(arg)) {
       if (!isRepeatedRecordFunctionParam(paramT)) {
         return isDataTypeMatch(
+          genericsAlreadySelected,
           genericTypes,
           arg.elementTypeDef,
           paramT.elementTypeDef
@@ -673,7 +675,12 @@ function isDataTypeMatch(
         type: 'record',
         fields: arg.fields,
       };
-      return isDataTypeMatch(genericTypes, fakeArgRecord, fakeParamRecord);
+      return isDataTypeMatch(
+        genericsAlreadySelected,
+        genericTypes,
+        fakeArgRecord,
+        fakeParamRecord
+      );
     } else {
       return {dataTypeMatch: false, genericsSet: []};
     }
@@ -688,17 +695,45 @@ function isDataTypeMatch(
       if (match === undefined) {
         return {dataTypeMatch: false, genericsSet: []};
       }
-      const result = isDataTypeMatch(genericTypes, field, match);
+      const result = isDataTypeMatch(
+        new Map([
+          ...genericsAlreadySelected.entries(),
+          ...genericsSet.map(
+            x => [x.name, x.type] as [string, ExpressionValueTypeDef]
+          ),
+        ]),
+        genericTypes,
+        field,
+        match
+      );
       genericsSet.push(...result.genericsSet);
     }
     return {dataTypeMatch: true, genericsSet};
   } else if (paramT.type === 'generic') {
+    const alreadySelected = genericsAlreadySelected.get(paramT.generic);
+    if (
+      alreadySelected !== undefined &&
+      alreadySelected.type !== 'null' &&
+      alreadySelected.type !== 'error'
+    ) {
+      return isDataTypeMatch(
+        genericsAlreadySelected,
+        genericTypes,
+        arg,
+        alreadySelected
+      );
+    }
     const allowedTypes =
       genericTypes.find(t => t.name === paramT.generic)?.acceptibleTypes ?? [];
     for (const type of allowedTypes) {
-      const result = isDataTypeMatch(genericTypes, arg, type);
+      const result = isDataTypeMatch(
+        genericsAlreadySelected,
+        genericTypes,
+        arg,
+        type
+      );
       if (result.dataTypeMatch) {
-        if (!isAtomic(arg)) {
+        if (!isAtomic(arg) && arg.type !== 'null') {
           continue;
         }
         const newGenericSet: GenericAssignment = {

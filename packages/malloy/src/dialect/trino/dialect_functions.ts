@@ -26,7 +26,7 @@ const approx_percentile: DefinitionBlueprint = {
 };
 
 const arbitrary: DefinitionBlueprint = {
-  generic: ['T', ['string', 'number', 'date', 'timestamp', 'boolean', 'json']],
+  generic: {'T': ['string', 'number', 'date', 'timestamp', 'boolean', 'json']},
   takes: {'value': {dimension: {generic: 'T'}}},
   returns: {measure: {generic: 'T'}},
   impl: {function: 'ARBITRARY'},
@@ -78,7 +78,7 @@ const count_approx: DefinitionBlueprint = {
 };
 
 const max_by: DefinitionBlueprint = {
-  generic: ['T', ['string', 'number', 'date', 'timestamp', 'boolean', 'json']],
+  generic: {'T': ['string', 'number', 'date', 'timestamp', 'boolean', 'json']},
   takes: {
     'value': {dimension: {generic: 'T'}},
     'order_by_val': {dimension: 'any'},
@@ -89,7 +89,7 @@ const max_by: DefinitionBlueprint = {
 };
 
 const min_by: DefinitionBlueprint = {
-  generic: ['T', ['string', 'number', 'date', 'timestamp', 'boolean', 'json']],
+  generic: {'T': ['string', 'number', 'date', 'timestamp', 'boolean', 'json']},
   takes: {
     'value': {dimension: {generic: 'T'}},
     'order_by_val': {dimension: 'any'},
