@@ -1322,6 +1322,9 @@ expressionModels.forEach((x, databaseName) => {
       it.when(isDuckdb)('list_extract', async () => {
         await funcTest('list_extract(list_extract([[5]], 1), 1)', 5);
       });
+      it.when(isDuckdb)('date_part,to_seconds', async () => {
+        await funcTest('date_part("seconds", to_seconds(5))', 5);
+      });
     });
 
     describe('trino', () => {

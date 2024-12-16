@@ -24,6 +24,18 @@ const dayname: DefinitionBlueprint = {
   impl: {function: 'DAYNAME'},
 };
 
+const date_part: DefinitionBlueprint = {
+  takes: {'part': 'string', 'interval': {sql_native: 'interval'}},
+  returns: 'number',
+  impl: {function: 'DATE_PART'},
+};
+
+const to_seconds: DefinitionBlueprint = {
+  takes: {'seconds': 'number'},
+  returns: {sql_native: 'interval'},
+  impl: {function: 'TO_SECONDS'},
+};
+
 const to_timestamp: DefinitionBlueprint = {
   takes: {'epoch_seconds': 'number'},
   returns: 'timestamp',
@@ -87,4 +99,6 @@ export const DUCKDB_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   to_timestamp,
   string_agg,
   string_agg_distinct,
+  to_seconds,
+  date_part,
 };

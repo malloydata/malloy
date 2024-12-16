@@ -231,11 +231,17 @@ export type TypeDescElementBlueprintOrNamedGeneric =
 export interface RecordBlueprint {
   record: Record<string, TypeDescElementBlueprintOrNamedGeneric>;
 }
+
+export interface SQLNativeTypeBlueprint {
+  sql_native: string;
+}
+
 export type LeafPlusType = LeafExpressionType | 'any';
 export type TypeDescElementBlueprint =
   | LeafPlusType
   | ArrayBlueprint
-  | RecordBlueprint;
+  | RecordBlueprint
+  | SQLNativeTypeBlueprint;
 export type NamedGeneric = {generic: string};
 
 export type TypeDescBlueprint =
@@ -362,6 +368,8 @@ function expandTypeDescElementBlueprint(
       throw new Error('Cannot use generic');
     }
     return {type: 'generic', generic: blueprint.generic};
+  } else if ('sql_native' in blueprint) {
+    return {type: 'sql native', rawType: blueprint.sql_native};
   }
   throw new Error('Cannot figure out type');
 }
@@ -396,6 +404,8 @@ function expandReturnTypeBlueprint(
     return minAggregate(
       expandTypeDescElementBlueprint(blueprint.measure, false)
     );
+  } else if ('sql_native' in blueprint) {
+    return anyExprType({type: 'sql native', rawType: blueprint.sql_native});
   } else {
     return minAnalytic(
       expandTypeDescElementBlueprint(blueprint.calculation, false)
@@ -415,7 +425,8 @@ function isTypeDescBlueprint(
     'constant' in blueprint ||
     'dimension' in blueprint ||
     'measure' in blueprint ||
-    'calculation' in blueprint
+    'calculation' in blueprint ||
+    'sql_native' in blueprint
   );
 }
 
@@ -456,6 +467,8 @@ function expandParamTypeBlueprint(
     return anyExprType(expandTypeDescElementBlueprint(blueprint, false));
   } else if ('record' in blueprint) {
     return anyExprType(expandTypeDescElementBlueprint(blueprint, false));
+  } else if ('sql_native' in blueprint) {
+    return anyExprType({type: 'sql native', rawType: blueprint.sql_native});
   } else {
     return maxAnalytic(expandTypeDescElementBlueprint(blueprint.calculation));
   }
