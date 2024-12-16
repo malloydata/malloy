@@ -350,35 +350,193 @@ describe.each(runtimes.runtimeList)(
           `run: ${nums}->{select t is array_min(nums)}`
         ).malloyResultMatches(runtime, {t: 1});
       });
-      /*
-define('array_cum_sum', arrayOfT, 'number');
-define('array_duplicates', arrayOfT, arrayOfT);
-define('array_except', arrayOfT, arrayOfT, arrayOfT);
-define('array_normalize', arrayOfT, 'number', arrayOfT);
-define('array_position', arrayOfT, {generic: 'T'}, 'number');
-define('array_remove', arrayOfT, {generic: 'T'}, arrayOfT);
-// mtoy todo document missing lambda sort
-define('array_sort', arrayOfT, arrayOfT);
-define('array_sort_desc', arrayOfT, arrayOfT);
-define('array_split_into_chunks', arrayOfT, 'number', arrayOfArrayOfT);
-define('array_sum', arrayOfT, arrayOfT);
-define('arrays_overlap', arrayOfT, arrayOfT, 'boolean');
-define('array_union', arrayOfT, arrayOfT, arrayOfT);
-define('cardinality', arrayOfT, 'number');
-define('remove_nulls', arrayOfT, arrayOfT);
-define('reverse', arrayOfT, arrayOfT);
-define('shuffle', arrayOfT, arrayOfT);
-define('array_top_n', arrayOfT, 'number', arrayOfT);
-define('combinations', arrayOfT, 'number', arrayOfArrayOfT);
-define('contains', arrayOfT, {generic: 'T'}, 'boolean');
-define('element_at', arrayOfT, 'number', {generic: 'T'});
-// hard to believe, but this is what flatten does
-define('flatten', arrayOfArrayOfT, arrayOfT);
-define('ngrams', arrayOfT, 'number', arrayOfArrayOfT);
-define('repeat', {generic: 'T'}, 'number', arrayOfT);
-define('slice', arrayOfT, 'number', 'number', arrayOfT);
-define('trim_array', arrayOfT, 'number', arrayOfT);
-*/
+      it('runs array_cum_sum', async () => {
+        await expect(
+          `run: ${nums}->{select t is array_cum_sum(nums)}`
+        ).malloyResultMatches(runtime, {t: [4, 5, 6]});
+      });
+      it('runs array_duplicates', async () => {
+        await expect(
+          `run: ${nums}->{select t is array_cum_sum(nums)}`
+        ).malloyResultMatches(runtime, {t: [1]});
+      });
+      it('runs array_sort', async () => {
+        await expect(
+          `run: ${nums}->{select t is array_sort(nums)}`
+        ).malloyResultMatches(runtime, {t: [1, 1, 4]});
+      });
+      it('runs repeat', async () => {
+        await expect(
+          `run: ${nums}->{select t is repeat('x', 2)}`
+        ).malloyResultMatches(runtime, {t: ['x', 'x']});
+      });
+      it('runs slice', async () => {
+        await expect(
+          `run: ${nums}->{select t is slice(nums, 2, 2)}`
+        ).malloyResultMatches(runtime, {t: ['1', '1']});
+      });
+      it('runs cardinality', async () => {
+        await expect(
+          `run: ${nums}->{select t is cardinality(nums)}`
+        ).malloyResultMatches(runtime, {t: 3});
+      });
+      it('runs array_sum', async () => {
+        await expect(
+          `run: ${nums}->{select t is array_sum(nums)}`
+        ).malloyResultMatches(runtime, {t: 6});
+      });
+      it('runs contains', async () => {
+        await expect(
+          `run: ${nums}->{select t is contains(nums, 42)}`
+        ).malloyResultMatches(runtime, {t: false});
+      });
+      it('runs array_except', async () => {
+        await expect(
+          `run: ${nums}->{select t is array_except(nums, [4])}`
+        ).malloyResultMatches(runtime, {t: [1]});
+      });
+      it('runs array_normalize', async () => {
+        await expect(
+          `run: ${nums}->{select t is array_normalize(nums, 40)}`
+        ).malloyResultMatches(runtime, {t: [1, 0.25, 0.25]});
+      });
+      it('runs array_position', async () => {
+        await expect(
+          `run: ${nums}->{select t is array_position(nums, 1, 2)}`
+        ).malloyResultMatches(runtime, {t: 3});
+      });
+      it('runs array_remove', async () => {
+        await expect(
+          `run: ${nums}->{select t is array_remove(nums, 1)}`
+        ).malloyResultMatches(runtime, {t: [4]});
+      });
+      it('runs array_sort_desc', async () => {
+        await expect(
+          `run: ${nums}->{select t is array_sort_desc([1,2,3], 1)}`
+        ).malloyResultMatches(runtime, {t: [3, 2, 1]});
+      });
+      it('runs array_split_into_chunks', async () => {
+        await expect(
+          `run: ${nums}->{select t is array_split_into_chunks(num, 1)}`
+        ).malloyResultMatches(runtime, {t: [[4], [1], [1]]});
+      });
+      it('runs arrays_overlap', async () => {
+        await expect(
+          `run: ${nums}->{select t is array_overlap(num, [2,3,4])}`
+        ).malloyResultMatches(runtime, {t: true});
+      });
+      it('runs arrays_union', async () => {
+        await expect(
+          `run: ${nums}->{select t is array_union(num, [2])}`
+        ).malloyResultMatches(runtime, {t: [4, 1, 2]});
+      });
+      it('runs remove_nulls', async () => {
+        await expect(
+          `run: ${nums}->{select t is remove_nulls([null, 2])}`
+        ).malloyResultMatches(runtime, {t: [2]});
+      });
+      it('runs reverse', async () => {
+        await expect(
+          `run: ${nums}->{select t is reverse(nums)}`
+        ).malloyResultMatches(runtime, {t: [1, 1, 4]});
+      });
+      it('runs shuffle', async () => {
+        await expect(
+          `run: ${nums}->{select t is shuffle([1])}`
+        ).malloyResultMatches(runtime, {t: [1]});
+      });
+      it('runs array_top_n', async () => {
+        await expect(
+          `run: ${nums}->{select t is array_top_n(nums, 2)}`
+        ).malloyResultMatches(runtime, {t: [4, 1]});
+      });
+      it('runs combinations', async () => {
+        await expect(
+          `run: ${nums}->{select t is combinations([1,2,3], 2)}`
+        ).malloyResultMatches(runtime, {
+          t: [
+            [1, 2],
+            [1, 3],
+            [2, 3],
+          ],
+        });
+      });
+      it('runs element_at', async () => {
+        await expect(
+          `run: ${nums}->{select t is element_at(nums, 1)}`
+        ).malloyResultMatches(runtime, {t: 4});
+      });
+      it('runs flatten', async () => {
+        await expect(
+          `run: ${nums}->{select t is flatten([1], [2])}`
+        ).malloyResultMatches(runtime, {t: [1, 2]});
+      });
+      it('runs ngrams', async () => {
+        await expect(
+          `run: ${nums}->{select t is ngrams([1,2,3], 2)}`
+        ).malloyResultMatches(runtime, {
+          t: [
+            [1, 2],
+            [2, 3],
+          ],
+        });
+      });
+      it('runs trim_array', async () => {
+        await expect(
+          `run: ${nums}->{select t is trim_array(nums, 2)}`
+        ).malloyResultMatches(runtime, {t: [4]});
+      });
+      it('runs sequence(n1,n2)', async () => {
+        await expect(
+          `run: ${nums}->{select t is sequence(1,2)}`
+        ).malloyResultMatches(runtime, {t: [1, 2]});
+      });
+      it('runs sequence(n1,n2,n3)', async () => {
+        await expect(
+          `run: ${nums}->{select t is sequence(10, 20, 10)}`
+        ).malloyResultMatches(runtime, {t: [10, 20]});
+      });
+      it('runs sequence(d1,d2)', async () => {
+        await expect(
+          `run: ${nums}->{select t is sequence(@2001-01-01, @2001-01-02)}`
+        ).malloyResultMatches(runtime, {t: [1, 2]});
+      });
+      it('runs sequence(ts1,ts2)', async () => {
+        await expect(
+          `run: ${nums}->{select t is sequence(@2001-01-01 00:00:00, @2001-01-02 00:00:00)}`
+        ).malloyResultMatches(runtime, {t: [1, 2]});
+      });
+      it('runs array_intersect(a1,a2)', async () => {
+        await expect(
+          `run: ${nums}->{select t is array_intersect(nums, [4])}`
+        ).malloyResultMatches(runtime, {t: [4]});
+      });
+      it('runs array_intersect(a)', async () => {
+        await expect(
+          `run: ${nums}->{select t is array_intersect([[1,2], [2,3]])}`
+        ).malloyResultMatches(runtime, {t: [2]});
+      });
+      it('runs array_join(a,s)', async () => {
+        await expect(
+          `run: ${nums}->{select t is array_join(nums, ',')}`
+        ).malloyResultMatches(runtime, {t: '4,1,1'});
+      });
+      it('runs array_join(a,s, n)', async () => {
+        await expect(
+          `run: ${nums}->{select t is array_join([1, null], ',', 42)}`
+        ).malloyResultMatches(runtime, {t: [1, 42]});
+      });
+      it('runs array_least_frequent(a)', async () => {
+        await expect(
+          `run: ${nums}->{select t is array_least_frequent(nums)}`
+        ).malloyResultMatches(runtime, {t: [4]});
+      });
+      it('runs array_least_frequent(a, n)', async () => {
+        await expect(
+          `run: ${nums}->{select t is array_least_frequent(nums)}`
+        ).malloyResultMatches(runtime, {t: [4, 1]});
+      });
+      // mtoy todo document missing lambda sort
     });
   }
 );

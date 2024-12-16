@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {LeafExpressionType} from '../../model';
 import {
   DefinitionBlueprint,
   DefinitionBlueprintMap,
@@ -436,7 +435,7 @@ function define(name: string, ...types: TypeDescBlueprint[]): void {
 }
 
 define('array_average', arrayOfT, 'number');
-define('array_cum_sum', arrayOfT, 'number');
+define('array_cum_sum', arrayOfT, {array: 'number'});
 define('array_distinct', arrayOfT, arrayOfT);
 define('array_duplicates', arrayOfT, arrayOfT);
 define('array_except', arrayOfT, arrayOfT, arrayOfT);
