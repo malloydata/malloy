@@ -11,15 +11,29 @@ import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
 import * as TDU from '../typedesc-utils';
+import {ExprIdReference} from './expr-id-reference';
 
+export type ElementDetails =
+  | {path: ExprIdReference}
+  | {key?: string; value: ExpressionDef};
 export class RecordElement extends MalloyElement {
   elementType = 'record element';
-  constructor(
-    readonly key: string,
-    readonly value: ExpressionDef
-  ) {
+  value: ExpressionDef;
+  key?: string;
+  constructor(val: ElementDetails) {
     super();
-    this.has({value});
+    if ('value' in val) {
+      this.value = val.value;
+      this.has({value: val.value});
+      if (val.key) {
+        this.key = val.key;
+      }
+    } else {
+      this.has({path: val.path});
+      this.value = val.path;
+      const parts = val.path.fieldReference.path;
+      this.key = parts[parts.length - 1];
+    }
   }
 }
 
@@ -31,6 +45,10 @@ export class RecordLiteral extends ExpressionDef {
   }
 
   getExpression(fs: FieldSpace): ExprValue {
+    return this.getRecord(fs, []);
+  }
+
+  getRecord(fs: FieldSpace, kidNames: string[]): ExprValue {
     const recLit: RecordLiteralNode = {
       node: 'recordLiteral',
       kids: {},
@@ -40,14 +58,24 @@ export class RecordLiteral extends ExpressionDef {
       },
     };
     const dependents: ExprValue[] = [];
+    let kidIndex = 0;
     for (const el of this.pairs) {
+      const key = el.key ?? kidNames[kidIndex];
+      kidIndex += 1;
+      if (key === undefined) {
+        el.logError(
+          'record-literal-needs-keys',
+          'Anonymous record element not legal here'
+        );
+        continue;
+      }
       const xVal = el.value.getExpression(fs);
       if (TD.isAtomic(xVal)) {
         dependents.push(xVal);
-        recLit.kids[el.key] = xVal.value;
-        recLit.typeDef.fields.push(mkFieldDef(TDU.atomicDef(xVal), el.key));
+        recLit.kids[key] = xVal.value;
+        recLit.typeDef.fields.push(mkFieldDef(TDU.atomicDef(xVal), key));
       } else {
-        this.logError(
+        el.value.logError(
           'illegal-record-property-type',
           `Record property '${el.key} is type '${xVal.type}', which is not a legal property value type`
         );
@@ -58,5 +86,13 @@ export class RecordLiteral extends ExpressionDef {
       dataType: recLit.typeDef,
       from: dependents,
     });
+  }
+
+  getNextElement(fs: FieldSpace, headValue: ExprValue): ExprValue {
+    const recLit = headValue.value;
+    if (recLit.node === 'recordLiteral') {
+      return this.getRecord(fs, Object.keys(recLit.kids));
+    }
+    return this.getRecord(fs, []);
   }
 }

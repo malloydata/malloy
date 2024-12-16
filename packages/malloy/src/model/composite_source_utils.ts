@@ -61,7 +61,9 @@ function _resolveCompositeSources(
       } of narrowedSources) {
         const fieldNames = new Set<string>();
         for (const field of inputSource.fields) {
-          fieldNames.add(field.as ?? field.name);
+          if (field.accessModifier !== 'private') {
+            fieldNames.add(field.as ?? field.name);
+          }
         }
         for (const usage of compositeFieldUsage.fields) {
           if (!fieldNames.has(usage)) {
@@ -398,6 +400,10 @@ function compositeFieldUsageWithoutNonCompositeFields(
     fields: compositeFieldUsage.fields.filter(f =>
       isCompositeField(sourceFieldsByName[f])
     ),
-    joinedUsage: compositeFieldUsage.joinedUsage,
+    // Today it is not possible for a join to be composite, so we can safely throw
+    // away all join usage here...; if we ever allow joins in composite source
+    // inputs, then this will need to be updated to be the joinUsage with joins
+    // that are not composite filtered out...
+    joinedUsage: {},
   };
 }

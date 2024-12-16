@@ -367,6 +367,7 @@ type MessageParameterTypes = {
   'sql-is-not-null': string;
   'sql-is-null': string;
   'illegal-record-property-type': string;
+  'record-literal-needs-keys': string;
   'not-yet-implemented': string;
   'sql-case': string;
   'case-then-type-does-not-match': {
@@ -385,9 +386,23 @@ type MessageParameterTypes = {
   'or-choices-only': string;
   'sql-in': string;
   'dialect-cast-unsafe-only': string;
+  'field-not-accessible': string;
+  'cannot-expand-access': string;
+  'conflicting-access-modifier': string;
+  'accept-except-not-compatible-with-include': string;
+  'already-renamed': string;
+  'wildcard-except-redundant': string;
+  'already-used-star-in-include': string;
+  'include-after-exclude': string;
+  'duplicate-include': string;
+  'exclude-after-include': string;
+  'cannot-rename-non-field': string;
   'array-values-incompatible': string;
   'invalid-resolved-type-for-array': string;
   'generic-not-resolved': string;
+  'cannot-tag-include-except': string;
+  'unsupported-path-in-include': string;
+  'wildcard-include-rename': string;
 };
 
 export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {
