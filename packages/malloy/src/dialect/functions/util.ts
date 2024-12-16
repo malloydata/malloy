@@ -32,7 +32,7 @@ import {
   mkFieldDef,
   FieldDef,
   FunctionReturnTypeDesc,
-  FunctionParamTypeDef,
+  FunctionParameterTypeDef,
   ExpressionType,
   EvalSpace,
   FunctionReturnTypeDef,
@@ -174,7 +174,7 @@ export function anyExprType<T>(type: T): T & TypeDescExtras {
 // }
 
 export function maxUngroupedAggregate(
-  type: FunctionParamTypeDef
+  type: FunctionParameterTypeDef
 ): FunctionParamTypeDesc {
   return {...type, expressionType: 'ungrouped_aggregate', evalSpace: 'input'};
 }
@@ -316,7 +316,7 @@ function expandTypeDescElementBlueprint(
 function expandTypeDescElementBlueprint(
   blueprint: TypeDescElementBlueprintOrNamedGeneric,
   allowAny?: true
-): FunctionParamTypeDef;
+): FunctionParameterTypeDef;
 function expandTypeDescElementBlueprint(
   blueprint: TypeDescElementBlueprintOrNamedGeneric,
   allowAny: true,
@@ -326,7 +326,7 @@ function expandTypeDescElementBlueprint(
   blueprint: TypeDescElementBlueprintOrNamedGeneric,
   allowAny = true,
   allowGenerics = true
-): FunctionParamTypeDef | FunctionReturnTypeDef | TypedDef {
+): FunctionParameterTypeDef | FunctionReturnTypeDef | TypedDef {
   if (!allowAny && blueprint === 'any') {
     throw new Error('Return type cannot include any');
   }

@@ -11,11 +11,11 @@ import {
   OverloadedDefinitionBlueprint,
 } from '../functions/util';
 
-const array_first: DefinitionBlueprint = {
-  takes: {'value': {array: {generic: 'T'}}},
+const list_extract: DefinitionBlueprint = {
+  takes: {'value': {array: {generic: 'T'}}, 'index': 'number'},
   generic: ['T', ['any']],
   returns: {generic: 'T'},
-  impl: {sql: 'list_extract(${value}, 1)'},
+  impl: {sql: 'list_extract(${value}, ${index})'},
 };
 
 const dayname: DefinitionBlueprint = {
@@ -81,7 +81,7 @@ const string_agg_distinct: OverloadedDefinitionBlueprint = {
 };
 
 export const DUCKDB_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
-  array_first,
+  list_extract,
   count_approx,
   dayname,
   to_timestamp,

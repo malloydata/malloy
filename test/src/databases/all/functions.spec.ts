@@ -1320,11 +1320,8 @@ expressionModels.forEach((x, databaseName) => {
           booleanResult(true, databaseName)
         );
       });
-      it.when(isDuckdb)('test_foo', async () => {
-        await funcTest('test_foo(5)', 5);
-      });
-      it.when(isDuckdb)('array_first', async () => {
-        await funcTest('array_first(array_first([[5]]))', 5);
+      it.when(isDuckdb)('list_extract', async () => {
+        await funcTest('list_extract(list_extract([[5]], 1), 1)', 5);
       });
     });
 

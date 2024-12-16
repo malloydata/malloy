@@ -30,26 +30,24 @@ import {
   expressionIsScalar,
   expressionIsUngroupedAggregate,
   ExpressionType,
-  ExpressionValueTypeDef,
   FunctionCallNode,
   FunctionDef,
-  FunctionGenericNonAnyTypeDef,
+  ExpressionValueTypeDef,
   FunctionGenericTypeDef,
   FunctionOverloadDef,
   FunctionParameterDef,
-  FunctionParamFieldDef,
-  FunctionParamTypeDef,
+  FunctionParameterFieldDef,
+  FunctionParameterTypeDef,
   FunctionReturnTypeDef,
   FunctionReturnTypeDesc,
   isAtomic,
   isAtomicFieldType,
-  isAtomicXYZ,
   isExpressionTypeLEQ,
   isRepeatedRecordFunctionParam,
   isScalarArray,
   maxOfExpressionTypes,
   mergeEvalSpaces,
-  RecordFunctionParamTypeDef,
+  RecordFunctionParameterTypeDef,
   RecordFunctionReturnTypeDef,
   RecordTypeDef,
   TD,
@@ -495,7 +493,7 @@ function findOverload(
   | undefined {
   for (const overload of func.overloads) {
     // Map from generic name to selected type
-    const genericsSelected = new Map<string, FunctionGenericNonAnyTypeDef>();
+    const genericsSelected = new Map<string, ExpressionValueTypeDef>();
     let paramIndex = 0;
     let ok = true;
     let matchedVariadic = false;
@@ -596,7 +594,7 @@ function findOverload(
         nullabilityErrors,
         returnTypeError: resolveReturnType.error,
         // TODO don't be bad!!!
-        returnType: returnType as ExpressionValueTypeDef,
+        returnType: returnType,
       };
     }
   }
@@ -633,12 +631,12 @@ function parseSQLInterpolation(template: string): InterpolationPart[] {
   return parts;
 }
 
-type OneSetGeneric = {name: string; type: FunctionGenericNonAnyTypeDef};
+type OneSetGeneric = {name: string; type: ExpressionValueTypeDef};
 
 function isDataTypeMatch(
   genericTypes: {name: string; acceptibleTypes: FunctionGenericTypeDef[]}[],
   arg: ExpressionValueTypeDef,
-  paramT: FunctionGenericTypeDef | FunctionParamTypeDef
+  paramT: FunctionGenericTypeDef | FunctionParameterTypeDef
 ): {
   dataTypeMatch: boolean;
   genericsSet: OneSetGeneric[];
@@ -666,7 +664,7 @@ function isDataTypeMatch(
         return {dataTypeMatch: false, genericsSet: []};
       }
     } else if (isRepeatedRecordFunctionParam(paramT)) {
-      const fakeParamRecord: RecordFunctionParamTypeDef = {
+      const fakeParamRecord: RecordFunctionParameterTypeDef = {
         type: 'record',
         fields: paramT.fields,
       };
@@ -680,7 +678,7 @@ function isDataTypeMatch(
     }
   } else if (paramT.type === 'record' && arg.type === 'record') {
     const genericsSet: OneSetGeneric[] = [];
-    const paramFieldsByName = new Map<string, FunctionParamFieldDef>();
+    const paramFieldsByName = new Map<string, FunctionParameterFieldDef>();
     for (const field of paramT.fields) {
       paramFieldsByName.set(field.as ?? field.name, field);
     }
@@ -720,9 +718,9 @@ function resolveGenerics(
   returnType:
     | FunctionReturnTypeDesc
     | Exclude<FunctionReturnTypeDef, RecordFunctionReturnTypeDef>,
-  genericsSelected: Map<string, FunctionGenericNonAnyTypeDef>
+  genericsSelected: Map<string, ExpressionValueTypeDef>
 ):
-  | {error: undefined; returnType: FunctionGenericNonAnyTypeDef}
+  | {error: undefined; returnType: ExpressionValueTypeDef}
   | {error: {code: string; data: string}; returnType: undefined} {
   switch (returnType.type) {
     case 'array': {
@@ -761,7 +759,7 @@ function resolveGenerics(
           returnType: undefined,
         };
       }
-      if (!isAtomicXYZ(elementTypeDef)) {
+      if (!isAtomic(elementTypeDef)) {
         return {
           error: {
             code: 'invalid-resolved-type-for-array',

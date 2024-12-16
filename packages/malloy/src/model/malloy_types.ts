@@ -786,25 +786,9 @@ export interface RepeatedRecordDef
 export type ArrayTypeDef = ScalarArrayTypeDef | RepeatedRecordTypeDef;
 export type ArrayDef = ScalarArrayDef | RepeatedRecordDef;
 
-// function isRepeatedRecordXYZ<XYZ>(
-//   paramT: XYZTypeDef<XYZ>
-// ): paramT is RepeatedRecordXYZTypeDef<XYZ> {
-//   return (
-//     paramT.type === 'array' && paramT.elementTypeDef.type === 'record_element'
-//   );
-// }
-
-// function isScalarArrayXYZ<XYZ>(
-//   paramT: XYZTypeDef<XYZ>
-// ): paramT is ScalarArrayXYZTypeDef<XYZ> {
-//   return (
-//     paramT.type === 'array' && paramT.elementTypeDef.type !== 'record_element'
-//   );
-// }
-
 export function isRepeatedRecordFunctionParam(
-  paramT: FunctionParamTypeDef
-): paramT is RepeatedRecordFunctionParamTypeDef {
+  paramT: FunctionParameterTypeDef
+): paramT is RepeatedRecordFunctionParameterTypeDef {
   return (
     paramT.type === 'array' && paramT.elementTypeDef.type === 'record_element'
   );
@@ -1244,24 +1228,19 @@ export type TypeInfo = {
 
 export type TypeDesc = ExpressionValueTypeDef & TypeInfo;
 
-export type FunctionParamTypeDef = XYZTypeDef<ParamTypeExtensions>;
-export type FunctionParamTypeDesc = FunctionParamTypeDef & {
+export type FunctionParameterTypeDef =
+  XYZTypeDef<FunctionParameterTypeExtensions>;
+export type FunctionParamTypeDesc = FunctionParameterTypeDef & {
   expressionType: ExpressionType | undefined;
   evalSpace: EvalSpace;
 };
-//
-export interface ScalarArrayXYZTypeDef<XYZ> {
+
+interface ScalarArrayXYZTypeDef<XYZ> {
   type: 'array';
   elementTypeDef: Exclude<XYZTypeDef<XYZ>, RecordXYZTypeDef<XYZ>>;
 }
 
-// TODO?
-export type FieldTypeDef = LeafAtomicTypeDef;
-// | Join
-// | Turtle;
-
-// export type XYZTypeDef<XYZ> = FieldTypeDef | XYZ;
-export type XYZTypeDef<XYZ> =
+type XYZTypeDef<XYZ> =
   | AtomicTypeDef
   | NonAtomicTypeDef
   | ScalarArrayXYZTypeDef<XYZ>
@@ -1269,58 +1248,59 @@ export type XYZTypeDef<XYZ> =
   | RepeatedRecordXYZTypeDef<XYZ>
   | XYZ;
 
-export interface RecordXYZTypeDef<XYZ> {
+interface RecordXYZTypeDef<XYZ> {
   type: 'record';
   fields: XYZFieldDef<XYZ>[];
 }
 
-export type XYZFieldDef<XYZ> = FieldDef | (XYZ & FieldBase);
+type XYZFieldDef<XYZ> = FieldDef | (XYZ & FieldBase);
 
-export interface RepeatedRecordXYZTypeDef<XYZ> {
+interface RepeatedRecordXYZTypeDef<XYZ> {
   type: 'array';
   elementTypeDef: RecordElementTypeDef;
   fields: XYZFieldDef<XYZ>[];
 }
 
-//
-
-type ReturnTypeExtensions = GenericTypeDef;
+type FunctionReturnTypeExtensions = GenericTypeDef;
 
 export type ScalarArrayFunctionReturnTypeDef =
-  ScalarArrayXYZTypeDef<ReturnTypeExtensions>;
+  ScalarArrayXYZTypeDef<FunctionReturnTypeExtensions>;
 
-export type FunctionReturnFieldDef = XYZFieldDef<ReturnTypeExtensions>;
+export type FunctionReturnFieldDef = XYZFieldDef<FunctionReturnTypeExtensions>;
 
 export type RecordFunctionReturnTypeDef =
-  RecordXYZTypeDef<ReturnTypeExtensions>;
+  RecordXYZTypeDef<FunctionReturnTypeExtensions>;
 
 export type RepeatedRecordFunctionReturnTypeDef =
-  RepeatedRecordXYZTypeDef<ReturnTypeExtensions>;
+  RepeatedRecordXYZTypeDef<FunctionReturnTypeExtensions>;
 
-type ParamTypeExtensions = GenericTypeDef | AnyTypeDef;
+type FunctionParameterTypeExtensions = GenericTypeDef | AnyTypeDef;
 
-export type ScalarArrayFunctionParamTypeDef =
-  ScalarArrayXYZTypeDef<ParamTypeExtensions>;
+export type ScalarArrayFunctionParameterTypeDef =
+  ScalarArrayXYZTypeDef<FunctionParameterTypeExtensions>;
 
-export type FunctionParamFieldDef = XYZFieldDef<ParamTypeExtensions>;
+export type FunctionParameterFieldDef =
+  XYZFieldDef<FunctionParameterTypeExtensions>;
 
-export type RecordFunctionParamTypeDef = RecordXYZTypeDef<ParamTypeExtensions>;
+export type RecordFunctionParameterTypeDef =
+  RecordXYZTypeDef<FunctionParameterTypeExtensions>;
 
-export type RepeatedRecordFunctionParamTypeDef =
-  RepeatedRecordXYZTypeDef<ParamTypeExtensions>;
+export type RepeatedRecordFunctionParameterTypeDef =
+  RepeatedRecordXYZTypeDef<FunctionParameterTypeExtensions>;
 
-type GenericTypeExtensions = AnyTypeDef;
+type FunctionGenericTypeExtensions = AnyTypeDef;
 
 export type ScalarArrayFunctionGenericTypeDef =
-  ScalarArrayXYZTypeDef<GenericTypeExtensions>;
+  ScalarArrayXYZTypeDef<FunctionGenericTypeExtensions>;
 
-export type FunctionGenericFieldDef = XYZFieldDef<GenericTypeExtensions>;
+export type FunctionGenericFieldDef =
+  XYZFieldDef<FunctionGenericTypeExtensions>;
 
 export type RecordFunctionGenericTypeDef =
-  RecordXYZTypeDef<GenericTypeExtensions>;
+  RecordXYZTypeDef<FunctionGenericTypeExtensions>;
 
 export type RepeatedRecordFunctionGenericTypeDef =
-  RepeatedRecordXYZTypeDef<GenericTypeExtensions>;
+  RepeatedRecordXYZTypeDef<FunctionGenericTypeExtensions>;
 
 export interface GenericTypeDef {
   type: 'generic';
@@ -1336,7 +1316,7 @@ export type TypeDescExtensions = {
   evalSpace: EvalSpace;
 };
 
-export type FunctionReturnTypeDef = XYZTypeDef<ReturnTypeExtensions>;
+export type FunctionReturnTypeDef = XYZTypeDef<FunctionReturnTypeExtensions>;
 export type FunctionReturnTypeDesc = FunctionReturnTypeDef & TypeDescExtensions;
 
 export type EvalSpace = 'constant' | 'input' | 'output' | 'literal';
@@ -1367,10 +1347,7 @@ export interface FunctionParameterDef {
   isVariadic: boolean;
 }
 
-// TODO name?
-export type FunctionGenericNonAnyTypeDef = XYZTypeDef<never>;
-
-export type FunctionGenericTypeDef = XYZTypeDef<GenericTypeExtensions>;
+export type FunctionGenericTypeDef = XYZTypeDef<FunctionGenericTypeExtensions>;
 
 export interface FunctionOverloadDef {
   // The expression type here is the MINIMUM return type
@@ -1560,13 +1537,6 @@ export function isTurtle(def: TypedDef): def is TurtleDef {
   return def.type === 'turtle';
 }
 
-export function isAtomicXYZ<
-  T extends object,
-  XYZ extends TypedDef | ExpressionValueTypeDef | XYZTypeDef<T>,
->(def: XYZTypeDef<XYZ>): def is AtomicTypeDef {
-  return 'type' in def && isAtomicFieldType(def.type);
-}
-
 export function isAtomic(
   def: TypedDef | ExpressionValueTypeDef
 ): def is AtomicTypeDef {
@@ -1637,7 +1607,7 @@ export interface PrepareResultOptions {
 type UTD =
   | AtomicTypeDef
   | TypedDef
-  | FunctionParamTypeDef
+  | FunctionParameterTypeDef
   | FunctionReturnTypeDef
   | undefined;
 /**
