@@ -154,7 +154,7 @@ const chr: DefinitionFor<Standard['chr']> = {
 };
 
 const coalesce: DefinitionFor<Standard['coalesce']> = {
-  generic: ['T', ['string', 'number', 'timestamp', 'date', 'json']],
+  generic: {'T': ['string', 'number', 'timestamp', 'date', 'json']},
   takes: {'value': {variadic: {generic: 'T'}}},
   returns: {generic: 'T'},
   impl: {function: 'COALESCE'},
@@ -208,14 +208,14 @@ const floor: DefinitionFor<Standard['floor']> = {
 };
 
 const greatest: DefinitionFor<Standard['greatest']> = {
-  generic: ['T', ['string', 'number', 'timestamp', 'date', 'json']],
+  generic: {'T': ['string', 'number', 'timestamp', 'date', 'json']},
   takes: {'values': {variadic: {generic: 'T'}}},
   returns: {generic: 'T'},
   impl: {function: 'GREATEST'},
 };
 
 const ifnull: DefinitionFor<Standard['ifnull']> = {
-  generic: ['T', ['string', 'number', 'timestamp', 'date', 'json']],
+  generic: {'T': ['string', 'number', 'timestamp', 'date', 'json']},
   takes: {'value': {generic: 'T'}, 'default': {generic: 'T'}},
   returns: {generic: 'T'},
   impl: {function: 'IFNULL'},
@@ -279,7 +279,7 @@ const ltrim: DefinitionFor<Standard['ltrim']> = {
 };
 
 const nullif: DefinitionFor<Standard['nullif']> = {
-  generic: ['T', ['string', 'number', 'timestamp', 'date', 'json']],
+  generic: {'T': ['string', 'number', 'timestamp', 'date', 'json']},
   takes: {'value1': {generic: 'T'}, 'value2': {generic: 'T'}},
   returns: {generic: 'T'},
   impl: {function: 'NULLIF'},
@@ -470,7 +470,7 @@ const stddev: DefinitionFor<Standard['stddev']> = {
 // Analytic functions
 const avg_moving: DefinitionFor<Standard['avg_moving']> = {
   'preceding': {
-    generic: ['T', ['string', 'number', 'timestamp', 'date']],
+    generic: {'T': ['string', 'number', 'timestamp', 'date']},
     takes: {
       'value': {measure: {generic: 'T'}},
       'preceding': {literal: 'number'},
@@ -483,7 +483,7 @@ const avg_moving: DefinitionFor<Standard['avg_moving']> = {
     },
   },
   'following': {
-    generic: ['T', ['string', 'number', 'timestamp', 'date']],
+    generic: {'T': ['string', 'number', 'timestamp', 'date']},
     takes: {
       'value': {measure: {generic: 'T'}},
       'preceding': {literal: 'number'},
@@ -499,7 +499,7 @@ const avg_moving: DefinitionFor<Standard['avg_moving']> = {
 };
 
 const first_value: DefinitionFor<Standard['first_value']> = {
-  generic: ['T', ['string', 'number', 'timestamp', 'date', 'json']],
+  generic: {'T': ['string', 'number', 'timestamp', 'date', 'json']},
   takes: {'value': {measure: {generic: 'T'}}},
   returns: {calculation: {generic: 'T'}},
   impl: {function: 'FIRST_VALUE', needsWindowOrderBy: true},
@@ -515,7 +515,7 @@ const LAG_TYPES: LeafExpressionType[] = [
 ];
 const lag: DefinitionFor<Standard['lag']> = {
   'bare': {
-    generic: ['T', LAG_TYPES],
+    generic: {'T': LAG_TYPES},
     takes: {
       'value': {measure: {generic: 'T'}},
     },
@@ -523,7 +523,7 @@ const lag: DefinitionFor<Standard['lag']> = {
     impl: {function: 'LAG', needsWindowOrderBy: true},
   },
   'with_offset': {
-    generic: ['T', LAG_TYPES],
+    generic: {'T': LAG_TYPES},
     takes: {
       'value': {measure: {generic: 'T'}},
       'offset': {literal: 'number'},
@@ -532,7 +532,7 @@ const lag: DefinitionFor<Standard['lag']> = {
     impl: {function: 'LAG', needsWindowOrderBy: true},
   },
   'with_default': {
-    generic: ['T', LAG_TYPES],
+    generic: {'T': LAG_TYPES},
     takes: {
       'value': {measure: {generic: 'T'}},
       'offset': {literal: 'number'},
@@ -544,7 +544,7 @@ const lag: DefinitionFor<Standard['lag']> = {
 };
 
 const last_value: DefinitionFor<Standard['last_value']> = {
-  generic: ['T', ['string', 'number', 'timestamp', 'date', 'json']],
+  generic: {'T': ['string', 'number', 'timestamp', 'date', 'json']},
   takes: {'value': {measure: {generic: 'T'}}},
   returns: {calculation: {generic: 'T'}},
   impl: {
@@ -570,28 +570,28 @@ const lead: DefinitionFor<Standard['lead']> = {
 };
 
 const max_cumulative: DefinitionFor<Standard['max_cumulative']> = {
-  generic: ['T', ['string', 'number', 'timestamp', 'date']],
+  generic: {'T': ['string', 'number', 'timestamp', 'date']},
   takes: {'value': {measure: {generic: 'T'}}},
   returns: {calculation: {generic: 'T'}},
   impl: {function: 'MAX', needsWindowOrderBy: true},
 };
 
 const max_window: DefinitionFor<Standard['max_window']> = {
-  generic: ['T', ['string', 'number', 'timestamp', 'date']],
+  generic: {'T': ['string', 'number', 'timestamp', 'date']},
   takes: {'value': {measure: {generic: 'T'}}},
   returns: {calculation: {generic: 'T'}},
   impl: {function: 'MAX', needsWindowOrderBy: false},
 };
 
 const min_cumulative: DefinitionFor<Standard['min_cumulative']> = {
-  generic: ['T', ['string', 'number', 'timestamp', 'date']],
+  generic: {'T': ['string', 'number', 'timestamp', 'date']},
   takes: {'value': {measure: {generic: 'T'}}},
   returns: {calculation: {generic: 'T'}},
   impl: {function: 'MIN', needsWindowOrderBy: true},
 };
 
 const min_window: DefinitionFor<Standard['min_window']> = {
-  generic: ['T', ['string', 'number', 'timestamp', 'date']],
+  generic: {'T': ['string', 'number', 'timestamp', 'date']},
   takes: {'value': {measure: {generic: 'T'}}},
   returns: {calculation: {generic: 'T'}},
   impl: {function: 'MIN', needsWindowOrderBy: false},
@@ -611,7 +611,7 @@ const row_number: DefinitionFor<Standard['row_number']> = {
 };
 
 const sum_cumulative: DefinitionFor<Standard['sum_cumulative']> = {
-  generic: ['T', ['string', 'number', 'timestamp', 'date']],
+  generic: {'T': ['string', 'number', 'timestamp', 'date']},
   takes: {'value': {measure: {generic: 'T'}}},
   returns: {calculation: {generic: 'T'}},
   impl: {function: 'SUM', needsWindowOrderBy: true},
@@ -619,7 +619,7 @@ const sum_cumulative: DefinitionFor<Standard['sum_cumulative']> = {
 
 const sum_moving: DefinitionFor<Standard['sum_moving']> = {
   'preceding': {
-    generic: ['T', ['string', 'number', 'timestamp', 'date']],
+    generic: {'T': ['string', 'number', 'timestamp', 'date']},
     takes: {
       'value': {measure: {generic: 'T'}},
       'preceding': {literal: 'number'},
@@ -632,7 +632,7 @@ const sum_moving: DefinitionFor<Standard['sum_moving']> = {
     },
   },
   'following': {
-    generic: ['T', ['string', 'number', 'timestamp', 'date']],
+    generic: {'T': ['string', 'number', 'timestamp', 'date']},
     takes: {
       'value': {measure: {generic: 'T'}},
       'preceding': {literal: 'number'},
@@ -648,7 +648,7 @@ const sum_moving: DefinitionFor<Standard['sum_moving']> = {
 };
 
 const sum_window: DefinitionFor<Standard['sum_window']> = {
-  generic: ['T', ['string', 'number', 'timestamp', 'date']],
+  generic: {'T': ['string', 'number', 'timestamp', 'date']},
   takes: {'value': {measure: {generic: 'T'}}},
   returns: {calculation: {generic: 'T'}},
   impl: {function: 'SUM', needsWindowOrderBy: false},

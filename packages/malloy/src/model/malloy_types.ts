@@ -1,5 +1,6 @@
 /*
  * Copyright 2023 Google LLC
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files
@@ -787,6 +788,14 @@ export interface RepeatedRecordDef
 export type ArrayTypeDef = ScalarArrayTypeDef | RepeatedRecordTypeDef;
 export type ArrayDef = ScalarArrayDef | RepeatedRecordDef;
 
+export function isRepeatedRecordFunctionParam(
+  paramT: FunctionParameterTypeDef
+): paramT is RepeatedRecordFunctionParameterTypeDef {
+  return (
+    paramT.type === 'array' && paramT.elementTypeDef.type === 'record_element'
+  );
+}
+
 export function isRepeatedRecord(
   fd: FieldDef | QueryFieldDef | StructDef | AtomicTypeDef
 ): fd is RepeatedRecordTypeDef {
@@ -1206,7 +1215,6 @@ export type NonAtomicType =
   | 'turtle' //   do NOT have the full type info, just noting the type
   | 'null'
   | 'duration'
-  | 'any'
   | 'regular expression';
 export interface NonAtomicTypeDef {
   type: NonAtomicType;
@@ -1227,11 +1235,100 @@ export type TypeInfo = {
 
 export type TypeDesc = ExpressionValueTypeDef & TypeInfo;
 
-export type FunctionParamType = ExpressionValueTypeDef | {type: 'any'};
-export type FunctionParamTypeDesc = FunctionParamType & {
+export type FunctionParameterTypeDef =
+  ExpressionValueExtTypeDef<FunctionParameterTypeExtensions>;
+export type FunctionParamTypeDesc = FunctionParameterTypeDef & {
   expressionType: ExpressionType | undefined;
   evalSpace: EvalSpace;
 };
+
+interface ScalarArrayExtTypeDef<TypeExtensions> {
+  type: 'array';
+  elementTypeDef: Exclude<
+    ExpressionValueExtTypeDef<TypeExtensions>,
+    RecordExtTypeDef<TypeExtensions>
+  >;
+}
+
+type ExpressionValueExtTypeDef<TypeExtensions> =
+  | AtomicTypeDef
+  | NonAtomicTypeDef
+  | ScalarArrayExtTypeDef<TypeExtensions>
+  | RecordExtTypeDef<TypeExtensions>
+  | RepeatedRecordExtTypeDef<TypeExtensions>
+  | TypeExtensions;
+
+interface RecordExtTypeDef<TypeExtensions> {
+  type: 'record';
+  fields: ExtFieldDef<TypeExtensions>[];
+}
+
+type ExtFieldDef<TypeExtensions> = FieldDef | (TypeExtensions & FieldBase);
+
+interface RepeatedRecordExtTypeDef<TypeExtensions> {
+  type: 'array';
+  elementTypeDef: RecordElementTypeDef;
+  fields: ExtFieldDef<TypeExtensions>[];
+}
+
+type FunctionReturnTypeExtensions = GenericTypeDef;
+
+export type ScalarArrayFunctionReturnTypeDef =
+  ScalarArrayExtTypeDef<FunctionReturnTypeExtensions>;
+
+export type FunctionReturnFieldDef = ExtFieldDef<FunctionReturnTypeExtensions>;
+
+export type RecordFunctionReturnTypeDef =
+  RecordExtTypeDef<FunctionReturnTypeExtensions>;
+
+export type RepeatedRecordFunctionReturnTypeDef =
+  RepeatedRecordExtTypeDef<FunctionReturnTypeExtensions>;
+
+type FunctionParameterTypeExtensions = GenericTypeDef | AnyTypeDef;
+
+export type ScalarArrayFunctionParameterTypeDef =
+  ScalarArrayExtTypeDef<FunctionParameterTypeExtensions>;
+
+export type FunctionParameterFieldDef =
+  ExtFieldDef<FunctionParameterTypeExtensions>;
+
+export type RecordFunctionParameterTypeDef =
+  RecordExtTypeDef<FunctionParameterTypeExtensions>;
+
+export type RepeatedRecordFunctionParameterTypeDef =
+  RepeatedRecordExtTypeDef<FunctionParameterTypeExtensions>;
+
+type FunctionGenericTypeExtensions = AnyTypeDef;
+
+export type ScalarArrayFunctionGenericTypeDef =
+  ScalarArrayExtTypeDef<FunctionGenericTypeExtensions>;
+
+export type FunctionGenericFieldDef =
+  ExtFieldDef<FunctionGenericTypeExtensions>;
+
+export type RecordFunctionGenericTypeDef =
+  RecordExtTypeDef<FunctionGenericTypeExtensions>;
+
+export type RepeatedRecordFunctionGenericTypeDef =
+  RepeatedRecordExtTypeDef<FunctionGenericTypeExtensions>;
+
+export interface GenericTypeDef {
+  type: 'generic';
+  generic: string;
+}
+
+export interface AnyTypeDef {
+  type: 'any';
+}
+
+export type TypeDescExtensions = {
+  expressionType: ExpressionType | undefined;
+  evalSpace: EvalSpace;
+};
+
+export type FunctionReturnTypeDef =
+  ExpressionValueExtTypeDef<FunctionReturnTypeExtensions>;
+export type FunctionReturnTypeDesc = FunctionReturnTypeDef & TypeDescExtensions;
 
 export type EvalSpace = 'constant' | 'input' | 'output' | 'literal';
 
@@ -1261,13 +1358,17 @@ export interface FunctionParameterDef {
   isVariadic: boolean;
 }
 
+export type FunctionGenericTypeDef =
+  ExpressionValueExtTypeDef<FunctionGenericTypeExtensions>;
+
 export interface FunctionOverloadDef {
   // The expression type here is the MINIMUM return type
-  returnType: TypeDesc;
+  returnType: FunctionReturnTypeDesc;
   isSymmetric?: boolean;
   params: FunctionParameterDef[];
   supportsOrderBy?: boolean | 'only_default';
   supportsLimit?: boolean;
+  genericTypes?: {name: string; acceptibleTypes: FunctionGenericTypeDef[]}[];
   dialect: {
     [dialect: string]: {
       e: Expr;
@@ -1448,7 +1549,9 @@ export function isTurtle(def: TypedDef): def is TurtleDef {
   return def.type === 'turtle';
 }
 
-export function isAtomic(def: TypedDef): def is AtomicTypeDef {
+export function isAtomic(
+  def: TypedDef | ExpressionValueTypeDef
+): def is AtomicTypeDef {
   return isAtomicFieldType(def.type);
 }
 
@@ -1513,7 +1616,12 @@ export interface PrepareResultOptions {
   materializedTablePrefix?: string;
 }
 
-type UTD = AtomicTypeDef | FunctionParamTypeDesc | undefined;
+type UTD =
+  | AtomicTypeDef
+  | TypedDef
+  | FunctionParameterTypeDef
+  | FunctionReturnTypeDef
+  | undefined;
 /**
  * A set of utilities for asking questions TypeDef/TypeDesc
  * (which is OK because TypeDesc is an extension of a TypeDef)
@@ -1567,9 +1675,9 @@ export const TD = {
       ) {
         return TD.eq(x.elementTypeDef, y.elementTypeDef);
       }
-      return checkFields(x, y);
+      return TD.isAtomic(x) && TD.isAtomic(y) && checkFields(x, y);
     } else if (x.type === 'record' && y.type === 'record') {
-      return checkFields(x, y);
+      return TD.isAtomic(x) && TD.isAtomic(y) && checkFields(x, y);
     }
     if (x.type === 'sql native' && y.type === 'sql native') {
       return x.rawType !== undefined && x.rawType === y.rawType;

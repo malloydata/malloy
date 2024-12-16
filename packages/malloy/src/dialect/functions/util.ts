@@ -1,5 +1,6 @@
 /*
  * Copyright 2023 Google LLC
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files
@@ -21,7 +22,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {emptyCompositeFieldUsage} from '../../model/composite_source_utils';
 import {
   FunctionParameterDef,
   TypeDesc,
@@ -32,13 +32,21 @@ import {
   TD,
   mkFieldDef,
   FieldDef,
+  FunctionReturnTypeDesc,
+  FunctionParameterTypeDef,
+  ExpressionType,
+  EvalSpace,
+  FunctionReturnTypeDef,
+  TypedDef,
+  FunctionGenericTypeDef,
 } from '../../model/malloy_types';
 import {SQLExprElement} from '../../model/utils';
 
 export interface DialectFunctionOverloadDef {
   // The expression type here is the MINIMUM return type
-  returnType: TypeDesc;
+  returnType: FunctionReturnTypeDesc;
   params: FunctionParameterDef[];
+  genericTypes?: {name: string; acceptibleTypes: FunctionGenericTypeDef[]}[];
   e: Expr;
   needsWindowOrderBy?: boolean;
   isSymmetric?: boolean;
@@ -90,21 +98,27 @@ export function sql(
   return ret;
 }
 
-export function constant(type: FunctionParamTypeDesc): FunctionParamTypeDesc {
+export function constant<
+  T extends {expressionType: ExpressionType | undefined},
+>(type: T): T & TypeDescExtras {
   return {
     ...type,
     evalSpace: 'constant',
   };
 }
 
-export function output(type: FunctionParamTypeDesc): FunctionParamTypeDesc {
+export function output<T extends {expressionType: ExpressionType | undefined}>(
+  type: T
+): T & TypeDescExtras {
   return {
     ...type,
     evalSpace: 'output',
   };
 }
 
-export function literal(type: FunctionParamTypeDesc): FunctionParamTypeDesc {
+export function literal<T extends {expressionType: ExpressionType | undefined}>(
+  type: T
+): T & TypeDescExtras {
   return {
     ...type,
     evalSpace: 'literal',
@@ -143,46 +157,43 @@ export function makeParam(
   return {param: param(name, ...allowedTypes), arg: arg(name)};
 }
 
-export function maxScalar(type: LeafExpressionType): FunctionParamTypeDesc {
-  return {type, expressionType: 'scalar', evalSpace: 'input'};
+export function maxScalar<T>(type: T): T & TypeDescExtras {
+  return {...type, expressionType: 'scalar', evalSpace: 'input'};
 }
 
-export function maxAggregate(type: LeafExpressionType): FunctionParamTypeDesc {
-  return {type, expressionType: 'aggregate', evalSpace: 'input'};
+export function maxAggregate<T>(type: T): T & TypeDescExtras {
+  return {...type, expressionType: 'aggregate', evalSpace: 'input'};
 }
 
-export function anyExprType(type: LeafExpressionType): FunctionParamTypeDesc {
-  return {type, expressionType: undefined, evalSpace: 'input'};
-}
-
-function anyExprTypeBP(
-  type: TypeDescBlueprint,
-  generic: {name: string; type: LeafExpressionType} | undefined
-): FunctionParamTypeDesc {
-  const typeDesc = expandReturnTypeBlueprint(type, generic);
-  return {...typeDesc, expressionType: undefined, evalSpace: 'input'};
+export function anyExprType<T>(type: T): T & TypeDescExtras {
+  return {...type, expressionType: undefined, evalSpace: 'input'};
 }
 
 export function maxUngroupedAggregate(
-  type: LeafExpressionType
+  type: FunctionParameterTypeDef
 ): FunctionParamTypeDesc {
-  return {type, expressionType: 'ungrouped_aggregate', evalSpace: 'input'};
+  return {...type, expressionType: 'ungrouped_aggregate', evalSpace: 'input'};
 }
 
-export function maxAnalytic(type: LeafExpressionType): FunctionParamTypeDesc {
-  return {type, expressionType: 'aggregate_analytic', evalSpace: 'input'};
+type TypeDescExtras = {
+  expressionType: ExpressionType | undefined;
+  evalSpace: EvalSpace;
+};
+
+export function maxAnalytic<T>(type: T): T & TypeDescExtras {
+  return {...type, expressionType: 'aggregate_analytic', evalSpace: 'input'};
 }
 
-export function minScalar(type: LeafExpressionType): FunctionParamTypeDesc {
-  return {type, expressionType: 'scalar', evalSpace: 'input'};
+export function minScalar<T>(type: T): T & TypeDescExtras {
+  return {...type, expressionType: 'scalar', evalSpace: 'input'};
 }
 
-export function minAggregate(type: LeafExpressionType): FunctionParamTypeDesc {
-  return {type, expressionType: 'aggregate', evalSpace: 'input'};
+export function minAggregate<T>(type: T): T & TypeDescExtras {
+  return {...type, expressionType: 'aggregate', evalSpace: 'input'};
 }
 
-export function minAnalytic(type: LeafExpressionType): FunctionParamTypeDesc {
-  return {type, expressionType: 'scalar_analytic', evalSpace: 'input'};
+export function minAnalytic<T>(type: T): T & TypeDescExtras {
+  return {...type, expressionType: 'scalar_analytic', evalSpace: 'input'};
 }
 
 export function overload(
@@ -212,24 +223,28 @@ export function overload(
 }
 
 export interface ArrayBlueprint {
-  array: TypeDescElementBlueprint;
+  array: TypeDescElementBlueprintOrNamedGeneric;
 }
+export type TypeDescElementBlueprintOrNamedGeneric =
+  | TypeDescElementBlueprint
+  | NamedGeneric;
 export interface RecordBlueprint {
-  record: Record<string, TypeDescElementBlueprint>;
+  record: Record<string, TypeDescElementBlueprintOrNamedGeneric>;
 }
+export type LeafPlusType = LeafExpressionType | 'any';
 export type TypeDescElementBlueprint =
-  | LeafExpressionType
+  | LeafPlusType
   | ArrayBlueprint
   | RecordBlueprint;
+export type NamedGeneric = {generic: string};
 
 export type TypeDescBlueprint =
-  | TypeDescElementBlueprint
-  | {generic: string}
-  | {literal: LeafExpressionType | {generic: string}}
-  | {constant: LeafExpressionType | {generic: string}}
-  | {dimension: LeafExpressionType | {generic: string}}
-  | {measure: LeafExpressionType | {generic: string}}
-  | {calculation: LeafExpressionType | {generic: string}};
+  | TypeDescElementBlueprintOrNamedGeneric
+  | {literal: TypeDescElementBlueprintOrNamedGeneric}
+  | {constant: TypeDescElementBlueprintOrNamedGeneric}
+  | {dimension: TypeDescElementBlueprintOrNamedGeneric}
+  | {measure: TypeDescElementBlueprintOrNamedGeneric}
+  | {calculation: TypeDescElementBlueprintOrNamedGeneric};
 
 type ParamTypeBlueprint =
   | TypeDescBlueprint
@@ -237,9 +252,7 @@ type ParamTypeBlueprint =
   | {variadic: TypeDescBlueprint | TypeDescBlueprint[]};
 
 export interface SignatureBlueprint {
-  // today only one generic is allowed, but if we need more
-  // we could change this to `{[name: string]: ExpressionValueType[]}`
-  generic?: [string, LeafExpressionType[]];
+  generic?: {[name: string]: TypeDescElementBlueprintOrNamedGeneric[]};
   takes: {[name: string]: ParamTypeBlueprint};
   returns: TypeDescBlueprint;
   supportsOrderBy?: boolean | 'only_default';
@@ -290,86 +303,104 @@ export type OverrideMap = {
   [name: string]: ImplementationBlueprint | OverloadedImplementationBlueprint;
 };
 
-function removeGeneric(
-  type: LeafExpressionType | {generic: string},
-  generic: {name: string; type: LeafExpressionType} | undefined
-) {
-  if (typeof type === 'string') {
-    return type;
+function expandTypeDescElementBlueprint(
+  blueprint: TypeDescElementBlueprintOrNamedGeneric,
+  allowAny: false
+): FunctionReturnTypeDef;
+function expandTypeDescElementBlueprint(
+  blueprint: TypeDescElementBlueprintOrNamedGeneric,
+  allowAny?: true
+): FunctionParameterTypeDef;
+function expandTypeDescElementBlueprint(
+  blueprint: TypeDescElementBlueprintOrNamedGeneric,
+  allowAny: true,
+  allowGenerics: false
+): FunctionGenericTypeDef;
+function expandTypeDescElementBlueprint(
+  blueprint: TypeDescElementBlueprintOrNamedGeneric,
+  allowAny = true,
+  allowGenerics = true
+): FunctionParameterTypeDef | FunctionReturnTypeDef | TypedDef {
+  if (!allowAny && blueprint === 'any') {
+    throw new Error('Return type cannot include any');
   }
-  if (type.generic !== generic?.name) {
-    throw new Error(`Cannot expand generic name ${type.generic}`);
-  }
-  return generic.type;
-}
-
-function expandReturnTypeBlueprint(
-  blueprint: TypeDescBlueprint,
-  generic: {name: string; type: LeafExpressionType} | undefined
-): TypeDesc {
-  let base: FunctionParamTypeDesc;
   if (typeof blueprint === 'string') {
-    base = minScalar(blueprint);
+    return {type: blueprint};
   } else if ('array' in blueprint) {
-    const innerType = expandReturnTypeBlueprint(blueprint.array, generic);
-    const {expressionType, evalSpace} = innerType;
-    if (TD.isAtomic(innerType)) {
-      if (innerType.type !== 'record') {
-        base = {
-          type: 'array',
-          elementTypeDef: innerType,
-          expressionType,
-          evalSpace,
-        };
-      } else {
-        base = {
-          type: 'array',
-          elementTypeDef: {type: 'record_element'},
-          fields: innerType.fields,
-          expressionType,
-          evalSpace,
-        };
-      }
-    } else {
-      // mtoy todo  fix by doing "exapndElementBlueprint" ...
-      throw new Error(
-        `TypeDescElementBlueprint should never allow ${blueprint.array}`
-      );
+    const innerType = allowAny
+      ? expandTypeDescElementBlueprint(blueprint.array, true)
+      : expandTypeDescElementBlueprint(blueprint.array, false);
+    if (innerType.type === 'record') {
+      return {
+        type: 'array',
+        elementTypeDef: {type: 'record_element'},
+        fields: innerType.fields,
+      };
     }
+    return {
+      type: 'array',
+      elementTypeDef: innerType,
+    };
   } else if ('record' in blueprint) {
     const fields: FieldDef[] = [];
     for (const [fieldName, fieldBlueprint] of Object.entries(
       blueprint.record
     )) {
-      const fieldDesc = expandReturnTypeBlueprint(fieldBlueprint, generic);
+      const fieldDesc = allowAny
+        ? expandTypeDescElementBlueprint(fieldBlueprint, true)
+        : expandTypeDescElementBlueprint(fieldBlueprint, false);
       if (TD.isAtomic(fieldDesc)) {
         fields.push(mkFieldDef(fieldDesc, fieldName));
       }
     }
-    base = {
+    return {
       type: 'record',
       fields,
-      evalSpace: 'input',
-      expressionType: 'scalar',
     };
   } else if ('generic' in blueprint) {
-    base = minScalar(removeGeneric(blueprint, generic));
-  } else if ('literal' in blueprint) {
-    base = literal(minScalar(removeGeneric(blueprint.literal, generic)));
-  } else if ('constant' in blueprint) {
-    base = constant(minScalar(removeGeneric(blueprint.constant, generic)));
-  } else if ('dimension' in blueprint) {
-    base = minScalar(removeGeneric(blueprint.dimension, generic));
-  } else if ('measure' in blueprint) {
-    base = minAggregate(removeGeneric(blueprint.measure, generic));
-  } else {
-    base = minAnalytic(removeGeneric(blueprint.calculation, generic));
+    if (!allowGenerics) {
+      throw new Error('Cannot use generic');
+    }
+    return {type: 'generic', generic: blueprint.generic};
   }
-  return {
-    ...base,
-    compositeFieldUsage: emptyCompositeFieldUsage(),
-    expressionType: base.expressionType ?? 'scalar',
-  };
+  throw new Error('Cannot figure out type');
+}
+
+function expandReturnTypeBlueprint(
+  blueprint: TypeDescBlueprint
+): FunctionReturnTypeDesc {
+  if (blueprint === 'any') {
+    throw new Error('Cannot return any type');
+  }
+  if (typeof blueprint === 'string') {
+    return minScalar({type: blueprint});
+  } else if ('array' in blueprint) {
+    return anyExprType(expandTypeDescElementBlueprint(blueprint, false));
+  } else if ('record' in blueprint) {
+    return anyExprType(expandTypeDescElementBlueprint(blueprint, false));
+  } else if ('generic' in blueprint) {
+    return minScalar(expandTypeDescElementBlueprint(blueprint, false));
+  } else if ('literal' in blueprint) {
+    return literal(
+      minScalar(expandTypeDescElementBlueprint(blueprint.literal, false))
+    );
+  } else if ('constant' in blueprint) {
+    return constant(
+      minScalar(expandTypeDescElementBlueprint(blueprint.constant, false))
+    );
+  } else if ('dimension' in blueprint) {
+    return minScalar(
+      expandTypeDescElementBlueprint(blueprint.dimension, false)
+    );
+  } else if ('measure' in blueprint) {
+    return minAggregate(
+      expandTypeDescElementBlueprint(blueprint.measure, false)
+    );
+  } else {
+    return minAnalytic(
+      expandTypeDescElementBlueprint(blueprint.calculation, false)
+    );
+  }
 }
 
 function isTypeDescBlueprint(
@@ -403,37 +434,35 @@ function extractParamTypeBlueprints(
 }
 
 function expandParamTypeBlueprint(
-  blueprint: TypeDescBlueprint,
-  generic: {name: string; type: LeafExpressionType} | undefined
+  blueprint: TypeDescBlueprint
 ): FunctionParamTypeDesc {
   if (typeof blueprint === 'string') {
-    return anyExprType(blueprint);
+    return anyExprType({type: blueprint});
   } else if ('generic' in blueprint) {
-    return anyExprType(removeGeneric(blueprint, generic));
+    return anyExprType(expandTypeDescElementBlueprint(blueprint));
   } else if ('literal' in blueprint) {
-    return literal(maxScalar(removeGeneric(blueprint.literal, generic)));
+    return literal(
+      maxScalar(expandTypeDescElementBlueprint(blueprint.literal))
+    );
   } else if ('constant' in blueprint) {
-    return constant(maxScalar(removeGeneric(blueprint.constant, generic)));
+    return constant(
+      maxScalar(expandTypeDescElementBlueprint(blueprint.constant))
+    );
   } else if ('dimension' in blueprint) {
-    return maxScalar(removeGeneric(blueprint.dimension, generic));
+    return maxScalar(expandTypeDescElementBlueprint(blueprint.dimension));
   } else if ('measure' in blueprint) {
-    return maxAggregate(removeGeneric(blueprint.measure, generic));
+    return maxAggregate(expandTypeDescElementBlueprint(blueprint.measure));
   } else if ('array' in blueprint) {
-    return anyExprTypeBP(blueprint, generic);
+    return anyExprType(expandTypeDescElementBlueprint(blueprint, false));
   } else if ('record' in blueprint) {
-    return anyExprTypeBP(blueprint, generic);
+    return anyExprType(expandTypeDescElementBlueprint(blueprint, false));
   } else {
-    return maxAnalytic(removeGeneric(blueprint.calculation, generic));
+    return maxAnalytic(expandTypeDescElementBlueprint(blueprint.calculation));
   }
 }
 
-function expandParamTypeBlueprints(
-  blueprints: TypeDescBlueprint[],
-  generic: {name: string; type: LeafExpressionType} | undefined
-) {
-  return blueprints.map(blueprint =>
-    expandParamTypeBlueprint(blueprint, generic)
-  );
+function expandParamTypeBlueprints(blueprints: TypeDescBlueprint[]) {
+  return blueprints.map(blueprint => expandParamTypeBlueprint(blueprint));
 }
 
 function isVariadicParamBlueprint(blueprint: ParamTypeBlueprint): boolean {
@@ -442,26 +471,23 @@ function isVariadicParamBlueprint(blueprint: ParamTypeBlueprint): boolean {
 
 function expandParamBlueprint(
   name: string,
-  blueprint: ParamTypeBlueprint,
-  generic: {name: string; type: LeafExpressionType} | undefined
+  blueprint: ParamTypeBlueprint
 ): FunctionParameterDef {
   return {
     name,
     allowedTypes: expandParamTypeBlueprints(
-      extractParamTypeBlueprints(blueprint),
-      generic
+      extractParamTypeBlueprints(blueprint)
     ),
     isVariadic: isVariadicParamBlueprint(blueprint),
   };
 }
 
-function expandParamsBlueprints(
-  blueprints: {[name: string]: ParamTypeBlueprint},
-  generic: {name: string; type: LeafExpressionType} | undefined
-) {
+function expandParamsBlueprints(blueprints: {
+  [name: string]: ParamTypeBlueprint;
+}) {
   const paramsArray = Object.entries(blueprints);
   return paramsArray.map(blueprint =>
-    expandParamBlueprint(blueprint[0], blueprint[1], generic)
+    expandParamBlueprint(blueprint[0], blueprint[1])
   );
 }
 
@@ -562,30 +588,32 @@ function expandImplBlueprint(blueprint: DefinitionBlueprint): {
   };
 }
 
-function expandOneBlueprint(
-  blueprint: DefinitionBlueprint,
-  generic?: {name: string; type: LeafExpressionType}
-): DialectFunctionOverloadDef {
-  return {
-    returnType: expandReturnTypeBlueprint(blueprint.returns, generic),
-    params: expandParamsBlueprints(blueprint.takes, generic),
-    isSymmetric: blueprint.isSymmetric,
-    supportsOrderBy: blueprint.supportsOrderBy,
-    supportsLimit: blueprint.supportsLimit,
-    ...expandImplBlueprint(blueprint),
-  };
+function expandGenericDefinitions(
+  blueprint:
+    | {[name: string]: TypeDescElementBlueprintOrNamedGeneric[]}
+    | undefined
+): {name: string; acceptibleTypes: FunctionGenericTypeDef[]}[] | undefined {
+  if (blueprint === undefined) return undefined;
+  return Object.entries(blueprint).map(([name, acceptibleTypes]) => ({
+    name: name,
+    acceptibleTypes: acceptibleTypes.map(t =>
+      expandTypeDescElementBlueprint(t, true, false)
+    ),
+  }));
 }
 
 function expandBlueprint(
   blueprint: DefinitionBlueprint
-): DialectFunctionOverloadDef[] {
-  if (blueprint.generic !== undefined) {
-    const name = blueprint.generic[0];
-    return blueprint.generic[1].map(type =>
-      expandOneBlueprint(blueprint, {name, type})
-    );
-  }
-  return [expandOneBlueprint(blueprint)];
+): DialectFunctionOverloadDef {
+  return {
+    returnType: expandReturnTypeBlueprint(blueprint.returns),
+    params: expandParamsBlueprints(blueprint.takes),
+    isSymmetric: blueprint.isSymmetric,
+    supportsOrderBy: blueprint.supportsOrderBy,
+    supportsLimit: blueprint.supportsLimit,
+    genericTypes: expandGenericDefinitions(blueprint.generic),
+    ...expandImplBlueprint(blueprint),
+  };
 }
 
 function isDefinitionBlueprint(
@@ -604,7 +632,7 @@ function expandOverloadedBlueprint(
   blueprint: DefinitionBlueprint | OverloadedDefinitionBlueprint
 ): DialectFunctionOverloadDef[] {
   if (isDefinitionBlueprint(blueprint)) {
-    return expandBlueprint(blueprint);
+    return [expandBlueprint(blueprint)];
   } else {
     return Object.values(blueprint).flatMap(overload =>
       expandBlueprint(overload)
@@ -624,7 +652,7 @@ function expandImplementationBlueprint(
   base: DefinitionBlueprint,
   impl: ImplementationBlueprint
 ): DialectFunctionOverloadDef[] {
-  return expandBlueprint({...base, impl});
+  return [expandBlueprint({...base, impl})];
 }
 
 function expandOverloadedOverrideBlueprint(

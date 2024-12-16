@@ -104,6 +104,7 @@ export function getDialectFunctions(): Map<string, FunctionDef> {
         dialect: {},
         supportsOrderBy: baseOverload.supportsOrderBy,
         supportsLimit: baseOverload.supportsLimit,
+        genericTypes: baseOverload.genericTypes,
         isSymmetric: baseOverload.isSymmetric,
       };
       for (const dialect of dialects) {

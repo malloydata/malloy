@@ -398,6 +398,8 @@ type MessageParameterTypes = {
   'exclude-after-include': string;
   'cannot-rename-non-field': string;
   'array-values-incompatible': string;
+  'invalid-resolved-type-for-array': string;
+  'generic-not-resolved': string;
   'cannot-tag-include-except': string;
   'unsupported-path-in-include': string;
   'wildcard-include-rename': string;
@@ -461,6 +463,13 @@ export type MessageCode = keyof MessageParameterTypes;
 
 export type MessageParameterType<T extends MessageCode> =
   MessageParameterTypes[T];
+
+type MessageCodeAndParameters<T extends MessageCode> = {
+  code: T;
+  parameters: MessageParameterType<T>;
+};
+
+export type AnyMessageCodeAndParameters = MessageCodeAndParameters<MessageCode>;
 
 type MessageFormatter<T extends MessageCode> =
   | MessageInfo
