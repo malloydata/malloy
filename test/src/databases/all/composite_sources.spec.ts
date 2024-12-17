@@ -9,8 +9,7 @@ import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
 import '../../util/db-jest-matchers';
 
-const runtimes = new RuntimeList(databasesFromEnvironmentOr(['duckdb']));
-// const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
+const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 afterAll(async () => {
   await runtimes.closeAll();
@@ -325,7 +324,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           state_facts,
           state_facts extend { dimension: bar is 1 }
         ) -> { index: bar }
-      `).malloyResultMatches(runtime, {fieldName: 'bar'});
+      `).malloyResultMatches(runtime, [{fieldName: 'bar'}, {fieldName: null}]);
     });
     it('index query selects first input', async () => {
       await expect(`
@@ -335,7 +334,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           state_facts extend { dimension: bar is 1 },
           state_facts
         ) -> { index: bar }
-      `).malloyResultMatches(runtime, {fieldName: 'bar'});
+      `).malloyResultMatches(runtime, [{fieldName: 'bar'}, {fieldName: null}]);
     });
     it('index query resolves when two stages', async () => {
       await expect(`
@@ -344,7 +343,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         run: compose(
           state_facts extend { dimension: bar is 1 },
           state_facts
-        ) -> { index: bar } -> { group_by: fieldName }
+        ) -> { index: bar } -> { group_by: fieldName; where: fieldName != null }
       `).malloyResultMatches(runtime, {fieldName: 'bar'});
     });
   });
