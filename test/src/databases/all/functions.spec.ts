@@ -1069,14 +1069,14 @@ expressionModels.forEach((x, databaseName) => {
     });
   });
 
-  describe('repeat', () => {
+  describe('string_repeat', () => {
     it(`works - ${databaseName}`, async () => {
       await funcTestMultiple(
-        ["repeat('foo', 0)", ''],
-        ["repeat('foo', 1)", 'foo'],
-        ["repeat('foo', 2)", 'foofoo'],
-        ['repeat(null, 2)', null],
-        ["repeat('foo', null)", null]
+        ["string_repeat('foo', 0)", ''],
+        ["string_repeat('foo', 1)", 'foo'],
+        ["string_repeat('foo', 2)", 'foofoo'],
+        ['string_repeat(null, 2)', null],
+        ["string_repeat('foo', null)", null]
       );
     });
     // TODO how does a user do this: the second argument needs to be an integer, but floor doesn't cast to "integer" type.

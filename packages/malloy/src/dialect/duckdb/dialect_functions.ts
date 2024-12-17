@@ -11,6 +11,12 @@ import {
   OverloadedDefinitionBlueprint,
 } from '../functions/util';
 
+const repeat: DefinitionBlueprint = {
+  takes: {'str': 'string', 'n': 'number'},
+  returns: 'string',
+  impl: {function: 'REPEAT'},
+};
+
 const list_extract: DefinitionBlueprint = {
   takes: {'value': {array: {generic: 'T'}}, 'index': 'number'},
   generic: {'T': ['any']},
@@ -85,6 +91,7 @@ export const DUCKDB_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   count_approx,
   dayname,
   to_timestamp,
+  repeat,
   string_agg,
   string_agg_distinct,
 };

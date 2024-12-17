@@ -413,8 +413,7 @@ define('element_at', {x: {array: T}, oridnal: 'number'}, T);
 // hard to believe, but this is what flatten does
 define('flatten', {x: {array: {array: T}}}, {array: T});
 define('ngrams', {x: {array: T}, n: 'number'}, {array: {array: T}});
-// mtoy todo move to overloaded version
-// define('repeat', {x: T, n: 'number'}, {array: T});
+define('repeat', {x: T, n: 'number'}, {array: T});
 define('slice', {x: {array: T}, start: 'number', len: 'number'}, {array: T});
 define('split', {to_split: 'string', seperator: 'string'}, {array: 'string'});
 define('trim_array', {x: {array: T}, n: 'number'}, {array: T});
