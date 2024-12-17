@@ -357,6 +357,16 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     }
   );
 
+  it('uses the correct symbol for modulus, either % or MOD', async () => {
+    await expect(`
+      run: aircraft_models->{
+        group_by: mod_example is 10 % 4
+      }
+    `).malloyResultMatches(expressionModel, {
+      mod_example: 2,
+    });
+  });
+
   it('named query metadata undefined', async () => {
     const result = await expressionModel
       .loadQuery(
