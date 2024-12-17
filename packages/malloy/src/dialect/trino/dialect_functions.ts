@@ -386,7 +386,14 @@ const sequence: OverloadedDefinitionBlueprint = {
   },
 };
 
+const trino_reverse: DefinitionBlueprint = {
+  takes: {'str': 'string'},
+  returns: 'string',
+  impl: {sql: 'REVERSE(CAST ${str} AS VARCHAR)'},
+};
+
 export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
+  reverse: trino_reverse,
   // aggregate functions
   approx_percentile,
   arbitrary,
@@ -443,7 +450,6 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   ...wrapDef('arrays_overlap', {'x': {array: T}, 'y': {array: T}}, 'boolean'),
   ...wrapDef('array_union', {'x': {array: T}, 'y': {array: T}}, {array: T}),
   ...wrapDef('cardinality', {'x': {array: T}}, 'number'),
-  ...wrapDef('reverse', {'x': 'string'}, 'string'),
   ...wrapDef('shuffle', {'x': {array: T}}, {array: T}),
   ...wrapDef(
     'combinations',
