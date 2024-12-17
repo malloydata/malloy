@@ -83,7 +83,7 @@ const hll_accumulate: OverloadedDefinitionBlueprint = {
       'T': ['string', 'number', 'date', 'timestamp', 'boolean', 'json'],
     },
     takes: {'value': {dimension: {generic: 'T'}}},
-    returns: {measure: 'string'},
+    returns: {measure: {sql_native: 'hyperloglog'}},
     isSymmetric: true,
     impl: {
       function: 'APPROX_SET',
@@ -94,7 +94,7 @@ const hll_accumulate: OverloadedDefinitionBlueprint = {
       'T': ['string', 'number', 'date', 'timestamp', 'boolean', 'json'],
     },
     takes: {'value': {dimension: {generic: 'T'}}, 'accuracy': 'number'},
-    returns: {measure: 'string'},
+    returns: {measure: {sql_native: 'hyperloglog'}},
     isSymmetric: true,
     impl: {
       function: 'APPROX_SET',
@@ -104,16 +104,16 @@ const hll_accumulate: OverloadedDefinitionBlueprint = {
 
 const hll_combine: DefinitionBlueprint = {
   takes: {
-    'value': 'string',
+    'value': {sql_native: 'hyperloglog'},
   },
-  returns: {measure: 'string'},
+  returns: {measure: {sql_native: 'hyperloglog'}},
   impl: {function: 'MERGE'},
   isSymmetric: true,
 };
 
 const hll_estimate: DefinitionBlueprint = {
   takes: {
-    'value': 'string',
+    'value': {sql_native: 'hyperloglog'},
   },
   returns: {dimension: 'number'},
   impl: {function: 'CARDINALITY'},
@@ -121,9 +121,9 @@ const hll_estimate: DefinitionBlueprint = {
 
 const hll_export: DefinitionBlueprint = {
   takes: {
-    'value': 'string',
+    'value': {sql_native: 'hyperloglog'},
   },
-  returns: {dimension: 'string'},
+  returns: {dimension: {sql_native: 'varbinary'}},
   impl: {
     sql: 'CAST(${value} AS VARBINARY)',
   },
@@ -131,9 +131,9 @@ const hll_export: DefinitionBlueprint = {
 
 const hll_import: DefinitionBlueprint = {
   takes: {
-    'value': 'string',
+    'value': {sql_native: 'varbinary'},
   },
-  returns: {dimension: 'string'},
+  returns: {dimension: {sql_native: 'hyperloglog'}},
   impl: {
     sql: 'CAST(${value} AS HyperLogLog)',
   },
