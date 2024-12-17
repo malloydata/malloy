@@ -75,12 +75,22 @@ export class QueryArrow extends QueryBase implements QueryElement {
     const {pipeline, annotation, outputStruct, name} =
       this.view.pipelineComp(fieldSpace);
 
+    const query = {
+      ...queryBase,
+      name,
+      annotation,
+      pipeline: [...queryBase.pipeline, ...pipeline],
+    };
+
+    const compositeResolvedSourceDef = this.resolveCompositeSource(
+      inputStruct,
+      query
+    );
+
     return {
       query: {
-        ...queryBase,
-        name,
-        annotation,
-        pipeline: [...queryBase.pipeline, ...pipeline],
+        ...query,
+        compositeResolvedSourceDef,
       },
       outputStruct,
       inputStruct,

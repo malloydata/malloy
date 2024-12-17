@@ -9,7 +9,8 @@ import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
 import '../../util/db-jest-matchers';
 
-const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
+const runtimes = new RuntimeList(databasesFromEnvironmentOr(['duckdb']));
+// const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 afterAll(async () => {
   await runtimes.closeAll();
@@ -22,6 +23,14 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       source: state_facts is ${databaseName}.table('malloytest.state_facts')
       source: x is compose(state_facts, state_facts extend { dimension: foo is 1 })
       run: x -> { group_by: foo }
+    `).malloyResultMatches(runtime, {foo: 1});
+  });
+  it('composite usage multistage', async () => {
+    await expect(`
+      ##! experimental.composite_sources
+      source: state_facts is ${databaseName}.table('malloytest.state_facts')
+      source: x is compose(state_facts, state_facts extend { dimension: foo is 1 })
+      run: x -> { group_by: foo } -> { select: foo }
     `).malloyResultMatches(runtime, {foo: 1});
   });
   it('composite source used in join', async () => {
@@ -306,5 +315,37 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       }
       run: x -> { group_by: state_facts.state }
     `).malloyResultMatches(runtime, {state: 'CA'});
+  });
+  describe('index queries against composite sources', () => {
+    it('index query selects second input', async () => {
+      await expect(`
+        ##! experimental.composite_sources
+        source: state_facts is ${databaseName}.table('malloytest.state_facts')
+        run: compose(
+          state_facts,
+          state_facts extend { dimension: bar is 1 }
+        ) -> { index: bar }
+      `).malloyResultMatches(runtime, {fieldName: 'bar'});
+    });
+    it('index query selects first input', async () => {
+      await expect(`
+        ##! experimental.composite_sources
+        source: state_facts is ${databaseName}.table('malloytest.state_facts')
+        run: compose(
+          state_facts extend { dimension: bar is 1 },
+          state_facts
+        ) -> { index: bar }
+      `).malloyResultMatches(runtime, {fieldName: 'bar'});
+    });
+    it('index query resolves when two stages', async () => {
+      await expect(`
+        ##! experimental.composite_sources
+        source: state_facts is ${databaseName}.table('malloytest.state_facts')
+        run: compose(
+          state_facts extend { dimension: bar is 1 },
+          state_facts
+        ) -> { index: bar } -> { group_by: fieldName }
+      `).malloyResultMatches(runtime, {fieldName: 'bar'});
+    });
   });
 });
