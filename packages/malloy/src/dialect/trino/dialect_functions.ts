@@ -433,29 +433,33 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   // array functions except those below
   array_join,
   sequence,
-  ...wrapDef('array_distinct', {x: {array: T}}, {array: T}),
-  ...wrapDef('array_except', {x: {array: T}, y: {array: T}}, {array: T}),
-  ...wrapDef('array_intersect', {x: {array: T}, y: {array: T}}, {array: T}),
-  ...wrapDef('array_max', {x: {array: T}}, T),
-  ...wrapDef('array_min', {x: {array: T}}, T),
-  ...wrapDef('array_normalize', {x: {array: T}, p: 'number'}, {array: T}),
-  ...wrapDef('array_remove', {x: {array: T}, element: T}, {array: T}),
+  ...wrapDef('array_distinct', {'x': {array: T}}, {array: T}),
+  ...wrapDef('array_except', {'x': {array: T}, 'y': {array: T}}, {array: T}),
+  ...wrapDef('array_intersect', {'x': {array: T}, 'y': {array: T}}, {array: T}),
+  ...wrapDef('array_max', {'x': {array: T}}, T),
+  ...wrapDef('array_min', {'x': {array: T}}, T),
+  ...wrapDef('array_normalize', {'x': {array: T}, 'p': 'number'}, {array: T}),
+  ...wrapDef('array_remove', {'x': {array: T}, 'element': T}, {array: T}),
   // mtoy todo document mising lambda sort
-  ...wrapDef('array_sort', {x: {array: T}}, {array: T}),
-  ...wrapDef('arrays_overlap', {x: {array: T}, y: {array: T}}, 'boolean'),
-  ...wrapDef('array_union', {x: {array: T}, y: {array: T}}, {array: T}),
-  ...wrapDef('cardinality', {x: {array: T}}, 'number'),
-  ...wrapDef('reverse', {x: {array: T}}, {array: T}),
-  ...wrapDef('shuffle', {x: {array: T}}, {array: T}),
-  ...wrapDef('combinations', {x: {array: T}, n: 'number'}, {array: {array: T}}),
-  ...wrapDef('contains', {x: {array: T}, element: T}, 'boolean'),
-  ...wrapDef('element_at', {x: {array: T}, oridnal: 'number'}, T),
-  ...wrapDef('flatten', {x: {array: {array: T}}}, {array: T}),
-  ...wrapDef('ngrams', {x: {array: T}, n: 'number'}, {array: {array: T}}),
-  ...wrapDef('repeat', {x: T, n: 'number'}, {array: T}),
+  ...wrapDef('array_sort', {'x': {array: T}}, {array: T}),
+  ...wrapDef('arrays_overlap', {'x': {array: T}, 'y': {array: T}}, 'boolean'),
+  ...wrapDef('array_union', {'x': {array: T}, 'y': {array: T}}, {array: T}),
+  ...wrapDef('cardinality', {'x': {array: T}}, 'number'),
+  ...wrapDef('reverse', {'x': 'string'}, 'string'),
+  ...wrapDef('shuffle', {'x': {array: T}}, {array: T}),
+  ...wrapDef(
+    'combinations',
+    {'x': {array: T}, 'n': 'number'},
+    {array: {array: T}}
+  ),
+  ...wrapDef('contains', {'x': {array: T}, 'element': T}, 'boolean'),
+  ...wrapDef('element_at', {'x': {array: T}, 'oridnal': 'number'}, T),
+  ...wrapDef('flatten', {'x': {array: {array: T}}}, {array: T}),
+  ...wrapDef('ngrams', {'x': {array: T}, 'n': 'number'}, {array: {array: T}}),
+  ...wrapDef('repeat', {'x': T, 'n': 'number'}, {array: T}),
   ...wrapDef(
     'slice',
-    {x: {array: T}, start: 'number', len: 'number'},
+    {'x': {array: T}, 'start': 'number', 'len': 'number'},
     {array: T}
   ),
   ...wrapDef(
@@ -463,10 +467,10 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
     {to_split: 'string', seperator: 'string'},
     {array: 'string'}
   ),
-  ...wrapDef('trim_array', {x: {array: T}, n: 'number'}, {array: T}),
+  ...wrapDef('trim_array', {'x': {array: T}, 'n': 'number'}, {array: T}),
   ...wrapDef(
     'array_split_into_chunks',
-    {x: {array: T}, n: 'number'},
+    {'x': {array: T}, 'n': 'number'},
     {array: {array: T}}
   ),
 };
@@ -475,13 +479,13 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
 
 const array_position: OverloadedDefinitionBlueprint = {
   first_instance: {
-    takes: {'array_v': {array: T}, 'el': T},
+    takes: {'x': {array: T}, 'el': T},
     generic: {T: ['any']},
     returns: 'number',
     impl: {function: 'ARRAY_POSITION'},
   },
   nth_instance: {
-    takes: {'array_v': {array: T}, 'el': T, 'instance': 'number'},
+    takes: {'x': {array: T}, 'el': T, 'instance': 'number'},
     generic: {T: ['any']},
     returns: 'number',
     impl: {function: 'ARRAY_POSITION'},
@@ -499,7 +503,7 @@ const array_intersect: OverloadedDefinitionBlueprint = {
     impl: {function: 'ARRAY_INTERSECT'},
   },
   nested_array: {
-    takes: {'array_v': {array: {array: T}}},
+    takes: {'x': {array: {array: T}}},
     generic: {'T': ['any']},
     returns: {array: T},
     impl: {function: 'ARRAY_INTERSECT'},
@@ -508,7 +512,7 @@ const array_intersect: OverloadedDefinitionBlueprint = {
 
 const array_least_frequent: OverloadedDefinitionBlueprint = {
   array_only: {
-    takes: {'array_v': {array: T}},
+    takes: {'x': {array: T}},
     generic: {'T': ['any']},
     returns: {array: T},
     impl: {function: 'ARRAY_LEAST_FREQUENT'},
@@ -526,7 +530,7 @@ const array_least_frequent: OverloadedDefinitionBlueprint = {
 
 const reverse: OverloadedDefinitionBlueprint = {
   yarra: {
-    takes: {'array_v': {array: T}},
+    takes: {'x': {array: T}},
     returns: {array: T},
     generic: {'T': ['any']},
     impl: {function: 'REVERSE'},
@@ -544,12 +548,12 @@ export const PRESTO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   array_least_frequent,
   array_position,
   reverse,
-  ...wrapDef('array_average', {'array_v': {array: T}}, 'number'),
-  ...wrapDef('array_has_duplicates', {'array_v': {array: T}}, 'boolean'),
+  ...wrapDef('array_average', {'x': {array: T}}, 'number'),
+  ...wrapDef('array_has_duplicates', {'x': {array: T}}, 'boolean'),
   ...wrapDef('array_cum_sum', {numeric_array: {array: T}}, {array: 'number'}),
-  ...wrapDef('array_duplicates', {'array_v': {array: T}}, {array: T}),
-  ...wrapDef('array_sum', {'array_v': {array: T}}, 'number'),
-  ...wrapDef('array_sort_desc', {'array_v': {array: T}}, {array: T}),
-  ...wrapDef('remove_nulls', {'array_v': {array: T}}, {array: T}),
-  ...wrapDef('array_top_n', {'array_v': {array: T}, 'n': 'number'}, {array: T}),
+  ...wrapDef('array_duplicates', {'x': {array: T}}, {array: T}),
+  ...wrapDef('array_sum', {'x': {array: T}}, 'number'),
+  ...wrapDef('array_sort_desc', {'x': {array: T}}, {array: T}),
+  ...wrapDef('remove_nulls', {'x': {array: T}}, {array: T}),
+  ...wrapDef('array_top_n', {'x': {array: T}, 'n': 'number'}, {array: T}),
 };
