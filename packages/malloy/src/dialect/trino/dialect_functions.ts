@@ -9,7 +9,10 @@ import {
   DefinitionBlueprint,
   DefinitionBlueprintMap,
   OverloadedDefinitionBlueprint,
+  TypeDescBlueprint,
 } from '../functions/util';
+
+const T: TypeDescBlueprint = {generic: 'T'};
 
 // Aggregate functions:
 
@@ -27,8 +30,8 @@ const approx_percentile: DefinitionBlueprint = {
 
 const arbitrary: DefinitionBlueprint = {
   generic: {'T': ['string', 'number', 'date', 'timestamp', 'boolean', 'json']},
-  takes: {'value': {dimension: {generic: 'T'}}},
-  returns: {measure: {generic: 'T'}},
+  takes: {'value': {dimension: T}},
+  returns: {measure: T},
   impl: {function: 'ARBITRARY'},
 };
 
@@ -142,10 +145,10 @@ const hll_import: DefinitionBlueprint = {
 const max_by: DefinitionBlueprint = {
   generic: {'T': ['string', 'number', 'date', 'timestamp', 'boolean', 'json']},
   takes: {
-    'value': {dimension: {generic: 'T'}},
+    'value': {dimension: T},
     'order_by_val': {dimension: 'any'},
   },
-  returns: {measure: {generic: 'T'}},
+  returns: {measure: T},
   impl: {function: 'MAX_BY'},
   isSymmetric: true,
 };
@@ -153,10 +156,10 @@ const max_by: DefinitionBlueprint = {
 const min_by: DefinitionBlueprint = {
   generic: {'T': ['string', 'number', 'date', 'timestamp', 'boolean', 'json']},
   takes: {
-    'value': {dimension: {generic: 'T'}},
+    'value': {dimension: T},
     'order_by_val': {dimension: 'any'},
   },
-  returns: {measure: {generic: 'T'}},
+  returns: {measure: T},
   impl: {function: 'MIN_BY'},
   isSymmetric: true,
 };
@@ -339,10 +342,48 @@ const url_extract_query: DefinitionBlueprint = {
   impl: {function: 'URL_EXTRACT_QUERY'},
 };
 
-const split: DefinitionBlueprint = {
-  takes: {'src': 'string', 'splitChar': 'string'},
-  returns: {array: 'string'},
-  impl: {function: 'SPLIT'},
+const array_join: OverloadedDefinitionBlueprint = {
+  skip_nulls: {
+    takes: {
+      'theArray': {array: T},
+      'sep': 'string',
+    },
+    generic: {T: ['any']},
+    returns: 'string',
+    impl: {function: 'ARRAY_JOIN'},
+  },
+  null_aware: {
+    takes: {
+      'theArray': T,
+      'sep': 'string',
+      'nullStr': 'string',
+    },
+    generic: {T: ['any']},
+    returns: 'string',
+    impl: {function: 'ARRAY_JOIN'},
+  },
+};
+
+const sequence: OverloadedDefinitionBlueprint = {
+  num_to_num: {
+    takes: {'start': 'number', 'stop': 'number'},
+    generic: {'T': ['any']},
+    returns: {array: 'number'},
+    impl: {function: 'SEQUENCE'},
+  },
+  num_to_num_step: {
+    takes: {'start': 'number', 'stop': 'number', 'step': 'number'},
+    generic: {'T': ['any']},
+    returns: {array: 'number'},
+    impl: {function: 'SEQUENCE'},
+  },
+  date_to_date: {
+    takes: {'start': 'date', 'stop': 'date'},
+    generic: {'T': ['any']},
+    returns: {array: 'date'},
+    impl: {function: 'SEQUENCE'},
+  },
+  // mtoy todo document missing sequence
 };
 
 export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
@@ -388,5 +429,140 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   // window functions
   percent_rank,
 
-  split,
+  // array functions except those below
+  array_join,
+  sequence,
+};
+
+/**
+ * Lazy function to add wrapper blueprint definition for non overloaded functions
+ * which have generic array in their parameter list or return value
+ * @param name function name
+ * @param types list of types, last is return type
+ */
+function define(
+  name: string,
+  takes: Record<string, TypeDescBlueprint>,
+  returns: TypeDescBlueprint
+): void {
+  const newDef: DefinitionBlueprint = {
+    takes,
+    generic: {'T': ['any']},
+    returns,
+    impl: {function: name.toUpperCase()},
+  };
+  TRINO_DIALECT_FUNCTIONS[name] = newDef;
+}
+
+define('array_distinct', {x: {array: T}}, {array: T});
+define('array_except', {x: {array: T}, y: {array: T}}, {array: T});
+define('array_intersect', {x: {array: T}, y: {array: T}}, {array: T});
+define('array_max', {x: {array: T}}, T);
+define('array_min', {x: {array: T}}, T);
+define('array_normalize', {x: {array: T}, p: 'number'}, {array: T});
+define('array_remove', {x: {array: T}, element: T}, {array: T});
+// mtoy todo document missing lambda sort
+define('array_sort', {x: {array: T}}, {array: T});
+define(
+  'array_split_into_chunks',
+  {x: {array: T}, n: 'number'},
+  {array: {array: T}}
+);
+define('arrays_overlap', {x: {array: T}, y: {array: T}}, 'boolean');
+define('array_union', {x: {array: T}, y: {array: T}}, {array: T});
+define('cardinality', {x: {array: T}}, 'number');
+// mtoy todo move overload version?
+// define('reverse', {x: {array: T}}, {array: T});
+define('shuffle', {x: {array: T}}, {array: T});
+define('combinations', {x: {array: T}, n: 'number'}, {array: {array: T}});
+define('contains', {x: {array: T}, element: T}, 'boolean');
+define('element_at', {x: {array: T}, oridnal: 'number'}, T);
+// hard to believe, but this is what flatten does
+define('flatten', {x: {array: {array: T}}}, {array: T});
+define('ngrams', {x: {array: T}, n: 'number'}, {array: {array: T}});
+define('repeat', {x: T, n: 'number'}, {array: T});
+define('slice', {x: {array: T}, start: 'number', len: 'number'}, {array: T});
+define('split', {to_split: 'string', seperator: 'string'}, {array: 'string'});
+define('trim_array', {x: {array: T}, n: 'number'}, {array: T});
+
+/******** Presto Only *********/
+
+const array_position: OverloadedDefinitionBlueprint = {
+  first_instance: {
+    takes: {x: {array: T}, el: T},
+    generic: {T: ['any']},
+    returns: 'number',
+    impl: {function: 'ARRAY_POSITION'},
+  },
+  nth_instance: {
+    takes: {x: {array: T}, el: T, instance: 'number'},
+    generic: {T: ['any']},
+    returns: 'number',
+    impl: {function: 'ARRAY_POSITION'},
+  },
+};
+
+const array_intersect: OverloadedDefinitionBlueprint = {
+  two_arrays: {
+    takes: {
+      'a': {array: T},
+      'b': {array: T},
+    },
+    generic: {'T': ['any']},
+    returns: {array: T},
+    impl: {function: 'ARRAY_INTERSECT'},
+  },
+  nested_array: {
+    takes: {'a': {array: {array: T}}},
+    generic: {'T': ['any']},
+    returns: {array: T},
+    impl: {function: 'ARRAY_INTERSECT'},
+  },
+};
+
+const array_least_frequent: OverloadedDefinitionBlueprint = {
+  array_only: {
+    takes: {'theArray': {array: T}},
+    generic: {'T': ['any']},
+    returns: {array: T},
+    impl: {function: 'ARRAY_LEAST_FREQUENT'},
+  },
+  bottom: {
+    takes: {
+      'theArray': {array: T},
+      'count': 'number',
+    },
+    generic: {'T': ['any']},
+    returns: {array: T},
+    impl: {function: 'ARRAY_LEAST_FREQUENT'},
+  },
+};
+
+function def(
+  name: string,
+  takes: Record<string, TypeDescBlueprint>,
+  returns: TypeDescBlueprint
+): DefinitionBlueprintMap {
+  const newDef: DefinitionBlueprint = {
+    takes,
+    generic: {'T': ['any']},
+    returns,
+    impl: {function: name.toUpperCase()},
+  };
+  return {[name]: newDef};
+}
+
+export const PRESTO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
+  ...TRINO_DIALECT_FUNCTIONS,
+  array_intersect,
+  array_least_frequent,
+  array_position,
+  ...def('array_average', {x: {array: T}}, 'number'),
+  ...def('array_has_duplicates', {x: {array: T}}, 'boolean'),
+  ...def('array_cum_sum', {numeric_array: {array: T}}, {array: 'number'}),
+  ...def('array_duplicates', {x: {array: T}}, {array: T}),
+  ...def('array_sum', {x: {array: T}}, 'number'),
+  ...def('array_sort_desc', {x: {array: T}}, {array: T}),
+  ...def('remove_nulls', {x: {array: T}}, {array: T}),
+  ...def('array_top_n', {x: {array: T}, n: 'number'}, {array: T}),
 };

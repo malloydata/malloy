@@ -58,7 +58,7 @@ type Standard = {
   pow: D;
   rand: D;
   regexp_extract: D;
-  repeat: D;
+  string_repeat: D;
   replace: {string: D; regular_expression: D};
   reverse: D;
   round: {to_integer: D; to_precision: D};
@@ -312,7 +312,7 @@ const regexp_extract: DefinitionFor<Standard['regexp_extract']> = {
   impl: {function: 'REGEXP_EXTRACT'},
 };
 
-const repeat: DefinitionFor<Standard['repeat']> = {
+const string_repeat: DefinitionFor<Standard['string_repeat']> = {
   takes: {'value': 'string', 'count': 'number'},
   returns: 'string',
   impl: {function: 'REPEAT'},
@@ -717,7 +717,6 @@ export const MALLOY_STANDARD_FUNCTIONS: MalloyStandardFunctionDefinitions = {
   pow,
   rand,
   regexp_extract,
-  repeat,
   replace,
   reverse,
   round,
@@ -726,6 +725,7 @@ export const MALLOY_STANDARD_FUNCTIONS: MalloyStandardFunctionDefinitions = {
   sin,
   sqrt,
   starts_with,
+  string_repeat,
   strpos,
   substr,
   tan,

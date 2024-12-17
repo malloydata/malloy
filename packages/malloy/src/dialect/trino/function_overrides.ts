@@ -25,7 +25,7 @@ export const TRINO_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
   // Trino has it but Presto doesn't
   // TODO only apply this override for Presto, not Trino
   log: {sql: '(LN(${value}) / LN(${base}))'},
-  repeat: {
+  string_repeat: {
     sql: "ARRAY_JOIN(REPEAT(${value}, CASE WHEN ${value} IS NOT NULL THEN ${count} END),'')",
   },
   reverse: {

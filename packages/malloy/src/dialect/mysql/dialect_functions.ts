@@ -6,9 +6,16 @@
  */
 
 import {
+  DefinitionBlueprint,
   DefinitionBlueprintMap,
   OverloadedDefinitionBlueprint,
 } from '../functions/util';
+
+const repeat: DefinitionBlueprint = {
+  takes: {'str': 'string', 'n': 'number'},
+  returns: 'string',
+  impl: {function: 'REPEAT'},
+};
 
 const string_agg: OverloadedDefinitionBlueprint = {
   default_separator: {
@@ -52,4 +59,5 @@ const string_agg_distinct: OverloadedDefinitionBlueprint = {
 export const MYSQL_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   string_agg,
   string_agg_distinct,
+  repeat,
 };

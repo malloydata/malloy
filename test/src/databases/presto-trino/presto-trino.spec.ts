@@ -21,24 +21,28 @@ describe.each(runtimes.runtimeList)(
     if (runtime === undefined) {
       throw new Error("Couldn't build runtime");
     }
+    const presto = databaseName === 'presto';
 
-    test.when(databaseName === 'presto')('presto explain parser', async () => {
-      const abrec = 'CAST(ROW(0,1) AS ROW(a DOUBLE,b DOUBLE))';
-      await expect(`
-        run: ${databaseName}.sql("""
-          SELECT
-            ${abrec} as "abrec",
-            ARRAY['c', 'd'] as str_array,
-            array[1,2,3] as int_array,
-            ARRAY[${abrec}] as array_of_abrec
-        """)
-      `).malloyResultMatches(runtime, {});
-    });
     it(`runs an sql query - ${databaseName}`, async () => {
       await expect(
         `run: ${databaseName}.sql("SELECT 1 as n") -> { select: n }`
       ).malloyResultMatches(runtime, {n: 1});
     });
+    test.when(databaseName === 'presto')(
+      'schema parser does not throw on compound types',
+      async () => {
+        const abrec = 'CAST(ROW(0,1) AS ROW(a DOUBLE,b DOUBLE))';
+        await expect(`
+          run: ${databaseName}.sql("""
+            SELECT
+              ${abrec} as "abrec",
+              ARRAY['c', 'd'] as str_array,
+              array[1,2,3] as int_array,
+              ARRAY[${abrec}] as array_of_abrec
+          """)
+      `).malloyResultMatches(runtime, {});
+      }
+    );
 
     it(`runs the to_unixtime function - ${databaseName}`, async () => {
       await expect(`run: ${databaseName}.sql("SELECT 1 as n") -> {
@@ -313,12 +317,229 @@ describe.each(runtimes.runtimeList)(
         query: 'first_param=val_one&second_param=2',
       });
     });
-    test('string split function in tresto', async () => {
-      await expect(`
-        run: ${databaseName}.sql("SELECT 1 AS N") -> {
-          select: some_words is split('hello world', ' ')
-        }
-      `).malloyResultMatches(runtime, {some_words: ['hello', 'world']});
+    describe('various array functions', () => {
+      const nums = `${databaseName}.sql('SELECT ARRAY[4,1,1] as "nums"')`;
+      it('runs split function', async () => {
+        await expect(`
+          run: ${databaseName}.sql("SELECT 1 AS N") -> {
+            select: some_words is split('hello world', ' ')
+          }
+        `).malloyResultMatches(runtime, {some_words: ['hello', 'world']});
+      });
+      it.when(presto)('runs array_average', async () => {
+        await expect(
+          `run: ${nums}->{select: tavg is array_average(nums)}`
+        ).malloyResultMatches(runtime, {tavg: 2});
+      });
+      it('runs array_distinct', async () => {
+        await expect(
+          `run: ${nums}->{select: t is array_distinct(nums)}`
+        ).malloyResultMatches(runtime, {t: [4, 1]});
+      });
+      it.when(presto)('runs array_has_duplicates', async () => {
+        await expect(
+          `run: ${nums}->{select: t is array_has_duplicates(nums)}`
+        ).malloyResultMatches(runtime, {t: true});
+      });
+      it('runs array_max', async () => {
+        await expect(
+          `run: ${nums}->{select: t is array_max(nums)}`
+        ).malloyResultMatches(runtime, {t: 4});
+      });
+      it('runs array_min', async () => {
+        await expect(
+          `run: ${nums}->{select: t is array_min(nums)}`
+        ).malloyResultMatches(runtime, {t: 1});
+      });
+      it.when(presto)('runs array_cum_sum', async () => {
+        await expect(
+          `run: ${nums}->{select: t is array_cum_sum(nums)}`
+        ).malloyResultMatches(runtime, {t: [4, 5, 6]});
+      });
+      it.when(presto)('runs array_duplicates', async () => {
+        await expect(
+          `run: ${nums}->{select: t is array_duplicates(nums)}`
+        ).malloyResultMatches(runtime, {t: [1]});
+      });
+      it('runs array_sort', async () => {
+        await expect(
+          `run: ${nums}->{select: t is array_sort(nums)}`
+        ).malloyResultMatches(runtime, {t: [1, 1, 4]});
+      });
+      it('runs repeat', async () => {
+        await expect(
+          `run: ${nums}->{select: t is repeat('x', 2)}`
+        ).malloyResultMatches(runtime, {t: ['x', 'x']});
+      });
+      it('runs slice', async () => {
+        await expect(
+          `run: ${nums}->{select: t is slice(nums, 2, 2)}`
+        ).malloyResultMatches(runtime, {t: [1, 1]});
+      });
+      it('runs cardinality', async () => {
+        await expect(
+          `run: ${nums}->{select: t is cardinality(nums)}`
+        ).malloyResultMatches(runtime, {t: 3});
+      });
+      it.when(presto)('runs array_sum', async () => {
+        await expect(
+          `run: ${nums}->{select: t is array_sum(nums)}`
+        ).malloyResultMatches(runtime, {t: 6});
+      });
+      it('runs contains', async () => {
+        await expect(
+          `run: ${nums}->{select: t is contains(nums, 42)}`
+        ).malloyResultMatches(runtime, {t: false});
+      });
+      it('runs array_except', async () => {
+        await expect(
+          `run: ${nums}->{select: t is array_except(nums, [4])}`
+        ).malloyResultMatches(runtime, {t: [1]});
+      });
+      // mtoy todo figure out how to test this, maybe reconfigure test instance
+      it.skip('runs array_normalize', async () => {
+        await expect(`
+          # test.verbose
+          run: ${nums}->{select: t is array_normalize(nums, 40)}
+        `).malloyResultMatches(runtime, {t: [1, 0.25, 0.25]});
+      });
+      it.when(presto)('runs array_position', async () => {
+        await expect(
+          `run: ${nums}->{select: t is array_position(nums, 1, 2)}`
+        ).malloyResultMatches(runtime, {t: 3});
+      });
+      it('runs array_remove', async () => {
+        await expect(
+          `run: ${nums}->{select: t is array_remove(nums, 1)}`
+        ).malloyResultMatches(runtime, {t: [4]});
+      });
+      it.when(presto)('runs array_sort_desc', async () => {
+        await expect(
+          `run: ${nums}->{select: t is array_sort_desc([1,2,3])}`
+        ).malloyResultMatches(runtime, {t: [3, 2, 1]});
+      });
+      // mtoy todo find why test instance doesn't have this fucntion
+      it.skip('runs array_split_into_chunks', async () => {
+        await expect(
+          `run: ${nums}->{select: t is array_split_into_chunks(nums, 1)}`
+        ).malloyResultMatches(runtime, {t: [[4], [1], [1]]});
+      });
+      it('runs arrays_overlap', async () => {
+        await expect(
+          `run: ${nums}->{select: t is arrays_overlap(nums, [2,3,4])}`
+        ).malloyResultMatches(runtime, {t: true});
+      });
+      it('runs arrays_union', async () => {
+        await expect(
+          `run: ${nums}->{select: t is array_union(nums, [2])}`
+        ).malloyResultMatches(runtime, {t: [4, 1, 2]});
+      });
+      it.when(presto)('runs remove_nulls', async () => {
+        await expect(
+          `run: ${nums}->{select: t is remove_nulls([null, 2])}`
+        ).malloyResultMatches(runtime, {t: [2]});
+      });
+      /// mtoy todo figure out overload
+      it.skip('runs reverse', async () => {
+        await expect(
+          `run: ${nums}->{select: t is reverse(nums)}`
+        ).malloyResultMatches(runtime, {t: [1, 1, 4]});
+      });
+      it('runs shuffle', async () => {
+        await expect(
+          `run: ${nums}->{select: t is shuffle([1])}`
+        ).malloyResultMatches(runtime, {t: [1]});
+      });
+      it.when(presto)('runs array_top_n', async () => {
+        await expect(
+          `run: ${nums}->{select: t is array_top_n(nums, 2)}`
+        ).malloyResultMatches(runtime, {t: [4, 1]});
+      });
+      it('runs combinations', async () => {
+        await expect(
+          `run: ${nums}->{select: t is combinations([1,2,3], 2)}`
+        ).malloyResultMatches(runtime, {
+          t: [
+            [1, 2],
+            [1, 3],
+            [2, 3],
+          ],
+        });
+      });
+      it('runs element_at', async () => {
+        await expect(
+          `run: ${nums}->{select: t is element_at(nums, 1)}`
+        ).malloyResultMatches(runtime, {t: 4});
+      });
+      it('runs flatten', async () => {
+        await expect(
+          `run: ${nums}->{select: t is flatten([[1], [2]])}`
+        ).malloyResultMatches(runtime, {t: [1, 2]});
+      });
+      it('runs ngrams', async () => {
+        await expect(
+          `run: ${nums}->{select: t is ngrams([1,2,3], 2)}`
+        ).malloyResultMatches(runtime, {
+          t: [
+            [1, 2],
+            [2, 3],
+          ],
+        });
+      });
+      it('runs trim_array', async () => {
+        await expect(
+          `run: ${nums}->{select: t is trim_array(nums, 2)}`
+        ).malloyResultMatches(runtime, {t: [4]});
+      });
+      it('runs sequence(n1,n2)', async () => {
+        await expect(
+          `run: ${nums}->{select: t is sequence(1,2)}`
+        ).malloyResultMatches(runtime, {t: [1, 2]});
+      });
+      it('runs sequence(n1,n2,n3)', async () => {
+        await expect(
+          `run: ${nums}->{select: t is sequence(10, 20, 10)}`
+        ).malloyResultMatches(runtime, {t: [10, 20]});
+      });
+      // mtoy todo figure out how to write test
+      it.skip('runs sequence(d1,d2)', async () => {
+        await expect(
+          `run: ${nums}->{select: t is sequence(@2001-01-01, @2001-01-02)}`
+        ).malloyResultMatches(runtime, {
+          t: [new Date('2001-01-01'), new Date('2001-01-02')],
+        });
+      });
+      it('runs array_intersect(a1,a2)', async () => {
+        await expect(
+          `run: ${nums}->{select: t is array_intersect(nums, [4])}`
+        ).malloyResultMatches(runtime, {t: [4]});
+      });
+      it.when(presto)('runs array_intersect(a)', async () => {
+        await expect(
+          `run: ${nums}->{select: t is array_intersect([[1,2], [2,3]])}`
+        ).malloyResultMatches(runtime, {t: [2]});
+      });
+      it('runs array_join(a,s)', async () => {
+        await expect(
+          `run: ${nums}->{select: t is array_join(nums, ',')}`
+        ).malloyResultMatches(runtime, {t: '4,1,1'});
+      });
+      it('runs array_join(a,s, n)', async () => {
+        await expect(
+          `run: ${nums}->{select: t is array_join(['a', null], ',', 'x')}`
+        ).malloyResultMatches(runtime, {t: 'a,x'});
+      });
+      it.when(presto)('runs array_least_frequent(a)', async () => {
+        await expect(
+          `run: ${nums}->{select: t is array_least_frequent(nums)}`
+        ).malloyResultMatches(runtime, {t: [4]});
+      });
+      it.when(presto)('runs array_least_frequent(a, n)', async () => {
+        await expect(
+          `run: ${nums}->{select: t is array_least_frequent(nums, 2)}`
+        ).malloyResultMatches(runtime, {t: [4, 1]});
+      });
+      // mtoy todo document missing lambda sort
     });
   }
 );

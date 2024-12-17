@@ -34,14 +34,14 @@ export class ArrayLiteral extends ExpressionDef {
           continue;
         }
         if (firstValue) {
-          if (!TDU.typeEq(firstValue, v)) {
+          if (v.type !== 'null' && !TDU.typeEq(firstValue, v)) {
             nextElement.logError(
               'array-values-incompatible',
               'All array elements must be same type'
             );
             continue;
           }
-        } else {
+        } else if (v.type !== 'null') {
           firstValue = v;
         }
         values.push(v.value);
