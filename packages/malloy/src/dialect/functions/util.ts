@@ -772,9 +772,8 @@ function* findGenerics(
 ): IterableIterator<NamedGeneric> {
   if (typeof tdbp !== 'string') {
     if ('generic' in tdbp) {
-      return tdbp;
-    }
-    if ('array' in tdbp) {
+      yield tdbp;
+    } else if ('array' in tdbp) {
       yield* findGenerics(tdbp.array);
     } else if ('record' in tdbp) {
       for (const recType of Object.values(tdbp.record)) {
