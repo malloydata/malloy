@@ -746,13 +746,10 @@ export function wrapDef(
   const generic: {[name: string]: TypeDescElementBlueprintOrNamedGeneric[]} =
     {};
   for (const argVal of Object.values(takes)) {
-    const genericRefs = Array.from(tdLeafTypes(argVal)).filter(
-      (t: TypeDescBlueprint): t is NamedGeneric => {
-        return typeof t !== 'string' && 'generic' in t;
+    for (const leafType of tdLeafTypes(argVal)) {
+      if (typeof leafType !== 'string' && 'generic' in leafType) {
+        generic[leafType.generic] = ['any'];
       }
-    );
-    for (const genericRef of genericRefs) {
-      generic[genericRef.generic] = ['any'];
     }
   }
   const newDef: DefinitionBlueprint = {
@@ -760,7 +757,7 @@ export function wrapDef(
     returns,
     impl: {function: name.toUpperCase()},
   };
-  // avoids constructing an erray just to test the length
+  // avoids constructing an array just to test the length
   for (const _atLeastOneGeneric in generic) {
     newDef.generic = generic;
     break;
