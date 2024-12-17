@@ -21,11 +21,20 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable no-console */
 import fs from 'fs';
 
-export function readPackageJson(path: string): any {
+export interface Package {
+  license?: string;
+  dependencies: Record<string, string>;
+  homepage?: string;
+  repository?: {
+    url?: string;
+    baseUrl?: string;
+  };
+  repo?: string;
+}
+
+export function readPackageJson(path: string): Package {
   try {
     const fileBuffer = fs.readFileSync(path, 'utf8');
     return JSON.parse(fileBuffer);
