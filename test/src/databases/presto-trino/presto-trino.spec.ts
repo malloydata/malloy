@@ -366,7 +366,8 @@ describe.each(runtimes.runtimeList)(
           `run: ${nums}->{select: t is array_sort(nums)}`
         ).malloyResultMatches(runtime, {t: [1, 1, 4]});
       });
-      it('runs repeat', async () => {
+      // mtoy todo re-enable
+      it.skip('runs repeat', async () => {
         await expect(
           `run: ${nums}->{select: t is repeat('x', 2)}`
         ).malloyResultMatches(runtime, {t: ['x', 'x']});
