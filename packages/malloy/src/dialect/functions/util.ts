@@ -773,22 +773,25 @@ function* findGenerics(
   if (typeof tdbp !== 'string') {
     if ('generic' in tdbp) {
       yield tdbp;
-    } else if ('array' in tdbp) {
-      yield* findGenerics(tdbp.array);
     } else if ('record' in tdbp) {
       for (const recType of Object.values(tdbp.record)) {
         yield* findGenerics(recType);
       }
-    } else if ('literal' in tdbp) {
-      yield* findGenerics(tdbp.literal);
-    } else if ('measure' in tdbp) {
-      yield* findGenerics(tdbp.measure);
-    } else if ('dimension' in tdbp) {
-      yield* findGenerics(tdbp.dimension);
-    } else if ('constant' in tdbp) {
-      yield* findGenerics(tdbp.constant);
-    } else if ('calculation' in tdbp) {
-      yield* findGenerics(tdbp.calculation);
+    } else {
+      for (const leaflet of [
+        'array',
+        'literal',
+        'measure',
+        'dimension',
+        'measure',
+        'constant',
+        'cacluation',
+      ]) {
+        if (leaflet in tdbp) {
+          yield* findGenerics(tdbp[leaflet]);
+          return;
+        }
+      }
     }
   }
 }
