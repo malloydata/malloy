@@ -723,3 +723,61 @@ export function expandOverrideMapFromBase(
   }
   return map;
 }
+
+/**
+ * Shortcut for functions wrapper definitions. Useful only if ....
+ *   0) Not an overloaded definition
+ *   1) The function has the same name in malloy and in the dialect
+ *   2) Every generic in args or return generics is type ['any']
+ * @param name name of function
+ * @param takes Record<Argument blueprint>
+ * @param returns Return Blueprint
+ * @returns dot dot dot able blueprint definition
+ */
+export function wrapDef(
+  name: string,
+  takes: Record<string, TypeDescBlueprint>,
+  returns: TypeDescBlueprint
+): DefinitionBlueprintMap {
+  const generic: {[name: string]: TypeDescElementBlueprintOrNamedGeneric[]} =
+    {};
+  for (const argVal of Object.values(takes)) {
+    const anyGeneric = Array.from(tdLeafTypes(argVal)).filter(
+      (t: TypeDescBlueprint): t is NamedGeneric => {
+        return typeof t !== 'string' && 'generic' in t;
+      }
+    );
+    for (const genericRef of anyGeneric) {
+      generic[genericRef.generic] = ['any'];
+    }
+  }
+  const newDef: DefinitionBlueprint = {
+    takes,
+    returns,
+    impl: {function: name.toUpperCase()},
+  };
+  if (Object.entries(generic).length > 0) {
+    newDef.generic = generic;
+  }
+  return {[name]: newDef};
+}
+
+/**
+ * Walks a type and returns all the leaves
+ * @param tdbp A type
+ */
+function* tdLeafTypes(
+  tdbp: TypeDescBlueprint
+): IterableIterator<TypeDescBlueprint> {
+  if (typeof tdbp === 'string') {
+    yield tdbp;
+  } else if ('array' in tdbp) {
+    yield* tdLeafTypes(tdbp.array);
+  } else if ('record' in tdbp) {
+    for (const recType of Object.values(tdbp.record)) {
+      yield* tdLeafTypes(recType);
+    }
+  } else {
+    yield tdbp;
+  }
+}

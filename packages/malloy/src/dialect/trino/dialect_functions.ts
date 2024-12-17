@@ -10,6 +10,7 @@ import {
   DefinitionBlueprintMap,
   OverloadedDefinitionBlueprint,
   TypeDescBlueprint,
+  wrapDef,
 } from '../functions/util';
 
 const T: TypeDescBlueprint = {generic: 'T'};
@@ -432,58 +433,43 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   // array functions except those below
   array_join,
   sequence,
+  ...wrapDef('array_distinct', {x: {array: T}}, {array: T}),
+  ...wrapDef('array_except', {x: {array: T}, y: {array: T}}, {array: T}),
+  ...wrapDef('array_intersect', {x: {array: T}, y: {array: T}}, {array: T}),
+  ...wrapDef('array_max', {x: {array: T}}, T),
+  ...wrapDef('array_min', {x: {array: T}}, T),
+  ...wrapDef('array_normalize', {x: {array: T}, p: 'number'}, {array: T}),
+  ...wrapDef('array_remove', {x: {array: T}, element: T}, {array: T}),
+  // mtoy todo document mising lambda sort
+  ...wrapDef('array_sort', {x: {array: T}}, {array: T}),
+  ...wrapDef('arrays_overlap', {x: {array: T}, y: {array: T}}, 'boolean'),
+  ...wrapDef('array_union', {x: {array: T}, y: {array: T}}, {array: T}),
+  ...wrapDef('cardinality', {x: {array: T}}, 'number'),
+  ...wrapDef('reverse', {x: {array: T}}, {array: T}),
+  ...wrapDef('shuffle', {x: {array: T}}, {array: T}),
+  ...wrapDef('combinations', {x: {array: T}, n: 'number'}, {array: {array: T}}),
+  ...wrapDef('contains', {x: {array: T}, element: T}, 'boolean'),
+  ...wrapDef('element_at', {x: {array: T}, oridnal: 'number'}, T),
+  ...wrapDef('flatten', {x: {array: {array: T}}}, {array: T}),
+  ...wrapDef('ngrams', {x: {array: T}, n: 'number'}, {array: {array: T}}),
+  ...wrapDef('repeat', {x: T, n: 'number'}, {array: T}),
+  ...wrapDef(
+    'slice',
+    {x: {array: T}, start: 'number', len: 'number'},
+    {array: T}
+  ),
+  ...wrapDef(
+    'split',
+    {to_split: 'string', seperator: 'string'},
+    {array: 'string'}
+  ),
+  ...wrapDef('trim_array', {x: {array: T}, n: 'number'}, {array: T}),
+  ...wrapDef(
+    'array_split_into_chunks',
+    {x: {array: T}, n: 'number'},
+    {array: {array: T}}
+  ),
 };
-
-/**
- * Lazy function to add wrapper blueprint definition for non overloaded functions
- * which have generic array in their parameter list or return value
- * @param name function name
- * @param types list of types, last is return type
- */
-function define(
-  name: string,
-  takes: Record<string, TypeDescBlueprint>,
-  returns: TypeDescBlueprint
-): void {
-  const newDef: DefinitionBlueprint = {
-    takes,
-    generic: {'T': ['any']},
-    returns,
-    impl: {function: name.toUpperCase()},
-  };
-  TRINO_DIALECT_FUNCTIONS[name] = newDef;
-}
-
-define('array_distinct', {x: {array: T}}, {array: T});
-define('array_except', {x: {array: T}, y: {array: T}}, {array: T});
-define('array_intersect', {x: {array: T}, y: {array: T}}, {array: T});
-define('array_max', {x: {array: T}}, T);
-define('array_min', {x: {array: T}}, T);
-define('array_normalize', {x: {array: T}, p: 'number'}, {array: T});
-define('array_remove', {x: {array: T}, element: T}, {array: T});
-// mtoy todo document missing lambda sort
-define('array_sort', {x: {array: T}}, {array: T});
-define(
-  'array_split_into_chunks',
-  {x: {array: T}, n: 'number'},
-  {array: {array: T}}
-);
-define('arrays_overlap', {x: {array: T}, y: {array: T}}, 'boolean');
-define('array_union', {x: {array: T}, y: {array: T}}, {array: T});
-define('cardinality', {x: {array: T}}, 'number');
-// mtoy todo move overload version?
-// define('reverse', {x: {array: T}}, {array: T});
-define('shuffle', {x: {array: T}}, {array: T});
-define('combinations', {x: {array: T}, n: 'number'}, {array: {array: T}});
-define('contains', {x: {array: T}, element: T}, 'boolean');
-define('element_at', {x: {array: T}, oridnal: 'number'}, T);
-// hard to believe, but this is what flatten does
-define('flatten', {x: {array: {array: T}}}, {array: T});
-define('ngrams', {x: {array: T}, n: 'number'}, {array: {array: T}});
-define('repeat', {x: T, n: 'number'}, {array: T});
-define('slice', {x: {array: T}, start: 'number', len: 'number'}, {array: T});
-define('split', {to_split: 'string', seperator: 'string'}, {array: 'string'});
-define('trim_array', {x: {array: T}, n: 'number'}, {array: T});
 
 /******** Presto Only *********/
 
@@ -538,31 +524,17 @@ const array_least_frequent: OverloadedDefinitionBlueprint = {
   },
 };
 
-function def(
-  name: string,
-  takes: Record<string, TypeDescBlueprint>,
-  returns: TypeDescBlueprint
-): DefinitionBlueprintMap {
-  const newDef: DefinitionBlueprint = {
-    takes,
-    generic: {'T': ['any']},
-    returns,
-    impl: {function: name.toUpperCase()},
-  };
-  return {[name]: newDef};
-}
-
 export const PRESTO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   ...TRINO_DIALECT_FUNCTIONS,
   array_intersect,
   array_least_frequent,
   array_position,
-  ...def('array_average', {x: {array: T}}, 'number'),
-  ...def('array_has_duplicates', {x: {array: T}}, 'boolean'),
-  ...def('array_cum_sum', {numeric_array: {array: T}}, {array: 'number'}),
-  ...def('array_duplicates', {x: {array: T}}, {array: T}),
-  ...def('array_sum', {x: {array: T}}, 'number'),
-  ...def('array_sort_desc', {x: {array: T}}, {array: T}),
-  ...def('remove_nulls', {x: {array: T}}, {array: T}),
-  ...def('array_top_n', {x: {array: T}, n: 'number'}, {array: T}),
+  ...wrapDef('array_average', {x: {array: T}}, 'number'),
+  ...wrapDef('array_has_duplicates', {x: {array: T}}, 'boolean'),
+  ...wrapDef('array_cum_sum', {numeric_array: {array: T}}, {array: 'number'}),
+  ...wrapDef('array_duplicates', {x: {array: T}}, {array: T}),
+  ...wrapDef('array_sum', {x: {array: T}}, 'number'),
+  ...wrapDef('array_sort_desc', {x: {array: T}}, {array: T}),
+  ...wrapDef('remove_nulls', {x: {array: T}}, {array: T}),
+  ...wrapDef('array_top_n', {x: {array: T}, n: 'number'}, {array: T}),
 };
