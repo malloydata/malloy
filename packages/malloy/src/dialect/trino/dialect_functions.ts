@@ -473,7 +473,7 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
 
 /******** Presto Only *********/
 
-const array_vosition: OverloadedDefinitionBlueprint = {
+const array_position: OverloadedDefinitionBlueprint = {
   first_instance: {
     takes: {x: {array: T}, el: T},
     generic: {T: ['any']},
@@ -542,7 +542,7 @@ export const PRESTO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   ...TRINO_DIALECT_FUNCTIONS,
   array_intersect,
   array_least_frequent,
-  array_vosition,
+  array_position,
   reverse,
   ...wrapDef('array_average', {x: {array: T}}, 'number'),
   ...wrapDef('array_has_duplicates', {x: {array: T}}, 'boolean'),
