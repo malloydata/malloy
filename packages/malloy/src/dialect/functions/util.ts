@@ -746,10 +746,8 @@ export function wrapDef(
   const generic: {[name: string]: TypeDescElementBlueprintOrNamedGeneric[]} =
     {};
   for (const argVal of Object.values(takes)) {
-    for (const leafType of tdLeafTypes(argVal)) {
-      if (typeof leafType !== 'string' && 'generic' in leafType) {
-        generic[leafType.generic] = ['any'];
-      }
+    for (const genericRef of findGenerics(argVal)) {
+      generic[genericRef.generic] = ['any'];
     }
   }
   const newDef: DefinitionBlueprint = {
@@ -766,21 +764,32 @@ export function wrapDef(
 }
 
 /**
- * Walks a type and returns all the leaves
+ * Walks a type and returns all the generic references
  * @param tdbp A type
  */
-function* tdLeafTypes(
+function* findGenerics(
   tdbp: TypeDescBlueprint
-): IterableIterator<TypeDescBlueprint> {
-  if (typeof tdbp === 'string') {
-    yield tdbp;
-  } else if ('array' in tdbp) {
-    yield* tdLeafTypes(tdbp.array);
-  } else if ('record' in tdbp) {
-    for (const recType of Object.values(tdbp.record)) {
-      yield* tdLeafTypes(recType);
+): IterableIterator<NamedGeneric> {
+  if (typeof tdbp !== 'string') {
+    if ('generic' in tdbp) {
+      return tdbp;
     }
-  } else {
-    yield tdbp;
+    if ('array' in tdbp) {
+      yield* findGenerics(tdbp.array);
+    } else if ('record' in tdbp) {
+      for (const recType of Object.values(tdbp.record)) {
+        yield* findGenerics(recType);
+      }
+    } else if ('literal' in tdbp) {
+      yield* findGenerics(tdbp.literal);
+    } else if ('measure' in tdbp) {
+      yield* findGenerics(tdbp.measure);
+    } else if ('dimension' in tdbp) {
+      yield* findGenerics(tdbp.dimension);
+    } else if ('constant' in tdbp) {
+      yield* findGenerics(tdbp.constant);
+    } else if ('calculation' in tdbp) {
+      yield* findGenerics(tdbp.calculation);
+    }
   }
 }
