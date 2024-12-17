@@ -440,7 +440,7 @@ describe.each(runtimes.runtimeList)(
         ).malloyResultMatches(runtime, {t: [2]});
       });
       /// mtoy todo figure out overload
-      it.skip('runs reverse', async () => {
+      it.when(presto)('runs reverse(array)', async () => {
         await expect(
           `run: ${nums}->{select: t is reverse(nums)}`
         ).malloyResultMatches(runtime, {t: [1, 1, 4]});
