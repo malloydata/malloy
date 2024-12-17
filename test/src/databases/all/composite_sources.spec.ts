@@ -32,6 +32,16 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       run: x -> { group_by: foo } -> { select: foo }
     `).malloyResultMatches(runtime, {foo: 1});
   });
+  it('composite view multistage', async () => {
+    await expect(`
+      ##! experimental.composite_sources
+      source: state_facts is ${databaseName}.table('malloytest.state_facts')
+      source: x is compose(state_facts, state_facts extend { dimension: foo is 1 }) extend {
+        view: multistage is { group_by: foo } -> { select: foo }
+      }
+      run: x -> multistage
+    `).malloyResultMatches(runtime, {foo: 1});
+  });
   it('composite source used in join', async () => {
     await expect(`
       ##! experimental.composite_sources
