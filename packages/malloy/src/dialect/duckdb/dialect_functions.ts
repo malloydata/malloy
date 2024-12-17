@@ -11,10 +11,29 @@ import {
   OverloadedDefinitionBlueprint,
 } from '../functions/util';
 
+const list_extract: DefinitionBlueprint = {
+  takes: {'value': {array: {generic: 'T'}}, 'index': 'number'},
+  generic: {'T': ['any']},
+  returns: {generic: 'T'},
+  impl: {sql: 'list_extract(${value}, ${index})'},
+};
+
 const dayname: DefinitionBlueprint = {
   takes: {'date_value': ['date', 'timestamp']},
   returns: 'string',
   impl: {function: 'DAYNAME'},
+};
+
+const date_part: DefinitionBlueprint = {
+  takes: {'part': 'string', 'interval': {sql_native: 'interval'}},
+  returns: 'number',
+  impl: {function: 'DATE_PART'},
+};
+
+const to_seconds: DefinitionBlueprint = {
+  takes: {'seconds': 'number'},
+  returns: {sql_native: 'interval'},
+  impl: {function: 'TO_SECONDS'},
 };
 
 const to_timestamp: DefinitionBlueprint = {
@@ -74,9 +93,12 @@ const string_agg_distinct: OverloadedDefinitionBlueprint = {
 };
 
 export const DUCKDB_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
+  list_extract,
   count_approx,
   dayname,
   to_timestamp,
   string_agg,
   string_agg_distinct,
+  to_seconds,
+  date_part,
 };

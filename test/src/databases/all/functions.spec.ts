@@ -1312,12 +1312,18 @@ expressionModels.forEach((x, databaseName) => {
 
   describe('dialect functions', () => {
     describe('duckdb', () => {
-      const duckdb = it.when(databaseName === 'duckdb');
-      duckdb('to_timestamp', async () => {
+      const isDuckdb = databaseName === 'duckdb';
+      it.when(isDuckdb)('to_timestamp', async () => {
         await funcTest(
           'to_timestamp(1725555835) = @2024-09-05 17:03:55',
           booleanResult(true, databaseName)
         );
+      });
+      it.when(isDuckdb)('list_extract', async () => {
+        await funcTest('list_extract(list_extract([[5]], 1), 1)', 5);
+      });
+      it.when(isDuckdb)('date_part,to_seconds', async () => {
+        await funcTest('date_part("seconds", to_seconds(5))', 5);
       });
     });
 

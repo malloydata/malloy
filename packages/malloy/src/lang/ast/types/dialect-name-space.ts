@@ -29,6 +29,7 @@ export class DialectNameSpace implements NameSpace {
             supportsOrderBy: overload.supportsOrderBy,
             supportsLimit: overload.supportsLimit,
             isSymmetric: overload.isSymmetric,
+            genericTypes: overload.genericTypes,
             dialect: {
               [dialect.name]: {
                 e: overload.e,
