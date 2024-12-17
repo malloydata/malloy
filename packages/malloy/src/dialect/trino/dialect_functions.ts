@@ -389,6 +389,7 @@ function define(
 
 define('array_distinct', {x: {array: T}}, {array: T});
 define('array_except', {x: {array: T}, y: {array: T}}, {array: T});
+define('array_intersect', {x: {array: T}, y: {array: T}}, {array: T});
 define('array_max', {x: {array: T}}, T);
 define('array_min', {x: {array: T}}, T);
 define('array_normalize', {x: {array: T}, p: 'number'}, {array: T});

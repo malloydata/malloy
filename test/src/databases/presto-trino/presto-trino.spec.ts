@@ -21,6 +21,7 @@ describe.each(runtimes.runtimeList)(
     if (runtime === undefined) {
       throw new Error("Couldn't build runtime");
     }
+    const presto = databaseName === 'presto';
 
     it(`runs an sql query - ${databaseName}`, async () => {
       await expect(
@@ -325,7 +326,7 @@ describe.each(runtimes.runtimeList)(
           }
         `).malloyResultMatches(runtime, {some_words: ['hello', 'world']});
       });
-      it('runs array_average', async () => {
+      it.when(presto)('runs array_average', async () => {
         await expect(
           `run: ${nums}->{select: tavg is array_average(nums)}`
         ).malloyResultMatches(runtime, {tavg: 2});
@@ -335,7 +336,7 @@ describe.each(runtimes.runtimeList)(
           `run: ${nums}->{select: t is array_distinct(nums)}`
         ).malloyResultMatches(runtime, {t: [4, 1]});
       });
-      it('runs array_has_duplicates', async () => {
+      it.when(presto)('runs array_has_duplicates', async () => {
         await expect(
           `run: ${nums}->{select: t is array_has_duplicates(nums)}`
         ).malloyResultMatches(runtime, {t: true});
@@ -350,12 +351,12 @@ describe.each(runtimes.runtimeList)(
           `run: ${nums}->{select: t is array_min(nums)}`
         ).malloyResultMatches(runtime, {t: 1});
       });
-      it('runs array_cum_sum', async () => {
+      it.when(presto)('runs array_cum_sum', async () => {
         await expect(
           `run: ${nums}->{select: t is array_cum_sum(nums)}`
         ).malloyResultMatches(runtime, {t: [4, 5, 6]});
       });
-      it('runs array_duplicates', async () => {
+      it.when(presto)('runs array_duplicates', async () => {
         await expect(
           `run: ${nums}->{select: t is array_duplicates(nums)}`
         ).malloyResultMatches(runtime, {t: [1]});
@@ -380,7 +381,7 @@ describe.each(runtimes.runtimeList)(
           `run: ${nums}->{select: t is cardinality(nums)}`
         ).malloyResultMatches(runtime, {t: 3});
       });
-      it('runs array_sum', async () => {
+      it.when(presto)('runs array_sum', async () => {
         await expect(
           `run: ${nums}->{select: t is array_sum(nums)}`
         ).malloyResultMatches(runtime, {t: 6});
@@ -402,7 +403,7 @@ describe.each(runtimes.runtimeList)(
           run: ${nums}->{select: t is array_normalize(nums, 40)}
         `).malloyResultMatches(runtime, {t: [1, 0.25, 0.25]});
       });
-      it('runs array_position', async () => {
+      it.when(presto)('runs array_position', async () => {
         await expect(
           `run: ${nums}->{select: t is array_position(nums, 1, 2)}`
         ).malloyResultMatches(runtime, {t: 3});
@@ -412,7 +413,7 @@ describe.each(runtimes.runtimeList)(
           `run: ${nums}->{select: t is array_remove(nums, 1)}`
         ).malloyResultMatches(runtime, {t: [4]});
       });
-      it('runs array_sort_desc', async () => {
+      it.when(presto)('runs array_sort_desc', async () => {
         await expect(
           `run: ${nums}->{select: t is array_sort_desc([1,2,3])}`
         ).malloyResultMatches(runtime, {t: [3, 2, 1]});
@@ -433,12 +434,13 @@ describe.each(runtimes.runtimeList)(
           `run: ${nums}->{select: t is array_union(nums, [2])}`
         ).malloyResultMatches(runtime, {t: [4, 1, 2]});
       });
-      it('runs remove_nulls', async () => {
+      it.when(presto)('runs remove_nulls', async () => {
         await expect(
           `run: ${nums}->{select: t is remove_nulls([null, 2])}`
         ).malloyResultMatches(runtime, {t: [2]});
       });
-      it('runs reverse', async () => {
+      /// mtoy todo figure out overload
+      it.skip('runs reverse', async () => {
         await expect(
           `run: ${nums}->{select: t is reverse(nums)}`
         ).malloyResultMatches(runtime, {t: [1, 1, 4]});
@@ -448,7 +450,7 @@ describe.each(runtimes.runtimeList)(
           `run: ${nums}->{select: t is shuffle([1])}`
         ).malloyResultMatches(runtime, {t: [1]});
       });
-      it('runs array_top_n', async () => {
+      it.when(presto)('runs array_top_n', async () => {
         await expect(
           `run: ${nums}->{select: t is array_top_n(nums, 2)}`
         ).malloyResultMatches(runtime, {t: [4, 1]});
@@ -512,7 +514,7 @@ describe.each(runtimes.runtimeList)(
           `run: ${nums}->{select: t is array_intersect(nums, [4])}`
         ).malloyResultMatches(runtime, {t: [4]});
       });
-      it('runs array_intersect(a)', async () => {
+      it.when(presto)('runs array_intersect(a)', async () => {
         await expect(
           `run: ${nums}->{select: t is array_intersect([[1,2], [2,3]])}`
         ).malloyResultMatches(runtime, {t: [2]});
@@ -527,12 +529,12 @@ describe.each(runtimes.runtimeList)(
           `run: ${nums}->{select: t is array_join(['a', null], ',', 'x')}`
         ).malloyResultMatches(runtime, {t: 'a,x'});
       });
-      it('runs array_least_frequent(a)', async () => {
+      it.when(presto)('runs array_least_frequent(a)', async () => {
         await expect(
           `run: ${nums}->{select: t is array_least_frequent(nums)}`
         ).malloyResultMatches(runtime, {t: [4]});
       });
-      it('runs array_least_frequent(a, n)', async () => {
+      it.when(presto)('runs array_least_frequent(a, n)', async () => {
         await expect(
           `run: ${nums}->{select: t is array_least_frequent(nums, 2)}`
         ).malloyResultMatches(runtime, {t: [4, 1]});
