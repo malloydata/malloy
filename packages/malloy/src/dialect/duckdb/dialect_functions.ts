@@ -9,13 +9,8 @@ import {
   DefinitionBlueprint,
   DefinitionBlueprintMap,
   OverloadedDefinitionBlueprint,
+  wrapDef,
 } from '../functions/util';
-
-const repeat: DefinitionBlueprint = {
-  takes: {'str': 'string', 'n': 'number'},
-  returns: 'string',
-  impl: {function: 'REPEAT'},
-};
 
 const list_extract: DefinitionBlueprint = {
   takes: {'value': {array: {generic: 'T'}}, 'index': 'number'},
@@ -103,9 +98,10 @@ export const DUCKDB_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   count_approx,
   dayname,
   to_timestamp,
-  repeat,
   string_agg,
   string_agg_distinct,
   to_seconds,
   date_part,
+  ...wrapDef('repeat', {'str': 'string', 'n': 'number'}, 'string'),
+  ...wrapDef('reverse', {'str': 'string'}, 'string'),
 };

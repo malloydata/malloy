@@ -346,7 +346,7 @@ const url_extract_query: DefinitionBlueprint = {
 const array_join: OverloadedDefinitionBlueprint = {
   skip_nulls: {
     takes: {
-      'theArray': {array: T},
+      'array_v': {array: T},
       'sep': 'string',
     },
     generic: {T: ['any']},
@@ -355,7 +355,7 @@ const array_join: OverloadedDefinitionBlueprint = {
   },
   null_aware: {
     takes: {
-      'theArray': T,
+      'array_v': T,
       'sep': 'string',
       'nullStr': 'string',
     },
@@ -473,7 +473,7 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
 
 /******** Presto Only *********/
 
-const array_position: OverloadedDefinitionBlueprint = {
+const array_vosition: OverloadedDefinitionBlueprint = {
   first_instance: {
     takes: {x: {array: T}, el: T},
     generic: {T: ['any']},
@@ -508,14 +508,14 @@ const array_intersect: OverloadedDefinitionBlueprint = {
 
 const array_least_frequent: OverloadedDefinitionBlueprint = {
   array_only: {
-    takes: {'theArray': {array: T}},
+    takes: {'array_v': {array: T}},
     generic: {'T': ['any']},
     returns: {array: T},
     impl: {function: 'ARRAY_LEAST_FREQUENT'},
   },
   bottom: {
     takes: {
-      'theArray': {array: T},
+      'array_v': {array: T},
       'count': 'number',
     },
     generic: {'T': ['any']},
@@ -524,11 +524,26 @@ const array_least_frequent: OverloadedDefinitionBlueprint = {
   },
 };
 
+const reverse: OverloadedDefinitionBlueprint = {
+  yarra: {
+    takes: {'array_v': {array: T}},
+    returns: {array: T},
+    generic: {'T': ['any']},
+    impl: {function: 'REVERSE'},
+  },
+  ngirts: {
+    takes: {'array_v': 'string'},
+    returns: 'string',
+    impl: {function: 'REVERSE'},
+  },
+};
+
 export const PRESTO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   ...TRINO_DIALECT_FUNCTIONS,
   array_intersect,
   array_least_frequent,
-  array_position,
+  array_vosition,
+  reverse,
   ...wrapDef('array_average', {x: {array: T}}, 'number'),
   ...wrapDef('array_has_duplicates', {x: {array: T}}, 'boolean'),
   ...wrapDef('array_cum_sum', {numeric_array: {array: T}}, {array: 'number'}),

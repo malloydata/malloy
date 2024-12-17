@@ -28,9 +28,6 @@ export const TRINO_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
   string_repeat: {
     sql: "ARRAY_JOIN(REPEAT(${value}, CASE WHEN ${value} IS NOT NULL THEN ${count} END),'')",
   },
-  reverse: {
-    sql: 'REVERSE(CAST(${value} AS VARCHAR))',
-  },
   starts_with: {sql: 'COALESCE(STARTS_WITH(${value}, ${prefix}), false)'},
   ends_with: {
     sql: 'COALESCE(STARTS_WITH(REVERSE(CAST(${value} AS VARCHAR)), REVERSE(CAST(${suffix} AS VARCHAR))), false)',

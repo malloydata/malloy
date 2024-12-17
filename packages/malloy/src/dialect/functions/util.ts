@@ -729,6 +729,10 @@ export function expandOverrideMapFromBase(
  *   0) Not an overloaded definition
  *   1) The function has the same name in malloy and in the dialect
  *   2) Every generic in args or return generics is type ['any']
+ * USAGE:
+ *
+ *     ...wrapDef('func_name', {'arg0': 'type0', 'arg1': 'type1'}, 'return-type')
+ *
  * @param name name of function
  * @param takes Record<Argument blueprint>
  * @param returns Return Blueprint
@@ -742,12 +746,12 @@ export function wrapDef(
   const generic: {[name: string]: TypeDescElementBlueprintOrNamedGeneric[]} =
     {};
   for (const argVal of Object.values(takes)) {
-    const anyGeneric = Array.from(tdLeafTypes(argVal)).filter(
+    const genericRefs = Array.from(tdLeafTypes(argVal)).filter(
       (t: TypeDescBlueprint): t is NamedGeneric => {
         return typeof t !== 'string' && 'generic' in t;
       }
     );
-    for (const genericRef of anyGeneric) {
+    for (const genericRef of genericRefs) {
       generic[genericRef.generic] = ['any'];
     }
   }
@@ -756,8 +760,10 @@ export function wrapDef(
     returns,
     impl: {function: name.toUpperCase()},
   };
-  if (Object.entries(generic).length > 0) {
+  // avoids constructing an erray just to test the length
+  for (const _atLeastOneGeneric in generic) {
     newDef.generic = generic;
+    break;
   }
   return {[name]: newDef};
 }
