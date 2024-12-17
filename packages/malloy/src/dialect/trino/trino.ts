@@ -52,7 +52,10 @@ import {
   isDialectFieldStruct,
 } from '../dialect';
 import {PostgresBase, timeExtractMap} from '../pg_impl';
-import {TRINO_DIALECT_FUNCTIONS} from './dialect_functions';
+import {
+  PRESTO_DIALECT_FUNCTIONS,
+  TRINO_DIALECT_FUNCTIONS,
+} from './dialect_functions';
 import {TRINO_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
 // These are the units that "TIMESTAMP_ADD" "TIMESTAMP_DIFF" accept
@@ -688,5 +691,9 @@ export class PrestoDialect extends TrinoDialect {
       // return `CROSS JOIN UNNEST(zip_with(${source},array[],(r,ignore) -> (r, ignore)))as ${alias}_outer(${alias},ignore)`;
       return `CROSS JOIN  UNNEST(COALESCE(${source}, ARRAY[NULL])) as ${alias}_outer(${alias})`;
     }
+  }
+
+  getDialectFunctions(): {[name: string]: DialectFunctionOverloadDef[]} {
+    return expandBlueprintMap(PRESTO_DIALECT_FUNCTIONS);
   }
 }
