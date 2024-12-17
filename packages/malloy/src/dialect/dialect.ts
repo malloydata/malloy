@@ -168,6 +168,8 @@ export abstract class Dialect {
 
   supportsCountApprox = false;
 
+  supportsHyperLogLog = false;
+
   // MYSQL doesn't have full join, maybe others.
   supportsFullJoin = true;
 

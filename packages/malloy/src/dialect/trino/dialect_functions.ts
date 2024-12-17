@@ -77,6 +77,68 @@ const count_approx: DefinitionBlueprint = {
   isSymmetric: true,
 };
 
+const hll_accumulate: OverloadedDefinitionBlueprint = {
+  default: {
+    generic: {
+      'T': ['string', 'number', 'date', 'timestamp', 'boolean', 'json'],
+    },
+    takes: {'value': {dimension: {generic: 'T'}}},
+    returns: {measure: 'string'},
+    isSymmetric: true,
+    impl: {
+      function: 'APPROX_SET',
+    },
+  },
+  with_percent: {
+    generic: {
+      'T': ['string', 'number', 'date', 'timestamp', 'boolean', 'json'],
+    },
+    takes: {'value': {dimension: {generic: 'T'}}, 'accuracy': 'number'},
+    returns: {measure: 'string'},
+    isSymmetric: true,
+    impl: {
+      function: 'APPROX_SET',
+    },
+  },
+};
+
+const hll_combine: DefinitionBlueprint = {
+  takes: {
+    'value': 'string',
+  },
+  returns: {measure: 'string'},
+  impl: {function: 'MERGE'},
+  isSymmetric: true,
+};
+
+const hll_estimate: DefinitionBlueprint = {
+  takes: {
+    'value': 'string',
+  },
+  returns: {dimension: 'number'},
+  impl: {function: 'CARDINALITY'},
+};
+
+const hll_export: DefinitionBlueprint = {
+  takes: {
+    'value': 'string',
+  },
+  returns: {dimension: 'string'},
+  impl: {
+    sql: 'CAST(${value} AS VARBINARY)',
+  },
+};
+
+const hll_import: DefinitionBlueprint = {
+  takes: {
+    'value': 'string',
+  },
+  returns: {dimension: 'string'},
+  impl: {
+    sql: 'CAST(${value} AS HyperLogLog)',
+  },
+};
+
 const max_by: DefinitionBlueprint = {
   generic: {'T': ['string', 'number', 'date', 'timestamp', 'boolean', 'json']},
   takes: {
@@ -294,6 +356,8 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   bool_or,
   corr,
   count_approx,
+  hll_accumulate,
+  hll_combine,
   max_by,
   min_by,
   string_agg,
@@ -306,6 +370,9 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   date_format,
   date_parse,
   from_unixtime,
+  hll_estimate,
+  hll_export,
+  hll_import,
   json_extract_scalar,
   regexp_like,
   regexp_replace,
