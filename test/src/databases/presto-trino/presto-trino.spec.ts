@@ -285,33 +285,6 @@ describe.each(runtimes.runtimeList)(
       ]);
     });
 
-    it(`hyperloglog basic - ${databaseName}`, async () => {
-      await expect(`run: ${databaseName}.table('malloytest.state_facts') -> {
-        aggregate:
-          m1 is floor(hll_estimate(hll_accumulate(state))/10)
-      }`).malloyResultMatches(runtime, {m1: 5});
-    });
-
-    it(`hyperloglog combine - ${databaseName}`, async () => {
-      await expect(`run: ${databaseName}.table('malloytest.state_facts') -> {
-          group_by: state
-          aggregate: names_hll is hll_accumulate(popular_name)
-      } -> {
-          aggregate: name_count is hll_estimate(hll_combine(names_hll))
-      }
-      `).malloyResultMatches(runtime, {name_count: 6});
-    });
-
-    it(`hyperloglog import/export - ${databaseName}`, async () => {
-      await expect(`run: ${databaseName}.table('malloytest.state_facts') -> {
-          group_by: state
-          aggregate: names_hll is hll_export(hll_accumulate(popular_name))
-      } -> {
-          aggregate: name_count is hll_estimate(hll_combine(hll_import(names_hll)))
-      }
-      `).malloyResultMatches(runtime, {name_count: 6});
-    });
-
     it(`runs the url_extract functions - ${databaseName}`, async () => {
       await expect(`
         run: ${databaseName}.sql(

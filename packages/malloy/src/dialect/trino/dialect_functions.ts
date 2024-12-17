@@ -79,10 +79,9 @@ const count_approx: DefinitionBlueprint = {
 
 const hll_accumulate: OverloadedDefinitionBlueprint = {
   default: {
-    generic: [
-      'T',
-      ['string', 'number', 'date', 'timestamp', 'boolean', 'json'],
-    ],
+    generic: {
+      'T': ['string', 'number', 'date', 'timestamp', 'boolean', 'json'],
+    },
     takes: {'value': {dimension: {generic: 'T'}}},
     returns: {measure: 'string'},
     isSymmetric: true,
@@ -91,10 +90,9 @@ const hll_accumulate: OverloadedDefinitionBlueprint = {
     },
   },
   with_percent: {
-    generic: [
-      'T',
-      ['string', 'number', 'date', 'timestamp', 'boolean', 'json'],
-    ],
+    generic: {
+      'T': ['string', 'number', 'date', 'timestamp', 'boolean', 'json'],
+    },
     takes: {'value': {dimension: {generic: 'T'}}, 'accuracy': 'number'},
     returns: {measure: 'string'},
     isSymmetric: true,

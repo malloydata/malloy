@@ -142,6 +142,7 @@ export class TrinoDialect extends PostgresBase {
   supportsComplexFilteredSources = false;
   supportsTempTables = false;
   supportsCountApprox = true;
+  supportsHyperLogLog = true;
 
   quoteTablePath(tablePath: string): string {
     // TODO: look into escaping.
