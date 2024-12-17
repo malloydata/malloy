@@ -475,13 +475,13 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
 
 const array_position: OverloadedDefinitionBlueprint = {
   first_instance: {
-    takes: {x: {array: T}, el: T},
+    takes: {'array_v': {array: T}, 'el': T},
     generic: {T: ['any']},
     returns: 'number',
     impl: {function: 'ARRAY_POSITION'},
   },
   nth_instance: {
-    takes: {x: {array: T}, el: T, instance: 'number'},
+    takes: {'array_v': {array: T}, 'el': T, 'instance': 'number'},
     generic: {T: ['any']},
     returns: 'number',
     impl: {function: 'ARRAY_POSITION'},
@@ -491,15 +491,15 @@ const array_position: OverloadedDefinitionBlueprint = {
 const array_intersect: OverloadedDefinitionBlueprint = {
   two_arrays: {
     takes: {
-      'a': {array: T},
-      'b': {array: T},
+      'array_v1': {array: T},
+      'array_v2': {array: T},
     },
     generic: {'T': ['any']},
     returns: {array: T},
     impl: {function: 'ARRAY_INTERSECT'},
   },
   nested_array: {
-    takes: {'a': {array: {array: T}}},
+    takes: {'array_v': {array: {array: T}}},
     generic: {'T': ['any']},
     returns: {array: T},
     impl: {function: 'ARRAY_INTERSECT'},
@@ -544,12 +544,12 @@ export const PRESTO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   array_least_frequent,
   array_position,
   reverse,
-  ...wrapDef('array_average', {x: {array: T}}, 'number'),
-  ...wrapDef('array_has_duplicates', {x: {array: T}}, 'boolean'),
+  ...wrapDef('array_average', {'array_v': {array: T}}, 'number'),
+  ...wrapDef('array_has_duplicates', {'array_v': {array: T}}, 'boolean'),
   ...wrapDef('array_cum_sum', {numeric_array: {array: T}}, {array: 'number'}),
-  ...wrapDef('array_duplicates', {x: {array: T}}, {array: T}),
-  ...wrapDef('array_sum', {x: {array: T}}, 'number'),
-  ...wrapDef('array_sort_desc', {x: {array: T}}, {array: T}),
-  ...wrapDef('remove_nulls', {x: {array: T}}, {array: T}),
-  ...wrapDef('array_top_n', {x: {array: T}, n: 'number'}, {array: T}),
+  ...wrapDef('array_duplicates', {'array_v': {array: T}}, {array: T}),
+  ...wrapDef('array_sum', {'array_v': {array: T}}, 'number'),
+  ...wrapDef('array_sort_desc', {'array_v': {array: T}}, {array: T}),
+  ...wrapDef('remove_nulls', {'array_v': {array: T}}, {array: T}),
+  ...wrapDef('array_top_n', {'array_v': {array: T}, 'n': 'number'}, {array: T}),
 };
