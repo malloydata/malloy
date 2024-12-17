@@ -384,7 +384,6 @@ const sequence: OverloadedDefinitionBlueprint = {
     returns: {array: 'date'},
     impl: {function: 'SEQUENCE'},
   },
-  // mtoy todo document missing sequence
 };
 
 export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
@@ -440,7 +439,6 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   ...wrapDef('array_min', {'x': {array: T}}, T),
   ...wrapDef('array_normalize', {'x': {array: T}, 'p': 'number'}, {array: T}),
   ...wrapDef('array_remove', {'x': {array: T}, 'element': T}, {array: T}),
-  // mtoy todo document mising lambda sort
   ...wrapDef('array_sort', {'x': {array: T}}, {array: T}),
   ...wrapDef('arrays_overlap', {'x': {array: T}, 'y': {array: T}}, 'boolean'),
   ...wrapDef('array_union', {'x': {array: T}, 'y': {array: T}}, {array: T}),
