@@ -532,7 +532,7 @@ const reverse: OverloadedDefinitionBlueprint = {
     impl: {function: 'REVERSE'},
   },
   ngirts: {
-    takes: {'array_v': 'string'},
+    takes: {'str_v': 'string'},
     returns: 'string',
     impl: {function: 'REVERSE'},
   },
