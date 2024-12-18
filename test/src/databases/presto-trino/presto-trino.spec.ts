@@ -439,7 +439,11 @@ describe.each(runtimes.runtimeList)(
           `run: ${nums}->{select: t is remove_nulls([null, 2])}`
         ).malloyResultMatches(runtime, {t: [2]});
       });
-      /// mtoy todo figure out overload
+      it('runs reverse(null)', async () => {
+        await expect(
+          `run: ${nums}->{select: t is reverse(null)}`
+        ).malloyResultMatches(runtime, {t: null});
+      });
       it.when(presto)('runs reverse(array)', async () => {
         await expect(
           `run: ${nums}->{select: t is reverse(nums)}`
