@@ -33,7 +33,8 @@ import {
  * Also let us know if you prefer editing the Blueprint data structures.
  */
 
-const T: TypeDescBlueprint = {generic: 'T'}; // So you can write things like: {array: T}
+// Cute shortcut So you can write things like: {array: T} and {dimension: T}
+const T: TypeDescBlueprint = {generic: 'T'};
 
 // Aggregate functions:
 
@@ -56,7 +57,7 @@ const hll_accumulate: OverloadedDefinitionBlueprint = {
     generic: {
       'T': ['string', 'number', 'date', 'timestamp', 'boolean', 'json'],
     },
-    takes: {'value': {dimension: {generic: 'T'}}},
+    takes: {'value': {dimension: T}},
     returns: {measure: {sql_native: 'hyperloglog'}},
     isSymmetric: true,
     impl: {
@@ -67,7 +68,7 @@ const hll_accumulate: OverloadedDefinitionBlueprint = {
     generic: {
       'T': ['string', 'number', 'date', 'timestamp', 'boolean', 'json'],
     },
-    takes: {'value': {dimension: {generic: 'T'}}, 'accuracy': 'number'},
+    takes: {'value': {dimension: T}, 'accuracy': 'number'},
     returns: {measure: {sql_native: 'hyperloglog'}},
     isSymmetric: true,
     impl: {
