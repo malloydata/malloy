@@ -252,6 +252,7 @@ export abstract class TrinoPrestoConnection
     // TODO(figutierrez): Use.
     _rowIndex = 0
   ): Promise<MalloyQueryData> {
+    options = {...this.readQueryOptions(), ...options};
     const r = await this.client.runSQL(sqlCommand, options.rowLimit);
 
     if (r.error) {
