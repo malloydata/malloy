@@ -10,67 +10,39 @@ import {
   DefinitionBlueprintMap,
   OverloadedDefinitionBlueprint,
   TypeDescBlueprint,
+  wrapDef,
 } from '../functions/util';
 
+/*
+ * We are experimenting with the best way to make this file easy for someone
+ * to step in and modify, AND to make it easy to create a new dialect.
+ *
+ * So in this file we are experimenting with various ways to define things.
+ * The most general and powerful is to write a DefinitionBlueprint or
+ * OverloadedDefinitionBlueprint, naming it with the name of the function
+ * you want to add, and then to add that name to the dialcect function list.
+ *
+ * Experimentally, there is also a function wrapDef which creates
+ * a DefinitionBlueprint for you. If the function name in malloy source
+ * is the same as the function name in sql, and any generic argument or return
+ * types are type 'any'( like array<any> ), then you can use the wrapper
+ * definition generator wrapDef, and there are examples in this file
+ * of how to do that. Let us know if you like wrapDef a lot, and we
+ * can extend it to also allow overloads and generics and other impl: geatures.
+ *
+ * Also let us know if you prefer editing the Blueprint data structures.
+ */
+
+// Cute shortcut So you can write things like: {array: T} and {dimension: T}
 const T: TypeDescBlueprint = {generic: 'T'};
 
 // Aggregate functions:
-
-// TODO: Approx percentile can be called with a third argument; we probably
-// want to implement that at some point
-// In Presto, this is an "error" parameter between 0 and 1
-// In Trino, this is a "weight" parameter between 1 and 99
-const approx_percentile: DefinitionBlueprint = {
-  takes: {'value': 'number', 'percentage': 'number'},
-  returns: {measure: 'number'},
-  impl: {
-    function: 'APPROX_PERCENTILE',
-  },
-};
 
 const arbitrary: DefinitionBlueprint = {
   generic: {'T': ['string', 'number', 'date', 'timestamp', 'boolean', 'json']},
   takes: {'value': {dimension: T}},
   returns: {measure: T},
   impl: {function: 'ARBITRARY'},
-};
-
-const bitwise_and_agg: DefinitionBlueprint = {
-  takes: {'value': {dimension: 'number'}},
-  returns: {measure: 'number'},
-  impl: {function: 'BITWISE_OR_AGG'},
-};
-
-const bitwise_or_agg: DefinitionBlueprint = {
-  takes: {'value': {dimension: 'number'}},
-  returns: {measure: 'number'},
-  impl: {function: 'BITWISE_AND_AGG'},
-};
-
-const bitwise_xor_agg: DefinitionBlueprint = {
-  takes: {'value': {dimension: 'number'}},
-  returns: {measure: 'number'},
-  impl: {function: 'BITWISE_XOR_AGG'},
-};
-
-const bool_and: DefinitionBlueprint = {
-  takes: {'value': {dimension: 'boolean'}},
-  returns: {measure: 'boolean'},
-  impl: {function: 'BOOL_AND'},
-};
-
-const bool_or: DefinitionBlueprint = {
-  takes: {'value': {dimension: 'boolean'}},
-  returns: {measure: 'boolean'},
-  impl: {function: 'BOOL_OR'},
-};
-
-const corr: DefinitionBlueprint = {
-  takes: {'y': {dimension: 'number'}, 'x': {dimension: 'number'}},
-  returns: {measure: 'number'},
-  impl: {
-    sql: 'CORR(${y}, ${x})',
-  },
 };
 
 const count_approx: DefinitionBlueprint = {
@@ -85,7 +57,7 @@ const hll_accumulate: OverloadedDefinitionBlueprint = {
     generic: {
       'T': ['string', 'number', 'date', 'timestamp', 'boolean', 'json'],
     },
-    takes: {'value': {dimension: {generic: 'T'}}},
+    takes: {'value': {dimension: T}},
     returns: {measure: {sql_native: 'hyperloglog'}},
     isSymmetric: true,
     impl: {
@@ -96,7 +68,7 @@ const hll_accumulate: OverloadedDefinitionBlueprint = {
     generic: {
       'T': ['string', 'number', 'date', 'timestamp', 'boolean', 'json'],
     },
-    takes: {'value': {dimension: {generic: 'T'}}, 'accuracy': 'number'},
+    takes: {'value': {dimension: T}, 'accuracy': 'number'},
     returns: {measure: {sql_native: 'hyperloglog'}},
     isSymmetric: true,
     impl: {
@@ -203,37 +175,7 @@ const string_agg_distinct: OverloadedDefinitionBlueprint = {
   },
 };
 
-const variance: DefinitionBlueprint = {
-  takes: {'value': {dimension: 'number'}},
-  returns: {measure: 'number'},
-  impl: {function: 'VARIANCE'},
-};
-
 // Scalar functions
-
-const bitwise_and: DefinitionBlueprint = {
-  takes: {'val1': 'number', 'val2': 'number'},
-  returns: 'number',
-  impl: {
-    function: 'BITWISE_AND',
-  },
-};
-
-const bitwise_or: DefinitionBlueprint = {
-  takes: {'val1': 'number', 'val2': 'number'},
-  returns: 'number',
-  impl: {
-    function: 'BITWISE_OR',
-  },
-};
-
-const date_format: DefinitionBlueprint = {
-  takes: {'ts_val': 'timestamp', 'format': 'string'},
-  returns: 'string',
-  impl: {
-    function: 'DATE_FORMAT',
-  },
-};
 
 const date_parse: DefinitionBlueprint = {
   takes: {'ts_string': 'string', 'format': 'string'},
@@ -241,12 +183,6 @@ const date_parse: DefinitionBlueprint = {
   impl: {
     sql: 'DATE_PARSE(${ts_string}, ${format})',
   },
-};
-
-const from_unixtime: DefinitionBlueprint = {
-  takes: {'unixtime': 'number'},
-  returns: 'timestamp',
-  impl: {function: 'FROM_UNIXTIME'},
 };
 
 // TODO: support Presto JSON types
@@ -288,64 +224,16 @@ const regexp_replace: OverloadedDefinitionBlueprint = {
   },
 };
 
-const to_unixtime: DefinitionBlueprint = {
-  takes: {'ts_val': 'timestamp'},
-  returns: 'number',
-  impl: {function: 'TO_UNIXTIME'},
-};
-
 const percent_rank: DefinitionBlueprint = {
   takes: {},
   returns: {calculation: 'number'},
   impl: {function: 'PERCENT_RANK', needsWindowOrderBy: true},
 };
 
-const url_extract_fragment: DefinitionBlueprint = {
-  takes: {'url': 'string'},
-  returns: 'string',
-  impl: {function: 'URL_EXTRACT_FRAGMENT'},
-};
-
-const url_extract_host: DefinitionBlueprint = {
-  takes: {'url': 'string'},
-  returns: 'string',
-  impl: {function: 'URL_EXTRACT_HOST'},
-};
-
-const url_extract_parameter: DefinitionBlueprint = {
-  takes: {'url': 'string', 'parameter': 'string'},
-  returns: 'string',
-  impl: {function: 'URL_EXTRACT_PARAMETER'},
-};
-
-const url_extract_path: DefinitionBlueprint = {
-  takes: {'url': 'string'},
-  returns: 'string',
-  impl: {function: 'URL_EXTRACT_PATH'},
-};
-
-const url_extract_port: DefinitionBlueprint = {
-  takes: {'url': 'string'},
-  returns: 'number',
-  impl: {function: 'URL_EXTRACT_PORT'},
-};
-
-const url_extract_protocol: DefinitionBlueprint = {
-  takes: {'url': 'string'},
-  returns: 'string',
-  impl: {function: 'URL_EXTRACT_PROTOCOL'},
-};
-
-const url_extract_query: DefinitionBlueprint = {
-  takes: {'url': 'string'},
-  returns: 'string',
-  impl: {function: 'URL_EXTRACT_QUERY'},
-};
-
 const array_join: OverloadedDefinitionBlueprint = {
   skip_nulls: {
     takes: {
-      'theArray': {array: T},
+      'array_v': {array: T},
       'sep': 'string',
     },
     generic: {T: ['any']},
@@ -354,7 +242,7 @@ const array_join: OverloadedDefinitionBlueprint = {
   },
   null_aware: {
     takes: {
-      'theArray': T,
+      'array_v': T,
       'sep': 'string',
       'nullStr': 'string',
     },
@@ -383,19 +271,67 @@ const sequence: OverloadedDefinitionBlueprint = {
     returns: {array: 'date'},
     impl: {function: 'SEQUENCE'},
   },
-  // mtoy todo document missing sequence
 };
 
+const string_reverse: DefinitionBlueprint = {
+  takes: {'str': 'string'},
+  returns: 'string',
+  impl: {sql: 'REVERSE(CAST(${str} AS VARCHAR))'},
+};
+
+/**
+ * This map is for functions which exist in both Presto and Trino.
+ * If you are adding functions which only exist in Presto, put them in
+ * to PRESTO_DIALECT_FUNCTIONS.
+ *
+ * If you have a function which works differently in each, add them to
+ * both.
+ */
 export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
+  // string functions
+  reverse: string_reverse,
+
   // aggregate functions
-  approx_percentile,
+  // TODO: Approx percentile can be called with a third argument; we probably
+  // want to implement that at some point
+  // In Presto, this is an "error" parameter between 0 and 1
+  // In Trino, this is a "weight" parameter between 1 and 99
+  ...wrapDef(
+    'approx_percentile',
+    {'value': 'number', 'percentage': 'number'},
+    {measure: 'number'}
+  ),
   arbitrary,
-  bitwise_and_agg,
-  bitwise_or_agg,
-  bitwise_xor_agg,
-  bool_and,
-  bool_or,
-  corr,
+  ...wrapDef(
+    'bitwise_and_agg',
+    {'value': {dimension: 'number'}},
+    {measure: 'number'}
+  ),
+  ...wrapDef(
+    'bitwise_or_agg',
+    {'value': {dimension: 'number'}},
+    {measure: 'number'}
+  ),
+  ...wrapDef(
+    'bitwise_xor_agg',
+    {'value': {dimension: 'number'}},
+    {measure: 'number'}
+  ),
+  ...wrapDef(
+    'bool_and',
+    {'value': {dimension: 'boolean'}},
+    {measure: 'boolean'}
+  ),
+  ...wrapDef(
+    'bool_or',
+    {'value': {dimension: 'boolean'}},
+    {measure: 'boolean'}
+  ),
+  ...wrapDef(
+    'corr',
+    {'y': {dimension: 'number'}, 'x': {dimension: 'number'}},
+    {measure: 'number'}
+  ),
   count_approx,
   hll_accumulate,
   hll_combine,
@@ -403,99 +339,94 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   min_by,
   string_agg,
   string_agg_distinct,
-  variance,
+  ...wrapDef('variance', {'n': 'number'}, {measure: 'number'}),
 
   // scalar functions
-  bitwise_and,
-  bitwise_or,
-  date_format,
+  ...wrapDef('bitwise_and', {'val1': 'number', 'val2': 'number'}, 'number'),
+  ...wrapDef('bitwise_or', {'val1': 'number', 'val2': 'number'}, 'number'),
+  ...wrapDef(
+    'date_format',
+    {'ts_val': 'timestamp', 'format': 'string'},
+    'string'
+  ),
   date_parse,
-  from_unixtime,
+  ...wrapDef('from_unixtime', {'unixtime': 'number'}, 'timestamp'),
   hll_estimate,
   hll_export,
   hll_import,
   json_extract_scalar,
   regexp_like,
   regexp_replace,
-  to_unixtime,
-  url_extract_fragment,
-  url_extract_host,
-  url_extract_parameter,
-  url_extract_path,
-  url_extract_port,
-  url_extract_protocol,
-  url_extract_query,
+  ...wrapDef('to_unixtime', {'ts_val': 'timestamp'}, 'number'),
+  ...wrapDef('url_extract_fragment', {'url': 'string'}, 'string'),
+  ...wrapDef('url_extract_host', {'url': 'string'}, 'string'),
+  ...wrapDef(
+    'url_extract_parameter',
+    {'url': 'string', 'parameter': 'string'},
+    'string'
+  ),
+  ...wrapDef('url_extract_path', {'url': 'string'}, 'string'),
+  ...wrapDef('url_extract_port', {'url': 'string'}, 'number'),
+  ...wrapDef('url_extract_protocol', {'url': 'string'}, 'string'),
+  ...wrapDef('url_extract_query', {'url': 'string'}, 'string'),
 
   // window functions
   percent_rank,
 
-  // array functions except those below
+  // array function
   array_join,
   sequence,
+  ...wrapDef('array_distinct', {'x': {array: T}}, {array: T}),
+  ...wrapDef('array_except', {'x': {array: T}, 'y': {array: T}}, {array: T}),
+  ...wrapDef('array_intersect', {'x': {array: T}, 'y': {array: T}}, {array: T}),
+  ...wrapDef('array_max', {'x': {array: T}}, T),
+  ...wrapDef('array_min', {'x': {array: T}}, T),
+  ...wrapDef('array_normalize', {'x': {array: T}, 'p': 'number'}, {array: T}),
+  ...wrapDef('array_remove', {'x': {array: T}, 'element': T}, {array: T}),
+  ...wrapDef('array_sort', {'x': {array: T}}, {array: T}),
+  ...wrapDef('arrays_overlap', {'x': {array: T}, 'y': {array: T}}, 'boolean'),
+  ...wrapDef('array_union', {'x': {array: T}, 'y': {array: T}}, {array: T}),
+  ...wrapDef('cardinality', {'x': {array: T}}, 'number'),
+  ...wrapDef('shuffle', {'x': {array: T}}, {array: T}),
+  ...wrapDef(
+    'combinations',
+    {'x': {array: T}, 'n': 'number'},
+    {array: {array: T}}
+  ),
+  ...wrapDef('contains', {'x': {array: T}, 'element': T}, 'boolean'),
+  ...wrapDef('element_at', {'x': {array: T}, 'oridnal': 'number'}, T),
+  ...wrapDef('flatten', {'x': {array: {array: T}}}, {array: T}),
+  ...wrapDef('ngrams', {'x': {array: T}, 'n': 'number'}, {array: {array: T}}),
+  ...wrapDef('repeat', {'x': T, 'n': 'number'}, {array: T}),
+  ...wrapDef(
+    'slice',
+    {'x': {array: T}, 'start': 'number', 'len': 'number'},
+    {array: T}
+  ),
+  ...wrapDef(
+    'split',
+    {to_split: 'string', seperator: 'string'},
+    {array: 'string'}
+  ),
+  ...wrapDef('trim_array', {'x': {array: T}, 'n': 'number'}, {array: T}),
+  ...wrapDef(
+    'array_split_into_chunks',
+    {'x': {array: T}, 'n': 'number'},
+    {array: {array: T}}
+  ),
 };
-
-/**
- * Lazy function to add wrapper blueprint definition for non overloaded functions
- * which have generic array in their parameter list or return value
- * @param name function name
- * @param types list of types, last is return type
- */
-function define(
-  name: string,
-  takes: Record<string, TypeDescBlueprint>,
-  returns: TypeDescBlueprint
-): void {
-  const newDef: DefinitionBlueprint = {
-    takes,
-    generic: {'T': ['any']},
-    returns,
-    impl: {function: name.toUpperCase()},
-  };
-  TRINO_DIALECT_FUNCTIONS[name] = newDef;
-}
-
-define('array_distinct', {x: {array: T}}, {array: T});
-define('array_except', {x: {array: T}, y: {array: T}}, {array: T});
-define('array_intersect', {x: {array: T}, y: {array: T}}, {array: T});
-define('array_max', {x: {array: T}}, T);
-define('array_min', {x: {array: T}}, T);
-define('array_normalize', {x: {array: T}, p: 'number'}, {array: T});
-define('array_remove', {x: {array: T}, element: T}, {array: T});
-// mtoy todo document missing lambda sort
-define('array_sort', {x: {array: T}}, {array: T});
-define(
-  'array_split_into_chunks',
-  {x: {array: T}, n: 'number'},
-  {array: {array: T}}
-);
-define('arrays_overlap', {x: {array: T}, y: {array: T}}, 'boolean');
-define('array_union', {x: {array: T}, y: {array: T}}, {array: T});
-define('cardinality', {x: {array: T}}, 'number');
-// mtoy todo move overload version?
-// define('reverse', {x: {array: T}}, {array: T});
-define('shuffle', {x: {array: T}}, {array: T});
-define('combinations', {x: {array: T}, n: 'number'}, {array: {array: T}});
-define('contains', {x: {array: T}, element: T}, 'boolean');
-define('element_at', {x: {array: T}, oridnal: 'number'}, T);
-// hard to believe, but this is what flatten does
-define('flatten', {x: {array: {array: T}}}, {array: T});
-define('ngrams', {x: {array: T}, n: 'number'}, {array: {array: T}});
-define('repeat', {x: T, n: 'number'}, {array: T});
-define('slice', {x: {array: T}, start: 'number', len: 'number'}, {array: T});
-define('split', {to_split: 'string', seperator: 'string'}, {array: 'string'});
-define('trim_array', {x: {array: T}, n: 'number'}, {array: T});
 
 /******** Presto Only *********/
 
 const array_position: OverloadedDefinitionBlueprint = {
   first_instance: {
-    takes: {x: {array: T}, el: T},
+    takes: {'x': {array: T}, 'el': T},
     generic: {T: ['any']},
     returns: 'number',
     impl: {function: 'ARRAY_POSITION'},
   },
   nth_instance: {
-    takes: {x: {array: T}, el: T, instance: 'number'},
+    takes: {'x': {array: T}, 'el': T, 'instance': 'number'},
     generic: {T: ['any']},
     returns: 'number',
     impl: {function: 'ARRAY_POSITION'},
@@ -505,15 +436,15 @@ const array_position: OverloadedDefinitionBlueprint = {
 const array_intersect: OverloadedDefinitionBlueprint = {
   two_arrays: {
     takes: {
-      'a': {array: T},
-      'b': {array: T},
+      'array_v1': {array: T},
+      'array_v2': {array: T},
     },
     generic: {'T': ['any']},
     returns: {array: T},
     impl: {function: 'ARRAY_INTERSECT'},
   },
   nested_array: {
-    takes: {'a': {array: {array: T}}},
+    takes: {'x': {array: {array: T}}},
     generic: {'T': ['any']},
     returns: {array: T},
     impl: {function: 'ARRAY_INTERSECT'},
@@ -522,14 +453,14 @@ const array_intersect: OverloadedDefinitionBlueprint = {
 
 const array_least_frequent: OverloadedDefinitionBlueprint = {
   array_only: {
-    takes: {'theArray': {array: T}},
+    takes: {'x': {array: T}},
     generic: {'T': ['any']},
     returns: {array: T},
     impl: {function: 'ARRAY_LEAST_FREQUENT'},
   },
   bottom: {
     takes: {
-      'theArray': {array: T},
+      'array_v': {array: T},
       'count': 'number',
     },
     generic: {'T': ['any']},
@@ -538,31 +469,28 @@ const array_least_frequent: OverloadedDefinitionBlueprint = {
   },
 };
 
-function def(
-  name: string,
-  takes: Record<string, TypeDescBlueprint>,
-  returns: TypeDescBlueprint
-): DefinitionBlueprintMap {
-  const newDef: DefinitionBlueprint = {
-    takes,
+const reverse: OverloadedDefinitionBlueprint = {
+  ngirts: {...string_reverse},
+  yarra: {
+    takes: {'x': {array: T}},
+    returns: {array: T},
     generic: {'T': ['any']},
-    returns,
-    impl: {function: name.toUpperCase()},
-  };
-  return {[name]: newDef};
-}
+    impl: {function: 'REVERSE'},
+  },
+};
 
 export const PRESTO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   ...TRINO_DIALECT_FUNCTIONS,
   array_intersect,
   array_least_frequent,
   array_position,
-  ...def('array_average', {x: {array: T}}, 'number'),
-  ...def('array_has_duplicates', {x: {array: T}}, 'boolean'),
-  ...def('array_cum_sum', {numeric_array: {array: T}}, {array: 'number'}),
-  ...def('array_duplicates', {x: {array: T}}, {array: T}),
-  ...def('array_sum', {x: {array: T}}, 'number'),
-  ...def('array_sort_desc', {x: {array: T}}, {array: T}),
-  ...def('remove_nulls', {x: {array: T}}, {array: T}),
-  ...def('array_top_n', {x: {array: T}, n: 'number'}, {array: T}),
+  reverse,
+  ...wrapDef('array_average', {'x': {array: T}}, 'number'),
+  ...wrapDef('array_has_duplicates', {'x': {array: T}}, 'boolean'),
+  ...wrapDef('array_cum_sum', {numeric_array: {array: T}}, {array: 'number'}),
+  ...wrapDef('array_duplicates', {'x': {array: T}}, {array: T}),
+  ...wrapDef('array_sum', {'x': {array: T}}, 'number'),
+  ...wrapDef('array_sort_desc', {'x': {array: T}}, {array: T}),
+  ...wrapDef('remove_nulls', {'x': {array: T}}, {array: T}),
+  ...wrapDef('array_top_n', {'x': {array: T}, 'n': 'number'}, {array: T}),
 };

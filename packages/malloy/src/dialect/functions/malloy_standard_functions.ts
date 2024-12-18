@@ -60,7 +60,6 @@ type Standard = {
   regexp_extract: D;
   string_repeat: D;
   replace: {string: D; regular_expression: D};
-  reverse: D;
   round: {to_integer: D; to_precision: D};
   rtrim: {whitespace: D; characters: D};
   sign: D;
@@ -337,12 +336,6 @@ const replace: DefinitionFor<Standard['replace']> = {
     returns: 'string',
     impl: {function: 'REGEXP_REPLACE'},
   },
-};
-
-const reverse: DefinitionFor<Standard['reverse']> = {
-  takes: {'value': 'string'},
-  returns: 'string',
-  impl: {function: 'REVERSE'},
 };
 
 const round: DefinitionFor<Standard['round']> = {
@@ -718,7 +711,6 @@ export const MALLOY_STANDARD_FUNCTIONS: MalloyStandardFunctionDefinitions = {
   rand,
   regexp_extract,
   replace,
-  reverse,
   round,
   rtrim,
   sign,

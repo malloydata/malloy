@@ -723,3 +723,75 @@ export function expandOverrideMapFromBase(
   }
   return map;
 }
+
+/**
+ * Shortcut for functions wrapper definitions. Useful only if ....
+ *   0) Not an overloaded definition
+ *   1) The function has the same name in malloy and in the dialect
+ *   2) Every generic in args or return generics is type ['any']
+ * USAGE:
+ *
+ *     ...wrapDef('func_name', {'arg0': 'type0', 'arg1': 'type1'}, 'return-type')
+ *
+ * @param name name of function
+ * @param takes Record<Argument blueprint>
+ * @param returns Return Blueprint
+ * @returns dot dot dot able blueprint definition
+ */
+export function wrapDef(
+  name: string,
+  takes: Record<string, TypeDescBlueprint>,
+  returns: TypeDescBlueprint
+): DefinitionBlueprintMap {
+  let anyGenerics = false;
+  const generic: {[name: string]: TypeDescElementBlueprintOrNamedGeneric[]} =
+    {};
+  for (const argType of Object.values(takes)) {
+    for (const genericRef of findGenerics(argType)) {
+      generic[genericRef.generic] = ['any'];
+      anyGenerics = true;
+    }
+  }
+  const newDef: DefinitionBlueprint = {
+    takes,
+    returns,
+    impl: {function: name.toUpperCase()},
+  };
+  if (anyGenerics) {
+    newDef.generic = generic;
+  }
+  return {[name]: newDef};
+}
+
+/**
+ * Walks a type and returns all the generic references
+ * @param tdbp A type
+ */
+function* findGenerics(
+  tdbp: TypeDescBlueprint
+): IterableIterator<NamedGeneric> {
+  if (typeof tdbp !== 'string') {
+    if ('generic' in tdbp) {
+      yield tdbp;
+    } else if ('record' in tdbp) {
+      for (const recType of Object.values(tdbp.record)) {
+        yield* findGenerics(recType);
+      }
+    } else {
+      for (const leaflet of [
+        'array',
+        'literal',
+        'measure',
+        'dimension',
+        'measure',
+        'constant',
+        'cacluation',
+      ]) {
+        if (leaflet in tdbp) {
+          yield* findGenerics(tdbp[leaflet]);
+          return;
+        }
+      }
+    }
+  }
+}
