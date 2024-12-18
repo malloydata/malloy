@@ -20,16 +20,17 @@ import {
  * So in this file we are experimenting with various ways to define things.
  * The most general and powerful is to write a DefinitionBlueprint or
  * OverloadedDefinitionBlueprint, naming it with the name of the function
- * you want to add, and then to add that name to the dialcect funciton list.
+ * you want to add, and then to add that name to the dialcect function list.
  *
- * Experimentally, currently there is also a function wrapDef which creates
+ * Experimentally, there is also a function wrapDef which creates
  * a DefinitionBlueprint for you. If the function name in malloy source
- * is the same as the function name in sql, any generic argument or return
+ * is the same as the function name in sql, and any generic argument or return
  * types are type 'any'( like array<any> ), then you can use the wrapper
  * definition generator wrapDef, and there are examples in this file
  * of how to do that. Let us know if you like wrapDef a lot, and we
- * can extend it to also allow overloads. Also let us know
- * if you prefer editing Blueprint data structures.
+ * can extend it to also allow overloads and generics and other impl: geatures.
+ *
+ * Also let us know if you prefer editing the Blueprint data structures.
  */
 
 const T: TypeDescBlueprint = {generic: 'T'}; // So you can write things like: {array: T}
