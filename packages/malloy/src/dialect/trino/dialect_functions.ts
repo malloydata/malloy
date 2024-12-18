@@ -278,6 +278,14 @@ const string_reverse: DefinitionBlueprint = {
   impl: {sql: 'REVERSE(CAST(${str} AS VARCHAR))'},
 };
 
+/**
+ * This map is for functions which exist in both Presto and Trino.
+ * If you are adding functions which only exist in Presto, put them in
+ * to PRESTO_DIALECT_FUNCTIONS.
+ *
+ * If you have a function which works differently in each, add them to
+ * both.
+ */
 export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   // string functions
   reverse: string_reverse,
