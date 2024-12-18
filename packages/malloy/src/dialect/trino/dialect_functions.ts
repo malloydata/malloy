@@ -386,14 +386,14 @@ const sequence: OverloadedDefinitionBlueprint = {
   },
 };
 
-const trino_reverse: DefinitionBlueprint = {
+const string_reverse: DefinitionBlueprint = {
   takes: {'str': 'string'},
   returns: 'string',
   impl: {sql: 'REVERSE(CAST(${str} AS VARCHAR))'},
 };
 
 export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
-  reverse: trino_reverse,
+  reverse: string_reverse,
   // aggregate functions
   approx_percentile,
   arbitrary,
@@ -533,16 +533,11 @@ const array_least_frequent: OverloadedDefinitionBlueprint = {
 };
 
 const reverse: OverloadedDefinitionBlueprint = {
+  ngirts: {...string_reverse},
   yarra: {
     takes: {'x': {array: T}},
     returns: {array: T},
     generic: {'T': ['any']},
-    impl: {function: 'REVERSE'},
-  },
-  ngirts: {
-    takes: {'str_v': T},
-    generic: {'T': ['string', 'null']},
-    returns: 'string',
     impl: {function: 'REVERSE'},
   },
 };
