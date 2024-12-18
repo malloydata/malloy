@@ -389,7 +389,7 @@ const sequence: OverloadedDefinitionBlueprint = {
 const trino_reverse: DefinitionBlueprint = {
   takes: {'str': 'string'},
   returns: 'string',
-  impl: {sql: 'REVERSE(CAST ${str} AS VARCHAR)'},
+  impl: {sql: 'REVERSE(CAST(${str} AS VARCHAR))'},
 };
 
 export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
@@ -540,7 +540,8 @@ const reverse: OverloadedDefinitionBlueprint = {
     impl: {function: 'REVERSE'},
   },
   ngirts: {
-    takes: {'str_v': 'string'},
+    takes: {'str_v': T},
+    generic: {'T': ['string', 'null']},
     returns: 'string',
     impl: {function: 'REVERSE'},
   },
