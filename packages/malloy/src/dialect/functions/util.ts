@@ -745,8 +745,8 @@ export function wrapDef(
 ): DefinitionBlueprintMap {
   const generic: {[name: string]: TypeDescElementBlueprintOrNamedGeneric[]} =
     {};
-  for (const argVal of Object.values(takes)) {
-    for (const genericRef of findGenerics(argVal)) {
+  for (const argType of Object.values(takes)) {
+    for (const genericRef of findGenerics(argType)) {
       generic[genericRef.generic] = ['any'];
     }
   }
