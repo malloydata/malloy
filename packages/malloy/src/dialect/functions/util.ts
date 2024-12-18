@@ -743,11 +743,13 @@ export function wrapDef(
   takes: Record<string, TypeDescBlueprint>,
   returns: TypeDescBlueprint
 ): DefinitionBlueprintMap {
+  let anyGenerics = false;
   const generic: {[name: string]: TypeDescElementBlueprintOrNamedGeneric[]} =
     {};
   for (const argType of Object.values(takes)) {
     for (const genericRef of findGenerics(argType)) {
       generic[genericRef.generic] = ['any'];
+      anyGenerics = true;
     }
   }
   const newDef: DefinitionBlueprint = {
@@ -755,10 +757,8 @@ export function wrapDef(
     returns,
     impl: {function: name.toUpperCase()},
   };
-  // avoids constructing an array just to test the length
-  for (const _atLeastOneGeneric in generic) {
+  if (anyGenerics) {
     newDef.generic = generic;
-    break;
   }
   return {[name]: newDef};
 }
