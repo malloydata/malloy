@@ -219,8 +219,8 @@ describe.each(runtimes.runtimeList)(
         or_agg is bitwise_or_agg(n1)
         xor_agg is bitwise_xor_agg(n1)
       }`).malloyResultMatches(runtime, {
-        and_agg: 33552351,
-        or_agg: 4166,
+        and_agg: 4166,
+        or_agg: 33552351,
         xor_agg: 28922591,
       });
     });

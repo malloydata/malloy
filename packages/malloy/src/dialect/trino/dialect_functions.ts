@@ -17,61 +17,11 @@ const T: TypeDescBlueprint = {generic: 'T'};
 
 // Aggregate functions:
 
-// TODO: Approx percentile can be called with a third argument; we probably
-// want to implement that at some point
-// In Presto, this is an "error" parameter between 0 and 1
-// In Trino, this is a "weight" parameter between 1 and 99
-const approx_percentile: DefinitionBlueprint = {
-  takes: {'value': 'number', 'percentage': 'number'},
-  returns: {measure: 'number'},
-  impl: {
-    function: 'APPROX_PERCENTILE',
-  },
-};
-
 const arbitrary: DefinitionBlueprint = {
   generic: {'T': ['string', 'number', 'date', 'timestamp', 'boolean', 'json']},
   takes: {'value': {dimension: T}},
   returns: {measure: T},
   impl: {function: 'ARBITRARY'},
-};
-
-const bitwise_and_agg: DefinitionBlueprint = {
-  takes: {'value': {dimension: 'number'}},
-  returns: {measure: 'number'},
-  impl: {function: 'BITWISE_OR_AGG'},
-};
-
-const bitwise_or_agg: DefinitionBlueprint = {
-  takes: {'value': {dimension: 'number'}},
-  returns: {measure: 'number'},
-  impl: {function: 'BITWISE_AND_AGG'},
-};
-
-const bitwise_xor_agg: DefinitionBlueprint = {
-  takes: {'value': {dimension: 'number'}},
-  returns: {measure: 'number'},
-  impl: {function: 'BITWISE_XOR_AGG'},
-};
-
-const bool_and: DefinitionBlueprint = {
-  takes: {'value': {dimension: 'boolean'}},
-  returns: {measure: 'boolean'},
-  impl: {function: 'BOOL_AND'},
-};
-
-const bool_or: DefinitionBlueprint = {
-  takes: {'value': {dimension: 'boolean'}},
-  returns: {measure: 'boolean'},
-  impl: {function: 'BOOL_OR'},
-};
-
-const corr: DefinitionBlueprint = {
-  takes: {'y': {dimension: 'number'}, 'x': {dimension: 'number'}},
-  returns: {measure: 'number'},
-  impl: {
-    sql: 'CORR(${y}, ${x})',
-  },
 };
 
 const count_approx: DefinitionBlueprint = {
@@ -204,37 +154,7 @@ const string_agg_distinct: OverloadedDefinitionBlueprint = {
   },
 };
 
-const variance: DefinitionBlueprint = {
-  takes: {'value': {dimension: 'number'}},
-  returns: {measure: 'number'},
-  impl: {function: 'VARIANCE'},
-};
-
 // Scalar functions
-
-const bitwise_and: DefinitionBlueprint = {
-  takes: {'val1': 'number', 'val2': 'number'},
-  returns: 'number',
-  impl: {
-    function: 'BITWISE_AND',
-  },
-};
-
-const bitwise_or: DefinitionBlueprint = {
-  takes: {'val1': 'number', 'val2': 'number'},
-  returns: 'number',
-  impl: {
-    function: 'BITWISE_OR',
-  },
-};
-
-const date_format: DefinitionBlueprint = {
-  takes: {'ts_val': 'timestamp', 'format': 'string'},
-  returns: 'string',
-  impl: {
-    function: 'DATE_FORMAT',
-  },
-};
 
 const date_parse: DefinitionBlueprint = {
   takes: {'ts_string': 'string', 'format': 'string'},
@@ -242,12 +162,6 @@ const date_parse: DefinitionBlueprint = {
   impl: {
     sql: 'DATE_PARSE(${ts_string}, ${format})',
   },
-};
-
-const from_unixtime: DefinitionBlueprint = {
-  takes: {'unixtime': 'number'},
-  returns: 'timestamp',
-  impl: {function: 'FROM_UNIXTIME'},
 };
 
 // TODO: support Presto JSON types
@@ -289,58 +203,10 @@ const regexp_replace: OverloadedDefinitionBlueprint = {
   },
 };
 
-const to_unixtime: DefinitionBlueprint = {
-  takes: {'ts_val': 'timestamp'},
-  returns: 'number',
-  impl: {function: 'TO_UNIXTIME'},
-};
-
 const percent_rank: DefinitionBlueprint = {
   takes: {},
   returns: {calculation: 'number'},
   impl: {function: 'PERCENT_RANK', needsWindowOrderBy: true},
-};
-
-const url_extract_fragment: DefinitionBlueprint = {
-  takes: {'url': 'string'},
-  returns: 'string',
-  impl: {function: 'URL_EXTRACT_FRAGMENT'},
-};
-
-const url_extract_host: DefinitionBlueprint = {
-  takes: {'url': 'string'},
-  returns: 'string',
-  impl: {function: 'URL_EXTRACT_HOST'},
-};
-
-const url_extract_parameter: DefinitionBlueprint = {
-  takes: {'url': 'string', 'parameter': 'string'},
-  returns: 'string',
-  impl: {function: 'URL_EXTRACT_PARAMETER'},
-};
-
-const url_extract_path: DefinitionBlueprint = {
-  takes: {'url': 'string'},
-  returns: 'string',
-  impl: {function: 'URL_EXTRACT_PATH'},
-};
-
-const url_extract_port: DefinitionBlueprint = {
-  takes: {'url': 'string'},
-  returns: 'number',
-  impl: {function: 'URL_EXTRACT_PORT'},
-};
-
-const url_extract_protocol: DefinitionBlueprint = {
-  takes: {'url': 'string'},
-  returns: 'string',
-  impl: {function: 'URL_EXTRACT_PROTOCOL'},
-};
-
-const url_extract_query: DefinitionBlueprint = {
-  takes: {'url': 'string'},
-  returns: 'string',
-  impl: {function: 'URL_EXTRACT_QUERY'},
 };
 
 const array_join: OverloadedDefinitionBlueprint = {
@@ -393,16 +259,50 @@ const string_reverse: DefinitionBlueprint = {
 };
 
 export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
+  // string functions
   reverse: string_reverse,
+
   // aggregate functions
-  approx_percentile,
+  // TODO: Approx percentile can be called with a third argument; we probably
+  // want to implement that at some point
+  // In Presto, this is an "error" parameter between 0 and 1
+  // In Trino, this is a "weight" parameter between 1 and 99
+  ...wrapDef(
+    'approx_percentile',
+    {'value': 'number', 'percentage': 'number'},
+    {measure: 'number'}
+  ),
   arbitrary,
-  bitwise_and_agg,
-  bitwise_or_agg,
-  bitwise_xor_agg,
-  bool_and,
-  bool_or,
-  corr,
+  ...wrapDef(
+    'bitwise_and_agg',
+    {'value': {dimension: 'number'}},
+    {measure: 'number'}
+  ),
+  ...wrapDef(
+    'bitwise_or_agg',
+    {'value': {dimension: 'number'}},
+    {measure: 'number'}
+  ),
+  ...wrapDef(
+    'bitwise_xor_agg',
+    {'value': {dimension: 'number'}},
+    {measure: 'number'}
+  ),
+  ...wrapDef(
+    'bool_and',
+    {'value': {dimension: 'boolean'}},
+    {measure: 'boolean'}
+  ),
+  ...wrapDef(
+    'bool_or',
+    {'value': {dimension: 'boolean'}},
+    {measure: 'boolean'}
+  ),
+  ...wrapDef(
+    'corr',
+    {'y': {dimension: 'number'}, 'x': {dimension: 'number'}},
+    {measure: 'number'}
+  ),
   count_approx,
   hll_accumulate,
   hll_combine,
@@ -410,33 +310,41 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   min_by,
   string_agg,
   string_agg_distinct,
-  variance,
+  ...wrapDef('variance', {'n': 'number'}, {measure: 'number'}),
 
   // scalar functions
-  bitwise_and,
-  bitwise_or,
-  date_format,
+  ...wrapDef('bitwise_and', {'val1': 'number', 'val2': 'number'}, 'number'),
+  ...wrapDef('bitwise_or', {'val1': 'number', 'val2': 'number'}, 'number'),
+  ...wrapDef(
+    'date_format',
+    {'ts_val': 'timestamp', 'format': 'string'},
+    'string'
+  ),
   date_parse,
-  from_unixtime,
+  ...wrapDef('from_unixtime', {'unixtime': 'number'}, 'timestamp'),
   hll_estimate,
   hll_export,
   hll_import,
   json_extract_scalar,
   regexp_like,
   regexp_replace,
-  to_unixtime,
-  url_extract_fragment,
-  url_extract_host,
-  url_extract_parameter,
-  url_extract_path,
-  url_extract_port,
-  url_extract_protocol,
-  url_extract_query,
+  ...wrapDef('to_unixtime', {'ts_val': 'timestamp'}, 'number'),
+  ...wrapDef('url_extract_fragment', {'url': 'string'}, 'string'),
+  ...wrapDef('url_extract_host', {'url': 'string'}, 'string'),
+  ...wrapDef(
+    'url_extract_parameter',
+    {'url': 'string', 'parameter': 'string'},
+    'string'
+  ),
+  ...wrapDef('url_extract_path', {'url': 'string'}, 'string'),
+  ...wrapDef('url_extract_port', {'url': 'string'}, 'number'),
+  ...wrapDef('url_extract_protocol', {'url': 'string'}, 'string'),
+  ...wrapDef('url_extract_query', {'url': 'string'}, 'string'),
 
   // window functions
   percent_rank,
 
-  // array functions except those below
+  // array function
   array_join,
   sequence,
   ...wrapDef('array_distinct', {'x': {array: T}}, {array: T}),
