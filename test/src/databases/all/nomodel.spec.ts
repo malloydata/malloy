@@ -7,7 +7,7 @@
  * (the "Software"), to deal in the Software without restriction,
  * including without limitation the rights to use, copy, modify, merge,
  * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
+ * and to permit persons to whom the Software is furnished to do so
  * subject to the following conditions:
  *
  * The above copyright notice and this permission notice shall be
@@ -25,14 +25,14 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 
 import {RuntimeList, allDatabases} from '../../runtimes';
-import {databasesFromEnvironmentOr, testIf} from '../../util';
+import {databasesFromEnvironmentOr} from '../../util';
 import '../../util/db-jest-matchers';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 // No prebuilt shared model, each test is complete.  Makes debugging easier.
 function rootDbPath(databaseName: string) {
-  return databaseName === 'bigquery' ? 'malloy-data.' : '';
+  return databaseName === 'bigquery' ? 'malloydata-org.' : '';
 }
 
 // TODO: Figure out how to generalize this.
@@ -46,6 +46,14 @@ function getSplitFunction(db: string) {
       `string_to_array(${column}, '${splitChar}')`,
     'duckdb_wasm': (column: string, splitChar: string) =>
       `string_to_array(${column}, '${splitChar}')`,
+    'motherduck': (column: string, splitChar: string) =>
+      `string_to_array(${column}, '${splitChar}')`,
+    'snowflake': (column: string, splitChar: string) =>
+      `split(${column}, '${splitChar}')`,
+    'trino': (column: string, splitChar: string) =>
+      `split(${column}, '${splitChar}')`,
+    'presto': (column: string, splitChar: string) =>
+      `split(${column}, '${splitChar}')`,
   }[db];
 }
 
@@ -54,11 +62,30 @@ afterAll(async () => {
 });
 
 runtimes.runtimeMap.forEach((runtime, databaseName) => {
+  const q = runtime.getQuoter();
+  // Issue #1824
+  it.when(runtime.dialect.nativeBoolean)(
+    `not boolean field with null - ${databaseName}`,
+    async () => {
+      await expect(`
+      run: ${databaseName}.sql("""
+          SELECT
+            CASE WHEN 1=1 THEN NULL ELSE false END as ${q`n`}
+      """) -> {
+        select:
+          is_true is not n
+      }
+    `).malloyResultMatches(runtime, {
+        is_true: true,
+      });
+    }
+  );
+
   // Issue: #1284
   it(`parenthesize output field values - ${databaseName}`, async () => {
     await expect(`
       run: ${databaseName}.table('malloytest.aircraft') -> {
-        group_by: r is 1
+        group_by: r is 1.0
 
         calculate:
           zero is 1 - rank()
@@ -191,7 +218,9 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     // symmetric aggregate are needed on both sides of the join
     // Check the row count and that sums on each side work properly.
     await expect(`
-      source: a is ${databaseName}.table('malloytest.state_facts')
+      source: a is ${databaseName}.table('malloytest.state_facts') extend {
+        dimension: x is airport_count/10000
+      }
       source: f is a extend {
         join_cross: a
       }
@@ -202,11 +231,15 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           right_count is a.count()
           left_sum is airport_count.sum()
           right_sum is a.airport_count.sum()
+          left_small_sum is round(x.sum() * 10000)
+          right_small_sum is round(x.sum() * 10000)
       }
     `).malloyResultMatches(runtime, {
       row_count: 51 * 51,
       left_sum: 19701,
       right_sum: 19701,
+      left_small_sum: 19701,
+      right_small_sum: 19701,
     });
   });
 
@@ -223,7 +256,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       }
       run: f->{
         aggregate:
-          row_count is count(concat(state,a.r))
+          row_count is count(concat(state,a.r::string))
           left_sum is airport_count.sum()
           right_sum is a.r.sum()
           sum_sum is sum(airport_count + a.r)
@@ -385,11 +418,13 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     });
   });
 
-  it(`join full - ${databaseName}`, async () => {
-    // a cross join produces a Many to Many result.
-    // symmetric aggregate are needed on both sides of the join
-    // Check the row count and that sums on each side work properly.
-    await expect(`
+  it.when(runtime.dialect.supportsFullJoin)(
+    `join full - ${databaseName}`,
+    async () => {
+      // a cross join produces a Many to Many result.
+      // symmetric aggregate are needed on both sides of the join
+      // Check the row count and that sums on each side work properly.
+      await expect(`
       ${matrixModel}
       run: ac_states -> {
         extend: {
@@ -403,12 +438,13 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
 
       }
       `).malloyResultMatches(runtime, {
-      ac_count: 49,
-      ac_sum: 21336,
-      am_count: 12,
-      am_sum: 4139,
-    });
-  });
+        ac_count: 49,
+        ac_sum: 21336,
+        am_count: 12,
+        am_sum: 4139,
+      });
+    }
+  );
 
   it(`leafy count - ${databaseName}`, async () => {
     // in a joined table when the joined is leafiest
@@ -436,6 +472,29 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     });
   });
 
+  it(`nest/unnest -basic - ${databaseName}`, async () => {
+    // in a joined table when the joined is leafiest
+    //  we need to make sure we don't count rows that
+    //  don't match the join.
+    await expect(`
+      run: ${databaseName}.table('malloytest.state_facts') -> {
+        group_by: state
+        aggregate: c is airport_count.sum()
+        nest: p is {
+          group_by: popular_name
+          aggregate: d is airport_count.sum()
+        }
+      } -> {
+        group_by: state, c
+        aggregate: p.d.sum()
+      }
+      `).malloyResultMatches(runtime, {
+      state: 'TX',
+      c: 1845,
+      d: 1845,
+    });
+  });
+
   it(`count at root should not use distinct key - ${databaseName}`, async () => {
     const q = await runtime
       .loadQuery(
@@ -449,11 +508,13 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(q.sql.toLowerCase()).not.toContain('distinct');
   });
 
-  it(`leafy nested count - ${databaseName}`, async () => {
-    // in a joined table when the joined is leafiest
-    //  we need to make sure we don't count rows that
-    //  don't match the join.
-    await expect(`
+  it.when(runtime.dialect.supportsLeftJoinUnnest)(
+    `leafy nested count - ${databaseName}`,
+    async () => {
+      // in a joined table when the joined is leafiest
+      //  we need to make sure we don't count rows that
+      //  don't match the join.
+      await expect(`
       source: am_states is ${databaseName}.table('malloytest.state_facts') -> {
         group_by: state,popular_name
         where: state ~ r'^(A|M)'
@@ -465,7 +526,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       source: states is ${databaseName}.table('malloytest.state_facts') extend {
         join_many: am_states on state=am_states.state
       }
-
       run: states -> {
         where: state = 'CA'
         group_by:
@@ -476,12 +536,13 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           root_count is count()
       }
       `).malloyResultMatches(runtime, {
-      leafy_count: 0,
-      root_count: 1,
-      state: 'CA',
-      am_state: null,
-    });
-  });
+        leafy_count: 0,
+        root_count: 1,
+        state: 'CA',
+        am_state: null,
+      });
+    }
+  );
 
   it(`basic index - ${databaseName}`, async () => {
     // Make sure basic indexing works.
@@ -499,8 +560,8 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     });
   });
 
-  testIf(runtime.supportsNesting)(
-    `number as null- ${databaseName}`,
+  test.when(runtime.supportsNesting)(
+    'number as null 2 - ${databaseName}',
     async () => {
       // a cross join produces a Many to Many result.
       // symmetric aggregate are needed on both sides of the join
@@ -517,11 +578,21 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     }
   );
 
+  it(`sql block- ${databaseName}`, async () => {
+    await expect(`
+      source: one is ${databaseName}.sql("""
+        SELECT 2 as ${q`a`}
+      """)
+      run: one -> {
+        select: a
+      }`).malloyResultMatches(runtime, {a: 2});
+  });
+
   // average should only include non-null values in the denominator
   it(`avg ignore null- ${databaseName}`, async () => {
     await expect(`
       source: one is ${databaseName}.sql("""
-        SELECT 2 as a
+        SELECT 2 as ${q`a`}
         UNION ALL SELECT 4
         UNION ALL SELECT null
       """)
@@ -559,8 +630,8 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       }`).malloyResultMatches(runtime, {births_per_100k: 9742});
   });
 
-  testIf(runtime.supportsNesting)(
-    `ungrouped top level with nested  - ${databaseName}`,
+  test.when(runtime.supportsNesting)(
+    'ungrouped top level with nested  - ${databaseName}',
     async () => {
       await expect(`
       run: ${databaseName}.table('malloytest.state_facts') extend {
@@ -593,10 +664,11 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     ]);
   });
 
-  testIf(runtime.supportsNesting)(
-    `ungrouped nested with no grouping above - ${databaseName}`,
+  test.when(runtime.supportsNesting)(
+    'ungrouped nested with no grouping above - ${databaseName}',
     async () => {
       await expect(`
+        // # test.debug
         run: ${databaseName}.table('malloytest.state_facts') extend {
           measure: total_births is births.sum()
           measure: births_per_100k is floor(total_births/ all(total_births) * 100000)
@@ -610,8 +682,8 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     }
   );
 
-  testIf(runtime.supportsNesting)(
-    `ungrouped - partial grouping - ${databaseName}`,
+  test.when(runtime.supportsNesting)(
+    'ungrouped - partial grouping - ${databaseName}',
     async () => {
       await expect(`
         run: ${databaseName}.table('malloytest.airports') extend {
@@ -644,8 +716,8 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     }
   );
 
-  testIf(runtime.supportsNesting)(
-    `ungrouped - all nested - ${databaseName}`,
+  test.when(runtime.supportsNesting)(
+    'ungrouped - all nested - ${databaseName}',
     async () => {
       await expect(`
         run: ${databaseName}.table('malloytest.airports') extend {
@@ -673,8 +745,8 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     }
   );
 
-  testIf(runtime.supportsNesting)(
-    `ungrouped nested  - ${databaseName}`,
+  test.when(runtime.supportsNesting)(
+    'ungrouped nested  - ${databaseName}',
     async () => {
       await expect(`
         run: ${databaseName}.table('malloytest.state_facts') extend {
@@ -691,8 +763,8 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     }
   );
 
-  testIf(runtime.supportsNesting)(
-    `ungrouped nested expression  - ${databaseName}`,
+  test.when(runtime.supportsNesting)(
+    'ungrouped nested expression  - ${databaseName}',
     async () => {
       await expect(`
         run: ${databaseName}.table('malloytest.state_facts') extend {
@@ -709,8 +781,8 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     }
   );
 
-  testIf(runtime.supportsNesting)(
-    `ungrouped nested group by float  - ${databaseName}`,
+  test.when(runtime.supportsNesting)(
+    'ungrouped nested group by float  - ${databaseName}',
     async () => {
       await expect(`
         run: ${databaseName}.table('malloytest.state_facts') extend {
@@ -729,21 +801,21 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
 
   it(`run simple sql - ${databaseName}`, async () => {
     const result = await runtime
-      .loadQuery('run: conn.sql("select 1 as one")')
+      .loadQuery(`run: conn.sql('select 1 as ${q`one`}')`)
       .run();
     expect(result.data.value[0]['one']).toBe(1);
   });
 
   it(`simple sql is exactly as written - ${databaseName}`, async () => {
     const result = await runtime
-      .loadQuery('run: conn.sql("select 1 as one")')
+      .loadQuery(`run: conn.sql('select 1 as ${q`one`}')`)
       .run();
     if (databaseName === 'postgres') {
       expect(result.sql).toBe(`WITH __stage0 AS (
-  select 1 as one)
+  select 1 as ${q`one`})
 SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
     } else {
-      expect(result.sql).toBe('select 1 as one');
+      expect(result.sql).toBe(`select 1 as ${q`one`}`);
     }
     expect(result.resultExplore).not.toBeUndefined();
   });
@@ -752,7 +824,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
     const result = await runtime
       .loadQuery(
         `
-        query: q is conn.sql("select 1 as one")
+        query: q is conn.sql('select 1 as ${q`one`}')
         source: s is q
         run: s -> { select: * }
       `
@@ -791,8 +863,8 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
     });
   });
 
-  testIf(runtime.supportsNesting)(
-    `all with parameters - nest  - ${databaseName}`,
+  test.when(runtime.supportsNesting)(
+    'all with parameters - nest  - ${databaseName}',
     async () => {
       await expect(`
         run: ${databaseName}.table('malloytest.state_facts') extend {
@@ -816,21 +888,23 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
     }
   );
 
-  testIf(runtime.supportsNesting)(
-    `single value to udf - ${databaseName}`,
-    async () => {
-      await expect(`
+  test.when(
+    runtime.supportsNesting && runtime.dialect.supportsPipelinesInViews
+  )(`single value to udf - ${databaseName}`, async () => {
+    await expect(`
         run: ${databaseName}.table('malloytest.state_facts') extend {
           view: fun is {
             aggregate: t is count()
           } -> { select: t1 is t+1 }
         } -> { nest: fun }
       `).malloyResultMatches(runtime, {'fun.t1': 52});
-    }
-  );
+  });
 
-  testIf(runtime.supportsNesting)(
+  test.when(
+    runtime.supportsNesting && runtime.dialect.supportsPipelinesInViews
+  )(
     `Multi value to udf - ${databaseName}`,
+
     async () => {
       await expect(`
         run: ${databaseName}.table('malloytest.state_facts') extend {
@@ -839,16 +913,17 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
             aggregate: t is count()
           } -> { select: t1 is t+1 }
         } -> {
+          group_by: two is 2
           nest: fun
         }
       `).malloyResultMatches(runtime, {'fun.t1': 52});
     }
   );
 
-  testIf(runtime.supportsNesting)(
-    `Multi value to udf group by - ${databaseName}`,
-    async () => {
-      await expect(`
+  test.when(
+    runtime.supportsNesting && runtime.dialect.supportsPipelinesInViews
+  )(`Multi value to udf group by - ${databaseName}`, async () => {
+    await expect(`
         run: ${databaseName}.table('malloytest.state_facts') extend {
           view: fun is {
             group_by: one is 1
@@ -858,27 +933,36 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
           nest: fun
         }
       `).malloyResultMatches(runtime, {'fun.t1': 52});
-    }
-  );
+  });
 
-  const sql1234 = `${databaseName}.sql("SELECT 1 as a, 2 as b UNION ALL SELECT 3, 4")`;
+  const sql1234 = `${databaseName}.sql('SELECT 1 as ${q`a`}, 2 as ${q`b`} UNION ALL SELECT 3, 4')`;
 
   it(`sql as source - ${databaseName}`, async () => {
     await expect(`
-      run: ${sql1234} -> { select: a }
+      run: ${sql1234} -> {
+        select: a
+        order_by: 1
+      }
     `).malloyResultMatches(runtime, {a: 1});
   });
 
+  // have to add an order_by: otherwise it isn't deterministic.
   it(`sql directly - ${databaseName}`, async () => {
-    await expect(`run: ${sql1234}`).malloyResultMatches(runtime, {a: 1});
+    await expect(
+      `run: ${sql1234}->{
+        select: *
+        order_by: a asc
+      }`
+    ).malloyResultMatches(runtime, {a: 1});
   });
 
+  // weirdly '*' must be the first thing in the select list in MySQL
   it(`sql with turducken- ${databaseName}`, async () => {
     const turduckenQuery = `
       run: ${databaseName}.sql("""
         SELECT
-          'something' as something,
           *
+          , 'something' as SOMETHING
         FROM %{
           ${databaseName}.table('malloytest.state_facts') -> {
             group_by: popular_name
@@ -887,6 +971,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
         } AS by_name_query
       """) -> {
           select: *; where: popular_name = 'Emma'
+          order_by: state_count DESC
         }`;
     await expect(turduckenQuery).malloyResultMatches(runtime, {state_count: 6});
   });
@@ -897,6 +982,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
       run: ${sql1234} -> {
         extend: { dimension: c is a + 1 }
         select: c
+        order_by: 1
       }
     `).malloyResultMatches(runtime, {c: 2});
   });
@@ -907,6 +993,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
         view: bar is {
           extend: { dimension: c is a + 1 }
           select: c
+          order_by: 1
         }
       } -> bar
     `).malloyResultMatches(runtime, {c: 2});
@@ -918,10 +1005,12 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
         view: bar is {
           extend: {dimension: c is a + 1}
           select: c
+          order_by: 1
         }
         view: baz is bar +  {
           extend: {dimension: d is c + 1}
           select: d
+          order_by: 1
         }
       } -> baz
     `).malloyResultMatches(runtime, {d: 3});
@@ -930,7 +1019,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
   it(`regexp match- ${databaseName}`, async () => {
     await expect(`
       run: ${databaseName}.sql("""
-        SELECT 'hello mom' as a, 'cheese tastes good' as b
+        SELECT 'hello mom' as ${q`a`}, 'cheese tastes good' as ${q`b`}
         UNION ALL SELECT 'lloyd is a bozo', 'michael likes poetry'
       """) -> {
         aggregate: llo is count() {where: a ~ r'llo'}
@@ -942,21 +1031,25 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
   it(`substitution precedence- ${databaseName}`, async () => {
     await expect(`
       run: ${databaseName}.sql("""
-        SELECT 5 as a, 2 as b
+        SELECT 5 as ${q`a`}, 2 as ${q`b`}
         UNION ALL SELECT 3, 4
       """) -> {
         extend: {dimension:  c is b + 4}
-        select: x is a * c
+        select: x is  a * c
+        order_by: x desc
       }
       `).malloyResultMatches(runtime, {x: 30});
   });
 
-  it(`array unnest - ${databaseName}`, async () => {
-    await expect(`
+  test.when(runtime.supportsNesting && runtime.dialect.supportsArraysInData)(
+    `array unnest - ${databaseName}`,
+    async () => {
+      const splitFN = getSplitFunction(databaseName);
+      await expect(`
       run: ${databaseName}.sql("""
         SELECT
-          city,
-          ${getSplitFunction(databaseName)!('city', ' ')} as words
+          ${q`city`},
+          ${splitFN!(q`city`, ' ')} as ${q`words`}
         FROM ${rootDbPath(databaseName)}malloytest.aircraft
       """) -> {
         where: words.value != null
@@ -964,30 +1057,89 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
         aggregate: c is count()
       }
       `).malloyResultMatches(runtime, {c: 145});
-  });
+    }
+  );
 
   // make sure we can count the total number of elements when fanning out.
-  it(`array unnest x 2 - ${databaseName}`, async () => {
-    await expect(`
+  test.when(runtime.supportsNesting && runtime.dialect.supportsArraysInData)(
+    `array unnest x 2 - ${databaseName}`,
+    async () => {
+      const splitFN = getSplitFunction(databaseName);
+      await expect(`
       run: ${databaseName}.sql("""
         SELECT
-          city,
-          ${getSplitFunction(databaseName)!('city', ' ')} as words,
-          ${getSplitFunction(databaseName)!('city', 'A')} as abreak
+          ${q`city`},
+          ${splitFN!(q`city`, ' ')} as ${q`words`},
+          ${splitFN!(q`city`, 'A')} as ${q`abreak`}
         FROM ${rootDbPath(databaseName)}malloytest.aircraft
-        WHERE city IS NOT null
+        WHERE ${q`city`} IS NOT null
       """) -> {
         aggregate:
           b is count()
           c is words.count()
           a is abreak.count()
       }`).malloyResultMatches(runtime, {b: 3552, c: 4586, a: 6601});
+    }
+  );
+
+  test.when(
+    runtime.supportsNesting &&
+      runtime.dialect.readsNestedData &&
+      databaseName !== 'presto' &&
+      databaseName !== 'trino'
+  )(`can unnest simply from file - ${databaseName}`, async () => {
+    await expect(`
+        source: ga_sample is ${databaseName}.table('malloytest.ga_sample')
+        run: ga_sample -> {
+          aggregate:
+            h is hits.count()
+        }
+      `).malloyResultMatches(runtime, {h: 13233});
   });
 
-  testIf(runtime.supportsNesting)(`nest null - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+  test.when(
+    runtime.supportsNesting &&
+      runtime.dialect.readsNestedData &&
+      databaseName !== 'presto' &&
+      databaseName !== 'trino'
+  )(`can unnest from file - ${databaseName}`, async () => {
+    await expect(`
+        source: ga_sample is ${databaseName}.table('malloytest.ga_sample')
+        run: ga_sample -> {
+          where: hits.product.productBrand != null
+          group_by:
+            hits.product.productBrand
+            hits.product.productSKU
+          aggregate:
+            h is hits.count()
+            c is count()
+            p is hits.product.count()
+        }
+      `).malloyResultMatches(runtime, {h: 1192, c: 681, p: 1192});
+  });
+
+  test.when(
+    runtime.supportsNesting &&
+      runtime.dialect.readsNestedData &&
+      databaseName !== 'presto' &&
+      databaseName !== 'trino'
+  )(`can double unnest - ${databaseName}`, async () => {
+    await expect(`
+        source: ga_sample is ${databaseName}.table('malloytest.ga_sample')
+
+        run: ga_sample -> {
+          aggregate:
+            p is floor(hits.product.productPrice.avg())
+        }
+      `).malloyResultMatches(runtime, {p: 23001594});
+  });
+
+  test.when(runtime.supportsNesting)(
+    'nest null - ${databaseName}',
+    async () => {
+      const result = await runtime
+        .loadQuery(
+          `
         run: ${databaseName}.table('malloytest.airports') -> {
           where: faa_region = null
           group_by: faa_region
@@ -1005,17 +1157,97 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
           }
         }
       `
+        )
+        .run();
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const d: any = result.data.toObject();
+      expect(d[0]['by_state']).not.toBe(null);
+      expect(d[0]['by_state1']).not.toBe(null);
+    }
+  );
+
+  test.when(
+    runtime.supportsNesting && runtime.dialect.supportsPipelinesInViews
+  )(`Nested pipelines sort properly - ${databaseName}`, async () => {
+    const doTrace = false; // Have to turn this on to debug this test
+    const result = await runtime
+      .loadQuery(
+        `
+        source: state_facts is ${databaseName}.table('malloytest.state_facts')
+        extend {
+            view: base_view is {
+                group_by: state
+                aggregate: airports is sum(airport_count)
+                order_by: airports asc
+            }
+            ->
+            {
+                group_by: state
+                aggregate: airports.sum()
+                order_by: airports
+            }
+            view: base_view2 is {
+                group_by: state
+                aggregate: aircrafts is sum(aircraft_count)
+                order_by: aircrafts asc
+            }
+            ->
+            {
+                group_by: state
+                aggregate: aircrafts.sum()
+                order_by: aircrafts
+            }
+            view: base_view3 is {
+                group_by: state
+                aggregate: aircrafts is sum(aircraft_count)
+            }
+            -> {
+              group_by: state
+              aggregate: aircrafts.sum()
+            }
+            view: sort_issue is {
+                where: popular_name ~ r'I'
+                group_by: popular_name
+                nest: base_view
+                nest: base_view2
+                nest: base_view3
+            }
+        }
+        run: state_facts -> sort_issue
+      `
       )
       .run();
-
+    if (doTrace) console.log(result.sql);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const d: any = result.data.toObject();
-    expect(d[0]['by_state']).not.toBe(null);
-    expect(d[0]['by_state1']).not.toBe(null);
+    const baseView: {state: string; airports: number}[] = d[0]['base_view'];
+    if (doTrace) console.log(baseView);
+    let baseMax = baseView[0];
+    for (const b of baseView) {
+      expect(b.airports).toBeGreaterThanOrEqual(baseMax.airports);
+      baseMax = b;
+    }
+
+    const baseView2: {state: string; aircrafts: number}[] = d[0]['base_view2'];
+    if (doTrace) console.log(baseView2);
+    let baseMax2 = baseView2[0];
+    for (const b of baseView2) {
+      expect(b.aircrafts).toBeGreaterThanOrEqual(baseMax2.aircrafts);
+      baseMax2 = b;
+    }
+    // implicit order by
+    const baseView3: {state: string; aircrafts: number}[] = d[0]['base_view3'];
+    if (doTrace) console.log(baseView3);
+    let baseMax3 = baseView3[0];
+    for (const b of baseView3) {
+      expect(b.aircrafts).toBeLessThanOrEqual(baseMax3.aircrafts);
+      baseMax3 = b;
+    }
   });
 
-  testIf(runtime.supportsNesting)(
-    `number as null- ${databaseName}`,
+  test.when(runtime.supportsNesting)(
+    'number as null- ${databaseName}',
     async () => {
       const result = await runtime
         .loadQuery(
@@ -1120,20 +1352,29 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
     const back = '\\';
     test('backslash quote', async () => {
       await expect(`
-        run: ${databaseName}.sql("SELECT 1") -> {
+        run: ${databaseName}.sql('SELECT 1 as one') -> {
           select: tick is '${back}${tick}'
         }
       `).malloyResultMatches(runtime, {tick});
     });
     test('backslash backslash', async () => {
       await expect(`
-        run: ${databaseName}.sql("SELECT 1") -> {
+        run: ${databaseName}.sql("SELECT 1 as one") -> {
           select: back is '${back}${back}'
         }
       `).malloyResultMatches(runtime, {back});
     });
 
-    testIf(runtime.supportsNesting)('spaces in names', async () => {
+    test('source with reserve word', async () => {
+      await expect(`
+        source: create is ${databaseName}.table('malloytest.state_facts')
+        run: create -> {
+          aggregate: c is count()
+        }
+      `).malloyResultMatches(runtime, {c: 51});
+    });
+
+    test.when(runtime.supportsNesting)('spaces in names', async () => {
       await expect(`
         source: \`space race\` is ${databaseName}.table('malloytest.state_facts') extend {
           join_one: \`j space\` is ${databaseName}.table('malloytest.state_facts') on \`j space\`.state=state

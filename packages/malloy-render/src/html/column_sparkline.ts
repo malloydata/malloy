@@ -26,10 +26,10 @@ import * as lite from 'vega-lite';
 import {getColorScale} from './utils';
 import {DEFAULT_SPEC} from './vega_spec';
 import {HTMLBarChartRenderer} from './bar_chart';
-import {RendererFactory} from '../renderer_factory';
-import {ColumnSparkLineRenderOptions, StyleDefaults} from '../data_styles';
-import {RendererOptions} from '../renderer_types';
-import {Renderer} from '../renderer';
+import {RendererFactory} from './renderer_factory';
+import {ColumnSparkLineRenderOptions, StyleDefaults} from './data_styles';
+import {RendererOptions} from './renderer_types';
+import {Renderer} from './renderer';
 
 export class HTMLColumnSparkLineRenderer extends HTMLBarChartRenderer {
   override getSize(): {height: number; width: number} {
@@ -41,7 +41,7 @@ export class HTMLColumnSparkLineRenderer extends HTMLBarChartRenderer {
   }
 
   override getVegaLiteSpec(data: DataArray): lite.TopLevelSpec {
-    const fields = data.field.intrinsicFields;
+    const fields = data.field.allFields;
     const xField = fields[0];
     const yField = fields[1];
     const colorField = fields[2];

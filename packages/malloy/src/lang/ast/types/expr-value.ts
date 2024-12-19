@@ -21,7 +21,113 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {
+  Expr,
+  ExpressionValueTypeDef,
+  TemporalTypeDef,
+  TimestampUnit,
+  maxOfExpressionTypes,
+  mergeEvalSpaces,
+} from '../../../model';
+import {
+  emptyCompositeFieldUsage,
+  mergeCompositeFieldUsage,
+} from '../../../model/composite_source_utils';
 import {ExprResult} from './expr-result';
 import {TimeResult} from './time-result';
 
 export type ExprValue = ExprResult | TimeResult;
+
+export function computedExprValue({
+  value,
+  dataType,
+  from,
+}: {
+  value: Expr;
+  dataType: ExpressionValueTypeDef;
+  from: ExprValue[];
+}): ExprValue {
+  return {
+    ...dataType,
+    value,
+    expressionType: maxOfExpressionTypes(from.map(e => e.expressionType)),
+    evalSpace: mergeEvalSpaces(...from.map(e => e.evalSpace)),
+    compositeFieldUsage: mergeCompositeFieldUsage(
+      ...from.map(e => e.compositeFieldUsage)
+    ),
+  };
+}
+
+export function computedTimeResult({
+  value,
+  dataType,
+  from,
+  timeframe,
+}: {
+  value: Expr;
+  dataType: TemporalTypeDef;
+  timeframe?: TimestampUnit;
+  from: ExprValue[];
+}): TimeResult {
+  const xv = computedExprValue({value, dataType, from});
+  const y: TimeResult = {
+    ...dataType,
+    expressionType: xv.expressionType,
+    evalSpace: xv.evalSpace,
+    value: xv.value,
+    compositeFieldUsage: mergeCompositeFieldUsage(
+      ...from.map(e => e.compositeFieldUsage)
+    ),
+  };
+  if (timeframe) {
+    y.timeframe = timeframe;
+  }
+  return y;
+}
+
+export function computedErrorExprValue({
+  dataType,
+  from,
+  error,
+}: {
+  error: string;
+  dataType?: ExpressionValueTypeDef;
+  from: ExprValue[];
+}): ExprValue {
+  return computedExprValue({
+    dataType: dataType ?? {type: 'error'},
+    value: {node: 'error', message: error},
+    from,
+  });
+}
+
+export function literalExprValue(options: {
+  value: Expr;
+  dataType: ExpressionValueTypeDef;
+}): ExprValue {
+  // Makes literal, output, scalar because from is empty
+  return computedExprValue({...options, from: []});
+}
+
+export function literalTimeResult({
+  value,
+  dataType,
+  timeframe,
+}: {
+  value: Expr;
+  dataType: TemporalTypeDef;
+  timeframe?: TimestampUnit;
+}): TimeResult {
+  const xv = computedExprValue({value, dataType, from: []});
+  const y: TimeResult = {
+    ...dataType,
+    expressionType: xv.expressionType,
+    evalSpace: xv.evalSpace,
+    value: xv.value,
+    compositeFieldUsage: emptyCompositeFieldUsage(),
+  };
+  if (timeframe) {
+    y.timeframe = timeframe;
+  }
+  return y;
+}

@@ -21,10 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Parameter, TypeDesc} from '../../../model/malloy_types';
+import {FieldDefType, Parameter, TypeDesc} from '../../../model/malloy_types';
 
 import {SpaceEntry} from './space-entry';
 import {HasParameter} from '../parameters/has-parameter';
+import * as TDU from '../typedesc-utils';
+import {emptyCompositeFieldUsage} from '../../../model/composite_source_utils';
 
 export abstract class SpaceParam extends SpaceEntry {
   abstract parameter(): Parameter;
@@ -36,15 +38,24 @@ export class AbstractParameter extends SpaceParam {
     super();
   }
 
+  _parameter: Parameter | undefined = undefined;
   parameter(): Parameter {
-    return this.astParam.parameter();
+    if (this._parameter !== undefined) return this._parameter;
+    this._parameter = this.astParam.parameter();
+    return this._parameter;
   }
 
   typeDesc(): TypeDesc {
-    const type = this.astParam.type || 'error';
-    // TODO Not sure whether params are considered "input space". It seems like they
-    // could be input or constant, depending on usage.
-    return {dataType: type, expressionType: 'scalar', evalSpace: 'input'};
+    return {
+      ...TDU.atomicDef(this.parameter()),
+      expressionType: 'scalar',
+      evalSpace: 'constant',
+      compositeFieldUsage: emptyCompositeFieldUsage(),
+    };
+  }
+
+  entryType(): FieldDefType {
+    return this.parameter().type;
   }
 }
 
@@ -59,11 +70,16 @@ export class DefinedParameter extends SpaceParam {
 
   typeDesc(): TypeDesc {
     return {
-      dataType: this.paramDef.type,
+      ...TDU.atomicDef(this.paramDef),
       expressionType: 'scalar',
       // TODO Not sure whether params are considered "input space". It seems like they
       // could be input or constant, depending on usage (same as above).
       evalSpace: 'input',
+      compositeFieldUsage: emptyCompositeFieldUsage(),
     };
+  }
+
+  entryType(): FieldDefType {
+    return this.paramDef.type;
   }
 }

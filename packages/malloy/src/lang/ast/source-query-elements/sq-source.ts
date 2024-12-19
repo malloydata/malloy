@@ -53,7 +53,10 @@ export class SQSource extends SourceQueryElement {
       this.has({rawQuery});
       return rawQuery;
     } else {
-      this.sqLog('This source cannot be used as a query');
+      this.sqLog(
+        'invalid-source-as-query',
+        'This source cannot be used as a query'
+      );
     }
   }
 }

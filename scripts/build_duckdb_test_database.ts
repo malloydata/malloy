@@ -21,8 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/* eslint-disable no-console */
-
 // duckdb node bindings do not come with Typescript types, require is required
 // https://github.com/duckdb/duckdb/tree/master/tools/nodejs
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -87,6 +85,7 @@ console.log(`Creating database at ${databasePath}`);
     await run(
       `CREATE TABLE malloytest.ga_sample AS SELECT * FROM parquet_scan('${cwd}ga_sample.parquet')`
     );
+    console.log('Finished populating database with data from parqeut files');
   } catch (e) {
     console.log(e);
   }

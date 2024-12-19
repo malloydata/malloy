@@ -1,0 +1,11 @@
+source: products is duckdb.table("static/data/products.parquet") extend {
+
+  #(story)
+  # scatter_chart
+  view: scatter_plot is {
+    aggregate:
+      avg_retail is retail_price.avg()
+      avg_cost is retail_price.avg()
+    group_by: brand
+  }
+}

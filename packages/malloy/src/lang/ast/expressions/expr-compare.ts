@@ -21,42 +21,95 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FT} from '../fragtype-utils';
-import {Comparison} from '../types/comparison';
-import {ExprValue} from '../types/expr-value';
+import * as TDU from '../typedesc-utils';
+import {
+  BinaryMalloyOperator,
+  CompareMalloyOperator,
+  EqualityMalloyOperator,
+} from '../types/binary_operators';
+import {computedExprValue, ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
-import {isGranularResult} from '../types/granular-result';
 import {BinaryBoolean} from './binary-boolean';
-import {ExprGranularTime} from './expr-granular-time';
 
 const compareTypes = {
-  '~': [FT.stringT],
-  '!~': [FT.stringT],
-  '<': [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
-  '<=': [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
-  '=': [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
-  '!=': [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
-  '>=': [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
-  '>': [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
+  '~': [TDU.stringT],
+  '!~': [TDU.stringT],
+  '<': [TDU.numberT, TDU.stringT, TDU.dateT, TDU.timestampT],
+  '<=': [TDU.numberT, TDU.stringT, TDU.dateT, TDU.timestampT],
+  '=': [TDU.numberT, TDU.stringT, TDU.dateT, TDU.timestampT],
+  '!=': [TDU.numberT, TDU.stringT, TDU.dateT, TDU.timestampT],
+  '>=': [TDU.numberT, TDU.stringT, TDU.dateT, TDU.timestampT],
+  '>': [TDU.numberT, TDU.stringT, TDU.dateT, TDU.timestampT],
 };
 
-export class ExprCompare extends BinaryBoolean<Comparison> {
+export class ExprCompare extends BinaryBoolean<CompareMalloyOperator> {
   elementType = 'a<=>b';
-  constructor(left: ExpressionDef, op: Comparison, right: ExpressionDef) {
+  constructor(
+    left: ExpressionDef,
+    op: CompareMalloyOperator,
+    right: ExpressionDef
+  ) {
     super(left, op, right);
     this.legalChildTypes = compareTypes[op];
   }
 
   getExpression(fs: FieldSpace): ExprValue {
-    if (!this.right.granular()) {
-      const rhs = this.right.requestExpression(fs);
-      if (rhs && isGranularResult(rhs)) {
-        const newRight = new ExprGranularTime(this.right, rhs.timeframe, false);
-        return newRight.apply(fs, this.op, this.left);
-      }
-    }
-
     return this.right.apply(fs, this.op, this.left);
+  }
+}
+
+/**
+ * The parser makes equality nodes, an application of ?
+ * makes an ExprCompare node with operator =. This is how
+ * the special rules for how apply works for equality
+ * nodes gets implemented.
+ */
+export class ExprEquality extends ExprCompare {
+  elementType = 'a~=b';
+  constructor(
+    left: ExpressionDef,
+    op: EqualityMalloyOperator,
+    right: ExpressionDef
+  ) {
+    super(left, op, right);
+  }
+
+  getExpression(fs: FieldSpace): ExprValue {
+    return this.right.apply(fs, this.op, this.left, true);
+  }
+
+  apply(
+    fs: FieldSpace,
+    op: BinaryMalloyOperator,
+    left: ExpressionDef
+  ): ExprValue {
+    return super.apply(fs, op, left, true);
+  }
+}
+
+export class ExprLegacyIn extends ExpressionDef {
+  elementType = 'in';
+  constructor(
+    readonly expr: ExpressionDef,
+    readonly notIn: boolean,
+    readonly choices: ExpressionDef[]
+  ) {
+    super();
+    this.has({expr, choices});
+  }
+
+  getExpression(fs: FieldSpace): ExprValue {
+    const lookFor = this.expr.getExpression(fs);
+    const oneOf = this.choices.map(e => e.getExpression(fs));
+    return computedExprValue({
+      dataType: {type: 'boolean'},
+      value: {
+        node: 'in',
+        not: this.notIn,
+        kids: {e: lookFor.value, oneOf: oneOf.map(v => v.value)},
+      },
+      from: [lookFor, ...oneOf],
+    });
   }
 }

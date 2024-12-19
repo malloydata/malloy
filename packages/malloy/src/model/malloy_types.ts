@@ -1,5 +1,6 @@
 /*
  * Copyright 2023 Google LLC
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files
@@ -23,29 +24,385 @@
 
 // clang-format off
 
-interface ParamBase {
+/**
+ * Field computations are compiled into an expression tree of "Expr"
+ * type nodes. Each node is one of these three interfaces. The
+ * final type "Expr" is a union type of all known nodes, so
+ * that you can use "if (expr.node === 'nodeType')" instead of
+ * having to write discriminator functions for every node type.
+ */
+export interface ExprLeaf {
+  node: string;
+  typeDef?: AtomicTypeDef;
+  sql?: string;
+}
+export interface ExprE extends ExprLeaf {
+  e: Expr;
+}
+export interface ExprOptionalE extends ExprLeaf {
+  e?: Expr;
+}
+
+export interface ExprWithKids extends ExprLeaf {
+  kids: Record<string, Expr | Expr[]>;
+}
+export type AnyExpr = ExprE | ExprOptionalE | ExprWithKids | ExprLeaf;
+
+export function exprHasKids(e: AnyExpr): e is ExprWithKids {
+  return 'kids' in e;
+}
+export function exprHasE(e: AnyExpr): e is ExprE {
+  return 'e' in e;
+}
+export function exprIsLeaf(e: AnyExpr) {
+  return !(exprHasKids(e) || exprHasE(e));
+}
+
+export type Expr =
+  | BinaryExpr
+  | UnaryExpr
+  | FunctionCallNode
+  | OutputFieldNode
+  | FilterCondition
+  | FilteredExpr
+  | AggregateExpr
+  | EmptyExpr
+  | UngroupNode
+  | FunctionParameterNode
+  | SpreadExpr
+  | AggregateOrderByNode
+  | AggregateLimitNode
+  | FieldnameNode
+  | SourceReferenceNode
+  | ParameterNode
+  | NowNode
+  | MeasureTimeExpr
+  | TimeExtractExpr
+  | TimeDeltaExpr
+  | TimeTruncExpr
+  | TimeLiteralNode
+  | TypecastExpr
+  | RegexMatchExpr
+  | RegexLiteralNode
+  | StringLiteralNode
+  | NumberLiteralNode
+  | BooleanLiteralNode
+  | RecordLiteralNode
+  | ArrayLiteralNode
+  | FunctionOrderBy
+  | GenericSQLExpr
+  | NullNode
+  | CaseExpr
+  | InCompareExpr
+  | CompositeFieldExpr
+  | ErrorNode;
+
+export type BinaryOperator =
+  | '+'
+  | '-'
+  | '*'
+  | '%'
+  | '/'
+  | 'and'
+  | 'or'
+  | '='
+  | '!='
+  | '>'
+  | '<'
+  | '>='
+  | '<='
+  | 'coalesce'
+  | 'like'
+  | '!like';
+export interface BinaryExpr extends ExprWithKids {
+  node: BinaryOperator;
+  kids: {left: Expr; right: Expr};
+}
+
+export type UnaryOperator = '()' | 'not' | 'unary-' | 'is-null' | 'is-not-null';
+export interface UnaryExpr extends ExprE {
+  node: UnaryOperator;
+  e: Expr;
+}
+
+export interface FunctionCallNode extends ExprWithKids {
+  node: 'function_call';
   name: string;
-  type: AtomicFieldType;
+  overload: FunctionOverloadDef;
+  expressionType: ExpressionType;
+  kids: {args: Expr[]; orderBy?: FunctionOrderBy[]};
+  limit?: number;
+  // List of non-dotted output field references
+  partitionBy?: string[];
+  structPath?: string[];
 }
+
+export interface OutputFieldNode extends ExprLeaf {
+  node: 'outputField';
+  name: string;
+}
+
+export interface FilterCondition extends ExprE {
+  node: 'filterCondition';
+  code: string;
+  expressionType: ExpressionType;
+  compositeFieldUsage?: CompositeFieldUsage;
+}
+
+export interface FilteredExpr extends ExprWithKids {
+  node: 'filteredExpr';
+  kids: {e: Expr; filterList: FilterCondition[]};
+}
+
+export type AggregateFunctionType =
+  | 'sum'
+  | 'avg'
+  | 'count'
+  | 'distinct'
+  | 'max'
+  | 'min';
+
+export interface AggregateExpr extends ExprE {
+  node: 'aggregate';
+  function: AggregateFunctionType;
+  structPath?: string[];
+}
+export function isAsymmetricExpr(f: Expr): f is AggregateExpr {
+  return (
+    f.node === 'aggregate' &&
+    ['sum', 'avg', 'count', 'distinct'].includes(f.function)
+  );
+}
+
+export interface EmptyExpr extends ExprLeaf {
+  node: '';
+}
+
+export interface UngroupNode extends ExprE {
+  node: 'all' | 'exclude';
+  fields?: string[];
+}
+
+export interface FunctionParameterNode extends ExprLeaf {
+  node: 'function_parameter';
+  name: string;
+}
+
+export interface AggregateOrderByNode extends ExprLeaf {
+  node: 'aggregate_order_by';
+  prefix?: string;
+  suffix?: string;
+}
+
+export interface AggregateLimitNode extends ExprLeaf {
+  node: 'aggregate_limit';
+}
+
+export interface SpreadExpr extends ExprE {
+  node: 'spread';
+  prefix: string | undefined;
+  suffix: string | undefined;
+}
+
+export interface FieldnameNode extends ExprLeaf {
+  node: 'field';
+  path: string[];
+}
+
+export interface SourceReferenceNode extends ExprLeaf {
+  node: 'source-reference';
+  path?: string[];
+}
+
+export interface ParameterNode extends ExprLeaf {
+  node: 'parameter';
+  path: string[];
+}
+
+export interface NowNode extends ExprLeaf {
+  node: 'now';
+}
+
+interface HasTimeValue {
+  typeDef: TemporalTypeDef;
+}
+type TimeExpr = Expr & HasTimeValue;
+/**
+ * Return true if this node can be turned into a temporal node by simply
+ * appending a time type to the typedef. The type systsem makes this hard
+ * because while it is theoretically possible to pass an array typed Expr,
+ * the reality is that type checking will stop this from ever happening.
+ *
+ * The list here is the list of Expr types which have a fixed typeDef,
+ * which are not of time type.
+ *
+ * If !canMakeTemporal then mkTemporal is going to return something
+ * which will probably error at SQL generation time, so don't do that.
+ */
+function canMakeTemporal(
+  e: Expr
+): e is Exclude<Expr, ArrayLiteralNode | RecordLiteralNode> {
+  return e.node !== 'arrayLiteral' && e.node !== 'recordLiteral';
+}
+export function mkTemporal(
+  e: Expr,
+  timeType: TemporalTypeDef | TemporalFieldType
+): TimeExpr {
+  const ttd = typeof timeType === 'string' ? {type: timeType} : timeType;
+  if (canMakeTemporal(e)) {
+    return {...e, typeDef: {...ttd}};
+  }
+  return e as TimeExpr;
+}
+
+export interface MeasureTimeExpr extends ExprWithKids {
+  node: 'timeDiff';
+  units: TimestampUnit;
+  kids: {left: TimeExpr; right: TimeExpr};
+}
+
+export interface TimeDeltaExpr extends ExprWithKids {
+  node: 'delta';
+  kids: {base: TimeExpr; delta: Expr};
+  op: '+' | '-';
+  units: TimestampUnit;
+}
+
+export interface TimeTruncExpr extends ExprE {
+  node: 'trunc';
+  e: TimeExpr;
+  units: TimestampUnit;
+}
+
+export interface TimeExtractExpr extends ExprE {
+  node: 'extract';
+  e: TimeExpr;
+  units: ExtractUnit;
+}
+
+export interface MalloyTypecastExpr extends ExprE {
+  node: 'cast';
+  safe: boolean;
+  e: Expr;
+  dstType: LeafAtomicTypeDef;
+  srcType?: LeafAtomicTypeDef;
+}
+
+interface RawTypeCastExpr extends ExprE {
+  node: 'cast';
+  safe: boolean;
+  e: Expr;
+  dstSQLType: string;
+  srcType?: LeafAtomicTypeDef;
+}
+export type TypecastExpr = MalloyTypecastExpr | RawTypeCastExpr;
+export function isRawCast(te: TypecastExpr): te is RawTypeCastExpr {
+  return 'dstSQLType' in te;
+}
+
+export interface RegexMatchExpr extends ExprWithKids {
+  node: 'regexpMatch';
+  kids: {expr: Expr; regex: Expr};
+}
+
+export interface TimeLiteralNode extends ExprLeaf {
+  node: 'timeLiteral';
+  literal: string;
+  typeDef: TemporalTypeDef;
+  timezone?: string;
+}
+
+export interface StringLiteralNode extends ExprLeaf {
+  node: 'stringLiteral';
+  literal: string;
+}
+
+export interface RegexLiteralNode extends ExprLeaf {
+  node: 'regexpLiteral';
+  literal: string;
+}
+
+export interface NumberLiteralNode extends ExprLeaf {
+  node: 'numberLiteral';
+  literal: string;
+}
+
+export interface BooleanLiteralNode extends ExprLeaf {
+  node: 'true' | 'false';
+}
+
+export interface RecordLiteralNode extends ExprWithKids {
+  node: 'recordLiteral';
+  kids: Record<string, Expr>;
+  typeDef: RecordTypeDef;
+}
+
+export interface ArrayLiteralNode extends ExprWithKids {
+  node: 'arrayLiteral';
+  kids: {values: Expr[]};
+  typeDef: ArrayTypeDef;
+}
+
+export interface ErrorNode extends ExprLeaf {
+  node: 'error';
+  message?: string;
+}
+
+export interface GenericSQLExpr extends ExprWithKids {
+  node: 'genericSQLExpr';
+  kids: {args: Expr[]};
+  src: string[];
+}
+
+export interface NullNode extends ExprLeaf {
+  node: 'null';
+}
+
+export interface CaseExpr extends ExprWithKids {
+  node: 'case';
+  kids: {
+    caseValue?: Expr;
+    caseWhen: Expr[];
+    caseThen: Expr[];
+    caseElse?: Expr;
+  };
+}
+
+export interface CompositeFieldExpr extends ExprLeaf {
+  node: 'compositeField';
+}
+
+export interface InCompareExpr extends ExprWithKids {
+  node: 'in';
+  not: boolean;
+  kids: {e: Expr; oneOf: Expr[]};
+}
+
+export type ExpressionType =
+  | 'scalar'
+  | 'aggregate'
+  | 'scalar_analytic'
+  | 'aggregate_analytic'
+  | 'ungrouped_aggregate';
+
+export interface Expression {
+  e?: Expr;
+  compositeFieldUsage?: CompositeFieldUsage; // TODO maybe make required?
+  expressionType?: ExpressionType;
+  code?: string;
+}
+
 type ConstantExpr = Expr;
-type Condition = Expr;
-interface ParamCondition extends ParamBase {
-  condition: Condition | null;
-  type: CastType;
-}
-interface ParamValue extends ParamBase {
+
+interface ParameterInfo {
+  name: string;
   value: ConstantExpr | null;
-  constant: boolean;
 }
-export type Parameter = ParamCondition | ParamValue;
-export function isValueParameter(p: Parameter): p is ParamValue {
-  return (p as ParamValue).value !== undefined;
-}
-export function isConditionParameter(p: Parameter): p is ParamCondition {
-  return (p as ParamCondition).condition !== undefined;
-}
+export type Parameter = AtomicTypeDef & ParameterInfo;
+export type Argument = Parameter;
+
 export function paramHasValue(p: Parameter): boolean {
-  return isValueParameter(p) || p.condition !== null;
+  return p.value !== null;
 }
 
 export interface DocumentRange {
@@ -86,7 +443,7 @@ export interface DocumentJoinReference extends DocumentReferenceBase {
 
 export interface DocumentSQLBlockReference extends DocumentReferenceBase {
   type: 'sqlBlockReference';
-  definition: SQLBlockStructDef;
+  definition: SQLSourceDef;
 }
 
 export interface DocumentQueryReference extends DocumentReferenceBase {
@@ -117,10 +474,6 @@ export interface AliasedName {
   as?: string;
 }
 
-export interface TypedObject {
-  type: string;
-}
-
 /** all named objects have a type an a name (optionally aliased) */
 export interface NamedObject extends AliasedName, HasLocation {
   type: string;
@@ -131,14 +484,18 @@ export interface ResultMetadataDef {
   sourceField: string;
   sourceExpression?: string;
   sourceClasses: string[];
-  filterList?: FilterExpression[];
+  filterList?: FilterCondition[];
   fieldKind: 'measure' | 'dimension' | 'struct';
+  referenceId?: string;
 }
 
-// struct specific metadta
-export interface ResultStructMetadataDef extends ResultMetadataDef {
-  limit?: number;
+export interface Ordered {
   orderBy?: OrderBy[];
+  defaultOrderBy?: boolean;
+}
+// struct specific metadta
+export interface ResultStructMetadataDef extends ResultMetadataDef, Ordered {
+  limit?: number;
 }
 
 export interface ResultMetadata {
@@ -147,337 +504,6 @@ export interface ResultMetadata {
 
 export interface ResultStructMetadata {
   resultMetadata?: ResultStructMetadataDef;
-}
-
-export interface OutputFieldFragment {
-  type: 'outputField';
-  name: string;
-}
-
-export function isOutputFieldFragment(f: Fragment): f is OutputFieldFragment {
-  return (f as OutputFieldFragment)?.type === 'outputField';
-}
-
-export interface FilterFragment {
-  type: 'filterExpression';
-  filterList: FilterExpression[];
-  e: Expr;
-}
-
-export function isFilterFragment(f: Fragment): f is FilterFragment {
-  return (f as FilterFragment)?.type === 'filterExpression';
-}
-
-export function isDialectFragment(f: Fragment): f is DialectFragment {
-  return (f as DialectFragment)?.type === 'dialect';
-}
-
-export type AggregateFunctionType =
-  | 'sum'
-  | 'avg'
-  | 'count'
-  | 'count_distinct'
-  | 'max'
-  | 'min';
-
-export interface AggregateFragment {
-  type: 'aggregate';
-  function: AggregateFunctionType;
-  e: Expr;
-  structPath?: string[];
-}
-export function isAggregateFragment(f: Fragment): f is AggregateFragment {
-  return (f as AggregateFragment)?.type === 'aggregate';
-}
-export function isAsymmetricFragment(f: Fragment): f is AggregateFragment {
-  return isAggregateFragment(f) && ['sum', 'avg', 'count'].includes(f.function);
-}
-
-export interface UngroupFragment {
-  type: 'all' | 'exclude';
-  e: Expr;
-  fields?: string[];
-}
-
-export function isUngroupFragment(f: Fragment): f is UngroupFragment {
-  const ftype = (f as UngroupFragment)?.type;
-  return ftype === 'all' || ftype === 'exclude';
-}
-
-export interface FunctionParameterFragment {
-  type: 'function_parameter';
-  name: string;
-}
-
-export function isFunctionParameterFragment(
-  f: Fragment
-): f is FunctionParameterFragment {
-  return (f as FunctionParameterFragment)?.type === 'function_parameter';
-}
-
-export interface AggregateOrderByFragment {
-  type: 'aggregate_order_by';
-}
-
-export interface AggregateLimitFragment {
-  type: 'aggregate_limit';
-}
-
-export interface FunctionCallFragment {
-  type: 'function_call';
-  name: string;
-  overload: FunctionOverloadDef;
-  expressionType: ExpressionType;
-  args: Expr[];
-  orderBy?: FunctionOrderBy[];
-  limit?: number;
-  // List of non-dotted output field references
-  partitionBy?: string[];
-  structPath?: string[];
-}
-
-export function isFunctionCallFragment(f: Fragment): f is FunctionCallFragment {
-  return (f as FunctionCallFragment)?.type === 'function_call';
-}
-
-export interface SQLExpressionFragment {
-  type: 'sql_expression';
-  e: Expr;
-}
-
-export function isSQLExpressionFragment(
-  f: Fragment
-): f is SQLExpressionFragment {
-  return (f as SQLExpressionFragment)?.type === 'sql_expression';
-}
-
-export interface SpreadFragment {
-  type: 'spread';
-  e: Expr;
-}
-
-export function isSpreadFragment(f: Fragment): f is SpreadFragment {
-  return (f as SpreadFragment)?.type === 'spread';
-}
-
-export interface FieldFragment {
-  type: 'field';
-  path: string[];
-}
-export function isFieldFragment(f: Fragment): f is FieldFragment {
-  return (f as FieldFragment)?.type === 'field';
-}
-
-export interface SqlStringFragment {
-  type: 'sql-string';
-  e: Expr;
-}
-export function isSqlStringFragment(f: Fragment): f is SqlStringFragment {
-  return (f as SqlStringFragment)?.type === 'sql-string';
-}
-
-export interface SourceReferenceFragment {
-  type: 'source-reference';
-  path?: string[];
-}
-export function isSourceReferenceFragment(
-  f: Fragment
-): f is SourceReferenceFragment {
-  return (f as SourceReferenceFragment)?.type === 'source-reference';
-}
-
-export interface ParameterFragment {
-  type: 'parameter';
-  path: string[];
-}
-export function isParameterFragment(f: Fragment): f is ParameterFragment {
-  return (f as ParameterFragment)?.type === 'parameter';
-}
-
-export interface ApplyValueFragment {
-  type: 'applyVal';
-}
-export function isApplyValue(f: Fragment): f is ApplyValueFragment {
-  return (f as ApplyValueFragment)?.type === 'applyVal';
-}
-
-export interface ApplyFragment {
-  type: 'apply';
-  value: Expr;
-  to: Expr;
-}
-export function isApplyFragment(f: Fragment): f is ApplyFragment {
-  return (f as ApplyFragment)?.type === 'apply';
-}
-
-interface DialectFragmentBase {
-  type: 'dialect';
-  function: string;
-}
-
-export interface NowFragment extends DialectFragmentBase {
-  function: 'now';
-}
-
-export interface TimeDiffFragment extends DialectFragmentBase {
-  function: 'timeDiff';
-  units: TimestampUnit;
-  left: TimeValue;
-  right: TimeValue;
-}
-
-export interface TimeDeltaFragment extends DialectFragmentBase {
-  function: 'delta';
-  base: TimeValue;
-  op: '+' | '-';
-  delta: Expr;
-  units: TimestampUnit;
-}
-
-export interface TimeTruncFragment extends DialectFragmentBase {
-  function: 'trunc';
-  expr: TimeValue;
-  units: TimestampUnit;
-}
-
-export interface TimeExtractFragment extends DialectFragmentBase {
-  function: 'extract';
-  expr: TimeValue;
-  units: ExtractUnit;
-}
-
-export interface TypecastFragment extends DialectFragmentBase {
-  function: 'cast';
-  safe: boolean;
-  expr: Expr;
-  dstType: CastType | {raw: string};
-  srcType?: AtomicFieldType;
-}
-
-export interface RegexpMatchFragment extends DialectFragmentBase {
-  function: 'regexpMatch';
-  expr: Expr;
-  regexp: Expr;
-}
-
-export interface DivFragment extends DialectFragmentBase {
-  function: 'div';
-  numerator: Expr;
-  denominator: Expr;
-}
-
-export interface TimeLiteralFragment extends DialectFragmentBase {
-  function: 'timeLiteral';
-  literal: string;
-  literalType: TimeFieldType;
-  timezone?: string;
-}
-
-export interface StringLiteralFragment extends DialectFragmentBase {
-  function: 'stringLiteral';
-  literal: string;
-}
-
-export interface RegexpLiteralFragment extends DialectFragmentBase {
-  function: 'regexpLiteral';
-  literal: string;
-}
-
-export interface NumberLiteralFragment extends DialectFragmentBase {
-  function: 'numberLiteral';
-  literal: string;
-}
-
-export type DialectFragment =
-  | DivFragment
-  | TimeLiteralFragment
-  | NowFragment
-  | TimeDeltaFragment
-  | TimeDiffFragment
-  | TimeTruncFragment
-  | TypecastFragment
-  | TimeExtractFragment
-  | StringLiteralFragment
-  | RegexpLiteralFragment
-  | NumberLiteralFragment
-  | RegexpMatchFragment;
-
-export type Fragment =
-  | string
-  | ApplyFragment
-  | ApplyValueFragment
-  | FieldFragment
-  | SourceReferenceFragment
-  | SqlStringFragment
-  | ParameterFragment
-  | FilterFragment
-  | OutputFieldFragment
-  | AggregateFragment
-  | UngroupFragment
-  | DialectFragment
-  | FunctionParameterFragment
-  | AggregateOrderByFragment
-  | AggregateLimitFragment
-  | FunctionCallFragment
-  | SQLExpressionFragment
-  | SpreadFragment;
-
-export type Expr = Fragment[];
-
-export interface TypedValue {
-  value: Expr;
-  valueType: AtomicFieldType;
-}
-export interface TimeValue extends TypedValue {
-  valueType: TimeFieldType;
-}
-
-type TagElement = Expr | string;
-
-/**
- * Return an Expr based on the string template, subsittutions can be
- * either strings, or other Exprs.
-
- * ```
- * units = "inches"
- * len: Expr = [ "something", "returning", "a length "]
- * computeExpr = mkExpr`MEASURE(${len} in ${units})`;
- * ```
- */
-export function mkExpr(
-  src: TemplateStringsArray,
-  ...exprs: TagElement[]
-): Expr {
-  const ret: Expr = [];
-  let index;
-  for (index = 0; index < exprs.length; index++) {
-    const el = exprs[index];
-    if (src[index].length > 0) {
-      ret.push(src[index]);
-    }
-    if (typeof el === 'string') {
-      ret.push(el);
-    } else {
-      ret.push(...el);
-    }
-  }
-  if (src[index].length > 0) {
-    ret.push(src[index]);
-  }
-  return ret;
-}
-
-export type ExpressionType =
-  | 'scalar'
-  | 'aggregate'
-  | 'scalar_analytic'
-  | 'aggregate_analytic'
-  | 'ungrouped_aggregate';
-
-export interface Expression {
-  e?: Expr;
-  expressionType?: ExpressionType;
-  code?: string;
 }
 
 export function expressionIsScalar(e: ExpressionType | undefined): boolean {
@@ -567,18 +593,32 @@ export function maxOfExpressionTypes(types: ExpressionType[]): ExpressionType {
   return types.reduce(maxExpressionType, 'scalar');
 }
 
-type HasExpression = FieldDef & Expression & {e: Expr};
-/**  Grants access to the expression property of a FieldDef */
-export function hasExpression(f: FieldDef): f is HasExpression {
-  return (f as Expression).e !== undefined;
+/**  Grants access to the expression properties of a FieldDef */
+export interface HasExpression {
+  e: Expr;
+}
+export function hasExpression<T extends FieldDef>(
+  f: T
+): f is T & Expression & HasExpression {
+  return 'e' in f;
 }
 
-export type TimeFieldType = 'date' | 'timestamp';
-export function isTimeFieldType(s: string): s is TimeFieldType {
+export type TemporalFieldType = 'date' | 'timestamp';
+export function isTemporalType(s: string): s is TemporalFieldType {
   return s === 'date' || s === 'timestamp';
 }
-export type CastType = 'string' | 'number' | TimeFieldType | 'boolean' | 'json';
-export type AtomicFieldType = CastType | 'unsupported' | 'error';
+export type CastType =
+  | 'string'
+  | 'number'
+  | TemporalFieldType
+  | 'boolean'
+  | 'json';
+export type AtomicFieldType =
+  | CastType
+  | 'sql native'
+  | 'record'
+  | 'array'
+  | 'error';
 export function isAtomicFieldType(s: string): s is AtomicFieldType {
   return [
     'string',
@@ -587,10 +627,18 @@ export function isAtomicFieldType(s: string): s is AtomicFieldType {
     'timestamp',
     'boolean',
     'json',
-    'unsupported',
+    'sql native',
+    'record',
+    'array',
     'error',
   ].includes(s);
 }
+export function canOrderBy(s: string) {
+  return ['string', 'number', 'date', 'boolean', 'date', 'timestamp'].includes(
+    s
+  );
+}
+
 export function isCastType(s: string): s is CastType {
   return ['string', 'number', 'date', 'timestamp', 'boolean', 'json'].includes(
     s
@@ -602,85 +650,226 @@ export function isCastType(s: string): s is CastType {
  * value could be an expression, and this is one of the objects
  * which might have an annotation.
  */
-export interface FieldAtomicDef
-  extends NamedObject,
-    Expression,
-    ResultMetadata {
-  type: AtomicFieldType;
+
+export interface FieldBase extends NamedObject, Expression, ResultMetadata {
   annotation?: Annotation;
+  accessModifier?: NonDefaultAccessModifierLabel | undefined;
 }
 
 // this field definition represents something in the database.
-export function FieldIsIntrinsic(f: FieldDef): boolean {
-  if (isAtomicFieldType(f.type) && !hasExpression(f)) {
-    return true;
-  } else if (
-    f.type === 'struct' &&
-    (f.structSource.type === 'inline' || f.structSource.type === 'nested')
-  ) {
-    return true;
-  } else {
-    return false;
-  }
+export function fieldIsIntrinsic(f: FieldDef): boolean {
+  return isAtomicFieldType(f.type) && !hasExpression(f);
 }
 
-export interface FieldStringTypeDef {
+export interface StringTypeDef {
   type: 'string';
   bucketFilter?: string;
   bucketOther?: string;
 }
+export type StringFieldDef = StringTypeDef & AtomicFieldDef;
 
-/** Scalar String Field */
-export interface FieldStringDef extends FieldAtomicDef, FieldStringTypeDef {
-  type: 'string';
-}
-
-export interface FieldNumberTypeDef {
+export interface NumberTypeDef {
   type: 'number';
   numberType?: 'integer' | 'float';
 }
+export type NumberFieldDef = NumberTypeDef & AtomicFieldDef;
 
-/** Scalar Numeric String Field */
-export interface FieldNumberDef extends FieldAtomicDef, FieldNumberTypeDef {
-  type: 'number';
-}
-
-export interface FieldBooleanTypeDef {
+export interface BooleanTypeDef {
   type: 'boolean';
 }
+export type BooleanFieldDef = BooleanTypeDef & AtomicFieldDef;
 
-/** Scalar Boolean Field */
-export interface FieldBooleanDef extends FieldAtomicDef, FieldBooleanTypeDef {
-  type: 'boolean';
-}
-
-export interface FieldJSONTypeDef {
+export interface JSONTypeDef {
   type: 'json';
 }
+export type JSONFieldDef = JSONTypeDef & AtomicFieldDef;
 
-/** Scalar JSON Field */
-export interface FieldJSONDef extends FieldAtomicDef, FieldJSONTypeDef {
-  type: 'json';
-}
-
-export interface FieldUnsupportedTypeDef {
-  type: 'unsupported';
+export interface NativeUnsupportedTypeDef {
+  type: 'sql native';
   rawType?: string;
 }
+export type NativeUnsupportedFieldDef = NativeUnsupportedTypeDef &
+  AtomicFieldDef;
 
-/** Scalar unsupported Field */
-export interface FieldUnsupportedDef
-  extends FieldAtomicDef,
-    FieldUnsupportedTypeDef {
-  type: 'unsupported';
+export interface ScalarArrayTypeDef {
+  type: 'array';
+  elementTypeDef: Exclude<AtomicTypeDef, RecordTypeDef>;
+}
+export interface ScalarArrayDef
+  extends ScalarArrayTypeDef,
+    StructDefBase,
+    JoinBase,
+    FieldBase {
+  type: 'array';
+  join: 'many';
 }
 
-export interface FieldErrorTypeDef {
-  type: 'error';
+export function mkFieldDef(atd: AtomicTypeDef, name: string): AtomicFieldDef {
+  if (isScalarArray(atd)) {
+    return mkArrayDef(atd.elementTypeDef, name);
+  }
+  if (isRepeatedRecord(atd)) {
+    const {type, fields, elementTypeDef} = atd;
+    return {type, fields, elementTypeDef, join: 'many', name};
+  }
+  if (atd.type === 'record') {
+    const {type, fields} = atd;
+    return {type, fields, join: 'one', name};
+  }
+  return {...atd, name};
 }
 
-export interface FieldErrorDef extends FieldAtomicDef, FieldErrorTypeDef {
+export function mkArrayDef(ofType: AtomicTypeDef, name: string): ArrayDef {
+  if (ofType.type === 'record') {
+    return {
+      type: 'array',
+      join: 'many',
+      name,
+      elementTypeDef: {type: 'record_element'},
+      fields: ofType.fields,
+    };
+  }
+  const valueEnt = mkFieldDef(ofType, 'value');
+  return {
+    type: 'array',
+    join: 'many',
+    name,
+    elementTypeDef: ofType,
+    fields: [
+      valueEnt,
+      {...valueEnt, name: 'each', e: {node: 'field', path: ['value']}},
+    ],
+  };
+}
+
+export interface RecordTypeDef {
+  type: 'record';
+  fields: FieldDef[];
+}
+export interface RecordDef
+  extends RecordTypeDef,
+    StructDefBase,
+    JoinBase,
+    FieldBase {
+  type: 'record';
+  join: 'one';
+}
+
+// While repeated records are mostly treated like arrays of records,
+// for historical reasons in the IR, a field which is a repeated record
+// and a field which is record both have the record schema in "fields"
+//
+// This is signified by the datatype of a array of records being
+//  {elementType: record_element, fields: [schema]}
+//     instead of
+//  {elementType: record{record schema}}
+//
+// This made it easier to re-factor structdef, however this might make
+// actual record types more difficult, so this might get re-visited
+// when record types are finalized.
+
+export interface RecordElementTypeDef {
+  type: 'record_element';
+}
+
+export interface RepeatedRecordTypeDef {
+  type: 'array';
+  elementTypeDef: RecordElementTypeDef;
+  fields: FieldDef[];
+}
+export interface RepeatedRecordDef
+  extends RepeatedRecordTypeDef,
+    StructDefBase,
+    JoinBase,
+    FieldBase {
+  type: 'array';
+  join: 'many';
+}
+export type ArrayTypeDef = ScalarArrayTypeDef | RepeatedRecordTypeDef;
+export type ArrayDef = ScalarArrayDef | RepeatedRecordDef;
+
+export function isRepeatedRecordFunctionParam(
+  paramT: FunctionParameterTypeDef
+): paramT is RepeatedRecordFunctionParameterTypeDef {
+  return (
+    paramT.type === 'array' && paramT.elementTypeDef.type === 'record_element'
+  );
+}
+
+export function isRepeatedRecord(
+  fd: FieldDef | QueryFieldDef | StructDef | AtomicTypeDef
+): fd is RepeatedRecordTypeDef {
+  return fd.type === 'array' && fd.elementTypeDef.type === 'record_element';
+}
+
+export function isScalarArray(
+  td: AtomicTypeDef | FieldDef | QueryFieldDef | StructDef
+): td is ScalarArrayTypeDef {
+  return td.type === 'array' && td.elementTypeDef.type !== 'record_element';
+}
+
+export interface ErrorTypeDef {
   type: 'error';
+}
+export type ErrorFieldDef = ErrorTypeDef & AtomicFieldDef;
+
+export type JoinType = 'one' | 'many' | 'cross';
+export type JoinRelationship =
+  | 'one_to_one'
+  | 'one_to_many'
+  | 'many_to_one'
+  | 'many_to_many';
+
+export type MatrixOperation = 'left' | 'right' | 'full' | 'inner';
+
+export function isMatrixOperation(x: string): x is MatrixOperation {
+  return ['left', 'right', 'full', 'inner'].includes(x);
+}
+
+export type JoinElementType =
+  | 'composite'
+  | 'table'
+  | 'sql_select'
+  | 'query_source'
+  | 'array'
+  | 'record';
+
+export interface JoinBase {
+  type: JoinElementType;
+  join: JoinType;
+  matrixOperation?: MatrixOperation;
+  onExpression?: Expr;
+  onCompositeFieldUsage?: CompositeFieldUsage;
+  accessModifier?: NonDefaultAccessModifierLabel | undefined;
+}
+
+export type Joinable =
+  | CompositeSourceDef
+  | TableSourceDef
+  | SQLSourceDef
+  | QuerySourceDef
+  | RepeatedRecordDef
+  | RecordDef
+  | ArrayDef;
+export type JoinFieldDef = Joinable & JoinBase;
+
+export function isJoinable(sd: StructDef): sd is Joinable {
+  return [
+    'composite',
+    'table',
+    'sql_select',
+    'query_source',
+    'array',
+    'record',
+  ].includes(sd.type);
+}
+
+export function isJoined(sd: TypedDef): sd is JoinFieldDef {
+  return 'join' in sd;
+}
+
+export function isJoinedSource(sd: StructDef): sd is SourceDef & JoinBase {
+  return isSourceDef(sd) && isJoined(sd);
 }
 
 export type DateUnit = 'day' | 'week' | 'month' | 'quarter' | 'year';
@@ -705,27 +894,17 @@ export enum ValueType {
 
 export type TimeValueType = ValueType.Date | ValueType.Timestamp;
 
-export interface FieldDateTypeDef {
+export interface DateTypeDef {
   type: 'date';
   timeframe?: DateUnit;
 }
+export type DateFieldDef = DateTypeDef & AtomicFieldDef;
 
-/** Scalar Date Field. */
-export interface FieldDateDef extends FieldAtomicDef, FieldDateTypeDef {
-  type: 'date';
-}
-
-export interface FieldTimestampTypeDef {
+export interface TimestampTypeDef {
   type: 'timestamp';
   timeframe?: TimestampUnit;
 }
-
-/** Scalar Timestamp Field */
-export interface FieldTimestampDef
-  extends FieldAtomicDef,
-    FieldTimestampTypeDef {
-  type: 'timestamp';
-}
+export type TimestampFieldDef = TimestampTypeDef & AtomicFieldDef;
 
 /** parameter to order a query */
 export interface OrderBy {
@@ -733,13 +912,13 @@ export interface OrderBy {
   dir?: 'asc' | 'desc';
 }
 
-export interface FunctionOrderByExpression {
-  e: Expr;
+export interface FunctionOrderByExpression extends ExprE {
+  node: 'functionOrderBy';
   dir?: 'asc' | 'desc';
 }
 
-export interface FunctionOrderByDefaultExpression {
-  e: undefined;
+export interface FunctionOrderByDefaultExpression extends ExprLeaf {
+  node: 'functionDefaultOrderBy';
   dir: 'asc' | 'desc';
 }
 
@@ -747,45 +926,20 @@ export type FunctionOrderBy =
   | FunctionOrderByExpression
   | FunctionOrderByDefaultExpression;
 
-export interface ByName {
-  by: 'name';
-  name: string;
-}
-export interface ByExpression {
-  by: 'expression';
-  e: Expr;
-}
-export type By = ByName | ByExpression;
-
-export function isByName(by: By | undefined): by is ByName {
-  if (by === undefined) {
-    return false;
-  }
-  return by.by === 'name';
-}
-
-export function isByExpression(by: By | undefined): by is ByExpression {
-  if (by === undefined) {
-    return false;
-  }
-  return by.by === 'name';
-}
-
 /** reference to a data source */
-export type StructRef = string | StructDef;
-export function refIsStructDef(ref: StructRef): ref is StructDef {
-  return typeof ref !== 'string' && ref.type === 'struct';
+// TODO this should be renamed to `SourceRef`
+export type StructRef = string | SourceDef;
+export function refIsStructDef(ref: StructRef): ref is SourceDef {
+  return typeof ref !== 'string';
 }
 
-/** join pattern structs is a struct. */
-export interface JoinedStruct {
+export type InvokedStructRef = {
   structRef: StructRef;
-  structRelationship: StructRelationship;
-  as: string;
-}
+  sourceArguments?: Record<string, Argument>;
+};
 
 export interface Filtered {
-  filterList?: FilterExpression[];
+  filterList?: FilterCondition[];
 }
 
 /**
@@ -797,18 +951,41 @@ export interface TurtleSegment extends Filtered {
 export interface Pipeline {
   pipeline: PipeSegment[];
 }
-
 export interface Query extends Pipeline, Filtered, HasLocation {
   type?: 'query';
   name?: string;
   structRef: StructRef;
+  sourceArguments?: Record<string, Argument>;
   annotation?: Annotation;
   modelAnnotation?: Annotation;
+  compositeResolvedSourceDef?: SourceDef;
 }
 
 export type NamedQuery = Query & NamedObject;
 
 export type PipeSegment = QuerySegment | IndexSegment | RawSegment;
+
+export function segmentHasErrors(segment: PipeSegment): boolean {
+  if (
+    segment.type === 'reduce' ||
+    segment.type === 'project' ||
+    segment.type === 'partial'
+  ) {
+    if (segment.extendSource) {
+      if (segment.extendSource.some(f => f.type === 'error')) {
+        return true;
+      }
+    }
+    if (segment.queryFields.some(f => f.type === 'error')) {
+      return true;
+    }
+  }
+  return false;
+}
+
+export function structHasErrors(struct: StructDef): boolean {
+  return struct.fields.some(f => f.type === 'error');
+}
 
 export interface ReduceSegment extends QuerySegment {
   type: 'reduce';
@@ -878,132 +1055,280 @@ export interface IndexSegment extends Filtered {
   limit?: number;
   weightMeasure?: string; // only allow the name of the field to use for weights
   sample?: Sampling;
+  alwaysJoins?: string[];
+  compositeFieldUsage?: CompositeFieldUsage;
 }
 export function isIndexSegment(pe: PipeSegment): pe is IndexSegment {
   return (pe as IndexSegment).type === 'index';
 }
 
-export interface QuerySegment extends Filtered {
+export interface CompositeFieldUsage {
+  fields: string[];
+  joinedUsage: Record<string, CompositeFieldUsage>;
+}
+
+export interface QuerySegment extends Filtered, Ordered {
   type: 'reduce' | 'project' | 'partial';
   queryFields: QueryFieldDef[];
   extendSource?: FieldDef[];
   limit?: number;
-  by?: By;
-  orderBy?: OrderBy[]; // uses output field name or index.
   queryTimezone?: string;
+  alwaysJoins?: string[];
+  compositeFieldUsage?: CompositeFieldUsage;
 }
+
+export type NonDefaultAccessModifierLabel = 'private' | 'internal';
+export type AccessModifierLabel = NonDefaultAccessModifierLabel | 'public';
 
 export interface TurtleDef extends NamedObject, Pipeline {
   type: 'turtle';
   annotation?: Annotation;
+  accessModifier?: NonDefaultAccessModifierLabel | undefined;
+  compositeFieldUsage?: CompositeFieldUsage;
 }
 
-export type JoinRelationship =
-  | 'one_to_one'
-  | 'one_to_many'
-  | 'many_to_one'
-  | 'many_to_many';
-
-export type MatrixOperation = 'left' | 'right' | 'full' | 'inner';
-
-export function isMatrixOperation(x: string): x is MatrixOperation {
-  return ['left', 'right', 'full', 'inner'].includes(x);
+interface StructDefBase extends HasLocation, NamedObject {
+  type: string;
+  annotation?: Annotation;
+  modelAnnotation?: ModelAnnotation;
+  fields: FieldDef[];
 }
 
-export interface JoinOn {
-  type: 'one' | 'many' | 'cross';
-  matrixOperation: MatrixOperation;
-  onExpression?: Expr;
+interface SourceDefBase extends StructDefBase, Filtered, ResultStructMetadata {
+  arguments?: Record<string, Argument>;
+  parameters?: Record<string, Parameter>;
+  queryTimezone?: string;
+  connection: string;
+  primaryKey?: PrimaryKeyRef;
+  dialect: string;
+}
+/** which field is the primary key in this struct */
+export type PrimaryKeyRef = string;
+
+export interface TableSourceDef extends SourceDefBase {
+  type: 'table';
+  tablePath: string;
 }
 
-export function isJoinOn(sr: StructRelationship): sr is JoinOn {
-  return ['one', 'many', 'cross'].includes(sr.type);
+export interface CompositeSourceDef extends SourceDefBase {
+  type: 'composite';
+  // TODO make composite sources support StructRefs
+  sources: SourceDef[];
 }
-/** types of joins. */
-export type StructRelationship =
-  | {type: 'basetable'; connectionName: string}
-  | JoinOn
-  | {type: 'inline'}
-  | {type: 'nested'; fieldName: string; isArray: boolean};
 
-export interface SQLFragment {
+/*
+ * Malloy has a kind of "strings" which is a list of segments. Each segment
+ * is either a string, or a query, which is meant to be replaced
+ * by the text of the query when the query is compiled to SQL.
+ *
+ * The data types for this are:
+ *  SQLPhrase -- A phrase, used to make a sentence
+ *  SQLSentence -- Used to request a schema from the connection
+ *  SQLSelectSource -- Returned from a query, contains the scehma
+ */
+export interface SQLStringSegment {
   sql: string;
 }
-export type SQLPhrase = Query | SQLFragment;
-export function isSQLFragment(f: SQLPhrase): f is SQLFragment {
-  return (f as SQLFragment).sql !== undefined;
-}
-/**
- * A source reference to an SQL block. The compiler uses these to request
- * an SQLBlock with it's schema and structdef defined. Use the factory
- * makeSQLBlock to construct these.
- */
-export interface SQLBlockSource {
-  name: string;
-  connection?: string;
-  select: SQLPhrase[];
+export type SQLPhraseSegment = Query | SQLStringSegment;
+export function isSegmentSQL(f: SQLPhraseSegment): f is SQLStringSegment {
+  return 'sql' in f;
 }
 
-export interface SQLBlock extends NamedObject {
-  type: 'sqlBlock';
-  connection?: string;
+export interface SQLSentence {
+  name: string;
+  connection: string;
+  select: SQLPhraseSegment[];
+}
+
+export interface SQLSourceDef extends SourceDefBase {
+  type: 'sql_select';
   selectStr: string;
 }
 
-interface SubquerySource {
-  type: 'sql';
-  method: 'subquery';
-  sqlBlock: SQLBlock;
+export interface QuerySourceDef extends SourceDefBase {
+  type: 'query_source';
+  query: Query;
 }
 
-/** where does the struct come from? */
-export type StructSource =
-  | {type: 'table'; tablePath: string}
-  | {type: 'nested'}
-  | {type: 'inline'}
-  | {type: 'query'; query: Query}
-  | {type: 'sql'; method: 'nested' | 'lastStage'}
-  | {type: 'query_result'}
-  | SubquerySource;
-
-// Inline and nested tables, cannot have a StructRelationship
-//  the relationshipo is implied
-
-/** struct that is intrinsic to the table */
-export interface StructDef extends NamedObject, ResultStructMetadata, Filtered {
-  type: 'struct';
-  structSource: StructSource;
-  structRelationship: StructRelationship;
-  fields: FieldDef[];
-  primaryKey?: PrimaryKeyRef;
-  parameters?: Record<string, Parameter>;
-  queryTimezone?: string;
-  dialect: string;
-  annotation?: Annotation;
-  modelAnnotation?: ModelAnnotation;
+export interface QueryResultDef extends SourceDefBase {
+  type: 'query_result';
 }
 
-export type ExpressionValueType =
-  | AtomicFieldType
+// Describes the schema which flows between pipe elements
+export interface NestSourceDef extends SourceDefBase {
+  type: 'nest_source';
+  pipeSQL: string;
+}
+
+// Used by PostGres to un-JSonify at the end of a query
+export interface FinalizeSourceDef extends SourceDefBase {
+  type: 'finalize';
+}
+
+// The gesture {...sourceStruct moreProperties}  happens everywhere, now that
+// structs aren't all identical, we need a way to make one from any of the
+// exisitng structs
+
+export function sourceBase(sd: SourceDefBase): SourceDefBase {
+  return {...sd};
+}
+
+export function isSourceDef(sd: NamedModelObject | FieldDef): sd is SourceDef {
+  return (
+    sd.type === 'table' ||
+    sd.type === 'sql_select' ||
+    sd.type === 'query_source' ||
+    sd.type === 'query_result' ||
+    sd.type === 'finalize' ||
+    sd.type === 'nest_source' ||
+    sd.type === 'composite'
+  );
+}
+
+export type SourceDef =
+  | TableSourceDef
+  | SQLSourceDef
+  | QuerySourceDef
+  | QueryResultDef
+  | FinalizeSourceDef
+  | NestSourceDef
+  | CompositeSourceDef;
+
+/** Is this the "FROM" table of a query tree */
+export function isBaseTable(def: StructDef): def is SourceDef {
+  if (isJoinedSource(def)) {
+    return false;
+  }
+  if (isSourceDef(def)) {
+    return true;
+  }
+  return false;
+}
+
+export type StructDef = SourceDef | RecordDef | ArrayDef;
+
+// "NonAtomic" are types that a name lookup or a computation might
+// have which are not AtomicFieldDefs. I asked an AI for a word for
+// for "non-atomic" and even the AI couldn't think of the right word.
+export type NonAtomicType =
+  | Exclude<JoinElementType, 'array' | 'record'>
+  | 'turtle' //   do NOT have the full type info, just noting the type
   | 'null'
   | 'duration'
-  | 'any'
   | 'regular expression';
-
-export type FieldValueType = ExpressionValueType | 'turtle' | 'struct';
-
-export interface ExpressionTypeDesc {
-  dataType: FieldValueType;
-  expressionType: ExpressionType;
-  rawType?: string;
-  evalSpace: EvalSpace;
+export interface NonAtomicTypeDef {
+  type: NonAtomicType;
 }
 
-export interface FunctionParamTypeDesc {
-  dataType: FieldValueType;
+export type ExpressionValueType = AtomicFieldType | NonAtomicType;
+export type ExpressionValueTypeDef = AtomicTypeDef | NonAtomicTypeDef;
+export type LeafExpressionType = Exclude<
+  ExpressionValueType,
+  JoinElementType | 'turtle'
+>;
+
+export type TypeInfo = {
+  expressionType: ExpressionType;
+  evalSpace: EvalSpace;
+  compositeFieldUsage: CompositeFieldUsage;
+};
+
+export type TypeDesc = ExpressionValueTypeDef & TypeInfo;
+
+export type FunctionParameterTypeDef =
+  ExpressionValueExtTypeDef<FunctionParameterTypeExtensions>;
+export type FunctionParamTypeDesc = FunctionParameterTypeDef & {
   expressionType: ExpressionType | undefined;
   evalSpace: EvalSpace;
+};
+
+interface ScalarArrayExtTypeDef<TypeExtensions> {
+  type: 'array';
+  elementTypeDef: Exclude<
+    ExpressionValueExtTypeDef<TypeExtensions>,
+    RecordExtTypeDef<TypeExtensions>
+  >;
 }
+
+type ExpressionValueExtTypeDef<TypeExtensions> =
+  | AtomicTypeDef
+  | NonAtomicTypeDef
+  | ScalarArrayExtTypeDef<TypeExtensions>
+  | RecordExtTypeDef<TypeExtensions>
+  | RepeatedRecordExtTypeDef<TypeExtensions>
+  | TypeExtensions;
+
+interface RecordExtTypeDef<TypeExtensions> {
+  type: 'record';
+  fields: ExtFieldDef<TypeExtensions>[];
+}
+
+type ExtFieldDef<TypeExtensions> = FieldDef | (TypeExtensions & FieldBase);
+
+interface RepeatedRecordExtTypeDef<TypeExtensions> {
+  type: 'array';
+  elementTypeDef: RecordElementTypeDef;
+  fields: ExtFieldDef<TypeExtensions>[];
+}
+
+type FunctionReturnTypeExtensions = GenericTypeDef;
+
+export type ScalarArrayFunctionReturnTypeDef =
+  ScalarArrayExtTypeDef<FunctionReturnTypeExtensions>;
+
+export type FunctionReturnFieldDef = ExtFieldDef<FunctionReturnTypeExtensions>;
+
+export type RecordFunctionReturnTypeDef =
+  RecordExtTypeDef<FunctionReturnTypeExtensions>;
+
+export type RepeatedRecordFunctionReturnTypeDef =
+  RepeatedRecordExtTypeDef<FunctionReturnTypeExtensions>;
+
+type FunctionParameterTypeExtensions = GenericTypeDef | AnyTypeDef;
+
+export type ScalarArrayFunctionParameterTypeDef =
+  ScalarArrayExtTypeDef<FunctionParameterTypeExtensions>;
+
+export type FunctionParameterFieldDef =
+  ExtFieldDef<FunctionParameterTypeExtensions>;
+
+export type RecordFunctionParameterTypeDef =
+  RecordExtTypeDef<FunctionParameterTypeExtensions>;
+
+export type RepeatedRecordFunctionParameterTypeDef =
+  RepeatedRecordExtTypeDef<FunctionParameterTypeExtensions>;
+
+type FunctionGenericTypeExtensions = AnyTypeDef;
+
+export type ScalarArrayFunctionGenericTypeDef =
+  ScalarArrayExtTypeDef<FunctionGenericTypeExtensions>;
+
+export type FunctionGenericFieldDef =
+  ExtFieldDef<FunctionGenericTypeExtensions>;
+
+export type RecordFunctionGenericTypeDef =
+  RecordExtTypeDef<FunctionGenericTypeExtensions>;
+
+export type RepeatedRecordFunctionGenericTypeDef =
+  RepeatedRecordExtTypeDef<FunctionGenericTypeExtensions>;
+
+export interface GenericTypeDef {
+  type: 'generic';
+  generic: string;
+}
+
+export interface AnyTypeDef {
+  type: 'any';
+}
+
+export type TypeDescExtensions = {
+  expressionType: ExpressionType | undefined;
+  evalSpace: EvalSpace;
+};
+
+export type FunctionReturnTypeDef =
+  ExpressionValueExtTypeDef<FunctionReturnTypeExtensions>;
+export type FunctionReturnTypeDesc = FunctionReturnTypeDef & TypeDescExtensions;
 
 export type EvalSpace = 'constant' | 'input' | 'output' | 'literal';
 
@@ -1012,7 +1337,9 @@ export function isLiteral(evalSpace: EvalSpace) {
 }
 
 export function mergeEvalSpaces(...evalSpaces: EvalSpace[]): EvalSpace {
-  if (evalSpaces.every(e => e === 'constant' || e === 'literal')) {
+  if (evalSpaces.length <= 1 && evalSpaces.every(e => e === 'literal')) {
+    return 'literal';
+  } else if (evalSpaces.every(e => e === 'constant' || e === 'literal')) {
     return 'constant';
   } else if (
     evalSpaces.every(e => e === 'output' || e === 'constant' || e === 'literal')
@@ -1020,13 +1347,6 @@ export function mergeEvalSpaces(...evalSpaces: EvalSpace[]): EvalSpace {
     return 'output';
   }
   return 'input';
-}
-
-export interface TypeDesc {
-  dataType: FieldValueType;
-  expressionType: ExpressionType;
-  rawType?: string;
-  evalSpace: EvalSpace;
 }
 
 export interface FunctionParameterDef {
@@ -1038,19 +1358,23 @@ export interface FunctionParameterDef {
   isVariadic: boolean;
 }
 
+export type FunctionGenericTypeDef =
+  ExpressionValueExtTypeDef<FunctionGenericTypeExtensions>;
+
 export interface FunctionOverloadDef {
   // The expression type here is the MINIMUM return type
-  returnType: TypeDesc;
-  needsWindowOrderBy?: boolean;
-  between?: {preceding: number | string; following: number | string};
+  returnType: FunctionReturnTypeDesc;
   isSymmetric?: boolean;
   params: FunctionParameterDef[];
+  supportsOrderBy?: boolean | 'only_default';
+  supportsLimit?: boolean;
+  genericTypes?: {name: string; acceptibleTypes: FunctionGenericTypeDef[]}[];
   dialect: {
     [dialect: string]: {
       e: Expr;
-      supportsOrderBy?: boolean | 'only_default';
+      between?: {preceding: number | string; following: number | string};
       defaultOrderByArgIndex?: number;
-      supportsLimit?: boolean;
+      needsWindowOrderBy?: boolean;
     };
   };
 }
@@ -1064,96 +1388,62 @@ export interface ConnectionDef extends NamedObject {
   type: 'connection';
 }
 
-export interface SQLBlockStructDef extends StructDef {
-  structSource: SubquerySource;
-  // This was added to that errors for structdefs created in sql: but NOT used in
-  // from_sql could error properly. This is kind of non-sensical, and once
-  // we decide if SQL blocks are StructDefs or Queries or Something Else
-  // this should go away.
-  declaredSQLBlock?: boolean;
-}
+export type TemporalTypeDef = DateTypeDef | TimestampTypeDef;
+export type LeafAtomicTypeDef =
+  | StringTypeDef
+  | TemporalTypeDef
+  | NumberTypeDef
+  | BooleanTypeDef
+  | JSONTypeDef
+  | NativeUnsupportedTypeDef
+  | ErrorTypeDef;
+export type LeafAtomicDef = LeafAtomicTypeDef & FieldBase;
 
-export function isSQLBlockStruct(sd: StructDef): sd is SQLBlockStructDef {
-  const src = sd.structSource;
-  return src.type === 'sql' && src.method === 'subquery';
-}
+export type AtomicTypeDef =
+  | LeafAtomicTypeDef
+  | ScalarArrayTypeDef
+  | RecordTypeDef
+  | RepeatedRecordTypeDef;
+export type AtomicFieldDef =
+  | LeafAtomicDef
+  | ScalarArrayDef
+  | RecordDef
+  | RepeatedRecordDef;
 
-// /** the resulting structure of the query (and it's source) */
-// export interface QueryReultStructDef {
-//   type: 'result';
-//   fields: FieldDef[];
-//   primaryKey?: string;
-//   queryDef?: QueryDef;
-// }
-
-/** any of the different field types */
-export type FieldTypeDef =
-  | FieldStringDef
-  | FieldDateDef
-  | FieldTimestampDef
-  | FieldNumberDef
-  | FieldBooleanDef
-  | FieldJSONDef
-  | FieldUnsupportedDef
-  | FieldErrorDef;
-
-export type FieldAtomicTypeDef =
-  | FieldStringTypeDef
-  | FieldDateTypeDef
-  | FieldTimestampTypeDef
-  | FieldNumberTypeDef
-  | FieldBooleanTypeDef
-  | FieldJSONTypeDef
-  | FieldUnsupportedTypeDef
-  | FieldErrorTypeDef;
-
-export function isFieldTypeDef(f: FieldDef): f is FieldTypeDef {
+export function isLeafAtomic(
+  fd: FieldDef | QueryFieldDef | AtomicTypeDef
+): fd is LeafAtomicDef {
   return (
-    f.type === 'string' ||
-    f.type === 'date' ||
-    f.type === 'number' ||
-    f.type === 'timestamp' ||
-    f.type === 'boolean' ||
-    f.type === 'json'
+    fd.type === 'string' ||
+    isTemporalType(fd.type) ||
+    fd.type === 'number' ||
+    fd.type === 'boolean' ||
+    fd.type === 'json' ||
+    fd.type === 'sql native' ||
+    fd.type === 'error'
   );
 }
 
-export function isFieldTimeBased(
-  f: FieldDef
-): f is FieldTimestampDef | FieldDateDef {
-  return f.type === 'date' || f.type === 'timestamp';
-}
+// Sources have fields like this ...
+export type FieldDef = LeafAtomicDef | JoinFieldDef | TurtleDef;
+export type FieldDefType = AtomicFieldType | 'turtle' | JoinElementType;
 
-export function isFieldStructDef(f: FieldDef): f is StructDef {
-  return f.type === 'struct';
-}
-
-// Queries
-
-export type QueryFieldDef = FieldTypeDef | TurtleDef | RefToField;
-
-/** basics statement */
-export type FieldDef = FieldTypeDef | StructDef | TurtleDef;
-
-/** reference to a field */
+// Queries have fields like this ..
 
 export interface RefToField {
   type: 'fieldref';
   path: string[];
   annotation?: Annotation;
 }
+export type QueryFieldDef = AtomicFieldDef | TurtleDef | RefToField;
 
-export type FieldRefOrDef = FieldDef | RefToField;
-
-/** which field is the primary key in this struct */
-export type PrimaryKeyRef = string;
-
-/** filters */
-export interface FilterExpression {
-  expression: Expr;
-  code: string;
-  expressionType: ExpressionType;
-}
+// All these share the same "type" space
+export type TypedDef =
+  | AtomicTypeDef
+  | JoinFieldDef
+  | TurtleDef
+  | RefToField
+  | StructDef;
 
 /** Get the output name for a NamedObject */
 export function getIdentifier(n: AliasedName): string {
@@ -1164,7 +1454,7 @@ export function getIdentifier(n: AliasedName): string {
 }
 
 export type NamedModelObject =
-  | StructDef
+  | SourceDef
   | NamedQuery
   | FunctionDef
   | ConnectionDef;
@@ -1178,7 +1468,7 @@ export interface ModelDef {
 }
 
 /** Very common record type */
-export type NamedStructDefs = Record<string, StructDef>;
+export type NamedSourceDefs = Record<string, SourceDef>;
 export type NamedModelObjects = Record<string, NamedModelObject>;
 
 /** Malloy source annotations attached to objects */
@@ -1222,11 +1512,18 @@ export type MalloyQueryData = {
 
 export interface DrillSource {
   sourceExplore: string;
-  sourceFilters?: FilterExpression[];
+  sourceFilters?: FilterCondition[];
 }
 
+export type QueryToMaterialize = {
+  id: string;
+  path: string;
+  source: string | undefined;
+  queryName: string;
+};
+
 export interface CompiledQuery extends DrillSource {
-  structs: StructDef[];
+  structs: SourceDef[];
   sql: string;
   lastStageName: string;
   malloy: string;
@@ -1234,6 +1531,9 @@ export interface CompiledQuery extends DrillSource {
   connectionName: string;
   queryTimezone?: string;
   annotation?: Annotation;
+  // Map of query unique id to the SQL.
+  dependenciesToMaterialize?: Record<string, QueryToMaterialize>;
+  materialization?: QueryToMaterialize;
 }
 
 /** Result type for running a Malloy query. */
@@ -1245,11 +1545,13 @@ export interface QueryResult extends CompiledQuery {
   profilingUrl?: string;
 }
 
-export function isTurtleDef(def: FieldDef): def is TurtleDef {
+export function isTurtle(def: TypedDef): def is TurtleDef {
   return def.type === 'turtle';
 }
 
-export function isAtomicField(def: FieldDef): def is FieldAtomicDef {
+export function isAtomic(
+  def: TypedDef | ExpressionValueTypeDef
+): def is AtomicTypeDef {
   return isAtomicFieldType(def.type);
 }
 
@@ -1260,40 +1562,6 @@ export interface SearchResultRow {
 }
 
 export type SearchResult = SearchResultRow[];
-
-export function isDimensional(field: FieldDef): boolean {
-  if ('resultMetadata' in field) {
-    return field.resultMetadata?.fieldKind === 'dimension';
-  }
-  return false;
-}
-
-export function isPhysical(field: FieldDef): boolean {
-  return (
-    (isFieldTypeDef(field) && field.e === undefined) ||
-    (isFieldStructDef(field) &&
-      (field.structSource.type === 'nested' ||
-        field.structSource.type === 'inline'))
-  );
-}
-
-export function getDimensions(structDef: StructDef): FieldAtomicDef[] {
-  return structDef.fields.filter(isDimensional) as FieldAtomicDef[];
-}
-
-export function getPhysicalFields(structDef: StructDef): FieldDef[] {
-  return structDef.fields.filter(isPhysical) as FieldDef[];
-}
-
-export function isMeasureLike(field: FieldDef): boolean {
-  if ('resultMetadata' in field) {
-    return (
-      field.resultMetadata?.fieldKind === 'measure' ||
-      field.resultMetadata?.fieldKind === 'struct'
-    );
-  }
-  return false;
-}
 
 export function isValueString(
   value: QueryValue,
@@ -1342,4 +1610,80 @@ export interface SearchValueMapResult {
   cardinality: number;
   values: {fieldValue: string; weight: number}[];
 }
+
+export interface PrepareResultOptions {
+  replaceMaterializedReferences?: boolean;
+  materializedTablePrefix?: string;
+}
+
+type UTD =
+  | AtomicTypeDef
+  | TypedDef
+  | FunctionParameterTypeDef
+  | FunctionReturnTypeDef
+  | undefined;
+/**
+ * A set of utilities for asking questions TypeDef/TypeDesc
+ * (which is OK because TypeDesc is an extension of a TypeDef)
+ */
+export const TD = {
+  isAtomic(td: UTD): td is AtomicTypeDef {
+    return td !== undefined && isAtomicFieldType(td.type);
+  },
+  isLeafAtomic(td: UTD): td is LeafAtomicTypeDef {
+    return td !== undefined && isLeafAtomic({type: td.type} as AtomicTypeDef);
+  },
+  isString: (td: UTD): td is StringTypeDef => td?.type === 'string',
+  isNumber: (td: UTD): td is NumberTypeDef => td?.type === 'number',
+  isBoolean: (td: UTD): td is BooleanTypeDef => td?.type === 'boolean',
+  isJSON: (td: UTD): td is JSONTypeDef => td?.type === 'json',
+  isSQL: (td: UTD): td is NativeUnsupportedTypeDef => td?.type === 'sql native',
+  isDate: (td: UTD): td is DateTypeDef => td?.type === 'date',
+  isTimestamp: (td: UTD): td is TimestampTypeDef => td?.type === 'timestamp',
+  isTemporal(td: UTD): td is TimestampTypeDef {
+    const typ = td?.type ?? '';
+    return isTemporalType(typ);
+  },
+  isError: (td: UTD): td is ErrorTypeDef => td?.type === 'error',
+  eq(x: UTD, y: UTD): boolean {
+    if (x === undefined || y === undefined) {
+      return false;
+    }
+    function checkFields(a: AtomicTypeDef, b: AtomicTypeDef): boolean {
+      const aSchema: Record<string, AtomicTypeDef> = {};
+      for (const aEnt of a['fields'] || []) {
+        if (aEnt.name) {
+          aSchema[aEnt.name] = aEnt;
+        } else {
+          return false;
+        }
+      }
+      for (const bEnt of b['fields'] || []) {
+        if (!TD.eq(aSchema[bEnt.name], bEnt)) {
+          return false;
+        }
+      }
+      return true;
+    }
+    if (x.type === 'array' && y.type === 'array') {
+      if (x.elementTypeDef.type !== y.elementTypeDef.type) {
+        return false;
+      }
+      if (
+        x.elementTypeDef.type !== 'record_element' && // Both are equal, but to make this
+        y.elementTypeDef.type !== 'record_element' //    typecheck, we need the && clause.
+      ) {
+        return TD.eq(x.elementTypeDef, y.elementTypeDef);
+      }
+      return TD.isAtomic(x) && TD.isAtomic(y) && checkFields(x, y);
+    } else if (x.type === 'record' && y.type === 'record') {
+      return TD.isAtomic(x) && TD.isAtomic(y) && checkFields(x, y);
+    }
+    if (x.type === 'sql native' && y.type === 'sql native') {
+      return x.rawType !== undefined && x.rawType === y.rawType;
+    }
+    return x.type === y.type;
+  },
+};
+
 // clang-format on

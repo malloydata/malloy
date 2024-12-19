@@ -23,17 +23,11 @@
 
 /* eslint-disable no-console */
 
-import {
-  ModelDef,
-  Query,
-  StructDef,
-  StructRelationship,
-} from '@malloydata/malloy';
+import {ModelDef, Query, StructDef} from '@malloydata/malloy';
 import {describeIfDatabaseAvailable, fStringLike, fToQF} from '../../util';
 
 import * as malloy from '@malloydata/malloy';
 import {RuntimeList} from '../../runtimes';
-
 const [describe] = describeIfDatabaseAvailable(['bigquery']);
 
 describe('BigQuery hand-built expression test', () => {
@@ -43,16 +37,28 @@ describe('BigQuery hand-built expression test', () => {
     await runtimes.closeAll();
   });
 
-  function withJoin(leftKey: string[], rightKey: string[]): StructRelationship {
-    return {
-      type: 'one',
-      matrixOperation: 'left',
-      onExpression: [
-        {type: 'field', path: leftKey},
-        '=',
-        {type: 'field', path: rightKey},
-      ],
+  function withJoin(
+    sd: malloy.TableSourceDef,
+    join: 'one' | 'many',
+    as: string,
+    keyExpr: string
+  ): malloy.JoinFieldDef {
+    const [leftKey, rightKey] = keyExpr.split('=');
+    const ret: malloy.JoinFieldDef = {
+      ...sd,
+      join,
+      onExpression: {
+        node: '=',
+        kids: {
+          left: {node: 'field', path: leftKey.split('.')},
+          right: {node: 'field', path: rightKey.split('.')},
+        },
+      },
     };
+    if (as !== ret.name) {
+      ret.as = as;
+    }
+    return ret;
   }
 
   async function validateCompilation(
@@ -81,16 +87,13 @@ describe('BigQuery hand-built expression test', () => {
     return model._loadQueryFromQueryDef(queryDef).getSQL();
   }
 
-  const modelHandBase: StructDef = {
-    name: 'malloy-data.malloytest.aircraft_models',
+  const modelHandBase: malloy.TableSourceDef = {
+    name: 'malloydata-org.malloytest.aircraft_models',
     as: 'aircraft_models',
-    type: 'struct',
+    type: 'table',
     dialect: 'standardsql',
-    structSource: {
-      type: 'table',
-      tablePath: 'malloy-data.malloytest.aircraft_models',
-    },
-    structRelationship: {type: 'basetable', connectionName: 'bigquery'},
+    tablePath: 'malloydata-org.malloytest.aircraft_models',
+    connection: 'bigquery',
     fields: [
       {type: 'string', name: 'aircraft_model_code'},
       {type: 'string', name: 'manufacturer'},
@@ -114,20 +117,18 @@ describe('BigQuery hand-built expression test', () => {
       {
         name: 'model_count',
         type: 'number',
-        e: [{type: 'aggregate', function: 'count', e: []}],
+        e: {node: 'aggregate', function: 'count', e: {node: ''}},
         expressionType: 'aggregate',
         numberType: 'float',
       },
       {
         name: 'total_seats',
         type: 'number',
-        e: [
-          {
-            type: 'aggregate',
-            function: 'sum',
-            e: [{type: 'field', path: ['seats']}],
-          },
-        ],
+        e: {
+          node: 'aggregate',
+          function: 'sum',
+          e: {node: 'field', path: ['seats']},
+        },
         expressionType: 'aggregate',
         numberType: 'float',
       },
@@ -135,43 +136,42 @@ describe('BigQuery hand-built expression test', () => {
         name: 'boeing_seats',
         type: 'number',
         expressionType: 'aggregate',
-        e: [
-          {
-            type: 'filterExpression',
-            e: [
-              {
-                type: 'aggregate',
-                function: 'sum',
-                e: [{type: 'field', path: ['seats']}],
-              },
-            ],
+        e: {
+          node: 'filteredExpr',
+          kids: {
+            e: {
+              node: 'aggregate',
+              function: 'sum',
+              e: {node: 'field', path: ['seats']},
+            },
             filterList: [
               {
+                node: 'filterCondition',
                 expressionType: 'aggregate',
                 code: "manufacturer='BOEING'",
-                expression: [
-                  {
-                    type: 'field',
-                    path: ['manufacturer'],
+                e: {
+                  node: '=',
+                  kids: {
+                    left: {node: 'field', path: ['manufacturer']},
+                    right: {node: 'stringLiteral', literal: 'BOEING'},
                   },
-                  "='BOEING'",
-                ],
+                },
               },
             ],
           },
-        ],
+        },
         numberType: 'float',
       },
       {
         name: 'percent_boeing',
         type: 'number',
-        e: [
+        e: malloy.composeSQLExpr([
           '(',
-          {type: 'field', path: ['boeing_seats']},
+          {node: 'field', path: ['boeing_seats']},
           '/',
-          {type: 'field', path: ['total_seats']},
+          {node: 'field', path: ['total_seats']},
           ')*100',
-        ],
+        ]),
         expressionType: 'aggregate',
         numberType: 'float',
       },
@@ -179,7 +179,11 @@ describe('BigQuery hand-built expression test', () => {
         name: 'percent_boeing_floor',
         type: 'number',
         expressionType: 'aggregate',
-        e: ['FLOOR(', {type: 'field', path: ['percent_boeing']}, ')'],
+        e: malloy.composeSQLExpr([
+          'FLOOR(',
+          {node: 'field', path: ['percent_boeing']},
+          ')',
+        ]),
         numberType: 'float',
       },
     ],
@@ -187,14 +191,11 @@ describe('BigQuery hand-built expression test', () => {
   };
 
   const aircraftHandBase: StructDef = {
-    type: 'struct',
-    name: 'malloy-data.malloytest.aircraft',
+    name: 'malloydata-org.malloytest.aircraft',
     dialect: 'standardsql',
-    structSource: {
-      type: 'table',
-      tablePath: 'malloy-data.malloytest.aircraft',
-    },
-    structRelationship: {type: 'basetable', connectionName: 'bigquery'},
+    type: 'table',
+    tablePath: 'malloydata-org.malloytest.aircraft',
+    connection: 'bigquery',
     fields: [
       {type: 'string', name: 'tail_num'},
       {type: 'string', name: 'aircraft_serial'},
@@ -231,7 +232,7 @@ describe('BigQuery hand-built expression test', () => {
       {
         name: 'aircraft_count',
         type: 'number',
-        e: [{type: 'aggregate', function: 'count', e: []}],
+        e: {node: 'aggregate', function: 'count', e: {node: ''}},
         expressionType: 'aggregate',
         numberType: 'float',
       },
@@ -248,30 +249,22 @@ describe('BigQuery hand-built expression test', () => {
           {type: 'reduce', queryFields: fToQF(['aircraft_count'])},
         ],
       },
+      withJoin(
+        modelHandBase,
+        'one',
+        'aircraft_models',
+        'aircraft_model_code=aircraft_models.aircraft_model_code'
+      ),
     ],
     primaryKey: 'tail_num',
     as: 'aircraft',
-  };
-
-  const aircraftHandStructDef: StructDef = {
-    ...aircraftHandBase,
-    fields: [
-      ...aircraftHandBase.fields,
-      {
-        ...modelHandBase,
-        structRelationship: withJoin(
-          ['aircraft_model_code'],
-          ['aircraft_models', 'aircraft_model_code']
-        ),
-      },
-    ],
   };
 
   const handCodedModel: ModelDef = {
     name: 'Hand Coded Models',
     exports: ['aircraft'],
     contents: {
-      aircraft: aircraftHandStructDef,
+      aircraft: aircraftHandBase,
     },
   };
 
@@ -309,36 +302,30 @@ describe('BigQuery hand-built expression test', () => {
               name: 'total_seats',
               type: 'number',
               expressionType: 'aggregate',
-              e: [
-                {
-                  type: 'filterExpression',
-                  e: [
-                    {
-                      type: 'aggregate',
-                      function: 'sum',
-                      e: [
-                        {
-                          type: 'field',
-                          path: ['aircraft_models', 'seats'],
-                        },
-                      ],
-                    },
-                  ],
+              e: {
+                node: 'filteredExpr',
+                kids: {
+                  e: {
+                    node: 'aggregate',
+                    function: 'sum',
+                    e: {node: 'field', path: ['aircraft_models', 'seats']},
+                  },
                   filterList: [
                     {
+                      node: 'filterCondition',
                       expressionType: 'aggregate',
                       code: "manufacturer='BOEING'",
-                      expression: [
+                      e: malloy.composeSQLExpr([
                         {
-                          type: 'field',
+                          node: 'field',
                           path: ['aircraft_models', 'manufacturer'],
                         },
                         "='BOEING'",
-                      ],
+                      ]),
                     },
                   ],
                 },
-              ],
+              },
             },
             // {
             //   name: "aircraft_models.total_seats",
@@ -448,12 +435,10 @@ describe('BigQuery hand-built expression test', () => {
               name: 'total_aircraft',
               type: 'number',
               expressionType: 'aggregate',
-              e: [
-                {
-                  type: 'exclude',
-                  e: [{type: 'field', path: ['aircraft_count']}],
-                },
-              ],
+              e: {
+                node: 'exclude',
+                e: {node: 'field', path: ['aircraft_count']},
+              },
             },
           ]),
         },
@@ -501,12 +486,10 @@ describe('BigQuery hand-built expression test', () => {
                       name: 'total_aircraft',
                       type: 'number',
                       expressionType: 'aggregate',
-                      e: [
-                        {
-                          type: 'exclude',
-                          e: [{type: 'field', path: ['aircraft_count']}],
-                        },
-                      ],
+                      e: {
+                        node: 'exclude',
+                        e: {node: 'field', path: ['aircraft_count']},
+                      },
                     },
                   ]),
                 },
@@ -561,13 +544,11 @@ describe('BigQuery hand-built expression test', () => {
                       {
                         name: 'total_aircraft',
                         type: 'number',
-                        e: [
-                          {
-                            type: 'aggregate',
-                            function: 'sum',
-                            e: [{type: 'field', path: ['aircraft_count']}],
-                          },
-                        ],
+                        e: {
+                          node: 'aggregate',
+                          function: 'sum',
+                          e: {node: 'field', path: ['aircraft_count']},
+                        },
                         expressionType: 'aggregate',
                         numberType: 'float',
                       },
@@ -681,34 +662,31 @@ describe('BigQuery hand-built expression test', () => {
                 name: 'boeing_seats',
                 type: 'number',
                 expressionType: 'aggregate',
-                e: [
-                  {
-                    type: 'filterExpression',
-                    e: [
-                      {
-                        type: 'aggregate',
-                        function: 'sum',
-                        structPath: ['aircraft_models'],
-                        e: [
-                          {type: 'field', path: ['aircraft_models', 'seats']},
-                        ],
-                      },
-                    ],
+                e: {
+                  node: 'filteredExpr',
+                  kids: {
+                    e: {
+                      node: 'aggregate',
+                      function: 'sum',
+                      structPath: ['aircraft_models'],
+                      e: {node: 'field', path: ['aircraft_models', 'seats']},
+                    },
                     filterList: [
                       {
+                        node: 'filterCondition',
                         expressionType: 'aggregate',
                         code: "manufacturer='BOEING'",
-                        expression: [
+                        e: malloy.composeSQLExpr([
                           {
-                            type: 'field',
+                            node: 'field',
                             path: ['aircraft_models', 'manufacturer'],
                           },
                           "='BOEING'",
-                        ],
+                        ]),
                       },
                     ],
                   },
-                ],
+                },
               },
             ],
           },
@@ -724,18 +702,12 @@ describe('BigQuery hand-built expression test', () => {
     as: 'model_aircraft',
     fields: [
       ...modelHandBase.fields,
-      {
-        ...aircraftHandBase,
-        structRelationship: {
-          type: 'many',
-          matrixOperation: 'left',
-          onExpression: [
-            {type: 'field', path: ['aircraft_model_code']},
-            '=',
-            {type: 'field', path: ['aircraft', 'aircraft_model_code']},
-          ],
-        },
-      },
+      withJoin(
+        aircraftHandBase,
+        'many',
+        'aircraft',
+        'aircraft_model_code=aircraft.aircraft_model_code'
+      ),
     ],
   };
 

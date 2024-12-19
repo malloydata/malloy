@@ -24,16 +24,17 @@
 import {Dialect} from '../../../dialect/dialect';
 import {
   Annotation,
-  FieldTypeDef,
   isAtomicFieldType,
   StructDef,
   TypeDesc,
   FieldDef,
-  QueryFieldDef,
+  AtomicFieldDef,
+  isAtomic,
+  FieldDefType,
+  mkFieldDef,
 } from '../../../model/malloy_types';
 
-import {compressExpr} from '../expressions/utils';
-import {FT} from '../fragtype-utils';
+import * as TDU from '../typedesc-utils';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldName, FieldSpace, QueryFieldSpace} from '../types/field-space';
@@ -76,7 +77,11 @@ export abstract class AtomicFieldDeclaration
     super({expr: expr});
   }
 
-  fieldDef(fs: FieldSpace, exprName: string): FieldTypeDef {
+  getName(): string {
+    return this.defineName;
+  }
+
+  fieldDef(fs: FieldSpace, exprName: string): FieldDef {
     /*
      * In an explore we cannot reference the thing we are defining, you need
      * to use rename. In a query, the output space is a new thing, and expressions
@@ -95,8 +100,8 @@ export abstract class AtomicFieldDeclaration
     return false;
   }
 
-  queryFieldDef(exprFS: FieldSpace, exprName: string): FieldTypeDef {
-    let exprValue;
+  queryFieldDef(exprFS: FieldSpace, exprName: string): AtomicFieldDef {
+    let exprValue: ExprValue;
 
     function getOutputFS() {
       if (exprFS.isQueryFieldSpace()) {
@@ -109,51 +114,60 @@ export abstract class AtomicFieldDeclaration
       const fs = this.executesInOutputSpace() ? getOutputFS() : exprFS;
       exprValue = this.expr.getExpression(fs);
     } catch (error) {
-      this.log(`Cannot define '${exprName}', ${error.message}`);
+      this.logError(
+        'failed-field-definition',
+        `Cannot define '${exprName}', ${error.message}`
+      );
       return {
         name: exprName,
         type: 'error',
       };
     }
-    const compressValue = compressExpr(exprValue.value);
-    let retType = exprValue.dataType;
-    if (retType === 'null') {
-      this.expr.log(
-        'null value defaults to type number, use "null::TYPE" to specify correct type',
-        'warn'
+    if (exprValue.type === 'null') {
+      this.expr.logWarning(
+        'null-typed-field-definition',
+        'null value defaults to type number, use "null::TYPE" to specify correct type'
       );
-      retType = 'number';
-    }
-    if (isAtomicFieldType(retType) && retType !== 'error') {
-      const template: FieldTypeDef = {
-        name: exprName,
-        type: retType,
-        location: this.location,
+      const nullAsNumber: ExprValue = {
+        type: 'number',
+        value: exprValue.value,
+        expressionType: exprValue.expressionType,
+        evalSpace: exprValue.evalSpace,
+        compositeFieldUsage: exprValue.compositeFieldUsage,
       };
-      if (compressValue.length > 0) {
-        template.e = compressValue;
-      }
-      if (exprValue.expressionType) {
-        template.expressionType = exprValue.expressionType;
-      }
+      exprValue = nullAsNumber;
+    }
+    if (isAtomicFieldType(exprValue.type) && exprValue.type !== 'error') {
       this.typecheckExprValue(exprValue);
-      if (this.exprSrc) {
-        template.code = this.exprSrc;
+      const ret = mkFieldDef(TDU.atomicDef(exprValue), exprName);
+      if (
+        (ret.type === 'date' || ret.type === 'timestamp') &&
+        isGranularResult(exprValue)
+      ) {
+        ret.timeframe = exprValue.timeframe;
       }
-      // TODO this should work for dates too
-      if (isGranularResult(exprValue) && template.type === 'timestamp') {
-        template.timeframe = exprValue.timeframe;
+      ret.location = this.location;
+      ret.e = exprValue.value;
+      ret.compositeFieldUsage = exprValue.compositeFieldUsage;
+      if (exprValue.expressionType) {
+        ret.expressionType = exprValue.expressionType;
+      }
+      if (this.exprSrc) {
+        ret.code = this.exprSrc;
       }
       if (this.note) {
-        template.annotation = this.note;
+        ret.annotation = this.note;
       }
-      return template;
+      return ret;
     }
     const circularDef = exprFS instanceof DefSpace && exprFS.foundCircle;
     if (!circularDef) {
-      if (exprValue.dataType !== 'error') {
-        const badType = FT.inspect(exprValue);
-        this.log(`Cannot define '${exprName}', unexpected type: ${badType}`);
+      if (exprValue.type !== 'error') {
+        const badType = TDU.inspect(exprValue);
+        this.logError(
+          'invalid-type-for-field-definition',
+          `Cannot define '${exprName}', unexpected type: ${badType}`
+        );
       }
     }
     return {
@@ -242,7 +256,10 @@ export class DefSpace implements FieldSpace {
     if (symbol[0] && symbol[0].refString === this.circular.defineName) {
       this.foundCircle = true;
       return {
-        error: `Circular reference to '${this.circular.defineName}' in definition`,
+        error: {
+          message: `Circular reference to '${this.circular.defineName}' in definition`,
+          code: 'circular-reference-in-field-definition',
+        },
         found: undefined,
       };
     }
@@ -250,6 +267,9 @@ export class DefSpace implements FieldSpace {
   }
   entries(): [string, SpaceEntry][] {
     return this.realFS.entries();
+  }
+  dialectName() {
+    return this.realFS.dialectName();
   }
   dialectObj(): Dialect | undefined {
     return this.realFS.dialectObj();
@@ -271,6 +291,10 @@ export class DefSpace implements FieldSpace {
     }
     throw new Error('Not a query field space');
   }
+
+  isProtectedAccessSpace(): boolean {
+    return true;
+  }
 }
 
 export class FieldDefinitionValue extends SpaceField {
@@ -288,21 +312,22 @@ export class FieldDefinitionValue extends SpaceField {
   }
 
   // A source will call this when it defines the field
+  private defInSource?: FieldDef;
   fieldDef(): FieldDef {
-    if (!this.haveFieldDef) {
-      this.haveFieldDef = this.exprDef.fieldDef(this.space, this.name);
-    }
-    return this.haveFieldDef;
+    const def =
+      this.defInSource ?? this.exprDef.fieldDef(this.space, this.name);
+    this.defInSource = def;
+    return def;
   }
 
-  // A query will call this when it defined the field
-  private qfd?: FieldTypeDef;
-  getQueryFieldDef(fs: FieldSpace): QueryFieldDef {
-    if (!this.qfd) {
+  // A query will call this when it defines the field
+  private defInQuery?: AtomicFieldDef;
+  getQueryFieldDef(fs: FieldSpace): AtomicFieldDef {
+    if (!this.defInQuery) {
       const def = this.exprDef.queryFieldDef(fs, this.name);
-      this.qfd = def;
+      this.defInQuery = def;
     }
-    return this.qfd;
+    return this.defInQuery;
   }
 
   // If this is called before the expression has been evaluated, we don't
@@ -310,7 +335,15 @@ export class FieldDefinitionValue extends SpaceField {
   // we can compile the expression to find out, this might result in
   // some expressions being compiled twice.
   typeDesc(): TypeDesc {
-    const typeFrom = this.qfd || this.fieldDef();
-    return this.fieldTypeFromFieldDef(typeFrom);
+    const typeFrom = this.defInQuery || this.fieldDef();
+    if (isAtomic(typeFrom)) {
+      return this.fieldTypeFromFieldDef(typeFrom);
+    }
+    throw new Error(`Can't get typeDesc for ${typeFrom.type}`);
+  }
+
+  entryType(): FieldDefType {
+    const typeFrom = this.defInQuery || this.fieldDef();
+    return typeFrom.type;
   }
 }

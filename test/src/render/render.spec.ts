@@ -62,16 +62,20 @@ const duckdb = runtimeFor('duckdb');
 describe('rendering results', () => {
   const runtimes = new RuntimeList(databases);
 
+  beforeEach(() => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
   afterAll(async () => {
     await runtimes.closeAll();
   });
 
-  test('can render table', async () => {
+  test.when(databases.includes('bigquery'))('can render table', async () => {
     const runtime = runtimes.runtimeMap.get('bigquery');
     expect(runtime).toBeDefined();
     if (runtime) {
       const src = `
-        run: bigquery.table('malloy-data.faa.flights') -> {
+        run: bigquery.table('malloydata-org.malloytest.flights') -> {
           group_by: carrier
           aggregate: flight_count is count()
         }
@@ -84,112 +88,151 @@ describe('rendering results', () => {
     }
   });
 
-  test('can render unsupported bigquery geo types', async () => {
-    await runUnsupportedRenderTest(
-      'bigquery',
-      runtimes,
-      "ST_GEOGFROMTEXT('LINESTRING(1 2, 3 4)')",
-      'LINESTRING(1 2, 3 4)'
-    );
-  });
+  test.when(databases.includes('bigquery'))(
+    'can render unsupported bigquery geo types',
+    async () => {
+      await runUnsupportedRenderTest(
+        'bigquery',
+        runtimes,
+        "ST_GEOGFROMTEXT('LINESTRING(1 2, 3 4)')",
+        'LINESTRING(1 2, 3 4)'
+      );
+    }
+  );
 
-  test('can render unsupported bigquery ip types', async () => {
-    await runUnsupportedRenderTest(
-      'bigquery',
-      runtimes,
-      "NET.IP_FROM_STRING('192.168.1.1')",
-      '{"type":"Buffer","data":[192,168,1,1]}'
-    );
-  });
+  test.when(databases.includes('bigquery'))(
+    'can render unsupported bigquery ip types',
+    async () => {
+      await runUnsupportedRenderTest(
+        'bigquery',
+        runtimes,
+        "NET.IP_FROM_STRING('192.168.1.1')",
+        '{"type":"Buffer","data":[192,168,1,1]}'
+      );
+    }
+  );
 
-  test('can render unsupported bigquery interval types', async () => {
-    await runUnsupportedRenderTest(
-      'bigquery',
-      runtimes,
-      'INTERVAL 1 YEAR',
-      '1-0 0 0:0:0'
-    );
-  });
+  test.when(databases.includes('bigquery'))(
+    'can render unsupported bigquery interval types',
+    async () => {
+      await runUnsupportedRenderTest(
+        'bigquery',
+        runtimes,
+        'INTERVAL 1 YEAR',
+        '1-0 0 0:0:0'
+      );
+    }
+  );
 
-  test('can render unsupported bigquery time types', async () => {
-    await runUnsupportedRenderTest(
-      'bigquery',
-      runtimes,
-      'TIME(10, 10, 1)',
-      '10:10:01'
-    );
-  });
+  test.when(databases.includes('bigquery'))(
+    'can render unsupported bigquery time types',
+    async () => {
+      await runUnsupportedRenderTest(
+        'bigquery',
+        runtimes,
+        'TIME(10, 10, 1)',
+        '10:10:01'
+      );
+    }
+  );
 
-  test('can render unsupported postgres interval types', async () => {
-    await runUnsupportedRenderTest(
-      'postgres',
-      runtimes,
-      'make_interval(days => 12)',
-      '12 days'
-    );
-  });
+  test.when(databases.includes('postgres'))(
+    'can render unsupported postgres interval types',
+    async () => {
+      await runUnsupportedRenderTest(
+        'postgres',
+        runtimes,
+        'make_interval(days => 12)',
+        '12 days'
+      );
+    }
+  );
 
-  test('can render unsupported postgres uuid types', async () => {
-    await runUnsupportedRenderTest(
-      'postgres',
-      runtimes,
-      "CAST('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11' AS UUID)",
-      'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'
-    );
-  });
+  test.when(databases.includes('postgres'))(
+    'can render unsupported postgres uuid types',
+    async () => {
+      await runUnsupportedRenderTest(
+        'postgres',
+        runtimes,
+        "CAST('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11' AS UUID)",
+        'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'
+      );
+    }
+  );
 
-  test('can render unsupported postgres inet types', async () => {
-    await runUnsupportedRenderTest(
-      'postgres',
-      runtimes,
-      "'192.168.1.1'::inet",
-      '192.168.1.1'
-    );
-  });
+  test.when(databases.includes('postgres'))(
+    'can render unsupported postgres inet types',
+    async () => {
+      await runUnsupportedRenderTest(
+        'postgres',
+        runtimes,
+        "'192.168.1.1'::inet",
+        '192.168.1.1'
+      );
+    }
+  );
 
-  test('can render unsupported postgres macaddr types', async () => {
-    await runUnsupportedRenderTest(
-      'postgres',
-      runtimes,
-      "'00:04:E2:36:95:C0'::macaddr",
-      '00:04:e2:36:95:c0'
-    );
-  });
+  test.when(databases.includes('postgres'))(
+    'can render unsupported postgres macaddr types',
+    async () => {
+      await runUnsupportedRenderTest(
+        'postgres',
+        runtimes,
+        "'00:04:E2:36:95:C0'::macaddr",
+        '00:04:e2:36:95:c0'
+      );
+    }
+  );
 
-  test('can render supported postgres types', async () => {
-    await runUnsupportedRenderTest('postgres', runtimes, '12345', '12,345');
-  });
+  test.when(databases.includes('postgres'))(
+    'can render supported postgres types',
+    async () => {
+      await runUnsupportedRenderTest('postgres', runtimes, '12345', '12,345');
+    }
+  );
 
-  test('can render supported duckdb types', async () => {
-    await runUnsupportedRenderTest('duckdb', runtimes, '12345', '12,345');
-  });
+  test.when(databases.includes('duckdb'))(
+    'can render supported duckdb types',
+    async () => {
+      await runUnsupportedRenderTest('duckdb', runtimes, '12345', '12,345');
+    }
+  );
 
-  test('can render unsupported duckdb blob types', async () => {
-    await runUnsupportedRenderTest(
-      'duckdb',
-      runtimes,
-      "'\\xAA'::BLOB",
-      '{"type":"Buffer","data":[170]}'
-    );
-  });
+  test.when(databases.includes('duckdb'))(
+    'can render unsupported duckdb blob types',
+    async () => {
+      await runUnsupportedRenderTest(
+        'duckdb',
+        runtimes,
+        "'\\xAA'::BLOB",
+        '{"type":"Buffer","data":[170]}'
+      );
+    }
+  );
 
-  test('can render unsupported duckdb uuid types', async () => {
-    await runUnsupportedRenderTest(
-      'duckdb',
-      runtimes,
-      "'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'::UUID",
-      'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'
-    );
-  });
+  test.when(databases.includes('duckdb'))(
+    'can render unsupported duckdb uuid types',
+    async () => {
+      await runUnsupportedRenderTest(
+        'duckdb',
+        runtimes,
+        "'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'::UUID",
+        'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'
+      );
+    }
+  );
 
-  test('can render null unsupported types', async () => {
-    await runUnsupportedRenderTest(
-      'bigquery',
-      runtimes,
-      'CAST(NULL AS GEOGRAPHY)',
-      '<span class="value-null">∅</span>'
-    );
-  });
+  test.when(databases.includes('bigquery'))(
+    'can render null unsupported types',
+    async () => {
+      await runUnsupportedRenderTest(
+        'bigquery',
+        runtimes,
+        'CAST(NULL AS GEOGRAPHY)',
+        '<span class="value-null">∅</span>'
+      );
+    }
+  );
 
   describe('html renderer', () => {
     describe('complex query with tags', () => {
@@ -286,7 +329,6 @@ describe('rendering results', () => {
             measure: visitcount is sum(vaccine) / count();
 
             # currency
-            # hidden
             dimension: price is apptcost
 
             view: by_name is {
@@ -467,7 +509,7 @@ describe('rendering results', () => {
   describe('date renderer', () => {
     test('date with timezone rendered correctly', async () => {
       const src = `
-        query: mex_query is duckdb.sql('SELECT 1') -> {
+        query: mex_query is duckdb.sql('SELECT 1 as one ') -> {
           timezone: 'America/Mexico_City'
           select: mex_time is @2021-02-24 03:05:06
         }
@@ -512,7 +554,7 @@ describe('rendering results', () => {
     test('date with timezone rendered correctly', async () => {
       const src = `
         query: mex_query is # bar_chart
-          duckdb.sql('SELECT 1') -> {
+          duckdb.sql('SELECT 1 as one') -> {
             timezone: 'America/Mexico_City'
             select: mex_time is @2021-02-24 03:05:06
           }
@@ -580,7 +622,7 @@ describe('rendering results', () => {
   describe('data volume renderer', () => {
     test('data volume tags works correctly', async () => {
       const src = `
-        query: bytes_query is duckdb.sql('SELECT 1') -> {
+        query: bytes_query is duckdb.sql('SELECT 1 as one') -> {
           select:
           # data_volume = bytes
           usage_b is 3758
@@ -606,10 +648,38 @@ describe('rendering results', () => {
     });
   });
 
+  describe('link renderer', () => {
+    test('data volume tags works correctly', async () => {
+      const src = `
+        query: bytes_query is duckdb.sql('SELECT 1 as one') -> {
+          select:
+          # link
+          just_link is "http://123.com"
+          # link.url_template="http://123.com/"
+          link_append is "4"
+          # link.url_template="http://123.com/$$/5"
+          link_substitue is "4"
+          # link{url_template="http://123.com/$$/5" field=key}
+          link_with_key is 'HTML Text'
+          key is "4"
+        }
+      `;
+      const result = await (
+        await duckdb.loadModel(src).loadQueryByName('bytes_query')
+      ).run();
+      const document = new JSDOM().window.document;
+      const html = await new HTMLView(document).render(result, {
+        dataStyles: {},
+      });
+
+      expect(html).toMatchSnapshot();
+    });
+  });
+
   describe('duration renderer', () => {
     test('duration tags works correctly', async () => {
       const src = `
-        query: duration_query is duckdb.sql('SELECT 1') -> {
+        query: duration_query is duckdb.sql('SELECT 1 as one') -> {
           select:
           # duration = nanoseconds
           ns1 is 1

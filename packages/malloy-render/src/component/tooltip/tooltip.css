@@ -1,0 +1,105 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ *  LICENSE file in the root directory of this source tree.
+ */
+
+.malloy-tooltip {
+  background: rgba(255, 255, 255, 0.95);
+  padding: 8px;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.1);
+  height: fit-content;
+  width: fit-content;
+  transform: translate(10px, 10px);
+
+  /* TODO: get rid of this hacky way of styling nested table
+      Also figure out how to pass normal styles to table. CSS is in shadow DOM while tooltip content is rendered outside
+  */
+  .header {
+    font-weight: bold;
+  }
+  .header,
+  .td {
+    padding: 2px 4px;
+  }
+
+  .td .cell-content {
+    text-overflow: ellipsis;
+    max-width: 200px;
+    overflow: hidden;
+  }
+}
+
+.malloy-tooltip--header {
+  margin-bottom: 4px;
+}
+
+.malloy-tooltip--title {
+  font-weight: bold;
+  font-size: 12px;
+  text-wrap: nowrap;
+}
+
+.malloy-tooltip--grid {
+  display: grid;
+  grid: auto / subgrid;
+  grid-template-columns: repeat(3, max-content);
+  column-gap: 8px;
+  row-gap: 4px;
+  font-size: 12px;
+}
+
+.malloy-tooltip--grid-row {
+  display: grid;
+  grid: auto / subgrid;
+  grid-column: 1 / span 3;
+}
+
+.malloy-tooltip--entry-label {
+  text-align: left;
+}
+
+.malloy-tooltip--entry-fade {
+  opacity: 0.25;
+}
+
+.malloy-tooltip--entry-value {
+  text-align: right;
+}
+
+.malloy-tooltip--entry-color {
+  text-align: center;
+  display: flex;
+  align-items: center;
+}
+
+.malloy-tooltip--color-circle {
+  width: 8px;
+  height: 8px;
+  border-radius: 8px;
+}
+
+.malloy-tooltip--list-item-row {
+  grid-column: 2 / span 2;
+  grid: auto / subgrid;
+  display: grid;
+  padding-block: 1px;
+}
+
+.malloy-tooltip--block-row {
+  grid-column: 2 / span 2;
+  margin-block: 6px;
+}
+
+.malloy-tooltip--block-label {
+  background: #eceff6;
+  width: fit-content;
+  padding: 3px 8px;
+  border-radius: 4px;
+  margin-bottom: 4px;
+}
+
+.malloy-tooltip--block-value {
+}

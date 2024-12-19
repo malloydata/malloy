@@ -32,10 +32,10 @@ import {
 import usAtlas from 'us-atlas/states-10m.json';
 import {HTMLChartRenderer} from './chart';
 import {formatTitle, getColorScale, timeToString} from './utils';
-import {RendererFactory} from '../renderer_factory';
-import {PointMapRenderOptions, StyleDefaults} from '../data_styles';
-import {RendererOptions} from '../renderer_types';
-import {Renderer} from '../renderer';
+import {RendererFactory} from './renderer_factory';
+import {PointMapRenderOptions, StyleDefaults} from './data_styles';
+import {RendererOptions} from './renderer_types';
+import {Renderer} from './renderer';
 
 export class HTMLPointMapRenderer extends HTMLChartRenderer {
   getDataValue(data: DataColumn): string | number {
@@ -77,7 +77,7 @@ export class HTMLPointMapRenderer extends HTMLChartRenderer {
       throw new Error('Expected struct value not to be null.');
     }
 
-    const fields = data.field.intrinsicFields;
+    const fields = data.field.allFields;
 
     const latField = fields[0];
     const lonField = fields[1];

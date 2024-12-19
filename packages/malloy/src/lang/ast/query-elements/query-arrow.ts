@@ -23,7 +23,7 @@
 
 import {Query, StructDef, refIsStructDef} from '../../../model/malloy_types';
 import {Source} from '../source-elements/source';
-import {StaticSpace} from '../field-space/static-space';
+import {StaticSourceSpace} from '../field-space/static-space';
 import {FieldSpace} from '../types/field-space';
 import {QueryComp} from '../types/query-comp';
 import {QueryElement} from '../types/query-element';
@@ -52,34 +52,44 @@ export class QueryArrow extends QueryBase implements QueryElement {
     if (this.source instanceof Source) {
       // We create a fresh query with either the QOPDesc as the head,
       // the view as the head, or the scalar as the head (if scalar lenses is enabled)
-      const structRef = isRefOk
-        ? this.source.structRef()
-        : this.source.structDef();
+      const invoked = isRefOk
+        ? this.source.structRef(undefined)
+        : {structRef: this.source.getSourceDef(undefined)};
       queryBase = {
         type: 'query',
-        structRef,
+        ...invoked,
         pipeline: [],
         location: this.location,
       };
-      inputStruct = refIsStructDef(structRef)
-        ? structRef
-        : this.source.structDef();
-      fieldSpace = new StaticSpace(inputStruct);
+      inputStruct = refIsStructDef(invoked.structRef)
+        ? invoked.structRef
+        : this.source.getSourceDef(undefined);
+      fieldSpace = new StaticSourceSpace(inputStruct);
     } else {
       // We are adding a second stage to the given "source" query; we get the query and add a segment
       const lhsQuery = this.source.queryComp(isRefOk);
       queryBase = lhsQuery.query;
       inputStruct = lhsQuery.outputStruct;
-      fieldSpace = new StaticSpace(lhsQuery.outputStruct);
+      fieldSpace = new StaticSourceSpace(lhsQuery.outputStruct);
     }
     const {pipeline, annotation, outputStruct, name} =
       this.view.pipelineComp(fieldSpace);
+
+    const query = {
+      ...queryBase,
+      name,
+      annotation,
+      pipeline: [...queryBase.pipeline, ...pipeline],
+    };
+
+    const compositeResolvedSourceDef =
+      query.compositeResolvedSourceDef ??
+      this.resolveCompositeSource(inputStruct, query);
+
     return {
       query: {
-        ...queryBase,
-        name,
-        annotation,
-        pipeline: [...queryBase.pipeline, ...pipeline],
+        ...query,
+        compositeResolvedSourceDef,
       },
       outputStruct,
       inputStruct,

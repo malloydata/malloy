@@ -21,8 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {AggregateFragment} from '../../../model/malloy_types';
-
+import {emptyCompositeFieldUsage} from '../../../model/composite_source_utils';
+import {AggregateExpr} from '../../../model/malloy_types';
 import {FieldReference} from '../query-items/field-references';
 import {ExprValue} from '../types/expr-value';
 import {FieldSpace} from '../types/field-space';
@@ -42,20 +42,33 @@ export class ExprCount extends ExprAggregateFunction {
     return undefined;
   }
 
+  returns(ev: ExprValue): ExprValue {
+    return {
+      type: 'number',
+      numberType: 'integer',
+      evalSpace: ev.evalSpace,
+      expressionType: 'aggregate',
+      value: ev.value,
+      compositeFieldUsage: ev.compositeFieldUsage,
+    };
+  }
+
   getExpression(_fs: FieldSpace): ExprValue {
-    const ret: AggregateFragment = {
-      type: 'aggregate',
+    const ret: AggregateExpr = {
+      node: 'aggregate',
       function: 'count',
-      e: [],
+      e: {node: ''},
     };
     if (this.source) {
       ret.structPath = this.source.path;
     }
     return {
-      dataType: 'number',
+      type: 'number',
+      numberType: 'integer',
       expressionType: 'aggregate',
-      value: [ret],
+      value: ret,
       evalSpace: 'output',
+      compositeFieldUsage: emptyCompositeFieldUsage(),
     };
   }
 }

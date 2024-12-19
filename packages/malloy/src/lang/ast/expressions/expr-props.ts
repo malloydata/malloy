@@ -22,11 +22,11 @@
  */
 
 import {
-  FilterExpression,
+  FilterCondition,
   expressionIsCalculation,
 } from '../../../model/malloy_types';
 import {errorFor} from '../ast-utils';
-import {FT} from '../fragtype-utils';
+import * as TDU from '../typedesc-utils';
 import {FunctionOrdering} from './function-ordering';
 import {Filter} from '../query-properties/filters';
 import {Limit} from '../query-properties/limit';
@@ -39,7 +39,7 @@ import {ExprFunc} from './expr-func';
 
 export class ExprProps extends ExpressionDef {
   elementType = 'expression with props';
-  legalChildTypes = FT.anyAtomicT;
+  legalChildTypes = TDU.anyAtomicT;
   constructor(
     readonly expr: ExpressionDef,
     readonly statements: FieldPropStatement[]
@@ -54,16 +54,20 @@ export class ExprProps extends ExpressionDef {
   ): ExprValue {
     if (wheres.length > 0) {
       if (!this.expr.supportsWhere(expr)) {
-        this.expr.log('Filtered expression requires an aggregate computation');
+        this.expr.logError(
+          'filter-of-non-aggregate',
+          'Filtered expression requires an aggregate computation'
+        );
         return expr;
       }
-      const filterList: FilterExpression[] = [];
+      const filterList: FilterCondition[] = [];
       for (const where of wheres) {
         const testList = where.getFilterList(fs);
         if (
           testList.find(cond => expressionIsCalculation(cond.expressionType))
         ) {
-          where.log(
+          where.logError(
+            'aggregate-filter-expression-not-scalar',
             'Cannot filter an expresion with an aggregate or analytical computation'
           );
           return expr;
@@ -73,16 +77,16 @@ export class ExprProps extends ExpressionDef {
       if (this.typeCheck(this.expr, {...expr, expressionType: 'scalar'})) {
         return {
           ...expr,
-          value: [
-            {
-              type: 'filterExpression',
-              e: expr.value,
-              filterList,
-            },
-          ],
+          value: {
+            node: 'filteredExpr',
+            kids: {e: expr.value, filterList},
+          },
         };
       }
-      this.expr.log(`Cannot filter '${expr.dataType}' data`);
+      this.expr.logError(
+        'filter-of-non-aggregate',
+        `Cannot filter '${expr.expressionType}' data`
+      );
       return errorFor('cannot filter type');
     }
     return expr;
@@ -96,7 +100,8 @@ export class ExprProps extends ExpressionDef {
     for (const statement of this.statements) {
       if (statement instanceof PartitionBy) {
         if (!this.expr.canSupportPartitionBy()) {
-          statement.log(
+          statement.logError(
+            'partition-by-of-non-window-function',
             '`partition_by` is not supported for this kind of expression'
           );
         } else {
@@ -104,15 +109,22 @@ export class ExprProps extends ExpressionDef {
         }
       } else if (statement instanceof Limit) {
         if (limit) {
-          statement.log('limit already specified');
+          statement.logError(
+            'expression-limit-already-specified',
+            'limit already specified'
+          );
         } else if (!this.expr.canSupportLimit()) {
-          statement.log('`limit` is not supported for this kind of expression');
+          statement.logError(
+            'limit-of-non-aggregate-function',
+            '`limit` is not supported for this kind of expression'
+          );
         } else {
           limit = statement;
         }
       } else if (statement instanceof FunctionOrdering) {
-        if (!this.expr.canSupportPartitionBy()) {
-          statement.log(
+        if (!this.expr.canSupportOrderBy()) {
+          statement.logError(
+            'order-by-of-non-aggregate-function',
             '`order_by` is not supported for this kind of expression'
           );
         } else {

@@ -23,21 +23,31 @@
 
 import {indent} from '../../model/utils';
 import {
-  Expr,
-  ExtractUnit,
   Sampling,
-  TimeValue,
-  TimestampUnit,
-  TypecastFragment,
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
-  mkExpr,
-  FieldAtomicTypeDef,
+  AtomicTypeDef,
+  TimeTruncExpr,
+  TimeExtractExpr,
+  TimeDeltaExpr,
+  TypecastExpr,
+  RegexMatchExpr,
+  TimeLiteralNode,
+  MeasureTimeExpr,
+  LeafAtomicTypeDef,
+  TD,
+  RecordLiteralNode,
+  ArrayLiteralNode,
 } from '../../model/malloy_types';
-import {STANDARDSQL_FUNCTIONS} from './functions';
-import {DialectFunctionOverloadDef} from '../functions';
+import {
+  DialectFunctionOverloadDef,
+  expandOverrideMap,
+  expandBlueprintMap,
+} from '../functions';
 import {Dialect, DialectFieldList, QueryInfo} from '../dialect';
+import {STANDARDSQL_DIALECT_FUNCTIONS} from './dialect_functions';
+import {STANDARDSQL_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
 // These are the units that "TIMESTAMP_ADD" "TIMESTAMP_DIFF" accept
 function timestampMeasureable(units: string): boolean {
@@ -75,7 +85,7 @@ declare interface TimeMeasure {
   ratio: number;
 }
 
-const bqToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
+const bqToMalloyTypes: {[key: string]: LeafAtomicTypeDef} = {
   'DATE': {type: 'date'},
   'STRING': {type: 'string'},
   'INTEGER': {type: 'number', numberType: 'integer'},
@@ -97,6 +107,7 @@ const bqToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
 
 export class StandardSQLDialect extends Dialect {
   name = 'standardsql';
+  experimental = false;
   defaultNumberType = 'FLOAT64';
   defaultDecimalType = 'NUMERIC';
   udfPrefix = '__udf';
@@ -113,6 +124,8 @@ export class StandardSQLDialect extends Dialect {
   supportsSafeCast = true;
   supportsNesting = true;
   cantPartitionWindowFunctionsOnExpressions = true;
+  hasModOperator = false;
+  nestedArrays = false; // Can't have an array of arrays for some reason
 
   quoteTablePath(tablePath: string): string {
     return `\`${tablePath}\``;
@@ -213,13 +226,13 @@ export class StandardSQLDialect extends Dialect {
   }
 
   sqlFieldReference(
-    alias: string,
-    fieldName: string,
-    _fieldType: string,
-    _isNested: boolean,
-    _isArray: boolean
+    parentAlias: string,
+    _parentType: unknown,
+    childName: string,
+    _childType: string
   ): string {
-    return `${alias}.${fieldName}`;
+    const child = this.sqlMaybeQuoteIdentifier(childName);
+    return `${parentAlias}.${child}`;
   }
 
   sqlUnnestPipelineHead(
@@ -259,208 +272,97 @@ ${indent(sql)}
     return `(SELECT AS STRUCT ${alias}.*)`;
   }
 
-  keywords = `
-  ALL
-  AND
-  ANY
-  ARRAY
-  AS
-  ASC
-  ASSERT_ROWS_MODIFIED
-  AT
-  BETWEEN
-  BY
-  CASE
-  CAST
-  COLLATE
-  CONTAINS
-  CREATE
-  CROSS
-  CUBE
-  CURRENT
-  DEFAULT
-  DEFINE
-  DESC
-  DISTINCT
-  ELSE
-  END
-  ENUM
-  ESCAPE
-  EXCEPT
-  EXCLUDE
-  EXISTS
-  EXTRACT
-  FALSE
-  FETCH
-  FOLLOWING
-  FOR
-  FROM
-  FULL
-  GROUP
-  GROUPING
-  GROUPS
-  HASH
-  HAVING
-  IF
-  IGNORE
-  IN
-  INNER
-  INTERSECT
-  INTERVAL
-  INTO
-  IS
-  JOIN
-  LATERAL
-  LEFT
-  LIKE
-  LIMIT
-  LOOKUP
-  MERGE
-  NATURAL
-  NEW
-  NO
-  NOT
-  NULL
-  NULLS
-  OF
-  ON
-  OR
-  ORDER
-  OUTER
-  OVER
-  PARTITION
-  PRECEDING
-  PROTO
-  RANGE
-  RECURSIVE
-  RESPECT
-  RIGHT
-  ROLLUP
-  ROWS
-  SELECT
-  SET
-  SOME
-  STRUCT
-  TABLESAMPLE
-  THEN
-  TO
-  TREAT
-  TRUE
-  UNBOUNDED
-  UNION
-  UNNEST
-  USING
-  WHEN
-  WHERE
-  WINDOW
-  WITH
-  WITHIN`.split(/\s/);
-
   sqlMaybeQuoteIdentifier(identifier: string): string {
-    // return this.keywords.indexOf(identifier.toUpperCase()) > 0
-    //   ? '`' + identifier + '`'
-    //   : identifier;
     return '`' + identifier + '`';
   }
 
-  sqlNow(): Expr {
-    return mkExpr`CURRENT_TIMESTAMP()`;
+  sqlNowExpr(): string {
+    return 'CURRENT_TIMESTAMP()';
   }
 
-  sqlTrunc(qi: QueryInfo, sqlTime: TimeValue, units: TimestampUnit): Expr {
+  sqlTruncExpr(qi: QueryInfo, trunc: TimeTruncExpr): string {
     const tz = qtz(qi);
     const tzAdd = tz ? `, "${tz}"` : '';
-    if (sqlTime.valueType === 'date') {
-      if (dateMeasureable(units)) {
-        return mkExpr`DATE_TRUNC(${sqlTime.value},${units})`;
+    if (TD.isDate(trunc.e.typeDef)) {
+      if (dateMeasureable(trunc.units)) {
+        return `DATE_TRUNC(${trunc.e.sql},${trunc.units})`;
       }
-      return mkExpr`TIMESTAMP(${sqlTime.value}${tzAdd})`;
+      return `TIMESTAMP(${trunc.e.sql}${tzAdd})`;
     }
-    return mkExpr`TIMESTAMP_TRUNC(${sqlTime.value},${units}${tzAdd})`;
+    return `TIMESTAMP_TRUNC(${trunc.e.sql},${trunc.units}${tzAdd})`;
   }
 
-  sqlExtract(qi: QueryInfo, expr: TimeValue, units: ExtractUnit): Expr {
-    const extractTo = extractMap[units] || units;
-    const tz = expr.valueType === 'timestamp' && qtz(qi);
+  sqlTimeExtractExpr(qi: QueryInfo, te: TimeExtractExpr): string {
+    const extractTo = extractMap[te.units] || te.units;
+    const tz = TD.isTimestamp(te.e.typeDef) && qtz(qi);
     const tzAdd = tz ? ` AT TIME ZONE '${tz}'` : '';
-    return mkExpr`EXTRACT(${extractTo} FROM ${expr.value}${tzAdd})`;
+    return `EXTRACT(${extractTo} FROM ${te.e.sql}${tzAdd})`;
   }
 
-  sqlAlterTime(
-    op: '+' | '-',
-    expr: TimeValue,
-    n: Expr,
-    timeframe: TimestampUnit
-  ): Expr {
-    let theTime = expr.value;
-    let computeType: string = expr.valueType;
-    if (timeframe !== 'day' && timestampMeasureable(timeframe)) {
+  sqlAlterTimeExpr(df: TimeDeltaExpr): string {
+    const from = df.kids.base;
+    let dataType: string = from?.typeDef.type;
+    let sql = from.sql;
+    if (df.units !== 'day' && timestampMeasureable(df.units)) {
       // The units must be done in timestamp, no matter the input type
-      computeType = 'timestamp';
-      if (expr.valueType !== 'timestamp') {
-        theTime = mkExpr`TIMESTAMP(${theTime})`;
+      if (dataType !== 'timestamp') {
+        sql = `TIMESTAMP(${sql})`;
+        dataType = 'timestamp';
       }
-    } else if (expr.valueType === 'timestamp') {
-      theTime = mkExpr`DATETIME(${theTime})`;
-      computeType = 'datetime';
+    } else if (dataType === 'timestamp') {
+      sql = `DATETIME(${sql})`;
+      dataType = 'datetime';
     }
-    const funcName = computeType.toUpperCase() + (op === '+' ? '_ADD' : '_SUB');
-    const newTime = mkExpr`${funcName}(${theTime}, INTERVAL ${n} ${timeframe})`;
-    if (computeType === expr.valueType) {
+    const funcTail = df.op === '+' ? '_ADD' : '_SUB';
+    const funcName = `${dataType.toUpperCase()}${funcTail}`;
+    const newTime = `${funcName}(${sql}, INTERVAL ${df.kids.delta.sql} ${df.units})`;
+    if (dataType === from.typeDef.type) {
       return newTime;
     }
-    return mkExpr`${expr.valueType.toUpperCase()}(${newTime})`;
+    return `${from.typeDef.type.toUpperCase()}(${newTime})`;
   }
 
   ignoreInProject(fieldName: string): boolean {
     return fieldName === '_PARTITIONTIME';
   }
 
-  sqlCast(qi: QueryInfo, cast: TypecastFragment): Expr {
-    const op = `${cast.srcType}::${cast.dstType}`;
+  sqlCast(qi: QueryInfo, cast: TypecastExpr): string {
+    const {op, srcTypeDef, dstTypeDef, dstSQLType} = this.sqlCastPrep(cast);
     const tz = qtz(qi);
+    const src = cast.e.sql || '';
     if (op === 'timestamp::date' && tz) {
-      return mkExpr`DATE(${cast.expr},'${tz}')`;
+      return `DATE(${src},'${tz}')`;
     }
     if (op === 'date::timestamp' && tz) {
-      return mkExpr`TIMESTAMP(${cast.expr}, '${tz}')`;
+      return `TIMESTAMP(${src}, '${tz}')`;
     }
-    if (cast.srcType !== cast.dstType) {
-      const dstType =
-        typeof cast.dstType === 'string'
-          ? this.malloyTypeToSQLType({type: cast.dstType})
-          : cast.dstType.raw;
+    if (!TD.eq(srcTypeDef, dstTypeDef)) {
       const castFunc = cast.safe ? 'SAFE_CAST' : 'CAST';
-      return mkExpr`${castFunc}(${cast.expr} AS ${dstType})`;
+      return `${castFunc}(${src} AS ${dstSQLType})`;
     }
-    return cast.expr;
+    return src;
   }
 
-  sqlRegexpMatch(expr: Expr, regexp: Expr): Expr {
-    return mkExpr`REGEXP_CONTAINS(${expr}, ${regexp})`;
+  sqlRegexpMatch(match: RegexMatchExpr): string {
+    return `REGEXP_CONTAINS(${match.kids.expr.sql},${match.kids.regex.sql})`;
   }
 
-  sqlLiteralTime(
-    qi: QueryInfo,
-    timeString: string,
-    type: 'date' | 'timestamp',
-    timezone: string | undefined
-  ): string {
-    if (type === 'date') {
-      return `DATE('${timeString}')`;
-    } else if (type === 'timestamp') {
-      let timestampArgs = `'${timeString}'`;
-      const tz = timezone || qtz(qi);
+  sqlLiteralTime(qi: QueryInfo, lit: TimeLiteralNode): string {
+    if (TD.isDate(lit.typeDef)) {
+      return `DATE('${lit.literal}')`;
+    } else if (TD.isTimestamp(lit.typeDef)) {
+      let timestampArgs = `'${lit.literal}'`;
+      const tz = lit.timezone || qtz(qi);
       if (tz && tz !== 'UTC') {
         timestampArgs += `,'${tz}'`;
       }
       return `TIMESTAMP(${timestampArgs})`;
     } else {
-      throw new Error(`Unsupported Literal time format ${type}`);
+      throw new Error(`Unsupported Literal time format ${lit.typeDef}`);
     }
   }
 
-  sqlMeasureTime(from: TimeValue, to: TimeValue, units: string): Expr {
+  sqlMeasureTimeExpr(measure: MeasureTimeExpr): string {
     const measureMap: Record<string, TimeMeasure> = {
       'microsecond': {use: 'microsecond', ratio: 1},
       'millisecond': {use: 'microsecond', ratio: 1000},
@@ -470,27 +372,29 @@ ${indent(sql)}
       'day': {use: 'hour', ratio: 24},
       'week': {use: 'day', ratio: 7},
     };
-    let lVal = from.value;
-    let rVal = to.value;
-    if (measureMap[units]) {
-      const {use: measureIn, ratio} = measureMap[units];
+    const from = measure.kids.left;
+    const to = measure.kids.right;
+    let lVal = from.sql;
+    let rVal = to.sql;
+    if (measureMap[measure.units]) {
+      const {use: measureIn, ratio} = measureMap[measure.units];
       if (!timestampMeasureable(measureIn)) {
         throw new Error(`Measure in '${measureIn} not implemented`);
       }
-      if (from.valueType !== to.valueType) {
+      if (!TD.eq(from.typeDef, to.typeDef)) {
         throw new Error("Can't measure difference between different types");
       }
-      if (from.valueType === 'date') {
-        lVal = mkExpr`TIMESTAMP(${lVal})`;
-        rVal = mkExpr`TIMESTAMP(${rVal})`;
+      if (TD.isDate(from.typeDef)) {
+        lVal = `TIMESTAMP(${lVal})`;
+        rVal = `TIMESTAMP(${rVal})`;
       }
-      let measured = mkExpr`TIMESTAMP_DIFF(${rVal},${lVal},${measureIn})`;
+      let measured = `TIMESTAMP_DIFF(${rVal},${lVal},${measureIn})`;
       if (ratio !== 1) {
-        measured = mkExpr`FLOOR(${measured}/${ratio.toString()}.0)`;
+        measured = `FLOOR(${measured}/${ratio.toString()}.0)`;
       }
       return measured;
     }
-    throw new Error(`Measure '${units} not implemented`);
+    throw new Error(`Measure '${measure.units} not implemented`);
   }
 
   sqlSampleTable(tableSQL: string, sample: Sampling | undefined): string {
@@ -519,11 +423,17 @@ ${indent(sql)}
     return "'" + noVirgule.replace(/'/g, "\\'") + "'";
   }
 
-  getGlobalFunctionDef(name: string): DialectFunctionOverloadDef[] | undefined {
-    return STANDARDSQL_FUNCTIONS.get(name);
+  getDialectFunctionOverrides(): {
+    [name: string]: DialectFunctionOverloadDef[];
+  } {
+    return expandOverrideMap(STANDARDSQL_MALLOY_STANDARD_OVERLOADS);
   }
 
-  malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string {
+  getDialectFunctions(): {[name: string]: DialectFunctionOverloadDef[]} {
+    return expandBlueprintMap(STANDARDSQL_DIALECT_FUNCTIONS);
+  }
+
+  malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
     if (malloyType.type === 'number') {
       if (malloyType.numberType === 'integer') {
         return 'INT64';
@@ -534,10 +444,15 @@ ${indent(sql)}
     return malloyType.type;
   }
 
-  sqlTypeToMalloyType(sqlType: string): FieldAtomicTypeDef | undefined {
+  sqlTypeToMalloyType(sqlType: string): LeafAtomicTypeDef {
     // Remove trailing params
     const baseSqlType = sqlType.match(/^(\w+)/)?.at(0) ?? sqlType;
-    return bqToMalloyTypes[baseSqlType.toUpperCase()];
+    return (
+      bqToMalloyTypes[baseSqlType.toUpperCase()] ?? {
+        type: 'sql native',
+        rawType: sqlType.toLowerCase(),
+      }
+    );
   }
 
   castToString(expression: string): string {
@@ -555,5 +470,19 @@ ${indent(sql)}
     // Parentheses, Commas:  NUMERIC(5, 2)
     // Angle Brackets:       ARRAY<INT64>
     return sqlType.match(/^[A-Za-z\s(),<>0-9]*$/) !== null;
+  }
+
+  sqlLiteralRecord(lit: RecordLiteralNode): string {
+    const ents: string[] = [];
+    for (const [name, val] of Object.entries(lit.kids)) {
+      const expr = val.sql || 'internal-error-literal-record';
+      ents.push(`${expr} AS ${this.sqlMaybeQuoteIdentifier(name)}`);
+    }
+    return `STRUCT(${ents.join(',')})`;
+  }
+
+  sqlLiteralArray(lit: ArrayLiteralNode): string {
+    const array = lit.kids.values.map(val => val.sql);
+    return '[' + array.join(',') + ']';
   }
 }

@@ -26,12 +26,12 @@ import {QueryBuilder} from '../types/query-builder';
 import {IndexBuilder} from '../query-builders/index-builder';
 import {ProjectBuilder} from '../query-builders/project-builder';
 import {ReduceBuilder} from '../query-builders/reduce-builder';
-import {FieldSpace} from '../types/field-space';
+import {SourceFieldSpace} from '../types/field-space';
 import {ListOf, MalloyElement} from '../types/malloy-element';
 import {OpDesc} from '../types/op-desc';
 import {opOutputStruct} from '../struct-utils';
 import {QueryProperty} from '../types/query-property';
-import {StaticSpace} from '../field-space/static-space';
+import {StaticSourceSpace} from '../field-space/static-space';
 import {QueryClass} from '../types/query-property-interface';
 import {PartialBuilder} from '../query-builders/partial-builder';
 import {QueryOperationSpace} from '../field-space/query-spaces';
@@ -57,7 +57,10 @@ export class QOpDesc extends ListOf<QueryProperty> {
       if (el.forceQueryClass) {
         if (guessType) {
           if (guessType !== el.forceQueryClass) {
-            el.log(`Not legal in ${guessType} query`);
+            el.logError(
+              `illegal-${guessType}-operation`,
+              `Not legal in ${guessType} query`
+            );
           }
         } else {
           guessType = el.forceQueryClass;
@@ -66,9 +69,7 @@ export class QOpDesc extends ListOf<QueryProperty> {
       needsExplicitQueryClass ||= el.needsExplicitQueryClass ?? false;
     }
     if (guessType === undefined && needsExplicitQueryClass) {
-      this.log(
-        "Can't determine view type (`group_by` / `aggregate` / `nest`, `project`, `index`)"
-      );
+      this.logError('ambiguous-view-type', {});
       guessType = QueryClass.Project;
     }
     this.opClass = guessType;
@@ -80,7 +81,7 @@ export class QOpDesc extends ListOf<QueryProperty> {
   }
 
   private getBuilder(
-    baseFS: FieldSpace,
+    baseFS: SourceFieldSpace,
     isNestIn: QueryOperationSpace | undefined,
     astEl: MalloyElement
   ): QueryBuilder {
@@ -97,7 +98,7 @@ export class QOpDesc extends ListOf<QueryProperty> {
   }
 
   getOp(
-    inputFS: FieldSpace,
+    inputFS: SourceFieldSpace,
     isNestIn: QueryOperationSpace | undefined
   ): OpDesc {
     const build = this.getBuilder(inputFS, isNestIn, this);
@@ -111,7 +112,9 @@ export class QOpDesc extends ListOf<QueryProperty> {
         // TODO someday we'd like to get rid of the call to opOutputStruct here.
         // If the `build.resultFS` is correct, then we should be able to just use that
         // in a more direct way.
-        new StaticSpace(opOutputStruct(this, inputFS.structDef(), segment)),
+        new StaticSourceSpace(
+          opOutputStruct(this, inputFS.structDef(), segment)
+        ),
     };
   }
 }

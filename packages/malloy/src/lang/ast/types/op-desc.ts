@@ -23,9 +23,9 @@
 
 import {PipeSegment} from '../../../model/malloy_types';
 
-import {FieldSpace} from './field-space';
+import {SourceFieldSpace} from './field-space';
 
 export interface OpDesc {
   segment: PipeSegment;
-  outputSpace: () => FieldSpace;
+  outputSpace: () => SourceFieldSpace;
 }

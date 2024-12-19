@@ -1,8 +1,8 @@
 {
   "name": "@malloydata/render",
-  "version": "0.0.123",
+  "version": "0.0.225",
   "license": "MIT",
-  "main": "dist/index.js",
+  "main": "dist/module/index.umd.js",
   "types": "dist/index.d.ts",
   "homepage": "https://github.com/malloydata/malloy#readme",
   "repository": {
@@ -10,41 +10,54 @@
     "url": "https://github.com/malloydata/malloy"
   },
   "engines": {
-    "node": ">=16"
+    "node": ">=18"
+  },
+  "exports": {
+    ".": "./dist/module/index.umd.js",
+    "./webcomponent": "./dist/webcomponent/malloy-render.umd.js",
+    "./webcomponent/register": "./dist/register/register.umd.js"
   },
   "scripts": {
     "bundle_renderer": "node src/bundle/esbuild_bundler.js",
-    "lint": "eslint '**/*.ts{,x}'",
-    "lint-fix": "eslint '**/*.ts{,x}' --fix",
     "test": "jest --config=../../jest.config.js",
-    "build": "tsc --build",
+    "build": "npm run build-types && npm run build-source && npm run build-webcomponent",
     "clean": "tsc --build --clean",
-    "prepublishOnly": "npm run build && npm run bundle_renderer",
-    "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "prepublishOnly": "npm run build",
+    "storybook": "rm -rf ./node_modules/.cache && storybook dev -p 6006",
+    "build-storybook": "storybook build",
+    "build-source": "vite build --outDir 'dist/module' --config vite.config.ts",
+    "build-webcomponent": "vite build --outDir 'dist/webcomponent' --config vite.config.webcomponent.ts && vite build --outDir 'dist/register' --config vite.config.webcomponent-register.ts",
+    "build-types": "tsc --build --declaration --emitDeclarationOnly"
   },
   "dependencies": {
-    "@lit/context": "^1.1.0",
-    "@malloydata/malloy": "^0.0.123",
-    "@types/luxon": "^2.4.0",
-    "lit": "^3.0.2",
+    "@malloydata/malloy": "^0.0.225",
+    "@tanstack/solid-virtual": "^3.10.4",
+    "component-register": "^0.8.6",
     "lodash": "^4.17.20",
     "luxon": "^2.4.0",
+    "solid-element": "^1.8.0",
+    "solid-js": "^1.8.15",
     "ssf": "^0.11.2",
     "us-atlas": "^3.0.0",
     "vega": "^5.21.0",
     "vega-lite": "^5.2.0"
   },
   "devDependencies": {
-    "@storybook/addon-essentials": "^7.5.0",
-    "@storybook/addon-interactions": "^7.5.0",
-    "@storybook/addon-links": "^7.5.0",
-    "@storybook/blocks": "^7.5.0",
-    "@storybook/html": "^7.5.0",
-    "@storybook/html-vite": "^7.5.0",
-    "@storybook/testing-library": "^0.2.2",
-    "@storybook/types": "^7.5.3",
+    "@storybook/addon-essentials": "^8.3.5",
+    "@storybook/addon-interactions": "^8.3.5",
+    "@storybook/addon-links": "^8.3.5",
+    "@storybook/blocks": "^8.3.5",
+    "@storybook/builder-vite": "^8.3.5",
+    "@storybook/html": "^8.3.5",
+    "@storybook/html-vite": "^8.3.5",
+    "@storybook/manager-api": "^8.3.5",
+    "@storybook/test": "^8.3.5",
+    "@storybook/theming": "^8.3.5",
+    "@storybook/types": "^8.3.5",
+    "@types/luxon": "^2.4.0",
     "esbuild": "0.19.11",
-    "storybook": "^7.5.0"
+    "storybook": "^8.3.5",
+    "vite": "^5.1.5",
+    "vite-plugin-solid": "^2.10.1"
   }
 }

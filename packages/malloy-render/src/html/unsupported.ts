@@ -22,11 +22,11 @@
  */
 
 import {DataColumn, Explore, Field} from '@malloydata/malloy';
-import {Renderer} from '../renderer';
+import {Renderer} from './renderer';
 import {createNullElement} from './utils';
-import {RendererFactory} from '../renderer_factory';
-import {DataRenderOptions, StyleDefaults} from '../data_styles';
-import {RendererOptions} from '../renderer_types';
+import {RendererFactory} from './renderer_factory';
+import {DataRenderOptions, StyleDefaults} from './data_styles';
+import {RendererOptions} from './renderer_types';
 
 export class HTMLUnsupportedRenderer implements Renderer {
   constructor(private readonly document: Document) {}
@@ -78,6 +78,6 @@ export class UnsupportedRendererFactory extends RendererFactory<DataRenderOption
   }
 
   get rendererName() {
-    return undefined;
+    return 'unsupported';
   }
 }

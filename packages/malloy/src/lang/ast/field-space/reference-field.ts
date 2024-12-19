@@ -21,12 +21,19 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Annotation, QueryFieldDef, TypeDesc} from '../../../model/malloy_types';
-
+import {
+  Annotation,
+  QueryFieldDef,
+  TD,
+  TypeDesc,
+  mkFieldDef,
+} from '../../../model/malloy_types';
+import * as TDU from '../typedesc-utils';
 import {FieldReference} from '../query-items/field-references';
 import {FieldSpace} from '../types/field-space';
 import {SpaceEntry} from '../types/space-entry';
 import {SpaceField} from '../types/space-field';
+import {joinedCompositeFieldUsage} from '../../../model/composite_source_utils';
 
 export class ReferenceField extends SpaceField {
   private didLookup = false;
@@ -52,22 +59,39 @@ export class ReferenceField extends SpaceField {
     if (!this.queryFieldDef) {
       const check = this.fieldRef.getField(fs);
       if (check.error) {
-        this.fieldRef.log(check.error);
+        this.fieldRef.logError(check.error.code, check.error.message);
       }
-      this.queryFieldDef = {
-        type: 'fieldref',
-        path: this.fieldRef.list.map(f => f.name),
-      };
+
+      // TODO investigate removing 'fieldref' as a type, as it obscures the
+      //      actual type of the field and is redundant with the slightly
+      //      more verbose `{ e: [{ type: 'field', path }] }`
+      const path = this.fieldRef.path;
+      if (check.found && check.found.refType === 'parameter') {
+        const foundType = check.found.typeDesc();
+        if (TD.isAtomic(foundType)) {
+          this.queryFieldDef = {
+            ...mkFieldDef(TDU.atomicDef(foundType), path[0]),
+            e: {node: 'parameter', path},
+          };
+        } else {
+          // not sure what to do here, if we get here
+          throw new Error('impossible turtle/join parameter');
+        }
+      } else {
+        this.queryFieldDef = {type: 'fieldref', path};
+      }
       const refTo = this.referenceTo;
-      if (refTo instanceof SpaceField && refTo.haveFieldDef) {
-        const origFd = refTo.haveFieldDef;
-        const notes = this.fieldRef.note;
-        if (origFd.annotation || notes) {
-          const annotation: Annotation = notes || {};
-          if (origFd.annotation) {
-            annotation.inherits = origFd.annotation;
+      if (refTo instanceof SpaceField) {
+        const origFd = refTo.constructorFieldDef();
+        if (origFd) {
+          const notes = this.fieldRef.note;
+          if (origFd.annotation || notes) {
+            const annotation: Annotation = notes || {};
+            if (origFd.annotation) {
+              annotation.inherits = origFd.annotation;
+            }
+            this.queryFieldDef.annotation = annotation;
           }
-          this.queryFieldDef.annotation = annotation;
         }
       }
     }
@@ -78,9 +102,17 @@ export class ReferenceField extends SpaceField {
     if (this.memoTypeDesc) return this.memoTypeDesc;
     const refTo = this.referenceTo;
     if (refTo) {
-      this.memoTypeDesc = refTo.typeDesc();
+      const joinPath = this.fieldRef.list.slice(0, -1).map(x => x.refString);
+      const typeDesc = refTo.typeDesc();
+      this.memoTypeDesc = {
+        ...typeDesc,
+        compositeFieldUsage: joinedCompositeFieldUsage(
+          joinPath,
+          typeDesc.compositeFieldUsage
+        ),
+      };
       return this.memoTypeDesc;
     }
-    return {dataType: 'error', expressionType: 'scalar', evalSpace: 'input'};
+    return TDU.errorT;
   }
 }

@@ -23,7 +23,10 @@
 
 import {DuckDBCommon} from './duckdb_common';
 import {DuckDBConnection} from './duckdb_connection';
-import {SQLBlock} from '@malloydata/malloy';
+import {SQLSourceDef, StructDef, mkArrayDef} from '@malloydata/malloy';
+import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
+
+const [describe] = describeIfDatabaseAvailable(['duckdb']);
 
 /*
  * !IMPORTANT
@@ -62,39 +65,39 @@ describe('DuckDBConnection', () => {
 
     it('caches table schema', async () => {
       await connection.fetchSchemaForTables({'test1': 'table1'}, {});
-      expect(runRawSQL).toBeCalledTimes(1);
+      expect(runRawSQL).toHaveBeenCalledTimes(1);
       await new Promise(resolve => setTimeout(resolve));
       await connection.fetchSchemaForTables({'test1': 'table1'}, {});
-      expect(runRawSQL).toBeCalledTimes(1);
+      expect(runRawSQL).toHaveBeenCalledTimes(1);
     });
 
     it('refreshes table schema', async () => {
       await connection.fetchSchemaForTables({'test2': 'table2'}, {});
-      expect(runRawSQL).toBeCalledTimes(1);
+      expect(runRawSQL).toHaveBeenCalledTimes(1);
       await new Promise(resolve => setTimeout(resolve));
       await connection.fetchSchemaForTables(
         {'test2': 'table2'},
         {refreshTimestamp: Date.now() + 10}
       );
-      expect(runRawSQL).toBeCalledTimes(2);
+      expect(runRawSQL).toHaveBeenCalledTimes(2);
     });
 
     it('caches sql schema', async () => {
-      await connection.fetchSchemaForSQLBlock(SQL_BLOCK_1, {});
-      expect(runRawSQL).toBeCalledTimes(1);
+      await connection.fetchSchemaForSQLStruct(SQL_BLOCK_1, {});
+      expect(runRawSQL).toHaveBeenCalledTimes(1);
       await new Promise(resolve => setTimeout(resolve));
-      await connection.fetchSchemaForSQLBlock(SQL_BLOCK_1, {});
-      expect(runRawSQL).toBeCalledTimes(1);
+      await connection.fetchSchemaForSQLStruct(SQL_BLOCK_1, {});
+      expect(runRawSQL).toHaveBeenCalledTimes(1);
     });
 
     it('refreshes sql schema', async () => {
-      await connection.fetchSchemaForSQLBlock(SQL_BLOCK_2, {});
-      expect(runRawSQL).toBeCalledTimes(1);
+      await connection.fetchSchemaForSQLStruct(SQL_BLOCK_2, {});
+      expect(runRawSQL).toHaveBeenCalledTimes(1);
       await new Promise(resolve => setTimeout(resolve));
-      await connection.fetchSchemaForSQLBlock(SQL_BLOCK_2, {
+      await connection.fetchSchemaForSQLStruct(SQL_BLOCK_2, {
         refreshTimestamp: Date.now() + 10,
       });
-      expect(runRawSQL).toBeCalledTimes(2);
+      expect(runRawSQL).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -124,11 +127,87 @@ describe('DuckDBConnection', () => {
       await connection2.close();
     });
   });
+
+  describe('schema parser', () => {
+    it('parses arrays', () => {
+      const structDef = makeStructDef();
+      connection.fillStructDefFromTypeMap(structDef, {test: ARRAY_SCHEMA});
+      expect(structDef.fields[0]).toEqual(
+        mkArrayDef({type: 'number', numberType: 'integer'}, 'test')
+      );
+    });
+
+    it('parses inline', () => {
+      const structDef = makeStructDef();
+      connection.fillStructDefFromTypeMap(structDef, {test: INLINE_SCHEMA});
+      expect(structDef.fields[0]).toEqual({
+        'name': 'test',
+        'type': 'record',
+        'join': 'one',
+        'fields': [
+          {'name': 'a', ...dblType},
+          {'name': 'b', ...intTyp},
+          {'name': 'c', ...strTyp},
+        ],
+      });
+    });
+
+    it('parses nested', () => {
+      const structDef = makeStructDef();
+      connection.fillStructDefFromTypeMap(structDef, {test: NESTED_SCHEMA});
+      expect(structDef.fields[0]).toEqual({
+        'name': 'test',
+        'type': 'array',
+        'elementTypeDef': {type: 'record_element'},
+        'join': 'many',
+        'fields': [
+          {'name': 'a', 'numberType': 'float', 'type': 'number'},
+          {'name': 'b', 'numberType': 'integer', 'type': 'number'},
+          {'name': 'c', 'type': 'string'},
+        ],
+      });
+    });
+
+    it('parses a simple type', () => {
+      const structDef = makeStructDef();
+      connection.fillStructDefFromTypeMap(structDef, {test: 'varchar(60)'});
+      expect(structDef.fields[0]).toEqual({
+        'name': 'test',
+        'type': 'string',
+      });
+    });
+  });
 });
 
-const SQL_BLOCK_1 = {
-  type: 'sqlBlock',
+/**
+ * Create a basic StructDef for the purpose of passing to
+ * DuckDBConnection.fillStructDefFromTypeMap()
+ *
+ * @returns valid StructDef for testing
+ */
+const makeStructDef = (): StructDef => {
+  return {
+    type: 'table',
+    name: 'test',
+    dialect: 'duckdb',
+    tablePath: 'test',
+    connection: 'duckdb',
+    fields: [],
+  };
+};
+
+//
+// SQL blocks for testing table name detection in
+// DuckDBConnection.fetchSchemaForSQLBlock()
+//
+
+// Uses string value for table
+const SQL_BLOCK_1: SQLSourceDef = {
+  type: 'sql_select',
   name: 'block1',
+  dialect: 'duckdb',
+  connection: 'duckdb',
+  fields: [],
   selectStr: `
 SELECT
 created_at,
@@ -142,11 +221,15 @@ product_category,
 created_at AS inventory_items_created_at
 FROM "inventory_items.parquet"
 `,
-} as SQLBlock;
+};
 
-const SQL_BLOCK_2 = {
-  type: 'sqlBlock',
+// Uses read_parquet() for table
+const SQL_BLOCK_2: SQLSourceDef = {
+  type: 'sql_select',
   name: 'block2',
+  dialect: 'duckdb',
+  connection: 'duckdb',
+  fields: [],
   selectStr: `
 SELECT
 created_at,
@@ -160,4 +243,21 @@ product_category,
 created_at AS inventory_items_created_at
 FROM read_parquet("inventory_items2.parquet")
 `,
-} as SQLBlock;
+};
+
+//
+// Type strings for testing DuckDBConnection.fillStructDefFromTypeMap()
+//
+
+// 'integer[]' is array
+const ARRAY_SCHEMA = 'integer[]';
+
+// STRUCT(...) is inline
+const INLINE_SCHEMA = 'STRUCT(a double, b integer, c varchar(60))';
+
+// STRUCT(....)[] is nested
+const NESTED_SCHEMA = 'STRUCT(a double, b integer, c varchar(60))[]';
+
+const intTyp = {type: 'number', numberType: 'integer'};
+const strTyp = {type: 'string'};
+const dblType = {type: 'number', numberType: 'float'};

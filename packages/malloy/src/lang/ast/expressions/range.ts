@@ -21,13 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {maxExpressionType, mergeEvalSpaces} from '../../../model/malloy_types';
-
 import {errorFor} from '../ast-utils';
-import {ExprValue} from '../types/expr-value';
+import {BinaryMalloyOperator} from '../types/binary_operators';
+import {ExprValue, computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
-import {compose} from './utils';
 
 export class Range extends ExpressionDef {
   elementType = 'range';
@@ -38,7 +36,11 @@ export class Range extends ExpressionDef {
     super({first: first, last: last});
   }
 
-  apply(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {
+  apply(
+    fs: FieldSpace,
+    op: BinaryMalloyOperator,
+    expr: ExpressionDef
+  ): ExprValue {
     switch (op) {
       case '=':
       case '!=': {
@@ -47,15 +49,14 @@ export class Range extends ExpressionDef {
         const op3 = op === '=' ? '<' : '>=';
         const fromValue = this.first.apply(fs, op1, expr);
         const toValue = this.last.apply(fs, op3, expr);
-        return {
-          dataType: 'boolean',
-          expressionType: maxExpressionType(
-            fromValue.expressionType,
-            toValue.expressionType
-          ),
-          evalSpace: mergeEvalSpaces(fromValue.evalSpace, toValue.evalSpace),
-          value: compose(fromValue.value, op2, toValue.value),
-        };
+        return computedExprValue({
+          dataType: {type: 'boolean'},
+          value: {
+            node: op2,
+            kids: {left: fromValue.value, right: toValue.value},
+          },
+          from: [fromValue, toValue],
+        });
       }
 
       /**
@@ -84,7 +85,7 @@ export class Range extends ExpressionDef {
   }
 
   getExpression(_fs: FieldSpace): ExprValue {
-    this.log('A Range is not a value');
+    this.logError('range-as-value', 'A Range is not a value');
     return errorFor('a range is not a value');
   }
 }

@@ -21,15 +21,17 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {PipeSegment} from '../../../model/malloy_types';
+import {FilterCondition, PipeSegment} from '../../../model/malloy_types';
 import {QueryProperty} from './query-property';
 import {QueryInputSpace} from '../field-space/query-input-space';
 import {QueryOperationSpace} from '../field-space/query-spaces';
 
 export interface QueryBuilder {
+  filters: FilterCondition[];
   type: 'grouping' | 'index' | 'project';
   inputFS: QueryInputSpace;
   resultFS: QueryOperationSpace;
+  alwaysJoins: string[];
   execute(qp: QueryProperty): void;
   finalize(refineFrom: PipeSegment | undefined): PipeSegment;
 }

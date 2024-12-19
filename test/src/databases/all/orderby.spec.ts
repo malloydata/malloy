@@ -23,7 +23,7 @@
  */
 
 import {RuntimeList, allDatabases} from '../../runtimes';
-import {databasesFromEnvironmentOr, testIf} from '../../util';
+import {booleanResult, databasesFromEnvironmentOr} from '../../util';
 import '../../util/db-jest-matchers';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
@@ -45,7 +45,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         aggregate: model_count is count()
       }
     `).malloyResultMatches(orderByModel, {
-      big: false,
+      big: booleanResult(false, databaseName),
       model_count: 58451,
     });
   });
@@ -62,7 +62,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         aggregate: model_count is model_count.sum()
       }
     `).malloyResultMatches(orderByModel, {
-      big: false,
+      big: booleanResult(false, databaseName),
       model_count: 58500,
     });
   });
@@ -87,11 +87,13 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     `).malloyResultMatches(orderByModel, {});
   });
 
-  it(`reserved words are quoted in turtles - ${databaseName}`, async () => {
-    await expect(`
-      run: models->{
+  test.when(runtime.supportsNesting)(
+    `reserved words are quoted in turtles - ${databaseName}`,
+    async () => {
+      await expect(`
+      run: ${databaseName}.table('malloytest.state_facts')->{
         nest: withx is {
-          group_by: select is UPPER(manufacturer)
+          group_by: select is upper(popular_name)
           aggregate: fetch is count()
         }
       } -> {
@@ -100,7 +102,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           fetch is withx.fetch
       }
     `).malloyResultMatches(orderByModel, {});
-  });
+    }
+  );
 
   it.skip('reserved words in structure definitions', async () => {
     await expect(`
@@ -139,7 +142,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     `).malloyResultMatches(orderByModel, {model_count: 102});
   });
 
-  testIf(runtime.supportsNesting)(
+  test.when(runtime.supportsNesting)(
     `modeled having complex - ${databaseName}`,
     async () => {
       await expect(`

@@ -24,22 +24,19 @@
 import {ExprValue} from '../types/expr-value';
 import {FieldSpace} from '../types/field-space';
 import {ExpressionDef} from '../types/expression-def';
+import {emptyCompositeFieldUsage} from '../../../model/composite_source_utils';
 
 export class ExprNow extends ExpressionDef {
   elementType = 'timestamp';
 
   getExpression(_fs: FieldSpace): ExprValue {
     return {
-      dataType: 'timestamp',
+      type: 'timestamp',
       expressionType: 'scalar',
       // `now` is considered to be a constant, at least in the dialects we support today
       evalSpace: 'constant',
-      value: [
-        {
-          type: 'dialect',
-          function: 'now',
-        },
-      ],
+      value: {node: 'now'},
+      compositeFieldUsage: emptyCompositeFieldUsage(),
     };
   }
 }

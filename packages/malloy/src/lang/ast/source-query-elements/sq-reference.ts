@@ -28,6 +28,8 @@ import {QueryElement} from '../types/query-element';
 import {QuerySource} from '../source-elements/query-source';
 import {NamedSource} from '../source-elements/named-source';
 import {QueryReference} from '../query-elements/query-reference';
+import {Argument} from '../parameters/argument';
+import {isSourceDef} from '../../../model';
 
 /**
  * A reference to either a source or a query.
@@ -38,8 +40,14 @@ export class SQReference extends SourceQueryElement {
   elementType = 'sq-reference';
   asSource?: Source;
 
-  constructor(readonly ref: ModelEntryReference) {
+  constructor(
+    readonly ref: ModelEntryReference,
+    readonly args?: Argument[] | undefined
+  ) {
     super({ref});
+    if (args !== undefined) {
+      this.has({args});
+    }
   }
 
   getQuery(): QueryElement | undefined {
@@ -51,18 +59,23 @@ export class SQReference extends SourceQueryElement {
         return query;
       } else {
         this.sqLog(
+          'cannot-use-as-query',
           `Illegal reference to '${entry.as || entry.name}', query expected`
         );
       }
     } else {
-      this.ref.log(`Reference to undefined object '${this.ref.refString}'`);
+      this.ref.logError(
+        'source-or-query-not-found',
+        `Reference to undefined object '${this.ref.refString}'`
+      );
       this.errored = true;
     }
     return;
   }
 
   isSource() {
-    return this.ref.getNamed()?.type === 'struct';
+    const refTo = this.ref.getNamed();
+    return refTo !== undefined && isSourceDef(refTo);
   }
 
   getSource(): Source | undefined {
@@ -71,17 +84,27 @@ export class SQReference extends SourceQueryElement {
     }
     const entry = this.ref.getNamed();
     if (!entry) {
-      this.ref.log(`Reference to undefined object '${this.ref.refString}'`);
+      this.ref.logError(
+        'source-not-found',
+        `Reference to undefined object '${this.ref.refString}'`
+      );
       this.errored = true;
       return;
     }
     if (entry.type === 'query') {
+      if (this.args !== undefined) {
+        this.ref.logError(
+          'illegal-query-argument',
+          'Arguments cannot be passed to queries'
+        );
+      }
       const existingQuery = new QueryReference(this.ref);
       this.asSource = new QuerySource(existingQuery);
-    } else if (entry.type === 'struct') {
-      this.asSource = new NamedSource(this.ref);
+    } else if (isSourceDef(entry)) {
+      this.asSource = new NamedSource(this.ref, undefined, this.args);
     } else {
       this.sqLog(
+        'cannot-use-struct-as-source',
         `Expected '${this.ref.refString}' to be of type query or source, not '${entry.type}'`
       );
       return;

@@ -23,23 +23,19 @@
 
 import crypto from 'crypto';
 import {DuckDBCommon} from './duckdb_common';
-import {
-  Connection,
-  Database,
-  DuckDbError,
-  OPEN_READONLY,
-  OPEN_READWRITE,
-  TableData,
-} from 'duckdb';
+import {Connection, Database, DuckDbError, TableData} from 'duckdb';
 import {
   ConnectionConfig,
   QueryDataRow,
   QueryOptionsReader,
   RunSQLOptions,
 } from '@malloydata/malloy';
+import packageJson from '@malloydata/malloy/package.json';
 
 export interface DuckDBConnectionOptions extends ConnectionConfig {
+  additionalExtensions?: string[];
   databasePath?: string;
+  motherDuckToken?: string;
   workingDirectory?: string;
   readOnly?: boolean;
 }
@@ -51,12 +47,14 @@ interface ActiveDB {
 
 export class DuckDBConnection extends DuckDBCommon {
   public readonly name: string;
+  private additionalExtensions: string[] = [];
   private databasePath = ':memory:';
   private workingDirectory = '.';
   private readOnly = false;
 
   connecting: Promise<void>;
   protected connection: Connection | null = null;
+  protected setupError: Error | undefined;
   protected isSetup: Promise<void> | undefined;
 
   static activeDBs: Record<string, ActiveDB> = {};
@@ -104,37 +102,66 @@ export class DuckDBConnection extends DuckDBCommon {
       if (typeof arg.workingDirectory === 'string') {
         this.workingDirectory = arg.workingDirectory;
       }
+      if (typeof arg.motherDuckToken === 'string') {
+        this.motherDuckToken = arg.motherDuckToken;
+      }
+      if (Array.isArray(arg.additionalExtensions)) {
+        this.additionalExtensions = arg.additionalExtensions;
+      }
     }
     if (this.databasePath === ':memory:') {
       this.readOnly = false;
     }
+    this.isMotherDuck =
+      this.databasePath.startsWith('md:') ||
+      this.databasePath.startsWith('motherduck:');
     this.connecting = this.init();
   }
 
   private async init(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      let activeDB: ActiveDB;
+    return new Promise(resolve => {
       if (this.databasePath in DuckDBConnection.activeDBs) {
-        activeDB = DuckDBConnection.activeDBs[this.databasePath];
+        const activeDB = DuckDBConnection.activeDBs[this.databasePath];
+        this.connection = activeDB.database.connect();
+        activeDB.connections.push(this.connection);
+        resolve();
       } else {
-        const database = new Database(
-          this.databasePath,
-          this.readOnly ? OPEN_READONLY : OPEN_READWRITE,
-          err => {
-            if (err) {
-              reject(err);
-            }
-          }
-        );
-        activeDB = {
-          database,
-          connections: [],
+        const config: Record<string, string> = {
+          'custom_user_agent': `Malloy/${packageJson.version}`,
         };
-        DuckDBConnection.activeDBs[this.databasePath] = activeDB;
+        if (this.isMotherDuck) {
+          if (
+            !this.motherDuckToken &&
+            !process.env['motherduck_token'] &&
+            !process.env['MOTHERDUCK_TOKEN']
+          ) {
+            this.setupError = new Error('Please set your MotherDuck Token');
+            // Resolve instead of error because errors cannot be caught.
+            return resolve();
+          }
+          if (this.motherDuckToken) {
+            config['motherduck_token'] = this.motherDuckToken;
+          }
+        }
+        if (this.readOnly) {
+          config['access_mode'] = 'read_only';
+        }
+        const database = new Database(this.databasePath, config, err => {
+          if (err) {
+            this.setupError = err;
+          } else {
+            this.connection = database.connect();
+            const activeDB: ActiveDB = {
+              database,
+              connections: [],
+            };
+            DuckDBConnection.activeDBs[this.databasePath] = activeDB;
+
+            activeDB.connections.push(this.connection);
+          }
+          resolve();
+        });
       }
-      this.connection = activeDB.database.connect();
-      activeDB.connections.push(this.connection);
-      resolve();
     });
   }
 
@@ -149,13 +176,25 @@ export class DuckDBConnection extends DuckDBCommon {
   }
 
   protected async setup(): Promise<void> {
+    if (this.setupError) {
+      throw this.setupError;
+    }
     const doSetup = async () => {
       if (this.workingDirectory) {
         await this.runDuckDBQuery(
           `SET FILE_SEARCH_PATH='${this.workingDirectory}'`
         );
       }
-      for (const ext of ['json', 'httpfs', 'icu']) {
+      const extensions = [
+        'json',
+        'httpfs',
+        'icu',
+        ...this.additionalExtensions,
+      ];
+      if (this.databasePath.startsWith('md:')) {
+        extensions.push('motherduck');
+      }
+      for (const ext of extensions) {
         await this.loadExtension(ext);
       }
       const setupCmds = ["SET TimeZone='UTC'"];

@@ -21,22 +21,24 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FieldDef, FieldTypeDef, TypeDesc} from '../../../model/malloy_types';
+import {TypeDesc, AtomicFieldDef} from '../../../model/malloy_types';
 
 import {SpaceField} from '../types/space-field';
 
-export class ColumnSpaceField extends SpaceField {
-  haveFieldDef: FieldDef;
-  constructor(def: FieldTypeDef) {
+export class ColumnSpaceField<T extends AtomicFieldDef> extends SpaceField {
+  constructor(public sourceFieldDef: T) {
     super();
-    this.haveFieldDef = def;
   }
 
-  fieldDef(): FieldDef {
-    return this.haveFieldDef;
+  fieldDef(): T {
+    return this.sourceFieldDef;
   }
 
   typeDesc(): TypeDesc {
-    return this.fieldTypeFromFieldDef(this.haveFieldDef);
+    return this.fieldTypeFromFieldDef(this.sourceFieldDef);
+  }
+
+  constructorFieldDef(): T {
+    return this.sourceFieldDef;
   }
 }

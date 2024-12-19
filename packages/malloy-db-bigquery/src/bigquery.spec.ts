@@ -22,11 +22,14 @@
  */
 
 import * as malloy from '@malloydata/malloy';
+import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
 import {BigQueryConnection} from './bigquery_connection';
 import {BigQuery as BigQuerySDK, TableMetadata} from '@google-cloud/bigquery';
 import * as util from 'util';
 import * as fs from 'fs';
 import {fileURLToPath} from 'url';
+
+const [describe] = describeIfDatabaseAvailable(['bigquery']);
 
 describe('db:BigQuery', () => {
   let bq: BigQueryConnection;
@@ -50,13 +53,15 @@ describe('db:BigQuery', () => {
 
   it('costs a SQL query', async () => {
     const res = await bq.estimateQueryCost(
-      'SELECT * FROM malloy-data.faa.airports'
+      'SELECT * FROM malloydata-org.malloytest.airports'
     );
     expect(res.queryCostBytes).toBe(3029200);
   });
 
   it('gets table schema', async () => {
-    const res = await bq.getTableFieldSchema('malloy-data.faa.carriers');
+    const res = await bq.getTableFieldSchema(
+      'malloydata-org.malloytest.carriers'
+    );
     expect(res.schema).toStrictEqual({
       fields: [
         {name: 'code', type: 'STRING'},
@@ -71,7 +76,7 @@ describe('db:BigQuery', () => {
   it('runs a Malloy query', async () => {
     const sql = await runtime
       .loadModel(
-        "source: carriers is bigquery.table('malloy-data.faa.carriers') extend { measure: carrier_count is count() }"
+        "source: carriers is bigquery.table('malloydata-org.malloytest.carriers') extend { measure: carrier_count is count() }"
       )
       .loadQuery('run: carriers -> { aggregate: carrier_count }')
       .getSQL();
@@ -82,7 +87,7 @@ describe('db:BigQuery', () => {
   it('streams a Malloy query for download', async () => {
     const sql = await runtime
       .loadModel(
-        "source: carriers is bigquery.table('malloy-data.faa.carriers') extend { measure: carrier_count is count() }"
+        "source: carriers is bigquery.table('malloydata-org.malloytest.carriers') extend { measure: carrier_count is count() }"
       )
       .loadQuery('run: carriers -> { group_by: name }')
       .getSQL();
@@ -108,57 +113,39 @@ describe('db:BigQuery', () => {
     expect(exists).toBeTruthy();
   });
 
-  describe.skip('manifests permanent table', () => {
-    const datasetName = 'test_malloy_test_dataset';
-    const tableName = 'test_malloy_test_table';
-    const sdk = new BigQuerySDK();
+  const skipThisTestSetion = false; // describe.skip is not ok, given how we patch describe
+  if (skipThisTestSetion) {
+    describe.skip('manifests permanent table', () => {
+      const datasetName = 'test_malloy_test_dataset';
+      const tableName = 'test_malloy_test_table';
+      const sdk = new BigQuerySDK();
 
-    // delete entire dataset before each test and once tests are complete
-    const deleteTestDataset = async () => {
-      const dataset = sdk.dataset(datasetName);
-      if ((await dataset.exists())[0]) {
-        await dataset.delete({
-          force: true,
-        });
-      }
-    };
-    beforeEach(deleteTestDataset);
-    afterAll(deleteTestDataset);
+      // delete entire dataset before each test and once tests are complete
+      const deleteTestDataset = async () => {
+        const dataset = sdk.dataset(datasetName);
+        if ((await dataset.exists())[0]) {
+          await dataset.delete({
+            force: true,
+          });
+        }
+      };
+      beforeEach(deleteTestDataset);
+      afterAll(deleteTestDataset);
 
-    it('throws if dataset does not exist and createDataset=false', async () => {
-      await expect(async () => {
-        await bq.manifestPermanentTable(
-          'SELECT 1 as t',
-          datasetName,
-          tableName,
-          false,
-          false
-        );
-      }).rejects.toThrowError(`Dataset ${datasetName} does not exist`);
-    });
+      it('throws if dataset does not exist and createDataset=false', async () => {
+        await expect(async () => {
+          await bq.manifestPermanentTable(
+            'SELECT 1 as t',
+            datasetName,
+            tableName,
+            false,
+            false
+          );
+        }).rejects.toThrowError(`Dataset ${datasetName} does not exist`);
+      });
 
-    it('creates dataset if createDataset=true', async () => {
-      // note - dataset does not exist b/c of beforeEach()
-      await bq.manifestPermanentTable(
-        'SELECT 1 as t',
-        datasetName,
-        tableName,
-        false,
-        true
-      );
-
-      const dataset = sdk.dataset(datasetName);
-      const [exists] = await dataset.exists();
-      expect(exists).toBeTruthy();
-    });
-
-    it('throws if table exist and overwriteExistingTable=false', async () => {
-      const newDatasetResponse = await sdk.createDataset(datasetName);
-      const dataset = newDatasetResponse[0];
-      const tableMeta: TableMetadata = {name: tableName};
-      await dataset.createTable(tableName, tableMeta);
-
-      await expect(async () => {
+      it('creates dataset if createDataset=true', async () => {
+        // note - dataset does not exist b/c of beforeEach()
         await bq.manifestPermanentTable(
           'SELECT 1 as t',
           datasetName,
@@ -166,34 +153,55 @@ describe('db:BigQuery', () => {
           false,
           true
         );
-      }).rejects.toThrowError(`Table ${tableName} already exists`);
+
+        const dataset = sdk.dataset(datasetName);
+        const [exists] = await dataset.exists();
+        expect(exists).toBeTruthy();
+      });
+
+      it('throws if table exist and overwriteExistingTable=false', async () => {
+        const newDatasetResponse = await sdk.createDataset(datasetName);
+        const dataset = newDatasetResponse[0];
+        const tableMeta: TableMetadata = {name: tableName};
+        await dataset.createTable(tableName, tableMeta);
+
+        await expect(async () => {
+          await bq.manifestPermanentTable(
+            'SELECT 1 as t',
+            datasetName,
+            tableName,
+            false,
+            true
+          );
+        }).rejects.toThrowError(`Table ${tableName} already exists`);
+      });
+
+      it('manifests a table', async () => {
+        const jobId = await bq.manifestPermanentTable(
+          'SELECT 1 as t',
+          datasetName,
+          tableName,
+          false,
+          true
+        );
+
+        // wait for job to complete
+        const [job] = await sdk.job(jobId).get();
+        let [metaData] = await job.getMetadata();
+        while (metaData.status.state !== 'DONE') {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          [metaData] = await job.getMetadata();
+        }
+
+        // query the new table
+        const [queryJob] = await sdk.createQueryJob(
+          `SELECT * FROM ${datasetName}.${tableName}`
+        );
+        const [results] = await queryJob.getQueryResults();
+        expect(results[0]).toStrictEqual({t: 1});
+      });
     });
-
-    it('manifests a table', async () => {
-      const jobId = await bq.manifestPermanentTable(
-        'SELECT 1 as t',
-        datasetName,
-        tableName,
-        false,
-        true
-      );
-
-      // wait for job to complete
-      const [job] = await sdk.job(jobId).get();
-      let [metaData] = await job.getMetadata();
-      while (metaData.status.state !== 'DONE') {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        [metaData] = await job.getMetadata();
-      }
-
-      // query the new table
-      const [queryJob] = await sdk.createQueryJob(
-        `SELECT * FROM ${datasetName}.${tableName}`
-      );
-      const [results] = await queryJob.getQueryResults();
-      expect(results[0]).toStrictEqual({t: 1});
-    });
-  });
+  }
 
   describe('Caching', () => {
     let getTableFieldSchema: jest.SpyInstance;
@@ -244,18 +252,18 @@ describe('db:BigQuery', () => {
     });
 
     it('caches sql schema', async () => {
-      await bq.fetchSchemaForSQLBlock(SQL_BLOCK_1, {});
+      await bq.fetchSchemaForSQLStruct(SQL_BLOCK_1, {});
       expect(getSQLBlockSchema).toBeCalledTimes(1);
       await new Promise(resolve => setTimeout(resolve));
-      await bq.fetchSchemaForSQLBlock(SQL_BLOCK_1, {});
+      await bq.fetchSchemaForSQLStruct(SQL_BLOCK_1, {});
       expect(getSQLBlockSchema).toBeCalledTimes(1);
     });
 
     it('refreshes sql schema', async () => {
-      await bq.fetchSchemaForSQLBlock(SQL_BLOCK_2, {});
+      await bq.fetchSchemaForSQLStruct(SQL_BLOCK_2, {});
       expect(getSQLBlockSchema).toBeCalledTimes(1);
       await new Promise(resolve => setTimeout(resolve));
-      await bq.fetchSchemaForSQLBlock(SQL_BLOCK_2, {
+      await bq.fetchSchemaForSQLStruct(SQL_BLOCK_2, {
         refreshTimestamp: Date.now() + 10,
       });
       expect(getSQLBlockSchema).toBeCalledTimes(2);
@@ -263,9 +271,12 @@ describe('db:BigQuery', () => {
   });
 });
 
-const SQL_BLOCK_1 = {
-  type: 'sqlBlock',
+const SQL_BLOCK_1: malloy.SQLSourceDef = {
+  type: 'sql_select',
   name: 'block1',
+  dialect: 'standardsql',
+  connection: 'bigquery',
+  fields: [],
   selectStr: `
 SELECT
 created_at,
@@ -279,11 +290,14 @@ product_category,
 created_at AS inventory_items_created_at
 FROM "inventory_items.parquet"
 `,
-} as malloy.SQLBlock;
+};
 
-const SQL_BLOCK_2 = {
-  type: 'sqlBlock',
+const SQL_BLOCK_2: malloy.SQLSourceDef = {
+  type: 'sql_select',
   name: 'block2',
+  dialect: 'standardsql',
+  connection: 'bigquery',
+  fields: [],
   selectStr: `
 SELECT
 created_at,
@@ -297,4 +311,4 @@ product_category,
 created_at AS inventory_items_created_at
 FROM read_parquet("inventory_items2.parquet")
 `,
-} as malloy.SQLBlock;
+};

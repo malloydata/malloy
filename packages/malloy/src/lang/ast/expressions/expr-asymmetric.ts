@@ -22,6 +22,7 @@
  */
 
 import {FieldReference} from '../query-items/field-references';
+import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {ExprAggregateFunction} from './expr-aggregate-function';
 
@@ -38,6 +39,10 @@ export abstract class ExprAsymmetric extends ExprAggregateFunction {
 
   isSymmetricFunction() {
     return false;
+  }
+
+  returns(ev: ExprValue): ExprValue {
+    return ev;
   }
 
   defaultFieldName(): undefined | string {

@@ -22,36 +22,36 @@
  */
 
 import {
-  DateUnit,
-  Expr,
-  ExtractUnit,
   Sampling,
-  StructDef,
-  TimeFieldType,
-  TimeValue,
-  TimestampUnit,
-  TypecastFragment,
-  getIdentifier,
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
-  mkExpr,
-  FieldAtomicTypeDef,
+  AtomicTypeDef,
+  TimeDeltaExpr,
+  RegexMatchExpr,
+  MeasureTimeExpr,
+  LeafAtomicTypeDef,
+  TD,
+  RecordLiteralNode,
+  OrderBy,
+  mkFieldDef,
 } from '../../model/malloy_types';
 import {indent} from '../../model/utils';
-import {DialectFunctionOverloadDef} from '../functions';
-import {DUCKDB_FUNCTIONS} from './functions';
-import {Dialect, DialectFieldList, QueryInfo, inDays, qtz} from '../dialect';
+import {
+  DialectFunctionOverloadDef,
+  expandOverrideMap,
+  expandBlueprintMap,
+} from '../functions';
+import {DialectFieldList, FieldReferenceType, inDays} from '../dialect';
+import {PostgresBase} from '../pg_impl';
+import {DUCKDB_DIALECT_FUNCTIONS} from './dialect_functions';
+import {DUCKDB_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
+import {TinyParseError, TinyParser, TinyToken} from '../tiny_parser';
 
 // need to refactor runSQL to take a SQLBlock instead of just a sql string.
 const hackSplitComment = '-- hack: split on this';
 
-const pgExtractionMap: Record<string, string> = {
-  'day_of_week': 'dow',
-  'day_of_year': 'doy',
-};
-
-const duckDBToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
+const duckDBToMalloyTypes: {[key: string]: LeafAtomicTypeDef} = {
   'BIGINT': {type: 'number', numberType: 'integer'},
   'INTEGER': {type: 'number', numberType: 'integer'},
   'TINYINT': {type: 'number', numberType: 'integer'},
@@ -71,8 +71,9 @@ const duckDBToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
   'BOOLEAN': {type: 'boolean'},
 };
 
-export class DuckDBDialect extends Dialect {
+export class DuckDBDialect extends PostgresBase {
   name = 'duckdb';
+  experimental = false;
   defaultNumberType = 'DOUBLE';
   defaultDecimalType = 'NUMERIC';
   hasFinalStage = false;
@@ -87,6 +88,7 @@ export class DuckDBDialect extends Dialect {
   supportsQualify = true;
   supportsSafeCast = true;
   supportsNesting = true;
+  supportsCountApprox = true;
 
   // hack until they support temporary macros.
   get udfPrefix(): string {
@@ -94,7 +96,7 @@ export class DuckDBDialect extends Dialect {
   }
 
   quoteTablePath(tableName: string): string {
-    return tableName.match(/\//) ? `'${tableName}'` : tableName;
+    return tableName.match(/[/*:]/) ? `'${tableName}'` : tableName;
   }
 
   sqlGroupSetTable(groupSetCount: number): string {
@@ -103,6 +105,14 @@ export class DuckDBDialect extends Dialect {
 
   sqlAnyValue(groupSet: number, fieldName: string): string {
     return `FIRST(${fieldName}) FILTER (WHERE ${fieldName} IS NOT NULL)`;
+  }
+
+  // DuckDB WASM has an issue with returning invalid DecimalBigNum
+  // values unless we explicitly cast to DOUBLE
+  override sqlLiteralNumber(literal: string): string {
+    return literal.includes('.')
+      ? `${literal}::${this.defaultNumberType}`
+      : literal;
   }
 
   mapFields(fieldList: DialectFieldList): string {
@@ -206,19 +216,18 @@ export class DuckDBDialect extends Dialect {
   }
 
   sqlFieldReference(
-    alias: string,
-    fieldName: string,
-    _fieldType: string,
-    _isNested: boolean,
-    isArray: boolean
+    parentAlias: string,
+    parentType: FieldReferenceType,
+    childName: string,
+    _childType: string
   ): string {
     // LTNOTE: hack, in duckdb we can't have structs as tables so we kind of simulate it.
-    if (!this.unnestWithNumbers && fieldName === '__row_id') {
-      return `${alias}_outer.__row_id`;
-    } else if (isArray) {
-      return alias;
+    if (!this.unnestWithNumbers && childName === '__row_id') {
+      return `${parentAlias}_outer.__row_id`;
+    } else if (parentType === 'array[scalar]') {
+      return parentAlias;
     } else {
-      return `${alias}.${this.sqlMaybeQuoteIdentifier(fieldName)}`;
+      return `${parentAlias}.${this.sqlMaybeQuoteIdentifier(childName)}`;
     }
   }
 
@@ -241,28 +250,37 @@ export class DuckDBDialect extends Dialect {
 
   sqlCreateFunctionCombineLastStage(
     lastStageName: string,
-    structDef: StructDef
+    dialectFieldList: DialectFieldList,
+    orderBy: OrderBy[] | undefined
   ): string {
-    return `SELECT LIST(STRUCT_PACK(${structDef.fields
-      .map(fieldDef => this.sqlMaybeQuoteIdentifier(getIdentifier(fieldDef)))
-      .join(',')})) FROM ${lastStageName}\n`;
+    let o = '';
+    if (orderBy) {
+      const clauses: string[] = [];
+      for (const c of orderBy) {
+        if (typeof c.field === 'string') {
+          clauses.push(`${c.field} ${c.dir || 'asc'}`);
+        } else {
+          clauses.push(
+            `${dialectFieldList[c.field].sqlOutputName} ${c.dir || 'asc'}`
+          );
+        }
+      }
+      if (clauses.length > 0) {
+        o = ` ORDER BY ${clauses.join(', ')}`;
+      }
+    }
+    return `SELECT LIST(STRUCT_PACK(${dialectFieldList
+      .map(d => this.sqlMaybeQuoteIdentifier(d.sqlOutputName))
+      .join(',')})${o}) FROM ${lastStageName}\n`;
   }
 
-  sqlSelectAliasAsStruct(alias: string, physicalFieldNames: string[]): string {
-    return `STRUCT_PACK(${physicalFieldNames
-      .map(name => `${alias}.${name}`)
+  sqlSelectAliasAsStruct(
+    alias: string,
+    dialectFieldList: DialectFieldList
+  ): string {
+    return `STRUCT_PACK(${dialectFieldList
+      .map(d => `${alias}.${d.sqlOutputName}`)
       .join(', ')})`;
-  }
-  // TODO
-  // sqlMaybeQuoteIdentifier(identifier: string): string {
-  //   return keywords.indexOf(identifier.toUpperCase()) > 0 ||
-  //     identifier.match(/[a-zA-Z][a-zA-Z0-9]*/) === null || true
-  //     ? '"' + identifier + '"'
-  //     : identifier;
-  // }
-
-  sqlMaybeQuoteIdentifier(identifier: string): string {
-    return '"' + identifier + '"';
   }
 
   // The simple way to do this is to add a comment on the table
@@ -270,119 +288,6 @@ export class DuckDBDialect extends Dialect {
   //  and have a reaper that read comments.
   sqlCreateTableAsSelect(_tableName: string, _sql: string): string {
     throw new Error('Not implemented Yet');
-  }
-
-  sqlMeasureTime(from: TimeValue, to: TimeValue, units: string): Expr {
-    let lVal = from.value;
-    let rVal = to.value;
-    if (!inDays(units)) {
-      if (from.valueType === 'date') {
-        lVal = mkExpr`(${lVal})::TIMESTAMP`;
-      }
-      if (to.valueType === 'date') {
-        rVal = mkExpr`(${rVal})::TIMESTAMP`;
-      }
-    }
-    return mkExpr`DATE_SUB('${units}',${lVal},${rVal})`;
-  }
-
-  sqlNow(): Expr {
-    return mkExpr`LOCALTIMESTAMP`;
-  }
-
-  sqlTrunc(qi: QueryInfo, sqlTime: TimeValue, units: TimestampUnit): Expr {
-    // adjusting for monday/sunday weeks
-    const week = units === 'week';
-    const truncThis = week
-      ? mkExpr`${sqlTime.value} + INTERVAL 1 DAY`
-      : sqlTime.value;
-    if (sqlTime.valueType === 'timestamp') {
-      const tz = qtz(qi);
-      if (tz) {
-        const civilSource = mkExpr`(${truncThis}::TIMESTAMPTZ AT TIME ZONE '${tz}')`;
-        let civilTrunc = mkExpr`DATE_TRUNC('${units}', ${civilSource})`;
-        // MTOY todo ... only need to do this if this is a date ...
-        civilTrunc = mkExpr`${civilTrunc}::TIMESTAMP`;
-        const truncTsTz = mkExpr`${civilTrunc} AT TIME ZONE '${tz}'`;
-        return mkExpr`(${truncTsTz})::TIMESTAMP`;
-      }
-    }
-    let result = mkExpr`DATE_TRUNC('${units}', ${truncThis})`;
-    if (week) {
-      result = mkExpr`(${result} - INTERVAL 1 DAY)`;
-    }
-    return result;
-  }
-
-  sqlExtract(qi: QueryInfo, from: TimeValue, units: ExtractUnit): Expr {
-    const pgUnits = pgExtractionMap[units] || units;
-    let extractFrom = from.value;
-    if (from.valueType === 'timestamp') {
-      const tz = qtz(qi);
-      if (tz) {
-        extractFrom = mkExpr`(${extractFrom}::TIMESTAMPTZ AT TIME ZONE '${tz}')`;
-      }
-    }
-    const extracted = mkExpr`EXTRACT(${pgUnits} FROM ${extractFrom})`;
-    return units === 'day_of_week' ? mkExpr`(${extracted}+1)` : extracted;
-  }
-
-  sqlAlterTime(
-    op: '+' | '-',
-    expr: TimeValue,
-    n: Expr,
-    timeframe: DateUnit
-  ): Expr {
-    if (timeframe === 'quarter') {
-      timeframe = 'month';
-      n = mkExpr`${n}*3`;
-    }
-    if (timeframe === 'week') {
-      timeframe = 'day';
-      n = mkExpr`${n}*7`;
-    }
-    const interval = mkExpr`INTERVAL (${n}) ${timeframe}`;
-    return mkExpr`${expr.value} ${op} ${interval}`;
-  }
-
-  sqlCast(qi: QueryInfo, cast: TypecastFragment): Expr {
-    const op = `${cast.srcType}::${cast.dstType}`;
-    const tz = qtz(qi);
-    if (op === 'timestamp::date' && tz) {
-      const tstz = mkExpr`${cast.expr}::TIMESTAMPTZ`;
-      return mkExpr`CAST((${tstz}) AT TIME ZONE '${tz}' AS DATE)`;
-    } else if (op === 'date::timestamp' && tz) {
-      return mkExpr`CAST((${cast.expr})::TIMESTAMP AT TIME ZONE '${tz}' AS TIMESTAMP)`;
-    }
-    if (cast.srcType !== cast.dstType) {
-      const dstType =
-        typeof cast.dstType === 'string'
-          ? this.malloyTypeToSQLType({type: cast.dstType})
-          : cast.dstType.raw;
-      const castFunc = cast.safe ? 'TRY_CAST' : 'CAST';
-      return mkExpr`${castFunc}(${cast.expr} AS ${dstType})`;
-    }
-    return cast.expr;
-  }
-
-  sqlRegexpMatch(expr: Expr, regexp: Expr): Expr {
-    return mkExpr`REGEXP_MATCHES(${expr}, ${regexp})`;
-  }
-
-  sqlLiteralTime(
-    qi: QueryInfo,
-    timeString: string,
-    type: TimeFieldType,
-    timezone: string | undefined
-  ): string {
-    if (type === 'date') {
-      return `DATE '${timeString}'`;
-    }
-    const tz = timezone || qtz(qi);
-    if (tz) {
-      return `TIMESTAMPTZ '${timeString} ${tz}'::TIMESTAMP`;
-    }
-    return `TIMESTAMP '${timeString}'`;
   }
 
   sqlSumDistinct(key: string, value: string, funcName: string): string {
@@ -446,11 +351,17 @@ export class DuckDBDialect extends Dialect {
     return "'" + literal.replace(/'/g, "''") + "'";
   }
 
-  getGlobalFunctionDef(name: string): DialectFunctionOverloadDef[] | undefined {
-    return DUCKDB_FUNCTIONS.get(name);
+  getDialectFunctionOverrides(): {
+    [name: string]: DialectFunctionOverloadDef[];
+  } {
+    return expandOverrideMap(DUCKDB_MALLOY_STANDARD_OVERLOADS);
   }
 
-  malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string {
+  getDialectFunctions(): {[name: string]: DialectFunctionOverloadDef[]} {
+    return expandBlueprintMap(DUCKDB_DIALECT_FUNCTIONS);
+  }
+
+  malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
     if (malloyType.type === 'number') {
       if (malloyType.numberType === 'integer') {
         return 'integer';
@@ -463,10 +374,30 @@ export class DuckDBDialect extends Dialect {
     return malloyType.type;
   }
 
-  sqlTypeToMalloyType(sqlType: string): FieldAtomicTypeDef | undefined {
+  parseDuckDBType(sqlType: string): AtomicTypeDef {
+    const parser = new DuckDBTypeParser(sqlType);
+    try {
+      return parser.typeDef();
+    } catch (e) {
+      if (e instanceof TinyParseError) {
+        return {type: 'sql native', rawType: sqlType};
+      } else {
+        throw e;
+      }
+    }
+  }
+
+  sqlTypeToMalloyType(sqlType: string): LeafAtomicTypeDef {
+    // Remove decimal precision
+    const ddbType = sqlType.replace(/^DECIMAL\(\d+,\d+\)/g, 'DECIMAL');
     // Remove trailing params
-    const baseSqlType = sqlType.match(/^(\w+)/)?.at(0) ?? sqlType;
-    return duckDBToMalloyTypes[baseSqlType.toUpperCase()];
+    const baseSqlType = ddbType.match(/^(\w+)/)?.at(0) ?? ddbType;
+    return (
+      duckDBToMalloyTypes[baseSqlType.toUpperCase()] ?? {
+        type: 'sql native',
+        rawType: sqlType.toLowerCase(),
+      }
+    );
   }
 
   castToString(expression: string): string {
@@ -484,5 +415,161 @@ export class DuckDBDialect extends Dialect {
     // Parentheses, Commas:  DECIMAL(1, 1)
     // Brackets:             INT[ ]
     return sqlType.match(/^[A-Za-z\s(),[\]0-9]*$/) !== null;
+  }
+
+  sqlAlterTimeExpr(df: TimeDeltaExpr): string {
+    let timeframe = df.units;
+    let n = df.kids.delta.sql;
+    if (timeframe === 'quarter') {
+      timeframe = 'month';
+      n = `${n}*3`;
+    } else if (timeframe === 'week') {
+      timeframe = 'day';
+      n = `${n}*7`;
+    }
+    const interval = `INTERVAL (${n}) ${timeframe}`;
+    return `${df.kids.base.sql} ${df.op} ${interval}`;
+  }
+
+  sqlRegexpMatch(df: RegexMatchExpr): string {
+    return `REGEXP_MATCHES(${df.kids.expr.sql},${df.kids.regex.sql})`;
+  }
+
+  sqlMeasureTimeExpr(df: MeasureTimeExpr): string {
+    const from = df.kids.left;
+    const to = df.kids.right;
+    let lVal = from.sql || '';
+    let rVal = to.sql || '';
+    if (!inDays(df.units)) {
+      if (TD.isDate(from.typeDef)) {
+        lVal = `${lVal}::TIMESTAMP`;
+      }
+      if (TD.isDate(to.typeDef)) {
+        rVal = `${rVal}::TIMESTAMP`;
+      }
+    }
+    return `DATE_SUB('${df.units}', ${lVal}, ${rVal})`;
+  }
+
+  sqlLiteralRecord(lit: RecordLiteralNode): string {
+    const pairs = Object.entries(lit.kids).map(
+      ([propName, propVal]) =>
+        `${this.sqlMaybeQuoteIdentifier(propName)}:${propVal.sql}`
+    );
+    return '{' + pairs.join(',') + '}';
+  }
+}
+
+class DuckDBTypeParser extends TinyParser {
+  constructor(input: string) {
+    super(input, {
+      /* whitespace           */ space: /^\s+/,
+      /* single quoted string */ qsingle: /^'([^']|'')*'/,
+      /* double quoted string */ qdouble: /^"([^"]|"")*"/,
+      /* (n) size             */ size: /^\(\d+\)/,
+      /* (n1,n2) precision    */ precision: /^\(\d+,\d+\)/,
+      /* T[] -> array of T    */ arrayOf: /^\[]/,
+      /* other punctuation    */ char: /^[,:[\]()-]/,
+      /* unquoted word        */ id: /^\w+/,
+    });
+  }
+
+  unquoteName(token: TinyToken): string {
+    if (token.type === 'qsingle') {
+      return token.text.replace("''", '');
+    } else if (token.type === 'qdouble') {
+      return token.text.replace('""', '');
+    }
+    return token.text;
+  }
+
+  sqlID(token: TinyToken) {
+    return token.text.toUpperCase();
+  }
+
+  typeDef(): AtomicTypeDef {
+    const unknownStart = this.parseCursor;
+    const wantID = this.next('id');
+    const id = this.sqlID(wantID);
+    let baseType: AtomicTypeDef;
+    if (id === 'VARCHAR') {
+      if (this.peek().type === 'size') {
+        this.next();
+      }
+    }
+    if (
+      (id === 'DECIMAL' || id === 'NUMERIC') &&
+      this.peek().type === 'precision'
+    ) {
+      this.next();
+      baseType = {type: 'number', numberType: 'float'};
+    } else if (id === 'TIMESTAMP') {
+      if (this.peek().text === 'WITH') {
+        this.nextText('WITH', 'TIME', 'ZONE');
+      }
+      baseType = {type: 'timestamp'};
+    } else if (duckDBToMalloyTypes[id]) {
+      baseType = duckDBToMalloyTypes[id];
+    } else if (id === 'STRUCT') {
+      this.next('(');
+      baseType = {type: 'record', fields: []};
+      for (;;) {
+        const fieldName = this.next();
+        if (
+          fieldName.type === 'qsingle' ||
+          fieldName.type === 'qdouble' ||
+          fieldName.type === 'id'
+        ) {
+          const fieldType = this.typeDef();
+          baseType.fields.push(
+            mkFieldDef(fieldType, this.unquoteName(fieldName))
+          );
+        } else {
+          if (fieldName.type !== ')') {
+            throw this.parseError('Expected identifier or ) to end STRUCT');
+          }
+          break;
+        }
+        if (this.peek().type === ',') {
+          this.next();
+        }
+      }
+    } else {
+      if (wantID.type === 'id') {
+        for (;;) {
+          const next = this.peek();
+          // Might be WEIRDTYP(a,b)[] ... stop at the []
+          if (next.type === 'arrayOf' || next.type === 'eof') {
+            break;
+          }
+          this.next();
+        }
+        baseType = {
+          type: 'sql native',
+          rawType: this.input.slice(
+            unknownStart,
+            this.parseCursor - unknownStart + 1
+          ),
+        };
+      } else {
+        throw this.parseError('Could not understand type');
+      }
+    }
+    while (this.peek().type === 'arrayOf') {
+      this.next();
+      if (baseType.type === 'record') {
+        baseType = {
+          type: 'array',
+          elementTypeDef: {type: 'record_element'},
+          fields: baseType.fields,
+        };
+      } else {
+        baseType = {
+          type: 'array',
+          elementTypeDef: baseType,
+        };
+      }
+    }
+    return baseType;
   }
 }

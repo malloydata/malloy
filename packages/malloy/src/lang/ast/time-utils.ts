@@ -23,81 +23,67 @@
 
 import {
   Expr,
-  Fragment,
-  TimeFieldType,
+  TemporalFieldType,
   TimestampUnit,
-  TypecastFragment,
-  isAtomicFieldType,
-  FieldValueType,
   CastType,
+  TypecastExpr,
+  TimeDeltaExpr,
+  mkTemporal,
+  isCastType,
+  ExpressionValueType,
+  isDateUnit,
 } from '../../model/malloy_types';
 
-import {compressExpr} from './expressions/utils';
 import {TimeResult} from './types/time-result';
 
 export function timeOffset(
-  timeType: TimeFieldType,
+  timeType: TemporalFieldType,
   from: Expr,
   op: '+' | '-',
   n: Expr,
   timeframe: TimestampUnit
-): Expr {
-  return [
-    {
-      type: 'dialect',
-      function: 'delta',
-      base: {valueType: timeType, value: from},
-      op,
+): TimeDeltaExpr {
+  return {
+    node: 'delta',
+    kids: {
+      base: mkTemporal(from, timeType),
       delta: n,
-      units: timeframe,
     },
-  ];
+    op,
+    units: timeframe,
+  };
 }
 
 export function castTo(
   castType: CastType | {raw: string},
   from: Expr,
-  fromType: FieldValueType,
+  fromType: ExpressionValueType,
   safe = false
-): Expr {
-  const cast: TypecastFragment = {
-    type: 'dialect',
-    function: 'cast',
-    dstType: castType,
-    expr: from,
-    safe,
-  };
-  if (isAtomicFieldType(fromType)) {
-    cast.srcType = fromType;
+): TypecastExpr {
+  let cast: TypecastExpr;
+  if (typeof castType !== 'string') {
+    cast = {
+      node: 'cast',
+      dstSQLType: castType.raw,
+      e: from,
+      safe,
+    };
+  } else {
+    const dstType = {type: castType};
+    cast = {
+      node: 'cast',
+      dstType,
+      e: from,
+      safe,
+    };
   }
-  return [cast];
+  if (isCastType(fromType)) {
+    cast.srcType = {type: fromType};
+  }
+  return cast;
 }
 
-export function castTimestampToDate(from: Expr, safe = false): Expr {
-  const cast: TypecastFragment = {
-    type: 'dialect',
-    function: 'cast',
-    dstType: 'date',
-    srcType: 'timestamp',
-    expr: from,
-    safe,
-  };
-  return [cast];
-}
-
-export function castDateToTimestamp(from: Expr, safe = false): Expr {
-  const cast: TypecastFragment = {
-    type: 'dialect',
-    function: 'cast',
-    dstType: 'timestamp',
-    srcType: 'date',
-    expr: from,
-    safe,
-  };
-  return [cast];
-}
-
-export function resolution(timeframe: string): TimeFieldType {
+export function resolution(timeframe: string): TemporalFieldType {
   switch (timeframe) {
     case 'hour':
     case 'minute':
@@ -109,58 +95,17 @@ export function resolution(timeframe: string): TimeFieldType {
   return 'date';
 }
 
-export function timeResult(
+export function mkTimeResult(
   t: TimeResult,
   tt: TimestampUnit | undefined
 ): TimeResult {
   if (tt) {
-    return {...t, timeframe: tt};
+    if (t.type === 'timestamp') {
+      return {...t, timeframe: tt};
+    }
+    if (isDateUnit(tt)) {
+      return {...t, timeframe: tt};
+    }
   }
   return t;
-}
-
-export function timestampOffset(
-  from: Fragment[],
-  op: '+' | '-',
-  n: Fragment[],
-  timeframe: TimestampUnit,
-  fromNotTimestamp = false
-): Fragment[] {
-  const useDatetime = ['week', 'month', 'quarter', 'year'].includes(timeframe);
-  const add = op === '+' ? '_ADD' : '_SUB';
-  const units = timeframe.toUpperCase();
-  if (useDatetime) {
-    return [
-      `TIMESTAMP(DATETIME${add}(DATETIME(`,
-      ...from,
-      '),INTERVAL ',
-      ...n,
-      ` ${units}))`,
-    ];
-  }
-  const typeFrom = fromNotTimestamp ? ['TIMESTAMP(', ...from, ')'] : from;
-  return compressExpr([
-    `TIMESTAMP${add}(`,
-    ...typeFrom,
-    ',INTERVAL ',
-    ...n,
-    ` ${units})`,
-  ]);
-}
-
-export function dateOffset(
-  from: Fragment[],
-  op: '+' | '-',
-  n: Fragment[],
-  timeframe: TimestampUnit
-): Fragment[] {
-  const add = op === '+' ? '_ADD' : '_SUB';
-  const units = timeframe.toUpperCase();
-  return compressExpr([
-    `DATE${add}(`,
-    ...from,
-    ',INTERVAL ',
-    ...n,
-    ` ${units})`,
-  ]);
 }

@@ -30,6 +30,7 @@ export type {
   MalloySQLSQLStatement,
   MalloySQLStatement,
   MalloySQLParseErrorExpected,
+  MalloySQLParseResults,
   EmbeddedMalloyQuery,
 } from './types';
 export {MalloySQLStatementType} from './types';

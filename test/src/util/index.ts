@@ -22,14 +22,16 @@
  */
 
 import {
-  FilterExpression,
-  Fragment,
+  FilterCondition,
   QueryFieldDef,
   IndexFieldDef,
   QueryMaterializer,
   Result,
   Runtime,
+  Expr,
+  composeSQLExpr,
 } from '@malloydata/malloy';
+export * from '@malloydata/malloy/test';
 
 // these two helper functions are here just to make older hand built models
 // easier to use in the new world were refs are not strings
@@ -45,55 +47,46 @@ export function fToIF(fs: string[]): IndexFieldDef[] {
   );
 }
 
-export function fStringEq(field: string, value: string): FilterExpression {
+export function fStringEq(field: string, value: string): FilterCondition {
   return {
-    expression: [{type: 'field', path: field.split('.')}, `='${value}'`],
+    node: 'filterCondition',
+    e: {
+      node: '=',
+      kids: {
+        left: {node: 'field', path: field.split('.')},
+        right: {node: 'stringLiteral', literal: value},
+      },
+    },
     code: `${field}='${value}'`,
     expressionType: 'scalar',
   };
 }
 
-export function fStringLike(field: string, value: string): FilterExpression {
+export function fStringLike(field: string, value: string): FilterCondition {
   return {
-    expression: [{type: 'field', path: field.split('.')}, ` LIKE '${value}'`],
+    node: 'filterCondition',
+    e: {
+      node: 'like',
+      kids: {
+        left: {node: 'field', path: field.split('.')},
+        right: {node: 'stringLiteral', literal: value},
+      },
+    },
     code: `${field}~'${value}'`,
     expressionType: 'scalar',
   };
 }
 
-export function fYearEq(field: string, year: number): FilterExpression {
+export function fYearEq(field: string, year: number): FilterCondition {
   const yBegin = `'${year}-01-01 00:00:00'`;
   const yEnd = `'${year + 1}-01-01 00:00:00'`;
-  const fx: Fragment = {type: 'field', path: field.split('.')};
+  const fx: Expr = {node: 'field', path: field.split('.')};
   return {
-    expression: [fx, `>=${yBegin} and `, fx, `<${yEnd}`],
+    node: 'filterCondition',
+    e: composeSQLExpr([fx, `>=${yBegin} and `, fx, `<${yEnd}`]),
     code: `${field}:@${year}`,
     expressionType: 'scalar',
   };
-}
-
-// accepts databases in env, either via comma-separated dialect list (MALLOY_DATABASES=) or a single
-// database (MALLOY_DATABASE=). returns either databases defined in env or a default list that was passed.
-export function databasesFromEnvironmentOr(
-  defaultDatabases: string[]
-): string[] {
-  return process.env['MALLOY_DATABASES']
-    ? process.env['MALLOY_DATABASES'].split(',')
-    : process.env['MALLOY_DATABASE']
-    ? [process.env['MALLOY_DATABASE']]
-    : defaultDatabases;
-}
-
-// confirms that one or more of the databases being tested overlaps with the databases a test suite can accept.
-// if there is overlap, return a tuple of jest.describe and the dialects to be tested
-// if there is no overlap, return a tuple if jest.describe.skip and the dialects to be tested
-export function describeIfDatabaseAvailable(
-  acceptableDatabases: string[]
-): [jest.Describe, string[]] {
-  const currentDatabases = databasesFromEnvironmentOr(acceptableDatabases);
-  const overlap = acceptableDatabases.filter(d => currentDatabases.includes(d));
-
-  return overlap.length > 0 ? [describe, overlap] : [describe.skip, overlap];
 }
 
 interface InitValues {
@@ -206,6 +199,18 @@ export async function runQuery(runtime: Runtime, querySrc: string) {
   return result;
 }
 
-export const testIf = (condition: boolean) => {
-  return condition ? test : test.skip;
-};
+export function booleanResult(value: boolean, dbName: string) {
+  if (dbName === 'mysql') {
+    return value ? 1 : 0;
+  } else {
+    return value;
+  }
+}
+
+export function booleanCode(value: boolean, dbName: string) {
+  if (dbName === 'mysql') {
+    return value ? '1' : '0';
+  } else {
+    return value ? 'true' : 'false';
+  }
+}

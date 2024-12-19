@@ -1,0 +1,230 @@
+source: products is duckdb.table("static/data/products.parquet") extend {
+
+  #(story)
+  view: products_table is {
+    select: *
+    limit: 1000
+    order_by: id
+  }
+
+  #(story)
+  view: long_column is {
+    select:
+      brand,
+      # column {width=lg}
+      name
+      # column {width=200 word_break=break_all }
+      f is 'asdfasdfasdfasdfasdfasdflkahdfsgoaisdfoijadsfgoiahjosdijgaodfsgijao;sdijfgoaidjsgaodsigjao;dsfgija;odfigjoaisdfj'
+  }
+
+  # bar_chart
+  view: category_bar is {
+    group_by: category
+    aggregate: avg_retail is retail_price.avg()
+  }
+
+  #(story)
+  view: simple_nested is {
+    group_by: category
+    aggregate: avg_retail is retail_price.avg()
+    limit: 2
+    nest:
+      nested_column_1 is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 10
+      },
+      # list_detail
+      nested_column_2 is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 10
+      }
+      another_nested is {
+        group_by: department
+        aggregate: avg_retail is retail_price.avg()
+        nest:
+          deeply_nested is {
+            group_by: `sku`
+            aggregate: total_cost is cost.sum()
+            limit: 3
+          }
+        limit: 5
+      }
+  }
+
+  #(story)
+  view: nested is {
+    group_by: category
+    aggregate: avg_retail is retail_price.avg()
+    nest:
+      nested_column_1 is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 10
+      }
+      another_nested is {
+        group_by: department
+        aggregate: avg_retail is retail_price.avg()
+        nest:
+          deeply_nested is {
+            group_by: `sku`
+            aggregate: total_cost is cost.sum()
+            limit: 3
+          }
+        limit: 5
+      }
+      record is {
+        nest: nested_record is {
+          group_by: id
+          aggregate: total_cost is cost.sum()
+          limit: 5
+        }
+      }
+      another_nested2 is {
+        group_by: department
+        aggregate: avg_retail is retail_price.avg()
+        nest: deeply_nested is {
+          group_by: `sku`
+          aggregate: total_cost is cost.sum()
+          limit: 3
+        }
+        limit: 5
+      }
+  }
+
+  #(story)
+  view: nested_2 is {
+    group_by: category
+    aggregate: avg_retail is retail_price.avg()
+    nest:
+      by_department is {
+        group_by: department
+        aggregate: avg_retail is retail_price.avg()
+        limit: 10
+        nest: nested_column_2 is {
+          group_by: brand
+          aggregate: avg_retail is retail_price.avg()
+          limit: 10
+        }
+      }
+  }
+
+  #(story)
+  view: number_formats is {
+    group_by: category
+    aggregate:
+      # currency
+      avg_retail_currency is retail_price.avg()
+      # percent
+      avg_retail_percent is retail_price.avg()
+      # number="#,##0.00"
+      avg_retail_number is retail_price.avg()
+      # duration
+      avg_retail_duration is round(retail_price.avg())
+      # duration.terse
+      avg_retail_duration_terse is round(retail_price.avg())
+  }
+
+  #(story)
+  # transpose
+  view: date_and_time is {
+    group_by:
+      `@2001-02-03` is @2001-02-03
+      `@2001-02-03.minute` is @2001-02-03.minute
+      `@2001-02-03.week` is @2001-02-03.week
+      `@2001-02-03.month` is @2001-02-03.month
+      `@2001-02-03.quarter` is @2001-02-03.quarter
+      `@2001-02-03.year` is @2001-02-03.year
+      `@2001-02-03 04:05:06.001` is @2001-02-03 04:05:06.001
+      `@2001-02-03 04:05:06.001[America/Mexico_City]` is @2001-02-03 04:05:06.001[America/Mexico_City]
+      `@2001-02-03 04:05:06.001.minute` is @2001-02-03 04:05:06.001.minute
+      `@2001-02-03 04:05:06.001.hour` is @2001-02-03 04:05:06.001.hour
+      `@2001-02-03 04:05:06.001.day` is @2001-02-03 04:05:06.001.day
+      `@2001-02-03 04:05:06.001.week` is @2001-02-03 04:05:06.001.week
+      `@2001-02-03 04:05:06.001.month` is @2001-02-03 04:05:06.001.month
+      `@2001-02-03 04:05:06.001.quarter` is @2001-02-03 04:05:06.001.quarter
+      `@2001-02-03 04:05:06.001.year` is @2001-02-03 04:05:06.001.year
+    limit: 1
+  }
+
+   #(story)
+   # table.size=fill
+  view: products_table_full_width is {
+    select: *
+    limit: 1000
+    order_by: id
+  }
+
+  #(story)
+  # table.size=fill
+  view: nested_full_width is {
+    group_by: category
+    aggregate: avg_retail is retail_price.avg()
+    nest:
+      nested_column_1 is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 10
+      }
+      another_nested is {
+        group_by: department
+        aggregate: avg_retail is retail_price.avg()
+        nest:
+          deeply_nested is {
+            group_by: `sku`
+            aggregate: total_cost is cost.sum()
+            limit: 3
+          }
+        limit: 5
+      }
+      record is {
+        nest: nested_record is {
+          group_by: id
+          aggregate: total_cost is cost.sum()
+          limit: 5
+        }
+      }
+      another_nested2 is {
+        group_by: department
+        aggregate: avg_retail is retail_price.avg()
+        nest: deeply_nested is {
+          group_by: `sku`
+          aggregate: total_cost is cost.sum()
+          limit: 3
+        }
+        limit: 5
+      }
+  }
+
+  measure: sales is retail_price.sum()
+
+  #(story)
+  view: perf is {
+    group_by: brand
+    aggregate: sales
+    -- # bar_chartx
+    nest: a is {
+      group_by: category
+      aggregate: sales
+      limit: 24
+    },
+    nest: b is {
+      group_by: category
+      aggregate: sales
+      # bar_chart { size=spark }
+      nest: c is {
+        group_by: id
+        aggregate: sales
+        limit: 24
+      }
+      limit: 5
+    }
+    limit: 10
+  }
+}
+
+source: null_test is duckdb.sql("select unnest([1,null,3]) as i") extend {
+  #(story)
+  view: null_field is {select: *}
+}

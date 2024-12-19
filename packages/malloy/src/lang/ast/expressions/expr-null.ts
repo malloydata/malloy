@@ -21,17 +21,15 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ExprValue} from '../types/expr-value';
+import {ExprValue, literalExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 
 export class ExprNULL extends ExpressionDef {
   elementType = 'NULL';
   getExpression(): ExprValue {
-    return {
-      dataType: 'null',
-      value: ['NULL'],
-      expressionType: 'scalar',
-      evalSpace: 'literal',
-    };
+    return literalExprValue({
+      dataType: {type: 'null'},
+      value: {node: 'null'},
+    });
   }
 }

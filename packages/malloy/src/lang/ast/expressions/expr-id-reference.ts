@@ -21,17 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  expressionIsAggregate,
-  isConditionParameter,
-  mergeEvalSpaces,
-} from '../../../model/malloy_types';
-import {errorFor} from '../ast-utils';
+import {expressionIsAggregate} from '../../../model/malloy_types';
 import {ExprValue} from '../types/expr-value';
 import {FieldReference} from '../query-items/field-references';
 import {FieldSpace} from '../types/field-space';
-import {SpaceParam} from '../types/space-param';
 import {ExpressionDef} from '../types/expression-def';
+import {joinedCompositeFieldUsage} from '../../../model/composite_source_utils';
 
 export class ExprIdReference extends ExpressionDef {
   elementType = 'ExpressionIdReference';
@@ -46,47 +41,34 @@ export class ExprIdReference extends ExpressionDef {
 
   getExpression(fs: FieldSpace): ExprValue {
     const def = this.fieldReference.getField(fs);
+    // TODO Currently the join usage is always equivalent to the reference path here;
+    // if/when we add namespaces, this will not be the case, and we will need to get the
+    // join path from `getField` / `lookup`
+    const compositeJoinUsage = this.fieldReference.list
+      .map(n => n.name)
+      .slice(0, -1);
     if (def.found) {
       const td = def.found.typeDesc();
+      const compositeFieldUsage = joinedCompositeFieldUsage(
+        compositeJoinUsage,
+        td.compositeFieldUsage
+      );
       if (def.isOutputField) {
         return {
           ...td,
+          // TODO what about literal??
           evalSpace: td.evalSpace === 'constant' ? 'constant' : 'output',
-          value: [{type: 'outputField', name: this.refString}],
+          value: {node: 'outputField', name: this.refString},
+          compositeFieldUsage,
         };
       }
-      const value = [{type: def.found.refType, path: this.fieldReference.path}];
+      const value = {node: def.found.refType, path: this.fieldReference.path};
       // We think that aggregates are more 'output' like, but maybe we will reconsider that...
       const evalSpace = expressionIsAggregate(td.expressionType)
         ? 'output'
         : td.evalSpace;
-      return {...td, value, evalSpace};
+      return {...td, value, evalSpace, compositeFieldUsage};
     }
-    this.log(def.error);
-    return errorFor(def.error);
-  }
-
-  apply(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {
-    const entry = this.fieldReference.getField(fs).found;
-    if (entry instanceof SpaceParam) {
-      const cParam = entry.parameter();
-      if (isConditionParameter(cParam)) {
-        const lval = expr.getExpression(fs);
-        return {
-          dataType: 'boolean',
-          expressionType: lval.expressionType,
-          // TODO not sure about the input-ness of parameters
-          evalSpace: mergeEvalSpaces(lval.evalSpace, 'input'),
-          value: [
-            {
-              type: 'apply',
-              value: lval.value,
-              to: [{type: 'parameter', path: this.fieldReference.path}],
-            },
-          ],
-        };
-      }
-    }
-    return super.apply(fs, op, expr);
+    return this.loggedErrorExpr(def.error.code, def.error.message);
   }
 }

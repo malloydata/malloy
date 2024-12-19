@@ -21,13 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FT} from '../fragtype-utils';
+import * as TDU from '../typedesc-utils';
+import {ArithmeticMalloyOperator} from '../types/binary_operators';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 
 export abstract class BinaryNumeric<
-  opType extends string,
+  opType extends ArithmeticMalloyOperator,
 > extends ExpressionDef {
   elementType = 'numeric binary abstract';
   constructor(
@@ -36,7 +37,7 @@ export abstract class BinaryNumeric<
     readonly right: ExpressionDef
   ) {
     super({left: left, right: right});
-    this.legalChildTypes = [FT.numberT];
+    this.legalChildTypes = [TDU.numberT];
   }
 
   getExpression(fs: FieldSpace): ExprValue {

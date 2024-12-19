@@ -33,9 +33,50 @@ import {
 import {BigQueryConnection} from '@malloydata/db-bigquery';
 import {DuckDBConnection} from '@malloydata/db-duckdb';
 import {DuckDBWASMConnection} from '@malloydata/db-duckdb/wasm';
+import {SnowflakeConnection} from '@malloydata/db-snowflake';
 import {PooledPostgresConnection} from '@malloydata/db-postgres';
+import {TrinoConnection, TrinoExecutor} from '@malloydata/db-trino';
+import {SnowflakeExecutor} from '@malloydata/db-snowflake/src/snowflake_executor';
+import {PrestoConnection} from '@malloydata/db-trino/src/trino_connection';
+import {
+  MySQLConnection,
+  MySQLExecutor,
+} from '@malloydata/db-mysql/src/mysql_connection';
+import {EventEmitter} from 'events';
+
+export class SnowflakeTestConnection extends SnowflakeConnection {
+  public async runSQL(
+    sqlCommand: string,
+    options?: RunSQLOptions
+  ): Promise<MalloyQueryData> {
+    try {
+      return await super.runSQL(sqlCommand, options);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.log(`Error in SQL:\n ${sqlCommand}`);
+      throw e;
+    }
+  }
+}
 
 export class BigQueryTestConnection extends BigQueryConnection {
+  // we probably need a better way to do this.
+
+  public async runSQL(
+    sqlCommand: string,
+    options?: RunSQLOptions
+  ): Promise<MalloyQueryData> {
+    try {
+      return await super.runSQL(sqlCommand, options);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.log(`Error in SQL:\n ${sqlCommand}`);
+      throw e;
+    }
+  }
+}
+
+export class MySQLTestConnection extends MySQLConnection {
   // we probably need a better way to do this.
 
   public async runSQL(
@@ -72,10 +113,6 @@ export class PostgresTestConnection extends PooledPostgresConnection {
 export class DuckDBTestConnection extends DuckDBConnection {
   // we probably need a better way to do this.
 
-  constructor(name: string) {
-    super(name, 'test/data/duckdb/duckdb_test.db');
-  }
-
   public async runSQL(
     sqlCommand: string,
     options?: RunSQLOptions
@@ -92,10 +129,6 @@ export class DuckDBTestConnection extends DuckDBConnection {
 
 export class DuckDBWASMTestConnection extends DuckDBWASMConnection {
   // we probably need a better way to do this.
-
-  constructor(name: string) {
-    super(name, 'test/data/duckdb/duckdb_test.db');
-  }
 
   public async runSQL(
     sqlCommand: string,
@@ -118,35 +151,94 @@ export function rows(qr: Result): QueryDataRow[] {
 }
 
 export function runtimeFor(dbName: string): SingleConnectionRuntime {
-  let connection;
-  switch (dbName) {
-    case 'bigquery':
-      connection = new BigQueryTestConnection(
-        dbName,
-        {},
-        {projectId: 'malloy-data'}
-      );
-      break;
-    case 'postgres':
-      connection = new PostgresTestConnection(dbName);
-      break;
-    case 'duckdb':
-      connection = new DuckDBTestConnection(dbName);
-      break;
-    case 'duckdb_wasm':
-      connection = new DuckDBWASMTestConnection(dbName);
-      break;
-    default:
-      throw new Error(`Unknown runtime "${dbName}`);
+  let connection: Connection;
+  try {
+    switch (dbName) {
+      case 'bigquery':
+        connection = new BigQueryTestConnection(
+          dbName,
+          {},
+          {projectId: 'malloydata-org'}
+        );
+        break;
+      case 'postgres':
+        connection = new PostgresTestConnection(dbName);
+        break;
+      case 'duckdb':
+        connection = new DuckDBTestConnection(
+          dbName,
+          'test/data/duckdb/duckdb_test.db'
+        );
+        break;
+      case 'duckdb_wasm':
+        connection = new DuckDBWASMTestConnection(
+          dbName,
+          'test/data/duckdb/duckdb_test.db'
+        );
+        break;
+      case 'motherduck':
+        connection = new DuckDBTestConnection({
+          name: dbName,
+          databasePath: 'md:my_db',
+          motherDuckToken: process.env['TEST_MD_TOKEN'],
+        });
+        break;
+      case 'snowflake':
+        {
+          const connOptions = SnowflakeExecutor.getConnectionOptionsFromEnv();
+          connection = new SnowflakeTestConnection(dbName, {connOptions});
+        }
+        break;
+      case 'trino':
+        connection = new TrinoConnection(
+          dbName,
+          {},
+          TrinoExecutor.getConnectionOptionsFromEnv(dbName)
+        );
+        break;
+      case 'mysql':
+        connection = new MySQLConnection(
+          dbName,
+          MySQLExecutor.getConnectionOptionsFromEnv(),
+          {}
+        );
+        break;
+      case 'presto':
+        connection = new PrestoConnection(
+          dbName,
+          {},
+          TrinoExecutor.getConnectionOptionsFromEnv(dbName) // they share configs.
+        );
+        break;
+      default:
+        throw new Error(`Unknown runtime "${dbName}`);
+    }
+    return testRuntimeFor(connection);
+  } catch (error) {
+    throw new Error(
+      `Failed to create connection \`${dbName}\`: ${error.message}`
+    );
   }
-  return testRuntimeFor(connection);
 }
 
 export function testRuntimeFor(connection: Connection) {
-  return new SingleConnectionRuntime(files, connection);
+  return new SingleConnectionRuntime(files, connection, new EventEmitter());
 }
 
-export const allDatabases = ['postgres', 'bigquery', 'duckdb', 'duckdb_wasm'];
+/**
+ * All databases which should be tested by default. Experimental dialects
+ * should not be in this list. Use MALLOY_DATABASE=dialect_name to test those
+ */
+export const allDatabases = [
+  'postgres',
+  'bigquery',
+  'duckdb',
+  'duckdb_wasm',
+  'snowflake',
+  'trino',
+  'mysql',
+];
+
 type RuntimeDatabaseNames = (typeof allDatabases)[number];
 
 export class RuntimeList {
@@ -166,6 +258,7 @@ export class RuntimeList {
         database instanceof SingleConnectionRuntime
           ? database
           : runtimeFor(database);
+      rt.isTestRuntime = true;
       this.runtimeMap.set(rt.connection.name, rt);
       this.runtimeList.push([rt.connection.name, rt]);
     }

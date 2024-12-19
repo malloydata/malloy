@@ -22,22 +22,22 @@
  */
 
 import {
-  FetchSchemaOptions,
-  FieldTypeDef,
   MalloyQueryData,
-  NamedStructDefs,
   PersistSQLResults,
   PooledConnection,
   QueryDataRow,
   QueryOptionsReader,
   QueryRunStats,
   RunSQLOptions,
-  SQLBlock,
   StreamingConnection,
   StructDef,
   TestableConnection,
   DuckDBDialect,
+  SQLSourceDef,
+  TableSourceDef,
+  mkFieldDef,
 } from '@malloydata/malloy';
+import {BaseConnection} from '@malloydata/malloy/connection';
 
 export interface DuckDBQueryOptions {
   rowLimit: number;
@@ -52,28 +52,21 @@ const unquoteName = (name: string) => {
 };
 
 export abstract class DuckDBCommon
+  extends BaseConnection
   implements TestableConnection, PersistSQLResults, StreamingConnection
 {
+  protected isMotherDuck = false;
+  protected motherDuckToken: string | undefined;
+
   private readonly dialect = new DuckDBDialect();
   static DEFAULT_QUERY_OPTIONS: DuckDBQueryOptions = {
     rowLimit: 10,
   };
 
-  private schemaCache = new Map<
-    string,
-    | {schema: StructDef; error?: undefined; timestamp: number}
-    | {error: string; schema?: undefined; timestamp: number}
-  >();
-  private sqlSchemaCache = new Map<
-    string,
-    | {structDef: StructDef; error?: undefined; timestamp: number}
-    | {error: string; structDef?: undefined; timestamp: number}
-  >();
-
   public readonly name: string = 'duckdb_common';
 
   get dialectName(): string {
-    return 'duckdb';
+    return this.dialect.name;
   }
 
   protected readQueryOptions(): DuckDBQueryOptions {
@@ -89,7 +82,9 @@ export abstract class DuckDBCommon
     }
   }
 
-  constructor(protected queryOptions?: QueryOptionsReader) {}
+  constructor(protected queryOptions?: QueryOptionsReader) {
+    super();
+  }
 
   public isPool(): this is PooledConnection {
     return false;
@@ -139,148 +134,31 @@ export abstract class DuckDBCommon
     options: RunSQLOptions
   ): AsyncIterableIterator<QueryDataRow>;
 
-  private async getSQLBlockSchema(sqlRef: SQLBlock): Promise<StructDef> {
-    const structDef: StructDef = {
-      type: 'struct',
-      dialect: 'duckdb',
-      name: sqlRef.name,
-      structSource: {
-        type: 'sql',
-        method: 'subquery',
-        sqlBlock: sqlRef,
-      },
-      structRelationship: {
-        type: 'basetable',
-        connectionName: this.name,
-      },
-      fields: [],
-    };
-
+  async fetchSelectSchema(
+    sqlRef: SQLSourceDef
+  ): Promise<SQLSourceDef | string> {
+    const sqlDef = {...sqlRef};
     await this.schemaFromQuery(
       `DESCRIBE SELECT * FROM (${sqlRef.selectStr})`,
-      structDef
+      sqlDef
     );
-    return structDef;
+    return sqlDef;
   }
 
   public async estimateQueryCost(_: string): Promise<QueryRunStats> {
     return {};
   }
 
-  /**
-   * Split's a structs columns declaration into individual columns
-   * to be fed back into fillStructDefFromTypeMap(). Handles commas
-   * within nested STRUCT() declarations.
-   *
-   * (https://github.com/malloydata/malloy/issues/635)
-   *
-   * @param s struct's column declaration
-   * @return Array of column type declarations
-   */
-  private splitColumns(s: string) {
-    const columns: string[] = [];
-    let parens = 0;
-    let column = '';
-    let eatSpaces = true;
-    for (let idx = 0; idx < s.length; idx++) {
-      const c = s.charAt(idx);
-      if (eatSpaces && c === ' ') {
-        // Eat space
-      } else {
-        eatSpaces = false;
-        if (!parens && c === ',') {
-          columns.push(column);
-          column = '';
-          eatSpaces = true;
-        } else {
-          column += c;
-        }
-        if (c === '(') {
-          parens += 1;
-        } else if (c === ')') {
-          parens -= 1;
-        }
-      }
-    }
-    columns.push(column);
-    return columns;
-  }
-
-  private stringToTypeMap(s: string): {[name: string]: string} {
-    const ret: {[name: string]: string} = {};
-    const columns = this.splitColumns(s);
-    for (const c of columns) {
-      //const [name, type] = c.split(" ", 1);
-      const columnMatch = c.match(/^(?<name>[^\s]+) (?<type>.*)$/);
-      if (columnMatch && columnMatch.groups) {
-        ret[columnMatch.groups['name']] = columnMatch.groups['type'];
-      } else {
-        throw new Error(`Badly form Structure definition ${s}`);
-      }
-    }
-    return ret;
-  }
-
-  private fillStructDefFromTypeMap(
+  fillStructDefFromTypeMap(
     structDef: StructDef,
     typeMap: {[name: string]: string}
   ) {
     for (const fieldName in typeMap) {
-      let duckDBType = typeMap[fieldName];
       // Remove quotes from field name
       const name = unquoteName(fieldName);
-      // Remove DECIMAL(x,y) precision to simplify lookup
-      duckDBType = duckDBType.replace(/^DECIMAL\(\d+,\d+\)/g, 'DECIMAL');
-      let malloyType = this.dialect.sqlTypeToMalloyType(duckDBType);
-      const arrayMatch = duckDBType.match(/(?<duckDBType>.*)\[\]$/);
-      if (arrayMatch && arrayMatch.groups) {
-        duckDBType = arrayMatch.groups['duckDBType'];
-      }
-      const structMatch = duckDBType.match(/^STRUCT\((?<fields>.*)\)$/);
-      if (structMatch && structMatch.groups) {
-        const newTypeMap = this.stringToTypeMap(structMatch.groups['fields']);
-        const innerStructDef: StructDef = {
-          type: 'struct',
-          name,
-          dialect: this.dialectName,
-          structSource: {type: arrayMatch ? 'nested' : 'inline'},
-          structRelationship: {
-            type: arrayMatch ? 'nested' : 'inline',
-            fieldName: name,
-            isArray: false,
-          },
-          fields: [],
-        };
-        this.fillStructDefFromTypeMap(innerStructDef, newTypeMap);
-        structDef.fields.push(innerStructDef);
-      } else {
-        if (arrayMatch) {
-          malloyType = this.dialect.sqlTypeToMalloyType(duckDBType);
-          const innerStructDef: StructDef = {
-            type: 'struct',
-            name,
-            dialect: this.dialectName,
-            structSource: {type: 'nested'},
-            structRelationship: {
-              type: 'nested',
-              fieldName: name,
-              isArray: true,
-            },
-            fields: [{...malloyType, name: 'value'} as FieldTypeDef],
-          };
-          structDef.fields.push(innerStructDef);
-        } else {
-          if (malloyType) {
-            structDef.fields.push({...malloyType, name});
-          } else {
-            structDef.fields.push({
-              type: 'unsupported',
-              rawType: duckDBType.toLowerCase(),
-              name,
-            });
-          }
-        }
-      }
+      const dbType = typeMap[fieldName];
+      const malloyType = this.dialect.parseDuckDBType(dbType);
+      structDef.fields.push(mkFieldDef(malloyType, name));
     }
   }
 
@@ -297,83 +175,16 @@ export abstract class DuckDBCommon
     this.fillStructDefFromTypeMap(structDef, typeMap);
   }
 
-  public async fetchSchemaForSQLBlock(
-    sqlRef: SQLBlock,
-    {refreshTimestamp}: FetchSchemaOptions
-  ): Promise<
-    | {structDef: StructDef; error?: undefined}
-    | {error: string; structDef?: undefined}
-  > {
-    const key = sqlRef.name;
-    let inCache = this.sqlSchemaCache.get(key);
-    if (
-      !inCache ||
-      (refreshTimestamp && refreshTimestamp > inCache.timestamp)
-    ) {
-      const timestamp = refreshTimestamp ?? Date.now();
-      try {
-        inCache = {
-          structDef: await this.getSQLBlockSchema(sqlRef),
-          timestamp,
-        };
-      } catch (error) {
-        inCache = {error: error.message, timestamp};
-      }
-      this.sqlSchemaCache.set(key, inCache);
-    }
-    return inCache;
-  }
-
-  public async fetchSchemaForTables(
-    tables: Record<string, string>,
-    {refreshTimestamp}: FetchSchemaOptions
-  ): Promise<{
-    schemas: Record<string, StructDef>;
-    errors: Record<string, string>;
-  }> {
-    const schemas: NamedStructDefs = {};
-    const errors: {[name: string]: string} = {};
-
-    for (const tableKey in tables) {
-      let inCache = this.schemaCache.get(tableKey);
-      if (
-        !inCache ||
-        (refreshTimestamp && refreshTimestamp > inCache.timestamp)
-      ) {
-        const timestamp = refreshTimestamp ?? Date.now();
-        const tablePath = tables[tableKey];
-        try {
-          inCache = {
-            schema: await this.getTableSchema(tableKey, tablePath),
-            timestamp,
-          };
-          this.schemaCache.set(tableKey, inCache);
-        } catch (error) {
-          inCache = {error: error.message, timestamp};
-        }
-      }
-      if (inCache.schema !== undefined) {
-        schemas[tableKey] = inCache.schema;
-      } else {
-        errors[tableKey] = inCache.error || 'Unknown schema fetch error';
-      }
-    }
-    return {schemas, errors};
-  }
-
-  private async getTableSchema(
+  async fetchTableSchema(
     tableKey: string,
     tablePath: string
-  ): Promise<StructDef> {
-    const structDef: StructDef = {
-      type: 'struct',
+  ): Promise<TableSourceDef> {
+    const structDef: TableSourceDef = {
+      type: 'table',
       name: tableKey,
-      dialect: 'duckdb',
-      structSource: {type: 'table', tablePath},
-      structRelationship: {
-        type: 'basetable',
-        connectionName: this.name,
-      },
+      dialect: this.dialectName,
+      tablePath,
+      connection: this.name,
       fields: [],
     };
 

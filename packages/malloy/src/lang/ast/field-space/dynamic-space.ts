@@ -27,50 +27,59 @@ import {SpaceEntry} from '../types/space-entry';
 import {ErrorFactory} from '../error-factory';
 import {HasParameter} from '../parameters/has-parameter';
 import {MalloyElement} from '../types/malloy-element';
-import {Join} from '../source-properties/joins';
+import {Join} from '../source-properties/join';
 import {SpaceField} from '../types/space-field';
 import {JoinSpaceField} from './join-space-field';
 import {ViewField} from './view-field';
 import {AbstractParameter, SpaceParam} from '../types/space-param';
-import {SourceSpec, SpaceSeed} from '../space-seed';
 import {StaticSpace} from './static-space';
 import {StructSpaceFieldBase} from './struct-space-field-base';
+import {ParameterSpace} from './parameter-space';
+import {SourceDef} from '../../../model/malloy_types';
+import {SourceFieldSpace} from '../types/field-space';
 
-export abstract class DynamicSpace extends StaticSpace {
-  protected final: model.StructDef | undefined;
-  protected source: SpaceSeed;
-  completions: (() => void)[] = [];
+export abstract class DynamicSpace
+  extends StaticSpace
+  implements SourceFieldSpace
+{
+  protected sourceDef: model.SourceDef | undefined;
+  protected fromSource: model.SourceDef;
   private complete = false;
+  private parameters: HasParameter[] = [];
   protected newTimezone?: string;
+  protected newAccessModifiers = new Map<string, model.AccessModifierLabel>();
+  protected newNotes = new Map<string, model.Annotation>();
 
-  constructor(extending: SourceSpec) {
-    const source = new SpaceSeed(extending);
-    super(structuredClone(source.structDef));
-    this.final = undefined;
-    this.source = source;
-  }
-
-  isComplete(): void {
-    this.complete = true;
+  constructor(extending: SourceDef) {
+    super(structuredClone(extending), extending.dialect);
+    this.fromSource = extending;
+    this.sourceDef = undefined;
   }
 
   protected setEntry(name: string, value: SpaceEntry): void {
-    if (this.final) {
+    if (this.complete) {
       throw new Error('Space already final');
     }
     super.setEntry(name, value);
   }
 
-  addParameters(params: HasParameter[]): DynamicSpace {
-    for (const oneP of params) {
-      this.setEntry(oneP.name, new AbstractParameter(oneP));
+  addParameters(parameters: HasParameter[]): DynamicSpace {
+    for (const parameter of parameters) {
+      if (this.entry(parameter.name) === undefined) {
+        this.parameters.push(parameter);
+        this.setEntry(parameter.name, new AbstractParameter(parameter));
+      }
     }
     return this;
   }
 
+  parameterSpace(): ParameterSpace {
+    return new ParameterSpace(this.parameters);
+  }
+
   newEntry(name: string, logTo: MalloyElement, entry: SpaceEntry): void {
     if (this.entry(name)) {
-      logTo.log(`Cannot redefine '${name}'`);
+      logTo.logError('definition-name-conflict', `Cannot redefine '${name}'`);
       return;
     }
     this.setEntry(name, entry);
@@ -89,18 +98,26 @@ export abstract class DynamicSpace extends StaticSpace {
     this.newTimezone = tz;
   }
 
-  structDef(): model.StructDef {
-    const parameters = this.fromStruct.parameters || {};
-    if (this.final === undefined) {
-      this.final = {
-        ...this.fromStruct,
-        fields: [],
-      };
+  structDef(): model.SourceDef {
+    this.complete = true;
+    if (this.sourceDef === undefined) {
+      // Grab all the parameters so that we can populate the "final" structDef
+      // with parameters immediately so that views can see them when they are translating
+      const parameters = {};
+      for (const [name, entry] of this.entries()) {
+        if (entry instanceof SpaceParam) {
+          parameters[name] = entry.parameter();
+        }
+      }
+
+      this.sourceDef = {...this.fromSource, fields: []};
+      this.sourceDef.parameters = parameters;
+      const fieldIndices = new Map<string, number>();
       // Need to process the entities in specific order
       const fields: [string, SpaceField][] = [];
       const joins: [string, SpaceField][] = [];
       const turtles: [string, SpaceField][] = [];
-      const fixupJoins: [Join, model.StructDef][] = [];
+      const fixupJoins: [Join, model.JoinFieldDef][] = [];
       for (const [name, spaceEntry] of this.entries()) {
         if (spaceEntry instanceof StructSpaceFieldBase) {
           joins.push([name, spaceEntry]);
@@ -108,22 +125,23 @@ export abstract class DynamicSpace extends StaticSpace {
           turtles.push([name, spaceEntry]);
         } else if (spaceEntry instanceof SpaceField) {
           fields.push([name, spaceEntry]);
-        } else if (spaceEntry instanceof SpaceParam) {
-          parameters[name] = spaceEntry.parameter();
         }
       }
       const reorderFields = [...fields, ...joins, ...turtles];
-      for (const [, field] of reorderFields) {
+      const parameterSpace = this.parameterSpace();
+      for (const [name, field] of reorderFields) {
         if (field instanceof JoinSpaceField) {
-          const joinStruct = field.join.structDef();
-          if (!ErrorFactory.isErrorStructDef(joinStruct)) {
-            this.final.fields.push(joinStruct);
+          const joinStruct = field.join.structDef(parameterSpace);
+          if (!ErrorFactory.didCreate(joinStruct)) {
+            fieldIndices.set(name, this.sourceDef.fields.length);
+            this.sourceDef.fields.push(joinStruct);
             fixupJoins.push([field.join, joinStruct]);
           }
         } else {
           const fieldDef = field.fieldDef();
           if (fieldDef) {
-            this.final.fields.push(fieldDef);
+            fieldIndices.set(name, this.sourceDef.fields.length);
+            this.sourceDef.fields.push(fieldDef);
           }
           // TODO I'm just removing this, but perhaps instead I should just filter
           // out ReferenceFields and still make this check.
@@ -132,18 +150,56 @@ export abstract class DynamicSpace extends StaticSpace {
           // }
         }
       }
-      if (Object.entries(parameters).length > 0) {
-        this.final.parameters = parameters;
-      }
+
       // If we have join expressions, we need to now go back and fill them in
       for (const [join, missingOn] of fixupJoins) {
         join.fixupJoinOn(this, missingOn);
       }
+      // Add access modifiers at the end so views don't obey them
+      for (const [name, access] of this.newAccessModifiers) {
+        const index = this.sourceDef.fields.findIndex(
+          f => f.as ?? f.name === name
+        );
+        if (index === -1) {
+          throw new Error(`Can't find field '${name}' to set access modifier`);
+        }
+        if (access === 'public') {
+          delete this.sourceDef.fields[index].accessModifier;
+        } else {
+          this.sourceDef.fields[index] = {
+            ...this.sourceDef.fields[index],
+            accessModifier: access,
+          };
+        }
+      }
+      // TODO does this need to be done when the space is instantiated?
+      // e.g. if a field had a compiler flag on it...
+      for (const [name, note] of this.newNotes) {
+        const index = this.sourceDef.fields.findIndex(
+          f => f.as ?? f.name === name
+        );
+        if (index === -1) {
+          throw new Error(`Can't find field '${name}' to set access modifier`);
+        }
+        const field = this.sourceDef.fields[index];
+        this.sourceDef.fields[index] = {
+          ...field,
+          annotation: {
+            ...note,
+            inherits: field.annotation,
+          },
+        };
+      }
     }
-    if (this.newTimezone) {
-      this.final.queryTimezone = this.newTimezone;
+    if (this.newTimezone && model.isSourceDef(this.sourceDef)) {
+      this.sourceDef.queryTimezone = this.newTimezone;
     }
-    this.isComplete();
-    return this.final;
+    return this.sourceDef;
+  }
+
+  emptyStructDef(): SourceDef {
+    const ret = {...this.fromSource};
+    ret.fields = [];
+    return ret;
   }
 }

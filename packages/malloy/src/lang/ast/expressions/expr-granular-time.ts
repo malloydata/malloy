@@ -22,14 +22,15 @@
  */
 
 import {
+  Expr,
   isDateUnit,
-  isTimeFieldType,
-  mkExpr,
+  mkTemporal,
   TimestampUnit,
+  TD,
 } from '../../../model/malloy_types';
 
 import {errorFor} from '../ast-utils';
-import {FT} from '../fragtype-utils';
+import * as TDU from '../typedesc-utils';
 import {timeOffset} from '../time-utils';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
@@ -48,7 +49,7 @@ import {Range} from './range';
 
 export class ExprGranularTime extends ExpressionDef {
   elementType = 'granularTime';
-  legalChildTypes = [FT.timestampT, FT.dateT];
+  legalChildTypes = [TDU.timestampT, TDU.dateT];
   constructor(
     readonly expr: ExpressionDef,
     readonly units: TimestampUnit,
@@ -64,75 +65,74 @@ export class ExprGranularTime extends ExpressionDef {
   getExpression(fs: FieldSpace): ExprValue {
     const timeframe = this.units;
     const exprVal = this.expr.getExpression(fs);
-    if (isTimeFieldType(exprVal.dataType)) {
+    if (TD.isTemporal(exprVal)) {
       const tsVal: GranularResult = {
         ...exprVal,
-        dataType: exprVal.dataType,
         timeframe: timeframe,
       };
       if (this.truncate) {
-        tsVal.value = [
-          {
-            type: 'dialect',
-            function: 'trunc',
-            expr: {value: exprVal.value, valueType: exprVal.dataType},
-            units: timeframe,
-          },
-        ];
+        tsVal.value = {
+          node: 'trunc',
+          e: mkTemporal(exprVal.value, exprVal.type),
+          units: timeframe,
+        };
       }
       return tsVal;
     }
-    if (exprVal.dataType !== 'error') {
-      this.log(`Cannot do time truncation on type '${exprVal.dataType}'`);
+    if (exprVal.type !== 'error') {
+      this.logError(
+        'unsupported-type-for-time-truncation',
+        `Cannot do time truncation on type '${exprVal.type}'`
+      );
     }
-    const returnType =
-      exprVal.dataType === 'error'
-        ? isDateUnit(timeframe)
-          ? 'date'
-          : 'timestamp'
-        : exprVal.dataType;
+    const returnType = {...exprVal};
+    if (exprVal.type === 'error') {
+      (returnType as ExprValue).type = isDateUnit(timeframe)
+        ? 'date'
+        : 'timestamp';
+    }
     return {
-      ...exprVal,
-      dataType: returnType,
+      ...returnType,
       value: errorFor('granularity typecheck').value,
       evalSpace: 'constant',
     };
   }
 
-  apply(fs: FieldSpace, op: string, left: ExpressionDef): ExprValue {
-    return this.getRange(fs).apply(fs, op, left);
+  // apply(fs: FieldSpace, op: string, left: ExpressionDef): ExprValue {
+  //   return this.getRange(fs).apply(fs, op, left);
 
-    /*
-      write tests for each of these cases ....
+  //   /*
+  //     write tests for each of these cases ....
 
-      vt  rt  gt  use
-      dt  dt  dt  dateRange
-      dt  dt  ts  == or timeStampRange
-      dt  ts  dt  timestampRange
-      dt  ts  ts  timeStampRange
+  //     vt  rt  gt  use
+  //     dt  dt  dt  dateRange
+  //     dt  dt  ts  == or timeStampRange
+  //     dt  ts  dt  timestampRange
+  //     dt  ts  ts  timeStampRange
 
-      ts  ts  ts  timestampRange
-      ts  ts  dt  timestampRange
-      ts  dt  ts  timestampRange
-      ts  dt  dt  either
+  //     ts  ts  ts  timestampRange
+  //     ts  ts  dt  timestampRange
+  //     ts  dt  ts  timestampRange
+  //     ts  dt  dt  either
 
-    */
-  }
+  //   */
+  // }
 
-  protected getRange(fs: FieldSpace): Range {
+  toRange(fs: FieldSpace): Range {
     const begin = this.getExpression(fs);
-    if (begin.dataType === 'timestamp') {
+    const one: Expr = {node: 'numberLiteral', literal: '1'};
+    if (begin.type === 'timestamp') {
       const beginTS = ExprTime.fromValue('timestamp', begin);
       const endTS = new ExprTime(
         'timestamp',
-        timeOffset('timestamp', begin.value, '+', mkExpr`1`, this.units),
-        begin.expressionType
+        timeOffset('timestamp', begin.value, '+', one, this.units),
+        [begin]
       );
       return new Range(beginTS, endTS);
     }
-    const beginDate = new ExprTime('date', begin.value, begin.expressionType);
-    const endAt = timeOffset('date', begin.value, '+', ['1'], this.units);
-    const endDate = new ExprTime('date', endAt, begin.expressionType);
+    const beginDate = new ExprTime('date', begin.value, [begin]);
+    const endAt = timeOffset('date', begin.value, '+', one, this.units);
+    const endDate = new ExprTime('date', endAt, [begin]);
     return new Range(beginDate, endDate);
   }
 }

@@ -39,7 +39,11 @@ export class ASTViewField extends ViewField {
     return this.view.getFieldDef(fs);
   }
 
+  private turtleDef: TurtleDef | undefined = undefined;
   fieldDef(): TurtleDef {
-    return this.view.getFieldDef(this.inSpace);
+    if (this.turtleDef === undefined) {
+      this.turtleDef = this.view.getFieldDef(this.inSpace);
+    }
+    return this.turtleDef;
   }
 }

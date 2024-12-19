@@ -29,9 +29,9 @@
  * specialized QuerySpace for each type of query operation.
  */
 
+import {SourceDef} from '../../../model';
 import {AtomicFieldDeclaration} from '../query-items/field-declaration';
-import {Join} from '../source-properties/joins';
-import {SourceSpec, SpaceSeed} from '../space-seed';
+import {Join} from '../source-properties/join';
 import {QueryFieldSpace} from '../types/field-space';
 import {QueryOperationSpace} from './query-spaces';
 import {RefinedSpace} from './refined-space';
@@ -46,11 +46,11 @@ export class QueryInputSpace extends RefinedSpace implements QueryFieldSpace {
    * @param queryOutput MUST BE A QuerySpace
    */
   constructor(
-    input: SourceSpec,
-    private queryOutput: QueryOperationSpace
+    input: SourceDef,
+    private queryOutput: QueryOperationSpace,
+    public readonly _isProtectedAccessSpace: boolean
   ) {
-    const inputSpace = new SpaceSeed(input);
-    super(inputSpace.structDef);
+    super(input);
   }
 
   extendSource(extendField: Join | AtomicFieldDeclaration): void {
@@ -62,7 +62,7 @@ export class QueryInputSpace extends RefinedSpace implements QueryFieldSpace {
     }
   }
 
-  isQueryFieldSpace() {
+  isQueryFieldSpace(): this is QueryFieldSpace {
     return true;
   }
 
@@ -72,5 +72,9 @@ export class QueryInputSpace extends RefinedSpace implements QueryFieldSpace {
 
   inputSpace() {
     return this;
+  }
+
+  isProtectedAccessSpace(): boolean {
+    return this._isProtectedAccessSpace;
   }
 }

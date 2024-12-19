@@ -39,25 +39,33 @@ export class NestFieldDeclaration
   elementType = 'nest-field-declaration';
   queryRefinementStage = LegalRefinementStage.Single;
   forceQueryClass = QueryClass.Grouping;
+  turtleDef: model.TurtleDef | undefined = undefined;
 
   queryExecute(executeFor: QueryBuilder) {
     executeFor.resultFS.pushFields(this);
   }
 
   getFieldDef(fs: FieldSpace): model.TurtleDef {
+    if (this.turtleDef) return this.turtleDef;
     if (fs.isQueryFieldSpace()) {
       const {pipeline, annotation} = this.view.pipelineComp(
         fs,
         fs.outputSpace()
       );
+      const compositeFieldUsage =
+        pipeline[0] && model.isQuerySegment(pipeline[0])
+          ? pipeline[0].compositeFieldUsage
+          : undefined;
       const checkedPipeline = detectAndRemovePartialStages(pipeline, this);
-      return {
+      this.turtleDef = {
         type: 'turtle',
         name: this.name,
         pipeline: checkedPipeline,
         annotation: {...this.note, inherits: annotation},
         location: this.location,
+        compositeFieldUsage,
       };
+      return this.turtleDef;
     }
     throw this.internalError('Unexpected namespace for nest');
   }

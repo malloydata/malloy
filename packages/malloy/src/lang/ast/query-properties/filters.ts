@@ -24,13 +24,14 @@
 import {
   expressionIsAggregate,
   expressionIsAnalytic,
-  FilterExpression,
+  FilterCondition,
 } from '../../../model/malloy_types';
+import {isNotUndefined} from '../../utils';
 
-import {compressExpr} from '../expressions/utils';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 import {ListOf, MalloyElement} from '../types/malloy-element';
+import {QueryBuilder} from '../types/query-builder';
 import {
   LegalRefinementStage,
   QueryPropertyInterface,
@@ -45,20 +46,27 @@ export class FilterElement extends MalloyElement {
     super({expr: expr});
   }
 
-  filterExpression(fs: FieldSpace): FilterExpression {
+  filterCondition(fs: FieldSpace): FilterCondition {
     const exprVal = this.expr.getExpression(fs);
-    if (exprVal.dataType !== 'boolean') {
-      this.expr.log('Filter expression must have boolean value');
+    if (exprVal.type !== 'boolean') {
+      this.expr.logError(
+        'non-boolean-filter',
+        'Filter expression must have boolean value'
+      );
       return {
+        node: 'filterCondition',
         code: this.exprSrc,
-        expression: ['_FILTER_MUST_RETURN_BOOLEAN_'],
+        e: {node: 'false'},
         expressionType: 'scalar',
+        compositeFieldUsage: exprVal.compositeFieldUsage,
       };
     }
-    const exprCond: FilterExpression = {
+    const exprCond: FilterCondition = {
+      node: 'filterCondition',
       code: this.exprSrc,
-      expression: compressExpr(exprVal.value),
+      e: exprVal.value,
       expressionType: exprVal.expressionType,
+      compositeFieldUsage: exprVal.compositeFieldUsage,
     };
     return exprCond;
   }
@@ -81,37 +89,59 @@ export class Filter
       : LegalRefinementStage.Head;
   }
 
-  getFilterList(fs: FieldSpace): FilterExpression[] {
-    const checked: FilterExpression[] = [];
-    for (const oneElement of this.list) {
-      const fExpr = oneElement.filterExpression(fs);
+  protected checkedFilterCondition(
+    fs: FieldSpace,
+    filter: FilterElement
+  ): FilterCondition | undefined {
+    const fExpr = filter.filterCondition(fs);
 
-      // mtoy todo is having we never set then queryRefinementStage might be wrong
-      // ... calculations and aggregations must go last
-
-      // Aggregates are ALSO checked at SQL generation time, but checking
-      // here allows better reflection of errors back to user.
-      if (this.havingClause !== undefined) {
-        const isAggregate = expressionIsAggregate(fExpr.expressionType);
-        const isAnalytic = expressionIsAnalytic(fExpr.expressionType);
-        if (this.havingClause) {
-          if (isAnalytic) {
-            oneElement.log('Analytic expressions are not allowed in `having:`');
-            continue;
-          }
-        } else {
-          if (isAnalytic) {
-            oneElement.log('Analytic expressions are not allowed in `where:`');
-            continue;
-          } else if (isAggregate) {
-            oneElement.log(
-              'Aggregate expressions are not allowed in `where:`; use `having:`'
-            );
-          }
+    // Aggregates are ALSO checked at SQL generation time, but checking
+    // here allows better reflection of errors back to user.
+    if (this.havingClause !== undefined) {
+      const isAggregate = expressionIsAggregate(fExpr.expressionType);
+      const isAnalytic = expressionIsAnalytic(fExpr.expressionType);
+      if (this.havingClause) {
+        if (isAnalytic) {
+          filter.logError(
+            'analytic-in-having',
+            'Analytic expressions are not allowed in `having:`'
+          );
+          return;
+        }
+      } else {
+        if (isAnalytic) {
+          filter.logError(
+            'analytic-in-where',
+            'Analytic expressions are not allowed in `where:`'
+          );
+          return;
+        } else if (isAggregate) {
+          filter.logError(
+            'aggregate-in-where',
+            'Aggregate expressions are not allowed in `where:`; use `having:`'
+          );
         }
       }
-      checked.push(fExpr);
     }
-    return checked;
+    return fExpr;
+  }
+
+  getFilterList(fs: FieldSpace): FilterCondition[] {
+    return this.list
+      .map(filter => this.checkedFilterCondition(fs, filter))
+      .filter(isNotUndefined);
+  }
+
+  queryExecute(executeFor: QueryBuilder) {
+    const filterFS = this.havingClause
+      ? executeFor.resultFS
+      : executeFor.inputFS;
+    for (const filter of this.list) {
+      const fExpr = this.checkedFilterCondition(filterFS, filter);
+      if (fExpr !== undefined) {
+        executeFor.filters.push(fExpr);
+        executeFor.resultFS.addCompositeFieldUserFromFilter(fExpr, filter);
+      }
+    }
   }
 }

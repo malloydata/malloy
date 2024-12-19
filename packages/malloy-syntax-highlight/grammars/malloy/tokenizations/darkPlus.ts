@@ -1026,38 +1026,6 @@ export default [
   ],
   [
     {
-      line: 'select: """ SELECT 1 """',
-      tokens: [
-        {
-          startIndex: 0,
-          type: ['source.malloy', 'source.sql', 'keyword.control.select'],
-          color: '#C586C0',
-        },
-        {
-          startIndex: 6,
-          type: ['source.malloy', 'source.sql'],
-          color: '#000000',
-        },
-        {
-          startIndex: 8,
-          type: ['source.malloy', 'source.sql', 'punctuation.sql-block.open'],
-          color: '#000000',
-        },
-        {
-          startIndex: 11,
-          type: ['source.malloy', 'source.sql'],
-          color: '#000000',
-        },
-        {
-          startIndex: 21,
-          type: ['source.malloy', 'source.sql', 'punctuation.sql-block.close'],
-          color: '#000000',
-        },
-      ],
-    },
-  ],
-  [
-    {
       line: 'run: duckdb.sql("""',
       tokens: [
         {

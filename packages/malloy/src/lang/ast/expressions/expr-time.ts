@@ -22,54 +22,47 @@
  */
 
 import {
-  ExpressionType,
-  Fragment,
-  TimeFieldType,
-  isTimeFieldType,
+  Expr,
+  TemporalFieldType,
+  TypecastExpr,
+  isTemporalType,
 } from '../../../model/malloy_types';
 
 import {FieldSpace} from '../types/field-space';
-import {compressExpr} from './utils';
-import {ExprValue} from '../types/expr-value';
+import {ExprValue, computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 
 export class ExprTime extends ExpressionDef {
   elementType = 'timestampOrDate';
   readonly translationValue: ExprValue;
-  constructor(
-    timeType: TimeFieldType,
-    value: Fragment[] | string,
-    expressionType: ExpressionType = 'scalar'
-  ) {
+  constructor(timeType: TemporalFieldType, value: Expr, from?: ExprValue[]) {
     super();
     this.elementType = timeType;
-    this.translationValue = {
-      dataType: timeType,
-      expressionType,
-      value: typeof value === 'string' ? [value] : value,
-      evalSpace: 'constant',
-    };
+    this.translationValue = computedExprValue({
+      dataType: {type: timeType},
+      value,
+      from: from ?? [],
+    });
   }
 
   getExpression(_fs: FieldSpace): ExprValue {
     return this.translationValue;
   }
 
-  static fromValue(timeType: TimeFieldType, expr: ExprValue): ExprTime {
+  static fromValue(timeType: TemporalFieldType, expr: ExprValue): ExprTime {
     let value = expr.value;
-    if (timeType !== expr.dataType) {
-      const toTs: Fragment = {
-        type: 'dialect',
-        function: 'cast',
+    if (timeType !== expr.type) {
+      const toTs: TypecastExpr = {
+        node: 'cast',
         safe: false,
-        dstType: timeType,
-        expr: expr.value,
+        dstType: {type: timeType},
+        e: expr.value,
       };
-      if (isTimeFieldType(expr.dataType)) {
-        toTs.srcType = expr.dataType;
+      if (isTemporalType(expr.type)) {
+        toTs.srcType = {type: expr.type};
       }
-      value = compressExpr([toTs]);
+      value = toTs;
     }
-    return new ExprTime(timeType, value, expr.expressionType);
+    return new ExprTime(timeType, value, [expr]);
   }
 }

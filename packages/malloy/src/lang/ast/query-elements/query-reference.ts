@@ -52,13 +52,19 @@ export class QueryReference extends MalloyElement implements QueryElement {
       };
     };
     if (!query) {
-      this.log(`Reference to undefined query '${this.name.refString}'`);
+      this.logError(
+        'query-reference-not-found',
+        `Reference to undefined query '${this.name.refString}'`
+      );
       return oops();
     }
     if (query.type === 'query') {
-      const queryHead = new QueryHeadStruct(query.structRef);
+      const queryHead = new QueryHeadStruct(
+        query.structRef,
+        query.sourceArguments
+      );
       this.has({queryHead: queryHead});
-      const inputStruct = queryHead.structDef();
+      const inputStruct = queryHead.getSourceDef(undefined);
       const outputStruct = getFinalStruct(this, inputStruct, query.pipeline);
       const unRefedQuery = isRefOk
         ? query
@@ -71,7 +77,10 @@ export class QueryReference extends MalloyElement implements QueryElement {
         inputStruct,
       };
     }
-    this.log(`Illegal reference to '${this.name}', query expected`);
+    this.logError(
+      'non-query-used-as-query',
+      `Illegal reference to '${this.name}', query expected`
+    );
     return oops();
   }
 

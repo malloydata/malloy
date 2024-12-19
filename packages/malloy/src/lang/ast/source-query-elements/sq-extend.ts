@@ -24,6 +24,7 @@
 import {RefinedSource} from '../source-elements/refined-source';
 import {SourceQueryElement} from './source-query-element';
 import {SourceDesc} from '../types/source-desc';
+import {IncludeItem} from './include-item';
 
 /**
  * An element which represents adding source extensions to a
@@ -38,7 +39,8 @@ export class SQExtend extends SourceQueryElement {
 
   constructor(
     readonly sqSrc: SourceQueryElement,
-    readonly extend: SourceDesc
+    readonly extend: SourceDesc,
+    readonly includeList: IncludeItem[] | undefined
   ) {
     super({sqSrc, extend});
   }
@@ -49,11 +51,14 @@ export class SQExtend extends SourceQueryElement {
     }
     const src = this.sqSrc.getSource();
     if (src) {
-      this.asSource = new RefinedSource(src, this.extend);
+      this.asSource = new RefinedSource(src, this.extend, this.includeList);
       this.has({asSource: this.asSource});
       return this.asSource;
     }
-    this.sqLog('Could not compute source to extend');
+    this.sqLog(
+      'failed-to-compute-source-to-extend',
+      'Could not compute source to extend'
+    );
   }
 
   isSource() {

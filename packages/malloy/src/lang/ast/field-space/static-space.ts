@@ -23,11 +23,24 @@
 
 import {Dialect} from '../../../dialect/dialect';
 import {getDialect} from '../../../dialect/dialect_map';
-import {FieldDef, StructDef, isTurtleDef} from '../../../model/malloy_types';
+import {
+  FieldDef,
+  StructDef,
+  SourceDef,
+  isJoined,
+  isTurtle,
+  isSourceDef,
+  JoinFieldDef,
+} from '../../../model/malloy_types';
 
 import {SpaceEntry} from '../types/space-entry';
 import {LookupResult} from '../types/lookup-result';
-import {FieldName, FieldSpace, QueryFieldSpace} from '../types/field-space';
+import {
+  FieldName,
+  FieldSpace,
+  QueryFieldSpace,
+  SourceFieldSpace,
+} from '../types/field-space';
 import {DefinedParameter} from '../types/space-param';
 import {SpaceField} from '../types/space-field';
 import {StructSpaceFieldBase} from './struct-space-field-base';
@@ -40,23 +53,29 @@ export class StaticSpace implements FieldSpace {
   readonly type = 'fieldSpace';
   private memoMap?: FieldMap;
   protected fromStruct: StructDef;
+  protected structDialect: string;
 
-  constructor(sourceStructDef: StructDef) {
-    this.fromStruct = sourceStructDef;
+  constructor(struct: StructDef, dialect_name: string) {
+    this.fromStruct = struct;
+    this.structDialect = dialect_name;
+  }
+
+  dialectName(): string {
+    return this.structDialect;
   }
 
   dialectObj(): Dialect | undefined {
     try {
-      return getDialect(this.fromStruct.dialect);
+      return getDialect(this.structDialect);
     } catch {
       return undefined;
     }
   }
 
   defToSpaceField(from: FieldDef): SpaceField {
-    if (from.type === 'struct') {
-      return new StructSpaceField(from);
-    } else if (isTurtleDef(from)) {
+    if (isJoined(from)) {
+      return new StructSpaceField(from, this.structDialect);
+    } else if (isTurtle(from)) {
       return new IRViewField(this, from);
     }
     return new ColumnSpaceField(from);
@@ -69,21 +88,23 @@ export class StaticSpace implements FieldSpace {
         const name = f.as || f.name;
         this.memoMap[name] = this.defToSpaceField(f);
       }
-      if (this.fromStruct.parameters) {
-        for (const [paramName, paramDef] of Object.entries(
-          this.fromStruct.parameters
-        )) {
-          if (this.memoMap[paramName]) {
-            throw new Error(
-              `In struct '${this.fromStruct.as || this.fromStruct.name}': ` +
-                ` : Field and parameter name conflict '${paramName}`
-            );
+      if (isSourceDef(this.fromStruct)) {
+        if (this.fromStruct.parameters) {
+          for (const [paramName, paramDef] of Object.entries(
+            this.fromStruct.parameters
+          )) {
+            if (!(paramName in this.memoMap)) {
+              this.memoMap[paramName] = new DefinedParameter(paramDef);
+            }
           }
-          this.memoMap[paramName] = new DefinedParameter(paramDef);
         }
       }
     }
     return this.memoMap;
+  }
+
+  isProtectedAccessSpace(): boolean {
+    return false;
   }
 
   protected dropEntries(): void {
@@ -112,19 +133,41 @@ export class StaticSpace implements FieldSpace {
   }
 
   emptyStructDef(): StructDef {
-    return {...this.fromStruct, fields: []};
+    const ret = {...this.fromStruct};
+    if (isSourceDef(ret)) {
+      ret.parameters = {};
+    }
+    ret.fields = [];
+    return ret;
   }
 
   lookup(path: FieldName[]): LookupResult {
     const head = path[0];
     const rest = path.slice(1);
-    const found = this.entry(head.refString);
+    let found = this.entry(head.refString);
     if (!found) {
-      return {error: `'${head}' is not defined`, found};
+      return {
+        error: {
+          message: `'${head}' is not defined`,
+          code: 'field-not-found',
+        },
+        found,
+      };
     }
     if (found instanceof SpaceField) {
       const definition = found.fieldDef();
       if (definition) {
+        if (!(found instanceof StructSpaceFieldBase) && isJoined(definition)) {
+          // We have looked up a field which is a join, but not a StructSpaceField
+          // because it is someting like "dimension: joinedArray is arrayComputation"
+          // which wasn't known to be a join when the fieldspace was constructed.
+          // TODO don't make one of these every time you do a lookup
+          found = new StructSpaceField(definition, this.structDialect);
+        }
+        // cswenson review todo I don't know how to count the reference properly now
+        // i tried only writing it as a join reference if there was more in the path
+        // but that failed because lookup([JOINNAME]) is called when translating JOINNAME.AGGREGATE(...)
+        // with a 1-length-path but that IS a join reference and there is a test
         head.addReference({
           type:
             found instanceof StructSpaceFieldBase
@@ -135,15 +178,28 @@ export class StaticSpace implements FieldSpace {
           text: head.refString,
         });
       }
-    }
-    const relationship =
-      found instanceof StructSpaceFieldBase
-        ? [
-            {
-              name: head.refString,
-              structRelationship: found.structRelationship,
+      if (definition?.accessModifier) {
+        // TODO path.length === 1 will not work with namespaces
+        if (
+          !(
+            this.isProtectedAccessSpace() &&
+            definition.accessModifier === 'internal' &&
+            path.length === 1
+          )
+        ) {
+          return {
+            error: {
+              message: `'${head}' is ${definition?.accessModifier}`,
+              code: 'field-not-accessible',
             },
-          ]
+            found: undefined,
+          };
+        }
+      }
+    } // cswenson review todo { else this is SpaceEntry not a field which can only be a param and what is going on? }
+    const joinPath =
+      found instanceof StructSpaceFieldBase
+        ? [{...found.joinPathElement, name: head.refString}]
         : [];
     if (rest.length) {
       if (found instanceof StructSpaceFieldBase) {
@@ -151,18 +207,21 @@ export class StaticSpace implements FieldSpace {
         if (restResult.found) {
           return {
             ...restResult,
-            relationship: [...relationship, ...restResult.relationship],
+            joinPath: [...joinPath, ...restResult.joinPath],
           };
         } else {
           return restResult;
         }
       }
       return {
-        error: `'${head}' cannot contain a '${rest[0]}'`,
+        error: {
+          message: `'${head}' cannot contain a '${rest[0]}'`,
+          code: 'invalid-property-access-in-field-reference',
+        },
         found: undefined,
       };
     }
-    return {found, error: undefined, relationship, isOutputField: false};
+    return {found, error: undefined, joinPath, isOutputField: false};
   }
 
   isQueryFieldSpace(): this is QueryFieldSpace {
@@ -171,11 +230,33 @@ export class StaticSpace implements FieldSpace {
 }
 
 export class StructSpaceField extends StructSpaceFieldBase {
-  constructor(def: StructDef) {
+  constructor(
+    def: JoinFieldDef,
+    private forDialect: string
+  ) {
     super(def);
   }
 
   get fieldSpace(): FieldSpace {
-    return new StaticSpace(this.sourceDef);
+    if (isSourceDef(this.structDef)) {
+      return new StaticSourceSpace(this.structDef);
+    } else {
+      return new StaticSpace(this.structDef, this.forDialect);
+    }
+  }
+}
+
+export class StaticSourceSpace extends StaticSpace implements SourceFieldSpace {
+  constructor(protected source: SourceDef) {
+    super(source, source.dialect);
+  }
+  structDef(): SourceDef {
+    return this.source;
+  }
+  emptyStructDef(): SourceDef {
+    const ret = {...this.source};
+    ret.parameters = {};
+    ret.fields = [];
+    return ret;
   }
 }

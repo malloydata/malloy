@@ -22,30 +22,36 @@
  */
 
 import {
-  StructDef,
+  Argument,
+  InvokedStructRef,
+  SourceDef,
   StructRef,
   refIsStructDef,
 } from '../../../model/malloy_types';
 
 import {Source} from '../source-elements/source';
 import {NamedSource} from '../source-elements/named-source';
+import {ParameterSpace} from '../field-space/parameter-space';
 
 export class QueryHeadStruct extends Source {
   elementType = 'internalOnlyQueryHead';
-  constructor(readonly fromRef: StructRef) {
+  constructor(
+    readonly fromRef: StructRef,
+    readonly sourceArguments: Record<string, Argument> | undefined
+  ) {
     super();
   }
 
-  structRef(): StructRef {
-    return this.fromRef;
+  structRef(): InvokedStructRef {
+    return {structRef: this.fromRef};
   }
 
-  structDef(): StructDef {
+  getSourceDef(parameterSpace: ParameterSpace | undefined): SourceDef {
     if (refIsStructDef(this.fromRef)) {
       return this.fromRef;
     }
-    const ns = new NamedSource(this.fromRef);
+    const ns = new NamedSource(this.fromRef, this.sourceArguments, undefined);
     this.has({exploreReference: ns});
-    return ns.structDef();
+    return ns.getSourceDef(parameterSpace);
   }
 }

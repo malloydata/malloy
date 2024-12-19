@@ -31,70 +31,80 @@ import {
   PipeSegment,
   Query,
   QueryFieldDef,
-  SQLBlockSource,
-  SQLBlockStructDef,
   StructDef,
   TurtleDef,
   isQuerySegment,
-  isSQLFragment,
+  isSegmentSQL,
+  isSourceDef,
+  SourceDef,
+  JoinBase,
+  TableSourceDef,
+  SQLSourceDef,
+  SQLSentence,
+  NumberTypeDef,
+  mkArrayDef,
 } from '../../model/malloy_types';
 import {ExpressionDef, MalloyElement} from '../ast';
 import {NameSpace} from '../ast/types/name-space';
 import {ModelEntry} from '../ast/types/model-entry';
 import {MalloyChildTranslator, MalloyTranslator} from '../parse-malloy';
 import {DataRequestResponse, TranslateResponse} from '../translate-response';
-import {StaticSpace} from '../ast/field-space/static-space';
+import {StaticSourceSpace} from '../ast/field-space/static-space';
 import {ExprValue} from '../ast/types/expr-value';
 import {GlobalNameSpace} from '../ast/types/global-name-space';
+import {LogSeverity, MessageCode, MessageParameterType} from '../parse-log';
+import {EventStream} from '../../runtime_types';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types
 export function pretty(thing: any): string {
   return inspect(thing, {breakLength: 72, depth: Infinity});
 }
-
-const mockSchema: Record<string, StructDef> = {
+const intType: NumberTypeDef = {type: 'number', numberType: 'integer'};
+const mockSchema: Record<string, SourceDef> = {
   'aTable': {
-    type: 'struct',
+    type: 'table',
     name: 'aTable',
     dialect: 'standardsql',
-    structSource: {type: 'table', tablePath: 'aTable'},
-    structRelationship: {type: 'basetable', connectionName: 'test'},
+    tablePath: 'aTable',
+    connection: 'test',
     fields: [
       {type: 'string', name: 'astr'},
       {type: 'number', name: 'af', numberType: 'float'},
-      {type: 'number', name: 'ai', numberType: 'integer'},
+      {...intType, name: 'ai'},
       {type: 'date', name: 'ad'},
       {type: 'boolean', name: 'abool'},
       {type: 'timestamp', name: 'ats'},
-      {type: 'unsupported', name: 'aun'},
-      {type: 'unsupported', name: 'aweird', rawType: 'weird'},
+      {type: 'sql native', name: 'aun'},
+      {type: 'sql native', name: 'aweird', rawType: 'weird'},
       {
-        type: 'struct',
+        type: 'array',
         name: 'astruct',
-        structSource: {type: 'nested'},
-        structRelationship: {type: 'nested', isArray: true, fieldName: 'foo'},
-        fields: [{type: 'number', name: 'column', numberType: 'integer'}],
-        dialect: 'standardsql',
+        elementTypeDef: {type: 'record_element'},
+        join: 'many',
+        fields: [
+          {
+            name: 'column',
+            type: 'number',
+            numberType: 'integer',
+          },
+        ],
       },
       {
-        type: 'struct',
+        type: 'record',
         name: 'aninline',
-        structSource: {type: 'nested'},
-        structRelationship: {type: 'inline'},
-        fields: [{type: 'number', name: 'column', numberType: 'integer'}],
-        dialect: 'standardsql',
+        fields: [{...intType, name: 'column'}],
+        join: 'one',
+        matrixOperation: 'left',
       },
+      mkArrayDef(intType, 'ais'),
     ],
   },
   'malloytest.carriers': {
-    type: 'struct',
+    type: 'table',
     name: 'malloytest.carriers',
     dialect: 'standardsql',
-    structSource: {
-      type: 'table',
-      tablePath: 'malloytest.carriers',
-    },
-    structRelationship: {type: 'basetable', connectionName: 'bigquery'},
+    tablePath: 'malloytest.carriers',
+    connection: 'bigquery',
     fields: [
       {name: 'code', type: 'string'},
       {name: 'name', type: 'string'},
@@ -103,14 +113,11 @@ const mockSchema: Record<string, StructDef> = {
     as: 'carriers',
   },
   'malloytest.flights': {
-    type: 'struct',
+    type: 'table',
     name: 'malloytest.flights',
     dialect: 'standardsql',
-    structSource: {
-      type: 'table',
-      tablePath: 'malloytest.flights',
-    },
-    structRelationship: {type: 'basetable', connectionName: 'bigquery'},
+    tablePath: 'malloytest.flights',
+    connection: 'bigquery',
     fields: [
       {name: 'carrier', type: 'string'},
       {name: 'origin', type: 'string'},
@@ -132,14 +139,11 @@ const mockSchema: Record<string, StructDef> = {
     as: 'flights',
   },
   'malloytest.airports': {
-    type: 'struct',
+    type: 'table',
     name: 'malloytest.airports',
     dialect: 'standardsql',
-    structSource: {
-      type: 'table',
-      tablePath: 'malloytest.airports',
-    },
-    structRelationship: {type: 'basetable', connectionName: 'bigquery'},
+    tablePath: 'malloytest.airports',
+    connection: 'bigquery',
     fields: [
       {name: 'id', type: 'number', numberType: 'integer'},
       {name: 'code', type: 'string'},
@@ -174,6 +178,25 @@ const mockSchema: Record<string, StructDef> = {
 };
 export const aTableDef = mockSchema['aTable'];
 
+const bJoinedIntoA: TableSourceDef & JoinBase = {
+  type: 'table',
+  name: 'aTable',
+  dialect: 'standardsql',
+  tablePath: 'aTable',
+  connection: 'test',
+  as: 'b',
+  join: 'one',
+  matrixOperation: 'left',
+  onExpression: {
+    node: '=',
+    kids: {
+      left: {node: 'field', path: ['astr']},
+      right: {node: 'field', path: ['b', 'astr']},
+    },
+  },
+  fields: aTableDef.fields,
+};
+
 /**
  * When translating partial trees, there will not be a document node
  * to handle namespace requests, this stands in for document in that case.
@@ -199,7 +222,7 @@ class TestRoot extends MalloyElement implements NameSpace {
     const global = this.globalNameSpace.getEntry(name);
     if (global) return global;
     const struct = this.modelDef.contents[name];
-    if (struct.type === 'struct') {
+    if (isSourceDef(struct)) {
       const exported = this.modelDef.exports.includes(name);
       return {entry: struct, exported};
     }
@@ -229,10 +252,11 @@ export class TestChildTranslator extends MalloyChildTranslator {
 
 const testURI = 'internal://test/langtests/root.malloy';
 export class TestTranslator extends MalloyTranslator {
+  allDialectsEnabled = true;
   testRoot?: TestRoot;
   /*
    * All test source files can assume that an import of this
-   * model has already happened.
+
    *
    * Also the following tables will be available on _db_
    *   aTable, malloytest.carriers, malloytest.flights, malloytest.airports
@@ -245,6 +269,7 @@ export class TestTranslator extends MalloyTranslator {
    *     query: aturtle is { group_by: astr; aggregate: acount }
    *   }
    */
+
   internalModel: ModelDef = {
     name: testURI,
     exports: [],
@@ -254,29 +279,16 @@ export class TestTranslator extends MalloyTranslator {
       b: {...aTableDef, primaryKey: 'astr', as: 'b'},
       ab: {
         ...aTableDef,
-        as: 'ab',
         primaryKey: 'astr',
         fields: [
           ...aTableDef.fields,
-          {
-            ...aTableDef,
-            as: 'b',
-            structRelationship: {
-              type: 'one',
-              matrixOperation: 'left',
-              onExpression: [
-                {type: 'field', path: ['astr']},
-                '=',
-                {type: 'field', path: ['b', 'astr']},
-              ],
-            },
-          },
+          bJoinedIntoA,
           {
             type: 'number',
             name: 'acount',
             numberType: 'integer',
             expressionType: 'aggregate',
-            e: ['COUNT()'],
+            e: {node: 'aggregate', function: 'count', e: {node: ''}},
             code: 'count()',
           },
           {
@@ -300,10 +312,11 @@ export class TestTranslator extends MalloyTranslator {
   constructor(
     readonly testSrc: string,
     importBaseURL: string | null = null,
+    eventStream: EventStream | null = null,
     rootRule = 'malloyDocument',
     internalModel?: ModelDef
   ) {
-    super(testURI, importBaseURL);
+    super(testURI, importBaseURL, null, eventStream);
     this.grammarRule = rootRule;
     this.importZone.define(testURI, testSrc);
     if (internalModel !== undefined) {
@@ -344,6 +357,7 @@ export class TestTranslator extends MalloyTranslator {
       if (whatImports) {
         mysterious = false;
         this.logger.log({
+          code: 'missing-imports',
           at: this.defaultLocation(),
           message: `Missing imports: ${whatImports.join(',')}`,
           severity: 'error',
@@ -353,6 +367,7 @@ export class TestTranslator extends MalloyTranslator {
       if (needThese) {
         mysterious = false;
         this.logger.log({
+          code: 'missing-schema',
           at: this.defaultLocation(),
           message: `Missing schema: ${needThese.join(',')}`,
           severity: 'error',
@@ -360,6 +375,7 @@ export class TestTranslator extends MalloyTranslator {
       }
       if (mysterious) {
         this.logger.log({
+          code: 'mysterious-translation-failure',
           at: this.defaultLocation(),
           message: 'mysterious translation failure',
           severity: 'error',
@@ -375,7 +391,7 @@ export class TestTranslator extends MalloyTranslator {
 
   exploreFor(exploreName: string): StructDef {
     const explore = this.nameSpace[exploreName];
-    if (explore && explore.type === 'struct') {
+    if (explore && isSourceDef(explore)) {
       return explore;
     }
     throw new Error(`Expected model to contain source '${exploreName}'`);
@@ -395,10 +411,10 @@ export class TestTranslator extends MalloyTranslator {
     return this.importsAndTablesStep.step(this);
   }
 
-  getSourceDef(srcName: string): StructDef | undefined {
+  getSourceDef(srcName: string): SourceDef | undefined {
     const t = this.translate().translated;
     const s = t?.modelDef?.contents[srcName];
-    if (s && s.type === 'struct') {
+    if (s && isSourceDef(s)) {
       return s;
     }
     return undefined;
@@ -421,14 +437,18 @@ export class TestTranslator extends MalloyTranslator {
 
 export class BetaExpression extends TestTranslator {
   private compiled?: ExprValue;
-  constructor(src: string) {
-    super(src, null, 'justExpr');
+  constructor(
+    src: string,
+    model?: ModelDef,
+    readonly sourceName: string = 'ab'
+  ) {
+    super(src, null, null, 'debugExpr', model);
   }
 
   private testFS() {
-    const aStruct = this.internalModel.contents['ab'];
-    if (aStruct.type === 'struct') {
-      const tstFS = new StaticSpace(aStruct);
+    const aStruct = this.internalModel.contents[this.sourceName];
+    if (isSourceDef(aStruct)) {
+      const tstFS = new StaticSourceSpace(aStruct);
       return tstFS;
     } else {
       throw new Error("Can't get simple namespace for expression tests");
@@ -511,14 +531,14 @@ export interface MarkedSource {
   translator?: TestTranslator;
 }
 
-interface HasTranslator extends MarkedSource {
-  translator: TestTranslator;
+interface HasTranslator<TT extends TestTranslator> extends MarkedSource {
+  translator: TT;
 }
 
 export function expr(
   unmarked: TemplateStringsArray,
   ...marked: string[]
-): HasTranslator {
+): HasTranslator<BetaExpression> {
   const ms = markSource(unmarked, ...marked);
   return {
     ...ms,
@@ -529,7 +549,7 @@ export function expr(
 export function model(
   unmarked: TemplateStringsArray,
   ...marked: string[]
-): HasTranslator {
+): HasTranslator<TestTranslator> {
   const ms = markSource(unmarked, ...marked);
   return {
     ...ms,
@@ -545,7 +565,7 @@ export function makeModelFunc(options: {
   return function model(
     unmarked: TemplateStringsArray,
     ...marked: string[]
-  ): HasTranslator {
+  ): HasTranslator<TestTranslator> {
     const ms = markSource(unmarked, ...marked);
     return {
       ...ms,
@@ -553,9 +573,23 @@ export function makeModelFunc(options: {
         (options.prefix ?? '') +
           (options.wrap ? options.wrap(ms.code) : ms.code),
         null,
+        null,
         undefined,
         options?.model
       ),
+    };
+  };
+}
+
+export function makeExprFunc(model: ModelDef, sourceName: string) {
+  return function expr(
+    unmarked: TemplateStringsArray,
+    ...marked: string[]
+  ): HasTranslator<TestTranslator> {
+    const ms = markSource(unmarked, ...marked);
+    return {
+      ...ms,
+      translator: new BetaExpression(ms.code, model, sourceName),
     };
   };
 }
@@ -595,27 +629,45 @@ export function markSource(
   return {code, locations};
 }
 
-export function getSelectOneStruct(
-  sqlBlock: SQLBlockSource
-): SQLBlockStructDef {
+export function getSelectOneStruct(sqlBlock: SQLSentence): SQLSourceDef {
   const selectThis = sqlBlock.select[0];
-  if (!isSQLFragment(selectThis)) {
+  if (!isSegmentSQL(selectThis)) {
     throw new Error('weird test support error sorry');
   }
   return {
-    type: 'struct',
+    type: 'sql_select',
     name: sqlBlock.name,
     dialect: 'standardsql',
-    structSource: {
-      type: 'sql',
-      method: 'subquery',
-      sqlBlock: {
-        type: 'sqlBlock',
-        name: sqlBlock.name,
-        selectStr: selectThis.sql,
-      },
-    },
-    structRelationship: {type: 'basetable', connectionName: 'bigquery'},
+    connection: 'bigquery',
+    selectStr: selectThis.sql,
     fields: [{type: 'number', name: 'one'}],
   };
+}
+
+export function error<T extends MessageCode>(
+  code: T,
+  data?: MessageParameterType<T>
+): {code: T; data: MessageParameterType<T> | undefined; severity: LogSeverity} {
+  return {code, data, severity: 'error'};
+}
+
+export function warning<T extends MessageCode>(
+  code: T,
+  data?: MessageParameterType<T>
+): {code: T; data: MessageParameterType<T> | undefined; severity: LogSeverity} {
+  return {code, data, severity: 'warn'};
+}
+
+export function errorMessage(message: string | RegExp): {
+  message: string | RegExp;
+  severity: LogSeverity;
+} {
+  return {message, severity: 'error'};
+}
+
+export function warningMessage(message: string | RegExp): {
+  message: string | RegExp;
+  severity: LogSeverity;
+} {
+  return {message, severity: 'warn'};
 }

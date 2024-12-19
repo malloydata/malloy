@@ -1,0 +1,478 @@
+source: products is duckdb.table("static/data/products.parquet") extend {
+  measure: total_sales is retail_price.sum()
+  measure: avg_margin is avg(retail_price - cost)
+  dimension: product is name
+  dimension: dcId is distribution_center_id::number
+  measure:
+    `Sales $` is retail_price.sum()*500
+    `Cost $ really long label` is retail_price.sum()*300
+  dimension:
+    `sales_year` is year(@2001-02-03 + round(id/5000) year)
+
+  view: x is {
+    aggregate: c is count()
+  }
+
+  # bar_chart
+  view: topSellingBrands is {
+    group_by: brand
+    aggregate: `Sales $`
+    limit: 10
+  }
+
+  # dashboard
+  view: interactions is {
+    nest:
+      # bar_chart
+      a is {
+        group_by: brand
+
+        # number="#,##0"
+        aggregate: `Sales $`
+
+        # tooltip bar_chart.size=xs
+        nest: `Top Products` is {
+          group_by: product
+          # currency
+          aggregate: `Sales $`
+          limit: 10
+        }
+
+        # tooltip
+        nest: `Top 3 Categories` is {
+          group_by: category
+          # currency
+          aggregate: `Sales $`
+          limit: 3
+        }
+        # tooltip currency
+        aggregate: `Cost $ really long label`
+        limit: 10
+      }
+      # bar_chart
+      b is {
+        group_by: brand, department
+        aggregate: `Sales $`
+        limit: 10
+      }
+      # bar_chart.stack
+      c is {
+        group_by: brand, department
+        # currency
+        aggregate: `Sales $`
+        # tooltip currency
+        aggregate: `Cost $ really long label`
+        # tooltip bar_chart.size=spark
+        nest: departments is {
+          group_by: product
+          # currency
+          aggregate: `Sales $`
+          limit: 10
+        }
+        limit: 10
+      }
+      # bar_chart
+      d is {
+        group_by: brand
+        aggregate:
+          # y
+          `Sales $`
+          # y
+          `Cost $ really long label`
+        # tooltip currency
+        aggregate: ct is count()
+        limit: 10
+      }
+      # bar_chart.stack
+      e is {
+        group_by: brand
+        aggregate:
+          # y
+          `Sales $`
+          # y
+          `Cost $ really long label`
+        limit: 10
+      }
+      # bar_chart
+      f is {
+        group_by: brand
+
+        # percent
+        aggregate: percent_of_sales is `Sales $` / all(`Sales $`)
+        limit: 10
+      }
+  }
+
+   # bar_chart
+  view: topSellingBrandsSeries is {
+    group_by: brand, department
+    aggregate: `Sales $` is retail_price.avg()*500
+    limit: 10
+  }
+
+  view: trailing_12_sales_trend is {
+    group_by: brand
+    aggregate: `Sales $` is retail_price.avg()*500
+    limit: 12
+    order_by: 1
+  }
+
+  view: baseLineData is {
+    group_by: dcId
+    aggregate: `Sales $` is retail_price.avg()
+    order_by: dcId
+  }
+
+  view: category_bar is {
+    limit: 2
+    group_by: category
+    # currency
+    aggregate: `Avg Retail` is retail_price.avg()
+
+    nest:
+    `Top Departments` is {
+      group_by: department
+      # currency
+      aggregate: `Avg Retail` is retail_price.avg()
+      limit: 5
+    }
+    `Top Selling Brands` is topSellingBrands
+    `Top Products` is {
+      group_by: name
+      # currency
+      aggregate: `Sales` is retail_price.avg()
+      limit: 10
+    }
+    # size=spark
+    spark is topSellingBrands
+    # size=sm
+    sm is topSellingBrands
+    # size=md
+    md is topSellingBrands
+    # size=lg
+    lg is topSellingBrands
+    # size=xl
+    xl is topSellingBrands
+    # size=2xl
+    `2xl` is topSellingBrands
+  }
+
+  view: nested_test is {
+    group_by: category
+    aggregate: avg_retail is retail_price.avg()
+    nest:
+      # bar_chart size=lg
+      # size.height=220 size.width=300
+      nested_column_1 is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 10
+      }
+      # bar_chart size=lg
+      # size.height=220 size.width=300
+      nested_column_2 is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 10
+      }
+      nested_column_3 is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 10
+      }
+    limit: 2
+  }
+
+
+  view: nested is {
+    group_by: category
+    aggregate: avg_retail is retail_price.avg()
+    nest:
+      # bar_chart size=lg
+      # size.height=220 size.width=300
+      nested_column_1 is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 10
+      }
+      # bar_chart size=lg
+      # size.height=220 size.width=300
+      nested_column_2 is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 10
+      }
+      nested_column_3 is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 10
+      }
+      another_nested is {
+        group_by: department
+        aggregate: avg_retail is retail_price.avg()
+        # bar_chart
+        nest:
+          deeply_nested is {
+            group_by: `sku`
+            aggregate: total_cost is cost.sum()
+            limit: 3
+          }
+        limit: 5
+      }
+      record is {
+        nest: nested_record is {
+          group_by: id
+          aggregate: total_cost is cost.sum()
+          limit: 5
+        }
+      }
+      another_nested2 is {
+        group_by: department
+        aggregate: avg_retail is retail_price.avg()
+        nest: deeply_nested is {
+          group_by: `sku`
+          aggregate: total_cost is cost.sum()
+          limit: 3
+        }
+        limit: 5
+      }
+  }
+
+  view: nested_independent_axis is {
+    group_by: category
+    aggregate: avg_retail is retail_price.avg()
+    # bar_chart
+    nest: top_brands is {
+      group_by: brand
+      aggregate: avg_retail is retail_price.avg()
+      limit: 10
+    }
+    # bar_chart { y.independent }
+    nest: top_brands_independent is {
+      group_by: brand
+      aggregate: avg_retail is retail_price.avg()
+      limit: 10
+    }
+    limit: 5
+  }
+
+  # dashboard
+  view: seriesCharts is {
+    # bar_chart
+    nest: grouped is {
+      group_by: brand, department_long_label is department
+      aggregate: `Sales $` is retail_price.avg()*500
+      limit: 10
+    }
+    # bar_chart.stack
+    nest: stacked is {
+      group_by: brand, department
+      aggregate: `Sales $` is retail_price.avg()*500
+      limit: 10
+    }
+    # bar_chart
+    nest: ySeries is {
+      group_by: brand
+      aggregate:
+        # y
+        `Sales $` is retail_price.avg()*500
+        # y
+        `Cost $ really long label` is retail_price.avg()*300
+      limit: 10
+    }
+    # bar_chart.stack
+    nest: ySeriesStack is {
+      group_by: brand
+      aggregate:
+        # y
+        `Sales $` is retail_price.avg()*500
+        # y
+        `Cost $` is retail_price.avg()*300
+      limit: 10
+    }
+    # bar_chart { x=brand y=['Cost $', 'Sales $'] }
+    nest: ySeriesExplicit is {
+      group_by: brand
+      aggregate:
+        `Sales $` is retail_price.avg()*500
+        `Cost $` is retail_price.avg()*300
+      limit: 10
+    }
+
+    # bar_chart
+    nest: negative is {
+      group_by: brand
+      aggregate: `Sales $` is retail_price.avg()-500
+      limit: 10
+    }
+
+    nest: negative_data is {
+      group_by: brand
+      aggregate: `Sales $` is retail_price.avg()-500
+      limit: 10
+    }
+
+    # bar_chart
+    nest: grouped_negative is {
+      group_by: brand, department_long_label is department
+      aggregate: `Sales $` is retail_price.avg()-1000
+      limit: 10
+    }
+    # bar_chart.stack
+    nest: stacked_negative is {
+      group_by: brand, department
+      aggregate: `Sales $` is avg(retail_price)-700
+      limit: 10
+    }
+
+    # bar_chart
+    nest: numericAxis is {
+      group_by: id
+      aggregate:
+        `Sales $` is retail_price.avg()*500
+      limit: 10
+      order_by: id
+    }
+
+    # bar_chart
+    nest: dateAxis is {
+      group_by:
+        `date` is @2001-02-03 + id day
+      aggregate:
+        `Sales $` is retail_price.avg()*500
+      limit: 10
+      order_by: `date`
+    }
+
+    # bar_chart size=xl
+    nest: yearExtract is {
+      group_by:
+        `date` is year(@2001-02-03 + id year)
+      aggregate:
+        `Sales $` is retail_price.avg()*500
+      limit: 10
+      order_by: `date`
+    }
+
+    # bar_chart size=xl
+    nest: yearTruncate is {
+      group_by:
+        `date` is (@2001-02-03 + id year).year
+      aggregate:
+        `Sales $` is retail_price.avg()*500
+      limit: 10
+      order_by: `date`
+    }
+
+    nest: n is {
+      group_by: brand
+       # bar_chart
+      nest: grouped is {
+        group_by: brand, department
+        aggregate: `Sales $` is retail_price.avg()*500
+        limit: 10
+      }
+      limit: 10
+    }
+  }
+
+  #(story)
+  view: root_chart is topSellingBrands
+
+  #(story)
+  # bar_chart { title='My Title' subtitle='My subtitle'}
+  view: with_titles is topSellingBrands
+
+  #(story)
+  # bar_chart
+  view: dimension_series is baseLineData + { group_by: department }
+
+  #(story)
+  view: single_nest is {
+    nest: topSellingBrands
+  }
+
+  #(story)
+  view: sparks is {
+    group_by: category
+    # currency
+    aggregate: `Avg Retail` is retail_price.avg()
+    nest:
+    # size="spark"
+    `Top Brands` is topSellingBrands
+  }
+
+  #(story)
+  view: sparks_nested is {
+    group_by: `Department` is department
+    # currency
+    aggregate: `Avg Retail` is retail_price.avg()
+    nest:
+      `Top 5 Categories` is {
+        group_by: category
+        limit: 5
+        # currency
+        aggregate: `Avg Retail` is retail_price.avg()
+        # bar_chart size="spark"
+        nest: `Trailing 12mo Sales` is trailing_12_sales_trend
+      }
+  }
+
+  #(story)
+  view: indepenent_axis is {
+    group_by: category
+    aggregate: avg_retail is retail_price.avg()
+    # bar_chart
+    nest: top_brands is {
+      group_by: brand
+      aggregate: avg_retail is retail_price.avg()
+      limit: 10
+    }
+    # label='Custom Column Label' bar_chart { y.independent title="Brand Sales" subtitle="with independent axes" }
+    nest: top_brands_independent is {
+      group_by: brand
+      aggregate: avg_retail is retail_price.avg()
+      limit: 10
+    }
+    limit: 5
+  }
+
+  #(story)
+  view: series_dashboard is seriesCharts
+
+  #(story)
+  view: size_sheet is {
+    limit: 2
+    group_by: category
+    nest:
+    `Top Selling Brands` is topSellingBrands
+    # size=spark
+    spark is topSellingBrands
+    # size=sm
+    sm is topSellingBrands
+    # size=md
+    md is topSellingBrands
+    # size=lg
+    lg is topSellingBrands
+    # size=xl
+    xl is topSellingBrands
+    # size=2xl
+    `2xl` is topSellingBrands
+  }
+
+  #(story)
+  view: interactions_sandbox is interactions;
+
+  #(story)
+  # bar_chart.stack
+  view: null_values is {
+    group_by:
+      x is pick null when id = 8 else id
+      id
+    aggregate: `Sales $`
+    limit: 10
+    order_by: id
+  }
+}
+
+run: products -> { group_by: distribution_center_id}

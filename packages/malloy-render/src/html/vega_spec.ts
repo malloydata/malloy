@@ -26,10 +26,11 @@ import {DataColumn, Explore, Field} from '@malloydata/malloy';
 import {HTMLChartRenderer} from './chart';
 
 import {getColorScale} from './utils';
-import {StyleDefaults, VegaRenderOptions} from '../data_styles';
-import {RendererOptions} from '../renderer_types';
-import {RendererFactory} from '../renderer_factory';
-import {Renderer} from '../renderer';
+import {StyleDefaults, VegaRenderOptions} from './data_styles';
+import {RendererOptions} from './renderer_types';
+import {RendererFactory} from './renderer_factory';
+import {Renderer} from './renderer';
+import {grayMedium, gridGray} from '../component/vega/base-vega-config';
 
 type DataContainer = Array<unknown> | Record<string, unknown>;
 
@@ -39,10 +40,10 @@ export const DEFAULT_SPEC: Partial<lite.TopLevelSpec> = {
     params: [
       {
         name: 'defaultFont',
-        value: "var(--malloy-font-family, 'Roboto')",
+        value: "var(--malloy-font-family, 'Inter')",
       },
-      {name: 'titleColor', value: 'var(--malloy-title-color, #505050)'},
-      {name: 'labelColor', value: 'var(--malloy-label-color, #505050)'},
+      {name: 'titleColor', value: `var(--malloy-title-color, ${grayMedium})`},
+      {name: 'labelColor', value: `var(--malloy-label-color, ${grayMedium})`},
     ],
     background: undefined,
     color: {expr: 'titleColor'},
@@ -71,6 +72,10 @@ export const DEFAULT_SPEC: Partial<lite.TopLevelSpec> = {
       titleFontWeight: 500,
       titleColor: {expr: 'titleColor'},
       titleFontSize: 12,
+      gridColor: gridGray,
+      tickColor: gridGray,
+      labelPadding: 5,
+      titlePadding: 10,
     },
     legend: {
       titleFontWeight: 500,
@@ -514,7 +519,7 @@ export class HTMLVegaSpecRenderer extends HTMLChartRenderer {
   translateField(explore: Explore, fieldString: string): string {
     const m = fieldString.match(/#\{(\d+)\}/);
     if (m && m.groups) {
-      return explore.intrinsicFields[parseInt(m.groups[1]) - 1].name;
+      return explore.allFields[parseInt(m.groups[1]) - 1].name;
     }
     return fieldString;
   }

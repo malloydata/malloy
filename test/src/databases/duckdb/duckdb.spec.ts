@@ -29,7 +29,7 @@ import {describeIfDatabaseAvailable} from '../../util';
 // TODO identify which tests need to run on wasm and move them into their own file
 const runtimes = ['duckdb', 'duckdb_wasm'];
 
-const [_describe, databases] = describeIfDatabaseAvailable(runtimes);
+const [describe, databases] = describeIfDatabaseAvailable(runtimes);
 const allDucks = new RuntimeList(databases);
 
 describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
@@ -90,6 +90,26 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
     );
   });
 
+  it('handles decimal literals', async () => {
+    const query = `
+    run: duckdb.sql("select 1") -> {
+      select:
+          n1 is 1.234
+          n2 is 1234.0 / 1000
+  }
+    `;
+    await expect(query).malloyResultMatches(runtime, {n1: 1.234, n2: 1.234});
+  });
+
+  it('dayname', async () => {
+    await expect(`
+      run: duckdb.sql('select 1') -> {
+        select:
+          x is dayname(@2024-09-12)
+          y is dayname(@2024-09-10 12:22:22)
+      }`).malloyResultMatches(runtime, {x: 'Thursday', y: 'Tuesday'});
+  });
+
   it('can open json files', async () => {
     await expect(`
       run: duckdb.table('test/data/duckdb/test.json') -> {
@@ -111,7 +131,7 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
     ).malloyResultMatches(runtime, {abc: 'a', abc3: 'a3'});
   });
 
-  describe('time', () => {
+  describe('time oddities', () => {
     const zone = 'America/Mexico_City'; // -06:00 no DST
     const zone_2020 = DateTime.fromObject(
       {
@@ -127,13 +147,12 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
       }
     );
     test('can cast TIMESTAMPTZ to timestamp', async () => {
-      await expect(
-        `run: duckdb.sql("""
+      await expect(`
+        run: duckdb.sql("""
               SELECT TIMESTAMPTZ '2020-02-20 00:00:00 ${zone}' as t_tstz
           """) -> {
             select: mex_220 is t_tstz::timestamp
-          }`
-      ).malloyResultMatches(runtime, {mex_220: zone_2020.toJSDate()});
+          }`).malloyResultMatches(runtime, {mex_220: zone_2020.toJSDate()});
     });
   });
 });

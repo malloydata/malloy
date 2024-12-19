@@ -22,8 +22,8 @@
  */
 
 import {DataArrayOrRecord} from '@malloydata/malloy';
-import {StyleDefaults} from '../data_styles';
-import {getDrillQuery} from '../drill';
+import {StyleDefaults} from './data_styles';
+import {getDrillQuery} from './drill';
 import {ContainerRenderer} from './container';
 import {HTMLTextRenderer} from './text';
 import {
@@ -47,7 +47,7 @@ export class HTMLDashboardRenderer extends ContainerRenderer {
       );
     }
 
-    const fields = table.field.intrinsicFields;
+    const fields = table.field.allFields;
 
     const dimensions = fields.filter(
       field => field.isAtomicField() && field.sourceWasDimension()

@@ -23,6 +23,7 @@
 
 import {
   TestTranslator,
+  errorMessage,
   getExplore,
   getFieldDef,
   getJoinField,
@@ -54,6 +55,10 @@ describe('source locations', () => {
       source.locations[0]
     );
   });
+
+  // TODO make parameters have locations, and make references to them work
+  // with existing jump-to-definition system
+  test.todo('location of parameter');
 
   test('location of defined dimension', () => {
     const source = markSource`source: na is a extend { dimension: ${'x is 1'} }`;
@@ -184,22 +189,6 @@ describe('source locations', () => {
     }
   });
 
-  test('pre m4 location of named SQL block', () => {
-    const source = markSource`##! -m4warnings\n${'sql: s is { select: """SELECT 1 as one""" }'}`;
-    const m = new TestTranslator(source.code);
-    expect(m).toParse();
-    const compileSql = m.translate().compileSQL;
-    expect(compileSql).toBeDefined();
-    if (compileSql) {
-      m.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
-      });
-      expect(m).toTranslate();
-      const s = m.sqlBlocks[0];
-      expect(s.location).isLocationIn(source.locations[0], source.code);
-    }
-  });
-
   test('location of renamed field', () => {
     const source = markSource`
       source: na is a extend {
@@ -256,41 +245,32 @@ describe('source locations', () => {
     expect(y.location).toMatchObject(source.locations[0]);
   });
 
-  // Since """ strings are not single tokens, I don't know how to do this.
-  // test("multi line sql block token span is correct", () => {
-  //   const sqlSource = `sql: { select: """// line 0\n//line 1\n// line 2""" }`;
-  //   const m = new TestTranslator(sqlSource);
-  //   expect(m).not.toParse();
-  //   const errList = m.errors().errors;
-  //   expect(errList[0].at?.range.end).toEqual({ line: 2, character: 11 });
-  // });
-
   test('undefined query location', () => {
-    expect(model`run: ${'xyz'}`).translationToFailWith(
-      "Reference to undefined object 'xyz'"
+    expect(model`run: ${'xyz'}`).toLog(
+      errorMessage("Reference to undefined object 'xyz'")
     );
   });
   test('undefined field reference', () => {
-    expect(model`run: a -> { group_by: ${'xyz'} }`).translationToFailWith(
-      "'xyz' is not defined"
+    expect(model`run: a -> { group_by: ${'xyz'} }`).toLog(
+      errorMessage("'xyz' is not defined")
     );
   });
   test('bad query', () => {
-    expect(
-      model`run: a -> { group_by: astr; ${'select: *'} }`
-    ).translationToFailWith(/Not legal in grouping query/);
+    expect(model`run: a -> { group_by: astr; ${'select: *'} }`).toLog(
+      errorMessage(/Not legal in grouping query/)
+    );
   });
 
   test.skip('undefined field reference in top', () => {
-    expect(
-      model`run: a -> { group_by: one is 1; top: 1 by ${'xyz'} }`
-    ).translationToFailWith("'xyz' is not defined");
+    expect(model`run: a -> { group_by: one is 1; top: 1 by ${'xyz'} }`).toLog(
+      errorMessage("'xyz' is not defined")
+    );
   });
 
   test.skip('undefined field reference in order_by', () => {
-    expect(
-      model`run: a -> { group_by: one is 1; order_by: ${'xyz'} }`
-    ).translationToFailWith("'xyz' is not defined");
+    expect(model`run: a -> { group_by: one is 1; order_by: ${'xyz'} }`).toLog(
+      errorMessage("'xyz' is not defined")
+    );
   });
 });
 

@@ -21,13 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {StructDef} from '@malloydata/malloy';
+import {composeSQLExpr, SourceDef} from '@malloydata/malloy';
 import {fToQF} from '../util';
 
 // will it build?
 
 /** Medicare Model */
-export const medicareModel: StructDef = {
+export const medicareModel: SourceDef = {
   as: 'medicare_test',
   dialect: 'standardsql',
   fields: [
@@ -66,25 +66,27 @@ export const medicareModel: StructDef = {
       type: 'number',
       name: 'count_of_drugs',
       expressionType: 'aggregate',
-      e: [{type: 'aggregate', function: 'count', e: []}],
+      e: {node: 'aggregate', function: 'count', e: {node: ''}},
     },
     {
       type: 'number',
       name: 'provider_count',
       expressionType: 'aggregate',
-      e: ['COUNT(DISTINCT ', {type: 'field', path: ['provider_id']}, ')'],
+      e: composeSQLExpr([
+        'COUNT(DISTINCT ',
+        {node: 'field', path: ['provider_id']},
+        ')',
+      ]),
     },
     {
       type: 'number',
       name: 'total_discharges',
       expressionType: 'aggregate',
-      e: [
-        {
-          type: 'aggregate',
-          function: 'sum',
-          e: [{type: 'field', path: ['discharges']}],
-        },
-      ],
+      e: {
+        node: 'aggregate',
+        function: 'sum',
+        e: {node: 'field', path: ['discharges']},
+      },
     },
 
     {
@@ -209,46 +211,40 @@ export const medicareModel: StructDef = {
       ],
     },
   ],
-  name: 'malloy-data.malloytest.bq_medicare_test',
+  name: 'malloydata-org.malloytest.bq_medicare_test',
   primaryKey: 'id',
-  structRelationship: {type: 'basetable', connectionName: 'bigquery'},
-  structSource: {
-    type: 'table',
-    tablePath: 'malloy-data.malloytest.bq_medicare_test',
-  },
-  type: 'struct',
+  connection: 'bigquery',
+  type: 'table',
+  tablePath: 'malloydata-org.malloytest.bq_medicare_test',
 };
 
-export const medicareStateFacts: StructDef = {
+export const medicareStateFacts: SourceDef = {
   fields: [],
   name: 'medicare_state_facts',
   dialect: 'standardsql',
-  structRelationship: {type: 'basetable', connectionName: 'bigquery'},
-  structSource: {
-    query: {
-      structRef: 'medicare_test',
-      pipeline: [
-        {
-          queryFields: fToQF([
-            'provider_state',
-            {
-              type: 'number',
-              name: 'num_providers',
-              expressionType: 'aggregate',
-              e: [
-                'COUNT(DISTINCT ',
-                {type: 'field', path: ['provider_id']},
-                ')',
-              ],
-            },
-          ]),
-          type: 'reduce',
-        },
-      ],
-    },
-    type: 'query',
+  connection: 'bigquery',
+  type: 'query_source',
+  query: {
+    structRef: 'medicare_test',
+    pipeline: [
+      {
+        queryFields: fToQF([
+          'provider_state',
+          {
+            type: 'number',
+            name: 'num_providers',
+            expressionType: 'aggregate',
+            e: composeSQLExpr([
+              'COUNT(DISTINCT ',
+              {node: 'field', path: ['provider_id']},
+              ')',
+            ]),
+          },
+        ]),
+        type: 'reduce',
+      },
+    ],
   },
-  type: 'struct',
 };
 
 // export const medicareStateFacts: StructDef = {

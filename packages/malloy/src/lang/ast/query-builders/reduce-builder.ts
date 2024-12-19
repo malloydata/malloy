@@ -22,21 +22,27 @@
  */
 
 import {
-  FilterExpression,
+  CompositeFieldUsage,
+  FilterCondition,
   PartialSegment,
   PipeSegment,
+  QueryFieldDef,
   QuerySegment,
   ReduceSegment,
+  canOrderBy,
+  expressionIsAggregate,
+  expressionIsAnalytic,
+  hasExpression,
   isPartialSegment,
+  isQuerySegment,
   isReduceSegment,
+  isTemporalType,
 } from '../../../model/malloy_types';
 
 import {ErrorFactory} from '../error-factory';
-import {FieldSpace} from '../types/field-space';
-import {Filter} from '../query-properties/filters';
+import {FieldName, SourceFieldSpace} from '../types/field-space';
 import {Limit} from '../query-properties/limit';
 import {Ordering} from '../query-properties/ordering';
-import {Top} from '../query-properties/top';
 import {QueryProperty} from '../types/query-property';
 import {QueryBuilder} from '../types/query-builder';
 import {
@@ -46,14 +52,26 @@ import {
 import {DefinitionList} from '../types/definition-list';
 import {QueryInputSpace} from '../field-space/query-input-space';
 import {MalloyElement} from '../types/malloy-element';
+import {
+  emptyCompositeFieldUsage,
+  mergeCompositeFieldUsage,
+} from '../../../model/composite_source_utils';
+
+function queryFieldName(qf: QueryFieldDef): string {
+  if (qf.type === 'fieldref') {
+    return qf.path[qf.path.length - 1];
+  }
+  return qf.name;
+}
 
 export abstract class QuerySegmentBuilder implements QueryBuilder {
-  order?: Top | Ordering;
+  order?: Ordering;
   limit?: number;
+  alwaysJoins: string[] = [];
   abstract inputFS: QueryInputSpace;
   abstract resultFS: QueryOperationSpace;
   abstract readonly type: 'grouping' | 'project';
-  filters: FilterExpression[] = [];
+  filters: FilterCondition[] = [];
 
   execute(qp: QueryProperty): void {
     if (qp.queryExecute) {
@@ -62,31 +80,21 @@ export abstract class QuerySegmentBuilder implements QueryBuilder {
     }
     if (qp instanceof DefinitionList) {
       this.resultFS.pushFields(...qp.list);
-    } else if (qp instanceof Filter) {
-      const filterFS = qp.havingClause ? this.resultFS : this.inputFS;
-      this.filters.push(...qp.getFilterList(filterFS));
-    } else if (qp instanceof Top) {
-      if (this.limit) {
-        qp.log('Query operation already limited');
-      } else {
-        this.limit = qp.limit;
-      }
-      if (qp.by) {
-        if (this.order) {
-          qp.log('Query operation is already sorted');
-        } else {
-          this.order = qp;
-        }
-      }
     } else if (qp instanceof Limit) {
       if (this.limit) {
-        qp.log('Query operation already limited');
+        qp.logError(
+          'limit-already-specified',
+          'Query operation already limited'
+        );
       } else {
         this.limit = qp.limit;
       }
     } else if (qp instanceof Ordering) {
       if (this.order) {
-        qp.log('Query operation already sorted');
+        qp.logError(
+          'ordering-already-specified',
+          'Query operation already sorted'
+        );
       } else {
         this.order = qp;
       }
@@ -95,32 +103,27 @@ export abstract class QuerySegmentBuilder implements QueryBuilder {
 
   abstract finalize(fromSeg: PipeSegment | undefined): PipeSegment;
 
+  get compositeFieldUsage(): CompositeFieldUsage {
+    return this.resultFS.compositeFieldUsage;
+  }
+
   refineFrom(from: PipeSegment | undefined, to: QuerySegment): void {
     if (from && from.type !== 'index' && from.type !== 'raw') {
-      if (!this.order) {
-        if (from.orderBy) {
-          to.orderBy = from.orderBy;
-        } else if (from.by) {
-          to.by = from.by;
-        }
+      if (!this.limit && from.orderBy && !from.defaultOrderBy) {
+        to.orderBy = from.orderBy;
       }
       if (!this.limit && from.limit) {
         to.limit = from.limit;
       }
     }
 
-    if (this.limit) {
-      to.limit = this.limit;
+    if (this.order) {
+      to.orderBy = this.order.getOrderBy(this.inputFS);
+      delete to.defaultOrderBy;
     }
 
-    if (this.order instanceof Top) {
-      const topBy = this.order.getBy(this.inputFS);
-      if (topBy) {
-        to.by = topBy;
-      }
-    }
-    if (this.order instanceof Ordering) {
-      to.orderBy = this.order.getOrderBy(this.inputFS);
+    if (this.limit) {
+      to.limit = this.limit;
     }
 
     const oldFilters = from?.filterList || [];
@@ -129,6 +132,19 @@ export abstract class QuerySegmentBuilder implements QueryBuilder {
     } else if (oldFilters) {
       to.filterList = [...oldFilters, ...this.filters];
     }
+
+    if (this.alwaysJoins.length > 0) {
+      to.alwaysJoins = [...this.alwaysJoins];
+    }
+
+    const fromCompositeFieldUsage =
+      from && isQuerySegment(from)
+        ? from.compositeFieldUsage ?? emptyCompositeFieldUsage()
+        : emptyCompositeFieldUsage();
+    to.compositeFieldUsage = mergeCompositeFieldUsage(
+      fromCompositeFieldUsage,
+      this.compositeFieldUsage
+    );
   }
 }
 
@@ -138,7 +154,7 @@ export class ReduceBuilder extends QuerySegmentBuilder implements QueryBuilder {
   readonly type = 'grouping';
 
   constructor(
-    baseFS: FieldSpace,
+    baseFS: SourceFieldSpace,
     refineThis: PipeSegment | undefined,
     isNestIn: QueryOperationSpace | undefined,
     astEl: MalloyElement
@@ -154,13 +170,70 @@ export class ReduceBuilder extends QuerySegmentBuilder implements QueryBuilder {
       if (isReduceSegment(fromSeg) || isPartialSegment(fromSeg)) {
         from = fromSeg;
       } else {
-        this.resultFS.log(`Can't refine reduce with ${fromSeg.type}`);
+        this.resultFS.logError(
+          'incompatible-segment-for-reduce-refinement',
+          `Can't refine reduce with ${fromSeg.type}`
+        );
         return ErrorFactory.reduceSegment;
       }
     }
     const reduceSegment = this.resultFS.getQuerySegment(from);
     this.refineFrom(from, reduceSegment);
 
+    if (reduceSegment.orderBy) {
+      // In the modern world, we will ONLY allow names and not numbers in order by lists
+      for (const by of reduceSegment.orderBy) {
+        if (typeof by.field === 'number') {
+          const by_field = reduceSegment.queryFields[by.field - 1];
+          by.field = queryFieldName(by_field);
+        }
+      }
+    }
+    if (reduceSegment.orderBy === undefined || reduceSegment.defaultOrderBy) {
+      // In the modern world, we will order all reduce segments with the default ordering
+      let usableDefaultOrderField: string | undefined;
+      for (const field of reduceSegment.queryFields) {
+        let fieldAggregate = false;
+        let fieldAnalytic = false;
+        let fieldType: string;
+        const fieldName = queryFieldName(field);
+        if (field.type === 'fieldref') {
+          const lookupPath = field.path.map(el => new FieldName(el));
+          const refField = this.inputFS.lookup(lookupPath).found;
+          if (refField) {
+            const typeDesc = refField.typeDesc();
+            fieldType = typeDesc.type;
+            fieldAggregate = expressionIsAggregate(typeDesc.expressionType);
+            fieldAnalytic = expressionIsAnalytic(typeDesc.expressionType);
+          } else {
+            continue;
+          }
+        } else {
+          fieldType = field.type;
+          fieldAggregate =
+            hasExpression(field) && expressionIsAggregate(field.expressionType);
+          fieldAnalytic =
+            hasExpression(field) && expressionIsAnalytic(field.expressionType);
+        }
+        if (isTemporalType(fieldType) || fieldAggregate) {
+          reduceSegment.defaultOrderBy = true;
+          reduceSegment.orderBy = [{field: fieldName, dir: 'desc'}];
+          usableDefaultOrderField = undefined;
+          break;
+        }
+        if (
+          canOrderBy(fieldType) &&
+          !fieldAnalytic &&
+          !usableDefaultOrderField
+        ) {
+          usableDefaultOrderField = fieldName;
+        }
+      }
+      if (usableDefaultOrderField) {
+        reduceSegment.defaultOrderBy = true;
+        reduceSegment.orderBy = [{field: usableDefaultOrderField, dir: 'asc'}];
+      }
+    }
     return reduceSegment;
   }
 }

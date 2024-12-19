@@ -21,15 +21,15 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {maxExpressionType, mergeEvalSpaces, mkExpr} from '../../../model';
-import {FT} from '../fragtype-utils';
+import {maxExpressionType, mergeEvalSpaces} from '../../../model';
+import * as TDU from '../typedesc-utils';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 
 export class ExprCoalesce extends ExpressionDef {
   elementType = 'coalesce expression';
-  legalChildTypes = FT.anyAtomicT;
+  legalChildTypes = TDU.anyAtomicT;
   constructor(
     readonly expr: ExpressionDef,
     readonly altExpr: ExpressionDef
@@ -40,7 +40,7 @@ export class ExprCoalesce extends ExpressionDef {
   getExpression(fs: FieldSpace): ExprValue {
     const maybeNull = this.expr.getExpression(fs);
     const whenNull = this.altExpr.getExpression(fs);
-    if (maybeNull.dataType === 'null') {
+    if (maybeNull.type === 'null') {
       return whenNull;
     }
     /**
@@ -51,20 +51,23 @@ export class ExprCoalesce extends ExpressionDef {
      * SQL, but I decided that is will happen when the "expressions are true
      * trees" rewrite happens.
      */
-    if (!FT.typeEq(maybeNull, whenNull)) {
-      this.log(
-        `Mismatched types for coalesce (${maybeNull.dataType}, ${whenNull.dataType})`
+    if (!TDU.typeEq(maybeNull, whenNull)) {
+      this.logError(
+        'mismatched-coalesce-types',
+        `Mismatched types for coalesce (${maybeNull.type}, ${whenNull.type})`
       );
     }
+    const srcForType = maybeNull.type === 'error' ? whenNull : maybeNull;
     return {
-      ...whenNull,
-      dataType:
-        maybeNull.dataType === 'error' ? whenNull.dataType : maybeNull.dataType,
+      ...srcForType,
       expressionType: maxExpressionType(
         maybeNull.expressionType,
         whenNull.expressionType
       ),
-      value: mkExpr`COALESCE(${maybeNull.value},${whenNull.value})`,
+      value: {
+        node: 'coalesce',
+        kids: {left: maybeNull.value, right: whenNull.value},
+      },
       evalSpace: mergeEvalSpaces(maybeNull.evalSpace, whenNull.evalSpace),
     };
   }

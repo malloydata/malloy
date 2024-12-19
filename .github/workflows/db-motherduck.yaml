@@ -1,0 +1,34 @@
+name: MotherDuck DB
+
+on:
+  pull_request:
+  workflow_call:
+    secrets:
+      MOTHERDUCK_TOKEN_10:
+        required: true
+
+jobs:
+  test-motherduck:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: npm install, build, and test
+        run: |
+          npm ci --loglevel error
+          npm run build
+          npm run test-silent -- -- test packages/malloy-duckdb
+        env:
+          CI: true
+          MALLOY_DATABASES: motherduck
+          MOTHERDUCK_TOKEN: ${{ secrets.MOTHERDUCK_TOKEN_10 }}

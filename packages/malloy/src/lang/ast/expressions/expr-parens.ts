@@ -21,8 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {BinaryMalloyOperator} from '../types/binary_operators';
 import {ExprValue} from '../types/expr-value';
-import {ExpressionDef} from '../types/expression-def';
+import {applyBinary, ATNodeType, ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 
 export class ExprParens extends ExpressionDef {
@@ -37,6 +38,26 @@ export class ExprParens extends ExpressionDef {
 
   getExpression(fs: FieldSpace): ExprValue {
     const subExpr = this.expr.getExpression(fs);
-    return {...subExpr, value: ['(', ...subExpr.value, ')']};
+    return {...subExpr, value: {node: '()', e: subExpr.value}};
+  }
+
+  apply(
+    fs: FieldSpace,
+    op: BinaryMalloyOperator,
+    left: ExpressionDef,
+    doWarn: boolean
+  ): ExprValue {
+    if (this.expr.atNodeType() === ATNodeType.Or) {
+      return this.expr.apply(fs, op, left, doWarn);
+    }
+    return applyBinary(fs, left, op, this);
+  }
+
+  atNodeType(): ATNodeType {
+    return this.expr.atNodeType();
+  }
+
+  atExpr(): ExpressionDef {
+    return this.expr;
   }
 }

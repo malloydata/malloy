@@ -22,7 +22,7 @@
  */
 
 import * as model from '../../model/malloy_types';
-import {StaticSpace} from '../ast/field-space/static-space';
+import {StaticSourceSpace} from '../ast/field-space/static-space';
 import {ColumnSpaceField} from '../ast/field-space/column-space-field';
 import {FieldName} from '../ast/types/field-space';
 import {IRViewField} from '../ast/field-space/ir-view-field';
@@ -34,13 +34,13 @@ import {DefinedParameter} from '../ast/types/space-param';
  */
 
 describe('structdef comprehension', () => {
-  function mkStructDef(field: model.FieldDef): model.StructDef {
+  function mkStructDef(field: model.FieldDef): model.SourceDef {
     return {
-      type: 'struct',
+      type: 'table',
       name: 'test',
       dialect: 'standardsql',
-      structSource: {type: 'table', tablePath: 'test'},
-      structRelationship: {type: 'basetable', connectionName: 'test'},
+      tablePath: 'test',
+      connection: 'test',
       fields: [field],
     };
   }
@@ -55,7 +55,7 @@ describe('structdef comprehension', () => {
       type: 'string',
     };
     const struct = mkStructDef(field);
-    const space = new StaticSpace(struct);
+    const space = new StaticSourceSpace(struct);
     expect(space.lookup(fieldRef('t')).found).toBeInstanceOf(ColumnSpaceField);
     const oField = space.structDef().fields[0];
     expect(oField).toEqual(field);
@@ -68,7 +68,7 @@ describe('structdef comprehension', () => {
       numberType: 'float',
     };
     const struct = mkStructDef(field);
-    const space = new StaticSpace(struct);
+    const space = new StaticSourceSpace(struct);
     expect(space.lookup(fieldRef('t')).found).toBeInstanceOf(ColumnSpaceField);
     const oField = space.structDef().fields[0];
     expect(oField).toEqual(field);
@@ -81,7 +81,7 @@ describe('structdef comprehension', () => {
       numberType: 'integer',
     };
     const struct = mkStructDef(field);
-    const space = new StaticSpace(struct);
+    const space = new StaticSourceSpace(struct);
     expect(space.lookup(fieldRef('t')).found).toBeInstanceOf(ColumnSpaceField);
     const oField = space.structDef().fields[0];
     expect(oField).toEqual(field);
@@ -93,7 +93,7 @@ describe('structdef comprehension', () => {
       type: 'boolean',
     };
     const struct = mkStructDef(field);
-    const space = new StaticSpace(struct);
+    const space = new StaticSourceSpace(struct);
     expect(space.lookup(fieldRef('t')).found).toBeInstanceOf(ColumnSpaceField);
     const oField = space.structDef().fields[0];
     expect(oField).toEqual(field);
@@ -102,30 +102,26 @@ describe('structdef comprehension', () => {
   test('import unsupported field', () => {
     const field: model.FieldDef = {
       name: 't',
-      type: 'unsupported',
+      type: 'sql native',
     };
     const struct = mkStructDef(field);
-    const space = new StaticSpace(struct);
+    const space = new StaticSourceSpace(struct);
     expect(space.lookup(fieldRef('t')).found).toBeInstanceOf(ColumnSpaceField);
     const oField = space.structDef().fields[0];
     expect(oField).toEqual(field);
   });
 
-  test('import nested field', () => {
-    const field: model.FieldDef = {
+  test('import repeated record', () => {
+    const field: model.ScalarArrayDef = {
       name: 't',
-      type: 'struct',
-      dialect: 'standardsql',
-      structRelationship: {
-        type: 'nested',
-        fieldName: 'a',
-        isArray: false,
-      },
-      structSource: {type: 'nested'},
+      type: 'array',
+      elementTypeDef: {type: 'string'},
+      join: 'many',
+      matrixOperation: 'left',
       fields: [{type: 'string', name: 'b'}],
     };
     const struct = mkStructDef(field);
-    const space = new StaticSpace(struct);
+    const space = new StaticSourceSpace(struct);
     expect(space.lookup(fieldRef('t.b')).found).toBeInstanceOf(
       ColumnSpaceField
     );
@@ -134,16 +130,15 @@ describe('structdef comprehension', () => {
   });
 
   test('import inline field', () => {
-    const field: model.FieldDef = {
+    const field: model.RecordDef = {
       name: 't',
-      type: 'struct',
-      dialect: 'standardsql',
-      structRelationship: {type: 'inline'},
-      structSource: {type: 'inline'},
+      type: 'record',
+      join: 'one',
+      matrixOperation: 'left',
       fields: [{type: 'string', name: 'a'}],
     };
     const struct = mkStructDef(field);
-    const space = new StaticSpace(struct);
+    const space = new StaticSourceSpace(struct);
     expect(space.lookup(fieldRef('t.a')).found).toBeInstanceOf(
       ColumnSpaceField
     );
@@ -154,22 +149,23 @@ describe('structdef comprehension', () => {
   test('import join field', () => {
     const field: model.FieldDef = {
       name: 't',
-      type: 'struct',
+      type: 'table',
       dialect: 'standardsql',
-      structRelationship: {
-        type: 'one',
-        matrixOperation: 'left',
-        onExpression: [
-          {type: 'field', path: ['aKey']},
-          '=',
-          {type: 'field', path: ['t', 'a']},
-        ],
+      connection: 'test',
+      join: 'one',
+      matrixOperation: 'left',
+      onExpression: {
+        node: '=',
+        kids: {
+          left: {node: 'field', path: ['aKey']},
+          right: {node: 'field', path: ['t', 'a']},
+        },
       },
-      structSource: {type: 'table', tablePath: 't'},
+      tablePath: 't',
       fields: [{type: 'string', name: 'a'}],
     };
     const struct = mkStructDef(field);
-    const space = new StaticSpace(struct);
+    const space = new StaticSourceSpace(struct);
     expect(space.lookup(fieldRef('t.a')).found).toBeInstanceOf(
       ColumnSpaceField
     );
@@ -189,7 +185,7 @@ describe('structdef comprehension', () => {
       ],
     };
     const struct = mkStructDef(field);
-    const space = new StaticSpace(struct);
+    const space = new StaticSourceSpace(struct);
     expect(space.lookup(fieldRef('t')).found).toBeInstanceOf(IRViewField);
     const oField = space.structDef().fields[0];
     expect(oField).toEqual(field);
@@ -202,16 +198,14 @@ describe('structdef comprehension', () => {
         name: 'cReqStr',
         type: 'string',
         value: null,
-        constant: false,
       },
       cOptStr: {
         name: 'cOptStr',
         type: 'string',
-        value: ['value'],
-        constant: false,
+        value: {node: 'stringLiteral', literal: 'value'},
       },
     };
-    const space = new StaticSpace(struct);
+    const space = new StaticSourceSpace(struct);
     expect(space.lookup(fieldRef('cReqStr')).found).toBeInstanceOf(
       DefinedParameter
     );

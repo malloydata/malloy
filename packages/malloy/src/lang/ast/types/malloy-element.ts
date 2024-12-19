@@ -21,23 +21,33 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {getDialect} from '../../../dialect';
 import {
   Annotation,
   DocumentLocation,
   DocumentReference,
-  isSQLBlockStruct,
   ModelDef,
   ModelAnnotation,
   NamedModelObject,
   Query,
-  SQLBlockStructDef,
+  SQLSourceDef,
   StructDef,
+  isSourceDef,
 } from '../../../model/malloy_types';
 import {Tag} from '../../../tags';
-import {LogSeverity, MessageLogger} from '../../parse-log';
+import {
+  LogMessageOptions,
+  MessageLogger,
+  MessageParameterType,
+  makeLogMessage,
+  MessageCode,
+} from '../../parse-log';
 import {MalloyTranslation} from '../../parse-malloy';
 import {ModelDataRequest} from '../../translate-response';
+import {errorFor} from '../ast-utils';
+import {DialectNameSpace} from './dialect-name-space';
 import {DocumentCompileResult} from './document-compile-result';
+import {ExprValue} from './expr-value';
 import {GlobalNameSpace} from './global-name-space';
 import {ModelEntry} from './model-entry';
 import {NameSpace} from './name-space';
@@ -120,6 +130,10 @@ export abstract class MalloyElement {
     throw new Error('INTERNAL ERROR: Translation without document scope');
   }
 
+  getDialectNamespace(dialectName: string): NameSpace | undefined {
+    return this.document()?.getDialectNamespace(dialectName);
+  }
+
   modelEntry(reference: string | ModelEntryReference): ModelEntry | undefined {
     const key =
       reference instanceof ModelEntryReference ? reference.name : reference;
@@ -132,22 +146,13 @@ export abstract class MalloyElement {
           definition: result.entry,
           location: reference.location,
         });
-      } else if (result?.entry.type === 'struct') {
-        if (isSQLBlockStruct(result.entry) && result.entry.declaredSQLBlock) {
-          this.addReference({
-            type: 'sqlBlockReference',
-            text: key,
-            definition: result.entry,
-            location: reference.location,
-          });
-        } else {
-          this.addReference({
-            type: 'exploreReference',
-            text: key,
-            definition: result.entry,
-            location: reference.location,
-          });
-        }
+      } else if (result && isSourceDef(result.entry)) {
+        this.addReference({
+          type: 'exploreReference',
+          text: key,
+          definition: result.entry,
+          location: reference.location,
+        });
       }
     }
     return result;
@@ -185,43 +190,60 @@ export abstract class MalloyElement {
     return trans?.sourceURL || '(missing)';
   }
 
-  errorsExist(): boolean {
-    const logger = this.logger();
-    if (logger) {
-      return logger.hasErrors();
-    }
-    return false;
-  }
-
   private readonly logged = new Set<string>();
-  log(message: string, severity: LogSeverity = 'error'): void {
+  private log<T extends MessageCode>(
+    code: T,
+    parameters: MessageParameterType<T>,
+    options?: LogMessageOptions
+  ): T {
+    const log = makeLogMessage(code, parameters, {
+      at: this.location,
+      ...options,
+    });
     if (this.codeLocation) {
       /*
        * If this element has a location, then don't report the same
        * error message at the same location more than once
        */
-      if (this.logged.has(message)) {
-        return;
+      if (this.logged.has(log.message)) {
+        return code;
       }
-      this.logged.add(message);
+      this.logged.add(log.message);
     }
-    const msg = {at: this.location, message, severity};
-    const logTo = this.logger();
-    if (logTo) {
-      logTo.log(msg);
-      return;
-    }
-    throw new Error(
-      `Translation error (without error reporter):\n${JSON.stringify(
-        msg,
-        null,
-        2
-      )}`
-    );
+    this.logger.log(log);
+    return code;
   }
 
-  logger(): MessageLogger | undefined {
-    return this.translator()?.root.logger;
+  logError<T extends MessageCode>(
+    code: T,
+    parameters: MessageParameterType<T>,
+    options?: Omit<LogMessageOptions, 'severity'>
+  ): T {
+    return this.log(code, parameters, {severity: 'error', ...options});
+  }
+
+  logWarning<T extends MessageCode>(
+    code: T,
+    parameters: MessageParameterType<T>,
+    options?: Omit<LogMessageOptions, 'severity'>
+  ): T {
+    return this.log(code, parameters, {severity: 'warn', ...options});
+  }
+
+  loggedErrorExpr<T extends MessageCode>(
+    code: T,
+    parameters: MessageParameterType<T>,
+    options?: LogMessageOptions
+  ): ExprValue {
+    return errorFor(this.logError(code, parameters, options));
+  }
+
+  get logger(): MessageLogger {
+    const logger = this.translator()?.root.logger;
+    if (logger === undefined) {
+      throw new Error('Attempted to access logger without a translator');
+    }
+    return logger;
   }
 
   /**
@@ -283,8 +305,7 @@ export abstract class MalloyElement {
   }
 
   protected internalError(msg: string): Error {
-    this.log(`INTERNAL ERROR IN TRANSLATION: ${msg}`);
-    return new Error(msg);
+    return new Error(`INTERNAL ERROR IN TRANSLATION: ${msg}`);
   }
 
   needs(doc: Document): ModelDataRequest | undefined {
@@ -294,17 +315,15 @@ export abstract class MalloyElement {
     }
   }
 
-  inExperiment(experimentID: string, silent = false) {
+  inExperiment(experimentId: string, silent = false) {
     const experimental = this.translator()?.compilerFlags.tag('experimental');
     const enabled =
-      experimental && (experimental.bare() || experimental.has(experimentID));
+      experimental && (experimental.bare() || experimental.has(experimentId));
     if (enabled) {
       return true;
     }
     if (!silent) {
-      this.log(
-        `Experimental flag '${experimentID}' is not set, feature not available`
-      );
+      this.logError('experiment-not-enabled', {experimentId});
     }
     return false;
   }
@@ -481,7 +500,7 @@ export class Document extends MalloyElement implements NameSpace {
   globalNameSpace: NameSpace = new GlobalNameSpace();
   documentModel: Record<string, ModelEntry> = {};
   queryList: Query[] = [];
-  sqlBlocks: SQLBlockStructDef[] = [];
+  sqlBlocks: SQLSourceDef[] = [];
   statements: DocStatementList;
   didInitModel = false;
   annotation: Annotation = {};
@@ -507,7 +526,7 @@ export class Document extends MalloyElement implements NameSpace {
       for (const [nm, orig] of Object.entries(extendingModelDef.contents)) {
         const entry = structuredClone(orig);
         if (
-          entry.type === 'struct' ||
+          isSourceDef(entry) ||
           entry.type === 'query' ||
           entry.type === 'function'
         ) {
@@ -575,7 +594,7 @@ export class Document extends MalloyElement implements NameSpace {
     }
     for (const entry in this.documentModel) {
       const entryDef = this.documentModel[entry].entry;
-      if (entryDef.type === 'struct' || entryDef.type === 'query') {
+      if (isSourceDef(entryDef) || entryDef.type === 'query') {
         if (this.documentModel[entry].exported) {
           def.exports.push(entry);
         }
@@ -589,11 +608,10 @@ export class Document extends MalloyElement implements NameSpace {
     return def;
   }
 
-  defineSQL(sql: SQLBlockStructDef, name?: string): boolean {
+  defineSQL(sql: SQLSourceDef, name?: string): boolean {
     const ret = {
       ...sql,
       as: `$${this.sqlBlocks.length}`,
-      declaredSQLBlock: true,
     };
     if (name) {
       if (this.getEntry(name)) {
@@ -613,8 +631,44 @@ export class Document extends MalloyElement implements NameSpace {
   setEntry(str: string, ent: ModelEntry): void {
     // TODO this error message is going to be in the wrong place everywhere...
     if (this.globalNameSpace.getEntry(str) !== undefined) {
-      this.log(`Cannot redefine '${str}', which is in global namespace`);
+      this.logError(
+        'name-conflict-with-global',
+        `Cannot redefine '${str}', which is in global namespace`
+      );
     }
+    if (isSourceDef(ent.entry)) {
+      this.checkExperimentalDialect(this, ent.entry.dialect);
+    }
+
     this.documentModel[str] = ent;
+  }
+
+  /**
+   * Return an error message if this dialect is the first reference to this particular
+   * dialect, and the dialect is marked as experimental, and we are not running tests.
+   * @param dialect The dialect name
+   * @returns The error message or undefined
+   */
+  checkExperimentalDialect(me: MalloyElement, dialect: string): void {
+    const t = this.translator();
+    if (
+      t &&
+      t.firstReferenceToDialect(dialect) &&
+      getDialect(dialect).experimental &&
+      !t.experimentalDialectEnabled(dialect)
+    ) {
+      me.logError('experimental-dialect-not-enabled', {dialect});
+    }
+  }
+
+  private readonly dialectNameSpaces = new Map<string, NameSpace>();
+  getDialectNamespace(dialectName: string): NameSpace | undefined {
+    if (this.dialectNameSpaces.has(dialectName)) {
+      return this.dialectNameSpaces.get(dialectName);
+    }
+    const dialect = getDialect(dialectName);
+    const ns = new DialectNameSpace(dialect);
+    this.dialectNameSpaces.set(dialectName, ns);
+    return ns;
   }
 }

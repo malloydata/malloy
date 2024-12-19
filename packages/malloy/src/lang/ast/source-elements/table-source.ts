@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {StructDef} from '../../../model/malloy_types';
+import {SourceDef} from '../../../model/malloy_types';
 import {
   constructTableKey,
   deprecatedParseTableURI,
@@ -34,7 +34,7 @@ type TableInfo = {tablePath: string; connectionName?: string | undefined};
 export abstract class TableSource extends Source {
   abstract getTableInfo(): TableInfo | undefined;
 
-  structDef(): StructDef {
+  getSourceDef(): SourceDef {
     const info = this.getTableInfo();
     if (info === undefined) {
       return ErrorFactory.structDef;
@@ -45,6 +45,10 @@ export abstract class TableSource extends Source {
     let msg = `Schema read failure for table '${tablePath}' for connection '${connectionName}'`;
     if (tableDefEntry) {
       if (tableDefEntry.status === 'present') {
+        this.document()?.checkExperimentalDialect(
+          this,
+          tableDefEntry.value.dialect
+        );
         tableDefEntry.value.location = this.location;
         tableDefEntry.value.fields.forEach(field => {
           field.location = this.location;
@@ -64,7 +68,7 @@ export abstract class TableSource extends Source {
         msg = tableDefEntry.message;
       }
     }
-    this.log(msg);
+    this.logError('failed-to-fetch-table-schema', msg);
     return ErrorFactory.structDef;
   }
 }
@@ -89,7 +93,8 @@ export class TableMethodSource extends TableSource {
         true
       );
     } else if (connection.entry.type !== 'connection') {
-      this.connectionName.log(
+      this.connectionName.logError(
+        'invalid-connection-for-table-source',
         `${this.connectionName.refString} is not a connection`
       );
       return undefined;

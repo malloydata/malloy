@@ -22,7 +22,7 @@
  */
 
 import {DataColumn, Explore, Field} from '@malloydata/malloy';
-import {StyleDefaults} from '../data_styles';
+import {StyleDefaults} from './data_styles';
 import {ContainerRenderer} from './container';
 import {createErrorElement, yieldTask} from './utils';
 
@@ -32,7 +32,11 @@ export class HTMLListRenderer extends ContainerRenderer {
   };
 
   getValueField(struct: Explore): Field {
-    return struct.intrinsicFields[0];
+    // Get the first non-hidden field as the value
+    return struct.allFields.filter(field => {
+      const {tag} = field.tagParse();
+      return !tag.has('hidden');
+    })[0];
   }
 
   getDetailField(_struct: Explore): Field | undefined {

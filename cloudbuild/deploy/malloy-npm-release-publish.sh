@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euxo pipefail
 
-export PACKAGES="packages/malloy-interfaces packages/malloy packages/malloy-db-bigquery packages/malloy-db-duckdb packages/malloy-db-postgres packages/malloy-render packages/malloy-malloy-sql test packages/malloy-syntax-highlight"
+export PACKAGES="packages/malloy-interfaces packages/malloy packages/malloy-db-bigquery packages/malloy-db-duckdb packages/malloy-db-postgres packages/malloy-db-snowflake packages/malloy-db-trino packages/malloy-db-mysql packages/malloy-render packages/malloy-malloy-sql test packages/malloy-syntax-highlight"
 
 nix-shell --pure --keep NPM_TOKEN --keep PACKAGES --keep BRANCH_NAME --command "$(cat <<NIXCMD
   set -euxo pipefail
@@ -18,7 +18,11 @@ nix-shell --pure --keep NPM_TOKEN --keep PACKAGES --keep BRANCH_NAME --command "
   git config --global user.name "Malloy CI Bot"
   # Build
   npm --no-audit --no-fund ci --loglevel error
-  npm run lint && npm run build && npm run build-duckdb-db && npm run test-silent
+  export MALLOY_DATABASES=postgres,bigquery,duckdb,duckdb_wasm
+  npm run lint
+  npm run build
+  npm run build-duckdb-db
+  npm run test-silent
   # Publish
   echo Publishing \$PACKAGES
   VERSION=\$(jq -r .version ./lerna.json)

@@ -23,7 +23,10 @@
 export {
   DuckDBDialect,
   StandardSQLDialect,
+  TrinoDialect,
   PostgresDialect,
+  SnowflakeDialect,
+  MySQLDialect,
   registerDialect,
   arg,
   qtz,
@@ -34,45 +37,47 @@ export {
   maxScalar,
   sql,
   makeParam,
-  sqlFragment,
   param,
-  params,
+  variadicParam,
   literal,
   spread,
   Dialect,
-  FUNCTIONS,
+  TinyParser,
 } from './dialect';
 export type {
   DialectFieldList,
   DialectFunctionOverloadDef,
   QueryInfo,
+  MalloyStandardFunctionImplementations,
+  DefinitionBlueprint,
+  DefinitionBlueprintMap,
+  OverloadedDefinitionBlueprint,
+  TinyToken,
 } from './dialect';
 // TODO tighten up exports
 export type {
   QueryDataRow,
-  // Currently needed only by tests
-  Fragment,
   // Needed for DB
   StructDef,
-  StructRelationship,
-  NamedStructDefs,
+  TableSourceDef,
+  SQLSourceDef,
+  SourceDef,
+  JoinFieldDef,
+  NamedSourceDefs,
   MalloyQueryData,
-  AtomicFieldType as AtomicFieldTypeInner,
   DateUnit,
   ExtractUnit,
   TimestampUnit,
-  TimeFieldType,
+  TemporalFieldType,
   QueryData,
   QueryValue,
-  FieldTypeDef,
   Expr,
-  DialectFragment,
-  TimeValue,
   // Needed for drills in render
-  FilterExpression,
-  SQLBlock,
-  // Used in Composer Demo
-  FieldAtomicDef,
+  FilterCondition,
+  SQLSentence,
+  // Used in Composer
+  Argument,
+  Parameter,
   FieldDef,
   PipeSegment,
   QueryFieldDef,
@@ -92,37 +97,56 @@ export type {
   FunctionParameterDef,
   ExpressionValueType,
   TypeDesc,
-  FieldValueType,
-  ExpressionTypeDesc,
   FunctionParamTypeDesc,
   // used in MalloyError.log
   DocumentLocation,
   DocumentRange,
   DocumentPosition,
   Sampling,
-  TypecastFragment,
   Annotation,
-  FieldAtomicTypeDef,
-  SQLBlockStructDef,
+  LeafAtomicTypeDef,
+  LeafAtomicDef,
+  AtomicTypeDef,
+  AtomicFieldDef,
+  ArrayDef,
+  ArrayTypeDef,
+  RecordTypeDef,
+  RepeatedRecordTypeDef,
+  RecordDef,
+  RepeatedRecordDef,
+  // Used in array/record tests
+  RecordLiteralNode,
+  ArrayLiteralNode,
 } from './model';
 export {
+  isSourceDef,
   // Used in Composer Demo
   Segment,
+  isLeafAtomic,
+  isJoined,
+  isJoinedSource,
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
-  mkExpr,
+  isRepeatedRecord,
+  isScalarArray,
+  mkArrayDef,
+  mkFieldDef,
+  expressionIsAggregate,
+  expressionIsAnalytic,
   expressionIsCalculation,
+  expressionIsScalar,
+  expressionIsUngroupedAggregate,
   indent,
+  composeSQLExpr,
 } from './model';
 export {
-  // Neede for VSCode extension
-  HighlightType,
   // Needed for tests only
   MalloyTranslator,
 } from './lang';
 export type {LogMessage, TranslateResponse} from './lang';
 export {
+  Model,
   Malloy,
   Runtime,
   AtomicFieldType,
@@ -146,7 +170,6 @@ export {
   Explore,
 } from './malloy';
 export type {
-  Model,
   PreparedQuery,
   Field,
   AtomicField,
@@ -159,16 +182,26 @@ export type {
   DataArrayOrRecord,
   Loggable,
   ModelMaterializer,
+  DocumentTablePath,
   DocumentSymbol,
-  DocumentHighlight,
   ResultJSON,
   PreparedResultMaterializer,
-  SQLBlockMaterializer,
   ExploreMaterializer,
   WriteStream,
   SerializedExplore,
+  // Needed for renderer type narrowing
+  DateField,
+  TimestampField,
 } from './malloy';
 export type {QueryOptionsReader, RunSQLOptions} from './run_sql_options';
+export type {
+  EventStream,
+  ModelString,
+  ModelURL,
+  QueryString,
+  QueryURL,
+  URLReader,
+} from './runtime_types';
 export type {
   Connection,
   ConnectionConfig,
@@ -179,15 +212,10 @@ export type {
   FetchSchemaOptions,
   InfoConnection,
   LookupConnection,
-  ModelString,
-  ModelURL,
   PersistSQLResults,
   PooledConnection,
-  QueryString,
-  QueryURL,
   TestableConnection,
   StreamingConnection,
-  URLReader,
-} from './runtime_types';
+} from './connection/types';
 export {toAsyncGenerator} from './connection_utils';
 export {type TagParse, Tag, type TagDict} from './tags';

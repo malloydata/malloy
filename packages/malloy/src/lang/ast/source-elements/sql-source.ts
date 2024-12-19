@@ -23,10 +23,11 @@
 
 import {
   StructDef,
-  StructRef,
-  SQLBlockSource,
+  SQLSentence,
+  InvokedStructRef,
+  SourceDef,
 } from '../../../model/malloy_types';
-import {makeSQLBlock} from '../../../model/sql_block';
+import {makeSQLSentence} from '../../../model/sql_block';
 import {NeedCompileSQL} from '../../translate-response';
 import {Source} from './source';
 import {ErrorFactory} from '../error-factory';
@@ -35,19 +36,18 @@ import {ModelEntryReference, Document} from '../types/malloy-element';
 
 export class SQLSource extends Source {
   elementType = 'sqlSource';
-  requestBlock?: SQLBlockSource;
+  requestBlock?: SQLSentence;
   private connectionNameInvalid = false;
   constructor(
     readonly connectionName: ModelEntryReference,
     readonly select: SQLString
   ) {
-    super();
-    this.has({connectionName, select});
+    super({connectionName, select});
   }
 
-  sqlBlock(): SQLBlockSource {
+  sqlSentence(): SQLSentence {
     if (!this.requestBlock) {
-      this.requestBlock = makeSQLBlock(
+      this.requestBlock = makeSQLSentence(
         this.select.sqlPhrases(),
         this.connectionName.refString
       );
@@ -55,8 +55,10 @@ export class SQLSource extends Source {
     return this.requestBlock;
   }
 
-  structRef(): StructRef {
-    return this.structDef();
+  structRef(): InvokedStructRef {
+    return {
+      structRef: this.getSourceDef(),
+    };
   }
 
   validateConnectionName(): boolean {
@@ -70,7 +72,8 @@ export class SQLSource extends Source {
         true
       );
     } else if (connection.entry.type !== 'connection') {
-      this.connectionName.log(
+      this.connectionName.logError(
+        'invalid-connection-for-sql-source',
         `${this.connectionName.refString} is not a connection`
       );
       this.connectionNameInvalid = true;
@@ -85,10 +88,13 @@ export class SQLSource extends Source {
     }
     const childNeeds = super.needs(doc);
     if (childNeeds) return childNeeds;
-    const sql = this.sqlBlock();
+    const sql = this.sqlSentence();
     const sqlDefEntry = this.translator()?.root.sqlQueryZone;
     if (!sqlDefEntry) {
-      this.log("Cant't look up schema for sql block");
+      this.logError(
+        'failed-to-fetch-sql-source-schema',
+        "Cant't look up schema for sql block"
+      );
       return;
     }
     sqlDefEntry.reference(sql.name, this.location);
@@ -98,24 +104,32 @@ export class SQLSource extends Source {
         compileSQL: sql,
         partialModel: this.select.containsQueries ? doc.modelDef() : undefined,
       };
+    } else if (lookup.status === 'present') {
+      doc.checkExperimentalDialect(this, lookup.value.dialect);
     }
   }
 
-  structDef(): StructDef {
+  getSourceDef(): SourceDef {
     if (!this.validateConnectionName()) {
       return ErrorFactory.structDef;
     }
     const sqlDefEntry = this.translator()?.root.sqlQueryZone;
     if (!sqlDefEntry) {
-      this.log("Cant't look up schema for sql block");
+      this.logError(
+        'failed-to-fetch-sql-source-schema',
+        "Cant't look up schema for sql block"
+      );
       return ErrorFactory.structDef;
     }
-    const sql = this.sqlBlock();
+    const sql = this.sqlSentence();
     sqlDefEntry.reference(sql.name, this.location);
     const lookup = sqlDefEntry.getEntry(sql.name);
     if (lookup.status === 'error') {
       const msgLines = lookup.message.split(/\r?\n/);
-      this.select.log('Invalid SQL, ' + msgLines.join('\n    '));
+      this.select.logError(
+        'invalid-sql-source',
+        'Invalid SQL, ' + msgLines.join('\n    ')
+      );
       return ErrorFactory.structDef;
     } else if (lookup.status === 'present') {
       const location = this.select.location;
@@ -131,7 +145,8 @@ export class SQLSource extends Source {
       }
       return locStruct;
     } else {
-      this.log(
+      this.logError(
+        'non-top-level-sql-source',
         '`connection_name.sql(...)` can currently only be used in top level source/query definitions'
       );
       return ErrorFactory.structDef;

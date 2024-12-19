@@ -21,7 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {expr, TestTranslator, BetaExpression} from './test-translator';
+import {
+  expr,
+  TestTranslator,
+  BetaExpression,
+  errorMessage,
+} from './test-translator';
 import {parseString} from '../parse-utils';
 import './parse-expects';
 import {isGranularResult} from '../ast/types/granular-result';
@@ -33,7 +38,7 @@ describe('literals', () => {
   test('string', () => {
     const m = new BetaExpression("'forty two'");
     expect(m).toTranslate();
-    const m42 = m.generated().value[0];
+    const m42 = m.generated().value;
     expect(m42).toMatchObject({literal: 'forty two'});
   });
 
@@ -90,7 +95,7 @@ describe('literals', () => {
     const exprModel = new BetaExpression(expr);
     expect(exprModel).toTranslate();
     const ir = exprModel.generated();
-    expect(ir.dataType).toEqual(timeType);
+    expect(ir.type).toEqual(timeType);
     if (timeframe) {
       expect(isGranularResult(ir)).toBeTruthy();
       if (isGranularResult(ir)) {
@@ -99,7 +104,7 @@ describe('literals', () => {
     } else {
       expect(isGranularResult(ir)).toBeFalsy();
     }
-    expect(ir.value[0]).toEqual(expect.objectContaining(result));
+    expect(ir.value).toEqual(expect.objectContaining(result));
   });
   const morphicLiterals: [string, string | undefined][] = [
     ['@1960', '1960-01-01 00:00:00'],
@@ -117,7 +122,7 @@ describe('literals', () => {
     if (morphic) {
       expect(morphTo).toBeDefined();
       if (morphTo) {
-        expect(morphTo[0]).toEqual(expect.objectContaining({literal: morphic}));
+        expect(morphTo).toEqual(expect.objectContaining({literal: morphic}));
       }
     } else {
       expect(morphTo).toBeUndefined();
@@ -190,7 +195,7 @@ describe('literals', () => {
               right
         """`);
       expect(checking).toTranslate();
-      const v = checking.generated().value[0];
+      const v = checking.generated().value;
       expect(v).toMatchObject({literal: '\nleft\n  mid\n    right\n'});
     });
     test('multi-line indent decreasing', () => {
@@ -200,13 +205,13 @@ describe('literals', () => {
           left
         """`);
       expect(checking).toTranslate();
-      const v = checking.generated().value[0];
+      const v = checking.generated().value;
       expect(v).toMatchObject({literal: '\n    right\n  mid\nleft\n'});
     });
     test('multi-line indent keep', () => {
       const checking = new BetaExpression('"""right\n  mid\nleft"""');
       expect(checking).toTranslate();
-      const v = checking.generated().value[0];
+      const v = checking.generated().value;
       expect(v).toMatchObject({literal: 'right\n  mid\nleft'});
     });
     test('timezone single quote', () => {
@@ -224,9 +229,9 @@ describe('literals', () => {
       expect(m).toParse();
     });
     test('timezone with illegal query', () => {
-      expect(
-        `run: a->{timezone: """${tz}%{ab->aturtle}"""; select: *}`
-      ).translationToFailWith('%{ query } illegal in this string');
+      expect(`run: a->{timezone: """${tz}%{ab->aturtle}"""; select: *}`).toLog(
+        errorMessage('%{ query } illegal in this string')
+      );
     });
     test('table single quote', () => {
       const m = new TestTranslator("source: n is bigquery.table('n')");
@@ -277,5 +282,23 @@ describe('literals', () => {
       expect(x).toParse();
     });
     test('a string containing a tab', () => expect(expr`'\t'`).toParse());
+  });
+  describe('compound literals', () => {
+    test('simple record literal', () => {
+      expect('{answer is 42}').compilesTo('{answer:42}');
+    });
+    test('record literal with path', () => {
+      expect('{aninline.column}').compilesTo('{column:aninline.column}');
+    });
+    test('array of records with same schema', () => {
+      expect(
+        '[{name is "one", val is 1},{name is "two", val is 2}]'
+      ).compilesTo('[{name:"one", val:1}, {name:"two", val:2}]');
+    });
+    test('array of records with head schema', () => {
+      expect('[{name is "one", val is 1},{"two", 2}]').compilesTo(
+        '[{name:"one", val:1}, {name:"two", val:2}]'
+      );
+    });
   });
 });

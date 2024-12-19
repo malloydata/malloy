@@ -67,12 +67,19 @@ export abstract class FieldReference
   makeEntry(fs: DynamicSpace) {
     const refName = this.outputName;
     if (fs.entry(refName)) {
-      this.log(`Output already has a field named '${refName}'`);
+      this.logError(
+        'output-name-conflict',
+        `Output already has a field named '${refName}'`
+      );
     } else {
       // In a QuerySpace, this needs to be able to find the thing to which it refers
       const fromFS = fs.isQueryFieldSpace() ? fs.inputSpace() : fs;
       fs.newEntry(refName, this, new ReferenceField(this, fromFS));
     }
+  }
+
+  getName(): string {
+    return this.nameString;
   }
 
   get refToField(): RefToField {
@@ -131,6 +138,14 @@ export class AcceptExceptFieldReference extends FieldReference {
   }
 }
 
+export class AccessModifierFieldReference extends FieldReference {
+  elementType = 'accessModifierFieldReference';
+  // Nothing to typecheck here
+  typecheck() {
+    return;
+  }
+}
+
 export class ExpressionFieldReference extends FieldReference {
   elementType = 'expressionFieldReference';
   // We assume that the outer expression will typecheck this
@@ -142,6 +157,14 @@ export class ExpressionFieldReference extends FieldReference {
 export class PartitionByFieldReference extends FieldReference {
   elementType = 'partitionByFieldReference';
   // We assume that the partition by expression will typecheck this
+  typecheck() {
+    return;
+  }
+}
+
+export class ParameterFieldReference extends FieldReference {
+  elementType = 'parameterFieldReference';
+  // The invocation of the argument will typecheck this
   typecheck() {
     return;
   }
@@ -225,7 +248,7 @@ export class WildcardFieldReference extends MalloyElement implements Noteable {
   except = new Set<string>();
   constructor(readonly joinPath: FieldReference | undefined) {
     super();
-    this.has({joinPath: joinPath});
+    this.has({joinPath});
   }
 
   getFieldDef(): FieldDef {

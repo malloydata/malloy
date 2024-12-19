@@ -25,15 +25,15 @@ import {
   Annotation,
   ModelDef,
   Query,
-  SQLBlockSource,
-  SQLBlockStructDef,
+  SQLSentence,
+  SQLSourceDef,
 } from '../model/malloy_types';
 import {MalloyElement} from './ast';
 import {LogMessage} from './parse-log';
 import {DocumentSymbol} from './parse-tree-walkers/document-symbol-walker';
-import {DocumentHighlight} from './parse-tree-walkers/document-highlight-walker';
 import {DocumentCompletion} from './parse-tree-walkers/document-completion-walker';
 import {DocumentHelpContext} from './parse-tree-walkers/document-help-context-walker';
+import {PathInfo} from './parse-tree-walkers/find-table-path-walker';
 
 /**
  * The translation interface is essentially a request/response protocol, and
@@ -62,7 +62,7 @@ export interface NeedURLData {
 }
 
 export interface NeedCompileSQL {
-  compileSQL: SQLBlockSource;
+  compileSQL: SQLSentence;
   partialModel: ModelDef | undefined;
 }
 interface NeededData extends NeedURLData, NeedSchemaData, NeedCompileSQL {}
@@ -77,7 +77,6 @@ interface ASTData extends ProblemResponse, NeededData, FinalResponse {
 export type ASTResponse = Partial<ASTData>;
 interface Metadata extends NeededData, ProblemResponse, FinalResponse {
   symbols: DocumentSymbol[];
-  highlights: DocumentHighlight[];
 }
 export type MetadataResponse = Partial<Metadata>;
 interface ModelAnnotationData
@@ -102,9 +101,14 @@ interface TranslatedResponseData
   translated: {
     modelDef: ModelDef;
     queryList: Query[];
-    sqlBlocks: SQLBlockStructDef[];
+    sqlBlocks: SQLSourceDef[];
   };
   fromSources: string[];
 }
+
+interface TablePath extends NeededData, ProblemResponse, FinalResponse {
+  pathInfo: PathInfo[];
+}
+export type TablePathResponse = Partial<TablePath>;
 
 export type TranslateResponse = Partial<TranslatedResponseData>;

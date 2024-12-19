@@ -23,9 +23,11 @@
 
 import {
   TestTranslator,
+  errorMessage,
   getFieldDef,
   getQueryFieldDef,
   model,
+  warningMessage,
 } from './test-translator';
 import './parse-expects';
 import {diff} from 'jest-diff';
@@ -60,6 +62,12 @@ expect.extend({
         clean.notes = a.notes.map(n => n.text);
       }
       return clean;
+    }
+    if (result === undefined) {
+      return {
+        pass: false,
+        message: () => 'Annotation was undefined',
+      };
     }
     const got = stripAt(result);
     if (!this.equals(got, shouldBe)) {
@@ -255,14 +263,14 @@ describe('document annotation', () => {
       # note1
       ## model1
     `);
-    expect(m).translationToFailWith(
-      'Object annotation not connected to any object'
+    expect(m).toLog(
+      errorMessage('Object annotation not connected to any object')
     );
   });
   test('errors reported from compiler flags', () => {
     expect(`
       ##! missingCloseQuote="...
-    `).translationToFailWith(/no viable alternative at input/);
+    `).toLog(errorMessage(/no viable alternative at input/));
   });
   test('checking compiler flags', () => {
     const m = model`
@@ -403,8 +411,8 @@ describe('source definition annotations', () => {
         ## model1
       }
     `);
-    expect(m).translationToFailWith(
-      'Model annotations not allowed at this scope'
+    expect(m).toLog(
+      errorMessage('Model annotations not allowed at this scope')
     );
   });
 });
@@ -415,7 +423,7 @@ describe('query operation annotations', () => {
         ## model1
         select: *
       }
-    `).translationToFailWith('Model annotations not allowed at this scope');
+    `).toLog(errorMessage('Model annotations not allowed at this scope'));
   });
   test('project new definition annotation', () => {
     const m = new TestTranslator(`
@@ -438,7 +446,7 @@ describe('query operation annotations', () => {
       expect(note_a?.annotation).matchesAnnotation(defaultTags);
     }
   });
-  test('project ref inherits annotation', () => {
+  test('select: ref inherits annotation', () => {
     const m = new TestTranslator(`
       run: a extend {
         # blockNote
@@ -675,5 +683,161 @@ describe('query operation annotations', () => {
         notes: ['# note\n'],
       });
     }
+  });
+  describe('include annotations', () => {
+    test('inherit: star', () => {
+      const m = new TestTranslator(`
+        ##! experimental.access_modifiers
+        source: na is a include {
+          # ai
+          *
+        }
+      `);
+      expect(m).toTranslate();
+      const na = m.getSourceDef('na');
+      expect(na).toBeDefined();
+      if (na) {
+        const ai = getFieldDef(na, 'ai');
+        expect(ai?.annotation).matchesAnnotation({
+          blockNotes: [],
+          notes: ['# ai\n'],
+        });
+      }
+    });
+    test('new tags are inherited, not added', () => {
+      const m = new TestTranslator(`
+        ##! experimental.access_modifiers
+        source: na is a include {
+          # ai
+          ai
+        } include {
+          # ai_2
+          ai
+        }
+      `);
+      expect(m).toTranslate();
+      const na = m.getSourceDef('na');
+      expect(na).toBeDefined();
+      if (na) {
+        const ai = getFieldDef(na, 'ai');
+        expect(ai?.annotation).matchesAnnotation({
+          blockNotes: [],
+          notes: ['# ai_2\n'],
+          inherits: {notes: ['# ai\n'], blockNotes: []},
+        });
+      }
+    });
+    test('modifier: star', () => {
+      const m = new TestTranslator(`
+        ##! experimental.access_modifiers
+        source: na is a include {
+          # ai_a
+          public:
+            # ai_b
+            *
+        }
+      `);
+      expect(m).toTranslate();
+      const na = m.getSourceDef('na');
+      expect(na).toBeDefined();
+      if (na) {
+        const ai = getFieldDef(na, 'ai');
+        expect(ai?.annotation).matchesAnnotation({
+          blockNotes: ['# ai_a\n'],
+          notes: ['# ai_b\n'],
+        });
+      }
+    });
+    test('inherit: list', () => {
+      const m = new TestTranslator(`
+        ##! experimental.access_modifiers
+        source: na is a include {
+          # ai
+          ai
+          af
+        }
+      `);
+      expect(m).toTranslate();
+      const na = m.getSourceDef('na');
+      expect(na).toBeDefined();
+      if (na) {
+        const ai = getFieldDef(na, 'ai');
+        expect(ai?.annotation).matchesAnnotation({
+          blockNotes: [],
+          notes: ['# ai\n'],
+        });
+        const af = getFieldDef(na, 'af');
+        expect(af).toBeDefined();
+        expect(af?.annotation).toBeUndefined();
+      }
+    });
+    test('modifier: list', () => {
+      const m = new TestTranslator(`
+        ##! experimental.access_modifiers
+        source: na is a include {
+          # a
+          public:
+            # ai
+            ai
+            af
+        }
+      `);
+      expect(m).toTranslate();
+      const na = m.getSourceDef('na');
+      expect(na).toBeDefined();
+      if (na) {
+        const ai = getFieldDef(na, 'ai');
+        expect(ai?.annotation).matchesAnnotation({
+          blockNotes: ['# a\n'],
+          notes: ['# ai\n'],
+        });
+        const af = getFieldDef(na, 'af');
+        expect(af?.annotation).matchesAnnotation({
+          blockNotes: ['# a\n'],
+          notes: [],
+        });
+      }
+    });
+    test('tags except: list', () => {
+      const m = new TestTranslator(`
+        ##! experimental.access_modifiers
+        source: na is a include {
+          # error_1
+          except:
+            # error_2
+            ai
+        }
+      `);
+      expect(m).toLog(
+        warningMessage('Tags on `except:` are ignored'),
+        warningMessage('Tags on `except:` are ignored')
+      );
+    });
+    test('tags except: star', () => {
+      const m = new TestTranslator(`
+        ##! experimental.access_modifiers
+        source: na is a include {
+          # error_1
+          except:
+            # error_2
+            *
+        }
+      `);
+      expect(m).toLog(
+        warningMessage('Tags on `except:` are ignored'),
+        warningMessage('Tags on `except:` are ignored'),
+        warningMessage('`except: *` is implied, unless another clause uses *')
+      );
+    });
+    test('oprhaned annotation', () => {
+      const m = new TestTranslator(`
+        ##! experimental.access_modifiers
+        source: na is a include {
+          ai
+          ${'# orphaned'}
+        }
+      `);
+      expect(m).toLog(warningMessage('This tag is not attached to anything'));
+    });
   });
 });

@@ -22,11 +22,11 @@
  */
 
 import {DataColumn, Explore, Field} from '@malloydata/malloy';
-import {Renderer} from '../renderer';
-import {createErrorElement, createNullElement} from './utils';
-import {LinkRenderOptions, StyleDefaults} from '../data_styles';
-import {RendererOptions} from '../renderer_types';
-import {RendererFactory} from '../renderer_factory';
+import {Renderer} from './renderer';
+import {createErrorElement, createNullElement, getDynamicValue} from './utils';
+import {LinkRenderOptions, StyleDefaults} from './data_styles';
+import {RendererOptions} from './renderer_types';
+import {RendererFactory} from './renderer_factory';
 
 export class HTMLLinkRenderer implements Renderer {
   constructor(private readonly document: Document) {}
@@ -36,6 +36,13 @@ export class HTMLLinkRenderer implements Renderer {
       return createNullElement(this.document);
     }
 
+    const {tag} = data.field.tagParse();
+    const linkTag = tag.tag('link');
+
+    if (!linkTag) {
+      return createErrorElement(this.document, 'Missing tag for Link renderer');
+    }
+
     if (!data.isString()) {
       return createErrorElement(
         this.document,
@@ -43,8 +50,22 @@ export class HTMLLinkRenderer implements Renderer {
       );
     }
 
+    // Read href component from field value or override with field tag if it exists
+    const hrefComponent =
+      getDynamicValue<string>({tag: linkTag, data}) ?? data.value;
+
+    // if a URL template is provided, replace the data were '$$$' appears.
+    const urlTemplate = linkTag.text('url_template');
+
     const element = this.document.createElement('a');
-    element.href = data.value;
+    element.href = hrefComponent;
+    if (urlTemplate) {
+      if (urlTemplate.indexOf('$$') > -1) {
+        element.href = urlTemplate.replace('$$', hrefComponent);
+      } else {
+        element.href = urlTemplate + hrefComponent;
+      }
+    }
     element.target = '_blank';
     element.appendChild(
       this.document.createTextNode(data.value.replace(/\//g, '/\u200C'))

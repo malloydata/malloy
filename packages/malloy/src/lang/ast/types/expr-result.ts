@@ -21,10 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Fragment, TypeDesc} from '../../../model/malloy_types';
+import {Expr, TypeDesc} from '../../../model/malloy_types';
 
-type MorphicValues = Record<string, Fragment[]>;
-export interface ExprResult extends TypeDesc {
-  value: Fragment[];
+type MorphicValues = Record<string, Expr>;
+export interface WithValue {
+  value: Expr;
   morphic?: MorphicValues;
 }
+
+export type ExprResult = TypeDesc & WithValue;

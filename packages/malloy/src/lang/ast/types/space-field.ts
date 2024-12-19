@@ -24,32 +24,31 @@
 import {
   FieldDef,
   QueryFieldDef,
-  isFieldTypeDef,
   TypeDesc,
+  AtomicFieldDef,
 } from '../../../model/malloy_types';
 import {SpaceEntry} from './space-entry';
 import {FieldSpace} from './field-space';
+import {emptyCompositeFieldUsage} from '../../../model/composite_source_utils';
 
 export abstract class SpaceField extends SpaceEntry {
   readonly refType = 'field';
-  haveFieldDef?: FieldDef;
 
-  protected fieldTypeFromFieldDef(def: FieldDef): TypeDesc {
+  protected fieldTypeFromFieldDef(def: AtomicFieldDef): TypeDesc {
+    const expressionType = def.expressionType || 'scalar';
     const ref: TypeDesc = {
-      dataType: def.type,
-      expressionType: 'scalar',
+      ...def,
+      expressionType,
       evalSpace: 'input',
+      compositeFieldUsage:
+        // Use the composite field usage in the def if it exists, otherwise, if the
+        // field has an e whic is a composite field, then the composite field usage
+        // should be just the name of the field.
+        def.compositeFieldUsage ??
+        (def.e?.node === 'compositeField'
+          ? {fields: [def.as ?? def.name], joinedUsage: {}}
+          : emptyCompositeFieldUsage()),
     };
-    if (isFieldTypeDef(def) && def.expressionType) {
-      ref.expressionType = def.expressionType;
-    }
-    if (
-      ref.dataType === 'unsupported' &&
-      def.type === 'unsupported' &&
-      def.rawType
-    ) {
-      ref.rawType = def.rawType;
-    }
     return ref;
   }
 
@@ -58,6 +57,17 @@ export abstract class SpaceField extends SpaceEntry {
   }
 
   fieldDef(): FieldDef | undefined {
+    return undefined;
+  }
+
+  /**
+   * Called by field reference code generation to gain access to the
+   * annotation properties on the field being referenced. ColumnSpaceFields
+   * will have the original field def, and will implement this method,
+   * nothing else should be referencable, but if somehow one of those is
+   * referenced, don't bother to compute the fieldDef.
+   */
+  constructorFieldDef(): FieldDef | undefined {
     return undefined;
   }
 }

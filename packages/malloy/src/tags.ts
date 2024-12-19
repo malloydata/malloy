@@ -375,6 +375,7 @@ class TagErrorListener implements ANTLRErrorListener<Token> {
     };
     const range = {start: errAt, end: errAt};
     const logMsg: LogMessage = {
+      code: 'tag-parse-syntax-error',
       message: msg,
       at: {url: this.sourceURL, range},
       severity: 'error',
@@ -382,14 +383,15 @@ class TagErrorListener implements ANTLRErrorListener<Token> {
     this.log.push(logMsg);
   }
 
-  semanticError(cx: ParserRuleContext, msg: string): void {
+  semanticError(cx: ParserRuleContext, code: string, msg: string): void {
+    const left = this.fromChar + cx.start.charPositionInLine;
     const errAt = {
       line: this.atLine,
-      // mtoy TODO get this right
-      character: 0,
+      character: left,
     };
     const range = {start: errAt, end: errAt};
     const logMsg: LogMessage = {
+      code,
       message: msg,
       at: {url: this.sourceURL, range},
       severity: 'error',
@@ -569,6 +571,7 @@ class TaglineParser
     }
     this.msgLog.semanticError(
       ctx,
+      'tag-property-not-found',
       `Reference to undefined property ${path.join('.')}`
     );
     return this.defaultResult();

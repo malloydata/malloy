@@ -48,18 +48,6 @@ export const monarch: Monaco.IMonarchLanguage = {
     ],
     sql_string: [
       [
-        /\b(select)(\s*:\s*)(""")/,
-        [
-          'keyword.control.select',
-          '',
-          {
-            next: '@sql_end',
-            nextEmbedded: 'sql',
-            token: 'punctuation.sql.block.open',
-          },
-        ],
-      ],
-      [
         /(\b[A-Za-z_][A-Za-z_0-9]*)(\s*\.\s*)(sql)(\s*\(\s*)(""")/,
         [
           'variable.other',
@@ -193,10 +181,13 @@ export const monarch: Monaco.IMonarchLanguage = {
       [/\bwhen\b/, 'keyword.other.when'],
       [/\bpick\b/, 'keyword.other.pick'],
       [/\bimport\b/, 'keyword.control.import'],
+      [/\binternal\b/, 'keyword.control.internal'],
+      [/\bpublic\b/, 'keyword.control.public'],
+      [/\bprivate\b/, 'keyword.control.private'],
+      [/\binclude\b/, 'keyword.control.include'],
     ],
     properties: [
       [/\baccept\b/, 'keyword.control.accept'],
-      [/\bsql\b/, 'keyword.control.sql'],
       [/\bselect\b/, 'keyword.control.select'],
       [/\bconnection\b/, 'keyword.control.connection'],
       [/\brun\b/, 'keyword.control.run'],
@@ -236,7 +227,7 @@ export const monarch: Monaco.IMonarchLanguage = {
         ['entity.name.function', '', 'entity.name.function.modifier'],
       ],
       [
-        /\b(AVG|COUNT|FIRST|FORMAT|LAST|LCASE|LEN|MAX|MID|MIN|MOD|NOW|ROUND|SUM|UCASE|TABLE|FROM|FROM_SQL|UNGROUPED)(\s*\()/,
+        /\b(AVG|COUNT|FIRST|FORMAT|LAST|LCASE|LEN|MAX|MID|MIN|MOD|NOW|ROUND|SUM|UCASE|UNGROUPED)(\s*\()/,
         ['entity.name.function', ''],
       ],
       [/\b([a-zA-Z_][a-zA-Z_0-9]*)(\s*\()/, ['entity.name.function', '']],

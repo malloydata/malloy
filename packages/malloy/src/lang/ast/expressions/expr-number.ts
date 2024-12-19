@@ -21,10 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ExprValue} from '../types/expr-value';
+import {ExprValue, literalExprValue} from '../types/expr-value';
 import {FieldSpace} from '../types/field-space';
-import {FT} from '../fragtype-utils';
 import {ExpressionDef} from '../types/expression-def';
+import {NumberTypeDef} from '../../../model';
 
 export class ExprNumber extends ExpressionDef {
   elementType = 'numeric literal';
@@ -37,10 +37,13 @@ export class ExprNumber extends ExpressionDef {
   }
 
   constantExpression(): ExprValue {
-    return {
-      ...FT.numberT,
-      evalSpace: 'literal',
-      value: [{type: 'dialect', function: 'numberLiteral', literal: this.n}],
-    };
+    const n = Number(this.n);
+    const dataType: NumberTypeDef = Number.isNaN(n)
+      ? {type: 'number'}
+      : {type: 'number', numberType: Number.isInteger(n) ? 'integer' : 'float'};
+    return literalExprValue({
+      dataType,
+      value: {node: 'numberLiteral', literal: this.n},
+    });
   }
 }

@@ -21,9 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {SQLBlock} from '@malloydata/malloy';
+import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
 import {DuckDBCommon} from './duckdb_common';
 import {DuckDBWASMConnection} from './duckdb_wasm_connection_node';
+import {SQLSourceDef} from '@malloydata/malloy';
+
+const [describe] = describeIfDatabaseAvailable(['duckdb_wasm']);
 
 describe('DuckDBWasmConnection', () => {
   let connection: DuckDBWASMConnection;
@@ -41,10 +44,8 @@ describe('DuckDBWasmConnection', () => {
 
   beforeEach(() => {
     jest
-      .spyOn(DuckDBCommon.prototype, 'fetchSchemaForSQLBlock')
-      .mockResolvedValue({
-        error: 'mocked',
-      });
+      .spyOn(DuckDBCommon.prototype, 'fetchSelectSchema')
+      .mockResolvedValue('mocked');
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     findTables = jest.spyOn(connection as any, 'findTables');
   });
@@ -54,7 +55,7 @@ describe('DuckDBWasmConnection', () => {
   });
 
   it('finds simple tables in SQL', async () => {
-    await connection.fetchSchemaForSQLBlock(
+    await connection.fetchSchemaForSQLStruct(
       {
         selectStr: `
 SELECT
@@ -69,7 +70,7 @@ id,
   created_at AS inventory_items_created_at
 FROM "inventory_items.parquet"
 `,
-      } as SQLBlock,
+      } as SQLSourceDef,
       {}
     );
     expect(findTables).toHaveBeenCalledWith(
@@ -79,7 +80,7 @@ FROM "inventory_items.parquet"
   });
 
   it('finds table functions in SQL', async () => {
-    await connection.fetchSchemaForSQLBlock(
+    await connection.fetchSchemaForSQLStruct(
       {
         selectStr: `
 SELECT
@@ -94,12 +95,20 @@ id,
   created_at AS inventory_items_created_at
 FROM read_parquet("inventory_items2.parquet")
 `,
-      } as SQLBlock,
+      } as SQLSourceDef,
       {}
     );
     expect(findTables).toHaveBeenCalledWith(
       ['order_items2.parquet', 'inventory_items2.parquet'],
       {}
     );
+  });
+
+  // Test to check that DecimalBigNums are broken.
+  // Remove/update when fixed, and remove the work-around in
+  // sqlLiteralNumber()
+  it('DecimalBigNum is broken', async () => {
+    const result = await connection.runSQL('SELECT 1.234 AS n1');
+    expect(result).toEqual({'rows': [{'n1': 1234}], 'totalRows': 1});
   });
 });

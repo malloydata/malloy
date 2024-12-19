@@ -21,22 +21,26 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import * as duckdb from '@malloydata/duckdb-wasm';
+import * as duckdb from '@duckdb/duckdb-wasm';
 import Worker from 'web-worker';
 import {
   FetchSchemaOptions,
   QueryDataRow,
   QueryOptionsReader,
   RunSQLOptions,
-  StructDef,
-  SQLBlock,
+  SQLSourceDef,
   ConnectionConfig,
+  TableSourceDef,
 } from '@malloydata/malloy';
-import {StructRow, Table, Vector} from 'apache-arrow';
+import {StructRow, Table} from 'apache-arrow';
 import {DuckDBCommon} from './duckdb_common';
 
 const TABLE_MATCH = /FROM\s*('([^']*)'|"([^"]*)")/gi;
 const TABLE_FUNCTION_MATCH = /FROM\s+[a-z0-9_]+\(('([^']*)'|"([^"]*)")/gi;
+
+const FILE_EXTS = ['.csv', '.tsv', '.parquet'] as const;
+
+const isIterable = (x: object): x is Iterable<unknown> => Symbol.iterator in x;
 
 /**
  * Arrow's toJSON() doesn't really do what I'd expect, since
@@ -47,11 +51,9 @@ const TABLE_FUNCTION_MATCH = /FROM\s+[a-z0-9_]+\(('([^']*)'|"([^"]*)")/gi;
  * @return Vanilla Javascript value
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const unwrapArrow = (value: unknown): any => {
+export const unwrapArrow = (value: unknown): any => {
   if (value === null) {
     return value;
-  } else if (value instanceof Vector) {
-    return [...value].map(unwrapArrow);
   } else if (value instanceof Date) {
     return value;
   } else if (typeof value === 'bigint') {
@@ -67,6 +69,9 @@ const unwrapArrow = (value: unknown): any => {
       return Number(obj[Symbol.toPrimitive]());
     } else if (Array.isArray(value)) {
       return value.map(unwrapArrow);
+    } else if (isIterable(value)) {
+      // Catch Arrow Vector objects
+      return [...value].map(unwrapArrow);
     } else {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result: Record<string | symbol, any> = {};
@@ -88,7 +93,7 @@ const unwrapArrow = (value: unknown): any => {
  * For some reason a custom replacer only sees DecimalBigNums as
  * strings, as well.
  */
-const unwrapRow = (row: StructRow): QueryDataRow => {
+export const unwrapRow = (row: StructRow): QueryDataRow => {
   return unwrapArrow(row.toJSON());
 };
 
@@ -106,10 +111,13 @@ type RemoteFileCallback = (
 ) => Promise<Uint8Array | undefined>;
 
 export interface DuckDBWasmOptions extends ConnectionConfig {
+  additionalExtensions?: string[];
   databasePath?: string;
+  motherDuckToken: string | undefined;
   workingDirectory?: string;
 }
 export abstract class DuckDBWASMConnection extends DuckDBCommon {
+  private additionalExtensions: string[] = [];
   public readonly name: string;
   private databasePath: string | null = null;
   protected workingDirectory = '/';
@@ -158,11 +166,21 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
       if (typeof arg.workingDirectory === 'string') {
         this.workingDirectory = arg.workingDirectory;
       }
+      if (typeof arg.motherDuckToken === 'string') {
+        this.motherDuckToken = arg.motherDuckToken;
+      }
+      if (Array.isArray(arg.additionalExtensions)) {
+        this.additionalExtensions = arg.additionalExtensions;
+      }
     }
+    this.isMotherDuck =
+      this.databasePath?.startsWith('md:') ||
+      this.databasePath?.startsWith('motherduck:') ||
+      false;
     this.connecting = this.init();
   }
 
-  private async init(): Promise<void> {
+  protected async init(): Promise<void> {
     // Select a bundle based on browser checks
     const bundle = await duckdb.selectBundle(this.getBundles());
 
@@ -219,10 +237,11 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
           `SET FILE_SEARCH_PATH='${this.workingDirectory}'`
         );
       }
-      // Not quite ready for prime time
-      // for (const ext of ['json', 'httpfs', 'icu']) {
-      //   await this.loadExtension(ext);
-      // }
+      const extensions = ['json', 'icu', ...this.additionalExtensions];
+
+      for (const ext of extensions) {
+        await this.loadExtension(ext);
+      }
       const setupCmds = ["SET TimeZone='UTC'"];
       for (const cmd of setupCmds) {
         try {
@@ -327,6 +346,13 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
     await this.setup();
 
     for (const tablePath of tables) {
+      if (
+        this.isMotherDuck &&
+        !tables.includes('/') &&
+        !FILE_EXTS.some(ext => tablePath.endsWith(ext))
+      ) {
+        continue;
+      }
       // http and s3 urls are handled by duckdb-wasm
       if (tablePath.match(/^https?:\/\//)) {
         continue;
@@ -344,11 +370,11 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
     }
   }
 
-  public async fetchSchemaForSQLBlock(
-    sqlRef: SQLBlock,
+  public async fetchSchemaForSQLStruct(
+    sqlRef: SQLSourceDef,
     options: FetchSchemaOptions
   ): Promise<
-    | {structDef: StructDef; error?: undefined}
+    | {structDef: SQLSourceDef; error?: undefined}
     | {error: string; structDef?: undefined}
   > {
     const tables: string[] = [];
@@ -359,14 +385,14 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
       tables.push(match[2] || match[3]);
     }
     await this.findTables(tables, options);
-    return super.fetchSchemaForSQLBlock(sqlRef, options);
+    return super.fetchSchemaForSQLStruct(sqlRef, options);
   }
 
   async fetchSchemaForTables(
     missing: Record<string, string>,
     options: FetchSchemaOptions
   ): Promise<{
-    schemas: Record<string, StructDef>;
+    schemas: Record<string, TableSourceDef>;
     errors: Record<string, string>;
   }> {
     const tables = Object.values(missing);

@@ -22,4 +22,9 @@
  */
 
 export type {DialectFunctionOverloadDef} from './util';
-export {FUNCTIONS} from './all_functions';
+export {expandBlueprintMap} from './util';
+export {
+  getMalloyStandardFunctions,
+  expandOverrideMap,
+} from './malloy_standard_functions';
+export type {MalloyStandardFunctionImplementations} from './malloy_standard_functions';

@@ -23,95 +23,270 @@
 
 import {
   DataArray,
-  DataRecord,
+  DataColumn,
   Explore,
+  ExploreField,
   Field,
+  QueryData,
   Result,
+  Tag,
 } from '@malloydata/malloy';
-import {getFieldKey, valueIsNumber, valueIsString} from './util';
+import {
+  getFieldKey,
+  valueIsDateTime,
+  valueIsNumber,
+  valueIsString,
+} from './util';
+import {
+  DataRowWithRecord,
+  RenderResultMetadata,
+  VegaChartProps,
+  VegaConfigHandler,
+} from './types';
+import {
+  NULL_SYMBOL,
+  shouldRenderAs,
+  shouldRenderChartAs,
+} from './apply-renderer';
+import {mergeVegaConfigs} from './vega/merge-vega-configs';
+import {baseVegaConfig} from './vega/base-vega-config';
+import {renderTimeString} from './render-time';
+import {generateBarChartVegaSpec} from './bar-chart/generate-bar_chart-vega-spec';
+import {createResultStore} from './result-store/result-store';
+import {generateLineChartVegaSpec} from './line-chart/generate-line_chart-vega-spec';
+import {parse, Config} from 'vega';
 
-export interface FieldRenderMetadata {
-  field: Field;
-  min: number | null;
-  max: number | null;
-  minString: string | null;
-  maxString: string | null;
-  values: Set<string>;
-  maxRecordCt: number | null;
+function createDataCache() {
+  const dataCache = new WeakMap<DataColumn, QueryData>();
+  return {
+    get: (cell: DataColumn) => {
+      if (!dataCache.has(cell) && cell.isArray()) {
+        const data: DataRowWithRecord[] = [];
+        const fields = cell.field.allFields;
+        for (const row of cell) {
+          const record = {__malloyDataRecord: row};
+          for (const field of fields) {
+            const value = row.cell(field).value;
+            // TODO: can we store Date objects as is? Downstream chart code would need to be updated
+            record[field.name] =
+              value instanceof Date ? value.valueOf() : row.cell(field).value;
+          }
+          data.push(record as DataRowWithRecord);
+        }
+        dataCache.set(cell, data);
+      }
+      return dataCache.get(cell)!;
+    },
+  };
 }
 
-export interface RenderResultMetadata {
-  fields: Record<string, FieldRenderMetadata>;
-}
+export type GetResultMetadataOptions = {
+  getVegaConfigOverride?: VegaConfigHandler;
+};
 
-export function getResultMetadata(result: Result) {
-  const fieldKeyMap: WeakMap<Field, string> = new WeakMap();
-  const getCachedFieldKey = (f: Field) => {
+export function getResultMetadata(
+  result: Result,
+  options: GetResultMetadataOptions = {}
+) {
+  const fieldKeyMap: WeakMap<Field | Explore, string> = new WeakMap();
+  const getCachedFieldKey = (f: Field | Explore) => {
     if (fieldKeyMap.has(f)) return fieldKeyMap.get(f)!;
     const fieldKey = getFieldKey(f);
     fieldKeyMap.set(f, fieldKey);
     return fieldKey;
   };
 
+  const dataCache = createDataCache();
+  const rootField = result.data.field;
   const metadata: RenderResultMetadata = {
     fields: {},
+    fieldKeyMap,
+    getFieldKey: getCachedFieldKey,
+    field: (f: Field | Explore) => metadata.fields[getCachedFieldKey(f)],
+    getData: dataCache.get,
+    modelTag: result.modelTag,
+    resultTag: result.tagParse().tag,
+    rootField,
+    store: createResultStore(),
   };
 
-  function initFieldMeta(e: Explore) {
-    for (const f of e.allFields) {
-      const fieldKey = getCachedFieldKey(f);
-      metadata.fields[fieldKey] = {
-        field: f,
-        min: null,
-        max: null,
-        minString: null,
-        maxString: null,
-        values: new Set(),
-        maxRecordCt: null,
-      };
-      if (f.isExploreField()) {
-        initFieldMeta(f);
+  const fieldKey = metadata.getFieldKey(rootField);
+  metadata.fields[fieldKey] = {
+    field: rootField,
+    min: null,
+    max: null,
+    minString: null,
+    maxString: null,
+    values: new Set(),
+    maxRecordCt: null,
+    maxUniqueFieldValueCounts: new Map(),
+    renderAs: shouldRenderAs(rootField, result.tagParse().tag),
+  };
+
+  initFieldMeta(result.data.field, metadata);
+  populateFieldMeta(result.data, metadata);
+
+  Object.values(metadata.fields).forEach(m => {
+    const f = m.field;
+    // If explore, do some additional post-processing like determining chart settings
+    if (f.isExploreField())
+      populateExploreMeta(f, f.tagParse().tag, metadata, options);
+    else if (f.isExplore())
+      populateExploreMeta(f, result.tagParse().tag, metadata, options);
+  });
+
+  return metadata;
+}
+
+function initFieldMeta(e: Explore, metadata: RenderResultMetadata) {
+  for (const f of e.allFields) {
+    const fieldKey = metadata.getFieldKey(f);
+    metadata.fields[fieldKey] = {
+      field: f,
+      min: null,
+      max: null,
+      minString: null,
+      maxString: null,
+      values: new Set(),
+      maxRecordCt: null,
+      maxUniqueFieldValueCounts: new Map<string, number>(),
+      renderAs: shouldRenderAs(f),
+    };
+    if (f.isExploreField()) {
+      initFieldMeta(f, metadata);
+    }
+  }
+}
+
+const populateFieldMeta = (data: DataArray, metadata: RenderResultMetadata) => {
+  let currExploreRecordCt = 0;
+  const currentExploreField = data.field;
+  const currentExploreFieldMeta = metadata.field(currentExploreField);
+  const maxUniqueFieldValueSets = new Map<string, Set<unknown>>();
+  data.field.allFields.forEach(f => {
+    maxUniqueFieldValueSets.set(getFieldKey(f), new Set());
+  });
+  for (const row of data) {
+    currExploreRecordCt++;
+    for (const f of data.field.allFields) {
+      const fieldMeta = metadata.field(f);
+      const fieldSet = maxUniqueFieldValueSets.get(getFieldKey(f))!;
+
+      const value = f.isAtomicField() ? row.cell(f).value : undefined;
+      if (
+        f.isAtomicField() &&
+        (value === null || typeof value === 'undefined')
+      ) {
+        fieldMeta.values.add(NULL_SYMBOL);
+        fieldSet.add(NULL_SYMBOL);
+      } else if (valueIsNumber(f, value)) {
+        const n = value;
+        fieldMeta.min = Math.min(fieldMeta.min ?? n, n);
+        fieldMeta.max = Math.max(fieldMeta.max ?? n, n);
+        if (f.isAtomicField() && f.sourceWasDimension()) {
+          fieldMeta.values.add(n);
+          fieldSet.add(n);
+        }
+      } else if (valueIsString(f, value)) {
+        const s = value;
+        fieldMeta.values.add(s);
+        fieldSet.add(s);
+        if (!fieldMeta.minString || fieldMeta.minString.length > s.length)
+          fieldMeta.minString = s;
+        if (!fieldMeta.maxString || fieldMeta.maxString.length < s.length)
+          fieldMeta.maxString = s;
+      } else if (valueIsDateTime(f, value)) {
+        const numericValue = Number(value);
+        fieldMeta.min = Math.min(fieldMeta.min ?? numericValue, numericValue);
+        fieldMeta.max = Math.max(fieldMeta.max ?? numericValue, numericValue);
+        const stringValue = renderTimeString(
+          value,
+          f.isAtomicField() && f.isDate(),
+          f.isAtomicField() && (f.isDate() || f.isTimestamp())
+            ? f.timeframe
+            : undefined
+        ).toString();
+        if (
+          !fieldMeta.minString ||
+          fieldMeta.minString.length > stringValue.length
+        )
+          fieldMeta.minString = stringValue;
+        if (
+          !fieldMeta.maxString ||
+          fieldMeta.maxString.length < stringValue.length
+        )
+          fieldMeta.maxString = stringValue;
+
+        if (f.isAtomicField() && f.sourceWasDimension()) {
+          fieldMeta.values.add(numericValue);
+          fieldSet.add(numericValue);
+        }
+      } else if (f.isExploreField()) {
+        const data = row.cell(f);
+        if (data.isArray()) populateFieldMeta(data, metadata);
       }
     }
   }
 
-  const populateFieldMeta = (
-    data: DataArray,
-    metadata: RenderResultMetadata,
-    cb?: (row: DataRecord) => void
-  ) => {
-    for (const row of data) {
-      cb?.(row);
-      for (const f of data.field.allFields) {
-        const value = f.isAtomicField() ? row.cell(f).value : undefined;
-        const fieldKey = getFieldKey(f);
-        const fieldMeta = metadata.fields[fieldKey];
-        if (valueIsNumber(f, value)) {
-          const n = value;
-          fieldMeta.min = Math.min(fieldMeta.min ?? n, n);
-          fieldMeta.max = Math.max(fieldMeta.max ?? n, n);
-        } else if (valueIsString(f, value)) {
-          const s = value;
-          fieldMeta.values.add(s);
-          if (!fieldMeta.minString || fieldMeta.minString.length > s.length)
-            fieldMeta.minString = s;
-          if (!fieldMeta.maxString || fieldMeta.maxString.length < s.length)
-            fieldMeta.maxString = s;
-        } else if (f.isExploreField()) {
-          const data = row.cell(f) as DataArray;
-          let recordCt = 0;
-          populateFieldMeta(data, metadata, () => recordCt++);
-          fieldMeta.maxRecordCt = Math.max(
-            fieldMeta.maxRecordCt ?? recordCt,
-            recordCt
-          );
-        }
-      }
+  // Update the max number of unique values for a field in nested explores
+  for (const [fieldKey, set] of maxUniqueFieldValueSets) {
+    currentExploreFieldMeta.maxUniqueFieldValueCounts.set(
+      fieldKey,
+      Math.max(
+        currentExploreFieldMeta.maxUniqueFieldValueCounts.get(fieldKey) ?? 0,
+        set.size
+      )
+    );
+  }
+
+  currentExploreFieldMeta.maxRecordCt = Math.max(
+    currentExploreFieldMeta.maxRecordCt ?? currExploreRecordCt,
+    currExploreRecordCt
+  );
+};
+
+function populateExploreMeta(
+  f: Explore | ExploreField,
+  tag: Tag,
+  metadata: RenderResultMetadata,
+  options: GetResultMetadataOptions
+) {
+  const fieldMeta = metadata.field(f);
+  let vegaChartProps: VegaChartProps | null = null;
+  const chartType = shouldRenderChartAs(tag);
+  if (chartType === 'bar_chart') {
+    vegaChartProps = generateBarChartVegaSpec(f, metadata);
+  } else if (chartType === 'line_chart') {
+    vegaChartProps = generateLineChartVegaSpec(f, metadata);
+  }
+
+  if (vegaChartProps) {
+    const vegaConfigOverride =
+      options.getVegaConfigOverride?.(vegaChartProps.chartType) ?? {};
+
+    const vegaConfig: Config = mergeVegaConfigs(
+      baseVegaConfig(),
+      options.getVegaConfigOverride?.(vegaChartProps.chartType) ?? {}
+    );
+
+    const maybeAxisYLabelFont = vegaConfigOverride['axisY']?.['labelFont'];
+    const maybeAxisLabelFont = vegaConfigOverride['axis']?.['labelFont'];
+    if (maybeAxisYLabelFont || maybeAxisLabelFont) {
+      const refLineFontSignal = vegaConfig.signals?.find(
+        signal => signal.name === 'referenceLineFont'
+      );
+      if (refLineFontSignal)
+        refLineFontSignal.value = maybeAxisYLabelFont ?? maybeAxisLabelFont;
     }
-  };
 
-  initFieldMeta(result.data.field);
-  populateFieldMeta(result.data, metadata);
-
-  return metadata;
+    fieldMeta.vegaChartProps = {
+      ...vegaChartProps,
+      spec: {
+        ...vegaChartProps.spec,
+        config: vegaConfig,
+      },
+    };
+    if (fieldMeta.vegaChartProps?.spec)
+      fieldMeta.runtime = parse(fieldMeta.vegaChartProps?.spec);
+  }
 }

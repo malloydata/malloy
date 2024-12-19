@@ -6,10 +6,12 @@
     {"path": "packages/malloy-db-bigquery"},
     {"path": "packages/malloy-db-duckdb"},
     {"path": "packages/malloy-db-postgres"},
+    {"path": "packages/malloy-db-snowflake"},
+    {"path": "packages/malloy-db-trino"},
+    {"path": "packages/malloy-db-mysql"},
     {"path": "packages/malloy-malloy-sql"},
     {"path": "test"},
-    {"path": "packages/malloy-render"},
-    {"path": "packages/malloy-lint"}
+    {"path": "packages/malloy-render"}
   ],
   "files": [],
   "include": [],

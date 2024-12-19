@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {SQLPhrase} from '../../../model/malloy_types';
+import {SQLPhraseSegment} from '../../../model/malloy_types';
 
 import {MalloyElement} from '../types/malloy-element';
 import {SourceQueryElement} from '../source-query-elements/source-query-element';
@@ -48,12 +48,15 @@ export class SQLString extends MalloyElement {
       this.containsQueries = true;
       el.parent = this;
     } else {
-      el.log('This element is not legal inside an SQL string');
+      el.logError(
+        'invalid-sql-source-interpolation',
+        'This element is not legal inside an SQL string'
+      );
     }
   }
 
-  sqlPhrases(): SQLPhrase[] {
-    const ret: SQLPhrase[] = [];
+  sqlPhrases(): SQLPhraseSegment[] {
+    const ret: SQLPhraseSegment[] = [];
     for (const el of this.elements) {
       if (typeof el === 'string') {
         ret.push({sql: el});
@@ -62,7 +65,7 @@ export class SQLString extends MalloyElement {
         if (queryObject) {
           ret.push(queryObject.query());
         } else {
-          el.sqLog('Cannot expand into a query');
+          el.sqLog('failed-to-expand-sql-source', 'Cannot expand into a query');
         }
       }
     }

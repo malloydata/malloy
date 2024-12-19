@@ -23,15 +23,16 @@
 
 import {
   PipeSegment,
-  StructDef,
-  isAtomicFieldType,
-  isTurtleDef,
+  SourceDef,
+  isAtomic,
+  isTurtle,
+  sourceBase,
 } from '../../../model/malloy_types';
 import {ErrorFactory} from '../error-factory';
 import {QueryOperationSpace} from '../field-space/query-spaces';
 import {ViewOrScalarFieldReference} from '../query-items/field-references';
 import {getFinalStruct} from '../struct-utils';
-import {FieldSpace} from '../types/field-space';
+import {SourceFieldSpace} from '../types/field-space';
 import {PipelineComp} from '../types/pipeline-comp';
 import {SpaceField} from '../types/space-field';
 import {refine} from './refine-utils';
@@ -54,12 +55,15 @@ export class ReferenceView extends View {
   // `isNestIn` is not needed because `ReferenceView`s never create a field space
   // that would use it; this operation is already compiled, and `isNestIn` is only
   // used for checking `exclude` references.
-  pipelineComp(fs: FieldSpace, _isNestIn: QueryOperationSpace): PipelineComp {
+  pipelineComp(
+    fs: SourceFieldSpace,
+    _isNestIn: QueryOperationSpace
+  ): PipelineComp {
     return this._pipelineComp(fs);
   }
 
   _pipelineComp(
-    fs: FieldSpace,
+    fs: SourceFieldSpace,
     {forRefinement} = {forRefinement: false}
   ): PipelineComp & {error?: boolean} {
     const lookup = this.reference.getField(fs);
@@ -72,7 +76,7 @@ export class ReferenceView extends View {
       };
     };
     if (!lookup.found) {
-      this.log(`\`${this.reference.refString}\` is not defined`);
+      this.reference.logError(lookup.error.code, lookup.error.message);
       return oops();
     }
     if (!(lookup.found instanceof SpaceField)) {
@@ -82,33 +86,33 @@ export class ReferenceView extends View {
     if (fieldDef === undefined) {
       throw new Error('Expected field to have definition');
     }
-    if (isAtomicFieldType(fieldDef.type)) {
+    if (isAtomic(fieldDef)) {
       const newSegment: PipeSegment = {
         type: 'reduce',
         queryFields: [this.reference.refToField],
+        compositeFieldUsage: fieldDef.compositeFieldUsage,
       };
-      const {dialect, queryTimezone, structRelationship} = fs.structDef();
       const name = this.reference.nameString;
-      const outputStruct: StructDef = {
-        type: 'struct',
-        dialect,
-        queryTimezone,
+      const outputStruct: SourceDef = {
+        ...sourceBase(fs.structDef()),
+        type: 'query_result',
         name,
         fields: [fieldDef],
-        structRelationship,
-        structSource: {type: 'query_result'},
       };
       return {
         pipeline: [newSegment],
         name,
         outputStruct,
       };
-    } else if (isTurtleDef(fieldDef)) {
+    } else if (isTurtle(fieldDef)) {
       if (this.reference.list.length > 1) {
         if (forRefinement) {
-          this.log('Cannot use view from join as refinement');
+          this.logError(
+            'refinement-with-joined-view',
+            'Cannot use view from join as refinement'
+          );
         } else {
-          this.log('Cannot use view from join');
+          this.logError('nest-of-joined-view', 'Cannot use view from join');
         }
         return oops();
       }
@@ -124,23 +128,28 @@ export class ReferenceView extends View {
       };
     } else {
       if (forRefinement) {
-        this.reference.log(
+        this.reference.logError(
+          'refinement-with-source',
           `named refinement \`${this.reference.refString}\` must be a view, found a ${fieldDef.type}`
         );
       } else {
-        this.reference.log('This operation is not supported');
+        this.reference.logError(
+          'nest-of-source',
+          'This operation is not supported'
+        );
       }
       return oops();
     }
   }
 
-  private getRefinementSegment(inputFS: FieldSpace) {
+  private getRefinementSegment(inputFS: SourceFieldSpace) {
     const {pipeline, error} = this._pipelineComp(inputFS, {
       forRefinement: true,
     });
     if (error) return;
     if (pipeline.length !== 1) {
-      this.reference.log(
+      this.reference.logError(
+        'refinement-with-multistage-view',
         `named refinement \`${this.reference.refString}\` must have exactly one stage`
       );
       return;
@@ -152,7 +161,7 @@ export class ReferenceView extends View {
   // that would use it; this operation is already compiled, and `isNestIn` is only
   // used for checking `exclude` references.
   refine(
-    inputFS: FieldSpace,
+    inputFS: SourceFieldSpace,
     pipeline: PipeSegment[],
     _isNestIn: QueryOperationSpace | undefined
   ): PipeSegment[] {

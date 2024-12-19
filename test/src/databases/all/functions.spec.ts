@@ -23,7 +23,7 @@
  */
 
 import {RuntimeList, allDatabases} from '../../runtimes';
-import {databasesFromEnvironmentOr} from '../../util';
+import {booleanResult, brokenIn, databasesFromEnvironmentOr} from '../../util';
 import '../../util/db-jest-matchers';
 import * as malloy from '@malloydata/malloy';
 
@@ -51,12 +51,23 @@ source: carriers is ${databaseName}.table('malloytest.carriers')
 `;
 }
 
-const expressionModels = new Map<string, malloy.ModelMaterializer>();
+const expressionModels = new Map<
+  string,
+  {
+    runtime: malloy.SingleConnectionRuntime;
+    expressionModel: malloy.ModelMaterializer;
+  }
+>();
 runtimes.runtimeMap.forEach((runtime, databaseName) =>
-  expressionModels.set(databaseName, runtime.loadModel(modelText(databaseName)))
+  expressionModels.set(databaseName, {
+    runtime,
+    expressionModel: runtime.loadModel(modelText(databaseName)),
+  })
 );
 
-expressionModels.forEach((expressionModel, databaseName) => {
+expressionModels.forEach((x, databaseName) => {
+  const expressionModel = x.expressionModel;
+  const runtime = x.runtime;
   const funcTestGeneral = async (
     expr: string,
     type: 'group_by' | 'aggregate',
@@ -96,7 +107,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
       return await expressionModel
         .loadQuery(
           `
-      run: aircraft -> { ${testCases.map(
+      run: state_facts -> { ${testCases.map(
         (testCase, i) => `group_by: f${i} is ${testCase[0]}`
       )} }`
         )
@@ -105,25 +116,37 @@ expressionModels.forEach((expressionModel, databaseName) => {
 
     const result = await run();
     testCases.forEach((testCase, i) => {
+      // console.log(databaseName, result.sql);
+      // console.log(result.data);
       expect(result.data.path(0, `f${i}`).value).toBe(testCase[1]);
     });
   };
 
   describe('concat', () => {
-    it(`works - ${databaseName}`, async () => {
+    it.when(
+      !brokenIn('trino', databaseName) &&
+        !brokenIn('presto', databaseName) /* crswenson */
+    )(`works - ${databaseName}`, async () => {
+      const expected = {
+        'bigquery': 'foo2003-01-01 12:00:00+00',
+        'snowflake': 'foo2003-01-01T12:00:00.000Z',
+      };
+
       await funcTestMultiple(
         ["concat('foo', 'bar')", 'foobar'],
         ["concat(1, 'bar')", '1bar'],
         [
           "concat('cons', true)",
-          databaseName === 'postgres' ? 'const' : 'construe',
+          databaseName === 'postgres'
+            ? 'const'
+            : databaseName === 'mysql'
+            ? 'cons1'
+            : 'construe',
         ],
         ["concat('foo', @2003)", 'foo2003-01-01'],
         [
           "concat('foo', @2003-01-01 12:00:00)",
-          databaseName === 'bigquery'
-            ? 'foo2003-01-01 12:00:00+00'
-            : 'foo2003-01-01 12:00:00',
+          expected[databaseName] ?? 'foo2003-01-01 12:00:00',
         ],
         // TODO Maybe implement consistent null behavior
         // ["concat('foo', null)", null],
@@ -167,11 +190,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     it(`works - ${databaseName}`, async () => {
       await funcTestMultiple(
         ['ceil(1.9)', 2],
-        // TODO Remove when we upgrade to DuckDB 0.8.X -- DuckDB has some bugs with rounding
-        // that are fixed in 0.8.
-        ...(databaseName === 'duckdb_wasm'
-          ? []
-          : ([['ceil(-1.9)', -1]] as [string, number][])),
+        ['ceil(-1.9)', -1],
         ['ceil(null)', null]
       );
     });
@@ -201,7 +220,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
         ["regexp_extract('I have a dog', r'd[aeiou]g')", 'dog'],
         ["regexp_extract(null, r'd[aeiou]g')", null],
         ["regexp_extract('foo', null)", null],
-        ["regexp_extract('I have a d0g', r'd\\dg')", 'd0g']
+        ["regexp_extract('I have a d0g', r'd.g')", 'd0g']
       );
     });
   });
@@ -213,9 +232,20 @@ expressionModels.forEach((expressionModel, databaseName) => {
         ["replace('aaaa', r'.', 'c')", 'cccc'],
         [
           "replace('axbxc', r'(a).(b).(c)', '\\\\0 - \\\\1 - \\\\2 - \\\\3')",
-          databaseName === 'postgres' ? '\\0 - a - b - c' : 'axbxc - a - b - c',
+          databaseName === 'postgres'
+            ? '\\0 - a - b - c'
+            : databaseName === 'trino' ||
+              databaseName === 'presto' ||
+              databaseName === 'mysql'
+            ? '0 - 1 - 2 - 3'
+            : 'axbxc - a - b - c',
         ],
-        ["replace('aaaa', '', 'c')", 'aaaa'],
+        [
+          "replace('aaaa', '', 'c')",
+          databaseName === 'trino' || databaseName === 'presto'
+            ? 'cacacacac'
+            : 'aaaa',
+        ],
         ["replace(null, 'a', 'c')", null],
         ["replace('aaaa', null, 'c')", null],
         ["replace('aaaa', 'a', null)", null]
@@ -229,7 +259,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
         ["substr('foo', 2)", 'oo'],
         ["substr('foo', 2, 1)", 'o'],
         ["substr('foo bar baz', -3)", 'baz'],
-        ['substr(null, 1, 2)', null],
+        ["substr(nullif('x','x'), 1, 2)", null], //  nullMatchesFunctionSignature.
         ["substr('aaaa', null, 1)", null],
         ["substr('aaaa', 1, null)", null]
       );
@@ -239,10 +269,10 @@ expressionModels.forEach((expressionModel, databaseName) => {
   describe('raw function call', () => {
     it(`works - ${databaseName}`, async () => {
       await funcTestMultiple(
-        ['floor(cbrt!(27)::number)', 3],
-        ['floor(cbrt!number(27))', 3],
+        ['floor(sqrt!(25)::number)', 5],
+        ['floor(sqrt!number(25))', 5],
         ["substr('foo bar baz', -3)", 'baz'],
-        ['substr(null, 1, 2)', null],
+        ["substr(nullif('x','x'), 1, 2)", null], // nullMatchesFunctionSignature
         ["substr('aaaa', null, 1)", null],
         ["substr('aaaa', 1, null)", null]
       );
@@ -251,7 +281,12 @@ expressionModels.forEach((expressionModel, databaseName) => {
 
   describe('stddev', () => {
     // TODO symmetric aggregates don't work with custom aggregate functions in BQ currently
-    if (databaseName === 'bigquery') return;
+    if (
+      ['bigquery', 'snowflake', 'trino', 'presto', 'mysql'].includes(
+        databaseName
+      )
+    )
+      return;
     it(`works - ${databaseName}`, async () => {
       await funcTestAgg('round(stddev(aircraft_models.seats))', 29);
     });
@@ -332,16 +367,35 @@ expressionModels.forEach((expressionModel, databaseName) => {
       expect(result.data.path(0, 'row_num').value).toBe(1);
     });
 
+    // should rework the tests to this form....
+    // it(`boolean type - ${databaseName}`, async () => {
+    //   await expect(`
+    //     # test.debug
+    //       run: state_facts extend { join_one: airports on airports.state = state } -> {
+    //         group_by: state
+    //         nest: q is {
+    //           group_by: airports.county
+    //           calculate: row_num is row_number()
+    //         }
+    //       }
+    //   `).malloyResultMatches(expressionModel, {
+    //     big: 1,
+    //     model_count: 58451,
+    //   });
+    // });
+
     it(`works inside nest - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
-          `run: state_facts extend { join_one: airports on airports.state = state } -> {
+          `
+          run: state_facts extend { join_one: airports on airports.state = state } -> {
             group_by: state
             nest: q is {
               group_by: airports.county
               calculate: row_num is row_number()
             }
-          }`
+          }
+            `
         )
         .run();
       expect(result.data.path(0, 'q', 0, 'row_num').value).toBe(1);
@@ -408,10 +462,12 @@ expressionModels.forEach((expressionModel, databaseName) => {
     it(`works using unary minus in calculate block - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
-          `query: state_facts -> {
+          `run: state_facts -> {
             group_by: first_letter is substr(state, 1, 1)
             aggregate: states_with_first_letter_ish is round(count() / 2) * 2
-            calculate: r is rank() neg_r is - r
+            calculate:
+              r is rank()
+              neg_r is -r
           }`
         )
         .run();
@@ -419,6 +475,32 @@ expressionModels.forEach((expressionModel, databaseName) => {
       expect(result.data.path(1, 'neg_r').value).toBe(-1);
       expect(result.data.path(2, 'neg_r').value).toBe(-3);
       expect(result.data.path(3, 'neg_r').value).toBe(-3);
+    });
+
+    it(`properly isolated nested calculations - ${databaseName}`, async () => {
+      await expect(`
+            run: ${databaseName}.table('malloytest.airports') -> {
+            group_by: faa_region
+            aggregate: airport_count is count()
+            calculate: id is row_number()
+            nest: by_fac_type is {
+              group_by: fac_type
+              aggregate: airport_count is count()
+              calculate: id2 is row_number()
+              nest: elevation is {
+                aggregate: avg_elevation is elevation.avg()
+              }
+              limit: 2
+            }
+          }
+          -> {
+            // should be 2 rows, max of 2
+            group_by: by_fac_type.id2
+            order_by: id2 desc
+          }
+      `).malloyResultMatches(expressionModel, {
+        id2: 2,
+      });
     });
   });
 
@@ -528,8 +610,12 @@ expressionModels.forEach((expressionModel, databaseName) => {
           }`
         )
         .run();
-      expect(result.data.path(0, 'lag_val').value).toBe(true);
-      expect(result.data.path(1, 'lag_val').value).toBe(false);
+      expect(result.data.path(0, 'lag_val').value).toBe(
+        booleanResult(true, databaseName)
+      );
+      expect(result.data.path(1, 'lag_val').value).toBe(
+        booleanResult(false, databaseName)
+      );
     });
   });
 
@@ -746,16 +832,19 @@ expressionModels.forEach((expressionModel, databaseName) => {
     });
   });
   describe('is_inf', () => {
-    it(`works - ${databaseName}`, async () => {
+    const inf = ['trino', 'presto'].includes(databaseName)
+      ? 'infinity!()'
+      : "'+inf'::number";
+    it.when(databaseName !== 'mysql')(`works - ${databaseName}`, async () => {
       await funcTestMultiple(
-        ["is_inf('+inf'::number)", true],
+        [`is_inf(${inf})`, true],
         ['is_inf(100)', false],
         ['is_inf(null)', false]
       );
     });
   });
   describe('is_nan', () => {
-    it(`works - ${databaseName}`, async () => {
+    it.when(databaseName !== 'mysql')(`works - ${databaseName}`, async () => {
       await funcTestMultiple(
         ["is_nan('NaN'::number)", true],
         ['is_nan(100)', false],
@@ -767,10 +856,13 @@ expressionModels.forEach((expressionModel, databaseName) => {
     it(`works - ${databaseName}`, async () => {
       await funcTestMultiple(
         ['greatest(1, 10, -100)', 10],
-        ['greatest(@2003, @2004, @1994) = @2004', true],
+        [
+          'greatest(@2003, @2004, @1994) = @2004',
+          booleanResult(true, databaseName),
+        ],
         [
           'greatest(@2023-05-26 11:58:00, @2023-05-26 11:59:00) = @2023-05-26 11:59:00',
-          true,
+          booleanResult(true, databaseName),
         ],
         ["greatest('a', 'b')", 'b'],
         ['greatest(1, null, 0)', null],
@@ -782,10 +874,13 @@ expressionModels.forEach((expressionModel, databaseName) => {
     it(`works - ${databaseName}`, async () => {
       await funcTestMultiple(
         ['least(1, 10, -100)', -100],
-        ['least(@2003, @2004, @1994) = @1994', true],
+        [
+          'least(@2003, @2004, @1994) = @1994',
+          booleanResult(true, databaseName),
+        ],
         [
           'least(@2023-05-26 11:58:00, @2023-05-26 11:59:00) = @2023-05-26 11:58:00',
-          true,
+          booleanResult(true, databaseName),
         ],
         ["least('a', 'b')", 'a'],
         ['least(1, null, 0)', null],
@@ -815,28 +910,40 @@ expressionModels.forEach((expressionModel, databaseName) => {
   describe('starts_with', () => {
     it(`works - ${databaseName}`, async () => {
       await funcTestMultiple(
-        ["starts_with('hello world', 'hello')", true],
-        ["starts_with('hello world', 'world')", false],
-        ["starts_with(null, 'world')", false],
-        ["starts_with('hello world', null)", false]
+        [
+          "starts_with('hello world', 'hello')",
+          booleanResult(true, databaseName),
+        ],
+        [
+          "starts_with('hello world', 'world')",
+          booleanResult(false, databaseName),
+        ],
+        ["starts_with(null, 'world')", booleanResult(false, databaseName)],
+        ["starts_with('hello world', null)", booleanResult(false, databaseName)]
       );
     });
   });
   describe('ends_with', () => {
     it(`works - ${databaseName}`, async () => {
       await funcTestMultiple(
-        ["ends_with('hello world', 'world')", true],
-        ["ends_with('hello world', 'hello')", false],
-        ["ends_with(null, 'world')", false],
-        ["ends_with('hello world', null)", false]
+        [
+          "ends_with('hello world', 'world')",
+          booleanResult(true, databaseName),
+        ],
+        [
+          "ends_with('hello world', 'hello')",
+          booleanResult(false, databaseName),
+        ],
+        ["ends_with(null, 'world')", booleanResult(false, databaseName)],
+        ["ends_with('hello world', null)", booleanResult(false, databaseName)]
       );
     });
   });
   describe('trim', () => {
-    it(`works - ${databaseName}`, async () => {
+    it(`trim works - ${databaseName}`, async () => {
       await funcTestMultiple(
         ["trim('  keep this  ')", 'keep this'],
-        ["trim('_ _keep_this_ _', '_ ')", 'keep_this'],
+        ["trim('__keep_this__', '_')", 'keep_this'],
         ["trim(' keep everything ', '')", ' keep everything '],
         ["trim('null example', null)", null],
         ["trim(null, 'a')", null],
@@ -845,10 +952,10 @@ expressionModels.forEach((expressionModel, databaseName) => {
     });
   });
   describe('ltrim', () => {
-    it(`works - ${databaseName}`, async () => {
+    it(`ltrim works - ${databaseName}`, async () => {
       await funcTestMultiple(
         ["ltrim('  keep this ->  ')", 'keep this ->  '],
-        ["ltrim('_ _keep_this -> _ _', '_ ')", 'keep_this -> _ _'],
+        ["ltrim('__keep_this -> __', '_')", 'keep_this -> __'],
         ["ltrim(' keep everything ', '')", ' keep everything '],
         ["ltrim('null example', null)", null],
         ["ltrim(null, 'a')", null],
@@ -857,10 +964,10 @@ expressionModels.forEach((expressionModel, databaseName) => {
     });
   });
   describe('rtrim', () => {
-    it(`works - ${databaseName}`, async () => {
+    it(`rtrim works - ${databaseName}`, async () => {
       await funcTestMultiple(
         ["rtrim('  <- keep this  ')", '  <- keep this'],
-        ["rtrim('_ _ <- keep_this_ _', '_ ')", '_ _ <- keep_this'],
+        ["rtrim('__ <- keep_this__', '_')", '__ <- keep_this'],
         ["rtrim(' keep everything ', '')", ' keep everything '],
         ["rtrim('null example', null)", null],
         ["rtrim(null, 'a')", null],
@@ -873,17 +980,20 @@ expressionModels.forEach((expressionModel, databaseName) => {
       // There are around a billion values that rand() can be, so if this
       // test fails, most likely something is broken. Otherwise, you're the lucky
       // one in a billion!
-      await funcTest('rand() = rand()', false);
+      await funcTest('rand() = rand()', booleanResult(false, databaseName));
     });
   });
   describe('pi', () => {
     it(`is pi - ${databaseName}`, async () => {
-      await funcTest('abs(pi() - 3.141592653589793) < 0.0000000000001', true);
+      await funcTest(
+        'abs(pi() - 3.141592653589793) < 0.0000000000001',
+        booleanResult(true, databaseName)
+      );
     });
   });
 
   describe('byte_length', () => {
-    it(`works - ${databaseName}`, async () => {
+    it.when(databaseName !== 'mysql')(`works - ${databaseName}`, async () => {
       await funcTestMultiple(
         ["byte_length('hello')", 5],
         ["byte_length('©')", 2],
@@ -904,13 +1014,13 @@ expressionModels.forEach((expressionModel, databaseName) => {
   describe('coalesce', () => {
     it(`works - ${databaseName}`, async () => {
       await funcTestMultiple(
-        ["coalesce('a')", 'a'],
+        // ["coalesce('a')", 'a'],
         ["coalesce('a', 'b')", 'a'],
         ["coalesce(null, 'a', 'b')", 'a'],
         ["coalesce(null, 'b')", 'b'],
         ["coalesce('a', null)", 'a'],
-        ['coalesce(null, null)', null],
-        ['coalesce(null)', null]
+        ['coalesce(null, null)', null]
+        // ['coalesce(null)', null]
       );
     });
   });
@@ -929,11 +1039,11 @@ expressionModels.forEach((expressionModel, databaseName) => {
     it(`works - ${databaseName}`, async () => {
       await funcTestMultiple(
         ['chr(65)', 'A'],
-        ['chr(255)', 'ÿ'],
-        ['chr(null)', null],
+        ['chr(255)', 'ÿ']
         // BigQuery's documentation says that `chr(0)` returns the empty string, but it doesn't,
         // it actually returns the null character. We generate code so that it does this.
-        ['chr(0)', '']
+        // ['chr(0)', '']
+        // ['chr(null)', null]
       );
     });
   });
@@ -942,31 +1052,31 @@ expressionModels.forEach((expressionModel, databaseName) => {
       await funcTestMultiple(
         ["ascii('A')", 65],
         ["ascii('ABC')", 65],
-        ["ascii('')", 0],
+        //["ascii('')", 0],   // I don't think we can guarentee this Trino returns null
         ['ascii(null)', null]
       );
     });
   });
   describe('unicode', () => {
-    it(`works - ${databaseName}`, async () => {
+    it.when(databaseName !== 'mysql')(`works - ${databaseName}`, async () => {
       await funcTestMultiple(
         ["unicode('A')", 65],
         ["unicode('â')", 226],
         ["unicode('âBC')", 226],
-        ["unicode('')", 0],
+        //["unicode('')", 0],   // I don't think we can guarentee this Trino returns null
         ['unicode(null)', null]
       );
     });
   });
 
-  describe('repeat', () => {
+  describe('string_repeat', () => {
     it(`works - ${databaseName}`, async () => {
       await funcTestMultiple(
-        ["repeat('foo', 0)", ''],
-        ["repeat('foo', 1)", 'foo'],
-        ["repeat('foo', 2)", 'foofoo'],
-        ['repeat(null, 2)', null],
-        ["repeat('foo', null)", null]
+        ["string_repeat('foo', 0)", ''],
+        ["string_repeat('foo', 1)", 'foo'],
+        ["string_repeat('foo', 2)", 'foofoo'],
+        ['string_repeat(null, 2)', null],
+        ["string_repeat('foo', null)", null]
       );
     });
     // TODO how does a user do this: the second argument needs to be an integer, but floor doesn't cast to "integer" type.
@@ -1027,6 +1137,33 @@ expressionModels.forEach((expressionModel, databaseName) => {
         )
         .run();
       expect(result.data.path(9, 'next_state').value).toBe('NONE');
+    });
+  });
+
+  describe('count_approx', () => {
+    const supported = runtime.dialect.supportsCountApprox;
+    test.when(supported)('works generally', async () => {
+      await expect(`
+          // be accurate within 30%
+          run: ${databaseName}.table('malloytest.state_facts') -> {
+            aggregate: passes is abs(count_approx(state)-count(state))/count(state) < 0.3
+            aggregate: also_passes is abs(count_approx(airport_count)-count(airport_count))/count(airport_count) < 0.3
+          }
+          `).malloyResultMatches(runtime, {
+        'passes': booleanResult(true, databaseName),
+        'also_passes': booleanResult(true, databaseName),
+      });
+    });
+    test.when(supported)('works with fanout', async () => {
+      await expect(`
+        source: state_facts is ${databaseName}.table('malloytest.state_facts')
+        source: state_facts_fanout is ${databaseName}.table('malloytest.state_facts') extend {
+          join_cross: state_facts on true
+        }
+        run: state_facts_fanout -> {
+          aggregate: x is state_facts.state.count_approx() > 0
+        }
+      `).malloyResultMatches(runtime, {x: booleanResult(true, databaseName)});
     });
   });
   describe('last_value', () => {
@@ -1098,6 +1235,43 @@ expressionModels.forEach((expressionModel, databaseName) => {
       expect(result.data.path(2, 'rolling_avg').number.value).toBe(births2);
     });
   });
+
+  describe('sum_moving', () => {
+    it(`works - ${databaseName}`, async () => {
+      await expect(`
+      run: state_facts -> {
+        group_by: state, b is births
+        order_by: b desc
+        calculate: s is sum_moving(b, 2)
+        limit: 5
+      }`).malloyResultMatches(expressionModel, [
+        {b: 28810563, s: 28810563},
+        {b: 23694136, s: 23694136 + 28810563},
+        {b: 21467359, s: 21467359 + 23694136 + 28810563},
+        {b: 16661910, s: 16661910 + 21467359 + 23694136},
+        {b: 15178876, s: 15178876 + 16661910 + 21467359},
+      ]);
+    });
+
+    it(`works forward - ${databaseName}`, async () => {
+      await expect(`
+      run: state_facts -> {
+        group_by: state, b is births
+        order_by: b desc
+        calculate: s is sum_moving(b, 0, 2)
+        limit: 7
+      }`).malloyResultMatches(expressionModel, [
+        {b: 28810563, s: 28810563 + 23694136 + 21467359},
+        {b: 23694136, s: 23694136 + 21467359 + 16661910},
+        {b: 21467359, s: 21467359 + 16661910 + 15178876},
+        {b: 16661910, s: 16661910 + 15178876 + 14201526},
+        {b: 15178876, s: 15178876 + 14201526 + 11643455},
+        {b: 14201526},
+        {b: 11643455},
+      ]);
+    });
+  });
+
   describe('min, max, sum / window, cumulative', () => {
     it(`works - ${databaseName}`, async () => {
       const result = await expressionModel
@@ -1135,6 +1309,67 @@ expressionModels.forEach((expressionModel, databaseName) => {
       }
     });
   });
+
+  describe('hll_functions', () => {
+    const supported = runtime.dialect.supportsHyperLogLog;
+    it.when(supported)(`hyperloglog basic - ${databaseName}`, async () => {
+      await expect(`run: ${databaseName}.table('malloytest.state_facts') -> {
+        aggregate:
+          m1 is floor(hll_estimate(hll_accumulate(state))/10)
+      }`).malloyResultMatches(runtime, {m1: 5});
+    });
+
+    it.when(supported)(`hyperloglog combine - ${databaseName}`, async () => {
+      await expect(`run: ${databaseName}.table('malloytest.state_facts') -> {
+          group_by: state
+          aggregate: names_hll is hll_accumulate(popular_name)
+      } -> {
+          aggregate: name_count is hll_estimate(hll_combine(names_hll))
+      }
+      `).malloyResultMatches(runtime, {name_count: 6});
+    });
+
+    it.when(supported)(
+      `hyperloglog import/export - ${databaseName}`,
+      async () => {
+        await expect(`run: ${databaseName}.table('malloytest.state_facts') -> {
+          group_by: state
+          aggregate: names_hll is hll_export(hll_accumulate(popular_name))
+      } -> {
+          aggregate: name_count is hll_estimate(hll_combine(hll_import(names_hll)))
+      }
+      `).malloyResultMatches(runtime, {name_count: 6});
+      }
+    );
+  });
+
+  describe('dialect functions', () => {
+    describe('duckdb', () => {
+      const isDuckdb = databaseName === 'duckdb';
+      it.when(isDuckdb)('to_timestamp', async () => {
+        await funcTest(
+          'to_timestamp(1725555835) = @2024-09-05 17:03:55',
+          booleanResult(true, databaseName)
+        );
+      });
+      it.when(isDuckdb)('list_extract', async () => {
+        await funcTest('list_extract(list_extract([[5]], 1), 1)', 5);
+      });
+      it.when(isDuckdb)('date_part,to_seconds', async () => {
+        await funcTest('date_part("seconds", to_seconds(5))', 5);
+      });
+    });
+
+    describe('trino', () => {
+      const trino = it.when(databaseName === 'trino');
+      trino('from_unixtime', async () => {
+        await funcTest(
+          'from_unixtime(1725555835) = @2024-09-05 17:03:55',
+          booleanResult(true, databaseName)
+        );
+      });
+    });
+  });
 });
 
 describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
@@ -1156,7 +1391,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
 
     it(`works with order by field - ${databaseName}`, async () => {
-      await expect(`##! experimental { function_order_by }
+      await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
         where: name ~ r'.*RUTHERFORD.*'
         aggregate: f is string_agg(name, ',') {
@@ -1168,7 +1403,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
 
     it(`works with order by direction - ${databaseName}`, async () => {
-      expect(`##! experimental { function_order_by }
+      expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
         where: name ~ r'.*RUTHERFORD.*'
         aggregate: f is string_agg(name, ',') {
@@ -1180,7 +1415,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
 
     it(`works with multiple order_bys - ${databaseName}`, async () => {
-      await expect(`##! experimental { function_order_by }
+      await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
         where: name ~ r'.*RUTHERFORD.*'
         aggregate: f is string_agg(name, ',') {
@@ -1192,7 +1427,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
 
     it(`works with order by expression - ${databaseName}`, async () => {
-      await expect(`##! experimental { function_order_by }
+      await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
         where: name ~ r'.*FLY.*'
         group_by: name
@@ -1208,7 +1443,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
 
     it(`works with order by join expression - ${databaseName}`, async () => {
-      await expect(`##! experimental { function_order_by }
+      await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
         where: name ~ r'.*ADVENTURE.*'
         aggregate: f is string_agg(name, ',') { order_by: aircraft_models.model }
@@ -1218,7 +1453,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
 
     it(`works with order asc - ${databaseName}`, async () => {
-      await expect(`##! experimental { function_order_by }
+      await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
         where: name ~ r'.*FLY.*'
         group_by: name
@@ -1232,7 +1467,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
 
     it(`works with order desc - ${databaseName}`, async () => {
-      await expect(`##! experimental { function_order_by }
+      await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
         where: name ~ r'.*FLY.*'
         group_by: name
@@ -1247,8 +1482,13 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 
     it(`works with fanout and order_by - ${databaseName}`, async () => {
       // TODO bigquery cannot handle both fanout and order_by today
-      if (databaseName === 'bigquery') return;
-      await expect(`##! experimental.function_order_by
+      if (
+        ['bigquery', 'snowflake', 'trino', 'presto', 'mysql'].includes(
+          databaseName
+        )
+      )
+        return;
+      await expect(`##! experimental.aggregate_order_by
       run: state_facts extend { join_many:
         state_facts2 is ${databaseName}.table('malloytest.state_facts')
           on state_facts2.state = state
@@ -1264,7 +1504,9 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
 
     it(`works with fanout - ${databaseName}`, async () => {
-      await expect(`##! experimental.function_order_by
+      // Snowflake cannot handle the fanout case today
+      if (databaseName === 'snowflake' || databaseName === 'mysql') return;
+      await expect(`##! experimental.aggregate_order_by
       run: state_facts extend { join_many:
         state_facts2 is ${databaseName}.table('malloytest.state_facts')
           on state_facts2.state = state
@@ -1278,7 +1520,9 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
 
     it(`works with fanout and separator - ${databaseName}`, async () => {
-      await expect(`##! experimental.function_order_by
+      // Snowflake cannot handle the fanout case today
+      if (databaseName === 'snowflake' || databaseName === 'mysql') return;
+      await expect(`##! experimental.aggregate_order_by
       run: state_facts extend { join_many:
         state_facts2 is ${databaseName}.table('malloytest.state_facts')
           on state_facts2.state = state
@@ -1292,7 +1536,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
 
     it(`works with limit - ${databaseName}`, async () => {
-      const query = `##! experimental { function_order_by aggregate_limit }
+      const query = `##! experimental { aggregate_order_by aggregate_limit }
       run: aircraft -> {
           where: name ~ r'.*FLY.*'
           group_by: name
@@ -1318,7 +1562,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 
   describe('string_agg_distinct', () => {
     it(`actually distincts - ${databaseName}`, async () => {
-      await expect(`##! experimental { function_order_by }
+      await expect(`##! experimental { aggregate_order_by }
         source: aircraft is ${databaseName}.table('malloytest.aircraft') extend {
           primary_key: tail_num
         }
@@ -1358,7 +1602,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
 
     it(`works with order by direction - ${databaseName}`, async () => {
-      await expect(`##! experimental { function_order_by }
+      await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
         where: name ~ r'.*RUTHERFORD.*'
         aggregate: f is string_agg_distinct(name, ',') {
@@ -1370,7 +1614,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
 
     it(`works with order asc - ${databaseName}`, async () => {
-      await expect(`##! experimental { function_order_by }
+      await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
         where: name ~ r'.*FLY.*'
         group_by: name
@@ -1384,7 +1628,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
 
     it(`works with order desc - ${databaseName}`, async () => {
-      await expect(`##! experimental { function_order_by }
+      await expect(`##! experimental { aggregate_order_by }
       run: aircraft -> {
         where: name ~ r'.*FLY.*'
         group_by: name
@@ -1398,7 +1642,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
 
     it(`works with limit - ${databaseName}`, async () => {
-      const query = `##! experimental { function_order_by aggregate_limit }
+      const query = `##! experimental { aggregate_order_by aggregate_limit }
         run: aircraft -> {
           where: name ~ r'.*FLY.*'
           group_by: name
@@ -1424,7 +1668,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 
   describe('partition_by', () => {
     it(`works - ${databaseName}`, async () => {
-      await expect(`##! experimental { function_order_by partition_by }
+      await expect(`
       run: flights -> {
         group_by:
           yr is year(dep_time)
@@ -1452,8 +1696,29 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       ]);
     });
 
+    it(`works with aggregate - ${databaseName}`, async () => {
+      await expect(`
+      run: state_facts -> {
+        aggregate: c is count()
+        group_by: l is substr(state, 1, 1)
+
+        calculate:
+          prev is lag(l) {
+            partition_by: c
+          }
+        order_by: l
+        limit: 5
+      }`).malloyResultMatches(expressionModel, [
+        {l: 'A', c: 4, prev: null},
+        {l: 'C', c: 3, prev: null},
+        {l: 'D', c: 2, prev: null},
+        {l: 'F', c: 1, prev: null},
+        {l: 'G', c: 1, prev: 'F'},
+      ]);
+    });
+
     it(`works with multiple order_bys - ${databaseName}`, async () => {
-      await expect(`##! experimental { function_order_by partition_by }
+      await expect(`
       run: aircraft -> {
         where: name =
           "UNITED AIR LINES INC"

@@ -21,26 +21,23 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {SQLBlockSource, SQLPhrase, isSQLFragment} from './malloy_types';
+import {SQLSentence, SQLPhraseSegment, isSegmentSQL} from './malloy_types';
 import {generateHash} from './utils';
 
 /**
- * The factory for SQLBlocks. Exists because the name is computed
+ * The factory for SQLSentences. Exists because the name is computed
  * from the components of the block and that name needs to be
- * unique, but predictable.
+ * unique, but predictable so that it can be used to cache schema fetches.
  */
-export function makeSQLBlock(
-  select: SQLPhrase[],
-  connection?: string
-): SQLBlockSource {
-  const theBlock: SQLBlockSource = {
-    name: `md5:/${connection || '$default'}//${nameFor(select)}`,
+export function makeSQLSentence(
+  select: SQLPhraseSegment[],
+  connection: string
+): SQLSentence {
+  return {
+    name: `sql://${connection}/${nameFor(select)}`,
+    connection,
     select,
   };
-  if (connection) {
-    theBlock.connection = connection;
-  }
-  return theBlock;
 }
 
 // This feels like wrongness on toast, before SQL contained a query we
@@ -51,9 +48,9 @@ export function makeSQLBlock(
 // going to work, I am using stringify(), but I suspect I will be back
 // here for later, and that the whole "how to determine the name of a query"
 // algorithm needs to change
-function nameFor(select: SQLPhrase[]): string {
+function nameFor(select: SQLPhraseSegment[]): string {
   const phrases = select.map(el =>
-    isSQLFragment(el) ? el.sql : JSON.stringify(el)
+    isSegmentSQL(el) ? el.sql : JSON.stringify(el)
   );
   return generateHash(phrases.join(';'));
 }

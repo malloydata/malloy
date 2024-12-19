@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {emptyCompositeFieldUsage} from '../../model/composite_source_utils';
 import {ExprValue} from './types/expr-value';
 
 /**
@@ -29,13 +30,14 @@ import {ExprValue} from './types/expr-value';
  * generated SQL will have a reference to an impossible variable name
  * with the reason embedded in it.
  * @param reason very short phrase, only read by implementers
- * @return Fragment[] which a debugging humnan will regognize
+ * @return Expr which a debugging humnan will regognize
  */
 export function errorFor(reason: string): ExprValue {
   return {
-    dataType: 'error',
+    type: 'error',
     expressionType: 'scalar',
-    value: [`_ERROR_${reason.replace(/ /g, '_')}`],
+    value: {node: 'error', message: reason},
     evalSpace: 'constant',
+    compositeFieldUsage: emptyCompositeFieldUsage(),
   };
 }

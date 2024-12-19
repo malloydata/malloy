@@ -30,7 +30,7 @@ import {
 } from '../../../model/malloy_types';
 
 import {ErrorFactory} from '../error-factory';
-import {FieldSpace} from '../types/field-space';
+import {SourceFieldSpace} from '../types/field-space';
 import {GroupBy} from '../query-properties/group-by';
 import {ProjectFieldSpace} from '../field-space/project-field-space';
 import {QueryProperty} from '../types/query-property';
@@ -49,7 +49,7 @@ export class ProjectBuilder
   readonly type = 'project';
 
   constructor(
-    baseFS: FieldSpace,
+    baseFS: SourceFieldSpace,
     refineThis: PipeSegment | undefined,
     isNestIn: QueryOperationSpace | undefined,
     astEl: MalloyElement
@@ -61,7 +61,10 @@ export class ProjectBuilder
 
   execute(qp: QueryProperty): void {
     if (qp.elementType === 'having' || qp instanceof GroupBy) {
-      qp.log('Illegal statement in a select query operation');
+      qp.logError(
+        'illegal-operation-in-select-segment',
+        'Illegal statement in a select query operation'
+      );
     } else {
       super.execute(qp);
     }
@@ -73,7 +76,10 @@ export class ProjectBuilder
       if (isProjectSegment(fromSeg) || isPartialSegment(fromSeg)) {
         from = fromSeg;
       } else {
-        this.resultFS.log(`Can't refine select with ${fromSeg.type}`);
+        this.resultFS.logError(
+          'incompatible-segment-for-select-refinement',
+          `Can't refine select with ${fromSeg.type}`
+        );
         return ErrorFactory.projectSegment;
       }
     }

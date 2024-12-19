@@ -21,13 +21,25 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FT} from '../fragtype-utils';
+import * as TDU from '../typedesc-utils';
 import {ExprAggregateFunction} from './expr-aggregate-function';
 import {ExpressionDef} from '../types/expression-def';
+import {ExprValue} from '../types/expr-value';
 
 export class ExprCountDistinct extends ExprAggregateFunction {
-  legalChildTypes = [FT.numberT, FT.stringT, FT.dateT, FT.timestampT];
+  legalChildTypes = [TDU.numberT, TDU.stringT, TDU.dateT, TDU.timestampT];
   constructor(expr: ExpressionDef) {
-    super('count_distinct', expr);
+    super('distinct', expr);
+  }
+
+  returns(ev: ExprValue): ExprValue {
+    return {
+      type: 'number',
+      numberType: 'integer',
+      evalSpace: ev.evalSpace,
+      expressionType: 'aggregate',
+      value: ev.value,
+      compositeFieldUsage: ev.compositeFieldUsage,
+    };
   }
 }

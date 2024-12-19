@@ -23,27 +23,24 @@
 
 import {Parameter, CastType, isCastType} from '../../../model/malloy_types';
 
-import {ConstantSubExpression} from '../expressions/constant-sub-expression';
+import {ConstantExpression} from '../expressions/constant-expression';
 import {MalloyElement} from '../types/malloy-element';
 
 interface HasInit {
   name: string;
-  isCondition: boolean;
-  type?: string;
-  default?: ConstantSubExpression;
+  type?: CastType;
+  default?: ConstantExpression;
 }
 
 export class HasParameter extends MalloyElement {
   elementType = 'hasParameter';
   readonly name: string;
-  readonly isCondition: boolean;
   readonly type?: CastType;
-  readonly default?: ConstantSubExpression;
+  readonly default?: ConstantExpression;
 
   constructor(init: HasInit) {
     super();
     this.name = init.name;
-    this.isCondition = init.isCondition;
     if (init.type && isCastType(init.type)) {
       this.type = init.type;
     }
@@ -54,22 +51,65 @@ export class HasParameter extends MalloyElement {
   }
 
   parameter(): Parameter {
-    const name = this.name;
-    const type = this.type || 'string';
-    if (this.isCondition) {
-      const cCond = this.default?.constantCondition(type).value || null;
+    if (this.default !== undefined) {
+      const constant = this.default.constantValue();
+      if (
+        this.type &&
+        this.type !== constant.type &&
+        constant.type !== 'null' &&
+        constant.type !== 'error'
+      ) {
+        this.default.logError(
+          'parameter-default-does-not-match-declared-type',
+          `Default value for parameter does not match declared type \`${this.type}\``
+        );
+      }
+      if (constant.type === 'null') {
+        if (this.type) {
+          return {
+            type: this.type,
+            value: constant.value,
+            name: this.name,
+          };
+        } else {
+          this.default.logError(
+            'parameter-null-default-without-declared-type',
+            'Default value cannot have type `null` unless parameter type is also specified'
+          );
+          return {
+            value: constant.value,
+            name: this.name,
+            type: 'error',
+          };
+        }
+      }
+      if (!isCastType(constant.type) && constant.type !== 'error') {
+        this.default.logError(
+          'parameter-illegal-default-type',
+          `Default value cannot have type \`${constant.type}\``
+        );
+        return {
+          value: constant.value,
+          name: this.name,
+          type: 'error',
+        };
+      }
       return {
-        type,
-        name,
-        condition: cCond,
+        value: constant.value,
+        name: this.name,
+        type: constant.type,
       };
     }
-    const cVal = this.default?.constantValue().value || null;
+    if (this.type === undefined) {
+      this.logError(
+        'parameter-missing-default-or-type',
+        'Parameter must have default value or declared type'
+      );
+    }
     return {
-      value: cVal,
-      type,
+      value: null,
       name: this.name,
-      constant: false,
+      type: this.type ?? 'error',
     };
   }
 }

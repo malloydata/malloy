@@ -27,6 +27,18 @@ import './util/db-jest-matchers';
 
 const runtime = runtimeFor('duckdb');
 
+const envDatabases = (
+  process.env['MALLOY_DATABASES'] ||
+  process.env['MALLOY_DATABASE'] ||
+  'duckdb'
+).split(',');
+
+let describe = globalThis.describe;
+if (!envDatabases.includes('duckdb')) {
+  describe = describe.skip;
+  describe.skip = describe;
+}
+
 describe('extendModel', () => {
   test('can run query in extend section', async () => {
     const model = runtime.loadModel(`
@@ -96,26 +108,40 @@ describe('extendModel', () => {
     });
 
     it('does not throw when true', async () => {
-      await expect(
-        runtime.getModel('source: foo is bar', {noThrowOnError: true})
-      ).resolves.toEqual(
+      const model = await runtime.getModel('source: foo is bar', {
+        noThrowOnError: true,
+      });
+      expect(model.problems[0]).toEqual(
         expect.objectContaining({
-          'problems': [
-            {
-              'at': {
-                'range': {
-                  'end': {'character': 18, 'line': 0},
-                  'start': {'character': 15, 'line': 0},
-                },
-                'url': 'internal://internal.malloy',
-              },
-              'message': "Reference to undefined object 'bar'",
-              'severity': 'error',
+          'at': {
+            'range': {
+              'end': {'character': 18, 'line': 0},
+              'start': {'character': 15, 'line': 0},
             },
-          ],
+            'url': 'internal://internal.malloy',
+          },
+          'message': "Reference to undefined object 'bar'",
+          'severity': 'error',
         })
       );
     });
+  });
+});
+
+describe('tags', () => {
+  test('view run as query gets tags in explore', async () => {
+    const model = runtime.loadModel(`
+      source: aircraft is duckdb.table('malloytest.aircraft') extend {
+        # bar_chart
+        view: by_state is {
+          group_by: state
+          aggregate: aircraft_count is count()
+        }
+      }
+    `);
+    const query = model.loadQuery('run: aircraft -> by_state');
+    const result = await query.run();
+    expect(result.resultExplore.tagParse().tag.has('bar_chart')).toBe(true);
   });
 });
 

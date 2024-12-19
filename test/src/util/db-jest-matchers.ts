@@ -30,11 +30,20 @@ import {
   MalloyError,
   LogMessage,
   SingleConnectionRuntime,
+  Tag,
 } from '@malloydata/malloy';
+import EventEmitter from 'events';
+import {inspect} from 'util';
 
 type ExpectedResultRow = Record<string, unknown>;
 type ExpectedResult = ExpectedResultRow | ExpectedResultRow[];
 type Runner = Runtime | ModelMaterializer;
+
+interface ExpectedEvent {
+  id: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: any;
+}
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -50,9 +59,16 @@ declare global {
        *     await expect('query').malloyResultMatches(runtime, {colName: colValue});
        *     await expect('query').malloyResultMatches(runtime, [{colName: colValue}]);
        *
-       *   * If "colName" has a dot in it, it is assumed to be a reference to a value in a nest
        *   * If you use an array, the number of rows in the result must match the rows in the match
        *   * The empty match {} accepts ANY data, but will errror if there is not a row
+       *   * A match key of nestName.colName expects nestName to be a query which returns multiple rows, it will match
+       *     fields from the first row of the rows of nestName
+       *   * A match key of nestName/colName expects nestName to be a record/struct type
+       *
+       * In addition, the query is checked for the following tags
+       *
+       *   * test.verbose -- If the test fails, also pretty-print the result data
+       *   * test.debug -- Force test failure, and the result data will be printed
        *
        * @param querySrc Malloy source, last query in source will be run
        * @param runtime Database connection runtime OR Model ( for the call to loadQuery )
@@ -61,6 +77,14 @@ declare global {
       malloyResultMatches(
         runtime: Runner,
         matchVals: ExpectedResult
+      ): Promise<R>;
+      toEmitDuringCompile(
+        runtime: Runtime,
+        ...events: ExpectedEvent[]
+      ): Promise<R>;
+      toEmitDuringTranslation(
+        runtime: Runtime,
+        ...events: ExpectedEvent[]
       ): Promise<R>;
     }
   }
@@ -109,12 +133,15 @@ expect.extend({
     }
 
     let query: QueryMaterializer;
+    let queryTestTag: Tag | undefined = undefined;
     try {
       query = runtime.loadQuery(querySrc);
+      const queryTags = (await query.getPreparedQuery()).tagParse().tag;
+      queryTestTag = queryTags.tag('test');
     } catch (e) {
       return {
         pass: false,
-        message: () => `loadQuery failed: ${e.message}`,
+        message: () => `Could not prepare query to run: ${e.message}`,
       };
     }
 
@@ -140,25 +167,35 @@ expect.extend({
     }
 
     const allRows = Array.isArray(shouldEqual) ? shouldEqual : [shouldEqual];
-    let i = 0;
     const fails: string[] = [];
     const gotRows = result.data.toObject().length;
+
     if (Array.isArray(shouldEqual)) {
       if (gotRows !== allRows.length) {
         fails.push(`Expected result.rows=${allRows.length}  Got: ${gotRows}`);
       }
     }
+    let matchRow = 0;
     for (const expected of allRows) {
       for (const [name, value] of Object.entries(expected)) {
         const pExpect = JSON.stringify(value);
-        const row = allRows.length > 1 ? `[${i}]` : '';
+        const row = allRows.length > 1 ? `[${matchRow}]` : '';
         const expected = `Expected ${row}{${name}: ${pExpect}}`;
         try {
-          const nestOne = name.split('.');
-          const resultPath = [i, nestOne[0]];
-          for (const child of nestOne.slice(1)) {
-            resultPath.push(0);
-            resultPath.push(child);
+          // the internet taught me this, use lookahead/behind to preserve delimiters
+          // but we are splitting on / and .
+          const nestParse = name.split(/(?=[./])|(?<=[./])/g);
+
+          const resultPath = [matchRow, nestParse[0]];
+          for (
+            let pathCursor = 1;
+            pathCursor < nestParse.length;
+            pathCursor += 2
+          ) {
+            if (nestParse[pathCursor] === '.') {
+              resultPath.push(0);
+            }
+            resultPath.push(nestParse[pathCursor + 1]);
           }
           const got = result.data.path(...resultPath).value;
           const pGot = JSON.stringify(got);
@@ -166,17 +203,26 @@ expect.extend({
           const actuallyGot = got instanceof Date ? got.getTime() : got;
           if (typeof mustBe === 'number' && typeof actuallyGot !== 'number') {
             fails.push(`${expected} Got: Non Numeric '${pGot}'`);
-          } else if (actuallyGot !== mustBe) {
+          } else if (!objectsMatch(actuallyGot, mustBe)) {
             fails.push(`${expected} Got: ${pGot}`);
           }
         } catch (e) {
           fails.push(`${expected} Error: ${e.message}`);
         }
       }
-      i += 1;
+      matchRow += 1;
     }
-    if (fails.length !== 0) {
+    const failedTest = fails.length > 0;
+    const debugFail = queryTestTag?.has('debug');
+    if (debugFail || (failedTest && queryTestTag?.has('verbose'))) {
+      fails.unshift(`Result Data: ${humanReadable(result.data.toObject())}\n`);
+    }
+
+    if (fails.length > 0) {
       const fromSQL = '  ' + (await query.getSQL()).split('\n').join('\n  ');
+      if (debugFail && !failedTest) {
+        fails.push('\nTest forced failure (# test.debug)');
+      }
       const failMsg = `SQL Generated:\n${fromSQL}\n${fails.join('\n')}`;
       return {pass: false, message: () => failMsg};
     }
@@ -186,7 +232,81 @@ expect.extend({
       message: () => 'All rows matched expected results',
     };
   },
+  async toEmitDuringCompile(
+    querySrc: string,
+    runtime: Runtime,
+    ...expectedEvents: ExpectedEvent[]
+  ) {
+    return toEmit(this, querySrc, 'compile', runtime, ...expectedEvents);
+  },
+  async toEmitDuringTranslation(
+    querySrc: string,
+    runtime: Runtime,
+    ...expectedEvents: ExpectedEvent[]
+  ) {
+    return toEmit(this, querySrc, 'translate', runtime, ...expectedEvents);
+  },
 });
+
+async function toEmit(
+  context: jest.MatcherContext,
+  querySrc: string,
+  when: 'compile' | 'translate',
+  runtime: Runtime,
+  ...expectedEvents: ExpectedEvent[]
+) {
+  const eventStream = runtime.eventStream;
+  if (eventStream === undefined) {
+    return {
+      pass: false,
+      message: () => 'No event stream found',
+    };
+  }
+  if (!(eventStream instanceof EventEmitter)) {
+    return {
+      pass: false,
+      message: () => 'Event stream is not an EventEmitter',
+    };
+  }
+  const gotEvents: ExpectedEvent[] = [];
+  const eventIdsWeCareAbout = new Set(expectedEvents.map(e => e.id));
+  for (const id of eventIdsWeCareAbout) {
+    eventStream.on(id, data => {
+      gotEvents.push({id, data});
+    });
+  }
+  const model = runtime.loadModel(querySrc, {
+    noThrowOnError: when === 'translate',
+  });
+  if (when === 'compile') {
+    const query = model.loadFinalQuery();
+    await query.getPreparedResult();
+  } else {
+    await model.getModel();
+  }
+
+  let matching = gotEvents.length === expectedEvents.length;
+  if (matching) {
+    for (let i = 0; i < expectedEvents.length; i++) {
+      const got = gotEvents[i];
+      const want = expectedEvents[i];
+      matching &&= objectsMatch(got, want);
+    }
+  }
+
+  if (!matching) {
+    return {
+      pass: false,
+      message: () =>
+        `Expected events ${context.utils.diff(expectedEvents, gotEvents)}`,
+    };
+  }
+
+  return {
+    pass: true,
+    message: () => 'All rows matched expected results',
+  };
+}
 
 function errorLogToString(src: string, msgs: LogMessage[]) {
   let lovely = '';
@@ -204,4 +324,49 @@ function errorLogToString(src: string, msgs: LogMessage[]) {
     lineNo += 1;
   }
   return lovely;
+}
+
+function humanReadable(thing: unknown): string {
+  return inspect(thing, {breakLength: 72, depth: Infinity});
+}
+
+// b is "expected"
+// a is "actual"
+// If expected is an object, all of the keys should also match,
+// but the expected is allowed to have other keys that are not matched
+function objectsMatch(a: unknown, b: unknown): boolean {
+  if (
+    typeof b === 'string' ||
+    typeof b === 'number' ||
+    typeof b === 'boolean' ||
+    typeof b === 'bigint' ||
+    b === undefined ||
+    b === null
+  ) {
+    return b === a;
+  } else if (Array.isArray(b)) {
+    if (Array.isArray(a)) {
+      return a.length === b.length && a.every((v, i) => objectsMatch(v, b[i]));
+    }
+    return false;
+  } else {
+    if (
+      typeof a === 'string' ||
+      typeof a === 'number' ||
+      typeof a === 'boolean' ||
+      typeof a === 'bigint' ||
+      a === undefined ||
+      a === null
+    ) {
+      return false;
+    }
+    if (Array.isArray(a)) return false;
+    const keys = Object.keys(b);
+    for (const key of keys) {
+      if (!objectsMatch(a[key], b[key])) {
+        return false;
+      }
+    }
+    return true;
+  }
 }

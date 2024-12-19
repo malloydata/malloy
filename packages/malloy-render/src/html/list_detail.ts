@@ -26,6 +26,10 @@ import {HTMLListRenderer} from './list';
 
 export class HTMLListDetailRenderer extends HTMLListRenderer {
   getDetailField(explore: Explore): Field | undefined {
-    return explore.intrinsicFields[1];
+    // Get the second non-hidden field as the description
+    return explore.allFields.filter(field => {
+      const {tag} = field.tagParse();
+      return !tag.has('hidden');
+    })[1];
   }
 }

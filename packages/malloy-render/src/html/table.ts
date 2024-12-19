@@ -28,13 +28,13 @@ import {
   Field,
   SortableField,
 } from '@malloydata/malloy';
-import {StyleDefaults} from '../data_styles';
-import {getDrillQuery} from '../drill';
+import {StyleDefaults} from './data_styles';
+import {getDrillQuery} from './drill';
 import {ContainerRenderer} from './container';
 import {HTMLNumberRenderer} from './number';
 import {createDrillIcon, formatTitle, yieldTask} from './utils';
 import {isFieldHidden} from '../tags_utils';
-import {ChildRenderers, Renderer} from '../renderer';
+import {ChildRenderers, Renderer} from './renderer';
 
 class PivotedField {
   readonly key: string;
@@ -124,7 +124,7 @@ export class HTMLTableRenderer extends ContainerRenderer {
 
     const shouldTranspose = this.tagged.has('transpose');
 
-    if (shouldTranspose && table.field.intrinsicFields.length > 20) {
+    if (shouldTranspose && table.field.allFields.length > 20) {
       throw new Error('Transpose limit of 20 columns exceeded.');
     }
 
@@ -135,7 +135,7 @@ export class HTMLTableRenderer extends ContainerRenderer {
 
     const columnFields: TableField[] = [];
     let pivotDepth = 0;
-    for (const field of table.field.intrinsicFields) {
+    for (const field of table.field.allFields) {
       if (isFieldHidden(field)) {
         continue;
       }

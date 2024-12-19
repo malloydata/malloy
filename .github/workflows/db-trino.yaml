@@ -1,0 +1,53 @@
+name: Trino DB
+
+on:
+  pull_request:
+  workflow_call:
+    secrets:
+      BQ_PRESTO_TRINO_KEY:
+        required: true
+
+jobs:
+  # Label of the container job
+  test-trino:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: npm install, build, and test
+        run: |
+          npm ci --loglevel error
+          npm run build
+          npm run build-duckdb-db
+          ./test/trino/trino_start.sh
+          npm run test-silent -- -- packages/malloy-db-trino
+          npm run test-silent -- -- test
+          ./test/trino/trino_stop.sh
+        env:
+          MALLOY_DATABASES: trino
+          BQ_CREDENTIALS_KEY: ${{ secrets.BQ_PRESTO_TRINO_KEY }}
+          TRINO_CATALOG: bigquery
+          TRINO_SCHEMA: malloytest
+          TRINO_SERVER: http://localhost:8080
+          TRINO_USER: malloy-ci-bot@malloydata.org
+      # - name: Show docker logs
+      #   if: always()
+      #   run: |
+      #     docker logs --since=1h trino-malloy
+      # - name: Archive production artifacts
+      #   if: always()
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: trino-logs
+      #     path: |
+      #       .tmp/**

@@ -21,12 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {AtomicFieldType, CastType} from '../../../model';
+import {CastType, LeafAtomicTypeDef} from '../../../model';
 import {castTo} from '../time-utils';
-import {ExprValue} from '../types/expr-value';
+import {ExprValue, computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
-import {compressExpr} from './utils';
 
 export class ExprCast extends ExpressionDef {
   elementType = 'cast';
@@ -40,32 +39,32 @@ export class ExprCast extends ExpressionDef {
 
   getExpression(fs: FieldSpace): ExprValue {
     const expr = this.expr.getExpression(fs);
-    let dataType: AtomicFieldType = 'unsupported';
+    let dataType: LeafAtomicTypeDef = {type: 'error'};
     if (typeof this.castType === 'string') {
-      dataType = this.castType;
+      dataType = {type: this.castType};
     } else {
       const dialect = fs.dialectObj();
       if (dialect) {
         if (dialect.validateTypeName(this.castType.raw)) {
-          // TODO theoretically `sqlTypeToMalloyType` can get number subtypes,
-          // but `TypeDesc` does not support them.
-          dataType =
-            fs.dialectObj()?.sqlTypeToMalloyType(this.castType.raw)?.type ??
-            'unsupported';
+          dataType = dialect.sqlTypeToMalloyType(this.castType.raw);
         } else {
-          this.log(
+          this.logError(
+            'invalid-sql-native-type',
             `Cast type \`${this.castType.raw}\` is invalid for ${dialect.name} dialect`
+          );
+        }
+        if (this.safe && !dialect.supportsSafeCast) {
+          this.logError(
+            'dialect-cast-unsafe-only',
+            `The SQL dialect '${fs.dialectName()}' does not supply a safe cast operator`
           );
         }
       }
     }
-    return {
+    return computedExprValue({
       dataType,
-      expressionType: expr.expressionType,
-      value: compressExpr(
-        castTo(this.castType, expr.value, expr.dataType, this.safe)
-      ),
-      evalSpace: expr.evalSpace,
-    };
+      value: castTo(this.castType, expr.value, expr.type, this.safe),
+      from: [expr],
+    });
   }
 }

@@ -24,19 +24,17 @@
 import {
   expressionIsAggregate,
   expressionIsUngroupedAggregate,
-  FieldValueType,
-  UngroupFragment,
+  UngroupNode,
 } from '../../../model/malloy_types';
 
-import {errorFor} from '../ast-utils';
 import {QuerySpace} from '../field-space/query-spaces';
-import {FT} from '../fragtype-utils';
+import * as TDU from '../typedesc-utils';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldName, FieldSpace} from '../types/field-space';
 
 export class ExprUngroup extends ExpressionDef {
-  legalChildTypes = FT.anyAtomicT;
+  legalChildTypes = TDU.anyAtomicT;
   elementType = 'ungroup';
   constructor(
     readonly control: 'all' | 'exclude',
@@ -46,24 +44,22 @@ export class ExprUngroup extends ExpressionDef {
     super({expr: expr, fields: fields});
   }
 
-  returns(_forExpression: ExprValue): FieldValueType {
-    return 'number';
-  }
-
   getExpression(fs: FieldSpace): ExprValue {
     const exprVal = this.expr.getExpression(fs);
     if (!expressionIsAggregate(exprVal.expressionType)) {
-      this.expr.log(`${this.control}() expression must be an aggregate`);
-      return errorFor('ungrouped scalar');
+      return this.expr.loggedErrorExpr(
+        'ungroup-of-non-aggregate',
+        `${this.control}() expression must be an aggregate`
+      );
     }
     if (expressionIsUngroupedAggregate(exprVal.expressionType)) {
-      this.expr.log(
+      return this.expr.loggedErrorExpr(
+        'ungroup-of-ungrouped-aggregate',
         `${this.control}() expression must not already be ungrouped`
       );
-      return errorFor('doubly-ungrouped aggregate');
     }
-    const ungroup: UngroupFragment = {
-      type: this.control,
+    const ungroup: UngroupNode = {
+      node: this.control,
       e: exprVal.value,
     };
     if (this.typeCheck(this.expr, {...exprVal, expressionType: 'scalar'})) {
@@ -90,7 +86,8 @@ export class ExprUngroup extends ExpressionDef {
           }
           if (notFound) {
             const uName = isExclude ? 'exclude()' : 'all()';
-            mentionedField.log(
+            mentionedField.logError(
+              'ungroup-field-not-in-output',
               `${uName} '${mentionedField.refString}' is missing from query output`
             );
           }
@@ -98,13 +95,16 @@ export class ExprUngroup extends ExpressionDef {
         ungroup.fields = dstFields;
       }
       return {
-        dataType: this.returns(exprVal),
+        ...TDU.atomicDef(exprVal),
         expressionType: 'ungrouped_aggregate',
-        value: [ungroup],
+        value: ungroup,
         evalSpace: 'output',
+        compositeFieldUsage: exprVal.compositeFieldUsage,
       };
     }
-    this.log(`${this.control}() incompatible type`);
-    return errorFor('ungrouped type check');
+    return this.loggedErrorExpr(
+      'ungroup-with-non-scalar',
+      `${this.control}() incompatible type`
+    );
   }
 }

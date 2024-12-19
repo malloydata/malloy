@@ -45,7 +45,11 @@ export function valueIsString(f: Field, s: unknown): s is string {
   return f.isAtomicField() && f.isString() && s !== null;
 }
 
-export function getTextWidth(
+export function valueIsDateTime(f: Field, v: unknown): v is Date {
+  return f.isAtomicField() && (f.isDate() || f.isTimestamp()) && v !== null;
+}
+
+export function getTextWidthCanvas(
   text: string,
   font: string,
   canvasToUse?: HTMLCanvasElement
@@ -57,17 +61,26 @@ export function getTextWidth(
   return metrics.width;
 }
 
+export function getTextWidthDOM(text: string, styles: Record<string, string>) {
+  const measureDiv = document.createElement('div');
+  measureDiv.innerHTML = text;
+  for (const [key, value] of Object.entries(styles)) {
+    measureDiv.style[key] = value;
+  }
+  document.body.appendChild(measureDiv);
+  const rect = measureDiv.getBoundingClientRect();
+  document.body.removeChild(measureDiv);
+  return rect.width;
+}
+
 export function clamp(s: number, e: number, v: number) {
   return Math.max(s, Math.min(e, v));
 }
 
-export function shouldRenderAs(f: Field) {
-  if (f.isAtomicField()) return 'cell';
-  const {tag} = f.tagParse();
-  if (tag.has('bar')) return 'bar-chart';
-  else return 'table';
+export function getFieldKey(f: Field | Explore) {
+  return JSON.stringify(f.fieldPath);
 }
 
-export function getFieldKey(f: Field) {
-  return JSON.stringify(f.fieldPath);
+export function getRangeSize(range: [number, number]) {
+  return range[1] - range[0] + 1;
 }

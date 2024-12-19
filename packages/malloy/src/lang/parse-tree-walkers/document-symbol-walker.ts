@@ -266,7 +266,7 @@ class DocumentSymbolWalker implements MalloyParserListener {
   handleJoinDef(pcx: parser.JoinWithContext | parser.JoinOnContext) {
     const symbol = {
       range: this.translator.rangeFromContext(pcx),
-      name: pcx.joinNameDef().id().text,
+      name: pcx.joinFrom().joinNameDef().id().text,
       type: 'join',
       children: [],
     };
@@ -274,17 +274,6 @@ class DocumentSymbolWalker implements MalloyParserListener {
     if (parent) {
       parent.children.push(symbol);
     }
-  }
-
-  enterDefineSQLStatement(pcx: parser.DefineSQLStatementContext) {
-    const name = pcx.nameSQLBlock().text;
-    const symbol = {
-      range: this.translator.rangeFromContext(pcx),
-      name,
-      type: 'sql',
-      children: [],
-    };
-    this.symbols.push(symbol);
   }
 
   enterImportStatement(pcx: parser.ImportStatementContext) {

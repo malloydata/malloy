@@ -22,7 +22,8 @@
  */
 
 import {
-  FilterExpression,
+  CompositeFieldUsage,
+  FilterCondition,
   PipeSegment,
   Sampling,
   isIndexSegment,
@@ -30,7 +31,7 @@ import {
 } from '../../../model/malloy_types';
 
 import {ErrorFactory} from '../error-factory';
-import {FieldName, FieldSpace} from '../types/field-space';
+import {FieldName, SourceFieldSpace} from '../types/field-space';
 import {Filter} from '../query-properties/filters';
 import {Index} from '../query-properties/indexing';
 import {Limit} from '../query-properties/limit';
@@ -41,18 +42,23 @@ import {QueryBuilder} from '../types/query-builder';
 import {QueryInputSpace} from '../field-space/query-input-space';
 import {QueryOperationSpace} from '../field-space/query-spaces';
 import {MalloyElement} from '../types/malloy-element';
+import {
+  emptyCompositeFieldUsage,
+  mergeCompositeFieldUsage,
+} from '../../../model/composite_source_utils';
 
 export class IndexBuilder implements QueryBuilder {
-  filters: FilterExpression[] = [];
+  filters: FilterCondition[] = [];
   limit?: Limit;
   indexOn?: FieldName;
   sample?: Sampling;
   resultFS: IndexFieldSpace;
   inputFS: QueryInputSpace;
+  alwaysJoins: string[] = [];
   readonly type = 'index';
 
   constructor(
-    inputFS: FieldSpace,
+    inputFS: SourceFieldSpace,
     refineThis: PipeSegment | undefined,
     isNestIn: QueryOperationSpace | undefined,
     astEl: MalloyElement
@@ -63,30 +69,46 @@ export class IndexBuilder implements QueryBuilder {
 
   execute(qp: QueryProperty): void {
     if (qp instanceof Filter) {
-      this.filters.push(...qp.getFilterList(this.inputFS));
+      qp.queryExecute(this);
     } else if (qp instanceof Limit) {
       if (this.limit) {
-        this.limit.log('Ignored, too many limit: statements');
+        this.limit.logError(
+          'index-limit-already-specified',
+          'Ignored, too many limit: statements'
+        );
       }
       this.limit = qp;
     } else if (qp instanceof Index) {
       this.resultFS.pushFields(...qp.fields.list);
       if (qp.weightBy) {
         if (this.indexOn) {
-          this.indexOn.log('Ignoring previous BY');
+          this.indexOn.logError(
+            'index-by-already-specified',
+            'Ignoring previous BY'
+          );
         }
         this.indexOn = qp.weightBy;
       }
     } else if (qp instanceof SampleProperty) {
       this.sample = qp.sampling();
     } else {
-      qp.log('Not legal in an index query operation');
+      qp.logError(
+        'illegal-operation-for-index',
+        'Not legal in an index query operation'
+      );
     }
+  }
+
+  get compositeFieldUsage(): CompositeFieldUsage {
+    return this.resultFS.compositeFieldUsage;
   }
 
   finalize(from: PipeSegment | undefined): PipeSegment {
     if (from && !isIndexSegment(from) && !isPartialSegment(from)) {
-      this.resultFS.log(`Can't refine index with ${from.type}`);
+      this.resultFS.logError(
+        'refinement-of-index-segment',
+        `Can't refine index with ${from.type}`
+      );
       return ErrorFactory.indexSegment;
     }
 
@@ -116,6 +138,19 @@ export class IndexBuilder implements QueryBuilder {
     if (this.sample) {
       indexSegment.sample = this.sample;
     }
+
+    if (this.alwaysJoins.length > 0) {
+      indexSegment.alwaysJoins = [...this.alwaysJoins];
+    }
+
+    const fromCompositeFieldUsage =
+      from && from.type === 'index'
+        ? from.compositeFieldUsage ?? emptyCompositeFieldUsage()
+        : emptyCompositeFieldUsage();
+    indexSegment.compositeFieldUsage = mergeCompositeFieldUsage(
+      fromCompositeFieldUsage,
+      this.compositeFieldUsage
+    );
 
     return indexSegment;
   }

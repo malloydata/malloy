@@ -23,28 +23,27 @@
 
 import {indent} from '../../model/utils';
 import {
-  DateUnit,
-  Expr,
-  ExtractUnit,
   Sampling,
-  TimeFieldType,
-  TimeValue,
-  TimestampUnit,
-  TypecastFragment,
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
-  mkExpr,
-  FieldAtomicTypeDef,
+  AtomicTypeDef,
+  TimeDeltaExpr,
+  TypecastExpr,
+  MeasureTimeExpr,
+  LeafAtomicTypeDef,
+  RecordLiteralNode,
+  ArrayLiteralNode,
 } from '../../model/malloy_types';
-import {POSTGRES_FUNCTIONS} from './functions';
-import {DialectFunctionOverloadDef} from '../functions';
-import {Dialect, DialectFieldList, QueryInfo, qtz} from '../dialect';
-
-const pgExtractionMap: Record<string, string> = {
-  'day_of_week': 'dow',
-  'day_of_year': 'doy',
-};
+import {
+  DialectFunctionOverloadDef,
+  expandOverrideMap,
+  expandBlueprintMap,
+} from '../functions';
+import {DialectFieldList, FieldReferenceType, QueryInfo} from '../dialect';
+import {PostgresBase} from '../pg_impl';
+import {POSTGRES_DIALECT_FUNCTIONS} from './dialect_functions';
+import {POSTGRES_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
 const pgMakeIntervalMap: Record<string, string> = {
   'year': 'years',
@@ -64,7 +63,7 @@ const inSeconds: Record<string, number> = {
   'week': 7 * 24 * 3600,
 };
 
-const postgresToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
+const postgresToMalloyTypes: {[key: string]: LeafAtomicTypeDef} = {
   'character varying': {type: 'string'},
   'name': {type: 'string'},
   'text': {type: 'string'},
@@ -91,7 +90,7 @@ const postgresToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
   'varchar': {type: 'string'},
 };
 
-export class PostgresDialect extends Dialect {
+export class PostgresDialect extends PostgresBase {
   name = 'postgres';
   defaultNumberType = 'DOUBLE PRECISION';
   defaultDecimalType = 'NUMERIC';
@@ -107,8 +106,11 @@ export class PostgresDialect extends Dialect {
   supportsSafeCast = false;
   dontUnionIndex = false;
   supportsQualify = false;
-  globalFunctions = POSTGRES_FUNCTIONS;
   supportsNesting = true;
+  experimental = false;
+  readsNestedData = false;
+  supportsComplexFilteredSources = false;
+  compoundObjectInSchema = false;
 
   quoteTablePath(tablePath: string): string {
     return tablePath
@@ -220,9 +222,9 @@ export class PostgresDialect extends Dialect {
   ): string {
     if (isArray) {
       if (needDistinctKey) {
-        return `LEFT JOIN UNNEST(ARRAY((SELECT jsonb_build_object('__row_id', row_number() over (), 'value', v) FROM UNNEST(${source}) as v))) as ${alias} ON true`;
+        return `LEFT JOIN UNNEST(ARRAY((SELECT jsonb_build_object('__row_id', row_number() over (), 'value', v) FROM JSONB_ARRAY_ELEMENTS(TO_JSONB(${source})) as v))) as ${alias} ON true`;
       } else {
-        return `LEFT JOIN UNNEST(ARRAY((SELECT jsonb_build_object('value', v) FROM UNNEST(${source}) as v))) as ${alias} ON true`;
+        return `LEFT JOIN UNNEST(ARRAY((SELECT jsonb_build_object('value', v) FROM JSONB_ARRAY_ELEMENTS(TO_JSONB(${source})) as v))) as ${alias} ON true`;
       }
     } else if (needDistinctKey) {
       // return `UNNEST(ARRAY(( SELECT AS STRUCT GENERATE_UUID() as __distinct_key, * FROM UNNEST(${source})))) as ${alias}`;
@@ -242,27 +244,33 @@ export class PostgresDialect extends Dialect {
   }
 
   sqlFieldReference(
-    alias: string,
-    fieldName: string,
-    fieldType: string,
-    isNested: boolean,
-    _isArray: boolean
+    parentAlias: string,
+    parentType: FieldReferenceType,
+    childName: string,
+    childType: string
   ): string {
-    let ret = `(${alias}->>'${fieldName}')`;
-    if (isNested) {
-      switch (fieldType) {
+    if (childName === '__row_id') {
+      return `(${parentAlias}->>'__row_id')`;
+    }
+    if (parentType !== 'table') {
+      let ret = `JSONB_EXTRACT_PATH_TEXT(${parentAlias},'${childName}')`;
+      switch (childType) {
         case 'string':
           break;
         case 'number':
           ret = `${ret}::double precision`;
           break;
         case 'struct':
-          ret = `${ret}::jsonb`;
+        case 'array':
+        case 'record':
+        case 'array[record]':
+          ret = `JSONB_EXTRACT_PATH(${parentAlias},'${childName}')`;
           break;
       }
       return ret;
     } else {
-      return `${alias}."${fieldName}"`;
+      const child = this.sqlMaybeQuoteIdentifier(childName);
+      return `${parentAlias}.${child}`;
     }
   }
 
@@ -294,10 +302,6 @@ export class PostgresDialect extends Dialect {
   sqlSelectAliasAsStruct(alias: string): string {
     return `ROW(${alias})`;
   }
-  // TODO
-  sqlMaybeQuoteIdentifier(identifier: string): string {
-    return `"${identifier}"`;
-  }
 
   // The simple way to do this is to add a comment on the table
   //  with the expiration time. https://www.postgresql.org/docs/current/sql-comment.html
@@ -306,116 +310,41 @@ export class PostgresDialect extends Dialect {
     throw new Error('Not implemented Yet');
   }
 
-  sqlNow(): Expr {
-    return mkExpr`LOCALTIMESTAMP`;
-  }
-
-  sqlTrunc(qi: QueryInfo, sqlTime: TimeValue, units: TimestampUnit): Expr {
-    // adjusting for monday/sunday weeks
-    const week = units === 'week';
-    const truncThis = week
-      ? mkExpr`${sqlTime.value} + INTERVAL '1' DAY`
-      : sqlTime.value;
-    if (sqlTime.valueType === 'timestamp') {
-      const tz = qtz(qi);
-      if (tz) {
-        const civilSource = mkExpr`(${truncThis}::TIMESTAMPTZ AT TIME ZONE '${tz}')`;
-        let civilTrunc = mkExpr`DATE_TRUNC('${units}', ${civilSource})`;
-        // MTOY todo ... only need to do this if this is a date ...
-        civilTrunc = mkExpr`${civilTrunc}::TIMESTAMP`;
-        const truncTsTz = mkExpr`${civilTrunc} AT TIME ZONE '${tz}'`;
-        return mkExpr`(${truncTsTz})::TIMESTAMP`;
-      }
-    }
-    let result = mkExpr`DATE_TRUNC('${units}', ${truncThis})`;
-    if (week) {
-      result = mkExpr`(${result} - INTERVAL '1' DAY)`;
-    }
-    return result;
-  }
-
-  sqlExtract(qi: QueryInfo, from: TimeValue, units: ExtractUnit): Expr {
-    const pgUnits = pgExtractionMap[units] || units;
-    let extractFrom = from.value;
-    if (from.valueType === 'timestamp') {
-      const tz = qtz(qi);
-      if (tz) {
-        extractFrom = mkExpr`(${extractFrom}::TIMESTAMPTZ AT TIME ZONE '${tz}')`;
-      }
-    }
-    const extracted = mkExpr`EXTRACT(${pgUnits} FROM ${extractFrom})`;
-    return units === 'day_of_week' ? mkExpr`(${extracted}+1)` : extracted;
-  }
-
-  sqlAlterTime(
-    op: '+' | '-',
-    expr: TimeValue,
-    n: Expr,
-    timeframe: DateUnit
-  ): Expr {
+  sqlAlterTimeExpr(df: TimeDeltaExpr): string {
+    let timeframe = df.units;
+    let n = df.kids.delta.sql;
     if (timeframe === 'quarter') {
       timeframe = 'month';
-      n = mkExpr`${n}*3`;
+      n = `${n}*3`;
+    } else if (timeframe === 'week') {
+      timeframe = 'day';
+      n = `${n}*7`;
     }
-    const interval = mkExpr`make_interval(${pgMakeIntervalMap[timeframe]}=>${n})`;
-    return mkExpr`((${expr.value})${op}${interval})`;
+    const interval = `make_interval(${pgMakeIntervalMap[timeframe]}=>${n})`;
+    return `(${df.kids.base.sql})${df.op}${interval}`;
   }
 
-  sqlCast(qi: QueryInfo, cast: TypecastFragment): Expr {
-    const op = `${cast.srcType}::${cast.dstType}`;
-    const tz = qtz(qi);
-    if (op === 'timestamp::date' && tz) {
-      const tstz = mkExpr`${cast.expr}::TIMESTAMPTZ`;
-      return mkExpr`CAST((${tstz}) AT TIME ZONE '${tz}' AS DATE)`;
-    } else if (op === 'date::timestamp' && tz) {
-      return mkExpr`CAST((${cast.expr})::TIMESTAMP AT TIME ZONE '${tz}' AS TIMESTAMP)`;
+  sqlCast(qi: QueryInfo, cast: TypecastExpr): string {
+    if (cast.safe) {
+      throw new Error("Postgres dialect doesn't support Safe Cast");
     }
-    if (cast.srcType !== cast.dstType) {
-      const dstType =
-        typeof cast.dstType === 'string'
-          ? this.malloyTypeToSQLType({type: cast.dstType})
-          : cast.dstType.raw;
-      if (cast.safe) {
-        throw new Error("Postgres dialect doesn't support Safe Cast");
-      }
-      const castFunc = 'CAST';
-      return mkExpr`${castFunc}(${cast.expr} AS ${dstType})`;
-    }
-    return cast.expr;
+    return super.sqlCast(qi, cast);
   }
 
-  sqlRegexpMatch(expr: Expr, regexp: Expr): Expr {
-    return mkExpr`(${expr} ~ ${regexp})`;
-  }
-
-  sqlLiteralTime(
-    qi: QueryInfo,
-    timeString: string,
-    type: TimeFieldType,
-    timezone: string | undefined
-  ): string {
-    if (type === 'date') {
-      return `DATE '${timeString}'`;
+  sqlMeasureTimeExpr(df: MeasureTimeExpr): string {
+    const from = df.kids.left;
+    const to = df.kids.right;
+    let lVal = from.sql;
+    let rVal = to.sql;
+    if (inSeconds[df.units]) {
+      lVal = `EXTRACT(EPOCH FROM ${lVal})`;
+      rVal = `EXTRACT(EPOCH FROM ${rVal})`;
+      const duration = `${rVal}-${lVal}`;
+      return df.units === 'second'
+        ? `FLOOR(${duration})`
+        : `FLOOR((${duration})/${inSeconds[df.units].toString()}.0)`;
     }
-    const tz = timezone || qtz(qi);
-    if (tz) {
-      return `TIMESTAMPTZ '${timeString} ${tz}'::TIMESTAMP`;
-    }
-    return `TIMESTAMP '${timeString}'`;
-  }
-
-  sqlMeasureTime(from: TimeValue, to: TimeValue, units: string): Expr {
-    let lVal = from.value;
-    let rVal = to.value;
-    if (inSeconds[units]) {
-      lVal = mkExpr`EXTRACT(EPOCH FROM ${lVal})`;
-      rVal = mkExpr`EXTRACT(EPOCH FROM ${rVal})`;
-      const duration = mkExpr`${rVal}-${lVal}`;
-      return units === 'second'
-        ? mkExpr`FLOOR(${duration})`
-        : mkExpr`FLOOR((${duration})/${inSeconds[units].toString()}.0)`;
-    }
-    throw new Error(`Unknown or unhandled postgres time unit: ${units}`);
+    throw new Error(`Unknown or unhandled postgres time unit: ${df.units}`);
   }
 
   sqlSumDistinct(key: string, value: string, funcName: string): string {
@@ -472,11 +401,17 @@ export class PostgresDialect extends Dialect {
     return "'" + literal.replace(/'/g, "''") + "'";
   }
 
-  getGlobalFunctionDef(name: string): DialectFunctionOverloadDef[] | undefined {
-    return POSTGRES_FUNCTIONS.get(name);
+  getDialectFunctionOverrides(): {
+    [name: string]: DialectFunctionOverloadDef[];
+  } {
+    return expandOverrideMap(POSTGRES_MALLOY_STANDARD_OVERLOADS);
   }
 
-  malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string {
+  getDialectFunctions(): {[name: string]: DialectFunctionOverloadDef[]} {
+    return expandBlueprintMap(POSTGRES_DIALECT_FUNCTIONS);
+  }
+
+  malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
     if (malloyType.type === 'number') {
       if (malloyType.numberType === 'integer') {
         return 'integer';
@@ -489,10 +424,15 @@ export class PostgresDialect extends Dialect {
     return malloyType.type;
   }
 
-  sqlTypeToMalloyType(sqlType: string): FieldAtomicTypeDef | undefined {
+  sqlTypeToMalloyType(sqlType: string): LeafAtomicTypeDef {
     // Remove trailing params
     const baseSqlType = sqlType.match(/^([\w\s]+)/)?.at(0) ?? sqlType;
-    return postgresToMalloyTypes[baseSqlType.trim().toLowerCase()];
+    return (
+      postgresToMalloyTypes[baseSqlType.trim().toLowerCase()] ?? {
+        type: 'sql native',
+        rawType: sqlType,
+      }
+    );
   }
 
   castToString(expression: string): string {
@@ -510,5 +450,18 @@ export class PostgresDialect extends Dialect {
     // Parentheses, Commas:  NUMERIC(5, 2)
     // Square Brackets:      INT64[]
     return sqlType.match(/^[A-Za-z\s(),[\]0-9]*$/) !== null;
+  }
+
+  sqlLiteralRecord(lit: RecordLiteralNode): string {
+    const props: string[] = [];
+    for (const [kName, kVal] of Object.entries(lit.kids)) {
+      props.push(`'${kName}',${kVal.sql}`);
+    }
+    return `JSONB_BUILD_OBJECT(${props.join(', ')})`;
+  }
+
+  sqlLiteralArray(lit: ArrayLiteralNode): string {
+    const array = lit.kids.values.map(val => val.sql);
+    return 'JSONB_BUILD_ARRAY(' + array.join(',') + ')';
   }
 }

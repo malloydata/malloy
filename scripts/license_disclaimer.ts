@@ -22,11 +22,9 @@
  */
 
 import path from 'path';
-import {readPackageJson} from './utils/licenses';
+import {Package, readPackageJson} from './utils/licenses';
 import fs from 'fs';
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable no-console */
 let filePath: string;
 const seen: {[id: string]: boolean} = {};
 
@@ -52,7 +50,7 @@ export function generateDisclaimer(
   doDependencies(nodeModulesPath, rootPackageJson);
 }
 
-function doDependencies(nodeModulesPath: string, packageJson: any): void {
+function doDependencies(nodeModulesPath: string, packageJson: Package): void {
   // eslint-disable-next-line no-prototype-builtins
   if (packageJson.hasOwnProperty('dependencies')) {
     const dependencies = packageJson.dependencies;

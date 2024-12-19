@@ -1,0 +1,239 @@
+.malloy-table * {
+  box-sizing: border-box;
+}
+
+.malloy-table {
+  background: var(--malloy-render--table-background);
+  --table-gutter-left-multiplier: 1;
+  --table-gutter-right-multiplier: 1;
+  --table-row-span: 1;
+  --total-header-size: 1;
+}
+
+.malloy-table .table-gutter-left {
+  --table-gutter-left-multiplier: 2;
+}
+
+.malloy-table .table-gutter-right {
+  --table-gutter-right-multiplier: 2;
+}
+
+.malloy-table {
+  display: grid;
+  grid: auto / subgrid;
+}
+
+.malloy-table.root {
+  width: fit-content;
+  max-width: 100%;
+  height: fit-content;
+  max-height: 100%;
+  position: relative;
+  overflow: auto;
+  overflow-anchor: none;
+  grid-template-columns: repeat(
+    var(--total-header-size),
+    minmax(auto, max-content)
+  );
+}
+
+.malloy-table.root.full-width {
+  width: 100%;
+}
+
+.malloy-table:not(.root) {
+  grid-column: 1 / span var(--table-row-span);
+}
+
+.malloy-table .pinned-header-row {
+  display: grid;
+  grid: auto / subgrid;
+  position: sticky;
+  top: 0px;
+  z-index: 100;
+  pointer-events: none;
+  height: fit-content;
+  grid-column: 1 / span var(--total-header-size);
+}
+
+.malloy-table .pinned-header-subrow {
+  display: grid;
+  grid: auto / subgrid;
+  grid-column: 1 / span var(--total-header-size);
+}
+
+.malloy-table .table-row {
+  display: grid;
+  grid: auto / subgrid;
+  grid-column: 1 / span var(--table-row-span);
+}
+
+.malloy-table .limit-row {
+  height: var(--malloy-render--table-row-height);
+  line-height: var(--malloy-render--table-row-height);
+  border-top: var(--malloy-render--table-border);
+  font-style: italic;
+  margin-left: calc(
+    var(--malloy-render--table-gutter-size) *
+      var(--table-gutter-left-multiplier)
+  );
+  margin-right: calc(
+    var(--malloy-render--table-gutter-size) *
+      var(--table-gutter-right-multiplier)
+  );
+}
+
+.malloy-table .th {
+  transition: background-color 0.25s;
+}
+
+.malloy-table .column-cell {
+  min-height: var(--malloy-render--table-row-height);
+  white-space: nowrap;
+  text-align: left;
+  padding: 0px;
+  vertical-align: top;
+}
+
+.malloy-table .td.column-cell {
+  font-weight: var(--malloy-render--table-body-weight);
+  color: var(--malloy-render--table-body-color);
+}
+
+.malloy-table .th.column-cell {
+  font-weight: var(--malloy-render--table-header-weight);
+  color: var(--malloy-render--table-header-color);
+}
+
+.malloy-table .column-cell.numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.malloy-table .th.numeric .cell-content {
+  justify-content: end;
+}
+
+.malloy-table .cell-content {
+  border-top: var(--malloy-render--table-border);
+  height: 100%;
+
+  /* TODO: This is better than nothing, but could use work.
+    A linear scaling of padding / line-height doesn't work all that well as you get bigger.
+  */
+  /* -1px for the top border */
+  line-height: calc(var(--malloy-render--table-row-height) * 5 / 7 - 1px);
+  /* padding-block: 4px; */
+  padding-block: calc(var(--malloy-render--table-row-height) * 1 / 7);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-inline: 0px;
+  /* padding-inline: var(--malloy-render--table-gutter-size); */
+  padding-left: calc(
+    var(--malloy-render--table-gutter-size) *
+      var(--table-gutter-left-multiplier)
+  );
+  padding-right: calc(
+    var(--malloy-render--table-gutter-size) *
+      var(--table-gutter-right-multiplier)
+  );
+  text-wrap: wrap;
+  word-break: normal;
+}
+
+.malloy-table .cell-content.chart {
+  padding-block: 0px;
+}
+
+.malloy-table .cell-content.chart svg {
+  display: block;
+}
+
+.malloy-table .th .cell-content {
+  display: flex;
+  align-items: end;
+}
+
+.malloy-table .cell-content.hide-start-gutter {
+  margin-left: calc(
+    var(--malloy-render--table-gutter-size) *
+      var(--table-gutter-left-multiplier)
+  );
+  padding-left: 0px;
+}
+
+.malloy-table .cell-content.hide-end-gutter {
+  margin-right: calc(
+    var(--malloy-render--table-gutter-size) *
+      var(--table-gutter-right-multiplier)
+  );
+  padding-right: 0px;
+}
+
+/* If scrolled, show all gutter borders in pinned header */
+.malloy-table.pinned .pinned-header {
+  .cell-content.hide-start-gutter,
+  .cell-content.hide-end-gutter {
+    margin-inline: 0px;
+    padding-left: calc(
+      var(--malloy-render--table-gutter-size) *
+        var(--table-gutter-left-multiplier)
+    );
+
+    padding-right: calc(
+      var(--malloy-render--table-gutter-size) *
+        var(--table-gutter-right-multiplier)
+    );
+  }
+}
+
+.malloy-table .pinned-header.th {
+  background: var(--malloy-render--table-background);
+  pointer-events: all;
+}
+
+.malloy-table.pinned .pinned-header .cell-content {
+  border-top: var(--malloy-render--table-pinned-border);
+}
+
+.malloy-table.pinned .pinned-header.th {
+  position: relative;
+  background: var(--malloy-render--table-pinned-background);
+}
+
+.malloy-table.pinned .pinned-header:after {
+  content: '';
+  border-bottom: var(--malloy-render--table-pinned-border);
+  width: 100%;
+  height: 0px;
+  display: inline-block;
+  position: absolute;
+  left: 0px;
+  right: 0px;
+}
+
+/* TODO figure out better strategy for tweaking renderers inside table */
+.malloy-table .malloy-list {
+  line-height: calc(var(--malloy-render--table-row-height) * 5 / 7 - 1px);
+}
+
+.malloy-table .td.highlight {
+  color: #547ce4;
+  cursor: pointer;
+}
+
+@keyframes modal-slide-in {
+  0% {
+    transform: translateX(0);
+  }
+  10% {
+    transform: translateX(calc(-100% - 24px));
+  }
+  90% {
+    transform: translateX(calc(-100% - 24px));
+  }
+  100% {
+    transform: translateX(0);
+  }
+}

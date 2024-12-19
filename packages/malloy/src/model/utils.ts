@@ -22,7 +22,13 @@
  */
 
 import {v5 as uuidv5} from 'uuid';
-import {Expr, Fragment} from './malloy_types';
+import {
+  Expr,
+  exprHasE,
+  exprHasKids,
+  ExprWithKids,
+  GenericSQLExpr,
+} from './malloy_types';
 
 /** simple indent function */
 export function indent(s: string): string {
@@ -105,228 +111,6 @@ export function generateHash(input: string): string {
   return uuidv5(input, MALLOY_UUID);
 }
 
-export function exprMap(expr: Expr, func: (fragment: Fragment) => Expr): Expr {
-  return expr.flatMap(fragment => {
-    const mapped = func(fragment);
-    return mapped.map(fragment => {
-      if (typeof fragment === 'string') {
-        return fragment;
-      }
-      switch (fragment.type) {
-        case 'aggregate':
-        case 'all':
-        case 'spread':
-        case 'sql_expression':
-        case 'exclude':
-          return {
-            ...fragment,
-            e: exprMap(fragment.e, func),
-          };
-        case 'apply':
-          return {
-            ...fragment,
-            to: exprMap(fragment.to, func),
-            value: exprMap(fragment.value, func),
-          };
-        case 'applyVal':
-        case 'field':
-        case 'function_parameter':
-        case 'parameter':
-        case 'outputField':
-        case 'source-reference':
-        case 'aggregate_limit':
-        case 'aggregate_order_by':
-          return fragment;
-        case 'sql-string':
-          return {
-            ...fragment,
-            e: exprMap(fragment.e, func),
-          };
-        case 'function_call':
-          return {
-            ...fragment,
-            args: fragment.args.map(arg => exprMap(arg, func)),
-          };
-        case 'filterExpression':
-          return {
-            ...fragment,
-            e: exprMap(fragment.e, func),
-            filterList: fragment.filterList.map(filter => {
-              return {
-                ...filter,
-                expression: exprMap(filter.expression, func),
-              };
-            }),
-          };
-        case 'dialect': {
-          switch (fragment.function) {
-            case 'cast':
-            case 'regexpMatch':
-              return {
-                ...fragment,
-                expr: exprMap(fragment.expr, func),
-              };
-            case 'delta':
-              return {
-                ...fragment,
-                delta: exprMap(fragment.delta, func),
-              };
-            case 'div':
-              return {
-                ...fragment,
-                denominator: exprMap(fragment.denominator, func),
-                numerator: exprMap(fragment.numerator, func),
-              };
-            case 'now':
-            case 'numberLiteral':
-            case 'stringLiteral':
-            case 'timeLiteral':
-            case 'regexpLiteral':
-              return fragment;
-            case 'extract':
-            case 'trunc':
-              return {
-                ...fragment,
-                expr: {
-                  ...fragment.expr,
-                  value: exprMap(fragment.expr.value, func),
-                },
-              };
-            case 'timeDiff':
-              return {
-                ...fragment,
-                left: {
-                  ...fragment.left,
-                  value: exprMap(fragment.left.value, func),
-                },
-                right: {
-                  ...fragment.left,
-                  value: exprMap(fragment.left.value, func),
-                },
-              };
-            default:
-              throw new Error('unexpected dialect function');
-          }
-        }
-        default:
-          throw new Error('unexpected');
-      }
-    });
-  });
-}
-
-export function exprWalk(expr: Expr, func: (fragment: Fragment) => void): void {
-  expr.forEach(fragment => {
-    func(fragment);
-    if (typeof fragment === 'string') {
-      return fragment;
-    }
-    switch (fragment.type) {
-      case 'aggregate':
-      case 'all':
-      case 'spread':
-      case 'sql_expression':
-      case 'exclude':
-        return {
-          ...fragment,
-          e: exprWalk(fragment.e, func),
-        };
-      case 'apply':
-        return {
-          ...fragment,
-          to: exprWalk(fragment.to, func),
-          value: exprWalk(fragment.value, func),
-        };
-      case 'applyVal':
-      case 'field':
-      case 'function_parameter':
-      case 'parameter':
-      case 'outputField':
-      case 'source-reference':
-      case 'aggregate_limit':
-      case 'aggregate_order_by':
-        return fragment;
-      case 'function_call':
-        return {
-          ...fragment,
-          args: fragment.args.map(arg => exprWalk(arg, func)),
-        };
-      case 'sql-string':
-        return {
-          ...fragment,
-          e: exprWalk(fragment.e, func),
-        };
-      case 'filterExpression':
-        return {
-          ...fragment,
-          e: exprWalk(fragment.e, func),
-          filterList: fragment.filterList.map(filter => {
-            return {
-              ...filter,
-              expression: exprWalk(filter.expression, func),
-            };
-          }),
-        };
-      case 'dialect': {
-        switch (fragment.function) {
-          case 'cast':
-          case 'regexpMatch':
-            return {
-              ...fragment,
-              expr: exprWalk(fragment.expr, func),
-            };
-          case 'delta':
-            return {
-              ...fragment,
-              delta: exprWalk(fragment.delta, func),
-            };
-          case 'div':
-            return {
-              ...fragment,
-              denominator: exprWalk(fragment.denominator, func),
-              numerator: exprWalk(fragment.numerator, func),
-            };
-          case 'now':
-          case 'numberLiteral':
-          case 'stringLiteral':
-          case 'timeLiteral':
-          case 'regexpLiteral':
-            return fragment;
-          case 'extract':
-          case 'trunc':
-            return {
-              ...fragment,
-              expr: {
-                ...fragment.expr,
-                value: exprWalk(fragment.expr.value, func),
-              },
-            };
-          case 'timeDiff':
-            return {
-              ...fragment,
-              left: {
-                ...fragment.left,
-                value: exprWalk(fragment.left.value, func),
-              },
-              right: {
-                ...fragment.left,
-                value: exprWalk(fragment.left.value, func),
-              },
-            };
-          default:
-            throw new Error('unexpected dialect function');
-        }
-      }
-      default:
-        throw new Error(
-          `unexpected fragment type ${
-            (fragment as unknown as {type: string}).type
-          }`
-        );
-    }
-  });
-}
-
 export function joinWith<T>(els: T[][], sep: T): T[] {
   const result: T[] = [];
   for (let i = 0; i < els.length; i++) {
@@ -340,4 +124,84 @@ export function joinWith<T>(els: T[][], sep: T): T[] {
 
 export function range(start: number, end: number): number[] {
   return Array.from({length: end - start}, (_, index) => index + start);
+}
+
+export function* exprKids(eNode: Expr): IterableIterator<Expr> {
+  if (exprHasKids(eNode)) {
+    for (const kidEnt of Object.values(eNode.kids)) {
+      if (Array.isArray(kidEnt)) {
+        yield* kidEnt;
+      } else if (kidEnt !== null) {
+        yield kidEnt;
+      }
+    }
+  } else if (exprHasE(eNode)) {
+    yield eNode.e;
+  }
+}
+export function* exprWalk(
+  eNode: Expr,
+  order: 'pre' | 'post' = 'post'
+): IterableIterator<Expr> {
+  if (order === 'pre') {
+    yield eNode;
+  }
+  for (const kid of exprKids(eNode)) {
+    yield* exprWalk(kid, order);
+  }
+  if (order === 'post') {
+    yield eNode;
+  }
+}
+
+export function exprMap(eNode: Expr, mapFunc: (e: Expr) => Expr): Expr {
+  let mapExpr = {...eNode};
+  if (exprHasKids(eNode)) {
+    const parentNode: ExprWithKids = {...eNode};
+    parentNode.kids = {};
+    for (const [name, kidEnt] of Object.entries(eNode.kids)) {
+      if (Array.isArray(kidEnt)) {
+        parentNode.kids[name] = kidEnt.map(kidEl => mapFunc(kidEl));
+      } else if (kidEnt !== null) {
+        parentNode.kids[name] = mapFunc(kidEnt);
+      }
+    }
+    mapExpr = parentNode as Expr;
+  }
+  if (exprHasE(mapExpr)) {
+    mapExpr.e = mapFunc(mapExpr.e);
+  }
+  return mapFunc(mapExpr);
+}
+export type SQLExprElement = string | Expr;
+
+/**
+ * Take a mixed array of strings and Expr and turn it into an SQLExpr
+ * expression node.
+ */
+export function composeSQLExpr(from: SQLExprElement[]): GenericSQLExpr {
+  const ret: GenericSQLExpr = {
+    node: 'genericSQLExpr',
+    kids: {args: []},
+    src: [],
+  };
+  // Build the array of alternating strings and expressions
+  let lastWasString = false;
+  for (const el of from) {
+    if (typeof el === 'string') {
+      if (lastWasString) {
+        ret.src[ret.src.length - 1] += el;
+      } else {
+        ret.src.push(el);
+      }
+      lastWasString = true;
+    } else {
+      if (!lastWasString) {
+        ret.src.push('');
+      }
+      ret.kids.args.push(el);
+      lastWasString = false;
+    }
+  }
+  return ret;
 }

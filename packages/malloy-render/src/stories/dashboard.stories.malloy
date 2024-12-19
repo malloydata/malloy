@@ -1,0 +1,69 @@
+source: products is duckdb.table("static/data/products.parquet") extend {
+
+  #(story)
+  # dashboard
+  view: dashboard is {
+    group_by:
+      category
+    # currency
+    aggregate:
+      avg_retail is retail_price.avg()
+      sum_retail is retail_price.sum()
+    nest:
+      by_brand is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 10
+      }
+  }
+
+  #(story)
+  # dashboard
+  view: dashboard_dense is {
+    group_by:
+      category
+    # currency
+    aggregate:
+      avg_retail is retail_price.avg()
+      # label='Custom kpi label'
+      sum_retail is retail_price.sum()
+      avg_retail2 is retail_price.avg()
+      avg_retail3 is retail_price.avg()
+      avg_retail4 is retail_price.avg()
+      avg_retail5 is retail_price.avg()
+      avg_retail6 is retail_price.avg()
+      avg_retail7 is retail_price.avg()
+    nest:
+      # label='Custom item label'
+      by_brand is {
+        group_by: brand
+        aggregate:
+          avg_retail is retail_price.avg()
+          avg_retail2 is retail_price.avg()
+          avg_retail3 is retail_price.avg()
+          avg_retail4 is retail_price.avg()
+          avg_retail5 is retail_price.avg()
+          avg_retail6 is retail_price.avg()
+          avg_retail7 is retail_price.avg()
+        limit: 10
+      }
+  }
+
+  #(story)
+  # dashboard
+  view: dashboard_with_break is {
+    group_by:
+      category
+    # currency
+    aggregate:
+      avg_retail is retail_price.avg()
+      sum_retail is retail_price.sum()
+    nest:
+      # break
+      by_brand is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 10
+      }
+  }
+}

@@ -23,7 +23,15 @@
  */
 
 import {MalloyTranslator, TranslateResponse} from '..';
-import {DocumentLocation, DocumentRange} from '../../model';
+import {
+  CompositeFieldUsage,
+  DocumentLocation,
+  DocumentRange,
+  Expr,
+  exprHasE,
+  exprHasKids,
+  exprIsLeaf,
+} from '../../model';
 import {
   BetaExpression,
   MarkedSource,
@@ -32,9 +40,15 @@ import {
 } from './test-translator';
 import {LogSeverity} from '../parse-log';
 
-type SimpleProblemSpec = string | RegExp;
-type ComplexProblemSpec = {severity: LogSeverity; message: SimpleProblemSpec};
-type ProblemSpec = SimpleProblemSpec | ComplexProblemSpec;
+type MessageProblemSpec = {
+  severity: LogSeverity;
+  message: string | RegExp;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data?: any;
+};
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type CodeProblemSpec = {severity: LogSeverity; code: string; data?: any};
+type ProblemSpec = CodeProblemSpec | MessageProblemSpec;
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace jest {
@@ -44,9 +58,7 @@ declare global {
        *
        * Passes if the source parses to an AST without errors.
        *
-       * X can be a MarkedSource, a string, or a model. If it is a marked
-       * source, the errors which are found must match the locations of
-       * the markings.
+       * X can be a MarkedSource, a string, or a model.
        */
       toParse(): R;
       /**
@@ -55,37 +67,24 @@ declare global {
        * Passes if the source compiles to code which could be used to
        * generate SQL.
        *
-       * X can be a MarkedSource, a string, or a model. If it is a marked
-       * source, the errors which are found must match the locations of
-       * the markings.
+       * X can be a MarkedSource, a string, or a model.
        */
       toTranslate(): R;
-      /**
-       * expect(X).toTranslateWithWarnings(expectedWarnings)
-       *
-       * Passes if the source compiles to code which could be used to
-       * generate SQL, and the specified warnings appear. If X is a marked
-       * source, the warnings which are found must match the locations of
-       * the markings.
-       *
-       * X can be a MarkedSource, a string, or a model. If it is a marked
-       * source, the errors which are found must match the locations of
-       * the markings.
-       */
-      toTranslateWithWarnings(...expectedWarnings: SimpleProblemSpec[]): R;
       toReturnType(tp: string): R;
-      /**
-       * expect(X).translateToFailWith(expectedErrors)
-       *
-       * X can be a MarkedSource, a string, or a model. If it is a marked
-       * source, the errors which are found must match the locations of
-       * the markings.
-       *
-       * @param expectedErrors varargs list of strings which must match
-       *        exactly, or regular expressions.
-       */
-      translationToFailWith(...expectedErrors: ProblemSpec[]): R;
+      toLog(...expectedErrors: ProblemSpec[]): R;
       isLocationIn(at: DocumentLocation, txt: string): R;
+      /**
+       * expect(X).compilesTo('expression-string')
+       *
+       * X should be a string or an expr`string` or a BetaExpression
+       *
+       * The string is compiled, and the compiled string is then "translated" into an expression,
+       * which can be used to check that the compiler did the right thing.
+       *
+       * Warnings are ignored, so need to be checked seperately
+       */
+      compilesTo(exprString: string): R;
+      hasCompositeUsage(compositeUsage: CompositeFieldUsage): R;
     }
   }
 }
@@ -99,11 +98,11 @@ function rangeToStr(loc?: DocumentRange): string {
   return 'undefined';
 }
 
-function ensureNoProblems(trans: MalloyTranslator) {
+function ensureNoProblems(trans: MalloyTranslator, warningsOkay = false) {
   if (trans.logger === undefined) {
     throw new Error('JESTERY BROKEN, CANT FIND ERORR LOG');
   }
-  if (!trans.logger.empty()) {
+  if (warningsOkay ? trans.logger.hasErrors() : !trans.logger.empty()) {
     return {
       message: () => `Translation problems:\n${trans.prettyErrors()}`,
       pass: false,
@@ -173,20 +172,6 @@ function highlightError(dl: DocumentLocation, txt: string): string {
   return output.join('\n');
 }
 
-function normalizeProblemSpec(
-  defaultSeverity: LogSeverity
-): (spec: ProblemSpec) => ComplexProblemSpec {
-  return function (spec: ProblemSpec) {
-    if (typeof spec === 'string') {
-      return {severity: defaultSeverity, message: spec};
-    } else if (spec instanceof RegExp) {
-      return {severity: defaultSeverity, message: spec};
-    } else {
-      return spec;
-    }
-  };
-}
-
 type TestSource = string | MarkedSource | TestTranslator;
 
 function isMarkedSource(ts: TestSource): ts is MarkedSource {
@@ -203,13 +188,113 @@ function xlator(ts: TestSource) {
   return ts.translator || new TestTranslator(ts.code);
 }
 
-function xlated(tt: TestTranslator) {
-  const errorCheck = ensureNoProblems(tt);
+function xlated(tt: TestTranslator, warningsOkay = false) {
+  const errorCheck = ensureNoProblems(tt, warningsOkay);
   if (!errorCheck.pass) {
     return errorCheck;
   }
   tt.translate();
   return checkForNeededs(tt);
+}
+
+/**
+ * Returns a readable shorthand for the node. Not complete, will be expanded
+ * as more expressions are tested. One weird thing it does is compress field
+ * references if passed an empty hash. The first field in an expression will be
+ * A in the output, the second B, and so on.
+ */
+type ESymbols = Record<string, string> | undefined;
+function eToStr(e: Expr, symbols: ESymbols): string {
+  function subExpr(e: Expr): string {
+    return eToStr(e, symbols);
+  }
+  switch (e.node) {
+    case 'field': {
+      const ref = e.path.join('.');
+      if (symbols) {
+        if (symbols[ref] === undefined) {
+          const nSyms = Object.keys(symbols).length;
+          symbols[ref] = String.fromCharCode('A'.charCodeAt(0) + nSyms);
+        }
+        return symbols[ref];
+      } else {
+        return ref;
+      }
+    }
+    case '()':
+      return `(${subExpr(e.e)})`;
+    case 'numberLiteral':
+      return `${e.literal}`;
+    case 'stringLiteral':
+      return `"${e.literal}"`;
+    case 'timeLiteral':
+      return `@${e.literal}`;
+    case 'recordLiteral': {
+      const parts: string[] = [];
+      for (const [name, val] of Object.entries(e.kids)) {
+        parts.push(`${name}:${subExpr(val)}`);
+      }
+      return `{${parts.join(', ')}}`;
+    }
+    case 'arrayLiteral': {
+      const parts = e.kids.values.map(k => subExpr(k));
+      return `[${parts.join(', ')}]`;
+    }
+    case 'regexpLiteral':
+      return `/${e.literal}/`;
+    case 'trunc':
+      return `{timeTrunc-${e.units} ${subExpr(e.e)}}`;
+    case 'delta':
+      return `{${e.op}${e.units} ${subExpr(e.kids.base)} ${subExpr(
+        e.kids.delta
+      )}}`;
+    case 'true':
+    case 'false':
+      return e.node;
+    case 'case': {
+      const caseStmt = ['case'];
+      if (e.kids.caseValue !== undefined) {
+        caseStmt.push(`${subExpr(e.kids.caseValue)}`);
+      }
+      for (let i = 0; i < e.kids.caseWhen.length; i += 1) {
+        caseStmt.push(
+          `when ${subExpr(e.kids.caseWhen[i])} then ${subExpr(
+            e.kids.caseThen[i]
+          )}`
+        );
+      }
+      if (e.kids.caseElse !== undefined) {
+        caseStmt.push(`else ${subExpr(e.kids.caseElse)}`);
+      }
+      return `{${caseStmt.join(' ')}}`;
+    }
+    case 'regexpMatch':
+      return `{${subExpr(e.kids.expr)} regex-match ${subExpr(e.kids.regex)}}`;
+    case 'in': {
+      return `{${subExpr(e.kids.e)} ${e.not ? 'not in' : 'in'} {${e.kids.oneOf
+        .map(o => `${subExpr(o)}`)
+        .join(',')}}}`;
+    }
+    case 'genericSQLExpr': {
+      let sql = '';
+      let i = 0;
+      for (; i < e.kids.args.length; i++) {
+        sql += `${e.src[i]}{${subExpr(e.kids.args[i])}}`;
+      }
+      if (i < e.src.length) {
+        sql += e.src[i];
+      }
+      return sql;
+    }
+  }
+  if (exprHasKids(e) && e.kids['left'] && e.kids['right']) {
+    return `{${subExpr(e.kids['left'])} ${e.node} ${subExpr(e.kids['right'])}}`;
+  } else if (exprHasE(e)) {
+    return `{${e.node} ${subExpr(e.e)}}`;
+  } else if (exprIsLeaf(e)) {
+    return `{${e.node}}`;
+  }
+  return `{?${e.node}}`;
 }
 
 expect.extend({
@@ -226,25 +311,18 @@ expect.extend({
   toReturnType: function (exprText: string, returnType: string) {
     const exprModel = new BetaExpression(exprText);
     exprModel.compile();
-    const ok = xlated(exprModel);
+    const ok = xlated(exprModel, true);
     if (!ok.pass) {
       return ok;
     }
     const d = exprModel.generated();
-    const pass = d.dataType === returnType;
-    const msg = `Expression type ${d.dataType} ${
-      pass ? '=' : '!='
-    } $[returnType`;
+    const pass = d.type === returnType;
+    const msg = `Expression type ${d.type} ${pass ? '=' : '!='} ${returnType}`;
     return {pass, message: () => msg};
   },
-  translationToFailWith: function (s: TestSource, ...msgs: ProblemSpec[]) {
-    return checkForProblems(this, false, s, 'error', ...msgs);
-  },
-  toTranslateWithWarnings: function (
-    s: TestSource,
-    ...msgs: SimpleProblemSpec[]
-  ) {
-    return checkForProblems(this, true, s, 'warn', ...msgs);
+  toLog: function (s: TestSource, ...msgs: ProblemSpec[]) {
+    const expectCompiles = !msgs.some(m => m.severity === 'error');
+    return checkForProblems(this, expectCompiles, s, ...msgs);
   },
   isLocationIn: function (
     checkAt: DocumentLocation,
@@ -266,20 +344,94 @@ expect.extend({
       message: () => errMsg,
     };
   },
+  compilesTo: function (tx: TestSource, expr: string) {
+    let bx: BetaExpression;
+    if (typeof tx === 'string') {
+      bx = new BetaExpression(tx);
+    } else {
+      const x = xlator(tx);
+      if (x instanceof BetaExpression) {
+        bx = x;
+      } else {
+        return {
+          pass: false,
+          message: () =>
+            'Must pass expr`EXPRESSION` to expect(EXPRSSION).compilesTo()',
+        };
+      }
+    }
+    bx.compile();
+    // Only report errors, callers will need to test for warnings
+    if (bx.logger.hasErrors()) {
+      return {
+        message: () => `Translation problems:\n${bx.prettyErrors()}`,
+        pass: false,
+      };
+    }
+    const badRefs = checkForNeededs(bx);
+    if (!badRefs.pass) {
+      return badRefs;
+    }
+    const rcvExpr = eToStr(bx.generated().value, undefined);
+    const pass = this.equals(rcvExpr, expr);
+    const msg = pass ? `Matched: ${rcvExpr}` : this.utils.diff(expr, rcvExpr);
+    return {pass, message: () => `${msg}`};
+  },
+  hasCompositeUsage: function (
+    tx: TestSource,
+    compositeFieldUsage: CompositeFieldUsage
+  ) {
+    let bx: BetaExpression;
+    if (typeof tx === 'string') {
+      bx = new BetaExpression(tx);
+    } else {
+      const x = xlator(tx);
+      if (x instanceof BetaExpression) {
+        bx = x;
+      } else {
+        return {
+          pass: false,
+          message: () =>
+            'Must pass expr`EXPRESSION` to expect(EXPRSSION).compilesTo()',
+        };
+      }
+    }
+    bx.compile();
+    // Only report errors, callers will need to test for warnings
+    if (bx.logger.hasErrors()) {
+      return {
+        message: () => `Translation problems:\n${bx.prettyErrors()}`,
+        pass: false,
+      };
+    }
+    const badRefs = checkForNeededs(bx);
+    if (!badRefs.pass) {
+      return badRefs;
+    }
+    const actual = bx.generated().compositeFieldUsage;
+    const pass = this.equals(actual, compositeFieldUsage);
+    const msg = pass
+      ? `Matched: ${actual}`
+      : this.utils.diff(compositeFieldUsage, actual);
+    return {pass, message: () => `${msg}`};
+  },
 });
+
+function problemSpecSummary(s: ProblemSpec): string {
+  return `${s.severity} '${'message' in s ? s.message : s.code}' ${
+    s.data !== undefined ? pretty(s.data) : ''
+  }`;
+}
 
 function checkForProblems(
   context: jest.MatcherContext,
   expectCompiles: boolean,
   s: TestSource,
-  defaultSeverity: LogSeverity,
   ...msgs: ProblemSpec[]
 ) {
   let emsg = `Expected ${expectCompiles ? 'to' : 'to not'} compile with: `;
   const mSrc = isMarkedSource(s) ? s : undefined;
-  const normalize = normalizeProblemSpec(defaultSeverity);
-  const normMsgs = msgs.map(normalize);
-  const qmsgs = normMsgs.map(s => `${s.severity} '${s.message}'`);
+  const qmsgs = msgs.map(problemSpecSummary);
   if (msgs.length === 1) {
     emsg += ` ${qmsgs[0]}`;
   } else {
@@ -305,28 +457,49 @@ function checkForProblems(
     const explain: string[] = [];
     const errList = m.problemResponse().problems;
     let i;
-    for (i = 0; i < normMsgs.length && errList[i]; i += 1) {
-      const msg = normMsgs[i];
+    for (i = 0; i < msgs.length && errList[i]; i += 1) {
+      const msg = msgs[i];
       const err = errList[i];
-      const matched =
-        typeof msg.message === 'string'
-          ? msg.message === err.message
-          : err.message.match(msg.message);
+      let matched = true;
+      if ('message' in msg) {
+        if (typeof msg.message === 'string') {
+          if (msg.message !== err.message) {
+            explain.push(`Expected: ${msg.message}\nGot: ${err.message}`);
+            matched = false;
+          }
+        } else {
+          if (!err.message.match(msg.message)) {
+            explain.push(`Expected: ${msg.message}\nGot: ${err.message}`);
+            matched = false;
+          }
+        }
+      } else {
+        if (msg.code !== err.code) {
+          matched = false;
+          explain.push(`Expected: ${msg.code}\nGot: ${err.code}`);
+        }
+      }
       if (err.severity !== msg.severity) {
         explain.push(
           `Expected ${msg.severity}, got ${err.severity} ${err.message}`
         );
       }
-      if (!matched) {
-        explain.push(`Expected: ${msg.message}\nGot: ${err.message}`);
-      } else {
+      if (matched) {
         if (mSrc?.locations[i]) {
           const have = err.at?.range;
           const want = mSrc.locations[i].range;
           if (!context.equals(have, want)) {
             explain.push(
-              `Expected '${msg.message}' at location: ${rangeToStr(want)}\n` +
-                `Actual location: ${rangeToStr(have)}`
+              `Expected ${err.code} (${err.message}) at location: ${rangeToStr(
+                want
+              )}\n` + `Actual location: ${rangeToStr(have)}`
+            );
+          }
+        }
+        if (msg.data !== undefined) {
+          if (JSON.stringify(msg.data) !== JSON.stringify(err.data)) {
+            explain.push(
+              `Expected log data ${pretty(msg.data)}\nGot ${pretty(err.data)}`
             );
           }
         }

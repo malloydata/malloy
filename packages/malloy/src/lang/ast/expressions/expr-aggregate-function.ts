@@ -22,39 +22,36 @@
  */
 
 import {
-  AggregateFragment,
   AggregateFunctionType,
   expressionIsAggregate,
   FieldDef,
-  FieldValueType,
-  Fragment,
   isAtomicFieldType,
-  StructRelationship,
+  AggregateExpr,
+  Expr,
+  hasExpression,
+  isAtomic,
+  isJoined,
 } from '../../../model/malloy_types';
 import {exprWalk} from '../../../model/utils';
 
 import {errorFor} from '../ast-utils';
 import {StructSpaceField} from '../field-space/static-space';
-import {StructSpaceFieldBase} from '../field-space/struct-space-field-base';
-import {FT} from '../fragtype-utils';
+import * as TDU from '../typedesc-utils';
 import {FieldReference} from '../query-items/field-references';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 import {SpaceField} from '../types/space-field';
 import {ExprIdReference} from './expr-id-reference';
-
-interface JoinPathElement {
-  name: string;
-  structRelationship: StructRelationship;
-}
+import {JoinPath, JoinPathElement} from '../types/lookup-result';
+import {MessageCode} from '../../parse-log';
 
 export abstract class ExprAggregateFunction extends ExpressionDef {
   elementType: string;
   source?: FieldReference;
   expr?: ExpressionDef;
   explicitSource?: boolean;
-  legalChildTypes = [FT.numberT];
+  legalChildTypes = [TDU.numberT];
   constructor(
     readonly func: AggregateFunctionType,
     expr?: ExpressionDef,
@@ -68,10 +65,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
       this.has({expr: expr});
     }
   }
-
-  returns(_forExpression: ExprValue): FieldValueType {
-    return 'number';
-  }
+  abstract returns(fromExpr: ExprValue): ExprValue;
 
   getExpression(fs: FieldSpace): ExprValue {
     // It is never useful to use output fields in an aggregate expression
@@ -84,64 +78,62 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
     if (this.source) {
       const result = this.source.getField(inputFS);
       if (result.found) {
-        sourceRelationship = result.relationship;
+        sourceRelationship = result.joinPath;
         const sourceFoot = result.found;
         const footType = sourceFoot.typeDesc();
-        if (isAtomicFieldType(footType.dataType)) {
-          expr = this.source;
-          exprVal = {
-            dataType: footType.dataType,
-            expressionType: footType.expressionType,
-            value: [
-              footType.evalSpace === 'output'
-                ? {
-                    type: 'outputField',
-                    name: this.source.refString,
-                  }
-                : {
-                    type: 'field',
-                    path: this.source.path,
-                  },
-            ],
-            evalSpace: footType.evalSpace,
-          };
-          structPath = this.source.path;
-          // Here we handle a special case where you write `foo.agg()` and `foo` is a
-          // dimension which uses only one distinct join path; in this case, we set the
-          // locality to be that join path
-          const joinUsage = this.getJoinUsage(inputFS);
-          const allUsagesSame =
-            joinUsage.length === 1 ||
-            (joinUsage.length > 1 &&
-              joinUsage.slice(1).every(p => joinPathEq(p, joinUsage[0])));
-          if (allUsagesSame) {
-            structPath = joinUsage[0].map(p => p.name);
-            sourceRelationship = joinUsage[0];
-          }
-        } else {
-          if (!(sourceFoot instanceof StructSpaceFieldBase)) {
-            this.log(`Aggregate source cannot be a ${footType.dataType}`);
-            return errorFor(
-              `Aggregate source cannot be a ${footType.dataType}`
+        if (!(sourceFoot instanceof StructSpaceField)) {
+          if (isAtomicFieldType(footType.type)) {
+            expr = this.source;
+            exprVal = {
+              ...TDU.atomicDef(footType),
+              expressionType: footType.expressionType,
+              value:
+                footType.evalSpace === 'output'
+                  ? {node: 'outputField', name: this.source.refString}
+                  : {node: 'field', path: this.source.path},
+              evalSpace: footType.evalSpace,
+              compositeFieldUsage: footType.compositeFieldUsage,
+            };
+            structPath = this.source.path.slice(0, -1);
+            // Here we handle a special case where you write `foo.agg()` and `foo` is a
+            // dimension which uses only one distinct join path; in this case, we set the
+            // locality to be that join path
+            const joinUsage = this.getJoinUsage(inputFS);
+            const allUsagesSame =
+              joinUsage.length === 1 ||
+              (joinUsage.length > 1 &&
+                joinUsage.slice(1).every(p => joinPathEq(p, joinUsage[0])));
+            if (allUsagesSame) {
+              structPath = joinUsage[0].map(p => p.name);
+              sourceRelationship = joinUsage[0];
+            }
+          } else {
+            return this.loggedErrorExpr(
+              'invalid-aggregate-source',
+              `Aggregate source cannot be a ${footType.type}`
             );
           }
         }
       } else {
-        this.log(`Reference to undefined value ${this.source.refString}`);
-        return errorFor(
+        return this.loggedErrorExpr(
+          'aggregate-source-not-found',
           `Reference to undefined value ${this.source.refString}`
         );
       }
     }
     if (exprVal === undefined) {
-      this.log('Missing expression for aggregate function');
-      return errorFor('agggregate without expression');
+      return this.loggedErrorExpr(
+        'missing-aggregate-expression',
+        'Missing expression for aggregate function'
+      );
     }
     if (expressionIsAggregate(exprVal.expressionType)) {
-      this.log('Aggregate expression cannot be aggregate');
-      return errorFor('reagggregate');
+      return this.loggedErrorExpr(
+        'aggregate-of-aggregate',
+        'Aggregate expression cannot be aggregate'
+      );
     }
-    const isAnError = exprVal.dataType === 'error';
+    const isAnError = exprVal.type === 'error';
     if (!isAnError) {
       const joinUsage = this.getJoinUsage(inputFS);
       // Did the user spceify a source, either as `source.agg()` or `path.to.join.agg()` or `path.to.field.agg()`
@@ -154,7 +146,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
           const usagePaths = getJoinUsagePaths(sourceRelationship, joinUsage);
           const joinError = validateUsagePaths(this.elementType, usagePaths);
           const message = sourceSpecified
-            ? joinError
+            ? joinError?.message
             : 'Join path is required for this calculation';
           if (message) {
             const errorWithSuggestion = suggestNewVersion(
@@ -163,7 +155,12 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
               expr,
               this.elementType
             );
-            this.log(errorWithSuggestion, joinError ? 'error' : 'warn');
+            const code = joinError?.code ?? 'bad-join-usage';
+            if (joinError) {
+              this.logError(code, errorWithSuggestion);
+            } else {
+              this.logWarning(code, errorWithSuggestion);
+            }
           }
         }
       }
@@ -174,8 +171,8 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
         expressionType: 'scalar',
       })
     ) {
-      const f: AggregateFragment = {
-        type: 'aggregate',
+      const f: AggregateExpr = {
+        node: 'aggregate',
         function: this.func,
         e: exprVal.value,
       };
@@ -183,9 +180,9 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
         f.structPath = structPath;
       }
       return {
-        dataType: this.returns(exprVal),
+        ...this.returns(exprVal),
         expressionType: 'aggregate',
-        value: [f],
+        value: f,
         evalSpace: 'output',
       };
     }
@@ -197,11 +194,11 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
   }
 
   getJoinUsage(fs: FieldSpace) {
-    const result: JoinPathElement[][] = [];
+    const result: JoinPath[] = [];
     if (this.source) {
       const lookup = this.source.getField(fs);
       if (lookup.found) {
-        const sfd: Fragment[] = [{type: 'field', path: this.source.path}];
+        const sfd: Expr = {node: 'field', path: this.source.path};
         result.push(...getJoinUsage(fs, sfd));
       }
     }
@@ -213,7 +210,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
   }
 }
 
-function joinPathEq(a1: JoinPathElement[], a2: JoinPathElement[]): boolean {
+function joinPathEq(a1: JoinPath, a2: JoinPath): boolean {
   let len = a1.length;
   if (len !== a2.length) {
     return false;
@@ -227,15 +224,15 @@ function joinPathEq(a1: JoinPathElement[], a2: JoinPathElement[]): boolean {
   return true;
 }
 
-function getJoinUsage(fs: FieldSpace, expr: Fragment[]): JoinPathElement[][] {
-  const result: {name: string; structRelationship: StructRelationship}[][] = [];
-  const lookup = (
+function getJoinUsage(fs: FieldSpace, expr: Expr): JoinPath[] {
+  const result: JoinPath[] = [];
+  const lookupWithPath = (
     fs: FieldSpace,
     path: string[]
   ): {
     fs: FieldSpace;
     def: FieldDef;
-    relationship: {name: string; structRelationship: StructRelationship}[];
+    joinPath: JoinPath;
   } => {
     const head = path[0];
     const rest = path.slice(1);
@@ -244,13 +241,10 @@ function getJoinUsage(fs: FieldSpace, expr: Fragment[]): JoinPathElement[][] {
       throw new Error(`Invalid field lookup ${head}`);
     }
     if (def instanceof StructSpaceField && rest.length > 0) {
-      const restDef = lookup(def.fieldSpace, rest);
+      const restDef = lookupWithPath(def.fieldSpace, rest);
       return {
         ...restDef,
-        relationship: [
-          {name: head, structRelationship: def.structRelationship},
-          ...restDef.relationship,
-        ],
+        joinPath: [{...def.joinPathElement, name: head}, ...restDef.joinPath],
       };
     } else if (def instanceof SpaceField) {
       if (rest.length !== 0) {
@@ -261,7 +255,7 @@ function getJoinUsage(fs: FieldSpace, expr: Fragment[]): JoinPathElement[][] {
         return {
           fs,
           def: fieldDef,
-          relationship: [],
+          joinPath: [],
         };
       }
       throw new Error('No field def');
@@ -269,60 +263,49 @@ function getJoinUsage(fs: FieldSpace, expr: Fragment[]): JoinPathElement[][] {
       throw new Error('expected a field def or struct');
     }
   };
-  exprWalk(expr, frag => {
-    if (typeof frag !== 'string') {
-      if (frag.type === 'field') {
-        const def = lookup(fs, frag.path);
-        if (def.def.type !== 'struct' && def.def.type !== 'turtle') {
-          if (def.def.e) {
-            const defUsage = getJoinUsage(def.fs, def.def.e);
-            result.push(...defUsage.map(r => [...def.relationship, ...r]));
-          } else {
-            result.push(def.relationship);
-          }
-        }
-      } else if (frag.type === 'source-reference') {
-        if (frag.path) {
-          const def = lookup(fs, frag.path);
-          result.push(def.relationship);
+  for (const frag of exprWalk(expr)) {
+    if (frag.node === 'field') {
+      const def = lookupWithPath(fs, frag.path);
+      const field = def.def;
+      if (isAtomic(field) && !isJoined(field)) {
+        if (hasExpression(field)) {
+          const defUsage = getJoinUsage(def.fs, field.e);
+          result.push(...defUsage.map(r => [...def.joinPath, ...r]));
         } else {
-          result.push([]);
+          result.push(def.joinPath);
         }
       }
+    } else if (frag.node === 'source-reference') {
+      if (frag.path) {
+        const def = lookupWithPath(fs, frag.path);
+        result.push(def.joinPath);
+      } else {
+        result.push([]);
+      }
     }
-  });
+  }
   return result;
 }
 
+type UsagePathElement = JoinPathElement & {reverse: boolean};
+type UsagePath = UsagePathElement[];
 function getJoinUsagePaths(
-  sourceRelationship: {name: string; structRelationship: StructRelationship}[],
-  joinUsage: {name: string; structRelationship: StructRelationship}[][]
-): {
-  name: string;
-  structRelationship: StructRelationship;
-  reverse: boolean;
-}[][] {
-  const sourceToUsagePaths: {
-    name: string;
-    structRelationship: StructRelationship;
-    reverse: boolean;
-  }[][] = [];
+  joinPath: JoinPath,
+  joinUsage: JoinPath[]
+): UsagePath[] {
+  const sourceToUsagePaths: UsagePath[] = [];
   for (const usage of joinUsage) {
     let overlap = 0;
-    for (let i = 0; i < sourceRelationship.length && i < usage.length; i++) {
-      if (sourceRelationship[i].name === usage[i].name) {
+    for (let i = 0; i < joinPath.length && i < usage.length; i++) {
+      if (joinPath[i].name === usage[i].name) {
         overlap = i + 1;
       } else {
         break;
       }
     }
-    const nonOverlapSource = sourceRelationship.slice(overlap);
+    const nonOverlapSource = joinPath.slice(overlap);
     const nonOverlapUsage = usage.slice(overlap);
-    const sourceToUsagePath: {
-      name: string;
-      structRelationship: StructRelationship;
-      reverse: boolean;
-    }[] = [
+    const sourceToUsagePath: UsagePath = [
       ...nonOverlapSource.map(r => ({...r, reverse: true})),
       ...nonOverlapUsage.map(r => ({...r, reverse: false})),
     ];
@@ -333,20 +316,25 @@ function getJoinUsagePaths(
 
 function validateUsagePaths(
   functionName: string,
-  usagePaths: {
-    name: string;
-    structRelationship: StructRelationship;
-    reverse: boolean;
-  }[][]
-) {
+  usagePaths: UsagePath[]
+): {message: string; code: MessageCode} | undefined {
   for (const path of usagePaths) {
     for (const step of path) {
-      if (step.structRelationship.type === 'cross') {
-        return `Cannot compute \`${functionName}\` across \`join_cross\` relationship \`${step.name}\``;
-      } else if (step.structRelationship.type === 'many' && !step.reverse) {
-        return `Cannot compute \`${functionName}\` across \`join_many\` relationship \`${step.name}\``;
-      } else if (step.structRelationship.type === 'nested' && !step.reverse) {
-        return `Cannot compute \`${functionName}\` across repeated relationship \`${step.name}\``;
+      if (step.joinType === 'cross') {
+        return {
+          code: 'aggregate-traverses-join-cross',
+          message: `Cannot compute \`${functionName}\` across \`join_cross\` relationship \`${step.name}\``,
+        };
+      } else if (step.joinElementType === 'array' && !step.reverse) {
+        return {
+          code: 'aggregate-traverses-repeated-relationship',
+          message: `Cannot compute \`${functionName}\` across repeated relationship \`${step.name}\``,
+        };
+      } else if (step.joinType === 'many' && !step.reverse) {
+        return {
+          code: 'aggregate-traverses-join-many',
+          message: `Cannot compute \`${functionName}\` across \`join_many\` relationship \`${step.name}\``,
+        };
       }
     }
   }
@@ -354,7 +342,7 @@ function validateUsagePaths(
 
 function suggestNewVersion(
   joinError: string,
-  joinUsage: {name: string; structRelationship: StructRelationship}[][],
+  joinUsage: JoinPath[],
   expr: FieldReference | ExpressionDef,
   func: string
 ) {
@@ -379,11 +367,7 @@ function suggestNewVersion(
   const indexFromEndOfLastMany = longestOverlap
     .slice()
     .reverse()
-    .findIndex(
-      x =>
-        x.structRelationship.type === 'many' ||
-        x.structRelationship.type === 'cross'
-    );
+    .findIndex(x => x.joinType === 'many' || x.joinType === 'cross');
   const numJoinsToLastMany =
     indexFromEndOfLastMany === -1
       ? 0

@@ -21,17 +21,25 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {StructRelationship} from '../../../model';
+import {JoinElementType, JoinType} from '../../../model';
+import {MessageCode} from '../../parse-log';
 import {SpaceEntry} from './space-entry';
+
+export interface JoinPathElement {
+  name: string;
+  joinElementType: JoinElementType;
+  joinType: JoinType;
+}
+export type JoinPath = JoinPathElement[];
 
 export interface LookupFound {
   found: SpaceEntry;
-  relationship: {name: string; structRelationship: StructRelationship}[];
+  joinPath: JoinPath;
   error: undefined;
   isOutputField: boolean;
 }
 export interface LookupError {
-  error: string;
+  error: {message: string; code: MessageCode};
   found: undefined;
 }
 

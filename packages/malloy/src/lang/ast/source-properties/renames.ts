@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {AccessModifierLabel} from '../../../model';
 import {DynamicSpace} from '../field-space/dynamic-space';
 import {RenameSpaceField} from '../field-space/rename-space-field';
 import {FieldName} from '../types/field-space';
@@ -39,7 +40,10 @@ export class RenameField extends MalloyElement implements MakeEntry {
   }
   makeEntry(fs: DynamicSpace) {
     if (this.oldName.refString === this.newName) {
-      this.log("Can't rename field to itself");
+      this.logError(
+        'invalid-rename-with-same-name',
+        "Can't rename field to itself"
+      );
       return;
     }
     const oldValue = this.oldName.getField(fs);
@@ -51,14 +55,32 @@ export class RenameField extends MalloyElement implements MakeEntry {
           new RenameSpaceField(oldValue.found, this.newName, this.location)
         );
       } else {
-        this.log(`'${this.oldName}' cannot be renamed`);
+        this.logError('failed-rename', `'${this.oldName}' cannot be renamed`);
       }
     } else {
-      this.log(`Can't rename '${this.oldName}', no such field`);
+      this.logError(
+        'rename-field-not-found',
+        `Can't rename '${this.oldName}', no such field`
+      );
     }
+  }
+
+  getName(): string {
+    return this.newName;
   }
 }
 
 export class Renames extends ListOf<RenameField> {
   elementType = 'renameFields';
+
+  constructor(
+    fields: RenameField[],
+    readonly accessModifier: AccessModifierLabel | undefined
+  ) {
+    super(fields);
+  }
+
+  get delarationNames(): string[] {
+    return this.list.map(el => el.getName());
+  }
 }

@@ -22,11 +22,16 @@
  */
 
 import {
+  emptyCompositeFieldUsage,
+  emptyNarrowedCompositeFieldResolution,
+} from '../../../model/composite_source_utils';
+import {
   IndexSegment,
   PipeSegment,
   IndexFieldDef,
-  isAtomicFieldType,
   expressionIsScalar,
+  TD,
+  CompositeFieldUsage,
 } from '../../../model/malloy_types';
 import {
   FieldReference,
@@ -51,36 +56,62 @@ export class IndexFieldSpace extends QueryOperationSpace {
       } else if (indexField instanceof WildcardFieldReference) {
         this.addWild(indexField);
       } else {
-        indexField.log('Internal error, not expected in index query');
+        indexField.logError(
+          'invalid-field-in-index-query',
+          'Internal error, not expected in index query'
+        );
       }
     }
   }
 
   getPipeSegment(refineIndex?: PipeSegment): IndexSegment {
     if (refineIndex) {
-      this.log('index query operations cannot be refined');
+      this.logError(
+        'refinement-of-index-segment',
+        'index query operations cannot be refined'
+      );
       return {type: 'index', indexFields: []};
     }
+    let compositeFieldUsage = emptyCompositeFieldUsage();
+    let narrowedCompositeFieldResolution =
+      emptyNarrowedCompositeFieldResolution();
     const indexFields: IndexFieldDef[] = [];
+    const source = this.inputSpace().structDef();
     for (const [name, field] of this.entries()) {
       if (field instanceof SpaceField) {
-        const wildPath = this.expandedWild[name];
-        if (wildPath) {
-          indexFields.push({type: 'fieldref', path: wildPath});
-          continue;
-        }
-        if (field instanceof ReferenceField) {
+        let nextCompositeFieldUsage: CompositeFieldUsage | undefined =
+          undefined;
+        let logTo: MalloyElement | undefined = undefined;
+        const wild = this.expandedWild[name];
+        if (wild) {
+          indexFields.push({type: 'fieldref', path: wild.path});
+          nextCompositeFieldUsage = wild.entry.typeDesc().compositeFieldUsage;
+        } else if (field instanceof ReferenceField) {
           // attempt to cause a type check
           const fieldRef = field.fieldRef;
           const check = fieldRef.getField(this.exprSpace);
           if (check.error) {
-            fieldRef.log(check.error);
+            fieldRef.logError(check.error.code, check.error.message);
           } else {
             indexFields.push(fieldRef.refToField);
+            nextCompositeFieldUsage =
+              check.found.typeDesc().compositeFieldUsage;
+            logTo = fieldRef;
           }
         }
+        const next = this.applyNextCompositeFieldUsage(
+          source,
+          compositeFieldUsage,
+          narrowedCompositeFieldResolution,
+          nextCompositeFieldUsage,
+          logTo
+        );
+        compositeFieldUsage = next.compositeFieldUsage;
+        narrowedCompositeFieldResolution =
+          next.narrowedCompositeFieldResolution;
       }
     }
+    this._compositeFieldUsage = compositeFieldUsage;
     return {type: 'index', indexFields};
   }
 
@@ -100,13 +131,17 @@ export class IndexFieldSpace extends QueryOperationSpace {
           if (ent instanceof StructSpaceField) {
             current = ent.fieldSpace;
           } else {
-            pathPart.log(
+            pathPart.logError(
+              'invalid-wildcard-source',
               `Field '${part}' does not contain rows and cannot be expanded with '*'`
             );
             return;
           }
         } else {
-          pathPart.log(`No such field as '${part}'`);
+          pathPart.logError(
+            'wildcard-source-not-found',
+            `No such field as '${part}'`
+          );
           return;
         }
       }
@@ -117,13 +152,17 @@ export class IndexFieldSpace extends QueryOperationSpace {
       if (wild.except.has(name)) {
         continue;
       }
+      if (entry.refType === 'parameter') {
+        continue;
+      }
       const indexName = IndexFieldReference.indexOutputName([
         ...joinPath,
         name,
       ]);
       if (this.entry(indexName)) {
-        const conflict = this.expandedWild[indexName]?.join('.');
-        wild.log(
+        const conflict = this.expandedWild[indexName].path?.join('.');
+        wild.logError(
+          'name-conflict-in-wildcard-expansion',
           `Cannot expand '${name}' in '${
             wild.refString
           }' because a field with that name already exists${
@@ -131,14 +170,18 @@ export class IndexFieldSpace extends QueryOperationSpace {
           }`
         );
       } else {
-        const eType = entry.typeDesc();
+        const eTypeDesc = entry.typeDesc();
+        // Don't index arrays and records
         if (
-          isAtomicFieldType(eType.dataType) &&
-          expressionIsScalar(eType.expressionType) &&
+          TD.isLeafAtomic(eTypeDesc) &&
+          expressionIsScalar(eTypeDesc.expressionType) &&
           (dialect === undefined || !dialect.ignoreInProject(name))
         ) {
           expandEntries.push({name: indexName, entry});
-          this.expandedWild[indexName] = joinPath.concat(name);
+          this.expandedWild[indexName] = {
+            path: joinPath.concat(name),
+            entry,
+          };
         }
       }
     }

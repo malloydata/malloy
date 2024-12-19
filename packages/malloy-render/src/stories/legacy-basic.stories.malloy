@@ -1,0 +1,85 @@
+## renderer_legacy
+
+##(story) component=Table
+
+source: products is duckdb.table("static/data/products.parquet") extend {
+
+  #(story)
+  view: flat_table is {
+    select: *
+    limit: 100
+  }
+
+  #(story)
+  # bar_chart
+  view: bar_chart is {
+    group_by: category
+    aggregate: avg_retail is retail_price.avg()
+  }
+
+  #(story) story="Flatten Nested Measures"
+  view: flatten is {
+    group_by: category
+    aggregate: avg_retail is retail_price.avg()
+    nest:
+      # flatten
+      mens is {
+        aggregate:
+          avg_price is retail_price.avg()
+          total_cost is cost.sum()
+        where: department="Men"
+      }
+      # flatten
+      womens is {
+        aggregate:
+          avg_price is retail_price.avg()
+          total_cost is cost.sum()
+        where: department="Women"
+      }
+
+      # pivot
+      test is {
+        group_by: distribution_center_id
+        aggregate: avg_retail is retail_price.avg()
+        nest:
+          # flatten
+          mens is {
+            aggregate:
+              avg_price is retail_price.avg()
+              total_cost is cost.sum()
+            where: department="Men"
+          }
+          # flatten
+          womens is {
+            aggregate:
+              avg_price1 is retail_price.avg()
+              total_cost1 is cost.sum()
+            where: department="Women"
+          }
+        where: distribution_center_id=1 or distribution_center_id=2
+      }
+  }
+
+  #(story)
+  view: formats is {
+    group_by:
+      `Test number` is "0.0123730499"
+      Default is 0.0123730499
+      # duration
+      `# duration` is 0.0123730499
+      # duration.terse
+      `# duration.terse` is 0.0123730499
+      # number="0.##"
+      `# number=0.##` is 0.0123730499
+      # duration number="0.##"
+      `# duration number=0.##` is 0.0123730499
+  }
+};
+
+source: uuid is duckdb.sql("SELECT 'Sample Text' AS text_column, 42 AS number_column, '123e4567-e89b-12d3-a456-426614174000'::UUID AS uuid_column, {'name': 'foo'} AS user") extend {
+  #(story)
+  view: unsupported_field is {
+    group_by: id is uuid_column,
+    name is user.name,
+  }
+};

@@ -1,12 +1,31 @@
 {
   "name": "@malloydata/malloy",
-  "version": "0.0.123",
+  "version": "0.0.225",
   "license": "MIT",
+  "exports": {
+    ".": "./dist/index.js",
+    "./test": "./dist/test/index.js",
+    "./connection": "./dist/connection/index.js",
+    "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {
+      "index": [
+        "./dist/index.d.ts"
+      ],
+      "test": [
+        "./dist/test/index.d.ts"
+      ],
+      "connection": [
+        "./dist/connection/index.d.ts"
+      ]
+    }
+  },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "homepage": "https://github.com/malloydata/malloy#readme",
   "engines": {
-    "node": ">=16"
+    "node": ">=18"
   },
   "repository": {
     "type": "git",
@@ -18,7 +37,8 @@
     "clean": "tsc --build --clean && rm -rf src/lang/lib dist",
     "build": "npm run build-parser && tsc --build",
     "malloyc": "ts-node ../../scripts/malloy-to-json",
-    "prepublishOnly": "npm run clean && npm run build"
+    "prepublishOnly": "npm run clean && npm run build",
+    "generate-version-file": "VERSION=$(npm pkg get version --workspaces=false | tr -d \\\")\necho \"// generated with 'generate-version-file' script; do not edit manually\\nexport const MALLOY_VERSION = '$VERSION';\" > src/version.ts"
   },
   "dependencies": {
     "antlr4ts": "^0.5.0-alpha.4",

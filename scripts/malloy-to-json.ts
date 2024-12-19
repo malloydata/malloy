@@ -21,11 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/* eslint-disable no-console */
 import * as readline from 'readline';
 import {inspect} from 'util';
 import {Connection, Malloy} from '@malloydata/malloy';
 import {BigQueryConnection} from '@malloydata/db-bigquery';
+import {DuckDBConnection} from '../packages/malloy-db-duckdb';
 import {readFile} from 'fs/promises';
 import {readFileSync} from 'fs';
 
@@ -58,10 +58,13 @@ CURRENTLY HAS TWO MODES
 async function printTranlsatedMalloy(fileSrc: string, fileURL: string) {
   const url = new URL(fileURL);
   const parse = Malloy.parse({source: fileSrc, url});
-  const connection = new BigQueryConnection('bigquery');
+  const bqConn = new BigQueryConnection('bigquery');
+  const ddbCon = new DuckDBConnection('duckdb');
   const lookupConnection = async function (name: string): Promise<Connection> {
     if (name === 'bigquery' || name === undefined) {
-      return connection;
+      return bqConn;
+    } else if (name === 'duckdb') {
+      return ddbCon;
     }
     throw new Error(`No connection ${name}`);
   };

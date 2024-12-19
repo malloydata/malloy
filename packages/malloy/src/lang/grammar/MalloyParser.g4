@@ -1,5 +1,6 @@
 /*
  * Copyright 2023 Google LLC
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files
@@ -26,9 +27,15 @@ options { tokenVocab=MalloyLexer; }
 
 malloyDocument: (malloyStatement | SEMI)* EOF;
 
+closeCurly
+  : CCURLY
+  // ANTLR VSCode plugin loses it's tiny mind if { } aren't matched
+  // even in the error string below
+  | { this.notifyErrorListeners("'{' missing a '}'"); }
+  ;
+
 malloyStatement
   : defineSourceStatement
-  | defineSQLStatement
   | defineQuery
   | importStatement
   | runStatement
@@ -62,25 +69,12 @@ runStatement
   : tags RUN topLevelAnonQueryDef
   ;
 
-defineSQLStatement
-  : SQLC nameSQLBlock isDefine sqlBlock
-  ;
-
-sqlBlock
-  : OCURLY blockSQLDef+ CCURLY
-  ;
-
-blockSQLDef
-  : CONNECTION connectionName
-  | SELECT sqlString
-  ;
-
 sqlString
   : SQL_BEGIN sqlInterpolation* SQL_END
   ;
 
 sqlInterpolation
-  : OPEN_CODE sqExpr (CCURLY | CLOSE_CODE)
+  : OPEN_CODE sqExpr (closeCurly | CLOSE_CODE)
   ;
 
 importStatement
@@ -90,7 +84,7 @@ importStatement
 importSelect
   : OCURLY
     importItem (COMMA importItem)*
-    CCURLY FROM
+    closeCurly FROM
   ;
 
 importItem
@@ -140,11 +134,11 @@ connectionId
 
 queryProperties
   : filterShortcut
-  | OCURLY (queryStatement | SEMI)* CCURLY
+  | OCURLY (queryStatement | SEMI)* closeCurly
   ;
 
 filterShortcut
-  : OCURLY QMARK fieldExpr CCURLY
+  : OCURLY QMARK fieldExpr closeCurly
   ;
 
 queryName : id;
@@ -154,42 +148,64 @@ sourcePropertyList
   ;
 
 sourceDefinition
-  : tags sourceNameDef isDefine sqExplore
+  : tags sourceNameDef sourceParameters? isDefine sqExplore
   ;
 
 sqExplore
   : sqExpr
   ;
 
+sourceParameters
+  : OPAREN CPAREN
+  | OPAREN sourceParameter (COMMA sourceParameter)* CPAREN
+  ;
+
+sourceParameter
+  : parameterNameDef (DOUBLECOLON malloyType)? (IS fieldExpr)?
+  ;
+
+parameterNameDef: id;
 sourceNameDef: id;
-sourceID: id;
 
 exploreProperties
-  : OCURLY (exploreStatement | SEMI)* CCURLY
+  : OCURLY (exploreStatement | SEMI)* closeCurly
   | filterShortcut
   ;
 
 exploreStatement
-  : defDimensions                         # defExploreDimension_stub
-  | defMeasures                           # defExploreMeasure_stub
-  | declareStatement                      # defDeclare_stub
-  | joinStatement                         # defJoin_stub
-  | whereStatement                        # defExploreWhere_stub
-  | PRIMARY_KEY fieldName                 # defExplorePrimaryKey
-  | RENAME renameList                     # defExploreRename
-  | (ACCEPT | EXCEPT) fieldNameList       # defExploreEditField
-  | tags (QUERY | VIEW) subQueryDefList   # defExploreQuery
-  | timezoneStatement                     # defExploreTimezone
-  | ANNOTATION+                           # defExploreAnnotation
-  | ignoredModelAnnotations               # defIgnoreModel_stub
+  : defDimensions                            # defExploreDimension_stub
+  | defMeasures                              # defExploreMeasure_stub
+  | declareStatement                         # defDeclare_stub
+  | joinStatement                            # defJoin_stub
+  | whereStatement                           # defExploreWhere_stub
+  | PRIMARY_KEY fieldName                    # defExplorePrimaryKey
+  | accessLabel? RENAME renameList           # defExploreRename
+  | (ACCEPT | EXCEPT) fieldNameList          # defExploreEditField
+  | tags accessLabel? (QUERY | VIEW) subQueryDefList
+                                             # defExploreQuery
+  | timezoneStatement                        # defExploreTimezone
+  | ANNOTATION+                              # defExploreAnnotation
+  | ignoredModelAnnotations                  # defIgnoreModel_stub
+  ;
+
+
+accessLabel
+  : PUBLIC_KW
+  | PRIVATE_KW
+  | INTERNAL_KW
+  ;
+
+accessModifierList
+  : fieldNameList
+  | STAR starQualified?
   ;
 
 defMeasures
-  : tags MEASURE defList
+  : tags accessLabel? MEASURE defList
   ;
 
 defDimensions
-  : tags DIMENSION defList
+  : tags accessLabel? DIMENSION defList
   ;
 
 renameList
@@ -212,13 +228,13 @@ fieldNameDef: id;
 joinNameDef: id;
 
 declareStatement
-  : DECLARE defList
+  : DECLARE accessLabel? defList
   ;
 
 joinStatement
-  : tags JOIN_ONE joinList                  # defJoinOne
-  | tags JOIN_MANY joinList                 # defJoinMany
-  | tags JOIN_CROSS joinList                # defJoinCross
+  : tags accessLabel? JOIN_ONE joinList                  # defJoinOne
+  | tags accessLabel? JOIN_MANY joinList                 # defJoinMany
+  | tags accessLabel? JOIN_CROSS joinList                # defJoinCross
   ;
 
 queryExtend
@@ -231,14 +247,69 @@ modEither
   | declareStatement
   ;
 
+sourceArguments
+  : OPAREN CPAREN
+  | OPAREN sourceArgument (COMMA sourceArgument)* CPAREN
+  ;
+
+argumentId
+  : id
+  ;
+
+sourceArgument
+  : (argumentId IS)? fieldExpr
+  ;
+
 sqExpr
-  : id                                        # SQID
-  | OPAREN sqExpr CPAREN                      # SQParens
-  | sqExpr PLUS segExpr                       # SQRefinedQuery
-  | sqExpr ARROW segExpr                      # SQArrow
-  | sqExpr EXTEND exploreProperties           # SQExtendedSource
-  | exploreTable                              # SQTable
-  | sqlSource                                 # SQSQL
+  : id sourceArguments?                                      # SQID
+  | OPAREN sqExpr CPAREN                                     # SQParens
+  | COMPOSE OPAREN (sqExpr (COMMA sqExpr)*)? CPAREN          # SQCompose
+  | sqExpr PLUS segExpr                                      # SQRefinedQuery
+  | sqExpr ARROW segExpr                                     # SQArrow
+  | sqExpr (INCLUDE includeBlock)? EXTEND exploreProperties  # SQExtendedSource
+  | sqExpr INCLUDE includeBlock                              # SQInclude
+  | exploreTable                                             # SQTable
+  | sqlSource                                                # SQSQL
+  ;
+
+includeBlock
+  : OCURLY (includeItem | SEMI)* closeCurly
+  ;
+
+includeItem
+  : tags accessLabelProp includeList
+  | includeList
+  | tags EXCEPT includeExceptList
+  | orphanedAnnotation
+  ;
+
+orphanedAnnotation
+  : ANNOTATION
+  ;
+
+accessLabelProp
+  : PUBLIC
+  | PRIVATE
+  | INTERNAL
+  ;
+
+includeExceptList
+  : includeExceptListItem (COMMA? includeExceptListItem)* COMMA?
+  ;
+
+includeExceptListItem
+  : tags fieldName
+  | tags collectionWildCard
+  ;
+
+includeList
+  : includeField (COMMA? includeField)* COMMA?
+  ;
+
+includeField
+  : tags (as=fieldName isDefine)? name=fieldName
+  | tags name=fieldName
+  | tags collectionWildCard
   ;
 
 segExpr
@@ -260,7 +331,7 @@ queryExtendStatement
   ;
 
 queryExtendStatementList
-  : OCURLY (queryExtendStatement | SEMI)* CCURLY
+  : OCURLY (queryExtendStatement | SEMI)* closeCurly
   ;
 
 joinList
@@ -273,9 +344,15 @@ isExplore
 
 matrixOperation : (LEFT | RIGHT | FULL| INNER);
 
+joinFrom
+  : joinNameDef
+  | joinNameDef sourceArguments
+  | joinNameDef isExplore
+  ;
+
 joinDef
-  : ANNOTATION* joinNameDef isExplore? matrixOperation? WITH fieldExpr        # joinWith
-  | ANNOTATION* joinNameDef isExplore? (matrixOperation? ON joinExpression)?  # joinOn
+  : ANNOTATION* joinFrom matrixOperation? WITH fieldExpr        # joinWith
+  | ANNOTATION* joinFrom (matrixOperation? ON joinExpression)?  # joinOn
   ;
 
 joinExpression: fieldExpr;
@@ -286,7 +363,7 @@ filterStatement
   ;
 
 fieldProperties
-  : OCURLY (fieldPropertyStatement | SEMI)* CCURLY
+  : OCURLY (fieldPropertyStatement | SEMI)* closeCurly
   ;
 
 aggregateOrdering
@@ -425,7 +502,7 @@ bySpec
   ;
 
 topStatement
-  : TOP INTEGER_LITERAL bySpec?
+  : TOP INTEGER_LITERAL
   ;
 
 indexElement
@@ -521,8 +598,10 @@ malloyOrSQLType
 
 fieldExpr
   : fieldPath                                              # exprFieldPath
-  | fieldExpr fieldProperties                              # exprFieldProps
   | literal                                                # exprLiteral
+  | OBRACK fieldExpr (COMMA fieldExpr)* COMMA? CBRACK      # exprArrayLiteral
+  | OCURLY recordElement (COMMA recordElement)* CCURLY     # exprLiteralRecord
+  | fieldExpr fieldProperties                              # exprFieldProps
   | fieldExpr timeframe                                    # exprDuration
   | fieldExpr DOT timeframe                                # exprTimeTrunc
   | fieldExpr DOUBLECOLON malloyOrSQLType                  # exprCast
@@ -535,23 +614,26 @@ fieldExpr
   | fieldExpr AMPER partialAllowedFieldExpr                # exprAndTree
   | fieldExpr BAR partialAllowedFieldExpr                  # exprOrTree
   | fieldExpr compareOp fieldExpr                          # exprCompare
+  | fieldExpr NOT? LIKE fieldExpr                          # exprWarnLike
+  | fieldExpr IS NOT? NULL                                 # exprWarnNullCmp
+  | fieldExpr NOT? IN OPAREN fieldExprList CPAREN          # exprWarnIn
   | fieldExpr QMARK partialAllowedFieldExpr                # exprApply
   | NOT fieldExpr                                          # exprNot
   | fieldExpr AND fieldExpr                                # exprLogicalAnd
   | fieldExpr OR fieldExpr                                 # exprLogicalOr
   | fieldExpr DOUBLE_QMARK fieldExpr                       # exprCoalesce
   | CAST OPAREN fieldExpr AS malloyOrSQLType CPAREN        # exprCast
-  | COUNT OPAREN DISTINCT fieldExpr CPAREN                 # exprCountDisinct
   | (SOURCE_KW DOT)? aggregate
       OPAREN (fieldExpr | STAR)? CPAREN                    # exprPathlessAggregate
   | fieldPath DOT aggregate
       OPAREN fieldExpr? CPAREN                             # exprAggregate
-  | OPAREN partialAllowedFieldExpr CPAREN                  # exprExpr
+  | OPAREN fieldExpr CPAREN                                # exprExpr
   | fieldPath DOT id
       OPAREN ( argumentList? ) CPAREN                      # exprAggFunc
   | ((id (EXCLAM malloyType?)?) | timeframe)
       OPAREN ( argumentList? ) CPAREN                      # exprFunc
   | pickStatement                                          # exprPick
+  | caseStatement                                          # exprCase
   | ungroup OPAREN fieldExpr (COMMA fieldName)* CPAREN     # exprUngroup
   ;
 
@@ -560,12 +642,30 @@ partialAllowedFieldExpr
   | compareOp? fieldExpr
   ;
 
+fieldExprList
+  : fieldExpr (COMMA fieldExpr)*
+  ;
+
 pickStatement
   : pick+ (ELSE pickElse=fieldExpr)?
   ;
 
 pick
   : PICK (pickValue=fieldExpr)? WHEN pickWhen=partialAllowedFieldExpr
+  ;
+
+caseStatement
+  : CASE (valueExpr=fieldExpr)? (caseWhen)+ (ELSE caseElse=fieldExpr)? END
+  ;
+
+caseWhen
+  : WHEN condition=fieldExpr THEN result=fieldExpr
+  ;
+
+recordKey: id;
+recordElement
+  : fieldPath                   # recordRef
+  | (recordKey IS)? fieldExpr   # recordExpr
   ;
 
 argumentList
@@ -588,7 +688,7 @@ starQualified
   : OCURLY (
       (EXCEPT fieldNameList)
     | COMMA
-  )+ CCURLY
+  )+ closeCurly
   ;
 
 taggedRef
@@ -613,11 +713,15 @@ fieldPath
 joinName: id;
 fieldName: id;
 
-justExpr: fieldExpr EOF;
-
 sqlExploreNameRef: id;
 nameSQLBlock: id;
 connectionName: string;
+
+// These are for debug launch configs. Without the EOF a parse can stop without
+// parsing the entire input, if it is legal up to some token, for the debuger
+// we want to make sure the entire expression parses.
+debugExpr: fieldExpr EOF;
+debugPartial: partialAllowedFieldExpr EOF;
 
 experimentalStatementForTesting // this only exists to enable tests for the experimental compiler flag
   : SEMI SEMI OBRACK string CBRACK

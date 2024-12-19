@@ -1,0 +1,732 @@
+/*
+ * Copyright 2023 Google LLC
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files
+ * (the "Software"), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge,
+ * publish, distribute, sublicense, and/or sell copies of the Software,
+ * and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+import {
+  Connection,
+  ConnectionConfig,
+  MalloyQueryData,
+  PersistSQLResults,
+  QueryValue,
+  QueryData,
+  QueryDataRow,
+  QueryOptionsReader,
+  QueryRunStats,
+  RunSQLOptions,
+  TrinoDialect,
+  StructDef,
+  TableSourceDef,
+  SQLSourceDef,
+  AtomicTypeDef,
+  mkFieldDef,
+  isScalarArray,
+  RepeatedRecordTypeDef,
+  RecordTypeDef,
+  Dialect,
+  ArrayTypeDef,
+  FieldDef,
+  TinyParser,
+  isRepeatedRecord,
+} from '@malloydata/malloy';
+
+import {BaseConnection} from '@malloydata/malloy/connection';
+
+import {PrestoClient, PrestoQuery} from '@prestodb/presto-js-client';
+import {randomUUID} from 'crypto';
+import {Trino, BasicAuth} from 'trino-client';
+
+export interface TrinoManagerOptions {
+  credentials?: {
+    clientId: string;
+    clientSecret: string;
+    refreshToken: string | null;
+  };
+  projectId?: string | undefined;
+  userAgent: string;
+}
+
+export interface TrinoConnectionConfiguration {
+  server?: string;
+  port?: number;
+  catalog?: string;
+  schema?: string;
+  user?: string;
+  password?: string;
+}
+
+export type TrinoConnectionOptions = ConnectionConfig;
+
+export interface BaseRunner {
+  runSQL(
+    sql: string,
+    limit: number | undefined
+  ): Promise<{
+    rows: unknown[][];
+    columns: {name: string; type: string; error?: string}[];
+    error?: string;
+  }>;
+}
+
+class PrestoRunner implements BaseRunner {
+  client: PrestoClient;
+  constructor(config: TrinoConnectionConfiguration) {
+    this.client = new PrestoClient({
+      catalog: config.catalog,
+      host: config.server,
+      port: config.port,
+      schema: config.schema,
+      timezone: 'America/Costa_Rica',
+      user: config.user || 'anyone',
+      extraHeaders: {'X-Presto-Session': 'legacy_unnest=true'},
+    });
+  }
+  async runSQL(sql: string, limit: number | undefined) {
+    let ret: PrestoQuery | undefined = undefined;
+    const q = limit ? `SELECT * FROM(${sql}) LIMIT ${limit}` : sql;
+    let error: string | undefined = undefined;
+    try {
+      ret = (await this.client.query(q)) || [];
+      // console.log(ret);
+    } catch (errorObj) {
+      // console.log(error);
+      error = errorObj.toString();
+    }
+    return {
+      rows: ret && ret.data ? ret.data : [],
+      columns:
+        ret && ret.columns
+          ? (ret.columns as {name: string; type: string}[])
+          : [],
+      error,
+    };
+  }
+}
+
+class TrinoRunner implements BaseRunner {
+  client: Trino;
+  constructor(config: TrinoConnectionConfiguration) {
+    this.client = Trino.create({
+      catalog: config.catalog,
+      server: config.server,
+      schema: config.schema,
+      auth: new BasicAuth(config.user!, config.password || ''),
+    });
+  }
+  async runSQL(sql: string, limit: number | undefined) {
+    const result = await this.client.query(sql);
+    let queryResult = await result.next();
+    if (queryResult.value.error) {
+      return {
+        rows: [],
+        columns: [],
+        error: JSON.stringify(queryResult.value.error),
+      };
+    }
+    const columns = queryResult.value.columns;
+
+    const outputRows: unknown[][] = [];
+    while (queryResult !== null && (!limit || outputRows.length < limit)) {
+      const rows = queryResult.value.data ?? [];
+      for (const row of rows) {
+        if (!limit || outputRows.length < limit) {
+          outputRows.push(row as unknown[]);
+        }
+      }
+      if (!queryResult.done) {
+        queryResult = await result.next();
+      } else {
+        break;
+      }
+    }
+    // console.log(outputRows);
+    // console.log(columns);
+    return {rows: outputRows, columns};
+  }
+}
+
+export abstract class TrinoPrestoConnection
+  extends BaseConnection
+  implements Connection, PersistSQLResults
+{
+  protected readonly dialect = new TrinoDialect();
+  static DEFAULT_QUERY_OPTIONS: RunSQLOptions = {
+    rowLimit: 10,
+  };
+
+  constructor(
+    public name: string,
+    private client: BaseRunner,
+    private queryOptions?: QueryOptionsReader
+  ) {
+    super();
+    this.name = name;
+    this.queryOptions = queryOptions;
+  }
+
+  get dialectName(): string {
+    return this.name;
+  }
+
+  private readQueryOptions(): RunSQLOptions {
+    const options = TrinoConnection.DEFAULT_QUERY_OPTIONS;
+    if (this.queryOptions) {
+      if (this.queryOptions instanceof Function) {
+        return {...options, ...this.queryOptions()};
+      } else {
+        return {...options, ...this.queryOptions};
+      }
+    } else {
+      return options;
+    }
+  }
+
+  public canPersist(): this is PersistSQLResults {
+    return true;
+  }
+
+  public get supportsNesting(): boolean {
+    return true;
+  }
+
+  public async manifestTemporaryTable(_sqlCommand: string): Promise<string> {
+    throw new Error('not implemented 1');
+  }
+
+  unpackArray(data: unknown): unknown[] {
+    return data as unknown[];
+  }
+
+  convertRow(fields: FieldDef[], rawRow: unknown) {
+    const retRow = {};
+    const row = this.unpackArray(rawRow);
+    for (let i = 0; i < fields.length; i++) {
+      const field = fields[i];
+
+      if (field.type === 'record') {
+        retRow[field.name] = this.convertRow(field.fields, row[i]);
+      } else if (isRepeatedRecord(field)) {
+        retRow[field.name] = this.convertNest(field.fields, row[i]);
+      } else if (field.type === 'array') {
+        // mtoy todo don't understand this line actually
+        retRow[field.name] = this.convertNest(field.fields.slice(0, 1), row[i]);
+      } else {
+        retRow[field.name] = row[i] ?? null;
+      }
+    }
+    //console.log(retRow);
+    return retRow;
+  }
+
+  convertNest(fields: FieldDef[], _data: unknown) {
+    const data = this.unpackArray(_data);
+    const ret: unknown[] = [];
+    const rows = (data === null || data === undefined ? [] : data) as unknown[];
+    for (const row of rows) {
+      ret.push(this.convertRow(fields, row));
+    }
+    return ret;
+  }
+
+  public async runSQL(
+    sqlCommand: string,
+    options: RunSQLOptions = {},
+    // TODO(figutierrez): Use.
+    _rowIndex = 0
+  ): Promise<MalloyQueryData> {
+    const r = await this.client.runSQL(sqlCommand, options.rowLimit);
+
+    if (r.error) {
+      throw new Error(r.error);
+    }
+    const inputRows = r.rows;
+    const columns = r.columns;
+
+    const malloyColumns = columns.map(c =>
+      this.malloyTypeFromTrinoType(c.name, c.type)
+    );
+
+    const malloyRows: QueryDataRow[] = [];
+    const rows = inputRows ?? [];
+    for (const row of rows) {
+      const malloyRow: QueryDataRow = {};
+      for (let i = 0; i < columns.length; i++) {
+        const column = columns[i];
+        const schemaColumn = malloyColumns[i];
+        malloyRow[column.name] = this.resultRow(schemaColumn, row[i]);
+      }
+
+      malloyRows.push(malloyRow);
+    }
+
+    return {rows: malloyRows, totalRows: malloyRows.length};
+  }
+
+  private resultRow(colSchema: AtomicTypeDef, rawRow: unknown) {
+    if (colSchema.type === 'record') {
+      return this.convertRow(colSchema.fields, rawRow);
+    } else if (isRepeatedRecord(colSchema)) {
+      return this.convertNest(colSchema.fields, rawRow) as QueryValue;
+    } else if (isScalarArray(colSchema)) {
+      const elType = colSchema.elementTypeDef;
+      let theArray = this.unpackArray(rawRow);
+      if (elType.type === 'array') {
+        theArray = theArray.map(el => this.resultRow(elType, el));
+      }
+      return theArray as QueryData;
+    } else if (colSchema.type === 'number' && typeof rawRow === 'string') {
+      // decimal numbers come back as strings
+      return Number(rawRow);
+    } else if (colSchema.type === 'timestamp' && typeof rawRow === 'string') {
+      // timestamps come back as strings
+      return new Date(rawRow as string);
+    } else {
+      return rawRow as QueryValue;
+    }
+  }
+
+  public async runSQLBlockAndFetchResultSchema(
+    _sqlBlock: SQLSourceDef,
+    _options?: RunSQLOptions
+  ): Promise<{data: MalloyQueryData; schema: StructDef}> {
+    throw new Error('Not implemented 3');
+  }
+
+  async fetchTableSchema(
+    tableKey: string,
+    tablePath: string
+  ): Promise<TableSourceDef> {
+    const structDef: TableSourceDef = {
+      type: 'table',
+      name: tableKey,
+      dialect: this.dialectName,
+      tablePath,
+      connection: this.name,
+      fields: [],
+    };
+
+    const schemaDesc = await this.loadSchemaForSqlBlock(
+      `DESCRIBE ${tablePath}`,
+      structDef,
+      `table ${tablePath}`
+    );
+    structDef.fields = schemaDesc.fields;
+    return structDef;
+  }
+
+  async fetchSelectSchema(sqlRef: SQLSourceDef): Promise<SQLSourceDef> {
+    const structDef: SQLSourceDef = {...sqlRef, fields: []};
+    await this.fillStructDefForSqlBlockSchema(sqlRef.selectStr, structDef);
+    return structDef;
+  }
+
+  protected abstract fillStructDefForSqlBlockSchema(
+    sql: string,
+    structDef: StructDef
+  ): Promise<void>;
+
+  protected async executeAndWait(sqlBlock: string): Promise<void> {
+    await this.client.runSQL(sqlBlock, undefined);
+    // TODO: make sure failure is handled correctly.
+    //while (!(await result.next()).done);
+  }
+
+  splitColumns(s: string) {
+    const columns: string[] = [];
+    let parens = 0;
+    let column = '';
+    let eatSpaces = true;
+    for (let idx = 0; idx < s.length; idx++) {
+      const c = s.charAt(idx);
+      if (eatSpaces && c === ' ') {
+        // Eat space
+      } else {
+        eatSpaces = false;
+        if (!parens && c === ',') {
+          columns.push(column);
+          column = '';
+          eatSpaces = true;
+        } else {
+          column += c;
+        }
+        if (c === '(') {
+          parens += 1;
+        } else if (c === ')') {
+          parens -= 1;
+        }
+      }
+    }
+    columns.push(column);
+    return columns;
+  }
+
+  public malloyTypeFromTrinoType(
+    name: string,
+    trinoType: string
+  ): AtomicTypeDef {
+    // Arrays look like `array(type)`
+    const arrayMatch = trinoType.match(/^(([^,])+\s)?array\((.*)\)$/);
+
+    // Structs look like `row(name type, name type)`
+    const structMatch = trinoType.match(/^(([^,])+\s)?row\((.*)\)$/);
+
+    if (arrayMatch) {
+      const arrayType = arrayMatch[3];
+      const innerType = this.malloyTypeFromTrinoType(name, arrayType);
+      if (innerType.type === 'record') {
+        const complexStruct: RepeatedRecordTypeDef = {
+          type: 'array',
+          elementTypeDef: {type: 'record_element'},
+          fields: innerType.fields,
+        };
+        return complexStruct;
+      } else {
+        const arrayStruct: ArrayTypeDef = {
+          type: 'array',
+          elementTypeDef: innerType,
+        };
+        return arrayStruct;
+      }
+    } else if (structMatch) {
+      // TODO: Trino doesn't quote or escape commas in field names,
+      // so some magic is going to need to be applied before we get here
+      // to avoid confusion if a field name contains a comma
+      const innerTypes = this.splitColumns(structMatch[3]);
+      const recordType: RecordTypeDef = {
+        type: 'record',
+        fields: [],
+      };
+      for (let innerType of innerTypes) {
+        // TODO: Handle time zone type annotation, which is an
+        // exception to the types not containing spaces assumption
+        innerType = innerType.replace(/ with time zone$/, '');
+        let parts = innerType.match(/^(.+?)\s((array\(|row\().*)$/);
+        if (parts === null) {
+          parts = innerType.match(/^(.+)\s(\S+)$/);
+        }
+        if (parts) {
+          // remove quotes from the name
+          const innerName = parts[1].replace(/^"(.+(?="$))"$/, '$1');
+          const innerTrinoType = parts[2];
+          const innerMalloyType = this.malloyTypeFromTrinoType(
+            innerName,
+            innerTrinoType
+          );
+          recordType.fields.push(mkFieldDef(innerMalloyType, innerName));
+        }
+      }
+      return recordType;
+    }
+    return this.dialect.sqlTypeToMalloyType(trinoType);
+  }
+
+  structDefFromSchema(rows: string[][], structDef: StructDef): void {
+    for (const row of rows) {
+      const name = row[0];
+      const type = row[4] || row[1];
+      const malloyType = this.malloyTypeFromTrinoType(name, type);
+      // console.log('>', row, '\n<', malloyType);
+      structDef.fields.push(mkFieldDef(malloyType, name));
+    }
+  }
+
+  protected async loadSchemaForSqlBlock(
+    sqlBlock: string,
+    structDef: StructDef,
+    element: string
+  ): Promise<StructDef> {
+    try {
+      const queryResult = await this.client.runSQL(sqlBlock, undefined);
+
+      if (queryResult.error) {
+        // TODO: handle.
+        throw new Error(queryResult.error);
+      }
+
+      const rows: string[][] = (queryResult.rows as string[][]) ?? [];
+      this.structDefFromSchema(rows, structDef);
+    } catch (e) {
+      throw new Error(
+        `Could not fetch schema for ${element} ${
+          e instanceof Error ? e.message : e
+        }`
+      );
+    }
+
+    return structDef;
+  }
+
+  /*  public async downloadMalloyQuery(
+    sqlCommand: string
+  ): Promise<ResourceStream<RowMetadata>> {
+    const job = await this.createTrinoJob({
+      query: sqlCommand,
+    });
+
+    return job.getQueryResultsStream();
+  }*/
+
+  public async estimateQueryCost(_sqlCommand: string): Promise<QueryRunStats> {
+    // TODO(figutierrez): Implement.
+    return {};
+  }
+
+  public async executeSQLRaw(_sqlCommand: string): Promise<QueryData> {
+    /*const result = await this.createTrinoJobAndGetResults(sqlCommand);
+    return result[0];*/
+    throw new Error('Not implemented 7');
+  }
+
+  public async test(): Promise<void> {
+    // await this.dryRunSQLQuery('SELECT 1');
+  }
+
+  async close(): Promise<void> {
+    return;
+  }
+}
+
+export class PrestoConnection extends TrinoPrestoConnection {
+  constructor(
+    name: string,
+    queryOptions?: QueryOptionsReader,
+    config?: TrinoConnectionConfiguration
+  );
+  constructor(
+    option: TrinoConnectionOptions,
+    queryOptions?: QueryOptionsReader
+  );
+  constructor(
+    arg: string | TrinoConnectionOptions,
+    queryOptions?: QueryOptionsReader,
+    config: TrinoConnectionConfiguration = {}
+  ) {
+    super(
+      typeof arg === 'string' ? arg : arg.name,
+      new PrestoRunner(config),
+      queryOptions
+    );
+  }
+
+  protected async fillStructDefForSqlBlockSchema(
+    sql: string,
+    structDef: StructDef
+  ): Promise<void> {
+    const explainResult = await this.runSQL(`EXPLAIN ${sql}`, {});
+    this.schemaFromExplain(explainResult, structDef);
+  }
+
+  private schemaFromExplain(
+    explainResult: MalloyQueryData,
+    structDef: StructDef
+  ) {
+    if (explainResult.rows.length === 0) {
+      throw new Error(
+        'Received empty explain result when trying to fetch schema.'
+      );
+    }
+
+    const resultFirstRow = explainResult.rows[0];
+
+    if (resultFirstRow['Query Plan'] === undefined) {
+      throw new Error(
+        "Explain result has rows but column 'Query Plan' is not present."
+      );
+    }
+
+    const expResult = resultFirstRow['Query Plan'] as string;
+
+    const lines = expResult.split('\n');
+    if (lines?.length === 0) {
+      throw new Error(
+        'Received invalid explain result when trying to fetch schema.'
+      );
+    }
+
+    const schemaDesc = new PrestoExplainParser(lines[0], this.dialect);
+    structDef.fields = schemaDesc.parseExplain();
+  }
+
+  unpackArray(data: unknown): unknown[] {
+    return JSON.parse(data as string);
+  }
+}
+
+export class TrinoConnection extends TrinoPrestoConnection {
+  constructor(
+    name: string,
+    queryOptions?: QueryOptionsReader,
+    config?: TrinoConnectionConfiguration
+  );
+  constructor(
+    option: TrinoConnectionOptions,
+    queryOptions?: QueryOptionsReader
+  );
+  constructor(
+    arg: string | TrinoConnectionOptions,
+    queryOptions?: QueryOptionsReader,
+    config: TrinoConnectionConfiguration = {}
+  ) {
+    super(
+      typeof arg === 'string' ? arg : arg.name,
+      new TrinoRunner(config),
+      queryOptions
+    );
+  }
+
+  protected async fillStructDefForSqlBlockSchema(
+    sql: string,
+    structDef: StructDef
+  ): Promise<void> {
+    const tmpQueryName = `myMalloyQuery${randomUUID().replace(/-/g, '')}`;
+    await this.executeAndWait(`PREPARE ${tmpQueryName} FROM ${sql}`);
+    await this.loadSchemaForSqlBlock(
+      `DESCRIBE OUTPUT ${tmpQueryName}`,
+      structDef,
+      `query ${sql.substring(0, 50)}`
+    );
+  }
+}
+
+/**
+ * A hand built parser for schema lines, roughly this grammar
+ * SCHEMA_LINE: - Output [PlanName N] [NAME_LIST] => [TYPE_LIST]
+ * NAME_LIST: NAME (, NAME)*
+ * TYPE_LIST: TYPE_SPEC (, TYPE_SPEC)*
+ * TYPE_SPEC: exprN ':' TYPE
+ * TYPE: REC_TYPE | ARRAY_TYPE | SQL_TYPE
+ * ARRAY_TYPE: ARRAY '(' TYPE ')'
+ * REC_TYPE: REC '(' "name" TYPE (, "name" TYPE)* ')'
+ */
+export class PrestoExplainParser extends TinyParser {
+  constructor(
+    readonly input: string,
+    readonly dialect: Dialect
+  ) {
+    super(input, {
+      space: /^\s+/,
+      arrow: /^=>/,
+      char: /^[,:[\]()-]/,
+      id: /^\w+/,
+      quoted_name: /^"\w+"/,
+    });
+  }
+
+  fieldNameList(): string[] {
+    this.skipTo(']'); // Skip to end of plan
+    this.next('['); // Expect start of name list
+    const fieldNames: string[] = [];
+    for (;;) {
+      const nmToken = this.next('id');
+      fieldNames.push(nmToken.text);
+      const sep = this.next();
+      if (sep.type === ',') {
+        continue;
+      }
+      if (sep.type !== ']') {
+        throw this.parseError(
+          `Unexpected '${sep.text}' while getting field name list`
+        );
+      }
+      break;
+    }
+    return fieldNames;
+  }
+
+  parseExplain(): FieldDef[] {
+    const fieldNames = this.fieldNameList();
+    const fields: FieldDef[] = [];
+    this.next('arrow', '[');
+    for (let nameIndex = 0; ; nameIndex += 1) {
+      const name = fieldNames[nameIndex];
+      this.next('id', ':');
+      const nextType = this.typeDef();
+      fields.push(mkFieldDef(nextType, name));
+      const sep = this.next();
+      if (sep.text === ',') {
+        continue;
+      }
+      if (sep.text !== ']') {
+        throw this.parseError(`Unexpected '${sep.text}' between field types`);
+      }
+      break;
+    }
+    if (fields.length !== fieldNames.length) {
+      throw new Error(
+        `Presto schema error mismatched ${fields.length} types and ${fieldNames.length} fields`
+      );
+    }
+    return fields;
+  }
+
+  typeDef(): AtomicTypeDef {
+    const typToken = this.next();
+    if (typToken.type === 'eof') {
+      throw this.parseError(
+        'Unexpected EOF parsing type, expected a type name'
+      );
+    } else if (typToken.text === 'row' && this.next('(')) {
+      const fields: FieldDef[] = [];
+      for (;;) {
+        const name = this.next('quoted_name');
+        const getDef = this.typeDef();
+        fields.push(mkFieldDef(getDef, name.text));
+        const sep = this.next();
+        if (sep.text === ')') {
+          break;
+        }
+        if (sep.text === ',') {
+          continue;
+        }
+      }
+      const def: RecordTypeDef = {
+        type: 'record',
+        fields,
+      };
+      return def;
+    } else if (typToken.text === 'array' && this.next('(')) {
+      const elType = this.typeDef();
+      this.next(')');
+      return elType.type === 'record'
+        ? {
+            type: 'array',
+            elementTypeDef: {type: 'record_element'},
+            fields: elType.fields,
+          }
+        : {type: 'array', elementTypeDef: elType};
+    } else if (typToken.type === 'id') {
+      const sqlType = typToken.text;
+      const def = this.dialect.sqlTypeToMalloyType(sqlType);
+      if (def === undefined) {
+        throw this.parseError(`Can't parse presto type ${sqlType}`);
+      }
+      if (sqlType === 'varchar') {
+        if (this.peek().type === '(') {
+          this.next('(', 'id', ')');
+        }
+      }
+      return def;
+    }
+    throw this.parseError(
+      `'${typToken.text}' unexpected while looking for a type`
+    );
+  }
+}

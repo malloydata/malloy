@@ -22,26 +22,46 @@
  */
 
 import {
-  DialectFragment,
   Expr,
-  ExtractUnit,
   Sampling,
-  StructDef,
-  TimeFieldType,
-  TimeValue,
-  TimestampUnit,
-  TypecastFragment,
-  mkExpr,
-  FieldAtomicTypeDef,
+  AtomicTypeDef,
+  MeasureTimeExpr,
+  TimeTruncExpr,
+  TimeExtractExpr,
+  TimeDeltaExpr,
+  TypecastExpr,
+  RegexMatchExpr,
+  TimeLiteralNode,
+  RecordLiteralNode,
+  ArrayLiteralNode,
+  LeafAtomicTypeDef,
+  isRawCast,
+  isLeafAtomic,
+  OrderBy,
 } from '../model/malloy_types';
 import {DialectFunctionOverloadDef} from './functions';
 
+type DialectFieldTypes = string | 'struct';
+
 interface DialectField {
-  type: string;
+  type: DialectFieldTypes;
   sqlExpression: string;
+  rawName: string;
   sqlOutputName: string;
 }
 
+export interface DialectFieldTypeStruct extends DialectField {
+  type: 'struct';
+  nestedStruct: DialectFieldList;
+  isArray: boolean;
+}
+
+export function isDialectFieldStruct(
+  d: DialectField
+): d is DialectFieldTypeStruct {
+  return d.type === 'struct';
+}
+export type DialectFieldList = DialectField[];
 /**
  * Data which dialect methods need in order to correctly generate SQL.
  * Initially this is just timezone related, but I made this an interface
@@ -53,6 +73,13 @@ export interface QueryInfo {
   queryTimezone?: string;
   systemTimezone?: string;
 }
+
+export type FieldReferenceType =
+  | 'table'
+  | 'nest source'
+  | 'array[scalar]'
+  | 'array[record]'
+  | 'record';
 
 const allUnits = [
   'microsecond',
@@ -82,7 +109,7 @@ export function qtz(qi: QueryInfo): string | undefined {
   return tz;
 }
 
-export type DialectFieldList = DialectField[];
+export type OrderByClauseType = 'output_name' | 'ordinal';
 
 export abstract class Dialect {
   abstract name: string;
@@ -101,6 +128,7 @@ export abstract class Dialect {
   abstract supportsQualify: boolean;
   abstract supportsSafeCast: boolean;
   abstract supportsNesting: boolean;
+  abstract experimental: boolean; // requires ##! experimental.dialect.NAME
 
   // -- we should add flags with default values from now on so as to not break
   // dialects outside our repository
@@ -109,10 +137,56 @@ export abstract class Dialect {
   // StandardSQL dialects can't partition on expression in window functions
   cantPartitionWindowFunctionsOnExpressions = false;
 
-  // return the definition of a function with the given name
-  abstract getGlobalFunctionDef(
-    name: string
-  ): DialectFunctionOverloadDef[] | undefined;
+  // Snowflake can't yet support pipelines in nested views.
+  supportsPipelinesInViews = true;
+
+  // Some dialects don't supporrt arrays (mysql)
+  supportsArraysInData = true;
+
+  // can read some version of ga_sample
+  readsNestedData = true;
+
+  // ORDER BY 1 DESC
+  orderByClause: OrderByClauseType = 'ordinal';
+
+  // null will match in a function signature
+  nullMatchesFunctionSignature = true;
+
+  // support select * replace(...)
+  supportsSelectReplace = true;
+
+  // ability to join source with a filter on a joined source.
+  supportsComplexFilteredSources = true;
+
+  // can create temp tables
+  supportsTempTables = true;
+
+  hasModOperator = true;
+
+  // can LEFT JOIN UNNEST
+  supportsLeftJoinUnnest = true;
+
+  supportsCountApprox = false;
+
+  supportsHyperLogLog = false;
+
+  // MYSQL doesn't have full join, maybe others.
+  supportsFullJoin = true;
+
+  nativeBoolean = true;
+
+  // Can have arrays of arrays
+  nestedArrays = true;
+  // An array or record will reveal type of contents on schema read
+  compoundObjectInSchema = true;
+
+  abstract getDialectFunctionOverrides(): {
+    [name: string]: DialectFunctionOverloadDef[];
+  };
+
+  abstract getDialectFunctions(): {
+    [name: string]: DialectFunctionOverloadDef[];
+  };
 
   // return a quoted string for use as a table path.
   abstract quoteTablePath(tablePath: string): string;
@@ -161,29 +235,30 @@ export abstract class Dialect {
   abstract sqlGenerateUUID(): string;
 
   abstract sqlFieldReference(
-    alias: string,
-    fieldName: string,
-    fieldType: string,
-    isNested: boolean,
-    isArray: boolean
+    parentAlias: string,
+    parentType: FieldReferenceType,
+    childName: string,
+    childType: string
   ): string;
 
   abstract sqlUnnestPipelineHead(
     isSingleton: boolean,
-    sourceSQLExpression: string
+    sourceSQLExpression: string,
+    fieldList?: DialectFieldList
   ): string;
 
   abstract sqlCreateFunction(id: string, funcText: string): string;
 
   abstract sqlCreateFunctionCombineLastStage(
     lastStageName: string,
-    structDef: StructDef
+    fieldList: DialectFieldList,
+    orderBy: OrderBy[] | undefined
   ): string;
   abstract sqlCreateTableAsSelect(tableName: string, sql: string): string;
 
   abstract sqlSelectAliasAsStruct(
     alias: string,
-    physicalFieldNames: string[]
+    fieldList: DialectFieldList
   ): string;
 
   sqlFinalStage(_lastStageName: string, _fields: string[]): string {
@@ -196,51 +271,6 @@ export abstract class Dialect {
   }
   abstract sqlMaybeQuoteIdentifier(identifier: string): string;
 
-  abstract sqlNow(): Expr;
-  abstract sqlTrunc(
-    qi: QueryInfo,
-    sqlTime: TimeValue,
-    units: TimestampUnit
-  ): Expr;
-  abstract sqlExtract(
-    qi: QueryInfo,
-    sqlTime: TimeValue,
-    units: ExtractUnit
-  ): Expr;
-  abstract sqlMeasureTime(
-    from: TimeValue,
-    to: TimeValue,
-    units: TimestampUnit
-  ): Expr;
-
-  abstract sqlAlterTime(
-    op: '+' | '-',
-    expr: TimeValue,
-    n: Expr,
-    timeframe: TimestampUnit
-  ): Expr;
-
-  // BigQuery has some fieldNames that are Pseudo Fields and shouldn't be
-  //  included in projections.
-  ignoreInProject(_fieldName: string): boolean {
-    return false;
-  }
-
-  abstract sqlCast(qi: QueryInfo, cast: TypecastFragment): Expr;
-
-  abstract sqlLiteralTime(
-    qi: QueryInfo,
-    timeString: string,
-    type: TimeFieldType,
-    timezone?: string
-  ): string;
-
-  abstract sqlLiteralString(literal: string): string;
-
-  abstract sqlLiteralRegexp(literal: string): string;
-
-  abstract sqlRegexpMatch(expr: Expr, regex: Expr): Expr;
-
   abstract castToString(expression: string): string;
 
   abstract concat(...values: string[]): string;
@@ -249,39 +279,76 @@ export abstract class Dialect {
     return literal;
   }
 
-  dialectExpr(qi: QueryInfo, df: DialectFragment): Expr {
-    switch (df.function) {
+  // BigQuery has some fieldNames that are Pseudo Fields and shouldn't be
+  //  included in projections.
+  ignoreInProject(_fieldName: string): boolean {
+    return false;
+  }
+
+  abstract sqlNowExpr(): string;
+  abstract sqlTruncExpr(qi: QueryInfo, toTrunc: TimeTruncExpr): string;
+  abstract sqlTimeExtractExpr(qi: QueryInfo, xFrom: TimeExtractExpr): string;
+  abstract sqlMeasureTimeExpr(e: MeasureTimeExpr): string;
+  abstract sqlAlterTimeExpr(df: TimeDeltaExpr): string;
+  abstract sqlCast(qi: QueryInfo, cast: TypecastExpr): string;
+  abstract sqlLiteralTime(qi: QueryInfo, df: TimeLiteralNode): string;
+  abstract sqlLiteralString(literal: string): string;
+  abstract sqlLiteralRegexp(literal: string): string;
+
+  abstract sqlRegexpMatch(df: RegexMatchExpr): string;
+  abstract sqlLiteralArray(lit: ArrayLiteralNode): string;
+  abstract sqlLiteralRecord(lit: RecordLiteralNode): string;
+
+  /**
+   * The dialect has a chance to over-ride how expressions are translated. If
+   * "undefined" is returned then the translation is left to the query translator.
+   *
+   * Any child nodes of the expression will already have been translated, and
+   * the translated value will be in the ".sql" fields for those nodes
+   * @param qi Info from the query containing this expression
+   * @param df The expression being translated
+   * @returns The SQL translation of the expression, or undefined
+   */
+  exprToSQL(qi: QueryInfo, df: Expr): string | undefined {
+    switch (df.node) {
       case 'now':
-        return this.sqlNow();
+        return this.sqlNowExpr();
       case 'timeDiff':
-        return this.sqlMeasureTime(df.left, df.right, df.units);
+        return this.sqlMeasureTimeExpr(df);
       case 'delta':
-        return this.sqlAlterTime(df.op, df.base, df.delta, df.units);
+        return this.sqlAlterTimeExpr(df);
       case 'trunc':
-        return this.sqlTrunc(qi, df.expr, df.units);
+        return this.sqlTruncExpr(qi, df);
       case 'extract':
-        return this.sqlExtract(qi, df.expr, df.units);
+        return this.sqlTimeExtractExpr(qi, df);
       case 'cast':
         return this.sqlCast(qi, df);
       case 'regexpMatch':
-        return this.sqlRegexpMatch(df.expr, df.regexp);
-      case 'div': {
+        return this.sqlRegexpMatch(df);
+      case '/': {
         if (this.divisionIsInteger) {
-          return mkExpr`${df.numerator}*1.0/${df.denominator}`;
+          return `${df.kids.left.sql}*1.0/${df.kids.right.sql}`;
         }
-        return mkExpr`${df.numerator}/${df.denominator}`;
+        return;
       }
-      case 'timeLiteral': {
-        return [
-          this.sqlLiteralTime(qi, df.literal, df.literalType, df.timezone),
-        ];
+      case '%': {
+        if (!this.hasModOperator) {
+          return `MOD(${df.kids.left.sql},${df.kids.right.sql})`;
+        }
+        return;
       }
+      case 'timeLiteral':
+        return this.sqlLiteralTime(qi, df);
       case 'stringLiteral':
-        return [this.sqlLiteralString(df.literal)];
+        return this.sqlLiteralString(df.literal);
       case 'numberLiteral':
-        return [this.sqlLiteralNumber(df.literal)];
+        return this.sqlLiteralNumber(df.literal);
       case 'regexpLiteral':
-        return [this.sqlLiteralRegexp(df.literal)];
+        return this.sqlLiteralRegexp(df.literal);
+      case 'recordLiteral':
+        return this.sqlLiteralRecord(df);
+      case 'arrayLiteral':
+        return this.sqlLiteralArray(df);
     }
   }
 
@@ -317,8 +384,62 @@ export abstract class Dialect {
     return `"${qi.queryTimezone}"`;
   }
 
-  abstract sqlTypeToMalloyType(sqlType: string): FieldAtomicTypeDef | undefined;
-  abstract malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string;
+  sqlMakeUnnestKey(key: string, rowKey: string) {
+    return this.concat(key, "'x'", rowKey);
+  }
+
+  // default implementation
+  sqlStringAggDistinct(
+    distinctKey: string,
+    valueSQL: string,
+    separatorSQL: string
+  ) {
+    const keyStart = '__STRING_AGG_KS__';
+    const keyEnd = '__STRING_AGG_KE__';
+    const distinctValueSQL = `concat('${keyStart}', ${distinctKey}, '${keyEnd}', ${valueSQL})`;
+    return `REGEXP_REPLACE(
+      STRING_AGG(DISTINCT ${distinctValueSQL}${
+        separatorSQL.length > 0 ? ',' + separatorSQL : ''
+      }),
+      '${keyStart}.*?${keyEnd}',
+      ''
+    )`;
+  }
+
+  abstract sqlTypeToMalloyType(sqlType: string): LeafAtomicTypeDef;
+  abstract malloyTypeToSQLType(malloyType: AtomicTypeDef): string;
 
   abstract validateTypeName(sqlType: string): boolean;
+
+  /**
+   * Helper function for sql cast implementations. Handles the
+   * wrangling of the raw type and also inferring the source
+   * type if it was not provided.
+   */
+  sqlCastPrep(cast: TypecastExpr): {
+    op: string;
+    srcTypeDef: LeafAtomicTypeDef | undefined;
+    dstTypeDef: LeafAtomicTypeDef | undefined;
+    dstSQLType: string;
+  } {
+    let srcTypeDef = cast.srcType || cast.e.typeDef;
+    const src = srcTypeDef?.type || 'unknown';
+    if (srcTypeDef && !isLeafAtomic(srcTypeDef)) {
+      srcTypeDef = undefined;
+    }
+    if (isRawCast(cast)) {
+      return {
+        op: `${src}::'${cast.dstSQLType}'`,
+        srcTypeDef,
+        dstTypeDef: undefined,
+        dstSQLType: cast.dstSQLType,
+      };
+    }
+    return {
+      op: `${src}::${cast.dstType.type}`,
+      srcTypeDef,
+      dstTypeDef: cast.dstType,
+      dstSQLType: this.malloyTypeToSQLType(cast.dstType),
+    };
+  }
 }
