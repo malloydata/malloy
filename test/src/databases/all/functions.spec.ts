@@ -1742,6 +1742,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       ]);
     });
 
+    // TODO remove the need for the `##! unsafe_complex_select_query` compiler flag
     it('can be used in a select', async () => {
       await expect(`
         ##! experimental { function_order_by partition_by }
