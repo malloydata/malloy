@@ -274,17 +274,20 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   ...def(
     'bitwise_and_agg',
     {'value': {dimension: 'number'}},
-    {measure: 'number'}
+    {measure: 'number'},
+    {isSymmetric: true}
   ),
   ...def(
     'bitwise_or_agg',
     {'value': {dimension: 'number'}},
-    {measure: 'number'}
+    {measure: 'number'},
+    {isSymmetric: true}
   ),
   ...def(
     'bitwise_xor_agg',
     {'value': {dimension: 'number'}},
-    {measure: 'number'}
+    {measure: 'number'},
+    {isSymmetric: true}
   ),
   ...def('bool_and', {'value': {dimension: 'boolean'}}, {measure: 'boolean'}),
   ...def('bool_or', {'value': {dimension: 'boolean'}}, {measure: 'boolean'}),
