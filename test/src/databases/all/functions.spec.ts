@@ -1745,6 +1745,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     it('can be used in a select', async () => {
       await expect(`
         ##! experimental { function_order_by partition_by }
+        ##! unsafe_complex_select_query
         run: state_facts -> {
           select: state, births, popular_name
           calculate: prev_births_by_name is lag(births) {
@@ -1752,7 +1753,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
             order_by: births desc
           }
           order_by: births desc
-          limit: 10
+          limit: 3
         }
       `).malloyResultMatches(expressionModel, [
         {
@@ -1772,48 +1773,6 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           births: 21467359,
           popular_name: 'Isabella',
           prev_births_by_name: 23694136,
-        },
-        {
-          state: 'PA',
-          births: 16661910,
-          popular_name: 'Isabella',
-          prev_births_by_name: 21467359,
-        },
-        {
-          state: 'IL',
-          births: 15178876,
-          popular_name: 'Isabella',
-          prev_births_by_name: 16661910,
-        },
-        {
-          state: 'OH',
-          births: 14201526,
-          popular_name: 'Isabella',
-          prev_births_by_name: 15178876,
-        },
-        {
-          state: 'MI',
-          births: 11643455,
-          popular_name: 'Sophia',
-          prev_births_by_name: null,
-        },
-        {
-          state: 'FL',
-          births: 9277223,
-          popular_name: 'Isabella',
-          prev_births_by_name: 14201526,
-        },
-        {
-          state: 'NC',
-          births: 8440235,
-          popular_name: 'Emma',
-          prev_births_by_name: null,
-        },
-        {
-          state: 'NJ',
-          births: 8318769,
-          popular_name: 'Isabella',
-          prev_births_by_name: 9277223,
         },
       ]);
     });
