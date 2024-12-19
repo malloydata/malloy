@@ -824,7 +824,7 @@ export function overdef(
   const overload: OverloadedDefinitionBlueprint = {};
   for (const one of overloads) {
     const name = Object.keys(one)[0];
-    overloads[name] = one[name];
+    overload[name] = one[name];
   }
   return {[name]: overload};
 }
