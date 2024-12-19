@@ -37,43 +37,6 @@ const T: TypeDescBlueprint = {generic: 'T'};
 
 // Aggregate functions:
 
-const hll_combine: DefinitionBlueprint = {
-  takes: {
-    'value': {sql_native: 'hyperloglog'},
-  },
-  returns: {measure: {sql_native: 'hyperloglog'}},
-  impl: {function: 'MERGE'},
-  isSymmetric: true,
-};
-
-const hll_estimate: DefinitionBlueprint = {
-  takes: {
-    'value': {sql_native: 'hyperloglog'},
-  },
-  returns: {dimension: 'number'},
-  impl: {function: 'CARDINALITY'},
-};
-
-const hll_export: DefinitionBlueprint = {
-  takes: {
-    'value': {sql_native: 'hyperloglog'},
-  },
-  returns: {dimension: {sql_native: 'varbinary'}},
-  impl: {
-    sql: 'CAST(${value} AS VARBINARY)',
-  },
-};
-
-const hll_import: DefinitionBlueprint = {
-  takes: {
-    'value': {sql_native: 'varbinary'},
-  },
-  returns: {dimension: {sql_native: 'hyperloglog'}},
-  impl: {
-    sql: 'CAST(${value} AS HyperLogLog)',
-  },
-};
-
 const max_by: DefinitionBlueprint = {
   generic: {'T': ['string', 'number', 'date', 'timestamp', 'boolean', 'json']},
   takes: {
@@ -332,7 +295,30 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
       }
     )
   ),
-  hll_combine,
+  ...def(
+    'hll_combine',
+    {'value': {sql_native: 'hyperloglog'}},
+    {measure: {sql_native: 'hyperloglog'}},
+    {impl: {function: 'MERGE'}, isSymmetric: true}
+  ),
+  ...def(
+    'hll_estimate',
+    {'value': {sql_native: 'hyperloglog'}},
+    {dimension: 'number'},
+    {impl: {function: 'CARDINALITY'}}
+  ),
+  ...def(
+    'hll_export',
+    {'value': {sql_native: 'hyperloglog'}},
+    {dimension: {sql_native: 'varbinary'}},
+    {impl: {sql: 'CAST(${value} AS VARBINARY)'}}
+  ),
+  ...def(
+    'hll_import',
+    {'value': {sql_native: 'varbinary'}},
+    {dimension: {sql_native: 'hyperloglog'}},
+    {impl: {sql: 'CAST(${value} AS HyperLogLog)'}}
+  ),
   max_by,
   min_by,
   string_agg,
@@ -345,9 +331,6 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   ...def('date_format', {'ts_val': 'timestamp', 'format': 'string'}, 'string'),
   date_parse,
   ...def('from_unixtime', {'unixtime': 'number'}, 'timestamp'),
-  hll_estimate,
-  hll_export,
-  hll_import,
   json_extract_scalar,
   regexp_like,
   regexp_replace,
