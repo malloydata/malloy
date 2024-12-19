@@ -6,7 +6,7 @@
  */
 
 import {
-  wrapDef,
+  def,
   DefinitionBlueprint,
   DefinitionBlueprintMap,
   OverloadedDefinitionBlueprint,
@@ -69,6 +69,6 @@ export const STANDARDSQL_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   date_from_unix_date,
   string_agg,
   string_agg_distinct,
-  ...wrapDef('repeat', {'str': 'string', 'n': 'number'}, 'string'),
-  ...wrapDef('reverse', {'str': 'string'}, 'string'),
+  ...def('repeat', {'str': 'string', 'n': 'number'}, 'string'),
+  ...def('reverse', {'str': 'string'}, 'string'),
 };

@@ -31,14 +31,14 @@ const abs: DefinitionFor<Standard['my_function']> = {
     * `${...param}` is expanded to a spread fragment, which is expanded to a comma-separated list of arguments for a variadic parameter
     * `${order_by:}` and `${limit:}` expand to `aggregate_order_by` and `aggregate_limit` fragments respectively
   * `{ expr: { node: "node_type", ... } }`, for cases where the `function` or `sql` options are insufficiently flexible; generates SQL for an arbitrary node, which may include parameter fragments, spread fragments (optionally with prefix and suffix), and order by or limit fragments.
-* `generic` specifies that the overload is generic over some types; it should be an array `['T', types]`, where `'T'` is the name of the generic, and `types` is an array of Malloy types: e.g. `generic: ['T', ['string', 'number', 'timestamp', 'date', 'json']],`. Note that currently we only allow one generic per overload, since that's all we need right now. Under the hood, this creates multiple overloads, one for each type in the generic. Eventually we may make the function system smarter and understand generics more deeply.
+* `generic` specifies that the overload is generic over some types; it should be an object `{'T': types}`, where `'T'` is the name of the generic, and `types` is an array of Malloy types: e.g. `generic: {'T', ['string', 'number', 'timestamp', 'date', 'json']},`. Note that currently we only allow one generic per overload, since that's all we need right now. Under the hood, this creates multiple overloads, one for each type in the generic. Eventually we may make the function system smarter and understand generics more deeply.
 * `supportsOrderBy` is for aggregate functions (e.g. `string_agg`) which can accept an `{ order_by: value }`. `false` is the default value. `true` indicates that any column may be used in the `order_by`. A value of `'default_only'` means that only the more limited `{ order_by: asc }` syntax is allowed.
 * `supportsLimit`: is for aggregate functions (e.g. `string_agg`) which can accept a `{ limit: 10 }`. Default `false`.
 * `isSymmetric` is for aggregate functions to indicate whether they are symmetric. Default `false`.
 
 A function with multiple overloads is defined like:
 
-```
+```TypeScript
 const concat: DefinitionFor<Standard['concat']> = {
   'empty': {
     takes: {},
@@ -55,7 +55,7 @@ const concat: DefinitionFor<Standard['concat']> = {
 
 Each dialect may override the standard implementations (that is, the `impl` part only). To do so:
 
-```
+```TypeScript
 import {MalloyStandardFunctionImplementations as OverrideMap} from '../functions/malloy_standard_functions';
 
 export const DIALECT_OVERRIDES: OverrideMap = {
@@ -106,6 +106,35 @@ export const DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
 };
 ```
 
+### The `def()` experiment
+There is also an experimental shortcut for simple wrapper definitions where the name of the function in SQL and in Malloy is the same, and the definition is not overloaded. Here's an example if using `def` to define the string length function ...
+
+Instead of writing
+
+```ts
+const length: DefinitionBluePrint = {
+  takes: {str: 'string'},
+  returns: 'number',
+  impl: {function: 'LENGTH'},
+}
+export const DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
+  my_function,
+  length
+}
+```
+
+The shortcut looks like this ...
+
+```ts
+export const DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
+  my_function,
+  ...def('length', {str: 'string'}, 'number')
+};
+```
+
+We are waiting on user feedback on this experiment. While these are simpler to write, they are not simpler to read for a human scanning the file for the definition of a function.
+
+### Dialect Implementation
 The `Dialect` implementation then implements `getDialectFunctions`. You should use `expandBlueprintMap` to expand the function blueprints into `DialectFunctionOverloadDef`s.
 
 ```ts

@@ -8,7 +8,7 @@
 import {
   DefinitionBlueprintMap,
   OverloadedDefinitionBlueprint,
-  wrapDef,
+  def,
 } from '../functions/util';
 
 const string_agg: OverloadedDefinitionBlueprint = {
@@ -53,6 +53,6 @@ const string_agg_distinct: OverloadedDefinitionBlueprint = {
 export const MYSQL_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   string_agg,
   string_agg_distinct,
-  ...wrapDef('repeat', {'str': 'string', 'n': 'number'}, 'string'),
-  ...wrapDef('reverse', {'str': 'string'}, 'string'),
+  ...def('repeat', {'str': 'string', 'n': 'number'}, 'string'),
+  ...def('reverse', {'str': 'string'}, 'string'),
 };
