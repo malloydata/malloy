@@ -131,6 +131,7 @@ import {
   shouldMaterialize,
 } from './materialization/utils';
 import {EventStream} from '../runtime_types';
+import {Tag} from '../tags';
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
@@ -3411,9 +3412,13 @@ class QueryQuery extends QueryField {
     };
     this.generateStage0Fields(this.rootResult, f, stageWriter);
 
-    if (this.firstSegment.type === 'project') {
+    if (
+      this.firstSegment.type === 'project' &&
+      !this.parent.modelCompilerFlags().has('unsafe_complex_select_query')
+    ) {
       throw new Error('PROJECT cannot be used on queries with turtles');
     }
+
     const groupBy = 'GROUP BY ' + f.dimensionIndexes.join(',') + '\n';
 
     from += this.parent.dialect.sqlGroupSetTable(this.maxGroupSet) + '\n';
@@ -4310,6 +4315,16 @@ class QueryStruct {
 
     this.dialect = getDialect(this.findFirstDialect());
     this.addFieldsFromFieldList(structDef.fields);
+  }
+
+  private _modelTag: Tag | undefined = undefined;
+  modelCompilerFlags(): Tag {
+    if (this._modelTag === undefined) {
+      const annotation = this.structDef.modelAnnotation;
+      const {tag} = Tag.annotationToTag(annotation, {prefix: /^##!\s*/});
+      this._modelTag = tag;
+    }
+    return this._modelTag;
   }
 
   protected findFirstDialect(): string {
