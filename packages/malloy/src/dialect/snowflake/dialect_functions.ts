@@ -7,7 +7,7 @@
 
 import {AggregateOrderByNode} from '../../model';
 import {
-  wrapDef,
+  def,
   DefinitionBlueprintMap,
   OverloadedDefinitionBlueprint,
   arg as a,
@@ -62,6 +62,6 @@ const string_agg_distinct: OverloadedDefinitionBlueprint = {
 export const SNOWFLAKE_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   string_agg,
   string_agg_distinct,
-  ...wrapDef('repeat', {'str': 'string', 'n': 'number'}, 'string'),
-  ...wrapDef('reverse', {'str': 'string'}, 'string'),
+  ...def('repeat', {'str': 'string', 'n': 'number'}, 'string'),
+  ...def('reverse', {'str': 'string'}, 'string'),
 };
