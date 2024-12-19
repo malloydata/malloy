@@ -387,73 +387,43 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
 
 /******** Presto Only *********/
 
-const array_position: OverloadedDefinitionBlueprint = {
-  first_instance: {
-    takes: {'x': {array: T}, 'el': T},
-    generic: {T: ['any']},
-    returns: 'number',
-    impl: {function: 'ARRAY_POSITION'},
-  },
-  nth_instance: {
-    takes: {'x': {array: T}, 'el': T, 'instance': 'number'},
-    generic: {T: ['any']},
-    returns: 'number',
-    impl: {function: 'ARRAY_POSITION'},
-  },
-};
-
-const array_intersect: OverloadedDefinitionBlueprint = {
-  two_arrays: {
-    takes: {
-      'array_v1': {array: T},
-      'array_v2': {array: T},
-    },
-    generic: {'T': ['any']},
-    returns: {array: T},
-    impl: {function: 'ARRAY_INTERSECT'},
-  },
-  nested_array: {
-    takes: {'x': {array: {array: T}}},
-    generic: {'T': ['any']},
-    returns: {array: T},
-    impl: {function: 'ARRAY_INTERSECT'},
-  },
-};
-
-const array_least_frequent: OverloadedDefinitionBlueprint = {
-  array_only: {
-    takes: {'x': {array: T}},
-    generic: {'T': ['any']},
-    returns: {array: T},
-    impl: {function: 'ARRAY_LEAST_FREQUENT'},
-  },
-  bottom: {
-    takes: {
-      'array_v': {array: T},
-      'count': 'number',
-    },
-    generic: {'T': ['any']},
-    returns: {array: T},
-    impl: {function: 'ARRAY_LEAST_FREQUENT'},
-  },
-};
-
-const reverse: OverloadedDefinitionBlueprint = {
-  ngirts: {...string_reverse},
-  yarra: {
-    takes: {'x': {array: T}},
-    returns: {array: T},
-    generic: {'T': ['any']},
-    impl: {function: 'REVERSE'},
-  },
-};
-
 export const PRESTO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   ...TRINO_DIALECT_FUNCTIONS,
-  array_intersect,
-  array_least_frequent,
-  array_position,
-  reverse,
+  ...overdef(
+    'array_intersect',
+    def('array_intersect', {'x': {array: T}, 'y': {array: T}}, {array: T}),
+    def(
+      'nested_array',
+      {'x': {array: {array: T}}},
+      {array: T},
+      {impl: {function: 'ARRAY_INTERSECT'}}
+    )
+  ),
+  ...overdef(
+    'array_least_frequent',
+    def('array_least_frequent', {'x': {array: T}}, {array: T}),
+    def(
+      'bottom_n',
+      {'array_v': {array: T}, 'n': 'number'},
+      {array: T},
+      {impl: {function: 'ARRAY_LEAST_FREQUENT'}}
+    )
+  ),
+  ...overdef(
+    'array_position',
+    def('array_position', {'x': {array: T}, 'el': T}, 'number'),
+    def(
+      'nth_instance',
+      {'x': {array: T}, 'el': T, 'instance': 'number'},
+      'number',
+      {impl: {function: 'ARRAY_POSITION'}}
+    )
+  ),
+  ...overdef(
+    'reverse',
+    {string_reverse},
+    def('reverse', {'x': {array: T}}, {array: T})
+  ),
   ...def('array_average', {'x': {array: T}}, 'number'),
   ...def('array_has_duplicates', {'x': {array: T}}, 'boolean'),
   ...def('array_cum_sum', {numeric_array: {array: T}}, {array: 'number'}),
