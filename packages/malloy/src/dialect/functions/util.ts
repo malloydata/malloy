@@ -725,45 +725,6 @@ export function expandOverrideMapFromBase(
 }
 
 /**
- * Shortcut for functions wrapper definitions. Useful only if ....
- *   0) Not an overloaded definition
- *   1) The function has the same name in malloy and in the dialect
- *   2) Every generic in args or return generics is type ['any']
- * USAGE:
- *
- *     ...wrapDef('func_name', {'arg0': 'type0', 'arg1': 'type1'}, 'return-type')
- *
- * @param name name of function
- * @param takes Record<Argument blueprint>
- * @param returns Return Blueprint
- * @returns dot dot dot able blueprint definition
- */
-export function wrapDef(
-  name: string,
-  takes: Record<string, TypeDescBlueprint>,
-  returns: TypeDescBlueprint
-): DefinitionBlueprintMap {
-  let anyGenerics = false;
-  const generic: {[name: string]: TypeDescElementBlueprintOrNamedGeneric[]} =
-    {};
-  for (const argType of Object.values(takes)) {
-    for (const genericRef of findGenerics(argType)) {
-      generic[genericRef.generic] = ['any'];
-      anyGenerics = true;
-    }
-  }
-  const newDef: DefinitionBlueprint = {
-    takes,
-    returns,
-    impl: {function: name.toUpperCase()},
-  };
-  if (anyGenerics) {
-    newDef.generic = generic;
-  }
-  return {[name]: newDef};
-}
-
-/**
  * Walks a type and returns all the generic references
  * @param tdbp A type
  */
@@ -794,4 +755,56 @@ function* findGenerics(
       }
     }
   }
+}
+
+/**
+ * Shortcut for non overloaded functions definitions. Default implementation
+ * will be the function name turned to upper case. Default type for
+ * any generics encountered will be `['any']`. Both of these can be over-ridden
+ * in the `options` parameter.
+ *
+ * The two implict defaults (which can be over-ridden) are that the
+ * impl: will be the upper case version of the function name, and that
+ * any generic reference will be of type 'any'.
+ *
+ * USAGE:
+ *
+ *     ...def('func_name', {'arg0': 'type0', 'arg1': 'type1'}, 'return-type')
+ *
+ * @param name name of function
+ * @param takes Record<Argument blueprint>
+ * @param returns Return Blueprint
+ * @param options Everything from a `DefinitionBlueprint` except `takes` and `returns`
+ * @returns dot dot dot able blueprint definition
+ */
+export function def(
+  name: string,
+  takes: Record<string, TypeDescBlueprint>,
+  returns: TypeDescBlueprint,
+  options: Partial<Omit<DefinitionBlueprint, 'takes' | 'returns'>> = {}
+) {
+  let anyGenerics = false;
+  const generic: {[name: string]: TypeDescElementBlueprintOrNamedGeneric[]} =
+    {};
+  for (const argType of Object.values(takes)) {
+    for (const genericRef of findGenerics(argType)) {
+      generic[genericRef.generic] = ['any'];
+      anyGenerics = true;
+    }
+  }
+  // We have found all the generic references and given them all
+  // T: ['any']. Use this as a default if the options section
+  // doesn't provide types for the generics.
+  if (anyGenerics) {
+    if (options.generic === undefined) {
+      options.generic = generic;
+    }
+  }
+  const newDef: DefinitionBlueprint = {
+    takes,
+    returns,
+    impl: {function: name.toUpperCase()},
+    ...options,
+  };
+  return {[name]: newDef};
 }

@@ -9,7 +9,7 @@ import {
   DefinitionBlueprint,
   DefinitionBlueprintMap,
   OverloadedDefinitionBlueprint,
-  wrapDef,
+  def,
 } from '../functions/util';
 
 const list_extract: DefinitionBlueprint = {
@@ -102,6 +102,6 @@ export const DUCKDB_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   string_agg_distinct,
   to_seconds,
   date_part,
-  ...wrapDef('repeat', {'str': 'string', 'n': 'number'}, 'string'),
-  ...wrapDef('reverse', {'str': 'string'}, 'string'),
+  ...def('repeat', {'str': 'string', 'n': 'number'}, 'string'),
+  ...def('reverse', {'str': 'string'}, 'string'),
 };
