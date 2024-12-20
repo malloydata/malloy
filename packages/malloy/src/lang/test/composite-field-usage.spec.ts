@@ -49,6 +49,7 @@ describe('composite sources', () => {
       source: x is compose(ab, ab) extend {
         dimension: aif is ai + af
         measure: ss is ai.sum()
+        measure: saiaf is ai.sum() { where: af > 1 }
       }
 
       source: y is compose(ab, ab) extend {
@@ -93,6 +94,11 @@ describe('composite sources', () => {
     test('measure defined in composite source', () => {
       const mexpr = makeExprFunc(m.translator.modelDef, 'x');
       expect(mexpr`ss`).hasCompositeUsage(paths([['ai']]));
+    });
+
+    test('measure with filter defined in composite source', () => {
+      const mexpr = makeExprFunc(m.translator.modelDef, 'x');
+      expect(mexpr`saiaf`).hasCompositeUsage(paths([['ai'], ['af']]));
     });
   });
 
