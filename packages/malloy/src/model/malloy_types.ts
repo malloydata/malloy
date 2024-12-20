@@ -1467,6 +1467,12 @@ export interface ModelDef {
   annotation?: ModelAnnotation;
 }
 
+export interface DocumentDef {
+  modelDef: ModelDef;
+  queryList: Query[];
+  sqlBlocks: SQLSourceDef[];
+}
+
 /** Very common record type */
 export type NamedSourceDefs = Record<string, SourceDef>;
 export type NamedModelObjects = Record<string, NamedModelObject>;

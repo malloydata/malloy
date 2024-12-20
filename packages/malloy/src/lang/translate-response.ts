@@ -23,10 +23,9 @@
 
 import {
   Annotation,
+  DocumentDef,
   ModelDef,
-  Query,
   SQLSentence,
-  SQLSourceDef,
 } from '../model/malloy_types';
 import {MalloyElement} from './ast';
 import {LogMessage} from './parse-log';
@@ -93,16 +92,13 @@ export type CompletionsResponse = Partial<Completions>;
 interface HelpContext extends NeededData, ProblemResponse, FinalResponse {
   helpContext: DocumentHelpContext | undefined;
 }
+
 export type HelpContextResponse = Partial<HelpContext>;
 interface TranslatedResponseData
   extends NeededData,
     ProblemResponse,
     FinalResponse {
-  translated: {
-    modelDef: ModelDef;
-    queryList: Query[];
-    sqlBlocks: SQLSourceDef[];
-  };
+  translated: DocumentDef;
   fromSources: string[];
 }
 

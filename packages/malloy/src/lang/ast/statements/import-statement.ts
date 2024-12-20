@@ -97,8 +97,9 @@ export class ImportStatement
         'Cannot import without translation context'
       );
     } else if (this.fullURL) {
+      const pretranslated = trans.root.pretranslateZone.getEntry(this.fullURL);
       const src = trans.root.importZone.getEntry(this.fullURL);
-      if (src.status === 'present') {
+      if (src.status === 'present' || pretranslated.status === 'present') {
         const importable = trans.getChildExports(this.fullURL);
         if (this.notEmpty()) {
           // just import the named objects
