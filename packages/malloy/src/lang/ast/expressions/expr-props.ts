@@ -36,6 +36,7 @@ import {ExpressionDef} from '../types/expression-def';
 import {FieldPropStatement} from '../types/field-prop-statement';
 import {FieldSpace} from '../types/field-space';
 import {ExprFunc} from './expr-func';
+import {mergeCompositeFieldUsage} from '../../../model/composite_source_utils';
 
 export class ExprProps extends ExpressionDef {
   elementType = 'expression with props';
@@ -77,6 +78,10 @@ export class ExprProps extends ExpressionDef {
       if (this.typeCheck(this.expr, {...expr, expressionType: 'scalar'})) {
         return {
           ...expr,
+          compositeFieldUsage: mergeCompositeFieldUsage(
+            expr.compositeFieldUsage,
+            ...filterList.map(f => f.compositeFieldUsage)
+          ),
           value: {
             node: 'filteredExpr',
             kids: {e: expr.value, filterList},
