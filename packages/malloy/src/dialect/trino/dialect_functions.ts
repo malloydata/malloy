@@ -11,7 +11,6 @@ import {
   OverloadedDefinitionBlueprint,
   TypeDescBlueprint,
   def,
-  overdef,
 } from '../functions/util';
 
 /*
@@ -268,9 +267,8 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
       isSymmetric: true,
     }
   ),
-  ...overdef(
-    'hll_accumulate',
-    def(
+  hll_accumulate: {
+    ...def(
       'default',
       {'value': {dimension: T}},
       {measure: {sql_native: 'hyperloglog'}},
@@ -282,7 +280,7 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
         impl: {function: 'APPROX_SET'},
       }
     ),
-    def(
+    ...def(
       'with_percent',
       {'value': {dimension: T}, 'accuracy': 'number'},
       {measure: {sql_native: 'hyperloglog'}},
@@ -293,8 +291,8 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
         isSymmetric: true,
         impl: {function: 'APPROX_SET'},
       }
-    )
-  ),
+    ),
+  },
   ...def(
     'hll_combine',
     {'value': {sql_native: 'hyperloglog'}},
@@ -389,41 +387,37 @@ export const TRINO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
 
 export const PRESTO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   ...TRINO_DIALECT_FUNCTIONS,
-  ...overdef(
-    'array_intersect',
-    def('array_intersect', {'x': {array: T}, 'y': {array: T}}, {array: T}),
-    def(
+  array_intersect: {
+    ...def('array_intersect', {'x': {array: T}, 'y': {array: T}}, {array: T}),
+    ...def(
       'nested_array',
       {'x': {array: {array: T}}},
       {array: T},
       {impl: {function: 'ARRAY_INTERSECT'}}
-    )
-  ),
-  ...overdef(
-    'array_least_frequent',
-    def('array_least_frequent', {'x': {array: T}}, {array: T}),
-    def(
+    ),
+  },
+  array_least_frequent: {
+    ...def('array_least_frequent', {'x': {array: T}}, {array: T}),
+    ...def(
       'bottom_n',
       {'array_v': {array: T}, 'n': 'number'},
       {array: T},
       {impl: {function: 'ARRAY_LEAST_FREQUENT'}}
-    )
-  ),
-  ...overdef(
-    'array_position',
-    def('array_position', {'x': {array: T}, 'el': T}, 'number'),
-    def(
+    ),
+  },
+  array_poiition: {
+    ...def('array_position', {'x': {array: T}, 'el': T}, 'number'),
+    ...def(
       'nth_instance',
       {'x': {array: T}, 'el': T, 'instance': 'number'},
       'number',
       {impl: {function: 'ARRAY_POSITION'}}
-    )
-  ),
-  ...overdef(
-    'reverse',
-    {string_reverse},
-    def('reverse', {'x': {array: T}}, {array: T})
-  ),
+    ),
+  },
+  reverse: {
+    string_reverse,
+    ...def('reverse', {'x': {array: T}}, {array: T}),
+  },
   ...def('array_average', {'x': {array: T}}, 'number'),
   ...def('array_has_duplicates', {'x': {array: T}}, 'boolean'),
   ...def('array_cum_sum', {numeric_array: {array: T}}, {array: 'number'}),

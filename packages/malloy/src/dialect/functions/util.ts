@@ -757,7 +757,6 @@ function* findGenerics(
   }
 }
 
-type NamedDef = {[name: string]: DefinitionBlueprint}; // to make overdef work, exclude overloaded
 /**
  * Shortcut for non overloaded functions definitions. Default implementation
  * will be the function name turned to upper case. Default type for
@@ -783,7 +782,7 @@ export function def(
   takes: Record<string, TypeDescBlueprint>,
   returns: TypeDescBlueprint,
   options: Partial<Omit<DefinitionBlueprint, 'takes' | 'returns'>> = {}
-): NamedDef {
+) {
   let anyGenerics = false;
   const generic: {[name: string]: TypeDescElementBlueprintOrNamedGeneric[]} =
     {};
@@ -808,23 +807,4 @@ export function def(
     ...options,
   };
   return {[name]: newDef};
-}
-
-/**
- * Even more experimental than def(), is overdef() which uses
- * def() to define an overloaded function.
- * @param name Name of function
- * @param overloads one def() for each overload
- * @returns dot dot dot-able bluepreint definition
- */
-export function overdef(
-  name: string,
-  ...overloads: NamedDef[]
-): DefinitionBlueprintMap {
-  const overload: OverloadedDefinitionBlueprint = {};
-  for (const one of overloads) {
-    const name = Object.keys(one)[0];
-    overload[name] = one[name];
-  }
-  return {[name]: overload};
 }
