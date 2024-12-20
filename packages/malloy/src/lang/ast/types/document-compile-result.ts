@@ -21,13 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ModelDef, Query, SQLSourceDef} from '../../../model/malloy_types';
+import {DocumentDef} from '../../../model/malloy_types';
 
 import {ModelDataRequest} from '../../translate-response';
 
-export interface DocumentCompileResult {
-  modelDef: ModelDef;
-  queryList: Query[];
-  sqlBlocks: SQLSourceDef[];
+export interface DocumentCompileResult extends DocumentDef {
   needs: ModelDataRequest;
 }
