@@ -74,6 +74,32 @@ const string_agg: OverloadedDefinitionBlueprint = {
   },
 };
 
+const arg_min: OverloadedDefinitionBlueprint = {
+  default: {
+    generic: {
+      'T': ['string', 'number', 'date', 'timestamp', 'boolean', 'json'],
+    },
+    takes: {'arg': {dimension: {generic: 'T'}}, 'val': {dimension: 'any'}},
+    returns: {measure: {generic: 'T'}},
+    impl: {
+      sql: 'arg_min(${arg}, ${val}${order_by:})',
+    },
+    supportsOrderBy: true,
+    isSymmetric: true,
+  },
+};
+
+const arg_max: DefinitionBlueprint = {
+  generic: {'T': ['string', 'number', 'date', 'timestamp', 'boolean', 'json']},
+  takes: {'arg': {dimension: {generic: 'T'}}, 'val': {dimension: 'any'}},
+  returns: {measure: {generic: 'T'}},
+  impl: {
+    sql: 'arg_max(${arg}, ${val}${order_by:})',
+  },
+  supportsOrderBy: true,
+  isSymmetric: true,
+};
+
 const string_agg_distinct: OverloadedDefinitionBlueprint = {
   default_separator: {
     ...string_agg['default_separator'],
@@ -104,4 +130,6 @@ export const DUCKDB_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   date_part,
   ...def('repeat', {'str': 'string', 'n': 'number'}, 'string'),
   ...def('reverse', {'str': 'string'}, 'string'),
+  arg_max,
+  arg_min,
 };
