@@ -177,19 +177,16 @@ const array_join: OverloadedDefinitionBlueprint = {
 const sequence: OverloadedDefinitionBlueprint = {
   num_to_num: {
     takes: {'start': 'number', 'stop': 'number'},
-    generic: {'T': ['any']},
     returns: {array: 'number'},
     impl: {function: 'SEQUENCE'},
   },
   num_to_num_step: {
     takes: {'start': 'number', 'stop': 'number', 'step': 'number'},
-    generic: {'T': ['any']},
     returns: {array: 'number'},
     impl: {function: 'SEQUENCE'},
   },
   date_to_date: {
     takes: {'start': 'date', 'stop': 'date'},
-    generic: {'T': ['any']},
     returns: {array: 'date'},
     impl: {function: 'SEQUENCE'},
   },
