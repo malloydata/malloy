@@ -41,6 +41,7 @@ import {
   Query,
   SourceDef,
   SQLSourceDef,
+  DocumentDef,
 } from '../model/malloy_types';
 import {MalloyLexer} from './lib/Malloy/MalloyLexer';
 import {MalloyParser} from './lib/Malloy/MalloyParser';
@@ -98,7 +99,8 @@ export type StepResponses =
   | ASTResponse
   | TranslateResponse
   | ParseResponse
-  | MetadataResponse;
+  | MetadataResponse
+  | PretranslatedResponse;
 
 /**
  * This ignores a -> popMode when the mode stack is empty, which is a hack,
@@ -132,7 +134,14 @@ interface TranslationStep {
 interface ParseData extends ProblemResponse, NeedURLData, FinalResponse {
   parse: MalloyParseInfo;
 }
+
 export type ParseResponse = Partial<ParseData>;
+
+interface PretranslatedData {
+  translation: DocumentDef;
+}
+
+export type PretranslatedResponse = PretranslatedData | null;
 
 /**
  * ParseStep -- Parse the source URL
@@ -151,19 +160,6 @@ class ParseStep implements TranslationStep {
       return this.response;
     }
 
-    if (that.urlIsFullPath === undefined) {
-      try {
-        const _checkFull = new URL(that.sourceURL);
-        that.urlIsFullPath = true;
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : '';
-        that.urlIsFullPath = false;
-        that.root.logError(
-          'failed-to-compute-absolute-import-url',
-          `Could not compute full path URL: ${msg}`
-        );
-      }
-    }
     if (!that.urlIsFullPath) {
       return that.fatalResponse();
     }
@@ -273,6 +269,22 @@ class ParseStep implements TranslationStep {
   }
 }
 
+class PretranslateStep implements TranslationStep {
+  private response?: PretranslatedResponse | null;
+  step(that: MalloyTranslation): PretranslatedResponse {
+    if (this.response !== undefined) {
+      return this.response;
+    }
+    const translation = that.root.pretranslateZone.get(that.sourceURL);
+    if (translation === undefined) {
+      this.response = null;
+      return this.response;
+    }
+    this.response = {translation};
+    return this.response;
+  }
+}
+
 class ImportsAndTablesStep implements TranslationStep {
   private parseReferences: FindReferencesData | undefined = undefined;
   constructor(readonly parseStep: ParseStep) {}
@@ -348,8 +360,10 @@ class ImportsAndTablesStep implements TranslationStep {
       allMissing = {tables};
     }
 
-    const missingImports = that.root.importZone.getUndefined();
-    if (missingImports) {
+    const missingImports = (that.root.importZone.getUndefined() ?? []).filter(
+      url => that.root.pretranslateZone.get(url) === undefined
+    );
+    if (missingImports.length > 0) {
       allMissing = {...allMissing, urls: missingImports};
     }
 
@@ -358,6 +372,9 @@ class ImportsAndTablesStep implements TranslationStep {
     }
 
     for (const child of that.childTranslators.values()) {
+      if (child.pretranslatedStep.step(child)) {
+        continue;
+      }
       const kidNeeds = child.importsAndTablesStep.step(child);
       if (isNeedResponse(kidNeeds)) {
         return kidNeeds;
@@ -433,6 +450,9 @@ class ASTStep implements TranslationStep {
     // Now make sure that every child has fully translated itself
     // before this tree is ready to also translate ...
     for (const child of that.childTranslators.values()) {
+      if (child.pretranslatedStep.step(child)) {
+        continue;
+      }
       const kidNeeds = child.astStep.step(child);
       if (isNeedResponse(kidNeeds)) {
         return kidNeeds;
@@ -601,11 +621,23 @@ class TablePathInfoStep implements TranslationStep {
 class TranslateStep implements TranslationStep {
   response?: TranslateResponse;
   importedAnnotations = false;
-  constructor(readonly astStep: ASTStep) {}
+  constructor(
+    readonly pretranslateStep: PretranslateStep,
+    readonly astStep: ASTStep
+  ) {}
 
   step(that: MalloyTranslation, extendingModel?: ModelDef): TranslateResponse {
     if (this.response) {
       return this.response;
+    }
+
+    const pretranslate = this.pretranslateStep.step(that);
+    if (pretranslate !== null && pretranslate.translation !== undefined) {
+      that.setTranslationResults(pretranslate.translation);
+      return {
+        translated: pretranslate.translation,
+        final: true,
+      };
     }
 
     // begin with the compiler flags of the model we are extending
@@ -635,9 +667,7 @@ class TranslateStep implements TranslationStep {
           if (docCompile.needs) {
             return docCompile.needs;
           } else {
-            that.modelDef = docCompile.modelDef;
-            that.queryList = docCompile.queryList;
-            that.sqlBlocks = docCompile.sqlBlocks;
+            that.setTranslationResults(docCompile);
             break;
           }
         }
@@ -674,13 +704,13 @@ class TranslateStep implements TranslationStep {
 export abstract class MalloyTranslation {
   abstract root: MalloyTranslator;
   childTranslators: Map<string, MalloyTranslation>;
-  urlIsFullPath?: boolean;
   queryList: Query[] = [];
   sqlBlocks: SQLSourceDef[] = [];
   modelDef: ModelDef;
   imports: ImportLocation[] = [];
   compilerFlags = new Tag();
 
+  readonly pretranslatedStep: PretranslateStep;
   readonly parseStep: ParseStep;
   readonly modelAnnotationStep: ModelAnnotationStep;
   readonly importsAndTablesStep: ImportsAndTablesStep;
@@ -717,10 +747,38 @@ export abstract class MalloyTranslation {
     this.completionsStep = new CompletionsStep(this.parseStep);
     this.helpContextStep = new HelpContextStep(this.parseStep);
     this.importsAndTablesStep = new ImportsAndTablesStep(this.parseStep);
+    this.pretranslatedStep = new PretranslateStep();
     this.astStep = new ASTStep(this.importsAndTablesStep);
     this.tablePathInfoStep = new TablePathInfoStep(this.parseStep);
-    this.translateStep = new TranslateStep(this.astStep);
+    this.translateStep = new TranslateStep(
+      this.pretranslatedStep,
+      this.astStep
+    );
     this.references = new ReferenceList(sourceURL);
+  }
+
+  _urlIsFullPath: boolean | undefined = undefined;
+  get urlIsFullPath(): boolean {
+    if (this._urlIsFullPath === undefined) {
+      try {
+        const _checkFull = new URL(this.sourceURL);
+        this._urlIsFullPath = true;
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : '';
+        this._urlIsFullPath = false;
+        this.root.logError(
+          'failed-to-compute-absolute-import-url',
+          `Could not compute full path URL: ${msg}`
+        );
+      }
+    }
+    return this._urlIsFullPath;
+  }
+
+  public setTranslationResults(documentDef: DocumentDef) {
+    this.modelDef = documentDef.modelDef;
+    this.queryList = documentDef.queryList;
+    this.sqlBlocks = documentDef.sqlBlocks;
   }
 
   addChild(url: string): void {
@@ -1025,6 +1083,7 @@ export class MalloyChildTranslator extends MalloyTranslation {
 export class MalloyTranslator extends MalloyTranslation {
   schemaZone = new Zone<SourceDef>();
   importZone = new Zone<string>();
+  pretranslateZone = new Zone<DocumentDef>();
   sqlQueryZone = new Zone<SQLSourceDef>();
   logger: BaseMessageLogger;
   readonly root: MalloyTranslator;
@@ -1045,6 +1104,7 @@ export class MalloyTranslator extends MalloyTranslation {
   update(dd: ParseUpdate): void {
     this.schemaZone.updateFrom(dd.tables, dd.errors?.tables);
     this.importZone.updateFrom(dd.urls, dd.errors?.urls);
+    this.pretranslateZone.updateFrom(dd.translations, dd.errors?.translations);
     this.sqlQueryZone.updateFrom(dd.compileSQL, dd.errors?.compileSQL);
   }
 
@@ -1064,10 +1124,14 @@ interface ErrorData {
   tables: Record<string, string>;
   urls: Record<string, string>;
   compileSQL: Record<string, string>;
+  translations: Record<string, string>;
 }
 
 export interface URLData {
   urls: ZoneData<string>;
+}
+export interface ModelData {
+  translations: ZoneData<DocumentDef>;
 }
 export interface SchemaData {
   tables: ZoneData<SourceDef>;
@@ -1075,7 +1139,7 @@ export interface SchemaData {
 export interface SQLSources {
   compileSQL: ZoneData<SQLSourceDef>;
 }
-export interface UpdateData extends URLData, SchemaData, SQLSources {
+export interface UpdateData extends URLData, SchemaData, SQLSources, ModelData {
   errors: Partial<ErrorData>;
 }
 export type ParseUpdate = Partial<UpdateData>;
