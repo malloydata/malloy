@@ -382,6 +382,7 @@ export const PRESTO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
     ...def('array_intersect', {'x': {array: T}, 'y': {array: T}}, {array: T}),
     nested_array: {
       takes: {'x': {array: {array: T}}},
+      generic: {'T': ['any']},
       returns: {array: T},
       impl: {function: 'ARRAY_INTERSECT'},
     },
@@ -391,20 +392,22 @@ export const PRESTO_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
     bottom_n: {
       takes: {'array_v': {array: T}, 'n': 'number'},
       returns: {array: T},
+      generic: {'T': ['any']},
       impl: {function: 'ARRAY_LEAST_FREQUENT'},
     },
   },
-  array_poiition: {
+  array_position: {
     ...def('array_position', {'x': {array: T}, 'el': T}, 'number'),
     nth_instance: {
       takes: {'x': {array: T}, 'el': T, 'instance': 'number'},
+      generic: {'T': ['any']},
       returns: 'number',
       impl: {function: 'ARRAY_POSITION'},
     },
   },
   reverse: {
-    ...def('reverse', {'x': {array: T}}, {array: T}),
     string_reverse,
+    ...def('reverse', {'x': {array: T}}, {array: T}),
   },
   ...def('array_average', {'x': {array: T}}, 'number'),
   ...def('array_has_duplicates', {'x': {array: T}}, 'boolean'),
