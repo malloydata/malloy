@@ -6,16 +6,11 @@
  */
 
 import {
+  def,
   DefinitionBlueprint,
   DefinitionBlueprintMap,
   OverloadedDefinitionBlueprint,
 } from '../functions/util';
-
-const repeat: DefinitionBlueprint = {
-  takes: {'str': 'string', 'n': 'number'},
-  returns: 'string',
-  impl: {function: 'REPEAT'},
-};
 
 const date_from_unix_date: DefinitionBlueprint = {
   takes: {'unix_date': 'number'},
@@ -74,5 +69,6 @@ export const STANDARDSQL_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   date_from_unix_date,
   string_agg,
   string_agg_distinct,
-  repeat,
+  ...def('repeat', {'str': 'string', 'n': 'number'}, 'string'),
+  ...def('reverse', {'str': 'string'}, 'string'),
 };

@@ -219,8 +219,8 @@ describe.each(runtimes.runtimeList)(
         or_agg is bitwise_or_agg(n1)
         xor_agg is bitwise_xor_agg(n1)
       }`).malloyResultMatches(runtime, {
-        and_agg: 33552351,
-        or_agg: 4166,
+        and_agg: 4166,
+        or_agg: 33552351,
         xor_agg: 28922591,
       });
     });
@@ -439,8 +439,12 @@ describe.each(runtimes.runtimeList)(
           `run: ${nums}->{select: t is remove_nulls([null, 2])}`
         ).malloyResultMatches(runtime, {t: [2]});
       });
-      /// mtoy todo figure out overload
-      it.skip('runs reverse', async () => {
+      it('runs reverse(null)', async () => {
+        await expect(
+          `run: ${nums}->{select: t is reverse(null)}`
+        ).malloyResultMatches(runtime, {t: null});
+      });
+      it.when(presto)('runs reverse(array)', async () => {
         await expect(
           `run: ${nums}->{select: t is reverse(nums)}`
         ).malloyResultMatches(runtime, {t: [1, 1, 4]});
