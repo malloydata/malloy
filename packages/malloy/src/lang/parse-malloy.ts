@@ -616,6 +616,7 @@ class TranslateStep implements TranslationStep {
     if (pretranslate !== undefined) {
       that.setTranslationResults(pretranslate);
       return {
+        // TODO handle extendingModel
         translated: pretranslate,
         final: true,
         // TODO
