@@ -269,22 +269,6 @@ class ParseStep implements TranslationStep {
   }
 }
 
-class PretranslateStep implements TranslationStep {
-  private response?: PretranslatedResponse | null;
-  step(that: MalloyTranslation): PretranslatedResponse {
-    if (this.response !== undefined) {
-      return this.response;
-    }
-    const translation = that.root.pretranslateZone.get(that.sourceURL);
-    if (translation === undefined) {
-      this.response = null;
-      return this.response;
-    }
-    this.response = {translation};
-    return this.response;
-  }
-}
-
 class ImportsAndTablesStep implements TranslationStep {
   private parseReferences: FindReferencesData | undefined = undefined;
   constructor(readonly parseStep: ParseStep) {}
@@ -361,7 +345,7 @@ class ImportsAndTablesStep implements TranslationStep {
     }
 
     const missingImports = (that.root.importZone.getUndefined() ?? []).filter(
-      url => that.root.pretranslateZone.get(url) === undefined
+      url => that.root.pretranslatedModels.get(url) === undefined
     );
     if (missingImports.length > 0) {
       allMissing = {...allMissing, urls: missingImports};
@@ -372,7 +356,7 @@ class ImportsAndTablesStep implements TranslationStep {
     }
 
     for (const child of that.childTranslators.values()) {
-      if (child.pretranslatedStep.step(child)) {
+      if (that.root.pretranslatedModels.get(child.sourceURL)) {
         continue;
       }
       const kidNeeds = child.importsAndTablesStep.step(child);
@@ -450,7 +434,7 @@ class ASTStep implements TranslationStep {
     // Now make sure that every child has fully translated itself
     // before this tree is ready to also translate ...
     for (const child of that.childTranslators.values()) {
-      if (child.pretranslatedStep.step(child)) {
+      if (that.root.pretranslatedModels.get(child.sourceURL)) {
         continue;
       }
       const kidNeeds = child.astStep.step(child);
@@ -621,22 +605,21 @@ class TablePathInfoStep implements TranslationStep {
 class TranslateStep implements TranslationStep {
   response?: TranslateResponse;
   importedAnnotations = false;
-  constructor(
-    readonly pretranslateStep: PretranslateStep,
-    readonly astStep: ASTStep
-  ) {}
+  constructor(readonly astStep: ASTStep) {}
 
   step(that: MalloyTranslation, extendingModel?: ModelDef): TranslateResponse {
     if (this.response) {
       return this.response;
     }
 
-    const pretranslate = this.pretranslateStep.step(that);
-    if (pretranslate !== null && pretranslate.translation !== undefined) {
-      that.setTranslationResults(pretranslate.translation);
+    const pretranslate = that.root.pretranslatedModels.get(that.sourceURL);
+    if (pretranslate !== undefined) {
+      that.setTranslationResults(pretranslate);
       return {
-        translated: pretranslate.translation,
+        translated: pretranslate,
         final: true,
+        // TODO
+        fromSources: [],
       };
     }
 
@@ -710,7 +693,6 @@ export abstract class MalloyTranslation {
   imports: ImportLocation[] = [];
   compilerFlags = new Tag();
 
-  readonly pretranslatedStep: PretranslateStep;
   readonly parseStep: ParseStep;
   readonly modelAnnotationStep: ModelAnnotationStep;
   readonly importsAndTablesStep: ImportsAndTablesStep;
@@ -747,13 +729,9 @@ export abstract class MalloyTranslation {
     this.completionsStep = new CompletionsStep(this.parseStep);
     this.helpContextStep = new HelpContextStep(this.parseStep);
     this.importsAndTablesStep = new ImportsAndTablesStep(this.parseStep);
-    this.pretranslatedStep = new PretranslateStep();
     this.astStep = new ASTStep(this.importsAndTablesStep);
     this.tablePathInfoStep = new TablePathInfoStep(this.parseStep);
-    this.translateStep = new TranslateStep(
-      this.pretranslatedStep,
-      this.astStep
-    );
+    this.translateStep = new TranslateStep(this.astStep);
     this.references = new ReferenceList(sourceURL);
   }
 
@@ -1083,7 +1061,7 @@ export class MalloyChildTranslator extends MalloyTranslation {
 export class MalloyTranslator extends MalloyTranslation {
   schemaZone = new Zone<SourceDef>();
   importZone = new Zone<string>();
-  pretranslateZone = new Zone<DocumentDef>();
+  pretranslatedModels = new Map<string, DocumentDef>();
   sqlQueryZone = new Zone<SQLSourceDef>();
   logger: BaseMessageLogger;
   readonly root: MalloyTranslator;
@@ -1104,8 +1082,10 @@ export class MalloyTranslator extends MalloyTranslation {
   update(dd: ParseUpdate): void {
     this.schemaZone.updateFrom(dd.tables, dd.errors?.tables);
     this.importZone.updateFrom(dd.urls, dd.errors?.urls);
-    this.pretranslateZone.updateFrom(dd.translations, dd.errors?.translations);
     this.sqlQueryZone.updateFrom(dd.compileSQL, dd.errors?.compileSQL);
+    for (const url in dd.translations) {
+      this.pretranslatedModels.set(url, dd.translations[url]);
+    }
   }
 
   logError<T extends MessageCode>(
