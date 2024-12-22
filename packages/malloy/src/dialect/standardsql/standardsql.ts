@@ -126,6 +126,7 @@ export class StandardSQLDialect extends Dialect {
   cantPartitionWindowFunctionsOnExpressions = true;
   hasModOperator = false;
   nestedArrays = false; // Can't have an array of arrays for some reason
+  supportsHyperLogLog = true;
 
   quoteTablePath(tablePath: string): string {
     return `\`${tablePath}\``;
