@@ -756,7 +756,7 @@ describe('airport_tests', () => {
     } -> {
         aggregate: code_count is hll_estimate(hll_combine(code_hll))
     }
-    `).malloyResultMatches(runtime, {code_count: 6});
+    `).malloyResultMatches(runtime, {code_count: 19799});
   });
 
   it.skip('crossjoined turtles', async () => {
