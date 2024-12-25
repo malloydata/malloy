@@ -41,7 +41,8 @@
     "third-party-licenses": "ts-node scripts/third_party_licenses",
     "malloyc": "ts-node scripts/malloy-to-json",
     "build-duckdb-db": "ts-node scripts/build_duckdb_test_database",
-    "ping-db": "ts-node ./test/bin/ping_db.ts"
+    "ping-db": "ts-node ./test/bin/ping_db.ts",
+    "describe-cube": "ts-node scripts/describe_cube.ts"
   },
   "devDependencies": {
     "@babel/plugin-transform-runtime": "^7.23.3",
