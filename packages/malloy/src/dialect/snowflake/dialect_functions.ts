@@ -10,9 +10,13 @@ import {
   def,
   DefinitionBlueprintMap,
   OverloadedDefinitionBlueprint,
+  TypeDescBlueprint,
   arg as a,
   sql,
 } from '../functions/util';
+
+// Cute shortcut So you can write things like: {array: T} and {dimension: T}
+const T: TypeDescBlueprint = {generic: 'T'};
 
 const order_by: AggregateOrderByNode = {
   node: 'aggregate_order_by',
@@ -62,6 +66,38 @@ const string_agg_distinct: OverloadedDefinitionBlueprint = {
 export const SNOWFLAKE_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   string_agg,
   string_agg_distinct,
+  hll_accumulate: {
+    default: {
+      takes: {'value': {dimension: T}},
+      returns: {measure: {sql_native: 'hyperloglog'}},
+      generic: {
+        'T': ['string', 'number'],
+      },
+      isSymmetric: true,
+      impl: {function: 'hll_accumulate'},
+    },
+  },
+  hll_combine: {
+    takes: {'value': {sql_native: 'hyperloglog'}},
+    returns: {measure: {sql_native: 'hyperloglog'}},
+    impl: {function: 'hll_combine'},
+    isSymmetric: true,
+  },
+  hll_estimate: {
+    takes: {'value': {sql_native: 'hyperloglog'}},
+    returns: {dimension: 'number'},
+    impl: {function: 'hll_estimate'},
+  },
+  hll_export: {
+    takes: {'value': {sql_native: 'hyperloglog'}},
+    returns: {dimension: {sql_native: 'bytes'}},
+    impl: {function: 'hll_export'},
+  },
+  hll_import: {
+    takes: {'value': {sql_native: 'bytes'}},
+    returns: {dimension: {sql_native: 'hyperloglog'}},
+    impl: {function: 'hll_import'},
+  },
   ...def('repeat', {'str': 'string', 'n': 'number'}, 'string'),
   ...def('reverse', {'str': 'string'}, 'string'),
 };
