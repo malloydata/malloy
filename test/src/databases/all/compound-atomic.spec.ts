@@ -529,6 +529,18 @@ describe.each(runtimes.runtimeList)(
           {val: 1, name: 'uno'},
         ]);
       });
+      test('group_by repeated record', async () => {
+        await expect(`
+          run: ${conName}.sql(""" ${selectAB('ab')} """) -> { group_by: ab }
+        `).malloyResultMatches(runtime, {ab: ab_eq});
+      });
+      // test for https://github.com/malloydata/malloy/issues/2065
+      test.skip('nest a groupoed repeated record', async () => {
+        await expect(`
+          run: ${conName}.sql(""" ${selectAB('ab')} """)
+          -> { nest: gab is {group_by: ab} }
+        `).malloyResultMatches(runtime, {ab: ab_eq});
+      });
     });
   }
 );

@@ -850,6 +850,89 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       no_paren: booleanResult(false, databaseName),
     });
   });
+
+  describe('null safe booleans', () => {
+    // Snowflake makes us do this ...
+    const y = runtime.dialect.sqlMaybeQuoteIdentifier('y');
+    const a = runtime.dialect.sqlMaybeQuoteIdentifier('a');
+    const b = runtime.dialect.sqlMaybeQuoteIdentifier('b');
+    const tf = runtime.dialect.sqlMaybeQuoteIdentifier('tf');
+    const x = runtime.dialect.sqlMaybeQuoteIdentifier('x');
+    // Create nulls of a few types
+    const nulls = `${databaseName}.sql("""
+      SELECT
+        false as has_nulls,
+          1 as ${x}, 2 as ${y},
+          'a' as ${a}, 'b' as ${b},
+          true as ${tf}
+      UNION ALL SELECT
+        true,
+          null, null, null, null, null
+    """) extend { where: has_nulls }`;
+
+    it('select boolean', async () => {
+      await expect(`run: ${nulls} -> {
+        select:
+          null_boolean is tf
+      }`).malloyResultMatches(runtime, {null_boolean: null});
+    });
+    it('not boolean', async () => {
+      await expect(`run: ${nulls} -> {
+        select:
+          not_null_boolean is not tf
+      }`).malloyResultMatches(runtime, {not_null_boolean: true});
+    });
+    it('numeric = non-null to null', async () => {
+      await expect(
+        `run: ${nulls} -> { select: val_eq_null is x = 9 }`
+      ).malloyResultMatches(runtime, {val_eq_null: false});
+    });
+    it('numeric != non-null to null', async () => {
+      await expect(
+        `run: ${nulls} -> { select: val_ne_null is x != 9 }`
+      ).malloyResultMatches(runtime, {val_ne_null: true});
+    });
+    it('string ~ non-null to null', async () => {
+      await expect(
+        `run: ${nulls} -> { select: val_eq_null is a ~ 'z' }`
+      ).malloyResultMatches(runtime, {val_eq_null: false});
+    });
+    it('string !~ non-null to null', async () => {
+      await expect(
+        `run: ${nulls} -> { select: val_ne_null is a !~ 'z' }`
+      ).malloyResultMatches(runtime, {val_ne_null: true});
+    });
+    it('regex ~ non-null to null', async () => {
+      await expect(
+        `run: ${nulls} -> { select: val_eq_null is a ~ r'z' }`
+      ).malloyResultMatches(runtime, {val_eq_null: false});
+    });
+    it('regex !~ non-null to null', async () => {
+      await expect(
+        `run: ${nulls} -> { select: val_ne_null is a !~ r'z' }`
+      ).malloyResultMatches(runtime, {val_ne_null: true});
+    });
+    it('numeric = null-to-null', async () => {
+      await expect(
+        `run: ${nulls} -> { select: null_eq_null is x = y }`
+      ).malloyResultMatches(runtime, {null_eq_null: true});
+    });
+    it('numeric != null-to-null', async () => {
+      await expect(
+        `run: ${nulls} -> { select: null_ne_null is x != y }`
+      ).malloyResultMatches(runtime, {null_ne_null: false});
+    });
+    it('string ~ null-to-null', async () => {
+      await expect(
+        `run: ${nulls} -> { select: null_eq_null is a ~ b }`
+      ).malloyResultMatches(runtime, {null_eq_null: true});
+    });
+    it('string !~ null-to-null', async () => {
+      await expect(
+        `run: ${nulls} -> { select: null_ne_null is a !~ b }`
+      ).malloyResultMatches(runtime, {null_ne_null: false});
+    });
+  });
 });
 
 afterAll(async () => {

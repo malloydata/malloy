@@ -1,29 +1,38 @@
 # NULL fields are a problem
-Because any field might be null, any expression might have NULL values.
+Because any field might be null, any expression might have NULL values. NULL in SQL is infecting,
+so any expression which has a NULL in it returns a NULL value.
 
-SQL basically says that any expression involving null values results in null value.
+For booleans, especially for boolean dimensions, a very common pattern in Malloy, you end
+up creating expressions which contain nonsense data because NOT null is null, or because
+two values which are both NULL are NULL when compared which is false-y not equal.
 
-For booleans, the creates a problem where "condition" and "not condition" cannot
-be assumed to cover all possibilities (because they might both be NULL)
+## The Malloy Null Safe Truth Tables
 
+### Boolean NOT
 
-## Null Safe Not
+| Expression | x=null | x=true | x=false
+| ---- | ---- | ----- | ---- |
+| `not x` | `true` | `false` | `true` |
 
-As an experiment, the following negation operators are all protected against NULL
-values.
+### Non null to nullable
 
-It is an open question if this is a good idea or not, but this has been how Malloy
-works for a while, so to err on the side of safety, I am simply writing down
-what happens now and moving on
-
-This transformation used to happen in the compiler, but at this writing,
-it now happens it code generation time.
-
-| Expression | Null Safe Version |
+| Expression | x=null |
 | ---- | ---- |
-| `not x` | `coalesce(not x, true)` |
-| `a != b` | `coalesce(a != b, true)` |
-| `a !~ b` | `coalesce(a != b, true)` |
+| `x = 0` | `false` |
+| `x != 0` | `true` |
+| `x ~ 'a'` | `false` |
+| `x !~ 'a'` | `true` |
+| `x ~ r'a'` | `false` |
+| `x !~ r'a'` | `true` |
+
+### Compare two nullable
+
+| Expression | x=null, y=null |
+| ---- | ---- |
+| `x = y` | `true` |
+| `x != y` | `false` |
+| `x ~ y` | `true` |
+| `x !~ y` | `false` |
 
 ## Null Safe Functions
 
