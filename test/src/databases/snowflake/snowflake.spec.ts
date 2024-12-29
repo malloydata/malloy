@@ -7,8 +7,8 @@
 
 /* eslint-disable no-console */
 
-import { RuntimeList } from '../../runtimes';
-import { describeIfDatabaseAvailable } from '../../util';
+import {RuntimeList} from '../../runtimes';
+import {describeIfDatabaseAvailable} from '../../util';
 import '../../util/db-jest-matchers';
 
 const [describe, databases] = describeIfDatabaseAvailable(['snowflake']);
@@ -25,13 +25,13 @@ describe.each(runtimes.runtimeList)(
     if (runtime === undefined) {
       throw new Error("Couldn't build runtime");
     }
-    it(`hyperloglog combine`, async () => {
+    it('hyperloglog combine', async () => {
       await expect(`run: bigquery.table('malloytest.airports')->{
           aggregate: code_hll is hll_accumulate(code)
       } -> {
           aggregate: code_count is hll_estimate(hll_combine(code_hll))
       }
-      `).malloyResultMatches(runtime, { code_count: 19812 });
+      `).malloyResultMatches(runtime, {code_count: 19812});
     });
   }
 );
