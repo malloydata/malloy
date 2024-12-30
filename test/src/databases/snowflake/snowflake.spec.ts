@@ -25,13 +25,29 @@ describe.each(runtimes.runtimeList)(
     if (runtime === undefined) {
       throw new Error("Couldn't build runtime");
     }
-    it('hyperloglog combine', async () => {
-      await expect(`run: bigquery.table('malloytest.airports')->{
+    it('hyperloglog combine airports', async () => {
+      await expect(`run: snowflake.table('malloytest.airports')->{
           aggregate: code_hll is hll_accumulate(code)
       } -> {
           aggregate: code_count is hll_estimate(hll_combine(code_hll))
       }
       `).malloyResultMatches(runtime, {code_count: 19812});
+    });
+    it('hyperloglog combine flights', async () => {
+      await expect(`run: snowflake.table('malloytest.flights')->{
+          group_by:
+            dep_date is dep_time::date
+            carrier, origin, destination
+          aggregate:
+            flight_count is count()
+            aircraft_count_hll is hll_accumulate(tail_num)
+      } -> {
+          group_by: dep_date
+          aggregate:
+            flight_count is flight_count.sum()
+            aircraft_count is hll_estimate(hll_combine(aircraft_count_hll))
+      }
+      `).malloyResultMatches(runtime, {aircraft_count: 42, flight_count: 175});
     });
   }
 );
