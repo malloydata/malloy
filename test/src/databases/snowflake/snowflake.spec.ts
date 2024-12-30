@@ -35,3 +35,7 @@ describe.each(runtimes.runtimeList)(
     });
   }
 );
+
+afterAll(async () => {
+  await runtimes.closeAll();
+});
