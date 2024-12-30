@@ -145,8 +145,21 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
         m2 is arg_min(x, y)
         m3 is arg_max(y, x)
         m4 is arg_max(x, y)
+        m5 is arg_min(y, x, 2)
+        m6 is arg_min(x, y, 1)
+        m7 is arg_max(y, x, 3)
+        m8 is arg_max(x, y, 2)
     }`
-    ).malloyResultMatches(runtime, {m1: 100, m2: 55, m3: 1, m4: 1});
+    ).malloyResultMatches(runtime, {
+      m1: 100,
+      m2: 55,
+      m3: 1,
+      m4: 1,
+      m5: [100, 50],
+      m6: [55],
+      m7: [1, 50, 100],
+      m8: [1, 22],
+    });
   });
 
   describe('time oddities', () => {
