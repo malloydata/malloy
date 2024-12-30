@@ -27,7 +27,7 @@ import '../../util/db-jest-matchers';
 import {describeIfDatabaseAvailable} from '../../util';
 
 // TODO identify which tests need to run on wasm and move them into their own file
-const runtimes = ['duckdb' /*'duckdb_wasm'*/];
+const runtimes = ['duckdb', 'duckdb_wasm'];
 
 const [describe, databases] = describeIfDatabaseAvailable(runtimes);
 const allDucks = new RuntimeList(databases);
