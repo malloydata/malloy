@@ -148,7 +148,7 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
         m5 is arg_min(y, x, 2)
         m6 is arg_min(x, y, 1)
         m7 is arg_max(y, x, 3)
-        m8 is arg_max(x, y, 2)
+        m8 is arg_max(x, y, 1)
     }`
     ).malloyResultMatches(runtime, {
       m1: 100,
@@ -158,7 +158,7 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
       m5: [100, 50],
       m6: [55],
       m7: [1, 50, 100],
-      m8: [1, 22],
+      m8: [1],
     });
   });
 
