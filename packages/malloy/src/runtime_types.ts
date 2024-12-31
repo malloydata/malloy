@@ -21,6 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {DocumentDef} from './model';
+
 /**
  * The contents of a Malloy query document.
  */
@@ -57,4 +59,16 @@ export interface URLReader {
 export interface EventStream {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   emit(id: string, data: any): void;
+}
+
+export type Check = string | number | Date;
+
+export interface ModelCache {
+  has(url: string): boolean;
+  get(url: string): DocumentDef | undefined;
+  set(url: string, translation: DocumentDef): void;
+}
+
+export interface Checker {
+  check(urls: string[]): Promise<{url: string; check: Check}[]>;
 }
