@@ -41,16 +41,6 @@ describe('source:', () => {
       "source: xA is _db_.table('aTable') extend { where: astr ~ 'a%' }"
     ).toTranslate();
   });
-  test('shorcut fitlered table m4warning', () => {
-    expect(`
-      ##! m4warnings=warn
-      source: xA is _db_.table('aTable') extend {? astr ~ 'a%' }
-    `).toLog(
-      warningMessage(
-        'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead'
-      )
-    );
-  });
   test('fitlered table', () => {
     expect(
       "source: testA is _db_.table('aTable') extend { where: astr ~ 'a%' }"
@@ -557,18 +547,6 @@ describe('source:', () => {
           view: for1 is aturtle + { where: ai = 1 }
         }
       `).toTranslate();
-    });
-    test('refined explore-query m4warning', () => {
-      expect(`
-        ##! m4warnings=warn
-        source: abNew is ab extend {
-          view: for1 is aturtle + {? ai = 1 }
-        }
-      `).toLog(
-        warningMessage(
-          'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead'
-        )
-      );
     });
     test('chained explore-query', () => {
       expect(`

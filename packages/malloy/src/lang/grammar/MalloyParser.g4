@@ -27,13 +27,6 @@ options { tokenVocab=MalloyLexer; }
 
 malloyDocument: (malloyStatement | SEMI)* EOF;
 
-closeCurly
-  : CCURLY
-  // ANTLR VSCode plugin loses it's tiny mind if { } aren't matched
-  // even in the error string below
-  | { this.notifyErrorListeners("'{' missing a '}'"); }
-  ;
-
 malloyStatement
   : defineSourceStatement
   | defineQuery
@@ -133,12 +126,7 @@ connectionId
   : id;
 
 queryProperties
-  : filterShortcut
-  | OCURLY (queryStatement | SEMI)* closeCurly
-  ;
-
-filterShortcut
-  : OCURLY QMARK fieldExpr closeCurly
+  : OCURLY (queryStatement | SEMI)* closeCurly
   ;
 
 queryName : id;
@@ -169,7 +157,6 @@ sourceNameDef: id;
 
 exploreProperties
   : OCURLY (exploreStatement | SEMI)* closeCurly
-  | filterShortcut
   ;
 
 exploreStatement
@@ -331,7 +318,7 @@ queryExtendStatement
   ;
 
 queryExtendStatementList
-  : OCURLY (queryExtendStatement | SEMI)* closeCurly
+  : OCURLY (queryExtendStatement | SEMI)* CCURLY
   ;
 
 joinList
@@ -688,7 +675,7 @@ starQualified
   : OCURLY (
       (EXCEPT fieldNameList)
     | COMMA
-  )+ closeCurly
+  )+ CCURLY
   ;
 
 taggedRef
@@ -725,4 +712,14 @@ debugPartial: partialAllowedFieldExpr EOF;
 
 experimentalStatementForTesting // this only exists to enable tests for the experimental compiler flag
   : SEMI SEMI OBRACK string CBRACK
+  ;
+
+// Try to show a nice error for a missing }.  Only use this when the next
+// legal symbols after the curly are things which would be illegal inside
+// the curly brackets.
+closeCurly
+  : CCURLY
+  // ANTLR VSCode plugin loses it's tiny mind if { } aren't matched
+  // even in the error string below
+  | { this.notifyErrorListeners("'{' missing a '}'"); }
   ;
