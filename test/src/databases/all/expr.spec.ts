@@ -882,6 +882,18 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           not_null_boolean is not tf
       }`).malloyResultMatches(runtime, {not_null_boolean: true});
     });
+    it('boolean or null', async () => {
+      await expect(`run: ${nulls} -> {
+        select:
+          val_or_null is true or tf
+      }`).malloyResultMatches(runtime, {val_or_true: true});
+    });
+    it('null or boolean', async () => {
+      await expect(`run: ${nulls} -> {
+        select:
+          val_or_null is tf or true
+      }`).malloyResultMatches(runtime, {val_or_true: true});
+    });
     it('numeric = non-null to null', async () => {
       await expect(
         `run: ${nulls} -> { select: val_eq_null is x = 9 }`
