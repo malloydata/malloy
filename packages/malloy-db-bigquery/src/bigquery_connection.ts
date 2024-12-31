@@ -35,7 +35,7 @@ import {ResourceStream} from '@google-cloud/paginator';
 import * as googleCommon from '@google-cloud/common';
 import {GaxiosError} from 'gaxios';
 import {
-  arrayEachFields,
+  mkArrayDef,
   Connection,
   ConnectionConfig,
   Malloy,
@@ -520,14 +520,7 @@ export class BigQueryConnection
         // Malloy treats repeated values as an array of scalars.
         const malloyType = this.dialect.sqlTypeToMalloyType(type);
         if (malloyType) {
-          const arrayField: StructDef = {
-            ...structShared,
-            type: 'array',
-            elementTypeDef: malloyType,
-            join: 'many',
-            fields: arrayEachFields(malloyType),
-          };
-          structDef.fields.push(arrayField);
+          structDef.fields.push(mkArrayDef(malloyType, name));
         }
       } else if (isRecord) {
         const ifRepeatedRecord: StructDef = {

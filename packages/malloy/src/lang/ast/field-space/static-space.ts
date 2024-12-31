@@ -28,7 +28,7 @@ import {
   StructDef,
   SourceDef,
   isJoined,
-  isTurtleDef,
+  isTurtle,
   isSourceDef,
   JoinFieldDef,
 } from '../../../model/malloy_types';
@@ -52,19 +52,21 @@ type FieldMap = Record<string, SpaceEntry>;
 export class StaticSpace implements FieldSpace {
   readonly type = 'fieldSpace';
   private memoMap?: FieldMap;
-  get dialect() {
-    return this.fromStruct.dialect;
+  protected fromStruct: StructDef;
+  protected structDialect: string;
+
+  constructor(struct: StructDef, dialect_name: string) {
+    this.fromStruct = struct;
+    this.structDialect = dialect_name;
   }
 
-  constructor(protected fromStruct: StructDef) {}
-
   dialectName(): string {
-    return this.fromStruct.dialect;
+    return this.structDialect;
   }
 
   dialectObj(): Dialect | undefined {
     try {
-      return getDialect(this.fromStruct.dialect);
+      return getDialect(this.structDialect);
     } catch {
       return undefined;
     }
@@ -72,8 +74,8 @@ export class StaticSpace implements FieldSpace {
 
   defToSpaceField(from: FieldDef): SpaceField {
     if (isJoined(from)) {
-      return new StructSpaceField(from, this.fromStruct.dialect);
-    } else if (isTurtleDef(from)) {
+      return new StructSpaceField(from, this.structDialect);
+    } else if (isTurtle(from)) {
       return new IRViewField(this, from);
     }
     return new ColumnSpaceField(from);
@@ -99,6 +101,10 @@ export class StaticSpace implements FieldSpace {
       }
     }
     return this.memoMap;
+  }
+
+  isProtectedAccessSpace(): boolean {
+    return false;
   }
 
   protected dropEntries(): void {
@@ -138,7 +144,7 @@ export class StaticSpace implements FieldSpace {
   lookup(path: FieldName[]): LookupResult {
     const head = path[0];
     const rest = path.slice(1);
-    const found = this.entry(head.refString);
+    let found = this.entry(head.refString);
     if (!found) {
       return {
         error: {
@@ -151,6 +157,17 @@ export class StaticSpace implements FieldSpace {
     if (found instanceof SpaceField) {
       const definition = found.fieldDef();
       if (definition) {
+        if (!(found instanceof StructSpaceFieldBase) && isJoined(definition)) {
+          // We have looked up a field which is a join, but not a StructSpaceField
+          // because it is someting like "dimension: joinedArray is arrayComputation"
+          // which wasn't known to be a join when the fieldspace was constructed.
+          // TODO don't make one of these every time you do a lookup
+          found = new StructSpaceField(definition, this.structDialect);
+        }
+        // cswenson review todo I don't know how to count the reference properly now
+        // i tried only writing it as a join reference if there was more in the path
+        // but that failed because lookup([JOINNAME]) is called when translating JOINNAME.AGGREGATE(...)
+        // with a 1-length-path but that IS a join reference and there is a test
         head.addReference({
           type:
             found instanceof StructSpaceFieldBase
@@ -161,7 +178,25 @@ export class StaticSpace implements FieldSpace {
           text: head.refString,
         });
       }
-    }
+      if (definition?.accessModifier) {
+        // TODO path.length === 1 will not work with namespaces
+        if (
+          !(
+            this.isProtectedAccessSpace() &&
+            definition.accessModifier === 'internal' &&
+            path.length === 1
+          )
+        ) {
+          return {
+            error: {
+              message: `'${head}' is ${definition?.accessModifier}`,
+              code: 'field-not-accessible',
+            },
+            found: undefined,
+          };
+        }
+      }
+    } // cswenson review todo { else this is SpaceEntry not a field which can only be a param and what is going on? }
     const joinPath =
       found instanceof StructSpaceFieldBase
         ? [{...found.joinPathElement, name: head.refString}]
@@ -195,20 +230,25 @@ export class StaticSpace implements FieldSpace {
 }
 
 export class StructSpaceField extends StructSpaceFieldBase {
-  private parentDialect: string;
-  constructor(def: JoinFieldDef, dialect: string) {
+  constructor(
+    def: JoinFieldDef,
+    private forDialect: string
+  ) {
     super(def);
-    this.parentDialect = dialect;
   }
 
   get fieldSpace(): FieldSpace {
-    return new StaticSpace(this.structDef);
+    if (isSourceDef(this.structDef)) {
+      return new StaticSourceSpace(this.structDef);
+    } else {
+      return new StaticSpace(this.structDef, this.forDialect);
+    }
   }
 }
 
 export class StaticSourceSpace extends StaticSpace implements SourceFieldSpace {
   constructor(protected source: SourceDef) {
-    super(source);
+    super(source, source.dialect);
   }
   structDef(): SourceDef {
     return this.source;

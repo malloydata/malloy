@@ -2,7 +2,7 @@
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
- *  LICENSE file in the root directory of this source tree.
+ * LICENSE file in the root directory of this source tree.
  */
 
 import {Dialect} from '../../../dialect';
@@ -29,6 +29,7 @@ export class DialectNameSpace implements NameSpace {
             supportsOrderBy: overload.supportsOrderBy,
             supportsLimit: overload.supportsLimit,
             isSymmetric: overload.isSymmetric,
+            genericTypes: overload.genericTypes,
             dialect: {
               [dialect.name]: {
                 e: overload.e,

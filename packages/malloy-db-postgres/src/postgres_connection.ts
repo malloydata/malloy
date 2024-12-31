@@ -42,9 +42,9 @@ import {
   RunSQLOptions,
   SQLSourceDef,
   TableSourceDef,
-  arrayEachFields,
   StreamingConnection,
   StructDef,
+  mkArrayDef,
 } from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 
@@ -237,14 +237,7 @@ export class PostgresConnection
         const elementType = this.dialect.sqlTypeToMalloyType(
           row['element_type'] as string
         );
-        structDef.fields.push({
-          type: 'array',
-          elementTypeDef: elementType,
-          name,
-          dialect: this.dialectName,
-          join: 'many',
-          fields: arrayEachFields(elementType),
-        });
+        structDef.fields.push(mkArrayDef(elementType, name));
       } else {
         const malloyType = this.dialect.sqlTypeToMalloyType(postgresDataType);
         structDef.fields.push({...malloyType, name});

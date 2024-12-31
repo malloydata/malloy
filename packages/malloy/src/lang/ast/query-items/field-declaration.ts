@@ -29,9 +29,9 @@ import {
   TypeDesc,
   FieldDef,
   AtomicFieldDef,
-  TemporalTypeDef,
   isAtomic,
   FieldDefType,
+  mkFieldDef,
 } from '../../../model/malloy_types';
 
 import * as TDU from '../typedesc-utils';
@@ -77,6 +77,10 @@ export abstract class AtomicFieldDeclaration
     super({expr: expr});
   }
 
+  getName(): string {
+    return this.defineName;
+  }
+
   fieldDef(fs: FieldSpace, exprName: string): FieldDef {
     /*
      * In an explore we cannot reference the thing we are defining, you need
@@ -119,63 +123,32 @@ export abstract class AtomicFieldDeclaration
         type: 'error',
       };
     }
-    let retType = exprValue.type;
-    if (retType === 'null') {
+    if (exprValue.type === 'null') {
       this.expr.logWarning(
         'null-typed-field-definition',
         'null value defaults to type number, use "null::TYPE" to specify correct type'
       );
-      retType = 'number';
+      const nullAsNumber: ExprValue = {
+        type: 'number',
+        value: exprValue.value,
+        expressionType: exprValue.expressionType,
+        evalSpace: exprValue.evalSpace,
+        compositeFieldUsage: exprValue.compositeFieldUsage,
+      };
+      exprValue = nullAsNumber;
     }
-    if (isAtomicFieldType(retType) && retType !== 'error') {
+    if (isAtomicFieldType(exprValue.type) && exprValue.type !== 'error') {
       this.typecheckExprValue(exprValue);
-      let ret: AtomicFieldDef;
-      switch (retType) {
-        case 'date':
-        case 'timestamp': {
-          const timeRet: TemporalTypeDef & AtomicFieldDef = {
-            name: exprName,
-            type: retType,
-            location: this.location,
-            e: exprValue.value,
-          };
-          if (isGranularResult(exprValue)) {
-            timeRet.timeframe = exprValue.timeframe;
-          }
-          ret = timeRet;
-          break;
-        }
-        case 'json':
-        case 'boolean':
-        case 'string':
-        case 'number':
-        case 'sql native': {
-          ret = {
-            type: retType,
-            name: exprName,
-            location: this.location,
-            e: exprValue.value,
-          };
-          break;
-        }
-        case 'record': {
-          const fields: FieldDef[] = [];
-          ret = {
-            type: 'record',
-            name: exprName,
-            location: this.location,
-            join: 'one',
-            fields,
-            e: exprValue.value,
-            dialect: exprFS.dialectName(),
-          };
-          break;
-        }
-        case 'array':
-          throw this.internalError(
-            'Cannot return an array result from a query (yet)'
-          );
+      const ret = mkFieldDef(TDU.atomicDef(exprValue), exprName);
+      if (
+        (ret.type === 'date' || ret.type === 'timestamp') &&
+        isGranularResult(exprValue)
+      ) {
+        ret.timeframe = exprValue.timeframe;
       }
+      ret.location = this.location;
+      ret.e = exprValue.value;
+      ret.compositeFieldUsage = exprValue.compositeFieldUsage;
       if (exprValue.expressionType) {
         ret.expressionType = exprValue.expressionType;
       }
@@ -317,6 +290,10 @@ export class DefSpace implements FieldSpace {
       return this.realFS.inputSpace();
     }
     throw new Error('Not a query field space');
+  }
+
+  isProtectedAccessSpace(): boolean {
+    return true;
   }
 }
 

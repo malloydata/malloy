@@ -2,7 +2,7 @@
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
- *  LICENSE file in the root directory of this source tree.
+ * LICENSE file in the root directory of this source tree.
  */
 
 import {
@@ -13,6 +13,7 @@ import {
   Tag,
 } from '@malloydata/malloy';
 import {
+  Accessor,
   Show,
   createContext,
   createEffect,
@@ -24,20 +25,40 @@ import {ResultContext} from './result-context';
 import './render.css';
 import {ComponentOptions, ICustomElement} from 'component-register';
 import {applyRenderer} from './apply-renderer';
-import {MalloyClickEventPayload, VegaConfigHandler} from './types';
+import {
+  DashboardConfig,
+  DrillData,
+  MalloyClickEventPayload,
+  TableConfig,
+  VegaConfigHandler,
+} from './types';
+export type {DimensionContextEntry, DrillData} from './types';
+import css from './render.css?raw';
 
 export type MalloyRenderProps = {
   result?: Result;
   queryResult?: QueryResult;
   modelDef?: ModelDef;
   scrollEl?: HTMLElement;
+  modalElement?: HTMLElement;
   onClick?: (payload: MalloyClickEventPayload) => void;
+  onDrill?: (drillData: DrillData) => void;
   vegaConfigOverride?: VegaConfigHandler;
+  tableConfig?: Partial<TableConfig>;
+  dashboardConfig?: Partial<DashboardConfig>;
 };
 
 const ConfigContext = createContext<{
+  tableConfig: Accessor<TableConfig>;
+  dashboardConfig: Accessor<DashboardConfig>;
+  element: ICustomElement;
+  stylesheet: CSSStyleSheet;
+  addCSSToShadowRoot: (css: string) => void;
+  addCSSToDocument: (id: string, css: string) => void;
   onClick?: (payload: MalloyClickEventPayload) => void;
+  onDrill?: (drillData: DrillData) => void;
   vegaConfigOverride?: VegaConfigHandler;
+  modalElement?: HTMLElement;
 }>();
 
 export const useConfig = () => {
@@ -60,12 +81,78 @@ export function MalloyRender(
     else return null;
   });
 
+  // Create one stylesheet for web component to use for all styles
+  // This is so we can pass the stylesheet to other components to share, like <malloy-modal>
+  const stylesheet = new CSSStyleSheet();
+  if (element.renderRoot instanceof ShadowRoot)
+    element.renderRoot.adoptedStyleSheets.push(stylesheet);
+
+  const addedStylesheets = new Set();
+  function addCSSToShadowRoot(css: string) {
+    const root = element.renderRoot;
+    if (!(root instanceof ShadowRoot)) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        "Couldn't add CSS to render element, it is not rendering in a ShadowRoot"
+      );
+      return;
+    }
+    if (!addedStylesheets.has(css)) {
+      const newStyleSheetTexts: string[] = [];
+      for (let i = 0; i < stylesheet.cssRules.length; i++) {
+        const cssText = stylesheet.cssRules.item(i)?.cssText;
+        if (cssText) newStyleSheetTexts.push(cssText);
+      }
+      newStyleSheetTexts.push(css);
+      stylesheet.replaceSync(newStyleSheetTexts.join('\n'));
+      addedStylesheets.add(css);
+    }
+  }
+
+  function addCSSToDocument(id: string, css: string) {
+    if (!document.getElementById(id)) {
+      const style = document.createElement('style');
+      style.id = id;
+      style.textContent = css;
+      document.head.appendChild(style);
+    }
+  }
+
+  addCSSToShadowRoot(css);
+
+  const tableConfig: Accessor<TableConfig> = () =>
+    Object.assign(
+      {
+        disableVirtualization: false,
+        rowLimit: Infinity,
+        shouldFillWidth: false,
+        enableDrill: false,
+      },
+      props.tableConfig
+    );
+
+  const dashboardConfig: Accessor<DashboardConfig> = () =>
+    Object.assign(
+      {
+        disableVirtualization: false,
+      },
+      props.dashboardConfig
+    );
+
   return (
     <Show when={result()}>
       <ConfigContext.Provider
         value={{
           onClick: props.onClick,
+          onDrill: props.onDrill,
           vegaConfigOverride: props.vegaConfigOverride,
+          element,
+          stylesheet,
+          addCSSToShadowRoot,
+          addCSSToDocument,
+          tableConfig,
+          dashboardConfig,
+          modalElement: props.modalElement,
         }}
       >
         <MalloyRenderInner
@@ -103,12 +190,12 @@ export function MalloyRenderInner(props: {
     };
   };
 
+  const config = useConfig();
+
   createEffect(() => {
     if (props.element) {
       const style = generateThemeStyle(tags().modelTheme, tags().localTheme);
-      for (const [key, value] of Object.entries(style)) {
-        props.element['style'].setProperty(key, value);
-      }
+      config.addCSSToShadowRoot(style);
     }
   });
 
@@ -131,9 +218,14 @@ export function MalloyRenderInner(props: {
   };
 
   return (
-    <ResultContext.Provider value={metadata()}>
-      {rendering().renderValue}
-    </ResultContext.Provider>
+    <>
+      <ResultContext.Provider value={metadata()}>
+        {rendering().renderValue}
+      </ResultContext.Provider>
+      <Show when={metadata().store.store.showCopiedModal}>
+        <div class="malloy-copied-modal">Copied query to clipboard!</div>
+      </Show>
+    </>
   );
 }
 
@@ -154,8 +246,6 @@ function getThemeValue(prop: string, ...themes: Array<Tag | undefined>) {
 }
 
 function generateThemeStyle(modelTheme?: Tag, localTheme?: Tag) {
-  const style: Record<string, string> = {};
-
   const tableRowHeight = getThemeValue(
     'tableRowHeight',
     localTheme,
@@ -205,17 +295,21 @@ function generateThemeStyle(modelTheme?: Tag, localTheme?: Tag) {
   );
   const fontFamily = getThemeValue('fontFamily', localTheme, modelTheme);
 
-  style['--malloy-render--table-row-height'] = tableRowHeight;
-  style['--malloy-render--table-body-color'] = tableBodyColor;
-  style['--malloy-render--table-font-size'] = tableFontSize;
-  style['--malloy-render--font-family'] = fontFamily;
-  style['--malloy-render--table-header-color'] = tableHeaderColor;
-  style['--malloy-render--table-header-weight'] = tableHeaderWeight;
-  style['--malloy-render--table-body-weight'] = tableBodyWeight;
-  style['--malloy-render--table-border'] = tableBorder;
-  style['--malloy-render--table-background'] = tableBackground;
-  style['--malloy-render--table-gutter-size'] = tableGutterSize;
-  style['--malloy-render--table-pinned-background'] = tablePinnedBackground;
-  style['--malloy-render--table-pinned-border'] = tablePinnedBorder;
-  return style;
+  const css = `
+  :host {
+    --malloy-render--table-row-height: ${tableRowHeight};
+    --malloy-render--table-body-color: ${tableBodyColor};
+    --malloy-render--table-font-size: ${tableFontSize};
+    --malloy-render--font-family: ${fontFamily};
+    --malloy-render--table-header-color: ${tableHeaderColor};
+    --malloy-render--table-header-weight: ${tableHeaderWeight};
+    --malloy-render--table-body-weight: ${tableBodyWeight};
+    --malloy-render--table-border: ${tableBorder};
+    --malloy-render--table-background: ${tableBackground};
+    --malloy-render--table-gutter-size: ${tableGutterSize};
+    --malloy-render--table-pinned-background: ${tablePinnedBackground};
+    --malloy-render--table-pinned-border: ${tablePinnedBorder};
+  }
+`;
+  return css;
 }

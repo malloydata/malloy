@@ -32,13 +32,15 @@ import {
   TypecastExpr,
   MeasureTimeExpr,
   LeafAtomicTypeDef,
+  RecordLiteralNode,
+  ArrayLiteralNode,
 } from '../../model/malloy_types';
 import {
   DialectFunctionOverloadDef,
   expandOverrideMap,
   expandBlueprintMap,
 } from '../functions';
-import {DialectFieldList, QueryInfo} from '../dialect';
+import {DialectFieldList, FieldReferenceType, QueryInfo} from '../dialect';
 import {PostgresBase} from '../pg_impl';
 import {POSTGRES_DIALECT_FUNCTIONS} from './dialect_functions';
 import {POSTGRES_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
@@ -108,6 +110,7 @@ export class PostgresDialect extends PostgresBase {
   experimental = false;
   readsNestedData = false;
   supportsComplexFilteredSources = false;
+  compoundObjectInSchema = false;
 
   quoteTablePath(tablePath: string): string {
     return tablePath
@@ -219,9 +222,9 @@ export class PostgresDialect extends PostgresBase {
   ): string {
     if (isArray) {
       if (needDistinctKey) {
-        return `LEFT JOIN UNNEST(ARRAY((SELECT jsonb_build_object('__row_id', row_number() over (), 'value', v) FROM UNNEST(${source}) as v))) as ${alias} ON true`;
+        return `LEFT JOIN UNNEST(ARRAY((SELECT jsonb_build_object('__row_id', row_number() over (), 'value', v) FROM JSONB_ARRAY_ELEMENTS(TO_JSONB(${source})) as v))) as ${alias} ON true`;
       } else {
-        return `LEFT JOIN UNNEST(ARRAY((SELECT jsonb_build_object('value', v) FROM UNNEST(${source}) as v))) as ${alias} ON true`;
+        return `LEFT JOIN UNNEST(ARRAY((SELECT jsonb_build_object('value', v) FROM JSONB_ARRAY_ELEMENTS(TO_JSONB(${source})) as v))) as ${alias} ON true`;
       }
     } else if (needDistinctKey) {
       // return `UNNEST(ARRAY(( SELECT AS STRUCT GENERATE_UUID() as __distinct_key, * FROM UNNEST(${source})))) as ${alias}`;
@@ -241,27 +244,33 @@ export class PostgresDialect extends PostgresBase {
   }
 
   sqlFieldReference(
-    alias: string,
-    fieldName: string,
-    fieldType: string,
-    isNested: boolean,
-    _isArray: boolean
+    parentAlias: string,
+    parentType: FieldReferenceType,
+    childName: string,
+    childType: string
   ): string {
-    let ret = `(${alias}->>'${fieldName}')`;
-    if (isNested) {
-      switch (fieldType) {
+    if (childName === '__row_id') {
+      return `(${parentAlias}->>'__row_id')`;
+    }
+    if (parentType !== 'table') {
+      let ret = `JSONB_EXTRACT_PATH_TEXT(${parentAlias},'${childName}')`;
+      switch (childType) {
         case 'string':
           break;
         case 'number':
           ret = `${ret}::double precision`;
           break;
         case 'struct':
-          ret = `${ret}::jsonb`;
+        case 'array':
+        case 'record':
+        case 'array[record]':
+          ret = `JSONB_EXTRACT_PATH(${parentAlias},'${childName}')`;
           break;
       }
       return ret;
     } else {
-      return `${alias}."${fieldName}"`;
+      const child = this.sqlMaybeQuoteIdentifier(childName);
+      return `${parentAlias}.${child}`;
     }
   }
 
@@ -292,10 +301,6 @@ export class PostgresDialect extends PostgresBase {
 
   sqlSelectAliasAsStruct(alias: string): string {
     return `ROW(${alias})`;
-  }
-  // TODO
-  sqlMaybeQuoteIdentifier(identifier: string): string {
-    return `"${identifier}"`;
   }
 
   // The simple way to do this is to add a comment on the table
@@ -445,5 +450,18 @@ export class PostgresDialect extends PostgresBase {
     // Parentheses, Commas:  NUMERIC(5, 2)
     // Square Brackets:      INT64[]
     return sqlType.match(/^[A-Za-z\s(),[\]0-9]*$/) !== null;
+  }
+
+  sqlLiteralRecord(lit: RecordLiteralNode): string {
+    const props: string[] = [];
+    for (const [kName, kVal] of Object.entries(lit.kids)) {
+      props.push(`'${kName}',${kVal.sql}`);
+    }
+    return `JSONB_BUILD_OBJECT(${props.join(', ')})`;
+  }
+
+  sqlLiteralArray(lit: ArrayLiteralNode): string {
+    const array = lit.kids.values.map(val => val.sql);
+    return 'JSONB_BUILD_ARRAY(' + array.join(',') + ')';
   }
 }

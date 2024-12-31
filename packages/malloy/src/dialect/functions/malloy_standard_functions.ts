@@ -2,7 +2,7 @@
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
- *  LICENSE file in the root directory of this source tree.
+ * LICENSE file in the root directory of this source tree.
  */
 
 import {LeafExpressionType} from '../../model/malloy_types';
@@ -58,9 +58,8 @@ type Standard = {
   pow: D;
   rand: D;
   regexp_extract: D;
-  repeat: D;
+  string_repeat: D;
   replace: {string: D; regular_expression: D};
-  reverse: D;
   round: {to_integer: D; to_precision: D};
   rtrim: {whitespace: D; characters: D};
   sign: D;
@@ -154,7 +153,7 @@ const chr: DefinitionFor<Standard['chr']> = {
 };
 
 const coalesce: DefinitionFor<Standard['coalesce']> = {
-  generic: ['T', ['string', 'number', 'timestamp', 'date', 'json']],
+  generic: {'T': ['string', 'number', 'timestamp', 'date', 'json']},
   takes: {'value': {variadic: {generic: 'T'}}},
   returns: {generic: 'T'},
   impl: {function: 'COALESCE'},
@@ -208,14 +207,14 @@ const floor: DefinitionFor<Standard['floor']> = {
 };
 
 const greatest: DefinitionFor<Standard['greatest']> = {
-  generic: ['T', ['string', 'number', 'timestamp', 'date', 'json']],
+  generic: {'T': ['string', 'number', 'timestamp', 'date', 'json']},
   takes: {'values': {variadic: {generic: 'T'}}},
   returns: {generic: 'T'},
   impl: {function: 'GREATEST'},
 };
 
 const ifnull: DefinitionFor<Standard['ifnull']> = {
-  generic: ['T', ['string', 'number', 'timestamp', 'date', 'json']],
+  generic: {'T': ['string', 'number', 'timestamp', 'date', 'json']},
   takes: {'value': {generic: 'T'}, 'default': {generic: 'T'}},
   returns: {generic: 'T'},
   impl: {function: 'IFNULL'},
@@ -279,7 +278,7 @@ const ltrim: DefinitionFor<Standard['ltrim']> = {
 };
 
 const nullif: DefinitionFor<Standard['nullif']> = {
-  generic: ['T', ['string', 'number', 'timestamp', 'date', 'json']],
+  generic: {'T': ['string', 'number', 'timestamp', 'date', 'json']},
   takes: {'value1': {generic: 'T'}, 'value2': {generic: 'T'}},
   returns: {generic: 'T'},
   impl: {function: 'NULLIF'},
@@ -312,7 +311,7 @@ const regexp_extract: DefinitionFor<Standard['regexp_extract']> = {
   impl: {function: 'REGEXP_EXTRACT'},
 };
 
-const repeat: DefinitionFor<Standard['repeat']> = {
+const string_repeat: DefinitionFor<Standard['string_repeat']> = {
   takes: {'value': 'string', 'count': 'number'},
   returns: 'string',
   impl: {function: 'REPEAT'},
@@ -337,12 +336,6 @@ const replace: DefinitionFor<Standard['replace']> = {
     returns: 'string',
     impl: {function: 'REGEXP_REPLACE'},
   },
-};
-
-const reverse: DefinitionFor<Standard['reverse']> = {
-  takes: {'value': 'string'},
-  returns: 'string',
-  impl: {function: 'REVERSE'},
 };
 
 const round: DefinitionFor<Standard['round']> = {
@@ -470,7 +463,7 @@ const stddev: DefinitionFor<Standard['stddev']> = {
 // Analytic functions
 const avg_moving: DefinitionFor<Standard['avg_moving']> = {
   'preceding': {
-    generic: ['T', ['string', 'number', 'timestamp', 'date']],
+    generic: {'T': ['string', 'number', 'timestamp', 'date']},
     takes: {
       'value': {measure: {generic: 'T'}},
       'preceding': {literal: 'number'},
@@ -483,7 +476,7 @@ const avg_moving: DefinitionFor<Standard['avg_moving']> = {
     },
   },
   'following': {
-    generic: ['T', ['string', 'number', 'timestamp', 'date']],
+    generic: {'T': ['string', 'number', 'timestamp', 'date']},
     takes: {
       'value': {measure: {generic: 'T'}},
       'preceding': {literal: 'number'},
@@ -499,7 +492,7 @@ const avg_moving: DefinitionFor<Standard['avg_moving']> = {
 };
 
 const first_value: DefinitionFor<Standard['first_value']> = {
-  generic: ['T', ['string', 'number', 'timestamp', 'date', 'json']],
+  generic: {'T': ['string', 'number', 'timestamp', 'date', 'json']},
   takes: {'value': {measure: {generic: 'T'}}},
   returns: {calculation: {generic: 'T'}},
   impl: {function: 'FIRST_VALUE', needsWindowOrderBy: true},
@@ -515,7 +508,7 @@ const LAG_TYPES: LeafExpressionType[] = [
 ];
 const lag: DefinitionFor<Standard['lag']> = {
   'bare': {
-    generic: ['T', LAG_TYPES],
+    generic: {'T': LAG_TYPES},
     takes: {
       'value': {measure: {generic: 'T'}},
     },
@@ -523,7 +516,7 @@ const lag: DefinitionFor<Standard['lag']> = {
     impl: {function: 'LAG', needsWindowOrderBy: true},
   },
   'with_offset': {
-    generic: ['T', LAG_TYPES],
+    generic: {'T': LAG_TYPES},
     takes: {
       'value': {measure: {generic: 'T'}},
       'offset': {literal: 'number'},
@@ -532,7 +525,7 @@ const lag: DefinitionFor<Standard['lag']> = {
     impl: {function: 'LAG', needsWindowOrderBy: true},
   },
   'with_default': {
-    generic: ['T', LAG_TYPES],
+    generic: {'T': LAG_TYPES},
     takes: {
       'value': {measure: {generic: 'T'}},
       'offset': {literal: 'number'},
@@ -544,7 +537,7 @@ const lag: DefinitionFor<Standard['lag']> = {
 };
 
 const last_value: DefinitionFor<Standard['last_value']> = {
-  generic: ['T', ['string', 'number', 'timestamp', 'date', 'json']],
+  generic: {'T': ['string', 'number', 'timestamp', 'date', 'json']},
   takes: {'value': {measure: {generic: 'T'}}},
   returns: {calculation: {generic: 'T'}},
   impl: {
@@ -570,28 +563,28 @@ const lead: DefinitionFor<Standard['lead']> = {
 };
 
 const max_cumulative: DefinitionFor<Standard['max_cumulative']> = {
-  generic: ['T', ['string', 'number', 'timestamp', 'date']],
+  generic: {'T': ['string', 'number', 'timestamp', 'date']},
   takes: {'value': {measure: {generic: 'T'}}},
   returns: {calculation: {generic: 'T'}},
   impl: {function: 'MAX', needsWindowOrderBy: true},
 };
 
 const max_window: DefinitionFor<Standard['max_window']> = {
-  generic: ['T', ['string', 'number', 'timestamp', 'date']],
+  generic: {'T': ['string', 'number', 'timestamp', 'date']},
   takes: {'value': {measure: {generic: 'T'}}},
   returns: {calculation: {generic: 'T'}},
   impl: {function: 'MAX', needsWindowOrderBy: false},
 };
 
 const min_cumulative: DefinitionFor<Standard['min_cumulative']> = {
-  generic: ['T', ['string', 'number', 'timestamp', 'date']],
+  generic: {'T': ['string', 'number', 'timestamp', 'date']},
   takes: {'value': {measure: {generic: 'T'}}},
   returns: {calculation: {generic: 'T'}},
   impl: {function: 'MIN', needsWindowOrderBy: true},
 };
 
 const min_window: DefinitionFor<Standard['min_window']> = {
-  generic: ['T', ['string', 'number', 'timestamp', 'date']],
+  generic: {'T': ['string', 'number', 'timestamp', 'date']},
   takes: {'value': {measure: {generic: 'T'}}},
   returns: {calculation: {generic: 'T'}},
   impl: {function: 'MIN', needsWindowOrderBy: false},
@@ -611,7 +604,7 @@ const row_number: DefinitionFor<Standard['row_number']> = {
 };
 
 const sum_cumulative: DefinitionFor<Standard['sum_cumulative']> = {
-  generic: ['T', ['string', 'number', 'timestamp', 'date']],
+  generic: {'T': ['string', 'number', 'timestamp', 'date']},
   takes: {'value': {measure: {generic: 'T'}}},
   returns: {calculation: {generic: 'T'}},
   impl: {function: 'SUM', needsWindowOrderBy: true},
@@ -619,7 +612,7 @@ const sum_cumulative: DefinitionFor<Standard['sum_cumulative']> = {
 
 const sum_moving: DefinitionFor<Standard['sum_moving']> = {
   'preceding': {
-    generic: ['T', ['string', 'number', 'timestamp', 'date']],
+    generic: {'T': ['string', 'number', 'timestamp', 'date']},
     takes: {
       'value': {measure: {generic: 'T'}},
       'preceding': {literal: 'number'},
@@ -632,7 +625,7 @@ const sum_moving: DefinitionFor<Standard['sum_moving']> = {
     },
   },
   'following': {
-    generic: ['T', ['string', 'number', 'timestamp', 'date']],
+    generic: {'T': ['string', 'number', 'timestamp', 'date']},
     takes: {
       'value': {measure: {generic: 'T'}},
       'preceding': {literal: 'number'},
@@ -648,7 +641,7 @@ const sum_moving: DefinitionFor<Standard['sum_moving']> = {
 };
 
 const sum_window: DefinitionFor<Standard['sum_window']> = {
-  generic: ['T', ['string', 'number', 'timestamp', 'date']],
+  generic: {'T': ['string', 'number', 'timestamp', 'date']},
   takes: {'value': {measure: {generic: 'T'}}},
   returns: {calculation: {generic: 'T'}},
   impl: {function: 'SUM', needsWindowOrderBy: false},
@@ -717,15 +710,14 @@ export const MALLOY_STANDARD_FUNCTIONS: MalloyStandardFunctionDefinitions = {
   pow,
   rand,
   regexp_extract,
-  repeat,
   replace,
-  reverse,
   round,
   rtrim,
   sign,
   sin,
   sqrt,
   starts_with,
+  string_repeat,
   strpos,
   substr,
   tan,

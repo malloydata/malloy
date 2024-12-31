@@ -2,7 +2,7 @@
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
- *  LICENSE file in the root directory of this source tree.
+ * LICENSE file in the root directory of this source tree.
  */
 
 import {Explore} from '@malloydata/malloy';
@@ -39,6 +39,13 @@ export function getCustomTooltipEntries({
               dataColumn: rec.__source.__malloyDataRecord.cell(f.name),
               resultMetadata: metadata,
               tag: f.tagParse().tag,
+              customProps: {
+                table: {
+                  shouldFillWidth: true,
+                  disableVirtualization: true,
+                  rowLimit: 20,
+                },
+              },
             }).renderValue,
           highlight: false,
           color: '',

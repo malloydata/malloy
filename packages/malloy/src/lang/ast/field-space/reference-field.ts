@@ -26,12 +26,14 @@ import {
   QueryFieldDef,
   TD,
   TypeDesc,
+  mkFieldDef,
 } from '../../../model/malloy_types';
 import * as TDU from '../typedesc-utils';
 import {FieldReference} from '../query-items/field-references';
 import {FieldSpace} from '../types/field-space';
 import {SpaceEntry} from '../types/space-entry';
 import {SpaceField} from '../types/space-field';
+import {joinedCompositeFieldUsage} from '../../../model/composite_source_utils';
 
 export class ReferenceField extends SpaceField {
   private didLookup = false;
@@ -68,12 +70,11 @@ export class ReferenceField extends SpaceField {
         const foundType = check.found.typeDesc();
         if (TD.isAtomic(foundType)) {
           this.queryFieldDef = {
-            ...TDU.atomicDef(foundType),
-            name: path[0],
+            ...mkFieldDef(TDU.atomicDef(foundType), path[0]),
             e: {node: 'parameter', path},
           };
         } else {
-          // mtoy todo
+          // not sure what to do here, if we get here
           throw new Error('impossible turtle/join parameter');
         }
       } else {
@@ -101,7 +102,15 @@ export class ReferenceField extends SpaceField {
     if (this.memoTypeDesc) return this.memoTypeDesc;
     const refTo = this.referenceTo;
     if (refTo) {
-      this.memoTypeDesc = refTo.typeDesc();
+      const joinPath = this.fieldRef.list.slice(0, -1).map(x => x.refString);
+      const typeDesc = refTo.typeDesc();
+      this.memoTypeDesc = {
+        ...typeDesc,
+        compositeFieldUsage: joinedCompositeFieldUsage(
+          joinPath,
+          typeDesc.compositeFieldUsage
+        ),
+      };
       return this.memoTypeDesc;
     }
     return TDU.errorT;

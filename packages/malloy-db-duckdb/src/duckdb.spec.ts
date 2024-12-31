@@ -23,7 +23,7 @@
 
 import {DuckDBCommon} from './duckdb_common';
 import {DuckDBConnection} from './duckdb_connection';
-import {arrayEachFields, SQLSourceDef, StructDef} from '@malloydata/malloy';
+import {SQLSourceDef, StructDef, mkArrayDef} from '@malloydata/malloy';
 import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
 
 const [describe] = describeIfDatabaseAvailable(['duckdb']);
@@ -132,14 +132,9 @@ describe('DuckDBConnection', () => {
     it('parses arrays', () => {
       const structDef = makeStructDef();
       connection.fillStructDefFromTypeMap(structDef, {test: ARRAY_SCHEMA});
-      expect(structDef.fields[0]).toEqual({
-        name: 'test',
-        type: 'array',
-        elementTypeDef: intTyp,
-        join: 'many',
-        dialect: 'duckdb',
-        fields: arrayEachFields({type: 'number', numberType: 'integer'}),
-      });
+      expect(structDef.fields[0]).toEqual(
+        mkArrayDef({type: 'number', numberType: 'integer'}, 'test')
+      );
     });
 
     it('parses inline', () => {
@@ -148,7 +143,6 @@ describe('DuckDBConnection', () => {
       expect(structDef.fields[0]).toEqual({
         'name': 'test',
         'type': 'record',
-        'dialect': 'duckdb',
         'join': 'one',
         'fields': [
           {'name': 'a', ...dblType},
@@ -165,7 +159,6 @@ describe('DuckDBConnection', () => {
         'name': 'test',
         'type': 'array',
         'elementTypeDef': {type: 'record_element'},
-        'dialect': 'duckdb',
         'join': 'many',
         'fields': [
           {'name': 'a', 'numberType': 'float', 'type': 'number'},

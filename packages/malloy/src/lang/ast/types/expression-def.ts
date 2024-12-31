@@ -25,7 +25,7 @@ import {
   Expr,
   TimestampUnit,
   isDateUnit,
-  isTemporalField,
+  isTemporalType,
   expressionIsAggregate,
   TD,
   LeafExpressionType,
@@ -181,7 +181,7 @@ export class ExprDuration extends ExpressionDef {
   ): ExprValue {
     const lhs = left.getExpression(fs);
     this.typeCheck(this, lhs);
-    if (isTemporalField(lhs.type) && (op === '+' || op === '-')) {
+    if (isTemporalType(lhs.type) && (op === '+' || op === '-')) {
       const num = this.n.getExpression(fs);
       if (!TDU.typeEq(num, TDU.numberT)) {
         this.logError(
@@ -239,12 +239,11 @@ export function getMorphicValue(
     return mv;
   }
   if (mv.morphic && mv.morphic[mt]) {
-    return {
-      type: mt,
+    return computedExprValue({
+      dataType: {type: mt},
       value: mv.morphic[mt],
-      expressionType: mv.expressionType,
-      evalSpace: mv.evalSpace,
-    };
+      from: [mv],
+    });
   }
 }
 
@@ -254,8 +253,8 @@ function timeCompare(
   op: CompareMalloyOperator,
   rhs: ExprValue
 ): Expr | undefined {
-  const leftIsTime = isTemporalField(lhs.type);
-  const rightIsTime = isTemporalField(rhs.type);
+  const leftIsTime = isTemporalType(lhs.type);
+  const rightIsTime = isTemporalType(rhs.type);
   const node = getExprNode(op);
   if (leftIsTime && rightIsTime) {
     if (lhs.type !== rhs.type) {
@@ -460,7 +459,7 @@ function delta(
     return noGo;
   }
 
-  const timeLHS = isTemporalField(lhs.type);
+  const timeLHS = isTemporalType(lhs.type);
 
   const err = errorCascade(timeLHS ? 'error' : 'number', lhs, rhs);
   if (err) return err;

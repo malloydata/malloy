@@ -2,12 +2,13 @@
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
- *  LICENSE file in the root directory of this source tree.
+ * LICENSE file in the root directory of this source tree.
  */
 
 import {
   DefinitionBlueprintMap,
   OverloadedDefinitionBlueprint,
+  def,
 } from '../functions/util';
 
 const string_agg: OverloadedDefinitionBlueprint = {
@@ -52,4 +53,6 @@ const string_agg_distinct: OverloadedDefinitionBlueprint = {
 export const MYSQL_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   string_agg,
   string_agg_distinct,
+  ...def('repeat', {'str': 'string', 'n': 'number'}, 'string'),
+  ...def('reverse', {'str': 'string'}, 'string'),
 };

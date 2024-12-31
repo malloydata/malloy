@@ -43,9 +43,17 @@ import {
   LeafAtomicTypeDef,
   TD,
   AtomicTypeDef,
+  ArrayLiteralNode,
+  RecordLiteralNode,
 } from '../../model/malloy_types';
 import {indent} from '../../model/utils';
-import {Dialect, DialectFieldList, qtz, QueryInfo} from '../dialect';
+import {
+  Dialect,
+  DialectFieldList,
+  FieldReferenceType,
+  qtz,
+  QueryInfo,
+} from '../dialect';
 import {
   DialectFunctionOverloadDef,
   expandBlueprintMap,
@@ -119,6 +127,7 @@ export class MySQLDialect extends Dialect {
   readsNestedData = false;
   supportsComplexFilteredSources = false;
   supportsArraysInData = false;
+  compoundObjectInSchema = false;
 
   malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
     switch (malloyType.type) {
@@ -230,34 +239,46 @@ export class MySQLDialect extends Dialect {
     return fields.join(',\n');
   }
 
-  jsonTable(source: string, fieldList: DialectFieldList): string {
-    return `JSON_TABLE(${source}, '$[*]'
+  jsonTable(
+    source: string,
+    fieldList: DialectFieldList,
+    isSingleton: boolean
+  ): string {
+    let fields = this.unnestColumns(fieldList);
+    if (isSingleton) {
+      // LTNOTE: we need the type of array here.
+      fields = "`value` JSON PATH '$'";
+    }
+    return `JSON_TABLE(CAST(${source} AS JSON), '$[*]'
         COLUMNS (
           __row_id FOR ORDINALITY,
-          ${this.unnestColumns(fieldList)}
+          ${fields}
         )
       )`;
   }
 
-  // LTNOTE: We'll make this work with Arrays once MToy's changes land.
   sqlUnnestAlias(
     source: string,
     alias: string,
     fieldList: DialectFieldList,
     _needDistinctKey: boolean,
-    _isArray: boolean,
+    isArray: boolean,
     _isInNestedPipeline: boolean
   ): string {
     return `
-      LEFT JOIN ${this.jsonTable(source, fieldList)} as ${alias} ON 1=1`;
+      LEFT JOIN ${this.jsonTable(
+        source,
+        fieldList,
+        isArray
+      )} as ${alias} ON 1=1`;
   }
 
   sqlUnnestPipelineHead(
-    _isSingleton: boolean,
+    isSingleton: boolean,
     sourceSQLExpression: string,
     fieldList: DialectFieldList
   ): string {
-    return this.jsonTable(sourceSQLExpression, fieldList);
+    return this.jsonTable(sourceSQLExpression, fieldList, isSingleton);
   }
 
   sqlSumDistinctHashedKey(_sqlDistinctKey: string): string {
@@ -285,30 +306,28 @@ export class MySQLDialect extends Dialect {
   }
 
   sqlFieldReference(
-    alias: string,
-    fieldName: string,
-    fieldType: string,
-    isNested: boolean,
-    _isArray: boolean
+    parentAlias: string,
+    parentType: FieldReferenceType,
+    childName: string,
+    childType: string
   ): string {
-    let ret = `${alias}.\`${fieldName}\``;
-    if (isNested) {
-      switch (fieldType) {
-        case 'string':
-          ret = `CONCAT(${ret}, '')`;
-          break;
-        // TODO: Fix this.
-        case 'number':
-          ret = `CAST(${ret} as double)`;
-          break;
-        case 'struct':
-          ret = `CAST(${ret} as JSON)`;
-          break;
+    if (parentType === 'array[scalar]' || parentType === 'record') {
+      let ret = `JSON_UNQUOTE(JSON_EXTRACT(${parentAlias},'$.${childName}'))`;
+      if (parentType === 'array[scalar]') {
+        ret = `JSON_UNQUOTE(${parentAlias}.\`value\`)`;
       }
-      return ret;
-    } else {
-      return `${alias}.\`${fieldName}\``;
+      switch (childType) {
+        case 'string':
+          return `CONCAT(${ret}, '')`;
+        case 'number':
+          return `CAST(${ret} as double)`;
+        case 'record':
+        case 'array':
+          return `CAST(${ret} as JSON)`;
+      }
     }
+    const child = this.sqlMaybeQuoteIdentifier(childName);
+    return `${parentAlias}.${child}`;
   }
 
   sqlCreateFunction(id: string, funcText: string): string {
@@ -331,7 +350,7 @@ export class MySQLDialect extends Dialect {
   }
 
   sqlMaybeQuoteIdentifier(identifier: string): string {
-    return `\`${identifier}\``;
+    return '`' + identifier.replace(/`/g, '``') + '`';
   }
 
   // TODO: Check what this is.
@@ -542,5 +561,18 @@ export class MySQLDialect extends Dialect {
     // Spaces,
     // Parentheses, Commas:  NUMERIC(5, 2)
     return sqlType.match(/^[A-Za-z\s(),0-9]*$/) !== null;
+  }
+
+  sqlLiteralArray(lit: ArrayLiteralNode): string {
+    const array = lit.kids.values.map(val => val.sql);
+    return `JSON_ARRAY(${array.join(',')})`;
+  }
+
+  sqlLiteralRecord(lit: RecordLiteralNode): string {
+    const pairs = Object.entries(lit.kids).map(
+      ([propName, propVal]) =>
+        `${this.sqlLiteralString(propName)},${propVal.sql}`
+    );
+    return `JSON_OBJECT(${pairs.join(', ')})`;
   }
 }

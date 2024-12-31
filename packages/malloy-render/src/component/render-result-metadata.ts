@@ -37,24 +37,24 @@ import {
   valueIsNumber,
   valueIsString,
 } from './util';
-import {hasAny} from './tag-utils';
 import {
   DataRowWithRecord,
   RenderResultMetadata,
   VegaChartProps,
   VegaConfigHandler,
 } from './types';
-import {shouldRenderAs} from './apply-renderer';
-import {getBarChartSettings} from './bar-chart/get-bar_chart-settings';
-import {mergeVegaConfigs} from './plot/merge-vega-configs';
-import {baseVegaConfig} from './plot/base-vega-config';
+import {
+  NULL_SYMBOL,
+  shouldRenderAs,
+  shouldRenderChartAs,
+} from './apply-renderer';
+import {mergeVegaConfigs} from './vega/merge-vega-configs';
+import {baseVegaConfig} from './vega/base-vega-config';
 import {renderTimeString} from './render-time';
-import {getLineChartSettings} from './line-chart/get-line_chart-settings';
-import {generateLineChartVegaLiteSpec} from './line-chart/generate-line_chart-vega-lite-spec';
-import {getAreaChartSettings} from './area-chart/get-area_chart-settings';
-import {generateAreaChartVegaLiteSpec} from './area-chart/generate-area_chart-vega-lite-spec';
 import {generateBarChartVegaSpec} from './bar-chart/generate-bar_chart-vega-spec';
 import {createResultStore} from './result-store/result-store';
+import {generateLineChartVegaSpec} from './line-chart/generate-line_chart-vega-spec';
+import {parse, Config} from 'vega';
 
 function createDataCache() {
   const dataCache = new WeakMap<DataColumn, QueryData>();
@@ -62,11 +62,16 @@ function createDataCache() {
     get: (cell: DataColumn) => {
       if (!dataCache.has(cell) && cell.isArray()) {
         const data: DataRowWithRecord[] = [];
+        const fields = cell.field.allFields;
         for (const row of cell) {
-          const record = Object.assign(row.toObject(), {
-            __malloyDataRecord: row,
-          });
-          data.push(record);
+          const record = {__malloyDataRecord: row};
+          for (const field of fields) {
+            const value = row.cell(field).value;
+            // TODO: can we store Date objects as is? Downstream chart code would need to be updated
+            record[field.name] =
+              value instanceof Date ? value.valueOf() : row.cell(field).value;
+          }
+          data.push(record as DataRowWithRecord);
         }
         dataCache.set(cell, data);
       }
@@ -168,8 +173,13 @@ const populateFieldMeta = (data: DataArray, metadata: RenderResultMetadata) => {
       const fieldSet = maxUniqueFieldValueSets.get(getFieldKey(f))!;
 
       const value = f.isAtomicField() ? row.cell(f).value : undefined;
-
-      if (valueIsNumber(f, value)) {
+      if (
+        f.isAtomicField() &&
+        (value === null || typeof value === 'undefined')
+      ) {
+        fieldMeta.values.add(NULL_SYMBOL);
+        fieldSet.add(NULL_SYMBOL);
+      } else if (valueIsNumber(f, value)) {
         const n = value;
         fieldMeta.min = Math.min(fieldMeta.min ?? n, n);
         fieldMeta.max = Math.max(fieldMeta.max ?? n, n);
@@ -208,8 +218,8 @@ const populateFieldMeta = (data: DataArray, metadata: RenderResultMetadata) => {
           fieldMeta.maxString = stringValue;
 
         if (f.isAtomicField() && f.sourceWasDimension()) {
-          fieldMeta.values.add(stringValue);
-          fieldSet.add(stringValue);
+          fieldMeta.values.add(numericValue);
+          fieldSet.add(numericValue);
         }
       } else if (f.isExploreField()) {
         const data = row.cell(f);
@@ -242,53 +252,41 @@ function populateExploreMeta(
   options: GetResultMetadataOptions
 ) {
   const fieldMeta = metadata.field(f);
-  let vegaLiteProps: VegaChartProps | null = null;
-  if (hasAny(tag, 'bar', 'bar_chart')) {
-    const chartTag = (tag.tag('bar_chart') ?? tag.tag('bar'))!;
-    const barSettings = getBarChartSettings(f, tag);
-    // vegaLiteProps = generateBarChartVegaLiteSpec(
-    //   f,
-    //   barSettings,
-    //   metadata,
-    //   chartTag
-    // );
-    vegaLiteProps = generateBarChartVegaSpec(
-      f,
-      barSettings,
-      metadata,
-      chartTag
-    );
-  } else if (tag.has('line_chart')) {
-    const chartTag = tag.tag('line_chart')!;
-    const lineSettings = getLineChartSettings(f, tag);
-    vegaLiteProps = generateLineChartVegaLiteSpec(
-      f,
-      lineSettings,
-      metadata,
-      chartTag
-    );
-  } else if (tag.has('area_chart')) {
-    const chartTag = tag.tag('area_chart')!;
-    const areaSettings = getAreaChartSettings(f, tag);
-    vegaLiteProps = generateAreaChartVegaLiteSpec(
-      f,
-      areaSettings,
-      metadata,
-      chartTag
-    );
+  let vegaChartProps: VegaChartProps | null = null;
+  const chartType = shouldRenderChartAs(tag);
+  if (chartType === 'bar_chart') {
+    vegaChartProps = generateBarChartVegaSpec(f, metadata);
+  } else if (chartType === 'line_chart') {
+    vegaChartProps = generateLineChartVegaSpec(f, metadata);
   }
 
-  if (vegaLiteProps) {
-    const vegaConfig = mergeVegaConfigs(
+  if (vegaChartProps) {
+    const vegaConfigOverride =
+      options.getVegaConfigOverride?.(vegaChartProps.chartType) ?? {};
+
+    const vegaConfig: Config = mergeVegaConfigs(
       baseVegaConfig(),
-      options.getVegaConfigOverride?.(vegaLiteProps.chartType) ?? {}
+      options.getVegaConfigOverride?.(vegaChartProps.chartType) ?? {}
     );
+
+    const maybeAxisYLabelFont = vegaConfigOverride['axisY']?.['labelFont'];
+    const maybeAxisLabelFont = vegaConfigOverride['axis']?.['labelFont'];
+    if (maybeAxisYLabelFont || maybeAxisLabelFont) {
+      const refLineFontSignal = vegaConfig.signals?.find(
+        signal => signal.name === 'referenceLineFont'
+      );
+      if (refLineFontSignal)
+        refLineFontSignal.value = maybeAxisYLabelFont ?? maybeAxisLabelFont;
+    }
+
     fieldMeta.vegaChartProps = {
-      ...vegaLiteProps,
+      ...vegaChartProps,
       spec: {
-        ...vegaLiteProps.spec,
+        ...vegaChartProps.spec,
         config: vegaConfig,
       },
     };
+    if (fieldMeta.vegaChartProps?.spec)
+      fieldMeta.runtime = parse(fieldMeta.vegaChartProps?.spec);
   }
 }

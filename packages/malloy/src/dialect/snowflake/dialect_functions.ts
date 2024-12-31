@@ -2,11 +2,12 @@
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
- *  LICENSE file in the root directory of this source tree.
+ * LICENSE file in the root directory of this source tree.
  */
 
 import {AggregateOrderByNode} from '../../model';
 import {
+  def,
   DefinitionBlueprintMap,
   OverloadedDefinitionBlueprint,
   arg as a,
@@ -61,4 +62,6 @@ const string_agg_distinct: OverloadedDefinitionBlueprint = {
 export const SNOWFLAKE_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   string_agg,
   string_agg_distinct,
+  ...def('repeat', {'str': 'string', 'n': 'number'}, 'string'),
+  ...def('reverse', {'str': 'string'}, 'string'),
 };

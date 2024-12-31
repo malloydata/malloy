@@ -27,6 +27,7 @@ import {
   isQuerySegment,
   isRawSegment,
 } from '../../../model';
+import {mergeCompositeFieldUsage} from '../../../model/composite_source_utils';
 import {nameFromDef} from '../../field-utils';
 import {MalloyElement} from '../types/malloy-element';
 
@@ -63,13 +64,9 @@ export function refine(
     }
 
     if (from.type !== 'index' && to.type !== 'index' && from.type !== 'raw') {
-      if (from.orderBy !== undefined || from.by !== undefined) {
-        if (to.orderBy === undefined && to.by === undefined) {
-          if (from.orderBy) {
-            to.orderBy = from.orderBy;
-          } else if (from.by) {
-            to.by = from.by;
-          }
+      if (from.orderBy !== undefined && !from.defaultOrderBy) {
+        if (to.orderBy === undefined || to.defaultOrderBy) {
+          to.orderBy = from.orderBy;
         } else {
           logTo.logError(
             'ordering-overridden-in-refinement',
@@ -120,6 +117,10 @@ export function refine(
           )}`
         );
       }
+      to.compositeFieldUsage = mergeCompositeFieldUsage(
+        to.compositeFieldUsage,
+        from.compositeFieldUsage
+      );
     } else if (from.type === 'index' && to.type === 'index') {
       to.indexFields = [...from.indexFields, ...to.indexFields];
     }

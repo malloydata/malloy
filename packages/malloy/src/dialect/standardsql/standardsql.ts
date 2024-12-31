@@ -37,6 +37,8 @@ import {
   MeasureTimeExpr,
   LeafAtomicTypeDef,
   TD,
+  RecordLiteralNode,
+  ArrayLiteralNode,
 } from '../../model/malloy_types';
 import {
   DialectFunctionOverloadDef,
@@ -123,6 +125,8 @@ export class StandardSQLDialect extends Dialect {
   supportsNesting = true;
   cantPartitionWindowFunctionsOnExpressions = true;
   hasModOperator = false;
+  nestedArrays = false; // Can't have an array of arrays for some reason
+  supportsHyperLogLog = true;
 
   quoteTablePath(tablePath: string): string {
     return `\`${tablePath}\``;
@@ -223,13 +227,13 @@ export class StandardSQLDialect extends Dialect {
   }
 
   sqlFieldReference(
-    alias: string,
-    fieldName: string,
-    _fieldType: string,
-    _isNested: boolean,
-    _isArray: boolean
+    parentAlias: string,
+    _parentType: unknown,
+    childName: string,
+    _childType: string
   ): string {
-    return `${alias}.${fieldName}`;
+    const child = this.sqlMaybeQuoteIdentifier(childName);
+    return `${parentAlias}.${child}`;
   }
 
   sqlUnnestPipelineHead(
@@ -269,107 +273,7 @@ ${indent(sql)}
     return `(SELECT AS STRUCT ${alias}.*)`;
   }
 
-  keywords = `
-  ALL
-  AND
-  ANY
-  ARRAY
-  AS
-  ASC
-  ASSERT_ROWS_MODIFIED
-  AT
-  BETWEEN
-  BY
-  CASE
-  CAST
-  COLLATE
-  CONTAINS
-  CREATE
-  CROSS
-  CUBE
-  CURRENT
-  DEFAULT
-  DEFINE
-  DESC
-  DISTINCT
-  ELSE
-  END
-  ENUM
-  ESCAPE
-  EXCEPT
-  EXCLUDE
-  EXISTS
-  EXTRACT
-  FALSE
-  FETCH
-  FOLLOWING
-  FOR
-  FROM
-  FULL
-  GROUP
-  GROUPING
-  GROUPS
-  HASH
-  HAVING
-  IF
-  IGNORE
-  IN
-  INNER
-  INTERSECT
-  INTERVAL
-  INTO
-  IS
-  JOIN
-  LATERAL
-  LEFT
-  LIKE
-  LIMIT
-  LOOKUP
-  MERGE
-  NATURAL
-  NEW
-  NO
-  NOT
-  NULL
-  NULLS
-  OF
-  ON
-  OR
-  ORDER
-  OUTER
-  OVER
-  PARTITION
-  PRECEDING
-  PROTO
-  RANGE
-  RECURSIVE
-  RESPECT
-  RIGHT
-  ROLLUP
-  ROWS
-  SELECT
-  SET
-  SOME
-  STRUCT
-  TABLESAMPLE
-  THEN
-  TO
-  TREAT
-  TRUE
-  UNBOUNDED
-  UNION
-  UNNEST
-  USING
-  WHEN
-  WHERE
-  WINDOW
-  WITH
-  WITHIN`.split(/\s/);
-
   sqlMaybeQuoteIdentifier(identifier: string): string {
-    // return this.keywords.indexOf(identifier.toUpperCase()) > 0
-    //   ? '`' + identifier + '`'
-    //   : identifier;
     return '`' + identifier + '`';
   }
 
@@ -567,5 +471,19 @@ ${indent(sql)}
     // Parentheses, Commas:  NUMERIC(5, 2)
     // Angle Brackets:       ARRAY<INT64>
     return sqlType.match(/^[A-Za-z\s(),<>0-9]*$/) !== null;
+  }
+
+  sqlLiteralRecord(lit: RecordLiteralNode): string {
+    const ents: string[] = [];
+    for (const [name, val] of Object.entries(lit.kids)) {
+      const expr = val.sql || 'internal-error-literal-record';
+      ents.push(`${expr} AS ${this.sqlMaybeQuoteIdentifier(name)}`);
+    }
+    return `STRUCT(${ents.join(',')})`;
+  }
+
+  sqlLiteralArray(lit: ArrayLiteralNode): string {
+    const array = lit.kids.values.map(val => val.sql);
+    return '[' + array.join(',') + ']';
   }
 }

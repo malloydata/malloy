@@ -37,13 +37,24 @@ import {
   RegexMatchExpr,
   LeafAtomicTypeDef,
   TD,
+  ArrayLiteralNode,
+  RecordLiteralNode,
+  isAtomic,
+  isRepeatedRecord,
+  isScalarArray,
 } from '../../model/malloy_types';
 import {
   DialectFunctionOverloadDef,
   expandOverrideMap,
   expandBlueprintMap,
 } from '../functions';
-import {Dialect, DialectFieldList, QueryInfo, qtz} from '../dialect';
+import {
+  Dialect,
+  DialectFieldList,
+  FieldReferenceType,
+  QueryInfo,
+  qtz,
+} from '../dialect';
 import {SNOWFLAKE_DIALECT_FUNCTIONS} from './dialect_functions';
 import {SNOWFLAKE_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
@@ -191,11 +202,12 @@ export class SnowflakeDialect extends Dialect {
     isArray: boolean,
     _isInNestedPipeline: boolean
   ): string {
+    const as = this.sqlMaybeQuoteIdentifier(alias);
     if (isArray) {
-      return `,LATERAL FLATTEN(INPUT => ${source}) AS ${alias}_1, LATERAL (SELECT ${alias}_1.INDEX, object_construct('value', ${alias}_1.value) as value ) as ${alias}`;
+      return `,LATERAL FLATTEN(INPUT => ${source}) AS ${alias}_1, LATERAL (SELECT ${alias}_1.INDEX, object_construct('value', ${alias}_1.value) as value ) as ${as}`;
     } else {
       // have to have a non empty row or it treats it like an inner join :barf-emoji:
-      return `LEFT JOIN LATERAL FLATTEN(INPUT => ifnull(${source},[1])) AS ${alias}`;
+      return `LEFT JOIN LATERAL FLATTEN(INPUT => ifnull(${source},[1])) AS ${as}`;
     }
   }
 
@@ -242,25 +254,39 @@ export class SnowflakeDialect extends Dialect {
   }
 
   sqlFieldReference(
-    alias: string,
-    fieldName: string,
-    fieldType: string,
-    isNested: boolean,
-    _isArray: boolean
+    parentAlias: string,
+    parentType: FieldReferenceType,
+    childName: string,
+    childType: string
   ): string {
-    if (fieldName === '__row_id') {
-      return `${alias}.INDEX::varchar`;
-    } else if (!isNested) {
-      return `${alias}."${fieldName}"`;
-    } else {
-      let snowflakeType = fieldType;
-      if (fieldType === 'string') {
-        snowflakeType = 'varchar';
-      } else if (fieldType === 'struct') {
-        snowflakeType = 'variant';
+    const sqlName = this.sqlMaybeQuoteIdentifier(childName);
+    if (childName === '__row_id') {
+      return `"${parentAlias}".INDEX::varchar`;
+    } else if (
+      parentType === 'array[scalar]' ||
+      parentType === 'array[record]'
+    ) {
+      const arrayRef = `"${parentAlias}".value:${sqlName}`;
+      switch (childType) {
+        case 'record':
+        case 'array':
+          childType = 'VARIANT';
+          break;
+        case 'string':
+          childType = 'VARCHAR';
+          break;
+        case 'number':
+          childType = 'DOUBLE';
+          break;
+        case 'struct':
+          throw new Error('NOT STRUCT PLEASE');
+        // boolean and timestamp and date are all ok
       }
-      return `${alias}.value:"${fieldName}"::${snowflakeType}`;
+      return `${arrayRef}::${childType}`;
+    } else if (parentType === 'record') {
+      return `${parentAlias}:${sqlName}`;
     }
+    return `${parentAlias}.${sqlName}`;
   }
 
   sqlUnnestPipelineHead(
@@ -286,8 +312,9 @@ export class SnowflakeDialect extends Dialect {
   sqlSelectAliasAsStruct(alias: string): string {
     return `OBJECT_CONSTRUCT_KEEP_NULL(${alias}.*)`;
   }
+
   sqlMaybeQuoteIdentifier(identifier: string): string {
-    return `"${identifier}"`;
+    return '"' + identifier.replace(/"/g, '""') + '"';
   }
 
   sqlCreateTableAsSelect(tableName: string, sql: string): string {
@@ -453,12 +480,31 @@ ${indent(sql)}
   }
 
   malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
-    if (malloyType.type === 'number') {
+    if (malloyType.type === 'string') {
+      return 'VARCHAR';
+    } else if (malloyType.type === 'number') {
       if (malloyType.numberType === 'integer') {
-        return 'integer';
+        return 'INTEGER';
       } else {
-        return 'double';
+        return 'DOUBLE';
       }
+    } else if (malloyType.type === 'record' || isRepeatedRecord(malloyType)) {
+      const sqlFields = malloyType.fields.reduce((ret, f) => {
+        if (isAtomic(f)) {
+          const name = f.as ?? f.name;
+          const oneSchema = `${this.sqlMaybeQuoteIdentifier(
+            name
+          )} ${this.malloyTypeToSQLType(f)}`;
+          ret.push(oneSchema);
+        }
+        return ret;
+      }, [] as string[]);
+      const recordScehma = `OBJECT(${sqlFields.join(',')})`;
+      return malloyType.type === 'record'
+        ? recordScehma
+        : `ARRAY(${recordScehma})`;
+    } else if (isScalarArray(malloyType)) {
+      return `ARRAY(${this.malloyTypeToSQLType(malloyType.elementTypeDef)})`;
     }
     return malloyType.type;
   }
@@ -489,5 +535,25 @@ ${indent(sql)}
     // Parentheses, Commas:  NUMERIC(5, 2)
     // Square Brackets:      INT64[]
     return sqlType.match(/^[A-Za-z\s(),[\]0-9]*$/) !== null;
+  }
+
+  sqlLiteralRecord(lit: RecordLiteralNode): string {
+    const rowVals: string[] = [];
+    for (const f of lit.typeDef.fields) {
+      const name = f.as ?? f.name;
+      const propName = `'${name}'`;
+      const propVal = lit.kids[name].sql ?? 'internal-error-record-literal';
+      rowVals.push(`${propName},${propVal}`);
+    }
+    return `OBJECT_CONSTRUCT_KEEP_NULL(${rowVals.join(',')})`;
+  }
+
+  sqlLiteralArray(lit: ArrayLiteralNode): string {
+    const array = lit.kids.values.map(val => val.sql);
+    const arraySchema = `[${array.join(',')}]`;
+    return arraySchema;
+    // return lit.typeDef.elementTypeDef.type === 'record_element'
+    //   ? `${arraySchema}::${this.malloyTypeToSQLType(lit.typeDef)}`
+    //   : arraySchema;
   }
 }

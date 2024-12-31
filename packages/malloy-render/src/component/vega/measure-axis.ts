@@ -2,12 +2,12 @@
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
- *  LICENSE file in the root directory of this source tree.
+ * LICENSE file in the root directory of this source tree.
  */
 
+import {Axis, GroupMark, RectMark} from 'vega';
 import {ChartLayoutSettings} from '../chart-layout-settings';
-import {grayMedium} from '../plot/base-vega-config';
-import {VegaSpec} from '../types';
+import {grayMedium} from './base-vega-config';
 
 type MeasureAxisOptions = {
   type: 'y';
@@ -30,7 +30,7 @@ export function createMeasureAxis({
   showBrushes = true,
   axisSettings,
 }: MeasureAxisOptions) {
-  const axis: VegaSpec = {
+  const axis: Axis = {
     orient: 'left',
     scale: 'yscale',
     title: title,
@@ -52,7 +52,7 @@ export function createMeasureAxis({
             ...(showBrushes
               ? [
                   {
-                    test: 'brushMeasureIn !== "empty" ? (datum.index !== 0 && datum.index !== 1) : false',
+                    test: 'brushMeasureIn !== null ? (datum.index !== 0 && datum.index !== 1) : false',
                     value: 0,
                   },
                   {
@@ -120,7 +120,7 @@ type AxisOverlayOptions = {
 };
 
 function createAxisOverlay(options: AxisOverlayOptions) {
-  const axisOverlay: VegaSpec = {
+  const axisOverlay: RectMark = {
     name: `${options.type}_axis_overlay`,
     type: 'rect',
     encode: {
@@ -128,7 +128,7 @@ function createAxisOverlay(options: AxisOverlayOptions) {
     },
   };
 
-  axisOverlay.encode.enter = {
+  axisOverlay.encode!.enter = {
     x: {
       value: -options.axisSettings.width! + options.axisSettings.yTitleSize!,
     },
@@ -152,16 +152,16 @@ type AxisReferenceLineOptions = {
 
 function createAxisReferenceLines(options: AxisReferenceLineOptions) {
   const opacityRefLineSignal = {
-    signal: 'brushMeasureIn === "empty" || yIsBrushing ? 0 : 1',
+    signal: 'brushMeasureIn === null || yIsBrushing ? 0 : 1',
   };
 
   const startingXPosition =
     -options.axisSettings.width + options.axisSettings.yTitleSize;
 
   const yPositionSignalWithOffset = (offset = 0) =>
-    `brushMeasureIn !== "empty" ? (scale("yscale",brushMeasureIn) + ${offset}) : 0`;
+    `brushMeasureIn !== null ? (scale("yscale",brushMeasureIn) + ${offset}) : 0`;
 
-  const referenceLines: VegaSpec = {
+  const referenceLines: GroupMark = {
     name: 'y_reference_line_group',
     type: 'group',
     marks: [
@@ -239,7 +239,7 @@ function createAxisReferenceLines(options: AxisReferenceLineOptions) {
             strokeWidth: {value: 3},
             fontSize: {value: 10},
             fontWeight: {value: 'normal'},
-            font: {value: 'Inter, sans-serif'},
+            font: {signal: 'referenceLineFont'},
             strokeOpacity: {value: 1},
           },
           update: {
@@ -267,7 +267,7 @@ function createAxisReferenceLines(options: AxisReferenceLineOptions) {
             fill: {value: grayMedium},
             fontSize: {value: 10},
             fontWeight: {value: 'normal'},
-            font: {value: 'Inter, sans-serif'},
+            font: {signal: 'referenceLineFont'},
           },
           update: {
             y: {
@@ -409,7 +409,7 @@ function createAxisReferenceLines(options: AxisReferenceLineOptions) {
 //             strokeWidth: {value: 3},
 //             fontSize: {value: 10},
 //             fontWeight: {value: 'normal'},
-//             font: {value: 'Inter, sans-serif'},
+//             font: {signal: "referenceLineFont"},
 //             strokeOpacity: {value: 1},
 //           },
 //           update: {
@@ -443,7 +443,7 @@ function createAxisReferenceLines(options: AxisReferenceLineOptions) {
 //             fill: {value: grayMedium},
 //             fontSize: {value: 10},
 //             fontWeight: {value: 'normal'},
-//             font: {value: 'Inter, sans-serif'},
+//             font: {signal: "referenceLineFont"},
 //           },
 //           update: {
 //             y: {
@@ -479,7 +479,7 @@ function createAxisReferenceLines(options: AxisReferenceLineOptions) {
 //             strokeWidth: {value: 3},
 //             fontSize: {value: 10},
 //             fontWeight: {value: 'normal'},
-//             font: {value: 'Inter, sans-serif'},
+//             font: {signal: "referenceLineFont"},
 //             strokeOpacity: {value: 1},
 //           },
 //           update: {
@@ -513,7 +513,7 @@ function createAxisReferenceLines(options: AxisReferenceLineOptions) {
 //             fill: {value: grayMedium},
 //             fontSize: {value: 10},
 //             fontWeight: {value: 'normal'},
-//             font: {value: 'Inter, sans-serif'},
+//             font: {signal: "referenceLineFont"},
 //           },
 //           update: {
 //             y: {

@@ -238,6 +238,274 @@ describe('source:', () => {
         `).toTranslate();
       });
     });
+    describe('access modifiers and include', () => {
+      test('private not accessible in query', () => {
+        expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a include { *; private: ai }
+          run: c -> { select: ${'ai'} }
+        `).toLog(errorMessage("'ai' is private"));
+      });
+      test('internal not accessible in query', () => {
+        expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a include { *; internal: ai }
+          run: c -> { select: ${'ai'} }
+        `).toLog(errorMessage("'ai' is internal"));
+      });
+      test('internal is accessible in source extension', () => {
+        expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a include { *; internal: ai }
+          source: d is c extend {
+            dimension: ai2 is ai
+          }
+        `).toTranslate();
+      });
+      test('private is inaccessible in source extension', () => {
+        expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a include {
+            public: *
+            private: ai
+          }
+          source: d is c extend {
+            dimension: ai2 is ai
+          }
+        `).toLog(errorMessage("'ai' is private"));
+      });
+      test('internal is inaccessible in joining source on', () => {
+        expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a include {
+            public: *
+            internal: ai
+          }
+          source: d is a extend {
+            join_one: c on ai = ${'c.ai'}
+          }
+        `).toLog(errorMessage("'ai' is internal"));
+      });
+      test('internal at definition time', () => {
+        expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a extend {
+            internal dimension: x is 1
+          }
+          run: c -> x
+        `).toLog(errorMessage("'x' is internal"));
+      });
+      test('internal is inaccessible in joining source field', () => {
+        expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a include {
+            public: *
+            internal: ai
+          }
+          source: d is a extend {
+            join_one: c on true
+            dimension: cai is ${'c.ai'}
+          }
+        `).toLog(errorMessage("'ai' is internal"));
+      });
+      test('internal is inaccessible in view reference', () => {
+        expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a extend {
+            view: v is { group_by: ai }
+          } include { *; internal: v }
+          run: c -> ${'v'}
+        `).toLog(errorMessage("'v' is internal"));
+      });
+      test('private field used in view is accessible outside via view', () => {
+        expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a extend {
+            view: v is { group_by: ai }
+          } include { *; private: ai }
+          run: c -> v
+        `).toTranslate();
+      });
+      test('use internal field in query in extension', () => {
+        expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a include {
+            internal: ai
+          }
+          source: d is c extend {
+            view: v is { group_by: ai }
+          }
+        `).toTranslate();
+      });
+      test('cannot expand access from private', () => {
+        expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a include {
+            public: *
+            private: ai
+          }
+          source: d is c include {
+            internal: ${'ai'}
+          }
+        `).toLog(
+          errorMessage('Cannot expand access of `ai` from private to internal')
+        );
+      });
+      test('can expand access from internal explicitly', () => {
+        expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a include {
+            internal: *
+          }
+          source: d is c include {
+            public: ai
+          }
+          run: d -> { group_by: ai }
+        `).toTranslate();
+      });
+      test('can expand access from internal with star', () => {
+        expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a include {
+            internal: *
+          }
+          source: d is c include {
+            public: *
+          }
+          run: d -> { group_by: ai }
+        `).toTranslate();
+      });
+      test('star does not expand access', () => {
+        expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a extend {
+            private dimension: x is 1
+          }
+          source: d is c include {
+            public: *
+          }
+          source: e is d extend {
+            dimension: y is ${'x'}
+          }
+        `).toLog(errorMessage("'x' is private"));
+      });
+      test('access modifier *', () => {
+        expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a include {
+            private: *
+          }
+          run: c -> { group_by: ai }
+        `).toLog(errorMessage("'ai' is private"));
+      });
+      test('private things can be used in immediate extension', () => {
+        expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a include {
+            private: *
+          } extend {
+            dimension: ai2 is ai
+          }
+        `).toTranslate();
+      });
+      test('private things cannot be used in later extension', () => {
+        expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is (a include {
+            private: *
+          }) extend {
+            dimension: ai2 is ai
+          }
+        `).toLog(errorMessage("'ai' is private"));
+      });
+      test('access modifier * except', () => {
+        expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a include {
+            ai;
+            private: *
+          }
+          run: c -> { group_by: ai, abool }
+        `).toLog(errorMessage("'abool' is private"));
+      });
+      test('access modifier * nonconflicting use', () => {
+        expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a include {
+            internal: ai
+            private: *
+          }
+          run: c -> { group_by: ai }
+          source: d is c extend {
+            dimension: x is abool
+          }
+        `).toLog(
+          errorMessage("'ai' is internal"),
+          errorMessage("'abool' is private")
+        );
+      });
+      test('cannot override in same source', () => {
+        return expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a include {
+            public: ai
+            private: ${'ai'}
+          }
+        `).toLog(errorMessage('Field `ai` already referenced in include list'));
+      });
+      test('rename in include', () => {
+        return expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a include {
+            public: ai2 is ai
+          }
+          run: c -> { group_by: ai2 }
+          run: c -> { group_by: ${'ai'} }
+        `).toLog(errorMessage("'ai' is not defined"));
+      });
+      test('commas optional in include', () => {
+        return expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a include {
+            ai
+            astr
+            abool
+            private:
+              af
+              aweird
+          }
+          run: c -> { group_by: astr }
+          run: c -> { group_by: ${'af'} }
+        `).toLog(errorMessage("'af' is private"));
+      });
+      test('include and except list', () => {
+        return expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a include {
+            ai
+            except: astr
+          }
+        `).toLog(
+          errorMessage(
+            'Cannot exclude specific fields if specific fields are already included'
+          )
+        );
+      });
+      test('except and include list', () => {
+        return expect(markSource`
+          ##! experimental.access_modifiers
+          source: c is a include {
+            except: astr
+            public: ai
+          }
+        `).toLog(
+          errorMessage(
+            'Cannot include specific fields if specific fields are already excluded'
+          )
+        );
+      });
+      // TODO test conflict with `rename:` and `except:` and `accept:`
+    });
     test('primary_key', () => {
       expect('source: c is a extend { primary_key: ai }').toTranslate();
     });
@@ -375,5 +643,14 @@ describe('source:', () => {
     expect(hasDate).toBeDefined();
     const ad = getFieldDef(hasDate!, 'ad');
     expect(ad).toMatchObject({name: 'ad', type: 'date'});
+  });
+  describe('composite sources', () => {
+    test('basic composite source', () => {
+      expect(`
+        ##! experimental.composite_sources
+        source: x is compose(a, a extend { dimension: foo is 1 })
+        run: x -> { select: foo }
+      `).toTranslate();
+    });
   });
 });

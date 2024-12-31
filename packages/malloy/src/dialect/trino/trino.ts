@@ -37,6 +37,8 @@ import {
   TimeExtractExpr,
   LeafAtomicTypeDef,
   TD,
+  RecordLiteralNode,
+  isAtomic,
 } from '../../model/malloy_types';
 import {
   DialectFunctionOverloadDef,
@@ -50,7 +52,10 @@ import {
   isDialectFieldStruct,
 } from '../dialect';
 import {PostgresBase, timeExtractMap} from '../pg_impl';
-import {TRINO_DIALECT_FUNCTIONS} from './dialect_functions';
+import {
+  PRESTO_DIALECT_FUNCTIONS,
+  TRINO_DIALECT_FUNCTIONS,
+} from './dialect_functions';
 import {TRINO_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 
 // These are the units that "TIMESTAMP_ADD" "TIMESTAMP_DIFF" accept
@@ -140,6 +145,7 @@ export class TrinoDialect extends PostgresBase {
   supportsComplexFilteredSources = false;
   supportsTempTables = false;
   supportsCountApprox = true;
+  supportsHyperLogLog = true;
 
   quoteTablePath(tablePath: string): string {
     // TODO: look into escaping.
@@ -276,17 +282,16 @@ export class TrinoDialect extends PostgresBase {
   }
 
   sqlFieldReference(
-    alias: string,
-    fieldName: string,
-    _fieldType: string,
-    _isNested: boolean,
-    _isArray: boolean
+    parentAlias: string,
+    _parentType: unknown,
+    childName: string,
+    _childType: string
   ): string {
     // LTNOTE: hack, in duckdb we can't have structs as tables so we kind of simulate it.
-    if (fieldName === '__row_id') {
-      return `__row_id_from_${alias}`;
+    if (childName === '__row_id') {
+      return `__row_id_from_${parentAlias}`;
     }
-    return `${alias}.${this.sqlMaybeQuoteIdentifier(fieldName)}`;
+    return `${parentAlias}.${this.sqlMaybeQuoteIdentifier(childName)}`;
   }
 
   sqlUnnestPipelineHead(
@@ -431,10 +436,6 @@ ${indent(sql)}
   WITH
   WITHIN`.split(/\s/);
 
-  sqlMaybeQuoteIdentifier(identifier: string): string {
-    return '"' + identifier + '"';
-  }
-
   sqlAlterTimeExpr(df: TimeDeltaExpr): string {
     let timeframe = df.units;
     let n = df.kids.delta.sql;
@@ -541,16 +542,33 @@ ${indent(sql)}
   }
 
   malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
-    if (malloyType.type === 'number') {
-      if (malloyType.numberType === 'integer') {
-        return 'BIGINT';
-      } else {
-        return 'DOUBLE';
+    switch (malloyType.type) {
+      case 'number':
+        return malloyType.numberType === 'integer' ? 'BIGINT' : 'DOUBLE';
+      case 'string':
+        return 'VARCHAR';
+      case 'record': {
+        const typeSpec: string[] = [];
+        for (const f of malloyType.fields) {
+          if (isAtomic(f)) {
+            typeSpec.push(`${f.name} ${this.malloyTypeToSQLType(f)}`);
+          }
+        }
+        return `ROW(${typeSpec.join(',')})`;
       }
-    } else if (malloyType.type === 'string') {
-      return 'VARCHAR';
+      case 'sql native':
+        return malloyType.rawType || 'UNKNOWN-NATIVE';
+      case 'array': {
+        if (malloyType.elementTypeDef.type !== 'record_element') {
+          return `ARRAY<${this.malloyTypeToSQLType(
+            malloyType.elementTypeDef
+          )}>`;
+        }
+        return malloyType.type.toUpperCase();
+      }
+      default:
+        return malloyType.type.toUpperCase();
     }
-    return malloyType.type;
   }
 
   sqlTypeToMalloyType(sqlType: string): LeafAtomicTypeDef {
@@ -618,6 +636,20 @@ ${indent(sql)}
     const extracted = `EXTRACT(${pgUnits} FROM ${extractFrom})`;
     return from.units === 'day_of_week' ? `mod(${extracted}+1,7)` : extracted;
   }
+
+  sqlLiteralRecord(lit: RecordLiteralNode): string {
+    const rowVals: string[] = [];
+    const rowTypes: string[] = [];
+    for (const f of lit.typeDef.fields) {
+      if (isAtomic(f)) {
+        const name = f.as ?? f.name;
+        rowVals.push(lit.kids[name].sql ?? 'internal-error-record-literal');
+        const elType = this.malloyTypeToSQLType(f);
+        rowTypes.push(`${name} ${elType}`);
+      }
+    }
+    return `CAST(ROW(${rowVals.join(',')}) AS ROW(${rowTypes.join(',')}))`;
+  }
 }
 
 export class PrestoDialect extends TrinoDialect {
@@ -660,5 +692,9 @@ export class PrestoDialect extends TrinoDialect {
       // return `CROSS JOIN UNNEST(zip_with(${source},array[],(r,ignore) -> (r, ignore)))as ${alias}_outer(${alias},ignore)`;
       return `CROSS JOIN  UNNEST(COALESCE(${source}, ARRAY[NULL])) as ${alias}_outer(${alias})`;
     }
+  }
+
+  getDialectFunctions(): {[name: string]: DialectFunctionOverloadDef[]} {
+    return expandBlueprintMap(PRESTO_DIALECT_FUNCTIONS);
   }
 }

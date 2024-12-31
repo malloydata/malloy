@@ -25,7 +25,7 @@ import {
   PipeSegment,
   SourceDef,
   isAtomic,
-  isTurtleDef,
+  isTurtle,
   sourceBase,
 } from '../../../model/malloy_types';
 import {ErrorFactory} from '../error-factory';
@@ -76,10 +76,7 @@ export class ReferenceView extends View {
       };
     };
     if (!lookup.found) {
-      this.logError(
-        'view-not-found',
-        `\`${this.reference.refString}\` is not defined`
-      );
+      this.reference.logError(lookup.error.code, lookup.error.message);
       return oops();
     }
     if (!(lookup.found instanceof SpaceField)) {
@@ -93,6 +90,7 @@ export class ReferenceView extends View {
       const newSegment: PipeSegment = {
         type: 'reduce',
         queryFields: [this.reference.refToField],
+        compositeFieldUsage: fieldDef.compositeFieldUsage,
       };
       const name = this.reference.nameString;
       const outputStruct: SourceDef = {
@@ -106,7 +104,7 @@ export class ReferenceView extends View {
         name,
         outputStruct,
       };
-    } else if (isTurtleDef(fieldDef)) {
+    } else if (isTurtle(fieldDef)) {
       if (this.reference.list.length > 1) {
         if (forRefinement) {
           this.logError(

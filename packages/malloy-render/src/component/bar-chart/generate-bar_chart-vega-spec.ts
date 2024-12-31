@@ -2,27 +2,40 @@
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
- *  LICENSE file in the root directory of this source tree.
+ * LICENSE file in the root directory of this source tree.
  */
 
-import {DateField, Explore, Tag, TimestampField} from '@malloydata/malloy';
-import {BarChartSettings} from './get-bar_chart-settings';
+import {Explore, QueryDataRow, QueryValue} from '@malloydata/malloy';
+import {getBarChartSettings} from './get-bar_chart-settings';
 import {
   ChartTooltipEntry,
-  DataInjector,
+  MalloyDataToChartDataHandler,
   MalloyVegaDataRecord,
   RenderResultMetadata,
   VegaChartProps,
-  VegaSpec,
+  VegaPadding,
+  VegaSignalRef,
 } from '../types';
 import {getChartLayoutSettings} from '../chart-layout-settings';
 import {getFieldFromRootPath, getFieldReferenceId} from '../plot/util';
-import {Item, View} from 'vega';
+import {
+  Data,
+  EncodeEntry,
+  GroupMark,
+  Item,
+  Legend,
+  Mark,
+  RectMark,
+  Signal,
+  Spec,
+  View,
+} from 'vega';
 import {renderTimeString} from '../render-time';
 import {renderNumericField} from '../render-numeric-field';
 import {createMeasureAxis} from '../vega/measure-axis';
 import {getCustomTooltipEntries} from './get-custom-tooltips-entries';
 import {getMarkName} from '../vega/vega-utils';
+import {NULL_SYMBOL} from '../apply-renderer';
 
 type BarDataRecord = {
   x: string | number;
@@ -46,10 +59,15 @@ function invertObject(obj: Record<string, string>): Record<string, string> {
 
 export function generateBarChartVegaSpec(
   explore: Explore,
-  settings: BarChartSettings,
-  metadata: RenderResultMetadata,
-  chartTag: Tag
+  metadata: RenderResultMetadata
 ): VegaChartProps {
+  const tag = explore.tagParse().tag;
+  const chartTag = tag.tag('bar_chart') ?? tag.tag('bar');
+  if (!chartTag)
+    throw new Error(
+      'Bar chart should only be rendered for bar_chart or bar tag'
+    );
+  const settings = getBarChartSettings(explore, tag);
   // TODO: check that there are <=2 dimension fields, throw error otherwise
   /**************************************
    *
@@ -65,6 +83,8 @@ export function generateBarChartVegaSpec(
   if (!yFieldPath) throw new Error('Malloy Bar Chart: Missing y field');
 
   const xField = getFieldFromRootPath(explore, xFieldPath);
+  const xIsDateorTime =
+    xField.isAtomicField() && (xField.isDate() || xField.isTimestamp());
   const yField = getFieldFromRootPath(explore, yFieldPath);
   const seriesField = seriesFieldPath
     ? getFieldFromRootPath(explore, seriesFieldPath)
@@ -173,8 +193,8 @@ export function generateBarChartVegaSpec(
 
   // Spacing for bar groups, depending on whether grouped or not
   // Manually calculating offsets and widths for bars because we need x highlight event targets to be full bandwidth
-  const xOffset: VegaSpec = {};
-  let xWidth: VegaSpec = {};
+  const xOffset: VegaSignalRef = {signal: ''};
+  let xWidth: EncodeEntry['width'] = {};
   if (isGrouping) {
     xOffset.signal = `scale('xOffset', datum.series)+bandwidth("xscale")*${
       barGroupPadding / 2
@@ -186,7 +206,7 @@ export function generateBarChartVegaSpec(
   }
 
   // Create groups for each unique x value via faceting
-  const groupMark: VegaSpec = {
+  const groupMark: GroupMark = {
     name: 'x_group',
     from: {
       facet: {
@@ -231,7 +251,7 @@ export function generateBarChartVegaSpec(
 
   const BAR_FADE_OPACITY = 0.35;
 
-  const barMark: VegaSpec = {
+  const barMark: RectMark = {
     name: 'bars',
     type: 'rect',
     from: {
@@ -282,7 +302,7 @@ export function generateBarChartVegaSpec(
     },
   };
 
-  const highlightMark: VegaSpec = {
+  const highlightMark: RectMark = {
     name: 'x_highlight',
     type: 'rect',
     from: {
@@ -315,26 +335,26 @@ export function generateBarChartVegaSpec(
     },
   };
 
-  groupMark.marks.push(highlightMark, barMark);
+  groupMark.marks!.push(highlightMark, barMark);
 
   // Source data and transforms
-  const valuesData: VegaSpec = {name: 'values', values: [], transform: []};
+  const valuesData: Data = {name: 'values', values: [], transform: []};
   // For measure series, unpivot the measures into the series column
   if (isMeasureSeries) {
     // Pull the series values from the source record, then remap the names to remove __source
-    valuesData.transform.push({
+    valuesData.transform!.push({
       type: 'fold',
       fields: settings.yChannel.fields.map(f => `__source.${f}`),
       as: ['series', 'y'],
     });
-    valuesData.transform.push({
+    valuesData.transform!.push({
       type: 'formula',
       as: 'series',
       expr: "replace(datum.series, '__source.', '')",
     });
   }
   if (isStacking) {
-    valuesData.transform.push({
+    valuesData.transform!.push({
       type: 'stack',
       groupby: ['x'],
       field: 'y',
@@ -342,7 +362,7 @@ export function generateBarChartVegaSpec(
     });
   }
 
-  const marks = [groupMark];
+  const marks: Mark[] = [groupMark];
 
   /**************************************
    *
@@ -351,7 +371,7 @@ export function generateBarChartVegaSpec(
    *************************************/
 
   // Base signals
-  const signals: VegaSpec[] = [
+  const signals: Signal[] = [
     {
       name: 'malloyExplore',
     },
@@ -407,7 +427,7 @@ export function generateBarChartVegaSpec(
     },
     {
       name: 'brushMeasureIn',
-      update: 'getMalloyBrush(brushIn, yRefsList, \'measure\') || "empty"',
+      update: "getMalloyBrush(brushIn, yRefsList, 'measure') || null",
     },
     {
       name: 'brushMeasureRangeIn',
@@ -553,7 +573,7 @@ export function generateBarChartVegaSpec(
    *
    *************************************/
 
-  const spec: VegaSpec = {
+  const spec: Spec = {
     $schema: 'https://vega.github.io/schema/vega/v5.json',
     width: chartSettings.plotWidth,
     height: chartSettings.plotHeight,
@@ -562,8 +582,8 @@ export function generateBarChartVegaSpec(
       resize: true,
       contains: 'content',
     },
-    padding: chartSettings.padding,
     data: [valuesData],
+    padding: {...chartSettings.padding},
     scales: [
       {
         name: 'xscale',
@@ -611,10 +631,28 @@ export function generateBarChartVegaSpec(
         orient: 'bottom',
         scale: 'xscale',
         title: xFieldPath,
+        labelOverlap: 'greedy',
+        labelSeparation: 4,
         ...chartSettings.xAxis,
         encode: {
           labels: {
+            enter: {
+              ...(xIsDateorTime
+                ? {
+                    text: {
+                      signal: `renderMalloyTime(malloyExplore, '${xFieldPath}', datum.value)`,
+                    },
+                  }
+                : {}),
+            },
             update: {
+              ...(xIsDateorTime
+                ? {
+                    text: {
+                      signal: `renderMalloyTime(malloyExplore, '${xFieldPath}', datum.value)`,
+                    },
+                  }
+                : {}),
               fillOpacity: [
                 {
                   test: 'brushXIn ? indexof(brushXIn,datum.value) === -1 : false',
@@ -657,7 +695,7 @@ export function generateBarChartVegaSpec(
       maxCharCt * 10 + 20
     );
 
-    const legendSettings: VegaSpec = {
+    const legendSettings: Legend = {
       // Provide padding around legend entries
       titleLimit: legendSize - 20,
       labelLimit: legendSize - 40,
@@ -665,11 +703,12 @@ export function generateBarChartVegaSpec(
       offset: 4,
     };
 
-    spec.padding.right = legendSize;
-    spec.legends.push({
+    (spec.padding as VegaPadding).right = legendSize;
+    spec.legends!.push({
       fill: 'color',
       // No title for measure list legends
       title: seriesField ? seriesField.name : '',
+      orient: 'right',
       ...legendSettings,
       encode: {
         entries: {
@@ -726,32 +765,39 @@ export function generateBarChartVegaSpec(
     });
   }
 
-  const injectData: DataInjector = (field, data, spec) => {
-    // Capture dates as strings for now. TODO time axes
-    const dateTimeFields = field.allFields.filter(
-      f => f.isAtomicField() && (f.isDate() || f.isTimestamp())
-    ) as (DateField | TimestampField)[];
+  const mapMalloyDataToChartData: MalloyDataToChartDataHandler = (
+    field,
+    data
+  ) => {
+    const getXValue = (row: QueryDataRow) =>
+      xIsDateorTime
+        ? new Date(row[xFieldPath] as string | number).valueOf()
+        : row[xFieldPath];
+
+    const mappedData: {
+      __source: QueryDataRow;
+      x: QueryValue;
+      y: QueryValue;
+      series: QueryValue;
+    }[] = [];
     data.forEach(row => {
-      dateTimeFields.forEach(f => {
-        const value = row[f.name];
-        if (typeof value === 'number' || typeof value === 'string')
-          row[f.name] = renderTimeString(
-            new Date(value),
-            f.isDate(),
-            f.timeframe
-          );
+      // Filter out missing date/time values
+      // TODO: figure out how we can show null values in continuous axes
+      if (
+        xIsDateorTime &&
+        (row[xFieldPath] === null || typeof row[xFieldPath] === 'undefined')
+      ) {
+        return;
+      }
+      // Map data fields to chart properties
+      mappedData.push({
+        __source: row,
+        x: getXValue(row) ?? NULL_SYMBOL,
+        y: row[yFieldPath],
+        series: seriesFieldPath ? row[seriesFieldPath] : yFieldPath,
       });
     });
-
-    // Map data fields to bar chart properties
-    const mappedData = data.map(row => ({
-      __source: row,
-      x: row[xFieldPath],
-      y: row[yFieldPath],
-      series: seriesFieldPath ? row[seriesFieldPath] : yFieldPath,
-    }));
-
-    spec.data[0].values = mappedData;
+    return mappedData;
   };
 
   // Memoize tooltip data
@@ -759,13 +805,13 @@ export function generateBarChartVegaSpec(
 
   return {
     spec,
-    specType: 'vega',
     plotWidth: chartSettings.plotWidth,
     plotHeight: chartSettings.plotHeight,
     totalWidth: chartSettings.totalWidth,
     totalHeight: chartSettings.totalHeight,
     chartType: 'bar_chart',
-    injectData,
+    chartTag,
+    mapMalloyDataToChartData,
     getTooltipData: (item: Item, view: View) => {
       if (tooltipEntryMemo.has(item)) {
         return tooltipEntryMemo.get(item)!;
@@ -792,8 +838,16 @@ export function generateBarChartVegaSpec(
         const x = item.datum.x;
         records = item.datum.v;
 
+        const title = xIsDateorTime
+          ? renderTimeString(
+              new Date(x),
+              xField.isAtomicField() && xField.isDate(),
+              xField.timeframe
+            )
+          : x;
+
         tooltipData = {
-          title: [x],
+          title: [title],
           entries: records.map(rec => ({
             label: rec.series,
             value: formatY(rec),
@@ -810,8 +864,16 @@ export function generateBarChartVegaSpec(
         const itemData = item.datum;
         highlightedSeries = itemData.series;
         records = item.mark.group.datum.v;
+        const title = xIsDateorTime
+          ? renderTimeString(
+              new Date(itemData.x),
+              xField.isAtomicField() && xField.isDate(),
+              xField.timeframe
+            )
+          : itemData.x;
+
         tooltipData = {
-          title: [itemData.x],
+          title: [title],
           entries: records.map(rec => {
             return {
               label: rec.series,
@@ -864,155 +926,3 @@ export function generateBarChartVegaSpec(
     },
   };
 }
-
-// TODO: x range brushes
-// const xAxisOverlay: VegaSpec = {
-//   name: 'x_axis_overlay',
-//   type: 'rect',
-//   encode: {
-//     enter: {
-//       y: {
-//         signal: `height + ${chartSettings.xAxis.height} + 4`,
-//       },
-//       y2: {signal: 'height'},
-//       x: {value: 0},
-//       x2: {signal: 'width'},
-//       fill: {value: 'transparent'},
-//     },
-//   },
-// };
-// const xAxisRangeBrushRect: VegaSpec = {
-//   name: 'x_axis_range_brush',
-//   type: 'rect',
-//   encode: {
-//     enter: {
-//       y: {
-//         signal: `height + ${chartSettings.xAxis.height} + 4`,
-//       },
-//       y2: {signal: 'height'},
-//       fill: {
-//         'value': '#4c72ba',
-//       },
-//       fillOpacity: {value: 0.1},
-//     },
-//     update: {
-//       x: {
-//         signal:
-//           'xRangeBrushValues ? scale("xscale",xRangeBrushValues[0]) : 0',
-//       },
-//       x2: {
-//         signal:
-//           'xRangeBrushValues ? scale("xscale",xRangeBrushValues[xRangeBrushValues.length-1]) + bandwidth("xscale") : 0',
-//       },
-//     },
-//   },
-// };
-
-// const xAxisRangeBrush: VegaSpec = {
-//   type: 'group',
-//   marks: [
-//     xAxisRangeBrushRect,
-//     {
-//       type: 'rule',
-//       encode: {
-//         enter: {
-//           y: {
-//             signal: `height + ${chartSettings.xAxis.height} + 4`,
-//           },
-//           y2: {signal: 'height'},
-//           stroke: {value: '#b5bcc9'},
-//           strokeWidth: {value: 0.5},
-//         },
-//         update: {
-//           x: {
-//             signal:
-//               'xRangeBrushValues ? scale("xscale",xRangeBrushValues[0])+0.5 : 0',
-//           },
-//           x2: {
-//             signal:
-//               'xRangeBrushValues ? scale("xscale",xRangeBrushValues[0])+0.5 : 0',
-//           },
-//           opacity: [
-//             {
-//               test: 'xRangeBrushValues',
-//               value: 1,
-//             },
-//             {value: 0},
-//           ],
-//         },
-//       },
-//     },
-//     {
-//       type: 'rule',
-//       encode: {
-//         enter: {
-//           y: {
-//             signal: `height + ${chartSettings.xAxis.height} + 4`,
-//           },
-//           y2: {signal: 'height'},
-//           stroke: {value: '#b5bcc9'},
-//           strokeWidth: {value: 0.5},
-//         },
-//         update: {
-//           x: {
-//             signal:
-//               'xRangeBrushValues ? scale("xscale",xRangeBrushValues[xRangeBrushValues.length-1])-0.5  + bandwidth("xscale") : 0',
-//           },
-//           x2: {
-//             signal:
-//               'xRangeBrushValues ? scale("xscale",xRangeBrushValues[xRangeBrushValues.length-1])-0.5  + bandwidth("xscale") : 0',
-//           },
-//           opacity: [
-//             {
-//               test: 'xRangeBrushValues',
-//               value: 1,
-//             },
-//             {value: 0},
-//           ],
-//         },
-//       },
-//     },
-//   ],
-// };
-
-/*
-  x range brush signals
-  {
-          name: 'xRangeBrush',
-          on: [
-            {
-              events: '@x_axis_overlay:mousedown',
-              update: '[x(), x()]',
-            },
-            {
-              'events':
-                '[@x_axis_overlay:mousedown, window:mouseup] > window:mousemove!',
-              'update': '[xRangeBrush[0], clamp(x(), 0, width)]',
-            },
-            // shortcut to clear it? if click clears it, then we can't move it
-            // TODO for now, double click. later can work in moving, edge move handle semantics
-            {
-              'events': '@x_axis_range_brush:dblclick',
-              'update': 'null',
-            },
-          ],
-        },
-        {
-          name: 'xRangeBrushSorted',
-          update: 'xRangeBrush ? extent(xRangeBrush) : null',
-        },
-        {
-          name: 'xRangeBrushIndices',
-          update: `xRangeBrushSorted ? [
-              indexof(domain('xscale'), invert('xscale', xRangeBrushSorted[0])) < 0 ? 0 : indexof(domain('xscale'), invert('xscale', xRangeBrushSorted[0])),
-              indexof(domain('xscale'), invert('xscale', xRangeBrushSorted[1])) < 0 ? length(domain('xscale')) : indexof(domain('xscale'), invert('xscale', xRangeBrushSorted[1])),
-      ]
-            : null`,
-        },
-        {
-          name: 'xRangeBrushValues',
-          update:
-            'xRangeBrushIndices ? slice(domain("xscale"), xRangeBrushIndices[0], xRangeBrushIndices[1]+1) : null',
-        },
-
-*/

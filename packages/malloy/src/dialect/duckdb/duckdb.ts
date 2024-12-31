@@ -32,6 +32,9 @@ import {
   MeasureTimeExpr,
   LeafAtomicTypeDef,
   TD,
+  RecordLiteralNode,
+  OrderBy,
+  mkFieldDef,
 } from '../../model/malloy_types';
 import {indent} from '../../model/utils';
 import {
@@ -39,10 +42,11 @@ import {
   expandOverrideMap,
   expandBlueprintMap,
 } from '../functions';
-import {DialectFieldList, inDays} from '../dialect';
+import {DialectFieldList, FieldReferenceType, inDays} from '../dialect';
 import {PostgresBase} from '../pg_impl';
 import {DUCKDB_DIALECT_FUNCTIONS} from './dialect_functions';
 import {DUCKDB_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
+import {TinyParseError, TinyParser, TinyToken} from '../tiny_parser';
 
 // need to refactor runSQL to take a SQLBlock instead of just a sql string.
 const hackSplitComment = '-- hack: split on this';
@@ -212,19 +216,18 @@ export class DuckDBDialect extends PostgresBase {
   }
 
   sqlFieldReference(
-    alias: string,
-    fieldName: string,
-    _fieldType: string,
-    _isNested: boolean,
-    isArray: boolean
+    parentAlias: string,
+    parentType: FieldReferenceType,
+    childName: string,
+    _childType: string
   ): string {
     // LTNOTE: hack, in duckdb we can't have structs as tables so we kind of simulate it.
-    if (!this.unnestWithNumbers && fieldName === '__row_id') {
-      return `${alias}_outer.__row_id`;
-    } else if (isArray) {
-      return alias;
+    if (!this.unnestWithNumbers && childName === '__row_id') {
+      return `${parentAlias}_outer.__row_id`;
+    } else if (parentType === 'array[scalar]') {
+      return parentAlias;
     } else {
-      return `${alias}.${this.sqlMaybeQuoteIdentifier(fieldName)}`;
+      return `${parentAlias}.${this.sqlMaybeQuoteIdentifier(childName)}`;
     }
   }
 
@@ -247,11 +250,28 @@ export class DuckDBDialect extends PostgresBase {
 
   sqlCreateFunctionCombineLastStage(
     lastStageName: string,
-    dialectFieldList: DialectFieldList
+    dialectFieldList: DialectFieldList,
+    orderBy: OrderBy[] | undefined
   ): string {
+    let o = '';
+    if (orderBy) {
+      const clauses: string[] = [];
+      for (const c of orderBy) {
+        if (typeof c.field === 'string') {
+          clauses.push(`${c.field} ${c.dir || 'asc'}`);
+        } else {
+          clauses.push(
+            `${dialectFieldList[c.field].sqlOutputName} ${c.dir || 'asc'}`
+          );
+        }
+      }
+      if (clauses.length > 0) {
+        o = ` ORDER BY ${clauses.join(', ')}`;
+      }
+    }
     return `SELECT LIST(STRUCT_PACK(${dialectFieldList
       .map(d => this.sqlMaybeQuoteIdentifier(d.sqlOutputName))
-      .join(',')})) FROM ${lastStageName}\n`;
+      .join(',')})${o}) FROM ${lastStageName}\n`;
   }
 
   sqlSelectAliasAsStruct(
@@ -261,17 +281,6 @@ export class DuckDBDialect extends PostgresBase {
     return `STRUCT_PACK(${dialectFieldList
       .map(d => `${alias}.${d.sqlOutputName}`)
       .join(', ')})`;
-  }
-  // TODO
-  // sqlMaybeQuoteIdentifier(identifier: string): string {
-  //   return keywords.indexOf(identifier.toUpperCase()) > 0 ||
-  //     identifier.match(/[a-zA-Z][a-zA-Z0-9]*/) === null || true
-  //     ? '"' + identifier + '"'
-  //     : identifier;
-  // }
-
-  sqlMaybeQuoteIdentifier(identifier: string): string {
-    return '"' + identifier + '"';
   }
 
   // The simple way to do this is to add a comment on the table
@@ -365,6 +374,19 @@ export class DuckDBDialect extends PostgresBase {
     return malloyType.type;
   }
 
+  parseDuckDBType(sqlType: string): AtomicTypeDef {
+    const parser = new DuckDBTypeParser(sqlType);
+    try {
+      return parser.typeDef();
+    } catch (e) {
+      if (e instanceof TinyParseError) {
+        return {type: 'sql native', rawType: sqlType};
+      } else {
+        throw e;
+      }
+    }
+  }
+
   sqlTypeToMalloyType(sqlType: string): LeafAtomicTypeDef {
     // Remove decimal precision
     const ddbType = sqlType.replace(/^DECIMAL\(\d+,\d+\)/g, 'DECIMAL');
@@ -427,5 +449,127 @@ export class DuckDBDialect extends PostgresBase {
       }
     }
     return `DATE_SUB('${df.units}', ${lVal}, ${rVal})`;
+  }
+
+  sqlLiteralRecord(lit: RecordLiteralNode): string {
+    const pairs = Object.entries(lit.kids).map(
+      ([propName, propVal]) =>
+        `${this.sqlMaybeQuoteIdentifier(propName)}:${propVal.sql}`
+    );
+    return '{' + pairs.join(',') + '}';
+  }
+}
+
+class DuckDBTypeParser extends TinyParser {
+  constructor(input: string) {
+    super(input, {
+      /* whitespace           */ space: /^\s+/,
+      /* single quoted string */ qsingle: /^'([^']|'')*'/,
+      /* double quoted string */ qdouble: /^"([^"]|"")*"/,
+      /* (n) size             */ size: /^\(\d+\)/,
+      /* (n1,n2) precision    */ precision: /^\(\d+,\d+\)/,
+      /* T[] -> array of T    */ arrayOf: /^\[]/,
+      /* other punctuation    */ char: /^[,:[\]()-]/,
+      /* unquoted word        */ id: /^\w+/,
+    });
+  }
+
+  unquoteName(token: TinyToken): string {
+    if (token.type === 'qsingle') {
+      return token.text.replace("''", '');
+    } else if (token.type === 'qdouble') {
+      return token.text.replace('""', '');
+    }
+    return token.text;
+  }
+
+  sqlID(token: TinyToken) {
+    return token.text.toUpperCase();
+  }
+
+  typeDef(): AtomicTypeDef {
+    const unknownStart = this.parseCursor;
+    const wantID = this.next('id');
+    const id = this.sqlID(wantID);
+    let baseType: AtomicTypeDef;
+    if (id === 'VARCHAR') {
+      if (this.peek().type === 'size') {
+        this.next();
+      }
+    }
+    if (
+      (id === 'DECIMAL' || id === 'NUMERIC') &&
+      this.peek().type === 'precision'
+    ) {
+      this.next();
+      baseType = {type: 'number', numberType: 'float'};
+    } else if (id === 'TIMESTAMP') {
+      if (this.peek().text === 'WITH') {
+        this.nextText('WITH', 'TIME', 'ZONE');
+      }
+      baseType = {type: 'timestamp'};
+    } else if (duckDBToMalloyTypes[id]) {
+      baseType = duckDBToMalloyTypes[id];
+    } else if (id === 'STRUCT') {
+      this.next('(');
+      baseType = {type: 'record', fields: []};
+      for (;;) {
+        const fieldName = this.next();
+        if (
+          fieldName.type === 'qsingle' ||
+          fieldName.type === 'qdouble' ||
+          fieldName.type === 'id'
+        ) {
+          const fieldType = this.typeDef();
+          baseType.fields.push(
+            mkFieldDef(fieldType, this.unquoteName(fieldName))
+          );
+        } else {
+          if (fieldName.type !== ')') {
+            throw this.parseError('Expected identifier or ) to end STRUCT');
+          }
+          break;
+        }
+        if (this.peek().type === ',') {
+          this.next();
+        }
+      }
+    } else {
+      if (wantID.type === 'id') {
+        for (;;) {
+          const next = this.peek();
+          // Might be WEIRDTYP(a,b)[] ... stop at the []
+          if (next.type === 'arrayOf' || next.type === 'eof') {
+            break;
+          }
+          this.next();
+        }
+        baseType = {
+          type: 'sql native',
+          rawType: this.input.slice(
+            unknownStart,
+            this.parseCursor - unknownStart + 1
+          ),
+        };
+      } else {
+        throw this.parseError('Could not understand type');
+      }
+    }
+    while (this.peek().type === 'arrayOf') {
+      this.next();
+      if (baseType.type === 'record') {
+        baseType = {
+          type: 'array',
+          elementTypeDef: {type: 'record_element'},
+          fields: baseType.fields,
+        };
+      } else {
+        baseType = {
+          type: 'array',
+          elementTypeDef: baseType,
+        };
+      }
+    }
+    return baseType;
   }
 }

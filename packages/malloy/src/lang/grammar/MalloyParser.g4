@@ -167,26 +167,39 @@ exploreProperties
   ;
 
 exploreStatement
-  : defDimensions                         # defExploreDimension_stub
-  | defMeasures                           # defExploreMeasure_stub
-  | declareStatement                      # defDeclare_stub
-  | joinStatement                         # defJoin_stub
-  | whereStatement                        # defExploreWhere_stub
-  | PRIMARY_KEY fieldName                 # defExplorePrimaryKey
-  | RENAME renameList                     # defExploreRename
-  | (ACCEPT | EXCEPT) fieldNameList       # defExploreEditField
-  | tags (QUERY | VIEW) subQueryDefList   # defExploreQuery
-  | timezoneStatement                     # defExploreTimezone
-  | ANNOTATION+                           # defExploreAnnotation
-  | ignoredModelAnnotations               # defIgnoreModel_stub
+  : defDimensions                            # defExploreDimension_stub
+  | defMeasures                              # defExploreMeasure_stub
+  | declareStatement                         # defDeclare_stub
+  | joinStatement                            # defJoin_stub
+  | whereStatement                           # defExploreWhere_stub
+  | PRIMARY_KEY fieldName                    # defExplorePrimaryKey
+  | accessLabel? RENAME renameList           # defExploreRename
+  | (ACCEPT | EXCEPT) fieldNameList          # defExploreEditField
+  | tags accessLabel? (QUERY | VIEW) subQueryDefList
+                                             # defExploreQuery
+  | timezoneStatement                        # defExploreTimezone
+  | ANNOTATION+                              # defExploreAnnotation
+  | ignoredModelAnnotations                  # defIgnoreModel_stub
+  ;
+
+
+accessLabel
+  : PUBLIC_KW
+  | PRIVATE_KW
+  | INTERNAL_KW
+  ;
+
+accessModifierList
+  : fieldNameList
+  | STAR starQualified?
   ;
 
 defMeasures
-  : tags MEASURE defList
+  : tags accessLabel? MEASURE defList
   ;
 
 defDimensions
-  : tags DIMENSION defList
+  : tags accessLabel? DIMENSION defList
   ;
 
 renameList
@@ -209,13 +222,13 @@ fieldNameDef: id;
 joinNameDef: id;
 
 declareStatement
-  : DECLARE defList
+  : DECLARE accessLabel? defList
   ;
 
 joinStatement
-  : tags JOIN_ONE joinList                  # defJoinOne
-  | tags JOIN_MANY joinList                 # defJoinMany
-  | tags JOIN_CROSS joinList                # defJoinCross
+  : tags accessLabel? JOIN_ONE joinList                  # defJoinOne
+  | tags accessLabel? JOIN_MANY joinList                 # defJoinMany
+  | tags accessLabel? JOIN_CROSS joinList                # defJoinCross
   ;
 
 queryExtend
@@ -242,13 +255,55 @@ sourceArgument
   ;
 
 sqExpr
-  : id sourceArguments?                       # SQID
-  | OPAREN sqExpr CPAREN                      # SQParens
-  | sqExpr PLUS segExpr                       # SQRefinedQuery
-  | sqExpr ARROW segExpr                      # SQArrow
-  | sqExpr EXTEND exploreProperties           # SQExtendedSource
-  | exploreTable                              # SQTable
-  | sqlSource                                 # SQSQL
+  : id sourceArguments?                                      # SQID
+  | OPAREN sqExpr CPAREN                                     # SQParens
+  | COMPOSE OPAREN (sqExpr (COMMA sqExpr)*)? CPAREN          # SQCompose
+  | sqExpr PLUS segExpr                                      # SQRefinedQuery
+  | sqExpr ARROW segExpr                                     # SQArrow
+  | sqExpr (INCLUDE includeBlock)? EXTEND exploreProperties  # SQExtendedSource
+  | sqExpr INCLUDE includeBlock                              # SQInclude
+  | exploreTable                                             # SQTable
+  | sqlSource                                                # SQSQL
+  ;
+
+includeBlock
+  : OCURLY (includeItem | SEMI)* closeCurly
+  ;
+
+includeItem
+  : tags accessLabelProp includeList
+  | includeList
+  | tags EXCEPT includeExceptList
+  | orphanedAnnotation
+  ;
+
+orphanedAnnotation
+  : ANNOTATION
+  ;
+
+accessLabelProp
+  : PUBLIC
+  | PRIVATE
+  | INTERNAL
+  ;
+
+includeExceptList
+  : includeExceptListItem (COMMA? includeExceptListItem)* COMMA?
+  ;
+
+includeExceptListItem
+  : tags fieldName
+  | tags collectionWildCard
+  ;
+
+includeList
+  : includeField (COMMA? includeField)* COMMA?
+  ;
+
+includeField
+  : tags (as=fieldName isDefine)? name=fieldName
+  | tags name=fieldName
+  | tags collectionWildCard
   ;
 
 segExpr
@@ -441,7 +496,7 @@ bySpec
   ;
 
 topStatement
-  : TOP INTEGER_LITERAL bySpec?
+  : TOP INTEGER_LITERAL
   ;
 
 indexElement
@@ -539,7 +594,7 @@ fieldExpr
   : fieldPath                                              # exprFieldPath
   | literal                                                # exprLiteral
   | OBRACK fieldExpr (COMMA fieldExpr)* COMMA? CBRACK      # exprArrayLiteral
-  | OCURLY recordElement (COMMA recordElement)* closeCurly     # exprLiteralRecord
+  | OCURLY recordElement (COMMA recordElement)* CCURLY     # exprLiteralRecord
   | fieldExpr fieldProperties                              # exprFieldProps
   | fieldExpr timeframe                                    # exprDuration
   | fieldExpr DOT timeframe                                # exprTimeTrunc
@@ -603,8 +658,8 @@ caseWhen
 
 recordKey: id;
 recordElement
-  : fieldPath         # recordRef
-  | recordKey IS fieldExpr   # recordExpr
+  : fieldPath                   # recordRef
+  | (recordKey IS)? fieldExpr   # recordExpr
   ;
 
 argumentList

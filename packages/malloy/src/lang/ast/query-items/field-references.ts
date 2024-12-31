@@ -78,6 +78,10 @@ export abstract class FieldReference
     }
   }
 
+  getName(): string {
+    return this.nameString;
+  }
+
   get refToField(): RefToField {
     return {
       type: 'fieldref',
@@ -128,6 +132,14 @@ export abstract class FieldReference
 
 export class AcceptExceptFieldReference extends FieldReference {
   elementType = 'acceptExceptFieldReference';
+  // Nothing to typecheck here
+  typecheck() {
+    return;
+  }
+}
+
+export class AccessModifierFieldReference extends FieldReference {
+  elementType = 'accessModifierFieldReference';
   // Nothing to typecheck here
   typecheck() {
     return;
@@ -236,7 +248,7 @@ export class WildcardFieldReference extends MalloyElement implements Noteable {
   except = new Set<string>();
   constructor(readonly joinPath: FieldReference | undefined) {
     super();
-    this.has({joinPath: joinPath});
+    this.has({joinPath});
   }
 
   getFieldDef(): FieldDef {

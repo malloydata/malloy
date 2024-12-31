@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {emptyCompositeFieldUsage} from '../../../model/composite_source_utils';
 import {AggregateExpr} from '../../../model/malloy_types';
 import {FieldReference} from '../query-items/field-references';
 import {ExprValue} from '../types/expr-value';
@@ -48,6 +49,7 @@ export class ExprCount extends ExprAggregateFunction {
       evalSpace: ev.evalSpace,
       expressionType: 'aggregate',
       value: ev.value,
+      compositeFieldUsage: ev.compositeFieldUsage,
     };
   }
 
@@ -66,6 +68,7 @@ export class ExprCount extends ExprAggregateFunction {
       expressionType: 'aggregate',
       value: ret,
       evalSpace: 'output',
+      compositeFieldUsage: emptyCompositeFieldUsage(),
     };
   }
 }

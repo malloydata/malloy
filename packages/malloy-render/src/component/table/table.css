@@ -217,3 +217,23 @@
 .malloy-table .malloy-list {
   line-height: calc(var(--malloy-render--table-row-height) * 5 / 7 - 1px);
 }
+
+.malloy-table .td.highlight {
+  color: #547ce4;
+  cursor: pointer;
+}
+
+@keyframes modal-slide-in {
+  0% {
+    transform: translateX(0);
+  }
+  10% {
+    transform: translateX(calc(-100% - 24px));
+  }
+  90% {
+    transform: translateX(calc(-100% - 24px));
+  }
+  100% {
+    transform: translateX(0);
+  }
+}

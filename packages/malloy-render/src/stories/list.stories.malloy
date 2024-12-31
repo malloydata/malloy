@@ -1,4 +1,4 @@
-source: logos is duckdb.table("data/logos.csv") extend {
+source: logos is duckdb.table("static/data/logos.csv") extend {
   #(story)
   # list
   view: list is {

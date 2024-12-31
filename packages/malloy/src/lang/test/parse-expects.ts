@@ -24,6 +24,7 @@
 
 import {MalloyTranslator, TranslateResponse} from '..';
 import {
+  CompositeFieldUsage,
   DocumentLocation,
   DocumentRange,
   Expr,
@@ -83,6 +84,7 @@ declare global {
        * Warnings are ignored, so need to be checked seperately
        */
       compilesTo(exprString: string): R;
+      hasCompositeUsage(compositeUsage: CompositeFieldUsage): R;
     }
   }
 }
@@ -227,6 +229,17 @@ function eToStr(e: Expr, symbols: ESymbols): string {
       return `"${e.literal}"`;
     case 'timeLiteral':
       return `@${e.literal}`;
+    case 'recordLiteral': {
+      const parts: string[] = [];
+      for (const [name, val] of Object.entries(e.kids)) {
+        parts.push(`${name}:${subExpr(val)}`);
+      }
+      return `{${parts.join(', ')}}`;
+    }
+    case 'arrayLiteral': {
+      const parts = e.kids.values.map(k => subExpr(k));
+      return `[${parts.join(', ')}]`;
+    }
     case 'regexpLiteral':
       return `/${e.literal}/`;
     case 'trunc':
@@ -261,6 +274,17 @@ function eToStr(e: Expr, symbols: ESymbols): string {
       return `{${subExpr(e.kids.e)} ${e.not ? 'not in' : 'in'} {${e.kids.oneOf
         .map(o => `${subExpr(o)}`)
         .join(',')}}}`;
+    }
+    case 'genericSQLExpr': {
+      let sql = '';
+      let i = 0;
+      for (; i < e.kids.args.length; i++) {
+        sql += `${e.src[i]}{${subExpr(e.kids.args[i])}}`;
+      }
+      if (i < e.src.length) {
+        sql += e.src[i];
+      }
+      return sql;
     }
   }
   if (exprHasKids(e) && e.kids['left'] && e.kids['right']) {
@@ -351,6 +375,44 @@ expect.extend({
     const rcvExpr = eToStr(bx.generated().value, undefined);
     const pass = this.equals(rcvExpr, expr);
     const msg = pass ? `Matched: ${rcvExpr}` : this.utils.diff(expr, rcvExpr);
+    return {pass, message: () => `${msg}`};
+  },
+  hasCompositeUsage: function (
+    tx: TestSource,
+    compositeFieldUsage: CompositeFieldUsage
+  ) {
+    let bx: BetaExpression;
+    if (typeof tx === 'string') {
+      bx = new BetaExpression(tx);
+    } else {
+      const x = xlator(tx);
+      if (x instanceof BetaExpression) {
+        bx = x;
+      } else {
+        return {
+          pass: false,
+          message: () =>
+            'Must pass expr`EXPRESSION` to expect(EXPRSSION).compilesTo()',
+        };
+      }
+    }
+    bx.compile();
+    // Only report errors, callers will need to test for warnings
+    if (bx.logger.hasErrors()) {
+      return {
+        message: () => `Translation problems:\n${bx.prettyErrors()}`,
+        pass: false,
+      };
+    }
+    const badRefs = checkForNeededs(bx);
+    if (!badRefs.pass) {
+      return badRefs;
+    }
+    const actual = bx.generated().compositeFieldUsage;
+    const pass = this.equals(actual, compositeFieldUsage);
+    const msg = pass
+      ? `Matched: ${actual}`
+      : this.utils.diff(compositeFieldUsage, actual);
     return {pass, message: () => `${msg}`};
   },
 });

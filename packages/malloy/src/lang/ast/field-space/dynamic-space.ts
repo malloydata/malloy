@@ -42,25 +42,22 @@ export abstract class DynamicSpace
   extends StaticSpace
   implements SourceFieldSpace
 {
-  protected final: model.SourceDef | undefined;
+  protected sourceDef: model.SourceDef | undefined;
   protected fromSource: model.SourceDef;
-  completions: (() => void)[] = [];
   private complete = false;
   private parameters: HasParameter[] = [];
   protected newTimezone?: string;
+  protected newAccessModifiers = new Map<string, model.AccessModifierLabel>();
+  protected newNotes = new Map<string, model.Annotation>();
 
   constructor(extending: SourceDef) {
-    super(structuredClone(extending));
+    super(structuredClone(extending), extending.dialect);
     this.fromSource = extending;
-    this.final = undefined;
-  }
-
-  isComplete(): void {
-    this.complete = true;
+    this.sourceDef = undefined;
   }
 
   protected setEntry(name: string, value: SpaceEntry): void {
-    if (this.final) {
+    if (this.complete) {
       throw new Error('Space already final');
     }
     super.setEntry(name, value);
@@ -102,7 +99,8 @@ export abstract class DynamicSpace
   }
 
   structDef(): model.SourceDef {
-    if (this.final === undefined) {
+    this.complete = true;
+    if (this.sourceDef === undefined) {
       // Grab all the parameters so that we can populate the "final" structDef
       // with parameters immediately so that views can see them when they are translating
       const parameters = {};
@@ -112,8 +110,9 @@ export abstract class DynamicSpace
         }
       }
 
-      this.final = {...this.fromSource, fields: []};
-      this.final.parameters = parameters;
+      this.sourceDef = {...this.fromSource, fields: []};
+      this.sourceDef.parameters = parameters;
+      const fieldIndices = new Map<string, number>();
       // Need to process the entities in specific order
       const fields: [string, SpaceField][] = [];
       const joins: [string, SpaceField][] = [];
@@ -130,17 +129,19 @@ export abstract class DynamicSpace
       }
       const reorderFields = [...fields, ...joins, ...turtles];
       const parameterSpace = this.parameterSpace();
-      for (const [, field] of reorderFields) {
+      for (const [name, field] of reorderFields) {
         if (field instanceof JoinSpaceField) {
           const joinStruct = field.join.structDef(parameterSpace);
           if (!ErrorFactory.didCreate(joinStruct)) {
-            this.final.fields.push(joinStruct);
+            fieldIndices.set(name, this.sourceDef.fields.length);
+            this.sourceDef.fields.push(joinStruct);
             fixupJoins.push([field.join, joinStruct]);
           }
         } else {
           const fieldDef = field.fieldDef();
           if (fieldDef) {
-            this.final.fields.push(fieldDef);
+            fieldIndices.set(name, this.sourceDef.fields.length);
+            this.sourceDef.fields.push(fieldDef);
           }
           // TODO I'm just removing this, but perhaps instead I should just filter
           // out ReferenceFields and still make this check.
@@ -154,12 +155,46 @@ export abstract class DynamicSpace
       for (const [join, missingOn] of fixupJoins) {
         join.fixupJoinOn(this, missingOn);
       }
+      // Add access modifiers at the end so views don't obey them
+      for (const [name, access] of this.newAccessModifiers) {
+        const index = this.sourceDef.fields.findIndex(
+          f => f.as ?? f.name === name
+        );
+        if (index === -1) {
+          throw new Error(`Can't find field '${name}' to set access modifier`);
+        }
+        if (access === 'public') {
+          delete this.sourceDef.fields[index].accessModifier;
+        } else {
+          this.sourceDef.fields[index] = {
+            ...this.sourceDef.fields[index],
+            accessModifier: access,
+          };
+        }
+      }
+      // TODO does this need to be done when the space is instantiated?
+      // e.g. if a field had a compiler flag on it...
+      for (const [name, note] of this.newNotes) {
+        const index = this.sourceDef.fields.findIndex(
+          f => f.as ?? f.name === name
+        );
+        if (index === -1) {
+          throw new Error(`Can't find field '${name}' to set access modifier`);
+        }
+        const field = this.sourceDef.fields[index];
+        this.sourceDef.fields[index] = {
+          ...field,
+          annotation: {
+            ...note,
+            inherits: field.annotation,
+          },
+        };
+      }
     }
-    if (this.newTimezone && model.isSourceDef(this.final)) {
-      this.final.queryTimezone = this.newTimezone;
+    if (this.newTimezone && model.isSourceDef(this.sourceDef)) {
+      this.sourceDef.queryTimezone = this.newTimezone;
     }
-    this.isComplete();
-    return this.final;
+    return this.sourceDef;
   }
 
   emptyStructDef(): SourceDef {

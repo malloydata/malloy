@@ -29,6 +29,7 @@ import {
   MatrixOperation,
   SourceDef,
   isJoinable,
+  AccessModifierLabel,
 } from '../../../model/malloy_types';
 import {DynamicSpace} from '../field-space/dynamic-space';
 import {JoinSpaceField} from '../field-space/join-space-field';
@@ -63,8 +64,12 @@ export abstract class Join
     fs.newEntry(
       this.name.refString,
       this,
-      new JoinSpaceField(fs.parameterSpace(), this, fs.dialect)
+      new JoinSpaceField(fs.parameterSpace(), this, fs.dialectName())
     );
+  }
+
+  getName(): string {
+    return this.name.refString;
   }
 
   protected getStructDefFromExpr(parameterSpace: ParameterSpace): SourceDef {
@@ -131,6 +136,7 @@ export class KeyJoin extends Join {
               right: exprX.value,
             },
           };
+          inStruct.onCompositeFieldUsage = exprX.compositeFieldUsage;
           return;
         } else {
           this.logError(
@@ -187,6 +193,7 @@ export class ExpressionJoin extends Join {
       return;
     }
     inStruct.onExpression = exprX.value;
+    inStruct.onCompositeFieldUsage = exprX.compositeFieldUsage;
   }
 
   structDef(parameterSpace: ParameterSpace): JoinFieldDef {
@@ -231,7 +238,10 @@ export class JoinStatement
   forceQueryClass = undefined;
   queryRefinementStage = LegalRefinementStage.Single;
 
-  constructor(joins: Join[]) {
+  constructor(
+    joins: Join[],
+    readonly accessModifier: AccessModifierLabel | undefined
+  ) {
     super(joins);
   }
 
@@ -240,5 +250,9 @@ export class JoinStatement
       executeFor.inputFS.extendSource(qel);
       executeFor.alwaysJoins.push(qel.name.refString);
     }
+  }
+
+  get delarationNames(): string[] {
+    return this.list.map(el => el.name.refString);
   }
 }

@@ -29,11 +29,11 @@ import {
   Field,
   TimestampTimeframe,
 } from '@malloydata/malloy';
-import {Renderer} from '../renderer';
+import {Renderer} from './renderer';
 import {createErrorElement, createNullElement, timeToString} from './utils';
-import {StyleDefaults, TimeRenderOptions} from '../data_styles';
-import {RendererOptions} from '../renderer_types';
-import {RendererFactory} from '../renderer_factory';
+import {StyleDefaults, TimeRenderOptions} from './data_styles';
+import {RendererOptions} from './renderer_types';
+import {RendererFactory} from './renderer_factory';
 
 export class HTMLDateRenderer implements Renderer {
   constructor(

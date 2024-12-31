@@ -21,14 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {maxExpressionType, mergeEvalSpaces} from '../../../model';
 import * as TDU from '../typedesc-utils';
 import {
   BinaryMalloyOperator,
   CompareMalloyOperator,
   EqualityMalloyOperator,
 } from '../types/binary_operators';
-import {ExprValue} from '../types/expr-value';
+import {computedExprValue, ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 import {BinaryBoolean} from './binary-boolean';
@@ -102,22 +101,15 @@ export class ExprLegacyIn extends ExpressionDef {
 
   getExpression(fs: FieldSpace): ExprValue {
     const lookFor = this.expr.getExpression(fs);
-    let {evalSpace, expressionType} = lookFor;
-    const oneOf = this.choices.map(e => {
-      const choice = e.getExpression(fs);
-      expressionType = maxExpressionType(expressionType, choice.expressionType);
-      evalSpace = mergeEvalSpaces(evalSpace, choice.evalSpace);
-      return choice.value;
-    });
-    return {
-      type: 'boolean',
-      expressionType,
-      evalSpace,
+    const oneOf = this.choices.map(e => e.getExpression(fs));
+    return computedExprValue({
+      dataType: {type: 'boolean'},
       value: {
         node: 'in',
         not: this.notIn,
-        kids: {e: lookFor.value, oneOf},
+        kids: {e: lookFor.value, oneOf: oneOf.map(v => v.value)},
       },
-    };
+      from: [lookFor, ...oneOf],
+    });
   }
 }

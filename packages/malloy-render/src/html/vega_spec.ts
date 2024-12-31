@@ -26,11 +26,11 @@ import {DataColumn, Explore, Field} from '@malloydata/malloy';
 import {HTMLChartRenderer} from './chart';
 
 import {getColorScale} from './utils';
-import {StyleDefaults, VegaRenderOptions} from '../data_styles';
-import {RendererOptions} from '../renderer_types';
-import {RendererFactory} from '../renderer_factory';
-import {Renderer} from '../renderer';
-import {grayMedium, gridGray} from '../component/plot/plot-to-vega';
+import {StyleDefaults, VegaRenderOptions} from './data_styles';
+import {RendererOptions} from './renderer_types';
+import {RendererFactory} from './renderer_factory';
+import {Renderer} from './renderer';
+import {grayMedium, gridGray} from '../component/vega/base-vega-config';
 
 type DataContainer = Array<unknown> | Record<string, unknown>;
 

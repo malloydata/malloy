@@ -72,11 +72,6 @@
     font-size: 20px;
   }
 
-  .dashboard-item-value-table {
-    /* Fit ten non-wrapped table rows */
-    max-height: 361px;
-  }
-
   .dashboard-dimension-wrapper {
     display: grid;
     grid-template-rows: auto;

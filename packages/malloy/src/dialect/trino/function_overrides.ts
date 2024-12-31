@@ -2,7 +2,7 @@
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
- *  LICENSE file in the root directory of this source tree.
+ * LICENSE file in the root directory of this source tree.
  */
 
 import {arg, spread, sql} from '../functions/util';
@@ -25,11 +25,8 @@ export const TRINO_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
   // Trino has it but Presto doesn't
   // TODO only apply this override for Presto, not Trino
   log: {sql: '(LN(${value}) / LN(${base}))'},
-  repeat: {
+  string_repeat: {
     sql: "ARRAY_JOIN(REPEAT(${value}, CASE WHEN ${value} IS NOT NULL THEN ${count} END),'')",
-  },
-  reverse: {
-    sql: 'REVERSE(CAST(${value} AS VARCHAR))',
   },
   starts_with: {sql: 'COALESCE(STARTS_WITH(${value}, ${prefix}), false)'},
   ends_with: {

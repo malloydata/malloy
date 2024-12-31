@@ -11,10 +11,11 @@ async function createConnection() {
   });
   await connection.connecting;
   for (let tableName of registeredData) {
-    const fullTableName = `data/${tableName}`;
+    const tableUrl = `data/${tableName}`;
+    const fullTableName = `static/${tableUrl}`;
     await connection.registerRemoteTable(
       fullTableName,
-      new window.URL(fullTableName, window.location.href).toString()
+      new window.URL(tableUrl, window.location.href).toString()
     );
   }
   memoConnection = connection;

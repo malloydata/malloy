@@ -41,6 +41,8 @@ import {
   TableSourceDef,
   SQLSourceDef,
   SQLSentence,
+  NumberTypeDef,
+  mkArrayDef,
 } from '../../model/malloy_types';
 import {ExpressionDef, MalloyElement} from '../ast';
 import {NameSpace} from '../ast/types/name-space';
@@ -57,7 +59,7 @@ import {EventStream} from '../../runtime_types';
 export function pretty(thing: any): string {
   return inspect(thing, {breakLength: 72, depth: Infinity});
 }
-
+const intType: NumberTypeDef = {type: 'number', numberType: 'integer'};
 const mockSchema: Record<string, SourceDef> = {
   'aTable': {
     type: 'table',
@@ -68,7 +70,7 @@ const mockSchema: Record<string, SourceDef> = {
     fields: [
       {type: 'string', name: 'astr'},
       {type: 'number', name: 'af', numberType: 'float'},
-      {type: 'number', name: 'ai', numberType: 'integer'},
+      {...intType, name: 'ai'},
       {type: 'date', name: 'ad'},
       {type: 'boolean', name: 'abool'},
       {type: 'timestamp', name: 'ats'},
@@ -86,16 +88,15 @@ const mockSchema: Record<string, SourceDef> = {
             numberType: 'integer',
           },
         ],
-        dialect: 'standardsql',
       },
       {
         type: 'record',
         name: 'aninline',
-        fields: [{type: 'number', name: 'column', numberType: 'integer'}],
+        fields: [{...intType, name: 'column'}],
         join: 'one',
         matrixOperation: 'left',
-        dialect: 'standardsql',
       },
+      mkArrayDef(intType, 'ais'),
     ],
   },
   'malloytest.carriers': {
@@ -436,12 +437,16 @@ export class TestTranslator extends MalloyTranslator {
 
 export class BetaExpression extends TestTranslator {
   private compiled?: ExprValue;
-  constructor(src: string) {
-    super(src, null, null, 'debugExpr');
+  constructor(
+    src: string,
+    model?: ModelDef,
+    readonly sourceName: string = 'ab'
+  ) {
+    super(src, null, null, 'debugExpr', model);
   }
 
   private testFS() {
-    const aStruct = this.internalModel.contents['ab'];
+    const aStruct = this.internalModel.contents[this.sourceName];
     if (isSourceDef(aStruct)) {
       const tstFS = new StaticSourceSpace(aStruct);
       return tstFS;
@@ -572,6 +577,19 @@ export function makeModelFunc(options: {
         undefined,
         options?.model
       ),
+    };
+  };
+}
+
+export function makeExprFunc(model: ModelDef, sourceName: string) {
+  return function expr(
+    unmarked: TemplateStringsArray,
+    ...marked: string[]
+  ): HasTranslator<TestTranslator> {
+    const ms = markSource(unmarked, ...marked);
+    return {
+      ...ms,
+      translator: new BetaExpression(ms.code, model, sourceName),
     };
   };
 }

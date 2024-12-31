@@ -2,7 +2,7 @@
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
- *  LICENSE file in the root directory of this source tree.
+ * LICENSE file in the root directory of this source tree.
  */
 
 import {
@@ -25,7 +25,6 @@ import {renderList} from './render-list';
 import {renderImage} from './render-image';
 import {Dashboard} from './dashboard/dashboard';
 import {LegacyChart} from './legacy-charts/legacy_chart';
-import {hasAny} from './tag-utils';
 import {renderTime} from './render-time';
 
 export type RendererProps = {
@@ -36,27 +35,47 @@ export type RendererProps = {
   customProps?: Record<string, Record<string, unknown>>;
 };
 
-export function shouldRenderAs(f: Field | Explore, tagOverride?: Tag) {
-  const tag = tagOverride ?? f.tagParse().tag;
-  if (!f.isExplore() && f.isAtomicField()) {
-    if (tag.has('link')) return 'link';
-    if (tag.has('image')) return 'image';
-    return 'cell';
-  }
-  if (hasAny(tag, 'list', 'list_detail')) return 'list';
-  if (hasAny(tag, 'bar_chart', 'line_chart', 'area_chart')) return 'chart';
-  if (tag.has('dashboard')) return 'dashboard';
-  if (tag.has('scatter_chart')) return 'scatter_chart';
-  if (tag.has('shape_map')) return 'shape_map';
-  if (tag.has('segment_map')) return 'segment_map';
-  else return 'table';
+const RENDER_TAG_LIST = [
+  'link',
+  'image',
+  'cell',
+  'list',
+  'list_detail',
+  'bar_chart',
+  'line_chart',
+  'dashboard',
+  'scatter_chart',
+  'shape_map',
+  'segment_map',
+];
+
+const CHART_TAG_LIST = ['bar_chart', 'line_chart'];
+
+export function shouldRenderChartAs(tag: Tag) {
+  const tagNamesInOrder = Object.keys(tag.properties ?? {}).reverse();
+  return tagNamesInOrder.find(name => CHART_TAG_LIST.includes(name));
 }
 
-const NULL_SYMBOL = '∅';
+export function shouldRenderAs(f: Field | Explore, tagOverride?: Tag) {
+  const tag = tagOverride ?? f.tagParse().tag;
+  const tagNamesInOrder = Object.keys(tag.properties ?? {}).reverse();
+  for (const tagName of tagNamesInOrder) {
+    if (RENDER_TAG_LIST.includes(tagName)) {
+      if (['list', 'list_detail'].includes(tagName)) return 'list';
+      if (['bar_chart', 'line_chart'].includes(tagName)) return 'chart';
+      return tagName;
+    }
+  }
+
+  if (!f.isExplore() && f.isAtomicField()) return 'cell';
+  return 'table';
+}
+
+export const NULL_SYMBOL = '∅';
 
 export function applyRenderer(props: RendererProps) {
-  const {field, dataColumn, resultMetadata, tag, customProps = {}} = props;
-  const renderAs = shouldRenderAs(field, tag);
+  const {field, dataColumn, resultMetadata, customProps = {}} = props;
+  const renderAs = resultMetadata.field(field).renderAs;
   let renderValue: JSXElement = '';
   const propsToPass = customProps[renderAs] || {};
   if (dataColumn.isNull()) {

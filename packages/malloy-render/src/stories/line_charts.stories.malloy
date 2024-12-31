@@ -1,6 +1,9 @@
-source: products is duckdb.table("data/products.parquet") extend {
+source: products is duckdb.table("static/data/products.parquet") extend {
   measure: total_sales is retail_price.sum()
   measure: avg_margin is avg(retail_price - cost)
+  measure:
+    `Sales $` is retail_price.sum()*500
+    `Cost $ really long label` is retail_price.sum()*300
   dimension: product is name
   dimension: dcId is distribution_center_id::number
 
@@ -27,23 +30,52 @@ source: products is duckdb.table("data/products.parquet") extend {
 
   view: baseLineData is {
     group_by: dcId
-    aggregate: `Sales $` is retail_price.avg()
+    aggregate: `Sales $`
     order_by: dcId
   }
 
-  # dashboard
+  # dashboard { table.max_height=100000 }
   view: seriesCharts is {
     group_by: ` ` is 'Line Charts'
     # line_chart
-    nest: basic is baseLineData
+    nest: basic is baseLineData + {
+      # tooltip bar_chart.size=xs
+        nest: `Top Products` is {
+          group_by: product
+          # currency
+          aggregate: `Sales $`
+          limit: 10
+        }
+
+        # tooltip
+        nest: `Top 3 Categories` is {
+          group_by: category
+          # currency
+          aggregate: `Sales $`
+          limit: 3
+        }
+        # tooltip currency
+        aggregate: `Cost $ really long label`
+    }
     # line_chart.zero_baseline=false
     nest: basicNoZero is baseLineData
     # line_chart
-    nest: dimensionSeries is baseLineData + { group_by: department }
+    nest: dimensionSeries is baseLineData + {
+      group_by: department
+      # tooltip currency
+      aggregate: `Cost $ really long label`
+      # tooltip bar_chart.size=spark
+      nest: departments is {
+        group_by: product
+        # currency
+        aggregate: `Sales $`
+        limit: 10
+      }
+    }
     # line_chart { interpolate=step }
     nest: dimensionSeriesStep is baseLineData + { group_by: department }
-    # line_chart { y=['Sales $', 'Cost $']}
-    nest: ySeries is  baseLineData + { aggregate: `Cost $` is retail_price.avg()*0.5 }
+    # line_chart { y=['Sales $', 'Cost $ really long label']}
+    nest: ySeries is  baseLineData + { aggregate: `Cost $ really long label` }
     # line_chart.zero_baseline=false
     nest: negativeData is {
       group_by: dcId, department
@@ -52,8 +84,8 @@ source: products is duckdb.table("data/products.parquet") extend {
     }
     # line_chart
     nest: onePoint is baseLineData + { limit: 1 }
-    # line_chart { y=['Sales $', 'Cost $']}
-    nest: onePointMultiY is baseLineData + { aggregate: `Cost $` is retail_price.avg()*0.5 limit: 1 }
+    # line_chart { y=['Sales $', 'Cost $ really long label']}
+    nest: onePointMultiY is baseLineData + { aggregate: `Cost $ really long label` limit: 1 }
     # line_chart
     nest: onePointSeries is baseLineData + { group_by: department limit: 2 }
 
@@ -72,7 +104,7 @@ source: products is duckdb.table("data/products.parquet") extend {
         `date` is @2001-02-03 + id day
       aggregate:
         `Sales $` is retail_price.avg()*500
-      limit: 10
+      limit: 20
       order_by: `date`
     }
 
@@ -163,6 +195,47 @@ source: products is duckdb.table("data/products.parquet") extend {
     # size=2xl
     `2xl` is topSellingBrands
   }
+
+  #(story)
+  view: Dates is {
+    # line_chart
+    nest: dateAxis is {
+      group_by:
+        `date` is @2001-02-03 + id day
+      aggregate:
+        `Sales $` is retail_price.avg()*500
+      limit: 20
+      order_by: `date`
+    }
+     # line_chart
+    nest: dateAxisMany is {
+      group_by:
+        `date` is @2001-02-03 + id day
+      aggregate:
+        `Sales $` is retail_price.avg()*500
+      limit: 60
+      order_by: `date`
+    }
+    # line_chart
+    nest: dateMonth is {
+      group_by:
+        `date` is (@2001-02-03 + id day).month
+      aggregate:
+        `Sales $` is retail_price.avg()*500
+      limit: 60
+      order_by: `date`
+    }
+    # line_chart
+    nest: dateYear is {
+      group_by:
+        `date` is (@2001-02-03 + id day).year
+      aggregate:
+        `Sales $` is retail_price.avg()*500
+      limit: 5
+      order_by: `date`
+    }
+  }
+
 }
 
 run: products -> { group_by: distribution_center_id}

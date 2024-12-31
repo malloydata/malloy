@@ -1,0 +1,57 @@
+.malloy-chart {
+  width: fit-content;
+  height: fit-content;
+  font-variant-numeric: tabular-nums;
+  position: relative;
+}
+
+.malloy-chart_debug_menu {
+  width: fit-content;
+  position: absolute;
+  top: 0px;
+  right: 0px;
+  color: #666;
+  padding: 2px;
+  border-radius: 4px;
+  background: white;
+  width: 28px;
+  height: 28px;
+  border: 1px solid #eee;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+}
+
+.malloy-chart:hover .malloy-chart_debug_menu,
+.malloy-chart_debug_menu:hover {
+  display: flex;
+}
+
+.malloy-chart_debug_menu:hover {
+  color: black;
+  border-color: #246ae9;
+}
+
+.malloy-chart_debug_icon {
+  width: 16px;
+}
+
+.malloy-chart__titles-bar {
+  padding-inline: 8px;
+  padding-top: 8px;
+  /* TODO: this feels hacky.
+    Maybe we need to configure the top padding of a chart to have more/less space
+    based on whether we detect there will be a title or not
+  */
+  margin-bottom: -8px;
+  display: flex;
+  flex-direction: column;
+  gap: 0px;
+  line-height: calc(var(--malloy-render--table-row-height) * 5 / 7 - 1px);
+}
+
+.malloy-chart__title {
+  font-weight: bold;
+}

@@ -32,13 +32,24 @@ import {
   ExpressionType,
   FunctionCallNode,
   FunctionDef,
+  ExpressionValueTypeDef,
+  FunctionGenericTypeDef,
   FunctionOverloadDef,
   FunctionParameterDef,
+  FunctionParameterFieldDef,
+  FunctionParameterTypeDef,
+  FunctionReturnTypeDef,
+  FunctionReturnTypeDesc,
+  isAtomic,
   isAtomicFieldType,
-  isCastType,
   isExpressionTypeLEQ,
+  isRepeatedRecordFunctionParam,
+  isScalarArray,
   maxOfExpressionTypes,
   mergeEvalSpaces,
+  RecordFunctionParameterTypeDef,
+  RecordFunctionReturnTypeDef,
+  RecordTypeDef,
   TD,
 } from '../../../model/malloy_types';
 import {errorFor} from '../ast-utils';
@@ -53,6 +64,8 @@ import {ExpressionDef} from '../types/expression-def';
 import {FieldName, FieldSpace} from '../types/field-space';
 import {composeSQLExpr, SQLExprElement} from '../../../model/utils';
 import * as TDU from '../typedesc-utils';
+import {mergeCompositeFieldUsage} from '../../../model/composite_source_utils';
+import {AnyMessageCodeAndParameters} from '../../parse-log';
 
 export class ExprFunc extends ExpressionDef {
   elementType = 'function call()';
@@ -127,23 +140,21 @@ export class ExprFunc extends ExpressionDef {
   ): ExprValue {
     const argExprsWithoutImplicit = this.args.map(arg => arg.getExpression(fs));
     if (this.isRaw) {
-      let collectType: CastType | undefined;
       const funcCall: SQLExprElement[] = [`${this.name}(`];
-      for (const expr of argExprsWithoutImplicit) {
-        if (collectType) {
+      argExprsWithoutImplicit.forEach((expr, i) => {
+        if (i !== 0) {
           funcCall.push(',');
-        } else {
-          if (isCastType(expr.type)) {
-            collectType = expr.type;
-          }
         }
         funcCall.push(expr.value);
-      }
+      });
       funcCall.push(')');
 
-      const dataType = this.rawType ?? collectType ?? 'number';
+      const inferredType = argExprsWithoutImplicit[0] ?? {type: 'number'};
+      const dataType: ExpressionValueTypeDef = this.rawType
+        ? {type: this.rawType}
+        : inferredType;
       return computedExprValue({
-        dataType: {type: dataType},
+        dataType,
         value: composeSQLExpr(funcCall),
         from: argExprsWithoutImplicit,
       });
@@ -168,6 +179,7 @@ export class ExprFunc extends ExpressionDef {
             expressionType: footType.expressionType,
             value: {node: 'field', path: this.source.path},
             evalSpace: footType.evalSpace,
+            compositeFieldUsage: footType.compositeFieldUsage,
           };
           structPath = this.source.path.slice(0, -1);
         } else {
@@ -199,8 +211,13 @@ export class ExprFunc extends ExpressionDef {
           .join(', ')})`
       );
     }
-    const {overload, expressionTypeErrors, evalSpaceErrors, nullabilityErrors} =
-      result;
+    const {
+      overload,
+      expressionTypeErrors,
+      evalSpaceErrors,
+      nullabilityErrors,
+      returnType,
+    } = result;
     // Report errors for expression type mismatch
     for (const error of expressionTypeErrors) {
       const adjustedIndex = error.argIndex - (implicitExpr ? 1 : 0);
@@ -243,9 +260,16 @@ export class ExprFunc extends ExpressionDef {
         } must not be a literal null`
       );
     }
+    // Report return type error
+    if (result.returnTypeError) {
+      this.logError(
+        result.returnTypeError.code,
+        result.returnTypeError.parameters
+      );
+    }
     const type = overload.returnType;
     const expressionType = maxOfExpressionTypes([
-      type.expressionType,
+      type.expressionType ?? 'scalar',
       ...argExprs.map(e => e.expressionType),
     ]);
     if (
@@ -410,12 +434,6 @@ export class ExprFunc extends ExpressionDef {
         funcCall = composeSQLExpr(expr);
       }
     }
-    if (type.type === 'any') {
-      return this.loggedErrorExpr(
-        'function-returns-any',
-        `Invalid return type ${type.type} for function '${this.name}'`
-      );
-    }
     const maxEvalSpace = mergeEvalSpaces(...argExprs.map(e => e.evalSpace));
     // If the merged eval space of all args is constant, the result is constant.
     // If the expression is scalar, then the eval space is that merged eval space.
@@ -431,10 +449,14 @@ export class ExprFunc extends ExpressionDef {
     // TODO consider if I can use `computedExprValue` here...
     // seems like the rules for the evalSpace is a bit different from normal though
     return {
-      ...TDU.atomicDef(type),
+      // TODO need to handle this???
+      ...(isAtomic(returnType) ? TDU.atomicDef(returnType) : returnType),
       expressionType,
       value: funcCall,
       evalSpace,
+      compositeFieldUsage: mergeCompositeFieldUsage(
+        ...argExprs.map(e => e.compositeFieldUsage)
+      ),
     };
   }
 }
@@ -467,9 +489,13 @@ function findOverload(
       expressionTypeErrors: ExpressionTypeError[];
       evalSpaceErrors: EvalSpaceError[];
       nullabilityErrors: NullabilityError[];
+      returnType: ExpressionValueTypeDef;
+      returnTypeError?: AnyMessageCodeAndParameters;
     }
   | undefined {
   for (const overload of func.overloads) {
+    // Map from generic name to selected type
+    const genericsSelected = new Map<string, ExpressionValueTypeDef>();
     let paramIndex = 0;
     let ok = true;
     let matchedVariadic = false;
@@ -486,14 +512,15 @@ function findOverload(
       const argOk = param.allowedTypes.some(paramT => {
         // Check whether types match (allowing for nullability errors, expression type errors,
         // eval space errors, and unknown types due to prior errors in args)
-        const dataTypeMatch =
-          TD.eq(paramT, arg) ||
-          paramT.type === 'any' ||
-          // TODO We should consider whether `nulls` should always be allowed. It probably
-          // does not make sense to limit function calls to not allow nulls, since have
-          // so little control over nullability.
-          arg.type === 'null' ||
-          arg.type === 'error';
+        const {dataTypeMatch, genericsSet} = isDataTypeMatch(
+          genericsSelected,
+          overload.genericTypes ?? [],
+          arg,
+          paramT
+        );
+        for (const genericSet of genericsSet) {
+          genericsSelected.set(genericSet.name, genericSet.type);
+        }
         // Check expression type errors
         if (paramT.expressionType) {
           const expressionTypeMatch = isExpressionTypeLEQ(
@@ -557,12 +584,19 @@ function findOverload(
     ) {
       continue;
     }
+    const resolveReturnType = resolveGenerics(
+      overload.returnType,
+      genericsSelected
+    );
+    const returnType = resolveReturnType.returnType ?? {type: 'number'};
     if (ok) {
       return {
         overload,
         expressionTypeErrors,
         evalSpaceErrors,
         nullabilityErrors,
+        returnTypeError: resolveReturnType.error,
+        returnType,
       };
     }
   }
@@ -597,4 +631,211 @@ function parseSQLInterpolation(template: string): InterpolationPart[] {
     }
   }
   return parts;
+}
+
+type GenericAssignment = {name: string; type: ExpressionValueTypeDef};
+
+function isDataTypeMatch(
+  genericsAlreadySelected: Map<string, ExpressionValueTypeDef>,
+  genericTypes: {name: string; acceptibleTypes: FunctionGenericTypeDef[]}[],
+  arg: ExpressionValueTypeDef,
+  paramT: FunctionGenericTypeDef | FunctionParameterTypeDef
+): {
+  dataTypeMatch: boolean;
+  genericsSet: GenericAssignment[];
+} {
+  if (
+    TD.eq(paramT, arg) ||
+    paramT.type === 'any' ||
+    // TODO We should consider whether `nulls` should always be allowed. It probably
+    // does not make sense to limit function calls to not allow nulls, since have
+    // so little control over nullability.
+    (paramT.type !== 'generic' && (arg.type === 'null' || arg.type === 'error'))
+  ) {
+    return {dataTypeMatch: true, genericsSet: []};
+  }
+  if (paramT.type === 'array' && arg.type === 'array') {
+    if (isScalarArray(arg)) {
+      if (!isRepeatedRecordFunctionParam(paramT)) {
+        return isDataTypeMatch(
+          genericsAlreadySelected,
+          genericTypes,
+          arg.elementTypeDef,
+          paramT.elementTypeDef
+        );
+      } else {
+        return {dataTypeMatch: false, genericsSet: []};
+      }
+    } else if (isRepeatedRecordFunctionParam(paramT)) {
+      const fakeParamRecord: RecordFunctionParameterTypeDef = {
+        type: 'record',
+        fields: paramT.fields,
+      };
+      const fakeArgRecord: RecordTypeDef = {
+        type: 'record',
+        fields: arg.fields,
+      };
+      return isDataTypeMatch(
+        genericsAlreadySelected,
+        genericTypes,
+        fakeArgRecord,
+        fakeParamRecord
+      );
+    } else {
+      return {dataTypeMatch: false, genericsSet: []};
+    }
+  } else if (paramT.type === 'record' && arg.type === 'record') {
+    const genericsSet: GenericAssignment[] = [];
+    const paramFieldsByName = new Map<string, FunctionParameterFieldDef>();
+    for (const field of paramT.fields) {
+      paramFieldsByName.set(field.as ?? field.name, field);
+    }
+    for (const field of arg.fields) {
+      const match = paramFieldsByName.get(field.as ?? field.name);
+      if (match === undefined) {
+        return {dataTypeMatch: false, genericsSet: []};
+      }
+      const result = isDataTypeMatch(
+        new Map([
+          ...genericsAlreadySelected.entries(),
+          ...genericsSet.map(
+            x => [x.name, x.type] as [string, ExpressionValueTypeDef]
+          ),
+        ]),
+        genericTypes,
+        field,
+        match
+      );
+      genericsSet.push(...result.genericsSet);
+    }
+    return {dataTypeMatch: true, genericsSet};
+  } else if (paramT.type === 'generic') {
+    const alreadySelected = genericsAlreadySelected.get(paramT.generic);
+    if (
+      alreadySelected !== undefined &&
+      alreadySelected.type !== 'null' &&
+      alreadySelected.type !== 'error'
+    ) {
+      return isDataTypeMatch(
+        genericsAlreadySelected,
+        genericTypes,
+        arg,
+        alreadySelected
+      );
+    }
+    const allowedTypes =
+      genericTypes.find(t => t.name === paramT.generic)?.acceptibleTypes ?? [];
+    for (const type of allowedTypes) {
+      const result = isDataTypeMatch(
+        genericsAlreadySelected,
+        genericTypes,
+        arg,
+        type
+      );
+      if (result.dataTypeMatch) {
+        if (!isAtomic(arg) && arg.type !== 'null') {
+          continue;
+        }
+        const newGenericSet: GenericAssignment = {
+          name: paramT.generic,
+          type: arg,
+        };
+        return {
+          dataTypeMatch: true,
+          genericsSet: [...result.genericsSet, newGenericSet],
+        };
+      }
+    }
+  }
+  return {dataTypeMatch: false, genericsSet: []};
+}
+
+function resolveGenerics(
+  returnType:
+    | FunctionReturnTypeDesc
+    | Exclude<FunctionReturnTypeDef, RecordFunctionReturnTypeDef>,
+  genericsSelected: Map<string, ExpressionValueTypeDef>
+):
+  | {error: undefined; returnType: ExpressionValueTypeDef}
+  | {error: AnyMessageCodeAndParameters; returnType: undefined} {
+  switch (returnType.type) {
+    case 'array': {
+      if ('fields' in returnType) {
+        const fields = returnType.fields.map(f => {
+          const type = resolveGenerics(f, genericsSelected);
+          return {
+            ...f,
+            ...type,
+          };
+        });
+        return {
+          error: undefined,
+          returnType: {
+            type: 'array',
+            elementTypeDef: returnType.elementTypeDef,
+            fields,
+          },
+        };
+      }
+      const resolve = resolveGenerics(
+        returnType.elementTypeDef,
+        genericsSelected
+      );
+      if (resolve.error) {
+        return resolve;
+      }
+      const elementTypeDef = resolve.returnType;
+      if (elementTypeDef.type === 'record') {
+        return {
+          error: undefined,
+          returnType: {
+            type: 'array',
+            elementTypeDef: {type: 'record_element'},
+            fields: elementTypeDef.fields,
+          },
+        };
+      }
+      if (!isAtomic(elementTypeDef)) {
+        return {
+          error: {
+            code: 'invalid-resolved-type-for-array',
+            parameters: 'Invalid resolved type for array; cannot be non-atomic',
+          },
+          returnType: undefined,
+        };
+      }
+      return {
+        error: undefined,
+        returnType: {type: 'array', elementTypeDef},
+      };
+    }
+    case 'record': {
+      const fields = returnType.fields.map(f => {
+        const type = resolveGenerics(f, genericsSelected);
+        return {
+          ...f,
+          ...type,
+        };
+      });
+      return {error: undefined, returnType: {type: 'record', fields}};
+    }
+    case 'generic': {
+      const resolved = genericsSelected.get(returnType.generic);
+      if (resolved === undefined) {
+        return {
+          error: {
+            code: 'generic-not-resolved',
+            parameters: `Generic ${returnType.generic} in return type could not be resolved`,
+          },
+          returnType: undefined,
+        };
+      }
+      return {
+        error: undefined,
+        returnType: resolved,
+      };
+    }
+    default:
+      return {error: undefined, returnType};
+  }
 }

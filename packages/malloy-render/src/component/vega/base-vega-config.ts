@@ -1,7 +1,9 @@
+import {Config} from 'vega';
+
 export const grayMedium = '#727883';
 export const gridGray = '#E5E7EB';
 
-export const baseVegaConfig = () => ({
+export const baseVegaConfig: () => Config = () => ({
   'range': {
     'category': [
       '#1877F2',
@@ -41,40 +43,36 @@ export const baseVegaConfig = () => ({
     'ordinal': ['#05214D', '#083E89', '#1877F2', '#76B6FF', '#A8D1FF'],
     'ramp': ['#05214D', '#083E89', '#1877F2', '#76B6FF', '#A8D1FF'],
   },
-  'axisY': {
+  'axis': {
     gridColor: gridGray,
-    grid: true,
     tickColor: gridGray,
     domain: false,
     labelFont: 'Inter, sans-serif',
     labelFontSize: 10,
     labelFontWeight: 'normal',
-    labelColor: grayMedium,
     labelPadding: 5,
+    labelColor: grayMedium,
     titleColor: grayMedium,
     titleFont: 'Inter, sans-serif',
     titleFontSize: 10,
     titleFontWeight: 500,
-    titlePadding: 10,
-    labelOverlap: false,
   },
   'axisX': {
-    gridColor: gridGray,
-    tickColor: gridGray,
     tickSize: 0,
-    domain: false,
-    labelFont: 'Inter, sans-serif',
-    labelFontSize: 10,
-    labelFontWeight: 'normal',
-    labelPadding: 5,
-    labelColor: grayMedium,
-    titleColor: grayMedium,
-    titleFont: 'Inter, sans-serif',
-    titleFontSize: 10,
-    titleFontWeight: 500,
+    titlePadding: 16,
+  },
+  'axisY': {
+    grid: true,
+    labelOverlap: false,
     titlePadding: 10,
   },
   'view': {
     strokeWidth: 0,
   },
+  'signals': [
+    {
+      name: 'referenceLineFont',
+      value: 'Inter, sans-serif',
+    },
+  ],
 });

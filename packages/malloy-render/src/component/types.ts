@@ -2,7 +2,7 @@
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
- *  LICENSE file in the root directory of this source tree.
+ * LICENSE file in the root directory of this source tree.
  */
 
 import {
@@ -14,26 +14,30 @@ import {
   QueryDataRow,
   Tag,
 } from '@malloydata/malloy';
-import {Item, View} from 'vega';
+import {Item, Runtime, Spec, View} from 'vega';
 import {JSX} from 'solid-js';
 import {ResultStore} from './result-store/result-store';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Vega does not have good TS support
-export type VegaSpec = any;
-export type DataInjector = (
+export type VegaSignalRef = {signal: string};
+export type VegaPadding = {
+  top?: number;
+  left?: number;
+  right?: number;
+  bottom?: number;
+};
+export type MalloyDataToChartDataHandler = (
   field: Explore,
-  data: QueryData,
-  spec: VegaSpec
-) => void;
+  data: QueryData
+) => unknown[];
 export type VegaChartProps = {
-  spec: VegaSpec;
-  specType: 'vega' | 'vega-lite';
+  spec: Spec;
   plotWidth: number;
   plotHeight: number;
   totalWidth: number;
   totalHeight: number;
   chartType: string;
-  injectData?: DataInjector;
+  chartTag: Tag;
+  mapMalloyDataToChartData: MalloyDataToChartDataHandler;
   getTooltipData?: (item: Item, view: View) => ChartTooltipEntry | null;
 };
 
@@ -52,6 +56,7 @@ export interface FieldRenderMetadata {
   maxRecordCt: number | null;
   maxUniqueFieldValueCounts: Map<string, number>;
   vegaChartProps?: VegaChartProps;
+  runtime?: Runtime;
   renderAs: string;
 }
 
@@ -101,4 +106,33 @@ export type DataRowWithRecord = QueryDataRow & {
 
 export type MalloyVegaDataRecord = {
   __source: QueryDataRow & {__malloyDataRecord: DataRecord};
+};
+
+type ScaleType = 'quantitative' | 'nominal';
+
+export type Channel = {
+  fields: string[];
+  type: ScaleType | null;
+};
+
+export type TableConfig = {
+  disableVirtualization: boolean;
+  rowLimit: number;
+  shouldFillWidth: boolean;
+  enableDrill: boolean;
+};
+export type DashboardConfig = {
+  disableVirtualization: boolean;
+};
+
+export type DrillData = {
+  dimensionFilters: DimensionContextEntry[];
+  copyQueryToClipboard: () => Promise<void>;
+  query: string;
+  whereClause: string;
+};
+
+export type DimensionContextEntry = {
+  fieldDef: string;
+  value: string | number | boolean | Date;
 };

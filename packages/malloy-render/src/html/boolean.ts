@@ -23,10 +23,10 @@
 
 import {AtomicFieldType, DataColumn, Explore, Field} from '@malloydata/malloy';
 import {HTMLTextRenderer} from './text';
-import {RendererFactory} from '../renderer_factory';
-import {BooleanRenderOptions, StyleDefaults} from '../data_styles';
-import {RendererOptions} from '../renderer_types';
-import {Renderer} from '../renderer';
+import {RendererFactory} from './renderer_factory';
+import {BooleanRenderOptions, StyleDefaults} from './data_styles';
+import {RendererOptions} from './renderer_types';
+import {Renderer} from './renderer';
 
 export class HTMLBooleanRenderer extends HTMLTextRenderer {
   override getText(data: DataColumn): string | null {

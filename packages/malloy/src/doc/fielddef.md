@@ -72,7 +72,7 @@ interface JoinBase {
 }
 ```
 
-* `isJoined(fd)` which will return true and grant typed access to the `JoinBase` properties of the `FieldDef`, and because all joined fields are structs, also the `StructDef` properties as well.
+* `isJoined(def)` which will return true and grant typed access to the `JoinBase` properties of the object, and because all joined fields are structs, also the `StructDef` properties as well.
 
 ## Views
 
@@ -91,11 +91,11 @@ are an array of ...
 * `join_XXX:` always on query joins
 
 
-## Descriminators
+## Discriminators
 
-* `isTemporalField` -- `date` or `timestamp` type
-* `isAtomicFieldType` -- Does the data in this field fit in one column of a table
-* `isRepeatedRecord(FieldDef)` -- In some databases this is a type, in other this is an array of record
-* `isScalarArray(FieldDef|SrtuctDef)` -- Is a ".each" array
-* `isAtomic(FieldDef)` -- Like `isAtomicFieldType` for `FieldDef` instead
-* `isLeafAtomic(FieldDef | QueryFieldDef)` -- an Atomic field can be stored in a column, a LeafAtomic is one which isn't a join
+* `isTemporalType` -- `date` or `timestamp` type
+* `isAtomicFieldType` -- Does type string match the type of one of the atomiv types
+* `isRepeatedRecord` -- In some databases this is a type, in other this is an array of record
+* `isScalarArray` -- Is a ".each" array
+* `isAtomic` -- Like `isAtomicFieldType` for `FieldDef` instead
+* `isLeafAtomic` -- an Atomic field can be stored in a column, a LeafAtomic is one which isn't a join

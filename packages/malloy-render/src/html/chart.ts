@@ -24,11 +24,11 @@
 import * as lite from 'vega-lite';
 import * as vega from 'vega';
 import {DataArray, DataColumn, Field} from '@malloydata/malloy';
-import {Renderer} from '../renderer';
-import {RendererOptions} from '../renderer_types';
-import {ChartRenderOptions, StyleDefaults} from '../data_styles';
+import {Renderer} from './renderer';
+import {RendererOptions} from './renderer_types';
+import {ChartRenderOptions, StyleDefaults} from './data_styles';
 import {normalizeToTimezone} from '../html/utils';
-import {mergeVegaConfigs} from '../component/plot/merge-vega-configs';
+import {mergeVegaConfigs} from '../component/vega/merge-vega-configs';
 
 type MappedRow = {[p: string]: string | number | Date | undefined | null};
 

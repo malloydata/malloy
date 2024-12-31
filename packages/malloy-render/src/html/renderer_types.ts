@@ -21,32 +21,20 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {By, expressionIsAggregate} from '../../../model/malloy_types';
+import {MalloyRenderProps} from '../component/render';
+import {DataStyles} from './data_styles';
 
-import {ExpressionDef} from '../types/expression-def';
-import {FieldSpace} from '../types/field-space';
-import {MalloyElement} from '../types/malloy-element';
-
-export class TopBy extends MalloyElement {
-  elementType = 'topBy';
-  constructor(readonly by: string | ExpressionDef) {
-    super();
-    if (by instanceof ExpressionDef) {
-      this.has({by: by});
-    }
-  }
-
-  getBy(fs: FieldSpace): By {
-    if (this.by instanceof ExpressionDef) {
-      const byExpr = this.by.getExpression(fs);
-      if (!expressionIsAggregate(byExpr.expressionType)) {
-        this.logError(
-          'top-by-non-aggregate',
-          'top by expression must be an aggregate'
-        );
-      }
-      return {by: 'expression', e: byExpr.value};
-    }
-    return {by: 'name', name: this.by};
-  }
+export interface RendererOptions {
+  dataStyles: DataStyles;
+  isDrillingEnabled?: boolean;
+  onDrill?: DrillFunction;
+  titleCase?: boolean;
+  queryTimezone?: string;
+  nextRendererOptions?: Partial<MalloyRenderProps>;
 }
+
+export type DrillFunction = (
+  drillQuery: string,
+  target: HTMLElement,
+  drillFilters: string[]
+) => void;

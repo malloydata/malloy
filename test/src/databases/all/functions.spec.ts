@@ -1069,14 +1069,14 @@ expressionModels.forEach((x, databaseName) => {
     });
   });
 
-  describe('repeat', () => {
+  describe('string_repeat', () => {
     it(`works - ${databaseName}`, async () => {
       await funcTestMultiple(
-        ["repeat('foo', 0)", ''],
-        ["repeat('foo', 1)", 'foo'],
-        ["repeat('foo', 2)", 'foofoo'],
-        ['repeat(null, 2)', null],
-        ["repeat('foo', null)", null]
+        ["string_repeat('foo', 0)", ''],
+        ["string_repeat('foo', 1)", 'foo'],
+        ["string_repeat('foo', 2)", 'foofoo'],
+        ['string_repeat(null, 2)', null],
+        ["string_repeat('foo', null)", null]
       );
     });
     // TODO how does a user do this: the second argument needs to be an integer, but floor doesn't cast to "integer" type.
@@ -1310,14 +1310,53 @@ expressionModels.forEach((x, databaseName) => {
     });
   });
 
+  describe('hll_functions', () => {
+    const supported = runtime.dialect.supportsHyperLogLog;
+    it.when(supported)(`hyperloglog basic - ${databaseName}`, async () => {
+      await expect(`run: ${databaseName}.table('malloytest.state_facts') -> {
+        aggregate:
+          m1 is floor(hll_estimate(hll_accumulate(state))/10)
+      }`).malloyResultMatches(runtime, {m1: 5});
+    });
+
+    it.when(supported)(`hyperloglog combine - ${databaseName}`, async () => {
+      await expect(`run: ${databaseName}.table('malloytest.state_facts') -> {
+          group_by: state
+          aggregate: names_hll is hll_accumulate(popular_name)
+      } -> {
+          aggregate: name_count is hll_estimate(hll_combine(names_hll))
+      }
+      `).malloyResultMatches(runtime, {name_count: 6});
+    });
+
+    it.when(supported)(
+      `hyperloglog import/export - ${databaseName}`,
+      async () => {
+        await expect(`run: ${databaseName}.table('malloytest.state_facts') -> {
+          group_by: state
+          aggregate: names_hll is hll_export(hll_accumulate(popular_name))
+      } -> {
+          aggregate: name_count is hll_estimate(hll_combine(hll_import(names_hll)))
+      }
+      `).malloyResultMatches(runtime, {name_count: 6});
+      }
+    );
+  });
+
   describe('dialect functions', () => {
     describe('duckdb', () => {
-      const duckdb = it.when(databaseName === 'duckdb');
-      duckdb('to_timestamp', async () => {
+      const isDuckdb = databaseName === 'duckdb';
+      it.when(isDuckdb)('to_timestamp', async () => {
         await funcTest(
           'to_timestamp(1725555835) = @2024-09-05 17:03:55',
           booleanResult(true, databaseName)
         );
+      });
+      it.when(isDuckdb)('list_extract', async () => {
+        await funcTest('list_extract(list_extract([[5]], 1), 1)', 5);
+      });
+      it.when(isDuckdb)('date_part,to_seconds', async () => {
+        await funcTest('date_part("seconds", to_seconds(5))', 5);
       });
     });
 
@@ -1700,6 +1739,42 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         {name: 'CESSNA AIRCRAFT COMPANY', r: 4},
         {name: 'FEDERAL EXPRESS CORP', r: 2},
         {name: 'UNITED AIR LINES INC', r: 1},
+      ]);
+    });
+
+    // TODO remove the need for the `##! unsafe_complex_select_query` compiler flag
+    it('can be used in a select', async () => {
+      await expect(`
+        ##! experimental { function_order_by partition_by }
+        ##! unsafe_complex_select_query
+        run: state_facts -> {
+          select: state, births, popular_name
+          calculate: prev_births_by_name is lag(births) {
+            partition_by: popular_name
+            order_by: births desc
+          }
+          order_by: births desc
+          limit: 3
+        }
+      `).malloyResultMatches(expressionModel, [
+        {
+          state: 'CA',
+          births: 28810563,
+          popular_name: 'Isabella',
+          prev_births_by_name: null,
+        },
+        {
+          state: 'NY',
+          births: 23694136,
+          popular_name: 'Isabella',
+          prev_births_by_name: 28810563,
+        },
+        {
+          state: 'TX',
+          births: 21467359,
+          popular_name: 'Isabella',
+          prev_births_by_name: 23694136,
+        },
       ]);
     });
   });

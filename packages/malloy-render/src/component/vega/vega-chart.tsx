@@ -2,26 +2,23 @@
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
- *  LICENSE file in the root directory of this source tree.
+ * LICENSE file in the root directory of this source tree.
  */
 
 import {createEffect, createSignal, untrack} from 'solid-js';
-import {VegaJSON, asVegaLiteSpec, asVegaSpec} from '../vega-types';
-import {EventListenerHandler, View, parse, SignalListenerHandler} from 'vega';
-import {compile} from 'vega-lite';
+import {EventListenerHandler, View, SignalListenerHandler, Runtime} from 'vega';
 import './vega-expr-addons';
 import {Explore, ExploreField} from '@malloydata/malloy';
 import {addSignalListenerIfExists, setSignalIfExists} from './vega-utils';
 
 type VegaChartProps = {
-  spec: VegaJSON;
-  type: 'vega' | 'vega-lite';
   explore: Explore | ExploreField;
   width?: number;
   height?: number;
   onMouseOver?: EventListenerHandler;
   onView?: (view: View) => void;
   onViewInterface?: (viewInterface: ViewInterface) => void;
+  runtime: Runtime;
 };
 
 export type ViewInterface = {
@@ -67,12 +64,8 @@ export function VegaChart(props: VegaChartProps) {
   createEffect(() => {
     const _view = untrack(() => view());
     if (_view) _view.finalize();
-    const vegaspec =
-      props.type === 'vega-lite'
-        ? compile(asVegaLiteSpec(props.spec)).spec
-        : asVegaSpec(props.spec);
 
-    const nextView = new View(parse(vegaspec)).initialize(el).renderer('svg');
+    const nextView = new View(props.runtime).initialize(el).renderer('svg');
 
     // This signal is needed before running the view for the first time
     setSignalIfExists(nextView, 'malloyExplore', props.explore);

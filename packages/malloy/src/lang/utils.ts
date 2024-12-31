@@ -36,3 +36,7 @@ export function locationContainsPosition(
       position.character <= location.range.end.character)
   );
 }
+
+export function isNotUndefined<T>(value: T | undefined): value is T {
+  return value !== undefined;
+}

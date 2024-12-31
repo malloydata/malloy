@@ -78,6 +78,11 @@ describe('expressions', () => {
   test('function call', () => {
     expect(expr`concat('foo')`).toTranslate();
   });
+  test('raw function call codegen', () => {
+    expect(expr`special_function!(aweird, 'foo')`).compilesTo(
+      'special_function({aweird},{"foo"})'
+    );
+  });
 
   describe('operators', () => {
     test('addition', () => {
@@ -328,6 +333,18 @@ describe('expressions', () => {
       `).toLog(
       errorMessage('Filtered expression requires an aggregate computation')
     );
+  });
+  test('can use calculate with partition by in select', () => {
+    expect(markSource`
+    ##! experimental { partition_by function_order_by }
+    run: a -> {
+      select: ai, astr
+      calculate: prev is lag(ai) {
+        partition_by: astr
+        order_by: ai asc
+      }
+      order_by: ai asc, astr asc
+    }`).toTranslate();
   });
 
   describe('expr props', () => {

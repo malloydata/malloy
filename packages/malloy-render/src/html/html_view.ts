@@ -29,16 +29,16 @@ import {
   Tag,
   isSourceDef,
 } from '@malloydata/malloy';
-import {DataStyles, RenderDef, StyleDefaults} from '../data_styles';
-import {ChildRenderers, Renderer} from '../renderer';
-import {RendererOptions} from '../renderer_types';
+import {DataStyles, RenderDef, StyleDefaults} from './data_styles';
+import {ChildRenderers, Renderer} from './renderer';
+import {RendererOptions} from './renderer_types';
 import {HTMLJSONRenderer} from './json';
 import {HTMLDashboardRenderer} from './dashboard';
 import {HTMLListDetailRenderer} from './list_detail';
 import {HTMLTableRenderer} from './table';
 import {ContainerRenderer} from './container';
 import {createErrorElement} from './utils';
-import {MainRendererFactory} from '../main_renderer_factory';
+import {MainRendererFactory} from './main_renderer_factory';
 import {HTMLListRenderer} from './list';
 
 export class HTMLView {
@@ -52,6 +52,10 @@ export class HTMLView {
       if (hasNextRenderer) {
         const el = this.document.createElement('malloy-render');
         el.result = result;
+        const nextRendererOptions = options.nextRendererOptions ?? {};
+        for (const [key, val] of Object.entries(nextRendererOptions)) {
+          el[key] = val;
+        }
         return el;
       } else {
         // eslint-disable-next-line no-console

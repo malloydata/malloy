@@ -22,6 +22,7 @@
  */
 
 import {
+  CompositeFieldUsage,
   FilterCondition,
   PipeSegment,
   Sampling,
@@ -41,6 +42,10 @@ import {QueryBuilder} from '../types/query-builder';
 import {QueryInputSpace} from '../field-space/query-input-space';
 import {QueryOperationSpace} from '../field-space/query-spaces';
 import {MalloyElement} from '../types/malloy-element';
+import {
+  emptyCompositeFieldUsage,
+  mergeCompositeFieldUsage,
+} from '../../../model/composite_source_utils';
 
 export class IndexBuilder implements QueryBuilder {
   filters: FilterCondition[] = [];
@@ -64,7 +69,7 @@ export class IndexBuilder implements QueryBuilder {
 
   execute(qp: QueryProperty): void {
     if (qp instanceof Filter) {
-      this.filters.push(...qp.getFilterList(this.inputFS));
+      qp.queryExecute(this);
     } else if (qp instanceof Limit) {
       if (this.limit) {
         this.limit.logError(
@@ -92,6 +97,10 @@ export class IndexBuilder implements QueryBuilder {
         'Not legal in an index query operation'
       );
     }
+  }
+
+  get compositeFieldUsage(): CompositeFieldUsage {
+    return this.resultFS.compositeFieldUsage;
   }
 
   finalize(from: PipeSegment | undefined): PipeSegment {
@@ -133,6 +142,15 @@ export class IndexBuilder implements QueryBuilder {
     if (this.alwaysJoins.length > 0) {
       indexSegment.alwaysJoins = [...this.alwaysJoins];
     }
+
+    const fromCompositeFieldUsage =
+      from && from.type === 'index'
+        ? from.compositeFieldUsage ?? emptyCompositeFieldUsage()
+        : emptyCompositeFieldUsage();
+    indexSegment.compositeFieldUsage = mergeCompositeFieldUsage(
+      fromCompositeFieldUsage,
+      this.compositeFieldUsage
+    );
 
     return indexSegment;
   }

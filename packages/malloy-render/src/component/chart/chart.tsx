@@ -2,66 +2,75 @@
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This source code is licensed under the MIT license found in the
- *  LICENSE file in the root directory of this source tree.
+ * LICENSE file in the root directory of this source tree.
  */
 
-import {
-  Explore,
-  ExploreField,
-  QueryData,
-  DateField,
-  TimestampField,
-} from '@malloydata/malloy';
+import {Explore, ExploreField, QueryData} from '@malloydata/malloy';
 import {VegaChart, ViewInterface} from '../vega/vega-chart';
 import {ChartTooltipEntry, RenderResultMetadata} from '../types';
-import {renderTimeString} from '../render-time';
 import {Tooltip} from '../tooltip/tooltip';
-import {createEffect, createSignal} from 'solid-js';
+import {createEffect, createSignal, createMemo, Show} from 'solid-js';
 import {DefaultChartTooltip} from './default-chart-tooltip';
-import {EventListenerHandler} from 'vega';
+import {EventListenerHandler, Runtime, View} from 'vega';
 import {useResultStore, VegaBrushOutput} from '../result-store/result-store';
+import css from './chart.css?raw';
+import {useConfig} from '../render';
+import {DebugIcon} from './debug_icon';
+import ChartDevTool from './chart-dev-tool';
 
-export function Chart(props: {
+let IS_STORYBOOK = false;
+try {
+  const storybookConfig = (process.env as Record<string, string>)[
+    'IS_STORYBOOK'
+  ];
+  if (typeof storybookConfig !== 'undefined')
+    IS_STORYBOOK = Boolean(storybookConfig);
+} catch (e) {
+  // Continue with storybook flag off
+}
+
+export type ChartProps = {
   field: Explore | ExploreField;
   data: QueryData;
   metadata: RenderResultMetadata;
-}) {
+  // Debugging properties
+  devMode?: boolean;
+  runtime?: Runtime;
+  onView?: (view: View) => void;
+};
+
+export function Chart(props: ChartProps) {
+  const config = useConfig();
+  config.addCSSToShadowRoot(css);
   const {field, data} = props;
   const chartProps = props.metadata.field(field).vegaChartProps!;
-  const spec = structuredClone(chartProps.spec);
-  const chartData = structuredClone(data);
+  const runtime = props.runtime ?? props.metadata.field(field).runtime;
+  if (!runtime)
+    throw new Error('Charts must have a runtime defined in their metadata');
+  const chartData = data;
   for (let i = 0; i < chartData.length; i++) {
     chartData[i]['__malloyDataRecord'] = data[i]['__malloyDataRecord'];
   }
-  // New vega charts use injectData handlers
-  if (chartProps.injectData && chartProps.specType === 'vega') {
-    chartProps.injectData(field, chartData, spec);
+  let values: unknown[] = [];
+  // New vega charts use mapMalloyDataToChartData handlers
+  if (chartProps.mapMalloyDataToChartData) {
+    values = chartProps.mapMalloyDataToChartData(field, chartData);
   }
-  // Pass data for legacy vega-lite charts
-  else {
-    spec.data.values = chartData;
-  }
-
-  // TODO: improve handling date/times in chart axes
-  const dateTimeFields = field.allFields.filter(
-    f => f.isAtomicField() && (f.isDate() || f.isTimestamp())
-  ) as (DateField | TimestampField)[];
-  chartData.forEach(row => {
-    dateTimeFields.forEach(f => {
-      const value = row[f.name];
-      if (typeof value === 'number' || typeof value === 'string')
-        row[f.name] = renderTimeString(
-          new Date(value),
-          f.isDate(),
-          f.timeframe
-        );
-    });
-  });
 
   const [viewInterface, setViewInterface] = createSignal<ViewInterface | null>(
     null
   );
   const view = () => viewInterface()?.view;
+
+  createEffect(() => {
+    const _view = view();
+
+    if (_view) {
+      _view.data('values', values);
+      _view.runAsync();
+      props.onView?.(_view);
+    }
+  });
 
   // Tooltip data
   const [tooltipData, setTooltipData] = createSignal<null | ChartTooltipEntry>(
@@ -158,14 +167,30 @@ export function Chart(props: {
     const relevantBrushes = resultStore.store.brushes.filter(brush =>
       fieldRefIds.includes(brush.fieldRefId)
     );
+
     viewInterface()?.setSignalAndRun(
       'brushIn',
+      // TODO this is kindof a hack to make sure we react to any changes in the brush array, since our proxy updates won't react if we just listen on the field ref ids and one of them is updated.
+      // Is there a better way in Solid stores to react to "any sub-property of this object changes"?
       JSON.parse(JSON.stringify(relevantBrushes))
     );
   });
 
+  const [showDebugModal, setShowDebugModal] = createSignal(false);
+  const openDebug = () => {
+    setTooltipData(null);
+    setShowDebugModal(true);
+  };
+
+  const showTooltip = createMemo(() => Boolean(tooltipData()));
+
+  const chartTitle = chartProps.chartTag.text('title');
+  const chartSubtitle = chartProps.chartTag.text('subtitle');
+  const hasTitleBar = chartTitle || chartSubtitle;
+
   return (
     <div
+      class="malloy-chart"
       onMouseLeave={() => {
         // immediately clear tooltips and highlights on leaving chart
         setTooltipData(null);
@@ -175,21 +200,38 @@ export function Chart(props: {
             .map(brush => ({type: 'remove', sourceId: brush.sourceId}))
         );
       }}
-      style="width: fit-content; height: fit-content;"
     >
+      <Show when={hasTitleBar}>
+        <div class="malloy-chart__titles-bar">
+          {chartTitle && <div class="malloy-chart__title">{chartTitle}</div>}
+          {chartSubtitle && (
+            <div class="malloy-chart__subtitle">{chartSubtitle}</div>
+          )}
+        </div>
+      </Show>
       <VegaChart
-        spec={spec}
-        type={chartProps.specType}
         width={chartProps.plotWidth}
         height={chartProps.plotHeight}
         onMouseOver={mouseOverHandler}
-        // onView={setView}
         onViewInterface={setViewInterface}
         explore={props.field}
+        runtime={runtime}
       />
-      <Tooltip show={!!tooltipData()}>
+      <Tooltip show={showTooltip()}>
         <DefaultChartTooltip data={tooltipData()!} />
       </Tooltip>
+      <Show when={IS_STORYBOOK && !props.devMode}>
+        <button class="malloy-chart_debug_menu" onClick={openDebug}>
+          <DebugIcon />
+        </button>
+        <Show when={showDebugModal()}>
+          <ChartDevTool
+            onClose={() => setShowDebugModal(false)}
+            {...props}
+            devMode={true}
+          />
+        </Show>
+      </Show>
     </div>
   );
 }
