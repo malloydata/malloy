@@ -80,6 +80,8 @@ export function generateLineChartVegaSpec(
   const xField = getFieldFromRootPath(explore, xFieldPath);
   const xIsDateorTime =
     xField.isAtomicField() && (xField.isDate() || xField.isTimestamp());
+  const xIsBoolean =
+    xField.isAtomicField() && xField.isBoolean();
   const yField = getFieldFromRootPath(explore, yFieldPath);
   const seriesField = seriesFieldPath
     ? getFieldFromRootPath(explore, seriesFieldPath)
@@ -576,7 +578,7 @@ export function generateLineChartVegaSpec(
         domain: shouldShareXDomain
           ? xIsDateorTime
             ? [xMeta.min, xMeta.max]
-            : [...xMeta.values]
+            : xIsBoolean ? [true, false] : [...xMeta.values]
           : {data: 'values', field: 'x'},
         range: 'width',
         paddingOuter: 0.05,
