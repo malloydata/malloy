@@ -3,10 +3,20 @@ name: Malloy Tests
 on: [workflow_dispatch]
 
 jobs:
+  main:
+    uses: './.github/workflows/main.yaml'
+    secrets:
+      BIGQUERY_KEY: ${{ secrets.BIGQUERY_KEY }}
+  db-trino:
+    uses: './.github/workflows/db-trino.yaml'
+    secrets:
+      BQ_PRESTO_TRINO_KEY: ${{ secrets.BQ_PRESTO_TRINO_KEY }}
+  db-presto:
+    uses: './.github/workflows/db-presto.yaml'
+    secrets:
+      BQ_PRESTO_TRINO_KEY: ${{ secrets.BQ_PRESTO_TRINO_KEY }}
   db-duckdb:
      uses: './github/workflows/db-duckdb.yaml'
-  db-duckdb-wasm:
-     uses: './github/workflows/db-duckdb-wasm.yaml'
   db-bigquery:
     uses: './.github/workflows/db-bigquery.yaml'
     secrets:
@@ -15,37 +25,30 @@ jobs:
     uses: './.github/workflows/db-motherduck.yaml'
     secrets:
       MOTHERDUCK_TOKEN_10: ${{ secrets.MOTHERDUCK_TOKEN_10 }}
-  db-mysql:
-    uses: './.github/workflows/db-mysql.yaml'
   db-postgres:
     uses: './.github/workflows/db-postgres.yaml'
-  db-presto:
-    uses: './.github/workflows/db-presto.yaml'
-    secrets:
-      BQ_PRESTO_TRINO_KEY: ${{ secrets.BQ_PRESTO_TRINO_KEY }}
   db-snowflake:
     uses: './.github/workflows/db-snowflake.yaml'
     secrets:
       SNOWFLAKE_CONNECTION: ${{ secrets.SNOWFLAKE_CONNECTION }}
-  db-trino:
-    uses: './.github/workflows/db-trino.yaml'
-    secrets:
-      BQ_PRESTO_TRINO_KEY: ${{ secrets.BQ_PRESTO_TRINO_KEY }}
-  main:
-    uses: './.github/workflows/main.yaml'
+  db-mysql:
+    uses: './.github/workflows/db-mysql.yaml'
+  db-duckdb-wasm:
+     uses: './github/workflows/db-duckdb-wasm.yaml'
+
 
   malloy-tests:
     needs:
+      - main
+      - db-trino
+      - db-presto
       - db-bigquery
       - db-duckdb
+      - db-snowflake
       - db-duckdb-wasm
       - db-motherduck
       - db-mysql
       - db-postgres
-      - db-presto
-      - db-snowflake
-      - db-trino
-      - main
     runs-on: ubuntu-latest
     steps:
       - name: Success
