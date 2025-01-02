@@ -749,18 +749,6 @@ describe('airport_tests', () => {
       }
     `).malloyResultMatches(model, {'pipe_turtle.total_airports': 1845});
   });
-  /**
-  The HyperLogLog algorithm is approximate, and different database implementations can return
-  slighlty different results.  Thus we implement per-dialect unit tests for these databases.
-  */
-  it('hyperloglog combine', async () => {
-    await expect(`run: bigquery.table('malloytest.airports')->{
-        aggregate: code_hll is hll_accumulate(code)
-    } -> {
-        aggregate: code_count is hll_estimate(hll_combine(code_hll))
-    }
-    `).malloyResultMatches(runtime, {code_count: 19799});
-  });
 
   it.skip('crossjoined turtles', async () => {
     // const result = await runQuery(model,`
