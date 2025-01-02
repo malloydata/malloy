@@ -1,4 +1,4 @@
-name: MySQL DB
+name: "DB:MySQL"
 
 on: [pull_request, workflow_call]
 
@@ -25,7 +25,7 @@ jobs:
           npm run build
           npm run build-duckdb-db
           ./test/mysql/mysql_start.sh
-          npm run test-silent -- -- test
+          npx jest --reporters jest-silent-reporter --reporters summary --config jest.mysql.config.ts
           ./test/mysql/mysql_stop.sh
         env:
           MALLOY_DATABASES: mysql

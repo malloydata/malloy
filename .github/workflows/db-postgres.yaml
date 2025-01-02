@@ -1,4 +1,4 @@
-name: Postgres DB
+name: "DB:Postgres"
 
 on: [pull_request, workflow_call]
 
@@ -39,10 +39,7 @@ jobs:
           npm run build
           echo CREATE EXTENSION tsm_system_rows\; | psql
           gunzip -c test/data/postgres/malloytest-postgres.sql.gz | psql
-          npm run test-silent -- -- test packages/malloy-db-postgres
-          export MALLOY_DATABASES=duckdb,postgres
-          npm run build-duckdb-db
-          npm run test-silent -- -- test/src/databases/multi-connection/multi_connection.spec.ts
+          npx jest --reporters jest-silent-reporter --reporters summary --config jest.postgres.config.ts
         env:
           MALLOY_DATABASES: postgres
           PGHOST: localhost

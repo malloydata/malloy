@@ -27,8 +27,8 @@ import {
   JSONWriter,
   WriteStream,
 } from '@malloydata/malloy';
-import {RuntimeList} from '../../runtimes';
-import {describeIfDatabaseAvailable} from '../../util';
+import {RuntimeList} from '../runtimes';
+import {describeIfDatabaseAvailable} from '../util';
 
 class StringAccumulator implements WriteStream {
   public accumulatedValue = '';

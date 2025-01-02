@@ -1,4 +1,4 @@
-name: Presto DB
+name: "DB:Presto"
 
 on:
   pull_request:
@@ -30,8 +30,7 @@ jobs:
           npm run build
           npm run build-duckdb-db
           ./test/presto/presto_start.sh
-          npm run test-silent -- -- packages/malloy-db-trino
-          npm run test-silent -- -- test
+          npx jest --reporters jest-silent-reporter --reporters summary --config jest.presto.config.ts
           ./test/presto/presto_stop.sh
         env:
           MALLOY_DATABASES: presto

@@ -282,16 +282,6 @@ export class MalloyToAST
     );
   }
 
-  protected getFilterShortcut(cx: parse.FilterShortcutContext): ast.Filter {
-    const el = this.getFilterElement(cx.fieldExpr());
-    this.m4advisory(
-      cx,
-      'filter-shortcut',
-      'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead'
-    );
-    return new ast.Filter([el]);
-  }
-
   protected getPlainStringFrom(cx: HasString): string {
     const [result, errors] = getPlainString(cx);
     for (const error of errors) {
@@ -444,16 +434,12 @@ export class MalloyToAST
   }
 
   visitExploreProperties(pcx: parse.ExplorePropertiesContext): ast.SourceDesc {
-    const filterCx = pcx.filterShortcut();
     const visited = this.only<ast.SourceProperty>(
       pcx.exploreStatement().map(ecx => this.visit(ecx)),
       x => ast.isSourceProperty(x) && x,
       'source property'
     );
     const propList = new ast.SourceDesc(visited);
-    if (filterCx) {
-      propList.push(this.getFilterShortcut(filterCx));
-    }
     return propList;
   }
 
@@ -848,10 +834,6 @@ export class MalloyToAST
       x => ast.isQueryProperty(x) && x,
       'query statement'
     );
-    const fcx = pcx.filterShortcut();
-    if (fcx) {
-      qProps.push(this.getFilterShortcut(fcx));
-    }
     return new ast.QOpDesc(qProps);
   }
 

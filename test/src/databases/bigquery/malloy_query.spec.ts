@@ -32,7 +32,7 @@ import '../../util/db-jest-matchers';
 const runtimeList = new RuntimeList(['bigquery']);
 const runtime = runtimeList.runtimeMap.get('bigquery');
 if (runtime === undefined) {
-  throw new Error("Couldn't build runtime");
+  throw new Error('BigQuery runtime not found');
 }
 const bq = runtime.connection as BigQueryTestConnection;
 

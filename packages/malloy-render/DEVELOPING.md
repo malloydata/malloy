@@ -8,11 +8,16 @@ The legacy renderer is deprecated but is still available and in use for features
 
 ## Viewing the renderer locally
 
-Storybook is used to view the renderer locally. To launch the storybook:
+Storybook is used to view the renderer locally. To launch the storybook, run the storybook script in `packages/malloy-render/package.json`:
 
 ```bash
 $ npm run storybook
 ```
+Or, on a Windows machine, and from the Malloy repo directory:
+```bash
+$ npm run --prefix packages/malloy-render storybook-windows
+```
+
 
 Then navigate to the URL provided. In this storybook, you can navigate between different stories that render Malloy queries from the Malloy source code.
 

@@ -113,7 +113,7 @@ describe('query:', () => {
     });
     test('query with shortcut filtered turtle', () => {
       expect(`##! -m4warnings
-        query: allA is ab -> aturtle + {? astr ~ 'a%' }`).toTranslate();
+        query: allA is ab -> aturtle + {where: astr ~ 'a%' }`).toTranslate();
     });
     test('query with filtered turtle', () => {
       expect(

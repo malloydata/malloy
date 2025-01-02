@@ -28,8 +28,8 @@ import {
   SQLSourceDef,
   registerDialect,
 } from '@malloydata/malloy';
-import {testRuntimeFor} from './runtimes';
-import './util/db-jest-matchers';
+import {testRuntimeFor} from '../runtimes';
+import '../util/db-jest-matchers';
 import {DuckDBConnection} from '@malloydata/db-duckdb';
 
 const envDatabases = (
