@@ -31,7 +31,7 @@ jobs:
         run: |
           npm ci --loglevel error
           npm run build
-          npm run test-silent -- -- test packages/malloy-db-bigquery
+          npx jest --reporters jest-silent-reporter --reporters summary --config jest.bigquery.config.ts
         env:
           CI: true
           MALLOY_DATABASES: bigquery

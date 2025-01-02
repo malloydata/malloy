@@ -28,7 +28,7 @@ jobs:
           npm ci --loglevel error
           npm run build
           ./scripts/gen-snowflake-auth.sh
-          npm run test-silent -- -- test packages/malloy-db-snowflake
+          npx jest --reporters jest-silent-reporter --reporters summary --config jest.snowflake.config.ts
         env:
           CI: true
           MALLOY_DATABASES: snowflake

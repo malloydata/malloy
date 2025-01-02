@@ -1,9 +1,9 @@
-name: Core
+name: DuckDB
 
 on: [pull_request, workflow_call]
 
 jobs:
-  test-all:
+  test-deuckdb:
     runs-on: ubuntu-latest
 
     strategy:
@@ -21,9 +21,10 @@ jobs:
       - name: npm install, build, and test
         run: |
           npm ci --loglevel error
-          npm run lint
           npm run build
           npm run build-duckdb-db
-          npx jest --reporters jest-silent-reporter --reporters summary --config jest.core.config.ts --runInBand
+          npx jest --reporters jest-silent-reporter --reporters summary --config jest.duckdb.config.ts --runInBand
+          npm run test-silent -- -- test packages/malloy-duckdb
         env:
           CI: true
+          MALLOY_DATABASES: duckdb

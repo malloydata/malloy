@@ -30,8 +30,7 @@ jobs:
           npm run build
           npm run build-duckdb-db
           ./test/trino/trino_start.sh
-          npm run test-silent -- -- packages/malloy-db-trino
-          npm run test-silent -- -- test
+          npx jest --reporters jest-silent-reporter --reporters summary --config jest.trino.config.ts
           ./test/trino/trino_stop.sh
         env:
           MALLOY_DATABASES: trino

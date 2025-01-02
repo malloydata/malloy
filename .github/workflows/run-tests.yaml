@@ -3,6 +3,10 @@ name: Malloy Tests
 on: [workflow_dispatch]
 
 jobs:
+  db-duckdb:
+     uses: './github/workflows/db-duckdb.yaml'
+  db-duckdb-wasm:
+     uses: './github/workflows/db-duckdb-wasm.yaml'
   db-bigquery:
     uses: './.github/workflows/db-bigquery.yaml'
     secrets:
