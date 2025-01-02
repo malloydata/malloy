@@ -37,18 +37,21 @@ jobs:
      uses: './github/workflows/db-duckdb-wasm.yaml'
 
 
+  # I think I have the sorted roughly longest to shortest
+  # so the longer running jobs get wrokers sooner, not sure
+  # that is the right plan
   malloy-tests:
     needs:
       - main
-      - db-trino
-      - db-presto
+      - db-snowflake
       - db-bigquery
       - db-duckdb
-      - db-snowflake
+      - db-presto
       - db-duckdb-wasm
+      - db-trino
+      - db-postgres
       - db-motherduck
       - db-mysql
-      - db-postgres
     runs-on: ubuntu-latest
     steps:
       - name: Success
