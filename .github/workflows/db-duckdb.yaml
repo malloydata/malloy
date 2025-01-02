@@ -1,9 +1,9 @@
-name: DuckDB
+name: DB:DuckDB
 
 on: [pull_request, workflow_call]
 
 jobs:
-  test-deuckdb:
+  test-duckdb:
     runs-on: ubuntu-latest
 
     strategy:

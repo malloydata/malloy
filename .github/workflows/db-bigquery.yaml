@@ -1,4 +1,4 @@
-name: BigQuery DB
+name: DB:BigQuery
 
 on:
   pull_request:

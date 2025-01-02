@@ -1,4 +1,4 @@
-name: Snowflake DB
+name: DB:Snowflake
 
 on:
   pull_request:

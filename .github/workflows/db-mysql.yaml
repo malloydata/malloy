@@ -1,4 +1,4 @@
-name: MySQL DB
+name: DB:MySQL
 
 on: [pull_request, workflow_call]
 

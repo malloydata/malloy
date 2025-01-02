@@ -6,7 +6,7 @@
  */
 
 import {runtimeFor} from '../runtimes';
-import './util/db-jest-matchers';
+import '../util/db-jest-matchers';
 
 const runtime = runtimeFor('duckdb');
 

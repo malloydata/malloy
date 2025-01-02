@@ -1,4 +1,4 @@
-name: Trino DB
+name: DB:Trino
 
 on:
   pull_request:

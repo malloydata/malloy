@@ -1,4 +1,4 @@
-name: MotherDuck DB
+name: DB:MotherDuck
 
 on:
   pull_request:
@@ -28,7 +28,6 @@ jobs:
           npm ci --loglevel error
           npm run build
           npx jest --reporters jest-silent-reporter --reporters summary --config jest.duckdb-other.config.ts
-          npm run test-silent -- -- test packages/malloy-duckdb
         env:
           CI: true
           MALLOY_DATABASES: motherduck

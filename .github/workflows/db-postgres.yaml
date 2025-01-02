@@ -1,4 +1,4 @@
-name: Postgres DB
+name: DB:Postgres
 
 on: [pull_request, workflow_call]
 

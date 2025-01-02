@@ -1,4 +1,4 @@
-name: DuckDB(WASM)
+name: DB: DuckDB(WASM)
 
 on: [pull_request, workflow_call]
 
