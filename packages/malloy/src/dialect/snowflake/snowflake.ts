@@ -116,6 +116,7 @@ export class SnowflakeDialect extends Dialect {
   supportsSafeCast = true;
   supportsNesting = true;
   defaultSampling = {rows: 50000};
+  supportsHyperLogLog = true;
 
   // NOTE: safely setting all these to false for now
   // more many be implemented in future
