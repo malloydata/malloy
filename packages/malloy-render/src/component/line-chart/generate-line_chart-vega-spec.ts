@@ -578,8 +578,8 @@ export function generateLineChartVegaSpec(
           ? xIsDateorTime
             ? [xMeta.min, xMeta.max]
             : xIsBoolean
-              ? [true, false]
-              : [...xMeta.values]
+            ? [true, false]
+            : [...xMeta.values]
           : {data: 'values', field: 'x'},
         range: 'width',
         paddingOuter: 0.05,
