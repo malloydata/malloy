@@ -132,13 +132,20 @@ class SnowObject extends SnowField {
           'SNOWFLAKE SCHEMA PARSER ERROR: Walk through undefined'
         );
       } else {
-        // If we get multiple type for a field, ignore them, should
-        // which will do until we support viarant data
-        if (!field) {
-          this.fieldMap.set(
-            path.name,
-            SnowField.make(path.name, fieldType, this.dialect)
-          );
+        // If we get multiple type for a field, ignore them. The exception
+        // is if there is field with integer and decimal types. In that case
+        // we overwrite the field type with decimal. This can happen if
+        // the field is an array and sometimes the value is a float and
+        // sometimes it is a integer. In that case we don't want to fail
+        // but instead treat it as a decimal.
+        const newField = SnowField.make(path.name, fieldType, this.dialect);
+        if (
+          !field ||
+          (newField.type === 'decimal' && field.type === 'integer')
+        ) {
+          this.fieldMap.set(path.name, newField);
+          return;
+        } else if (newField.type === 'integer' && field.type === 'decimal') {
           return;
         }
       }
