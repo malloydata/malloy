@@ -1,8 +1,8 @@
 module.exports = {
   ...require('./jest.config.ts'),
   roots: [
+    '<rootDir>/packages/malloy-db-postgres/',
     '<rootDir>/test/src/databases/all/',
-    '<rootDir>/packages/malloy-db-postgres/src/',
     '<rootDir>/test/src/databases/postgres/',
   ],
 };
