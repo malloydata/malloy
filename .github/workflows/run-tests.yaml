@@ -37,6 +37,8 @@ jobs:
   malloy-tests:
     needs:
       - db-bigquery
+      - db-duckdb
+      - db-duckdb-wasm
       - db-motherduck
       - db-mysql
       - db-postgres
