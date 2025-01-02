@@ -11,13 +11,12 @@ npx jest --listTests | sort > $all_test_file
 for ci_test in jest.*.config.ts; do
   npx jest --config $ci_test --listTests >> $ci_test_file
 done
-echo "force failure" >> $all_test_file
 sort -u $ci_test_file -o $ci_test_file
 diff $all_test_file $ci_test_file
 status=$?
 rm -rf $all_test_file $ci_test_file
 if [ $status -ne 0 ]; then
-  echo "!!!!!!! CI JEST TEST CONFIG FILE LIST MUST BE UPDATES !!!!!!!!"
+  echo "!!!!!!! jest.config.* CI configurations must up dated, some tests are missing !!!!!!!!"
   exit 1;
 fi
 exit 0
