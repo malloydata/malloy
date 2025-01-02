@@ -1,3 +1,4 @@
+// For motherduck and duckdb-wasm
 module.exports = {
   ...require('./jest.config.ts'),
   roots: [
