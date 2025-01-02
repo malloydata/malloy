@@ -1,14 +1,9 @@
-name: "DB:Snowflake"
+name: "DB:DuckDB(WASM)"
 
-on:
-  pull_request:
-  workflow_call:
-    secrets:
-      SNOWFLAKE_CONNECTION:
-        required: true
+on: [pull_request, workflow_call]
 
 jobs:
-  test-snowflake:
+  test-duckdb-wasm:
     runs-on: ubuntu-latest
 
     strategy:
@@ -27,9 +22,8 @@ jobs:
         run: |
           npm ci --loglevel error
           npm run build
-          ./scripts/gen-snowflake-auth.sh
-          npx jest --reporters jest-silent-reporter --reporters summary --config jest.snowflake.config.ts
+          npm run build-duckdb-db
+          npx jest --reporters jest-silent-reporter --reporters summary --config jest.duckdb-other.config.ts --runInBand
         env:
           CI: true
-          MALLOY_DATABASES: snowflake
-          SNOWFLAKE_CONNECTION: ${{ secrets.SNOWFLAKE_CONNECTION }}
+          MALLOY_DATABASES: duckdb_wasm

@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {runtimeFor} from './runtimes';
-import './util/db-jest-matchers';
+import {runtimeFor} from '../runtimes';
+import '../util/db-jest-matchers';
 
 const runtime = runtimeFor('duckdb');
 

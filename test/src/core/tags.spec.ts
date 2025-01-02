@@ -22,7 +22,7 @@
  */
 
 import {TagDict, Tag} from '@malloydata/malloy';
-import {runtimeFor} from './runtimes';
+import {runtimeFor} from '../runtimes';
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace

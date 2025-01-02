@@ -22,8 +22,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {runtimeFor} from './runtimes';
-import './util/db-jest-matchers';
+import {runtimeFor} from '../runtimes';
+import '../util/db-jest-matchers';
 
 const runtime = runtimeFor('duckdb');
 

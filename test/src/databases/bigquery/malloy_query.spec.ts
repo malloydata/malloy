@@ -32,7 +32,7 @@ import '../../util/db-jest-matchers';
 const runtimeList = new RuntimeList(['bigquery']);
 const runtime = runtimeList.runtimeMap.get('bigquery');
 if (runtime === undefined) {
-  throw new Error("Couldn't build runtime");
+  throw new Error('BigQuery runtime not found');
 }
 const bq = runtime.connection as BigQueryTestConnection;
 
@@ -750,7 +750,7 @@ describe('airport_tests', () => {
     `).malloyResultMatches(model, {'pipe_turtle.total_airports': 1845});
   });
 
-  it(`hyperloglog combine`, async () => {
+  it('hyperloglog combine', async () => {
     await expect(`run: bigquery.table('malloytest.airports')->{
         aggregate: code_hll is hll_accumulate(code)
     } -> {
