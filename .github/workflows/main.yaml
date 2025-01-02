@@ -5,6 +5,7 @@ on:
   workflow_call:
     secrets:
       BIGQUERY_KEY:
+        required: true
 
 jobs:
   test-all:
