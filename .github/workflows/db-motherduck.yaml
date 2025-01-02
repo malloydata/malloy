@@ -1,4 +1,4 @@
-name: DB:MotherDuck
+name: "DB:MotherDuck"
 
 on:
   pull_request:

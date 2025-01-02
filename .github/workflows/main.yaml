@@ -3,7 +3,7 @@ name: Core
 on: [pull_request, workflow_call]
 
 jobs:
-  test-all:
+  test-core:
     runs-on: ubuntu-latest
 
     strategy:

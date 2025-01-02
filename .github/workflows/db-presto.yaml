@@ -1,4 +1,4 @@
-name: DB:Presto
+name: "DB:Presto"
 
 on:
   pull_request:
