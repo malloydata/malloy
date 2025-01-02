@@ -236,6 +236,23 @@ source: products is duckdb.table("static/data/products.parquet") extend {
     }
   }
 
+  dimension:
+    is_female is pick true when department = 'Women' else false
+  measure:
+    product_count_by_gender is count(id)
+
+  #(story)
+  view: line_chart_with_boolean is {
+    nest: product_sales_by_gender is {
+      group_by: is_female
+      aggregate: product_count_by_gender
+    }
+    # line_chart
+    nest: product_sales_chart is {
+      group_by: is_female
+      aggregate: product_count_by_gender
+    }
+  }
 }
 
 run: products -> { group_by: distribution_center_id}
