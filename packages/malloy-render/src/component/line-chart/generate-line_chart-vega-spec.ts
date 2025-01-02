@@ -80,8 +80,7 @@ export function generateLineChartVegaSpec(
   const xField = getFieldFromRootPath(explore, xFieldPath);
   const xIsDateorTime =
     xField.isAtomicField() && (xField.isDate() || xField.isTimestamp());
-  const xIsBoolean =
-    xField.isAtomicField() && xField.isBoolean();
+  const xIsBoolean = xField.isAtomicField() && xField.isBoolean();
   const yField = getFieldFromRootPath(explore, yFieldPath);
   const seriesField = seriesFieldPath
     ? getFieldFromRootPath(explore, seriesFieldPath)
