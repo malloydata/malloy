@@ -23,8 +23,7 @@ jobs:
           npm ci --loglevel error
           npm run build
           npm run build-duckdb-db
-          npx jest --reporters jest-silent-reporter --reporters summary --config jest.duckdb.config.ts --runInBand
-          npm run test-silent -- -- test packages/malloy-duckdb
+          npx jest --reporters jest-silent-reporter --reporters summary --config jest.duckdb-other.config.ts --runInBand
         env:
           CI: true
-          MALLOY_DATABASES: duckdb-wasm
+          MALLOY_DATABASES: duckdb_wasm
