@@ -5,5 +5,6 @@ module.exports = {
     '<rootDir>/packages/malloy-syntax-highlight/',
     '<rootDir>/packages/malloy/',
     '<rootDir>/test/src/core/',
+    '<rootDir>/test/src/render/',
   ],
 };

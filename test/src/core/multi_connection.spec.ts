@@ -26,8 +26,8 @@
 
 import * as malloy from '@malloydata/malloy';
 import {EmptyURLReader} from '@malloydata/malloy';
-import {DuckDBTestConnection, PostgresTestConnection} from '../../runtimes';
-import {describeIfDatabaseAvailable} from '../../util';
+import {DuckDBTestConnection, PostgresTestConnection} from '../runtimes';
+import {describeIfDatabaseAvailable} from '../util';
 
 const [, databases] = describeIfDatabaseAvailable(['duckdb', 'postgres']);
 
