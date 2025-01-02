@@ -577,7 +577,9 @@ export function generateLineChartVegaSpec(
         domain: shouldShareXDomain
           ? xIsDateorTime
             ? [xMeta.min, xMeta.max]
-            : xIsBoolean ? [true, false] : [...xMeta.values]
+            : xIsBoolean
+              ? [true, false]
+              : [...xMeta.values]
           : {data: 'values', field: 'x'},
         range: 'width',
         paddingOuter: 0.05,
