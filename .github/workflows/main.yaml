@@ -1,7 +1,7 @@
 # The "Core" job runs through all the tests which are not dialect specific.
 # This includes tests which don't touch the database at all, and tests
 # which touch some combination of duckdb,bigquery,postgres but do
-# not nee to be run multiple times for each dialect.
+# not need to be once times for each dialect.
 name: Core
 
 on:
