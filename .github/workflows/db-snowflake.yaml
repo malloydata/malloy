@@ -2,6 +2,7 @@ name: "DB:Snowflake"
 
 on:
   pull_request:
+  pull_request_target:
   workflow_call:
     secrets:
       SNOWFLAKE_CONNECTION:
