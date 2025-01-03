@@ -189,15 +189,15 @@ const populateFieldMeta = (data: DataArray, metadata: RenderResultMetadata) => {
           fieldSet.add(n);
         }
       } else if (valueIsBoolean(f, value)) {
-        const bool:boolean = value;
+        const bool: boolean = value;
         if (f.isAtomicField() && f.sourceWasDimension()) {
           fieldMeta.values.add(bool);
           fieldSet.add(bool);
         }
         if (!fieldMeta.minString || fieldMeta.minString.length > 4)
-          fieldMeta.minString = "true";
+          fieldMeta.minString = 'true';
         if (!fieldMeta.maxString || fieldMeta.maxString.length < 5)
-          fieldMeta.maxString = "false";
+          fieldMeta.maxString = 'false';
       } else if (valueIsString(f, value)) {
         const s = value;
         fieldMeta.values.add(s);
