@@ -253,6 +253,30 @@ source: products is duckdb.table("static/data/products.parquet") extend {
       aggregate: product_count_by_gender
     }
   }
+
+  dimension:
+    `the_date` is @2001-02-03 + id day
+    bool_series is pick true when brand = 'Lucky Brand'
+      pick false when brand = 'Calvin Klein'
+      else true
+    text_series_with_null is pick brand when brand = 'Lucky Brand'
+      pick brand when brand = 'Calvin Klein'
+      else null
+
+  #(story)
+  # line_chart
+  view: product_brand_broken is {
+    # x
+    group_by: the_date
+
+    # series
+    group_by: text_series_with_null
+
+    # y
+    aggregate: `Sales $` is retail_price.avg()*500
+    where: the_date >= @2001-02-01 and the_date < @2001-04-01
+    order_by: the_date
+  }
 }
 
 run: products -> { group_by: distribution_center_id}
