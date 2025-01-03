@@ -242,7 +242,7 @@ source: products is duckdb.table("static/data/products.parquet") extend {
     product_count_by_gender is count(id)
 
   #(story)
-  view: line_chart_with_boolean is {
+  view: line_chart_boolean_xaxis is {
     nest: product_sales_by_gender is {
       group_by: is_female
       aggregate: product_count_by_gender
@@ -252,6 +252,46 @@ source: products is duckdb.table("static/data/products.parquet") extend {
       group_by: is_female
       aggregate: product_count_by_gender
     }
+  }
+
+  dimension:
+    `date_of_sale` is @2001-02-03 + id day
+    bool_series is pick true when brand = 'Lucky Brand'
+      pick false when brand = 'Calvin Klein'
+      else true
+    text_series_with_null is pick brand when brand = 'Lucky Brand'
+      pick brand when brand = 'Calvin Klein'
+      else null
+
+  #(story)
+  # line_chart
+  view: line_chart_time_series is {
+    # x
+    group_by: date_of_sale
+
+    # series
+    group_by: brand
+
+    # y
+    aggregate: `Sales $` is retail_price.avg()*500
+    where: date_of_sale >= @2001-02-01 and date_of_sale < @2001-04-01
+    order_by: date_of_sale
+    limit: 20
+  }
+
+  #(story)
+  # line_chart
+  view: line_chart_bool_time_series is {
+    # x
+    group_by: date_of_sale
+
+    # series
+    group_by: bool_series
+
+    # y
+    aggregate: `Sales $` is retail_price.avg()*500
+    where: date_of_sale >= @2001-02-01 and date_of_sale < @2001-04-01
+    order_by: date_of_sale
   }
 }
 
