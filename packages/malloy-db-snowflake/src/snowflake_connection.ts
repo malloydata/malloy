@@ -133,7 +133,7 @@ class SnowObject extends SnowField {
         );
       } else {
         // If we get multiple type for a field, ignore them. The exception
-        // is if there is field with integer and decimal types. In that case
+        // is if there is field with integer and decimal types. In that case,
         // we overwrite the field type with decimal. This can happen if
         // the field is an array and sometimes the value is a float and
         // sometimes it is a integer. In that case we don't want to fail
