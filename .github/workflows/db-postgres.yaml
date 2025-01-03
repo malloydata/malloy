@@ -1,6 +1,6 @@
-name: "DB:Postgres"
+name: 'DB:Postgres'
 
-on: [pull_request, workflow_call]
+on: [pull_request_target, workflow_call]
 
 jobs:
   # Label of the container job
