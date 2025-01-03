@@ -2,7 +2,6 @@ name: "DB:Presto"
 
 on:
   pull_request:
-  pull_request_target:
   workflow_call:
     secrets:
       BQ_PRESTO_TRINO_KEY:

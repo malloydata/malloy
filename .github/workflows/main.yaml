@@ -6,7 +6,6 @@ name: Core
 
 on:
   pull_request:
-  pull_request_target:
   workflow_call:
     secrets:
       BIGQUERY_KEY:
