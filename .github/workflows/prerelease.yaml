@@ -22,6 +22,8 @@ jobs:
       SNOWFLAKE_CONNECTION: ${{ secrets.SNOWFLAKE_CONNECTION }}
   main:
     uses: './.github/workflows/main.yaml'
+    secrets:
+      BIGQUERY_KEY: ${{ secrets.BIGQUERY_KEY }}
 
   npm-prerelease:
     needs:
