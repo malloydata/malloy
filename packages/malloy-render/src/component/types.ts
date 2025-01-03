@@ -52,7 +52,7 @@ export interface FieldRenderMetadata {
   max: number | null;
   minString: string | null;
   maxString: string | null;
-  values: Set<string | number>;
+  values: Set<string | number | boolean>;
   maxRecordCt: number | null;
   maxUniqueFieldValueCounts: Map<string, number>;
   vegaChartProps?: VegaChartProps;

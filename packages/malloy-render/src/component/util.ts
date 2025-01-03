@@ -41,6 +41,10 @@ export function valueIsNumber(f: Field, v: unknown): v is number {
   return f.isAtomicField() && f.isNumber() && v !== null;
 }
 
+export function valueIsBoolean(f: Field, v: unknown): v is boolean {
+  return f.isAtomicField() && f.isBoolean() && v !== null;
+}
+
 export function valueIsString(f: Field, s: unknown): s is string {
   return f.isAtomicField() && f.isString() && s !== null;
 }

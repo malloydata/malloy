@@ -35,6 +35,7 @@ import {
   getFieldKey,
   valueIsDateTime,
   valueIsNumber,
+  valueIsBoolean,
   valueIsString,
 } from './util';
 import {
@@ -187,6 +188,16 @@ const populateFieldMeta = (data: DataArray, metadata: RenderResultMetadata) => {
           fieldMeta.values.add(n);
           fieldSet.add(n);
         }
+      } else if (valueIsBoolean(f, value)) {
+        const bool:boolean = value;
+        if (f.isAtomicField() && f.sourceWasDimension()) {
+          fieldMeta.values.add(bool);
+          fieldSet.add(bool);
+        }
+        if (!fieldMeta.minString || fieldMeta.minString.length > 4)
+          fieldMeta.minString = "true";
+        if (!fieldMeta.maxString || fieldMeta.maxString.length < 5)
+          fieldMeta.maxString = "false";
       } else if (valueIsString(f, value)) {
         const s = value;
         fieldMeta.values.add(s);
