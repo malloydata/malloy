@@ -132,20 +132,13 @@ class SnowObject extends SnowField {
           'SNOWFLAKE SCHEMA PARSER ERROR: Walk through undefined'
         );
       } else {
-        // If we get multiple type for a field, ignore them. The exception
-        // is if there is field with integer and decimal types. In that case,
-        // we overwrite the field type with decimal. This can happen if
-        // the field is an array and sometimes the value is a float and
-        // sometimes it is a integer. In that case we don't want to fail
-        // but instead treat it as a decimal.
-        const newField = SnowField.make(path.name, fieldType, this.dialect);
-        if (
-          !field ||
-          (newField.type === 'decimal' && field.type === 'integer')
-        ) {
-          this.fieldMap.set(path.name, newField);
-          return;
-        } else if (newField.type === 'integer' && field.type === 'decimal') {
+        // If we get multiple type for a field, ignore them, should
+        // which will do until we support viarant data
+        if (!field) {
+          this.fieldMap.set(
+            path.name,
+            SnowField.make(path.name, fieldType, this.dialect)
+          );
           return;
         }
       }
@@ -336,12 +329,22 @@ export class SnowflakeConnection
     }
     // For these things, we need to sample the data to know the schema
     if (variants.length > 0) {
+      // * decimal and integer should be treated as the same type.
+      // * remove null values
+      // * remove fields for which we have multiple types
       const sampleQuery = `
-      SELECT regexp_replace(PATH, '\\[[0-9]+\\]', '[*]') as PATH, lower(TYPEOF(value)) as type
+      SELECT PATH, min(type) as type
+      FROM (
+        SELECT regexp_replace(PATH, '\\[[0-9]+\\]', '[*]') as PATH,
+        CASE WHEN lower(TYPEOF(value)) = 'integer' THEN 'decimal' ELSE lower(TYPEOF(value)) END as type
       FROM (select object_construct(*) o from  ${tablePath} limit 100)
             ,table(flatten(input => o, recursive => true)) as meta
       GROUP BY 1,2
-      ORDER BY PATH;
+      )
+      WHERE type != 'null_value'
+      group by 1
+      having count(*) <=1
+      ORDER By PATH;
       `;
       const fieldPathRows = await this.executor.batch(sampleQuery);
 
