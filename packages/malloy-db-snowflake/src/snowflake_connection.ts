@@ -332,10 +332,12 @@ export class SnowflakeConnection
       // * decimal and integer should be treated as the same type.
       // * remove null values
       // * remove fields for which we have multiple types
+      // * make sure that the regexp path is properly escaped. we want
+      // something like \\[[0-9]+\\] in the final query.
       const sampleQuery = `
       SELECT PATH, min(type) as type
       FROM (
-        SELECT regexp_replace(PATH, '\\[[0-9]+\\]', '[*]') as PATH,
+        SELECT regexp_replace(PATH, '\\\\[[0-9]+\\\\]', '[*]') as PATH,
         CASE WHEN lower(TYPEOF(value)) = 'integer' THEN 'decimal' ELSE lower(TYPEOF(value)) END as type
       FROM (select object_construct(*) o from  ${tablePath} limit 100)
             ,table(flatten(input => o, recursive => true)) as meta
