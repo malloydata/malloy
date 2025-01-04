@@ -91,6 +91,13 @@ describe.each(runtimes.runtimeList)(
     """)`;
 
     describe('simple arrays', () => {
+      test('join on scalar array field', async () => {
+        const nestedArrayJoin = `
+           source: a is ${conName}.sql(""" SELECT 2 as "a_two" """) extend {}
+           source: b is ${evens} extend { join_one: a is a on a.a_two = evens.value}
+           run: b -> {select: a_two is a.a_two}`;
+        await expect(nestedArrayJoin).malloyResultMatches(runtime, {a_two: 2});
+      });
       test('array literal dialect function', async () => {
         await expect(`
           run: ${evens}`).malloyResultMatches(runtime, {
