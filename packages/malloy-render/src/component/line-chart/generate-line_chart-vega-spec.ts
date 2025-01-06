@@ -752,12 +752,16 @@ export function generateLineChartVegaSpec(
       ) {
         return;
       }
-      // Map data fields to chart properties
+      // Map data fields to chart properties.  Handle undefined values properly.
+      let seriesVal = seriesFieldPath ? row[seriesFieldPath] : yFieldPath;
+      if (seriesVal === undefined || seriesVal === null) {
+        seriesVal = NULL_SYMBOL;
+      }
       mappedData.push({
         __source: row,
         x: getXValue(row) ?? NULL_SYMBOL,
         y: row[yFieldPath],
-        series: seriesFieldPath ? row[seriesFieldPath] : yFieldPath,
+        series: seriesVal,
       });
     });
     return mappedData;
