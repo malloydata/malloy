@@ -205,7 +205,7 @@ export class SnowflakeDialect extends Dialect {
   ): string {
     const as = this.sqlMaybeQuoteIdentifier(alias);
     if (isArray) {
-      return `,LATERAL FLATTEN(INPUT => ${source}) AS ${alias}_1, LATERAL (SELECT ${alias}_1.INDEX, object_construct('value', ${alias}_1.value) as value ) as ${as}`;
+      return `LEFT JOIN lateral flatten(input => ${source}) as ${as}`;
     } else {
       // have to have a non empty row or it treats it like an inner join :barf-emoji:
       return `LEFT JOIN LATERAL FLATTEN(INPUT => ifnull(${source},[1])) AS ${as}`;
