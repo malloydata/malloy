@@ -267,7 +267,7 @@ export class SnowflakeDialect extends Dialect {
       parentType === 'array[scalar]' ||
       parentType === 'array[record]'
     ) {
-      const arrayRef = `"${parentAlias}".value:${sqlName}`;
+      const arrayRef = `"${parentAlias}".value`;
       switch (childType) {
         case 'record':
         case 'array':
