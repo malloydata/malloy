@@ -135,7 +135,9 @@ export abstract class DynamicSpace
           if (!ErrorFactory.didCreate(joinStruct)) {
             fieldIndices.set(name, this.sourceDef.fields.length);
             this.sourceDef.fields.push(joinStruct);
-            fixupJoins.push([field.join, joinStruct]);
+            // fixupJoins.push([field.join, joinStruct]);
+
+            field.join.fixupJoinOn(this, joinStruct);
           }
         } else {
           const fieldDef = field.fieldDef();
