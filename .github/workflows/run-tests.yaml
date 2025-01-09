@@ -3,31 +3,48 @@ name: Malloy Tests
 on: [workflow_dispatch, pull_request]
 
 jobs:
+  check-permission:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Permission Check
+        uses: malloydata/check-ci-permissions@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ github.triggering_actor }}
+          error_message: |
+            User does not have write access to this repository. Refer to CONTRIBUTING.md instructions on how to contribute to Malloy.
+
   main:
+    needs: check-permission
     uses: './.github/workflows/main.yaml'
     secrets:
       BIGQUERY_KEY: ${{ secrets.BIGQUERY_KEY }}
   db-trino:
+    needs: check-permission
     uses: './.github/workflows/db-trino.yaml'
     secrets:
       BQ_PRESTO_TRINO_KEY: ${{ secrets.BQ_PRESTO_TRINO_KEY }}
   db-presto:
+    needs: check-permission
     uses: './.github/workflows/db-presto.yaml'
     secrets:
       BQ_PRESTO_TRINO_KEY: ${{ secrets.BQ_PRESTO_TRINO_KEY }}
   db-duckdb:
     uses: './.github/workflows/db-duckdb.yaml'
   db-bigquery:
+    needs: check-permission
     uses: './.github/workflows/db-bigquery.yaml'
     secrets:
       BIGQUERY_KEY: ${{ secrets.BIGQUERY_KEY }}
   db-motherduck:
+    needs: check-permission
     uses: './.github/workflows/db-motherduck.yaml'
     secrets:
       MOTHERDUCK_TOKEN_10: ${{ secrets.MOTHERDUCK_TOKEN_10 }}
   db-postgres:
     uses: './.github/workflows/db-postgres.yaml'
   db-snowflake:
+    needs: check-permission
     uses: './.github/workflows/db-snowflake.yaml'
     secrets:
       SNOWFLAKE_CONNECTION: ${{ secrets.SNOWFLAKE_CONNECTION }}
