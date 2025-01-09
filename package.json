@@ -36,6 +36,7 @@
     "test-bigquery": "MALLOY_DATABASE=bigquery jest --runInBand",
     "test-postgres": "MALLOY_DATABASE=postgres jest --runInBand",
     "test-duckdb": "JEST_SILENT_REPORTER_SHOW_PATHS=true MALLOY_DATABASE=duckdb jest --runInBand --reporters jest-silent-reporter",
+    "ci-snowflake": "JEST_SILENT_REPORTER_SHOW_PATHS=true jest --config jest.snowflake.config.ts --reporters jest-silent-reporter --reporters summary",
     "test-silent": "JEST_SILENT_REPORTER_SHOW_PATHS=true jest --runInBand --reporters jest-silent-reporter --no-color",
     "test-deps": "npm run build && npx jest -t dependencies",
     "third-party-licenses": "ts-node scripts/third_party_licenses",
