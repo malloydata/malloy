@@ -17,7 +17,7 @@ jobs:
       - name: Use Node.js 18.x
         uses: actions/setup-node@v4
         with:
-          node-version: Use Node.js 18.x
+          node-version: 18.x
       - name: npm install, build, and test
         run: |
           npm ci --loglevel error
