@@ -11,7 +11,7 @@ on:
         required: true
 
 jobs:
-  test-all:
+  main:
     runs-on: ubuntu-latest
 
     services:
