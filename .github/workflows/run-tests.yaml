@@ -3,37 +3,37 @@ name: Run Malloy Tests
 on: [workflow_dispatch, pull_request]
 
 jobs:
-  main:
+  test-all:
     uses: './.github/workflows/main.yaml'
     secrets:
       BIGQUERY_KEY: ${{ secrets.BIGQUERY_KEY }}
-  db-trino:
+  test-trino:
     uses: './.github/workflows/db-trino.yaml'
     secrets:
       BQ_PRESTO_TRINO_KEY: ${{ secrets.BQ_PRESTO_TRINO_KEY }}
-  db-presto:
+  test-presto:
     uses: './.github/workflows/db-presto.yaml'
     secrets:
       BQ_PRESTO_TRINO_KEY: ${{ secrets.BQ_PRESTO_TRINO_KEY }}
-  db-duckdb:
+  test-duckdb:
     uses: './.github/workflows/db-duckdb.yaml'
-  db-bigquery:
+  test-bigquery:
     uses: './.github/workflows/db-bigquery.yaml'
     secrets:
       BIGQUERY_KEY: ${{ secrets.BIGQUERY_KEY }}
-  db-motherduck:
+  test-motherduck:
     uses: './.github/workflows/db-motherduck.yaml'
     secrets:
       MOTHERDUCK_TOKEN_10: ${{ secrets.MOTHERDUCK_TOKEN_10 }}
-  db-postgres:
+  test-postgres:
     uses: './.github/workflows/db-postgres.yaml'
-  db-snowflake:
+  test-snowflake:
     uses: './.github/workflows/db-snowflake.yaml'
     secrets:
       SNOWFLAKE_CONNECTION: ${{ secrets.SNOWFLAKE_CONNECTION }}
-  db-mysql:
+  test-mysql:
     uses: './.github/workflows/db-mysql.yaml'
-  db-duckdb-wasm:
+  test-duckdb-wasm:
     uses: './.github/workflows/db-duckdb-wasm.yaml'
 
   # I think I have the sorted roughly longest to shortest
@@ -41,16 +41,16 @@ jobs:
   # that is the right plan
   malloy-tests:
     needs:
-      - main
-      - db-snowflake
-      - db-bigquery
-      - db-duckdb
-      - db-presto
-      - db-duckdb-wasm
-      - db-trino
-      - db-postgres
-      - db-motherduck
-      - db-mysql
+      - test-all
+      - test-snowflake
+      - test-bigquery
+      - test-duckdb
+      - test-presto
+      - test-duckdb-wasm
+      - test-trino
+      - test-postgres
+      - test-motherduck
+      - test-mysql
     runs-on: ubuntu-latest
     steps:
       - name: Success
