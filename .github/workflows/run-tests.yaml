@@ -1,6 +1,6 @@
-name: Malloy Tests
+name: Run Malloy Tests
 
-on: [workflow_dispatch]
+on: [workflow_dispatch, pull_request]
 
 jobs:
   main:
@@ -37,7 +37,7 @@ jobs:
     uses: './.github/workflows/db-duckdb-wasm.yaml'
 
   # I think I have the sorted roughly longest to shortest
-  # so the longer running jobs get wrokers sooner, not sure
+  # so the longer running jobs get workers sooner, not sure
   # that is the right plan
   malloy-tests:
     needs:

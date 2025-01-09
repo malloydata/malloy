@@ -1,7 +1,6 @@
-name: "DB:Snowflake"
+name: 'DB:Snowflake'
 
 on:
-  pull_request:
   workflow_call:
     secrets:
       SNOWFLAKE_CONNECTION:

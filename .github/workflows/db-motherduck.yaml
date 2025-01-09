@@ -1,7 +1,6 @@
-name: "DB:MotherDuck"
+name: 'DB:MotherDuck'
 
 on:
-  pull_request:
   workflow_call:
     secrets:
       MOTHERDUCK_TOKEN_10:

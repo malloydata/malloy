@@ -1,6 +1,6 @@
-name: "DB:DuckDB(WASM)"
+name: 'DB:DuckDB(WASM)'
 
-on: [pull_request, workflow_call]
+on: workflow_call
 
 jobs:
   test-duckdb-wasm:

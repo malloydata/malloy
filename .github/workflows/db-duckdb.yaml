@@ -1,6 +1,6 @@
-name: "DB:DuckDB"
+name: 'DB:DuckDB'
 
-on: [pull_request, workflow_call]
+on: workflow_call
 
 jobs:
   test-duckdb:

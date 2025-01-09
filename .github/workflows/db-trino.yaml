@@ -1,7 +1,6 @@
-name: "DB:Trino"
+name: 'DB:Trino'
 
 on:
-  pull_request:
   workflow_call:
     secrets:
       BQ_PRESTO_TRINO_KEY:
