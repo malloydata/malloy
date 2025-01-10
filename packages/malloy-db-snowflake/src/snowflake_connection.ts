@@ -336,7 +336,7 @@ export class SnowflakeConnection
         select path, min(type) as type
         from (
           select
-            regexp_replace(path, '\\[[0-9]+\\]', '[*]') as path,
+            regexp_replace(path, '\\\\[[0-9]+\\\\]', '[*]') as path,
             case when typeof(value) = 'INTEGER' then 'decimal' else lower(typeof(value)) end as type
           from
             (select object_construct(*) o from ${tablePath} limit 100)
