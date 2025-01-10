@@ -63,6 +63,9 @@ export interface SnowflakeConnectionOptions {
   scratchSpace?: namespace;
 
   queryOptions?: RunSQLOptions;
+
+  // Timeout for the statement
+  timeoutMs?: number;
 }
 
 type PathChain =
@@ -207,6 +210,11 @@ class SnowArray extends SnowField {
   }
 }
 
+/**
+ * Default statement timeoutMs value, 10 Mins
+ */
+const TIMEOUT_MS = 1000 * 60 * 10;
+
 export class SnowflakeConnection
   extends BaseConnection
   implements
@@ -221,6 +229,7 @@ export class SnowflakeConnection
   // the database & schema where we do temporary operations like creating a temp table
   private scratchSpace?: namespace;
   private queryOptions: RunSQLOptions;
+  private timeoutMs: number;
 
   constructor(
     public readonly name: string,
@@ -235,6 +244,7 @@ export class SnowflakeConnection
     this.executor = new SnowflakeExecutor(connOptions, options?.poolOptions);
     this.scratchSpace = options?.scratchSpace;
     this.queryOptions = options?.queryOptions ?? {};
+    this.timeoutMs = options?.timeoutMs ?? TIMEOUT_MS;
   }
 
   get dialectName(): string {
@@ -273,10 +283,10 @@ export class SnowflakeConnection
 
   public async runSQL(
     sql: string,
-    options?: RunSQLOptions
+    options: RunSQLOptions = {}
   ): Promise<MalloyQueryData> {
     const rowLimit = options?.rowLimit ?? this.queryOptions?.rowLimit;
-    let rows = await this.executor.batch(sql);
+    let rows = await this.executor.batch(sql, options, this.timeoutMs);
     if (rowLimit !== undefined && rows.length > rowLimit) {
       rows = rows.slice(0, rowLimit);
     }
