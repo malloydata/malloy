@@ -69,14 +69,18 @@ import {
   isSourceDef,
   QueryToMaterialize,
   isJoined,
+  DocumentDef,
 } from './model';
 import {
   EventStream,
+  ModelCache,
+  Check,
   ModelString,
   ModelURL,
   QueryString,
   QueryURL,
   URLReader,
+  Checker,
 } from './runtime_types';
 import {
   Connection,
@@ -235,12 +239,14 @@ export class Malloy {
     eventStream,
     replaceMaterializedReferences,
     materializedTablePrefix,
+    modelCache,
   }: {
     urlReader: URLReader;
     connections: LookupConnection<InfoConnection>;
     parse: Parse;
     model?: Model;
     replaceMaterializedReferences?: boolean;
+    modelCache?: ModelCacheController;
   } & CompileOptions &
     CompileQueryOptions): Promise<Model> {
     let refreshTimestamp: number | undefined;
@@ -255,11 +261,22 @@ export class Malloy {
       const result = translator.translate(model?._modelDef);
       if (result.final) {
         if (result.translated) {
+          const fromSources = [
+            ...(model?.fromSources ?? []),
+            ...(result.fromSources ?? []),
+          ];
+          const check = ''; // TODO need the actual file checksum somehow?
+          modelCache?.set(
+            translator.sourceURL,
+            result.translated,
+            fromSources,
+            check
+          );
           return new Model(
             result.translated.modelDef,
             result.translated.queryList,
             result.problems || [],
-            [...(model?.fromSources ?? []), ...(result.fromSources ?? [])],
+            fromSources,
             (position: ModelDocumentPosition) =>
               translator.referenceAt(position),
             (position: ModelDocumentPosition) => translator.importAt(position)
@@ -299,9 +316,16 @@ export class Malloy {
                   'In order to use relative imports, you must compile a file via a URL.'
                 );
               }
-              const neededText = await urlReader.readURL(new URL(neededUrl));
-              const urls = {[neededUrl]: neededText};
-              translator.update({urls});
+              // TODO this action of "get contents of files if they are newer than XYZ verisons"
+              const precompiled = await modelCache?.get(neededUrl);
+              if (precompiled) {
+                const translations = {[neededUrl]: precompiled};
+                translator.update({translations});
+              } else {
+                const neededText = await urlReader.readURL(new URL(neededUrl));
+                const urls = {[neededUrl]: neededText};
+                translator.update({urls});
+              }
             } catch (error) {
               translator.update({
                 errors: {urls: {[neededUrl]: error.message}},
@@ -2205,6 +2229,7 @@ export class Runtime {
   private _urlReader: URLReader;
   private _connections: LookupConnection<Connection>;
   private _eventStream: EventStream | undefined;
+  private modelCache: ModelCacheController;
 
   constructor(runtime: LookupConnection<Connection> & URLReader);
   constructor(
@@ -2260,6 +2285,10 @@ export class Runtime {
     this._urlReader = urlReader;
     this._connections = connections;
     this._eventStream = eventStream;
+    this.modelCache = new ModelCacheController(
+      new InMemoryCache(),
+      new UrlReaderHashChecker(urlReader)
+    );
   }
 
   /**
@@ -4131,5 +4160,118 @@ export class CSVWriter extends DataWriter {
       }
     }
     this.stream.close();
+  }
+}
+
+class ModelCacheController {
+  constructor(
+    readonly cache: ModelCache,
+    readonly checker: Checker
+  ) {}
+
+  private entries: Map<string, {check: Check; dependencies: string[]}> =
+    new Map();
+
+  private getAllDependencies(url: string): string[] | undefined {
+    const deps: string[] = [];
+    const direct = this.entries.get(url);
+    if (direct === undefined) {
+      return undefined;
+    }
+    for (const dep of direct.dependencies) {
+      const indirect = this.getAllDependencies(dep);
+      if (indirect === undefined) {
+        this.entries.delete(url);
+        return undefined;
+      }
+      deps.push(dep, ...indirect);
+    }
+    return deps;
+  }
+
+  async get(url: string) {
+    if (!this.cache.has(url)) return undefined;
+    // get dependencies of file
+    const deps = this.getAllDependencies(url);
+    if (deps === undefined) {
+      return undefined;
+    }
+    // check invalidation
+    const valid = await this.check([url, ...deps]);
+    if (!valid) {
+      return undefined;
+    }
+    // use cached
+    const cached = this.cache.get(url);
+    if (cached === undefined) {
+      // its no longer in the cache, delete
+      // record of its dependencies
+      // TODO this could really get out of sync...
+      this.entries.delete(url);
+    }
+    return cached;
+  }
+
+  set(
+    url: string,
+    translation: DocumentDef,
+    dependencies: string[],
+    check: Check
+  ) {
+    this.entries.set(url, {check, dependencies});
+    if (this.getAllDependencies(url) === undefined) {
+      this.entries.delete(url);
+      return;
+    }
+    this.cache.set(url, translation);
+  }
+
+  private async check(urls: string[]) {
+    let valid = true;
+    const checks = await this.checker.check(urls);
+    // todo ensure all urls covered
+    for (const {check, url} of checks) {
+      const existing = this.entries.get(url);
+      if (existing === undefined || existing.check !== check) {
+        valid = false;
+        this.entries.delete(url);
+      }
+    }
+    return valid;
+  }
+}
+
+export class InMemoryCache implements ModelCache {
+  private entries = new Map<string, DocumentDef>();
+
+  has(url: string) {
+    return this.entries.has(url);
+  }
+
+  get(url: string) {
+    return this.entries.get(url);
+  }
+
+  set(url: string, translation: DocumentDef) {
+    this.set(url, translation);
+  }
+}
+
+export class UrlReaderHashChecker implements Checker {
+  constructor(private readonly urlReader: URLReader) {}
+
+  async check(urls: string[]) {
+    const allContents = await Promise.all(
+      urls.map(async url => {
+        return {url, contents: await this.urlReader.readURL(new URL(url))};
+      })
+    );
+    const checks: {url: string; check: Check}[] = [];
+    for (const {url, contents} of allContents) {
+      // TODO actually hash the contents...
+      const check = contents;
+      checks.push({url, check});
+    }
+    return checks;
   }
 }
