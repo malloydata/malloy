@@ -305,7 +305,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       run: x -> { aggregate: foo; group_by: bar }
     `).malloyResultMatches(runtime, {foo: 0, bar: 1});
   });
-  it('complex nesting composite with join', async () => {
+  it('complex nesting composite with join -- literal view', async () => {
     await expect(`
       ##! experimental.composite_sources
       source: state_facts is ${databaseName}.table('malloytest.state_facts')
@@ -323,6 +323,50 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         join_one: state_facts on the_state = state_facts.state
       }
       run: x -> { group_by: state_facts.state }
+    `).malloyResultMatches(runtime, {state: 'CA'});
+  });
+  it('complex nesting composite with join -- double extend to define view', async () => {
+    await expect(`
+      ##! experimental.composite_sources
+      source: state_facts is ${databaseName}.table('malloytest.state_facts')
+      source: x is compose(
+        compose(
+          state_facts,
+          state_facts extend {
+            dimension: the_state is 'CA'
+          }
+        ),
+        state_facts extend {
+          dimension: the_state is 'IL'
+        }
+      ) extend {
+        join_one: state_facts on the_state = state_facts.state
+      } extend {
+        view: y is { group_by: state_facts.state }
+      }
+      run: x -> y
+    `).malloyResultMatches(runtime, {state: 'CA'});
+  });
+  it('complex nesting composite with join -- defined view', async () => {
+    await expect(`
+      ##! experimental.composite_sources
+      source: state_facts is ${databaseName}.table('malloytest.state_facts')
+      source: x is compose(
+        compose(
+          state_facts,
+          state_facts extend {
+            dimension: the_state is 'CA'
+          }
+        ),
+        state_facts extend {
+          dimension: the_state is 'IL'
+        }
+      ) extend {
+        join_one: state_facts on the_state = state_facts.state
+
+        view: y is { group_by: state_facts.state }
+      }
+      run: x -> y
     `).malloyResultMatches(runtime, {state: 'CA'});
   });
   describe('index queries against composite sources', () => {

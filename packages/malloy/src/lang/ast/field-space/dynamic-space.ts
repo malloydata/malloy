@@ -27,7 +27,6 @@ import {SpaceEntry} from '../types/space-entry';
 import {ErrorFactory} from '../error-factory';
 import {HasParameter} from '../parameters/has-parameter';
 import {MalloyElement} from '../types/malloy-element';
-import {Join} from '../source-properties/join';
 import {SpaceField} from '../types/space-field';
 import {JoinSpaceField} from './join-space-field';
 import {ViewField} from './view-field';
@@ -117,7 +116,6 @@ export abstract class DynamicSpace
       const fields: [string, SpaceField][] = [];
       const joins: [string, SpaceField][] = [];
       const turtles: [string, SpaceField][] = [];
-      const fixupJoins: [Join, model.JoinFieldDef][] = [];
       for (const [name, spaceEntry] of this.entries()) {
         if (spaceEntry instanceof StructSpaceFieldBase) {
           joins.push([name, spaceEntry]);
@@ -135,7 +133,7 @@ export abstract class DynamicSpace
           if (!ErrorFactory.didCreate(joinStruct)) {
             fieldIndices.set(name, this.sourceDef.fields.length);
             this.sourceDef.fields.push(joinStruct);
-            fixupJoins.push([field.join, joinStruct]);
+            field.join.fixupJoinOn(this, joinStruct);
           }
         } else {
           const fieldDef = field.fieldDef();
@@ -149,11 +147,6 @@ export abstract class DynamicSpace
           //   throw new Error(`'${fieldName}' doesn't have a FieldDef`);
           // }
         }
-      }
-
-      // If we have join expressions, we need to now go back and fill them in
-      for (const [join, missingOn] of fixupJoins) {
-        join.fixupJoinOn(this, missingOn);
       }
       // Add access modifiers at the end so views don't obey them
       for (const [name, access] of this.newAccessModifiers) {
