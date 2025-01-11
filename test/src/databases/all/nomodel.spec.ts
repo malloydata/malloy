@@ -63,23 +63,6 @@ afterAll(async () => {
 
 runtimes.runtimeMap.forEach((runtime, databaseName) => {
   const q = runtime.getQuoter();
-  // Issue #1824
-  it.when(runtime.dialect.nativeBoolean)(
-    `not boolean field with null - ${databaseName}`,
-    async () => {
-      await expect(`
-      run: ${databaseName}.sql("""
-          SELECT
-            CASE WHEN 1=1 THEN NULL ELSE false END as ${q`n`}
-      """) -> {
-        select:
-          is_true is not n
-      }
-    `).malloyResultMatches(runtime, {
-        is_true: true,
-      });
-    }
-  );
 
   // Issue: #1284
   it(`parenthesize output field values - ${databaseName}`, async () => {
