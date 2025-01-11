@@ -105,4 +105,17 @@ describe('db:Snowflake', () => {
     expect(res.rows[0]['rand']).toBeGreaterThanOrEqual(0);
     expect(res.rows[0]['rand']).toBeLessThanOrEqual(1);
   });
+
+  it('variant parser is not confused by arrays with numbers in name', async () => {
+    const x: malloy.SQLSourceDef = {
+      type: 'sql_select',
+      name: 'one_two_three',
+      connection: conn.name,
+      dialect: conn.dialectName,
+      selectStr: 'SELECT [1,2,3] as one_23',
+      fields: [],
+    };
+    const y = await conn.fetchSelectSchema(x);
+    expect(y.fields[0].name).toEqual('ONE_23');
+  });
 });

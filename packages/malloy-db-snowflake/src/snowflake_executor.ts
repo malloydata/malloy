@@ -149,15 +149,30 @@ export class SnowflakeExecutor {
     });
   }
 
-  public async _execute(sqlText: string, conn: Connection): Promise<QueryData> {
-    return new Promise((resolve, reject) => {
-      const _statment = conn.execute({
+  public async _execute(
+    sqlText: string,
+    conn: Connection,
+    options?: RunSQLOptions,
+    timeoutMs?: number
+  ): Promise<QueryData> {
+    let _statement: RowStatement | undefined;
+    const cancel = () => {
+      _statement?.cancel();
+    };
+    const timeoutId = timeoutMs ? setTimeout(cancel, timeoutMs) : undefined;
+    options?.abortSignal?.addEventListener('abort', cancel);
+    return await new Promise((resolve, reject) => {
+      _statement = conn.execute({
         sqlText,
         complete: (
           err: SnowflakeError | undefined,
           _stmt: RowStatement,
           rows?: QueryData
         ) => {
+          options?.abortSignal?.removeEventListener('abort', cancel);
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+          }
           if (err) {
             reject(err);
           } else if (rows) {
@@ -186,10 +201,14 @@ export class SnowflakeExecutor {
     );
   }
 
-  public async batch(sqlText: string): Promise<QueryData> {
+  public async batch(
+    sqlText: string,
+    options?: RunSQLOptions,
+    timeoutMs?: number
+  ): Promise<QueryData> {
     return await this.pool_.use(async (conn: Connection) => {
       await this._setSessionParams(conn);
-      return await this._execute(sqlText, conn);
+      return await this._execute(sqlText, conn, options, timeoutMs);
     });
   }
 

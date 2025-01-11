@@ -63,6 +63,9 @@ export interface SnowflakeConnectionOptions {
   scratchSpace?: namespace;
 
   queryOptions?: RunSQLOptions;
+
+  // Timeout for the statement
+  timeoutMs?: number;
 }
 
 type PathChain =
@@ -207,6 +210,11 @@ class SnowArray extends SnowField {
   }
 }
 
+/**
+ * Default statement timeoutMs value, 10 Mins
+ */
+const TIMEOUT_MS = 1000 * 60 * 10;
+
 export class SnowflakeConnection
   extends BaseConnection
   implements
@@ -221,6 +229,7 @@ export class SnowflakeConnection
   // the database & schema where we do temporary operations like creating a temp table
   private scratchSpace?: namespace;
   private queryOptions: RunSQLOptions;
+  private timeoutMs: number;
 
   constructor(
     public readonly name: string,
@@ -235,6 +244,7 @@ export class SnowflakeConnection
     this.executor = new SnowflakeExecutor(connOptions, options?.poolOptions);
     this.scratchSpace = options?.scratchSpace;
     this.queryOptions = options?.queryOptions ?? {};
+    this.timeoutMs = options?.timeoutMs ?? TIMEOUT_MS;
   }
 
   get dialectName(): string {
@@ -273,10 +283,10 @@ export class SnowflakeConnection
 
   public async runSQL(
     sql: string,
-    options?: RunSQLOptions
+    options: RunSQLOptions = {}
   ): Promise<MalloyQueryData> {
     const rowLimit = options?.rowLimit ?? this.queryOptions?.rowLimit;
-    let rows = await this.executor.batch(sql);
+    let rows = await this.executor.batch(sql, options, this.timeoutMs);
     if (rowLimit !== undefined && rows.length > rowLimit) {
       rows = rows.slice(0, rowLimit);
     }
@@ -329,12 +339,24 @@ export class SnowflakeConnection
     }
     // For these things, we need to sample the data to know the schema
     if (variants.length > 0) {
+      // * remove null values
+      // * remove fields for which we have multiple types
+      //   ( requires folding decimal to integer )
       const sampleQuery = `
-      SELECT regexp_replace(PATH, '\\[[0-9]+\\]', '[*]') as PATH, lower(TYPEOF(value)) as type
-      FROM (select object_construct(*) o from  ${tablePath} limit 100)
-            ,table(flatten(input => o, recursive => true)) as meta
-      GROUP BY 1,2
-      ORDER BY PATH;
+        select path, min(type) as type
+        from (
+          select
+            regexp_replace(path, '\\\\[[0-9]+\\\\]', '[*]') as path,
+            case when typeof(value) = 'INTEGER' then 'decimal' else lower(typeof(value)) end as type
+          from
+            (select object_construct(*) o from ${tablePath} limit 100)
+              ,table(flatten(input => o, recursive => true)) as meta
+          group by 1,2
+        )
+        where type != 'null_value'
+        group BY 1
+        having count(*) <=1
+        order by path;
       `;
       const fieldPathRows = await this.executor.batch(sampleQuery);
 
