@@ -839,14 +839,14 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   describe('null safe booleans', () => {
     const nulls = `${databaseName}.sql("""
       SELECT
-        0 as nulls,
+        0 as null_cnt,
         1 as ${q`x`}, 2 as ${q`y`},
         'a' as ${q`a`}, 'b' as ${q`b`},
         (1 = 1) as ${q`tf`}
       UNION ALL SELECT
-        1,
+        5,
         null, null, null, null, null
-    """) extend { where: nulls > 0 }`;
+    """) extend { where: null_cnt > 0 }`;
 
     it('select boolean', async () => {
       await expect(`run: ${nulls} -> {
