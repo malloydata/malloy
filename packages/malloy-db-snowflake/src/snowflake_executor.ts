@@ -56,7 +56,6 @@ export interface ConnectionConfigFile {
 //   return ret;
 // }
 
-
 export class SnowflakeExecutor {
   private static defaultPoolOptions_: PoolOptions = {
     min: 1,
@@ -150,11 +149,16 @@ export class SnowflakeExecutor {
     });
   }
 
-  public async _execute(sqlText: string, conn: Connection, options?: RunSQLOptions, timeoutMs?: number): Promise<QueryData> {
+  public async _execute(
+    sqlText: string,
+    conn: Connection,
+    options?: RunSQLOptions,
+    timeoutMs?: number
+  ): Promise<QueryData> {
     let _statement: RowStatement | undefined;
     const cancel = () => {
       _statement?.cancel();
-    }
+    };
     const timeoutId = timeoutMs ? setTimeout(cancel, timeoutMs) : undefined;
     options?.abortSignal?.addEventListener('abort', cancel);
     return await new Promise((resolve, reject) => {
@@ -197,7 +201,11 @@ export class SnowflakeExecutor {
     );
   }
 
-  public async batch(sqlText: string, options?: RunSQLOptions, timeoutMs?: number): Promise<QueryData> {
+  public async batch(
+    sqlText: string,
+    options?: RunSQLOptions,
+    timeoutMs?: number
+  ): Promise<QueryData> {
     return await this.pool_.use(async (conn: Connection) => {
       await this._setSessionParams(conn);
       return await this._execute(sqlText, conn, options, timeoutMs);
