@@ -1,7 +1,6 @@
-name: "DB:Trino"
+name: 'DB:Trino'
 
 on:
-  pull_request:
   workflow_call:
     secrets:
       BQ_PRESTO_TRINO_KEY:
@@ -12,18 +11,14 @@ jobs:
   test-trino:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        node-version: [18.x]
-
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: 'true'
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Use Node.js 18.x
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 18.x
       - name: npm install, build, and test
         run: |
           npm ci --loglevel error
