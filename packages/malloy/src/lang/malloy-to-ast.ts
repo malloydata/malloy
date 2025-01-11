@@ -2124,29 +2124,10 @@ export class MalloyToAST
     );
   }
 
-  visitExprWarnNullCmp(pcx: parse.ExprWarnNullCmpContext): ast.ExprCompare {
-    let op: ast.CompareMalloyOperator = '=';
+  visitExprNullCheck(pcx: parse.ExprNullCheckContext): ast.ExprIsNull {
     const expr = pcx.fieldExpr();
-    const wholeRange = this.parseInfo.rangeFromContext(pcx);
-    if (pcx.NOT()) {
-      op = '!=';
-      this.warnWithReplacement(
-        'sql-is-not-null',
-        "Use '!= NULL' to check for NULL instead of 'IS NOT NULL'",
-        wholeRange,
-        `${this.getSourceCode(expr)} != null`
-      );
-    } else {
-      this.warnWithReplacement(
-        'sql-is-null',
-        "Use '= NULL' to check for NULL instead of 'IS NULL'",
-        wholeRange,
-        `${this.getSourceCode(expr)} = null`
-      );
-    }
-    const nullExpr = new ast.ExprNULL();
     return this.astAt(
-      new ast.ExprCompare(this.getFieldExpr(expr), op, nullExpr),
+      new ast.ExprIsNull(this.getFieldExpr(expr), pcx.NOT() === undefined),
       pcx
     );
   }

@@ -43,6 +43,24 @@ const compareTypes = {
   '>': [TDU.numberT, TDU.stringT, TDU.dateT, TDU.timestampT],
 };
 
+export class ExprIsNull extends ExpressionDef {
+  elementType = 'is null';
+  constructor(
+    readonly expr: ExpressionDef,
+    readonly eq: boolean
+  ) {
+    super();
+    this.has({expr});
+  }
+
+  getExpression(fs: FieldSpace): ExprValue {
+    const expr = this.expr.getExpression(fs);
+    expr.type = 'boolean';
+    expr.value = {node: this.eq ? 'is-null' : 'is-not-null', e: expr.value};
+    return expr;
+  }
+}
+
 export class ExprCompare extends BinaryBoolean<CompareMalloyOperator> {
   elementType = 'a<=>b';
   constructor(

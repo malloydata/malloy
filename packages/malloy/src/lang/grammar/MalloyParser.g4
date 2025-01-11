@@ -602,7 +602,7 @@ fieldExpr
   | fieldExpr BAR partialAllowedFieldExpr                  # exprOrTree
   | fieldExpr compareOp fieldExpr                          # exprCompare
   | fieldExpr NOT? LIKE fieldExpr                          # exprWarnLike
-  | fieldExpr IS NOT? NULL                                 # exprWarnNullCmp
+  | fieldExpr IS NOT? NULL                                 # exprNullCheck
   | fieldExpr NOT? IN OPAREN fieldExprList CPAREN          # exprWarnIn
   | fieldExpr QMARK partialAllowedFieldExpr                # exprApply
   | NOT fieldExpr                                          # exprNot

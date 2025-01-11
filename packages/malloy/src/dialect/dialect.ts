@@ -173,12 +173,13 @@ export abstract class Dialect {
   // MYSQL doesn't have full join, maybe others.
   supportsFullJoin = true;
 
-  nativeBoolean = true;
-
   // Can have arrays of arrays
   nestedArrays = true;
   // An array or record will reveal type of contents on schema read
   compoundObjectInSchema = true;
+
+  // No true boolean type, e.g. true=1 and false=0, set this to true
+  booleanAsNumbers = false;
 
   abstract getDialectFunctionOverrides(): {
     [name: string]: DialectFunctionOverloadDef[];

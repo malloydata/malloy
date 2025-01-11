@@ -107,7 +107,7 @@ export class MySQLDialect extends Dialect {
   defaultDecimalType = 'DECIMAL';
   udfPrefix = 'ms_temp.__udf';
   hasFinalStage = false;
-  // TODO: this may not be enough for lager casts.
+  // TODO: this may not be enough for larger casts.
   stringTypeName = 'VARCHAR(255)';
   divisionIsInteger = true;
   supportsSumDistinctFunction = true;
@@ -121,13 +121,13 @@ export class MySQLDialect extends Dialect {
   supportsQualify = false;
   supportsNesting = true;
   experimental = false;
-  nativeBoolean = false;
   supportsFullJoin = false;
   supportsPipelinesInViews = false;
   readsNestedData = false;
   supportsComplexFilteredSources = false;
   supportsArraysInData = false;
   compoundObjectInSchema = false;
+  booleanAsNumbers = true;
 
   malloyTypeToSQLType(malloyType: AtomicTypeDef): string {
     switch (malloyType.type) {
