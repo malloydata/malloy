@@ -836,6 +836,57 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
   });
 
+  describe('null safe booleans', () => {
+    const nulls = `${databaseName}.sql("""
+      SELECT
+        0 as nulls,
+        1 as ${q`x`}, 2 as ${q`y`},
+        'a' as ${q`a`}, 'b' as ${q`b`},
+        (1 = 1) as ${q`tf`}
+      UNION ALL SELECT
+        1,
+        null, null, null, null, null
+    """) extend { where: nulls > 0 }`;
+
+    it('select boolean', async () => {
+      await expect(`run: ${nulls} -> {
+        select:
+          null_boolean is tf
+      }`).malloyResultMatches(runtime, {null_boolean: null});
+    });
+    it('not boolean', async () => {
+      await expect(`run: ${nulls} -> {
+        select:
+          not_null_boolean is not tf
+      }`).malloyResultMatches(runtime, {not_null_boolean: true});
+    });
+    it('numeric != non-null to null', async () => {
+      await expect(
+        `run: ${nulls} -> { select: val_ne_null is x != 9 }`
+      ).malloyResultMatches(runtime, {val_ne_null: true});
+    });
+    it('string !~ non-null to null', async () => {
+      await expect(
+        `run: ${nulls} -> { select: val_ne_null is a !~ 'z' }`
+      ).malloyResultMatches(runtime, {val_ne_null: true});
+    });
+    it('regex !~ non-null to null', async () => {
+      await expect(
+        `run: ${nulls} -> { select: val_ne_null is a !~ r'z' }`
+      ).malloyResultMatches(runtime, {val_ne_null: true});
+    });
+    it('numeric != null-to-null', async () => {
+      await expect(
+        `run: ${nulls} -> { select: null_ne_null is x != y }`
+      ).malloyResultMatches(runtime, {null_ne_null: true});
+    });
+    it('string !~ null-to-null', async () => {
+      await expect(
+        `run: ${nulls} -> { select: null_ne_null is a !~ b }`
+      ).malloyResultMatches(runtime, {null_ne_null: true});
+    });
+  });
+
   test('dimension expressions expanded with parens properly', async () => {
     await expect(
       `run: ${databaseName}.sql("SELECT 1 as one") extend {
