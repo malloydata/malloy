@@ -14,6 +14,9 @@ jobs:
           error_message: |
             User does not have write access to this repository. Refer to CONTRIBUTING.md instructions on how to contribute to Malloy.
 
+  # *** IMPORTANT ***
+  # When modifying these, make sure that needs: check-permission
+  # is part of any job that requires secrets.
   main:
     needs: check-permission
     uses: './.github/workflows/main.yaml'
