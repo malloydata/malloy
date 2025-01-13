@@ -242,6 +242,26 @@ describe('expressions', () => {
       expect(expr`ai ? (> 1 & < 100)`).toTranslate();
     });
     describe('sql friendly warnings', () => {
+      test('= null with warning', () => {
+        const warnSrc = expr`${'ai = null'}`;
+        expect(warnSrc).toLog(
+          warningMessage("Use 'is null' to check for NULL instead of '= null'")
+        );
+        expect(warnSrc).compilesTo('{is-null ai}');
+        const warning = warnSrc.translator.problems()[0];
+        expect(warning.replacement).toEqual('ai is null');
+      });
+      test('is not null with warning', () => {
+        const warnSrc = expr`${'ai != null'}`;
+        expect(warnSrc).toLog(
+          warningMessage(
+            "Use 'is not null' to check for NULL instead of '!= null'"
+          )
+        );
+        expect(warnSrc).compilesTo('{is-not-null ai}');
+        const warning = warnSrc.translator.problems()[0];
+        expect(warning.replacement).toEqual('ai is not null');
+      });
       test('like with warning', () => {
         const warnSrc = expr`astr like 'a'`;
         expect(warnSrc).toLog(

@@ -1372,14 +1372,14 @@ export class MalloyToAST
         if (op === '=') {
           this.warnWithReplacement(
             'sql-is-null',
-            "Use IS NULL instead of '= null'",
+            "Use 'is null' to check for NULL instead of '= null'",
             wholeRange,
             `${this.getSourceCode(pcx.fieldExpr(0))} is null`
           );
         } else if (op === '!=') {
           this.warnWithReplacement(
             'sql-is-not-null',
-            "Use IS NOT NULL instead of '!= null'",
+            "Use 'is not null' to check for NULL instead of '!= null'",
             wholeRange,
             `${this.getSourceCode(pcx.fieldExpr(0))} is not null`
           );
