@@ -1292,7 +1292,7 @@ describe('expressions', () => {
     ['astr', 'string'],
     ['abool', 'boolean'],
   ])('Can compare field %s (type %s) to NULL', (name, _datatype) => {
-    expect(expr`${name} = NULL`).toTranslate();
+    expect(expr`${name} IS NULL`).toTranslate();
   });
 });
 describe('alternations as in', () => {
@@ -1353,7 +1353,7 @@ describe('sql native fields in schema', () => {
   });
   test('sql native reference can be compared to NULL', () => {
     const uModel = new TestTranslator(
-      'run: a->{ where: aun != NULL; select: * }'
+      'run: a->{ where: aun !IS NULL; select: * }'
     );
     expect(uModel).toTranslate();
   });

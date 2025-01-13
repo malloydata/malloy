@@ -21,15 +21,34 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {BinaryMalloyOperator, FieldSpace} from '..';
 import {ExprValue, literalExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 
 export class ExprNULL extends ExpressionDef {
   elementType = 'NULL';
+
   getExpression(): ExprValue {
     return literalExprValue({
       dataType: {type: 'null'},
       value: {node: 'null'},
     });
+  }
+
+  apply(
+    fs: FieldSpace,
+    op: BinaryMalloyOperator,
+    left: ExpressionDef
+  ): ExprValue {
+    if (op === '!=' || op === '=') {
+      const expr = left.getExpression(fs);
+      expr.type = 'boolean';
+      expr.value = {
+        node: op === '=' ? 'is-null' : 'is-not-null',
+        e: expr.value,
+      };
+      return expr;
+    }
+    return super.apply(fs, op, left, true);
   }
 }

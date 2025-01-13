@@ -1348,6 +1348,24 @@ export class MalloyToAST
     const left = this.getFieldExpr(pcx.fieldExpr(0));
     const right = this.getFieldExpr(pcx.fieldExpr(1));
     if (ast.isEquality(op)) {
+      const wholeRange = this.parseInfo.rangeFromContext(pcx);
+      if (right instanceof ast.ExprNULL) {
+        if (op === '=') {
+          this.warnWithReplacement(
+            'sql-is-null',
+            "Use IS NULL instead of '= null'",
+            wholeRange,
+            `${this.getSourceCode(pcx.fieldExpr(0))} is null`
+          );
+        } else if (op === '!=') {
+          this.warnWithReplacement(
+            'sql-is-not-null',
+            "Use IS NOT NULL instead of '!= null'",
+            wholeRange,
+            `${this.getSourceCode(pcx.fieldExpr(0))} is not null`
+          );
+        }
+      }
       return this.astAt(new ast.ExprEquality(left, op, right), pcx);
     } else if (ast.isComparison(op)) {
       return this.astAt(new ast.ExprCompare(left, op, right), pcx);

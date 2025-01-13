@@ -82,7 +82,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   it(`bug 151 which used to throw unknown dialect is still fixed- ${databaseName}`, async () => {
     await expect(`
       query: q is ${databaseName}.table('malloytest.aircraft')->{
-        where: state != null
+        where: state is not null
         group_by: state
       }
       run: q extend {
@@ -1035,7 +1035,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
           ${splitFN!(q`city`, ' ')} as ${q`words`}
         FROM ${rootDbPath(databaseName)}malloytest.aircraft
       """) -> {
-        where: words.value != null
+        where: words.value is not null
         group_by: words.value
         aggregate: c is count()
       }
@@ -1089,7 +1089,7 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
     await expect(`
         source: ga_sample is ${databaseName}.table('malloytest.ga_sample')
         run: ga_sample -> {
-          where: hits.product.productBrand != null
+          where: hits.product.productBrand is not null
           group_by:
             hits.product.productBrand
             hits.product.productSKU
@@ -1124,16 +1124,16 @@ SELECT row_to_json(finalStage) as row FROM __stage0 AS finalStage`);
         .loadQuery(
           `
         run: ${databaseName}.table('malloytest.airports') -> {
-          where: faa_region = null
+          where: faa_region is null
           group_by: faa_region
           aggregate: airport_count is count()
           nest: by_state is {
-            where: state != null
+            where: state is not null
             group_by: state
             aggregate: airport_count is count()
           }
           nest: by_state1 is {
-            where: state != null
+            where: state is not null
             group_by: state
             aggregate: airport_count is count()
             limit: 1

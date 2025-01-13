@@ -234,7 +234,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       run: aircraft->{
         top: 10
         order_by: 1
-        where: region != NULL
+        where: region is not null
         group_by: region
         nest: by_state is {
           top: 10
@@ -823,7 +823,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           SELECT '' as ${q`null_value`}, '' as ${q`string_value`}
           UNION ALL SELECT null, 'correct'
       """) -> {
-        where: null_value = null
+        where: null_value is null
         select:
           found_null is  null_value ?? 'correct',
           else_pass is string_value ?? 'incorrect'
