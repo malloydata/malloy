@@ -38,9 +38,9 @@ import {
   ModelDef,
   isSourceDef,
   NamedModelObject,
-  Query,
   SourceDef,
   SQLSourceDef,
+  DependencyTree,
 } from '../model/malloy_types';
 import {MalloyLexer} from './lib/Malloy/MalloyLexer';
 import {MalloyParser} from './lib/Malloy/MalloyParser';
@@ -98,7 +98,8 @@ export type StepResponses =
   | ASTResponse
   | TranslateResponse
   | ParseResponse
-  | MetadataResponse;
+  | MetadataResponse
+  | PretranslatedResponse;
 
 /**
  * This ignores a -> popMode when the mode stack is empty, which is a hack,
@@ -132,7 +133,14 @@ interface TranslationStep {
 interface ParseData extends ProblemResponse, NeedURLData, FinalResponse {
   parse: MalloyParseInfo;
 }
+
 export type ParseResponse = Partial<ParseData>;
+
+interface PretranslatedData {
+  translation: ModelDef;
+}
+
+export type PretranslatedResponse = PretranslatedData | null;
 
 /**
  * ParseStep -- Parse the source URL
@@ -151,19 +159,6 @@ class ParseStep implements TranslationStep {
       return this.response;
     }
 
-    if (that.urlIsFullPath === undefined) {
-      try {
-        const _checkFull = new URL(that.sourceURL);
-        that.urlIsFullPath = true;
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : '';
-        that.urlIsFullPath = false;
-        that.root.logError(
-          'failed-to-compute-absolute-import-url',
-          `Could not compute full path URL: ${msg}`
-        );
-      }
-    }
     if (!that.urlIsFullPath) {
       return that.fatalResponse();
     }
@@ -348,8 +343,10 @@ class ImportsAndTablesStep implements TranslationStep {
       allMissing = {tables};
     }
 
-    const missingImports = that.root.importZone.getUndefined();
-    if (missingImports) {
+    const missingImports = (that.root.importZone.getUndefined() ?? []).filter(
+      url => that.root.pretranslatedModels.get(url) === undefined
+    );
+    if (missingImports.length > 0) {
       allMissing = {...allMissing, urls: missingImports};
     }
 
@@ -358,6 +355,9 @@ class ImportsAndTablesStep implements TranslationStep {
     }
 
     for (const child of that.childTranslators.values()) {
+      if (that.root.pretranslatedModels.get(child.sourceURL)) {
+        continue;
+      }
       const kidNeeds = child.importsAndTablesStep.step(child);
       if (isNeedResponse(kidNeeds)) {
         return kidNeeds;
@@ -433,6 +433,9 @@ class ASTStep implements TranslationStep {
     // Now make sure that every child has fully translated itself
     // before this tree is ready to also translate ...
     for (const child of that.childTranslators.values()) {
+      if (that.root.pretranslatedModels.get(child.sourceURL)) {
+        continue;
+      }
       const kidNeeds = child.astStep.step(child);
       if (isNeedResponse(kidNeeds)) {
         return kidNeeds;
@@ -608,6 +611,16 @@ class TranslateStep implements TranslationStep {
       return this.response;
     }
 
+    const pretranslate = that.root.pretranslatedModels.get(that.sourceURL);
+    if (pretranslate !== undefined) {
+      that.modelDef = pretranslate;
+      return {
+        modelDef: pretranslate,
+        final: true,
+        fromSources: that.getDependencies(),
+      };
+    }
+
     // begin with the compiler flags of the model we are extending
     if (extendingModel && !this.importedAnnotations) {
       const tagParse = Tag.annotationToTag(extendingModel.annotation, {
@@ -636,8 +649,6 @@ class TranslateStep implements TranslationStep {
             return docCompile.needs;
           } else {
             that.modelDef = docCompile.modelDef;
-            that.queryList = docCompile.queryList;
-            that.sqlBlocks = docCompile.sqlBlocks;
             break;
           }
         }
@@ -657,10 +668,9 @@ class TranslateStep implements TranslationStep {
       };
     } else {
       this.response = {
-        translated: {
-          modelDef: that.modelDef,
-          queryList: that.queryList,
-          sqlBlocks: that.sqlBlocks,
+        modelDef: {
+          ...that.modelDef,
+          dependencies: that.getDependencyTree(),
         },
         fromSources: that.getDependencies(),
         ...that.problemResponse(),
@@ -674,9 +684,7 @@ class TranslateStep implements TranslationStep {
 export abstract class MalloyTranslation {
   abstract root: MalloyTranslator;
   childTranslators: Map<string, MalloyTranslation>;
-  urlIsFullPath?: boolean;
-  queryList: Query[] = [];
-  sqlBlocks: SQLSourceDef[] = [];
+  sqlSources: SQLSourceDef[] = [];
   modelDef: ModelDef;
   imports: ImportLocation[] = [];
   compilerFlags = new Tag();
@@ -703,6 +711,8 @@ export abstract class MalloyTranslation {
       name: sourceURL,
       exports: [],
       contents: {},
+      queryList: [],
+      dependencies: {},
     };
     /**
      * This is sort of the makefile for the translation, all the steps
@@ -723,6 +733,24 @@ export abstract class MalloyTranslation {
     this.references = new ReferenceList(sourceURL);
   }
 
+  _urlIsFullPath: boolean | undefined = undefined;
+  get urlIsFullPath(): boolean {
+    if (this._urlIsFullPath === undefined) {
+      try {
+        const _checkFull = new URL(this.sourceURL);
+        this._urlIsFullPath = true;
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : '';
+        this._urlIsFullPath = false;
+        this.root.logError(
+          'failed-to-compute-absolute-import-url',
+          `Could not compute full path URL: ${msg}`
+        );
+      }
+    }
+    return this._urlIsFullPath;
+  }
+
   addChild(url: string): void {
     if (!this.childTranslators.get(url)) {
       this.childTranslators.set(url, new MalloyChildTranslator(url, this.root));
@@ -730,11 +758,40 @@ export abstract class MalloyTranslation {
   }
 
   getDependencies(): string[] {
-    const dependencies = [this.sourceURL];
+    const dependencies = this.getDependencyTree();
+    return [this.sourceURL, ...flattenDependencyTree(dependencies)];
+  }
+
+  getDependencyTree(): DependencyTree {
+    const pretranslated = this.root.pretranslatedModels.get(this.sourceURL);
+    if (pretranslated !== undefined) {
+      return pretranslated.dependencies;
+    }
+    const dependencies: DependencyTree = {};
     for (const [_childURL, child] of this.childTranslators) {
-      dependencies.push(...child.getDependencies());
+      dependencies[_childURL] = child.getDependencyTree();
     }
     return dependencies;
+  }
+
+  newlyTranslatedDependencies(): {url: string; modelDef: ModelDef}[] {
+    const pretranslated = this.root.pretranslatedModels.get(this.sourceURL);
+    if (pretranslated !== undefined) {
+      return [];
+    }
+    const newModels: {url: string; modelDef: ModelDef}[] = [];
+    for (const [url, child] of this.childTranslators) {
+      const pretranslated = this.root.pretranslatedModels.get(url);
+      if (pretranslated !== undefined) {
+        continue;
+      }
+      const result = child.translate();
+      if (result.modelDef) {
+        newModels.push({url, modelDef: result.modelDef});
+        newModels.push(...child.newlyTranslatedDependencies());
+      }
+    }
+    return newModels;
   }
 
   addReference(reference: DocumentReference): void {
@@ -856,7 +913,7 @@ export abstract class MalloyTranslation {
     const child = this.childTranslators.get(childURL);
     if (child) {
       const did = child.translate();
-      if (did.translated) {
+      if (did.modelDef) {
         for (const fromChild of child.modelDef.exports) {
           const modelEntry = child.modelDef.contents[fromChild];
           if (isSourceDef(modelEntry) || modelEntry.type === 'query') {
@@ -879,6 +936,10 @@ export abstract class MalloyTranslation {
       this.finalAnswer = attempt;
     }
     return attempt;
+  }
+
+  translatorForDependency(url: string): MalloyTranslation | undefined {
+    return this.childTranslators.get(url);
   }
 
   importAt(position: DocumentPosition): ImportLocation | undefined {
@@ -1025,6 +1086,7 @@ export class MalloyChildTranslator extends MalloyTranslation {
 export class MalloyTranslator extends MalloyTranslation {
   schemaZone = new Zone<SourceDef>();
   importZone = new Zone<string>();
+  pretranslatedModels = new Map<string, ModelDef>();
   sqlQueryZone = new Zone<SQLSourceDef>();
   logger: BaseMessageLogger;
   readonly root: MalloyTranslator;
@@ -1046,6 +1108,9 @@ export class MalloyTranslator extends MalloyTranslation {
     this.schemaZone.updateFrom(dd.tables, dd.errors?.tables);
     this.importZone.updateFrom(dd.urls, dd.errors?.urls);
     this.sqlQueryZone.updateFrom(dd.compileSQL, dd.errors?.compileSQL);
+    for (const url in dd.translations) {
+      this.pretranslatedModels.set(url, dd.translations[url]);
+    }
   }
 
   logError<T extends MessageCode>(
@@ -1064,10 +1129,14 @@ interface ErrorData {
   tables: Record<string, string>;
   urls: Record<string, string>;
   compileSQL: Record<string, string>;
+  translations: Record<string, string>;
 }
 
 export interface URLData {
   urls: ZoneData<string>;
+}
+export interface ModelData {
+  translations: ZoneData<ModelDef>;
 }
 export interface SchemaData {
   tables: ZoneData<SourceDef>;
@@ -1075,7 +1144,7 @@ export interface SchemaData {
 export interface SQLSources {
   compileSQL: ZoneData<SQLSourceDef>;
 }
-export interface UpdateData extends URLData, SchemaData, SQLSources {
+export interface UpdateData extends URLData, SchemaData, SQLSources, ModelData {
   errors: Partial<ErrorData>;
 }
 export type ParseUpdate = Partial<UpdateData>;
@@ -1117,4 +1186,15 @@ export class MalloyParserErrorHandler implements ANTLRErrorListener<Token> {
       }
     );
   }
+}
+
+function flattenDependencyTree(dependencies: DependencyTree) {
+  return [
+    ...Object.keys(dependencies),
+    ...Object.keys(dependencies)
+      .map(dependency => {
+        return flattenDependencyTree(dependencies[dependency]);
+      })
+      .flat(),
+  ];
 }

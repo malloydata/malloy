@@ -289,8 +289,8 @@ describe('expressions', () => {
       test('x is expr y is not null', () => {
         const isNullSrc = model`source: xa is a extend { dimension: x is 1 y is not null }`;
         expect(isNullSrc).toTranslate();
-        const xaModel = isNullSrc.translator.translate().translated;
-        const xa = getExplore(xaModel!.modelDef, 'xa');
+        const xaModel = isNullSrc.translator.translate().modelDef;
+        const xa = getExplore(xaModel!, 'xa');
         const x = getFieldDef(xa, 'x');
         expect(x).toMatchObject({e: {node: 'numberLiteral'}});
         const y = getFieldDef(xa, 'y');

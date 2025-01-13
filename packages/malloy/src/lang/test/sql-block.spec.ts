@@ -140,7 +140,7 @@ describe('connection sql()', () => {
     const sql = makeSQLSentence([{sql: selStmt}], 'aConnection');
     model.update({compileSQL: {[sql.name]: makeSchemaResponse(sql)}});
     expect(model).toTranslate();
-    const modelDef = model?.translate()?.translated?.modelDef;
+    const modelDef = model?.translate()?.modelDef;
 
     // this tests the underlying api that .extendModel calls
     const extModel = new MalloyTranslator('sqlblocktest://main');
@@ -151,6 +151,6 @@ describe('connection sql()', () => {
     const tr = extModel.translate(modelDef);
     // because extModel is not a TestTranslator we can't use the hotness
     expect(tr.problems).toEqual([]);
-    expect(tr.translated).toBeDefined();
+    expect(tr.modelDef).toBeDefined();
   });
 });

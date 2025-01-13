@@ -37,6 +37,9 @@ describe('import:', () => {
     expect(docParse).toTranslate();
     const aa = docParse.getSourceDef('aa');
     expect(aa).toBeDefined();
+    expect(docParse.translate().modelDef?.dependencies).toMatchObject({
+      'internal://test/langtests/child': {},
+    });
   });
   test('simple source with importBaseURL', () => {
     const docParse = new TestTranslator(
@@ -52,6 +55,9 @@ describe('import:', () => {
     expect(docParse).toTranslate();
     const aa = docParse.getSourceDef('aa');
     expect(aa).toBeDefined();
+    expect(docParse.translate().modelDef?.dependencies).toMatchObject({
+      'http://example.com/child': {},
+    });
   });
   test('simple query', () => {
     const docParse = new TestTranslator('import "child"');
@@ -66,6 +72,9 @@ describe('import:', () => {
     expect(docParse).toTranslate();
     const aq = docParse.getQuery('aq');
     expect(aq).toBeDefined();
+    expect(docParse.translate().modelDef?.dependencies).toMatchObject({
+      'internal://test/langtests/child': {},
+    });
   });
   test('query based source with named structref', () => {
     const docParse = new TestTranslator(`
@@ -127,12 +136,29 @@ source: botProjQSrc is botProjQ
       urls: {'internal://test/langtests/grandChild': '// empty file'},
     });
     expect(docParse).toTranslate();
-    const sources = docParse.translate().fromSources;
+    const translated = docParse.translate();
+    const sources = translated.fromSources;
     expect(sources).toEqual([
       'internal://test/langtests/root.malloy',
       'internal://test/langtests/child',
       'internal://test/langtests/grandChild',
     ]);
+    expect(translated.modelDef?.dependencies).toMatchObject({
+      'internal://test/langtests/child': {
+        'internal://test/langtests/grandChild': {},
+      },
+    });
+    const newDependencies = docParse.newlyTranslatedDependencies();
+    expect(newDependencies).toMatchObject([
+      {url: 'internal://test/langtests/child', modelDef: {}},
+      {url: 'internal://test/langtests/grandChild', modelDef: {}},
+    ]);
+    const child = docParse.translatorForDependency(
+      'internal://test/langtests/child'
+    );
+    expect(child!.translate().modelDef?.dependencies).toMatchObject({
+      'internal://test/langtests/grandChild': {},
+    });
   });
   test('relative imports', () => {
     const docParse = new TestTranslator('import "../parent.malloy"');

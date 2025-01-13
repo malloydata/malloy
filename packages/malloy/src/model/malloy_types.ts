@@ -1459,12 +1459,18 @@ export type NamedModelObject =
   | FunctionDef
   | ConnectionDef;
 
+export interface DependencyTree {
+  [url: string]: DependencyTree;
+}
+
 /** Result of parsing a model file */
 export interface ModelDef {
   name: string;
   exports: string[];
   contents: Record<string, NamedModelObject>;
   annotation?: ModelAnnotation;
+  queryList: Query[];
+  dependencies: DependencyTree;
 }
 
 /** Very common record type */

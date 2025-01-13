@@ -266,6 +266,8 @@ describe('BigQuery hand-built expression test', () => {
     contents: {
       aircraft: aircraftHandBase,
     },
+    queryList: [],
+    dependencies: {},
   };
 
   // BigQuery tests only on the Hand Coded models.
@@ -719,6 +721,8 @@ describe('BigQuery hand-built expression test', () => {
     contents: {
       model_aircraft: joinModelAircraftHandStructDef,
     },
+    queryList: [],
+    dependencies: {},
   };
 
   const handJoinModel = bqRuntime._loadModelFromModelDef(joinModel);

@@ -21,13 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  Annotation,
-  ModelDef,
-  Query,
-  SQLSentence,
-  SQLSourceDef,
-} from '../model/malloy_types';
+import {Annotation, ModelDef, SQLSentence} from '../model/malloy_types';
 import {MalloyElement} from './ast';
 import {LogMessage} from './parse-log';
 import {DocumentSymbol} from './parse-tree-walkers/document-symbol-walker';
@@ -93,16 +87,13 @@ export type CompletionsResponse = Partial<Completions>;
 interface HelpContext extends NeededData, ProblemResponse, FinalResponse {
   helpContext: DocumentHelpContext | undefined;
 }
+
 export type HelpContextResponse = Partial<HelpContext>;
 interface TranslatedResponseData
   extends NeededData,
     ProblemResponse,
     FinalResponse {
-  translated: {
-    modelDef: ModelDef;
-    queryList: Query[];
-    sqlBlocks: SQLSourceDef[];
-  };
+  modelDef: ModelDef;
   fromSources: string[];
 }
 

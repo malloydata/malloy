@@ -254,10 +254,9 @@ export class Malloy {
     for (;;) {
       const result = translator.translate(model?._modelDef);
       if (result.final) {
-        if (result.translated) {
+        if (result.modelDef) {
           return new Model(
-            result.translated.modelDef,
-            result.translated.queryList,
+            result.modelDef,
             result.problems || [],
             [...(model?.fromSources ?? []), ...(result.fromSources ?? [])],
             (position: ModelDocumentPosition) =>
@@ -269,11 +268,12 @@ export class Malloy {
             name: 'modelDidNotCompile',
             exports: [],
             contents: {},
+            dependencies: {},
+            queryList: [],
           };
           const modelFromCompile = model?._modelDef || emptyModel;
           return new Model(
             modelFromCompile,
-            [],
             result.problems || [],
             [...(model?.fromSources ?? []), ...(result.fromSources ?? [])],
             (position: ModelDocumentPosition) =>
@@ -543,6 +543,8 @@ export class Malloy {
           name: 'empty_model',
           exports: [],
           contents: {},
+          queryList: [],
+          dependencies: {},
         }
       );
     } else if (preparedResult) {
@@ -701,7 +703,6 @@ export class Model implements Taggable {
 
   constructor(
     private modelDef: ModelDef,
-    private queryList: InternalQuery[],
     readonly problems: LogMessage[],
     readonly fromSources: string[],
     referenceAt: (
@@ -773,11 +774,11 @@ export class Model implements Taggable {
   public getPreparedQueryByIndex(index: number): PreparedQuery {
     if (index < 0) {
       throw new Error(`Invalid index ${index}.`);
-    } else if (index >= this.queryList.length) {
+    } else if (index >= this.modelDef.queryList.length) {
       throw new Error(`Query index ${index} is out of bounds.`);
     }
     return new PreparedQuery(
-      this.queryList[index],
+      this.modelDef.queryList[index],
       this.modelDef,
       this.problems
     );
@@ -798,11 +799,11 @@ export class Model implements Taggable {
    * @return A prepared query.
    */
   public getPreparedQuery(): PreparedQuery {
-    if (this.queryList.length === 0) {
+    if (this.modelDef.queryList.length === 0) {
       throw new Error('Model has no queries.');
     }
     return new PreparedQuery(
-      this.queryList[this.queryList.length - 1],
+      this.modelDef.queryList[this.modelDef.queryList.length - 1],
       this.modelDef,
       this.problems
     );
@@ -1563,11 +1564,13 @@ export class Explore extends Entity implements Taggable {
       name: 'generated_model',
       exports: [],
       contents: {[this.structDef.name]: this.structDef},
+      queryList: [],
+      dependencies: {},
     };
   }
 
   public getSingleExploreModel(): Model {
-    return new Model(this.modelDef, [], [], []);
+    return new Model(this.modelDef, [], []);
   }
 
   private get fieldMap(): Map<string, Field> {
@@ -2344,7 +2347,7 @@ export class Runtime {
     return new ModelMaterializer(
       this,
       async () => {
-        return new Model(modelDef, [], [], []);
+        return new Model(modelDef, [], []);
       },
       options
     );

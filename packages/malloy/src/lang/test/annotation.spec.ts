@@ -253,9 +253,9 @@ describe('document annotation', () => {
       ## model2
     `);
     expect(m).toTranslate();
-    const model = m.translate()?.translated;
+    const model = m.translate()?.modelDef;
     expect(model).toBeDefined();
-    const notes = model?.modelDef.annotation;
+    const notes = model?.annotation;
     expect(notes).matchesAnnotation({notes: ['## model1\n', '## model2\n']});
   });
   test('ignores objectless object annotations', () => {
@@ -282,11 +282,11 @@ describe('document annotation', () => {
   test('extended models inherit model flags', () => {
     const first = model`## from=1\n`;
     expect(first).toTranslate();
-    const firstModel = first.translator.translate()?.translated?.modelDef;
+    const firstModel = first.translator.translate()?.modelDef;
     expect(firstModel).toBeDefined();
     const second = model`## from=2\n`;
     second.translator.internalModel = firstModel!;
-    const secondModel = second.translator.translate()?.translated?.modelDef;
+    const secondModel = second.translator.translate()?.modelDef;
     expect(secondModel?.annotation).matchesAnnotation({
       inherits: {notes: ['## from=1\n']},
       notes: ['## from=2\n'],

@@ -1276,8 +1276,8 @@ describe('query:', () => {
       `);
       expect(m).toTranslate();
       const t = m.translate();
-      if (t.translated) {
-        const q = t.translated.queryList[0].pipeline[0];
+      if (t.modelDef) {
+        const q = t.modelDef.queryList[0].pipeline[0];
         expect(q).toBeDefined();
         if (q.type === 'reduce' && q.extendSource) {
           expect(q.extendSource.length).toBe(1);
@@ -1300,8 +1300,8 @@ describe('query:', () => {
       `);
       expect(m).toTranslate();
       const t = m.translate();
-      if (t.translated) {
-        const q = t.translated.queryList[0].pipeline[0];
+      if (t.modelDef) {
+        const q = t.modelDef.queryList[0].pipeline[0];
         if (q.type === 'reduce' && q.extendSource) {
           expect(q.extendSource.length).toBe(1);
           const f = q.extendSource[0];
@@ -1323,8 +1323,8 @@ describe('query:', () => {
       `);
       expect(m).toTranslate();
       const t = m.translate();
-      if (t.translated) {
-        const q = t.translated.queryList[0].pipeline[0];
+      if (t.modelDef) {
+        const q = t.modelDef.queryList[0].pipeline[0];
         if (q.type === 'reduce' && q.extendSource) {
           expect(q.extendSource.length).toBe(1);
           expect(isJoined(q.extendSource[0])).toBeTruthy();
