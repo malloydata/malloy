@@ -30,7 +30,6 @@ import {
   ModelAnnotation,
   NamedModelObject,
   Query,
-  SQLSourceDef,
   StructDef,
   isSourceDef,
 } from '../../../model/malloy_types';
