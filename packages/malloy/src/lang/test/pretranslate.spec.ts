@@ -40,5 +40,9 @@ describe('pretranslated models', () => {
     expect(docParse.translate().modelDef?.dependencies).toMatchObject({
       'internal://test/langtests/child': {},
     });
+    const child = docParse.translatorForDependency(
+      'internal://test/langtests/child'
+    );
+    expect(child.translate().modelDef?.dependencies).toMatchObject({});
   });
 });

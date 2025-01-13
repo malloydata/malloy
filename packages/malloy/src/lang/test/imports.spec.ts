@@ -147,6 +147,12 @@ source: botProjQSrc is botProjQ
         'internal://test/langtests/grandChild': {},
       },
     });
+    const child = docParse.translatorForDependency(
+      'internal://test/langtests/child'
+    );
+    expect(child.translate().modelDef?.dependencies).toMatchObject({
+      'internal://test/langtests/grandChild': {},
+    });
   });
   test('relative imports', () => {
     const docParse = new TestTranslator('import "../parent.malloy"');

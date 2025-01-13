@@ -918,6 +918,14 @@ export abstract class MalloyTranslation {
     return attempt;
   }
 
+  translatorForDependency(url: string): MalloyTranslation {
+    const child = this.childTranslators.get(url);
+    if (child === undefined) {
+      throw new Error(`No child translator for ${url}`);
+    }
+    return child;
+  }
+
   importAt(position: DocumentPosition): ImportLocation | undefined {
     // Here we assume that imports DO NOT overlap. And then we do a linear
     // search to find the one we're looking for.
