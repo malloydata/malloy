@@ -150,7 +150,7 @@ source: botProjQSrc is botProjQ
     const child = docParse.translatorForDependency(
       'internal://test/langtests/child'
     );
-    expect(child.translate().modelDef?.dependencies).toMatchObject({
+    expect(child!.translate().modelDef?.dependencies).toMatchObject({
       'internal://test/langtests/grandChild': {},
     });
   });

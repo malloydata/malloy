@@ -61,7 +61,7 @@ describe('pretranslated models', () => {
     const child = docParse.translatorForDependency(
       'internal://test/langtests/child'
     );
-    const childTranslated = child.translate();
+    const childTranslated = child!.translate();
     expect(childTranslated.modelDef?.dependencies).toMatchObject({
       'internal://test/langtests/grandchild': {
         'internal://test/langtests/grandgrandchild1': {},

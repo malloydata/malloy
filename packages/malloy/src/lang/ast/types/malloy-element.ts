@@ -500,7 +500,6 @@ export class Document extends MalloyElement implements NameSpace {
   globalNameSpace: NameSpace = new GlobalNameSpace();
   documentModel: Record<string, ModelEntry> = {};
   queryList: Query[] = [];
-  sqlSources: SQLSourceDef[] = [];
   statements: DocStatementList;
   didInitModel = false;
   annotation: Annotation = {};
@@ -518,7 +517,6 @@ export class Document extends MalloyElement implements NameSpace {
     }
     this.documentModel = {};
     this.queryList = [];
-    this.sqlSources = [];
     if (extendingModelDef) {
       if (extendingModelDef.annotation) {
         this.annotation.inherits = extendingModelDef.annotation;
@@ -543,11 +541,6 @@ export class Document extends MalloyElement implements NameSpace {
     const modelDef = this.modelDef();
     if (needs === undefined) {
       for (const q of this.queryList) {
-        if (q.modelAnnotation === undefined && modelDef.annotation) {
-          q.modelAnnotation = modelDef.annotation;
-        }
-      }
-      for (const q of this.sqlSources) {
         if (q.modelAnnotation === undefined && modelDef.annotation) {
           q.modelAnnotation = modelDef.annotation;
         }
@@ -613,22 +606,6 @@ export class Document extends MalloyElement implements NameSpace {
       }
     }
     return def;
-  }
-
-  defineSQL(sql: SQLSourceDef, name?: string): boolean {
-    const ret = {
-      ...sql,
-      as: `$${this.sqlSources.length}`,
-    };
-    if (name) {
-      if (this.getEntry(name)) {
-        return false;
-      }
-      ret.as = name;
-      this.setEntry(name, {entry: ret});
-    }
-    this.sqlSources.push(ret);
-    return true;
   }
 
   getEntry(str: string): ModelEntry {

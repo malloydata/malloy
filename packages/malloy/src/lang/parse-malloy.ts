@@ -774,6 +774,22 @@ export abstract class MalloyTranslation {
     return dependencies;
   }
 
+  newlyTranslatedDependencies(): {url: string; modelDef: ModelDef}[] {
+    const pretranslated = this.root.pretranslatedModels.get(this.sourceURL);
+    if (pretranslated !== undefined) {
+      return [];
+    }
+    const newModels: {url: string; modelDef: ModelDef}[] = [];
+    for (const [url, child] of this.childTranslators) {
+      const result = child.translate();
+      if (result.modelDef) {
+        newModels.push({url, modelDef: result.modelDef});
+        newModels.push(...child.newlyTranslatedDependencies());
+      }
+    }
+    return newModels;
+  }
+
   addReference(reference: DocumentReference): void {
     this.references.add(reference);
   }
