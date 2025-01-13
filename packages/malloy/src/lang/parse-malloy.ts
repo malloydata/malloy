@@ -614,7 +614,7 @@ class TranslateStep implements TranslationStep {
     if (pretranslate !== undefined) {
       that.setTranslationResults(pretranslate);
       return {
-        translated: pretranslate,
+        modelDef: pretranslate,
         final: true,
         // TODO
         fromSources: [],
@@ -668,7 +668,7 @@ class TranslateStep implements TranslationStep {
       };
     } else {
       this.response = {
-        translated: that.modelDef,
+        modelDef: that.modelDef,
         fromSources: that.getDependencies(),
         ...that.problemResponse(),
         final: true,
@@ -884,7 +884,7 @@ export abstract class MalloyTranslation {
     const child = this.childTranslators.get(childURL);
     if (child) {
       const did = child.translate();
-      if (did.translated) {
+      if (did.modelDef) {
         for (const fromChild of child.modelDef.exports) {
           const modelEntry = child.modelDef.contents[fromChild];
           if (isSourceDef(modelEntry) || modelEntry.type === 'query') {

@@ -387,7 +387,7 @@ export class TestTranslator extends MalloyTranslator {
 
   get nameSpace(): Record<string, NamedModelObject> {
     const gotModel = this.translate();
-    return gotModel?.translated?.contents || {};
+    return gotModel?.modelDef?.contents || {};
   }
 
   exploreFor(exploreName: string): StructDef {
@@ -401,8 +401,8 @@ export class TestTranslator extends MalloyTranslator {
   static inspectCompile = false;
   compile(): void {
     const compileTo = this.translate();
-    if (compileTo.translated && TestTranslator.inspectCompile) {
-      console.log('MODEL: ', pretty(compileTo.translated));
+    if (compileTo.modelDef && TestTranslator.inspectCompile) {
+      console.log('MODEL: ', pretty(compileTo.modelDef));
     }
     // All the stuff to ask the ast for a translation is already in TestTranslator
   }
@@ -412,7 +412,7 @@ export class TestTranslator extends MalloyTranslator {
   }
 
   getSourceDef(srcName: string): SourceDef | undefined {
-    const t = this.translate().translated;
+    const t = this.translate().modelDef;
     const s = t?.contents[srcName];
     if (s && isSourceDef(s)) {
       return s;
@@ -421,7 +421,7 @@ export class TestTranslator extends MalloyTranslator {
   }
 
   getQuery(queryName: string | number): Query | undefined {
-    const t = this.translate().translated;
+    const t = this.translate().modelDef;
     if (t) {
       const s =
         typeof queryName === 'string'

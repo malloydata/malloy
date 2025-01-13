@@ -442,7 +442,7 @@ function checkForProblems(
   emsg += `\nSource:\n${src}`;
   m.compile();
   const t = m.translate();
-  if (t.translated && !expectCompiles) {
+  if (t.modelDef && !expectCompiles) {
     return {pass: false, message: () => emsg};
   } else if (t.problems === undefined) {
     return {

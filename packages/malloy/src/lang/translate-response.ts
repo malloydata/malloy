@@ -93,7 +93,7 @@ interface TranslatedResponseData
   extends NeededData,
     ProblemResponse,
     FinalResponse {
-  translated: ModelDef;
+  modelDef: ModelDef;
   fromSources: string[];
 }
 

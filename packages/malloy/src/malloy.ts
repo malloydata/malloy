@@ -254,9 +254,9 @@ export class Malloy {
     for (;;) {
       const result = translator.translate(model?._modelDef);
       if (result.final) {
-        if (result.translated) {
+        if (result.modelDef) {
           return new Model(
-            result.translated,
+            result.modelDef,
             result.problems || [],
             [...(model?.fromSources ?? []), ...(result.fromSources ?? [])],
             (position: ModelDocumentPosition) =>
