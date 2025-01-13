@@ -140,7 +140,7 @@ describe('connection sql()', () => {
     const sql = makeSQLSentence([{sql: selStmt}], 'aConnection');
     model.update({compileSQL: {[sql.name]: makeSchemaResponse(sql)}});
     expect(model).toTranslate();
-    const modelDef = model?.translate()?.translated?.modelDef;
+    const modelDef = model?.translate()?.translated;
 
     // this tests the underlying api that .extendModel calls
     const extModel = new MalloyTranslator('sqlblocktest://main');

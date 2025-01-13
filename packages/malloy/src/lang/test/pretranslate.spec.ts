@@ -17,22 +17,19 @@ describe('pretranslated models', () => {
     docParse.update({
       translations: {
         'internal://test/langtests/child': {
-          modelDef: {
-            name: 'child',
-            exports: ['foo'],
-            contents: {
-              foo: {
-                type: 'table',
-                tablePath: 'foo',
-                connection: 'duckdb',
-                dialect: 'duckdb',
-                name: 'foo',
-                fields: [],
-              },
+          name: 'child',
+          exports: ['foo'],
+          queryList: [],
+          contents: {
+            foo: {
+              type: 'table',
+              tablePath: 'foo',
+              connection: 'duckdb',
+              dialect: 'duckdb',
+              name: 'foo',
+              fields: [],
             },
           },
-          queryList: [],
-          sqlBlocks: [],
         },
       },
     });

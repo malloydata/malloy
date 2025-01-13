@@ -1,0 +1,132 @@
+
+##! experimental.sql_functions
+
+source: values is duckdb.sql("""
+  SELECT null as value, null as bool_value
+  UNION ALL
+  SELECT 1 as value, true as bool_value
+  UNION ALL
+  SELECT 2 as value, false as bool_value
+""") extend {
+  dimension: x is value
+  dimension: xb is bool_value
+  join_cross: others is duckdb.sql("""
+    SELECT null as value, null as bool_value
+    UNION ALL
+    SELECT 1 as value, true as bool_value
+    UNION ALL
+    SELECT 2 as value, false as bool_value
+  """) on true
+  dimension: y is others.value
+  dimension: yb is others.bool_value
+
+  # dashboard
+  view: summary is {
+    nest: no_values is {
+      group_by: `null = null` is null = null
+      -- group_by: `null is null` is null is null
+      group_by: `null != null` is null != null
+      -- group_by: `null is not null` is null is not null
+      group_by: `1 = null` is 1 = null
+      -- group_by: `1 is null` is 1 is null
+      group_by: `1 != null` is 1 != null
+      -- group_by: `1 is not null` is 1 is not null
+      group_by: `null = 1` is null = 1
+      group_by: `null != 1` is null != 1
+      group_by: `1 = 1` is 1 = 1
+      group_by: `1 != 1` is 1 != 1
+      group_by: `1 = 2` is 1 = 2
+      group_by: `1 != 2` is 1 != 2
+      group_by: `not(true)` is not(true)
+      group_by: `not(false)` is not(false)
+      group_by: `not(null)` is not(null)
+      group_by: `null or null` is 'an error'// null or null
+    }
+    nest: one_value is {
+      group_by: x
+      group_by: `x = null` is x = null
+      group_by: `x != null` is x != null
+      group_by: `null = x` is null = x
+      group_by: `null != x` is null != x
+      group_by: `x = x` is x = x
+      group_by: `x != x` is x != x
+      group_by: `not(x = x)` is not(x = x)
+      group_by: `x = 2` is x = 2
+      group_by: `x != 2` is x != 2
+      group_by: `not(x = 2)` is not(x = 2)
+    }
+    nest: two_values is {
+      group_by: x, y
+      group_by: `x = y` is x = y
+      group_by: `x != y` is x != y
+      group_by: `not (x = y)` is not (x = y)
+    }
+    nest: two_values_or is {
+      group_by: xb, yb
+      group_by: `xb or yb` is xb or yb
+    }
+  }
+
+  -- view: test is {
+  --   group_by: a is check_value ? (x ? pick > 7 when 'tuesday' else < 7)
+  -- }
+}
+
+source: values2 is duckdb.sql("""
+  SELECT null as value, null as bool_value
+  UNION ALL
+  SELECT 1 as value, true as bool_value
+  UNION ALL
+  SELECT 2 as value, false as bool_value
+""") extend {
+  dimension: x is value
+  dimension: xb is bool_value
+  join_cross: others is duckdb.sql("""
+    SELECT null as value, null as bool_value
+    UNION ALL
+    SELECT 1 as value, true as bool_value
+    UNION ALL
+    SELECT 2 as value, false as bool_value
+  """) on true
+  dimension: y is others.value
+  dimension: yb is others.bool_value
+
+  # dashboard
+  view: summary is {
+    nest: no_values is {
+      group_by: `null is null` is null is null //sql_boolean("NULL is NULL")
+      group_by: `null is not null` is null is not null // sql_boolean("NULL is not NULL")
+    }
+    nest: one_value is {
+      group_by: x
+      where: x != 2
+      group_by: `x is null` is x is null // sql_boolean("${x} is NULL")
+      group_by: `x is not null` is x is not null // sql_boolean("${x} is not NULL")
+      group_by: `x = x` is x = x
+      group_by: `x != x` is x != x
+      group_by: `not(x = x)` is not(x = x)
+    }
+    nest: one_value_bool is {
+      group_by: xb
+      group_by: `xb or true` is xb or true
+      group_by: `xb or false` is xb or false
+      group_by: `not xb` is not xb
+      -- group_by: `xb or null` is xb or null
+    }
+    nest: two_values is {
+      group_by: x, y
+      where: x != 2
+      group_by: `x = y` is x = y
+      group_by: `x != y` is x != y
+      group_by: `not (x = y)` is not (x = y)
+    }
+    nest: two_values_bool is {
+      group_by: xb, yb
+      group_by: `xb or yb` is xb or yb
+    }
+  }
+
+  -- view: test is {
+  --   group_by: a is check_value ? (x ? pick > 7 when 'tuesday' else < 7)
+  -- }
+}

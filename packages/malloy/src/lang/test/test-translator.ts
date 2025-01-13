@@ -273,6 +273,7 @@ export class TestTranslator extends MalloyTranslator {
   internalModel: ModelDef = {
     name: testURI,
     exports: [],
+    queryList: [],
     contents: {
       _db_: {type: 'connection', name: '_db_'},
       a: {...aTableDef, primaryKey: 'astr', as: 'a'},
@@ -386,7 +387,7 @@ export class TestTranslator extends MalloyTranslator {
 
   get nameSpace(): Record<string, NamedModelObject> {
     const gotModel = this.translate();
-    return gotModel?.translated?.modelDef.contents || {};
+    return gotModel?.translated?.contents || {};
   }
 
   exploreFor(exploreName: string): StructDef {
@@ -401,8 +402,7 @@ export class TestTranslator extends MalloyTranslator {
   compile(): void {
     const compileTo = this.translate();
     if (compileTo.translated && TestTranslator.inspectCompile) {
-      console.log('MODEL: ', pretty(compileTo.translated.modelDef));
-      console.log('QUERIES: ', pretty(compileTo.translated.queryList));
+      console.log('MODEL: ', pretty(compileTo.translated));
     }
     // All the stuff to ask the ast for a translation is already in TestTranslator
   }
@@ -413,7 +413,7 @@ export class TestTranslator extends MalloyTranslator {
 
   getSourceDef(srcName: string): SourceDef | undefined {
     const t = this.translate().translated;
-    const s = t?.modelDef?.contents[srcName];
+    const s = t?.contents[srcName];
     if (s && isSourceDef(s)) {
       return s;
     }
@@ -425,7 +425,7 @@ export class TestTranslator extends MalloyTranslator {
     if (t) {
       const s =
         typeof queryName === 'string'
-          ? t.modelDef.contents[queryName]
+          ? t.contents[queryName]
           : t.queryList[queryName];
       if (s?.type === 'query') {
         return s;

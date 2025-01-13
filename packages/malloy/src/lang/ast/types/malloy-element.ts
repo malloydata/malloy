@@ -559,9 +559,8 @@ export class Document extends MalloyElement implements NameSpace {
       }
     }
     const ret: DocumentCompileResult = {
-      modelDef,
+      ...modelDef,
       queryList: this.queryList,
-      sqlBlocks: this.sqlBlocks,
       needs,
     };
     return ret;
@@ -588,7 +587,7 @@ export class Document extends MalloyElement implements NameSpace {
   }
 
   modelDef(): ModelDef {
-    const def: ModelDef = {name: '', exports: [], contents: {}};
+    const def: ModelDef = {name: '', exports: [], contents: {}, queryList: []};
     if (this.hasAnnotation()) {
       def.annotation = this.currentModelAnnotation();
     }

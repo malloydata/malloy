@@ -21,10 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DocumentDef} from '../../../model/malloy_types';
+import {ModelDef} from '../../../model/malloy_types';
 
 import {ModelDataRequest} from '../../translate-response';
 
-export interface DocumentCompileResult extends DocumentDef {
+export interface DocumentCompileResult extends ModelDef {
   needs: ModelDataRequest;
 }

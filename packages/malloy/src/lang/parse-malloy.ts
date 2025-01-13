@@ -38,10 +38,8 @@ import {
   ModelDef,
   isSourceDef,
   NamedModelObject,
-  Query,
   SourceDef,
   SQLSourceDef,
-  DocumentDef,
 } from '../model/malloy_types';
 import {MalloyLexer} from './lib/Malloy/MalloyLexer';
 import {MalloyParser} from './lib/Malloy/MalloyParser';
@@ -138,7 +136,7 @@ interface ParseData extends ProblemResponse, NeedURLData, FinalResponse {
 export type ParseResponse = Partial<ParseData>;
 
 interface PretranslatedData {
-  translation: DocumentDef;
+  translation: ModelDef;
 }
 
 export type PretranslatedResponse = PretranslatedData | null;
@@ -670,11 +668,7 @@ class TranslateStep implements TranslationStep {
       };
     } else {
       this.response = {
-        translated: {
-          modelDef: that.modelDef,
-          queryList: that.queryList,
-          sqlBlocks: that.sqlBlocks,
-        },
+        translated: that.modelDef,
         fromSources: that.getDependencies(),
         ...that.problemResponse(),
         final: true,
@@ -687,7 +681,6 @@ class TranslateStep implements TranslationStep {
 export abstract class MalloyTranslation {
   abstract root: MalloyTranslator;
   childTranslators: Map<string, MalloyTranslation>;
-  queryList: Query[] = [];
   sqlBlocks: SQLSourceDef[] = [];
   modelDef: ModelDef;
   imports: ImportLocation[] = [];
@@ -715,6 +708,7 @@ export abstract class MalloyTranslation {
       name: sourceURL,
       exports: [],
       contents: {},
+      queryList: [],
     };
     /**
      * This is sort of the makefile for the translation, all the steps
@@ -753,10 +747,8 @@ export abstract class MalloyTranslation {
     return this._urlIsFullPath;
   }
 
-  public setTranslationResults(documentDef: DocumentDef) {
-    this.modelDef = documentDef.modelDef;
-    this.queryList = documentDef.queryList;
-    this.sqlBlocks = documentDef.sqlBlocks;
+  public setTranslationResults(modelDef: ModelDef) {
+    this.modelDef = modelDef;
   }
 
   addChild(url: string): void {
@@ -1061,7 +1053,7 @@ export class MalloyChildTranslator extends MalloyTranslation {
 export class MalloyTranslator extends MalloyTranslation {
   schemaZone = new Zone<SourceDef>();
   importZone = new Zone<string>();
-  pretranslatedModels = new Map<string, DocumentDef>();
+  pretranslatedModels = new Map<string, ModelDef>();
   sqlQueryZone = new Zone<SQLSourceDef>();
   logger: BaseMessageLogger;
   readonly root: MalloyTranslator;
@@ -1111,7 +1103,7 @@ export interface URLData {
   urls: ZoneData<string>;
 }
 export interface ModelData {
-  translations: ZoneData<DocumentDef>;
+  translations: ZoneData<ModelDef>;
 }
 export interface SchemaData {
   tables: ZoneData<SourceDef>;
