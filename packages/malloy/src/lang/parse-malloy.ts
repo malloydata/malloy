@@ -685,7 +685,7 @@ class TranslateStep implements TranslationStep {
 export abstract class MalloyTranslation {
   abstract root: MalloyTranslator;
   childTranslators: Map<string, MalloyTranslation>;
-  sqlBlocks: SQLSourceDef[] = [];
+  sqlSources: SQLSourceDef[] = [];
   modelDef: ModelDef;
   imports: ImportLocation[] = [];
   compilerFlags = new Tag();
