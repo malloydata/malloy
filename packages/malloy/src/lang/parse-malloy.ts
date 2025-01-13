@@ -781,6 +781,10 @@ export abstract class MalloyTranslation {
     }
     const newModels: {url: string; modelDef: ModelDef}[] = [];
     for (const [url, child] of this.childTranslators) {
+      const pretranslated = this.root.pretranslatedModels.get(url);
+      if (pretranslated !== undefined) {
+        continue;
+      }
       const result = child.translate();
       if (result.modelDef) {
         newModels.push({url, modelDef: result.modelDef});

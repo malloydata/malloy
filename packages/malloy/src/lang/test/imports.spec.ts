@@ -136,17 +136,23 @@ source: botProjQSrc is botProjQ
       urls: {'internal://test/langtests/grandChild': '// empty file'},
     });
     expect(docParse).toTranslate();
-    const sources = docParse.translate().fromSources;
+    const translated = docParse.translate();
+    const sources = translated.fromSources;
     expect(sources).toEqual([
       'internal://test/langtests/root.malloy',
       'internal://test/langtests/child',
       'internal://test/langtests/grandChild',
     ]);
-    expect(docParse.translate().modelDef?.dependencies).toMatchObject({
+    expect(translated.modelDef?.dependencies).toMatchObject({
       'internal://test/langtests/child': {
         'internal://test/langtests/grandChild': {},
       },
     });
+    const newDependencies = docParse.newlyTranslatedDependencies();
+    expect(newDependencies).toMatchObject([
+      {url: 'internal://test/langtests/child', modelDef: {}},
+      {url: 'internal://test/langtests/grandChild', modelDef: {}},
+    ]);
     const child = docParse.translatorForDependency(
       'internal://test/langtests/child'
     );

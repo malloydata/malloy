@@ -51,6 +51,8 @@ describe('pretranslated models', () => {
         },
       },
     });
+    const newDependencies = docParse.newlyTranslatedDependencies();
+    expect(newDependencies).toMatchObject([]);
     expect(translated.fromSources).toEqual([
       'internal://test/langtests/root.malloy',
       'internal://test/langtests/child',
