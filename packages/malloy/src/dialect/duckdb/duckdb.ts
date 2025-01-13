@@ -537,8 +537,7 @@ class DuckDBTypeParser extends TinyParser {
       if (wantID.type === 'id') {
         // unknown field type, strip all type decorations, there was a regex for this
         // in the pre-parser code, but no tests, so this is also untested
-        const next = this.peek();
-        if (next.type === 'precision') {
+        if (this.peek().type === 'precision') {
           this.next();
         }
 
