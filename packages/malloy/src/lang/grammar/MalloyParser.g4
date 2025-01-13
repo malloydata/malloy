@@ -624,9 +624,19 @@ fieldExpr
   | ungroup OPAREN fieldExpr (COMMA fieldName)* CPAREN     # exprUngroup
   ;
 
+partialCompare
+  : compareOp fieldExpr
+  ;
+
+partialTest
+  : partialCompare
+  | IS NOT? NULL
+  ;
+
 partialAllowedFieldExpr
-  : OPAREN compareOp? fieldExpr CPAREN
-  | compareOp? fieldExpr
+  : partialTest
+  | OPAREN partialTest CPAREN
+  | fieldExpr
   ;
 
 fieldExprList

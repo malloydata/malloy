@@ -1273,21 +1273,40 @@ export class MalloyToAST
     return this.astAt(new ast.ExprCoalesce(left, right), pcx);
   }
 
+  visitPartialCompare(pcx: parse.PartialCompareContext): ast.PartialCompare {
+    const partialOp = pcx.compareOp().text;
+    if (ast.isComparison(partialOp)) {
+      return this.astAt(
+        new ast.PartialCompare(partialOp, this.getFieldExpr(pcx.fieldExpr())),
+        pcx
+      );
+    }
+    throw this.internalError(
+      pcx,
+      `partial comparison '${partialOp}' not recognized`
+    );
+  }
+
+  visitPartialTest(pcx: parse.PartialTestContext): ast.ExpressionDef {
+    const cmp = pcx.partialCompare();
+    if (cmp) {
+      return this.visitPartialCompare(cmp);
+    }
+    return this.astAt(new ast.PartialIsNull(pcx.NOT() ? '!=' : '='), pcx);
+  }
+
   visitPartialAllowedFieldExpr(
     pcx: parse.PartialAllowedFieldExprContext
   ): ast.ExpressionDef {
-    const fieldExpr = this.getFieldExpr(pcx.fieldExpr());
-    const partialOp = pcx.compareOp()?.text;
-    if (partialOp) {
-      if (ast.isComparison(partialOp)) {
-        return this.astAt(new ast.PartialCompare(partialOp, fieldExpr), pcx);
-      }
-      throw this.internalError(
-        pcx,
-        `partial comparison '${partialOp}' not recognized`
-      );
+    const exprCx = pcx.fieldExpr();
+    if (exprCx) {
+      return this.getFieldExpr(exprCx);
     }
-    return fieldExpr;
+    const partialCx = pcx.partialTest();
+    if (partialCx) {
+      return this.visitPartialTest(partialCx);
+    }
+    throw this.internalError(pcx, 'impossible partial');
   }
 
   visitExprString(pcx: parse.ExprStringContext): ast.ExprString {
@@ -2145,7 +2164,7 @@ export class MalloyToAST
   visitExprNullCheck(pcx: parse.ExprNullCheckContext): ast.ExprIsNull {
     const expr = pcx.fieldExpr();
     return this.astAt(
-      new ast.ExprIsNull(this.getFieldExpr(expr), pcx.NOT() === undefined),
+      new ast.ExprIsNull(this.getFieldExpr(expr), pcx.NOT() ? '!=' : '='),
       pcx
     );
   }
