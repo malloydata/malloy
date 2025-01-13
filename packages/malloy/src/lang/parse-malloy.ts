@@ -918,12 +918,8 @@ export abstract class MalloyTranslation {
     return attempt;
   }
 
-  translatorForDependency(url: string): MalloyTranslation {
-    const child = this.childTranslators.get(url);
-    if (child === undefined) {
-      throw new Error(`No child translator for ${url}`);
-    }
-    return child;
+  translatorForDependency(url: string): MalloyTranslation | undefined {
+    return this.childTranslators.get(url);
   }
 
   importAt(position: DocumentPosition): ImportLocation | undefined {

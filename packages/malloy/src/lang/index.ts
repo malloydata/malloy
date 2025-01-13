@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export {MalloyTranslator} from './parse-malloy';
+export {MalloyTranslator, MalloyTranslation} from './parse-malloy';
 export type {
   UpdateData,
   SchemaData,
