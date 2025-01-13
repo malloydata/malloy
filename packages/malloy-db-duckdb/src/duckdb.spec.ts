@@ -167,6 +167,22 @@ describe('DuckDBConnection', () => {
         ],
       });
     });
+    it('parses struct with sql native field', () => {
+      const structDef = makeStructDef();
+      connection.fillStructDefFromTypeMap(structDef, {test: PROFESSOR_SCHEMA});
+      expect(structDef.fields[0]).toEqual({
+        'name': 'test',
+        'type': 'array',
+        'elementTypeDef': {type: 'record_element'},
+        'join': 'many',
+        'fields': [
+          {'name': 'professor_id', 'type': 'sql native', 'rawType': 'UUID'},
+          {'name': 'name', 'type': 'string'},
+          {'name': 'age', 'numberType': 'integer', 'type': 'number'},
+          {'name': 'total_sections', 'numberType': 'integer', 'type': 'number'},
+        ],
+      });
+    });
 
     it('parses a simple type', () => {
       const structDef = makeStructDef();
@@ -174,6 +190,16 @@ describe('DuckDBConnection', () => {
       expect(structDef.fields[0]).toEqual({
         'name': 'test',
         'type': 'string',
+      });
+    });
+
+    it('parses unknown type', () => {
+      const structDef = makeStructDef();
+      connection.fillStructDefFromTypeMap(structDef, {test: 'UUID'});
+      expect(structDef.fields[0]).toEqual({
+        'name': 'test',
+        'type': 'sql native',
+        'rawType': 'UUID',
       });
     });
   });
@@ -261,3 +287,6 @@ const NESTED_SCHEMA = 'STRUCT(a double, b integer, c varchar(60))[]';
 const intTyp = {type: 'number', numberType: 'integer'};
 const strTyp = {type: 'string'};
 const dblType = {type: 'number', numberType: 'float'};
+
+const PROFESSOR_SCHEMA =
+  'STRUCT(professor_id UUID, "name" VARCHAR, age BIGINT, total_sections BIGINT)[]';

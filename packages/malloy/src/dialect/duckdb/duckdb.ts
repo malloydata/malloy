@@ -488,7 +488,6 @@ class DuckDBTypeParser extends TinyParser {
   }
 
   typeDef(): AtomicTypeDef {
-    const unknownStart = this.parseCursor;
     const wantID = this.next('id');
     const id = this.sqlID(wantID);
     let baseType: AtomicTypeDef;
@@ -536,20 +535,18 @@ class DuckDBTypeParser extends TinyParser {
       }
     } else {
       if (wantID.type === 'id') {
-        for (;;) {
-          const next = this.peek();
-          // Might be WEIRDTYP(a,b)[] ... stop at the []
-          if (next.type === 'arrayOf' || next.type === 'eof') {
-            break;
-          }
+        // unknown field type, strip all type decorations, there was a regex for this
+        // in the pre-parser code, but no tests, so this is also untested
+        let idEnd = wantID.cursor + wantID.text.length;
+        if (this.peek().type === 'precision') {
           this.next();
+        }
+        if (this.peek().type === 'eof') {
+          idEnd = this.input.length;
         }
         baseType = {
           type: 'sql native',
-          rawType: this.input.slice(
-            unknownStart,
-            this.parseCursor - unknownStart + 1
-          ),
+          rawType: this.input.slice(wantID.cursor, idEnd),
         };
       } else {
         throw this.parseError('Could not understand type');
