@@ -777,6 +777,19 @@ describe('query:', () => {
         group_by: b.ai
       }`).toTranslate();
     });
+    test('reference field in double nested join inside nest', () => {
+      expect(`
+        source: a_2 is a extend { join_one: b is b extend {
+          join_one: c is b on 1 = c.ai
+        } with astr }
+
+        run: a_2 -> {
+          nest: x is {
+            group_by: ai is b.c.ai
+          }
+        }
+      `).toTranslate();
+    });
     test.skip('reference join as field', () => {
       expect(`run: a -> {
         extend: { join_one: b with astr }

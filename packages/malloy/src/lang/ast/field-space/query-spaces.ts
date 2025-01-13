@@ -50,6 +50,7 @@ import {
   emptyCompositeFieldUsage,
   emptyNarrowedCompositeFieldResolution,
   isEmptyCompositeFieldUsage,
+  joinedCompositeFieldUsage,
   mergeCompositeFieldUsage,
   narrowCompositeFieldResolution,
   NarrowedCompositeFieldResolution,
@@ -220,9 +221,10 @@ export abstract class QueryOperationSpace
     const lookup = this.exprSpace.lookup(reference);
     // Should always be found...
     if (lookup.found && lookup.found instanceof StructSpaceFieldBase) {
-      return (
+      return joinedCompositeFieldUsage(
+        joinPath.slice(0, -1),
         lookup.found.fieldDef().onCompositeFieldUsage ??
-        emptyCompositeFieldUsage()
+          emptyCompositeFieldUsage()
       );
     }
     throw new Error('Unexpected join lookup was not found or not a struct');
