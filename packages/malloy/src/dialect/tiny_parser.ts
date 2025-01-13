@@ -6,6 +6,7 @@
  */
 
 export interface TinyToken {
+  cursor: number;
   type: string;
   text: string;
 }
@@ -139,12 +140,14 @@ export class TinyParser {
         if (foundToken) {
           notFound = false;
           let tokenText = foundToken[0];
+          const cursor = this.parseCursor;
           this.parseCursor += tokenText.length;
           if (tokenType !== 'space') {
             if (tokenType[0] === 'q') {
               tokenText = tokenText.slice(1, -1); // strip quotes
             }
             yield {
+              cursor,
               type: tokenType === 'char' ? tokenText : tokenType,
               text: tokenText,
             };
@@ -153,7 +156,7 @@ export class TinyParser {
         }
       }
       if (notFound) {
-        yield {type: 'unexpected token', text: src};
+        yield {cursor: this.parseCursor, type: 'unexpected token', text: src};
         return;
       }
     }
