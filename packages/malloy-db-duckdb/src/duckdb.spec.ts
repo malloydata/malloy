@@ -167,7 +167,7 @@ describe('DuckDBConnection', () => {
         ],
       });
     });
-    it('parses schema with sql native field', () => {
+    it('parses struct with sql native field', () => {
       const structDef = makeStructDef();
       connection.fillStructDefFromTypeMap(structDef, {test: PROFESSOR_SCHEMA});
       expect(structDef.fields[0]).toEqual({

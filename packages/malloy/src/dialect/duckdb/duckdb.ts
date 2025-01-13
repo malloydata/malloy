@@ -537,13 +537,16 @@ class DuckDBTypeParser extends TinyParser {
       if (wantID.type === 'id') {
         // unknown field type, strip all type decorations, there was a regex for this
         // in the pre-parser code, but no tests, so this is also untested
+        let idEnd = wantID.cursor + wantID.text.length;
         if (this.peek().type === 'precision') {
           this.next();
         }
-
+        if (this.peek().type === 'eof') {
+          idEnd = this.input.length;
+        }
         baseType = {
           type: 'sql native',
-          rawType: this.input.slice(wantID.cursor, this.parseCursor - 1),
+          rawType: this.input.slice(wantID.cursor, idEnd),
         };
       } else {
         throw this.parseError('Could not understand type');
