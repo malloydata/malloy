@@ -30,19 +30,49 @@ describe('pretranslated models', () => {
               fields: [],
             },
           },
-          dependencies: {},
+          dependencies: {
+            'internal://test/langtests/grandchild': {
+              'internal://test/langtests/grandgrandchild1': {},
+              'internal://test/langtests/grandgrandchild2': {},
+            },
+          },
         },
       },
     });
     expect(docParse).toTranslate();
     const foo = docParse.getSourceDef('foo');
     expect(foo).toBeDefined();
-    expect(docParse.translate().modelDef?.dependencies).toMatchObject({
-      'internal://test/langtests/child': {},
+    const translated = docParse.translate();
+    expect(translated.modelDef?.dependencies).toMatchObject({
+      'internal://test/langtests/child': {
+        'internal://test/langtests/grandchild': {
+          'internal://test/langtests/grandgrandchild1': {},
+          'internal://test/langtests/grandgrandchild2': {},
+        },
+      },
     });
+    expect(translated.fromSources).toEqual([
+      'internal://test/langtests/root.malloy',
+      'internal://test/langtests/child',
+      'internal://test/langtests/grandchild',
+      'internal://test/langtests/grandgrandchild1',
+      'internal://test/langtests/grandgrandchild2',
+    ]);
     const child = docParse.translatorForDependency(
       'internal://test/langtests/child'
     );
-    expect(child.translate().modelDef?.dependencies).toMatchObject({});
+    const childTranslated = child.translate();
+    expect(childTranslated.modelDef?.dependencies).toMatchObject({
+      'internal://test/langtests/grandchild': {
+        'internal://test/langtests/grandgrandchild1': {},
+        'internal://test/langtests/grandgrandchild2': {},
+      },
+    });
+    expect(childTranslated.fromSources).toEqual([
+      'internal://test/langtests/child',
+      'internal://test/langtests/grandchild',
+      'internal://test/langtests/grandgrandchild1',
+      'internal://test/langtests/grandgrandchild2',
+    ]);
   });
 });

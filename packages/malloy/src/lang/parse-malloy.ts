@@ -617,8 +617,7 @@ class TranslateStep implements TranslationStep {
       return {
         modelDef: pretranslate,
         final: true,
-        // TODO
-        fromSources: [],
+        fromSources: that.getDependencies(),
       };
     }
 
@@ -759,14 +758,15 @@ export abstract class MalloyTranslation {
   }
 
   getDependencies(): string[] {
-    const dependencies = [this.sourceURL];
-    for (const [_childURL, child] of this.childTranslators) {
-      dependencies.push(...child.getDependencies());
-    }
-    return dependencies;
+    const dependencies = this.getDependencyTree();
+    return [this.sourceURL, ...flattenDependencyTree(dependencies)];
   }
 
   getDependencyTree(): DependencyTree {
+    const pretranslated = this.root.pretranslatedModels.get(this.sourceURL);
+    if (pretranslated !== undefined) {
+      return pretranslated.dependencies;
+    }
     const dependencies: DependencyTree = {};
     for (const [_childURL, child] of this.childTranslators) {
       dependencies[_childURL] = child.getDependencyTree();
@@ -1170,4 +1170,15 @@ export class MalloyParserErrorHandler implements ANTLRErrorListener<Token> {
       }
     );
   }
+}
+
+function flattenDependencyTree(dependencies: DependencyTree) {
+  return [
+    ...Object.keys(dependencies),
+    ...Object.keys(dependencies)
+      .map(dependency => {
+        return flattenDependencyTree(dependencies[dependency]);
+      })
+      .flat(),
+  ];
 }
