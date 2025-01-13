@@ -25,6 +25,7 @@ import {ModelDef} from '../../../model/malloy_types';
 
 import {ModelDataRequest} from '../../translate-response';
 
-export interface DocumentCompileResult extends ModelDef {
+export interface DocumentCompileResult {
+  modelDef: ModelDef;
   needs: ModelDataRequest;
 }

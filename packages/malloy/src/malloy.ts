@@ -268,6 +268,7 @@ export class Malloy {
             name: 'modelDidNotCompile',
             exports: [],
             contents: {},
+            dependencies: {},
             queryList: [],
           };
           const modelFromCompile = model?._modelDef || emptyModel;
@@ -543,6 +544,7 @@ export class Malloy {
           exports: [],
           contents: {},
           queryList: [],
+          dependencies: {},
         }
       );
     } else if (preparedResult) {
@@ -1563,6 +1565,7 @@ export class Explore extends Entity implements Taggable {
       exports: [],
       contents: {[this.structDef.name]: this.structDef},
       queryList: [],
+      dependencies: {},
     };
   }
 

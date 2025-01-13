@@ -40,6 +40,7 @@ import {
   NamedModelObject,
   SourceDef,
   SQLSourceDef,
+  DependencyTree,
 } from '../model/malloy_types';
 import {MalloyLexer} from './lib/Malloy/MalloyLexer';
 import {MalloyParser} from './lib/Malloy/MalloyParser';
@@ -612,7 +613,7 @@ class TranslateStep implements TranslationStep {
 
     const pretranslate = that.root.pretranslatedModels.get(that.sourceURL);
     if (pretranslate !== undefined) {
-      that.setTranslationResults(pretranslate);
+      that.modelDef = pretranslate;
       return {
         modelDef: pretranslate,
         final: true,
@@ -648,7 +649,7 @@ class TranslateStep implements TranslationStep {
           if (docCompile.needs) {
             return docCompile.needs;
           } else {
-            that.setTranslationResults(docCompile);
+            that.modelDef = docCompile.modelDef;
             break;
           }
         }
@@ -668,7 +669,10 @@ class TranslateStep implements TranslationStep {
       };
     } else {
       this.response = {
-        modelDef: that.modelDef,
+        modelDef: {
+          ...that.modelDef,
+          dependencies: that.getDependencyTree(),
+        },
         fromSources: that.getDependencies(),
         ...that.problemResponse(),
         final: true,
@@ -709,6 +713,7 @@ export abstract class MalloyTranslation {
       exports: [],
       contents: {},
       queryList: [],
+      dependencies: {},
     };
     /**
      * This is sort of the makefile for the translation, all the steps
@@ -747,10 +752,6 @@ export abstract class MalloyTranslation {
     return this._urlIsFullPath;
   }
 
-  public setTranslationResults(modelDef: ModelDef) {
-    this.modelDef = modelDef;
-  }
-
   addChild(url: string): void {
     if (!this.childTranslators.get(url)) {
       this.childTranslators.set(url, new MalloyChildTranslator(url, this.root));
@@ -761,6 +762,14 @@ export abstract class MalloyTranslation {
     const dependencies = [this.sourceURL];
     for (const [_childURL, child] of this.childTranslators) {
       dependencies.push(...child.getDependencies());
+    }
+    return dependencies;
+  }
+
+  getDependencyTree(): DependencyTree {
+    const dependencies: DependencyTree = {};
+    for (const [_childURL, child] of this.childTranslators) {
+      dependencies[_childURL] = child.getDependencyTree();
     }
     return dependencies;
   }

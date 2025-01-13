@@ -274,6 +274,7 @@ export class TestTranslator extends MalloyTranslator {
     name: testURI,
     exports: [],
     queryList: [],
+    dependencies: {},
     contents: {
       _db_: {type: 'connection', name: '_db_'},
       a: {...aTableDef, primaryKey: 'astr', as: 'a'},

@@ -30,11 +30,15 @@ describe('pretranslated models', () => {
               fields: [],
             },
           },
+          dependencies: {},
         },
       },
     });
     expect(docParse).toTranslate();
     const foo = docParse.getSourceDef('foo');
     expect(foo).toBeDefined();
+    expect(docParse.translate().modelDef?.dependencies).toMatchObject({
+      'internal://test/langtests/child': {},
+    });
   });
 });
