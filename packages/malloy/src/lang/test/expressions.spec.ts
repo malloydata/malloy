@@ -170,11 +170,17 @@ describe('expressions', () => {
     test('null-check (??)', () => {
       expect('ai ?? 7').compilesTo('{ai coalesce 7}');
     });
-    test('is-null', () => {
+    test('normal is-null', () => {
       expect('ai is null').compilesTo('{is-null ai}');
     });
-    test('is-not-null', () => {
+    test('normal is-not-null', () => {
       expect('ai is not null').compilesTo('{is-not-null ai}');
+    });
+    test('apply is-null', () => {
+      expect('ai ? is null').compilesTo('{is-null ai}');
+    });
+    test('apply is-not-null', () => {
+      expect('ai ? is not null').compilesTo('{is-not-null ai}');
     });
     test('coalesce type mismatch', () => {
       expect(new BetaExpression('ai ?? @2003')).toLog(

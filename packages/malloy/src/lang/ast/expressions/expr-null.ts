@@ -64,7 +64,7 @@ export class PartialIsNull extends ExpressionDef {
   }
 
   apply(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {
-    return doIsNull(fs, op, expr);
+    return doIsNull(fs, this.op, expr);
   }
 
   requestExpression(_fs: FieldSpace): ExprValue | undefined {
