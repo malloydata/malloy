@@ -1353,7 +1353,7 @@ describe('sql native fields in schema', () => {
   });
   test('sql native reference can be compared to NULL', () => {
     const uModel = new TestTranslator(
-      'run: a->{ where: aun !IS NULL; select: * }'
+      'run: a->{ where: aun is not null; select: * }'
     );
     expect(uModel).toTranslate();
   });

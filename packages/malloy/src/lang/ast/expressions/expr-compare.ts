@@ -93,6 +93,10 @@ export class ExprEquality extends ExprCompare {
     super(left, op, right);
   }
 
+  getExpression(fs: FieldSpace): ExprValue {
+    return this.right.apply(fs, this.op, this.left, true);
+  }
+
   apply(
     fs: FieldSpace,
     op: BinaryMalloyOperator,
