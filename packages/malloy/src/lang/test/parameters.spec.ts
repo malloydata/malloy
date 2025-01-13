@@ -71,7 +71,7 @@ describe('parameters', () => {
     expect(`
       ##! experimental.parameters
       source: ab_new(param is null::string) is ab extend {
-        where: param = null
+        where: param is null
       }
         run: ab_new(param is "foo") -> { select: * } -> { select: * }
     `).toTranslate();

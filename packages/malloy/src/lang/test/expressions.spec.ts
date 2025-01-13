@@ -170,6 +170,18 @@ describe('expressions', () => {
     test('null-check (??)', () => {
       expect('ai ?? 7').compilesTo('{ai coalesce 7}');
     });
+    test('normal is-null', () => {
+      expect('ai is null').compilesTo('{is-null ai}');
+    });
+    test('normal is-not-null', () => {
+      expect('ai is not null').compilesTo('{is-not-null ai}');
+    });
+    test('apply is-null', () => {
+      expect('ai ? is null').compilesTo('{is-null ai}');
+    });
+    test('apply is-not-null', () => {
+      expect('ai ? is not null').compilesTo('{is-not-null ai}');
+    });
     test('coalesce type mismatch', () => {
       expect(new BetaExpression('ai ?? @2003')).toLog(
         errorMessage('Mismatched types for coalesce (number, date)')
@@ -230,25 +242,25 @@ describe('expressions', () => {
       expect(expr`ai ? (> 1 & < 100)`).toTranslate();
     });
     describe('sql friendly warnings', () => {
-      test('is null with warning', () => {
-        const warnSrc = expr`ai is null`;
+      test('= null with warning', () => {
+        const warnSrc = expr`${'ai = null'}`;
         expect(warnSrc).toLog(
-          warningMessage("Use '= NULL' to check for NULL instead of 'IS NULL'")
+          warningMessage("Use 'is null' to check for NULL instead of '= null'")
         );
         expect(warnSrc).compilesTo('{is-null ai}');
         const warning = warnSrc.translator.problems()[0];
-        expect(warning.replacement).toEqual('ai = null');
+        expect(warning.replacement).toEqual('ai is null');
       });
       test('is not null with warning', () => {
-        const warnSrc = expr`ai is not null`;
+        const warnSrc = expr`${'ai != null'}`;
         expect(warnSrc).toLog(
           warningMessage(
-            "Use '!= NULL' to check for NULL instead of 'IS NOT NULL'"
+            "Use 'is not null' to check for NULL instead of '!= null'"
           )
         );
         expect(warnSrc).compilesTo('{is-not-null ai}');
         const warning = warnSrc.translator.problems()[0];
-        expect(warning.replacement).toEqual('ai != null');
+        expect(warning.replacement).toEqual('ai is not null');
       });
       test('like with warning', () => {
         const warnSrc = expr`astr like 'a'`;
@@ -267,24 +279,6 @@ describe('expressions', () => {
         expect(warnSrc).compilesTo('{astr !like "a"}');
         const warning = warnSrc.translator.problems()[0];
         expect(warning.replacement).toEqual("astr !~ 'a'");
-      });
-      test('is is-null in a model', () => {
-        const isNullSrc = model`source: xa is a extend { dimension: x1 is astr is null }`;
-        expect(isNullSrc).toLog(
-          warningMessage("Use '= NULL' to check for NULL instead of 'IS NULL'")
-        );
-      });
-      test('is not-null in a model', () => {
-        const isNullSrc = model`source: xa is a extend { dimension: x1 is not null }`;
-        expect(isNullSrc).toTranslate();
-      });
-      test('is not-null is in a model', () => {
-        const isNullSrc = model`source: xa is a extend { dimension: x1 is not null is null }`;
-        expect(isNullSrc).toLog(
-          warningMessage("Use '= NULL' to check for NULL instead of 'IS NULL'")
-        );
-        const warning = isNullSrc.translator.problems()[0];
-        expect(warning.replacement).toEqual('null = null');
       });
       test('x is expr y is not null', () => {
         const isNullSrc = model`source: xa is a extend { dimension: x is 1 y is not null }`;
@@ -1324,7 +1318,7 @@ describe('expressions', () => {
     ['astr', 'string'],
     ['abool', 'boolean'],
   ])('Can compare field %s (type %s) to NULL', (name, _datatype) => {
-    expect(expr`${name} = NULL`).toTranslate();
+    expect(expr`${name} IS NULL`).toTranslate();
   });
 });
 describe('alternations as in', () => {
@@ -1385,7 +1379,7 @@ describe('sql native fields in schema', () => {
   });
   test('sql native reference can be compared to NULL', () => {
     const uModel = new TestTranslator(
-      'run: a->{ where: aun != NULL; select: * }'
+      'run: a->{ where: aun is not null; select: * }'
     );
     expect(uModel).toTranslate();
   });

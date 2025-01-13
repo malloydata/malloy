@@ -66,7 +66,7 @@ describe('db:Snowflake', () => {
       .loadModel("source: aircraft is snowflake.table('malloytest.aircraft')")
       .loadQuery(
         `run:  aircraft -> {
-        where: state != null
+        where: state is not null
         aggregate: cnt is count()
         group_by:  state}`
       )

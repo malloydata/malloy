@@ -73,7 +73,7 @@ source: airports is duckdb,table('airports.parquet') extend {
     heliport_count is airport_count {where: fac_type = 'HELIPORT'}
 
   view: by_state is {
-    where: state != null
+    where: state is not null
     group_by: state
     aggregate: airport_count
   }

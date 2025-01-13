@@ -1273,21 +1273,40 @@ export class MalloyToAST
     return this.astAt(new ast.ExprCoalesce(left, right), pcx);
   }
 
+  visitPartialCompare(pcx: parse.PartialCompareContext): ast.PartialCompare {
+    const partialOp = pcx.compareOp().text;
+    if (ast.isComparison(partialOp)) {
+      return this.astAt(
+        new ast.PartialCompare(partialOp, this.getFieldExpr(pcx.fieldExpr())),
+        pcx
+      );
+    }
+    throw this.internalError(
+      pcx,
+      `partial comparison '${partialOp}' not recognized`
+    );
+  }
+
+  visitPartialTest(pcx: parse.PartialTestContext): ast.ExpressionDef {
+    const cmp = pcx.partialCompare();
+    if (cmp) {
+      return this.visitPartialCompare(cmp);
+    }
+    return this.astAt(new ast.PartialIsNull(pcx.NOT() ? '!=' : '='), pcx);
+  }
+
   visitPartialAllowedFieldExpr(
     pcx: parse.PartialAllowedFieldExprContext
   ): ast.ExpressionDef {
-    const fieldExpr = this.getFieldExpr(pcx.fieldExpr());
-    const partialOp = pcx.compareOp()?.text;
-    if (partialOp) {
-      if (ast.isComparison(partialOp)) {
-        return this.astAt(new ast.PartialCompare(partialOp, fieldExpr), pcx);
-      }
-      throw this.internalError(
-        pcx,
-        `partial comparison '${partialOp}' not recognized`
-      );
+    const exprCx = pcx.fieldExpr();
+    if (exprCx) {
+      return this.getFieldExpr(exprCx);
     }
-    return fieldExpr;
+    const partialCx = pcx.partialTest();
+    if (partialCx) {
+      return this.visitPartialTest(partialCx);
+    }
+    throw this.internalError(pcx, 'impossible partial');
   }
 
   visitExprString(pcx: parse.ExprStringContext): ast.ExprString {
@@ -1348,6 +1367,24 @@ export class MalloyToAST
     const left = this.getFieldExpr(pcx.fieldExpr(0));
     const right = this.getFieldExpr(pcx.fieldExpr(1));
     if (ast.isEquality(op)) {
+      const wholeRange = this.parseInfo.rangeFromContext(pcx);
+      if (right instanceof ast.ExprNULL) {
+        if (op === '=') {
+          this.warnWithReplacement(
+            'sql-is-null',
+            "Use 'is null' to check for NULL instead of '= null'",
+            wholeRange,
+            `${this.getSourceCode(pcx.fieldExpr(0))} is null`
+          );
+        } else if (op === '!=') {
+          this.warnWithReplacement(
+            'sql-is-not-null',
+            "Use 'is not null' to check for NULL instead of '!= null'",
+            wholeRange,
+            `${this.getSourceCode(pcx.fieldExpr(0))} is not null`
+          );
+        }
+      }
       return this.astAt(new ast.ExprEquality(left, op, right), pcx);
     } else if (ast.isComparison(op)) {
       return this.astAt(new ast.ExprCompare(left, op, right), pcx);
@@ -2124,29 +2161,10 @@ export class MalloyToAST
     );
   }
 
-  visitExprWarnNullCmp(pcx: parse.ExprWarnNullCmpContext): ast.ExprCompare {
-    let op: ast.CompareMalloyOperator = '=';
+  visitExprNullCheck(pcx: parse.ExprNullCheckContext): ast.ExprIsNull {
     const expr = pcx.fieldExpr();
-    const wholeRange = this.parseInfo.rangeFromContext(pcx);
-    if (pcx.NOT()) {
-      op = '!=';
-      this.warnWithReplacement(
-        'sql-is-not-null',
-        "Use '!= NULL' to check for NULL instead of 'IS NOT NULL'",
-        wholeRange,
-        `${this.getSourceCode(expr)} != null`
-      );
-    } else {
-      this.warnWithReplacement(
-        'sql-is-null',
-        "Use '= NULL' to check for NULL instead of 'IS NULL'",
-        wholeRange,
-        `${this.getSourceCode(expr)} = null`
-      );
-    }
-    const nullExpr = new ast.ExprNULL();
     return this.astAt(
-      new ast.ExprCompare(this.getFieldExpr(expr), op, nullExpr),
+      new ast.ExprIsNull(this.getFieldExpr(expr), pcx.NOT() ? '!=' : '='),
       pcx
     );
   }

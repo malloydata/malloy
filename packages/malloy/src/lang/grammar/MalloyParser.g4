@@ -602,7 +602,7 @@ fieldExpr
   | fieldExpr BAR partialAllowedFieldExpr                  # exprOrTree
   | fieldExpr compareOp fieldExpr                          # exprCompare
   | fieldExpr NOT? LIKE fieldExpr                          # exprWarnLike
-  | fieldExpr IS NOT? NULL                                 # exprWarnNullCmp
+  | fieldExpr IS NOT? NULL                                 # exprNullCheck
   | fieldExpr NOT? IN OPAREN fieldExprList CPAREN          # exprWarnIn
   | fieldExpr QMARK partialAllowedFieldExpr                # exprApply
   | NOT fieldExpr                                          # exprNot
@@ -624,9 +624,19 @@ fieldExpr
   | ungroup OPAREN fieldExpr (COMMA fieldName)* CPAREN     # exprUngroup
   ;
 
+partialCompare
+  : compareOp fieldExpr
+  ;
+
+partialTest
+  : partialCompare
+  | IS NOT? NULL
+  ;
+
 partialAllowedFieldExpr
-  : OPAREN compareOp? fieldExpr CPAREN
-  | compareOp? fieldExpr
+  : partialTest
+  | OPAREN partialTest CPAREN
+  | fieldExpr
   ;
 
 fieldExprList

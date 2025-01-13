@@ -397,7 +397,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         run: compose(
           state_facts extend { dimension: bar is 1 },
           state_facts
-        ) -> { index: bar } -> { group_by: fieldName; where: fieldName != null }
+        ) -> { index: bar } -> { group_by: fieldName; where: fieldName is not null }
       `).malloyResultMatches(runtime, {fieldName: 'bar'});
     });
   });

@@ -56,7 +56,7 @@ function modelText(databaseName: string) {
   }
 
   view: by_county is {
-    where: county != null
+    where: county is not null
     group_by: county
     aggregate: airport_count
     limit: 2
@@ -64,7 +64,7 @@ function modelText(databaseName: string) {
   }
 
   view: by_state is {
-    where: state != null
+    where: state is not null
     group_by: state
     aggregate: airport_count
     limit: 2
