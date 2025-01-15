@@ -2324,6 +2324,10 @@ export class ExploreField extends Explore {
   }
 }
 
+type Connectionable =
+  | {connection: Connection; lookupConnection?: undefined}
+  | {lookupConnection: LookupConnection<Connection>; connection?: undefined};
+
 /**
  * An environment for compiling and running Malloy queries.
  */
@@ -2332,72 +2336,46 @@ export class Runtime {
   private _urlReader: URLReader;
   private _connections: LookupConnection<Connection>;
   private _eventStream: EventStream | undefined;
-  private modelCache: ModelCache | undefined;
+  private _modelCache: ModelCache | undefined;
   private cacheManager: CacheManager | undefined;
 
-  // TODO remove, for testing only
-  public getModelCache(): ModelCache | undefined {
-    return this.modelCache;
-  }
-
-  constructor(runtime: LookupConnection<Connection> & URLReader);
-  constructor(
-    urls: URLReader,
-    connections: LookupConnection<Connection>,
-    eventStream?: EventStream
-  );
-  constructor(
-    urls: URLReader,
-    connection: Connection,
-    eventStream?: EventStream
-  );
-  constructor(connection: Connection, eventStream?: EventStream);
-  constructor(
-    connections: LookupConnection<Connection>,
-    eventStream?: EventStream
-  );
-  constructor(
-    ...args: (
-      | URLReader
-      | LookupConnection<Connection>
-      | Connection
-      | EventStream
-      | undefined
-    )[]
-  ) {
-    let urlReader: URLReader | undefined;
-    let connections: LookupConnection<Connection> | undefined;
-    let eventStream: EventStream | undefined;
-    for (const arg of args) {
-      if (arg === undefined) {
-        continue;
-      } else if (isURLReader(arg)) {
-        urlReader = arg;
-      } else if (isLookupConnection<Connection>(arg)) {
-        connections = arg;
-      } else if (isEventStream(arg)) {
-        eventStream = arg;
-      } else {
-        connections = {
-          lookupConnection: () => Promise.resolve(arg),
-        };
+  constructor({
+    urlReader,
+    lookupConnection,
+    connection,
+    eventStream,
+    modelCache,
+  }: {
+    urlReader?: URLReader;
+    eventStream?: EventStream;
+    modelCache?: ModelCache;
+  } & Connectionable) {
+    if (lookupConnection === undefined) {
+      if (connection === undefined) {
+        throw new Error(
+          'A LookupConnection<Connection> or Connection is required.'
+        );
       }
+      lookupConnection = {
+        lookupConnection: () => Promise.resolve(connection),
+      };
     }
     if (urlReader === undefined) {
       urlReader = new EmptyURLReader();
     }
-    if (connections === undefined) {
-      throw new Error(
-        'A LookupConnection<Connection> or Connection is required.'
-      );
-    }
     this._urlReader = urlReader;
-    this._connections = connections;
+    this._connections = lookupConnection;
     this._eventStream = eventStream;
-    const modelCache = new InMemoryModelCache(); // TODO make this a parameter
-    this.modelCache = modelCache;
+    this._modelCache = modelCache;
     this.cacheManager =
       urlReader && modelCache && new CacheManager({modelCache, urlReader});
+  }
+
+  /**
+   * @return The `ModelCache` for this runtime instance.
+   */
+  public get modelCache(): ModelCache | undefined {
+    return this._modelCache;
   }
 
   /**
@@ -2590,24 +2568,18 @@ export class Runtime {
 export class ConnectionRuntime extends Runtime {
   public readonly rawConnections: Connection[];
 
-  constructor(urls: URLReader, connections: Connection[]);
-  constructor(connections: Connection[]);
-  constructor(
-    urlsOrConnections: URLReader | Connection[],
-    maybeConnections?: Connection[]
-  ) {
-    if (maybeConnections === undefined) {
-      const connections = urlsOrConnections as Connection[];
-      super(FixedConnectionMap.fromArray(connections));
-      this.rawConnections = connections;
-    } else {
-      const connections = maybeConnections as Connection[];
-      super(
-        urlsOrConnections as URLReader,
-        FixedConnectionMap.fromArray(connections)
-      );
-      this.rawConnections = connections;
-    }
+  constructor({
+    urlReader,
+    connections,
+  }: {
+    urlReader?: URLReader;
+    connections: Connection[];
+  }) {
+    super({
+      lookupConnection: FixedConnectionMap.fromArray(connections),
+      urlReader,
+    });
+    this.rawConnections = connections;
   }
 }
 
@@ -2616,31 +2588,23 @@ export class SingleConnectionRuntime<
 > extends Runtime {
   public readonly connection: T;
 
-  constructor(urlReader: URLReader, connection: T);
-  constructor(connection: T);
-  constructor(connection: T, eventStream: EventStream);
-  constructor(urlReader: URLReader, connection: T, eventStream: EventStream);
-  constructor(...params: (URLReader | T | EventStream)[]) {
-    let urlReader: URLReader | undefined;
-    let connection: T | undefined;
-    let eventStream: EventStream | undefined;
-    for (const param of params) {
-      if (isURLReader(param)) {
-        urlReader = param;
-      }
-      if (isConnection(param)) {
-        connection = param;
-      }
-      if (isEventStream(param)) {
-        eventStream = param;
-      }
-    }
-    if (connection === undefined) {
-      throw new Error(
-        'Expected connection to be passed into SingleConnectionRuntime'
-      );
-    }
-    super(urlReader as URLReader, connection, eventStream);
+  constructor({
+    urlReader,
+    connection,
+    eventStream,
+    modelCache,
+  }: {
+    urlReader?: URLReader;
+    eventStream?: EventStream;
+    modelCache?: ModelCache;
+    connection: T;
+  }) {
+    super({
+      urlReader,
+      eventStream,
+      modelCache,
+      connection,
+    });
     this.connection = connection;
   }
 
@@ -3975,50 +3939,6 @@ export class DataRecord extends Data<{[fieldName: string]: DataColumn}> {
       },
     };
   }
-}
-
-function isURLReader(
-  thing:
-    | URLReader
-    | LookupConnection<InfoConnection>
-    | LookupConnection<Connection>
-    | Connection
-    | EventStream
-): thing is URLReader {
-  return 'readURL' in thing;
-}
-
-function isLookupConnection<T extends InfoConnection = InfoConnection>(
-  thing:
-    | URLReader
-    | LookupConnection<InfoConnection>
-    | LookupConnection<Connection>
-    | Connection
-    | EventStream
-): thing is LookupConnection<T> {
-  return 'lookupConnection' in thing;
-}
-
-function isEventStream(
-  thing:
-    | URLReader
-    | LookupConnection<InfoConnection>
-    | LookupConnection<Connection>
-    | Connection
-    | EventStream
-): thing is EventStream {
-  return 'emit' in thing;
-}
-
-function isConnection<T extends Connection>(
-  thing:
-    | URLReader
-    | LookupConnection<InfoConnection>
-    | LookupConnection<Connection>
-    | Connection
-    | EventStream
-): thing is T {
-  return 'runSQL' in thing;
 }
 
 export interface WriteStream {

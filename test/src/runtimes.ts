@@ -29,6 +29,7 @@ import {
   RunSQLOptions,
   SingleConnectionRuntime,
   InMemoryURLReader,
+  InMemoryModelCache,
 } from '@malloydata/malloy';
 import {BigQueryConnection} from '@malloydata/db-bigquery';
 import {DuckDBConnection} from '@malloydata/db-duckdb';
@@ -236,7 +237,12 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
 }
 
 export function testRuntimeFor(connection: Connection) {
-  return new SingleConnectionRuntime(files, connection, new EventEmitter());
+  return new SingleConnectionRuntime({
+    urlReader: files,
+    connection,
+    eventStream: new EventEmitter(),
+    modelCache: new InMemoryModelCache(),
+  });
 }
 
 /**

@@ -40,10 +40,16 @@ describe('db:BigQuery', () => {
     const files = {
       readURL: async (url: URL) => {
         const filePath = fileURLToPath(url);
-        return await util.promisify(fs.readFile)(filePath, 'utf8');
+        const contents = await util.promisify(fs.readFile)(filePath, 'utf8');
+        // TODO do we ever care about invalidation keys here?
+        return {contents, invalidationKey: 1};
       },
+      getInvalidationKey: async (_url: URL) => 1,
     };
-    runtime = new malloy.Runtime(files, bq);
+    runtime = new malloy.Runtime({
+      urlReader: files,
+      connection: bq,
+    });
   });
 
   it('runs a SQL query', async () => {

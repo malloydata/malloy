@@ -29,7 +29,7 @@ const runtimes = new RuntimeList(databases);
 
 describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   test('model caching works', async () => {
-    const modelCache = runtime.getModelCache();
+    const modelCache = runtime.modelCache;
     const urlReader = runtime.urlReader;
     expect(urlReader instanceof TestURLReader).toBe(true);
     if (!(urlReader instanceof TestURLReader)) return;

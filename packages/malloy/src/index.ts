@@ -168,6 +168,7 @@ export {
   Parse,
   DataWriter,
   Explore,
+  InMemoryModelCache,
 } from './malloy';
 export type {
   PreparedQuery,
