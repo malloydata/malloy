@@ -30,6 +30,8 @@ import {
   SingleConnectionRuntime,
   InMemoryURLReader,
   InMemoryModelCache,
+  CacheManager,
+  ModelCache,
 } from '@malloydata/malloy';
 import {BigQueryConnection} from '@malloydata/db-bigquery';
 import {DuckDBConnection} from '@malloydata/db-duckdb';
@@ -145,6 +147,12 @@ export class DuckDBWASMTestConnection extends DuckDBWASMConnection {
   }
 }
 
+export class TestCacheManager extends CacheManager {
+  constructor(readonly _modelCache: ModelCache) {
+    super(_modelCache);
+  }
+}
+
 export class TestURLReader extends InMemoryURLReader {
   constructor() {
     super(new Map());
@@ -241,7 +249,7 @@ export function testRuntimeFor(connection: Connection) {
     urlReader: files,
     connection,
     eventStream: new EventEmitter(),
-    modelCache: new InMemoryModelCache(),
+    cacheManager: new TestCacheManager(new InMemoryModelCache()),
   });
 }
 

@@ -169,6 +169,7 @@ export {
   DataWriter,
   Explore,
   InMemoryModelCache,
+  CacheManager,
 } from './malloy';
 export type {
   PreparedQuery,
@@ -190,6 +191,7 @@ export type {
   ExploreMaterializer,
   WriteStream,
   SerializedExplore,
+  ModelCache,
   // Needed for renderer type narrowing
   DateField,
   TimestampField,

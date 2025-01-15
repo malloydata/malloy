@@ -290,7 +290,10 @@ export class Malloy {
     // Before anything, if we have a URL and not source code, we check if that URL
     // is cached.
     if (source === undefined && cacheManager !== undefined) {
-      const cached = await cacheManager.getCachedModelDef(url.toString());
+      const cached = await cacheManager.getCachedModelDef(
+        urlReader,
+        url.toString()
+      );
       if (cached) {
         return new Model(
           cached.modelDef,
@@ -382,7 +385,10 @@ export class Malloy {
               }
               // First, check the cache
               if (cacheManager !== undefined) {
-                const cached = await cacheManager.getCachedModelDef(neededUrl);
+                const cached = await cacheManager.getCachedModelDef(
+                  urlReader,
+                  neededUrl
+                );
                 if (cached) {
                   for (const dependency in cached.invalidationKeys) {
                     invalidationKeys[dependency] =
@@ -2321,8 +2327,8 @@ export class ExploreField extends Explore {
 }
 
 type Connectionable =
-  | {connection: Connection; lookupConnection?: undefined}
-  | {lookupConnection: LookupConnection<Connection>; connection?: undefined};
+  | {connection: Connection; connections?: undefined}
+  | {connections: LookupConnection<Connection>; connection?: undefined};
 
 /**
  * An environment for compiling and running Malloy queries.
@@ -2332,27 +2338,26 @@ export class Runtime {
   private _urlReader: URLReader;
   private _connections: LookupConnection<Connection>;
   private _eventStream: EventStream | undefined;
-  private _modelCache: ModelCache | undefined;
-  private cacheManager: CacheManager | undefined;
+  private _cacheManager: CacheManager | undefined;
 
   constructor({
     urlReader,
-    lookupConnection,
+    connections,
     connection,
     eventStream,
-    modelCache,
+    cacheManager,
   }: {
     urlReader?: URLReader;
     eventStream?: EventStream;
-    modelCache?: ModelCache;
+    cacheManager?: CacheManager;
   } & Connectionable) {
-    if (lookupConnection === undefined) {
+    if (connections === undefined) {
       if (connection === undefined) {
         throw new Error(
           'A LookupConnection<Connection> or Connection is required.'
         );
       }
-      lookupConnection = {
+      connections = {
         lookupConnection: () => Promise.resolve(connection),
       };
     }
@@ -2360,18 +2365,16 @@ export class Runtime {
       urlReader = new EmptyURLReader();
     }
     this._urlReader = urlReader;
-    this._connections = lookupConnection;
+    this._connections = connections;
     this._eventStream = eventStream;
-    this._modelCache = modelCache;
-    this.cacheManager =
-      urlReader && modelCache && new CacheManager({modelCache, urlReader});
+    this._cacheManager = cacheManager;
   }
 
   /**
-   * @return The `ModelCache` for this runtime instance.
+   * @return The `CacheManager` for this runtime instance.
    */
-  public get modelCache(): ModelCache | undefined {
-    return this._modelCache;
+  public get cacheManager(): CacheManager | undefined {
+    return this._cacheManager;
   }
 
   /**
@@ -2572,7 +2575,7 @@ export class ConnectionRuntime extends Runtime {
     connections: Connection[];
   }) {
     super({
-      lookupConnection: FixedConnectionMap.fromArray(connections),
+      connections: FixedConnectionMap.fromArray(connections),
       urlReader,
     });
     this.rawConnections = connections;
@@ -2588,17 +2591,17 @@ export class SingleConnectionRuntime<
     urlReader,
     connection,
     eventStream,
-    modelCache,
+    cacheManager,
   }: {
     urlReader?: URLReader;
     eventStream?: EventStream;
-    modelCache?: ModelCache;
+    cacheManager?: CacheManager;
     connection: T;
   }) {
     super({
       urlReader,
       eventStream,
-      modelCache,
+      cacheManager,
       connection,
     });
     this.connection = connection;
@@ -4186,21 +4189,11 @@ export interface ModelCache {
 export class CacheManager {
   private modelDependencies: Map<string, DependencyTree> = new Map();
   private modelInvalidationKeys: Map<string, InvalidationKey> = new Map();
-  private modelCache: ModelCache;
-  private urlReader: URLReader;
 
-  constructor({
-    modelCache,
-    urlReader,
-  }: {
-    modelCache: ModelCache;
-    urlReader: URLReader;
-  }) {
-    this.modelCache = modelCache;
-    this.urlReader = urlReader;
-  }
+  constructor(private modelCache: ModelCache) {}
 
   async getCachedModelDef(
+    urlReader: URLReader,
     url: string
   ): Promise<CacheGetModelDefResponse | undefined> {
     const _dependencies = this.modelDependencies.get(url);
@@ -4218,7 +4211,7 @@ export class CacheManager {
     }
     for (const dependency of dependencies) {
       const invalidationKey = await getInvalidationKey(
-        this.urlReader,
+        urlReader,
         new URL(dependency)
       );
       if (invalidationKey !== invalidationKeys[dependency]) {

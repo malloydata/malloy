@@ -58,7 +58,7 @@ describe('Multi-connection', () => {
 
   const runtime = new malloy.Runtime({
     urlReader: files,
-    lookupConnection: connectionMap,
+    connections: connectionMap,
   });
 
   afterAll(async () => {

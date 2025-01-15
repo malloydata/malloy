@@ -22,18 +22,20 @@
  */
 
 import {describeIfDatabaseAvailable} from '../../util';
-import {RuntimeList, TestURLReader} from '../../runtimes';
+import {RuntimeList, TestCacheManager, TestURLReader} from '../../runtimes';
 
 const [_describe, databases] = describeIfDatabaseAvailable(['duckdb']);
 const runtimes = new RuntimeList(databases);
 
 describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   test('model caching works', async () => {
-    const modelCache = runtime.modelCache;
+    const cacheManager = runtime.cacheManager;
     const urlReader = runtime.urlReader;
     expect(urlReader instanceof TestURLReader).toBe(true);
     if (!(urlReader instanceof TestURLReader)) return;
-    expect(modelCache).toBeDefined();
+    expect(cacheManager instanceof TestCacheManager).toBe(true);
+    if (!(cacheManager instanceof TestCacheManager)) return;
+    const modelCache = cacheManager._modelCache;
     if (modelCache === undefined) return;
     const aURL = new URL('file://a.malloy');
     const bURL = new URL('file://b.malloy');
