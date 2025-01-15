@@ -291,7 +291,7 @@ export class Malloy {
     // is cached.
     if (source === undefined && cacheManager !== undefined) {
       const cached = await cacheManager.getCachedModelDef(url.toString());
-      if (cached.modelDef) {
+      if (cached) {
         return new Model(
           cached.modelDef,
           [], // TODO when using a model from cache, should we also store the problems??
@@ -383,7 +383,7 @@ export class Malloy {
               // First, check the cache
               if (cacheManager !== undefined) {
                 const cached = await cacheManager.getCachedModelDef(neededUrl);
-                if (cached.modelDef) {
+                if (cached) {
                   for (const dependency in cached.invalidationKeys) {
                     invalidationKeys[dependency] =
                       cached.invalidationKeys[dependency];
@@ -4249,8 +4249,8 @@ export class CSVWriter extends DataWriter {
 }
 
 interface CacheGetModelDefResponse {
-  modelDef: ModelDef | undefined;
-  invalidationKeys?: {[url: string]: InvalidationKey};
+  modelDef: ModelDef;
+  invalidationKeys: {[url: string]: InvalidationKey};
 }
 
 export interface ModelCache {
@@ -4284,43 +4284,41 @@ export class CacheManager {
     this.urlReader = urlReader;
   }
 
-  async getCachedModelDef(url: string): Promise<CacheGetModelDefResponse> {
+  async getCachedModelDef(
+    url: string
+  ): Promise<CacheGetModelDefResponse | undefined> {
     const _dependencies = this.modelDependencies.get(url);
     if (_dependencies === undefined) {
-      return {modelDef: undefined};
+      return undefined;
     }
     const dependencies = [url, ...flatDeps(_dependencies)];
     const invalidationKeys = {};
     for (const dependency of dependencies) {
       const invalidationKey = this.modelInvalidationKeys.get(dependency);
       if (invalidationKey === undefined) {
-        return {modelDef: undefined};
+        return undefined;
       }
       invalidationKeys[dependency] = invalidationKey;
     }
-    // const newInvalidationKeys = {};
     for (const dependency of dependencies) {
       const invalidationKey = await this.urlReader.getInvalidationKey(
         new URL(dependency)
       );
       if (invalidationKey !== invalidationKeys[dependency]) {
-        return {modelDef: undefined};
-        // TODO is it helpful to fetch all the invalidation keys anyway?
+        return undefined;
       }
-      // newInvalidationKeys[dependency] =
     }
     const cached = await this.modelCache.getModel(new URL(url));
     if (cached === undefined) {
-      return {modelDef: undefined};
+      return undefined;
     }
     for (const dependency of dependencies) {
       if (
         cached.invalidationKeys[dependency] !== invalidationKeys[dependency]
       ) {
-        return {modelDef: undefined};
+        return undefined;
       }
     }
-
     // Return the cached model def and the invalidation keys for this
     // model def's dependencies
     return {modelDef: cached.modelDef, invalidationKeys};
@@ -4364,11 +4362,6 @@ export class InMemoryModelCache implements ModelCache {
     string,
     {modelDef: ModelDef; invalidationKeys: {[url: string]: InvalidationKey}}
   >();
-
-  private hash(input: string): string {
-    const MALLOY_UUID = '76c17e9d-f3ce-5f2d-bfde-98ad3d2a37f6';
-    return uuidv5(input, MALLOY_UUID);
-  }
 
   public async getModel(url: URL): Promise<
     | {
