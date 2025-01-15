@@ -49,7 +49,10 @@ describe('db:Snowflake', () => {
         return await util.promisify(fs.readFile)(filePath, 'utf8');
       },
     };
-    runtime = new malloy.Runtime(files, conn);
+    runtime = new malloy.Runtime({
+      urlReader: files,
+      connection: conn,
+    });
   });
 
   afterAll(async () => {
