@@ -35,7 +35,7 @@ export async function loadModel({
   connection: Promise<DuckDBWASMConnection>;
 }) {
   const conn = await connection;
-  return new SingleConnectionRuntime(conn).loadModel(script);
+  return new SingleConnectionRuntime({connection: conn}).loadModel(script);
 }
 
 export async function runQuery({
