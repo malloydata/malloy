@@ -41,7 +41,8 @@ export type ModelURL = URL;
  */
 export type QueryURL = URL;
 
-export type InvalidationKey = string | number | Date;
+// An null InvalidationKey indicates to not cache...
+export type InvalidationKey = string | number | Date | null;
 
 /**
  * An object capable of reading the contents of a URL in some context.

@@ -104,6 +104,8 @@ export interface Loggable {
   error: (message?: any, ...optionalParams: any[]) => void;
 }
 
+const MALLOY_INTERNAL_URL = 'internal://internal.malloy';
+
 export interface ParseOptions {
   importBaseURL?: URL;
   testEnvironment?: boolean;
@@ -151,7 +153,7 @@ export class Malloy {
     invalidationKey?: InvalidationKey
   ): Parse {
     if (url === undefined) {
-      url = new URL('internal://internal.malloy');
+      url = new URL(MALLOY_INTERNAL_URL);
     }
     let importBaseURL = url;
     if (options?.importBaseURL) {
@@ -290,7 +292,7 @@ export class Malloy {
       if (parse !== undefined) {
         url = new URL(parse._translator.sourceURL);
       } else {
-        url = new URL('internal://internal.malloy');
+        url = new URL(MALLOY_INTERNAL_URL);
       }
     }
     const invalidationKeys = {};
@@ -392,7 +394,7 @@ export class Malloy {
         if (result.urls) {
           for (const neededUrl of result.urls) {
             try {
-              if (neededUrl.startsWith('internal://')) {
+              if (isInternalURL(neededUrl)) {
                 throw new Error(
                   'In order to use relative imports, you must compile a file via a URL.'
                 );
@@ -1467,7 +1469,7 @@ export class InMemoryURLReader implements URLReader {
     if (file !== undefined) {
       return Promise.resolve({
         contents: file,
-        invalidationKey: hashForInvalidationKey(file),
+        invalidationKey: this.invalidationKey(url, file),
       });
     } else {
       throw new Error(`File not found '${url}'`);
@@ -1477,10 +1479,17 @@ export class InMemoryURLReader implements URLReader {
   public async getInvalidationKey(url: URL): Promise<InvalidationKey> {
     const file = this.files.get(url.toString());
     if (file !== undefined) {
-      return Promise.resolve(hashForInvalidationKey(file));
+      return Promise.resolve(this.invalidationKey(url, file));
     } else {
       throw new Error(`File not found '${url}'`);
     }
+  }
+
+  private invalidationKey(url: URL, contents: string): InvalidationKey {
+    if (isInternalURL(url.toString())) {
+      return null;
+    }
+    return hashForInvalidationKey(contents);
   }
 }
 
@@ -4225,7 +4234,7 @@ export class CacheManager {
     const invalidationKeys = {};
     for (const dependency of dependencies) {
       const invalidationKey = this.modelInvalidationKeys.get(dependency);
-      if (invalidationKey === undefined) {
+      if (invalidationKey === undefined || invalidationKey === null) {
         return undefined;
       }
       invalidationKeys[dependency] = invalidationKey;
@@ -4263,6 +4272,9 @@ export class CacheManager {
     this.modelDependencies.set(url, modelDef.dependencies);
     const invalidationKeysToSave = {};
     for (const dependency of [url, ...flatDeps(modelDef.dependencies)]) {
+      if (invalidationKeys[dependency] === null) {
+        return false;
+      }
       if (invalidationKeys[dependency] === undefined) {
         throw new Error(
           `Missing invalidation key for dependency ${dependency}`
@@ -4330,13 +4342,25 @@ async function readURL(
       : result;
   return {
     contents,
-    invalidationKey: invalidationKey ?? hashForInvalidationKey(contents),
+    invalidationKey: isInternalURL(url.toString())
+      ? null
+      : invalidationKey ?? hashForInvalidationKey(contents),
   };
 }
 
-async function getInvalidationKey(urlReader: URLReader, url: URL) {
+async function getInvalidationKey(
+  urlReader: URLReader,
+  url: URL
+): Promise<InvalidationKey> {
+  if (isInternalURL(url.toString())) {
+    return null;
+  }
   if (urlReader.getInvalidationKey !== undefined) {
     return await urlReader.getInvalidationKey(url);
   }
   return (await readURL(urlReader, url)).invalidationKey;
+}
+
+function isInternalURL(url: string) {
+  return url.startsWith('internal://');
 }
