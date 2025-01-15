@@ -23,12 +23,12 @@
 
 import {
   Connection,
-  EmptyURLReader,
   MalloyQueryData,
   QueryDataRow,
   Result,
   RunSQLOptions,
   SingleConnectionRuntime,
+  InMemoryURLReader,
 } from '@malloydata/malloy';
 import {BigQueryConnection} from '@malloydata/db-bigquery';
 import {DuckDBConnection} from '@malloydata/db-duckdb';
@@ -144,7 +144,21 @@ export class DuckDBWASMTestConnection extends DuckDBWASMConnection {
   }
 }
 
-const files = new EmptyURLReader();
+export class TestURLReader extends InMemoryURLReader {
+  constructor() {
+    super(new Map());
+  }
+
+  setFile(url: URL, contents: string) {
+    this.files.set(url.toString(), contents);
+  }
+
+  deleteFile(url: URL) {
+    this.files.delete(url.toString());
+  }
+}
+
+const files = new TestURLReader();
 
 export function rows(qr: Result): QueryDataRow[] {
   return qr.data.value;
