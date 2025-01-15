@@ -230,7 +230,7 @@ export class Malloy {
           'Internal Error: url is required if source not present.'
         );
       }
-      return urlReader.readURL(url).then(({contents}) => {
+      return readURL(urlReader, url).then(({contents}) => {
         return Malloy._parse(contents, url, eventStream, options);
       });
     }
@@ -307,7 +307,7 @@ export class Malloy {
       translator = parse._translator;
     } else {
       if (source === undefined) {
-        const {contents, invalidationKey} = await urlReader.readURL(url);
+        const {contents, invalidationKey} = await readURL(urlReader, url);
         invalidationKeys[url.toString()] = invalidationKey;
         source = contents;
       }
@@ -395,7 +395,8 @@ export class Malloy {
                 }
               }
               // Otherwise, fetch the URL contents
-              const {contents, invalidationKey} = await urlReader.readURL(
+              const {contents, invalidationKey} = await readURL(
+                urlReader,
                 new URL(neededUrl)
               );
               const urls = {[neededUrl]: contents};
@@ -1432,11 +1433,6 @@ export class EmptyURLReader implements URLReader {
 export class InMemoryURLReader implements URLReader {
   constructor(protected files: Map<string, string>) {}
 
-  private hash(input: string): string {
-    const MALLOY_UUID = '76c17e9d-f3ce-5f2d-bfde-98ad3d2a37f6';
-    return uuidv5(input, MALLOY_UUID);
-  }
-
   public async readURL(
     url: URL
   ): Promise<{contents: string; invalidationKey: InvalidationKey}> {
@@ -1444,7 +1440,7 @@ export class InMemoryURLReader implements URLReader {
     if (file !== undefined) {
       return Promise.resolve({
         contents: file,
-        invalidationKey: this.hash(file),
+        invalidationKey: hashForInvalidationKey(file),
       });
     } else {
       throw new Error(`File not found '${url}'`);
@@ -1454,7 +1450,7 @@ export class InMemoryURLReader implements URLReader {
   public async getInvalidationKey(url: URL): Promise<InvalidationKey> {
     const file = this.files.get(url.toString());
     if (file !== undefined) {
-      return Promise.resolve(this.hash(file));
+      return Promise.resolve(hashForInvalidationKey(file));
     } else {
       throw new Error(`File not found '${url}'`);
     }
@@ -4221,7 +4217,8 @@ export class CacheManager {
       invalidationKeys[dependency] = invalidationKey;
     }
     for (const dependency of dependencies) {
-      const invalidationKey = await this.urlReader.getInvalidationKey(
+      const invalidationKey = await getInvalidationKey(
+        this.urlReader,
         new URL(dependency)
       );
       if (invalidationKey !== invalidationKeys[dependency]) {
@@ -4301,4 +4298,31 @@ export class InMemoryModelCache implements ModelCache {
     this.models.set(url.toString(), {modelDef, invalidationKeys});
     return Promise.resolve(true);
   }
+}
+
+function hashForInvalidationKey(input: string): string {
+  const MALLOY_UUID = '76c17e9d-f3ce-5f2d-bfde-98ad3d2a37f6';
+  return uuidv5(input, MALLOY_UUID);
+}
+
+async function readURL(
+  urlReader: URLReader,
+  url: URL
+): Promise<{contents: string; invalidationKey: InvalidationKey}> {
+  const result = await urlReader.readURL(url);
+  const {contents, invalidationKey} =
+    typeof result === 'string'
+      ? {contents: result, invalidationKey: undefined}
+      : result;
+  return {
+    contents,
+    invalidationKey: invalidationKey ?? hashForInvalidationKey(contents),
+  };
+}
+
+async function getInvalidationKey(urlReader: URLReader, url: URL) {
+  if (urlReader.getInvalidationKey !== undefined) {
+    return await urlReader.getInvalidationKey(url);
+  }
+  return (await readURL(urlReader, url)).invalidationKey;
 }

@@ -55,8 +55,8 @@ export interface URLReader {
    */
   readURL: (
     url: URL
-  ) => Promise<{contents: string; invalidationKey: InvalidationKey}>;
-  getInvalidationKey: (url: URL) => Promise<InvalidationKey>;
+  ) => Promise<string | {contents: string; invalidationKey?: InvalidationKey}>;
+  getInvalidationKey?: (url: URL) => Promise<InvalidationKey>;
 }
 
 export interface EventStream {
