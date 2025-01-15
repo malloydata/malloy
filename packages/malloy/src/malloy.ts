@@ -147,7 +147,8 @@ export class Malloy {
     source: string,
     url?: URL,
     eventStream?: EventStream,
-    options?: ParseOptions
+    options?: ParseOptions,
+    invalidationKey?: InvalidationKey
   ): Parse {
     if (url === undefined) {
       url = new URL('internal://internal.malloy');
@@ -167,7 +168,7 @@ export class Malloy {
     if (options?.testEnvironment) {
       translator.allDialectsEnabled = true;
     }
-    return new Parse(translator);
+    return new Parse(translator, invalidationKey);
   }
 
   /**
@@ -230,8 +231,14 @@ export class Malloy {
           'Internal Error: url is required if source not present.'
         );
       }
-      return readURL(urlReader, url).then(({contents}) => {
-        return Malloy._parse(contents, url, eventStream, options);
+      return readURL(urlReader, url).then(({contents, invalidationKey}) => {
+        return Malloy._parse(
+          contents,
+          url,
+          eventStream,
+          options,
+          invalidationKey
+        );
       });
     }
   }
@@ -306,19 +313,26 @@ export class Malloy {
     importBaseURL ??= url;
     let translator: MalloyTranslator;
     // It's not cached, so we may need to get the actual source
+    const _url = url.toString();
     if (parse !== undefined) {
       translator = parse._translator;
+      const invalidationKey =
+        parse._invalidationKey ?? (await getInvalidationKey(urlReader, url));
+      invalidationKeys[_url] = invalidationKey;
     } else {
       if (source === undefined) {
         const {contents, invalidationKey} = await readURL(urlReader, url);
-        invalidationKeys[url.toString()] = invalidationKey;
+        invalidationKeys[_url] = invalidationKey;
         source = contents;
+      } else {
+        const invalidationKey = await getInvalidationKey(urlReader, url);
+        invalidationKeys[_url] = invalidationKey;
       }
       translator = new MalloyTranslator(
-        url.toString(),
+        _url,
         importBaseURL.toString(),
         {
-          urls: {[url.toString()]: source},
+          urls: {[_url]: source},
         },
         eventStream
       );
@@ -1042,7 +1056,10 @@ export class PreparedQuery implements Taggable {
  * A parsed Malloy document.
  */
 export class Parse {
-  constructor(private translator: MalloyTranslator) {}
+  constructor(
+    private translator: MalloyTranslator,
+    private invalidationKey?: InvalidationKey
+  ) {}
 
   /**
    * Retrieve the symbols defined in the parsed document.
@@ -1072,6 +1089,10 @@ export class Parse {
 
   public get _translator(): MalloyTranslator {
     return this.translator;
+  }
+
+  public get _invalidationKey(): InvalidationKey | undefined {
+    return this.invalidationKey;
   }
 
   public completions(position: {
