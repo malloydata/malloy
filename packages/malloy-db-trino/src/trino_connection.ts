@@ -447,7 +447,7 @@ export class PrestoConnection extends TrinoPrestoConnection {
     this.schemaFromExplain(explainResult, structDef);
   }
 
-  private schemaFromExplain(
+  protected schemaFromExplain(
     explainResult: MalloyQueryData,
     structDef: StructDef
   ) {
