@@ -63,39 +63,35 @@ describe('Trino connection', () => {
 
   describe('schema parser', () => {
     it('parses arrays', () => {
-      expect(connection.malloyTypeFromTrinoType('test', ARRAY_SCHEMA)).toEqual({
+      expect(connection.malloyTypeFromTrinoType(ARRAY_SCHEMA)).toEqual({
         type: 'array',
         elementTypeDef: intType,
       });
     });
 
     it('parses inline', () => {
-      expect(connection.malloyTypeFromTrinoType('test', INLINE_SCHEMA)).toEqual(
-        {
-          'type': 'record',
-          'fields': recordSchema,
-        }
-      );
+      expect(connection.malloyTypeFromTrinoType(INLINE_SCHEMA)).toEqual({
+        'type': 'record',
+        'fields': recordSchema,
+      });
     });
 
     it('parses nested', () => {
-      expect(connection.malloyTypeFromTrinoType('test', NESTED_SCHEMA)).toEqual(
-        {
-          'type': 'array',
-          'elementTypeDef': {type: 'record_element'},
-          'fields': recordSchema,
-        }
-      );
+      expect(connection.malloyTypeFromTrinoType(NESTED_SCHEMA)).toEqual({
+        'type': 'array',
+        'elementTypeDef': {type: 'record_element'},
+        'fields': recordSchema,
+      });
     });
 
     it('parses a simple type', () => {
-      expect(connection.malloyTypeFromTrinoType('test', 'varchar(60)')).toEqual(
+      expect(connection.malloyTypeFromTrinoType('varchar(60)')).toEqual(
         stringType
       );
     });
 
     it('parses deep nesting', () => {
-      expect(connection.malloyTypeFromTrinoType('test', DEEP_SCHEMA)).toEqual({
+      expect(connection.malloyTypeFromTrinoType(DEEP_SCHEMA)).toEqual({
         'type': 'array',
         'elementTypeDef': {type: 'record_element'},
         'fields': [

@@ -44,7 +44,6 @@ import {
   FieldDef,
   TinyParser,
   isRepeatedRecord,
-  AtomicFieldDef,
 } from '@malloydata/malloy';
 
 import {BaseConnection} from '@malloydata/malloy/connection';
@@ -260,7 +259,7 @@ export abstract class TrinoPrestoConnection
     const columns = r.columns;
 
     const malloyColumns = columns.map(c =>
-      this.malloyTypeFromTrinoType(c.name, c.type)
+      mkFieldDef(this.malloyTypeFromTrinoType(c.type), c.name)
     );
 
     const malloyRows: QueryDataRow[] = [];
@@ -348,24 +347,16 @@ export abstract class TrinoPrestoConnection
     //while (!(await result.next()).done);
   }
 
-  public malloyTypeFromTrinoType(
-    name: string,
-    trinoType: string
-  ): AtomicFieldDef {
-    const atomicType = new TrinoPrestoSchemaParser(
-      trinoType,
-      this.dialect
-    ).typeDef();
-    const def = mkFieldDef(atomicType, name);
-    return def;
+  public malloyTypeFromTrinoType(trinoType: string): AtomicTypeDef {
+    const typeParse = new TrinoPrestoSchemaParser(trinoType, this.dialect);
+    return typeParse.typeDef();
   }
 
   structDefFromSchema(rows: string[][], structDef: StructDef): void {
     for (const row of rows) {
       const name = row[0];
       const type = row[4] || row[1];
-      const malloyType = this.malloyTypeFromTrinoType(name, type);
-      // console.log('>', row, '\n<', malloyType);
+      const malloyType = mkFieldDef(this.malloyTypeFromTrinoType(type), name);
       structDef.fields.push(mkFieldDef(malloyType, name));
     }
   }
@@ -611,7 +602,10 @@ class TrinoPrestoSchemaParser extends TinyParser {
     } else if (typToken.text === 'row' && this.next('(')) {
       const fields: FieldDef[] = [];
       for (;;) {
-        const name = this.next('quoted_name');
+        const name = this.next();
+        if (name.type !== 'id' && name.type !== 'quoted_name') {
+          throw this.parseError('Expected property name');
+        }
         const getDef = this.typeDef();
         fields.push(mkFieldDef(getDef, name.text));
         const sep = this.next();
@@ -637,10 +631,10 @@ class TrinoPrestoSchemaParser extends TinyParser {
             fields: elType.fields,
           }
         : {type: 'array', elementTypeDef: elType};
-    } else if (typToken.type === 'id') {
+    } else if (typToken.type === 'id' || typToken.type === 'quoted_name') {
       const sqlType = typToken.text;
-      const def = this.dialect.sqlTypeToMalloyType(sqlType);
-      if (def === undefined) {
+      const typeDef = this.dialect.sqlTypeToMalloyType(sqlType);
+      if (typeDef === undefined) {
         throw this.parseError(`Can't parse presto type ${sqlType}`);
       }
       if (sqlType === 'varchar') {
@@ -650,7 +644,7 @@ class TrinoPrestoSchemaParser extends TinyParser {
       } else if (sqlType === 'timezone' && this.peek().text === 'with') {
         this.nextText('with', 'time', 'zone');
       }
-      return def;
+      return typeDef;
     }
     throw this.parseError(
       `'${typToken.text}' unexpected while looking for a type`
