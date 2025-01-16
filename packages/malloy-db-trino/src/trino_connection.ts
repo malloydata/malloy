@@ -542,7 +542,7 @@ class TrinoPrestoSchemaParser extends TinyParser {
       arrow: /^=>/,
       char: /^[,:[\]()-]/,
       id: /^\w+/,
-      quoted_name: /^"\w+"/,
+      quoted_name: /^"(\\"|[^"])*"/,
     });
   }
 
@@ -604,7 +604,7 @@ class TrinoPrestoSchemaParser extends TinyParser {
       for (;;) {
         const name = this.next();
         if (name.type !== 'id' && name.type !== 'quoted_name') {
-          throw this.parseError('Expected property name');
+          throw this.parseError(`Expected property name, got '${name.type}'`);
         }
         const getDef = this.typeDef();
         fields.push(mkFieldDef(getDef, name.text));
