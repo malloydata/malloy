@@ -632,7 +632,7 @@ class TrinoPrestoSchemaParser extends TinyParser {
           }
         : {type: 'array', elementTypeDef: elType};
     } else if (typToken.type === 'id') {
-      const sqlType = typToken.text;
+      const sqlType = typToken.text.toLowerCase();
       if (sqlType === 'varchar') {
         if (this.peek().type === '(') {
           this.next('(', 'id', ')');
