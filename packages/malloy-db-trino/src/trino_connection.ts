@@ -447,7 +447,7 @@ export class PrestoConnection extends TrinoPrestoConnection {
     this.schemaFromExplain(explainResult, structDef);
   }
 
-  private schemaFromExplain(
+  protected schemaFromExplain(
     explainResult: MalloyQueryData,
     structDef: StructDef
   ) {
@@ -532,7 +532,7 @@ export class TrinoConnection extends TrinoPrestoConnection {
  * ARRAY_TYPE: ARRAY '(' TYPE ')'
  * REC_TYPE: REC '(' "name" TYPE (, "name" TYPE)* ')'
  */
-export class TrinoPrestoSchemaParser extends TinyParser {
+class TrinoPrestoSchemaParser extends TinyParser {
   constructor(
     readonly input: string,
     readonly dialect: Dialect
