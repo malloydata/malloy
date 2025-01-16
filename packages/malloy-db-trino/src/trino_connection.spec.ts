@@ -104,6 +104,15 @@ describe('Trino connection', () => {
       });
     });
 
+    it('parses row with timestamp(3)', () => {
+      expect(
+        connection.malloyTypeFromTrinoType('row(la_time timestamp(3))')
+      ).toEqual({
+        type: 'record',
+        fields: [{name: 'la_time', type: 'timestamp'}],
+      });
+    });
+
     it('parses deep nesting', () => {
       expect(connection.malloyTypeFromTrinoType(DEEP_SCHEMA)).toEqual({
         'type': 'array',

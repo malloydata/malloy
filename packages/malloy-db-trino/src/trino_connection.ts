@@ -637,7 +637,7 @@ class TrinoPrestoSchemaParser extends TinyParser {
         if (this.peek().type === '(') {
           this.next('(', 'id', ')');
         }
-      } else if (sqlType === 'timezone') {
+      } else if (sqlType === 'timestamp') {
         if (this.peek().text === '(') {
           this.next('(', 'id', ')');
         }
