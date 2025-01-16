@@ -5004,12 +5004,33 @@ export class QueryModel {
     };
   }
 
+  addDefaultRowLimit(query: Query, defaultRowLimit?: number): Query {
+    if (defaultRowLimit === undefined) return query;
+    const lastSegment = query.pipeline[query.pipeline.length - 1];
+    if (lastSegment.type === 'raw') return query;
+    if (lastSegment.limit !== undefined) return query;
+    return {
+      ...query,
+      pipeline: [
+        ...query.pipeline.slice(0, -1),
+        {
+          ...lastSegment,
+          limit: defaultRowLimit,
+        },
+      ],
+    };
+  }
+
   compileQuery(
     query: Query,
     prepareResultOptions?: PrepareResultOptions,
     finalize = true
   ): CompiledQuery {
     let newModel: QueryModel | undefined;
+    query = this.addDefaultRowLimit(
+      query,
+      prepareResultOptions?.defaultRowLimit
+    );
     const m = newModel || this;
     const ret = m.loadQuery(
       query,
