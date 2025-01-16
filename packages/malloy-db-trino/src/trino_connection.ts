@@ -641,8 +641,13 @@ class TrinoPrestoSchemaParser extends TinyParser {
         if (this.peek().type === '(') {
           this.next('(', 'id', ')');
         }
-      } else if (sqlType === 'timezone' && this.peek().text === 'with') {
-        this.nextText('with', 'time', 'zone');
+      } else if (sqlType === 'timezone') {
+        const tzMod = this.peek();
+        if (tzMod.text === 'with') {
+          this.nextText('with', 'time', 'zone');
+        } else if (tzMod.text === '(') {
+          this.next('(', 'id', ')');
+        }
       }
       return typeDef;
     }
