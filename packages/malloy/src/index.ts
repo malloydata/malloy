@@ -192,6 +192,7 @@ export type {
   WriteStream,
   SerializedExplore,
   ModelCache,
+  CachedModel,
   // Needed for renderer type narrowing
   DateField,
   TimestampField,
@@ -204,6 +205,7 @@ export type {
   QueryString,
   QueryURL,
   URLReader,
+  InvalidationKey,
 } from './runtime_types';
 export type {
   Connection,

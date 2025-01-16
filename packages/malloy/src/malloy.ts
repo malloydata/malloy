@@ -343,17 +343,15 @@ export class Malloy {
       const result = translator.translate(model?._modelDef);
       if (result.final) {
         if (result.modelDef) {
-          await cacheManager?.setCachedModelDef(
-            url.toString(),
-            result.modelDef,
-            invalidationKeys
-          );
+          await cacheManager?.setCachedModelDef(url.toString(), {
+            modelDef: result.modelDef,
+            invalidationKeys,
+          });
           for (const model of translator.newlyTranslatedDependencies()) {
-            await cacheManager?.setCachedModelDef(
-              model.url,
-              model.modelDef,
-              invalidationKeys
-            );
+            await cacheManager?.setCachedModelDef(model.url, {
+              modelDef: model.modelDef,
+              invalidationKeys,
+            });
           }
           return new Model(
             result.modelDef,
@@ -4203,17 +4201,8 @@ interface CacheGetModelDefResponse {
 }
 
 export interface ModelCache {
-  getModel(
-    url: URL
-  ): Promise<
-    | {modelDef: ModelDef; invalidationKeys: {[url: string]: InvalidationKey}}
-    | undefined
-  >;
-  setModel(
-    url: URL,
-    modelDef: ModelDef,
-    invalidationKeys: {[url: string]: InvalidationKey}
-  ): Promise<boolean>;
+  getModel(url: URL): Promise<CachedModel | undefined>;
+  setModel(url: URL, cachedModel: CachedModel): Promise<boolean>;
 }
 
 export class CacheManager {
@@ -4266,28 +4255,32 @@ export class CacheManager {
 
   async setCachedModelDef(
     url: string,
-    modelDef: ModelDef,
-    invalidationKeys: {[url: string]: InvalidationKey}
+    cachedModel: CachedModel
   ): Promise<boolean> {
-    this.modelDependencies.set(url, modelDef.dependencies);
-    const invalidationKeysToSave = {};
-    for (const dependency of [url, ...flatDeps(modelDef.dependencies)]) {
-      if (invalidationKeys[dependency] === null) {
+    this.modelDependencies.set(url, cachedModel.modelDef.dependencies);
+    const invalidationKeys = {};
+    for (const dependency of [
+      url,
+      ...flatDeps(cachedModel.modelDef.dependencies),
+    ]) {
+      if (cachedModel.invalidationKeys[dependency] === null) {
         return false;
       }
-      if (invalidationKeys[dependency] === undefined) {
+      if (cachedModel.invalidationKeys[dependency] === undefined) {
         throw new Error(
           `Missing invalidation key for dependency ${dependency}`
         );
       }
-      this.modelInvalidationKeys.set(dependency, invalidationKeys[dependency]);
-      invalidationKeysToSave[dependency] = invalidationKeys[dependency];
+      this.modelInvalidationKeys.set(
+        dependency,
+        cachedModel.invalidationKeys[dependency]
+      );
+      invalidationKeys[dependency] = cachedModel.invalidationKeys[dependency];
     }
-    const result = await this.modelCache.setModel(
-      new URL(url),
-      modelDef,
-      invalidationKeysToSave
-    );
+    const result = await this.modelCache.setModel(new URL(url), {
+      modelDef: cachedModel.modelDef,
+      invalidationKeys,
+    });
     if (result) {
       return true; // TODO just return `result` when it's a boolean
     }
@@ -4299,29 +4292,21 @@ function flatDeps(tree: DependencyTree): string[] {
   return [...Object.keys(tree), ...Object.values(tree).map(flatDeps).flat()];
 }
 
+export interface CachedModel {
+  modelDef: ModelDef;
+  invalidationKeys: {[url: string]: InvalidationKey};
+}
+
 // TODO maybe make this memory bounded....
 export class InMemoryModelCache implements ModelCache {
-  private readonly models = new Map<
-    string,
-    {modelDef: ModelDef; invalidationKeys: {[url: string]: InvalidationKey}}
-  >();
+  private readonly models = new Map<string, CachedModel>();
 
-  public async getModel(url: URL): Promise<
-    | {
-        modelDef: ModelDef;
-        invalidationKeys: {[url: string]: InvalidationKey};
-      }
-    | undefined
-  > {
+  public async getModel(url: URL): Promise<CachedModel | undefined> {
     return Promise.resolve(this.models.get(url.toString()));
   }
 
-  public async setModel(
-    url: URL,
-    modelDef: ModelDef,
-    invalidationKeys: {[url: string]: InvalidationKey}
-  ): Promise<boolean> {
-    this.models.set(url.toString(), {modelDef, invalidationKeys});
+  public async setModel(url: URL, cachedModel: CachedModel): Promise<boolean> {
+    this.models.set(url.toString(), cachedModel);
     return Promise.resolve(true);
   }
 }
