@@ -145,4 +145,44 @@ describe('tags', () => {
   });
 });
 
+describe('default row limit', () => {
+  test('default row limit gets added to query', async () => {
+    const query = runtime.loadQuery(
+      "run: duckdb.table('malloytest.aircraft') -> { group_by: state }"
+    );
+    const result = await query.run({defaultRowLimit: 1});
+    expect(result.data.rowCount).toBe(1);
+  });
+
+  test('default row limit does not get added to raw query', async () => {
+    const query = runtime.loadQuery(
+      `
+        run: duckdb.sql("""
+          SELECT 1 as value
+          UNION ALL
+          SELECT 2 as value
+        """)
+      `
+    );
+    const result = await query.run({defaultRowLimit: 1});
+    expect(result.data.rowCount).toBe(2);
+  });
+
+  test('default row limit does not override existing limit', async () => {
+    const query = runtime.loadQuery(
+      "run: duckdb.table('malloytest.aircraft') -> { group_by: state; limit: 2 }"
+    );
+    const result = await query.run({defaultRowLimit: 1});
+    expect(result.data.rowCount).toBe(2);
+  });
+
+  test('no default row limit does not add row limit', async () => {
+    const query = runtime.loadQuery(
+      "run: duckdb.table('malloytest.aircraft') -> { group_by: state }"
+    );
+    const result = await query.run();
+    expect(result.data.rowCount).toBe(10); // Weird that there are only 10 states in this table?
+  });
+});
+
 afterAll(async () => await runtime.connection.close());

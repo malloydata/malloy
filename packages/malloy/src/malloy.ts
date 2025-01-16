@@ -117,6 +117,7 @@ interface CompileQueryOptions {
   replaceMaterializedReferences?: boolean;
   materializedTablePrefix?: string;
   eventStream?: EventStream;
+  defaultRowLimit?: number;
 }
 
 export class Malloy {
@@ -443,7 +444,10 @@ export class Malloy {
         }
         const compiledSql = queryModel.compileQuery(
           segment,
-          options,
+          {
+            ...options,
+            defaultRowLimit: undefined,
+          },
           false
         ).sql;
         selectStr += parenAlready ? compiledSql : `(${compiledSql})`;

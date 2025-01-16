@@ -1620,6 +1620,7 @@ export interface SearchValueMapResult {
 export interface PrepareResultOptions {
   replaceMaterializedReferences?: boolean;
   materializedTablePrefix?: string;
+  defaultRowLimit?: number;
 }
 
 type UTD =
