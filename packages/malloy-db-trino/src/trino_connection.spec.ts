@@ -90,6 +90,20 @@ describe('Trino connection', () => {
       );
     });
 
+    it('parses a decimal integer type', () => {
+      expect(connection.malloyTypeFromTrinoType('decimal(10)')).toEqual({
+        type: 'number',
+        numberType: 'integer',
+      });
+    });
+
+    it('parses a decimal float type', () => {
+      expect(connection.malloyTypeFromTrinoType('decimal(10,10)')).toEqual({
+        type: 'number',
+        numberType: 'float',
+      });
+    });
+
     it('parses deep nesting', () => {
       expect(connection.malloyTypeFromTrinoType(DEEP_SCHEMA)).toEqual({
         'type': 'array',

@@ -631,23 +631,33 @@ class TrinoPrestoSchemaParser extends TinyParser {
             fields: elType.fields,
           }
         : {type: 'array', elementTypeDef: elType};
-    } else if (typToken.type === 'id' || typToken.type === 'quoted_name') {
+    } else if (typToken.type === 'id') {
       const sqlType = typToken.text;
-      const typeDef = this.dialect.sqlTypeToMalloyType(sqlType);
-      if (typeDef === undefined) {
-        throw this.parseError(`Can't parse presto type ${sqlType}`);
-      }
       if (sqlType === 'varchar') {
         if (this.peek().type === '(') {
           this.next('(', 'id', ')');
         }
       } else if (sqlType === 'timezone') {
-        const tzMod = this.peek();
-        if (tzMod.text === 'with') {
-          this.nextText('with', 'time', 'zone');
-        } else if (tzMod.text === '(') {
+        if (this.peek().text === '(') {
           this.next('(', 'id', ')');
         }
+        if (this.peek().text === 'with') {
+          this.nextText('with', 'time', 'zone');
+        }
+      }
+      const typeDef = this.dialect.sqlTypeToMalloyType(sqlType);
+      if (typeDef.type === 'number' && sqlType === 'decimal') {
+        this.next('(', 'id');
+        if (this.peek().type === ',') {
+          this.next(',', 'id');
+          typeDef.numberType = 'float';
+        } else {
+          typeDef.numberType = 'integer';
+        }
+        this.next(')');
+      }
+      if (typeDef === undefined) {
+        throw this.parseError(`Can't parse presto type ${sqlType}`);
       }
       return typeDef;
     }
