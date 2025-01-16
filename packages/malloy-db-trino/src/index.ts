@@ -24,7 +24,6 @@
 export type {BaseRunner} from './trino_connection';
 export {
   PrestoConnection,
-  PrestoExplainParser,
   TrinoConnection,
   TrinoPrestoConnection,
 } from './trino_connection';

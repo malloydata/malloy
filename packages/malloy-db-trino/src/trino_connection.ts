@@ -39,13 +39,12 @@ import {
   AtomicTypeDef,
   mkFieldDef,
   isScalarArray,
-  RepeatedRecordTypeDef,
   RecordTypeDef,
   Dialect,
-  ArrayTypeDef,
   FieldDef,
   TinyParser,
   isRepeatedRecord,
+  AtomicFieldDef,
 } from '@malloydata/malloy';
 
 import {BaseConnection} from '@malloydata/malloy/connection';
@@ -349,93 +348,16 @@ export abstract class TrinoPrestoConnection
     //while (!(await result.next()).done);
   }
 
-  splitColumns(s: string) {
-    const columns: string[] = [];
-    let parens = 0;
-    let column = '';
-    let eatSpaces = true;
-    for (let idx = 0; idx < s.length; idx++) {
-      const c = s.charAt(idx);
-      if (eatSpaces && c === ' ') {
-        // Eat space
-      } else {
-        eatSpaces = false;
-        if (!parens && c === ',') {
-          columns.push(column);
-          column = '';
-          eatSpaces = true;
-        } else {
-          column += c;
-        }
-        if (c === '(') {
-          parens += 1;
-        } else if (c === ')') {
-          parens -= 1;
-        }
-      }
-    }
-    columns.push(column);
-    return columns;
-  }
-
   public malloyTypeFromTrinoType(
     name: string,
     trinoType: string
-  ): AtomicTypeDef {
-    // Arrays look like `array(type)`
-    const arrayMatch = trinoType.match(/^(([^,])+\s)?array\((.*)\)$/);
-
-    // Structs look like `row(name type, name type)`
-    const structMatch = trinoType.match(/^(([^,])+\s)?row\((.*)\)$/);
-
-    if (arrayMatch) {
-      const arrayType = arrayMatch[3];
-      const innerType = this.malloyTypeFromTrinoType(name, arrayType);
-      if (innerType.type === 'record') {
-        const complexStruct: RepeatedRecordTypeDef = {
-          type: 'array',
-          elementTypeDef: {type: 'record_element'},
-          fields: innerType.fields,
-        };
-        return complexStruct;
-      } else {
-        const arrayStruct: ArrayTypeDef = {
-          type: 'array',
-          elementTypeDef: innerType,
-        };
-        return arrayStruct;
-      }
-    } else if (structMatch) {
-      // TODO: Trino doesn't quote or escape commas in field names,
-      // so some magic is going to need to be applied before we get here
-      // to avoid confusion if a field name contains a comma
-      const innerTypes = this.splitColumns(structMatch[3]);
-      const recordType: RecordTypeDef = {
-        type: 'record',
-        fields: [],
-      };
-      for (let innerType of innerTypes) {
-        // TODO: Handle time zone type annotation, which is an
-        // exception to the types not containing spaces assumption
-        innerType = innerType.replace(/ with time zone$/, '');
-        let parts = innerType.match(/^(.+?)\s((array\(|row\().*)$/);
-        if (parts === null) {
-          parts = innerType.match(/^(.+)\s(\S+)$/);
-        }
-        if (parts) {
-          // remove quotes from the name
-          const innerName = parts[1].replace(/^"(.+(?="$))"$/, '$1');
-          const innerTrinoType = parts[2];
-          const innerMalloyType = this.malloyTypeFromTrinoType(
-            innerName,
-            innerTrinoType
-          );
-          recordType.fields.push(mkFieldDef(innerMalloyType, innerName));
-        }
-      }
-      return recordType;
-    }
-    return this.dialect.sqlTypeToMalloyType(trinoType);
+  ): AtomicFieldDef {
+    const atomicType = new TrinoPrestoSchemaParser(
+      trinoType,
+      this.dialect
+    ).typeDef();
+    const def = mkFieldDef(atomicType, name);
+    return def;
   }
 
   structDefFromSchema(rows: string[][], structDef: StructDef): void {
@@ -561,8 +483,8 @@ export class PrestoConnection extends TrinoPrestoConnection {
       );
     }
 
-    const schemaDesc = new PrestoExplainParser(lines[0], this.dialect);
-    structDef.fields = schemaDesc.parseExplain();
+    const schemaDesc = new TrinoPrestoSchemaParser(lines[0], this.dialect);
+    structDef.fields = schemaDesc.parseQueryPlan();
   }
 
   unpackArray(data: unknown): unknown[] {
@@ -607,16 +529,19 @@ export class TrinoConnection extends TrinoPrestoConnection {
 }
 
 /**
- * A hand built parser for schema lines, roughly this grammar
+ * A hand built parser for schema lines, it parses two things ...
+ * A presto query plan
  * SCHEMA_LINE: - Output [PlanName N] [NAME_LIST] => [TYPE_LIST]
  * NAME_LIST: NAME (, NAME)*
  * TYPE_LIST: TYPE_SPEC (, TYPE_SPEC)*
  * TYPE_SPEC: exprN ':' TYPE
+ *
+ * And a presto/trino type
  * TYPE: REC_TYPE | ARRAY_TYPE | SQL_TYPE
  * ARRAY_TYPE: ARRAY '(' TYPE ')'
  * REC_TYPE: REC '(' "name" TYPE (, "name" TYPE)* ')'
  */
-export class PrestoExplainParser extends TinyParser {
+class TrinoPrestoSchemaParser extends TinyParser {
   constructor(
     readonly input: string,
     readonly dialect: Dialect
@@ -651,7 +576,7 @@ export class PrestoExplainParser extends TinyParser {
     return fieldNames;
   }
 
-  parseExplain(): FieldDef[] {
+  parseQueryPlan(): FieldDef[] {
     const fieldNames = this.fieldNameList();
     const fields: FieldDef[] = [];
     this.next('arrow', '[');
@@ -722,6 +647,8 @@ export class PrestoExplainParser extends TinyParser {
         if (this.peek().type === '(') {
           this.next('(', 'id', ')');
         }
+      } else if (sqlType === 'timezone' && this.peek().text === 'with') {
+        this.nextText('with', 'time', 'zone');
       }
       return def;
     }

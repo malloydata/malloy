@@ -114,17 +114,4 @@ describe('Trino connection', () => {
       });
     });
   });
-
-  describe('splitColumns', () => {
-    it('handles internal rows', () => {
-      const nested =
-        'popular_name varchar, airport_count double, by_state array(row(state varchar, airport_count double))';
-
-      expect(connection.splitColumns(nested)).toEqual([
-        'popular_name varchar',
-        'airport_count double',
-        'by_state array(row(state varchar, airport_count double))',
-      ]);
-    });
-  });
 });
