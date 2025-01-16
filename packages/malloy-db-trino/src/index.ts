@@ -26,5 +26,6 @@ export {
   PrestoConnection,
   TrinoConnection,
   TrinoPrestoConnection,
+  TrinoPrestoSchemaParser,
 } from './trino_connection';
 export {TrinoExecutor} from './trino_executor';

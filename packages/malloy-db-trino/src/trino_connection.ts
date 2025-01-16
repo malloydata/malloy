@@ -532,7 +532,7 @@ export class TrinoConnection extends TrinoPrestoConnection {
  * ARRAY_TYPE: ARRAY '(' TYPE ')'
  * REC_TYPE: REC '(' "name" TYPE (, "name" TYPE)* ')'
  */
-class TrinoPrestoSchemaParser extends TinyParser {
+export class TrinoPrestoSchemaParser extends TinyParser {
   constructor(
     readonly input: string,
     readonly dialect: Dialect
