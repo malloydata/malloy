@@ -439,17 +439,10 @@ export class PrestoConnection extends TrinoPrestoConnection {
     );
   }
 
-  protected async fillStructDefForSqlBlockSchema(
-    sql: string,
-    structDef: StructDef
-  ): Promise<void> {
-    const explainResult = await this.runSQL(`EXPLAIN ${sql}`, {});
-    this.schemaFromExplain(explainResult, structDef);
-  }
-
-  protected schemaFromExplain(
+  static schemaFromExplain(
     explainResult: MalloyQueryData,
-    structDef: StructDef
+    structDef: StructDef,
+    dialect: Dialect
   ) {
     if (explainResult.rows.length === 0) {
       throw new Error(
@@ -474,8 +467,16 @@ export class PrestoConnection extends TrinoPrestoConnection {
       );
     }
 
-    const schemaDesc = new TrinoPrestoSchemaParser(lines[0], this.dialect);
+    const schemaDesc = new TrinoPrestoSchemaParser(lines[0], dialect);
     structDef.fields = schemaDesc.parseQueryPlan();
+  }
+
+  protected async fillStructDefForSqlBlockSchema(
+    sql: string,
+    structDef: StructDef
+  ): Promise<void> {
+    const explainResult = await this.runSQL(`EXPLAIN ${sql}`, {});
+    PrestoConnection.schemaFromExplain(explainResult, structDef, this.dialect);
   }
 
   unpackArray(data: unknown): unknown[] {
