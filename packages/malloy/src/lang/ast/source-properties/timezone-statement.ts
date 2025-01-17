@@ -24,6 +24,7 @@
 import {QueryBuilder} from '../types/query-builder';
 import {MalloyElement} from '../types/malloy-element';
 import {QueryPropertyInterface} from '../types/query-property-interface';
+import {DateTime} from 'luxon';
 
 export class TimezoneStatement
   extends MalloyElement
@@ -38,7 +39,7 @@ export class TimezoneStatement
 
   get isValid(): boolean {
     try {
-      Intl.DateTimeFormat(undefined, {timeZone: this.tz});
+      DateTime.fromISO('2020-02-19T00:00:00', {zone: this.tz});
       return true;
     } catch {
       return false;
