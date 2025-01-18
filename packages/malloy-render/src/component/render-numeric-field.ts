@@ -52,7 +52,7 @@ export function renderNumericField(f: AtomicField, value: number): string {
       getText(f, value, {durationUnit: targetUnit}) ?? value.toLocaleString()
     );
   } else if (tag.has('number'))
-    displayValue = format(tag.text('number')!, value);
+    displayValue = format(tag.text('number') ?? '#', value);
   else displayValue = (value as number).toLocaleString();
   return displayValue;
 }
