@@ -78,9 +78,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     const existingModel = await modelCache.getModel(bURL);
     expect(existingModel).toBeDefined();
     if (existingModel === undefined) return;
-    await modelCache.setModel(
-      bURL,
-      {
+    await modelCache.setModel(bURL, {
+      modelDef: {
         ...existingModel.modelDef,
         contents: {
           ...existingModel.modelDef.contents,
@@ -88,8 +87,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         },
         exports: ['sneaky'],
       },
-      existingModel.invalidationKeys
-    );
+      invalidationKeys: existingModel.invalidationKeys,
+    });
     urlReader.setFile(
       aURL,
       `
