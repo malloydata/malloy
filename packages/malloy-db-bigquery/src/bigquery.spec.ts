@@ -43,7 +43,10 @@ describe('db:BigQuery', () => {
         return await util.promisify(fs.readFile)(filePath, 'utf8');
       },
     };
-    runtime = new malloy.Runtime(files, bq);
+    runtime = new malloy.Runtime({
+      urlReader: files,
+      connection: bq,
+    });
   });
 
   it('runs a SQL query', async () => {

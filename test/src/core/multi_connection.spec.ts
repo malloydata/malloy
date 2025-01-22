@@ -56,7 +56,10 @@ describe('Multi-connection', () => {
     'duckdb'
   );
 
-  const runtime = new malloy.Runtime(files, connectionMap);
+  const runtime = new malloy.Runtime({
+    urlReader: files,
+    connections: connectionMap,
+  });
 
   afterAll(async () => {
     await postgresConnection.close();

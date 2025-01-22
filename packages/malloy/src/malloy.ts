@@ -69,9 +69,11 @@ import {
   isSourceDef,
   QueryToMaterialize,
   isJoined,
+  DependencyTree,
 } from './model';
 import {
   EventStream,
+  InvalidationKey,
   ModelString,
   ModelURL,
   QueryString,
@@ -89,6 +91,7 @@ import {Tag, TagParse, TagParseSpec, Taggable} from './tags';
 import {Dialect, getDialect} from './dialect';
 import {PathInfo} from './lang/parse-tree-walkers/find-table-path-walker';
 import {MALLOY_VERSION} from './version';
+import {v5 as uuidv5} from 'uuid';
 
 export interface Loggable {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -100,6 +103,8 @@ export interface Loggable {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   error: (message?: any, ...optionalParams: any[]) => void;
 }
+
+const MALLOY_INTERNAL_URL = 'internal://internal.malloy';
 
 export interface ParseOptions {
   importBaseURL?: URL;
@@ -120,6 +125,23 @@ interface CompileQueryOptions {
   defaultRowLimit?: number;
 }
 
+type Compilable =
+  | {
+      parse: Parse;
+      url?: undefined;
+      source?: undefined;
+    }
+  | {
+      url: URL;
+      parse?: undefined;
+      source?: undefined;
+    }
+  | {
+      source: string;
+      parse?: undefined;
+      url?: undefined;
+    };
+
 export class Malloy {
   public static get version(): string {
     return MALLOY_VERSION;
@@ -128,10 +150,11 @@ export class Malloy {
     source: string,
     url?: URL,
     eventStream?: EventStream,
-    options?: ParseOptions
+    options?: ParseOptions,
+    invalidationKey?: InvalidationKey
   ): Parse {
     if (url === undefined) {
-      url = new URL('internal://internal.malloy');
+      url = new URL(MALLOY_INTERNAL_URL);
     }
     let importBaseURL = url;
     if (options?.importBaseURL) {
@@ -148,7 +171,7 @@ export class Malloy {
     if (options?.testEnvironment) {
       translator.allDialectsEnabled = true;
     }
-    return new Parse(translator);
+    return new Parse(translator, invalidationKey);
   }
 
   /**
@@ -211,8 +234,14 @@ export class Malloy {
           'Internal Error: url is required if source not present.'
         );
       }
-      return urlReader.readURL(url).then(source => {
-        return Malloy._parse(source, url, eventStream, options);
+      return readURL(urlReader, url).then(({contents, invalidationKey}) => {
+        return Malloy._parse(
+          contents,
+          url,
+          eventStream,
+          options,
+          invalidationKey
+        );
       });
     }
   }
@@ -227,23 +256,29 @@ export class Malloy {
    * @return A (promise of a) compiled `Model`.
    */
   public static async compile({
+    url,
+    source,
+    parse,
     urlReader,
     connections,
-    parse,
     model,
     refreshSchemaCache,
     noThrowOnError,
     eventStream,
     replaceMaterializedReferences,
     materializedTablePrefix,
+    importBaseURL,
+    cacheManager,
   }: {
     urlReader: URLReader;
     connections: LookupConnection<InfoConnection>;
-    parse: Parse;
     model?: Model;
     replaceMaterializedReferences?: boolean;
-  } & CompileOptions &
-    CompileQueryOptions): Promise<Model> {
+    cacheManager?: CacheManager;
+  } & Compilable &
+    CompileOptions &
+    CompileQueryOptions &
+    ParseOptions): Promise<Model> {
     let refreshTimestamp: number | undefined;
     if (refreshSchemaCache) {
       refreshTimestamp =
@@ -251,11 +286,74 @@ export class Malloy {
           ? refreshSchemaCache
           : Date.now();
     }
-    const translator = parse._translator;
+    if (url === undefined && source === undefined && parse === undefined) {
+      throw new Error('Internal Error: url, source, or parse required.');
+    }
+    if (url === undefined) {
+      if (parse !== undefined) {
+        url = new URL(parse._translator.sourceURL);
+      } else {
+        url = new URL(MALLOY_INTERNAL_URL);
+      }
+    }
+    const invalidationKeys = {};
+    // Before anything, if we have a URL and not source code, we check if that URL
+    // is cached.
+    if (source === undefined && cacheManager !== undefined) {
+      const cached = await cacheManager.getCachedModelDef(
+        urlReader,
+        url.toString()
+      );
+      if (cached) {
+        return new Model(
+          cached.modelDef,
+          [], // TODO when using a model from cache, should we also store the problems??
+          [url.toString(), ...flatDeps(cached.modelDef.dependencies)]
+          // TODO maybe implement referenceAt and importAt by re-translating the model?
+        );
+      }
+    }
+    importBaseURL ??= url;
+    let translator: MalloyTranslator;
+    // It's not cached, so we may need to get the actual source
+    const _url = url.toString();
+    if (parse !== undefined) {
+      translator = parse._translator;
+      const invalidationKey =
+        parse._invalidationKey ?? (await getInvalidationKey(urlReader, url));
+      invalidationKeys[_url] = invalidationKey;
+    } else {
+      if (source === undefined) {
+        const {contents, invalidationKey} = await readURL(urlReader, url);
+        invalidationKeys[_url] = invalidationKey;
+        source = contents;
+      } else {
+        const invalidationKey = await getInvalidationKey(urlReader, url);
+        invalidationKeys[_url] = invalidationKey;
+      }
+      translator = new MalloyTranslator(
+        _url,
+        importBaseURL.toString(),
+        {
+          urls: {[_url]: source},
+        },
+        eventStream
+      );
+    }
     for (;;) {
       const result = translator.translate(model?._modelDef);
       if (result.final) {
         if (result.modelDef) {
+          await cacheManager?.setCachedModelDef(url.toString(), {
+            modelDef: result.modelDef,
+            invalidationKeys,
+          });
+          for (const model of translator.newlyTranslatedDependencies()) {
+            await cacheManager?.setCachedModelDef(model.url, {
+              modelDef: model.modelDef,
+              invalidationKeys,
+            });
+          }
           return new Model(
             result.modelDef,
             result.problems || [],
@@ -295,13 +393,35 @@ export class Malloy {
         if (result.urls) {
           for (const neededUrl of result.urls) {
             try {
-              if (neededUrl.startsWith('internal://')) {
+              if (isInternalURL(neededUrl)) {
                 throw new Error(
                   'In order to use relative imports, you must compile a file via a URL.'
                 );
               }
-              const neededText = await urlReader.readURL(new URL(neededUrl));
-              const urls = {[neededUrl]: neededText};
+              // First, check the cache
+              if (cacheManager !== undefined) {
+                const cached = await cacheManager.getCachedModelDef(
+                  urlReader,
+                  neededUrl
+                );
+                if (cached) {
+                  for (const dependency in cached.invalidationKeys) {
+                    invalidationKeys[dependency] =
+                      cached.invalidationKeys[dependency];
+                  }
+                  translator.update({
+                    translations: {[neededUrl]: cached.modelDef},
+                  });
+                  continue;
+                }
+              }
+              // Otherwise, fetch the URL contents
+              const {contents, invalidationKey} = await readURL(
+                urlReader,
+                new URL(neededUrl)
+              );
+              const urls = {[neededUrl]: contents};
+              invalidationKeys[neededUrl] = invalidationKey;
               translator.update({urls});
             } catch (error) {
               translator.update({
@@ -940,7 +1060,10 @@ export class PreparedQuery implements Taggable {
  * A parsed Malloy document.
  */
 export class Parse {
-  constructor(private translator: MalloyTranslator) {}
+  constructor(
+    private translator: MalloyTranslator,
+    private invalidationKey?: InvalidationKey
+  ) {}
 
   /**
    * Retrieve the symbols defined in the parsed document.
@@ -970,6 +1093,10 @@ export class Parse {
 
   public get _translator(): MalloyTranslator {
     return this.translator;
+  }
+
+  public get _invalidationKey(): InvalidationKey | undefined {
+    return this.invalidationKey;
   }
 
   public completions(position: {
@@ -1320,7 +1447,13 @@ export class PreparedResult implements Taggable {
  * Useful for scenarios in which `import` statements are not required.
  */
 export class EmptyURLReader implements URLReader {
-  async readURL(_url: URL): Promise<string> {
+  async readURL(
+    _url: URL
+  ): Promise<{contents: string; invalidationKey: InvalidationKey}> {
+    throw new Error('No files.');
+  }
+
+  async getInvalidationKey(_url: URL): Promise<InvalidationKey> {
     throw new Error('No files.');
   }
 }
@@ -1329,15 +1462,36 @@ export class EmptyURLReader implements URLReader {
  * A URL reader backed by an in-memory mapping of URL contents.
  */
 export class InMemoryURLReader implements URLReader {
-  constructor(private files: Map<string, string>) {}
+  constructor(protected files: Map<string, string>) {}
 
-  public async readURL(url: URL): Promise<string> {
+  public async readURL(
+    url: URL
+  ): Promise<{contents: string; invalidationKey: InvalidationKey}> {
     const file = this.files.get(url.toString());
     if (file !== undefined) {
-      return Promise.resolve(file);
+      return Promise.resolve({
+        contents: file,
+        invalidationKey: this.invalidationKey(url, file),
+      });
     } else {
       throw new Error(`File not found '${url}'`);
     }
+  }
+
+  public async getInvalidationKey(url: URL): Promise<InvalidationKey> {
+    const file = this.files.get(url.toString());
+    if (file !== undefined) {
+      return Promise.resolve(this.invalidationKey(url, file));
+    } else {
+      throw new Error(`File not found '${url}'`);
+    }
+  }
+
+  private invalidationKey(url: URL, contents: string): InvalidationKey {
+    if (isInternalURL(url.toString())) {
+      return null;
+    }
+    return hashForInvalidationKey(contents);
   }
 }
 
@@ -2204,6 +2358,10 @@ export class ExploreField extends Explore {
   }
 }
 
+type Connectionable =
+  | {connection: Connection; connections?: undefined}
+  | {connections: LookupConnection<Connection>; connection?: undefined};
+
 /**
  * An environment for compiling and running Malloy queries.
  */
@@ -2212,61 +2370,43 @@ export class Runtime {
   private _urlReader: URLReader;
   private _connections: LookupConnection<Connection>;
   private _eventStream: EventStream | undefined;
+  private _cacheManager: CacheManager | undefined;
 
-  constructor(runtime: LookupConnection<Connection> & URLReader);
-  constructor(
-    urls: URLReader,
-    connections: LookupConnection<Connection>,
-    eventStream?: EventStream
-  );
-  constructor(
-    urls: URLReader,
-    connection: Connection,
-    eventStream?: EventStream
-  );
-  constructor(connection: Connection, eventStream?: EventStream);
-  constructor(
-    connections: LookupConnection<Connection>,
-    eventStream?: EventStream
-  );
-  constructor(
-    ...args: (
-      | URLReader
-      | LookupConnection<Connection>
-      | Connection
-      | EventStream
-      | undefined
-    )[]
-  ) {
-    let urlReader: URLReader | undefined;
-    let connections: LookupConnection<Connection> | undefined;
-    let eventStream: EventStream | undefined;
-    for (const arg of args) {
-      if (arg === undefined) {
-        continue;
-      } else if (isURLReader(arg)) {
-        urlReader = arg;
-      } else if (isLookupConnection<Connection>(arg)) {
-        connections = arg;
-      } else if (isEventStream(arg)) {
-        eventStream = arg;
-      } else {
-        connections = {
-          lookupConnection: () => Promise.resolve(arg),
-        };
+  constructor({
+    urlReader,
+    connections,
+    connection,
+    eventStream,
+    cacheManager,
+  }: {
+    urlReader?: URLReader;
+    eventStream?: EventStream;
+    cacheManager?: CacheManager;
+  } & Connectionable) {
+    if (connections === undefined) {
+      if (connection === undefined) {
+        throw new Error(
+          'A LookupConnection<Connection> or Connection is required.'
+        );
       }
+      connections = {
+        lookupConnection: () => Promise.resolve(connection),
+      };
     }
     if (urlReader === undefined) {
       urlReader = new EmptyURLReader();
     }
-    if (connections === undefined) {
-      throw new Error(
-        'A LookupConnection<Connection> or Connection is required.'
-      );
-    }
     this._urlReader = urlReader;
     this._connections = connections;
     this._eventStream = eventStream;
+    this._cacheManager = cacheManager;
+  }
+
+  /**
+   * @return The `CacheManager` for this runtime instance.
+   */
+  public get cacheManager(): CacheManager | undefined {
+    return this._cacheManager;
   }
 
   /**
@@ -2309,31 +2449,22 @@ export class Runtime {
         options = {...options, testEnvironment: true};
       }
     }
+    const compilable = source instanceof URL ? {url: source} : {source};
     return new ModelMaterializer(
       this,
       async () => {
-        const parse =
-          source instanceof URL
-            ? await Malloy.parse({
-                url: source,
-                urlReader: this.urlReader,
-                eventStream: this.eventStream,
-                options,
-              })
-            : Malloy.parse({
-                source,
-                eventStream: this.eventStream,
-                options,
-              });
         return Malloy.compile({
+          ...compilable,
           urlReader: this.urlReader,
           connections: this.connections,
-          parse,
           refreshSchemaCache,
           noThrowOnError,
           eventStream: this.eventStream,
           replaceMaterializedReferences: options?.replaceMaterializedReferences,
           materializedTablePrefix: options?.materializedTablePrefix,
+          importBaseURL: options?.importBaseURL,
+          testEnvironment: options?.testEnvironment,
+          cacheManager: this.cacheManager,
         });
       },
       options
@@ -2468,24 +2599,18 @@ export class Runtime {
 export class ConnectionRuntime extends Runtime {
   public readonly rawConnections: Connection[];
 
-  constructor(urls: URLReader, connections: Connection[]);
-  constructor(connections: Connection[]);
-  constructor(
-    urlsOrConnections: URLReader | Connection[],
-    maybeConnections?: Connection[]
-  ) {
-    if (maybeConnections === undefined) {
-      const connections = urlsOrConnections as Connection[];
-      super(FixedConnectionMap.fromArray(connections));
-      this.rawConnections = connections;
-    } else {
-      const connections = maybeConnections as Connection[];
-      super(
-        urlsOrConnections as URLReader,
-        FixedConnectionMap.fromArray(connections)
-      );
-      this.rawConnections = connections;
-    }
+  constructor({
+    urlReader,
+    connections,
+  }: {
+    urlReader?: URLReader;
+    connections: Connection[];
+  }) {
+    super({
+      connections: FixedConnectionMap.fromArray(connections),
+      urlReader,
+    });
+    this.rawConnections = connections;
   }
 }
 
@@ -2494,31 +2619,23 @@ export class SingleConnectionRuntime<
 > extends Runtime {
   public readonly connection: T;
 
-  constructor(urlReader: URLReader, connection: T);
-  constructor(connection: T);
-  constructor(connection: T, eventStream: EventStream);
-  constructor(urlReader: URLReader, connection: T, eventStream: EventStream);
-  constructor(...params: (URLReader | T | EventStream)[]) {
-    let urlReader: URLReader | undefined;
-    let connection: T | undefined;
-    let eventStream: EventStream | undefined;
-    for (const param of params) {
-      if (isURLReader(param)) {
-        urlReader = param;
-      }
-      if (isConnection(param)) {
-        connection = param;
-      }
-      if (isEventStream(param)) {
-        eventStream = param;
-      }
-    }
-    if (connection === undefined) {
-      throw new Error(
-        'Expected connection to be passed into SingleConnectionRuntime'
-      );
-    }
-    super(urlReader as URLReader, connection, eventStream);
+  constructor({
+    urlReader,
+    connection,
+    eventStream,
+    cacheManager,
+  }: {
+    urlReader?: URLReader;
+    eventStream?: EventStream;
+    cacheManager?: CacheManager;
+    connection: T;
+  }) {
+    super({
+      urlReader,
+      eventStream,
+      cacheManager,
+      connection,
+    });
     this.connection = connection;
   }
 
@@ -2688,25 +2805,17 @@ export class ModelMaterializer extends FluentState<Model> {
           options = {...options, testEnvironment: true};
         }
       }
-      const parse =
-        query instanceof URL
-          ? await Malloy.parse({
-              url: query,
-              urlReader,
-              options,
-            })
-          : Malloy.parse({
-              source: query,
-              options,
-            });
+      const compilable = query instanceof URL ? {url: query} : {source: query};
       const model = await this.getModel();
       const queryModel = await Malloy.compile({
+        ...compilable,
         urlReader,
         connections,
-        parse,
         model,
         refreshSchemaCache,
         noThrowOnError,
+        importBaseURL: options?.importBaseURL,
+        testEnvironment: options?.testEnvironment,
         ...this.compileQueryOptions,
       });
       return queryModel.preparedQuery;
@@ -2736,25 +2845,18 @@ export class ModelMaterializer extends FluentState<Model> {
       async () => {
         const urlReader = this.runtime.urlReader;
         const connections = this.runtime.connections;
-        const parse =
-          query instanceof URL
-            ? await Malloy.parse({
-                url: query,
-                urlReader,
-                options,
-              })
-            : Malloy.parse({
-                source: query,
-                options,
-              });
+        const compilable =
+          query instanceof URL ? {url: query} : {source: query};
         const model = await this.getModel();
         const queryModel = await Malloy.compile({
+          ...compilable,
           urlReader,
           connections,
-          parse,
           model,
           refreshSchemaCache: options?.refreshSchemaCache,
           noThrowOnError: options?.noThrowOnError,
+          importBaseURL: options?.importBaseURL,
+          testEnvironment: options?.testEnvironment,
           ...this.compileQueryOptions,
         });
         return queryModel;
@@ -3870,50 +3972,6 @@ export class DataRecord extends Data<{[fieldName: string]: DataColumn}> {
   }
 }
 
-function isURLReader(
-  thing:
-    | URLReader
-    | LookupConnection<InfoConnection>
-    | LookupConnection<Connection>
-    | Connection
-    | EventStream
-): thing is URLReader {
-  return 'readURL' in thing;
-}
-
-function isLookupConnection<T extends InfoConnection = InfoConnection>(
-  thing:
-    | URLReader
-    | LookupConnection<InfoConnection>
-    | LookupConnection<Connection>
-    | Connection
-    | EventStream
-): thing is LookupConnection<T> {
-  return 'lookupConnection' in thing;
-}
-
-function isEventStream(
-  thing:
-    | URLReader
-    | LookupConnection<InfoConnection>
-    | LookupConnection<Connection>
-    | Connection
-    | EventStream
-): thing is EventStream {
-  return 'emit' in thing;
-}
-
-function isConnection<T extends Connection>(
-  thing:
-    | URLReader
-    | LookupConnection<InfoConnection>
-    | LookupConnection<Connection>
-    | Connection
-    | EventStream
-): thing is T {
-  return 'runSQL' in thing;
-}
-
 export interface WriteStream {
   write: (text: string) => void;
   close: () => void;
@@ -4139,4 +4197,159 @@ export class CSVWriter extends DataWriter {
     }
     this.stream.close();
   }
+}
+
+interface CacheGetModelDefResponse {
+  modelDef: ModelDef;
+  invalidationKeys: {[url: string]: InvalidationKey};
+}
+
+export interface ModelCache {
+  getModel(url: URL): Promise<CachedModel | undefined>;
+  setModel(url: URL, cachedModel: CachedModel): Promise<boolean>;
+}
+
+export class CacheManager {
+  private modelDependencies: Map<string, DependencyTree> = new Map();
+  private modelInvalidationKeys: Map<string, InvalidationKey> = new Map();
+
+  constructor(private modelCache: ModelCache) {}
+
+  async getCachedModelDef(
+    urlReader: URLReader,
+    url: string
+  ): Promise<CacheGetModelDefResponse | undefined> {
+    const _dependencies = this.modelDependencies.get(url);
+    if (_dependencies === undefined) {
+      return undefined;
+    }
+    const dependencies = [url, ...flatDeps(_dependencies)];
+    const invalidationKeys = {};
+    for (const dependency of dependencies) {
+      const invalidationKey = this.modelInvalidationKeys.get(dependency);
+      if (invalidationKey === undefined || invalidationKey === null) {
+        return undefined;
+      }
+      invalidationKeys[dependency] = invalidationKey;
+    }
+    for (const dependency of dependencies) {
+      const invalidationKey = await getInvalidationKey(
+        urlReader,
+        new URL(dependency)
+      );
+      if (invalidationKey !== invalidationKeys[dependency]) {
+        return undefined;
+      }
+    }
+    const cached = await this.modelCache.getModel(new URL(url));
+    if (cached === undefined) {
+      return undefined;
+    }
+    for (const dependency of dependencies) {
+      if (
+        cached.invalidationKeys[dependency] !== invalidationKeys[dependency]
+      ) {
+        return undefined;
+      }
+    }
+    // Return the cached model def and the invalidation keys for this
+    // model def's dependencies
+    return {modelDef: cached.modelDef, invalidationKeys};
+  }
+
+  async setCachedModelDef(
+    url: string,
+    cachedModel: CachedModel
+  ): Promise<boolean> {
+    this.modelDependencies.set(url, cachedModel.modelDef.dependencies);
+    const invalidationKeys = {};
+    for (const dependency of [
+      url,
+      ...flatDeps(cachedModel.modelDef.dependencies),
+    ]) {
+      if (cachedModel.invalidationKeys[dependency] === null) {
+        return false;
+      }
+      if (cachedModel.invalidationKeys[dependency] === undefined) {
+        throw new Error(
+          `Missing invalidation key for dependency ${dependency}`
+        );
+      }
+      this.modelInvalidationKeys.set(
+        dependency,
+        cachedModel.invalidationKeys[dependency]
+      );
+      invalidationKeys[dependency] = cachedModel.invalidationKeys[dependency];
+    }
+    const result = await this.modelCache.setModel(new URL(url), {
+      modelDef: cachedModel.modelDef,
+      invalidationKeys,
+    });
+    if (result) {
+      return true; // TODO just return `result` when it's a boolean
+    }
+    return false;
+  }
+}
+
+function flatDeps(tree: DependencyTree): string[] {
+  return [...Object.keys(tree), ...Object.values(tree).map(flatDeps).flat()];
+}
+
+export interface CachedModel {
+  modelDef: ModelDef;
+  invalidationKeys: {[url: string]: InvalidationKey};
+}
+
+// TODO maybe make this memory bounded....
+export class InMemoryModelCache implements ModelCache {
+  private readonly models = new Map<string, CachedModel>();
+
+  public async getModel(url: URL): Promise<CachedModel | undefined> {
+    return Promise.resolve(this.models.get(url.toString()));
+  }
+
+  public async setModel(url: URL, cachedModel: CachedModel): Promise<boolean> {
+    this.models.set(url.toString(), cachedModel);
+    return Promise.resolve(true);
+  }
+}
+
+function hashForInvalidationKey(input: string): string {
+  const MALLOY_UUID = '76c17e9d-f3ce-5f2d-bfde-98ad3d2a37f6';
+  return uuidv5(input, MALLOY_UUID);
+}
+
+async function readURL(
+  urlReader: URLReader,
+  url: URL
+): Promise<{contents: string; invalidationKey: InvalidationKey}> {
+  const result = await urlReader.readURL(url);
+  const {contents, invalidationKey} =
+    typeof result === 'string'
+      ? {contents: result, invalidationKey: undefined}
+      : result;
+  return {
+    contents,
+    invalidationKey: isInternalURL(url.toString())
+      ? null
+      : invalidationKey ?? hashForInvalidationKey(contents),
+  };
+}
+
+async function getInvalidationKey(
+  urlReader: URLReader,
+  url: URL
+): Promise<InvalidationKey> {
+  if (isInternalURL(url.toString())) {
+    return null;
+  }
+  if (urlReader.getInvalidationKey !== undefined) {
+    return await urlReader.getInvalidationKey(url);
+  }
+  return (await readURL(urlReader, url)).invalidationKey;
+}
+
+function isInternalURL(url: string) {
+  return url.startsWith('internal://');
 }
