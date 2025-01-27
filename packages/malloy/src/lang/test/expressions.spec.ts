@@ -220,6 +220,16 @@ describe('expressions', () => {
         '{{ad >= @2020-01-01} and {ad < @2021-01-01}}'
       );
     });
+    test('apply followed by another condition', () => {
+      expect('ai ? (10 | 20) and ai is not null').toLog(
+        errorMessage(`no viable alternative at input 'ai'`)
+      );
+    });
+    test('apply followed by another condition, with parenthesis', () => {
+      expect('(ai ? (10 | 20)) and ai is not null').compilesTo(
+        '{({ai in {10,20}}) and {is-not-null ai}}'
+      );
+    });
     test('apply or-tree granular-literal doesnt turn into IN', () => {
       expect('ad ? @2020 | @2022').compilesTo(
         '{{{ad >= @2020-01-01} and {ad < @2021-01-01}} or {{ad >= @2022-01-01} and {ad < @2023-01-01}}}'
