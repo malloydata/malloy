@@ -76,7 +76,8 @@ export type TrinoConnectionOptions = ConnectionConfig;
 export interface BaseRunner {
   runSQL(
     sql: string,
-    limit: number | undefined
+    limit: number | undefined,
+    abortSignal?: AbortSignal
   ): Promise<{
     rows: unknown[][];
     columns: {name: string; type: string; error?: string}[];
@@ -97,7 +98,11 @@ class PrestoRunner implements BaseRunner {
       extraHeaders: {'X-Presto-Session': 'legacy_unnest=true'},
     });
   }
-  async runSQL(sql: string, limit: number | undefined) {
+  async runSQL(
+    sql: string,
+    limit: number | undefined,
+    _abortSignal?: AbortSignal
+  ) {
     let ret: PrestoQuery | undefined = undefined;
     const q = limit ? `SELECT * FROM(${sql}) LIMIT ${limit}` : sql;
     let error: string | undefined = undefined;
@@ -129,7 +134,11 @@ class TrinoRunner implements BaseRunner {
       auth: new BasicAuth(config.user!, config.password || ''),
     });
   }
-  async runSQL(sql: string, limit: number | undefined) {
+  async runSQL(
+    sql: string,
+    limit: number | undefined,
+    _abortSignal?: AbortSignal
+  ) {
     const result = await this.client.query(sql);
     let queryResult = await result.next();
     if (queryResult.value.error) {
@@ -250,7 +259,11 @@ export abstract class TrinoPrestoConnection
     // TODO(figutierrez): Use.
     _rowIndex = 0
   ): Promise<MalloyQueryData> {
-    const r = await this.client.runSQL(sqlCommand, options.rowLimit);
+    const r = await this.client.runSQL(
+      sqlCommand,
+      options.rowLimit,
+      options.abortSignal
+    );
 
     if (r.error) {
       throw new Error(r.error);
