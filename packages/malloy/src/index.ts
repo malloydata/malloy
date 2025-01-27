@@ -168,6 +168,8 @@ export {
   Parse,
   DataWriter,
   Explore,
+  InMemoryModelCache,
+  CacheManager,
 } from './malloy';
 export type {
   PreparedQuery,
@@ -189,6 +191,8 @@ export type {
   ExploreMaterializer,
   WriteStream,
   SerializedExplore,
+  ModelCache,
+  CachedModel,
   // Needed for renderer type narrowing
   DateField,
   TimestampField,
@@ -201,6 +205,7 @@ export type {
   QueryString,
   QueryURL,
   URLReader,
+  InvalidationKey,
 } from './runtime_types';
 export type {
   Connection,

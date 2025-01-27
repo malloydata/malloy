@@ -41,6 +41,9 @@ export type ModelURL = URL;
  */
 export type QueryURL = URL;
 
+// An null InvalidationKey indicates to not cache...
+export type InvalidationKey = string | number | Date | null;
+
 /**
  * An object capable of reading the contents of a URL in some context.
  */
@@ -51,7 +54,10 @@ export interface URLReader {
    * @param url The URL to read.
    * @return A promise to the contents of the URL.
    */
-  readURL: (url: URL) => Promise<string>;
+  readURL: (
+    url: URL
+  ) => Promise<string | {contents: string; invalidationKey?: InvalidationKey}>;
+  getInvalidationKey?: (url: URL) => Promise<InvalidationKey>;
 }
 
 export interface EventStream {
