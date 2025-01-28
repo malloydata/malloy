@@ -222,7 +222,7 @@ describe('expressions', () => {
     });
     test('apply followed by another condition', () => {
       expect('ai ? (10 | 20) and ai is not null').toLog(
-        errorMessage('no viable alternative at input "ai"')
+        errorMessage('no viable alternative at input \'ai\'')
       );
     });
     test('apply followed by another condition, with parenthesis', () => {
