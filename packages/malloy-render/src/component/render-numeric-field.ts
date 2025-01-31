@@ -28,7 +28,7 @@ import {getText} from '../html/duration';
 import {NULL_SYMBOL} from './apply-renderer';
 
 export function renderNumericField(f: AtomicField, value: number | null | undefined): string {
-  if (value === null || value === undefined) {
+  if (value == null) {
     return NULL_SYMBOL;
   }
   let displayValue: string | number = value;
