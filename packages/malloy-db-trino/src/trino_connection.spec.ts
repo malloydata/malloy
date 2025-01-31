@@ -21,8 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {AtomicTypeDef, FieldDef} from '@malloydata/malloy';
-import {TrinoConnection, TrinoExecutor} from '.';
+import {AtomicTypeDef, FieldDef, StructDef} from '@malloydata/malloy';
+import {
+  BaseRunner,
+  TrinoConnection,
+  TrinoExecutor,
+  TrinoPrestoConnection,
+} from '.';
 
 // array(varchar) is array
 const ARRAY_SCHEMA = 'array(integer)';
@@ -133,4 +138,87 @@ describe('Trino connection', () => {
       });
     });
   });
+
+  /**
+   * Test for issue where nested rows are returned as records not
+   * arrays, resulting in fieldA and fieldB being returned as `null`
+   */
+  it('Unpacks arrays from objects', async () => {
+    const connection = new MockConnection();
+    expect(await connection.runSQL('SELECT MOCK DATA')).toEqual({
+      'rows': [
+        {
+          'cardinality': 2,
+          'fieldName': 'string',
+          'values': [
+            {
+              'fieldA': 'abc',
+              'fieldB': 123,
+            },
+            {
+              'fieldA': 'def',
+              'fieldB': 456,
+            },
+          ],
+        },
+      ],
+      'totalRows': 1,
+    });
+  });
 });
+
+class MockConnection extends TrinoPrestoConnection {
+  constructor() {
+    super('presto', new MockRunner());
+  }
+
+  override get dialectName(): string {
+    return 'presto';
+  }
+
+  override async fillStructDefForSqlBlockSchema(
+    _sql: string,
+    _structDef: StructDef
+  ): Promise<void> {
+    throw new Error('nope');
+  }
+}
+
+class MockRunner implements BaseRunner {
+  async runSQL(_sql: string) {
+    return mockData;
+  }
+}
+
+const mockData = {
+  rows: [
+    [
+      'string',
+      2,
+      [
+        {
+          fieldA: 'abc',
+          fieldB: 123,
+        },
+        {
+          fieldA: 'def',
+          fieldB: 456,
+        },
+      ],
+    ],
+  ],
+  columns: [
+    {
+      name: 'fieldName',
+      type: 'varchar(12)',
+    },
+    {
+      name: 'cardinality',
+      type: 'bigint',
+    },
+    {
+      name: 'values',
+      type: 'array(row("fieldA" varchar,"fieldB" double))',
+    },
+  ],
+};

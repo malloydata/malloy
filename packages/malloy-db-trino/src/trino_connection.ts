@@ -100,14 +100,13 @@ class PrestoRunner implements BaseRunner {
   }
   async runSQL(
     sql: string,
-    limit: number | undefined,
+    _limit: number | undefined,
     _abortSignal?: AbortSignal
   ) {
     let ret: PrestoQuery | undefined = undefined;
-    const q = limit ? `SELECT * FROM(${sql}) LIMIT ${limit}` : sql;
     let error: string | undefined = undefined;
     try {
-      ret = (await this.client.query(q)) || [];
+      ret = (await this.client.query(sql)) || [];
       // console.log(ret);
     } catch (errorObj) {
       // console.log(error);
@@ -219,7 +218,10 @@ export abstract class TrinoPrestoConnection
   }
 
   unpackArray(data: unknown): unknown[] {
-    return data as unknown[];
+    if (data !== null && typeof data === 'object') {
+      return Object.values(data);
+    }
+    throw new Error('cannot unpack data');
   }
 
   convertRow(fields: FieldDef[], rawRow: unknown) {
