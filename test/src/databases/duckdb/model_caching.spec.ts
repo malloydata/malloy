@@ -24,7 +24,7 @@
 import {describeIfDatabaseAvailable} from '../../util';
 import {RuntimeList, TestCacheManager, TestURLReader} from '../../runtimes';
 
-const [_describe, databases] = describeIfDatabaseAvailable(['duckdb']);
+const [describe, databases] = describeIfDatabaseAvailable(['duckdb']);
 const runtimes = new RuntimeList(databases);
 
 describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
