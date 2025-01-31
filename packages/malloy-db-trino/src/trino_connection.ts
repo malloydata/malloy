@@ -231,7 +231,7 @@ export abstract class TrinoPrestoConnection
         return result;
       }
     }
-    throw new Error('cannot unpack data');
+    throw new Error('Cannot unpack data');
   }
 
   convertRow(fields: FieldDef[], rawRow: unknown) {
@@ -504,8 +504,13 @@ export class PrestoConnection extends TrinoPrestoConnection {
     PrestoConnection.schemaFromExplain(explainResult, structDef, this.dialect);
   }
 
-  unpackArray(data: unknown): unknown[] {
-    return JSON.parse(data as string);
+  unpackArray(_fields: FieldDef[], data: unknown): unknown[] {
+    if (data === null) {
+      return [];
+    } else if (typeof data === 'string') {
+      return JSON.parse(data);
+    }
+    throw new Error('Cannot unpack data');
   }
 }
 
