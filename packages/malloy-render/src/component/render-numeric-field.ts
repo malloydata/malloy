@@ -54,13 +54,8 @@ export function renderNumericField(f: AtomicField, value: number): string {
   } else if (tag.has('number'))
     displayValue = format(tag.text('number') ?? '#', value);
   else {
-    const numericValue = Number(value ?? '');
-    if (!isNaN(numericValue)) {
-      displayValue = numericValue.toLocaleString();
-    } else {
-      // handle the case where value is not a number
-      displayValue = String(value ?? '');
-    }
+    const nonNullValue = value ?? '';
+    displayValue = (nonNullValue as number).toLocaleString();
   }
   return displayValue;
 }
