@@ -492,7 +492,7 @@ export class PrestoConnection extends TrinoPrestoConnection {
     PrestoConnection.schemaFromExplain(explainResult, structDef, this.dialect);
   }
 
-  unpackArray(data: unknown, _fields: FieldDef[]): unknown[] {
+  unpackArray(_fields: FieldDef[], data: unknown): unknown[] {
     return JSON.parse(data as string);
   }
 }
