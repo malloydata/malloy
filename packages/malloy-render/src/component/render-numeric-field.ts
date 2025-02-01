@@ -25,8 +25,15 @@ import {AtomicField} from '@malloydata/malloy';
 import {Currency, DurationUnit} from '../html/data_styles';
 import {format} from 'ssf';
 import {getText} from '../html/duration';
+import {NULL_SYMBOL} from './apply-renderer';
 
-export function renderNumericField(f: AtomicField, value: number): string {
+export function renderNumericField(
+  f: AtomicField,
+  value: number | null | undefined
+): string {
+  if (value === null || value === undefined) {
+    return NULL_SYMBOL;
+  }
   let displayValue: string | number = value;
   const {tag} = f.tagParse();
   if (tag.has('currency')) {
