@@ -32,6 +32,7 @@ import {
   ReferenceContext,
   StringContext,
   TagDefContext,
+  TagEmptyContext,
   TagEqContext,
   TagLineContext,
   TagReplacePropertiesContext,
@@ -638,5 +639,11 @@ class TaglineParser
       writeInto[writeKey] = new Tag({});
     }
     return buildOn;
+  }
+
+  visitTagEmpty(ctx: TagEmptyContext): Tag {
+    const tagList = ctx['buildOn'] as Tag;
+    tagList.properties = {};
+    return tagList;
   }
 }

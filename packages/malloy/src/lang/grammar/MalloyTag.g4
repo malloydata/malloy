@@ -29,6 +29,7 @@ tagSpec
   | propName EQ DOTTY? properties      # tagReplaceProperties
   | propName properties                # tagUpdateProperties
   | MINUS? propName                    # tagDef
+  | MINUS_DOTTY                        # tagEmpty
   ;
 
 string
@@ -63,6 +64,7 @@ reference: RF_BEG propName RF_END;
 arrayValue: AR_BEG arrayElement (COMMA arrayElement)* COMMA? AR_END;
 properties: PR_BEG (DOTTY | (tagSpec*)) PR_END;
 
+MINUS_DOTTY: '-...';
 DOTTY: '...';
 DOT: '.';
 MINUS: '-';
