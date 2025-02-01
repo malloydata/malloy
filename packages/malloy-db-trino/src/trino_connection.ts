@@ -218,13 +218,13 @@ export abstract class TrinoPrestoConnection
     throw new Error('not implemented 1');
   }
 
-  unpackArray(data: unknown): unknown[] {
+  unpackArray(_fields: FieldDef[], data: unknown): unknown[] {
     return data as unknown[];
   }
 
   convertRow(fields: FieldDef[], rawRow: unknown) {
     const retRow = {};
-    const row = this.unpackArray(rawRow);
+    const row = this.unpackArray(fields, rawRow);
     for (let i = 0; i < fields.length; i++) {
       const field = fields[i];
 
@@ -244,7 +244,7 @@ export abstract class TrinoPrestoConnection
   }
 
   convertNest(fields: FieldDef[], _data: unknown) {
-    const data = this.unpackArray(_data);
+    const data = this.unpackArray(fields, _data);
     const ret: unknown[] = [];
     const rows = (data === null || data === undefined ? [] : data) as unknown[];
     for (const row of rows) {
@@ -298,7 +298,7 @@ export abstract class TrinoPrestoConnection
       return this.convertNest(colSchema.fields, rawRow) as QueryValue;
     } else if (isScalarArray(colSchema)) {
       const elType = colSchema.elementTypeDef;
-      let theArray = this.unpackArray(rawRow);
+      let theArray = this.unpackArray([], rawRow);
       if (elType.type === 'array') {
         theArray = theArray.map(el => this.resultRow(elType, el));
       }
@@ -492,7 +492,7 @@ export class PrestoConnection extends TrinoPrestoConnection {
     PrestoConnection.schemaFromExplain(explainResult, structDef, this.dialect);
   }
 
-  unpackArray(data: unknown): unknown[] {
+  unpackArray(data: unknown, _fields: FieldDef[]): unknown[] {
     return JSON.parse(data as string);
   }
 }
