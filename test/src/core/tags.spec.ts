@@ -155,12 +155,13 @@ describe('tagParse to Tag', () => {
         },
       },
     ],
+    ['can remove.properties -...', {}],
   ];
   test.each(tagTests)('tag %s', (expression: string, expected: TagDict) => {
     expect(expression).tagsAre(expected);
   });
   test.skip('unskip to debug just one of the expressions', () => {
-    const x: TagTestTuple = ['x x.y', {x: {properties: {y: {}}}}];
+    const x: TagTestTuple = ['word -...', {}];
     expect(x[0]).tagsAre(x[1]);
   });
   test('inherits can be over-ridden', () => {
