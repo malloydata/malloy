@@ -1,6 +1,6 @@
 name: Malloy Tests
 
-on: [workflow_dispatch, pull_request]
+on: [workflow_dispatch, pull_request_target]
 
 jobs:
   check-permission:
