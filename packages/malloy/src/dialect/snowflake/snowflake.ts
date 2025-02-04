@@ -240,7 +240,7 @@ export class SnowflakeDialect extends Dialect {
   sqlSumDistinct(key: string, value: string, funcName: string): string {
     const hashKey = this.sqlSumDistinctHashedKey(key);
     const scale = 100000000.0;
-    const v = `(CAST (COALESCE(${value},0)*${scale}) as INT)`;
+    const v = `(CAST (COALESCE(${value},0)*${scale} as INT))`;
 
     const sqlSum = `(SUM(DISTINCT ${hashKey} + ${v}) - SUM(DISTINCT ${hashKey}))/${scale}`;
     if (funcName === 'SUM') {
