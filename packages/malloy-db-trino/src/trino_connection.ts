@@ -22,7 +22,6 @@
  */
 
 import {
-  Connection,
   ConnectionConfig,
   MalloyQueryData,
   PersistSQLResults,
@@ -44,6 +43,7 @@ import {
   FieldDef,
   TinyParser,
   isRepeatedRecord,
+  TestableConnection,
 } from '@malloydata/malloy';
 
 import {BaseConnection} from '@malloydata/malloy/connection';
@@ -172,7 +172,7 @@ class TrinoRunner implements BaseRunner {
 
 export abstract class TrinoPrestoConnection
   extends BaseConnection
-  implements Connection, PersistSQLResults
+  implements TestableConnection, PersistSQLResults
 {
   protected readonly dialect = new TrinoDialect();
   static DEFAULT_QUERY_OPTIONS: RunSQLOptions = {
@@ -422,7 +422,7 @@ export abstract class TrinoPrestoConnection
   }
 
   public async test(): Promise<void> {
-    // await this.dryRunSQLQuery('SELECT 1');
+    await this.runSQL('SELECT 1');
   }
 
   async close(): Promise<void> {
