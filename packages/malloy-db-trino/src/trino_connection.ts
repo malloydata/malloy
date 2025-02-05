@@ -48,7 +48,11 @@ import {
 
 import {BaseConnection} from '@malloydata/malloy/connection';
 
-import {PrestoClient, PrestoQuery} from '@prestodb/presto-js-client';
+import {
+  PrestoClient,
+  PrestoClientConfig,
+  PrestoQuery,
+} from '@prestodb/presto-js-client';
 import {randomUUID} from 'crypto';
 import {Trino, BasicAuth} from 'trino-client';
 
@@ -88,7 +92,7 @@ export interface BaseRunner {
 class PrestoRunner implements BaseRunner {
   client: PrestoClient;
   constructor(config: TrinoConnectionConfiguration) {
-    this.client = new PrestoClient({
+    const prestoClientConfig: PrestoClientConfig = {
       catalog: config.catalog,
       host: config.server,
       port: config.port,
@@ -96,7 +100,14 @@ class PrestoRunner implements BaseRunner {
       timezone: 'America/Costa_Rica',
       user: config.user || 'anyone',
       extraHeaders: {'X-Presto-Session': 'legacy_unnest=true'},
-    });
+    };
+    if (config.user && config.password) {
+      prestoClientConfig.basicAuthentication = {
+        user: config.user,
+        password: config.password,
+      };
+    }
+    this.client = new PrestoClient(prestoClientConfig);
   }
   async runSQL(
     sql: string,
