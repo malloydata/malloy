@@ -347,7 +347,10 @@ export class SnowflakeConnection
         from (
           select
             regexp_replace(path, '\\\\[[0-9]+\\\\]', '[*]') as path,
-            case when typeof(value) = 'INTEGER' then 'decimal' else lower(typeof(value)) end as type
+            case
+              when typeof(value) = 'INTEGER' then 'decimal'
+              when typeof(value) = 'DOUBLE' then 'decimal'
+            else lower(typeof(value)) end as type
           from
             (select object_construct(*) o from ${tablePath} limit 100)
               ,table(flatten(input => o, recursive => true)) as meta
