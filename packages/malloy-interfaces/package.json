@@ -16,6 +16,14 @@
     "test": "jest --config=../../jest.config.js",
     "clean": "tsc --build --clean",
     "build": "tsc --build",
-    "prepublishOnly": "npm run clean && npm run build"
+    "prepublishOnly": "npm run clean && npm run build",
+    "generate-types": "thrift-typescript --strictUnions --target thrift-server --sourceDir thrift --outDir generated-types malloy.thrift && ts-node scripts/hacky_gen_types.ts > src/types.ts && cd ../.. && eslint 'packages/malloy-interfaces/src/types.ts' --fix"
+  },
+  "devDependencies": {
+    "@creditkarma/thrift-typescript": "^3.7.6",
+    "ts-node": "^10.9.2"
+  },
+  "dependencies": {
+    "@creditkarma/thrift-server-core": "^1.0.4"
   }
 }
