@@ -429,7 +429,7 @@ export type JoinInfo = {
   schema: Schema;
   tag?: Tag;
   annotations?: Array<Annotation>;
-  relationship?: Relationship;
+  relationship: Relationship;
 };
 export type Limit = {
   limit: number;
@@ -774,8 +774,8 @@ export type View = {
   annotations?: Array<TagOrAnnotation>;
 };
 export type ViewInfo = {
-  name?: string;
-  schema?: Schema;
+  name: string;
+  schema: Schema;
   tag?: Tag;
   annotations?: Array<Annotation>;
   definition?: View;

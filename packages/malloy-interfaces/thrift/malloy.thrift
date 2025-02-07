@@ -6,21 +6,21 @@
  */
 
 struct ModelInfo {
-  1: list<ModelEntryValue> entries,
+  1: required list<ModelEntryValue> entries,
   // TODO should (tag | annotation | tag & annotation) be a metadata type
   2: optional Tag tag,
   3: optional list<Annotation> annotations,
-  4: list<QueryInfo> anonymous_queries,
+  4: required list<QueryInfo> anonymous_queries,
 }
 
 union ModelEntryValue {
-  1: SourceInfo source,
-  2: QueryInfo query,
+  1: required SourceInfo source,
+  2: required QueryInfo query,
 }
 
 struct SourceInfo {
-  1: string name,
-  2: Schema schema,
+  1: required string name,
+  2: required Schema schema,
   3: optional Tag tag,
   4: optional list<Annotation> annotations,
 }
@@ -30,8 +30,8 @@ run: name_of_query -> asdf
 */
 
 struct QueryInfo {
-  1: string name,
-  2: Schema schema,
+  1: required string name,
+  2: required Schema schema,
   3: optional Tag tag,
   4: optional list<Annotation> annotations,
   // "openable query"
@@ -50,7 +50,7 @@ struct QueryInfo {
 }
 
 struct AnonymousQueryInfo {
-  2: Schema schema,
+  2: required Schema schema,
   4: optional list<Annotation> annotations,
   // "openable query"
   5: optional Query definition,
@@ -68,36 +68,36 @@ struct AnonymousQueryInfo {
 }
 
 struct Location {
-  1: string url,
-  2: Range range,
+  1: required string url,
+  2: required Range range,
 }
 
 struct Range {
-  1: Position start,
-  2: Position end,
+  1: required Position start,
+  2: required Position end,
 }
 
 struct Position {
-  1: i32 line,
-  2: i32 character,
+  1: required i32 line,
+  2: required i32 character,
 }
 
 struct Schema {
-  1: list<FieldInfo> fields,
+  1: required list<FieldInfo> fields,
 }
 
 struct Annotation {
-  1: string value,
+  1: required string value,
 }
 
 union TagValue {
-  1: string string_value,
-  2: list<Tag> array_value,
+  1: required string string_value,
+  2: required list<Tag> array_value,
 }
 
 struct TagProperty {
-  1: string name,
-  2: Tag value,
+  1: required string name,
+  2: required Tag value,
 }
 
 struct Tag {
@@ -107,24 +107,24 @@ struct Tag {
 }
 
 union FieldInfo {
-  // 1: AtomicField atomic_field,
-  1: DimensionInfo dimension,
-  2: MeasureInfo measure,
-  3: JoinInfo join,
-  4: ViewInfo view,
+  // 1: required AtomicField atomic_field,
+  1: required DimensionInfo dimension,
+  2: required MeasureInfo measure,
+  3: required JoinInfo join,
+  4: required ViewInfo view,
 }
 
 // struct AtomicField {
-//   1: string name,
-//   2: UAtomicFieldType type,
+//   1: required string name,
+//   2: required UAtomicFieldType type,
 //   3: optional Tag tag,
 //   4: optional list<Annotation> annotations,
 // }
 
 // TODO should these just be "AtomicField" with a "fieldtype"
 struct DimensionInfo {
-  1: string name,
-  2: AtomicType type,
+  1: required string name,
+  2: required AtomicType type,
   3: optional Tag tag,
   4: optional list<Annotation> annotations,
   // TODO possibly need "wasDimension vs wasMeasure"
@@ -136,8 +136,8 @@ struct DimensionInfo {
 }
 
 struct MeasureInfo {
-  1: string name,
-  2: AtomicType type,
+  1: required string name,
+  2: required AtomicType type,
   3: optional Tag tag,
   4: optional list<Annotation> annotations,
 }
@@ -150,16 +150,16 @@ enum Relationship {
 }
 
 struct JoinInfo {
-  1: string name,
-  2: Schema schema,
+  1: required string name,
+  2: required Schema schema,
   3: optional Tag tag,
   4: optional list<Annotation> annotations,
-  5: Relationship relationship,
+  5: required Relationship relationship,
 }
 
 struct ViewInfo {
-  1: string name,
-  2: Schema schema,
+  1: required string name,
+  2: required Schema schema,
   3: optional Tag tag,
   4: optional list<Annotation> annotations,
   // TODO naming of this
@@ -169,7 +169,7 @@ struct ViewInfo {
 }
 
 struct View {
-  2: Pipeline pipeline,
+  2: required Pipeline pipeline,
   3: optional list<TagOrAnnotation> annotations,
 }
 
@@ -197,23 +197,23 @@ struct JSONType {
 }
 
 struct ArrayType {
-  1: AtomicType element_type;
+  1: required AtomicType element_type;
 }
 
 struct RecordType {
-  1: list<DimensionInfo> fields
+  1: required list<DimensionInfo> fields
 }
 
 union AtomicType {
-  1: StringType string_type,
-  2: BooleanType boolean_type,
-  3: NumberType number_type,
-  4: JSONType json_type,
-  5: SQLNativeType sql_native_type,
-  6: DateType date_type,
-  7: TimestampType timestamp_type,
-  9: ArrayType array_type,
-  10: RecordType record_type,
+  1: required StringType string_type,
+  2: required BooleanType boolean_type,
+  3: required NumberType number_type,
+  4: required JSONType json_type,
+  5: required SQLNativeType sql_native_type,
+  6: required DateType date_type,
+  7: required TimestampType timestamp_type,
+  9: required ArrayType array_type,
+  10: required RecordType record_type,
 }
 
 struct SQLNativeType {
@@ -260,241 +260,241 @@ Generate typescript?
 */
 
 union RefinementBase {
-  1: Reference reference,
+  1: required Reference reference,
 }
 
 struct Refinement {
-  1: RefinementBase base,
-  2: RefinementOperation operation,
+  1: required RefinementBase base,
+  2: required RefinementOperation operation,
 }
 
 union RefinementOperation {
-  1: Reference reference,
-  2: Segment segment,
+  1: required Reference reference,
+  2: required Segment segment,
 }
 
 struct Segment {
-  1: list<ViewOperation> operations,
+  1: required list<ViewOperation> operations,
 }
 
 union ViewOperation {
-  1: GroupBy group_by,
-  2: Aggregate aggregate,
+  1: required GroupBy group_by,
+  2: required Aggregate aggregate,
   3: OrderBy order_by,
-  4: Limit limit,
-  5: Where where,
-  6: Nest nest,
+  4: required Limit limit,
+  5: required Where where,
+  6: required Nest nest,
 }
 
 union TagOrAnnotation {
-  1: Tag tag,
-  2: Annotation annotation,
+  1: required Tag tag,
+  2: required Annotation annotation,
 }
 
 struct GroupBy {
-  1: list<GroupByItem> items,
+  1: required list<GroupByItem> items,
   2: optional list<TagOrAnnotation> annotations,
 }
 
 struct GroupByItem {
   1: optional string name,
-  2: Field field,
+  2: required Field field,
 }
 
 struct Nest {
-  1: list<NestItem> items,
+  1: required list<NestItem> items,
   2: optional list<TagOrAnnotation> annotations,
 }
 
 struct NestItem {
   1: optional string name,
-  2: View view,
+  2: required View view,
 }
 
 struct Aggregate {
-  1: list<AggregateOperation> items,
+  1: required list<AggregateOperation> items,
   2: optional list<TagOrAnnotation> annotations,
 }
 
 struct AggregateOperation {
   1: optional string name,
-  2: Field field,
+  2: required Field field,
 }
 
 struct Field {
-  1: Expression expression,
+  1: required Expression expression,
   // TODO only two kinds of distinguishable annotations are before `aggregate:` and before `name is value`
   // between `name` and `is`, or between `is` and `value` are converted to before `name`.
   2: optional list<TagOrAnnotation> annotations,
 }
 
 struct OrderBy {
-  1: list<OrderByItem> items,
+  1: required list<OrderByItem> items,
 }
 
 struct OrderByItem {
-  1: Reference field,
+  1: required Reference field,
   2: optional OrderByDirection direction,
 }
 
 struct Limit {
-  1: i32 limit,
+  1: required i32 limit,
 }
 
 struct Where {
-  1: list<WhereItem> items,
+  1: required list<WhereItem> items,
 }
 
 union WhereItem {
-  1: FilterStringApplication filter_string,
+  1: required FilterStringApplication filter_string,
 }
 
 struct FilterStringApplication {
-  1: Reference field,
-  2: string filter, // TODO multiple filters?
+  1: required Reference field,
+  2: required string filter, // TODO multiple filters?
 }
 
 union PipeStage {
-  1: Reference reference,
-  2: Refinement refinement,
-  3: Segment segment,
+  1: required Reference reference,
+  2: required Refinement refinement,
+  3: required Segment segment,
 }
 
 struct Query {
   1: optional Reference source,
-  2: Pipeline pipeline,
+  2: required Pipeline pipeline,
   3: optional list<TagOrAnnotation> annotations,
 }
 
 struct Pipeline {
-  1: list<PipeStage> stages,
+  1: required list<PipeStage> stages,
 }
 
 struct Reference {
-  1: string name,
+  1: required string name,
   2: optional list<ParameterValue> parameters,
 }
 
 struct ParameterValue {
-  1: string name,
-  2: LiteralValue value,
+  1: required string name,
+  2: required LiteralValue value,
 }
 
 union LiteralValue {
-  1: StringLiteral string_literal,
-  2: NumberLiteral number_literal,
-  3: DateLiteral date_literal,
-  4: TimestampLiteral timestamp_literal,
-  5: BooleanLiteral boolean_literal,
-  6: NullLiteral null_literal,
+  1: required StringLiteral string_literal,
+  2: required NumberLiteral number_literal,
+  3: required DateLiteral date_literal,
+  4: required TimestampLiteral timestamp_literal,
+  5: required BooleanLiteral boolean_literal,
+  6: required NullLiteral null_literal,
 }
 
 struct StringLiteral {
-  1: string string_value,
+  1: required string string_value,
 }
 
 struct NumberLiteral {
-  1: double number_value,
+  1: required double number_value,
 }
 
 struct BooleanLiteral {
-  1: bool boolean_value,
+  1: required bool boolean_value,
 }
 
 struct DateLiteral {
-  1: string date_value,
+  1: required string date_value,
 }
 
 struct TimestampLiteral {
-  1: string timestamp_value,
+  1: required string timestamp_value,
 }
 
 struct NullLiteral {
 }
 
 union Expression {
-  1: Reference reference,
-  2: TimeTruncationFieldReference time_truncation,
-  3: FilteredField filtered_field,
+  1: required Reference reference,
+  2: required TimeTruncationFieldReference time_truncation,
+  3: required FilteredField filtered_field,
 }
 
 struct TimeTruncationFieldReference {
-  1: Reference reference, // TODO do I make this circular, more like actual grammar? e.g. TimeTruncation rather than TimeTruncationFieldReference
-  2: TimestampTimeframe truncation,
+  1: required Reference reference, // TODO do I make this circular, more like actual grammar? e.g. TimeTruncation rather than TimeTruncationFieldReference
+  2: required TimestampTimeframe truncation,
 }
 
 struct FilteredField {
-  1: Reference reference,
-  2: WhereItem filter, // TODO multiple filters?
+  1: required Reference reference,
+  2: required WhereItem filter, // TODO multiple filters?
 }
 
 struct StringCell {
-  1: string string_value,
+  1: required string string_value,
 }
 
 struct BooleanCell {
-  1: bool boolean_value,
+  1: required bool boolean_value,
 }
 
 struct NumberCell {
-  1: double number_value,
+  1: required double number_value,
 }
 
 struct TimestampCell {
-  1: string timestamp_value, // TODO another way to represent dates?
+  1: required string timestamp_value, // TODO another way to represent dates?
 }
 
 struct DateCell {
-  1: string date_value, // TODO another way to represent dates?
+  1: required string date_value, // TODO another way to represent dates?
 }
 
 struct JSONCell {
-  1: string json_value,
+  1: required string json_value,
 }
 
 struct ArrayCell {
-  1: list<Cell> array_value,
+  1: required list<Cell> array_value,
 }
 
 // A record is also just a list of values, because we don't need to store the names in the data
 struct RecordCell {
-  1: list<Cell> record_value,
+  1: required list<Cell> record_value,
 }
 
 struct TableCell {
-  1: Table table_value,
+  1: required Table table_value,
 }
 
 union Cell {
-  1: StringCell string_cell,
-  2: BooleanCell boolean_cell,
-  3: DateCell date_cell,
-  4: TimestampCell timestamp_cell, // TODO does this need to be separate?
-  5: NumberCell number_cell,
-  6: JSONCell json_cell, // TODO does this need to be here?
-  7: RecordCell record_cell,
-  8: ArrayCell array_cell,
-  9: TableCell table_cell, // TODO does this need to be different from an array of records
+  1: required StringCell string_cell,
+  2: required BooleanCell boolean_cell,
+  3: required DateCell date_cell,
+  4: required TimestampCell timestamp_cell, // TODO does this need to be separate?
+  5: required NumberCell number_cell,
+  6: required JSONCell json_cell, // TODO does this need to be here?
+  7: required RecordCell record_cell,
+  8: required ArrayCell array_cell,
+  9: required TableCell table_cell, // TODO does this need to be different from an array of records
   // TODO sql_native???
 }
 
 struct Row {
-  1: list<Cell> cells,
+  1: required list<Cell> cells,
 }
 
 struct Table {
-  1: list<Row> rows,
+  1: required list<Row> rows,
 }
 
 union Data {
-  1: RecordCell record,
-  2: Table table,
+  1: required RecordCell record,
+  2: required Table table,
 }
 
 // should this be one type "Result" with optional data/sql, or three different types?
 struct Result {
   1: optional Data data,
-  2: Schema schema,
+  2: required Schema schema,
   3: optional string sql,
 }
 
