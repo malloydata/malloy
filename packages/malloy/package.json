@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/malloy",
-  "version": "0.0.235",
+  "version": "0.0.236",
   "license": "MIT",
   "exports": {
     ".": "./dist/index.js",
