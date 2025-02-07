@@ -1,0 +1,13 @@
+-- A simple malloy model representing a valid connection to the test presto container.
+source: presto_models is presto.table("malloytest.aircraft_models") extend {
+    measure: model_count is count()
+
+    view: biggest_airplanes is {
+        group_by:
+            model,
+            seats
+        aggregate: model_count
+        order_by: seats DESC
+        limit: 20
+    }
+}
