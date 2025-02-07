@@ -86,6 +86,7 @@ export interface BaseRunner {
     rows: unknown[][];
     columns: {name: string; type: string; error?: string}[];
     error?: string;
+    profilingUrl?: string;
   }>;
 }
 
@@ -279,8 +280,8 @@ export abstract class TrinoPrestoConnection
     if (r.error) {
       throw new Error(r.error);
     }
-    const inputRows = r.rows;
-    const columns = r.columns;
+
+    const {rows: inputRows, columns, profilingUrl} = r;
 
     const malloyColumns = columns.map(c =>
       mkFieldDef(this.malloyTypeFromTrinoType(c.type), c.name)
@@ -299,7 +300,7 @@ export abstract class TrinoPrestoConnection
       malloyRows.push(malloyRow);
     }
 
-    return {rows: malloyRows, totalRows: malloyRows.length};
+    return {rows: malloyRows, totalRows: malloyRows.length, profilingUrl};
   }
 
   private resultRow(colSchema: AtomicTypeDef, rawRow: unknown) {
