@@ -463,6 +463,10 @@ export class PrestoConnection extends TrinoPrestoConnection {
     );
   }
 
+  override get dialectName(): string {
+    return 'presto';
+  }
+
   static schemaFromExplain(
     explainResult: MalloyQueryData,
     structDef: StructDef,
@@ -528,6 +532,10 @@ export class TrinoConnection extends TrinoPrestoConnection {
       new TrinoRunner(config),
       queryOptions
     );
+  }
+
+  override get dialectName(): string {
+    return 'trino';
   }
 
   protected async fillStructDefForSqlBlockSchema(
