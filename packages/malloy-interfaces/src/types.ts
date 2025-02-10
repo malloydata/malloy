@@ -29,6 +29,9 @@ export type AnonymousQueryInfo = {
 export type ArrayCell = {
   array_value: Array<Cell>;
 };
+export type ArrayTagValue = {
+  value: Array<Tag>;
+};
 export type ArrayType = {
   element_type: AtomicType;
 };
@@ -55,112 +58,31 @@ export type AtomicType =
   | AtomicTypeWithRecordType;
 export type AtomicTypeWithStringType = {
   __type: AtomicTypeType.StringType;
-  string_type: StringType;
-  boolean_type?: undefined;
-  number_type?: undefined;
-  json_type?: undefined;
-  sql_native_type?: undefined;
-  date_type?: undefined;
-  timestamp_type?: undefined;
-  array_type?: undefined;
-  record_type?: undefined;
-};
+} & StringType;
 export type AtomicTypeWithBooleanType = {
   __type: AtomicTypeType.BooleanType;
-  string_type?: undefined;
-  boolean_type: BooleanType;
-  number_type?: undefined;
-  json_type?: undefined;
-  sql_native_type?: undefined;
-  date_type?: undefined;
-  timestamp_type?: undefined;
-  array_type?: undefined;
-  record_type?: undefined;
-};
+} & BooleanType;
 export type AtomicTypeWithNumberType = {
   __type: AtomicTypeType.NumberType;
-  string_type?: undefined;
-  boolean_type?: undefined;
-  number_type: NumberType;
-  json_type?: undefined;
-  sql_native_type?: undefined;
-  date_type?: undefined;
-  timestamp_type?: undefined;
-  array_type?: undefined;
-  record_type?: undefined;
-};
+} & NumberType;
 export type AtomicTypeWithJSONType = {
   __type: AtomicTypeType.JSONType;
-  string_type?: undefined;
-  boolean_type?: undefined;
-  number_type?: undefined;
-  json_type: JSONType;
-  sql_native_type?: undefined;
-  date_type?: undefined;
-  timestamp_type?: undefined;
-  array_type?: undefined;
-  record_type?: undefined;
-};
+} & JSONType;
 export type AtomicTypeWithSQLNativeType = {
   __type: AtomicTypeType.SQLNativeType;
-  string_type?: undefined;
-  boolean_type?: undefined;
-  number_type?: undefined;
-  json_type?: undefined;
-  sql_native_type: SQLNativeType;
-  date_type?: undefined;
-  timestamp_type?: undefined;
-  array_type?: undefined;
-  record_type?: undefined;
-};
+} & SQLNativeType;
 export type AtomicTypeWithDateType = {
   __type: AtomicTypeType.DateType;
-  string_type?: undefined;
-  boolean_type?: undefined;
-  number_type?: undefined;
-  json_type?: undefined;
-  sql_native_type?: undefined;
-  date_type: DateType;
-  timestamp_type?: undefined;
-  array_type?: undefined;
-  record_type?: undefined;
-};
+} & DateType;
 export type AtomicTypeWithTimestampType = {
   __type: AtomicTypeType.TimestampType;
-  string_type?: undefined;
-  boolean_type?: undefined;
-  number_type?: undefined;
-  json_type?: undefined;
-  sql_native_type?: undefined;
-  date_type?: undefined;
-  timestamp_type: TimestampType;
-  array_type?: undefined;
-  record_type?: undefined;
-};
+} & TimestampType;
 export type AtomicTypeWithArrayType = {
   __type: AtomicTypeType.ArrayType;
-  string_type?: undefined;
-  boolean_type?: undefined;
-  number_type?: undefined;
-  json_type?: undefined;
-  sql_native_type?: undefined;
-  date_type?: undefined;
-  timestamp_type?: undefined;
-  array_type: ArrayType;
-  record_type?: undefined;
-};
+} & ArrayType;
 export type AtomicTypeWithRecordType = {
   __type: AtomicTypeType.RecordType;
-  string_type?: undefined;
-  boolean_type?: undefined;
-  number_type?: undefined;
-  json_type?: undefined;
-  sql_native_type?: undefined;
-  date_type?: undefined;
-  timestamp_type?: undefined;
-  array_type?: undefined;
-  record_type: RecordType;
-};
+} & RecordType;
 export type BooleanCell = {
   boolean_value: boolean;
 };
@@ -189,129 +111,24 @@ export type Cell =
   | CellWithRecordCell
   | CellWithArrayCell
   | CellWithTableCell;
-export type CellWithStringCell = {
-  __type: CellType.StringCell;
-  string_cell: StringCell;
-  boolean_cell?: undefined;
-  date_cell?: undefined;
-  timestamp_cell?: undefined;
-  number_cell?: undefined;
-  json_cell?: undefined;
-  record_cell?: undefined;
-  array_cell?: undefined;
-  table_cell?: undefined;
-};
-export type CellWithBooleanCell = {
-  __type: CellType.BooleanCell;
-  string_cell?: undefined;
-  boolean_cell: BooleanCell;
-  date_cell?: undefined;
-  timestamp_cell?: undefined;
-  number_cell?: undefined;
-  json_cell?: undefined;
-  record_cell?: undefined;
-  array_cell?: undefined;
-  table_cell?: undefined;
-};
-export type CellWithDateCell = {
-  __type: CellType.DateCell;
-  string_cell?: undefined;
-  boolean_cell?: undefined;
-  date_cell: DateCell;
-  timestamp_cell?: undefined;
-  number_cell?: undefined;
-  json_cell?: undefined;
-  record_cell?: undefined;
-  array_cell?: undefined;
-  table_cell?: undefined;
-};
+export type CellWithStringCell = {__type: CellType.StringCell} & StringCell;
+export type CellWithBooleanCell = {__type: CellType.BooleanCell} & BooleanCell;
+export type CellWithDateCell = {__type: CellType.DateCell} & DateCell;
 export type CellWithTimestampCell = {
   __type: CellType.TimestampCell;
-  string_cell?: undefined;
-  boolean_cell?: undefined;
-  date_cell?: undefined;
-  timestamp_cell: TimestampCell;
-  number_cell?: undefined;
-  json_cell?: undefined;
-  record_cell?: undefined;
-  array_cell?: undefined;
-  table_cell?: undefined;
-};
-export type CellWithNumberCell = {
-  __type: CellType.NumberCell;
-  string_cell?: undefined;
-  boolean_cell?: undefined;
-  date_cell?: undefined;
-  timestamp_cell?: undefined;
-  number_cell: NumberCell;
-  json_cell?: undefined;
-  record_cell?: undefined;
-  array_cell?: undefined;
-  table_cell?: undefined;
-};
-export type CellWithJSONCell = {
-  __type: CellType.JSONCell;
-  string_cell?: undefined;
-  boolean_cell?: undefined;
-  date_cell?: undefined;
-  timestamp_cell?: undefined;
-  number_cell?: undefined;
-  json_cell: JSONCell;
-  record_cell?: undefined;
-  array_cell?: undefined;
-  table_cell?: undefined;
-};
-export type CellWithRecordCell = {
-  __type: CellType.RecordCell;
-  string_cell?: undefined;
-  boolean_cell?: undefined;
-  date_cell?: undefined;
-  timestamp_cell?: undefined;
-  number_cell?: undefined;
-  json_cell?: undefined;
-  record_cell: RecordCell;
-  array_cell?: undefined;
-  table_cell?: undefined;
-};
-export type CellWithArrayCell = {
-  __type: CellType.ArrayCell;
-  string_cell?: undefined;
-  boolean_cell?: undefined;
-  date_cell?: undefined;
-  timestamp_cell?: undefined;
-  number_cell?: undefined;
-  json_cell?: undefined;
-  record_cell?: undefined;
-  array_cell: ArrayCell;
-  table_cell?: undefined;
-};
-export type CellWithTableCell = {
-  __type: CellType.TableCell;
-  string_cell?: undefined;
-  boolean_cell?: undefined;
-  date_cell?: undefined;
-  timestamp_cell?: undefined;
-  number_cell?: undefined;
-  json_cell?: undefined;
-  record_cell?: undefined;
-  array_cell?: undefined;
-  table_cell: TableCell;
-};
+} & TimestampCell;
+export type CellWithNumberCell = {__type: CellType.NumberCell} & NumberCell;
+export type CellWithJSONCell = {__type: CellType.JSONCell} & JSONCell;
+export type CellWithRecordCell = {__type: CellType.RecordCell} & RecordCell;
+export type CellWithArrayCell = {__type: CellType.ArrayCell} & ArrayCell;
+export type CellWithTableCell = {__type: CellType.TableCell} & TableCell;
 export enum DataType {
   Record = 'record',
   Table = 'table',
 }
 export type Data = DataWithRecord | DataWithTable;
-export type DataWithRecord = {
-  __type: DataType.Record;
-  record: RecordCell;
-  table?: undefined;
-};
-export type DataWithTable = {
-  __type: DataType.Table;
-  record?: undefined;
-  table: Table;
-};
+export type DataWithRecord = {__type: DataType.Record} & RecordCell;
+export type DataWithTable = {__type: DataType.Table} & Table;
 export type DateCell = {
   date_value: string;
 };
@@ -345,22 +162,13 @@ export type Expression =
   | ExpressionWithFilteredField;
 export type ExpressionWithReference = {
   __type: ExpressionType.Reference;
-  reference: Reference;
-  time_truncation?: undefined;
-  filtered_field?: undefined;
-};
+} & Reference;
 export type ExpressionWithTimeTruncation = {
   __type: ExpressionType.TimeTruncation;
-  reference?: undefined;
-  time_truncation: TimeTruncationFieldReference;
-  filtered_field?: undefined;
-};
+} & TimeTruncationFieldReference;
 export type ExpressionWithFilteredField = {
   __type: ExpressionType.FilteredField;
-  reference?: undefined;
-  time_truncation?: undefined;
-  filtered_field: FilteredField;
-};
+} & FilteredField;
 export type Field = {
   expression: Expression;
   annotations?: Array<TagOrAnnotation>;
@@ -378,32 +186,12 @@ export type FieldInfo =
   | FieldInfoWithView;
 export type FieldInfoWithDimension = {
   __type: FieldInfoType.Dimension;
-  dimension: DimensionInfo;
-  measure?: undefined;
-  join?: undefined;
-  view?: undefined;
-};
+} & DimensionInfo;
 export type FieldInfoWithMeasure = {
   __type: FieldInfoType.Measure;
-  dimension?: undefined;
-  measure: MeasureInfo;
-  join?: undefined;
-  view?: undefined;
-};
-export type FieldInfoWithJoin = {
-  __type: FieldInfoType.Join;
-  dimension?: undefined;
-  measure?: undefined;
-  join: JoinInfo;
-  view?: undefined;
-};
-export type FieldInfoWithView = {
-  __type: FieldInfoType.View;
-  dimension?: undefined;
-  measure?: undefined;
-  join?: undefined;
-  view: ViewInfo;
-};
+} & MeasureInfo;
+export type FieldInfoWithJoin = {__type: FieldInfoType.Join} & JoinInfo;
+export type FieldInfoWithView = {__type: FieldInfoType.View} & ViewInfo;
 export type FilterStringApplication = {
   field: Reference;
   filter: string;
@@ -451,58 +239,22 @@ export type LiteralValue =
   | LiteralValueWithNullLiteral;
 export type LiteralValueWithStringLiteral = {
   __type: LiteralValueType.StringLiteral;
-  string_literal: StringLiteral;
-  number_literal?: undefined;
-  date_literal?: undefined;
-  timestamp_literal?: undefined;
-  boolean_literal?: undefined;
-  null_literal?: undefined;
-};
+} & StringLiteral;
 export type LiteralValueWithNumberLiteral = {
   __type: LiteralValueType.NumberLiteral;
-  string_literal?: undefined;
-  number_literal: NumberLiteral;
-  date_literal?: undefined;
-  timestamp_literal?: undefined;
-  boolean_literal?: undefined;
-  null_literal?: undefined;
-};
+} & NumberLiteral;
 export type LiteralValueWithDateLiteral = {
   __type: LiteralValueType.DateLiteral;
-  string_literal?: undefined;
-  number_literal?: undefined;
-  date_literal: DateLiteral;
-  timestamp_literal?: undefined;
-  boolean_literal?: undefined;
-  null_literal?: undefined;
-};
+} & DateLiteral;
 export type LiteralValueWithTimestampLiteral = {
   __type: LiteralValueType.TimestampLiteral;
-  string_literal?: undefined;
-  number_literal?: undefined;
-  date_literal?: undefined;
-  timestamp_literal: TimestampLiteral;
-  boolean_literal?: undefined;
-  null_literal?: undefined;
-};
+} & TimestampLiteral;
 export type LiteralValueWithBooleanLiteral = {
   __type: LiteralValueType.BooleanLiteral;
-  string_literal?: undefined;
-  number_literal?: undefined;
-  date_literal?: undefined;
-  timestamp_literal?: undefined;
-  boolean_literal: BooleanLiteral;
-  null_literal?: undefined;
-};
+} & BooleanLiteral;
 export type LiteralValueWithNullLiteral = {
   __type: LiteralValueType.NullLiteral;
-  string_literal?: undefined;
-  number_literal?: undefined;
-  date_literal?: undefined;
-  timestamp_literal?: undefined;
-  boolean_literal?: undefined;
-  null_literal: NullLiteral;
-};
+} & NullLiteral;
 export type Location = {
   url: string;
   range: Range;
@@ -522,14 +274,10 @@ export type ModelEntryValue =
   | ModelEntryValueWithQuery;
 export type ModelEntryValueWithSource = {
   __type: ModelEntryValueType.Source;
-  source: SourceInfo;
-  query?: undefined;
-};
+} & SourceInfo;
 export type ModelEntryValueWithQuery = {
   __type: ModelEntryValueType.Query;
-  source?: undefined;
-  query: QueryInfo;
-};
+} & QueryInfo;
 export type ModelInfo = {
   entries: Array<ModelEntryValue>;
   tag?: Tag;
@@ -618,14 +366,8 @@ export enum RefinementType {
 export type Refinement = RefinementWithReference | RefinementWithSegment;
 export type RefinementWithReference = {
   __type: RefinementType.Reference;
-  reference: Reference;
-  segment?: undefined;
-};
-export type RefinementWithSegment = {
-  __type: RefinementType.Segment;
-  reference?: undefined;
-  segment: Segment;
-};
+} & Reference;
+export type RefinementWithSegment = {__type: RefinementType.Segment} & Segment;
 export enum Relationship {
   ONE = 1,
   MANY = 2,
@@ -660,6 +402,9 @@ export type StringCell = {
 export type StringLiteral = {
   string_value: string;
 };
+export type StringTagValue = {
+  value: string;
+};
 export type StringType = {};
 export type Table = {
   rows: Array<Row>;
@@ -679,16 +424,10 @@ export enum TagOrAnnotationType {
 export type TagOrAnnotation =
   | TagOrAnnotationWithTag
   | TagOrAnnotationWithAnnotation;
-export type TagOrAnnotationWithTag = {
-  __type: TagOrAnnotationType.Tag;
-  tag: Tag;
-  annotation?: undefined;
-};
+export type TagOrAnnotationWithTag = {__type: TagOrAnnotationType.Tag} & Tag;
 export type TagOrAnnotationWithAnnotation = {
   __type: TagOrAnnotationType.Annotation;
-  tag?: undefined;
-  annotation: Annotation;
-};
+} & Annotation;
 export type TagProperty = {
   name: string;
   value: Tag;
@@ -700,14 +439,10 @@ export enum TagValueType {
 export type TagValue = TagValueWithStringValue | TagValueWithArrayValue;
 export type TagValueWithStringValue = {
   __type: TagValueType.StringValue;
-  string_value: string;
-  array_value?: undefined;
-};
+} & StringTagValue;
 export type TagValueWithArrayValue = {
   __type: TagValueType.ArrayValue;
-  string_value?: undefined;
-  array_value: Array<Tag>;
-};
+} & ArrayTagValue;
 export type TimeTruncationFieldReference = {
   reference: Reference;
   truncation: TimestampTimeframe;
@@ -759,58 +494,16 @@ export type ViewOperation =
   | ViewOperationWithNest;
 export type ViewOperationWithGroupBy = {
   __type: ViewOperationType.GroupBy;
-  group_by: GroupBy;
-  aggregate?: undefined;
-  order_by?: undefined;
-  limit?: undefined;
-  where?: undefined;
-  nest?: undefined;
-};
+} & GroupBy;
 export type ViewOperationWithAggregate = {
   __type: ViewOperationType.Aggregate;
-  group_by?: undefined;
-  aggregate: Aggregate;
-  order_by?: undefined;
-  limit?: undefined;
-  where?: undefined;
-  nest?: undefined;
-};
+} & Aggregate;
 export type ViewOperationWithOrderBy = {
   __type: ViewOperationType.OrderBy;
-  group_by?: undefined;
-  aggregate?: undefined;
-  order_by: OrderBy;
-  limit?: undefined;
-  where?: undefined;
-  nest?: undefined;
-};
-export type ViewOperationWithLimit = {
-  __type: ViewOperationType.Limit;
-  group_by?: undefined;
-  aggregate?: undefined;
-  order_by?: undefined;
-  limit: Limit;
-  where?: undefined;
-  nest?: undefined;
-};
-export type ViewOperationWithWhere = {
-  __type: ViewOperationType.Where;
-  group_by?: undefined;
-  aggregate?: undefined;
-  order_by?: undefined;
-  limit?: undefined;
-  where: Where;
-  nest?: undefined;
-};
-export type ViewOperationWithNest = {
-  __type: ViewOperationType.Nest;
-  group_by?: undefined;
-  aggregate?: undefined;
-  order_by?: undefined;
-  limit?: undefined;
-  where?: undefined;
-  nest: Nest;
-};
+} & OrderBy;
+export type ViewOperationWithLimit = {__type: ViewOperationType.Limit} & Limit;
+export type ViewOperationWithWhere = {__type: ViewOperationType.Where} & Where;
+export type ViewOperationWithNest = {__type: ViewOperationType.Nest} & Nest;
 export type Where = {
   items: Array<WhereItem>;
 };
@@ -820,5 +513,4 @@ export enum WhereItemType {
 export type WhereItem = WhereItemWithFilterString;
 export type WhereItemWithFilterString = {
   __type: WhereItemType.FilterString;
-  filter_string: FilterStringApplication;
-};
+} & FilterStringApplication;

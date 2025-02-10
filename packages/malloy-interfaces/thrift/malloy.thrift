@@ -91,8 +91,16 @@ struct Annotation {
 }
 
 union TagValue {
-  1: required string string_value,
-  2: required list<Tag> array_value,
+  1: required StringTagValue string_value,
+  2: required ArrayTagValue array_value,
+}
+
+struct StringTagValue {
+  1: required string value,
+}
+
+struct ArrayTagValue {
+  1: required list<Tag> value,
 }
 
 struct TagProperty {

@@ -20,6 +20,14 @@ function fixEnum(m: string) {
   return m.replace(/ {2}([A-Za-z])+With/g, '');
 }
 
+function fixUnionType(m: string) {
+  m = m.replace(/\n {2}(__type: [A-Za-z]+Type.[A-Za-z]+);\n/, '$1} &');
+  m = m.replace(/ {2}[a-z_]+\?: undefined;\n/g, '');
+  m = m.replace(/ {2}[a-z_]+: ([A-Za-z]+);\n/, ' $1');
+  m = m.replace(/}$/, ';');
+  return m;
+}
+
 let allTypes = '';
 for (const file of fs.readdirSync('./generated-types')) {
   if (file === 'index.ts') continue;
@@ -49,6 +57,10 @@ for (const file of fs.readdirSync('./generated-types')) {
   actualTypes = actualTypes.replace(
     /__type: ([A-Za-z]+)Type\.\1With/g,
     '__type: $1Type.'
+  );
+  actualTypes = actualTypes.replace(
+    /export type ([A-Za-z]+)With([A-Za-z]+) = {\n {2}(__type: \1Type.\2);\n( {2}[a-z_]+\?: undefined;\n)*( {2}[a-z_]+: [A-Za-z]+;\n)( {2}[a-z_]+\?: undefined;\n)*}/g,
+    fixUnionType
   );
   allTypes += actualTypes + '\n';
 }
