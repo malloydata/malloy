@@ -1,3 +1,7 @@
 # Malloy Interfaces
 
-This package contains most of the main definitions of the interfaces that are relevant for packages that implement Malloy Connections.
+WIP stable interfaces for interacting with Malloy.
+
+## Typescript type generation from Thrift
+
+Run `npm run generate-types` to generate `types.ts`.
