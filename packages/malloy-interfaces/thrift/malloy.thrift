@@ -259,16 +259,7 @@ Generate typescript?
     - https://www.internalfb.com/diff/D68557062
 */
 
-union RefinementBase {
-  1: required Reference reference,
-}
-
-struct Refinement {
-  1: required RefinementBase base,
-  2: required RefinementOperation operation,
-}
-
-union RefinementOperation {
+union Refinement {
   1: required Reference reference,
   2: required Segment segment,
 }
@@ -354,11 +345,29 @@ struct FilterStringApplication {
   2: required string filter, // TODO multiple filters?
 }
 
-union PipeStage {
-  1: required Reference reference,
-  2: required Refinement refinement,
-  3: required Segment segment,
+struct PipeStage {
+  1: required list<Refinement> refinements,
 }
+
+/**
+
+stages: [
+  {ref: ff}
+  {refin: {base: ff}, {seg}}
+  {seg}
+]
+
+stages: [
+  {
+    refinements: [
+      {ref}
+      {ref}
+      {seg}
+    ]
+  }
+]
+
+*/
 
 struct Query {
   1: optional Reference source,

@@ -573,32 +573,8 @@ export type ParameterValue = {
   name: string;
   value: LiteralValue;
 };
-export enum PipeStageType {
-  Reference = 'reference',
-  Refinement = 'refinement',
-  Segment = 'segment',
-}
-export type PipeStage =
-  | PipeStageWithReference
-  | PipeStageWithRefinement
-  | PipeStageWithSegment;
-export type PipeStageWithReference = {
-  __type: PipeStageType.Reference;
-  reference: Reference;
-  refinement?: undefined;
-  segment?: undefined;
-};
-export type PipeStageWithRefinement = {
-  __type: PipeStageType.Refinement;
-  reference?: undefined;
-  refinement: Refinement;
-  segment?: undefined;
-};
-export type PipeStageWithSegment = {
-  __type: PipeStageType.Segment;
-  reference?: undefined;
-  refinement?: undefined;
-  segment: Segment;
+export type PipeStage = {
+  refinements: Array<Refinement>;
 };
 export type Pipeline = {
   stages: Array<PipeStage>;
@@ -635,32 +611,18 @@ export type Reference = {
   name: string;
   parameters?: Array<ParameterValue>;
 };
-export type Refinement = {
-  base: RefinementBase;
-  operation: RefinementOperation;
-};
-export enum RefinementBaseType {
-  Reference = 'reference',
-}
-export type RefinementBase = RefinementBaseWithReference;
-export type RefinementBaseWithReference = {
-  __type: RefinementBaseType.Reference;
-  reference: Reference;
-};
-export enum RefinementOperationType {
+export enum RefinementType {
   Reference = 'reference',
   Segment = 'segment',
 }
-export type RefinementOperation =
-  | RefinementOperationWithReference
-  | RefinementOperationWithSegment;
-export type RefinementOperationWithReference = {
-  __type: RefinementOperationType.Reference;
+export type Refinement = RefinementWithReference | RefinementWithSegment;
+export type RefinementWithReference = {
+  __type: RefinementType.Reference;
   reference: Reference;
   segment?: undefined;
 };
-export type RefinementOperationWithSegment = {
-  __type: RefinementOperationType.Segment;
+export type RefinementWithSegment = {
+  __type: RefinementType.Segment;
   reference?: undefined;
   segment: Segment;
 };
