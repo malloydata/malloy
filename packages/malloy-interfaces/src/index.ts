@@ -128,6 +128,18 @@ export const test: Malloy.ModelInfo = {
           },
         ],
       },
+      parameters: [
+        {
+          name: 'param',
+          type: {
+            __type: Malloy.AtomicTypeType.NumberType,
+          },
+          default_value: {
+            __type: Malloy.LiteralValueType.NumberLiteral,
+            number_value: 7,
+          },
+        },
+      ],
     },
   ],
   anonymous_queries: [],

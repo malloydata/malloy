@@ -23,11 +23,14 @@ struct SourceInfo {
   2: required Schema schema,
   3: optional Tag tag,
   4: optional list<Annotation> annotations,
+  5: optional list<ParameterInfo> parameters,
 }
 
-/*
-run: name_of_query -> asdf
-*/
+struct ParameterInfo {
+  1: required string name,
+  2: required AtomicType type,
+  3: optional LiteralValue default_value,
+}
 
 struct QueryInfo {
   1: required string name,

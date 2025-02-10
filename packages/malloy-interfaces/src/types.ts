@@ -317,6 +317,11 @@ export type OrderByItem = {
   field: Reference;
   direction?: OrderByDirection;
 };
+export type ParameterInfo = {
+  name: string;
+  type: AtomicType;
+  default_value?: LiteralValue;
+};
 export type ParameterValue = {
   name: string;
   value: LiteralValue;
@@ -395,6 +400,7 @@ export type SourceInfo = {
   schema: Schema;
   tag?: Tag;
   annotations?: Array<Annotation>;
+  parameters?: Array<ParameterInfo>;
 };
 export type StringCell = {
   string_value: string;
