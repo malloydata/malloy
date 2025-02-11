@@ -105,8 +105,8 @@ describe('Streaming tests', () => {
         .loadModel(modelText(databaseName))
         .loadQuery('run: airports -> airports_by_region')
         .runStream();
-      const accummulator = new StringAccumulator();
-      const csvWriter = new CSVWriter(accummulator);
+      const accumulator = new StringAccumulator();
+      const csvWriter = new CSVWriter(accumulator);
       await csvWriter.process(stream);
       const expectedCsv = `faa_region,by_state,,,,by_facility_type,,airport_count
 AGL,state,airport_count,by_county,,facility_type,airport_count,4437
@@ -124,7 +124,7 @@ ASW,state,airport_count,by_county,,facility_type,airport_count,3268
 ,,,PLAQUEMINES,31,,,
 ,,,VERMILION,29,,,
 `;
-      expect(accummulator.accumulatedValue).toBe(expectedCsv);
+      expect(accumulator.accumulatedValue).toBe(expectedCsv);
     });
 
     it(`stream simple results to CSV - ${databaseName}`, async () => {
@@ -132,8 +132,8 @@ ASW,state,airport_count,by_county,,facility_type,airport_count,3268
         .loadModel(modelText(databaseName))
         .loadQuery('run: airports -> higher_elevation')
         .runStream();
-      const accummulator = new StringAccumulator();
-      const csvWriter = new CSVWriter(accummulator);
+      const accumulator = new StringAccumulator();
+      const csvWriter = new CSVWriter(accumulator);
       await csvWriter.process(stream);
       const expectedCsv = `faa_region,airport_count,avg_elevation
 ANM,2102,3284.3910561370126
@@ -142,7 +142,7 @@ ACE,1579,1339.0139328689045
 ASW,3268,1007.2873317013464
 AGL,4437,983.4800540906018
 `;
-      expect(accummulator.accumulatedValue).toBe(expectedCsv);
+      expect(accumulator.accumulatedValue).toBe(expectedCsv);
     });
   });
 });
