@@ -1,6 +1,7 @@
 name: npmjs.com Pre-release
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
