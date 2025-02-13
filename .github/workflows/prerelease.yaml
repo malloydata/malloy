@@ -34,8 +34,6 @@ jobs:
       - db-snowflake
       - main
     runs-on: ubuntu-latest
-    env:
-      PACKAGES: 'packages/malloy-interfaces packages/malloy packages/malloy-db-bigquery packages/malloy-db-duckdb packages/malloy-db-postgres packages/malloy-db-snowflake packages/malloy-db-trino packages/malloy-db-mysql packages/malloy-render packages/malloy-malloy-sql test packages/malloy-syntax-highlight'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -48,6 +46,7 @@ jobs:
         run: |
           npm ci --loglevel error
           npm run build
+          PACKAGES=$(jq -r '.workspaces.packages[]' ./package.json | xargs echo)
           echo Publishing $PACKAGES
           PRERELEASE=$(date +%y%m%d%H%M%S)
           VERSION=$(jq -r .version ./lerna.json)-dev$PRERELEASE
