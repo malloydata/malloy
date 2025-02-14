@@ -281,11 +281,10 @@ describe('query builder', () => {
       tst2(
         s0,
         q => {
-          q.findOrCreateDefaultSegment().addOrderBy(
+          q.getOrCreateDefaultSegment().addOrderBy(
             'baz',
             Malloy.OrderByDirection.ASC
           );
-          q.source!.name = 'bar';
         },
         {
           pipeline: {
@@ -305,6 +304,157 @@ describe('query builder', () => {
                         ],
                       },
                     ],
+                  },
+                ],
+              },
+            ],
+          },
+          source: s0.source,
+        }
+      );
+    });
+    test('add a group by', () => {
+      const s0 = {
+        pipeline: {stages: []},
+        source: {name: 'foo'},
+      };
+      tst2(
+        s0,
+        q => {
+          q.getOrCreateDefaultSegment().addGroupBy('foo');
+        },
+        {
+          pipeline: {
+            stages: [
+              {
+                refinements: [
+                  {
+                    __type: Malloy.RefinementType.Segment,
+                    operations: [
+                      {
+                        __type: Malloy.ViewOperationType.GroupBy,
+                        items: [
+                          {
+                            field: {
+                              expression: {
+                                __type: Malloy.ExpressionType.Reference,
+                                name: 'foo',
+                              },
+                            },
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+          source: s0.source,
+        }
+      );
+    });
+    test('add two group bys', () => {
+      const s0 = {
+        pipeline: {stages: []},
+        source: {name: 'foo'},
+      };
+      tst2(
+        s0,
+        q => {
+          q.getOrCreateDefaultSegment().addGroupBy('foo').addGroupBy('bar');
+        },
+        {
+          pipeline: {
+            stages: [
+              {
+                refinements: [
+                  {
+                    __type: Malloy.RefinementType.Segment,
+                    operations: [
+                      {
+                        __type: Malloy.ViewOperationType.GroupBy,
+                        items: [
+                          {
+                            field: {
+                              expression: {
+                                __type: Malloy.ExpressionType.Reference,
+                                name: 'foo',
+                              },
+                            },
+                          },
+                          {
+                            field: {
+                              expression: {
+                                __type: Malloy.ExpressionType.Reference,
+                                name: 'bar',
+                              },
+                            },
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+          source: s0.source,
+        }
+      );
+    });
+    test('remove a group by', () => {
+      const s0: Malloy.Query = {
+        pipeline: {
+          stages: [
+            {
+              refinements: [
+                {
+                  __type: Malloy.RefinementType.Segment,
+                  operations: [
+                    {
+                      __type: Malloy.ViewOperationType.GroupBy,
+                      items: [
+                        {
+                          field: {
+                            expression: {
+                              __type: Malloy.ExpressionType.Reference,
+                              name: 'foo',
+                            },
+                          },
+                        },
+                      ],
+                    },
+                    {
+                      __type: Malloy.ViewOperationType.OrderBy,
+                      items: [
+                        {
+                          field: {name: 'foo'},
+                          direction: Malloy.OrderByDirection.ASC,
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        source: {name: 'foo'},
+      };
+      tst2(
+        s0,
+        q => {
+          q.getOrCreateDefaultSegment().removeGroupBy('foo');
+        },
+        {
+          pipeline: {
+            stages: [
+              {
+                refinements: [
+                  {
+                    __type: Malloy.RefinementType.Segment,
+                    operations: [],
                   },
                 ],
               },
