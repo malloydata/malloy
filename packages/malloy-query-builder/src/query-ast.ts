@@ -17,19 +17,17 @@ const DELETED = null;
 //   ? NodeTypeFor<T> | null | undefined
 //   : NodeTypeFor<T>;
 
-type NonOptionalASTNode<T, Parent extends ASTAny> = T extends undefined
-  ? never
-  : ASTNode<T, Parent>;
+type NonOptionalASTNode<T> = T extends undefined ? never : ASTNode<T>;
 
 type Deletable<T> = T | typeof DELETED;
 
-type LiteralOrNode<T, Parent extends ASTAny> = T extends string
+type LiteralOrNode<T> = T extends string
   ? string
   : T extends number
   ? number
   : undefined extends T
-  ? NonOptionalASTNode<T, Parent> | null | undefined
-  : ASTNode<T, Parent>;
+  ? NonOptionalASTNode<T> | null | undefined
+  : ASTNode<T>;
 
 // type A = LiteralOrNode<Malloy.Reference | undefined>;
 
@@ -61,10 +59,10 @@ type LiteralOrNode<T, Parent extends ASTAny> = T extends string
 // type Y = NodeTypeFor<Malloy.Reference>;
 // type Z = NodeTypeFor<Malloy.Refinement>;
 
-abstract class ASTNode<T, Parent extends ASTAny = ASTAny> {
+abstract class ASTNode<T> {
   edited = false;
 
-  public _parent: Parent | undefined;
+  public _parent: ASTAny | undefined;
 
   abstract build(): T;
 
@@ -95,7 +93,7 @@ abstract class ASTNode<T, Parent extends ASTAny = ASTAny> {
     return this._parent;
   }
 
-  set parent(parent: Parent) {
+  set parent(parent: ASTAny) {
     this._parent = parent;
   }
 }
@@ -106,9 +104,8 @@ function isBasic(t: ASTAny | string | number): t is string | number {
 
 abstract class ASTListNode<
   T,
-  N extends ASTNode<T>,
-  Parent extends ASTAny = ASTAny,
-> extends ASTNode<T[], Parent> {
+  N extends ASTNode<T> = ASTNode<T>,
+> extends ASTNode<T[]> {
   originalChildren: N[];
   constructor(
     protected node: T[],
@@ -181,10 +178,9 @@ abstract class ASTListNode<
 abstract class ASTObjectNode<
   T,
   Children extends {
-    [Key in keyof T]: LiteralOrNode<T[Key], ASTAny>;
+    [Key in keyof T]: LiteralOrNode<T[Key]>;
   },
-  Parent extends ASTAny = ASTAny,
-> extends ASTNode<T, Parent> {
+> extends ASTNode<T> {
   constructor(
     protected node: T,
     protected children: Children
@@ -748,8 +744,7 @@ class ASTGroupByViewOperation extends ASTObjectNode<
     __type: Malloy.ViewOperationType.GroupBy;
     items: ASTGroupByItemList;
     annotations?: Deletable<ASTUnimplemented<Malloy.TagOrAnnotation[]>>;
-  },
-  ASTViewOperationList
+  }
 > {
   readonly type: Malloy.ViewOperationType = Malloy.ViewOperationType.GroupBy;
 
@@ -776,9 +771,13 @@ class ASTGroupByViewOperation extends ASTObjectNode<
     }
   }
 
+  get list() {
+    return this.parent.as(ASTViewOperationList);
+  }
+
   delete() {
     this.drain();
-    this.parent.remove(this);
+    this.list.remove(this);
   }
 }
 
@@ -787,8 +786,7 @@ class ASTOrderByViewOperation extends ASTObjectNode<
   {
     __type: Malloy.ViewOperationType.OrderBy;
     items: ASTOrderByItemList;
-  },
-  ASTViewOperationList
+  }
 > {
   readonly type: Malloy.ViewOperationType = Malloy.ViewOperationType.OrderBy;
 
@@ -809,16 +807,19 @@ class ASTOrderByViewOperation extends ASTObjectNode<
     }
   }
 
+  get list() {
+    return this.parent.as(ASTViewOperationList);
+  }
+
   delete() {
     this.drain();
-    this.parent.remove(this);
+    this.list.remove(this);
   }
 }
 
 class ASTGroupByItemList extends ASTListNode<
   Malloy.GroupByItem,
-  ASTGroupByItem,
-  ASTGroupByViewOperation
+  ASTGroupByItem
 > {
   constructor(items: Malloy.GroupByItem[]) {
     super(
@@ -830,12 +831,15 @@ class ASTGroupByItemList extends ASTListNode<
   get items() {
     return this.children;
   }
+
+  get operation() {
+    return this.parent.as(ASTGroupByViewOperation);
+  }
 }
 
 class ASTOrderByItemList extends ASTListNode<
   Malloy.OrderByItem,
-  ASTOrderByItem,
-  ASTOrderByViewOperation
+  ASTOrderByItem
 > {
   constructor(items: Malloy.OrderByItem[]) {
     super(
@@ -847,6 +851,10 @@ class ASTOrderByItemList extends ASTListNode<
   get items() {
     return this.children;
   }
+
+  get operation() {
+    return this.parent.as(ASTOrderByViewOperation);
+  }
 }
 
 class ASTOrderByItem extends ASTObjectNode<
@@ -854,8 +862,7 @@ class ASTOrderByItem extends ASTObjectNode<
   {
     field: ASTReference;
     direction?: Malloy.OrderByDirection;
-  },
-  ASTOrderByItemList
+  }
 > {
   constructor(public node: Malloy.OrderByItem) {
     super(node, {
@@ -882,11 +889,15 @@ class ASTOrderByItem extends ASTObjectNode<
     this.children.direction = direction;
   }
 
+  get list() {
+    return this.parent.as(ASTOrderByItemList);
+  }
+
   delete() {
-    const list = this.parent;
+    const list = this.list;
     list.remove(this);
     if (list.length === 0) {
-      const operation = list.parent;
+      const operation = list.operation;
       operation.delete();
       // TODO somehow signal that there was a side effect?
     }
@@ -898,8 +909,7 @@ class ASTGroupByItem extends ASTObjectNode<
   {
     name?: string;
     field: ASTField;
-  },
-  ASTGroupByItemList
+  }
 > {
   constructor(public node: Malloy.GroupByItem) {
     super(node, {
@@ -916,15 +926,18 @@ class ASTGroupByItem extends ASTObjectNode<
     return this.children.name ?? this.field.name;
   }
 
+  get list() {
+    return this.parent.as(ASTGroupByItemList);
+  }
+
   delete() {
-    const list = this.parent;
-    list.remove(this);
-    if (list.length === 0) {
-      const operation = list.parent;
+    this.list.remove(this);
+    if (this.list.length === 0) {
+      const operation = this.list.operation;
       operation.delete();
       // TODO somehow signal that there was a side effect?
     }
-    const operations = list.parent.parent;
+    const operations = this.list.operation.list;
     for (const operation of operations) {
       if (operation instanceof ASTOrderByViewOperation) {
         for (const item of operation.items) {
