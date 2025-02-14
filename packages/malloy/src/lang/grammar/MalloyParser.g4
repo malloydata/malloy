@@ -38,12 +38,12 @@ malloyStatement
   ;
 
 defineSourceStatement
-  : tags SOURCE sourcePropertyList
+  : tags SOURCE COLON sourcePropertyList
   ;
 
 defineQuery
   : topLevelQueryDefs                 # use_top_level_query_defs
-  | tags QUERY topLevelAnonQueryDef   # anonymousQuery
+  | tags QUERY COLON topLevelAnonQueryDef   # anonymousQuery
   ;
 
 topLevelAnonQueryDef
@@ -59,7 +59,7 @@ isDefine
   ;
 
 runStatement
-  : tags RUN topLevelAnonQueryDef
+  : tags RUN COLON topLevelAnonQueryDef
   ;
 
 sqlString
@@ -67,7 +67,7 @@ sqlString
   ;
 
 sqlInterpolation
-  : OPEN_CODE sqExpr (closeCurly | CLOSE_CODE)
+  : OPEN_CODE sqExpr (CCURLY | CLOSE_CODE)
   ;
 
 importStatement
@@ -77,7 +77,7 @@ importStatement
 importSelect
   : OCURLY
     importItem (COMMA importItem)*
-    closeCurly FROM
+    CCURLY FROM
   ;
 
 importItem
@@ -101,7 +101,7 @@ ignoredModelAnnotations
   ;
 
 topLevelQueryDefs
-  : tags QUERY topLevelQueryDef (COMMA? topLevelQueryDef)* COMMA?
+  : tags QUERY COLON topLevelQueryDef (COMMA? topLevelQueryDef)* COMMA?
   ;
 
 topLevelQueryDef
@@ -126,7 +126,7 @@ connectionId
   : id;
 
 queryProperties
-  : OCURLY (queryStatement | SEMI)* closeCurly
+  : OCURLY (queryStatement | SEMI)* CCURLY
   ;
 
 queryName : id;
@@ -156,7 +156,7 @@ parameterNameDef: id;
 sourceNameDef: id;
 
 exploreProperties
-  : OCURLY (exploreStatement | SEMI)* closeCurly
+  : OCURLY (exploreStatement | SEMI)* CCURLY
   ;
 
 exploreStatement
@@ -165,10 +165,10 @@ exploreStatement
   | declareStatement                         # defDeclare_stub
   | joinStatement                            # defJoin_stub
   | whereStatement                           # defExploreWhere_stub
-  | PRIMARY_KEY fieldName                    # defExplorePrimaryKey
-  | accessLabel? RENAME renameList           # defExploreRename
-  | (ACCEPT | EXCEPT) fieldNameList          # defExploreEditField
-  | tags accessLabel? (QUERY | VIEW) subQueryDefList
+  | PRIMARY_KEY COLON fieldName                    # defExplorePrimaryKey
+  | accessLabel? RENAME COLON renameList           # defExploreRename
+  | (ACCEPT | EXCEPT) COLON fieldNameList          # defExploreEditField
+  | tags accessLabel? (QUERY | VIEW) COLON subQueryDefList
                                              # defExploreQuery
   | timezoneStatement                        # defExploreTimezone
   | ANNOTATION+                              # defExploreAnnotation
@@ -177,9 +177,9 @@ exploreStatement
 
 
 accessLabel
-  : PUBLIC_KW
-  | PRIVATE_KW
-  | INTERNAL_KW
+  : PUBLIC
+  | PRIVATE
+  | INTERNAL
   ;
 
 accessModifierList
@@ -188,11 +188,11 @@ accessModifierList
   ;
 
 defMeasures
-  : tags accessLabel? MEASURE defList
+  : tags accessLabel? MEASURE COLON defList
   ;
 
 defDimensions
-  : tags accessLabel? DIMENSION defList
+  : tags accessLabel? DIMENSION COLON defList
   ;
 
 renameList
@@ -215,17 +215,17 @@ fieldNameDef: id;
 joinNameDef: id;
 
 declareStatement
-  : DECLARE accessLabel? defList
+  : DECLARE COLON accessLabel? defList
   ;
 
 joinStatement
-  : tags accessLabel? JOIN_ONE joinList                  # defJoinOne
-  | tags accessLabel? JOIN_MANY joinList                 # defJoinMany
-  | tags accessLabel? JOIN_CROSS joinList                # defJoinCross
+  : tags accessLabel? JOIN_ONE COLON joinList                  # defJoinOne
+  | tags accessLabel? JOIN_MANY COLON joinList                 # defJoinMany
+  | tags accessLabel? JOIN_CROSS COLON joinList                # defJoinCross
   ;
 
 queryExtend
-  : EXTENDQ queryExtendStatementList
+  : EXTEND COLON queryExtendStatementList
   ;
 
 modEither
@@ -260,13 +260,13 @@ sqExpr
   ;
 
 includeBlock
-  : OCURLY (includeItem | SEMI)* closeCurly
+  : OCURLY (includeItem | SEMI)* CCURLY
   ;
 
 includeItem
   : tags accessLabelProp includeList
   | includeList
-  | tags EXCEPT includeExceptList
+  | tags EXCEPT COLON includeExceptList
   | orphanedAnnotation
   ;
 
@@ -275,9 +275,9 @@ orphanedAnnotation
   ;
 
 accessLabelProp
-  : PUBLIC
-  | PRIVATE
-  | INTERNAL
+  : PUBLIC COLON
+  | PRIVATE COLON
+  | INTERNAL COLON
   ;
 
 includeExceptList
@@ -350,7 +350,7 @@ filterStatement
   ;
 
 fieldProperties
-  : OCURLY (fieldPropertyStatement | SEMI)* closeCurly
+  : OCURLY (fieldPropertyStatement | SEMI)* CCURLY
   ;
 
 aggregateOrdering
@@ -364,7 +364,7 @@ aggregateOrderBySpec
   ;
 
 aggregateOrderByStatement
-  : ORDER_BY aggregateOrdering
+  : ORDER_BY COLON aggregateOrdering
   ;
 
 fieldPropertyLimitStatement
@@ -383,11 +383,11 @@ filterClauseList
   ;
 
 whereStatement
-  : WHERE filterClauseList
+  : WHERE COLON filterClauseList
   ;
 
 havingStatement
-  : HAVING filterClauseList
+  : HAVING COLON filterClauseList
   ;
 
 subQueryDefList
@@ -426,7 +426,7 @@ queryJoinStatement
   ;
 
 groupByStatement
-  : tags GROUP_BY queryFieldList
+  : tags GROUP_BY COLON queryFieldList
   ;
 
 queryFieldList
@@ -440,7 +440,7 @@ queryFieldEntry
   ;
 
 nestStatement
-  : tags NEST nestedQueryList
+  : tags NEST COLON nestedQueryList
   ;
 
 nestedQueryList
@@ -452,23 +452,23 @@ nestEntry
   ;
 
 aggregateStatement
-  : tags AGGREGATE queryFieldList
+  : tags AGGREGATE COLON queryFieldList
   ;
 
 calculateStatement
-  : tags CALCULATE queryFieldList
+  : tags CALCULATE COLON queryFieldList
   ;
 
 projectStatement
-  : tags (SELECT | PROJECT) fieldCollection
+  : tags (SELECT | PROJECT) COLON fieldCollection
   ;
 
 partitionByStatement
-  : PARTITION_BY id (COMMA id)* COMMA?
+  : PARTITION_BY COLON id (COMMA id)* COMMA?
   ;
 
 orderByStatement
-  : ORDER_BY ordering
+  : ORDER_BY COLON ordering
   ;
 
 ordering
@@ -480,7 +480,7 @@ orderBySpec
   ;
 
 limitStatement
-  : LIMIT INTEGER_LITERAL
+  : LIMIT COLON INTEGER_LITERAL
   ;
 
 bySpec
@@ -489,7 +489,7 @@ bySpec
   ;
 
 topStatement
-  : TOP INTEGER_LITERAL
+  : TOP COLON INTEGER_LITERAL
   ;
 
 indexElement
@@ -502,15 +502,15 @@ indexFields
   ;
 
 indexStatement
-  : INDEX indexFields (BY fieldName)?
+  : INDEX COLON indexFields (BY fieldName)?
   ;
 
 sampleStatement
-  : SAMPLE sampleSpec
+  : SAMPLE COLON sampleSpec
   ;
 
 timezoneStatement
-  : TIMEZONE string
+  : TIMEZONE COLON string
   ;
 
 queryAnnotation
@@ -610,7 +610,7 @@ fieldExpr
   | fieldExpr OR fieldExpr                                 # exprLogicalOr
   | fieldExpr DOUBLE_QMARK fieldExpr                       # exprCoalesce
   | CAST OPAREN fieldExpr AS malloyOrSQLType CPAREN        # exprCast
-  | (SOURCE_KW DOT)? aggregate
+  | (SOURCE DOT)? aggregate
       OPAREN (fieldExpr | STAR)? CPAREN                    # exprPathlessAggregate
   | fieldPath DOT aggregate
       OPAREN fieldExpr? CPAREN                             # exprAggregate
@@ -683,7 +683,7 @@ collectionWildCard
 
 starQualified
   : OCURLY (
-      (EXCEPT fieldNameList)
+      (EXCEPT COLON fieldNameList)
     | COMMA
   )+ CCURLY
   ;
@@ -722,14 +722,4 @@ debugPartial: partialAllowedFieldExpr EOF;
 
 experimentalStatementForTesting // this only exists to enable tests for the experimental compiler flag
   : SEMI SEMI OBRACK string CBRACK
-  ;
-
-// Try to show a nice error for a missing }.  Only use this when the next
-// legal symbols after the curly are things which would be illegal inside
-// the curly brackets.
-closeCurly
-  : CCURLY
-  // ANTLR VSCode plugin loses it's tiny mind if { } aren't matched
-  // even in the error string below
-  | { this.notifyErrorListeners("'{' missing a '}'"); }
   ;
