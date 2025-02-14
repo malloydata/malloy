@@ -85,6 +85,12 @@ declare global {
        */
       compilesTo(exprString: string): R;
       hasCompositeUsage(compositeUsage: CompositeFieldUsage): R;
+      /**
+       * Assets that the input malloy has at least one error when compiling.
+       * In theory, this should be extended to allow an error matcher to assert
+       * what kind of error occurs, but is limited for now in order to provide TDD.
+       */
+      toHaveSyntaxErrors(): R;
     }
   }
 }
@@ -376,6 +382,26 @@ expect.extend({
     const pass = this.equals(rcvExpr, expr);
     const msg = pass ? `Matched: ${rcvExpr}` : this.utils.diff(expr, rcvExpr);
     return {pass, message: () => `${msg}`};
+  },
+  toHaveSyntaxErrors: function (tx: TestSource) {
+    const x = xlator(tx);
+    x.compile();
+    // Only report errors, callers will need to test for warnings
+    if (!x.logger.hasErrors()) {
+      return {
+        message: () =>
+          `Compiled but should have had an error:\n${tx.toString()}`,
+        pass: false,
+      };
+    } else {
+      console.log(
+        x.logger
+          .getLog()
+          .map(l => l.message)
+          .join('\n\t')
+      );
+      return {pass: true, message: () => x.logger.getLog().join('\n\t')};
+    }
   },
   hasCompositeUsage: function (
     tx: TestSource,

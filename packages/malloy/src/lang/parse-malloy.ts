@@ -25,6 +25,8 @@ import {
   ANTLRErrorListener,
   CharStreams,
   CommonTokenStream,
+  DefaultErrorStrategy,
+  Parser,
   ParserRuleContext,
   Token,
 } from 'antlr4ts';
@@ -92,6 +94,7 @@ import {MalloyParseInfo} from './malloy-parse-info';
 import {walkForModelAnnotation} from './parse-tree-walkers/model-annotation-walker';
 import {walkForTablePath} from './parse-tree-walkers/find-table-path-walker';
 import {EventStream} from '../runtime_types';
+import {ParserATNSimulator} from 'antlr4ts/atn/ParserATNSimulator';
 
 export type StepResponses =
   | DataRequestResponse
@@ -105,7 +108,7 @@ export type StepResponses =
  * This ignores a -> popMode when the mode stack is empty, which is a hack,
  * but it let's us parse }%
  */
-class HandlesOverpoppingLexer extends MalloyLexer {
+export class HandlesOverpoppingLexer extends MalloyLexer {
   popMode(): number {
     if (this._modeStack.isEmpty) {
       return this._mode;
@@ -238,14 +241,18 @@ class ParseStep implements TranslationStep {
   }
 
   private runParser(source: string, that: MalloyTranslation): MalloyParseInfo {
+    // ParserATNSimulator.debug = true;
+    // ParserATNSimulator.dfa_debug = true;
+    // ParserATNSimulator.retry_debug = true;
     const inputStream = CharStreams.fromString(source);
     const lexer = new HandlesOverpoppingLexer(inputStream);
     const tokenStream = new CommonTokenStream(lexer);
     const malloyParser = new MalloyParser(tokenStream);
     malloyParser.removeErrorListeners();
     malloyParser.addErrorListener(
-      new MalloyParserErrorHandler(that, that.root.logger)
+      new MalloyParserErrorListener(that, that.root.logger)
     );
+    malloyParser.errorHandler = new MalloyParserErrorHandler();
 
     // Admitted code smell here, testing likes to parse from an arbitrary
     // node and this is the simplest way to allow that.
@@ -1149,7 +1156,55 @@ export interface UpdateData extends URLData, SchemaData, SQLSources, ModelData {
 }
 export type ParseUpdate = Partial<UpdateData>;
 
-export class MalloyParserErrorHandler implements ANTLRErrorListener<Token> {
+export class MalloyParserErrorHandler extends DefaultErrorStrategy {
+  // Problem: The DefaultErrorStrategy implements SingleTokenDeletion and SingleTokeInsertion
+  // recovery, which unfortunately means that for many errors it can simply close the
+  // current rule out and proceed. This causes many of our error messages to get
+  // jumbled up./
+  xrecoverInline(parser: Parser): Token {
+    const currentToken = parser.currentToken;
+    const expectedTokens = parser.getExpectedTokens();
+    const getExpectedTokensWithinCurrentRule =
+      parser.getExpectedTokensWithinCurrentRule();
+    const dfaStrings = parser.getDFAStrings();
+    const ruleInvocationStack = parser.getRuleInvocationStack();
+
+    // try {
+    //   const laNeg = parser.inputStream.LA(-1);
+    //   const la1 = parser.inputStream.LA(1);
+    //   const la2 = parser.inputStream.LA(2);
+    //   const la3 = parser.inputStream.LA(3);
+    // } catch (ex) {
+    // }
+
+    return currentToken;
+  }
+
+  // override sync
+  // commented out to make sure I can test the actual flow
+  xsync(parser: Parser): void {
+    // Problem: Even when failing to find a match for currentToken.text ("primarykey"),
+    // it is being treated as an Identifier, which for some reason is part of getExpectedTokensWithinCurrentRule().
+    // So that makes error recovery trickier to detect.
+    // I wanted to do something like:
+    // if parser.isInErrorState()
+    //    nearestMatch = findNearestMatchingString(currentToken.text);
+    //    if (nearestMatch)
+    //      currentToken.
+
+    const recoveredToken = this.recoverInline(parser);
+    if (recoveredToken) {
+
+      // TODO: Can I do something like:
+      
+
+    } else {
+      super.sync(parser);
+    }
+  }
+}
+
+export class MalloyParserErrorListener implements ANTLRErrorListener<Token> {
   constructor(
     readonly translator: MalloyTranslation,
     readonly messages: MessageLogger
@@ -1178,6 +1233,11 @@ export class MalloyParserErrorHandler implements ANTLRErrorListener<Token> {
     const range = offendingSymbol
       ? this.translator.rangeFromToken(offendingSymbol)
       : {start: errAt, end: errAt};
+
+    if (offendingSymbol?.text === 'source') {
+      message += ". Did you mean 'source:'?";
+    }
+
     this.logError(
       'syntax-error',
       {message},

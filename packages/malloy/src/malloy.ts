@@ -92,6 +92,20 @@ import {Dialect, getDialect} from './dialect';
 import {PathInfo} from './lang/parse-tree-walkers/find-table-path-walker';
 import {MALLOY_VERSION} from './version';
 import {v5 as uuidv5} from 'uuid';
+import {
+  CharStreams,
+  CommonTokenStream,
+  DefaultErrorStrategy,
+  Parser,
+  RuleContext,
+  Token,
+} from 'antlr4ts';
+import {MalloyParser} from './lang/lib/Malloy/MalloyParser';
+import {
+  HandlesOverpoppingLexer,
+  MalloyParserErrorHandler,
+} from './lang/parse-malloy';
+import {ParseTree} from 'antlr4ts/tree/ParseTree';
 
 export interface Loggable {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -123,6 +137,24 @@ interface CompileQueryOptions {
   materializedTablePrefix?: string;
   eventStream?: EventStream;
   defaultRowLimit?: number;
+}
+
+class RobustParserErrorHandler extends DefaultErrorStrategy {
+  recoverInline(parser: Parser): Token {
+    const currentToken = parser.currentToken;
+    const placeholderToken = parser.tokenFactory.create(
+      {source: currentToken.tokenSource!},
+      currentToken.type,
+      currentToken.text, // TODO: can I fill in what is missing?
+      currentToken.channel,
+      currentToken.startIndex,
+      currentToken.stopIndex,
+      currentToken.line,
+      currentToken.charPositionInLine
+    );
+    parser.consume();
+    return placeholderToken;
+  }
 }
 
 type Compilable =
@@ -173,6 +205,110 @@ export class Malloy {
     }
     return new Parse(translator, invalidationKey);
   }
+
+  public static WOO = 300;
+
+  public static stringifyTree(obj, indent = 0) {
+    const nodeName = obj.constructor.name || 'Unknown';
+
+    let result = `${'  '.repeat(indent)}${nodeName}`;
+
+    if (obj.children && Array.isArray(obj.children)) {
+      result += ` \n`;
+
+      for (const child of obj.children) {
+        result += this.stringifyTree(child, indent + 1);
+      }
+
+      result += `${'  '.repeat(indent)}\n`;
+    } else {
+      result += `\n`;
+    }
+
+    return result;
+  }
+
+  public static parseRobustlyAndGetCompletions(
+    documentText: string,
+    cursorPosition: {line: number; character: number}
+  ): string[] {
+    const inputStream = CharStreams.fromString(documentText);
+    const lexer = new HandlesOverpoppingLexer(inputStream);
+    const tokenStream = new CommonTokenStream(lexer);
+    const malloyParser = new MalloyParser(tokenStream);
+    malloyParser.removeErrorListeners();
+    malloyParser.errorHandler = new RobustParserErrorHandler();
+
+    const malloyContext = malloyParser.malloyDocument();
+
+    function getRuleAtPosition(line: number, col: number): RuleContext | null {
+      const tokenIndex = getTokenIndexAtPosition(line, col);
+      if (tokenIndex === -1) {
+        return null;
+      }
+      const token = tokenStream.get(tokenIndex);
+      const context = findRuleContext(malloyContext, token);
+      return context;
+    }
+    function getTokenIndexAtPosition(line: number, col: number): number {
+      for (let i = 0; i < tokenStream.size; i++) {
+        const token = tokenStream.get(i);
+        if (
+          // line + 1 accounts for zero-vs-one indexing
+          token.line === line + 1 &&
+          token.charPositionInLine <= col &&
+          token.charPositionInLine + (token.text?.length || 0) >= col
+        ) {
+          return i;
+        }
+      }
+      return -1;
+    }
+    function findRuleContext(
+      context: ParseTree,
+      token: Token
+    ): RuleContext | null {
+      if (context instanceof RuleContext) {
+        const ruleContext = context as RuleContext;
+        if (
+          ruleContext.sourceInterval.a <= token.tokenIndex &&
+          ruleContext.sourceInterval.b >= token.tokenIndex
+        ) {
+          for (let i = 0; i < ruleContext.childCount; i++) {
+            const child = ruleContext.getChild(i);
+            const result = findRuleContext(child, token);
+            if (result !== null) {
+              return result;
+            }
+          }
+          return ruleContext;
+        }
+      }
+      return null;
+    }
+
+    const rule: RuleContext | null = getRuleAtPosition(
+      cursorPosition.line,
+      cursorPosition.character
+    );
+
+    if (rule) {
+      const atn = malloyParser.getATNWithBypassAlts();
+      const currentState = rule.invokingState; // atn.states[malloyParser.state];
+      try {
+        const expectedTokens = atn.getExpectedTokens(rule.invokingState, rule);
+        return expectedTokens
+          .toArray()
+          .map(token => malloyParser.vocabulary.getDisplayName(token));
+      } catch (err) {
+        return [err.message];
+      }
+    }
+
+    return ['no completions found'];
+  }
+
+  // TODO: This is code from Metamate and hasn't been tested
 
   /**
    * Parse a Malloy document by URL.
