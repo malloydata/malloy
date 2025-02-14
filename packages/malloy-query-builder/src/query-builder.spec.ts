@@ -41,7 +41,7 @@ describe('query builder', () => {
     test('default segment when there is already one stage', () => {
       const qb = new QueryNode({pipeline: {stages: []}});
       // TODO actually add a source...
-      qb.query = qb.editDefaultSegment().addGroupBy('foo');
+      qb.editDefaultSegment().addGroupBy('foo');
       const query = qb.editDefaultSegment().addGroupBy('bar');
       const expected: Malloy.Query = {
         pipeline: {
@@ -83,30 +83,24 @@ describe('query builder', () => {
     });
     test('cascading deletion', () => {
       const q = new QueryNode({pipeline: {stages: []}});
-      q.query = q.setSource({name: 'foo', schema: {fields: []}});
-      q.query = q.source!.parameters.setParameter('foo', 3);
-      q.query = q.editDefaultSegment().addGroupBy('foo');
-      q.query = q
-        .editDefaultSegment()
-        .addOrderBy('foo', Malloy.OrderByDirection.ASC);
-      q.query = q
-        .editDefaultSegment()
-        .addOrderBy('foo', Malloy.OrderByDirection.DESC);
+      q.setSource({name: 'foo', schema: {fields: []}});
+      q.source!.parameters.setParameter('foo', 3);
+      q.editDefaultSegment().addGroupBy('foo');
+      q.editDefaultSegment().addOrderBy('foo', Malloy.OrderByDirection.ASC);
+      q.editDefaultSegment().addOrderBy('foo', Malloy.OrderByDirection.DESC);
       // saveState?.index(0).delete();
 
-      q.query = q
-        .editGroupByItem([
-          'pipeline',
-          'stages',
-          0,
-          'refinements',
-          0,
-          'operations',
-          0,
-          'items',
-          0,
-        ])
-        .delete();
+      q.editGroupByItem([
+        'pipeline',
+        'stages',
+        0,
+        'refinements',
+        0,
+        'operations',
+        0,
+        'items',
+        0,
+      ]).delete();
       // saveState?.setParameter('bar', 5);
       expect(q.query).toMatchObject({foo: 'bar'});
     });
@@ -114,16 +108,12 @@ describe('query builder', () => {
   describe('play', () => {
     test('foo', () => {
       const q = new QueryNode({pipeline: {stages: []}});
-      q.query = q.setSource({name: 'foo', schema: {fields: []}});
-      q.query = q.source!.parameters.setParameter('foo', 3);
-      q.query = q.editDefaultSegment().addGroupBy('foo');
-      q.query = q.editDefaultSegment().editLimit().setLimit(5);
-      q.query = q
-        .editDefaultSegment()
-        .addOrderBy('foo', Malloy.OrderByDirection.ASC);
-      q.query = q
-        .editDefaultSegment()
-        .addOrderBy('foo', Malloy.OrderByDirection.DESC);
+      q.setSource({name: 'foo', schema: {fields: []}});
+      q.source!.parameters.setParameter('foo', 3);
+      q.editDefaultSegment().addGroupBy('foo');
+      q.editDefaultSegment().editLimit().setLimit(5);
+      q.editDefaultSegment().addOrderBy('foo', Malloy.OrderByDirection.ASC);
+      q.editDefaultSegment().addOrderBy('foo', Malloy.OrderByDirection.DESC);
       // saveState?.index(0).delete();
 
       q.editParameter(['source', 'parameters', 0]).setValue(8);

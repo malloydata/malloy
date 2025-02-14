@@ -452,9 +452,15 @@ Query
 */
 
 type RawParameterValue = number | string | Date | boolean | null;
-type Path = (string | number)[];
+type PathSegment = string | number;
+type Path = PathSegment[];
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type NodeConstructor<T extends Node> = new (...args: any[]) => T;
+type UpdateResult = {
+  query: Malloy.Query;
+  path: Path;
+};
+type Update<T> = (item: T) => UpdateResult;
 
 abstract class Node {
   constructor(public readonly parent: Node | undefined) {}
@@ -479,7 +485,7 @@ abstract class Node {
     return child.path(rest);
   }
 
-  private edit<T extends Node>(NodeClass: NodeConstructor<T>, path: Path): T {
+  edit<T extends Node>(NodeClass: NodeConstructor<T>, path: Path): T {
     const child = this.path(path);
     if (child instanceof NodeClass) {
       return child;
@@ -502,7 +508,7 @@ abstract class Node {
 
 // Possible to have an unnamed nest and provide a name later?
 
-export class QueryNode extends Node implements Buildable<Malloy.Query> {
+export class QueryNode extends Node {
   constructor(public query: Malloy.Query) {
     super(undefined);
   }
@@ -511,7 +517,7 @@ export class QueryNode extends Node implements Buildable<Malloy.Query> {
     if (this.query.source) {
       return new ReferenceNode(
         this,
-        source => this.build({source}),
+        source => then(this.build({source}), 'source'),
         this.query.source
       );
     }
@@ -520,7 +526,7 @@ export class QueryNode extends Node implements Buildable<Malloy.Query> {
   get pipeline(): PipelineNode {
     return new PipelineNode(
       this,
-      pipeline => this.build({pipeline}),
+      pipeline => then(this.build({pipeline}), 'pipeline'),
       this.query.pipeline
     );
   }
@@ -535,8 +541,12 @@ export class QueryNode extends Node implements Buildable<Malloy.Query> {
     return this.build({source: {name: source.name}});
   }
 
-  build(edit: Partial<Malloy.Query>): Malloy.Query {
-    return (this.query = {...this.query, ...edit});
+  build(edit: Partial<Malloy.Query>): UpdateResult {
+    this.query = {...this.query, ...edit};
+    return {
+      query: this.query,
+      path: [],
+    };
   }
 
   root(): QueryNode {
@@ -549,7 +559,7 @@ export class QueryNode extends Node implements Buildable<Malloy.Query> {
       // Need to add a stage with an empty segment
       return new SegmentRefinementNode(
         this.pipeline.stages,
-        s => stages.addStageWithSingleRefinement(s),
+        s => then(stages.addStageWithSingleRefinement(s), 'refinements', 0),
         SegmentRefinementNode.empty()
       );
     } else {
@@ -570,16 +580,20 @@ export class QueryNode extends Node implements Buildable<Malloy.Query> {
   }
 }
 
-interface Buildable<T> {
-  build(edit: Partial<T>): Malloy.Query;
+function then(result: UpdateResult, ...segments: PathSegment[]) {
+  const {path, query} = result;
+  return {
+    query,
+    path: [...path, ...segments],
+  };
 }
 
 // type Buildsa<A extends string, B> = Buildable<Record<A, B>>;
 
-class ReferenceNode extends Node implements Buildable<Malloy.Reference> {
+class ReferenceNode extends Node {
   constructor(
     parent: Node,
-    private readonly update: (node: Malloy.Reference) => Malloy.Query,
+    private readonly update: Update<Malloy.Reference>,
     private readonly node: Malloy.Reference
   ) {
     super(parent);
@@ -592,7 +606,7 @@ class ReferenceNode extends Node implements Buildable<Malloy.Reference> {
   get parameters(): ParametersNode {
     return new ParametersNode(
       this,
-      parameters => this.build({parameters}),
+      parameters => then(this.build({parameters}), 'parameters'),
       this.node.parameters
     );
   }
@@ -606,7 +620,7 @@ class ReferenceNode extends Node implements Buildable<Malloy.Reference> {
     return this.parameters.setParameter(name, value);
   }
 
-  build(edit: Partial<Malloy.Reference> | undefined): Malloy.Query {
+  build(edit: Partial<Malloy.Reference> | undefined) {
     return this.update({...this.node, ...edit});
   }
 }
@@ -614,9 +628,7 @@ class ReferenceNode extends Node implements Buildable<Malloy.Reference> {
 class ParametersNode extends Node {
   constructor(
     parent: Node,
-    private readonly update: (
-      parameters: Malloy.ParameterValue[] | undefined
-    ) => Malloy.Query,
+    private readonly update: Update<Malloy.ParameterValue[] | undefined>,
     private readonly parameters: Malloy.ParameterValue[] | undefined
   ) {
     super(parent);
@@ -660,7 +672,7 @@ class ParametersNode extends Node {
     return new ParameterNode(this, update, this.parameters[i]);
   }
 
-  build(edit: Malloy.ParameterValue[] | undefined): Malloy.Query {
+  build(edit: Malloy.ParameterValue[] | undefined) {
     return this.update(edit);
   }
 }
@@ -668,7 +680,7 @@ class ParametersNode extends Node {
 class PipelineNode extends Node {
   constructor(
     parent: Node,
-    private readonly update: (pipeline: Malloy.Pipeline) => Malloy.Query,
+    private readonly update: Update<Malloy.Pipeline>,
     private readonly pipeline: Malloy.Pipeline
   ) {
     super(parent);
@@ -677,7 +689,7 @@ class PipelineNode extends Node {
   get stages(): PipeStagesNode {
     return new PipeStagesNode(
       this,
-      stages => this.update({stages}),
+      stages => then(this.build({stages}), 'stages'),
       this.pipeline.stages
     );
   }
@@ -687,7 +699,7 @@ class PipelineNode extends Node {
     return super.child(name);
   }
 
-  public build(edit: Partial<Malloy.Pipeline>): Malloy.Query {
+  public build(edit: Partial<Malloy.Pipeline>) {
     return this.update({...this.pipeline, ...edit});
   }
 }
@@ -695,9 +707,7 @@ class PipelineNode extends Node {
 class ParameterNode extends Node {
   constructor(
     parent: Node,
-    private readonly update: (
-      parameter: Malloy.ParameterValue | null
-    ) => Malloy.Query,
+    private readonly update: Update<Malloy.ParameterValue | null>,
     private readonly parameter: Malloy.ParameterValue
   ) {
     super(parent);
@@ -738,7 +748,7 @@ class ParameterNode extends Node {
     this.build(null);
   }
 
-  public build(parameter: Malloy.ParameterValue | null): Malloy.Query {
+  public build(parameter: Malloy.ParameterValue | null) {
     return this.update(parameter);
   }
 }
@@ -746,7 +756,7 @@ class ParameterNode extends Node {
 class PipeStagesNode extends Node {
   constructor(
     parent: Node,
-    private readonly update: (stages: Malloy.PipeStage[]) => Malloy.Query,
+    private readonly update: Update<Malloy.PipeStage[]>,
     private readonly stages: Malloy.PipeStage[]
   ) {
     super(parent);
@@ -771,16 +781,19 @@ class PipeStagesNode extends Node {
       } else {
         stages.splice(i, 1, stage);
       }
-      return this.update(stages);
+      // TODO this is sorta wrong -- the path now points to the next element
+      // when you delete; the path should probably be removed.
+      return then(this.build(stages), i);
     };
     return new PipeStageNode(this, update, this.stages[i]);
   }
 
   addStage(stage: Malloy.PipeStage | null) {
     if (stage === null) {
+      // TODO path is wrong
       return this.update(this.stages);
     } else {
-      return this.update([...this.stages, stage]);
+      return then(this.update([...this.stages, stage]), this.stages.length);
     }
   }
 
@@ -788,11 +801,14 @@ class PipeStagesNode extends Node {
     if (segment === null) {
       return this.update(this.stages);
     } else {
-      return this.update([...this.stages, {refinements: [segment]}]);
+      return then(
+        this.update([...this.stages, {refinements: [segment]}]),
+        this.stages.length
+      );
     }
   }
 
-  build(edit: Malloy.PipeStage[]): Malloy.Query {
+  build(edit: Malloy.PipeStage[]) {
     return this.update(edit);
   }
 }
@@ -800,7 +816,7 @@ class PipeStagesNode extends Node {
 class PipeStageNode extends Node {
   constructor(
     parent: Node,
-    private readonly update: (stage: Malloy.PipeStage | null) => Malloy.Query,
+    private readonly update: Update<Malloy.PipeStage | null>,
     private readonly stage: Malloy.PipeStage // is there a source, if so what is it's schema
   ) {
     super(parent);
@@ -809,7 +825,8 @@ class PipeStageNode extends Node {
   get refinements(): RefinementsNode {
     return new RefinementsNode(
       this,
-      refinements => this.update({...this.stage, refinements}),
+      refinements =>
+        then(this.update({...this.stage, refinements}), 'refinements'),
       this.stage.refinements
     );
   }
@@ -823,7 +840,7 @@ class PipeStageNode extends Node {
     this.build(null);
   }
 
-  public build(stage: Malloy.PipeStage | null): Malloy.Query {
+  public build(stage: Malloy.PipeStage | null) {
     return this.update(stage);
   }
 }
@@ -831,7 +848,7 @@ class PipeStageNode extends Node {
 class RefinementsNode extends Node {
   constructor(
     parent: Node,
-    private readonly update: (refinements: Malloy.Refinement[]) => Malloy.Query,
+    private readonly update: Update<Malloy.Refinement[]>,
     private readonly refinements: Malloy.Refinement[] // needs the schema
   ) {
     super(parent);
@@ -856,12 +873,16 @@ class RefinementsNode extends Node {
     }
   }
 
-  build(edit: Malloy.Refinement[]): Malloy.Query {
+  build(edit: Malloy.Refinement[]) {
     return this.update(edit);
   }
 
   setIndex(index: number, refinement: Malloy.Refinement | null) {
-    return this.build(setIndex(index, refinement, this.refinements));
+    // TODO index for deletion
+    return then(
+      this.build(setIndex(index, refinement, this.refinements)),
+      index
+    );
   }
 
   addRefinement(refinement: Malloy.Refinement | null) {
@@ -877,9 +898,7 @@ class SegmentRefinementNode extends Node {
   // and also what the previous refinements were
   constructor(
     parent: Node,
-    private readonly update: (
-      segment: Malloy.RefinementWithSegment | null
-    ) => Malloy.Query,
+    private readonly update: Update<Malloy.RefinementWithSegment | null>,
     private readonly segment: Malloy.RefinementWithSegment
   ) {
     super(parent);
@@ -893,7 +912,8 @@ class SegmentRefinementNode extends Node {
   get operations() {
     return new ViewOperationsNode(
       this,
-      operations => this.build({...this.segment, operations}),
+      operations =>
+        then(this.build({...this.segment, operations}), 'operations'),
       this.segment.operations
     );
   }
@@ -902,7 +922,7 @@ class SegmentRefinementNode extends Node {
     return this.build(null);
   }
 
-  public build(segment: Malloy.RefinementWithSegment | null): Malloy.Query {
+  public build(segment: Malloy.RefinementWithSegment | null) {
     return this.update(segment);
   }
 
@@ -1040,7 +1060,7 @@ class SegmentRefinementNode extends Node {
     return this.editLimit().setLimit(limit);
   }
 
-  public addGroupBy(name: string): Malloy.Query {
+  public addGroupBy(name: string) {
     const groupByItem: Malloy.GroupByItem = {
       field: {
         expression: {
@@ -1071,9 +1091,7 @@ class SegmentRefinementNode extends Node {
 class ViewOperationsNode extends Node {
   constructor(
     parent: Node,
-    private readonly update: (
-      operations: Malloy.ViewOperation[]
-    ) => Malloy.Query,
+    private readonly update: Update<Malloy.ViewOperation[]>,
     private readonly operations: Malloy.ViewOperation[]
   ) {
     super(parent);
@@ -1107,17 +1125,35 @@ class ViewOperationsNode extends Node {
   }
 
   setIndex(index: number, operation: Malloy.ViewOperation | null) {
-    return this.build(setIndex(index, operation, this.operations));
+    // TODO deletion index
+    return then(this.build(setIndex(index, operation, this.operations)), index);
   }
 
   addOperation(operation: Malloy.ViewOperation | null) {
     return this.setIndex(this.length, operation);
   }
 
-  build(edit: Malloy.ViewOperation[]): Malloy.Query {
-    const q = this.update(edit);
+  // chain(
+  //   edit: Malloy.ViewOperation[],
+  //   then: (next: ViewOperationsNode) => UpdateResult
+  // ) {
+  //   const q = this.update(edit);
+  //   const next = this.root().edit(ViewOperationsNode, q.path);
+  //   // TODO i guess merge other stuff?
+  //   return then(next);
+  // }
 
-    return q;
+  /*
+    Question: if you have `order_by: x, y`, but there is no `group_by: y` in the query,
+    then you delete `group_by: x` from the query, should `order_by: y` automatically
+    get deleted? In other words, is the "cascading changes" just performing
+    operations to delete illegal expressions, or should it be to delete
+    specific things (in this case, only `order_by: x`)
+
+  */
+
+  build(edit: Malloy.ViewOperation[]) {
+    return this.update(edit);
     // TODO validate order_by's referring to real things, and delete if not
   }
 }
@@ -1126,9 +1162,7 @@ class RefinementWithReferenceNode extends Node {
   readonly __type = Malloy.RefinementType.Reference;
   constructor(
     parent: Node,
-    private readonly update: (
-      reference: Malloy.RefinementWithReference | null
-    ) => Malloy.Query,
+    private readonly update: Update<Malloy.RefinementWithReference | null>,
     private readonly reference: Malloy.RefinementWithReference
   ) {
     super(parent);
@@ -1138,7 +1172,7 @@ class RefinementWithReferenceNode extends Node {
     this.build(null);
   }
 
-  public build(reference: Malloy.RefinementWithReference | null): Malloy.Query {
+  public build(reference: Malloy.RefinementWithReference | null) {
     return this.update(reference);
   }
 }
@@ -1148,9 +1182,7 @@ class LimitOperationNode extends Node {
 
   constructor(
     parent: Node,
-    private readonly update: (
-      node: Malloy.ViewOperationWithLimit | null
-    ) => Malloy.Query,
+    private readonly update: Update<Malloy.ViewOperationWithLimit | null>,
     private readonly node: Malloy.ViewOperationWithLimit
   ) {
     super(parent);
@@ -1160,7 +1192,7 @@ class LimitOperationNode extends Node {
     this.build(null);
   }
 
-  public build(node: Malloy.ViewOperationWithLimit | null): Malloy.Query {
+  public build(node: Malloy.ViewOperationWithLimit | null) {
     return this.update(node);
   }
 
@@ -1181,9 +1213,7 @@ class OrderByOperationNode extends Node {
 
   constructor(
     parent: Node,
-    private readonly update: (
-      node: Malloy.ViewOperationWithOrderBy | null
-    ) => Malloy.Query,
+    private readonly update: Update<Malloy.ViewOperationWithOrderBy | null>,
     private readonly node: Malloy.ViewOperationWithOrderBy
   ) {
     super(parent);
@@ -1192,7 +1222,7 @@ class OrderByOperationNode extends Node {
   get items() {
     return new OrderByItemsNode(
       this,
-      items => this.update({...this.node, items}),
+      items => then(this.update({...this.node, items}), 'items'),
       this.node.items
     );
   }
@@ -1206,7 +1236,7 @@ class OrderByOperationNode extends Node {
     this.build(null);
   }
 
-  public build(node: Malloy.ViewOperationWithOrderBy | null): Malloy.Query {
+  public build(node: Malloy.ViewOperationWithOrderBy | null) {
     return this.update(node);
   }
 
@@ -1234,9 +1264,7 @@ class AggregateOperationNode extends Node {
 
   constructor(
     parent: Node,
-    private readonly update: (
-      node: Malloy.ViewOperationWithAggregate | null
-    ) => Malloy.Query,
+    private readonly update: Update<Malloy.ViewOperationWithAggregate | null>,
     private readonly node: Malloy.ViewOperationWithAggregate
   ) {
     super(parent);
@@ -1246,7 +1274,7 @@ class AggregateOperationNode extends Node {
     this.build(null);
   }
 
-  public build(node: Malloy.ViewOperationWithAggregate | null): Malloy.Query {
+  public build(node: Malloy.ViewOperationWithAggregate | null) {
     return this.update(node);
   }
 
@@ -1263,9 +1291,7 @@ class GroupByOperationNode extends Node {
 
   constructor(
     parent: Node,
-    private readonly update: (
-      node: Malloy.ViewOperationWithGroupBy | null
-    ) => Malloy.Query,
+    private readonly update: Update<Malloy.ViewOperationWithGroupBy | null>,
     private readonly node: Malloy.ViewOperationWithGroupBy
   ) {
     super(parent);
@@ -1274,7 +1300,7 @@ class GroupByOperationNode extends Node {
   get items() {
     return new GroupByItemsNode(
       this,
-      items => this.build({...this.node, items}),
+      items => then(this.build({...this.node, items}), 'items'),
       this.node.items
     );
   }
@@ -1288,7 +1314,7 @@ class GroupByOperationNode extends Node {
     return this.build(null);
   }
 
-  public build(node: Malloy.ViewOperationWithGroupBy | null): Malloy.Query {
+  public build(node: Malloy.ViewOperationWithGroupBy | null) {
     // TODO notify user somehow that this cascade happened?
     if (node?.items.length === 0) return this.update(null);
     return this.update(node);
@@ -1305,7 +1331,7 @@ class GroupByOperationNode extends Node {
 class GroupByItemsNode extends Node {
   constructor(
     parent: Node,
-    private readonly update: (items: Malloy.GroupByItem[]) => Malloy.Query,
+    private readonly update: Update<Malloy.GroupByItem[]>,
     private readonly items: Malloy.GroupByItem[]
   ) {
     super(parent);
@@ -1329,7 +1355,7 @@ class GroupByItemsNode extends Node {
     return this.setIndex(this.length, item);
   }
 
-  build(edit: Malloy.GroupByItem[]): Malloy.Query {
+  build(edit: Malloy.GroupByItem[]) {
     return this.update(edit);
   }
 }
@@ -1337,7 +1363,7 @@ class GroupByItemsNode extends Node {
 class GroupByItemNode extends Node {
   constructor(
     parent: Node,
-    private readonly update: (node: Malloy.GroupByItem | null) => Malloy.Query,
+    private readonly update: Update<Malloy.GroupByItem | null>,
     private readonly node: Malloy.GroupByItem
   ) {
     super(parent);
@@ -1358,7 +1384,7 @@ class GroupByItemNode extends Node {
     return this.build(null);
   }
 
-  public build(node: Malloy.GroupByItem | null): Malloy.Query {
+  public build(node: Malloy.GroupByItem | null) {
     return this.update(node);
   }
 }
@@ -1366,7 +1392,7 @@ class GroupByItemNode extends Node {
 class OrderByItemsNode extends Node {
   constructor(
     parent: Node,
-    private readonly update: (items: Malloy.OrderByItem[]) => Malloy.Query,
+    private readonly update: Update<Malloy.OrderByItem[]>,
     private readonly items: Malloy.OrderByItem[]
   ) {
     super(parent);
@@ -1389,14 +1415,15 @@ class OrderByItemsNode extends Node {
 
   setIndex(index: number, item: Malloy.OrderByItem | null) {
     // TODO do some validation here...
-    return this.build(setIndex(index, item, this.items));
+    // TODO deletion index
+    return then(this.build(setIndex(index, item, this.items)), index);
   }
 
   addItem(item: Malloy.OrderByItem | null) {
     return this.setIndex(this.length, item);
   }
 
-  build(edit: Malloy.OrderByItem[]): Malloy.Query {
+  build(edit: Malloy.OrderByItem[]) {
     return this.update(edit);
   }
 }
@@ -1404,7 +1431,7 @@ class OrderByItemsNode extends Node {
 class OrderByItemNode extends Node {
   constructor(
     parent: Node,
-    private readonly update: (node: Malloy.OrderByItem | null) => Malloy.Query,
+    private readonly update: Update<Malloy.OrderByItem | null>,
     private readonly node: Malloy.OrderByItem
   ) {
     super(parent);
@@ -1421,7 +1448,7 @@ class OrderByItemNode extends Node {
   get field() {
     return new ReferenceNode(
       this,
-      field => this.update({...this.node, field}),
+      field => then(this.build({...this.node, field}), 'field'),
       this.node.field
     );
   }
@@ -1435,7 +1462,7 @@ class OrderByItemNode extends Node {
     this.build(null);
   }
 
-  public build(node: Malloy.OrderByItem | null): Malloy.Query {
+  public build(node: Malloy.OrderByItem | null) {
     return this.update(node);
   }
 }
@@ -1492,3 +1519,51 @@ Weird case:
       order_by: carrier desc
     }
 */
+
+
+/*
+
+New thought:
+
+All Nodes have a reference to the root QueryNode and their path
+
+each operation basically starts with "get the object somewhere in the path" (might be the given path
+or somewhere slightly above), then recompute that part of the tree and pass it to a function (returned
+by the path get) which updates that subtree and returns the new tree.
+
+field delete:
+
+  - get group by operation that contains the field
+  - delete the field from the group by
+  - if the group by is empty, delete the group by
+  - get the view operations list that contains the group by
+  - find any order bys that refer to that field
+  - delete them
+  - get the list of stages that contained the refinement
+  - get any references to the field which was removed in later stages
+  - remove them
+
+  GroupByItem.delete() {
+    // delete this item
+    let out = this.update(null);
+      // could be this.parentPath() is [...this.path, PARENT]
+    const groupBy = this.getGroupByViewOperationNode(out, [...this.path, PARENT]);
+    if (groupBy.items.length === 0) {
+      out = groupBy.delete({ cascade: false });
+    }
+    const operations = this.getViewOperationsNode(out, [...groupBy.path, PARENT]);
+    for (const operation of operations) {
+      if (operation.__type === Malloy.ViewOperationType.OrderBy) {
+        for (const item of operation) {
+          if (item.field.name === this.getOutputName()) {
+            // this won't work, because successive deletions will overwrite each other
+            item.delete({ cascade: false });
+          }
+        }
+        if (operation.items.length === 0) {
+          operation.delete({ cascade: false });
+        }
+      }
+    }
+  }
+ */
