@@ -7,6 +7,10 @@ type ASTAny = ASTNode<unknown>;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type NodeConstructor<T extends ASTAny> = new (...args: any[]) => T;
 
+type ASTChildren<T> = {
+  [Key in keyof T]: LiteralOrNode<T[Key]>;
+};
+
 const DELETED = null;
 
 // type LiteralOrNode<T> = T extends string
@@ -173,13 +177,15 @@ abstract class ASTListNode<
   findIndex(predicate: (n: N) => boolean): number {
     return this.children.findIndex(predicate);
   }
+
+  indexOf(n: N): number {
+    return this.children.indexOf(n);
+  }
 }
 
 abstract class ASTObjectNode<
   T,
-  Children extends {
-    [Key in keyof T]: LiteralOrNode<T[Key]>;
-  },
+  Children extends ASTChildren<T>,
 > extends ASTNode<T> {
   constructor(
     protected node: T,
@@ -243,14 +249,46 @@ export class ASTQuery extends ASTObjectNode<
   Malloy.Query,
   {
     pipeline: ASTPipeline;
-    source?: Deletable<ASTReference>;
+    source?: Deletable<ASTSourceReference>;
   }
 > {
-  constructor(public query: Malloy.Query) {
+  model: Malloy.ModelInfo;
+  constructor(options?: {
+    query?: Malloy.Query;
+    model?: Malloy.ModelInfo;
+    source?:
+      | Malloy.ModelEntryValueWithSource
+      | Malloy.ModelEntryValueWithQuery
+      | Malloy.SourceInfo
+      | Malloy.QueryInfo;
+  }) {
+    const query = options?.query ?? {pipeline: {stages: []}};
+    const source = options?.source;
+    const model: Malloy.ModelInfo | undefined =
+      options?.model ??
+      (source && {
+        entries: [
+          {
+            ...source,
+            __type:
+              '__type' in source
+                ? source.__type
+                : Malloy.ModelEntryValueType.Source,
+          },
+        ],
+        anonymous_queries: [],
+      });
+    if (model === undefined) {
+      throw new Error('Must provide a model or source');
+    }
     super(query, {
       pipeline: new ASTPipeline(query.pipeline),
-      source: query.source && new ASTReference(query.source),
+      source: query.source && new ASTSourceReference(query.source),
     });
+    this.model = model;
+    if (source) {
+      this.setSource(source.name);
+    }
   }
 
   get pipeline() {
@@ -259,6 +297,14 @@ export class ASTQuery extends ASTObjectNode<
 
   get source() {
     return this.children.source;
+  }
+
+  set source(value: Deletable<ASTSourceReference> | undefined) {
+    this.edit();
+    this.children.source = value;
+    if (value) {
+      value.parent = this;
+    }
   }
 
   public getOrCreateDefaultSegment(): ASTSegmentRefinement {
@@ -290,6 +336,23 @@ export class ASTQuery extends ASTObjectNode<
         return refinements.last;
       }
     }
+  }
+
+  setSource(name: string) {
+    this.source = new ASTSourceReference({
+      name,
+    });
+  }
+
+  getQueryInfo(name: string): Malloy.QueryInfo {
+    const query = this.model.entries.find(e => e.name === name);
+    if (query === undefined) {
+      throw new Error(`Query ${name} is not defined in model`);
+    }
+    if (query.__type !== Malloy.ModelEntryValueType.Query) {
+      throw new Error(`Model entry ${name} is not a query`);
+    }
+    return query;
   }
 }
 
@@ -343,6 +406,20 @@ class ASTReference extends ASTObjectNode<
         value: LiteralValueAST.makeLiteral(value),
       })
     );
+  }
+}
+
+class ASTSourceReference extends ASTReference {
+  get query(): ASTQuery {
+    return this.parent.as(ASTQuery);
+  }
+
+  getSourceInfo(): Malloy.SourceInfo {
+    const info = this.query.model.entries.find(e => e.name === this.name);
+    if (info === undefined) {
+      throw new Error('No source info found');
+    }
+    return info;
   }
 }
 
@@ -492,6 +569,22 @@ class ASTPipeline extends ASTObjectNode<
   get stages() {
     return this.children.stages;
   }
+
+  getSourceInfo(): Malloy.SourceInfo {
+    if (this.parent instanceof ASTQuery) {
+      const source = this.parent.source;
+      if (!source) {
+        throw new Error('No source configured');
+      }
+      return source.getSourceInfo();
+    }
+    // TODO
+    // else if (this.parent instanceof ASTView) {
+    // }
+    throw new Error(
+      `Invalid parent of ASTPipeline ${this.parent.constructor.name}`
+    );
+  }
 }
 
 class ASTPipeStageList extends ASTListNode<Malloy.PipeStage, ASTPipeStage> {
@@ -504,6 +597,10 @@ class ASTPipeStageList extends ASTListNode<Malloy.PipeStage, ASTPipeStage> {
 
   get stages() {
     return this.children;
+  }
+
+  get pipeline() {
+    return this.parent.as(ASTPipeline);
   }
 }
 
@@ -522,6 +619,45 @@ class ASTPipeStage extends ASTObjectNode<
   get refinements() {
     return this.children.refinements;
   }
+
+  get list() {
+    return this.parent.as(ASTPipeStageList);
+  }
+
+  get index() {
+    const index = this.list.indexOf(this);
+    if (index === -1) {
+      throw new Error('This element is not contained in its parent');
+    }
+    return index;
+  }
+
+  isQueryHeadedStage(): boolean {
+    const pipelineContainer = this.list.pipeline.parent;
+    return (
+      this.index === 0 &&
+      pipelineContainer instanceof ASTQuery &&
+      pipelineContainer.source === undefined &&
+      this.refinements.length > 0 &&
+      this.refinements.index(0).type === Malloy.RefinementType.Reference
+    );
+  }
+
+  getInputSchema(): Malloy.Schema {
+    if (this.isQueryHeadedStage()) {
+      const refinement = this.refinements.index(0).as(ASTReferenceRefinement);
+      const query = this.list.pipeline.parent.as(ASTQuery);
+      const queryInfo = query.getQueryInfo(refinement.name);
+      return queryInfo.schema;
+    } else if (this.index === 0) {
+      return this.list.pipeline.getSourceInfo().schema;
+    }
+    return this.list.index(this.index - 1).getOutputSchema();
+  }
+
+  getOutputSchema(): Malloy.Schema {
+    throw new Error('Not implemented');
+  }
 }
 
 class ASTRefinementList extends ASTListNode<Malloy.Refinement, ASTRefinement> {
@@ -535,6 +671,10 @@ class ASTRefinementList extends ASTListNode<Malloy.Refinement, ASTRefinement> {
   // TODO weird that it's stage.refinements.refinements?
   get refinements() {
     return this.children;
+  }
+
+  get stage() {
+    return this.parent.as(ASTPipeStage);
   }
 }
 
@@ -550,10 +690,45 @@ const ASTRefinement = {
   },
 };
 
+abstract class ASTRefinementBase<
+  T,
+  Children extends ASTChildren<T>,
+> extends ASTObjectNode<T, Children> {
+  get list() {
+    return this.parent.as(ASTRefinementList);
+  }
+
+  get index() {
+    if (
+      !(
+        this instanceof ASTReferenceRefinement ||
+        this instanceof ASTSegmentRefinement
+      )
+    ) {
+      throw new Error('Invalid subclass of ASTRefinementBase');
+    }
+    const index = this.list.indexOf(this);
+    if (index === -1) {
+      throw new Error('ASTRefinement is not contained in parent list');
+    }
+    return index;
+  }
+
+  getInputSchema() {
+    if (this.index === 0) {
+      return this.list.stage.getInputSchema();
+    }
+  }
+
+  getOutputSchema() {
+    throw new Error('Not implemeneted');
+  }
+}
+
 // TODO sorta annoying that this is a different class than the sourceRefimenent
 // class, because it is part of a union....
 // I guess maybe I could make an abstract class that both extend???
-class ASTReferenceRefinement extends ASTObjectNode<
+class ASTReferenceRefinement extends ASTRefinementBase<
   Malloy.RefinementWithReference,
   {
     __type: Malloy.RefinementType.Reference;
@@ -570,9 +745,13 @@ class ASTReferenceRefinement extends ASTObjectNode<
       parameters: node.parameters && new ASTParameterValueList(node.parameters),
     });
   }
+
+  get name() {
+    return this.children.name;
+  }
 }
 
-class ASTSegmentRefinement extends ASTObjectNode<
+class ASTSegmentRefinement extends ASTRefinementBase<
   Malloy.RefinementWithSegment,
   {
     __type: Malloy.RefinementType.Segment;
@@ -675,6 +854,14 @@ class ASTSegmentRefinement extends ASTObjectNode<
   }
 
   public addGroupBy(name: string) {
+    const schema = this.getInputSchema();
+    const fieldInfo = schema?.fields.find(f => f.name === name);
+    if (fieldInfo === undefined) {
+      throw new Error(`No such field ${name}`);
+    }
+    if (fieldInfo.__type !== Malloy.FieldInfoType.Dimension) {
+      throw new Error(`Cannot group by non dimension ${name}`);
+    }
     const groupByItem: Malloy.GroupByItem = {
       field: {
         expression: {

@@ -2248,6 +2248,36 @@ export class Segment {
   }
 }
 
+export function getResultStructDefForView(
+  source: SourceDef,
+  view: TurtleDef
+): SourceDef {
+  const qs = new QueryStruct(
+    source,
+    undefined,
+    {
+      model: new QueryModel(undefined),
+    },
+    {}
+  );
+  const queryQueryQuery = QueryQuery.makeQuery(
+    view,
+    qs,
+    new StageWriter(true, undefined), // stage write indicates we want to get a result.
+    false
+  );
+  return queryQueryQuery.getResultStructDef();
+}
+
+export function getResultStructDefForQuery(
+  model: ModelDef,
+  query: Query
+): SourceDef {
+  const queryModel = new QueryModel(model);
+  const compiled = queryModel.compileQuery(query);
+  return compiled.structs[compiled.structs.length - 1];
+}
+
 type StageGroupMaping = {fromGroup: number; toGroup: number};
 
 type StageOutputContext = {
