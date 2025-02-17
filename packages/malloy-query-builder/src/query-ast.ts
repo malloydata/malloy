@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 import * as Malloy from '@malloydata/malloy-interfaces';
 
 type PathSegment = number | string;
@@ -13,14 +20,6 @@ type ASTChildren<T> = {
 
 const DELETED = null;
 
-// type LiteralOrNode<T> = T extends string
-//   ? string
-//   : T extends number
-//   ? number
-//   : undefined extends T
-//   ? NodeTypeFor<T> | null | undefined
-//   : NodeTypeFor<T>;
-
 type NonOptionalASTNode<T> = T extends undefined ? never : ASTNode<T>;
 
 type Deletable<T> = T | typeof DELETED;
@@ -32,36 +31,6 @@ type LiteralOrNode<T> = T extends string
   : undefined extends T
   ? NonOptionalASTNode<T> | null | undefined
   : ASTNode<T>;
-
-// type A = LiteralOrNode<Malloy.Reference | undefined>;
-
-// type X = LiteralOrNode<Malloy.Reference | undefined>;
-
-// type NodeTypeFor<T> = undefined extends T
-//   ? never
-//   : T extends Malloy.Query
-//   ? QueryAST
-//   : T extends Malloy.Pipeline
-//   ? PipelineAST
-//   : T extends Malloy.ParameterValue
-//   ? ParameterValueAST
-//   : T extends Malloy.Refinement
-//   ? RefinementAST
-//   : T extends Malloy.Reference
-//   ? ReferenceAST
-//   : T extends Malloy.ParameterValue[]
-//   ? ParameterValueListAST
-//   : T extends Malloy.PipeStage
-//   ? PipeStageAST
-//   : T extends Malloy.PipeStage[]
-//   ? PipeStageListAST
-//   : T extends Malloy.Refinement[]
-//   ? RefinementListAST
-//   : ASTNode<T>;
-
-// type X = NodeTypeFor<Malloy.ParameterValue>;
-// type Y = NodeTypeFor<Malloy.Reference>;
-// type Z = NodeTypeFor<Malloy.Refinement>;
 
 abstract class ASTNode<T> {
   edited = false;
