@@ -70,7 +70,8 @@ expect.extend({
     if (malloy !== actualMalloy) {
       return {
         pass: false,
-        message: () => `Resulting query text does not match expected: ${malloyDiff}`,
+        message: () =>
+          `Resulting query text does not match expected: ${malloyDiff}`,
       };
     }
     return {
