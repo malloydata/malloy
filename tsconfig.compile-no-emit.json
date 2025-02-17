@@ -2,6 +2,7 @@
   "extends": "./tsconfig.packages.json",
   "references": [
     {"path": "packages/malloy-interfaces"},
+    {"path": "packages/malloy-query-builder"},
     {"path": "packages/malloy"},
     {"path": "packages/malloy-db-bigquery"},
     {"path": "packages/malloy-db-duckdb"},
