@@ -54,7 +54,6 @@ import {ExprValue} from '../ast/types/expr-value';
 import {GlobalNameSpace} from '../ast/types/global-name-space';
 import {LogSeverity, MessageCode, MessageParameterType} from '../parse-log';
 import {EventStream} from '../../runtime_types';
-import {modelDefToModelInfo} from '../../to_stable';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types
 export function pretty(thing: any): string {
