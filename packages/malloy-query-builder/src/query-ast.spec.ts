@@ -103,7 +103,7 @@ describe('query builder', () => {
     expect((q: ASTQuery) => {
       const seg = q.getOrCreateDefaultSegment();
       seg.addGroupBy('carrier');
-      seg.addGroupBy('origin');
+      seg.addGroupBy('origin_code');
     }).toModifyQuery({
       model: flights_model,
       from,
@@ -130,7 +130,7 @@ describe('query builder', () => {
                           field: {
                             expression: {
                               __type: Malloy.ExpressionType.Reference,
-                              name: 'origin',
+                              name: 'origin_code',
                             },
                           },
                         },
@@ -148,7 +148,7 @@ describe('query builder', () => {
 run: flights -> {
   group_by:
     carrier
-    origin
+    origin_code
 }`.trim(),
     });
   });
