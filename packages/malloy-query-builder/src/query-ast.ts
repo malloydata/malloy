@@ -100,6 +100,28 @@ abstract class ASTNode<T> {
   set parent(parent: ASTAny) {
     this._parent = parent;
   }
+
+  static schemaGet(schema: Malloy.Schema, name: string) {
+    const parts = name.split('.');
+    let current = schema;
+    const front = parts.slice(0, -1);
+    const last = parts[parts.length - 1];
+    for (const part of front) {
+      const field = current.fields.find(f => f.name === part);
+      if (field === undefined) {
+        throw new Error(`${part} not found`);
+      }
+      if (field.__type !== Malloy.FieldInfoType.Join) {
+        throw new Error(`${part} is not a join`);
+      }
+      current = field.schema;
+    }
+    const field = current.fields.find(f => f.name === last);
+    if (field === undefined) {
+      throw new Error(`${last} not found`);
+    }
+    return field;
+  }
 }
 
 function isBasic(t: ASTAny | string | number): t is string | number {
@@ -353,6 +375,10 @@ export class ASTQuery extends ASTObjectNode<
       throw new Error(`Model entry ${name} is not a query`);
     }
     return query;
+  }
+
+  toMalloy(): string {
+    return Malloy.queryToMalloy(this.build());
   }
 }
 
@@ -718,6 +744,7 @@ abstract class ASTRefinementBase<
     if (this.index === 0) {
       return this.list.stage.getInputSchema();
     }
+    throw new Error('Not implemented');
   }
 
   getOutputSchema() {
@@ -855,7 +882,7 @@ class ASTSegmentRefinement extends ASTRefinementBase<
 
   public addGroupBy(name: string) {
     const schema = this.getInputSchema();
-    const fieldInfo = schema?.fields.find(f => f.name === name);
+    const fieldInfo = ASTNode.schemaGet(schema, name);
     if (fieldInfo === undefined) {
       throw new Error(`No such field ${name}`);
     }

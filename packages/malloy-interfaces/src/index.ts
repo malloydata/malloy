@@ -7,6 +7,7 @@
 
 import * as Malloy from './types';
 export * from './types';
+export {queryToMalloy} from './to_malloy';
 
 export const test: Malloy.ModelInfo = {
   entries: [
