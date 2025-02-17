@@ -91,6 +91,13 @@ abstract class ASTNode<T> {
     }
     return field;
   }
+
+  static schemaMerge(a: Malloy.Schema, b: Malloy.Schema): Malloy.Schema {
+    // TODO does this need to be smarter
+    return {
+      fields: [...a.fields, ...b.fields],
+    };
+  }
 }
 
 function isBasic(t: ASTAny | string | number): t is string | number {
@@ -710,15 +717,18 @@ abstract class ASTRefinementBase<
   }
 
   getInputSchema() {
-    if (this.index === 0) {
-      return this.list.stage.getInputSchema();
-    }
-    throw new Error('Not implemented');
+    return this.list.stage.getInputSchema();
   }
 
   getOutputSchema() {
-    throw new Error('Not implemeneted');
+    const schema: Malloy.Schema =
+      this.index === 0
+        ? {fields: []}
+        : this.list.index(this.index - 1).getOutputSchema();
+    return ASTNode.schemaMerge(schema, this.getRefinementSchema());
   }
+
+  abstract getRefinementSchema(): Malloy.Schema;
 }
 
 // TODO sorta annoying that this is a different class than the sourceRefimenent
@@ -745,6 +755,21 @@ class ASTReferenceRefinement extends ASTRefinementBase<
   get name() {
     return this.children.name;
   }
+
+  getRefinementSchema(): Malloy.Schema {
+    const inputSchema = this.getInputSchema();
+    const field = ASTQuery.schemaGet(inputSchema, this.name);
+    if (
+      field.__type === Malloy.FieldInfoType.Dimension ||
+      field.__type === Malloy.FieldInfoType.Measure
+    ) {
+      throw new Error('Scalar lenses not yet supported');
+    }
+    if (field.__type !== Malloy.FieldInfoType.View) {
+      throw new Error('Field type not supported in refinement');
+    }
+    return field.schema;
+  }
 }
 
 class ASTSegmentRefinement extends ASTRefinementBase<
@@ -768,7 +793,13 @@ class ASTSegmentRefinement extends ASTRefinementBase<
   }
 
   addOrderBy(name: string, direction?: Malloy.OrderByDirection) {
-    // todo ensure there is a group by with this name
+    // Ensure output schema has a field with this name
+    const outputSchema = this.getOutputSchema();
+    try {
+      ASTNode.schemaGet(outputSchema, name);
+    } catch {
+      throw new Error(`No such field ${name} in stage output`);
+    }
     // first see if there is already an order by for this field
     for (const operation of this.operations) {
       if (operation instanceof ASTOrderByViewOperation) {
@@ -885,6 +916,20 @@ class ASTSegmentRefinement extends ASTRefinementBase<
       return this;
     }
   }
+
+  getRefinementSchema(): Malloy.Schema {
+    const fields: Malloy.FieldInfo[] = [];
+    for (const operation of this.operations) {
+      if (
+        operation instanceof ASTGroupByViewOperation //||
+        // operation instanceof ASTAggregateOperation ||
+        // operation instanceof ASTNestOperation
+      ) {
+        fields.push(...operation.getFieldInfos());
+      }
+    }
+    return {fields};
+  }
 }
 
 class ASTViewOperationList extends ASTListNode<
@@ -961,6 +1006,10 @@ class ASTGroupByViewOperation extends ASTObjectNode<
   delete() {
     this.drain();
     this.list.remove(this);
+  }
+
+  getFieldInfos() {
+    return [...this.items].map(i => i.getFieldInfo());
   }
 }
 
@@ -1132,6 +1181,14 @@ class ASTGroupByItem extends ASTObjectNode<
     }
     return this;
   }
+
+  getFieldInfo(): Malloy.FieldInfo {
+    return {
+      __type: Malloy.FieldInfoType.Dimension,
+      name: this.field.name,
+      type: this.field.type,
+    };
+  }
 }
 
 class ASTField extends ASTObjectNode<
@@ -1154,6 +1211,18 @@ class ASTField extends ASTObjectNode<
 
   get name() {
     return this.expression.name;
+  }
+
+  get type() {
+    return this.expression.fieldType;
+  }
+
+  get refinement() {
+    const groupByOrAggregateItem = this.parent;
+    const groupByOrAggregateItemList = groupByOrAggregateItem.parent;
+    const groupByOrAggregate = groupByOrAggregateItemList.parent;
+    const operationList = groupByOrAggregate.parent;
+    return operationList.parent.as(ASTSegmentRefinement);
   }
 }
 
@@ -1195,6 +1264,22 @@ class ASTReferenceExpression extends ASTObjectNode<
   get name() {
     return this.children.name;
   }
+
+  get field() {
+    return this.parent.as(ASTField);
+  }
+
+  get fieldType() {
+    const schema = this.field.refinement.getInputSchema();
+    const def = ASTNode.schemaGet(schema, this.name);
+    if (
+      def.__type === Malloy.FieldInfoType.Dimension ||
+      def.__type === Malloy.FieldInfoType.Measure
+    ) {
+      return def.type;
+    }
+    throw new Error('Invalid field reference');
+  }
 }
 
 class ASTTimeTruncationExpression extends ASTObjectNode<
@@ -1219,8 +1304,36 @@ class ASTTimeTruncationExpression extends ASTObjectNode<
     return this.children.reference;
   }
 
+  get truncation() {
+    return this.children.truncation;
+  }
+
   get name() {
     return this.reference.name;
+  }
+
+  get field() {
+    return this.parent.as(ASTField);
+  }
+
+  get fieldType() {
+    const schema = this.field.refinement.getInputSchema();
+    const def = ASTNode.schemaGet(schema, this.name);
+    if (
+      def.__type !== Malloy.FieldInfoType.Dimension &&
+      def.__type !== Malloy.FieldInfoType.Measure
+    ) {
+      throw new Error('Invalid field reference');
+    }
+    if (def.type.__type === Malloy.AtomicTypeType.DateType) {
+      return {
+        ...def.type,
+        timeframe: timestampTimeframeToDateTimeframe(this.truncation),
+      };
+    } else if (def.type.__type === Malloy.AtomicTypeType.TimestampType) {
+      return {...def.type, timeframe: this.truncation};
+    }
+    throw new Error('This type of field cannot have a time truncation');
   }
 }
 
@@ -1248,5 +1361,40 @@ class ASTFilteredFieldExpression extends ASTObjectNode<
 
   get name() {
     return this.reference.name;
+  }
+
+  get field() {
+    return this.parent.as(ASTField);
+  }
+
+  get fieldType() {
+    const schema = this.field.refinement.getInputSchema();
+    const def = ASTNode.schemaGet(schema, this.name);
+    if (
+      def.__type === Malloy.FieldInfoType.Dimension ||
+      def.__type === Malloy.FieldInfoType.Measure
+    ) {
+      return def.type;
+    }
+    throw new Error('Invalid field reference');
+  }
+}
+
+function timestampTimeframeToDateTimeframe(
+  timeframe: Malloy.TimestampTimeframe
+): Malloy.DateTimeframe {
+  switch (timeframe) {
+    case Malloy.TimestampTimeframe.DAY:
+      return Malloy.DateTimeframe.DAY;
+    case Malloy.TimestampTimeframe.WEEK:
+      return Malloy.DateTimeframe.WEEK;
+    case Malloy.TimestampTimeframe.MONTH:
+      return Malloy.DateTimeframe.MONTH;
+    case Malloy.TimestampTimeframe.YEAR:
+      return Malloy.DateTimeframe.YEAR;
+    case Malloy.TimestampTimeframe.QUARTER:
+      return Malloy.DateTimeframe.QUARTER;
+    default:
+      throw new Error('Invalid date timeframe');
   }
 }

@@ -13,13 +13,38 @@ import {ASTQuery} from './query-ast';
 
 describe('query builder', () => {
   test('add an order by', () => {
-    const from = {
-      pipeline: {stages: []},
-      source: {name: 'foo'},
+    const from: Malloy.Query = {
+      pipeline: {
+        stages: [
+          {
+            refinements: [
+              {
+                __type: Malloy.RefinementType.Segment,
+                operations: [
+                  {
+                    __type: Malloy.ViewOperationType.GroupBy,
+                    items: [
+                      {
+                        field: {
+                          expression: {
+                            __type: Malloy.ExpressionType.Reference,
+                            name: 'carrier',
+                          },
+                        },
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      source: {name: 'flights'},
     };
     expect((q: ASTQuery) => {
       q.getOrCreateDefaultSegment().addOrderBy(
-        'baz',
+        'carrier',
         Malloy.OrderByDirection.ASC
       );
     }).toModifyQuery({
@@ -34,10 +59,23 @@ describe('query builder', () => {
                   __type: Malloy.RefinementType.Segment,
                   operations: [
                     {
+                      __type: Malloy.ViewOperationType.GroupBy,
+                      items: [
+                        {
+                          field: {
+                            expression: {
+                              __type: Malloy.ExpressionType.Reference,
+                              name: 'carrier',
+                            },
+                          },
+                        },
+                      ],
+                    },
+                    {
                       __type: Malloy.ViewOperationType.OrderBy,
                       items: [
                         {
-                          field: {name: 'baz'},
+                          field: {name: 'carrier'},
                           direction: Malloy.OrderByDirection.ASC,
                         },
                       ],
