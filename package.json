@@ -33,7 +33,7 @@
     "watch": "tsc --watch",
     "lint": "gts lint",
     "lint-fix": "gts fix",
-    "test": "jest --runInBand",
+    "test": "NODE_OPTIONS=\"$NODE_OPTIONS --experimental-vm-modules\" jest --runInBand",
     "test-bigquery": "MALLOY_DATABASE=bigquery jest --runInBand",
     "test-postgres": "MALLOY_DATABASE=postgres jest --runInBand",
     "test-duckdb": "JEST_SILENT_REPORTER_SHOW_PATHS=true MALLOY_DATABASE=duckdb jest --runInBand --reporters jest-silent-reporter",
