@@ -88,7 +88,10 @@ describe('query builder', () => {
         },
         source: from.source,
       },
-      malloy: 'run: foo -> { order_by: baz asc }',
+      malloy: `run: flights -> {
+  group_by: carrier
+  order_by: carrier asc
+}`,
     });
   });
   test('add a group by', () => {
@@ -188,6 +191,161 @@ run: flights -> {
     carrier
     origin_code
 }`.trim(),
+    });
+  });
+  test('add a nest', () => {
+    const from = {
+      pipeline: {stages: []},
+      source: {name: 'flights'},
+    };
+    expect((q: ASTQuery) => {
+      const seg = q.getOrCreateDefaultSegment();
+      const nest = seg.addEmptyNest('by_carrier');
+      const seg2 = nest.view.getOrCreateDefaultSegment();
+      seg2.addGroupBy('carrier');
+    }).toModifyQuery({
+      model: flights_model,
+      from,
+      to: {
+        pipeline: {
+          stages: [
+            {
+              refinements: [
+                {
+                  __type: Malloy.RefinementType.Segment,
+                  operations: [
+                    {
+                      __type: Malloy.ViewOperationType.Nest,
+                      items: [
+                        {
+                          name: 'by_carrier',
+                          view: {
+                            pipeline: {
+                              stages: [
+                                {
+                                  refinements: [
+                                    {
+                                      __type: Malloy.RefinementType.Segment,
+                                      operations: [
+                                        {
+                                          __type:
+                                            Malloy.ViewOperationType.GroupBy,
+                                          items: [
+                                            {
+                                              field: {
+                                                expression: {
+                                                  __type:
+                                                    Malloy.ExpressionType
+                                                      .Reference,
+                                                  name: 'carrier',
+                                                },
+                                              },
+                                            },
+                                          ],
+                                        },
+                                      ],
+                                    },
+                                  ],
+                                },
+                              ],
+                            },
+                          },
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        source: from.source,
+      },
+      malloy: 'run: flights -> { nest: by_carrier is { group_by: carrier } }',
+    });
+  });
+  test('add limit', () => {
+    const from = {
+      pipeline: {stages: []},
+      source: {name: 'flights'},
+    };
+    expect((q: ASTQuery) => {
+      const seg = q.getOrCreateDefaultSegment();
+      seg.setLimit(10);
+    }).toModifyQuery({
+      model: flights_model,
+      from,
+      to: {
+        pipeline: {
+          stages: [
+            {
+              refinements: [
+                {
+                  __type: Malloy.RefinementType.Segment,
+                  operations: [
+                    {
+                      __type: Malloy.ViewOperationType.Limit,
+                      limit: 10,
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        source: from.source,
+      },
+      malloy: 'run: flights -> { limit: 10 }',
+    });
+  });
+  test('change limit', () => {
+    const from: Malloy.Query = {
+      pipeline: {
+        stages: [
+          {
+            refinements: [
+              {
+                __type: Malloy.RefinementType.Segment,
+                operations: [
+                  {
+                    __type: Malloy.ViewOperationType.Limit,
+                    limit: 10,
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      source: {name: 'flights'},
+    };
+    expect((q: ASTQuery) => {
+      const seg = q.getOrCreateDefaultSegment();
+      seg.setLimit(20);
+    }).toModifyQuery({
+      model: flights_model,
+      from,
+      to: {
+        pipeline: {
+          stages: [
+            {
+              refinements: [
+                {
+                  __type: Malloy.RefinementType.Segment,
+                  operations: [
+                    {
+                      __type: Malloy.ViewOperationType.Limit,
+                      limit: 20,
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        source: from.source,
+      },
+      malloy: 'run: flights -> { limit: 20 }',
     });
   });
 });

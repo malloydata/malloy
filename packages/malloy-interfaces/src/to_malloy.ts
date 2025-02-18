@@ -1,3 +1,4 @@
+import { pipeline } from 'stream';
 import * as Malloy from './types';
 import {maybeQuoteIdentifier} from './util';
 
@@ -48,7 +49,7 @@ function codeFromFragments(fragments: Fragment[], {tabWidth} = {tabWidth: 2}) {
 
 function wrap(open: string, block: Fragment[], close: string): Fragment[] {
   if (block.includes(NEWLINE)) {
-    return [open, NEWLINE, INDENT, ...block, OUTDENT, close];
+    return [open, NEWLINE, INDENT, ...block, NEWLINE, OUTDENT, close];
   }
   return [open, ' ', ...block, ' ', close];
 }
@@ -102,8 +103,18 @@ function queryToFragments(query: Malloy.Query): Fragment[] {
   if (query.source) {
     fragments.push(...referenceToFragments(query.source));
   }
-  for (const stage of query.pipeline.stages) {
-    fragments.push(' -> ');
+  fragments.push(' -> ');
+  fragments.push(...pipelineToFragments(query.pipeline));
+  return fragments;
+}
+
+function pipelineToFragments(pipeline: Malloy.Pipeline): Fragment[] {
+  const fragments: Fragment[] = [];
+  for (let i = 0; i < pipeline.stages.length; i++) {
+    const stage = pipeline.stages[i];
+    if (i > 0) {
+      fragments.push(' -> ');
+    }
     fragments.push(...stageToFragments(stage));
   }
   return fragments;
@@ -131,13 +142,16 @@ function refinementToFragments(refinement: Malloy.Refinement): Fragment[] {
 }
 
 function segmentToFragments(segment: Malloy.Segment): Fragment[] {
-  const fragments: Fragment[] = [];
+  const onMultipleLines = segment.operations.length > 1;
   const operationFragments: Fragment[] = [];
-  for (const operation of segment.operations) {
+  for (let i = 0; i < segment.operations.length; i++) {
+    const operation = segment.operations[i];
     operationFragments.push(...operationToFragments(operation));
+    if (onMultipleLines && i < segment.operations.length - 1) {
+      operationFragments.push(NEWLINE);
+    }
   }
-  fragments.push(...wrap('{', operationFragments, '}'));
-  return fragments;
+  return wrap('{', operationFragments, '}');
 }
 
 function operationToFragments(operation: Malloy.ViewOperation): Fragment[] {
@@ -180,7 +194,7 @@ function formatBlock(
     if (items.length > 1 && i < items.length - 1) {
       fragments.push(separator);
     }
-    if (indented) {
+    if (indented && i < items.length - 1) {
       fragments.push(NEWLINE);
     }
   }
@@ -272,8 +286,23 @@ function orderByItemToFragments(orderByItem: Malloy.OrderByItem): Fragment[] {
   return fragments;
 }
 
-function nestToFragments(_nest: Malloy.Nest): Fragment[] {
-  return []; // TODO
+function nestToFragments(nest: Malloy.Nest): Fragment[] {
+  return formatBlock('nest', nest.items.map(nestItemToFragments));
+}
+
+function nestItemToFragments(nestItem: Malloy.NestItem): Fragment[] {
+  const fragments: Fragment[] = [];
+  if (nestItem.name) {
+    fragments.push(maybeQuoteIdentifier(nestItem.name));
+    fragments.push(' is ');
+  }
+  fragments.push(...viewToFragments(nestItem.view));
+  return fragments;
+}
+
+function viewToFragments(view: Malloy.View): Fragment[] {
+  // TODO annotations
+  return pipelineToFragments(view.pipeline);
 }
 
 function limitToFragments(limit: Malloy.Limit): Fragment[] {

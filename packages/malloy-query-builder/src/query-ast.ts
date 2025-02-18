@@ -307,33 +307,7 @@ export class ASTQuery extends ASTObjectNode<
 
   public getOrCreateDefaultSegment(): ASTSegmentRefinement {
     const stages = this.pipeline.stages;
-    if (stages.length === 0) {
-      const stage = new ASTPipeStage({
-        refinements: [
-          {
-            __type: Malloy.RefinementType.Segment,
-            operations: [],
-          },
-        ],
-      }).edit();
-      stages.add(stage);
-      return stage.refinements.index(0) as ASTSegmentRefinement;
-    } else {
-      const refinements = stages.last.refinements;
-      if (
-        refinements.length === 0 ||
-        !(refinements.last instanceof ASTSegmentRefinement)
-      ) {
-        const segment = new ASTSegmentRefinement({
-          __type: Malloy.RefinementType.Segment,
-          operations: [],
-        }).edit();
-        refinements.add(segment);
-        return segment;
-      } else {
-        return refinements.last;
-      }
-    }
+    return stages.getOrCreateDefaultSegment();
   }
 
   setSource(name: string) {
@@ -579,13 +553,23 @@ class ASTPipeline extends ASTObjectNode<
         throw new Error('No source configured');
       }
       return source.getSourceInfo();
+    } else if (this.parent instanceof ASTView) {
+      // TODO yikes
+      return this.parent.nest.list.operation.list.segment.list.stage.list.pipeline.getSourceInfo();
     }
-    // TODO
-    // else if (this.parent instanceof ASTView) {
-    // }
     throw new Error(
       `Invalid parent of ASTPipeline ${this.parent.constructor.name}`
     );
+  }
+
+  public getImplicitName(): string | undefined {
+    if (this.stages.length !== 1) return undefined;
+    if (this.stages.index(0).refinements.length < 1) return undefined;
+    const head = this.stages.index(0).refinements.index(0);
+    if (head instanceof ASTReferenceRefinement) {
+      return head.name;
+    }
+    return undefined;
   }
 }
 
@@ -603,6 +587,36 @@ class ASTPipeStageList extends ASTListNode<Malloy.PipeStage, ASTPipeStage> {
 
   get pipeline() {
     return this.parent.as(ASTPipeline);
+  }
+
+  getOrCreateDefaultSegment() {
+    if (this.length === 0) {
+      const stage = new ASTPipeStage({
+        refinements: [
+          {
+            __type: Malloy.RefinementType.Segment,
+            operations: [],
+          },
+        ],
+      });
+      this.add(stage);
+      return stage.refinements.index(0) as ASTSegmentRefinement;
+    } else {
+      const refinements = this.last.refinements;
+      if (
+        refinements.length === 0 ||
+        !(refinements.last instanceof ASTSegmentRefinement)
+      ) {
+        const segment = new ASTSegmentRefinement({
+          __type: Malloy.RefinementType.Segment,
+          operations: [],
+        });
+        refinements.add(segment);
+        return segment;
+      } else {
+        return refinements.last;
+      }
+    }
   }
 }
 
@@ -792,6 +806,10 @@ class ASTSegmentRefinement extends ASTRefinementBase<
     return this.children.operations;
   }
 
+  get list() {
+    return this.parent.as(ASTRefinementList);
+  }
+
   addOrderBy(name: string, direction?: Malloy.OrderByDirection) {
     // Ensure output schema has a field with this name
     const outputSchema = this.getOutputSchema();
@@ -815,7 +833,7 @@ class ASTSegmentRefinement extends ASTRefinementBase<
     // now try to add to an existing order by
     for (const operation of this.operations) {
       if (operation instanceof ASTOrderByViewOperation) {
-        operation.items.add(new ASTOrderByItem(orderByItem).edit());
+        operation.items.add(new ASTOrderByItem(orderByItem));
         return;
       }
     }
@@ -824,8 +842,34 @@ class ASTSegmentRefinement extends ASTRefinementBase<
       new ASTOrderByViewOperation({
         __type: Malloy.ViewOperationType.OrderBy,
         items: [orderByItem],
-      }).edit()
+      })
     );
+  }
+
+  addEmptyNest(name: string) {
+    // TODO validate name
+    // TODO decide whether this by default groups into existing nest operation?
+    const nest = new ASTNestViewOperation({
+      __type: Malloy.ViewOperationType.Nest,
+      items: [
+        {
+          name,
+          view: {
+            pipeline: {
+              stages: [
+                {
+                  refinements: [
+                    {__type: Malloy.RefinementType.Segment, operations: []},
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      ],
+    });
+    this.operations.add(nest);
+    return nest.items.index(0);
   }
 
   private firstIndexOfOperationType(type: Malloy.ViewOperationType) {
@@ -905,14 +949,14 @@ class ASTSegmentRefinement extends ASTRefinementBase<
       if (!(operation instanceof ASTGroupByViewOperation)) {
         throw new Error('Invalid');
       }
-      operation.items.add(new ASTGroupByItem(groupByItem).edit());
+      operation.items.add(new ASTGroupByItem(groupByItem));
       return this;
     } else {
       const operation: Malloy.ViewOperation = {
         __type: Malloy.ViewOperationType.GroupBy,
         items: [groupByItem],
       };
-      this.operations.add(new ASTGroupByViewOperation(operation).edit());
+      this.operations.add(new ASTGroupByViewOperation(operation));
       return this;
     }
   }
@@ -930,13 +974,28 @@ class ASTSegmentRefinement extends ASTRefinementBase<
     }
     return {fields};
   }
+
+  public setLimit(limit: number) {
+    const limitOp: ASTLimitViewOperation | undefined = [
+      ...this.operations,
+    ].find(ASTViewOperation.isLimit);
+    if (limitOp) {
+      limitOp.limit = limit;
+    } else {
+      this.operations.add(
+        new ASTLimitViewOperation({
+          __type: Malloy.ViewOperationType.Limit,
+          limit,
+        })
+      );
+    }
+  }
 }
 
 class ASTViewOperationList extends ASTListNode<
   Malloy.ViewOperation,
   ASTViewOperation
 > {
-  _parent: ASTSegmentRefinement | undefined;
   constructor(operations: Malloy.ViewOperation[]) {
     super(
       operations,
@@ -947,9 +1006,17 @@ class ASTViewOperationList extends ASTListNode<
   get operations() {
     return this.children;
   }
+
+  get segment() {
+    return this.parent.as(ASTSegmentRefinement);
+  }
 }
 
-type ASTViewOperation = ASTGroupByViewOperation | ASTOrderByViewOperation;
+type ASTViewOperation =
+  | ASTGroupByViewOperation
+  | ASTOrderByViewOperation
+  | ASTNestViewOperation
+  | ASTLimitViewOperation;
 // TODO others
 const ASTViewOperation = {
   from(value: Malloy.ViewOperation): ASTViewOperation {
@@ -958,11 +1025,18 @@ const ASTViewOperation = {
         return new ASTGroupByViewOperation(value);
       case Malloy.ViewOperationType.OrderBy:
         return new ASTOrderByViewOperation(value);
+      case Malloy.ViewOperationType.Nest:
+        return new ASTNestViewOperation(value);
+      case Malloy.ViewOperationType.Limit:
+        return new ASTLimitViewOperation(value);
       default:
         throw new Error(
           `TODO Unimplemented ViewOperation type ${value.__type}`
         );
     }
+  },
+  isLimit(x: ASTViewOperation): x is ASTLimitViewOperation {
+    return x instanceof ASTLimitViewOperation;
   },
 };
 
@@ -1396,5 +1470,162 @@ function timestampTimeframeToDateTimeframe(
       return Malloy.DateTimeframe.QUARTER;
     default:
       throw new Error('Invalid date timeframe');
+  }
+}
+
+class ASTNestViewOperation extends ASTObjectNode<
+  Malloy.ViewOperationWithNest,
+  {
+    __type: Malloy.ViewOperationType.Nest;
+    items: ASTNestItemList;
+    annotations?: Deletable<ASTUnimplemented<Malloy.TagOrAnnotation[]>>;
+  }
+> {
+  readonly type: Malloy.ViewOperationType = Malloy.ViewOperationType.Nest;
+
+  get items() {
+    return this.children.items;
+  }
+
+  get annotations() {
+    return this.children.annotations;
+  }
+
+  constructor(public node: Malloy.ViewOperationWithNest) {
+    super(node, {
+      __type: node.__type,
+      items: new ASTNestItemList(node.items),
+      annotations: node.annotations && new ASTUnimplemented(node.annotations),
+      // annotations: node.annotations && new TagOrAnnotationListAST(),
+    });
+  }
+
+  drain() {
+    for (const item of this.items) {
+      item.delete();
+    }
+  }
+
+  get list() {
+    return this.parent.as(ASTViewOperationList);
+  }
+
+  delete() {
+    this.drain();
+    this.list.remove(this);
+  }
+}
+
+class ASTNestItemList extends ASTListNode<Malloy.NestItem, ASTNestItem> {
+  constructor(items: Malloy.NestItem[]) {
+    super(
+      items,
+      items.map(p => new ASTNestItem(p))
+    );
+  }
+
+  get items() {
+    return this.children;
+  }
+
+  get operation() {
+    return this.parent.as(ASTNestViewOperation);
+  }
+}
+
+class ASTNestItem extends ASTObjectNode<
+  Malloy.NestItem,
+  {
+    name?: string;
+    view: ASTView;
+  }
+> {
+  constructor(public node: Malloy.NestItem) {
+    super(node, {
+      name: node.name,
+      view: new ASTView(node.view),
+    });
+  }
+
+  get view() {
+    return this.children.view;
+  }
+
+  get name() {
+    return this.children.name ?? this.view.name;
+  }
+
+  get list() {
+    return this.parent.as(ASTNestItemList);
+  }
+
+  delete() {
+    this.list.remove(this);
+  }
+}
+
+class ASTView extends ASTObjectNode<
+  Malloy.View,
+  {
+    pipeline: ASTPipeline;
+    annotations?: Deletable<ASTUnimplemented<Malloy.TagOrAnnotation[]>>;
+  }
+> {
+  constructor(public node: Malloy.View) {
+    super(node, {
+      pipeline: new ASTPipeline(node.pipeline),
+      annotations: node.annotations && new ASTUnimplemented(node.annotations),
+    });
+  }
+
+  get pipeline() {
+    return this.children.pipeline;
+  }
+
+  get name() {
+    return this.pipeline.getImplicitName();
+  }
+
+  public getOrCreateDefaultSegment(): ASTSegmentRefinement {
+    const stages = this.pipeline.stages;
+    return stages.getOrCreateDefaultSegment();
+  }
+
+  get nest() {
+    return this.parent.as(ASTNestItem);
+  }
+}
+
+class ASTLimitViewOperation extends ASTObjectNode<
+  Malloy.ViewOperationWithLimit,
+  {
+    __type: Malloy.ViewOperationType.Limit;
+    limit: number;
+  }
+> {
+  readonly type: Malloy.ViewOperationType = Malloy.ViewOperationType.Limit;
+
+  get limit() {
+    return this.children.limit;
+  }
+
+  set limit(limit: number) {
+    this.edit();
+    this.children.limit = limit;
+  }
+
+  constructor(public node: Malloy.ViewOperationWithLimit) {
+    super(node, {
+      __type: node.__type,
+      limit: node.limit,
+    });
+  }
+
+  get list() {
+    return this.parent.as(ASTViewOperationList);
+  }
+
+  delete() {
+    this.list.remove(this);
   }
 }
