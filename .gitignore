@@ -60,3 +60,4 @@ test/data/duckdb/duckdb_test.db.wal
 monospace.json
 snowflake.log
 packages/malloy-interfaces/generated-types/
+packages/malloy-query-builder/docs/

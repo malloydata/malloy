@@ -17,9 +17,13 @@
     "clean": "tsc --build --clean",
     "build": "tsc --build",
     "prepublishOnly": "npm run clean && npm run build",
-    "generate-flow": "ts-node scripts/gen_flow.ts"
+    "generate-flow": "ts-node scripts/gen_flow.ts",
+    "generate-docs": "npx typedoc --excludeInternal",
+    "serve-docs": "npx http-server -o docs"
   },
   "devDependencies": {
-    "flow-api-translator": "^0.26.0"
+    "flow-api-translator": "^0.26.0",
+    "http-server": "^14.1.1",
+    "typedoc": "^0.27.7"
   }
 }

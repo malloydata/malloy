@@ -43,7 +43,7 @@ describe('query builder', () => {
       source: {name: 'flights'},
     };
     expect((q: ASTQuery) => {
-      q.getOrCreateDefaultSegment().addOrderBy(
+      q.getOrAddDefaultSegment().addOrderBy(
         'carrier',
         Malloy.OrderByDirection.ASC
       );
@@ -100,7 +100,7 @@ describe('query builder', () => {
       source: {name: 'flights'},
     };
     expect((q: ASTQuery) => {
-      q.getOrCreateDefaultSegment().addGroupBy('carrier');
+      q.getOrAddDefaultSegment().addGroupBy('carrier');
     }).toModifyQuery({
       model: flights_model,
       from,
@@ -142,7 +142,7 @@ describe('query builder', () => {
       source: {name: 'flights'},
     };
     expect((q: ASTQuery) => {
-      const seg = q.getOrCreateDefaultSegment();
+      const seg = q.getOrAddDefaultSegment();
       seg.addGroupBy('carrier');
       seg.addGroupBy('origin_code');
     }).toModifyQuery({
@@ -199,9 +199,9 @@ run: flights -> {
       source: {name: 'flights'},
     };
     expect((q: ASTQuery) => {
-      const seg = q.getOrCreateDefaultSegment();
+      const seg = q.getOrAddDefaultSegment();
       const nest = seg.addEmptyNest('by_carrier');
-      const seg2 = nest.view.getOrCreateDefaultSegment();
+      const seg2 = nest.view.getOrAddDefaultSegment();
       seg2.addGroupBy('carrier');
     }).toModifyQuery({
       model: flights_model,
@@ -270,7 +270,7 @@ run: flights -> {
       source: {name: 'flights'},
     };
     expect((q: ASTQuery) => {
-      const seg = q.getOrCreateDefaultSegment();
+      const seg = q.getOrAddDefaultSegment();
       seg.setLimit(10);
     }).toModifyQuery({
       model: flights_model,
@@ -320,7 +320,7 @@ run: flights -> {
       source: {name: 'flights'},
     };
     expect((q: ASTQuery) => {
-      const seg = q.getOrCreateDefaultSegment();
+      const seg = q.getOrAddDefaultSegment();
       seg.setLimit(20);
     }).toModifyQuery({
       model: flights_model,

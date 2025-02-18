@@ -9,10 +9,10 @@
  * DO NOT EDIT UNLESS YOU ARE SURE THAT YOU KNOW WHAT YOU ARE DOING
  */
 export type Aggregate = {
-  items: Array<AggregateOperation>;
+  items: Array<AggregateItem>;
   annotations?: Array<TagOrAnnotation>;
 };
-export type AggregateOperation = {
+export type AggregateItem = {
   name?: string;
   field: Field;
 };
