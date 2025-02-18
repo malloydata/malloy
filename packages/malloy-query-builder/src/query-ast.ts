@@ -631,6 +631,15 @@ abstract class ASTListNode<
   /**
    * @internal
    */
+  insert(n: N, index: number) {
+    this.edit();
+    this.children.splice(index, 0, n);
+    n.parent = this;
+  }
+
+  /**
+   * @internal
+   */
   add(n: N) {
     this.edit();
     this.children.push(n);
@@ -1571,72 +1580,66 @@ export class ASTSegmentRefinement extends ASTRefinementBase<
   }
 
   public addGroupBy(name: string) {
-    this.addGroupByOrAggregate(name, false);
+    this.addField(name, Malloy.FieldInfoType.Dimension);
   }
 
   public addAggregate(name: string) {
-    this.addGroupByOrAggregate(name, true);
+    this.addField(name, Malloy.FieldInfoType.Measure);
   }
 
-  // TODO find a way to abstract this better to make the code less horrible
-  private addGroupByOrAggregate(name: string, aggregate = false) {
+  public addNest(name: string) {
+    this.addField(name, Malloy.FieldInfoType.View);
+  }
+
+  private addField<
+    T extends
+      | Malloy.FieldInfoType.Dimension
+      | Malloy.FieldInfoType.Measure
+      | Malloy.FieldInfoType.View,
+  >(name: string, type: T) {
     const schema = this.getInputSchema();
     const fieldInfo = ASTNode.schemaGet(schema, name);
     if (fieldInfo === undefined) {
       throw new Error(`No such field ${name}`);
     }
-    if (aggregate) {
-      if (fieldInfo.__type !== Malloy.FieldInfoType.Measure) {
-        throw new Error(`Cannot aggregate non measure ${name}`);
-      }
-    } else {
-      if (fieldInfo.__type !== Malloy.FieldInfoType.Dimension) {
-        throw new Error(`Cannot group by non dimension ${name}`);
-      }
+    if (fieldInfo.__type !== type) {
+      const action = fieldTypeToAction(type);
+      const typeName = fieldTypeName(type);
+      throw new Error(`Cannot ${action} non-${typeName} ${name}`);
     }
-    const item: Malloy.GroupByItem | Malloy.AggregateItem = {
-      field: {
-        expression: {
-          __type: Malloy.ExpressionType.Reference,
-          name,
-        },
-      },
-    };
     const whereToInsert = this.findInsertionPoint(
-      aggregate
-        ? Malloy.ViewOperationType.Aggregate
-        : Malloy.ViewOperationType.GroupBy
+      fieldTypeToViewOperationType(type)
     );
     if ('addTo' in whereToInsert) {
       const operation = this.operations.index(whereToInsert.addTo);
-      if (aggregate) {
-        if (!(operation instanceof ASTAggregateViewOperation)) {
-          throw new Error('Invalid');
-        }
-        operation.items.add(new ASTAggregateItem(item));
-      } else {
-        if (!(operation instanceof ASTGroupByViewOperation)) {
-          throw new Error('Invalid');
-        }
-        operation.items.add(new ASTGroupByItem(item));
+      if (
+        !(
+          operation instanceof ASTAggregateViewOperation ||
+          operation instanceof ASTGroupByViewOperation ||
+          operation instanceof ASTNestViewOperation
+        )
+      ) {
+        throw new Error('Invalid');
       }
-      return this;
+      operation.addReference(name);
     } else {
-      if (aggregate) {
-        this.operations.add(
-          new ASTAggregateViewOperation({
-            __type: Malloy.ViewOperationType.Aggregate,
-            items: [item],
-          })
-        );
-      } else {
-        this.operations.add(
-          new ASTGroupByViewOperation({
-            __type: Malloy.ViewOperationType.GroupBy,
-            items: [item],
-          })
-        );
-      }
+      const operation =
+        type === Malloy.FieldInfoType.Dimension
+          ? new ASTGroupByViewOperation({
+              __type: Malloy.ViewOperationType.GroupBy,
+              items: [],
+            })
+          : type === Malloy.FieldInfoType.Measure
+          ? new ASTGroupByViewOperation({
+              __type: Malloy.ViewOperationType.GroupBy,
+              items: [],
+            })
+          : new ASTNestViewOperation({
+              __type: Malloy.ViewOperationType.Nest,
+              items: [],
+            });
+      operation.addReference(name);
+      this.operations.insert(operation, whereToInsert.addAt);
       return this;
     }
   }
@@ -1779,6 +1782,22 @@ export class ASTGroupByViewOperation extends ASTObjectNode<
   getFieldInfos() {
     return [...this.items.iter()].map(i => i.getFieldInfo());
   }
+
+  /**
+   * @internal
+   */
+  addReference(name: string) {
+    this.items.add(
+      new ASTGroupByItem({
+        field: {
+          expression: {
+            __type: Malloy.ExpressionType.Reference,
+            name,
+          },
+        },
+      })
+    );
+  }
 }
 
 export class ASTAggregateViewOperation extends ASTObjectNode<
@@ -1831,6 +1850,22 @@ export class ASTAggregateViewOperation extends ASTObjectNode<
    */
   getFieldInfos() {
     return [...this.items.iter()].map(i => i.getFieldInfo());
+  }
+
+  /**
+   * @internal
+   */
+  addReference(name: string) {
+    this.items.add(
+      new ASTAggregateItem({
+        field: {
+          expression: {
+            __type: Malloy.ExpressionType.Reference,
+            name,
+          },
+        },
+      })
+    );
   }
 }
 
@@ -2369,6 +2404,30 @@ export class ASTNestViewOperation extends ASTObjectNode<
     this.drain();
     this.list.remove(this);
   }
+
+  /**
+   * @internal
+   */
+  addReference(name: string) {
+    this.items.add(
+      new ASTNestItem({
+        view: {
+          pipeline: {
+            stages: [
+              {
+                refinements: [
+                  {
+                    __type: Malloy.RefinementType.Reference,
+                    name,
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      })
+    );
+  }
 }
 
 export class ASTNestItemList extends ASTListNode<Malloy.NestItem, ASTNestItem> {
@@ -2494,5 +2553,46 @@ export class ASTLimitViewOperation extends ASTObjectNode<
 
   delete() {
     this.list.remove(this);
+  }
+}
+
+function fieldTypeToAction(type: Malloy.FieldInfoType): string {
+  switch (type) {
+    case Malloy.FieldInfoType.Dimension:
+      return 'group by';
+    case Malloy.FieldInfoType.Measure:
+      return 'aggregate';
+    case Malloy.FieldInfoType.View:
+      return 'nest';
+    case Malloy.FieldInfoType.Join:
+      return 'join';
+  }
+}
+
+function fieldTypeToViewOperationType(
+  type: Malloy.FieldInfoType
+): Malloy.ViewOperationType {
+  switch (type) {
+    case Malloy.FieldInfoType.Dimension:
+      return Malloy.ViewOperationType.GroupBy;
+    case Malloy.FieldInfoType.Measure:
+      return Malloy.ViewOperationType.Aggregate;
+    case Malloy.FieldInfoType.View:
+      return Malloy.ViewOperationType.Aggregate;
+    default:
+      throw new Error('Invalid');
+  }
+}
+
+function fieldTypeName(type: Malloy.FieldInfoType): string {
+  switch (type) {
+    case Malloy.FieldInfoType.Dimension:
+      return 'dimension';
+    case Malloy.FieldInfoType.Measure:
+      return 'measure';
+    case Malloy.FieldInfoType.View:
+      return 'view';
+    case Malloy.FieldInfoType.Join:
+      return 'join';
   }
 }

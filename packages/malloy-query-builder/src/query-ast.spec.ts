@@ -264,6 +264,57 @@ run: flights -> {
       malloy: 'run: flights -> { nest: by_carrier is { group_by: carrier } }',
     });
   });
+  test('nest via field reference', () => {
+    const from = {
+      pipeline: {stages: []},
+      source: {name: 'flights'},
+    };
+    expect((q: ASTQuery) => {
+      const seg = q.getOrAddDefaultSegment();
+      seg.addNest('by_month');
+    }).toModifyQuery({
+      model: flights_model,
+      from,
+      to: {
+        pipeline: {
+          stages: [
+            {
+              refinements: [
+                {
+                  __type: Malloy.RefinementType.Segment,
+                  operations: [
+                    {
+                      __type: Malloy.ViewOperationType.Nest,
+                      items: [
+                        {
+                          view: {
+                            pipeline: {
+                              stages: [
+                                {
+                                  refinements: [
+                                    {
+                                      __type: Malloy.RefinementType.Reference,
+                                      name: 'by_month',
+                                    },
+                                  ],
+                                },
+                              ],
+                            },
+                          },
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        source: from.source,
+      },
+      malloy: 'run: flights -> { nest: by_month }',
+    });
+  });
   test('add limit', () => {
     const from = {
       pipeline: {stages: []},
