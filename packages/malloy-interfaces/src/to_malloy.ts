@@ -1,4 +1,3 @@
-import { pipeline } from 'stream';
 import * as Malloy from './types';
 import {maybeQuoteIdentifier} from './util';
 
