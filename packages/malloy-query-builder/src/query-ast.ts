@@ -11,8 +11,8 @@ type PathSegment = number | string;
 type Path = PathSegment[];
 
 type ASTAny = ASTNode<unknown>;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type NodeConstructor<T extends ASTAny> = new (...args: any[]) => T;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
+type NodeConstructor<T extends ASTAny> = any;
 
 type ASTChildren<T> = {
   [Key in keyof T]: LiteralOrNode<T[Key]>;
@@ -45,18 +45,267 @@ abstract class ASTNode<T> {
     return this;
   }
 
-  abstract find<T extends ASTAny>(Class: NodeConstructor<T>, path: Path): T;
+  abstract find(path: Path): ASTAny;
 
-  as<T extends ASTAny>(Class: NodeConstructor<T>): T {
-    if (this instanceof Class) {
-      return this;
-    } else {
-      throw new Error(`Path does not refer to a ${Class.name}`);
-    }
+  asReference(): ASTReference {
+    if (this instanceof ASTReference) return this;
+    throw new Error('Not an ASTReference');
   }
 
   findReference(path: Path): ASTReference {
-    return this.find(ASTReference, path);
+    return this.find(path).asReference();
+  }
+
+  asQuery(): ASTQuery {
+    if (this instanceof ASTQuery) return this;
+    throw new Error('Not an ASTQuery');
+  }
+
+  findQuery(path: Path): ASTQuery {
+    return this.find(path).asQuery();
+  }
+
+  asSourceReference(): ASTSourceReference {
+    if (this instanceof ASTSourceReference) return this;
+    throw new Error('Not an ASTSourceReference');
+  }
+
+  findSourceReference(path: Path): ASTSourceReference {
+    return this.find(path).asSourceReference();
+  }
+
+  asParameterValueList(): ASTParameterValueList {
+    if (this instanceof ASTParameterValueList) return this;
+    throw new Error('Not an ASTParameterValueList');
+  }
+
+  findParameterValueList(path: Path): ASTParameterValueList {
+    return this.find(path).asParameterValueList();
+  }
+
+  asParameterValue(): ASTParameterValue {
+    if (this instanceof ASTParameterValue) return this;
+    throw new Error('Not an ASTParameterValue');
+  }
+
+  findParameterValue(path: Path): ASTParameterValue {
+    return this.find(path).asParameterValue();
+  }
+
+  asStringLiteralValue(): ASTStringLiteralValue {
+    if (this instanceof ASTStringLiteralValue) return this;
+    throw new Error('Not an ASTStringLiteralValue');
+  }
+
+  findStringLiteralValue(path: Path): ASTStringLiteralValue {
+    return this.find(path).asStringLiteralValue();
+  }
+
+  asNumberLiteralValue(): ASTNumberLiteralValue {
+    if (this instanceof ASTNumberLiteralValue) return this;
+    throw new Error('Not an ASTNumberLiteralValue');
+  }
+
+  findNumberLiteralValue(path: Path): ASTNumberLiteralValue {
+    return this.find(path).asNumberLiteralValue();
+  }
+
+  asPipeline(): ASTPipeline {
+    if (this instanceof ASTPipeline) return this;
+    throw new Error('Not an ASTPipeline');
+  }
+
+  findPipeline(path: Path): ASTPipeline {
+    return this.find(path).asPipeline();
+  }
+
+  asPipeStageList(): ASTPipeStageList {
+    if (this instanceof ASTPipeStageList) return this;
+    throw new Error('Not an ASTPipeStageList');
+  }
+
+  findPipeStageList(path: Path): ASTPipeStageList {
+    return this.find(path).asPipeStageList();
+  }
+
+  asPipeStage(): ASTPipeStage {
+    if (this instanceof ASTPipeStage) return this;
+    throw new Error('Not an ASTPipeStage');
+  }
+
+  findPipeStage(path: Path): ASTPipeStage {
+    return this.find(path).asPipeStage();
+  }
+
+  asRefinementList(): ASTRefinementList {
+    if (this instanceof ASTRefinementList) return this;
+    throw new Error('Not an ASTRefinementList');
+  }
+
+  findRefinementList(path: Path): ASTRefinementList {
+    return this.find(path).asRefinementList();
+  }
+
+  asReferenceRefinement(): ASTReferenceRefinement {
+    if (this instanceof ASTReferenceRefinement) return this;
+    throw new Error('Not an ASTReferenceRefinement');
+  }
+
+  findReferenceRefinement(path: Path): ASTReferenceRefinement {
+    return this.find(path).asReferenceRefinement();
+  }
+
+  asSegmentRefinement(): ASTSegmentRefinement {
+    if (this instanceof ASTSegmentRefinement) return this;
+    throw new Error('Not an ASTSegmentRefinement');
+  }
+
+  findSegmentRefinement(path: Path): ASTSegmentRefinement {
+    return this.find(path).asSegmentRefinement();
+  }
+
+  asViewOperationList(): ASTViewOperationList {
+    if (this instanceof ASTViewOperationList) return this;
+    throw new Error('Not an ASTViewOperationList');
+  }
+
+  findViewOperationList(path: Path): ASTViewOperationList {
+    return this.find(path).asViewOperationList();
+  }
+
+  asGroupByViewOperation(): ASTGroupByViewOperation {
+    if (this instanceof ASTGroupByViewOperation) return this;
+    throw new Error('Not an ASTGroupByViewOperation');
+  }
+
+  findGroupByViewOperation(path: Path): ASTGroupByViewOperation {
+    return this.find(path).asGroupByViewOperation();
+  }
+
+  asOrderByViewOperation(): ASTOrderByViewOperation {
+    if (this instanceof ASTOrderByViewOperation) return this;
+    throw new Error('Not an ASTOrderByViewOperation');
+  }
+
+  findOrderByViewOperation(path: Path): ASTOrderByViewOperation {
+    return this.find(path).asOrderByViewOperation();
+  }
+
+  asGroupByItemList(): ASTGroupByItemList {
+    if (this instanceof ASTGroupByItemList) return this;
+    throw new Error('Not an ASTGroupByItemList');
+  }
+
+  findGroupByItemList(path: Path): ASTGroupByItemList {
+    return this.find(path).asGroupByItemList();
+  }
+
+  asOrderByItemList(): ASTOrderByItemList {
+    if (this instanceof ASTOrderByItemList) return this;
+    throw new Error('Not an ASTOrderByItemList');
+  }
+
+  findOrderByItemList(path: Path): ASTOrderByItemList {
+    return this.find(path).asOrderByItemList();
+  }
+
+  asOrderByItem(): ASTOrderByItem {
+    if (this instanceof ASTOrderByItem) return this;
+    throw new Error('Not an ASTOrderByItem');
+  }
+
+  findOrderByItem(path: Path): ASTOrderByItem {
+    return this.find(path).asOrderByItem();
+  }
+
+  asGroupByItem(): ASTGroupByItem {
+    if (this instanceof ASTGroupByItem) return this;
+    throw new Error('Not an ASTGroupByItem');
+  }
+
+  findGroupByItem(path: Path): ASTGroupByItem {
+    return this.find(path).asGroupByItem();
+  }
+
+  asField(): ASTField {
+    if (this instanceof ASTField) return this;
+    throw new Error('Not an ASTField');
+  }
+
+  findField(path: Path): ASTField {
+    return this.find(path).asField();
+  }
+
+  asReferenceExpression(): ASTReferenceExpression {
+    if (this instanceof ASTReferenceExpression) return this;
+    throw new Error('Not an ASTReferenceExpression');
+  }
+
+  findReferenceExpression(path: Path): ASTReferenceExpression {
+    return this.find(path).asReferenceExpression();
+  }
+
+  asTimeTruncationExpression(): ASTTimeTruncationExpression {
+    if (this instanceof ASTTimeTruncationExpression) return this;
+    throw new Error('Not an ASTTimeTruncationExpression');
+  }
+
+  findTimeTruncationExpression(path: Path): ASTTimeTruncationExpression {
+    return this.find(path).asTimeTruncationExpression();
+  }
+
+  asFilteredFieldExpression(): ASTFilteredFieldExpression {
+    if (this instanceof ASTFilteredFieldExpression) return this;
+    throw new Error('Not an ASTFilteredFieldExpression');
+  }
+
+  findFilteredFieldExpression(path: Path): ASTFilteredFieldExpression {
+    return this.find(path).asFilteredFieldExpression();
+  }
+
+  asNestViewOperation(): ASTNestViewOperation {
+    if (this instanceof ASTNestViewOperation) return this;
+    throw new Error('Not an ASTNestViewOperation');
+  }
+
+  findNestViewOperation(path: Path): ASTNestViewOperation {
+    return this.find(path).asNestViewOperation();
+  }
+
+  asNestItemList(): ASTNestItemList {
+    if (this instanceof ASTNestItemList) return this;
+    throw new Error('Not an ASTNestItemList');
+  }
+
+  findNestItemList(path: Path): ASTNestItemList {
+    return this.find(path).asNestItemList();
+  }
+
+  asNestItem(): ASTNestItem {
+    if (this instanceof ASTNestItem) return this;
+    throw new Error('Not an ASTNestItem');
+  }
+
+  findNestItem(path: Path): ASTNestItem {
+    return this.find(path).asNestItem();
+  }
+
+  asView(): ASTView {
+    if (this instanceof ASTView) return this;
+    throw new Error('Not an ASTView');
+  }
+
+  findView(path: Path): ASTView {
+    return this.find(path).asView();
+  }
+
+  asLimitViewOperation(): ASTLimitViewOperation {
+    if (this instanceof ASTLimitViewOperation) return this;
+    throw new Error('Not an ASTLimitViewOperation');
+  }
+
+  findLimitViewOperation(path: Path): ASTLimitViewOperation {
+    return this.find(path).asLimitViewOperation();
   }
 
   get parent() {
@@ -158,9 +407,9 @@ abstract class ASTListNode<
     return ret;
   }
 
-  find<T extends ASTAny>(Class: NodeConstructor<T>, path: Path): T {
+  find(path: Path): ASTAny {
     if (path.length === 0) {
-      return this.as(Class);
+      return this;
     }
     const [head, ...rest] = path;
     if (typeof head !== 'number') {
@@ -169,7 +418,7 @@ abstract class ASTListNode<
       );
     }
     const child = this.children[head];
-    return child.find(Class, rest);
+    return child.find(rest);
   }
 
   findIndex(predicate: (n: N) => boolean): number {
@@ -223,9 +472,9 @@ abstract class ASTObjectNode<
     return ret;
   }
 
-  find<N extends ASTAny>(Class: NodeConstructor<N>, path: Path): N {
+  find(path: Path): ASTAny {
     if (path.length === 0) {
-      return this.as(Class);
+      return this;
     }
     const [head, ...rest] = path;
     if (typeof head !== 'string') {
@@ -239,7 +488,7 @@ abstract class ASTObjectNode<
         `${this.constructor.name}.${head} refers to a basic type, not an ASTNode`
       );
     }
-    return child.find(Class, rest);
+    return child.find(rest);
   }
 }
 
@@ -387,7 +636,7 @@ class ASTReference extends ASTObjectNode<
 
 class ASTSourceReference extends ASTReference {
   get query(): ASTQuery {
-    return this.parent.as(ASTQuery);
+    return this.parent.asQuery();
   }
 
   getSourceInfo(): Malloy.SourceInfo {
@@ -586,7 +835,7 @@ class ASTPipeStageList extends ASTListNode<Malloy.PipeStage, ASTPipeStage> {
   }
 
   get pipeline() {
-    return this.parent.as(ASTPipeline);
+    return this.parent.asPipeline();
   }
 
   getOrCreateDefaultSegment() {
@@ -637,7 +886,7 @@ class ASTPipeStage extends ASTObjectNode<
   }
 
   get list() {
-    return this.parent.as(ASTPipeStageList);
+    return this.parent.asPipeStageList();
   }
 
   get index() {
@@ -661,8 +910,8 @@ class ASTPipeStage extends ASTObjectNode<
 
   getInputSchema(): Malloy.Schema {
     if (this.isQueryHeadedStage()) {
-      const refinement = this.refinements.index(0).as(ASTReferenceRefinement);
-      const query = this.list.pipeline.parent.as(ASTQuery);
+      const refinement = this.refinements.index(0).asReferenceRefinement();
+      const query = this.list.pipeline.parent.asQuery();
       const queryInfo = query.getQueryInfo(refinement.name);
       return queryInfo.schema;
     } else if (this.index === 0) {
@@ -690,7 +939,7 @@ class ASTRefinementList extends ASTListNode<Malloy.Refinement, ASTRefinement> {
   }
 
   get stage() {
-    return this.parent.as(ASTPipeStage);
+    return this.parent.asPipeStage();
   }
 }
 
@@ -711,7 +960,7 @@ abstract class ASTRefinementBase<
   Children extends ASTChildren<T>,
 > extends ASTObjectNode<T, Children> {
   get list() {
-    return this.parent.as(ASTRefinementList);
+    return this.parent.asRefinementList();
   }
 
   get index() {
@@ -807,7 +1056,7 @@ class ASTSegmentRefinement extends ASTRefinementBase<
   }
 
   get list() {
-    return this.parent.as(ASTRefinementList);
+    return this.parent.asRefinementList();
   }
 
   addOrderBy(name: string, direction?: Malloy.OrderByDirection) {
@@ -1008,7 +1257,7 @@ class ASTViewOperationList extends ASTListNode<
   }
 
   get segment() {
-    return this.parent.as(ASTSegmentRefinement);
+    return this.parent.asSegmentRefinement();
   }
 }
 
@@ -1074,7 +1323,7 @@ class ASTGroupByViewOperation extends ASTObjectNode<
   }
 
   get list() {
-    return this.parent.as(ASTViewOperationList);
+    return this.parent.asViewOperationList();
   }
 
   delete() {
@@ -1114,7 +1363,7 @@ class ASTOrderByViewOperation extends ASTObjectNode<
   }
 
   get list() {
-    return this.parent.as(ASTViewOperationList);
+    return this.parent.asViewOperationList();
   }
 
   delete() {
@@ -1139,7 +1388,7 @@ class ASTGroupByItemList extends ASTListNode<
   }
 
   get operation() {
-    return this.parent.as(ASTGroupByViewOperation);
+    return this.parent.asGroupByViewOperation();
   }
 }
 
@@ -1159,7 +1408,7 @@ class ASTOrderByItemList extends ASTListNode<
   }
 
   get operation() {
-    return this.parent.as(ASTOrderByViewOperation);
+    return this.parent.asOrderByViewOperation();
   }
 }
 
@@ -1196,7 +1445,7 @@ class ASTOrderByItem extends ASTObjectNode<
   }
 
   get list() {
-    return this.parent.as(ASTOrderByItemList);
+    return this.parent.asOrderByItemList();
   }
 
   delete() {
@@ -1233,7 +1482,7 @@ class ASTGroupByItem extends ASTObjectNode<
   }
 
   get list() {
-    return this.parent.as(ASTGroupByItemList);
+    return this.parent.asGroupByItemList();
   }
 
   delete() {
@@ -1296,7 +1545,7 @@ class ASTField extends ASTObjectNode<
     const groupByOrAggregateItemList = groupByOrAggregateItem.parent;
     const groupByOrAggregate = groupByOrAggregateItemList.parent;
     const operationList = groupByOrAggregate.parent;
-    return operationList.parent.as(ASTSegmentRefinement);
+    return operationList.parent.asSegmentRefinement();
   }
 }
 
@@ -1340,7 +1589,7 @@ class ASTReferenceExpression extends ASTObjectNode<
   }
 
   get field() {
-    return this.parent.as(ASTField);
+    return this.parent.asField();
   }
 
   get fieldType() {
@@ -1387,7 +1636,7 @@ class ASTTimeTruncationExpression extends ASTObjectNode<
   }
 
   get field() {
-    return this.parent.as(ASTField);
+    return this.parent.asField();
   }
 
   get fieldType() {
@@ -1438,7 +1687,7 @@ class ASTFilteredFieldExpression extends ASTObjectNode<
   }
 
   get field() {
-    return this.parent.as(ASTField);
+    return this.parent.asField();
   }
 
   get fieldType() {
@@ -1507,7 +1756,7 @@ class ASTNestViewOperation extends ASTObjectNode<
   }
 
   get list() {
-    return this.parent.as(ASTViewOperationList);
+    return this.parent.asViewOperationList();
   }
 
   delete() {
@@ -1529,7 +1778,7 @@ class ASTNestItemList extends ASTListNode<Malloy.NestItem, ASTNestItem> {
   }
 
   get operation() {
-    return this.parent.as(ASTNestViewOperation);
+    return this.parent.asNestViewOperation();
   }
 }
 
@@ -1556,7 +1805,7 @@ class ASTNestItem extends ASTObjectNode<
   }
 
   get list() {
-    return this.parent.as(ASTNestItemList);
+    return this.parent.asNestItemList();
   }
 
   delete() {
@@ -1592,7 +1841,7 @@ class ASTView extends ASTObjectNode<
   }
 
   get nest() {
-    return this.parent.as(ASTNestItem);
+    return this.parent.asNestItem();
   }
 }
 
@@ -1622,7 +1871,7 @@ class ASTLimitViewOperation extends ASTObjectNode<
   }
 
   get list() {
-    return this.parent.as(ASTViewOperationList);
+    return this.parent.asViewOperationList();
   }
 
   delete() {
