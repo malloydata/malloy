@@ -32,7 +32,6 @@ import {
 } from './test-translator';
 import './parse-expects';
 
-
 describe('source:', () => {
   test('table', () => {
     expect("source: testA is _db_.table('aTable')").toTranslate();

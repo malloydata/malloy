@@ -70,8 +70,8 @@ describe('errors', () => {
 
   test("missing opening curly after source extend keyword", () => {
     expect(`
-      source: x is a extend
+      source: x is a extend:
         primary_key: id
     `).toLogAtLeast(errorMessage("Missing '{' after 'extend'"))
-  })
+  });
 });

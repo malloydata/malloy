@@ -20,13 +20,11 @@ const customErrorCases: ErrorCase[] = [
     ],
   },
   {
-      errorMessage: "Missing '{' after 'extend'",
-      currentToken: MalloyParser.EXTEND,
-      ruleContextOptions: ['sqExpr'],
-      lookAheadOptions: [
-        [-MalloyParser.OCURLY]
-      ]
-    }
+    errorMessage: "Missing '{' after 'extend'",
+    currentToken: MalloyParser.EXTEND,
+    ruleContextOptions: ['sqExpr'],
+    lookAheadOptions: [[-MalloyParser.OCURLY]],
+  },
 ];
 
 /**
@@ -58,12 +56,4 @@ export class MalloyErrorStrategy extends DefaultErrorStrategy {
 
     super.sync(parser);
   }
-
-  // override recoverInline(parser: Parser) {
-  //   const token = parser.currentToken;
-  //   const displayToken = parser.vocabulary.getDisplayName(token.type);
-  //   console.log('Recover Inline hit at token: ', displayToken);
-
-  //   return super.recoverInline(parser);
-  // }
 }

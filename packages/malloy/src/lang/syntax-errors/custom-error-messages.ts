@@ -4,7 +4,6 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
-/* eslint-disable no-console */
 
 import {Parser, Token} from 'antlr4ts';
 
@@ -42,28 +41,38 @@ export const checkCustomErrorMessage = (
 
   for (const errorCase of errorCases) {
     // Check to see if the initial conditions match
-    const isCurrentTokenMatch = !errorCase.currentToken || currentToken.type === errorCase.currentToken;
-    const isOffendingSymbolMatch = !errorCase.offendingSymbol || offendingSymbol?.type === errorCase.offendingSymbol;
-    const isRuleContextMatch = !errorCase.ruleContextOptions || errorCase.ruleContextOptions.includes(currentRuleName)
-    if (
-      isCurrentTokenMatch && isOffendingSymbolMatch && isRuleContextMatch
-    ) {
+    const isCurrentTokenMatch =
+      !errorCase.currentToken || currentToken.type === errorCase.currentToken;
+    const isOffendingSymbolMatch =
+      !errorCase.offendingSymbol ||
+      offendingSymbol?.type === errorCase.offendingSymbol;
+    const isRuleContextMatch =
+      !errorCase.ruleContextOptions ||
+      errorCase.ruleContextOptions.includes(currentRuleName);
+    if (isCurrentTokenMatch && isOffendingSymbolMatch && isRuleContextMatch) {
       // If so, try to check the preceding tokens.
       if (errorCase.precedingTokenOptions) {
-        let hasPrecedingTokenMatch = errorCase.precedingTokenOptions.some(sequence => checkTokenSequenceMatch(parser, sequence, 'lookback'));
+        const hasPrecedingTokenMatch = errorCase.precedingTokenOptions.some(
+          sequence => checkTokenSequenceMatch(parser, sequence, 'lookback')
+        );
         if (!hasPrecedingTokenMatch) {
           continue; // Continue to check a different error case
         }
       }
       if (errorCase.lookAheadOptions) {
-        let hasLookaheadTokenMatch = errorCase.lookAheadOptions.some(sequence => checkTokenSequenceMatch(parser, sequence, 'lookahead'));
+        const hasLookaheadTokenMatch = errorCase.lookAheadOptions.some(
+          sequence => checkTokenSequenceMatch(parser, sequence, 'lookahead')
+        );
         if (!hasLookaheadTokenMatch) {
           continue; // Continue to check a different error case
         }
       }
 
       // If all cases match, return the custom error message
-      const message = errorCase.errorMessage.replace("${currentToken}", offendingSymbol?.text || currentToken.text || "");
+      const message = errorCase.errorMessage.replace(
+        '${currentToken}',
+        offendingSymbol?.text || currentToken.text || ''
+      );
       return message;
     }
   }
@@ -79,7 +88,7 @@ const checkTokenSequenceMatch = (
   try {
     let isMatch = true;
     for (let i = 0; i < sequence.length; i++) {
-      let tokenIndex = direction === 'lookahead' ? i + 1 : -1 * (i + 1);
+      const tokenIndex = direction === 'lookahead' ? i + 1 : -1 * (i + 1);
       const streamToken = parser.inputStream.LA(tokenIndex);
       if (sequence[i] > 0 && streamToken !== sequence[i]) {
         isMatch = false;
@@ -93,4 +102,4 @@ const checkTokenSequenceMatch = (
     // There may not be enough lookback tokens. If so, the case doesn't match.
     return false;
   }
-}
+};
