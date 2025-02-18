@@ -1,6 +1,13 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 import {ANTLRErrorListener, Token} from 'antlr4ts';
 import {MalloyParser} from '../lib/Malloy/MalloyParser';
-import {checkCustomErrorMessage} from './custom-error-messages';
+import {checkCustomErrorMessage, ErrorCase} from './custom-error-messages';
 import {
   MessageLogger,
   MessageCode,
@@ -9,6 +16,21 @@ import {
   makeLogMessage,
 } from '../parse-log';
 import {MalloyTranslation} from '../parse-malloy';
+
+export const commonErrorCases: ErrorCase[] = [
+  {
+    errorMessage: "'view:' must be followed by '<identifier> is {'",
+    ruleContextOptions: ['exploreQueryDef'],
+    offendingSymbol: MalloyParser.OCURLY,
+    precedingTokenOptions: [[MalloyParser.VIEW], [MalloyParser.COLON]],
+  },
+  {
+    errorMessage: "Missing '}' at '${currentToken}'",
+    ruleContextOptions: ['vExpr'],
+    offendingSymbol: MalloyParser.VIEW,
+    currentToken: MalloyParser.OCURLY,
+  },
+];
 
 export class MalloyParserErrorListener implements ANTLRErrorListener<Token> {
   constructor(
@@ -42,8 +64,9 @@ export class MalloyParserErrorListener implements ANTLRErrorListener<Token> {
 
     const overrideMessage = checkCustomErrorMessage(
       recognizer as MalloyParser,
-      offendingSymbol
-    ); // getCustomErrorMessage(recognizer as MalloyParser);
+      offendingSymbol,
+      commonErrorCases
+    );
     if (overrideMessage) {
       message = overrideMessage;
     }

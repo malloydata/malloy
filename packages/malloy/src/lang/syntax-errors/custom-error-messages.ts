@@ -7,9 +7,8 @@
 /* eslint-disable no-console */
 
 import {Parser, Token} from 'antlr4ts';
-import {MalloyParser} from '../lib/Malloy/MalloyParser';
 
-interface ErrorCase {
+export interface ErrorCase {
   // The rule contexts in which to apply this error case.
   // If no context is provided, this error case will apply to all rules.
   ruleContextOptions?: string[];
@@ -19,61 +18,75 @@ interface ErrorCase {
   // The value of the current token when this error rewrite should occur.
   // In general, prefer to use offendingSymbol
   currentToken?: number;
+
   // The tokens preceding the offending token, in the order they occur
-  precedingTokens?: number[];
+  precedingTokenOptions?: number[][];
+
+  // If provided, at least one of the look ahead sequences would need to match.
+  lookAheadOptions?: number[][];
+
   // The error message to show to the user, instead of whatever was default
+  // Supports tokenization: ${currentToken}
   errorMessage: string;
 }
 
-const commonErrorCases: ErrorCase[] = [
-  {
-    errorMessage: "'view:' must be followed by '<identifier> is {'",
-    ruleContextOptions: ['exploreQueryDef'],
-    offendingSymbol: MalloyParser.OCURLY,
-    precedingTokens: [MalloyParser.VIEW, MalloyParser.COLON],
-  },
-  {
-    errorMessage: "Missing '}' at 'view'",
-    ruleContextOptions: ['vExpr'],
-    offendingSymbol: MalloyParser.VIEW,
-    currentToken: MalloyParser.OCURLY,
-  },
-];
-
 export const checkCustomErrorMessage = (
   parser: Parser,
-  offendingSymbol: Token | undefined
+  offendingSymbol: Token | undefined,
+  errorCases: ErrorCase[]
 ): string => {
   const currentRuleName = parser.getRuleInvocationStack()[0];
   const currentToken = parser.currentToken;
 
-  for (const errorCase of commonErrorCases) {
+  for (const errorCase of errorCases) {
     // Check to see if the initial conditions match
+    const isCurrentTokenMatch = !errorCase.currentToken || currentToken.type === errorCase.currentToken;
+    const isOffendingSymbolMatch = !errorCase.offendingSymbol || offendingSymbol?.type === errorCase.offendingSymbol;
+    const isRuleContextMatch = !errorCase.ruleContextOptions || errorCase.ruleContextOptions.includes(currentRuleName)
     if (
-      (currentToken.type === errorCase.currentToken ||
-        offendingSymbol?.type === errorCase.offendingSymbol) &&
-      (!errorCase.ruleContextOptions ||
-        errorCase.ruleContextOptions.includes(currentRuleName))
+      isCurrentTokenMatch && isOffendingSymbolMatch && isRuleContextMatch
     ) {
       // If so, try to check the preceding tokens.
-      if (errorCase.precedingTokens) {
-        try {
-          for (let i = 0; i < errorCase.precedingTokens.length; i++) {
-            const lookbackToken = parser.inputStream.LA(-1 * (i + 1));
-            if (lookbackToken !== errorCase.precedingTokens[i]) {
-              continue;
-            }
-          }
-        } catch (ex) {
-          // There may not be enough lookback tokens. If so, the case doesn't match.
-          continue;
+      if (errorCase.precedingTokenOptions) {
+        let hasPrecedingTokenMatch = errorCase.precedingTokenOptions.some(sequence => checkTokenSequenceMatch(parser, sequence, 'lookback'));
+        if (!hasPrecedingTokenMatch) {
+          continue; // Continue to check a different error case
+        }
+      }
+      if (errorCase.lookAheadOptions) {
+        let hasLookaheadTokenMatch = errorCase.lookAheadOptions.some(sequence => checkTokenSequenceMatch(parser, sequence, 'lookahead'));
+        if (!hasLookaheadTokenMatch) {
+          continue; // Continue to check a different error case
         }
       }
 
       // If all cases match, return the custom error message
-      return errorCase.errorMessage;
+      const message = errorCase.errorMessage.replace("${currentToken}", offendingSymbol?.text || currentToken.text || "");
+      return message;
     }
   }
 
   return '';
 };
+
+const checkTokenSequenceMatch = (
+  parser: Parser,
+  sequence: number[],
+  direction: 'lookahead' | 'lookback'
+): boolean => {
+  try {
+    let isMatch = true;
+    for (let i = 0; i < sequence.length; i++) {
+      let tokenIndex = direction === 'lookahead' ? i + 1 : -1 * (i + 1);
+      const lookbackToken = parser.inputStream.LA(tokenIndex);
+      if (lookbackToken !== sequence[i]) {
+        isMatch = false;
+      }
+    }
+
+    return isMatch;
+  } catch (ex) {
+    // There may not be enough lookback tokens. If so, the case doesn't match.
+    return false;
+  }
+}

@@ -6,48 +6,12 @@
  */
 
 import {DefaultErrorStrategy, Parser} from 'antlr4ts';
-import {IntervalSet} from 'antlr4ts/misc/IntervalSet';
 import {MalloyParser} from '../lib/Malloy/MalloyParser';
+import {checkCustomErrorMessage, ErrorCase} from './custom-error-messages';
 
-// Set of tokens that should only appear outside of any blocks
-export const ROOT_LEVEL_TOKEN_SET = [
-  MalloyParser.EOF,
-  MalloyParser.RUN,
-  MalloyParser.SOURCE,
-];
-
-// A list of rules end with a CCURLY token, for which we want to detect a
-// missing closing curly brace and provide a helpful error message when
-// possible.
-const CLOSING_CURLY_RULE_NAMES = [
-  'exploreProperties',
-  'queryProperties',
-  // 'includeBlock',
-  // 'queryExtendStatementList',
-  // 'fieldProperties',
-  // 'starQualified',
-  // TODO: To support this rule, we'd need to separate it out from the fieldExp alternatives list
-  // and give it a name. Would this interfere with the AST Walker or IR construction?
-  // exprLiteralRecord (fieldExpr case: ` OCURLY recordElement (COMMA recordElement)* CCURLY`)
-];
-
-// Declarative interface for defining custom error cases.
-// These cases are checked many times during parsing, and so should only be
-// used for significant error cases that are not well detected by the default
-// error strategy. For errors that are detected, but need a custom message,
-// update custom-error-messages.ts instead.
-interface CustomErrorStrategyCase {
-  errorMessageTemplate: string;
-  ruleContextOptions: string[];
-
-  // A list of
-  lookAheadOptions: number[][];
-}
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const customErrorCases: CustomErrorStrategyCase[] = [
+const customErrorCases: ErrorCase[] = [
   {
-    errorMessageTemplate: "Missing '}' at '${currentTokenName}'",
+    errorMessage: "Missing '}' at '${currentToken}'",
     ruleContextOptions: ['exploreProperties', 'queryProperties'],
     lookAheadOptions: [
       [MalloyParser.EOF],
@@ -69,24 +33,19 @@ const customErrorCases: CustomErrorStrategyCase[] = [
  */
 export class MalloyErrorStrategy extends DefaultErrorStrategy {
   override sync(parser: Parser) {
-    const currentRuleName = parser.getRuleInvocationStack()[0];
-    if (CLOSING_CURLY_RULE_NAMES.includes(currentRuleName)) {
-      const expected: IntervalSet = this.getExpectedTokens(parser);
-      if (expected.contains(MalloyParser.CCURLY)) {
-        const lookAhead = parser.inputStream.LA(1);
-        if (ROOT_LEVEL_TOKEN_SET.includes(lookAhead)) {
-          // Error here is that a curly brace is missing
+    const interceptedErrorMessage = checkCustomErrorMessage(
+      parser as MalloyParser,
+      undefined,
+      customErrorCases
+    );
+    if (interceptedErrorMessage) {
+      parser.notifyErrorListeners(
+        interceptedErrorMessage,
+        parser.currentToken,
+        undefined
+      );
 
-          const tokenName = parser.vocabulary.getDisplayName(lookAhead);
-          parser.notifyErrorListeners(
-            `Missing '}' at '${tokenName}'`,
-            parser.currentToken,
-            undefined
-          );
-
-          return;
-        }
-      }
+      return;
     }
 
     super.sync(parser);
