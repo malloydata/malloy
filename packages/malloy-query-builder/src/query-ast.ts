@@ -759,6 +759,20 @@ abstract class ASTObjectNode<
   }
 }
 
+/**
+ * AST Object to represent the whole query AST.
+ *
+ * ```ts
+ * const q = new ASTQuery({
+ *   source: flightsSourceInfo,
+ * });
+ * const segment = q.getOrAddDefaultSegment();
+ * segment.addGroupBy("carrier");
+ * segment.addOrderBy("carrier", Malloy.OrderByDirection.DESC);
+ * const malloy = q.toMalloy();
+ * const query = q.build();
+ * ```
+ */
 export class ASTQuery extends ASTObjectNode<
   Malloy.Query,
   {
@@ -767,7 +781,34 @@ export class ASTQuery extends ASTObjectNode<
   }
 > {
   model: Malloy.ModelInfo;
-  constructor(options?: {
+
+  /**
+   * Create a new Query AST object against a given source.
+   *
+   * @param options.query Optional query to begin with; if none is provided, will
+   *                      use an empty query (`{pipeline: {stages: []}}`)
+   * @param options.source A source to base the query on. Will set the source name
+   *                       in the provided (or default) query to the name of this source.
+   */
+  constructor(options: {
+    query?: Malloy.Query;
+    source:
+      | Malloy.ModelEntryValueWithSource
+      | Malloy.ModelEntryValueWithQuery
+      | Malloy.SourceInfo
+      | Malloy.QueryInfo;
+  });
+  /**
+   * Create a new Query AST object against a given model.
+   *
+   * @param options.query Optional query to begin with; if none is provided, will
+   *                      use an empty query (`{pipeline: {stages: []}}`)
+   * @param options.model A model to use for building this query. Use {@link setSource}
+   *                      to configure the source, or set {@link setQueryHead} to run
+   *                      a top level query in the model.
+   */
+  constructor(options: {query?: Malloy.Query; model: Malloy.ModelInfo});
+  constructor(options: {
     query?: Malloy.Query;
     model?: Malloy.ModelInfo;
     source?:
@@ -809,6 +850,11 @@ export class ASTQuery extends ASTObjectNode<
     return this.children.pipeline;
   }
 
+  set pipeline(pipeline: ASTPipeline) {
+    this.edit();
+    this.children.pipeline = pipeline;
+  }
+
   get source() {
     return this.children.source;
   }
@@ -827,8 +873,25 @@ export class ASTQuery extends ASTObjectNode<
   }
 
   public setSource(name: string) {
+    // TODO validate
     this.source = new ASTSourceReference({
       name,
+    });
+  }
+
+  public setQueryHead(name: string) {
+    // TODO validate
+    this.pipeline = new ASTPipeline({
+      stages: [
+        {
+          refinements: [
+            {
+              __type: Malloy.RefinementType.Reference,
+              name,
+            },
+          ],
+        },
+      ],
     });
   }
 
