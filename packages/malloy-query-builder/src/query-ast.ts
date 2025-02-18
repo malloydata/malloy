@@ -11,8 +11,6 @@ type PathSegment = number | string;
 type Path = PathSegment[];
 
 type ASTAny = ASTNode<unknown>;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
-type NodeConstructor<T extends ASTAny> = any;
 
 type ASTChildren<T> = {
   [Key in keyof T]: LiteralOrNode<T[Key]>;
@@ -367,7 +365,7 @@ abstract class ASTListNode<
     children.forEach(c => (c.parent = this));
   }
 
-  *[Symbol.iterator]() {
+  *iter(): Generator<N, void, unknown> {
     for (let i = 0; i < this.length; i++) {
       yield this.index(i);
     }
@@ -1068,9 +1066,9 @@ class ASTSegmentRefinement extends ASTRefinementBase<
       throw new Error(`No such field ${name} in stage output`);
     }
     // first see if there is already an order by for this field
-    for (const operation of this.operations) {
+    for (const operation of this.operations.iter()) {
       if (operation instanceof ASTOrderByViewOperation) {
-        for (const item of operation.items) {
+        for (const item of operation.items.iter()) {
           if (item.name === name) {
             item.direction = direction;
             return;
@@ -1080,7 +1078,7 @@ class ASTSegmentRefinement extends ASTRefinementBase<
     }
     const orderByItem = {field: {name}, direction};
     // now try to add to an existing order by
-    for (const operation of this.operations) {
+    for (const operation of this.operations.iter()) {
       if (operation instanceof ASTOrderByViewOperation) {
         operation.items.add(new ASTOrderByItem(orderByItem));
         return;
@@ -1157,9 +1155,9 @@ class ASTSegmentRefinement extends ASTRefinementBase<
   }
 
   public getGroupBy(name: string) {
-    for (const operation of this.operations) {
+    for (const operation of this.operations.iter()) {
       if (operation instanceof ASTGroupByViewOperation) {
-        for (const item of operation.items) {
+        for (const item of operation.items.iter()) {
           if (item.name === name) {
             return item;
           }
@@ -1212,7 +1210,7 @@ class ASTSegmentRefinement extends ASTRefinementBase<
 
   getRefinementSchema(): Malloy.Schema {
     const fields: Malloy.FieldInfo[] = [];
-    for (const operation of this.operations) {
+    for (const operation of this.operations.iter()) {
       if (
         operation instanceof ASTGroupByViewOperation //||
         // operation instanceof ASTAggregateOperation ||
@@ -1226,7 +1224,7 @@ class ASTSegmentRefinement extends ASTRefinementBase<
 
   public setLimit(limit: number) {
     const limitOp: ASTLimitViewOperation | undefined = [
-      ...this.operations,
+      ...this.operations.iter(),
     ].find(ASTViewOperation.isLimit);
     if (limitOp) {
       limitOp.limit = limit;
@@ -1317,7 +1315,7 @@ class ASTGroupByViewOperation extends ASTObjectNode<
   }
 
   drain() {
-    for (const item of this.items) {
+    for (const item of this.items.iter()) {
       item.delete();
     }
   }
@@ -1332,7 +1330,7 @@ class ASTGroupByViewOperation extends ASTObjectNode<
   }
 
   getFieldInfos() {
-    return [...this.items].map(i => i.getFieldInfo());
+    return [...this.items.iter()].map(i => i.getFieldInfo());
   }
 }
 
@@ -1357,7 +1355,7 @@ class ASTOrderByViewOperation extends ASTObjectNode<
   }
 
   drain() {
-    for (const item of this.items) {
+    for (const item of this.items.iter()) {
       item.delete();
     }
   }
@@ -1493,9 +1491,9 @@ class ASTGroupByItem extends ASTObjectNode<
       // TODO somehow signal that there was a side effect?
     }
     const operations = this.list.operation.list;
-    for (const operation of operations) {
+    for (const operation of operations.iter()) {
       if (operation instanceof ASTOrderByViewOperation) {
-        for (const item of operation.items) {
+        for (const item of operation.items.iter()) {
           if (item.name === this.name) {
             item.delete();
           }
@@ -1750,7 +1748,7 @@ class ASTNestViewOperation extends ASTObjectNode<
   }
 
   drain() {
-    for (const item of this.items) {
+    for (const item of this.items.iter()) {
       item.delete();
     }
   }
