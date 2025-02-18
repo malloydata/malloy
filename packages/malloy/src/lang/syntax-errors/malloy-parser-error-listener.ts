@@ -29,7 +29,7 @@ export const commonErrorCases: ErrorCase[] = [
     ruleContextOptions: ['vExpr'],
     offendingSymbol: MalloyParser.VIEW,
     currentToken: MalloyParser.OCURLY,
-  },
+  }
 ];
 
 export class MalloyParserErrorListener implements ANTLRErrorListener<Token> {

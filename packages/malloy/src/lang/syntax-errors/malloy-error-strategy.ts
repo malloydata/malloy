@@ -19,6 +19,14 @@ const customErrorCases: ErrorCase[] = [
       [MalloyParser.SOURCE],
     ],
   },
+  {
+      errorMessage: "Missing '{' after 'extend'",
+      currentToken: MalloyParser.EXTEND,
+      ruleContextOptions: ['sqExpr'],
+      lookAheadOptions: [
+        [-MalloyParser.OCURLY]
+      ]
+    }
 ];
 
 /**

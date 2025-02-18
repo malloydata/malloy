@@ -19,10 +19,12 @@ export interface ErrorCase {
   // In general, prefer to use offendingSymbol
   currentToken?: number;
 
-  // The tokens preceding the offending token, in the order they occur
+  // The tokens preceding the offending token, in the order they occur.
+  // Make the token negative to match all other tokens.
   precedingTokenOptions?: number[][];
 
   // If provided, at least one of the look ahead sequences would need to match.
+  // Make the token negative to match all other tokens.
   lookAheadOptions?: number[][];
 
   // The error message to show to the user, instead of whatever was default
@@ -78,8 +80,10 @@ const checkTokenSequenceMatch = (
     let isMatch = true;
     for (let i = 0; i < sequence.length; i++) {
       let tokenIndex = direction === 'lookahead' ? i + 1 : -1 * (i + 1);
-      const lookbackToken = parser.inputStream.LA(tokenIndex);
-      if (lookbackToken !== sequence[i]) {
+      const streamToken = parser.inputStream.LA(tokenIndex);
+      if (sequence[i] > 0 && streamToken !== sequence[i]) {
+        isMatch = false;
+      } else if (sequence[i] < 0 && streamToken === sequence[i]) {
         isMatch = false;
       }
     }

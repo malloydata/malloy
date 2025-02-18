@@ -48,8 +48,7 @@ describe('errors', () => {
       `).toLogAtLeast(errorMessage("Missing '}' at 'view'"));
   });
 
-  // Was: extraneous input '{' expecting {BQ_STRING, IDENTIFIER}
-  test('incorrect opening curly', () => {
+  test('incorrect opening curly after dimension', () => {
     expect(`
       source: x is a extend {
         dimension: {
@@ -68,4 +67,11 @@ describe('errors', () => {
       }
     `).toLogAtLeast(errorMessage("no viable alternative at input 'primarykey'"))
   });
+
+  test("missing opening curly after source extend keyword", () => {
+    expect(`
+      source: x is a extend
+        primary_key: id
+    `).toLogAtLeast(errorMessage("Missing '{' after 'extend'"))
+  })
 });
