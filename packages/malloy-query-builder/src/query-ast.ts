@@ -883,11 +883,48 @@ export class ASTQuery extends ASTObjectNode<
     }
   }
 
+  /**
+   * Gets an {@link ASTSegmentRefinement} for the "default" place to add query
+   * operations, or creates one if it doesn't exist.
+   *
+   * ```
+   * run: flights ->
+   * ```
+   * ```ts
+   * q.getOrAddDefaultSegment();
+   * ```
+   * ```
+   * run: flights -> { }
+   * ```
+   *
+   * If there is a view at the head, it will refine it:
+   * ```
+   * run: flights -> by_carrier
+   * ```
+   * ```ts
+   * q.getOrAddDefaultSegment();
+   * ```
+   * ```
+   * run: flights -> by_carrier + { }
+   * ```
+   */
   public getOrAddDefaultSegment(): ASTSegmentRefinement {
     const stages = this.pipeline.stages;
     return stages.getOrAddDefaultSegment();
   }
 
+  /**
+   * Sets the source of this query to be a reference to a source in the model.
+   *
+   * ```ts
+   * q.setSource('flights')
+   * ```
+   * ```
+   * run: flights ->
+   * ```
+   *
+   * @param name The name of the source in the model to reference.
+   */
   public setSource(name: string) {
     // TODO validate
     this.source = new ASTSourceReference({
@@ -895,6 +932,18 @@ export class ASTQuery extends ASTObjectNode<
     });
   }
 
+  /**
+   * Sets the head of this query to be a reference to a top level query.
+   *
+   * ```ts
+   * q.setQueryHead('flights_by_carrier')
+   * ```
+   * ```
+   * run: flights_by_carrier
+   * ```
+   *
+   * @param name The name of the query in the model to reference.
+   */
   public setQueryHead(name: string) {
     // TODO validate
     this.pipeline = new ASTPipeline({
@@ -928,6 +977,15 @@ export class ASTQuery extends ASTObjectNode<
   /**
    * Emits the current query object as Malloy code
    *
+   * ```ts
+   * q.setSource('flights')
+   * q.setView('by_carrier')
+   * q.toMalloy();
+   * ```
+   * ```
+   * run: flights -> by_carrier
+   * ```
+   *
    * @returns Malloy code for the query
    */
   toMalloy(): string {
@@ -946,6 +1004,16 @@ export class ASTQuery extends ASTObjectNode<
 
   /**
    * Set the view of this query; overwrites any other query operations.
+   *
+   * ```
+   * run: flights ->
+   * ```
+   * ```ts
+   * q.setView('by_carrier')
+   * ```
+   * ```
+   * run: flights -> by_carrier
+   * ```
    *
    * @param name The name of the view to set as the head of the query pipeline
    */
@@ -1561,7 +1629,31 @@ export class ASTSegmentRefinement extends ASTRefinementBase<
     return this.parent.asRefinementList();
   }
 
+  /**
+   * Adds an order by to the segment. Will override the direction of an existing order by
+   * if one is present for the same field.
+   *
+   * ```
+   * run: flights -> { group_by: carrier }
+   * ```
+   * ```ts
+   * q.getOrAddDefaultSegment().addOrderBy("carrier", Malloy.OrderByDirection.DESC);
+   * ```
+   * ```
+   * run: flights -> {
+   *   group_by: carrier
+   *   order_by: carrier desc
+   * }
+   * ```
+   *
+   * The order by item is added to an existing order by operation if one is present,
+   * or to a new order by operation at the end of the query.
+   *
+   * @param name The name of the field to order by.
+   * @param direction The order by direction (ascending or descending).
+   */
   public addOrderBy(name: string, direction?: Malloy.OrderByDirection) {
+    // TODO decide where to add it
     // Ensure output schema has a field with this name
     const outputSchema = this.getOutputSchema();
     try {
@@ -1597,9 +1689,32 @@ export class ASTSegmentRefinement extends ASTRefinementBase<
     );
   }
 
-  public addEmptyNest(name: string) {
+  /**
+   * Adds an empty nest to this segment, with the given name.
+   * @param name The name of the new nest.
+   *
+   * The new nest is always added to the end of the query in a new nest block.
+   *
+   * ```
+   * run: flights -> { group_by: carrier }
+   * ```
+   * ```ts
+   * q.getOrAddDefaultSegment().addEmptyNest("by_origin");
+   * ```
+   * ```
+   * run: flights -> {
+   *   group_by: carrier
+   *   nest: by_origin is { }
+   * }
+   * ```
+   *
+   * @returns The {@link ASTNestItem} that was created.
+   *
+   */
+  public addEmptyNest(name: string): ASTNestItem {
     // TODO validate name
     // TODO decide whether this by default groups into existing nest operation?
+    // TODO pick a better location in the query
     const nest = new ASTNestViewOperation({
       __type: Malloy.ViewOperationType.Nest,
       items: [
@@ -1675,14 +1790,110 @@ export class ASTSegmentRefinement extends ASTRefinementBase<
     return this;
   }
 
+  /**
+   * Adds a group by field with the given name to this segment.
+   *
+   * ```
+   * run: flights -> { }
+   * ```
+   * ```ts
+   * q.getOrAddDefaultSegment().addGroupBy("carrier");
+   * ```
+   * ```
+   * run: flights -> { group_by: carrier }
+   * ```
+   *
+   * If there is already a group by clause, the new field will be added
+   * to that clause (or the first one if there are multiple).
+   *
+   * ```
+   * run: flights -> { group_by: carrier }
+   * ```
+   * ```ts
+   * q.getOrAddDefaultSegment().addGroupBy("origin_code");
+   * ```
+   * ```
+   * run: flights -> {
+   *   group_by:
+   *     carrier
+   *     origin_code
+   * }
+   * ```
+   *
+   * If there is no group by clause, it will be added
+   *   1) before the first aggregate clause if there is one, or
+   *   2) before the first nest clause if there is one, or
+   *   3) before the first order by clause if ther is one, or
+   *   4) at the end of the query
+   *
+   * ```
+   * run: flights -> {
+   *   order_by: flight_count
+   *   aggregate: flight_count
+   * }
+   * ```
+   * ```ts
+   * q.getOrAddDefaultSegment().addGroupBy("carrier");
+   * ```
+   * ```
+   * run: flights -> {
+   *   order_by: flight_count
+   *   group_by: carrier
+   *   aggregate: flight_count
+   * }
+   * ```
+   *
+   * @param name The name of the dimension to group by.
+   */
   public addGroupBy(name: string) {
     this.addField(name, Malloy.FieldInfoType.Dimension);
   }
 
+  /**
+   * Adds an aggregate item with the given name to this segment.
+   *
+   * ```
+   * run: flights -> { }
+   * ```
+   * ```ts
+   * q.getOrAddDefaultSegment().addAggregate("flight_count");
+   * ```
+   * ```
+   * run: flights -> { aggregate: flight_count }
+   * ```
+   *
+   * Added
+   *   1) at the end of an existing aggregate clause if ther is one, or
+   *   2) before the first nest clause if there is one, or
+   *   3) before the first order by clause if ther is one, or
+   *   4) at the end of the query
+   *
+   * @param name The name of the measure to aggregate.
+   */
   public addAggregate(name: string) {
     this.addField(name, Malloy.FieldInfoType.Measure);
   }
 
+  /**
+   * Adds a nest item with the given name to this segment.
+   *
+   * ```
+   * run: flights -> { }
+   * ```
+   * ```ts
+   * q.getOrAddDefaultSegment().addNest("by_carrier");
+   * ```
+   * ```
+   * run: flights -> { nest: by_carrier }
+   * ```
+   *
+   * Added
+   *   1) at the end of an existing nest clause if there is one, or
+   *   2) before the first order by clause if ther is one, or
+   *   3) at the end of the query
+   *
+   * @param name The name of the view to nest.
+   */
   public addNest(name: string) {
     this.addField(name, Malloy.FieldInfoType.View);
   }
@@ -1757,7 +1968,26 @@ export class ASTSegmentRefinement extends ASTRefinementBase<
     return {fields};
   }
 
+  /**
+   * Sets the limit for this segment. Overrides an existing limit.
+   *
+   * ```
+   * run: flights -> { group_by: carrier }
+   * ```
+   * ```ts
+   * q.getOrAddDefaultSegment().setLimit(10);
+   * ```
+   * ```
+   * run: flights -> {
+   *   group_by: carrier
+   *   limit: 10
+   * }
+   * ```
+   *
+   * @param limit The limit to set. Must be an integer.
+   */
   public setLimit(limit: number) {
+    // TODO throw if not an integer
     const limitOp: ASTLimitViewOperation | undefined = [
       ...this.operations.iter(),
     ].find(ASTViewOperation.isLimit);
