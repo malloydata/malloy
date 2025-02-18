@@ -647,9 +647,9 @@ export class MalloyToAST
     pcx: parse.AccessLabelContext | undefined
   ): AccessModifierLabel | undefined {
     if (pcx === undefined) return undefined;
-    if (pcx.INTERNAL()) return 'internal';
-    if (pcx.PRIVATE()) return 'private';
-    if (pcx.PUBLIC()) return 'public';
+    if (pcx.INTERNAL_KW()) return 'internal';
+    if (pcx.PRIVATE_KW()) return 'private';
+    if (pcx.PUBLIC_KW()) return 'public';
     throw this.internalError(pcx, `Unknown access modifier label ${pcx.text}`);
   }
 
@@ -1522,7 +1522,7 @@ export class MalloyToAST
         );
         return new ast.ExprNULL();
       }
-      const explicitSource = pcx.SOURCE() !== undefined;
+      const explicitSource = pcx.SOURCE_KW() !== undefined;
       if (aggFunc === 'avg') {
         return new ast.ExprAvg(expr, source, explicitSource);
       } else if (aggFunc === 'sum') {

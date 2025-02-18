@@ -38,12 +38,12 @@ malloyStatement
   ;
 
 defineSourceStatement
-  : tags SOURCE COLON sourcePropertyList
+  : tags SOURCE sourcePropertyList
   ;
 
 defineQuery
   : topLevelQueryDefs                 # use_top_level_query_defs
-  | tags QUERY COLON topLevelAnonQueryDef   # anonymousQuery
+  | tags QUERY topLevelAnonQueryDef   # anonymousQuery
   ;
 
 topLevelAnonQueryDef
@@ -59,7 +59,7 @@ isDefine
   ;
 
 runStatement
-  : tags RUN COLON topLevelAnonQueryDef
+  : tags RUN topLevelAnonQueryDef
   ;
 
 sqlString
@@ -101,7 +101,7 @@ ignoredModelAnnotations
   ;
 
 topLevelQueryDefs
-  : tags QUERY COLON topLevelQueryDef (COMMA? topLevelQueryDef)* COMMA?
+  : tags QUERY topLevelQueryDef (COMMA? topLevelQueryDef)* COMMA?
   ;
 
 topLevelQueryDef
@@ -165,10 +165,10 @@ exploreStatement
   | declareStatement                         # defDeclare_stub
   | joinStatement                            # defJoin_stub
   | whereStatement                           # defExploreWhere_stub
-  | PRIMARY_KEY COLON fieldName                    # defExplorePrimaryKey
-  | accessLabel? RENAME COLON renameList           # defExploreRename
-  | (ACCEPT | EXCEPT) COLON fieldNameList          # defExploreEditField
-  | tags accessLabel? (QUERY | VIEW) COLON subQueryDefList
+  | PRIMARY_KEY fieldName                    # defExplorePrimaryKey
+  | accessLabel? RENAME renameList           # defExploreRename
+  | (ACCEPT | EXCEPT) fieldNameList          # defExploreEditField
+  | tags accessLabel? (QUERY | VIEW) subQueryDefList
                                              # defExploreQuery
   | timezoneStatement                        # defExploreTimezone
   | ANNOTATION+                              # defExploreAnnotation
@@ -177,9 +177,9 @@ exploreStatement
 
 
 accessLabel
-  : PUBLIC
-  | PRIVATE
-  | INTERNAL
+  : PUBLIC_KW
+  | PRIVATE_KW
+  | INTERNAL_KW
   ;
 
 accessModifierList
@@ -188,11 +188,11 @@ accessModifierList
   ;
 
 defMeasures
-  : tags accessLabel? MEASURE COLON defList
+  : tags accessLabel? MEASURE defList
   ;
 
 defDimensions
-  : tags accessLabel? DIMENSION COLON defList
+  : tags accessLabel? DIMENSION defList
   ;
 
 renameList
@@ -215,17 +215,17 @@ fieldNameDef: id;
 joinNameDef: id;
 
 declareStatement
-  : DECLARE COLON accessLabel? defList
+  : DECLARE accessLabel? defList
   ;
 
 joinStatement
-  : tags accessLabel? JOIN_ONE COLON joinList                  # defJoinOne
-  | tags accessLabel? JOIN_MANY COLON joinList                 # defJoinMany
-  | tags accessLabel? JOIN_CROSS COLON joinList                # defJoinCross
+  : tags accessLabel? JOIN_ONE joinList                  # defJoinOne
+  | tags accessLabel? JOIN_MANY joinList                 # defJoinMany
+  | tags accessLabel? JOIN_CROSS joinList                # defJoinCross
   ;
 
 queryExtend
-  : EXTEND COLON queryExtendStatementList
+  : EXTENDQ queryExtendStatementList
   ;
 
 modEither
@@ -266,7 +266,7 @@ includeBlock
 includeItem
   : tags accessLabelProp includeList
   | includeList
-  | tags EXCEPT COLON includeExceptList
+  | tags EXCEPT includeExceptList
   | orphanedAnnotation
   ;
 
@@ -275,9 +275,9 @@ orphanedAnnotation
   ;
 
 accessLabelProp
-  : PUBLIC COLON
-  | PRIVATE COLON
-  | INTERNAL COLON
+  : PUBLIC
+  | PRIVATE
+  | INTERNAL
   ;
 
 includeExceptList
@@ -364,7 +364,7 @@ aggregateOrderBySpec
   ;
 
 aggregateOrderByStatement
-  : ORDER_BY COLON aggregateOrdering
+  : ORDER_BY aggregateOrdering
   ;
 
 fieldPropertyLimitStatement
@@ -383,11 +383,11 @@ filterClauseList
   ;
 
 whereStatement
-  : WHERE COLON filterClauseList
+  : WHERE filterClauseList
   ;
 
 havingStatement
-  : HAVING COLON filterClauseList
+  : HAVING filterClauseList
   ;
 
 subQueryDefList
@@ -426,7 +426,7 @@ queryJoinStatement
   ;
 
 groupByStatement
-  : tags GROUP_BY COLON queryFieldList
+  : tags GROUP_BY queryFieldList
   ;
 
 queryFieldList
@@ -440,7 +440,7 @@ queryFieldEntry
   ;
 
 nestStatement
-  : tags NEST COLON nestedQueryList
+  : tags NEST nestedQueryList
   ;
 
 nestedQueryList
@@ -452,23 +452,23 @@ nestEntry
   ;
 
 aggregateStatement
-  : tags AGGREGATE COLON queryFieldList
+  : tags AGGREGATE queryFieldList
   ;
 
 calculateStatement
-  : tags CALCULATE COLON queryFieldList
+  : tags CALCULATE queryFieldList
   ;
 
 projectStatement
-  : tags (SELECT | PROJECT) COLON fieldCollection
+  : tags (SELECT | PROJECT) fieldCollection
   ;
 
 partitionByStatement
-  : PARTITION_BY COLON id (COMMA id)* COMMA?
+  : PARTITION_BY id (COMMA id)* COMMA?
   ;
 
 orderByStatement
-  : ORDER_BY COLON ordering
+  : ORDER_BY ordering
   ;
 
 ordering
@@ -480,7 +480,7 @@ orderBySpec
   ;
 
 limitStatement
-  : LIMIT COLON INTEGER_LITERAL
+  : LIMIT INTEGER_LITERAL
   ;
 
 bySpec
@@ -489,7 +489,7 @@ bySpec
   ;
 
 topStatement
-  : TOP COLON INTEGER_LITERAL
+  : TOP INTEGER_LITERAL
   ;
 
 indexElement
@@ -502,15 +502,15 @@ indexFields
   ;
 
 indexStatement
-  : INDEX COLON indexFields (BY fieldName)?
+  : INDEX indexFields (BY fieldName)?
   ;
 
 sampleStatement
-  : SAMPLE COLON sampleSpec
+  : SAMPLE sampleSpec
   ;
 
 timezoneStatement
-  : TIMEZONE COLON string
+  : TIMEZONE string
   ;
 
 queryAnnotation
@@ -610,7 +610,7 @@ fieldExpr
   | fieldExpr OR fieldExpr                                 # exprLogicalOr
   | fieldExpr DOUBLE_QMARK fieldExpr                       # exprCoalesce
   | CAST OPAREN fieldExpr AS malloyOrSQLType CPAREN        # exprCast
-  | (SOURCE DOT)? aggregate
+  | (SOURCE_KW DOT)? aggregate
       OPAREN (fieldExpr | STAR)? CPAREN                    # exprPathlessAggregate
   | fieldPath DOT aggregate
       OPAREN fieldExpr? CPAREN                             # exprAggregate
@@ -683,7 +683,7 @@ collectionWildCard
 
 starQualified
   : OCURLY (
-      (EXCEPT COLON fieldNameList)
+      (EXCEPT fieldNameList)
     | COMMA
   )+ CCURLY
   ;
