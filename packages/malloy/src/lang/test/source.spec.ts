@@ -32,6 +32,60 @@ import {
 } from './test-translator';
 import './parse-expects';
 
+describe('errors', () => {
+  test('missing closing curly, EOF', () => {
+    expect('source: x is a extend {').toLogAtLeast(
+      errorMessage("Missing '}' at 'EOF'")
+    );
+  });
+
+  test('missing closing curly, source', () => {
+    expect(`source: x is a extend {
+      where: val > 5
+
+    source: y is a extend { }
+  `).toLogAtLeast(errorMessage("Missing '}' at 'SOURCE'"));
+  });
+
+  test('view is missing name', () => {
+    expect(`
+      source: x is a extend {
+        view: {
+          group_by: b
+        }
+      }
+      `).toLogAtLeast(
+      errorMessage("'view:' must be followed by '<identifier> is {'")
+    );
+  });
+
+  test('missing closing curly, source>view', () => {
+    expect(`
+      source: x is a extend {
+        view: y is {
+          group_by: b
+
+        view: z is {
+          group_by: c
+        }
+      }
+      `).toLogAtLeast(errorMessage("Missing '}' at 'view'"));
+  });
+
+  // Was: extraneous input '{' expecting {BQ_STRING, IDENTIFIER}
+  test('incorrect opening curly', () => {
+    expect(`
+      source: x is a extend {
+        dimension: {
+          test is best
+        }
+      }
+      `).toLogAtLeast(
+      errorMessage("extraneous input '{' expecting {BQ_STRING, IDENTIFIER}")
+    );
+  });
+});
+
 describe('source:', () => {
   test('table', () => {
     expect("source: testA is _db_.table('aTable')").toTranslate();

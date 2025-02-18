@@ -22,7 +22,6 @@
  */
 
 import {
-  ANTLRErrorListener,
   CharStreams,
   CommonTokenStream,
   ParserRuleContext,
@@ -51,7 +50,6 @@ import {
   LogMessage,
   LogMessageOptions,
   MessageCode,
-  MessageLogger,
   MessageParameterType,
   makeLogMessage,
 } from './parse-log';
@@ -92,6 +90,8 @@ import {MalloyParseInfo} from './malloy-parse-info';
 import {walkForModelAnnotation} from './parse-tree-walkers/model-annotation-walker';
 import {walkForTablePath} from './parse-tree-walkers/find-table-path-walker';
 import {EventStream} from '../runtime_types';
+import {MalloyErrorStrategy} from './syntax-errors/malloy-error-strategy';
+import {MalloyParserErrorListener} from './syntax-errors/malloy-parser-error-listener';
 
 export type StepResponses =
   | DataRequestResponse
@@ -244,8 +244,9 @@ class ParseStep implements TranslationStep {
     const malloyParser = new MalloyParser(tokenStream);
     malloyParser.removeErrorListeners();
     malloyParser.addErrorListener(
-      new MalloyParserErrorHandler(that, that.root.logger)
+      new MalloyParserErrorListener(that, that.root.logger)
     );
+    malloyParser.errorHandler = new MalloyErrorStrategy();
 
     // Admitted code smell here, testing likes to parse from an arbitrary
     // node and this is the simplest way to allow that.
@@ -1148,45 +1149,6 @@ export interface UpdateData extends URLData, SchemaData, SQLSources, ModelData {
   errors: Partial<ErrorData>;
 }
 export type ParseUpdate = Partial<UpdateData>;
-
-export class MalloyParserErrorHandler implements ANTLRErrorListener<Token> {
-  constructor(
-    readonly translator: MalloyTranslation,
-    readonly messages: MessageLogger
-  ) {}
-
-  logError<T extends MessageCode>(
-    code: T,
-    parameters: MessageParameterType<T>,
-    options?: Omit<LogMessageOptions, 'severity'>
-  ): T {
-    this.messages.log(
-      makeLogMessage(code, parameters, {severity: 'error', ...options})
-    );
-    return code;
-  }
-
-  syntaxError(
-    recognizer: unknown,
-    offendingSymbol: Token | undefined,
-    line: number,
-    charPositionInLine: number,
-    message: string,
-    _e: unknown
-  ): void {
-    const errAt = {line: line - 1, character: charPositionInLine};
-    const range = offendingSymbol
-      ? this.translator.rangeFromToken(offendingSymbol)
-      : {start: errAt, end: errAt};
-    this.logError(
-      'syntax-error',
-      {message},
-      {
-        at: {url: this.translator.sourceURL, range},
-      }
-    );
-  }
-}
 
 function flattenDependencyTree(dependencies: DependencyTree) {
   return [
