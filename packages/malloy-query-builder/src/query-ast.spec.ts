@@ -315,6 +315,158 @@ run: flights -> {
       malloy: 'run: flights -> { nest: by_month }',
     });
   });
+  test('set view reference', () => {
+    const from = {
+      pipeline: {stages: []},
+      source: {name: 'flights'},
+    };
+    expect((q: ASTQuery) => {
+      q.setView('by_month');
+    }).toModifyQuery({
+      model: flights_model,
+      from,
+      to: {
+        pipeline: {
+          stages: [
+            {
+              refinements: [
+                {
+                  __type: Malloy.RefinementType.Reference,
+                  name: 'by_month',
+                },
+              ],
+            },
+          ],
+        },
+        source: from.source,
+      },
+      malloy: 'run: flights -> by_month',
+    });
+  });
+  test('set view with segment refinement', () => {
+    const from = {
+      pipeline: {stages: []},
+      source: {name: 'flights'},
+    };
+    expect((q: ASTQuery) => {
+      const view = q.setView('by_month');
+      const segment = view.list.stage.addEmptyRefinement();
+      segment.setLimit(10);
+    }).toModifyQuery({
+      model: flights_model,
+      from,
+      to: {
+        pipeline: {
+          stages: [
+            {
+              refinements: [
+                {
+                  __type: Malloy.RefinementType.Reference,
+                  name: 'by_month',
+                },
+                {
+                  __type: Malloy.RefinementType.Segment,
+                  operations: [
+                    {
+                      __type: Malloy.ViewOperationType.Limit,
+                      limit: 10,
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        source: from.source,
+      },
+      malloy: 'run: flights -> by_month + { limit: 10 }',
+    });
+  });
+  test('set view reference with named refinement', () => {
+    const from = {
+      pipeline: {stages: []},
+      source: {name: 'flights'},
+    };
+    expect((q: ASTQuery) => {
+      const view = q.setView('by_carrier');
+      view.list.stage.addViewRefinement('cool_state_measures');
+    }).toModifyQuery({
+      source: {
+        name: 'flights',
+        schema: {
+          fields: [
+            {
+              __type: Malloy.FieldInfoType.Dimension,
+              name: 'carrier',
+              type: {__type: Malloy.AtomicTypeType.StringType},
+            },
+            {
+              __type: Malloy.FieldInfoType.Measure,
+              name: 'flight_count',
+              type: {__type: Malloy.AtomicTypeType.NumberType},
+            },
+            {
+              __type: Malloy.FieldInfoType.View,
+              name: 'by_carrier',
+              schema: {
+                fields: [
+                  {
+                    __type: Malloy.FieldInfoType.Dimension,
+                    name: 'carrier',
+                    type: {__type: Malloy.AtomicTypeType.StringType},
+                  },
+                  {
+                    __type: Malloy.FieldInfoType.Measure,
+                    name: 'flight_count',
+                    type: {__type: Malloy.AtomicTypeType.NumberType},
+                  },
+                ],
+              },
+            },
+            {
+              __type: Malloy.FieldInfoType.View,
+              name: 'cool_state_measures',
+              schema: {
+                fields: [
+                  {
+                    __type: Malloy.FieldInfoType.Measure,
+                    name: 'il_flight_count',
+                    type: {__type: Malloy.AtomicTypeType.NumberType},
+                  },
+                  {
+                    __type: Malloy.FieldInfoType.Measure,
+                    name: 'ca_flight_count',
+                    type: {__type: Malloy.AtomicTypeType.NumberType},
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+      from,
+      to: {
+        pipeline: {
+          stages: [
+            {
+              refinements: [
+                {
+                  __type: Malloy.RefinementType.Reference,
+                  name: 'by_carrier',
+                },
+                {
+                  __type: Malloy.RefinementType.Reference,
+                  name: 'cool_state_measures',
+                },
+              ],
+            },
+          ],
+        },
+        source: from.source,
+      },
+      malloy: 'run: flights -> by_carrier + cool_state_measures',
+    });
+  });
   test('add limit', () => {
     const from = {
       pipeline: {stages: []},

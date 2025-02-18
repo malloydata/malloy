@@ -4,7 +4,6 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
-
 import * as Malloy from '@malloydata/malloy-interfaces';
 
 export type PathSegment = number | string;
@@ -553,7 +552,7 @@ abstract class ASTNode<T> {
   /**
    * @internal
    */
-  static schemaGet(schema: Malloy.Schema, name: string) {
+  static schemaTryGet(schema: Malloy.Schema, name: string) {
     const parts = name.split('.');
     let current = schema;
     const front = parts.slice(0, -1);
@@ -569,8 +568,16 @@ abstract class ASTNode<T> {
       current = field.schema;
     }
     const field = current.fields.find(f => f.name === last);
+    return field;
+  }
+
+  /**
+   * @internal
+   */
+  static schemaGet(schema: Malloy.Schema, name: string) {
+    const field = ASTNode.schemaTryGet(schema, name);
     if (field === undefined) {
-      throw new Error(`${last} not found`);
+      throw new Error(`${name} not found`);
     }
     return field;
   }
@@ -936,6 +943,15 @@ export class ASTQuery extends ASTObjectNode<
   build(): Malloy.Query {
     return super.build();
   }
+
+  /**
+   * Set the view of this query; overwrites any other query operations.
+   *
+   * @param name The name of the view to set as the head of the query pipeline
+   */
+  setView(name: string): ASTReferenceRefinement {
+    return this.pipeline.setView(name);
+  }
 }
 
 export type RawLiteralValue = number | string | Date | boolean | null;
@@ -1193,6 +1209,33 @@ export class ASTPipeline extends ASTObjectNode<
     }
     return undefined;
   }
+
+  /**
+   * Set the view of this pipeline; overwrites any other query operations.
+   *
+   * @param name The name of the view to set as the head of the pipeline
+   */
+  setView(name: string) {
+    const sourceInfo = this.getSourceInfo();
+    const field = ASTQuery.schemaGet(sourceInfo.schema, name);
+    if (field === undefined) {
+      throw new Error(`${name} is not defined`);
+    } else if (field.__type !== Malloy.FieldInfoType.View) {
+      throw new Error(`${name} is not a view`); // TODO scalar refinements
+    }
+    this.stages.drain();
+    this.stages.add(
+      new ASTPipeStage({
+        refinements: [
+          {
+            __type: Malloy.RefinementType.Reference,
+            name,
+          },
+        ],
+      })
+    );
+    return this.stages.index(0).refinements.index(0).asReferenceRefinement();
+  }
 }
 
 export class ASTPipeStageList extends ASTListNode<
@@ -1215,6 +1258,13 @@ export class ASTPipeStageList extends ASTListNode<
    */
   get pipeline() {
     return this.parent.asPipeline();
+  }
+
+  /**
+   * @internal
+   */
+  drain() {
+    this.stages.splice(0, this.length);
   }
 
   getOrAddDefaultSegment() {
@@ -1312,6 +1362,52 @@ export class ASTPipeStage extends ASTObjectNode<
     return this.refinements
       .index(this.refinements.length - 1)
       .getOutputSchema();
+  }
+
+  isValidViewRefinement(name: string): {
+    isValidViewRefinement: boolean;
+    error?: string;
+  } {
+    const schema = this.getInputSchema();
+    const field = ASTQuery.schemaGet(schema, name);
+    if (field === undefined) {
+      return {isValidViewRefinement: false, error: `${name} is not defined`};
+    } else if (field.__type !== Malloy.FieldInfoType.View) {
+      // TODO scalar refinements
+      return {isValidViewRefinement: false, error: `${name} is not a view`};
+    }
+    const prevOutput = this.getOutputSchema();
+    for (const refinementField of field.schema.fields) {
+      if (ASTQuery.schemaTryGet(prevOutput, refinementField.name)) {
+        return {
+          isValidViewRefinement: false,
+          error: `Cannot refine with ${name} because stage already has an output field named ${refinementField.name}`,
+        };
+      }
+    }
+    return {isValidViewRefinement: true};
+  }
+
+  addViewRefinement(name: string) {
+    const {error} = this.isValidViewRefinement(name);
+    if (error) {
+      throw new Error(error);
+    }
+    const refinement = new ASTReferenceRefinement({
+      __type: Malloy.RefinementType.Reference,
+      name,
+    });
+    this.refinements.add(refinement);
+    return refinement;
+  }
+
+  addEmptyRefinement() {
+    const refinement = new ASTSegmentRefinement({
+      __type: Malloy.RefinementType.Segment,
+      operations: [],
+    });
+    this.refinements.add(refinement);
+    return refinement;
   }
 }
 

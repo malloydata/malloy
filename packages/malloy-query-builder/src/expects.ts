@@ -25,6 +25,12 @@ declare global {
         to: Malloy.Query;
         malloy: string;
       }): R;
+      toModifyQuery(exp: {
+        source: Malloy.SourceInfo;
+        from: Malloy.Query;
+        to: Malloy.Query;
+        malloy: string;
+      }): R;
     }
   }
 }
@@ -34,18 +40,27 @@ expect.extend({
     f: (q: ASTQuery) => void,
     {
       model,
+      source,
       from,
       to,
       malloy,
     }: {
-      model: Malloy.ModelInfo;
+      model?: Malloy.ModelInfo;
+      source?: Malloy.SourceInfo;
       from: Malloy.Query;
       to: Malloy.Query;
       malloy: string;
     }
   ) {
     const clone = JSON.parse(JSON.stringify(from));
-    const q = new ASTQuery({model, query: from});
+    const q = model
+      ? new ASTQuery({model, query: from})
+      : source
+      ? new ASTQuery({source, query: from})
+      : undefined;
+    if (q === undefined) {
+      throw new Error('Must specify either model or source')
+    }
     f(q);
     const query = q.build();
     const eq = objectsMatch(query, to);
