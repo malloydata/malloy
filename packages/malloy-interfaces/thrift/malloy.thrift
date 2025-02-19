@@ -7,10 +7,8 @@
 
 struct ModelInfo {
   1: required list<ModelEntryValue> entries,
-  // TODO should (tag | annotation | tag & annotation) be a metadata type
-  2: optional Tag tag,
-  3: optional list<Annotation> annotations,
-  4: required list<QueryInfo> anonymous_queries,
+  2: optional list<Annotation> annotations,
+  3: required list<QueryInfo> anonymous_queries,
 }
 
 union ModelEntryValue {
@@ -21,9 +19,8 @@ union ModelEntryValue {
 struct SourceInfo {
   1: required string name,
   2: required Schema schema,
-  3: optional Tag tag,
-  4: optional list<Annotation> annotations,
-  5: optional list<ParameterInfo> parameters,
+  3: optional list<Annotation> annotations,
+  4: optional list<ParameterInfo> parameters,
 }
 
 struct ParameterInfo {
@@ -35,10 +32,9 @@ struct ParameterInfo {
 struct QueryInfo {
   1: required string name,
   2: required Schema schema,
-  3: optional Tag tag,
-  4: optional list<Annotation> annotations,
+  3: optional list<Annotation> annotations,
   // "openable query"
-  5: optional Query definition,
+  4: optional Query definition,
   // TODO consider code and location for ALL objects in the model
   // TODO should this be optional or always present? or not here at all?
     // Argument against: if all objects have their code, then there is tons of repetition
@@ -47,9 +43,9 @@ struct QueryInfo {
     // What about definitions from other files?
     // Should Location have a url at all, or just be the Range -- does Thrift handle repetition of
     // strings well?
-  6: optional string code,
+  5: optional string code,
   // TODO should this be optional or always present? or not here at all?
-  7: optional Location location,
+  6: optional Location location,
 }
 
 struct AnonymousQueryInfo {
@@ -93,30 +89,6 @@ struct Annotation {
   1: required string value,
 }
 
-union TagValue {
-  1: required StringTagValue string_value,
-  2: required ArrayTagValue array_value,
-}
-
-struct StringTagValue {
-  1: required string value,
-}
-
-struct ArrayTagValue {
-  1: required list<Tag> value,
-}
-
-struct TagProperty {
-  1: required string name,
-  2: required Tag value,
-}
-
-struct Tag {
-  1: optional string prefix,
-  2: optional TagValue value,
-  3: optional list<TagProperty> properties,
-}
-
 union FieldInfo {
   // 1: required AtomicField atomic_field,
   1: required DimensionInfo dimension,
@@ -125,19 +97,11 @@ union FieldInfo {
   4: required ViewInfo view,
 }
 
-// struct AtomicField {
-//   1: required string name,
-//   2: required UAtomicFieldType type,
-//   3: optional Tag tag,
-//   4: optional list<Annotation> annotations,
-// }
-
 // TODO should these just be "AtomicField" with a "fieldtype"
 struct DimensionInfo {
   1: required string name,
   2: required AtomicType type,
-  3: optional Tag tag,
-  4: optional list<Annotation> annotations,
+  3: optional list<Annotation> annotations,
   // TODO possibly need "wasDimension vs wasMeasure"
   // TODO possibly need "isExpression" depending on how we do drills
   // TODO possibly need "isParameter" depending on how we do drills
@@ -149,8 +113,7 @@ struct DimensionInfo {
 struct MeasureInfo {
   1: required string name,
   2: required AtomicType type,
-  3: optional Tag tag,
-  4: optional list<Annotation> annotations,
+  3: optional list<Annotation> annotations,
 }
 
 // TODO do I need the full "nested"/"query"/"one_to_one" etc?
@@ -163,25 +126,23 @@ enum Relationship {
 struct JoinInfo {
   1: required string name,
   2: required Schema schema,
-  3: optional Tag tag,
-  4: optional list<Annotation> annotations,
-  5: required Relationship relationship,
+  3: optional list<Annotation> annotations,
+  4: required Relationship relationship,
 }
 
 struct ViewInfo {
   1: required string name,
   2: required Schema schema,
-  3: optional Tag tag,
-  4: optional list<Annotation> annotations,
+  3: optional list<Annotation> annotations,
   // TODO naming of this
   // "openable view"
-  5: optional View definition,
+  4: optional View definition,
   // Possibly need `filterList` depending on how we do drills
 }
 
 struct View {
   2: required Pipeline pipeline,
-  3: optional list<TagOrAnnotation> annotations,
+  3: optional list<Annotation> annotations,
 }
 
 enum OrderByDirection {
@@ -288,14 +249,9 @@ union ViewOperation {
   6: required Nest nest,
 }
 
-union TagOrAnnotation {
-  1: required Tag tag,
-  2: required Annotation annotation,
-}
-
 struct GroupBy {
   1: required list<GroupByItem> items,
-  2: optional list<TagOrAnnotation> annotations,
+  2: optional list<Annotation> annotations,
 }
 
 struct GroupByItem {
@@ -305,7 +261,7 @@ struct GroupByItem {
 
 struct Nest {
   1: required list<NestItem> items,
-  2: optional list<TagOrAnnotation> annotations,
+  2: optional list<Annotation> annotations,
 }
 
 struct NestItem {
@@ -315,7 +271,7 @@ struct NestItem {
 
 struct Aggregate {
   1: required list<AggregateOperation> items,
-  2: optional list<TagOrAnnotation> annotations,
+  2: optional list<Annotation> annotations,
 }
 
 struct AggregateOperation {
@@ -327,7 +283,7 @@ struct Field {
   1: required Expression expression,
   // TODO only two kinds of distinguishable annotations are before `aggregate:` and before `name is value`
   // between `name` and `is`, or between `is` and `value` are converted to before `name`.
-  2: optional list<TagOrAnnotation> annotations,
+  2: optional list<Annotation> annotations,
 }
 
 struct OrderBy {
@@ -383,7 +339,7 @@ stages: [
 struct Query {
   1: optional Reference source,
   2: required Pipeline pipeline,
-  3: optional list<TagOrAnnotation> annotations,
+  3: optional list<Annotation> annotations,
 }
 
 struct Pipeline {

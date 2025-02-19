@@ -22,21 +22,6 @@ export const test: Malloy.ModelInfo = {
               __type: Malloy.AtomicTypeType.BooleanType,
             },
             annotations: [{value: '# foo=1'}],
-            tag: {
-              properties: [
-                // TODO maybe just say that a tag can have an optional string value and an optional array value
-                // even though technially this would mean it could have BOTH
-                {
-                  name: 'foo',
-                  value: {
-                    value: {
-                      __type: Malloy.TagValueType.StringValue,
-                      value: '1',
-                    },
-                  },
-                },
-              ],
-            },
           },
           {
             __type: Malloy.FieldInfoType.Dimension,
@@ -344,8 +329,6 @@ export const q3: Malloy.Query = {
                                     __type: Malloy.ViewOperationType.GroupBy,
                                     annotations: [
                                       {
-                                        __type:
-                                          Malloy.TagOrAnnotationType.Annotation,
                                         value: '# bar',
                                       },
                                     ],
@@ -360,9 +343,6 @@ export const q3: Malloy.Query = {
                                           },
                                           annotations: [
                                             {
-                                              __type:
-                                                Malloy.TagOrAnnotationType
-                                                  .Annotation,
                                               value: '# foo',
                                             },
                                           ],

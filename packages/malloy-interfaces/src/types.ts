@@ -10,7 +10,7 @@
  */
 export type Aggregate = {
   items: Array<AggregateOperation>;
-  annotations?: Array<TagOrAnnotation>;
+  annotations?: Array<Annotation>;
 };
 export type AggregateOperation = {
   name?: string;
@@ -28,9 +28,6 @@ export type AnonymousQueryInfo = {
 };
 export type ArrayCell = {
   array_value: Array<Cell>;
-};
-export type ArrayTagValue = {
-  value: Array<Tag>;
 };
 export type ArrayType = {
   element_type: AtomicType;
@@ -148,7 +145,6 @@ export type DateType = {
 export type DimensionInfo = {
   name: string;
   type: AtomicType;
-  tag?: Tag;
   annotations?: Array<Annotation>;
 };
 export enum ExpressionType {
@@ -171,7 +167,7 @@ export type ExpressionWithFilteredField = {
 } & FilteredField;
 export type Field = {
   expression: Expression;
-  annotations?: Array<TagOrAnnotation>;
+  annotations?: Array<Annotation>;
 };
 export enum FieldInfoType {
   Dimension = 'dimension',
@@ -202,7 +198,7 @@ export type FilteredField = {
 };
 export type GroupBy = {
   items: Array<GroupByItem>;
-  annotations?: Array<TagOrAnnotation>;
+  annotations?: Array<Annotation>;
 };
 export type GroupByItem = {
   name?: string;
@@ -215,7 +211,6 @@ export type JSONType = {};
 export type JoinInfo = {
   name: string;
   schema: Schema;
-  tag?: Tag;
   annotations?: Array<Annotation>;
   relationship: Relationship;
 };
@@ -262,7 +257,6 @@ export type Location = {
 export type MeasureInfo = {
   name: string;
   type: AtomicType;
-  tag?: Tag;
   annotations?: Array<Annotation>;
 };
 export enum ModelEntryValueType {
@@ -280,13 +274,12 @@ export type ModelEntryValueWithQuery = {
 } & QueryInfo;
 export type ModelInfo = {
   entries: Array<ModelEntryValue>;
-  tag?: Tag;
   annotations?: Array<Annotation>;
   anonymous_queries: Array<QueryInfo>;
 };
 export type Nest = {
   items: Array<NestItem>;
-  annotations?: Array<TagOrAnnotation>;
+  annotations?: Array<Annotation>;
 };
 export type NestItem = {
   name?: string;
@@ -339,12 +332,11 @@ export type Position = {
 export type Query = {
   source?: Reference;
   pipeline: Pipeline;
-  annotations?: Array<TagOrAnnotation>;
+  annotations?: Array<Annotation>;
 };
 export type QueryInfo = {
   name: string;
   schema: Schema;
-  tag?: Tag;
   annotations?: Array<Annotation>;
   definition?: Query;
   code?: string;
@@ -398,7 +390,6 @@ export type Segment = {
 export type SourceInfo = {
   name: string;
   schema: Schema;
-  tag?: Tag;
   annotations?: Array<Annotation>;
   parameters?: Array<ParameterInfo>;
 };
@@ -408,9 +399,6 @@ export type StringCell = {
 export type StringLiteral = {
   string_value: string;
 };
-export type StringTagValue = {
-  value: string;
-};
 export type StringType = {};
 export type Table = {
   rows: Array<Row>;
@@ -418,37 +406,6 @@ export type Table = {
 export type TableCell = {
   table_value: Table;
 };
-export type Tag = {
-  prefix?: string;
-  value?: TagValue;
-  properties?: Array<TagProperty>;
-};
-export enum TagOrAnnotationType {
-  Tag = 'tag',
-  Annotation = 'annotation',
-}
-export type TagOrAnnotation =
-  | TagOrAnnotationWithTag
-  | TagOrAnnotationWithAnnotation;
-export type TagOrAnnotationWithTag = {__type: TagOrAnnotationType.Tag} & Tag;
-export type TagOrAnnotationWithAnnotation = {
-  __type: TagOrAnnotationType.Annotation;
-} & Annotation;
-export type TagProperty = {
-  name: string;
-  value: Tag;
-};
-export enum TagValueType {
-  StringValue = 'string_value',
-  ArrayValue = 'array_value',
-}
-export type TagValue = TagValueWithStringValue | TagValueWithArrayValue;
-export type TagValueWithStringValue = {
-  __type: TagValueType.StringValue;
-} & StringTagValue;
-export type TagValueWithArrayValue = {
-  __type: TagValueType.ArrayValue;
-} & ArrayTagValue;
 export type TimeTruncationFieldReference = {
   reference: Reference;
   truncation: TimestampTimeframe;
@@ -474,12 +431,11 @@ export type TimestampType = {
 };
 export type View = {
   pipeline: Pipeline;
-  annotations?: Array<TagOrAnnotation>;
+  annotations?: Array<Annotation>;
 };
 export type ViewInfo = {
   name: string;
   schema: Schema;
-  tag?: Tag;
   annotations?: Array<Annotation>;
   definition?: View;
 };
