@@ -13,6 +13,7 @@ import {
   TypeDescBlueprint,
   arg as a,
   sql,
+  DefinitionBlueprint,
 } from '../functions/util';
 
 // Cute shortcut So you can write things like: {array: T} and {dimension: T}
@@ -63,9 +64,55 @@ const string_agg_distinct: OverloadedDefinitionBlueprint = {
   },
 };
 
+const percent_rank: DefinitionBlueprint = {
+  takes: {},
+  returns: {calculation: 'number'},
+  impl: {function: 'PERCENT_RANK', needsWindowOrderBy: true},
+};
+
 export const SNOWFLAKE_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   string_agg,
   string_agg_distinct,
+  stddev: {
+    takes: {'value': 'number'},
+    returns: {measure: 'number'},
+    impl: {function: 'STDDEV'},
+  },
+  stddev_pop: {
+    takes: {'value': 'number'},
+    returns: {measure: 'number'},
+    impl: {function: 'STDDEV_POP'},
+  },
+  var_pop: {
+    takes: {'value': 'number'},
+    returns: {measure: 'number'},
+    impl: {function: 'VARIANCE_POP'},
+  },
+  var_samp: {
+    takes: {'value': 'number'},
+    returns: {measure: 'number'},
+    impl: {function: 'VARIANCE_SAMP'},
+  },
+  variance: {
+    takes: {'value': 'number'},
+    returns: {measure: 'number'},
+    impl: {function: 'VARIANCE'},
+  },
+  ...def(
+    'corr',
+    {'y': {dimension: T}, 'x': {dimension: T}},
+    {measure: 'number'}
+  ),
+  ...def(
+    'covar_pop',
+    {'y': {dimension: T}, 'x': {dimension: T}},
+    {measure: 'number'}
+  ),
+  ...def(
+    'covar_samp',
+    {'y': {dimension: T}, 'x': {dimension: T}},
+    {measure: 'number'}
+  ),
   hll_accumulate: {
     default: {
       takes: {'value': {dimension: T}},
@@ -100,4 +147,5 @@ export const SNOWFLAKE_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   },
   ...def('repeat', {'str': 'string', 'n': 'number'}, 'string'),
   ...def('reverse', {'str': 'string'}, 'string'),
+  percent_rank,
 };
