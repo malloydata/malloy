@@ -35,6 +35,9 @@
     },
     {
       "path": "../packages/malloy-query-builder"
+    },
+    {
+      "path": "../packages/malloy-tag"
     }
   ]
 }

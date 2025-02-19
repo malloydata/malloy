@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Tag} from '../../tags';
+import {Tag} from '@malloydata/malloy-tag';
 import {Annotation, QueryToMaterialize} from '../malloy_types';
 import {generateHash} from '../utils';
 

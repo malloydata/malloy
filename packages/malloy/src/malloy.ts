@@ -87,7 +87,7 @@ import {
   LookupConnection,
 } from './connection/types';
 import {DateTime} from 'luxon';
-import {Tag, TagParse, TagParseSpec, Taggable} from './tags';
+import {Tag, TagParse, TagParseSpec, Taggable} from '@malloydata/malloy-tag';
 import {Dialect, getDialect} from './dialect';
 import {PathInfo} from './lang/parse-tree-walkers/find-table-path-walker';
 import {MALLOY_VERSION} from './version';

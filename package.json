@@ -6,6 +6,7 @@
   "workspaces": {
     "packages": [
       "packages/malloy-interfaces",
+      "packages/malloy-tag",
       "packages/malloy-query-builder",
       "packages/malloy",
       "packages/malloy-db-bigquery",

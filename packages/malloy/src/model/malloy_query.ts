@@ -131,7 +131,7 @@ import {
   shouldMaterialize,
 } from './materialization/utils';
 import {EventStream} from '../runtime_types';
-import {Tag} from '../tags';
+import {Tag} from '@malloydata/malloy-tag';
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 

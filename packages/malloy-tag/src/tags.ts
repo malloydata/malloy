@@ -22,7 +22,7 @@
  */
 
 import {AbstractParseTreeVisitor} from 'antlr4ts/tree';
-import {MalloyTagLexer} from './lang/lib/Malloy/MalloyTagLexer';
+import {MalloyTagLexer} from './lib/Malloy/MalloyTagLexer';
 import {
   ArrayElementContext,
   ArrayValueContext,
@@ -38,8 +38,8 @@ import {
   TagReplacePropertiesContext,
   TagSpecContext,
   TagUpdatePropertiesContext,
-} from './lang/lib/Malloy/MalloyTagParser';
-import {MalloyTagVisitor} from './lang/lib/Malloy/MalloyTagVisitor';
+} from './lib/Malloy/MalloyTagParser';
+import {MalloyTagVisitor} from './lib/Malloy/MalloyTagVisitor';
 import {
   ANTLRErrorListener,
   CharStreams,
@@ -47,9 +47,9 @@ import {
   ParserRuleContext,
   Token,
 } from 'antlr4ts';
-import {parseString} from './lang/parse-utils';
-import {LogMessage} from './lang';
-import {Annotation, Note} from './model';
+import {parseString} from './util';
+import {LogMessage} from './log';
+import {Annotation, Note} from './types';
 
 // The distinction between the interface and the Tag class exists solely to
 // make it possible to write tests and specify expected results This

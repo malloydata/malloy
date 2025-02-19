@@ -22,7 +22,7 @@
  */
 
 import {Note} from '../../../model/malloy_types';
-import {Tag} from '../../../tags';
+import {Tag} from '@malloydata/malloy-tag';
 import {MessageLogger} from '../../parse-log';
 import {Document, DocStatement, MalloyElement} from './malloy-element';
 import {QueryPropertyInterface} from './query-property-interface';

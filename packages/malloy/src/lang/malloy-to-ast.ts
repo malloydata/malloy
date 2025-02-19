@@ -58,7 +58,7 @@ import {
   isMatrixOperation,
   Note,
 } from '../model/malloy_types';
-import {Tag} from '../tags';
+import {Tag} from '@malloydata/malloy-tag';
 import {ConstantExpression} from './ast/expressions/constant-expression';
 import {isNotUndefined} from './utils';
 
