@@ -72,6 +72,7 @@ declare global {
       toTranslate(): R;
       toReturnType(tp: string): R;
       toLog(...expectedErrors: ProblemSpec[]): R;
+      toLogAtLeast(...expectedErrors: ProblemSpec[]): R;
       isLocationIn(at: DocumentLocation, txt: string): R;
       /**
        * expect(X).compilesTo('expression-string')
@@ -326,7 +327,11 @@ expect.extend({
   },
   toLog: function (s: TestSource, ...msgs: ProblemSpec[]) {
     const expectCompiles = !msgs.some(m => m.severity === 'error');
-    return checkForProblems(this, expectCompiles, s, ...msgs);
+    return checkForProblems(this, expectCompiles, s, false, ...msgs);
+  },
+  toLogAtLeast: function (s: TestSource, ...msgs: ProblemSpec[]) {
+    const expectCompiles = !msgs.some(m => m.severity === 'error');
+    return checkForProblems(this, expectCompiles, s, true, ...msgs);
   },
   isLocationIn: function (
     checkAt: DocumentLocation,
@@ -431,6 +436,7 @@ function checkForProblems(
   context: jest.MatcherContext,
   expectCompiles: boolean,
   s: TestSource,
+  allowAdditionalErrors: boolean,
   ...msgs: ProblemSpec[]
 ) {
   let emsg = `Expected ${expectCompiles ? 'to' : 'to not'} compile with: `;
@@ -512,7 +518,7 @@ function checkForProblems(
     if (i !== msgs.length) {
       explain.push(...msgs.slice(i).map(m => `Missing: ${m}`));
     }
-    if (i !== errList.length) {
+    if (!allowAdditionalErrors && i !== errList.length) {
       explain.push(
         ...errList.slice(i).map(m => `Unexpected Error: ${m.message}`)
       );
