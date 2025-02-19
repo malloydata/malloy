@@ -15,7 +15,7 @@
   "scripts": {
     "test": "jest --config=../../jest.config.js",
     "clean": "tsc --build --clean",
-    "build": "npm run generate-types && tsc --build",
+    "build": "tsc --build",
     "prepublishOnly": "npm run clean && npm run build",
     "generate-types": "rm -f generated-types/* && thrift-typescript --strictUnions --target thrift-server --sourceDir thrift --outDir generated-types malloy.thrift && ts-node scripts/hacky_gen_types.ts > src/types.ts && cd ../.. && eslint 'packages/malloy-interfaces/src/types.ts' --fix"
   },

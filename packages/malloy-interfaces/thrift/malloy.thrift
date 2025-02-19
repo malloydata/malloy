@@ -270,11 +270,11 @@ struct NestItem {
 }
 
 struct Aggregate {
-  1: required list<AggregateOperation> items,
+  1: required list<AggregateItem> items,
   2: optional list<Annotation> annotations,
 }
 
-struct AggregateOperation {
+struct AggregateItem {
   1: optional string name,
   2: required Field field,
 }
