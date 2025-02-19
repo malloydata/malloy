@@ -67,7 +67,7 @@ sqlString
   ;
 
 sqlInterpolation
-  : OPEN_CODE sqExpr (closeCurly | CLOSE_CODE)
+  : OPEN_CODE sqExpr (CCURLY | CLOSE_CODE)
   ;
 
 importStatement
@@ -77,7 +77,7 @@ importStatement
 importSelect
   : OCURLY
     importItem (COMMA importItem)*
-    closeCurly FROM
+    CCURLY FROM
   ;
 
 importItem
@@ -126,7 +126,7 @@ connectionId
   : id;
 
 queryProperties
-  : OCURLY (queryStatement | SEMI)* closeCurly
+  : OCURLY (queryStatement | SEMI)* CCURLY
   ;
 
 queryName : id;
@@ -156,7 +156,7 @@ parameterNameDef: id;
 sourceNameDef: id;
 
 exploreProperties
-  : OCURLY (exploreStatement | SEMI)* closeCurly
+  : OCURLY (exploreStatement | SEMI)* CCURLY
   ;
 
 exploreStatement
@@ -260,7 +260,7 @@ sqExpr
   ;
 
 includeBlock
-  : OCURLY (includeItem | SEMI)* closeCurly
+  : OCURLY (includeItem | SEMI)* CCURLY
   ;
 
 includeItem
@@ -350,7 +350,7 @@ filterStatement
   ;
 
 fieldProperties
-  : OCURLY (fieldPropertyStatement | SEMI)* closeCurly
+  : OCURLY (fieldPropertyStatement | SEMI)* CCURLY
   ;
 
 aggregateOrdering
@@ -722,14 +722,4 @@ debugPartial: partialAllowedFieldExpr EOF;
 
 experimentalStatementForTesting // this only exists to enable tests for the experimental compiler flag
   : SEMI SEMI OBRACK string CBRACK
-  ;
-
-// Try to show a nice error for a missing }.  Only use this when the next
-// legal symbols after the curly are things which would be illegal inside
-// the curly brackets.
-closeCurly
-  : CCURLY
-  // ANTLR VSCode plugin loses it's tiny mind if { } aren't matched
-  // even in the error string below
-  | { this.notifyErrorListeners("'{' missing a '}'"); }
   ;
