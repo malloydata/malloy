@@ -23,11 +23,20 @@
 
 import crypto from 'crypto';
 import {DuckDBCommon} from './duckdb_common';
-import {Connection, Database, DuckDbError, TableData} from 'duckdb';
+import {
+  DuckDBConnection as Connection,
+  DuckDBInstance as Database,
+  DuckDBListValue,
+  DuckDBStructValue,
+  DuckDBValue,
+} from '@duckdb/node-api';
+
 import {
   ConnectionConfig,
+  QueryData,
   QueryDataRow,
   QueryOptionsReader,
+  QueryValue,
   RunSQLOptions,
 } from '@malloydata/malloy';
 import packageJson from '@malloydata/malloy/package.json';
@@ -119,50 +128,45 @@ export class DuckDBConnection extends DuckDBCommon {
   }
 
   private async init(): Promise<void> {
-    return new Promise(resolve => {
-      if (this.databasePath in DuckDBConnection.activeDBs) {
-        const activeDB = DuckDBConnection.activeDBs[this.databasePath];
-        this.connection = activeDB.database.connect();
-        activeDB.connections.push(this.connection);
-        resolve();
-      } else {
-        const config: Record<string, string> = {
-          'custom_user_agent': `Malloy/${packageJson.version}`,
-        };
-        if (this.isMotherDuck) {
-          if (
-            !this.motherDuckToken &&
-            !process.env['motherduck_token'] &&
-            !process.env['MOTHERDUCK_TOKEN']
-          ) {
-            this.setupError = new Error('Please set your MotherDuck Token');
-            // Resolve instead of error because errors cannot be caught.
-            return resolve();
-          }
-          if (this.motherDuckToken) {
-            config['motherduck_token'] = this.motherDuckToken;
-          }
+    if (this.databasePath in DuckDBConnection.activeDBs) {
+      const activeDB = DuckDBConnection.activeDBs[this.databasePath];
+      this.connection = await activeDB.database.connect();
+      activeDB.connections.push(this.connection);
+    } else {
+      const config: Record<string, string> = {
+        'custom_user_agent': `Malloy/${packageJson.version}`,
+      };
+      if (this.isMotherDuck) {
+        if (
+          !this.motherDuckToken &&
+          !process.env['motherduck_token'] &&
+          !process.env['MOTHERDUCK_TOKEN']
+        ) {
+          this.setupError = new Error('Please set your MotherDuck Token');
+          // Resolve instead of error because errors cannot be caught.
+          return;
         }
-        if (this.readOnly) {
-          config['access_mode'] = 'read_only';
+        if (this.motherDuckToken) {
+          config['motherduck_token'] = this.motherDuckToken;
         }
-        const database = new Database(this.databasePath, config, err => {
-          if (err) {
-            this.setupError = err;
-          } else {
-            this.connection = database.connect();
-            const activeDB: ActiveDB = {
-              database,
-              connections: [],
-            };
-            DuckDBConnection.activeDBs[this.databasePath] = activeDB;
-
-            activeDB.connections.push(this.connection);
-          }
-          resolve();
-        });
       }
-    });
+      if (this.readOnly) {
+        config['access_mode'] = 'read_only';
+      }
+      try {
+        const database = await Database.create(this.databasePath, config);
+        this.connection = await database.connect();
+        const activeDB: ActiveDB = {
+          database,
+          connections: [],
+        };
+        DuckDBConnection.activeDBs[this.databasePath] = activeDB;
+
+        activeDB.connections.push(this.connection);
+      } catch (error) {
+        this.setupError = error;
+      }
+    }
   }
 
   async loadExtension(ext: string) {
@@ -214,33 +218,60 @@ export class DuckDBConnection extends DuckDBCommon {
     await this.isSetup;
   }
 
+  private duckDBValueToQueryValue(value: DuckDBValue): QueryValue {
+    if (value === null) {
+      return null;
+    } else if (typeof value === 'bigint') {
+      return Number(value);
+    } else if (typeof value === 'object') {
+      if (Array.isArray(value)) {
+        const result: QueryDataRow = {};
+        for (const [key, duckDBValue] of value) {
+          result[key] = this.duckDBValueToQueryValue(duckDBValue);
+        }
+        return result;
+      } else if (value instanceof DuckDBListValue) {
+        const result: unknown[] = [];
+        for (const duckdbValue of value.items) {
+          result.push(this.duckDBValueToQueryValue(duckdbValue));
+        }
+        return result as QueryValue;
+      } else if (value instanceof DuckDBStructValue) {
+        const result: QueryDataRow = {};
+        for (const key in value.entries) {
+          result[key] = this.duckDBValueToQueryValue(value.entries[key]);
+        }
+        return result;
+      } else {
+        return value.toString();
+      }
+    } else {
+      return value;
+    }
+  }
+
   protected async runDuckDBQuery(
     sql: string
-  ): Promise<{rows: TableData; totalRows: number}> {
-    return new Promise((resolve, reject) => {
-      if (this.connection) {
-        this.connection.all(sql, (err: DuckDbError | null, rows: TableData) => {
-          if (err) {
-            reject(err);
-          } else {
-            rows = JSON.parse(
-              JSON.stringify(rows, (_key, value) => {
-                if (typeof value === 'bigint') {
-                  return Number(value);
-                }
-                return value;
-              })
-            );
-            resolve({
-              rows,
-              totalRows: rows.length,
-            });
-          }
-        });
-      } else {
-        reject(new Error('Connection not open'));
+  ): Promise<{rows: QueryData; totalRows: number}> {
+    if (this.connection) {
+      const result = await this.connection.run(sql);
+      const duckDBRows = await result.getRows();
+      const columnNames = result.columnNames();
+      const rows: QueryData = [];
+      for (const duckDBRow of duckDBRows) {
+        const row: QueryDataRow = {};
+        for (let idx = 0; idx < columnNames.length; idx++) {
+          row[columnNames[idx]] = this.duckDBValueToQueryValue(duckDBRow[idx]);
+        }
+        rows.push(row);
       }
-    });
+      return {
+        rows,
+        totalRows: rows.length,
+      };
+    } else {
+      throw new Error('Connection not open');
+    }
   }
 
   public async *runSQLStream(
@@ -262,15 +293,29 @@ export class DuckDBConnection extends DuckDBCommon {
     }
 
     let index = 0;
-    for await (const row of this.connection.stream(statements[0])) {
-      if (
-        (rowLimit !== undefined && index >= rowLimit) ||
-        abortSignal?.aborted
-      ) {
-        break;
+    const result = await this.connection.run(statements[0]);
+    let done = false;
+    while (!done) {
+      const chunk = await result.fetchChunk();
+      // Last chunk will have zero rows.
+      if (!chunk || chunk.rowCount === 0) {
+        done = true;
+      } else {
+        const columnNames = result.columnNames();
+        const duckDBRows = chunk.getRows();
+        for (const duckDBRow of duckDBRows) {
+          if (++index > rowLimit || abortSignal?.aborted) {
+            return;
+          }
+          const row: QueryDataRow = {};
+          for (let idx = 0; idx < columnNames.length; idx++) {
+            row[columnNames[idx]] = this.duckDBValueToQueryValue(
+              duckDBRow[idx]
+            );
+          }
+          yield row;
+        }
       }
-      index++;
-      yield row;
     }
   }
 
@@ -285,7 +330,6 @@ export class DuckDBConnection extends DuckDBCommon {
         connection => connection !== this.connection
       );
       if (activeDB.connections.length === 0) {
-        activeDB.database.close();
         delete DuckDBConnection.activeDBs[this.databasePath];
       }
     }
