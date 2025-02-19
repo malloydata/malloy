@@ -68,4 +68,16 @@ describe('errors', () => {
         primary_key: id
     `).toLogAtLeast(errorMessage("Missing '{' after 'extend'"));
   });
+
+  test('missing alias for aggregate entry', () => {
+    expect(`
+        run: x -> {
+          aggregate: count()
+        }
+      `).toLogAtLeast(
+      errorMessage(
+        "'aggregate:' entries must include a name (ex: `some_name is count()`)"
+      )
+    );
+  });
 });
