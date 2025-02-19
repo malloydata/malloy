@@ -286,6 +286,10 @@ function eToStr(e: Expr, symbols: ESymbols): string {
       }
       return sql;
     }
+    case 'filterMatch': {
+      const fType = `${e.dataType[0].toUpperCase()}${e.dataType.slice(1)}`;
+      return `{filter${fType} ${subExpr(e.e)} | ${e.filter}}`;
+    }
   }
   if (exprHasKids(e) && e.kids['left'] && e.kids['right']) {
     return `{${subExpr(e.kids['left'])} ${e.node} ${subExpr(e.kids['right'])}}`;

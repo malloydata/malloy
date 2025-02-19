@@ -84,6 +84,7 @@ export type Expr =
   | TypecastExpr
   | RegexMatchExpr
   | RegexLiteralNode
+  | FilterMatchExpr
   | StringLiteralNode
   | NumberLiteralNode
   | BooleanLiteralNode
@@ -303,6 +304,22 @@ export function isRawCast(te: TypecastExpr): te is RawTypeCastExpr {
 export interface RegexMatchExpr extends ExprWithKids {
   node: 'regexpMatch';
   kids: {expr: Expr; regex: Expr};
+}
+
+export type FilterExprType =
+  | 'string'
+  | 'number'
+  | 'boolean'
+  | 'date'
+  | 'timestamp';
+export function isFilterExprType(s: string): s is FilterExprType {
+  return ['string', 'number', 'boolean', 'date', 'timestamp'].includes(s);
+}
+export interface FilterMatchExpr extends ExprE {
+  node: 'filterMatch';
+  dataType: FilterExprType;
+  notMatch?: true;
+  filter: string;
 }
 
 export interface TimeLiteralNode extends ExprLeaf {
@@ -1215,7 +1232,8 @@ export type NonAtomicType =
   | 'turtle' //   do NOT have the full type info, just noting the type
   | 'null'
   | 'duration'
-  | 'regular expression';
+  | 'regular expression'
+  | 'filter expression';
 export interface NonAtomicTypeDef {
   type: NonAtomicType;
 }

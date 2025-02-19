@@ -548,6 +548,7 @@ literal
   | NULL                                        # exprNULL
   | (TRUE | FALSE)                              # exprBool
   | HACKY_REGEX                                 # exprRegex
+  | filterString                                # filterString_stub
   | NOW                                         # exprNow
   ;
 
@@ -713,6 +714,21 @@ fieldName: id;
 sqlExploreNameRef: id;
 nameSQLBlock: id;
 connectionName: string;
+
+tripFilterString
+  : SQ3_FILTER
+  | BQ3_FILTER
+  | DQ3_FILTER
+  ;
+
+tickFilterString
+  : SQ_FILTER
+  | BQ_FILTER
+  | DQ_FILTER;
+
+filterString
+  : tripFilterString
+  | tickFilterString;
 
 // These are for debug launch configs. Without the EOF a parse can stop without
 // parsing the entire input, if it is legal up to some token, for the debuger

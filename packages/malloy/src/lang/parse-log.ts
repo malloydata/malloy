@@ -402,6 +402,7 @@ type MessageParameterTypes = {
   'cannot-tag-include-except': string;
   'unsupported-path-in-include': string;
   'wildcard-include-rename': string;
+  'filter-expression-type': string;
 };
 
 export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {

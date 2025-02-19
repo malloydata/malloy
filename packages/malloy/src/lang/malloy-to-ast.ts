@@ -2191,4 +2191,22 @@ export class MalloyToAST
     );
     return inStmt;
   }
+
+  visitTickFilterString(
+    pcx: parse.TickFilterStringContext
+  ): ast.ExprFilterExpression {
+    const fString = pcx.text.slice(1).trimStart(); // remove fSPACE
+    const filterText = fString.slice(1, -1);
+    const mfe = new ast.ExprFilterExpression(filterText);
+    return this.astAt(mfe, pcx);
+  }
+
+  visitTripFilterString(
+    pcx: parse.TripFilterStringContext
+  ): ast.ExprFilterExpression {
+    const fString = pcx.text.slice(1).trimStart();
+    const filterText = fString.slice(3, -3);
+    const mfe = new ast.ExprFilterExpression(filterText);
+    return this.astAt(mfe, pcx);
+  }
 }

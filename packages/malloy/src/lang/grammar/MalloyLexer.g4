@@ -132,21 +132,31 @@ WITH: W I T H ;
 YEAR: Y E A R S?;
 UNGROUPED: U N G R O U P E D;
 
-STRING_ESCAPE
-  : '\\' '\''
-  | '\\' '\\'
-  | '\\' .
-  ;
-HACKY_REGEX: ('/' | [rR]) '\'' (STRING_ESCAPE | ~('\\' | '\''))* '\'';
+fragment SQ: '\'';
+fragment BQ: '`';
+fragment DQ: '"';
+fragment SQ3: SQ SQ SQ;
+fragment DQ3: DQ DQ DQ;
+fragment BQ3: BQ BQ BQ;
+fragment RAW_CHAR: ( '\\' . ) | (~ '\\');
+fragment FILTER: F SPACE_CHAR*;
+HACKY_REGEX: ('/' | [rR]) SQ RAW_CHAR* SQ;
+
+SQ3_FILTER: FILTER SQ3 RAW_CHAR* SQ3;
+SQ_FILTER: FILTER SQ RAW_CHAR* SQ;
+DQ3_FILTER: FILTER DQ3 RAW_CHAR* DQ3;
+DQ_FILTER: FILTER DQ RAW_CHAR* DQ;
+BQ3_FILTER: FILTER BQ3 RAW_CHAR* BQ3;
+BQ_FILTER: FILTER BQ RAW_CHAR* BQ;
 
 fragment HEX: [0-9a-fA-F];
 fragment UNICODE: '\\u' HEX HEX HEX HEX;
 fragment SAFE_NON_QUOTE: ~ ['"`\\\u0000-\u001F];
 fragment ESCAPED: '\\' ~ '\n';
 fragment STR_CHAR: UNICODE | ESCAPED | SAFE_NON_QUOTE | '\t';
-SQ_STRING: '\'' (STR_CHAR | ["`])* '\'';
-DQ_STRING: '"' (STR_CHAR | ['`])* '"';
-BQ_STRING: '`' (STR_CHAR | ['"])* '`';
+SQ_STRING: SQ (STR_CHAR | ["`])* SQ;
+DQ_STRING: DQ (STR_CHAR | ['`])* DQ;
+BQ_STRING: BQ (STR_CHAR | ['"])* BQ;
 
 fragment F_TO_EOL: ~[\r\n]* (('\r'? '\n') | EOF);
 DOC_ANNOTATION: '##' F_TO_EOL;
