@@ -124,7 +124,9 @@ describe('model statements', () => {
 
 describe('error handling', () => {
   test('no close brace', () => {
-    expect('run: a -> { group_by: ai').toLog(errorMessage("'{' missing a '}'"));
+    expect('run: a -> { group_by: ai').toLog(
+      errorMessage("Missing '}' at '<EOF>'")
+    );
   });
   test('field and query with same name does not overflow', () => {
     expect(`
