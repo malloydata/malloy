@@ -86,18 +86,22 @@ const checkTokenSequenceMatch = (
   direction: 'lookahead' | 'lookback'
 ): boolean => {
   try {
-    let isMatch = true;
     for (let i = 0; i < sequence.length; i++) {
-      const tokenIndex = direction === 'lookahead' ? i + 1 : -1 * (i + 1);
+      // Note: positive lookahead starts at '2' because '1' is the current token.
+      const tokenIndex = direction === 'lookahead' ? i + 2 : -1 * (i + 1);
       const streamToken = parser.inputStream.LA(tokenIndex);
-      if (sequence[i] > 0 && streamToken !== sequence[i]) {
-        isMatch = false;
-      } else if (sequence[i] < 0 && streamToken === sequence[i]) {
-        isMatch = false;
+
+      // Note: negative checking is < -1 becuase Token.EOF is -1, but below
+      // that we use negatives to indicate "does-not-match" rules.
+      if (sequence[i] >= -1 && streamToken !== sequence[i]) {
+        return false;
+      }
+
+      if (sequence[i] < -1 && streamToken === -1 * sequence[i]) {
+        return false;
       }
     }
-
-    return isMatch;
+    return true;
   } catch (ex) {
     // There may not be enough lookback tokens. If so, the case doesn't match.
     return false;

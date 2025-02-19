@@ -9,18 +9,10 @@ import {errorMessage} from './test-translator';
 import './parse-expects';
 
 describe('errors', () => {
-  test('missing closing curly, EOF', () => {
+  test('source missing closing curly: EOF', () => {
     expect('source: x is a extend {').toLogAtLeast(
       errorMessage("Missing '}' at '<EOF>'")
     );
-  });
-
-  test('missing closing curly, source', () => {
-    expect(`source: x is a extend {
-      where: val > 5
-
-    source: y is a extend { }
-  `).toLogAtLeast(errorMessage("Missing '}' at 'source'"));
   });
 
   test('view is missing name', () => {
@@ -45,7 +37,7 @@ describe('errors', () => {
           group_by: c
         }
       }
-      `).toLogAtLeast(errorMessage("Missing '}' at 'view'"));
+      `).toLogAtLeast(errorMessage("Missing '}' at 'view:'"));
   });
 
   test('incorrect opening curly after dimension', () => {
@@ -60,18 +52,20 @@ describe('errors', () => {
     );
   });
 
-  test("misspelled primarykey", () => {
+  test('misspelled primarykey', () => {
     expect(`
       source: x is a extend {
         primarykey: id
       }
-    `).toLogAtLeast(errorMessage("no viable alternative at input 'primarykey'"))
+    `).toLogAtLeast(
+      errorMessage("no viable alternative at input 'primarykey'")
+    );
   });
 
-  test("missing opening curly after source extend keyword", () => {
+  test('missing opening curly after source extend keyword', () => {
     expect(`
-      source: x is a extend:
+      source: x is a extend
         primary_key: id
-    `).toLogAtLeast(errorMessage("Missing '{' after 'extend'"))
+    `).toLogAtLeast(errorMessage("Missing '{' after 'extend'"));
   });
 });

@@ -29,7 +29,20 @@ export const commonErrorCases: ErrorCase[] = [
     ruleContextOptions: ['vExpr'],
     offendingSymbol: MalloyParser.VIEW,
     currentToken: MalloyParser.OCURLY,
-  }
+  },
+  {
+    errorMessage: "Missing '}' at '${currentToken}'",
+    ruleContextOptions: [
+      'exploreProperties',
+      'queryProperties',
+      'exploreStatement',
+    ],
+    lookAheadOptions: [
+      [MalloyParser.EOF],
+      [MalloyParser.RUN],
+      [MalloyParser.SOURCE],
+    ],
+  },
 ];
 
 export class MalloyParserErrorListener implements ANTLRErrorListener<Token> {

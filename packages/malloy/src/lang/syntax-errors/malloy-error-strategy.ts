@@ -11,15 +11,6 @@ import {checkCustomErrorMessage, ErrorCase} from './custom-error-messages';
 
 const customErrorCases: ErrorCase[] = [
   {
-    errorMessage: "Missing '}' at '${currentToken}'",
-    ruleContextOptions: ['exploreProperties', 'queryProperties'],
-    lookAheadOptions: [
-      [MalloyParser.EOF],
-      [MalloyParser.RUN],
-      [MalloyParser.SOURCE],
-    ],
-  },
-  {
     errorMessage: "Missing '{' after 'extend'",
     currentToken: MalloyParser.EXTEND,
     ruleContextOptions: ['sqExpr'],
