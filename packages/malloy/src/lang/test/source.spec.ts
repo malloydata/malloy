@@ -33,6 +33,9 @@ import {
 import './parse-expects';
 
 describe('source:', () => {
+  test('failure', () => {
+    expect(10).toEqual(20);
+  });
   test('table', () => {
     expect("source: testA is _db_.table('aTable')").toTranslate();
   });
