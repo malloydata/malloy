@@ -533,6 +533,36 @@ abstract class ASTNode<T> {
   }
 
   /**
+   * @hidden
+   */
+  asAnnotationList(): ASTAnnotationList {
+    if (this instanceof ASTAnnotationList) return this;
+    throw new Error('Not an ASTAnnotationList');
+  }
+
+  /**
+   * @hidden
+   */
+  findAnnotationList(path: Path): ASTAnnotationList {
+    return this.find(path).asAnnotationList();
+  }
+
+  /**
+   * @hidden
+   */
+  asAnnotation(): ASTAnnotation {
+    if (this instanceof ASTAnnotation) return this;
+    throw new Error('Not an ASTAnnotation');
+  }
+
+  /**
+   * @hidden
+   */
+  findAnnotation(path: Path): ASTAnnotation {
+    return this.find(path).asAnnotation();
+  }
+
+  /**
    * @internal
    */
   get parent() {
@@ -2062,7 +2092,7 @@ export class ASTGroupByViewOperation extends ASTObjectNode<
   {
     __type: Malloy.ViewOperationType.GroupBy;
     items: ASTGroupByItemList;
-    annotations?: Deletable<ASTUnimplemented<Malloy.TagOrAnnotation[]>>;
+    annotations?: Deletable<ASTAnnotationList>;
   }
 > {
   readonly type: Malloy.ViewOperationType = Malloy.ViewOperationType.GroupBy;
@@ -2079,8 +2109,7 @@ export class ASTGroupByViewOperation extends ASTObjectNode<
     super(node, {
       __type: node.__type,
       items: new ASTGroupByItemList(node.items),
-      annotations: node.annotations && new ASTUnimplemented(node.annotations),
-      // annotations: node.annotations && new TagOrAnnotationListAST(),
+      annotations: node.annotations && new ASTAnnotationList(node.annotations),
     });
   }
 
@@ -2131,7 +2160,7 @@ export class ASTAggregateViewOperation extends ASTObjectNode<
   {
     __type: Malloy.ViewOperationType.Aggregate;
     items: ASTAggregateItemList;
-    annotations?: Deletable<ASTUnimplemented<Malloy.TagOrAnnotation[]>>;
+    annotations?: Deletable<ASTAnnotationList>;
   }
 > {
   readonly type: Malloy.ViewOperationType = Malloy.ViewOperationType.Aggregate;
@@ -2148,8 +2177,7 @@ export class ASTAggregateViewOperation extends ASTObjectNode<
     super(node, {
       __type: node.__type,
       items: new ASTAggregateItemList(node.items),
-      annotations: node.annotations && new ASTUnimplemented(node.annotations),
-      // annotations: node.annotations && new TagOrAnnotationListAST(),
+      annotations: node.annotations && new ASTAnnotationList(node.annotations),
     });
   }
 
@@ -2470,13 +2498,13 @@ export class ASTField extends ASTObjectNode<
   Malloy.Field,
   {
     expression: ASTExpression;
-    annotations?: Deletable<ASTUnimplemented<Malloy.TagOrAnnotation[]>>;
+    annotations?: Deletable<ASTAnnotationList>;
   }
 > {
   constructor(public node: Malloy.Field) {
     super(node, {
       expression: ASTExpression.from(node.expression),
-      annotations: node.annotations && new ASTUnimplemented(node.annotations),
+      annotations: node.annotations && new ASTAnnotationList(node.annotations),
     });
   }
 
@@ -2691,7 +2719,7 @@ export class ASTNestViewOperation extends ASTObjectNode<
   {
     __type: Malloy.ViewOperationType.Nest;
     items: ASTNestItemList;
-    annotations?: Deletable<ASTUnimplemented<Malloy.TagOrAnnotation[]>>;
+    annotations?: Deletable<ASTAnnotationList>;
   }
 > {
   readonly type: Malloy.ViewOperationType = Malloy.ViewOperationType.Nest;
@@ -2708,8 +2736,7 @@ export class ASTNestViewOperation extends ASTObjectNode<
     super(node, {
       __type: node.__type,
       items: new ASTNestItemList(node.items),
-      annotations: node.annotations && new ASTUnimplemented(node.annotations),
-      // annotations: node.annotations && new TagOrAnnotationListAST(),
+      annotations: node.annotations && new ASTAnnotationList(node.annotations),
     });
   }
 
@@ -2814,13 +2841,13 @@ export class ASTView extends ASTObjectNode<
   Malloy.View,
   {
     pipeline: ASTPipeline;
-    annotations?: Deletable<ASTUnimplemented<Malloy.TagOrAnnotation[]>>;
+    annotations?: Deletable<ASTAnnotationList>;
   }
 > {
   constructor(public node: Malloy.View) {
     super(node, {
       pipeline: new ASTPipeline(node.pipeline),
-      annotations: node.annotations && new ASTUnimplemented(node.annotations),
+      annotations: node.annotations && new ASTAnnotationList(node.annotations),
     });
   }
 
@@ -2920,5 +2947,51 @@ function fieldTypeName(type: Malloy.FieldInfoType): string {
       return 'view';
     case Malloy.FieldInfoType.Join:
       return 'join';
+  }
+}
+
+export class ASTAnnotationList extends ASTListNode<
+  Malloy.Annotation,
+  ASTAnnotation
+> {
+  constructor(annotations: Malloy.Annotation[]) {
+    super(
+      annotations,
+      annotations.map(p => new ASTAnnotation(p))
+    );
+  }
+
+  get annotations() {
+    return this.children;
+  }
+}
+
+export class ASTAnnotation extends ASTObjectNode<
+  Malloy.Annotation,
+  {
+    value: string;
+  }
+> {
+  readonly type: Malloy.ViewOperationType = Malloy.ViewOperationType.Limit;
+
+  get value() {
+    return this.children.value;
+  }
+
+  constructor(public node: Malloy.Annotation) {
+    super(node, {
+      value: node.value,
+    });
+  }
+
+  /**
+   * @internal
+   */
+  get list() {
+    return this.parent.asAnnotationList();
+  }
+
+  delete() {
+    this.list.remove(this);
   }
 }
