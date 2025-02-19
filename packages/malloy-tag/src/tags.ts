@@ -48,8 +48,13 @@ import {
   Token,
 } from 'antlr4ts';
 import {parseString} from './util';
-import {LogMessage} from './log';
-import {Annotation, Note} from './types';
+
+export interface TagError {
+  message: string;
+  line: number;
+  offset: number;
+  code: string;
+}
 
 // The distinction between the interface and the Tag class exists solely to
 // make it possible to write tests and specify expected results This
@@ -65,18 +70,7 @@ export interface TagInterface {
 
 export interface TagParse {
   tag: Tag;
-  log: LogMessage[];
-}
-
-export interface TagParseSpec {
-  prefix?: RegExp;
-  extending?: Tag;
-  scopes?: Tag[];
-}
-
-export interface Taggable {
-  tagParse: (spec?: TagParseSpec) => TagParse;
-  getTaglines: (prefix?: RegExp) => string[];
+  log: TagError[];
 }
 
 /**
@@ -153,88 +147,38 @@ export class Tag implements TagInterface {
    * Parse a line of Malloy tag language into a Tag which can be queried
    * @param source -- The source line to be parsed. If the string starts with #, then it skips
    *   all characters up to the first space.
+   * @param lineNumber -- A line number to be associated with the parse errors.
    * @param extending A tag which this line will be extending
    * @param importing Outer "scopes" for $() references
-   * @returns Something shaped like { tag: Tag  , log: ParseErrors[] }
+   * @returns Something shaped like { tag: Tag, log: ParseErrors[] }
    */
-  static fromTagline(
-    str: string,
-    extending: Tag | undefined,
+  static fromTagLine(
+    source: string,
+    lineNumber = 0,
+    extending?: Tag,
     ...importing: Tag[]
   ): TagParse {
-    // TODO -- Figure out the right thing about the URL
-    const url = `internal://tag-parse/from-tag-line?${encodeURIComponent(str)}`;
-    return parseTagline(str, extending, importing, url, 0, 0);
+    return parseTagLine(source, extending, importing, lineNumber);
   }
 
-  static addModelScope(
-    spec: TagParseSpec | undefined,
-    modelScope: Tag
-  ): TagParseSpec {
-    const useSpec = spec ? {...spec} : {};
-    if (useSpec.scopes) {
-      useSpec.scopes = useSpec.scopes.concat(modelScope);
-    } else {
-      useSpec.scopes = [modelScope];
+  /**
+   * Parse multiple lines of Malloy tag language, merging them into a single Tag
+   * @param lines -- The source line to be parsed. If the string starts with #, then it skips
+   *   all characters up to the first space.
+   * @param extending A tag which this line will be extending
+   * @param importing Outer "scopes" for $() references
+   * @returns Something shaped like { tag: Tag, log: ParseErrors[] }
+   */
+  static fromTagLines(lines: string[], extending?: Tag, ...importing: Tag[]) {
+    const allErrs: TagError[] = [];
+    let current: Tag | undefined = extending;
+    for (let i = 0; i < lines.length; i++) {
+      const text = lines[i];
+      const noteParse = parseTagLine(text, extending, importing, i);
+      current = noteParse.tag;
+      allErrs.push(...noteParse.log);
     }
-    return useSpec;
-  }
-
-  static annotationToTaglines(
-    annote: Annotation | undefined,
-    prefix?: RegExp
-  ): string[] {
-    annote ||= {};
-    const tagLines = annote.inherits
-      ? Tag.annotationToTaglines(annote.inherits, prefix)
-      : [];
-    function prefixed(na: Note[] | undefined): string[] {
-      const ret: string[] = [];
-      for (const n of na || []) {
-        if (prefix === undefined || n.text.match(prefix)) {
-          ret.push(n.text);
-        }
-      }
-      return ret;
-    }
-    return tagLines.concat(prefixed(annote.blockNotes), prefixed(annote.notes));
-  }
-
-  static annotationToTag(
-    annote: Annotation | undefined,
-    spec: TagParseSpec = {}
-  ): TagParse {
-    let extending = spec.extending || new Tag();
-    const prefix = spec.prefix || /^##? /;
-    annote ||= {};
-    const allErrs: LogMessage[] = [];
-    if (annote.inherits) {
-      const inherits = Tag.annotationToTag(annote.inherits, spec);
-      allErrs.push(...inherits.log);
-      extending = inherits.tag;
-    }
-    const allNotes: Note[] = [];
-    if (annote.blockNotes) {
-      allNotes.push(...annote.blockNotes);
-    }
-    if (annote.notes) {
-      allNotes.push(...annote.notes);
-    }
-    for (const note of allNotes) {
-      if (note.text.match(prefix)) {
-        const noteParse = parseTagline(
-          note.text,
-          extending,
-          spec.scopes || [],
-          note.at.url,
-          note.at.range.start.line,
-          note.at.range.start.character
-        );
-        extending = noteParse.tag;
-        allErrs.push(...noteParse.log);
-      }
-    }
-    return {tag: extending, log: allErrs};
+    return {tag: current, log: allErrs};
   }
 
   constructor(from: TagInterface = {}) {
@@ -355,12 +299,8 @@ export class Tag implements TagInterface {
 }
 
 class TagErrorListener implements ANTLRErrorListener<Token> {
-  log: LogMessage[] = [];
-  constructor(
-    readonly sourceURL: string,
-    readonly atLine: number,
-    readonly fromChar: number
-  ) {}
+  log: TagError[] = [];
+  constructor(readonly line: number) {}
 
   syntaxError(
     recognizer: unknown,
@@ -370,32 +310,21 @@ class TagErrorListener implements ANTLRErrorListener<Token> {
     msg: string,
     _e: unknown
   ): void {
-    const errAt = {
-      line: this.atLine,
-      character: this.fromChar + charPositionInLine,
-    };
-    const range = {start: errAt, end: errAt};
-    const logMsg: LogMessage = {
+    const logMsg: TagError = {
       code: 'tag-parse-syntax-error',
       message: msg,
-      at: {url: this.sourceURL, range},
-      severity: 'error',
+      line: this.line,
+      offset: charPositionInLine,
     };
     this.log.push(logMsg);
   }
 
   semanticError(cx: ParserRuleContext, code: string, msg: string): void {
-    const left = this.fromChar + cx.start.charPositionInLine;
-    const errAt = {
-      line: this.atLine,
-      character: left,
-    };
-    const range = {start: errAt, end: errAt};
-    const logMsg: LogMessage = {
+    const logMsg: TagError = {
       code,
       message: msg,
-      at: {url: this.sourceURL, range},
-      severity: 'error',
+      line: this.line,
+      offset: cx.start.charPositionInLine,
     };
     this.log.push(logMsg);
   }
@@ -442,13 +371,11 @@ function getString(ctx: StringContext) {
   return ctx.text;
 }
 
-function parseTagline(
+function parseTagLine(
   source: string,
   extending: Tag | undefined,
   outerScope: Tag[],
-  sourceURL: string,
-  onLine: number,
-  atChar: number
+  onLine: number
 ): TagParse {
   if (source[0] === '#') {
     const skipTo = source.indexOf(' ');
@@ -461,17 +388,17 @@ function parseTagline(
   const inputStream = CharStreams.fromString(source);
   const lexer = new MalloyTagLexer(inputStream);
   const tokenStream = new CommonTokenStream(lexer);
-  const pLog = new TagErrorListener(sourceURL, onLine, atChar);
+  const pLog = new TagErrorListener(onLine);
   const taglineParser = new MalloyTagParser(tokenStream);
   taglineParser.removeErrorListeners();
   taglineParser.addErrorListener(pLog);
   const tagTree = taglineParser.tagLine();
-  const treeWalker = new TaglineParser(outerScope, pLog);
+  const treeWalker = new TagLineParser(outerScope, pLog);
   const tag = treeWalker.tagLineToTag(tagTree, extending);
   return {tag, log: pLog.log};
 }
 
-class TaglineParser
+class TagLineParser
   extends AbstractParseTreeVisitor<Tag>
   implements MalloyTagVisitor<Tag>
 {

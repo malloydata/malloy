@@ -35,7 +35,7 @@ declare global {
 expect.extend({
   tagsAre(src: string | Tag, result: Tag) {
     if (typeof src === 'string') {
-      const {tag, log} = Tag.fromTagline(src, undefined);
+      const {tag, log} = Tag.fromTagLine(src, undefined);
       const errs = log.map(e => e.message);
       if (log.length > 0) {
         return {
@@ -161,28 +161,12 @@ describe('tagParse to Tag', () => {
     const x: TagTestTuple = ['word -...', {}];
     expect(x[0]).tagsAre(x[1]);
   });
-  test('inherits can be over-ridden', () => {
-    const loc1 = {
-      url: 'inherit-test',
-      range: {start: {line: 1, character: 0}, end: {line: 1, character: 0}},
-    };
-    const loc2 = {
-      url: 'inherit-test',
-      range: {start: {line: 2, character: 0}, end: {line: 2, character: 0}},
-    };
-    const nestedTags = Tag.annotationToTag({
-      inherits: {notes: [{text: '## from=inherits\n', at: loc1}]},
-      notes: [{text: '## from=notes\n', at: loc2}],
-    });
-    const fromVal = nestedTags.tag.text('from');
-    expect(fromVal).toEqual('notes');
-  });
 });
 
 describe('Tag access', () => {
   test('just text', () => {
     const strToParse = 'a=b';
-    const getTags = Tag.fromTagline(strToParse, undefined);
+    const getTags = Tag.fromTagLine(strToParse, undefined);
     expect(getTags.log).toEqual([]);
     const a = getTags.tag.tag('a');
     expect(a).toBeDefined();
@@ -190,7 +174,7 @@ describe('Tag access', () => {
   });
   test('tag path', () => {
     const strToParse = 'a.b.c.d.e=f';
-    const tagParse = Tag.fromTagline(strToParse, undefined);
+    const tagParse = Tag.fromTagLine(strToParse, undefined);
     expect(tagParse.log).toEqual([]);
     const abcde = tagParse.tag.tag('a', 'b', 'c', 'd', 'e');
     expect(abcde).toBeDefined();
@@ -198,7 +182,7 @@ describe('Tag access', () => {
   });
   test('just array', () => {
     const strToParse = 'a=[b]';
-    const getTags = Tag.fromTagline(strToParse, undefined);
+    const getTags = Tag.fromTagLine(strToParse, undefined);
     expect(getTags.log).toEqual([]);
     const a = getTags.tag.tag('a');
     const aval = a?.array();
@@ -210,7 +194,7 @@ describe('Tag access', () => {
   });
   test('array as text', () => {
     const strToParse = 'a=[b]';
-    const getTags = Tag.fromTagline(strToParse, undefined);
+    const getTags = Tag.fromTagLine(strToParse, undefined);
     expect(getTags.log).toEqual([]);
     const a = getTags.tag.tag('a');
     expect(a).toBeDefined();
@@ -218,7 +202,7 @@ describe('Tag access', () => {
   });
   test('text as array', () => {
     const strToParse = 'a=b';
-    const getTags = Tag.fromTagline(strToParse, undefined);
+    const getTags = Tag.fromTagLine(strToParse, undefined);
     expect(getTags.log).toEqual([]);
     const a = getTags.tag.tag('a');
     expect(a).toBeDefined();
@@ -226,7 +210,7 @@ describe('Tag access', () => {
   });
   test('just numeric', () => {
     const strToParse = 'a=7';
-    const getTags = Tag.fromTagline(strToParse, undefined);
+    const getTags = Tag.fromTagLine(strToParse, undefined);
     expect(getTags.log).toEqual([]);
     const a = getTags.tag.tag('a');
     expect(a).toBeDefined();
@@ -236,7 +220,7 @@ describe('Tag access', () => {
   });
   test('text as numeric', () => {
     const strToParse = 'a=seven';
-    const getTags = Tag.fromTagline(strToParse, undefined);
+    const getTags = Tag.fromTagLine(strToParse, undefined);
     expect(getTags.log).toEqual([]);
     const a = getTags.tag.tag('a');
     expect(a).toBeDefined();
@@ -245,7 +229,7 @@ describe('Tag access', () => {
   });
   test('array as numeric', () => {
     const strToParse = 'a=[seven]';
-    const getTags = Tag.fromTagline(strToParse, undefined);
+    const getTags = Tag.fromTagLine(strToParse, undefined);
     expect(getTags.log).toEqual([]);
     const a = getTags.tag.tag('a');
     expect(a).toBeDefined();
@@ -254,7 +238,7 @@ describe('Tag access', () => {
   });
   test('full text array', () => {
     const strToParse = 'a=[b,c]';
-    const getTags = Tag.fromTagline(strToParse, undefined);
+    const getTags = Tag.fromTagLine(strToParse, undefined);
     expect(getTags.log).toEqual([]);
     const a = getTags.tag.tag('a');
     expect(a).toBeDefined();
@@ -263,7 +247,7 @@ describe('Tag access', () => {
   });
   test('filtered text array', () => {
     const strToParse = 'a=[b,c,{d}]';
-    const getTags = Tag.fromTagline(strToParse, undefined);
+    const getTags = Tag.fromTagLine(strToParse, undefined);
     expect(getTags.log).toEqual([]);
     const a = getTags.tag.tag('a');
     expect(a).toBeDefined();
@@ -272,7 +256,7 @@ describe('Tag access', () => {
   });
   test('full numeric array', () => {
     const strToParse = 'a=[1,2]';
-    const getTags = Tag.fromTagline(strToParse, undefined);
+    const getTags = Tag.fromTagLine(strToParse, undefined);
     expect(getTags.log).toEqual([]);
     const a = getTags.tag.tag('a');
     expect(a).toBeDefined();
@@ -281,7 +265,7 @@ describe('Tag access', () => {
   });
   test('filtered numeric array', () => {
     const strToParse = 'a=[1,2,three]';
-    const getTags = Tag.fromTagline(strToParse, undefined);
+    const getTags = Tag.fromTagLine(strToParse);
     expect(getTags.log).toEqual([]);
     const a = getTags.tag.tag('a');
     expect(a).toBeDefined();
@@ -290,15 +274,15 @@ describe('Tag access', () => {
   });
   test('has', () => {
     const strToParse = 'a b.d';
-    const getTags = Tag.fromTagline(strToParse, undefined);
+    const getTags = Tag.fromTagLine(strToParse);
     expect(getTags.log).toEqual([]);
     expect(getTags.tag.has('a')).toBeTruthy();
     expect(getTags.tag.has('b', 'd')).toBeTruthy();
     expect(getTags.tag.has('c')).toBeFalsy();
   });
   test('property access on existing tag (which does not yet have properties)', () => {
-    const parsePlot = Tag.fromTagline('# plot', undefined);
-    const parsed = Tag.fromTagline('# plot.x=2', parsePlot.tag);
+    const parsePlot = Tag.fromTagLine('# plot');
+    const parsed = Tag.fromTagLine('# plot.x=2', 0, parsePlot.tag);
     const allTags = parsed.tag;
     const plotTag = allTags.tag('plot');
     const xTag = plotTag!.tag('x');

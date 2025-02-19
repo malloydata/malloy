@@ -94,7 +94,7 @@ export class MalloyToAST
   ) {
     super();
     for (const flag of DEFAULT_COMPILER_FLAGS) {
-      const withNewTag = Tag.fromTagline(flag, this.compilerFlags);
+      const withNewTag = Tag.fromTagLine(flag, 0, this.compilerFlags);
       this.compilerFlags = withNewTag.tag;
     }
   }

@@ -132,6 +132,7 @@ import {
 } from './materialization/utils';
 import {EventStream} from '../runtime_types';
 import {Tag} from '@malloydata/malloy-tag';
+import { annotationToTag } from '../annotation';
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
@@ -4351,7 +4352,7 @@ class QueryStruct {
   modelCompilerFlags(): Tag {
     if (this._modelTag === undefined) {
       const annotation = this.structDef.modelAnnotation;
-      const {tag} = Tag.annotationToTag(annotation, {prefix: /^##!\s*/});
+      const {tag} = annotationToTag(annotation, {prefix: /^##!\s*/});
       this._modelTag = tag;
     }
     return this._modelTag;

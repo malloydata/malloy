@@ -87,11 +87,23 @@ import {
   LookupConnection,
 } from './connection/types';
 import {DateTime} from 'luxon';
-import {Tag, TagParse, TagParseSpec, Taggable} from '@malloydata/malloy-tag';
+import {Tag} from '@malloydata/malloy-tag';
 import {Dialect, getDialect} from './dialect';
 import {PathInfo} from './lang/parse-tree-walkers/find-table-path-walker';
 import {MALLOY_VERSION} from './version';
 import {v5 as uuidv5} from 'uuid';
+import {
+  addModelScope,
+  annotationToTag,
+  annotationToTaglines,
+  MalloyTagParse,
+  TagParseSpec,
+} from './annotation';
+
+export interface Taggable {
+  tagParse: (spec?: TagParseSpec) => MalloyTagParse;
+  getTaglines: (prefix?: RegExp) => string[];
+}
 
 export interface Loggable {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -840,12 +852,12 @@ export class Model implements Taggable {
     this._importAt = importAt;
   }
 
-  tagParse(spec?: TagParseSpec): TagParse {
-    return Tag.annotationToTag(this.modelDef.annotation, spec);
+  tagParse(spec?: TagParseSpec): MalloyTagParse {
+    return annotationToTag(this.modelDef.annotation, spec);
   }
 
   getTaglines(prefix?: RegExp) {
-    return Tag.annotationToTaglines(this.modelDef.annotation, prefix);
+    return annotationToTaglines(this.modelDef.annotation, prefix);
   }
 
   /**
@@ -999,13 +1011,13 @@ export class PreparedQuery implements Taggable {
   }
 
   tagParse(spec?: TagParseSpec) {
-    const modelScope = Tag.annotationToTag(this._modelDef.annotation).tag;
-    spec = Tag.addModelScope(spec, modelScope);
-    return Tag.annotationToTag(this._query.annotation, spec);
+    const modelScope = annotationToTag(this._modelDef.annotation).tag;
+    spec = addModelScope(spec, modelScope);
+    return annotationToTag(this._query.annotation, spec);
   }
 
   getTaglines(prefix?: RegExp) {
-    return Tag.annotationToTaglines(this._query.annotation, prefix);
+    return annotationToTaglines(this._query.annotation, prefix);
   }
 
   /**
@@ -1342,14 +1354,14 @@ export class PreparedResult implements Taggable {
     return new PreparedResult(query, modelDef);
   }
 
-  tagParse(spec?: TagParseSpec): TagParse {
-    const modelScope = Tag.annotationToTag(this.modelDef.annotation).tag;
-    spec = Tag.addModelScope(spec, modelScope);
-    return Tag.annotationToTag(this.inner.annotation, spec);
+  tagParse(spec?: TagParseSpec): MalloyTagParse {
+    const modelScope = annotationToTag(this.modelDef.annotation).tag;
+    spec = addModelScope(spec, modelScope);
+    return annotationToTag(this.inner.annotation, spec);
   }
 
   getTaglines(prefix?: RegExp) {
-    return Tag.annotationToTaglines(this.inner.annotation, prefix);
+    return annotationToTaglines(this.inner.annotation, prefix);
   }
 
   get annotation(): Annotation | undefined {
@@ -1361,7 +1373,7 @@ export class PreparedResult implements Taggable {
   }
 
   get modelTag(): Tag {
-    return Tag.annotationToTag(this.modelDef.annotation).tag;
+    return annotationToTag(this.modelDef.annotation).tag;
   }
 
   /**
@@ -1669,17 +1681,17 @@ export class Explore extends Entity implements Taggable {
     return false;
   }
 
-  tagParse(spec?: TagParseSpec): TagParse {
-    return Tag.annotationToTag(this._structDef.annotation, spec);
+  tagParse(spec?: TagParseSpec): MalloyTagParse {
+    return annotationToTag(this._structDef.annotation, spec);
   }
 
   getTaglines(prefix?: RegExp): string[] {
-    return Tag.annotationToTaglines(this._structDef.annotation, prefix);
+    return annotationToTaglines(this._structDef.annotation, prefix);
   }
 
   private parsedModelTag?: Tag;
   public get modelTag(): Tag {
-    this.parsedModelTag ||= Tag.annotationToTag(
+    this.parsedModelTag ||= annotationToTag(
       this._structDef.modelAnnotation
     ).tag;
     return this.parsedModelTag;
@@ -1959,12 +1971,12 @@ export class AtomicField extends Entity implements Taggable {
   }
 
   tagParse(spec?: TagParseSpec) {
-    spec = Tag.addModelScope(spec, this.parent.modelTag);
-    return Tag.annotationToTag(this.fieldTypeDef.annotation, spec);
+    spec = addModelScope(spec, this.parent.modelTag);
+    return annotationToTag(this.fieldTypeDef.annotation, spec);
   }
 
   getTaglines(prefix?: RegExp) {
-    return Tag.annotationToTaglines(this.fieldTypeDef.annotation, prefix);
+    return annotationToTaglines(this.fieldTypeDef.annotation, prefix);
   }
 
   public isIntrinsic(): boolean {
@@ -2258,12 +2270,12 @@ export class QueryField extends Query implements Taggable {
   }
 
   tagParse(spec?: TagParseSpec) {
-    spec = Tag.addModelScope(spec, this.parent.modelTag);
-    return Tag.annotationToTag(this.turtleDef.annotation, spec);
+    spec = addModelScope(spec, this.parent.modelTag);
+    return annotationToTag(this.turtleDef.annotation, spec);
   }
 
   getTaglines(prefix?: RegExp) {
-    return Tag.annotationToTaglines(this.turtleDef.annotation, prefix);
+    return annotationToTaglines(this.turtleDef.annotation, prefix);
   }
 
   public isQueryField(): this is QueryField {
@@ -2332,8 +2344,8 @@ export class ExploreField extends Explore {
   }
 
   override tagParse(spec?: TagParseSpec) {
-    spec = Tag.addModelScope(spec, this._parentExplore.modelTag);
-    return Tag.annotationToTag(this._structDef.annotation, spec);
+    spec = addModelScope(spec, this._parentExplore.modelTag);
+    return annotationToTag(this._structDef.annotation, spec);
   }
 
   public isQueryField(): this is QueryField {

@@ -92,6 +92,7 @@ import {MalloyParseInfo} from './malloy-parse-info';
 import {walkForModelAnnotation} from './parse-tree-walkers/model-annotation-walker';
 import {walkForTablePath} from './parse-tree-walkers/find-table-path-walker';
 import {EventStream} from '../runtime_types';
+import { annotationToTag } from '../annotation';
 
 export type StepResponses =
   | DataRequestResponse
@@ -623,7 +624,7 @@ class TranslateStep implements TranslationStep {
 
     // begin with the compiler flags of the model we are extending
     if (extendingModel && !this.importedAnnotations) {
-      const tagParse = Tag.annotationToTag(extendingModel.annotation, {
+      const tagParse = annotationToTag(extendingModel.annotation, {
         prefix: /^##! /,
       });
       that.compilerFlags = tagParse.tag;

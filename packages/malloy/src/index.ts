@@ -223,5 +223,5 @@ export type {
   StreamingConnection,
 } from './connection/types';
 export {toAsyncGenerator} from './connection_utils';
-export {type TagParse, Tag, type TagDict} from '@malloydata/malloy-tag';
 export {modelDefToModelInfo} from './to_stable';
+export {annotationToTag} from './annotation';

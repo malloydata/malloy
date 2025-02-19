@@ -21,7 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {TagDict, Tag} from '@malloydata/malloy';
+import {annotationToTag} from '@malloydata/malloy';
+import {TagDict, Tag} from '@malloydata/malloy-tag';
 import {runtimeFor} from '../runtimes';
 
 declare global {
@@ -299,5 +300,21 @@ describe('tags in results', () => {
         a: {},
       });
     }
+  });
+  test('inherits can be over-ridden', () => {
+    const loc1 = {
+      url: 'inherit-test',
+      range: {start: {line: 1, character: 0}, end: {line: 1, character: 0}},
+    };
+    const loc2 = {
+      url: 'inherit-test',
+      range: {start: {line: 2, character: 0}, end: {line: 2, character: 0}},
+    };
+    const nestedTags = annotationToTag({
+      inherits: {notes: [{text: '## from=inherits\n', at: loc1}]},
+      notes: [{text: '## from=notes\n', at: loc2}],
+    });
+    const fromVal = nestedTags.tag.text('from');
+    expect(fromVal).toEqual('notes');
   });
 });
