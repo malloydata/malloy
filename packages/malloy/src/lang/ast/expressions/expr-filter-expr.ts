@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {errorFor} from '../ast-utils';
 import {BinaryMalloyOperator} from '../types/binary_operators';
 import {ExprValue, computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
@@ -20,11 +19,10 @@ export class ExprFilterExpression extends ExpressionDef {
   }
 
   getExpression(): ExprValue {
-    this.logError(
+    return this.loggedErrorExpr(
       'filter-expression-type',
-      "Missing application of '?' operator, expression cannot have a filter value"
+      'Filter expression illegal here'
     );
-    return errorFor('illegal-filter-valued-expression');
   }
 
   apply(
@@ -54,16 +52,14 @@ export class ExprFilterExpression extends ExpressionDef {
           from: [matchExpr],
         });
       }
-      left.logError(
+      return left.loggedErrorExpr(
         'filter-expression-type',
         `Cannot use filter expressions with type '${matchExpr.type}'`
       );
-      return errorFor('cant-filter-type-' + matchExpr.type);
     }
-    this.logError(
+    return this.loggedErrorExpr(
       'filter-expression-type',
       `Cannot use the '${op}' operator with a filter expression`
     );
-    return errorFor('illegal-filter-valued-apply');
   }
 }
