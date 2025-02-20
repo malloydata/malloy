@@ -173,15 +173,11 @@ function convertDateTimeframe(
     case undefined:
       return undefined;
     case 'day':
-      return Malloy.DateTimeframe.DAY;
     case 'week':
-      return Malloy.DateTimeframe.WEEK;
     case 'month':
-      return Malloy.DateTimeframe.MONTH;
     case 'year':
-      return Malloy.DateTimeframe.YEAR;
     case 'quarter':
-      return Malloy.DateTimeframe.QUARTER;
+      return timeframe;
     default:
       throw new Error('Invalid date timeframe');
   }
@@ -190,37 +186,9 @@ function convertDateTimeframe(
 function convertTimestampTimeframe(
   timeframe: TimestampUnit | undefined
 ): Malloy.TimestampTimeframe | undefined {
-  switch (timeframe) {
-    case undefined:
-      return undefined;
-    case 'second':
-      return Malloy.TimestampTimeframe.SECOND;
-    case 'minute':
-      return Malloy.TimestampTimeframe.MINUTE;
-    case 'hour':
-      return Malloy.TimestampTimeframe.HOUR;
-    case 'day':
-      return Malloy.TimestampTimeframe.DAY;
-    case 'week':
-      return Malloy.TimestampTimeframe.WEEK;
-    case 'month':
-      return Malloy.TimestampTimeframe.MONTH;
-    case 'year':
-      return Malloy.TimestampTimeframe.YEAR;
-    case 'quarter':
-      return Malloy.TimestampTimeframe.QUARTER;
-    default:
-      throw new Error(`Invalid timestamp timeframe ${timeframe}`);
-  }
+  return timeframe;
 }
 
 function convertJoinType(type: JoinType): Malloy.Relationship {
-  switch (type) {
-    case 'one':
-      return Malloy.Relationship.ONE;
-    case 'many':
-      return Malloy.Relationship.MANY;
-    case 'cross':
-      return Malloy.Relationship.CROSS;
-  }
+  return type;
 }

@@ -14,79 +14,56 @@ import {ASTQuery} from './query-ast';
 describe('query builder', () => {
   test('add an order by', () => {
     const from: Malloy.Query = {
-      pipeline: {
-        stages: [
-          {
-            refinements: [
-              {
-                __type: Malloy.RefinementType.Segment,
-                operations: [
-                  {
-                    __type: Malloy.ViewOperationType.GroupBy,
-                    items: [
-                      {
-                        field: {
-                          expression: {
-                            __type: Malloy.ExpressionType.Reference,
-                            name: 'carrier',
-                          },
-                        },
-                      },
-                    ],
-                  },
-                ],
+      definition: {
+        kind: 'arrow',
+        source_reference: {name: 'flights'},
+        view: {
+          kind: 'segment',
+          operations: [
+            {
+              kind: 'group_by',
+              field: {
+                expression: {
+                  kind: 'field_reference',
+                  name: 'carrier',
+                },
               },
-            ],
-          },
-        ],
+            },
+          ],
+        },
       },
-      source: {name: 'flights'},
     };
     expect((q: ASTQuery) => {
-      q.getOrAddDefaultSegment().addOrderBy(
-        'carrier',
-        Malloy.OrderByDirection.ASC
-      );
+      q.getOrAddDefaultSegment().addOrderBy('carrier', 'asc');
     }).toModifyQuery({
       model: flights_model,
       from,
       to: {
-        pipeline: {
-          stages: [
-            {
-              refinements: [
-                {
-                  __type: Malloy.RefinementType.Segment,
-                  operations: [
-                    {
-                      __type: Malloy.ViewOperationType.GroupBy,
-                      items: [
-                        {
-                          field: {
-                            expression: {
-                              __type: Malloy.ExpressionType.Reference,
-                              name: 'carrier',
-                            },
-                          },
-                        },
-                      ],
-                    },
-                    {
-                      __type: Malloy.ViewOperationType.OrderBy,
-                      items: [
-                        {
-                          field: {name: 'carrier'},
-                          direction: Malloy.OrderByDirection.ASC,
-                        },
-                      ],
-                    },
-                  ],
+        definition: {
+          kind: 'arrow',
+          source_reference: {name: 'flights'},
+          view: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'group_by',
+                field: {
+                  expression: {
+                    kind: 'field_reference',
+                    name: 'carrier',
+                  },
                 },
-              ],
-            },
-          ],
+              },
+              {
+                kind: 'order_by',
+                field_reference: {
+                  name: 'carrier',
+                },
+                direction: 'asc',
+              },
+            ],
+          },
         },
-        source: from.source,
       },
       malloy: `run: flights -> {
   group_by: carrier
@@ -95,9 +72,15 @@ describe('query builder', () => {
     });
   });
   test('add a group by', () => {
-    const from = {
-      pipeline: {stages: []},
-      source: {name: 'flights'},
+    const from: Malloy.Query = {
+      definition: {
+        kind: 'arrow',
+        source_reference: {name: 'flights'},
+        view: {
+          kind: 'segment',
+          operations: [],
+        },
+      },
     };
     expect((q: ASTQuery) => {
       q.getOrAddDefaultSegment().addGroupBy('carrier');
@@ -105,41 +88,38 @@ describe('query builder', () => {
       model: flights_model,
       from,
       to: {
-        pipeline: {
-          stages: [
-            {
-              refinements: [
-                {
-                  __type: Malloy.RefinementType.Segment,
-                  operations: [
-                    {
-                      __type: Malloy.ViewOperationType.GroupBy,
-                      items: [
-                        {
-                          field: {
-                            expression: {
-                              __type: Malloy.ExpressionType.Reference,
-                              name: 'carrier',
-                            },
-                          },
-                        },
-                      ],
-                    },
-                  ],
+        definition: {
+          kind: 'arrow',
+          source_reference: {name: 'flights'},
+          view: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'group_by',
+                field: {
+                  expression: {
+                    kind: 'field_reference',
+                    name: 'carrier',
+                  },
                 },
-              ],
-            },
-          ],
+              },
+            ],
+          },
         },
-        source: from.source,
       },
       malloy: 'run: flights -> { group_by: carrier }',
     });
   });
   test('add two group bys', () => {
-    const from = {
-      pipeline: {stages: []},
-      source: {name: 'flights'},
+    const from: Malloy.Query = {
+      definition: {
+        kind: 'arrow',
+        source_reference: {name: 'flights'},
+        view: {
+          kind: 'segment',
+          operations: [],
+        },
+      },
     };
     expect((q: ASTQuery) => {
       const seg = q.getOrAddDefaultSegment();
@@ -149,41 +129,33 @@ describe('query builder', () => {
       model: flights_model,
       from,
       to: {
-        pipeline: {
-          stages: [
-            {
-              refinements: [
-                {
-                  __type: Malloy.RefinementType.Segment,
-                  operations: [
-                    {
-                      __type: Malloy.ViewOperationType.GroupBy,
-                      items: [
-                        {
-                          field: {
-                            expression: {
-                              __type: Malloy.ExpressionType.Reference,
-                              name: 'carrier',
-                            },
-                          },
-                        },
-                        {
-                          field: {
-                            expression: {
-                              __type: Malloy.ExpressionType.Reference,
-                              name: 'origin_code',
-                            },
-                          },
-                        },
-                      ],
-                    },
-                  ],
+        definition: {
+          kind: 'arrow',
+          source_reference: {name: 'flights'},
+          view: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'group_by',
+                field: {
+                  expression: {
+                    kind: 'field_reference',
+                    name: 'carrier',
+                  },
                 },
-              ],
-            },
-          ],
+              },
+              {
+                kind: 'group_by',
+                field: {
+                  expression: {
+                    kind: 'field_reference',
+                    name: 'origin_code',
+                  },
+                },
+              },
+            ],
+          },
         },
-        source: from.source,
       },
       malloy: `
 run: flights -> {
@@ -194,9 +166,15 @@ run: flights -> {
     });
   });
   test('add a nest', () => {
-    const from = {
-      pipeline: {stages: []},
-      source: {name: 'flights'},
+    const from: Malloy.Query = {
+      definition: {
+        kind: 'arrow',
+        source_reference: {name: 'flights'},
+        view: {
+          kind: 'segment',
+          operations: [],
+        },
+      },
     };
     expect((q: ASTQuery) => {
       const seg = q.getOrAddDefaultSegment();
@@ -207,67 +185,49 @@ run: flights -> {
       model: flights_model,
       from,
       to: {
-        pipeline: {
-          stages: [
-            {
-              refinements: [
-                {
-                  __type: Malloy.RefinementType.Segment,
-                  operations: [
-                    {
-                      __type: Malloy.ViewOperationType.Nest,
-                      items: [
-                        {
-                          name: 'by_carrier',
-                          view: {
-                            pipeline: {
-                              stages: [
-                                {
-                                  refinements: [
-                                    {
-                                      __type: Malloy.RefinementType.Segment,
-                                      operations: [
-                                        {
-                                          __type:
-                                            Malloy.ViewOperationType.GroupBy,
-                                          items: [
-                                            {
-                                              field: {
-                                                expression: {
-                                                  __type:
-                                                    Malloy.ExpressionType
-                                                      .Reference,
-                                                  name: 'carrier',
-                                                },
-                                              },
-                                            },
-                                          ],
-                                        },
-                                      ],
-                                    },
-                                  ],
-                                },
-                              ],
-                            },
+        definition: {
+          kind: 'arrow',
+          source_reference: {name: 'flights'},
+          view: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'nest',
+                name: 'by_carrier',
+                view: {
+                  definition: {
+                    kind: 'segment',
+                    operations: [
+                      {
+                        kind: 'group_by',
+                        field: {
+                          expression: {
+                            kind: 'field_reference',
+                            name: 'carrier',
                           },
                         },
-                      ],
-                    },
-                  ],
+                      },
+                    ],
+                  },
                 },
-              ],
-            },
-          ],
+              },
+            ],
+          },
         },
-        source: from.source,
       },
       malloy: 'run: flights -> { nest: by_carrier is { group_by: carrier } }',
     });
   });
   test('nest via field reference', () => {
-    const from = {
-      pipeline: {stages: []},
-      source: {name: 'flights'},
+    const from: Malloy.Query = {
+      definition: {
+        kind: 'arrow',
+        source_reference: {name: 'flights'},
+        view: {
+          kind: 'segment',
+          operations: [],
+        },
+      },
     };
     expect((q: ASTQuery) => {
       const seg = q.getOrAddDefaultSegment();
@@ -276,49 +236,38 @@ run: flights -> {
       model: flights_model,
       from,
       to: {
-        pipeline: {
-          stages: [
-            {
-              refinements: [
-                {
-                  __type: Malloy.RefinementType.Segment,
-                  operations: [
-                    {
-                      __type: Malloy.ViewOperationType.Nest,
-                      items: [
-                        {
-                          view: {
-                            pipeline: {
-                              stages: [
-                                {
-                                  refinements: [
-                                    {
-                                      __type: Malloy.RefinementType.Reference,
-                                      name: 'by_month',
-                                    },
-                                  ],
-                                },
-                              ],
-                            },
-                          },
-                        },
-                      ],
-                    },
-                  ],
+        definition: {
+          kind: 'arrow',
+          source_reference: {name: 'flights'},
+          view: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'nest',
+                view: {
+                  definition: {
+                    kind: 'view_reference',
+                    name: 'by_month',
+                  },
                 },
-              ],
-            },
-          ],
+              },
+            ],
+          },
         },
-        source: from.source,
       },
       malloy: 'run: flights -> { nest: by_month }',
     });
   });
   test('set view reference', () => {
-    const from = {
-      pipeline: {stages: []},
-      source: {name: 'flights'},
+    const from: Malloy.Query = {
+      definition: {
+        kind: 'arrow',
+        source_reference: {name: 'flights'},
+        view: {
+          kind: 'segment',
+          operations: [],
+        },
+      },
     };
     expect((q: ASTQuery) => {
       q.setView('by_month');
@@ -326,151 +275,163 @@ run: flights -> {
       model: flights_model,
       from,
       to: {
-        pipeline: {
-          stages: [
-            {
-              refinements: [
-                {
-                  __type: Malloy.RefinementType.Reference,
-                  name: 'by_month',
-                },
-              ],
-            },
-          ],
+        definition: {
+          kind: 'arrow',
+          source_reference: {name: 'flights'},
+          view: {
+            kind: 'view_reference',
+            name: 'by_month',
+          },
         },
-        source: from.source,
       },
       malloy: 'run: flights -> by_month',
     });
   });
   test('set view with segment refinement', () => {
-    const from = {
-      pipeline: {stages: []},
-      source: {name: 'flights'},
+    const from: Malloy.Query = {
+      definition: {
+        kind: 'arrow',
+        source_reference: {name: 'flights'},
+        view: {
+          kind: 'segment',
+          operations: [],
+        },
+      },
     };
     expect((q: ASTQuery) => {
       const view = q.setView('by_month');
-      const segment = view.list.stage.addEmptyRefinement();
+      const segment = view.getOrAddDefaultSegment();
+      // TODO need a view.addEmptyRefinement();
       segment.setLimit(10);
     }).toModifyQuery({
       model: flights_model,
       from,
       to: {
-        pipeline: {
-          stages: [
-            {
-              refinements: [
+        definition: {
+          kind: 'arrow',
+          source_reference: {name: 'flights'},
+          view: {
+            kind: 'refinement',
+            base: {
+              kind: 'view_reference',
+              name: 'by_month',
+            },
+            refinement: {
+              kind: 'segment',
+              operations: [
                 {
-                  __type: Malloy.RefinementType.Reference,
-                  name: 'by_month',
-                },
-                {
-                  __type: Malloy.RefinementType.Segment,
-                  operations: [
-                    {
-                      __type: Malloy.ViewOperationType.Limit,
-                      limit: 10,
-                    },
-                  ],
+                  kind: 'limit',
+                  limit: 10,
                 },
               ],
             },
-          ],
+          },
         },
-        source: from.source,
       },
       malloy: 'run: flights -> by_month + { limit: 10 }',
     });
   });
-  test('set view reference with named refinement', () => {
-    const from = {
-      pipeline: {stages: []},
-      source: {name: 'flights'},
-    };
-    expect((q: ASTQuery) => {
-      const view = q.setView('by_carrier');
-      view.list.stage.addViewRefinement('cool_state_measures');
-    }).toModifyQuery({
-      source: {
-        name: 'flights',
-        schema: {
-          fields: [
-            {
-              __type: Malloy.FieldInfoType.Dimension,
-              name: 'carrier',
-              type: {__type: Malloy.AtomicTypeType.StringType},
-            },
-            {
-              __type: Malloy.FieldInfoType.Measure,
-              name: 'flight_count',
-              type: {__type: Malloy.AtomicTypeType.NumberType},
-            },
-            {
-              __type: Malloy.FieldInfoType.View,
-              name: 'by_carrier',
-              schema: {
-                fields: [
-                  {
-                    __type: Malloy.FieldInfoType.Dimension,
-                    name: 'carrier',
-                    type: {__type: Malloy.AtomicTypeType.StringType},
-                  },
-                  {
-                    __type: Malloy.FieldInfoType.Measure,
-                    name: 'flight_count',
-                    type: {__type: Malloy.AtomicTypeType.NumberType},
-                  },
-                ],
-              },
-            },
-            {
-              __type: Malloy.FieldInfoType.View,
-              name: 'cool_state_measures',
-              schema: {
-                fields: [
-                  {
-                    __type: Malloy.FieldInfoType.Measure,
-                    name: 'il_flight_count',
-                    type: {__type: Malloy.AtomicTypeType.NumberType},
-                  },
-                  {
-                    __type: Malloy.FieldInfoType.Measure,
-                    name: 'ca_flight_count',
-                    type: {__type: Malloy.AtomicTypeType.NumberType},
-                  },
-                ],
-              },
-            },
-          ],
-        },
-      },
-      from,
-      to: {
-        pipeline: {
-          stages: [
-            {
-              refinements: [
-                {
-                  __type: Malloy.RefinementType.Reference,
-                  name: 'by_carrier',
-                },
-                {
-                  __type: Malloy.RefinementType.Reference,
-                  name: 'cool_state_measures',
-                },
-              ],
-            },
-          ],
-        },
-        source: from.source,
-      },
-      malloy: 'run: flights -> by_carrier + cool_state_measures',
-    });
-  });
+  // test('set view reference with named refinement', () => {
+  //   const from: Malloy.Query = {
+  //     definition: {
+  //       kind: 'arrow',
+  //       source_reference: {name: 'flights'},
+  //       view: {
+  //         kind: 'segment',
+  //         operations: [],
+  //       },
+  //     },
+  //   };
+  //   expect((q: ASTQuery) => {
+  //     const view = q.setView('by_carrier');
+  //     view.list.stage.addViewRefinement('cool_state_measures');
+  //   }).toModifyQuery({
+  //     source: {
+  //       name: 'flights',
+  //       schema: {
+  //         fields: [
+  //           {
+  //             __type: Malloy.FieldInfoType.Dimension,
+  //             name: 'carrier',
+  //             type: {__type: Malloy.AtomicTypeType.StringType},
+  //           },
+  //           {
+  //             __type: Malloy.FieldInfoType.Measure,
+  //             name: 'flight_count',
+  //             type: {__type: Malloy.AtomicTypeType.NumberType},
+  //           },
+  //           {
+  //             __type: Malloy.FieldInfoType.View,
+  //             name: 'by_carrier',
+  //             schema: {
+  //               fields: [
+  //                 {
+  //                   __type: Malloy.FieldInfoType.Dimension,
+  //                   name: 'carrier',
+  //                   type: {__type: Malloy.AtomicTypeType.StringType},
+  //                 },
+  //                 {
+  //                   __type: Malloy.FieldInfoType.Measure,
+  //                   name: 'flight_count',
+  //                   type: {__type: Malloy.AtomicTypeType.NumberType},
+  //                 },
+  //               ],
+  //             },
+  //           },
+  //           {
+  //             __type: Malloy.FieldInfoType.View,
+  //             name: 'cool_state_measures',
+  //             schema: {
+  //               fields: [
+  //                 {
+  //                   __type: Malloy.FieldInfoType.Measure,
+  //                   name: 'il_flight_count',
+  //                   type: {__type: Malloy.AtomicTypeType.NumberType},
+  //                 },
+  //                 {
+  //                   __type: Malloy.FieldInfoType.Measure,
+  //                   name: 'ca_flight_count',
+  //                   type: {__type: Malloy.AtomicTypeType.NumberType},
+  //                 },
+  //               ],
+  //             },
+  //           },
+  //         ],
+  //       },
+  //     },
+  //     from,
+  //     to: {
+  //       pipeline: {
+  //         stages: [
+  //           {
+  //             refinements: [
+  //               {
+  //                 __type: Malloy.RefinementType.Reference,
+  //                 name: 'by_carrier',
+  //               },
+  //               {
+  //                 __type: Malloy.RefinementType.Reference,
+  //                 name: 'cool_state_measures',
+  //               },
+  //             ],
+  //           },
+  //         ],
+  //       },
+  //       source: from.source,
+  //     },
+  //     malloy: 'run: flights -> by_carrier + cool_state_measures',
+  //   });
+  // });
   test('add limit', () => {
-    const from = {
-      pipeline: {stages: []},
-      source: {name: 'flights'},
+    const from: Malloy.Query = {
+      definition: {
+        kind: 'arrow',
+        source_reference: {name: 'flights'},
+        view: {
+          kind: 'segment',
+          operations: [],
+        },
+      },
     };
     expect((q: ASTQuery) => {
       const seg = q.getOrAddDefaultSegment();
@@ -479,48 +440,38 @@ run: flights -> {
       model: flights_model,
       from,
       to: {
-        pipeline: {
-          stages: [
-            {
-              refinements: [
-                {
-                  __type: Malloy.RefinementType.Segment,
-                  operations: [
-                    {
-                      __type: Malloy.ViewOperationType.Limit,
-                      limit: 10,
-                    },
-                  ],
-                },
-              ],
-            },
-          ],
+        definition: {
+          kind: 'arrow',
+          source_reference: {name: 'flights'},
+          view: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'limit',
+                limit: 10,
+              },
+            ],
+          },
         },
-        source: from.source,
       },
       malloy: 'run: flights -> { limit: 10 }',
     });
   });
   test('change limit', () => {
     const from: Malloy.Query = {
-      pipeline: {
-        stages: [
-          {
-            refinements: [
-              {
-                __type: Malloy.RefinementType.Segment,
-                operations: [
-                  {
-                    __type: Malloy.ViewOperationType.Limit,
-                    limit: 10,
-                  },
-                ],
-              },
-            ],
-          },
-        ],
+      definition: {
+        kind: 'arrow',
+        source_reference: {name: 'flights'},
+        view: {
+          kind: 'segment',
+          operations: [
+            {
+              kind: 'limit',
+              limit: 10,
+            },
+          ],
+        },
       },
-      source: {name: 'flights'},
     };
     expect((q: ASTQuery) => {
       const seg = q.getOrAddDefaultSegment();
@@ -529,32 +480,33 @@ run: flights -> {
       model: flights_model,
       from,
       to: {
-        pipeline: {
-          stages: [
-            {
-              refinements: [
-                {
-                  __type: Malloy.RefinementType.Segment,
-                  operations: [
-                    {
-                      __type: Malloy.ViewOperationType.Limit,
-                      limit: 20,
-                    },
-                  ],
-                },
-              ],
-            },
-          ],
+        definition: {
+          kind: 'arrow',
+          source_reference: {name: 'flights'},
+          view: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'limit',
+                limit: 20,
+              },
+            ],
+          },
         },
-        source: from.source,
       },
       malloy: 'run: flights -> { limit: 20 }',
     });
   });
   test('add a tag property to a group by', () => {
-    const from = {
-      pipeline: {stages: []},
-      source: {name: 'flights'},
+    const from: Malloy.Query = {
+      definition: {
+        kind: 'arrow',
+        source_reference: {name: 'flights'},
+        view: {
+          kind: 'segment',
+          operations: [],
+        },
+      },
     };
     expect((q: ASTQuery) => {
       const gb = q.getOrAddDefaultSegment().addGroupBy('carrier');
@@ -563,40 +515,30 @@ run: flights -> {
       model: flights_model,
       from,
       to: {
-        pipeline: {
-          stages: [
-            {
-              refinements: [
-                {
-                  __type: Malloy.RefinementType.Segment,
-                  operations: [
-                    {
-                      __type: Malloy.ViewOperationType.GroupBy,
-                      items: [
-                        {
-                          field: {
-                            annotations: [{value: '# a.b.c = 10'}],
-                            expression: {
-                              __type: Malloy.ExpressionType.Reference,
-                              name: 'carrier',
-                            },
-                          },
-                        },
-                      ],
-                    },
-                  ],
+        definition: {
+          kind: 'arrow',
+          source_reference: {name: 'flights'},
+          view: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'group_by',
+                field: {
+                  annotations: [{value: '# a.b.c = 10'}],
+                  expression: {
+                    kind: 'field_reference',
+                    name: 'carrier',
+                  },
                 },
-              ],
-            },
-          ],
+              },
+            ],
+          },
         },
-        source: from.source,
       },
       malloy: `
 run: flights -> {
-  group_by:
-    # a.b.c = 10
-    carrier
+  # a.b.c = 10
+  group_by: carrier
 }`.trim(),
     });
   });

@@ -239,24 +239,7 @@ function fieldToFragments(field: Malloy.Field): Fragment[] {
 }
 
 function timeUnitToFragment(timeUnit: Malloy.TimestampTimeframe): Fragment {
-  switch (timeUnit) {
-    case Malloy.TimestampTimeframe.SECOND:
-      return 'second';
-    case Malloy.TimestampTimeframe.MINUTE:
-      return 'minute';
-    case Malloy.TimestampTimeframe.HOUR:
-      return 'hour';
-    case Malloy.TimestampTimeframe.DAY:
-      return 'day';
-    case Malloy.TimestampTimeframe.WEEK:
-      return 'week';
-    case Malloy.TimestampTimeframe.MONTH:
-      return 'month';
-    case Malloy.TimestampTimeframe.QUARTER:
-      return 'quarter';
-    case Malloy.TimestampTimeframe.YEAR:
-      return 'year';
-  }
+  return timeUnit;
 }
 
 function expressionToFragments(expression: Malloy.Expression): Fragment[] {
@@ -319,9 +302,7 @@ function orderByItemToFragments(orderByItem: Malloy.OrderBy): Fragment[] {
   fragments.push(...referenceToFragments(orderByItem.field_reference));
   if (orderByItem.direction) {
     fragments.push(' ');
-    fragments.push(
-      orderByItem.direction === Malloy.OrderByDirection.ASC ? 'asc' : 'desc'
-    );
+    fragments.push(orderByItem.direction);
   }
   return fragments;
 }
@@ -351,9 +332,11 @@ function limitItemToFragments(limit: Malloy.Limit): Fragment[] {
 
 function limitToFragments(limits: Malloy.Limit[]): Fragment[] {
   const fragments: Fragment[] = [];
-  for (const limit of limits) {
-    fragments.push(...limitItemToFragments(limit));
-    fragments.push(NEWLINE);
+  for (let i = 0; i < limits.length; i++) {
+    if (i !== 0) {
+      fragments.push(NEWLINE);
+    }
+    fragments.push(...limitItemToFragments(limits[i]));
   }
   return fragments;
 }

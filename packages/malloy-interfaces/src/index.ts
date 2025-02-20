@@ -397,3 +397,17 @@ export const thingy4sdfsd: Malloy.Query = {
     },
   },
 };
+
+// run: flights -> { }
+export const thingy4sddfdfsd: Malloy.Query = {
+  definition: {
+    kind: 'arrow',
+    source_reference: {
+      name: 'flights',
+    },
+    view: {
+      kind: 'segment',
+      operations: [],
+    },
+  },
+};

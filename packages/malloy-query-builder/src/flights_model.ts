@@ -9,1921 +9,1921 @@ import * as Malloy from '@malloydata/malloy-interfaces';
 export const flights_model: Malloy.ModelInfo = {
   'entries': [
     {
-      '__type': Malloy.ModelEntryValueType.Source,
+      'kind': 'source',
       'name': 'carriers',
       'schema': {
         'fields': [
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'code',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'name',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'nickname',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Measure,
+            'kind': 'measure',
             'name': 'carrier_count',
             'type': {
-              '__type': Malloy.AtomicTypeType.NumberType,
-              'subtype': Malloy.NumberSubtype.INTEGER,
+              'kind': 'number_type',
+              'subtype': 'integer',
             },
           },
         ],
       },
     },
     {
-      '__type': Malloy.ModelEntryValueType.Source,
+      'kind': 'source',
       'name': 'airports',
       'schema': {
         'fields': [
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'id',
             'type': {
-              '__type': Malloy.AtomicTypeType.NumberType,
-              'subtype': Malloy.NumberSubtype.INTEGER,
+              'kind': 'number_type',
+              'subtype': 'integer',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'code',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'site_number',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'fac_type',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'fac_use',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'faa_region',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'faa_dist',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'city',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'county',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'state',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'full_name',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'own_type',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'longitude',
             'type': {
-              '__type': Malloy.AtomicTypeType.NumberType,
-              'subtype': 2,
+              'kind': 'number_type',
+              'subtype': 'integer',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'latitude',
             'type': {
-              '__type': Malloy.AtomicTypeType.NumberType,
-              'subtype': 2,
+              'kind': 'number_type',
+              'subtype': 'integer',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'elevation',
             'type': {
-              '__type': Malloy.AtomicTypeType.NumberType,
-              'subtype': Malloy.NumberSubtype.INTEGER,
+              'kind': 'number_type',
+              'subtype': 'integer',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'aero_cht',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'cbd_dist',
             'type': {
-              '__type': Malloy.AtomicTypeType.NumberType,
-              'subtype': Malloy.NumberSubtype.INTEGER,
+              'kind': 'number_type',
+              'subtype': 'integer',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'cbd_dir',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'act_date',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'cert',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'fed_agree',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'cust_intl',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'c_ldg_rts',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'joint_use',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'mil_rts',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'cntl_twr',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'major',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Measure,
+            'kind': 'measure',
             'name': 'airport_count',
             'type': {
-              '__type': Malloy.AtomicTypeType.NumberType,
-              'subtype': Malloy.NumberSubtype.INTEGER,
+              'kind': 'number_type',
+              'subtype': 'integer',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'name',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
         ],
       },
     },
     {
-      '__type': Malloy.ModelEntryValueType.Source,
+      'kind': 'source',
       'name': 'aircraft_models',
       'schema': {
         'fields': [
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'aircraft_model_code',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'manufacturer',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'model',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'aircraft_type_id',
             'type': {
-              '__type': Malloy.AtomicTypeType.NumberType,
-              'subtype': Malloy.NumberSubtype.INTEGER,
+              'kind': 'number_type',
+              'subtype': 'integer',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'aircraft_engine_type_id',
             'type': {
-              '__type': Malloy.AtomicTypeType.NumberType,
-              'subtype': Malloy.NumberSubtype.INTEGER,
+              'kind': 'number_type',
+              'subtype': 'integer',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'aircraft_category_id',
             'type': {
-              '__type': Malloy.AtomicTypeType.NumberType,
-              'subtype': Malloy.NumberSubtype.INTEGER,
+              'kind': 'number_type',
+              'subtype': 'integer',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'amateur',
             'type': {
-              '__type': Malloy.AtomicTypeType.NumberType,
-              'subtype': Malloy.NumberSubtype.INTEGER,
+              'kind': 'number_type',
+              'subtype': 'integer',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'engines',
             'type': {
-              '__type': Malloy.AtomicTypeType.NumberType,
-              'subtype': Malloy.NumberSubtype.INTEGER,
+              'kind': 'number_type',
+              'subtype': 'integer',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'seats',
             'type': {
-              '__type': Malloy.AtomicTypeType.NumberType,
-              'subtype': Malloy.NumberSubtype.INTEGER,
+              'kind': 'number_type',
+              'subtype': 'integer',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'weight',
             'type': {
-              '__type': Malloy.AtomicTypeType.NumberType,
-              'subtype': Malloy.NumberSubtype.INTEGER,
+              'kind': 'number_type',
+              'subtype': 'integer',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'speed',
             'type': {
-              '__type': Malloy.AtomicTypeType.NumberType,
-              'subtype': Malloy.NumberSubtype.INTEGER,
+              'kind': 'number_type',
+              'subtype': 'integer',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Measure,
+            'kind': 'measure',
             'name': 'aircraft_model_count',
             'type': {
-              '__type': Malloy.AtomicTypeType.NumberType,
-              'subtype': Malloy.NumberSubtype.INTEGER,
+              'kind': 'number_type',
+              'subtype': 'integer',
             },
           },
         ],
       },
     },
     {
-      '__type': Malloy.ModelEntryValueType.Source,
+      'kind': 'source',
       'name': 'aircraft',
       'schema': {
         'fields': [
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'id',
             'type': {
-              '__type': Malloy.AtomicTypeType.NumberType,
-              'subtype': Malloy.NumberSubtype.INTEGER,
+              'kind': 'number_type',
+              'subtype': 'integer',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'tail_num',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'aircraft_serial',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'aircraft_model_code',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'aircraft_engine_code',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'year_built',
             'type': {
-              '__type': Malloy.AtomicTypeType.NumberType,
-              'subtype': Malloy.NumberSubtype.INTEGER,
+              'kind': 'number_type',
+              'subtype': 'integer',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'aircraft_type_id',
             'type': {
-              '__type': Malloy.AtomicTypeType.NumberType,
-              'subtype': Malloy.NumberSubtype.INTEGER,
+              'kind': 'number_type',
+              'subtype': 'integer',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'aircraft_engine_type_id',
             'type': {
-              '__type': Malloy.AtomicTypeType.NumberType,
-              'subtype': Malloy.NumberSubtype.INTEGER,
+              'kind': 'number_type',
+              'subtype': 'integer',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'registrant_type_id',
             'type': {
-              '__type': Malloy.AtomicTypeType.NumberType,
-              'subtype': Malloy.NumberSubtype.INTEGER,
+              'kind': 'number_type',
+              'subtype': 'integer',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'name',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'address1',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'address2',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'city',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'state',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'zip',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'region',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'county',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'country',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'certification',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'status_code',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'mode_s_code',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'fract_owner',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'last_action_date',
             'type': {
-              '__type': Malloy.AtomicTypeType.DateType,
+              'kind': 'date_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'cert_issue_date',
             'type': {
-              '__type': Malloy.AtomicTypeType.DateType,
+              'kind': 'date_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'air_worth_date',
             'type': {
-              '__type': Malloy.AtomicTypeType.DateType,
+              'kind': 'date_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Measure,
+            'kind': 'measure',
             'name': 'aircraft_count',
             'type': {
-              '__type': Malloy.AtomicTypeType.NumberType,
-              'subtype': Malloy.NumberSubtype.INTEGER,
+              'kind': 'number_type',
+              'subtype': 'integer',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Join,
+            'kind': 'join',
             'name': 'aircraft_models',
             'schema': {
               'fields': [
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'aircraft_model_code',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'manufacturer',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'model',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'aircraft_type_id',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': Malloy.NumberSubtype.INTEGER,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'aircraft_engine_type_id',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': Malloy.NumberSubtype.INTEGER,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'aircraft_category_id',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': Malloy.NumberSubtype.INTEGER,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'amateur',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': Malloy.NumberSubtype.INTEGER,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'engines',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': Malloy.NumberSubtype.INTEGER,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'seats',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': Malloy.NumberSubtype.INTEGER,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'weight',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': Malloy.NumberSubtype.INTEGER,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'speed',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': Malloy.NumberSubtype.INTEGER,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Measure,
+                  'kind': 'measure',
                   'name': 'aircraft_model_count',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': Malloy.NumberSubtype.INTEGER,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
               ],
             },
-            'relationship': 1,
+            'relationship': 'one',
           },
         ],
       },
     },
     {
-      '__type': Malloy.ModelEntryValueType.Source,
+      'kind': 'source',
       'name': 'flights',
       'schema': {
         'fields': [
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'carrier',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'flight_num',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'flight_time',
             'type': {
-              '__type': Malloy.AtomicTypeType.NumberType,
-              'subtype': Malloy.NumberSubtype.INTEGER,
+              'kind': 'number_type',
+              'subtype': 'integer',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'tail_num',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'dep_time',
             'type': {
-              '__type': Malloy.AtomicTypeType.TimestampType,
+              'kind': 'timestamp_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'arr_time',
             'type': {
-              '__type': Malloy.AtomicTypeType.TimestampType,
+              'kind': 'timestamp_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'dep_delay',
             'type': {
-              '__type': Malloy.AtomicTypeType.NumberType,
-              'subtype': Malloy.NumberSubtype.INTEGER,
+              'kind': 'number_type',
+              'subtype': 'integer',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'arr_delay',
             'type': {
-              '__type': Malloy.AtomicTypeType.NumberType,
-              'subtype': Malloy.NumberSubtype.INTEGER,
+              'kind': 'number_type',
+              'subtype': 'integer',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'taxi_out',
             'type': {
-              '__type': Malloy.AtomicTypeType.NumberType,
-              'subtype': Malloy.NumberSubtype.INTEGER,
+              'kind': 'number_type',
+              'subtype': 'integer',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'taxi_in',
             'type': {
-              '__type': Malloy.AtomicTypeType.NumberType,
-              'subtype': Malloy.NumberSubtype.INTEGER,
+              'kind': 'number_type',
+              'subtype': 'integer',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'distance',
             'type': {
-              '__type': Malloy.AtomicTypeType.NumberType,
-              'subtype': Malloy.NumberSubtype.INTEGER,
+              'kind': 'number_type',
+              'subtype': 'integer',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'cancelled',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'diverted',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'id2',
             'type': {
-              '__type': Malloy.AtomicTypeType.NumberType,
-              'subtype': Malloy.NumberSubtype.INTEGER,
+              'kind': 'number_type',
+              'subtype': 'integer',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'origin_code',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Dimension,
+            'kind': 'dimension',
             'name': 'destination_code',
             'type': {
-              '__type': Malloy.AtomicTypeType.StringType,
+              'kind': 'string_type',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Measure,
+            'kind': 'measure',
             'name': 'flight_count',
             'type': {
-              '__type': Malloy.AtomicTypeType.NumberType,
-              'subtype': Malloy.NumberSubtype.INTEGER,
+              'kind': 'number_type',
+              'subtype': 'integer',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Measure,
+            'kind': 'measure',
             'name': 'total_distance',
             'type': {
-              '__type': Malloy.AtomicTypeType.NumberType,
-              'subtype': Malloy.NumberSubtype.INTEGER,
+              'kind': 'number_type',
+              'subtype': 'integer',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Measure,
+            'kind': 'measure',
             'name': 'destination_count',
             'type': {
-              '__type': Malloy.AtomicTypeType.NumberType,
-              'subtype': Malloy.NumberSubtype.INTEGER,
+              'kind': 'number_type',
+              'subtype': 'integer',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Measure,
+            'kind': 'measure',
             'name': 'origin_count',
             'type': {
-              '__type': Malloy.AtomicTypeType.NumberType,
-              'subtype': Malloy.NumberSubtype.INTEGER,
+              'kind': 'number_type',
+              'subtype': 'integer',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Measure,
+            'kind': 'measure',
             'name': 'seats_for_sale',
             'type': {
-              '__type': Malloy.AtomicTypeType.NumberType,
-              'subtype': Malloy.NumberSubtype.INTEGER,
+              'kind': 'number_type',
+              'subtype': 'integer',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Measure,
+            'kind': 'measure',
             'name': 'seats_owned',
             'type': {
-              '__type': Malloy.AtomicTypeType.NumberType,
-              'subtype': Malloy.NumberSubtype.INTEGER,
+              'kind': 'number_type',
+              'subtype': 'integer',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Measure,
+            'kind': 'measure',
             'name': 'average_plane_size',
             'type': {
-              '__type': Malloy.AtomicTypeType.NumberType,
-              'subtype': Malloy.NumberSubtype.INTEGER,
+              'kind': 'number_type',
+              'subtype': 'integer',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Measure,
+            'kind': 'measure',
             'name': 'average_flight_distance',
             'type': {
-              '__type': Malloy.AtomicTypeType.NumberType,
-              'subtype': Malloy.NumberSubtype.INTEGER,
+              'kind': 'number_type',
+              'subtype': 'integer',
             },
           },
           {
-            '__type': Malloy.FieldInfoType.Join,
+            'kind': 'join',
             'name': 'carriers',
             'schema': {
               'fields': [
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'code',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'name',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'nickname',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Measure,
+                  'kind': 'measure',
                   'name': 'carrier_count',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': Malloy.NumberSubtype.INTEGER,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
               ],
             },
-            'relationship': 1,
+            'relationship': 'one',
           },
           {
-            '__type': Malloy.FieldInfoType.Join,
+            'kind': 'join',
             'name': 'origin',
             'schema': {
               'fields': [
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'id',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': Malloy.NumberSubtype.INTEGER,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'code',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'site_number',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'fac_type',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'fac_use',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'faa_region',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'faa_dist',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'city',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'county',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'state',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'full_name',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'own_type',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'longitude',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': 2,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'latitude',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': 2,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'elevation',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': Malloy.NumberSubtype.INTEGER,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'aero_cht',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'cbd_dist',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': Malloy.NumberSubtype.INTEGER,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'cbd_dir',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'act_date',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'cert',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'fed_agree',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'cust_intl',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'c_ldg_rts',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'joint_use',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'mil_rts',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'cntl_twr',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'major',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Measure,
+                  'kind': 'measure',
                   'name': 'airport_count',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': Malloy.NumberSubtype.INTEGER,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'name',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
               ],
             },
-            'relationship': 1,
+            'relationship': 'one',
           },
           {
-            '__type': Malloy.FieldInfoType.Join,
+            'kind': 'join',
             'name': 'destination',
             'schema': {
               'fields': [
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'id',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': Malloy.NumberSubtype.INTEGER,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'code',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'site_number',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'fac_type',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'fac_use',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'faa_region',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'faa_dist',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'city',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'county',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'state',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'full_name',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'own_type',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'longitude',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': 2,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'latitude',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': 2,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'elevation',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': Malloy.NumberSubtype.INTEGER,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'aero_cht',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'cbd_dist',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': Malloy.NumberSubtype.INTEGER,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'cbd_dir',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'act_date',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'cert',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'fed_agree',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'cust_intl',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'c_ldg_rts',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'joint_use',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'mil_rts',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'cntl_twr',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'major',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Measure,
+                  'kind': 'measure',
                   'name': 'airport_count',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': Malloy.NumberSubtype.INTEGER,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'name',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
               ],
             },
-            'relationship': 1,
+            'relationship': 'one',
           },
           {
-            '__type': Malloy.FieldInfoType.Join,
+            'kind': 'join',
             'name': 'aircraft',
             'schema': {
               'fields': [
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'id',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': Malloy.NumberSubtype.INTEGER,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'tail_num',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'aircraft_serial',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'aircraft_model_code',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'aircraft_engine_code',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'year_built',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': Malloy.NumberSubtype.INTEGER,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'aircraft_type_id',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': Malloy.NumberSubtype.INTEGER,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'aircraft_engine_type_id',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': Malloy.NumberSubtype.INTEGER,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'registrant_type_id',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': Malloy.NumberSubtype.INTEGER,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'name',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'address1',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'address2',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'city',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'state',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'zip',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'region',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'county',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'country',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'certification',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'status_code',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'mode_s_code',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'fract_owner',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'last_action_date',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.DateType,
+                    'kind': 'date_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'cert_issue_date',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.DateType,
+                    'kind': 'date_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'air_worth_date',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.DateType,
+                    'kind': 'date_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Measure,
+                  'kind': 'measure',
                   'name': 'aircraft_count',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': Malloy.NumberSubtype.INTEGER,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Join,
+                  'kind': 'join',
                   'name': 'aircraft_models',
                   'schema': {
                     'fields': [
                       {
-                        '__type': Malloy.FieldInfoType.Dimension,
+                        'kind': 'dimension',
                         'name': 'aircraft_model_code',
                         'type': {
-                          '__type': Malloy.AtomicTypeType.StringType,
+                          'kind': 'string_type',
                         },
                       },
                       {
-                        '__type': Malloy.FieldInfoType.Dimension,
+                        'kind': 'dimension',
                         'name': 'manufacturer',
                         'type': {
-                          '__type': Malloy.AtomicTypeType.StringType,
+                          'kind': 'string_type',
                         },
                       },
                       {
-                        '__type': Malloy.FieldInfoType.Dimension,
+                        'kind': 'dimension',
                         'name': 'model',
                         'type': {
-                          '__type': Malloy.AtomicTypeType.StringType,
+                          'kind': 'string_type',
                         },
                       },
                       {
-                        '__type': Malloy.FieldInfoType.Dimension,
+                        'kind': 'dimension',
                         'name': 'aircraft_type_id',
                         'type': {
-                          '__type': Malloy.AtomicTypeType.NumberType,
-                          'subtype': Malloy.NumberSubtype.INTEGER,
+                          'kind': 'number_type',
+                          'subtype': 'integer',
                         },
                       },
                       {
-                        '__type': Malloy.FieldInfoType.Dimension,
+                        'kind': 'dimension',
                         'name': 'aircraft_engine_type_id',
                         'type': {
-                          '__type': Malloy.AtomicTypeType.NumberType,
-                          'subtype': Malloy.NumberSubtype.INTEGER,
+                          'kind': 'number_type',
+                          'subtype': 'integer',
                         },
                       },
                       {
-                        '__type': Malloy.FieldInfoType.Dimension,
+                        'kind': 'dimension',
                         'name': 'aircraft_category_id',
                         'type': {
-                          '__type': Malloy.AtomicTypeType.NumberType,
-                          'subtype': Malloy.NumberSubtype.INTEGER,
+                          'kind': 'number_type',
+                          'subtype': 'integer',
                         },
                       },
                       {
-                        '__type': Malloy.FieldInfoType.Dimension,
+                        'kind': 'dimension',
                         'name': 'amateur',
                         'type': {
-                          '__type': Malloy.AtomicTypeType.NumberType,
-                          'subtype': Malloy.NumberSubtype.INTEGER,
+                          'kind': 'number_type',
+                          'subtype': 'integer',
                         },
                       },
                       {
-                        '__type': Malloy.FieldInfoType.Dimension,
+                        'kind': 'dimension',
                         'name': 'engines',
                         'type': {
-                          '__type': Malloy.AtomicTypeType.NumberType,
-                          'subtype': Malloy.NumberSubtype.INTEGER,
+                          'kind': 'number_type',
+                          'subtype': 'integer',
                         },
                       },
                       {
-                        '__type': Malloy.FieldInfoType.Dimension,
+                        'kind': 'dimension',
                         'name': 'seats',
                         'type': {
-                          '__type': Malloy.AtomicTypeType.NumberType,
-                          'subtype': Malloy.NumberSubtype.INTEGER,
+                          'kind': 'number_type',
+                          'subtype': 'integer',
                         },
                       },
                       {
-                        '__type': Malloy.FieldInfoType.Dimension,
+                        'kind': 'dimension',
                         'name': 'weight',
                         'type': {
-                          '__type': Malloy.AtomicTypeType.NumberType,
-                          'subtype': Malloy.NumberSubtype.INTEGER,
+                          'kind': 'number_type',
+                          'subtype': 'integer',
                         },
                       },
                       {
-                        '__type': Malloy.FieldInfoType.Dimension,
+                        'kind': 'dimension',
                         'name': 'speed',
                         'type': {
-                          '__type': Malloy.AtomicTypeType.NumberType,
-                          'subtype': Malloy.NumberSubtype.INTEGER,
+                          'kind': 'number_type',
+                          'subtype': 'integer',
                         },
                       },
                       {
-                        '__type': Malloy.FieldInfoType.Measure,
+                        'kind': 'measure',
                         'name': 'aircraft_model_count',
                         'type': {
-                          '__type': Malloy.AtomicTypeType.NumberType,
-                          'subtype': Malloy.NumberSubtype.INTEGER,
+                          'kind': 'number_type',
+                          'subtype': 'integer',
                         },
                       },
                     ],
                   },
-                  'relationship': 1,
+                  'relationship': 'one',
                 },
               ],
             },
-            'relationship': 1,
+            'relationship': 'one',
           },
           {
-            '__type': Malloy.FieldInfoType.View,
+            'kind': 'view',
             'name': 'top_carriers',
             'schema': {
               'fields': [
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'nickname',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'flight_count',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': Malloy.NumberSubtype.INTEGER,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'destination_count',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': Malloy.NumberSubtype.INTEGER,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'percentage_of_flights',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
+                    'kind': 'number_type',
                   },
                 },
               ],
             },
           },
           {
-            '__type': Malloy.FieldInfoType.View,
+            'kind': 'view',
             'name': 'carriers_over_time',
             'schema': {
               'fields': [
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'dep_month',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.TimestampType,
-                    'timeframe': 3,
+                    'kind': 'timestamp_type',
+                    'timeframe': 'month',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'flight_count',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': Malloy.NumberSubtype.INTEGER,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'nickname',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
               ],
             },
           },
           {
-            '__type': Malloy.FieldInfoType.View,
+            'kind': 'view',
             'name': 'top_origins',
             'schema': {
               'fields': [
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'name',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'flight_count',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': Malloy.NumberSubtype.INTEGER,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'destination_count',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': Malloy.NumberSubtype.INTEGER,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'carrier_count',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': Malloy.NumberSubtype.INTEGER,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'percent_of_flights',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
+                    'kind': 'number_type',
                   },
                 },
               ],
             },
           },
           {
-            '__type': Malloy.FieldInfoType.View,
+            'kind': 'view',
             'name': 'top_destinations',
             'schema': {
               'fields': [
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'code',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'full_name',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'flight_count',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': Malloy.NumberSubtype.INTEGER,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'percent_of_flights_to_destination',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
+                    'kind': 'number_type',
                   },
                 },
               ],
             },
           },
           {
-            '__type': Malloy.FieldInfoType.View,
+            'kind': 'view',
             'name': 'by_month',
             'schema': {
               'fields': [
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'dep_month',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.TimestampType,
-                    'timeframe': 3,
+                    'kind': 'timestamp_type',
+                    'timeframe': 'month',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'flight_count',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': Malloy.NumberSubtype.INTEGER,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
               ],
             },
           },
           {
-            '__type': Malloy.FieldInfoType.View,
+            'kind': 'view',
             'name': 'by_manufacturer',
             'schema': {
               'fields': [
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'manufacturer',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'flight_count',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': Malloy.NumberSubtype.INTEGER,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'aircraft_count',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': Malloy.NumberSubtype.INTEGER,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
               ],
             },
           },
           {
-            '__type': Malloy.FieldInfoType.View,
+            'kind': 'view',
             'name': 'top_routes_map',
             'schema': {
               'fields': [
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'latitude',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': 2,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'longitude',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': 2,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'latitude2',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': 2,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'longitude2',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': 2,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'flight_count',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': Malloy.NumberSubtype.INTEGER,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
               ],
             },
           },
           {
-            '__type': Malloy.FieldInfoType.View,
+            'kind': 'view',
             'name': 'carrier_dashboard',
             'schema': {
               'fields': [
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'destination_count',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': Malloy.NumberSubtype.INTEGER,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'flight_count',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': Malloy.NumberSubtype.INTEGER,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'by_manufacturer',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.ArrayType,
+                    'kind': 'array_type',
                     'element_type': {
-                      '__type': Malloy.AtomicTypeType.RecordType,
+                      'kind': 'record_type',
                       'fields': [
                         {
                           'name': 'manufacturer',
                           'type': {
-                            '__type': Malloy.AtomicTypeType.StringType,
+                            'kind': 'string_type',
                           },
                         },
                         {
                           'name': 'flight_count',
                           'type': {
-                            '__type': Malloy.AtomicTypeType.NumberType,
-                            'subtype': Malloy.NumberSubtype.INTEGER,
+                            'kind': 'number_type',
+                            'subtype': 'integer',
                           },
                         },
                         {
                           'name': 'aircraft_count',
                           'type': {
-                            '__type': Malloy.AtomicTypeType.NumberType,
-                            'subtype': Malloy.NumberSubtype.INTEGER,
+                            'kind': 'number_type',
+                            'subtype': 'integer',
                           },
                         },
                       ],
@@ -1931,25 +1931,25 @@ export const flights_model: Malloy.ModelInfo = {
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'by_month',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.ArrayType,
+                    'kind': 'array_type',
                     'element_type': {
-                      '__type': Malloy.AtomicTypeType.RecordType,
+                      'kind': 'record_type',
                       'fields': [
                         {
                           'name': 'dep_month',
                           'type': {
-                            '__type': Malloy.AtomicTypeType.TimestampType,
-                            'timeframe': Malloy.TimestampTimeframe.MONTH,
+                            'kind': 'timestamp_type',
+                            'timeframe': 'month',
                           },
                         },
                         {
                           'name': 'flight_count',
                           'type': {
-                            '__type': Malloy.AtomicTypeType.NumberType,
-                            'subtype': Malloy.NumberSubtype.INTEGER,
+                            'kind': 'number_type',
+                            'subtype': 'integer',
                           },
                         },
                       ],
@@ -1957,31 +1957,31 @@ export const flights_model: Malloy.ModelInfo = {
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'hubs',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.ArrayType,
+                    'kind': 'array_type',
                     'element_type': {
-                      '__type': Malloy.AtomicTypeType.RecordType,
+                      'kind': 'record_type',
                       'fields': [
                         {
                           'name': 'hub',
                           'type': {
-                            '__type': Malloy.AtomicTypeType.StringType,
+                            'kind': 'string_type',
                           },
                         },
                         {
                           'name': 'destination_count',
                           'type': {
-                            '__type': Malloy.AtomicTypeType.NumberType,
-                            'subtype': Malloy.NumberSubtype.INTEGER,
+                            'kind': 'number_type',
+                            'subtype': 'integer',
                           },
                         },
                         {
                           'name': 'flight_count',
                           'type': {
-                            '__type': Malloy.AtomicTypeType.NumberType,
-                            'subtype': Malloy.NumberSubtype.INTEGER,
+                            'kind': 'number_type',
+                            'subtype': 'integer',
                           },
                         },
                       ],
@@ -1989,64 +1989,63 @@ export const flights_model: Malloy.ModelInfo = {
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'origin_dashboard',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.ArrayType,
+                    'kind': 'array_type',
                     'element_type': {
-                      '__type': Malloy.AtomicTypeType.RecordType,
+                      'kind': 'record_type',
                       'fields': [
                         {
                           'name': 'code',
                           'type': {
-                            '__type': Malloy.AtomicTypeType.StringType,
+                            'kind': 'string_type',
                           },
                         },
                         {
                           'name': 'origin',
                           'type': {
-                            '__type': Malloy.AtomicTypeType.StringType,
+                            'kind': 'string_type',
                           },
                         },
                         {
                           'name': 'city',
                           'type': {
-                            '__type': Malloy.AtomicTypeType.StringType,
+                            'kind': 'string_type',
                           },
                         },
                         {
                           'name': 'flight_count',
                           'type': {
-                            '__type': Malloy.AtomicTypeType.NumberType,
-                            'subtype': Malloy.NumberSubtype.INTEGER,
+                            'kind': 'number_type',
+                            'subtype': 'integer',
                           },
                         },
                         {
                           'name': 'destinations_by_month_line_chart',
                           'type': {
-                            '__type': Malloy.AtomicTypeType.ArrayType,
+                            'kind': 'array_type',
                             'element_type': {
-                              '__type': Malloy.AtomicTypeType.RecordType,
+                              'kind': 'record_type',
                               'fields': [
                                 {
                                   'name': 'dep_month',
                                   'type': {
-                                    '__type':
-                                      Malloy.AtomicTypeType.TimestampType,
-                                    'timeframe': 3,
+                                    'kind': 'timestamp_type',
+                                    'timeframe': 'month',
                                   },
                                 },
                                 {
                                   'name': 'flight_count',
                                   'type': {
-                                    '__type': Malloy.AtomicTypeType.NumberType,
-                                    'subtype': Malloy.NumberSubtype.INTEGER,
+                                    'kind': 'number_type',
+                                    'subtype': 'integer',
                                   },
                                 },
                                 {
                                   'name': 'name',
                                   'type': {
-                                    '__type': Malloy.AtomicTypeType.StringType,
+                                    'kind': 'string_type',
                                   },
                                 },
                               ],
@@ -2056,36 +2055,36 @@ export const flights_model: Malloy.ModelInfo = {
                         {
                           'name': 'top_routes_map',
                           'type': {
-                            '__type': Malloy.AtomicTypeType.ArrayType,
+                            'kind': 'array_type',
                             'element_type': {
-                              '__type': Malloy.AtomicTypeType.RecordType,
+                              'kind': 'record_type',
                               'fields': [
                                 {
                                   'name': 'latitude',
                                   'type': {
-                                    '__type': Malloy.AtomicTypeType.NumberType,
-                                    'subtype': 2,
+                                    'kind': 'number_type',
+                                    'subtype': 'integer',
                                   },
                                 },
                                 {
                                   'name': 'longitude',
                                   'type': {
-                                    '__type': Malloy.AtomicTypeType.NumberType,
-                                    'subtype': 2,
+                                    'kind': 'number_type',
+                                    'subtype': 'integer',
                                   },
                                 },
                                 {
                                   'name': 'latitude2',
                                   'type': {
-                                    '__type': Malloy.AtomicTypeType.NumberType,
-                                    'subtype': 2,
+                                    'kind': 'number_type',
+                                    'subtype': 'integer',
                                   },
                                 },
                                 {
                                   'name': 'longitude2',
                                   'type': {
-                                    '__type': Malloy.AtomicTypeType.NumberType,
-                                    'subtype': 2,
+                                    'kind': 'number_type',
+                                    'subtype': 'integer',
                                   },
                                 },
                               ],
@@ -2100,44 +2099,44 @@ export const flights_model: Malloy.ModelInfo = {
             },
           },
           {
-            '__type': Malloy.FieldInfoType.View,
+            'kind': 'view',
             'name': 'search_index',
             'schema': {
               'fields': [
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'fieldName',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'fieldPath',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'fieldValue',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'fieldType',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.StringType,
+                    'kind': 'string_type',
                   },
                 },
                 {
-                  '__type': Malloy.FieldInfoType.Dimension,
+                  'kind': 'dimension',
                   'name': 'weight',
                   'type': {
-                    '__type': Malloy.AtomicTypeType.NumberType,
-                    'subtype': Malloy.NumberSubtype.INTEGER,
+                    'kind': 'number_type',
+                    'subtype': 'integer',
                   },
                 },
               ],

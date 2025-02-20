@@ -64,7 +64,7 @@ expect.extend({
     f(q);
     const query = q.build();
     const eq = objectsMatch(query, to);
-    const diff = this.utils.diff(query, to);
+    const diff = this.utils.diff(to, query);
     if (!eq) {
       return {
         pass: false,
