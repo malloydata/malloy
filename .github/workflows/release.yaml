@@ -33,6 +33,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ env.GITHUB_SHA }}
           ssh-key: ${{ secrets.MALLOY_GHAPI }}
       - name: Use Node.js
         uses: actions/setup-node@v4
