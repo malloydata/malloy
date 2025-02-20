@@ -21,6 +21,14 @@ function fixEnum(m: string) {
   return m.replace(/ {2}[A-Za-z]+With[A-Za-z_]+ = ("[a-z_]+"),?\n}?/g, '| $1');
 }
 
+function fixEnum2(m: string) {
+  m = m.replace(/export enum ([A-Za-z_]+) {\n/g, 'export type $1 =');
+  m = m.replace(/ {2}([A-Z_]+) = \d+,?\n/g, m =>
+    m.replace(/ {2}([A-Z_]+) = \d+,?\n/, '| "$1"').toLowerCase()
+  );
+  return m.replace(/\}/, '');
+}
+
 function fixUnionType(m: string) {
   m = m.replace(/\n {2}(__type: [A-Za-z_]+Type.[A-Za-z_]+);\n/, '$1} &');
   m = m.replace(/ {2}[a-z_]+\?: undefined;\n/g, '');
@@ -65,6 +73,10 @@ for (const file of fs.readdirSync('./generated-types')) {
           '__type: "$1"'
         )
         .toLowerCase()
+  );
+  actualTypes = actualTypes.replace(
+    /export enum ([A-Za-z_]+) {\n( {2}[A-Z_]+ = \d+,?\n)+}/g,
+    fixEnum2
   );
   actualTypes = actualTypes.replace(/Json/g, 'JSON');
   actualTypes = actualTypes.replace(/Sql/g, 'SQL');

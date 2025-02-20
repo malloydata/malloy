@@ -107,13 +107,7 @@ export type DateCell = {
 export type DateLiteral = {
   date_value: string;
 };
-export enum DateTimeframe {
-  YEAR = 1,
-  QUARTER = 2,
-  MONTH = 3,
-  WEEK = 4,
-  DAY = 5,
-}
+export type DateTimeframe = 'year' | 'quarter' | 'month' | 'week' | 'day';
 export type DateType = {
   timeframe?: DateTimeframe;
 };
@@ -242,10 +236,7 @@ export type NumberCell = {
 export type NumberLiteral = {
   number_value: number;
 };
-export enum NumberSubtype {
-  INTEGER = 1,
-  DECIMAL = 2,
-}
+export type NumberSubtype = 'integer' | 'decimal';
 export type NumberType = {
   subtype?: NumberSubtype;
 };
@@ -253,10 +244,7 @@ export type OrderBy = {
   field_reference: Reference;
   direction?: OrderByDirection;
 };
-export enum OrderByDirection {
-  ASC = 1,
-  DESC = 2,
-}
+export type OrderByDirection = 'asc' | 'desc';
 export type ParameterInfo = {
   name: string;
   type: AtomicType;
@@ -316,11 +304,7 @@ export type Reference = {
   path?: Array<string>;
   parameters?: Array<ParameterValue>;
 };
-export enum Relationship {
-  ONE = 1,
-  MANY = 2,
-  CROSS = 3,
-}
+export type Relationship = 'one' | 'many' | 'cross';
 export type Result = {
   data?: Data;
   schema: Schema;
@@ -364,16 +348,15 @@ export type TimestampCell = {
 export type TimestampLiteral = {
   timestamp_value: string;
 };
-export enum TimestampTimeframe {
-  YEAR = 1,
-  QUARTER = 2,
-  MONTH = 3,
-  WEEK = 4,
-  DAY = 5,
-  HOUR = 6,
-  MINUTE = 7,
-  SECOND = 8,
-}
+export type TimestampTimeframe =
+  | 'year'
+  | 'quarter'
+  | 'month'
+  | 'week'
+  | 'day'
+  | 'hour'
+  | 'minute'
+  | 'second';
 export type TimestampType = {
   timeframe?: TimestampTimeframe;
 };
