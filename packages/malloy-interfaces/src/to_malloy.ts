@@ -181,7 +181,8 @@ function formatBlock(
 ): Fragment[] {
   const fragments: Fragment[] = [];
   fragments.push(`${label}:`);
-  const indented = items.length > 1;
+  const indented =
+    items.length > 1 || items.some(item => item.includes(NEWLINE));
   if (indented) {
     fragments.push(NEWLINE, INDENT);
   } else {
@@ -253,6 +254,7 @@ function expressionToFragments(expression: Malloy.Expression): Fragment[] {
 
 function groupByItemToFragments(groupByItem: Malloy.GroupByItem): Fragment[] {
   const fragments: Fragment[] = [];
+  fragments.push(...annotationsToFragments(groupByItem.field.annotations));
   if (groupByItem.name) {
     fragments.push(maybeQuoteIdentifier(groupByItem.name));
     fragments.push(' is ');
@@ -262,7 +264,12 @@ function groupByItemToFragments(groupByItem: Malloy.GroupByItem): Fragment[] {
 }
 
 function groupByToFragments(groupBy: Malloy.GroupBy): Fragment[] {
-  return formatBlock('group_by', groupBy.items.map(groupByItemToFragments));
+  const fragments: Fragment[] = [];
+  fragments.push(...annotationsToFragments(groupBy.annotations));
+  fragments.push(
+    ...formatBlock('group_by', groupBy.items.map(groupByItemToFragments))
+  );
+  return fragments;
 }
 
 function orderByToFragments(orderBy: Malloy.OrderBy): Fragment[] {
@@ -321,4 +328,14 @@ function whereItemToFragments(whereItem: Malloy.WhereItem): Fragment[] {
         `f'${whereItem.filter}'`,
       ];
   }
+}
+
+function annotationsToFragments(
+  annotations: Malloy.Annotation[] | undefined
+): Fragment[] {
+  return annotations ? annotations.flatMap(annotationToFragments) : [];
+}
+
+function annotationToFragments(annotation: Malloy.Annotation): Fragment[] {
+  return [annotation.value.trim(), NEWLINE];
 }

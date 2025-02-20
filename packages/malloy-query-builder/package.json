@@ -21,6 +21,9 @@
     "generate-docs": "npx typedoc --excludeInternal",
     "serve-docs": "npx http-server -o docs"
   },
+  "dependencies": {
+    "@malloydata/malloy-tag": "^0.0.234"
+  },
   "devDependencies": {
     "flow-api-translator": "^0.26.0",
     "http-server": "^14.1.1",

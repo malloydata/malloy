@@ -551,4 +551,53 @@ run: flights -> {
       malloy: 'run: flights -> { limit: 20 }',
     });
   });
+  test('add a tag property to a group by', () => {
+    const from = {
+      pipeline: {stages: []},
+      source: {name: 'flights'},
+    };
+    expect((q: ASTQuery) => {
+      const gb = q.getOrAddDefaultSegment().addGroupBy('carrier');
+      gb.setTagProperty(['a', 'b', 'c'], 10);
+    }).toModifyQuery({
+      model: flights_model,
+      from,
+      to: {
+        pipeline: {
+          stages: [
+            {
+              refinements: [
+                {
+                  __type: Malloy.RefinementType.Segment,
+                  operations: [
+                    {
+                      __type: Malloy.ViewOperationType.GroupBy,
+                      items: [
+                        {
+                          field: {
+                            annotations: [{value: '# a.b.c = 10'}],
+                            expression: {
+                              __type: Malloy.ExpressionType.Reference,
+                              name: 'carrier',
+                            },
+                          },
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        source: from.source,
+      },
+      malloy: `
+run: flights -> {
+  group_by:
+    # a.b.c = 10
+    carrier
+}`.trim(),
+    });
+  });
 });

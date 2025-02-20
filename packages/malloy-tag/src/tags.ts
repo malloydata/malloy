@@ -296,6 +296,38 @@ export class Tag implements TagInterface {
   clone(): Tag {
     return new Tag(structuredClone(this));
   }
+
+  toString(): string {
+    let annotation = '# '; // TODO prefix
+    function addChildren(tag: TagInterface) {
+      const props = Object.keys(tag.properties ?? {});
+      for (let i = 0; i < props.length; i++) {
+        addChild(props[i], tag.properties![props[i]]);
+        if (i < props.length - 1) {
+          annotation += ' ';
+        }
+      }
+    }
+    function addChild(prop: string, child: TagInterface) {
+      annotation += prop;
+      if (child.eq !== undefined) {
+        annotation += ` = ${child.eq}`;
+      }
+      if (child.properties) {
+        const props = Object.keys(child.properties);
+        if (props.length === 1) {
+          annotation += '.';
+          addChildren(child);
+        } else {
+          annotation += ' {';
+          addChildren(child);
+          annotation += '}';
+        }
+      }
+    }
+    addChildren(this);
+    return annotation;
+  }
 }
 
 class TagErrorListener implements ANTLRErrorListener<Token> {
