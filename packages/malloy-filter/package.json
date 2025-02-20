@@ -8,6 +8,9 @@
     "type": "git",
     "url": "https://github.com/malloydata/malloy"
   },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "build": "tsc --build",
     "samples": "node dist/generate_samples.js",
@@ -18,5 +21,4 @@
   },
   "keywords": [],
   "author": ""
-
 }
