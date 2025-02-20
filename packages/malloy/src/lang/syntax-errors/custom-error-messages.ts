@@ -120,11 +120,10 @@ const checkTokenSequenceMatch = (
           anchorTokenPosition + tokenOffset
         ).type;
       } else {
+        // Note: positive lookahead starts at '2' because '1' is the current token.
         const tokenOffset = direction === 'lookahead' ? i + 2 : -1 * (i + 1);
         streamToken = parser.inputStream.LA(tokenOffset);
       }
-      // Note: positive lookahead starts at '2' because '1' is the current token.
-
 
       // Note: negative checking is < -1 becuase Token.EOF is -1, but below
       // that we use negatives to indicate "does-not-match" rules.
