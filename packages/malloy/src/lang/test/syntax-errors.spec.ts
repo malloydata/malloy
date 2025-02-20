@@ -97,6 +97,7 @@ describe('errors', () => {
       )
     );
   });
+
   test('run opening curly to EOF', () => {
     expect(`
         run: x -> {
