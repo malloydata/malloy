@@ -58,21 +58,21 @@ function escapeString(str: string): {contents: string; quoteCharacter: string} {
 }
 
 function literalToFragments(literal: Malloy.LiteralValue): Fragment[] {
-  switch (literal.__type) {
-    case Malloy.LiteralValueType.BooleanLiteral:
+  switch (literal.kind) {
+    case 'boolean_literal':
       return [literal.boolean_value.toString()];
-    case Malloy.LiteralValueType.StringLiteral: {
+    case 'string_literal': {
       const {contents, quoteCharacter} = escapeString(literal.string_value);
       return [quoteCharacter, contents, quoteCharacter];
     }
-    case Malloy.LiteralValueType.NumberLiteral:
+    case 'number_literal':
       // TODO big numbers etc?
       return [literal.number_value.toString()];
-    case Malloy.LiteralValueType.NullLiteral:
+    case 'null_literal':
       return ['null'];
-    case Malloy.LiteralValueType.DateLiteral:
+    case 'date_literal':
       throw new Error('DateLiteral not implemented');
-    case Malloy.LiteralValueType.TimestampLiteral:
+    case 'timestamp_literal':
       throw new Error('TimestampLiteral not implemented');
   }
 }
@@ -99,53 +99,78 @@ function referenceToFragments(reference: Malloy.Reference): Fragment[] {
 function queryToFragments(query: Malloy.Query): Fragment[] {
   const fragments: Fragment[] = [];
   fragments.push('run: ');
-  if (query.source) {
-    fragments.push(...referenceToFragments(query.source));
-  }
-  fragments.push(' -> ');
-  fragments.push(...pipelineToFragments(query.pipeline));
+  fragments.push(...queryDefinitionToFragments(query.definition));
   return fragments;
 }
 
-function pipelineToFragments(pipeline: Malloy.Pipeline): Fragment[] {
+function queryDefinitionToFragments(query: Malloy.QueryDefinition): Fragment[] {
   const fragments: Fragment[] = [];
-  for (let i = 0; i < pipeline.stages.length; i++) {
-    const stage = pipeline.stages[i];
-    if (i > 0) {
+  switch (query.kind) {
+    case 'arrow': {
+      fragments.push(...referenceToFragments(query.source_reference));
       fragments.push(' -> ');
+      fragments.push(...viewDefinitionToFragments(query.view));
+      break;
     }
-    fragments.push(...stageToFragments(stage));
-  }
-  return fragments;
-}
-
-function stageToFragments(stage: Malloy.PipeStage): Fragment[] {
-  const fragments: Fragment[] = [];
-  for (let i = 0; i < stage.refinements.length; i++) {
-    const refinement = stage.refinements[i];
-    if (i > 0) {
+    case 'query_reference': {
+      fragments.push(...referenceToFragments(query));
+      break;
+    }
+    case 'refinement': {
+      fragments.push(...referenceToFragments(query.query_reference));
       fragments.push(' + ');
+      fragments.push(...viewDefinitionToFragments(query.refinement));
+      break;
     }
-    fragments.push(...refinementToFragments(refinement));
   }
   return fragments;
 }
 
-function refinementToFragments(refinement: Malloy.Refinement): Fragment[] {
-  switch (refinement.__type) {
-    case Malloy.RefinementType.Reference:
-      return referenceToFragments(refinement);
-    case Malloy.RefinementType.Segment:
-      return segmentToFragments(refinement);
+function viewDefinitionToFragments(view: Malloy.ViewDefinition): Fragment[] {
+  const fragments: Fragment[] = [];
+  switch (view.kind) {
+    case 'arrow': {
+      fragments.push(...viewDefinitionToFragments(view.source));
+      fragments.push(' -> ');
+      fragments.push(...viewDefinitionToFragments(view.view));
+      break;
+    }
+    case 'view_reference': {
+      fragments.push(...referenceToFragments(view));
+      break;
+    }
+    case 'refinement': {
+      fragments.push(...viewDefinitionToFragments(view.base));
+      fragments.push(' + ');
+      fragments.push(...viewDefinitionToFragments(view.refinement));
+      break;
+    }
+    case 'segment': {
+      fragments.push(...segmentToFragments(view));
+      break;
+    }
   }
+  return fragments;
 }
 
-function segmentToFragments(segment: Malloy.Segment): Fragment[] {
+function segmentToFragments(
+  segment: Malloy.ViewDefinitionWithSegment
+): Fragment[] {
   const onMultipleLines = segment.operations.length > 1;
   const operationFragments: Fragment[] = [];
   for (let i = 0; i < segment.operations.length; i++) {
     const operation = segment.operations[i];
-    operationFragments.push(...operationToFragments(operation));
+    const likeOperations = [operation];
+    while (i < segment.operations.length - 1) {
+      const nextOperation = segment.operations[i + 1];
+      if (nextOperation.kind === operation.kind) {
+        likeOperations.push(nextOperation);
+        i++;
+      } else {
+        break;
+      }
+    }
+    operationFragments.push(...groupedOperationsToFragments(likeOperations));
     if (onMultipleLines && i < segment.operations.length - 1) {
       operationFragments.push(NEWLINE);
     }
@@ -153,24 +178,26 @@ function segmentToFragments(segment: Malloy.Segment): Fragment[] {
   return wrap('{', operationFragments, '}');
 }
 
-function operationToFragments(operation: Malloy.ViewOperation): Fragment[] {
-  switch (operation.__type) {
-    case Malloy.ViewOperationType.Aggregate:
-      return aggregateToFragments(operation);
-    case Malloy.ViewOperationType.GroupBy:
-      return groupByToFragments(operation);
-    case Malloy.ViewOperationType.OrderBy:
-      return orderByToFragments(operation);
-    case Malloy.ViewOperationType.Nest:
-      return nestToFragments(operation);
-    case Malloy.ViewOperationType.Limit:
-      return limitToFragments(operation);
-    case Malloy.ViewOperationType.Where:
-      return whereToFragments(operation);
+function groupedOperationsToFragments(
+  operations: Malloy.ViewOperation[]
+): Fragment[] {
+  switch (operations[0].kind) {
+    case 'aggregate':
+      return aggregateToFragments(operations as Malloy.Aggregate[]);
+    case 'group_by':
+      return groupByToFragments(operations as Malloy.GroupBy[]);
+    case 'order_by':
+      return orderByToFragments(operations as Malloy.OrderBy[]);
+    case 'nest':
+      return nestToFragments(operations as Malloy.Nest[]);
+    case 'limit':
+      return limitToFragments(operations as Malloy.Limit[]);
+    case 'where':
+      return whereToFragments(operations as Malloy.Where[]);
   }
 }
 
-function aggregateToFragments(_aggregate: Malloy.Aggregate): Fragment[] {
+function aggregateToFragments(_aggregate: Malloy.Aggregate[]): Fragment[] {
   return []; // TODO
 }
 
@@ -233,28 +260,33 @@ function timeUnitToFragment(timeUnit: Malloy.TimestampTimeframe): Fragment {
 }
 
 function expressionToFragments(expression: Malloy.Expression): Fragment[] {
-  switch (expression.__type) {
-    case Malloy.ExpressionType.Reference:
+  switch (expression.kind) {
+    case 'field_reference':
       return referenceToFragments(expression);
-    case Malloy.ExpressionType.TimeTruncation:
+    case 'time_truncation':
       return [
-        ...referenceToFragments(expression.reference),
+        ...referenceToFragments(expression.field_reference),
         '.',
         timeUnitToFragment(expression.truncation),
       ];
-    case Malloy.ExpressionType.FilteredField:
+    case 'filtered_field':
       return [
-        ...referenceToFragments(expression.reference),
+        ...referenceToFragments(expression.field_reference),
         '{ where: ',
-        ...whereItemToFragments(expression.filter),
+        ...whereToFragments(expression.where),
         ' }',
       ];
   }
 }
 
-function groupByItemToFragments(groupByItem: Malloy.GroupByItem): Fragment[] {
+function groupByItemToFragments(
+  groupByItem: Malloy.GroupBy,
+  hideAnnotations = false
+): Fragment[] {
   const fragments: Fragment[] = [];
-  fragments.push(...annotationsToFragments(groupByItem.field.annotations));
+  if (!hideAnnotations) {
+    fragments.push(...annotationsToFragments(groupByItem.field.annotations));
+  }
   if (groupByItem.name) {
     fragments.push(maybeQuoteIdentifier(groupByItem.name));
     fragments.push(' is ');
@@ -263,26 +295,28 @@ function groupByItemToFragments(groupByItem: Malloy.GroupByItem): Fragment[] {
   return fragments;
 }
 
-function groupByToFragments(groupBy: Malloy.GroupBy): Fragment[] {
+function groupByToFragments(groupBy: Malloy.GroupBy[]): Fragment[] {
   const fragments: Fragment[] = [];
-  fragments.push(...annotationsToFragments(groupBy.annotations));
+  const hoistAnnotations = groupBy.length === 1;
+  if (hoistAnnotations) {
+    fragments.push(...annotationsToFragments(groupBy[0].field.annotations));
+  }
   fragments.push(
-    ...formatBlock('group_by', groupBy.items.map(groupByItemToFragments))
+    ...formatBlock(
+      'group_by',
+      groupBy.map(i => groupByItemToFragments(i, hoistAnnotations))
+    )
   );
   return fragments;
 }
 
-function orderByToFragments(orderBy: Malloy.OrderBy): Fragment[] {
-  return formatBlock(
-    'order_by',
-    orderBy.items.map(orderByItemToFragments),
-    ','
-  );
+function orderByToFragments(orderBy: Malloy.OrderBy[]): Fragment[] {
+  return formatBlock('order_by', orderBy.map(orderByItemToFragments), ',');
 }
 
-function orderByItemToFragments(orderByItem: Malloy.OrderByItem): Fragment[] {
+function orderByItemToFragments(orderByItem: Malloy.OrderBy): Fragment[] {
   const fragments: Fragment[] = [];
-  fragments.push(...referenceToFragments(orderByItem.field));
+  fragments.push(...referenceToFragments(orderByItem.field_reference));
   if (orderByItem.direction) {
     fragments.push(' ');
     fragments.push(
@@ -292,11 +326,11 @@ function orderByItemToFragments(orderByItem: Malloy.OrderByItem): Fragment[] {
   return fragments;
 }
 
-function nestToFragments(nest: Malloy.Nest): Fragment[] {
-  return formatBlock('nest', nest.items.map(nestItemToFragments));
+function nestToFragments(nest: Malloy.Nest[]): Fragment[] {
+  return formatBlock('nest', nest.map(nestItemToFragments));
 }
 
-function nestItemToFragments(nestItem: Malloy.NestItem): Fragment[] {
+function nestItemToFragments(nestItem: Malloy.Nest): Fragment[] {
   const fragments: Fragment[] = [];
   if (nestItem.name) {
     fragments.push(maybeQuoteIdentifier(nestItem.name));
@@ -308,24 +342,33 @@ function nestItemToFragments(nestItem: Malloy.NestItem): Fragment[] {
 
 function viewToFragments(view: Malloy.View): Fragment[] {
   // TODO annotations
-  return pipelineToFragments(view.pipeline);
+  return viewDefinitionToFragments(view.definition);
 }
 
-function limitToFragments(limit: Malloy.Limit): Fragment[] {
+function limitItemToFragments(limit: Malloy.Limit): Fragment[] {
   return [`limit: ${limit.limit}`];
 }
 
-function whereToFragments(where: Malloy.Where): Fragment[] {
-  return formatBlock('where', where.items.map(whereItemToFragments));
+function limitToFragments(limits: Malloy.Limit[]): Fragment[] {
+  const fragments: Fragment[] = [];
+  for (const limit of limits) {
+    fragments.push(...limitItemToFragments(limit));
+    fragments.push(NEWLINE);
+  }
+  return fragments;
 }
 
-function whereItemToFragments(whereItem: Malloy.WhereItem): Fragment[] {
-  switch (whereItem.__type) {
-    case Malloy.WhereItemType.FilterString:
+function whereToFragments(where: Malloy.Where[]): Fragment[] {
+  return formatBlock('where', where.map(whereItemToFragments));
+}
+
+function whereItemToFragments(whereItem: Malloy.Where): Fragment[] {
+  switch (whereItem.filter.kind) {
+    case 'filter_string':
       return [
-        ...referenceToFragments(whereItem.field),
+        ...referenceToFragments(whereItem.filter.field_reference),
         ' ? ',
-        `f'${whereItem.filter}'`,
+        `f'${whereItem.filter.filter}'`,
       ];
   }
 }
