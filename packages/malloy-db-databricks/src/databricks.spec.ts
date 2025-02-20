@@ -21,37 +21,43 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export type {
-  DialectFunctionOverloadDef,
-  DefinitionBlueprint,
-  DefinitionBlueprintMap,
-  OverloadedDefinitionBlueprint,
-} from './functions/util';
-export {
-  arg,
-  anyExprType,
-  makeParam,
-  overload,
-  minScalar,
-  minAggregate,
-  maxScalar,
-  spread,
-  param,
-  variadicParam,
-  literal,
-  sql,
-} from './functions/util';
-export {Dialect, qtz} from './dialect';
-export type {DialectFieldList, QueryInfo, FieldReferenceType} from './dialect';
-export {StandardSQLDialect} from './standardsql';
-export {PostgresDialect} from './postgres';
-export {DuckDBDialect} from './duckdb';
-export {SnowflakeDialect} from './snowflake';
-export {TrinoDialect} from './trino';
-export {MySQLDialect} from './mysql';
-export {DatabricksDialect} from './databricks';
-export {getDialect, registerDialect} from './dialect_map';
-export {getMalloyStandardFunctions} from './functions';
-export type {MalloyStandardFunctionImplementations} from './functions';
-export type {TinyToken} from './tiny_parser';
-export {TinyParser} from './tiny_parser';
+import {DatabricksConnection} from './databricks_connection';
+import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
+
+const [describe] = describeIfDatabaseAvailable(['postgres']);
+
+/*
+ * !IMPORTANT
+ *
+ * The connection is reused for each test, so if you do not name your tables
+ * and keys uniquely for each test you will see cross test interactions.
+ */
+
+describe('DataBricksConnection', () => {
+  let connection: DatabricksConnection;
+
+  beforeAll(async () => {
+    connection = new DatabricksConnection('databricks', {
+      'host': 'todo',
+      'path': 'todo',
+      'token': 'todo',
+      'name': 'test',
+      'defaultCatalog': 'workspace',
+    });
+
+    await connection.runSQL('SELECT 1');
+  });
+
+  afterAll(async () => {
+    await connection.close();
+  });
+
+  afterEach(() => {
+    jest.resetAllMocks();
+  });
+
+  it('can execute select 1', async () => {
+    const result = await connection.runSQL('SELECT 1');
+    expect(result.rows).toEqual([{1: 1}]);
+  });
+});

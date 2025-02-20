@@ -136,6 +136,7 @@ expressionModels.forEach((x, databaseName) => {
       const expected = {
         'bigquery': 'foo2003-01-01 12:00:00+00',
         'snowflake': 'foo2003-01-01T12:00:00.000Z',
+        'databricks': 'foo2003-01-01 00:00:00',
       };
 
       await funcTestMultiple(
@@ -242,7 +243,8 @@ expressionModels.forEach((x, databaseName) => {
             ? '\\0 - a - b - c'
             : databaseName === 'trino' ||
               databaseName === 'presto' ||
-              databaseName === 'mysql'
+              databaseName === 'mysql' ||
+              databaseName === 'databricks'
             ? '0 - 1 - 2 - 3'
             : 'axbxc - a - b - c',
         ],
@@ -288,9 +290,14 @@ expressionModels.forEach((x, databaseName) => {
   describe('stddev', () => {
     // TODO symmetric aggregates don't work with custom aggregate functions in BQ currently
     if (
-      ['bigquery', 'snowflake', 'trino', 'presto', 'mysql'].includes(
-        databaseName
-      )
+      [
+        'bigquery',
+        'snowflake',
+        'trino',
+        'presto',
+        'mysql',
+        'databricks',
+      ].includes(databaseName)
     )
       return;
     it(`works - ${databaseName}`, async () => {
@@ -1371,6 +1378,91 @@ expressionModels.forEach((x, databaseName) => {
     );
   });
 
+  describe('snowflake_statistical_functions', () => {
+    const isSnowflake = databaseName === 'snowflake';
+
+    it.when(isSnowflake)(`stddev works - ${databaseName}`, async () => {
+      await expect(`run: ${databaseName}.table('malloytest.aircraft_models') -> {
+        aggregate: std_seats is round(stddev(seats))
+      }`).malloyResultMatches(runtime, {std_seats: 39});
+    });
+
+    it.when(isSnowflake)(`stddev_pop works - ${databaseName}`, async () => {
+      await expect(`run: ${databaseName}.table('malloytest.aircraft_models') -> {
+        aggregate: std_pop_seats is round(stddev_pop(seats))
+      }`).malloyResultMatches(runtime, {std_pop_seats: 39});
+    });
+
+    it.when(isSnowflake)(`variance works - ${databaseName}`, async () => {
+      await expect(`run: ${databaseName}.table('malloytest.aircraft_models') -> {
+        aggregate: var_seats is round(variance(seats) / 100) * 100
+      }`).malloyResultMatches(runtime, {var_seats: 1500});
+    });
+
+    it.when(isSnowflake)(`var_pop works - ${databaseName}`, async () => {
+      await expect(`run: ${databaseName}.table('malloytest.aircraft_models') -> {
+        aggregate: var_pop_seats is round(var_pop(seats) / 100) * 100
+      }`).malloyResultMatches(runtime, {var_pop_seats: 1500});
+    });
+
+    it.when(isSnowflake)(`var_samp works - ${databaseName}`, async () => {
+      await expect(`run: ${databaseName}.table('malloytest.aircraft_models') -> {
+        aggregate: var_samp_seats is round(var_samp(seats) / 100) * 100
+      }`).malloyResultMatches(runtime, {var_samp_seats: 1500});
+    });
+
+    it.when(isSnowflake)(`corr works - ${databaseName}`, async () => {
+      await expect(`run: ${databaseName}.table('malloytest.aircraft_models') -> {
+        aggregate: correlation is round(corr(seats, engines) * 10) / 10
+      }`).malloyResultMatches(runtime, {correlation: 0.6});
+    });
+
+    it.when(isSnowflake)(`covar_pop works - ${databaseName}`, async () => {
+      await expect(`run: ${databaseName}.table('malloytest.aircraft_models') -> {
+        aggregate: covar is round(covar_pop(seats, engines))
+      }`).malloyResultMatches(runtime, {covar: 10});
+    });
+
+    it.when(isSnowflake)(`covar_samp works - ${databaseName}`, async () => {
+      await expect(`run: ${databaseName}.table('malloytest.aircraft_models') -> {
+        aggregate: covar is round(covar_samp(seats, engines))
+      }`).malloyResultMatches(runtime, {covar: 10});
+    });
+
+    it.when(isSnowflake)(`percent_rank basic - ${databaseName}`, async () => {
+      await expect(`run: ${databaseName}.table('malloytest.state_facts') -> {
+        group_by: state
+        calculate: rank_val is percent_rank()
+        limit: 3
+      }`).malloyResultMatches(runtime, [
+        {state: 'AK', rank_val: 0},
+        {state: 'AL', rank_val: 0.02},
+        {state: 'AR', rank_val: 0.04},
+      ]);
+    });
+
+    it.when(isSnowflake)(
+      `percent_rank with partition - ${databaseName}`,
+      async () => {
+        await expect(`run: ${databaseName}.table('malloytest.flights') -> {
+        group_by:
+          carrier,
+          origin
+        order_by:
+          carrier
+        calculate: rank_by_carrier is percent_rank() { partition_by: carrier }
+        where: carrier = 'AA' | 'AS'
+        limit: 4
+      }`).malloyResultMatches(runtime, [
+          {carrier: 'AA', origin: 'PHX', rank_by_carrier: 0},
+          {carrier: 'AA', origin: 'ORF', rank_by_carrier: 0},
+          {carrier: 'AA', origin: 'OAK', rank_by_carrier: 0},
+          {carrier: 'AA', origin: 'MEM', rank_by_carrier: 0},
+        ]);
+      }
+    );
+  });
+
   describe('dialect functions', () => {
     describe('duckdb', () => {
       const isDuckdb = databaseName === 'duckdb';
@@ -1511,9 +1603,14 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     it(`works with fanout and order_by - ${databaseName}`, async () => {
       // TODO bigquery cannot handle both fanout and order_by today
       if (
-        ['bigquery', 'snowflake', 'trino', 'presto', 'mysql'].includes(
-          databaseName
-        )
+        [
+          'bigquery',
+          'snowflake',
+          'trino',
+          'presto',
+          'mysql',
+          'databricks',
+        ].includes(databaseName)
       )
         return;
       await expect(`##! experimental.aggregate_order_by
@@ -1533,7 +1630,12 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 
     it(`works with fanout - ${databaseName}`, async () => {
       // Snowflake cannot handle the fanout case today
-      if (databaseName === 'snowflake' || databaseName === 'mysql') return;
+      if (
+        databaseName === 'snowflake' ||
+        databaseName === 'mysql' ||
+        databaseName === 'databricks'
+      )
+        return;
       await expect(`##! experimental.aggregate_order_by
       run: state_facts extend { join_many:
         state_facts2 is ${databaseName}.table('malloytest.state_facts')

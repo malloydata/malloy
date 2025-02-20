@@ -1,0 +1,9 @@
+# Snowflake Connection Configuration
+
+To connect to Snowflake, create a TOML configuration file at:
+
+`~/.snowflake/connections.toml`
+
+With the following structure:
+
+default = { account = "", user = "", password = "", role = "", warehouse = "", database = "", schema = "" }
