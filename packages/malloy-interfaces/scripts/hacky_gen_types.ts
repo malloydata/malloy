@@ -17,13 +17,14 @@ function snakeToCamel(m: string) {
 }
 
 function fixEnum(m: string) {
-  return m.replace(/ {2}([A-Za-z])+With/g, '');
+  m = m.replace(/enum ([A-Za-z]+)Type {/, 'type $1Type = ');
+  return m.replace(/ {2}[A-Za-z]+With[A-Za-z_]+ = ("[a-z_]+"),?\n}?/g, '| $1');
 }
 
 function fixUnionType(m: string) {
-  m = m.replace(/\n {2}(__type: [A-Za-z]+Type.[A-Za-z]+);\n/, '$1} &');
+  m = m.replace(/\n {2}(__type: [A-Za-z_]+Type.[A-Za-z_]+);\n/, '$1} &');
   m = m.replace(/ {2}[a-z_]+\?: undefined;\n/g, '');
-  m = m.replace(/ {2}[a-z_]+: ([A-Za-z]+);\n/, ' $1');
+  m = m.replace(/ {2}[a-z_]+: ([A-Za-z_]+);\n/, ' $1');
   m = m.replace(/}$/, ';');
   return m;
 }
@@ -47,21 +48,28 @@ for (const file of fs.readdirSync('./generated-types')) {
   actualTypes = actualTypes.replace(/= I/g, '= ');
   actualTypes = actualTypes.replace(/\| I/g, '| ');
   actualTypes = actualTypes.replace(/ {4}/g, '  ');
-  actualTypes = actualTypes.replace(/With[A-Za-z_]+/g, snakeToCamel);
-  actualTypes = actualTypes.replace(/Json/g, 'JSON');
-  actualTypes = actualTypes.replace(/Sql/g, 'SQL');
   actualTypes = actualTypes.replace(
-    /enum ([A-Za-z]+)Type {\n( {2}\1With([A-Za-z]+) = "[a-z_]+",?\n)+}/g,
+    /enum ([A-Za-z]+)Type {\n( {2}\1With([A-Za-z_]+) = "[a-z_]+",?\n)+}/g,
     fixEnum
   );
   actualTypes = actualTypes.replace(
-    /__type: ([A-Za-z]+)Type\.\1With/g,
-    '__type: $1Type.'
-  );
-  actualTypes = actualTypes.replace(
-    /export type ([A-Za-z]+)With([A-Za-z]+) = {\n {2}(__type: \1Type.\2);\n( {2}[a-z_]+\?: undefined;\n)*( {2}[a-z_]+: [A-Za-z]+;\n)( {2}[a-z_]+\?: undefined;\n)*}/g,
+    /export type ([A-Za-z]+)With([A-Za-z_]+) = {\n {2}(__type: \1Type.\1With\2);\n( {2}[a-z_]+\?: undefined;\n)*( {2}[a-z_]+: [A-Za-z_]+;\n)( {2}[a-z_]+\?: undefined;\n)*}/g,
     fixUnionType
   );
+  actualTypes = actualTypes.replace(
+    /__type: ([A-Za-z]+)Type\.\1With[A-Za-z_]+/g,
+    m =>
+      m
+        .replace(
+          /__type: [A-Za-z]+Type\.[A-Za-z]+With([A-Za-z_]+)/,
+          '__type: "$1"'
+        )
+        .toLowerCase()
+  );
+  actualTypes = actualTypes.replace(/Json/g, 'JSON');
+  actualTypes = actualTypes.replace(/Sql/g, 'SQL');
+  actualTypes = actualTypes.replace(/__type/g, 'kind');
+  actualTypes = actualTypes.replace(/With[A-Za-z_]+/g, snakeToCamel);
   allTypes += actualTypes + '\n';
 }
 

@@ -11,42 +11,42 @@ export * from './types';
 export const test: Malloy.ModelInfo = {
   entries: [
     {
-      __type: Malloy.ModelEntryValueType.Source,
+      kind: 'source',
       name: 'flights',
       schema: {
         fields: [
           {
-            __type: Malloy.FieldInfoType.Dimension,
+            kind: 'dimension',
             name: 'carrier',
             type: {
-              __type: Malloy.AtomicTypeType.BooleanType,
+              kind: 'boolean_type',
             },
             annotations: [{value: '# foo=1'}],
           },
           {
-            __type: Malloy.FieldInfoType.Dimension,
+            kind: 'dimension',
             name: 'arr',
             type: {
-              __type: Malloy.AtomicTypeType.ArrayType,
+              kind: 'array_type',
               element_type: {
-                __type: Malloy.AtomicTypeType.BooleanType,
+                kind: 'boolean_type',
               },
             },
           },
           {
-            __type: Malloy.FieldInfoType.Dimension,
+            kind: 'dimension',
             name: 'arr_rec',
             type: {
-              __type: Malloy.AtomicTypeType.ArrayType,
+              kind: 'array_type',
               element_type: {
-                __type: Malloy.AtomicTypeType.RecordType,
+                kind: 'record_type',
                 fields: [
                   {
                     name: 'arr',
                     type: {
-                      __type: Malloy.AtomicTypeType.ArrayType,
+                      kind: 'array_type',
                       element_type: {
-                        __type: Malloy.AtomicTypeType.BooleanType,
+                        kind: 'boolean_type',
                       },
                     },
                   },
@@ -55,17 +55,17 @@ export const test: Malloy.ModelInfo = {
             },
           },
           {
-            __type: Malloy.FieldInfoType.Dimension,
+            kind: 'dimension',
             name: 'rec',
             type: {
-              __type: Malloy.AtomicTypeType.RecordType,
+              kind: 'record_type',
               fields: [
                 {
                   name: 'arr',
                   type: {
-                    __type: Malloy.AtomicTypeType.ArrayType,
+                    kind: 'array_type',
                     element_type: {
-                      __type: Malloy.AtomicTypeType.BooleanType,
+                      kind: 'boolean_type',
                     },
                   },
                 },
@@ -73,39 +73,39 @@ export const test: Malloy.ModelInfo = {
             },
           },
           {
-            __type: Malloy.FieldInfoType.Join,
+            kind: 'join',
             name: 'carriers',
             relationship: Malloy.Relationship.ONE,
             schema: {
               fields: [
                 {
-                  __type: Malloy.FieldInfoType.Dimension,
+                  kind: 'dimension',
                   name: 'code',
                   type: {
-                    __type: Malloy.AtomicTypeType.StringType,
+                    kind: 'string_type',
                   },
                 },
               ],
             },
           },
           {
-            __type: Malloy.FieldInfoType.View,
+            kind: 'view',
             name: 'by_carrier',
             schema: {
               fields: [
                 {
-                  __type: Malloy.FieldInfoType.Dimension,
+                  kind: 'dimension',
                   name: 'carrier',
                   type: {
-                    __type: Malloy.AtomicTypeType.StringType,
+                    kind: 'string_type',
                   },
                 },
                 {
-                  __type: Malloy.FieldInfoType.Dimension,
+                  kind: 'dimension',
                   name: 'flight_count',
                   // How do I say this "came from" a dimension
                   type: {
-                    __type: Malloy.AtomicTypeType.NumberType,
+                    kind: 'number_type',
                   },
                 },
               ],
@@ -117,10 +117,10 @@ export const test: Malloy.ModelInfo = {
         {
           name: 'param',
           type: {
-            __type: Malloy.AtomicTypeType.NumberType,
+            kind: 'number_type',
           },
           default_value: {
-            __type: Malloy.LiteralValueType.NumberLiteral,
+            kind: 'number_literal',
             number_value: 7,
           },
         },
@@ -132,16 +132,16 @@ export const test: Malloy.ModelInfo = {
 
 export const res: Malloy.Result = {
   data: {
-    __type: Malloy.DataType.Table,
+    kind: 'table',
     rows: [
       {
         cells: [
           {
-            __type: Malloy.CellType.StringCell,
+            kind: 'string_cell',
             string_value: 'UA',
           },
           {
-            __type: Malloy.CellType.NumberCell,
+            kind: 'number_cell',
             number_value: 12341234,
           },
         ],
@@ -149,11 +149,11 @@ export const res: Malloy.Result = {
       {
         cells: [
           {
-            __type: Malloy.CellType.StringCell,
+            kind: 'string_cell',
             string_value: 'AA',
           },
           {
-            __type: Malloy.CellType.NumberCell,
+            kind: 'number_cell',
             number_value: 2343,
           },
         ],
@@ -163,18 +163,18 @@ export const res: Malloy.Result = {
   schema: {
     fields: [
       {
-        __type: Malloy.FieldInfoType.Dimension,
+        kind: 'dimension',
         name: 'carrier',
         type: {
-          __type: Malloy.AtomicTypeType.StringType,
+          kind: 'string_type',
         },
       },
       {
-        __type: Malloy.FieldInfoType.Dimension,
+        kind: 'dimension',
         // TODO "wasMeasure?"
         name: 'flight_count',
         type: {
-          __type: Malloy.AtomicTypeType.NumberType,
+          kind: 'number_type',
         },
       },
     ],
@@ -184,17 +184,17 @@ export const res: Malloy.Result = {
 
 export const thingy1: Malloy.Query = {
   definition: {
-    __type: Malloy.QueryDefinitionType.Reference,
+    kind: 'query_reference',
     name: 'flights_by_carrier',
   },
 };
 
 export const thingy123r: Malloy.Query = {
   definition: {
-    __type: Malloy.QueryDefinitionType.Arrow,
-    source: {name: 'flights'},
+    kind: 'arrow',
+    source_reference: {name: 'flights'},
     view: {
-      __type: Malloy.ViewDefinitionType.Reference,
+      kind: 'view_reference',
       name: 'by_carrier',
     },
   },
@@ -202,10 +202,10 @@ export const thingy123r: Malloy.Query = {
 
 export const thingyssdfg: Malloy.Query = {
   definition: {
-    __type: Malloy.QueryDefinitionType.Refinement,
-    query: {name: 'flights'},
+    kind: 'refinement',
+    query_reference: {name: 'flights'},
     refinement: {
-      __type: Malloy.ViewDefinitionType.Reference,
+      kind: 'view_reference',
       name: 'by_carrier',
     },
   },
@@ -213,22 +213,22 @@ export const thingyssdfg: Malloy.Query = {
 
 export const thingy2asdf: Malloy.Query = {
   definition: {
-    __type: Malloy.QueryDefinitionType.Arrow,
-    source: {name: 'flights'},
+    kind: 'arrow',
+    source_reference: {name: 'flights'},
     view: {
-      __type: Malloy.ViewDefinitionType.Refinement,
+      kind: 'refinement',
       base: {
-        __type: Malloy.ViewDefinitionType.Reference,
+        kind: 'view_reference',
         name: 'by_carrier',
       },
       refinement: {
-        __type: Malloy.ViewDefinitionType.Segment,
+        kind: 'segment',
         operations: [
           {
-            __type: Malloy.ViewOperationType.Where,
+            kind: 'where',
             filter: {
-              __type: Malloy.FilterType.FilterString,
-              field: {name: 'carrier'},
+              kind: 'filter_string',
+              field_reference: {name: 'carrier'},
               filter: 'WN',
             },
           },
@@ -240,33 +240,33 @@ export const thingy2asdf: Malloy.Query = {
 
 export const thingy3: Malloy.Query = {
   definition: {
-    __type: Malloy.QueryDefinitionType.Arrow,
-    source: {
+    kind: 'arrow',
+    source_reference: {
       name: 'flights',
     },
     view: {
-      __type: Malloy.ViewDefinitionType.Refinement,
+      kind: 'refinement',
       base: {
-        __type: Malloy.ViewDefinitionType.Reference,
+        kind: 'view_reference',
         name: 'by_carrier',
       },
       refinement: {
-        __type: Malloy.ViewDefinitionType.Segment,
+        kind: 'segment',
         operations: [
           {
-            __type: Malloy.ViewOperationType.GroupBy,
+            kind: 'group_by',
             field: {
               expression: {
-                __type: Malloy.ExpressionType.Reference,
+                kind: 'field_reference',
                 name: 'carrier',
               },
             },
           },
           {
-            __type: Malloy.ViewOperationType.GroupBy,
+            kind: 'group_by',
             field: {
               expression: {
-                __type: Malloy.ExpressionType.Reference,
+                kind: 'field_reference',
                 name: 'foo',
               },
             },
@@ -277,32 +277,120 @@ export const thingy3: Malloy.Query = {
   },
 };
 
-export const thingy4: Malloy.Query = {
+export const thingy3dfdf: Malloy.Query = {
   definition: {
-    __type: Malloy.QueryDefinitionType.Arrow,
-    source: {
+    kind: 'arrow',
+    source_reference: {
       name: 'flights',
     },
     view: {
-      __type: Malloy.ViewDefinitionType.Segment,
+      kind: 'refinement',
+      base: {
+        kind: 'view_reference',
+        name: 'by_carrier',
+      },
+      refinement: {
+        kind: 'view_reference',
+        name: 'top10',
+      },
+    },
+  },
+};
+
+export const thingy4asdfasdf: Malloy.Query = {
+  definition: {
+    kind: 'arrow',
+    source_reference: {
+      name: 'flights',
+    },
+    view: {
+      kind: 'segment',
       operations: [
         {
-          __type: Malloy.ViewOperationType.GroupBy,
+          kind: 'group_by',
           field: {
             expression: {
-              __type: Malloy.ExpressionType.Reference,
+              kind: 'field_reference',
               name: 'carrier',
             },
           },
         },
         {
-          __type: Malloy.ViewOperationType.GroupBy,
+          kind: 'group_by',
           field: {
             expression: {
-              __type: Malloy.ExpressionType.Reference,
+              kind: 'field_reference',
               name: 'foo',
             },
           },
+        },
+      ],
+    },
+  },
+};
+
+// run: flights -> by_carrier
+export const thingy4asdfas: Malloy.Query = {
+  definition: {
+    kind: 'arrow',
+    source_reference: {
+      name: 'flights',
+    },
+    view: {
+      kind: 'view_reference',
+      name: 'by_carrier',
+    },
+  },
+};
+
+// run: flights -> by_carrier + { limit: 10 }
+export const thingy4dfdsfs: Malloy.Query = {
+  definition: {
+    kind: 'arrow',
+    source_reference: {
+      name: 'flights',
+    },
+    view: {
+      kind: 'refinement',
+      base: {
+        kind: 'view_reference',
+        name: 'by_carrier',
+      },
+      refinement: {
+        kind: 'segment',
+        operations: [
+          {
+            kind: 'limit',
+            limit: 10,
+          },
+        ],
+      },
+    },
+  },
+};
+
+// run: flights -> { group_by: carrier }
+export const thingy4sdfsd: Malloy.Query = {
+  definition: {
+    kind: 'arrow',
+    source_reference: {
+      name: 'flights',
+    },
+    view: {
+      kind: 'segment',
+      operations: [
+        {
+          kind: 'group_by',
+          field: {
+            expression: {
+              kind: 'field_reference',
+              name: 'carrier',
+            },
+          },
+        },
+        {
+          kind: 'limit',
+          limit: 10,
         },
       ],
     },

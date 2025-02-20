@@ -263,7 +263,7 @@ struct Field {
 }
 
 struct OrderBy {
-  1: required Reference field,
+  1: required Reference field_reference,
   2: optional OrderByDirection direction,
 }
 
@@ -284,7 +284,7 @@ union Filter {
 }
 
 struct FilterStringApplication {
-  1: required Reference field,
+  1: required Reference field_reference,
   2: required string filter,
 }
 
@@ -314,23 +314,23 @@ struct Query {
 
 union QueryDefinition {
   1: QueryArrow arrow,
-  2: Reference reference,
+  2: Reference query_reference,
   3: QueryRefinement refinement,
 }
 
 struct QueryArrow {
-  1: required Reference source,
+  1: required Reference source_reference,
   2: required ViewDefinition view,
 }
 
 struct QueryRefinement {
-  1: required Reference query,
+  1: required Reference query_reference,
   2: required ViewDefinition refinement,
 }
 
 union ViewDefinition {
   1: ViewArrow arrow,
-  2: Reference reference,
+  2: Reference view_reference,
   3: ViewRefinement refinement,
   4: ViewSegment segment,
 }
@@ -393,18 +393,18 @@ struct NullLiteral {
 }
 
 union Expression {
-  1: required Reference reference,
+  1: required Reference field_reference,
   2: required TimeTruncationFieldReference time_truncation,
   3: required FilteredField filtered_field,
 }
 
 struct TimeTruncationFieldReference {
-  1: required Reference reference, // TODO do I make this circular, more like actual grammar? e.g. TimeTruncation rather than TimeTruncationFieldReference
+  1: required Reference field_reference, // TODO do I make this circular, more like actual grammar? e.g. TimeTruncation rather than TimeTruncationFieldReference
   2: required TimestampTimeframe truncation,
 }
 
 struct FilteredField {
-  1: required Reference reference,
+  1: required Reference field_reference,
   2: required list<Where> where,
 }
 

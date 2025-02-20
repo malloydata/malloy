@@ -28,17 +28,16 @@ export type ArrayCell = {
 export type ArrayType = {
   element_type: AtomicType;
 };
-export enum AtomicTypeType {
-  StringType = 'string_type',
-  BooleanType = 'boolean_type',
-  NumberType = 'number_type',
-  JSONType = 'json_type',
-  SQLNativeType = 'sql_native_type',
-  DateType = 'date_type',
-  TimestampType = 'timestamp_type',
-  ArrayType = 'array_type',
-  RecordType = 'record_type',
-}
+export type AtomicTypeType =
+  | 'string_type'
+  | 'boolean_type'
+  | 'number_type'
+  | 'json_type'
+  | 'sql_native_type'
+  | 'date_type'
+  | 'timestamp_type'
+  | 'array_type'
+  | 'record_type';
 export type AtomicType =
   | AtomicTypeWithStringType
   | AtomicTypeWithBooleanType
@@ -49,33 +48,19 @@ export type AtomicType =
   | AtomicTypeWithTimestampType
   | AtomicTypeWithArrayType
   | AtomicTypeWithRecordType;
-export type AtomicTypeWithStringType = {
-  __type: AtomicTypeType.StringType;
-} & StringType;
-export type AtomicTypeWithBooleanType = {
-  __type: AtomicTypeType.BooleanType;
-} & BooleanType;
-export type AtomicTypeWithNumberType = {
-  __type: AtomicTypeType.NumberType;
-} & NumberType;
-export type AtomicTypeWithJSONType = {
-  __type: AtomicTypeType.JSONType;
-} & JSONType;
+export type AtomicTypeWithStringType = {kind: 'string_type'} & StringType;
+export type AtomicTypeWithBooleanType = {kind: 'boolean_type'} & BooleanType;
+export type AtomicTypeWithNumberType = {kind: 'number_type'} & NumberType;
+export type AtomicTypeWithJSONType = {kind: 'json_type'} & JSONType;
 export type AtomicTypeWithSQLNativeType = {
-  __type: AtomicTypeType.SQLNativeType;
+  kind: 'sql_native_type';
 } & SQLNativeType;
-export type AtomicTypeWithDateType = {
-  __type: AtomicTypeType.DateType;
-} & DateType;
+export type AtomicTypeWithDateType = {kind: 'date_type'} & DateType;
 export type AtomicTypeWithTimestampType = {
-  __type: AtomicTypeType.TimestampType;
+  kind: 'timestamp_type';
 } & TimestampType;
-export type AtomicTypeWithArrayType = {
-  __type: AtomicTypeType.ArrayType;
-} & ArrayType;
-export type AtomicTypeWithRecordType = {
-  __type: AtomicTypeType.RecordType;
-} & RecordType;
+export type AtomicTypeWithArrayType = {kind: 'array_type'} & ArrayType;
+export type AtomicTypeWithRecordType = {kind: 'record_type'} & RecordType;
 export type BooleanCell = {
   boolean_value: boolean;
 };
@@ -83,17 +68,16 @@ export type BooleanLiteral = {
   boolean_value: boolean;
 };
 export type BooleanType = {};
-export enum CellType {
-  StringCell = 'string_cell',
-  BooleanCell = 'boolean_cell',
-  DateCell = 'date_cell',
-  TimestampCell = 'timestamp_cell',
-  NumberCell = 'number_cell',
-  JSONCell = 'json_cell',
-  RecordCell = 'record_cell',
-  ArrayCell = 'array_cell',
-  TableCell = 'table_cell',
-}
+export type CellType =
+  | 'string_cell'
+  | 'boolean_cell'
+  | 'date_cell'
+  | 'timestamp_cell'
+  | 'number_cell'
+  | 'json_cell'
+  | 'record_cell'
+  | 'array_cell'
+  | 'table_cell';
 export type Cell =
   | CellWithStringCell
   | CellWithBooleanCell
@@ -104,24 +88,19 @@ export type Cell =
   | CellWithRecordCell
   | CellWithArrayCell
   | CellWithTableCell;
-export type CellWithStringCell = {__type: CellType.StringCell} & StringCell;
-export type CellWithBooleanCell = {__type: CellType.BooleanCell} & BooleanCell;
-export type CellWithDateCell = {__type: CellType.DateCell} & DateCell;
-export type CellWithTimestampCell = {
-  __type: CellType.TimestampCell;
-} & TimestampCell;
-export type CellWithNumberCell = {__type: CellType.NumberCell} & NumberCell;
-export type CellWithJSONCell = {__type: CellType.JSONCell} & JSONCell;
-export type CellWithRecordCell = {__type: CellType.RecordCell} & RecordCell;
-export type CellWithArrayCell = {__type: CellType.ArrayCell} & ArrayCell;
-export type CellWithTableCell = {__type: CellType.TableCell} & TableCell;
-export enum DataType {
-  Record = 'record',
-  Table = 'table',
-}
+export type CellWithStringCell = {kind: 'string_cell'} & StringCell;
+export type CellWithBooleanCell = {kind: 'boolean_cell'} & BooleanCell;
+export type CellWithDateCell = {kind: 'date_cell'} & DateCell;
+export type CellWithTimestampCell = {kind: 'timestamp_cell'} & TimestampCell;
+export type CellWithNumberCell = {kind: 'number_cell'} & NumberCell;
+export type CellWithJSONCell = {kind: 'json_cell'} & JSONCell;
+export type CellWithRecordCell = {kind: 'record_cell'} & RecordCell;
+export type CellWithArrayCell = {kind: 'array_cell'} & ArrayCell;
+export type CellWithTableCell = {kind: 'table_cell'} & TableCell;
+export type DataType = 'record' | 'table';
 export type Data = DataWithRecord | DataWithTable;
-export type DataWithRecord = {__type: DataType.Record} & RecordCell;
-export type DataWithTable = {__type: DataType.Table} & Table;
+export type DataWithRecord = {kind: 'record'} & RecordCell;
+export type DataWithTable = {kind: 'table'} & Table;
 export type DateCell = {
   date_value: string;
 };
@@ -143,60 +122,48 @@ export type DimensionInfo = {
   type: AtomicType;
   annotations?: Array<Annotation>;
 };
-export enum ExpressionType {
-  Reference = 'reference',
-  TimeTruncation = 'time_truncation',
-  FilteredField = 'filtered_field',
-}
+export type ExpressionType =
+  | 'field_reference'
+  | 'time_truncation'
+  | 'filtered_field';
 export type Expression =
-  | ExpressionWithReference
+  | ExpressionWithFieldReference
   | ExpressionWithTimeTruncation
   | ExpressionWithFilteredField;
-export type ExpressionWithReference = {
-  __type: ExpressionType.Reference;
+export type ExpressionWithFieldReference = {
+  kind: 'field_reference';
 } & Reference;
 export type ExpressionWithTimeTruncation = {
-  __type: ExpressionType.TimeTruncation;
+  kind: 'time_truncation';
 } & TimeTruncationFieldReference;
 export type ExpressionWithFilteredField = {
-  __type: ExpressionType.FilteredField;
+  kind: 'filtered_field';
 } & FilteredField;
 export type Field = {
   expression: Expression;
   annotations?: Array<Annotation>;
 };
-export enum FieldInfoType {
-  Dimension = 'dimension',
-  Measure = 'measure',
-  Join = 'join',
-  View = 'view',
-}
+export type FieldInfoType = 'dimension' | 'measure' | 'join' | 'view';
 export type FieldInfo =
   | FieldInfoWithDimension
   | FieldInfoWithMeasure
   | FieldInfoWithJoin
   | FieldInfoWithView;
-export type FieldInfoWithDimension = {
-  __type: FieldInfoType.Dimension;
-} & DimensionInfo;
-export type FieldInfoWithMeasure = {
-  __type: FieldInfoType.Measure;
-} & MeasureInfo;
-export type FieldInfoWithJoin = {__type: FieldInfoType.Join} & JoinInfo;
-export type FieldInfoWithView = {__type: FieldInfoType.View} & ViewInfo;
-export enum FilterType {
-  FilterString = 'filter_string',
-}
+export type FieldInfoWithDimension = {kind: 'dimension'} & DimensionInfo;
+export type FieldInfoWithMeasure = {kind: 'measure'} & MeasureInfo;
+export type FieldInfoWithJoin = {kind: 'join'} & JoinInfo;
+export type FieldInfoWithView = {kind: 'view'} & ViewInfo;
+export type FilterType = 'filter_string';
 export type Filter = FilterWithFilterString;
 export type FilterWithFilterString = {
-  __type: FilterType.FilterString;
+  kind: 'filter_string';
 } & FilterStringApplication;
 export type FilterStringApplication = {
-  field: Reference;
+  field_reference: Reference;
   filter: string;
 };
 export type FilteredField = {
-  reference: Reference;
+  field_reference: Reference;
   where: Array<Where>;
 };
 export type GroupBy = {
@@ -216,14 +183,13 @@ export type JoinInfo = {
 export type Limit = {
   limit: number;
 };
-export enum LiteralValueType {
-  StringLiteral = 'string_literal',
-  NumberLiteral = 'number_literal',
-  DateLiteral = 'date_literal',
-  TimestampLiteral = 'timestamp_literal',
-  BooleanLiteral = 'boolean_literal',
-  NullLiteral = 'null_literal',
-}
+export type LiteralValueType =
+  | 'string_literal'
+  | 'number_literal'
+  | 'date_literal'
+  | 'timestamp_literal'
+  | 'boolean_literal'
+  | 'null_literal';
 export type LiteralValue =
   | LiteralValueWithStringLiteral
   | LiteralValueWithNumberLiteral
@@ -232,23 +198,19 @@ export type LiteralValue =
   | LiteralValueWithBooleanLiteral
   | LiteralValueWithNullLiteral;
 export type LiteralValueWithStringLiteral = {
-  __type: LiteralValueType.StringLiteral;
+  kind: 'string_literal';
 } & StringLiteral;
 export type LiteralValueWithNumberLiteral = {
-  __type: LiteralValueType.NumberLiteral;
+  kind: 'number_literal';
 } & NumberLiteral;
-export type LiteralValueWithDateLiteral = {
-  __type: LiteralValueType.DateLiteral;
-} & DateLiteral;
+export type LiteralValueWithDateLiteral = {kind: 'date_literal'} & DateLiteral;
 export type LiteralValueWithTimestampLiteral = {
-  __type: LiteralValueType.TimestampLiteral;
+  kind: 'timestamp_literal';
 } & TimestampLiteral;
 export type LiteralValueWithBooleanLiteral = {
-  __type: LiteralValueType.BooleanLiteral;
+  kind: 'boolean_literal';
 } & BooleanLiteral;
-export type LiteralValueWithNullLiteral = {
-  __type: LiteralValueType.NullLiteral;
-} & NullLiteral;
+export type LiteralValueWithNullLiteral = {kind: 'null_literal'} & NullLiteral;
 export type Location = {
   url: string;
   range: Range;
@@ -258,19 +220,12 @@ export type MeasureInfo = {
   type: AtomicType;
   annotations?: Array<Annotation>;
 };
-export enum ModelEntryValueType {
-  Source = 'source',
-  Query = 'query',
-}
+export type ModelEntryValueType = 'source' | 'query';
 export type ModelEntryValue =
   | ModelEntryValueWithSource
   | ModelEntryValueWithQuery;
-export type ModelEntryValueWithSource = {
-  __type: ModelEntryValueType.Source;
-} & SourceInfo;
-export type ModelEntryValueWithQuery = {
-  __type: ModelEntryValueType.Query;
-} & QueryInfo;
+export type ModelEntryValueWithSource = {kind: 'source'} & SourceInfo;
+export type ModelEntryValueWithQuery = {kind: 'query'} & QueryInfo;
 export type ModelInfo = {
   entries: Array<ModelEntryValue>;
   annotations?: Array<Annotation>;
@@ -295,7 +250,7 @@ export type NumberType = {
   subtype?: NumberSubtype;
 };
 export type OrderBy = {
-  field: Reference;
+  field_reference: Reference;
   direction?: OrderByDirection;
 };
 export enum OrderByDirection {
@@ -319,26 +274,20 @@ export type Query = {
   definition: QueryDefinition;
 };
 export type QueryArrow = {
-  source: Reference;
+  source_reference: Reference;
   view: ViewDefinition;
 };
-export enum QueryDefinitionType {
-  Arrow = 'arrow',
-  Reference = 'reference',
-  Refinement = 'refinement',
-}
+export type QueryDefinitionType = 'arrow' | 'query_reference' | 'refinement';
 export type QueryDefinition =
   | QueryDefinitionWithArrow
-  | QueryDefinitionWithReference
+  | QueryDefinitionWithQueryReference
   | QueryDefinitionWithRefinement;
-export type QueryDefinitionWithArrow = {
-  __type: QueryDefinitionType.Arrow;
-} & QueryArrow;
-export type QueryDefinitionWithReference = {
-  __type: QueryDefinitionType.Reference;
+export type QueryDefinitionWithArrow = {kind: 'arrow'} & QueryArrow;
+export type QueryDefinitionWithQueryReference = {
+  kind: 'query_reference';
 } & Reference;
 export type QueryDefinitionWithRefinement = {
-  __type: QueryDefinitionType.Refinement;
+  kind: 'refinement';
 } & QueryRefinement;
 export type QueryInfo = {
   name: string;
@@ -349,7 +298,7 @@ export type QueryInfo = {
   location?: Location;
 };
 export type QueryRefinement = {
-  query: Reference;
+  query_reference: Reference;
   refinement: ViewDefinition;
 };
 export type Range = {
@@ -406,7 +355,7 @@ export type TableCell = {
   table_value: Table;
 };
 export type TimeTruncationFieldReference = {
-  reference: Reference;
+  field_reference: Reference;
   truncation: TimestampTimeframe;
 };
 export type TimestampCell = {
@@ -436,43 +385,37 @@ export type ViewArrow = {
   source: ViewDefinition;
   view: ViewDefinition;
 };
-export enum ViewDefinitionType {
-  Arrow = 'arrow',
-  Reference = 'reference',
-  Refinement = 'refinement',
-  Segment = 'segment',
-}
+export type ViewDefinitionType =
+  | 'arrow'
+  | 'view_reference'
+  | 'refinement'
+  | 'segment';
 export type ViewDefinition =
   | ViewDefinitionWithArrow
-  | ViewDefinitionWithReference
+  | ViewDefinitionWithViewReference
   | ViewDefinitionWithRefinement
   | ViewDefinitionWithSegment;
-export type ViewDefinitionWithArrow = {
-  __type: ViewDefinitionType.Arrow;
-} & ViewArrow;
-export type ViewDefinitionWithReference = {
-  __type: ViewDefinitionType.Reference;
+export type ViewDefinitionWithArrow = {kind: 'arrow'} & ViewArrow;
+export type ViewDefinitionWithViewReference = {
+  kind: 'view_reference';
 } & Reference;
 export type ViewDefinitionWithRefinement = {
-  __type: ViewDefinitionType.Refinement;
+  kind: 'refinement';
 } & ViewRefinement;
-export type ViewDefinitionWithSegment = {
-  __type: ViewDefinitionType.Segment;
-} & ViewSegment;
+export type ViewDefinitionWithSegment = {kind: 'segment'} & ViewSegment;
 export type ViewInfo = {
   name: string;
   schema: Schema;
   annotations?: Array<Annotation>;
   definition?: View;
 };
-export enum ViewOperationType {
-  GroupBy = 'group_by',
-  Aggregate = 'aggregate',
-  OrderBy = 'order_by',
-  Limit = 'limit',
-  Where = 'where',
-  Nest = 'nest',
-}
+export type ViewOperationType =
+  | 'group_by'
+  | 'aggregate'
+  | 'order_by'
+  | 'limit'
+  | 'where'
+  | 'nest';
 export type ViewOperation =
   | ViewOperationWithGroupBy
   | ViewOperationWithAggregate
@@ -480,18 +423,12 @@ export type ViewOperation =
   | ViewOperationWithLimit
   | ViewOperationWithWhere
   | ViewOperationWithNest;
-export type ViewOperationWithGroupBy = {
-  __type: ViewOperationType.GroupBy;
-} & GroupBy;
-export type ViewOperationWithAggregate = {
-  __type: ViewOperationType.Aggregate;
-} & Aggregate;
-export type ViewOperationWithOrderBy = {
-  __type: ViewOperationType.OrderBy;
-} & OrderBy;
-export type ViewOperationWithLimit = {__type: ViewOperationType.Limit} & Limit;
-export type ViewOperationWithWhere = {__type: ViewOperationType.Where} & Where;
-export type ViewOperationWithNest = {__type: ViewOperationType.Nest} & Nest;
+export type ViewOperationWithGroupBy = {kind: 'group_by'} & GroupBy;
+export type ViewOperationWithAggregate = {kind: 'aggregate'} & Aggregate;
+export type ViewOperationWithOrderBy = {kind: 'order_by'} & OrderBy;
+export type ViewOperationWithLimit = {kind: 'limit'} & Limit;
+export type ViewOperationWithWhere = {kind: 'where'} & Where;
+export type ViewOperationWithNest = {kind: 'nest'} & Nest;
 export type ViewRefinement = {
   base: ViewDefinition;
   refinement: ViewDefinition;
