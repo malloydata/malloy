@@ -141,7 +141,7 @@ struct ViewInfo {
 }
 
 struct View {
-  2: required Pipeline pipeline,
+  2: required ViewDefinition definition,
   3: optional list<Annotation> annotations,
 }
 
@@ -231,15 +231,6 @@ Generate typescript?
     - https://www.internalfb.com/diff/D68557062
 */
 
-union Refinement {
-  1: required Reference reference,
-  2: required Segment segment,
-}
-
-struct Segment {
-  1: required list<ViewOperation> operations,
-}
-
 union ViewOperation {
   1: required GroupBy group_by,
   2: required Aggregate aggregate,
@@ -250,31 +241,16 @@ union ViewOperation {
 }
 
 struct GroupBy {
-  1: required list<GroupByItem> items,
-  2: optional list<Annotation> annotations,
-}
-
-struct GroupByItem {
   1: optional string name,
   2: required Field field,
 }
 
 struct Nest {
-  1: required list<NestItem> items,
-  2: optional list<Annotation> annotations,
-}
-
-struct NestItem {
   1: optional string name,
   2: required View view,
 }
 
 struct Aggregate {
-  1: required list<AggregateOperation> items,
-  2: optional list<Annotation> annotations,
-}
-
-struct AggregateOperation {
   1: optional string name,
   2: required Field field,
 }
@@ -287,10 +263,6 @@ struct Field {
 }
 
 struct OrderBy {
-  1: required list<OrderByItem> items,
-}
-
-struct OrderByItem {
   1: required Reference field,
   2: optional OrderByDirection direction,
 }
@@ -299,21 +271,21 @@ struct Limit {
   1: required i32 limit,
 }
 
+// TODO this is a bit annoying, but the current typescript system doesn't really
+// allow me to have a union whose property is also a union, since I'm compressing them
+// into an intersection type of `{__type: } & Where`. If Where is also a union, then
+// there would be two `__type` fields...
 struct Where {
-  1: required list<WhereItem> items,
+  1: required Filter filter,
 }
 
-union WhereItem {
+union Filter {
   1: required FilterStringApplication filter_string,
 }
 
 struct FilterStringApplication {
   1: required Reference field,
-  2: required string filter, // TODO multiple filters?
-}
-
-struct PipeStage {
-  1: required list<Refinement> refinements,
+  2: required string filter,
 }
 
 /**
@@ -337,18 +309,50 @@ stages: [
 */
 
 struct Query {
-  1: optional Reference source,
-  2: required Pipeline pipeline,
-  3: optional list<Annotation> annotations,
+  1: required QueryDefinition definition,
 }
 
-struct Pipeline {
-  1: required list<PipeStage> stages,
+union QueryDefinition {
+  1: QueryArrow arrow,
+  2: Reference reference,
+  3: QueryRefinement refinement,
+}
+
+struct QueryArrow {
+  1: required Reference source,
+  2: required ViewDefinition view,
+}
+
+struct QueryRefinement {
+  1: required Reference query,
+  2: required ViewDefinition refinement,
+}
+
+union ViewDefinition {
+  1: ViewArrow arrow,
+  2: Reference reference,
+  3: ViewRefinement refinement,
+  4: ViewSegment segment,
+}
+
+struct ViewRefinement {
+  1: required ViewDefinition base,
+  2: required ViewDefinition refinement,
+}
+
+struct ViewArrow {
+  1: required ViewDefinition source,
+  2: required ViewDefinition view,
+}
+
+struct ViewSegment {
+  1: required list<ViewOperation> operations,
 }
 
 struct Reference {
   1: required string name,
-  2: optional list<ParameterValue> parameters,
+  2: optional list<string> path,
+  3: optional list<ParameterValue> parameters,
 }
 
 struct ParameterValue {
@@ -401,7 +405,7 @@ struct TimeTruncationFieldReference {
 
 struct FilteredField {
   1: required Reference reference,
-  2: required WhereItem filter, // TODO multiple filters?
+  2: required list<Where> where,
 }
 
 struct StringCell {
