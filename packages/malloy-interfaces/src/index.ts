@@ -131,280 +131,6 @@ export const test: Malloy.ModelInfo = {
   anonymous_queries: [],
 };
 
-export const q: Malloy.Query = {
-  source: {
-    name: 'flights',
-    parameters: [
-      {
-        name: 'param',
-        value: {
-          __type: Malloy.LiteralValueType.StringLiteral,
-          string_value: 'foo',
-        },
-      },
-    ],
-  },
-  pipeline: {
-    stages: [
-      {
-        refinements: [
-          {
-            __type: Malloy.RefinementType.Reference,
-            name: 'by_carrier',
-          },
-        ],
-      },
-      {
-        refinements: [
-          {
-            __type: Malloy.RefinementType.Segment,
-            operations: [
-              {
-                __type: Malloy.ViewOperationType.GroupBy,
-                items: [
-                  {
-                    field: {
-                      expression: {
-                        __type: Malloy.ExpressionType.Reference,
-                        name: 'thingy',
-                      },
-                    },
-                  },
-                ],
-              },
-              {
-                __type: Malloy.ViewOperationType.OrderBy,
-                items: [
-                  {
-                    field: {name: 'thingy'},
-                    direction: Malloy.OrderByDirection.ASC,
-                  },
-                ],
-              },
-              {
-                __type: Malloy.ViewOperationType.Limit,
-                limit: 10,
-              },
-            ],
-          },
-        ],
-      },
-    ],
-  },
-};
-
-export const q2: Malloy.Query = {
-  pipeline: {
-    stages: [
-      // A query which is just a pipeline from a top level query
-      {
-        refinements: [
-          {
-            __type: Malloy.RefinementType.Reference,
-            name: 'flights_by_carrier',
-          },
-        ],
-      },
-      {
-        refinements: [
-          {
-            __type: Malloy.RefinementType.Segment,
-            operations: [
-              {
-                __type: Malloy.ViewOperationType.GroupBy,
-                items: [
-                  {
-                    field: {
-                      expression: {
-                        __type: Malloy.ExpressionType.Reference,
-                        name: 'thingy',
-                      },
-                    },
-                  },
-                ],
-              },
-              {
-                __type: Malloy.ViewOperationType.OrderBy,
-                items: [
-                  {
-                    field: {name: 'thingy'},
-                    direction: Malloy.OrderByDirection.ASC,
-                  },
-                ],
-              },
-              {
-                __type: Malloy.ViewOperationType.Limit,
-                limit: 10,
-              },
-            ],
-          },
-        ],
-      },
-    ],
-  },
-};
-
-// A query which is just a refinement of a top level query
-export const q3: Malloy.Query = {
-  pipeline: {
-    stages: [
-      {
-        refinements: [
-          {
-            __type: Malloy.RefinementType.Reference,
-            name: 'flights_by_carrier',
-          },
-          {
-            __type: Malloy.RefinementType.Segment,
-            operations: [
-              {
-                __type: Malloy.ViewOperationType.GroupBy,
-                items: [
-                  {
-                    field: {
-                      expression: {
-                        __type: Malloy.ExpressionType.Reference,
-                        name: 'thingy',
-                      },
-                    },
-                  },
-                ],
-              },
-              {
-                __type: Malloy.ViewOperationType.GroupBy,
-                items: [
-                  {
-                    field: {
-                      expression: {
-                        __type: Malloy.ExpressionType.TimeTruncation,
-                        reference: {name: 'thingy'},
-                        truncation: Malloy.TimestampTimeframe.DAY,
-                      },
-                    },
-                  },
-                ],
-              },
-              {
-                __type: Malloy.ViewOperationType.Nest,
-                items: [
-                  {
-                    view: {
-                      pipeline: {
-                        stages: [
-                          {
-                            refinements: [
-                              {
-                                __type: Malloy.RefinementType.Reference,
-                                name: 'foo',
-                              },
-                            ],
-                          },
-                        ],
-                      },
-                    },
-                  },
-                ],
-              },
-              {
-                __type: Malloy.ViewOperationType.Nest,
-                items: [
-                  {
-                    name: 'thingy',
-                    view: {
-                      pipeline: {
-                        stages: [
-                          {
-                            refinements: [
-                              {
-                                __type: Malloy.RefinementType.Reference,
-                                name: 'by_carrier',
-                              },
-                            ],
-                          },
-                          {
-                            refinements: [
-                              {
-                                __type: Malloy.RefinementType.Segment,
-                                operations: [
-                                  {
-                                    __type: Malloy.ViewOperationType.GroupBy,
-                                    annotations: [
-                                      {
-                                        value: '# bar',
-                                      },
-                                    ],
-                                    items: [
-                                      {
-                                        name: 'renamed',
-                                        field: {
-                                          expression: {
-                                            __type:
-                                              Malloy.ExpressionType.Reference,
-                                            name: 'thingy',
-                                          },
-                                          annotations: [
-                                            {
-                                              value: '# foo',
-                                            },
-                                          ],
-                                        },
-                                      },
-                                    ],
-                                  },
-                                  {
-                                    __type: Malloy.ViewOperationType.OrderBy,
-                                    items: [
-                                      {
-                                        field: {name: 'thingy'},
-                                        direction: Malloy.OrderByDirection.ASC,
-                                      },
-                                    ],
-                                  },
-                                  {
-                                    __type: Malloy.ViewOperationType.Limit,
-                                    limit: 10,
-                                  },
-                                ],
-                              },
-                            ],
-                          },
-                        ],
-                      },
-                    },
-                  },
-                ],
-              },
-              {
-                __type: Malloy.ViewOperationType.OrderBy,
-                items: [
-                  {
-                    field: {name: 'thingy'},
-                    direction: Malloy.OrderByDirection.ASC,
-                  },
-                ],
-              },
-              {
-                __type: Malloy.ViewOperationType.Where,
-                items: [
-                  {
-                    __type: Malloy.WhereItemType.FilterString,
-                    field: {name: 'carrier'},
-                    filter: 'WN',
-                  },
-                ],
-              },
-              {
-                __type: Malloy.ViewOperationType.Limit,
-                limit: 10,
-              },
-            ],
-          },
-        ],
-      },
-    ],
-  },
-};
-
 export const res: Malloy.Result = {
   data: {
     __type: Malloy.DataType.Table,
@@ -455,4 +181,131 @@ export const res: Malloy.Result = {
     ],
   },
   sql: 'SELECT * ...',
+};
+
+export const thingy1: Malloy.Query = {
+  definition: {
+    __type: Malloy.QueryDefinitionType.Reference,
+    name: 'flights_by_carrier',
+  },
+};
+
+export const thingy123r: Malloy.Query = {
+  definition: {
+    __type: Malloy.QueryDefinitionType.Arrow,
+    source: {name: 'flights'},
+    view: {
+      __type: Malloy.ViewDefinitionType.Reference,
+      name: 'by_carrier',
+    },
+  },
+};
+
+export const thingyssdfg: Malloy.Query = {
+  definition: {
+    __type: Malloy.QueryDefinitionType.Refinement,
+    query: {name: 'flights'},
+    refinement: {
+      __type: Malloy.ViewDefinitionType.Reference,
+      name: 'by_carrier',
+    },
+  },
+};
+
+export const thingy2asdf: Malloy.Query = {
+  definition: {
+    __type: Malloy.QueryDefinitionType.Arrow,
+    source: {name: 'flights'},
+    view: {
+      __type: Malloy.ViewDefinitionType.Refinement,
+      base: {
+        __type: Malloy.ViewDefinitionType.Reference,
+        name: 'by_carrier',
+      },
+      refinement: {
+        __type: Malloy.ViewDefinitionType.Segment,
+        operations: [
+          {
+            __type: Malloy.ViewOperationType.Where,
+            filter: {
+              __type: Malloy.FilterType.FilterString,
+              field: {name: 'carrier'},
+              filter: 'WN',
+            },
+          },
+        ],
+      },
+    },
+  },
+};
+
+export const thingy3: Malloy.Query = {
+  definition: {
+    __type: Malloy.QueryDefinitionType.Arrow,
+    source: {
+      name: 'flights',
+    },
+    view: {
+      __type: Malloy.ViewDefinitionType.Refinement,
+      base: {
+        __type: Malloy.ViewDefinitionType.Reference,
+        name: 'by_carrier',
+      },
+      refinement: {
+        __type: Malloy.ViewDefinitionType.Segment,
+        operations: [
+          {
+            __type: Malloy.ViewOperationType.GroupBy,
+            field: {
+              expression: {
+                __type: Malloy.ExpressionType.Reference,
+                name: 'carrier',
+              },
+            },
+          },
+          {
+            __type: Malloy.ViewOperationType.GroupBy,
+            field: {
+              expression: {
+                __type: Malloy.ExpressionType.Reference,
+                name: 'foo',
+              },
+            },
+          },
+        ],
+      },
+    },
+  },
+};
+
+export const thingy4: Malloy.Query = {
+  definition: {
+    __type: Malloy.QueryDefinitionType.Arrow,
+    source: {
+      name: 'flights',
+    },
+    view: {
+      __type: Malloy.ViewDefinitionType.Segment,
+      operations: [
+        {
+          __type: Malloy.ViewOperationType.GroupBy,
+          field: {
+            expression: {
+              __type: Malloy.ExpressionType.Reference,
+              name: 'carrier',
+            },
+          },
+        },
+        {
+          __type: Malloy.ViewOperationType.GroupBy,
+          field: {
+            expression: {
+              __type: Malloy.ExpressionType.Reference,
+              name: 'foo',
+            },
+          },
+        },
+      ],
+    },
+  },
 };

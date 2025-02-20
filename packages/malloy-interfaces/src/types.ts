@@ -9,10 +9,6 @@
  * DO NOT EDIT UNLESS YOU ARE SURE THAT YOU KNOW WHAT YOU ARE DOING
  */
 export type Aggregate = {
-  items: Array<AggregateItem>;
-  annotations?: Array<Annotation>;
-};
-export type AggregateItem = {
   name?: string;
   field: Field;
 };
@@ -188,19 +184,22 @@ export type FieldInfoWithMeasure = {
 } & MeasureInfo;
 export type FieldInfoWithJoin = {__type: FieldInfoType.Join} & JoinInfo;
 export type FieldInfoWithView = {__type: FieldInfoType.View} & ViewInfo;
+export enum FilterType {
+  FilterString = 'filter_string',
+}
+export type Filter = FilterWithFilterString;
+export type FilterWithFilterString = {
+  __type: FilterType.FilterString;
+} & FilterStringApplication;
 export type FilterStringApplication = {
   field: Reference;
   filter: string;
 };
 export type FilteredField = {
   reference: Reference;
-  filter: WhereItem;
+  where: Array<Where>;
 };
 export type GroupBy = {
-  items: Array<GroupByItem>;
-  annotations?: Array<Annotation>;
-};
-export type GroupByItem = {
   name?: string;
   field: Field;
 };
@@ -278,10 +277,6 @@ export type ModelInfo = {
   anonymous_queries: Array<QueryInfo>;
 };
 export type Nest = {
-  items: Array<NestItem>;
-  annotations?: Array<Annotation>;
-};
-export type NestItem = {
   name?: string;
   view: View;
 };
@@ -300,16 +295,13 @@ export type NumberType = {
   subtype?: NumberSubtype;
 };
 export type OrderBy = {
-  items: Array<OrderByItem>;
+  field: Reference;
+  direction?: OrderByDirection;
 };
 export enum OrderByDirection {
   ASC = 1,
   DESC = 2,
 }
-export type OrderByItem = {
-  field: Reference;
-  direction?: OrderByDirection;
-};
 export type ParameterInfo = {
   name: string;
   type: AtomicType;
@@ -319,21 +311,35 @@ export type ParameterValue = {
   name: string;
   value: LiteralValue;
 };
-export type PipeStage = {
-  refinements: Array<Refinement>;
-};
-export type Pipeline = {
-  stages: Array<PipeStage>;
-};
 export type Position = {
   line: number;
   character: number;
 };
 export type Query = {
-  source?: Reference;
-  pipeline: Pipeline;
-  annotations?: Array<Annotation>;
+  definition: QueryDefinition;
 };
+export type QueryArrow = {
+  source: Reference;
+  view: ViewDefinition;
+};
+export enum QueryDefinitionType {
+  Arrow = 'arrow',
+  Reference = 'reference',
+  Refinement = 'refinement',
+}
+export type QueryDefinition =
+  | QueryDefinitionWithArrow
+  | QueryDefinitionWithReference
+  | QueryDefinitionWithRefinement;
+export type QueryDefinitionWithArrow = {
+  __type: QueryDefinitionType.Arrow;
+} & QueryArrow;
+export type QueryDefinitionWithReference = {
+  __type: QueryDefinitionType.Reference;
+} & Reference;
+export type QueryDefinitionWithRefinement = {
+  __type: QueryDefinitionType.Refinement;
+} & QueryRefinement;
 export type QueryInfo = {
   name: string;
   schema: Schema;
@@ -341,6 +347,10 @@ export type QueryInfo = {
   definition?: Query;
   code?: string;
   location?: Location;
+};
+export type QueryRefinement = {
+  query: Reference;
+  refinement: ViewDefinition;
 };
 export type Range = {
   start: Position;
@@ -354,17 +364,9 @@ export type RecordType = {
 };
 export type Reference = {
   name: string;
+  path?: Array<string>;
   parameters?: Array<ParameterValue>;
 };
-export enum RefinementType {
-  Reference = 'reference',
-  Segment = 'segment',
-}
-export type Refinement = RefinementWithReference | RefinementWithSegment;
-export type RefinementWithReference = {
-  __type: RefinementType.Reference;
-} & Reference;
-export type RefinementWithSegment = {__type: RefinementType.Segment} & Segment;
 export enum Relationship {
   ONE = 1,
   MANY = 2,
@@ -383,9 +385,6 @@ export type SQLNativeType = {
 };
 export type Schema = {
   fields: Array<FieldInfo>;
-};
-export type Segment = {
-  operations: Array<ViewOperation>;
 };
 export type SourceInfo = {
   name: string;
@@ -430,9 +429,36 @@ export type TimestampType = {
   timeframe?: TimestampTimeframe;
 };
 export type View = {
-  pipeline: Pipeline;
+  definition: ViewDefinition;
   annotations?: Array<Annotation>;
 };
+export type ViewArrow = {
+  source: ViewDefinition;
+  view: ViewDefinition;
+};
+export enum ViewDefinitionType {
+  Arrow = 'arrow',
+  Reference = 'reference',
+  Refinement = 'refinement',
+  Segment = 'segment',
+}
+export type ViewDefinition =
+  | ViewDefinitionWithArrow
+  | ViewDefinitionWithReference
+  | ViewDefinitionWithRefinement
+  | ViewDefinitionWithSegment;
+export type ViewDefinitionWithArrow = {
+  __type: ViewDefinitionType.Arrow;
+} & ViewArrow;
+export type ViewDefinitionWithReference = {
+  __type: ViewDefinitionType.Reference;
+} & Reference;
+export type ViewDefinitionWithRefinement = {
+  __type: ViewDefinitionType.Refinement;
+} & ViewRefinement;
+export type ViewDefinitionWithSegment = {
+  __type: ViewDefinitionType.Segment;
+} & ViewSegment;
 export type ViewInfo = {
   name: string;
   schema: Schema;
@@ -466,13 +492,13 @@ export type ViewOperationWithOrderBy = {
 export type ViewOperationWithLimit = {__type: ViewOperationType.Limit} & Limit;
 export type ViewOperationWithWhere = {__type: ViewOperationType.Where} & Where;
 export type ViewOperationWithNest = {__type: ViewOperationType.Nest} & Nest;
-export type Where = {
-  items: Array<WhereItem>;
+export type ViewRefinement = {
+  base: ViewDefinition;
+  refinement: ViewDefinition;
 };
-export enum WhereItemType {
-  FilterString = 'filter_string',
-}
-export type WhereItem = WhereItemWithFilterString;
-export type WhereItemWithFilterString = {
-  __type: WhereItemType.FilterString;
-} & FilterStringApplication;
+export type ViewSegment = {
+  operations: Array<ViewOperation>;
+};
+export type Where = {
+  filter: Filter;
+};
