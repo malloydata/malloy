@@ -37,7 +37,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: 'true'
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
