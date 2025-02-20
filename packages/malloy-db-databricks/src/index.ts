@@ -21,34 +21,4 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-process.env.TZ = 'America/Los_Angeles';
-
-const transformIgnoreModules = [
-  'lit-html',
-  'lit-element',
-  'lit',
-  '@lit',
-  '@lit-labs',
-  '@motherduck/wasm-client',
-].join('|');
-
-module.exports = {
-  moduleFileExtensions: ['js', 'jsx', 'ts', 'tsx', 'node'],
-  setupFilesAfterEnv: ['<rootDir>/test/jest.setup.ts', 'jest-expect-message'],
-  testMatch: ['**/?(*.)spec.(ts|js)?(x)'],
-  testPathIgnorePatterns: ['/node_modules/', '/dist/', '/out/'],
-  transformIgnorePatterns: [`node_modules/(?!(${transformIgnoreModules})/)`],
-  transform: {
-    '^.+\\.(ts|tsx)$': ['ts-jest', {tsconfig: '<rootDir>/test/tsconfig.json'}],
-    '^.+\\.(js|jsx)$': [
-      'babel-jest',
-      {
-        'presets': ['@babel/preset-env'],
-        'plugins': [['@babel/transform-runtime']],
-      },
-    ],
-  },
-  testTimeout: 100000,
-  verbose: true,
-  testEnvironment: 'node',
-};
+export {DatabricksConnection} from './databricks_connection';

@@ -21,34 +21,43 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-process.env.TZ = 'America/Los_Angeles';
+import {DatabricksConnection} from './databricks_connection';
+import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
 
-const transformIgnoreModules = [
-  'lit-html',
-  'lit-element',
-  'lit',
-  '@lit',
-  '@lit-labs',
-  '@motherduck/wasm-client',
-].join('|');
+const [describe] = describeIfDatabaseAvailable(['postgres']);
 
-module.exports = {
-  moduleFileExtensions: ['js', 'jsx', 'ts', 'tsx', 'node'],
-  setupFilesAfterEnv: ['<rootDir>/test/jest.setup.ts', 'jest-expect-message'],
-  testMatch: ['**/?(*.)spec.(ts|js)?(x)'],
-  testPathIgnorePatterns: ['/node_modules/', '/dist/', '/out/'],
-  transformIgnorePatterns: [`node_modules/(?!(${transformIgnoreModules})/)`],
-  transform: {
-    '^.+\\.(ts|tsx)$': ['ts-jest', {tsconfig: '<rootDir>/test/tsconfig.json'}],
-    '^.+\\.(js|jsx)$': [
-      'babel-jest',
-      {
-        'presets': ['@babel/preset-env'],
-        'plugins': [['@babel/transform-runtime']],
-      },
-    ],
-  },
-  testTimeout: 100000,
-  verbose: true,
-  testEnvironment: 'node',
-};
+/*
+ * !IMPORTANT
+ *
+ * The connection is reused for each test, so if you do not name your tables
+ * and keys uniquely for each test you will see cross test interactions.
+ */
+
+describe('DataBricksConnection', () => {
+  let connection: DatabricksConnection;
+
+  beforeAll(async () => {
+    connection = new DatabricksConnection('databricks', {
+      'host': 'todo',
+      'path': 'todo',
+      'oauthClientId': 'todo',
+      'oauthClientSecret': 'todo',
+      'name': 'test',
+    });
+
+    await connection.runSQL('SELECT 1');
+  });
+
+  afterAll(async () => {
+    await connection.close();
+  });
+
+  afterEach(() => {
+    jest.resetAllMocks();
+  });
+
+  it('can execute select 1', async () => {
+    const result = await connection.runSQL('SELECT 1');
+    expect(result.rows).toEqual([{1: 1}]);
+  });
+});

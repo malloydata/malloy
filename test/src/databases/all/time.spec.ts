@@ -629,6 +629,7 @@ const utc_2020 = LuxonDateTime.fromObject(
   }
 );
 
+// eslint-disable-next-line no-restricted-properties
 describe.each(runtimes.runtimeList)('%s: tz literals', (dbName, runtime) => {
   test.when(
     !brokenIn('trino', dbName) && !brokenIn('presto', dbName) /* mtoy */

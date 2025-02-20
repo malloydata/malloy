@@ -36,6 +36,10 @@ describe.each(runtimes.runtimeList)(
       return {node: 'numberLiteral', literal, sql: literal};
     }
     const empty = `${conName}.sql("SELECT 0 as z")`;
+    const special_char_map = {
+      'databricks': ["'", '"', '.'],
+    };
+    const special_chars = special_char_map[conName] ?? ["'", '"', '.', '`'];
     function arraySelectVal(...val: Number[]): string {
       const literal: ArrayLiteralNode = {
         node: 'arrayLiteral',
@@ -124,6 +128,7 @@ describe.each(runtimes.runtimeList)(
           'trino': 'CARDINALITY',
           'mysql': 'JSON_LENGTH',
           'snowflake': 'ARRAY_SIZE',
+          'databricks': 'size',
         };
         const dialect = runtime.dialect.name;
         const missing = `Dialect '${dialect}' missing array length function in nameOfArrayLenFunction`;
@@ -181,7 +186,6 @@ describe.each(runtimes.runtimeList)(
       test.when(conName !== 'bigquery')(
         'array stored field with special chars in name',
         async () => {
-          const special_chars = ["'", '"', '.', '`'];
           for (const c of special_chars) {
             const qname = '`_\\' + c + '_`';
             const malloySrc = `
@@ -268,7 +272,6 @@ describe.each(runtimes.runtimeList)(
       test.when(conName !== 'bigquery')(
         'special character in record property name',
         async () => {
-          const special_chars = ["'", '"', '.', '`'];
           for (const c of special_chars) {
             const qname = '_\\' + c + '_';
             const name = '_' + c + '_';
@@ -288,7 +291,6 @@ describe.each(runtimes.runtimeList)(
       test.when(conName !== 'bigquery')(
         'record stored in field with special chars in name',
         async () => {
-          const special_chars = ["'", '"', '.', '`'];
           for (const c of special_chars) {
             const qname = '`_\\' + c + '_`';
             const malloySrc = `
