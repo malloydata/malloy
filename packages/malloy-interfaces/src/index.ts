@@ -76,7 +76,7 @@ export const test: Malloy.ModelInfo = {
           {
             kind: 'join',
             name: 'carriers',
-            relationship: Malloy.Relationship.ONE,
+            relationship: 'one',
             schema: {
               fields: [
                 {
