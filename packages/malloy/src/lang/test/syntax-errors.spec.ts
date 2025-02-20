@@ -68,4 +68,33 @@ describe('errors', () => {
         primary_key: id
     `).toLogAtLeast(errorMessage("Missing '{' after 'extend'"));
   });
+
+  test('missing alias for aggregate entry', () => {
+    expect(`
+        run: x -> {
+          aggregate: count()
+        }
+      `).toLogAtLeast(
+      errorMessage(
+        "'aggregate:' entries must include a name (ex: `some_name is count()`)"
+      )
+    );
+  });
+
+  test('missing alias for aggregate inside source>view', () => {
+    expect(`
+      source: x is aa extend {
+        measure: airport_count is count()
+
+        view: by_state is {
+          where: state is not null
+          aggregate: count()
+        }
+      }
+      `).toLogAtLeast(
+      errorMessage(
+        "'aggregate:' entries must include a name (ex: `some_name is count()`)"
+      )
+    );
+  });
 });

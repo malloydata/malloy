@@ -43,6 +43,14 @@ export const commonErrorCases: ErrorCase[] = [
       [MalloyParser.SOURCE],
     ],
   },
+  {
+    errorMessage:
+      "'aggregate:' entries must include a name (ex: `some_name is count()`)",
+    // ruleContextOptions: ['queryFieldEntry'],
+    precedingTokenOptions: [[MalloyParser.AGGREGATE]],
+    lookAheadOptions: [[-MalloyParser.IS]],
+    lookbackFromOffendingSymbol: true,
+  },
 ];
 
 export class MalloyParserErrorListener implements ANTLRErrorListener<Token> {
