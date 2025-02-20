@@ -46,7 +46,6 @@ export const commonErrorCases: ErrorCase[] = [
   {
     errorMessage:
       "'aggregate:' entries must include a name (ex: `some_name is count()`)",
-    // ruleContextOptions: ['queryFieldEntry'],
     precedingTokenOptions: [[MalloyParser.AGGREGATE]],
     lookAheadOptions: [[-MalloyParser.IS]],
     lookbackFromOffendingSymbol: true,

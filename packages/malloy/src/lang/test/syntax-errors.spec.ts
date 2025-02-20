@@ -97,4 +97,15 @@ describe('errors', () => {
       )
     );
   });
+
+  test('run opening curly to EOF', () => {
+    expect(`
+        run: x -> {
+      `).toLogAtLeast(errorMessage("Missing '}' at '<EOF>'"));
+  });
+  test('source opening curly to EOF', () => {
+    expect(`
+        source: y is x extend {
+      `).toLogAtLeast(errorMessage("Missing '}' at '<EOF>'"));
+  });
 });
