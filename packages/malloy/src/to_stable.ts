@@ -32,7 +32,7 @@ export function modelDefToModelInfo(modelDef: ModelDef): Malloy.ModelInfo {
     if (!modelDef.exports.includes(name)) continue;
     if (isSourceDef(entry)) {
       const sourceInfo: Malloy.ModelEntryValueWithSource = {
-        __type: Malloy.ModelEntryValueType.Source,
+        kind: 'source',
         name,
         schema: {
           fields: convertFieldInfos(entry, entry.fields),
@@ -42,7 +42,7 @@ export function modelDefToModelInfo(modelDef: ModelDef): Malloy.ModelInfo {
     } else if (entry.type === 'query') {
       const outputStruct = getResultStructDefForQuery(modelDef, entry);
       const queryInfo: Malloy.ModelEntryValueWithSource = {
-        __type: Malloy.ModelEntryValueType.Source,
+        kind: 'source',
         name,
         schema: {
           fields: convertFieldInfos(outputStruct, outputStruct.fields),
@@ -60,7 +60,7 @@ function convertFieldInfos(source: SourceDef, fields: FieldDef[]) {
     if (isTurtle(field)) {
       const outputStruct = getResultStructDefForView(source, field);
       const fieldInfo: Malloy.FieldInfo = {
-        __type: Malloy.FieldInfoType.View,
+        kind: 'view',
         name: field.as ?? field.name,
         schema: {fields: convertFieldInfos(outputStruct, outputStruct.fields)},
       };
@@ -71,16 +71,14 @@ function convertFieldInfos(source: SourceDef, fields: FieldDef[]) {
       if (!aggregate && !scalar) continue;
       if (field.type === 'error') continue;
       const fieldInfo: Malloy.FieldInfo = {
-        __type: aggregate
-          ? Malloy.FieldInfoType.Measure
-          : Malloy.FieldInfoType.Dimension,
+        kind: aggregate ? 'measure' : 'dimension',
         name: field.as ?? field.name,
         type: typeDefToType(field),
       };
       result.push(fieldInfo);
     } else if (isJoinedSource(field)) {
       const fieldInfo: Malloy.FieldInfo = {
-        __type: Malloy.FieldInfoType.Join,
+        kind: 'join',
         name: field.as ?? field.name,
         schema: {
           fields: convertFieldInfos(field, field.fields),
@@ -97,34 +95,34 @@ function typeDefToType(field: AtomicTypeDef): Malloy.AtomicType {
   if (isLeafAtomic(field)) {
     switch (field.type) {
       case 'string':
-        return {__type: Malloy.AtomicTypeType.StringType};
+        return {kind: 'string_type'};
       case 'number':
         return {
-          __type: Malloy.AtomicTypeType.NumberType,
+          kind: 'number_type',
           subtype:
             field.numberType === 'float'
-              ? Malloy.NumberSubtype.DECIMAL
+              ? 'decimal'
               : field.numberType === 'integer'
-              ? Malloy.NumberSubtype.INTEGER
+              ? 'integer'
               : undefined,
         };
       case 'boolean':
-        return {__type: Malloy.AtomicTypeType.BooleanType};
+        return {kind: 'boolean_type'};
       case 'date':
         return {
-          __type: Malloy.AtomicTypeType.DateType,
+          kind: 'date_type',
           timeframe: convertDateTimeframe(field.timeframe),
         };
       case 'timestamp':
         return {
-          __type: Malloy.AtomicTypeType.TimestampType,
+          kind: 'timestamp_type',
           timeframe: convertTimestampTimeframe(field.timeframe),
         };
       case 'json':
-        return {__type: Malloy.AtomicTypeType.JSONType};
+        return {kind: 'json_type'};
       case 'sql native':
         return {
-          __type: Malloy.AtomicTypeType.SQLNativeType,
+          kind: 'sql_native_type',
           sql_type: field.rawType,
         };
       case 'error':
@@ -132,14 +130,14 @@ function typeDefToType(field: AtomicTypeDef): Malloy.AtomicType {
     }
   } else if (isRepeatedRecord(field)) {
     return {
-      __type: Malloy.AtomicTypeType.ArrayType,
+      kind: 'array_type',
       element_type: convertRecordType(field),
     };
   } else if (field.type === 'record') {
     return convertRecordType(field);
   } else if (field.type === 'array') {
     return {
-      __type: Malloy.AtomicTypeType.ArrayType,
+      kind: 'array_type',
       element_type: typeDefToType(field.elementTypeDef),
     };
   }
@@ -150,7 +148,7 @@ function convertRecordType(
   field: RecordTypeDef | RepeatedRecordTypeDef
 ): Malloy.AtomicTypeWithRecordType {
   return {
-    __type: Malloy.AtomicTypeType.RecordType,
+    kind: 'record_type',
     fields: field.fields.map(f => {
       if (isAtomic(f)) {
         return {

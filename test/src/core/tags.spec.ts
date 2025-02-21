@@ -37,7 +37,7 @@ declare global {
 expect.extend({
   tagsAre(src: string | Tag, result: Tag) {
     if (typeof src === 'string') {
-      const {tag, log} = Tag.fromTagline(src, undefined);
+      const {tag, log} = Tag.fromTagLine(src, undefined);
       const errs = log.map(e => e.message);
       if (log.length > 0) {
         return {
@@ -259,10 +259,10 @@ describe('tags in results', () => {
     expect(field).toBeDefined();
     let tp = field.tagParse().tag;
     expect(tp).tagsAre({valueFrom: {eq: 'model'}});
-    const sessionScope = Tag.fromTagline('# scope=session', undefined).tag;
+    const sessionScope = Tag.fromTagLine('# scope=session', undefined).tag;
     tp = field.tagParse({scopes: [sessionScope]}).tag;
     expect(tp).tagsAre({valueFrom: {eq: 'session'}});
-    const globalScope = Tag.fromTagline('# scope=global', undefined).tag;
+    const globalScope = Tag.fromTagLine('# scope=global', undefined).tag;
     tp = field.tagParse({scopes: [globalScope, sessionScope]}).tag;
     expect(tp).tagsAre({valueFrom: {eq: 'global'}});
   });

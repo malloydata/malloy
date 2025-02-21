@@ -21,7 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Field, Explore, Tag} from '@malloydata/malloy';
+import {Field, Explore} from '@malloydata/malloy';
+import {Tag} from '@malloydata/malloy-tag';
 import {DataRenderOptions, RenderDef, StyleDefaults} from './data_styles';
 import {Renderer} from './renderer';
 import {RendererFactory} from './renderer_factory';

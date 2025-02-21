@@ -26,9 +26,9 @@ import {
   Explore,
   Field,
   Result,
-  Tag,
   isSourceDef,
 } from '@malloydata/malloy';
+import {Tag} from '@malloydata/malloy-tag';
 import {DataStyles, RenderDef, StyleDefaults} from './data_styles';
 import {ChildRenderers, Renderer} from './renderer';
 import {RendererOptions} from './renderer_types';

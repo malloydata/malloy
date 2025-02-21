@@ -5,13 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {
-  ExploreField,
-  ModelDef,
-  QueryResult,
-  Result,
-  Tag,
-} from '@malloydata/malloy';
+import {ExploreField, ModelDef, QueryResult, Result} from '@malloydata/malloy';
+import {Tag} from '@malloydata/malloy-tag';
 import {
   Accessor,
   Show,
