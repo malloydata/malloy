@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {Runtime} from '@malloydata/malloy';
 import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
 import '../../util/db-jest-matchers';
@@ -400,5 +401,51 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         ) -> { index: bar } -> { group_by: fieldName; where: fieldName is not null }
       `).malloyResultMatches(runtime, {fieldName: 'bar'});
     });
+  });
+  it('composite with parameters in separate file', async () => {
+    const wrappedRuntime = new Runtime({
+      connections: runtime.connections,
+      urlReader: {
+        readURL(_url: URL) {
+          return Promise.resolve(`
+            ##! experimental { composite_sources parameters }
+            source: state_facts is ${databaseName}.table('malloytest.state_facts')
+            source: x(param is 2) is compose(
+              state_facts extend { dimension: a is 1 },
+              state_facts extend { dimension: b is 2 }
+            ) extend {
+              where: param = 1
+            }
+          `);
+        },
+      },
+    });
+    await expect(`
+      import "http://foo.malloy"
+      ##! experimental { composite_sources parameters }
+      run: x(param is 1) -> { group_by: b }
+    `).malloyResultMatches(wrappedRuntime, {b: 2});
+  });
+  it('composite with parameters in separate file passing parameter to use in extended compose', async () => {
+    const wrappedRuntime = new Runtime({
+      connections: runtime.connections,
+      urlReader: {
+        readURL(_url: URL) {
+          return Promise.resolve(`
+            ##! experimental { composite_sources parameters }
+            source: state_facts is ${databaseName}.table('malloytest.state_facts')
+            source: x(param is 1) is compose(
+              state_facts extend { dimension: a is param },
+              state_facts extend { dimension: b is param + 1 }
+            )
+          `);
+        },
+      },
+    });
+    await expect(`
+      import "http://foo.malloy"
+      ##! experimental { composite_sources parameters }
+      run: x(param is 2) -> { group_by: b }
+    `).malloyResultMatches(wrappedRuntime, {b: 3});
   });
 });

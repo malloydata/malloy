@@ -127,6 +127,7 @@ function _resolveCompositeSources(
       return {error: {code: 'not_a_composite_source', data: {path}}};
     }
   }
+  base.arguments = source.arguments;
   const fieldsByName: {[name: string]: FieldDef} = {};
   const narrowedJoinedSources = narrowedCompositeFieldResolution?.joined ?? {};
   for (const field of base.fields) {
