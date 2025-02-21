@@ -1,0 +1,22 @@
+{
+  "name": "@malloydata/malloy-filter",
+  "version": "0.0.236",
+  "license": "MIT",
+  "description": "",
+  "main": "dist/string_parser.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/malloydata/malloy"
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "samples": "node dist/generate_samples.js",
+    "asimpleparser": "node dist/a_simple_parser.js",
+    "asimpleserializer": "node dist/a_simple_serializer.js",
+    "test": "jest --runInBand",
+    "test:tokenizer": "jest tokenizer.spec.ts"
+  },
+  "keywords": [],
+  "author": ""
+
+}

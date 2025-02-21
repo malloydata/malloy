@@ -1,0 +1,19 @@
+package-lock.json
+node_modules/
+dist/
+build/
+# Ignore test coverage reports
+coverage/
+# Ignore npm/yarn logs and other generated files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+# Ignore IDE settings and project metadata
+.vscode/
+.idea/
+.settings/
+# Ignore other generated files
+*.log
+*.tmp
+.cache/
+.tmp/
