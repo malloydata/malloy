@@ -795,14 +795,22 @@ export class ASTQuery extends ASTObjectNode<
    * @param name The name of the source in the model to reference.
    */
   public setSource(name: string) {
+    if (this.definition instanceof ASTArrowQueryDefinition) {
+      if (this.definition.sourceReference.name === name) {
+        return;
+      }
+    }
     // TODO validate
     this.definition = new ASTArrowQueryDefinition({
       kind: 'arrow',
       source_reference: {name},
-      view: {
-        kind: 'segment',
-        operations: [],
-      },
+      view:
+        this.definition instanceof ASTArrowQueryDefinition
+          ? this.definition.view.build()
+          : {
+              kind: 'segment',
+              operations: [],
+            },
     });
   }
 
@@ -1314,7 +1322,7 @@ interface IASTViewDefinition {
   getImplicitName(): string | undefined;
   getRefinementSchema(): Malloy.Schema;
   addEmptyRefinement(): ASTSegmentViewDefinition;
-  addViewRefienment(name: string): ASTReferenceViewDefinition; // todo path
+  addViewRefinement(name: string): ASTReferenceViewDefinition; // todo path
 }
 
 export type ASTViewDefinition =
@@ -1416,7 +1424,7 @@ export class ASTReferenceViewDefinition
     return newView.refinement.asSegmentViewDefinition();
   }
 
-  addViewRefienment(name: string): ASTReferenceViewDefinition {
+  addViewRefinement(name: string): ASTReferenceViewDefinition {
     const newView = new ASTRefinementViewDefinition({
       kind: 'refinement',
       base: this.build(),
@@ -1517,6 +1525,14 @@ export class ASTArrowViewDefinition
     return this.view.getOrAddDefaultSegment();
   }
 
+  addEmptyRefinement(): ASTSegmentViewDefinition {
+    return this.view.addEmptyRefinement();
+  }
+
+  addViewRefinement(name: string): ASTReferenceViewDefinition {
+    return this.view.addViewRefinement(name);
+  }
+
   getInputSchema(): Malloy.Schema {
     return this.source.getOutputSchema();
   }
@@ -1573,6 +1589,14 @@ export class ASTRefinementViewDefinition
 
   getOrAddDefaultSegment(): ASTSegmentViewDefinition {
     return this.refinement.getOrAddDefaultSegment();
+  }
+
+  addEmptyRefinement(): ASTSegmentViewDefinition {
+    return this.refinement.addEmptyRefinement();
+  }
+
+  addViewRefinement(name: string): ASTReferenceViewDefinition {
+    return this.refinement.addViewRefinement(name);
   }
 
   getInputSchema(): Malloy.Schema {
@@ -2008,6 +2032,32 @@ export class ASTSegmentViewDefinition
 
   getOrAddDefaultSegment(): ASTSegmentViewDefinition {
     return this;
+  }
+
+  addEmptyRefinement(): ASTSegmentViewDefinition {
+    const view = new ASTRefinementViewDefinition({
+      kind: 'refinement',
+      base: this.build(),
+      refinement: {
+        kind: 'segment',
+        operations: [],
+      },
+    });
+    swapViewInParent(this, view);
+    return view.refinement.asSegmentViewDefinition();
+  }
+
+  addViewRefinement(name: string): ASTReferenceViewDefinition {
+    const view = new ASTRefinementViewDefinition({
+      kind: 'refinement',
+      base: this.build(),
+      refinement: {
+        kind: 'view_reference',
+        name,
+      },
+    });
+    swapViewInParent(this, view);
+    return view.refinement.asReferenceViewDefinition();
   }
 
   getInputSchema(): Malloy.Schema {

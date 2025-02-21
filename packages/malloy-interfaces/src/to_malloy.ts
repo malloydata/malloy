@@ -156,6 +156,7 @@ function viewDefinitionToFragments(view: Malloy.ViewDefinition): Fragment[] {
 function segmentToFragments(
   segment: Malloy.ViewDefinitionWithSegment
 ): Fragment[] {
+  if (segment.operations.length === 0) return ['{ }'];
   const onMultipleLines = segment.operations.length > 1;
   const operationFragments: Fragment[] = [];
   for (let i = 0; i < segment.operations.length; i++) {
