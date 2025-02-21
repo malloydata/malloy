@@ -209,7 +209,7 @@ query.getOrAddDefaultSegment().getInputSchema();
 ```
 {
   fields: [
-    { __type: "measure", name: "flight_count", type: { __type: "string_type" }}
+    { kind: "measure", name: "flight_count", type: { kind: "string_type" }}
     ...
   ]
 }
