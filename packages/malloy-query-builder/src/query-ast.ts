@@ -294,6 +294,21 @@ abstract class ASTNode<T> {
   /**
    * @hidden
    */
+  asRefinementViewDefinition(): ASTRefinementViewDefinition {
+    if (this instanceof ASTRefinementViewDefinition) return this;
+    throw new Error('Not an ASTRefinementViewDefinition');
+  }
+
+  /**
+   * @hidden
+   */
+  findRefinementViewDefinition(path: Path): ASTRefinementViewDefinition {
+    return this.find(path).asRefinementViewDefinition();
+  }
+
+  /**
+   * @hidden
+   */
   asTimeTruncationExpression(): ASTTimeTruncationExpression {
     if (this instanceof ASTTimeTruncationExpression) return this;
     throw new Error('Not an ASTTimeTruncationExpression');
@@ -1398,7 +1413,6 @@ export class ASTReferenceViewDefinition
   }
 
   getOrAddDefaultSegment(): ASTSegmentViewDefinition {
-    // TODO this is broken logic -- if the parent is already a refinement, should check it's refinement first?
     const newView = new ASTRefinementViewDefinition({
       kind: 'refinement',
       base: this.build(),

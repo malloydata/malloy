@@ -566,4 +566,184 @@ run: flights -> {
 }`.trim(),
     });
   });
+  describe('getOrAddDefaultSegment', () => {
+    test('on an arrow query with a segment', () => {
+      expect((q: ASTQuery) => {
+        q.getOrAddDefaultSegment();
+      }).toModifyQuery({
+        model: flights_model,
+        from: {
+          definition: {
+            kind: 'arrow',
+            source_reference: {name: 'flights'},
+            view: {
+              kind: 'segment',
+              operations: [],
+            },
+          },
+        },
+        to: {
+          definition: {
+            kind: 'arrow',
+            source_reference: {name: 'flights'},
+            view: {
+              kind: 'segment',
+              operations: [],
+            },
+          },
+        },
+        malloy: 'run: flights -> { }',
+      });
+    });
+    test('on an arrow query with a view reference', () => {
+      expect((q: ASTQuery) => {
+        q.getOrAddDefaultSegment();
+      }).toModifyQuery({
+        model: flights_model,
+        from: {
+          definition: {
+            kind: 'arrow',
+            source_reference: {name: 'flights'},
+            view: {
+              kind: 'view_reference',
+              name: 'by_month',
+            },
+          },
+        },
+        to: {
+          definition: {
+            kind: 'arrow',
+            source_reference: {name: 'flights'},
+            view: {
+              kind: 'refinement',
+              base: {
+                kind: 'view_reference',
+                name: 'by_month',
+              },
+              refinement: {
+                kind: 'segment',
+                operations: [],
+              },
+            },
+          },
+        },
+        malloy: 'run: flights -> by_month + { }',
+      });
+    });
+    test('on an arrow query with a view reference that already has a segment refinement', () => {
+      expect((q: ASTQuery) => {
+        q.getOrAddDefaultSegment();
+      }).toModifyQuery({
+        model: flights_model,
+        from: {
+          definition: {
+            kind: 'arrow',
+            source_reference: {name: 'flights'},
+            view: {
+              kind: 'refinement',
+              base: {
+                kind: 'view_reference',
+                name: 'by_month',
+              },
+              refinement: {
+                kind: 'segment',
+                operations: [],
+              },
+            },
+          },
+        },
+        to: {
+          definition: {
+            kind: 'arrow',
+            source_reference: {name: 'flights'},
+            view: {
+              kind: 'refinement',
+              base: {
+                kind: 'view_reference',
+                name: 'by_month',
+              },
+              refinement: {
+                kind: 'segment',
+                operations: [],
+              },
+            },
+          },
+        },
+        malloy: 'run: flights -> by_month + { }',
+      });
+    });
+    test('on a query reference', () => {
+      expect((q: ASTQuery) => {
+        q.getOrAddDefaultSegment();
+      }).toModifyQuery({
+        model: flights_model,
+        from: {
+          definition: {
+            kind: 'query_reference',
+            name: 'flights_by_carrier',
+          },
+        },
+        to: {
+          definition: {
+            kind: 'refinement',
+            query_reference: {name: 'flights_by_carrier'},
+            refinement: {
+              kind: 'segment',
+              operations: [],
+            },
+          },
+        },
+        malloy: 'run: flights_by_carrier + { }',
+      });
+    });
+  });
+  test('on an arrow query with a view reference that already has a reference refinement', () => {
+    expect((q: ASTQuery) => {
+      q.getOrAddDefaultSegment();
+    }).toModifyQuery({
+      model: flights_model,
+      from: {
+        definition: {
+          kind: 'arrow',
+          source_reference: {name: 'flights'},
+          view: {
+            kind: 'refinement',
+            base: {
+              kind: 'view_reference',
+              name: 'by_month',
+            },
+            refinement: {
+              kind: 'view_reference',
+              name: 'top10',
+            },
+          },
+        },
+      },
+      to: {
+        definition: {
+          kind: 'arrow',
+          source_reference: {name: 'flights'},
+          view: {
+            kind: 'refinement',
+            base: {
+              kind: 'view_reference',
+              name: 'by_month',
+            },
+            refinement: {
+              kind: 'refinement',
+              base: {
+                kind: 'view_reference',
+                name: 'top10',
+              },
+              refinement: {
+                kind: 'segment',
+                operations: [],
+              },
+            },
+          },
+        },
+      },
+      malloy: 'run: flights -> by_month + top10 + { }',
+    });
+  });
 });
