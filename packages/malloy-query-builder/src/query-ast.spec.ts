@@ -110,6 +110,46 @@ describe('query builder', () => {
       malloy: 'run: flights -> { group_by: carrier }',
     });
   });
+  test('add a date group by', () => {
+    const from: Malloy.Query = {
+      definition: {
+        kind: 'arrow',
+        source_reference: {name: 'flights'},
+        view: {
+          kind: 'segment',
+          operations: [],
+        },
+      },
+    };
+    expect((q: ASTQuery) => {
+      q.getOrAddDefaultSegment().addTimestampGroupBy('dep_time', 'month');
+    }).toModifyQuery({
+      model: flights_model,
+      from,
+      to: {
+        definition: {
+          kind: 'arrow',
+          source_reference: {name: 'flights'},
+          view: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'group_by',
+                field: {
+                  expression: {
+                    kind: 'time_truncation',
+                    field_reference: {name: 'dep_time'},
+                    truncation: 'month',
+                  },
+                },
+              },
+            ],
+          },
+        },
+      },
+      malloy: 'run: flights -> { group_by: dep_time.month }',
+    });
+  });
   test('add two group bys', () => {
     const from: Malloy.Query = {
       definition: {

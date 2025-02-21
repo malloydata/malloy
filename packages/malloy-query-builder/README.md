@@ -44,9 +44,9 @@ run: flights -> by_carrier
 
 ## Add a new field to a particular literal view
 
-{@link ASTSegmentRefinement.addGroupBy}
-{@link ASTSegmentRefinement.addAggregate}
-{@link ASTSegmentRefinement.addNest}
+{@link ASTSegmentViewDefinition.addGroupBy}
+{@link ASTSegmentViewDefinition.addAggregate}
+{@link ASTSegmentViewDefinition.addNest}
 
 ```ts
 const segment = query.getOrAddDefaultSegment();
@@ -64,16 +64,30 @@ run: flights -> {
 
 ## A field reference
 ## A time truncation of a field reference
+
+{@link ASTSegmentViewDefinition.addDateGroupBy}
+{@link ASTSegmentViewDefinition.addTimestampGroupBy}
+
+```ts
+const segment = query.getOrAddDefaultSegment();
+segment.addTimestampGroupBy('dep_time', 'month');
+```
+```
+run: flights -> {
+  group_by: dep_time.month
+}
+```
+
 ## A measure reference with filters
 
 ## Rename/delete a field
 
-{@link ASTGroupByItem.delete}
-{@link ASTAggregateItem.delete}
-{@link ASTNestItem.delete}
-{@link ASTGroupByItem.rename}
-{@link ASTAggregateItem.rename}
-{@link ASTNestItem.rename}
+{@link ASTGroupByViewOperation.delete}
+{@link ASTAggregateViewOperation.delete}
+{@link ASTNestViewOperation.delete}
+{@link ASTGroupByViewOperation.rename}
+{@link ASTAggregateViewOperation.rename}
+{@link ASTNestViewOperation.rename}
 
 ```
 run: flights -> {
@@ -92,7 +106,7 @@ run: flights -> { aggregate: flight_count_2 is flight_count }
 ## Check if a field is present
 ## Add/edit/delete order by
 
-{@link ASTOrderByItem.delete}
+{@link ASTOrderByViewOperation.delete}
 
 ```
 run: flights -> {
@@ -107,7 +121,7 @@ orderBy.delete();
 run: flights -> { group_by: carrier }
 ```
 
-{@link ASTOrderByItem.setField}
+{@link ASTOrderByViewOperation.setField}
 
 ```
 run: flights -> {
@@ -129,7 +143,7 @@ run: flights -> {
 }
 ```
 
-{@link ASTOrderByItem.setDirection}
+{@link ASTOrderByViewOperation.setDirection}
 
 ```
 run: flights -> {
@@ -151,7 +165,7 @@ run: flights -> {
 ## Add/edit/delete limit
 ## Create new nest with name
 
-{@link ASTSegmentRefinement.addEmptyNest}
+{@link ASTSegmentViewDefinition.addEmptyNest}
 
 
 ```ts
@@ -166,7 +180,7 @@ run: flights -> { nest: by_origin is { } }
 
 ## For a particular literal view, list the fields which can be added
 
-{@link ASTSegmentRefinement.getInputSchema}
+{@link ASTSegmentViewDefinition.getInputSchema}
 
 ```ts
 query.getOrAddDefaultSegment().getInputSchema();
@@ -182,15 +196,12 @@ query.getOrAddDefaultSegment().getInputSchema();
 
 ## To a particular view reference, add a new literal view as a refinement
 
-{@link ASTPipeStage.addEmptyRefinement}
-{@link ASTSegmentRefinement.addEmptyRefinement}
-{@link ASTReferenceRefinement.addEmptyRefinement}
+{@link IASTViewDefinition.addEmptyRefinement}
 
-TODO this should also be a method on the refinement itself, which inserts a refinement
 
 ```ts
-query.setView("by_carrier");
-const segment = query.pipeline.stages.index(0).addEmptyRefinement();
+const view = query.setView("by_carrier");
+const segment = view.addEmptyRefinement();
 segment.setLimit(10);
 ```
 ```
@@ -199,13 +210,11 @@ run: flights -> by_carrier + { limit: 10 }
 
 ## To a particular view reference, add a new view reference as a refinement
 
-{@link ASTPipeStage.addViewRefinement}
-{@link ASTSegmentRefinement.addViewRefinement}
-{@link ASTReferenceRefinement.addViewRefinement}
+{@link IASTViewDefinition.addViewRefinement}
 
 ```ts
-query.setView("by_carrier");
-query.pipeline.stages.index(0).addViewRefinement("top10");
+const view = query.setView("by_carrier");
+view.addViewRefinement("top10");
 ```
 ```
 run: flights -> by_carrier + top10

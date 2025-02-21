@@ -769,7 +769,7 @@ export class ASTQuery extends ASTObjectNode<
   }
 
   /**
-   * Gets an {@link ASTSegmentRefinement} for the "default" place to add query
+   * Gets an {@link ASTSegmentViewDefinition} for the "default" place to add query
    * operations, or creates one if it doesn't exist.
    *
    * ```
@@ -1046,7 +1046,7 @@ export class ASTSourceReference extends ASTReference {
    * @param name The name of the parameter to set
    * @param value The value of the parameter to set
    */
-  public addParameter(name: string, value: RawLiteralValue) {
+  public setParameter(name: string, value: RawLiteralValue) {
     const parameters = this.getOrAddParameters();
     parameters.add(
       new ASTParameterValue({
@@ -1181,15 +1181,15 @@ export class ASTUnimplemented<T> extends ASTNode<T> {
   }
 }
 
-interface IASTQueryDefinition {
+export interface IASTQueryDefinition {
   getOrAddDefaultSegment(): ASTSegmentViewDefinition;
 }
 
-type ASTQueryDefinition =
+export type ASTQueryDefinition =
   | ASTReferenceQueryDefinition
   | ASTArrowQueryDefinition
   | ASTRefinementQueryDefinition;
-const ASTQueryDefinition = {
+export const ASTQueryDefinition = {
   from: (definition: Malloy.QueryDefinition) => {
     switch (definition.kind) {
       case 'arrow':
@@ -1330,7 +1330,7 @@ export class ASTReferenceQueryDefinition
   }
 }
 
-interface IASTViewDefinition {
+export interface IASTViewDefinition {
   getOrAddDefaultSegment(): ASTSegmentViewDefinition;
   getInputSchema(): Malloy.Schema;
   getOutputSchema(): Malloy.Schema;
@@ -1737,7 +1737,7 @@ export class ASTSegmentViewDefinition
    * }
    * ```
    *
-   * @returns The {@link ASTNestItem} that was created.
+   * @returns The {@link ASTNestViewOperation} that was created.
    *
    */
   public addEmptyNest(name: string): ASTNestViewOperation {
@@ -1870,8 +1870,11 @@ export class ASTSegmentViewDefinition
     return item;
   }
 
-  // TODO these names should really be paths: string[]
-  public addDateGroupBy(name: string, timeframe: Malloy.DateTimeframe) {
+  private addTimeGroupBy(
+    name: string,
+    timeframe: Malloy.TimestampTimeframe,
+    type: 'date_type' | 'timestamp_type'
+  ) {
     const schema = this.getInputSchema();
     const fieldInfo = ASTNode.schemaGet(schema, name);
     if (fieldInfo === undefined) {
@@ -1880,8 +1883,8 @@ export class ASTSegmentViewDefinition
     if (fieldInfo.kind !== 'dimension') {
       throw new Error(`Cannot group by non-dimension ${name}`);
     }
-    if (fieldInfo.type.kind !== 'date_type') {
-      throw new Error(`${name} is not a date`);
+    if (fieldInfo.type.kind !== type) {
+      throw new Error(`${name} is not a ${type}`);
     }
     const item = new ASTGroupByViewOperation({
       kind: 'group_by',
@@ -1890,11 +1893,20 @@ export class ASTSegmentViewDefinition
           kind: 'time_truncation',
           // TODO references here should also be paths?
           field_reference: {name},
-          truncation: dateTimeframeToTimestampTimeframe(timeframe),
+          truncation: timeframe,
         },
       },
     });
     this.addField(item);
+  }
+
+  // TODO these names should really be paths: string[]
+  public addDateGroupBy(name: string, timeframe: Malloy.DateTimeframe) {
+    this.addTimeGroupBy(name, timeframe, 'date_type');
+  }
+
+  public addTimestampGroupBy(name: string, timeframe: Malloy.DateTimeframe) {
+    this.addTimeGroupBy(name, timeframe, 'timestamp_type');
   }
 
   /**
@@ -2735,6 +2747,17 @@ export class ASTOrderByViewOperation extends ASTObjectNode<
   delete() {
     const list = this.list;
     list.remove(this);
+  }
+
+  setField(name: string) {
+    const schema = this.list.segment.getOutputSchema();
+    ASTNode.schemaGet(schema, name);
+    this.edit();
+    this.children.field_reference = new ASTReference({name});
+  }
+
+  setDirection(direction: Malloy.OrderByDirection | undefined) {
+    this.direction = direction;
   }
 }
 
