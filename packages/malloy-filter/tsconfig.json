@@ -6,7 +6,6 @@
     "composite": true,
     "noImplicitReturns": true,
   },
-  "include": ["src/*.ts"],
   "references": [
     {
       "path": "../malloy"

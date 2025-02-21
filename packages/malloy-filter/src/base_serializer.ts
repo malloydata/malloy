@@ -1,11 +1,11 @@
-import { Clause } from './clause_types'
+import {Clause} from './clause_types';
 
 export abstract class BaseSerializer {
-    protected clauses: Clause[];
+  protected clauses: Clause[];
 
-    constructor(clauses: Clause[]) {
-        this.clauses = clauses;
-    }
+  constructor(clauses: Clause[]) {
+    this.clauses = clauses;
+  }
 
-    public abstract serialize(): string;
+  public abstract serialize(): string;
 }

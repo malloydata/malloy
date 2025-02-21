@@ -1,44 +1,46 @@
-import { Clause } from './clause_types'
-import { Token } from './token_types'
-import { FilterParserResponse } from './filter_types'
+import {Clause} from './clause_types';
+import {Token} from './token_types';
+import {FilterParserResponse} from './filter_types';
 
 export abstract class BaseParser {
-    protected inputString: string;
-    protected index: number;
-    protected tokens: Token[];
+  protected inputString: string;
+  protected index: number;
+  protected tokens: Token[];
 
-    constructor(inputString: string) {
-        this.index = 0;
-        this.tokens = [];
-        this.inputString = inputString;
+  constructor(inputString: string) {
+    this.index = 0;
+    this.tokens = [];
+    this.inputString = inputString;
+  }
+
+  public getTokens(): Token[] {
+    return this.tokens;
+  }
+
+  public abstract parse(): FilterParserResponse;
+
+  protected getAt(index: number): Token {
+    return this.tokens[index];
+  }
+
+  protected getNext(): Token {
+    return this.getAt(this.index);
+  }
+
+  protected static matchTokenTypes(
+    candidates: string[],
+    index: number,
+    tokens: Token[]
+  ): boolean {
+    const maxIndex = index + candidates.length;
+    if (index < 0 || maxIndex > tokens.length) {
+      return false;
     }
-
-    public getTokens(): Token[] {
-        return this.tokens;
+    for (let i = 0; i < candidates.length; i++) {
+      if (candidates[i] !== tokens[i + index].type) {
+        return false;
+      }
     }
-
-    public abstract parse(): FilterParserResponse;
-
-    protected getAt(index: number): Token {
-        return this.tokens[index];
-    }
-
-    protected getNext(): Token {
-        return this.getAt(this.index);
-    }
-
-    protected static matchTokenTypes(candidates: string[], index: number, tokens: Token[]): boolean {
-        const maxIndex = index + candidates.length;
-        if (index < 0 || maxIndex > tokens.length) {
-            return false;
-        }
-        for (let i = 0; i < candidates.length; i++) {
-            if (candidates[i] !== tokens[i + index].type) {
-                return false;
-            }
-        }
-        return true;
-    }
+    return true;
+  }
 }
-
-

@@ -1,12 +1,12 @@
-import { Clause } from './clause_types'
+import {Clause} from './clause_types';
 
 export interface FilterError {
-    message: string;
-    startIndex: number;
-    endIndex: number;
+  message: string;
+  startIndex: number;
+  endIndex: number;
 }
 
 export interface FilterParserResponse {
-    clauses: Clause[];
-    errors: FilterError[];
-};
+  clauses: Clause[];
+  errors: FilterError[];
+}
