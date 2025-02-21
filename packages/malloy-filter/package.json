@@ -13,7 +13,7 @@
     "samples": "node dist/generate_samples.js",
     "asimpleparser": "node dist/a_simple_parser.js",
     "asimpleserializer": "node dist/a_simple_serializer.js",
-    "test": "jest",
+    "test": "jest --runInBand",
     "test:tokenizer": "jest tokenizer.spec.ts"
   },
   "keywords": [],
