@@ -884,9 +884,12 @@ export class ASTQuery extends ASTObjectNode<
    * @param name The name of the view to set as the head of the query pipeline
    */
   setView(name: string): ASTReferenceViewDefinition {
+    if (!(this.definition instanceof ASTArrowQueryDefinition)) {
+      throw new Error('Must set source before setting view');
+    }
     this.definition = new ASTArrowQueryDefinition({
       kind: 'arrow',
-      source_reference: {name: 'flights'}, // TODO
+      source_reference: this.definition.sourceReference.build(),
       view: {
         kind: 'view_reference',
         name,
@@ -1310,6 +1313,8 @@ interface IASTViewDefinition {
   getOutputSchema(): Malloy.Schema;
   getImplicitName(): string | undefined;
   getRefinementSchema(): Malloy.Schema;
+  addEmptyRefinement(): ASTSegmentViewDefinition;
+  addViewRefienment(name: string): ASTReferenceViewDefinition; // todo path
 }
 
 export type ASTViewDefinition =
@@ -1331,6 +1336,34 @@ const ASTViewDefinition = {
     }
   },
 };
+
+function swapViewInParent(node: ASTViewDefinition, view: ASTViewDefinition) {
+  const parent = node.parent as
+    | ASTArrowQueryDefinition
+    | ASTRefinementQueryDefinition
+    | ASTView
+    | ASTArrowViewDefinition
+    | ASTRefinementViewDefinition;
+  if (parent instanceof ASTArrowQueryDefinition) {
+    parent.view = view;
+  } else if (parent instanceof ASTRefinementQueryDefinition) {
+    parent.refinement = view;
+  } else if (parent instanceof ASTView) {
+    parent.definition = view;
+  } else if (parent instanceof ASTArrowViewDefinition) {
+    if (parent.source === node) {
+      parent.source = view;
+    } else {
+      parent.view = view;
+    }
+  } else {
+    if (parent.base === node) {
+      parent.base = view;
+    } else {
+      parent.refinement = view;
+    }
+  }
+}
 
 export class ASTReferenceViewDefinition
   extends ASTObjectNode<
@@ -1357,6 +1390,7 @@ export class ASTReferenceViewDefinition
   }
 
   getOrAddDefaultSegment(): ASTSegmentViewDefinition {
+    // TODO this is broken logic -- if the parent is already a refinement, should check it's refinement first?
     const newView = new ASTRefinementViewDefinition({
       kind: 'refinement',
       base: this.build(),
@@ -1365,32 +1399,34 @@ export class ASTReferenceViewDefinition
         operations: [],
       },
     });
-    const parent = this.parent as
-      | ASTArrowQueryDefinition
-      | ASTRefinementQueryDefinition
-      | ASTView
-      | ASTArrowViewDefinition
-      | ASTRefinementViewDefinition;
-    if (parent instanceof ASTArrowQueryDefinition) {
-      parent.view = newView;
-    } else if (parent instanceof ASTRefinementQueryDefinition) {
-      parent.refinement = newView;
-    } else if (parent instanceof ASTView) {
-      parent.definition = newView;
-    } else if (parent instanceof ASTArrowViewDefinition) {
-      if (parent.source === this) {
-        parent.source = newView;
-      } else {
-        parent.view = newView;
-      }
-    } else {
-      if (parent.base === this) {
-        parent.base = newView;
-      } else {
-        parent.refinement = newView;
-      }
-    }
+    swapViewInParent(this, newView);
     return newView.refinement.asSegmentViewDefinition();
+  }
+
+  addEmptyRefinement(): ASTSegmentViewDefinition {
+    const newView = new ASTRefinementViewDefinition({
+      kind: 'refinement',
+      base: this.build(),
+      refinement: {
+        kind: 'segment',
+        operations: [],
+      },
+    });
+    swapViewInParent(this, newView);
+    return newView.refinement.asSegmentViewDefinition();
+  }
+
+  addViewRefienment(name: string): ASTReferenceViewDefinition {
+    const newView = new ASTRefinementViewDefinition({
+      kind: 'refinement',
+      base: this.build(),
+      refinement: {
+        kind: 'view_reference',
+        name,
+      },
+    });
+    swapViewInParent(this, newView);
+    return newView.refinement.asReferenceViewDefinition();
   }
 
   getInputSchema(): Malloy.Schema {
@@ -1696,26 +1732,28 @@ export class ASTSegmentViewDefinition
     'order_by',
   ];
 
-  private findInsertionPoint(_type: Malloy.ViewOperationType): number {
-    return 0; // TODO
-    // const firstOfType = this.firstIndexOfOperationType(type);
-    // if (firstOfType > -1) return {addTo: firstOfType};
-    // const indexInOrder = this.DEFAULT_INSERTION_ORDER.indexOf(type);
-    // if (indexInOrder === -1) {
-    //   throw new Error(
-    //     `Operation ${type} is not supported for \`findInsertionPoint\``
-    //   );
-    // }
-    // const laterOperations = this.DEFAULT_INSERTION_ORDER.slice(
-    //   indexInOrder + 1
-    // );
-    // for (const laterType of laterOperations) {
-    //   const firstOfType = this.firstIndexOfOperationType(laterType);
-    //   if (firstOfType > -1) {
-    //     return {addAt: firstOfType};
-    //   }
-    // }
-    // return {addAt: this.operations.length};
+  private findInsertionPoint(kind: Malloy.ViewOperationType): number {
+    const firstOfType = this.firstIndexOfOperationType(kind);
+    if (firstOfType > -1) {
+      let i = firstOfType;
+      while (this.operations.index(i) && this.operations.index(i).kind === kind)
+        i++;
+      return i;
+    }
+    const indexInOrder = this.DEFAULT_INSERTION_ORDER.indexOf(kind);
+    if (indexInOrder === -1) {
+      throw new Error(
+        `Operation ${kind} is not supported for \`findInsertionPoint\``
+      );
+    }
+    const laterOperations = this.DEFAULT_INSERTION_ORDER.slice(
+      indexInOrder + 1
+    );
+    for (const laterType of laterOperations) {
+      const firstOfType = this.firstIndexOfOperationType(laterType);
+      return firstOfType;
+    }
+    return this.operations.length;
   }
 
   public getGroupBy(name: string) {

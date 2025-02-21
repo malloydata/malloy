@@ -331,97 +331,97 @@ run: flights -> {
       malloy: 'run: flights -> by_month + { limit: 10 }',
     });
   });
-  // test('set view reference with named refinement', () => {
-  //   const from: Malloy.Query = {
-  //     definition: {
-  //       kind: 'arrow',
-  //       source_reference: {name: 'flights'},
-  //       view: {
-  //         kind: 'segment',
-  //         operations: [],
-  //       },
-  //     },
-  //   };
-  //   expect((q: ASTQuery) => {
-  //     const view = q.setView('by_carrier');
-  //     view.list.stage.addViewRefinement('cool_state_measures');
-  //   }).toModifyQuery({
-  //     source: {
-  //       name: 'flights',
-  //       schema: {
-  //         fields: [
-  //           {
-  //             __type: Malloy.FieldInfoType.Dimension,
-  //             name: 'carrier',
-  //             type: {__type: Malloy.AtomicTypeType.StringType},
-  //           },
-  //           {
-  //             __type: Malloy.FieldInfoType.Measure,
-  //             name: 'flight_count',
-  //             type: {__type: Malloy.AtomicTypeType.NumberType},
-  //           },
-  //           {
-  //             __type: Malloy.FieldInfoType.View,
-  //             name: 'by_carrier',
-  //             schema: {
-  //               fields: [
-  //                 {
-  //                   __type: Malloy.FieldInfoType.Dimension,
-  //                   name: 'carrier',
-  //                   type: {__type: Malloy.AtomicTypeType.StringType},
-  //                 },
-  //                 {
-  //                   __type: Malloy.FieldInfoType.Measure,
-  //                   name: 'flight_count',
-  //                   type: {__type: Malloy.AtomicTypeType.NumberType},
-  //                 },
-  //               ],
-  //             },
-  //           },
-  //           {
-  //             __type: Malloy.FieldInfoType.View,
-  //             name: 'cool_state_measures',
-  //             schema: {
-  //               fields: [
-  //                 {
-  //                   __type: Malloy.FieldInfoType.Measure,
-  //                   name: 'il_flight_count',
-  //                   type: {__type: Malloy.AtomicTypeType.NumberType},
-  //                 },
-  //                 {
-  //                   __type: Malloy.FieldInfoType.Measure,
-  //                   name: 'ca_flight_count',
-  //                   type: {__type: Malloy.AtomicTypeType.NumberType},
-  //                 },
-  //               ],
-  //             },
-  //           },
-  //         ],
-  //       },
-  //     },
-  //     from,
-  //     to: {
-  //       pipeline: {
-  //         stages: [
-  //           {
-  //             refinements: [
-  //               {
-  //                 __type: Malloy.RefinementType.Reference,
-  //                 name: 'by_carrier',
-  //               },
-  //               {
-  //                 __type: Malloy.RefinementType.Reference,
-  //                 name: 'cool_state_measures',
-  //               },
-  //             ],
-  //           },
-  //         ],
-  //       },
-  //       source: from.source,
-  //     },
-  //     malloy: 'run: flights -> by_carrier + cool_state_measures',
-  //   });
-  // });
+  test('set view reference with named refinement', () => {
+    const from: Malloy.Query = {
+      definition: {
+        kind: 'arrow',
+        source_reference: {name: 'flights'},
+        view: {
+          kind: 'segment',
+          operations: [],
+        },
+      },
+    };
+    expect((q: ASTQuery) => {
+      const view = q.setView('by_carrier');
+      view.list.stage.addViewRefinement('cool_state_measures');
+    }).toModifyQuery({
+      source: {
+        name: 'flights',
+        schema: {
+          fields: [
+            {
+              __type: Malloy.FieldInfoType.Dimension,
+              name: 'carrier',
+              type: {__type: Malloy.AtomicTypeType.StringType},
+            },
+            {
+              __type: Malloy.FieldInfoType.Measure,
+              name: 'flight_count',
+              type: {__type: Malloy.AtomicTypeType.NumberType},
+            },
+            {
+              __type: Malloy.FieldInfoType.View,
+              name: 'by_carrier',
+              schema: {
+                fields: [
+                  {
+                    __type: Malloy.FieldInfoType.Dimension,
+                    name: 'carrier',
+                    type: {__type: Malloy.AtomicTypeType.StringType},
+                  },
+                  {
+                    __type: Malloy.FieldInfoType.Measure,
+                    name: 'flight_count',
+                    type: {__type: Malloy.AtomicTypeType.NumberType},
+                  },
+                ],
+              },
+            },
+            {
+              __type: Malloy.FieldInfoType.View,
+              name: 'cool_state_measures',
+              schema: {
+                fields: [
+                  {
+                    __type: Malloy.FieldInfoType.Measure,
+                    name: 'il_flight_count',
+                    type: {__type: Malloy.AtomicTypeType.NumberType},
+                  },
+                  {
+                    __type: Malloy.FieldInfoType.Measure,
+                    name: 'ca_flight_count',
+                    type: {__type: Malloy.AtomicTypeType.NumberType},
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+      from,
+      to: {
+        pipeline: {
+          stages: [
+            {
+              refinements: [
+                {
+                  __type: Malloy.RefinementType.Reference,
+                  name: 'by_carrier',
+                },
+                {
+                  __type: Malloy.RefinementType.Reference,
+                  name: 'cool_state_measures',
+                },
+              ],
+            },
+          ],
+        },
+        source: from.source,
+      },
+      malloy: 'run: flights -> by_carrier + cool_state_measures',
+    });
+  });
   test('add limit', () => {
     const from: Malloy.Query = {
       definition: {
