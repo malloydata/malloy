@@ -177,25 +177,23 @@ export class Tokenizer {
     }
 
     public static combineAdjacentWords(tokens: Token[]): Token[] {
-        let output = [];
+        let output: Token[] = [];
+        let previousToken: Token | undefined = undefined;
         for (let i = 0; i < tokens.length; i++) {
-            const currentToken = tokens[i];
-            if (
-                currentToken.type === "word" &&
-                output.length > 0 &&
-                output[output.length - 1].type === "word"
-            ) {
-                output[output.length - 1].value += currentToken.value;
-                output[output.length - 1].endIndex = currentToken.endIndex;
+            const currentToken: Token = tokens[i];
+            if (currentToken.type === 'word' && previousToken && previousToken.type === 'word') {
+                previousToken.value += currentToken.value;
+                previousToken.endIndex = currentToken.endIndex;
             } else {
                 output.push(currentToken);
             }
+            previousToken = currentToken;
         }
         return output;
     }
 
     public static trimWordWhitespace(tokens: Token[]): Token[] {
-        let output = [];
+        let output: Token[] = [];
         for (const token of tokens) {
             if (token.type === "word") {
                 token.value = token.value.trim();
@@ -238,7 +236,7 @@ export class Tokenizer {
         tokens: Token[],
         specials: SpecialToken[]
     ): Token[] {
-        let output = [];
+        let output: Token[] = [];
         let special: Token | undefined = undefined;
         for (const token of tokens) {
             if (
@@ -318,4 +316,3 @@ export class Tokenizer {
         return output;
     }
 }
-
