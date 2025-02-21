@@ -162,7 +162,28 @@ run: flights -> {
 ```
 
 ## Add/edit/delete filter
+
+{@link ASTSegmentViewDefinition.addWhere}
+{@link ASTFilterWithFilterString.setFilter}
+
+```ts
+query.getOrAddDefaultSegment().addWhere("carrier", "WN, AA");
+```
+```
+run: flights -> { where: carrier ~ f`WN, AA` }
+```
+
 ## Add/edit/delete limit
+
+{@link ASTSegmentViewDefinition.setLimit}
+
+```ts
+query.getOrAddDefaultSegment().setLimit(10);
+```
+```
+run: flights -> { limit: 10 }
+```
+
 ## Create new nest with name
 
 {@link ASTSegmentViewDefinition.addEmptyNest}

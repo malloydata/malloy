@@ -3112,6 +3112,16 @@ export class ASTFilterWithFilterString extends ASTObjectNode<
   get filter() {
     return this.children.filter;
   }
+
+  set filter(filter: string) {
+    this.edit();
+    this.children.filter = filter;
+  }
+
+  setFilter(filter: string) {
+    // TODO validate
+    this.filter = filter;
+  }
 }
 
 export class ASTView extends ASTObjectNode<
