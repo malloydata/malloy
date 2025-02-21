@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "es2019",
+    "module": "commonjs",
+    "sourceMap": true,
+    "rootDir": "src",
+    "outDir": "dist",
+    "strict": true,
+    "esModuleInterop": true,
+    // Prevent tsc from picking up modules from higher directories.
+    "moduleResolution": "node"
+  },
+  "include": ["src/**/*", "jest.config.js"],
+}
