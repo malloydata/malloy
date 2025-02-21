@@ -1922,7 +1922,22 @@ export class ASTSegmentViewDefinition
    */
   public addGroupBy(name: string) {
     const item = this.makeField(name, 'dimension');
-    this.addField(item);
+    this.addOperation(item);
+    return item;
+  }
+
+  public addWhere(name: string, filterString: string) {
+    // TODO validate name
+    // TODO validate filter string
+    const item = new ASTWhereViewOperation({
+      kind: 'where',
+      filter: {
+        kind: 'filter_string',
+        field_reference: {name},
+        filter: filterString,
+      },
+    });
+    this.addOperation(item);
     return item;
   }
 
@@ -1953,7 +1968,7 @@ export class ASTSegmentViewDefinition
         },
       },
     });
-    this.addField(item);
+    this.addOperation(item);
   }
 
   // TODO these names should really be paths: string[]
@@ -1988,7 +2003,7 @@ export class ASTSegmentViewDefinition
    */
   public addAggregate(name: string) {
     const item = this.makeField(name, 'measure');
-    this.addField(item);
+    this.addOperation(item);
   }
 
   /**
@@ -2013,7 +2028,7 @@ export class ASTSegmentViewDefinition
    */
   public addNest(name: string) {
     const item = this.makeField(name, 'view');
-    this.addField(item);
+    this.addOperation(item);
   }
 
   private makeField(name: string, type: 'dimension'): ASTGroupByViewOperation;
@@ -2039,23 +2054,16 @@ export class ASTSegmentViewDefinition
     }
   }
 
-  private addField(
+  private addOperation(
     item:
       | ASTGroupByViewOperation
       | ASTAggregateViewOperation
       | ASTNestViewOperation
+      | ASTWhereViewOperation
   ) {
     // TODO ensure output schema doesn't already have this name, and add a parameter here to
     // allow specifying an override name
-    const type =
-      item instanceof ASTGroupByViewOperation
-        ? 'dimension'
-        : item instanceof ASTAggregateViewOperation
-        ? 'measure'
-        : 'view';
-    const whereToInsert = this.findInsertionPoint(
-      fieldTypeToViewOperationType(type)
-    );
+    const whereToInsert = this.findInsertionPoint(item.kind);
     this.operations.insert(item, whereToInsert);
     return item;
   }
@@ -2207,7 +2215,8 @@ export type ASTViewOperation =
   | ASTAggregateViewOperation
   | ASTOrderByViewOperation
   | ASTNestViewOperation
-  | ASTLimitViewOperation;
+  | ASTLimitViewOperation
+  | ASTWhereViewOperation;
 export const ASTViewOperation = {
   from(value: Malloy.ViewOperation): ASTViewOperation {
     switch (value.kind) {
@@ -2221,8 +2230,8 @@ export const ASTViewOperation = {
         return new ASTNestViewOperation(value);
       case 'limit':
         return new ASTLimitViewOperation(value);
-      default:
-        throw new Error(`TODO Unimplemented ViewOperation type ${value.kind}`);
+      case 'where':
+        return new ASTWhereViewOperation(value);
     }
   },
   isLimit(x: ASTViewOperation): x is ASTLimitViewOperation {
@@ -3041,6 +3050,70 @@ export class ASTNestViewOperation extends ASTObjectNode<
   }
 }
 
+export class ASTWhereViewOperation extends ASTObjectNode<
+  Malloy.ViewOperationWithWhere,
+  {
+    kind: 'where';
+    filter: ASTFilter;
+  }
+> {
+  readonly kind: Malloy.ViewOperationType = 'nest';
+  constructor(public node: Malloy.ViewOperationWithWhere) {
+    super(node, {
+      kind: 'where',
+      filter: ASTFilter.from(node.filter),
+    });
+  }
+
+  get filter() {
+    return this.children.filter;
+  }
+
+  /**
+   * @internal
+   */
+  get list() {
+    return this.parent.asViewOperationList();
+  }
+
+  delete() {
+    this.list.remove(this);
+  }
+}
+
+export type ASTFilter = ASTFilterWithFilterString;
+export const ASTFilter = {
+  from(filter: Malloy.Filter) {
+    return new ASTFilterWithFilterString(filter);
+  },
+};
+
+export class ASTFilterWithFilterString extends ASTObjectNode<
+  Malloy.FilterWithFilterString,
+  {
+    kind: 'filter_string';
+    field_reference: ASTReference;
+    filter: string;
+  }
+> {
+  readonly kind: Malloy.FilterType = 'filter_string';
+  constructor(public node: Malloy.FilterWithFilterString) {
+    super(node, {
+      kind: 'filter_string',
+      field_reference: new ASTReference(node.field_reference),
+      filter: node.filter,
+    });
+  }
+
+  get fieldReference() {
+    return this.children.field_reference;
+  }
+
+  get filter() {
+    return this.children.filter;
+  }
+}
+
 export class ASTView extends ASTObjectNode<
   Malloy.View,
   {
@@ -3131,21 +3204,6 @@ function fieldTypeToAction(type: Malloy.FieldInfoType): string {
       return 'nest';
     case 'join':
       return 'join';
-  }
-}
-
-function fieldTypeToViewOperationType(
-  type: Malloy.FieldInfoType
-): Malloy.ViewOperationType {
-  switch (type) {
-    case 'dimension':
-      return 'group_by';
-    case 'measure':
-      return 'aggregate';
-    case 'view':
-      return 'aggregate';
-    default:
-      throw new Error('Invalid');
   }
 }
 

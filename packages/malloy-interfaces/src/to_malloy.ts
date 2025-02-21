@@ -351,8 +351,8 @@ function whereItemToFragments(whereItem: Malloy.Where): Fragment[] {
     case 'filter_string':
       return [
         ...referenceToFragments(whereItem.filter.field_reference),
-        ' ? ',
-        `f'${whereItem.filter.filter}'`,
+        ' ~ ',
+        `f\`${whereItem.filter.filter}\``, // TODO change quote based on filter
       ];
   }
 }
