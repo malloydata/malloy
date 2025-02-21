@@ -1338,6 +1338,10 @@ export interface IASTViewDefinition {
   getRefinementSchema(): Malloy.Schema;
   addEmptyRefinement(): ASTSegmentViewDefinition;
   addViewRefinement(name: string): ASTReferenceViewDefinition; // todo path
+  isValidViewRefinement(name: string): {
+    isValidViewRefinement: boolean;
+    error?: string;
+  };
 }
 
 export type ASTViewDefinition =
@@ -1386,6 +1390,33 @@ function swapViewInParent(node: ASTViewDefinition, view: ASTViewDefinition) {
       parent.refinement = view;
     }
   }
+}
+
+function isValidViewRefinement(
+  view: ASTViewDefinition,
+  name: string
+): {
+  isValidViewRefinement: boolean;
+  error?: string;
+} {
+  const schema = view.getInputSchema();
+  const field = ASTQuery.schemaGet(schema, name);
+  if (field === undefined) {
+    return {isValidViewRefinement: false, error: `${name} is not defined`};
+  } else if (field.kind !== 'view') {
+    // TODO scalar refinements
+    return {isValidViewRefinement: false, error: `${name} is not a view`};
+  }
+  const prevOutput = view.getOutputSchema();
+  for (const refinementField of field.schema.fields) {
+    if (ASTQuery.schemaTryGet(prevOutput, refinementField.name)) {
+      return {
+        isValidViewRefinement: false,
+        error: `Cannot refine with ${name} because stage already has an output field named ${refinementField.name}`,
+      };
+    }
+  }
+  return {isValidViewRefinement: true};
 }
 
 export class ASTReferenceViewDefinition
@@ -1439,6 +1470,10 @@ export class ASTReferenceViewDefinition
   }
 
   addViewRefinement(name: string): ASTReferenceViewDefinition {
+    const {error} = this.isValidViewRefinement(name);
+    if (error) {
+      throw new Error(error);
+    }
     const newView = new ASTRefinementViewDefinition({
       kind: 'refinement',
       base: this.build(),
@@ -1449,6 +1484,13 @@ export class ASTReferenceViewDefinition
     });
     swapViewInParent(this, newView);
     return newView.refinement.asReferenceViewDefinition();
+  }
+
+  isValidViewRefinement(name: string): {
+    isValidViewRefinement: boolean;
+    error?: string;
+  } {
+    return isValidViewRefinement(this, name);
   }
 
   getInputSchema(): Malloy.Schema {
@@ -1562,6 +1604,13 @@ export class ASTArrowViewDefinition
   getRefinementSchema(): Malloy.Schema {
     throw new Error('An arrow is not a valid refinement');
   }
+
+  isValidViewRefinement(name: string): {
+    isValidViewRefinement: boolean;
+    error?: string;
+  } {
+    return isValidViewRefinement(this, name);
+  }
 }
 
 export class ASTRefinementViewDefinition
@@ -1643,6 +1692,13 @@ export class ASTRefinementViewDefinition
 
   getImplicitName(): string | undefined {
     return this.base.getImplicitName();
+  }
+
+  isValidViewRefinement(name: string): {
+    isValidViewRefinement: boolean;
+    error?: string;
+  } {
+    return isValidViewRefinement(this, name);
   }
 }
 
@@ -2074,6 +2130,10 @@ export class ASTSegmentViewDefinition
   }
 
   addViewRefinement(name: string): ASTReferenceViewDefinition {
+    const {error} = this.isValidViewRefinement(name);
+    if (error) {
+      throw new Error(error);
+    }
     const view = new ASTRefinementViewDefinition({
       kind: 'refinement',
       base: this.build(),
@@ -2110,303 +2170,14 @@ export class ASTSegmentViewDefinition
   getImplicitName(): string | undefined {
     return undefined;
   }
+
+  isValidViewRefinement(name: string): {
+    isValidViewRefinement: boolean;
+    error?: string;
+  } {
+    return isValidViewRefinement(this, name);
+  }
 }
-
-// export class ASTPipeStageList extends ASTListNode<
-//   Malloy.PipeStage,
-//   ASTPipeStage
-// > {
-//   constructor(stages: Malloy.PipeStage[]) {
-//     super(
-//       stages,
-//       stages.map(p => new ASTPipeStage(p))
-//     );
-//   }
-
-//   get stages() {
-//     return this.children;
-//   }
-
-//   /**
-//    * @internal
-//    */
-//   get pipeline() {
-//     return this.parent.asPipeline();
-//   }
-
-//   /**
-//    * @internal
-//    */
-//   drain() {
-//     this.stages.splice(0, this.length);
-//   }
-
-//   getOrAddDefaultSegment() {
-//     if (this.length === 0) {
-//       const stage = new ASTPipeStage({
-//         refinements: [
-//           {
-//             kind: "segment",
-//             operations: [],
-//           },
-//         ],
-//       });
-//       this.add(stage);
-//       return stage.refinements.index(0) as ASTSegmentRefinement;
-//     } else {
-//       const refinements = this.last.refinements;
-//       if (
-//         refinements.length === 0 ||
-//         !(refinements.last instanceof ASTSegmentRefinement)
-//       ) {
-//         const segment = new ASTSegmentRefinement({
-//           kind: "segment",
-//           operations: [],
-//         });
-//         refinements.add(segment);
-//         return segment;
-//       } else {
-//         return refinements.last;
-//       }
-//     }
-//   }
-// }
-
-// export class ASTPipeStage extends ASTObjectNode<
-//   Malloy.PipeStage,
-//   {
-//     refinements: ASTRefinementList;
-//   }
-// > {
-//   constructor(public stage: Malloy.PipeStage) {
-//     super(stage, {
-//       refinements: new ASTRefinementList(stage.refinements),
-//     });
-//   }
-
-//   get refinements() {
-//     return this.children.refinements;
-//   }
-
-//   /**
-//    * @internal
-//    */
-//   get list() {
-//     return this.parent.asPipeStageList();
-//   }
-
-//   /**
-//    * @internal
-//    */
-//   get index() {
-//     const index = this.list.indexOf(this);
-//     if (index === -1) {
-//       throw new Error('This element is not contained in its parent');
-//     }
-//     return index;
-//   }
-
-//   /**
-//    * @internal
-//    */
-//   isQueryHeadedStage(): boolean {
-//     const pipelineContainer = this.list.pipeline.parent;
-//     return (
-//       this.index === 0 &&
-//       pipelineContainer instanceof ASTQuery &&
-//       pipelineContainer.source === undefined &&
-//       this.refinements.length > 0 &&
-//       this.refinements.index(0).type === "reference"
-//     );
-//   }
-
-//   public getInputSchema(): Malloy.Schema {
-//     if (this.isQueryHeadedStage()) {
-//       const refinement = this.refinements.index(0).asReferenceRefinement();
-//       const query = this.list.pipeline.parent.asQuery();
-//       const queryInfo = query.getQueryInfo(refinement.name);
-//       return queryInfo.schema;
-//     } else if (this.index === 0) {
-//       return this.list.pipeline.getSourceInfo().schema;
-//     }
-//     return this.list.index(this.index - 1).getOutputSchema();
-//   }
-
-//   public getOutputSchema(): Malloy.Schema {
-//     return this.refinements
-//       .index(this.refinements.length - 1)
-//       .getOutputSchema();
-//   }
-
-//   isValidViewRefinement(name: string): {
-//     isValidViewRefinement: boolean;
-//     error?: string;
-//   } {
-//     const schema = this.getInputSchema();
-//     const field = ASTQuery.schemaGet(schema, name);
-//     if (field === undefined) {
-//       return {isValidViewRefinement: false, error: `${name} is not defined`};
-//     } else if (field.kind !== "view") {
-//       // TODO scalar refinements
-//       return {isValidViewRefinement: false, error: `${name} is not a view`};
-//     }
-//     const prevOutput = this.getOutputSchema();
-//     for (const refinementField of field.schema.fields) {
-//       if (ASTQuery.schemaTryGet(prevOutput, refinementField.name)) {
-//         return {
-//           isValidViewRefinement: false,
-//           error: `Cannot refine with ${name} because stage already has an output field named ${refinementField.name}`,
-//         };
-//       }
-//     }
-//     return {isValidViewRefinement: true};
-//   }
-
-//   addViewRefinement(name: string) {
-//     const {error} = this.isValidViewRefinement(name);
-//     if (error) {
-//       throw new Error(error);
-//     }
-//     const refinement = new ASTReferenceRefinement({
-//       kind: "reference",
-//       name,
-//     });
-//     this.refinements.add(refinement);
-//     return refinement;
-//   }
-
-//   addEmptyRefinement() {
-//     const refinement = new ASTSegmentRefinement({
-//       kind: "segment",
-//       operations: [],
-//     });
-//     this.refinements.add(refinement);
-//     return refinement;
-//   }
-// }
-
-// export class ASTRefinementList extends ASTListNode<
-//   Malloy.Refinement,
-//   ASTRefinement
-// > {
-//   constructor(refinements: Malloy.Refinement[]) {
-//     super(
-//       refinements,
-//       refinements.map(p => ASTRefinement.from(p))
-//     );
-//   }
-
-//   /**
-//    * @internal
-//    */
-//   get stage() {
-//     return this.parent.asPipeStage();
-//   }
-// }
-
-// export type ASTRefinement = ASTReferenceRefinement | ASTSegmentRefinement;
-// export const ASTRefinement = {
-//   from(value: Malloy.Refinement): ASTRefinement {
-//     switch (value.kind) {
-//       case "reference":
-//         return new ASTReferenceRefinement(value);
-//       case "segment":
-//         return new ASTSegmentRefinement(value);
-//     }
-//   },
-// };
-
-// abstract class ASTRefinementBase<
-//   T,
-//   Children extends ASTChildren<T>,
-// > extends ASTObjectNode<T, Children> {
-//   /**
-//    * @internal
-//    */
-//   get list() {
-//     return this.parent.asRefinementList();
-//   }
-
-//   /**
-//    * @internal
-//    */
-//   get index() {
-//     if (
-//       !(
-//         this instanceof ASTReferenceRefinement ||
-//         this instanceof ASTSegmentRefinement
-//       )
-//     ) {
-//       throw new Error('Invalid subclass of ASTRefinementBase');
-//     }
-//     const index = this.list.indexOf(this);
-//     if (index === -1) {
-//       throw new Error('ASTRefinement is not contained in parent list');
-//     }
-//     return index;
-//   }
-
-//   public getInputSchema() {
-//     return this.list.stage.getInputSchema();
-//   }
-
-//   public getOutputSchema() {
-//     const schema: Malloy.Schema =
-//       this.index === 0
-//         ? {fields: []}
-//         : this.list.index(this.index - 1).getOutputSchema();
-//     return ASTNode.schemaMerge(schema, this.getRefinementSchema());
-//   }
-
-//   /**
-//    * @internal
-//    */
-//   abstract getRefinementSchema(): Malloy.Schema;
-// }
-
-// TODO sorta annoying that this is a different class than the sourceRefimenent
-// class, because it is part of a union....
-// I guess maybe I could make an abstract class that both extend???
-// export class ASTReferenceRefinement extends ASTRefinementBase<
-//   Malloy.RefinementWithReference,
-//   {
-//     kind: "reference";
-//     name: string;
-//     parameters?: Deletable<ASTParameterValueList>;
-//   }
-// > {
-//   readonly kind: Malloy.RefinementType = "reference";
-
-//   constructor(public node: Malloy.RefinementWithReference) {
-//     super(node, {
-//       kind: node.kind,
-//       name: node.name,
-//       parameters: node.parameters && new ASTParameterValueList(node.parameters),
-//     });
-//   }
-
-//   get name() {
-//     return this.children.name;
-//   }
-
-//   /**
-//    * @internal
-//    */
-//   getRefinementSchema(): Malloy.Schema {
-//     const inputSchema = this.getInputSchema();
-//     const field = ASTQuery.schemaGet(inputSchema, this.name);
-//     if (
-//       field.kind === "dimension" ||
-//       field.kind === "measure"
-//     ) {
-//       throw new Error('Scalar lenses not yet supported');
-//     }
-//     if (field.kind !== "view") {
-//       throw new Error('Field type not supported in refinement');
-//     }
-//     return field.schema;
-//   }
-// }
 
 export class ASTViewOperationList extends ASTListNode<
   Malloy.ViewOperation,
@@ -2458,252 +2229,6 @@ export const ASTViewOperation = {
     return x instanceof ASTLimitViewOperation;
   },
 };
-
-// export class ASTGroupByViewOperation extends ASTObjectNode<
-//   Malloy.ViewOperationWithGroupBy,
-//   {
-//     kind: "groupby";
-//     items: ASTGroupByItemList;
-//     annotations?: Deletable<ASTAnnotationList>;
-//   }
-// > {
-//   readonly kind: Malloy.ViewOperationType = "groupby";
-
-//   get items() {
-//     return this.children.items;
-//   }
-
-//   get annotations() {
-//     return this.children.annotations;
-//   }
-
-//   constructor(public node: Malloy.ViewOperationWithGroupBy) {
-//     super(node, {
-//       kind: node.kind,
-//       items: new ASTGroupByItemList(node.items),
-//       annotations: node.annotations && new ASTAnnotationList(node.annotations),
-//     });
-//   }
-
-//   drain() {
-//     for (const item of this.items.iter()) {
-//       item.delete();
-//     }
-//   }
-
-//   /**
-//    * @internal
-//    */
-//   get list() {
-//     return this.parent.asViewOperationList();
-//   }
-
-//   delete() {
-//     this.drain();
-//     this.list.remove(this);
-//   }
-
-//   /**
-//    * @internal
-//    */
-//   getFieldInfos() {
-//     return [...this.items.iter()].map(i => i.getFieldInfo());
-//   }
-
-//   /**
-//    * @internal
-//    */
-//   addReference(name: string) {
-//     this.items.add(ASTGroupByItem.fromName(name));
-//   }
-
-//   /**
-//    * @internal
-//    */
-//   static empty() {
-//     return new ASTGroupByViewOperation({
-//       kind: "groupby",
-//       items: [],
-//     });
-//   }
-// }
-
-// export class ASTAggregateViewOperation extends ASTObjectNode<
-//   Malloy.ViewOperationWithAggregate,
-//   {
-//     kind: "aggregate";
-//     items: ASTAggregateItemList;
-//     annotations?: Deletable<ASTAnnotationList>;
-//   }
-// > {
-//   readonly kind: Malloy.ViewOperationType = "aggregate";
-
-//   get items() {
-//     return this.children.items;
-//   }
-
-//   get annotations() {
-//     return this.children.annotations;
-//   }
-
-//   constructor(public node: Malloy.ViewOperationWithAggregate) {
-//     super(node, {
-//       kind: node.kind,
-//       items: new ASTAggregateItemList(node.items),
-//       annotations: node.annotations && new ASTAnnotationList(node.annotations),
-//     });
-//   }
-
-//   drain() {
-//     for (const item of this.items.iter()) {
-//       item.delete();
-//     }
-//   }
-
-//   /**
-//    * @internal
-//    */
-//   get list() {
-//     return this.parent.asViewOperationList();
-//   }
-
-//   delete() {
-//     this.drain();
-//     this.list.remove(this);
-//   }
-
-//   /**
-//    * @internal
-//    */
-//   getFieldInfos() {
-//     return [...this.items.iter()].map(i => i.getFieldInfo());
-//   }
-
-//   /**
-//    * @internal
-//    */
-//   addReference(name: string) {
-//     this.items.add(ASTAggregateItem.fromName(name));
-//   }
-
-//   /**
-//    * @internal
-//    */
-//   static empty() {
-//     return new ASTAggregateViewOperation({
-//       kind: "aggregate",
-//       items: [],
-//     });
-//   }
-// }
-
-// export class ASTOrderByViewOperation extends ASTObjectNode<
-//   Malloy.ViewOperationWithOrderBy,
-//   {
-//     kind: "orderby";
-//     items: ASTOrderByItemList;
-//   }
-// > {
-//   readonly kind: Malloy.ViewOperationType = "orderby";
-
-//   constructor(public node: Malloy.ViewOperationWithOrderBy) {
-//     super(node, {
-//       kind: node.kind,
-//       items: new ASTOrderByItemList(node.items),
-//     });
-//   }
-
-//   get items() {
-//     return this.children.items;
-//   }
-
-//   drain() {
-//     for (const item of this.items.iter()) {
-//       item.delete();
-//     }
-//   }
-
-//   /**
-//    * @internal
-//    */
-//   get list() {
-//     return this.parent.asViewOperationList();
-//   }
-
-//   delete() {
-//     this.drain();
-//     this.list.remove(this);
-//   }
-// }
-
-// export class ASTGroupByItemList extends ASTListNode<
-//   Malloy.GroupByItem,
-//   ASTGroupByItem
-// > {
-//   constructor(items: Malloy.GroupByItem[]) {
-//     super(
-//       items,
-//       items.map(p => new ASTGroupByItem(p))
-//     );
-//   }
-
-//   get items() {
-//     return this.children;
-//   }
-
-//   /**
-//    * @internal
-//    */
-//   get operation() {
-//     return this.parent.asGroupByViewOperation();
-//   }
-// }
-
-// export class ASTAggregateItemList extends ASTListNode<
-//   Malloy.AggregateItem,
-//   ASTAggregateItem
-// > {
-//   constructor(items: Malloy.AggregateItem[]) {
-//     super(
-//       items,
-//       items.map(p => new ASTAggregateItem(p))
-//     );
-//   }
-
-//   get items() {
-//     return this.children;
-//   }
-
-//   /**
-//    * @internal
-//    */
-//   get operation() {
-//     return this.parent.asAggregateViewOperation();
-//   }
-// }
-
-// export class ASTOrderByItemList extends ASTListNode<
-//   Malloy.OrderByItem,
-//   ASTOrderByItem
-// > {
-//   constructor(items: Malloy.OrderByItem[]) {
-//     super(
-//       items,
-//       items.map(p => new ASTOrderByItem(p))
-//     );
-//   }
-
-//   get items() {
-//     return this.children;
-//   }
-
-//   /**
-//    * @internal
-//    */
-//   get operation() {
-//     return this.parent.asOrderByViewOperation();
-//   }
-// }
 
 export class ASTOrderByViewOperation extends ASTObjectNode<
   Malloy.ViewOperationWithOrderBy,
@@ -3409,94 +2934,6 @@ function timestampTimeframeToDateTimeframe(
       throw new Error('Invalid date timeframe');
   }
 }
-
-function dateTimeframeToTimestampTimeframe(
-  timeframe: Malloy.DateTimeframe
-): Malloy.TimestampTimeframe {
-  return timeframe;
-}
-
-// export class ASTNestViewOperation extends ASTObjectNode<
-//   Malloy.ViewOperationWithNest,
-//   {
-//     kind: "nest";
-//     items: ASTNestItemList;
-//     annotations?: Deletable<ASTAnnotationList>;
-//   }
-// > {
-//   readonly kind: Malloy.ViewOperationType = "nest";
-
-//   get items() {
-//     return this.children.items;
-//   }
-
-//   get annotations() {
-//     return this.children.annotations;
-//   }
-
-//   constructor(public node: Malloy.ViewOperationWithNest) {
-//     super(node, {
-//       kind: node.kind,
-//       items: new ASTNestItemList(node.items),
-//       annotations: node.annotations && new ASTAnnotationList(node.annotations),
-//     });
-//   }
-
-//   drain() {
-//     for (const item of this.items.iter()) {
-//       item.delete();
-//     }
-//   }
-
-//   /**
-//    * @internal
-//    */
-//   get list() {
-//     return this.parent.asViewOperationList();
-//   }
-
-//   delete() {
-//     this.drain();
-//     this.list.remove(this);
-//   }
-
-//   /**
-//    * @internal
-//    */
-//   addReference(name: string) {
-//     this.items.add(ASTNestItem.fromName(name));
-//   }
-
-//   /**
-//    * @internal
-//    */
-//   static empty() {
-//     return new ASTNestViewOperation({
-//       kind: "nest",
-//       items: [],
-//     });
-//   }
-// }
-
-// export class ASTNestItemList extends ASTListNode<Malloy.NestItem, ASTNestItem> {
-//   constructor(items: Malloy.NestItem[]) {
-//     super(
-//       items,
-//       items.map(p => new ASTNestItem(p))
-//     );
-//   }
-
-//   get items() {
-//     return this.children;
-//   }
-
-//   /**
-//    * @internal
-//    */
-//   get operation() {
-//     return this.parent.asNestViewOperation();
-//   }
-// }
 
 export class ASTNestViewOperation extends ASTObjectNode<
   Malloy.ViewOperationWithNest,
