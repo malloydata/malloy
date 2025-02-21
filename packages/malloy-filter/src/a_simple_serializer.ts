@@ -1,13 +1,12 @@
 import {FilterSerializer} from './filter_serializer';
 import {
-  Clause,
-  NumberCondition,
   NumberClause,
   StringCondition,
   BooleanClause,
   DateClause,
 } from './clause_types';
 
+/* eslint-disable no-console */
 function aSimpleSerializer() {
   const strings: StringCondition[] = [{operator: '=', values: ['CAT', 'DOG']}];
   let response = new FilterSerializer(strings, 'string').serialize();

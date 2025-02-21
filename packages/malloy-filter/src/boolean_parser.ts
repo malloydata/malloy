@@ -1,5 +1,5 @@
 import {SpecialToken, Tokenizer, TokenizerParams} from './tokenizer';
-import {BooleanClause, BooleanOperator, Clause} from './clause_types';
+import {BooleanClause, BooleanOperator} from './clause_types';
 import {BaseParser} from './base_parser';
 import {FilterParserResponse, FilterError} from './filter_types';
 
@@ -31,17 +31,17 @@ export class BooleanParser extends BaseParser {
   public parse(): FilterParserResponse {
     this.index = 0;
     this.tokenize();
-    let clauses: BooleanClause[] = [];
-    let errors: FilterError[] = [];
+    const clauses: BooleanClause[] = [];
+    const errors: FilterError[] = [];
     while (this.index < this.tokens.length) {
-      let token = this.getNext();
+      const token = this.getNext();
       if (token.type === ',') {
         this.index++;
       } else if (
-        token.type == 'NULL' ||
-        token.type == 'TRUE' ||
-        token.type == 'FALSE' ||
-        token.type == 'NOTNULL'
+        token.type === 'NULL' ||
+        token.type === 'TRUE' ||
+        token.type === 'FALSE' ||
+        token.type === 'NOTNULL'
       ) {
         const clause: BooleanClause = {operator: token.type as BooleanOperator};
         clauses.push(clause);

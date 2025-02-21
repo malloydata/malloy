@@ -2,11 +2,11 @@ import {Tokenizer, SpecialToken, TokenizerParams} from './tokenizer';
 import {Token} from './token_types';
 
 function makeParams(): TokenizerParams {
-  let specialSubstrings: SpecialToken[] = [
+  const specialSubstrings: SpecialToken[] = [
     {type: ',', value: ','},
-    {type: 'VARIABLE', value: /^\$\{[^\}]+\}/},
+    {type: 'VARIABLE', value: /^\$\{[^}]+\}/},
   ];
-  let specialWords: SpecialToken[] = [
+  const specialWords: SpecialToken[] = [
     {type: 'NULL', value: 'null', ignoreCase: true},
     {type: 'EMPTY', value: 'empty', ignoreCase: true},
     {type: 'NOTNULL', value: '-null', ignoreCase: true},
@@ -17,8 +17,8 @@ function makeParams(): TokenizerParams {
       ignoreCase: true,
     },
     {type: 'STATE', value: /^(California|Washington)$/i},
-    {type: 'DATE', value: /^\d\d\d\d\-\d\d\-\d\d$/},
-    {type: 'DATE', value: /^\d\d\d\d\-\d\d$/},
+    {type: 'DATE', value: /^\d\d\d\d-\d\d-\d\d$/},
+    {type: 'DATE', value: /^\d\d\d\d-\d\d$/},
     {type: 'DATE', value: /^\d\d\d\d$/},
   ];
   return {
@@ -45,7 +45,7 @@ describe('Tokenizer', () => {
     expect(new Tokenizer(input, makeParams()).parse()).toEqual(expectedTokens);
   });
   it('should split adjacent characters when no whitespace', () => {
-    let specialSubstrings: SpecialToken[] = [
+    const specialSubstrings: SpecialToken[] = [
       {type: ',', value: ','},
       {type: 'exclamation', value: '!'},
       {type: 'bracket', value: '['},

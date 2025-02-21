@@ -50,9 +50,9 @@ export class NumberParser extends BaseParser {
     this.index = 0;
     this.tokenize();
     let clauses: NumberClause[] = [];
-    let errors: FilterError[] = [];
+    const errors: FilterError[] = [];
     while (this.index < this.tokens.length) {
-      let token = this.getNext();
+      const token = this.getNext();
       if (token.type === ',') {
         this.index++;
       } else if (this.isRangeStart(this.index)) {
@@ -90,7 +90,7 @@ export class NumberParser extends BaseParser {
       return clauses;
     }
     let previous: NumberClause | undefined = undefined;
-    let outputs: NumberClause[] = [];
+    const outputs: NumberClause[] = [];
     for (let i = 0; i < clauses.length; i++) {
       const clause: NumberClause = clauses[i];
       if (clause.operator === 'range') {
@@ -155,9 +155,9 @@ export class NumberParser extends BaseParser {
   }
 
   private static parseNumber(value: string): number {
-    if (value.toUpperCase() == 'inf') {
+    if (value.toUpperCase() === 'inf') {
       return Infinity;
-    } else if (value.toUpperCase() == '-inf') {
+    } else if (value.toUpperCase() === '-inf') {
       return -Infinity;
     } else {
       return Number(value);

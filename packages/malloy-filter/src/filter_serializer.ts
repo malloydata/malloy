@@ -13,10 +13,10 @@ export interface FilterSerializerResponse {
 }
 
 export class FilterSerializer {
-  input: Clause[];
-  type: FilterType;
-
-  constructor(input: Clause[], type: FilterType) {
+  constructor(
+    private input: Clause[],
+    private type: FilterType
+  ) {
     this.input = input;
     this.type = type;
   }

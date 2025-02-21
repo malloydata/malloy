@@ -15,7 +15,7 @@ export class DateSerializer extends BaseSerializer {
   }
 
   public serialize(): string {
-    let result = DateSerializer.clausesToString(this.clauses);
+    const result = DateSerializer.clausesToString(this.clauses);
     return result.trim().replace(/,$/, '');
   }
 

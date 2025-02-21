@@ -1,4 +1,3 @@
-import {Clause} from './clause_types';
 import {Token} from './token_types';
 import {FilterParserResponse} from './filter_types';
 

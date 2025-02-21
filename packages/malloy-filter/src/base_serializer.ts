@@ -1,9 +1,7 @@
 import {Clause} from './clause_types';
 
 export abstract class BaseSerializer {
-  protected clauses: Clause[];
-
-  constructor(clauses: Clause[]) {
+  constructor(protected clauses: Clause[]) {
     this.clauses = clauses;
   }
 

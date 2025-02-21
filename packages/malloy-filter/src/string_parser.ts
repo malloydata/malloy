@@ -38,22 +38,22 @@ export class StringParser extends BaseParser {
   public parse(): FilterParserResponse {
     this.index = 0;
     this.tokenize();
-    let clauses: StringCondition[] = [];
-    let errors: FilterError[] = [];
+    const clauses: StringCondition[] = [];
+    const errors: FilterError[] = [];
     while (this.index < this.tokens.length) {
-      let token = this.getNext();
+      const token = this.getNext();
       if (token.type === ',') {
         this.index++;
-      } else if (token.type == 'NULL') {
+      } else if (token.type === 'NULL') {
         clauses.push({operator: '=', values: [null]});
         this.index++;
-      } else if (token.type == 'EMPTY') {
+      } else if (token.type === 'EMPTY') {
         clauses.push({operator: 'EMPTY', values: [null]});
         this.index++;
-      } else if (token.type == 'NOTNULL') {
+      } else if (token.type === 'NOTNULL') {
         clauses.push({operator: '!=', values: [null]});
         this.index++;
-      } else if (token.type == 'NOTEMPTY') {
+      } else if (token.type === 'NOTEMPTY') {
         clauses.push({operator: 'NOTEMPTY', values: [null]});
         this.index++;
       } else if (this.checkSimpleWord(clauses)) {
@@ -124,7 +124,7 @@ export class StringParser extends BaseParser {
       return clauses;
     }
     let previous: StringCondition = clauses[0];
-    let outputs: StringCondition[] = [previous];
+    const outputs: StringCondition[] = [previous];
     for (let i = 1; i < clauses.length; i++) {
       if (previous.operator === clauses[i].operator) {
         previous.values.push(...clauses[i].values);
@@ -144,11 +144,11 @@ export class StringParser extends BaseParser {
 
   private static removeBackslashes(word: string): string {
     StringParser.singleBackslashRegex.lastIndex = 0;
-    return word.replace(StringParser.singleBackslashRegex, match => '');
+    return word.replace(StringParser.singleBackslashRegex, _match => '');
   }
 
   private checkSimpleWord(clauses: StringCondition[]): boolean {
-    let token = this.getNext();
+    const token = this.getNext();
     if (token.type !== 'word') {
       return false;
     }
@@ -180,7 +180,7 @@ export class StringParser extends BaseParser {
       // = or !=
       word = StringParser.removeBackslashes(word);
     }
-    if (word.length == 0) {
+    if (word.length === 0) {
       return false;
     }
 

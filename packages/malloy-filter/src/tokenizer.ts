@@ -40,13 +40,11 @@ export class Tokenizer {
     let wordEnd = -1;
     let special: SpecialTokenMatch | undefined;
     while (this.hasMoreInput()) {
-      // console.log('evaluating ', this.input[this.index]);
       if (this.params.splitOnWhitespace && this.isWhitespace(this.index)) {
         this.maybeConsumeWord(wordStart, wordEnd, tokens);
         wordStart = -1;
         this.consumeWhitespace();
       } else if (this.input[this.index] === '\\') {
-        // console.log("Found backslash at: '" + this.input.substring(this.index) + "'");
         if (wordStart === -1) {
           wordStart = this.index;
         }
@@ -71,11 +69,6 @@ export class Tokenizer {
     }
     this.maybeConsumeWord(wordStart, wordEnd, tokens);
 
-    //console.log("Tokens1: ", ...tokens);
-    //for (const token of tokens) {
-    //    console.log("Single token: " + token.value);
-    //}
-
     tokens = Tokenizer.convertSpecialWords(tokens, this.specialWords);
 
     if (this.params.combineAdjacentWords) {
@@ -84,15 +77,11 @@ export class Tokenizer {
     if (this.params.trimWordWhitespace) {
       tokens = Tokenizer.trimWordWhitespace(tokens);
     }
-    // console.log("Tokens4: ", ...tokens);
     return tokens;
   }
 
   public parse(): Token[] {
     let tokens = this.tokenize();
-    //if (this.params.combineAdjacentWords) {
-    //    tokens = Tokenizer.combineAdjacentWords(tokens);
-    //}
     if (this.params.trimWordWhitespace) {
       tokens = Tokenizer.trimWordWhitespace(tokens);
     }
@@ -117,7 +106,6 @@ export class Tokenizer {
     wordEnd: number,
     tokens: Token[]
   ): void {
-    // console.log("Possible word: ", wordStart, ' ', wordEnd);
     if (wordStart >= 0 && wordEnd >= wordStart) {
       tokens.push({
         type: 'word',
@@ -125,7 +113,6 @@ export class Tokenizer {
         startIndex: wordStart,
         endIndex: wordEnd + 1,
       });
-      // console.log("Added word " + tokens[tokens.length - 1].value)
     }
   }
 
@@ -135,7 +122,6 @@ export class Tokenizer {
         const shifted = this.input.substring(this.index); // create a substring starting at index.
         const matcher = special.value.exec(shifted);
         if (matcher) {
-          console.log('match special: ', matcher);
           return {
             type: special.type,
             value: special.value,
@@ -179,7 +165,7 @@ export class Tokenizer {
   }
 
   public static combineAdjacentWords(tokens: Token[]): Token[] {
-    let output: Token[] = [];
+    const output: Token[] = [];
     let previousToken: Token | undefined = undefined;
     for (let i = 0; i < tokens.length; i++) {
       const currentToken: Token = tokens[i];
@@ -199,7 +185,7 @@ export class Tokenizer {
   }
 
   public static trimWordWhitespace(tokens: Token[]): Token[] {
-    let output: Token[] = [];
+    const output: Token[] = [];
     for (const token of tokens) {
       if (token.type === 'word') {
         token.value = token.value.trim();
@@ -252,7 +238,7 @@ export class Tokenizer {
     tokens: Token[],
     specials: SpecialToken[]
   ): Token[] {
-    let output: Token[] = [];
+    const output: Token[] = [];
     let special: Token | undefined = undefined;
     for (const token of tokens) {
       if (

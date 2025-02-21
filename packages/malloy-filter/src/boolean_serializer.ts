@@ -7,7 +7,7 @@ export class BooleanSerializer extends BaseSerializer {
   }
 
   public serialize(): string {
-    let result = BooleanSerializer.clauseToString(this.clauses);
+    const result = BooleanSerializer.clauseToString(this.clauses);
     return result.trim().replace(/,$/, '');
   }
 

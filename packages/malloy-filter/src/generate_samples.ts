@@ -10,7 +10,6 @@ import {StringSerializer} from './string_serializer';
 import {NumberSerializer} from './number_serializer';
 import {DateSerializer} from './date_serializer';
 import {BaseSerializer} from './base_serializer';
-import {Token} from './token_types';
 
 const numberExamples = [
   '5',
@@ -112,6 +111,9 @@ const dateExamples = [
   '',
 ];
 
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable no-console */
+
 function testTokenizerSingle(str: string, params: TokenizerParams): void {
   const tokenizer = new Tokenizer(str, params);
   console.log(str, ' -> ', tokenizer.parse(), '\n');
@@ -119,15 +121,15 @@ function testTokenizerSingle(str: string, params: TokenizerParams): void {
 
 function testTokenizerString() {
   // Test string parser tokenizer.  Do not split on whitespace
-  let specialSubstrings: SpecialToken[] = [{type: ',', value: ','}];
-  let specialWords: SpecialToken[] = [];
-  let params: TokenizerParams = {
+  const specialSubstrings: SpecialToken[] = [{type: ',', value: ','}];
+  const specialWords: SpecialToken[] = [];
+  const params: TokenizerParams = {
     trimWordWhitespace: true,
     combineAdjacentWords: true,
     specialSubstrings,
     specialWords,
   };
-  let examples = [
+  const examples = [
     'CAT, DOG,mouse ',
     '-CAT,-DOG , -mouse',
     ' CAT,-"DOG",m o u s e',
@@ -157,7 +159,7 @@ function testTokenizerString() {
 
 function testTokenizerNumber() {
   // Test number parser tokenizer, split on whitespace
-  let specialSubstrings: SpecialToken[] = [
+  const specialSubstrings: SpecialToken[] = [
     {type: ',', value: ','},
     {type: '[', value: '['},
     {type: ']', value: ']'},
@@ -170,12 +172,12 @@ function testTokenizerNumber() {
     {type: '>', value: '>'},
     {type: '<', value: '<'},
   ];
-  let specialWords: SpecialToken[] = [
+  const specialWords: SpecialToken[] = [
     {type: 'TO', value: 'to', ignoreCase: true},
     {type: '-NULL', value: '-null', ignoreCase: true},
     {type: 'NULL', value: 'null', ignoreCase: true},
   ];
-  let params: TokenizerParams = {
+  const params: TokenizerParams = {
     trimWordWhitespace: true,
     combineAdjacentWords: false,
     splitOnWhitespace: true,
@@ -203,18 +205,6 @@ function testTokenizerNumber() {
   for (const example of examples) {
     testTokenizerSingle(example, params);
   }
-}
-
-function testTokenizerMatchTypes() {
-  const tokens: Token[] = [
-    {type: 'word', value: 'hello', startIndex: 0, endIndex: 5},
-    {type: 'punctuation', value: ',', startIndex: 5, endIndex: 6},
-    {type: 'word', value: 'world', startIndex: 6, endIndex: 10},
-  ];
-
-  console.log(Tokenizer.matchTypes('word|punctuation|word', tokens, 0)); // Output: true
-  console.log(Tokenizer.matchTypes('word|word|word', tokens, 0)); // Output: false
-  console.log(Tokenizer.matchTypes('word|punctuation|word', tokens, 1)); // Output: false
 }
 
 function testParserSingle(

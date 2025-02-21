@@ -22,10 +22,6 @@ import {BaseParser} from './base_parser';
 import {Token} from './token_types';
 import {FilterParserResponse, FilterError} from './filter_types';
 
-interface MergedToken extends Token {
-  moment?: DateMoment;
-}
-
 export class DateParser extends BaseParser {
   private static readonly yearRegex: RegExp = /[%_]/;
   private static readonly negatedStartRegex: RegExp = /^-(.+)$/;
@@ -35,8 +31,8 @@ export class DateParser extends BaseParser {
   }
 
   private tokenize(): void {
-    let specialSubstrings: SpecialToken[] = [{type: ',', value: ','}];
-    let specialWords: SpecialToken[] = [
+    const specialSubstrings: SpecialToken[] = [{type: ',', value: ','}];
+    const specialWords: SpecialToken[] = [
       {
         type: 'UNITOFTIME',
         value: /^(second|minute|hour|day|week|month|quarter|year)s?$/i,
@@ -47,8 +43,8 @@ export class DateParser extends BaseParser {
         value: /^(monday|tuesday|wednesday|thursday|friday|saturday|sunday)$/i,
         ignoreCase: true,
       },
-      {type: 'DATE', value: /^\d\d\d\d\-\d\d\-\d\d$/},
-      {type: 'DATE', value: /^\d\d\d\d\-\d\d$/},
+      {type: 'DATE', value: /^\d\d\d\d-\d\d-\d\d$/},
+      {type: 'DATE', value: /^\d\d\d\d-\d\d$/},
       {type: 'TIME', value: /^\d\d:\d\d:\d\d\.\d+$/},
       {type: 'TIME', value: /^\d\d:\d\d:\d\d$/},
       {type: 'TIME', value: /^\d\d:\d\d$/},
@@ -67,7 +63,7 @@ export class DateParser extends BaseParser {
       {type: 'FOR', value: 'for', ignoreCase: true},
       {type: 'TO', value: 'to', ignoreCase: true},
       {type: 'YEARORNUMBER', value: /^\d\d\d\d$/}, // Years are ambiguous, and require special handling.
-      {type: 'NUMBER', value: /^[\d\.]+/, ignoreCase: true},
+      {type: 'NUMBER', value: /^[\d.]+/, ignoreCase: true},
     ];
     const params: TokenizerParams = {
       trimWordWhitespace: true,
@@ -83,7 +79,7 @@ export class DateParser extends BaseParser {
   }
 
   private mergeMomentTokens(): Token[] {
-    let output: Token[] = [];
+    const output: Token[] = [];
     this.index = 0;
     while (this.index < this.tokens.length) {
       if (
@@ -159,11 +155,11 @@ export class DateParser extends BaseParser {
   public parse(): FilterParserResponse {
     this.tokenize();
     let prefix: DatePrefix | undefined = undefined;
-    let clauses: DateClause[] = [];
-    let errors: FilterError[] = [];
+    const clauses: DateClause[] = [];
+    const errors: FilterError[] = [];
     this.index = 0;
     while (this.index < this.tokens.length) {
-      let token = this.getNext();
+      const token = this.getNext();
       if (token.type === ',') {
         if (prefix) {
           errors.push({
@@ -210,7 +206,7 @@ export class DateParser extends BaseParser {
     const unit: DateTimeUnit | DateWeekday = tokens[1].value as
       | DateTimeUnit
       | DateWeekday;
-    let moment: DateMomentInterval = {operator, unit};
+    const moment: DateMomentInterval = {operator, unit};
     if (prefix) {
       moment.prefix = prefix;
     }
@@ -227,7 +223,7 @@ export class DateParser extends BaseParser {
       type0 === 'LAST' ? 'LASTN' : 'NEXTN';
     const value: string = tokens[1].value;
     const unit: DateTimeUnit = tokens[2].value as DateTimeUnit;
-    let moment: DateMomentNumberInterval = {operator, value, unit};
+    const moment: DateMomentNumberInterval = {operator, value, unit};
     if (prefix) {
       moment.prefix = prefix;
     }
@@ -242,7 +238,7 @@ export class DateParser extends BaseParser {
     const operator: DateMomentNumberIntervalOperator = 'AGO';
     const value: string = tokens[0].value;
     const unit: DateTimeUnit = tokens[1].value as DateTimeUnit;
-    let moment: DateMomentNumberInterval = {operator, value, unit};
+    const moment: DateMomentNumberInterval = {operator, value, unit};
     if (prefix) {
       moment.prefix = prefix;
     }
@@ -257,7 +253,7 @@ export class DateParser extends BaseParser {
     const operator: DateMomentNumberIntervalOperator = 'FROMNOW';
     const value: string = tokens[0].value;
     const unit: DateTimeUnit = tokens[1].value as DateTimeUnit;
-    let moment: DateMomentNumberInterval = {operator, value, unit};
+    const moment: DateMomentNumberInterval = {operator, value, unit};
     if (prefix) {
       moment.prefix = prefix;
     }
@@ -272,7 +268,7 @@ export class DateParser extends BaseParser {
     const operator: DateMomentNumberUnitOperator = 'TIMEBLOCK';
     const value: string = tokens[0].value;
     const unit: DateTimeUnit = tokens[1].value as DateTimeUnit;
-    let moment: DateMomentNumberUnit = {operator, value, unit};
+    const moment: DateMomentNumberUnit = {operator, value, unit};
     if (prefix) {
       moment.prefix = prefix;
     }
@@ -285,9 +281,9 @@ export class DateParser extends BaseParser {
     tokens: Token[]
   ): DateMomentNumber {
     const operator: DateMomentNumberOperator =
-      tokens.length == 2 ? 'DATETIME' : 'DATE';
-    let moment: DateMomentNumber = {operator, date: tokens[0].value};
-    if (tokens.length == 2) {
+      tokens.length === 2 ? 'DATETIME' : 'DATE';
+    const moment: DateMomentNumber = {operator, date: tokens[0].value};
+    if (tokens.length === 2) {
       moment.time = tokens[1].value;
     }
     if (prefix) {
@@ -303,7 +299,7 @@ export class DateParser extends BaseParser {
   ): DateMomentNow {
     const operator: DateMomentNowOperator = tokens[0]
       .type as DateMomentNowOperator;
-    let moment: DateMomentNow = {operator};
+    const moment: DateMomentNow = {operator};
     if (prefix) {
       moment.prefix = prefix;
     }

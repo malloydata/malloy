@@ -9,10 +9,10 @@ import {BaseParser} from './base_parser';
 export type FilterType = 'boolean' | 'number' | 'string' | 'date';
 
 export class FilterParser {
-  input: string;
-  type: FilterType;
-
-  constructor(input: string, type: FilterType) {
+  constructor(
+    private input: string,
+    private type: FilterType
+  ) {
     this.input = input;
     this.type = type;
   }
@@ -30,6 +30,7 @@ export class FilterParser {
     }
   }
 
+  /* eslint-disable no-console */
   public getTokens(): Token[] {
     let tokens: Token[] = [];
     try {
@@ -43,6 +44,7 @@ export class FilterParser {
     }
     return tokens;
   }
+  /* eslint-enable no-console */
 
   private makeErrorMessage(message: string): FilterError {
     return {message, startIndex: 0, endIndex: this.input.length};

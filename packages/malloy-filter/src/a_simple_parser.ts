@@ -1,5 +1,6 @@
 import {FilterParser} from './filter_parser';
 
+/* eslint-disable no-console */
 function aSimpleParser() {
   let str = 'CAT,DOG';
   let response = new FilterParser(str, 'string').parse();
