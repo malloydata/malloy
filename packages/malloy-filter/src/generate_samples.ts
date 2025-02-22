@@ -15,7 +15,7 @@ type Clause = BooleanClause | DateClause | NumberClause | StringClause;
 const numberExamples = [
   '5',
   '!=5',
-  '1, 3, null , 7',
+  '1, 3, 5, null',
   '<1, >=100 ',
   '>=1',
   ' <= 10 ',
@@ -70,9 +70,10 @@ const stringExamples = [
 const booleanExamples = [
   'true',
   'FALSE',
+  '=false',
   'null',
   '-NULL',
-  ' True , faLSE,NULl,-null',
+  ' True , faLSE,=false,NULl,-null',
   "-'null'",
   '10',
   'nnull',
@@ -104,6 +105,8 @@ const dateExamples = [
   'next week',
   'now',
   'now to next month',
+  'null',
+  '-null,',
   ' yyesterday ', // Typo
   'before', // Bad syntax
   'for', // Bad syntax
@@ -250,6 +253,9 @@ function testStringParserSingle(
     } else {
       console.log('Output: ', ...response.clauses);
     }
+  }
+  if (response.quotes) {
+    console.log('Quotes: ', ...response.quotes);
   }
   if (response.errors && response.errors.length > 0) {
     console.log('Errors: ', ...response.errors);

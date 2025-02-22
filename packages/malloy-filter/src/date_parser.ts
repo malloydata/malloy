@@ -168,7 +168,9 @@ export class DateParser extends BaseParser {
         prefix = undefined;
       } else {
         errors.push({
-          message: 'Invalid token ' + token.value,
+          message:
+            'Invalid token ' + token.value ||
+            (token.values ? token.values.join(' ') : ''),
           startIndex: token.startIndex,
           endIndex: token.endIndex,
         });
@@ -440,6 +442,8 @@ export class DateParser extends BaseParser {
       }
       clauses.push(clause);
       return true;
+    } else if (token.type === 'NULL' || token.type === 'NOTNULL') {
+      clauses.push({operator: token.type});
     }
     return false;
   }

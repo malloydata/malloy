@@ -11,7 +11,15 @@ export class BooleanSerializer {
   }
 
   private static booleanClauseToString(clause: BooleanClause): string {
-    return clause.operator === 'NOTNULL' ? '-NULL' : clause.operator;
+    switch (clause.operator) {
+      case 'NOTNULL':
+        return '-NULL';
+      case 'FALSEORNULL':
+        return 'FALSE';
+      case 'FALSE':
+        return '=FALSE';
+    }
+    return clause.operator;
   }
 
   private static clauseToString(clauses: BooleanClause[]): string {

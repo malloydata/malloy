@@ -1,4 +1,8 @@
-import {StringClause, StringOperator} from './clause_types';
+import {
+  StringClause,
+  StringCondition,
+  StringConditionOperator,
+} from './clause_types';
 
 export class StringSerializer {
   constructor(private clauses: StringClause[]) {
@@ -10,9 +14,8 @@ export class StringSerializer {
     return result.trim().replace(/,$/, '');
   }
 
-  private static isNegated(operator: StringOperator): boolean {
+  private static isNegated(operator: StringConditionOperator): boolean {
     return (
-      operator === 'NOTEMPTY' ||
       operator === '!~' ||
       operator === '!=' ||
       operator === 'notStarts' ||
@@ -29,22 +32,14 @@ export class StringSerializer {
     return input.replace(/[_%]/g, match => `\\${match}`);
   }
 
-  // export type StringOperator = 'EMPTY' | 'NOTEMPTY' | 'starts' | 'ends' | 'contains' | 'notStarts' |
-  // 'notEnds' | 'notContains' | '~' | '=' | '!~' | '!=';
-  private static StringClauseToString(
-    operator: StringOperator,
-    value: string | null
+  // export type StringOperator =
+  //  | 'starts' | 'ends' | 'contains' | 'notStarts' | 'notEnds' | 'notContains'
+  //  | '~' | '=' | '!~' | '!=';
+  private static StringConditionWordToString(
+    operator: StringConditionOperator,
+    value: string
   ): string {
-    if (operator === 'EMPTY') {
-      return 'EMPTY';
-    } else if (operator === 'NOTEMPTY') {
-      return '-EMPTY';
-    }
-
     const negated: boolean = StringSerializer.isNegated(operator);
-    if (value === null) {
-      return negated ? '-NULL' : 'NULL';
-    }
     if (value === 'NULL' || value === '-NULL') {
       return (negated ? '-' : '') + '\\' + value;
     }
@@ -67,18 +62,50 @@ export class StringSerializer {
     return (negated ? '-' : '') + value;
   }
 
+  private static StringClauseToString(
+    operator:
+      | StringConditionOperator
+      | 'EMPTY'
+      | 'NOTEMPTY'
+      | 'NULL'
+      | 'NOTNULL',
+    clause: StringClause
+  ): string {
+    if (operator === 'EMPTY') {
+      return 'EMPTY';
+    } else if (operator === 'NOTEMPTY') {
+      return '-EMPTY';
+    } else if (operator === 'NULL') {
+      return 'NULL';
+    } else if (operator === 'NOTNULL') {
+      return '-NULL';
+    }
+    if (!('values' in clause) || clause.values.length === 0) {
+      return '';
+    }
+    let result = '';
+    const condition: StringCondition = clause;
+    for (const value of condition.values) {
+      const word = StringSerializer.StringConditionWordToString(
+        condition.operator,
+        value
+      );
+      if (word) {
+        result += word + ', ';
+      }
+    }
+    return result;
+  }
+
   private static clauseToString(clauses: StringClause[]): string {
     let result = '';
-    for (const genericClause of clauses) {
-      const clause: StringClause = genericClause as StringClause;
-      for (const value of clause.values) {
-        const word = StringSerializer.StringClauseToString(
-          clause.operator,
-          value
-        );
-        if (word) {
-          result += word + ', ';
-        }
+    for (const clause of clauses) {
+      const words = StringSerializer.StringClauseToString(
+        clause.operator,
+        clause
+      );
+      if (words) {
+        result += words + ', ';
       }
     }
     return result;

@@ -1,14 +1,11 @@
 # Testing
 
-The `malloy-filter` tests use Jest.  Install Jest using:
-
-```bash
-npm install --save-dev jest @types/jest ts-jest
-```
+The `malloy-filter` tests use Jest.
 
 ## Tokenizer Testing
 
 ```bash
+npm run build
 npm run test:tokenizer
 ```
 

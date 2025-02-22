@@ -1,7 +1,8 @@
 import {SpecialToken, Tokenizer, TokenizerParams} from './tokenizer';
 import {
   StringClause,
-  StringOperator,
+  StringCondition,
+  StringConditionOperator,
   QuoteType,
   FilterError,
   StringParserResponse,
@@ -49,17 +50,13 @@ export class StringParser extends BaseParser {
       const token = this.getNext();
       if (token.type === ',') {
         this.index++;
-      } else if (token.type === 'NULL') {
-        clauses.push({operator: '=', values: [null]});
-        this.index++;
-      } else if (token.type === 'EMPTY') {
-        clauses.push({operator: 'EMPTY', values: [null]});
-        this.index++;
-      } else if (token.type === 'NOTNULL') {
-        clauses.push({operator: '!=', values: [null]});
-        this.index++;
-      } else if (token.type === 'NOTEMPTY') {
-        clauses.push({operator: 'NOTEMPTY', values: [null]});
+      } else if (
+        token.type === 'NULL' ||
+        token.type === 'NOTNULL' ||
+        token.type === 'EMPTY' ||
+        token.type === 'NOTEMPTY'
+      ) {
+        clauses.push({operator: token.type});
         this.index++;
       } else if (this.checkSimpleWord(clauses)) {
         this.index++;
@@ -72,7 +69,15 @@ export class StringParser extends BaseParser {
         this.index++;
       }
     }
-    return {clauses: StringParser.groupClauses(clauses), errors};
+    const response: StringParserResponse = {
+      clauses: StringParser.groupClauses(clauses),
+      errors,
+    };
+    const quotes: QuoteType[] = StringParser.findQuotes(this.inputString);
+    if (quotes.length > 0) {
+      response.quotes = quotes;
+    }
+    return response;
   }
 
   private static findQuotes(str: string): QuoteType[] {
@@ -131,11 +136,16 @@ export class StringParser extends BaseParser {
     let previous: StringClause = clauses[0];
     const outputs: StringClause[] = [previous];
     for (let i = 1; i < clauses.length; i++) {
-      if (previous.operator === clauses[i].operator) {
-        previous.values.push(...clauses[i].values);
+      const current = clauses[i];
+      if (
+        previous.operator === current.operator &&
+        'values' in previous &&
+        'values' in current
+      ) {
+        previous.values.push(...current.values);
       } else {
-        previous = clauses[i];
-        outputs.push(previous);
+        previous = current;
+        outputs.push(current);
       }
     }
     return outputs;
@@ -166,7 +176,7 @@ export class StringParser extends BaseParser {
     const isUnderscore = StringParser.underscoreRegex.test(word);
     const isPercentMiddle = StringParser.percentInMiddle(word);
 
-    let operator: StringOperator = negatedMatch ? '!=' : '=';
+    let operator: StringConditionOperator = negatedMatch ? '!=' : '=';
     if (isUnderscore || isPercentMiddle || (isPercentBoth && word.length < 3)) {
       operator = negatedMatch ? '!~' : '~';
     } else if (isPercentBoth && word.length > 2) {
@@ -189,9 +199,7 @@ export class StringParser extends BaseParser {
       return false;
     }
 
-    const clause: StringClause = {operator: operator, values: [word]};
-    //const quotes: QuoteType[] = StringParser.findQuotes(word);
-    //if (quotes.length > 0) { clause.quotes = quotes; }
+    const clause: StringCondition = {operator: operator, values: [word]};
     clauses.push(clause);
     return true;
   }
