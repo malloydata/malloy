@@ -35,7 +35,7 @@ declare global {
 expect.extend({
   tagsAre(src: string | Tag, result: Tag) {
     if (typeof src === 'string') {
-      const {tag, log} = Tag.fromTagLine(src, undefined);
+      const {tag, log} = Tag.fromTagLine(src, 0, undefined);
       const errs = log.map(e => e.message);
       if (log.length > 0) {
         return {
@@ -52,11 +52,9 @@ expect.extend({
         message: () => 'Parse returned expected object',
       };
     }
-    const expected = this.utils.printExpected(result);
-    const received = this.utils.printReceived(got);
     return {
       pass: false,
-      message: () => `Expected: ${expected}\nReceived: ${received}`,
+      message: () => this.utils.diff(result, got) ?? 'Not different',
     };
   },
 });
@@ -290,5 +288,18 @@ describe('Tag access', () => {
     expect(parsed.tag.numeric('plot', 'x')).toEqual(2);
     expect(plotTag!.numeric('x')).toEqual(2);
     expect(x).toEqual(2);
+  });
+  test('set tag', () => {
+    const base = Tag.withPrefix('# ');
+    const ext = base.set(['a', 'b', 0], 3).set(['a', 'b', 1], 4);
+    expect(ext).tagsAre({
+      a: {properties: {b: {eq: [{eq: '3'}, {eq: '4'}]}}},
+    });
+    expect(ext.toString()).toBe('# a.b = [3, 4]');
+  });
+  test('set with different prefix', () => {
+    const base = Tag.withPrefix('#(docs) ');
+    const ext = base.set(['a'], 3).set(['a', 'b'], null);
+    expect(ext.toString()).toBe('#(docs) a = 3 { b }');
   });
 });

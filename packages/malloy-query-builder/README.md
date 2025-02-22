@@ -32,6 +32,16 @@ query.getOrAddDefaultSegment().addGroupBy("carrier");
 run: flights -> { group_by: carrier }
 ```
 
+{@link ASTQuery.setViewToEmptySegment}
+
+```ts
+query.setSource('flights');
+query.setViewToEmptySegment().addGroupBy("carrier");
+```
+```
+run: flights -> { group_by: carrier }
+```
+
 {@link ASTQuery.setView}
 
 ```ts
@@ -40,6 +50,17 @@ query.setView('by_carrier');
 ```
 ```
 run: flights -> by_carrier
+```
+
+## Determine if the query can be run
+
+{@link ASTSegmentViewDefinition.isRunnable}
+
+```
+run: flights -> { }
+```
+```ts
+query.isRunnable() // false
 ```
 
 ## Add a new field to a particular literal view
@@ -104,6 +125,13 @@ run: flights -> { aggregate: flight_count_2 is flight_count }
 ```
 
 ## Check if a field is present
+
+{@link ASTSegmentViewDefinition.hasField}
+
+```ts
+query.getOrAddDefaultSegment().hasField('carrier');
+```
+
 ## Add/edit/delete order by
 
 {@link ASTOrderByViewOperation.delete}
@@ -163,8 +191,10 @@ run: flights -> {
 
 ## Add/edit/delete filter
 
-{@link ASTSegmentViewDefinition.addWhere}
-{@link ASTFilterWithFilterString.setFilter}
+* {@link ASTSegmentViewDefinition.addWhere}
+* {@link ASTFilterWithFilterString.setFilter}
+* {@link ASTWhereViewOperation.delete}
+* {@link ASTWhere.delete}
 
 ```ts
 query.getOrAddDefaultSegment().addWhere("carrier", "WN, AA");
@@ -175,7 +205,8 @@ run: flights -> { where: carrier ~ f`WN, AA` }
 
 ## Add/edit/delete limit
 
-{@link ASTSegmentViewDefinition.setLimit}
+* {@link ASTSegmentViewDefinition.setLimit}
+* {@link ASTLimitViewOperation.delete}
 
 ```ts
 query.getOrAddDefaultSegment().setLimit(10);
@@ -242,7 +273,54 @@ run: flights -> by_carrier + top10
 ```
 
 ## To a particular view (literal or reference), specify the order of fields by way of adding/editing an annotation
+
+{@link ASTQuery.reorderFields}
+{@link ASTView.reorderFields}
+
+If the view or query is a simple segment, it will automatically reorder the clauses.
+
+```
+run: flights -> {
+  group_by: carrier
+  aggregate: flight_count
+}
+```
+```ts
+query.reorderFields(['flight_count', 'carrier']);
+```
+```
+run: flights -> {
+  aggregate: flight_count
+  group_by: carrier
+}
+```
+
+Otherwise, it will add an annotation:
+
+```
+run: flights -> by_carrier
+```
+```ts
+query.reorderFields(['flight_count', 'carrier']);
+```
+```
+# field_order = [flight_count, carrier]
+run: flights -> by_carrier
+```
+
 ## To a particular aggregate field in the query, add/edit/delete filter
+
+* {@link ASTAggregateViewOperation.addWhere}
+* {@link ASTFilterWithFilterString.setFilter}
+* {@link ASTWhere.delete}
+
+```ts
+query.getOrAddDefaultSegment().addAggregate('flight_count').addWhere('carrier', 'WN, AA');
+```
+```
+run: flights -> { aggregate: flight_count { where: carrier ~ f`WN, AA`} }
+```
+
 ## Specify or remove source parameter value
 
 {@link ASTSourceReference.setParameter}
@@ -255,9 +333,75 @@ run: flights(param is 1) ->
 ```
 
 ## List parameters of the source and whether they are required
+
+{@link ASTSourceReference.getSourceParameters}
+
+```ts
+query.definition.asArrowQueryDefinition().source.getSourceParameters();
+```
+
 ## To a particular field in the query (including nests), add/edit/delete annotation
+
+{@link IASTAnnotatable.setTagProperty}
+{@link IASTAnnotatable.removeTagProperty}
+
+```ts
+query
+  .getOrAddDefaultSegment()
+  .addGroupBy('carrier');
+  .setTagProperty(['a', 'b', 'c'], 10);
+```
+```
+run: flights -> {
+  # a.b.c = 10
+  group_by: carrier
+}
+```
+
+```ts
+// Assume that 'by_carrier' has, in the model, a tag "bar_chart"
+query
+  .getOrAddDefaultSegment()
+  .addNest('by_carrier');
+  .removeTagProperty(['bar_chart']);
+```
+```
+run: flights -> {
+  # -bar_chart
+  nest: by_carrier
+}
+```
+
 ## To a particular field, ask which annotations come from the input field vs in the query itself
+
+{@link IASTAnnotatable.getIntrinsicTag}
+{@link IASTAnnotatable.getInheritedTag}
+
+```ts
+query
+  .getOrAddDefaultSegment()
+  .addGroupBy('carrier');
+  .getIntrinsicTag()
+  .has('some_tag');
+query
+  .getOrAddDefaultSegment()
+  .addGroupBy('carrier');
+  .getInheritedTag()
+  .has('some_tag');
+```
+
 ## To the query itself, add/edit/delete annotation
+
+```ts
+query.setTagProperty(['bar_chart']);
+query.setSource('flights');
+query.setView('by_carrier');
+```
+```
+# bar_chart
+run: flights -> by_carrier
+```
+
 ## After any operation of a QueryBuilder, perform a partial validation of the query
 This is only ever a partial validation: cube resolution, aggregate validation, and expression validation (and possibly other validation) must happen in the translator, and will not be replicated in the QueryBuilder
 We will do as much validation as we can do, but it is possible some queries will only generate errors when you do a full translation (probably when you run it)
@@ -265,8 +409,9 @@ We will do as much validation as we can do, but it is possible some queries will
 ## Given a StableFilterDef, serialize it into a filter string
 ## Automatically determine where in a literal view is most appropriate to place a new field
 
+This happens automatically when you call {@link ASTSegmentViewDefinition.addGroupBy}, {@link ASTSegmentViewDefinition.addAggregate}, {@link ASTSegmentViewDefinition.addNest}, {@link ASTSegmentViewDefinition.addWhere}, {@link ASTSegmentViewDefinition.addOrderBy}, {@link ASTSegmentViewDefinition.setLimit}, etc..
 
-## This is the current behavior in the Explorer (dimensions, measures, and views are by default grouped together)
+## Finding the default place in the tree to put a new field
 
 {@link ASTQuery.getOrAddDefaultSegment}
 

@@ -98,6 +98,7 @@ function referenceToFragments(reference: Malloy.Reference): Fragment[] {
 
 function queryToFragments(query: Malloy.Query): Fragment[] {
   const fragments: Fragment[] = [];
+  fragments.push(...annotationsToFragments(query.annotations));
   fragments.push('run: ');
   fragments.push(...queryDefinitionToFragments(query.definition));
   return fragments;
@@ -198,10 +199,6 @@ function groupedOperationsToFragments(
   }
 }
 
-function aggregateToFragments(_aggregate: Malloy.Aggregate[]): Fragment[] {
-  return []; // TODO
-}
-
 function formatBlock(
   label: string,
   items: Fragment[][],
@@ -256,26 +253,24 @@ function expressionToFragments(expression: Malloy.Expression): Fragment[] {
     case 'filtered_field':
       return [
         ...referenceToFragments(expression.field_reference),
-        '{ where: ',
-        ...whereToFragments(expression.where),
-        ' }',
+        ...wrap(' {', whereToFragments(expression.where), '}'),
       ];
   }
 }
 
-function groupByItemToFragments(
-  groupByItem: Malloy.GroupBy,
+function groupByOrAggregateItemToFragments(
+  item: Malloy.GroupBy | Malloy.Aggregate,
   hideAnnotations = false
 ): Fragment[] {
   const fragments: Fragment[] = [];
   if (!hideAnnotations) {
-    fragments.push(...annotationsToFragments(groupByItem.field.annotations));
+    fragments.push(...annotationsToFragments(item.field.annotations));
   }
-  if (groupByItem.name) {
-    fragments.push(maybeQuoteIdentifier(groupByItem.name));
+  if (item.name) {
+    fragments.push(maybeQuoteIdentifier(item.name));
     fragments.push(' is ');
   }
-  fragments.push(...fieldToFragments(groupByItem.field));
+  fragments.push(...fieldToFragments(item.field));
   return fragments;
 }
 
@@ -288,7 +283,22 @@ function groupByToFragments(groupBy: Malloy.GroupBy[]): Fragment[] {
   fragments.push(
     ...formatBlock(
       'group_by',
-      groupBy.map(i => groupByItemToFragments(i, hoistAnnotations))
+      groupBy.map(i => groupByOrAggregateItemToFragments(i, hoistAnnotations))
+    )
+  );
+  return fragments;
+}
+
+function aggregateToFragments(groupBy: Malloy.GroupBy[]): Fragment[] {
+  const fragments: Fragment[] = [];
+  const hoistAnnotations = groupBy.length === 1;
+  if (hoistAnnotations) {
+    fragments.push(...annotationsToFragments(groupBy[0].field.annotations));
+  }
+  fragments.push(
+    ...formatBlock(
+      'aggregate',
+      groupBy.map(i => groupByOrAggregateItemToFragments(i, hoistAnnotations))
     )
   );
   return fragments;
@@ -309,11 +319,28 @@ function orderByItemToFragments(orderByItem: Malloy.OrderBy): Fragment[] {
 }
 
 function nestToFragments(nest: Malloy.Nest[]): Fragment[] {
-  return formatBlock('nest', nest.map(nestItemToFragments));
+  const fragments: Fragment[] = [];
+  const hoistAnnotations = nest.length === 1;
+  if (hoistAnnotations) {
+    fragments.push(...annotationsToFragments(nest[0].view.annotations));
+  }
+  fragments.push(
+    ...formatBlock(
+      'nest',
+      nest.map(i => nestItemToFragments(i, hoistAnnotations))
+    )
+  );
+  return fragments;
 }
 
-function nestItemToFragments(nestItem: Malloy.Nest): Fragment[] {
+function nestItemToFragments(
+  nestItem: Malloy.Nest,
+  hideAnnotations = false
+): Fragment[] {
   const fragments: Fragment[] = [];
+  if (!hideAnnotations) {
+    fragments.push(...annotationsToFragments(nestItem.view.annotations));
+  }
   if (nestItem.name) {
     fragments.push(maybeQuoteIdentifier(nestItem.name));
     fragments.push(' is ');

@@ -132,6 +132,57 @@ describe('query builder', () => {
       malloy: 'run: flights -> { group_by: carrier }',
     });
   });
+  test('add an aggregate with a where', () => {
+    const from: Malloy.Query = {
+      definition: {
+        kind: 'arrow',
+        source_reference: {name: 'flights'},
+        view: {
+          kind: 'segment',
+          operations: [],
+        },
+      },
+    };
+    expect((q: ASTQuery) => {
+      q.getOrAddDefaultSegment()
+        .addAggregate('flight_count')
+        .addWhere('carrier', 'WN, AA');
+    }).toModifyQuery({
+      model: flights_model,
+      from,
+      to: {
+        definition: {
+          kind: 'arrow',
+          source_reference: {name: 'flights'},
+          view: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'aggregate',
+                field: {
+                  expression: {
+                    kind: 'filtered_field',
+                    field_reference: {name: 'flight_count'},
+                    where: [
+                      {
+                        filter: {
+                          kind: 'filter_string',
+                          field_reference: {name: 'carrier'},
+                          filter: 'WN, AA',
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            ],
+          },
+        },
+      },
+      malloy:
+        'run: flights -> { aggregate: flight_count { where: carrier ~ f`WN, AA` } }',
+    });
+  });
   test('add a where', () => {
     const from: Malloy.Query = {
       definition: {
@@ -265,6 +316,79 @@ describe('query builder', () => {
         }`,
     });
   });
+  test('reorder fields', () => {
+    const from: Malloy.Query = {
+      definition: {
+        kind: 'arrow',
+        source_reference: {name: 'flights'},
+        view: {
+          kind: 'segment',
+          operations: [
+            {
+              kind: 'group_by',
+              field: {
+                expression: {
+                  kind: 'field_reference',
+                  name: 'carrier',
+                },
+              },
+            },
+            {
+              kind: 'group_by',
+              field: {
+                expression: {
+                  kind: 'field_reference',
+                  name: 'origin_code',
+                },
+              },
+            },
+          ],
+        },
+      },
+    };
+    expect((q: ASTQuery) => {
+      const seg = q.getOrAddDefaultSegment();
+      seg.reorderFields(['origin_code', 'carrier']);
+    }).toModifyQuery({
+      model: flights_model,
+      from,
+      to: {
+        definition: {
+          kind: 'arrow',
+          source_reference: {name: 'flights'},
+          view: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'group_by',
+                field: {
+                  expression: {
+                    kind: 'field_reference',
+                    name: 'origin_code',
+                  },
+                },
+              },
+              {
+                kind: 'group_by',
+                field: {
+                  expression: {
+                    kind: 'field_reference',
+                    name: 'carrier',
+                  },
+                },
+              },
+            ],
+          },
+        },
+      },
+      malloy: dedent`
+        run: flights -> {
+          group_by:
+            origin_code
+            carrier
+        }`,
+    });
+  });
   test('add a nest', () => {
     const from: Malloy.Query = {
       definition: {
@@ -385,6 +509,39 @@ describe('query builder', () => {
         },
       },
       malloy: 'run: flights -> by_month',
+    });
+  });
+  test('reorder fields in a view reference', () => {
+    const from: Malloy.Query = {
+      definition: {
+        kind: 'arrow',
+        source_reference: {name: 'flights'},
+        view: {
+          kind: 'segment',
+          operations: [],
+        },
+      },
+    };
+    expect((q: ASTQuery) => {
+      q.setView('by_month');
+      q.reorderFields(['flight_count', 'dep_month']);
+    }).toModifyQuery({
+      model: flights_model,
+      from,
+      to: {
+        definition: {
+          kind: 'arrow',
+          source_reference: {name: 'flights'},
+          view: {
+            kind: 'view_reference',
+            name: 'by_month',
+          },
+        },
+      },
+      malloy: dedent`
+        # field_order = [flight_count, dep_month]
+        run: flights -> by_month
+      `,
     });
   });
   test('set view with segment refinement', () => {
@@ -707,6 +864,39 @@ describe('query builder', () => {
             # a.b.c = 10
             group_by: carrier
           }`,
+      });
+    });
+    test('add tag to query', () => {
+      const from: Malloy.Query = {
+        definition: {
+          kind: 'arrow',
+          source_reference: {name: 'flights'},
+          view: {
+            kind: 'segment',
+            operations: [],
+          },
+        },
+      };
+      expect((q: ASTQuery) => {
+        q.setTagProperty(['a'], 'foo');
+      }).toModifyQuery({
+        model: flights_model,
+        from,
+        to: {
+          definition: {
+            kind: 'arrow',
+            source_reference: {name: 'flights'},
+            view: {
+              kind: 'segment',
+              operations: [],
+            },
+          },
+          annotations: [{value: '# a = foo'}],
+        },
+        malloy: dedent`
+          # a = foo
+          run: flights -> { }
+        `,
       });
     });
     test('clear an inherited tag', () => {

@@ -67,12 +67,18 @@ export interface TagInterface {
   eq?: TagValue;
   properties?: TagDict;
   deleted?: boolean;
+  prefix?: string;
 }
 
 export interface TagParse {
   tag: Tag;
   log: TagError[];
 }
+
+export type PathSegment = string | number;
+export type Path = PathSegment[];
+
+export type TagSetValue = string | number | string[] | number[] | null;
 
 /**
  * Class for interacting with the parsed output of an annotation
@@ -93,6 +99,8 @@ export interface TagParse {
 export class Tag implements TagInterface {
   eq?: TagValue;
   properties?: TagDict;
+  prefix?: string;
+  deleted?: boolean;
 
   static tagFrom(from: TagInterface = {}) {
     if (from instanceof Tag) {
@@ -189,26 +197,20 @@ export class Tag implements TagInterface {
     if (from.properties) {
       this.properties = from.properties;
     }
+    if (from.deleted) {
+      this.deleted = from.deleted;
+    }
+    if (from.prefix) {
+      this.prefix = from.prefix;
+    }
   }
 
-  private find(at: string[]): Tag | undefined {
-    let lookAt = Tag.tagFrom(this);
-    for (const seg of at) {
-      const lookup = lookAt.properties && lookAt.properties[seg];
-      if (!lookup) {
-        return;
-      }
-      lookAt = Tag.tagFrom(lookup);
-    }
-    return lookAt;
+  static withPrefix(prefix: string) {
+    return new Tag({prefix});
   }
 
   tag(...at: string[]): Tag | undefined {
     return this.find(at);
-  }
-
-  has(...at: string[]): boolean {
-    return this.find(at) !== undefined;
   }
 
   text(...at: string[]): string | undefined {
@@ -299,7 +301,7 @@ export class Tag implements TagInterface {
   }
 
   toString(): string {
-    let annotation = '# '; // TODO prefix
+    let annotation = this.prefix ?? '# ';
     function addChildren(tag: TagInterface) {
       const props = Object.keys(tag.properties ?? {});
       for (let i = 0; i < props.length; i++) {
@@ -309,32 +311,175 @@ export class Tag implements TagInterface {
         }
       }
     }
+    function addTag(child: TagInterface, isArrayEl = false) {
+      if (child.eq !== undefined) {
+        if (!isArrayEl) annotation += ' = ';
+        if (Array.isArray(child.eq)) {
+          annotation += '[';
+          for (let i = 0; i < child.eq.length; i++) {
+            addTag(child.eq[i], true);
+            if (i !== child.eq.length - 1) annotation += ', ';
+          }
+          annotation += ']';
+        } else {
+          annotation += `${child.eq}`;
+        }
+      }
+      if (child.properties) {
+        const props = Object.keys(child.properties);
+        if (
+          props.length === 1 &&
+          !props.some(c => (child.properties ?? {})[c].deleted) &&
+          child.eq === undefined
+        ) {
+          annotation += '.';
+          addChildren(child);
+        } else {
+          annotation += ' { ';
+          addChildren(child);
+          annotation += ' }';
+        }
+      }
+    }
     function addChild(prop: string, child: TagInterface) {
       if (child.deleted) {
         annotation += `-${prop}`;
         return;
       }
       annotation += prop;
-      if (child.eq !== undefined) {
-        annotation += ` = ${child.eq}`;
-      }
-      if (child.properties) {
-        const props = Object.keys(child.properties);
-        if (
-          props.length === 1 &&
-          !props.some(c => (child.properties ?? {})[c].deleted)
-        ) {
-          annotation += '.';
-          addChildren(child);
-        } else {
-          annotation += ' {';
-          addChildren(child);
-          annotation += '}';
-        }
-      }
+      addTag(child);
     }
     addChildren(this);
     return annotation;
+  }
+
+  find(path: Path): Tag | undefined {
+    let currentTag: Tag = Tag.tagFrom(this);
+    for (const segment of path) {
+      if (typeof segment === 'number') {
+        if (
+          currentTag.eq === undefined ||
+          !Array.isArray(currentTag.eq) ||
+          currentTag.eq.length <= segment
+        ) {
+          return;
+        }
+        currentTag = Tag.tagFrom(currentTag.eq[segment]);
+      } else {
+        const properties = currentTag.properties ?? {};
+        if (segment in properties) {
+          currentTag = Tag.tagFrom(properties[segment]);
+        } else {
+          return;
+        }
+      }
+    }
+    return currentTag;
+  }
+
+  has(...path: Path): boolean {
+    return this.find(path) !== undefined;
+  }
+
+  set(path: Path, value: TagSetValue = null): Tag {
+    const copy = Tag.tagFrom(this);
+    let currentTag: TagInterface = copy;
+    for (const segment of path) {
+      if (typeof segment === 'number') {
+        if (currentTag.eq === undefined || !Array.isArray(currentTag.eq)) {
+          currentTag.eq = Array.from({length: segment + 1}).map(_ => ({}));
+        } else if (currentTag.eq.length <= segment) {
+          const values = currentTag.eq;
+          const newVal = Array.from({length: segment + 1}).map((_, i) =>
+            i < values.length ? values[i] : {}
+          );
+          currentTag.eq = newVal;
+        }
+        currentTag = currentTag.eq[segment];
+      } else {
+        const properties = currentTag.properties;
+        if (properties === undefined) {
+          currentTag.properties = {[segment]: {}};
+          currentTag = currentTag.properties[segment];
+        } else if (segment in properties) {
+          currentTag = properties[segment];
+          if (currentTag.deleted) {
+            currentTag.deleted = false;
+          }
+        } else {
+          properties[segment] = {};
+          currentTag = properties[segment];
+        }
+      }
+    }
+    if (value === null) {
+      currentTag.eq = undefined;
+    } else if (typeof value === 'string') {
+      currentTag.eq = value;
+    } else if (typeof value === 'number') {
+      currentTag.eq = value.toString(); // TODO big numbers?
+    } else if (Array.isArray(value)) {
+      currentTag.eq = value.map((v: string | number) => {
+        return {eq: typeof v === 'string' ? v : v.toString()};
+      });
+    }
+    return copy;
+  }
+
+  delete(...path: Path): Tag {
+    return this.remove(path, false);
+  }
+
+  unset(...path: Path): Tag {
+    return this.remove(path, true);
+  }
+
+  private remove(path: Path, hard = false): Tag {
+    const origCopy = Tag.tagFrom(this);
+    let currentTag: TagInterface = origCopy;
+    for (const segment of path.slice(0, path.length - 1)) {
+      if (typeof segment === 'number') {
+        if (currentTag.eq === undefined || !Array.isArray(currentTag.eq)) {
+          if (!hard) return origCopy;
+          currentTag.eq = Array.from({length: segment}).map(_ => ({}));
+        } else if (currentTag.eq.length <= segment) {
+          if (!hard) return origCopy;
+          const values = currentTag.eq;
+          const newVal = Array.from({length: segment}).map((_, i) =>
+            i < values.length ? values[i] : {}
+          );
+          currentTag.eq = newVal;
+        }
+        currentTag = currentTag.eq[segment];
+      } else {
+        const properties = currentTag.properties;
+        if (properties === undefined) {
+          if (!hard) return origCopy;
+          currentTag.properties = {[segment]: {}};
+          currentTag = currentTag.properties[segment];
+        } else if (segment in properties) {
+          currentTag = properties[segment];
+        } else {
+          if (!hard) return origCopy;
+          properties[segment] = {};
+          currentTag = properties[segment];
+        }
+      }
+    }
+    const segment = path[path.length - 1];
+    if (typeof segment === 'string') {
+      if (currentTag.properties && segment in currentTag.properties) {
+        delete currentTag.properties[segment];
+      } else if (hard) {
+        currentTag.properties ??= {};
+        currentTag.properties[segment] = {deleted: true};
+      }
+    } else {
+      if (Array.isArray(currentTag.eq)) {
+        currentTag.eq.splice(segment, 1);
+      }
+    }
+    return origCopy;
   }
 }
 
