@@ -129,6 +129,14 @@ export interface DateForClause {
   duration: Duration;
 }
 
+export interface DateNullClause {
+  operator: 'NULL';
+}
+
+export interface DateNotNullClause {
+  operator: 'NOTNULL';
+}
+
 // 3 days
 export interface DateDurationClause {
   operator: 'DURATION';
@@ -141,6 +149,8 @@ export type DateClause =
   | DateOnClause
   | DateBetweenClause
   | DateForClause
+  | DateNullClause
+  | DateNotNullClause
   | DateDurationClause;
 
 export interface DateParserResponse {

@@ -64,6 +64,10 @@ export class DateSerializer {
       return 'AFTER ' + DateSerializer.dateMomentToString(clause.moment);
     } else if (clause.operator === 'ON') {
       return DateSerializer.dateMomentToString(clause.moment);
+    } else if (clause.operator === 'NULL') {
+      return 'NULL';
+    } else if (clause.operator === 'NOTNULL') {
+      return '-NULL';
     } else if (clause.operator === 'DURATION') {
       return clause.duration.amount + ' ' + clause.duration.unit;
     } else {

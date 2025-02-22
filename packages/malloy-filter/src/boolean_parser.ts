@@ -1,7 +1,6 @@
 import {SpecialToken, Tokenizer, TokenizerParams} from './tokenizer';
 import {
   BooleanClause,
-  BooleanOperator,
   BooleanParserResponse,
   FilterError,
 } from './clause_types';
@@ -18,7 +17,8 @@ export class BooleanParser extends BaseParser {
       {type: 'NULL', value: 'null', ignoreCase: true},
       {type: 'NOTNULL', value: '-null', ignoreCase: true},
       {type: 'TRUE', value: 'true', ignoreCase: true},
-      {type: 'FALSE', value: 'false', ignoreCase: true},
+      {type: 'FALSE', value: '=false', ignoreCase: true},
+      {type: 'FALSEORNULL', value: 'false', ignoreCase: true},
     ];
     const params: TokenizerParams = {
       trimWordWhitespace: true,
@@ -45,9 +45,10 @@ export class BooleanParser extends BaseParser {
         token.type === 'NULL' ||
         token.type === 'TRUE' ||
         token.type === 'FALSE' ||
+        token.type === 'FALSEORNULL' ||
         token.type === 'NOTNULL'
       ) {
-        const clause: BooleanClause = {operator: token.type as BooleanOperator};
+        const clause: BooleanClause = {operator: token.type};
         clauses.push(clause);
         this.index++;
       } else {

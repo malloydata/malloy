@@ -98,7 +98,8 @@ export class NumberParser extends BaseParser {
         outputs.push(clause);
       } else if (
         previous !== undefined &&
-        previous.operator === clause.operator
+        previous.operator === clause.operator &&
+        'values' in previous && 'values' in clause
       ) {
         previous.values.push(...clause.values);
       } else {
@@ -204,59 +205,6 @@ export class NumberParser extends BaseParser {
     return clauses;
   }
 
-  private static getNegatedType(tokenType: NumberOperator): NumberOperator {
-    switch (tokenType) {
-      case '<=':
-        return '>';
-      case '>=':
-        return '<';
-      case '<':
-        return '>';
-      case '>':
-        return '<';
-      case '=':
-        return '!=';
-      case '!=':
-        return '=';
-    }
-  }
-
-  private static getNumberOperator(
-    tokenType: string
-  ): NumberOperator | undefined {
-    switch (tokenType) {
-      case '<=':
-        return '<=';
-      case '>=':
-        return '>=';
-      case '<':
-        return '<';
-      case '>':
-        return '>';
-      case '=':
-        return '=';
-      case '!=':
-        return '!=';
-    }
-    return undefined;
-  }
-
-  private static getNumberRnageOperator(
-    tokenType: string
-  ): NumberRangeOperator | undefined {
-    switch (tokenType) {
-      case '<=':
-        return '<=';
-      case '>=':
-        return '>=';
-      case '<':
-        return '<';
-      case '>':
-        return '>';
-    }
-    return undefined;
-  }
-
   private checkNumericExpression(
     tokenType: NumberOperator,
     clauses: NumberClause[]
@@ -297,10 +245,12 @@ export class NumberParser extends BaseParser {
   }
 
   private checkNull(clauses: NumberClause[]): boolean {
-    if (this.getNext().type === 'NULL' || this.getNext().type === 'NOTNULL') {
-      const tokenType = this.getNext().type === 'NULL' ? '=' : '!=';
-      const clause: NumberCondition = {operator: tokenType, values: [null]};
-      clauses.push(clause);
+    const type = this.getNext().type;
+    if (type === 'NULL') {
+      clauses.push({operator: 'NULL'});
+      return true;
+    } else if (type === 'NOTNULL') {
+      clauses.push({operator: 'NOTNULL'});
       return true;
     }
     return false;

@@ -16,15 +16,13 @@ export class NumberSerializer {
     return result.trim().replace(/,$/, '');
   }
 
-  // NumberOperator = '<=' | '>=' | '!=' | '=' | '>' | '<';
+  // NumberOperator = '<=' | '>=' | '!=' | '=' | '>' | '<'
   private static numberConditionToString(
     operator: NumberOperator,
-    value: number | null
+    value: number
   ): string {
-    if (value === null) {
-      return operator === '=' ? 'NULL' : '-NULL';
-    }
-    const operatorString = operator === '=' ? '' : operator; // Remove operator for eg "5, 7, 9"
+    // Remove operator for eg "5, 7, 9".
+    const operatorString = operator === '=' ? '' : operator;
     return operatorString + value;
   }
 
@@ -43,7 +41,7 @@ export class NumberSerializer {
     }
   }
 
-  private static isNumberOperator(value: string): value is NumberOperator {
+  private static isNumberOperator(value: string): boolean {
     return ['<=', '>=', '!=', '=', '>', '<'].includes(value);
   }
 
@@ -71,13 +69,17 @@ export class NumberSerializer {
   private static clauseToString(clauses: NumberClause[]): string {
     let result = '';
     for (const clause of clauses) {
-      if ('operator' in clause && clause.operator === 'range') {
+      if (!('operator' in clause)) {
+        throw new Error('Invalid number clause ' + JSON.stringify(clause));
+      }
+      if (clause.operator === 'range') {
         result += NumberSerializer.rangeToString(clause);
         result += ', ';
-      } else if (
-        'operator' in clause &&
-        NumberSerializer.isNumberOperator(clause.operator)
-      ) {
+      } else if (clause.operator === 'NULL') {
+        result += 'NULL, ';
+      } else if (clause.operator === 'NOTNULL') {
+        result += '-NULL, ';
+      } else if (NumberSerializer.isNumberOperator(clause.operator)) {
         const numberClause: NumberCondition = clause as NumberCondition;
         for (const value of numberClause.values) {
           result += NumberSerializer.numberConditionToString(
@@ -86,8 +88,6 @@ export class NumberSerializer {
           );
           result += ', ';
         }
-      } else {
-        throw new Error('Invalid number clause ' + JSON.stringify(clause));
       }
     }
     return result;
