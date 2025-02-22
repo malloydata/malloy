@@ -408,6 +408,48 @@ run: flights -> {
       malloy: 'run: flights -> by_month + { limit: 10 }',
     });
   });
+  test('add an order by in a refinement', () => {
+    const from: Malloy.Query = {
+      definition: {
+        kind: 'arrow',
+        source_reference: {name: 'flights'},
+        view: {
+          kind: 'view_reference',
+          name: 'by_month',
+        },
+      },
+    };
+    expect((q: ASTQuery) => {
+      q.getOrAddDefaultSegment().addOrderBy('dep_month', 'asc');
+    }).toModifyQuery({
+      model: flights_model,
+      from,
+      to: {
+        definition: {
+          kind: 'arrow',
+          source_reference: {name: 'flights'},
+          view: {
+            kind: 'refinement',
+            base: {
+              kind: 'view_reference',
+              name: 'by_month',
+            },
+            refinement: {
+              kind: 'segment',
+              operations: [
+                {
+                  kind: 'order_by',
+                  field_reference: {name: 'dep_month'},
+                  direction: 'asc',
+                },
+              ],
+            },
+          },
+        },
+      },
+      malloy: 'run: flights -> by_month + { order_by: dep_month asc }',
+    });
+  });
   test('do nothing', () => {
     expect((_q: ASTQuery) => {}).toModifyQuery({
       model: flights_model,
@@ -642,6 +684,277 @@ run: flights -> {
   # a.b.c = 10
   group_by: carrier
 }`.trim(),
+    });
+  });
+  test('rename a group by', () => {
+    const from: Malloy.Query = {
+      definition: {
+        kind: 'arrow',
+        source_reference: {name: 'flights'},
+        view: {
+          kind: 'segment',
+          operations: [
+            {
+              kind: 'group_by',
+              field: {
+                expression: {
+                  kind: 'field_reference',
+                  name: 'carrier',
+                },
+              },
+            },
+            {
+              kind: 'order_by',
+              field_reference: {name: 'carrier'},
+            },
+          ],
+        },
+      },
+    };
+    expect((q: ASTQuery) => {
+      q.getOrAddDefaultSegment().getGroupBy('carrier')!.rename('carrier_2');
+    }).toModifyQuery({
+      model: flights_model,
+      from,
+      to: {
+        definition: {
+          kind: 'arrow',
+          source_reference: {name: 'flights'},
+          view: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'group_by',
+                name: 'carrier_2',
+                field: {
+                  expression: {
+                    kind: 'field_reference',
+                    name: 'carrier',
+                  },
+                },
+              },
+              {
+                kind: 'order_by',
+                field_reference: {
+                  name: 'carrier_2',
+                },
+              },
+            ],
+          },
+        },
+      },
+      malloy: `run: flights -> {
+  group_by: carrier_2 is carrier
+  order_by: carrier_2
+}`,
+    });
+  });
+  test('rename a group by should change order by in refinement', () => {
+    const from: Malloy.Query = {
+      definition: {
+        kind: 'arrow',
+        source_reference: {name: 'flights'},
+        view: {
+          kind: 'refinement',
+          base: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'group_by',
+                field: {
+                  expression: {
+                    kind: 'field_reference',
+                    name: 'carrier',
+                  },
+                },
+              },
+            ],
+          },
+          refinement: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'order_by',
+                field_reference: {name: 'carrier'},
+              },
+            ],
+          },
+        },
+      },
+    };
+    expect((q: ASTQuery) => {
+      const segment = q.definition
+        .asArrowQueryDefinition()
+        .view.asRefinementViewDefinition()
+        .base.asSegmentViewDefinition();
+      segment.getGroupBy('carrier')!.rename('carrier_2');
+    }).toModifyQuery({
+      model: flights_model,
+      from,
+      to: {
+        definition: {
+          kind: 'arrow',
+          source_reference: {name: 'flights'},
+          view: {
+            kind: 'refinement',
+            base: {
+              kind: 'segment',
+              operations: [
+                {
+                  kind: 'group_by',
+                  name: 'carrier_2',
+                  field: {
+                    expression: {
+                      kind: 'field_reference',
+                      name: 'carrier',
+                    },
+                  },
+                },
+              ],
+            },
+            refinement: {
+              kind: 'segment',
+              operations: [
+                {
+                  kind: 'order_by',
+                  field_reference: {name: 'carrier_2'},
+                },
+              ],
+            },
+          },
+        },
+      },
+      malloy:
+        'run: flights -> { group_by: carrier_2 is carrier } + { order_by: carrier_2 }',
+    });
+  });
+  test('deleting a group by should delete order by in refinement', () => {
+    const from: Malloy.Query = {
+      definition: {
+        kind: 'arrow',
+        source_reference: {name: 'flights'},
+        view: {
+          kind: 'refinement',
+          base: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'group_by',
+                field: {
+                  expression: {
+                    kind: 'field_reference',
+                    name: 'carrier',
+                  },
+                },
+              },
+            ],
+          },
+          refinement: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'order_by',
+                field_reference: {name: 'carrier'},
+              },
+            ],
+          },
+        },
+      },
+    };
+    expect((q: ASTQuery) => {
+      const segment = q.definition
+        .asArrowQueryDefinition()
+        .view.asRefinementViewDefinition()
+        .base.asSegmentViewDefinition();
+      segment.getGroupBy('carrier')!.delete();
+    }).toModifyQuery({
+      model: flights_model,
+      from,
+      to: {
+        definition: {
+          kind: 'arrow',
+          source_reference: {name: 'flights'},
+          view: {
+            kind: 'refinement',
+            base: {
+              kind: 'segment',
+              operations: [],
+            },
+            refinement: {
+              kind: 'segment',
+              operations: [],
+            },
+          },
+        },
+      },
+      malloy: 'run: flights -> { } + { }',
+    });
+  });
+  test.skip('deleting a group by should remove a group by in subsequent stage', () => {
+    const from: Malloy.Query = {
+      definition: {
+        kind: 'arrow',
+        source_reference: {name: 'flights'},
+        view: {
+          kind: 'arrow',
+          source: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'group_by',
+                field: {
+                  expression: {
+                    kind: 'field_reference',
+                    name: 'carrier',
+                  },
+                },
+              },
+            ],
+          },
+          view: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'group_by',
+                field: {
+                  expression: {
+                    kind: 'field_reference',
+                    name: 'carrier',
+                  },
+                },
+              },
+            ],
+          },
+        },
+      },
+    };
+    expect((q: ASTQuery) => {
+      const segment = q.definition
+        .asArrowQueryDefinition()
+        .view.asArrowViewDefinition()
+        .source.asSegmentViewDefinition();
+      segment.getGroupBy('carrier')!.delete();
+    }).toModifyQuery({
+      model: flights_model,
+      from,
+      to: {
+        definition: {
+          kind: 'arrow',
+          source_reference: {name: 'flights'},
+          view: {
+            kind: 'arrow',
+            source: {
+              kind: 'segment',
+              operations: [],
+            },
+            view: {
+              kind: 'segment',
+              operations: [],
+            },
+          },
+        },
+      },
+      malloy: 'run: flights -> { } -> { }',
     });
   });
   describe('getOrAddDefaultSegment', () => {

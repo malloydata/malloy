@@ -294,6 +294,21 @@ abstract class ASTNode<T> {
   /**
    * @hidden
    */
+  asArrowViewDefinition(): ASTArrowViewDefinition {
+    if (this instanceof ASTArrowViewDefinition) return this;
+    throw new Error('Not an ASTArrowViewDefinition');
+  }
+
+  /**
+   * @hidden
+   */
+  findArrowViewDefinition(path: Path): ASTArrowViewDefinition {
+    return this.find(path).asArrowViewDefinition();
+  }
+
+  /**
+   * @hidden
+   */
   asRefinementViewDefinition(): ASTRefinementViewDefinition {
     if (this instanceof ASTRefinementViewDefinition) return this;
     throw new Error('Not an ASTRefinementViewDefinition');
@@ -766,6 +781,7 @@ export class ASTQuery extends ASTObjectNode<
   set definition(definition: ASTQueryDefinition) {
     this.edit();
     this.children.definition = definition;
+    definition.parent = this;
   }
 
   /**
@@ -1183,6 +1199,26 @@ export class ASTUnimplemented<T> extends ASTNode<T> {
 
 export interface IASTQueryDefinition {
   getOrAddDefaultSegment(): ASTSegmentViewDefinition;
+  /**
+   * Upward propagation of name change; change order bys to use a new name for a field.
+   * @internal
+   */
+  renameOrderBys(oldName: string, newName: string): void;
+  /**
+   * Downward propagation of name change; change order bys to use a new name for a field.
+   * @internal
+   */
+  renameOrderBysInSelf(oldName: string, newName: string): void;
+  /**
+   * Upward propagation of field deletion
+   * @internal
+   */
+  removeOrderBys(name: string): void;
+  /**
+   * Downward propagation of field deletion
+   * @internal
+   */
+  removeOrderBysInSelf(name: string): void;
 }
 
 export type ASTQueryDefinition =
@@ -1228,6 +1264,7 @@ export class ASTArrowQueryDefinition
   set view(view: ASTViewDefinition) {
     this.edit();
     this.children.view = view;
+    view.parent = this;
   }
 
   get sourceReference() {
@@ -1240,6 +1277,39 @@ export class ASTArrowQueryDefinition
 
   getSourceInfo() {
     return this.sourceReference.getSourceInfo();
+  }
+
+  getOutputSchema() {
+    return this.view.getRefinementSchema();
+  }
+
+  /**
+   * @internal
+   */
+  renameOrderBys(oldName: string, newName: string): void {
+    this.renameOrderBysInSelf(oldName, newName);
+  }
+
+  /**
+   * @internal
+   */
+  renameOrderBysInSelf(oldName: string, newName: string): void {
+    this.view.renameOrderBysInSelf(oldName, newName);
+  }
+
+  // TODO abstract this logic of upward/downward propagation
+  /**
+   * @internal
+   */
+  removeOrderBys(name: string): void {
+    this.removeOrderBysInSelf(name);
+  }
+
+  /**
+   * @internal
+   */
+  removeOrderBysInSelf(name: string): void {
+    this.view.removeOrderBysInSelf(name);
   }
 }
 
@@ -1273,10 +1343,56 @@ export class ASTRefinementQueryDefinition
   set refinement(refinement: ASTViewDefinition) {
     this.edit();
     this.children.refinement = refinement;
+    refinement.parent = this;
+  }
+
+  /**
+   * @internal
+   */
+  get query() {
+    return this.parent.asQuery();
   }
 
   getOrAddDefaultSegment(): ASTSegmentViewDefinition {
     return this.refinement.getOrAddDefaultSegment();
+  }
+
+  getOutputSchema() {
+    const model = this.query.model;
+    const query = model.entries.find(e => e.name === this.queryReference.name);
+    if (query === undefined) {
+      throw new Error(`Query not found with name ${this.queryReference.name}`);
+    }
+    const base = query.schema;
+    const refinement = this.refinement.getRefinementSchema();
+    return ASTQuery.schemaMerge(base, refinement);
+  }
+  /**
+   * @internal
+   */
+  renameOrderBys(oldName: string, newName: string): void {
+    this.renameOrderBysInSelf(oldName, newName);
+  }
+
+  /**
+   * @internal
+   */
+  renameOrderBysInSelf(oldName: string, newName: string): void {
+    this.refinement.renameOrderBysInSelf(oldName, newName);
+  }
+
+  /**
+   * @internal
+   */
+  removeOrderBys(name: string): void {
+    this.removeOrderBysInSelf(name);
+  }
+
+  /**
+   * @internal
+   */
+  removeOrderBysInSelf(name: string): void {
+    this.refinement.removeOrderBysInSelf(name);
   }
 }
 
@@ -1328,6 +1444,34 @@ export class ASTReferenceQueryDefinition
     this.query.definition = newQuery;
     return newQuery.refinement.asSegmentViewDefinition();
   }
+
+  /**
+   * @internal
+   */
+  renameOrderBys(_oldName: string, _newName: string): void {
+    return;
+  }
+
+  /**
+   * @internal
+   */
+  renameOrderBysInSelf(_oldName: string, _newName: string): void {
+    return;
+  }
+
+  /**
+   * @internal
+   */
+  removeOrderBys(_name: string): void {
+    return;
+  }
+
+  /**
+   * @internal
+   */
+  removeOrderBysInSelf(_name: string): void {
+    return;
+  }
 }
 
 export interface IASTViewDefinition {
@@ -1342,6 +1486,26 @@ export interface IASTViewDefinition {
     isValidViewRefinement: boolean;
     error?: string;
   };
+  /**
+   * Upward propagation of name change; change order bys to use a new name for a field.
+   * @internal
+   */
+  renameOrderBys(oldName: string, newName: string): void;
+  /**
+   * Downward propagation of name change; change order bys to use a new name for a field.
+   * @internal
+   */
+  renameOrderBysInSelf(oldName: string, newName: string): void;
+  /**
+   * Upward propagation of field deletion
+   * @internal
+   */
+  removeOrderBys(name: string): void;
+  /**
+   * Downward propagation of field deletion
+   * @internal
+   */
+  removeOrderBysInSelf(name: string): void;
 }
 
 export type ASTViewDefinition =
@@ -1510,20 +1674,8 @@ export class ASTReferenceViewDefinition
   }
 
   getOutputSchema(): Malloy.Schema {
-    // TODO this is duplicated in a few places
-    const parent = this.parent as
-      | ASTArrowQueryDefinition
-      | ASTRefinementQueryDefinition
-      | ASTView
-      | ASTArrowViewDefinition
-      | ASTRefinementViewDefinition;
-    if (parent instanceof ASTArrowQueryDefinition) {
-      return parent.getSourceInfo().schema;
-    } else if (parent instanceof ASTRefinementQueryDefinition) {
-      throw new Error('unimplemented');
-    } else {
-      return parent.getInputSchema();
-    }
+    const parent = this.parent as ViewParent;
+    return parent.getOutputSchema();
   }
 
   getImplicitName(): string | undefined {
@@ -1537,6 +1689,34 @@ export class ASTReferenceViewDefinition
       throw new Error('Not a view');
     }
     return view.schema;
+  }
+
+  /**
+   * @internal
+   */
+  renameOrderBys(oldName: string, newName: string): void {
+    (this.parent as ViewParent).renameOrderBys(oldName, newName);
+  }
+
+  /**
+   * @internal
+   */
+  renameOrderBysInSelf(_oldName: string, _newName: string): void {
+    return;
+  }
+
+  /**
+   * @internal
+   */
+  removeOrderBys(name: string): void {
+    (this.parent as ViewParent).removeOrderBys(name);
+  }
+
+  /**
+   * @internal
+   */
+  removeOrderBysInSelf(_name: string): void {
+    return;
   }
 }
 
@@ -1575,6 +1755,7 @@ export class ASTArrowViewDefinition
   set view(view: ASTViewDefinition) {
     this.edit();
     this.children.view = view;
+    view.parent = this;
   }
 
   getOrAddDefaultSegment(): ASTSegmentViewDefinition {
@@ -1594,7 +1775,7 @@ export class ASTArrowViewDefinition
   }
 
   getOutputSchema(): Malloy.Schema {
-    return this.view.getOutputSchema();
+    return this.view.getRefinementSchema();
   }
 
   getImplicitName(): string | undefined {
@@ -1611,7 +1792,42 @@ export class ASTArrowViewDefinition
   } {
     return isValidViewRefinement(this, name);
   }
+
+  /**
+   * @internal
+   */
+  renameOrderBys(oldName: string, newName: string): void {
+    this.renameOrderBysInSelf(oldName, newName);
+  }
+
+  /**
+   * @internal
+   */
+  renameOrderBysInSelf(oldName: string, newName: string): void {
+    this.view.renameOrderBysInSelf(oldName, newName);
+  }
+
+  /**
+   * @internal
+   */
+  removeOrderBys(name: string): void {
+    this.removeOrderBysInSelf(name);
+  }
+
+  /**
+   * @internal
+   */
+  removeOrderBysInSelf(name: string): void {
+    this.view.removeOrderBysInSelf(name);
+  }
 }
+
+type ViewParent =
+  | ASTArrowQueryDefinition
+  | ASTRefinementQueryDefinition
+  | ASTView
+  | ASTArrowViewDefinition
+  | ASTRefinementViewDefinition;
 
 export class ASTRefinementViewDefinition
   extends ASTObjectNode<
@@ -1639,6 +1855,7 @@ export class ASTRefinementViewDefinition
   set refinement(refinement: ASTViewDefinition) {
     this.edit();
     this.children.refinement = refinement;
+    refinement.parent = this;
   }
 
   get base() {
@@ -1680,14 +1897,15 @@ export class ASTRefinementViewDefinition
   }
 
   getOutputSchema(): Malloy.Schema {
-    return ASTNode.schemaMerge(
-      this.base.getOutputSchema(),
-      this.getRefinementSchema()
-    );
+    const parent = this.parent as ViewParent;
+    return parent.getOutputSchema();
   }
 
   getRefinementSchema(): Malloy.Schema {
-    return this.refinement.getRefinementSchema();
+    return ASTNode.schemaMerge(
+      this.base.getRefinementSchema(),
+      this.refinement.getRefinementSchema()
+    );
   }
 
   getImplicitName(): string | undefined {
@@ -1699,6 +1917,36 @@ export class ASTRefinementViewDefinition
     error?: string;
   } {
     return isValidViewRefinement(this, name);
+  }
+
+  /**
+   * @internal
+   */
+  renameOrderBys(oldName: string, newName: string): void {
+    (this.parent as ViewParent).renameOrderBys(oldName, newName);
+  }
+
+  /**
+   * @internal
+   */
+  renameOrderBysInSelf(oldName: string, newName: string): void {
+    this.base.renameOrderBysInSelf(oldName, newName);
+    this.refinement.renameOrderBysInSelf(oldName, newName);
+  }
+
+  /**
+   * @internal
+   */
+  removeOrderBys(name: string): void {
+    (this.parent as ViewParent).removeOrderBys(name);
+  }
+
+  /**
+   * @internal
+   */
+  removeOrderBysInSelf(name: string): void {
+    this.base.removeOrderBysInSelf(name);
+    this.refinement.removeOrderBysInSelf(name);
   }
 }
 
@@ -1721,6 +1969,64 @@ export class ASTSegmentViewDefinition
 
   get operations() {
     return this.children.operations;
+  }
+
+  /**
+   * Downward propagation of name change; change order bys to use a new name for a field.
+   * @internal
+   */
+  renameOrderBysInSelf(oldName: string, newName: string) {
+    for (const operation of this.operations.iter()) {
+      if (operation instanceof ASTOrderByViewOperation) {
+        if (operation.name === oldName) {
+          operation.setField(newName);
+        }
+      }
+    }
+  }
+  /**
+   * Upward propagation of name change; change order bys to use a new name for a field.
+   * @internal
+   */
+  renameOrderBys(oldName: string, newName: string) {
+    (this.parent as ViewParent).renameOrderBys(oldName, newName);
+  }
+
+  /**
+   * @internal
+   */
+  removeOrderBys(name: string): void {
+    (this.parent as ViewParent).removeOrderBys(name);
+  }
+
+  /**
+   * @internal
+   */
+  removeOrderBysInSelf(name: string): void {
+    for (const operation of this.operations.iter()) {
+      if (operation instanceof ASTOrderByViewOperation) {
+        if (operation.name === name) {
+          operation.delete();
+        }
+      }
+    }
+  }
+
+  public renameField(
+    field:
+      | ASTAggregateViewOperation
+      | ASTGroupByViewOperation
+      | ASTNestViewOperation,
+    name: string
+  ) {
+    if (field.name === name) return;
+    const output = this.getOutputSchema();
+    if (ASTNode.schemaTryGet(output, name)) {
+      throw new Error(`Output already has a field named ${name}`);
+    }
+    const oldName = field.name;
+    field.name = name;
+    this.renameOrderBys(oldName, name);
   }
 
   /**
@@ -2075,9 +2381,9 @@ export class ASTSegmentViewDefinition
     const fields: Malloy.FieldInfo[] = [];
     for (const operation of this.operations.iter()) {
       if (
-        operation instanceof ASTGroupByViewOperation // || TODO
-        // operation instanceof ASTAggregateViewOperation ||
-        // operation instanceof ASTNestViewOperation
+        operation instanceof ASTGroupByViewOperation ||
+        operation instanceof ASTAggregateViewOperation ||
+        operation instanceof ASTNestViewOperation
       ) {
         fields.push(operation.getFieldInfo());
       }
@@ -2156,12 +2462,7 @@ export class ASTSegmentViewDefinition
 
   getInputSchema(): Malloy.Schema {
     // TODO this is duplicated in a few places
-    const parent = this.parent as
-      | ASTArrowQueryDefinition
-      | ASTRefinementQueryDefinition
-      | ASTView
-      | ASTArrowViewDefinition
-      | ASTRefinementViewDefinition;
+    const parent = this.parent as ViewParent;
     if (parent instanceof ASTArrowQueryDefinition) {
       return parent.getSourceInfo().schema;
     } else if (parent instanceof ASTRefinementQueryDefinition) {
@@ -2172,7 +2473,8 @@ export class ASTSegmentViewDefinition
   }
 
   getOutputSchema(): Malloy.Schema {
-    return this.getRefinementSchema();
+    const parent = this.parent as ViewParent;
+    return parent.getOutputSchema();
   }
 
   getImplicitName(): string | undefined {
@@ -2320,6 +2622,16 @@ export class ASTGroupByViewOperation extends ASTObjectNode<
     return this.children.name ?? this.field.name;
   }
 
+  set name(name: string) {
+    if (this.name === name) return;
+    this.edit();
+    if (this.field.name === name) {
+      this.children.name = undefined;
+    } else {
+      this.children.name = name;
+    }
+  }
+
   /**
    * @internal
    */
@@ -2355,13 +2667,7 @@ export class ASTGroupByViewOperation extends ASTObjectNode<
    * @param name The new name
    */
   rename(name: string) {
-    if (this.name === name) return;
-    this.edit();
-    if (this.field.name === name) {
-      this.children.name = undefined;
-    } else {
-      this.children.name = name;
-    }
+    this.list.segment.renameField(this, name);
   }
 
   /**
@@ -2394,21 +2700,13 @@ export class ASTGroupByViewOperation extends ASTObjectNode<
    */
   delete() {
     this.list.remove(this);
-    const operations = this.list;
-    for (const operation of operations.iter()) {
-      if (operation instanceof ASTOrderByViewOperation) {
-        if (operation.name === this.name) {
-          operation.delete();
-        }
-      }
-    }
-    return this;
+    this.list.segment.removeOrderBys(this.name);
   }
 
   getFieldInfo(): Malloy.FieldInfo {
     return {
       kind: 'dimension',
-      name: this.field.name,
+      name: this.name,
       type: this.field.type,
     };
   }
@@ -2646,6 +2944,16 @@ export class ASTAggregateViewOperation extends ASTObjectNode<
     return this.children.name ?? this.field.name;
   }
 
+  set name(name: string) {
+    if (this.name === name) return;
+    this.edit();
+    if (this.field.name === name) {
+      this.children.name = undefined;
+    } else {
+      this.children.name = name;
+    }
+  }
+
   /**
    * Renames the aggregate item. If the field's name matches the given name,
    * removes the `name is` part.
@@ -2674,13 +2982,7 @@ export class ASTAggregateViewOperation extends ASTObjectNode<
    * @param name The new name
    */
   rename(name: string) {
-    if (this.name === name) return;
-    this.edit();
-    if (this.field.name === name) {
-      this.children.name = undefined;
-    } else {
-      this.children.name = name;
-    }
+    this.list.segment.renameField(this, name);
   }
 
   /**
@@ -2692,21 +2994,13 @@ export class ASTAggregateViewOperation extends ASTObjectNode<
 
   delete() {
     this.list.remove(this);
-    const operations = this.list;
-    for (const operation of operations.iter()) {
-      if (operation instanceof ASTOrderByViewOperation) {
-        if (operation.name === this.name) {
-          operation.delete();
-        }
-      }
-    }
-    return this;
+    this.list.segment.removeOrderBys(this.name);
   }
 
   getFieldInfo(): Malloy.FieldInfo {
     return {
       kind: 'dimension',
-      name: this.field.name,
+      name: this.name,
       type: this.field.type,
     };
   }
@@ -2966,7 +3260,21 @@ export class ASTNestViewOperation extends ASTObjectNode<
   }
 
   get name() {
-    return this.children.name ?? this.view.name;
+    const name = this.children.name ?? this.view.name;
+    if (name === undefined) {
+      throw new Error('Nest does not have a name');
+    }
+    return name;
+  }
+
+  set name(name: string) {
+    if (this.name === name) return;
+    this.edit();
+    if (this.view.name === name) {
+      this.children.name = undefined;
+    } else {
+      this.children.name = name;
+    }
   }
 
   /**
@@ -3025,13 +3333,16 @@ export class ASTNestViewOperation extends ASTObjectNode<
    * @param name The new name
    */
   rename(name: string) {
-    if (this.name === name) return;
-    this.edit();
-    if (this.view.name === name) {
-      this.children.name = undefined;
-    } else {
-      this.children.name = name;
-    }
+    this.list.segment.renameField(this, name);
+  }
+
+  getFieldInfo(): Malloy.FieldInfo {
+    return {
+      kind: 'view',
+      name: this.name,
+      definition: this.view.build(),
+      schema: this.view.getOutputSchema(),
+    };
   }
 
   /**
@@ -3145,6 +3456,7 @@ export class ASTView extends ASTObjectNode<
   set definition(definition: ASTViewDefinition) {
     this.edit();
     this.children.definition = definition;
+    definition.parent = this;
   }
 
   get name() {
@@ -3164,6 +3476,38 @@ export class ASTView extends ASTObjectNode<
 
   getInputSchema() {
     return this.nest.list.segment.getInputSchema();
+  }
+
+  getOutputSchema() {
+    return this.definition.getOutputSchema();
+  }
+
+  /**
+   * @internal
+   */
+  renameOrderBys(oldName: string, newName: string): void {
+    this.renameOrderBysInSelf(oldName, newName);
+  }
+
+  /**
+   * @internal
+   */
+  renameOrderBysInSelf(oldName: string, newName: string): void {
+    this.definition.renameOrderBysInSelf(oldName, newName);
+  }
+
+  /**
+   * @internal
+   */
+  removeOrderBys(name: string): void {
+    this.removeOrderBysInSelf(name);
+  }
+
+  /**
+   * @internal
+   */
+  removeOrderBysInSelf(name: string): void {
+    this.definition.removeOrderBysInSelf(name);
   }
 }
 
