@@ -3,13 +3,12 @@ import {
   NumberRange,
   NumberOperator,
   NumberRangeOperator,
-  Clause,
+  NumberClause,
 } from './clause_types';
-import {BaseSerializer} from './base_serializer';
 
-export class NumberSerializer extends BaseSerializer {
-  constructor(clauses: Clause[]) {
-    super(clauses);
+export class NumberSerializer {
+  constructor(private clauses: NumberClause[]) {
+    this.clauses = clauses;
   }
 
   public serialize(): string {
@@ -69,7 +68,7 @@ export class NumberSerializer extends BaseSerializer {
     );
   }
 
-  private static clauseToString(clauses: Clause[]): string {
+  private static clauseToString(clauses: NumberClause[]): string {
     let result = '';
     for (const clause of clauses) {
       if ('operator' in clause && clause.operator === 'range') {
