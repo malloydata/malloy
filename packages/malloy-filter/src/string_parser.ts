@@ -1,7 +1,12 @@
 import {SpecialToken, Tokenizer, TokenizerParams} from './tokenizer';
-import {StringCondition, StringOperator, QuoteType} from './clause_types';
+import {
+  StringClause,
+  StringOperator,
+  QuoteType,
+  FilterError,
+  StringParserResponse,
+} from './clause_types';
 import {BaseParser} from './base_parser';
-import {FilterParserResponse, FilterError} from './filter_types';
 
 export class StringParser extends BaseParser {
   private static readonly percentRegex: RegExp = /(?<!\\)%/;
@@ -35,10 +40,10 @@ export class StringParser extends BaseParser {
     this.tokens = Tokenizer.convertSpecialWords(this.tokens, specialWords);
   }
 
-  public parse(): FilterParserResponse {
+  public parse(): StringParserResponse {
     this.index = 0;
     this.tokenize();
-    const clauses: StringCondition[] = [];
+    const clauses: StringClause[] = [];
     const errors: FilterError[] = [];
     while (this.index < this.tokens.length) {
       const token = this.getNext();
@@ -119,12 +124,12 @@ export class StringParser extends BaseParser {
     return Array.from(quotes);
   }
 
-  private static groupClauses(clauses: StringCondition[]): StringCondition[] {
+  private static groupClauses(clauses: StringClause[]): StringClause[] {
     if (clauses.length < 2) {
       return clauses;
     }
-    let previous: StringCondition = clauses[0];
-    const outputs: StringCondition[] = [previous];
+    let previous: StringClause = clauses[0];
+    const outputs: StringClause[] = [previous];
     for (let i = 1; i < clauses.length; i++) {
       if (previous.operator === clauses[i].operator) {
         previous.values.push(...clauses[i].values);
@@ -147,7 +152,7 @@ export class StringParser extends BaseParser {
     return word.replace(StringParser.singleBackslashRegex, _match => '');
   }
 
-  private checkSimpleWord(clauses: StringCondition[]): boolean {
+  private checkSimpleWord(clauses: StringClause[]): boolean {
     const token = this.getNext();
     if (token.type !== 'word') {
       return false;
@@ -184,7 +189,7 @@ export class StringParser extends BaseParser {
       return false;
     }
 
-    const clause: StringCondition = {operator: operator, values: [word]};
+    const clause: StringClause = {operator: operator, values: [word]};
     //const quotes: QuoteType[] = StringParser.findQuotes(word);
     //if (quotes.length > 0) { clause.quotes = quotes; }
     clauses.push(clause);

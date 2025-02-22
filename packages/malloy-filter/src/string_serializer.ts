@@ -1,9 +1,8 @@
-import {StringCondition, StringOperator, Clause} from './clause_types';
-import {BaseSerializer} from './base_serializer';
+import {StringClause, StringOperator} from './clause_types';
 
-export class StringSerializer extends BaseSerializer {
-  constructor(clauses: Clause[]) {
-    super(clauses);
+export class StringSerializer {
+  constructor(private clauses: StringClause[]) {
+    this.clauses = clauses;
   }
 
   public serialize(): string {
@@ -32,7 +31,7 @@ export class StringSerializer extends BaseSerializer {
 
   // export type StringOperator = 'EMPTY' | 'NOTEMPTY' | 'starts' | 'ends' | 'contains' | 'notStarts' |
   // 'notEnds' | 'notContains' | '~' | '=' | '!~' | '!=';
-  private static stringConditionToString(
+  private static StringClauseToString(
     operator: StringOperator,
     value: string | null
   ): string {
@@ -68,12 +67,12 @@ export class StringSerializer extends BaseSerializer {
     return (negated ? '-' : '') + value;
   }
 
-  private static clauseToString(clauses: Clause[]): string {
+  private static clauseToString(clauses: StringClause[]): string {
     let result = '';
     for (const genericClause of clauses) {
-      const clause: StringCondition = genericClause as StringCondition;
+      const clause: StringClause = genericClause as StringClause;
       for (const value of clause.values) {
-        const word = StringSerializer.stringConditionToString(
+        const word = StringSerializer.StringClauseToString(
           clause.operator,
           value
         );

@@ -1,26 +1,29 @@
 import {SpecialToken, Tokenizer, TokenizerParams} from './tokenizer';
 import {
-  DateRange,
-  DatePrefix,
-  DateMoment,
-  DateMomentNow,
-  DateMomentInterval,
-  DateMomentNumberInterval,
-  DateMomentNumberUnit,
-  DateMomentNumber,
   DateTimeUnit,
   DateWeekday,
+  DateMomentName,
+  NamedMoment,
   DateMomentIntervalOperator,
-  DateMomentNumberIntervalOperator,
-  DateMomentNumberUnitOperator,
-  DateMomentNumberOperator,
-  DateMomentNowOperator,
+  IntervalMoment,
+  DateMomentOffsetFromNowDirection,
+  OffsetMoment,
+  DateMomentSpanFromNowDirection,
+  SpanMoment,
+  AbsoluteMoment,
+  DateMoment,
+  DateBetweenClause,
+  Duration,
+  DateForClause,
+  DateDurationClause,
   DateClause,
-  Clause,
-} from './clause_types';
+  DateParserResponse,
+} from './date_types';
 import {BaseParser} from './base_parser';
 import {Token} from './token_types';
-import {FilterParserResponse, FilterError} from './filter_types';
+import {FilterError} from './clause_types';
+
+type DatePrefix = 'BEFORE' | 'AFTER';
 
 export class DateParser extends BaseParser {
   private static readonly yearRegex: RegExp = /[%_]/;
@@ -62,7 +65,7 @@ export class DateParser extends BaseParser {
       {type: 'FROM', value: 'from', ignoreCase: true},
       {type: 'FOR', value: 'for', ignoreCase: true},
       {type: 'TO', value: 'to', ignoreCase: true},
-      {type: 'YEARORNUMBER', value: /^\d\d\d\d$/}, // Years are ambiguous, and require special handling.
+      {type: 'YEAR', value: /^\d\d\d\d$/}, // Years are ambiguous, and require special handling.
       {type: 'NUMBER', value: /^[\d.]+/, ignoreCase: true},
     ];
     const params: TokenizerParams = {
@@ -83,44 +86,28 @@ export class DateParser extends BaseParser {
     this.index = 0;
     while (this.index < this.tokens.length) {
       if (
-        this.matchAndMerge('LAST|UNITOFTIME', this.tokens, output) ||
-        this.matchAndMerge('LAST|DAYOFWEEK', this.tokens, output) ||
-        this.matchAndMerge('LAST|NUMBER|UNITOFTIME', this.tokens, output) ||
-        this.matchAndMerge(
-          'LAST|YEARORNUMBER|UNITOFTIME',
-          this.tokens,
-          output
-        ) ||
-        this.matchAndMerge('THIS|UNITOFTIME', this.tokens, output) ||
-        this.matchAndMerge('NEXT|UNITOFTIME', this.tokens, output) ||
-        this.matchAndMerge('NEXT|DAYOFWEEK', this.tokens, output) ||
-        this.matchAndMerge('NEXT|NUMBER|UNITOFTIME', this.tokens, output) ||
-        this.matchAndMerge(
-          'NEXT|YEARORNUMBER|UNITOFTIME',
-          this.tokens,
-          output
-        ) ||
-        this.matchAndMerge('NUMBER|UNITOFTIME|AGO', this.tokens, output) ||
-        this.matchAndMerge(
-          'YEARORNUMBER|UNITOFTIME|AGO',
-          this.tokens,
-          output
-        ) ||
-        this.matchAndMerge('NUMBER|UNITOFTIME|FROM|NOW', this.tokens, output) ||
-        this.matchAndMerge(
-          'YEARORNUMBER|UNITOFTIME|FROM|NOW',
-          this.tokens,
-          output
-        ) ||
-        this.matchAndMerge('NUMBER|UNITOFTIME', this.tokens, output) ||
-        this.matchAndMerge('YEARORNUMBER|UNITOFTIME', this.tokens, output) ||
-        this.matchAndMerge('DATE|TIME', this.tokens, output) ||
-        this.matchAndMerge('TODAY', this.tokens, output) ||
-        this.matchAndMerge('YESTERDAY', this.tokens, output) ||
-        this.matchAndMerge('TOMORROW', this.tokens, output) ||
-        this.matchAndMerge('DATE', this.tokens, output) ||
-        this.matchAndMerge('YEARORNUMBER', this.tokens, output) ||
-        this.matchAndMerge('NOW', this.tokens, output)
+        this.matchAndMerge('LAST|UNITOFTIME', output) ||
+        this.matchAndMerge('LAST|DAYOFWEEK', output) ||
+        this.matchAndMerge('LAST|NUMBER|UNITOFTIME', output) ||
+        this.matchAndMerge('LAST|YEAR|UNITOFTIME', output) ||
+        this.matchAndMerge('THIS|UNITOFTIME', output) ||
+        this.matchAndMerge('NEXT|UNITOFTIME', output) ||
+        this.matchAndMerge('NEXT|DAYOFWEEK', output) ||
+        this.matchAndMerge('NEXT|NUMBER|UNITOFTIME', output) ||
+        this.matchAndMerge('NEXT|YEAR|UNITOFTIME', output) ||
+        this.matchAndMerge('NUMBER|UNITOFTIME|AGO', output) ||
+        this.matchAndMerge('YEAR|UNITOFTIME|AGO', output) ||
+        this.matchAndMerge('NUMBER|UNITOFTIME|FROM|NOW', output) ||
+        this.matchAndMerge('YEAR|UNITOFTIME|FROM|NOW', output) ||
+        this.matchAndMerge('NUMBER|UNITOFTIME', output) ||
+        this.matchAndMerge('YEAR|UNITOFTIME', output) ||
+        this.matchAndMerge('DATE|TIME', output) ||
+        this.matchAndMerge('TODAY', output) ||
+        this.matchAndMerge('YESTERDAY', output) ||
+        this.matchAndMerge('TOMORROW', output) ||
+        this.matchAndMerge('DATE', output) ||
+        this.matchAndMerge('YEAR', output) ||
+        this.matchAndMerge('NOW', output)
       ) {
         continue;
       } else {
@@ -131,16 +118,12 @@ export class DateParser extends BaseParser {
     return output;
   }
 
-  private matchAndMerge(
-    types: string,
-    tokens: Token[],
-    output: Token[]
-  ): boolean {
+  private matchAndMerge(types: string, output: Token[]): boolean {
     const idx = this.index;
-    const matchedTokens = Tokenizer.matchTypes(types, tokens, idx);
+    const matchedTokens = Tokenizer.matchTypes(types, this.tokens, idx);
     if (matchedTokens) {
       output.push({
-        type: 'MOMENT:' + types,
+        type: 'MERGE:' + types,
         value: '',
         values: matchedTokens,
         startIndex: matchedTokens[0].startIndex,
@@ -152,7 +135,7 @@ export class DateParser extends BaseParser {
     return false;
   }
 
-  public parse(): FilterParserResponse {
+  public parse(): DateParserResponse {
     this.tokenize();
     let prefix: DatePrefix | undefined = undefined;
     const clauses: DateClause[] = [];
@@ -181,7 +164,7 @@ export class DateParser extends BaseParser {
           });
           this.index++;
         }
-      } else if (this.handleMoment(prefix, clauses)) {
+      } else if (this.handleMerged(prefix, clauses)) {
         prefix = undefined;
       } else {
         errors.push({
@@ -196,151 +179,187 @@ export class DateParser extends BaseParser {
     return {clauses, errors};
   }
 
-  // LAST|DAYOFWEEK
-  private static createMomentInterval(
+  private static createMomentClause(
+    prefix: DatePrefix | undefined,
+    moment: DateMoment
+  ): DateClause {
+    if (!prefix) {
+      return {operator: 'ON', moment}; // DateOnClause
+    } else if (prefix === 'BEFORE') {
+      return {operator: 'BEFORE', moment}; // DateBeforeClause
+    } else {
+      return {operator: 'AFTER', moment}; // DateAfterClause
+    }
+  }
+
+  // (BEFORE|AFTER) LAST|DAYOFWEEK
+  private static createIntervalMoment(
     prefix: DatePrefix | undefined,
     tokens: Token[]
-  ): DateMomentInterval {
-    const operator: DateMomentIntervalOperator = tokens[0]
+  ): DateClause {
+    const kind: DateMomentIntervalOperator = tokens[0]
       .type as DateMomentIntervalOperator;
     const unit: DateTimeUnit | DateWeekday = tokens[1].value as
       | DateTimeUnit
       | DateWeekday;
-    const moment: DateMomentInterval = {operator, unit};
-    if (prefix) {
-      moment.prefix = prefix;
-    }
-    return moment;
-  }
-
-  // LAST|NUMBER|UNITOFTIME
-  private static createMomentNumberInterval(
-    prefix: DatePrefix | undefined,
-    tokens: Token[]
-  ): DateMomentNumberInterval {
-    const type0 = tokens[0].type;
-    const operator: DateMomentNumberIntervalOperator =
-      type0 === 'LAST' ? 'LASTN' : 'NEXTN';
-    const value: string = tokens[1].value;
-    const unit: DateTimeUnit = tokens[2].value as DateTimeUnit;
-    const moment: DateMomentNumberInterval = {operator, value, unit};
-    if (prefix) {
-      moment.prefix = prefix;
-    }
-    return moment;
+    const moment: IntervalMoment = {type: 'INTERVAL', kind, unit};
+    return DateParser.createMomentClause(prefix, moment);
   }
 
   // NUMBER|UNITOFTIME|AGO
-  private static createMomentNumberIntervalAgo(
-    prefix: DatePrefix | undefined,
-    tokens: Token[]
-  ): DateMomentNumberInterval {
-    const operator: DateMomentNumberIntervalOperator = 'AGO';
-    const value: string = tokens[0].value;
-    const unit: DateTimeUnit = tokens[1].value as DateTimeUnit;
-    const moment: DateMomentNumberInterval = {operator, value, unit};
-    if (prefix) {
-      moment.prefix = prefix;
-    }
-    return moment;
-  }
-
   // NUMBER|UNITOFTIME|FROM|NOW
-  private static createMomentNumberIntervalFromNow(
+  private static createOffsetMoment(
     prefix: DatePrefix | undefined,
     tokens: Token[]
-  ): DateMomentNumberInterval | undefined {
-    const operator: DateMomentNumberIntervalOperator = 'FROMNOW';
-    const value: string = tokens[0].value;
+  ): DateClause | undefined {
+    const amount = Number(tokens[0].value);
     const unit: DateTimeUnit = tokens[1].value as DateTimeUnit;
-    const moment: DateMomentNumberInterval = {operator, value, unit};
-    if (prefix) {
-      moment.prefix = prefix;
+    const direction: DateMomentOffsetFromNowDirection =
+      tokens[2].type === 'AGO' ? 'AGO' : 'FROMNOW';
+    if (!DateParser.isValidNumber(amount)) {
+      return undefined;
     }
-    return moment;
+    const moment: OffsetMoment = {
+      type: 'OFFSET_FROM_NOW',
+      direction,
+      amount,
+      unit,
+    };
+    return DateParser.createMomentClause(prefix, moment);
   }
 
-  // NUMBER|UNITOFTIME
-  private static createMomentNumberUnit(
+  // (LAST|NEXT)|NUMBER|UNITOFTIME
+  private static createSpanMoment(
     prefix: DatePrefix | undefined,
     tokens: Token[]
-  ): DateMomentNumberUnit {
-    const operator: DateMomentNumberUnitOperator = 'TIMEBLOCK';
-    const value: string = tokens[0].value;
+  ): DateClause | undefined {
+    const amount = Number(tokens[0].value);
     const unit: DateTimeUnit = tokens[1].value as DateTimeUnit;
-    const moment: DateMomentNumberUnit = {operator, value, unit};
-    if (prefix) {
-      moment.prefix = prefix;
+    const direction: DateMomentSpanFromNowDirection =
+      tokens[2].type === 'LAST' ? 'LAST' : 'NEXT';
+    if (!DateParser.isValidNumber(amount)) {
+      return undefined;
     }
-    return moment;
+    const moment: SpanMoment = {type: 'SPAN_FROM_NOW', direction, amount, unit};
+    return DateParser.createMomentClause(prefix, moment);
   }
 
-  // DATE  DATE|TIME
-  private static createMomentNumber(
+  // (NUMBER|YEAR)|UNITOFTIME
+  private static createDateDuration(
     prefix: DatePrefix | undefined,
     tokens: Token[]
-  ): DateMomentNumber {
-    const operator: DateMomentNumberOperator =
-      tokens.length === 2 ? 'DATETIME' : 'DATE';
-    const moment: DateMomentNumber = {operator, date: tokens[0].value};
+  ): DateClause | undefined {
+    if (prefix) {
+      return undefined; // before 7 hours is ambiguous, not allowed.
+    }
+    const operator = 'DURATION';
+    const amount = Number(tokens[0].value);
+    const unit: DateTimeUnit = tokens[1].value as DateTimeUnit;
+    if (!DateParser.isValidNumber(amount)) {
+      return undefined;
+    }
+    const clause: DateDurationClause = {operator, duration: {amount, unit}};
+    return clause;
+  }
+
+  // (BEFORE|AFTER)  DATE  DATE|TIME
+  private static createAbsoluteMoment(
+    prefix: DatePrefix | undefined,
+    tokens: Token[]
+  ): DateClause {
+    let unit: DateTimeUnit = 'YEAR';
+    let date = tokens[0].value;
     if (tokens.length === 2) {
-      moment.time = tokens[1].value;
+      const timeStr = tokens[1].value;
+      date += ' ' + timeStr;
+      if (timeStr.length > 5) unit = 'SECOND';
+      else unit = 'MINUTE';
+    } else if (date.length > 7) {
+      unit = 'DAY';
+    } else if (date.length > 4) {
+      unit = 'MONTH';
     }
-    if (prefix) {
-      moment.prefix = prefix;
-    }
-    return moment;
+    const moment: AbsoluteMoment = {type: 'ABSOLUTE', date, unit};
+    return DateParser.createMomentClause(prefix, moment);
   }
 
   // NOW  YESTERDAY  TODAY  TOMORROW
-  private static createMomentNow(
+  private static createNamedMoment(
     prefix: DatePrefix | undefined,
     tokens: Token[]
-  ): DateMomentNow {
-    const operator: DateMomentNowOperator = tokens[0]
-      .type as DateMomentNowOperator;
-    const moment: DateMomentNow = {operator};
-    if (prefix) {
-      moment.prefix = prefix;
+  ): DateClause {
+    let momentName: DateMomentName = 'NOW';
+    switch (tokens[0].type) {
+      case 'TODAY':
+        momentName = 'TODAY';
+        break;
+      case 'YESTERDAY':
+        momentName = 'YESTERDAY';
+        break;
+      case 'TOMORROW':
+        momentName = 'TOMORROW';
+        break;
     }
-    return moment;
+    const moment: NamedMoment = {type: 'NAMED', name: momentName};
+    return DateParser.createMomentClause(prefix, moment);
   }
 
-  private static createMomentFromToken(
+  private static isValidNumber(value: number): boolean {
+    return Number.isNaN(value) === false;
+  }
+
+  private static createDurationFromMerged(token: Token): Duration | undefined {
+    if (!token.values || token.values.length !== 2) {
+      return undefined;
+    }
+    if (
+      token.type === 'MERGE:NUMBER|UNITOFTIME' ||
+      token.type === 'MERGE:YEAR|UNITOFTIME'
+    ) {
+      const value = Number(token.values[0].value);
+      if (!DateParser.isValidNumber(value)) {
+        return undefined;
+      }
+      const unit = token.values[1].value as DateTimeUnit;
+      return {amount: value, unit: unit};
+    }
+    return undefined;
+  }
+
+  private static createClauseFromMerged(
     prefix: DatePrefix | undefined,
     token: Token
-  ): DateMoment | undefined {
+  ): DateClause | undefined {
     const tokens: Token[] = token.values || [];
     switch (token.type) {
-      case 'MOMENT:LAST|UNITOFTIME':
-      case 'MOMENT:LAST|DAYOFWEEK':
-      case 'MOMENT:THIS|UNITOFTIME':
-      case 'MOMENT:NEXT|UNITOFTIME':
-      case 'MOMENT:NEXT|DAYOFWEEK':
-        return this.createMomentInterval(prefix, tokens);
-      case 'MOMENT:LAST|NUMBER|UNITOFTIME':
-      case 'MOMENT:LAST|YEARORNUMBER|UNITOFTIME':
-      case 'MOMENT:NEXT|NUMBER|UNITOFTIME':
-      case 'MOMENT:NEXT|YEARORNUMBER|UNITOFTIME':
-        return this.createMomentNumberInterval(prefix, tokens);
-      case 'MOMENT:NUMBER|UNITOFTIME|AGO':
-      case 'MOMENT:YEARORNUMBER|UNITOFTIME|AGO':
-        return this.createMomentNumberIntervalAgo(prefix, tokens);
-      case 'MOMENT:NUMBER|UNITOFTIME|FROM|NOW':
-      case 'MOMENT:YEARORNUMBER|UNITOFTIME|FROM|NOW':
-        return this.createMomentNumberIntervalFromNow(prefix, tokens);
-      case 'MOMENT:NUMBER|UNITOFTIME':
-      case 'MOMENT:YEARORNUMBER|UNITOFTIME':
-        return this.createMomentNumberUnit(prefix, tokens);
-      case 'MOMENT:DATE|TIME':
-      case 'MOMENT:DATE':
-      case 'MOMENT:YEARORNUMBER':
-        return this.createMomentNumber(prefix, tokens);
-      case 'MOMENT:NOW':
-      case 'MOMENT:TODAY':
-      case 'MOMENT:YESTERDAY':
-      case 'MOMENT:TOMORROW':
-        return this.createMomentNow(prefix, tokens);
+      case 'MERGE:LAST|UNITOFTIME':
+      case 'MERGE:LAST|DAYOFWEEK':
+      case 'MERGE:THIS|UNITOFTIME':
+      case 'MERGE:NEXT|UNITOFTIME':
+      case 'MERGE:NEXT|DAYOFWEEK':
+        return this.createIntervalMoment(prefix, tokens);
+      case 'MERGE:LAST|NUMBER|UNITOFTIME':
+      case 'MERGE:LAST|YEAR|UNITOFTIME':
+      case 'MERGE:NEXT|NUMBER|UNITOFTIME':
+      case 'MERGE:NEXT|YEAR|UNITOFTIME':
+        return this.createSpanMoment(prefix, tokens);
+      case 'MERGE:NUMBER|UNITOFTIME|AGO':
+      case 'MERGE:YEAR|UNITOFTIME|AGO':
+      case 'MERGE:NUMBER|UNITOFTIME|FROM|NOW':
+      case 'MERGE:YEAR|UNITOFTIME|FROM|NOW':
+        return this.createOffsetMoment(prefix, tokens);
+      case 'MERGE:NUMBER|UNITOFTIME':
+      case 'MERGE:YEAR|UNITOFTIME':
+        return this.createDateDuration(prefix, tokens);
+      case 'MERGE:DATE|TIME':
+      case 'MERGE:DATE':
+      case 'MERGE:YEAR':
+        return this.createAbsoluteMoment(prefix, tokens);
+      case 'MERGE:NOW':
+      case 'MERGE:TODAY':
+      case 'MERGE:YESTERDAY':
+      case 'MERGE:TOMORROW':
+        return this.createNamedMoment(prefix, tokens);
       default:
         return undefined;
     }
@@ -359,48 +378,62 @@ export class DateParser extends BaseParser {
       : this.tokens[position].type.startsWith(value);
   }
 
-  private handleRange(clauses: Clause[]): boolean {
+  private handleRange(clauses: DateClause[]): boolean {
     if (
-      this.isMatchingToken(this.index, 'MOMENT', false) &&
+      this.isMatchingToken(this.index, 'MERGE', false) &&
       (this.isMatchingToken(this.index + 1, 'TO', true) ||
         this.isMatchingToken(this.index + 1, 'FOR', true)) &&
-      this.isMatchingToken(this.index + 2, 'MOMENT', false)
+      this.isMatchingToken(this.index + 2, 'MERGE', false)
     ) {
-      const startMoment: DateMoment | undefined =
-        DateParser.createMomentFromToken(undefined, this.tokens[this.index]);
-      const endMoment: DateMoment | undefined =
-        DateParser.createMomentFromToken(
-          undefined,
-          this.tokens[this.index + 2]
-        );
-      const operator: 'TO' | 'FOR' = this.tokens[this.index + 1].type as
-        | 'TO'
-        | 'FOR';
+      const startToken = this.tokens[this.index];
+      const operator = this.tokens[this.index + 1].type; // TO | FOR
+      const endToken = this.tokens[this.index + 2];
+      const startClause = DateParser.createClauseFromMerged(
+        undefined,
+        startToken
+      );
       this.index += 3;
-      if (startMoment === undefined || endMoment === undefined) {
+      if (startClause === undefined || !('moment' in startClause)) {
         return false;
       }
-      const dateRange: DateRange = {
-        start: startMoment,
-        operator,
-        end: endMoment,
-      };
-      clauses.push(dateRange);
+      if (operator === 'TO') {
+        const endClause = DateParser.createClauseFromMerged(
+          undefined,
+          endToken
+        );
+        if (endClause === undefined || !('moment' in endClause)) {
+          return false;
+        }
+        const clause: DateBetweenClause = {
+          operator: 'TO_RANGE',
+          from: startClause.moment,
+          to: endClause.moment,
+        };
+        clauses.push(clause);
+      } else {
+        const endDuration = DateParser.createDurationFromMerged(endToken);
+        if (endDuration === undefined) {
+          return false;
+        }
+        const clause: DateForClause = {
+          operator: 'FOR_RANGE',
+          from: startClause.moment,
+          duration: endDuration,
+        };
+        clauses.push(clause);
+      }
       return true;
     }
     return false;
   }
 
-  private handleMoment(
+  private handleMerged(
     prefix: DatePrefix | undefined,
     clauses: DateClause[]
   ): boolean {
     const token: Token = this.getNext();
-    if (token.type.startsWith('MOMENT')) {
-      const clause: DateMoment | undefined = DateParser.createMomentFromToken(
-        prefix,
-        token
-      );
+    if (token.type.startsWith('MERGE')) {
+      const clause = DateParser.createClauseFromMerged(prefix, token);
       this.index++;
       if (clause === undefined) {
         return false;

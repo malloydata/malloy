@@ -1,15 +1,16 @@
-import {Clause} from './clause_types';
 import {SpecialToken, Tokenizer, TokenizerParams} from './tokenizer';
 import {BooleanParser} from './boolean_parser';
 import {StringParser} from './string_parser';
 import {NumberParser} from './number_parser';
 import {DateParser} from './date_parser';
-import {BaseParser} from './base_parser';
 import {BooleanSerializer} from './boolean_serializer';
 import {StringSerializer} from './string_serializer';
 import {NumberSerializer} from './number_serializer';
 import {DateSerializer} from './date_serializer';
-import {BaseSerializer} from './base_serializer';
+import {BooleanClause, NumberClause, StringClause} from './clause_types';
+import {DateClause} from './date_types';
+
+type Clause = BooleanClause | DateClause | NumberClause | StringClause;
 
 const numberExamples = [
   '5',
@@ -88,7 +89,7 @@ const dateExamples = [
   'before 3 days ago',
   'before 2025-08-30 08:30:20',
   'after 2025-10-05',
-  '2025-08-30 12:00:00 to 2025-09-18 14:00:00',
+  '2025-08-30 12:00 to 2025-09-18 14:30',
   'this year',
   'next tuesday',
   '7 years from now',
@@ -108,6 +109,7 @@ const dateExamples = [
   'for', // Bad syntax
   '7', // Bad syntax
   'from now', // Bad syntax
+  '2025-12-25 12:32:', // Bad syntax
   '',
 ];
 
@@ -207,77 +209,86 @@ function testTokenizerNumber() {
   }
 }
 
-function testParserSingle(
+function testNumberParserSingle(
   str: string,
-  parser: BaseParser,
   outputFormatter?: (clauses: Clause[]) => string
 ): void {
   console.log('Input: ', str);
-  try {
-    const response = parser.parse();
-    // console.log('Tokens: ', parser.getTokens());
-    if (response.clauses && response.clauses.length > 0) {
-      if (outputFormatter) {
-        console.log('Output: ', outputFormatter(response.clauses));
-      } else {
-        console.log('Output: ', ...response.clauses);
-      }
-    }
-    if (response.errors && response.errors.length > 0) {
-      console.log('Errors: ', ...response.errors);
-    }
-  } catch (ex: Error | unknown) {
-    if (ex instanceof Error) console.error('Thrown Error: ', ex.message);
-    else {
-      console.error('Thrown Unknown error: ', ex);
+  const parser = new NumberParser(str);
+  const response = parser.parse();
+  // console.log('Tokens: ', parser.getTokens());
+  if (response.clauses && response.clauses.length > 0) {
+    if (outputFormatter) {
+      console.log('Output: ', outputFormatter(response.clauses));
+    } else {
+      console.log('Output: ', ...response.clauses);
     }
   }
-  console.log('');
-}
-
-function testSerializerRoundtrip(
-  str: string,
-  parser: BaseParser,
-  serializerFunc: (clauses: Clause[]) => BaseSerializer
-): void {
-  console.log('Input:  ' + str);
-  try {
-    const response = parser.parse();
-    // console.log('Clause: ', ...response.clauses, '\n');
-    if (response.clauses && response.clauses.length > 0) {
-      const result = serializerFunc(response.clauses || []).serialize();
-      console.log('Output: ' + result);
-    }
-    if (response.errors && response.errors.length > 0) {
-      console.log('Errors: ', ...response.errors);
-    }
-  } catch (ex: Error | unknown) {
-    if (ex instanceof Error) console.error('Thrown Error: ', ex.message);
-    else {
-      console.error('Thrown Unknown error: ', ex);
-    }
+  if (response.errors && response.errors.length > 0) {
+    console.log('Errors: ', ...response.errors);
   }
   console.log('');
 }
 
 function testNumberParser() {
   for (const example of numberExamples) {
-    const parser = new NumberParser(example);
-    testParserSingle(example, parser);
+    testNumberParserSingle(example);
   }
+}
+
+function testStringParserSingle(
+  str: string,
+  outputFormatter?: (clauses: Clause[]) => string
+): void {
+  console.log('Input: ', str);
+  const parser = new StringParser(str);
+  const response = parser.parse();
+  // console.log('Tokens: ', parser.getTokens());
+  if (response.clauses && response.clauses.length > 0) {
+    if (outputFormatter) {
+      console.log('Output: ', outputFormatter(response.clauses));
+    } else {
+      console.log('Output: ', ...response.clauses);
+    }
+  }
+  if (response.errors && response.errors.length > 0) {
+    console.log('Errors: ', ...response.errors);
+  }
+  console.log('');
 }
 
 function testStringParser() {
   for (const example of stringExamples) {
     const parser = new StringParser(example);
-    testParserSingle(example, parser);
+    testStringParserSingle(example);
   }
+}
+
+function testBooleanParserSingle(
+  str: string,
+  outputFormatter?: (clauses: Clause[]) => string
+): void {
+  console.log('Input: ', str);
+  const parser = new BooleanParser(str);
+  const response = parser.parse();
+  // console.log('Tokens: ', parser.getTokens());
+  if (response.clauses && response.clauses.length > 0) {
+    if (outputFormatter) {
+      console.log('Output: ', outputFormatter(response.clauses));
+    } else {
+      console.log('Output: ', ...response.clauses);
+    }
+  }
+  if (response.errors && response.errors.length > 0) {
+    console.log('Errors: ', ...response.errors);
+  }
+  console.log('');
 }
 
 function testBooleanParser() {
   for (const example of booleanExamples) {
     const parser = new BooleanParser(example);
-    testParserSingle(example, parser);
+    testBooleanParserSingle(example);
   }
 }
 
@@ -289,67 +300,112 @@ function jsonFormatter(clauses: Clause[]): string {
   return str;
 }
 
+function testDateParserSingle(
+  str: string,
+  outputFormatter?: (clauses: Clause[]) => string
+): void {
+  console.log('Input: ', str);
+  const parser = new DateParser(str);
+  const response = parser.parse();
+  // console.log('Tokens: ', parser.getTokens());
+  if (response.clauses && response.clauses.length > 0) {
+    if (outputFormatter) {
+      console.log('Output: ', outputFormatter(response.clauses));
+    } else {
+      console.log('Output: ', ...response.clauses);
+    }
+  }
+  if (response.errors && response.errors.length > 0) {
+    console.log('Errors: ', ...response.errors);
+  }
+  console.log('');
+}
+
 function testDateParser() {
   for (const example of dateExamples) {
     const parser = new DateParser(example);
-    testParserSingle(example, parser);
-    //testParserSingle(example, parser, jsonFormatter);
+    testDateParserSingle(example);
   }
 }
 
-function testNumberSerializer(): void {
-  const examples = [
-    [{operator: '>', value: 10}],
-    [{startOperator: '>=', startValue: 20, endOperator: '<=', endValue: 30}],
-  ];
-  for (const example of numberExamples) {
-    testSerializerRoundtrip(
-      example,
-      new NumberParser(example),
-      clauses => new NumberSerializer(clauses)
-    );
+function testNumberRoundtrip(str: string): void {
+  console.log('Input:  ' + str);
+  const response = new NumberParser(str).parse();
+  // console.log('Clause: ', ...response.clauses, '\n');
+  if (response.clauses && response.clauses.length > 0) {
+    const result = new NumberSerializer(response.clauses || []).serialize();
+    console.log('Output: ' + result);
   }
+  if (response.errors && response.errors.length > 0) {
+    console.log('Errors: ', ...response.errors);
+  }
+  console.log('');
+}
+
+function testNumberSerializer(): void {
+  for (const example of numberExamples) {
+    testNumberRoundtrip(example);
+  }
+}
+
+function testStringRoundtrip(str: string): void {
+  console.log('Input:  ' + str);
+  const response = new StringParser(str).parse();
+  // console.log('Clause: ', ...response.clauses, '\n');
+  if (response.clauses && response.clauses.length > 0) {
+    const result = new StringSerializer(response.clauses || []).serialize();
+    console.log('Output: ' + result);
+  }
+  if (response.errors && response.errors.length > 0) {
+    console.log('Errors: ', ...response.errors);
+  }
+  console.log('');
 }
 
 function testStringSerializer(): void {
   for (const example of stringExamples) {
-    testSerializerRoundtrip(
-      example,
-      new StringParser(example),
-      clauses => new StringSerializer(clauses)
-    );
+    testStringRoundtrip(example);
   }
+}
+
+function testBooleanRoundtrip(str: string): void {
+  console.log('Input:  ' + str);
+  const response = new BooleanParser(str).parse();
+  // console.log('Clause: ', ...response.clauses, '\n');
+  if (response.clauses && response.clauses.length > 0) {
+    const result = new BooleanSerializer(response.clauses || []).serialize();
+    console.log('Output: ' + result);
+  }
+  if (response.errors && response.errors.length > 0) {
+    console.log('Errors: ', ...response.errors);
+  }
+  console.log('');
 }
 
 function testBooleanSerializer(): void {
   const examples = [[{operator: 'TRUE'}]];
   for (const example of booleanExamples) {
-    testSerializerRoundtrip(
-      example,
-      new BooleanParser(example),
-      clauses => new BooleanSerializer(clauses)
-    );
+    testBooleanRoundtrip(example);
   }
 }
 
+function testDateRoundtrip(str: string): void {
+  console.log('Input:  ' + str);
+  const response = new DateParser(str).parse();
+  // console.log('Clause: ', ...response.clauses, '\n');
+  if (response.clauses && response.clauses.length > 0) {
+    const result = new DateSerializer(response.clauses || []).serialize();
+    console.log('Output: ' + result);
+  }
+  if (response.errors && response.errors.length > 0) {
+    console.log('Errors: ', ...response.errors);
+  }
+  console.log('');
+}
+
 function testDateSerializer(): void {
-  const examples = [
-    [{prefix: 'BEFORE', values: [{type: 'day', value: 'yesterday'}]}],
-    [
-      {
-        start: [{type: 'day', value: 'today'}],
-        operator: 'TO',
-        end: [{type: 'day', value: 'tomorrow'}],
-      },
-    ],
-    [{type: 'day', value: 'today'}],
-  ];
   for (const example of dateExamples) {
-    testSerializerRoundtrip(
-      example,
-      new DateParser(example),
-      clauses => new DateSerializer(clauses)
-    );
+    testDateRoundtrip(example);
   }
 }
 
@@ -362,26 +418,33 @@ function printHeader(title: string): void {
 
 // Comment or uncomment the following function calls to disable/enable examples.
 function generateSamples() {
-  //printHeader('Tokenizer');
-  //testTokenizerString();
-  //testTokenizerNumber();
-  //testTokenizerMatchTypes();
-  //printHeader('Numbers');
-  //testNumberParser();
-  //printHeader('Strings');
-  //testStringParser();
-  //printHeader('Booleans');
-  //testBooleanParser();
-  //printHeader('Dates and Times');
-  //testDateParser();
-  printHeader('Number Serializer');
-  testNumberSerializer();
-  printHeader('String Serializer');
-  testStringSerializer();
-  printHeader('Boolean Serializer');
-  testBooleanSerializer();
-  printHeader('Date and Time Serializer');
-  testDateSerializer();
+  try {
+    //printHeader('Tokenizer');
+    //testTokenizerString();
+    //testTokenizerNumber();
+    //testTokenizerMatchTypes();
+    printHeader('Numbers');
+    testNumberParser();
+    printHeader('Strings');
+    testStringParser();
+    printHeader('Booleans');
+    testBooleanParser();
+    printHeader('Dates and Times');
+    testDateParser();
+    printHeader('Number Serializer');
+    testNumberSerializer();
+    printHeader('String Serializer');
+    testStringSerializer();
+    printHeader('Boolean Serializer');
+    testBooleanSerializer();
+    printHeader('Date and Time Serializer');
+    testDateSerializer();
+  } catch (ex: Error | unknown) {
+    if (ex instanceof Error) console.error('Thrown Error: ', ex.message);
+    else {
+      console.error('Thrown Unknown error: ', ex);
+    }
+  }
 }
 
 generateSamples();

@@ -1,7 +1,11 @@
 import {SpecialToken, Tokenizer, TokenizerParams} from './tokenizer';
-import {BooleanClause, BooleanOperator} from './clause_types';
+import {
+  BooleanClause,
+  BooleanOperator,
+  BooleanParserResponse,
+  FilterError,
+} from './clause_types';
 import {BaseParser} from './base_parser';
-import {FilterParserResponse, FilterError} from './filter_types';
 
 export class BooleanParser extends BaseParser {
   constructor(input: string) {
@@ -28,7 +32,7 @@ export class BooleanParser extends BaseParser {
     this.tokens = Tokenizer.convertSpecialWords(this.tokens, specialWords);
   }
 
-  public parse(): FilterParserResponse {
+  public parse(): BooleanParserResponse {
     this.index = 0;
     this.tokenize();
     const clauses: BooleanClause[] = [];
