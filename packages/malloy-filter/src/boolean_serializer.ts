@@ -1,9 +1,8 @@
-import {BooleanClause, Clause} from './clause_types';
-import {BaseSerializer} from './base_serializer';
+import {BooleanClause} from './clause_types';
 
-export class BooleanSerializer extends BaseSerializer {
-  constructor(clauses: Clause[]) {
-    super(clauses);
+export class BooleanSerializer {
+  constructor(private clauses: BooleanClause[]) {
+    this.clauses = clauses;
   }
 
   public serialize(): string {
@@ -15,7 +14,7 @@ export class BooleanSerializer extends BaseSerializer {
     return clause.operator === 'NOTNULL' ? '-NULL' : clause.operator;
   }
 
-  private static clauseToString(clauses: Clause[]): string {
+  private static clauseToString(clauses: BooleanClause[]): string {
     let result = '';
     for (const clause of clauses) {
       if ('operator' in clause) {

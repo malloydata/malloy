@@ -5,11 +5,11 @@ import {
   NumberOperator,
   NumberRangeOperator,
   NumberClause,
-  Clause,
+  NumberParserResponse,
+  FilterError,
 } from './clause_types';
 import {BaseParser} from './base_parser';
 import {Token} from './token_types';
-import {FilterParserResponse, FilterError} from './filter_types';
 
 export class NumberParser extends BaseParser {
   constructor(input: string) {
@@ -46,7 +46,7 @@ export class NumberParser extends BaseParser {
     this.tokens = tokenizer.parse();
   }
 
-  public parse(): FilterParserResponse {
+  public parse(): NumberParserResponse {
     this.index = 0;
     this.tokenize();
     let clauses: NumberClause[] = [];
@@ -281,7 +281,7 @@ export class NumberParser extends BaseParser {
     return false;
   }
 
-  private checkSimpleNumber(clauses: Clause[]): boolean {
+  private checkSimpleNumber(clauses: NumberClause[]): boolean {
     if (this.getNext().type === 'word') {
       const numericValue: number = NumberParser.parseNumber(
         this.getAt(this.index).value
@@ -296,7 +296,7 @@ export class NumberParser extends BaseParser {
     return false;
   }
 
-  private checkNull(clauses: Clause[]): boolean {
+  private checkNull(clauses: NumberClause[]): boolean {
     if (this.getNext().type === 'NULL' || this.getNext().type === 'NOTNULL') {
       const tokenType = this.getNext().type === 'NULL' ? '=' : '!=';
       const clause: NumberCondition = {operator: tokenType, values: [null]};

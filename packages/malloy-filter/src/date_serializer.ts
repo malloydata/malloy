@@ -1,17 +1,13 @@
 import {
-  DateRange,
   DateMoment,
-  DateMomentInterval,
-  DateMomentNumberInterval,
-  DateMomentNumberUnit,
-  DateMomentNumber,
-  Clause,
-} from './clause_types';
-import {BaseSerializer} from './base_serializer';
+  DateBetweenClause,
+  DateForClause,
+  DateClause,
+} from './date_types';
 
-export class DateSerializer extends BaseSerializer {
-  constructor(clauses: Clause[]) {
-    super(clauses);
+export class DateSerializer {
+  constructor(private clauses: DateClause[]) {
+    this.clauses = clauses;
   }
 
   public serialize(): string {
@@ -19,95 +15,67 @@ export class DateSerializer extends BaseSerializer {
     return result.trim().replace(/,$/, '');
   }
 
-  private static dateMomentToString(operator: string, clause: Clause): string {
-    if (
-      operator === 'NOW' ||
-      operator === 'TODAY' ||
-      operator === 'YESTERDAY' ||
-      operator === 'TOMORROW'
-    ) {
-      const custom: DateMoment = clause as DateMoment;
-      return custom.prefix ? custom.prefix + ' ' + operator : operator;
-    } else if (
-      operator === 'LAST' ||
-      operator === 'THIS' ||
-      operator === 'NEXT'
-    ) {
-      const custom: DateMomentInterval = clause as DateMomentInterval;
-      let value = custom.operator + ' ' + custom.unit;
-      if (custom.prefix) {
-        value = custom.prefix + ' ' + value;
-      }
-      return value;
-    } else if (operator === 'LASTN' || operator === 'NEXTN') {
-      const custom: DateMomentNumberInterval =
-        clause as DateMomentNumberInterval;
-      operator = operator.substring(0, 4); // Strip "N"
-      let value = operator + ' ' + custom.value + ' ' + custom.unit;
-      if (custom.prefix) {
-        value = custom.prefix + ' ' + value;
-      }
-      return value;
-    } else if (operator === 'AGO' || operator === 'FROMNOW') {
-      const custom: DateMomentNumberInterval =
-        clause as DateMomentNumberInterval;
-      if (operator === 'FROMNOW') operator = 'FROM NOW';
-      let value = custom.value + ' ' + custom.unit + ' ' + operator;
-      if (custom.prefix) {
-        value = custom.prefix + ' ' + value;
-      }
-      return value;
-    } else if (operator === 'TIMEBLOCK') {
-      const custom: DateMomentNumberUnit = clause as DateMomentNumberUnit;
-      let value = custom.value + ' ' + custom.unit;
-      if (custom.prefix) {
-        value = custom.prefix + ' ' + value;
-      }
-      return value;
-    } else if (operator === 'DATE' || operator === 'DATETIME') {
-      const custom: DateMomentNumber = clause as DateMomentNumber;
-      let value = custom.date;
-      if (custom.time) {
-        value = value + ' ' + custom.time;
-      }
-      if (custom.prefix) {
-        value = custom.prefix + ' ' + value;
-      }
-      return value;
+  private static dateMomentToString(moment: DateMoment): string {
+    if (moment.type === 'ABSOLUTE') {
+      return moment.date;
+    } else if (moment.type === 'INTERVAL') {
+      return moment.kind + ' ' + moment.unit;
+    } else if (moment.type === 'NAMED') {
+      return moment.name;
+    } else if (moment.type === 'OFFSET_FROM_NOW') {
+      const direction = moment.direction === 'FROMNOW' ? 'FROM NOW' : 'AGO';
+      return moment.amount + ' ' + moment.unit + ' ' + direction;
+    } else if (moment.type === 'SPAN_FROM_NOW') {
+      return moment.direction + ' ' + moment.amount + ' ' + moment.unit;
+    } else {
+      throw new Error('moment type not recognized ' + JSON.stringify(moment));
     }
-    return '';
   }
 
-  private static dateRangeToString(
-    operator: 'TO' | 'FOR',
-    clause: DateRange
-  ): string {
+  private static goDateBetweenClause(clause: DateBetweenClause): string {
     return (
-      DateSerializer.dateMomentToString(clause.start.operator, clause.start) +
-      ' ' +
-      clause.operator +
-      ' ' +
-      DateSerializer.dateMomentToString(clause.end.operator, clause.end)
+      DateSerializer.dateMomentToString(clause.from) +
+      ' TO ' +
+      DateSerializer.dateMomentToString(clause.to)
     );
   }
 
-  private static clauseToString(operator: string, clause: Clause): string {
-    if (operator === 'TO' || operator === 'FOR') {
-      const custom = clause as DateRange;
-      return DateSerializer.dateRangeToString(operator, custom);
-    }
-    return DateSerializer.dateMomentToString(operator, clause);
+  private static goDateForClause(clause: DateForClause): string {
+    return (
+      DateSerializer.dateMomentToString(clause.from) +
+      ' FOR ' +
+      clause.duration.amount +
+      ' ' +
+      clause.duration.unit
+    );
   }
 
-  private static clausesToString(clauses: Clause[]): string {
+  private static clauseToString(clause: DateClause): string {
+    if (!('operator' in clause)) {
+      throw new Error('Invalid date clause ' + JSON.stringify(clause));
+    }
+    if (clause.operator === 'TO_RANGE') {
+      return DateSerializer.goDateBetweenClause(clause);
+    } else if (clause.operator === 'FOR_RANGE') {
+      return DateSerializer.goDateForClause(clause);
+    } else if (clause.operator === 'BEFORE') {
+      return 'BEFORE ' + DateSerializer.dateMomentToString(clause.moment);
+    } else if (clause.operator === 'AFTER') {
+      return 'AFTER ' + DateSerializer.dateMomentToString(clause.moment);
+    } else if (clause.operator === 'ON') {
+      return DateSerializer.dateMomentToString(clause.moment);
+    } else if (clause.operator === 'DURATION') {
+      return clause.duration.amount + ' ' + clause.duration.unit;
+    } else {
+      throw new Error('Clause type not recognized ' + JSON.stringify(clause));
+    }
+  }
+
+  private static clausesToString(clauses: DateClause[]): string {
     let result = '';
     for (const clause of clauses) {
-      if ('operator' in clause) {
-        result += DateSerializer.clauseToString(clause.operator, clause);
-        result += ', ';
-      } else {
-        throw new Error('Invalid date clause ' + JSON.stringify(clause));
-      }
+      result += DateSerializer.clauseToString(clause);
+      result += ', ';
     }
     return result;
   }

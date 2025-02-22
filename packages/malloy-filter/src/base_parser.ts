@@ -1,5 +1,4 @@
 import {Token} from './token_types';
-import {FilterParserResponse} from './filter_types';
 
 export abstract class BaseParser {
   protected inputString: string;
@@ -15,8 +14,6 @@ export abstract class BaseParser {
   public getTokens(): Token[] {
     return this.tokens;
   }
-
-  public abstract parse(): FilterParserResponse;
 
   protected getAt(index: number): Token {
     return this.tokens[index];
