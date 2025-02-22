@@ -699,6 +699,7 @@ export class ASTQuery extends ASTObjectNode<
   Malloy.Query,
   {
     definition: ASTQueryDefinition;
+    annotations?: ASTAnnotationList;
   }
 > {
   model: Malloy.ModelInfo;
@@ -767,6 +768,8 @@ export class ASTQuery extends ASTObjectNode<
     }
     super(query, {
       definition: ASTQueryDefinition.from(query.definition),
+      annotations:
+        query.annotations && new ASTAnnotationList(query.annotations),
     });
     this.model = model;
     if (source) {
@@ -782,6 +785,18 @@ export class ASTQuery extends ASTObjectNode<
     this.edit();
     this.children.definition = definition;
     definition.parent = this;
+  }
+
+  get annotations() {
+    return this.children.annotations;
+  }
+
+  getOrAddAnnotations() {
+    if (this.annotations) return this.annotations;
+    this.edit();
+    const annotations = new ASTAnnotationList([]);
+    this.children.annotations = annotations;
+    return annotations;
   }
 
   /**
@@ -935,6 +950,19 @@ export class ASTQuery extends ASTObjectNode<
       },
     });
     return this.definition.view.asReferenceViewDefinition();
+  }
+
+  getInheritedAnnotations(): Malloy.Annotation[] {
+    if (this.definition instanceof ASTReferenceQueryDefinition) {
+      const query = this.getQueryInfo(this.definition.name);
+      return query.annotations ?? [];
+    } else if (this.definition instanceof ASTRefinementQueryDefinition) {
+      const query = this.getQueryInfo(this.definition.queryReference.name);
+      return query.annotations ?? [];
+    } else if (this.definition instanceof ASTArrowQueryDefinition) {
+      return this.definition.view.getInheritedAnnotations();
+    }
+    return [];
   }
 }
 
@@ -1199,6 +1227,8 @@ export class ASTUnimplemented<T> extends ASTNode<T> {
 
 export interface IASTQueryDefinition {
   getOrAddDefaultSegment(): ASTSegmentViewDefinition;
+  reorderFields(names: string[]): void;
+
   /**
    * Upward propagation of name change; change order bys to use a new name for a field.
    * @internal
@@ -1286,6 +1316,13 @@ export class ASTArrowQueryDefinition
   /**
    * @internal
    */
+  get query() {
+    return this.parent.asQuery();
+  }
+
+  /**
+   * @internal
+   */
   renameOrderBys(oldName: string, newName: string): void {
     this.renameOrderBysInSelf(oldName, newName);
   }
@@ -1310,6 +1347,14 @@ export class ASTArrowQueryDefinition
    */
   removeOrderBysInSelf(name: string): void {
     this.view.removeOrderBysInSelf(name);
+  }
+
+  reorderFields(names: string[]): void {
+    if (this.view instanceof ASTSegmentViewDefinition) {
+      this.view.reorderFields(names);
+    } else {
+      this.query.getOrAddAnnotations().setTagProperty(['field_order'], names);
+    }
   }
 }
 
@@ -1394,6 +1439,10 @@ export class ASTRefinementQueryDefinition
   removeOrderBysInSelf(name: string): void {
     this.refinement.removeOrderBysInSelf(name);
   }
+
+  reorderFields(names: string[]): void {
+    this.query.getOrAddAnnotations().setTagProperty(['field_order'], names);
+  }
 }
 
 export class ASTReferenceQueryDefinition
@@ -1472,6 +1521,10 @@ export class ASTReferenceQueryDefinition
   removeOrderBysInSelf(_name: string): void {
     return;
   }
+
+  reorderFields(names: string[]): void {
+    this.query.getOrAddAnnotations().setTagProperty(['field_order'], names);
+  }
 }
 
 export interface IASTViewDefinition {
@@ -1486,6 +1539,7 @@ export interface IASTViewDefinition {
     isValidViewRefinement: boolean;
     error?: string;
   };
+  getInheritedAnnotations(): Malloy.Annotation[];
   /**
    * Upward propagation of name change; change order bys to use a new name for a field.
    * @internal
@@ -1682,12 +1736,17 @@ export class ASTReferenceViewDefinition
     return this.name;
   }
 
-  getRefinementSchema(): Malloy.Schema {
+  getViewInfo(): Malloy.FieldInfoWithView {
     const schema = this.getInputSchema();
     const view = ASTNode.schemaGet(schema, this.name); // TODO path
     if (view.kind !== 'view') {
       throw new Error('Not a view');
     }
+    return view;
+  }
+
+  getRefinementSchema(): Malloy.Schema {
+    const view = this.getViewInfo();
     return view.schema;
   }
 
@@ -1717,6 +1776,11 @@ export class ASTReferenceViewDefinition
    */
   removeOrderBysInSelf(_name: string): void {
     return;
+  }
+
+  getInheritedAnnotations(): Malloy.Annotation[] {
+    const view = this.getViewInfo();
+    return view.annotations ?? [];
   }
 }
 
@@ -1819,6 +1883,10 @@ export class ASTArrowViewDefinition
    */
   removeOrderBysInSelf(name: string): void {
     this.view.removeOrderBysInSelf(name);
+  }
+
+  getInheritedAnnotations(): Malloy.Annotation[] {
+    return [];
   }
 }
 
@@ -1948,6 +2016,10 @@ export class ASTRefinementViewDefinition
     this.base.removeOrderBysInSelf(name);
     this.refinement.removeOrderBysInSelf(name);
   }
+
+  getInheritedAnnotations(): Malloy.Annotation[] {
+    return this.base.getInheritedAnnotations();
+  }
 }
 
 export class ASTSegmentViewDefinition
@@ -2010,6 +2082,50 @@ export class ASTSegmentViewDefinition
         }
       }
     }
+  }
+
+  reorderFields(names: string[]): void {
+    const leadingOperations: ASTViewOperation[] = [];
+    const trailingOperations: ASTViewOperation[] = [];
+    const opsByName: {
+      [name: string]:
+        | ASTAggregateViewOperation
+        | ASTGroupByViewOperation
+        | ASTNestViewOperation;
+    } = {};
+    let seenAnyNamed = false;
+    for (const operation of this.operations.iter()) {
+      if (
+        operation instanceof ASTAggregateViewOperation ||
+        operation instanceof ASTGroupByViewOperation ||
+        operation instanceof ASTNestViewOperation
+      ) {
+        if (names.includes(operation.name)) {
+          opsByName[operation.name] = operation;
+          seenAnyNamed = true;
+          continue;
+        }
+      }
+      if (seenAnyNamed) {
+        trailingOperations.push(operation);
+      } else {
+        leadingOperations.push(operation);
+      }
+    }
+    const middleOperations: ASTViewOperation[] = [];
+    for (const name of names) {
+      const operation = opsByName[name];
+      if (operation === undefined) {
+        throw new Error(`No field named ${name}`);
+      }
+      middleOperations.push(operation);
+    }
+    const operations = [
+      ...leadingOperations,
+      ...middleOperations,
+      ...trailingOperations,
+    ];
+    this.operations.items = operations;
   }
 
   public renameField(
@@ -2487,6 +2603,10 @@ export class ASTSegmentViewDefinition
   } {
     return isValidViewRefinement(this, name);
   }
+
+  getInheritedAnnotations(): Malloy.Annotation[] {
+    return [];
+  }
 }
 
 export class ASTViewOperationList extends ASTListNode<
@@ -2500,8 +2620,16 @@ export class ASTViewOperationList extends ASTListNode<
     );
   }
 
-  get operations() {
+  get items() {
     return this.children;
+  }
+
+  /**
+   * @internal
+   */
+  set items(operations: ASTViewOperation[]) {
+    this.edit();
+    this.children = operations;
   }
 
   /**
@@ -2711,28 +2839,12 @@ export class ASTGroupByViewOperation extends ASTObjectNode<
     };
   }
 
-  private tagFromAnnotations(
-    prefix: string | RegExp,
-    annotations: string[] = [],
-    inherited?: Tag
-  ) {
-    const filteredLines = annotations.filter(l =>
-      typeof prefix === 'string' ? l.startsWith(prefix) : l.match(prefix)
-    );
-    return Tag.fromTagLines(filteredLines, inherited).tag ?? new Tag();
-  }
-
-  private getInheritedTagLines(): string[] {
-    const fieldInfo = this.getFieldInfo();
-    return fieldInfo.annotations?.map(a => a.value) ?? [];
-  }
-
   /**
    * @internal
    * TODO make external or delete
    */
   getInheritedTag(prefix: RegExp | string = '# ') {
-    return this.tagFromAnnotations(prefix, this.getInheritedTagLines());
+    return tagFromAnnotations(prefix, this.field.getInheritedAnnotations());
   }
 
   private get annotations() {
@@ -2746,99 +2858,24 @@ export class ASTGroupByViewOperation extends ASTObjectNode<
     this.field.annotations = annotations;
   }
 
-  private getIntrinsicTagLines(): string[] {
-    return this.annotations?.annotations.map(a => a.value) ?? [];
+  getOrAddAnnotations() {
+    return this.field.getOrAddAnnotations();
   }
 
   /**
    * @internal
    * TODO make external or delete
    */
-  getIntrinsicTags(prefix: RegExp | string = '# ') {
-    return this.tagFromAnnotations(prefix, this.getIntrinsicTagLines());
+  getIntrinsicTag(prefix: RegExp | string = '# ') {
+    return this.annotations?.getIntrinsicTag(prefix) ?? new Tag();
   }
 
   /**
    * @internal
    * TODO make external or delete
    */
-  getEffectiveTags(prefix: RegExp | string = '# ') {
-    return this.tagFromAnnotations(prefix, [
-      ...this.getInheritedTagLines(),
-      ...this.getIntrinsicTagLines(),
-    ]);
-  }
-
-  // TODO push this into Tag library
-  private tagHasPropertyPath(tag: Tag, path: Path) {
-    let currentTag: TagInterface = tag;
-    for (const segment of path.slice(0, -1)) {
-      if (typeof segment === 'number') {
-        if (currentTag.eq === undefined) {
-          return false;
-        } else if (!Array.isArray(currentTag.eq)) {
-          return false;
-        } else if (currentTag.eq.length <= segment) {
-          return false;
-        }
-        currentTag = currentTag.eq[segment];
-      } else {
-        if (currentTag === undefined) {
-          return false;
-        }
-        const properties = currentTag.properties ?? {};
-        if (segment in properties) {
-          currentTag = properties[segment];
-        } else {
-          return false;
-        }
-      }
-    }
-    return true;
-  }
-
-  private setTagPropertyPath(
-    tag: Tag,
-    path: Path,
-    value: string | number | string[] | number[] | null
-  ): void {
-    let currentTag: TagInterface = tag;
-    for (const segment of path) {
-      if (typeof segment === 'number') {
-        if (currentTag.eq === undefined || !Array.isArray(currentTag.eq)) {
-          currentTag.eq = Array.from({length: segment}).map(_ => ({}));
-        } else if (currentTag.eq.length <= segment) {
-          const values = currentTag.eq;
-          const newVal = Array.from({length: segment}).map((_, i) =>
-            i < values.length ? values[i] : {}
-          );
-          currentTag.eq = newVal;
-        }
-        currentTag = currentTag.eq[segment];
-      } else {
-        const properties = currentTag.properties;
-        if (properties === undefined) {
-          currentTag.properties = {[segment]: {}};
-          currentTag = currentTag.properties[segment];
-        } else if (segment in properties) {
-          currentTag = properties[segment];
-        } else {
-          properties[segment] = {};
-          currentTag = properties[segment];
-        }
-      }
-    }
-    if (value === null) {
-      currentTag.eq = undefined;
-    } else if (typeof value === 'string') {
-      currentTag.eq = value;
-    } else if (typeof value === 'number') {
-      currentTag.eq = value.toString(); // TODO big numbers?
-    } else if (Array.isArray(value)) {
-      currentTag.eq = value.map((v: string | number) => {
-        return {eq: typeof v === 'string' ? v : v.toString()};
-      });
-    }
+  getTag(prefix: RegExp | string = '# ') {
+    return this.annotations?.getTag(prefix) ?? this.getInheritedTag(prefix);
   }
 
   /**
@@ -2848,59 +2885,12 @@ export class ASTGroupByViewOperation extends ASTObjectNode<
    * @param value Value to set at that path
    * @param prefix Prefix of annotations to consider, and prefix to use when creating a new annotation
    */
-  setTagProperty(
-    path: Path,
-    value: string | number | string[] | number[] | null,
-    prefix = '# '
-  ) {
-    const lines = [
-      ...this.getInheritedTagLines().map((l, i) => ({
-        annotation: l,
-        index: i,
-        editable: false,
-        type: 'inherited',
-      })),
-      ...this.getIntrinsicTagLines().map((l, i) => ({
-        annotation: l,
-        index: i,
-        editable: true,
-        type: 'intrinsic',
-      })),
-    ].filter(line =>
-      typeof prefix === 'string'
-        ? line.annotation.startsWith(prefix)
-        : line.annotation.match(prefix)
-    );
-    for (let i = lines.length - 1; i > 0; i--) {
-      const {annotation, index, editable, type} = lines[i];
-      const tag = Tag.fromTagLine(annotation).tag;
-      if (this.tagHasPropertyPath(tag, path)) {
-        if (editable) {
-          this.setTagPropertyPath(tag, path, value);
-          if (type === 'intrinsic') {
-            this.annotations!.index(index).value = tag.toString();
-          }
-        } else {
-          const tag = new Tag();
-          if (!this.annotations) this.annotations = new ASTAnnotationList([]);
-          this.annotations?.add(new ASTAnnotation({value: tag.toString()}));
-        }
-        return;
-      }
-    }
-    const lastLine = lines[lines.length - 1];
-    if (lastLine && lastLine.editable) {
-      const tag = Tag.fromTagLine(lastLine.annotation).tag;
-      this.setTagPropertyPath(tag, path, value);
-      if (lastLine.type === 'intrinsic') {
-        this.annotations!.index(lastLine.index).value = tag.toString();
-      }
-    } else {
-      const tag = new Tag();
-      this.setTagPropertyPath(tag, path, value);
-      if (!this.annotations) this.annotations = new ASTAnnotationList([]);
-      this.annotations.add(new ASTAnnotation({value: tag.toString()}));
-    }
+  setTagProperty(path: Path, value: TagValue, prefix = '# ') {
+    this.getOrAddAnnotations().setTagProperty(path, value, prefix);
+  }
+
+  removeTagProperty(path: Path, prefix = '# ') {
+    this.getOrAddAnnotations().removeTagProperty(path, prefix);
   }
 
   /**
@@ -3057,6 +3047,14 @@ export class ASTField extends ASTObjectNode<
     this.children.annotations = annotations;
   }
 
+  getOrAddAnnotations() {
+    if (this.annotations) return this.annotations;
+    this.edit();
+    const annotations = new ASTAnnotationList([]);
+    this.children.annotations = annotations;
+    return annotations;
+  }
+
   /**
    * @internal
    */
@@ -3066,6 +3064,10 @@ export class ASTField extends ASTObjectNode<
       | ASTAggregateViewOperation;
     const operationList = groupByOrAggregate.list;
     return operationList.segment;
+  }
+
+  getInheritedAnnotations(): Malloy.Annotation[] {
+    return this.expression.getInheritedAnnotations();
   }
 }
 
@@ -3115,13 +3117,22 @@ export class ASTReferenceExpression extends ASTObjectNode<
     return this.parent.asField();
   }
 
-  get fieldType() {
+  getFieldInfo(): Malloy.FieldInfoWithDimension | Malloy.FieldInfoWithMeasure {
     const schema = this.field.refinement.getInputSchema();
     const def = ASTNode.schemaGet(schema, this.name);
-    if (def.kind === 'dimension' || def.kind === 'measure') {
-      return def.type;
+    if (def.kind !== 'dimension' && def.kind !== 'measure') {
+      throw new Error('Invalid field for ASTReferenceExpression');
     }
-    throw new Error('Invalid field reference');
+    return def;
+  }
+
+  get fieldType() {
+    return this.getFieldInfo().type;
+  }
+
+  getInheritedAnnotations(): Malloy.Annotation[] {
+    const field = this.getFieldInfo();
+    return field.annotations ?? [];
   }
 }
 
@@ -3162,12 +3173,17 @@ export class ASTTimeTruncationExpression extends ASTObjectNode<
     return this.parent.asField();
   }
 
-  get fieldType() {
+  getFieldInfo(): Malloy.FieldInfoWithDimension | Malloy.FieldInfoWithMeasure {
     const schema = this.field.refinement.getInputSchema();
     const def = ASTNode.schemaGet(schema, this.name);
     if (def.kind !== 'dimension' && def.kind !== 'measure') {
-      throw new Error('Invalid field reference');
+      throw new Error('Invalid field for ASTReferenceExpression');
     }
+    return def;
+  }
+
+  get fieldType() {
+    const def = this.getFieldInfo();
     if (def.type.kind === 'date_type') {
       return {
         ...def.type,
@@ -3177,6 +3193,11 @@ export class ASTTimeTruncationExpression extends ASTObjectNode<
       return {...def.type, timeframe: this.truncation};
     }
     throw new Error('This type of field cannot have a time truncation');
+  }
+
+  getInheritedAnnotations(): Malloy.Annotation[] {
+    const field = this.getFieldInfo();
+    return field.annotations ?? [];
   }
 }
 
@@ -3213,13 +3234,22 @@ export class ASTFilteredFieldExpression extends ASTObjectNode<
     return this.parent.asField();
   }
 
-  get fieldType() {
+  getFieldInfo(): Malloy.FieldInfoWithMeasure {
     const schema = this.field.refinement.getInputSchema();
     const def = ASTNode.schemaGet(schema, this.name);
-    if (def.kind === 'dimension' || def.kind === 'measure') {
-      return def.type;
+    if (def.kind !== 'measure') {
+      throw new Error('Invalid field for ASTFilteredFieldExpression');
     }
-    throw new Error('Invalid field reference');
+    return def;
+  }
+
+  get fieldType() {
+    return this.getFieldInfo().type;
+  }
+
+  getInheritedAnnotations(): Malloy.Annotation[] {
+    const field = this.getFieldInfo();
+    return field.annotations ?? [];
   }
 }
 
@@ -3509,6 +3539,30 @@ export class ASTView extends ASTObjectNode<
   removeOrderBysInSelf(name: string): void {
     this.definition.removeOrderBysInSelf(name);
   }
+
+  reorderFields(names: string[]): void {
+    if (this.definition instanceof ASTSegmentViewDefinition) {
+      this.definition.reorderFields(names);
+    } else {
+      this.getOrAddAnnotations().setTagProperty(['field_order'], names);
+    }
+  }
+
+  get annotations() {
+    return this.children.annotations;
+  }
+
+  getOrAddAnnotations() {
+    if (this.annotations) return this.annotations;
+    this.edit();
+    const annotations = new ASTAnnotationList([]);
+    this.children.annotations = annotations;
+    return annotations;
+  }
+
+  getInheritedAnnotations(): Malloy.Annotation[] {
+    return this.definition.getInheritedAnnotations();
+  }
 }
 
 export class ASTLimitViewOperation extends ASTObjectNode<
@@ -3565,6 +3619,8 @@ function fieldTypeName(type: Malloy.FieldInfoType): string {
   return type;
 }
 
+type ASTAnnotationListParent = ASTQuery | ASTField | ASTView;
+
 export class ASTAnnotationList extends ASTListNode<
   Malloy.Annotation,
   ASTAnnotation
@@ -3576,8 +3632,68 @@ export class ASTAnnotationList extends ASTListNode<
     );
   }
 
+  get items() {
+    return this.children;
+  }
+
+  getInheritedAnnotations(): Malloy.Annotation[] {
+    const parent = this.parent as ASTAnnotationListParent;
+    return parent.getInheritedAnnotations();
+  }
+
+  getIntrinsicTag(prefix: RegExp | string = '# '): Tag {
+    return tagFromAnnotations(prefix, this.items);
+  }
+
+  getTag(prefix: RegExp | string = '# '): Tag {
+    const extending = Tag.fromTagLines(
+      this.getInheritedAnnotations().map(a => a.value)
+    ).tag;
+    return tagFromAnnotations(prefix, this.items, extending);
+  }
+
   get annotations() {
     return this.children.map(astAnnotation => astAnnotation.node);
+  }
+
+  setTagProperty(path: Path, value: TagValue, prefix = '# ') {
+    let firstMatch: ASTAnnotation | undefined = undefined;
+    for (let i = this.items.length - 1; i >= 0; i--) {
+      const annotation = this.index(i);
+      if (!annotation.hasPrefix(prefix)) continue;
+      firstMatch = annotation;
+      if (annotation.hasIntrinsicTagProperty(path)) {
+        annotation.setTagProperty(path, value);
+        return;
+      }
+    }
+    if (firstMatch) {
+      firstMatch.setTagProperty(path, value);
+    } else {
+      const tag = new Tag();
+      setTagPropertyPath(tag, path, value);
+      this.add(new ASTAnnotation({value: tag.toString()}));
+    }
+  }
+
+  removeTagProperty(path: Path, prefix = '# ') {
+    let firstMatch: ASTAnnotation | undefined = undefined;
+    for (let i = this.items.length - 1; i >= 0; i--) {
+      const annotation = this.index(i);
+      if (!annotation.hasPrefix(prefix)) continue;
+      firstMatch = annotation;
+      if (annotation.hasIntrinsicTagProperty(path)) {
+        annotation.removeTagProperty(path);
+        return;
+      }
+    }
+    if (firstMatch) {
+      firstMatch.removeTagProperty(path);
+    } else {
+      const tag = new Tag();
+      removeTagPropertyPath(tag, path, true);
+      this.add(new ASTAnnotation({value: tag.toString()}));
+    }
   }
 }
 
@@ -3611,7 +3727,174 @@ export class ASTAnnotation extends ASTObjectNode<
     return this.parent.asAnnotationList();
   }
 
+  get index() {
+    return this.list.indexOf(this);
+  }
+
   delete() {
     this.list.remove(this);
   }
+
+  getIntrinsicTag(): Tag {
+    return Tag.fromTagLines([this.value]).tag ?? new Tag();
+  }
+
+  getTag(): Tag {
+    const extending =
+      this.index === 0
+        ? Tag.fromTagLines(
+            this.list.getInheritedAnnotations().map(a => a.value)
+          ).tag ?? new Tag()
+        : this.list.index(this.index - 1).getTag();
+    return Tag.fromTagLines([this.value], extending).tag ?? new Tag();
+  }
+
+  hasPrefix(prefix: string) {
+    return this.value.startsWith(prefix);
+  }
+
+  hasIntrinsicTagProperty(path: Path) {
+    return tagHasPropertyPath(this.getIntrinsicTag(), path);
+  }
+
+  setTagProperty(path: Path, value: TagValue) {
+    this.value = setTagPropertyPath(this.getTag(), path, value).toString();
+  }
+
+  removeTagProperty(path: Path) {
+    this.value = removeTagPropertyPath(this.getTag(), path, true).toString();
+  }
+}
+
+export type TagValue = string | number | string[] | number[] | null;
+
+// TODO push this into Tag library
+function tagHasPropertyPath(tag: Tag, path: Path) {
+  let currentTag: TagInterface = tag;
+  for (const segment of path.slice(0, -1)) {
+    if (typeof segment === 'number') {
+      if (currentTag.eq === undefined) {
+        return false;
+      } else if (!Array.isArray(currentTag.eq)) {
+        return false;
+      } else if (currentTag.eq.length <= segment) {
+        return false;
+      }
+      currentTag = currentTag.eq[segment];
+    } else {
+      if (currentTag === undefined) {
+        return false;
+      }
+      const properties = currentTag.properties ?? {};
+      if (segment in properties) {
+        currentTag = properties[segment];
+      } else {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+function setTagPropertyPath(tag: Tag, path: Path, value: TagValue): Tag {
+  let currentTag: TagInterface = tag;
+  for (const segment of path) {
+    if (typeof segment === 'number') {
+      if (currentTag.eq === undefined || !Array.isArray(currentTag.eq)) {
+        currentTag.eq = Array.from({length: segment}).map(_ => ({}));
+      } else if (currentTag.eq.length <= segment) {
+        const values = currentTag.eq;
+        const newVal = Array.from({length: segment}).map((_, i) =>
+          i < values.length ? values[i] : {}
+        );
+        currentTag.eq = newVal;
+      }
+      currentTag = currentTag.eq[segment];
+    } else {
+      const properties = currentTag.properties;
+      if (properties === undefined) {
+        currentTag.properties = {[segment]: {}};
+        currentTag = currentTag.properties[segment];
+      } else if (segment in properties) {
+        currentTag = properties[segment];
+        if (currentTag.deleted) {
+          currentTag.deleted = false;
+        }
+      } else {
+        properties[segment] = {};
+        currentTag = properties[segment];
+      }
+    }
+  }
+  if (value === null) {
+    currentTag.eq = undefined;
+  } else if (typeof value === 'string') {
+    currentTag.eq = value;
+  } else if (typeof value === 'number') {
+    currentTag.eq = value.toString(); // TODO big numbers?
+  } else if (Array.isArray(value)) {
+    currentTag.eq = value.map((v: string | number) => {
+      return {eq: typeof v === 'string' ? v : v.toString()};
+    });
+  }
+  return tag;
+}
+
+function removeTagPropertyPath(tag: Tag, path: Path, hard = false): Tag {
+  let currentTag: TagInterface = tag;
+  for (const segment of path.slice(0, path.length - 1)) {
+    if (typeof segment === 'number') {
+      if (currentTag.eq === undefined || !Array.isArray(currentTag.eq)) {
+        if (!hard) return tag;
+        currentTag.eq = Array.from({length: segment}).map(_ => ({}));
+      } else if (currentTag.eq.length <= segment) {
+        if (!hard) return tag;
+        const values = currentTag.eq;
+        const newVal = Array.from({length: segment}).map((_, i) =>
+          i < values.length ? values[i] : {}
+        );
+        currentTag.eq = newVal;
+      }
+      currentTag = currentTag.eq[segment];
+    } else {
+      const properties = currentTag.properties;
+      if (properties === undefined) {
+        if (!hard) return tag;
+        currentTag.properties = {[segment]: {}};
+        currentTag = currentTag.properties[segment];
+      } else if (segment in properties) {
+        currentTag = properties[segment];
+      } else {
+        if (!hard) return tag;
+        properties[segment] = {};
+        currentTag = properties[segment];
+      }
+    }
+  }
+  const segment = path[path.length - 1];
+  if (typeof segment === 'string') {
+    if (currentTag.properties && segment in currentTag.properties) {
+      delete currentTag.properties[segment];
+    } else if (hard) {
+      currentTag.properties ??= {};
+      currentTag.properties[segment] = {deleted: true};
+    }
+  } else {
+    if (Array.isArray(currentTag.eq)) {
+      currentTag.eq.splice(segment, 1);
+    }
+  }
+  return tag;
+}
+
+function tagFromAnnotations(
+  prefix: string | RegExp,
+  annotations: Malloy.Annotation[] = [],
+  inherited?: Tag
+) {
+  const lines = annotations.map(a => a.value);
+  const filteredLines = lines.filter(l =>
+    typeof prefix === 'string' ? l.startsWith(prefix) : l.match(prefix)
+  );
+  return Tag.fromTagLines(filteredLines, inherited).tag ?? new Tag();
 }

@@ -310,6 +310,7 @@ stages: [
 
 struct Query {
   1: required QueryDefinition definition,
+  2: optional list<Annotation> annotations,
 }
 
 union QueryDefinition {

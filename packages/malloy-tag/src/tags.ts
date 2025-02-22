@@ -66,6 +66,7 @@ type TagValue = string | TagInterface[];
 export interface TagInterface {
   eq?: TagValue;
   properties?: TagDict;
+  deleted?: boolean;
 }
 
 export interface TagParse {
@@ -309,13 +310,20 @@ export class Tag implements TagInterface {
       }
     }
     function addChild(prop: string, child: TagInterface) {
+      if (child.deleted) {
+        annotation += `-${prop}`;
+        return;
+      }
       annotation += prop;
       if (child.eq !== undefined) {
         annotation += ` = ${child.eq}`;
       }
       if (child.properties) {
         const props = Object.keys(child.properties);
-        if (props.length === 1) {
+        if (
+          props.length === 1 &&
+          !props.some(c => (child.properties ?? {})[c].deleted)
+        ) {
           annotation += '.';
           addChildren(child);
         } else {

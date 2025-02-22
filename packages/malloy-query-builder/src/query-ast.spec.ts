@@ -11,6 +11,28 @@ import {flights_model} from './flights_model';
 import './expects';
 import {ASTQuery} from './query-ast';
 
+function dedent(strs: TemplateStringsArray) {
+  const str = strs.join('');
+  let lines = str.split('\n');
+  const firstNonEmptyLine = lines.findIndex(l => l.trim().length > 0);
+  let lastNonEmptyLine = 0;
+  for (let i = lines.length - 1; i >= 0; i--) {
+    if (lines[i].trim().length > 0) {
+      lastNonEmptyLine = i;
+      break;
+    }
+  }
+  lines = lines.slice(firstNonEmptyLine, lastNonEmptyLine + 1);
+  let minIndent: number | undefined = undefined;
+  for (const line of lines) {
+    if (line.trim().length === 0) continue;
+    const indent = line.length - line.trimStart().length;
+    if (minIndent === undefined || indent < minIndent) minIndent = indent;
+  }
+  if (!minIndent) return str;
+  return lines.map(l => l.slice(minIndent)).join('\n');
+}
+
 describe('query builder', () => {
   test('add an order by', () => {
     const from: Malloy.Query = {
@@ -235,12 +257,12 @@ describe('query builder', () => {
           },
         },
       },
-      malloy: `
-run: flights -> {
-  group_by:
-    carrier
-    origin_code
-}`.trim(),
+      malloy: dedent`
+        run: flights -> {
+          group_by:
+            carrier
+            origin_code
+        }`,
     });
   });
   test('add a nest', () => {
@@ -641,49 +663,109 @@ run: flights -> {
       malloy: 'run: flights -> { limit: 20 }',
     });
   });
-  test('add a tag property to a group by', () => {
-    const from: Malloy.Query = {
-      definition: {
-        kind: 'arrow',
-        source_reference: {name: 'flights'},
-        view: {
-          kind: 'segment',
-          operations: [],
-        },
-      },
-    };
-    expect((q: ASTQuery) => {
-      const gb = q.getOrAddDefaultSegment().addGroupBy('carrier');
-      gb.setTagProperty(['a', 'b', 'c'], 10);
-    }).toModifyQuery({
-      model: flights_model,
-      from,
-      to: {
+  describe('tags', () => {
+    test('add a tag property to a group by', () => {
+      const from: Malloy.Query = {
         definition: {
           kind: 'arrow',
           source_reference: {name: 'flights'},
           view: {
             kind: 'segment',
-            operations: [
-              {
-                kind: 'group_by',
-                field: {
-                  annotations: [{value: '# a.b.c = 10'}],
-                  expression: {
-                    kind: 'field_reference',
-                    name: 'carrier',
+            operations: [],
+          },
+        },
+      };
+      expect((q: ASTQuery) => {
+        const gb = q.getOrAddDefaultSegment().addGroupBy('carrier');
+        gb.setTagProperty(['a', 'b', 'c'], 10);
+      }).toModifyQuery({
+        model: flights_model,
+        from,
+        to: {
+          definition: {
+            kind: 'arrow',
+            source_reference: {name: 'flights'},
+            view: {
+              kind: 'segment',
+              operations: [
+                {
+                  kind: 'group_by',
+                  field: {
+                    annotations: [{value: '# a.b.c = 10'}],
+                    expression: {
+                      kind: 'field_reference',
+                      name: 'carrier',
+                    },
                   },
                 },
+              ],
+            },
+          },
+        },
+        malloy: dedent`
+          run: flights -> {
+            # a.b.c = 10
+            group_by: carrier
+          }`,
+      });
+    });
+    test('clear an inherited tag', () => {
+      const from: Malloy.Query = {
+        definition: {
+          kind: 'arrow',
+          source_reference: {name: 'flights'},
+          view: {
+            kind: 'segment',
+            operations: [],
+          },
+        },
+      };
+      expect((q: ASTQuery) => {
+        q.getOrAddDefaultSegment()
+          .addGroupBy('carrier')
+          .removeTagProperty(['a']);
+      }).toModifyQuery({
+        source: {
+          name: 'flights',
+          schema: {
+            fields: [
+              {
+                kind: 'dimension',
+                name: 'carrier',
+                type: {kind: 'string_type'},
+                annotations: [{value: '# a'}],
               },
             ],
           },
         },
-      },
-      malloy: `
-run: flights -> {
-  # a.b.c = 10
-  group_by: carrier
-}`.trim(),
+        from,
+        to: {
+          definition: {
+            kind: 'arrow',
+            source_reference: {name: 'flights'},
+            view: {
+              kind: 'segment',
+              operations: [
+                {
+                  kind: 'group_by',
+                  field: {
+                    annotations: [{value: '# -a'}],
+                    expression: {
+                      kind: 'field_reference',
+                      name: 'carrier',
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+        malloy: dedent`
+          run: flights -> {
+            # -a
+            group_by: carrier
+          }`,
+      });
     });
   });
   test('rename a group by', () => {

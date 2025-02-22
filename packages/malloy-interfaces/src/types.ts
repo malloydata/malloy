@@ -260,6 +260,7 @@ export type Position = {
 };
 export type Query = {
   definition: QueryDefinition;
+  annotations?: Array<Annotation>;
 };
 export type QueryArrow = {
   source_reference: Reference;
