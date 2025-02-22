@@ -69,9 +69,14 @@ export class StringParser extends BaseParser {
         this.index++;
       }
     }
-    const response: StringParserResponse = {clauses: StringParser.groupClauses(clauses), errors}
+    const response: StringParserResponse = {
+      clauses: StringParser.groupClauses(clauses),
+      errors,
+    };
     const quotes: QuoteType[] = StringParser.findQuotes(this.inputString);
-    if (quotes.length > 0) { response.quotes = quotes; }
+    if (quotes.length > 0) {
+      response.quotes = quotes;
+    }
     return response;
   }
 
@@ -132,7 +137,11 @@ export class StringParser extends BaseParser {
     const outputs: StringClause[] = [previous];
     for (let i = 1; i < clauses.length; i++) {
       const current = clauses[i];
-      if (previous.operator === current.operator && 'values' in previous && 'values' in current) {
+      if (
+        previous.operator === current.operator &&
+        'values' in previous &&
+        'values' in current
+      ) {
         previous.values.push(...current.values);
       } else {
         previous = current;

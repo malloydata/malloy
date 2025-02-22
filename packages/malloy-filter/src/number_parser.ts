@@ -99,7 +99,8 @@ export class NumberParser extends BaseParser {
       } else if (
         previous !== undefined &&
         previous.operator === clause.operator &&
-        'values' in previous && 'values' in clause
+        'values' in previous &&
+        'values' in clause
       ) {
         previous.values.push(...clause.values);
       } else {
