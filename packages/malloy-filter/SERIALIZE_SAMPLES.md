@@ -1,16 +1,15 @@
 # Serializers
 
-Each parser has a complementary serializer that converts the structured clause list back to string format.  Below are round-trip samples: `string` to `Clause[]` back to `string`.
-
-Round-trip Examples: 
+Each parser has a complementary serializer that converts the structured clause list back
+to string format.  Below are round-trip samples: `string` to `Clause[]` back to `string`.
+Round-trip Examples:
 
 ```code
     Input  >  parse  >  Clause[]  >  serialize  >  Output
     string                                         string
 ```
 
----
-
+-------------------------------------------------------------------------
 ## Number Serializer
 
 ```code
@@ -20,8 +19,8 @@ Output: 5
 Input:  !=5
 Output: !=5
 
-Input:  1, 3, null , 7
-Output: 1, 3, NULL, 7
+Input:  1, 3, 5, null
+Output: 1, 3, 5, NULL
 
 Input:  <1, >=100
 Output: <1, >=100
@@ -57,8 +56,7 @@ Input:  [0,10], 20, NULL, ( 72, 82 ]
 Output: [0, 10], 20, NULL, (72, 82]
 
 Input:  , notanumber,, "null", apple pear orange, nulle, nnull, >=,
-Errors:  { message: 'Invalid expression', startIndex: 2, endIndex: 12 } { message: 'Invalid expression', startIndex: 15, endIndex: 21 } { message: 'Invalid expression', startIndex: 23, endIndex: 28 } { message: 'Invalid expression', startIndex: 29, endIndex: 33 } { message: 'Invalid expression', startIndex: 34, endIndex: 40 } { message: 'Invalid expression', startIndex: 42, endIndex: 47 } { message:
- 'Invalid expression', startIndex: 49, endIndex: 54 } { message: 'Invalid expression', startIndex: 56, endIndex: 58 }
+Errors:  { message: 'Invalid expression', startIndex: 2, endIndex: 12 } { message: 'Invalid expression', startIndex: 15, endIndex: 21 } { message: 'Invalid expression', startIndex: 23, endIndex: 28 } { message: 'Invalid expression', startIndex: 29, endIndex: 33 } { message: 'Invalid expression', startIndex: 34, endIndex: 40 } { message: 'Invalid expression', startIndex: 42, endIndex: 47 } { message: 'Invalid expression', startIndex: 49, endIndex: 54 } { message: 'Invalid expression', startIndex: 56, endIndex: 58 }
 
 Input:  [cat, 100], <cat
 Errors:  { message: 'Invalid number', startIndex: 1, endIndex: 4 } { message: 'Invalid expression', startIndex: 12, endIndex: 13 } { message: 'Invalid expression', startIndex: 13, endIndex: 16 }
@@ -68,8 +66,7 @@ Output: -5.5, 10
 Errors:  { message: 'Invalid expression', startIndex: 5, endIndex: 7 }
 ```
 
----
-
+-------------------------------------------------------------------------
 ## String Serializer
 
 ```code
@@ -169,10 +166,10 @@ Input:  one ,Null ,  Empty,E M P T Y Y,EEmpty,        emptIEs
 Output: one, NULL, EMPTY, E M P T Y Y, EEmpty, emptIEs
 
 Input:
+
 ```
 
----
-
+-------------------------------------------------------------------------
 ## Boolean Serializer
 
 ```code
@@ -182,14 +179,17 @@ Output: TRUE
 Input:  FALSE
 Output: FALSE
 
+Input:  =false
+Output: =FALSE
+
 Input:  null
 Output: NULL
 
 Input:  -NULL
 Output: -NULL
 
-Input:   True , faLSE,NULl,-null
-Output: TRUE, FALSE, NULL, -NULL
+Input:   True , faLSE,=false,NULl,-null
+Output: TRUE, FALSE, =FALSE, NULL, -NULL
 
 Input:  -'null'
 Errors:  { message: "Invalid token -'null'", startIndex: 0, endIndex: 7 }
@@ -202,11 +202,11 @@ Errors:  { message: 'Invalid token nnull', startIndex: 0, endIndex: 5 }
 
 Input:   truee
 Errors:  { message: 'Invalid token truee', startIndex: 1, endIndex: 6 }
+
 ```
 
----
-
-## Date and Time Serializer
+-------------------------------------------------------------------------
+## Date Serializer
 
 ```code
 Input:  this month
@@ -221,9 +221,6 @@ Output: 3 DAYS AGO
 Input:  3 months ago for 2 days
 Output: 3 MONTHS AGO FOR 2 DAYS
 
-Input:  after 2025 seconds
-Output: AFTER 2025 SECONDS
-
 Input:  2025 weeks ago
 Output: 2025 WEEKS AGO
 
@@ -236,8 +233,8 @@ Output: BEFORE 2025-08-30 08:30:20
 Input:  after 2025-10-05
 Output: AFTER 2025-10-05
 
-Input:  2025-08-30 12:00:00 to 2025-09-18 14:00:00
-Output: 2025-08-30 12:00:00 TO 2025-09-18 14:00:00
+Input:  2025-08-30 12:00 to 2025-09-18 14:30
+Output: 2025-08-30 12:00 TO 2025-09-18 14:30
 
 Input:  this year
 Output: THIS YEAR
@@ -281,6 +278,14 @@ Output: NOW
 Input:  now to next month
 Output: NOW TO NEXT MONTH
 
+Input:  null
+Output: NULL
+Errors:  { message: 'Invalid token NULL', startIndex: 0, endIndex: 4 }
+
+Input:  -null,
+Output: -NULL
+Errors:  { message: 'Invalid token -NULL', startIndex: 0, endIndex: 5 }
+
 Input:   yyesterday
 Errors:  { message: 'Invalid token yyesterday', startIndex: 1, endIndex: 11 }
 
@@ -296,5 +301,13 @@ Input:  from now
 Output: NOW
 Errors:  { message: 'Invalid token FROM', startIndex: 0, endIndex: 4 }
 
+Input:  2025-12-25 12:32:
+Output: 2025-12-25
+Errors:  { message: 'Invalid token 12:32:', startIndex: 11, endIndex: 17 }
+
+Input:  after 2025 seconds
+Errors:  { message: 'Invalid token ', startIndex: 6, endIndex: 18 }
+
 Input:
+
 ```

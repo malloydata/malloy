@@ -1,16 +1,12 @@
-import {SpecialToken, Tokenizer, TokenizerParams} from './tokenizer';
-import {BooleanParser} from './boolean_parser';
-import {StringParser} from './string_parser';
-import {NumberParser} from './number_parser';
-import {DateParser} from './date_parser';
-import {BooleanSerializer} from './boolean_serializer';
-import {StringSerializer} from './string_serializer';
-import {NumberSerializer} from './number_serializer';
-import {DateSerializer} from './date_serializer';
-import {BooleanClause, NumberClause, StringClause} from './clause_types';
-import {DateClause} from './date_types';
-
-type Clause = BooleanClause | DateClause | NumberClause | StringClause;
+import * as fs from 'fs';
+import { BooleanParser } from './boolean_parser';
+import { StringParser } from './string_parser';
+import { NumberParser } from './number_parser';
+import { DateParser } from './date_parser';
+import { BooleanSerializer } from './boolean_serializer';
+import { StringSerializer } from './string_serializer';
+import { NumberSerializer } from './number_serializer';
+import { DateSerializer } from './date_serializer';
 
 const numberExamples = [
   '5',
@@ -85,7 +81,6 @@ const dateExamples = [
   '3 days',
   '3 days ago',
   '3 months ago for 2 days',
-  'after 2025 seconds',
   '2025 weeks ago',
   'before 3 days ago',
   'before 2025-08-30 08:30:20',
@@ -113,338 +108,208 @@ const dateExamples = [
   '7', // Bad syntax
   'from now', // Bad syntax
   '2025-12-25 12:32:', // Bad syntax
+  'after 2025 seconds', // Bad syntax
   '',
 ];
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable no-console */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
-function testTokenizerSingle(str: string, params: TokenizerParams): void {
-  const tokenizer = new Tokenizer(str, params);
-  console.log(str, ' -> ', tokenizer.parse(), '\n');
-}
+class GenerateSamples {
+  public samplesFile: fs.WriteStream = fs.createWriteStream('dist/SAMPLES.md');
+  public serializedFile: fs.WriteStream = fs.createWriteStream('dist/SERIALIZE_SAMPLES.md');
+  constructor() { }
 
-function testTokenizerString() {
-  // Test string parser tokenizer.  Do not split on whitespace
-  const specialSubstrings: SpecialToken[] = [{type: ',', value: ','}];
-  const specialWords: SpecialToken[] = [];
-  const params: TokenizerParams = {
-    trimWordWhitespace: true,
-    combineAdjacentWords: true,
-    specialSubstrings,
-    specialWords,
-  };
-  const examples = [
-    'CAT, DOG,mouse ',
-    '-CAT,-DOG , -mouse',
-    ' CAT,-"DOG",m o u s e',
-    '-CAT,-DOG,mouse, bird, zebra, -horse, -goat',
-    'Missing ,NULL',
-    'CAT%,D%OG',
-    'CAT%,-CATALOG',
-    '_CAT,D_G',
-    'CAT,-NULL',
-    'CAT,-"NULL"',
-    'EMPTY',
-    '-EMPTY',
-    'CAT,-EMPTY',
-    '"CAT,DOG"',
-    'CAT\\,DOG',
-    'CAT,DOG,-, - ',
-    '--CAT,DOG,\\',
-    'CA--,D-G', // _ = 'CA--' OR _ = 'D-G'
-    ' hello world, foo="bar baz" , qux=quux',
-    'one ,Null ,  Empty,E M P T Y Y,EEmpty,        emptIEs',
-    '',
-  ];
-  for (const example of examples) {
-    testTokenizerSingle(example, params);
-  }
-}
-
-function testTokenizerNumber() {
-  // Test number parser tokenizer, split on whitespace
-  const specialSubstrings: SpecialToken[] = [
-    {type: ',', value: ','},
-    {type: '[', value: '['},
-    {type: ']', value: ']'},
-    {type: '(', value: '('},
-    {type: ')', value: ')'},
-    {type: '<=', value: '<='},
-    {type: '>=', value: '>='},
-    {type: '!=', value: '!='},
-    {type: '=', value: '='},
-    {type: '>', value: '>'},
-    {type: '<', value: '<'},
-  ];
-  const specialWords: SpecialToken[] = [
-    {type: 'TO', value: 'to', ignoreCase: true},
-    {type: '-NULL', value: '-null', ignoreCase: true},
-    {type: 'NULL', value: 'null', ignoreCase: true},
-  ];
-  const params: TokenizerParams = {
-    trimWordWhitespace: true,
-    combineAdjacentWords: false,
-    splitOnWhitespace: true,
-    specialSubstrings,
-    specialWords,
-  };
-  const examples = [
-    '5',
-    '!=5',
-    '1, 3, null , 7',
-    '<1, >=100 ',
-    '-5.5 to 10',
-    '>=1',
-    ' <= 10 ',
-    'NULL',
-    ' -NULL',
-    '(1, 7)',
-    '[-5, 90]',
-    ' ( 12, 20 ] ',
-    '[.12e-20, 20.0e3)',
-    '[0,9],[20,29]',
-    '[0,10], 20, NULL, ( 72, 82 ] ',
-    ', notanumber,, -"-null", apple pear orange, nulle, nnull',
-  ];
-  for (const example of examples) {
-    testTokenizerSingle(example, params);
-  }
-}
-
-function testNumberParserSingle(
-  str: string,
-  outputFormatter?: (clauses: Clause[]) => string
-): void {
-  console.log('Input: ', str);
-  const parser = new NumberParser(str);
-  const response = parser.parse();
-  // console.log('Tokens: ', parser.getTokens());
-  if (response.clauses && response.clauses.length > 0) {
-    if (outputFormatter) {
-      console.log('Output: ', outputFormatter(response.clauses));
-    } else {
-      console.log('Output: ', ...response.clauses);
+  private static removeQuotes(word: string) {
+    if (word.startsWith('"')) {
+      word = word.substring(1);
     }
-  }
-  if (response.errors && response.errors.length > 0) {
-    console.log('Errors: ', ...response.errors);
-  }
-  console.log('');
-}
-
-function testNumberParser() {
-  for (const example of numberExamples) {
-    testNumberParserSingle(example);
-  }
-}
-
-function testStringParserSingle(
-  str: string,
-  outputFormatter?: (clauses: Clause[]) => string
-): void {
-  console.log('Input: ', str);
-  const parser = new StringParser(str);
-  const response = parser.parse();
-  // console.log('Tokens: ', parser.getTokens());
-  if (response.clauses && response.clauses.length > 0) {
-    if (outputFormatter) {
-      console.log('Output: ', outputFormatter(response.clauses));
-    } else {
-      console.log('Output: ', ...response.clauses);
+    if (word.endsWith('"')) {
+      word = word.substring(0, word.length - 1);
     }
+    return word;
   }
-  if (response.quotes) {
-    console.log('Quotes: ', ...response.quotes);
-  }
-  if (response.errors && response.errors.length > 0) {
-    console.log('Errors: ', ...response.errors);
-  }
-  console.log('');
-}
 
-function testStringParser() {
-  for (const example of stringExamples) {
-    const parser = new StringParser(example);
-    testStringParserSingle(example);
+  private static writeJson(fp: fs.WriteStream, title: string, ...args: any[]): void {
+    const result: string[] = args.map(str => JSON.stringify(str));
+    const result2: string[] = result.map(str => GenerateSamples.removeQuotes(str));
+    fp.write(title + ' ' + result2.join(' ') + '\n');
+    console.log(title, ...args);
   }
-}
 
-function testBooleanParserSingle(
-  str: string,
-  outputFormatter?: (clauses: Clause[]) => string
-): void {
-  console.log('Input: ', str);
-  const parser = new BooleanParser(str);
-  const response = parser.parse();
-  // console.log('Tokens: ', parser.getTokens());
-  if (response.clauses && response.clauses.length > 0) {
-    if (outputFormatter) {
-      console.log('Output: ', outputFormatter(response.clauses));
-    } else {
-      console.log('Output: ', ...response.clauses);
+  public static writeRaw(fp: fs.WriteStream, ...args: any[]): void {
+    fp.write(args.join(' ') + '\n');
+    console.log(...args);
+  }
+
+  public booleanSample(
+    str: string, fp: fs.WriteStream
+  ): void {
+    GenerateSamples.writeRaw(fp, 'Input: ', str);
+    const parser = new BooleanParser(str);
+    const response = parser.parse();
+    // GenerateSamples.writeJson(fp, 'Tokens: ', parser.getTokens());
+    if (response.clauses && response.clauses.length > 0) {
+      GenerateSamples.writeJson(fp, 'Output: ', ...response.clauses);
     }
-  }
-  if (response.errors && response.errors.length > 0) {
-    console.log('Errors: ', ...response.errors);
-  }
-  console.log('');
-}
-
-function testBooleanParser() {
-  for (const example of booleanExamples) {
-    const parser = new BooleanParser(example);
-    testBooleanParserSingle(example);
-  }
-}
-
-function jsonFormatter(clauses: Clause[]): string {
-  let str = '';
-  for (const clause of clauses) {
-    str += JSON.stringify(clause, null, ' ');
-  }
-  return str;
-}
-
-function testDateParserSingle(
-  str: string,
-  outputFormatter?: (clauses: Clause[]) => string
-): void {
-  console.log('Input: ', str);
-  const parser = new DateParser(str);
-  const response = parser.parse();
-  // console.log('Tokens: ', parser.getTokens());
-  if (response.clauses && response.clauses.length > 0) {
-    if (outputFormatter) {
-      console.log('Output: ', outputFormatter(response.clauses));
-    } else {
-      console.log('Output: ', ...response.clauses);
+    if (response.errors && response.errors.length > 0) {
+      GenerateSamples.writeJson(fp, 'Errors: ', ...response.errors);
     }
+    GenerateSamples.writeRaw(fp, '');
   }
-  if (response.errors && response.errors.length > 0) {
-    console.log('Errors: ', ...response.errors);
-  }
-  console.log('');
-}
 
-function testDateParser() {
-  for (const example of dateExamples) {
-    const parser = new DateParser(example);
-    testDateParserSingle(example);
+  public dateSample(
+    str: string, fp: fs.WriteStream
+  ): void {
+    GenerateSamples.writeRaw(fp, 'Input: ', str);
+    const parser = new DateParser(str);
+    const response = parser.parse();
+    // GenerateSamples.writeJson(fp, 'Tokens: ', parser.getTokens());
+    if (response.clauses && response.clauses.length > 0) {
+      GenerateSamples.writeJson(fp, 'Output: ', ...response.clauses);
+    }
+    if (response.errors && response.errors.length > 0) {
+      GenerateSamples.writeJson(fp, 'Errors: ', ...response.errors);
+    }
+    GenerateSamples.writeRaw(fp, '');
   }
-}
 
-function testNumberRoundtrip(str: string): void {
-  console.log('Input:  ' + str);
-  const response = new NumberParser(str).parse();
-  // console.log('Clause: ', ...response.clauses, '\n');
-  if (response.clauses && response.clauses.length > 0) {
-    const result = new NumberSerializer(response.clauses || []).serialize();
-    console.log('Output: ' + result);
+  public numberSample(
+    str: string, fp: fs.WriteStream
+  ): void {
+    GenerateSamples.writeRaw(fp, 'Input: ', str);
+    const parser = new NumberParser(str);
+    const response = parser.parse();
+    // GenerateSamples.writeJson(fp, 'Tokens: ', parser.getTokens());
+    if (response.clauses && response.clauses.length > 0) {
+      GenerateSamples.writeJson(fp, 'Output: ', ...response.clauses);
+    }
+    if (response.errors && response.errors.length > 0) {
+      GenerateSamples.writeJson(fp, 'Errors: ', ...response.errors);
+    }
+    GenerateSamples.writeRaw(fp, '');
   }
-  if (response.errors && response.errors.length > 0) {
-    console.log('Errors: ', ...response.errors);
-  }
-  console.log('');
-}
 
-function testNumberSerializer(): void {
-  for (const example of numberExamples) {
-    testNumberRoundtrip(example);
+  public stringSample(
+    str: string, fp: fs.WriteStream
+  ): void {
+    GenerateSamples.writeRaw(fp, 'Input: ', str);
+    const parser = new StringParser(str);
+    const response = parser.parse();
+    // GenerateSamples.writeJson(fp, 'Tokens: ', parser.getTokens());
+    if (response.clauses && response.clauses.length > 0) {
+      GenerateSamples.writeJson(fp, 'Output: ', ...response.clauses);
+    }
+    if (response.quotes) {
+      GenerateSamples.writeJson(fp, 'Quotes: ', ...response.quotes);
+    }
+    if (response.errors && response.errors.length > 0) {
+      GenerateSamples.writeJson(fp, 'Errors: ', ...response.errors);
+    }
+    GenerateSamples.writeRaw(fp, '');
   }
-}
 
-function testStringRoundtrip(str: string): void {
-  console.log('Input:  ' + str);
-  const response = new StringParser(str).parse();
-  // console.log('Clause: ', ...response.clauses, '\n');
-  if (response.clauses && response.clauses.length > 0) {
-    const result = new StringSerializer(response.clauses || []).serialize();
-    console.log('Output: ' + result);
+  public booleanSerialized(str: string, fp: fs.WriteStream): void {
+    GenerateSamples.writeRaw(fp, 'Input:  ' + str);
+    const response = new BooleanParser(str).parse();
+    // this.writeJson('Clause: ', ...response.clauses, '\n');
+    if (response.clauses && response.clauses.length > 0) {
+      const result = new BooleanSerializer(response.clauses || []).serialize();
+      GenerateSamples.writeRaw(fp, 'Output: ' + result);
+    }
+    if (response.errors && response.errors.length > 0) {
+      GenerateSamples.writeJson(fp, 'Errors: ', ...response.errors);
+    }
+    GenerateSamples.writeRaw(fp, '');
   }
-  if (response.errors && response.errors.length > 0) {
-    console.log('Errors: ', ...response.errors);
-  }
-  console.log('');
-}
 
-function testStringSerializer(): void {
-  for (const example of stringExamples) {
-    testStringRoundtrip(example);
+  public dateSerialized(str: string, fp: fs.WriteStream): void {
+    GenerateSamples.writeRaw(fp, 'Input:  ' + str);
+    const response = new DateParser(str).parse();
+    // this.writeJson('Clause: ', ...response.clauses, '\n');
+    if (response.clauses && response.clauses.length > 0) {
+      const result = new DateSerializer(response.clauses || []).serialize();
+      GenerateSamples.writeRaw(fp, 'Output: ' + result);
+    }
+    if (response.errors && response.errors.length > 0) {
+      GenerateSamples.writeJson(fp, 'Errors: ', ...response.errors);
+    }
+    GenerateSamples.writeRaw(fp, '');
   }
-}
 
-function testBooleanRoundtrip(str: string): void {
-  console.log('Input:  ' + str);
-  const response = new BooleanParser(str).parse();
-  // console.log('Clause: ', ...response.clauses, '\n');
-  if (response.clauses && response.clauses.length > 0) {
-    const result = new BooleanSerializer(response.clauses || []).serialize();
-    console.log('Output: ' + result);
+  public numberSerialized(str: string, fp: fs.WriteStream): void {
+    GenerateSamples.writeRaw(fp, 'Input:  ' + str);
+    const response = new NumberParser(str).parse();
+    // this.writeJson('Clause: ', ...response.clauses, '\n');
+    if (response.clauses && response.clauses.length > 0) {
+      const result = new NumberSerializer(response.clauses || []).serialize();
+      GenerateSamples.writeRaw(fp, 'Output: ' + result);
+    }
+    if (response.errors && response.errors.length > 0) {
+      GenerateSamples.writeJson(fp, 'Errors: ', ...response.errors);
+    }
+    GenerateSamples.writeRaw(fp, '');
   }
-  if (response.errors && response.errors.length > 0) {
-    console.log('Errors: ', ...response.errors);
-  }
-  console.log('');
-}
 
-function testBooleanSerializer(): void {
-  const examples = [[{operator: 'TRUE'}]];
-  for (const example of booleanExamples) {
-    testBooleanRoundtrip(example);
+  public stringSerialized(str: string, fp: fs.WriteStream): void {
+    GenerateSamples.writeRaw(fp, 'Input:  ' + str);
+    const response = new StringParser(str).parse();
+    // this.writeJson('Clause: ', ...response.clauses, '\n');
+    if (response.clauses && response.clauses.length > 0) {
+      const result = new StringSerializer(response.clauses || []).serialize();
+      GenerateSamples.writeRaw(fp, 'Output: ' + result);
+    }
+    if (response.errors && response.errors.length > 0) {
+      GenerateSamples.writeJson(fp, 'Errors: ', ...response.errors);
+    }
+    GenerateSamples.writeRaw(fp, '');
   }
-}
 
-function testDateRoundtrip(str: string): void {
-  console.log('Input:  ' + str);
-  const response = new DateParser(str).parse();
-  // console.log('Clause: ', ...response.clauses, '\n');
-  if (response.clauses && response.clauses.length > 0) {
-    const result = new DateSerializer(response.clauses || []).serialize();
-    console.log('Output: ' + result);
+  public loop(title: string, examples: string[], func: (str: string, fp: fs.WriteStream) => void, fp: fs.WriteStream): void {
+    GenerateSamples.writeRaw(fp,
+      '-------------------------------------------------------------------------'
+    );
+    GenerateSamples.writeRaw(fp, '## ' + title + '\n');
+    GenerateSamples.writeRaw(fp, '```code');
+    for (const example of examples) {
+      func(example, fp);
+    }
+    GenerateSamples.writeRaw(fp, '```\n');
   }
-  if (response.errors && response.errors.length > 0) {
-    console.log('Errors: ', ...response.errors);
-  }
-  console.log('');
-}
-
-function testDateSerializer(): void {
-  for (const example of dateExamples) {
-    testDateRoundtrip(example);
-  }
-}
-
-function printHeader(title: string): void {
-  console.log(
-    '\n-------------------------------------------------------------------------'
-  );
-  console.log('## ', title, '\n');
 }
 
 // Comment or uncomment the following function calls to disable/enable examples.
 function generateSamples() {
   try {
-    //printHeader('Tokenizer');
-    //testTokenizerString();
-    //testTokenizerNumber();
-    //testTokenizerMatchTypes();
-    printHeader('Numbers');
-    testNumberParser();
-    printHeader('Strings');
-    testStringParser();
-    printHeader('Booleans');
-    testBooleanParser();
-    printHeader('Dates and Times');
-    testDateParser();
-    printHeader('Number Serializer');
-    testNumberSerializer();
-    printHeader('String Serializer');
-    testStringSerializer();
-    printHeader('Boolean Serializer');
-    testBooleanSerializer();
-    printHeader('Date and Time Serializer');
-    testDateSerializer();
+    const gen = new GenerateSamples();
+    GenerateSamples.writeRaw(gen.samplesFile, `
+# Parsers
+
+Each filter type is handled by a different parser (strings, numbers, dates and times, etc).
+Sample outputs from each parser follow...
+`);
+
+    GenerateSamples.writeRaw(gen.serializedFile, `
+# Serializers
+
+Each parser has a complementary serializer that converts the structured clause list back
+to string format.  Below are round-trip samples: \`string\` to \`Clause[]\` back to \`string\`.
+Round-trip Examples:
+
+\`\`\`code
+    Input  >  parse  >  Clause[]  >  serialize  >  Output
+    string                                         string
+\`\`\`
+`);
+    gen.loop('Numbers', numberExamples, gen.numberSample, gen.samplesFile);
+    gen.loop('Strings', stringExamples, gen.stringSample, gen.samplesFile);
+    gen.loop('Booleans', booleanExamples, gen.booleanSample, gen.samplesFile);
+    gen.loop('Dates and Times', dateExamples, gen.dateSample, gen.samplesFile);
+    gen.loop('Number Serializer', numberExamples, gen.numberSerialized, gen.serializedFile);
+    gen.loop('String Serializer', stringExamples, gen.stringSerialized, gen.serializedFile);
+    gen.loop('Boolean Serializer', booleanExamples, gen.booleanSerialized, gen.serializedFile);
+    gen.loop('Date Serializer', dateExamples, gen.dateSerialized, gen.serializedFile);
   } catch (ex: Error | unknown) {
     if (ex instanceof Error) console.error('Thrown Error: ', ex.message);
     else {

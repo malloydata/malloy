@@ -2,11 +2,9 @@
 
 The `malloy-filter` tests use Jest.
 
-## Tokenizer Testing
-
 ```bash
 npm run build
-npm run test:tokenizer
+npm run test
 ```
 
 # generate_samples
@@ -19,5 +17,3 @@ To create the samples:
 npm run build
 npm run samples
 ```
-
-Comment/uncomment individual lines in `generateSamples()` to enable/disable sample generation for the different parsers.

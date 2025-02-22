@@ -19,42 +19,52 @@ To use the parser, simply import `FilterParser` and go.
 Example:
 
 ```code
-    import { FilterParser } from './filter_parser'
+import {BooleanParser} from './boolean_parser';
+import {StringParser} from './string_parser';
+import {NumberParser} from './number_parser';
+import {DateParser} from './date_parser';
 
-    let str = 'CAT,DOG';
-    let response = new FilterParser(str, 'string').parse();
-    console.log(str, '\n', ...response.clauses, '\n');
+function aSimpleParser() {
+  let str = 'CAT,DOG';
+  const stringResponse = new StringParser(str).parse();
+  console.log(str, '\n', ...stringResponse.clauses, '\n');
 
-    str = '-5.5, 10, 2.3e7';
-    response = new FilterParser(str, 'number').parse();
-    console.log(str, '\n', ...response.clauses, '\n');
+  str = '-5.5, 10, 2.3e7';
+  const numberResponse = new NumberParser(str).parse();
+  console.log(str, '\n', ...numberResponse.clauses, '\n');
 
-    str = 'null, false';
-    response = new FilterParser(str, 'boolean').parse();
-    console.log(str, '\n', ...response.clauses, '\n');
+  str = 'null, false';
+  const booleanResponse = new BooleanParser(str).parse();
+  console.log(str, '\n', ...booleanResponse.clauses, '\n');
 
-    str = 'after 2025-10-05';
-    response = new FilterParser(str, 'date').parse();
-    console.log(str, '\n', ...response.clauses, '\n');
+  str = 'after 2025-10-05';
+  const dateResponse = new DateParser(str).parse();
+  console.log(str, '\n', ...dateResponse.clauses, '\n');
+}
+
+aSimpleParser();
 ```
 
 Output:
 
 ```code
-CAT,DOG 
+CAT,DOG
  { operator: '=', values: [ 'CAT', 'DOG' ] }
 
 -5.5, 10, 2.3e7
  { operator: '=', values: [ -5.5, 10, 23000000 ] }
 
 null, false
- { operator: 'NULL' } { operator: 'FALSE' }
+ { operator: 'NULL' } { operator: 'FALSEORNULL' }
 
 after 2025-10-05
- { operator: 'DATE', date: '2025-10-05', prefix: 'AFTER' }
+ {
+  operator: 'AFTER',
+  moment: { type: 'ABSOLUTE', date: '2025-10-05', unit: 'DAY' }
+ }
 ```
 
-Likewise, to use the serializer, simply import `FilterSerializer`.
+Likewise, to use the serializers, simply import the `*Serializer` classes.
 
 ## Parsers
 
@@ -78,4 +88,4 @@ The date and time parser `date_parser.ts` supports the operations highlighted on
 
 ## Serializers
 
-Each parser has a complementary serializer that converts the parser output (`Clause[]`) back to a string. See examples of the round trip from string to Clause to string on the [Serialization Samples](SERIALIZE_SAMPLES.md) page.
+Each parser has a complementary serializer that converts the parser output (`xxxClause[]`) back to a string. See examples of the round trip from string to Clause to string on the [Serialization Samples](SERIALIZE_SAMPLES.md) page.
