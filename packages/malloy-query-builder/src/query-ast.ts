@@ -6,6 +6,13 @@
  */
 import * as Malloy from '@malloydata/malloy-interfaces';
 import {Tag, TagSetValue} from '@malloydata/malloy-tag';
+import * as Filter from '@malloydata/malloy-filter';
+
+export type ParsedFilter =
+  | {kind: 'string'; clauses: Filter.StringClause[]}
+  | {kind: 'number'; clauses: Filter.NumberClause[]}
+  | {kind: 'boolean'; clauses: Filter.BooleanClause[]};
+// | ({kind: 'time'} & Filter.TimeClause);
 
 export type PathSegment = number | string;
 export type Path = PathSegment[];
@@ -1099,13 +1106,93 @@ export class ASTReference extends ASTObjectNode<
    * @param value The value of the parameter to set
    */
   public addParameter(name: string, value: RawLiteralValue) {
-    const parameters = this.getOrAddParameters();
-    parameters.add(
-      new ASTParameterValue({
-        name,
-        value: LiteralValueAST.makeLiteral(value),
-      })
-    );
+    return this.getOrAddParameters().addParameter(name, value);
+  }
+}
+
+type ASTFieldReferenceParent =
+  | ASTFilterWithFilterString
+  | ASTOrderByViewOperation
+  | ASTTimeTruncationExpression
+  | ASTFilteredFieldExpression;
+
+export class ASTFieldReference extends ASTReference {
+  /**
+   * @internal
+   */
+  get segment(): ASTSegmentViewDefinition {
+    const parent = this.parent as ASTFieldReferenceParent;
+    if (
+      parent instanceof ASTFilteredFieldExpression ||
+      parent instanceof ASTTimeTruncationExpression
+    ) {
+      return parent.field.segment;
+    } else if (parent instanceof ASTFilterWithFilterString) {
+      const grand = parent.parent as ASTWhere | ASTWhereViewOperation;
+      if (grand instanceof ASTWhere) {
+        return grand.list.expression.field.segment;
+      } else {
+        return grand.list.segment;
+      }
+    } else {
+      return parent.list.segment;
+    }
+  }
+
+  getFieldInfo() {
+    const schema = this.segment.getInputSchema();
+    // TODO path
+    return ASTNode.schemaGet(schema, this.name);
+  }
+
+  get name() {
+    return this.children.name;
+  }
+
+  set name(value: string) {
+    this.edit();
+    this.children.name = value;
+  }
+
+  get parameters() {
+    return this.children.parameters;
+  }
+
+  /**
+   * Gets the parameter list for this reference, or creates it if it does not exist.
+   *
+   * @returns The parameter list `ASTParameterValueList`
+   */
+  public getOrAddParameters() {
+    // TODO ABSTRACT THIS OUT INTO A COMMON METHOD FOR THE DIFFERENT REFERENCE TYPES?
+    if (this.children.parameters) {
+      return this.children.parameters;
+    }
+    this.edit();
+    const parameters = new ASTParameterValueList([]);
+    this.children.parameters = parameters;
+    return parameters;
+  }
+
+  /**
+   * Adds a parameter to this source with with the given name and value
+   *
+   * This will override an existing parameter with the same name.
+   *
+   * @param name The name of the parameter to set
+   * @param value The value of the parameter to set
+   */
+  public setParameter(name: string, value: RawLiteralValue) {
+    return this.getOrAddParameters().addParameter(name, value);
+  }
+
+  public tryGetParameter(name: string) {
+    if (this.parameters === undefined) return undefined;
+    for (const parameter of this.parameters.iter()) {
+      if (parameter.name === name) {
+        return parameter;
+      }
+    }
   }
 }
 
@@ -1216,6 +1303,15 @@ export class ASTParameterValueList extends ASTListNode<
 
   get parameters() {
     return this.children;
+  }
+
+  addParameter(name: string, value: RawLiteralValue) {
+    this.add(
+      new ASTParameterValue({
+        name,
+        value: LiteralValueAST.makeLiteral(value),
+      })
+    );
   }
 }
 
@@ -2563,7 +2659,14 @@ export class ASTSegmentViewDefinition
     return item;
   }
 
-  public addWhere(name: string, filterString: string) {
+  public addWhere(name: string, filter: ParsedFilter): ASTWhereViewOperation;
+  public addWhere(name: string, filterString: string): ASTWhereViewOperation;
+  public addWhere(
+    name: string,
+    filter: string | ParsedFilter
+  ): ASTWhereViewOperation {
+    const filterString =
+      typeof filter === 'string' ? filter : serializeFilter(filter);
     // TODO validate name
     // TODO validate filter string
     const item = new ASTWhereViewOperation({
@@ -2898,7 +3001,7 @@ export class ASTOrderByViewOperation extends ASTObjectNode<
   Malloy.ViewOperationWithOrderBy,
   {
     kind: 'order_by';
-    field_reference: ASTReference;
+    field_reference: ASTFieldReference;
     direction?: Malloy.OrderByDirection;
   }
 > {
@@ -2906,7 +3009,7 @@ export class ASTOrderByViewOperation extends ASTObjectNode<
   constructor(public node: Malloy.ViewOperationWithOrderBy) {
     super(node, {
       kind: 'order_by',
-      field_reference: new ASTReference(node.field_reference),
+      field_reference: new ASTFieldReference(node.field_reference),
       direction: node.direction,
     });
   }
@@ -2942,7 +3045,7 @@ export class ASTOrderByViewOperation extends ASTObjectNode<
     const schema = this.list.segment.getOutputSchema();
     ASTNode.schemaGet(schema, name);
     this.edit();
-    this.children.field_reference = new ASTReference({name});
+    this.children.field_reference = new ASTFieldReference({name});
   }
 
   setDirection(direction: Malloy.OrderByDirection | undefined) {
@@ -3235,18 +3338,26 @@ export class ASTAggregateViewOperation
     this.getOrAddAnnotations().removeTagProperty(path, prefix);
   }
 
-  addWhere(name: string, filter: string) {
+  addWhere(name: string, filterString: string): ASTFilteredFieldExpression;
+  addWhere(name: string, filter: ParsedFilter): ASTFilteredFieldExpression;
+  addWhere(
+    name: string,
+    filter: string | ParsedFilter
+  ): ASTFilteredFieldExpression {
+    const filterString =
+      typeof filter === 'string' ? filter : serializeFilter(filter);
     const schema = this.list.segment.getInputSchema();
     ASTQuery.schemaGet(schema, name);
     const where: Malloy.Where = {
       filter: {
         kind: 'filter_string',
         field_reference: {name},
-        filter,
+        filter: filterString,
       },
     };
     if (this.field.expression instanceof ASTFilteredFieldExpression) {
       this.field.expression.where.add(new ASTWhere(where));
+      return this.field.expression;
     } else if (this.field.expression instanceof ASTReferenceExpression) {
       const existing = this.field.expression.build();
       this.field.expression = new ASTFilteredFieldExpression({
@@ -3258,6 +3369,7 @@ export class ASTAggregateViewOperation
         },
         where: [where],
       });
+      return this.field.expression;
     } else {
       throw new Error('This kind of expression does not support addWhere');
     }
@@ -3361,7 +3473,7 @@ export class ASTField
   /**
    * @internal
    */
-  get refinement() {
+  get segment() {
     const groupByOrAggregate = this.parent as
       | ASTGroupByViewOperation
       | ASTAggregateViewOperation;
@@ -3391,6 +3503,7 @@ export const ASTExpression = {
   },
 };
 
+// TODO would be nice for this to extend ASTFieldReference?
 export class ASTReferenceExpression extends ASTObjectNode<
   Malloy.ExpressionWithFieldReference,
   {
@@ -3425,7 +3538,7 @@ export class ASTReferenceExpression extends ASTObjectNode<
   }
 
   getFieldInfo(): Malloy.FieldInfoWithDimension | Malloy.FieldInfoWithMeasure {
-    const schema = this.field.refinement.getInputSchema();
+    const schema = this.field.segment.getInputSchema();
     const def = ASTNode.schemaGet(schema, this.name);
     if (def.kind !== 'dimension' && def.kind !== 'measure') {
       throw new Error('Invalid field for ASTReferenceExpression');
@@ -3447,7 +3560,7 @@ export class ASTTimeTruncationExpression extends ASTObjectNode<
   Malloy.ExpressionWithTimeTruncation,
   {
     kind: 'time_truncation';
-    field_reference: ASTReference;
+    field_reference: ASTFieldReference;
     truncation: Malloy.TimestampTimeframe;
   }
 > {
@@ -3456,7 +3569,7 @@ export class ASTTimeTruncationExpression extends ASTObjectNode<
   constructor(public node: Malloy.ExpressionWithTimeTruncation) {
     super(node, {
       kind: node.kind,
-      field_reference: new ASTReference(node.field_reference),
+      field_reference: new ASTFieldReference(node.field_reference),
       truncation: node.truncation,
     });
   }
@@ -3485,7 +3598,7 @@ export class ASTTimeTruncationExpression extends ASTObjectNode<
   }
 
   getFieldInfo(): Malloy.FieldInfoWithDimension | Malloy.FieldInfoWithMeasure {
-    const schema = this.field.refinement.getInputSchema();
+    const schema = this.field.segment.getInputSchema();
     const def = ASTNode.schemaGet(schema, this.name);
     if (def.kind !== 'dimension' && def.kind !== 'measure') {
       throw new Error('Invalid field for ASTReferenceExpression');
@@ -3539,13 +3652,17 @@ export class ASTWhereList extends ASTListNode<Malloy.Where, ASTWhere> {
       wheres.map(p => new ASTWhere(p))
     );
   }
+
+  get expression() {
+    return this.parent.asFilteredFieldExpression();
+  }
 }
 
 export class ASTFilteredFieldExpression extends ASTObjectNode<
   Malloy.ExpressionWithFilteredField,
   {
     kind: 'filtered_field';
-    field_reference: ASTReference;
+    field_reference: ASTFieldReference;
     where: ASTWhereList;
   }
 > {
@@ -3554,7 +3671,7 @@ export class ASTFilteredFieldExpression extends ASTObjectNode<
   constructor(public node: Malloy.ExpressionWithFilteredField) {
     super(node, {
       kind: node.kind,
-      field_reference: new ASTReference(node.field_reference),
+      field_reference: new ASTFieldReference(node.field_reference),
       where: new ASTWhereList(node.where),
     });
   }
@@ -3583,7 +3700,7 @@ export class ASTFilteredFieldExpression extends ASTObjectNode<
   }
 
   getFieldInfo(): Malloy.FieldInfoWithMeasure {
-    const schema = this.field.refinement.getInputSchema();
+    const schema = this.field.segment.getInputSchema();
     const def = ASTNode.schemaGet(schema, this.name);
     if (def.kind !== 'measure') {
       throw new Error('Invalid field for ASTFilteredFieldExpression');
@@ -3813,7 +3930,7 @@ export class ASTFilterWithFilterString extends ASTObjectNode<
   Malloy.FilterWithFilterString,
   {
     kind: 'filter_string';
-    field_reference: ASTReference;
+    field_reference: ASTFieldReference;
     filter: string;
   }
 > {
@@ -3821,7 +3938,7 @@ export class ASTFilterWithFilterString extends ASTObjectNode<
   constructor(public node: Malloy.FilterWithFilterString) {
     super(node, {
       kind: 'filter_string',
-      field_reference: new ASTReference(node.field_reference),
+      field_reference: new ASTFieldReference(node.field_reference),
       filter: node.filter,
     });
   }
@@ -3830,18 +3947,74 @@ export class ASTFilterWithFilterString extends ASTObjectNode<
     return this.children.field_reference;
   }
 
-  get filter() {
+  get filterString() {
     return this.children.filter;
   }
 
-  set filter(filter: string) {
+  set filterString(filter: string) {
     this.edit();
     this.children.filter = filter;
   }
 
-  setFilter(filter: string) {
+  setFilterString(filterString: string) {
     // TODO validate
-    this.filter = filter;
+    this.filterString = filterString;
+  }
+
+  getFieldInfo() {
+    const field = this.fieldReference.getFieldInfo();
+    if (field.kind !== 'dimension' && field.kind !== 'measure') {
+      throw new Error('Invalid field type for filter with filter string');
+    }
+    return field;
+  }
+
+  getFilterType(): 'string' | 'boolean' | 'number' | 'time' | 'other' {
+    const fieldInfo = this.getFieldInfo();
+    switch (fieldInfo.type.kind) {
+      case 'string_type':
+        return 'string';
+      case 'boolean_type':
+        return 'boolean';
+      case 'number_type':
+        return 'number';
+      case 'date_type':
+      case 'timestamp_type':
+        return 'time';
+      default:
+        return 'other';
+    }
+  }
+
+  setFilter(filter: ParsedFilter) {
+    const kind = this.getFilterType();
+    if (kind !== filter.kind) {
+      throw new Error(
+        `Invalid filter: expected type ${kind}, got ${filter.kind}`
+      );
+    }
+    this.filterString = serializeFilter(filter);
+  }
+
+  getFilter(): ParsedFilter {
+    const kind = this.getFilterType();
+    switch (kind) {
+      case 'string': {
+        const result = new Filter.StringParser(this.filterString).parse();
+        return {kind, clauses: result.clauses};
+      }
+      case 'number': {
+        const result = new Filter.NumberParser(this.filterString).parse();
+        return {kind, clauses: result.clauses};
+      }
+      case 'boolean': {
+        const result = new Filter.BooleanParser(this.filterString).parse();
+        return {kind, clauses: result.clauses};
+      }
+      case 'time':
+      case 'other':
+        throw new Error('Not implemented');
+    }
   }
 }
 
@@ -4184,4 +4357,16 @@ function tagFromAnnotations(
     typeof prefix === 'string' ? l.startsWith(prefix) : l.match(prefix)
   );
   return Tag.fromTagLines(filteredLines, inherited).tag ?? new Tag();
+}
+
+function serializeFilter(filter: ParsedFilter) {
+  switch (filter.kind) {
+    case 'string':
+      return new Filter.StringSerializer(filter.clauses).serialize();
+    case 'number':
+      return new Filter.NumberSerializer(filter.clauses).serialize();
+    case 'boolean': {
+      return new Filter.BooleanSerializer(filter.clauses).serialize();
+    }
+  }
 }

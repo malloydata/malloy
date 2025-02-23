@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/malloy-query-builder",
-  "version": "0.0.234",
+  "version": "0.0.237",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -22,7 +22,8 @@
     "serve-docs": "npx http-server -o docs"
   },
   "dependencies": {
-    "@malloydata/malloy-tag": "^0.0.234"
+    "@malloydata/malloy-tag": "^0.0.237",
+    "@malloydata/malloy-filter": "^0.0.237"
   },
   "devDependencies": {
     "flow-api-translator": "^0.26.0",

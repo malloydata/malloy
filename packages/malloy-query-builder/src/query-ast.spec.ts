@@ -221,6 +221,47 @@ describe('query builder', () => {
       malloy: 'run: flights -> { where: carrier ~ f`WN, AA` }',
     });
   });
+  test('add a parsed where', () => {
+    const from: Malloy.Query = {
+      definition: {
+        kind: 'arrow',
+        source_reference: {name: 'flights'},
+        view: {
+          kind: 'segment',
+          operations: [],
+        },
+      },
+    };
+    expect((q: ASTQuery) => {
+      q.getOrAddDefaultSegment().addWhere('carrier', {
+        kind: 'string',
+        clauses: [{operator: '=', values: ['WN', 'AA']}],
+      });
+    }).toModifyQuery({
+      model: flights_model,
+      from,
+      to: {
+        definition: {
+          kind: 'arrow',
+          source_reference: {name: 'flights'},
+          view: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'where',
+                filter: {
+                  kind: 'filter_string',
+                  field_reference: {name: 'carrier'},
+                  filter: 'WN, AA',
+                },
+              },
+            ],
+          },
+        },
+      },
+      malloy: 'run: flights -> { where: carrier ~ f`WN, AA` }',
+    });
+  });
   test('add a date group by', () => {
     const from: Malloy.Query = {
       definition: {

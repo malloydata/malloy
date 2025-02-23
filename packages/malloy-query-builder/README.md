@@ -192,7 +192,9 @@ run: flights -> {
 ## Add/edit/delete filter
 
 * {@link ASTSegmentViewDefinition.addWhere}
+* {@link ASTFilterWithFilterString.setFilterString}
 * {@link ASTFilterWithFilterString.setFilter}
+* {@link ASTFilterWithFilterString.getFilter}
 * {@link ASTWhereViewOperation.delete}
 * {@link ASTWhere.delete}
 
