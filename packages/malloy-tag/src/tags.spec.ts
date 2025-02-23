@@ -190,6 +190,14 @@ describe('Tag access', () => {
       expect(aval[0].text()).toEqual('b');
     }
   });
+  test('tag path into array', () => {
+    const strToParse = 'a.b.c = [{d=e}]';
+    const tagParse = Tag.fromTagLine(strToParse, undefined);
+    expect(tagParse.log).toEqual([]);
+    const abcde = tagParse.tag.tag('a', 'b', 'c', 0, 'd');
+    expect(abcde).toBeDefined();
+    expect(abcde?.text()).toEqual('e');
+  });
   test('array as text', () => {
     const strToParse = 'a=[b]';
     const getTags = Tag.fromTagLine(strToParse, undefined);
@@ -296,6 +304,24 @@ describe('Tag access', () => {
       a: {properties: {b: {eq: [{eq: '3'}, {eq: '4'}]}}},
     });
     expect(ext.toString()).toBe('# a.b = [3, 4]');
+  });
+  test('soft remove', () => {
+    const base = Tag.fromTagLine('# a.b.c = [{ d = 1 }]').tag;
+    const ext = base.delete('a', 'b', 'c', 0, 'd').delete('a', 'b', 'c', 0);
+    expect(ext).tagsAre({
+      a: {properties: {b: {properties: {c: {eq: []}}}}},
+    });
+    expect(ext.toString()).toBe('# a.b.c = []');
+  });
+  test('hard remove', () => {
+    const base = Tag.fromTagLine('# hello').tag;
+    const ext = base.unset('goodbye').unset('a', 'dieu');
+    expect(ext).tagsAre({
+      hello: {},
+      goodbye: {deleted: true},
+      a: {properties: {dieu: {deleted: true}}},
+    });
+    expect(ext.toString()).toBe('# hello -goodbye a { -dieu }');
   });
   test('set with different prefix', () => {
     const base = Tag.withPrefix('#(docs) ');

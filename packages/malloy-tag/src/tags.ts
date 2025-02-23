@@ -209,18 +209,18 @@ export class Tag implements TagInterface {
     return new Tag({prefix});
   }
 
-  tag(...at: string[]): Tag | undefined {
+  tag(...at: Path): Tag | undefined {
     return this.find(at);
   }
 
-  text(...at: string[]): string | undefined {
+  text(...at: Path): string | undefined {
     const str = this.find(at)?.eq;
     if (typeof str === 'string') {
       return str;
     }
   }
 
-  numeric(...at: string[]): number | undefined {
+  numeric(...at: Path): number | undefined {
     const str = this.find(at)?.eq;
     if (typeof str === 'string') {
       const num = Number.parseFloat(str);
@@ -230,7 +230,7 @@ export class Tag implements TagInterface {
     }
   }
 
-  bare(...at: string[]): boolean | undefined {
+  bare(...at: Path): boolean | undefined {
     const p = this.find(at);
     if (p === undefined) {
       return;
@@ -250,7 +250,7 @@ export class Tag implements TagInterface {
     return newDict;
   }
 
-  array(...at: string[]): Tag[] | undefined {
+  array(...at: Path): Tag[] | undefined {
     const array = this.find(at)?.eq;
     if (array === undefined || typeof array === 'string') {
       return undefined;
@@ -260,7 +260,7 @@ export class Tag implements TagInterface {
     );
   }
 
-  textArray(...at: string[]): string[] | undefined {
+  textArray(...at: Path): string[] | undefined {
     const array = this.find(at)?.eq;
     if (array === undefined || typeof array === 'string') {
       return undefined;
@@ -272,7 +272,7 @@ export class Tag implements TagInterface {
     );
   }
 
-  numericArray(...at: string[]): number[] | undefined {
+  numericArray(...at: Path): number[] | undefined {
     const array = this.find(at)?.eq;
     if (array === undefined || typeof array === 'string') {
       return undefined;
