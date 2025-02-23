@@ -132,12 +132,25 @@ WITH: W I T H ;
 YEAR: Y E A R S?;
 UNGROUPED: U N G R O U P E D;
 
+fragment SQ: '\'';
+fragment BQ: '`';
+fragment DQ: '"';
+fragment SQ3: SQ SQ SQ;
+fragment DQ3: DQ DQ DQ;
+fragment BQ3: BQ BQ BQ;
+fragment RAW_CHAR: ( '\\' . ) | (~ '\\');
+fragment FILTER: F SPACE_CHAR*;
+fragment RAWSTR: S SPACE_CHAR*;
+HACKY_REGEX: ('/' | R) SQ RAW_CHAR*? SQ;
+
+RAW_SQ: RAWSTR SQ RAW_CHAR*? SQ;
+RAW_DQ: RAWSTR DQ RAW_CHAR*? DQ;
+
 STRING_ESCAPE
   : '\\' '\''
   | '\\' '\\'
   | '\\' .
   ;
-HACKY_REGEX: ('/' | [rR]) '\'' (STRING_ESCAPE | ~('\\' | '\''))* '\'';
 
 fragment HEX: [0-9a-fA-F];
 fragment UNICODE: '\\u' HEX HEX HEX HEX;
