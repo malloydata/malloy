@@ -7,6 +7,7 @@
     "packages": [
       "packages/malloy-interfaces",
       "packages/malloy-tag",
+      "packages/malloy-filter",
       "packages/malloy-query-builder",
       "packages/malloy",
       "packages/malloy-db-bigquery",
@@ -15,7 +16,6 @@
       "packages/malloy-db-mysql",
       "packages/malloy-db-postgres",
       "packages/malloy-db-snowflake",
-      "packages/malloy-filter",
       "packages/malloy-malloy-sql",
       "packages/malloy-render",
       "packages/malloy-syntax-highlight",
