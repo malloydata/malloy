@@ -72,14 +72,22 @@ export function annotationToTag(
       matchingNotes.push(note);
     }
   }
-  const parsed = Tag.fromTagLines(
-    matchingNotes.map(n => n.text),
-    extending
-  );
-  allErrs.push(
-    ...parsed.log.map((e: TagError) => mapMalloyError(e, matchingNotes[e.line]))
-  );
-  return {tag: parsed.tag ?? new Tag(), log: allErrs};
+  for (let i = 0; i < matchingNotes.length; i++) {
+    const note = matchingNotes[i];
+    if (note.text.match(prefix)) {
+      const noteParse = Tag.fromTagLine(
+        note.text,
+        i,
+        extending,
+        ...(spec.scopes ?? [])
+      );
+      extending = noteParse.tag;
+      allErrs.push(
+        ...noteParse.log.map((e: TagError) => mapMalloyError(e, note))
+      );
+    }
+  }
+  return {tag: extending, log: allErrs};
 }
 
 function mapMalloyError(e: TagError, note: Note): LogMessage {
