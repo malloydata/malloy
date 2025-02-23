@@ -8,6 +8,7 @@ import {StringSerializer} from './string_serializer';
 import {NumberSerializer} from './number_serializer';
 import {DateSerializer} from './date_serializer';
 
+
 const numberExamples = [
   '5',
   '!=5',
