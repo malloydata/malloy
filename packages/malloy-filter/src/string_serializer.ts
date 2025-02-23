@@ -94,7 +94,7 @@ export class StringSerializer {
         result += word + ', ';
       }
     }
-    return result;
+    return result.trim().replace(/,$/, '');
   }
 
   private static clauseToString(clauses: StringClause[]): string {
