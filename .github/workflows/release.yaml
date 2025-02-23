@@ -30,8 +30,6 @@ jobs:
       - db-snowflake
       - main
     runs-on: ubuntu-latest
-    env:
-      PACKAGES: 'packages/malloy-interfaces packages/malloy-tag packages/malloy-query-builder packages/malloy packages/malloy-db-bigquery packages/malloy-db-duckdb packages/malloy-db-postgres packages/malloy-db-snowflake packages/malloy-db-trino packages/malloy-db-mysql packages/malloy-render packages/malloy-malloy-sql test packages/malloy-syntax-highlight'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -39,7 +37,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18.x
+          node-version: 20.x
       - name: npm install, build, and publish
         run: |
           # Configure git user
@@ -48,6 +46,7 @@ jobs:
           # Build
           npm --no-audit --no-fund ci --loglevel error
           # Publish
+          PACKAGES=$(jq -r '.workspaces.packages[]' ./package.json | xargs echo)
           echo Publishing $PACKAGES
           VERSION=$(jq -r .version ./lerna.json)
           for package in $PACKAGES; do

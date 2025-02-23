@@ -15,6 +15,7 @@
       "packages/malloy-db-mysql",
       "packages/malloy-db-postgres",
       "packages/malloy-db-snowflake",
+      "packages/malloy-filter",
       "packages/malloy-malloy-sql",
       "packages/malloy-render",
       "packages/malloy-syntax-highlight",
@@ -25,7 +26,7 @@
     "samples"
   ],
   "engines": {
-    "node": ">=18",
+    "node": ">=20",
     "npm": ">=9"
   },
   "scripts": {
@@ -37,8 +38,8 @@
     "test": "NODE_OPTIONS=\"$NODE_OPTIONS --experimental-vm-modules\" jest --runInBand",
     "test-bigquery": "MALLOY_DATABASE=bigquery jest --runInBand",
     "test-postgres": "MALLOY_DATABASE=postgres jest --runInBand",
-    "test-duckdb": "JEST_SILENT_REPORTER_SHOW_PATHS=true MALLOY_DATABASE=duckdb jest --runInBand --reporters jest-silent-reporter",
-    "ci-snowflake": "JEST_SILENT_REPORTER_SHOW_PATHS=true jest --config jest.snowflake.config.ts --reporters jest-silent-reporter --reporters summary",
+    "test-duckdb": "MALLOY_DATABASE=duckdb JEST_SILENT_REPORTER_SHOW_PATHS=true jest --runInBand --reporters jest-silent-reporter",
+    "ci-snowflake": "MALLOY_DATABASE=snowflake JEST_SILENT_REPORTER_SHOW_PATHS=true jest --config jest.snowflake.config.ts --reporters jest-silent-reporter --reporters summary",
     "ci-trino": "MALLOY_DATABASE=trino JEST_SILENT_REPORTER_SHOW_PATHS=true jest --config jest.trino.config.ts --reporters jest-silent-reporter --reporters summary",
     "ci-presto": "MALLOY_DATABASE=presto JEST_SILENT_REPORTER_SHOW_PATHS=true jest --config jest.presto.config.ts --reporters jest-silent-reporter --reporters summary",
     "test-silent": "JEST_SILENT_REPORTER_SHOW_PATHS=true jest --runInBand --reporters jest-silent-reporter --no-color",
@@ -59,7 +60,7 @@
     "@types/fs-extra": "^9.0.13",
     "@types/jest": "^29.0.3",
     "@types/jest-expect-message": "^1.0.3",
-    "@types/node": "^18.15.3",
+    "@types/node": "^20.14.8",
     "@types/uuid": "^8.3.2",
     "@typescript-eslint/eslint-plugin": "^5.51.0",
     "@typescript-eslint/parser": "^5.51.0",

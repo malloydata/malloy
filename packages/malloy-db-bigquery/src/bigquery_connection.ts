@@ -164,7 +164,7 @@ export class BigQueryConnection
 
   private config: BigQueryConnectionConfiguration;
 
-  private location: string;
+  private location?: string;
 
   constructor(
     option: BigQueryConnectionOptions,
@@ -208,7 +208,7 @@ export class BigQueryConnection
 
     this.queryOptions = queryOptions;
     this.config = config;
-    this.location = config.location || 'US';
+    this.location = config.location;
   }
 
   get dialectName(): string {
@@ -689,7 +689,7 @@ export class BigQueryConnection
       query: sqlCommand,
       dryRun,
     });
-    const url = `https://console.cloud.google.com/bigquery?project=${this.billingProjectId}&j=bq:${this.location}:${job.id}&page=queryresults`;
+    const url = `https://console.cloud.google.com/bigquery?project=${this.billingProjectId}&j=bq:${job.location}:${job.id}&page=queryresults`;
     return url;
   }
 

@@ -22,7 +22,6 @@
  */
 
 import {
-  Connection,
   ConnectionConfig,
   MalloyQueryData,
   PersistSQLResults,
@@ -44,11 +43,16 @@ import {
   FieldDef,
   TinyParser,
   isRepeatedRecord,
+  TestableConnection,
 } from '@malloydata/malloy';
 
 import {BaseConnection} from '@malloydata/malloy/connection';
 
-import {PrestoClient, PrestoQuery} from '@prestodb/presto-js-client';
+import {
+  PrestoClient,
+  PrestoClientConfig,
+  PrestoQuery,
+} from '@prestodb/presto-js-client';
 import {randomUUID} from 'crypto';
 import {Trino, BasicAuth} from 'trino-client';
 
@@ -82,13 +86,14 @@ export interface BaseRunner {
     rows: unknown[][];
     columns: {name: string; type: string; error?: string}[];
     error?: string;
+    profilingUrl?: string;
   }>;
 }
 
 class PrestoRunner implements BaseRunner {
   client: PrestoClient;
   constructor(config: TrinoConnectionConfiguration) {
-    this.client = new PrestoClient({
+    const prestoClientConfig: PrestoClientConfig = {
       catalog: config.catalog,
       host: config.server,
       port: config.port,
@@ -96,7 +101,14 @@ class PrestoRunner implements BaseRunner {
       timezone: 'America/Costa_Rica',
       user: config.user || 'anyone',
       extraHeaders: {'X-Presto-Session': 'legacy_unnest=true'},
-    });
+    };
+    if (config.user && config.password) {
+      prestoClientConfig.basicAuthentication = {
+        user: config.user,
+        password: config.password,
+      };
+    }
+    this.client = new PrestoClient(prestoClientConfig);
   }
   async runSQL(
     sql: string,
@@ -172,7 +184,7 @@ class TrinoRunner implements BaseRunner {
 
 export abstract class TrinoPrestoConnection
   extends BaseConnection
-  implements Connection, PersistSQLResults
+  implements TestableConnection, PersistSQLResults
 {
   protected readonly dialect = new TrinoDialect();
   static DEFAULT_QUERY_OPTIONS: RunSQLOptions = {
@@ -268,8 +280,8 @@ export abstract class TrinoPrestoConnection
     if (r.error) {
       throw new Error(r.error);
     }
-    const inputRows = r.rows;
-    const columns = r.columns;
+
+    const {rows: inputRows, columns, profilingUrl} = r;
 
     const malloyColumns = columns.map(c =>
       mkFieldDef(this.malloyTypeFromTrinoType(c.type), c.name)
@@ -288,7 +300,7 @@ export abstract class TrinoPrestoConnection
       malloyRows.push(malloyRow);
     }
 
-    return {rows: malloyRows, totalRows: malloyRows.length};
+    return {rows: malloyRows, totalRows: malloyRows.length, profilingUrl};
   }
 
   private resultRow(colSchema: AtomicTypeDef, rawRow: unknown) {
@@ -422,7 +434,7 @@ export abstract class TrinoPrestoConnection
   }
 
   public async test(): Promise<void> {
-    // await this.dryRunSQLQuery('SELECT 1');
+    await this.runSQL('SELECT 1');
   }
 
   async close(): Promise<void> {
@@ -450,6 +462,10 @@ export class PrestoConnection extends TrinoPrestoConnection {
       new PrestoRunner(config),
       queryOptions
     );
+  }
+
+  override get dialectName(): string {
+    return 'presto';
   }
 
   static schemaFromExplain(
@@ -517,6 +533,10 @@ export class TrinoConnection extends TrinoPrestoConnection {
       new TrinoRunner(config),
       queryOptions
     );
+  }
+
+  override get dialectName(): string {
+    return 'trino';
   }
 
   protected async fillStructDefForSqlBlockSchema(

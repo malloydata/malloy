@@ -13,6 +13,7 @@
     {"path": "packages/malloy-db-mysql"},
     {"path": "packages/malloy-malloy-sql"},
     {"path": "test"},
+    {"path": "packages/malloy-filter"},
     {"path": "packages/malloy-render"}
   ],
   "files": [],
