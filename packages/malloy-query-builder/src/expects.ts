@@ -59,7 +59,7 @@ expect.extend({
       ? new ASTQuery({source, query: from})
       : undefined;
     if (q === undefined) {
-      throw new Error('Must specify either model or source')
+      throw new Error('Must specify either model or source');
     }
     f(q);
     const query = q.build();

@@ -13,9 +13,11 @@ async function go() {
   const files = fs.readdirSync('./dist').filter(f => !skipFiles.includes(f));
   await Promise.all(
     files.map(async file => {
+      // eslint-disable-next-line no-console
       console.log(`Generating flow types for file ${file}`);
       const contents = fs.readFileSync(`./dist/${file}`, 'utf8');
       const flow = await unstable_translateTSDefToFlowDef(contents);
+      // eslint-disable-next-line no-console
       console.log(flow);
     })
   );

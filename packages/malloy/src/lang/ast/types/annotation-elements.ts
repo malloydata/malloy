@@ -26,7 +26,7 @@ import {Tag} from '@malloydata/malloy-tag';
 import {MessageLogger} from '../../parse-log';
 import {Document, DocStatement, MalloyElement} from './malloy-element';
 import {QueryPropertyInterface} from './query-property-interface';
-import { annotationToTag } from '../../../annotation';
+import {annotationToTag} from '../../../annotation';
 
 export class ObjectAnnotation
   extends MalloyElement

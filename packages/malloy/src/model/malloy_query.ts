@@ -132,7 +132,7 @@ import {
 } from './materialization/utils';
 import {EventStream} from '../runtime_types';
 import {Tag} from '@malloydata/malloy-tag';
-import { annotationToTag } from '../annotation';
+import {annotationToTag} from '../annotation';
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
