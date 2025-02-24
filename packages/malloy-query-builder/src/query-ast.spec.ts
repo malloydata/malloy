@@ -143,6 +143,7 @@ describe('query builder', () => {
       },
     };
     expect((q: ASTQuery) => {
+      q.getOrAddDefaultSegment().addGroupBy('carrier');
       q.getOrAddDefaultSegment().addGroupBy('carrier', [], 'carrier_2');
     }).toModifyQuery({
       model: flights_model,
@@ -154,6 +155,15 @@ describe('query builder', () => {
           view: {
             kind: 'segment',
             operations: [
+              {
+                kind: 'group_by',
+                field: {
+                  expression: {
+                    kind: 'field_reference',
+                    name: 'carrier',
+                  },
+                },
+              },
               {
                 kind: 'group_by',
                 name: 'carrier_2',
@@ -168,7 +178,13 @@ describe('query builder', () => {
           },
         },
       },
-      malloy: 'run: flights -> { group_by: carrier_2 is carrier }',
+      malloy: dedent`
+        run: flights -> {
+          group_by:
+            carrier
+            carrier_2 is carrier
+        }
+      `,
     });
   });
   test('add a group by in a join', () => {
