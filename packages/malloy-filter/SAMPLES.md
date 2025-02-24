@@ -424,11 +424,9 @@ Output:  {
 
 Input:  null
 Output:  { operator: 'NULL' }
-Errors:  { message: 'Invalid token NULL', startIndex: 0, endIndex: 4 }
 
 Input:  -null,
 Output:  { operator: 'NOTNULL' }
-Errors:  { message: 'Invalid token -NULL', startIndex: 0, endIndex: 5 }
 
 Input:   yyesterday
 Errors:  { message: 'Invalid token yyesterday', startIndex: 1, endIndex: 11 }
