@@ -754,6 +754,18 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       dimension: satDay is 6
     }`,
   });
+  test('basic like', async () => {
+    const result = await sqlEq("'abz' ~ '%z'", true);
+    expect(result).isSqlEq();
+  });
+  test('basic like with string', async () => {
+    const result = await sqlEq("'%' ~ '\\\\%'", true);
+    expect(result).isSqlEq();
+  });
+  test('basic like with raw string', async () => {
+    const result = await sqlEq("'%' ~ s'\\%'", true);
+    expect(result).isSqlEq();
+  });
 
   describe.skip('alternations with not-eq', () => {
     /*
