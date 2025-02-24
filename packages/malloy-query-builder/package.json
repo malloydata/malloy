@@ -15,7 +15,7 @@
   "scripts": {
     "test": "jest --config=../../jest.config.js",
     "clean": "tsc --build --clean",
-    "build": "tsc --build",
+    "build": "tsc --build && npm run generate-flow",
     "prepublishOnly": "npm run clean && npm run build",
     "generate-flow": "ts-node scripts/gen_flow.ts",
     "generate-docs": "npx typedoc --excludeInternal",
