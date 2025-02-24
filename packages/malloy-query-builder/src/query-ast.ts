@@ -11,8 +11,8 @@ import * as Filter from '@malloydata/malloy-filter';
 export type ParsedFilter =
   | {kind: 'string'; clauses: Filter.StringClause[]}
   | {kind: 'number'; clauses: Filter.NumberClause[]}
-  | {kind: 'boolean'; clauses: Filter.BooleanClause[]};
-// | ({kind: 'time'} & Filter.TimeClause);
+  | {kind: 'boolean'; clauses: Filter.BooleanClause[]}
+  | {kind: 'time'; clauses: Filter.DateClause[]};
 
 export type PathSegment = number | string;
 export type Path = PathSegment[];
@@ -4365,8 +4365,9 @@ function serializeFilter(filter: ParsedFilter) {
       return new Filter.StringSerializer(filter.clauses).serialize();
     case 'number':
       return new Filter.NumberSerializer(filter.clauses).serialize();
-    case 'boolean': {
+    case 'boolean':
       return new Filter.BooleanSerializer(filter.clauses).serialize();
-    }
+    case 'time':
+      return new Filter.DateSerializer(filter.clauses).serialize();
   }
 }

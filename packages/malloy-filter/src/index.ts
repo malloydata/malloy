@@ -13,3 +13,4 @@ export * from './string_serializer';
 export * from './number_serializer';
 export * from './boolean_serializer';
 export * from './clause_types';
+export * from './date_types';
