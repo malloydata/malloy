@@ -166,6 +166,10 @@ export class DateParser extends BaseParser {
         }
       } else if (this.handleMerged(prefix, clauses)) {
         prefix = undefined;
+      } else if (token.type === 'NULL' || token.type === 'NOTNULL') {
+        prefix = undefined;
+        clauses.push({operator: token.type});
+        this.index++;
       } else {
         errors.push({
           message:
@@ -442,8 +446,6 @@ export class DateParser extends BaseParser {
       }
       clauses.push(clause);
       return true;
-    } else if (token.type === 'NULL' || token.type === 'NOTNULL') {
-      clauses.push({operator: token.type});
     }
     return false;
   }
