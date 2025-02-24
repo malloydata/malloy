@@ -1314,6 +1314,20 @@ export class MalloyToAST
     return new ast.ExprString(str);
   }
 
+  visitRawString(pcx: parse.RawStringContext): ast.ExprString {
+    const str = pcx.text.slice(1).trimStart();
+    const lastChar = str[str.length - 1];
+    if (lastChar === '\n') {
+      this.contextError(
+        pcx,
+        'literal-string-newline',
+        'String cannot contain a new-line character'
+      );
+    }
+    const astStr = new ast.ExprString(str.slice(1, -1));
+    return this.astAt(astStr, pcx);
+  }
+
   visitExprRegex(pcx: parse.ExprRegexContext): ast.ExprRegEx {
     const malloyRegex = pcx.HACKY_REGEX().text;
     return new ast.ExprRegEx(malloyRegex.slice(2, -1));
