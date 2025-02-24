@@ -290,6 +290,11 @@ describe('literals', () => {
       const x = new BetaExpression('"""x"""');
       expect(x).toParse();
     });
+    test('Error for missing close in raw string', () => {
+      expect(expr`s'hello\n`).toLog(
+        errorMessage('String cannot contain a new-line character')
+      );
+    });
     test('a string containing a tab', () => expect(expr`'\t'`).toParse());
   });
   describe('compound literals', () => {

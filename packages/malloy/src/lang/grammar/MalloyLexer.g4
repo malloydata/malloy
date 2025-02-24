@@ -138,22 +138,16 @@ fragment DQ: '"';
 fragment SQ3: SQ SQ SQ;
 fragment DQ3: DQ DQ DQ;
 fragment BQ3: BQ BQ BQ;
-fragment RAW_CHAR: ( '\\' . ) | (~ '\\');
+fragment RAW_CHAR: ('\\'  ~[\n]) | ~[\\\n];
 fragment FILTER: F SPACE_CHAR*;
 fragment RAWSTR: S SPACE_CHAR*;
 HACKY_REGEX: ('/' | R) SQ RAW_CHAR*? SQ;
 
-RAW_SQ: RAWSTR SQ RAW_CHAR*? SQ;
-RAW_DQ: RAWSTR DQ RAW_CHAR*? DQ;
-
-STRING_ESCAPE
-  : '\\' '\''
-  | '\\' '\\'
-  | '\\' .
-  ;
+RAW_SQ: RAWSTR SQ RAW_CHAR*? (SQ | '\n');
+RAW_DQ: RAWSTR DQ RAW_CHAR*? (DQ | '\n');
 
 fragment HEX: [0-9a-fA-F];
-fragment UNICODE: '\\u' HEX HEX HEX HEX;
+fragment UNICODE: '\\' U HEX HEX HEX HEX;
 fragment SAFE_NON_QUOTE: ~ ['"`\\\u0000-\u001F];
 fragment ESCAPED: '\\' ~ '\n';
 fragment STR_CHAR: UNICODE | ESCAPED | SAFE_NON_QUOTE | '\t';
@@ -202,7 +196,6 @@ QMARK: '?';
 fragment F_YEAR: DIGIT DIGIT DIGIT DIGIT;
 fragment F_DD: DIGIT DIGIT;
 fragment F_TZ: '[' (ID_CHAR | '/')* ']';
-fragment LX: '-' 'X' (ID_CHAR | DIGIT)+;
 // @YYYY-MM-DD HH:MM:SS.n
 LITERAL_TIMESTAMP
   : '@' F_YEAR '-' F_DD '-' F_DD
