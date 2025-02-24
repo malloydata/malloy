@@ -26,7 +26,6 @@
     "@malloydata/db-postgres": "^0.0.236",
     "@malloydata/db-snowflake": "^0.0.236",
     "@malloydata/db-trino": "^0.0.236",
-    "@malloydata/db-databricks": "^0.0.236",
     "@malloydata/malloy": "^0.0.236",
     "@malloydata/render": "^0.0.236",
     "events": "^3.3.0",

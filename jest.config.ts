@@ -33,7 +33,7 @@ const transformIgnoreModules = [
 ].join('|');
 
 module.exports = {
-  moduleFileExtensions: ['js', 'jsx', 'ts', 'tsx', 'node'],
+  moduleFileExtensions: ['js', 'jsx', 'ts', 'tsx'],
   setupFilesAfterEnv: ['<rootDir>/test/jest.setup.ts', 'jest-expect-message'],
   testMatch: ['**/?(*.)spec.(ts|js)?(x)'],
   testPathIgnorePatterns: ['/node_modules/', '/dist/', '/out/'],

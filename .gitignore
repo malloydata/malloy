@@ -39,7 +39,6 @@ tsconfig.compile-no-emit.tsbuildinfo
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-*.log
 
 .idea/
 .idea*
