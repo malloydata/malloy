@@ -2933,8 +2933,6 @@ export class ASTSegmentViewDefinition
         throw new Error(`Query already has a field named ${item.name}`);
       }
     }
-    // TODO ensure output schema doesn't already have this name, and add a parameter here to
-    // allow specifying an override name
     const whereToInsert = this.findInsertionPoint(item.kind);
     this.operations.insert(item, whereToInsert);
     return item;
@@ -2976,7 +2974,7 @@ export class ASTSegmentViewDefinition
    * @param limit The limit to set. Must be an integer.
    */
   public setLimit(limit: number) {
-    // TODO throw if not an integer
+    ASTLimitViewOperation.validateLimit(limit);
     const limitOp: ASTLimitViewOperation | undefined = [
       ...this.operations.iter(),
     ].find(ASTViewOperation.isLimit);
@@ -4301,6 +4299,7 @@ export class ASTLimitViewOperation extends ASTObjectNode<
   }
 
   set limit(limit: number) {
+    ASTLimitViewOperation.validateLimit(limit);
     this.edit();
     this.children.limit = limit;
   }
@@ -4321,6 +4320,15 @@ export class ASTLimitViewOperation extends ASTObjectNode<
 
   delete() {
     this.list.remove(this);
+  }
+
+  /**
+   * @internal
+   */
+  static validateLimit(limit: number) {
+    if (!Number.isInteger(limit)) {
+      throw new Error('Limit must be an integer');
+    }
   }
 }
 
