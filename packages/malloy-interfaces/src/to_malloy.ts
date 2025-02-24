@@ -455,7 +455,7 @@ function whereToFragments(where: Malloy.Where[]): Fragment[] {
   return formatBlock('where', where.map(whereItemToFragments));
 }
 
-const FILTER_QUOTES = ['`', "'", '"', '"""', "'''"];
+const FILTER_QUOTES = ['`', "'", '"']; // technically , '"""', "'''" are valid too, but they're ugly
 
 function quoteFilter(filter: string): string {
   let bestQuote: string | undefined = undefined;

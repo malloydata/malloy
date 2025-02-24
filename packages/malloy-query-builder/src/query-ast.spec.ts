@@ -463,7 +463,7 @@ describe('query builder', () => {
           carrier ~ f\`'"\`
           carrier ~ f'\`'
           carrier ~ f"\`'"
-          carrier ~ f"""\`'""""
+          carrier ~ f\`\\\`"\`
           carrier ~ f\`\\\`"""'''\`
       }`,
     });
