@@ -40,9 +40,9 @@ describe('DataBricksConnection', () => {
     connection = new DatabricksConnection('databricks', {
       'host': 'todo',
       'path': 'todo',
-      'oauthClientId': 'todo',
-      'oauthClientSecret': 'todo',
+      'token': 'todo',
       'name': 'test',
+      'defaultCatalog': 'workspace',
     });
 
     await connection.runSQL('SELECT 1');

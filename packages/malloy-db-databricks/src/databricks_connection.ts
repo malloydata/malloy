@@ -53,6 +53,7 @@ export interface DatabricksConnectionOptions extends ConnectionConfig {
   token?: string;
   oauthClientId?: string;
   oauthClientSecret?: string;
+  defaultCatalog: string;
 }
 
 export class DatabricksConnection
@@ -61,7 +62,12 @@ export class DatabricksConnection
 {
   public readonly name: string;
   private queryOptionsReader: QueryOptionsReader = {};
-  private config: DatabricksConnectionOptions = {host: '', path: '', name: ''};
+  private config: DatabricksConnectionOptions = {
+    host: '',
+    path: '',
+    name: '',
+    defaultCatalog: '',
+  };
 
   private readonly dialect = new DatabricksDialect();
 
@@ -234,6 +240,8 @@ export class DatabricksConnection
       throw new Error('Databricks connection not established');
     }
 
+    sql.unshift(`USE CATALOG ${this.config.defaultCatalog}`);
+
     let result: QueryDataRow[] = [];
     for (let i = 0; i < sql.length; i++) {
       const queryOperation = await this.session.executeStatement(sql[i], {
@@ -264,18 +272,21 @@ export class DatabricksConnection
       throw new Error('Databricks connection not established');
     }
 
-    const queryOperation = await this.session.executeStatement(sql, {
-      runAsync: true,
-    });
+    const sqlWithDefaultCatalog = [`USE CATALOG ${this.config.defaultCatalog}`, sql]
 
-    let result = (await queryOperation.fetchAll()) as QueryDataRow[];
+    let result: QueryDataRow[] = [];
+    for (let i = 0; i < sqlWithDefaultCatalog.length; i++) {
+      const queryOperation = await this.session.executeStatement(sqlWithDefaultCatalog[i], {
+        runAsync: true,
+      });
+      result = (await queryOperation.fetchAll()) as QueryDataRow[];
+      await queryOperation.close();
+    }
 
     // Extract actual result from Databricks response
     const actualResult = result.map(row =>
       row['row'] ? JSON.parse(String(row['row'])) : row
     );
-
-    await queryOperation.close();
 
     // restrict num rows if necessary
     const databricksRowLimit = rowLimit ?? config.rowLimit ?? DEFAULT_PAGE_SIZE;
