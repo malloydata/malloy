@@ -819,9 +819,6 @@ export class ASTQuery
       entries: [source],
       anonymous_queries: [],
     };
-    if (model === undefined) {
-      throw new Error('Must provide a model or source');
-    }
     super(query, {
       definition: ASTQueryDefinition.from(query.definition),
       annotations:
