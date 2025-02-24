@@ -1557,4 +1557,122 @@ describe('query builder', () => {
       malloy: 'run: flights -> by_month + top10 + { }',
     });
   });
+  describe('parameters', () => {
+    test('add parameters of different types', () => {
+      const from: Malloy.Query = {
+        definition: {
+          kind: 'arrow',
+          source_reference: {name: 'foo'},
+          view: {
+            kind: 'segment',
+            operations: [],
+          },
+        },
+      };
+      expect((q: ASTQuery) => {
+        const source = q.definition.asArrowQueryDefinition().sourceReference;
+        source.addParameter('string_param', 'COOL');
+        source.addParameter('number_param', 7);
+        source.addParameter('boolean_param', true);
+        source.addParameter('date_param', {
+          // TODO what am I supposed to do about timezones?
+          date: new Date('2020-01-01 10:00:00+00:00'),
+          granularity: 'month',
+        });
+        source.addParameter('timestamp_param', {
+          date: new Date('2020-01-01 10:00:00+00:00'),
+          granularity: 'minute',
+        });
+        source.addParameter('null_param', null);
+      }).toModifyQuery({
+        source: {
+          name: 'foo',
+          schema: {fields: []},
+          parameters: [
+            {
+              name: 'string_param',
+              type: {kind: 'string_type'},
+            },
+            {
+              name: 'number_param',
+              type: {kind: 'number_type'},
+            },
+            {
+              name: 'boolean_param',
+              type: {kind: 'boolean_type'},
+            },
+            {
+              name: 'date_param',
+              type: {kind: 'date_type'},
+            },
+            {
+              name: 'timestamp_param',
+              type: {kind: 'timestamp_type'},
+            },
+            {
+              name: 'null_param',
+              type: {kind: 'string_type'},
+            },
+          ],
+        },
+        from,
+        to: {
+          definition: {
+            kind: 'arrow',
+            source_reference: {
+              name: 'foo',
+              parameters: [
+                {
+                  name: 'string_param',
+                  value: {kind: 'string_literal', string_value: 'COOL'},
+                },
+                {
+                  name: 'number_param',
+                  value: {kind: 'number_literal', number_value: 7},
+                },
+                {
+                  name: 'boolean_param',
+                  value: {kind: 'boolean_literal', boolean_value: true},
+                },
+                {
+                  name: 'date_param',
+                  value: {
+                    kind: 'date_literal',
+                    date_value: '2020-01-01 10:00:00',
+                    granularity: 'month',
+                  },
+                },
+                {
+                  name: 'timestamp_param',
+                  value: {
+                    kind: 'timestamp_literal',
+                    timestamp_value: '2020-01-01 10:00:00',
+                    granularity: 'minute',
+                  },
+                },
+                {
+                  name: 'null_param',
+                  value: {kind: 'null_literal'},
+                },
+              ],
+            },
+            view: {
+              kind: 'segment',
+              operations: [],
+            },
+          },
+        },
+        malloy: dedent`
+          run: foo(
+            string_param is "COOL",
+            number_param is 7,
+            boolean_param is true,
+            date_param is @2020-01,
+            timestamp_param is @2020-01-01 18:00,
+            null_param is null
+          ) -> { }
+        `,
+      });
+    });
+  });
 });

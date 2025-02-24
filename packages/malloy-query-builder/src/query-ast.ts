@@ -31,6 +31,8 @@ type LiteralOrNode<T> = T extends string
   ? T
   : T extends string[]
   ? T
+  : T extends boolean
+  ? T
   : undefined extends T
   ? NonOptionalASTNode<T> | undefined
   : ASTNode<T>;
@@ -544,9 +546,14 @@ abstract class ASTNode<T> {
 }
 
 function isBasic(
-  t: ASTAny | string | number | string[]
-): t is string | number | string[] {
-  return Array.isArray(t) || typeof t === 'string' || typeof t === 'number';
+  t: ASTAny | string | number | string[] | boolean
+): t is string | number | string[] | boolean {
+  return (
+    Array.isArray(t) ||
+    typeof t === 'string' ||
+    typeof t === 'number' ||
+    typeof t === 'boolean'
+  );
 }
 
 abstract class ASTListNode<
@@ -1074,7 +1081,12 @@ export class ASTQuery
   }
 }
 
-export type RawLiteralValue = number | string | Date | boolean | null;
+export type RawLiteralValue =
+  | number
+  | string
+  | {date: Date; granularity: Malloy.TimestampTimeframe}
+  | boolean
+  | null;
 
 export class ASTReference extends ASTObjectNode<
   Malloy.Reference,
@@ -1362,7 +1374,13 @@ export class ASTParameterValue extends ASTObjectNode<
   }
 }
 
-export type ASTLiteralValue = ASTStringLiteralValue | ASTNumberLiteralValue;
+export type ASTLiteralValue =
+  | ASTStringLiteralValue
+  | ASTNumberLiteralValue
+  | ASTBooleanLiteralValue
+  | ASTDateLiteralValue
+  | ASTTimestampLiteralValue
+  | ASTNullLiteralValue;
 export const LiteralValueAST = {
   from(value: Malloy.LiteralValue) {
     switch (value.kind) {
@@ -1370,8 +1388,14 @@ export const LiteralValueAST = {
         return new ASTStringLiteralValue(value);
       case 'number_literal':
         return new ASTNumberLiteralValue(value);
-      default:
-        throw new Error(`Unsupported literal value type ${value.kind}`);
+      case 'boolean_literal':
+        return new ASTBooleanLiteralValue(value);
+      case 'date_literal':
+        return new ASTDateLiteralValue(value);
+      case 'timestamp_literal':
+        return new ASTTimestampLiteralValue(value);
+      case 'null_literal':
+        return new ASTNullLiteralValue(value);
     }
   },
   makeLiteral(value: RawLiteralValue): Malloy.LiteralValue {
@@ -1394,15 +1418,25 @@ export const LiteralValueAST = {
       return {
         kind: 'null_literal',
       };
+    } else if ('date' in value) {
+      const granularity = value.granularity;
+      const serialized = serializeDateAsLiteral(value.date);
+      if (isDateTimeframe(granularity)) {
+        return {
+          kind: 'date_literal',
+          date_value: serialized,
+          granularity: granularity,
+        };
+      }
+      return {
+        kind: 'timestamp_literal',
+        timestamp_value: serialized,
+        granularity: granularity,
+      };
     }
     throw new Error('TODO other literal types');
   },
 };
-
-// | DateLiteralValueAST
-// | TimestampLiteralValueAST
-// | BooleanLiteralValueAST
-// | NullLiteralValueAST;
 
 export class ASTStringLiteralValue extends ASTObjectNode<
   Malloy.LiteralValueWithStringLiteral,
@@ -1421,6 +1455,21 @@ export class ASTStringLiteralValue extends ASTObjectNode<
   }
 }
 
+export class ASTNullLiteralValue extends ASTObjectNode<
+  Malloy.LiteralValueWithNullLiteral,
+  {
+    kind: 'null_literal';
+  }
+> {
+  readonly kind: Malloy.LiteralValueType = 'null_literal';
+
+  constructor(public node: Malloy.LiteralValueWithNullLiteral) {
+    super(node, {
+      kind: node.kind,
+    });
+  }
+}
+
 export class ASTNumberLiteralValue extends ASTObjectNode<
   Malloy.LiteralValueWithNumberLiteral,
   {
@@ -1434,6 +1483,61 @@ export class ASTNumberLiteralValue extends ASTObjectNode<
     super(node, {
       kind: node.kind,
       number_value: node.number_value,
+    });
+  }
+}
+
+export class ASTBooleanLiteralValue extends ASTObjectNode<
+  Malloy.LiteralValueWithBooleanLiteral,
+  {
+    kind: 'boolean_literal';
+    boolean_value: boolean;
+  }
+> {
+  readonly kind: Malloy.LiteralValueType = 'boolean_literal';
+
+  constructor(public node: Malloy.LiteralValueWithBooleanLiteral) {
+    super(node, {
+      kind: node.kind,
+      boolean_value: node.boolean_value,
+    });
+  }
+}
+
+export class ASTDateLiteralValue extends ASTObjectNode<
+  Malloy.LiteralValueWithDateLiteral,
+  {
+    kind: 'date_literal';
+    date_value: string;
+    granularity?: Malloy.DateTimeframe;
+  }
+> {
+  readonly kind: Malloy.LiteralValueType = 'date_literal';
+
+  constructor(public node: Malloy.LiteralValueWithDateLiteral) {
+    super(node, {
+      kind: node.kind,
+      date_value: node.date_value,
+      granularity: node.granularity,
+    });
+  }
+}
+
+export class ASTTimestampLiteralValue extends ASTObjectNode<
+  Malloy.LiteralValueWithTimestampLiteral,
+  {
+    kind: 'timestamp_literal';
+    timestamp_value: string;
+    granularity?: Malloy.TimestampTimeframe;
+  }
+> {
+  readonly kind: Malloy.LiteralValueType = 'timestamp_literal';
+
+  constructor(public node: Malloy.LiteralValueWithTimestampLiteral) {
+    super(node, {
+      kind: node.kind,
+      timestamp_value: node.timestamp_value,
+      granularity: node.granularity,
     });
   }
 }
@@ -4571,4 +4675,33 @@ function sourceOrQueryToModelEntry(
   } else {
     return {...entry, kind: 'source'};
   }
+}
+
+function isDateTimeframe(
+  timeframe: Malloy.TimestampTimeframe
+): timeframe is Malloy.DateTimeframe {
+  switch (timeframe) {
+    case 'year':
+    case 'quarter':
+    case 'month':
+    case 'week':
+    case 'day':
+      return true;
+    default:
+      return false;
+  }
+}
+
+function digits(value: number, digits: number) {
+  return value.toString().padStart(digits, '0');
+}
+
+function serializeDateAsLiteral(date: Date): string {
+  const year = digits(date.getUTCFullYear(), 2);
+  const month = digits(date.getUTCMonth() + 1, 2);
+  const day = digits(date.getUTCDate(), 2);
+  const hour = digits(date.getUTCHours(), 2);
+  const minute = digits(date.getUTCMinutes(), 2);
+  const second = digits(date.getUTCSeconds(), 2);
+  return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
 }

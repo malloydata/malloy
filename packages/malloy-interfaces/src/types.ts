@@ -106,6 +106,7 @@ export type DateCell = {
 };
 export type DateLiteral = {
   date_value: string;
+  granularity?: DateTimeframe;
 };
 export type DateTimeframe = 'year' | 'quarter' | 'month' | 'week' | 'day';
 export type DateType = {
@@ -348,6 +349,7 @@ export type TimestampCell = {
 };
 export type TimestampLiteral = {
   timestamp_value: string;
+  granularity?: TimestampTimeframe;
 };
 export type TimestampTimeframe =
   | 'year'

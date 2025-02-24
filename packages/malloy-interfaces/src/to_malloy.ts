@@ -71,9 +71,88 @@ function literalToFragments(literal: Malloy.LiteralValue): Fragment[] {
     case 'null_literal':
       return ['null'];
     case 'date_literal':
-      throw new Error('DateLiteral not implemented');
+      return [
+        serializeDateAsLiteral(
+          parseDate(literal.date_value),
+          literal.granularity ?? 'day'
+        ),
+      ];
     case 'timestamp_literal':
-      throw new Error('TimestampLiteral not implemented');
+      return [
+        serializeDateAsLiteral(
+          parseDate(literal.timestamp_value),
+          literal.granularity ?? 'second'
+        ),
+      ];
+  }
+}
+
+function parseDate(date: string): Date {
+  return new Date(date);
+}
+
+function digits(value: number, digits: number) {
+  return value.toString().padStart(digits, '0');
+}
+
+function serializeDateAsLiteral(
+  date: Date,
+  granularity: Malloy.TimestampTimeframe
+): string {
+  switch (granularity) {
+    case 'year': {
+      const year = digits(date.getUTCFullYear(), 4);
+      return `@${year}`;
+    }
+    case 'quarter': {
+      const year = digits(date.getUTCFullYear(), 4);
+      const quarter = Math.floor(date.getUTCMonth() / 3) + 1;
+      return `@${year}-Q${quarter}`;
+    }
+    case 'month': {
+      const year = digits(date.getUTCFullYear(), 2);
+      const month = digits(date.getUTCMonth() + 1, 2);
+      return `@${year}-${month}`;
+    }
+    case 'week': {
+      const year = digits(date.getUTCFullYear(), 2);
+      const month = digits(date.getUTCMonth() + 1, 2);
+      const day = digits(date.getUTCDate(), 2);
+      return `@WK${year}-${month}-${day}`;
+    }
+    case 'day': {
+      const year = digits(date.getUTCFullYear(), 2);
+      const month = digits(date.getUTCMonth() + 1, 2);
+      const day = digits(date.getUTCDate(), 2);
+      return `@${year}-${month}-${day}`;
+    }
+    case 'hour': {
+      // TODO it's technically illegal to have a date literal of granularity hour
+      const year = digits(date.getUTCFullYear(), 2);
+      const month = digits(date.getUTCMonth() + 1, 2);
+      const day = digits(date.getUTCDate(), 2);
+      const hour = digits(date.getUTCHours(), 2);
+      return `@${year}-${month}-${day} ${hour}:00`;
+    }
+    case 'minute': {
+      const year = digits(date.getUTCFullYear(), 2);
+      const month = digits(date.getUTCMonth() + 1, 2);
+      const day = digits(date.getUTCDate(), 2);
+      const hour = digits(date.getUTCHours(), 2);
+      const minute = digits(date.getUTCMinutes(), 2);
+      return `@${year}-${month}-${day} ${hour}:${minute}`;
+    }
+    case 'second': {
+      const year = digits(date.getUTCFullYear(), 2);
+      const month = digits(date.getUTCMonth() + 1, 2);
+      const day = digits(date.getUTCDate(), 2);
+      const hour = digits(date.getUTCHours(), 2);
+      const minute = digits(date.getUTCMinutes(), 2);
+      const second = digits(date.getUTCSeconds(), 2);
+      return `@${year}-${month}-${day} ${hour}:${minute}:${second}`;
+    }
+    default:
+      throw new Error('Unknown timeframe.');
   }
 }
 
@@ -92,7 +171,7 @@ function referenceToFragments(reference: Malloy.Reference): Fragment[] {
       parameterFragments.push(' is ');
       parameterFragments.push(...literalToFragments(p.value));
       if (i < reference.parameters.length - 1) {
-        parameterFragments.push(', ');
+        parameterFragments.push(',', NEWLINE);
       }
     }
     fragments.push(...wrap('(', parameterFragments, ')'));

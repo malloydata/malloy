@@ -384,10 +384,12 @@ struct BooleanLiteral {
 
 struct DateLiteral {
   1: required string date_value,
+  2: optional DateTimeframe granularity,
 }
 
 struct TimestampLiteral {
   1: required string timestamp_value,
+  2: optional TimestampTimeframe granularity,
 }
 
 struct NullLiteral {
