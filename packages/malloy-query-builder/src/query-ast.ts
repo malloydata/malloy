@@ -1560,31 +1560,25 @@ export class ASTUnimplemented<T> extends ASTNode<T> {
   }
 }
 
-export interface IASTQueryDefinition {
+export interface IASTQueryOrViewDefinition {
+  /**
+   * Upward propagation of field deletion/rename etc
+   * @internal
+   */
+  propagateUp(f: PropagationFunction): void;
+  /**
+   * Downward propagation of field deletion/rename etc
+   * @internal
+   */
+  propagateDown(f: PropagationFunction): void;
+}
+
+type PropagationFunction = (propagatable: IASTQueryOrViewDefinition) => void;
+
+export interface IASTQueryDefinition extends IASTQueryOrViewDefinition {
   getOrAddDefaultSegment(): ASTSegmentViewDefinition;
   reorderFields(names: string[]): void;
   isRunnable(): boolean;
-
-  /**
-   * Upward propagation of name change; change order bys to use a new name for a field.
-   * @internal
-   */
-  renameOrderBys(oldName: string, newName: string): void;
-  /**
-   * Downward propagation of name change; change order bys to use a new name for a field.
-   * @internal
-   */
-  renameOrderBysInSelf(oldName: string, newName: string): void;
-  /**
-   * Upward propagation of field deletion
-   * @internal
-   */
-  removeOrderBys(name: string): void;
-  /**
-   * Downward propagation of field deletion
-   * @internal
-   */
-  removeOrderBysInSelf(name: string): void;
 }
 
 export type ASTQueryDefinition =
@@ -1665,30 +1659,16 @@ export class ASTArrowQueryDefinition
   /**
    * @internal
    */
-  renameOrderBys(oldName: string, newName: string): void {
-    this.renameOrderBysInSelf(oldName, newName);
+  propagateUp(f: PropagationFunction): void {
+    this.propagateDown(f);
   }
 
   /**
    * @internal
    */
-  renameOrderBysInSelf(oldName: string, newName: string): void {
-    this.view.renameOrderBysInSelf(oldName, newName);
-  }
-
-  // TODO abstract this logic of upward/downward propagation
-  /**
-   * @internal
-   */
-  removeOrderBys(name: string): void {
-    this.removeOrderBysInSelf(name);
-  }
-
-  /**
-   * @internal
-   */
-  removeOrderBysInSelf(name: string): void {
-    this.view.removeOrderBysInSelf(name);
+  propagateDown(f: PropagationFunction): void {
+    f(this.view);
+    this.view.propagateDown(f);
   }
 
   reorderFields(names: string[]): void {
@@ -1758,32 +1738,20 @@ export class ASTRefinementQueryDefinition
     const refinement = this.refinement.getRefinementSchema();
     return ASTQuery.schemaMerge(base, refinement);
   }
+
   /**
    * @internal
    */
-  renameOrderBys(oldName: string, newName: string): void {
-    this.renameOrderBysInSelf(oldName, newName);
+  propagateUp(f: PropagationFunction): void {
+    this.propagateDown(f);
   }
 
   /**
    * @internal
    */
-  renameOrderBysInSelf(oldName: string, newName: string): void {
-    this.refinement.renameOrderBysInSelf(oldName, newName);
-  }
-
-  /**
-   * @internal
-   */
-  removeOrderBys(name: string): void {
-    this.removeOrderBysInSelf(name);
-  }
-
-  /**
-   * @internal
-   */
-  removeOrderBysInSelf(name: string): void {
-    this.refinement.removeOrderBysInSelf(name);
+  propagateDown(f: PropagationFunction): void {
+    f(this.refinement);
+    this.refinement.propagateDown(f);
   }
 
   reorderFields(names: string[]): void {
@@ -1852,28 +1820,14 @@ export class ASTReferenceQueryDefinition
   /**
    * @internal
    */
-  renameOrderBys(_oldName: string, _newName: string): void {
+  propagateUp(_f: PropagationFunction): void {
     return;
   }
 
   /**
    * @internal
    */
-  renameOrderBysInSelf(_oldName: string, _newName: string): void {
-    return;
-  }
-
-  /**
-   * @internal
-   */
-  removeOrderBys(_name: string): void {
-    return;
-  }
-
-  /**
-   * @internal
-   */
-  removeOrderBysInSelf(_name: string): void {
+  propagateDown(_f: PropagationFunction): void {
     return;
   }
 
@@ -1882,7 +1836,7 @@ export class ASTReferenceQueryDefinition
   }
 }
 
-export interface IASTViewDefinition {
+export interface IASTViewDefinition extends IASTQueryOrViewDefinition {
   isRunnable(): boolean;
   getOrAddDefaultSegment(): ASTSegmentViewDefinition;
   getInputSchema(): Malloy.Schema;
@@ -1899,26 +1853,6 @@ export interface IASTViewDefinition {
     error?: string;
   };
   getInheritedAnnotations(): Malloy.Annotation[];
-  /**
-   * Upward propagation of name change; change order bys to use a new name for a field.
-   * @internal
-   */
-  renameOrderBys(oldName: string, newName: string): void;
-  /**
-   * Downward propagation of name change; change order bys to use a new name for a field.
-   * @internal
-   */
-  renameOrderBysInSelf(oldName: string, newName: string): void;
-  /**
-   * Upward propagation of field deletion
-   * @internal
-   */
-  removeOrderBys(name: string): void;
-  /**
-   * Downward propagation of field deletion
-   * @internal
-   */
-  removeOrderBysInSelf(name: string): void;
 }
 
 export type ASTViewDefinition =
@@ -2108,28 +2042,14 @@ export class ASTReferenceViewDefinition
   /**
    * @internal
    */
-  renameOrderBys(oldName: string, newName: string): void {
-    (this.parent as ViewParent).renameOrderBys(oldName, newName);
+  propagateUp(f: PropagationFunction): void {
+    (this.parent as ViewParent).propagateUp(f);
   }
 
   /**
    * @internal
    */
-  renameOrderBysInSelf(_oldName: string, _newName: string): void {
-    return;
-  }
-
-  /**
-   * @internal
-   */
-  removeOrderBys(name: string): void {
-    (this.parent as ViewParent).removeOrderBys(name);
-  }
-
-  /**
-   * @internal
-   */
-  removeOrderBysInSelf(_name: string): void {
+  propagateDown(_f: PropagationFunction): void {
     return;
   }
 
@@ -2222,29 +2142,16 @@ export class ASTArrowViewDefinition
   /**
    * @internal
    */
-  renameOrderBys(oldName: string, newName: string): void {
-    this.renameOrderBysInSelf(oldName, newName);
+  propagateUp(f: PropagationFunction): void {
+    this.propagateDown(f);
   }
 
   /**
    * @internal
    */
-  renameOrderBysInSelf(oldName: string, newName: string): void {
-    this.view.renameOrderBysInSelf(oldName, newName);
-  }
-
-  /**
-   * @internal
-   */
-  removeOrderBys(name: string): void {
-    this.removeOrderBysInSelf(name);
-  }
-
-  /**
-   * @internal
-   */
-  removeOrderBysInSelf(name: string): void {
-    this.view.removeOrderBysInSelf(name);
+  propagateDown(f: PropagationFunction): void {
+    f(this.view);
+    this.view.propagateDown(f);
   }
 
   getInheritedAnnotations(): Malloy.Annotation[] {
@@ -2359,31 +2266,18 @@ export class ASTRefinementViewDefinition
   /**
    * @internal
    */
-  renameOrderBys(oldName: string, newName: string): void {
-    (this.parent as ViewParent).renameOrderBys(oldName, newName);
+  propagateUp(f: PropagationFunction): void {
+    (this.parent as ViewParent).propagateUp(f);
   }
 
   /**
    * @internal
    */
-  renameOrderBysInSelf(oldName: string, newName: string): void {
-    this.base.renameOrderBysInSelf(oldName, newName);
-    this.refinement.renameOrderBysInSelf(oldName, newName);
-  }
-
-  /**
-   * @internal
-   */
-  removeOrderBys(name: string): void {
-    (this.parent as ViewParent).removeOrderBys(name);
-  }
-
-  /**
-   * @internal
-   */
-  removeOrderBysInSelf(name: string): void {
-    this.base.removeOrderBysInSelf(name);
-    this.refinement.removeOrderBysInSelf(name);
+  propagateDown(f: PropagationFunction): void {
+    f(this.base);
+    f(this.refinement);
+    this.base.propagateDown(f);
+    this.refinement.propagateDown(f);
   }
 
   getInheritedAnnotations(): Malloy.Annotation[] {
@@ -2459,10 +2353,9 @@ export class ASTSegmentViewDefinition
   }
 
   /**
-   * Downward propagation of name change; change order bys to use a new name for a field.
    * @internal
    */
-  renameOrderBysInSelf(oldName: string, newName: string) {
+  renameOrderBys(oldName: string, newName: string) {
     for (const operation of this.operations.iter()) {
       if (operation instanceof ASTOrderByViewOperation) {
         if (operation.name === oldName) {
@@ -2471,25 +2364,25 @@ export class ASTSegmentViewDefinition
       }
     }
   }
+
   /**
-   * Upward propagation of name change; change order bys to use a new name for a field.
    * @internal
    */
-  renameOrderBys(oldName: string, newName: string) {
-    (this.parent as ViewParent).renameOrderBys(oldName, newName);
+  propagateUp(f: PropagationFunction): void {
+    (this.parent as ViewParent).propagateUp(f);
+  }
+
+  /**
+   * @internal
+   */
+  propagateDown(_f: PropagationFunction): void {
+    return;
   }
 
   /**
    * @internal
    */
   removeOrderBys(name: string): void {
-    (this.parent as ViewParent).removeOrderBys(name);
-  }
-
-  /**
-   * @internal
-   */
-  removeOrderBysInSelf(name: string): void {
     for (const operation of this.operations.iter()) {
       if (operation instanceof ASTOrderByViewOperation) {
         if (operation.name === name) {
@@ -2557,7 +2450,11 @@ export class ASTSegmentViewDefinition
     }
     const oldName = field.name;
     field.name = name;
-    this.renameOrderBys(oldName, name);
+    this.propagateUp(v => {
+      if (v instanceof ASTSegmentViewDefinition) {
+        v.renameOrderBys(oldName, name);
+      }
+    });
   }
 
   /**
@@ -3416,7 +3313,11 @@ export class ASTGroupByViewOperation
    */
   delete() {
     this.list.remove(this);
-    this.list.segment.removeOrderBys(this.name);
+    this.list.segment.propagateUp(v => {
+      if (v instanceof ASTSegmentViewDefinition) {
+        v.removeOrderBys(this.name);
+      }
+    });
   }
 
   getFieldInfo(): Malloy.FieldInfo {
@@ -3565,7 +3466,11 @@ export class ASTAggregateViewOperation
 
   delete() {
     this.list.remove(this);
-    this.list.segment.removeOrderBys(this.name);
+    this.list.segment.propagateUp(v => {
+      if (v instanceof ASTSegmentViewDefinition) {
+        v.removeOrderBys(this.name);
+      }
+    });
   }
 
   getFieldInfo(): Malloy.FieldInfo {
@@ -4339,29 +4244,16 @@ export class ASTView
   /**
    * @internal
    */
-  renameOrderBys(oldName: string, newName: string): void {
-    this.renameOrderBysInSelf(oldName, newName);
+  propagateUp(f: PropagationFunction): void {
+    this.propagateDown(f);
   }
 
   /**
    * @internal
    */
-  renameOrderBysInSelf(oldName: string, newName: string): void {
-    this.definition.renameOrderBysInSelf(oldName, newName);
-  }
-
-  /**
-   * @internal
-   */
-  removeOrderBys(name: string): void {
-    this.removeOrderBysInSelf(name);
-  }
-
-  /**
-   * @internal
-   */
-  removeOrderBysInSelf(name: string): void {
-    this.definition.removeOrderBysInSelf(name);
+  propagateDown(f: PropagationFunction): void {
+    f(this.definition);
+    this.definition.propagateDown(f);
   }
 
   reorderFields(names: string[]): void {
