@@ -498,12 +498,13 @@ abstract class ASTNode<T> {
   /**
    * @internal
    */
-  static schemaTryGet(schema: Malloy.Schema, name: string) {
-    const parts = name.split('.');
+  static schemaTryGet(
+    schema: Malloy.Schema,
+    name: string,
+    path: string[] | undefined
+  ) {
     let current = schema;
-    const front = parts.slice(0, -1);
-    const last = parts[parts.length - 1];
-    for (const part of front) {
+    for (const part of path ?? []) {
       const field = current.fields.find(f => f.name === part);
       if (field === undefined) {
         throw new Error(`${part} not found`);
@@ -513,15 +514,19 @@ abstract class ASTNode<T> {
       }
       current = field.schema;
     }
-    const field = current.fields.find(f => f.name === last);
+    const field = current.fields.find(f => f.name === name);
     return field;
   }
 
   /**
    * @internal
    */
-  static schemaGet(schema: Malloy.Schema, name: string) {
-    const field = ASTNode.schemaTryGet(schema, name);
+  static schemaGet(
+    schema: Malloy.Schema,
+    name: string,
+    path: string[] | undefined
+  ) {
+    const field = ASTNode.schemaTryGet(schema, name, path);
     if (field === undefined) {
       throw new Error(`${name} not found`);
     }
@@ -1082,6 +1087,7 @@ export class ASTReference extends ASTObjectNode<
   constructor(public reference: Malloy.Reference) {
     super(reference, {
       name: reference.name,
+      path: reference.path,
       parameters:
         reference.parameters && new ASTParameterValueList(reference.parameters),
     });
@@ -1098,6 +1104,10 @@ export class ASTReference extends ASTObjectNode<
 
   get parameters() {
     return this.children.parameters;
+  }
+
+  get path() {
+    return this.children.path;
   }
 
   /**
@@ -1161,7 +1171,7 @@ export class ASTFieldReference extends ASTReference {
   getFieldInfo() {
     const schema = this.segment.getInputSchema();
     // TODO path
-    return ASTNode.schemaGet(schema, this.name);
+    return ASTNode.schemaGet(schema, this.name, this.path);
   }
 
   get name() {
@@ -1849,13 +1859,14 @@ function swapViewInParent(node: ASTViewDefinition, view: ASTViewDefinition) {
 
 function isValidViewRefinement(
   view: ASTViewDefinition,
-  name: string
+  name: string,
+  path: string[] = []
 ): {
   isValidViewRefinement: boolean;
   error?: string;
 } {
   const schema = view.getInputSchema();
-  const field = ASTQuery.schemaGet(schema, name);
+  const field = ASTQuery.schemaGet(schema, name, path);
   if (field === undefined) {
     return {isValidViewRefinement: false, error: `${name} is not defined`};
   } else if (field.kind !== 'view') {
@@ -1864,7 +1875,7 @@ function isValidViewRefinement(
   }
   const prevOutput = view.getOutputSchema();
   for (const refinementField of field.schema.fields) {
-    if (ASTQuery.schemaTryGet(prevOutput, refinementField.name)) {
+    if (ASTQuery.schemaTryGet(prevOutput, refinementField.name, [])) {
       return {
         isValidViewRefinement: false,
         error: `Cannot refine with ${name} because stage already has an output field named ${refinementField.name}`,
@@ -1890,6 +1901,7 @@ export class ASTReferenceViewDefinition
     super(node, {
       kind: 'view_reference',
       name: node.name,
+      path: node.path,
       parameters: node.parameters && new ASTParameterValueList(node.parameters),
     });
   }
@@ -1900,6 +1912,10 @@ export class ASTReferenceViewDefinition
 
   get name() {
     return this.children.name;
+  }
+
+  get path() {
+    return this.children.path;
   }
 
   getOrAddDefaultSegment(): ASTSegmentViewDefinition {
@@ -1979,7 +1995,7 @@ export class ASTReferenceViewDefinition
 
   getViewInfo(): Malloy.FieldInfoWithView {
     const schema = this.getInputSchema();
-    const view = ASTNode.schemaGet(schema, this.name); // TODO path
+    const view = ASTNode.schemaGet(schema, this.name, this.path);
     if (view.kind !== 'view') {
       throw new Error('Not a view');
     }
@@ -2399,7 +2415,7 @@ export class ASTSegmentViewDefinition
   ) {
     if (field.name === name) return;
     const output = this.getOutputSchema();
-    if (ASTNode.schemaTryGet(output, name)) {
+    if (ASTNode.schemaTryGet(output, name, [])) {
       throw new Error(`Output already has a field named ${name}`);
     }
     const oldName = field.name;
@@ -2435,7 +2451,7 @@ export class ASTSegmentViewDefinition
     // Ensure output schema has a field with this name
     const outputSchema = this.getOutputSchema();
     try {
-      ASTNode.schemaGet(outputSchema, name);
+      ASTNode.schemaGet(outputSchema, name, []);
     } catch {
       throw new Error(`No such field ${name} in stage output`);
     }
@@ -2671,9 +2687,10 @@ export class ASTSegmentViewDefinition
    * ```
    *
    * @param name The name of the dimension to group by.
+   * @param path Join path for this dimension.
    */
-  public addGroupBy(name: string) {
-    const item = this.makeField(name, 'dimension');
+  public addGroupBy(name: string, path: string[] = []) {
+    const item = this.makeField(name, path, 'dimension');
     this.addOperation(item);
     return item;
   }
@@ -2702,11 +2719,12 @@ export class ASTSegmentViewDefinition
 
   private addTimeGroupBy(
     name: string,
+    path: string[],
     timeframe: Malloy.TimestampTimeframe,
     type: 'date_type' | 'timestamp_type'
-  ) {
+  ): ASTGroupByViewOperation {
     const schema = this.getInputSchema();
-    const fieldInfo = ASTNode.schemaGet(schema, name);
+    const fieldInfo = ASTNode.schemaGet(schema, name, path);
     if (fieldInfo === undefined) {
       throw new Error(`No such field ${name}`);
     }
@@ -2728,15 +2746,47 @@ export class ASTSegmentViewDefinition
       },
     });
     this.addOperation(item);
+    return item;
   }
 
-  // TODO these names should really be paths: string[]
-  public addDateGroupBy(name: string, timeframe: Malloy.DateTimeframe) {
-    this.addTimeGroupBy(name, timeframe, 'date_type');
+  public addDateGroupBy(
+    name: string,
+    path: string[],
+    timeframe: Malloy.DateTimeframe
+  ): ASTGroupByViewOperation;
+  public addDateGroupBy(
+    name: string,
+    timeframe: Malloy.DateTimeframe
+  ): ASTGroupByViewOperation;
+  public addDateGroupBy(
+    name: string,
+    arg2: string[] | Malloy.DateTimeframe,
+    arg3?: Malloy.DateTimeframe
+  ): ASTGroupByViewOperation {
+    const timeframe =
+      arg3 === undefined ? (arg2 as Malloy.DateTimeframe) : arg3;
+    const path = arg3 === undefined ? [] : (arg2 as string[]);
+    return this.addTimeGroupBy(name, path, timeframe, 'date_type');
   }
 
-  public addTimestampGroupBy(name: string, timeframe: Malloy.DateTimeframe) {
-    this.addTimeGroupBy(name, timeframe, 'timestamp_type');
+  public addTimestampGroupBy(
+    name: string,
+    path: string[],
+    timeframe: Malloy.TimestampTimeframe
+  ): ASTGroupByViewOperation;
+  public addTimestampGroupBy(
+    name: string,
+    timeframe: Malloy.TimestampTimeframe
+  ): ASTGroupByViewOperation;
+  public addTimestampGroupBy(
+    name: string,
+    arg2: string[] | Malloy.TimestampTimeframe,
+    arg3?: Malloy.TimestampTimeframe
+  ): ASTGroupByViewOperation {
+    const timeframe =
+      arg3 === undefined ? (arg2 as Malloy.TimestampTimeframe) : arg3;
+    const path = arg3 === undefined ? [] : (arg2 as string[]);
+    return this.addTimeGroupBy(name, path, timeframe, 'timestamp_type');
   }
 
   /**
@@ -2760,8 +2810,8 @@ export class ASTSegmentViewDefinition
    *
    * @param name The name of the measure to aggregate.
    */
-  public addAggregate(name: string) {
-    const item = this.makeField(name, 'measure');
+  public addAggregate(name: string, path: string[] = []) {
+    const item = this.makeField(name, path, 'measure');
     this.addOperation(item);
     return item;
   }
@@ -2786,17 +2836,33 @@ export class ASTSegmentViewDefinition
    *
    * @param name The name of the view to nest.
    */
-  public addNest(name: string) {
-    const item = this.makeField(name, 'view');
+  public addNest(name: string, path: string[] = []) {
+    const item = this.makeField(name, path, 'view');
     this.addOperation(item);
   }
 
-  private makeField(name: string, type: 'dimension'): ASTGroupByViewOperation;
-  private makeField(name: string, type: 'measure'): ASTAggregateViewOperation;
-  private makeField(name: string, type: 'view'): ASTNestViewOperation;
-  private makeField(name: string, type: 'dimension' | 'measure' | 'view') {
+  private makeField(
+    name: string,
+    path: string[],
+    type: 'dimension'
+  ): ASTGroupByViewOperation;
+  private makeField(
+    name: string,
+    path: string[],
+    type: 'measure'
+  ): ASTAggregateViewOperation;
+  private makeField(
+    name: string,
+    path: string[],
+    type: 'view'
+  ): ASTNestViewOperation;
+  private makeField(
+    name: string,
+    path: string[],
+    type: 'dimension' | 'measure' | 'view'
+  ) {
     const schema = this.getInputSchema();
-    const fieldInfo = ASTNode.schemaGet(schema, name);
+    const fieldInfo = ASTNode.schemaGet(schema, name, path);
     if (fieldInfo === undefined) {
       throw new Error(`No such field ${name}`);
     }
@@ -2806,11 +2872,11 @@ export class ASTSegmentViewDefinition
       throw new Error(`Cannot ${action} non-${typeName} ${name}`);
     }
     if (type === 'dimension') {
-      return ASTGroupByViewOperation.fromName(name);
+      return ASTGroupByViewOperation.fromReference(name, path);
     } else if (type === 'measure') {
-      return ASTAggregateViewOperation.fromName(name);
+      return ASTAggregateViewOperation.fromReference(name, path);
     } else {
-      return ASTNestViewOperation.fromName(name);
+      return ASTNestViewOperation.fromReference(name, path);
     }
   }
 
@@ -3062,7 +3128,7 @@ export class ASTOrderByViewOperation extends ASTObjectNode<
 
   setField(name: string) {
     const schema = this.list.segment.getOutputSchema();
-    ASTNode.schemaGet(schema, name);
+    ASTNode.schemaGet(schema, name, []);
     this.edit();
     this.children.field_reference = new ASTFieldReference({name});
   }
@@ -3226,13 +3292,14 @@ export class ASTGroupByViewOperation
   /**
    * @internal
    */
-  static fromName(name: string) {
+  static fromReference(name: string, path: string[] | undefined) {
     return new ASTGroupByViewOperation({
       kind: 'group_by',
       field: {
         expression: {
           kind: 'field_reference',
           name,
+          path,
         },
       },
     });
@@ -3357,16 +3424,29 @@ export class ASTAggregateViewOperation
     this.getOrAddAnnotations().removeTagProperty(path, prefix);
   }
 
+  addWhere(
+    name: string,
+    path: string[],
+    filterString: string
+  ): ASTFilteredFieldExpression;
+  addWhere(
+    name: string,
+    path: string[],
+    filter: ParsedFilter
+  ): ASTFilteredFieldExpression;
   addWhere(name: string, filterString: string): ASTFilteredFieldExpression;
   addWhere(name: string, filter: ParsedFilter): ASTFilteredFieldExpression;
   addWhere(
     name: string,
-    filter: string | ParsedFilter
+    arg2: string[] | string | ParsedFilter,
+    arg3?: string | ParsedFilter
   ): ASTFilteredFieldExpression {
+    const path = Array.isArray(arg2) ? arg2 : [];
+    const filter = arg3 === undefined ? (arg2 as string | ParsedFilter) : arg3;
     const filterString =
       typeof filter === 'string' ? filter : serializeFilter(filter);
     const schema = this.list.segment.getInputSchema();
-    ASTQuery.schemaGet(schema, name);
+    ASTQuery.schemaGet(schema, name, path);
     const where: Malloy.Where = {
       filter: {
         kind: 'filter_string',
@@ -3397,13 +3477,14 @@ export class ASTAggregateViewOperation
   /**
    * @internal
    */
-  static fromName(name: string) {
+  static fromReference(name: string, path: string[] | undefined) {
     return new ASTAggregateViewOperation({
       kind: 'aggregate',
       field: {
         expression: {
           kind: 'field_reference',
           name,
+          path,
         },
       },
     });
@@ -3528,6 +3609,7 @@ export class ASTReferenceExpression extends ASTObjectNode<
   {
     kind: 'field_reference';
     name: string;
+    path?: string[];
     parameters?: ASTParameterValueList;
   }
 > {
@@ -3537,6 +3619,7 @@ export class ASTReferenceExpression extends ASTObjectNode<
     super(node, {
       kind: node.kind,
       name: node.name,
+      path: node.path,
       parameters: node.parameters && new ASTParameterValueList(node.parameters),
     });
   }
@@ -3552,13 +3635,17 @@ export class ASTReferenceExpression extends ASTObjectNode<
     return this.parent.asField();
   }
 
+  get path() {
+    return this.children.path;
+  }
+
   getReference() {
     return this.build();
   }
 
   getFieldInfo(): Malloy.FieldInfoWithDimension | Malloy.FieldInfoWithMeasure {
     const schema = this.field.segment.getInputSchema();
-    const def = ASTNode.schemaGet(schema, this.name);
+    const def = ASTNode.schemaGet(schema, this.name, this.path);
     if (def.kind !== 'dimension' && def.kind !== 'measure') {
       throw new Error('Invalid field for ASTReferenceExpression');
     }
@@ -3618,7 +3705,7 @@ export class ASTTimeTruncationExpression extends ASTObjectNode<
 
   getFieldInfo(): Malloy.FieldInfoWithDimension | Malloy.FieldInfoWithMeasure {
     const schema = this.field.segment.getInputSchema();
-    const def = ASTNode.schemaGet(schema, this.name);
+    const def = ASTNode.schemaGet(schema, this.name, this.fieldReference.path);
     if (def.kind !== 'dimension' && def.kind !== 'measure') {
       throw new Error('Invalid field for ASTReferenceExpression');
     }
@@ -3720,7 +3807,7 @@ export class ASTFilteredFieldExpression extends ASTObjectNode<
 
   getFieldInfo(): Malloy.FieldInfoWithMeasure {
     const schema = this.field.segment.getInputSchema();
-    const def = ASTNode.schemaGet(schema, this.name);
+    const def = ASTNode.schemaGet(schema, this.name, this.fieldReference.path);
     if (def.kind !== 'measure') {
       throw new Error('Invalid field for ASTFilteredFieldExpression');
     }
@@ -3894,13 +3981,14 @@ export class ASTNestViewOperation
   /**
    * @internal
    */
-  static fromName(name: string) {
+  static fromReference(name: string, path: string[] | undefined) {
     return new ASTNestViewOperation({
       kind: 'nest',
       view: {
         definition: {
           kind: 'view_reference',
           name,
+          path,
         },
       },
     });

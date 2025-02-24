@@ -79,6 +79,10 @@ function literalToFragments(literal: Malloy.LiteralValue): Fragment[] {
 
 function referenceToFragments(reference: Malloy.Reference): Fragment[] {
   const fragments: Fragment[] = [];
+  for (const name of reference.path ?? []) {
+    fragments.push(maybeQuoteIdentifier(name));
+    fragments.push('.');
+  }
   fragments.push(maybeQuoteIdentifier(reference.name));
   if (reference.parameters) {
     const parameterFragments: Fragment[] = [];
