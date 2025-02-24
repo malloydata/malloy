@@ -943,7 +943,10 @@ export class ASTQuery
         return;
       }
     }
-    // TODO validate
+    const source = this.model.entries.find(e => e.name === name);
+    if (source === undefined) {
+      throw new Error(`Source ${name} is not defined in model`);
+    }
     this.definition = new ASTArrowQueryDefinition({
       kind: 'arrow',
       source_reference: {name},
@@ -970,7 +973,10 @@ export class ASTQuery
    * @param name The name of the query in the model to reference.
    */
   public setQueryHead(name: string) {
-    // TODO validate
+    const query = this.model.entries.find(e => e.name === name);
+    if (query === undefined || query.kind !== 'query') {
+      throw new Error(`No query named ${name} in the model`);
+    }
     this.definition = new ASTReferenceQueryDefinition({
       kind: 'query_reference',
       name,
