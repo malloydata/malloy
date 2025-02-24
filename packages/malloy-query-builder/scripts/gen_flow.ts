@@ -3,14 +3,10 @@ import {unstable_translateTSDefToFlowDef} from 'flow-api-translator';
 import * as fs from 'fs';
 
 async function go() {
-  const skipFiles = [
-    'expects.d.ts',
-    'query-ast.spec.d.ts',
-    'query-ast.spec.js.map',
-    'query-ast.spec.js',
-    'query-ast.js.map',
-  ];
-  const files = fs.readdirSync('./dist').filter(f => !skipFiles.includes(f));
+  const skipFiles = ['expects.d.ts', 'query-ast.spec.d.ts'];
+  const files = fs
+    .readdirSync('./dist')
+    .filter(f => f.endsWith('.d.ts') && !skipFiles.includes(f));
   await Promise.all(
     files.map(async file => {
       // eslint-disable-next-line no-console
