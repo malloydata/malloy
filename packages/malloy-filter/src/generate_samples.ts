@@ -90,7 +90,14 @@ const dateExamples = [
   'next tuesday',
   '7 years from now',
   '2025-01-01 12:00:00 for 3 days',
+  '2020-08-12 03:12:56.57',
+  '2020-08-12T03:12:56[PST]',
+  '2020-08-12 03:12:56',
+  '2020-08-12 03:22',
+  '2020-08-12 03',
   '2020-08-12',
+  '2020-Q3',
+  '2020-08-07-wK',
   '2020-08',
   'today',
   'yesterday',
@@ -105,9 +112,10 @@ const dateExamples = [
   ' yyesterday ', // Typo
   'before', // Bad syntax
   'for', // Bad syntax
-  '7', // Bad syntax
+  '12', // Bad syntax
   'from now', // Bad syntax
   '2025-12-25 12:32:', // Bad syntax
+  '12:22',
   'after 2025 seconds', // Bad syntax
   '',
 ];

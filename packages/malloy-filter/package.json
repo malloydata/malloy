@@ -3,7 +3,7 @@
   "version": "0.0.237",
   "license": "MIT",
   "description": "",
-  "main": "dist/string_parser.js",
+  "main": "dist/index.js",
   "repository": {
     "type": "git",
     "url": "https://github.com/malloydata/malloy"

@@ -73,10 +73,10 @@ export class StringParser extends BaseParser {
       clauses: StringParser.groupClauses(clauses),
       errors,
     };
-    const quotes: QuoteType[] = StringParser.findQuotes(this.inputString);
-    if (quotes.length > 0) {
-      response.quotes = quotes;
-    }
+    // const quotes: QuoteType[] = StringParser.findQuotes(this.inputString);
+    // if (quotes.length > 0) {
+    //   response.quotes = quotes;
+    // }
     return response;
   }
 
