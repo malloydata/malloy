@@ -2001,19 +2001,7 @@ export class ASTReferenceViewDefinition
   }
 
   getInputSchema(): Malloy.Schema {
-    const parent = this.parent as
-      | ASTArrowQueryDefinition
-      | ASTRefinementQueryDefinition
-      | ASTView
-      | ASTArrowViewDefinition
-      | ASTRefinementViewDefinition;
-    if (parent instanceof ASTArrowQueryDefinition) {
-      return parent.getSourceInfo().schema;
-    } else if (parent instanceof ASTRefinementQueryDefinition) {
-      throw new Error('unimplemented');
-    } else {
-      return parent.getInputSchema();
-    }
+    return getInputSchemaFromViewParent(this.parent as ViewParent);
   }
 
   getOutputSchema(): Malloy.Schema {
@@ -2221,20 +2209,7 @@ export class ASTRefinementViewDefinition
   }
 
   getInputSchema(): Malloy.Schema {
-    // TODO this is duplicated in a few places
-    const parent = this.parent as
-      | ASTArrowQueryDefinition
-      | ASTRefinementQueryDefinition
-      | ASTView
-      | ASTArrowViewDefinition
-      | ASTRefinementViewDefinition;
-    if (parent instanceof ASTArrowQueryDefinition) {
-      return parent.getSourceInfo().schema;
-    } else if (parent instanceof ASTRefinementQueryDefinition) {
-      throw new Error('unimplemented');
-    } else {
-      return parent.getInputSchema();
-    }
+    return getInputSchemaFromViewParent(this.parent as ViewParent);
   }
 
   getOutputSchema(): Malloy.Schema {
@@ -3047,15 +3022,7 @@ export class ASTSegmentViewDefinition
   }
 
   getInputSchema(): Malloy.Schema {
-    // TODO this is duplicated in a few places
-    const parent = this.parent as ViewParent;
-    if (parent instanceof ASTArrowQueryDefinition) {
-      return parent.getSourceInfo().schema;
-    } else if (parent instanceof ASTRefinementQueryDefinition) {
-      throw new Error('unimplemented');
-    } else {
-      return parent.getInputSchema();
-    }
+    return getInputSchemaFromViewParent(this.parent as ViewParent);
   }
 
   getOutputSchema(): Malloy.Schema {
@@ -4662,5 +4629,15 @@ function validateFilter(
         `Invalid filter for field ${field.name}; expected type ${type}, but got ${filter.kind}`
       );
     }
+  }
+}
+
+function getInputSchemaFromViewParent(parent: ViewParent) {
+  if (parent instanceof ASTArrowQueryDefinition) {
+    return parent.getSourceInfo().schema;
+  } else if (parent instanceof ASTRefinementQueryDefinition) {
+    throw new Error('unimplemented');
+  } else {
+    return parent.getInputSchema();
   }
 }
