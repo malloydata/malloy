@@ -532,7 +532,6 @@ abstract class ASTNode<T> {
    * @internal
    */
   static schemaMerge(a: Malloy.Schema, b: Malloy.Schema): Malloy.Schema {
-    // TODO does this need to be smarter
     return {
       fields: [...a.fields, ...b.fields],
     };
@@ -779,11 +778,36 @@ export class ASTQuery
       | Malloy.SourceInfo
       | Malloy.QueryInfo;
   }) {
-    const query = options?.query ?? {
+    let chosenSource = options.source;
+    if (chosenSource === undefined) {
+      if (options.model === undefined) {
+        throw new Error('Need a model or source');
+      }
+      if (options.query) {
+        const definition = options.query.definition;
+        if (definition.kind === 'arrow') {
+          const name = definition.source_reference.name;
+          chosenSource = options.model.entries.find(e => e.name === name);
+          if (chosenSource === undefined) {
+            throw new Error(
+              `Model does not contain source or query named ${name}`
+            );
+          }
+        }
+      }
+      if (chosenSource === undefined) {
+        chosenSource = options.model.entries[0];
+      }
+      if (chosenSource === undefined) {
+        throw new Error('Model does not contain any sources or queries');
+      }
+    }
+    const source = sourceOrQueryToModelEntry(chosenSource);
+    const query = options.query ?? {
       definition: {
         kind: 'arrow',
         source_reference: {
-          name: options.source?.name ?? 'default', // TODO
+          name: source.name,
         },
         view: {
           kind: 'segment',
@@ -791,18 +815,10 @@ export class ASTQuery
         },
       },
     };
-    const source = options?.source;
-    const model: Malloy.ModelInfo | undefined =
-      options?.model ??
-      (source && {
-        entries: [
-          {
-            ...source,
-            kind: 'kind' in source ? source.kind : 'source',
-          },
-        ],
-        anonymous_queries: [],
-      });
+    const model: Malloy.ModelInfo | undefined = options.model ?? {
+      entries: [source],
+      anonymous_queries: [],
+    };
     if (model === undefined) {
       throw new Error('Must provide a model or source');
     }
@@ -812,8 +828,8 @@ export class ASTQuery
         query.annotations && new ASTAnnotationList(query.annotations),
     });
     this.model = model;
-    if (source) {
-      this.setSource(source.name);
+    if (options.source) {
+      this.setSource(options.source.name);
     }
   }
 
@@ -4372,5 +4388,19 @@ function serializeFilter(filter: ParsedFilter) {
       return new Filter.BooleanSerializer(filter.clauses).serialize();
     case 'date':
       return new Filter.DateSerializer(filter.clauses).serialize();
+  }
+}
+
+function sourceOrQueryToModelEntry(
+  entry:
+    | Malloy.ModelEntryValueWithSource
+    | Malloy.ModelEntryValueWithQuery
+    | Malloy.SourceInfo
+    | Malloy.QueryInfo
+): Malloy.ModelEntryValueWithSource | Malloy.ModelEntryValueWithQuery {
+  if ('kind' in entry) {
+    return entry;
+  } else {
+    return {...entry, kind: 'source'};
   }
 }
