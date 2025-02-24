@@ -1088,14 +1088,42 @@ export type RawLiteralValue =
   | boolean
   | null;
 
-export class ASTReference extends ASTObjectNode<
-  Malloy.Reference,
-  {
-    name: string;
-    path?: string[];
-    parameters?: ASTParameterValueList;
-  }
-> {
+export interface IASTReference extends ASTAny {
+  /**
+   * Gets the parameter list for this reference, or creates it if it does not exist.
+   *
+   * @returns The parameter list `ASTParameterValueList`
+   */
+  getOrAddParameters(): ASTParameterValueList;
+
+  /**
+   * Adds a parameter to this source with with the given name and value
+   *
+   * This will override an existing parameter with the same name.
+   *
+   * @param name The name of the parameter to set
+   * @param value The value of the parameter to set
+   */
+  setParameter(name: string, value: RawLiteralValue): void;
+
+  tryGetParameter(name: string): ASTParameterValue | undefined;
+
+  parameters: ASTParameterValueList | undefined;
+  name: string;
+  path: string[] | undefined;
+}
+
+export class ASTReference
+  extends ASTObjectNode<
+    Malloy.Reference,
+    {
+      name: string;
+      path?: string[];
+      parameters?: ASTParameterValueList;
+    }
+  >
+  implements IASTReference
+{
   constructor(public reference: Malloy.Reference) {
     super(reference, {
       name: reference.name,
@@ -1118,36 +1146,61 @@ export class ASTReference extends ASTObjectNode<
     return this.children.parameters;
   }
 
+  set parameters(parameters: ASTParameterValueList | undefined) {
+    this.edit();
+    this.children.parameters = parameters;
+  }
+
   get path() {
     return this.children.path;
   }
 
   /**
-   * Gets the parameter list for this reference, or creates it if it does not exist.
-   *
-   * @returns The parameter list `ASTParameterValueList`
+   * @internal
    */
-  public getOrAddParameters() {
-    // TODO ABSTRACT THIS OUT INTO A COMMON METHOD FOR THE DIFFERENT REFERENCE TYPES?
-    if (this.children.parameters) {
-      return this.children.parameters;
+  static getOrAddParameters(reference: IASTReference) {
+    if (reference.parameters) {
+      return reference.parameters;
     }
-    this.edit();
+    reference.edit();
     const parameters = new ASTParameterValueList([]);
-    this.children.parameters = parameters;
+    reference.parameters = parameters;
     return parameters;
   }
 
   /**
-   * Adds a parameter to this source with with the given name and value
-   *
-   * This will override an existing parameter with the same name.
-   *
-   * @param name The name of the parameter to set
-   * @param value The value of the parameter to set
+   * @internal
    */
-  public addParameter(name: string, value: RawLiteralValue) {
-    return this.getOrAddParameters().addParameter(name, value);
+  static setParameter(
+    reference: IASTReference,
+    name: string,
+    value: RawLiteralValue
+  ) {
+    return reference.getOrAddParameters().addParameter(name, value);
+  }
+
+  /**
+   * @internal
+   */
+  static tryGetParameter(reference: IASTReference, name: string) {
+    if (reference.parameters === undefined) return undefined;
+    for (const parameter of reference.parameters.iter()) {
+      if (parameter.name === name) {
+        return parameter;
+      }
+    }
+  }
+
+  public getOrAddParameters() {
+    return ASTReference.getOrAddParameters(this);
+  }
+
+  public setParameter(name: string, value: RawLiteralValue) {
+    return ASTReference.setParameter(this, name, value);
+  }
+
+  public tryGetParameter(name: string): ASTParameterValue | undefined {
+    return ASTReference.tryGetParameter(this, name);
   }
 }
 
@@ -1183,56 +1236,6 @@ export class ASTFieldReference extends ASTReference {
   getFieldInfo() {
     const schema = this.segment.getInputSchema();
     return ASTNode.schemaGet(schema, this.name, this.path);
-  }
-
-  get name() {
-    return this.children.name;
-  }
-
-  set name(value: string) {
-    this.edit();
-    this.children.name = value;
-  }
-
-  get parameters() {
-    return this.children.parameters;
-  }
-
-  /**
-   * Gets the parameter list for this reference, or creates it if it does not exist.
-   *
-   * @returns The parameter list `ASTParameterValueList`
-   */
-  public getOrAddParameters() {
-    // TODO ABSTRACT THIS OUT INTO A COMMON METHOD FOR THE DIFFERENT REFERENCE TYPES?
-    if (this.children.parameters) {
-      return this.children.parameters;
-    }
-    this.edit();
-    const parameters = new ASTParameterValueList([]);
-    this.children.parameters = parameters;
-    return parameters;
-  }
-
-  /**
-   * Adds a parameter to this source with with the given name and value
-   *
-   * This will override an existing parameter with the same name.
-   *
-   * @param name The name of the parameter to set
-   * @param value The value of the parameter to set
-   */
-  public setParameter(name: string, value: RawLiteralValue) {
-    return this.getOrAddParameters().addParameter(name, value);
-  }
-
-  public tryGetParameter(name: string) {
-    if (this.parameters === undefined) return undefined;
-    for (const parameter of this.parameters.iter()) {
-      if (parameter.name === name) {
-        return parameter;
-      }
-    }
   }
 }
 
@@ -1271,62 +1274,6 @@ export class ASTSourceReference extends ASTReference {
       }
     }
     return true;
-  }
-
-  get name() {
-    return this.children.name;
-  }
-
-  set name(value: string) {
-    this.edit();
-    this.children.name = value;
-  }
-
-  get parameters() {
-    return this.children.parameters;
-  }
-
-  /**
-   * Gets the parameter list for this reference, or creates it if it does not exist.
-   *
-   * @returns The parameter list `ASTParameterValueList`
-   */
-  public getOrAddParameters() {
-    // TODO ABSTRACT THIS OUT INTO A COMMON METHOD FOR THE DIFFERENT REFERENCE TYPES?
-    if (this.children.parameters) {
-      return this.children.parameters;
-    }
-    this.edit();
-    const parameters = new ASTParameterValueList([]);
-    this.children.parameters = parameters;
-    return parameters;
-  }
-
-  /**
-   * Adds a parameter to this source with with the given name and value
-   *
-   * This will override an existing parameter with the same name.
-   *
-   * @param name The name of the parameter to set
-   * @param value The value of the parameter to set
-   */
-  public setParameter(name: string, value: RawLiteralValue) {
-    const parameters = this.getOrAddParameters();
-    parameters.add(
-      new ASTParameterValue({
-        name,
-        value: LiteralValueAST.makeLiteral(value),
-      })
-    );
-  }
-
-  public tryGetParameter(name: string) {
-    if (this.parameters === undefined) return undefined;
-    for (const parameter of this.parameters.iter()) {
-      if (parameter.name === name) {
-        return parameter;
-      }
-    }
   }
 }
 
@@ -1769,7 +1716,7 @@ export class ASTReferenceQueryDefinition
       parameters?: ASTParameterValueList;
     }
   >
-  implements IASTQueryDefinition
+  implements IASTQueryDefinition, IASTReference
 {
   constructor(public node: Malloy.QueryDefinitionWithQueryReference) {
     super(node, {
@@ -1794,6 +1741,11 @@ export class ASTReferenceQueryDefinition
 
   get parameters() {
     return this.children.parameters;
+  }
+
+  set parameters(parameters: ASTParameterValueList | undefined) {
+    this.edit();
+    this.children.parameters = parameters;
   }
 
   get path() {
@@ -1833,6 +1785,18 @@ export class ASTReferenceQueryDefinition
 
   reorderFields(names: string[]): void {
     this.query.getOrAddAnnotations().setTagProperty(['field_order'], names);
+  }
+
+  public getOrAddParameters() {
+    return ASTReference.getOrAddParameters(this);
+  }
+
+  public setParameter(name: string, value: RawLiteralValue) {
+    return ASTReference.setParameter(this, name, value);
+  }
+
+  public tryGetParameter(name: string): ASTParameterValue | undefined {
+    return ASTReference.tryGetParameter(this, name);
   }
 }
 
@@ -1941,7 +1905,7 @@ export class ASTReferenceViewDefinition
       parameters?: ASTParameterValueList;
     }
   >
-  implements IASTViewDefinition
+  implements IASTViewDefinition, IASTReference
 {
   constructor(public node: Malloy.ViewDefinitionWithViewReference) {
     super(node, {
@@ -1962,6 +1926,15 @@ export class ASTReferenceViewDefinition
 
   get path() {
     return this.children.path;
+  }
+
+  get parameters() {
+    return this.children.parameters;
+  }
+
+  set parameters(parameters: ASTParameterValueList | undefined) {
+    this.edit();
+    this.children.parameters = parameters;
   }
 
   getOrAddDefaultSegment(): ASTSegmentViewDefinition {
@@ -2044,6 +2017,18 @@ export class ASTReferenceViewDefinition
   getInheritedAnnotations(): Malloy.Annotation[] {
     const view = this.getViewInfo();
     return view.annotations ?? [];
+  }
+
+  public getOrAddParameters() {
+    return ASTReference.getOrAddParameters(this);
+  }
+
+  public setParameter(name: string, value: RawLiteralValue) {
+    return ASTReference.setParameter(this, name, value);
+  }
+
+  public tryGetParameter(name: string): ASTParameterValue | undefined {
+    return ASTReference.tryGetParameter(this, name);
   }
 }
 
@@ -3659,15 +3644,18 @@ export const ASTExpression = {
 };
 
 // TODO would be nice for this to extend ASTFieldReference?
-export class ASTReferenceExpression extends ASTObjectNode<
-  Malloy.ExpressionWithFieldReference,
-  {
-    kind: 'field_reference';
-    name: string;
-    path?: string[];
-    parameters?: ASTParameterValueList;
-  }
-> {
+export class ASTReferenceExpression
+  extends ASTObjectNode<
+    Malloy.ExpressionWithFieldReference,
+    {
+      kind: 'field_reference';
+      name: string;
+      path?: string[];
+      parameters?: ASTParameterValueList;
+    }
+  >
+  implements IASTReference
+{
   readonly kind: Malloy.ExpressionType = 'field_reference';
 
   constructor(public node: Malloy.ExpressionWithFieldReference) {
@@ -3681,6 +3669,15 @@ export class ASTReferenceExpression extends ASTObjectNode<
 
   get name() {
     return this.children.name;
+  }
+
+  get parameters() {
+    return this.children.parameters;
+  }
+
+  set parameters(parameters: ASTParameterValueList | undefined) {
+    this.edit();
+    this.children.parameters = parameters;
   }
 
   /**
@@ -3714,6 +3711,18 @@ export class ASTReferenceExpression extends ASTObjectNode<
   getInheritedAnnotations(): Malloy.Annotation[] {
     const field = this.getFieldInfo();
     return field.annotations ?? [];
+  }
+
+  public getOrAddParameters() {
+    return ASTReference.getOrAddParameters(this);
+  }
+
+  public setParameter(name: string, value: RawLiteralValue) {
+    return ASTReference.setParameter(this, name, value);
+  }
+
+  public tryGetParameter(name: string): ASTParameterValue | undefined {
+    return ASTReference.tryGetParameter(this, name);
   }
 }
 

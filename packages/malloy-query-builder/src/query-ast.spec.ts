@@ -1571,19 +1571,19 @@ describe('query builder', () => {
       };
       expect((q: ASTQuery) => {
         const source = q.definition.asArrowQueryDefinition().sourceReference;
-        source.addParameter('string_param', 'COOL');
-        source.addParameter('number_param', 7);
-        source.addParameter('boolean_param', true);
-        source.addParameter('date_param', {
+        source.setParameter('string_param', 'COOL');
+        source.setParameter('number_param', 7);
+        source.setParameter('boolean_param', true);
+        source.setParameter('date_param', {
           // TODO what am I supposed to do about timezones?
           date: new Date('2020-01-01 10:00:00+00:00'),
           granularity: 'month',
         });
-        source.addParameter('timestamp_param', {
+        source.setParameter('timestamp_param', {
           date: new Date('2020-01-01 10:00:00+00:00'),
           granularity: 'minute',
         });
-        source.addParameter('null_param', null);
+        source.setParameter('null_param', null);
       }).toModifyQuery({
         source: {
           name: 'foo',
