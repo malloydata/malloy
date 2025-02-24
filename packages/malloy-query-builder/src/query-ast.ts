@@ -12,7 +12,7 @@ export type ParsedFilter =
   | {kind: 'string'; clauses: Filter.StringClause[]}
   | {kind: 'number'; clauses: Filter.NumberClause[]}
   | {kind: 'boolean'; clauses: Filter.BooleanClause[]}
-  | {kind: 'time'; clauses: Filter.DateClause[]};
+  | {kind: 'date'; clauses: Filter.DateClause[]};
 
 export type PathSegment = number | string;
 export type Path = PathSegment[];
@@ -3969,7 +3969,7 @@ export class ASTFilterWithFilterString extends ASTObjectNode<
     return field;
   }
 
-  getFilterType(): 'string' | 'boolean' | 'number' | 'time' | 'other' {
+  getFilterType(): 'string' | 'boolean' | 'number' | 'date' | 'other' {
     const fieldInfo = this.getFieldInfo();
     switch (fieldInfo.type.kind) {
       case 'string_type':
@@ -3980,7 +3980,7 @@ export class ASTFilterWithFilterString extends ASTObjectNode<
         return 'number';
       case 'date_type':
       case 'timestamp_type':
-        return 'time';
+        return 'date';
       default:
         return 'other';
     }
@@ -4011,7 +4011,10 @@ export class ASTFilterWithFilterString extends ASTObjectNode<
         const result = new Filter.BooleanParser(this.filterString).parse();
         return {kind, clauses: result.clauses};
       }
-      case 'time':
+      case 'date': {
+        const result = new Filter.DateParser(this.filterString).parse();
+        return {kind, clauses: result.clauses};
+      }
       case 'other':
         throw new Error('Not implemented');
     }
@@ -4367,7 +4370,7 @@ function serializeFilter(filter: ParsedFilter) {
       return new Filter.NumberSerializer(filter.clauses).serialize();
     case 'boolean':
       return new Filter.BooleanSerializer(filter.clauses).serialize();
-    case 'time':
+    case 'date':
       return new Filter.DateSerializer(filter.clauses).serialize();
   }
 }
