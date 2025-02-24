@@ -369,6 +369,105 @@ describe('query builder', () => {
       malloy: 'run: flights -> { where: carrier ~ f`WN, AA` }',
     });
   });
+  test('add some parsed wheres with different quote requirements', () => {
+    const from: Malloy.Query = {
+      definition: {
+        kind: 'arrow',
+        source_reference: {name: 'flights'},
+        view: {
+          kind: 'segment',
+          operations: [],
+        },
+      },
+    };
+    expect((q: ASTQuery) => {
+      const segment = q.getOrAddDefaultSegment();
+      function add(str: string) {
+        segment.addWhere('carrier', {
+          kind: 'string',
+          clauses: [{operator: '=', values: [str]}],
+        });
+      }
+      add("'");
+      add('\'"');
+      add('`');
+      add("`'");
+      add('`\'"');
+      add("`'\"\"\"'''");
+    }).toModifyQuery({
+      model: flights_model,
+      from,
+      to: {
+        definition: {
+          kind: 'arrow',
+          source_reference: {name: 'flights'},
+          view: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'where',
+                filter: {
+                  kind: 'filter_string',
+                  field_reference: {name: 'carrier'},
+                  filter: "'",
+                },
+              },
+              {
+                kind: 'where',
+                filter: {
+                  kind: 'filter_string',
+                  field_reference: {name: 'carrier'},
+                  filter: '\'"',
+                },
+              },
+              {
+                kind: 'where',
+                filter: {
+                  kind: 'filter_string',
+                  field_reference: {name: 'carrier'},
+                  filter: '`',
+                },
+              },
+              {
+                kind: 'where',
+                filter: {
+                  kind: 'filter_string',
+                  field_reference: {name: 'carrier'},
+                  filter: "`'",
+                },
+              },
+              {
+                kind: 'where',
+                filter: {
+                  kind: 'filter_string',
+                  field_reference: {name: 'carrier'},
+                  filter: '`\'"',
+                },
+              },
+              {
+                kind: 'where',
+                filter: {
+                  kind: 'filter_string',
+                  field_reference: {name: 'carrier'},
+                  filter: "`'\"\"\"'''",
+                },
+              },
+            ],
+          },
+        },
+      },
+      malloy: dedent`
+      run: flights -> {
+        where:
+          carrier ~ f\`'\`
+          carrier ~ f\`'"\`
+          carrier ~ f'\`'
+          carrier ~ f"\`'"
+          carrier ~ f"""\`'""""
+          carrier ~ f\`\\\`"""'''\`
+      }`,
+    });
+  });
   test('add a date group by', () => {
     const from: Malloy.Query = {
       definition: {

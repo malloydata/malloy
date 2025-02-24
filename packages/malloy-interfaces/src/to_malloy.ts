@@ -455,13 +455,47 @@ function whereToFragments(where: Malloy.Where[]): Fragment[] {
   return formatBlock('where', where.map(whereItemToFragments));
 }
 
+const FILTER_QUOTES = ['`', "'", '"', '"""', "'''"];
+
+function quoteFilter(filter: string): string {
+  let bestQuote: string | undefined = undefined;
+  let bestEscaped: string | undefined = undefined;
+  for (const quote of FILTER_QUOTES) {
+    const escaped = escapeFilter(filter, quote);
+    if (escaped === filter) {
+      return `f${quote}${filter}${quote}`;
+    }
+    if (bestEscaped === undefined || escaped.length < bestEscaped.length) {
+      bestQuote = quote;
+      bestEscaped = escaped;
+    }
+  }
+  return `f${bestQuote}${bestEscaped}${bestQuote}`;
+}
+
+function escapeFilter(filter: string, quote: string): string {
+  let result = '';
+  for (let i = 0; i < filter.length; i++) {
+    if (filter.slice(i).startsWith(quote)) {
+      result += '\\' + quote;
+      i += quote.length;
+    } else {
+      result += filter[i];
+      if (filter[i] === '\\') {
+        result += filter[++i];
+      }
+    }
+  }
+  return result;
+}
+
 function whereItemToFragments(whereItem: Malloy.Where): Fragment[] {
   switch (whereItem.filter.kind) {
     case 'filter_string':
       return [
         ...referenceToFragments(whereItem.filter.field_reference),
         ' ~ ',
-        `f\`${whereItem.filter.filter}\``, // TODO change quote based on filter
+        quoteFilter(whereItem.filter.filter),
       ];
   }
 }
