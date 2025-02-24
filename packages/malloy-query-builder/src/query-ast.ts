@@ -2941,6 +2941,7 @@ export class ASTSegmentViewDefinition
         operation instanceof ASTAggregateViewOperation ||
         operation instanceof ASTNestViewOperation
       ) {
+        // TODO convert measures into dimensions for output
         fields.push(operation.getFieldInfo());
       }
     }
