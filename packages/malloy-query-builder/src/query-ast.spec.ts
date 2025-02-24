@@ -131,6 +131,46 @@ describe('query builder', () => {
       malloy: 'run: flights -> { group_by: carrier }',
     });
   });
+  test('add a group by with a new name', () => {
+    const from: Malloy.Query = {
+      definition: {
+        kind: 'arrow',
+        source_reference: {name: 'flights'},
+        view: {
+          kind: 'segment',
+          operations: [],
+        },
+      },
+    };
+    expect((q: ASTQuery) => {
+      q.getOrAddDefaultSegment().addGroupBy('carrier', [], 'carrier_2');
+    }).toModifyQuery({
+      model: flights_model,
+      from,
+      to: {
+        definition: {
+          kind: 'arrow',
+          source_reference: {name: 'flights'},
+          view: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'group_by',
+                name: 'carrier_2',
+                field: {
+                  expression: {
+                    kind: 'field_reference',
+                    name: 'carrier',
+                  },
+                },
+              },
+            ],
+          },
+        },
+      },
+      malloy: 'run: flights -> { group_by: carrier_2 is carrier }',
+    });
+  });
   test('add a group by in a join', () => {
     const from: Malloy.Query = {
       definition: {

@@ -2528,9 +2528,6 @@ export class ASTSegmentViewDefinition
    *
    */
   public addEmptyNest(name: string): ASTNestViewOperation {
-    if (this.hasFieldNamed(name)) {
-      throw new Error(`Query already has a field named ${name}`);
-    }
     const nest = new ASTNestViewOperation({
       kind: 'nest',
       name,
@@ -2720,8 +2717,8 @@ export class ASTSegmentViewDefinition
    * @param name The name of the dimension to group by.
    * @param path Join path for this dimension.
    */
-  public addGroupBy(name: string, path: string[] = []) {
-    const item = this.makeField(name, path, 'dimension');
+  public addGroupBy(name: string, path: string[] = [], rename?: string) {
+    const item = this.makeField(name, path, rename, 'dimension');
     this.addOperation(item);
     return item;
   }
@@ -2840,9 +2837,11 @@ export class ASTSegmentViewDefinition
    *   4) at the end of the query
    *
    * @param name The name of the measure to aggregate.
+   * @param path The join path of the measure to aggregate.
+   * @param rename A new name for this measure
    */
-  public addAggregate(name: string, path: string[] = []) {
-    const item = this.makeField(name, path, 'measure');
+  public addAggregate(name: string, path: string[] = [], rename?: string) {
+    const item = this.makeField(name, path, rename, 'measure');
     this.addOperation(item);
     return item;
   }
@@ -2866,30 +2865,36 @@ export class ASTSegmentViewDefinition
    *   3) at the end of the query
    *
    * @param name The name of the view to nest.
+   * @param rename A new name for this view in the query
    */
-  public addNest(name: string, path: string[] = []) {
-    const item = this.makeField(name, path, 'view');
+  public addNest(name: string, rename?: string) {
+    const item = this.makeField(name, [], rename, 'view');
     this.addOperation(item);
+    return item;
   }
 
   private makeField(
     name: string,
     path: string[],
+    rename: string | undefined,
     type: 'dimension'
   ): ASTGroupByViewOperation;
   private makeField(
     name: string,
     path: string[],
+    rename: string | undefined,
     type: 'measure'
   ): ASTAggregateViewOperation;
   private makeField(
     name: string,
     path: string[],
+    rename: string | undefined,
     type: 'view'
   ): ASTNestViewOperation;
   private makeField(
     name: string,
     path: string[],
+    rename: string | undefined,
     type: 'dimension' | 'measure' | 'view'
   ) {
     const schema = this.getInputSchema();
@@ -2903,11 +2908,11 @@ export class ASTSegmentViewDefinition
       throw new Error(`Cannot ${action} non-${typeName} ${name}`);
     }
     if (type === 'dimension') {
-      return ASTGroupByViewOperation.fromReference(name, path);
+      return ASTGroupByViewOperation.fromReference(name, path, rename);
     } else if (type === 'measure') {
-      return ASTAggregateViewOperation.fromReference(name, path);
+      return ASTAggregateViewOperation.fromReference(name, path, rename);
     } else {
-      return ASTNestViewOperation.fromReference(name, path);
+      return ASTNestViewOperation.fromReference(name, path, rename);
     }
   }
 
@@ -2919,6 +2924,15 @@ export class ASTSegmentViewDefinition
       | ASTWhereViewOperation
       | ASTOrderByViewOperation
   ) {
+    if (
+      item instanceof ASTGroupByViewOperation ||
+      item instanceof ASTAggregateViewOperation ||
+      item instanceof ASTNestViewOperation
+    ) {
+      if (this.hasFieldNamed(item.name)) {
+        throw new Error(`Query already has a field named ${item.name}`);
+      }
+    }
     // TODO ensure output schema doesn't already have this name, and add a parameter here to
     // allow specifying an override name
     const whereToInsert = this.findInsertionPoint(item.kind);
@@ -3317,9 +3331,14 @@ export class ASTGroupByViewOperation
   /**
    * @internal
    */
-  static fromReference(name: string, path: string[] | undefined) {
+  static fromReference(
+    name: string,
+    path: string[] | undefined,
+    rename: string | undefined
+  ) {
     return new ASTGroupByViewOperation({
       kind: 'group_by',
+      name: rename,
       field: {
         expression: {
           kind: 'field_reference',
@@ -3502,9 +3521,14 @@ export class ASTAggregateViewOperation
   /**
    * @internal
    */
-  static fromReference(name: string, path: string[] | undefined) {
+  static fromReference(
+    name: string,
+    path: string[] | undefined,
+    rename: string | undefined
+  ) {
     return new ASTAggregateViewOperation({
       kind: 'aggregate',
+      name: rename,
       field: {
         expression: {
           kind: 'field_reference',
@@ -4005,9 +4029,14 @@ export class ASTNestViewOperation
   /**
    * @internal
    */
-  static fromReference(name: string, path: string[] | undefined) {
+  static fromReference(
+    name: string,
+    path: string[] | undefined,
+    rename: string | undefined
+  ) {
     return new ASTNestViewOperation({
       kind: 'nest',
+      name: rename,
       view: {
         definition: {
           kind: 'view_reference',
