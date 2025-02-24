@@ -127,12 +127,11 @@ function serializeDateAsLiteral(
       return `@${year}-${month}-${day}`;
     }
     case 'hour': {
-      // TODO it's technically illegal to have a date literal of granularity hour
       const year = digits(date.getUTCFullYear(), 2);
       const month = digits(date.getUTCMonth() + 1, 2);
       const day = digits(date.getUTCDate(), 2);
       const hour = digits(date.getUTCHours(), 2);
-      return `@${year}-${month}-${day} ${hour}:00`;
+      return `@${year}-${month}-${day} ${hour}`;
     }
     case 'minute': {
       const year = digits(date.getUTCFullYear(), 2);
