@@ -1170,7 +1170,6 @@ export class ASTFieldReference extends ASTReference {
 
   getFieldInfo() {
     const schema = this.segment.getInputSchema();
-    // TODO path
     return ASTNode.schemaGet(schema, this.name, this.path);
   }
 
@@ -1703,6 +1702,7 @@ export class ASTReferenceQueryDefinition
     super(node, {
       kind: 'query_reference',
       name: node.name,
+      path: node.path,
       parameters: node.parameters && new ASTParameterValueList(node.parameters),
     });
   }
@@ -1723,12 +1723,16 @@ export class ASTReferenceQueryDefinition
     return this.children.parameters;
   }
 
+  get path() {
+    return this.children.path;
+  }
+
   getOrAddDefaultSegment(): ASTSegmentViewDefinition {
     const newQuery = new ASTRefinementQueryDefinition({
       kind: 'refinement',
       query_reference: {
         name: this.name,
-        path: undefined, // TODO
+        path: this.path,
         parameters: this.parameters?.build(),
       },
       refinement: {
@@ -1781,8 +1785,11 @@ export interface IASTViewDefinition {
   getImplicitName(): string | undefined;
   getRefinementSchema(): Malloy.Schema;
   addEmptyRefinement(): ASTSegmentViewDefinition;
-  addViewRefinement(name: string): ASTReferenceViewDefinition; // todo path
-  isValidViewRefinement(name: string): {
+  addViewRefinement(name: string, path?: string[]): ASTReferenceViewDefinition;
+  isValidViewRefinement(
+    name: string,
+    path?: string[]
+  ): {
     isValidViewRefinement: boolean;
     error?: string;
   };
@@ -1919,53 +1926,39 @@ export class ASTReferenceViewDefinition
   }
 
   getOrAddDefaultSegment(): ASTSegmentViewDefinition {
-    const newView = new ASTRefinementViewDefinition({
-      kind: 'refinement',
-      base: this.build(),
-      refinement: {
-        kind: 'segment',
-        operations: [],
-      },
-    });
-    swapViewInParent(this, newView);
-    return newView.refinement.asSegmentViewDefinition();
+    return this.addEmptyRefinement();
   }
 
   addEmptyRefinement(): ASTSegmentViewDefinition {
-    const newView = new ASTRefinementViewDefinition({
-      kind: 'refinement',
-      base: this.build(),
-      refinement: {
-        kind: 'segment',
-        operations: [],
-      },
-    });
+    const newView = ASTRefinementViewDefinition.segmentRefinementOf(
+      this.build()
+    );
     swapViewInParent(this, newView);
     return newView.refinement.asSegmentViewDefinition();
   }
 
-  addViewRefinement(name: string): ASTReferenceViewDefinition {
-    const {error} = this.isValidViewRefinement(name);
+  addViewRefinement(name: string, path?: string[]): ASTReferenceViewDefinition {
+    const {error} = this.isValidViewRefinement(name, path);
     if (error) {
       throw new Error(error);
     }
-    const newView = new ASTRefinementViewDefinition({
-      kind: 'refinement',
-      base: this.build(),
-      refinement: {
-        kind: 'view_reference',
-        name,
-      },
-    });
+    const newView = ASTRefinementViewDefinition.viewRefinementOf(
+      this.build(),
+      name,
+      path
+    );
     swapViewInParent(this, newView);
     return newView.refinement.asReferenceViewDefinition();
   }
 
-  isValidViewRefinement(name: string): {
+  isValidViewRefinement(
+    name: string,
+    path?: string[]
+  ): {
     isValidViewRefinement: boolean;
     error?: string;
   } {
-    return isValidViewRefinement(this, name);
+    return isValidViewRefinement(this, name, path);
   }
 
   getInputSchema(): Malloy.Schema {
@@ -2091,8 +2084,8 @@ export class ASTArrowViewDefinition
     return this.view.addEmptyRefinement();
   }
 
-  addViewRefinement(name: string): ASTReferenceViewDefinition {
-    return this.view.addViewRefinement(name);
+  addViewRefinement(name: string, path?: string[]): ASTReferenceViewDefinition {
+    return this.view.addViewRefinement(name, path);
   }
 
   getInputSchema(): Malloy.Schema {
@@ -2111,11 +2104,14 @@ export class ASTArrowViewDefinition
     throw new Error('An arrow is not a valid refinement');
   }
 
-  isValidViewRefinement(name: string): {
+  isValidViewRefinement(
+    name: string,
+    path?: string[]
+  ): {
     isValidViewRefinement: boolean;
     error?: string;
   } {
-    return isValidViewRefinement(this, name);
+    return isValidViewRefinement(this, name, path);
   }
 
   /**
@@ -2208,8 +2204,8 @@ export class ASTRefinementViewDefinition
     return this.refinement.addEmptyRefinement();
   }
 
-  addViewRefinement(name: string): ASTReferenceViewDefinition {
-    return this.refinement.addViewRefinement(name);
+  addViewRefinement(name: string, path?: string[]): ASTReferenceViewDefinition {
+    return this.refinement.addViewRefinement(name, path);
   }
 
   getInputSchema(): Malloy.Schema {
@@ -2245,11 +2241,14 @@ export class ASTRefinementViewDefinition
     return this.base.getImplicitName();
   }
 
-  isValidViewRefinement(name: string): {
+  isValidViewRefinement(
+    name: string,
+    path?: string[]
+  ): {
     isValidViewRefinement: boolean;
     error?: string;
   } {
-    return isValidViewRefinement(this, name);
+    return isValidViewRefinement(this, name, path);
   }
 
   /**
@@ -2284,6 +2283,39 @@ export class ASTRefinementViewDefinition
 
   getInheritedAnnotations(): Malloy.Annotation[] {
     return this.base.getInheritedAnnotations();
+  }
+
+  /**
+   * @internal
+   */
+  static viewRefinementOf(
+    view: Malloy.ViewDefinition,
+    name: string,
+    path?: string[]
+  ) {
+    return new ASTRefinementViewDefinition({
+      kind: 'refinement',
+      base: view,
+      refinement: {
+        kind: 'view_reference',
+        name,
+        path,
+      },
+    });
+  }
+
+  /**
+   * @internal
+   */
+  static segmentRefinementOf(view: Malloy.ViewDefinition) {
+    return new ASTRefinementViewDefinition({
+      kind: 'refinement',
+      base: view,
+      refinement: {
+        kind: 'segment',
+        operations: [],
+      },
+    });
   }
 }
 
@@ -2440,14 +2472,13 @@ export class ASTSegmentViewDefinition
    * }
    * ```
    *
-   * The order by item is added to an existing order by operation if one is present,
+   * The order by item is added after an existing order by operation if one is present,
    * or to a new order by operation at the end of the query.
    *
    * @param name The name of the field to order by.
    * @param direction The order by direction (ascending or descending).
    */
   public addOrderBy(name: string, direction?: Malloy.OrderByDirection) {
-    // TODO decide where to add it
     // Ensure output schema has a field with this name
     const outputSchema = this.getOutputSchema();
     try {
@@ -2465,7 +2496,7 @@ export class ASTSegmentViewDefinition
       }
     }
     // add a new order by operation
-    this.operations.add(
+    this.addOperation(
       new ASTOrderByViewOperation({
         kind: 'order_by',
         field_reference: {name},
@@ -2497,9 +2528,9 @@ export class ASTSegmentViewDefinition
    *
    */
   public addEmptyNest(name: string): ASTNestViewOperation {
-    // TODO validate name
-    // TODO decide whether this by default groups into existing nest operation?
-    // TODO pick a better location in the query
+    if (this.hasFieldNamed(name)) {
+      throw new Error(`Query already has a field named ${name}`);
+    }
     const nest = new ASTNestViewOperation({
       kind: 'nest',
       name,
@@ -2510,7 +2541,7 @@ export class ASTSegmentViewDefinition
         },
       },
     });
-    this.operations.add(nest);
+    this.addOperation(nest);
     return nest;
   }
 
@@ -2886,6 +2917,7 @@ export class ASTSegmentViewDefinition
       | ASTAggregateViewOperation
       | ASTNestViewOperation
       | ASTWhereViewOperation
+      | ASTOrderByViewOperation
   ) {
     // TODO ensure output schema doesn't already have this name, and add a parameter here to
     // allow specifying an override name
@@ -2951,31 +2983,21 @@ export class ASTSegmentViewDefinition
   }
 
   addEmptyRefinement(): ASTSegmentViewDefinition {
-    const view = new ASTRefinementViewDefinition({
-      kind: 'refinement',
-      base: this.build(),
-      refinement: {
-        kind: 'segment',
-        operations: [],
-      },
-    });
+    const view = ASTRefinementViewDefinition.segmentRefinementOf(this.build());
     swapViewInParent(this, view);
     return view.refinement.asSegmentViewDefinition();
   }
 
-  addViewRefinement(name: string): ASTReferenceViewDefinition {
-    const {error} = this.isValidViewRefinement(name);
+  addViewRefinement(name: string, path?: string[]): ASTReferenceViewDefinition {
+    const {error} = this.isValidViewRefinement(name, path);
     if (error) {
       throw new Error(error);
     }
-    const view = new ASTRefinementViewDefinition({
-      kind: 'refinement',
-      base: this.build(),
-      refinement: {
-        kind: 'view_reference',
-        name,
-      },
-    });
+    const view = ASTRefinementViewDefinition.viewRefinementOf(
+      this.build(),
+      name,
+      path
+    );
     swapViewInParent(this, view);
     return view.refinement.asReferenceViewDefinition();
   }
@@ -3001,11 +3023,14 @@ export class ASTSegmentViewDefinition
     return undefined;
   }
 
-  isValidViewRefinement(name: string): {
+  isValidViewRefinement(
+    name: string,
+    path?: string[]
+  ): {
     isValidViewRefinement: boolean;
     error?: string;
   } {
-    return isValidViewRefinement(this, name);
+    return isValidViewRefinement(this, name, path);
   }
 
   getInheritedAnnotations(): Malloy.Annotation[] {
@@ -3530,7 +3555,6 @@ export class ASTField
     return this.children.annotations;
   }
 
-  // TODO should you have to call delete annotations? What if you do `annotations = undefined` instead of `annotations = DELETED`?
   set annotations(annotations: ASTAnnotationList | undefined) {
     this.edit();
     this.children.annotations = annotations;
@@ -4064,7 +4088,8 @@ export class ASTFilterWithFilterString extends ASTObjectNode<
   }
 
   setFilterString(filterString: string) {
-    // TODO validate
+    const kind = this.getFilterType();
+    parseFilter(this.filterString, kind);
     this.filterString = filterString;
   }
 
@@ -4105,26 +4130,7 @@ export class ASTFilterWithFilterString extends ASTObjectNode<
 
   getFilter(): ParsedFilter {
     const kind = this.getFilterType();
-    switch (kind) {
-      case 'string': {
-        const result = new Filter.StringParser(this.filterString).parse();
-        return {kind, clauses: result.clauses};
-      }
-      case 'number': {
-        const result = new Filter.NumberParser(this.filterString).parse();
-        return {kind, clauses: result.clauses};
-      }
-      case 'boolean': {
-        const result = new Filter.BooleanParser(this.filterString).parse();
-        return {kind, clauses: result.clauses};
-      }
-      case 'date': {
-        const result = new Filter.DateParser(this.filterString).parse();
-        return {kind, clauses: result.clauses};
-      }
-      case 'other':
-        throw new Error('Not implemented');
-    }
+    return parseFilter(this.filterString, kind);
   }
 }
 
@@ -4479,6 +4485,40 @@ function serializeFilter(filter: ParsedFilter) {
       return new Filter.BooleanSerializer(filter.clauses).serialize();
     case 'date':
       return new Filter.DateSerializer(filter.clauses).serialize();
+  }
+}
+
+function parseFilter(
+  filterString: string,
+  kind: 'string' | 'number' | 'boolean' | 'date' | 'other'
+) {
+  function handleError(errors: Filter.FilterError[]) {
+    if (errors.length === 0) return;
+    throw new Error(`Invalid Malloy filter string: ${errors[0].message}`);
+  }
+  switch (kind) {
+    case 'string': {
+      const result = new Filter.StringParser(filterString).parse();
+      handleError(result.errors);
+      return {kind, clauses: result.clauses};
+    }
+    case 'number': {
+      const result = new Filter.NumberParser(filterString).parse();
+      handleError(result.errors);
+      return {kind, clauses: result.clauses};
+    }
+    case 'boolean': {
+      const result = new Filter.BooleanParser(filterString).parse();
+      handleError(result.errors);
+      return {kind, clauses: result.clauses};
+    }
+    case 'date': {
+      const result = new Filter.DateParser(filterString).parse();
+      handleError(result.errors);
+      return {kind, clauses: result.clauses};
+    }
+    case 'other':
+      throw new Error('Not implemented');
   }
 }
 
