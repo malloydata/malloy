@@ -1346,6 +1346,7 @@ export class ASTParameterValueList extends ASTListNode<
   }
 
   addParameter(name: string, value: RawLiteralValue) {
+    // TODO validate that the parameter is valid (name and type)
     this.add(
       new ASTParameterValue({
         name,
@@ -1434,7 +1435,7 @@ export const LiteralValueAST = {
         granularity: granularity,
       };
     }
-    throw new Error('TODO other literal types');
+    throw new Error('Unknown literal type');
   },
 };
 
@@ -2698,14 +2699,29 @@ export class ASTSegmentViewDefinition
     return this.tryGetFieldNamed(name) !== undefined;
   }
 
-  public hasField(name: string): boolean {
-    return this.tryGetField(name) !== undefined;
+  public hasField(name: string, path?: string[]): boolean {
+    return this.tryGetField(name, path) !== undefined;
+  }
+
+  public getField(
+    name: string,
+    path?: string[]
+  ):
+    | ASTGroupByViewOperation
+    | ASTAggregateViewOperation
+    | ASTNestViewOperation {
+    const field = this.tryGetField(name, path);
+    if (field === undefined) {
+      throw new Error('No such field');
+    }
+    return field;
   }
 
   // TODO what constitutes "having a field" -- does "dep_time.month" count as dep_time?
   // does flight_count {where: carrier = 'CA' } count as flight_count?
   public tryGetField(
-    name: string
+    name: string,
+    path?: string[]
   ):
     | ASTGroupByViewOperation
     | ASTAggregateViewOperation
@@ -2716,8 +2732,8 @@ export class ASTSegmentViewDefinition
         operation instanceof ASTGroupByViewOperation ||
         operation instanceof ASTAggregateViewOperation
       ) {
-        // TODO paths
-        if (operation.field.getReference().name === name) {
+        const reference = operation.field.getReference();
+        if (reference.name === name && pathsMatch(reference.path, path)) {
           return operation;
         }
       } else if (operation instanceof ASTNestViewOperation) {
@@ -2831,12 +2847,28 @@ export class ASTSegmentViewDefinition
   public addWhere(name: string, filterString: string): ASTWhereViewOperation;
   public addWhere(
     name: string,
-    filter: string | ParsedFilter
+    path: string[],
+    filter: ParsedFilter
+  ): ASTWhereViewOperation;
+  public addWhere(
+    name: string,
+    path: string[],
+    filterString: string
+  ): ASTWhereViewOperation;
+  public addWhere(
+    name: string,
+    arg2: string[] | string | ParsedFilter,
+    arg3?: string | ParsedFilter
   ): ASTWhereViewOperation {
+    const path = Array.isArray(arg2) ? arg2 : [];
+    const filter = arg3 === undefined ? (arg2 as string | ParsedFilter) : arg3;
     const filterString =
       typeof filter === 'string' ? filter : serializeFilter(filter);
-    // TODO validate name
-    // TODO validate filter string
+    const schema = this.getInputSchema();
+    // Validate name
+    const field = ASTQuery.schemaGet(schema, name, path);
+    // Validate filter
+    validateFilter(field, filter);
     const item = new ASTWhereViewOperation({
       kind: 'where',
       filter: {
@@ -2871,8 +2903,7 @@ export class ASTSegmentViewDefinition
       field: {
         expression: {
           kind: 'time_truncation',
-          // TODO references here should also be paths?
-          field_reference: {name},
+          field_reference: {name, path},
           truncation: timeframe,
         },
       },
@@ -3592,7 +3623,9 @@ export class ASTAggregateViewOperation
     const filterString =
       typeof filter === 'string' ? filter : serializeFilter(filter);
     const schema = this.list.segment.getInputSchema();
-    ASTQuery.schemaGet(schema, name, path);
+    const field = ASTQuery.schemaGet(schema, name, path);
+    // Validate filter
+    validateFilter(field, filter);
     const where: Malloy.Where = {
       filter: {
         kind: 'filter_string',
@@ -4234,19 +4267,7 @@ export class ASTFilterWithFilterString extends ASTObjectNode<
 
   getFilterType(): 'string' | 'boolean' | 'number' | 'date' | 'other' {
     const fieldInfo = this.getFieldInfo();
-    switch (fieldInfo.type.kind) {
-      case 'string_type':
-        return 'string';
-      case 'boolean_type':
-        return 'boolean';
-      case 'number_type':
-        return 'number';
-      case 'date_type':
-      case 'timestamp_type':
-        return 'date';
-      default:
-        return 'other';
-    }
+    return getFilterType(fieldInfo);
   }
 
   setFilter(filter: ParsedFilter) {
@@ -4704,4 +4725,50 @@ function serializeDateAsLiteral(date: Date): string {
   const minute = digits(date.getUTCMinutes(), 2);
   const second = digits(date.getUTCSeconds(), 2);
   return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+}
+
+function pathsMatch(a: string[] | undefined, b: string[] | undefined): boolean {
+  const aOrEmpty = a ?? [];
+  const bOrEmpty = b ?? [];
+  return (
+    aOrEmpty.length === bOrEmpty.length &&
+    aOrEmpty.every((s, i) => s === bOrEmpty[i])
+  );
+}
+
+function getFilterType(
+  fieldInfo: Malloy.FieldInfoWithDimension | Malloy.FieldInfoWithMeasure
+): 'string' | 'boolean' | 'number' | 'date' | 'other' {
+  switch (fieldInfo.type.kind) {
+    case 'string_type':
+      return 'string';
+    case 'boolean_type':
+      return 'boolean';
+    case 'number_type':
+      return 'number';
+    case 'date_type':
+    case 'timestamp_type':
+      return 'date';
+    default:
+      return 'other';
+  }
+}
+
+function validateFilter(
+  field: Malloy.FieldInfo,
+  filter: string | ParsedFilter
+) {
+  if (field.kind !== 'dimension' && field.kind !== 'measure') {
+    throw new Error(`Cannot filter by field of type ${field.kind}`);
+  }
+  const type = getFilterType(field);
+  if (typeof filter === 'string') {
+    parseFilter(filter, type);
+  } else {
+    if (filter.kind !== type) {
+      throw new Error(
+        `Invalid filter for field ${field.name}; expected type ${type}, but got ${filter.kind}`
+      );
+    }
+  }
 }
