@@ -1,23 +1,31 @@
-import {FilterError} from './clause_types';
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+import {FilterLog} from './clause_types';
 
 export type DateTimeUnit =
-  | 'YEAR'
-  | 'QUARTER'
-  | 'MONTH'
-  | 'WEEK'
-  | 'DAY'
-  | 'HOUR'
-  | 'MINUTE'
-  | 'SECOND';
+  | 'year'
+  | 'quarter'
+  | 'month'
+  | 'week'
+  | 'day'
+  | 'hour'
+  | 'minute'
+  | 'second'
+  | 'instant';
 
 export type DateWeekday =
-  | 'MONDAY'
-  | 'TUESDAY'
-  | 'WEDNESDAY'
-  | 'THURSDAY'
-  | 'FRIDAY'
-  | 'SATURDAY'
-  | 'SUNDAY';
+  | 'monday'
+  | 'tuesday'
+  | 'wednesday'
+  | 'thursday'
+  | 'friday'
+  | 'saturday'
+  | 'sunday';
 
 // 7 weeks, 32 hours
 export interface Duration {
@@ -25,45 +33,45 @@ export interface Duration {
   unit: DateTimeUnit;
 }
 
-export type DateMomentName = 'NOW' | 'TODAY' | 'YESTERDAY' | 'TOMORROW';
+export type DateMomentName = 'now' | 'today' | 'yesterday' | 'tomorrow';
 
 // now, today, yesterday, tomorrow
 export interface NamedMoment {
-  type: 'NAMED';
+  type: 'named';
   name: DateMomentName;
 }
 
-export type DateMomentIntervalOperator = 'LAST' | 'THIS' | 'NEXT';
+export type DateMomentIntervalOperator = 'last' | 'this' | 'next';
 
 // LAST|UNITOFTIME, LAST|DAYOFWEEK
 // THIS|UNITOFTIME
 // NEXT|UNITOFTIME, NEXT|DAYOFWEEK
 // last month, next tuesday, this month
 export interface IntervalMoment {
-  type: 'INTERVAL';
+  type: 'interval';
   kind: DateMomentIntervalOperator;
   unit: DateTimeUnit | DateWeekday;
 }
 
-export type DateMomentOffsetFromNowDirection = 'AGO' | 'FROMNOW';
+export type DateMomentOffsetFromNowDirection = 'ago' | 'from_now';
 
 // NUMBER|UNITOFTIME|AGO
 // NUMBER|UNITOFTIME|FROM|NOW
 // 3 hours ago, 6 weeks from now
 export interface OffsetMoment {
-  type: 'OFFSET_FROM_NOW';
+  type: 'offset_from_now';
   direction: DateMomentOffsetFromNowDirection;
   unit: DateTimeUnit;
   amount: number;
 }
 
-export type DateMomentSpanFromNowDirection = 'LAST' | 'NEXT';
+export type DateMomentSpanFromNowDirection = 'last' | 'next';
 
 // LAST|NUMBER|UNITOFTIME
 // NEXT|NUMBER|UNITOFTIME
 // last 3 hours, next 2025 seconds, last 6 weeks
 export interface SpanMoment {
-  type: 'SPAN_FROM_NOW';
+  type: 'span_from_now';
   direction: DateMomentSpanFromNowDirection;
   unit: DateTimeUnit;
   amount: number;
@@ -71,7 +79,7 @@ export interface SpanMoment {
 
 // 2005, 2005-01, 2005-01-01, 2005-01-01 00:00, 2005-01-01 00:00:01
 export interface AbsoluteMoment {
-  type: 'ABSOLUTE';
+  type: 'absolute';
   date: string;
   unit: DateTimeUnit;
 }
@@ -99,47 +107,47 @@ export type DateMoment =
 
 // after 2005-01, after 3 hours ago
 export interface DateAfterClause {
-  operator: 'AFTER';
+  operator: 'after';
   moment: DateMoment;
 }
 
 // before 2005-01, before 3 hours ago
 export interface DateBeforeClause {
-  operator: 'BEFORE';
+  operator: 'before';
   moment: DateMoment;
 }
 
 // next week, last 3 weeks, 3 days ago
 export interface DateOnClause {
-  operator: 'ON';
+  operator: 'on';
   moment: DateMoment;
 }
 
 // 2015 to next month
 export interface DateBetweenClause {
-  operator: 'TO_RANGE';
+  operator: 'to_range';
   from: DateMoment;
   to: DateMoment;
 }
 
 // 2025-01-01 12:00:00 for 3 days
 export interface DateForClause {
-  operator: 'FOR_RANGE';
+  operator: 'for_range';
   from: DateMoment;
   duration: Duration;
 }
 
 export interface DateNullClause {
-  operator: 'NULL';
+  operator: 'null';
 }
 
 export interface DateNotNullClause {
-  operator: 'NOTNULL';
+  operator: 'not_null';
 }
 
 // 3 days
 export interface DateDurationClause {
-  operator: 'DURATION';
+  operator: 'duration';
   duration: Duration;
 }
 
@@ -155,5 +163,5 @@ export type DateClause =
 
 export interface DateParserResponse {
   clauses: DateClause[];
-  errors: FilterError[];
+  logs: FilterLog[];
 }

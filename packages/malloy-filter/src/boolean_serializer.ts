@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 import {BooleanClause} from './clause_types';
 
 export class BooleanSerializer {
@@ -12,12 +19,12 @@ export class BooleanSerializer {
 
   private static booleanClauseToString(clause: BooleanClause): string {
     switch (clause.operator) {
-      case 'NOTNULL':
-        return '-NULL';
-      case 'FALSEORNULL':
-        return 'FALSE';
-      case 'FALSE':
-        return '=FALSE';
+      case 'not_null':
+        return '-null';
+      case 'false_or_null':
+        return 'false';
+      case 'false':
+        return '=false';
     }
     return clause.operator;
   }

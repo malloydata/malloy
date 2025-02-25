@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 import {
   DateMoment,
   DateBetweenClause,
@@ -16,16 +23,16 @@ export class DateSerializer {
   }
 
   private static dateMomentToString(moment: DateMoment): string {
-    if (moment.type === 'ABSOLUTE') {
+    if (moment.type === 'absolute') {
       return moment.date;
-    } else if (moment.type === 'INTERVAL') {
+    } else if (moment.type === 'interval') {
       return moment.kind + ' ' + moment.unit;
-    } else if (moment.type === 'NAMED') {
+    } else if (moment.type === 'named') {
       return moment.name;
-    } else if (moment.type === 'OFFSET_FROM_NOW') {
-      const direction = moment.direction === 'FROMNOW' ? 'FROM NOW' : 'AGO';
+    } else if (moment.type === 'offset_from_now') {
+      const direction = moment.direction === 'from_now' ? 'from now' : 'ago';
       return moment.amount + ' ' + moment.unit + ' ' + direction;
-    } else if (moment.type === 'SPAN_FROM_NOW') {
+    } else if (moment.type === 'span_from_now') {
       return moment.direction + ' ' + moment.amount + ' ' + moment.unit;
     } else {
       throw new Error('moment type not recognized ' + JSON.stringify(moment));
@@ -35,7 +42,7 @@ export class DateSerializer {
   private static goDateBetweenClause(clause: DateBetweenClause): string {
     return (
       DateSerializer.dateMomentToString(clause.from) +
-      ' TO ' +
+      ' to ' +
       DateSerializer.dateMomentToString(clause.to)
     );
   }
@@ -43,7 +50,7 @@ export class DateSerializer {
   private static goDateForClause(clause: DateForClause): string {
     return (
       DateSerializer.dateMomentToString(clause.from) +
-      ' FOR ' +
+      ' for ' +
       clause.duration.amount +
       ' ' +
       clause.duration.unit
@@ -54,21 +61,21 @@ export class DateSerializer {
     if (!('operator' in clause)) {
       throw new Error('Invalid date clause ' + JSON.stringify(clause));
     }
-    if (clause.operator === 'TO_RANGE') {
+    if (clause.operator === 'to_range') {
       return DateSerializer.goDateBetweenClause(clause);
-    } else if (clause.operator === 'FOR_RANGE') {
+    } else if (clause.operator === 'for_range') {
       return DateSerializer.goDateForClause(clause);
-    } else if (clause.operator === 'BEFORE') {
-      return 'BEFORE ' + DateSerializer.dateMomentToString(clause.moment);
-    } else if (clause.operator === 'AFTER') {
-      return 'AFTER ' + DateSerializer.dateMomentToString(clause.moment);
-    } else if (clause.operator === 'ON') {
+    } else if (clause.operator === 'before') {
+      return 'before ' + DateSerializer.dateMomentToString(clause.moment);
+    } else if (clause.operator === 'after') {
+      return 'after ' + DateSerializer.dateMomentToString(clause.moment);
+    } else if (clause.operator === 'on') {
       return DateSerializer.dateMomentToString(clause.moment);
-    } else if (clause.operator === 'NULL') {
-      return 'NULL';
-    } else if (clause.operator === 'NOTNULL') {
-      return '-NULL';
-    } else if (clause.operator === 'DURATION') {
+    } else if (clause.operator === 'null') {
+      return 'null';
+    } else if (clause.operator === 'not_null') {
+      return '-null';
+    } else if (clause.operator === 'duration') {
       return clause.duration.amount + ' ' + clause.duration.unit;
     } else {
       throw new Error('Clause type not recognized ' + JSON.stringify(clause));
