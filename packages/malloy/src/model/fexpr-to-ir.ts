@@ -20,16 +20,14 @@ function mkLike(
   values: string[],
   isNeg: boolean,
   compareTo: Expr,
-  likeify: (s: string) => string,
-  escape = false
+  likeify: (s: string) => string
 ): Expr {
   let retExpr: Expr = {node: 'false'};
   const combine = isNeg ? 'and' : 'or';
   for (const v of values) {
-    const match = escape ? likeEscape(v) : v;
     const likeThis: Expr = {
       node: isNeg ? '!like' : 'like',
-      kids: {left: compareTo, right: stringLiteral(likeify(match))},
+      kids: {left: compareTo, right: stringLiteral(likeify(v))},
     };
     if (retExpr.node === 'false') {
       retExpr = likeThis;
@@ -105,16 +103,26 @@ export function stringClauseToExpr(op: StringClause, expr: Expr): Expr {
         op.values,
         op.operator === 'notContains',
         expr,
-        s => `%${s}%`
+        s => `%${likeEscape(s)}%`
       );
     case 'notStarts':
     case 'starts':
-      return mkLike(op.values, op.operator === 'notStarts', expr, s => `${s}%`);
+      return mkLike(
+        op.values,
+        op.operator === 'notStarts',
+        expr,
+        s => `${likeEscape(s)}%`
+      );
     case 'notEnds':
     case 'ends':
-      return mkLike(op.values, op.operator === 'notEnds', expr, s => `%${s}`);
+      return mkLike(
+        op.values,
+        op.operator === 'notEnds',
+        expr,
+        s => `%${likeEscape(s)}`
+      );
     case '~':
     case '!~':
-      return mkLike(op.values, op.operator === '!~', expr, s => s, false);
+      return mkLike(op.values, op.operator === '!~', expr, s => s);
   }
 }
