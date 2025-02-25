@@ -126,4 +126,7 @@ describe('Malloy Filter Expressions', () => {
       '{filterTimestamp ats | 2001-02-03}'
     );
   });
+  test.todo('is backslash');
+  test.todo('backslash followed by close quote');
+  test.todo('contains percent');
 });
