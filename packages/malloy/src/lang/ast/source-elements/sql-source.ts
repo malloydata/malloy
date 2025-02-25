@@ -25,10 +25,9 @@ import {
   StructDef,
   InvokedStructRef,
   SourceDef,
-  SQLSourceDef,
 } from '../../../model/malloy_types';
-import {compileSQLInterpolation} from '../../../model/sql_block';
-import {NeedCompileSQL} from '../../translate-response';
+import {compileSQLInterpolation, sqlKey} from '../../../model/sql_block';
+import {NeedCompileSQL, SQLSourceRequest} from '../../translate-response';
 import {Source} from './source';
 import {ErrorFactory} from '../error-factory';
 import {SQLString} from '../sql-elements/sql-string';
@@ -36,7 +35,7 @@ import {ModelEntryReference, Document} from '../types/malloy-element';
 
 export class SQLSource extends Source {
   elementType = 'sqlSource';
-  requestBlock?: SQLSourceDef;
+  requestBlock?: SQLSourceRequest;
   private connectionNameInvalid = false;
   constructor(
     readonly connectionName: ModelEntryReference,
@@ -45,7 +44,7 @@ export class SQLSource extends Source {
     super({connectionName, select});
   }
 
-  sqlSource(doc: Document): SQLSourceDef {
+  sqlSourceRequest(doc: Document): SQLSourceRequest {
     const partialModel = this.select.containsQueries
       ? doc.modelDef()
       : undefined;
@@ -90,7 +89,7 @@ export class SQLSource extends Source {
     const childNeeds = super.needs(doc);
     if (childNeeds) return childNeeds;
     if (this.requestBlock === undefined) {
-      this.requestBlock = this.sqlSource(doc);
+      this.requestBlock = this.sqlSourceRequest(doc);
     }
     const sql = this.requestBlock;
     const sqlDefEntry = this.translator()?.root.sqlQueryZone;
@@ -101,8 +100,9 @@ export class SQLSource extends Source {
       );
       return;
     }
-    sqlDefEntry.reference(sql.name, this.location);
-    const lookup = sqlDefEntry.getEntry(sql.name);
+    const key = sqlKey(sql.connection, sql.selectStr);
+    sqlDefEntry.reference(key, this.location);
+    const lookup = sqlDefEntry.getEntry(key);
     if (lookup.status === 'reference') {
       return {
         compileSQL: sql,
@@ -132,8 +132,9 @@ export class SQLSource extends Source {
       return ErrorFactory.structDef;
     }
     const sql = this.requestBlock;
-    sqlDefEntry.reference(sql.name, this.location);
-    const lookup = sqlDefEntry.getEntry(sql.name);
+    const key = sqlKey(sql.connection, sql.selectStr);
+    sqlDefEntry.reference(key, this.location);
+    const lookup = sqlDefEntry.getEntry(key);
     if (lookup.status === 'error') {
       const msgLines = lookup.message.split(/\r?\n/);
       this.select.logError(

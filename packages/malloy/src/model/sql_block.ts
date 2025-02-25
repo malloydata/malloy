@@ -21,20 +21,16 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {SQLSourceRequest} from '../lang/translate-response';
 import {QueryModel} from './malloy_query';
-import {
-  SQLPhraseSegment,
-  isSegmentSQL,
-  ModelDef,
-  SQLSourceDef,
-} from './malloy_types';
+import {SQLPhraseSegment, isSegmentSQL, ModelDef} from './malloy_types';
 import {generateHash} from './utils';
 
 export function compileSQLInterpolation(
   select: SQLPhraseSegment[],
   connection: string,
   partialModel: ModelDef | undefined
-): SQLSourceDef {
+): SQLSourceRequest {
   let queryModel: QueryModel | undefined = undefined;
   let selectStr = '';
   let parenAlready = false;
@@ -64,12 +60,8 @@ export function compileSQLInterpolation(
     }
   }
   return {
-    type: 'sql_select',
-    name: sqlKey(connection, selectStr),
     connection,
-    dialect: '~connection_failed_to_set_dialect~',
     selectStr,
-    fields: [],
   };
 }
 
