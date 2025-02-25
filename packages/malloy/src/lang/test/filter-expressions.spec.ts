@@ -8,8 +8,11 @@
 import {expr, errorMessage} from './test-translator';
 import './parse-expects';
 import {ExprFilterExpression, ExprLogicalOp} from '../ast';
+import {Expr} from '../../model/malloy_types';
+import {stringFilterToExpr} from '../fexpr-to-expr';
+import {exprToStr} from './expr-to-str';
 
-describe('Malloy Filter Expressions', () => {
+describe('Filter Expressions In Source', () => {
   test('single quote literal parses correctly', () => {
     const fstr = expr`f'z'`;
     const node = fstr.translator.ast();
@@ -126,7 +129,58 @@ describe('Malloy Filter Expressions', () => {
       '{filterTimestamp ats | 2001-02-03}'
     );
   });
-  test.todo('is backslash');
-  test.todo('backslash followed by close quote');
-  test.todo('contains percent');
+  test('is backslash', () => {
+    expect('astr ~ f"\\\\"').compilesTo('{filterString astr | \\\\}');
+  });
+  test('backslash followed by close quote', () => {
+    expect('astr ~ f"\\""').compilesTo('{filterString astr | \\"}');
+  });
+  test('contains percent', () => {
+    expect('astr ~ f"%\\%%"').compilesTo('{filterString astr | %\\%%}');
+  });
+  test.todo('parse erorrs from filters appear in logs');
+});
+
+describe('string filter to expr', () => {
+  const s: Expr = {node: 'field', path: ['s']};
+  test('single =', () => {
+    const applied = stringFilterToExpr('a', s);
+    const ir = exprToStr(applied, {s: 's'});
+    expect(ir).toEqual('{s = {"a"}}');
+  });
+  test('two =', () => {
+    const applied = stringFilterToExpr('a,b', s);
+    const ir = exprToStr(applied, {s: 's'});
+    expect(ir).toEqual('{s in {{"a"},{"b"}}}');
+  });
+  test('single !=', () => {
+    const applied = stringFilterToExpr('-a', s);
+    const ir = exprToStr(applied, {s: 's'});
+    expect(ir).toEqual('{s != {"a"}}');
+  });
+  test('two !=', () => {
+    const applied = stringFilterToExpr('-a,-b', s);
+    const ir = exprToStr(applied, {s: 's'});
+    expect(ir).toEqual('{s not in {{"a"},{"b"}}}');
+  });
+  test('single contains', () => {
+    const applied = stringFilterToExpr('%a%', s);
+    const ir = exprToStr(applied, {s: 's'});
+    expect(ir).toEqual('{s like {"%a%"}}');
+  });
+  test('two contains', () => {
+    const applied = stringFilterToExpr('%a%,%b%', s);
+    const ir = exprToStr(applied, {s: 's'});
+    expect(ir).toEqual('{{s like {"%a%"}} or {s like {"%b%"}}}');
+  });
+  test('single not_contains', () => {
+    const applied = stringFilterToExpr('-%a%', s);
+    const ir = exprToStr(applied, {s: 's'});
+    expect(ir).toEqual('{s !like {"%a%"}}');
+  });
+  test('two not_contains', () => {
+    const applied = stringFilterToExpr('-%a%,-%b%', s);
+    const ir = exprToStr(applied, {s: 's'});
+    expect(ir).toEqual('{{s !like {"%a%"}} and {s !like {"%b%"}}}');
+  });
 });

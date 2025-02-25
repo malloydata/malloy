@@ -27,11 +27,8 @@ import {
   CompositeFieldUsage,
   DocumentLocation,
   DocumentRange,
-  Expr,
-  exprHasE,
-  exprHasKids,
-  exprIsLeaf,
 } from '../../model';
+import {exprToStr} from './expr-to-str';
 import {
   BetaExpression,
   MarkedSource,
@@ -198,110 +195,6 @@ function xlated(tt: TestTranslator, warningsOkay = false) {
   return checkForNeededs(tt);
 }
 
-/**
- * Returns a readable shorthand for the node. Not complete, will be expanded
- * as more expressions are tested. One weird thing it does is compress field
- * references if passed an empty hash. The first field in an expression will be
- * A in the output, the second B, and so on.
- */
-type ESymbols = Record<string, string> | undefined;
-function eToStr(e: Expr, symbols: ESymbols): string {
-  function subExpr(e: Expr): string {
-    return eToStr(e, symbols);
-  }
-  switch (e.node) {
-    case 'field': {
-      const ref = e.path.join('.');
-      if (symbols) {
-        if (symbols[ref] === undefined) {
-          const nSyms = Object.keys(symbols).length;
-          symbols[ref] = String.fromCharCode('A'.charCodeAt(0) + nSyms);
-        }
-        return symbols[ref];
-      } else {
-        return ref;
-      }
-    }
-    case '()':
-      return `(${subExpr(e.e)})`;
-    case 'numberLiteral':
-      return `${e.literal}`;
-    case 'stringLiteral':
-      return `{"${e.literal}"}`;
-    case 'timeLiteral':
-      return `@${e.literal}`;
-    case 'recordLiteral': {
-      const parts: string[] = [];
-      for (const [name, val] of Object.entries(e.kids)) {
-        parts.push(`${name}:${subExpr(val)}`);
-      }
-      return `{${parts.join(', ')}}`;
-    }
-    case 'arrayLiteral': {
-      const parts = e.kids.values.map(k => subExpr(k));
-      return `[${parts.join(', ')}]`;
-    }
-    case 'regexpLiteral':
-      return `/${e.literal}/`;
-    case 'trunc':
-      return `{timeTrunc-${e.units} ${subExpr(e.e)}}`;
-    case 'delta':
-      return `{${e.op}${e.units} ${subExpr(e.kids.base)} ${subExpr(
-        e.kids.delta
-      )}}`;
-    case 'true':
-    case 'false':
-      return e.node;
-    case 'case': {
-      const caseStmt = ['case'];
-      if (e.kids.caseValue !== undefined) {
-        caseStmt.push(`${subExpr(e.kids.caseValue)}`);
-      }
-      for (let i = 0; i < e.kids.caseWhen.length; i += 1) {
-        caseStmt.push(
-          `when ${subExpr(e.kids.caseWhen[i])} then ${subExpr(
-            e.kids.caseThen[i]
-          )}`
-        );
-      }
-      if (e.kids.caseElse !== undefined) {
-        caseStmt.push(`else ${subExpr(e.kids.caseElse)}`);
-      }
-      return `{${caseStmt.join(' ')}}`;
-    }
-    case 'regexpMatch':
-      return `{${subExpr(e.kids.expr)} regex-match ${subExpr(e.kids.regex)}}`;
-    case 'in': {
-      return `{${subExpr(e.kids.e)} ${e.not ? 'not in' : 'in'} {${e.kids.oneOf
-        .map(o => `${subExpr(o)}`)
-        .join(',')}}}`;
-    }
-    case 'genericSQLExpr': {
-      let sql = '';
-      let i = 0;
-      for (; i < e.kids.args.length; i++) {
-        sql += `${e.src[i]}{${subExpr(e.kids.args[i])}}`;
-      }
-      if (i < e.src.length) {
-        sql += e.src[i];
-      }
-      return sql;
-    }
-    case 'filterMatch': {
-      const fType = `${e.dataType[0].toUpperCase()}${e.dataType.slice(1)}`;
-      return `{filter${fType} ${subExpr(e.e)} | ${e.filter}}`;
-    }
-  }
-  if (exprHasKids(e) && e.kids['left'] && e.kids['right']) {
-    return `{${subExpr(e.kids['left'])} ${e.node} ${subExpr(e.kids['right'])}}`;
-  } else if (exprHasE(e)) {
-    return `{${e.node} ${subExpr(e.e)}}`;
-  } else if (exprIsLeaf(e)) {
-    return `{${e.node}}`;
-  }
-  return `{?${e.node}}`;
-}
-
 expect.extend({
   toParse: function (tx: TestSource) {
     const x = xlator(tx);
@@ -381,7 +274,7 @@ expect.extend({
     if (!badRefs.pass) {
       return badRefs;
     }
-    const rcvExpr = eToStr(bx.generated().value, undefined);
+    const rcvExpr = exprToStr(bx.generated().value, undefined);
     const pass = this.equals(rcvExpr, expr);
     const msg = pass ? `Matched: ${rcvExpr}` : this.utils.diff(expr, rcvExpr);
     return {pass, message: () => `${msg}`};
