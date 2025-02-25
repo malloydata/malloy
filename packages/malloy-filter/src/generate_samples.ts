@@ -94,12 +94,12 @@ const dateExamples = [
   '3 months ago for 2 days',
   '2025 weeks ago',
   'before 3 days ago',
-  'before 2025-08-30 08:30:20',
-  'after 2025-10-05',
+  'Before 2025-08-30 08:30:20',
+  'AFTER 2025-10-05',
   '2025-08-30 12:00 to 2025-09-18 14:30',
-  'this year',
-  'next tuesday',
-  '7 years from now',
+  'this YEAR',
+  'Next Tuesday',
+  '7 years from Now',
   '2025-01-01 12:00:00 for 3 days',
   '2020-08-12 03:12:56.57',
   '2020-08-12T03:12:56[PST]',
@@ -179,7 +179,7 @@ class GenerateSamples {
       GenerateSamples.writeJson(fp, 'Output: ', ...response.clauses);
     }
     if (response.logs && response.logs.length > 0) {
-      GenerateSamples.writeJson(fp, 'Errors: ', ...response.logs);
+      GenerateSamples.writeJson(fp, 'Logs:   ', ...response.logs);
     }
     GenerateSamples.writeRaw(fp, '');
   }
@@ -193,7 +193,7 @@ class GenerateSamples {
       GenerateSamples.writeJson(fp, 'Output: ', ...response.clauses);
     }
     if (response.logs && response.logs.length > 0) {
-      GenerateSamples.writeJson(fp, 'Errors: ', ...response.logs);
+      GenerateSamples.writeJson(fp, 'Logs:   ', ...response.logs);
     }
     GenerateSamples.writeRaw(fp, '');
   }
@@ -207,7 +207,7 @@ class GenerateSamples {
       GenerateSamples.writeJson(fp, 'Output: ', ...response.clauses);
     }
     if (response.logs && response.logs.length > 0) {
-      GenerateSamples.writeJson(fp, 'Errors: ', ...response.logs);
+      GenerateSamples.writeJson(fp, 'Logs:   ', ...response.logs);
     }
     GenerateSamples.writeRaw(fp, '');
   }
@@ -221,7 +221,7 @@ class GenerateSamples {
       GenerateSamples.writeJson(fp, 'Output: ', ...response.clauses);
     }
     if (response.logs && response.logs.length > 0) {
-      GenerateSamples.writeJson(fp, 'Errors: ', ...response.logs);
+      GenerateSamples.writeJson(fp, 'Logs:   ', ...response.logs);
     }
     GenerateSamples.writeRaw(fp, '');
   }
@@ -235,7 +235,7 @@ class GenerateSamples {
       GenerateSamples.writeRaw(fp, 'Output: ' + result);
     }
     if (response.logs && response.logs.length > 0) {
-      GenerateSamples.writeJson(fp, 'Errors: ', ...response.logs);
+      GenerateSamples.writeJson(fp, 'Logs:   ', ...response.logs);
     }
     GenerateSamples.writeRaw(fp, '');
   }
@@ -249,7 +249,7 @@ class GenerateSamples {
       GenerateSamples.writeRaw(fp, 'Output: ' + result);
     }
     if (response.logs && response.logs.length > 0) {
-      GenerateSamples.writeJson(fp, 'Errors: ', ...response.logs);
+      GenerateSamples.writeJson(fp, 'Logs:   ', ...response.logs);
     }
     GenerateSamples.writeRaw(fp, '');
   }
@@ -263,7 +263,7 @@ class GenerateSamples {
       GenerateSamples.writeRaw(fp, 'Output: ' + result);
     }
     if (response.logs && response.logs.length > 0) {
-      GenerateSamples.writeJson(fp, 'Errors: ', ...response.logs);
+      GenerateSamples.writeJson(fp, 'Logs:   ', ...response.logs);
     }
     GenerateSamples.writeRaw(fp, '');
   }
@@ -277,7 +277,7 @@ class GenerateSamples {
       GenerateSamples.writeRaw(fp, 'Output: ' + result);
     }
     if (response.logs && response.logs.length > 0) {
-      GenerateSamples.writeJson(fp, 'Errors: ', ...response.logs);
+      GenerateSamples.writeJson(fp, 'Logs:   ', ...response.logs);
     }
     GenerateSamples.writeRaw(fp, '');
   }

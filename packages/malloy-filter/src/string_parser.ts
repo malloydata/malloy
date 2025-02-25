@@ -56,6 +56,14 @@ export class StringParser extends BaseParser {
     while (this.index < this.tokens.length) {
       const token = this.getNext();
       if (token.type === ',') {
+        if (this.index > 0 && this.tokens[this.index - 1].type === ',') {
+          logs.push({
+            severity: 'warn',
+            message: 'Empty clause',
+            startIndex: token.startIndex,
+            endIndex: token.endIndex,
+          });
+        }
         this.index++;
       } else if (
         token.type === 'null' ||

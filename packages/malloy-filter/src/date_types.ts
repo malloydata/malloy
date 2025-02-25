@@ -15,7 +15,8 @@ export type DateTimeUnit =
   | 'day'
   | 'hour'
   | 'minute'
-  | 'second';
+  | 'second'
+  | 'instant';
 
 export type DateWeekday =
   | 'monday'

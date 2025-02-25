@@ -61,6 +61,14 @@ export class NumberParser extends BaseParser {
     while (this.index < this.tokens.length) {
       const token = this.getNext();
       if (token.type === ',') {
+        if (this.index > 0 && this.tokens[this.index - 1].type === ',') {
+          logs.push({
+            severity: 'warn',
+            message: 'Empty clause',
+            startIndex: token.startIndex,
+            endIndex: token.endIndex,
+          });
+        }
         this.index++;
       } else if (this.isRangeStart(this.index)) {
         clauses = this.checkRange(token, false, clauses, logs);
@@ -83,7 +91,7 @@ export class NumberParser extends BaseParser {
       } else {
         logs.push({
           severity: 'error',
-          message: 'Invalid expression',
+          message: 'Invalid expression: ' + token.value,
           startIndex: token.startIndex,
           endIndex: token.endIndex,
         });

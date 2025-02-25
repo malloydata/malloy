@@ -194,6 +194,13 @@ export class DateParser extends BaseParser {
             startIndex: token.startIndex,
             endIndex: token.endIndex,
           });
+        } else if (this.index > 0 && this.tokens[this.index - 1].type === ',') {
+          logs.push({
+            severity: 'warn',
+            message: 'Empty clause',
+            startIndex: token.startIndex,
+            endIndex: token.endIndex,
+          });
         }
         this.index++;
       } else if (token.type === 'prefix') {
@@ -326,7 +333,9 @@ export class DateParser extends BaseParser {
     const timeStr = matcher ? matcher[1] : '';
 
     let unit: DateTimeUnit = 'year';
-    if (timeStr.length > 5) {
+    if (timeStr.length > 8) {
+      unit = 'instant';
+    } else if (timeStr.length > 5) {
       unit = 'second';
     } else if (timeStr.length > 2) {
       unit = 'minute';
