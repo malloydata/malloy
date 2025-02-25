@@ -1,7 +1,16 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 import {
   StringClause,
   StringCondition,
   StringConditionOperator,
+  StringMatch,
+  StringMatchOperator,
 } from './clause_types';
 
 export class StringSerializer {
@@ -16,11 +25,10 @@ export class StringSerializer {
 
   private static isNegated(operator: StringConditionOperator): boolean {
     return (
-      operator === '!~' ||
       operator === '!=' ||
-      operator === 'notStarts' ||
-      operator === 'notEnds' ||
-      operator === 'notContains'
+      operator === 'not_starts' ||
+      operator === 'not_ends' ||
+      operator === 'not_contains'
     );
   }
 
@@ -32,66 +40,84 @@ export class StringSerializer {
     return input.replace(/[_%]/g, match => `\\${match}`);
   }
 
-  // export type StringOperator =
+  // export type StringConditionOperator =
   //  | 'starts' | 'ends' | 'contains' | 'notStarts' | 'notEnds' | 'notContains'
-  //  | '~' | '=' | '!~' | '!=';
+  //  | '='| '!=';
   private static StringConditionWordToString(
     operator: StringConditionOperator,
     value: string
   ): string {
     const negated: boolean = StringSerializer.isNegated(operator);
-    if (value === 'NULL' || value === '-NULL') {
+    if (value === 'null' || value === '-null') {
       return (negated ? '-' : '') + '\\' + value;
     }
 
     value = StringSerializer.escapeSpecialCharacters(value);
-    if (operator === 'starts' || operator === 'notStarts') {
-      value = StringSerializer.escapeWildcardCharacters(value);
+    value = StringSerializer.escapeWildcardCharacters(value);
+    if (operator === 'starts' || operator === 'not_starts') {
       return (negated ? '-' : '') + value + '%';
-    } else if (operator === 'ends' || operator === 'notEnds') {
-      value = StringSerializer.escapeWildcardCharacters(value);
+    } else if (operator === 'ends' || operator === 'not_ends') {
       return (negated ? '-' : '') + '%' + value;
-    } else if (operator === 'contains' || operator === 'notContains') {
-      value = StringSerializer.escapeWildcardCharacters(value);
+    } else if (operator === 'contains' || operator === 'not_contains') {
       return (negated ? '-' : '') + '%' + value + '%';
-    } else if (operator === '=' || operator === '!=') {
-      value = StringSerializer.escapeWildcardCharacters(value);
-      return (negated ? '-' : '') + value;
     }
+    return (negated ? '-' : '') + value;
+  }
 
+  // export type StringMatchOperator = '~' | '!~';
+  private static StringMatchWordToString(
+    operator: StringMatchOperator,
+    value: string
+  ): string {
+    const negated: boolean = operator === '!~' ? true : false;
+    if (value === 'null' || value === '-null') {
+      return (negated ? '-' : '') + '\\' + value;
+    }
+    value = StringSerializer.escapeSpecialCharacters(value);
     return (negated ? '-' : '') + value;
   }
 
   private static StringClauseToString(
     operator:
       | StringConditionOperator
-      | 'EMPTY'
-      | 'NOTEMPTY'
-      | 'NULL'
-      | 'NOTNULL',
+      | StringMatchOperator
+      | 'empty'
+      | 'not_empty'
+      | 'null'
+      | 'not_null',
     clause: StringClause
   ): string {
-    if (operator === 'EMPTY') {
-      return 'EMPTY';
-    } else if (operator === 'NOTEMPTY') {
-      return '-EMPTY';
-    } else if (operator === 'NULL') {
-      return 'NULL';
-    } else if (operator === 'NOTNULL') {
-      return '-NULL';
-    }
-    if (!('values' in clause) || clause.values.length === 0) {
-      return '';
+    if (operator === 'empty') {
+      return 'empty';
+    } else if (operator === 'not_empty') {
+      return '-empty';
+    } else if (operator === 'null') {
+      return 'null';
+    } else if (operator === 'not_null') {
+      return '-null';
     }
     let result = '';
-    const condition: StringCondition = clause;
-    for (const value of condition.values) {
-      const word = StringSerializer.StringConditionWordToString(
-        condition.operator,
-        value
-      );
-      if (word) {
-        result += word + ', ';
+    if ('values' in clause && clause.values.length > 0) {
+      const condition: StringCondition = clause;
+      for (const value of condition.values) {
+        const word = StringSerializer.StringConditionWordToString(
+          condition.operator,
+          value
+        );
+        if (word) {
+          result += word + ', ';
+        }
+      }
+    } else if ('escaped_values' in clause && clause.escaped_values.length > 0) {
+      const condition: StringMatch = clause;
+      for (const value of condition.escaped_values) {
+        const word = StringSerializer.StringMatchWordToString(
+          condition.operator,
+          value
+        );
+        if (word) {
+          result += word + ', ';
+        }
       }
     }
     return result.trim().replace(/,$/, '');

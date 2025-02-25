@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 import {Token} from './token_types';
 
 export interface SpecialToken {
@@ -138,7 +145,7 @@ export class Tokenizer {
           : subString === special.value;
         if (matches) {
           const value = special.ignoreCase
-            ? subString.toUpperCase()
+            ? subString.toLowerCase()
             : subString;
           return {
             type: special.type,
@@ -205,7 +212,7 @@ export class Tokenizer {
         regexp.lastIndex = 0; // Set the starting index for the search
         if (regexp.test(token.value)) {
           const value = special.ignoreCase
-            ? token.value.toUpperCase()
+            ? token.value.toLowerCase()
             : token.value;
           return {
             type: special.type,
@@ -220,7 +227,7 @@ export class Tokenizer {
           : token.value === special.value;
         if (matches) {
           const value = special.ignoreCase
-            ? token.value.toUpperCase()
+            ? token.value.toLowerCase()
             : token.value;
           return {
             type: special.type,

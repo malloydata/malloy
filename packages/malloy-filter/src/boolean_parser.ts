@@ -1,9 +1,12 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 import {SpecialToken, Tokenizer, TokenizerParams} from './tokenizer';
-import {
-  BooleanClause,
-  BooleanParserResponse,
-  FilterError,
-} from './clause_types';
+import {BooleanClause, BooleanParserResponse, FilterLog} from './clause_types';
 import {BaseParser} from './base_parser';
 
 export class BooleanParser extends BaseParser {
@@ -14,11 +17,11 @@ export class BooleanParser extends BaseParser {
   private tokenize(): void {
     const specialSubstrings: SpecialToken[] = [{type: ',', value: ','}];
     const specialWords: SpecialToken[] = [
-      {type: 'NULL', value: 'null', ignoreCase: true},
-      {type: 'NOTNULL', value: '-null', ignoreCase: true},
-      {type: 'TRUE', value: 'true', ignoreCase: true},
-      {type: 'FALSE', value: '=false', ignoreCase: true},
-      {type: 'FALSEORNULL', value: 'false', ignoreCase: true},
+      {type: 'null', value: 'null', ignoreCase: true},
+      {type: 'not_null', value: '-null', ignoreCase: true},
+      {type: 'true', value: 'true', ignoreCase: true},
+      {type: 'false', value: '=false', ignoreCase: true},
+      {type: 'false_or_null', value: 'false', ignoreCase: true},
     ];
     const params: TokenizerParams = {
       trimWordWhitespace: true,
@@ -36,23 +39,24 @@ export class BooleanParser extends BaseParser {
     this.index = 0;
     this.tokenize();
     const clauses: BooleanClause[] = [];
-    const errors: FilterError[] = [];
+    const logs: FilterLog[] = [];
     while (this.index < this.tokens.length) {
       const token = this.getNext();
       if (token.type === ',') {
         this.index++;
       } else if (
-        token.type === 'NULL' ||
-        token.type === 'TRUE' ||
-        token.type === 'FALSE' ||
-        token.type === 'FALSEORNULL' ||
-        token.type === 'NOTNULL'
+        token.type === 'null' ||
+        token.type === 'true' ||
+        token.type === 'false' ||
+        token.type === 'false_or_null' ||
+        token.type === 'not_null'
       ) {
         const clause: BooleanClause = {operator: token.type};
         clauses.push(clause);
         this.index++;
       } else {
-        errors.push({
+        logs.push({
+          severity: 'error',
           message: 'Invalid token ' + token.value,
           startIndex: token.startIndex,
           endIndex: token.endIndex,
@@ -60,6 +64,6 @@ export class BooleanParser extends BaseParser {
         this.index++;
       }
     }
-    return {clauses, errors};
+    return {clauses, logs};
   }
 }

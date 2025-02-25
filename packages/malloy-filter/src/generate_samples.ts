@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 import * as fs from 'fs';
 import {BooleanParser} from './boolean_parser';
 import {StringParser} from './string_parser';
@@ -12,6 +19,7 @@ const numberExamples = [
   '5',
   '!=5',
   '1, 3, 5, null',
+  '1, 3, , 5,',
   '<1, >=100 ',
   '>=1',
   ' <= 10 ',
@@ -45,6 +53,8 @@ const stringExamples = [
   'CAT,-NULL',
   'CAT,-"NULL"',
   'CAT,NULL',
+  'CAT,,',
+  'CAT, , DOG',
   'EMPTY',
   '-EMPTY',
   'CAT,-EMPTY',
@@ -69,7 +79,8 @@ const booleanExamples = [
   '=false',
   'null',
   '-NULL',
-  ' True , faLSE,=false,NULl,-null',
+  'null,',
+  ' True , , faLSE,=false,NULl,-null',
   "-'null'",
   '10',
   'nnull',
@@ -167,8 +178,8 @@ class GenerateSamples {
     if (response.clauses && response.clauses.length > 0) {
       GenerateSamples.writeJson(fp, 'Output: ', ...response.clauses);
     }
-    if (response.errors && response.errors.length > 0) {
-      GenerateSamples.writeJson(fp, 'Errors: ', ...response.errors);
+    if (response.logs && response.logs.length > 0) {
+      GenerateSamples.writeJson(fp, 'Errors: ', ...response.logs);
     }
     GenerateSamples.writeRaw(fp, '');
   }
@@ -181,8 +192,8 @@ class GenerateSamples {
     if (response.clauses && response.clauses.length > 0) {
       GenerateSamples.writeJson(fp, 'Output: ', ...response.clauses);
     }
-    if (response.errors && response.errors.length > 0) {
-      GenerateSamples.writeJson(fp, 'Errors: ', ...response.errors);
+    if (response.logs && response.logs.length > 0) {
+      GenerateSamples.writeJson(fp, 'Errors: ', ...response.logs);
     }
     GenerateSamples.writeRaw(fp, '');
   }
@@ -195,8 +206,8 @@ class GenerateSamples {
     if (response.clauses && response.clauses.length > 0) {
       GenerateSamples.writeJson(fp, 'Output: ', ...response.clauses);
     }
-    if (response.errors && response.errors.length > 0) {
-      GenerateSamples.writeJson(fp, 'Errors: ', ...response.errors);
+    if (response.logs && response.logs.length > 0) {
+      GenerateSamples.writeJson(fp, 'Errors: ', ...response.logs);
     }
     GenerateSamples.writeRaw(fp, '');
   }
@@ -209,11 +220,8 @@ class GenerateSamples {
     if (response.clauses && response.clauses.length > 0) {
       GenerateSamples.writeJson(fp, 'Output: ', ...response.clauses);
     }
-    if (response.quotes) {
-      GenerateSamples.writeJson(fp, 'Quotes: ', ...response.quotes);
-    }
-    if (response.errors && response.errors.length > 0) {
-      GenerateSamples.writeJson(fp, 'Errors: ', ...response.errors);
+    if (response.logs && response.logs.length > 0) {
+      GenerateSamples.writeJson(fp, 'Errors: ', ...response.logs);
     }
     GenerateSamples.writeRaw(fp, '');
   }
@@ -226,8 +234,8 @@ class GenerateSamples {
       const result = new BooleanSerializer(response.clauses || []).serialize();
       GenerateSamples.writeRaw(fp, 'Output: ' + result);
     }
-    if (response.errors && response.errors.length > 0) {
-      GenerateSamples.writeJson(fp, 'Errors: ', ...response.errors);
+    if (response.logs && response.logs.length > 0) {
+      GenerateSamples.writeJson(fp, 'Errors: ', ...response.logs);
     }
     GenerateSamples.writeRaw(fp, '');
   }
@@ -240,8 +248,8 @@ class GenerateSamples {
       const result = new DateSerializer(response.clauses || []).serialize();
       GenerateSamples.writeRaw(fp, 'Output: ' + result);
     }
-    if (response.errors && response.errors.length > 0) {
-      GenerateSamples.writeJson(fp, 'Errors: ', ...response.errors);
+    if (response.logs && response.logs.length > 0) {
+      GenerateSamples.writeJson(fp, 'Errors: ', ...response.logs);
     }
     GenerateSamples.writeRaw(fp, '');
   }
@@ -254,8 +262,8 @@ class GenerateSamples {
       const result = new NumberSerializer(response.clauses || []).serialize();
       GenerateSamples.writeRaw(fp, 'Output: ' + result);
     }
-    if (response.errors && response.errors.length > 0) {
-      GenerateSamples.writeJson(fp, 'Errors: ', ...response.errors);
+    if (response.logs && response.logs.length > 0) {
+      GenerateSamples.writeJson(fp, 'Errors: ', ...response.logs);
     }
     GenerateSamples.writeRaw(fp, '');
   }
@@ -268,8 +276,8 @@ class GenerateSamples {
       const result = new StringSerializer(response.clauses || []).serialize();
       GenerateSamples.writeRaw(fp, 'Output: ' + result);
     }
-    if (response.errors && response.errors.length > 0) {
-      GenerateSamples.writeJson(fp, 'Errors: ', ...response.errors);
+    if (response.logs && response.logs.length > 0) {
+      GenerateSamples.writeJson(fp, 'Errors: ', ...response.logs);
     }
     GenerateSamples.writeRaw(fp, '');
   }
