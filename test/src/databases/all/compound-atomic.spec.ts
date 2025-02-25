@@ -14,7 +14,7 @@ import {
   ArrayTypeDef,
   FieldDef,
   Expr,
-  SQLSourceDef,
+  SQLSourceRequest,
 } from '@malloydata/malloy';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
@@ -220,13 +220,9 @@ describe.each(runtimes.runtimeList)(
             kids: {values: [aOne, aTwo]},
           };
           const sql_aoa = runtime.dialect.sqlLiteralArray(aoa);
-          const asStruct: SQLSourceDef = {
-            name: 'select_with_aoa',
-            type: 'sql_select',
+          const asStruct: SQLSourceRequest = {
             connection: conName,
-            dialect: runtime.dialect.name,
             selectStr: `SELECT ${sql_aoa} AS aoa`,
-            fields: [],
           };
           const ret = await runtime.connection.fetchSchemaForSQLStruct(
             asStruct,

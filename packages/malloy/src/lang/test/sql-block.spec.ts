@@ -26,18 +26,25 @@ import {TestTranslator, aTableDef} from './test-translator';
 import './parse-expects';
 import {MalloyTranslator} from '../parse-malloy';
 import {SQLSourceDef} from '../../model';
+import {sqlKey} from '../../model/sql_block';
+import {SQLSourceRequest} from '../translate-response';
 
 describe('connection sql()', () => {
   const selStmt = 'SELECT * FROM aTable';
-  function makeSchemaResponse(sql: SQLSourceDef): SQLSourceDef {
+  function makeSchemaResponse(sql: SQLSourceRequest): {
+    [key: string]: SQLSourceDef;
+  } {
     const cname = sql.connection || 'bigquery';
+    const key = sqlKey(cname, sql.selectStr);
     return {
-      type: 'sql_select',
-      name: sql.name,
-      dialect: 'standardsql',
-      connection: cname,
-      selectStr: selStmt,
-      fields: aTableDef.fields,
+      [key]: {
+        type: 'sql_select',
+        name: key,
+        dialect: 'standardsql',
+        connection: cname,
+        selectStr: selStmt,
+        fields: aTableDef.fields,
+      },
     };
   }
 
@@ -51,8 +58,7 @@ describe('connection sql()', () => {
     const needs = needReq?.compileSQL;
     expect(needs).toBeDefined();
     if (needs) {
-      const refKey = needs.name;
-      model.update({compileSQL: {[refKey]: makeSchemaResponse(needs)}});
+      model.update({compileSQL: makeSchemaResponse(needs)});
       expect(model).toTranslate();
       const users = model.getSourceDef('malloyUsers');
       expect(users).toBeDefined();
@@ -77,7 +83,7 @@ describe('connection sql()', () => {
     const needReq = model.translate();
     const needs = needReq?.compileSQL;
     expect(needs).toBeDefined();
-    model.update({compileSQL: {[needs!.name]: makeSchemaResponse(needs!)}});
+    model.update({compileSQL: makeSchemaResponse(needs!)});
     expect(model).toTranslate();
   });
 
@@ -135,7 +141,7 @@ describe('connection sql()', () => {
     const needReq = model.translate();
     const needs = needReq?.compileSQL;
     expect(needs).toBeDefined();
-    model.update({compileSQL: {[needs!.name]: makeSchemaResponse(needs!)}});
+    model.update({compileSQL: makeSchemaResponse(needs!)});
     expect(model).toTranslate();
     const modelDef = model?.translate()?.modelDef;
 

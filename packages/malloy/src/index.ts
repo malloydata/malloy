@@ -225,3 +225,5 @@ export {toAsyncGenerator} from './connection_utils';
 export {modelDefToModelInfo} from './to_stable';
 export {annotationToTag} from './annotation';
 export * from './api';
+export type {SQLSourceRequest} from './lang/translate-response';
+export {sqlKey} from './model/sql_block';

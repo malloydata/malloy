@@ -67,7 +67,7 @@ export function compileSQLInterpolation(
     type: 'sql_select',
     name: sqlKey(connection, selectStr),
     connection,
-    dialect: '~no_dialect~',
+    dialect: '~connection_failed_to_set_dialect~',
     selectStr,
     fields: [],
   };

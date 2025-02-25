@@ -45,6 +45,8 @@ import {
   StreamingConnection,
   StructDef,
   mkArrayDef,
+  SQLSourceRequest,
+  sqlKey,
 } from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 
@@ -194,9 +196,15 @@ export class PostgresConnection
   }
 
   async fetchSelectSchema(
-    sqlRef: SQLSourceDef
+    sqlRef: SQLSourceRequest
   ): Promise<SQLSourceDef | string> {
-    const structDef: SQLSourceDef = {...sqlRef, fields: []};
+    const structDef: SQLSourceDef = {
+      type: 'sql_select',
+      ...sqlRef,
+      dialect: this.dialectName,
+      fields: [],
+      name: sqlKey(sqlRef.connection, sqlRef.selectStr),
+    };
     const tempTableName = `tmp${randomUUID()}`.replace(/-/g, '');
     const infoQuery = `
       drop table if exists ${tempTableName};
@@ -212,7 +220,7 @@ export class PostgresConnection
     try {
       await this.schemaFromQuery(infoQuery, structDef);
     } catch (error) {
-      return `Error fetching schema for ${sqlRef.name}: ${error}`;
+      return `Error fetching schema for ${structDef.name}: ${error}`;
     }
     return structDef;
   }

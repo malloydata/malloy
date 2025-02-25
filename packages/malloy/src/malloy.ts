@@ -97,6 +97,7 @@ import {
   MalloyTagParse,
   TagParseSpec,
 } from './annotation';
+import {sqlKey} from './model/sql_block';
 
 export interface Taggable {
   tagParse: (spec?: TagParseSpec) => MalloyTagParse;
@@ -489,6 +490,7 @@ export class Malloy {
           // Unlike other requests, these do not come in batches
           const toCompile = result.compileSQL;
           const connectionName = toCompile.connection;
+          const key = sqlKey(toCompile.connection, toCompile.selectStr);
           try {
             const conn = await connections.lookupConnection(connectionName);
             const resolved = await conn.fetchSchemaForSQLStruct(toCompile, {
@@ -497,17 +499,21 @@ export class Malloy {
             });
             if (resolved.error) {
               translator.update({
-                errors: {compileSQL: {[toCompile.name]: resolved.error}},
+                errors: {
+                  compileSQL: {
+                    [key]: resolved.error,
+                  },
+                },
               });
             }
             if (resolved.structDef) {
               translator.update({
-                compileSQL: {[toCompile.name]: resolved.structDef},
+                compileSQL: {[key]: resolved.structDef},
               });
             }
           } catch (error) {
             const errors: {[name: string]: string} = {};
-            errors[toCompile.name] = error.toString();
+            errors[key] = error.toString();
             translator.update({errors: {compileSQL: errors}});
           }
         }

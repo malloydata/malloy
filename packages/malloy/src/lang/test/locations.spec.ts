@@ -36,6 +36,7 @@ import {
 } from './test-translator';
 import './parse-expects';
 import {DocumentLocation, DocumentPosition} from '../../model/malloy_types';
+import {sqlKey} from '../../model/sql_block';
 
 describe('source locations', () => {
   test('renamed source location', () => {
@@ -144,7 +145,7 @@ describe('source locations', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
       expect(m).toTranslate();
       const na = getExplore(m.modelDef, 'na');

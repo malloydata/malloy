@@ -20,6 +20,7 @@ import {
 } from '../model';
 import {modelDefToModelInfo} from '../to_stable';
 import {sqlKey} from '../model/sql_block';
+import {SQLSourceRequest} from '../lang/translate-response';
 
 // TODO find where this should go...
 function tableKey(connectionName: string, tablePath: string): string {
@@ -162,7 +163,7 @@ function compilerNeedsToUpdate(
 }
 
 function convertCompilerNeeds(
-  compileSQL: SQLSourceDef | undefined,
+  compileSQL: SQLSourceRequest | undefined,
   urls: string[] | undefined,
   tables:
     | Record<
