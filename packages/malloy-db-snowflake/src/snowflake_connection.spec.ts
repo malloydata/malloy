@@ -78,7 +78,7 @@ describe('db:Snowflake', () => {
     expect(res.totalRows).toBe(55);
     let total = 0;
     for (const row of res.rows) {
-      total += +(row['cnt'] ?? 0);
+      total += Number(row['cnt'] ?? 0);
     }
     expect(total).toBe(3540);
 

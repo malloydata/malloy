@@ -70,8 +70,6 @@ function unwrapMotherDuck(value: DuckDBValue) {
     } else {
       result = value.toString();
     }
-  } else if (typeof value === 'bigint') {
-    result = Number(value);
   } else {
     result = value;
   }

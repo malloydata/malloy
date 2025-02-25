@@ -223,14 +223,6 @@ export class DuckDBConnection extends DuckDBCommon {
           if (err) {
             reject(err);
           } else {
-            rows = JSON.parse(
-              JSON.stringify(rows, (_key, value) => {
-                if (typeof value === 'bigint') {
-                  return Number(value);
-                }
-                return value;
-              })
-            );
             resolve({
               rows,
               totalRows: rows.length,
