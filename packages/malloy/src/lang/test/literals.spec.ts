@@ -49,6 +49,15 @@ describe('literals', () => {
     const str = "'Is " + '\\' + '\\' + " nice'";
     expect(new BetaExpression(str)).toTranslate();
   });
+  test("raw s'string", () => {
+    expect("s'a'").compilesTo('{"a"}');
+  });
+  test('raw s"string', () => {
+    expect('s "a"').compilesTo('{"a"}');
+  });
+  test('raw string with quoted end char', () => {
+    expect("s'a\\'b'").compilesTo('{"a\\\'b"}');
+  });
   const literalTimes: [string, string, string | undefined, unknown][] = [
     ['@1960', 'date', 'year', {literal: '1960-01-01'}],
     ['@1960-Q2', 'date', 'quarter', {literal: '1960-04-01'}],
@@ -244,6 +253,11 @@ describe('literals', () => {
       const x = new BetaExpression('"""x"""');
       expect(x).toParse();
     });
+    test('Error for missing close in raw string', () => {
+      expect(expr`s'hello\n`).toLog(
+        errorMessage('String cannot contain a new-line character')
+      );
+    });
     test('a string containing a tab', () => expect(expr`'\t'`).toParse());
   });
   describe('compound literals', () => {
@@ -256,11 +270,11 @@ describe('literals', () => {
     test('array of records with same schema', () => {
       expect(
         '[{name is "one", val is 1},{name is "two", val is 2}]'
-      ).compilesTo('[{name:"one", val:1}, {name:"two", val:2}]');
+      ).compilesTo('[{name:{"one"}, val:1}, {name:{"two"}, val:2}]');
     });
     test('array of records with head schema', () => {
       expect('[{name is "one", val is 1},{"two", 2}]').compilesTo(
-        '[{name:"one", val:1}, {name:"two", val:2}]'
+        '[{name:{"one"}, val:1}, {name:{"two"}, val:2}]'
       );
     });
   });

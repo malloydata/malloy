@@ -80,7 +80,7 @@ describe('expressions', () => {
   });
   test('raw function call codegen', () => {
     expect(expr`special_function!(aweird, 'foo')`).compilesTo(
-      'special_function({aweird},{"foo"})'
+      'special_function({aweird},{{"foo"}})'
     );
   });
 
@@ -135,27 +135,27 @@ describe('expressions', () => {
     });
     test('match', () => {
       expect("'forty-two' ~ 'fifty-four'").compilesTo(
-        '{"forty-two" like "fifty-four"}'
+        '{{"forty-two"} like {"fifty-four"}}'
       );
     });
     test('not match', () => {
       expect("'forty-two' !~ 'fifty-four'").compilesTo(
-        '{"forty-two" !like "fifty-four"}'
+        '{{"forty-two"} !like {"fifty-four"}}'
       );
     });
     test('regexp-match', () => {
       expect("'forty-two' ~ r'fifty-four'").compilesTo(
-        '{"forty-two" regex-match /fifty-four/}'
+        '{{"forty-two"} regex-match /fifty-four/}'
       );
     });
     test('not regexp-match', () => {
       expect("'forty-two' !~ r'fifty-four'").compilesTo(
-        '{not {"forty-two" regex-match /fifty-four/}}'
+        '{not {{"forty-two"} regex-match /fifty-four/}}'
       );
     });
     test('apply as equality', () => {
       expect("'forty-two' ? 'fifty-four'").compilesTo(
-        '{"forty-two" = "fifty-four"}'
+        '{{"forty-two"} = {"fifty-four"}}'
       );
     });
     test('not', () => {
@@ -277,7 +277,7 @@ describe('expressions', () => {
         expect(warnSrc).toLog(
           warningMessage("Use Malloy operator '~' instead of 'LIKE'")
         );
-        expect(warnSrc).compilesTo('{astr like "a"}');
+        expect(warnSrc).compilesTo('{astr like {"a"}}');
         const warning = warnSrc.translator.problems()[0];
         expect(warning.replacement).toEqual("astr ~ 'a'");
       });
@@ -286,7 +286,7 @@ describe('expressions', () => {
         expect(warnSrc).toLog(
           warningMessage("Use Malloy operator '!~' instead of 'NOT LIKE'")
         );
-        expect(warnSrc).compilesTo('{astr !like "a"}');
+        expect(warnSrc).compilesTo('{astr !like {"a"}}');
         const warning = warnSrc.translator.problems()[0];
         expect(warning.replacement).toEqual("astr !~ 'a'");
       });
@@ -1017,7 +1017,7 @@ describe('expressions', () => {
       `;
       expect(e).toLog(warning('sql-case'));
       expect(e).compilesTo(
-        '{case when {ai = 42} then "the answer" when {ai = 54} then "the questionable answer" else "random"}'
+        '{case when {ai = 42} then {"the answer"} when {ai = 54} then {"the questionable answer"} else {"random"}}'
       );
     });
     test('with value', () => {
@@ -1030,7 +1030,7 @@ describe('expressions', () => {
       `;
       expect(e).toLog(warning('sql-case'));
       expect(e).compilesTo(
-        '{case ai when 42 then "the answer" when 54 then "the questionable answer" else "random"}'
+        '{case ai when 42 then {"the answer"} when 54 then {"the questionable answer"} else {"random"}}'
       );
     });
     test('no else', () => {
@@ -1042,7 +1042,7 @@ describe('expressions', () => {
       `;
       expect(e).toLog(warning('sql-case'));
       expect(e).compilesTo(
-        '{case when {ai = 42} then "the answer" when {ai = 54} then "the questionable answer"}'
+        '{case when {ai = 42} then {"the answer"} when {ai = 54} then {"the questionable answer"}}'
       );
     });
     test('wrong then type', () => {

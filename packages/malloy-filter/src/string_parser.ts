@@ -1,10 +1,17 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 import {SpecialToken, Tokenizer, TokenizerParams} from './tokenizer';
 import {
   StringClause,
   StringCondition,
+  StringMatchOperator,
   StringConditionOperator,
-  QuoteType,
-  FilterError,
+  FilterLog,
   StringParserResponse,
 } from './clause_types';
 import {BaseParser} from './base_parser';
@@ -24,10 +31,10 @@ export class StringParser extends BaseParser {
   private tokenize(): void {
     const specialSubstrings: SpecialToken[] = [{type: ',', value: ','}];
     const specialWords: SpecialToken[] = [
-      {type: 'NULL', value: 'null', ignoreCase: true},
-      {type: 'EMPTY', value: 'empty', ignoreCase: true},
-      {type: 'NOTNULL', value: '-null', ignoreCase: true},
-      {type: 'NOTEMPTY', value: '-empty', ignoreCase: true},
+      {type: 'null', value: 'null', ignoreCase: true},
+      {type: 'empty', value: 'empty', ignoreCase: true},
+      {type: 'not_null', value: '-null', ignoreCase: true},
+      {type: 'not_empty', value: '-empty', ignoreCase: true},
     ];
     const params: TokenizerParams = {
       trimWordWhitespace: true,
@@ -44,89 +51,45 @@ export class StringParser extends BaseParser {
   public parse(): StringParserResponse {
     this.index = 0;
     this.tokenize();
-    const clauses: StringClause[] = [];
-    const errors: FilterError[] = [];
+    let clauses: StringClause[] = [];
+    const logs: FilterLog[] = [];
     while (this.index < this.tokens.length) {
       const token = this.getNext();
       if (token.type === ',') {
+        if (this.index > 0 && this.tokens[this.index - 1].type === ',') {
+          logs.push({
+            severity: 'warn',
+            message: 'Empty clause',
+            startIndex: token.startIndex,
+            endIndex: token.endIndex,
+          });
+        }
         this.index++;
       } else if (
-        token.type === 'NULL' ||
-        token.type === 'NOTNULL' ||
-        token.type === 'EMPTY' ||
-        token.type === 'NOTEMPTY'
+        token.type === 'null' ||
+        token.type === 'not_null' ||
+        token.type === 'empty' ||
+        token.type === 'not_empty'
       ) {
         clauses.push({operator: token.type});
         this.index++;
       } else if (this.checkSimpleWord(clauses)) {
         this.index++;
       } else {
-        errors.push({
-          message: 'Invalid expression',
+        logs.push({
+          severity: 'warn',
+          message: 'Empty clause',
           startIndex: token.startIndex,
           endIndex: token.endIndex,
         });
         this.index++;
       }
     }
-    const response: StringParserResponse = {
-      clauses: StringParser.groupClauses(clauses),
-      errors,
+    clauses = StringParser.groupClauses(clauses);
+    return {
+      clauses,
+      logs,
     };
-    const quotes: QuoteType[] = StringParser.findQuotes(this.inputString);
-    if (quotes.length > 0) {
-      response.quotes = quotes;
-    }
-    return response;
-  }
-
-  private static findQuotes(str: string): QuoteType[] {
-    const quotes: Set<QuoteType> = new Set();
-    let i = 0;
-
-    while (i < str.length) {
-      // Check for triple quotes first to avoid false positives
-      if (str.slice(i, i + 3) === "'''") {
-        quotes.add('TRIPLESINGLE');
-        i += 3;
-      } else if (str.slice(i, i + 3) === '"""') {
-        quotes.add('TRIPLEDOUBLE');
-        i += 3;
-      } else if (str[i] === '\\') {
-        // Check for escaped quotes
-        if (i + 1 < str.length) {
-          switch (str[i + 1]) {
-            case "'":
-              quotes.add('ESCAPEDSINGLE');
-              break;
-            case '"':
-              quotes.add('ESCAPEDDOUBLE');
-              break;
-            case '`':
-              quotes.add('ESCAPEDBACKTICK');
-              break;
-          }
-          i += 2;
-        } else {
-          i++;
-        }
-      } else {
-        // Check for single quotes
-        switch (str[i]) {
-          case "'":
-            quotes.add('SINGLE');
-            break;
-          case '"':
-            quotes.add('DOUBLE');
-            break;
-          case '`':
-            quotes.add('BACKTICK');
-            break;
-        }
-        i++;
-      }
-    }
-    return Array.from(quotes);
   }
 
   private static groupClauses(clauses: StringClause[]): StringClause[] {
@@ -143,6 +106,12 @@ export class StringParser extends BaseParser {
         'values' in current
       ) {
         previous.values.push(...current.values);
+      } else if (
+        previous.operator === current.operator &&
+        'escaped_values' in previous &&
+        'escaped_values' in current
+      ) {
+        previous.escaped_values.push(...current.escaped_values);
       } else {
         previous = current;
         outputs.push(current);
@@ -178,23 +147,26 @@ export class StringParser extends BaseParser {
 
     let operator: StringConditionOperator = negatedMatch ? '!=' : '=';
     if (isUnderscore || isPercentMiddle || (isPercentBoth && word.length < 3)) {
-      operator = negatedMatch ? '!~' : '~';
+      // Special handling for string match
+      const matchOperator: StringMatchOperator = negatedMatch ? '!~' : '~';
+      if (word.length === 0) {
+        return false;
+      }
+      clauses.push({operator: matchOperator, escaped_values: [word]});
+      return true;
     } else if (isPercentBoth && word.length > 2) {
-      operator = negatedMatch ? 'notContains' : 'contains';
+      operator = negatedMatch ? 'not_contains' : 'contains';
       word = word.substring(1, word.length - 1);
-      word = StringParser.removeBackslashes(word);
     } else if (isPercentStart) {
-      operator = negatedMatch ? 'notEnds' : 'ends';
+      operator = negatedMatch ? 'not_ends' : 'ends';
       word = word.substring(1, word.length);
-      word = StringParser.removeBackslashes(word);
     } else if (isPercentEnd) {
-      operator = negatedMatch ? 'notStarts' : 'starts';
+      operator = negatedMatch ? 'not_starts' : 'starts';
       word = word.substring(0, word.length - 1);
-      word = StringParser.removeBackslashes(word);
     } else {
       // = or !=
-      word = StringParser.removeBackslashes(word);
     }
+    word = StringParser.removeBackslashes(word);
     if (word.length === 0) {
       return false;
     }

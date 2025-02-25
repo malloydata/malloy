@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 import {
   NumberCondition,
   NumberRange,
@@ -75,10 +82,10 @@ export class NumberSerializer {
       if (clause.operator === 'range') {
         result += NumberSerializer.rangeToString(clause);
         result += ', ';
-      } else if (clause.operator === 'NULL') {
-        result += 'NULL, ';
-      } else if (clause.operator === 'NOTNULL') {
-        result += '-NULL, ';
+      } else if (clause.operator === 'null') {
+        result += 'null, ';
+      } else if (clause.operator === 'not_null') {
+        result += '-null, ';
       } else if (NumberSerializer.isNumberOperator(clause.operator)) {
         const numberClause: NumberCondition = clause as NumberCondition;
         for (const value of numberClause.values) {

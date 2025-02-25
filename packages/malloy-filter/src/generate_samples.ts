@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 import * as fs from 'fs';
 import {BooleanParser} from './boolean_parser';
 import {StringParser} from './string_parser';
@@ -12,6 +19,7 @@ const numberExamples = [
   '5',
   '!=5',
   '1, 3, 5, null',
+  '1, 3, , 5,',
   '<1, >=100 ',
   '>=1',
   ' <= 10 ',
@@ -45,6 +53,8 @@ const stringExamples = [
   'CAT,-NULL',
   'CAT,-"NULL"',
   'CAT,NULL',
+  'CAT,,',
+  'CAT, , DOG',
   'EMPTY',
   '-EMPTY',
   'CAT,-EMPTY',
@@ -69,7 +79,8 @@ const booleanExamples = [
   '=false',
   'null',
   '-NULL',
-  ' True , faLSE,=false,NULl,-null',
+  'null,',
+  ' True , , faLSE,=false,NULl,-null',
   "-'null'",
   '10',
   'nnull',
@@ -83,14 +94,21 @@ const dateExamples = [
   '3 months ago for 2 days',
   '2025 weeks ago',
   'before 3 days ago',
-  'before 2025-08-30 08:30:20',
-  'after 2025-10-05',
+  'Before 2025-08-30 08:30:20',
+  'AFTER 2025-10-05',
   '2025-08-30 12:00 to 2025-09-18 14:30',
-  'this year',
-  'next tuesday',
-  '7 years from now',
+  'this YEAR',
+  'Next Tuesday',
+  '7 years from Now',
   '2025-01-01 12:00:00 for 3 days',
+  '2020-08-12 03:12:56.57',
+  '2020-08-12T03:12:56[PST]',
+  '2020-08-12 03:12:56',
+  '2020-08-12 03:22',
+  '2020-08-12 03',
   '2020-08-12',
+  '2020-Q3',
+  '2020-08-07-wK',
   '2020-08',
   'today',
   'yesterday',
@@ -105,9 +123,10 @@ const dateExamples = [
   ' yyesterday ', // Typo
   'before', // Bad syntax
   'for', // Bad syntax
-  '7', // Bad syntax
+  '12', // Bad syntax
   'from now', // Bad syntax
   '2025-12-25 12:32:', // Bad syntax
+  '12:22',
   'after 2025 seconds', // Bad syntax
   '',
 ];
@@ -159,8 +178,8 @@ class GenerateSamples {
     if (response.clauses && response.clauses.length > 0) {
       GenerateSamples.writeJson(fp, 'Output: ', ...response.clauses);
     }
-    if (response.errors && response.errors.length > 0) {
-      GenerateSamples.writeJson(fp, 'Errors: ', ...response.errors);
+    if (response.logs && response.logs.length > 0) {
+      GenerateSamples.writeJson(fp, 'Logs:   ', ...response.logs);
     }
     GenerateSamples.writeRaw(fp, '');
   }
@@ -173,8 +192,8 @@ class GenerateSamples {
     if (response.clauses && response.clauses.length > 0) {
       GenerateSamples.writeJson(fp, 'Output: ', ...response.clauses);
     }
-    if (response.errors && response.errors.length > 0) {
-      GenerateSamples.writeJson(fp, 'Errors: ', ...response.errors);
+    if (response.logs && response.logs.length > 0) {
+      GenerateSamples.writeJson(fp, 'Logs:   ', ...response.logs);
     }
     GenerateSamples.writeRaw(fp, '');
   }
@@ -187,8 +206,8 @@ class GenerateSamples {
     if (response.clauses && response.clauses.length > 0) {
       GenerateSamples.writeJson(fp, 'Output: ', ...response.clauses);
     }
-    if (response.errors && response.errors.length > 0) {
-      GenerateSamples.writeJson(fp, 'Errors: ', ...response.errors);
+    if (response.logs && response.logs.length > 0) {
+      GenerateSamples.writeJson(fp, 'Logs:   ', ...response.logs);
     }
     GenerateSamples.writeRaw(fp, '');
   }
@@ -201,11 +220,8 @@ class GenerateSamples {
     if (response.clauses && response.clauses.length > 0) {
       GenerateSamples.writeJson(fp, 'Output: ', ...response.clauses);
     }
-    if (response.quotes) {
-      GenerateSamples.writeJson(fp, 'Quotes: ', ...response.quotes);
-    }
-    if (response.errors && response.errors.length > 0) {
-      GenerateSamples.writeJson(fp, 'Errors: ', ...response.errors);
+    if (response.logs && response.logs.length > 0) {
+      GenerateSamples.writeJson(fp, 'Logs:   ', ...response.logs);
     }
     GenerateSamples.writeRaw(fp, '');
   }
@@ -218,8 +234,8 @@ class GenerateSamples {
       const result = new BooleanSerializer(response.clauses || []).serialize();
       GenerateSamples.writeRaw(fp, 'Output: ' + result);
     }
-    if (response.errors && response.errors.length > 0) {
-      GenerateSamples.writeJson(fp, 'Errors: ', ...response.errors);
+    if (response.logs && response.logs.length > 0) {
+      GenerateSamples.writeJson(fp, 'Logs:   ', ...response.logs);
     }
     GenerateSamples.writeRaw(fp, '');
   }
@@ -232,8 +248,8 @@ class GenerateSamples {
       const result = new DateSerializer(response.clauses || []).serialize();
       GenerateSamples.writeRaw(fp, 'Output: ' + result);
     }
-    if (response.errors && response.errors.length > 0) {
-      GenerateSamples.writeJson(fp, 'Errors: ', ...response.errors);
+    if (response.logs && response.logs.length > 0) {
+      GenerateSamples.writeJson(fp, 'Logs:   ', ...response.logs);
     }
     GenerateSamples.writeRaw(fp, '');
   }
@@ -246,8 +262,8 @@ class GenerateSamples {
       const result = new NumberSerializer(response.clauses || []).serialize();
       GenerateSamples.writeRaw(fp, 'Output: ' + result);
     }
-    if (response.errors && response.errors.length > 0) {
-      GenerateSamples.writeJson(fp, 'Errors: ', ...response.errors);
+    if (response.logs && response.logs.length > 0) {
+      GenerateSamples.writeJson(fp, 'Logs:   ', ...response.logs);
     }
     GenerateSamples.writeRaw(fp, '');
   }
@@ -260,8 +276,8 @@ class GenerateSamples {
       const result = new StringSerializer(response.clauses || []).serialize();
       GenerateSamples.writeRaw(fp, 'Output: ' + result);
     }
-    if (response.errors && response.errors.length > 0) {
-      GenerateSamples.writeJson(fp, 'Errors: ', ...response.errors);
+    if (response.logs && response.logs.length > 0) {
+      GenerateSamples.writeJson(fp, 'Logs:   ', ...response.logs);
     }
     GenerateSamples.writeRaw(fp, '');
   }

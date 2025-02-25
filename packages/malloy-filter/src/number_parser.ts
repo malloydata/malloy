@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 import {SpecialToken, Tokenizer, TokenizerParams} from './tokenizer';
 import {
   NumberCondition,
@@ -6,7 +13,7 @@ import {
   NumberRangeOperator,
   NumberClause,
   NumberParserResponse,
-  FilterError,
+  FilterLog,
 } from './clause_types';
 import {BaseParser} from './base_parser';
 import {Token} from './token_types';
@@ -31,8 +38,8 @@ export class NumberParser extends BaseParser {
       {type: '<', value: '<'},
     ];
     const specialWords = [
-      {type: 'NOTNULL', value: '-null', ignoreCase: true},
-      {type: 'NULL', value: 'null', ignoreCase: true},
+      {type: 'not_null', value: '-null', ignoreCase: true},
+      {type: 'null', value: 'null', ignoreCase: true},
     ];
     const params: TokenizerParams = {
       trimWordWhitespace: true,
@@ -50,16 +57,24 @@ export class NumberParser extends BaseParser {
     this.index = 0;
     this.tokenize();
     let clauses: NumberClause[] = [];
-    const errors: FilterError[] = [];
+    const logs: FilterLog[] = [];
     while (this.index < this.tokens.length) {
       const token = this.getNext();
       if (token.type === ',') {
+        if (this.index > 0 && this.tokens[this.index - 1].type === ',') {
+          logs.push({
+            severity: 'warn',
+            message: 'Empty clause',
+            startIndex: token.startIndex,
+            endIndex: token.endIndex,
+          });
+        }
         this.index++;
       } else if (this.isRangeStart(this.index)) {
-        clauses = this.checkRange(token, false, clauses, errors);
+        clauses = this.checkRange(token, false, clauses, logs);
       } else if (token.type === '!=' && this.isRangeStart(this.index + 1)) {
         this.index++;
-        clauses = this.checkRange(token, true, clauses, errors);
+        clauses = this.checkRange(token, true, clauses, logs);
       } else if (this.checkNull(clauses)) {
         this.index++;
       } else if (
@@ -74,15 +89,16 @@ export class NumberParser extends BaseParser {
       } else if (this.checkSimpleNumber(clauses)) {
         this.index++;
       } else {
-        errors.push({
-          message: 'Invalid expression',
+        logs.push({
+          severity: 'error',
+          message: 'Invalid expression: ' + token.value,
           startIndex: token.startIndex,
           endIndex: token.endIndex,
         });
         this.index++;
       }
     }
-    return {clauses: NumberParser.groupClauses(clauses), errors};
+    return {clauses: NumberParser.groupClauses(clauses), logs};
   }
 
   private static groupClauses(clauses: NumberClause[]): NumberClause[] {
@@ -119,26 +135,27 @@ export class NumberParser extends BaseParser {
     token: Token,
     negated: boolean,
     clauses: NumberClause[],
-    errors: FilterError[]
+    logs: FilterLog[]
   ): NumberClause[] {
     if (this.matchTokens(['[', 'word', ',', 'word', ']'])) {
       return negated
-        ? this.consumeRange('<', '>', clauses, errors)
-        : this.consumeRange('>=', '<=', clauses, errors);
+        ? this.consumeRange('<', '>', clauses, logs)
+        : this.consumeRange('>=', '<=', clauses, logs);
     } else if (this.matchTokens(['[', 'word', ',', 'word', ')'])) {
       return negated
-        ? this.consumeRange('<', '>=', clauses, errors)
-        : this.consumeRange('>=', '<', clauses, errors);
+        ? this.consumeRange('<', '>=', clauses, logs)
+        : this.consumeRange('>=', '<', clauses, logs);
     } else if (this.matchTokens(['(', 'word', ',', 'word', ']'])) {
       return negated
-        ? this.consumeRange('<=', '>', clauses, errors)
-        : this.consumeRange('>', '<=', clauses, errors);
+        ? this.consumeRange('<=', '>', clauses, logs)
+        : this.consumeRange('>', '<=', clauses, logs);
     } else if (this.matchTokens(['(', 'word', ',', 'word', ')'])) {
       return negated
-        ? this.consumeRange('<=', '>=', clauses, errors)
-        : this.consumeRange('>', '<', clauses, errors);
+        ? this.consumeRange('<=', '>=', clauses, logs)
+        : this.consumeRange('>', '<', clauses, logs);
     } else {
-      errors.push({
+      logs.push({
+        severity: 'error',
         message: 'Invalid range expression',
         startIndex: token.startIndex,
         endIndex: token.endIndex,
@@ -174,20 +191,22 @@ export class NumberParser extends BaseParser {
     startOperator: NumberRangeOperator,
     endOperator: NumberRangeOperator,
     clauses: NumberClause[],
-    errors: FilterError[]
+    logs: FilterLog[]
   ): NumberClause[] {
     const startToken = this.getAt(this.index + 1);
     const endToken = this.getAt(this.index + 3);
     const startValue: number = NumberParser.parseNumber(startToken.value);
     const endValue: number = NumberParser.parseNumber(endToken.value);
     if (!NumberParser.isValidNumber(startValue)) {
-      errors.push({
+      logs.push({
+        severity: 'error',
         message: 'Invalid number',
         startIndex: startToken.startIndex,
         endIndex: startToken.endIndex,
       });
     } else if (!NumberParser.isValidNumber(endValue)) {
-      errors.push({
+      logs.push({
+        severity: 'error',
         message: 'Invalid number',
         startIndex: endToken.startIndex,
         endIndex: endToken.endIndex,
@@ -247,11 +266,11 @@ export class NumberParser extends BaseParser {
 
   private checkNull(clauses: NumberClause[]): boolean {
     const type = this.getNext().type;
-    if (type === 'NULL') {
-      clauses.push({operator: 'NULL'});
+    if (type === 'null') {
+      clauses.push({operator: 'null'});
       return true;
-    } else if (type === 'NOTNULL') {
-      clauses.push({operator: 'NOTNULL'});
+    } else if (type === 'not_null') {
+      clauses.push({operator: 'not_null'});
       return true;
     }
     return false;
