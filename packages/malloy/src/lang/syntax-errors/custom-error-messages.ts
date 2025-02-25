@@ -29,6 +29,15 @@ export interface ErrorCase {
   // The error message to show to the user, instead of whatever was default
   // Supports tokenization: ${currentToken}
   errorMessage: string;
+
+  // By default, the error checker does lookahead and lookback based on the curentToken
+  // (the parser's position in the inputStream). However, for many error cases it is
+  // better to check from the offending token and not from the current token, since the
+  // error may have been hit while the ATN was looking ahead for alternatives.
+  // Note: In most cases, if this option is enabled, the 'ruleContext' may be a parser rule
+  // much higher in the tree than you would expect, and may be better to leave off entirely.
+  // Note: You can use this option without actually specifying the offendingSymbol match.
+  lookbackFromOffendingSymbol?: boolean;
 }
 
 export const checkCustomErrorMessage = (
@@ -53,7 +62,15 @@ export const checkCustomErrorMessage = (
       // If so, try to check the preceding tokens.
       if (errorCase.precedingTokenOptions) {
         const hasPrecedingTokenMatch = errorCase.precedingTokenOptions.some(
-          sequence => checkTokenSequenceMatch(parser, sequence, 'lookback')
+          sequence =>
+            checkTokenSequenceMatch(
+              parser,
+              sequence,
+              'lookback',
+              errorCase.lookbackFromOffendingSymbol
+                ? offendingSymbol?.tokenIndex
+                : undefined
+            )
         );
         if (!hasPrecedingTokenMatch) {
           continue; // Continue to check a different error case
@@ -61,7 +78,15 @@ export const checkCustomErrorMessage = (
       }
       if (errorCase.lookAheadOptions) {
         const hasLookaheadTokenMatch = errorCase.lookAheadOptions.some(
-          sequence => checkTokenSequenceMatch(parser, sequence, 'lookahead')
+          sequence =>
+            checkTokenSequenceMatch(
+              parser,
+              sequence,
+              'lookahead',
+              errorCase.lookbackFromOffendingSymbol
+                ? offendingSymbol?.tokenIndex
+                : undefined
+            )
         );
         if (!hasLookaheadTokenMatch) {
           continue; // Continue to check a different error case
@@ -83,13 +108,22 @@ export const checkCustomErrorMessage = (
 const checkTokenSequenceMatch = (
   parser: Parser,
   sequence: number[],
-  direction: 'lookahead' | 'lookback'
+  direction: 'lookahead' | 'lookback',
+  anchorTokenPosition: number | undefined
 ): boolean => {
   try {
     for (let i = 0; i < sequence.length; i++) {
-      // Note: positive lookahead starts at '2' because '1' is the current token.
-      const tokenIndex = direction === 'lookahead' ? i + 2 : -1 * (i + 1);
-      const streamToken = parser.inputStream.LA(tokenIndex);
+      let streamToken: number | undefined = undefined;
+      if (typeof anchorTokenPosition === 'number') {
+        const tokenOffset = direction === 'lookahead' ? i + 1 : -1 * (i + 1);
+        streamToken = parser.inputStream.get(
+          anchorTokenPosition + tokenOffset
+        ).type;
+      } else {
+        // Note: positive lookahead starts at '2' because '1' is the current token.
+        const tokenOffset = direction === 'lookahead' ? i + 2 : -1 * (i + 1);
+        streamToken = parser.inputStream.LA(tokenOffset);
+      }
 
       // Note: negative checking is < -1 becuase Token.EOF is -1, but below
       // that we use negatives to indicate "does-not-match" rules.

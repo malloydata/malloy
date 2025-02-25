@@ -138,19 +138,24 @@ fragment DQ: '"';
 fragment SQ3: SQ SQ SQ;
 fragment DQ3: DQ DQ DQ;
 fragment BQ3: BQ BQ BQ;
-fragment RAW_CHAR: ( '\\' . ) | (~ '\\');
+fragment RAW_CHAR: ('\\'  ~[\n]) | ~[\\\n];
+fragment RAW3_CHAR: ( '\\' . ) | (~ '\\');
 fragment FILTER: F SPACE_CHAR*;
+fragment RAWSTR: S SPACE_CHAR*;
 HACKY_REGEX: ('/' | [rR]) SQ RAW_CHAR*? SQ;
 
-SQ3_FILTER: FILTER SQ3 RAW_CHAR*? SQ3;
-SQ_FILTER: FILTER SQ RAW_CHAR*? SQ;
-DQ3_FILTER: FILTER DQ3 RAW_CHAR*? DQ3;
-DQ_FILTER: FILTER DQ RAW_CHAR*? DQ;
-BQ3_FILTER: FILTER BQ3 RAW_CHAR*? BQ3;
-BQ_FILTER: FILTER BQ RAW_CHAR*? BQ;
+RAW_SQ: RAWSTR SQ RAW_CHAR*? (SQ | '\n');
+RAW_DQ: RAWSTR DQ RAW_CHAR*? (DQ | '\n');
+
+SQ3_FILTER: FILTER SQ3 RAW3_CHAR*? SQ3;
+SQ_FILTER: FILTER SQ RAW_CHAR*? (SQ | '\n');
+DQ3_FILTER: FILTER DQ3 RAW3_CHAR*? DQ3;
+DQ_FILTER: FILTER DQ RAW_CHAR*? (DQ | |'\n');
+BQ3_FILTER: FILTER BQ3 RAW3_CHAR*? BQ3;
+BQ_FILTER: FILTER BQ RAW_CHAR*? (BQ | '\n');
 
 fragment HEX: [0-9a-fA-F];
-fragment UNICODE: '\\u' HEX HEX HEX HEX;
+fragment UNICODE: '\\' U HEX HEX HEX HEX;
 fragment SAFE_NON_QUOTE: ~ ['"`\\\u0000-\u001F];
 fragment ESCAPED: '\\' ~ '\n';
 fragment STR_CHAR: UNICODE | ESCAPED | SAFE_NON_QUOTE | '\t';
@@ -199,7 +204,6 @@ QMARK: '?';
 fragment F_YEAR: DIGIT DIGIT DIGIT DIGIT;
 fragment F_DD: DIGIT DIGIT;
 fragment F_TZ: '[' (ID_CHAR | '/')* ']';
-fragment LX: '-' 'X' (ID_CHAR | DIGIT)+;
 // @YYYY-MM-DD HH:MM:SS.n
 LITERAL_TIMESTAMP
   : '@' F_YEAR '-' F_DD '-' F_DD

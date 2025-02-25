@@ -38,6 +38,7 @@ import {
   isRawCast,
   isLeafAtomic,
   OrderBy,
+  BinaryExpr,
 } from '../model/malloy_types';
 import {DialectFunctionOverloadDef} from './functions';
 
@@ -180,6 +181,9 @@ export abstract class Dialect {
 
   // No true boolean type, e.g. true=1 and false=0, set this to true
   booleanAsNumbers = false;
+
+  // Like characters are escaped with ESCAPE clause
+  likeEscape = true;
 
   abstract getDialectFunctionOverrides(): {
     [name: string]: DialectFunctionOverloadDef[];
@@ -442,5 +446,22 @@ export abstract class Dialect {
       dstTypeDef: cast.dstType,
       dstSQLType: this.malloyTypeToSQLType(cast.dstType),
     };
+  }
+
+  likeExpr(expr: BinaryExpr): string {
+    const isLike = expr.kids.right;
+    if (expr.node === 'like' || expr.node === '!like') {
+      const likeOp = expr.node === '!like' ? 'NOT LIKE' : 'LIKE';
+      if (this.likeEscape && isLike.node === 'stringLiteral') {
+        const likeStr = isLike.literal;
+        if (likeStr.includes('\\')) {
+          const escapeUp = likeStr.replace(/\^/g, '^^');
+          const newLikeStr = escapeUp.replace(/\\/g, '^');
+          return `${expr.kids.left.sql} ${likeOp} '${newLikeStr}' ESCAPE '^'`;
+        }
+      }
+      return `${expr.kids.left.sql} ${likeOp} ${isLike.sql}`;
+    }
+    return 'false';
   }
 }

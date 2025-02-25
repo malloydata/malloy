@@ -227,7 +227,7 @@ function eToStr(e: Expr, symbols: ESymbols): string {
     case 'numberLiteral':
       return `${e.literal}`;
     case 'stringLiteral':
-      return `"${e.literal}"`;
+      return `{"${e.literal}"}`;
     case 'timeLiteral':
       return `@${e.literal}`;
     case 'recordLiteral': {

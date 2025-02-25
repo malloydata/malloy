@@ -1,11 +1,11 @@
 {
   "name": "@malloydata/db-mysql",
-  "version": "0.0.236",
+  "version": "0.0.237",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "homepage": "https://github.com/malloydata/malloy#readme",
   "repository": {
@@ -22,7 +22,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@malloydata/malloy": "^0.0.236",
+    "@malloydata/malloy": "^0.0.237",
     "@types/node": "^22.7.4",
     "fastestsmallesttextencoderdecoder": "^1.0.22",
     "luxon": "^3.5.0",

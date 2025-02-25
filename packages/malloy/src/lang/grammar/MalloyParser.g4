@@ -537,12 +537,18 @@ shortString
   : (SQ_STRING | DQ_STRING)
   ;
 
+rawString
+  : RAW_SQ
+  | RAW_DQ
+  ;
+
 numericLiteral
   : (NUMERIC_LITERAL | INTEGER_LITERAL)
   ;
 
 literal
   : string                                      # exprString
+  | rawString                                   # stub_rawString
   | numericLiteral                              # exprNumber
   | dateLiteral                                 # exprTime
   | NULL                                        # exprNULL

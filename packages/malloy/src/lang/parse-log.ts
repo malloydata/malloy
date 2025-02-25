@@ -403,6 +403,7 @@ type MessageParameterTypes = {
   'cannot-tag-include-except': string;
   'unsupported-path-in-include': string;
   'wildcard-include-rename': string;
+  'literal-string-newline': string;
   'filter-expression-type': string;
 };
 

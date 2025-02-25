@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/malloy",
-  "version": "0.0.236",
+  "version": "0.0.237",
   "license": "MIT",
   "exports": {
     ".": "./dist/index.js",
@@ -25,7 +25,7 @@
   "types": "dist/index.d.ts",
   "homepage": "https://github.com/malloydata/malloy#readme",
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "repository": {
     "type": "git",
