@@ -4,6 +4,7 @@ enum ParseState {
   Unicode,
 }
 
+// TODO this should probably live in it's own package, `malloy-common` or something
 /**
  * Parses the interior of a string, doing all \ substitutions. In most cases
  * a lexical analyzer has already recognized this as a string. As a convenience,
