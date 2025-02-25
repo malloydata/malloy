@@ -22,6 +22,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import 'json-bigint-patch';
 import {
   ModelMaterializer,
   QueryMaterializer,
@@ -201,7 +202,11 @@ expect.extend({
           const pGot = JSON.stringify(got);
           const mustBe = value instanceof Date ? value.getTime() : value;
           const actuallyGot = got instanceof Date ? got.getTime() : got;
-          if (typeof mustBe === 'number' && typeof actuallyGot !== 'number') {
+          if (
+            typeof mustBe === 'number' &&
+            typeof actuallyGot !== 'number' &&
+            typeof actuallyGot !== 'bigint'
+          ) {
             fails.push(`${expected} Got: Non Numeric '${pGot}'`);
           } else if (!objectsMatch(actuallyGot, mustBe)) {
             fails.push(`${expected} Got: ${pGot}`);

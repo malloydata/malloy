@@ -48,17 +48,17 @@ function unwrapMotherDuck(value: DuckDBValue) {
     if (value instanceof DuckDBDate) {
       result = new Date(value.days * 8.64e7);
     } else if (value instanceof DuckDBDecimal) {
-      result = Number(value.scaledValue) / Math.pow(10, value.scale);
+      result = value.scaledValue / BigInt(Math.pow(10, value.scale));
     } else if (value instanceof DuckDBTime) {
-      result = new Date(Number(value.microseconds) / 1000);
+      result = new Date(Number(value.microseconds / 1000n));
     } else if (value instanceof DuckDBTimestampMicroseconds) {
-      result = new Date(Number(value.microseconds) / 1000);
+      result = new Date(Number(value.microseconds / 1000n));
     } else if (value instanceof DuckDBTimestampMilliseconds) {
       result = new Date(Number(value.milliseconds));
     } else if (value instanceof DuckDBTimestampNanoseconds) {
-      result = new Date(Number(value.nanoseconds) / 1000 / 1000);
+      result = new Date(Number(value.nanoseconds / 1000n / 1000n));
     } else if (value instanceof DuckDBTimestampSeconds) {
-      result = new Date(Number(value.seconds) * 1000);
+      result = new Date(Number(value.seconds * 1000n));
     } else if (value instanceof DuckDBStruct) {
       const struct: QueryValue = {};
       for (const structEntry of value.entries) {
