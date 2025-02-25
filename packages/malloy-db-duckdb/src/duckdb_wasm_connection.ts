@@ -57,7 +57,9 @@ export const unwrapArrow = (value: unknown): any => {
   } else if (value instanceof Date) {
     return value;
   } else if (typeof value === 'bigint') {
-    return value;
+    return value > Number.MAX_SAFE_INTEGER || value < Number.MIN_SAFE_INTEGER
+      ? value
+      : Number(value);
   } else if (typeof value === 'object') {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const obj = value as Record<string | symbol, any>;

@@ -222,7 +222,9 @@ export class DuckDBConnection extends DuckDBCommon {
     if (value === null) {
       return null;
     } else if (typeof value === 'bigint') {
-      return Number(value);
+      return value > Number.MAX_SAFE_INTEGER || value < Number.MIN_SAFE_INTEGER
+        ? value
+        : Number(value);
     } else if (typeof value === 'object') {
       if (Array.isArray(value)) {
         const result: QueryDataRow = {};
