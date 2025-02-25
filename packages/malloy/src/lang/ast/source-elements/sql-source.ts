@@ -23,11 +23,11 @@
 
 import {
   StructDef,
-  SQLSentence,
   InvokedStructRef,
   SourceDef,
+  SQLSourceDef,
 } from '../../../model/malloy_types';
-import {makeSQLSentence} from '../../../model/sql_block';
+import {compileSQLSentence} from '../../../model/sql_block';
 import {NeedCompileSQL} from '../../translate-response';
 import {Source} from './source';
 import {ErrorFactory} from '../error-factory';
@@ -36,7 +36,7 @@ import {ModelEntryReference, Document} from '../types/malloy-element';
 
 export class SQLSource extends Source {
   elementType = 'sqlSource';
-  requestBlock?: SQLSentence;
+  requestBlock?: SQLSourceDef;
   private connectionNameInvalid = false;
   constructor(
     readonly connectionName: ModelEntryReference,
@@ -45,14 +45,15 @@ export class SQLSource extends Source {
     super({connectionName, select});
   }
 
-  sqlSentence(): SQLSentence {
-    if (!this.requestBlock) {
-      this.requestBlock = makeSQLSentence(
-        this.select.sqlPhrases(),
-        this.connectionName.refString
-      );
-    }
-    return this.requestBlock;
+  sqlSentence(doc: Document): SQLSourceDef {
+    const partialModel = this.select.containsQueries
+      ? doc.modelDef()
+      : undefined;
+    return compileSQLSentence(
+      this.select.sqlPhrases(),
+      this.connectionName.refString,
+      partialModel
+    );
   }
 
   structRef(): InvokedStructRef {
@@ -88,7 +89,10 @@ export class SQLSource extends Source {
     }
     const childNeeds = super.needs(doc);
     if (childNeeds) return childNeeds;
-    const sql = this.sqlSentence();
+    if (this.requestBlock === undefined) {
+      this.requestBlock = this.sqlSentence(doc);
+    }
+    const sql = this.requestBlock;
     const sqlDefEntry = this.translator()?.root.sqlQueryZone;
     if (!sqlDefEntry) {
       this.logError(
@@ -102,7 +106,6 @@ export class SQLSource extends Source {
     if (lookup.status === 'reference') {
       return {
         compileSQL: sql,
-        partialModel: this.select.containsQueries ? doc.modelDef() : undefined,
       };
     } else if (lookup.status === 'present') {
       doc.checkExperimentalDialect(this, lookup.value.dialect);
@@ -121,7 +124,14 @@ export class SQLSource extends Source {
       );
       return ErrorFactory.structDef;
     }
-    const sql = this.sqlSentence();
+    if (this.requestBlock === undefined) {
+      this.logError(
+        'failed-to-fetch-sql-source-schema',
+        'Expected to have already compiled the sql block'
+      );
+      return ErrorFactory.structDef;
+    }
+    const sql = this.requestBlock;
     sqlDefEntry.reference(sql.name, this.location);
     const lookup = sqlDefEntry.getEntry(sql.name);
     if (lookup.status === 'error') {

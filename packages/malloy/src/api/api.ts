@@ -12,35 +12,42 @@ import {
   AtomicFieldDef,
   AtomicTypeDef,
   FieldDef,
-  isSegmentSQL,
   mkFieldDef,
   ModelDef,
   QueryModel,
-  SQLSentence,
   SQLSourceDef,
   TableSourceDef,
 } from '../model';
 import {modelDefToModelInfo} from '../to_stable';
+import {sqlKey} from '../model/sql_block';
 
-function makeSQLSourceDef(sql: Malloy.SQLQuery): SQLSourceDef {
+// TODO find where this should go...
+function tableKey(connectionName: string, tablePath: string): string {
+  return `${connectionName}:${tablePath}`;
+}
+
+function makeSQLSourceDef(sql: Malloy.SQLQuery, dialect: string): SQLSourceDef {
   return {
     type: 'sql_select',
     selectStr: sql.sql,
     connection: sql.connection_name,
-    dialect: sql.dialect ?? '__missing_dialect__', // TODO make this an error
+    dialect: dialect,
     fields: sql.schema ? getSchemaFields(sql.schema) : [],
-    name: '', // TODO
+    name: sqlKey(sql.connection_name, sql.sql),
   };
 }
 
-function makeTableSourceDef(table: Malloy.SQLTable): TableSourceDef {
+function makeTableSourceDef(
+  table: Malloy.SQLTable,
+  dialect: string
+): TableSourceDef {
   return {
     type: 'table',
     tablePath: table.name,
     connection: table.connection_name,
-    dialect: table.dialect ?? '__missing_dialect__', // TODO make this an error
+    dialect: dialect,
     fields: table.schema ? getSchemaFields(table.schema) : [],
-    name: `${table.connection_name}:${table.name}`,
+    name: tableKey(table.connection_name, table.name),
   };
 }
 
@@ -127,11 +134,21 @@ function compilerNeedsToUpdate(
       }
     }
     for (const table of compilerNeeds.table_schemas ?? []) {
-      update.tables![table.key] = makeTableSourceDef(table);
+      const connection = compilerNeeds.connections?.find(
+        c => c.name === table.connection_name
+      );
+      if (connection && table.schema && connection.dialect) {
+        update.tables![tableKey(table.connection_name, table.name)] =
+          makeTableSourceDef(table, connection.dialect);
+      }
     }
     for (const sql of compilerNeeds.sql_schemas ?? []) {
-      if (sql !== undefined) {
-        update.compileSQL![sql.key] = makeSQLSourceDef(sql);
+      const connection = compilerNeeds.connections?.find(
+        c => c.name === sql.connection_name
+      );
+      if (connection && connection.dialect) {
+        update.compileSQL![sqlKey(sql.connection_name, sql.sql)] =
+          makeSQLSourceDef(sql, connection.dialect);
       }
     }
     for (const translation of compilerNeeds.translations ?? []) {
@@ -145,7 +162,7 @@ function compilerNeedsToUpdate(
 }
 
 function convertCompilerNeeds(
-  compileSQL: {partialModel: ModelDef; sqlSentence: SQLSentence} | undefined,
+  compileSQL: SQLSourceDef | undefined,
   urls: string[] | undefined,
   tables:
     | Record<
@@ -161,18 +178,15 @@ function convertCompilerNeeds(
     files: [],
     table_schemas: [],
   };
+  const neededConnections = new Set<string>();
   if (compileSQL !== undefined) {
-    const block = compileSQLBlock(
-      compileSQL.partialModel,
-      compileSQL.sqlSentence
-    );
     compilerNeeds.sql_schemas = [
       {
-        sql: block.selectStr,
-        connection_name: block.connection,
-        key: block.name,
+        sql: compileSQL.selectStr,
+        connection_name: compileSQL.connection,
       },
     ];
+    neededConnections.add(compileSQL.connection);
   }
   if (urls !== undefined) {
     for (const url of urls) {
@@ -182,13 +196,18 @@ function convertCompilerNeeds(
   if (tables !== undefined) {
     for (const key in tables) {
       const table = tables[key];
+      // TODO do we even support default connections any more?
+      const connectionName = table.connectionName ?? '__default__';
       compilerNeeds.table_schemas!.push({
         name: table.tablePath,
-        connection_name: table.connectionName ?? '__default__', // TODO do we even support default connections any more?,
-        key,
+        connection_name: connectionName,
       });
+      neededConnections.add(connectionName);
     }
   }
+  compilerNeeds.connections = Array.from(neededConnections).map(c => ({
+    name: c,
+  }));
   return compilerNeeds;
 }
 
@@ -236,12 +255,8 @@ function compile(
       throw new Error(result.problems[0].message);
     }
   } else {
-    const compileSQL =
-      result.compileSQL && result.partialModel
-        ? {partialModel: result.partialModel, sqlSentence: result.compileSQL}
-        : undefined;
     const compilerNeeds = convertCompilerNeeds(
-      compileSQL,
+      result.compileSQL,
       result.urls,
       result.tables
     );
@@ -319,46 +334,3 @@ export function compileQuery(
 // Given a StableQueryDef and the URL to a model, validate it and return a list of StableErrors
 
 // Given a URL to a model and the name of a source, run the indexing query
-
-function compileSQLBlock(
-  partialModel: ModelDef | undefined,
-  toCompile: SQLSentence
-): SQLSourceDef {
-  let queryModel: QueryModel | undefined = undefined;
-  let selectStr = '';
-  let parenAlready = false;
-  for (const segment of toCompile.select) {
-    if (isSegmentSQL(segment)) {
-      selectStr += segment.sql;
-      parenAlready = segment.sql.match(/\(\s*$/) !== null;
-    } else {
-      // TODO catch exceptions and throw errors ...
-      if (!queryModel) {
-        if (!partialModel) {
-          throw new Error(
-            'Internal error: Partial model missing when compiling SQL block'
-          );
-        }
-        queryModel = new QueryModel(partialModel);
-      }
-      const compiledSql = queryModel.compileQuery(
-        segment,
-        {
-          defaultRowLimit: undefined,
-        },
-        false
-      ).sql;
-      selectStr += parenAlready ? compiledSql : `(${compiledSql})`;
-      parenAlready = false;
-    }
-  }
-  const {name, connection} = toCompile;
-  return {
-    type: 'sql_select',
-    name,
-    connection,
-    dialect: '~no_dialect~',
-    selectStr,
-    fields: [],
-  };
-}

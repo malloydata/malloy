@@ -277,15 +277,12 @@ export class Malloy {
     refreshSchemaCache,
     noThrowOnError,
     eventStream,
-    replaceMaterializedReferences,
-    materializedTablePrefix,
     importBaseURL,
     cacheManager,
   }: {
     urlReader: URLReader;
     connections: LookupConnection<InfoConnection>;
     model?: Model;
-    replaceMaterializedReferences?: boolean;
     cacheManager?: CacheManager;
   } & Compilable &
     CompileOptions &
@@ -496,28 +493,18 @@ export class Malloy {
           const connectionName = toCompile.connection;
           try {
             const conn = await connections.lookupConnection(connectionName);
-            const expanded = Malloy.compileSQLBlock(
-              conn.dialectName,
-              result.partialModel,
-              toCompile,
-              {
-                replaceMaterializedReferences,
-                materializedTablePrefix,
-                eventStream,
-              }
-            );
-            const resolved = await conn.fetchSchemaForSQLStruct(expanded, {
+            const resolved = await conn.fetchSchemaForSQLStruct(toCompile, {
               refreshTimestamp,
               modelAnnotation,
             });
             if (resolved.error) {
               translator.update({
-                errors: {compileSQL: {[expanded.name]: resolved.error}},
+                errors: {compileSQL: {[toCompile.name]: resolved.error}},
               });
             }
             if (resolved.structDef) {
               translator.update({
-                compileSQL: {[expanded.name]: resolved.structDef},
+                compileSQL: {[toCompile.name]: resolved.structDef},
               });
             }
           } catch (error) {

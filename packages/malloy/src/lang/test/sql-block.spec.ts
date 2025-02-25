@@ -22,15 +22,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {makeSQLSentence} from '../../model/sql_block';
 import {TestTranslator, aTableDef} from './test-translator';
 import './parse-expects';
 import {MalloyTranslator} from '../parse-malloy';
-import {isSegmentSQL, SQLSentence, SQLSourceDef} from '../../model';
+import {SQLSourceDef} from '../../model';
 
 describe('connection sql()', () => {
   const selStmt = 'SELECT * FROM aTable';
-  function makeSchemaResponse(sql: SQLSentence): SQLSourceDef {
+  function makeSchemaResponse(sql: SQLSourceDef): SQLSourceDef {
     const cname = sql.connection || 'bigquery';
     return {
       type: 'sql_select',
@@ -52,9 +51,8 @@ describe('connection sql()', () => {
     const needs = needReq?.compileSQL;
     expect(needs).toBeDefined();
     if (needs) {
-      const sql = makeSQLSentence([{sql: selStmt}], 'aConnection');
       const refKey = needs.name;
-      model.update({compileSQL: {[refKey]: makeSchemaResponse(sql)}});
+      model.update({compileSQL: {[refKey]: makeSchemaResponse(needs)}});
       expect(model).toTranslate();
       const users = model.getSourceDef('malloyUsers');
       expect(users).toBeDefined();
@@ -79,8 +77,7 @@ describe('connection sql()', () => {
     const needReq = model.translate();
     const needs = needReq?.compileSQL;
     expect(needs).toBeDefined();
-    const sql = makeSQLSentence([{sql: selStmt}], '_db_');
-    model.update({compileSQL: {[sql.name]: makeSchemaResponse(sql)}});
+    model.update({compileSQL: {[needs!.name]: makeSchemaResponse(needs!)}});
     expect(model).toTranslate();
   });
 
@@ -92,12 +89,9 @@ describe('connection sql()', () => {
     const compileSql = m.translate().compileSQL;
     expect(compileSql).toBeDefined();
     if (compileSql) {
-      const select = compileSql.select[0];
-      const star = compileSql.select[1];
-      const where = compileSql.select[2];
-      expect(select).toEqual({sql: 'SELECT * FROM '});
-      expect(isSegmentSQL(star)).toBeFalsy();
-      expect(where).toEqual({sql: ' WHERE 1=1'});
+      expect(compileSql.selectStr).toEqual(
+        'SELECT * FROM (SELECT \n   base.`astr` as `astr`\nFROM `aTable` as base\nGROUP BY 1\nORDER BY 1 asc\n) WHERE 1=1'
+      );
     }
   });
   it('turduckenzilla', () => {
@@ -137,8 +131,11 @@ describe('connection sql()', () => {
       source: sql_block is aConnection.sql("""${selStmt}""")
       source: malloy_source is sql_block extend { primary_key: ai }
     `);
-    const sql = makeSQLSentence([{sql: selStmt}], 'aConnection');
-    model.update({compileSQL: {[sql.name]: makeSchemaResponse(sql)}});
+    expect(model).toParse();
+    const needReq = model.translate();
+    const needs = needReq?.compileSQL;
+    expect(needs).toBeDefined();
+    model.update({compileSQL: {[needs!.name]: makeSchemaResponse(needs!)}});
     expect(model).toTranslate();
     const modelDef = model?.translate()?.modelDef;
 

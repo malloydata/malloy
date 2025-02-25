@@ -528,17 +528,12 @@ struct SQLTable {
   1: required string name,
   2: optional Schema schema,
   3: required string connection_name,
-  4: optional string dialect,
-  5: required string key,
 }
 
 struct SQLQuery {
   1: required string sql,
   2: optional Schema schema,
   3: required string connection_name,
-  // TODO should dialect be retrieved separately in a 'connections' need?
-  4: optional string dialect,
-  5: required string key,
 }
 
 struct File {
@@ -547,10 +542,10 @@ struct File {
   3: optional string invalidation_key,
 }
 
-// struct Connection {
-//   1: required string name,
-//   2: optional string dialect,
-// }
+struct Connection {
+  1: required string name,
+  2: optional string dialect,
+}
 
 struct Translation {
   1: required string url,
@@ -561,7 +556,7 @@ struct CompilerNeeds {
   1: optional list<SQLTable> table_schemas,
   2: optional list<SQLQuery> sql_schemas,
   3: optional list<File> files,
-  // 4: optional list<Connection> connections,
+  4: optional list<Connection> connections,
   5: optional list<Translation> translations,
 }
 

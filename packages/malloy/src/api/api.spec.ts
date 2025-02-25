@@ -16,10 +16,8 @@ describe('api', () => {
         compiler_needs: {
           table_schemas: [
             {
-              key: 'connection:flights',
               connection_name: 'connection',
               name: 'flights',
-              dialect: 'duckdb',
               schema: {
                 fields: [
                   {
@@ -37,6 +35,7 @@ describe('api', () => {
               contents: "source: flights is connection.table('flights')",
             },
           ],
+          connections: [{name: 'connection', dialect: 'duckdb'}],
         },
       });
       const expected: Malloy.CompileModelResponse = {
@@ -61,6 +60,143 @@ describe('api', () => {
       };
       expect(result).toMatchObject(expected);
     });
+    test('compile model with sql dependency', () => {
+      const result = compileModel({
+        model_url: 'file://test.malloy',
+        compiler_needs: {
+          sql_schemas: [
+            {
+              connection_name: 'connection',
+              sql: 'SELECT 1 as one',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'one',
+                    type: {kind: 'number_type'},
+                  },
+                ],
+              },
+            },
+          ],
+          files: [
+            {
+              url: 'file://test.malloy',
+              contents: "source: flights is connection.sql('SELECT 1 as one')",
+            },
+          ],
+          connections: [{name: 'connection', dialect: 'duckdb'}],
+        },
+      });
+      const expected: Malloy.CompileModelResponse = {
+        model: {
+          entries: [
+            {
+              kind: 'source',
+              name: 'flights',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'one',
+                    type: {kind: 'number_type'},
+                  },
+                ],
+              },
+            },
+          ],
+          anonymous_queries: [],
+        },
+      };
+      expect(result).toMatchObject(expected);
+    });
+  });
+  test('compile model with turducken sql dependency', () => {
+    const sql =
+      '\n                SELECT carrier FROM (SELECT \n   base."carrier" as "carrier"\nFROM flights as base\nGROUP BY 1\nORDER BY 1 asc NULLS LAST\n)\n              ';
+    const result = compileModel({
+      model_url: 'file://test.malloy',
+      compiler_needs: {
+        table_schemas: [
+          {
+            connection_name: 'connection',
+            name: 'flights',
+            schema: {
+              fields: [
+                {
+                  kind: 'dimension',
+                  name: 'carrier',
+                  type: {kind: 'string_type'},
+                },
+              ],
+            },
+          },
+        ],
+        sql_schemas: [
+          {
+            connection_name: 'connection',
+            sql,
+            schema: {
+              fields: [
+                {
+                  kind: 'dimension',
+                  name: 'carrier',
+                  type: {kind: 'string_type'},
+                },
+              ],
+            },
+          },
+        ],
+        files: [
+          {
+            url: 'file://test.malloy',
+            contents: `
+              source: flights is connection.table('flights')
+              source: sql_source is connection.sql("""
+                SELECT carrier FROM (%{
+                  flights -> { group_by: carrier }
+                })
+              """)
+            `,
+          },
+        ],
+        connections: [{name: 'connection', dialect: 'duckdb'}],
+      },
+    });
+    const expected: Malloy.CompileModelResponse = {
+      model: {
+        entries: [
+          {
+            kind: 'source',
+            name: 'flights',
+            schema: {
+              fields: [
+                {
+                  kind: 'dimension',
+                  name: 'carrier',
+                  type: {kind: 'string_type'},
+                },
+              ],
+            },
+          },
+          {
+            kind: 'source',
+            name: 'sql_source',
+            schema: {
+              fields: [
+                {
+                  kind: 'dimension',
+                  name: 'carrier',
+                  type: {kind: 'string_type'},
+                },
+              ],
+            },
+          },
+        ],
+        anonymous_queries: [],
+      },
+    };
+    expect(result).toMatchObject(expected);
   });
   describe('compile query', () => {
     test('compile query with table dependency', () => {
@@ -86,10 +222,8 @@ describe('api', () => {
         compiler_needs: {
           table_schemas: [
             {
-              key: 'connection:flights',
               connection_name: 'connection',
               name: 'flights',
-              dialect: 'duckdb',
               schema: {
                 fields: [
                   {
@@ -107,6 +241,7 @@ describe('api', () => {
               contents: "source: flights is connection.table('flights')",
             },
           ],
+          connections: [{name: 'connection', dialect: 'duckdb'}],
         },
       });
       const expected: Malloy.CompileQueryResponse = {

@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Annotation, ModelDef, SQLSentence} from '../model/malloy_types';
+import {Annotation, ModelDef, SQLSourceDef} from '../model/malloy_types';
 import {MalloyElement} from './ast';
 import {LogMessage} from './parse-log';
 import {DocumentSymbol} from './parse-tree-walkers/document-symbol-walker';
@@ -56,8 +56,7 @@ export interface NeedURLData {
 }
 
 export interface NeedCompileSQL {
-  compileSQL: SQLSentence;
-  partialModel: ModelDef | undefined;
+  compileSQL: SQLSourceDef;
 }
 interface NeededData extends NeedURLData, NeedSchemaData, NeedCompileSQL {}
 export type DataRequestResponse = Partial<NeededData> | null;

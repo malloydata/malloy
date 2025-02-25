@@ -630,17 +630,13 @@ export function markSource(
   return {code, locations};
 }
 
-export function getSelectOneStruct(sqlBlock: SQLSentence): SQLSourceDef {
-  const selectThis = sqlBlock.select[0];
-  if (!isSegmentSQL(selectThis)) {
-    throw new Error('weird test support error sorry');
-  }
+export function getSelectOneStruct(sqlBlock: SQLSourceDef): SQLSourceDef {
   return {
     type: 'sql_select',
     name: sqlBlock.name,
     dialect: 'standardsql',
     connection: 'bigquery',
-    selectStr: selectThis.sql,
+    selectStr: sqlBlock.selectStr,
     fields: [{type: 'number', name: 'one'}],
   };
 }

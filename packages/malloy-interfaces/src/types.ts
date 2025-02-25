@@ -127,7 +127,12 @@ export type CompilerNeeds = {
   table_schemas?: Array<SQLTable>;
   sql_schemas?: Array<SQLQuery>;
   files?: Array<File>;
+  connections?: Array<Connection>;
   translations?: Array<Translation>;
+};
+export type Connection = {
+  name: string;
+  dialect?: string;
 };
 export type DataType = 'record' | 'table';
 export type Data = DataWithRecord | DataWithTable;
@@ -377,15 +382,11 @@ export type SQLQuery = {
   sql: string;
   schema?: Schema;
   connection_name: string;
-  dialect?: string;
-  key: string;
 };
 export type SQLTable = {
   name: string;
   schema?: Schema;
   connection_name: string;
-  dialect?: string;
-  key: string;
 };
 export type Schema = {
   fields: Array<FieldInfo>;
