@@ -52,14 +52,12 @@ import {
   StructDef,
   TurtleDef,
   expressionIsCalculation,
-  isSegmentSQL,
   NativeUnsupportedFieldDef,
   QueryRunStats,
   ImportLocation,
   Annotation,
   NamedModelObject,
   QueryValue,
-  SQLSentence,
   SQLSourceDef,
   AtomicFieldDef,
   DateFieldDef,
@@ -536,52 +534,6 @@ export class Malloy {
       }
     }
     return ret;
-  }
-
-  static compileSQLBlock(
-    dialect: string,
-    partialModel: ModelDef | undefined,
-    toCompile: SQLSentence,
-    options?: CompileQueryOptions
-  ): SQLSourceDef {
-    let queryModel: QueryModel | undefined = undefined;
-    let selectStr = '';
-    let parenAlready = false;
-    for (const segment of toCompile.select) {
-      if (isSegmentSQL(segment)) {
-        selectStr += segment.sql;
-        parenAlready = segment.sql.match(/\(\s*$/) !== null;
-      } else {
-        // TODO catch exceptions and throw errors ...
-        if (!queryModel) {
-          if (!partialModel) {
-            throw new Error(
-              'Internal error: Partial model missing when compiling SQL block'
-            );
-          }
-          queryModel = new QueryModel(partialModel, options?.eventStream);
-        }
-        const compiledSql = queryModel.compileQuery(
-          segment,
-          {
-            ...options,
-            defaultRowLimit: undefined,
-          },
-          false
-        ).sql;
-        selectStr += parenAlready ? compiledSql : `(${compiledSql})`;
-        parenAlready = false;
-      }
-    }
-    const {name, connection} = toCompile;
-    return {
-      type: 'sql_select',
-      name,
-      connection,
-      dialect,
-      selectStr,
-      fields: [],
-    };
   }
 
   /**

@@ -74,7 +74,6 @@ export type {
   Expr,
   // Needed for drills in render
   FilterCondition,
-  SQLSentence,
   // Used in Composer
   Argument,
   Parameter,

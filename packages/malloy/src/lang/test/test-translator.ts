@@ -34,13 +34,11 @@ import {
   StructDef,
   TurtleDef,
   isQuerySegment,
-  isSegmentSQL,
   isSourceDef,
   SourceDef,
   JoinBase,
   TableSourceDef,
   SQLSourceDef,
-  SQLSentence,
   NumberTypeDef,
   mkArrayDef,
 } from '../../model/malloy_types';

@@ -27,7 +27,7 @@ import {
   SourceDef,
   SQLSourceDef,
 } from '../../../model/malloy_types';
-import {compileSQLSentence} from '../../../model/sql_block';
+import {compileSQLInterpolation} from '../../../model/sql_block';
 import {NeedCompileSQL} from '../../translate-response';
 import {Source} from './source';
 import {ErrorFactory} from '../error-factory';
@@ -45,11 +45,11 @@ export class SQLSource extends Source {
     super({connectionName, select});
   }
 
-  sqlSentence(doc: Document): SQLSourceDef {
+  sqlSource(doc: Document): SQLSourceDef {
     const partialModel = this.select.containsQueries
       ? doc.modelDef()
       : undefined;
-    return compileSQLSentence(
+    return compileSQLInterpolation(
       this.select.sqlPhrases(),
       this.connectionName.refString,
       partialModel
@@ -90,7 +90,7 @@ export class SQLSource extends Source {
     const childNeeds = super.needs(doc);
     if (childNeeds) return childNeeds;
     if (this.requestBlock === undefined) {
-      this.requestBlock = this.sqlSentence(doc);
+      this.requestBlock = this.sqlSource(doc);
     }
     const sql = this.requestBlock;
     const sqlDefEntry = this.translator()?.root.sqlQueryZone;

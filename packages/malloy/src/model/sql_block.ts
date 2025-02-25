@@ -23,7 +23,6 @@
 
 import {QueryModel} from './malloy_query';
 import {
-  SQLSentence,
   SQLPhraseSegment,
   isSegmentSQL,
   ModelDef,
@@ -31,7 +30,7 @@ import {
 } from './malloy_types';
 import {generateHash} from './utils';
 
-export function compileSQLSentence(
+export function compileSQLInterpolation(
   select: SQLPhraseSegment[],
   connection: string,
   partialModel: ModelDef | undefined
