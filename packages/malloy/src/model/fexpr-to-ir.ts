@@ -46,11 +46,11 @@ function mkLike(
 
 export function stringClauseToExpr(op: StringClause, expr: Expr): Expr {
   switch (op.operator) {
-    case 'NULL':
+    case 'null':
       return {node: 'is-null', e: expr};
-    case 'NOTNULL':
+    case 'not_null':
       return {node: 'is-not-null', e: expr};
-    case 'NOTEMPTY':
+    case 'not_empty':
       return {
         node: 'and',
         kids: {
@@ -64,7 +64,7 @@ export function stringClauseToExpr(op: StringClause, expr: Expr): Expr {
           right: {node: 'is-not-null', e: expr},
         },
       };
-    case 'EMPTY':
+    case 'empty':
       return {
         node: 'or',
         kids: {
@@ -97,32 +97,32 @@ export function stringClauseToExpr(op: StringClause, expr: Expr): Expr {
           right: stringLiteral(op.values[0]),
         },
       };
-    case 'notContains':
+    case 'not_contains':
     case 'contains':
       return mkLike(
         op.values,
-        op.operator === 'notContains',
+        op.operator === 'not_contains',
         expr,
         s => `%${likeEscape(s)}%`
       );
-    case 'notStarts':
+    case 'not_starts':
     case 'starts':
       return mkLike(
         op.values,
-        op.operator === 'notStarts',
+        op.operator === 'not_starts',
         expr,
         s => `${likeEscape(s)}%`
       );
-    case 'notEnds':
+    case 'not_ends':
     case 'ends':
       return mkLike(
         op.values,
-        op.operator === 'notEnds',
+        op.operator === 'not_ends',
         expr,
         s => `%${likeEscape(s)}`
       );
     case '~':
     case '!~':
-      return mkLike(op.values, op.operator === '!~', expr, s => s);
+      return mkLike(op.escaped_values, op.operator === '!~', expr, s => s);
   }
 }
