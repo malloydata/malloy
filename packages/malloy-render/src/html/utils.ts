@@ -25,9 +25,9 @@ import {
   DataColumn,
   DateTimeframe,
   Field,
-  Tag,
   TimestampTimeframe,
 } from '@malloydata/malloy';
+import {Tag} from '@malloydata/malloy-tag';
 import startCase from 'lodash/startCase';
 import {RenderDef} from './data_styles';
 import {RendererOptions} from './renderer_types';

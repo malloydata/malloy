@@ -22,7 +22,7 @@
  */
 
 import {AbstractParseTreeVisitor} from 'antlr4ts/tree';
-import {MalloyTagLexer} from './lang/lib/Malloy/MalloyTagLexer';
+import {MalloyTagLexer} from './lib/Malloy/MalloyTagLexer';
 import {
   ArrayElementContext,
   ArrayValueContext,
@@ -38,8 +38,8 @@ import {
   TagReplacePropertiesContext,
   TagSpecContext,
   TagUpdatePropertiesContext,
-} from './lang/lib/Malloy/MalloyTagParser';
-import {MalloyTagVisitor} from './lang/lib/Malloy/MalloyTagVisitor';
+} from './lib/Malloy/MalloyTagParser';
+import {MalloyTagVisitor} from './lib/Malloy/MalloyTagVisitor';
 import {
   ANTLRErrorListener,
   CharStreams,
@@ -47,9 +47,14 @@ import {
   ParserRuleContext,
   Token,
 } from 'antlr4ts';
-import {parseString} from './lang/parse-utils';
-import {LogMessage} from './lang';
-import {Annotation, Note} from './model';
+import {parseString} from './util';
+
+export interface TagError {
+  message: string;
+  line: number;
+  offset: number;
+  code: string;
+}
 
 // The distinction between the interface and the Tag class exists solely to
 // make it possible to write tests and specify expected results This
@@ -61,23 +66,19 @@ type TagValue = string | TagInterface[];
 export interface TagInterface {
   eq?: TagValue;
   properties?: TagDict;
+  deleted?: boolean;
+  prefix?: string;
 }
 
 export interface TagParse {
   tag: Tag;
-  log: LogMessage[];
+  log: TagError[];
 }
 
-export interface TagParseSpec {
-  prefix?: RegExp;
-  extending?: Tag;
-  scopes?: Tag[];
-}
+export type PathSegment = string | number;
+export type Path = PathSegment[];
 
-export interface Taggable {
-  tagParse: (spec?: TagParseSpec) => TagParse;
-  getTaglines: (prefix?: RegExp) => string[];
-}
+export type TagSetValue = string | number | string[] | number[] | null;
 
 /**
  * Class for interacting with the parsed output of an annotation
@@ -98,6 +99,8 @@ export interface Taggable {
 export class Tag implements TagInterface {
   eq?: TagValue;
   properties?: TagDict;
+  prefix?: string;
+  deleted?: boolean;
 
   static tagFrom(from: TagInterface = {}) {
     if (from instanceof Tag) {
@@ -153,88 +156,38 @@ export class Tag implements TagInterface {
    * Parse a line of Malloy tag language into a Tag which can be queried
    * @param source -- The source line to be parsed. If the string starts with #, then it skips
    *   all characters up to the first space.
+   * @param lineNumber -- A line number to be associated with the parse errors.
    * @param extending A tag which this line will be extending
    * @param importing Outer "scopes" for $() references
-   * @returns Something shaped like { tag: Tag  , log: ParseErrors[] }
+   * @returns Something shaped like { tag: Tag, log: ParseErrors[] }
    */
-  static fromTagline(
-    str: string,
-    extending: Tag | undefined,
+  static fromTagLine(
+    source: string,
+    lineNumber = 0,
+    extending?: Tag,
     ...importing: Tag[]
   ): TagParse {
-    // TODO -- Figure out the right thing about the URL
-    const url = `internal://tag-parse/from-tag-line?${encodeURIComponent(str)}`;
-    return parseTagline(str, extending, importing, url, 0, 0);
+    return parseTagLine(source, extending, importing, lineNumber);
   }
 
-  static addModelScope(
-    spec: TagParseSpec | undefined,
-    modelScope: Tag
-  ): TagParseSpec {
-    const useSpec = spec ? {...spec} : {};
-    if (useSpec.scopes) {
-      useSpec.scopes = useSpec.scopes.concat(modelScope);
-    } else {
-      useSpec.scopes = [modelScope];
+  /**
+   * Parse multiple lines of Malloy tag language, merging them into a single Tag
+   * @param lines -- The source line to be parsed. If the string starts with #, then it skips
+   *   all characters up to the first space.
+   * @param extending A tag which this line will be extending
+   * @param importing Outer "scopes" for $() references
+   * @returns Something shaped like { tag: Tag, log: ParseErrors[] }
+   */
+  static fromTagLines(lines: string[], extending?: Tag, ...importing: Tag[]) {
+    const allErrs: TagError[] = [];
+    let current: Tag | undefined = extending;
+    for (let i = 0; i < lines.length; i++) {
+      const text = lines[i];
+      const noteParse = parseTagLine(text, extending, importing, i);
+      current = noteParse.tag;
+      allErrs.push(...noteParse.log);
     }
-    return useSpec;
-  }
-
-  static annotationToTaglines(
-    annote: Annotation | undefined,
-    prefix?: RegExp
-  ): string[] {
-    annote ||= {};
-    const tagLines = annote.inherits
-      ? Tag.annotationToTaglines(annote.inherits, prefix)
-      : [];
-    function prefixed(na: Note[] | undefined): string[] {
-      const ret: string[] = [];
-      for (const n of na || []) {
-        if (prefix === undefined || n.text.match(prefix)) {
-          ret.push(n.text);
-        }
-      }
-      return ret;
-    }
-    return tagLines.concat(prefixed(annote.blockNotes), prefixed(annote.notes));
-  }
-
-  static annotationToTag(
-    annote: Annotation | undefined,
-    spec: TagParseSpec = {}
-  ): TagParse {
-    let extending = spec.extending || new Tag();
-    const prefix = spec.prefix || /^##? /;
-    annote ||= {};
-    const allErrs: LogMessage[] = [];
-    if (annote.inherits) {
-      const inherits = Tag.annotationToTag(annote.inherits, spec);
-      allErrs.push(...inherits.log);
-      extending = inherits.tag;
-    }
-    const allNotes: Note[] = [];
-    if (annote.blockNotes) {
-      allNotes.push(...annote.blockNotes);
-    }
-    if (annote.notes) {
-      allNotes.push(...annote.notes);
-    }
-    for (const note of allNotes) {
-      if (note.text.match(prefix)) {
-        const noteParse = parseTagline(
-          note.text,
-          extending,
-          spec.scopes || [],
-          note.at.url,
-          note.at.range.start.line,
-          note.at.range.start.character
-        );
-        extending = noteParse.tag;
-        allErrs.push(...noteParse.log);
-      }
-    }
-    return {tag: extending, log: allErrs};
+    return {tag: current, log: allErrs};
   }
 
   constructor(from: TagInterface = {}) {
@@ -244,36 +197,30 @@ export class Tag implements TagInterface {
     if (from.properties) {
       this.properties = from.properties;
     }
-  }
-
-  private find(at: string[]): Tag | undefined {
-    let lookAt = Tag.tagFrom(this);
-    for (const seg of at) {
-      const lookup = lookAt.properties && lookAt.properties[seg];
-      if (!lookup) {
-        return;
-      }
-      lookAt = Tag.tagFrom(lookup);
+    if (from.deleted) {
+      this.deleted = from.deleted;
     }
-    return lookAt;
+    if (from.prefix) {
+      this.prefix = from.prefix;
+    }
   }
 
-  tag(...at: string[]): Tag | undefined {
+  static withPrefix(prefix: string) {
+    return new Tag({prefix});
+  }
+
+  tag(...at: Path): Tag | undefined {
     return this.find(at);
   }
 
-  has(...at: string[]): boolean {
-    return this.find(at) !== undefined;
-  }
-
-  text(...at: string[]): string | undefined {
+  text(...at: Path): string | undefined {
     const str = this.find(at)?.eq;
     if (typeof str === 'string') {
       return str;
     }
   }
 
-  numeric(...at: string[]): number | undefined {
+  numeric(...at: Path): number | undefined {
     const str = this.find(at)?.eq;
     if (typeof str === 'string') {
       const num = Number.parseFloat(str);
@@ -283,7 +230,7 @@ export class Tag implements TagInterface {
     }
   }
 
-  bare(...at: string[]): boolean | undefined {
+  bare(...at: Path): boolean | undefined {
     const p = this.find(at);
     if (p === undefined) {
       return;
@@ -303,7 +250,7 @@ export class Tag implements TagInterface {
     return newDict;
   }
 
-  array(...at: string[]): Tag[] | undefined {
+  array(...at: Path): Tag[] | undefined {
     const array = this.find(at)?.eq;
     if (array === undefined || typeof array === 'string') {
       return undefined;
@@ -313,7 +260,7 @@ export class Tag implements TagInterface {
     );
   }
 
-  textArray(...at: string[]): string[] | undefined {
+  textArray(...at: Path): string[] | undefined {
     const array = this.find(at)?.eq;
     if (array === undefined || typeof array === 'string') {
       return undefined;
@@ -325,7 +272,7 @@ export class Tag implements TagInterface {
     );
   }
 
-  numericArray(...at: string[]): number[] | undefined {
+  numericArray(...at: Path): number[] | undefined {
     const array = this.find(at)?.eq;
     if (array === undefined || typeof array === 'string') {
       return undefined;
@@ -352,15 +299,193 @@ export class Tag implements TagInterface {
   clone(): Tag {
     return new Tag(structuredClone(this));
   }
+
+  toString(): string {
+    let annotation = this.prefix ?? '# ';
+    function addChildren(tag: TagInterface) {
+      const props = Object.keys(tag.properties ?? {});
+      for (let i = 0; i < props.length; i++) {
+        addChild(props[i], tag.properties![props[i]]);
+        if (i < props.length - 1) {
+          annotation += ' ';
+        }
+      }
+    }
+    function addTag(child: TagInterface, isArrayEl = false) {
+      if (child.eq !== undefined) {
+        if (!isArrayEl) annotation += ' = ';
+        if (Array.isArray(child.eq)) {
+          annotation += '[';
+          for (let i = 0; i < child.eq.length; i++) {
+            addTag(child.eq[i], true);
+            if (i !== child.eq.length - 1) annotation += ', ';
+          }
+          annotation += ']';
+        } else {
+          annotation += `${child.eq}`;
+        }
+      }
+      if (child.properties) {
+        const props = Object.keys(child.properties);
+        if (
+          props.length === 1 &&
+          !props.some(c => (child.properties ?? {})[c].deleted) &&
+          child.eq === undefined
+        ) {
+          annotation += '.';
+          addChildren(child);
+        } else {
+          annotation += ' { ';
+          addChildren(child);
+          annotation += ' }';
+        }
+      }
+    }
+    function addChild(prop: string, child: TagInterface) {
+      if (child.deleted) {
+        annotation += `-${prop}`;
+        return;
+      }
+      annotation += prop;
+      addTag(child);
+    }
+    addChildren(this);
+    return annotation;
+  }
+
+  find(path: Path): Tag | undefined {
+    let currentTag: Tag = Tag.tagFrom(this);
+    for (const segment of path) {
+      if (typeof segment === 'number') {
+        if (
+          currentTag.eq === undefined ||
+          !Array.isArray(currentTag.eq) ||
+          currentTag.eq.length <= segment
+        ) {
+          return;
+        }
+        currentTag = Tag.tagFrom(currentTag.eq[segment]);
+      } else {
+        const properties = currentTag.properties ?? {};
+        if (segment in properties) {
+          currentTag = Tag.tagFrom(properties[segment]);
+        } else {
+          return;
+        }
+      }
+    }
+    return currentTag;
+  }
+
+  has(...path: Path): boolean {
+    return this.find(path) !== undefined;
+  }
+
+  set(path: Path, value: TagSetValue = null): Tag {
+    const copy = Tag.tagFrom(this);
+    let currentTag: TagInterface = copy;
+    for (const segment of path) {
+      if (typeof segment === 'number') {
+        if (currentTag.eq === undefined || !Array.isArray(currentTag.eq)) {
+          currentTag.eq = Array.from({length: segment + 1}).map(_ => ({}));
+        } else if (currentTag.eq.length <= segment) {
+          const values = currentTag.eq;
+          const newVal = Array.from({length: segment + 1}).map((_, i) =>
+            i < values.length ? values[i] : {}
+          );
+          currentTag.eq = newVal;
+        }
+        currentTag = currentTag.eq[segment];
+      } else {
+        const properties = currentTag.properties;
+        if (properties === undefined) {
+          currentTag.properties = {[segment]: {}};
+          currentTag = currentTag.properties[segment];
+        } else if (segment in properties) {
+          currentTag = properties[segment];
+          if (currentTag.deleted) {
+            currentTag.deleted = false;
+          }
+        } else {
+          properties[segment] = {};
+          currentTag = properties[segment];
+        }
+      }
+    }
+    if (value === null) {
+      currentTag.eq = undefined;
+    } else if (typeof value === 'string') {
+      currentTag.eq = value;
+    } else if (typeof value === 'number') {
+      currentTag.eq = value.toString(); // TODO big numbers?
+    } else if (Array.isArray(value)) {
+      currentTag.eq = value.map((v: string | number) => {
+        return {eq: typeof v === 'string' ? v : v.toString()};
+      });
+    }
+    return copy;
+  }
+
+  delete(...path: Path): Tag {
+    return this.remove(path, false);
+  }
+
+  unset(...path: Path): Tag {
+    return this.remove(path, true);
+  }
+
+  private remove(path: Path, hard = false): Tag {
+    const origCopy = Tag.tagFrom(this);
+    let currentTag: TagInterface = origCopy;
+    for (const segment of path.slice(0, path.length - 1)) {
+      if (typeof segment === 'number') {
+        if (currentTag.eq === undefined || !Array.isArray(currentTag.eq)) {
+          if (!hard) return origCopy;
+          currentTag.eq = Array.from({length: segment}).map(_ => ({}));
+        } else if (currentTag.eq.length <= segment) {
+          if (!hard) return origCopy;
+          const values = currentTag.eq;
+          const newVal = Array.from({length: segment}).map((_, i) =>
+            i < values.length ? values[i] : {}
+          );
+          currentTag.eq = newVal;
+        }
+        currentTag = currentTag.eq[segment];
+      } else {
+        const properties = currentTag.properties;
+        if (properties === undefined) {
+          if (!hard) return origCopy;
+          currentTag.properties = {[segment]: {}};
+          currentTag = currentTag.properties[segment];
+        } else if (segment in properties) {
+          currentTag = properties[segment];
+        } else {
+          if (!hard) return origCopy;
+          properties[segment] = {};
+          currentTag = properties[segment];
+        }
+      }
+    }
+    const segment = path[path.length - 1];
+    if (typeof segment === 'string') {
+      if (currentTag.properties && segment in currentTag.properties) {
+        delete currentTag.properties[segment];
+      } else if (hard) {
+        currentTag.properties ??= {};
+        currentTag.properties[segment] = {deleted: true};
+      }
+    } else {
+      if (Array.isArray(currentTag.eq)) {
+        currentTag.eq.splice(segment, 1);
+      }
+    }
+    return origCopy;
+  }
 }
 
 class TagErrorListener implements ANTLRErrorListener<Token> {
-  log: LogMessage[] = [];
-  constructor(
-    readonly sourceURL: string,
-    readonly atLine: number,
-    readonly fromChar: number
-  ) {}
+  log: TagError[] = [];
+  constructor(readonly line: number) {}
 
   syntaxError(
     recognizer: unknown,
@@ -370,32 +495,21 @@ class TagErrorListener implements ANTLRErrorListener<Token> {
     msg: string,
     _e: unknown
   ): void {
-    const errAt = {
-      line: this.atLine,
-      character: this.fromChar + charPositionInLine,
-    };
-    const range = {start: errAt, end: errAt};
-    const logMsg: LogMessage = {
+    const logMsg: TagError = {
       code: 'tag-parse-syntax-error',
       message: msg,
-      at: {url: this.sourceURL, range},
-      severity: 'error',
+      line: this.line,
+      offset: charPositionInLine,
     };
     this.log.push(logMsg);
   }
 
   semanticError(cx: ParserRuleContext, code: string, msg: string): void {
-    const left = this.fromChar + cx.start.charPositionInLine;
-    const errAt = {
-      line: this.atLine,
-      character: left,
-    };
-    const range = {start: errAt, end: errAt};
-    const logMsg: LogMessage = {
+    const logMsg: TagError = {
       code,
       message: msg,
-      at: {url: this.sourceURL, range},
-      severity: 'error',
+      line: this.line,
+      offset: cx.start.charPositionInLine,
     };
     this.log.push(logMsg);
   }
@@ -442,13 +556,11 @@ function getString(ctx: StringContext) {
   return ctx.text;
 }
 
-function parseTagline(
+function parseTagLine(
   source: string,
   extending: Tag | undefined,
   outerScope: Tag[],
-  sourceURL: string,
-  onLine: number,
-  atChar: number
+  onLine: number
 ): TagParse {
   if (source[0] === '#') {
     const skipTo = source.indexOf(' ');
@@ -461,17 +573,17 @@ function parseTagline(
   const inputStream = CharStreams.fromString(source);
   const lexer = new MalloyTagLexer(inputStream);
   const tokenStream = new CommonTokenStream(lexer);
-  const pLog = new TagErrorListener(sourceURL, onLine, atChar);
+  const pLog = new TagErrorListener(onLine);
   const taglineParser = new MalloyTagParser(tokenStream);
   taglineParser.removeErrorListeners();
   taglineParser.addErrorListener(pLog);
   const tagTree = taglineParser.tagLine();
-  const treeWalker = new TaglineParser(outerScope, pLog);
+  const treeWalker = new TagLineParser(outerScope, pLog);
   const tag = treeWalker.tagLineToTag(tagTree, extending);
   return {tag, log: pLog.log};
 }
 
-class TaglineParser
+class TagLineParser
   extends AbstractParseTreeVisitor<Tag>
   implements MalloyTagVisitor<Tag>
 {

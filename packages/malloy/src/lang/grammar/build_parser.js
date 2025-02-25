@@ -39,11 +39,6 @@ const digestFile = path.join(libDir, '_BUILD_DIGEST_');
 const build = [
   {src: 'MalloyLexer.g4', makes: 'MalloyLexer.ts', run: antlr},
   {src: 'MalloyParser.g4', makes: 'MalloyParser.ts', run: `${antlr} -visitor`},
-  {
-    src: 'MalloyTag.g4',
-    makes: 'MalloyTagParser.ts',
-    run: `${antlr} -visitor -no-listener`,
-  },
 ];
 const MALLOY_UUID = '76c17e9d-f3ce-5f2d-bfde-98ad3d2a37f6';
 

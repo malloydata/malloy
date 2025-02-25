@@ -1,0 +1,34 @@
+{
+  "name": "@malloydata/malloy-query-builder",
+  "version": "0.0.237",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "homepage": "https://github.com/malloydata/malloy#readme",
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/malloydata/malloy"
+  },
+  "scripts": {
+    "test": "jest --config=../../jest.config.js",
+    "clean": "tsc --build --clean",
+    "build": "tsc --build && npm run generate-flow",
+    "prepublishOnly": "npm run clean && npm run build",
+    "generate-flow": "ts-node scripts/gen_flow.ts",
+    "generate-docs": "npx typedoc --excludeInternal",
+    "serve-docs": "npx http-server -o docs"
+  },
+  "dependencies": {
+    "@malloydata/malloy-tag": "^0.0.237",
+    "@malloydata/malloy-interfaces": "^0.0.237",
+    "@malloydata/malloy-filter": "^0.0.237"
+  },
+  "devDependencies": {
+    "flow-api-translator": "^0.26.0",
+    "http-server": "^14.1.1",
+    "typedoc": "^0.27.7"
+  }
+}

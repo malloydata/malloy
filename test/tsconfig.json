@@ -35,6 +35,12 @@
     },
     {
       "path": "../packages/malloy-malloy-sql"
+    },
+    {
+      "path": "../packages/malloy-query-builder"
+    },
+    {
+      "path": "../packages/malloy-tag"
     }
   ]
 }

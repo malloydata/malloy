@@ -33,7 +33,7 @@ import {
   StructDef,
   isSourceDef,
 } from '../../../model/malloy_types';
-import {Tag} from '../../../tags';
+import {Tag} from '@malloydata/malloy-tag';
 import {
   LogMessageOptions,
   MessageLogger,

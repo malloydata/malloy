@@ -30,8 +30,8 @@ import {
   MalloyError,
   LogMessage,
   SingleConnectionRuntime,
-  Tag,
 } from '@malloydata/malloy';
+import {Tag} from '@malloydata/malloy-tag';
 import EventEmitter from 'events';
 import {inspect} from 'util';
 

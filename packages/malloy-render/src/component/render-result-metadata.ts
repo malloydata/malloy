@@ -29,8 +29,8 @@ import {
   Field,
   QueryData,
   Result,
-  Tag,
 } from '@malloydata/malloy';
+import {Tag} from '@malloydata/malloy-tag';
 import {
   getFieldKey,
   valueIsDateTime,

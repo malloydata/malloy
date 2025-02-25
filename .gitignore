@@ -59,3 +59,9 @@ demo/malloy-demo-composer/env
 test/data/duckdb/duckdb_test.db.wal
 monospace.json
 snowflake.log
+packages/malloy-interfaces/generated-types/
+packages/malloy-query-builder/docs/
+packages/malloy-query-builder/flow/
+
+packages/malloy-tag/src/.antlr
+packages/malloy-tag/src/lib

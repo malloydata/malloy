@@ -12,8 +12,8 @@ import {
   Field,
   QueryData,
   QueryDataRow,
-  Tag,
 } from '@malloydata/malloy';
+import {Tag} from '@malloydata/malloy-tag';
 import {Item, Runtime, Spec, View} from 'vega';
 import {JSX} from 'solid-js';
 import {ResultStore} from './result-store/result-store';
