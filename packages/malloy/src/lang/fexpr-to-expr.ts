@@ -6,7 +6,17 @@
  */
 
 import {Expr, StringLiteralNode} from '../model/malloy_types';
-import {StringClause} from '@malloydata/malloy-filter';
+import {FilterLog, StringClause, StringParser} from '@malloydata/malloy-filter';
+
+export function stringFilterToExpr(filter: string, applyTo: Expr): Expr {
+  const sp = new StringParser(filter);
+  const parseResult = sp.parse();
+  if (anyErrors(parseResult.logs) || parseResult.clauses.length === 0) {
+    return {node: 'false'};
+  }
+  const exprs = parseResult.clauses.map(c => stringClauseToExpr(c, applyTo));
+  return combineClausesExprs(exprs);
+}
 
 function stringLiteral(x: string): StringLiteralNode {
   return {node: 'stringLiteral', literal: x};
@@ -14,6 +24,22 @@ function stringLiteral(x: string): StringLiteralNode {
 
 function likeEscape(v: string): string {
   return v.replace(/[\\_%]/g, c => `\\${c}`);
+}
+
+function anyErrors(fl: FilterLog[]) {
+  return fl.find(f => f.severity === 'error') !== undefined;
+}
+
+function combineClausesExprs(exprs: Expr[]): Expr {
+  const first = exprs[0];
+  if (exprs.length === 1) {
+    return first;
+  }
+  const rest = combineClausesExprs(exprs.slice(1));
+  return {
+    node: 'or',
+    kids: {left: first, right: rest},
+  };
 }
 
 function mkLike(
@@ -44,7 +70,7 @@ function mkLike(
   return retExpr;
 }
 
-export function stringClauseToExpr(op: StringClause, expr: Expr): Expr {
+function stringClauseToExpr(op: StringClause, expr: Expr): Expr {
   switch (op.operator) {
     case 'null':
       return {node: 'is-null', e: expr};
