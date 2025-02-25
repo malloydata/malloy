@@ -4523,29 +4523,30 @@ function parseFilter(
   filterString: string,
   kind: 'string' | 'number' | 'boolean' | 'date' | 'other'
 ) {
-  function handleError(errors: Filter.FilterError[]) {
+  function handleError(logs: Filter.FilterLog[]) {
+    const errors = logs.filter(l => l.severity === 'error');
     if (errors.length === 0) return;
     throw new Error(`Invalid Malloy filter string: ${errors[0].message}`);
   }
   switch (kind) {
     case 'string': {
       const result = new Filter.StringParser(filterString).parse();
-      handleError(result.errors);
+      handleError(result.logs);
       return {kind, clauses: result.clauses};
     }
     case 'number': {
       const result = new Filter.NumberParser(filterString).parse();
-      handleError(result.errors);
+      handleError(result.logs);
       return {kind, clauses: result.clauses};
     }
     case 'boolean': {
       const result = new Filter.BooleanParser(filterString).parse();
-      handleError(result.errors);
+      handleError(result.logs);
       return {kind, clauses: result.clauses};
     }
     case 'date': {
       const result = new Filter.DateParser(filterString).parse();
-      handleError(result.errors);
+      handleError(result.logs);
       return {kind, clauses: result.clauses};
     }
     case 'other':
