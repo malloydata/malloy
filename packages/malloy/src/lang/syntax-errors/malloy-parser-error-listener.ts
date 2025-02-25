@@ -7,7 +7,7 @@
 
 import {ANTLRErrorListener, Token} from 'antlr4ts';
 import {MalloyParser} from '../lib/Malloy/MalloyParser';
-import {checkCustomErrorMessage, ErrorCase} from './custom-error-messages';
+import {checkCustomErrorMessage} from './error-case-checker';
 import {
   MessageLogger,
   MessageCode,
@@ -16,41 +16,7 @@ import {
   makeLogMessage,
 } from '../parse-log';
 import {MalloyTranslation} from '../parse-malloy';
-
-export const commonErrorCases: ErrorCase[] = [
-  {
-    errorMessage: "'view:' must be followed by '<identifier> is {'",
-    ruleContextOptions: ['exploreQueryDef'],
-    offendingSymbol: MalloyParser.OCURLY,
-    precedingTokenOptions: [[MalloyParser.VIEW], [MalloyParser.COLON]],
-  },
-  {
-    errorMessage: "Missing '}' at '${currentToken}'",
-    ruleContextOptions: ['vExpr'],
-    offendingSymbol: MalloyParser.VIEW,
-    currentToken: MalloyParser.OCURLY,
-  },
-  {
-    errorMessage: "Missing '}' at '${currentToken}'",
-    ruleContextOptions: [
-      'exploreProperties',
-      'queryProperties',
-      'exploreStatement',
-    ],
-    lookAheadOptions: [
-      [MalloyParser.EOF],
-      [MalloyParser.RUN],
-      [MalloyParser.SOURCE],
-    ],
-  },
-  {
-    errorMessage:
-      "'aggregate:' entries must include a name (ex: `some_name is count()`)",
-    precedingTokenOptions: [[MalloyParser.AGGREGATE]],
-    lookAheadOptions: [[-MalloyParser.IS]],
-    lookbackFromOffendingSymbol: true,
-  },
-];
+import {malloyCustomErrorCases} from './malloy-custom-error-messages';
 
 export class MalloyParserErrorListener implements ANTLRErrorListener<Token> {
   constructor(
@@ -85,7 +51,7 @@ export class MalloyParserErrorListener implements ANTLRErrorListener<Token> {
     const overrideMessage = checkCustomErrorMessage(
       recognizer as MalloyParser,
       offendingSymbol,
-      commonErrorCases
+      malloyCustomErrorCases
     );
     if (overrideMessage) {
       message = overrideMessage;
