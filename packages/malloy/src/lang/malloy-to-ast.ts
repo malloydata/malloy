@@ -1318,10 +1318,11 @@ export class MalloyToAST
     const str = pcx.text.slice(1).trimStart();
     const lastChar = str[str.length - 1];
     if (lastChar === '\n') {
+      const t = str[0] === "'" ? '"' : "'";
       this.contextError(
         pcx,
         'literal-string-newline',
-        'String cannot contain a new-line character. Use """..."""'
+        `Missing ${t}${str[0]}${t} before end-of-line`
       );
     }
     const astStr = new ast.ExprString(str.slice(1, -1));
@@ -2212,11 +2213,11 @@ export class MalloyToAST
     const fString = pcx.text.slice(1).trimStart(); // remove fSPACE
     const lastChar = fString[fString.length - 1];
     if (lastChar === '\n') {
-      const t3 = (fString[0] === "'" ? '"' : "'").repeat(3);
+      const t = fString[0] === "'" ? '"' : "'";
       this.contextError(
         pcx,
         'literal-string-newline',
-        `Filter expression cannot contain a new-line character, use ${pcx.text[0]}${t3}...${t3}`
+        `Missing $${t}${fString[0]}${t} before end-of-line`
       );
     }
     const filterText = fString.slice(1, -1);
