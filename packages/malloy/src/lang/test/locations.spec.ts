@@ -36,7 +36,6 @@ import {
 } from './test-translator';
 import './parse-expects';
 import {DocumentLocation, DocumentPosition} from '../../model/malloy_types';
-import {sqlKey} from '../../model/sql_block';
 
 describe('source locations', () => {
   test('renamed source location', () => {

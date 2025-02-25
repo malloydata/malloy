@@ -29,8 +29,7 @@ import {databasesFromEnvironmentOr} from '../../util';
 import '../../util/db-jest-matchers';
 // No prebuilt shared model, each test is complete.  Makes debugging easier.
 
-const runtimes = new RuntimeList(databasesFromEnvironmentOr(['duckdb']));
-// const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
+const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 afterAll(async () => {
   await runtimes.closeAll();
