@@ -39,7 +39,13 @@ describe('dependencies', () => {
   it('typescript references should not be circular', async () => {
     const deps = await madge('packages', {
       fileExtensions: ['ts'],
-      excludeRegExp: [/malloy\/src\/lang/, /malloy-render\/src/, /\.d\.ts/],
+      excludeRegExp: [
+        /malloy\/src\/lang/,
+        /malloy-render\/src/,
+        /\.d\.ts/,
+        /malloy-interfaces\/generated-types/,
+        /malloy-tag\/src\/lib/,
+      ],
     });
     expect(deps.circular().length, getMessage(deps.circular())).toBe(0);
   });
@@ -55,7 +61,12 @@ describe('dependencies', () => {
   it.skip('malloy/src/lang typescript should not be circular', async () => {
     const deps = await madge('packages', {
       fileExtensions: ['ts'],
-      excludeRegExp: [/malloy\/src\/lang\/lib/, /\.d\.ts/],
+      excludeRegExp: [
+        /malloy-render\/src/,
+        /\.d\.ts/,
+        /malloy-interfaces\/generated-types/,
+        /malloy-tag\/src\/lib/,
+      ],
     });
     expect(deps.circular().length, getMessage(deps.circular())).toBe(0);
   });
@@ -64,7 +75,26 @@ describe('dependencies', () => {
   it.skip('malloy-render/src typescript should not be circular', async () => {
     const deps = await madge('packages', {
       fileExtensions: ['ts'],
-      excludeRegExp: [/malloy-render\/src/, /\.d\.ts/],
+      excludeRegExp: [
+        /malloy\/src\/lang/,
+        /\.d\.ts/,
+        /malloy-interfaces\/generated-types/,
+        /malloy-tag\/src\/lib/,
+      ],
+    });
+    expect(deps.circular().length, getMessage(deps.circular())).toBe(0);
+  });
+
+  // TODO: remove circular references in malloy-tag
+  it.skip('malloy-tag/src typescript should not be circular', async () => {
+    const deps = await madge('packages', {
+      fileExtensions: ['ts'],
+      excludeRegExp: [
+        /malloy\/src\/lang/,
+        /malloy-render\/src/,
+        /\.d\.ts/,
+        /malloy-interfaces\/generated-types/,
+      ],
     });
     expect(deps.circular().length, getMessage(deps.circular())).toBe(0);
   });

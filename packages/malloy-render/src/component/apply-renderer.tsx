@@ -12,8 +12,8 @@ import {
   Explore,
   ExploreField,
   Field,
-  Tag,
 } from '@malloydata/malloy';
+import {Tag} from '@malloydata/malloy-tag';
 import {RenderResultMetadata} from './types';
 import {valueIsNumber, valueIsString} from './util';
 import {JSXElement} from 'solid-js';

@@ -85,11 +85,12 @@ import {
   TablePathResponse,
 } from './translate-response';
 import {locationContainsPosition} from './utils';
-import {Tag} from '../tags';
+import {Tag} from '@malloydata/malloy-tag';
 import {MalloyParseInfo} from './malloy-parse-info';
 import {walkForModelAnnotation} from './parse-tree-walkers/model-annotation-walker';
 import {walkForTablePath} from './parse-tree-walkers/find-table-path-walker';
 import {EventStream} from '../runtime_types';
+import {annotationToTag} from '../annotation';
 import {MalloyErrorStrategy} from './syntax-errors/malloy-error-strategy';
 import {MalloyParserErrorListener} from './syntax-errors/malloy-parser-error-listener';
 
@@ -624,7 +625,7 @@ class TranslateStep implements TranslationStep {
 
     // begin with the compiler flags of the model we are extending
     if (extendingModel && !this.importedAnnotations) {
-      const tagParse = Tag.annotationToTag(extendingModel.annotation, {
+      const tagParse = annotationToTag(extendingModel.annotation, {
         prefix: /^##! /,
       });
       that.compilerFlags = tagParse.tag;

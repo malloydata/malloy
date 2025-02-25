@@ -21,7 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataColumn, Tag} from '@malloydata/malloy';
+import {DataColumn} from '@malloydata/malloy';
+import {Tag} from '@malloydata/malloy-tag';
 import {RendererOptions} from './renderer_types';
 export type ChildRenderers = {[fieldName: string]: Renderer};
 

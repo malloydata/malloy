@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 import {Tokenizer, SpecialToken, TokenizerParams} from './tokenizer';
 import {Token} from './token_types';
 
@@ -68,16 +75,16 @@ describe('Tokenizer', () => {
     const input = 'hello NULL world,-Null,-\'NULL" ,NULL, NULL ,  ';
     const expectedTokens = [
       makeToken('word', 'hello', 0, 5),
-      makeToken('NULL', 'NULL', 6, 10),
+      makeToken('NULL', 'null', 6, 10),
       makeToken('word', 'world', 11, 16),
       makeToken(',', ',', 16, 17),
-      makeToken('NOTNULL', '-NULL', 17, 22),
+      makeToken('NOTNULL', '-null', 17, 22),
       makeToken(',', ',', 22, 23),
       makeToken('word', '-\'NULL"', 23, 30),
       makeToken(',', ',', 31, 32),
-      makeToken('NULL', 'NULL', 32, 36),
+      makeToken('NULL', 'null', 32, 36),
       makeToken(',', ',', 36, 37),
-      makeToken('NULL', 'NULL', 38, 42),
+      makeToken('NULL', 'null', 38, 42),
       makeToken(',', ',', 43, 44),
     ];
     const params = makeParams();
@@ -121,18 +128,18 @@ describe('Tokenizer', () => {
     ];
     expect(new Tokenizer(input, makeParams()).parse()).toEqual(expectedTokens);
   });
-  it('should match regexp and capitalize special matches', () => {
+  it('should match regexp and lowercase special matches', () => {
     const input =
       "hello tuesDAY,ttuesday, tuesdayy ,Tuesday , ttuesday, 'TUESday' ";
     const expectedTokens = [
       makeToken('word', 'hello', 0, 5),
-      makeToken('DAYOFWEEK', 'TUESDAY', 6, 13),
+      makeToken('DAYOFWEEK', 'tuesday', 6, 13),
       makeToken(',', ',', 13, 14),
       makeToken('word', 'ttuesday', 14, 22),
       makeToken(',', ',', 22, 23),
       makeToken('word', 'tuesdayy', 24, 32),
       makeToken(',', ',', 33, 34),
-      makeToken('DAYOFWEEK', 'TUESDAY', 34, 41),
+      makeToken('DAYOFWEEK', 'tuesday', 34, 41),
       makeToken(',', ',', 42, 43),
       makeToken('word', 'ttuesday', 44, 52),
       makeToken(',', ',', 52, 53),

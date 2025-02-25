@@ -20,7 +20,16 @@ Input:  !=5
 Output: !=5
 
 Input:  1, 3, 5, null
-Output: 1, 3, 5, NULL
+Output: 1, 3, 5, null
+
+Input:  1, 3, , 5,
+Output: 1, 3, 5
+Logs:    {
+  severity: 'warn',
+  message: 'Empty clause',
+  startIndex: 6,
+  endIndex: 7
+}
 
 Input:  <1, >=100
 Output: <1, >=100
@@ -32,10 +41,10 @@ Input:   <= 10
 Output: <=10
 
 Input:  NULL
-Output: NULL
+Output: null
 
 Input:   -NULL
-Output: -NULL
+Output: -null
 
 Input:  (1, 7)
 Output: (1, 7)
@@ -53,17 +62,82 @@ Input:  [0,9],[20,29]
 Output: [0, 9], [20, 29]
 
 Input:  [0,10], 20, NULL, ( 72, 82 ]
-Output: [0, 10], 20, NULL, (72, 82]
+Output: [0, 10], 20, null, (72, 82]
 
 Input:  , notanumber,, "null", apple pear orange, nulle, nnull, >=,
-Errors:  { message: 'Invalid expression', startIndex: 2, endIndex: 12 } { message: 'Invalid expression', startIndex: 15, endIndex: 21 } { message: 'Invalid expression', startIndex: 23, endIndex: 28 } { message: 'Invalid expression', startIndex: 29, endIndex: 33 } { message: 'Invalid expression', startIndex: 34, endIndex: 40 } { message: 'Invalid expression', startIndex: 42, endIndex: 47 } { message: 'Invalid expression', startIndex: 49, endIndex: 54 } { message: 'Invalid expression', startIndex: 56, endIndex: 58 }
+Logs:    {
+  severity: 'error',
+  message: 'Invalid expression: notanumber',
+  startIndex: 2,
+  endIndex: 12
+} {
+  severity: 'warn',
+  message: 'Empty clause',
+  startIndex: 13,
+  endIndex: 14
+} {
+  severity: 'error',
+  message: 'Invalid expression: "null"',
+  startIndex: 15,
+  endIndex: 21
+} {
+  severity: 'error',
+  message: 'Invalid expression: apple',
+  startIndex: 23,
+  endIndex: 28
+} {
+  severity: 'error',
+  message: 'Invalid expression: pear',
+  startIndex: 29,
+  endIndex: 33
+} {
+  severity: 'error',
+  message: 'Invalid expression: orange',
+  startIndex: 34,
+  endIndex: 40
+} {
+  severity: 'error',
+  message: 'Invalid expression: nulle',
+  startIndex: 42,
+  endIndex: 47
+} {
+  severity: 'error',
+  message: 'Invalid expression: nnull',
+  startIndex: 49,
+  endIndex: 54
+} {
+  severity: 'error',
+  message: 'Invalid expression: >=',
+  startIndex: 56,
+  endIndex: 58
+}
 
 Input:  [cat, 100], <cat
-Errors:  { message: 'Invalid number', startIndex: 1, endIndex: 4 } { message: 'Invalid expression', startIndex: 12, endIndex: 13 } { message: 'Invalid expression', startIndex: 13, endIndex: 16 }
+Logs:    {
+  severity: 'error',
+  message: 'Invalid number',
+  startIndex: 1,
+  endIndex: 4
+} {
+  severity: 'error',
+  message: 'Invalid expression: <',
+  startIndex: 12,
+  endIndex: 13
+} {
+  severity: 'error',
+  message: 'Invalid expression: cat',
+  startIndex: 13,
+  endIndex: 16
+}
 
 Input:  -5.5 to 10
 Output: -5.5, 10
-Errors:  { message: 'Invalid expression', startIndex: 5, endIndex: 7 }
+Logs:    {
+  severity: 'error',
+  message: 'Invalid expression: to',
+  startIndex: 5,
+  endIndex: 7
+}
 ```
 
 -------------------------------------------------------------------------
@@ -83,11 +157,16 @@ Input:  -CAT,-DOG,mouse, bird, zebra, -horse, -goat
 Output: -CAT, -DOG, mouse, bird, zebra, -horse, -goat
 
 Input:  Missing ,NULL
-Output: Missing, NULL
+Output: Missing, null
 
 Input:  CAT%, D%OG, %ous%, %ira_f%, %_oat,
 Output: CAT%, D%OG, %ous%, %ira_f%, %_oat
-Errors:  { message: 'Invalid expression', startIndex: 34, endIndex: 35 }
+Logs:    {
+  severity: 'warn',
+  message: 'Empty clause',
+  startIndex: 34,
+  endIndex: 35
+}
 
 Input:  -CAT%,-D%OG,-%mouse,-%zebra%
 Output: -CAT%, -D%OG, -%mouse, -%zebra%
@@ -111,22 +190,40 @@ Input:  \_CAT,D\%G,\mouse
 Output: \_CAT, D\%G, mouse
 
 Input:  CAT,-NULL
-Output: CAT, -NULL
+Output: CAT, -null
 
 Input:  CAT,-"NULL"
 Output: CAT, -"NULL"
 
 Input:  CAT,NULL
-Output: CAT, NULL
+Output: CAT, null
+
+Input:  CAT,,
+Output: CAT
+Logs:    {
+  severity: 'warn',
+  message: 'Empty clause',
+  startIndex: 4,
+  endIndex: 5
+}
+
+Input:  CAT, , DOG
+Output: CAT, DOG
+Logs:    {
+  severity: 'warn',
+  message: 'Empty clause',
+  startIndex: 4,
+  endIndex: 5
+}
 
 Input:  EMPTY
-Output: EMPTY
+Output: empty
 
 Input:  -EMPTY
-Output: -EMPTY
+Output: -empty
 
 Input:  CAT,-EMPTY
-Output: CAT, -EMPTY
+Output: CAT, -empty
 
 Input:  "CAT,DOG',mo`use,zeb'''ra,g"""t,g\"ir\`af\'e
 Output: "CAT, DOG', mo`use, zeb'''ra, g"""t, g"ir`af'e
@@ -139,7 +236,12 @@ Output: CAT, DOG, -, -
 
 Input:  --CAT,DOG,\
 Output: --CAT, DOG
-Errors:  { message: 'Invalid expression', startIndex: 10, endIndex: 11 }
+Logs:    {
+  severity: 'warn',
+  message: 'Empty clause',
+  startIndex: 10,
+  endIndex: 11
+}
 
 Input:  CAT\ DOG
 Output: CAT DOG
@@ -148,13 +250,13 @@ Input:  _\_CAT
 Output: _\\_CAT
 
 Input:  \NULL
-Output: \NULL
+Output: NULL
 
 Input:  \-NULL
-Output: \-NULL
+Output: -NULL
 
 Input:  -N\ULL
-Output: -\NULL
+Output: -NULL
 
 Input:  CA--,D-G
 Output: CA--, D-G
@@ -163,7 +265,7 @@ Input:   hello world, foo="bar baz" , qux=quux
 Output: hello world, foo="bar baz", qux=quux
 
 Input:  one ,Null ,  Empty,E M P T Y Y,EEmpty,        emptIEs
-Output: one, NULL, EMPTY, E M P T Y Y, EEmpty, emptIEs
+Output: one, null, empty, E M P T Y Y, EEmpty, emptIEs
 
 Input:
 
@@ -174,34 +276,63 @@ Input:
 
 ```code
 Input:  true
-Output: TRUE
+Output: true
 
 Input:  FALSE
-Output: FALSE
+Output: false
 
 Input:  =false
-Output: =FALSE
+Output: =false
 
 Input:  null
-Output: NULL
+Output: null
 
 Input:  -NULL
-Output: -NULL
+Output: -null
 
-Input:   True , faLSE,=false,NULl,-null
-Output: TRUE, FALSE, =FALSE, NULL, -NULL
+Input:  null,
+Output: null
+
+Input:   True , , faLSE,=false,NULl,-null
+Output: true, false, =false, null, -null
+Logs:    {
+  severity: 'warn',
+  message: 'Empty clause',
+  startIndex: 8,
+  endIndex: 9
+}
 
 Input:  -'null'
-Errors:  { message: "Invalid token -'null'", startIndex: 0, endIndex: 7 }
+Logs:    {
+  severity: 'error',
+  message: "Invalid token -'null'",
+  startIndex: 0,
+  endIndex: 7
+}
 
 Input:  10
-Errors:  { message: 'Invalid token 10', startIndex: 0, endIndex: 2 }
+Logs:    {
+  severity: 'error',
+  message: 'Invalid token 10',
+  startIndex: 0,
+  endIndex: 2
+}
 
 Input:  nnull
-Errors:  { message: 'Invalid token nnull', startIndex: 0, endIndex: 5 }
+Logs:    {
+  severity: 'error',
+  message: 'Invalid token nnull',
+  startIndex: 0,
+  endIndex: 5
+}
 
 Input:   truee
-Errors:  { message: 'Invalid token truee', startIndex: 1, endIndex: 6 }
+Logs:    {
+  severity: 'error',
+  message: 'Invalid token truee',
+  startIndex: 1,
+  endIndex: 6
+}
 
 ```
 
@@ -210,103 +341,176 @@ Errors:  { message: 'Invalid token truee', startIndex: 1, endIndex: 6 }
 
 ```code
 Input:  this month
-Output: THIS MONTH
+Output: this month
 
 Input:  3 days
-Output: 3 DAYS
+Output: 3 days
 
 Input:  3 days ago
-Output: 3 DAYS AGO
+Output: 3 days ago
 
 Input:  3 months ago for 2 days
-Output: 3 MONTHS AGO FOR 2 DAYS
+Output: 3 months ago for 2 days
 
 Input:  2025 weeks ago
-Output: 2025 WEEKS AGO
+Output: 2025 weeks ago
 
 Input:  before 3 days ago
-Output: BEFORE 3 DAYS AGO
+Output: before 3 days ago
 
 Input:  before 2025-08-30 08:30:20
-Output: BEFORE 2025-08-30 08:30:20
+Output: before 2025-08-30 08:30:20
 
 Input:  after 2025-10-05
-Output: AFTER 2025-10-05
+Output: after 2025-10-05
 
 Input:  2025-08-30 12:00 to 2025-09-18 14:30
-Output: 2025-08-30 12:00 TO 2025-09-18 14:30
+Output: 2025-08-30 12:00 to 2025-09-18 14:30
 
 Input:  this year
-Output: THIS YEAR
+Output: this year
 
 Input:  next tuesday
-Output: NEXT TUESDAY
+Output: next tuesday
 
 Input:  7 years from now
-Output: 7 YEARS FROM NOW
+Output: 7 years from now
 
 Input:  2025-01-01 12:00:00 for 3 days
-Output: 2025-01-01 12:00:00 FOR 3 DAYS
+Output: 2025-01-01 12:00:00 for 3 days
+
+Input:  2020-08-12 03:12:56.57
+Output: 2020-08-12 03:12:56.57
+
+Input:  2020-08-12T03:12:56[PST]
+Output: 2020-08-12T03:12:56[PST]
+
+Input:  2020-08-12 03:12:56
+Output: 2020-08-12 03:12:56
+
+Input:  2020-08-12 03:22
+Output: 2020-08-12 03:22
+
+Input:  2020-08-12 03
+Output: 2020-08-12 03
 
 Input:  2020-08-12
 Output: 2020-08-12
+
+Input:  2020-Q3
+Output: 2020-Q3
+
+Input:  2020-08-07-wK
+Logs:    {
+  severity: 'error',
+  message: 'Invalid token 2020-08-07-wk',
+  startIndex: 0,
+  endIndex: 13
+}
 
 Input:  2020-08
 Output: 2020-08
 
 Input:  today
-Output: TODAY
+Output: today
 
 Input:  yesterday
-Output: YESTERDAY
+Output: yesterday
 
 Input:  tomorrow
-Output: TOMORROW
+Output: tomorrow
 
 Input:  TODay,Yesterday, TOMORROW , ,TODay ,,
-Output: TODAY, YESTERDAY, TOMORROW, TODAY
+Output: today, yesterday, tomorrow, today
+Logs:    {
+  severity: 'warn',
+  message: 'Empty clause',
+  startIndex: 28,
+  endIndex: 29
+} {
+  severity: 'warn',
+  message: 'Empty clause',
+  startIndex: 36,
+  endIndex: 37
+}
 
 Input:  2010 to 2011, 2015 to 2016 , 2018, 2020
-Output: 2010 TO 2011, 2015 TO 2016, 2018, 2020
+Output: 2010 to 2011, 2015 to 2016, 2018, 2020
 
 Input:  next week
-Output: NEXT WEEK
+Output: next week
 
 Input:  now
-Output: NOW
+Output: now
 
 Input:  now to next month
-Output: NOW TO NEXT MONTH
+Output: now to next month
 
 Input:  null
-Output: NULL
-Errors:  { message: 'Invalid token NULL', startIndex: 0, endIndex: 4 }
+Output: null
 
 Input:  -null,
-Output: -NULL
-Errors:  { message: 'Invalid token -NULL', startIndex: 0, endIndex: 5 }
+Output: -null
 
 Input:   yyesterday
-Errors:  { message: 'Invalid token yyesterday', startIndex: 1, endIndex: 11 }
+Logs:    {
+  severity: 'error',
+  message: 'Invalid token yyesterday',
+  startIndex: 1,
+  endIndex: 11
+}
 
 Input:  before
 
 Input:  for
-Errors:  { message: 'Invalid token FOR', startIndex: 0, endIndex: 3 }
+Logs:    {
+  severity: 'error',
+  message: 'Invalid token for',
+  startIndex: 0,
+  endIndex: 3
+}
 
-Input:  7
-Errors:  { message: 'Invalid token 7', startIndex: 0, endIndex: 1 }
+Input:  12
+Logs:    {
+  severity: 'error',
+  message: 'Invalid token 12',
+  startIndex: 0,
+  endIndex: 2
+}
 
 Input:  from now
-Output: NOW
-Errors:  { message: 'Invalid token FROM', startIndex: 0, endIndex: 4 }
+Output: now
+Logs:    {
+  severity: 'error',
+  message: 'Invalid token from',
+  startIndex: 0,
+  endIndex: 4
+}
 
 Input:  2025-12-25 12:32:
 Output: 2025-12-25
-Errors:  { message: 'Invalid token 12:32:', startIndex: 11, endIndex: 17 }
+Logs:    {
+  severity: 'error',
+  message: 'Invalid token 12:32:',
+  startIndex: 11,
+  endIndex: 17
+}
+
+Input:  12:22
+Logs:    {
+  severity: 'error',
+  message: 'Invalid token 12:22',
+  startIndex: 0,
+  endIndex: 5
+}
 
 Input:  after 2025 seconds
-Errors:  { message: 'Invalid token ', startIndex: 6, endIndex: 18 }
+Logs:    {
+  severity: 'error',
+  message: 'Invalid token ',
+  startIndex: 6,
+  endIndex: 18
+}
 
 Input:
 

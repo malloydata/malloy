@@ -1,0 +1,30 @@
+{
+  "name": "@malloydata/malloy-tag",
+  "version": "0.0.237",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "homepage": "https://github.com/malloydata/malloy#readme",
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/malloydata/malloy"
+  },
+  "scripts": {
+    "test": "jest --config=../../jest.config.js",
+    "build-parser": "node scripts/build_parser.js",
+    "clean": "tsc --build --clean",
+    "build": "npm run build-parser && tsc --build",
+    "prepublishOnly": "npm run clean && npm run build"
+  },
+  "dependencies": {
+    "antlr4ts": "^0.5.0-alpha.4",
+    "assert": "^2.0.0",
+    "uuid": "^8.3.2"
+  },
+  "devDependencies": {
+    "antlr4ts-cli": "^0.5.0-alpha.4"
+  }
+}

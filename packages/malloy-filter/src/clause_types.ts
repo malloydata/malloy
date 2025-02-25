@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 export type NumberOperator = '<=' | '>=' | '!=' | '=' | '>' | '<';
 
 export type NumberValue = number;
@@ -8,11 +15,11 @@ export interface NumberCondition {
 }
 
 export interface NumberNull {
-  operator: 'NULL';
+  operator: 'null';
 }
 
 export interface NumberNotNull {
-  operator: 'NOTNULL';
+  operator: 'not_null';
 }
 
 export type NumberRangeOperator = '<=' | '>=' | '>' | '<';
@@ -35,13 +42,13 @@ export type StringConditionOperator =
   | 'starts'
   | 'ends'
   | 'contains'
-  | 'notStarts'
-  | 'notEnds'
-  | 'notContains'
-  | '~'
+  | 'not_starts'
+  | 'not_ends'
+  | 'not_contains'
   | '='
-  | '!~'
   | '!=';
+
+export type StringMatchOperator = '~' | '!~';
 
 export type StringValue = string;
 
@@ -50,68 +57,66 @@ export interface StringCondition {
   values: StringValue[];
 }
 
+export interface StringMatch {
+  operator: StringMatchOperator;
+  escaped_values: StringValue[];
+}
+
 export interface StringNull {
-  operator: 'NULL';
+  operator: 'null';
 }
 
 export interface StringNotNull {
-  operator: 'NOTNULL';
+  operator: 'not_null';
 }
 
 export interface StringEmpty {
-  operator: 'EMPTY';
+  operator: 'empty';
 }
 
 export interface StringNotEmpty {
-  operator: 'NOTEMPTY';
+  operator: 'not_empty';
 }
 
 export type StringClause =
   | StringCondition
+  | StringMatch
   | StringNull
   | StringNotNull
   | StringEmpty
   | StringNotEmpty;
 
 export type BooleanOperator =
-  | 'TRUE'
-  | 'FALSE'
-  | 'FALSEORNULL'
-  | 'NULL'
-  | 'NOTNULL';
+  | 'true'
+  | 'false'
+  | 'false_or_null'
+  | 'null'
+  | 'not_null';
 
 export interface BooleanClause {
   operator: BooleanOperator;
 }
 
-export interface FilterError {
+export type FilterLogSeverity = 'error' | 'warn';
+
+export interface FilterLog {
   message: string;
   startIndex: number;
   endIndex: number;
+  severity: FilterLogSeverity;
 }
 
 export interface BooleanParserResponse {
   clauses: BooleanClause[];
-  errors: FilterError[];
+  logs: FilterLog[];
 }
 
 export interface NumberParserResponse {
   clauses: NumberClause[];
-  errors: FilterError[];
+  logs: FilterLog[];
 }
-
-export type QuoteType =
-  | 'SINGLE'
-  | 'DOUBLE'
-  | 'BACKTICK'
-  | 'TRIPLESINGLE'
-  | 'TRIPLEDOUBLE'
-  | 'ESCAPEDSINGLE'
-  | 'ESCAPEDDOUBLE'
-  | 'ESCAPEDBACKTICK';
 
 export interface StringParserResponse {
   clauses: StringClause[];
-  errors: FilterError[];
-  quotes?: QuoteType[]; // List of quote types found in the string.
+  logs: FilterLog[];
 }

@@ -32,6 +32,7 @@
   },
   "dependencies": {
     "@malloydata/malloy": "^0.0.237",
+    "@malloydata/malloy-tag": "^0.0.237",
     "@tanstack/solid-virtual": "^3.10.4",
     "component-register": "^0.8.6",
     "lodash": "^4.17.20",
