@@ -183,4 +183,64 @@ describe('string filter to expr', () => {
     const ir = exprToStr(applied, {s: 's'});
     expect(ir).toEqual('{{s !like {"%a%"}} and {s !like {"%b%"}}}');
   });
+  test('single end', () => {
+    const applied = stringFilterToExpr('%a', s);
+    const ir = exprToStr(applied, {s: 's'});
+    expect(ir).toEqual('{s like {"%a"}}');
+  });
+  test('two end', () => {
+    const applied = stringFilterToExpr('%a,%b', s);
+    const ir = exprToStr(applied, {s: 's'});
+    expect(ir).toEqual('{{s like {"%a"}} or {s like {"%b"}}}');
+  });
+  test('single not_end', () => {
+    const applied = stringFilterToExpr('-%a', s);
+    const ir = exprToStr(applied, {s: 's'});
+    expect(ir).toEqual('{s !like {"%a"}}');
+  });
+  test('two not_end', () => {
+    const applied = stringFilterToExpr('-%a,-%b', s);
+    const ir = exprToStr(applied, {s: 's'});
+    expect(ir).toEqual('{{s !like {"%a"}} and {s !like {"%b"}}}');
+  });
+  test('single starts', () => {
+    const applied = stringFilterToExpr('a%', s);
+    const ir = exprToStr(applied, {s: 's'});
+    expect(ir).toEqual('{s like {"a%"}}');
+  });
+  test('two starts', () => {
+    const applied = stringFilterToExpr('a%,b%', s);
+    const ir = exprToStr(applied, {s: 's'});
+    expect(ir).toEqual('{{s like {"a%"}} or {s like {"b%"}}}');
+  });
+  test('single not_starts', () => {
+    const applied = stringFilterToExpr('-%a', s);
+    const ir = exprToStr(applied, {s: 's'});
+    expect(ir).toEqual('{s !like {"%a"}}');
+  });
+  test('two not_starts', () => {
+    const applied = stringFilterToExpr('-a%,-b%', s);
+    const ir = exprToStr(applied, {s: 's'});
+    expect(ir).toEqual('{{s !like {"a%"}} and {s !like {"b%"}}}');
+  });
+  test('single other', () => {
+    const applied = stringFilterToExpr('_', s);
+    const ir = exprToStr(applied, {s: 's'});
+    expect(ir).toEqual('{s like {"_"}}');
+  });
+  test('two other', () => {
+    const applied = stringFilterToExpr('_,__', s);
+    const ir = exprToStr(applied, {s: 's'});
+    expect(ir).toEqual('{{s like {"_"}} or {s like {"__"}}}');
+  });
+  test('single not_other', () => {
+    const applied = stringFilterToExpr('-_', s);
+    const ir = exprToStr(applied, {s: 's'});
+    expect(ir).toEqual('{s !like {"_"}}');
+  });
+  test('two not_other', () => {
+    const applied = stringFilterToExpr('-_,-__', s);
+    const ir = exprToStr(applied, {s: 's'});
+    expect(ir).toEqual('{{s !like {"_"}} and {s !like {"__"}}}');
+  });
 });
