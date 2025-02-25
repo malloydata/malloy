@@ -1321,7 +1321,7 @@ export class MalloyToAST
       this.contextError(
         pcx,
         'literal-string-newline',
-        'String cannot contain a new-line character'
+        'String cannot contain a new-line character. Use """..."""'
       );
     }
     const astStr = new ast.ExprString(str.slice(1, -1));
@@ -2210,6 +2210,15 @@ export class MalloyToAST
     pcx: parse.TickFilterStringContext
   ): ast.ExprFilterExpression {
     const fString = pcx.text.slice(1).trimStart(); // remove fSPACE
+    const lastChar = fString[fString.length - 1];
+    if (lastChar === '\n') {
+      const t3 = (fString[0] === "'" ? '"' : "'").repeat(3);
+      this.contextError(
+        pcx,
+        'literal-string-newline',
+        `Filter expression cannot contain a new-line character, use ${pcx.text[0]}${t3}...${t3}`
+      );
+    }
     const filterText = fString.slice(1, -1);
     const mfe = new ast.ExprFilterExpression(filterText);
     return this.astAt(mfe, pcx);
