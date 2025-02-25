@@ -32,6 +32,7 @@ import {
   warningMessage,
 } from './test-translator';
 import './parse-expects';
+import {sqlKey} from '../../model/sql_block';
 
 describe('model statements', () => {
   describe('table method', () => {
@@ -251,10 +252,14 @@ describe('error handling', () => {
     const needSchema = badTrans.translate();
     expect(needSchema.compileSQL).toBeDefined();
     if (needSchema.compileSQL) {
+      const key = sqlKey(
+        needSchema.compileSQL.connection,
+        needSchema.compileSQL.selectStr
+      );
       badTrans.update({
         errors: {
           compileSQL: {
-            [needSchema.compileSQL.name]: 'Nobody ZZZZ',
+            [key]: 'Nobody ZZZZ',
           },
         },
       });
@@ -304,7 +309,8 @@ describe('translation need error locations', () => {
     const req = m.translate().compileSQL;
     expect(req).toBeDefined();
     if (req) {
-      m.update({errors: {compileSQL: {[req.name]: 'Bad SQL!'}}});
+      const key = sqlKey(req.connection, req.selectStr);
+      m.update({errors: {compileSQL: {[key]: 'Bad SQL!'}}});
     }
     expect(m).not.toTranslate();
     const errList = m.problems();
@@ -568,7 +574,7 @@ describe('sql expressions', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.translator.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
       expect(m).toTranslate();
     }
@@ -583,7 +589,7 @@ describe('sql expressions', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.translator.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
       expect(m).toTranslate();
     }
@@ -598,7 +604,7 @@ describe('sql expressions', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.translator.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
       expect(m).toTranslate();
     }
@@ -614,7 +620,7 @@ describe('sql expressions', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.translator.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
       expect(m).toTranslate();
     }
@@ -629,7 +635,7 @@ describe('sql expressions', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
       expect(m).toTranslate();
     }
@@ -644,7 +650,7 @@ describe('sql expressions', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
       expect(m).toTranslate();
     }
@@ -659,7 +665,7 @@ describe('sql expressions', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
       expect(m).toLog(errorMessage('Cannot add view refinements to a source'));
     }
@@ -677,7 +683,7 @@ describe('sql expressions', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.translator.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
       expect(m).toTranslate();
     }
@@ -692,7 +698,7 @@ describe('sql expressions', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
       expect(m).toTranslate();
     }
@@ -707,7 +713,7 @@ describe('sql expressions', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
       expect(m).toTranslate();
     }
@@ -722,7 +728,7 @@ describe('sql expressions', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
       expect(m).toTranslate();
     }
@@ -738,7 +744,7 @@ describe('sql expressions', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
       expect(m).toLog(errorMessage('A raw query cannot be refined'));
     }
@@ -753,7 +759,7 @@ describe('sql expressions', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
       expect(m).toLog(errorMessage('Cannot add view refinements to a source'));
     }

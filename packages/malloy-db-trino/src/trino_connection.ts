@@ -44,6 +44,8 @@ import {
   TinyParser,
   isRepeatedRecord,
   TestableConnection,
+  SQLSourceRequest,
+  sqlKey,
 } from '@malloydata/malloy';
 
 import {BaseConnection} from '@malloydata/malloy/connection';
@@ -355,8 +357,14 @@ export abstract class TrinoPrestoConnection
     return structDef;
   }
 
-  async fetchSelectSchema(sqlRef: SQLSourceDef): Promise<SQLSourceDef> {
-    const structDef: SQLSourceDef = {...sqlRef, fields: []};
+  async fetchSelectSchema(sqlRef: SQLSourceRequest): Promise<SQLSourceDef> {
+    const structDef: SQLSourceDef = {
+      type: 'sql_select',
+      ...sqlRef,
+      dialect: this.dialectName,
+      fields: [],
+      name: sqlKey(sqlRef.connection, sqlRef.selectStr),
+    };
     await this.fillStructDefForSqlBlockSchema(sqlRef.selectStr, structDef);
     return structDef;
   }

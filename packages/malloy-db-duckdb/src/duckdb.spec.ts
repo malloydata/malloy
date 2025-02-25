@@ -23,7 +23,7 @@
 
 import {DuckDBCommon} from './duckdb_common';
 import {DuckDBConnection} from './duckdb_connection';
-import {SQLSourceDef, StructDef, mkArrayDef} from '@malloydata/malloy';
+import {SQLSourceRequest, StructDef, mkArrayDef} from '@malloydata/malloy';
 import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
 
 const [describe] = describeIfDatabaseAvailable(['duckdb']);
@@ -228,12 +228,8 @@ const makeStructDef = (): StructDef => {
 //
 
 // Uses string value for table
-const SQL_BLOCK_1: SQLSourceDef = {
-  type: 'sql_select',
-  name: 'block1',
-  dialect: 'duckdb',
+const SQL_BLOCK_1: SQLSourceRequest = {
   connection: 'duckdb',
-  fields: [],
   selectStr: `
 SELECT
 created_at,
@@ -250,12 +246,8 @@ FROM "inventory_items.parquet"
 };
 
 // Uses read_parquet() for table
-const SQL_BLOCK_2: SQLSourceDef = {
-  type: 'sql_select',
-  name: 'block2',
-  dialect: 'duckdb',
+const SQL_BLOCK_2: SQLSourceRequest = {
   connection: 'duckdb',
-  fields: [],
   selectStr: `
 SELECT
 created_at,

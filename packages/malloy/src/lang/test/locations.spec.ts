@@ -144,7 +144,7 @@ describe('source locations', () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.update({
-        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+        compileSQL: getSelectOneStruct(compileSql),
       });
       expect(m).toTranslate();
       const na = getExplore(m.modelDef, 'na');

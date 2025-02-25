@@ -42,6 +42,8 @@ import {
   mkArrayDef,
   AtomicFieldDef,
   ArrayDef,
+  SQLSourceRequest,
+  sqlKey,
 } from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 
@@ -400,8 +402,14 @@ export class SnowflakeConnection
     return structDef;
   }
 
-  async fetchSelectSchema(sqlRef: SQLSourceDef): Promise<SQLSourceDef> {
-    const structDef = {...sqlRef, fields: []};
+  async fetchSelectSchema(sqlRef: SQLSourceRequest): Promise<SQLSourceDef> {
+    const structDef: SQLSourceDef = {
+      type: 'sql_select',
+      ...sqlRef,
+      dialect: this.dialectName,
+      fields: [],
+      name: sqlKey(sqlRef.connection, sqlRef.selectStr),
+    };
     // create temp table with same schema as the query
     const tempTableName = this.getTempViewName(sqlRef.selectStr);
     this.runSQL(

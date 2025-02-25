@@ -8,6 +8,7 @@ import {
   TableSourceDef,
 } from '../model/malloy_types';
 import {Dialect} from '../dialect';
+import {SQLSourceRequest} from '../lang/translate-response';
 
 /**
  * Options passed to fetchSchema methods.
@@ -48,7 +49,7 @@ export interface InfoConnection {
    */
 
   fetchSchemaForSQLStruct(
-    sentence: SQLSourceDef,
+    sentence: SQLSourceRequest,
     options: FetchSchemaOptions
   ): Promise<
     | {structDef: SQLSourceDef; error?: undefined}

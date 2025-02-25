@@ -52,6 +52,8 @@ import {
   toAsyncGenerator,
   StructDef,
   SQLSourceDef,
+  SQLSourceRequest,
+  sqlKey,
 } from '@malloydata/malloy';
 import {BaseConnection, TableMetadata} from '@malloydata/malloy/connection';
 // eslint-disable-next-line no-restricted-imports
@@ -549,12 +551,17 @@ export class BigQueryConnection
   }
 
   async fetchSelectSchema(
-    sqlSource: SQLSourceDef
+    sqlSource: SQLSourceRequest
   ): Promise<SQLSourceDef | string> {
     try {
-      const ret: SQLSourceDef = {...sqlSource};
-      ret.fields = [];
-      this.addFieldsToStructDef(ret, await this.getSQLBlockSchema(sqlSource));
+      const ret: SQLSourceDef = {
+        type: 'sql_select',
+        ...sqlSource,
+        dialect: this.dialectName,
+        fields: [],
+        name: sqlKey(sqlSource.connection, sqlSource.selectStr),
+      };
+      this.addFieldsToStructDef(ret, await this.getSQLBlockSchema(ret));
       return ret;
     } catch (error) {
       return error.message;

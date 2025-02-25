@@ -36,6 +36,8 @@ import {
   SQLSourceDef,
   TableSourceDef,
   mkFieldDef,
+  SQLSourceRequest,
+  sqlKey,
 } from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 
@@ -135,9 +137,15 @@ export abstract class DuckDBCommon
   ): AsyncIterableIterator<QueryDataRow>;
 
   async fetchSelectSchema(
-    sqlRef: SQLSourceDef
+    sqlRef: SQLSourceRequest
   ): Promise<SQLSourceDef | string> {
-    const sqlDef = {...sqlRef};
+    const sqlDef: SQLSourceDef = {
+      type: 'sql_select',
+      ...sqlRef,
+      dialect: this.dialectName,
+      fields: [],
+      name: sqlKey(sqlRef.connection, sqlRef.selectStr),
+    };
     await this.schemaFromQuery(
       `DESCRIBE SELECT * FROM (${sqlRef.selectStr})`,
       sqlDef
