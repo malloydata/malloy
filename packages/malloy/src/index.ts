@@ -224,4 +224,4 @@ export type {
 } from './connection/types';
 export {toAsyncGenerator} from './connection_utils';
 export {modelDefToModelInfo} from './to_stable';
-export {annotationToTag} from './annotation';
+export {annotationToTag, annotationToTaglines} from './annotation';
