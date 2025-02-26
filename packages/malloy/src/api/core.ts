@@ -229,11 +229,7 @@ export function compileQuery(
   request: Malloy.CompileQueryRequest,
   state?: CompileModelState
 ): Malloy.CompileQueryResponse {
-  state ??= newCompileQueryState(
-    request.query,
-    request.model_url,
-    request.compiler_needs
-  );
+  state ??= newCompileQueryState(request);
   return statedCompileQuery(state);
 }
 
@@ -262,7 +258,7 @@ export function updateCompileModelState(
   performUpdate(state, update);
 }
 
-export function newCompileModelState(
+function _newCompileModelState(
   modelURL: string,
   compilerNeeds?: Malloy.CompilerNeeds,
   extendURL?: string
@@ -276,7 +272,7 @@ export function newCompileModelState(
     compilerNeeds?.files?.some(f => f.url === modelURL) ?? false;
   if (extendURL) {
     return {
-      extending: newCompileModelState(extendURL, compilerNeeds),
+      extending: _newCompileModelState(extendURL, compilerNeeds),
       translator,
       done: false,
       hasSource,
@@ -288,6 +284,26 @@ export function newCompileModelState(
       hasSource,
     };
   }
+}
+
+export function newCompileModelState(
+  request: Malloy.CompileModelRequest
+): CompileModelState {
+  return _newCompileModelState(
+    request.model_url,
+    request.compiler_needs,
+    request.extend_model_url
+  );
+}
+
+export function newCompileSourceState(
+  request: Malloy.CompileSourceRequest
+): CompileModelState {
+  return _newCompileModelState(
+    request.model_url,
+    request.compiler_needs,
+    request.extend_model_url
+  );
 }
 
 // function hasNeeds(needs: Malloy.CompilerNeeds | undefined): boolean {
@@ -371,7 +387,7 @@ function _compileModel(
   extendURL?: string,
   state?: CompileModelState
 ): CompileResponse {
-  state ??= newCompileModelState(modelURL, compilerNeeds, extendURL);
+  state ??= _newCompileModelState(modelURL, compilerNeeds, extendURL);
   return _statedCompileModel(state);
 }
 
@@ -379,11 +395,7 @@ export function compileModel(
   request: Malloy.CompileModelRequest,
   state?: CompileModelState
 ): Malloy.CompileModelResponse {
-  state ??= newCompileModelState(
-    request.model_url,
-    request.compiler_needs,
-    request.extend_model_url
-  );
+  state ??= newCompileModelState(request);
   return statedCompileModel(state);
 }
 
@@ -422,13 +434,11 @@ export function extractSource(result: CompileResponse, name: string) {
 // Given a URL to a model and the name of a source, run the indexing query
 
 export function newCompileQueryState(
-  query: Malloy.Query,
-  modelURL: string,
-  compilerNeeds?: Malloy.CompilerNeeds
+  request: Malloy.CompileQueryRequest
 ): CompileModelState {
-  const queryMalloy = Malloy.queryToMalloy(query);
+  const queryMalloy = Malloy.queryToMalloy(request.query);
   const needs = {
-    ...(compilerNeeds ?? {}),
+    ...(request.compiler_needs ?? {}),
   };
   const queryURL = 'internal://query.malloy';
   needs.files = [
@@ -438,7 +448,7 @@ export function newCompileQueryState(
     },
     ...(needs.files ?? []),
   ];
-  return newCompileModelState(queryURL, needs, modelURL);
+  return _newCompileModelState(queryURL, needs, request.model_url);
 }
 
 export function statedCompileQuery(

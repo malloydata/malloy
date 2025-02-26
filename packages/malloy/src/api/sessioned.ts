@@ -108,16 +108,12 @@ class SessionManager {
   }
 
   private newCompileModelSession(
+    request: Malloy.CompileModelRequest,
     sessionInfo: SessionInfoForCompileModel,
-    compilerNeeds?: Malloy.CompilerNeeds,
     options?: OptionsBase
   ): SessionStateForCompileModel {
     const expires = options?.ttl ? this.getExpires(options.ttl) : undefined;
-    const state = Core.newCompileModelState(
-      sessionInfo.modelURL,
-      compilerNeeds,
-      undefined
-    );
+    const state = Core.newCompileModelState(request);
     return {
       type: 'compile_model',
       sessionInfo,
@@ -127,16 +123,12 @@ class SessionManager {
   }
 
   private newCompileSourceSession(
+    request: Malloy.CompileSourceRequest,
     sessionInfo: SessionInfoForCompileSource,
-    compilerNeeds?: Malloy.CompilerNeeds,
     options?: OptionsBase
   ): SessionStateForCompileSource {
     const expires = options?.ttl ? this.getExpires(options.ttl) : undefined;
-    const state = Core.newCompileModelState(
-      sessionInfo.modelURL,
-      compilerNeeds,
-      undefined
-    );
+    const state = Core.newCompileSourceState(request);
     return {
       type: 'compile_source',
       sessionInfo,
@@ -146,16 +138,12 @@ class SessionManager {
   }
 
   private newCompileQuerySession(
+    request: Malloy.CompileQueryRequest,
     sessionInfo: SessionInfoForCompileQuery,
-    compilerNeeds?: Malloy.CompilerNeeds,
     options?: OptionsBase
   ): SessionStateForCompileQuery {
     const expires = options?.ttl ? this.getExpires(options.ttl) : undefined;
-    const state = Core.newCompileQueryState(
-      sessionInfo.query,
-      sessionInfo.modelURL,
-      compilerNeeds
-    );
+    const state = Core.newCompileQueryState(request);
     return {
       type: 'compile_query',
       sessionInfo,
@@ -192,11 +180,7 @@ class SessionManager {
     if (session) {
       Core.updateCompileModelState(session.state, request.compiler_needs);
     } else {
-      session = this.newCompileModelSession(
-        sessionInfo,
-        request.compiler_needs,
-        options
-      );
+      session = this.newCompileModelSession(request, sessionInfo, options);
       this.sessions.push(session);
     }
     const result = Core.statedCompileModel(session.state);
@@ -229,11 +213,7 @@ class SessionManager {
     if (session) {
       Core.updateCompileModelState(session.state, request.compiler_needs);
     } else {
-      session = this.newCompileSourceSession(
-        sessionInfo,
-        request.compiler_needs,
-        options
-      );
+      session = this.newCompileSourceSession(request, sessionInfo, options);
       this.sessions.push(session);
     }
     const result = Core.statedCompileSource(session.state, request.name);
@@ -267,11 +247,7 @@ class SessionManager {
     if (session) {
       Core.updateCompileModelState(session.state, request.compiler_needs);
     } else {
-      session = this.newCompileQuerySession(
-        sessionInfo,
-        request.compiler_needs,
-        options
-      );
+      session = this.newCompileQuerySession(request, sessionInfo, options);
       this.sessions.push(session);
     }
     const result = Core.statedCompileQuery(session.state);
