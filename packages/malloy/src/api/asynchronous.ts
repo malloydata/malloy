@@ -7,13 +7,13 @@
 
 import * as Malloy from '@malloydata/malloy-interfaces';
 import * as Core from './core';
-import {InfoConnection, LookupConnection} from './connection';
+import {InfoConnection, Connection, LookupConnection} from './connection';
 import {URLReader} from '../runtime_types';
 import {CacheManager} from '../malloy';
 
 async function fetchNeeds(
   needs: Malloy.CompilerNeeds | undefined,
-  fetchers: CompilerNeedFetch
+  fetchers: CompilerNeedFetch<InfoConnection>
 ): Promise<Malloy.CompilerNeeds> {
   if (needs === undefined) {
     throw new Error(
@@ -113,15 +113,15 @@ async function fetchNeeds(
   return result;
 }
 
-export interface CompilerNeedFetch {
-  connections: LookupConnection<InfoConnection>;
+export interface CompilerNeedFetch<T extends InfoConnection> {
+  connections: LookupConnection<T>;
   urls: URLReader;
   cacheManager?: CacheManager;
 }
 
 export async function compileModel(
   request: Malloy.CompileModelRequest,
-  fetchers: CompilerNeedFetch
+  fetchers: CompilerNeedFetch<InfoConnection>
 ): Promise<Malloy.CompileModelResponse> {
   const state = Core.newCompileModelState(request);
   // eslint-disable-next-line no-constant-condition
@@ -136,13 +136,83 @@ export async function compileModel(
 }
 
 export async function compileSource(
-  request: Malloy.CompileSourceRequest
+  request: Malloy.CompileSourceRequest,
+  fetchers: CompilerNeedFetch<InfoConnection>
 ): Promise<Malloy.CompileSourceResponse> {
-  return Core.compileSource(request);
+  const state = Core.newCompileSourceState(request);
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const result = Core.statedCompileSource(state, request.name);
+    if (result.source) {
+      return result;
+    }
+    const needs = await fetchNeeds(result.compiler_needs, fetchers);
+    Core.updateCompileModelState(state, needs);
+  }
 }
 
 export async function compileQuery(
-  request: Malloy.CompileQueryRequest
+  request: Malloy.CompileQueryRequest,
+  fetchers: CompilerNeedFetch<InfoConnection>
 ): Promise<Malloy.CompileQueryResponse> {
-  return Core.compileQuery(request);
+  const state = Core.newCompileQueryState(request);
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const result = Core.statedCompileQuery(state);
+    if (result.result) {
+      return result;
+    }
+    const needs = await fetchNeeds(result.compiler_needs, fetchers);
+    Core.updateCompileModelState(state, needs);
+  }
+}
+
+export async function runQuery(
+  request: Malloy.CompileQueryRequest,
+  fetchers: CompilerNeedFetch<Connection>
+): Promise<Malloy.CompileQueryResponse> {
+  const compiled = await compileQuery(request, fetchers);
+  if (compiled.result === undefined) {
+    return compiled;
+  }
+  const defaultURL = request.model_url;
+  if (compiled.result.sql === undefined) {
+    return {
+      logs: [
+        ...(compiled.logs ?? []),
+        {
+          url: defaultURL,
+          severity: 'error',
+          message: 'Internal error: Compiler did not generate SQL',
+          range: Core.DEFAULT_LOG_RANGE,
+        },
+      ],
+    };
+  }
+  try {
+    const connection = await fetchers.connections.lookupConnection(
+      compiled.result.connection_name
+    );
+    const data = await connection.runSQL(compiled.result.sql);
+    return {
+      ...compiled,
+      result: {
+        ...compiled.result,
+        data,
+      },
+    };
+  } catch (error) {
+    return {
+      ...compiled,
+      logs: [
+        ...(compiled.logs ?? []),
+        {
+          url: defaultURL,
+          severity: 'error',
+          message: `Error running SQL: ${error.message}`,
+          range: Core.DEFAULT_LOG_RANGE,
+        },
+      ],
+    };
+  }
 }

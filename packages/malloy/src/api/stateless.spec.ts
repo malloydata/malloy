@@ -314,6 +314,7 @@ describe('api', () => {
       });
       const expected: Malloy.CompileQueryResponse = {
         result: {
+          connection_name: 'connection',
           sql: `SELECT \n\
    base."carrier" as "carrier"
 FROM flights as base

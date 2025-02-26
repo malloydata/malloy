@@ -6,3 +6,4 @@
  */
 export * as sessioned from './sessioned';
 export * as stateless from './stateless';
+export * as asynchronous from './asynchronous';

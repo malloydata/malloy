@@ -133,6 +133,7 @@ export const test: Malloy.ModelInfo = {
 };
 
 export const res: Malloy.Result = {
+  connection_name: 'foo',
   data: {
     kind: 'table',
     rows: [

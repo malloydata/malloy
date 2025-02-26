@@ -386,7 +386,7 @@ export function _statedCompileModel(state: CompileModelState): CompileResponse {
   }
 }
 
-const DEFAULT_LOG_RANGE: Malloy.DocumentRange = {
+export const DEFAULT_LOG_RANGE: Malloy.DocumentRange = {
   start: {
     line: 0,
     character: 0,
@@ -530,6 +530,7 @@ export function statedCompileQuery(
         result: {
           sql: translatedQuery.sql,
           schema,
+          connection_name: translatedQuery.connectionName,
         },
       };
     } catch (error) {

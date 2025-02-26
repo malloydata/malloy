@@ -373,6 +373,7 @@ export type Result = {
   data?: Data;
   schema: Schema;
   sql?: string;
+  connection_name: string;
 };
 export type Row = {
   cells: Array<Cell>;

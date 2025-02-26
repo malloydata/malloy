@@ -14,7 +14,7 @@ export interface InfoConnection {
 }
 
 export interface Connection extends InfoConnection {
-  runSQL(sql: string): Promise<Malloy.Result>;
+  runSQL(sql: string): Promise<Malloy.Data>;
 }
 
 export interface LookupConnection<T extends InfoConnection> {

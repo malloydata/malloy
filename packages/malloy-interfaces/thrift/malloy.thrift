@@ -479,6 +479,7 @@ struct Result {
   1: optional Data data,
   2: required Schema schema,
   3: optional string sql,
+  4: required string connection_name,
 }
 
 /*
