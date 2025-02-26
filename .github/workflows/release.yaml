@@ -45,6 +45,7 @@ jobs:
           git config --global user.name "Malloy CI Bot"
           # Build
           npm --no-audit --no-fund ci --loglevel error
+          npm run build
           # Publish
           PACKAGES=$(jq -r '.workspaces.packages[]' ./package.json | xargs echo)
           echo Publishing $PACKAGES
