@@ -167,6 +167,10 @@ class SessionManager {
     );
   }
 
+  public hasErrors(log: Malloy.LogMessage[] | undefined) {
+    return log?.some(m => m.severity === 'error') ?? false;
+  }
+
   public compileModel(
     request: Malloy.CompileModelRequest,
     options?: OptionsBase
@@ -184,7 +188,7 @@ class SessionManager {
       this.sessions.push(session);
     }
     const result = Core.statedCompileModel(session.state);
-    if (result.model) {
+    if (result.model || this.hasErrors(result.logs)) {
       this.killSession(sessionInfo);
     }
     return result;
@@ -217,7 +221,7 @@ class SessionManager {
       this.sessions.push(session);
     }
     const result = Core.statedCompileSource(session.state, request.name);
-    if (result.source) {
+    if (result.source || this.hasErrors(result.logs)) {
       this.killSession(sessionInfo);
     }
     return result;
@@ -251,7 +255,7 @@ class SessionManager {
       this.sessions.push(session);
     }
     const result = Core.statedCompileQuery(session.state);
-    if (result.result) {
+    if (result.result || this.hasErrors(result.logs)) {
       this.killSession(sessionInfo);
     }
     return result;

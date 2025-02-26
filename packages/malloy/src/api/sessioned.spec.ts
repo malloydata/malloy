@@ -296,6 +296,63 @@ ORDER BY 1 asc NULLS LAST
         expect(result).toMatchObject(expected);
       });
     });
+    test('getting an error should kill session', () => {
+      let result = compileModel({
+        model_url: 'file://test.malloy',
+        compiler_needs: {
+          files: [
+            {
+              url: 'file://test.malloy',
+              contents:
+                "source: flights is connection.table('flights') extend { dimension: x is does_not_exist }",
+            },
+          ],
+          table_schemas: [
+            {
+              connection_name: 'connection',
+              name: 'flights',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'carrier',
+                    type: {kind: 'string_type'},
+                  },
+                ],
+              },
+            },
+          ],
+          connections: [{name: 'connection', dialect: 'duckdb'}],
+        },
+      });
+      let expected: Malloy.CompileModelResponse = {
+        logs: [
+          {
+            url: 'file://test.malloy',
+            severity: 'error',
+            message: "'does_not_exist' is not defined",
+            range: {
+              start: {line: 0, character: 72},
+              end: {line: 0, character: 86},
+            },
+          },
+        ],
+      };
+      expect(result).toMatchObject(expected);
+      result = compileModel({
+        model_url: 'file://test.malloy',
+      });
+      expected = {
+        compiler_needs: {
+          files: [
+            {
+              url: 'file://test.malloy',
+            },
+          ],
+        },
+      };
+      expect(result).toMatchObject(expected);
+    });
     test('sessions should be cleared when they successfully return a result', () => {
       let result = compileModel({
         model_url: 'file://test.malloy',
