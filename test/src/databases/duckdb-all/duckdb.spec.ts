@@ -101,6 +101,17 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
     await expect(query).malloyResultMatches(runtime, {n1: 1.234, n2: 1.234});
   });
 
+  it('handles bigints', async () => {
+    const query = `
+    run: duckdb.sql("select 9223372036854775807 as big") -> {
+      select: *
+  }
+    `;
+    await expect(query).malloyResultMatches(runtime, {
+      big: 9223372036854775807n,
+    });
+  });
+
   it('dayname', async () => {
     await expect(`
       run: duckdb.sql('select 1') -> {

@@ -37,7 +37,7 @@ export class ExprNumber extends ExpressionDef {
   }
 
   constantExpression(): ExprValue {
-    const n = Number(this.n);
+    const n = typeof this.n === 'bigint' ? this.n : Number(this.n);
     const dataType: NumberTypeDef = Number.isNaN(n)
       ? {type: 'number'}
       : {type: 'number', numberType: Number.isInteger(n) ? 'integer' : 'float'};

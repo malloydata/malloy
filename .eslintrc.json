@@ -51,9 +51,10 @@
       }
     },
     {
-      "files": ["**/vite.config.*", "scripts/**"],
+      "files": ["**/vite.config.*", "scripts/**", "test/**"],
       "rules": {
-        "node/no-unpublished-import": "off"
+        "node/no-unpublished-import": "off",
+        "node/no-extraneous-import": "off"
       }
     }
   ]

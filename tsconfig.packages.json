@@ -18,7 +18,7 @@
     "esModuleInterop": true,
     "moduleResolution": "node",
     "isolatedModules": true,
-    "target": "es2019",
+    "target": "es2020",
     "experimentalDecorators": true,
     "sourceMap": true,
     "useUnknownInCatchVariables": false,
