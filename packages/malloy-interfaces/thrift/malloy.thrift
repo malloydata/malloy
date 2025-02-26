@@ -564,6 +564,7 @@ struct CompilerNeeds {
 
 struct CompileModelRequest {
   1: required string model_url,
+  2: optional string extend_model_url,
 
   9: optional CompilerNeeds compiler_needs,
 }
@@ -579,6 +580,7 @@ struct CompileModelResponse {
 struct CompileSourceRequest {
   1: required string model_url,
   2: required string name,
+  3: optional string extend_model_url,
 
   9: optional CompilerNeeds compiler_needs,
 }

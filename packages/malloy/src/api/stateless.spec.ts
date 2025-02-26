@@ -60,6 +60,74 @@ describe('api', () => {
       };
       expect(result).toMatchObject(expected);
     });
+    test('compile model with model extension', () => {
+      const result = compileModel({
+        model_url: 'file://test.malloy',
+        extend_model_url: 'file://base.malloy',
+        compiler_needs: {
+          table_schemas: [
+            {
+              connection_name: 'connection',
+              name: 'flights',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'carrier',
+                    type: {kind: 'string_type'},
+                  },
+                ],
+              },
+            },
+          ],
+          files: [
+            {
+              url: 'file://base.malloy',
+              contents: "source: flights_base is connection.table('flights')",
+            },
+            {
+              url: 'file://test.malloy',
+              contents: 'source: flights is flights_base',
+            },
+          ],
+          connections: [{name: 'connection', dialect: 'duckdb'}],
+        },
+      });
+      const expected: Malloy.CompileModelResponse = {
+        model: {
+          entries: [
+            {
+              kind: 'source',
+              name: 'flights_base',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'carrier',
+                    type: {kind: 'string_type'},
+                  },
+                ],
+              },
+            },
+            {
+              kind: 'source',
+              name: 'flights',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'carrier',
+                    type: {kind: 'string_type'},
+                  },
+                ],
+              },
+            },
+          ],
+          anonymous_queries: [],
+        },
+      };
+      expect(result).toMatchObject(expected);
+    });
     test('compile model with sql dependency', () => {
       const result = compileModel({
         model_url: 'file://test.malloy',

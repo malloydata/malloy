@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {compileModel} from './sessioned';
+import {compileModel, compileQuery, compileSource} from './sessioned';
 import * as Malloy from '@malloydata/malloy-interfaces';
 
 describe('api', () => {
@@ -86,6 +86,209 @@ describe('api', () => {
             },
           ],
           anonymous_queries: [],
+        },
+      };
+      expect(result).toMatchObject(expected);
+    });
+    test('compile source basic test', () => {
+      let result = compileSource({
+        model_url: 'file://test.malloy',
+        name: 'flights',
+        compiler_needs: {
+          files: [
+            {
+              url: 'file://test.malloy',
+              contents: "source: flights is connection.table('flights')",
+            },
+          ],
+        },
+      });
+      let expected: Malloy.CompileSourceResponse = {
+        compiler_needs: {
+          table_schemas: [
+            {
+              connection_name: 'connection',
+              name: 'flights',
+            },
+          ],
+          connections: [{name: 'connection'}],
+        },
+      };
+      expect(result).toMatchObject(expected);
+      result = compileSource({
+        model_url: 'file://test.malloy',
+        name: 'flights',
+        compiler_needs: {
+          table_schemas: [
+            {
+              connection_name: 'connection',
+              name: 'flights',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'carrier',
+                    type: {kind: 'string_type'},
+                  },
+                ],
+              },
+            },
+          ],
+          connections: [{name: 'connection', dialect: 'duckdb'}],
+        },
+      });
+      expected = {
+        source: {
+          name: 'flights',
+          schema: {
+            fields: [
+              {
+                kind: 'dimension',
+                name: 'carrier',
+                type: {kind: 'string_type'},
+              },
+            ],
+          },
+        },
+      };
+      expect(result).toMatchObject(expected);
+    });
+  });
+  describe('compile query', () => {
+    test('compile query with table dependency', () => {
+      const query: Malloy.Query = {
+        definition: {
+          kind: 'arrow',
+          source_reference: {name: 'flights'},
+          view: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'group_by',
+                field: {
+                  expression: {kind: 'field_reference', name: 'carrier'},
+                },
+              },
+            ],
+          },
+        },
+      };
+      let result = compileQuery({
+        model_url: 'file://test.malloy',
+        query,
+      });
+      let expected: Malloy.CompileQueryResponse = {
+        compiler_needs: {
+          files: [
+            {
+              url: 'file://test.malloy',
+            },
+          ],
+        },
+      };
+      expect(result).toMatchObject(expected);
+      result = compileQuery({
+        model_url: 'file://test.malloy',
+        query,
+        compiler_needs: {
+          files: [
+            {
+              url: 'file://test.malloy',
+              contents: "source: flights is connection.table('flights')",
+            },
+          ],
+        },
+      });
+      expected = {
+        compiler_needs: {
+          table_schemas: [
+            {
+              connection_name: 'connection',
+              name: 'flights',
+            },
+          ],
+          connections: [{name: 'connection'}],
+        },
+      };
+      expect(result).toMatchObject(expected);
+      result = compileQuery({
+        model_url: 'file://test.malloy',
+        query,
+        compiler_needs: {
+          table_schemas: [
+            {
+              connection_name: 'connection',
+              name: 'flights',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'carrier',
+                    type: {kind: 'string_type'},
+                  },
+                ],
+              },
+            },
+          ],
+          connections: [{name: 'connection', dialect: 'duckdb'}],
+        },
+      });
+      expected = {
+        result: {
+          sql: `SELECT \n\
+   base."carrier" as "carrier"
+FROM flights as base
+GROUP BY 1
+ORDER BY 1 asc NULLS LAST
+`,
+          schema: {
+            fields: [
+              {
+                kind: 'dimension',
+                name: 'carrier',
+                type: {kind: 'string_type'},
+              },
+            ],
+          },
+        },
+      };
+      expect(result).toMatchObject(expected);
+    });
+  });
+  describe('ttl', () => {
+    test('making a different request should purge expired sessions', () => {
+      let result = compileModel(
+        {
+          model_url: 'file://test.malloy',
+        },
+        {
+          // This is in the past...
+          ttl: new Date(Date.now() - 1000),
+        }
+      );
+      let expected: Malloy.CompileModelResponse = {
+        compiler_needs: {
+          files: [
+            {
+              url: 'file://test.malloy',
+            },
+          ],
+        },
+      };
+      expect(result).toMatchObject(expected);
+      compileModel({
+        model_url: 'file://some_other_model.malloy',
+      });
+      result = compileModel({
+        model_url: 'file://test.malloy',
+      });
+      expected = {
+        compiler_needs: {
+          files: [
+            {
+              url: 'file://test.malloy',
+            },
+          ],
         },
       };
       expect(result).toMatchObject(expected);

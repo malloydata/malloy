@@ -99,6 +99,7 @@ export type CellWithArrayCell = {kind: 'array_cell'} & ArrayCell;
 export type CellWithTableCell = {kind: 'table_cell'} & TableCell;
 export type CompileModelRequest = {
   model_url: string;
+  extend_model_url?: string;
   compiler_needs?: CompilerNeeds;
 };
 export type CompileModelResponse = {
@@ -117,6 +118,7 @@ export type CompileQueryResponse = {
 export type CompileSourceRequest = {
   model_url: string;
   name: string;
+  extend_model_url?: string;
   compiler_needs?: CompilerNeeds;
 };
 export type CompileSourceResponse = {

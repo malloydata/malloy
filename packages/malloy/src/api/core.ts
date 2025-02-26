@@ -226,40 +226,15 @@ export type CompileResponse =
     };
 
 export function compileQuery(
-  request: Malloy.CompileQueryRequest
+  request: Malloy.CompileQueryRequest,
+  state?: CompileModelState
 ): Malloy.CompileQueryResponse {
-  const queryMalloy = Malloy.queryToMalloy(request.query);
-  const needs = {
-    ...request.compiler_needs,
-  };
-  const queryURL = 'internal://query.malloy';
-  needs.files = [
-    {
-      url: queryURL,
-      contents: queryMalloy,
-    },
-    ...(needs.files ?? []),
-  ];
-  const result = _compileModel(queryURL, needs, request.model_url);
-  if (result.model) {
-    const queries = result.modelDef.queryList;
-    if (queries.length === 0) {
-      throw new Error('No queries found');
-    }
-    const index = queries.length - 1;
-    const query = result.modelDef.queryList[index];
-    const schema = result.model.anonymous_queries[index].schema;
-    const queryModel = new QueryModel(result.modelDef);
-    const translatedQuery = queryModel.compileQuery(query);
-    return {
-      result: {
-        sql: translatedQuery.sql,
-        schema,
-      },
-    };
-  } else {
-    return {compiler_needs: result.compilerNeeds};
-  }
+  state ??= newCompileQueryState(
+    request.query,
+    request.model_url,
+    request.compiler_needs
+  );
+  return statedCompileQuery(state);
 }
 
 export interface CompileModelState {
@@ -278,13 +253,13 @@ export function updateCompileModelState(
     if (state.extending) {
       performUpdate(state.extending, update);
     }
+    if (!state.hasSource) {
+      state.hasSource =
+        needs?.files?.some(f => f.url === state.translator.sourceURL) ?? false;
+    }
   }
   const update = compilerNeedsToUpdate(needs);
   performUpdate(state, update);
-  if (!state.hasSource) {
-    state.hasSource =
-      needs?.files?.some(f => f.url === state.translator.sourceURL) ?? false;
-  }
 }
 
 export function newCompileModelState(
@@ -328,6 +303,13 @@ export function statedCompileModel(
   state: CompileModelState
 ): Malloy.CompileModelResponse {
   return wrapResponse(_statedCompileModel(state));
+}
+
+export function statedCompileSource(
+  state: CompileModelState,
+  name: string
+): Malloy.CompileSourceResponse {
+  return extractSource(_statedCompileModel(state), name);
 }
 
 export function _statedCompileModel(state: CompileModelState): CompileResponse {
@@ -397,14 +379,22 @@ export function compileModel(
   request: Malloy.CompileModelRequest,
   state?: CompileModelState
 ): Malloy.CompileModelResponse {
-  state ??= newCompileModelState(request.model_url, request.compiler_needs);
+  state ??= newCompileModelState(
+    request.model_url,
+    request.compiler_needs,
+    request.extend_model_url
+  );
   return statedCompileModel(state);
 }
 
 export function compileSource(
   request: Malloy.CompileSourceRequest
 ): Malloy.CompileSourceResponse {
-  const result = _compileModel(request.model_url, request.compiler_needs);
+  const result = _compileModel(
+    request.model_url,
+    request.compiler_needs,
+    request.extend_model_url
+  );
   return extractSource(result, request.name);
 }
 
@@ -430,3 +420,48 @@ export function extractSource(result: CompileResponse, name: string) {
 // Given a StableQueryDef and the URL to a model, validate it and return a list of StableErrors
 
 // Given a URL to a model and the name of a source, run the indexing query
+
+export function newCompileQueryState(
+  query: Malloy.Query,
+  modelURL: string,
+  compilerNeeds?: Malloy.CompilerNeeds
+): CompileModelState {
+  const queryMalloy = Malloy.queryToMalloy(query);
+  const needs = {
+    ...(compilerNeeds ?? {}),
+  };
+  const queryURL = 'internal://query.malloy';
+  needs.files = [
+    {
+      url: queryURL,
+      contents: queryMalloy,
+    },
+    ...(needs.files ?? []),
+  ];
+  return newCompileModelState(queryURL, needs, modelURL);
+}
+
+export function statedCompileQuery(
+  state: CompileModelState
+): Malloy.CompileQueryResponse {
+  const result = _statedCompileModel(state);
+  if (result.model) {
+    const queries = result.modelDef.queryList;
+    if (queries.length === 0) {
+      throw new Error('No queries found');
+    }
+    const index = queries.length - 1;
+    const query = result.modelDef.queryList[index];
+    const schema = result.model.anonymous_queries[index].schema;
+    const queryModel = new QueryModel(result.modelDef);
+    const translatedQuery = queryModel.compileQuery(query);
+    return {
+      result: {
+        sql: translatedQuery.sql,
+        schema,
+      },
+    };
+  } else {
+    return {compiler_needs: result.compilerNeeds};
+  }
+}

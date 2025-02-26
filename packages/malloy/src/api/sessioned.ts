@@ -11,18 +11,21 @@ import * as Core from './core';
 interface SessionInfoForCompileModel {
   type: 'compile_model';
   modelURL: string;
+  extendModelURL?: string;
 }
 
 interface SessionInfoForCompileSource {
   type: 'compile_source';
   modelURL: string;
+  extendModelURL?: string;
   name: string;
 }
 
 interface SessionInfoForCompileQuery {
   type: 'compile_query';
   modelURL: string;
-  query: string;
+  queryString: string;
+  query: Malloy.Query;
 }
 
 type SessionInfo =
@@ -48,23 +51,29 @@ interface SessionStateForCompileModel extends SessionStateBase {
 interface SessionStateForCompileSource extends SessionStateBase {
   type: 'compile_source';
   sessionInfo: SessionInfoForCompileSource;
+  state: Core.CompileModelState;
 }
 
 interface SessionStateForCompileQuery extends SessionStateBase {
   type: 'compile_query';
   sessionInfo: SessionInfoForCompileQuery;
+  state: Core.CompileModelState;
 }
 
 function sessionInfosMatch(a: SessionInfo, b: SessionInfo) {
   if (a.type === 'compile_model') {
     if (b.type !== 'compile_model') return false;
-    return a.modelURL === b.modelURL;
+    return a.modelURL === b.modelURL && a.extendModelURL === b.extendModelURL;
   } else if (a.type === 'compile_source') {
     if (b.type !== 'compile_source') return false;
-    return a.modelURL === b.modelURL && a.name === b.name;
+    return (
+      a.modelURL === b.modelURL &&
+      a.extendModelURL === b.extendModelURL &&
+      a.name === b.name
+    );
   } else {
     if (b.type !== 'compile_query') return false;
-    return a.modelURL === b.modelURL && a.query === b.query;
+    return a.modelURL === b.modelURL && a.queryString === b.queryString;
   }
 }
 
@@ -81,7 +90,7 @@ class SessionManager {
     );
   }
 
-  findSession(sessionInfo: SessionInfo) {
+  private findSession(sessionInfo: SessionInfo) {
     const session = this.sessions.find(s =>
       sessionInfosMatch(s.sessionInfo, sessionInfo)
     );
@@ -98,7 +107,7 @@ class SessionManager {
     }
   }
 
-  newCompileModelSession(
+  private newCompileModelSession(
     sessionInfo: SessionInfoForCompileModel,
     compilerNeeds?: Malloy.CompilerNeeds,
     options?: OptionsBase
@@ -117,16 +126,42 @@ class SessionManager {
     };
   }
 
-  newCompileSourceSession(
-    _sessionInfo: SessionInfoForCompileSource
+  private newCompileSourceSession(
+    sessionInfo: SessionInfoForCompileSource,
+    compilerNeeds?: Malloy.CompilerNeeds,
+    options?: OptionsBase
   ): SessionStateForCompileSource {
-    throw new Error('Method not implemented.');
+    const expires = options?.ttl ? this.getExpires(options.ttl) : undefined;
+    const state = Core.newCompileModelState(
+      sessionInfo.modelURL,
+      compilerNeeds,
+      undefined
+    );
+    return {
+      type: 'compile_source',
+      sessionInfo,
+      state,
+      expires,
+    };
   }
 
-  newCompileQuerySession(
-    _sessionInfo: SessionInfoForCompileQuery
+  private newCompileQuerySession(
+    sessionInfo: SessionInfoForCompileQuery,
+    compilerNeeds?: Malloy.CompilerNeeds,
+    options?: OptionsBase
   ): SessionStateForCompileQuery {
-    throw new Error('Method not implemented.');
+    const expires = options?.ttl ? this.getExpires(options.ttl) : undefined;
+    const state = Core.newCompileQueryState(
+      sessionInfo.query,
+      sessionInfo.modelURL,
+      compilerNeeds
+    );
+    return {
+      type: 'compile_query',
+      sessionInfo,
+      state,
+      expires,
+    };
   }
 
   private findCompileModelSession(
@@ -138,13 +173,14 @@ class SessionManager {
     }
   }
 
-  compileModel(
+  public compileModel(
     request: Malloy.CompileModelRequest,
     options?: OptionsBase
   ): Malloy.CompileModelResponse {
     const sessionInfo: SessionInfoForCompileModel = {
       type: 'compile_model',
       modelURL: request.model_url,
+      extendModelURL: request.extend_model_url,
     };
     let session = this.findCompileModelSession(sessionInfo);
     if (session) {
@@ -160,29 +196,71 @@ class SessionManager {
     return Core.statedCompileModel(session.state);
   }
 
-  compileSource(
+  private findCompileSourceSession(
+    sessionInfo: SessionInfoForCompileSource
+  ): SessionStateForCompileSource | undefined {
+    const session = this.findSession(sessionInfo);
+    if (session?.type === 'compile_source') {
+      return session;
+    }
+  }
+
+  public compileSource(
     request: Malloy.CompileSourceRequest,
-    _options?: OptionsBase
+    options?: OptionsBase
   ): Malloy.CompileSourceResponse {
-    const _sessionInfo = {
+    const sessionInfo: SessionInfoForCompileSource = {
       type: 'compile_source',
       modelURL: request.model_url,
       name: request.name,
+      extendModelURL: request.extend_model_url,
     };
-    throw new Error('Method not implemented.');
+    let session = this.findCompileSourceSession(sessionInfo);
+    if (session) {
+      Core.updateCompileModelState(session.state, request.compiler_needs);
+    } else {
+      session = this.newCompileSourceSession(
+        sessionInfo,
+        request.compiler_needs,
+        options
+      );
+      this.sessions.push(session);
+    }
+    return Core.statedCompileSource(session.state, request.name);
   }
 
-  compileQuery(
+  private findCompileQuerySession(
+    sessionInfo: SessionInfoForCompileQuery
+  ): SessionStateForCompileQuery | undefined {
+    const session = this.findSession(sessionInfo);
+    if (session?.type === 'compile_query') {
+      return session;
+    }
+  }
+
+  public compileQuery(
     request: Malloy.CompileQueryRequest,
-    _options?: OptionsBase
+    options?: OptionsBase
   ): Malloy.CompileQueryResponse {
-    const query = Malloy.queryToMalloy(request.query);
-    const _sessionInfo = {
+    const queryString = Malloy.queryToMalloy(request.query);
+    const sessionInfo: SessionInfoForCompileQuery = {
       type: 'compile_query',
       modelURL: request.model_url,
-      query,
+      queryString,
+      query: request.query,
     };
-    throw new Error('Method not implemented.');
+    let session = this.findCompileQuerySession(sessionInfo);
+    if (session) {
+      Core.updateCompileModelState(session.state, request.compiler_needs);
+    } else {
+      session = this.newCompileQuerySession(
+        sessionInfo,
+        request.compiler_needs,
+        options
+      );
+      this.sessions.push(session);
+    }
+    return Core.statedCompileQuery(session.state);
   }
 }
 
