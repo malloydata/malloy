@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {compileModel, compileQuery} from './stateless';
+import {compileModel, compileQuery, compileSource} from './stateless';
 import * as Malloy from '@malloydata/malloy-interfaces';
 
 describe('api', () => {
@@ -330,6 +330,63 @@ ORDER BY 1 asc NULLS LAST
             ],
           },
         },
+      };
+      expect(result).toMatchObject(expected);
+    });
+  });
+  describe('compiler errors', () => {
+    test('parse error should come back as a log', () => {
+      const result = compileModel({
+        model_url: 'file://test.malloy',
+        compiler_needs: {
+          files: [
+            {
+              url: 'file://test.malloy',
+              contents: 'run: flights -> { group_by: carrier }',
+            },
+          ],
+        },
+      });
+      const expected: Malloy.CompileModelResponse = {
+        logs: [
+          {
+            url: 'file://test.malloy',
+            severity: 'error',
+            message: "Reference to undefined object 'flights'",
+            range: {
+              start: {line: 0, character: 5},
+              end: {line: 0, character: 12},
+            },
+          },
+        ],
+      };
+      expect(result).toMatchObject(expected);
+    });
+    test('missing source should come back as a log', () => {
+      const result = compileSource({
+        model_url: 'file://test.malloy',
+        name: 'flights',
+        compiler_needs: {
+          files: [
+            {
+              url: 'file://test.malloy',
+              contents: '// nothing to see here',
+            },
+          ],
+        },
+      });
+      const expected: Malloy.CompileModelResponse = {
+        logs: [
+          {
+            url: 'file://test.malloy',
+            severity: 'error',
+            message: 'Model does not contain a source named flights',
+            range: {
+              start: {line: 0, character: 0},
+              end: {line: 0, character: 0},
+            },
+          },
+        ],
       };
       expect(result).toMatchObject(expected);
     });

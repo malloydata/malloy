@@ -560,6 +560,30 @@ struct CompilerNeeds {
   5: optional list<Translation> translations,
 }
 
+struct DocumentPosition {
+  1: required i32 line;
+  2: required i32 character;
+}
+
+struct DocumentRange {
+  1: required DocumentPosition start;
+  2: required DocumentPosition end;
+}
+
+enum LogSeverity {
+  DEBUG = 1,
+  INFO = 2,
+  WARN = 3,
+  ERROR = 4
+}
+
+struct LogMessage {
+  1: required string url;
+  2: required DocumentRange range;
+  3: required LogSeverity severity;
+  4: required string message;
+}
+
 // Given the URL to a model, return the StableModelDef for that model
 
 struct CompileModelRequest {
@@ -572,6 +596,7 @@ struct CompileModelRequest {
 struct CompileModelResponse {
   1: optional ModelInfo model,
 
+  8: optional list<LogMessage> logs,
   9: optional CompilerNeeds compiler_needs,
 }
 
@@ -588,6 +613,7 @@ struct CompileSourceRequest {
 struct CompileSourceResponse {
   1: optional SourceInfo source,
 
+  8: optional list<LogMessage> logs,
   9: optional CompilerNeeds compiler_needs,
 }
 
@@ -603,6 +629,7 @@ struct RunQueryRequest {
 struct RunQueryResponse {
   1: optional Result result,
 
+  8: optional list<LogMessage> logs,
   9: optional CompilerNeeds compiler_needs,
 }
 
@@ -618,6 +645,7 @@ struct CompileQueryRequest {
 struct CompileQueryResponse {
   1: optional Result result,
 
+  8: optional list<LogMessage> logs,
   9: optional CompilerNeeds compiler_needs,
 }
 

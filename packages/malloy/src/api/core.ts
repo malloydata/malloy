@@ -6,7 +6,7 @@
  */
 
 import * as Malloy from '@malloydata/malloy-interfaces';
-import {MalloyTranslator} from '../lang';
+import {LogMessage, MalloyTranslator} from '../lang';
 import {ParseUpdate} from '../lang/parse-malloy';
 import {
   AtomicFieldDef,
@@ -218,11 +218,19 @@ export type CompileResponse =
       model: Malloy.ModelInfo;
       modelDef: ModelDef;
       compilerNeeds?: undefined;
+      logs?: LogMessage[];
     }
   | {
       model?: undefined;
       modelDef?: undefined;
       compilerNeeds: Malloy.CompilerNeeds;
+      logs?: LogMessage[];
+    }
+  | {
+      model?: undefined;
+      modelDef?: undefined;
+      compilerNeeds?: undefined;
+      logs: LogMessage[];
     };
 
 export function compileQuery(
@@ -318,14 +326,18 @@ export function newCompileSourceState(
 export function statedCompileModel(
   state: CompileModelState
 ): Malloy.CompileModelResponse {
-  return wrapResponse(_statedCompileModel(state));
+  return wrapResponse(_statedCompileModel(state), state.translator.sourceURL);
 }
 
 export function statedCompileSource(
   state: CompileModelState,
   name: string
 ): Malloy.CompileSourceResponse {
-  return extractSource(_statedCompileModel(state), name);
+  return extractSource(
+    _statedCompileModel(state),
+    name,
+    state.translator.sourceURL
+  );
 }
 
 export function _statedCompileModel(state: CompileModelState): CompileResponse {
@@ -360,8 +372,9 @@ export function _statedCompileModel(state: CompileModelState): CompileResponse {
       if (result.problems === undefined || result.problems.length === 0) {
         throw new Error('No problems found, but no model either');
       }
-      // TODO return an error...
-      throw new Error(result.problems[0].message);
+      return {
+        logs: result.problems,
+      };
     }
   } else {
     const compilerNeeds = convertCompilerNeeds(
@@ -369,15 +382,39 @@ export function _statedCompileModel(state: CompileModelState): CompileResponse {
       result.urls,
       result.tables
     );
-    return {compilerNeeds};
+    return {compilerNeeds, logs: result.problems};
   }
 }
 
-function wrapResponse(response: CompileResponse): Malloy.CompileModelResponse {
+const DEFAULT_LOG_RANGE: Malloy.DocumentRange = {
+  start: {
+    line: 0,
+    character: 0,
+  },
+  end: {
+    line: 0,
+    character: 0,
+  },
+};
+
+function mapLogs(logs: LogMessage[], defaultURL: string): Malloy.LogMessage[] {
+  return logs.map(log => ({
+    severity: log.severity,
+    message: log.message,
+    range: log.at?.range ?? DEFAULT_LOG_RANGE,
+    url: log.at?.url ?? defaultURL,
+  }));
+}
+
+function wrapResponse(
+  response: CompileResponse,
+  defaultURL: string
+): Malloy.CompileModelResponse {
+  const logs = response.logs ? mapLogs(response.logs, defaultURL) : undefined;
   if (response.compilerNeeds) {
-    return {compiler_needs: response.compilerNeeds};
+    return {compiler_needs: response.compilerNeeds, logs};
   } else {
-    return {model: response.model};
+    return {model: response.model, logs};
   }
 }
 
@@ -402,26 +439,36 @@ export function compileModel(
 export function compileSource(
   request: Malloy.CompileSourceRequest
 ): Malloy.CompileSourceResponse {
-  const result = _compileModel(
-    request.model_url,
-    request.compiler_needs,
-    request.extend_model_url
-  );
-  return extractSource(result, request.name);
+  const state = newCompileSourceState(request);
+  return statedCompileSource(state, request.name);
 }
 
 // Given the URL to a model and a name of a queryable thing, get a StableSourceDef
 
-export function extractSource(result: CompileResponse, name: string) {
+function extractSource(
+  result: CompileResponse,
+  name: string,
+  defaultURL: string
+): Malloy.CompileSourceResponse {
+  const logs = result.logs ? mapLogs(result.logs, defaultURL) : undefined;
   if (result.model) {
     const source = result.model.entries.find(e => e.name === name);
     if (source === undefined) {
-      // TODO decide how to actually respond with an error?
-      throw new Error('Source not found');
+      return {
+        logs: [
+          ...(logs ?? []),
+          {
+            url: defaultURL,
+            severity: 'error',
+            message: `Model does not contain a source named ${name}`,
+            range: DEFAULT_LOG_RANGE,
+          },
+        ],
+      };
     }
-    return {source};
+    return {source, logs};
   } else {
-    return {compiler_needs: result.compilerNeeds};
+    return {compiler_needs: result.compilerNeeds, logs};
   }
 }
 
@@ -455,23 +502,50 @@ export function statedCompileQuery(
   state: CompileModelState
 ): Malloy.CompileQueryResponse {
   const result = _statedCompileModel(state);
+  // TODO this can expose the internal URL... is there a better way to handle URL-less errors from the compiler?
+  const defaultURL = state.translator.sourceURL;
+  const logs = result.logs ? mapLogs(result.logs, defaultURL) : undefined;
   if (result.model) {
     const queries = result.modelDef.queryList;
     if (queries.length === 0) {
-      throw new Error('No queries found');
+      return {
+        logs: [
+          ...(logs ?? []),
+          {
+            url: defaultURL,
+            severity: 'error',
+            message: 'Internal error: No queries found',
+            range: DEFAULT_LOG_RANGE,
+          },
+        ],
+      };
     }
     const index = queries.length - 1;
     const query = result.modelDef.queryList[index];
     const schema = result.model.anonymous_queries[index].schema;
-    const queryModel = new QueryModel(result.modelDef);
-    const translatedQuery = queryModel.compileQuery(query);
-    return {
-      result: {
-        sql: translatedQuery.sql,
-        schema,
-      },
-    };
+    try {
+      const queryModel = new QueryModel(result.modelDef);
+      const translatedQuery = queryModel.compileQuery(query);
+      return {
+        result: {
+          sql: translatedQuery.sql,
+          schema,
+        },
+      };
+    } catch (error) {
+      return {
+        logs: [
+          ...(logs ?? []),
+          {
+            url: defaultURL,
+            severity: 'error',
+            message: `Internal compiler error: ${error.message}`,
+            range: DEFAULT_LOG_RANGE,
+          },
+        ],
+      };
+    }
   } else {
-    return {compiler_needs: result.compilerNeeds};
+    return {compiler_needs: result.compilerNeeds, logs};
   }
 }

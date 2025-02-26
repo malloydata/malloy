@@ -104,6 +104,7 @@ export type CompileModelRequest = {
 };
 export type CompileModelResponse = {
   model?: ModelInfo;
+  logs?: Array<LogMessage>;
   compiler_needs?: CompilerNeeds;
 };
 export type CompileQueryRequest = {
@@ -113,6 +114,7 @@ export type CompileQueryRequest = {
 };
 export type CompileQueryResponse = {
   result?: Result;
+  logs?: Array<LogMessage>;
   compiler_needs?: CompilerNeeds;
 };
 export type CompileSourceRequest = {
@@ -123,6 +125,7 @@ export type CompileSourceRequest = {
 };
 export type CompileSourceResponse = {
   source?: SourceInfo;
+  logs?: Array<LogMessage>;
   compiler_needs?: CompilerNeeds;
 };
 export type CompilerNeeds = {
@@ -155,6 +158,14 @@ export type DimensionInfo = {
   name: string;
   type: AtomicType;
   annotations?: Array<Annotation>;
+};
+export type DocumentPosition = {
+  line: number;
+  character: number;
+};
+export type DocumentRange = {
+  start: DocumentPosition;
+  end: DocumentPosition;
 };
 export type ExpressionType =
   | 'field_reference'
@@ -254,6 +265,13 @@ export type Location = {
   url: string;
   range: Range;
 };
+export type LogMessage = {
+  url: string;
+  range: DocumentRange;
+  severity: LogSeverity;
+  message: string;
+};
+export type LogSeverity = 'debug' | 'info' | 'warn' | 'error';
 export type MeasureInfo = {
   name: string;
   type: AtomicType;
@@ -375,6 +393,7 @@ export type RunQueryRequest = {
 };
 export type RunQueryResponse = {
   result?: Result;
+  logs?: Array<LogMessage>;
   compiler_needs?: CompilerNeeds;
 };
 export type SQLNativeType = {
