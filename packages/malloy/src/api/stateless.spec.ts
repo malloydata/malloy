@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {compileModel, compileQuery} from './api';
+import {compileModel, compileQuery} from './stateless';
 import * as Malloy from '@malloydata/malloy-interfaces';
 
 describe('api', () => {
