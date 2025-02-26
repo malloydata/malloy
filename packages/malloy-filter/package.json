@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/malloy-filter",
-  "version": "0.0.237",
+  "version": "0.0.239",
   "license": "MIT",
   "description": "",
   "main": "dist/index.js",
