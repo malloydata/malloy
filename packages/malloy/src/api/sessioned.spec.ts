@@ -23,6 +23,7 @@ describe('api', () => {
           ],
         },
       };
+      expect(result).toMatchObject(expected);
       result = compileModel({
         model_url: 'file://test.malloy',
         compiler_needs: {
