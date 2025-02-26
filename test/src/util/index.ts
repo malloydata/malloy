@@ -59,7 +59,7 @@ export function mkSqlEqWith(
     `;
     let query: string;
     if (typeof result === 'boolean') {
-      const notEq = `concat('sqlEq failed', CHR(10), '    Expected: ${qExpr} to be ${result}')`;
+      const notEq = `concat('sqlEq failed', concat(CHR(10), '    Expected: ${qExpr} to be ${result}'))`;
       const varName = result ? 'expectTrue' : 'expectFalse';
       const whenPick = result
         ? `'=' when ${varName}`
@@ -81,7 +81,7 @@ export function mkSqlEqWith(
             }
             select: calc is
               pick '=' when expect = got
-              else concat('sqlEq failed', CHR(10), '    Expected: ${qExpr} == ${result}', CHR(10), '    Received: ', got::string)
+              else concat('sqlEq failed', concat(CHR(10), concat('    Expected: ${qExpr} == ${result}', concat(CHR(10), '    Received: ', got::string))))
           }`;
     } else if (expr[0] === "'") {
       // quoted strings
@@ -109,7 +109,7 @@ export function mkSqlEqWith(
           } -> {
             select: calc is
               pick '=' when expect = got
-              else concat('sqlEq failed', CHR(10), '    Expected: ${qExpr} == ${qResult}', CHR(10), '    Received: ', got::string)
+              else concat('sqlEq failed', concat(CHR(10), concat('    Expected: ${qExpr} == ${qResult}', concat(CHR(10), concat('    Received: ', got::string)))))
           }`;
     }
 

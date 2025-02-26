@@ -21,38 +21,32 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export type {
-  DialectFunctionOverloadDef,
-  DefinitionBlueprint,
-  DefinitionBlueprintMap,
-  OverloadedDefinitionBlueprint,
-} from './functions/util';
-export {
-  arg,
-  anyExprType,
-  makeParam,
-  overload,
-  minScalar,
-  minAggregate,
-  maxScalar,
-  spread,
-  param,
-  variadicParam,
-  literal,
-  sql,
-} from './functions/util';
-export {Dialect, qtz} from './dialect';
-export type {DialectFieldList, QueryInfo, FieldReferenceType} from './dialect';
-export {StandardSQLDialect} from './standardsql';
-export {PostgresDialect} from './postgres';
-export {RedshiftDialect} from './redshift';
-export {DuckDBDialect} from './duckdb';
-export {SnowflakeDialect} from './snowflake';
-export {TrinoDialect} from './trino';
-export {MySQLDialect} from './mysql';
-export {DatabricksDialect} from './databricks';
-export {getDialect, registerDialect} from './dialect_map';
-export {getMalloyStandardFunctions} from './functions';
-export type {MalloyStandardFunctionImplementations} from './functions';
-export type {TinyToken} from './tiny_parser';
-export {TinyParser} from './tiny_parser';
+import {RedshiftConnection} from './redshift_connection';
+import {SQLSourceDef} from '@malloydata/malloy';
+import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
+
+const [describe] = describeIfDatabaseAvailable(['postgres']);
+
+/*
+ * !IMPORTANT
+ *
+ * The connection is reused for each test, so if you do not name your tables
+ * and keys uniquely for each test you will see cross test interactions.
+ */
+
+describe('RedshiftConnection', () => {
+  let connection: RedshiftConnection;
+
+  beforeAll(async () => {
+    connection = new RedshiftConnection('duckdb');
+  });
+
+  afterAll(async () => {
+    await connection.close();
+  });
+
+  it('can execute basic SELECT query', async () => {
+    const result = await connection.runSQL('SELECT 1');
+    expect(result.rows).toEqual([{1: 1}]);
+  });
+});
