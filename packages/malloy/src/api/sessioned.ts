@@ -173,6 +173,12 @@ class SessionManager {
     }
   }
 
+  private killSession(sessionInfo: SessionInfo) {
+    this.sessions = this.sessions.filter(
+      s => !sessionInfosMatch(s.sessionInfo, sessionInfo)
+    );
+  }
+
   public compileModel(
     request: Malloy.CompileModelRequest,
     options?: OptionsBase
@@ -193,7 +199,11 @@ class SessionManager {
       );
       this.sessions.push(session);
     }
-    return Core.statedCompileModel(session.state);
+    const result = Core.statedCompileModel(session.state);
+    if (result.model) {
+      this.killSession(sessionInfo);
+    }
+    return result;
   }
 
   private findCompileSourceSession(
@@ -226,7 +236,11 @@ class SessionManager {
       );
       this.sessions.push(session);
     }
-    return Core.statedCompileSource(session.state, request.name);
+    const result = Core.statedCompileSource(session.state, request.name);
+    if (result.source) {
+      this.killSession(sessionInfo);
+    }
+    return result;
   }
 
   private findCompileQuerySession(
@@ -260,7 +274,11 @@ class SessionManager {
       );
       this.sessions.push(session);
     }
-    return Core.statedCompileQuery(session.state);
+    const result = Core.statedCompileQuery(session.state);
+    if (result.result) {
+      this.killSession(sessionInfo);
+    }
+    return result;
   }
 }
 

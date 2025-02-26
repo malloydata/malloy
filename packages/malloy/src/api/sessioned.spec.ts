@@ -255,33 +255,99 @@ ORDER BY 1 asc NULLS LAST
       expect(result).toMatchObject(expected);
     });
   });
-  describe('ttl', () => {
-    test('making a different request should purge expired sessions', () => {
-      let result = compileModel(
-        {
+  describe('sessions', () => {
+    describe('ttl', () => {
+      test('making a different request should purge expired sessions', () => {
+        let result = compileModel(
+          {
+            model_url: 'file://test.malloy',
+          },
+          {
+            // This is in the past...
+            ttl: new Date(Date.now() - 1000),
+          }
+        );
+        let expected: Malloy.CompileModelResponse = {
+          compiler_needs: {
+            files: [
+              {
+                url: 'file://test.malloy',
+              },
+            ],
+          },
+        };
+        expect(result).toMatchObject(expected);
+        compileModel({
+          model_url: 'file://some_other_model.malloy',
+        });
+        result = compileModel({
           model_url: 'file://test.malloy',
-        },
-        {
-          // This is in the past...
-          ttl: new Date(Date.now() - 1000),
-        }
-      );
-      let expected: Malloy.CompileModelResponse = {
+        });
+        expected = {
+          compiler_needs: {
+            files: [
+              {
+                url: 'file://test.malloy',
+              },
+            ],
+          },
+        };
+        expect(result).toMatchObject(expected);
+      });
+    });
+    test('sessions should be cleared when they successfully return a result', () => {
+      let result = compileModel({
+        model_url: 'file://test.malloy',
         compiler_needs: {
+          table_schemas: [
+            {
+              connection_name: 'connection',
+              name: 'flights',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'carrier',
+                    type: {kind: 'string_type'},
+                  },
+                ],
+              },
+            },
+          ],
           files: [
             {
               url: 'file://test.malloy',
+              contents: "source: flights is connection.table('flights')",
             },
           ],
+          connections: [{name: 'connection', dialect: 'duckdb'}],
+        },
+      });
+      let expected: Malloy.CompileModelResponse = {
+        model: {
+          entries: [
+            {
+              kind: 'source',
+              name: 'flights',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'carrier',
+                    type: {kind: 'string_type'},
+                  },
+                ],
+              },
+            },
+          ],
+          anonymous_queries: [],
         },
       };
       expect(result).toMatchObject(expected);
-      compileModel({
-        model_url: 'file://some_other_model.malloy',
-      });
       result = compileModel({
         model_url: 'file://test.malloy',
       });
+      // Compiler should not know the contents of this file anymore because the session was cleared
       expected = {
         compiler_needs: {
           files: [
