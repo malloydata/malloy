@@ -51,6 +51,15 @@ export function modelDefToModelInfo(modelDef: ModelDef): Malloy.ModelInfo {
       modelInfo.entries.push(queryInfo);
     }
   }
+  for (const query of modelDef.queryList) {
+    const outputStruct = getResultStructDefForQuery(modelDef, query);
+    const queryInfo: Malloy.AnonymousQueryInfo = {
+      schema: {
+        fields: convertFieldInfos(outputStruct, outputStruct.fields),
+      },
+    };
+    modelInfo.anonymous_queries.push(queryInfo);
+  }
   return modelInfo;
 }
 

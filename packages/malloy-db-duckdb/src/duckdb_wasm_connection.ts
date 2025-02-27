@@ -31,6 +31,7 @@ import {
   SQLSourceDef,
   ConnectionConfig,
   TableSourceDef,
+  SQLSourceRequest,
 } from '@malloydata/malloy';
 import {StructRow, Table} from 'apache-arrow';
 import {DuckDBCommon} from './duckdb_common';
@@ -371,7 +372,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
   }
 
   public async fetchSchemaForSQLStruct(
-    sqlRef: SQLSourceDef,
+    sqlRef: SQLSourceRequest,
     options: FetchSchemaOptions
   ): Promise<
     | {structDef: SQLSourceDef; error?: undefined}

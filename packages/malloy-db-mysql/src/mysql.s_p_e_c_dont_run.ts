@@ -41,12 +41,8 @@ describe('MySQL Connection', () => {
   it('fetches schema for SQL block', async () => {
     const res = await connection.fetchSchemaForSQLStruct(
       {
-        name: 'foo',
-        type: 'sql_select',
         selectStr: 'SELECT 1 as one',
         connection: 'mysql',
-        fields: [],
-        dialect: 'mysql',
       },
       {}
     );

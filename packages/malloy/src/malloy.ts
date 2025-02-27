@@ -52,14 +52,12 @@ import {
   StructDef,
   TurtleDef,
   expressionIsCalculation,
-  isSegmentSQL,
   NativeUnsupportedFieldDef,
   QueryRunStats,
   ImportLocation,
   Annotation,
   NamedModelObject,
   QueryValue,
-  SQLSentence,
   SQLSourceDef,
   AtomicFieldDef,
   DateFieldDef,
@@ -99,6 +97,7 @@ import {
   MalloyTagParse,
   TagParseSpec,
 } from './annotation';
+import {sqlKey} from './model/sql_block';
 
 export interface Taggable {
   tagParse: (spec?: TagParseSpec) => MalloyTagParse;
@@ -277,15 +276,12 @@ export class Malloy {
     refreshSchemaCache,
     noThrowOnError,
     eventStream,
-    replaceMaterializedReferences,
-    materializedTablePrefix,
     importBaseURL,
     cacheManager,
   }: {
     urlReader: URLReader;
     connections: LookupConnection<InfoConnection>;
     model?: Model;
-    replaceMaterializedReferences?: boolean;
     cacheManager?: CacheManager;
   } & Compilable &
     CompileOptions &
@@ -494,35 +490,30 @@ export class Malloy {
           // Unlike other requests, these do not come in batches
           const toCompile = result.compileSQL;
           const connectionName = toCompile.connection;
+          const key = sqlKey(toCompile.connection, toCompile.selectStr);
           try {
             const conn = await connections.lookupConnection(connectionName);
-            const expanded = Malloy.compileSQLBlock(
-              conn.dialectName,
-              result.partialModel,
-              toCompile,
-              {
-                replaceMaterializedReferences,
-                materializedTablePrefix,
-                eventStream,
-              }
-            );
-            const resolved = await conn.fetchSchemaForSQLStruct(expanded, {
+            const resolved = await conn.fetchSchemaForSQLStruct(toCompile, {
               refreshTimestamp,
               modelAnnotation,
             });
             if (resolved.error) {
               translator.update({
-                errors: {compileSQL: {[expanded.name]: resolved.error}},
+                errors: {
+                  compileSQL: {
+                    [key]: resolved.error,
+                  },
+                },
               });
             }
             if (resolved.structDef) {
               translator.update({
-                compileSQL: {[expanded.name]: resolved.structDef},
+                compileSQL: {[key]: resolved.structDef},
               });
             }
           } catch (error) {
             const errors: {[name: string]: string} = {};
-            errors[toCompile.name] = error.toString();
+            errors[key] = error.toString();
             translator.update({errors: {compileSQL: errors}});
           }
         }
@@ -549,52 +540,6 @@ export class Malloy {
       }
     }
     return ret;
-  }
-
-  static compileSQLBlock(
-    dialect: string,
-    partialModel: ModelDef | undefined,
-    toCompile: SQLSentence,
-    options?: CompileQueryOptions
-  ): SQLSourceDef {
-    let queryModel: QueryModel | undefined = undefined;
-    let selectStr = '';
-    let parenAlready = false;
-    for (const segment of toCompile.select) {
-      if (isSegmentSQL(segment)) {
-        selectStr += segment.sql;
-        parenAlready = segment.sql.match(/\(\s*$/) !== null;
-      } else {
-        // TODO catch exceptions and throw errors ...
-        if (!queryModel) {
-          if (!partialModel) {
-            throw new Error(
-              'Internal error: Partial model missing when compiling SQL block'
-            );
-          }
-          queryModel = new QueryModel(partialModel, options?.eventStream);
-        }
-        const compiledSql = queryModel.compileQuery(
-          segment,
-          {
-            ...options,
-            defaultRowLimit: undefined,
-          },
-          false
-        ).sql;
-        selectStr += parenAlready ? compiledSql : `(${compiledSql})`;
-        parenAlready = false;
-      }
-    }
-    const {name, connection} = toCompile;
-    return {
-      type: 'sql_select',
-      name,
-      connection,
-      dialect,
-      selectStr,
-      fields: [],
-    };
   }
 
   /**
