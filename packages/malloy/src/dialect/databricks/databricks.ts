@@ -53,6 +53,7 @@ const databricksToMalloyTypes: {[key: string]: LeafAtomicTypeDef} = {
   'int': {type: 'number', numberType: 'integer'},
   'bigint': {type: 'number', numberType: 'integer'},
   'double': {type: 'number', numberType: 'float'},
+  'decimal': {type: 'number', numberType: 'float'},
   'timestamp_ntz': {type: 'timestamp'}, // maybe not
   'boolean': {type: 'boolean'},
   'timestamp': {type: 'timestamp'},
