@@ -31,7 +31,7 @@ const numberExamples = [
   '[.12e-20, 20.0e3)',
   '[0,9],[20,29]',
   '[0,10], 20, NULL, ( 72, 82 ] ',
-  ', notanumber,, "null", apple pear orange, nulle, nnull, >=,',
+  ', notanumber,, "null", apple pear orange, nulle, nnull, >=, a(, |, ), ;',
   '[cat, 100], <cat',
   '-5.5 to 10',
 ];
@@ -68,6 +68,8 @@ const stringExamples = [
   '\\-NULL',
   '-N\\ULL',
   'CA--,D-G', // _ = 'CA--' OR _ = 'D-G'
+  'Escaped\\;chars\\|are\\(allowed\\)ok',
+  'No(parens, No)parens, No;semicolons, No|ors',
   ' hello world, foo="bar baz" , qux=quux',
   'one ,Null ,  Empty,E M P T Y Y,EEmpty,        emptIEs',
   '',
@@ -85,6 +87,8 @@ const booleanExamples = [
   '10',
   'nnull',
   ' truee ',
+  '(true)',
+  'false|true',
 ];
 
 const dateExamples = [
@@ -128,6 +132,7 @@ const dateExamples = [
   '2025-12-25 12:32:', // Bad syntax
   '12:22',
   'after 2025 seconds', // Bad syntax
+  '(2025)',
   '',
 ];
 
