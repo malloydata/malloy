@@ -24,12 +24,33 @@ export class StringParser extends BaseParser {
   private static readonly negatedStartRegex: RegExp = /^-(.+)$/;
   private static readonly singleBackslashRegex: RegExp = /(?<!\\)\\(?!\\)/g;
 
+  // TODO: Replace the invalid tokens with support for conjunctive clauses.
+  private static readonly invalidTokens: string[] = ['|', ';', '(', ')'];
+
   constructor(input: string) {
     super(input);
   }
 
   private tokenize(): void {
-    const specialSubstrings: SpecialToken[] = [{type: ',', value: ','}];
+    const specialSubstrings: SpecialToken[] = [
+      {type: ',', value: ','},
+      {
+        type: StringParser.invalidTokens[0],
+        value: StringParser.invalidTokens[0],
+      },
+      {
+        type: StringParser.invalidTokens[1],
+        value: StringParser.invalidTokens[1],
+      },
+      {
+        type: StringParser.invalidTokens[2],
+        value: StringParser.invalidTokens[2],
+      },
+      {
+        type: StringParser.invalidTokens[3],
+        value: StringParser.invalidTokens[3],
+      },
+    ];
     const specialWords: SpecialToken[] = [
       {type: 'null', value: 'null', ignoreCase: true},
       {type: 'empty', value: 'empty', ignoreCase: true},
@@ -64,6 +85,14 @@ export class StringParser extends BaseParser {
             endIndex: token.endIndex,
           });
         }
+        this.index++;
+      } else if (StringParser.invalidTokens.includes(token.type)) {
+        logs.push({
+          severity: 'error',
+          message: 'Invalid unescaped token: ' + token.type,
+          startIndex: token.startIndex,
+          endIndex: token.endIndex,
+        });
         this.index++;
       } else if (
         token.type === 'null' ||

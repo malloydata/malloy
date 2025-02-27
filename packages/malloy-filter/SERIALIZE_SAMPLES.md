@@ -261,6 +261,33 @@ Output: -NULL
 Input:  CA--,D-G
 Output: CA--, D-G
 
+Input:  Escaped\;chars\|are\(allowed\)ok
+Output: Escaped\;chars\|are\(allowed\)ok
+
+Input:  No(parens, No)parens, No;semicolons, No|ors
+Output: No, parens, No, parens, No, semicolons, No, ors
+Logs:    {
+  severity: 'error',
+  message: 'Invalid unescaped token: (',
+  startIndex: 2,
+  endIndex: 3
+} {
+  severity: 'error',
+  message: 'Invalid unescaped token: )',
+  startIndex: 13,
+  endIndex: 14
+} {
+  severity: 'error',
+  message: 'Invalid unescaped token: ;',
+  startIndex: 24,
+  endIndex: 25
+} {
+  severity: 'error',
+  message: 'Invalid unescaped token: |',
+  startIndex: 39,
+  endIndex: 40
+}
+
 Input:   hello world, foo="bar baz" , qux=quux
 Output: hello world, foo="bar baz", qux=quux
 
@@ -334,6 +361,21 @@ Logs:    {
   endIndex: 6
 }
 
+Input:  (true)
+Logs:    {
+  severity: 'error',
+  message: 'Invalid token (true)',
+  startIndex: 0,
+  endIndex: 6
+}
+
+Input:  false|true
+Logs:    {
+  severity: 'error',
+  message: 'Invalid token false|true',
+  startIndex: 0,
+  endIndex: 10
+}
 ```
 
 -------------------------------------------------------------------------
@@ -510,6 +552,14 @@ Logs:    {
   message: 'Invalid token ',
   startIndex: 6,
   endIndex: 18
+}
+
+Input:  (2025)
+Logs:    {
+  severity: 'error',
+  message: 'Invalid token (2025)',
+  startIndex: 0,
+  endIndex: 6
 }
 
 Input:
