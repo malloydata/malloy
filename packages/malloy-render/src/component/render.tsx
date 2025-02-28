@@ -29,9 +29,13 @@ import {
 export type {DimensionContextEntry, DrillData} from './types';
 import css from './render.css?raw';
 import * as Malloy from '@malloydata/malloy-interfaces';
+import {ModelDef, QueryResult, Result, API} from '@malloydata/malloy';
 
 export type MalloyRenderProps = {
-  result?: Malloy.Result;
+  malloyResult?: Malloy.Result;
+  result?: Result;
+  queryResult?: QueryResult;
+  modelDef?: ModelDef;
   scrollEl?: HTMLElement;
   modalElement?: HTMLElement;
   onClick?: (payload: MalloyClickEventPayload) => void;
@@ -68,8 +72,19 @@ export function MalloyRender(
   {element}: ComponentOptions
 ) {
   const result = createMemo(() => {
-    if (props.result) return props.result;
-    else return null;
+    if (props.malloyResult) {
+      return props.malloyResult;
+    }
+    console.log(props);
+    const result =
+      props.result ??
+      (props.queryResult && props.modelDef
+        ? new Result(props.queryResult, props.modelDef)
+        : null);
+    if (result) {
+      return API.util.wrapResult(result);
+    }
+    return null;
   });
 
   // Create one stylesheet for web component to use for all styles

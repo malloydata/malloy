@@ -152,7 +152,7 @@ export function viteMalloyStoriesPlugin(): PluginOption {
               parent.style.position = 'relative';
               const el = document.createElement('malloy-render');
               if (classes) el.classList.add(classes);
-              el.result = context.loaded['result'];
+              el.malloyResult = context.loaded['result'];
               el.tableConfig = {
                 enableDrill: true
               };
