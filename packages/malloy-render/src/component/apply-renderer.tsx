@@ -147,10 +147,16 @@ export function applyRenderer(props: RendererProps) {
       case 'shape_map':
       case 'segment_map': {
         if (isNest(field))
-          renderValue = <LegacyChart type={renderAs} data={dataColumn} />;
+          renderValue = (
+            <LegacyChart
+              type={renderAs}
+              data={dataColumn as NestCell}
+              field={field}
+            />
+          );
         else
           throw new Error(
-            `Malloy render: wrong data type passed to the ${renderAs} renderer for field ${dataColumn.field.name}`
+            `Malloy render: wrong data type passed to the ${renderAs} renderer for field ${field.name}`
           );
         break;
       }

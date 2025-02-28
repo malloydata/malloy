@@ -32,6 +32,7 @@ import {Renderer} from './renderer';
 import {RendererFactory} from './renderer_factory';
 import * as Malloy from '@malloydata/malloy-interfaces';
 import {
+  getCell,
   getNestFields,
   isAtomic,
   isDate,
@@ -39,7 +40,10 @@ import {
   isNumber,
   isString,
   isTimestamp,
+  NestFieldInfo,
 } from '../component/util';
+
+type MappedRow = {[p: string]: string | number | Date | undefined | null};
 
 export class HTMLShapeMapRenderer extends HTMLChartRenderer {
   private getRegionField(explore: Malloy.DimensionInfo): Malloy.DimensionInfo {
@@ -56,14 +60,48 @@ export class HTMLShapeMapRenderer extends HTMLChartRenderer {
     return getNestFields(explore)[1];
   }
 
+  mapData2(
+    data: Malloy.Cell[],
+    field: NestFieldInfo,
+    regionField: Malloy.DimensionInfo
+  ): MappedRow[] {
+    const mappedRows: MappedRow[] = [];
+    for (const rowCell of data) {
+      if (rowCell.kind !== 'record_cell') {
+        throw new Error('Expected record cell');
+      }
+      const row = rowCell.record_value;
+      const mappedRow: {
+        [p: string]: string | number | Date | undefined | null;
+      } = {};
+      for (const f of getNestFields(field)) {
+        mappedRow[f.name] = this.getDataValue2(
+          getCell(field, row, f.name),
+          f,
+          regionField
+        );
+      }
+      mappedRows.push(mappedRow);
+    }
+    return mappedRows;
+  }
+
   getDataValue(
     data: Malloy.Cell,
     field: Malloy.DimensionInfo
+  ): Date | string | number | null | undefined {
+    return this.getDataValue2(data, field, undefined);
+  }
+
+  getDataValue2(
+    data: Malloy.Cell,
+    field: Malloy.DimensionInfo,
+    regionField?: Malloy.DimensionInfo
   ): string | number | undefined {
     if (data.kind === 'number_cell') {
       return data.number_value;
     } else if (data.kind === 'string_cell') {
-      if (field === this.getRegionField(data.field.parentExplore)) {
+      if (field === regionField) {
         const id = STATE_CODES[data.string_value];
         if (id === undefined) {
           return undefined;
@@ -82,12 +120,19 @@ export class HTMLShapeMapRenderer extends HTMLChartRenderer {
 
   getDataType(
     field: Malloy.DimensionInfo
+  ): 'temporal' | 'ordinal' | 'quantitative' | 'nominal' {
+    return this.getDataType2(field, undefined);
+  }
+
+  getDataType2(
+    field: Malloy.DimensionInfo,
+    regionField?: Malloy.DimensionInfo
   ): 'ordinal' | 'quantitative' | 'nominal' {
     if (isAtomic(field)) {
       if (isDate(field) || isTimestamp(field)) {
         return 'nominal';
       } else if (isString(field)) {
-        if (field === this.getRegionField(field.parentExplore)) {
+        if (field === regionField) {
           return 'quantitative';
         } else {
           return 'nominal';
@@ -114,7 +159,9 @@ export class HTMLShapeMapRenderer extends HTMLChartRenderer {
     const regionField = this.getRegionField(field);
     const colorField = this.getColorField(field);
 
-    const colorType = colorField ? this.getDataType(colorField) : undefined;
+    const colorType = colorField
+      ? this.getDataType2(colorField, regionField)
+      : undefined;
 
     const colorDef =
       colorField !== undefined
@@ -133,7 +180,7 @@ export class HTMLShapeMapRenderer extends HTMLChartRenderer {
           }
         : undefined;
 
-    const mapped = this.mapData(data.array_value, field).filter(
+    const mapped = this.mapData2(data.array_value, field, regionField).filter(
       row => row[regionField.name] !== undefined
     );
 

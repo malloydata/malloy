@@ -6,6 +6,7 @@ import {SegmentMapRendererFactory} from '../../html/segment_map';
 import {useResultContext} from '../result-context';
 import {useConfig} from '../render';
 import * as Malloy from '@malloydata/malloy-interfaces';
+import {NestCell} from '../util';
 
 const renderers = [
   LineChartRendererFactory.instance,
@@ -15,7 +16,7 @@ const renderers = [
 ];
 export function LegacyChart(props: {
   field: Malloy.DimensionInfo;
-  data: Malloy.CellWithArrayCell;
+  data: NestCell;
   type: string;
 }) {
   const metadata = useResultContext();
@@ -37,7 +38,7 @@ export function LegacyChart(props: {
   let el;
   createEffect(async () => {
     if (el && renderer()) {
-      const rendererEl = await renderer()!.render(props.data);
+      const rendererEl = await renderer()!.render(props.data, props.field);
       el.replaceChildren(rendererEl);
     }
   });

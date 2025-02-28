@@ -28,57 +28,16 @@ import {RendererFactory} from './renderer_factory';
 import {RendererOptions} from './renderer_types';
 import {ShapeMapRendererFactory} from './shape_map';
 import {PointMapRendererFactory} from './point_map';
-import {ImageRendererFactory} from './image';
 import {SegmentMapRendererFactory} from './segment_map';
-import {JSONRendererFactory} from './json';
-import {SparkLineRendererFactory} from './sparkline';
-import {BarSparkLineRendererFactory} from './bar_sparkline';
-import {AreaSparkLineRendererFactory} from './area_sparkline';
-import {ColumnSparkLineRendererFactory} from './column_sparkline';
 import {ScatterChartRendererFactory} from './scatter_chart';
-import {BarChartRendererFactory} from './bar_chart';
-import {VegaRendererFactory} from './vega_spec';
-import {LineChartRendererFactory} from './line_chart';
-import {DateRendererFactory} from './date';
-import {CurrencyRendererFactory} from './currency';
-import {PercentRendererFactory} from './percent';
-import {NumberRendererFactory} from './number';
-import {BytesRendererFactory} from './bytes';
-import {BooleanRendererFactory} from './boolean';
-import {LinkRendererFactory} from './link';
-import {UnsupportedRendererFactory} from './unsupported';
-import {TextRendererFactory} from './text';
-import {DataVolumeRendererFactory} from './data_volume';
-import {DurationRendererFactory} from './duration';
 import * as Malloy from '@malloydata/malloy-interfaces';
 
 export class MainRendererFactory {
   static renderFactories = [
     ShapeMapRendererFactory.instance,
     PointMapRendererFactory.instance,
-    ImageRendererFactory.instance,
     SegmentMapRendererFactory.instance,
-    JSONRendererFactory.instance,
-    LineChartRendererFactory.instance,
-    ColumnSparkLineRendererFactory.instance,
-    BarSparkLineRendererFactory.instance,
-    AreaSparkLineRendererFactory.instance,
-    // This factory needs to be after the other Spark Line factories, so it doesn't override them.
-    SparkLineRendererFactory.instance,
     ScatterChartRendererFactory.instance,
-    BarChartRendererFactory.instance,
-    VegaRendererFactory.instance,
-    DateRendererFactory.instance,
-    CurrencyRendererFactory.instance,
-    PercentRendererFactory.instance,
-    DataVolumeRendererFactory.instance,
-    BytesRendererFactory.instance,
-    LinkRendererFactory.instance,
-    DurationRendererFactory.instance,
-    BooleanRendererFactory.instance,
-    NumberRendererFactory.instance,
-    UnsupportedRendererFactory.instance,
-    TextRendererFactory.instance,
   ];
 
   create(

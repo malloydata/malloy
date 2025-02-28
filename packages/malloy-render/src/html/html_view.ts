@@ -26,15 +26,12 @@ import {DataStyles, RenderDef, StyleDefaults} from './data_styles';
 import {ChildRenderers, Renderer} from './renderer';
 import {RendererOptions} from './renderer_types';
 import {HTMLJSONRenderer} from './json';
-import {HTMLDashboardRenderer} from './dashboard';
-import {HTMLListDetailRenderer} from './list_detail';
 import {HTMLTableRenderer} from './table';
 import {ContainerRenderer} from './container';
 import {createErrorElement} from './utils';
 import {MainRendererFactory} from './main_renderer_factory';
-import {HTMLListRenderer} from './list';
 import * as Malloy from '@malloydata/malloy-interfaces';
-import {getNestFields, isNest, NestFieldInfo} from '../component/util';
+import {getNestFields, isNest, NestFieldInfo, tagFor} from '../component/util';
 
 export class HTMLView {
   constructor(private document: Document) {}
@@ -222,49 +219,13 @@ export function makeRenderer(
     return renderer;
   }
 
-  if (renderDef?.renderer === 'dashboard' || tagged.has('dashboard')) {
-    return makeContainerRenderer(
-      HTMLDashboardRenderer,
-      document,
-      isContainer(field),
-      options,
-      tagged
-    );
-  } else if (renderDef?.renderer === 'list' || tagged.has('list')) {
-    return makeContainerRenderer(
-      HTMLListRenderer,
-      document,
-      isContainer(field),
-      options,
-      tagged
-    );
-  } else if (
-    renderDef?.renderer === 'list_detail' ||
-    tagged.has('list_detail')
-  ) {
-    return makeContainerRenderer(
-      HTMLListDetailRenderer,
-      document,
-      isContainer(field),
-      options,
-      tagged
-    );
-  } else if (
-    renderDef?.renderer === 'table' ||
-    tagged.has('table') ||
-    !field.hasParentExplore() ||
-    field.isExploreField()
-  ) {
-    return makeContainerRenderer(
-      HTMLTableRenderer,
-      document,
-      isContainer(field),
-      options,
-      tagged
-    );
-  }
-
-  throw new Error(`Could not find a proper renderer for field ${field.name}`);
+  return makeContainerRenderer(
+    HTMLTableRenderer,
+    document,
+    isContainer(field),
+    options,
+    tagged
+  );
 }
 
 function makeContainerRenderer<Type extends ContainerRenderer>(
@@ -286,8 +247,8 @@ function makeContainerRenderer<Type extends ContainerRenderer>(
       document,
       options,
       c.defaultStylesForChildren,
-      explore.queryTimezone,
-      field.tagParse().tag
+      undefined, // TODO timezone: explore.queryTimezone,
+      tagFor(field)
     );
   });
   c.childRenderers = result;
