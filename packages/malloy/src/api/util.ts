@@ -5,8 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {annotationToTaglines} from '../annotation';
 import {InfoConnection as OldConnection} from '../connection';
-import {MalloyQueryData, QueryDataRow, QueryValue} from '../model';
+import {Result} from '../malloy';
+import {QueryData, QueryDataRow, QueryValue} from '../model';
 import {convertFieldInfos} from '../to_stable';
 import {InfoConnection} from './connection';
 import * as Malloy from '@malloydata/malloy-interfaces';
@@ -80,10 +82,7 @@ function valueToDate(value: unknown): Date {
   }
 }
 
-export function mapData(
-  data: MalloyQueryData,
-  schema: Malloy.Schema
-): Malloy.Data {
+export function mapData(data: QueryData, schema: Malloy.Schema): Malloy.Data {
   function mapValue(value: QueryValue, field: Malloy.FieldInfo): Malloy.Cell {
     if (value === null) {
       return {kind: 'null_cell'};
@@ -168,6 +167,21 @@ export function mapData(
   };
   return {
     kind: 'array_cell',
-    array_value: data.rows.map(row => mapRow(row, rootField)),
+    array_value: data.map(row => mapRow(row, rootField)),
+  };
+}
+
+export function wrapResult(result: Result): Malloy.Result {
+  const structs = result._queryResult.structs;
+  const struct = structs[structs.length - 1];
+  const schema = {fields: convertFieldInfos(struct, struct.fields)};
+  const annotations = annotationToTaglines(result.annotation).map(l => ({
+    value: l,
+  }));
+  return {
+    schema,
+    data: mapData(result.data.toObject(), schema),
+    connection_name: result.connectionName,
+    annotations: annotations.length > 0 ? annotations : undefined,
   };
 }

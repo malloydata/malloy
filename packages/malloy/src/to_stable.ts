@@ -155,11 +155,21 @@ function typeDefToType(field: AtomicTypeDef): Malloy.AtomicType {
         };
       case 'boolean':
         return {kind: 'boolean_type'};
-      case 'date':
+      case 'date': {
+        // TODO there seems to be a bug where date literals with a timestamp truncation have
+        // type: date, but still have a timestamp truncation.
+        const timeframe = field.timeframe;
+        if (timeframe && !isDateTimeframe(timeframe)) {
+          return {
+            kind: 'timestamp_type',
+            timeframe: convertTimestampTimeframe(field.timeframe),
+          };
+        }
         return {
           kind: 'date_type',
           timeframe: convertDateTimeframe(field.timeframe),
         };
+      }
       case 'timestamp':
         return {
           kind: 'timestamp_type',
@@ -227,6 +237,19 @@ function convertRecordType(
       }
     }),
   };
+}
+
+function isDateTimeframe(timeframe: DateUnit): boolean {
+  switch (timeframe) {
+    case 'day':
+    case 'week':
+    case 'month':
+    case 'year':
+    case 'quarter':
+      return true;
+    default:
+      return false;
+  }
 }
 
 function convertDateTimeframe(

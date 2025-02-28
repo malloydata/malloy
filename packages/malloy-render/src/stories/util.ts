@@ -85,7 +85,7 @@ export async function runQuery({
         runSQL: async (sql: string) => {
           const result = await conn.runSQL(sql);
           // console.log({data: result.rows});
-          return API.util.mapData(result, preparedResult.result!.schema);
+          return API.util.mapData(result.rows, preparedResult.result!.schema);
         },
       };
     },
