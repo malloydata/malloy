@@ -101,7 +101,7 @@ function DashboardItem(props: {
 }
 
 export function Dashboard(props: {
-  data: Malloy.CellWithArrayCell;
+  data: Malloy.CellWithArrayCell | Malloy.CellWithRecordCell;
   scrollEl?: HTMLElement;
   field: NestFieldInfo;
 }) {
@@ -149,7 +149,9 @@ export function Dashboard(props: {
 
   const data = createMemo(() => {
     const data: Malloy.Row[] = [];
-    for (const row of props.data.array_value) {
+    const rows =
+      props.data.kind === 'record_cell' ? [props.data] : props.data.array_value;
+    for (const row of rows) {
       if (row.kind !== 'record_cell') {
         throw new Error('Expected record cell');
       }

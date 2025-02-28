@@ -21,7 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataArray, Explore, Field} from '@malloydata/malloy';
 import {Tag} from '@malloydata/malloy-tag';
 import {DataStyles, RenderDef, StyleDefaults} from './data_styles';
 import {ChildRenderers, Renderer} from './renderer';
@@ -35,6 +34,7 @@ import {createErrorElement} from './utils';
 import {MainRendererFactory} from './main_renderer_factory';
 import {HTMLListRenderer} from './list';
 import * as Malloy from '@malloydata/malloy-interfaces';
+import {getNestFields, isNest, NestFieldInfo} from '../component/util';
 
 export class HTMLView {
   constructor(private document: Document) {}
@@ -102,10 +102,13 @@ export class HTMLView {
 export class JSONView {
   constructor(private document: Document) {}
 
-  async render(table: DataArray): Promise<HTMLElement> {
+  async render(
+    table: Malloy.Cell,
+    field: Malloy.DimensionInfo
+  ): Promise<HTMLElement> {
     const renderer = new HTMLJSONRenderer(this.document);
     try {
-      return await renderer.render(table);
+      return await renderer.render(table, field);
     } catch (error) {
       if (error instanceof Error) {
         return createErrorElement(this.document, error);
@@ -138,10 +141,14 @@ const suffixMap: Record<string, RenderDef['renderer']> = {
   'sparkline_bar': 'sparkline',
 };
 
-function getRendererOptions(field: Field | Explore, dataStyles: DataStyles) {
+function getRendererOptions(
+  field: Malloy.DimensionInfo,
+  dataStyles: DataStyles
+) {
   let renderer = dataStyles[field.name];
   if (!renderer) {
-    for (const sourceClass of field.sourceClasses) {
+    // TODO field.sourceClasses no longer exists
+    for (const sourceClass of []) {
       if (!renderer) {
         renderer = dataStyles[sourceClass];
       }
@@ -180,8 +187,8 @@ function updateOrCreateRenderer(
   return renderer!;
 }
 
-function isContainer(field: Field | Explore): Explore {
-  if (field.isExplore()) {
+function isContainer(field: Malloy.DimensionInfo): NestFieldInfo {
+  if (isNest(field)) {
     return field;
   } else {
     throw new Error(
@@ -191,7 +198,7 @@ function isContainer(field: Field | Explore): Explore {
 }
 
 export function makeRenderer(
-  field: Explore | Field,
+  field: Malloy.DimensionInfo,
   document: Document,
   options: RendererOptions,
   styleDefaults: StyleDefaults,
@@ -267,13 +274,13 @@ function makeContainerRenderer<Type extends ContainerRenderer>(
     tagged: Tag
   ) => Type,
   document: Document,
-  explore: Explore,
+  explore: NestFieldInfo,
   options: RendererOptions,
   tagged: Tag
 ): ContainerRenderer {
   const c = ContainerRenderer.make(cType, document, explore, options, tagged);
   const result: ChildRenderers = {};
-  explore.allFields.forEach((field: Field) => {
+  getNestFields(explore).forEach((field: Malloy.DimensionInfo) => {
     result[field.name] = makeRenderer(
       field,
       document,

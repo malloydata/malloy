@@ -21,17 +21,24 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataArray} from '@malloydata/malloy';
 import * as lite from 'vega-lite';
 import {HTMLChartRenderer} from './chart';
 import {formatTitle, getColorScale} from './utils';
 import {DEFAULT_SPEC} from './vega_spec';
+import * as Malloy from '@malloydata/malloy-interfaces';
+import {getNestFields, isNest} from '../component/util';
 
 export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
   abstract getMark(): 'bar' | 'line' | 'point';
 
-  getVegaLiteSpec(data: DataArray): lite.TopLevelSpec {
-    const fields = data.field.allFields;
+  getVegaLiteSpec(
+    data: Malloy.Cell,
+    field: Malloy.DimensionInfo
+  ): lite.TopLevelSpec {
+    if (!isNest(field) || data.kind !== 'array_cell') {
+      throw new Error('Cartesian charts must be nest fields');
+    }
+    const fields = getNestFields(field);
     const xField = fields[0];
     const yField = fields[1];
     const colorField = fields[2];
@@ -120,7 +127,7 @@ export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
       ...DEFAULT_SPEC,
       ...this.getSize(),
       data: {
-        values: this.mapData(data),
+        values: this.mapData(data.array_value, field),
       },
       mark,
       encoding: {

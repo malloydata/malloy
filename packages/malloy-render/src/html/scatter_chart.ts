@@ -21,7 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataColumn, Explore, Field} from '@malloydata/malloy';
 import {HTMLCartesianChartRenderer} from './cartesian_chart';
 import {
   LineChartRenderOptions,
@@ -31,6 +30,15 @@ import {
 import {RendererOptions} from './renderer_types';
 import {Renderer} from './renderer';
 import {RendererFactory} from './renderer_factory';
+import * as Malloy from '@malloydata/malloy-interfaces';
+import {
+  getCellValue,
+  isAtomic,
+  isDate,
+  isNumber,
+  isString,
+  isTimestamp,
+} from '../component/util';
 
 export class HTMLScatterChartRenderer extends HTMLCartesianChartRenderer {
   getMark(): 'point' {
@@ -38,30 +46,29 @@ export class HTMLScatterChartRenderer extends HTMLCartesianChartRenderer {
   }
 
   getDataType(
-    field: Field
+    field: Malloy.DimensionInfo
   ): 'temporal' | 'ordinal' | 'quantitative' | 'nominal' {
-    if (field.isAtomicField()) {
-      if (field.isDate() || field.isTimestamp()) {
+    if (isAtomic(field)) {
+      if (isDate(field) || isTimestamp(field)) {
         return 'temporal';
-      } else if (field.isString()) {
+      } else if (isString(field)) {
         return 'nominal';
-      } else if (field.isNumber()) {
+      } else if (isNumber(field)) {
         return 'quantitative';
       }
     }
     throw new Error('Invalid field type for scatter chart.');
   }
 
-  getDataValue(data: DataColumn): Date | string | number | null {
-    if (data.isNull()) {
-      return null;
-    } else if (
-      data.isTimestamp() ||
-      data.isDate() ||
-      data.isNumber() ||
-      data.isString()
+  getDataValue(data: Malloy.Cell): Date | string | number | null {
+    if (
+      data.kind === 'null_cell' ||
+      data.kind === 'timestamp_cell' ||
+      data.kind === 'date_cell' ||
+      data.kind === 'number_cell' ||
+      data.kind === 'string_cell'
     ) {
-      return data.value;
+      return getCellValue(data) as Date | string | number | null;
     } else {
       throw new Error('Invalid field type for scatter chart.');
     }
@@ -75,7 +82,7 @@ export class ScatterChartRendererFactory extends RendererFactory<ScatterChartRen
     document: Document,
     styleDefaults: StyleDefaults,
     rendererOptions: RendererOptions,
-    _field: Field | Explore,
+    _field: Malloy.DimensionInfo,
     options: LineChartRenderOptions,
     timezone?: string
   ): Renderer {

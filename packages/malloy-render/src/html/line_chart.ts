@@ -21,12 +21,20 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataColumn, Explore, Field} from '@malloydata/malloy';
 import {HTMLCartesianChartRenderer} from './cartesian_chart';
 import {LineChartRenderOptions, StyleDefaults} from './data_styles';
 import {RendererFactory} from './renderer_factory';
 import {RendererOptions} from './renderer_types';
 import {Renderer} from './renderer';
+import * as Malloy from '@malloydata/malloy-interfaces';
+import {
+  getCellValue,
+  isAtomic,
+  isDate,
+  isNumber,
+  isString,
+  isTimestamp,
+} from '../component/util';
 
 export class HTMLLineChartRenderer extends HTMLCartesianChartRenderer {
   getMark(): 'line' {
@@ -34,30 +42,30 @@ export class HTMLLineChartRenderer extends HTMLCartesianChartRenderer {
   }
 
   getDataType(
-    field: Field
+    field: Malloy.DimensionInfo
   ): 'temporal' | 'ordinal' | 'quantitative' | 'nominal' {
-    if (field.isAtomicField()) {
-      if (field.isDate() || field.isTimestamp()) {
+    if (isAtomic(field)) {
+      if (isDate(field) || isTimestamp(field)) {
         return 'temporal';
-      } else if (field.isString()) {
+      } else if (isString(field)) {
         return 'nominal';
-      } else if (field.isNumber()) {
+      } else if (isNumber(field)) {
         return 'quantitative';
       }
     }
     throw new Error('Invalid field type for line chart.');
   }
 
-  getDataValue(data: DataColumn): Date | string | number | null {
-    if (data.isNull()) {
+  getDataValue(data: Malloy.Cell): Date | string | number | null {
+    if (data.kind === 'null_cell') {
       return null;
     } else if (
-      data.isTimestamp() ||
-      data.isDate() ||
-      data.isNumber() ||
-      data.isString()
+      data.kind === 'timestamp_cell' ||
+      data.kind === 'date_cell' ||
+      data.kind === 'number_cell' ||
+      data.kind === 'string_cell'
     ) {
-      return data.value;
+      return getCellValue(data) as Date | string | number;
     } else {
       throw new Error('Invalid field type for line chart.');
     }
@@ -71,7 +79,7 @@ export class LineChartRendererFactory extends RendererFactory<LineChartRenderOpt
     document: Document,
     styleDefaults: StyleDefaults,
     rendererOptions: RendererOptions,
-    _field: Field | Explore,
+    _field: Malloy.DimensionInfo,
     options: LineChartRenderOptions,
     timezone?: string
   ): Renderer {

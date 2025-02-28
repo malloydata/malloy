@@ -23,12 +23,13 @@
 
 import * as lite from 'vega-lite';
 import * as vega from 'vega';
-import {DataArray, DataColumn, Field} from '@malloydata/malloy';
 import {Renderer} from './renderer';
 import {RendererOptions} from './renderer_types';
 import {ChartRenderOptions, StyleDefaults} from './data_styles';
 import {normalizeToTimezone} from '../html/utils';
 import {mergeVegaConfigs} from '../component/vega/merge-vega-configs';
+import * as Malloy from '@malloydata/malloy-interfaces';
+import {getCell, getNestFields, isNest, NestFieldInfo} from '../component/util';
 
 type MappedRow = {[p: string]: string | number | Date | undefined | null};
 
@@ -36,26 +37,31 @@ export abstract class HTMLChartRenderer implements Renderer {
   size: string;
   chartOptions: ChartRenderOptions;
   abstract getDataType(
-    field: Field
+    field: Malloy.DimensionInfo
   ): 'temporal' | 'ordinal' | 'quantitative' | 'nominal';
 
   abstract getDataValue(
-    value: DataColumn
+    data: Malloy.Cell,
+    field: Malloy.DimensionInfo
   ): Date | string | number | null | undefined;
 
-  mapData(data: DataArray): MappedRow[] {
+  mapData(data: Malloy.Cell[], field: NestFieldInfo): MappedRow[] {
     const mappedRows: MappedRow[] = [];
-    for (const row of data) {
+    for (const rowCell of data) {
+      if (rowCell.kind !== 'record_cell') {
+        throw new Error('Expected record cell');
+      }
+      const row = rowCell.record_value;
       const mappedRow: {
         [p: string]: string | number | Date | undefined | null;
       } = {};
-      for (const field of data.field.allFields) {
-        let dataValue = this.getDataValue(row.cell(field));
+      for (const f of getNestFields(field)) {
+        let dataValue = this.getDataValue(getCell(field, row, f.name), f);
         if (dataValue instanceof Date) {
           dataValue = normalizeToTimezone(dataValue, this.timezone);
         }
 
-        mappedRow[field.name] = dataValue;
+        mappedRow[f.name] = dataValue;
       }
       mappedRows.push(mappedRow);
     }
@@ -81,14 +87,20 @@ export abstract class HTMLChartRenderer implements Renderer {
     this.chartOptions = chartOptions;
   }
 
-  abstract getVegaLiteSpec(data: DataArray): lite.TopLevelSpec;
+  abstract getVegaLiteSpec(
+    data: Malloy.Cell,
+    field: Malloy.DimensionInfo
+  ): lite.TopLevelSpec;
 
-  async render(table: DataColumn): Promise<HTMLElement> {
-    if (!table.isArray()) {
+  async render(
+    table: Malloy.Cell,
+    field: Malloy.DimensionInfo
+  ): Promise<HTMLElement> {
+    if (!isNest(field)) {
       throw new Error('Invalid type for chart renderer');
     }
 
-    const spec = this.getVegaLiteSpec(table);
+    const spec = this.getVegaLiteSpec(table, field);
     spec.config = mergeVegaConfigs(
       spec.config ?? {},
       this.chartOptions.vegaConfigOverride ?? {}

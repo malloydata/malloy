@@ -22,7 +22,6 @@
  */
 
 import {HTMLSparkLineRenderer} from './sparkline';
-import {DataArray, Explore, Field} from '@malloydata/malloy';
 import * as lite from 'vega-lite';
 import {getColorScale} from './utils';
 import {DEFAULT_SPEC} from './vega_spec';
@@ -30,9 +29,10 @@ import {RendererFactory} from './renderer_factory';
 import {Renderer} from './renderer';
 import {SparkLineRenderOptions, StyleDefaults} from './data_styles';
 import {RendererOptions} from './renderer_types';
+import * as Malloy from '@malloydata/malloy-interfaces';
 
 export class HTMLAreaSparkLineRenderer extends HTMLSparkLineRenderer {
-  override getVegaLiteSpec(data: DataArray): lite.TopLevelSpec {
+  override getVegaLiteSpec(data: Malloy.Cell): lite.TopLevelSpec {
     const fields = data.field.allFields;
     const xField = fields[0];
     const yField = fields[1];

@@ -22,13 +22,6 @@
  */
 
 import * as lite from 'vega-lite';
-import {
-  DataArray,
-  DataColumn,
-  Explore,
-  Field,
-  TimestampTimeframe,
-} from '@malloydata/malloy';
 import usAtlas from 'us-atlas/states-10m.json';
 import {HTMLChartRenderer} from './chart';
 import {formatTitle, getColorScale, timeToString} from './utils';
@@ -36,35 +29,53 @@ import {RendererFactory} from './renderer_factory';
 import {PointMapRenderOptions, StyleDefaults} from './data_styles';
 import {RendererOptions} from './renderer_types';
 import {Renderer} from './renderer';
+import * as Malloy from '@malloydata/malloy-interfaces';
+import {
+  getCellValue,
+  getNestFields,
+  isAtomic,
+  isDate,
+  isNest,
+  isNumber,
+  isString,
+  isTimestamp,
+} from '../component/util';
 
 export class HTMLPointMapRenderer extends HTMLChartRenderer {
-  getDataValue(data: DataColumn): string | number {
-    if (data.isNumber() || data.isString()) {
-      return data.value;
-    } else if (data.isTimestamp() || data.isDate()) {
+  getDataValue(
+    data: Malloy.Cell,
+    field: Malloy.DimensionInfo
+  ): string | number {
+    if (data.kind === 'number_cell' || data.kind === 'string_cell') {
+      return getCellValue(data) as number | string;
+    } else if (data.kind === 'timestamp_cell' || data.kind === 'date_cell') {
+      const timeframe =
+        isDate(field) || isTimestamp(field) ? field.type.timeframe : undefined;
       return timeToString(
-        data.value,
-        data.field.timeframe || TimestampTimeframe.Second,
+        getCellValue(data) as Date,
+        timeframe ?? 'second',
         this.timezone
       );
     }
     throw new Error('Invalid field type for point map chart.');
   }
 
-  getDataType(field: Field): 'ordinal' | 'quantitative' | 'nominal' {
-    if (field.isAtomicField()) {
-      if (field.isDate() || field.isTimestamp() || field.isString()) {
+  getDataType(
+    field: Malloy.DimensionInfo
+  ): 'ordinal' | 'quantitative' | 'nominal' {
+    if (isAtomic(field)) {
+      if (isDate(field) || isTimestamp(field) || isString(field)) {
         return 'nominal';
-      } else if (field.isNumber()) {
+      } else if (isNumber(field)) {
         return 'quantitative';
       }
     }
     throw new Error('Invalid field type for point map.');
   }
 
-  isTimeFieldDef(field: Field): boolean {
-    if (field.isAtomicField()) {
-      if (field.isDate() || field.isTimestamp()) {
+  isTimeFieldDef(field: Malloy.DimensionInfo): boolean {
+    if (isAtomic(field)) {
+      if (isDate(field) || isTimestamp(field)) {
         return true;
       }
     }
@@ -72,12 +83,18 @@ export class HTMLPointMapRenderer extends HTMLChartRenderer {
     return false;
   }
 
-  getVegaLiteSpec(data: DataArray): lite.TopLevelSpec {
-    if (data.isNull()) {
+  getVegaLiteSpec(
+    data: Malloy.Cell,
+    field: Malloy.DimensionInfo
+  ): lite.TopLevelSpec {
+    if (data.kind === 'null_cell') {
       throw new Error('Expected struct value not to be null.');
     }
+    if (!isNest(field) || data.kind !== 'array_cell') {
+      throw new Error('Expected field to be a nest field.');
+    }
 
-    const fields = data.field.allFields;
+    const fields = getNestFields(field);
 
     const latField = fields[0];
     const lonField = fields[1];
@@ -139,7 +156,7 @@ export class HTMLPointMapRenderer extends HTMLChartRenderer {
     return {
       ...this.getSize(),
       data: {
-        values: this.mapData(data),
+        values: this.mapData(data.array_value, field),
       },
       projection: {
         type: 'albersUsa',
@@ -211,7 +228,7 @@ export class PointMapRendererFactory extends RendererFactory<PointMapRenderOptio
     document: Document,
     styleDefaults: StyleDefaults,
     rendererOptions: RendererOptions,
-    _field: Field | Explore,
+    _field: Malloy.DimensionInfo,
     options: PointMapRenderOptions,
     timezone?: string
   ): Renderer {

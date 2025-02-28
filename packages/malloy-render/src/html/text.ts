@@ -21,7 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataColumn, Explore, Field} from '@malloydata/malloy';
 import {Renderer} from './renderer';
 import {createErrorElement, createNullElement} from './utils';
 import {
@@ -31,18 +30,23 @@ import {
 } from './data_styles';
 import {RendererFactory} from './renderer_factory';
 import {RendererOptions} from './renderer_types';
+import * as Malloy from '@malloydata/malloy-interfaces';
+import {getCellValue, isAtomic} from '../component/util';
 
 export class HTMLTextRenderer implements Renderer {
   constructor(private readonly document: Document) {}
 
-  getText(data: DataColumn): string | null {
-    return data.value === null ? null : `${data.value}`;
+  getText(data: Malloy.Cell, _field: Malloy.DimensionInfo): string | null {
+    return data.kind === 'null_cell' ? null : `${getCellValue(data)}`;
   }
 
-  async render(data: DataColumn): Promise<HTMLElement> {
+  async render(
+    data: Malloy.Cell,
+    field: Malloy.DimensionInfo
+  ): Promise<HTMLElement> {
     let text: string | null = null;
     try {
-      text = this.getText(data);
+      text = this.getText(data, field);
     } catch (e) {
       return createErrorElement(this.document, e);
     }
@@ -60,15 +64,15 @@ export class HTMLTextRenderer implements Renderer {
 export class TextRendererFactory extends RendererFactory<TextRenderOptions> {
   public static readonly instance = new TextRendererFactory();
 
-  activates(field: Field | Explore): boolean {
-    return field.hasParentExplore() && !field.isExploreField();
+  activates(field: Malloy.DimensionInfo): boolean {
+    return field.hasParentExplore() && !isAtomic(field);
   }
 
   create(
     document: Document,
     _styleDefaults: StyleDefaults,
     _rendererOptions: RendererOptions,
-    _field: Field | Explore,
+    _field: Malloy.DimensionInfo,
     _options: DataRenderOptions
   ): Renderer {
     return new HTMLTextRenderer(document);

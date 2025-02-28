@@ -21,31 +21,32 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {AtomicFieldType, DataColumn, Explore, Field} from '@malloydata/malloy';
 import {HTMLTextRenderer} from './text';
 import {RendererFactory} from './renderer_factory';
 import {BooleanRenderOptions, StyleDefaults} from './data_styles';
 import {RendererOptions} from './renderer_types';
 import {Renderer} from './renderer';
+import * as Malloy from '@malloydata/malloy-interfaces';
+import {isAtomic} from '../component/util';
 
 export class HTMLBooleanRenderer extends HTMLTextRenderer {
-  override getText(data: DataColumn): string | null {
-    if (data.isNull()) {
+  override getText(data: Malloy.Cell): string | null {
+    if (data.kind !== 'boolean_cell') {
       return null;
     }
 
-    return `${data.boolean.value}`;
+    return `${data.boolean_value}`;
   }
 }
 
 export class BooleanRendererFactory extends RendererFactory<BooleanRenderOptions> {
   public static readonly instance = new BooleanRendererFactory();
 
-  activates(field: Field | Explore): boolean {
+  activates(field: Malloy.DimensionInfo): boolean {
     return (
       field.hasParentExplore() &&
-      field.isAtomicField() &&
-      field.type === AtomicFieldType.Boolean
+      isAtomic(field) &&
+      field.type.kind === 'boolean_type'
     );
   }
 
@@ -53,7 +54,7 @@ export class BooleanRendererFactory extends RendererFactory<BooleanRenderOptions
     document: Document,
     _styleDefaults: StyleDefaults,
     _rendererOptions: RendererOptions,
-    _field: Field | Explore,
+    _field: Malloy.DimensionInfo,
     _options: BooleanRenderOptions
   ): Renderer {
     return new HTMLBooleanRenderer(document);

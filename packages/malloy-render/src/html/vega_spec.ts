@@ -22,7 +22,6 @@
  */
 
 import * as lite from 'vega-lite';
-import {DataColumn, Explore, Field} from '@malloydata/malloy';
 import {HTMLChartRenderer} from './chart';
 
 import {getColorScale} from './utils';
@@ -31,6 +30,19 @@ import {RendererOptions} from './renderer_types';
 import {RendererFactory} from './renderer_factory';
 import {Renderer} from './renderer';
 import {grayMedium, gridGray} from '../component/vega/base-vega-config';
+import * as Malloy from '@malloydata/malloy-interfaces';
+import {
+  getCellValue,
+  getNestFields,
+  isAtomic,
+  isDate,
+  isNest,
+  isNumber,
+  isString,
+  isTimestamp,
+  NestFieldInfo,
+  valueIsNull,
+} from '../component/util';
 
 type DataContainer = Array<unknown> | Record<string, unknown>;
 
@@ -465,7 +477,7 @@ export class HTMLVegaSpecRenderer extends HTMLChartRenderer {
     document: Document,
     styleDefaults: StyleDefaults,
     options: RendererOptions,
-    field: Field | Explore,
+    field: Malloy.DimensionInfo,
     vegaRenderOptions: VegaRenderOptions
   ) {
     super(document, styleDefaults, options);
@@ -490,41 +502,42 @@ export class HTMLVegaSpecRenderer extends HTMLChartRenderer {
     }
   }
 
-  getDataValue(data: DataColumn): Date | string | number | null {
-    if (data.isNull()) {
-      return null;
-    } else if (
-      data.isTimestamp() ||
-      data.isDate() ||
-      data.isNumber() ||
-      data.isString()
+  getDataValue(data: Malloy.Cell): Date | string | number | null {
+    const value = getCellValue(data);
+    if (
+      value === null ||
+      typeof value === 'string' ||
+      typeof value === 'number' ||
+      value instanceof Date
     ) {
-      return data.value;
-    } else {
-      throw new Error('Invalid field type for vega chart.');
+      return value;
     }
+    throw new Error('Invalid data type for vega chart.');
   }
 
-  getDataType(field: Field): 'ordinal' | 'quantitative' | 'nominal' {
-    if (field.isAtomicField()) {
-      if (field.isDate() || field.isTimestamp() || field.isString()) {
+  getDataType(
+    field: Malloy.DimensionInfo
+  ): 'ordinal' | 'quantitative' | 'nominal' {
+    if (isAtomic(field)) {
+      if (isDate(field) || isTimestamp(field) || isString(field)) {
         return 'nominal';
-      } else if (field.isNumber()) {
+      } else if (isNumber(field)) {
         return 'quantitative';
       }
     }
     throw new Error('Invalid field type for vega chart.');
   }
 
-  translateField(explore: Explore, fieldString: string): string {
+  translateField(explore: NestFieldInfo, fieldString: string): string {
     const m = fieldString.match(/#\{(\d+)\}/);
     if (m && m.groups) {
-      return explore.allFields[parseInt(m.groups[1]) - 1].name;
+      // WHAT
+      return getNestFields(explore)[parseInt(m.groups[1]) - 1].name;
     }
     return fieldString;
   }
 
-  translateFields(node: DataContainer, explore: Explore): void {
+  translateFields(node: DataContainer, explore: NestFieldInfo): void {
     if (Array.isArray(node)) {
       for (const e of node) {
         if (isDataContainer(e)) {
@@ -562,16 +575,24 @@ export class HTMLVegaSpecRenderer extends HTMLChartRenderer {
   //   return ret;
   // }
 
-  getVegaLiteSpec(data: DataColumn): lite.TopLevelSpec {
-    if (data.isNull() || !data.isArray()) {
+  getVegaLiteSpec(
+    data: Malloy.Cell,
+    field: Malloy.DimensionInfo
+  ): lite.TopLevelSpec {
+    if (
+      !isNest(field) ||
+      valueIsNull(data) ||
+      (data.kind !== 'array_cell' && data.kind !== 'record_cell')
+    ) {
       throw new Error('Expected struct value not to be null.');
     }
 
     const newSpec = structuredClone(this.spec);
 
-    this.translateFields(newSpec as unknown as DataContainer, data.field);
+    this.translateFields(newSpec as unknown as DataContainer, field);
+    const rows = data.kind === 'record_cell' ? [data] : data.array_value;
     const rdata = {
-      values: this.mapData(data),
+      values: this.mapData(rows, field),
     };
     newSpec.data = rdata;
 
@@ -586,7 +607,7 @@ export class VegaRendererFactory extends RendererFactory<VegaRenderOptions> {
     document: Document,
     styleDefaults: StyleDefaults,
     rendererOptions: RendererOptions,
-    field: Field | Explore,
+    field: Malloy.DimensionInfo,
     options: VegaRenderOptions
   ): Renderer {
     return new HTMLVegaSpecRenderer(

@@ -21,7 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataArray, Explore, Field} from '@malloydata/malloy';
 import * as lite from 'vega-lite';
 import {getColorScale} from './utils';
 import {DEFAULT_SPEC} from './vega_spec';
@@ -30,6 +29,8 @@ import {BarSparkLineRenderOptions, StyleDefaults} from './data_styles';
 import {RendererFactory} from './renderer_factory';
 import {RendererOptions} from './renderer_types';
 import {Renderer} from './renderer';
+import * as Malloy from '@malloydata/malloy-interfaces';
+import { getNestFields, isNest } from '../component/util';
 
 export class HTMLBarSparkLineRenderer extends HTMLBarChartRenderer {
   override getSize(): {height: number; width: number} {
@@ -40,8 +41,14 @@ export class HTMLBarSparkLineRenderer extends HTMLBarChartRenderer {
     }
   }
 
-  override getVegaLiteSpec(data: DataArray): lite.TopLevelSpec {
-    const fields = data.field.allFields;
+  override getVegaLiteSpec(
+    data: Malloy.Cell,
+    field: Malloy.DimensionInfo
+  ): lite.TopLevelSpec {
+    if (!isNest(field)) {
+      throw new Error('BarSparkLineRenderer only supports nest fields');
+    }
+    const fields = getNestFields(field);
     const xField = fields[0];
     const yField = fields[1];
     const colorField = fields[2];

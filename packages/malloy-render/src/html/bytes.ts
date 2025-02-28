@@ -21,20 +21,16 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataColumn, Explore, Field} from '@malloydata/malloy';
 import {HTMLTextRenderer} from './text';
 import {BytesRenderOptions, StyleDefaults} from './data_styles';
 import {RendererOptions} from './renderer_types';
 import {Renderer} from './renderer';
 import {RendererFactory} from './renderer_factory';
+import * as Malloy from '@malloydata/malloy-interfaces';
 
 export class HTMLBytesRenderer extends HTMLTextRenderer {
-  override getText(data: DataColumn): string | null {
-    if (data.isNull()) {
-      return null;
-    }
-
-    return data.bytes.value.toString('base64');
+  override getText(_data: Malloy.Cell): string | null {
+    return null; // TODO not supported any more
   }
 }
 
@@ -45,7 +41,7 @@ export class BytesRendererFactory extends RendererFactory<BytesRenderOptions> {
     document: Document,
     _styleDefaults: StyleDefaults,
     _rendererOptions: RendererOptions,
-    _field: Field | Explore,
+    _field: Malloy.DimensionInfo,
     _options: BytesRenderOptions
   ): Renderer {
     return new HTMLBytesRenderer(document);

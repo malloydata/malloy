@@ -21,7 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataArray, Explore, Field} from '@malloydata/malloy';
 import * as lite from 'vega-lite';
 import {getColorScale} from './utils';
 import {DEFAULT_SPEC} from './vega_spec';
@@ -30,6 +29,8 @@ import {RendererFactory} from './renderer_factory';
 import {ColumnSparkLineRenderOptions, StyleDefaults} from './data_styles';
 import {RendererOptions} from './renderer_types';
 import {Renderer} from './renderer';
+import * as Malloy from '@malloydata/malloy-interfaces';
+import {getNestFields, isNest} from '../component/util';
 
 export class HTMLColumnSparkLineRenderer extends HTMLBarChartRenderer {
   override getSize(): {height: number; width: number} {
@@ -40,8 +41,14 @@ export class HTMLColumnSparkLineRenderer extends HTMLBarChartRenderer {
     }
   }
 
-  override getVegaLiteSpec(data: DataArray): lite.TopLevelSpec {
-    const fields = data.field.allFields;
+  override getVegaLiteSpec(
+    data: Malloy.Cell,
+    field: Malloy.DimensionInfo
+  ): lite.TopLevelSpec {
+    if (!isNest(field) || data.kind !== 'array_cell') {
+      throw new Error('Column sparkline renderer requires a nested field');
+    }
+    const fields = getNestFields(field);
     const xField = fields[0];
     const yField = fields[1];
     const colorField = fields[2];
@@ -98,7 +105,7 @@ export class HTMLColumnSparkLineRenderer extends HTMLBarChartRenderer {
       ...DEFAULT_SPEC,
       ...this.getSize(),
       data: {
-        values: this.mapData(data),
+        values: this.mapData(data.array_value, field),
       },
       config: {
         view: {
@@ -119,7 +126,7 @@ export class HTMLColumnSparkLineRenderer extends HTMLBarChartRenderer {
 export class ColumnSparkLineRendererFactory extends RendererFactory<ColumnSparkLineRenderOptions> {
   public static readonly instance = new ColumnSparkLineRendererFactory();
 
-  isValidMatch(field: Field | Explore): boolean {
+  isValidMatch(field: Malloy.DimensionInfo): boolean {
     return field.name.endsWith('_column');
   }
 
@@ -127,7 +134,7 @@ export class ColumnSparkLineRendererFactory extends RendererFactory<ColumnSparkL
     document: Document,
     styleDefaults: StyleDefaults,
     rendererOptions: RendererOptions,
-    _field: Field | Explore,
+    _field: Malloy.DimensionInfo,
     options: ColumnSparkLineRenderOptions,
     timezone?: string
   ): Renderer {

@@ -21,7 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Field, Explore} from '@malloydata/malloy';
 import {Tag} from '@malloydata/malloy-tag';
 import {DataRenderOptions, RenderDef, StyleDefaults} from './data_styles';
 import {Renderer} from './renderer';
@@ -51,6 +50,7 @@ import {UnsupportedRendererFactory} from './unsupported';
 import {TextRendererFactory} from './text';
 import {DataVolumeRendererFactory} from './data_volume';
 import {DurationRendererFactory} from './duration';
+import * as Malloy from '@malloydata/malloy-interfaces';
 
 export class MainRendererFactory {
   static renderFactories = [
@@ -87,7 +87,7 @@ export class MainRendererFactory {
     document: Document,
     styleDefaults: StyleDefaults,
     rendererOptions: RendererOptions,
-    field: Field | Explore,
+    field: Malloy.DimensionInfo,
     timezone?: string | undefined
   ): Renderer | undefined {
     let factory: RendererFactory<DataRenderOptions> | undefined;

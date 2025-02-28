@@ -21,13 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {AtomicFieldType, DataColumn, Explore, Field} from '@malloydata/malloy';
 import {HTMLTextRenderer} from './text';
 import {NumberRenderOptions, StyleDefaults} from './data_styles';
 import {RendererOptions} from './renderer_types';
 import {Renderer} from './renderer';
 import {RendererFactory} from './renderer_factory';
 import {format} from 'ssf';
+import * as Malloy from '@malloydata/malloy-interfaces';
+import {isAtomic} from '../component/util';
 
 export class HTMLNumberRenderer extends HTMLTextRenderer {
   constructor(
@@ -37,21 +38,21 @@ export class HTMLNumberRenderer extends HTMLTextRenderer {
     super(document);
   }
 
-  override getText(data: DataColumn): string | null {
-    if (data.isNull()) {
+  override getText(data: Malloy.Cell): string | null {
+    if (data.kind !== 'number_cell') {
       return null;
     }
 
     if (this.options.value_format) {
       try {
-        return format(this.options.value_format, data.number.value);
+        return format(this.options.value_format, data.number_value);
       } catch {
         // TODO: explore surfacing invalid format error, ignoring it for now.
         throw new Error(`Invalid value format: ${this.options.value_format}`);
       }
     }
 
-    return data.number.value.toLocaleString();
+    return data.number_value.toLocaleString();
   }
 }
 
@@ -69,11 +70,11 @@ export class NumberRendererFactory extends RendererFactory<NumberRenderOptions> 
     );
   }
 
-  activates(field: Field | Explore): boolean {
+  activates(field: Malloy.DimensionInfo): boolean {
     return (
       field.hasParentExplore() &&
-      field.isAtomicField() &&
-      field.type === AtomicFieldType.Number
+      isAtomic(field) &&
+      field.type.kind === 'number_type'
     );
   }
 
@@ -81,7 +82,7 @@ export class NumberRendererFactory extends RendererFactory<NumberRenderOptions> 
     document: Document,
     _styleDefaults: StyleDefaults,
     _rendererOptions: RendererOptions,
-    _field: Field | Explore,
+    _field: Malloy.DimensionInfo,
     options: NumberRenderOptions
   ): Renderer {
     return new HTMLNumberRenderer(document, options);

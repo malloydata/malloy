@@ -21,32 +21,33 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataColumn, Explore, Field} from '@malloydata/malloy';
 import {Renderer} from './renderer';
 import {createNullElement} from './utils';
 import {RendererFactory} from './renderer_factory';
 import {DataRenderOptions, StyleDefaults} from './data_styles';
 import {RendererOptions} from './renderer_types';
+import * as Malloy from '@malloydata/malloy-interfaces';
+import {getCellValue, isAtomic} from '../component/util';
 
 export class HTMLUnsupportedRenderer implements Renderer {
   constructor(private readonly document: Document) {}
 
-  getText(data: DataColumn): string | null {
-    const value = data.value;
+  getText(data: Malloy.Cell): string | null {
+    const value = getCellValue(data);
     if (typeof value === 'string') {
       return value;
     } else if (value === null) {
       return null;
-    } else if (typeof data.value === 'object') {
-      const record = data.value as Record<string, unknown>;
+    } else if (typeof value === 'object') {
+      const record = value as Record<string, unknown>;
       if ('value' in record && typeof record['value'] === 'string') {
         return record['value'];
       }
     }
-    return JSON.stringify(data.value);
+    return JSON.stringify(value);
   }
 
-  async render(data: DataColumn): Promise<HTMLElement> {
+  async render(data: Malloy.Cell): Promise<HTMLElement> {
     const text = this.getText(data);
     if (text === null) {
       return createNullElement(this.document);
@@ -61,9 +62,11 @@ export class HTMLUnsupportedRenderer implements Renderer {
 export class UnsupportedRendererFactory extends RendererFactory<DataRenderOptions> {
   public static readonly instance = new UnsupportedRendererFactory();
 
-  activates(field: Field | Explore): boolean {
+  activates(field: Malloy.DimensionInfo): boolean {
     return (
-      field.hasParentExplore() && field.isAtomicField() && field.isUnsupported()
+      field.hasParentExplore() &&
+      isAtomic(field) &&
+      field.type.kind === 'sql_native_type'
     );
   }
 
@@ -71,7 +74,7 @@ export class UnsupportedRendererFactory extends RendererFactory<DataRenderOption
     document: Document,
     _styleDefaults: StyleDefaults,
     _rendererOptions: RendererOptions,
-    _field: Field | Explore,
+    _field: Malloy.DimensionInfo,
     _options: DataRenderOptions
   ): Renderer {
     return new HTMLUnsupportedRenderer(document);

@@ -22,7 +22,6 @@
  */
 
 import * as lite from 'vega-lite';
-import {DataColumn, Explore, Field} from '@malloydata/malloy';
 import usAtlas from 'us-atlas/states-10m.json';
 import {HTMLChartRenderer} from './chart';
 import {STATE_CODES} from './state_codes';
@@ -31,30 +30,49 @@ import {ShapeMapRenderOptions, StyleDefaults} from './data_styles';
 import {RendererOptions} from './renderer_types';
 import {Renderer} from './renderer';
 import {RendererFactory} from './renderer_factory';
+import * as Malloy from '@malloydata/malloy-interfaces';
+import {
+  getNestFields,
+  isAtomic,
+  isDate,
+  isNest,
+  isNumber,
+  isString,
+  isTimestamp,
+} from '../component/util';
 
 export class HTMLShapeMapRenderer extends HTMLChartRenderer {
-  private getRegionField(explore: Explore): Field {
-    return explore.allFields[0];
+  private getRegionField(explore: Malloy.DimensionInfo): Malloy.DimensionInfo {
+    if (!isNest(explore)) {
+      throw new Error('Expected this to be an array of records.');
+    }
+    return getNestFields(explore)[0];
   }
 
-  private getColorField(explore: Explore): Field {
-    return explore.allFields[1];
+  private getColorField(explore: Malloy.DimensionInfo): Malloy.DimensionInfo {
+    if (!isNest(explore)) {
+      throw new Error('Expected this to be an array of records.');
+    }
+    return getNestFields(explore)[1];
   }
 
-  getDataValue(data: DataColumn): string | number | undefined {
-    if (data.isNumber()) {
-      return data.value;
-    } else if (data.isString()) {
-      if (data.field === this.getRegionField(data.field.parentExplore)) {
-        const id = STATE_CODES[data.value];
+  getDataValue(
+    data: Malloy.Cell,
+    field: Malloy.DimensionInfo
+  ): string | number | undefined {
+    if (data.kind === 'number_cell') {
+      return data.number_value;
+    } else if (data.kind === 'string_cell') {
+      if (field === this.getRegionField(data.field.parentExplore)) {
+        const id = STATE_CODES[data.string_value];
         if (id === undefined) {
           return undefined;
         }
         return id;
       } else {
-        return data.value;
+        return data.string_value;
       }
-    } else if (data.isNull()) {
+    } else if (data.kind === 'null_cell') {
       // ignore nulls
       return undefined;
     } else {
@@ -62,34 +80,39 @@ export class HTMLShapeMapRenderer extends HTMLChartRenderer {
     }
   }
 
-  getDataType(field: Field): 'ordinal' | 'quantitative' | 'nominal' {
-    if (field.isAtomicField()) {
-      if (field.isDate() || field.isTimestamp()) {
+  getDataType(
+    field: Malloy.DimensionInfo
+  ): 'ordinal' | 'quantitative' | 'nominal' {
+    if (isAtomic(field)) {
+      if (isDate(field) || isTimestamp(field)) {
         return 'nominal';
-      } else if (field.isString()) {
+      } else if (isString(field)) {
         if (field === this.getRegionField(field.parentExplore)) {
           return 'quantitative';
         } else {
           return 'nominal';
         }
-      } else if (field.isNumber()) {
+      } else if (isNumber(field)) {
         return 'quantitative';
       }
     }
     throw new Error('Invalid field type for shape map.');
   }
 
-  getVegaLiteSpec(data: DataColumn): lite.TopLevelSpec {
-    if (data.isNull()) {
+  getVegaLiteSpec(
+    data: Malloy.Cell,
+    field: Malloy.DimensionInfo
+  ): lite.TopLevelSpec {
+    if (data.kind === 'null_cell') {
       throw new Error('Expected struct value not to be null.');
     }
 
-    if (!data.isArray()) {
+    if (data.kind !== 'array_cell' || !isNest(field)) {
       throw new Error('Invalid data for shape map');
     }
 
-    const regionField = this.getRegionField(data.field);
-    const colorField = this.getColorField(data.field);
+    const regionField = this.getRegionField(field);
+    const colorField = this.getColorField(field);
 
     const colorType = colorField ? this.getDataType(colorField) : undefined;
 
@@ -110,7 +133,7 @@ export class HTMLShapeMapRenderer extends HTMLChartRenderer {
           }
         : undefined;
 
-    const mapped = this.mapData(data).filter(
+    const mapped = this.mapData(data.array_value, field).filter(
       row => row[regionField.name] !== undefined
     );
 
@@ -200,7 +223,7 @@ export class ShapeMapRendererFactory extends RendererFactory<ShapeMapRenderOptio
     document: Document,
     styleDefaults: StyleDefaults,
     rendererOptions: RendererOptions,
-    _field: Field | Explore,
+    _field: Malloy.DimensionInfo,
     options: ShapeMapRenderOptions,
     timezone?: string
   ): Renderer {

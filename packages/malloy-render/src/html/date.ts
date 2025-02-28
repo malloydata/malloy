@@ -21,19 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  AtomicFieldType,
-  DataColumn,
-  DateTimeframe,
-  Explore,
-  Field,
-  TimestampTimeframe,
-} from '@malloydata/malloy';
 import {Renderer} from './renderer';
 import {createErrorElement, createNullElement, timeToString} from './utils';
 import {StyleDefaults, TimeRenderOptions} from './data_styles';
 import {RendererOptions} from './renderer_types';
 import {RendererFactory} from './renderer_factory';
+import * as Malloy from '@malloydata/malloy-interfaces';
+import {getCellValue, isAtomic, isDate, isTimestamp} from '../component/util';
 
 export class HTMLDateRenderer implements Renderer {
   constructor(
@@ -41,12 +35,18 @@ export class HTMLDateRenderer implements Renderer {
     private readonly queryTimezone: string | undefined
   ) {}
 
-  async render(data: DataColumn): Promise<HTMLElement> {
-    if (data.isNull()) {
+  async render(
+    data: Malloy.Cell,
+    field: Malloy.DimensionInfo
+  ): Promise<HTMLElement> {
+    if (data.kind === 'null_cell') {
       return createNullElement(this.document);
     }
 
-    if (!data.isDate() && !data.isTimestamp()) {
+    if (
+      (data.kind !== 'date_cell' && data.kind !== 'timestamp_cell') ||
+      (!isDate(field) && !isTimestamp(field))
+    ) {
       return createErrorElement(
         this.document,
         'Invalid field for date renderer'
@@ -54,10 +54,11 @@ export class HTMLDateRenderer implements Renderer {
     }
 
     const timeframe =
-      data.field.timeframe ||
-      (data.isTimestamp() ? TimestampTimeframe.Second : DateTimeframe.Day);
+      field.type.timeframe || (isDate(field) ? 'day' : 'second');
 
-    const timestring = timeToString(data.value, timeframe, this.queryTimezone);
+    const value = getCellValue(data) as Date;
+
+    const timestring = timeToString(value, timeframe, this.queryTimezone);
 
     const element = this.document.createElement('span');
     element.appendChild(this.document.createTextNode(timestring));
@@ -68,12 +69,11 @@ export class HTMLDateRenderer implements Renderer {
 export class DateRendererFactory extends RendererFactory<TimeRenderOptions> {
   public static readonly instance = new DateRendererFactory();
 
-  activates(field: Field | Explore): boolean {
+  activates(field: Malloy.DimensionInfo): boolean {
     return (
       field.hasParentExplore() &&
-      field.isAtomicField() &&
-      (field.type === AtomicFieldType.Date ||
-        field.type === AtomicFieldType.Timestamp)
+      isAtomic(field) &&
+      (isDate(field) || isTimestamp(field))
     );
   }
 
@@ -81,7 +81,7 @@ export class DateRendererFactory extends RendererFactory<TimeRenderOptions> {
     document: Document,
     _styleDefaults: StyleDefaults,
     _rendererOptions: RendererOptions,
-    _field: Field | Explore,
+    _field: Malloy.DimensionInfo,
     _options: TimeRenderOptions,
     timezone?: string
   ): Renderer {

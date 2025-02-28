@@ -21,25 +21,29 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataColumn, Explore, Field} from '@malloydata/malloy';
 import {Renderer} from './renderer';
 import {createErrorElement, createNullElement, getDynamicValue} from './utils';
 import {RendererFactory} from './renderer_factory';
 import {ImageRenderOptions, StyleDefaults} from './data_styles';
 import {RendererOptions} from './renderer_types';
+import * as Malloy from '@malloydata/malloy-interfaces';
+import {tagFor} from '../component/util';
 
 export class HTMLImageRenderer implements Renderer {
   constructor(private readonly document: Document) {}
 
-  async render(data: DataColumn): Promise<HTMLElement> {
-    if (!data.isString()) {
+  async render(
+    data: Malloy.Cell,
+    field: Malloy.DimensionInfo
+  ): Promise<HTMLElement> {
+    if (data.kind !== 'string_cell' && data.kind !== 'null_cell') {
       return createErrorElement(
         this.document,
         'Invalid field for Image renderer'
       );
     }
 
-    const {tag} = data.field.tagParse();
+    const tag = tagFor(field);
     const imgTag = tag.tag('image');
 
     if (!imgTag) {
@@ -49,9 +53,10 @@ export class HTMLImageRenderer implements Renderer {
       );
     }
 
-    const element: HTMLElement = data.isNull()
-      ? createNullElement(this.document)
-      : this.document.createElement('img');
+    const element: HTMLElement =
+      data.kind === 'null_cell'
+        ? createNullElement(this.document)
+        : this.document.createElement('img');
 
     const width = imgTag.text('width');
     const height = imgTag.text('height');
@@ -68,8 +73,8 @@ export class HTMLImageRenderer implements Renderer {
     }
 
     // Image specific props
-    if (!data.isNull()) {
-      img.src = data.value;
+    if (data.kind !== 'null_cell') {
+      img.src = data.string_value;
     }
     return element;
   }
@@ -82,7 +87,7 @@ export class ImageRendererFactory extends RendererFactory<ImageRenderOptions> {
     document: Document,
     _styleDefaults: StyleDefaults,
     _rendererOptions: RendererOptions,
-    _field: Field | Explore,
+    _field: Malloy.DimensionInfo,
     _options: ImageRenderOptions
   ): Renderer {
     return new HTMLImageRenderer(document);

@@ -21,56 +21,76 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataColumn, Explore, Field} from '@malloydata/malloy';
 import {StyleDefaults} from './data_styles';
 import {ContainerRenderer} from './container';
 import {createErrorElement, yieldTask} from './utils';
+import * as Malloy from '@malloydata/malloy-interfaces';
+import {
+  getCell,
+  getNestFields,
+  isNest,
+  NestFieldInfo,
+  tagFor,
+} from '../component/util';
 
 export class HTMLListRenderer extends ContainerRenderer {
   protected childrenStyleDefaults: StyleDefaults = {
     size: 'small',
   };
 
-  getValueField(struct: Explore): Field {
+  getValueField(struct: NestFieldInfo): Malloy.DimensionInfo {
     // Get the first non-hidden field as the value
-    return struct.allFields.filter(field => {
-      const {tag} = field.tagParse();
+    return getNestFields(struct).filter(field => {
+      const tag = tagFor(field);
       return !tag.has('hidden');
     })[0];
   }
 
-  getDetailField(_struct: Explore): Field | undefined {
+  getDetailField(_struct: NestFieldInfo): Malloy.DimensionInfo | undefined {
     return undefined;
   }
 
-  async render(table: DataColumn): Promise<HTMLElement> {
-    if (!table.isArray()) {
+  async render(
+    table: Malloy.Cell,
+    field: Malloy.DimensionInfo
+  ): Promise<HTMLElement> {
+    if (table.kind !== 'array_cell' || !isNest(field)) {
       return createErrorElement(
         this.document,
         'Invalid data for chart renderer.'
       );
     }
-    if (table.rowCount === 0) {
+    if (table.array_value.length === 0) {
       return this.document.createElement('span');
     }
 
-    const valueField = this.getValueField(table.field);
-    const detailField = this.getDetailField(table.field);
+    const valueField = this.getValueField(field);
+    const detailField = this.getDetailField(field);
 
     const element = this.document.createElement('span');
     let isFirst = true;
-    for (const row of table) {
+    for (const rowCell of table.array_value) {
+      if (rowCell.kind !== 'record_cell') {
+        throw new Error('Expected to be a record cell');
+      }
+      const row = rowCell.record_value;
       if (!isFirst) {
         element.appendChild(this.document.createTextNode(', '));
       }
       isFirst = false;
       const childRenderer = this.childRenderers[valueField.name];
-      const rendered = await childRenderer.render(row.cell(valueField));
+      const rendered = await childRenderer.render(
+        getCell(field, row, valueField.name),
+        valueField
+      );
       element.appendChild(rendered);
       if (detailField) {
         const childRenderer = this.childRenderers[detailField.name];
         await yieldTask();
-        const rendered = await childRenderer.render(row.cell(detailField));
+        const rendered = await childRenderer.render(
+          getCell(field, row, detailField.name),
+          detailField
+        );
         element.appendChild(this.document.createTextNode('('));
         element.appendChild(rendered);
         element.appendChild(this.document.createTextNode(')'));

@@ -13,6 +13,7 @@ import {
   isDate,
   isNest,
   isTimestamp,
+  NestCell,
   NestFieldInfo,
   tagFor,
   valueIsNull,
@@ -30,6 +31,7 @@ import {Dashboard} from './dashboard/dashboard';
 // import {LegacyChart} from './legacy-charts/legacy_chart';
 import {renderTime} from './render-time';
 import * as Malloy from '@malloydata/malloy-interfaces';
+import {LegacyChart} from './legacy-charts/legacy_chart';
 
 export type RendererProps = {
   field: Malloy.DimensionInfo;
@@ -127,11 +129,11 @@ export function applyRenderer(props: RendererProps) {
         break;
       }
       case 'dashboard': {
-        if (dataColumn.kind === 'array_cell')
+        if (isNest(field))
           renderValue = (
             <Dashboard
               field={field as NestFieldInfo}
-              data={dataColumn}
+              data={dataColumn as NestCell}
               {...propsToPass}
             />
           );
@@ -141,17 +143,17 @@ export function applyRenderer(props: RendererProps) {
           );
         break;
       }
-      // case 'scatter_chart':
-      // case 'shape_map':
-      // case 'segment_map': {
-      //   if (dataColumn.kind === 'table_cell')
-      //     renderValue = <LegacyChart type={renderAs} data={dataColumn} />;
-      //   else
-      //     throw new Error(
-      //       `Malloy render: wrong data type passed to the ${renderAs} renderer for field ${dataColumn.field.name}`
-      //     );
-      //   break;
-      // }
+      case 'scatter_chart':
+      case 'shape_map':
+      case 'segment_map': {
+        if (isNest(field))
+          renderValue = <LegacyChart type={renderAs} data={dataColumn} />;
+        else
+          throw new Error(
+            `Malloy render: wrong data type passed to the ${renderAs} renderer for field ${dataColumn.field.name}`
+          );
+        break;
+      }
       case 'table': {
         if (isNest(field))
           renderValue = (

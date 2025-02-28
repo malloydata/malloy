@@ -21,7 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {AtomicField, DataColumn, Explore, Field} from '@malloydata/malloy';
 import {HTMLTextRenderer} from './text';
 import {
   DurationRenderOptions,
@@ -33,6 +32,8 @@ import {RendererOptions} from './renderer_types';
 import {Renderer} from './renderer';
 import {RendererFactory} from './renderer_factory';
 import {format} from 'ssf';
+import * as Malloy from '@malloydata/malloy-interfaces';
+import {tagFor} from '../component/util';
 
 export function formatTimeUnit(
   value: number,
@@ -73,7 +74,7 @@ const multiplierMap = new Map<DurationUnit, number>([
 ]);
 
 export function getText(
-  field: AtomicField,
+  field: Malloy.DimensionInfo,
   value: number,
   options: {
     durationUnit?: string;
@@ -83,7 +84,7 @@ export function getText(
     options.durationUnit && isDurationUnit(options.durationUnit)
       ? options.durationUnit
       : DurationUnit.Seconds;
-  const tag = field.tagParse().tag;
+  const tag = tagFor(field);
   const numFormat = tag.text('number');
   const terse = tag.has('duration', 'terse');
 
@@ -131,17 +132,20 @@ export class HTMLDurationRenderer extends HTMLTextRenderer {
     super(document);
   }
 
-  override getText(data: DataColumn): string | null {
-    if (data.isNull()) {
+  override getText(
+    data: Malloy.Cell,
+    field: Malloy.DimensionInfo
+  ): string | null {
+    if (data.kind === 'null_cell') {
       return null;
     }
 
-    if (!data.isNumber()) {
+    if (data.kind !== 'number_cell') {
       throw new Error(
-        `Cannot format field ${data.field.name} as a duration unit since its not a number`
+        `Cannot format field ${field.name} as a duration unit since its not a number`
       );
     }
-    return getText(data.field, data.number.value, {
+    return getText(field, data.number_value, {
       durationUnit: this.options.duration_unit,
     });
   }
@@ -162,7 +166,7 @@ export class DurationRendererFactory extends RendererFactory<DurationRenderOptio
     document: Document,
     _styleDefaults: StyleDefaults,
     _rendererOptions: RendererOptions,
-    _field: Field | Explore,
+    _field: Malloy.DimensionInfo,
     options: DurationRenderOptions
   ): Renderer {
     return new HTMLDurationRenderer(document, options);

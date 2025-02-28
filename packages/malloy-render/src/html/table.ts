@@ -21,27 +21,28 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  DataColumn,
-  DataRecord,
-  ExploreField,
-  Field,
-  SortableField,
-} from '@malloydata/malloy';
 import {StyleDefaults} from './data_styles';
 import {getDrillQuery} from './drill';
 import {ContainerRenderer} from './container';
 import {HTMLNumberRenderer} from './number';
 import {createDrillIcon, formatTitle, yieldTask} from './utils';
-import {isFieldHiddenOld} from '../tags_utils';
+import {isFieldHidden} from '../tags_utils';
 import {ChildRenderers, Renderer} from './renderer';
+import * as Malloy from '@malloydata/malloy-interfaces';
+import {
+  getCell,
+  getNestFields,
+  isNest,
+  NestFieldInfo,
+  tagFor,
+} from '../component/util';
 
 class PivotedField {
   readonly key: string;
-  readonly fieldValueMap: Map<string, DataColumn>;
+  readonly fieldValueMap: Map<string, Malloy.DimensionInfo>;
   constructor(
-    readonly parentField: Field,
-    readonly values: DataColumn[],
+    readonly parentField: NestFieldInfo,
+    readonly values: Malloy.Cell[],
     readonly span: number
   ) {
     this.key = JSON.stringify({
@@ -58,7 +59,7 @@ class PivotedField {
 class PivotedColumnField {
   constructor(
     readonly pivotedField: PivotedField,
-    readonly field: Field,
+    readonly field: Malloy.DimensionInfo,
     readonly userDefinedPivotDimensions?: Array<string>
   ) {}
   isPivotedColumnField(): this is PivotedColumnField {
@@ -68,8 +69,8 @@ class PivotedColumnField {
 
 class FlattenedColumnField {
   constructor(
-    readonly flattenedField: Field,
-    readonly field: Field,
+    readonly flattenedField: Malloy.DimensionInfo,
+    readonly field: Malloy.DimensionInfo,
     readonly name: string
   ) {}
 
@@ -88,7 +89,7 @@ class FlattenedColumnField {
     }
   }
 
-  getValue(row: DataRecord) {
+  getValue(row: Malloy.Row) {
     const parentRecord = row.cell(this.flattenedField);
     if (parentRecord.isRecord()) return parentRecord.cell(this.field);
     else
@@ -98,14 +99,17 @@ class FlattenedColumnField {
   }
 }
 
-type TableField = Field | PivotedColumnField | FlattenedColumnField;
+type TableField =
+  | Malloy.DimensionInfo
+  | PivotedColumnField
+  | FlattenedColumnField;
 type NonDimension = SortableField & {flattenedField?: FlattenedColumnField};
 
 type SpannableCell = HTMLTableCellElement | undefined;
 
-function shouldFlattenField(field: Field) {
-  const {tag} = field.tagParse();
-  return field.isExploreField() && tag.has('flatten') && field.isRecord;
+function shouldFlattenField(field: Malloy.DimensionInfo) {
+  const tag = tagFor(field);
+  return isNest(field) && tag.has('flatten') && field.isRecord;
 }
 
 export class HTMLTableRenderer extends ContainerRenderer {
@@ -113,18 +117,26 @@ export class HTMLTableRenderer extends ContainerRenderer {
     size: 'medium',
   };
 
-  async render(table: DataColumn): Promise<HTMLElement> {
-    if (table.isNull()) {
+  async render(
+    table: Malloy.Cell,
+    field: Malloy.DimensionInfo
+  ): Promise<HTMLElement> {
+    if (table.kind === 'null_cell') {
       return this.document.createElement('span');
     }
 
-    if (!table.isArray() && !table.isRecord()) {
+    if (
+      !isNest(field) ||
+      (table.kind !== 'array_cell' && table.kind !== 'record_cell')
+    ) {
       throw new Error('Invalid type for Table Renderer');
     }
 
     const shouldTranspose = this.tagged.has('transpose');
 
-    if (shouldTranspose && table.field.allFields.length > 20) {
+    const fields = getNestFields(field);
+
+    if (shouldTranspose && fields.length > 20) {
       throw new Error('Transpose limit of 20 columns exceeded.');
     }
 
@@ -135,8 +147,9 @@ export class HTMLTableRenderer extends ContainerRenderer {
 
     const columnFields: TableField[] = [];
     let pivotDepth = 0;
-    for (const field of table.field.allFields) {
-      if (isFieldHiddenOld(field)) {
+    const tableField = field;
+    for (const field of fields) {
+      if (isFieldHidden(field)) {
         continue;
       }
 
@@ -155,13 +168,21 @@ export class HTMLTableRenderer extends ContainerRenderer {
         let dimensions: SortableField[] | undefined = undefined;
         let nonDimensions: NonDimension[] = [];
         const pivotedFields: Map<string, PivotedField> = new Map();
-        for (const row of table) {
-          const dc = row.cell(field);
-          if (dc.isNull()) {
+        const rows = table.kind === 'record_cell' ? [table] : table.array_value;
+        for (const rowCell of rows) {
+          if (rowCell.kind !== 'record_cell') {
+            throw new Error('Unexpected record');
+          }
+          const row = rowCell.record_value;
+          const dc = getCell(tableField, row, field.name);
+          if (dc.kind === 'null_cell') {
             continue;
           }
 
-          if (!dc.isArray() && !dc.isRecord()) {
+          if (
+            !isNest(field) ||
+            (dc.kind !== 'array_cell' && dc.kind !== 'record_cell')
+          ) {
             throw new Error(`Can not pivot field ${field.name}.`);
           }
 
@@ -174,10 +195,16 @@ export class HTMLTableRenderer extends ContainerRenderer {
             nonDimensions = dimensionsResult.nonDimensions;
           }
 
-          for (const innerRow of dc) {
+          const innerRows = dc.kind === 'record_cell' ? [dc] : dc.array_value;
+
+          for (const innerRowCell of innerRows) {
+            if (innerRowCell.kind !== 'record_cell') {
+              throw new Error('Unexpected record');
+            }
+            const innerRow = innerRowCell.record_value;
             const pivotedField = new PivotedField(
               field,
-              dimensions.map(d => innerRow.cell(d.field)),
+              dimensions.map(d => getCell(field, innerRow, d.name)),
               nonDimensions.length
             );
 
@@ -248,8 +275,9 @@ export class HTMLTableRenderer extends ContainerRenderer {
         }
         pivotDepth = Math.max(pivotDepth, dimensions!.length);
       } else if (shouldFlattenField(field)) {
-        const parentField = field as ExploreField;
-        const flattenedFields = parentField.allFields.map(
+        const parentField = field as NestFieldInfo;
+        const parentFieldFields = getNestFields(parentField);
+        const flattenedFields = parentFieldFields.map(
           f =>
             new FlattenedColumnField(
               parentField,
@@ -394,7 +422,7 @@ export class HTMLTableRenderer extends ContainerRenderer {
           );
           columnIndex++;
         } else {
-          if (isFieldHiddenOld(field)) {
+          if (isFieldHidden(field)) {
             continue;
           }
           const childRenderer = this.childRenderers[field.name];
@@ -501,7 +529,7 @@ export class HTMLTableRenderer extends ContainerRenderer {
     for (const f of table.field.allFieldsWithOrder) {
       if (dimensions!.indexOf(f) >= 0) continue;
       if (shouldFlattenField(f.field)) {
-        const nestedFields = (f.field as ExploreField).allFieldsWithOrder.map(
+        const nestedFields = (f.field as NestFieldInfo).allFieldsWithOrder.map(
           nf => ({
             dir: nf.dir,
             field: nf.field,
@@ -529,18 +557,22 @@ export class HTMLTableRenderer extends ContainerRenderer {
   }
 
   async generatePivotedCells(
-    table: DataColumn,
+    table: Malloy.Cell,
+    tableField: Malloy.DimensionInfo,
     shouldTranspose: boolean,
     userSpecifiedDimensions?: Array<string>
   ): Promise<Map<string, Map<string, HTMLTableCellElement>>> {
     const result: Map<string, Map<string, HTMLTableCellElement>> = new Map();
 
-    if (table.isNull()) {
+    if (table.kind === 'null_cell') {
       return result;
     }
 
-    if (!table.isArray() && !table.isRecord()) {
-      throw new Error(`Could not pivot ${table.field.name}`);
+    if (
+      !isNest(tableField) ||
+      (table.kind !== 'array_cell' && table.kind !== 'record_cell')
+    ) {
+      throw new Error(`Could not pivot ${tableField.name}`);
     }
 
     const {dimensions, nonDimensions} = this.calculatePivotDimensions(
@@ -548,10 +580,16 @@ export class HTMLTableRenderer extends ContainerRenderer {
       userSpecifiedDimensions
     );
 
-    for (const row of table) {
+    const rows = table.kind === 'record_cell' ? [table] : table.array_value;
+
+    for (const rowCell of rows) {
+      if (rowCell.kind !== 'record_cell') {
+        throw new Error('Unexpected record');
+      }
+      const row = rowCell.record_value;
       const pf = new PivotedField(
-        table.field as Field,
-        dimensions.map(f => row.cell(f.field.name)),
+        tableField,
+        dimensions.map(f => getCell(tableField, row, f.name)),
         nonDimensions.length
       );
       const renderedCells: Map<string, HTMLTableCellElement> = new Map();
@@ -565,18 +603,23 @@ export class HTMLTableRenderer extends ContainerRenderer {
           value = nonDimension.flattenedField.getValue(row);
         } else {
           childRenderer = this.childRenderers[nonDimension.field.name];
-          value = row.cell(nonDimension.field.name);
+          value = getCell(tableField, row, nonDimension.field.name);
         }
 
         renderedCells.set(
           nonDimension.field.name,
-          await this.createCellAndRender(childRenderer, value, shouldTranspose)
+          await this.createCellAndRender(
+            childRenderer,
+            nonDimension.field,
+            value,
+            shouldTranspose
+          )
         );
       }
 
       if (result.has(pf.key)) {
         throw new Error(
-          `Can not pivot ${table.field.name} dimensions lead to non unique pivots.`
+          `Can not pivot ${tableField.name} dimensions lead to non unique pivots.`
         );
       }
       result.set(pf.key, renderedCells);
@@ -585,7 +628,7 @@ export class HTMLTableRenderer extends ContainerRenderer {
   }
 
   generateNoValueCell(
-    field: Field,
+    field: Malloy.DimensionInfo,
     shouldTranspose: boolean
   ): HTMLTableCellElement {
     const cell = this.createCell(
@@ -598,11 +641,12 @@ export class HTMLTableRenderer extends ContainerRenderer {
 
   async createCellAndRender(
     childRenderer: Renderer,
-    value: DataColumn,
+    value: Malloy.Cell,
+    field: Malloy.DimensionInfo,
     shouldTranspose: boolean
   ): Promise<HTMLTableCellElement> {
     const cell = this.createCell(childRenderer, shouldTranspose);
-    cell.appendChild(await childRenderer.render(value));
+    cell.appendChild(await childRenderer.render(value, field));
     return cell;
   }
 
@@ -617,7 +661,7 @@ export class HTMLTableRenderer extends ContainerRenderer {
   }
 
   createHeaderCell(
-    field: Field,
+    field: Malloy.DimensionInfo,
     shouldTranspose: boolean,
     override: {
       name?: string;
@@ -666,7 +710,7 @@ export class HTMLTableRenderer extends ContainerRenderer {
     return cellElement;
   }
 
-  async renderChild(value: DataColumn) {
-    return this.childRenderers[value.field.name].render(value);
+  async renderChild(value: Malloy.Cell, field: Malloy.DimensionInfo) {
+    return this.childRenderers[field.name].render(value, field);
   }
 }

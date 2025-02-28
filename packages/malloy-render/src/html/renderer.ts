@@ -21,13 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataColumn} from '@malloydata/malloy';
 import {Tag} from '@malloydata/malloy-tag';
 import {RendererOptions} from './renderer_types';
 export type ChildRenderers = {[fieldName: string]: Renderer};
+import * as Malloy from '@malloydata/malloy-interfaces';
 
 export interface Renderer {
-  render(value: DataColumn): Promise<HTMLElement>;
+  render(value: Malloy.Cell, field: Malloy.DimensionInfo): Promise<HTMLElement>;
 }
 
 export abstract class RenderTree implements Renderer {
@@ -39,5 +39,8 @@ export abstract class RenderTree implements Renderer {
 
   protected abstract get childRenderers(): ChildRenderers;
 
-  abstract render(value: DataColumn): Promise<HTMLElement>;
+  abstract render(
+    value: Malloy.Cell,
+    field: Malloy.DimensionInfo
+  ): Promise<HTMLElement>;
 }

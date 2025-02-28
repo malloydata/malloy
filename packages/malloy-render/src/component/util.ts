@@ -184,7 +184,13 @@ export function wasCalculation(field: Malloy.DimensionInfo) {
   return tag.has('calculation');
 }
 
-export function isTimestamp(field: Malloy.DimensionInfo): boolean {
+export type TimestampFieldInfo = Malloy.FieldInfoWithDimension & {
+  type: Malloy.AtomicTypeWithTimestampType;
+};
+
+export function isTimestamp(
+  field: Malloy.DimensionInfo
+): field is TimestampFieldInfo {
   return field.type.kind === 'timestamp_type';
 }
 
@@ -221,6 +227,8 @@ export type RecordFieldInfo = Malloy.DimensionInfo & {
 };
 
 export type NestFieldInfo = RepeatedRecordFieldInfo | RecordFieldInfo;
+
+export type NestCell = Malloy.CellWithArrayCell | Malloy.CellWithRecordCell;
 
 export function isNest(field: Malloy.DimensionInfo): field is NestFieldInfo {
   return (
