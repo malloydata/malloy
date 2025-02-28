@@ -21,6 +21,7 @@ import {
 import {modelDefToModelInfo} from '../to_stable';
 import {sqlKey} from '../model/sql_block';
 import {SQLSourceRequest} from '../lang/translate-response';
+import {annotationToTaglines} from '../annotation';
 
 // TODO find where this should go...
 function tableKey(connectionName: string, tablePath: string): string {
@@ -526,11 +527,15 @@ export function statedCompileQuery(
     try {
       const queryModel = new QueryModel(result.modelDef);
       const translatedQuery = queryModel.compileQuery(query);
+      const annotations = annotationToTaglines(query.annotation).map(l => ({
+        value: l,
+      }));
       return {
         result: {
           sql: translatedQuery.sql,
           schema,
           connection_name: translatedQuery.connectionName,
+          annotations: annotations.length > 0 ? annotations : undefined,
         },
       };
     } catch (error) {

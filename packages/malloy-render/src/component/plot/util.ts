@@ -1,34 +1,44 @@
-import {Explore, ExploreField, Field} from '@malloydata/malloy';
+import * as Malloy from '@malloydata/malloy-interfaces';
+import {getNestFields, isNest, NestFieldInfo, tagFor} from '../util';
+import {RenderResultMetadata} from '../types';
 
-export function walkFields(e: Explore, cb: (f: Field) => void) {
-  e.allFields.forEach(f => {
+export function walkFields(
+  e: NestFieldInfo,
+  cb: (f: Malloy.DimensionInfo) => void
+) {
+  getNestFields(e).forEach(f => {
     cb(f);
-    if (f.isExplore()) {
+    if (isNest(f)) {
       walkFields(f, cb);
     }
   });
 }
 
-export function getFieldPathArrayFromRoot(f: Field | Explore) {
-  const paths = f.isExplore() && !f.isExploreField() ? [] : [f.name];
-  let parent = f.parentExplore;
-  while (parent?.isExploreField()) {
-    paths.unshift(parent.name);
-    parent = parent.parentExplore;
+export function getFieldPathArrayFromRoot(
+  f: Malloy.DimensionInfo,
+  metadata: RenderResultMetadata
+) {
+  const path = metadata.fields.get(f)?.path;
+  if (path === undefined) {
+    throw new Error('Invalid field');
   }
-  return paths;
+  return path;
 }
 
-export function getFieldPathFromRoot(f: Field | Explore) {
-  return getFieldPathArrayFromRoot(f).join('.');
+export function getFieldPathFromRoot(
+  f: Malloy.DimensionInfo,
+  metadata: RenderResultMetadata
+) {
+  return getFieldPathArrayFromRoot(f, metadata).join('.');
 }
 
 export function getFieldPathBetweenFields(
-  parentField: Field | Explore,
-  childField: Field | Explore
+  parentField: NestFieldInfo,
+  childField: Malloy.DimensionInfo,
+  metadata: RenderResultMetadata
 ): string {
-  const parentPath = getFieldPathArrayFromRoot(parentField);
-  const childPath = getFieldPathArrayFromRoot(childField);
+  const parentPath = getFieldPathArrayFromRoot(parentField, metadata);
+  const childPath = getFieldPathArrayFromRoot(childField, metadata);
   const startIndex = parentPath.length;
 
   let i = 0;
@@ -39,25 +49,29 @@ export function getFieldPathBetweenFields(
       );
     i++;
   }
-
   return childPath.slice(startIndex).join('.');
 }
 
-export function getFieldFromRootPath(root: Explore, path: string): Field {
+export function getFieldFromRootPath(
+  root: NestFieldInfo,
+  path: string
+): Malloy.DimensionInfo {
   const pathParts = path.split('.');
-  let curr: Field | ExploreField | Explore = root;
+  let curr: Malloy.DimensionInfo = root;
   for (const part of pathParts) {
-    if (curr.isExplore()) {
-      curr = curr.allFields.find(f => f.name === part)!;
+    if (isNest(curr)) {
+      curr = getNestFields(curr).find(f => f.name === part)!;
     } else {
       throw new Error('Tried to get field from path, but path is invalid');
     }
   }
-  if (curr.isExplore() && !curr.isExploreField())
-    throw new Error('Tried to get field from path, but got root Explore');
+  // TODO why is this here?
+  // if (curr.isExplore() && !curr.isExploreField())
+  //   throw new Error('Tried to get field from path, but got root Explore');
   return curr;
 }
 
-export function getFieldReferenceId(field: Field) {
-  return field.isAtomicField() ? field.referenceId ?? null : null;
+export function getFieldReferenceId(field: Malloy.DimensionInfo) {
+  const tag = tagFor(field, '#(malloy) ');
+  return tag.text('reference_id');
 }

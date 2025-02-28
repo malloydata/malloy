@@ -31,6 +31,7 @@
     "build-types": "tsc --build --declaration --emitDeclarationOnly"
   },
   "dependencies": {
+    "@malloydata/malloy-interfaces": "^0.0.239",
     "@malloydata/malloy": "^0.0.239",
     "@malloydata/db-duckdb": "^0.0.239",
     "@malloydata/malloy-tag": "^0.0.239",

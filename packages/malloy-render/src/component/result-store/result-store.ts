@@ -1,7 +1,7 @@
 import {createStore, produce, unwrap} from 'solid-js/store';
 import {useResultContext} from '../result-context';
 import {DrillData, RenderResultMetadata, DimensionContextEntry} from '../types';
-import {Explore, Field} from '@malloydata/malloy';
+import * as Malloy from '@malloydata/malloy-interfaces';
 
 interface BrushDataBase {
   fieldRefId: string;
@@ -138,27 +138,23 @@ export function useResultStore() {
 
 export async function copyExplorePathQueryToClipboard({
   metadata,
-  field,
   dimensionContext,
   onDrill,
 }: {
   metadata: RenderResultMetadata;
-  field: Field;
+  field: Malloy.DimensionInfo;
   dimensionContext: DimensionContextEntry[];
   onDrill?: (drillData: DrillData) => void;
 }) {
   const dimensionContextEntries = dimensionContext;
-  let explore: Field | Explore = field;
-  while (explore.parentExplore) {
-    explore = explore.parentExplore;
-  }
 
+  // TODO the name is wrong, as it is not the full path; drilling all broken...
   const whereClause = dimensionContextEntries
-    .map(entry => `\t\t${entry.fieldDef} = ${JSON.stringify(entry.value)}`)
+    .map(entry => `\t\t${entry.field.name} = ${JSON.stringify(entry.value)}`)
     .join(',\n');
 
   const query = `
-run: ${explore.name} -> {
+run: ${metadata.sourceName} -> {
 where:
 ${whereClause}
 } + { select: * }`.trim();

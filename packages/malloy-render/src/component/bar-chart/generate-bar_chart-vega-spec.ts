@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Explore, QueryDataRow, QueryValue} from '@malloydata/malloy';
 import {getBarChartSettings} from './get-bar_chart-settings';
+import * as Malloy from '@malloydata/malloy-interfaces';
 import {
   ChartTooltipEntry,
   MalloyDataToChartDataHandler,
@@ -36,6 +36,18 @@ import {createMeasureAxis} from '../vega/measure-axis';
 import {getCustomTooltipEntries} from './get-custom-tooltips-entries';
 import {getMarkName} from '../vega/vega-utils';
 import {NULL_SYMBOL} from '../apply-renderer';
+import {
+  CellDataValue,
+  getAllCellValues,
+  getCell,
+  getCellValue,
+  getFieldTimeframe,
+  isAtomic,
+  isDate,
+  isTimestamp,
+  NestFieldInfo,
+  tagFor,
+} from '../util';
 
 type BarDataRecord = {
   x: string | number;
@@ -58,16 +70,16 @@ function invertObject(obj: Record<string, string>): Record<string, string> {
 }
 
 export function generateBarChartVegaSpec(
-  explore: Explore,
+  explore: NestFieldInfo,
   metadata: RenderResultMetadata
 ): VegaChartProps {
-  const tag = explore.tagParse().tag;
+  const tag = tagFor(explore);
   const chartTag = tag.tag('bar_chart') ?? tag.tag('bar');
   if (!chartTag)
     throw new Error(
       'Bar chart should only be rendered for bar_chart or bar tag'
     );
-  const settings = getBarChartSettings(explore, tag);
+  const settings = getBarChartSettings(explore, metadata, tag);
   // TODO: check that there are <=2 dimension fields, throw error otherwise
   /**************************************
    *
@@ -84,7 +96,7 @@ export function generateBarChartVegaSpec(
 
   const xField = getFieldFromRootPath(explore, xFieldPath);
   const xIsDateorTime =
-    xField.isAtomicField() && (xField.isDate() || xField.isTimestamp());
+    isAtomic(xField) && (isDate(xField) || isTimestamp(xField));
   const yField = getFieldFromRootPath(explore, yFieldPath);
   const seriesField = seriesFieldPath
     ? getFieldFromRootPath(explore, seriesFieldPath)
@@ -94,8 +106,8 @@ export function generateBarChartVegaSpec(
   const yRef = getFieldReferenceId(yField);
   const seriesRef = seriesField && getFieldReferenceId(seriesField);
 
-  const xMeta = metadata.field(xField);
-  const seriesMeta = seriesField ? metadata.field(seriesField) : null;
+  const xMeta = metadata.fields.get(xField)!;
+  const seriesMeta = seriesField ? metadata.fields.get(seriesField) : null;
 
   // Map y fields to ref ids
   const yRefsMap = settings.yChannel.fields.reduce((map, fieldPath) => {
@@ -134,9 +146,9 @@ export function generateBarChartVegaSpec(
   let yMax = -Infinity;
   for (const name of settings.yChannel.fields) {
     const field = getFieldFromRootPath(explore, name);
-    const min = metadata.field(field).min;
+    const min = metadata.fields.get(field)!.min;
     if (min !== null) yMin = Math.min(yMin, min);
-    const max = metadata.field(field).max;
+    const max = metadata.fields.get(field)!.max;
     if (max !== null) yMax = Math.max(yMax, max);
   }
 
@@ -769,32 +781,38 @@ export function generateBarChartVegaSpec(
     field,
     data
   ) => {
-    const getXValue = (row: QueryDataRow) =>
-      xIsDateorTime
-        ? new Date(row[xFieldPath] as string | number).valueOf()
-        : row[xFieldPath];
+    const getXValue = (row: Malloy.Row) => {
+      return getCellValue(getCell(field, row, xField.name));
+    };
 
     const mappedData: {
-      __source: QueryDataRow;
-      x: QueryValue;
-      y: QueryValue;
-      series: QueryValue;
+      __source: {[name: string]: CellDataValue};
+      x: CellDataValue;
+      y: CellDataValue;
+      series: CellDataValue;
     }[] = [];
-    data.forEach(row => {
+    data.forEach(rowCell => {
+      if (rowCell.kind !== 'record_cell') {
+        throw new Error('Unexpected record');
+      }
+      const row = rowCell.record_value;
+      const xValue = getXValue(row);
       // Filter out missing date/time values
       // TODO: figure out how we can show null values in continuous axes
-      if (
-        xIsDateorTime &&
-        (row[xFieldPath] === null || typeof row[xFieldPath] === 'undefined')
-      ) {
+      if (xIsDateorTime && (xValue === null || typeof xValue === 'undefined')) {
         return;
       }
       // Map data fields to chart properties
+      const seriesVal = seriesField
+        ? getCellValue(getCell(field, row, seriesField.name))
+        : yFieldPath;
+      const __source = getAllCellValues(field, row);
+      __source['__malloyDataRecord'] = row;
       mappedData.push({
-        __source: row,
-        x: getXValue(row) ?? NULL_SYMBOL,
-        y: row[yFieldPath],
-        series: seriesFieldPath ? row[seriesFieldPath] : yFieldPath,
+        __source,
+        x: xValue ?? NULL_SYMBOL,
+        y: getCellValue(getCell(field, row, yField.name)),
+        series: seriesVal,
       });
     });
     return mappedData;
@@ -828,7 +846,7 @@ export function generateBarChartVegaSpec(
           : getFieldFromRootPath(explore, fieldName);
 
         const value = rec.y;
-        return field.isAtomicField()
+        return isAtomic(field)
           ? renderNumericField(field, value)
           : String(value);
       };
@@ -841,8 +859,8 @@ export function generateBarChartVegaSpec(
         const title = xIsDateorTime
           ? renderTimeString(
               new Date(x),
-              xField.isAtomicField() && xField.isDate(),
-              xField.timeframe
+              isAtomic(xField) && isDate(xField), // TODO should this be isDateorTimestamp?
+              getFieldTimeframe(xField)
             )
           : x;
 
@@ -867,8 +885,8 @@ export function generateBarChartVegaSpec(
         const title = xIsDateorTime
           ? renderTimeString(
               new Date(itemData.x),
-              xField.isAtomicField() && xField.isDate(),
-              xField.timeframe
+              isAtomic(xField) && isDate(xField), // TODO should this be isDateorTimestamp?
+              getFieldTimeframe(xField)
             )
           : itemData.x;
 

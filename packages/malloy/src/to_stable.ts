@@ -15,6 +15,7 @@ import {
   ModelDef,
   RecordTypeDef,
   RepeatedRecordTypeDef,
+  ResultMetadataDef,
   SourceDef,
   TimestampUnit,
 } from './model';
@@ -22,6 +23,8 @@ import {
   getResultStructDefForQuery,
   getResultStructDefForView,
 } from './model/malloy_query';
+import {annotationToTaglines} from './annotation';
+import {Tag} from '@malloydata/malloy-tag';
 
 export function modelDefToModelInfo(modelDef: ModelDef): Malloy.ModelInfo {
   const modelInfo: Malloy.ModelInfo = {
@@ -63,14 +66,20 @@ export function modelDefToModelInfo(modelDef: ModelDef): Malloy.ModelInfo {
   return modelInfo;
 }
 
-function convertFieldInfos(source: SourceDef, fields: FieldDef[]) {
+export function convertFieldInfos(source: SourceDef, fields: FieldDef[]) {
   const result: Malloy.FieldInfo[] = [];
   for (const field of fields) {
+    const taglines = annotationToTaglines(field.annotation);
+    const rawAnnotations: Malloy.Annotation[] = taglines.map(tagline => ({
+      value: tagline,
+    }));
+    const annotations = rawAnnotations.length > 0 ? rawAnnotations : undefined;
     if (isTurtle(field)) {
       const outputStruct = getResultStructDefForView(source, field);
       const fieldInfo: Malloy.FieldInfo = {
         kind: 'view',
         name: field.as ?? field.name,
+        annotations,
         schema: {fields: convertFieldInfos(outputStruct, outputStruct.fields)},
       };
       result.push(fieldInfo);
@@ -79,16 +88,25 @@ function convertFieldInfos(source: SourceDef, fields: FieldDef[]) {
       const scalar = expressionIsScalar(field.expressionType);
       if (!aggregate && !scalar) continue;
       if (field.type === 'error') continue;
+      const resultMetadataAnnotation = field.resultMetadata
+        ? getResultMetadataAnnotation(field.resultMetadata)
+        : undefined;
+      const fieldAnnotations = [
+        ...(annotations ?? []),
+        ...(resultMetadataAnnotation ? [resultMetadataAnnotation] : []),
+      ];
       const fieldInfo: Malloy.FieldInfo = {
         kind: aggregate ? 'measure' : 'dimension',
         name: field.as ?? field.name,
         type: typeDefToType(field),
+        annotations: fieldAnnotations.length > 0 ? fieldAnnotations : undefined,
       };
       result.push(fieldInfo);
     } else if (isJoinedSource(field)) {
       const fieldInfo: Malloy.FieldInfo = {
         kind: 'join',
         name: field.as ?? field.name,
+        annotations,
         schema: {
           fields: convertFieldInfos(field, field.fields),
         },
@@ -98,6 +116,26 @@ function convertFieldInfos(source: SourceDef, fields: FieldDef[]) {
     }
   }
   return result;
+}
+
+function getResultMetadataAnnotation(
+  resultMetadata: ResultMetadataDef
+): Malloy.Annotation | undefined {
+  const tag = Tag.withPrefix('#(malloy) ');
+  let hasAny = false;
+  if (resultMetadata.referenceId !== undefined) {
+    tag.set(['reference_id'], resultMetadata.referenceId);
+    hasAny = true;
+  }
+  if (resultMetadata.fieldKind === 'measure') {
+    tag.set(['calculation']);
+    hasAny = true;
+  }
+  return hasAny
+    ? {
+        value: tag.toString(),
+      }
+    : undefined;
 }
 
 function typeDefToType(field: AtomicTypeDef): Malloy.AtomicType {
@@ -159,9 +197,27 @@ function convertRecordType(
   return {
     kind: 'record_type',
     fields: field.fields.map(f => {
+      const annotations: Malloy.Annotation[] = [];
+      if ('resultMetadata' in f) {
+        if (f.resultMetadata) {
+          const ann = getResultMetadataAnnotation(f.resultMetadata);
+          if (ann) {
+            annotations.push(ann);
+          }
+        }
+      }
+      if (f.annotation) {
+        const taglines = annotationToTaglines(f.annotation);
+        annotations.push(
+          ...taglines.map(tagline => ({
+            value: tagline,
+          }))
+        );
+      }
       if (isAtomic(f)) {
         return {
           name: f.name,
+          annotations: annotations.length > 0 ? annotations : undefined,
           type: typeDefToType(f),
         };
       } else {
@@ -186,7 +242,7 @@ function convertDateTimeframe(
     case 'quarter':
       return timeframe;
     default:
-      throw new Error('Invalid date timeframe');
+      throw new Error(`Invalid date timeframe ${timeframe}`);
   }
 }
 

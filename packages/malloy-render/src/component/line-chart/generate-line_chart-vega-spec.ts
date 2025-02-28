@@ -5,7 +5,6 @@
  *  LICENSE file in the root directory of this source tree.
  */
 
-import {Explore, QueryDataRow, QueryValue} from '@malloydata/malloy';
 import {
   ChartTooltipEntry,
   MalloyDataToChartDataHandler,
@@ -19,6 +18,7 @@ import {getFieldFromRootPath, getFieldReferenceId} from '../plot/util';
 import {getChartLayoutSettings} from '../chart-layout-settings';
 import {renderTimeString} from '../render-time';
 import {createMeasureAxis} from '../vega/measure-axis';
+import * as Malloy from '@malloydata/malloy-interfaces';
 import {
   Data,
   GroupMark,
@@ -35,6 +35,19 @@ import {renderNumericField} from '../render-numeric-field';
 import {getMarkName} from '../vega/vega-utils';
 import {getCustomTooltipEntries} from '../bar-chart/get-custom-tooltips-entries';
 import {NULL_SYMBOL} from '../apply-renderer';
+import {
+  CellDataValue,
+  getAllCellValues,
+  getCell,
+  getCellValue,
+  getFieldTimeframe,
+  isAtomic,
+  isBoolean,
+  isDate,
+  isTimestamp,
+  NestFieldInfo,
+  tagFor,
+} from '../util';
 
 type LineDataRecord = {
   x: string | number;
@@ -57,14 +70,14 @@ function invertObject(obj: Record<string, string>): Record<string, string> {
 }
 
 export function generateLineChartVegaSpec(
-  explore: Explore,
+  explore: NestFieldInfo,
   metadata: RenderResultMetadata
 ): VegaChartProps {
-  const tag = explore.tagParse().tag;
+  const tag = tagFor(explore);
   const chartTag = tag.tag('line_chart');
   if (!chartTag)
     throw new Error('Line chart should only be rendered for line_chart tag');
-  const settings = getLineChartSettings(explore, tag);
+  const settings = getLineChartSettings(explore, metadata, tag);
   /**************************************
    *
    * Chart data fields
@@ -79,8 +92,8 @@ export function generateLineChartVegaSpec(
 
   const xField = getFieldFromRootPath(explore, xFieldPath);
   const xIsDateorTime =
-    xField.isAtomicField() && (xField.isDate() || xField.isTimestamp());
-  const xIsBoolean = xField.isAtomicField() && xField.isBoolean();
+    isAtomic(xField) && (isDate(xField) || isTimestamp(xField));
+  const xIsBoolean = isAtomic(xField) && isBoolean(xField);
   const yField = getFieldFromRootPath(explore, yFieldPath);
   const seriesField = seriesFieldPath
     ? getFieldFromRootPath(explore, seriesFieldPath)
@@ -90,8 +103,8 @@ export function generateLineChartVegaSpec(
   const yRef = getFieldReferenceId(yField);
   const seriesRef = seriesField && getFieldReferenceId(seriesField);
 
-  const xMeta = metadata.field(xField);
-  const seriesMeta = seriesField ? metadata.field(seriesField) : null;
+  const xMeta = metadata.fields.get(xField)!;
+  const seriesMeta = seriesField ? metadata.fields.get(seriesField) : null;
 
   // Map y fields to ref ids
   const yRefsMap = settings.yChannel.fields.reduce((map, fieldPath) => {
@@ -124,9 +137,9 @@ export function generateLineChartVegaSpec(
   let yMax = -Infinity;
   for (const name of settings.yChannel.fields) {
     const field = getFieldFromRootPath(explore, name);
-    const min = metadata.field(field).min;
+    const min = metadata.fields.get(field)!.min;
     if (min !== null) yMin = Math.min(yMin, min);
-    const max = metadata.field(field).max;
+    const max = metadata.fields.get(field)!.max;
     if (max !== null) yMax = Math.max(yMax, max);
   }
 
@@ -733,34 +746,41 @@ export function generateLineChartVegaSpec(
     field,
     data
   ) => {
-    const getXValue = (row: QueryDataRow) =>
-      xIsDateorTime
-        ? new Date(row[xFieldPath] as string | number).valueOf()
-        : row[xFieldPath];
+    const getXValue = (row: Malloy.Row) => {
+      return getCellValue(getCell(field, row, xField.name));
+    };
+    // xIsDateorTime
+    //   ? new Date(row[xFieldPath] as string | number).valueOf()
+    //   : row[xFieldPath];
 
     const mappedData: {
-      __source: QueryDataRow;
-      x: QueryValue;
-      y: QueryValue;
-      series: QueryValue;
+      __source: {[name: string]: CellDataValue};
+      x: CellDataValue;
+      y: CellDataValue;
+      series: CellDataValue;
     }[] = [];
-    data.forEach(row => {
+    data.forEach(rowCell => {
+      if (rowCell.kind !== 'record_cell') {
+        throw new Error('Unexpected record');
+      }
+      const row = rowCell.record_value;
       // Filter out missing date/time values
-      if (
-        xIsDateorTime &&
-        (row[xFieldPath] === null || typeof row[xFieldPath] === 'undefined')
-      ) {
+      if (xIsDateorTime && getXValue(row) === null) {
         return;
       }
       // Map data fields to chart properties.  Handle undefined values properly.
-      let seriesVal = seriesFieldPath ? row[seriesFieldPath] : yFieldPath;
+      let seriesVal = seriesField
+        ? getCellValue(getCell(field, row, seriesField.name))
+        : yFieldPath;
       if (seriesVal === undefined || seriesVal === null) {
         seriesVal = NULL_SYMBOL;
       }
+      const __source = getAllCellValues(field, row);
+      __source['__malloyDataRecord'] = row;
       mappedData.push({
-        __source: row,
+        __source,
         x: getXValue(row) ?? NULL_SYMBOL,
-        y: row[yFieldPath],
+        y: getCellValue(getCell(field, row, yField.name)),
         series: seriesVal,
       });
     });
@@ -795,7 +815,7 @@ export function generateLineChartVegaSpec(
           : getFieldFromRootPath(explore, fieldName);
 
         const value = rec.y;
-        return field.isAtomicField()
+        return isAtomic(field)
           ? renderNumericField(field, value)
           : String(value);
       };
@@ -809,8 +829,8 @@ export function generateLineChartVegaSpec(
         const title = xIsDateorTime
           ? renderTimeString(
               new Date(x),
-              xField.isAtomicField() && xField.isDate(),
-              xField.timeframe
+              isAtomic(xField) && isDate(xField),
+              getFieldTimeframe(xField)
             )
           : x;
 
@@ -841,8 +861,8 @@ export function generateLineChartVegaSpec(
         const title = xIsDateorTime
           ? renderTimeString(
               new Date(itemData.x),
-              xField.isAtomicField() && xField.isDate(),
-              xField.timeframe
+              isAtomic(xField) && isDate(xField),
+              getFieldTimeframe(xField)
             )
           : itemData.x;
 

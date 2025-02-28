@@ -21,14 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Explore, Field} from '@malloydata/malloy';
 import {
   FieldHeaderRangeMap,
   FieldRenderMetadata,
   RenderResultMetadata,
 } from '../types';
-import {getFieldKey} from '../util';
+import {getNestFields, isNest, NestFieldInfo, tagFor} from '../util';
 import {isFieldHidden} from '../../tags_utils';
+import * as Malloy from '@malloydata/malloy-interfaces';
 
 type LayoutEntry = {
   metadata: FieldRenderMetadata;
@@ -42,7 +42,7 @@ type LayoutEntry = {
 export type TableLayout = {
   fields: Record<string, LayoutEntry>;
   fieldHeaderRangeMap: FieldHeaderRangeMap;
-  fieldLayout: (field: Field | Explore) => LayoutEntry;
+  fieldLayout: (field: Malloy.DimensionInfo) => LayoutEntry;
   totalHeaderSize: number;
   maxDepth: number;
 };
@@ -57,34 +57,37 @@ const NAMED_COLUMN_WIDTHS = {
 };
 
 function createFieldHeaderRangeMap(
-  explore: Explore,
+  explore: NestFieldInfo,
+  metadata: RenderResultMetadata,
   start = 0,
   relStart = 0,
   depth = 0
 ): [FieldHeaderRangeMap, number, number] {
   let fieldMap: FieldHeaderRangeMap = {};
 
-  explore.allFields.forEach(field => {
+  const nestFields = getNestFields(explore);
+  nestFields.forEach(field => {
     if (isFieldHidden(field)) return;
-    if (!field.isExploreField()) {
-      fieldMap[getFieldKey(field)] = {
-        abs: [start, start],
-        rel: [relStart, relStart],
-        depth,
-      };
-      start++;
-      relStart++;
-    } else {
+    const key = metadata.fields.get(field)!.key;
+    if (isNest(field)) {
       const [nestedFieldMap, nextStart, nextRelStart] =
-        createFieldHeaderRangeMap(field, start, 0, depth + 1);
+        createFieldHeaderRangeMap(field, metadata, start, 0, depth + 1);
       fieldMap = {...fieldMap, ...nestedFieldMap};
-      fieldMap[getFieldKey(field)] = {
+      fieldMap[key] = {
         abs: [start, nextStart - 1],
         rel: [relStart, relStart + nextRelStart - 1],
         depth,
       };
       start = nextStart;
       relStart += nextRelStart;
+    } else {
+      fieldMap[key] = {
+        abs: [start, start],
+        rel: [relStart, relStart],
+        depth,
+      };
+      start++;
+      relStart++;
     }
   });
 
@@ -93,14 +96,15 @@ function createFieldHeaderRangeMap(
 
 export function getTableLayout(
   metadata: RenderResultMetadata,
-  rootField: Explore
+  rootField: NestFieldInfo
 ): TableLayout {
-  const [fieldHeaderRangeMap] = createFieldHeaderRangeMap(rootField);
+  const [fieldHeaderRangeMap] = createFieldHeaderRangeMap(rootField, metadata);
 
   const totalHeaderSize =
     Math.max(...Object.values(fieldHeaderRangeMap).map(f => f.abs[1])) + 1;
+  const key = metadata.fields.get(rootField)!.key;
   // Populate for root explore
-  fieldHeaderRangeMap[getFieldKey(rootField)] = {
+  fieldHeaderRangeMap[key] = {
     abs: [0, totalHeaderSize - 1],
     rel: [0, totalHeaderSize - 1],
     depth: -1,
@@ -109,14 +113,16 @@ export function getTableLayout(
   const layout: TableLayout = {
     fields: {},
     fieldHeaderRangeMap,
-    fieldLayout(f: Field | Explore) {
-      return this.fields[getFieldKey(f)];
+    fieldLayout(f: Malloy.DimensionInfo) {
+      const key = metadata.fields.get(f)!.key;
+      return this.fields[key];
     },
     totalHeaderSize,
     maxDepth: 0,
   };
 
-  for (const [key, fieldMeta] of Object.entries(metadata.fields)) {
+  for (const [_, fieldMeta] of metadata.fields.entries()) {
+    const key = fieldMeta.key;
     // Only include table fields
     if (!(key in fieldHeaderRangeMap)) continue;
 
@@ -130,7 +136,7 @@ export function getTableLayout(
       depth: fieldHeaderRangeMap[key].depth,
     };
     layout.maxDepth = Math.max(layout.maxDepth, layoutEntry.depth);
-    const {tag} = field.tagParse();
+    const tag = tagFor(field);
     const columnTag = tag.tag('column');
 
     // Allow overriding size

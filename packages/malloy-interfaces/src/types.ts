@@ -77,7 +77,7 @@ export type CellType =
   | 'json_cell'
   | 'record_cell'
   | 'array_cell'
-  | 'table_cell';
+  | 'null_cell';
 export type Cell =
   | CellWithStringCell
   | CellWithBooleanCell
@@ -87,7 +87,7 @@ export type Cell =
   | CellWithJSONCell
   | CellWithRecordCell
   | CellWithArrayCell
-  | CellWithTableCell;
+  | CellWithNullCell;
 export type CellWithStringCell = {kind: 'string_cell'} & StringCell;
 export type CellWithBooleanCell = {kind: 'boolean_cell'} & BooleanCell;
 export type CellWithDateCell = {kind: 'date_cell'} & DateCell;
@@ -96,7 +96,7 @@ export type CellWithNumberCell = {kind: 'number_cell'} & NumberCell;
 export type CellWithJSONCell = {kind: 'json_cell'} & JSONCell;
 export type CellWithRecordCell = {kind: 'record_cell'} & RecordCell;
 export type CellWithArrayCell = {kind: 'array_cell'} & ArrayCell;
-export type CellWithTableCell = {kind: 'table_cell'} & TableCell;
+export type CellWithNullCell = {kind: 'null_cell'} & NullCell;
 export type CompileModelRequest = {
   model_url: string;
   extend_model_url?: string;
@@ -139,10 +139,10 @@ export type Connection = {
   name: string;
   dialect?: string;
 };
-export type DataType = 'record' | 'table';
-export type Data = DataWithRecord | DataWithTable;
-export type DataWithRecord = {kind: 'record'} & RecordCell;
-export type DataWithTable = {kind: 'table'} & Table;
+export type DataType = 'record_cell' | 'array_cell';
+export type Data = DataWithRecordCell | DataWithArrayCell;
+export type DataWithRecordCell = {kind: 'record_cell'} & RecordCell;
+export type DataWithArrayCell = {kind: 'array_cell'} & ArrayCell;
 export type DateCell = {
   date_value: string;
 };
@@ -292,6 +292,7 @@ export type Nest = {
   name?: string;
   view: View;
 };
+export type NullCell = {};
 export type NullLiteral = {};
 export type NumberCell = {
   number_value: number;
@@ -358,7 +359,7 @@ export type Range = {
   end: Position;
 };
 export type RecordCell = {
-  record_value: Array<Cell>;
+  record_value: Row;
 };
 export type RecordType = {
   fields: Array<DimensionInfo>;
@@ -374,6 +375,7 @@ export type Result = {
   schema: Schema;
   sql?: string;
   connection_name: string;
+  annotations?: Array<Annotation>;
 };
 export type Row = {
   cells: Array<Cell>;
@@ -426,12 +428,6 @@ export type StringLiteral = {
   string_value: string;
 };
 export type StringType = {};
-export type Table = {
-  rows: Array<Row>;
-};
-export type TableCell = {
-  table_value: Table;
-};
 export type TimeTruncationFieldReference = {
   field_reference: Reference;
   truncation: TimestampTimeframe;

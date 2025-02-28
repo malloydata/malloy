@@ -5,18 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {
-  DataColumn,
-  DataRecord,
-  Explore,
-  Field,
-  QueryData,
-  QueryDataRow,
-} from '@malloydata/malloy';
 import {Tag} from '@malloydata/malloy-tag';
 import {Item, Runtime, Spec, View} from 'vega';
 import {JSX} from 'solid-js';
 import {ResultStore} from './result-store/result-store';
+import * as Malloy from '@malloydata/malloy-interfaces';
+import {CellDataValue, NestFieldInfo} from './util';
 
 export type VegaSignalRef = {signal: string};
 export type VegaPadding = {
@@ -26,8 +20,8 @@ export type VegaPadding = {
   bottom?: number;
 };
 export type MalloyDataToChartDataHandler = (
-  field: Explore,
-  data: QueryData
+  field: NestFieldInfo,
+  data: Malloy.Cell[]
 ) => unknown[];
 export type VegaChartProps = {
   spec: Spec;
@@ -47,33 +41,39 @@ export type FieldHeaderRangeMap = Record<
 >;
 
 export interface FieldRenderMetadata {
-  field: Field | Explore;
+  field: Malloy.DimensionInfo;
+  key: string;
   min: number | null;
   max: number | null;
   minString: string | null;
   maxString: string | null;
   values: Set<string | number | boolean>;
   maxRecordCt: number | null;
-  maxUniqueFieldValueCounts: Map<string, number>;
+  maxUniqueFieldValueCounts: Map<Malloy.DimensionInfo, number>;
   vegaChartProps?: VegaChartProps;
   runtime?: Runtime;
   renderAs: string;
+  path: string[];
+  parent: ParentFieldRenderMetadata | undefined;
+}
+
+export interface ParentFieldRenderMetadata extends FieldRenderMetadata {
+  field: NestFieldInfo;
 }
 
 export interface RenderResultMetadata {
-  fields: Record<string, FieldRenderMetadata>;
-  fieldKeyMap: WeakMap<Field | Explore, string>;
-  getFieldKey: (f: Field | Explore) => string;
-  field: (f: Field | Explore) => FieldRenderMetadata;
-  getData: (cell: DataColumn) => QueryData;
+  fields: Map<Malloy.DimensionInfo, FieldRenderMetadata>;
+  fieldsByKey: Map<string, Malloy.DimensionInfo>;
+  // getData: (cell: Malloy.Cell) => CellDataValue;
   modelTag: Tag;
   resultTag: Tag;
-  rootField: Field | Explore;
+  sourceName: string;
   store: ResultStore;
+  rootField: NestFieldInfo;
 }
 
 export type MalloyClickEventPayload = {
-  field: Field;
+  field: Malloy.DimensionInfo;
   // TODO: type these later
   displayValue: unknown;
   value: unknown;
@@ -100,12 +100,14 @@ export type ChartTooltipEntry = {
   }[];
 };
 
-export type DataRowWithRecord = QueryDataRow & {
-  __malloyDataRecord: DataRecord;
+type CellValues = {[name: string]: CellDataValue};
+
+export type DataRowWithRecord = CellValues & {
+  __malloyDataRecord: Malloy.Row;
 };
 
 export type MalloyVegaDataRecord = {
-  __source: QueryDataRow & {__malloyDataRecord: DataRecord};
+  __source: DataRowWithRecord;
 };
 
 type ScaleType = 'quantitative' | 'nominal';
@@ -133,6 +135,6 @@ export type DrillData = {
 };
 
 export type DimensionContextEntry = {
-  fieldDef: string;
+  field: Malloy.DimensionInfo;
   value: string | number | boolean | Date;
 };

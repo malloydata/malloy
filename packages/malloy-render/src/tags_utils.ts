@@ -21,8 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import * as Malloy from '@malloydata/malloy-interfaces';
+import {tagFor} from './component/util';
 import {Field} from '@malloydata/malloy';
 
-export function isFieldHidden(field: Field) {
+export function isFieldHidden(field: Malloy.DimensionInfo) {
+  return tagFor(field).has('hidden');
+}
+
+export function isFieldHiddenOld(field: Field) {
   return field.tagParse().tag.has('hidden');
 }

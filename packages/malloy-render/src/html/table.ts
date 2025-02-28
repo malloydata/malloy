@@ -33,7 +33,7 @@ import {getDrillQuery} from './drill';
 import {ContainerRenderer} from './container';
 import {HTMLNumberRenderer} from './number';
 import {createDrillIcon, formatTitle, yieldTask} from './utils';
-import {isFieldHidden} from '../tags_utils';
+import {isFieldHiddenOld} from '../tags_utils';
 import {ChildRenderers, Renderer} from './renderer';
 
 class PivotedField {
@@ -136,7 +136,7 @@ export class HTMLTableRenderer extends ContainerRenderer {
     const columnFields: TableField[] = [];
     let pivotDepth = 0;
     for (const field of table.field.allFields) {
-      if (isFieldHidden(field)) {
+      if (isFieldHiddenOld(field)) {
         continue;
       }
 
@@ -394,7 +394,7 @@ export class HTMLTableRenderer extends ContainerRenderer {
           );
           columnIndex++;
         } else {
-          if (isFieldHidden(field)) {
+          if (isFieldHiddenOld(field)) {
             continue;
           }
           const childRenderer = this.childRenderers[field.name];

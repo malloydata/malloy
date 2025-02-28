@@ -7,3 +7,5 @@
 export * as sessioned from './sessioned';
 export * as stateless from './stateless';
 export * as asynchronous from './asynchronous';
+export * from './connection';
+export * as util from './util';

@@ -5,10 +5,17 @@
  *  LICENSE file in the root directory of this source tree.
  */
 
-import {Explore} from '@malloydata/malloy';
 import {Tag} from '@malloydata/malloy-tag';
 import {getFieldPathBetweenFields, walkFields} from '../plot/util';
-import {Channel} from '../types';
+import {Channel, RenderResultMetadata} from '../types';
+import {
+  getNestFields,
+  isAtomic,
+  NestFieldInfo,
+  tagFor,
+  wasCalculation,
+  wasDimension,
+} from '../util';
 
 export type BarChartSettings = {
   xChannel: Channel;
@@ -20,10 +27,11 @@ export type BarChartSettings = {
 };
 
 export function getBarChartSettings(
-  explore: Explore,
+  explore: NestFieldInfo,
+  metadata: RenderResultMetadata,
   tagOverride?: Tag
 ): BarChartSettings {
-  const tag = tagOverride ?? explore.tagParse().tag;
+  const tag = tagOverride ?? tagFor(explore);
   const chart = tag.tag('bar_chart') ?? tag.tag('bar');
   // if tooltip, disable interactions
   const interactive = !tag.has('tooltip');
@@ -70,15 +78,15 @@ export function getBarChartSettings(
   const embeddedY: string[] = [];
   const embeddedSeries: string[] = [];
   walkFields(explore, field => {
-    const {tag} = field.tagParse();
+    const tag = tagFor(field);
     if (tag.has('x')) {
-      embeddedX.push(getFieldPathBetweenFields(explore, field));
+      embeddedX.push(getFieldPathBetweenFields(explore, field, metadata));
     }
     if (tag.has('y')) {
-      embeddedY.push(getFieldPathBetweenFields(explore, field));
+      embeddedY.push(getFieldPathBetweenFields(explore, field, metadata));
     }
     if (tag.has('series')) {
-      embeddedSeries.push(getFieldPathBetweenFields(explore, field));
+      embeddedSeries.push(getFieldPathBetweenFields(explore, field, metadata));
     }
   });
 
@@ -97,33 +105,38 @@ export function getBarChartSettings(
     seriesChannel.fields.push(path);
   });
 
-  const dimensions = explore.allFields.filter(
-    f => f.isAtomicField() && f.sourceWasDimension()
-  );
+  const nestFields = getNestFields(explore);
+  const dimensions = nestFields.filter(f => isAtomic(f) && wasDimension(f));
 
   // If still no x or y, attempt to pick the best choice
   if (xChannel.fields.length === 0) {
     // Pick first dimension field for x
     if (dimensions.length > 0) {
-      xChannel.fields.push(getFieldPathBetweenFields(explore, dimensions[0]));
+      xChannel.fields.push(
+        getFieldPathBetweenFields(explore, dimensions[0], metadata)
+      );
     }
   }
   if (yChannel.fields.length === 0) {
     // Pick first numeric measure field
-    const numberField = explore.allFields.find(
-      f => f.isAtomicField() && f.sourceWasMeasureLike() && f.isNumber()
+    const numberField = nestFields.find(
+      f => isAtomic(f) && wasCalculation(f) && f.type.kind === 'number_type'
     );
     if (numberField)
-      yChannel.fields.push(getFieldPathBetweenFields(explore, numberField));
+      yChannel.fields.push(
+        getFieldPathBetweenFields(explore, numberField, metadata)
+      );
   }
   // If no series defined and multiple dimensions, use leftover dimension
   if (seriesChannel.fields.length === 0 && dimensions.length > 1) {
     const dimension = dimensions.find(d => {
-      const path = getFieldPathBetweenFields(explore, d);
+      const path = getFieldPathBetweenFields(explore, d, metadata);
       return !xChannel.fields.includes(path);
     });
     if (dimension) {
-      seriesChannel.fields.push(getFieldPathBetweenFields(explore, dimension));
+      seriesChannel.fields.push(
+        getFieldPathBetweenFields(explore, dimension, metadata)
+      );
     }
   }
 

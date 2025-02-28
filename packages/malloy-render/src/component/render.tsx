@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {ExploreField, ModelDef, QueryResult, Result} from '@malloydata/malloy';
 import {Tag} from '@malloydata/malloy-tag';
 import {
   Accessor,
@@ -29,11 +28,10 @@ import {
 } from './types';
 export type {DimensionContextEntry, DrillData} from './types';
 import css from './render.css?raw';
+import * as Malloy from '@malloydata/malloy-interfaces';
 
 export type MalloyRenderProps = {
-  result?: Result;
-  queryResult?: QueryResult;
-  modelDef?: ModelDef;
+  result?: Malloy.Result;
   scrollEl?: HTMLElement;
   modalElement?: HTMLElement;
   onClick?: (payload: MalloyClickEventPayload) => void;
@@ -71,8 +69,6 @@ export function MalloyRender(
 ) {
   const result = createMemo(() => {
     if (props.result) return props.result;
-    else if (props.queryResult && props.modelDef)
-      return new Result(props.queryResult, props.modelDef);
     else return null;
   });
 
@@ -162,7 +158,7 @@ export function MalloyRender(
 }
 
 export function MalloyRenderInner(props: {
-  result: Result;
+  result: Malloy.Result;
   element: ICustomElement;
   scrollEl?: HTMLElement;
   vegaConfigOverride?: VegaConfigHandler;
@@ -195,9 +191,13 @@ export function MalloyRenderInner(props: {
   });
 
   const rendering = () => {
+    const rootField = metadata().rootField;
+    if (props.result.data === undefined) {
+      throw new Error('MalloyRender: result.data is undefined');
+    }
     return applyRenderer({
       // TODO: figure out what to do about the diffs between top level Explore vs. ExploreFields/AtomicFields
-      field: props.result.resultExplore as ExploreField,
+      field: rootField,
       dataColumn: props.result.data,
       resultMetadata: metadata(),
       tag: tags().resultTag,

@@ -21,25 +21,29 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  DataArray,
-  DataColumn,
-  Explore,
-  ExploreField,
-  Field,
-  QueryData,
-  Result,
-} from '@malloydata/malloy';
 import {Tag} from '@malloydata/malloy-tag';
 import {
-  getFieldKey,
   valueIsDateTime,
   valueIsNumber,
   valueIsBoolean,
   valueIsString,
+  tagFor,
+  isAtomic,
+  wasDimension,
+  isDate,
+  isTimestamp,
+  getFieldTimeframe,
+  getCell,
+  getCellValue,
+  isNest,
+  NestFieldInfo,
+  getNestFields,
+  CellDataValue,
 } from './util';
 import {
   DataRowWithRecord,
+  FieldRenderMetadata,
+  ParentFieldRenderMetadata,
   RenderResultMetadata,
   VegaChartProps,
   VegaConfigHandler,
@@ -56,63 +60,107 @@ import {generateBarChartVegaSpec} from './bar-chart/generate-bar_chart-vega-spec
 import {createResultStore} from './result-store/result-store';
 import {generateLineChartVegaSpec} from './line-chart/generate-line_chart-vega-spec';
 import {parse, Config} from 'vega';
+import * as Malloy from '@malloydata/malloy-interfaces';
 
-function createDataCache() {
-  const dataCache = new WeakMap<DataColumn, QueryData>();
-  return {
-    get: (cell: DataColumn) => {
-      if (!dataCache.has(cell) && cell.isArray()) {
-        const data: DataRowWithRecord[] = [];
-        const fields = cell.field.allFields;
-        for (const row of cell) {
-          const record = {__malloyDataRecord: row};
-          for (const field of fields) {
-            const value = row.cell(field).value;
-            // TODO: can we store Date objects as is? Downstream chart code would need to be updated
-            record[field.name] =
-              value instanceof Date ? value.valueOf() : row.cell(field).value;
-          }
-          data.push(record as DataRowWithRecord);
-        }
-        dataCache.set(cell, data);
-      }
-      return dataCache.get(cell)!;
-    },
-  };
-}
+// function createDataCache(
+//   rootField: NestFieldInfo,
+//   data: Malloy.CellWithArrayCell | Malloy.CellWithRecordCell
+// ) {
+//   const dataCache = new WeakMap<Malloy.Cell, CellDataValue>();
+//   const parentMap = new WeakMap<Malloy.Cell, Malloy.Cell | undefined>();
+//   const fieldMap = new WeakMap<Malloy.Cell, Malloy.DimensionInfo>();
+
+//   function populate(
+//     field: NestFieldInfo,
+//     data: Malloy.CellWithArrayCell | Malloy.CellWithRecordCell
+//   ) {
+//     parentMap.set(data, undefined);
+//     fieldMap.set(data, field);
+//     const fields = getNestFields(field);
+//     const rows = data.kind === 'record_cell' ? [data] : data.array_value;
+//     for (const rowCell of rows) {
+//       if (rowCell.kind !== 'record_cell') {
+//         throw new Error('Invalid record');
+//       }
+//       const row = rowCell.record_value;
+//       for (const child of fields) {
+//         const cell = getCell(field, row, child.name);
+//         if (isNest(child)) {
+//           populate(
+//             child,
+//             cell as Malloy.CellWithArrayCell | Malloy.CellWithRecordCell
+//           );
+//         } else {
+//           parentMap.set(cell, data);
+//           fieldMap.set(cell, child);
+//         }
+//       }
+//     }
+//   }
+//   populate(rootField, data);
+
+//   return {
+//     get: (cell: Malloy.Cell) => {
+//       if (!dataCache.has(cell)) {
+//         const data: DataRowWithRecord[] = [];
+//         const fields = parent.schema.fields;
+//         for (const row of cell.table_value.rows) {
+//           const record = {__malloyDataRecord: row}; // TODO remove this
+//           for (const field of fields) {
+//             const cell = getCell(parent, row, field.name);
+//             const value = getCellValue(cell);
+//             // TODO: can we store Date objects as is? Downstream chart code would need to be updated
+//             record[field.name] =
+//               value instanceof Date ? value.valueOf() : value;
+//           }
+//           data.push(record as DataRowWithRecord);
+//         }
+//         dataCache.set(cell, data);
+//       }
+//       return dataCache.get(cell)!;
+//     },
+//   };
+// }
 
 export type GetResultMetadataOptions = {
   getVegaConfigOverride?: VegaConfigHandler;
 };
 
 export function getResultMetadata(
-  result: Result,
+  result: Malloy.Result,
   options: GetResultMetadataOptions = {}
 ) {
-  const fieldKeyMap: WeakMap<Field | Explore, string> = new WeakMap();
-  const getCachedFieldKey = (f: Field | Explore) => {
-    if (fieldKeyMap.has(f)) return fieldKeyMap.get(f)!;
-    const fieldKey = getFieldKey(f);
-    fieldKeyMap.set(f, fieldKey);
-    return fieldKey;
+  // const dataCache = createDataCache();
+  const fields: Malloy.DimensionInfo[] = [];
+  for (const field of result.schema.fields) {
+    if (field.kind === 'dimension') {
+      fields.push(field);
+    }
+  }
+  const rootField: NestFieldInfo = {
+    name: 'root',
+    type: {
+      kind: 'array_type',
+      element_type: {
+        kind: 'record_type',
+        fields,
+      },
+    },
+    annotations: result.annotations,
   };
-
-  const dataCache = createDataCache();
-  const rootField = result.data.field;
+  const resultTag = new Tag(); // TODO
   const metadata: RenderResultMetadata = {
-    fields: {},
-    fieldKeyMap,
-    getFieldKey: getCachedFieldKey,
-    field: (f: Field | Explore) => metadata.fields[getCachedFieldKey(f)],
-    getData: dataCache.get,
-    modelTag: result.modelTag,
-    resultTag: result.tagParse().tag,
-    rootField,
+    fields: new Map(),
+    fieldsByKey: new Map(),
+    // getData: dataCache.get,
+    modelTag: new Tag(), // TODO
+    resultTag,
     store: createResultStore(),
+    rootField,
+    sourceName: 'foo', // TODO
   };
 
-  const fieldKey = metadata.getFieldKey(rootField);
-  metadata.fields[fieldKey] = {
+  const rootMetadata: FieldRenderMetadata = {
     field: rootField,
     min: null,
     max: null,
@@ -121,28 +169,40 @@ export function getResultMetadata(
     values: new Set(),
     maxRecordCt: null,
     maxUniqueFieldValueCounts: new Map(),
-    renderAs: shouldRenderAs(rootField, result.tagParse().tag),
+    renderAs: shouldRenderAs(rootField),
+    path: [],
+    parent: undefined,
+    key: '',
   };
+  metadata.fields.set(rootField, rootMetadata);
+  metadata.fieldsByKey.set(rootMetadata.key, rootField);
 
-  initFieldMeta(result.data.field, metadata);
-  populateFieldMeta(result.data, metadata);
+  // console.log({theResult: result});
+  initFieldMeta(rootField, [], metadata);
+  if (result.data === undefined) {
+    throw new Error('Expected result to have data');
+  }
+  populateFieldMeta(result.data, rootField, metadata);
+  // console.log({metadata});
 
-  Object.values(metadata.fields).forEach(m => {
+  [...metadata.fields.values()].forEach(m => {
     const f = m.field;
     // If explore, do some additional post-processing like determining chart settings
-    if (f.isExploreField())
-      populateExploreMeta(f, f.tagParse().tag, metadata, options);
-    else if (f.isExplore())
-      populateExploreMeta(f, result.tagParse().tag, metadata, options);
+    if (isNest(f)) populateExploreMeta(f, tagFor(f), metadata, options);
   });
 
   return metadata;
 }
 
-function initFieldMeta(e: Explore, metadata: RenderResultMetadata) {
-  for (const f of e.allFields) {
-    const fieldKey = metadata.getFieldKey(f);
-    metadata.fields[fieldKey] = {
+function initFieldMeta(
+  e: NestFieldInfo,
+  path: string[],
+  metadata: RenderResultMetadata
+) {
+  for (const f of getNestFields(e)) {
+    const parentMetadata = metadata.fields.get(e);
+    const newPath = [...path, f.name];
+    const fieldMetadata: FieldRenderMetadata = {
       field: f,
       min: null,
       max: null,
@@ -150,47 +210,62 @@ function initFieldMeta(e: Explore, metadata: RenderResultMetadata) {
       maxString: null,
       values: new Set(),
       maxRecordCt: null,
-      maxUniqueFieldValueCounts: new Map<string, number>(),
+      maxUniqueFieldValueCounts: new Map(),
       renderAs: shouldRenderAs(f),
+      path: newPath,
+      parent: parentMetadata as ParentFieldRenderMetadata,
+      key: newPath.join('.'),
     };
-    if (f.isExploreField()) {
-      initFieldMeta(f, metadata);
+    metadata.fields.set(f, fieldMetadata);
+    metadata.fieldsByKey.set(fieldMetadata.key, f);
+    if (isNest(f)) {
+      initFieldMeta(f, newPath, metadata);
     }
   }
 }
 
-const populateFieldMeta = (data: DataArray, metadata: RenderResultMetadata) => {
+const populateFieldMeta = (
+  data: Malloy.Cell,
+  field: NestFieldInfo,
+  metadata: RenderResultMetadata
+) => {
   let currExploreRecordCt = 0;
-  const currentExploreField = data.field;
-  const currentExploreFieldMeta = metadata.field(currentExploreField);
-  const maxUniqueFieldValueSets = new Map<string, Set<unknown>>();
-  data.field.allFields.forEach(f => {
-    maxUniqueFieldValueSets.set(getFieldKey(f), new Set());
+  const currentExploreField = field;
+  const currentExploreFieldMeta = metadata.fields.get(currentExploreField)!;
+  const maxUniqueFieldValueSets = new Map<Malloy.DimensionInfo, Set<unknown>>();
+  const nestFields = getNestFields(field);
+  nestFields.forEach(f => {
+    maxUniqueFieldValueSets.set(f, new Set());
   });
-  for (const row of data) {
+  if (data.kind !== 'array_cell') {
+    throw new Error('Expected table data here'); // TODO what about a query with all measures?
+  }
+  for (const row of data.array_value) {
+    if (row.kind !== 'record_cell') {
+      throw new Error('Expected record data here');
+    }
     currExploreRecordCt++;
-    for (const f of data.field.allFields) {
-      const fieldMeta = metadata.field(f);
-      const fieldSet = maxUniqueFieldValueSets.get(getFieldKey(f))!;
+    for (const f of nestFields) {
+      const fieldMeta = metadata.fields.get(f)!;
+      const fieldSet = maxUniqueFieldValueSets.get(f)!;
 
-      const value = f.isAtomicField() ? row.cell(f).value : undefined;
-      if (
-        f.isAtomicField() &&
-        (value === null || typeof value === 'undefined')
-      ) {
+      const value = isAtomic(f)
+        ? getCellValue(getCell(field, row.record_value, f.name))
+        : undefined;
+      if (isAtomic(f) && (value === null || typeof value === 'undefined')) {
         fieldMeta.values.add(NULL_SYMBOL);
         fieldSet.add(NULL_SYMBOL);
       } else if (valueIsNumber(f, value)) {
         const n = value;
         fieldMeta.min = Math.min(fieldMeta.min ?? n, n);
         fieldMeta.max = Math.max(fieldMeta.max ?? n, n);
-        if (f.isAtomicField() && f.sourceWasDimension()) {
+        if (isAtomic(f) && wasDimension(f)) {
           fieldMeta.values.add(n);
           fieldSet.add(n);
         }
       } else if (valueIsBoolean(f, value)) {
         const bool: boolean = value;
-        if (f.isAtomicField() && f.sourceWasDimension()) {
+        if (isAtomic(f) && wasDimension(f)) {
           fieldMeta.values.add(bool);
           fieldSet.add(bool);
         }
@@ -212,9 +287,9 @@ const populateFieldMeta = (data: DataArray, metadata: RenderResultMetadata) => {
         fieldMeta.max = Math.max(fieldMeta.max ?? numericValue, numericValue);
         const stringValue = renderTimeString(
           value,
-          f.isAtomicField() && f.isDate(),
-          f.isAtomicField() && (f.isDate() || f.isTimestamp())
-            ? f.timeframe
+          isAtomic(f) && isDate(f),
+          isAtomic(f) && (isDate(f) || isTimestamp(f))
+            ? getFieldTimeframe(f)
             : undefined
         ).toString();
         if (
@@ -228,23 +303,23 @@ const populateFieldMeta = (data: DataArray, metadata: RenderResultMetadata) => {
         )
           fieldMeta.maxString = stringValue;
 
-        if (f.isAtomicField() && f.sourceWasDimension()) {
+        if (isAtomic(f) && wasDimension(f)) {
           fieldMeta.values.add(numericValue);
           fieldSet.add(numericValue);
         }
-      } else if (f.isExploreField()) {
-        const data = row.cell(f);
-        if (data.isArray()) populateFieldMeta(data, metadata);
+      } else if (isNest(f)) {
+        const data = getCell(field, row.record_value, f.name);
+        if (data.kind === 'array_cell') populateFieldMeta(data, f, metadata);
       }
     }
   }
 
   // Update the max number of unique values for a field in nested explores
-  for (const [fieldKey, set] of maxUniqueFieldValueSets) {
+  for (const [field, set] of maxUniqueFieldValueSets) {
     currentExploreFieldMeta.maxUniqueFieldValueCounts.set(
-      fieldKey,
+      field,
       Math.max(
-        currentExploreFieldMeta.maxUniqueFieldValueCounts.get(fieldKey) ?? 0,
+        currentExploreFieldMeta.maxUniqueFieldValueCounts.get(field) ?? 0,
         set.size
       )
     );
@@ -257,12 +332,12 @@ const populateFieldMeta = (data: DataArray, metadata: RenderResultMetadata) => {
 };
 
 function populateExploreMeta(
-  f: Explore | ExploreField,
+  f: NestFieldInfo,
   tag: Tag,
   metadata: RenderResultMetadata,
   options: GetResultMetadataOptions
 ) {
-  const fieldMeta = metadata.field(f);
+  const fieldMeta = metadata.fields.get(f)!;
   let vegaChartProps: VegaChartProps | null = null;
   const chartType = shouldRenderChartAs(tag);
   if (chartType === 'bar_chart') {
@@ -270,6 +345,7 @@ function populateExploreMeta(
   } else if (chartType === 'line_chart') {
     vegaChartProps = generateLineChartVegaSpec(f, metadata);
   }
+  if (f.name === 'ySeries') console.log({vegaChartProps});
 
   if (vegaChartProps) {
     const vegaConfigOverride =

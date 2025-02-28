@@ -1,12 +1,18 @@
-import {getDynamicValue} from '../html/utils';
 import {RendererProps} from './apply-renderer';
+import {
+  getCellValue,
+  getDynamicValue,
+  isAtomic,
+  valueIsNull,
+  valueIsString,
+} from './util';
 
 export function renderImage(props: RendererProps) {
   const imgTag = props.tag.tag('image');
   if (!imgTag) throw new Error('Missing tag for Image renderer');
-  if (!props.field.isAtomicField())
+  if (!isAtomic(props.field))
     throw new Error('Image renderer: Field must be AtomicField');
-  if (!props.dataColumn.isString())
+  if (!valueIsString(props.field, props.dataColumn))
     throw new Error('Image renderer: DataColumn must be DataString');
 
   // Sizing
@@ -27,8 +33,8 @@ export function renderImage(props: RendererProps) {
 
   // src
   let src: string | undefined;
-  if (!props.dataColumn.isNull()) {
-    src = props.dataColumn.value;
+  if (!valueIsNull(props.dataColumn)) {
+    src = String(getCellValue(props.dataColumn));
   }
 
   return <img style={style} src={src} alt={alt} />;

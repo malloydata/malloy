@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {DataArray, DataRecord, Field} from '@malloydata/malloy';
 import {createMemo, For, Show} from 'solid-js';
 import {applyRenderer} from '../apply-renderer';
 import {useResultContext} from '../result-context';
@@ -13,15 +12,29 @@ import {RenderResultMetadata} from '../types';
 import {createVirtualizer, Virtualizer} from '@tanstack/solid-virtual';
 import {useConfig} from '../render';
 import dashboardCss from './dashboard.css?raw';
+import * as Malloy from '@malloydata/malloy-interfaces';
+import {
+  getCell,
+  getCellValue,
+  getNestFields,
+  isAtomic,
+  NestFieldInfo,
+  tagFor,
+  wasCalculation,
+  wasDimension,
+} from '../util';
+import {getFieldPathArrayFromRoot} from '../plot/util';
 
 function DashboardItem(props: {
-  field: Field;
-  row: DataRecord;
+  parent: NestFieldInfo;
+  field: Malloy.DimensionInfo;
+  row: Malloy.Row;
   resultMetadata: RenderResultMetadata;
   maxTableHeight: number | null;
   isMeasure?: boolean;
 }) {
   const config = useConfig();
+  const metadata = useResultContext();
   const shouldVirtualizeTable = () => {
     // If dashboard is disabling virtualization, disable table virtualization as well
     // This is done mainly to support Copy to HTML; not sure if this is correct approach for other scenarios
@@ -31,10 +44,12 @@ function DashboardItem(props: {
     // If no max height is set, then don't virtualize
     else return false;
   };
+  const cell = getCell(props.parent, props.row, props.field.name);
+  const tag = tagFor(props.field);
   const rendering = applyRenderer({
     field: props.field,
-    dataColumn: props.row.cell(props.field),
-    tag: props.field.tagParse().tag,
+    dataColumn: cell,
+    tag,
     resultMetadata: props.resultMetadata,
     customProps: {
       table: {
@@ -51,8 +66,8 @@ function DashboardItem(props: {
           typeof rendering.renderValue !== 'function'
             ? rendering.renderValue
             : null,
-        value: props.row.cell(props.field).value,
-        fieldPath: props.field.fieldPath,
+        value: getCellValue(cell),
+        fieldPath: getFieldPathArrayFromRoot(props.field, metadata),
         isHeader: false,
         event: evt,
         type: 'dashboard-item',
@@ -63,7 +78,7 @@ function DashboardItem(props: {
   if (rendering.renderAs === 'table' && props.maxTableHeight)
     itemStyle['max-height'] = `${props.maxTableHeight}px`;
 
-  const customLabel = props.field.tagParse().tag.text('label');
+  const customLabel = tag.text('label');
   const title = customLabel ?? props.field.name;
 
   return (
@@ -85,39 +100,44 @@ function DashboardItem(props: {
   );
 }
 
-export function Dashboard(props: {data: DataArray; scrollEl?: HTMLElement}) {
-  const field = () => props.data.field;
-  const dashboardTag = field().tagParse().tag.tag('dashboard');
+export function Dashboard(props: {
+  data: Malloy.CellWithArrayCell;
+  scrollEl?: HTMLElement;
+  field: NestFieldInfo;
+}) {
+  const field = props.field;
+  const tag = tagFor(field);
+  const dashboardTag = tag.tag('dashboard');
   let maxTableHeight: number | null = 361;
   const maxTableHeightTag = dashboardTag?.tag('table', 'max_height');
   if (maxTableHeightTag?.text() === 'none') maxTableHeight = null;
   else if (maxTableHeightTag?.numeric())
     maxTableHeight = maxTableHeightTag!.numeric()!;
 
+  const nestFields = getNestFields(field);
   const dimensions = () =>
-    field().allFields.filter(f => {
-      const isHidden = f.tagParse().tag.has('hidden');
-      return !isHidden && f.isAtomicField() && f.sourceWasDimension();
+    nestFields.filter(f => {
+      const isHidden = tagFor(f).has('hidden');
+      return !isHidden && isAtomic(f) && wasDimension(f);
     });
 
   const nonDimensions = () => {
-    const measureFields: Field[] = [];
-    const otherFields: Field[] = [];
+    const measureFields: Malloy.DimensionInfo[] = [];
+    const otherFields: Malloy.DimensionInfo[] = [];
 
-    for (const f of field().allFields) {
-      if (f.tagParse().tag.has('hidden')) continue;
-      if (f.isAtomicField() && f.sourceWasMeasureLike()) {
+    for (const f of nestFields) {
+      if (tagFor(f).has('hidden')) continue;
+      if (isAtomic(f) && wasCalculation(f)) {
         measureFields.push(f);
-      } else if (!f.isAtomicField() || !f.sourceWasDimension())
-        otherFields.push(f);
+      } else if (!isAtomic(f) || !wasDimension(f)) otherFields.push(f);
     }
     return [...measureFields, ...otherFields];
   };
 
   const nonDimensionsGrouped = () => {
-    const group: Field[][] = [[]];
+    const group: Malloy.DimensionInfo[][] = [[]];
     for (const f of nonDimensions()) {
-      const {tag} = f.tagParse();
+      const tag = tagFor(f);
       if (tag.has('break')) {
         group.push([]);
       }
@@ -128,9 +148,12 @@ export function Dashboard(props: {data: DataArray; scrollEl?: HTMLElement}) {
   };
 
   const data = createMemo(() => {
-    const data: DataRecord[] = [];
-    for (const row of props.data) {
-      data.push(row);
+    const data: Malloy.Row[] = [];
+    for (const row of props.data.array_value) {
+      if (row.kind !== 'record_cell') {
+        throw new Error('Expected record cell');
+      }
+      data.push(row.record_value);
     }
     return data;
   });
@@ -195,8 +218,12 @@ export function Dashboard(props: {data: DataArray; scrollEl?: HTMLElement}) {
                               {
                                 applyRenderer({
                                   field: d,
-                                  dataColumn: data()[virtualRow.index].cell(d),
-                                  tag: d.tagParse().tag,
+                                  dataColumn: getCell(
+                                    props.field,
+                                    data()[virtualRow.index],
+                                    d.name
+                                  ),
+                                  tag: tagFor(d),
                                   resultMetadata,
                                 }).renderValue
                               }
@@ -213,12 +240,12 @@ export function Dashboard(props: {data: DataArray; scrollEl?: HTMLElement}) {
                         <For each={group}>
                           {field => (
                             <DashboardItem
+                              parent={props.field}
                               field={field}
                               row={data()[virtualRow.index]}
                               resultMetadata={resultMetadata}
                               isMeasure={
-                                field.isAtomicField() &&
-                                field.sourceWasMeasureLike()
+                                isAtomic(field) && wasCalculation(field)
                               }
                               maxTableHeight={maxTableHeight}
                             />
@@ -247,8 +274,8 @@ export function Dashboard(props: {data: DataArray; scrollEl?: HTMLElement}) {
                           {
                             applyRenderer({
                               field: d,
-                              dataColumn: row.cell(d),
-                              tag: d.tagParse().tag,
+                              dataColumn: getCell(props.field, row, d.name),
+                              tag: tagFor(d),
                               resultMetadata,
                             }).renderValue
                           }
@@ -265,13 +292,11 @@ export function Dashboard(props: {data: DataArray; scrollEl?: HTMLElement}) {
                     <For each={group}>
                       {field => (
                         <DashboardItem
+                          parent={props.field}
                           field={field}
                           row={row}
                           resultMetadata={resultMetadata}
-                          isMeasure={
-                            field.isAtomicField() &&
-                            field.sourceWasMeasureLike()
-                          }
+                          isMeasure={isAtomic(field) && wasCalculation(field)}
                           maxTableHeight={maxTableHeight}
                         />
                       )}

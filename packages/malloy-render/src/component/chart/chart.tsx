@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Explore, ExploreField, QueryData} from '@malloydata/malloy';
 import {VegaChart, ViewInterface} from '../vega/vega-chart';
 import {ChartTooltipEntry, RenderResultMetadata} from '../types';
 import {Tooltip} from '../tooltip/tooltip';
@@ -17,6 +16,8 @@ import css from './chart.css?raw';
 import {useConfig} from '../render';
 import {DebugIcon} from './debug_icon';
 import ChartDevTool from './chart-dev-tool';
+import {CellDataValue, getNestFields, isAtomic, NestFieldInfo} from '../util';
+import {getFieldReferenceId} from '../plot/util';
 
 let IS_STORYBOOK = false;
 try {
@@ -30,8 +31,8 @@ try {
 }
 
 export type ChartProps = {
-  field: Explore | ExploreField;
-  data: QueryData;
+  field: NestFieldInfo;
+  data: CellDataValue;
   metadata: RenderResultMetadata;
   // Debugging properties
   devMode?: boolean;
@@ -43,14 +44,16 @@ export function Chart(props: ChartProps) {
   const config = useConfig();
   config.addCSSToShadowRoot(css);
   const {field, data} = props;
-  const chartProps = props.metadata.field(field).vegaChartProps!;
-  const runtime = props.runtime ?? props.metadata.field(field).runtime;
+  const chartProps = props.metadata.fields.get(field)!.vegaChartProps!;
+  const runtime = props.runtime ?? props.metadata.fields.get(field)!.runtime;
   if (!runtime)
     throw new Error('Charts must have a runtime defined in their metadata');
   const chartData = data;
-  for (let i = 0; i < chartData.length; i++) {
-    chartData[i]['__malloyDataRecord'] = data[i]['__malloyDataRecord'];
-  }
+  if (!Array.isArray(chartData)) throw new Error('Data must be an array'); // TODO
+  // for (let i = 0; i < chartData.length; i++) {
+  //   chartData[i]['__malloyDataRecord'] = data[i]['__malloyDataRecord'];
+  // }
+  // TODO no!!??!
   let values: unknown[] = [];
   // New vega charts use mapMalloyDataToChartData handlers
   if (chartProps.mapMalloyDataToChartData) {
@@ -161,8 +164,8 @@ export function Chart(props: ChartProps) {
 
   // Pass relevant brushes from store into the vega view
   createEffect(() => {
-    const fieldRefIds = props.field.allFields.map(f =>
-      f.isAtomicField() ? f.referenceId : null
+    const fieldRefIds = getNestFields(props.field).map(f =>
+      isAtomic(f) ? getFieldReferenceId(f) : null
     );
     const relevantBrushes = resultStore.store.brushes.filter(brush =>
       fieldRefIds.includes(brush.fieldRefId)

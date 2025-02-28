@@ -1,10 +1,10 @@
-import {AtomicField, DataColumn} from '@malloydata/malloy';
-import {getDynamicValue} from '../html/utils';
+import {getCellValue, tagFor, valueIsNull, getDynamicValue} from './util';
+import * as Malloy from '@malloydata/malloy-interfaces';
 
-export function renderLink(f: AtomicField, data: DataColumn) {
-  const {tag} = f.tagParse();
-  if (data.isNull()) return '∅';
-  const value = String(data.value);
+export function renderLink(f: Malloy.DimensionInfo, data: Malloy.Cell) {
+  const tag = tagFor(f);
+  if (valueIsNull(data)) return '∅';
+  const value = String(getCellValue(data));
   const linkTag = tag.tag('link');
   if (!linkTag) throw new Error('Missing tag for Link renderer');
   // Read href component from field value or override with field tag if it exists

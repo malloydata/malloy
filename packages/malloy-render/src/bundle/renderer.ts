@@ -21,43 +21,40 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Result, ResultJSON, PreparedResult} from '@malloydata/malloy';
 import {HTMLView} from '../html/html_view';
+import * as Malloy from '@malloydata/malloy-interfaces';
 
-export async function renderMalloyResults(
-  queryResult,
-  totalRows,
-  preparedResult
-) {
+export async function renderMalloyResults(queryResult) {
   try {
-    let preparedResultObj: PreparedResult;
-    if (
-      preparedResult._modelDef !== undefined &&
-      preparedResult._rawQuery !== undefined
-    ) {
-      // prepared result is safely typecasted.
-      preparedResultObj = preparedResult;
-    } else if (
-      preparedResult.inner !== undefined &&
-      preparedResult.modelDef !== undefined
-    ) {
-      // prepared result is raw json.
-      preparedResultObj = PreparedResult.fromJson({
-        query: preparedResult.inner,
-        modelDef: preparedResult.modelDef,
-      });
-    } else {
-      throw new Error('preparedResult has missing properties.');
-    }
-    const malloyRes: ResultJSON = {
-      queryResult: {
-        ...preparedResultObj._rawQuery,
-        result: queryResult,
-        totalRows: totalRows,
-      },
-      modelDef: preparedResultObj._modelDef,
-    };
-    const result = Result.fromJSON(malloyRes);
+    // let preparedResultObj: PreparedResult;
+    // if (
+    //   preparedResult._modelDef !== undefined &&
+    //   preparedResult._rawQuery !== undefined
+    // ) {
+    //   // prepared result is safely typecasted.
+    //   preparedResultObj = preparedResult;
+    // } else if (
+    //   preparedResult.inner !== undefined &&
+    //   preparedResult.modelDef !== undefined
+    // ) {
+    //   // prepared result is raw json.
+    //   preparedResultObj = PreparedResult.fromJson({
+    //     query: preparedResult.inner,
+    //     modelDef: preparedResult.modelDef,
+    //   });
+    // } else {
+    //   throw new Error('preparedResult has missing properties.');
+    // }
+    // const malloyRes: ResultJSON = {
+    //   queryResult: {
+    //     ...preparedResultObj._rawQuery,
+    //     result: queryResult,
+    //     totalRows: totalRows,
+    //   },
+    //   modelDef: preparedResultObj._modelDef,
+    // };
+    // const result = Result.fromJSON(malloyRes);
+    const result: Malloy.Result = JSON.parse(queryResult);
     const htmlView = new HTMLView(document).render(result, {
       dataStyles: {},
       isDrillingEnabled: false,

@@ -183,7 +183,7 @@ export class Tag implements TagInterface {
     let current: Tag | undefined = extending;
     for (let i = 0; i < lines.length; i++) {
       const text = lines[i];
-      const noteParse = parseTagLine(text, extending, importing, i);
+      const noteParse = parseTagLine(text, current, importing, i);
       current = noteParse.tag;
       allErrs.push(...noteParse.log);
     }

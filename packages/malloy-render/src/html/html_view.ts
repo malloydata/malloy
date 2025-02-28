@@ -21,13 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  DataArray,
-  Explore,
-  Field,
-  Result,
-  isSourceDef,
-} from '@malloydata/malloy';
+import {DataArray, Explore, Field} from '@malloydata/malloy';
 import {Tag} from '@malloydata/malloy-tag';
 import {DataStyles, RenderDef, StyleDefaults} from './data_styles';
 import {ChildRenderers, Renderer} from './renderer';
@@ -40,12 +34,17 @@ import {ContainerRenderer} from './container';
 import {createErrorElement} from './utils';
 import {MainRendererFactory} from './main_renderer_factory';
 import {HTMLListRenderer} from './list';
+import * as Malloy from '@malloydata/malloy-interfaces';
 
 export class HTMLView {
   constructor(private document: Document) {}
 
-  async render(result: Result, options: RendererOptions): Promise<HTMLElement> {
-    const isNextRenderer = !result.modelTag.has('renderer_legacy');
+  async render(
+    result: Malloy.Result,
+    options: RendererOptions
+  ): Promise<HTMLElement> {
+    // const isNextRenderer = !result.modelTag.has('renderer_legacy');
+    const isNextRenderer = true; // TODO
     if (isNextRenderer) {
       const hasNextRenderer =
         !!this.document.defaultView?.customElements.get('malloy-render');
@@ -64,38 +63,39 @@ export class HTMLView {
         );
       }
     }
+    return createErrorElement(this.document, 'Legacy renderer not supported.');
 
-    const table = result.data;
-    const renderer = makeRenderer(
-      table.field,
-      this.document,
-      options,
-      {
-        size: 'large',
-      },
-      isSourceDef(table.field.structDef)
-        ? table.field.structDef.queryTimezone
-        : undefined,
-      result.tagParse().tag
-    );
-    try {
-      // TODO Implement row streaming capability for some renderers: some renderers should be usable
-      //      as a builder with `begin(field: StructDef)`, `row(field: StructDef, row: QueryDataRow)`,
-      //      and `end(field: StructDef)` methods.
-      //      Primarily, this should be possible for the `table` and `dashboard` renderers.
-      //      This would only be used at this top level (and HTML view should support `begin`,
-      //      `row`, and `end` as well).
-      return await renderer.render(table);
-    } catch (error) {
-      if (error instanceof Error) {
-        return createErrorElement(this.document, error);
-      } else {
-        return createErrorElement(
-          this.document,
-          'Internal error - Exception not an Error object.'
-        );
-      }
-    }
+    // const table = result.data;
+    // const renderer = makeRenderer(
+    //   table.field,
+    //   this.document,
+    //   options,
+    //   {
+    //     size: 'large',
+    //   },
+    //   isSourceDef(table.field.structDef)
+    //     ? table.field.structDef.queryTimezone
+    //     : undefined,
+    //   result.tagParse().tag
+    // );
+    // try {
+    //   // TODO Implement row streaming capability for some renderers: some renderers should be usable
+    //   //      as a builder with `begin(field: StructDef)`, `row(field: StructDef, row: QueryDataRow)`,
+    //   //      and `end(field: StructDef)` methods.
+    //   //      Primarily, this should be possible for the `table` and `dashboard` renderers.
+    //   //      This would only be used at this top level (and HTML view should support `begin`,
+    //   //      `row`, and `end` as well).
+    //   return await renderer.render(table);
+    // } catch (error) {
+    //   if (error instanceof Error) {
+    //     return createErrorElement(this.document, error);
+    //   } else {
+    //     return createErrorElement(
+    //       this.document,
+    //       'Internal error - Exception not an Error object.'
+    //     );
+    //   }
+    // }
   }
 }
 

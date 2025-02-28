@@ -7,18 +7,24 @@
 
 import {expressionFunction} from 'vega';
 import {renderNumericField} from '../render-numeric-field';
-import {Explore, ExploreField} from '@malloydata/malloy';
 import {getFieldFromRootPath} from '../plot/util';
 import {BrushData} from '../result-store/result-store';
 import {renderTimeString} from '../render-time';
+import {
+  getFieldTimeframe,
+  isAtomic,
+  isDate,
+  isTimestamp,
+  NestFieldInfo,
+} from '../util';
 
 if (!expressionFunction('renderMalloyNumber')) {
   expressionFunction(
     'renderMalloyNumber',
-    (explore: Explore | ExploreField, fieldPath: string, value: number) => {
+    (explore: NestFieldInfo, fieldPath: string, value: number) => {
       if (explore) {
         const field = getFieldFromRootPath(explore, fieldPath);
-        return field.isAtomicField()
+        return isAtomic(field)
           ? renderNumericField(field, value)
           : String(value);
       }
@@ -30,14 +36,14 @@ if (!expressionFunction('renderMalloyNumber')) {
 if (!expressionFunction('renderMalloyTime')) {
   expressionFunction(
     'renderMalloyTime',
-    (explore: Explore | ExploreField, fieldPath: string, value: number) => {
+    (explore: NestFieldInfo, fieldPath: string, value: number) => {
       if (explore) {
         const field = getFieldFromRootPath(explore, fieldPath);
-        if (field.isAtomicField() && (field.isDate() || field.isTimestamp()))
+        if (isAtomic(field) && (isDate(field) || isTimestamp(field)))
           return renderTimeString(
             new Date(value),
-            field.isAtomicField() && field.isDate(),
-            field.timeframe
+            isAtomic(field) && isDate(field),
+            getFieldTimeframe(field)
           );
       }
       return String(value);

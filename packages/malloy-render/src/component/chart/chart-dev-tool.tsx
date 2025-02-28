@@ -16,6 +16,7 @@ type ChartDevToolProps = {
   onClose: () => void;
 } & ChartProps;
 
+// TODO remove this
 function stripMalloyRecord(record: Record<string, unknown>) {
   for (const [key, value] of Object.entries(record)) {
     if (key === '__malloyDataRecord') {
@@ -32,7 +33,7 @@ function stripMalloyRecord(record: Record<string, unknown>) {
 }
 
 export default function ChartDevTool(props: ChartDevToolProps) {
-  const chartProps = props.metadata.field(props.field).vegaChartProps!;
+  const chartProps = props.metadata.fields.get(props.field)!.vegaChartProps!;
   const [specString, setSpecString] = createSignal(
     JSON.stringify(chartProps.spec, null, 2)
   );

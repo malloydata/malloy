@@ -21,21 +21,21 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {AtomicField} from '@malloydata/malloy';
 import {Currency, DurationUnit} from '../html/data_styles';
 import {format} from 'ssf';
-import {getText} from '../html/duration';
 import {NULL_SYMBOL} from './apply-renderer';
+import {tagFor, getText} from './util';
+import * as Malloy from '@malloydata/malloy-interfaces';
 
 export function renderNumericField(
-  f: AtomicField,
+  f: Malloy.DimensionInfo,
   value: number | null | undefined
 ): string {
   if (value === null || value === undefined) {
     return NULL_SYMBOL;
   }
   let displayValue: string | number = value;
-  const {tag} = f.tagParse();
+  const tag = tagFor(f);
   if (tag.has('currency')) {
     let unitText = '$';
 

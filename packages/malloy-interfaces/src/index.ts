@@ -135,31 +135,37 @@ export const test: Malloy.ModelInfo = {
 export const res: Malloy.Result = {
   connection_name: 'foo',
   data: {
-    kind: 'table',
-    rows: [
+    kind: 'array_cell',
+    array_value: [
       {
-        cells: [
-          {
-            kind: 'string_cell',
-            string_value: 'UA',
-          },
-          {
-            kind: 'number_cell',
-            number_value: 12341234,
-          },
-        ],
+        kind: 'record_cell',
+        record_value: {
+          cells: [
+            {
+              kind: 'string_cell',
+              string_value: 'UA',
+            },
+            {
+              kind: 'number_cell',
+              number_value: 12341234,
+            },
+          ],
+        },
       },
       {
-        cells: [
-          {
-            kind: 'string_cell',
-            string_value: 'AA',
-          },
-          {
-            kind: 'number_cell',
-            number_value: 2343,
-          },
-        ],
+        kind: 'record_cell',
+        record_value: {
+          cells: [
+            {
+              kind: 'string_cell',
+              string_value: 'AA',
+            },
+            {
+              kind: 'number_cell',
+              number_value: 2343,
+            },
+          ],
+        },
       },
     ],
   },

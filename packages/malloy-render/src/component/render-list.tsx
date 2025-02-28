@@ -1,32 +1,40 @@
-import {DataRecord, ExploreField} from '@malloydata/malloy';
 import {For} from 'solid-js';
 import {applyRenderer, RendererProps} from './apply-renderer';
+import {
+  getCell,
+  getNestFields,
+  isNest,
+  NestFieldInfo,
+  tagFor,
+  valueIsNull,
+} from './util';
+import {isFieldHidden} from '../tags_utils';
+import * as Malloy from '@malloydata/malloy-interfaces';
 
 export function renderList(props: RendererProps) {
-  if (props.dataColumn.isNull()) return '∅';
+  if (valueIsNull(props.dataColumn)) return '∅';
   const listTag = props.tag.tag('list');
   const listDetailTag = props.tag.tag('list_detail');
   if (!listTag && !listDetailTag)
     throw new Error('Missing tag for List renderer');
-  if (!props.field.isExplore())
+  if (!isNest(props.field))
     throw new Error('List renderer: Field must be ExploreField');
-  if (!props.dataColumn.isArray())
+  const fieldAsNest = props.field as NestFieldInfo;
+  if (props.dataColumn.kind !== 'array_cell')
     throw new Error('List renderer: DataColumn must be DataArray');
-  const valueField = props.field.allFields.filter(field => {
-    const {tag} = field.tagParse();
-    return !tag.has('hidden');
-  })[0];
+  const nonHiddenFields = getNestFields(fieldAsNest).filter(field => {
+    return !isFieldHidden(field);
+  });
+  const valueField = nonHiddenFields[0];
 
   const isListDetail = !!listDetailTag;
-  const descriptionField = (props.field as ExploreField).allFields.filter(
-    field => {
-      const {tag} = field.tagParse();
-      return !tag.has('hidden');
+  const descriptionField = nonHiddenFields[1];
+  const rows: Malloy.Row[] = [];
+  for (const row of props.dataColumn.array_value) {
+    if (row.kind !== 'record_cell') {
+      throw new Error('List renderer: Row must be DataRecord');
     }
-  )[1];
-  const rows: DataRecord[] = [];
-  for (const row of props.dataColumn) {
-    rows.push(row);
+    rows.push(row.record_value);
   }
 
   return (
@@ -40,9 +48,9 @@ export function renderList(props: RendererProps) {
             {
               applyRenderer({
                 field: valueField,
-                dataColumn: row.cell(valueField),
+                dataColumn: getCell(fieldAsNest, row, valueField.name),
                 resultMetadata: props.resultMetadata,
-                tag: valueField.tagParse().tag,
+                tag: tagFor(valueField),
               }).renderValue
             }
             {isListDetail &&
@@ -50,9 +58,9 @@ export function renderList(props: RendererProps) {
               '(' +
                 applyRenderer({
                   field: descriptionField,
-                  dataColumn: row.cell(descriptionField),
+                  dataColumn: getCell(fieldAsNest, row, descriptionField.name),
                   resultMetadata: props.resultMetadata,
-                  tag: descriptionField.tagParse().tag,
+                  tag: tagFor(descriptionField),
                 }).renderValue +
                 ')'}
             {idx() < rows.length - 1 && ', '}
