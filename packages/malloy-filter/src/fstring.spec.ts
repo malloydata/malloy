@@ -42,7 +42,7 @@ expect.extend({
 });
 
 describe('nearley string filters', () => {
-  test('equality', () => {
+  test('matching', () => {
     expect('A').parsesTo({op: '=~', match: 'A'});
   });
 });
