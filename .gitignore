@@ -5,6 +5,7 @@ packages/**/build
 packages/**/dist
 packages/**/node_modules
 packages/malloy/src/lang/lib
+packages/malloy-filter/src/lib
 *.tsbuildinfo
 packages/**/package-lock.json
 packages/**/.eslintcache

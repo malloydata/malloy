@@ -13,11 +13,21 @@
   },
   "scripts": {
     "build": "tsc --build",
+    "buldParser": "nearleyc src/fexpr-string.ne --out src/lib/fexpr-string-parser.ts",
     "samples": "node dist/generate_samples.js",
     "asimpleparser": "node dist/a_simple_parser.js",
     "test": "jest --runInBand",
     "test:tokenizer": "jest tokenizer.spec.ts"
   },
   "keywords": [],
-  "author": ""
+  "author": "",
+  "dependencies": {
+    "moo": "^0.5.2",
+    "nearley": "^2.20.1",
+    "jest-diff": "^29.6.2"
+  },
+  "devDependencies": {
+    "@types/moo": "^0.5.10",
+    "@types/nearley": "^2.11.5"
+  }
 }
