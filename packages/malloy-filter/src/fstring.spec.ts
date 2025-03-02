@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 import {diff} from 'jest-diff';
 import * as nearley from 'nearley';
 import fstring_grammar from './lib/fexpr-string-parser';
