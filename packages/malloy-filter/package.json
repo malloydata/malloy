@@ -12,8 +12,8 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "tsc --build",
-    "buldParser": "nearleyc src/fexpr-string.ne --out src/lib/fexpr-string-parser.ts",
+    "build": "npm run build-parser && tsc --build",
+    "build-parser": "nearleyc src/fexpr-string.ne --out src/lib/fexpr-string-parser.ts",
     "samples": "node dist/generate_samples.js",
     "asimpleparser": "node dist/a_simple_parser.js",
     "test": "jest --runInBand",

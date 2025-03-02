@@ -30,10 +30,14 @@ expect.extend({
         message: () => 'Ambiguous parse, grammar error',
       };
     }
-    const errTest = diff([expectedParse], results[0], {expand: true});
-    if (errTest === '') {
+    if (this.equals(expectedParse, results[0])) {
       return {pass: true, message: () => `${src} parsed correctly`};
     }
+    const errTest = diff(
+      {parse: expectedParse},
+      {parse: results[0]},
+      {expand: true}
+    );
     return {
       pass: false,
       message: () => `${src} did not compile correctly\n${errTest}`,
@@ -44,5 +48,49 @@ expect.extend({
 describe('nearley string filters', () => {
   test('matching', () => {
     expect('A').parsesTo({op: '=~', match: 'A'});
+  });
+  test('not match', () => {
+    expect('-A').parsesTo({op: '=~', match: 'A', not: true});
+  });
+  test('is null', () => {
+    expect('null').parsesTo({op: 'null'});
+    expect('NULL').parsesTo({op: 'null'});
+  });
+  test('is not null', () => {
+    expect('-null').parsesTo({op: 'null', not: true});
+  });
+  test('is empty', () => {
+    expect('empty').parsesTo({op: 'empty'});
+    expect('EMPTY').parsesTo({op: 'empty'});
+  });
+  test('is not empty', () => {
+    expect('-empty').parsesTo({op: 'empty', not: true});
+  });
+  test('a,b', () => {
+    expect('a,b').parsesTo({
+      op: ',',
+      left: {op: '=~', match: 'a'},
+      right: {op: '=~', match: 'b'},
+    });
+  });
+  test('a;b', () => {
+    expect('a;b').parsesTo({
+      op: ';',
+      left: {op: '=~', match: 'a'},
+      right: {op: '=~', match: 'b'},
+    });
+  });
+  test('a|b', () => {
+    expect('a|b').parsesTo({
+      op: '|',
+      left: {op: '=~', match: 'a'},
+      right: {op: '=~', match: 'b'},
+    });
+  });
+  test('(a)', () => {
+    expect('(a)').parsesTo({
+      op: '()',
+      expr: {op: '=~', match: 'a'},
+    });
   });
 });
