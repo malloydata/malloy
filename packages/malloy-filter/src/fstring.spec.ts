@@ -83,6 +83,12 @@ describe('nearley string filters', () => {
   test('is not null', () => {
     expect('-null').parsesTo({op: 'null', not: true});
   });
+  test('= null', () => {
+    expect('\\null').parsesTo({op: '=', match: 'null'});
+  });
+  test('= empty', () => {
+    expect('\\empty').parsesTo({op: '=', match: 'empty'});
+  });
   test('is empty', () => {
     expect('empty').parsesTo({op: 'empty'});
     expect('EMPTY').parsesTo({op: 'empty'});
@@ -141,5 +147,8 @@ describe('nearley string filters', () => {
       op: '=',
       match: 'a|b',
     });
+  });
+  test('starts with -', () => {
+    expect('\\-a').parsesTo({op: '=', match: '-a'});
   });
 });
