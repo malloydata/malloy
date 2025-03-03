@@ -20,11 +20,7 @@ const fstring_lexer = moo.compile({
   matchStr: /\s*(?:\\[^\n]|[^\n,;()|])+\s*/,
 })
 
-function matchClause(data: any[]) {
-  return data[0];
-}
-
-function mkStringFilter(data: any[]) {
+function maybeNot(data: any[]) {
   const [isMinus, op] = data;
   if (isMinus) {
     return {...op, not: true};
@@ -37,17 +33,17 @@ function mkStringFilter(data: any[]) {
 @lexer fstring_lexer
 
 stringFilter ->
-    %minus:? sfBinary {% (data) => mkStringFilter(data) %}
+    %minus:? sfBinary {% (data) => maybeNot(data) %}
 
 sfBinary ->
     sfBinary conjunction clause {% ([left, cop, right]) => ({op: cop[0].text, left, right}) %}
-  | clause {% (data) => matchClause(data) %}
+  | clause {% (data) => data[0] %}
 
 parens -> %open stringFilter %close {% ([_1, subFilter, _3]) => ({op: "()", expr: subFilter}) %}
 
 clause ->
     %keyword {% ([kw])=> ({op: kw.text.toLowerCase() }) %}
   | %matchStr {% ([withStr]) => ({op: "=~", match: withStr.text}) %}
-  | parens {% (data) => matchClause(data) %}
+  | parens {% (data) => data[0] %}
 
 conjunction -> %comma | %semi | %or
