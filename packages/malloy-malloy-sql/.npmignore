@@ -1,5 +1,5 @@
 src/
 tsconfig*
-*.spec
+*.spec.*
 *.g4
 *.pegjs
