@@ -158,6 +158,13 @@ describe('nearley string filters', () => {
       right: {op: 'null', not: true},
     });
   });
+  test('-a,null', () => {
+    expect('-a,null').parsesTo({
+      op: ',',
+      left: {op: '=', match: 'a', not: true},
+      right: {op: 'null'},
+    });
+  });
   test('complex filter', () => {
     expect('(a,(b;c)|-empty,null);-null').parsesTo({
       op: ';',
