@@ -277,7 +277,11 @@ export function shouldRenderChartAs(tag: Tag) {
   return tagNamesInOrder.find(name => CHART_TAG_LIST.includes(name));
 }
 
-export function shouldRenderAs(field: Malloy.DimensionInfo, tagOverride?: Tag) {
+export function shouldRenderAs(
+  field: Malloy.DimensionInfo,
+  parent: Field | undefined,
+  tagOverride?: Tag
+) {
   const tag = tagOverride ?? tagFor(field);
   const tagNamesInOrder = Object.keys(tag.properties ?? {}).reverse();
   for (const tagName of tagNamesInOrder) {
@@ -286,6 +290,10 @@ export function shouldRenderAs(field: Malloy.DimensionInfo, tagOverride?: Tag) {
       if (['bar_chart', 'line_chart'].includes(tagName)) return 'chart';
       return tagName;
     }
+  }
+
+  if (field.type.kind === 'record_type' && parent?.renderAs === 'chart') {
+    return 'none';
   }
 
   const isNest =
@@ -312,7 +320,7 @@ export abstract class FieldBase {
         ? [...parent.path]
         : [...parent.path, field.name]
       : [];
-    this.renderAs = shouldRenderAs(field);
+    this.renderAs = shouldRenderAs(field, parent);
   }
 
   populateAllVegaSpecs(_options: GetResultMetadataOptions) {}

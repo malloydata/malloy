@@ -133,7 +133,7 @@ const HeaderField = (props: {field: Field; isPinned?: boolean}) => {
   return (
     <div
       class="column-cell th"
-      data-pinned-header={props.isPinned ? props.field.path : undefined}
+      data-pinned-header={props.isPinned ? props.field.key : undefined}
       classList={{
         'numeric': props.field.isNumber(),
         'pinned-header': props.isPinned,
@@ -316,6 +316,7 @@ const MalloyTableRoot = (_props: {
         const parentFieldRenderer = parent?.renderAs ?? null;
         const isNotRoot = value.depth >= 0;
         const isPartOfTable = isNotRoot && parentFieldRenderer === 'table';
+        console.log({key, value, field, parent, parentFieldRenderer, isNotRoot, isPartOfTable});
         return isPartOfTable;
       })
       .map(([key, value]) => ({
