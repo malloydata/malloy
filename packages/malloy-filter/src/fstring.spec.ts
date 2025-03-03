@@ -158,4 +158,33 @@ describe('nearley string filters', () => {
       right: {op: 'null', not: true},
     });
   });
+  test('complex filter', () => {
+    expect('(a,(b;c)|-empty,null);-null').parsesTo({
+      op: ';',
+      left: {
+        op: '()',
+        expr: {
+          op: ',',
+          left: {
+            op: '|',
+            left: {
+              op: ',',
+              left: {op: '=', match: 'a'},
+              right: {
+                op: '()',
+                expr: {
+                  op: ';',
+                  left: {op: '=', match: 'b'},
+                  right: {op: '=', match: 'c'},
+                },
+              },
+            },
+            right: {op: 'empty', not: true},
+          },
+          right: {op: 'null'},
+        },
+      },
+      right: {op: 'null', not: true},
+    });
+  });
 });
