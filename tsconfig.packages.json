@@ -1,4 +1,5 @@
 {
+  "exclude": ["**/*.spec.ts"],
   "compilerOptions": {
     "allowJs": false,
     "declaration": true,
@@ -25,6 +26,5 @@
     "forceConsistentCasingInFileNames": true,
     "noPropertyAccessFromIndexSignature": true,
     "types": ["node", "jest", "jest-expect-message"],
-    "exclude": ["**/*.spec.ts”]
   }
 }
