@@ -14,6 +14,7 @@
   "scripts": {
     "build": "npm run build-parser && tsc --build",
     "build-parser": "nearleyc src/fexpr-string.ne --out src/lib/fexpr-string-parser.ts",
+    "clean": "tsc --build --clean && rm -rf src/lib/* dist",
     "samples": "node dist/generate_samples.js",
     "asimpleparser": "node dist/a_simple_parser.js",
     "test": "jest --runInBand",

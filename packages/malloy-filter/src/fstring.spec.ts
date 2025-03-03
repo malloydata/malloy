@@ -100,6 +100,9 @@ describe('nearley string filters', () => {
   test('a escape-space', () => {
     expect('a\\ ').parsesTo({op: '=', match: 'a '});
   });
+  test('backslash space', () => {
+    expect('\\ ').parsesTo({op: '=', match: ' '});
+  });
   test(' spacey null ', () => {
     expect(' null ').parsesTo({op: 'null'});
   });
