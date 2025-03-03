@@ -58,20 +58,32 @@ describe('nearley string filters', () => {
   test('like _', () => {
     expect('_').parsesTo({op: '~', match: '_'});
   });
-  test('like a%', () => {
-    expect('a%').parsesTo({op: '~', match: 'a%'});
+  test('like a%z', () => {
+    expect('a%z').parsesTo({op: '~', match: 'a%z'});
   });
-  test('end with %', () => {
-    expect('%\\%').parsesTo({op: '~', match: '%\\%'});
+  test('starts with %', () => {
+    expect('\\%%').parsesTo({op: 'starts', match: '%'});
+  });
+  test('end with _', () => {
+    expect('%\\_').parsesTo({op: 'ends', match: '_'});
+  });
+  test('contains _X_', () => {
+    expect('%\\_X\\_%').parsesTo({op: 'contains', match: '_X_'});
+  });
+  test('not starts with foo', () => {
+    expect('-foo%').parsesTo({op: 'starts', match: 'foo', not: true});
+  });
+  test('not ends with bar', () => {
+    expect('-%bar').parsesTo({op: 'ends', match: 'bar', not: true});
+  });
+  test('not contains sugar', () => {
+    expect('-%sugar%').parsesTo({op: 'contains', match: 'sugar', not: true});
   });
   test('is %', () => {
     expect('\\%').parsesTo({op: '=', match: '%'});
   });
   test('is _', () => {
     expect('\\_').parsesTo({op: '=', match: '_'});
-  });
-  test('end with _', () => {
-    expect('%\\_').parsesTo({op: '~', match: '%\\_'});
   });
   test('like a_', () => {
     expect('a_').parsesTo({op: '~', match: 'a_'});

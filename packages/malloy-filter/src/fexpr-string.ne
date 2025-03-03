@@ -28,16 +28,43 @@ function maybeNot(data: any[]) {
   return op;
 }
 
+function hasLikeChar(str: string) {
+  return str.match(/(^[%_])|[^\\][%_]/) !== null;
+}
+
+function unescape(str: string) {
+  return str.replace(/\\(.)/g, '$1');
+}
+
 function matchOp(matchStr: string) {
   // Strip escaping needed to get past parser
-  matchStr = matchStr.replace(/\\([,;|()])/g, '$1');
+  const match = matchStr.trim().replace(/\\([,;|()])/g, '$1');
   // It's a LIKE if there are unescaped % or _, we are
   // passing this on to a domain where \ escaping is respected
-  if (matchStr.match(/(^[%_])|[^\\][%_]/)) {
-    return {op: '~', match: matchStr};
+  if (hasLikeChar(match)) {
+    const ends = match[0] === '%';
+    const last = match.length - 1;
+    const starts = match[last] === '%' && match[last-1] !== '\\';
+    if (starts && ends) {
+      const mid = match.slice(1,-1);
+      if (!hasLikeChar(mid) && mid.length > 0) {
+        return {op: 'contains', match: unescape(mid)};
+      }
+    } else if (starts) {
+      const tail = match.slice(0, -1);
+      if (!hasLikeChar(tail)) {
+        return {op: 'starts', match: unescape(tail)};
+      }
+    } else if (ends) {
+      const head = match.slice(1);
+      if (!hasLikeChar(head)) {
+        return {op: 'ends', match: unescape(head)};
+      }
+    }
+    return {op: '~', match};
   }
   // Unescape everything else
-  return {op: '=', match: matchStr.replace(/\\(.)/g, '$1')};
+  return {op: '=', match: unescape(match)};
 }
 
 %}
