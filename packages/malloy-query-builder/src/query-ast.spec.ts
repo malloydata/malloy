@@ -92,6 +92,77 @@ describe('query builder', () => {
 }`,
     });
   });
+
+  test('add an order by 2', () => {
+    const from: Malloy.Query = {
+      'definition': {
+        'kind': 'arrow',
+        'source_reference': {
+          'name': 'flights',
+        },
+        'view': {
+          'kind': 'refinement',
+          'base': {
+            'kind': 'view_reference',
+            'name': 'by_carrier',
+          },
+          'refinement': {
+            'kind': 'segment',
+            'operations': [
+              {
+                'kind': 'nest',
+                'name': 'by_state',
+                'view': {
+                  'definition': {
+                    'kind': 'view_reference',
+                    'name': 'by_state',
+                  },
+                },
+              },
+            ],
+          },
+        },
+      },
+    };
+    expect((q: ASTQuery) => {
+      q.getOrAddDefaultSegment().addOrderBy('carrier');
+    }).toModifyQuery({
+      model: flights_model,
+      from,
+      to: {
+        definition: {
+          kind: 'arrow',
+          source_reference: {name: 'flights'},
+          view: {
+            kind: 'segment',
+            operations: [
+              {
+                kind: 'group_by',
+                field: {
+                  expression: {
+                    kind: 'field_reference',
+                    name: 'carrier',
+                  },
+                },
+              },
+              {
+                kind: 'order_by',
+                field_reference: {
+                  name: 'carrier',
+                },
+                direction: 'asc',
+              },
+            ],
+          },
+        },
+      },
+      malloy: `run: flights -> {
+  group_by: carrier
+  order_by: carrier asc
+}`,
+    });
+  });
+
   test('add a group by', () => {
     const from: Malloy.Query = {
       definition: {
