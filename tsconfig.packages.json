@@ -1,5 +1,4 @@
 {
-  "exclude": ["**/*.spec.ts"],
   "compilerOptions": {
     "allowJs": false,
     "declaration": true,

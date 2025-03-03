@@ -15,4 +15,5 @@
     "test/testUtils.ts",
     "test/generateMonarchTokenizations.ts"
   ],
+  "exclude": ["**/*.spec.ts"],
 }
