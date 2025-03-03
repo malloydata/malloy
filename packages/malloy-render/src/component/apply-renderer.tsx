@@ -6,20 +6,6 @@
  */
 
 import {Tag} from '@malloydata/malloy-tag';
-import {RenderResultMetadata} from './types';
-import {
-  getCellValue,
-  isAtomic,
-  isDate,
-  isNest,
-  isTimestamp,
-  NestCell,
-  NestFieldInfo,
-  tagFor,
-  valueIsNull,
-  valueIsNumber,
-  valueIsString,
-} from './util';
 import {JSXElement} from 'solid-js';
 import {renderNumericField} from './render-numeric-field';
 import {renderLink} from './render-link';
@@ -28,78 +14,39 @@ import MalloyTable from './table/table';
 import {renderList} from './render-list';
 import {renderImage} from './render-image';
 import {Dashboard} from './dashboard/dashboard';
-// import {LegacyChart} from './legacy-charts/legacy_chart';
 import {renderTime} from './render-time';
-import * as Malloy from '@malloydata/malloy-interfaces';
 import {LegacyChart} from './legacy-charts/legacy_chart';
+import {Cell} from './render-result-metadata';
 
 export type RendererProps = {
-  field: Malloy.DimensionInfo;
-  dataColumn: Malloy.Cell;
-  resultMetadata: RenderResultMetadata;
+  dataColumn: Cell;
   tag: Tag;
   customProps?: Record<string, Record<string, unknown>>;
 };
 
-const RENDER_TAG_LIST = [
-  'link',
-  'image',
-  'cell',
-  'list',
-  'list_detail',
-  'bar_chart',
-  'line_chart',
-  'dashboard',
-  'scatter_chart',
-  'shape_map',
-  'segment_map',
-];
-
-const CHART_TAG_LIST = ['bar_chart', 'line_chart'];
-
-export function shouldRenderChartAs(tag: Tag) {
-  const tagNamesInOrder = Object.keys(tag.properties ?? {}).reverse();
-  return tagNamesInOrder.find(name => CHART_TAG_LIST.includes(name));
-}
-
-export function shouldRenderAs(f: Malloy.DimensionInfo, tagOverride?: Tag) {
-  const tag = tagOverride ?? tagFor(f);
-  const tagNamesInOrder = Object.keys(tag.properties ?? {}).reverse();
-  for (const tagName of tagNamesInOrder) {
-    if (RENDER_TAG_LIST.includes(tagName)) {
-      if (['list', 'list_detail'].includes(tagName)) return 'list';
-      if (['bar_chart', 'line_chart'].includes(tagName)) return 'chart';
-      return tagName;
-    }
-  }
-
-  if (isAtomic(f)) return 'cell';
-  return 'table';
-}
-
 export const NULL_SYMBOL = '∅';
 
 export function applyRenderer(props: RendererProps) {
-  const {field, dataColumn, resultMetadata, customProps = {}} = props;
-  const renderAs = resultMetadata.fields.get(field)!.renderAs;
+  const {dataColumn, customProps = {}} = props;
+  const field = props.dataColumn.field;
+  const renderAs = field.renderAs;
   let renderValue: JSXElement = '';
   const propsToPass = customProps[renderAs] || {};
-  if (valueIsNull(dataColumn)) {
+  if (dataColumn.isNull()) {
     renderValue = NULL_SYMBOL;
   } else {
     switch (renderAs) {
       case 'cell': {
-        const resultCellValue = getCellValue(dataColumn);
-        if (valueIsNumber(field, resultCellValue)) {
+        if (dataColumn.isNumber()) {
           // TS doesn't support typeguards for multiple parameters, so unfortunately have to assert AtomicField here. https://github.com/microsoft/TypeScript/issues/26916
-          renderValue = renderNumericField(field, resultCellValue);
-        } else if (valueIsString(field, resultCellValue)) {
-          renderValue = resultCellValue;
-        } else if (isAtomic(field) && (isDate(field) || isTimestamp(field))) {
+          renderValue = renderNumericField(field, dataColumn.value);
+        } else if (dataColumn.isString()) {
+          renderValue = dataColumn.value;
+        } else if (field.isTime()) {
           renderValue = renderTime(props);
         } else {
           // try to force to string
-          renderValue = String(resultCellValue);
+          renderValue = String(dataColumn.value);
         }
         break;
       }
@@ -118,25 +65,14 @@ export function applyRenderer(props: RendererProps) {
         break;
       }
       case 'chart': {
-        renderValue = (
-          <Chart
-            field={field as NestFieldInfo}
-            data={getCellValue(dataColumn)}
-            metadata={resultMetadata}
-            {...propsToPass}
-          />
-        );
+        if (dataColumn.isRepeatedRecord()) {
+          renderValue = <Chart data={dataColumn} {...propsToPass} />;
+        }
         break;
       }
       case 'dashboard': {
-        if (isNest(field))
-          renderValue = (
-            <Dashboard
-              field={field as NestFieldInfo}
-              data={dataColumn as NestCell}
-              {...propsToPass}
-            />
-          );
+        if (dataColumn.isRecordOrRepeatedRecord())
+          renderValue = <Dashboard data={dataColumn} {...propsToPass} />;
         else
           throw new Error(
             `Malloy render: wrong data type passed to the dashboard renderer for field ${field.name}`
@@ -146,14 +82,8 @@ export function applyRenderer(props: RendererProps) {
       case 'scatter_chart':
       case 'shape_map':
       case 'segment_map': {
-        if (isNest(field))
-          renderValue = (
-            <LegacyChart
-              type={renderAs}
-              data={dataColumn as NestCell}
-              field={field}
-            />
-          );
+        if (dataColumn.isRepeatedRecord())
+          renderValue = <LegacyChart type={renderAs} data={dataColumn} />;
         else
           throw new Error(
             `Malloy render: wrong data type passed to the ${renderAs} renderer for field ${field.name}`
@@ -161,19 +91,8 @@ export function applyRenderer(props: RendererProps) {
         break;
       }
       case 'table': {
-        if (isNest(field))
-          renderValue = (
-            <MalloyTable
-              field={field}
-              data={
-                // TODO need to support array of record, table, and record
-                dataColumn as
-                  | Malloy.CellWithArrayCell
-                  | Malloy.CellWithRecordCell
-              }
-              {...propsToPass}
-            />
-          );
+        if (dataColumn.isRecordOrRepeatedRecord())
+          renderValue = <MalloyTable data={dataColumn} {...propsToPass} />;
         else
           throw new Error(
             `Malloy render: wrong data type passed to the table renderer for field ${field.name}`
@@ -182,7 +101,7 @@ export function applyRenderer(props: RendererProps) {
       }
       default: {
         try {
-          renderValue = String(getCellValue(dataColumn));
+          renderValue = String(dataColumn.value);
         } catch (err) {
           // eslint-disable-next-line no-console
           console.warn('Couldnt get value for ', field, dataColumn);

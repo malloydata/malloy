@@ -30,7 +30,7 @@ import {ShapeMapRendererFactory} from './shape_map';
 import {PointMapRendererFactory} from './point_map';
 import {SegmentMapRendererFactory} from './segment_map';
 import {ScatterChartRendererFactory} from './scatter_chart';
-import * as Malloy from '@malloydata/malloy-interfaces';
+import {Field} from '../component/render-result-metadata';
 
 export class MainRendererFactory {
   static renderFactories = [
@@ -46,7 +46,7 @@ export class MainRendererFactory {
     document: Document,
     styleDefaults: StyleDefaults,
     rendererOptions: RendererOptions,
-    field: Malloy.DimensionInfo,
+    field: Field,
     timezone?: string | undefined
   ): Renderer | undefined {
     let factory: RendererFactory<DataRenderOptions> | undefined;

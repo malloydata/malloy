@@ -1,11 +1,4 @@
 import {RendererProps} from './apply-renderer';
-import {
-  getCellValue,
-  getFieldTimeframe,
-  isAtomic,
-  isDate,
-  isTimestamp,
-} from './util';
 
 function padZeros(num: number, length = 2) {
   return `${'0'.repeat(length - 1)}${num}`.slice(-length);
@@ -53,16 +46,20 @@ export function renderTimeString(
   }
 }
 
-export function renderTime({field, dataColumn}: RendererProps) {
-  if (!isAtomic(field))
+export function renderTime({dataColumn}: RendererProps) {
+  if (!dataColumn.field.isAtomic())
     throw new Error(
-      `Time renderer error: field ${field.name} is not an atomic field`
+      `Time renderer error: field ${dataColumn.field.name} is not an atomic field`
     );
-  if (!isDate(field) && !isTimestamp(field))
+  if (!dataColumn.isTime())
     throw new Error(
-      `Time renderer error: field ${field.name} is not a date or timestamp`
+      `Time renderer error: field ${dataColumn.field.name} is not a date or timestamp`
     );
 
-  const value = getCellValue(dataColumn) as Date;
-  return renderTimeString(value, isDate(field), getFieldTimeframe(field));
+  const value = dataColumn.value;
+  return renderTimeString(
+    value,
+    dataColumn.field.isDate(),
+    dataColumn.field.timeframe
+  );
 }

@@ -90,7 +90,12 @@ export function mapData(data: QueryData, schema: Malloy.Schema): Malloy.Data {
       field.kind === 'dimension' &&
       (field.type.kind === 'date_type' || field.type.kind === 'timestamp_type')
     ) {
-      return {kind: 'date_cell', date_value: valueToDate(value).toString()};
+      const time_value = valueToDate(value).toISOString();
+      if (field.type.kind === 'date_type') {
+        return {kind: 'date_cell', date_value: time_value};
+      } else {
+        return {kind: 'timestamp_cell', timestamp_value: time_value};
+      }
     } else if (typeof value === 'boolean') {
       return {kind: 'boolean_cell', boolean_value: value};
     } else if (typeof value === 'number') {

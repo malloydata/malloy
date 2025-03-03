@@ -7,34 +7,24 @@
 
 import {createMemo, For, Show} from 'solid-js';
 import {applyRenderer} from '../apply-renderer';
-import {useResultContext} from '../result-context';
-import {RenderResultMetadata} from '../types';
 import {createVirtualizer, Virtualizer} from '@tanstack/solid-virtual';
 import {useConfig} from '../render';
 import dashboardCss from './dashboard.css?raw';
-import * as Malloy from '@malloydata/malloy-interfaces';
 import {
-  getCell,
-  getCellValue,
-  getNestFields,
-  isAtomic,
-  NestFieldInfo,
-  tagFor,
-  wasCalculation,
-  wasDimension,
-} from '../util';
-import {getFieldPathArrayFromRoot} from '../plot/util';
+  Field,
+  NestField,
+  RecordCell,
+  RecordOrRepeatedRecordCell,
+} from '../render-result-metadata';
 
 function DashboardItem(props: {
-  parent: NestFieldInfo;
-  field: Malloy.DimensionInfo;
-  row: Malloy.Row;
-  resultMetadata: RenderResultMetadata;
+  parent: NestField;
+  field: Field;
+  row: RecordCell;
   maxTableHeight: number | null;
   isMeasure?: boolean;
 }) {
   const config = useConfig();
-  const metadata = useResultContext();
   const shouldVirtualizeTable = () => {
     // If dashboard is disabling virtualization, disable table virtualization as well
     // This is done mainly to support Copy to HTML; not sure if this is correct approach for other scenarios
@@ -44,13 +34,11 @@ function DashboardItem(props: {
     // If no max height is set, then don't virtualize
     else return false;
   };
-  const cell = getCell(props.parent, props.row, props.field.name);
-  const tag = tagFor(props.field);
+  const cell = props.row.column(props.field.name);
+  const tag = props.field.tag;
   const rendering = applyRenderer({
-    field: props.field,
     dataColumn: cell,
     tag,
-    resultMetadata: props.resultMetadata,
     customProps: {
       table: {
         disableVirtualization: !shouldVirtualizeTable(),
@@ -66,8 +54,8 @@ function DashboardItem(props: {
           typeof rendering.renderValue !== 'function'
             ? rendering.renderValue
             : null,
-        value: getCellValue(cell),
-        fieldPath: getFieldPathArrayFromRoot(props.field, metadata),
+        value: cell.value,
+        fieldPath: props.field.path,
         isHeader: false,
         event: evt,
         type: 'dashboard-item',
@@ -101,12 +89,11 @@ function DashboardItem(props: {
 }
 
 export function Dashboard(props: {
-  data: Malloy.CellWithArrayCell | Malloy.CellWithRecordCell;
+  data: RecordOrRepeatedRecordCell;
   scrollEl?: HTMLElement;
-  field: NestFieldInfo;
 }) {
-  const field = props.field;
-  const tag = tagFor(field);
+  const field = props.data.field;
+  const tag = field.tag;
   const dashboardTag = tag.tag('dashboard');
   let maxTableHeight: number | null = 361;
   const maxTableHeightTag = dashboardTag?.tag('table', 'max_height');
@@ -114,30 +101,30 @@ export function Dashboard(props: {
   else if (maxTableHeightTag?.numeric())
     maxTableHeight = maxTableHeightTag!.numeric()!;
 
-  const nestFields = getNestFields(field);
+  const nestFields = field.fields;
   const dimensions = () =>
     nestFields.filter(f => {
-      const isHidden = tagFor(f).has('hidden');
-      return !isHidden && isAtomic(f) && wasDimension(f);
+      const isHidden = f.tag.has('hidden');
+      return !isHidden && f.isAtomic() && f.wasDimension();
     });
 
   const nonDimensions = () => {
-    const measureFields: Malloy.DimensionInfo[] = [];
-    const otherFields: Malloy.DimensionInfo[] = [];
+    const measureFields: Field[] = [];
+    const otherFields: Field[] = [];
 
     for (const f of nestFields) {
-      if (tagFor(f).has('hidden')) continue;
-      if (isAtomic(f) && wasCalculation(f)) {
+      if (f.tag.has('hidden')) continue;
+      if (f.isAtomic() && f.wasCalculation()) {
         measureFields.push(f);
-      } else if (!isAtomic(f) || !wasDimension(f)) otherFields.push(f);
+      } else if (!f.isAtomic() || !f.wasDimension()) otherFields.push(f);
     }
     return [...measureFields, ...otherFields];
   };
 
   const nonDimensionsGrouped = () => {
-    const group: Malloy.DimensionInfo[][] = [[]];
+    const group: Field[][] = [[]];
     for (const f of nonDimensions()) {
-      const tag = tagFor(f);
+      const tag = f.tag;
       if (tag.has('break')) {
         group.push([]);
       }
@@ -148,16 +135,7 @@ export function Dashboard(props: {
   };
 
   const data = createMemo(() => {
-    const data: Malloy.Row[] = [];
-    const rows =
-      props.data.kind === 'record_cell' ? [props.data] : props.data.array_value;
-    for (const row of rows) {
-      if (row.kind !== 'record_cell') {
-        throw new Error('Expected record cell');
-      }
-      data.push(row.record_value);
-    }
-    return data;
+    return props.data.rows;
   });
 
   let scrollEl!: HTMLElement;
@@ -173,8 +151,6 @@ export function Dashboard(props: {
     });
   }
   const items = virtualizer?.getVirtualItems();
-
-  const resultMetadata = useResultContext();
 
   const config = useConfig();
   config.addCSSToShadowRoot(dashboardCss);
@@ -219,14 +195,10 @@ export function Dashboard(props: {
                             <div class="dashboard-dimension-value">
                               {
                                 applyRenderer({
-                                  field: d,
-                                  dataColumn: getCell(
-                                    props.field,
-                                    data()[virtualRow.index],
+                                  dataColumn: data()[virtualRow.index].column(
                                     d.name
                                   ),
-                                  tag: tagFor(d),
-                                  resultMetadata,
+                                  tag: d.tag,
                                 }).renderValue
                               }
                             </div>
@@ -242,13 +214,10 @@ export function Dashboard(props: {
                         <For each={group}>
                           {field => (
                             <DashboardItem
-                              parent={props.field}
+                              parent={props.data.field}
                               field={field}
                               row={data()[virtualRow.index]}
-                              resultMetadata={resultMetadata}
-                              isMeasure={
-                                isAtomic(field) && wasCalculation(field)
-                              }
+                              isMeasure={field.wasCalculation()}
                               maxTableHeight={maxTableHeight}
                             />
                           )}
@@ -275,10 +244,8 @@ export function Dashboard(props: {
                         <div class="dashboard-dimension-value">
                           {
                             applyRenderer({
-                              field: d,
-                              dataColumn: getCell(props.field, row, d.name),
-                              tag: tagFor(d),
-                              resultMetadata,
+                              dataColumn: row.column(d.name),
+                              tag: d.tag,
                             }).renderValue
                           }
                         </div>
@@ -294,11 +261,10 @@ export function Dashboard(props: {
                     <For each={group}>
                       {field => (
                         <DashboardItem
-                          parent={props.field}
+                          parent={props.data.field}
                           field={field}
                           row={row}
-                          resultMetadata={resultMetadata}
-                          isMeasure={isAtomic(field) && wasCalculation(field)}
+                          isMeasure={field.wasCalculation()}
                           maxTableHeight={maxTableHeight}
                         />
                       )}

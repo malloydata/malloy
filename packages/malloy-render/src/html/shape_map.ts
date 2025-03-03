@@ -42,6 +42,7 @@ import {
   isTimestamp,
   NestFieldInfo,
 } from '../component/util';
+import { Field } from '../component/render-result-metadata';
 
 type MappedRow = {[p: string]: string | number | Date | undefined | null};
 
@@ -270,7 +271,7 @@ export class ShapeMapRendererFactory extends RendererFactory<ShapeMapRenderOptio
     document: Document,
     styleDefaults: StyleDefaults,
     rendererOptions: RendererOptions,
-    _field: Malloy.DimensionInfo,
+    _field: Field,
     options: ShapeMapRenderOptions,
     timezone?: string
   ): Renderer {

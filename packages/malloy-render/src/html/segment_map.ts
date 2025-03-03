@@ -38,6 +38,7 @@ import {
   isNumber,
   isString,
 } from '../component/util';
+import { Field } from '../component/render-result-metadata';
 
 export class HTMLSegmentMapRenderer extends HTMLChartRenderer {
   getDataValue(data: Malloy.Cell): string | number | null {
@@ -178,7 +179,7 @@ export class SegmentMapRendererFactory extends RendererFactory<SegmentMapRenderO
     document: Document,
     styleDefaults: StyleDefaults,
     rendererOptions: RendererOptions,
-    _field: Malloy.DimensionInfo,
+    _field: Field,
     options: SegmentMapRenderOptions,
     timezone?: string
   ): Renderer {

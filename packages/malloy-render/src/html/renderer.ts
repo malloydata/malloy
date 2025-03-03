@@ -24,10 +24,10 @@
 import {Tag} from '@malloydata/malloy-tag';
 import {RendererOptions} from './renderer_types';
 export type ChildRenderers = {[fieldName: string]: Renderer};
-import * as Malloy from '@malloydata/malloy-interfaces';
+import {Cell} from '../component/render-result-metadata';
 
 export interface Renderer {
-  render(value: Malloy.Cell, field: Malloy.DimensionInfo): Promise<HTMLElement>;
+  render(value: Cell): Promise<HTMLElement>;
 }
 
 export abstract class RenderTree implements Renderer {
@@ -39,8 +39,5 @@ export abstract class RenderTree implements Renderer {
 
   protected abstract get childRenderers(): ChildRenderers;
 
-  abstract render(
-    value: Malloy.Cell,
-    field: Malloy.DimensionInfo
-  ): Promise<HTMLElement>;
+  abstract render(value: Cell): Promise<HTMLElement>;
 }

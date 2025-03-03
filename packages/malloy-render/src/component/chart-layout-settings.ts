@@ -23,16 +23,9 @@
 
 import {Tag} from '@malloydata/malloy-tag';
 import {scale, locale, AlignValue, TextBaselineValue} from 'vega';
-import {
-  getNestFields,
-  getTextWidthDOM,
-  isAtomic,
-  NestFieldInfo,
-  tagFor,
-} from './util';
-import {RenderResultMetadata} from './types';
+import {getTextWidthDOM} from './util';
 import {renderNumericField} from './render-numeric-field';
-import * as Malloy from '@malloydata/malloy-interfaces';
+import {Field, NestField} from './render-result-metadata';
 
 export type ChartLayoutSettings = {
   plotWidth: number;
@@ -55,8 +48,8 @@ export type ChartLayoutSettings = {
   yScale: {
     domain: number[];
   };
-  xField: Malloy.DimensionInfo;
-  yField: Malloy.DimensionInfo;
+  xField: Field;
+  yField: Field;
   padding: {
     top: number;
     left: number;
@@ -82,23 +75,22 @@ const CHART_SIZES = {
 const ROW_HEIGHT = 28;
 
 export function getChartLayoutSettings(
-  field: NestFieldInfo,
-  metadata: RenderResultMetadata,
+  field: NestField,
   chartTag: Tag,
   options: {
-    xField?: Malloy.DimensionInfo;
-    yField?: Malloy.DimensionInfo;
+    xField?: Field;
+    yField?: Field;
     chartType: string;
     getXMinMax?: () => [number, number];
     getYMinMax?: () => [number, number];
   }
 ): ChartLayoutSettings {
-  const nestFields = getNestFields(field);
+  const nestFields = field.fields;
   // TODO: improve logic for field extraction
   // may not need this anymore if we enforce the options, so each chart passes its specific needs for calculating layout
   const xField = options?.xField ?? nestFields[0];
   const yField = options?.yField ?? nestFields[1];
-  const tag = tagFor(field);
+  const tag = field.tag;
 
   // For now, support legacy API of size being its own tag
   const customWidth =
@@ -124,12 +116,11 @@ export function getChartLayoutSettings(
   let yTitleSize = 0;
   const hasXAxis = presetSize !== 'spark';
   const hasYAxis = presetSize !== 'spark';
-  const exploreMetadata = metadata.fields.get(field)!;
   let topPadding = presetSize !== 'spark' ? ROW_HEIGHT - 1 : 0; // Subtract 1 to account for top border
   let yTickCount: number | undefined;
   const [minVal, maxVal] = options?.getYMinMax?.() ?? [
-    metadata.fields.get(yField)!.min!,
-    metadata.fields.get(yField)!.max!,
+    yField.minNumber!,
+    yField.maxNumber!,
   ];
   const yScale = scale('linear')()
     .domain([minVal, maxVal])
@@ -141,10 +132,10 @@ export function getChartLayoutSettings(
     const maxAxisVal = yScale.domain().at(1);
     const minAxisVal = yScale.domain().at(0);
     const l = locale();
-    const formattedMin = isAtomic(yField)
+    const formattedMin = yField.isAtomic()
       ? renderNumericField(yField, minAxisVal)
       : l.format(',')(minAxisVal);
-    const formattedMax = isAtomic(yField)
+    const formattedMax = yField.isAtomic()
       ? renderNumericField(yField, maxAxisVal)
       : l.format(',')(maxAxisVal);
     // const formattedMin = l.format(',')(minAxisVal);
@@ -192,7 +183,7 @@ export function getChartLayoutSettings(
 
   if (hasXAxis) {
     // TODO: add type checking here for axis. for now assume number, string
-    const maxString = metadata.fields.get(xField)!.maxString!;
+    const maxString = xField.maxString!;
     const maxStringSize =
       getTextWidthDOM(maxString, {
         fontFamily: 'Inter, sans-serif',
@@ -209,11 +200,11 @@ export function getChartLayoutSettings(
     labelLimit = xAxisHeight;
 
     // TODO: improve this, this logic exists in more detail in generate vega spec. this is a hacky partial solution for now :/
-    const uniqueValuesCt = metadata.fields.get(xField)!.values.size;
+    const uniqueValuesCt = xField.valueSet.size;
     const isSharedDomain = uniqueValuesCt <= 20;
     const recordsToFit = isSharedDomain
       ? uniqueValuesCt
-      : exploreMetadata.maxUniqueFieldValueCounts.get(xField)!;
+      : field.maxUniqueFieldValueCounts.get(xField.name)!;
     const xSpacePerLabel = chartWidth / recordsToFit;
     if (xSpacePerLabel > xAxisHeight || xSpacePerLabel > maxStringSize) {
       labelAngle = 0;

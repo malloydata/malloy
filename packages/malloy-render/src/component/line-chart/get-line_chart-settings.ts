@@ -6,17 +6,9 @@
  */
 
 import {Tag} from '@malloydata/malloy-tag';
-import {getFieldPathBetweenFields, walkFields} from '../plot/util';
-import {Channel, RenderResultMetadata} from '../types';
-import {
-  getNestFields,
-  isAtomic,
-  isNumber,
-  NestFieldInfo,
-  tagFor,
-  wasCalculation,
-  wasDimension,
-} from '../util';
+import {walkFields} from '../plot/util'; // TODO make this a method
+import {Channel} from '../types';
+import {NestField} from '../render-result-metadata';
 
 export type LineChartSettings = {
   xChannel: Channel;
@@ -27,11 +19,10 @@ export type LineChartSettings = {
 };
 
 export function getLineChartSettings(
-  explore: NestFieldInfo,
-  metadata: RenderResultMetadata,
+  explore: NestField,
   tagOverride?: Tag
 ): LineChartSettings {
-  const tag = tagOverride ?? tagFor(explore);
+  const tag = tagOverride ?? explore.tag;
   const chart = tag.tag('line_chart');
   if (!chart) {
     throw new Error(
@@ -79,15 +70,16 @@ export function getLineChartSettings(
   const embeddedY: string[] = [];
   const embeddedSeries: string[] = [];
   walkFields(explore, field => {
-    const tag = tagFor(field);
+    const tag = field.tag;
+    const pathTo = explore.pathTo(field);
     if (tag.has('x')) {
-      embeddedX.push(getFieldPathBetweenFields(explore, field, metadata));
+      embeddedX.push(pathTo);
     }
     if (tag.has('y')) {
-      embeddedY.push(getFieldPathBetweenFields(explore, field, metadata));
+      embeddedY.push(pathTo);
     }
     if (tag.has('series')) {
-      embeddedSeries.push(getFieldPathBetweenFields(explore, field, metadata));
+      embeddedSeries.push(pathTo);
     }
   });
 
@@ -106,38 +98,31 @@ export function getLineChartSettings(
     seriesChannel.fields.push(path);
   });
 
-  const nestFields = getNestFields(explore);
-  const dimensions = nestFields.filter(f => isAtomic(f) && wasDimension(f));
+  const nestFields = explore.fields;
+  const dimensions = nestFields.filter(f => f.isAtomic() && f.wasDimension());
 
   // If still no x or y, attempt to pick the best choice
   if (xChannel.fields.length === 0) {
     // Pick first dimension field for x
     if (dimensions.length > 0) {
-      xChannel.fields.push(
-        getFieldPathBetweenFields(explore, dimensions[0], metadata)
-      );
+      xChannel.fields.push(explore.pathTo(dimensions[0]));
     }
   }
   if (yChannel.fields.length === 0) {
     // Pick first numeric measure field
     const numberField = nestFields.find(
-      f => isAtomic(f) && wasCalculation(f) && isNumber(f)
+      f => f.wasCalculation() && f.isNumber()
     );
-    if (numberField)
-      yChannel.fields.push(
-        getFieldPathBetweenFields(explore, numberField, metadata)
-      );
+    if (numberField) yChannel.fields.push(explore.pathTo(numberField));
   }
   // If no series defined and multiple dimensions, use leftover dimension
   if (seriesChannel.fields.length === 0 && dimensions.length > 1) {
     const dimension = dimensions.find(d => {
-      const path = getFieldPathBetweenFields(explore, d, metadata);
+      const path = explore.pathTo(d);
       return !xChannel.fields.includes(path);
     });
     if (dimension) {
-      seriesChannel.fields.push(
-        getFieldPathBetweenFields(explore, dimension, metadata)
-      );
+      seriesChannel.fields.push(explore.pathTo(dimension));
     }
   }
 

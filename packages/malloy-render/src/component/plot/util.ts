@@ -1,14 +1,12 @@
 import * as Malloy from '@malloydata/malloy-interfaces';
 import {getNestFields, isNest, NestFieldInfo, tagFor} from '../util';
 import {RenderResultMetadata} from '../types';
+import {Field, NestField} from '../render-result-metadata';
 
-export function walkFields(
-  e: NestFieldInfo,
-  cb: (f: Malloy.DimensionInfo) => void
-) {
-  getNestFields(e).forEach(f => {
+export function walkFields(e: NestField, cb: (f: Field) => void) {
+  e.fields.forEach(f => {
     cb(f);
-    if (isNest(f)) {
+    if (Field.isNestField(f)) {
       walkFields(f, cb);
     }
   });

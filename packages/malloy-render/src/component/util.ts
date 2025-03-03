@@ -25,6 +25,7 @@ import {Tag} from '@malloydata/malloy-tag';
 import {DurationUnit, isDurationUnit} from '../html/data_styles';
 import {format} from 'ssf';
 import {RenderResultMetadata} from './types';
+import {Field} from './render-result-metadata';
 
 function getLocationInParent(
   f: Malloy.DimensionInfo,
@@ -300,7 +301,7 @@ const multiplierMap = new Map<DurationUnit, number>([
 ]);
 
 export function getText(
-  field: Malloy.DimensionInfo,
+  field: Field,
   value: number,
   options: {
     durationUnit?: string;
@@ -310,7 +311,7 @@ export function getText(
     options.durationUnit && isDurationUnit(options.durationUnit)
       ? options.durationUnit
       : DurationUnit.Seconds;
-  const tag = tagFor(field);
+  const tag = field.tag;
   const numFormat = tag.text('number');
   const terse = tag.has('duration', 'terse');
 

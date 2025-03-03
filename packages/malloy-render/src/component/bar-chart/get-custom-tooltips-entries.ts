@@ -5,44 +5,29 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {
-  ChartTooltipEntry,
-  RenderResultMetadata,
-  MalloyVegaDataRecord,
-} from '../types';
+import {ChartTooltipEntry, MalloyVegaDataRecord} from '../types';
 import {applyRenderer} from '../apply-renderer';
-import {getCell, getNestFields, isNest, NestFieldInfo, tagFor} from '../util';
+import {NestField} from '../render-result-metadata';
 
 type CustomTooltipGetterOptions = {
-  explore: NestFieldInfo;
+  explore: NestField;
   records: MalloyVegaDataRecord[];
-  metadata: RenderResultMetadata;
 };
 
 export function getCustomTooltipEntries({
   explore,
   records,
-  metadata,
 }: CustomTooltipGetterOptions) {
-  const customTooltipFields = getNestFields(explore).filter(f =>
-    tagFor(f).has('tooltip')
-  );
+  const customTooltipFields = explore.fields.filter(f => f.tag.has('tooltip'));
   const customEntries: ChartTooltipEntry['entries'] = [];
   customTooltipFields.forEach(f => {
-    const parent = metadata.fields.get(f)!.parent!.field;
     records.forEach(rec => {
       customEntries.push({
         label: f.name,
         value: () =>
           applyRenderer({
-            field: f,
-            dataColumn: getCell(
-              parent,
-              rec.__source.__malloyDataRecord,
-              f.name
-            ),
-            resultMetadata: metadata,
-            tag: tagFor(f),
+            dataColumn: rec.row.column(f.name),
+            tag: f.tag,
             customProps: {
               table: {
                 shouldFillWidth: true,
@@ -53,7 +38,7 @@ export function getCustomTooltipEntries({
           }).renderValue,
         highlight: false,
         color: '',
-        entryType: isNest(f) ? 'block' : 'list-item',
+        entryType: f.isNest() ? 'block' : 'list-item',
         ignoreHighlightState: true,
       });
     });

@@ -1,7 +1,6 @@
 import {createStore, produce, unwrap} from 'solid-js/store';
-import {useResultContext} from '../result-context';
-import {DrillData, RenderResultMetadata, DimensionContextEntry} from '../types';
-import * as Malloy from '@malloydata/malloy-interfaces';
+import {DrillData, DimensionContextEntry} from '../types';
+import {Field} from '../render-result-metadata';
 
 interface BrushDataBase {
   fieldRefId: string;
@@ -131,30 +130,27 @@ export function createResultStore() {
 
 export type ResultStore = ReturnType<typeof createResultStore>;
 
-export function useResultStore() {
-  const metadata = useResultContext();
-  return metadata.store;
-}
-
 export async function copyExplorePathQueryToClipboard({
-  metadata,
+  field,
   dimensionContext,
   onDrill,
 }: {
-  metadata: RenderResultMetadata;
-  field: Malloy.DimensionInfo;
+  field: Field;
   dimensionContext: DimensionContextEntry[];
   onDrill?: (drillData: DrillData) => void;
 }) {
+  const root = field.root();
   const dimensionContextEntries = dimensionContext;
 
   // TODO the name is wrong, as it is not the full path; drilling all broken...
   const whereClause = dimensionContextEntries
-    .map(entry => `\t\t${entry.field.name} = ${JSON.stringify(entry.value)}`)
+    .map(
+      entry => `\t\t${field.drillExpression()} = ${JSON.stringify(entry.value)}` // TODO JSON.stringify super doesn't work here...
+    )
     .join(',\n');
 
   const query = `
-run: ${metadata.sourceName} -> {
+run: ${root.sourceName} -> {
 where:
 ${whereClause}
 } + { select: * }`.trim();
@@ -164,7 +160,7 @@ ${whereClause}
     copyQueryToClipboard: async () => {
       try {
         await navigator.clipboard.writeText(query);
-        metadata.store.triggerCopiedModal();
+        root.store.triggerCopiedModal();
       } catch (error) {
         // eslint-disable-next-line no-console
         console.error('Failed to copy text: ', error);

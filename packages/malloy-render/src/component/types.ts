@@ -10,7 +10,8 @@ import {Item, Runtime, Spec, View} from 'vega';
 import {JSX} from 'solid-js';
 import {ResultStore} from './result-store/result-store';
 import * as Malloy from '@malloydata/malloy-interfaces';
-import {CellDataValue, NestFieldInfo} from './util';
+import {NestFieldInfo} from './util';
+import {Field, RecordCell, RepeatedRecordCell} from './render-result-metadata';
 
 export type VegaSignalRef = {signal: string};
 export type VegaPadding = {
@@ -20,8 +21,7 @@ export type VegaPadding = {
   bottom?: number;
 };
 export type MalloyDataToChartDataHandler = (
-  field: NestFieldInfo,
-  data: Malloy.Cell[]
+  data: RepeatedRecordCell
 ) => unknown[];
 export type VegaChartProps = {
   spec: Spec;
@@ -73,7 +73,7 @@ export interface RenderResultMetadata {
 }
 
 export type MalloyClickEventPayload = {
-  field: Malloy.DimensionInfo;
+  field: Field;
   // TODO: type these later
   displayValue: unknown;
   value: unknown;
@@ -100,14 +100,10 @@ export type ChartTooltipEntry = {
   }[];
 };
 
-type CellValues = {[name: string]: CellDataValue};
-
-export type DataRowWithRecord = CellValues & {
-  __malloyDataRecord: Malloy.Row;
-};
+// type CellValues = {[name: string]: CellDataValue};
 
 export type MalloyVegaDataRecord = {
-  __source: DataRowWithRecord;
+  row: RecordCell;
 };
 
 type ScaleType = 'quantitative' | 'nominal';
@@ -135,6 +131,7 @@ export type DrillData = {
 };
 
 export type DimensionContextEntry = {
-  field: Malloy.DimensionInfo;
-  value: string | number | boolean | Date;
+  field: Field;
+  // value: string | number | boolean | Date; // TODO
+  value: string | number | boolean | Date | null;
 };

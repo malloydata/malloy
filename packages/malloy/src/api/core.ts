@@ -530,12 +530,19 @@ export function statedCompileQuery(
       const annotations = annotationToTaglines(query.annotation).map(l => ({
         value: l,
       }));
+      const modelAnnotations = annotationToTaglines(
+        result.modelDef.annotation
+      ).map(l => ({
+        value: l,
+      }));
       return {
         result: {
           sql: translatedQuery.sql,
           schema,
           connection_name: translatedQuery.connectionName,
           annotations: annotations.length > 0 ? annotations : undefined,
+          model_annotations:
+            modelAnnotations.length > 0 ? modelAnnotations : undefined,
         },
       };
     } catch (error) {

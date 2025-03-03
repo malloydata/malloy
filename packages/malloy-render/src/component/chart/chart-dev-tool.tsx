@@ -33,7 +33,7 @@ function stripMalloyRecord(record: Record<string, unknown>) {
 }
 
 export default function ChartDevTool(props: ChartDevToolProps) {
-  const chartProps = props.metadata.fields.get(props.field)!.vegaChartProps!;
+  const chartProps = props.data.field.vegaChartProps!;
   const [specString, setSpecString] = createSignal(
     JSON.stringify(chartProps.spec, null, 2)
   );

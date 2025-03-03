@@ -6,18 +6,17 @@
  */
 
 import {VegaChart, ViewInterface} from '../vega/vega-chart';
-import {ChartTooltipEntry, RenderResultMetadata} from '../types';
+import {ChartTooltipEntry} from '../types';
 import {Tooltip} from '../tooltip/tooltip';
 import {createEffect, createSignal, createMemo, Show} from 'solid-js';
 import {DefaultChartTooltip} from './default-chart-tooltip';
 import {EventListenerHandler, Runtime, View} from 'vega';
-import {useResultStore, VegaBrushOutput} from '../result-store/result-store';
+import {VegaBrushOutput} from '../result-store/result-store';
 import css from './chart.css?raw';
 import {useConfig} from '../render';
 import {DebugIcon} from './debug_icon';
 import ChartDevTool from './chart-dev-tool';
-import {CellDataValue, getNestFields, isAtomic, NestFieldInfo} from '../util';
-import {getFieldReferenceId} from '../plot/util';
+import {RepeatedRecordCell} from '../render-result-metadata';
 
 let IS_STORYBOOK = false;
 try {
@@ -31,9 +30,7 @@ try {
 }
 
 export type ChartProps = {
-  field: NestFieldInfo;
-  data: CellDataValue;
-  metadata: RenderResultMetadata;
+  data: RepeatedRecordCell;
   // Debugging properties
   devMode?: boolean;
   runtime?: Runtime;
@@ -43,22 +40,20 @@ export type ChartProps = {
 export function Chart(props: ChartProps) {
   const config = useConfig();
   config.addCSSToShadowRoot(css);
-  const {field, data} = props;
-  const chartProps = props.metadata.fields.get(field)!.vegaChartProps!;
-  const runtime = props.runtime ?? props.metadata.fields.get(field)!.runtime;
+  const data = props.data;
+  const field = data.field;
+  const chartProps = field.vegaChartProps!;
+  const runtime = field.vegaRuntime;
   if (!runtime)
     throw new Error('Charts must have a runtime defined in their metadata');
   const chartData = data;
-  if (!Array.isArray(chartData)) throw new Error('Data must be an array'); // TODO
-  // for (let i = 0; i < chartData.length; i++) {
-  //   chartData[i]['__malloyDataRecord'] = data[i]['__malloyDataRecord'];
-  // }
-  // TODO no!!??!
+  if (!chartData.isArray()) throw new Error('Data must be an array');
   let values: unknown[] = [];
   // New vega charts use mapMalloyDataToChartData handlers
   if (chartProps.mapMalloyDataToChartData) {
-    values = chartProps.mapMalloyDataToChartData(field, chartData);
+    values = chartProps.mapMalloyDataToChartData(chartData);
   }
+  console.log(values);
 
   const [viewInterface, setViewInterface] = createSignal<ViewInterface | null>(
     null
@@ -93,7 +88,7 @@ export function Chart(props: ChartProps) {
     } else setTooltipDataDebounce(null);
   };
 
-  const resultStore = useResultStore();
+  const resultStore = field.root().store;
 
   // Enable charts to debounce interactions; this helps with rapid mouse movement through charts
   const timeouts = new Map();
@@ -164,8 +159,8 @@ export function Chart(props: ChartProps) {
 
   // Pass relevant brushes from store into the vega view
   createEffect(() => {
-    const fieldRefIds = getNestFields(props.field).map(f =>
-      isAtomic(f) ? getFieldReferenceId(f) : null
+    const fieldRefIds = field.fields.map(f =>
+      f.isAtomic() ? f.referenceId : null
     );
     const relevantBrushes = resultStore.store.brushes.filter(brush =>
       fieldRefIds.includes(brush.fieldRefId)
@@ -217,7 +212,7 @@ export function Chart(props: ChartProps) {
         height={chartProps.plotHeight}
         onMouseOver={mouseOverHandler}
         onViewInterface={setViewInterface}
-        explore={props.field}
+        explore={field}
         runtime={runtime}
       />
       <Tooltip show={showTooltip()}>

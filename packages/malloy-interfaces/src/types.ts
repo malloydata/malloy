@@ -376,6 +376,7 @@ export type Result = {
   sql?: string;
   connection_name: string;
   annotations?: Array<Annotation>;
+  model_annotations?: Array<Annotation>;
 };
 export type Row = {
   cells: Array<Cell>;

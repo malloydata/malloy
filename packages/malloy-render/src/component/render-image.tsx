@@ -1,19 +1,12 @@
 import {RendererProps} from './apply-renderer';
-import {
-  getCellValue,
-  getDynamicValue,
-  isAtomic,
-  valueIsNull,
-  valueIsString,
-} from './util';
 
 export function renderImage(props: RendererProps) {
   const imgTag = props.tag.tag('image');
   if (!imgTag) throw new Error('Missing tag for Image renderer');
-  if (!isAtomic(props.field))
+  if (!props.dataColumn.field.isAtomic())
     throw new Error('Image renderer: Field must be AtomicField');
-  if (!valueIsString(props.field, props.dataColumn))
-    throw new Error('Image renderer: DataColumn must be DataString');
+  if (!props.dataColumn.isString() && !props.dataColumn.isNull())
+    throw new Error('Image renderer: DataColumn must be StringCell');
 
   // Sizing
   const width = imgTag.text('width');
@@ -26,15 +19,18 @@ export function renderImage(props: RendererProps) {
   let alt: string | undefined;
   const altTag = imgTag.tag('alt');
   if (altTag) {
-    alt =
-      getDynamicValue<string>({tag: altTag, data: props.dataColumn}) ??
-      altTag.text();
+    const ref = altTag.text('field');
+    if (ref) {
+      alt = String(props.dataColumn.getRelativeCell(ref)?.value);
+    } else {
+      alt = altTag.text();
+    }
   }
 
   // src
   let src: string | undefined;
-  if (!valueIsNull(props.dataColumn)) {
-    src = String(getCellValue(props.dataColumn));
+  if (!props.dataColumn.isNull()) {
+    src = String(props.dataColumn.value);
   }
 
   return <img style={style} src={src} alt={alt} />;

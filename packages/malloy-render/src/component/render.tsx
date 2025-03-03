@@ -15,7 +15,6 @@ import {
   useContext,
 } from 'solid-js';
 import {getResultMetadata} from './render-result-metadata';
-import {ResultContext} from './result-context';
 import './render.css';
 import {ComponentOptions, ICustomElement} from 'component-register';
 import {applyRenderer} from './apply-renderer';
@@ -75,7 +74,6 @@ export function MalloyRender(
     if (props.malloyResult) {
       return props.malloyResult;
     }
-    console.log(props);
     const result =
       props.result ??
       (props.queryResult && props.modelDef
@@ -178,14 +176,14 @@ export function MalloyRenderInner(props: {
   scrollEl?: HTMLElement;
   vegaConfigOverride?: VegaConfigHandler;
 }) {
-  const metadata = createMemo(() =>
+  const rootCell = createMemo(() =>
     getResultMetadata(props.result, {
       getVegaConfigOverride: props.vegaConfigOverride,
     })
   );
   const tags = () => {
-    const modelTag = metadata().modelTag;
-    const resultTag = metadata().resultTag;
+    const modelTag = rootCell().field.modelTag;
+    const resultTag = rootCell().field.tag;
     const modelTheme = modelTag.tag('theme');
     const localTheme = resultTag.tag('theme');
     return {
@@ -206,16 +204,10 @@ export function MalloyRenderInner(props: {
   });
 
   const rendering = () => {
-    const rootField = metadata().rootField;
-    if (props.result.data === undefined) {
-      throw new Error('MalloyRender: result.data is undefined');
-    }
+    const data = rootCell();
     return applyRenderer({
-      // TODO: figure out what to do about the diffs between top level Explore vs. ExploreFields/AtomicFields
-      field: rootField,
-      dataColumn: props.result.data,
-      resultMetadata: metadata(),
-      tag: tags().resultTag,
+      dataColumn: data,
+      tag: data.field.tag,
       customProps: {
         table: {
           scrollEl: props.scrollEl,
@@ -229,10 +221,8 @@ export function MalloyRenderInner(props: {
 
   return (
     <>
-      <ResultContext.Provider value={metadata()}>
-        {rendering().renderValue}
-      </ResultContext.Provider>
-      <Show when={metadata().store.store.showCopiedModal}>
+      {rendering().renderValue}
+      <Show when={rootCell().field.store.store.showCopiedModal}>
         <div class="malloy-copied-modal">Copied query to clipboard!</div>
       </Show>
     </>

@@ -3,10 +3,8 @@ import {createEffect} from 'solid-js';
 import {ScatterChartRendererFactory} from '../../html/scatter_chart';
 import {ShapeMapRendererFactory} from '../../html/shape_map';
 import {SegmentMapRendererFactory} from '../../html/segment_map';
-import {useResultContext} from '../result-context';
 import {useConfig} from '../render';
-import * as Malloy from '@malloydata/malloy-interfaces';
-import {NestCell} from '../util';
+import {RepeatedRecordCell} from '../render-result-metadata';
 
 const renderers = [
   LineChartRendererFactory.instance,
@@ -14,12 +12,7 @@ const renderers = [
   ShapeMapRendererFactory.instance,
   SegmentMapRendererFactory.instance,
 ];
-export function LegacyChart(props: {
-  field: Malloy.DimensionInfo;
-  data: NestCell;
-  type: string;
-}) {
-  const metadata = useResultContext();
+export function LegacyChart(props: {data: RepeatedRecordCell; type: string}) {
   const config = useConfig();
   const vegaConfig = config.vegaConfigOverride?.(props.type) ?? {};
   const renderer = () =>
@@ -29,16 +22,16 @@ export function LegacyChart(props: {
         document,
         {
           // If rendering chart at root, make large. Otherwise medium because its nested
-          size: metadata.rootField === props.field ? 'large' : 'medium',
+          size: props.data.field.isRoot() ? 'large' : 'medium',
         },
         {dataStyles: {}},
-        props.field,
+        props.data.field,
         {vegaConfigOverride: vegaConfig}
       );
   let el;
   createEffect(async () => {
     if (el && renderer()) {
-      const rendererEl = await renderer()!.render(props.data, props.field);
+      const rendererEl = await renderer()!.render(props.data);
       el.replaceChildren(rendererEl);
     }
   });

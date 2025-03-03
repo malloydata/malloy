@@ -24,18 +24,18 @@
 import {Currency, DurationUnit} from '../html/data_styles';
 import {format} from 'ssf';
 import {NULL_SYMBOL} from './apply-renderer';
-import {tagFor, getText} from './util';
-import * as Malloy from '@malloydata/malloy-interfaces';
+import {getText} from './util';
+import {Field} from './render-result-metadata';
 
 export function renderNumericField(
-  f: Malloy.DimensionInfo,
+  f: Field,
   value: number | null | undefined
 ): string {
   if (value === null || value === undefined) {
     return NULL_SYMBOL;
   }
   let displayValue: string | number = value;
-  const tag = tagFor(f);
+  const tag = f.tag;
   if (tag.has('currency')) {
     let unitText = '$';
 

@@ -26,6 +26,7 @@ import {Renderer} from './renderer';
 import {DataRenderOptions, RenderDef, StyleDefaults} from './data_styles';
 import {RendererOptions} from './renderer_types';
 import * as Malloy from '@malloydata/malloy-interfaces';
+import {Field} from '../component/render-result-metadata';
 
 type TagPropertyExtractor<T extends DataRenderOptions> = (
   options: T,
@@ -74,7 +75,7 @@ export abstract class RendererFactory<T extends DataRenderOptions> {
     document: Document,
     styleDefaults: StyleDefaults,
     rendererOptions: RendererOptions,
-    field: Malloy.DimensionInfo,
+    field: Field,
     renderOptions: T,
     timezone?: string
   ): Renderer;

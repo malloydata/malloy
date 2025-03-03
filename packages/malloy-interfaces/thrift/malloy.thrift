@@ -475,6 +475,7 @@ struct Result {
   3: optional string sql,
   4: required string connection_name,
   5: optional list<Annotation> annotations,
+  6: optional list<Annotation> model_annotations,
 }
 
 /*

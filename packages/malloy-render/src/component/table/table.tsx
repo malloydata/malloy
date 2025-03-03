@@ -11,39 +11,29 @@ import {
   JSX,
   onMount,
 } from 'solid-js';
-import {
-  getCell,
-  getCellValue,
-  getNestFields,
-  getRangeSize,
-  isAtomic,
-  isFirstChild,
-  isLastChild,
-  isNest,
-  isNumber,
-  NestFieldInfo,
-  tagFor,
-  wasDimension,
-} from '../util';
+import {getRangeSize} from '../util';
 import {getTableLayout} from './table-layout';
-import {useResultContext} from '../result-context';
 import {createTableStore, TableContext, useTableContext} from './table-context';
 import tableCss from './table.css?raw';
 import {applyRenderer} from '../apply-renderer';
-import {isFieldHidden} from '../../tags_utils';
 import {createStore, produce} from 'solid-js/store';
 import {createVirtualizer, Virtualizer} from '@tanstack/solid-virtual';
 import {useConfig} from '../render';
 import {DimensionContextEntry} from '../types';
 import {copyExplorePathQueryToClipboard} from '../result-store/result-store';
-import * as Malloy from '@malloydata/malloy-interfaces';
+import {
+  AtomicField,
+  Field,
+  RecordCell,
+  RecordOrRepeatedRecordCell,
+} from '../render-result-metadata';
 
 const IS_CHROMIUM = navigator.userAgent.toLowerCase().indexOf('chrome') >= 0;
 // CSS Subgrid + Sticky Positioning only seems to work reliably in Chrome
 const SUPPORTS_STICKY = IS_CHROMIUM;
 
 const Cell = (props: {
-  field: Malloy.DimensionInfo;
+  field: Field;
   value: JSXElement;
   hideStartGutter: boolean;
   hideEndGutter: boolean;
@@ -53,10 +43,9 @@ const Cell = (props: {
   rawValue?: unknown;
   isChart?: boolean;
 }) => {
-  const metadata = useResultContext();
   const style = () => {
     const layout = useTableContext()!.layout;
-    const columnTag = tagFor(props.field).tag('column');
+    const columnTag = props.field.tag.tag('column');
     const width = layout.fieldLayout(props.field).width;
     const height = layout.fieldLayout(props.field).height;
     const style: JSX.CSSProperties = {};
@@ -87,7 +76,7 @@ const Cell = (props: {
           ? props.value
           : null,
         value: typeof props.rawValue !== 'function' ? props.rawValue : null,
-        fieldPath: metadata.fields.get(props.field)!.path,
+        fieldPath: props.field.path,
         isHeader: !!props.isHeader,
         event: evt,
         type: 'table-cell',
@@ -114,20 +103,16 @@ const Cell = (props: {
   );
 };
 
-const HeaderField = (props: {
-  field: Malloy.DimensionInfo;
-  isPinned?: boolean;
-}) => {
+const HeaderField = (props: {field: Field; isPinned?: boolean}) => {
   const {layout: tableLayout} = useTableContext()!;
-  const metadata = useResultContext();
-  const isFirst = isFirstChild(props.field, metadata);
-  const parent = metadata.fields.get(props.field)!.parent!.field;
-  const isParentFirst = isFirstChild(parent, metadata);
-  const isParentNotAField = parent === metadata.rootField;
+  const isFirst = props.field.isFirstChild();
+  const parent = props.field.parent!;
+  const isParentFirst = parent.isFirstChild();
+  const isParentNotAField = parent.isRoot();
   const hideStartGutter = isFirst && (isParentFirst || isParentNotAField);
 
-  const isLast = isLastChild(props.field, metadata);
-  const isParentLast = isLastChild(parent, metadata);
+  const isLast = props.field.isLastChild();
+  const isParentLast = parent.isLastChild();
   const hideEndGutter = isLast && (isParentLast || isParentNotAField);
 
   const fieldLayout = tableLayout.fieldLayout(props.field);
@@ -137,22 +122,20 @@ const HeaderField = (props: {
 
   const tableGutterLeft =
     (fieldLayout.depth > 0 && isFirst) ||
-    fieldLayout.metadata.renderAs === 'table';
+    fieldLayout.field.renderAs === 'table';
   const tableGutterRight =
     (fieldLayout.depth > 0 && isLast) ||
-    (fieldLayout.depth === 0 && fieldLayout.metadata.renderAs === 'table');
+    (fieldLayout.depth === 0 && fieldLayout.field.renderAs === 'table');
 
-  const customLabel = tagFor(props.field).text('label');
+  const customLabel = props.field.tag.text('label');
   const value = customLabel ?? props.field.name.replace(/_/g, '_\u200b');
 
   return (
     <div
       class="column-cell th"
-      data-pinned-header={
-        props.isPinned ? metadata.fields.get(props.field)!.path : undefined
-      }
+      data-pinned-header={props.isPinned ? props.field.path : undefined}
       classList={{
-        'numeric': isAtomic(props.field) && isNumber(props.field),
+        'numeric': props.field.isNumber(),
         'pinned-header': props.isPinned,
       }}
       style={{
@@ -181,19 +164,16 @@ const HeaderField = (props: {
 
 const DRILL_RENDERER_IGNORE_LIST = ['chart', 'link'];
 const TableField = (props: {
-  parent: NestFieldInfo;
-  field: Malloy.DimensionInfo;
-  row: Malloy.Row;
+  field: Field;
+  row: RecordCell;
   rowPath: number[];
   dimensionContext: DimensionContextEntry[];
 }) => {
   let renderValue: JSXElement = '';
   let renderAs = '';
   ({renderValue, renderAs} = applyRenderer({
-    field: props.field,
-    dataColumn: getCell(props.parent, props.row, props.field.name),
-    resultMetadata: useResultContext(),
-    tag: tagFor(props.field),
+    dataColumn: props.row.column(props.field.name),
+    tag: props.field.tag,
     customProps: {
       table: {
         rowLimit: 100, // Limit nested tables to 100 records
@@ -202,6 +182,7 @@ const TableField = (props: {
       },
     },
   }));
+  console.log({field: props.field, renderAs});
   const tableLayout = useTableContext()!.layout;
   const fieldLayout = tableLayout.fieldLayout(props.field);
   const columnRange = fieldLayout.relativeColumnRange;
@@ -224,17 +205,13 @@ const TableField = (props: {
     style.grid = 'auto / subgrid';
   }
   // TODO: review what should be sticky
-  else if (SUPPORTS_STICKY && isAtomic(props.field)) {
+  else if (SUPPORTS_STICKY && props.field.isAtomic()) {
     style.position = 'sticky';
     style.top = `var(--malloy-render--table-header-cumulative-height-${fieldLayout.depth})`;
   }
 
-  const metadata = useResultContext();
-
-  const tableGutterLeft =
-    fieldLayout.depth > 0 && isFirstChild(props.field, metadata);
-  const tableGutterRight =
-    fieldLayout.depth > 0 && isLastChild(props.field, metadata);
+  const tableGutterLeft = fieldLayout.depth > 0 && props.field.isFirstChild();
+  const tableGutterRight = fieldLayout.depth > 0 && props.field.isLastChild();
 
   const handleMouseEnter = () => {
     if (tableCtx && !DRILL_RENDERER_IGNORE_LIST.includes(renderAs)) {
@@ -259,7 +236,6 @@ const TableField = (props: {
     evt.stopPropagation();
     if (isDrillingEnabled && !DRILL_RENDERER_IGNORE_LIST.includes(renderAs)) {
       copyExplorePathQueryToClipboard({
-        metadata,
         field: props.field,
         dimensionContext: [
           ...tableCtx!.dimensionContext,
@@ -274,7 +250,7 @@ const TableField = (props: {
     <div
       class="column-cell td"
       classList={{
-        numeric: isAtomic(props.field) && isNumber(props.field),
+        numeric: props.field.isNumber(),
         highlight:
           isDrillingEnabled &&
           !DRILL_RENDERER_IGNORE_LIST.includes(renderAs) &&
@@ -292,13 +268,11 @@ const TableField = (props: {
           <Cell
             field={props.field}
             value={renderValue}
-            hideStartGutter={isFirstChild(props.field, metadata)}
-            hideEndGutter={isLastChild(props.field, metadata)}
+            hideStartGutter={props.field.isFirstChild()}
+            hideEndGutter={props.field.isLastChild()}
             tableGutterLeft={tableGutterLeft}
             tableGutterRight={tableGutterRight}
-            rawValue={getCellValue(
-              getCell(props.parent, props.row, props.field.name)
-            )}
+            rawValue={props.row.column(props.field.name).value}
             isChart={renderAs === 'chart'}
           />
         </Match>
@@ -308,8 +282,7 @@ const TableField = (props: {
 };
 
 const MalloyTableRoot = (_props: {
-  field: NestFieldInfo;
-  data: Malloy.CellWithArrayCell | Malloy.CellWithRecordCell;
+  data: RecordOrRepeatedRecordCell;
   rowLimit?: number;
   scrollEl?: HTMLElement;
   disableVirtualization?: boolean;
@@ -317,15 +290,16 @@ const MalloyTableRoot = (_props: {
 }) => {
   const props = mergeProps({rowLimit: Infinity}, _props);
   const tableCtx = useTableContext()!;
-  const resultMetadata = useResultContext();
 
   let shouldFillWidth = false;
   if (tableCtx.root) {
-    const sizeTag = tagFor(props.field).tag('table')?.tag('size');
+    const sizeTag = props.data.field.tag.tag('table')?.tag('size');
     if (sizeTag && sizeTag.text() === 'fill') shouldFillWidth = true;
     else if (typeof props.shouldFillWidth === 'boolean')
       shouldFillWidth = props.shouldFillWidth;
   }
+
+  const root = props.data.root().field;
 
   const pinnedFields = createMemo(() => {
     const fields = Object.entries(tableCtx.layout.fieldHeaderRangeMap)
@@ -337,8 +311,8 @@ const MalloyTableRoot = (_props: {
         else return 0;
       })
       .filter(([key, value]) => {
-        const field = resultMetadata.fieldsByKey.get(key)!;
-        const parent = resultMetadata.fields.get(field)!.parent;
+        const field = root.fieldAt(key);
+        const parent = field.parent;
         const parentFieldRenderer = parent?.renderAs ?? null;
         const isNotRoot = value.depth >= 0;
         const isPartOfTable = isNotRoot && parentFieldRenderer === 'table';
@@ -346,7 +320,7 @@ const MalloyTableRoot = (_props: {
       })
       .map(([key, value]) => ({
         fieldKey: key,
-        field: resultMetadata.fieldsByKey.get(key)!,
+        field: root.fieldAt(key),
         ...value,
       }));
     return fields;
@@ -358,14 +332,14 @@ const MalloyTableRoot = (_props: {
 
   const fieldsToSize = createMemo(() => {
     const fields = Object.entries(tableCtx.layout.fieldHeaderRangeMap).filter(
-      ([key]) => !isNest(resultMetadata.fieldsByKey.get(key)!)
+      ([key]) => !root.fieldAt(key).isNest()
     );
     return fields;
   });
 
   const getContainerStyle: () => JSX.CSSProperties = () => {
     const columnRange = tableCtx.layout.fieldLayout(
-      props.field
+      props.data.field
     ).relativeColumnRange;
 
     const style: JSX.CSSProperties = {
@@ -402,26 +376,22 @@ const MalloyTableRoot = (_props: {
   // TODO: Get this from resultMetadata cache?
   const [rowsAreLimited, setRowsAreLimited] = createSignal(false);
   const data = createMemo(() => {
-    const data: Malloy.Row[] = [];
+    const data: RecordCell[] = [];
     let i = 0;
-    const rows =
-      props.data.kind === 'record_cell' ? [props.data] : props.data.array_value;
+    const rows = props.data.rows;
     for (const row of rows) {
-      if (row.kind !== 'record_cell') {
-        throw new Error('Expected record cell');
-      }
       if (i >= props.rowLimit) {
         setRowsAreLimited(true);
         break;
       }
-      data.push(row.record_value);
+      data.push(row);
       i++;
     }
     return data;
   });
 
   const visibleFields = () =>
-    getNestFields(props.field).filter(f => !isFieldHidden(f));
+    props.data.field.fields.filter(f => !f.isHidden());
 
   const pinnedFieldsByDepth = () => {
     const fields = pinnedFields();
@@ -591,31 +561,25 @@ const MalloyTableRoot = (_props: {
     return tableCtx.currentRow;
   };
 
-  const metadata = useResultContext();
-
   const handleTableMouseOver = (evt: MouseEvent) => {
     evt.stopPropagation();
 
     tableCtx.setStore(s => ({
       ...s,
-      highlightedExplore: metadata.fields.get(props.field)!.path,
+      highlightedExplore: props.data.field.path,
     }));
   };
 
-  const getRowDimensionContext = (row: Malloy.Row, rowField: NestFieldInfo) => {
+  const getRowDimensionContext = (row: RecordCell) => {
     const dimensionContext: DimensionContextEntry[] = [];
 
-    const dimensions = getNestFields(rowField).filter(
-      f => isAtomic(f) && wasDimension(f)
+    const dimensions = row.field.fields.filter(
+      f => f.isAtomic() && f.wasDimension()
     );
     dimensions.forEach(field => {
       dimensionContext.push({
         field,
-        value: getCellValue(getCell(rowField, row, field.name)) as
-          | string
-          | number
-          | boolean
-          | Date,
+        value: row.column(field.name).value as string | number | boolean | Date,
       });
     });
     return dimensionContext;
@@ -710,13 +674,11 @@ const MalloyTableRoot = (_props: {
                     <For each={visibleFields()}>
                       {field => (
                         <TableField
-                          parent={props.field}
                           field={field}
                           row={data()[virtualRow.index]}
                           rowPath={getRowPath(virtualRow.index)}
                           dimensionContext={getRowDimensionContext(
-                            data()[virtualRow.index],
-                            props.field
+                            data()[virtualRow.index]
                           )}
                         />
                       )}
@@ -745,11 +707,10 @@ const MalloyTableRoot = (_props: {
               <For each={visibleFields()}>
                 {field => (
                   <TableField
-                    parent={props.field}
                     field={field}
                     row={row}
                     rowPath={getRowPath(idx())}
-                    dimensionContext={getRowDimensionContext(row, props.field)}
+                    dimensionContext={getRowDimensionContext(row)}
                   />
                 )}
               </For>
@@ -767,8 +728,7 @@ const MalloyTableRoot = (_props: {
 };
 
 const MalloyTable: Component<{
-  field: NestFieldInfo;
-  data: Malloy.CellWithArrayCell | Malloy.CellWithRecordCell;
+  data: RecordOrRepeatedRecordCell;
   rowLimit?: number;
   scrollEl?: HTMLElement;
   disableVirtualization?: boolean;
@@ -776,33 +736,33 @@ const MalloyTable: Component<{
   currentRow?: number[];
   dimensionContext?: DimensionContextEntry[];
 }> = props => {
-  const metadata = useResultContext();
   const hasTableCtx = !!useTableContext();
-  const fieldMetadata = metadata.fields.get(props.field)!;
   const tableCtx = createMemo<TableContext>(() => {
     if (hasTableCtx) {
       const parentCtx = useTableContext()!;
-      const parentRecord = fieldMetadata.parent; // TODO should be parent DATA, not field
+      const parentRecord = props.data.parent;
       const dimensionContext: DimensionContextEntry[] = [];
-      if (parentRecord) {
-        // TODO
-        // const dimensions = parentRecord.field.schema.fields.filter(
-        //   f => isAtomic(f) && wasDimension(f)
-        // ) as AtomicFieldInfo[];
-        // dimensions.forEach(field => {
-        //   dimensionContext.push({
-        //     field,
-        //     value: getCellValue(
-        //       getCell(parentRecord.field, data, field.name)
-        //     ) as string | number | boolean | Date,
-        //   });
-        // });
+      if (parentRecord?.isRecord()) {
+        const dimensions = parentRecord.field.fields.filter(
+          f => f.isAtomic() && f.wasDimension()
+        ) as AtomicField[];
+        dimensions.forEach(field => {
+          dimensionContext.push({
+            field,
+            value: parentRecord.column(field.name).value as
+              | string
+              | number
+              | boolean
+              | Date
+              | null, // TODO better assertion here?
+          });
+        });
       }
       return {
         ...parentCtx,
         root: false,
         currentRow: props.currentRow ?? parentCtx.currentRow,
-        currentExplore: fieldMetadata.path,
+        currentExplore: props.data.field.path,
         dimensionContext: [...parentCtx.dimensionContext, ...dimensionContext],
       };
     }
@@ -810,12 +770,12 @@ const MalloyTable: Component<{
     const [store, setStore] = createTableStore();
     return {
       root: true,
-      layout: getTableLayout(metadata, props.field),
+      layout: getTableLayout(props.data.field),
       store,
       setStore,
       headerSizeStore: createStore({}),
       currentRow: [],
-      currentExplore: fieldMetadata.path,
+      currentExplore: props.data.field.path,
       dimensionContext: [],
     };
   });

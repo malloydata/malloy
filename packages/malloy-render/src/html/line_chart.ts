@@ -35,6 +35,7 @@ import {
   isString,
   isTimestamp,
 } from '../component/util';
+import { Field } from '../component/render-result-metadata';
 
 export class HTMLLineChartRenderer extends HTMLCartesianChartRenderer {
   getMark(): 'line' {
@@ -79,7 +80,7 @@ export class LineChartRendererFactory extends RendererFactory<LineChartRenderOpt
     document: Document,
     styleDefaults: StyleDefaults,
     rendererOptions: RendererOptions,
-    _field: Malloy.DimensionInfo,
+    _field: Field,
     options: LineChartRenderOptions,
     timezone?: string
   ): Renderer {

@@ -39,6 +39,7 @@ import {
   isString,
   isTimestamp,
 } from '../component/util';
+import { Field } from '../component/render-result-metadata';
 
 export class HTMLScatterChartRenderer extends HTMLCartesianChartRenderer {
   getMark(): 'point' {
@@ -82,7 +83,7 @@ export class ScatterChartRendererFactory extends RendererFactory<ScatterChartRen
     document: Document,
     styleDefaults: StyleDefaults,
     rendererOptions: RendererOptions,
-    _field: Malloy.DimensionInfo,
+    _field: Field,
     options: LineChartRenderOptions,
     timezone?: string
   ): Renderer {

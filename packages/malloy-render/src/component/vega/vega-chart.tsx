@@ -9,10 +9,10 @@ import {createEffect, createSignal, untrack} from 'solid-js';
 import {EventListenerHandler, View, SignalListenerHandler, Runtime} from 'vega';
 import './vega-expr-addons';
 import {addSignalListenerIfExists, setSignalIfExists} from './vega-utils';
-import {NestFieldInfo} from '../util';
+import {RepeatedRecordField} from '../render-result-metadata';
 
 type VegaChartProps = {
-  explore: NestFieldInfo;
+  explore: RepeatedRecordField;
   width?: number;
   height?: number;
   onMouseOver?: EventListenerHandler;

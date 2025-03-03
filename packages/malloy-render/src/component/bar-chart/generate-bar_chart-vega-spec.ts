@@ -6,18 +6,15 @@
  */
 
 import {getBarChartSettings} from './get-bar_chart-settings';
-import * as Malloy from '@malloydata/malloy-interfaces';
 import {
   ChartTooltipEntry,
   MalloyDataToChartDataHandler,
   MalloyVegaDataRecord,
-  RenderResultMetadata,
   VegaChartProps,
   VegaPadding,
   VegaSignalRef,
 } from '../types';
 import {getChartLayoutSettings} from '../chart-layout-settings';
-import {getFieldFromRootPath, getFieldReferenceId} from '../plot/util';
 import {
   Data,
   EncodeEntry,
@@ -37,17 +34,10 @@ import {getCustomTooltipEntries} from './get-custom-tooltips-entries';
 import {getMarkName} from '../vega/vega-utils';
 import {NULL_SYMBOL} from '../apply-renderer';
 import {
-  CellDataValue,
-  getAllCellValues,
-  getCell,
-  getCellValue,
-  getFieldTimeframe,
-  isAtomic,
-  isDate,
-  isTimestamp,
-  NestFieldInfo,
-  tagFor,
-} from '../util';
+  CellValue,
+  RecordCell,
+  RepeatedRecordField,
+} from '../render-result-metadata';
 
 type BarDataRecord = {
   x: string | number;
@@ -70,16 +60,15 @@ function invertObject(obj: Record<string, string>): Record<string, string> {
 }
 
 export function generateBarChartVegaSpec(
-  explore: NestFieldInfo,
-  metadata: RenderResultMetadata
+  explore: RepeatedRecordField
 ): VegaChartProps {
-  const tag = tagFor(explore);
+  const tag = explore.tag;
   const chartTag = tag.tag('bar_chart') ?? tag.tag('bar');
   if (!chartTag)
     throw new Error(
       'Bar chart should only be rendered for bar_chart or bar tag'
     );
-  const settings = getBarChartSettings(explore, metadata, tag);
+  const settings = getBarChartSettings(explore);
   // TODO: check that there are <=2 dimension fields, throw error otherwise
   /**************************************
    *
@@ -94,27 +83,21 @@ export function generateBarChartVegaSpec(
   if (!xFieldPath) throw new Error('Malloy Bar Chart: Missing x field');
   if (!yFieldPath) throw new Error('Malloy Bar Chart: Missing y field');
 
-  const xField = getFieldFromRootPath(explore, xFieldPath);
-  const xIsDateorTime =
-    isAtomic(xField) && (isDate(xField) || isTimestamp(xField));
-  const yField = getFieldFromRootPath(explore, yFieldPath);
-  const seriesField = seriesFieldPath
-    ? getFieldFromRootPath(explore, seriesFieldPath)
-    : null;
+  const xField = explore.fieldAt(xFieldPath);
+  const xIsDateorTime = xField.isTime();
+  const yField = explore.fieldAt(yFieldPath);
+  const seriesField = seriesFieldPath ? explore.fieldAt(seriesFieldPath) : null;
 
-  const xRef = getFieldReferenceId(xField);
-  const yRef = getFieldReferenceId(yField);
-  const seriesRef = seriesField && getFieldReferenceId(seriesField);
-
-  const xMeta = metadata.fields.get(xField)!;
-  const seriesMeta = seriesField ? metadata.fields.get(seriesField) : null;
+  const xRef = xField.referenceId;
+  const yRef = yField.referenceId;
+  const seriesRef = seriesField && seriesField.referenceId;
 
   // Map y fields to ref ids
   const yRefsMap = settings.yChannel.fields.reduce((map, fieldPath) => {
-    const field = getFieldFromRootPath(explore, fieldPath);
+    const field = explore.fieldAt(fieldPath);
     return {
       ...map,
-      [fieldPath]: getFieldReferenceId(field),
+      [fieldPath]: field.referenceId,
     };
   }, {});
   // Map ref ids to y fields
@@ -145,18 +128,18 @@ export function generateBarChartVegaSpec(
   let yMin = Infinity;
   let yMax = -Infinity;
   for (const name of settings.yChannel.fields) {
-    const field = getFieldFromRootPath(explore, name);
-    const min = metadata.fields.get(field)!.min;
-    if (min !== null) yMin = Math.min(yMin, min);
-    const max = metadata.fields.get(field)!.max;
-    if (max !== null) yMax = Math.max(yMax, max);
+    const field = explore.fieldAt(name);
+    const min = field.minNumber;
+    if (min !== undefined) yMin = Math.min(yMin, min);
+    const max = field.maxNumber;
+    if (max !== undefined) yMax = Math.max(yMax, max);
   }
 
   // Final axis domain, with 0 boundary so bars always start at 0
   const yDomainMin = Math.min(0, yMin);
   const yDomainMax = Math.max(0, yMax);
 
-  const chartSettings = getChartLayoutSettings(explore, metadata, chartTag, {
+  const chartSettings = getChartLayoutSettings(explore, chartTag, {
     xField,
     yField,
     chartType: 'bar_chart',
@@ -164,14 +147,14 @@ export function generateBarChartVegaSpec(
   });
 
   // x axes across rows should auto share when distinct values <=20, unless user has explicitly set independent setting
-  const autoSharedX = xMeta.values.size <= 20;
+  const autoSharedX = xField.valueSet.size <= 20;
   const forceSharedX = chartTag.text('x', 'independent') === 'false';
   const forceIndependentX = chartTag.has('x', 'independent') && !forceSharedX;
   const shouldShareXDomain =
     forceSharedX || (autoSharedX && !forceIndependentX);
 
   // series legends across rows should auto share when distinct values <=20, unless user has explicitly set independent setting
-  const autoSharedSeries = seriesMeta && seriesMeta.values.size <= 20;
+  const autoSharedSeries = seriesField && seriesField.valueSet.size <= 20;
   const forceSharedSeries = chartTag.text('series', 'independent') === 'false';
   const forceIndependentSeries =
     chartTag.has('series', 'independent') && !forceSharedSeries;
@@ -584,7 +567,7 @@ export function generateBarChartVegaSpec(
    * Chart spec
    *
    *************************************/
-
+  console.log({name: xField.name, xField, valueSet: xField.valueSet})
   const spec: Spec = {
     $schema: 'https://vega.github.io/schema/vega/v5.json',
     width: chartSettings.plotWidth,
@@ -601,7 +584,7 @@ export function generateBarChartVegaSpec(
         name: 'xscale',
         type: 'band',
         domain: shouldShareXDomain
-          ? [...xMeta.values]
+          ? [...xField.valueSet]
           : {data: 'values', field: 'x'},
         range: 'width',
         paddingOuter: 0.05,
@@ -620,7 +603,7 @@ export function generateBarChartVegaSpec(
         type: 'ordinal',
         range: 'category',
         domain: shouldShareSeriesDomain
-          ? [...seriesMeta!.values]
+          ? [...seriesField!.valueSet]
           : {
               data: 'values',
               field: 'series',
@@ -630,7 +613,7 @@ export function generateBarChartVegaSpec(
         name: 'xOffset',
         type: 'band',
         domain: shouldShareSeriesDomain
-          ? [...seriesMeta!.values]
+          ? [...seriesField!.valueSet]
           : {data: 'values', field: 'series'},
         range: {
           signal: `[0,bandwidth('xscale') * ${1 - barGroupPadding}]`,
@@ -691,7 +674,7 @@ export function generateBarChartVegaSpec(
     // Get legend dimensions
     if (isDimensionalSeries) {
       // Legend size is by legend title or the longest legend value
-      maxCharCt = seriesMeta!.maxString?.length ?? 0;
+      maxCharCt = seriesField!.maxString?.length ?? 0;
       maxCharCt = Math.max(maxCharCt, seriesField!.name.length);
     } else {
       maxCharCt = settings.yChannel.fields.reduce(
@@ -777,25 +760,18 @@ export function generateBarChartVegaSpec(
     });
   }
 
-  const mapMalloyDataToChartData: MalloyDataToChartDataHandler = (
-    field,
-    data
-  ) => {
-    const getXValue = (row: Malloy.Row) => {
-      return getCellValue(getCell(field, row, xField.name));
+  const mapMalloyDataToChartData: MalloyDataToChartDataHandler = data => {
+    const getXValue = (row: RecordCell) => {
+      return row.column(xField.name).value;
     };
 
     const mappedData: {
-      __source: {[name: string]: CellDataValue};
-      x: CellDataValue;
-      y: CellDataValue;
-      series: CellDataValue;
+      __source: {[name: string]: CellValue};
+      x: CellValue;
+      y: CellValue;
+      series: CellValue;
     }[] = [];
-    data.forEach(rowCell => {
-      if (rowCell.kind !== 'record_cell') {
-        throw new Error('Unexpected record');
-      }
-      const row = rowCell.record_value;
+    data.rows.forEach(row => {
       const xValue = getXValue(row);
       // Filter out missing date/time values
       // TODO: figure out how we can show null values in continuous axes
@@ -804,14 +780,12 @@ export function generateBarChartVegaSpec(
       }
       // Map data fields to chart properties
       const seriesVal = seriesField
-        ? getCellValue(getCell(field, row, seriesField.name))
+        ? row.column(seriesField.name).value
         : yFieldPath;
-      const __source = getAllCellValues(field, row);
-      __source['__malloyDataRecord'] = row;
       mappedData.push({
-        __source,
+        __source: row.allCellValues(),
         x: xValue ?? NULL_SYMBOL,
-        y: getCellValue(getCell(field, row, yField.name)),
+        y: row.column(yField.name).value,
         series: seriesVal,
       });
     });
@@ -841,12 +815,10 @@ export function generateBarChartVegaSpec(
       const formatY = (rec: BarDataRecord) => {
         const fieldName = rec.series;
         // If dimensional, use the first yField for formatting. Else the series value is the field path of the field to use
-        const field = isDimensionalSeries
-          ? yField
-          : getFieldFromRootPath(explore, fieldName);
+        const field = isDimensionalSeries ? yField : explore.fieldAt(fieldName);
 
         const value = rec.y;
-        return isAtomic(field)
+        return field.isAtomic()
           ? renderNumericField(field, value)
           : String(value);
       };
@@ -857,11 +829,7 @@ export function generateBarChartVegaSpec(
         records = item.datum.v;
 
         const title = xIsDateorTime
-          ? renderTimeString(
-              new Date(x),
-              isAtomic(xField) && isDate(xField), // TODO should this be isDateorTimestamp?
-              getFieldTimeframe(xField)
-            )
+          ? renderTimeString(new Date(x), xField.isTime(), xField.timeframe)
           : x;
 
         tooltipData = {
@@ -885,8 +853,8 @@ export function generateBarChartVegaSpec(
         const title = xIsDateorTime
           ? renderTimeString(
               new Date(itemData.x),
-              isAtomic(xField) && isDate(xField), // TODO should this be isDateorTimestamp?
-              getFieldTimeframe(xField)
+              xField.isTime(),
+              xField.timeframe
             )
           : itemData.x;
 
@@ -929,7 +897,6 @@ export function generateBarChartVegaSpec(
           getCustomTooltipEntries({
             explore,
             records: customTooltipRecords,
-            metadata,
           });
 
         // If not series, put custom entries at end
