@@ -93,4 +93,11 @@ describe('nearley string filters', () => {
       expr: {op: '=~', match: 'a'},
     });
   });
+  test('-(z)', () => {
+    expect('-(z)').parsesTo({
+      op: '()',
+      expr: {op: '=~', match: 'z'},
+      not: true,
+    });
+  });
 });

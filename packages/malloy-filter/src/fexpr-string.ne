@@ -21,23 +21,33 @@ const fstring_lexer = moo.compile({
 })
 
 function matchClause(data: any[]) {
-  // console.log("MATCH CLAUSE ", JSON.stringify(data, null, 2));
   return data[0];
 }
+
+function mkStringFilter(data: any[]) {
+  const [isMinus, op] = data;
+  if (isMinus) {
+    return {...op, not: true};
+  }
+  return op;
+}
+
 %}
 
 @lexer fstring_lexer
 
 stringFilter ->
-    %minus sfBinary {% ([_, expr]) => ({...expr, not: true}) %}
-  | sfBinary {% (data) => matchClause(data) %}
+    %minus:? sfBinary {% (data) => mkStringFilter(data) %}
 
 sfBinary ->
     sfBinary conjunction clause {% ([left, cop, right]) => ({op: cop[0].text, left, right}) %}
   | clause {% (data) => matchClause(data) %}
+
+parens -> %open stringFilter %close {% ([_1, subFilter, _3]) => ({op: "()", expr: subFilter}) %}
+
 clause ->
     %keyword {% ([kw])=> ({op: kw.text.toLowerCase() }) %}
   | %matchStr {% ([withStr]) => ({op: "=~", match: withStr.text}) %}
-  | %open stringFilter %close {% ([_1, subFilter, _3]) => ({op: "()", expr: subFilter}) %}
+  | parens {% (data) => matchClause(data) %}
 
 conjunction -> %comma | %semi | %or
