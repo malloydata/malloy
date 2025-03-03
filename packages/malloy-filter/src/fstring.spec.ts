@@ -151,4 +151,11 @@ describe('nearley string filters', () => {
   test('starts with -', () => {
     expect('\\-a').parsesTo({op: '=', match: '-a'});
   });
+  test('a,-null', () => {
+    expect('a,-null').parsesTo({
+      op: ',',
+      left: {op: '=', match: 'a'},
+      right: {op: 'null', not: true},
+    });
+  });
 });

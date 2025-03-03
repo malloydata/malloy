@@ -31,11 +31,12 @@ function maybeNot(data: any[]) {
 function matchOp(matchStr: string) {
   // Strip escaping needed to get past parser
   matchStr = matchStr.replace(/\\([,;|()])/g, '$1');
-  // It's a LIKE if there are unescapes % or _
+  // It's a LIKE if there are unescaped % or _, we are
+  // passing this on to a domain where \ escaping is respected
   if (matchStr.match(/(^[%_])|[^\\][%_]/)) {
     return {op: '~', match: matchStr};
   }
-  // Unescape everything now
+  // Unescape everything else
   return {op: '=', match: matchStr.replace(/\\(.)/g, '$1')};
 }
 
@@ -44,11 +45,11 @@ function matchOp(matchStr: string) {
 @lexer fstring_lexer
 
 stringFilter ->
-    %minus:? sfBinary {% (data) => maybeNot(data) %}
+    stringFilter conjunction sfUnary {% ([left, cop, right]) => ({op: cop[0].text, left, right}) %}
+  | sfUnary {% (data) => data[0] %}
 
-sfBinary ->
-    sfBinary conjunction clause {% ([left, cop, right]) => ({op: cop[0].text, left, right}) %}
-  | clause {% (data) => data[0] %}
+sfUnary ->
+  %minus:? clause {% (data) => maybeNot(data) %}
 
 parens -> %open stringFilter %close {% ([_1, subFilter, _3]) => ({op: "()", expr: subFilter}) %}
 
