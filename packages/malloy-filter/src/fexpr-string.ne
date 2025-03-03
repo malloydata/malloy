@@ -28,6 +28,17 @@ function maybeNot(data: any[]) {
   return op;
 }
 
+function matchOp(matchStr: string) {
+  // Strip escaping needed to get past parser
+  matchStr = matchStr.replace(/\\([,;|()])/g, '$1');
+  // It's a LIKE if there are unescapes % or _
+  if (matchStr.match(/(^[%_])|[^\\][%_]/)) {
+    return {op: '~', match: matchStr};
+  }
+  // Unescape everything now
+  return {op: '=', match: matchStr.replace(/\\(.)/g, '$1')};
+}
+
 %}
 
 @lexer fstring_lexer
@@ -43,7 +54,7 @@ parens -> %open stringFilter %close {% ([_1, subFilter, _3]) => ({op: "()", expr
 
 clause ->
     %keyword {% ([kw])=> ({op: kw.text.toLowerCase() }) %}
-  | %matchStr {% ([withStr]) => ({op: "=~", match: withStr.text}) %}
+  | %matchStr {% ([withStr]) => matchOp(withStr.text) %}
   | parens {% (data) => data[0] %}
 
 conjunction -> %comma | %semi | %or

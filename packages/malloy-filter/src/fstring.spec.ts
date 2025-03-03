@@ -47,10 +47,34 @@ expect.extend({
 
 describe('nearley string filters', () => {
   test('matching', () => {
-    expect('A').parsesTo({op: '=~', match: 'A'});
+    expect('A').parsesTo({op: '=', match: 'A'});
   });
   test('not match', () => {
-    expect('-A').parsesTo({op: '=~', match: 'A', not: true});
+    expect('-A').parsesTo({op: '=', match: 'A', not: true});
+  });
+  test('like %', () => {
+    expect('%').parsesTo({op: '~', match: '%'});
+  });
+  test('like _', () => {
+    expect('_').parsesTo({op: '~', match: '_'});
+  });
+  test('like a%', () => {
+    expect('a%').parsesTo({op: '~', match: 'a%'});
+  });
+  test('end with %', () => {
+    expect('%\\%').parsesTo({op: '~', match: '%\\%'});
+  });
+  test('is %', () => {
+    expect('\\%').parsesTo({op: '=', match: '%'});
+  });
+  test('is _', () => {
+    expect('\\_').parsesTo({op: '=', match: '_'});
+  });
+  test('end with _', () => {
+    expect('%\\_').parsesTo({op: '~', match: '%\\_'});
+  });
+  test('like a_', () => {
+    expect('a_').parsesTo({op: '~', match: 'a_'});
   });
   test('is null', () => {
     expect('null').parsesTo({op: 'null'});
@@ -69,35 +93,53 @@ describe('nearley string filters', () => {
   test('a,b', () => {
     expect('a,b').parsesTo({
       op: ',',
-      left: {op: '=~', match: 'a'},
-      right: {op: '=~', match: 'b'},
+      left: {op: '=', match: 'a'},
+      right: {op: '=', match: 'b'},
     });
   });
   test('a;b', () => {
     expect('a;b').parsesTo({
       op: ';',
-      left: {op: '=~', match: 'a'},
-      right: {op: '=~', match: 'b'},
+      left: {op: '=', match: 'a'},
+      right: {op: '=', match: 'b'},
     });
   });
   test('a|b', () => {
     expect('a|b').parsesTo({
       op: '|',
-      left: {op: '=~', match: 'a'},
-      right: {op: '=~', match: 'b'},
+      left: {op: '=', match: 'a'},
+      right: {op: '=', match: 'b'},
     });
   });
   test('(a)', () => {
     expect('(a)').parsesTo({
       op: '()',
-      expr: {op: '=~', match: 'a'},
+      expr: {op: '=', match: 'a'},
     });
   });
   test('-(z)', () => {
     expect('-(z)').parsesTo({
       op: '()',
-      expr: {op: '=~', match: 'z'},
+      expr: {op: '=', match: 'z'},
       not: true,
+    });
+  });
+  test('contains ,', () => {
+    expect('a\\,b').parsesTo({
+      op: '=',
+      match: 'a,b',
+    });
+  });
+  test('contains ;', () => {
+    expect('a\\;b').parsesTo({
+      op: '=',
+      match: 'a;b',
+    });
+  });
+  test('contains |', () => {
+    expect('a\\|b').parsesTo({
+      op: '=',
+      match: 'a|b',
     });
   });
 });
