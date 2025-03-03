@@ -10,15 +10,26 @@
 import moo from 'moo';
 
 const fstring_lexer = moo.compile({
+  WS: /[ \t]+/,
   comma: ',',
   semi: ';',
+  or: '|',
   open: '(',
   close: ')',
-  or: '|',
   minus: '-',
   keyword: ['null', 'NULL', 'empty', 'EMPTY'],
-  matchStr: /\s*(?:\\[^\n]|[^\n,;()|])+\s*/,
+  matchStr: /(?:\\[^\n]|[^\n,;()|])+/,
 })
+
+const actual_next = fstring_lexer.next;
+fstring_lexer.next = (next => () => {
+  for (;;) {
+    const token = next.call(fstring_lexer);
+    if (token == undefined || token.type !== 'WS') {
+      return token;
+    }
+  }
+})(actual_next);
 
 function maybeNot(data: any[]) {
   const [isMinus, op] = data;
@@ -38,7 +49,13 @@ function unescape(str: string) {
 
 function matchOp(matchStr: string) {
   // Strip escaping needed to get past parser
-  const match = matchStr.trim().replace(/\\([,;|()])/g, '$1');
+  let match = matchStr.trimLeft().replace(/\\([,;|()])/g, '$1');
+  const trailingSpaces = match.match(/[^\\\s](\s+)($)/);
+  if (trailingSpaces) {
+    // remove trailing spaces
+    const extraSpaces = trailingSpaces[1];
+    match = match.slice(0, match.length - extraSpaces.length);
+  }
   // It's a LIKE if there are unescaped % or _, we are
   // passing this on to a domain where \ escaping is respected
   if (hasLikeChar(match)) {

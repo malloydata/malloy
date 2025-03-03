@@ -73,6 +73,9 @@ describe('nearley string filters', () => {
   test('not starts with foo', () => {
     expect('-foo%').parsesTo({op: 'starts', match: 'foo', not: true});
   });
+  test('a_% is not a starts with', () => {
+    expect('a_%').parsesTo({op: '~', match: 'a_%'});
+  });
   test('not ends with bar', () => {
     expect('-%bar').parsesTo({op: 'ends', match: 'bar', not: true});
   });
@@ -87,6 +90,18 @@ describe('nearley string filters', () => {
   });
   test('like a_', () => {
     expect('a_').parsesTo({op: '~', match: 'a_'});
+  });
+  test('space a', () => {
+    expect(' a ').parsesTo({op: '=', match: 'a'});
+  });
+  test('escape-space a', () => {
+    expect('\\ a').parsesTo({op: '=', match: ' a'});
+  });
+  test('a escape-space', () => {
+    expect('a\\ ').parsesTo({op: '=', match: 'a '});
+  });
+  test(' spacey null ', () => {
+    expect(' null ').parsesTo({op: 'null'});
   });
   test('is null', () => {
     expect('null').parsesTo({op: 'null'});
