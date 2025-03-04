@@ -106,7 +106,7 @@ Output:  {
   endValue: 82
 }
 
-Input:  , notanumber,, "null", apple pear orange, nulle, nnull, >=,
+Input:  , notanumber,, "null", apple pear orange, nulle, nnull, >=, a(, |, ), ;
 Logs:    {
   severity: 'error',
   message: 'Invalid expression: notanumber',
@@ -152,24 +152,31 @@ Logs:    {
   message: 'Invalid expression: >=',
   startIndex: 56,
   endIndex: 58
-}
-
-Input:  [cat, 100], <cat
-Logs:    {
-  severity: 'error',
-  message: 'Invalid number',
-  startIndex: 1,
-  endIndex: 4
 } {
   severity: 'error',
-  message: 'Invalid expression: <',
-  startIndex: 12,
-  endIndex: 13
+  message: 'Invalid expression: a',
+  startIndex: 60,
+  endIndex: 61
 } {
   severity: 'error',
-  message: 'Invalid expression: cat',
-  startIndex: 13,
-  endIndex: 16
+  message: 'Invalid range expression',
+  startIndex: 61,
+  endIndex: 62
+} {
+  severity: 'error',
+  message: 'Invalid expression: |',
+  startIndex: 64,
+  endIndex: 65
+} {
+  severity: 'error',
+  message: 'Invalid expression: )',
+  startIndex: 67,
+  endIndex: 68
+} {
+  severity: 'error',
+  message: 'Invalid expression: ;',
+  startIndex: 70,
+  endIndex: 71
 }
 
 Input:  -5.5 to 10
@@ -306,6 +313,36 @@ Output:  { operator: '!=', values: [ 'NULL' ] }
 Input:  CA--,D-G
 Output:  { operator: '=', values: [ 'CA--', 'D-G' ] }
 
+Input:  Escaped\;chars\|are\(allowed\)ok
+Output:  { operator: '=', values: [ 'Escaped;chars|are(allowed)ok' ] }
+
+Input:  No(parens, No)parens, No;semicolons, No|ors
+Output:  {
+  operator: '=',
+  values: [ 'No', 'parens', 'No', 'parens', 'No', 'semicolons', 'No', 'ors' ]
+}
+Logs:    {
+  severity: 'error',
+  message: 'Invalid unescaped token: (',
+  startIndex: 2,
+  endIndex: 3
+} {
+  severity: 'error',
+  message: 'Invalid unescaped token: )',
+  startIndex: 13,
+  endIndex: 14
+} {
+  severity: 'error',
+  message: 'Invalid unescaped token: ;',
+  startIndex: 24,
+  endIndex: 25
+} {
+  severity: 'error',
+  message: 'Invalid unescaped token: |',
+  startIndex: 39,
+  endIndex: 40
+}
+
 Input:   hello world, foo="bar baz" , qux=quux
 Output:  {
   operator: '=',
@@ -441,13 +478,13 @@ Output:  {
   }
 }
 
-Input:  before 2025-08-30 08:30:20
+Input:  Before 2025-08-30 08:30:20
 Output:  {
   operator: 'before',
   moment: { type: 'absolute', date: '2025-08-30 08:30:20', unit: 'second' }
 }
 
-Input:  after 2025-10-05
+Input:  AFTER 2025-10-05
 Output:  {
   operator: 'after',
   moment: { type: 'absolute', date: '2025-10-05', unit: 'day' }
@@ -460,19 +497,19 @@ Output:  {
   to: { type: 'absolute', date: '2025-09-18 14:30', unit: 'minute' }
 }
 
-Input:  this year
+Input:  this YEAR
 Output:  {
   operator: 'on',
   moment: { type: 'interval', kind: 'this', unit: 'year' }
 }
 
-Input:  next tuesday
+Input:  Next Tuesday
 Output:  {
   operator: 'on',
   moment: { type: 'interval', kind: 'next', unit: 'tuesday' }
 }
 
-Input:  7 years from now
+Input:  7 years from Now
 Output:  {
   operator: 'on',
   moment: {
@@ -675,6 +712,13 @@ Logs:    {
   endIndex: 18
 }
 
-Input:
+Input:  (2025)
+Logs:    {
+  severity: 'error',
+  message: 'Invalid token (2025)',
+  startIndex: 0,
+  endIndex: 6
+}
 
+Input:
 ```
