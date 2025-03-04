@@ -73,8 +73,6 @@ export function getResultMetadata(
   const rootCell = new RootCell(cell, rootFieldMeta);
   rootFieldMeta.populateAllVegaSpecs(options);
 
-  console.log({rootCell, rootFieldMeta});
-
   return rootCell;
 }
 
