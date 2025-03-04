@@ -25,3 +25,27 @@ export function compileQuery(
 ): Malloy.CompileQueryResponse {
   return Core.compileQuery(request);
 }
+
+export function extractSourceDependencies(
+  request: Malloy.ExtractSourceDependenciesRequest
+): Malloy.ExtractSourceDependenciesResponse {
+  const resp = Core.extractSourceDependencies(request);
+
+  resp.sql_sources = [
+    {
+      connection_name: 'connection',
+      name: 'flights',
+      schema: {
+        fields: [
+          {
+            kind: 'dimension',
+            name: 'carrier',
+            type: {kind: 'string_type'},
+          },
+        ],
+      },
+    },
+  ];
+
+  return resp;
+}

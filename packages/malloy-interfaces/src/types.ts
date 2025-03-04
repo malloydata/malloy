@@ -1743,7 +1743,17 @@ export type CompileSourceResponse = {
   logs?: Array<LogMessage>;
   compiler_needs?: CompilerNeeds;
 };
-
+export type ExtractSourceDependenciesRequest = {
+  model_url: string;
+  name: string;
+  extend_model_url?: string;
+  compiler_needs?: CompilerNeeds;
+};
+export type ExtractSourceDependenciesResponse = {
+  sql_sources?: Array<SQLSource>;
+  logs?: Array<LogMessage>;
+  compiler_needs?: CompilerNeeds;
+};
 export type CompilerNeeds = {
   table_schemas?: Array<SQLTable>;
   sql_schemas?: Array<SQLQuery>;
@@ -2230,7 +2240,7 @@ export type SQLTable = {
   schema?: Schema;
   connection_name: string;
 };
-
+export type SQLSource = SQLQuery | SQLTable;
 export type Schema = {
   fields: Array<FieldInfo>;
 };

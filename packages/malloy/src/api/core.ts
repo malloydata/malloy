@@ -260,6 +260,17 @@ export function compileQuery(
   return statedCompileQuery(state);
 }
 
+export function extractSourceDependencies(
+  request: Malloy.ExtractSourceDependenciesRequest
+  // todo: maybe add CompiledModelState if we want a stateful endpoint for this
+  // for now statefulness is not too important
+): Malloy.ExtractSourceDependenciesResponse {
+  // AR note: this is where what I'm interested in happens
+  const result = _statedCompileModel(newCompileModelState(request));
+
+  return extractSource(result, request.name, request.model_url);
+}
+
 export interface CompileModelState {
   extending?: CompileModelState;
   translator: MalloyTranslator;

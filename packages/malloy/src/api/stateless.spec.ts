@@ -1000,6 +1000,42 @@ LIMIT 101
       expect(result).toMatchObject(expected);
     });
   });
+  describe('extract sql artifact dependencies from a source', () => {
+    test('source with a single table dependency', () => {
+      const flightsTable: Malloy.SQLTable = {
+        connection_name: 'connection',
+        name: 'flights',
+        schema: {
+          fields: [
+            {
+              kind: 'dimension',
+              name: 'carrier',
+              type: {kind: 'string_type'},
+            },
+          ],
+        },
+      };
+
+      const result = compileModel({
+        model_url: 'file://test.malloy',
+        compiler_needs: {
+          table_schemas: [flightsTable],
+          files: [
+            {
+              url: 'file://test.malloy',
+              contents: "source: flights is connection.table('flights')",
+            },
+          ],
+          connections: [{name: 'connection', dialect: 'presto'}],
+        },
+      });
+      const expected: Malloy.ExtractSourceDependenciesResponse = {
+        sql_sources: [flightsTable],
+      };
+
+      expect(result).toMatchObject(expected);
+    });
+  });
   describe('annotations in schemas', () => {
     test('annotations should be carried through the schema', () => {
       const result = compileModel({
