@@ -22,7 +22,6 @@
  */
 
 import {StyleDefaults} from './data_styles';
-import {getDrillQuery} from './drill';
 import {ContainerRenderer} from './container';
 import {HTMLNumberRenderer} from './number';
 import {createDrillIcon, formatTitle, yieldTask} from './utils';

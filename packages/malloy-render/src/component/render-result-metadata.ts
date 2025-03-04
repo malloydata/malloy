@@ -1,5 +1,6 @@
 /*
  * Copyright 2023 Google LLC
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files
@@ -22,7 +23,7 @@
  */
 
 import {Tag} from '@malloydata/malloy-tag';
-import {NestFieldInfo, tagFromAnnotations, valueToMalloy} from './util';
+import {tagFromAnnotations, valueToMalloy} from './util';
 import {DrillEntry, VegaChartProps, VegaConfigHandler} from './types';
 import {mergeVegaConfigs} from './vega/merge-vega-configs';
 import {baseVegaConfig} from './vega/base-vega-config';
@@ -48,24 +49,26 @@ export function getResultMetadata(
       fields.push(field);
     }
   }
-  const rootField: NestFieldInfo = {
-    name: 'root',
-    type: {
-      kind: 'array_type',
-      element_type: {
-        kind: 'record_type',
-        fields,
-      },
-    },
-    annotations: result.annotations,
-  };
 
-  const rootFieldMeta = new RootField(rootField, {
-    modelTag: tagFromAnnotations(result.model_annotations, '## '),
-    store: createResultStore(),
-    sourceName: 'foo', // TODO);
-    queryTimezone: undefined, // TODO
-  });
+  const rootFieldMeta = new RootField(
+    {
+      name: 'root',
+      type: {
+        kind: 'array_type',
+        element_type: {
+          kind: 'record_type',
+          fields,
+        },
+      },
+      annotations: result.annotations,
+    },
+    {
+      modelTag: tagFromAnnotations(result.model_annotations, '## '),
+      store: createResultStore(),
+      sourceName: 'foo', // TODO);
+      queryTimezone: undefined, // TODO
+    }
+  );
   const cell: Malloy.DataWithArrayCell =
     result.data!.kind === 'record_cell'
       ? {kind: 'array_cell', array_value: [result.data!]}

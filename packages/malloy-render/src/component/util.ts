@@ -1,5 +1,6 @@
 /*
  * Copyright 2023 Google LLC
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files
@@ -24,8 +25,7 @@ import * as Malloy from '@malloydata/malloy-interfaces';
 import {Tag} from '@malloydata/malloy-tag';
 import {DurationUnit, isDurationUnit} from '../html/data_styles';
 import {format} from 'ssf';
-import {RenderResultMetadata} from './types';
-import {Cell, Field} from './render-result-metadata';
+import {Cell, Field, NestField} from './render-result-metadata';
 import {renderTimeString} from './render-time';
 
 export function tagFromAnnotations(
@@ -35,113 +35,6 @@ export function tagFromAnnotations(
   const tagLines =
     annotations?.map(a => a.value)?.filter(l => l.startsWith(prefix)) ?? [];
   return Tag.fromTagLines(tagLines).tag ?? new Tag();
-}
-
-function getLocationInParent(
-  f: Malloy.DimensionInfo,
-  metadata: RenderResultMetadata
-) {
-  const parent = metadata.fields.get(f)?.parent?.field;
-  return (
-    (parent && getNestFields(parent).findIndex(pf => pf.name === f.name)) ?? -1
-  );
-}
-
-export function isLastChild(
-  f: Malloy.DimensionInfo,
-  metadata: RenderResultMetadata
-) {
-  const parent = metadata.fields.get(f)?.parent?.field;
-  if (parent)
-    return (
-      getLocationInParent(f, metadata) === getNestFields(parent).length - 1
-    );
-  return true;
-}
-
-export function isFirstChild(
-  f: Malloy.DimensionInfo,
-  metadata: RenderResultMetadata
-) {
-  return getLocationInParent(f, metadata) === 0;
-}
-
-export function valueIsNumber(
-  f: Malloy.DimensionInfo,
-  v: unknown
-): v is number {
-  return isNumber(f) && v !== null;
-}
-
-// export function valueIsTable(
-//   f: Malloy.DimensionInfo,
-//   v: unknown
-// ): v is Malloy.Table {
-//   return f.kind === 'join' && v !== null;
-// }
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function valueIsArray(f: Malloy.DimensionInfo, v: unknown): v is any[] {
-  return isAtomic(f) && isArray(f) && v !== null;
-}
-
-export function valueIsNull(v: Malloy.Cell) {
-  return v.kind === 'null_cell';
-}
-
-export type CellDataValue =
-  | string
-  | number
-  | boolean
-  | Malloy.Cell[]
-  | Malloy.Row
-  | Date
-  | null;
-
-export function getCellValue(v: Malloy.Cell): CellDataValue {
-  switch (v.kind) {
-    case 'null_cell':
-      return null;
-    case 'number_cell':
-      return v.number_value;
-    case 'string_cell':
-      return v.string_value;
-    case 'boolean_cell':
-      return v.boolean_value;
-    case 'date_cell':
-      return new Date(v.date_value);
-    case 'timestamp_cell':
-      return new Date(v.timestamp_value);
-    case 'array_cell':
-      return v.array_value;
-    case 'record_cell':
-      return v.record_value;
-    case 'json_cell':
-      return v.json_value; // TODO parse?
-    case 'sql_native_cell':
-      return v.sql_native_value;
-  }
-}
-
-export function valueIsBoolean(
-  f: Malloy.DimensionInfo,
-  v: unknown
-): v is boolean {
-  return isAtomic(f) && isBoolean(f) && v !== null;
-}
-
-export function valueIsString(
-  f: Malloy.DimensionInfo,
-  s: unknown
-): s is string {
-  return isAtomic(f) && isString(f) && s !== null;
-}
-
-export function valueIsDateTime(
-  f: Malloy.DimensionInfo,
-  v: unknown
-): v is Date {
-  return isAtomic(f) && (isDate(f) || isTimestamp(f)) && v !== null;
 }
 
 export function getTextWidthCanvas(
@@ -174,104 +67,6 @@ export function clamp(s: number, e: number, v: number) {
 
 export function getRangeSize(range: [number, number]) {
   return range[1] - range[0] + 1;
-}
-
-export function tagFor(item: Malloy.DimensionInfo, prefix = '# '): Tag {
-  const lines =
-    item.annotations?.map(a => a.value)?.filter(l => l.startsWith(prefix)) ??
-    [];
-  return Tag.fromTagLines(lines).tag ?? new Tag();
-}
-
-export function isAtomic(field: Malloy.DimensionInfo): boolean {
-  return !isNest(field);
-}
-
-export function wasDimension(field: Malloy.DimensionInfo) {
-  const tag = tagFor(field, '#(malloy) ');
-  return !tag.has('calculation');
-}
-
-export function wasCalculation(field: Malloy.DimensionInfo) {
-  const tag = tagFor(field, '#(malloy) ');
-  return tag.has('calculation');
-}
-
-export type TimestampFieldInfo = Malloy.FieldInfoWithDimension & {
-  type: Malloy.AtomicTypeWithTimestampType;
-};
-
-export function isTimestamp(
-  field: Malloy.DimensionInfo
-): field is TimestampFieldInfo {
-  return field.type.kind === 'timestamp_type';
-}
-
-export type DateFieldInfo = Malloy.FieldInfoWithDimension & {
-  type: Malloy.AtomicTypeWithDateType;
-};
-
-export function isDate(field: Malloy.DimensionInfo): field is DateFieldInfo {
-  return field.type.kind === 'date_type';
-}
-
-export function getFieldTimeframe(
-  field: Malloy.DimensionInfo
-): Malloy.TimestampTimeframe | undefined {
-  if (field.type.kind !== 'date_type' && field.type.kind !== 'timestamp_type') {
-    throw new Error('Not a date or timeframe');
-  }
-  return field.type.timeframe;
-}
-
-export type RepeatedRecordFieldInfo = Malloy.DimensionInfo & {
-  type: {
-    kind: 'array_type';
-    element_type: {
-      kind: 'record_type';
-    };
-  };
-};
-
-export type RecordFieldInfo = Malloy.DimensionInfo & {
-  type: {
-    kind: 'record_type';
-  };
-};
-
-export type NestFieldInfo = RepeatedRecordFieldInfo | RecordFieldInfo;
-
-export type NestCell = Malloy.CellWithArrayCell | Malloy.CellWithRecordCell;
-
-export function isNest(field: Malloy.DimensionInfo): field is NestFieldInfo {
-  return (
-    (field.type.kind === 'array_type' &&
-      field.type.element_type.kind === 'record_type') ||
-    field.type.kind === 'record_type'
-  );
-}
-
-export function getNestFields(field: NestFieldInfo): Malloy.DimensionInfo[] {
-  if (field.type.kind === 'array_type') {
-    return field.type.element_type.fields;
-  }
-  return field.type.fields;
-}
-
-export function isNumber(field: Malloy.DimensionInfo): boolean {
-  return field.type.kind === 'number_type';
-}
-
-export function isArray(field: Malloy.DimensionInfo): boolean {
-  return field.type.kind === 'array_type';
-}
-
-export function isBoolean(field: Malloy.DimensionInfo): boolean {
-  return field.type.kind === 'boolean_type';
-}
-
-export function isString(field: Malloy.DimensionInfo): boolean {
-  return field.type.kind === 'string_type';
 }
 
 export function formatTimeUnit(
@@ -363,81 +158,6 @@ export function getText(
   return formatTimeUnit(0, targetUnit, {numFormat, terse});
 }
 
-// export function getParentRecord(
-//   data: Malloy.Cell,
-//   field: Malloy.DimensionInfo,
-//   metadata: RenderResultMetadata,
-//   n = 0
-// ) {
-//   let record = data;
-//   while (n > 0 && metadata.fields.get(field)?.parent) {
-//     n -= 1;
-//     record = metadata.fields.get(field)!.parent!;
-//   }
-//   return record;
-// }
-
-// function getPathInfo(path: string): {levelsUp: number; pathSegments: string[]} {
-//   const pathParts = path.split('/');
-//   const levelsUp = pathParts.filter(part => part === '..').length + 1;
-//   const pathSegments = pathParts.filter(part => part !== '..' && part !== '');
-//   return {levelsUp, pathSegments};
-// }
-
-export function getDynamicValue<T = unknown>(_foo: {
-  tag: Tag;
-  data: Malloy.Cell;
-  // field: Malloy.FieldInfo;
-  // metadata: RenderResultMetadata;
-}): T | undefined {
-  return undefined; // TODO
-  // try {
-  //   const path = tag.tag('field')?.text() ?? '';
-  //   const {levelsUp, pathSegments} = getPathInfo(path);
-  //   let scope = getParentRecord(data, field, metadata, levelsUp);
-  //   while (pathSegments.length > 0 && 'cell' in scope) {
-  //     const fieldName = pathSegments.shift()!;
-  //     scope = scope.cell(fieldName);
-  //   }
-  //   return scope?.value as T;
-  // } catch (err) {
-  //   return undefined;
-  // }
-}
-
-export function getCell(
-  parent: NestFieldInfo,
-  row: Malloy.Row,
-  name: string
-): Malloy.Cell {
-  const index = getNestFields(parent).findIndex(f => f.name === name);
-  return row.cells[index];
-}
-
-export function getAllCells(
-  parent: NestFieldInfo,
-  row: Malloy.Row
-): {[name: string]: Malloy.Cell} {
-  const fields = getNestFields(parent);
-  const obj = {};
-  for (let i = 0; i < fields.length; i++) {
-    obj[fields[i].name] = row.cells[i];
-  }
-  return obj;
-}
-
-export function getAllCellValues(
-  parent: NestFieldInfo,
-  row: Malloy.Row
-): {[name: string]: CellDataValue} {
-  const fields = getNestFields(parent);
-  const obj = {};
-  for (let i = 0; i < fields.length; i++) {
-    obj[fields[i].name] = getCellValue(row.cells[i]);
-  }
-  return obj;
-}
-
 function filterQuote(s: string): string {
   return `'${s.replace(/(['\\])/g, '\\$1')}'`;
 }
@@ -458,4 +178,13 @@ export function valueToMalloy(value: Cell) {
   } else {
     return 'invalid_drill_literal()';
   }
+}
+
+export function walkFields(e: NestField, cb: (f: Field) => void) {
+  e.fields.forEach(f => {
+    cb(f);
+    if (Field.isNestField(f)) {
+      walkFields(f, cb);
+    }
+  });
 }

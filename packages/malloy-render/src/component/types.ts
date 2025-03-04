@@ -6,11 +6,8 @@
  */
 
 import {Tag} from '@malloydata/malloy-tag';
-import {Item, Runtime, Spec, View} from 'vega';
+import {Item, Spec, View} from 'vega';
 import {JSX} from 'solid-js';
-import {ResultStore} from './result-store/result-store';
-import * as Malloy from '@malloydata/malloy-interfaces';
-import {NestFieldInfo} from './util';
 import {Field, RecordCell, RepeatedRecordCell} from './render-result-metadata';
 
 export type VegaSignalRef = {signal: string};
@@ -39,38 +36,6 @@ export type FieldHeaderRangeMap = Record<
   string,
   {abs: [number, number]; rel: [number, number]; depth: number}
 >;
-
-export interface FieldRenderMetadata {
-  field: Malloy.DimensionInfo;
-  key: string;
-  min: number | null;
-  max: number | null;
-  minString: string | null;
-  maxString: string | null;
-  values: Set<string | number | boolean>;
-  maxRecordCt: number | null;
-  maxUniqueFieldValueCounts: Map<Malloy.DimensionInfo, number>;
-  vegaChartProps?: VegaChartProps;
-  runtime?: Runtime;
-  renderAs: string;
-  path: string[];
-  parent: ParentFieldRenderMetadata | undefined;
-}
-
-export interface ParentFieldRenderMetadata extends FieldRenderMetadata {
-  field: NestFieldInfo;
-}
-
-export interface RenderResultMetadata {
-  fields: Map<Malloy.DimensionInfo, FieldRenderMetadata>;
-  fieldsByKey: Map<string, Malloy.DimensionInfo>;
-  // getData: (cell: Malloy.Cell) => CellDataValue;
-  modelTag: Tag;
-  resultTag: Tag;
-  sourceName: string;
-  store: ResultStore;
-  rootField: NestFieldInfo;
-}
 
 export type MalloyClickEventPayload = {
   field: Field;

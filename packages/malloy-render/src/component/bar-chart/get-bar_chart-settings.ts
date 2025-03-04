@@ -6,9 +6,9 @@
  */
 
 import {Tag} from '@malloydata/malloy-tag';
-import {walkFields} from '../plot/util';
 import {Channel} from '../types';
 import {RepeatedRecordField} from '../render-result-metadata';
+import {walkFields} from '../util';
 
 export type BarChartSettings = {
   xChannel: Channel;

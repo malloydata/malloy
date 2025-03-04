@@ -6,9 +6,9 @@
  */
 
 import {Tag} from '@malloydata/malloy-tag';
-import {walkFields} from '../plot/util'; // TODO make this a method
 import {Channel} from '../types';
 import {NestField} from '../render-result-metadata';
+import {walkFields} from '../util';
 
 export type LineChartSettings = {
   xChannel: Channel;
