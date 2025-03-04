@@ -104,18 +104,35 @@ describe('query builder', () => {
           'kind': 'refinement',
           'base': {
             'kind': 'view_reference',
-            'name': 'by_carrier',
+            'name': 'top_carriers',
           },
           'refinement': {
             'kind': 'segment',
             'operations': [
               {
+                'kind': 'group_by',
+                'field': {
+                  'expression': {
+                    'kind': 'field_reference',
+                    'name': 'carrier',
+                    'path': [],
+                  },
+                },
+              },
+              {
                 'kind': 'nest',
                 'name': 'by_state',
                 'view': {
                   'definition': {
-                    'kind': 'view_reference',
-                    'name': 'by_state',
+                    'kind': 'refinement',
+                    'base': {
+                      'kind': 'view_reference',
+                      'name': 'by_state',
+                    },
+                    'refinement': {
+                      'kind': 'segment',
+                      'operations': [],
+                    },
                   },
                 },
               },
@@ -130,29 +147,55 @@ describe('query builder', () => {
       model: flights_model,
       from,
       to: {
-        definition: {
-          kind: 'arrow',
-          source_reference: {name: 'flights'},
-          view: {
-            kind: 'segment',
-            operations: [
-              {
-                kind: 'group_by',
-                field: {
-                  expression: {
-                    kind: 'field_reference',
-                    name: 'carrier',
+        'definition': {
+          'kind': 'arrow',
+          'source_reference': {
+            'name': 'flights',
+          },
+          'view': {
+            'kind': 'refinement',
+            'base': {
+              'kind': 'view_reference',
+              'name': 'top_carriers',
+            },
+            'refinement': {
+              'kind': 'segment',
+              'operations': [
+                {
+                  'kind': 'group_by',
+                  'field': {
+                    'expression': {
+                      'kind': 'field_reference',
+                      'name': 'carrier',
+                      'path': [],
+                    },
                   },
                 },
-              },
-              {
-                kind: 'order_by',
-                field_reference: {
-                  name: 'carrier',
+                {
+                  'kind': 'order_by',
+                  'field_reference': {
+                    'name': 'carrier',
+                  },
                 },
-                direction: 'asc',
-              },
-            ],
+                {
+                  'kind': 'nest',
+                  'name': 'by_state',
+                  'view': {
+                    'definition': {
+                      'kind': 'refinement',
+                      'base': {
+                        'kind': 'view_reference',
+                        'name': 'by_state',
+                      },
+                      'refinement': {
+                        'kind': 'segment',
+                        'operations': [],
+                      },
+                    },
+                  },
+                },
+              ],
+            },
           },
         },
       },
