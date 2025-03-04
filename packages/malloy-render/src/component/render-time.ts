@@ -22,13 +22,13 @@ export function renderTimeString(
       return `${dateDisplay} ${hours}:${minutes}`;
     }
     case 'hour': {
-      return `${dateDisplay} ${hours}:00 for 1 hour`;
+      return `${dateDisplay} ${hours}`;
     }
     case 'day': {
       return `${dateDisplay}`;
     }
     case 'week': {
-      return `WK${dateDisplay}`;
+      return `${dateDisplay}-WK`;
     }
     case 'month': {
       return `${fullYear}-${fullMonth}`;

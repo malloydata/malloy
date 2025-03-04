@@ -305,6 +305,18 @@ describe('Tag access', () => {
     });
     expect(ext.toString()).toBe('# a.b = [3, 4]');
   });
+  test('set tag array element with properties', () => {
+    const base = Tag.withPrefix('# ');
+    const ext = base
+      .set(['a', 'b', 0, 'a'], 3)
+      .set(['c', 0], 'foo')
+      .set(['c', 0, 'a'], 4);
+    expect(ext).tagsAre({
+      a: {properties: {b: {eq: [{properties: {a: {eq: '3'}}}]}}},
+      c: {eq: [{eq: 'foo', properties: {a: {eq: '4'}}}]},
+    });
+    expect(ext.toString()).toBe('# a.b = [{ a = 3 }] c = [foo { a = 4 }]');
+  });
   test('soft remove', () => {
     const base = Tag.fromTagLine('# a.b.c = [{ d = 1 }]').tag;
     const ext = base.delete('a', 'b', 'c', 0, 'd').delete('a', 'b', 'c', 0);

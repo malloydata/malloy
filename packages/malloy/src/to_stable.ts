@@ -13,9 +13,11 @@ import {
   isTurtle,
   JoinType,
   ModelDef,
+  Query,
   RecordTypeDef,
   RepeatedRecordTypeDef,
   ResultMetadataDef,
+  ResultStructMetadataDef,
   SourceDef,
   TimestampUnit,
 } from './model';
@@ -44,26 +46,57 @@ export function modelDefToModelInfo(modelDef: ModelDef): Malloy.ModelInfo {
       modelInfo.entries.push(sourceInfo);
     } else if (entry.type === 'query') {
       const outputStruct = getResultStructDefForQuery(modelDef, entry);
+      const annotations = getAnnotationsFromField(entry);
+      const resultMetadataAnnotation = outputStruct.resultMetadata
+        ? getResultStructMetadataAnnotation(
+            outputStruct,
+            outputStruct.resultMetadata
+          )
+        : undefined;
+      const fieldAnnotations = [
+        ...(annotations ?? []),
+        ...(resultMetadataAnnotation ? [resultMetadataAnnotation] : []),
+      ];
       const queryInfo: Malloy.ModelEntryValueWithSource = {
         kind: 'source',
         name,
         schema: {
           fields: convertFieldInfos(outputStruct, outputStruct.fields),
         },
+        annotations: fieldAnnotations.length > 0 ? fieldAnnotations : undefined,
       };
       modelInfo.entries.push(queryInfo);
     }
   }
   for (const query of modelDef.queryList) {
     const outputStruct = getResultStructDefForQuery(modelDef, query);
+    const annotations = getAnnotationsFromField(query);
+    const resultMetadataAnnotation = outputStruct.resultMetadata
+      ? getResultStructMetadataAnnotation(
+          outputStruct,
+          outputStruct.resultMetadata
+        )
+      : undefined;
+    const fieldAnnotations = [
+      ...(annotations ?? []),
+      ...(resultMetadataAnnotation ? [resultMetadataAnnotation] : []),
+    ];
     const queryInfo: Malloy.AnonymousQueryInfo = {
       schema: {
         fields: convertFieldInfos(outputStruct, outputStruct.fields),
       },
+      annotations: fieldAnnotations.length > 0 ? fieldAnnotations : undefined,
     };
     modelInfo.anonymous_queries.push(queryInfo);
   }
   return modelInfo;
+}
+
+function getAnnotationsFromField(field: FieldDef | Query): Malloy.Annotation[] {
+  const taglines = annotationToTaglines(field.annotation);
+  return taglines.map(tagline => ({
+    value: tagline,
+  }));
 }
 
 export function convertFieldInfos(source: SourceDef, fields: FieldDef[]) {
@@ -76,10 +109,20 @@ export function convertFieldInfos(source: SourceDef, fields: FieldDef[]) {
     const annotations = rawAnnotations.length > 0 ? rawAnnotations : undefined;
     if (isTurtle(field)) {
       const outputStruct = getResultStructDefForView(source, field);
+      const resultMetadataAnnotation = outputStruct.resultMetadata
+        ? getResultStructMetadataAnnotation(
+            outputStruct,
+            outputStruct.resultMetadata
+          )
+        : undefined;
+      const fieldAnnotations = [
+        ...(annotations ?? []),
+        ...(resultMetadataAnnotation ? [resultMetadataAnnotation] : []),
+      ];
       const fieldInfo: Malloy.FieldInfo = {
         kind: 'view',
         name: field.as ?? field.name,
-        annotations,
+        annotations: fieldAnnotations.length > 0 ? fieldAnnotations : undefined,
         schema: {fields: convertFieldInfos(outputStruct, outputStruct.fields)},
       };
       result.push(fieldInfo);
@@ -89,10 +132,17 @@ export function convertFieldInfos(source: SourceDef, fields: FieldDef[]) {
       if (!aggregate && !scalar) continue;
       if (field.type === 'error') continue;
       const resultMetadataAnnotation = field.resultMetadata
-        ? getResultMetadataAnnotation(field.resultMetadata)
+        ? getResultMetadataAnnotation(field, field.resultMetadata)
         : undefined;
+      // const resultStructMetadataAnnotation =
+      //   isSourceDef(field) && field.resultMetadata
+      //     ? getResultStructMetadataAnnotation(field, field.resultMetadata)
+      //     : undefined;
       const fieldAnnotations = [
         ...(annotations ?? []),
+        // ...(resultStructMetadataAnnotation
+        //   ? [resultStructMetadataAnnotation]
+        //   : []),
         ...(resultMetadataAnnotation ? [resultMetadataAnnotation] : []),
       ];
       const fieldInfo: Malloy.FieldInfo = {
@@ -119,6 +169,7 @@ export function convertFieldInfos(source: SourceDef, fields: FieldDef[]) {
 }
 
 function getResultMetadataAnnotation(
+  field: FieldDef,
   resultMetadata: ResultMetadataDef
 ): Malloy.Annotation | undefined {
   const tag = Tag.withPrefix('#(malloy) ');
@@ -129,6 +180,47 @@ function getResultMetadataAnnotation(
   }
   if (resultMetadata.fieldKind === 'measure') {
     tag.set(['calculation']);
+    hasAny = true;
+  }
+  if (resultMetadata.fieldKind === 'dimension') {
+    const dot = '.';
+    // If field is joined-in from another table i.e. of type `tableName.columnName`,
+    // return sourceField, else return name because this could be a renamed field.
+    const drillExpression =
+      resultMetadata?.sourceExpression ||
+      (resultMetadata?.sourceField.includes(dot)
+        ? resultMetadata?.sourceField
+        : field.name);
+    tag.set(['drill_expression'], drillExpression);
+    hasAny = true;
+  }
+  return hasAny
+    ? {
+        value: tag.toString(),
+      }
+    : undefined;
+}
+
+function getResultStructMetadataAnnotation(
+  field: SourceDef,
+  resultMetadata: ResultStructMetadataDef
+): Malloy.Annotation | undefined {
+  const tag = Tag.withPrefix('#(malloy) ');
+  let hasAny = false;
+  if (resultMetadata.limit !== undefined) {
+    tag.set(['limit'], resultMetadata.limit);
+    hasAny = true;
+  }
+  if (resultMetadata.orderBy) {
+    for (let i = 0; i < resultMetadata.orderBy.length; i++) {
+      const orderBy = resultMetadata.orderBy[i];
+      const orderByField =
+        typeof orderBy.field === 'number'
+          ? field.fields[orderBy.field].as ?? field.fields[orderBy.field].name
+          : orderBy.field;
+      const direction = orderBy.dir ?? null;
+      tag.set(['ordered_by', i, orderByField], direction);
+    }
     hasAny = true;
   }
   return hasAny
@@ -210,7 +302,7 @@ function convertRecordType(
       const annotations: Malloy.Annotation[] = [];
       if ('resultMetadata' in f) {
         if (f.resultMetadata) {
-          const ann = getResultMetadataAnnotation(f.resultMetadata);
+          const ann = getResultMetadataAnnotation(f, f.resultMetadata);
           if (ann) {
             annotations.push(ann);
           }

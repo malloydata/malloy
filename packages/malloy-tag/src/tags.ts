@@ -328,6 +328,7 @@ export class Tag implements TagInterface {
       if (child.properties) {
         const props = Object.keys(child.properties);
         if (
+          !isArrayEl &&
           props.length === 1 &&
           !props.some(c => (child.properties ?? {})[c].deleted) &&
           child.eq === undefined
@@ -335,7 +336,8 @@ export class Tag implements TagInterface {
           annotation += '.';
           addChildren(child);
         } else {
-          annotation += ' { ';
+          if (!isArrayEl || child.eq !== undefined) annotation += ' ';
+          annotation += '{ ';
           addChildren(child);
           annotation += ' }';
         }

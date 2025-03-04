@@ -524,12 +524,10 @@ export function statedCompileQuery(
     const index = queries.length - 1;
     const query = result.modelDef.queryList[index];
     const schema = result.model.anonymous_queries[index].schema;
+    const annotations = result.model.anonymous_queries[index].annotations;
     try {
       const queryModel = new QueryModel(result.modelDef);
       const translatedQuery = queryModel.compileQuery(query);
-      const annotations = annotationToTaglines(query.annotation).map(l => ({
-        value: l,
-      }));
       const modelAnnotations = annotationToTaglines(
         result.modelDef.annotation
       ).map(l => ({
@@ -540,7 +538,8 @@ export function statedCompileQuery(
           sql: translatedQuery.sql,
           schema,
           connection_name: translatedQuery.connectionName,
-          annotations: annotations.length > 0 ? annotations : undefined,
+          annotations:
+            annotations && annotations.length > 0 ? annotations : undefined,
           model_annotations:
             modelAnnotations.length > 0 ? modelAnnotations : undefined,
         },

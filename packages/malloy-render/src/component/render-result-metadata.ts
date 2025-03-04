@@ -22,8 +22,8 @@
  */
 
 import {Tag} from '@malloydata/malloy-tag';
-import {NestFieldInfo, tagFromAnnotations} from './util';
-import {VegaChartProps, VegaConfigHandler} from './types';
+import {NestFieldInfo, tagFromAnnotations, valueToMalloy} from './util';
+import {DrillEntry, VegaChartProps, VegaConfigHandler} from './types';
 import {mergeVegaConfigs} from './vega/merge-vega-configs';
 import {baseVegaConfig} from './vega/base-vega-config';
 import {renderTimeString} from './render-time';
@@ -265,6 +265,8 @@ const RENDER_TAG_LIST = [
 ];
 
 const CHART_TAG_LIST = ['bar_chart', 'line_chart'];
+
+type DrillValue = {field: Field; value: Cell};
 
 export function shouldRenderChartAs(tag: Tag) {
   const tagNamesInOrder = Object.keys(tag.properties ?? {}).reverse();
@@ -1184,6 +1186,69 @@ export abstract class CellBase {
 
   compareTo(_other: Cell): number {
     return 0;
+  }
+
+  private getDrillValues(): DrillValue[] {
+    let current: Cell | undefined = this.asCell();
+    const result: DrillValue[] = [];
+    while (current) {
+      if (current && current.isArray()) {
+        current = current.parent;
+      }
+      if (current === undefined) {
+        break;
+      }
+      if (current && current.isRecord()) {
+        const parentRecord = current;
+        const dimensions = current.field.fields.filter(
+          f => f.isAtomic() && f.wasDimension()
+        );
+        result.push(
+          ...dimensions.map(dim => ({
+            field: dim,
+            value: parentRecord.column(dim.name),
+          }))
+        );
+      }
+      current = current.parent;
+    }
+    return result;
+  }
+
+  getDrillExpressions(): string[] {
+    const drillValues = this.getDrillValues();
+    return drillValues.map(({field, value}) => {
+      const valueStr = valueToMalloy(value);
+      return `${field.drillExpression()} = ${valueStr}`;
+    });
+  }
+
+  getDrillEntries(): DrillEntry[] {
+    const drillValues = this.getDrillValues();
+    const result: DrillEntry[] = [];
+    for (const drill of drillValues) {
+      if (
+        drill.value.isNull() ||
+        drill.value.isTime() ||
+        drill.value.isString() ||
+        drill.value.isNumber() ||
+        drill.value.isBoolean()
+      ) {
+        result.push({field: drill.field, value: drill.value.value});
+      }
+    }
+    return result;
+  }
+
+  getDrillQuery(): string {
+    const whereClause = this.getDrillExpressions()
+      .map(entry => `    ${entry}`)
+      .join(',\n');
+    return `
+      run: ${this.field.root().sourceName} -> {
+  where:
+${whereClause}
+} + { select: * }`.trim();
   }
 }
 

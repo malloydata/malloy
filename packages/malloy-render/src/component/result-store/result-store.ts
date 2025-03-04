@@ -1,6 +1,6 @@
 import {createStore, produce, unwrap} from 'solid-js/store';
-import {DrillData, DimensionContextEntry} from '../types';
-import {Field} from '../render-result-metadata';
+import {DrillData} from '../types';
+import {Cell} from '../render-result-metadata';
 
 interface BrushDataBase {
   fieldRefId: string;
@@ -131,32 +131,23 @@ export function createResultStore() {
 export type ResultStore = ReturnType<typeof createResultStore>;
 
 export async function copyExplorePathQueryToClipboard({
-  field,
-  dimensionContext,
+  data,
   onDrill,
 }: {
-  field: Field;
-  dimensionContext: DimensionContextEntry[];
+  data: Cell;
   onDrill?: (drillData: DrillData) => void;
 }) {
+  const expressions = data.getDrillExpressions();
+  const field = data.field;
   const root = field.root();
-  const dimensionContextEntries = dimensionContext;
+  const drillEntries = data.getDrillEntries();
 
-  // TODO the name is wrong, as it is not the full path; drilling all broken...
-  const whereClause = dimensionContextEntries
-    .map(
-      entry => `\t\t${field.drillExpression()} = ${JSON.stringify(entry.value)}` // TODO JSON.stringify super doesn't work here...
-    )
-    .join(',\n');
+  const whereClause = expressions.map(entry => `\t\t${entry}`).join(',\n');
 
-  const query = `
-run: ${root.sourceName} -> {
-where:
-${whereClause}
-} + { select: * }`.trim();
+  const query = data.getDrillQuery();
 
   const drillData: DrillData = {
-    dimensionFilters: dimensionContextEntries,
+    dimensionFilters: drillEntries,
     copyQueryToClipboard: async () => {
       try {
         await navigator.clipboard.writeText(query);

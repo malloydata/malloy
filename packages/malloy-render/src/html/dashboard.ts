@@ -22,7 +22,6 @@
  */
 
 import {StyleDefaults} from './data_styles';
-import {getDrillQuery} from './drill';
 import {ContainerRenderer} from './container';
 import {HTMLTextRenderer} from './text';
 import {
@@ -167,7 +166,8 @@ export class HTMLDashboardRenderer extends ContainerRenderer {
           'padding: 8px; vertical-align: top; width: 25px; cursor: pointer; position: absolute; top: 5px; right: 5px;';
         drillElement.onclick = () => {
           if (this.options.onDrill) {
-            const {drillQuery, drillFilters} = getDrillQuery(row);
+            const drillQuery = row.getDrillQuery();
+            const drillFilters = row.getDrillExpressions();
             this.options.onDrill(drillQuery, drillIcon, drillFilters);
           }
         };

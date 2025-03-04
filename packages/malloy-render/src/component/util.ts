@@ -25,7 +25,8 @@ import {Tag} from '@malloydata/malloy-tag';
 import {DurationUnit, isDurationUnit} from '../html/data_styles';
 import {format} from 'ssf';
 import {RenderResultMetadata} from './types';
-import {Field} from './render-result-metadata';
+import {Cell, Field} from './render-result-metadata';
+import {renderTimeString} from './render-time';
 
 export function tagFromAnnotations(
   annotations: Malloy.Annotation[] | undefined,
@@ -435,4 +436,26 @@ export function getAllCellValues(
     obj[fields[i].name] = getCellValue(row.cells[i]);
   }
   return obj;
+}
+
+function filterQuote(s: string): string {
+  return `'${s.replace(/(['\\])/g, '\\$1')}'`;
+}
+
+export function valueToMalloy(value: Cell) {
+  if (value.isNull()) {
+    return 'null';
+  } else if (value.isString()) {
+    return filterQuote(value.value);
+  } else if (value.isNumber()) {
+    return value.value.toString();
+  } else if (value.isBoolean()) {
+    return value.value.toString();
+  } else if (value.isTime()) {
+    return (
+      '@' + renderTimeString(value.value, value.isDate(), value.field.timeframe)
+    );
+  } else {
+    return 'invalid_drill_literal()';
+  }
 }

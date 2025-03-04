@@ -124,14 +124,13 @@ export type DashboardConfig = {
 };
 
 export type DrillData = {
-  dimensionFilters: DimensionContextEntry[];
+  dimensionFilters: DrillEntry[];
   copyQueryToClipboard: () => Promise<void>;
   query: string;
   whereClause: string;
 };
 
-export type DimensionContextEntry = {
+export type DrillEntry = {
   field: Field;
-  // value: string | number | boolean | Date; // TODO
   value: string | number | boolean | Date | null;
 };

@@ -271,6 +271,7 @@ describe('api', () => {
       const result = compileQuery({
         model_url: 'file://test.malloy',
         query: {
+          annotations: [{value: '#(test) hello'}],
           definition: {
             kind: 'arrow',
             source_reference: {name: 'flights'},
@@ -307,6 +308,88 @@ describe('api', () => {
             {
               url: 'file://test.malloy',
               contents: "source: flights is connection.table('flights')",
+            },
+          ],
+          connections: [{name: 'connection', dialect: 'duckdb'}],
+        },
+      });
+      const expected: Malloy.CompileQueryResponse = {
+        result: {
+          connection_name: 'connection',
+          annotations: [
+            {value: '#(test) hello\n'},
+            // TODO generated tags have no newline?
+            {value: '#(malloy) ordered_by = [{ carrier = asc }]'},
+          ],
+          sql: `SELECT \n\
+   base."carrier" as "carrier"
+FROM flights as base
+GROUP BY 1
+ORDER BY 1 asc NULLS LAST
+`,
+          schema: {
+            fields: [
+              {
+                kind: 'dimension',
+                name: 'carrier',
+                type: {kind: 'string_type'},
+              },
+            ],
+          },
+        },
+      };
+      expect(result).toMatchObject(expected);
+    });
+    test('compile query with nest', () => {
+      const result = compileQuery({
+        model_url: 'file://test.malloy',
+        query: {
+          definition: {
+            kind: 'arrow',
+            source_reference: {name: 'flights'},
+            view: {
+              kind: 'segment',
+              operations: [
+                {
+                  kind: 'nest',
+                  view: {
+                    definition: {
+                      kind: 'view_reference',
+                      name: 'by_carrier',
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+        compiler_needs: {
+          table_schemas: [
+            {
+              connection_name: 'connection',
+              name: 'flights',
+              schema: {
+                fields: [
+                  {
+                    kind: 'dimension',
+                    name: 'carrier',
+                    type: {kind: 'string_type'},
+                  },
+                ],
+              },
+            },
+          ],
+          files: [
+            {
+              url: 'file://test.malloy',
+              contents: `
+                source: flights is connection.table('flights') extend {
+                  view: by_carrier is {
+                    group_by: carrier
+                    aggregate: flight_count is count()
+                  }
+                }
+              `,
             },
           ],
           connections: [{name: 'connection', dialect: 'duckdb'}],

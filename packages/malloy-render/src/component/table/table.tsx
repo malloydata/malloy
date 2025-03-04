@@ -19,10 +19,8 @@ import {applyRenderer} from '../apply-renderer';
 import {createStore, produce} from 'solid-js/store';
 import {createVirtualizer, Virtualizer} from '@tanstack/solid-virtual';
 import {useConfig} from '../render';
-import {DimensionContextEntry} from '../types';
 import {copyExplorePathQueryToClipboard} from '../result-store/result-store';
 import {
-  AtomicField,
   Field,
   RecordCell,
   RecordOrRepeatedRecordCell,
@@ -167,7 +165,6 @@ const TableField = (props: {
   field: Field;
   row: RecordCell;
   rowPath: number[];
-  dimensionContext: DimensionContextEntry[];
 }) => {
   let renderValue: JSXElement = '';
   let renderAs = '';
@@ -178,7 +175,6 @@ const TableField = (props: {
       table: {
         rowLimit: 100, // Limit nested tables to 100 records
         currentRow: [...props.rowPath],
-        // dimensionContext,
       },
     },
   }));
@@ -235,11 +231,7 @@ const TableField = (props: {
     evt.stopPropagation();
     if (isDrillingEnabled && !DRILL_RENDERER_IGNORE_LIST.includes(renderAs)) {
       copyExplorePathQueryToClipboard({
-        field: props.field,
-        dimensionContext: [
-          ...tableCtx!.dimensionContext,
-          ...props.dimensionContext,
-        ],
+        data: props.row.column(props.field.name),
         onDrill: config.onDrill,
       });
     }
@@ -569,21 +561,6 @@ const MalloyTableRoot = (_props: {
     }));
   };
 
-  const getRowDimensionContext = (row: RecordCell) => {
-    const dimensionContext: DimensionContextEntry[] = [];
-
-    const dimensions = row.field.fields.filter(
-      f => f.isAtomic() && f.wasDimension()
-    );
-    dimensions.forEach(field => {
-      dimensionContext.push({
-        field,
-        value: row.column(field.name).value as string | number | boolean | Date,
-      });
-    });
-    return dimensionContext;
-  };
-
   return (
     <div
       class="malloy-table"
@@ -676,9 +653,6 @@ const MalloyTableRoot = (_props: {
                           field={field}
                           row={data()[virtualRow.index]}
                           rowPath={getRowPath(virtualRow.index)}
-                          dimensionContext={getRowDimensionContext(
-                            data()[virtualRow.index]
-                          )}
                         />
                       )}
                     </For>
@@ -709,7 +683,6 @@ const MalloyTableRoot = (_props: {
                     field={field}
                     row={row}
                     rowPath={getRowPath(idx())}
-                    dimensionContext={getRowDimensionContext(row)}
                   />
                 )}
               </For>
@@ -733,36 +706,16 @@ const MalloyTable: Component<{
   disableVirtualization?: boolean;
   shouldFillWidth?: boolean;
   currentRow?: number[];
-  dimensionContext?: DimensionContextEntry[];
 }> = props => {
   const hasTableCtx = !!useTableContext();
   const tableCtx = createMemo<TableContext>(() => {
     if (hasTableCtx) {
       const parentCtx = useTableContext()!;
-      const parentRecord = props.data.parent;
-      const dimensionContext: DimensionContextEntry[] = [];
-      if (parentRecord?.isRecord()) {
-        const dimensions = parentRecord.field.fields.filter(
-          f => f.isAtomic() && f.wasDimension()
-        ) as AtomicField[];
-        dimensions.forEach(field => {
-          dimensionContext.push({
-            field,
-            value: parentRecord.column(field.name).value as
-              | string
-              | number
-              | boolean
-              | Date
-              | null, // TODO better assertion here?
-          });
-        });
-      }
       return {
         ...parentCtx,
         root: false,
         currentRow: props.currentRow ?? parentCtx.currentRow,
         currentExplore: props.data.field.path,
-        dimensionContext: [...parentCtx.dimensionContext, ...dimensionContext],
       };
     }
 
@@ -775,7 +728,6 @@ const MalloyTable: Component<{
       headerSizeStore: createStore({}),
       currentRow: [],
       currentExplore: props.data.field.path,
-      dimensionContext: [],
     };
   });
 
