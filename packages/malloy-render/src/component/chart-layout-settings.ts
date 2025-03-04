@@ -22,8 +22,7 @@
  */
 
 import {Tag} from '@malloydata/malloy-tag';
-import {scale, AlignValue, TextBaselineValue} from 'vega';
-// import {locale} from 'vega';
+import {scale, locale, AlignValue, TextBaselineValue} from 'vega';
 import {getTextWidthDOM} from './util';
 import {renderNumericField} from './render-numeric-field';
 import {Field, NestField} from './render-result-metadata';
@@ -132,13 +131,13 @@ export function getChartLayoutSettings(
   if (hasYAxis) {
     const maxAxisVal = yScale.domain().at(1);
     const minAxisVal = yScale.domain().at(0);
-    // const l = locale();
+    const l = locale();
     const formattedMin = yField.isAtomic()
       ? renderNumericField(yField, minAxisVal)
-      : 'FOO'; //l.format(',')(minAxisVal); // TODO LOCALE
+      : l.format(',')(minAxisVal);
     const formattedMax = yField.isAtomic()
       ? renderNumericField(yField, maxAxisVal)
-      : 'FOO'; //l.format(',')(maxAxisVal);
+      : l.format(',')(maxAxisVal);
     // const formattedMin = l.format(',')(minAxisVal);
     // const formattedMax = l.format(',')(maxAxisVal);
     yTitleSize = 31; // Estimate for now, can be dynamic later
