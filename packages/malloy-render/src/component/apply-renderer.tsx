@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Tag} from '@malloydata/malloy-tag';
 import {JSXElement} from 'solid-js';
 import {renderNumericField} from './render-numeric-field';
 import {renderLink} from './render-link';
@@ -16,15 +15,8 @@ import {renderImage} from './render-image';
 import {Dashboard} from './dashboard/dashboard';
 import {renderTime} from './render-time';
 import {LegacyChart} from './legacy-charts/legacy_chart';
-import {Cell} from './render-result-metadata';
-
-export type RendererProps = {
-  dataColumn: Cell;
-  tag: Tag;
-  customProps?: Record<string, Record<string, unknown>>;
-};
-
-export const NULL_SYMBOL = '∅';
+import {NULL_SYMBOL} from './util';
+import {RendererProps} from './types';
 
 export function applyRenderer(props: RendererProps) {
   const {dataColumn, customProps = {}} = props;

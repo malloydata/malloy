@@ -41,22 +41,30 @@ import {tagFromAnnotations} from '../component/util';
 import {HTMLDashboardRenderer} from './dashboard';
 import {HTMLListRenderer} from './list';
 import {HTMLListDetailRenderer} from './list_detail';
+import {Result, API} from '@malloydata/malloy';
 
 export class HTMLView {
   constructor(private document: Document) {}
 
   async render(
-    result: Malloy.Result,
+    result: Result | Malloy.Result,
     options: RendererOptions
   ): Promise<HTMLElement> {
-    const modelTag = tagFromAnnotations(result.model_annotations, '## ');
+    let malloyResult: Malloy.Result;
+    // TODO this check is bad, but I can't get VSCode to work linked without it...
+    if (result instanceof Result || 'modelDef' in result) {
+      malloyResult = API.util.wrapResult(result as Result);
+    } else {
+      malloyResult = result;
+    }
+    const modelTag = tagFromAnnotations(malloyResult.model_annotations, '## ');
     const isNextRenderer = !modelTag.has('renderer_legacy');
     if (isNextRenderer) {
       const hasNextRenderer =
         !!this.document.defaultView?.customElements.get('malloy-render');
       if (hasNextRenderer) {
         const el = this.document.createElement('malloy-render');
-        el.malloyResult = result;
+        el['malloyResult'] = malloyResult;
         const nextRendererOptions = options.nextRendererOptions ?? {};
         for (const [key, val] of Object.entries(nextRendererOptions)) {
           el[key] = val;
@@ -69,7 +77,7 @@ export class HTMLView {
         );
       }
     }
-    const rootCell = getResultMetadata(result);
+    const rootCell = getResultMetadata(malloyResult);
     const renderer = makeRenderer(
       rootCell.field,
       this.document,

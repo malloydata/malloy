@@ -8,7 +8,18 @@
 import {Tag} from '@malloydata/malloy-tag';
 import {Item, Spec, View} from 'vega';
 import {JSX} from 'solid-js';
-import {Field, RecordCell, RepeatedRecordCell} from './render-result-metadata';
+import {
+  Cell,
+  Field,
+  RecordCell,
+  RepeatedRecordCell,
+} from './render-result-metadata';
+
+export type RendererProps = {
+  dataColumn: Cell;
+  tag: Tag;
+  customProps?: Record<string, Record<string, unknown>>;
+};
 
 export type VegaSignalRef = {signal: string};
 export type VegaPadding = {

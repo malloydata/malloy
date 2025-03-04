@@ -28,6 +28,8 @@ import {format} from 'ssf';
 import {Cell, Field, NestField} from './render-result-metadata';
 import {renderTimeString} from './render-time';
 
+export const NULL_SYMBOL = '∅';
+
 export function tagFromAnnotations(
   annotations: Malloy.Annotation[] | undefined,
   prefix = '# '

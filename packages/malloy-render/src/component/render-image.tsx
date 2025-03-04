@@ -1,4 +1,4 @@
-import {RendererProps} from './apply-renderer';
+import {RendererProps} from './types';
 
 export function renderImage(props: RendererProps) {
   const imgTag = props.tag.tag('image');

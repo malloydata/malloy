@@ -32,12 +32,12 @@ import {renderNumericField} from '../render-numeric-field';
 import {createMeasureAxis} from '../vega/measure-axis';
 import {getCustomTooltipEntries} from './get-custom-tooltips-entries';
 import {getMarkName} from '../vega/vega-utils';
-import {NULL_SYMBOL} from '../apply-renderer';
 import {
   CellValue,
   RecordCell,
   RepeatedRecordField,
 } from '../render-result-metadata';
+import {NULL_SYMBOL} from '../util';
 
 type BarDataRecord = {
   x: string | number;

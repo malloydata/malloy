@@ -23,7 +23,7 @@
  */
 
 import {Tag} from '@malloydata/malloy-tag';
-import {tagFromAnnotations, valueToMalloy} from './util';
+import {NULL_SYMBOL, tagFromAnnotations, valueToMalloy} from './util';
 import {DrillEntry, VegaChartProps, VegaConfigHandler} from './types';
 import {mergeVegaConfigs} from './vega/merge-vega-configs';
 import {baseVegaConfig} from './vega/base-vega-config';
@@ -33,7 +33,6 @@ import {createResultStore, ResultStore} from './result-store/result-store';
 import {generateLineChartVegaSpec} from './line-chart/generate-line_chart-vega-spec';
 import {parse, Config, Runtime} from 'vega';
 import * as Malloy from '@malloydata/malloy-interfaces';
-import {NULL_SYMBOL} from './apply-renderer';
 
 export type GetResultMetadataOptions = {
   getVegaConfigOverride?: VegaConfigHandler;

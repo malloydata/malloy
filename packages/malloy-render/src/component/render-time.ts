@@ -1,4 +1,4 @@
-import {RendererProps} from './apply-renderer';
+import {RendererProps} from './types';
 
 function padZeros(num: number, length = 2) {
   return `${'0'.repeat(length - 1)}${num}`.slice(-length);

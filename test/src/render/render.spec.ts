@@ -24,8 +24,8 @@
 import {ModelMaterializer} from '@malloydata/malloy';
 import {RuntimeList, runtimeFor} from '../runtimes';
 import {describeIfDatabaseAvailable} from '../util';
-import {HTMLView} from '@malloydata/render';
 import {JSDOM} from 'jsdom';
+import {HTMLView} from '@malloydata/render';
 
 async function runUnsupportedRenderTest(
   connectionName: string,

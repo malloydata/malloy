@@ -6,6 +6,9 @@ global.document = window.document;
 global.HTMLElement = window.HTMLElement;
 global.customElements = window.customElements;
 global.CSSStyleSheet = window.CSSStyleSheet;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+global.window = window as any;
+global.navigator = window.navigator;
 
 /**
  * A replacement for [test()] that mimics [test.skip()]

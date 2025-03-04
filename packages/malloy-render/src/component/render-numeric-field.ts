@@ -23,8 +23,7 @@
 
 import {Currency, DurationUnit} from '../html/data_styles';
 import {format} from 'ssf';
-import {NULL_SYMBOL} from './apply-renderer';
-import {getText} from './util';
+import {getText, NULL_SYMBOL} from './util';
 import {Field} from './render-result-metadata';
 
 export function renderNumericField(
