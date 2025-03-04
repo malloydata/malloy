@@ -64,7 +64,6 @@ export function getResultMetadata(
     {
       modelTag: tagFromAnnotations(result.model_annotations, '## '),
       store: createResultStore(),
-      sourceName: 'foo', // TODO);
       queryTimezone: result.query_timezone,
     }
   );
@@ -333,6 +332,10 @@ export abstract class FieldBase {
       }
       throw new Error('Root field was not an instance of RootField');
     }
+  }
+
+  get sourceName() {
+    return this.metadataTag.text('source_name') ?? '__source__';
   }
 
   get name() {
@@ -655,21 +658,18 @@ export class RepeatedRecordField extends ArrayField {
 }
 
 export class RootField extends RepeatedRecordField {
-  public readonly sourceName: string;
   public readonly store: ResultStore;
   public readonly modelTag: Tag;
   public readonly queryTimezone: string | undefined;
   constructor(
     public readonly field: RepeatedRecordFieldInfo,
     metadata: {
-      sourceName: string;
       store: ResultStore;
       modelTag: Tag;
       queryTimezone: string | undefined;
     }
   ) {
     super(field, undefined);
-    this.sourceName = metadata.sourceName;
     this.store = metadata.store;
     this.modelTag = metadata.modelTag;
     this.queryTimezone = metadata.queryTimezone;
@@ -1119,7 +1119,8 @@ export abstract class CellBase {
       this instanceof StringCell ||
       this instanceof TimestampCell ||
       this instanceof BooleanCell ||
-      this instanceof NullCell
+      this instanceof NullCell ||
+      this instanceof SQLNativeCell
     ) {
       return this;
     }

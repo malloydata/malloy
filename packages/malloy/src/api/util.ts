@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {Tag} from '@malloydata/malloy-tag';
 import {annotationToTaglines} from '../annotation';
 import {InfoConnection as OldConnection} from '../connection';
 import {Result} from '../malloy';
@@ -192,6 +193,11 @@ export function wrapResult(result: Result): Malloy.Result {
   const annotations = annotationToTaglines(result.annotation).map(l => ({
     value: l,
   }));
+  annotations.push({
+    value: Tag.withPrefix('#(malloy) ')
+      .set(['source_name'], result.sourceExplore.name)
+      .toString(),
+  });
   return {
     schema,
     data: mapData(result.data.toObject(), schema),

@@ -22,6 +22,7 @@ import {modelDefToModelInfo} from '../to_stable';
 import {sqlKey} from '../model/sql_block';
 import {SQLSourceRequest} from '../lang/translate-response';
 import {annotationToTaglines} from '../annotation';
+import {Tag} from '@malloydata/malloy-tag';
 
 // TODO find where this should go...
 function tableKey(connectionName: string, tablePath: string): string {
@@ -524,7 +525,7 @@ export function statedCompileQuery(
     const index = queries.length - 1;
     const query = result.modelDef.queryList[index];
     const schema = result.model.anonymous_queries[index].schema;
-    const annotations = result.model.anonymous_queries[index].annotations;
+    const annotations = result.model.anonymous_queries[index].annotations ?? [];
     try {
       const queryModel = new QueryModel(result.modelDef);
       const translatedQuery = queryModel.compileQuery(query);
@@ -533,13 +534,17 @@ export function statedCompileQuery(
       ).map(l => ({
         value: l,
       }));
+      annotations.push({
+        value: Tag.withPrefix('#(malloy) ')
+          .set(['source_name'], translatedQuery.sourceExplore)
+          .toString(),
+      });
       return {
         result: {
           sql: translatedQuery.sql,
           schema,
           connection_name: translatedQuery.connectionName,
-          annotations:
-            annotations && annotations.length > 0 ? annotations : undefined,
+          annotations: annotations.length > 0 ? annotations : undefined,
           model_annotations:
             modelAnnotations.length > 0 ? modelAnnotations : undefined,
           query_timezone: translatedQuery.queryTimezone,
