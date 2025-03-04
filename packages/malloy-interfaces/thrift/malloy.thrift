@@ -437,6 +437,10 @@ struct JSONCell {
   1: required string json_value,
 }
 
+struct SQLNativeCell {
+  1: required string sql_native_value,
+}
+
 struct ArrayCell {
   1: required list<Cell> array_value,
 }
@@ -456,7 +460,7 @@ union Cell {
   7: required RecordCell record_cell,
   8: required ArrayCell array_cell,
   9: required NullCell null_cell,
-  // TODO sql_native???
+  10: required SQLNativeCell sql_native_cell,
 }
 
 struct Row {

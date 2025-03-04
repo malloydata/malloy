@@ -77,7 +77,8 @@ export type CellType =
   | 'json_cell'
   | 'record_cell'
   | 'array_cell'
-  | 'null_cell';
+  | 'null_cell'
+  | 'sql_native_cell';
 export type Cell =
   | CellWithStringCell
   | CellWithBooleanCell
@@ -87,7 +88,8 @@ export type Cell =
   | CellWithJSONCell
   | CellWithRecordCell
   | CellWithArrayCell
-  | CellWithNullCell;
+  | CellWithNullCell
+  | CellWithSQLNativeCell;
 export type CellWithStringCell = {kind: 'string_cell'} & StringCell;
 export type CellWithBooleanCell = {kind: 'boolean_cell'} & BooleanCell;
 export type CellWithDateCell = {kind: 'date_cell'} & DateCell;
@@ -97,6 +99,7 @@ export type CellWithJSONCell = {kind: 'json_cell'} & JSONCell;
 export type CellWithRecordCell = {kind: 'record_cell'} & RecordCell;
 export type CellWithArrayCell = {kind: 'array_cell'} & ArrayCell;
 export type CellWithNullCell = {kind: 'null_cell'} & NullCell;
+export type CellWithSQLNativeCell = {kind: 'sql_native_cell'} & SQLNativeCell;
 export type CompileModelRequest = {
   model_url: string;
   extend_model_url?: string;
@@ -399,6 +402,9 @@ export type RunQueryResponse = {
   result?: Result;
   logs?: Array<LogMessage>;
   compiler_needs?: CompilerNeeds;
+};
+export type SQLNativeCell = {
+  sql_native_value: string;
 };
 export type SQLNativeType = {
   sql_type?: string;

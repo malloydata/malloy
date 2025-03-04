@@ -156,6 +156,12 @@ source: products is duckdb.table("static/data/products.parquet") extend {
     order_by: id
   }
 
+  #(story) story="Top Level Record"
+  view: record is {
+    aggregate: total_cost is cost.sum()
+    aggregate: avg_retail is retail_price.avg()
+  }
+
   #(story)
   # table.size=fill
   view: nested_full_width is {
@@ -228,3 +234,11 @@ source: null_test is duckdb.sql("select unnest([1,null,3]) as i") extend {
   #(story)
   view: null_field is {select: *}
 }
+
+source: uuid is duckdb.sql("SELECT 'Sample Text' AS text_column, 42 AS number_column, '123e4567-e89b-12d3-a456-426614174000'::UUID AS uuid_column, {'name': 'foo'} AS user") extend {
+  #(story)
+  view: unsupported_field is {
+    group_by: id is uuid_column,
+    name is user.name,
+  }
+};

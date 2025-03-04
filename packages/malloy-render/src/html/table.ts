@@ -501,8 +501,8 @@ export class HTMLTableRenderer extends ContainerRenderer {
         }
       }
     } else {
-      dimensions = table.field.fieldsWithOrder.filter(f =>
-        f.field.wasDimension()
+      dimensions = table.field.fieldsWithOrder.filter(
+        f => f.field.isAtomic() && f.field.wasDimension()
       );
     }
 

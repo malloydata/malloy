@@ -83,12 +83,15 @@ function valueToDate(value: unknown): Date {
 }
 
 export function mapData(data: QueryData, schema: Malloy.Schema): Malloy.Data {
-  function mapValue(value: QueryValue, field: Malloy.FieldInfo): Malloy.Cell {
+  function mapValue(
+    value: QueryValue,
+    field: Malloy.DimensionInfo
+  ): Malloy.Cell {
     if (value === null) {
       return {kind: 'null_cell'};
     } else if (
-      field.kind === 'dimension' &&
-      (field.type.kind === 'date_type' || field.type.kind === 'timestamp_type')
+      field.type.kind === 'date_type' ||
+      field.type.kind === 'timestamp_type'
     ) {
       const time_value = valueToDate(value).toISOString();
       if (field.type.kind === 'date_type') {
@@ -96,39 +99,39 @@ export function mapData(data: QueryData, schema: Malloy.Schema): Malloy.Data {
       } else {
         return {kind: 'timestamp_cell', timestamp_value: time_value};
       }
-    } else if (typeof value === 'boolean') {
+    } else if (field.type.kind === 'boolean_type') {
+      if (typeof value !== 'boolean') {
+        throw new Error('Invalid boolean');
+      }
       return {kind: 'boolean_cell', boolean_value: value};
-    } else if (typeof value === 'number') {
+    } else if (field.type.kind === 'number_type') {
+      if (typeof value !== 'number') {
+        throw new Error('Invalid number');
+      }
       return {kind: 'number_cell', number_value: value};
-    } else if (value instanceof Date) {
-      return {kind: 'date_cell', date_value: value.toString()}; // TODO what kind of string format
-    } else if (typeof value === 'string') {
+    } else if (field.type.kind === 'string_type') {
+      if (typeof value !== 'string') {
+        throw new Error('Invalid string');
+      }
       return {kind: 'string_cell', string_value: value};
-    } else if ('value' in value) {
-      return {kind: 'string_cell', string_value: 'TODO'};
-    } else if (Array.isArray(value)) {
-      if (field.kind === 'join' || field.kind === 'view') {
-        throw new Error('Invalid join/view in result somehow');
-      } else {
-        const type = field.type;
-        if (type.kind !== 'array_type') {
-          throw new Error('Invalid array');
-        }
-        return {
-          kind: 'array_cell',
-          array_value: value.map(value =>
-            mapValue(value, {
-              kind: 'dimension',
-              name: 'foo',
-              type: type.element_type,
-            })
-          ),
-        };
+    } else if (field.type.kind === 'array_type') {
+      if (!Array.isArray(value)) {
+        throw new Error('Invalid array');
       }
+      return {
+        kind: 'array_cell',
+        array_value: value.map(value =>
+          mapValue(value, {
+            name: 'foo',
+            type: (field.type as Malloy.AtomicTypeWithArrayType).element_type,
+          })
+        ),
+      };
+    } else if (field.type.kind === 'json_type') {
+      return {kind: 'json_cell', json_value: JSON.stringify(value)};
+    } else if (field.type.kind === 'sql_native_type') {
+      return {kind: 'sql_native_cell', sql_native_value: JSON.stringify(value)};
     } else {
-      if (field.kind === 'join' || field.kind === 'view') {
-        throw new Error('Invalid result');
-      }
       const type = field.type;
       if (type.kind !== 'record_type') {
         throw new Error(
@@ -156,6 +159,12 @@ export function mapData(data: QueryData, schema: Malloy.Schema): Malloy.Data {
     const cells: Malloy.Cell[] = [];
     for (const f of field.schema.fields) {
       const value = row[f.name]; // TODO this might not work for weird names?
+      if (f.kind !== 'dimension') {
+        // TODO this makes me think that the result schema should be a repeated record dimension instead of a schema
+        throw new Error(
+          'Invalid result -- expected all fields to be dimensions'
+        );
+      }
       const cell = mapValue(value, f);
       cells.push(cell);
     }

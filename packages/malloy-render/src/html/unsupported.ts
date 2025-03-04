@@ -36,6 +36,13 @@ export class HTMLUnsupportedRenderer implements Renderer {
       return data.value;
     }
     const value = data.value;
+    if (
+      typeof value === 'string' ||
+      typeof value === 'number' ||
+      typeof value === 'boolean'
+    ) {
+      return value.toString();
+    }
     if (typeof value === 'object') {
       // TODO this probably doesn't work with the new data structure.
       // Maybe borrow the JSON renderer's mapper?

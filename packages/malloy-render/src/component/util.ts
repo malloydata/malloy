@@ -117,6 +117,8 @@ export function getCellValue(v: Malloy.Cell): CellDataValue {
       return v.record_value;
     case 'json_cell':
       return v.json_value; // TODO parse?
+    case 'sql_native_cell':
+      return v.sql_native_value;
   }
 }
 

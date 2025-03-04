@@ -510,7 +510,7 @@ export abstract class FieldBase {
         );
       i++;
     }
-    return childPath.slice(startIndex).join('.');
+    return Field.pathStringToPath(childPath.slice(startIndex));
   }
 }
 
@@ -704,8 +704,15 @@ export class RecordField extends FieldBase {
   populateAllVegaSpecs(options: GetResultMetadataOptions): void {
     this.fields.forEach(f => f.populateAllVegaSpecs(options));
   }
+
+  private _fieldsWithOrder: SortableField[] | undefined = undefined;
   public get fieldsWithOrder(): SortableField[] {
-    return []; // TODO
+    if (this._fieldsWithOrder === undefined) {
+      this._fieldsWithOrder = [
+        ...this.fields.map<SortableField>(field => ({field, dir: 'asc'})),
+      ];
+    }
+    return this._fieldsWithOrder;
   }
 }
 
@@ -958,7 +965,8 @@ export type Cell =
   | JSONCell
   | StringCell
   | TimestampCell
-  | BooleanCell;
+  | BooleanCell
+  | SQLNativeCell;
 export const Cell = {
   from(cell: Malloy.Cell, field: Field, parent: NestCell): Cell {
     switch (cell.kind) {
@@ -1024,6 +1032,14 @@ export const Cell = {
         }
         throw new Error(
           'Expected boolean data to be associated with boolean field'
+        );
+      }
+      case 'sql_native_cell': {
+        if (field instanceof SQLNativeField) {
+          return new SQLNativeCell(cell, field, parent);
+        }
+        throw new Error(
+          'Expected sql_native data to be associated with sql_native field'
         );
       }
     }
@@ -1403,7 +1419,41 @@ export class JSONCell extends CellBase {
   }
 
   get value() {
-    return this.cell.json_value;
+    try {
+      return JSON.parse(this.cell.json_value);
+    } catch {
+      return this.cell.json_value;
+    }
+  }
+
+  compareTo(other: Cell) {
+    const value = this.value.toString();
+    const otherValue = other.toString();
+    if (value === otherValue) {
+      return 0;
+    } else if (value > otherValue) {
+      return 1;
+    } else {
+      return -1;
+    }
+  }
+}
+
+export class SQLNativeCell extends CellBase {
+  constructor(
+    public readonly cell: Malloy.CellWithSQLNativeCell,
+    public readonly field: SQLNativeField,
+    public readonly parent: NestCell | undefined
+  ) {
+    super(cell, field, parent);
+  }
+
+  get value() {
+    try {
+      return JSON.parse(this.cell.sql_native_value);
+    } catch {
+      return this.cell.sql_native_value;
+    }
   }
 
   compareTo(other: Cell) {
