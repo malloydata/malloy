@@ -542,6 +542,7 @@ export function statedCompileQuery(
             annotations && annotations.length > 0 ? annotations : undefined,
           model_annotations:
             modelAnnotations.length > 0 ? modelAnnotations : undefined,
+          query_timezone: translatedQuery.queryTimezone,
         },
       };
     } catch (error) {

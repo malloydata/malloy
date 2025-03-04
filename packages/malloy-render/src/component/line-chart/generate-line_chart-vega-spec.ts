@@ -32,7 +32,7 @@ import {renderNumericField} from '../render-numeric-field';
 import {getMarkName} from '../vega/vega-utils';
 import {getCustomTooltipEntries} from '../bar-chart/get-custom-tooltips-entries';
 import {CellValue, NestField, RecordCell} from '../render-result-metadata';
-import { NULL_SYMBOL } from '../util';
+import {NULL_SYMBOL} from '../util';
 
 type LineDataRecord = {
   x: string | number;

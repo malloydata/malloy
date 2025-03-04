@@ -475,7 +475,6 @@ export const NOTHING = 0;
 //           UNION ALL SELECT 'Miguel', 'Wednesday', 1, 2, 3, 35, 4.2, 31, 1, 'E'
 //           UNION ALL SELECT 'Miguel', 'Wednesday', 1, 2, 4, 47, 4.3, 76, 0, 'F' """) extend {
 
-
 //             view: flatten is {
 //               group_by: nm
 //               aggregate: avg_height is height.avg()
@@ -533,7 +532,6 @@ export const NOTHING = 0;
 //                     SELECT CAST('2021-12-11 10:20:00' AS datetime) as times
 //           UNION ALL SELECT CAST('2021-01-01 05:40:00' AS datetime)
 //           UNION ALL SELECT CAST('2021-04-01 00:59:00' AS datetime)""")
-
 
 //         query:
 //           data_trunc is timeDataTrunc -> {

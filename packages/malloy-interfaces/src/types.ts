@@ -362,7 +362,7 @@ export type Range = {
   end: Position;
 };
 export type RecordCell = {
-  record_value: Row;
+  record_value: Array<Cell>;
 };
 export type RecordType = {
   fields: Array<DimensionInfo>;
@@ -380,9 +380,7 @@ export type Result = {
   connection_name: string;
   annotations?: Array<Annotation>;
   model_annotations?: Array<Annotation>;
-};
-export type Row = {
-  cells: Array<Cell>;
+  query_timezone?: string;
 };
 export type RunIndexQueryRequest = {
   model_url: string;

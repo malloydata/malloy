@@ -170,7 +170,7 @@ export function mapData(data: QueryData, schema: Malloy.Schema): Malloy.Data {
     }
     return {
       kind: 'record_cell',
-      record_value: {cells},
+      record_value: cells,
     };
   }
   const rootField: Malloy.FieldInfoWithJoin = {
@@ -197,5 +197,6 @@ export function wrapResult(result: Result): Malloy.Result {
     data: mapData(result.data.toObject(), schema),
     connection_name: result.connectionName,
     annotations: annotations.length > 0 ? annotations : undefined,
+    query_timezone: result.data.field.queryTimezone,
   };
 }

@@ -65,7 +65,7 @@ export function getResultMetadata(
       modelTag: tagFromAnnotations(result.model_annotations, '## '),
       store: createResultStore(),
       sourceName: 'foo', // TODO);
-      queryTimezone: undefined, // TODO
+      queryTimezone: result.query_timezone,
     }
   );
   const cell: Malloy.DataWithArrayCell =
@@ -1333,7 +1333,7 @@ export class RecordCell extends CellBase {
     super(cell, field, parent);
     for (let i = 0; i < field.fields.length; i++) {
       const childField = field.fields[i];
-      const childCell = Cell.from(cell.record_value.cells[i], childField, this);
+      const childCell = Cell.from(cell.record_value[i], childField, this);
       this.cells[childField.name] = childCell;
     }
   }

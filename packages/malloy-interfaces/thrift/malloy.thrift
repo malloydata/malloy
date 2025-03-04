@@ -447,7 +447,7 @@ struct ArrayCell {
 
 // A record is also just a list of values, because we don't need to store the names in the data
 struct RecordCell {
-  1: required Row record_value,
+  1: required list<Cell> record_value,
 }
 
 union Cell {
@@ -463,10 +463,6 @@ union Cell {
   10: required SQLNativeCell sql_native_cell,
 }
 
-struct Row {
-  1: required list<Cell> cells,
-}
-
 union Data {
   1: required RecordCell record_cell,
   2: required ArrayCell array_cell,
@@ -480,6 +476,7 @@ struct Result {
   4: required string connection_name,
   5: optional list<Annotation> annotations,
   6: optional list<Annotation> model_annotations,
+  7: optional string query_timezone,
 }
 
 /*
