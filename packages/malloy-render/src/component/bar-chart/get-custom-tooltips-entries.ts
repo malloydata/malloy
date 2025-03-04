@@ -26,7 +26,7 @@ export function getCustomTooltipEntries({
         label: f.name,
         value: () =>
           applyRenderer({
-            dataColumn: rec.row.column(f.name),
+            dataColumn: rec.__row.column(f.name),
             tag: f.tag,
             customProps: {
               table: {

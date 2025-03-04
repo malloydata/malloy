@@ -52,17 +52,21 @@ export function getLineChartSettings(
     type: null,
   };
 
+  function getField(ref: string) {
+    return explore.pathTo(explore.fieldAt([ref]));
+  }
+
   // Parse top level tags
   if (chart.text('x')) {
-    xChannel.fields.push(chart.text('x')!);
+    xChannel.fields.push(getField(chart.text('x')!));
   }
   if (chart.text('y')) {
-    yChannel.fields.push(chart.text('y')!);
+    yChannel.fields.push(getField(chart.text('y')!));
   } else if (chart.textArray('y')) {
-    yChannel.fields.push(...chart.textArray('y')!);
+    yChannel.fields.push(...chart.textArray('y')!.map(getField));
   }
   if (chart.text('series')) {
-    seriesChannel.fields.push(chart.text('series')!);
+    seriesChannel.fields.push(getField(chart.text('series')!));
   }
 
   // Parse embedded tags

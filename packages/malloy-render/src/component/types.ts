@@ -76,10 +76,8 @@ export type ChartTooltipEntry = {
   }[];
 };
 
-// type CellValues = {[name: string]: CellDataValue};
-
 export type MalloyVegaDataRecord = {
-  row: RecordCell;
+  __row: RecordCell;
 };
 
 type ScaleType = 'quantitative' | 'nominal';

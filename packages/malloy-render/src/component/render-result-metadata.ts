@@ -238,11 +238,10 @@ export const Field = {
     );
   },
   pathFromString(path: string) {
-    if (path === '') return [];
-    return path.split('///'); // TODO this won't work for fields with dots in their names?
+    return JSON.parse(path);
   },
-  pathStringToPath(path: string[]) {
-    return path.join('///'); // TODO this won't work for fields with dots in their names?
+  pathToString(path: string[]) {
+    return JSON.stringify(path);
   },
 };
 
@@ -363,7 +362,7 @@ export abstract class FieldBase {
   }
 
   get key(): string {
-    return Field.pathStringToPath(this.path);
+    return Field.pathToString(this.path);
   }
 
   fieldAtPath(path: string[]): Field {
@@ -512,7 +511,7 @@ export abstract class FieldBase {
         );
       i++;
     }
-    return Field.pathStringToPath(childPath.slice(startIndex));
+    return Field.pathToString(childPath.slice(startIndex));
   }
 }
 

@@ -34,6 +34,7 @@ import {getCustomTooltipEntries} from './get-custom-tooltips-entries';
 import {getMarkName} from '../vega/vega-utils';
 import {
   CellValue,
+  Field,
   RecordCell,
   RepeatedRecordField,
 } from '../render-result-metadata';
@@ -170,7 +171,9 @@ export function generateBarChartVegaSpec(
   const yAxis = !chartSettings.yAxis.hidden
     ? createMeasureAxis({
         type: 'y',
-        title: settings.yChannel.fields.join(', '),
+        title: settings.yChannel.fields
+          .map(f => explore.fieldAt(f).name)
+          .join(', '),
         tickCount: chartSettings.yAxis.tickCount ?? 'ceil(height/40)',
         labelLimit: chartSettings.yAxis.width + 10,
         // Use first y number style for axis labels
@@ -336,16 +339,19 @@ export function generateBarChartVegaSpec(
   const valuesData: Data = {name: 'values', values: [], transform: []};
   // For measure series, unpivot the measures into the series column
   if (isMeasureSeries) {
-    // Pull the series values from the source record, then remap the names to remove __source
+    // Pull the series values from the source record, then remap the names to remove __values
     valuesData.transform!.push({
       type: 'fold',
-      fields: settings.yChannel.fields.map(f => `__source.${f}`),
+      // TODO this does not support field names that have dots in them
+      fields: settings.yChannel.fields.map(
+        f => `__values.${explore.fieldAt(f).name}`
+      ),
       as: ['series', 'y'],
     });
     valuesData.transform!.push({
       type: 'formula',
       as: 'series',
-      expr: "replace(datum.series, '__source.', '')",
+      expr: "replace(datum.series, '__values.', '')",
     });
   }
   if (isStacking) {
@@ -624,7 +630,7 @@ export function generateBarChartVegaSpec(
       {
         orient: 'bottom',
         scale: 'xscale',
-        title: xFieldPath,
+        title: xField.name,
         labelOverlap: 'greedy',
         labelSeparation: 4,
         ...chartSettings.xAxis,
@@ -765,7 +771,8 @@ export function generateBarChartVegaSpec(
     };
 
     const mappedData: {
-      __source: {[name: string]: CellValue};
+      __row: RecordCell;
+      __values: {[name: string]: CellValue};
       x: CellValue;
       y: CellValue;
       series: CellValue;
@@ -780,9 +787,10 @@ export function generateBarChartVegaSpec(
       // Map data fields to chart properties
       const seriesVal = seriesField
         ? row.column(seriesField.name).value
-        : yFieldPath;
+        : yField.name;
       mappedData.push({
-        __source: row.allCellValues(),
+        __values: row.allCellValues(),
+        __row: row,
         x: xValue ?? NULL_SYMBOL,
         y: row.column(yField.name).value,
         series: seriesVal,
@@ -812,9 +820,12 @@ export function generateBarChartVegaSpec(
       let records: BarDataRecord[] = [];
       const colorScale = view.scale('color');
       const formatY = (rec: BarDataRecord) => {
-        const fieldName = rec.series;
         // If dimensional, use the first yField for formatting. Else the series value is the field path of the field to use
-        const field = isDimensionalSeries ? yField : explore.fieldAt(fieldName);
+        const field = isDimensionalSeries
+          ? yField
+          : explore.fieldAt(
+              seriesField ? Field.pathFromString(rec.series) : [rec.series]
+            );
 
         const value = rec.y;
         return field.isAtomic()

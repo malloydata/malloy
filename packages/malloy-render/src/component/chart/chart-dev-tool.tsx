@@ -16,20 +16,20 @@ type ChartDevToolProps = {
   onClose: () => void;
 } & ChartProps;
 
-// TODO remove this
 function stripMalloyRecord(record: Record<string, unknown>) {
+  const result = {};
   for (const [key, value] of Object.entries(record)) {
-    if (key === '__malloyDataRecord') {
-      delete record['__malloyDataRecord'];
-    } else {
-      if (value === null || typeof value !== 'object') continue;
-      if (Array.isArray(value)) {
-        value.forEach(stripMalloyRecord);
+    if (key !== '__values' && key !== '__row') {
+      if (value === null || typeof value !== 'object') {
+        result[key] = value;
+      } else if (Array.isArray(value)) {
+        result[key] = value.map(stripMalloyRecord);
       } else {
-        stripMalloyRecord(value as Record<string, unknown>);
+        result[key] = stripMalloyRecord(value as Record<string, unknown>);
       }
     }
   }
+  return result;
 }
 
 export default function ChartDevTool(props: ChartDevToolProps) {
@@ -86,8 +86,7 @@ export default function ChartDevTool(props: ChartDevToolProps) {
         } else {
           dataValues = valueEntry?.map(v => v.datum ?? {}) ?? [];
         }
-        const clonedValues = structuredClone(dataValues);
-        clonedValues.forEach(stripMalloyRecord);
+        const clonedValues = structuredClone(dataValues.map(stripMalloyRecord));
 
         setVegaData(state => ({
           ...state,
