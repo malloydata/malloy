@@ -21,6 +21,8 @@
 //  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //  */
 
+export const NOTHING = 0;
+
 // import {runtimeFor} from '../runtimes';
 // import {getDrillQuery} from '@malloydata/render';
 

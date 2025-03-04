@@ -21,6 +21,8 @@
 //  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //  */
 
+export const NOTHING = 0;
+
 // import {ModelMaterializer} from '@malloydata/malloy';
 // import {RuntimeList, runtimeFor} from '../runtimes';
 // import {describeIfDatabaseAvailable} from '../util';
