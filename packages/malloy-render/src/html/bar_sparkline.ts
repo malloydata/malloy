@@ -29,8 +29,7 @@ import {BarSparkLineRenderOptions, StyleDefaults} from './data_styles';
 import {RendererFactory} from './renderer_factory';
 import {RendererOptions} from './renderer_types';
 import {Renderer} from './renderer';
-import * as Malloy from '@malloydata/malloy-interfaces';
-import { getNestFields, isNest } from '../component/util';
+import {Cell, Field} from '../component/render-result-metadata';
 
 export class HTMLBarSparkLineRenderer extends HTMLBarChartRenderer {
   override getSize(): {height: number; width: number} {
@@ -41,14 +40,11 @@ export class HTMLBarSparkLineRenderer extends HTMLBarChartRenderer {
     }
   }
 
-  override getVegaLiteSpec(
-    data: Malloy.Cell,
-    field: Malloy.DimensionInfo
-  ): lite.TopLevelSpec {
-    if (!isNest(field)) {
+  override getVegaLiteSpec(data: Cell): lite.TopLevelSpec {
+    if (!data.isRepeatedRecord()) {
       throw new Error('BarSparkLineRenderer only supports nest fields');
     }
-    const fields = getNestFields(field);
+    const fields = data.field.fields;
     const xField = fields[0];
     const yField = fields[1];
     const colorField = fields[2];
@@ -104,7 +100,7 @@ export class HTMLBarSparkLineRenderer extends HTMLBarChartRenderer {
       ...DEFAULT_SPEC,
       ...this.getSize(),
       data: {
-        values: this.mapData(data),
+        values: this.mapData(data.rows),
       },
       config: {
         view: {
@@ -125,7 +121,7 @@ export class HTMLBarSparkLineRenderer extends HTMLBarChartRenderer {
 export class BarSparkLineRendererFactory extends RendererFactory<BarSparkLineRenderOptions> {
   public static readonly instance = new BarSparkLineRendererFactory();
 
-  isValidMatch(field: Field | Explore): boolean {
+  isValidMatch(field: Field): boolean {
     return field.name.endsWith('_bar');
   }
 
@@ -133,7 +129,7 @@ export class BarSparkLineRendererFactory extends RendererFactory<BarSparkLineRen
     document: Document,
     styleDefaults: StyleDefaults,
     rendererOptions: RendererOptions,
-    _field: Field | Explore,
+    _field: Field,
     options: BarSparkLineRenderOptions,
     timezone?: string
   ): Renderer {

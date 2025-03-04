@@ -567,7 +567,6 @@ export function generateBarChartVegaSpec(
    * Chart spec
    *
    *************************************/
-  console.log({name: xField.name, xField, valueSet: xField.valueSet})
   const spec: Spec = {
     $schema: 'https://vega.github.io/schema/vega/v5.json',
     width: chartSettings.plotWidth,

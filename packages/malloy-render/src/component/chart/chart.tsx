@@ -53,7 +53,6 @@ export function Chart(props: ChartProps) {
   if (chartProps.mapMalloyDataToChartData) {
     values = chartProps.mapMalloyDataToChartData(chartData);
   }
-  console.log(values);
 
   const [viewInterface, setViewInterface] = createSignal<ViewInterface | null>(
     null

@@ -21,13 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Tag} from '@malloydata/malloy-tag';
 import startCase from 'lodash/startCase';
 import {RenderDef} from './data_styles';
 import {RendererOptions} from './renderer_types';
 import {DateTime} from 'luxon';
 import * as Malloy from '@malloydata/malloy-interfaces';
-import {isAtomic, isDate, isTimestamp} from '../component/util';
+import {Field} from '../component/render-result-metadata';
 
 export function getColorScale(
   type: 'temporal' | 'ordinal' | 'quantitative' | 'nominal' | undefined,
@@ -262,53 +261,15 @@ export function createDrillIcon(document: Document): HTMLElement {
 
 export function formatTitle(
   options: RendererOptions,
-  field: Malloy.DimensionInfo,
+  field: Field,
   renderDef?: RenderDef | undefined,
   timezone?: string
 ) {
   const label = renderDef?.data?.label || field.name;
   let title = options.titleCase ? startCase(label) : label;
-  if (isAtomic(field) && (isDate(field) || isTimestamp(field)) && timezone) {
+  if (field.isTime() && timezone) {
     title = `${title} (${timezone})`;
   }
 
   return title;
-}
-
-// export function getParentRecord(data: DataColumn, n = 0) {
-//   let record = data;
-//   while (n > 0 && record.parentRecord) {
-//     n -= 1;
-//     record = record.parentRecord;
-//   }
-//   return record;
-// }
-
-// function getPathInfo(path: string): {levelsUp: number; pathSegments: string[]} {
-//   const pathParts = path.split('/');
-//   const levelsUp = pathParts.filter(part => part === '..').length + 1;
-//   const pathSegments = pathParts.filter(part => part !== '..' && part !== '');
-//   return {levelsUp, pathSegments};
-// }
-
-export function getDynamicValue<T = unknown>({
-  tag,
-  data,
-}: {
-  tag: Tag;
-  data: Malloy.Cell;
-}): T | undefined {
-  // try {
-  //   const path = tag.tag('field')?.text() ?? '';
-  //   const {levelsUp, pathSegments} = getPathInfo(path);
-  //   let scope = getParentRecord(data, levelsUp);
-  //   while (pathSegments.length > 0 && 'cell' in scope) {
-  //     const fieldName = pathSegments.shift()!;
-  //     scope = scope.cell(fieldName);
-  //   }
-  //   return scope?.value as T;
-  // } catch (err) {
-  //   return undefined;
-  // }
-  return undefined;
 }

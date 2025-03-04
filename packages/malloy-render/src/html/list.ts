@@ -24,72 +24,55 @@
 import {StyleDefaults} from './data_styles';
 import {ContainerRenderer} from './container';
 import {createErrorElement, yieldTask} from './utils';
-import * as Malloy from '@malloydata/malloy-interfaces';
 import {
-  getCell,
-  getNestFields,
-  isNest,
-  NestFieldInfo,
-  tagFor,
-} from '../component/util';
+  Cell,
+  Field,
+  RecordOrRepeatedRecordField,
+} from '../component/render-result-metadata';
 
 export class HTMLListRenderer extends ContainerRenderer {
   protected childrenStyleDefaults: StyleDefaults = {
     size: 'small',
   };
 
-  getValueField(struct: NestFieldInfo): Malloy.DimensionInfo {
+  getValueField(struct: RecordOrRepeatedRecordField): Field {
     // Get the first non-hidden field as the value
-    return getNestFields(struct).filter(field => {
-      const tag = tagFor(field);
-      return !tag.has('hidden');
-    })[0];
+    return struct.fields.filter(field => !field.isHidden())[0];
   }
 
-  getDetailField(_struct: NestFieldInfo): Malloy.DimensionInfo | undefined {
+  getDetailField(_struct: RecordOrRepeatedRecordField): Field | undefined {
     return undefined;
   }
 
-  async render(
-    table: Malloy.Cell,
-    field: Malloy.DimensionInfo
-  ): Promise<HTMLElement> {
-    if (table.kind !== 'array_cell' || !isNest(field)) {
+  async render(table: Cell): Promise<HTMLElement> {
+    if (!table.isRecordOrRepeatedRecord()) {
       return createErrorElement(
         this.document,
-        'Invalid data for chart renderer.'
+        'Invalid data for list renderer.'
       );
     }
-    if (table.array_value.length === 0) {
+    if (table.rows.length === 0) {
       return this.document.createElement('span');
     }
 
-    const valueField = this.getValueField(field);
-    const detailField = this.getDetailField(field);
+    const valueField = this.getValueField(table.field);
+    const detailField = this.getDetailField(table.field);
 
     const element = this.document.createElement('span');
     let isFirst = true;
-    for (const rowCell of table.array_value) {
-      if (rowCell.kind !== 'record_cell') {
-        throw new Error('Expected to be a record cell');
-      }
-      const row = rowCell.record_value;
+    for (const row of table.rows) {
       if (!isFirst) {
         element.appendChild(this.document.createTextNode(', '));
       }
       isFirst = false;
       const childRenderer = this.childRenderers[valueField.name];
-      const rendered = await childRenderer.render(
-        getCell(field, row, valueField.name),
-        valueField
-      );
+      const rendered = await childRenderer.render(row.column(valueField.name));
       element.appendChild(rendered);
       if (detailField) {
         const childRenderer = this.childRenderers[detailField.name];
         await yieldTask();
         const rendered = await childRenderer.render(
-          getCell(field, row, detailField.name),
-          detailField
+          row.column(detailField.name)
         );
         element.appendChild(this.document.createTextNode('('));
         element.appendChild(rendered);

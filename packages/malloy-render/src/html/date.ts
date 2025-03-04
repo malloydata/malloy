@@ -26,8 +26,7 @@ import {createErrorElement, createNullElement, timeToString} from './utils';
 import {StyleDefaults, TimeRenderOptions} from './data_styles';
 import {RendererOptions} from './renderer_types';
 import {RendererFactory} from './renderer_factory';
-import * as Malloy from '@malloydata/malloy-interfaces';
-import {getCellValue, isAtomic, isDate, isTimestamp} from '../component/util';
+import {Cell, Field} from '../component/render-result-metadata';
 
 export class HTMLDateRenderer implements Renderer {
   constructor(
@@ -35,18 +34,12 @@ export class HTMLDateRenderer implements Renderer {
     private readonly queryTimezone: string | undefined
   ) {}
 
-  async render(
-    data: Malloy.Cell,
-    field: Malloy.DimensionInfo
-  ): Promise<HTMLElement> {
-    if (data.kind === 'null_cell') {
+  async render(data: Cell): Promise<HTMLElement> {
+    if (data.isNull()) {
       return createNullElement(this.document);
     }
 
-    if (
-      (data.kind !== 'date_cell' && data.kind !== 'timestamp_cell') ||
-      (!isDate(field) && !isTimestamp(field))
-    ) {
+    if (!data.isTime()) {
       return createErrorElement(
         this.document,
         'Invalid field for date renderer'
@@ -54,9 +47,9 @@ export class HTMLDateRenderer implements Renderer {
     }
 
     const timeframe =
-      field.type.timeframe || (isDate(field) ? 'day' : 'second');
+      data.field.timeframe ?? (data.field.isDate() ? 'day' : 'second');
 
-    const value = getCellValue(data) as Date;
+    const value = data.value;
 
     const timestring = timeToString(value, timeframe, this.queryTimezone);
 
@@ -69,19 +62,15 @@ export class HTMLDateRenderer implements Renderer {
 export class DateRendererFactory extends RendererFactory<TimeRenderOptions> {
   public static readonly instance = new DateRendererFactory();
 
-  activates(field: Malloy.DimensionInfo): boolean {
-    return (
-      field.hasParentExplore() &&
-      isAtomic(field) &&
-      (isDate(field) || isTimestamp(field))
-    );
+  activates(field: Field): boolean {
+    return field.isTime();
   }
 
   create(
     document: Document,
     _styleDefaults: StyleDefaults,
     _rendererOptions: RendererOptions,
-    _field: Malloy.DimensionInfo,
+    _field: Field,
     _options: TimeRenderOptions,
     timezone?: string
   ): Renderer {

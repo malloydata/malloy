@@ -182,7 +182,6 @@ const TableField = (props: {
       },
     },
   }));
-  console.log({field: props.field, renderAs});
   const tableLayout = useTableContext()!.layout;
   const fieldLayout = tableLayout.fieldLayout(props.field);
   const columnRange = fieldLayout.relativeColumnRange;
@@ -316,7 +315,6 @@ const MalloyTableRoot = (_props: {
         const parentFieldRenderer = parent?.renderAs ?? null;
         const isNotRoot = value.depth >= 0;
         const isPartOfTable = isNotRoot && parentFieldRenderer === 'table';
-        console.log({key, value, field, parent, parentFieldRenderer, isNotRoot, isPartOfTable});
         return isPartOfTable;
       })
       .map(([key, value]) => ({

@@ -31,7 +31,7 @@ import {
 import {RendererOptions} from './renderer_types';
 import {Renderer} from './renderer';
 import {RendererFactory} from './renderer_factory';
-import * as Malloy from '@malloydata/malloy-interfaces';
+import {Cell, Field} from '../component/render-result-metadata';
 
 export class HTMLDataVolumeRenderer extends HTMLTextRenderer {
   constructor(
@@ -46,18 +46,18 @@ export class HTMLDataVolumeRenderer extends HTMLTextRenderer {
   private static gbMultiplier = this.mbMultiplier * this.kbMultiplier;
   private static tbMultiplier = this.gbMultiplier * this.kbMultiplier;
 
-  override getText(data: Malloy.Cell): string | null {
-    if (data.kind === 'null_cell') {
+  override getText(data: Cell): string | null {
+    if (data.isNull()) {
       return null;
     }
 
-    if (data.kind !== 'number_cell') {
+    if (!data.isNumber()) {
       throw new Error(
         'Cannot format field as data volume since it is not a number'
       );
     }
 
-    let data_volume = data.number_value;
+    let data_volume = data.value;
     let unit = 'Bytes';
     switch (this.options.data_volume_unit) {
       case DataVolumeUnit.Bytes:
@@ -102,7 +102,7 @@ export class DataVolumeRendererFactory extends RendererFactory<DataVolumeRenderO
     document: Document,
     _styleDefaults: StyleDefaults,
     _rendererOptions: RendererOptions,
-    _field: Malloy.DimensionInfo,
+    _field: Field,
     options: NumberRenderOptions
   ): Renderer {
     return new HTMLDataVolumeRenderer(document, options);

@@ -26,10 +26,10 @@ import {BytesRenderOptions, StyleDefaults} from './data_styles';
 import {RendererOptions} from './renderer_types';
 import {Renderer} from './renderer';
 import {RendererFactory} from './renderer_factory';
-import * as Malloy from '@malloydata/malloy-interfaces';
+import {Cell, Field} from '../component/render-result-metadata';
 
 export class HTMLBytesRenderer extends HTMLTextRenderer {
-  override getText(_data: Malloy.Cell): string | null {
+  override getText(_data: Cell): string | null {
     return null; // TODO not supported any more
   }
 }
@@ -41,7 +41,7 @@ export class BytesRendererFactory extends RendererFactory<BytesRenderOptions> {
     document: Document,
     _styleDefaults: StyleDefaults,
     _rendererOptions: RendererOptions,
-    _field: Malloy.DimensionInfo,
+    _field: Field,
     _options: BytesRenderOptions
   ): Renderer {
     return new HTMLBytesRenderer(document);

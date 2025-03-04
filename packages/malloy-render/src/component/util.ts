@@ -27,6 +27,15 @@ import {format} from 'ssf';
 import {RenderResultMetadata} from './types';
 import {Field} from './render-result-metadata';
 
+export function tagFromAnnotations(
+  annotations: Malloy.Annotation[] | undefined,
+  prefix = '# '
+) {
+  const tagLines =
+    annotations?.map(a => a.value)?.filter(l => l.startsWith(prefix)) ?? [];
+  return Tag.fromTagLines(tagLines).tag ?? new Tag();
+}
+
 function getLocationInParent(
   f: Malloy.DimensionInfo,
   metadata: RenderResultMetadata

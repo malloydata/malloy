@@ -30,16 +30,7 @@ import {
 import {RendererOptions} from './renderer_types';
 import {Renderer} from './renderer';
 import {RendererFactory} from './renderer_factory';
-import * as Malloy from '@malloydata/malloy-interfaces';
-import {
-  getCellValue,
-  isAtomic,
-  isDate,
-  isNumber,
-  isString,
-  isTimestamp,
-} from '../component/util';
-import { Field } from '../component/render-result-metadata';
+import {Cell, Field} from '../component/render-result-metadata';
 
 export class HTMLScatterChartRenderer extends HTMLCartesianChartRenderer {
   getMark(): 'point' {
@@ -47,29 +38,21 @@ export class HTMLScatterChartRenderer extends HTMLCartesianChartRenderer {
   }
 
   getDataType(
-    field: Malloy.DimensionInfo
+    field: Field
   ): 'temporal' | 'ordinal' | 'quantitative' | 'nominal' {
-    if (isAtomic(field)) {
-      if (isDate(field) || isTimestamp(field)) {
-        return 'temporal';
-      } else if (isString(field)) {
-        return 'nominal';
-      } else if (isNumber(field)) {
-        return 'quantitative';
-      }
+    if (field.isTime()) {
+      return 'temporal';
+    } else if (field.isString()) {
+      return 'nominal';
+    } else if (field.isNumber()) {
+      return 'quantitative';
     }
     throw new Error('Invalid field type for scatter chart.');
   }
 
-  getDataValue(data: Malloy.Cell): Date | string | number | null {
-    if (
-      data.kind === 'null_cell' ||
-      data.kind === 'timestamp_cell' ||
-      data.kind === 'date_cell' ||
-      data.kind === 'number_cell' ||
-      data.kind === 'string_cell'
-    ) {
-      return getCellValue(data) as Date | string | number | null;
+  getDataValue(data: Cell): Date | string | number | null {
+    if (data.isNull() || data.isTime() || data.isString() || data.isNumber()) {
+      return data.value;
     } else {
       throw new Error('Invalid field type for scatter chart.');
     }

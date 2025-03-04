@@ -31,55 +31,32 @@ import {
   yieldTask,
   formatTitle,
 } from './utils';
-import {isFieldHidden} from '../tags_utils';
-import * as Malloy from '@malloydata/malloy-interfaces';
-import {
-  getCell,
-  getNestFields,
-  isAtomic,
-  isNest,
-  wasCalculation,
-  wasDimension,
-} from '../component/util';
+import {Cell} from '../component/render-result-metadata';
 
 export class HTMLDashboardRenderer extends ContainerRenderer {
   protected childrenStyleDefaults: StyleDefaults = {
     size: 'medium',
   };
 
-  async render(
-    table: Malloy.Cell,
-    field: Malloy.DimensionInfo
-  ): Promise<HTMLElement> {
-    if (!isNest(field)) {
+  async render(table: Cell): Promise<HTMLElement> {
+    if (!table.isRecordOrRepeatedRecord()) {
       return createErrorElement(
         this.document,
         'Invalid data for dashboard renderer.'
       );
     }
 
-    const fields = getNestFields(field);
+    const fields = table.field.fields;
 
     const dimensions = fields.filter(
-      field => isAtomic(field) && wasDimension(field)
+      field => field.isAtomic() && field.wasDimension()
     );
     const measures = fields.filter(
-      field => !isAtomic(field) || wasCalculation(field)
+      field => !field.isAtomic() || field.wasCalculation()
     );
 
     const body = this.document.createElement('div');
-    const rows =
-      table.kind === 'record_cell'
-        ? [table]
-        : table.kind === 'array_cell'
-        ? table.array_value
-        : null;
-    if (rows === null) throw new Error('Expected a record or array of records');
-    for (const rowCell of rows) {
-      if (rowCell.kind !== 'record_cell') {
-        throw new Error('Unexpected record');
-      }
-      const row = rowCell.record_value;
+    for (const row of table.rows) {
       const dimensionsContainer = this.document.createElement('div');
       dimensionsContainer.classList.add('dimensions');
       dimensionsContainer.style.display = 'flex';
@@ -87,16 +64,12 @@ export class HTMLDashboardRenderer extends ContainerRenderer {
       const rowElement = this.document.createElement('div');
       rowElement.style.position = 'relative';
 
-      const tableField = field;
       for (const field of dimensions) {
-        if (isFieldHidden(field)) {
+        if (field.isHidden()) {
           continue;
         }
         const renderer = this.childRenderers[field.name];
-        const rendered = await renderer.render(
-          getCell(tableField, row, field.name),
-          field
-        );
+        const rendered = await renderer.render(row.column(field.name));
         const renderedDimension = this.document.createElement('div');
         renderedDimension.style.cssText = DIMENSION_BOX;
         const dimensionTitle = this.document.createElement('div');
@@ -129,15 +102,12 @@ export class HTMLDashboardRenderer extends ContainerRenderer {
       const measuresContainer = this.document.createElement('div');
       measuresContainer.style.cssText = MEASURE_BOXES;
       for (const field of measures) {
-        if (isFieldHidden(field)) {
+        if (field.isHidden()) {
           continue;
         }
         const childRenderer = this.childRenderers[field.name];
         await yieldTask();
-        const rendered = await childRenderer.render(
-          getCell(tableField, row, field.name),
-          field
-        );
+        const rendered = await childRenderer.render(row.column(field.name));
         if (childRenderer instanceof HTMLDashboardRenderer) {
           measuresContainer.appendChild(rendered);
         } else if (childRenderer instanceof HTMLTextRenderer) {
@@ -197,7 +167,7 @@ export class HTMLDashboardRenderer extends ContainerRenderer {
           'padding: 8px; vertical-align: top; width: 25px; cursor: pointer; position: absolute; top: 5px; right: 5px;';
         drillElement.onclick = () => {
           if (this.options.onDrill) {
-            const {drillQuery, drillFilters} = getDrillQuery(rowCell, field);
+            const {drillQuery, drillFilters} = getDrillQuery(row);
             this.options.onDrill(drillQuery, drillIcon, drillFilters);
           }
         };

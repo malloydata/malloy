@@ -26,35 +26,30 @@ import {RendererFactory} from './renderer_factory';
 import {BooleanRenderOptions, StyleDefaults} from './data_styles';
 import {RendererOptions} from './renderer_types';
 import {Renderer} from './renderer';
-import * as Malloy from '@malloydata/malloy-interfaces';
-import {isAtomic} from '../component/util';
+import {Cell, Field} from '../component/render-result-metadata';
 
 export class HTMLBooleanRenderer extends HTMLTextRenderer {
-  override getText(data: Malloy.Cell): string | null {
-    if (data.kind !== 'boolean_cell') {
+  override getText(data: Cell): string | null {
+    if (!data.isBoolean()) {
       return null;
     }
 
-    return `${data.boolean_value}`;
+    return `${data.value}`;
   }
 }
 
 export class BooleanRendererFactory extends RendererFactory<BooleanRenderOptions> {
   public static readonly instance = new BooleanRendererFactory();
 
-  activates(field: Malloy.DimensionInfo): boolean {
-    return (
-      field.hasParentExplore() &&
-      isAtomic(field) &&
-      field.type.kind === 'boolean_type'
-    );
+  activates(field: Field): boolean {
+    return field.isBoolean();
   }
 
   create(
     document: Document,
     _styleDefaults: StyleDefaults,
     _rendererOptions: RendererOptions,
-    _field: Malloy.DimensionInfo,
+    _field: Field,
     _options: BooleanRenderOptions
   ): Renderer {
     return new HTMLBooleanRenderer(document);

@@ -29,8 +29,7 @@ import {SparkLineRenderOptions, StyleDefaults} from './data_styles';
 import {RendererOptions} from './renderer_types';
 import {Renderer} from './renderer';
 import {RendererFactory} from './renderer_factory';
-import * as Malloy from '@malloydata/malloy-interfaces';
-import {getNestFields, isNest} from '../component/util';
+import {Cell, Field} from '../component/render-result-metadata';
 
 export class HTMLSparkLineRenderer extends HTMLLineChartRenderer {
   override getSize(): {height: number; width: number} {
@@ -41,14 +40,11 @@ export class HTMLSparkLineRenderer extends HTMLLineChartRenderer {
     }
   }
 
-  override getVegaLiteSpec(
-    data: Malloy.Cell,
-    field: Malloy.DimensionInfo
-  ): lite.TopLevelSpec {
-    if (!isNest(field) || data.kind !== 'array_cell') {
+  override getVegaLiteSpec(data: Cell): lite.TopLevelSpec {
+    if (!data.isRecordOrRepeatedRecord()) {
       throw new Error('Sparkline only supports nests');
     }
-    const fields = getNestFields(field);
+    const fields = data.field.fields;
     const xField = fields[0];
     const yField = fields[1];
     const colorField = fields[2];
@@ -104,7 +100,7 @@ export class HTMLSparkLineRenderer extends HTMLLineChartRenderer {
       ...DEFAULT_SPEC,
       ...this.getSize(),
       data: {
-        values: this.mapData(data.array_value, field),
+        values: this.mapData(data.rows),
       },
       config: {
         view: {
@@ -132,7 +128,7 @@ export class SparkLineRendererFactory extends RendererFactory<SparkLineRenderOpt
     document: Document,
     styleDefaults: StyleDefaults,
     rendererOptions: RendererOptions,
-    _field: Malloy.DimensionInfo,
+    _field: Field,
     options: SparkLineRenderOptions,
     timezone?: string
   ): Renderer {

@@ -30,88 +30,36 @@ import {ShapeMapRenderOptions, StyleDefaults} from './data_styles';
 import {RendererOptions} from './renderer_types';
 import {Renderer} from './renderer';
 import {RendererFactory} from './renderer_factory';
-import * as Malloy from '@malloydata/malloy-interfaces';
 import {
-  getCell,
-  getNestFields,
-  isAtomic,
-  isDate,
-  isNest,
-  isNumber,
-  isString,
-  isTimestamp,
-  NestFieldInfo,
-} from '../component/util';
-import { Field } from '../component/render-result-metadata';
-
-type MappedRow = {[p: string]: string | number | Date | undefined | null};
+  Cell,
+  Field,
+  RecordOrRepeatedRecordField,
+} from '../component/render-result-metadata';
 
 export class HTMLShapeMapRenderer extends HTMLChartRenderer {
-  private getRegionField(explore: Malloy.DimensionInfo): Malloy.DimensionInfo {
-    if (!isNest(explore)) {
-      throw new Error('Expected this to be an array of records.');
-    }
-    return getNestFields(explore)[0];
+  private getRegionField(explore: RecordOrRepeatedRecordField): Field {
+    return explore.fields[0];
   }
 
-  private getColorField(explore: Malloy.DimensionInfo): Malloy.DimensionInfo {
-    if (!isNest(explore)) {
-      throw new Error('Expected this to be an array of records.');
-    }
-    return getNestFields(explore)[1];
+  private getColorField(explore: RecordOrRepeatedRecordField): Field {
+    return explore.fields[1];
   }
 
-  mapData2(
-    data: Malloy.Cell[],
-    field: NestFieldInfo,
-    regionField: Malloy.DimensionInfo
-  ): MappedRow[] {
-    const mappedRows: MappedRow[] = [];
-    for (const rowCell of data) {
-      if (rowCell.kind !== 'record_cell') {
-        throw new Error('Expected record cell');
-      }
-      const row = rowCell.record_value;
-      const mappedRow: {
-        [p: string]: string | number | Date | undefined | null;
-      } = {};
-      for (const f of getNestFields(field)) {
-        mappedRow[f.name] = this.getDataValue2(
-          getCell(field, row, f.name),
-          f,
-          regionField
-        );
-      }
-      mappedRows.push(mappedRow);
-    }
-    return mappedRows;
-  }
-
-  getDataValue(
-    data: Malloy.Cell,
-    field: Malloy.DimensionInfo
-  ): Date | string | number | null | undefined {
-    return this.getDataValue2(data, field, undefined);
-  }
-
-  getDataValue2(
-    data: Malloy.Cell,
-    field: Malloy.DimensionInfo,
-    regionField?: Malloy.DimensionInfo
-  ): string | number | undefined {
-    if (data.kind === 'number_cell') {
-      return data.number_value;
-    } else if (data.kind === 'string_cell') {
-      if (field === regionField) {
-        const id = STATE_CODES[data.string_value];
+  getDataValue(data: Cell): Date | string | number | null | undefined {
+    if (data.isNumber()) {
+      return data.value;
+    } else if (data.isString()) {
+      const regionField = this.getRegionField(data.getParentRecord(1).field);
+      if (data.field === regionField) {
+        const id = STATE_CODES[data.value];
         if (id === undefined) {
           return undefined;
         }
         return id;
       } else {
-        return data.string_value;
+        return data.value;
       }
-    } else if (data.kind === 'null_cell') {
+    } else if (data.isNull()) {
       // ignore nulls
       return undefined;
     } else {
@@ -120,49 +68,38 @@ export class HTMLShapeMapRenderer extends HTMLChartRenderer {
   }
 
   getDataType(
-    field: Malloy.DimensionInfo
+    field: Field
   ): 'temporal' | 'ordinal' | 'quantitative' | 'nominal' {
-    return this.getDataType2(field, undefined);
-  }
-
-  getDataType2(
-    field: Malloy.DimensionInfo,
-    regionField?: Malloy.DimensionInfo
-  ): 'ordinal' | 'quantitative' | 'nominal' {
-    if (isAtomic(field)) {
-      if (isDate(field) || isTimestamp(field)) {
+    if (field.isAtomic()) {
+      if (field.isTime()) {
         return 'nominal';
-      } else if (isString(field)) {
+      } else if (field.isString()) {
+        const regionField = this.getRegionField(field.getParentRecord(1));
         if (field === regionField) {
           return 'quantitative';
         } else {
           return 'nominal';
         }
-      } else if (isNumber(field)) {
+      } else if (field.isNumber()) {
         return 'quantitative';
       }
     }
     throw new Error('Invalid field type for shape map.');
   }
 
-  getVegaLiteSpec(
-    data: Malloy.Cell,
-    field: Malloy.DimensionInfo
-  ): lite.TopLevelSpec {
-    if (data.kind === 'null_cell') {
+  getVegaLiteSpec(data: Cell): lite.TopLevelSpec {
+    if (data.isNull()) {
       throw new Error('Expected struct value not to be null.');
     }
 
-    if (data.kind !== 'array_cell' || !isNest(field)) {
+    if (!data.isRecordOrRepeatedRecord()) {
       throw new Error('Invalid data for shape map');
     }
 
-    const regionField = this.getRegionField(field);
-    const colorField = this.getColorField(field);
+    const regionField = this.getRegionField(data.field);
+    const colorField = this.getColorField(data.field);
 
-    const colorType = colorField
-      ? this.getDataType2(colorField, regionField)
-      : undefined;
+    const colorType = colorField ? this.getDataType(colorField) : undefined;
 
     const colorDef =
       colorField !== undefined
@@ -181,7 +118,7 @@ export class HTMLShapeMapRenderer extends HTMLChartRenderer {
           }
         : undefined;
 
-    const mapped = this.mapData2(data.array_value, field, regionField).filter(
+    const mapped = this.mapData(data.rows).filter(
       row => row[regionField.name] !== undefined
     );
 

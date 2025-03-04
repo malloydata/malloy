@@ -77,17 +77,12 @@ export async function runQuery({
       connections: lookupInfoConnection,
     }
   );
-  // console.log({schema: preparedResult.result!.schema});
   const lookupConnection: API.LookupConnection<API.Connection> = {
     async lookupConnection(_name: string) {
       return {
         ...wrappedConnection,
         runSQL: async (sql: string) => {
           const result = await conn.runSQL(sql);
-          console.log({
-            data: result.rows,
-            schema: preparedResult.result!.schema,
-          });
           return API.util.mapData(result.rows, preparedResult.result!.schema);
         },
       };
@@ -106,7 +101,6 @@ export async function runQuery({
   if (result.logs?.some(l => l.severity === 'error')) {
     throw new Error(JSON.stringify(result.logs));
   }
-  console.log(result.result)
   return result.result!;
 }
 

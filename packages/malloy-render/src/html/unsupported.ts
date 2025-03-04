@@ -26,19 +26,19 @@ import {createNullElement} from './utils';
 import {RendererFactory} from './renderer_factory';
 import {DataRenderOptions, StyleDefaults} from './data_styles';
 import {RendererOptions} from './renderer_types';
-import * as Malloy from '@malloydata/malloy-interfaces';
-import {getCellValue, isAtomic} from '../component/util';
+import {Cell, Field} from '../component/render-result-metadata';
 
 export class HTMLUnsupportedRenderer implements Renderer {
   constructor(private readonly document: Document) {}
 
-  getText(data: Malloy.Cell): string | null {
-    const value = getCellValue(data);
-    if (typeof value === 'string') {
-      return value;
-    } else if (value === null) {
-      return null;
-    } else if (typeof value === 'object') {
+  getText(data: Cell): string | null {
+    if (data.isString() || data.isNull()) {
+      return data.value;
+    }
+    const value = data.value;
+    if (typeof value === 'object') {
+      // TODO this probably doesn't work with the new data structure.
+      // Maybe borrow the JSON renderer's mapper?
       const record = value as Record<string, unknown>;
       if ('value' in record && typeof record['value'] === 'string') {
         return record['value'];
@@ -47,7 +47,7 @@ export class HTMLUnsupportedRenderer implements Renderer {
     return JSON.stringify(value);
   }
 
-  async render(data: Malloy.Cell): Promise<HTMLElement> {
+  async render(data: Cell): Promise<HTMLElement> {
     const text = this.getText(data);
     if (text === null) {
       return createNullElement(this.document);
@@ -62,19 +62,15 @@ export class HTMLUnsupportedRenderer implements Renderer {
 export class UnsupportedRendererFactory extends RendererFactory<DataRenderOptions> {
   public static readonly instance = new UnsupportedRendererFactory();
 
-  activates(field: Malloy.DimensionInfo): boolean {
-    return (
-      field.hasParentExplore() &&
-      isAtomic(field) &&
-      field.type.kind === 'sql_native_type'
-    );
+  activates(field: Field): boolean {
+    return field.isSQLNative();
   }
 
   create(
     document: Document,
     _styleDefaults: StyleDefaults,
     _rendererOptions: RendererOptions,
-    _field: Malloy.DimensionInfo,
+    _field: Field,
     _options: DataRenderOptions
   ): Renderer {
     return new HTMLUnsupportedRenderer(document);

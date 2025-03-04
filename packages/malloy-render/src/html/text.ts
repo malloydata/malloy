@@ -30,23 +30,19 @@ import {
 } from './data_styles';
 import {RendererFactory} from './renderer_factory';
 import {RendererOptions} from './renderer_types';
-import * as Malloy from '@malloydata/malloy-interfaces';
-import {getCellValue, isAtomic} from '../component/util';
+import {Cell, Field} from '../component/render-result-metadata';
 
 export class HTMLTextRenderer implements Renderer {
   constructor(private readonly document: Document) {}
 
-  getText(data: Malloy.Cell, _field: Malloy.DimensionInfo): string | null {
-    return data.kind === 'null_cell' ? null : `${getCellValue(data)}`;
+  getText(data: Cell): string | null {
+    return data.isNull() ? null : `${data.value}`;
   }
 
-  async render(
-    data: Malloy.Cell,
-    field: Malloy.DimensionInfo
-  ): Promise<HTMLElement> {
+  async render(data: Cell): Promise<HTMLElement> {
     let text: string | null = null;
     try {
-      text = this.getText(data, field);
+      text = this.getText(data);
     } catch (e) {
       return createErrorElement(this.document, e);
     }
@@ -64,15 +60,15 @@ export class HTMLTextRenderer implements Renderer {
 export class TextRendererFactory extends RendererFactory<TextRenderOptions> {
   public static readonly instance = new TextRendererFactory();
 
-  activates(field: Malloy.DimensionInfo): boolean {
-    return field.hasParentExplore() && !isAtomic(field);
+  activates(field: Field): boolean {
+    return !field.isRoot() && field.isString();
   }
 
   create(
     document: Document,
     _styleDefaults: StyleDefaults,
     _rendererOptions: RendererOptions,
-    _field: Malloy.DimensionInfo,
+    _field: Field,
     _options: DataRenderOptions
   ): Renderer {
     return new HTMLTextRenderer(document);

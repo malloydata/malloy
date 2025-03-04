@@ -22,32 +22,28 @@
  */
 
 import {Renderer} from './renderer';
-import {createErrorElement, createNullElement, getDynamicValue} from './utils';
+import {createErrorElement, createNullElement} from './utils';
 import {LinkRenderOptions, StyleDefaults} from './data_styles';
 import {RendererOptions} from './renderer_types';
 import {RendererFactory} from './renderer_factory';
-import * as Malloy from '@malloydata/malloy-interfaces';
-import {tagFor} from '../component/util';
+import {Cell, Field} from '../component/render-result-metadata';
 
 export class HTMLLinkRenderer implements Renderer {
   constructor(private readonly document: Document) {}
 
-  async render(
-    data: Malloy.Cell,
-    field: Malloy.DimensionInfo
-  ): Promise<HTMLElement> {
-    if (data.kind === 'null_cell') {
+  async render(data: Cell): Promise<HTMLElement> {
+    if (data.isNull()) {
       return createNullElement(this.document);
     }
 
-    const tag = tagFor(field);
+    const tag = data.field.tag;
     const linkTag = tag.tag('link');
 
     if (!linkTag) {
       return createErrorElement(this.document, 'Missing tag for Link renderer');
     }
 
-    if (data.kind !== 'string_cell') {
+    if (!data.isString()) {
       return createErrorElement(
         this.document,
         'Invalid type for link renderer.'
@@ -55,8 +51,13 @@ export class HTMLLinkRenderer implements Renderer {
     }
 
     // Read href component from field value or override with field tag if it exists
-    const hrefComponent =
-      getDynamicValue<string>({tag: linkTag, data}) ?? data.string_value;
+    const dynamicRef = linkTag.text('field');
+    let hrefCell: Cell | undefined;
+    if (dynamicRef) {
+      hrefCell = data.getRelativeCell(dynamicRef);
+    }
+    hrefCell ??= data;
+    const hrefComponent = String(hrefCell.value);
 
     // if a URL template is provided, replace the data were '$$$' appears.
     const urlTemplate = linkTag.text('url_template');
@@ -72,7 +73,7 @@ export class HTMLLinkRenderer implements Renderer {
     }
     element.target = '_blank';
     element.appendChild(
-      this.document.createTextNode(data.string_value.replace(/\//g, '/\u200C'))
+      this.document.createTextNode(data.value.replace(/\//g, '/\u200C'))
     );
     return element;
   }
@@ -85,7 +86,7 @@ export class LinkRendererFactory extends RendererFactory<LinkRenderOptions> {
     document: Document,
     _styleDefaults: StyleDefaults,
     _rendererOptions: RendererOptions,
-    _field: Malloy.DimensionInfo,
+    _field: Field,
     _options: LinkRenderOptions
   ): Renderer {
     return new HTMLLinkRenderer(document);

@@ -25,7 +25,7 @@ import {Tag} from '@malloydata/malloy-tag';
 import {StyleDefaults} from './data_styles';
 import {ChildRenderers, RenderTree} from './renderer';
 import {RendererOptions} from './renderer_types';
-import {NestFieldInfo} from '../component/util';
+import {NestField} from '../component/render-result-metadata';
 
 export abstract class ContainerRenderer extends RenderTree {
   childRenderers: ChildRenderers = {};
@@ -41,7 +41,7 @@ export abstract class ContainerRenderer extends RenderTree {
   static make<Type extends ContainerRenderer>(
     c: new (document: Document, options: RendererOptions, tags: Tag) => Type,
     document: Document,
-    exploreField: NestFieldInfo,
+    exploreField: NestField,
     options: RendererOptions,
     tagged: Tag
   ): Type {

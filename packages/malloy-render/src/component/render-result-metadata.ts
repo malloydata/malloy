@@ -22,7 +22,7 @@
  */
 
 import {Tag} from '@malloydata/malloy-tag';
-import {NestFieldInfo} from './util';
+import {NestFieldInfo, tagFromAnnotations} from './util';
 import {VegaChartProps, VegaConfigHandler} from './types';
 import {mergeVegaConfigs} from './vega/merge-vega-configs';
 import {baseVegaConfig} from './vega/base-vega-config';
@@ -64,6 +64,7 @@ export function getResultMetadata(
     modelTag: tagFromAnnotations(result.model_annotations, '## '),
     store: createResultStore(),
     sourceName: 'foo', // TODO);
+    queryTimezone: undefined, // TODO
   });
   const cell: Malloy.DataWithArrayCell =
     result.data!.kind === 'record_cell'
@@ -89,6 +90,7 @@ export type Field =
   | BooleanField
   | SQLNativeField;
 export type NestField = RepeatedRecordField | RecordField | ArrayField;
+export type RecordOrRepeatedRecordField = RepeatedRecordField | RecordField;
 // TODO should be renamed LeafAtomicField
 export type AtomicField =
   | NumberField
@@ -99,6 +101,7 @@ export type AtomicField =
   | BooleanField
   | SQLNativeField;
 export type TimeField = DateField | TimestampField;
+export type SortableField = {field: Field; dir: 'asc' | 'desc' | undefined};
 
 type ArrayFieldInfo = Malloy.DimensionInfo & {
   type: Malloy.AtomicTypeWithArrayType;
@@ -243,15 +246,6 @@ export const Field = {
   },
 };
 
-function tagFromAnnotations(
-  annotations: Malloy.Annotation[] | undefined,
-  prefix = '# '
-) {
-  const tagLines =
-    annotations?.map(a => a.value)?.filter(l => l.startsWith(prefix)) ?? [];
-  return Tag.fromTagLines(tagLines).tag ?? new Tag();
-}
-
 function tagFor(field: Malloy.DimensionInfo, prefix = '# ') {
   return tagFromAnnotations(field.annotations, prefix);
 }
@@ -306,7 +300,7 @@ export function shouldRenderAs(
 export abstract class FieldBase {
   public readonly tag: Tag;
   public readonly path: string[];
-  private readonly metadataTag: Tag;
+  protected readonly metadataTag: Tag;
   public readonly renderAs: string;
   public readonly valueSet = new Set<string | number | boolean>();
   constructor(
@@ -349,6 +343,21 @@ export abstract class FieldBase {
       return this.fieldAtPath(Field.pathFromString(path));
     }
     return this.fieldAtPath(path);
+  }
+
+  getParentRecord(levelsUp: number): RecordField {
+    let current: Field | undefined = this.asField();
+    while (current && levelsUp > 0) {
+      current = current.parent;
+      while (current?.isArray()) {
+        current = current.parent;
+      }
+      levelsUp--;
+    }
+    if (!current?.isRecord()) {
+      throw new Error(`Parent ${levelsUp} levels up was not a record`);
+    }
+    return current;
   }
 
   get key(): string {
@@ -434,6 +443,14 @@ export abstract class FieldBase {
 
   isBoolean(): this is BooleanField {
     return this instanceof BooleanField;
+  }
+
+  isString(): this is StringField {
+    return this instanceof StringField;
+  }
+
+  isRecordOrRepeatedRecord(): this is RecordOrRepeatedRecordField {
+    return this.isRecord() || this.isRepeatedRecord();
   }
 
   isDate(): this is DateField {
@@ -541,16 +558,6 @@ export class RepeatedRecordField extends ArrayField {
     parent: NestField | undefined
   ) {
     super(field, parent);
-    // this.eachField = new RecordField(
-    //   {
-    //     name: 'each',
-    //     type: this.field.type.element_type,
-    //   },
-    //   this
-    // );
-    // this.fields = field.type.element_type.fields.map(f =>
-    //   Field.from(f, this.eachField)
-    // );
     const eachField = this.eachField;
     if (!eachField.isRecord())
       throw new Error('Expected eachField of repeatedRecord to be a record');
@@ -584,14 +591,12 @@ export class RepeatedRecordField extends ArrayField {
   populateVegaSpec(options: GetResultMetadataOptions) {
     // Populate vega spec data
     let vegaChartProps: VegaChartProps | null = null;
-    console.log(this.tag);
     const chartType = shouldRenderChartAs(this.tag);
     if (chartType === 'bar_chart') {
       vegaChartProps = generateBarChartVegaSpec(this);
     } else if (chartType === 'line_chart') {
       vegaChartProps = generateLineChartVegaSpec(this);
     }
-    console.log({name: this.name, vegaChartProps});
 
     if (vegaChartProps) {
       const vegaConfigOverride =
@@ -620,8 +625,31 @@ export class RepeatedRecordField extends ArrayField {
         },
       };
       this.vegaRuntime = parse(this.vegaChartProps.spec);
-      console.log({name: this.name, vegaRuntime: this.vegaRuntime});
     }
+  }
+
+  private _fieldsWithOrder: SortableField[] | undefined = undefined;
+  public get fieldsWithOrder(): SortableField[] {
+    if (!this._fieldsWithOrder) {
+      const orderedByTag = this.metadataTag.tag('ordered_by');
+      const orderedByFields =
+        (orderedByTag &&
+          orderedByTag.array()?.map(t => {
+            const name = Object.keys(t.properties ?? {})[0];
+            const direction = t.text(name) as 'asc' | 'desc';
+            return {field: this.fieldAt(name), dir: direction};
+          })) ??
+        [];
+
+      const orderByFieldSet = new Set(orderedByFields.map(f => f.field.name));
+      this._fieldsWithOrder = [
+        ...orderedByFields,
+        ...this.fields
+          .filter(f => !orderByFieldSet.has(f.name))
+          .map<SortableField>(field => ({field, dir: 'asc'})),
+      ];
+    }
+    return this._fieldsWithOrder;
   }
 }
 
@@ -629,18 +657,21 @@ export class RootField extends RepeatedRecordField {
   public readonly sourceName: string;
   public readonly store: ResultStore;
   public readonly modelTag: Tag;
+  public readonly queryTimezone: string | undefined;
   constructor(
     public readonly field: RepeatedRecordFieldInfo,
     metadata: {
       sourceName: string;
       store: ResultStore;
       modelTag: Tag;
+      queryTimezone: string | undefined;
     }
   ) {
     super(field, undefined);
     this.sourceName = metadata.sourceName;
     this.store = metadata.store;
     this.modelTag = metadata.modelTag;
+    this.queryTimezone = metadata.queryTimezone;
   }
 }
 
@@ -673,6 +704,9 @@ export class RecordField extends FieldBase {
   populateAllVegaSpecs(options: GetResultMetadataOptions): void {
     this.fields.forEach(f => f.populateAllVegaSpecs(options));
   }
+  public get fieldsWithOrder(): SortableField[] {
+    return []; // TODO
+  }
 }
 
 export class NumberField extends FieldBase {
@@ -690,7 +724,8 @@ export class NumberField extends FieldBase {
     this.valueSet.add(value);
     if (this.max === undefined || value > this.max) {
       this.max = value;
-    } else if (this.min === undefined || value < this.min) {
+    }
+    if (this.min === undefined || value < this.min) {
       this.min = value;
     }
     const str = value.toString(); // TODO what locale?
@@ -739,7 +774,8 @@ export class DateField extends FieldBase {
     this.valueSet.add(numberValue);
     if (this.max === undefined || value > this.max) {
       this.max = value;
-    } else if (this.min === undefined || value < this.min) {
+    }
+    if (this.min === undefined || value < this.min) {
       this.min = value;
     }
     const stringValue = renderTimeString(
@@ -766,6 +802,14 @@ export class DateField extends FieldBase {
   get maxString(): string | undefined {
     return this._maxString;
   }
+
+  get minNumber(): number | undefined {
+    return this.min !== undefined ? Number(this.min) : undefined;
+  }
+
+  get maxNumber(): number | undefined {
+    return this.max !== undefined ? Number(this.max) : undefined;
+  }
 }
 
 export class TimestampField extends FieldBase {
@@ -788,7 +832,8 @@ export class TimestampField extends FieldBase {
     this.valueSet.add(numberValue);
     if (this.max === undefined || value > this.max) {
       this.max = value;
-    } else if (this.min === undefined || value < this.min) {
+    }
+    if (this.min === undefined || value < this.min) {
       this.min = value;
     }
     const stringValue = renderTimeString(
@@ -832,7 +877,8 @@ export class StringField extends FieldBase {
     this.valueSet.add(value);
     if (this.max === undefined || value > this.max) {
       this.max = value;
-    } else if (this.min === undefined || value < this.min) {
+    }
+    if (this.min === undefined || value < this.min) {
       this.min = value;
     }
     if (
@@ -1088,6 +1134,7 @@ export abstract class CellBase {
       while (current?.isArray()) {
         current = current.parent;
       }
+      levelsUp--;
     }
     if (!current?.isRecord()) {
       throw new Error(`Parent ${levelsUp} levels up was not a record`);
@@ -1117,6 +1164,10 @@ export abstract class CellBase {
       return this.asCell();
     }
     throw new Error(`${this.constructor.name} cannot contain columns`);
+  }
+
+  compareTo(_other: Cell): number {
+    return 0;
   }
 }
 
@@ -1270,6 +1321,18 @@ export class NumberCell extends CellBase {
   get value() {
     return this.cell.number_value;
   }
+
+  compareTo(other: Cell) {
+    if (!other.isNumber()) return 0;
+    const difference = this.value - other.value;
+    if (difference > 0) {
+      return 1;
+    } else if (difference === 0) {
+      return 0;
+    }
+
+    return -1;
+  }
 }
 
 export class DateCell extends CellBase {
@@ -1288,6 +1351,16 @@ export class DateCell extends CellBase {
 
   get timeframe() {
     return this.field.timeframe;
+  }
+
+  compareTo(other: Cell) {
+    if (!other.isTime()) return 0;
+    if (this.value > other.value) {
+      return 1;
+    } else if (this.value < other.value) {
+      return -1;
+    }
+    return 0;
   }
 }
 
@@ -1308,6 +1381,16 @@ export class TimestampCell extends CellBase {
   get timeframe() {
     return this.field.timeframe;
   }
+
+  compareTo(other: Cell) {
+    if (!other.isTime()) return 0;
+    if (this.value > other.value) {
+      return 1;
+    } else if (this.value < other.value) {
+      return -1;
+    }
+    return 0;
+  }
 }
 
 export class JSONCell extends CellBase {
@@ -1321,6 +1404,18 @@ export class JSONCell extends CellBase {
 
   get value() {
     return this.cell.json_value;
+  }
+
+  compareTo(other: Cell) {
+    const value = this.value.toString();
+    const otherValue = other.toString();
+    if (value === otherValue) {
+      return 0;
+    } else if (value > otherValue) {
+      return 1;
+    } else {
+      return -1;
+    }
   }
 }
 
@@ -1337,6 +1432,13 @@ export class StringCell extends CellBase {
   get value() {
     return this.cell.string_value;
   }
+
+  compareTo(other: Cell) {
+    if (!other.isString()) return 0;
+    return this.value
+      .toLocaleLowerCase()
+      .localeCompare(other.value.toLocaleLowerCase());
+  }
 }
 
 export class BooleanCell extends CellBase {
@@ -1351,5 +1453,16 @@ export class BooleanCell extends CellBase {
 
   get value() {
     return this.cell.boolean_value;
+  }
+
+  compareTo(other: Cell) {
+    if (this.value === other.value) {
+      return 0;
+    }
+    if (this.value) {
+      return 1;
+    }
+
+    return -1;
   }
 }

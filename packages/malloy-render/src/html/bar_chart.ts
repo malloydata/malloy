@@ -31,15 +31,7 @@ import {RendererFactory} from './renderer_factory';
 import {RendererOptions} from './renderer_types';
 import {Renderer} from './renderer';
 import {timeToString} from './utils';
-import * as Malloy from '@malloydata/malloy-interfaces';
-import {
-  getCellValue,
-  isAtomic,
-  isDate,
-  isNumber,
-  isString,
-  isTimestamp,
-} from '../component/util';
+import {Cell, Field} from '../component/render-result-metadata';
 
 export class HTMLBarChartRenderer extends HTMLCartesianChartRenderer {
   getMark(): 'bar' {
@@ -47,34 +39,24 @@ export class HTMLBarChartRenderer extends HTMLCartesianChartRenderer {
   }
 
   getDataType(
-    field: Malloy.DimensionInfo
+    field: Field
   ): 'temporal' | 'ordinal' | 'quantitative' | 'nominal' {
-    if (isAtomic(field)) {
-      if (isDate(field) || isTimestamp(field) || isString(field)) {
-        return 'nominal';
-      } else if (isNumber(field)) {
-        return 'quantitative';
-      }
+    if (field.isTime() || field.isString()) {
+      return 'nominal';
+    } else if (field.isNumber()) {
+      return 'quantitative';
     }
     throw new Error('Invalid field type for bar chart.');
   }
 
-  getDataValue(
-    data: Malloy.Cell,
-    field: Malloy.DimensionInfo
-  ): Date | string | number | null {
-    if (data.kind === 'null_cell') {
+  getDataValue(data: Cell): Date | string | number | null {
+    if (data.isNull()) {
       return null;
-    } else if (data.kind === 'timestamp_cell') {
-      const timeframe =
-        field.type.kind === 'timestamp_type' ? field.type.timeframe : undefined;
-      return timeToString(getCellValue(data) as Date, timeframe, this.timezone);
-    } else if (data.kind === 'date_cell') {
-      const timeframe =
-        field.type.kind === 'date_type' ? field.type.timeframe : undefined;
-      return timeToString(getCellValue(data) as Date, timeframe, this.timezone);
-    } else if (data.kind === 'number_cell' || data.kind === 'string_cell') {
-      return getCellValue(data) as number | string;
+    } else if (data.isTime()) {
+      const timeframe = data.field.timeframe;
+      return timeToString(data.value, timeframe, this.timezone);
+    } else if (data.isNumber() || data.isString()) {
+      return data.value;
     } else {
       throw new Error('Invalid field type for bar chart.');
     }
@@ -87,7 +69,7 @@ export class BarChartRendererFactory extends RendererFactory<BarChartRenderOptio
     document: Document,
     styleDefaults: StyleDefaults,
     rendererOptions: RendererOptions,
-    _field: Field | Explore,
+    _field: Field,
     options: SparkLineRenderOptions,
     timezone?: string
   ): Renderer {

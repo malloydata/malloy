@@ -27,8 +27,7 @@ import {RendererOptions} from './renderer_types';
 import {Renderer} from './renderer';
 import {RendererFactory} from './renderer_factory';
 import {format} from 'ssf';
-import * as Malloy from '@malloydata/malloy-interfaces';
-import {isAtomic} from '../component/util';
+import {Cell, Field} from '../component/render-result-metadata';
 
 export class HTMLNumberRenderer extends HTMLTextRenderer {
   constructor(
@@ -38,21 +37,21 @@ export class HTMLNumberRenderer extends HTMLTextRenderer {
     super(document);
   }
 
-  override getText(data: Malloy.Cell): string | null {
-    if (data.kind !== 'number_cell') {
+  override getText(data: Cell): string | null {
+    if (!data.isNumber()) {
       return null;
     }
 
     if (this.options.value_format) {
       try {
-        return format(this.options.value_format, data.number_value);
+        return format(this.options.value_format, data.value);
       } catch {
         // TODO: explore surfacing invalid format error, ignoring it for now.
         throw new Error(`Invalid value format: ${this.options.value_format}`);
       }
     }
 
-    return data.number_value.toLocaleString();
+    return data.value.toLocaleString();
   }
 }
 
@@ -70,19 +69,15 @@ export class NumberRendererFactory extends RendererFactory<NumberRenderOptions> 
     );
   }
 
-  activates(field: Malloy.DimensionInfo): boolean {
-    return (
-      field.hasParentExplore() &&
-      isAtomic(field) &&
-      field.type.kind === 'number_type'
-    );
+  activates(field: Field): boolean {
+    return field.isNumber();
   }
 
   create(
     document: Document,
     _styleDefaults: StyleDefaults,
     _rendererOptions: RendererOptions,
-    _field: Malloy.DimensionInfo,
+    _field: Field,
     options: NumberRenderOptions
   ): Renderer {
     return new HTMLNumberRenderer(document, options);

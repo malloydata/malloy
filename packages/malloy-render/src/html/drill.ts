@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {RecordCell} from '../component/render-result-metadata';
 import {
   getCell,
   getCellValue,
@@ -178,10 +179,7 @@ export function getDrillFilters(
   return {formattedFilters: dedupedFilters, source};
 }
 
-export function getDrillQuery(
-  data: NestCell,
-  field: NestFieldInfo
-): {
+export function getDrillQuery(data: RecordCell): {
   drillQuery: string;
   drillFilters: string[];
 } {

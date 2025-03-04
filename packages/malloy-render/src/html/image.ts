@@ -22,28 +22,24 @@
  */
 
 import {Renderer} from './renderer';
-import {createErrorElement, createNullElement, getDynamicValue} from './utils';
+import {createErrorElement, createNullElement} from './utils';
 import {RendererFactory} from './renderer_factory';
 import {ImageRenderOptions, StyleDefaults} from './data_styles';
 import {RendererOptions} from './renderer_types';
-import * as Malloy from '@malloydata/malloy-interfaces';
-import {tagFor} from '../component/util';
+import {Cell, Field} from '../component/render-result-metadata';
 
 export class HTMLImageRenderer implements Renderer {
   constructor(private readonly document: Document) {}
 
-  async render(
-    data: Malloy.Cell,
-    field: Malloy.DimensionInfo
-  ): Promise<HTMLElement> {
-    if (data.kind !== 'string_cell' && data.kind !== 'null_cell') {
+  async render(data: Cell): Promise<HTMLElement> {
+    if (!data.isNull() && !data.isString()) {
       return createErrorElement(
         this.document,
         'Invalid field for Image renderer'
       );
     }
 
-    const tag = tagFor(field);
+    const tag = data.field.tag;
     const imgTag = tag.tag('image');
 
     if (!imgTag) {
@@ -53,10 +49,9 @@ export class HTMLImageRenderer implements Renderer {
       );
     }
 
-    const element: HTMLElement =
-      data.kind === 'null_cell'
-        ? createNullElement(this.document)
-        : this.document.createElement('img');
+    const element: HTMLElement = data.isNull()
+      ? createNullElement(this.document)
+      : this.document.createElement('img');
 
     const width = imgTag.text('width');
     const height = imgTag.text('height');
@@ -68,13 +63,19 @@ export class HTMLImageRenderer implements Renderer {
 
     const altTag = imgTag.tag('alt');
     if (altTag) {
-      const alt = getDynamicValue<string>({tag: altTag, data}) ?? altTag.text();
+      const ref = altTag.text('field');
+      let alt: string | undefined;
+      if (ref) {
+        alt = String(data.getRelativeCell(ref)?.value);
+      } else {
+        alt = altTag.text();
+      }
       if (alt) img.alt = alt;
     }
 
     // Image specific props
-    if (data.kind !== 'null_cell') {
-      img.src = data.string_value;
+    if (!data.isNull()) {
+      img.src = data.value;
     }
     return element;
   }
@@ -87,7 +88,7 @@ export class ImageRendererFactory extends RendererFactory<ImageRenderOptions> {
     document: Document,
     _styleDefaults: StyleDefaults,
     _rendererOptions: RendererOptions,
-    _field: Malloy.DimensionInfo,
+    _field: Field,
     _options: ImageRenderOptions
   ): Renderer {
     return new HTMLImageRenderer(document);

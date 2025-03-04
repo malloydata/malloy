@@ -30,19 +30,11 @@ import {RendererOptions} from './renderer_types';
 import {RendererFactory} from './renderer_factory';
 import {Renderer} from './renderer';
 import {grayMedium, gridGray} from '../component/vega/base-vega-config';
-import * as Malloy from '@malloydata/malloy-interfaces';
 import {
-  getCellValue,
-  getNestFields,
-  isAtomic,
-  isDate,
-  isNest,
-  isNumber,
-  isString,
-  isTimestamp,
-  NestFieldInfo,
-  valueIsNull,
-} from '../component/util';
+  Cell,
+  Field,
+  RecordOrRepeatedRecordField,
+} from '../component/render-result-metadata';
 
 type DataContainer = Array<unknown> | Record<string, unknown>;
 
@@ -477,7 +469,7 @@ export class HTMLVegaSpecRenderer extends HTMLChartRenderer {
     document: Document,
     styleDefaults: StyleDefaults,
     options: RendererOptions,
-    field: Malloy.DimensionInfo,
+    field: Field,
     vegaRenderOptions: VegaRenderOptions
   ) {
     super(document, styleDefaults, options);
@@ -502,42 +494,38 @@ export class HTMLVegaSpecRenderer extends HTMLChartRenderer {
     }
   }
 
-  getDataValue(data: Malloy.Cell): Date | string | number | null {
-    const value = getCellValue(data);
-    if (
-      value === null ||
-      typeof value === 'string' ||
-      typeof value === 'number' ||
-      value instanceof Date
-    ) {
-      return value;
+  getDataValue(data: Cell): Date | string | number | null {
+    if (data.isNull() || data.isString() || data.isNumber() || data.isTime()) {
+      return data.value;
     }
     throw new Error('Invalid data type for vega chart.');
   }
 
-  getDataType(
-    field: Malloy.DimensionInfo
-  ): 'ordinal' | 'quantitative' | 'nominal' {
-    if (isAtomic(field)) {
-      if (isDate(field) || isTimestamp(field) || isString(field)) {
-        return 'nominal';
-      } else if (isNumber(field)) {
-        return 'quantitative';
-      }
+  getDataType(field: Field): 'ordinal' | 'quantitative' | 'nominal' {
+    if (field.isTime() || field.isString()) {
+      return 'nominal';
+    } else if (field.isNumber()) {
+      return 'quantitative';
     }
     throw new Error('Invalid field type for vega chart.');
   }
 
-  translateField(explore: NestFieldInfo, fieldString: string): string {
+  translateField(
+    explore: RecordOrRepeatedRecordField,
+    fieldString: string
+  ): string {
     const m = fieldString.match(/#\{(\d+)\}/);
     if (m && m.groups) {
-      // WHAT
-      return getNestFields(explore)[parseInt(m.groups[1]) - 1].name;
+      // TODO WHAT
+      return explore.fields[parseInt(m.groups[1]) - 1].name;
     }
     return fieldString;
   }
 
-  translateFields(node: DataContainer, explore: NestFieldInfo): void {
+  translateFields(
+    node: DataContainer,
+    explore: RecordOrRepeatedRecordField
+  ): void {
     if (Array.isArray(node)) {
       for (const e of node) {
         if (isDataContainer(e)) {
@@ -575,24 +563,16 @@ export class HTMLVegaSpecRenderer extends HTMLChartRenderer {
   //   return ret;
   // }
 
-  getVegaLiteSpec(
-    data: Malloy.Cell,
-    field: Malloy.DimensionInfo
-  ): lite.TopLevelSpec {
-    if (
-      !isNest(field) ||
-      valueIsNull(data) ||
-      (data.kind !== 'array_cell' && data.kind !== 'record_cell')
-    ) {
+  getVegaLiteSpec(data: Cell): lite.TopLevelSpec {
+    if (!data.isRecordOrRepeatedRecord()) {
       throw new Error('Expected struct value not to be null.');
     }
 
     const newSpec = structuredClone(this.spec);
 
-    this.translateFields(newSpec as unknown as DataContainer, field);
-    const rows = data.kind === 'record_cell' ? [data] : data.array_value;
+    this.translateFields(newSpec as unknown as DataContainer, data.field);
     const rdata = {
-      values: this.mapData(rows, field),
+      values: this.mapData(data.rows),
     };
     newSpec.data = rdata;
 
@@ -607,7 +587,7 @@ export class VegaRendererFactory extends RendererFactory<VegaRenderOptions> {
     document: Document,
     styleDefaults: StyleDefaults,
     rendererOptions: RendererOptions,
-    field: Malloy.DimensionInfo,
+    field: Field,
     options: VegaRenderOptions
   ): Renderer {
     return new HTMLVegaSpecRenderer(

@@ -31,13 +31,54 @@ import {PointMapRendererFactory} from './point_map';
 import {SegmentMapRendererFactory} from './segment_map';
 import {ScatterChartRendererFactory} from './scatter_chart';
 import {Field} from '../component/render-result-metadata';
+import {ImageRendererFactory} from './image';
+import {JSONRendererFactory} from './json';
+import {LineChartRendererFactory} from './line_chart';
+import {ColumnSparkLineRendererFactory} from './column_sparkline';
+import {BarSparkLineRendererFactory} from './bar_sparkline';
+import {AreaSparkLineRendererFactory} from './area_sparkline';
+import {SparkLineRendererFactory} from './sparkline';
+import {BarChartRendererFactory} from './bar_chart';
+import {DateRendererFactory} from './date';
+import {VegaRendererFactory} from './vega_spec';
+import {CurrencyRendererFactory} from './currency';
+import {PercentRendererFactory} from './percent';
+import {DataVolumeRendererFactory} from './data_volume';
+import {BytesRendererFactory} from './bytes';
+import {LinkRendererFactory} from './link';
+import {DurationRendererFactory} from './duration';
+import {BooleanRendererFactory} from './boolean';
+import {NumberRendererFactory} from './number';
+import {UnsupportedRendererFactory} from './unsupported';
+import {TextRendererFactory} from './text';
 
 export class MainRendererFactory {
   static renderFactories = [
     ShapeMapRendererFactory.instance,
     PointMapRendererFactory.instance,
+    ImageRendererFactory.instance,
     SegmentMapRendererFactory.instance,
+    JSONRendererFactory.instance,
+    LineChartRendererFactory.instance,
+    ColumnSparkLineRendererFactory.instance,
+    BarSparkLineRendererFactory.instance,
+    AreaSparkLineRendererFactory.instance,
+    // This factory needs to be after the other Spark Line factories, so it doesn't override them.
+    SparkLineRendererFactory.instance,
     ScatterChartRendererFactory.instance,
+    BarChartRendererFactory.instance,
+    VegaRendererFactory.instance,
+    DateRendererFactory.instance,
+    CurrencyRendererFactory.instance,
+    PercentRendererFactory.instance,
+    DataVolumeRendererFactory.instance,
+    BytesRendererFactory.instance,
+    LinkRendererFactory.instance,
+    DurationRendererFactory.instance,
+    BooleanRendererFactory.instance,
+    NumberRendererFactory.instance,
+    UnsupportedRendererFactory.instance,
+    TextRendererFactory.instance,
   ];
 
   create(

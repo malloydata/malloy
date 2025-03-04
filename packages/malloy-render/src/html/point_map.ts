@@ -29,72 +29,40 @@ import {RendererFactory} from './renderer_factory';
 import {PointMapRenderOptions, StyleDefaults} from './data_styles';
 import {RendererOptions} from './renderer_types';
 import {Renderer} from './renderer';
-import * as Malloy from '@malloydata/malloy-interfaces';
-import {
-  getCellValue,
-  getNestFields,
-  isAtomic,
-  isDate,
-  isNest,
-  isNumber,
-  isString,
-  isTimestamp,
-} from '../component/util';
+import {Cell, CellBase, Field} from '../component/render-result-metadata';
 
 export class HTMLPointMapRenderer extends HTMLChartRenderer {
-  getDataValue(
-    data: Malloy.Cell,
-    field: Malloy.DimensionInfo
-  ): string | number {
-    if (data.kind === 'number_cell' || data.kind === 'string_cell') {
-      return getCellValue(data) as number | string;
-    } else if (data.kind === 'timestamp_cell' || data.kind === 'date_cell') {
-      const timeframe =
-        isDate(field) || isTimestamp(field) ? field.type.timeframe : undefined;
+  getDataValue(data: Cell): string | number {
+    if (data.isNumber() || data.isString()) {
+      return data.value;
+    } else if (data.isTime()) {
       return timeToString(
-        getCellValue(data) as Date,
-        timeframe ?? 'second',
+        data.value,
+        data.field.timeframe ?? (data.isDate() ? 'day' : 'second'),
         this.timezone
       );
     }
     throw new Error('Invalid field type for point map chart.');
   }
 
-  getDataType(
-    field: Malloy.DimensionInfo
-  ): 'ordinal' | 'quantitative' | 'nominal' {
-    if (isAtomic(field)) {
-      if (isDate(field) || isTimestamp(field) || isString(field)) {
-        return 'nominal';
-      } else if (isNumber(field)) {
-        return 'quantitative';
-      }
+  getDataType(field: Field): 'ordinal' | 'quantitative' | 'nominal' {
+    if (field.isTime() || field.isString()) {
+      return 'nominal';
+    } else if (field.isNumber()) {
+      return 'quantitative';
     }
     throw new Error('Invalid field type for point map.');
   }
 
-  isTimeFieldDef(field: Malloy.DimensionInfo): boolean {
-    if (isAtomic(field)) {
-      if (isDate(field) || isTimestamp(field)) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  getVegaLiteSpec(
-    data: Malloy.Cell,
-    field: Malloy.DimensionInfo
-  ): lite.TopLevelSpec {
-    if (data.kind === 'null_cell') {
+  getVegaLiteSpec(data: CellBase): lite.TopLevelSpec {
+    if (data.isNull()) {
       throw new Error('Expected struct value not to be null.');
     }
-    if (!isNest(field) || data.kind !== 'array_cell') {
+    if (!data.isRecordOrRepeatedRecord()) {
       throw new Error('Expected field to be a nest field.');
     }
 
-    const fields = getNestFields(field);
+    const fields = data.field.fields;
 
     const latField = fields[0];
     const lonField = fields[1];
@@ -156,7 +124,7 @@ export class HTMLPointMapRenderer extends HTMLChartRenderer {
     return {
       ...this.getSize(),
       data: {
-        values: this.mapData(data.array_value, field),
+        values: this.mapData(data.rows),
       },
       projection: {
         type: 'albersUsa',
@@ -228,7 +196,7 @@ export class PointMapRendererFactory extends RendererFactory<PointMapRenderOptio
     document: Document,
     styleDefaults: StyleDefaults,
     rendererOptions: RendererOptions,
-    _field: Malloy.DimensionInfo,
+    _field: Field,
     options: PointMapRenderOptions,
     timezone?: string
   ): Renderer {

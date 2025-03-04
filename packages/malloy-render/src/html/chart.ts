@@ -28,8 +28,7 @@ import {RendererOptions} from './renderer_types';
 import {ChartRenderOptions, StyleDefaults} from './data_styles';
 import {normalizeToTimezone} from '../html/utils';
 import {mergeVegaConfigs} from '../component/vega/merge-vega-configs';
-import * as Malloy from '@malloydata/malloy-interfaces';
-import {getCell, getNestFields, isNest, NestFieldInfo} from '../component/util';
+import {Cell, Field, RecordCell} from '../component/render-result-metadata';
 
 type MappedRow = {[p: string]: string | number | Date | undefined | null};
 
@@ -37,26 +36,19 @@ export abstract class HTMLChartRenderer implements Renderer {
   size: string;
   chartOptions: ChartRenderOptions;
   abstract getDataType(
-    field: Malloy.DimensionInfo
+    field: Field
   ): 'temporal' | 'ordinal' | 'quantitative' | 'nominal';
 
-  abstract getDataValue(
-    data: Malloy.Cell,
-    field: Malloy.DimensionInfo
-  ): Date | string | number | null | undefined;
+  abstract getDataValue(data: Cell): Date | string | number | null | undefined;
 
-  mapData(data: Malloy.Cell[], field: NestFieldInfo): MappedRow[] {
+  mapData(data: RecordCell[]): MappedRow[] {
     const mappedRows: MappedRow[] = [];
-    for (const rowCell of data) {
-      if (rowCell.kind !== 'record_cell') {
-        throw new Error('Expected record cell');
-      }
-      const row = rowCell.record_value;
+    for (const row of data) {
       const mappedRow: {
         [p: string]: string | number | Date | undefined | null;
       } = {};
-      for (const f of getNestFields(field)) {
-        let dataValue = this.getDataValue(getCell(field, row, f.name), f);
+      for (const f of row.field.fields) {
+        let dataValue = this.getDataValue(row.column(f.name));
         if (dataValue instanceof Date) {
           dataValue = normalizeToTimezone(dataValue, this.timezone);
         }
@@ -87,20 +79,14 @@ export abstract class HTMLChartRenderer implements Renderer {
     this.chartOptions = chartOptions;
   }
 
-  abstract getVegaLiteSpec(
-    data: Malloy.Cell,
-    field: Malloy.DimensionInfo
-  ): lite.TopLevelSpec;
+  abstract getVegaLiteSpec(data: Cell): lite.TopLevelSpec;
 
-  async render(
-    table: Malloy.Cell,
-    field: Malloy.DimensionInfo
-  ): Promise<HTMLElement> {
-    if (!isNest(field)) {
+  async render(table: Cell): Promise<HTMLElement> {
+    if (!table.isRepeatedRecord()) {
       throw new Error('Invalid type for chart renderer');
     }
 
-    const spec = this.getVegaLiteSpec(table, field);
+    const spec = this.getVegaLiteSpec(table);
     spec.config = mergeVegaConfigs(
       spec.config ?? {},
       this.chartOptions.vegaConfigOverride ?? {}

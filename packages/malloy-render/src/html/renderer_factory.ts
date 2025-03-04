@@ -25,7 +25,6 @@ import {Tag} from '@malloydata/malloy-tag';
 import {Renderer} from './renderer';
 import {DataRenderOptions, RenderDef, StyleDefaults} from './data_styles';
 import {RendererOptions} from './renderer_types';
-import * as Malloy from '@malloydata/malloy-interfaces';
 import {Field} from '../component/render-result-metadata';
 
 type TagPropertyExtractor<T extends DataRenderOptions> = (
@@ -45,12 +44,12 @@ export abstract class RendererFactory<T extends DataRenderOptions> {
     }
   }
 
-  activates(_field: Malloy.DimensionInfo): boolean {
+  activates(_field: Field): boolean {
     // Does not activate by default.
     return false;
   }
 
-  isValidMatch(_field: Malloy.DimensionInfo): boolean {
+  isValidMatch(_field: Field): boolean {
     return true;
   }
 

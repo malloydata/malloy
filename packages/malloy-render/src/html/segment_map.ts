@@ -29,55 +29,32 @@ import {RendererFactory} from './renderer_factory';
 import {SegmentMapRenderOptions, StyleDefaults} from './data_styles';
 import {RendererOptions} from './renderer_types';
 import {Renderer} from './renderer';
-import * as Malloy from '@malloydata/malloy-interfaces';
-import {
-  getCellValue,
-  getNestFields,
-  isAtomic,
-  isNest,
-  isNumber,
-  isString,
-} from '../component/util';
-import { Field } from '../component/render-result-metadata';
+import {Cell, Field} from '../component/render-result-metadata';
 
 export class HTMLSegmentMapRenderer extends HTMLChartRenderer {
-  getDataValue(data: Malloy.Cell): string | number | null {
-    if (
-      data.kind === 'null_cell' ||
-      data.kind === 'number_cell' ||
-      data.kind === 'string_cell'
-    ) {
-      return getCellValue(data) as string | number | null;
+  getDataValue(data: Cell): string | number | null {
+    if (data.isNull() || data.isNumber() || data.isString()) {
+      return data.value;
     }
     throw new Error('Invalid field type for segment map.');
   }
 
-  getDataType(
-    field: Malloy.DimensionInfo
-  ): 'ordinal' | 'quantitative' | 'nominal' {
-    if (isAtomic(field)) {
-      if (isString(field)) {
-        return 'nominal';
-      } else if (isNumber(field)) {
-        return 'quantitative';
-      }
-      // TODO dates nominal?
+  getDataType(field: Field): 'ordinal' | 'quantitative' | 'nominal' {
+    if (field.isString()) {
+      return 'nominal';
+    } else if (field.isNumber()) {
+      return 'quantitative';
     }
+    // TODO dates nominal?
     throw new Error('Invalid field type for segment map.');
   }
 
-  getVegaLiteSpec(
-    data: Malloy.Cell,
-    field: Malloy.DimensionInfo
-  ): lite.TopLevelSpec {
-    if (data.kind !== 'array_cell') {
+  getVegaLiteSpec(data: Cell): lite.TopLevelSpec {
+    if (!data.isRepeatedRecord()) {
       throw new Error('Expected struct value not to be null.');
     }
-    if (!isNest(field)) {
-      throw new Error('Invalid field for segment map');
-    }
 
-    const fields = getNestFields(field);
+    const fields = data.field.fields;
 
     const lat1Field = fields[0];
     const lon1Field = fields[1];
@@ -107,7 +84,7 @@ export class HTMLSegmentMapRenderer extends HTMLChartRenderer {
     return {
       ...this.getSize(),
       data: {
-        values: this.mapData(data.array_value, field),
+        values: this.mapData(data.rows),
       },
       projection: {
         type: 'albersUsa',

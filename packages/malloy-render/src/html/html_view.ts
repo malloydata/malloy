@@ -31,7 +31,16 @@ import {ContainerRenderer} from './container';
 import {createErrorElement} from './utils';
 import {MainRendererFactory} from './main_renderer_factory';
 import * as Malloy from '@malloydata/malloy-interfaces';
-import {getNestFields, isNest, NestFieldInfo, tagFor} from '../component/util';
+import {
+  Cell,
+  Field,
+  getResultMetadata,
+  RecordOrRepeatedRecordField,
+} from '../component/render-result-metadata';
+import {tagFromAnnotations} from '../component/util';
+import {HTMLDashboardRenderer} from './dashboard';
+import {HTMLListRenderer} from './list';
+import {HTMLListDetailRenderer} from './list_detail';
 
 export class HTMLView {
   constructor(private document: Document) {}
@@ -40,8 +49,8 @@ export class HTMLView {
     result: Malloy.Result,
     options: RendererOptions
   ): Promise<HTMLElement> {
-    // const isNextRenderer = !result.modelTag.has('renderer_legacy');
-    const isNextRenderer = true; // TODO
+    const modelTag = tagFromAnnotations(result.model_annotations, '## ');
+    const isNextRenderer = !modelTag.has('renderer_legacy');
     if (isNextRenderer) {
       const hasNextRenderer =
         !!this.document.defaultView?.customElements.get('malloy-render');
@@ -60,52 +69,45 @@ export class HTMLView {
         );
       }
     }
-    return createErrorElement(this.document, 'Legacy renderer not supported.');
-
-    // const table = result.data;
-    // const renderer = makeRenderer(
-    //   table.field,
-    //   this.document,
-    //   options,
-    //   {
-    //     size: 'large',
-    //   },
-    //   isSourceDef(table.field.structDef)
-    //     ? table.field.structDef.queryTimezone
-    //     : undefined,
-    //   result.tagParse().tag
-    // );
-    // try {
-    //   // TODO Implement row streaming capability for some renderers: some renderers should be usable
-    //   //      as a builder with `begin(field: StructDef)`, `row(field: StructDef, row: QueryDataRow)`,
-    //   //      and `end(field: StructDef)` methods.
-    //   //      Primarily, this should be possible for the `table` and `dashboard` renderers.
-    //   //      This would only be used at this top level (and HTML view should support `begin`,
-    //   //      `row`, and `end` as well).
-    //   return await renderer.render(table);
-    // } catch (error) {
-    //   if (error instanceof Error) {
-    //     return createErrorElement(this.document, error);
-    //   } else {
-    //     return createErrorElement(
-    //       this.document,
-    //       'Internal error - Exception not an Error object.'
-    //     );
-    //   }
-    // }
+    const rootCell = getResultMetadata(result);
+    const renderer = makeRenderer(
+      rootCell.field,
+      this.document,
+      options,
+      {
+        size: 'large',
+      },
+      rootCell.field.queryTimezone,
+      rootCell.field.tag
+    );
+    try {
+      // TODO Implement row streaming capability for some renderers: some renderers should be usable
+      //      as a builder with `begin(field: StructDef)`, `row(field: StructDef, row: QueryDataRow)`,
+      //      and `end(field: StructDef)` methods.
+      //      Primarily, this should be possible for the `table` and `dashboard` renderers.
+      //      This would only be used at this top level (and HTML view should support `begin`,
+      //      `row`, and `end` as well).
+      return await renderer.render(rootCell);
+    } catch (error) {
+      if (error instanceof Error) {
+        return createErrorElement(this.document, error);
+      } else {
+        return createErrorElement(
+          this.document,
+          'Internal error - Exception not an Error object.'
+        );
+      }
+    }
   }
 }
 
 export class JSONView {
   constructor(private document: Document) {}
 
-  async render(
-    table: Malloy.Cell,
-    field: Malloy.DimensionInfo
-  ): Promise<HTMLElement> {
+  async render(table: Cell): Promise<HTMLElement> {
     const renderer = new HTMLJSONRenderer(this.document);
     try {
-      return await renderer.render(table, field);
+      return await renderer.render(table);
     } catch (error) {
       if (error instanceof Error) {
         return createErrorElement(this.document, error);
@@ -138,19 +140,8 @@ const suffixMap: Record<string, RenderDef['renderer']> = {
   'sparkline_bar': 'sparkline',
 };
 
-function getRendererOptions(
-  field: Malloy.DimensionInfo,
-  dataStyles: DataStyles
-) {
-  let renderer = dataStyles[field.name];
-  if (!renderer) {
-    // TODO field.sourceClasses no longer exists
-    for (const sourceClass of []) {
-      if (!renderer) {
-        renderer = dataStyles[sourceClass];
-      }
-    }
-  }
+function getRendererOptions(field: Field, dataStyles: DataStyles) {
+  const renderer = dataStyles[field.name];
 
   const {name} = field;
   for (const suffix in suffixMap) {
@@ -184,8 +175,8 @@ function updateOrCreateRenderer(
   return renderer!;
 }
 
-function isContainer(field: Malloy.DimensionInfo): NestFieldInfo {
-  if (isNest(field)) {
+function isContainer(field: Field): RecordOrRepeatedRecordField {
+  if (field.isRecordOrRepeatedRecord()) {
     return field;
   } else {
     throw new Error(
@@ -195,7 +186,7 @@ function isContainer(field: Malloy.DimensionInfo): NestFieldInfo {
 }
 
 export function makeRenderer(
-  field: Malloy.DimensionInfo,
+  field: Field,
   document: Document,
   options: RendererOptions,
   styleDefaults: StyleDefaults,
@@ -219,13 +210,48 @@ export function makeRenderer(
     return renderer;
   }
 
-  return makeContainerRenderer(
-    HTMLTableRenderer,
-    document,
-    isContainer(field),
-    options,
-    tagged
-  );
+  if (renderDef?.renderer === 'dashboard' || tagged.has('dashboard')) {
+    return makeContainerRenderer(
+      HTMLDashboardRenderer,
+      document,
+      isContainer(field),
+      options,
+      tagged
+    );
+  } else if (renderDef?.renderer === 'list' || tagged.has('list')) {
+    return makeContainerRenderer(
+      HTMLListRenderer,
+      document,
+      isContainer(field),
+      options,
+      tagged
+    );
+  } else if (
+    renderDef?.renderer === 'list_detail' ||
+    tagged.has('list_detail')
+  ) {
+    return makeContainerRenderer(
+      HTMLListDetailRenderer,
+      document,
+      isContainer(field),
+      options,
+      tagged
+    );
+  } else if (
+    renderDef?.renderer === 'table' ||
+    tagged.has('table') ||
+    field.isRecordOrRepeatedRecord()
+  ) {
+    return makeContainerRenderer(
+      HTMLTableRenderer,
+      document,
+      isContainer(field),
+      options,
+      tagged
+    );
+  }
+
+  throw new Error(`Could not find a proper renderer for field ${field.name}`);
 }
 
 function makeContainerRenderer<Type extends ContainerRenderer>(
@@ -235,20 +261,20 @@ function makeContainerRenderer<Type extends ContainerRenderer>(
     tagged: Tag
   ) => Type,
   document: Document,
-  explore: NestFieldInfo,
+  explore: RecordOrRepeatedRecordField,
   options: RendererOptions,
   tagged: Tag
 ): ContainerRenderer {
   const c = ContainerRenderer.make(cType, document, explore, options, tagged);
   const result: ChildRenderers = {};
-  getNestFields(explore).forEach((field: Malloy.DimensionInfo) => {
+  explore.fields.forEach((field: Field) => {
     result[field.name] = makeRenderer(
       field,
       document,
       options,
       c.defaultStylesForChildren,
-      undefined, // TODO timezone: explore.queryTimezone,
-      tagFor(field)
+      field.root().queryTimezone,
+      field.tag
     );
   });
   c.childRenderers = result;

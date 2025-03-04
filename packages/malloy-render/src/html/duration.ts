@@ -32,8 +32,7 @@ import {RendererOptions} from './renderer_types';
 import {Renderer} from './renderer';
 import {RendererFactory} from './renderer_factory';
 import {format} from 'ssf';
-import * as Malloy from '@malloydata/malloy-interfaces';
-import {tagFor} from '../component/util';
+import {Cell, Field} from '../component/render-result-metadata';
 
 export function formatTimeUnit(
   value: number,
@@ -74,7 +73,7 @@ const multiplierMap = new Map<DurationUnit, number>([
 ]);
 
 export function getText(
-  field: Malloy.DimensionInfo,
+  field: Field,
   value: number,
   options: {
     durationUnit?: string;
@@ -84,7 +83,7 @@ export function getText(
     options.durationUnit && isDurationUnit(options.durationUnit)
       ? options.durationUnit
       : DurationUnit.Seconds;
-  const tag = tagFor(field);
+  const tag = field.tag;
   const numFormat = tag.text('number');
   const terse = tag.has('duration', 'terse');
 
@@ -132,20 +131,17 @@ export class HTMLDurationRenderer extends HTMLTextRenderer {
     super(document);
   }
 
-  override getText(
-    data: Malloy.Cell,
-    field: Malloy.DimensionInfo
-  ): string | null {
-    if (data.kind === 'null_cell') {
+  override getText(data: Cell): string | null {
+    if (data.isNull()) {
       return null;
     }
 
-    if (data.kind !== 'number_cell') {
+    if (!data.isNumber()) {
       throw new Error(
-        `Cannot format field ${field.name} as a duration unit since its not a number`
+        `Cannot format field ${data.field.name} as a duration unit since its not a number`
       );
     }
-    return getText(field, data.number_value, {
+    return getText(data.field, data.value, {
       durationUnit: this.options.duration_unit,
     });
   }
@@ -166,7 +162,7 @@ export class DurationRendererFactory extends RendererFactory<DurationRenderOptio
     document: Document,
     _styleDefaults: StyleDefaults,
     _rendererOptions: RendererOptions,
-    _field: Malloy.DimensionInfo,
+    _field: Field,
     options: DurationRenderOptions
   ): Renderer {
     return new HTMLDurationRenderer(document, options);

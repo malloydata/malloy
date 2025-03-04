@@ -29,8 +29,7 @@ import {RendererFactory} from './renderer_factory';
 import {ColumnSparkLineRenderOptions, StyleDefaults} from './data_styles';
 import {RendererOptions} from './renderer_types';
 import {Renderer} from './renderer';
-import * as Malloy from '@malloydata/malloy-interfaces';
-import {getNestFields, isNest} from '../component/util';
+import {Cell, Field} from '../component/render-result-metadata';
 
 export class HTMLColumnSparkLineRenderer extends HTMLBarChartRenderer {
   override getSize(): {height: number; width: number} {
@@ -41,14 +40,11 @@ export class HTMLColumnSparkLineRenderer extends HTMLBarChartRenderer {
     }
   }
 
-  override getVegaLiteSpec(
-    data: Malloy.Cell,
-    field: Malloy.DimensionInfo
-  ): lite.TopLevelSpec {
-    if (!isNest(field) || data.kind !== 'array_cell') {
+  override getVegaLiteSpec(data: Cell): lite.TopLevelSpec {
+    if (!data.isRepeatedRecord()) {
       throw new Error('Column sparkline renderer requires a nested field');
     }
-    const fields = getNestFields(field);
+    const fields = data.field.fields;
     const xField = fields[0];
     const yField = fields[1];
     const colorField = fields[2];
@@ -105,7 +101,7 @@ export class HTMLColumnSparkLineRenderer extends HTMLBarChartRenderer {
       ...DEFAULT_SPEC,
       ...this.getSize(),
       data: {
-        values: this.mapData(data.array_value, field),
+        values: this.mapData(data.rows),
       },
       config: {
         view: {
@@ -126,7 +122,7 @@ export class HTMLColumnSparkLineRenderer extends HTMLBarChartRenderer {
 export class ColumnSparkLineRendererFactory extends RendererFactory<ColumnSparkLineRenderOptions> {
   public static readonly instance = new ColumnSparkLineRendererFactory();
 
-  isValidMatch(field: Malloy.DimensionInfo): boolean {
+  isValidMatch(field: Field): boolean {
     return field.name.endsWith('_column');
   }
 
@@ -134,7 +130,7 @@ export class ColumnSparkLineRendererFactory extends RendererFactory<ColumnSparkL
     document: Document,
     styleDefaults: StyleDefaults,
     rendererOptions: RendererOptions,
-    _field: Malloy.DimensionInfo,
+    _field: Field,
     options: ColumnSparkLineRenderOptions,
     timezone?: string
   ): Renderer {

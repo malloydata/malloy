@@ -26,16 +26,7 @@ import {LineChartRenderOptions, StyleDefaults} from './data_styles';
 import {RendererFactory} from './renderer_factory';
 import {RendererOptions} from './renderer_types';
 import {Renderer} from './renderer';
-import * as Malloy from '@malloydata/malloy-interfaces';
-import {
-  getCellValue,
-  isAtomic,
-  isDate,
-  isNumber,
-  isString,
-  isTimestamp,
-} from '../component/util';
-import { Field } from '../component/render-result-metadata';
+import {Cell, Field} from '../component/render-result-metadata';
 
 export class HTMLLineChartRenderer extends HTMLCartesianChartRenderer {
   getMark(): 'line' {
@@ -43,30 +34,23 @@ export class HTMLLineChartRenderer extends HTMLCartesianChartRenderer {
   }
 
   getDataType(
-    field: Malloy.DimensionInfo
+    field: Field
   ): 'temporal' | 'ordinal' | 'quantitative' | 'nominal' {
-    if (isAtomic(field)) {
-      if (isDate(field) || isTimestamp(field)) {
-        return 'temporal';
-      } else if (isString(field)) {
-        return 'nominal';
-      } else if (isNumber(field)) {
-        return 'quantitative';
-      }
+    if (field.isTime()) {
+      return 'temporal';
+    } else if (field.isString()) {
+      return 'nominal';
+    } else if (field.isNumber()) {
+      return 'quantitative';
     }
     throw new Error('Invalid field type for line chart.');
   }
 
-  getDataValue(data: Malloy.Cell): Date | string | number | null {
-    if (data.kind === 'null_cell') {
+  getDataValue(data: Cell): Date | string | number | null {
+    if (data.isNull()) {
       return null;
-    } else if (
-      data.kind === 'timestamp_cell' ||
-      data.kind === 'date_cell' ||
-      data.kind === 'number_cell' ||
-      data.kind === 'string_cell'
-    ) {
-      return getCellValue(data) as Date | string | number;
+    } else if (data.isTime() || data.isNumber() || data.isString()) {
+      return data.value;
     } else {
       throw new Error('Invalid field type for line chart.');
     }
