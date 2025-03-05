@@ -328,7 +328,7 @@ run: flights -> { aggregate: flight_count { where: carrier ~ f`WN, AA`} }
 {@link ASTSourceReference.setParameter}
 
 ```ts
-query.source.setParameter("param", 1);
+query.definition.asArrowQueryDefinition().sourceReference.parameters.setParameter("param", 1)
 ```
 ```
 run: flights(param is 1) ->
@@ -339,7 +339,7 @@ run: flights(param is 1) ->
 {@link ASTSourceReference.getSourceParameters}
 
 ```ts
-query.definition.asArrowQueryDefinition().source.getSourceParameters();
+query.definition.asArrowQueryDefinition().sourceReference.getSourceParameters();
 ```
 
 ## To a particular field in the query (including nests), add/edit/delete annotation

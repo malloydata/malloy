@@ -543,6 +543,23 @@ abstract class ASTNode<T> {
       fields: [...a.fields, ...b.fields],
     };
   }
+
+  static tagFor(a: Malloy.FieldInfo, prefix = '# ') {
+    const lines = a.annotations
+      ?.map(a => a.value)
+      ?.filter(l => l.startsWith(prefix));
+    return Tag.fromTagLines(lines ?? []).tag ?? new Tag();
+  }
+
+  static fieldWasCalculation(a: Malloy.FieldInfo) {
+    if (a.kind !== 'dimension') {
+      throw new Error(
+        `${a.name} could not be an output field, because it is a ${a.kind}, and only dimensions can appear in output schemas`
+      );
+    }
+    const tag = ASTNode.tagFor(a, '#(malloy) ');
+    return tag.has('calculation');
+  }
 }
 
 function isBasic(
@@ -3438,6 +3455,11 @@ export class ASTAggregateViewOperation
 
   getFieldInfo(): Malloy.FieldInfo {
     return {
+      annotations: [
+        {
+          value: Tag.withPrefix('#(malloy) ').set(['calculation']).toString(),
+        },
+      ],
       kind: 'dimension',
       name: this.name,
       type: this.field.type,

@@ -239,55 +239,101 @@ describe('query builder', () => {
       `,
     });
   });
-  test('add an aggregate with a where', () => {
-    const from: Malloy.Query = {
-      definition: {
-        kind: 'arrow',
-        source_reference: {name: 'flights'},
-        view: {
-          kind: 'segment',
-          operations: [],
-        },
-      },
-    };
-    expect((q: ASTQuery) => {
-      q.getOrAddDefaultSegment()
-        .addAggregate('flight_count')
-        .addWhere('carrier', 'WN, AA');
-    }).toModifyQuery({
-      model: flights_model,
-      from,
-      to: {
+  describe('aggregate', () => {
+    test('added aggregate should have calculation annotation', () => {
+      const from: Malloy.Query = {
         definition: {
           kind: 'arrow',
           source_reference: {name: 'flights'},
           view: {
             kind: 'segment',
-            operations: [
-              {
-                kind: 'aggregate',
-                field: {
-                  expression: {
-                    kind: 'filtered_field',
-                    field_reference: {name: 'flight_count'},
-                    where: [
-                      {
-                        filter: {
-                          kind: 'filter_string',
-                          field_reference: {name: 'carrier'},
-                          filter: 'WN, AA',
-                        },
-                      },
-                    ],
-                  },
-                },
-              },
-            ],
+            operations: [],
           },
         },
-      },
-      malloy:
-        'run: flights -> { aggregate: flight_count { where: carrier ~ f`WN, AA` } }',
+      };
+      expect((q: ASTQuery) => {
+        const aggregate = q
+          .getOrAddDefaultSegment()
+          .addAggregate('flight_count');
+        expect(ASTQuery.fieldWasCalculation(aggregate.getFieldInfo())).toBe(
+          true
+        );
+      }).toModifyQuery({
+        model: flights_model,
+        from,
+        to: {
+          definition: {
+            kind: 'arrow',
+            source_reference: {name: 'flights'},
+            view: {
+              kind: 'segment',
+              operations: [
+                {
+                  kind: 'aggregate',
+                  field: {
+                    expression: {
+                      kind: 'field_reference',
+                      name: 'flight_count',
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+        malloy: 'run: flights -> { aggregate: flight_count }',
+      });
+    });
+    test('add an aggregate with a where', () => {
+      const from: Malloy.Query = {
+        definition: {
+          kind: 'arrow',
+          source_reference: {name: 'flights'},
+          view: {
+            kind: 'segment',
+            operations: [],
+          },
+        },
+      };
+      expect((q: ASTQuery) => {
+        q.getOrAddDefaultSegment()
+          .addAggregate('flight_count')
+          .addWhere('carrier', 'WN, AA');
+      }).toModifyQuery({
+        model: flights_model,
+        from,
+        to: {
+          definition: {
+            kind: 'arrow',
+            source_reference: {name: 'flights'},
+            view: {
+              kind: 'segment',
+              operations: [
+                {
+                  kind: 'aggregate',
+                  field: {
+                    expression: {
+                      kind: 'filtered_field',
+                      field_reference: {name: 'flight_count'},
+                      where: [
+                        {
+                          filter: {
+                            kind: 'filter_string',
+                            field_reference: {name: 'carrier'},
+                            filter: 'WN, AA',
+                          },
+                        },
+                      ],
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+        malloy:
+          'run: flights -> { aggregate: flight_count { where: carrier ~ f`WN, AA` } }',
+      });
     });
   });
   test('add a where', () => {
