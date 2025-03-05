@@ -196,6 +196,9 @@ class SessionManager {
       this.findCompileModelSession(options.session_id, sessionInfo);
     this.purgeExpired({except: options?.session_id});
     if (session) {
+      if (options?.ttl) {
+        session.expires = this.getExpires(options.ttl);
+      }
       Core.updateCompileModelState(session.state, request.compiler_needs);
     } else {
       session = this.newCompileModelSession(request, sessionInfo, options);
@@ -233,6 +236,9 @@ class SessionManager {
       this.findCompileSourceSession(options.session_id, sessionInfo);
     this.purgeExpired({except: options?.session_id});
     if (session) {
+      if (options?.ttl) {
+        session.expires = this.getExpires(options.ttl);
+      }
       Core.updateCompileModelState(session.state, request.compiler_needs);
     } else {
       session = this.newCompileSourceSession(request, sessionInfo, options);
@@ -271,6 +277,9 @@ class SessionManager {
       this.findCompileQuerySession(options.session_id, sessionInfo);
     this.purgeExpired({except: options?.session_id});
     if (session) {
+      if (options?.ttl) {
+        session.expires = this.getExpires(options.ttl);
+      }
       Core.updateCompileModelState(session.state, request.compiler_needs);
     } else {
       session = this.newCompileQuerySession(request, sessionInfo, options);

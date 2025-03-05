@@ -315,6 +315,65 @@ ORDER BY 1 asc NULLS LAST
         // New session
         expect(result.session_id).not.toBe(session_id);
       });
+      test('ttl should be updated if set in a subsequent request', () => {
+        let result = compileModel(
+          {
+            model_url: 'file://test.malloy',
+          },
+          {
+            // This is in the past...
+            ttl: new Date(Date.now() - 1000),
+          }
+        );
+        const session_id = result.session_id;
+        let expected: Malloy.CompileModelResponse & {session_id?: string} = {
+          compiler_needs: {
+            files: [
+              {
+                url: 'file://test.malloy',
+              },
+            ],
+          },
+        };
+        expect(result).toMatchObject(expected);
+        result = compileModel(
+          {
+            model_url: 'file://test.malloy',
+            compiler_needs: {
+              files: [
+                {
+                  url: 'file://test.malloy',
+                  contents: 'source: flights is connection.table("flights")',
+                },
+              ],
+            },
+          },
+          {
+            session_id,
+            // Update TTL to be far in the future
+            ttl: {seconds: 100000},
+          }
+        );
+        expected = {
+          compiler_needs: {
+            table_schemas: [
+              {
+                connection_name: 'connection',
+                name: 'flights',
+              },
+            ],
+            connections: [{name: 'connection'}],
+          },
+          session_id,
+        };
+        expect(result).toMatchObject(expected);
+        // Now asking for a different file should NOT purge the original session
+        compileModel({
+          model_url: 'file://some_other_model.malloy',
+        });
+        result = compileModel({model_url: 'file://test.malloy'}, {session_id});
+        expect(result).toMatchObject(expected);
+      });
     });
     test('getting an error should kill session', () => {
       let result = compileModel({
