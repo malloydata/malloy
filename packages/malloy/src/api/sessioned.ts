@@ -7,6 +7,7 @@
 
 import * as Malloy from '@malloydata/malloy-interfaces';
 import * as Core from './core';
+import {v4 as uuidv4} from 'uuid';
 
 interface SessionInfoForCompileModel {
   type: 'compile_model';
@@ -40,6 +41,7 @@ type SessionState =
 
 interface SessionStateBase {
   expires?: Date;
+  sessionId: string;
 }
 
 interface SessionStateForCompileModel extends SessionStateBase {
@@ -78,24 +80,23 @@ function sessionInfosMatch(a: SessionInfo, b: SessionInfo) {
 }
 
 class SessionManager {
-  private sessions: SessionState[] = [];
+  private sessions: Map<string, SessionState> = new Map();
 
-  private purgeExpired(except?: SessionInfo) {
+  private purgeExpired(options?: {except?: string}) {
     const now = new Date();
-    this.sessions = this.sessions.filter(
-      s =>
-        (except && sessionInfosMatch(s.sessionInfo, except)) ||
-        s.expires === undefined ||
-        s.expires > now
-    );
+    for (const session of this.sessions.values()) {
+      if (session.sessionId === options?.except) continue;
+      if (session.expires && session.expires < now) {
+        this.sessions.delete(session.sessionId);
+      }
+    }
   }
 
-  private findSession(sessionInfo: SessionInfo) {
-    const session = this.sessions.find(s =>
-      sessionInfosMatch(s.sessionInfo, sessionInfo)
-    );
-    this.purgeExpired(sessionInfo);
-    return session;
+  private findSession(sessionId: string, sessionInfo: SessionInfo) {
+    const session = this.sessions.get(sessionId);
+    if (session && sessionInfosMatch(session.sessionInfo, sessionInfo)) {
+      return session;
+    }
   }
 
   private getExpires(ttl: TTL): Date {
@@ -105,6 +106,14 @@ class SessionManager {
       // TODO is this how you do this?
       return new Date(Date.now() + ttl.seconds * 1000);
     }
+  }
+
+  private newSessionId() {
+    let id: string;
+    do {
+      id = uuidv4();
+    } while (this.sessions.has(id));
+    return id;
   }
 
   private newCompileModelSession(
@@ -119,6 +128,7 @@ class SessionManager {
       sessionInfo,
       state,
       expires,
+      sessionId: this.newSessionId(),
     };
   }
 
@@ -134,6 +144,7 @@ class SessionManager {
       sessionInfo,
       state,
       expires,
+      sessionId: this.newSessionId(),
     };
   }
 
@@ -149,22 +160,22 @@ class SessionManager {
       sessionInfo,
       state,
       expires,
+      sessionId: this.newSessionId(),
     };
   }
 
   private findCompileModelSession(
+    sessionId: string,
     sessionInfo: SessionInfoForCompileModel
   ): SessionStateForCompileModel | undefined {
-    const session = this.findSession(sessionInfo);
+    const session = this.findSession(sessionId, sessionInfo);
     if (session?.type === 'compile_model') {
       return session;
     }
   }
 
-  private killSession(sessionInfo: SessionInfo) {
-    this.sessions = this.sessions.filter(
-      s => !sessionInfosMatch(s.sessionInfo, sessionInfo)
-    );
+  private killSession(sessionId: string) {
+    this.sessions.delete(sessionId);
   }
 
   public hasErrors(log: Malloy.LogMessage[] | undefined) {
@@ -174,30 +185,34 @@ class SessionManager {
   public compileModel(
     request: Malloy.CompileModelRequest,
     options?: OptionsBase
-  ): Malloy.CompileModelResponse {
+  ): Malloy.CompileModelResponse & {session_id: string} {
     const sessionInfo: SessionInfoForCompileModel = {
       type: 'compile_model',
       modelURL: request.model_url,
       extendModelURL: request.extend_model_url,
     };
-    let session = this.findCompileModelSession(sessionInfo);
+    let session =
+      options?.session_id &&
+      this.findCompileModelSession(options.session_id, sessionInfo);
+    this.purgeExpired({except: options?.session_id});
     if (session) {
       Core.updateCompileModelState(session.state, request.compiler_needs);
     } else {
       session = this.newCompileModelSession(request, sessionInfo, options);
-      this.sessions.push(session);
+      this.sessions.set(session.sessionId, session);
     }
     const result = Core.statedCompileModel(session.state);
     if (result.model || this.hasErrors(result.logs)) {
-      this.killSession(sessionInfo);
+      this.killSession(session.sessionId);
     }
-    return result;
+    return {...result, session_id: session.sessionId};
   }
 
   private findCompileSourceSession(
+    sessionId: string,
     sessionInfo: SessionInfoForCompileSource
   ): SessionStateForCompileSource | undefined {
-    const session = this.findSession(sessionInfo);
+    const session = this.findSession(sessionId, sessionInfo);
     if (session?.type === 'compile_source') {
       return session;
     }
@@ -206,31 +221,35 @@ class SessionManager {
   public compileSource(
     request: Malloy.CompileSourceRequest,
     options?: OptionsBase
-  ): Malloy.CompileSourceResponse {
+  ): Malloy.CompileSourceResponse & {session_id: string} {
     const sessionInfo: SessionInfoForCompileSource = {
       type: 'compile_source',
       modelURL: request.model_url,
       name: request.name,
       extendModelURL: request.extend_model_url,
     };
-    let session = this.findCompileSourceSession(sessionInfo);
+    let session =
+      options?.session_id &&
+      this.findCompileSourceSession(options.session_id, sessionInfo);
+    this.purgeExpired({except: options?.session_id});
     if (session) {
       Core.updateCompileModelState(session.state, request.compiler_needs);
     } else {
       session = this.newCompileSourceSession(request, sessionInfo, options);
-      this.sessions.push(session);
+      this.sessions.set(session.sessionId, session);
     }
     const result = Core.statedCompileSource(session.state, request.name);
     if (result.source || this.hasErrors(result.logs)) {
-      this.killSession(sessionInfo);
+      this.killSession(session.sessionId);
     }
-    return result;
+    return {...result, session_id: session.sessionId};
   }
 
   private findCompileQuerySession(
+    sessionId: string,
     sessionInfo: SessionInfoForCompileQuery
   ): SessionStateForCompileQuery | undefined {
-    const session = this.findSession(sessionInfo);
+    const session = this.findSession(sessionId, sessionInfo);
     if (session?.type === 'compile_query') {
       return session;
     }
@@ -239,7 +258,7 @@ class SessionManager {
   public compileQuery(
     request: Malloy.CompileQueryRequest,
     options?: OptionsBase
-  ): Malloy.CompileQueryResponse {
+  ): Malloy.CompileQueryResponse & {session_id: string} {
     const queryString = Malloy.queryToMalloy(request.query);
     const sessionInfo: SessionInfoForCompileQuery = {
       type: 'compile_query',
@@ -247,18 +266,21 @@ class SessionManager {
       queryString,
       query: request.query,
     };
-    let session = this.findCompileQuerySession(sessionInfo);
+    let session =
+      options?.session_id &&
+      this.findCompileQuerySession(options.session_id, sessionInfo);
+    this.purgeExpired({except: options?.session_id});
     if (session) {
       Core.updateCompileModelState(session.state, request.compiler_needs);
     } else {
       session = this.newCompileQuerySession(request, sessionInfo, options);
-      this.sessions.push(session);
+      this.sessions.set(session.sessionId, session);
     }
     const result = Core.statedCompileQuery(session.state);
     if (result.result || this.hasErrors(result.logs)) {
-      this.killSession(sessionInfo);
+      this.killSession(session.sessionId);
     }
-    return result;
+    return {...result, session_id: session.sessionId};
   }
 }
 
@@ -268,25 +290,26 @@ export type TTL = {'seconds': number} | Date;
 
 export interface OptionsBase {
   ttl?: TTL;
+  session_id?: string;
 }
 
 export function compileModel(
   request: Malloy.CompileModelRequest,
   options?: OptionsBase
-): Malloy.CompileModelResponse {
+): Malloy.CompileModelResponse & {session_id: string} {
   return SESSION_MANAGER.compileModel(request, options);
 }
 
 export function compileSource(
   request: Malloy.CompileSourceRequest,
   options?: OptionsBase
-): Malloy.CompileSourceResponse {
+): Malloy.CompileSourceResponse & {session_id: string} {
   return SESSION_MANAGER.compileSource(request, options);
 }
 
 export function compileQuery(
   request: Malloy.CompileQueryRequest,
   options?: OptionsBase
-): Malloy.CompileQueryResponse {
+): Malloy.CompileQueryResponse & {session_id: string} {
   return SESSION_MANAGER.compileQuery(request, options);
 }
