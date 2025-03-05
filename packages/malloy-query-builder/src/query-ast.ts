@@ -1233,8 +1233,15 @@ export class ASTFieldReference extends ASTReference {
     }
   }
 
+  private getReferenceSchema() {
+    if (this.parent instanceof ASTOrderByViewOperation) {
+      return this.segment.getOutputSchema();
+    }
+    return this.segment.getInputSchema();
+  }
+
   getFieldInfo() {
-    const schema = this.segment.getInputSchema();
+    const schema = this.getReferenceSchema();
     return ASTNode.schemaGet(schema, this.name, this.path);
   }
 }
@@ -2440,7 +2447,10 @@ export class ASTSegmentViewDefinition
    * @param name The name of the field to order by.
    * @param direction The order by direction (ascending or descending).
    */
-  public addOrderBy(name: string, direction?: Malloy.OrderByDirection) {
+  public addOrderBy(
+    name: string,
+    direction?: Malloy.OrderByDirection
+  ): ASTOrderByViewOperation {
     // Ensure output schema has a field with this name
     const outputSchema = this.getOutputSchema();
     try {
@@ -2453,18 +2463,18 @@ export class ASTSegmentViewDefinition
       if (operation instanceof ASTOrderByViewOperation) {
         if (operation.name === name) {
           operation.direction = direction;
-          return;
+          return operation;
         }
       }
     }
+    const operation = new ASTOrderByViewOperation({
+      kind: 'order_by',
+      field_reference: {name},
+      direction,
+    });
     // add a new order by operation
-    this.addOperation(
-      new ASTOrderByViewOperation({
-        kind: 'order_by',
-        field_reference: {name},
-        direction,
-      })
-    );
+    this.addOperation(operation);
+    return operation;
   }
 
   /**
@@ -4215,7 +4225,7 @@ export class ASTView
   }
 
   getOutputSchema() {
-    return this.definition.getOutputSchema();
+    return this.definition.getRefinementSchema();
   }
 
   /**

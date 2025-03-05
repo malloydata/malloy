@@ -8,7 +8,7 @@
 import * as Malloy from '@malloydata/malloy-interfaces';
 import {flights_model} from './flights_model';
 import './expects';
-import {ASTQuery} from './query-ast';
+import {ASTOrderByViewOperation, ASTQuery} from './query-ast';
 
 function dedent(strs: TemplateStringsArray) {
   const str = strs.join('');
@@ -834,46 +834,168 @@ describe('query builder', () => {
       malloy: 'run: flights -> by_month + { limit: 10 }',
     });
   });
-  test('add an order by in a refinement', () => {
-    const from: Malloy.Query = {
-      definition: {
-        kind: 'arrow',
-        source_reference: {name: 'flights'},
-        view: {
-          kind: 'view_reference',
-          name: 'by_month',
-        },
-      },
-    };
-    expect((q: ASTQuery) => {
-      q.getOrAddDefaultSegment().addOrderBy('dep_month', 'asc');
-    }).toModifyQuery({
-      model: flights_model,
-      from,
-      to: {
+  describe('add order by', () => {
+    test('add an order by to a complex refinement', () => {
+      const from: Malloy.Query = {
         definition: {
           kind: 'arrow',
-          source_reference: {name: 'flights'},
+          source_reference: {
+            name: 'flights',
+          },
           view: {
             kind: 'refinement',
             base: {
               kind: 'view_reference',
-              name: 'by_month',
+              name: 'top_carriers',
             },
             refinement: {
               kind: 'segment',
               operations: [
                 {
-                  kind: 'order_by',
-                  field_reference: {name: 'dep_month'},
-                  direction: 'asc',
+                  kind: 'group_by',
+                  field: {
+                    expression: {
+                      kind: 'field_reference',
+                      name: 'carrier',
+                      path: [],
+                    },
+                  },
+                },
+                {
+                  kind: 'nest',
+                  name: 'by_month',
+                  view: {
+                    definition: {
+                      kind: 'refinement',
+                      base: {
+                        kind: 'view_reference',
+                        name: 'by_month',
+                      },
+                      refinement: {
+                        kind: 'segment',
+                        operations: [],
+                      },
+                    },
+                  },
                 },
               ],
             },
           },
         },
-      },
-      malloy: 'run: flights -> by_month + { order_by: dep_month asc }',
+      };
+      expect((q: ASTQuery) => {
+        q.getOrAddDefaultSegment().addOrderBy('carrier');
+      }).toModifyQuery({
+        model: flights_model,
+        from,
+        to: {
+          definition: {
+            kind: 'arrow',
+            source_reference: {
+              name: 'flights',
+            },
+            view: {
+              kind: 'refinement',
+              base: {
+                kind: 'view_reference',
+                name: 'top_carriers',
+              },
+              refinement: {
+                kind: 'segment',
+                operations: [
+                  {
+                    kind: 'group_by',
+                    field: {
+                      expression: {
+                        kind: 'field_reference',
+                        name: 'carrier',
+                        path: [],
+                      },
+                    },
+                  },
+                  {
+                    kind: 'nest',
+                    name: 'by_month',
+                    view: {
+                      definition: {
+                        kind: 'refinement',
+                        base: {
+                          kind: 'view_reference',
+                          name: 'by_month',
+                        },
+                        refinement: {
+                          kind: 'segment',
+                          operations: [],
+                        },
+                      },
+                    },
+                  },
+                  {
+                    kind: 'order_by',
+                    field_reference: {
+                      name: 'carrier',
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+        malloy: dedent`
+          run: flights -> top_carriers + {
+            group_by: carrier
+            nest: by_month is by_month + { }
+            order_by: carrier
+          }
+        `,
+      });
+    });
+    test('add an order by in a refinement', () => {
+      let orderBy: ASTOrderByViewOperation | undefined;
+      const from: Malloy.Query = {
+        definition: {
+          kind: 'arrow',
+          source_reference: {name: 'flights'},
+          view: {
+            kind: 'view_reference',
+            name: 'by_month',
+          },
+        },
+      };
+      expect((q: ASTQuery) => {
+        orderBy = q.getOrAddDefaultSegment().addOrderBy('dep_month', 'asc');
+      }).toModifyQuery({
+        model: flights_model,
+        from,
+        to: {
+          definition: {
+            kind: 'arrow',
+            source_reference: {name: 'flights'},
+            view: {
+              kind: 'refinement',
+              base: {
+                kind: 'view_reference',
+                name: 'by_month',
+              },
+              refinement: {
+                kind: 'segment',
+                operations: [
+                  {
+                    kind: 'order_by',
+                    field_reference: {name: 'dep_month'},
+                    direction: 'asc',
+                  },
+                ],
+              },
+            },
+          },
+        },
+        malloy: 'run: flights -> by_month + { order_by: dep_month asc }',
+      });
+      expect(orderBy?.fieldReference.getFieldInfo()).toMatchObject({
+        'kind': 'dimension',
+        'name': 'dep_month',
+      });
     });
   });
   test('do nothing', () => {
