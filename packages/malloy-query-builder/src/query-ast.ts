@@ -543,6 +543,23 @@ abstract class ASTNode<T> {
       fields: [...a.fields, ...b.fields],
     };
   }
+
+  static tagFor(a: Malloy.FieldInfo, prefix = '# ') {
+    const lines = a.annotations
+      ?.map(a => a.value)
+      ?.filter(l => l.startsWith(prefix));
+    return Tag.fromTagLines(lines ?? []).tag ?? new Tag();
+  }
+
+  static fieldWasCalculation(a: Malloy.FieldInfo) {
+    if (a.kind !== 'dimension') {
+      throw new Error(
+        `${a.name} could not be an output field, because it is a ${a.kind}, and only dimensions can appear in output schemas`
+      );
+    }
+    const tag = ASTNode.tagFor(a, '#(malloy) ');
+    return tag.has('calculation');
+  }
 }
 
 function isBasic(
@@ -1233,8 +1250,15 @@ export class ASTFieldReference extends ASTReference {
     }
   }
 
+  private getReferenceSchema() {
+    if (this.parent instanceof ASTOrderByViewOperation) {
+      return this.segment.getOutputSchema();
+    }
+    return this.segment.getInputSchema();
+  }
+
   getFieldInfo() {
-    const schema = this.segment.getInputSchema();
+    const schema = this.getReferenceSchema();
     return ASTNode.schemaGet(schema, this.name, this.path);
   }
 }
@@ -2440,7 +2464,10 @@ export class ASTSegmentViewDefinition
    * @param name The name of the field to order by.
    * @param direction The order by direction (ascending or descending).
    */
-  public addOrderBy(name: string, direction?: Malloy.OrderByDirection) {
+  public addOrderBy(
+    name: string,
+    direction?: Malloy.OrderByDirection
+  ): ASTOrderByViewOperation {
     // Ensure output schema has a field with this name
     const outputSchema = this.getOutputSchema();
     try {
@@ -2453,18 +2480,18 @@ export class ASTSegmentViewDefinition
       if (operation instanceof ASTOrderByViewOperation) {
         if (operation.name === name) {
           operation.direction = direction;
-          return;
+          return operation;
         }
       }
     }
+    const operation = new ASTOrderByViewOperation({
+      kind: 'order_by',
+      field_reference: {name},
+      direction,
+    });
     // add a new order by operation
-    this.addOperation(
-      new ASTOrderByViewOperation({
-        kind: 'order_by',
-        field_reference: {name},
-        direction,
-      })
-    );
+    this.addOperation(operation);
+    return operation;
   }
 
   /**
@@ -3428,6 +3455,11 @@ export class ASTAggregateViewOperation
 
   getFieldInfo(): Malloy.FieldInfo {
     return {
+      annotations: [
+        {
+          value: Tag.withPrefix('#(malloy) ').set(['calculation']).toString(),
+        },
+      ],
       kind: 'dimension',
       name: this.name,
       type: this.field.type,
@@ -4215,7 +4247,7 @@ export class ASTView
   }
 
   getOutputSchema() {
-    return this.definition.getOutputSchema();
+    return this.definition.getRefinementSchema();
   }
 
   /**
