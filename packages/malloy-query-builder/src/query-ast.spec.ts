@@ -1082,8 +1082,8 @@ describe('query builder', () => {
       },
     };
     expect((q: ASTQuery) => {
-      q.definition
-        .asArrowQueryDefinition()
+      q.definition.as
+        .ArrowQueryDefinition()
         .view.addViewRefinement('cool_state_measures');
     }).toModifyQuery({
       source: {
@@ -1470,10 +1470,10 @@ describe('query builder', () => {
       },
     };
     expect((q: ASTQuery) => {
-      const segment = q.definition
-        .asArrowQueryDefinition()
-        .view.asRefinementViewDefinition()
-        .base.asSegmentViewDefinition();
+      const segment = q.definition.as
+        .ArrowQueryDefinition()
+        .view.as.RefinementViewDefinition()
+        .base.as.SegmentViewDefinition();
       segment.getGroupBy('carrier')!.rename('carrier_2');
     }).toModifyQuery({
       model: flights_model,
@@ -1549,10 +1549,10 @@ describe('query builder', () => {
       },
     };
     expect((q: ASTQuery) => {
-      const segment = q.definition
-        .asArrowQueryDefinition()
-        .view.asRefinementViewDefinition()
-        .base.asSegmentViewDefinition();
+      const segment = q.definition.as
+        .ArrowQueryDefinition()
+        .view.as.RefinementViewDefinition()
+        .base.as.SegmentViewDefinition();
       segment.getGroupBy('carrier')!.delete();
     }).toModifyQuery({
       model: flights_model,
@@ -1616,10 +1616,10 @@ describe('query builder', () => {
       },
     };
     expect((q: ASTQuery) => {
-      const segment = q.definition
-        .asArrowQueryDefinition()
-        .view.asArrowViewDefinition()
-        .source.asSegmentViewDefinition();
+      const segment = q.definition.as
+        .ArrowQueryDefinition()
+        .view.as.ArrowViewDefinition()
+        .source.as.SegmentViewDefinition();
       segment.getGroupBy('carrier')!.delete();
     }).toModifyQuery({
       model: flights_model,
@@ -1837,7 +1837,7 @@ describe('query builder', () => {
         },
       };
       expect((q: ASTQuery) => {
-        const source = q.definition.asArrowQueryDefinition().sourceReference;
+        const source = q.definition.as.ArrowQueryDefinition().sourceReference;
         source.setParameter('string_param', 'COOL');
         source.setParameter('number_param', 7);
         source.setParameter('boolean_param', true);
