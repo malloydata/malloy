@@ -134,15 +134,8 @@ export function convertFieldInfos(source: SourceDef, fields: FieldDef[]) {
       const resultMetadataAnnotation = field.resultMetadata
         ? getResultMetadataAnnotation(field, field.resultMetadata)
         : undefined;
-      // const resultStructMetadataAnnotation =
-      //   isSourceDef(field) && field.resultMetadata
-      //     ? getResultStructMetadataAnnotation(field, field.resultMetadata)
-      //     : undefined;
       const fieldAnnotations = [
         ...(annotations ?? []),
-        // ...(resultStructMetadataAnnotation
-        //   ? [resultStructMetadataAnnotation]
-        //   : []),
         ...(resultMetadataAnnotation ? [resultMetadataAnnotation] : []),
       ];
       const fieldInfo: Malloy.FieldInfo = {
