@@ -327,43 +327,24 @@ describe('string filter expressions', () => {
       'a%a, b%b, c%c'
     );
   });
+  test('multiple not = -a,-b', () => {
+    expect('-a, -b').parsesTo({operator: '=', not: true, values: ['a', 'b']});
+  });
+  test('multiple not starts -a%,-b%', () => {
+    expect('-a%, -b%').parsesTo({
+      operator: 'starts',
+      not: true,
+      values: ['a', 'b'],
+    });
+  });
+  test('multiple not like -a%a,-b%b', () => {
+    expect('-a%a, -b%b').parsesTo({
+      operator: '~',
+      not: true,
+      escaped_values: ['a%a', 'b%b'],
+    });
+  });
   test.todo(
     'write many malformed expressions and generate reasonable errors for them'
   );
-  // 'CAT, DOG,mouse ',
-  // '-CAT,-DOG , -mouse',
-  // ' CAT,-"DOG",m o u s e',
-  // '-CAT,-DOG,mouse, bird, zebra, -horse, -goat',
-  // 'Missing ,NULL',
-  // 'CAT%, D%OG, %ous%, %ira_f%, %_oat, ',
-  // '-CAT%,-D%OG,-%mouse,-%zebra%',
-  // 'CAT%,-CATALOG',
-  // '%,_,%%,%a%',
-  // '%\\_X',
-  // '_\\_X',
-  // '_CAT,D_G,mouse_',
-  // '\\_CAT,D\\%G,\\mouse',
-  // 'CAT,-NULL',
-  // 'CAT,-"NULL"',
-  // 'CAT,NULL',
-  // 'CAT,,',
-  // 'CAT, , DOG',
-  // 'EMPTY',
-  // '-EMPTY',
-  // 'CAT,-EMPTY',
-  // '"CAT,DOG\',mo`use,zeb\'\'\'ra,g"""t,g\\"ir\\`af\\\'e',
-  // 'CAT\\,DOG',
-  // 'CAT,DOG,-, - ',
-  // '--CAT,DOG,\\',
-  // 'CAT\\ DOG',
-  // '_\\_CAT',
-  // '\\NULL',
-  // '\\-NULL',
-  // '-N\\ULL',
-  // 'CA--,D-G', // _ = 'CA--' OR _ = 'D-G'
-  // 'Escaped\\;chars\\|are\\(allowed\\)ok',
-  // 'No(parens, No)parens, No;semicolons, No|ors',
-  // ' hello world, foo="bar baz" , qux=quux',
-  // 'one ,Null ,  Empty,E M P T Y Y,EEmpty,        emptIEs',
-  // '',
 });
