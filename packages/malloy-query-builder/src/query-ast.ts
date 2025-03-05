@@ -62,422 +62,209 @@ abstract class ASTNode<T> {
   /**
    * @internal
    */
-  abstract find(path: Path): ASTAny;
+  abstract findAny(path: Path): ASTAny;
 
-  /**
-   * Returns this node as an `ASTQuery`. Throws if it is not an `ASTQuery`.
-   *
-   * There are variants of this method for _all_ ASTXYZ nodes `asXYZ`, but they
-   * are not shown here so the docs aren't crazy big.
-   *
-   * @returns Returns this node as an `ASTQuery`.
-   */
-  asQuery(): ASTQuery {
-    if (this instanceof ASTQuery) return this;
-    throw new Error('Not an ASTQuery');
+  get as() {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const node = this;
+    return {
+      Query(): ASTQuery {
+        if (node instanceof ASTQuery) return node;
+        throw new Error('Not an ASTQuery');
+      },
+      Reference(): ASTReference {
+        if (node instanceof ASTReference) return node;
+        throw new Error('Not an ASTReference');
+      },
+      SourceReference(): ASTSourceReference {
+        if (node instanceof ASTSourceReference) return node;
+        throw new Error('Not an ASTSourceReference');
+      },
+      ParameterValueList(): ASTParameterValueList {
+        if (node instanceof ASTParameterValueList) return node;
+        throw new Error('Not an ASTParameterValueList');
+      },
+      Where(): ASTWhere {
+        if (node instanceof ASTWhere) return node;
+        throw new Error('Not an ASTWhere');
+      },
+      WhereList(): ASTWhereList {
+        if (node instanceof ASTWhereList) return node;
+        throw new Error('Not an ASTWhereList');
+      },
+      ParameterValue(): ASTParameterValue {
+        if (node instanceof ASTParameterValue) return node;
+        throw new Error('Not an ASTParameterValue');
+      },
+      StringLiteralValue(): ASTStringLiteralValue {
+        if (node instanceof ASTStringLiteralValue) return node;
+        throw new Error('Not an ASTStringLiteralValue');
+      },
+      NumberLiteralValue(): ASTNumberLiteralValue {
+        if (node instanceof ASTNumberLiteralValue) return node;
+        throw new Error('Not an ASTNumberLiteralValue');
+      },
+      ViewOperationList(): ASTViewOperationList {
+        if (node instanceof ASTViewOperationList) return node;
+        throw new Error('Not an ASTViewOperationList');
+      },
+      GroupByViewOperation(): ASTGroupByViewOperation {
+        if (node instanceof ASTGroupByViewOperation) return node;
+        throw new Error('Not an ASTGroupByViewOperation');
+      },
+      AggregateViewOperation(): ASTAggregateViewOperation {
+        if (node instanceof ASTAggregateViewOperation) return node;
+        throw new Error('Not an ASTAggregateViewOperation');
+      },
+      OrderByViewOperation(): ASTOrderByViewOperation {
+        if (node instanceof ASTOrderByViewOperation) return node;
+        throw new Error('Not an ASTOrderByViewOperation');
+      },
+      Field(): ASTField {
+        if (node instanceof ASTField) return node;
+        throw new Error('Not an ASTField');
+      },
+      ReferenceExpression(): ASTReferenceExpression {
+        if (node instanceof ASTReferenceExpression) return node;
+        throw new Error('Not an ASTReferenceExpression');
+      },
+      ReferenceViewDefinition(): ASTReferenceViewDefinition {
+        if (node instanceof ASTReferenceViewDefinition) return node;
+        throw new Error('Not an ASTReferenceViewDefinition');
+      },
+      ArrowQueryDefinition(): ASTArrowQueryDefinition {
+        if (node instanceof ASTArrowQueryDefinition) return node;
+        throw new Error('Not an ASTArrowQueryDefinition');
+      },
+      ArrowViewDefinition(): ASTArrowViewDefinition {
+        if (node instanceof ASTArrowViewDefinition) return node;
+        throw new Error('Not an ASTArrowViewDefinition');
+      },
+      RefinementViewDefinition(): ASTRefinementViewDefinition {
+        if (node instanceof ASTRefinementViewDefinition) return node;
+        throw new Error('Not an ASTRefinementViewDefinition');
+      },
+      TimeTruncationExpression(): ASTTimeTruncationExpression {
+        if (node instanceof ASTTimeTruncationExpression) return node;
+        throw new Error('Not an ASTTimeTruncationExpression');
+      },
+      FilteredFieldExpression(): ASTFilteredFieldExpression {
+        if (node instanceof ASTFilteredFieldExpression) return node;
+        throw new Error('Not an ASTFilteredFieldExpression');
+      },
+      NestViewOperation(): ASTNestViewOperation {
+        if (node instanceof ASTNestViewOperation) return node;
+        throw new Error('Not an ASTNestViewOperation');
+      },
+      View(): ASTView {
+        if (node instanceof ASTView) return node;
+        throw new Error('Not an ASTView');
+      },
+      SegmentViewDefinition(): ASTSegmentViewDefinition {
+        if (node instanceof ASTSegmentViewDefinition) return node;
+        throw new Error('Not an ASTSegmentViewDefinition');
+      },
+      LimitViewOperation(): ASTLimitViewOperation {
+        if (node instanceof ASTLimitViewOperation) return node;
+        throw new Error('Not an ASTLimitViewOperation');
+      },
+      AnnotationList(): ASTAnnotationList {
+        if (node instanceof ASTAnnotationList) return node;
+        throw new Error('Not an ASTAnnotationList');
+      },
+      Annotation(): ASTAnnotation {
+        if (node instanceof ASTAnnotation) return node;
+        throw new Error('Not an ASTAnnotation');
+      },
+    };
   }
 
-  /**
-   * Finds the AST node at the given `path`. Throws if it is not an `ASTQuery`.
-   *
-   * There are variants of this method for _all_ ASTXYZ nodes `findXYZ`, but they
-   * are not shown here so the docs aren't crazy big.
-   *
-   * @param path Path to the desired ASTNode, e.g. `['source', 'parameters', 0]`
-   * @returns Returns this node as an `ASTQuery`.
-   */
-  findQuery(path: Path): ASTQuery {
-    return this.find(path).asQuery();
-  }
-
-  /**
-   * @hidden
-   */
-  asReference(): ASTReference {
-    if (this instanceof ASTReference) return this;
-    throw new Error('Not an ASTReference');
-  }
-
-  /**
-   * @hidden
-   */
-  findReference(path: Path): ASTReference {
-    return this.find(path).asReference();
-  }
-
-  /**
-   * @hidden
-   */
-  asSourceReference(): ASTSourceReference {
-    if (this instanceof ASTSourceReference) return this;
-    throw new Error('Not an ASTSourceReference');
-  }
-
-  /**
-   * @hidden
-   */
-  findSourceReference(path: Path): ASTSourceReference {
-    return this.find(path).asSourceReference();
-  }
-
-  /**
-   * @hidden
-   */
-  asParameterValueList(): ASTParameterValueList {
-    if (this instanceof ASTParameterValueList) return this;
-    throw new Error('Not an ASTParameterValueList');
-  }
-
-  /**
-   * @hidden
-   */
-  findParameterValueList(path: Path): ASTParameterValueList {
-    return this.find(path).asParameterValueList();
-  }
-
-  /**
-   * @hidden
-   */
-  asWhere(): ASTWhere {
-    if (this instanceof ASTWhere) return this;
-    throw new Error('Not an ASTWhere');
-  }
-
-  /**
-   * @hidden
-   */
-  findWhere(path: Path): ASTWhere {
-    return this.find(path).asWhere();
-  }
-
-  /**
-   * @hidden
-   */
-  asWhereList(): ASTWhereList {
-    if (this instanceof ASTWhereList) return this;
-    throw new Error('Not an ASTWhereList');
-  }
-
-  /**
-   * @hidden
-   */
-  findWhereList(path: Path): ASTWhereList {
-    return this.find(path).asWhereList();
-  }
-
-  /**
-   * @hidden
-   */
-  asParameterValue(): ASTParameterValue {
-    if (this instanceof ASTParameterValue) return this;
-    throw new Error('Not an ASTParameterValue');
-  }
-
-  /**
-   * @hidden
-   */
-  findParameterValue(path: Path): ASTParameterValue {
-    return this.find(path).asParameterValue();
-  }
-
-  /**
-   * @hidden
-   */
-  asStringLiteralValue(): ASTStringLiteralValue {
-    if (this instanceof ASTStringLiteralValue) return this;
-    throw new Error('Not an ASTStringLiteralValue');
-  }
-
-  /**
-   * @hidden
-   */
-  findStringLiteralValue(path: Path): ASTStringLiteralValue {
-    return this.find(path).asStringLiteralValue();
-  }
-
-  /**
-   * @hidden
-   */
-  asNumberLiteralValue(): ASTNumberLiteralValue {
-    if (this instanceof ASTNumberLiteralValue) return this;
-    throw new Error('Not an ASTNumberLiteralValue');
-  }
-
-  /**
-   * @hidden
-   */
-  findNumberLiteralValue(path: Path): ASTNumberLiteralValue {
-    return this.find(path).asNumberLiteralValue();
-  }
-
-  /**
-   * @hidden
-   */
-  asViewOperationList(): ASTViewOperationList {
-    if (this instanceof ASTViewOperationList) return this;
-    throw new Error('Not an ASTViewOperationList');
-  }
-
-  /**
-   * @hidden
-   */
-  findViewOperationList(path: Path): ASTViewOperationList {
-    return this.find(path).asViewOperationList();
-  }
-
-  /**
-   * @hidden
-   */
-  asGroupByViewOperation(): ASTGroupByViewOperation {
-    if (this instanceof ASTGroupByViewOperation) return this;
-    throw new Error('Not an ASTGroupByViewOperation');
-  }
-
-  /**
-   * @hidden
-   */
-  findGroupByViewOperation(path: Path): ASTGroupByViewOperation {
-    return this.find(path).asGroupByViewOperation();
-  }
-
-  /**
-   * @hidden
-   */
-  asAggregateViewOperation(): ASTAggregateViewOperation {
-    if (this instanceof ASTAggregateViewOperation) return this;
-    throw new Error('Not an ASTAggregateViewOperation');
-  }
-
-  /**
-   * @hidden
-   */
-  findAggregateViewOperation(path: Path): ASTAggregateViewOperation {
-    return this.find(path).asAggregateViewOperation();
-  }
-
-  /**
-   * @hidden
-   */
-  asOrderByViewOperation(): ASTOrderByViewOperation {
-    if (this instanceof ASTOrderByViewOperation) return this;
-    throw new Error('Not an ASTOrderByViewOperation');
-  }
-
-  /**
-   * @hidden
-   */
-  findOrderByViewOperation(path: Path): ASTOrderByViewOperation {
-    return this.find(path).asOrderByViewOperation();
-  }
-
-  /**
-   * @hidden
-   */
-  asField(): ASTField {
-    if (this instanceof ASTField) return this;
-    throw new Error('Not an ASTField');
-  }
-
-  /**
-   * @hidden
-   */
-  findField(path: Path): ASTField {
-    return this.find(path).asField();
-  }
-
-  /**
-   * @hidden
-   */
-  asReferenceExpression(): ASTReferenceExpression {
-    if (this instanceof ASTReferenceExpression) return this;
-    throw new Error('Not an ASTReferenceExpression');
-  }
-
-  /**
-   * @hidden
-   */
-  findReferenceExpression(path: Path): ASTReferenceExpression {
-    return this.find(path).asReferenceExpression();
-  }
-
-  /**
-   * @hidden
-   */
-  asReferenceViewDefinition(): ASTReferenceViewDefinition {
-    if (this instanceof ASTReferenceViewDefinition) return this;
-    throw new Error('Not an ASTReferenceViewDefinition');
-  }
-
-  /**
-   * @hidden
-   */
-  findReferenceViewDefinition(path: Path): ASTReferenceViewDefinition {
-    return this.find(path).asReferenceViewDefinition();
-  }
-
-  /**
-   * @hidden
-   */
-  asArrowQueryDefinition(): ASTArrowQueryDefinition {
-    if (this instanceof ASTArrowQueryDefinition) return this;
-    throw new Error('Not an ASTArrowQueryDefinition');
-  }
-
-  /**
-   * @hidden
-   */
-  findArrowQueryDefinition(path: Path): ASTArrowQueryDefinition {
-    return this.find(path).asArrowQueryDefinition();
-  }
-
-  /**
-   * @hidden
-   */
-  asArrowViewDefinition(): ASTArrowViewDefinition {
-    if (this instanceof ASTArrowViewDefinition) return this;
-    throw new Error('Not an ASTArrowViewDefinition');
-  }
-
-  /**
-   * @hidden
-   */
-  findArrowViewDefinition(path: Path): ASTArrowViewDefinition {
-    return this.find(path).asArrowViewDefinition();
-  }
-
-  /**
-   * @hidden
-   */
-  asRefinementViewDefinition(): ASTRefinementViewDefinition {
-    if (this instanceof ASTRefinementViewDefinition) return this;
-    throw new Error('Not an ASTRefinementViewDefinition');
-  }
-
-  /**
-   * @hidden
-   */
-  findRefinementViewDefinition(path: Path): ASTRefinementViewDefinition {
-    return this.find(path).asRefinementViewDefinition();
-  }
-
-  /**
-   * @hidden
-   */
-  asTimeTruncationExpression(): ASTTimeTruncationExpression {
-    if (this instanceof ASTTimeTruncationExpression) return this;
-    throw new Error('Not an ASTTimeTruncationExpression');
-  }
-
-  /**
-   * @hidden
-   */
-  findTimeTruncationExpression(path: Path): ASTTimeTruncationExpression {
-    return this.find(path).asTimeTruncationExpression();
-  }
-
-  /**
-   * @hidden
-   */
-  asFilteredFieldExpression(): ASTFilteredFieldExpression {
-    if (this instanceof ASTFilteredFieldExpression) return this;
-    throw new Error('Not an ASTFilteredFieldExpression');
-  }
-
-  /**
-   * @hidden
-   */
-  findFilteredFieldExpression(path: Path): ASTFilteredFieldExpression {
-    return this.find(path).asFilteredFieldExpression();
-  }
-
-  /**
-   * @hidden
-   */
-  asNestViewOperation(): ASTNestViewOperation {
-    if (this instanceof ASTNestViewOperation) return this;
-    throw new Error('Not an ASTNestViewOperation');
-  }
-
-  /**
-   * @hidden
-   */
-  findNestViewOperation(path: Path): ASTNestViewOperation {
-    return this.find(path).asNestViewOperation();
-  }
-
-  /**
-   * @hidden
-   */
-  asView(): ASTView {
-    if (this instanceof ASTView) return this;
-    throw new Error('Not an ASTView');
-  }
-
-  /**
-   * @hidden
-   */
-  findView(path: Path): ASTView {
-    return this.find(path).asView();
-  }
-
-  /**
-   * @hidden
-   */
-  asSegmentViewDefinition(): ASTSegmentViewDefinition {
-    if (this instanceof ASTSegmentViewDefinition) return this;
-    throw new Error('Not an ASTSegmentViewDefinition');
-  }
-
-  /**
-   * @hidden
-   */
-  findSegmentViewDefinition(path: Path): ASTSegmentViewDefinition {
-    return this.find(path).asSegmentViewDefinition();
-  }
-
-  /**
-   * @hidden
-   */
-  asLimitViewOperation(): ASTLimitViewOperation {
-    if (this instanceof ASTLimitViewOperation) return this;
-    throw new Error('Not an ASTLimitViewOperation');
-  }
-
-  /**
-   * @hidden
-   */
-  findLimitViewOperation(path: Path): ASTLimitViewOperation {
-    return this.find(path).asLimitViewOperation();
-  }
-
-  /**
-   * @hidden
-   */
-  asAnnotationList(): ASTAnnotationList {
-    if (this instanceof ASTAnnotationList) return this;
-    throw new Error('Not an ASTAnnotationList');
-  }
-
-  /**
-   * @hidden
-   */
-  findAnnotationList(path: Path): ASTAnnotationList {
-    return this.find(path).asAnnotationList();
-  }
-
-  /**
-   * @hidden
-   */
-  asAnnotation(): ASTAnnotation {
-    if (this instanceof ASTAnnotation) return this;
-    throw new Error('Not an ASTAnnotation');
-  }
-
-  /**
-   * @hidden
-   */
-  findAnnotation(path: Path): ASTAnnotation {
-    return this.find(path).asAnnotation();
+  get find() {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const node = this;
+    return {
+      Query(path: Path): ASTQuery {
+        return node.findAny(path).as.Query();
+      },
+      Reference(path: Path): ASTReference {
+        return node.findAny(path).as.Reference();
+      },
+      SourceReference(path: Path): ASTSourceReference {
+        return node.findAny(path).as.SourceReference();
+      },
+      ParameterValueList(path: Path): ASTParameterValueList {
+        return node.findAny(path).as.ParameterValueList();
+      },
+      Where(path: Path): ASTWhere {
+        return node.findAny(path).as.Where();
+      },
+      WhereList(path: Path): ASTWhereList {
+        return node.findAny(path).as.WhereList();
+      },
+      ParameterValue(path: Path): ASTParameterValue {
+        return node.findAny(path).as.ParameterValue();
+      },
+      StringLiteralValue(path: Path): ASTStringLiteralValue {
+        return node.findAny(path).as.StringLiteralValue();
+      },
+      NumberLiteralValue(path: Path): ASTNumberLiteralValue {
+        return node.findAny(path).as.NumberLiteralValue();
+      },
+      ViewOperationList(path: Path): ASTViewOperationList {
+        return node.findAny(path).as.ViewOperationList();
+      },
+      GroupByViewOperation(path: Path): ASTGroupByViewOperation {
+        return node.findAny(path).as.GroupByViewOperation();
+      },
+      AggregateViewOperation(path: Path): ASTAggregateViewOperation {
+        return node.findAny(path).as.AggregateViewOperation();
+      },
+      OrderByViewOperation(path: Path): ASTOrderByViewOperation {
+        return node.findAny(path).as.OrderByViewOperation();
+      },
+      Field(path: Path): ASTField {
+        return node.findAny(path).as.Field();
+      },
+      ReferenceExpression(path: Path): ASTReferenceExpression {
+        return node.findAny(path).as.ReferenceExpression();
+      },
+      ReferenceViewDefinition(path: Path): ASTReferenceViewDefinition {
+        return node.findAny(path).as.ReferenceViewDefinition();
+      },
+      ArrowQueryDefinition(path: Path): ASTArrowQueryDefinition {
+        return node.findAny(path).as.ArrowQueryDefinition();
+      },
+      ArrowViewDefinition(path: Path): ASTArrowViewDefinition {
+        return node.findAny(path).as.ArrowViewDefinition();
+      },
+      RefinementViewDefinition(path: Path): ASTRefinementViewDefinition {
+        return node.findAny(path).as.RefinementViewDefinition();
+      },
+      TimeTruncationExpression(path: Path): ASTTimeTruncationExpression {
+        return node.findAny(path).as.TimeTruncationExpression();
+      },
+      FilteredFieldExpression(path: Path): ASTFilteredFieldExpression {
+        return node.findAny(path).as.FilteredFieldExpression();
+      },
+      NestViewOperation(path: Path): ASTNestViewOperation {
+        return node.findAny(path).as.NestViewOperation();
+      },
+      View(path: Path): ASTView {
+        return node.findAny(path).as.View();
+      },
+      SegmentViewDefinition(path: Path): ASTSegmentViewDefinition {
+        return node.findAny(path).as.SegmentViewDefinition();
+      },
+      LimitViewOperation(path: Path): ASTLimitViewOperation {
+        return node.findAny(path).as.LimitViewOperation();
+      },
+      AnnotationList(path: Path): ASTAnnotationList {
+        return node.findAny(path).as.AnnotationList();
+      },
+      Annotation(path: Path): ASTAnnotation {
+        return node.findAny(path).as.Annotation();
+      },
+    };
   }
 
   /**
@@ -637,7 +424,7 @@ abstract class ASTListNode<
   /**
    * @internal
    */
-  find(path: Path): ASTAny {
+  findAny(path: Path): ASTAny {
     if (path.length === 0) {
       return this;
     }
@@ -648,7 +435,7 @@ abstract class ASTListNode<
       );
     }
     const child = this.children[head];
-    return child.find(rest);
+    return child.findAny(rest);
   }
 
   /**
@@ -709,7 +496,7 @@ abstract class ASTObjectNode<
   /**
    * @internal
    */
-  find(path: Path): ASTAny {
+  findAny(path: Path): ASTAny {
     if (path.length === 0) {
       return this;
     }
@@ -725,7 +512,7 @@ abstract class ASTObjectNode<
         `${this.constructor.name}.${head} refers to a basic type, not an ASTNode`
       );
     }
-    return child.find(rest);
+    return child._find(rest);
   }
 }
 
@@ -901,7 +688,7 @@ export class ASTQuery
         operations: [],
       },
     });
-    return this.definition.view.asSegmentViewDefinition();
+    return this.definition.view.as.SegmentViewDefinition();
   }
 
   isRunnable() {
@@ -1064,7 +851,7 @@ export class ASTQuery
         name,
       },
     });
-    return this.definition.view.asReferenceViewDefinition();
+    return this.definition.view.as.ReferenceViewDefinition();
   }
 
   getInheritedAnnotations(): Malloy.Annotation[] {
@@ -1251,7 +1038,7 @@ export class ASTSourceReference extends ASTReference {
    * @internal
    */
   get query(): ASTQuery {
-    return this.parent.parent.asQuery();
+    return this.parent.parent.as.Query();
   }
 
   /**
@@ -1509,7 +1296,7 @@ export class ASTUnimplemented<T> extends ASTNode<T> {
     return this.node;
   }
 
-  find(): never {
+  findAny(): never {
     throw new Error('Tried to find a node from an unimplemented node type');
   }
 }
@@ -1607,7 +1394,7 @@ export class ASTArrowQueryDefinition
    * @internal
    */
   get query() {
-    return this.parent.asQuery();
+    return this.parent.as.Query();
   }
 
   /**
@@ -1675,7 +1462,7 @@ export class ASTRefinementQueryDefinition
    * @internal
    */
   get query() {
-    return this.parent.asQuery();
+    return this.parent.as.Query();
   }
 
   getOrAddDefaultSegment(): ASTSegmentViewDefinition {
@@ -1743,7 +1530,7 @@ export class ASTReferenceQueryDefinition
   }
 
   get query() {
-    return this.parent.asQuery();
+    return this.parent.as.Query();
   }
 
   get parameters() {
@@ -1773,7 +1560,7 @@ export class ASTReferenceQueryDefinition
       },
     });
     this.query.definition = newQuery;
-    return newQuery.refinement.asSegmentViewDefinition();
+    return newQuery.refinement.as.SegmentViewDefinition();
   }
 
   /**
@@ -1953,7 +1740,7 @@ export class ASTReferenceViewDefinition
       this.build()
     );
     swapViewInParent(this, newView);
-    return newView.refinement.asSegmentViewDefinition();
+    return newView.refinement.as.SegmentViewDefinition();
   }
 
   addViewRefinement(name: string, path?: string[]): ASTReferenceViewDefinition {
@@ -1967,7 +1754,7 @@ export class ASTReferenceViewDefinition
       path
     );
     swapViewInParent(this, newView);
-    return newView.refinement.asReferenceViewDefinition();
+    return newView.refinement.as.ReferenceViewDefinition();
   }
 
   isValidViewRefinement(
@@ -3000,7 +2787,7 @@ export class ASTSegmentViewDefinition
   addEmptyRefinement(): ASTSegmentViewDefinition {
     const view = ASTRefinementViewDefinition.segmentRefinementOf(this.build());
     swapViewInParent(this, view);
-    return view.refinement.asSegmentViewDefinition();
+    return view.refinement.as.SegmentViewDefinition();
   }
 
   addViewRefinement(name: string, path?: string[]): ASTReferenceViewDefinition {
@@ -3014,7 +2801,7 @@ export class ASTSegmentViewDefinition
       path
     );
     swapViewInParent(this, view);
-    return view.refinement.asReferenceViewDefinition();
+    return view.refinement.as.ReferenceViewDefinition();
   }
 
   getInputSchema(): Malloy.Schema {
@@ -3072,7 +2859,7 @@ export class ASTViewOperationList extends ASTListNode<
    * @internal
    */
   get segment() {
-    return this.parent.asSegmentViewDefinition();
+    return this.parent.as.SegmentViewDefinition();
   }
 }
 
@@ -3150,7 +2937,7 @@ export class ASTOrderByViewOperation extends ASTObjectNode<
   }
 
   get list() {
-    return this.parent.asViewOperationList();
+    return this.parent.as.ViewOperationList();
   }
 
   delete() {
@@ -3212,7 +2999,7 @@ export class ASTGroupByViewOperation
    * @internal
    */
   get list() {
-    return this.parent.asViewOperationList();
+    return this.parent.as.ViewOperationList();
   }
 
   /**
@@ -3424,7 +3211,7 @@ export class ASTAggregateViewOperation
    * @internal
    */
   get list() {
-    return this.parent.asViewOperationList();
+    return this.parent.as.ViewOperationList();
   }
 
   delete() {
@@ -3695,7 +3482,7 @@ export class ASTReferenceExpression
    * @internal
    */
   get field() {
-    return this.parent.asField();
+    return this.parent.as.Field();
   }
 
   get path() {
@@ -3775,7 +3562,7 @@ export class ASTTimeTruncationExpression extends ASTObjectNode<
    * @internal
    */
   get field() {
-    return this.parent.asField();
+    return this.parent.as.Field();
   }
 
   getFieldInfo(): Malloy.FieldInfoWithDimension | Malloy.FieldInfoWithMeasure {
@@ -3818,7 +3605,7 @@ export class ASTWhere extends ASTObjectNode<Malloy.Where, {filter: ASTFilter}> {
   }
 
   get list() {
-    return this.parent.asWhereList();
+    return this.parent.as.WhereList();
   }
 
   delete() {
@@ -3835,7 +3622,7 @@ export class ASTWhereList extends ASTListNode<Malloy.Where, ASTWhere> {
   }
 
   get expression() {
-    return this.parent.asFilteredFieldExpression();
+    return this.parent.as.FilteredFieldExpression();
   }
 }
 
@@ -3877,7 +3664,7 @@ export class ASTFilteredFieldExpression extends ASTObjectNode<
    * @internal
    */
   get field() {
-    return this.parent.asField();
+    return this.parent.as.Field();
   }
 
   getFieldInfo(): Malloy.FieldInfoWithMeasure {
@@ -3964,7 +3751,7 @@ export class ASTNestViewOperation
    * @internal
    */
   get list() {
-    return this.parent.asViewOperationList();
+    return this.parent.as.ViewOperationList();
   }
 
   getOrAddAnnotations() {
@@ -4098,7 +3885,7 @@ export class ASTWhereViewOperation extends ASTObjectNode<
    * @internal
    */
   get list() {
-    return this.parent.asViewOperationList();
+    return this.parent.as.ViewOperationList();
   }
 
   delete() {
@@ -4217,7 +4004,7 @@ export class ASTView
    * @internal
    */
   get nest() {
-    return this.parent.asNestViewOperation();
+    return this.parent.as.NestViewOperation();
   }
 
   getInputSchema() {
@@ -4319,7 +4106,7 @@ export class ASTLimitViewOperation extends ASTObjectNode<
    * @internal
    */
   get list() {
-    return this.parent.asViewOperationList();
+    return this.parent.as.ViewOperationList();
   }
 
   delete() {
@@ -4460,7 +4247,7 @@ export class ASTAnnotation extends ASTObjectNode<
    * @internal
    */
   get list() {
-    return this.parent.asAnnotationList();
+    return this.parent.as.AnnotationList();
   }
 
   get index() {
