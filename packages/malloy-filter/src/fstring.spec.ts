@@ -7,18 +7,22 @@
 
 import {diff} from 'jest-diff';
 import * as nearley from 'nearley';
-import fstring_grammar from './lib/fexpr-string-parser';
+import fstring_grammar from './lib/fexpr_string_parser';
+import {StringClause} from './clause_types';
+import {StringFilterExpression} from './string_filter_expression';
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace jest {
     interface Matchers<R> {
-      parsesTo(expected: unknown): R;
+      parsesTo(expected: StringClause, unparse?: string): R;
     }
   }
 }
 expect.extend({
-  parsesTo(src: string, expectedParse: unknown) {
+  parsesTo(src: string, expectedParse: StringClause, expectedUnparse?: string) {
+    // We don't call StringFilter.parse because we want to fail here
+    // with an ambiguous grammar
     const fstring_parser = new nearley.Parser(
       nearley.Grammar.fromCompiled(fstring_grammar)
     );
@@ -31,7 +35,19 @@ expect.extend({
       };
     }
     if (this.equals(expectedParse, results[0])) {
-      return {pass: true, message: () => `${src} parsed correctly`};
+      const unparse = StringFilterExpression.unparse(results[0]);
+      if (unparse === (expectedUnparse ?? src)) {
+        return {
+          pass: true,
+          message: () => `${src} parsed and serialized correctly`,
+        };
+      }
+      const serialize_error = diff(src, unparse);
+      return {
+        pass: false,
+        message: () =>
+          `Unparse Error: '${src}' parsed correctly, but unparsed as '${unparse}'\n${serialize_error}`,
+      };
     }
     const errTest = diff(
       {parse: expectedParse},
@@ -45,183 +61,309 @@ expect.extend({
   },
 });
 
-describe('nearley string filters', () => {
+describe('string filter expressions', () => {
   test('matching', () => {
-    expect('A').parsesTo({op: '=', match: 'A'});
+    expect('A').parsesTo({operator: '=', values: ['A']});
+  });
+  test('leading space ignore', () => {
+    expect(' A').parsesTo({operator: '=', values: ['A']}, 'A');
+  });
+  test('trailing space ignored', () => {
+    expect('A ').parsesTo({operator: '=', values: ['A']}, 'A');
   });
   test('not match', () => {
-    expect('-A').parsesTo({op: '=', match: 'A', not: true});
+    expect('-A').parsesTo({operator: '=', values: ['A'], not: true});
+  });
+  test('not space match', () => {
+    expect('- A').parsesTo({operator: '=', values: ['A'], not: true}, '-A');
+  });
+  test('space not match', () => {
+    expect(' -A').parsesTo({operator: '=', values: ['A'], not: true}, '-A');
   });
   test('like %', () => {
-    expect('%').parsesTo({op: '~', match: '%'});
+    expect('%').parsesTo({operator: '~', escaped_values: ['%']});
   });
   test('like _', () => {
-    expect('_').parsesTo({op: '~', match: '_'});
+    expect('_').parsesTo({operator: '~', escaped_values: ['_']});
   });
   test('like a%z', () => {
-    expect('a%z').parsesTo({op: '~', match: 'a%z'});
+    expect('a%z').parsesTo({operator: '~', escaped_values: ['a%z']});
   });
   test('starts with %', () => {
-    expect('\\%%').parsesTo({op: 'starts', match: '%'});
+    expect('\\%%').parsesTo({operator: 'starts', values: ['%']});
   });
   test('end with _', () => {
-    expect('%\\_').parsesTo({op: 'ends', match: '_'});
+    expect('%\\_').parsesTo({operator: 'ends', values: ['_']});
   });
   test('contains _X_', () => {
-    expect('%\\_X\\_%').parsesTo({op: 'contains', match: '_X_'});
+    expect('%\\_X\\_%').parsesTo({operator: 'contains', values: ['_X_']});
   });
   test('not starts with foo', () => {
-    expect('-foo%').parsesTo({op: 'starts', match: 'foo', not: true});
+    expect('-foo%').parsesTo({operator: 'starts', values: ['foo'], not: true});
   });
   test('a_% is not a starts with', () => {
-    expect('a_%').parsesTo({op: '~', match: 'a_%'});
+    expect('a_%').parsesTo({operator: '~', escaped_values: ['a_%']});
   });
   test('not ends with bar', () => {
-    expect('-%bar').parsesTo({op: 'ends', match: 'bar', not: true});
+    expect('-%bar').parsesTo({operator: 'ends', values: ['bar'], not: true});
   });
   test('not contains sugar', () => {
-    expect('-%sugar%').parsesTo({op: 'contains', match: 'sugar', not: true});
-  });
-  test('is %', () => {
-    expect('\\%').parsesTo({op: '=', match: '%'});
-  });
-  test('is _', () => {
-    expect('\\_').parsesTo({op: '=', match: '_'});
-  });
-  test('like a_', () => {
-    expect('a_').parsesTo({op: '~', match: 'a_'});
-  });
-  test('space a', () => {
-    expect(' a ').parsesTo({op: '=', match: 'a'});
-  });
-  test('escape-space a', () => {
-    expect('\\ a').parsesTo({op: '=', match: ' a'});
-  });
-  test('a escape-space', () => {
-    expect('a\\ ').parsesTo({op: '=', match: 'a '});
-  });
-  test('backslash space', () => {
-    expect('\\ ').parsesTo({op: '=', match: ' '});
-  });
-  test(' spacey null ', () => {
-    expect(' null ').parsesTo({op: 'null'});
-  });
-  test('is null', () => {
-    expect('null').parsesTo({op: 'null'});
-    expect('NULL').parsesTo({op: 'null'});
-  });
-  test('is not null', () => {
-    expect('-null').parsesTo({op: 'null', not: true});
-  });
-  test('= null', () => {
-    expect('\\null').parsesTo({op: '=', match: 'null'});
-  });
-  test('= empty', () => {
-    expect('\\empty').parsesTo({op: '=', match: 'empty'});
-  });
-  test('is empty', () => {
-    expect('empty').parsesTo({op: 'empty'});
-    expect('EMPTY').parsesTo({op: 'empty'});
-  });
-  test('is not empty', () => {
-    expect('-empty').parsesTo({op: 'empty', not: true});
-  });
-  test('a,b', () => {
-    expect('a,b').parsesTo({
-      op: ',',
-      left: {op: '=', match: 'a'},
-      right: {op: '=', match: 'b'},
+    expect('-%sugar%').parsesTo({
+      operator: 'contains',
+      values: ['sugar'],
+      not: true,
     });
   });
+  test('is %', () => {
+    expect('\\%').parsesTo({operator: '=', values: ['%']});
+  });
+  test('is _', () => {
+    expect('\\_').parsesTo({operator: '=', values: ['_']});
+  });
+  test('like a_', () => {
+    expect('a_').parsesTo({operator: '~', escaped_values: ['a_']});
+  });
+  test('escape-space a', () => {
+    expect('\\ a').parsesTo({operator: '=', values: [' a']});
+  });
+  test('a escape-space', () => {
+    expect('a\\ ').parsesTo({operator: '=', values: ['a ']});
+  });
+  test('backslash space', () => {
+    expect('\\ ').parsesTo({operator: '=', values: [' ']});
+  });
+  test(' spacey null ', () => {
+    expect(' null ').parsesTo({operator: 'null'}, 'null');
+  });
+  test('is null', () => {
+    expect('null').parsesTo({operator: 'null'});
+    expect('NULL').parsesTo({operator: 'null'}, 'null');
+  });
+  test('is not null', () => {
+    expect('-null').parsesTo({operator: 'null', not: true});
+  });
+  test('= null', () => {
+    expect('\\null').parsesTo({operator: '=', values: ['null']});
+  });
+  test('= empty', () => {
+    expect('\\empty').parsesTo({operator: '=', values: ['empty']});
+  });
+  test('is empty', () => {
+    expect('empty').parsesTo({operator: 'empty'});
+    expect('EMPTY').parsesTo({operator: 'empty'}, 'empty');
+  });
+  test('is not empty', () => {
+    expect('-empty').parsesTo({operator: 'empty', not: true});
+  });
+  test('nulldata', () => {
+    expect('nulldata').parsesTo({operator: '=', values: ['nulldata']});
+  });
+  test('emptystr', () => {
+    expect('emptystr').parsesTo({operator: '=', values: ['emptystr']});
+  });
+  test('a%b,c', () => {
+    expect('a%b,c').parsesTo(
+      {
+        operator: ',',
+        members: [
+          {operator: '~', escaped_values: ['a%b']},
+          {operator: '=', values: ['c']},
+        ],
+      },
+      'a%b, c'
+    );
+  });
+  test('a\\% starts with a-backslash', () => {
+    const backslash = '\\';
+    const src = 'a' + backslash + backslash + '%';
+    expect(src).parsesTo({operator: 'starts', values: ['a' + backslash]});
+  });
   test('a;b', () => {
-    expect('a;b').parsesTo({
-      op: ';',
-      left: {op: '=', match: 'a'},
-      right: {op: '=', match: 'b'},
+    expect('a; b').parsesTo({
+      operator: 'and',
+      members: [
+        {operator: '=', values: ['a']},
+        {operator: '=', values: ['b']},
+      ],
     });
   });
   test('a|b', () => {
-    expect('a|b').parsesTo({
-      op: '|',
-      left: {op: '=', match: 'a'},
-      right: {op: '=', match: 'b'},
+    expect('a | b').parsesTo({
+      operator: 'or',
+      members: [
+        {operator: '=', values: ['a']},
+        {operator: '=', values: ['b']},
+      ],
     });
   });
   test('(a)', () => {
     expect('(a)').parsesTo({
-      op: '()',
-      expr: {op: '=', match: 'a'},
+      operator: '()',
+      expr: {operator: '=', values: ['a']},
     });
   });
   test('-(z)', () => {
     expect('-(z)').parsesTo({
-      op: '()',
-      expr: {op: '=', match: 'z'},
+      operator: '()',
+      expr: {operator: '=', values: ['z']},
       not: true,
     });
   });
-  test('contains ,', () => {
+  test('- space (z)', () => {
+    expect('- (z)').parsesTo(
+      {
+        operator: '()',
+        expr: {operator: '=', values: ['z']},
+        not: true,
+      },
+      '-(z)'
+    );
+  });
+  test('cmatch escapes ,', () => {
     expect('a\\,b').parsesTo({
-      op: '=',
-      match: 'a,b',
+      operator: '=',
+      values: ['a,b'],
     });
   });
-  test('contains ;', () => {
+  test('match escaped ;', () => {
     expect('a\\;b').parsesTo({
-      op: '=',
-      match: 'a;b',
+      operator: '=',
+      values: ['a;b'],
     });
   });
-  test('contains |', () => {
+  test('match escaped |', () => {
     expect('a\\|b').parsesTo({
-      op: '=',
-      match: 'a|b',
+      operator: '=',
+      values: ['a|b'],
     });
   });
-  test('starts with -', () => {
-    expect('\\-a').parsesTo({op: '=', match: '-a'});
+  test('match escaped -', () => {
+    expect('\\-a').parsesTo({operator: '=', values: ['-a']});
   });
   test('a,-null', () => {
-    expect('a,-null').parsesTo({
-      op: ',',
-      left: {op: '=', match: 'a'},
-      right: {op: 'null', not: true},
+    expect('a, -null').parsesTo({
+      operator: ',',
+      members: [
+        {operator: '=', values: ['a']},
+        {operator: 'null', not: true},
+      ],
     });
   });
   test('-a,null', () => {
-    expect('-a,null').parsesTo({
-      op: ',',
-      left: {op: '=', match: 'a', not: true},
-      right: {op: 'null'},
+    expect('-a, null').parsesTo({
+      operator: ',',
+      members: [{operator: '=', values: ['a'], not: true}, {operator: 'null'}],
     });
   });
   test('complex filter', () => {
-    expect('(a,(b;c)|-empty,null);-null').parsesTo({
-      op: ';',
-      left: {
-        op: '()',
-        expr: {
-          op: ',',
-          left: {
-            op: '|',
-            left: {
-              op: ',',
-              left: {op: '=', match: 'a'},
-              right: {
-                op: '()',
-                expr: {
-                  op: ';',
-                  left: {op: '=', match: 'b'},
-                  right: {op: '=', match: 'c'},
-                },
+    expect('(a, (b; c) | -empty, null); -null').parsesTo({
+      operator: 'and',
+      members: [
+        {
+          operator: '()',
+          expr: {
+            operator: ',',
+            members: [
+              {
+                operator: 'or',
+                members: [
+                  {
+                    operator: ',',
+                    members: [
+                      {operator: '=', values: ['a']},
+                      {
+                        operator: '()',
+                        expr: {
+                          operator: 'and',
+                          members: [
+                            {operator: '=', values: ['b']},
+                            {operator: '=', values: ['c']},
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                  {operator: 'empty', not: true},
+                ],
               },
-            },
-            right: {op: 'empty', not: true},
+              {operator: 'null'},
+            ],
           },
-          right: {op: 'null'},
         },
-      },
-      right: {op: 'null', not: true},
+        {operator: 'null', not: true},
+      ],
     });
   });
+  test('multiple = into one clause', () => {
+    expect('a, b, c').parsesTo({
+      operator: '=',
+      values: ['a', 'b', 'c'],
+    });
+  });
+  test('multiple starts into one clause', () => {
+    expect('a%,b%,c%').parsesTo(
+      {operator: 'starts', values: ['a', 'b', 'c']},
+      'a%, b%, c%'
+    );
+  });
+  test('multiple ends into one clause', () => {
+    expect('%a,%b,%c').parsesTo(
+      {operator: 'ends', values: ['a', 'b', 'c']},
+      '%a, %b, %c'
+    );
+  });
+  test('multiple contains into one clause', () => {
+    expect('%a%,%b%,%c%').parsesTo(
+      {operator: 'contains', values: ['a', 'b', 'c']},
+      '%a%, %b%, %c%'
+    );
+  });
+  test('multiple likes into one clause', () => {
+    expect('a%a,b%b,c%c').parsesTo(
+      {
+        operator: '~',
+        escaped_values: ['a%a', 'b%b', 'c%c'],
+      },
+      'a%a, b%b, c%c'
+    );
+  });
+  test.todo(
+    'write many malformed expressions and generate reasonable errors for them'
+  );
+  // 'CAT, DOG,mouse ',
+  // '-CAT,-DOG , -mouse',
+  // ' CAT,-"DOG",m o u s e',
+  // '-CAT,-DOG,mouse, bird, zebra, -horse, -goat',
+  // 'Missing ,NULL',
+  // 'CAT%, D%OG, %ous%, %ira_f%, %_oat, ',
+  // '-CAT%,-D%OG,-%mouse,-%zebra%',
+  // 'CAT%,-CATALOG',
+  // '%,_,%%,%a%',
+  // '%\\_X',
+  // '_\\_X',
+  // '_CAT,D_G,mouse_',
+  // '\\_CAT,D\\%G,\\mouse',
+  // 'CAT,-NULL',
+  // 'CAT,-"NULL"',
+  // 'CAT,NULL',
+  // 'CAT,,',
+  // 'CAT, , DOG',
+  // 'EMPTY',
+  // '-EMPTY',
+  // 'CAT,-EMPTY',
+  // '"CAT,DOG\',mo`use,zeb\'\'\'ra,g"""t,g\\"ir\\`af\\\'e',
+  // 'CAT\\,DOG',
+  // 'CAT,DOG,-, - ',
+  // '--CAT,DOG,\\',
+  // 'CAT\\ DOG',
+  // '_\\_CAT',
+  // '\\NULL',
+  // '\\-NULL',
+  // '-N\\ULL',
+  // 'CA--,D-G', // _ = 'CA--' OR _ = 'D-G'
+  // 'Escaped\\;chars\\|are\\(allowed\\)ok',
+  // 'No(parens, No)parens, No;semicolons, No|ors',
+  // ' hello world, foo="bar baz" , qux=quux',
+  // 'one ,Null ,  Empty,E M P T Y Y,EEmpty,        emptIEs',
+  // '',
 });

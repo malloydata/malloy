@@ -5,13 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-export {BooleanParser} from './boolean_parser';
-export {DateParser} from './date_parser';
-export {NumberParser} from './number_parser';
-export {StringParser} from './string_parser';
-export {BooleanSerializer} from './boolean_serializer';
-export {DateSerializer} from './date_serializer';
-export {NumberSerializer} from './number_serializer';
-export {StringSerializer} from './string_serializer';
+export {BooleanFilterExpression} from './boolean_filter_expression';
+export {TimedateFilterExpression} from './timedate_filter_expression';
+export {NumberFilterExpression} from './number_filter_expression';
+export {StringFilterExpression} from './string_filter_expression';
 export * from './clause_types';
-export * from './date_types';

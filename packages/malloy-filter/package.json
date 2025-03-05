@@ -12,8 +12,8 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "npm run build-parser && tsc --build",
-    "build-parser": "mkdir -p src/lib && nearleyc src/fexpr-string.ne --out src/lib/fexpr-string-parser.ts",
+    "build": "npm run build-parsers && tsc --build",
+    "build-parsers": "mkdir -p src/lib && nearleyc src/fexpr_string.ne --out src/lib/fexpr_string_parser.ts && nearleyc src/fexpr_number.ne --out src/lib/fexpr_number_parser.ts",
     "clean": "tsc --build --clean && rm -rf src/lib/* dist",
     "samples": "node dist/generate_samples.js",
     "asimpleparser": "node dist/a_simple_parser.js",
