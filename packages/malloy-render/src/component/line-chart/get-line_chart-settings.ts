@@ -102,8 +102,9 @@ export function getLineChartSettings(
     seriesChannel.fields.push(path);
   });
 
-  const nestFields = explore.fields;
-  const dimensions = nestFields.filter(f => f.isAtomic() && f.wasDimension());
+  const dimensions = explore.fields.filter(
+    f => f.isAtomic() && f.wasDimension()
+  );
 
   // If still no x or y, attempt to pick the best choice
   if (xChannel.fields.length === 0) {
@@ -114,7 +115,7 @@ export function getLineChartSettings(
   }
   if (yChannel.fields.length === 0) {
     // Pick first numeric measure field
-    const numberField = nestFields.find(
+    const numberField = explore.fields.find(
       f => f.wasCalculation() && f.isNumber()
     );
     if (numberField) yChannel.fields.push(explore.pathTo(numberField));

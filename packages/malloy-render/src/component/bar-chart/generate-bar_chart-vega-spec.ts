@@ -781,9 +781,7 @@ export function generateBarChartVegaSpec(
       const xValue = getXValue(row);
       // Filter out missing date/time values
       // TODO: figure out how we can show null values in continuous axes
-      if (xIsDateorTime && (xValue === null || typeof xValue === 'undefined')) {
-        return;
-      }
+      if (xIsDateorTime && xValue === null) return;
       // Map data fields to chart properties
       const seriesVal = seriesField
         ? row.column(seriesField.name).value
@@ -839,7 +837,7 @@ export function generateBarChartVegaSpec(
         records = item.datum.v;
 
         const title = xIsDateorTime
-          ? renderTimeString(new Date(x), xField.isTime(), xField.timeframe)
+          ? renderTimeString(new Date(x), xField.isDate(), xField.timeframe)
           : x;
 
         tooltipData = {
@@ -863,7 +861,7 @@ export function generateBarChartVegaSpec(
         const title = xIsDateorTime
           ? renderTimeString(
               new Date(itemData.x),
-              xField.isTime(),
+              xField.isDate(),
               xField.timeframe
             )
           : itemData.x;

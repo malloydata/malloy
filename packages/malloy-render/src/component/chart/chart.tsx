@@ -46,12 +46,10 @@ export function Chart(props: ChartProps) {
   const runtime = field.vegaRuntime;
   if (!runtime)
     throw new Error('Charts must have a runtime defined in their metadata');
-  const chartData = data;
-  if (!chartData.isArray()) throw new Error('Data must be an array');
   let values: unknown[] = [];
   // New vega charts use mapMalloyDataToChartData handlers
   if (chartProps.mapMalloyDataToChartData) {
-    values = chartProps.mapMalloyDataToChartData(chartData);
+    values = chartProps.mapMalloyDataToChartData(data);
   }
 
   const [viewInterface, setViewInterface] = createSignal<ViewInterface | null>(

@@ -25,7 +25,7 @@ import {
   TableConfig,
   VegaConfigHandler,
 } from './types';
-export type {DrillEntry as DimensionContextEntry, DrillData} from './types';
+export type {DrillEntry, DrillData} from './types';
 import css from './render.css?raw';
 import * as Malloy from '@malloydata/malloy-interfaces';
 import {ModelDef, QueryResult, Result, API} from '@malloydata/malloy';

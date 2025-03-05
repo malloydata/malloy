@@ -85,11 +85,10 @@ export function getChartLayoutSettings(
     getYMinMax?: () => [number, number];
   }
 ): ChartLayoutSettings {
-  const nestFields = field.fields;
   // TODO: improve logic for field extraction
   // may not need this anymore if we enforce the options, so each chart passes its specific needs for calculating layout
-  const xField = options?.xField ?? nestFields[0];
-  const yField = options?.yField ?? nestFields[1];
+  const xField = options?.xField ?? field.fields[0];
+  const yField = options?.yField ?? field.fields[1];
   const tag = field.tag;
 
   // For now, support legacy API of size being its own tag

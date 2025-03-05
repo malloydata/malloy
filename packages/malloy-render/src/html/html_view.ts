@@ -64,7 +64,7 @@ export class HTMLView {
         !!this.document.defaultView?.customElements.get('malloy-render');
       if (hasNextRenderer) {
         const el = this.document.createElement('malloy-render');
-        el['malloyResult'] = malloyResult;
+        el.malloyResult = malloyResult;
         const nextRendererOptions = options.nextRendererOptions ?? {};
         for (const [key, val] of Object.entries(nextRendererOptions)) {
           el[key] = val;

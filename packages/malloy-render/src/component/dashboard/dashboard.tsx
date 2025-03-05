@@ -5,20 +5,18 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {createMemo, For, Show} from 'solid-js';
+import {For, Show} from 'solid-js';
 import {applyRenderer} from '../apply-renderer';
 import {createVirtualizer, Virtualizer} from '@tanstack/solid-virtual';
 import {useConfig} from '../render';
 import dashboardCss from './dashboard.css?raw';
 import {
   Field,
-  NestField,
   RecordCell,
   RecordOrRepeatedRecordCell,
 } from '../render-result-metadata';
 
 function DashboardItem(props: {
-  parent: NestField;
   field: Field;
   row: RecordCell;
   maxTableHeight: number | null;
@@ -101,19 +99,17 @@ export function Dashboard(props: {
   else if (maxTableHeightTag?.numeric())
     maxTableHeight = maxTableHeightTag!.numeric()!;
 
-  const nestFields = field.fields;
   const dimensions = () =>
-    nestFields.filter(f => {
-      const isHidden = f.tag.has('hidden');
-      return !isHidden && f.isAtomic() && f.wasDimension();
+    field.fields.filter(f => {
+      return !f.isHidden() && f.isAtomic() && f.wasDimension();
     });
 
   const nonDimensions = () => {
     const measureFields: Field[] = [];
     const otherFields: Field[] = [];
 
-    for (const f of nestFields) {
-      if (f.tag.has('hidden')) continue;
+    for (const f of field.fields) {
+      if (f.isHidden()) continue;
       if (f.isAtomic() && f.wasCalculation()) {
         measureFields.push(f);
       } else if (!f.isAtomic() || !f.wasDimension()) otherFields.push(f);
@@ -124,8 +120,7 @@ export function Dashboard(props: {
   const nonDimensionsGrouped = () => {
     const group: Field[][] = [[]];
     for (const f of nonDimensions()) {
-      const tag = f.tag;
-      if (tag.has('break')) {
+      if (f.tag.has('break')) {
         group.push([]);
       }
       const lastGroup = group.at(-1)!;
@@ -134,10 +129,6 @@ export function Dashboard(props: {
     return group;
   };
 
-  const data = createMemo(() => {
-    return props.data.rows;
-  });
-
   let scrollEl!: HTMLElement;
   if (props.scrollEl) scrollEl = props.scrollEl;
   const shouldVirtualize = () =>
@@ -145,7 +136,7 @@ export function Dashboard(props: {
   let virtualizer: Virtualizer<HTMLElement, Element> | undefined;
   if (shouldVirtualize()) {
     virtualizer = createVirtualizer({
-      count: data().length,
+      count: props.data.rows.length,
       getScrollElement: () => scrollEl,
       estimateSize: () => 192,
     });
@@ -195,9 +186,9 @@ export function Dashboard(props: {
                             <div class="dashboard-dimension-value">
                               {
                                 applyRenderer({
-                                  dataColumn: data()[virtualRow.index].column(
-                                    d.name
-                                  ),
+                                  dataColumn: props.data.rows[
+                                    virtualRow.index
+                                  ].column(d.name),
                                   tag: d.tag,
                                 }).renderValue
                               }
@@ -214,9 +205,8 @@ export function Dashboard(props: {
                         <For each={group}>
                           {field => (
                             <DashboardItem
-                              parent={props.data.field}
                               field={field}
-                              row={data()[virtualRow.index]}
+                              row={props.data.rows[virtualRow.index]}
                               isMeasure={field.wasCalculation()}
                               maxTableHeight={maxTableHeight}
                             />
@@ -232,7 +222,7 @@ export function Dashboard(props: {
         </div>
       </Show>
       <Show when={!shouldVirtualize()}>
-        <For each={data()}>
+        <For each={props.data.rows}>
           {row => (
             <div class="dashboard-row">
               <div class="dashboard-row-header">
@@ -261,7 +251,6 @@ export function Dashboard(props: {
                     <For each={group}>
                       {field => (
                         <DashboardItem
-                          parent={props.data.field}
                           field={field}
                           row={row}
                           isMeasure={field.wasCalculation()}

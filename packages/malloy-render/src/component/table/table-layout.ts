@@ -58,8 +58,7 @@ function createFieldHeaderRangeMap(
 ): [FieldHeaderRangeMap, number, number] {
   let fieldMap: FieldHeaderRangeMap = {};
 
-  const nestFields = explore.fields;
-  nestFields.forEach(field => {
+  explore.fields.forEach(field => {
     if (field.isHidden()) return;
     const key = field.key;
     if (field.isNest()) {
@@ -111,11 +110,8 @@ export function getTableLayout(rootField: NestField): TableLayout {
     maxDepth: 0,
   };
 
-  // for (const [_, fieldMeta] of metadata.fields.entries()) { // TODO
   for (const key in fieldHeaderRangeMap) {
     const field = rootField.root().fieldAt(key);
-    // Only include table fields
-    // if (!(key in fieldHeaderRangeMap)) continue;
     const layoutEntry: LayoutEntry = {
       field,
       width: null,

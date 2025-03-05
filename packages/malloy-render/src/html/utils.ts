@@ -118,7 +118,7 @@ export function timeToString(
       const year = numberFixedDigits(dateTime.year, 2);
       const month = numberFixedDigits(dateTime.month, 2);
       const day = numberFixedDigits(dateTime.day, 2);
-      return `WK${year}-${month}-${day}`;
+      return `${year}-${month}-${day}-WK`;
     }
     case 'day': {
       const year = numberFixedDigits(dateTime.year, 2);
@@ -131,7 +131,7 @@ export function timeToString(
       const month = numberFixedDigits(dateTime.month, 2);
       const day = numberFixedDigits(dateTime.day, 2);
       const hour = numberFixedDigits(dateTime.hour, 2);
-      return `${year}-${month}-${day} ${hour}:00 for 1 hour`;
+      return `${year}-${month}-${day} ${hour}`;
     }
     case 'minute': {
       const year = numberFixedDigits(dateTime.year, 2);

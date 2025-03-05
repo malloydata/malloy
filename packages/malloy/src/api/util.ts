@@ -159,7 +159,9 @@ export function mapData(data: QueryData, schema: Malloy.Schema): Malloy.Data {
   ): Malloy.Cell {
     const cells: Malloy.Cell[] = [];
     for (const f of field.schema.fields) {
-      const value = row[f.name]; // TODO this might not work for weird names?
+      // TODO this might not work for weird names? Is it always the case
+      // that the names returned from the DB always match the field names excactly?
+      const value = row[f.name];
       if (f.kind !== 'dimension') {
         // TODO this makes me think that the result schema should be a repeated record dimension instead of a schema
         throw new Error(

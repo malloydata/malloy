@@ -522,7 +522,6 @@ export class ArrayField extends FieldBase {
   public readonly fields: Field[];
   public readonly maxUniqueFieldValueCounts: Map<string, number> = new Map();
   public readonly eachField: Field;
-  // public readonly recordField: RecordField;
   constructor(
     public readonly field: ArrayFieldInfo,
     parent: NestField | undefined
@@ -536,13 +535,6 @@ export class ArrayField extends FieldBase {
       this
     );
     this.fields = [this.eachField];
-    // this.recordField = new RecordField(
-    //   {
-    //     name: 'as_record',
-    //     type: {kind: 'record_type', fields: [this.eachField.field]},
-    //   },
-    //   this
-    // );
   }
 
   populateAllVegaSpecs(options: GetResultMetadataOptions): void {
@@ -555,7 +547,6 @@ export class RepeatedRecordField extends ArrayField {
   public vegaChartProps: VegaChartProps | undefined;
   public vegaRuntime: Runtime | undefined;
   public maxRecordCount = 0;
-  // public readonly eachField: RecordField;
 
   constructor(
     public readonly field: RepeatedRecordFieldInfo,
@@ -1300,9 +1291,6 @@ export class RepeatedRecordCell extends ArrayCell {
   get value() {
     return this.rows;
   }
-
-  // TODO I don't think it makes sense to override cellAtPath here -- what would it mean to get a particular column
-  // in a repeated record -- would you get the first row always??
 }
 
 export class RootCell extends RepeatedRecordCell {

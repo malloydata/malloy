@@ -516,7 +516,6 @@ export class HTMLVegaSpecRenderer extends HTMLChartRenderer {
   ): string {
     const m = fieldString.match(/#\{(\d+)\}/);
     if (m && m.groups) {
-      // TODO WHAT
       return explore.fields[parseInt(m.groups[1]) - 1].name;
     }
     return fieldString;

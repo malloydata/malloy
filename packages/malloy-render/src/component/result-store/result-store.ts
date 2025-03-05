@@ -142,7 +142,7 @@ export async function copyExplorePathQueryToClipboard({
   const root = field.root();
   const drillEntries = data.getDrillEntries();
 
-  const whereClause = expressions.map(entry => `\t\t${entry}`).join(',\n');
+  const whereClause = expressions.join(',\n');
 
   const query = data.getDrillQuery();
 
