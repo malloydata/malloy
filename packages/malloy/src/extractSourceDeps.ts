@@ -6,7 +6,13 @@
  */
 
 import * as Malloy from '@malloydata/malloy-interfaces';
-import {FieldDef, isSourceDef, ModelDef, SourceDef} from './model';
+import {
+  FieldDef,
+  FilterCondition,
+  isSourceDef,
+  ModelDef,
+  SourceDef,
+} from './model';
 
 export function extractSourceDependenciesFromModel(
   model: ModelDef,
@@ -14,77 +20,120 @@ export function extractSourceDependenciesFromModel(
 ): Array<SQLSource> {
   const source = model.contents[sourceName];
 
-  if (source && isSourceDef(source))
-    return extractSourceDependenciesImpl(source).dependencies;
+  if (source && isSourceDef(source)) {
+    const res = extractSourceDependenciesImpl(source).dependencies;
+
+    return res;
+  }
 
   return [];
 }
 
 function extractSourceDependenciesImpl(source: SourceDef): ParseSourceResult {
-  const rawDeps: Array<SourceDef> = [];
+  const {sources: deps, columns} = parseFields(source.fields);
+  const filters = parseFilters(source.filterList ?? []);
 
-  const {rawSources, includeCols} = parseFields(source.fields);
-  rawDeps.push(...rawSources);
+  const partial: ConstrainedSQLArtifact = {filters, columns};
+  let currSQLSource: SQLSource | null = null;
 
-  // handle special cases
   switch (source.type) {
     case 'query_source':
       {
         const stage = source.query.structRef;
 
         if (typeof stage !== 'string') {
-          rawDeps.push(stage);
+          deps.push(stage);
+        }
+      }
+      break;
+    case 'table':
+      {
+        if ('tablePath' in source) {
+          currSQLSource = {name: source.tablePath, ...partial};
+        }
+      }
+      break;
+    case 'sql_select':
+      {
+        if ('selectStr' in source) {
+          currSQLSource = {sql: source.selectStr, ...partial};
         }
       }
       break;
     default:
-    // source not supported
+      break;
   }
 
   const resolvedDeps: Array<ParseSourceResult> = [];
-
-  for (const dep of rawDeps) {
+  for (const dep of deps) {
     resolvedDeps.push(extractSourceDependenciesImpl(dep));
   }
 
   const childrenResult = collateChildResults(resolvedDeps);
 
-  // TODO: this happens if:
-  // - agg level changes
-  // - there's a join (though might not be necessary - this might change)
-  const isDerived = true;
-
-  if (isDerived) {
-    return childrenResult;
-  }
-
-  // TODO - parse filters from this stage
-  const filters: Array<RowFilter> = [];
-
-  return reconcileChildrenAndSelf(childrenResult, filters, includeCols);
+  return reconcileChildrenAndSelf(childrenResult, {
+    isDerivedView: false,
+    dependencies: currSQLSource ? [currSQLSource] : [],
+  });
 }
 
+// TODO: derived view happens if:
+// - agg level changes
+// - there's a join (though might not be necessary - this might change)
 function reconcileChildrenAndSelf(
-  _children: ParseSourceResult,
-  _rowFilters: Array<RowFilter>,
-  _cols: Array<Column>
+  children: ParseSourceResult,
+  self: ParseSourceResult | null
 ): ParseSourceResult {
+  if (children.dependencies.length === 0) {
+    return self ?? {isDerivedView: false, dependencies: []};
+  }
+
   return {isDerivedView: true, dependencies: []};
 }
 
-function collateChildResults(_results: Array<ParseSourceResult>) {
-  // combine/distill
+// these are siblings; take intersection
+// TODO: at some point, maybe keep discarded stuff for hints
+function collateChildResults(results: Array<ParseSourceResult>) {
+  if (results.length === 0) {
+    return {isDerivedView: false, dependencies: []};
+  }
 
   return {isDerivedView: true, dependencies: []};
 }
 
 // fields are always handled the same way and can result in more parsing if there
 // are joins
-function parseFields(_fields: Array<FieldDef>): {
-  rawSources: Array<SourceDef>;
-  includeCols: Array<Column>;
+function parseFields(fields: Array<FieldDef>): {
+  sources: Array<SourceDef>;
+  columns: Array<Column>;
 } {
-  return {rawSources: [], includeCols: []};
+  const sources: Array<SourceDef> = [];
+  const columns: Array<Column> = [];
+
+  for (const field of fields) {
+    switch (field.type) {
+      case 'string':
+        {
+          if ('expressionType' in field) {
+            break;
+          }
+
+          columns.push({name: field.name});
+        }
+        break;
+      case 'table':
+        sources.push(field);
+        break;
+      default:
+        break;
+    }
+  }
+
+  return {sources, columns};
+}
+
+function parseFilters(_filters: Array<FilterCondition>): Array<RowFilter> {
+  return [];
 }
 
 // this might also require some mapping of column names to the original table/query
@@ -106,6 +155,7 @@ export type ExtractSourceDependenciesResponse = {
   compiler_needs?: Malloy.CompilerNeeds;
 };
 
+// add connection? for ns
 export type SQLSource = SQLTable | SQLQuery;
 export type RowFilter = {
   sql: string;
@@ -113,16 +163,17 @@ export type RowFilter = {
 export type Column = {
   name: string;
 };
-export type SQLQuery = {
+export interface SQLQuery extends ConstrainedSQLArtifact {
   sql: string;
-  filters: Array<RowFilter>;
-  columns: Array<Column>;
-};
-export type SQLTable = {
+}
+export interface SQLTable extends ConstrainedSQLArtifact {
   name: string;
+}
+
+export interface ConstrainedSQLArtifact {
   filters: Array<RowFilter>;
   columns: Array<Column>;
-};
+}
 
 // thinking:
 
