@@ -581,6 +581,7 @@ describe('rendering results', () => {
         SELECT 43.839187 as latitude, -113.849795 as longitude, CAST('2021-11-10' AS datetime) as times, 200 as size
           UNION ALL SELECT 32.8647113, -117.1998042, CAST('2021-11-12' AS datetime), 400 as size""")
 
+        # point_map
         query: mexico_point_map is timeData -> {
           timezone: 'America/Mexico_City'
           group_by: latitude, longitude, times
