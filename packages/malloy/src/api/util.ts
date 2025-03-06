@@ -105,22 +105,22 @@ export function mapData(data: QueryData, schema: Malloy.Schema): Malloy.Data {
       }
     } else if (field.type.kind === 'boolean_type') {
       if (typeof value !== 'boolean') {
-        throw new Error('Invalid boolean');
+        throw new Error(`Invalid boolean ${value}`);
       }
       return {kind: 'boolean_cell', boolean_value: value};
     } else if (field.type.kind === 'number_type') {
       if (typeof value !== 'number') {
-        throw new Error('Invalid number');
+        throw new Error(`Invalid number ${value}`);
       }
       return {kind: 'number_cell', number_value: value};
     } else if (field.type.kind === 'string_type') {
       if (typeof value !== 'string') {
-        throw new Error('Invalid string');
+        throw new Error(`Invalid string ${value}`);
       }
       return {kind: 'string_cell', string_value: value};
     } else if (field.type.kind === 'array_type') {
       if (!Array.isArray(value)) {
-        throw new Error('Invalid array');
+        throw new Error(`Invalid array ${value}`);
       }
       return {
         kind: 'array_cell',
