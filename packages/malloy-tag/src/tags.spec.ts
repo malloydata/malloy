@@ -394,6 +394,12 @@ describe('Tag access', () => {
       expect(ext.toString()).toBe('#(malloy) `a\\`b` = 1');
       idempotent(ext);
     });
+    test('prop has multiple back ticks', () => {
+      const base = Tag.withPrefix('#(malloy) ');
+      const ext = base.set(['a`b`c'], 1);
+      expect(ext.toString()).toBe('#(malloy) `a\\`b\\`c` = 1');
+      idempotent(ext);
+    });
   });
 });
 
