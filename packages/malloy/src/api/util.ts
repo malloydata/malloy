@@ -195,11 +195,13 @@ export function wrapResult(result: Result): Malloy.Result {
   const annotations = annotationToTaglines(result.annotation).map(l => ({
     value: l,
   }));
-  annotations.push({
-    value: Tag.withPrefix('#(malloy) ')
-      .set(['source_name'], result.sourceExplore.name)
-      .toString(),
-  });
+  if (result.sourceExplore) {
+    annotations.push({
+      value: Tag.withPrefix('#(malloy) ')
+        .set(['source_name'], result.sourceExplore.name)
+        .toString(),
+    });
+  }
   return {
     schema,
     data: mapData(result.data.toObject(), schema),

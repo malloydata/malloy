@@ -474,6 +474,10 @@ function extractSource(
   }
 }
 
+export function hasErrors(log: Malloy.LogMessage[] | undefined) {
+  return log?.some(m => m.severity === 'error') ?? false;
+}
+
 // Given a StableQueryDef and the URL to a model, run it and return a StableResult
 
 // Given a StableQueryDef and the URL to a model, compile it and return a StableResultDef

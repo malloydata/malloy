@@ -168,7 +168,7 @@ class SessionManager {
   }
 
   public hasErrors(log: Malloy.LogMessage[] | undefined) {
-    return log?.some(m => m.severity === 'error') ?? false;
+    return Core.hasErrors(log);
   }
 
   public compileModel(

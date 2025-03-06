@@ -442,9 +442,10 @@ describe('rendering results', () => {
 
           query: by_name is height -> by_name
       `;
-      const result = await (
-        await duckdb.loadModel(src).loadQueryByName('by_name')
-      ).run();
+      const result = await duckdb
+        .loadModel(src)
+        .loadQueryByName('by_name')
+        .run();
       const document = new JSDOM().window.document;
       const html = await new HTMLView(document).render(result, {
         dataStyles: {},
@@ -493,9 +494,10 @@ describe('rendering results', () => {
 
           query: flatten is height -> flatten
       `;
-      const result = await (
-        await duckdb.loadModel(src).loadQueryByName('flatten')
-      ).run();
+      const result = await duckdb
+        .loadModel(src)
+        .loadQueryByName('flatten')
+        .run();
       const document = new JSDOM().window.document;
       const html = await new HTMLView(document).render(result, {
         dataStyles: {},
@@ -513,9 +515,10 @@ describe('rendering results', () => {
           select: mex_time is @2021-02-24 03:05:06
         }
       `;
-      const result = await (
-        await duckdb.loadModel(src).loadQueryByName('mex_query')
-      ).run();
+      const result = await duckdb
+        .loadModel(src)
+        .loadQueryByName('mex_query')
+        .run();
       const document = new JSDOM().window.document;
       const html = await new HTMLView(document).render(result, {
         dataStyles: {},
@@ -536,9 +539,10 @@ describe('rendering results', () => {
             select: yr is times.year, qt is times.quarter, mt is times.month, dy is times.day
         }
       `;
-      const result = await (
-        await duckdb.loadModel(src).loadQueryByName('data_trunc')
-      ).run();
+      const result = await duckdb
+        .loadModel(src)
+        .loadQueryByName('data_trunc')
+        .run();
       const document = new JSDOM().window.document;
       const html = await new HTMLView(document).render(result, {
         dataStyles: {},
@@ -554,12 +558,14 @@ describe('rendering results', () => {
         query: mex_query is # bar_chart
           duckdb.sql('SELECT 1 as one') -> {
             timezone: 'America/Mexico_City'
-            select: mex_time is @2021-02-24 03:05:06
+            group_by: mex_time is @2021-02-24 03:05:06
+            aggregate: value is sum(1)
           }
       `;
-      const result = await (
-        await duckdb.loadModel(src).loadQueryByName('mex_query')
-      ).run();
+      const result = await duckdb
+        .loadModel(src)
+        .loadQueryByName('mex_query')
+        .run();
       const document = new JSDOM().window.document;
       const html = await new HTMLView(document).render(result, {
         dataStyles: {},
@@ -581,9 +587,10 @@ describe('rendering results', () => {
             aggregate:
               sizeSum is sum(size)
         }`;
-      const result = await (
-        await duckdb.loadModel(src).loadQueryByName('mexico_point_map')
-      ).run();
+      const result = await duckdb
+        .loadModel(src)
+        .loadQueryByName('mexico_point_map')
+        .run();
       const document = new JSDOM().window.document;
       const html = await new HTMLView(document).render(result, {
         dataStyles: {},
@@ -605,9 +612,10 @@ describe('rendering results', () => {
             shorter is anumber
         }
       `;
-      const result = await (
-        await duckdb.loadModel(src).loadQueryByName('number_query')
-      ).run();
+      const result = await duckdb
+        .loadModel(src)
+        .loadQueryByName('number_query')
+        .run();
       const document = new JSDOM().window.document;
       const html = await new HTMLView(document).render(result, {
         dataStyles: {},
@@ -634,9 +642,10 @@ describe('rendering results', () => {
           usage_tb is 3758096384000
         }
       `;
-      const result = await (
-        await duckdb.loadModel(src).loadQueryByName('bytes_query')
-      ).run();
+      const result = await duckdb
+        .loadModel(src)
+        .loadQueryByName('bytes_query')
+        .run();
       const document = new JSDOM().window.document;
       const html = await new HTMLView(document).render(result, {
         dataStyles: {},
@@ -662,9 +671,10 @@ describe('rendering results', () => {
           key is "4"
         }
       `;
-      const result = await (
-        await duckdb.loadModel(src).loadQueryByName('bytes_query')
-      ).run();
+      const result = await duckdb
+        .loadModel(src)
+        .loadQueryByName('bytes_query')
+        .run();
       const document = new JSDOM().window.document;
       const html = await new HTMLView(document).render(result, {
         dataStyles: {},
@@ -725,9 +735,10 @@ describe('rendering results', () => {
           d2 is 300
         }
       `;
-      const result = await (
-        await duckdb.loadModel(src).loadQueryByName('duration_query')
-      ).run();
+      const result = await duckdb
+        .loadModel(src)
+        .loadQueryByName('duration_query')
+        .run();
       const document = new JSDOM().window.document;
       const html = await new HTMLView(document).render(result, {
         dataStyles: {},

@@ -26,7 +26,8 @@ export function LegacyChart(props: {data: RepeatedRecordCell; type: string}) {
         },
         {dataStyles: {}},
         props.data.field,
-        {vegaConfigOverride: vegaConfig}
+        {vegaConfigOverride: vegaConfig},
+        props.data.field.root().queryTimezone
       );
   let el;
   createEffect(async () => {

@@ -5100,6 +5100,7 @@ export class QueryModel {
       queryName: query.name,
       connectionName: ret.connectionName,
       annotation: query.annotation,
+      queryTimezone: ret.structs[0].queryTimezone,
     };
   }
 

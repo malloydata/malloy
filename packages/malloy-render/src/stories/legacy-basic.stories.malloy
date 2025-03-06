@@ -115,3 +115,268 @@ source: uuid is duckdb.sql("SELECT 'Sample Text' AS text_column, 42 AS number_co
     name is user.name,
   }
 };
+
+source: height is duckdb.sql("""
+  SELECT 'Pedro' as nm, 1 as monthy, 20 as height, 3 as wt, 50 apptcost, 1 as vaccine
+  UNION ALL SELECT 'Pedro', 2, 25, 3.4, 100, 1
+  UNION ALL SELECT 'Sebastian', 1, 23, 2, 400, 1
+  UNION ALL SELECT 'Sebastian', 2, 28, 2.6, 500, 1
+""") extend {
+  measure: visitcount is sum(vaccine) / count();
+
+  # currency
+  dimension: price is apptcost
+
+  #(story) story="By Name"
+  view: by_name is {
+    group_by: nm
+    order_by: nm
+    nest: height_by_age is {
+      select:
+        # hidden
+        monthy,
+        height
+    }
+
+    # hidden
+    nest: height_by_age_hidden is {
+      select: monthy, height
+    }
+
+    # list
+    nest: monthy is {
+      select: price
+    }
+
+    aggregate:
+      visitcount
+      # hidden
+      noshowvc is visitcount
+  }
+
+  #(story) story="By Name Dashboard"
+  # dashboard
+  view: by_name_db is by_name
+}
+
+source: height2 is duckdb.sql(
+  """
+    SELECT 'Pedro' as nm, 'Monday' as dayito, 1 as loc, 2 as lac, 1 as monthy, 20 as height, 3 as wt, 50 apptcost, 1 as vaccine, 'A' as btype
+    UNION ALL SELECT 'Pedro', 'Tuesday', 1, 2, 2, 25, 3.4, 100, 1, 'B'
+    UNION ALL SELECT 'Pedro', 'Tuesday', 1, 2, 3, 38, 3.6, 200, 0, 'A'
+    UNION ALL SELECT 'Pedro', 'Wednesday', 1, 2, 4, 45, 3.7, 300, 1, 'O'
+    UNION ALL SELECT 'Sebastian', 'Thursday', 1, 2, 1, 23, 2, 400, 1, 'C'
+    UNION ALL SELECT 'Sebastian', 'Thursday', 1, 2, 2, 28, 2.6, 500, 1, 'A'
+    UNION ALL SELECT 'Sebastian', 'Monday', 1, 2, 3, 35, 3.6, 650, 0, 'A'
+    UNION ALL SELECT 'Sebastian', 'Monday', 1, 2, 4, 47, 4.2, 70, 1, 'B'
+    UNION ALL SELECT 'Alex', 'Tuesday', 1, 2, 1, 23, 2.5, 85, 0, 'X'
+    UNION ALL SELECT 'Alex', 'Thursday', 1, 2, 2, 28, 3, 42, 1, 'P'
+    UNION ALL SELECT 'Alex', 'Thursday', 1, 2,  3, 35, 3.2, 63, 1, 'A'
+    UNION ALL SELECT 'Alex', 'Monday', 1, 2, 4, 47, 3.4, 81, 1, 'D'
+    UNION ALL SELECT 'Miguel', 'Monday', 1, 2, 1, 23, 4, 34, 0, 'E'
+    UNION ALL SELECT 'Miguel', 'Monday', 1, 2, 2, 28, 4.1, 64, 1, 'R'
+    UNION ALL SELECT 'Miguel', 'Wednesday', 1, 2, 3, 35, 4.2, 31, 1, 'E'
+    UNION ALL SELECT 'Miguel', 'Wednesday', 1, 2, 4, 47, 4.3, 76, 0, 'F'
+  """) extend {
+  # percent
+  dimension: flac is lac
+
+  # currency
+  dimension: floc is loc
+
+  #(story) story="Pivot Table"
+  view: by_name_2 is {
+    group_by: nm
+    # pivot  { dimensions=["dayito"] }
+    nest: pivot_f is {
+      group_by: dayito
+      aggregate:
+        ht is avg(height),
+        price is sum(apptcost)
+        mbtype is max(btype)
+    }
+
+    aggregate: pricepu is sum(apptcost)
+    # pivot
+    nest: pivot_f2 is {
+      group_by: floc, flac
+      aggregate:
+        ht is avg(height)
+        price is sum(apptcost)
+    }
+  }
+}
+
+source: height_3 is duckdb.sql(
+  """
+    SELECT 'Pedro' as nm, 'Monday' as dayito, 1 as loc, 2 as lac, 1 as monthy, 20 as height, 3 as wt, 50 apptcost, 1 as vaccine, 'A' as btype
+    UNION ALL SELECT 'Pedro', 'Tuesday', 1, 2, 2, 25, 3.4, 100, 1, 'B'
+    UNION ALL SELECT 'Pedro', 'Tuesday', 1, 2, 3, 38, 3.6, 200, 0, 'A'
+    UNION ALL SELECT 'Pedro', 'Wednesday', 1, 2, 4, 45, 3.7, 300, 1, 'O'
+    UNION ALL SELECT 'Sebastian', 'Thursday', 1, 2, 1, 23, 2, 400, 1, 'C'
+    UNION ALL SELECT 'Sebastian', 'Thursday', 1, 2, 2, 28, 2.6, 500, 1, 'A'
+    UNION ALL SELECT 'Sebastian', 'Monday', 1, 2, 3, 35, 3.6, 650, 0, 'A'
+    UNION ALL SELECT 'Sebastian', 'Monday', 1, 2, 4, 47, 4.2, 70, 1, 'B'
+    UNION ALL SELECT 'Alex', 'Tuesday', 1, 2, 1, 23, 2.5, 85, 0, 'X'
+    UNION ALL SELECT 'Alex', 'Thursday', 1, 2, 2, 28, 3, 42, 1, 'P'
+    UNION ALL SELECT 'Alex', 'Thursday', 1, 2,  3, 35, 3.2, 63, 1, 'A'
+    UNION ALL SELECT 'Alex', 'Monday', 1, 2, 4, 47, 3.4, 81, 1, 'D'
+    UNION ALL SELECT 'Miguel', 'Monday', 1, 2, 1, 23, 4, 34, 0, 'E'
+    UNION ALL SELECT 'Miguel', 'Monday', 1, 2, 2, 28, 4.1, 64, 1, 'R'
+    UNION ALL SELECT 'Miguel', 'Wednesday', 1, 2, 3, 35, 4.2, 31, 1, 'E'
+    UNION ALL SELECT 'Miguel', 'Wednesday', 1, 2, 4, 47, 4.3, 76, 0, 'F'
+  """
+) extend {
+  #(story) story="Flattened Records"
+  view: flatten_2 is {
+    group_by: nm
+    aggregate: avg_height is height.avg()
+    order_by: 2 desc, 1 desc
+    nest:
+      # flatten
+      monday is {
+        aggregate: avg_height is height.avg()
+        where: dayito='Monday'
+      },
+      # flatten
+      thursday is {
+        aggregate: avg_height is height.avg()
+        where: dayito='Thursday'
+      }
+  }
+}
+
+source: none is duckdb.sql('SELECT 1 as one ') extend {
+  #(story) story="Timezone"
+  view: mex_query is {
+    timezone: 'America/Mexico_City'
+    select: mex_time is @2021-02-24 03:05:06
+  }
+
+  #(story) story="Timezone in Bar Chart"
+  # bar_chart
+  view: mex_query_bar is {
+    timezone: 'America/Mexico_City'
+    group_by: mex_time is @2021-02-24 03:05:06
+    aggregate: value is sum(1)
+  }
+
+  #(story) story="Data Volume"
+  view: data_volume is {
+    select:
+      # data_volume = bytes
+      usage_b is 3758
+      # data_volume = kb
+      usage_kb is 3758
+      # data_volume = mb
+      usage_mb is 3758096
+      # data_volume = gb
+      usage_gb is 3758096384
+      # data_volume = tb
+      usage_tb is 3758096384000
+  }
+
+  #(story) story="Links"
+  view: links is {
+    select:
+      # link
+      just_link is "http://123.com"
+      # link.url_template="http://123.com/"
+      link_append is "4"
+      # link.url_template="http://123.com/$$/5"
+      link_substitue is "4"
+      # link{url_template="http://123.com/$$/5" field=key}
+      link_with_key is 'HTML Text'
+      key is "4"
+  }
+
+  #(story) story="Durations"
+  view: durations is {
+    select:
+      # duration = nanoseconds
+      ns1 is 1
+      # duration = nanoseconds
+      ns2 is 1002
+      # duration = nanoseconds
+      ns3 is 1002003
+      # duration = microseconds
+      mis1 is 1
+      # duration = microseconds
+      mis2 is 1002
+      # duration = microseconds
+      mis3 is 1002003
+      # duration = milliseconds
+      ms1 is 1
+      # duration = milliseconds
+      ms2 is 1002
+      # duration = milliseconds
+      ms3 is 1002003
+      # duration = seconds
+      s1 is 1
+      # duration = seconds
+      s2 is 61
+      # duration = seconds
+      s3 is 121
+      # duration = seconds
+      s4 is 3610
+      # duration = seconds
+      s5 is 1728015
+      # duration = minutes
+      m1 is 1
+      # duration = minutes
+      m2 is 62
+      # duration = minutes
+      m3 is 1445
+      # duration = hours
+      h1 is 1
+      # duration = hours
+      h2 is 26
+      # duration = hours
+      h3 is 48
+      # duration = days
+      d1 is 1
+      # duration = days
+      d2 is 300
+  }
+}
+
+source: time_data_trunc is duckdb.sql(
+  """
+    SELECT CAST('2021-12-11 10:20:00' AS datetime) as times
+    UNION ALL SELECT CAST('2021-01-01 05:40:00' AS datetime)
+    UNION ALL SELECT CAST('2021-04-01 00:59:00' AS datetime)
+  """
+) extend {
+  #(story) story="Time Truncation"
+  view: data_trunc is {
+    select: yr is times.year, qt is times.quarter, mt is times.month, dy is times.day
+  }
+}
+
+source: location_data is duckdb.sql(
+  """
+    SELECT 43.839187 as latitude, -113.849795 as longitude, CAST('2021-11-10' AS datetime) as times, 200 as size
+    UNION ALL SELECT 32.8647113, -117.1998042, CAST('2021-11-12' AS datetime), 400 as size
+  """
+) extend {
+  #(story) story="Point Map"
+  # point_map
+  view: points is {
+    timezone: 'America/Mexico_City'
+    group_by: latitude, longitude, times
+      aggregate:
+        size_sum is sum(size)
+  }
+}
+
+source: number_formatting is duckdb.sql('SELECT 12.345 as anumber') extend {
+  #(story) story="Number Format"
+  view: num_format is {
+    select:
+      anumber
+      # number= "#,##0.0000"
+      larger is anumber
+      # number= "#,##0.00"
+      shorter is anumber
+  }
+}
