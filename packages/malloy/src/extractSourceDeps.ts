@@ -19,11 +19,8 @@ export function extractSourceDependenciesFromModel(
   sourceName: string
 ): Array<SQLSource> {
   const source = model.contents[sourceName];
-
   if (source && isSourceDef(source)) {
-    const res = extractSourceDependenciesImpl(source).dependencies;
-
-    return res;
+    return extractSourceDependenciesImpl(source).dependencies;
   }
 
   return [];
@@ -37,15 +34,6 @@ function extractSourceDependenciesImpl(source: SourceDef): ParseSourceResult {
   let currSQLSource: SQLSource | null = null;
 
   switch (source.type) {
-    case 'query_source':
-      {
-        const stage = source.query.structRef;
-
-        if (typeof stage !== 'string') {
-          deps.push(stage);
-        }
-      }
-      break;
     case 'table':
       {
         if ('tablePath' in source) {
@@ -57,6 +45,15 @@ function extractSourceDependenciesImpl(source: SourceDef): ParseSourceResult {
       {
         if ('selectStr' in source) {
           currSQLSource = {sql: source.selectStr, ...partial};
+        }
+      }
+      break;
+    case 'query_source':
+      {
+        const stage = source.query.structRef;
+
+        if (typeof stage !== 'string') {
+          deps.push(stage);
         }
       }
       break;
@@ -77,9 +74,50 @@ function extractSourceDependenciesImpl(source: SourceDef): ParseSourceResult {
   });
 }
 
+// fields are always handled the same way and can result in more parsing if there
+// are joins
+function parseFields(fields: Array<FieldDef>): {
+  sources: Array<SourceDef>;
+  columns: Array<Column>;
+} {
+  const sources: Array<SourceDef> = [];
+  const columns: Array<Column> = [];
+
+  for (const field of fields) {
+    switch (field.type) {
+      case 'table':
+        sources.push(field);
+        break;
+      case 'sql_select':
+        sources.push(field);
+        break;
+      case 'string':
+        {
+          if ('expressionType' in field) {
+            break;
+          }
+          columns.push({name: field.name});
+        }
+        break;
+      default:
+        break;
+    }
+  }
+
+  return {sources, columns};
+}
+
+function parseFilters(_filters: Array<FilterCondition>): Array<RowFilter> {
+  return [];
+}
+
 // TODO: derived view happens if:
 // - agg level changes
 // - there's a join (though might not be necessary - this might change)
+
+// also, need to handle special case where there's a table at this level and a join with
+// a source with that table
+// can't union filters in that case
 function reconcileChildrenAndSelf(
   children: ParseSourceResult,
   self: ParseSourceResult | null
@@ -101,38 +139,20 @@ function collateChildResults(results: Array<ParseSourceResult>) {
   return {isDerivedView: true, dependencies: []};
 }
 
-// fields are always handled the same way and can result in more parsing if there
-// are joins
-function parseFields(fields: Array<FieldDef>): {
-  sources: Array<SourceDef>;
-  columns: Array<Column>;
-} {
-  const sources: Array<SourceDef> = [];
-  const columns: Array<Column> = [];
-
-  for (const field of fields) {
-    switch (field.type) {
-      case 'string':
-        {
-          if ('expressionType' in field) {
-            break;
-          }
-
-          columns.push({name: field.name});
-        }
-        break;
-      case 'table':
-        sources.push(field);
-        break;
-      default:
-        break;
-    }
-  }
-
-  return {sources, columns};
+function unionRowFilters(_filters: Array<RowFilter>): Array<RowFilter> {
+  return [];
 }
 
-function parseFilters(_filters: Array<FilterCondition>): Array<RowFilter> {
+function unionColumns(_columns: Array<Column>): Array<Column> {
+  return [];
+}
+
+// TODO also return union? for later surfacing?
+function intersectionRowFilters(_filters: Array<RowFilter>): Array<RowFilter> {
+  return [];
+}
+
+function intersectionColumns(_columns: Array<Column>): Array<Column> {
   return [];
 }
 
@@ -212,3 +232,16 @@ export interface ConstrainedSQLArtifact {
 // same logic as row filters
 // might be easier to do 'columns included' over 'excluded'
 // --> this is also what Onyx expects
+
+// I think I want to add 'derived' to SQL artifact, not source result
+// after taking the intersection, maybe quit? or can I go back to taking union?
+
+// some other thoughts ->
+// when do columns get filtered?
+// --> when the source is based on a query
+// --> when there's an include/exclude clause
+
+// based on this, if a node knows what its parent needs, it can know that it only needs
+// what is necessary to create the parent
+// how does it create the parent?
+// --> measures + dimensions + filters
