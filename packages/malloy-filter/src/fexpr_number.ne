@@ -39,6 +39,13 @@ fnumber_lexer.next = (next => () => {
   }
 })(actual_next);
 
+function conjoin(x: Object, y:  Object, z: Object) {
+  return null;
+}
+
+function maybeNot(x: Object) {
+  return null;
+}
 %}
 
 @lexer fnumber_lexer

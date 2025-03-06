@@ -7,7 +7,7 @@
 
 import {FilterLog, isStringClause, StringClause} from './clause_types';
 import * as nearley from 'nearley';
-import fstring_grammar from './lib/fexpr-string-parser';
+import fstring_grammar from './lib/fexpr_string_parser';
 import {escape} from './string_clause_utils';
 
 interface StringParseResult {
