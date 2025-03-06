@@ -340,4 +340,66 @@ describe('Tag access', () => {
     const ext = base.set(['a'], 3).set(['a', 'b'], null);
     expect(ext.toString()).toBe('#(docs) a = 3 { b }');
   });
+  test('empty array', () => {
+    const base = Tag.withPrefix('#(docs) ');
+    const ext = base.set(['a'], []);
+    expect(ext.toString()).toBe('#(docs) a = []');
+    idempotent(ext);
+  });
+  test.skip('empty array followed by field', () => {
+    const base = Tag.withPrefix('#(docs) ');
+    const ext = base.set(['a'], []).set(['b'], 'foo');
+    expect(ext.toString()).toBe('#(docs) a = [] b = foo');
+    idempotent(ext);
+  });
+  describe('toString escapes and quotes strings if necessary', () => {
+    test('in eq value', () => {
+      const base = Tag.withPrefix('#(malloy) ');
+      const ext = base.set(['drill_expression'], 'joined.two');
+      expect(ext.toString()).toBe('#(malloy) drill_expression = "joined.two"');
+      idempotent(ext);
+    });
+    test('in property name', () => {
+      const base = Tag.withPrefix('#(malloy) ');
+      const ext = base.set(['foo bar'], '4');
+      expect(ext.toString()).toBe('#(malloy) `foo bar` = 4');
+      idempotent(ext);
+    });
+    test('deleted property name', () => {
+      const base = Tag.withPrefix('#(malloy) ');
+      const ext = base.unset('two words');
+      expect(ext.toString()).toBe('#(malloy) -`two words`');
+    });
+    test('value has a backslash', () => {
+      const base = Tag.withPrefix('#(malloy) ');
+      const ext = base.set(['value'], '\\');
+      expect(ext.toString()).toBe('#(malloy) value = "\\\\"');
+      idempotent(ext);
+    });
+    test('value has a double quote', () => {
+      const base = Tag.withPrefix('#(malloy) ');
+      const ext = base.set(['value'], '"');
+      expect(ext.toString()).toBe('#(malloy) value = "\\""');
+      idempotent(ext);
+    });
+    test.skip('value is empty string', () => {
+      const base = Tag.withPrefix('#(malloy) ');
+      const ext = base.set(['value'], '');
+      expect(ext.toString()).toBe('#(malloy) value = ""');
+      idempotent(ext);
+    });
+    test('prop has a back tick', () => {
+      const base = Tag.withPrefix('#(malloy) ');
+      const ext = base.set(['a`b'], 1);
+      expect(ext.toString()).toBe('#(malloy) `a\\`b` = 1');
+      idempotent(ext);
+    });
+  });
 });
+
+function idempotent(tag: Tag) {
+  const str = tag.toString();
+  const clone = Tag.fromTagLine(str).tag;
+  clone.prefix = tag.prefix;
+  expect(clone.toString()).toBe(str);
+}

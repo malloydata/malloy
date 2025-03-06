@@ -242,3 +242,32 @@ source: uuid is duckdb.sql("SELECT 'Sample Text' AS text_column, 42 AS number_co
     name is user.name,
   }
 };
+
+source: drilling is duckdb.sql("SELECT 1 as one") -> {
+  select: one
+  select: `Name with Spaces` is 1
+} extend {
+  join_one: joined is duckdb.sql("SELECT 2 as two") on true
+
+  #(story) story="Drilling Dashboard"
+  # dashboard
+  view: drill_dash is {
+    where: one::string != 'top level where'
+    group_by: one is 1
+    nest: a is {
+      group_by: joined.two
+    }
+    nest: b is {
+      group_by: `Name with Spaces`
+    }
+    nest: c is {
+      aggregate: no_filters is sum(1)
+    }
+    nest: where_in_nest is {
+      where: joined.two = 2
+      group_by: one
+      limit: 1
+    }
+    order_by: one
+  }
+}

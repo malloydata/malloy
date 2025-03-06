@@ -5,8 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-export const NOTHING = 0;
-
 import {runtimeFor} from '../runtimes';
 import {getDataTree} from '@malloydata/render';
 import {API} from '@malloydata/malloy';
@@ -48,11 +46,17 @@ describe('drill query', () => {
         view: no_filter is {
           aggregate: flight_count
         }
+
+        view: cool_carriers is {
+          where: carrier = 'AA' or carrier = 'WN'
+          group_by: \`Origin Code\`
+        }
       }
       query: top_carriers is flights -> top_carriers
       query: over_time is flights -> over_time
       query: by_origin is flights -> by_origin
       query: no_filter is flights -> no_filter
+      query: cool_carriers is flights -> cool_carriers
     `;
 
   beforeEach(() => {
@@ -66,11 +70,10 @@ describe('drill query', () => {
       .run();
     const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery =
-      'run: flights -> { \n' +
-      '  where: \n' +
-      "    carriers.nickname = 'Southwest'" +
-      '  \n' +
-      '} + {select: *}\n';
+      'run: flights -> {\n' +
+      '  where:\n' +
+      "    carriers.nickname = 'Southwest'\n" +
+      '} + { select: * }';
     const row = table.rows[0];
     expect(row.getDrillQuery()).toEqual(expDrillQuery);
   });
@@ -82,8 +85,8 @@ describe('drill query', () => {
       .run();
     const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery =
-      'run: flights -> { \n  where: \n    ' +
-      'month(dep_time) = 8  \n} + {select: *}\n';
+      'run: flights -> {\n  where:\n    ' +
+      'month(dep_time) = 8\n} + { select: * }';
     const row = table.rows[0];
     expect(row.getDrillQuery()).toEqual(expDrillQuery);
   });
@@ -95,8 +98,8 @@ describe('drill query', () => {
       .run();
     const table = getDataTree(API.util.wrapResult(result));
     const expDrillQuery =
-      'run: flights -> { \n  where: \n    ' +
-      "`Origin Code` = 'ATL'  \n} + {select: *}\n";
+      'run: flights -> {\n  where:\n    ' +
+      "`Origin Code` = 'ATL'\n} + { select: * }";
     const row = table.rows[0];
     expect(row.getDrillQuery()).toEqual(expDrillQuery);
   });
@@ -107,7 +110,23 @@ describe('drill query', () => {
       .loadQueryByName('no_filter')
       .run();
     const table = getDataTree(API.util.wrapResult(result));
-    const expDrillQuery = 'run: flights -> {select: *}';
+    const expDrillQuery = 'run: flights -> { select: * }';
+    const row = table.rows[0];
+    expect(row.getDrillQuery()).toEqual(expDrillQuery);
+  });
+
+  test('can handle view filters', async () => {
+    const result = await duckdb
+      .loadModel(model)
+      .loadQueryByName('cool_carriers')
+      .run();
+    const table = getDataTree(API.util.wrapResult(result));
+    const expDrillQuery =
+      'run: flights -> {\n' +
+      '  where:\n' +
+      "    carrier = 'AA' or carrier = 'WN',\n" +
+      "    `Origin Code` = 'ABQ'\n" +
+      '} + { select: * }';
     const row = table.rows[0];
     expect(row.getDrillQuery()).toEqual(expDrillQuery);
   });

@@ -10,7 +10,10 @@ import {annotationToTaglines} from '../annotation';
 import {InfoConnection as OldConnection} from '../connection';
 import {Result} from '../malloy';
 import {QueryData, QueryDataRow, QueryValue} from '../model';
-import {convertFieldInfos} from '../to_stable';
+import {
+  convertFieldInfos,
+  getResultStructMetadataAnnotation,
+} from '../to_stable';
 import {InfoConnection} from './connection';
 import * as Malloy from '@malloydata/malloy-interfaces';
 import {DateTime} from 'luxon';
@@ -195,6 +198,13 @@ export function wrapResult(result: Result): Malloy.Result {
   const annotations = annotationToTaglines(result.annotation).map(l => ({
     value: l,
   }));
+  const metadataAnnot = struct.resultMetadata
+    ? getResultStructMetadataAnnotation(struct, struct.resultMetadata)
+    : undefined;
+  if (metadataAnnot) {
+    annotations.push(metadataAnnot);
+  }
+  annotations.push(...(struct.resultMetadata ? [] : []));
   if (result.sourceExplore) {
     annotations.push({
       value: Tag.withPrefix('#(malloy) ')

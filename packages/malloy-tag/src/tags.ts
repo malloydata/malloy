@@ -300,6 +300,21 @@ export class Tag implements TagInterface {
     return new Tag(structuredClone(this));
   }
 
+  private static escapeString(str: string) {
+    return str.replace(/\\/g, '\\\\').replace('"', '\\"');
+  }
+
+  private static escapeProp(str: string) {
+    return str.replace(/\\/g, '\\\\').replace('`', '\\`');
+  }
+
+  private static quoteAndEscape(str: string, isProp = false) {
+    if (str.match(/^[0-9A-Za-z_]+$/)) return str;
+    if (isProp) return `\`${Tag.escapeProp(str)}\``;
+    // TODO consider choosing the quote character based on which quotes appear in the string
+    return `"${Tag.escapeString(str)}"`;
+  }
+
   toString(): string {
     let annotation = this.prefix ?? '# ';
     function addChildren(tag: TagInterface) {
@@ -322,7 +337,7 @@ export class Tag implements TagInterface {
           }
           annotation += ']';
         } else {
-          annotation += `${child.eq}`;
+          annotation += Tag.quoteAndEscape(`${child.eq}`);
         }
       }
       if (child.properties) {
@@ -345,10 +360,10 @@ export class Tag implements TagInterface {
     }
     function addChild(prop: string, child: TagInterface) {
       if (child.deleted) {
-        annotation += `-${prop}`;
+        annotation += `-${Tag.quoteAndEscape(prop, true)}`;
         return;
       }
-      annotation += prop;
+      annotation += Tag.quoteAndEscape(prop, true);
       addTag(child);
     }
     addChildren(this);
@@ -659,7 +674,7 @@ class TagLineParser
     }
 
     if (properties) {
-      if (value) {
+      if (value !== undefined) {
         properties.eq = value;
       }
       return properties;

@@ -14,10 +14,12 @@ import {
 } from './util';
 import * as Malloy from '@malloydata/malloy-interfaces';
 
-export type DrillEntry = {
-  field: Field;
-  value: string | number | boolean | Date | null;
-};
+export type DrillEntry =
+  | {
+      field: Field;
+      value: string | number | boolean | Date | null;
+    }
+  | {where: string};
 
 export function getDataTree(result: Malloy.Result) {
   const fields: Malloy.DimensionInfo[] = [];
@@ -49,7 +51,6 @@ export function getDataTree(result: Malloy.Result) {
       ? {kind: 'array_cell', array_value: [result.data!]}
       : result.data!;
   const rootCell = new RootCell(cell, rootFieldMeta);
-
   return rootCell;
 }
 
@@ -238,7 +239,7 @@ const RENDER_TAG_LIST = [
   'segment_map',
 ];
 
-type DrillValue = {field: Field; value: Cell};
+type DrillValue = {field: Field; value: Cell} | {where: string};
 
 export function shouldRenderAs(
   field: Malloy.DimensionInfo,
@@ -346,12 +347,25 @@ export abstract class FieldBase {
     this.valueSet.add(NULL_SYMBOL);
   }
 
+  get drillFilters() {
+    return this.metadataTag.textArray('drill_filters') ?? [];
+  }
+
   get referenceId(): string | undefined {
     return this.metadataTag.text('reference_id');
   }
 
+  private escapeIdentifier(str: string) {
+    return str.replace(/\\/g, '\\\\').replace('`', '\\`');
+  }
+
+  private identifierCode() {
+    if (this.name.match(/^[A-Za-z_][0-9A-Za-z_]*$/)) return this.name;
+    return `\`${this.escapeIdentifier(this.name)}\``;
+  }
+
   drillExpression(): string {
-    return this.metadataTag.text('drill_expression') ?? this.name;
+    return this.metadataTag.text('drill_expression') ?? this.identifierCode();
   }
 
   wasDimension(): boolean {
@@ -1093,6 +1107,7 @@ export abstract class CellBase {
     const result: DrillValue[] = [];
     while (current) {
       if (current && current.isArray()) {
+        result.unshift(...current.field.drillFilters.map(f => ({where: f})));
         current = current.parent;
       }
       if (current === undefined) {
@@ -1103,7 +1118,7 @@ export abstract class CellBase {
         const dimensions = current.field.fields.filter(
           f => f.isAtomic() && f.wasDimension()
         );
-        result.push(
+        result.unshift(
           ...dimensions.map(dim => ({
             field: dim,
             value: parentRecord.column(dim.name),
@@ -1117,9 +1132,10 @@ export abstract class CellBase {
 
   getDrillExpressions(): string[] {
     const drillValues = this.getDrillValues();
-    return drillValues.map(({field, value}) => {
-      const valueStr = valueToMalloy(value);
-      return `${field.drillExpression()} = ${valueStr}`;
+    return drillValues.map(drill => {
+      if ('where' in drill) return drill.where;
+      const valueStr = valueToMalloy(drill.value);
+      return `${drill.field.drillExpression()} = ${valueStr}`;
     });
   }
 
@@ -1127,7 +1143,8 @@ export abstract class CellBase {
     const drillValues = this.getDrillValues();
     const result: DrillEntry[] = [];
     for (const drill of drillValues) {
-      if (
+      if ('where' in drill) result.push(drill);
+      else if (
         drill.value.isNull() ||
         drill.value.isTime() ||
         drill.value.isString() ||
@@ -1141,14 +1158,16 @@ export abstract class CellBase {
   }
 
   getDrillQuery(): string {
-    const whereClause = this.getDrillExpressions()
-      .map(entry => `    ${entry}`)
-      .join(',\n');
-    return `
-      run: ${this.field.root().sourceName} -> {
+    const expressions = this.getDrillExpressions();
+    let query = `run: ${this.field.root().sourceName} ->`;
+    if (expressions.length > 0) {
+      query += ` {
   where:
-${whereClause}
-} + { select: * }`.trim();
+${expressions.map(entry => `    ${entry}`).join(',\n')}
+} +`;
+    }
+    query += ' { select: * }';
+    return query;
   }
 }
 
