@@ -766,7 +766,8 @@ export function generateBarChartVegaSpec(
 
   const mapMalloyDataToChartData: MalloyDataToChartDataHandler = data => {
     const getXValue = (row: RecordCell) => {
-      return row.column(xField.name).value;
+      const cell = row.column(xField.name);
+      return cell.isTime() ? cell.value.valueOf() : cell.value;
     };
 
     const mappedData: {
