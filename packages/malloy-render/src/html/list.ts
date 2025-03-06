@@ -24,11 +24,7 @@
 import {StyleDefaults} from './data_styles';
 import {ContainerRenderer} from './container';
 import {createErrorElement, yieldTask} from './utils';
-import {
-  Cell,
-  Field,
-  RecordOrRepeatedRecordField,
-} from '../data_tree';
+import {Cell, Field, RecordOrRepeatedRecordField} from '../data_tree';
 
 export class HTMLListRenderer extends ContainerRenderer {
   protected childrenStyleDefaults: StyleDefaults = {

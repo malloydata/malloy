@@ -30,11 +30,7 @@ import {ShapeMapRenderOptions, StyleDefaults} from './data_styles';
 import {RendererOptions} from './renderer_types';
 import {Renderer} from './renderer';
 import {RendererFactory} from './renderer_factory';
-import {
-  Cell,
-  Field,
-  RecordOrRepeatedRecordField,
-} from '../data_tree';
+import {Cell, Field, RecordOrRepeatedRecordField} from '../data_tree';
 
 export class HTMLShapeMapRenderer extends HTMLChartRenderer {
   private getRegionField(explore: RecordOrRepeatedRecordField): Field {
