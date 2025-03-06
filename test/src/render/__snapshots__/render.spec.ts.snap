@@ -11402,7 +11402,7 @@ exports[`rendering results html renderer hidden tags rendered correctly dashboar
                 <span>
                   $50.00
                 </span>
-                ,
+                , 
                 <span>
                   $100.00
                 </span>
@@ -11543,7 +11543,7 @@ exports[`rendering results html renderer hidden tags rendered correctly dashboar
                 <span>
                   $400.00
                 </span>
-                ,
+                , 
                 <span>
                   $500.00
                 </span>
@@ -11658,7 +11658,7 @@ exports[`rendering results html renderer hidden tags rendered correctly table 1`
           <span>
             $50.00
           </span>
-          ,
+          , 
           <span>
             $100.00
           </span>
@@ -11724,7 +11724,7 @@ exports[`rendering results html renderer hidden tags rendered correctly table 1`
           <span>
             $400.00
           </span>
-          ,
+          , 
           <span>
             $500.00
           </span>
@@ -11794,7 +11794,7 @@ exports[`rendering results html renderer pivot table renders correctly 1`] = `
         colspan="2"
         style="padding: 8px; text-align: left;"
       >
-        floc:
+        floc: 
         <span>
           $1.00
         </span>
@@ -11808,7 +11808,7 @@ exports[`rendering results html renderer pivot table renders correctly 1`] = `
         colspan="3"
         style="padding: 8px; text-align: left;"
       >
-        dayito:
+        dayito: 
         <span>
           Monday
         </span>
@@ -11817,7 +11817,7 @@ exports[`rendering results html renderer pivot table renders correctly 1`] = `
         colspan="3"
         style="padding: 8px; text-align: left;"
       >
-        dayito:
+        dayito: 
         <span>
           Thursday
         </span>
@@ -11826,7 +11826,7 @@ exports[`rendering results html renderer pivot table renders correctly 1`] = `
         colspan="3"
         style="padding: 8px; text-align: left;"
       >
-        dayito:
+        dayito: 
         <span>
           Tuesday
         </span>
@@ -11835,7 +11835,7 @@ exports[`rendering results html renderer pivot table renders correctly 1`] = `
         colspan="3"
         style="padding: 8px; text-align: left;"
       >
-        dayito:
+        dayito: 
         <span>
           Wednesday
         </span>
@@ -11847,7 +11847,7 @@ exports[`rendering results html renderer pivot table renders correctly 1`] = `
         colspan="2"
         style="padding: 8px; text-align: left;"
       >
-        flac:
+        flac: 
         <span>
           200%
         </span>
