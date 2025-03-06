@@ -301,11 +301,11 @@ export class Tag implements TagInterface {
   }
 
   private static escapeString(str: string) {
-    return str.replace(/\\/g, '\\\\').replace('"', '\\"');
+    return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   }
 
   private static escapeProp(str: string) {
-    return str.replace(/\\/g, '\\\\').replace('`', '\\`');
+    return str.replace(/\\/g, '\\\\').replace(/`/g, '\\`');
   }
 
   private static quoteAndEscape(str: string, isProp = false) {

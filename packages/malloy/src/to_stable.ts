@@ -216,7 +216,7 @@ function getResultMetadataAnnotation(
 }
 
 function escapeIdentifier(str: string) {
-  return str.replace(/\\/g, '\\\\').replace('`', '\\`');
+  return str.replace(/\\/g, '\\\\').replace(/`/g, '\\`');
 }
 
 function identifierCode(name: string) {
