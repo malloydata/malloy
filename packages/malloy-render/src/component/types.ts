@@ -10,10 +10,11 @@ import {Item, Spec, View} from 'vega';
 import {JSX} from 'solid-js';
 import {
   Cell,
+  DrillEntry,
   Field,
   RecordCell,
   RepeatedRecordCell,
-} from './render-result-metadata';
+} from '../data_tree';
 
 export type RendererProps = {
   dataColumn: Cell;
@@ -102,9 +103,4 @@ export type DrillData = {
   copyQueryToClipboard: () => Promise<void>;
   query: string;
   whereClause: string;
-};
-
-export type DrillEntry = {
-  field: Field;
-  value: string | number | boolean | Date | null;
 };

@@ -7,7 +7,7 @@
 
 import {ChartTooltipEntry, MalloyVegaDataRecord} from '../types';
 import {applyRenderer} from '../apply-renderer';
-import {NestField} from '../render-result-metadata';
+import {NestField} from '../../data_tree';
 
 type CustomTooltipGetterOptions = {
   explore: NestField;

@@ -34,14 +34,14 @@ import * as Malloy from '@malloydata/malloy-interfaces';
 import {
   Cell,
   Field,
-  getResultMetadata,
+  getDataTree,
   RecordOrRepeatedRecordField,
-} from '../component/render-result-metadata';
-import {tagFromAnnotations} from '../component/util';
+} from '../data_tree';
 import {HTMLDashboardRenderer} from './dashboard';
 import {HTMLListRenderer} from './list';
 import {HTMLListDetailRenderer} from './list_detail';
 import {Result, API} from '@malloydata/malloy';
+import {tagFromAnnotations} from '../util';
 
 export class HTMLView {
   constructor(private document: Document) {}
@@ -77,7 +77,7 @@ export class HTMLView {
         );
       }
     }
-    const rootCell = getResultMetadata(malloyResult);
+    const rootCell = getDataTree(malloyResult);
     const renderer = makeRenderer(
       rootCell.field,
       this.document,

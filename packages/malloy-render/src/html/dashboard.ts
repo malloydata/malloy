@@ -30,7 +30,7 @@ import {
   yieldTask,
   formatTitle,
 } from './utils';
-import {Cell} from '../component/render-result-metadata';
+import {Cell} from '../data_tree';
 
 export class HTMLDashboardRenderer extends ContainerRenderer {
   protected childrenStyleDefaults: StyleDefaults = {

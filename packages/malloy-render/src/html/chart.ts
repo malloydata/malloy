@@ -28,7 +28,7 @@ import {RendererOptions} from './renderer_types';
 import {ChartRenderOptions, StyleDefaults} from './data_styles';
 import {normalizeToTimezone} from '../html/utils';
 import {mergeVegaConfigs} from '../component/vega/merge-vega-configs';
-import {Cell, Field, RecordCell} from '../component/render-result-metadata';
+import {Cell, Field, RecordCell} from '../data_tree';
 
 type MappedRow = {[p: string]: string | number | Date | undefined | null};
 

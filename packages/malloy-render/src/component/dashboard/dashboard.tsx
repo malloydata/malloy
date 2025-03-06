@@ -10,11 +10,7 @@ import {applyRenderer} from '../apply-renderer';
 import {createVirtualizer, Virtualizer} from '@tanstack/solid-virtual';
 import {useConfig} from '../render';
 import dashboardCss from './dashboard.css?raw';
-import {
-  Field,
-  RecordCell,
-  RecordOrRepeatedRecordCell,
-} from '../render-result-metadata';
+import {Field, RecordCell, RecordOrRepeatedRecordCell} from '../../data_tree';
 
 function DashboardItem(props: {
   field: Field;

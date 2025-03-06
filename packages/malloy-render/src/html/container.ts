@@ -25,7 +25,7 @@ import {Tag} from '@malloydata/malloy-tag';
 import {StyleDefaults} from './data_styles';
 import {ChildRenderers, RenderTree} from './renderer';
 import {RendererOptions} from './renderer_types';
-import {NestField} from '../component/render-result-metadata';
+import {NestField} from '../data_tree';
 
 export abstract class ContainerRenderer extends RenderTree {
   childRenderers: ChildRenderers = {};

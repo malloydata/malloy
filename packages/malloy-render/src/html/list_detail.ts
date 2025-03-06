@@ -25,7 +25,7 @@ import {HTMLListRenderer} from './list';
 import {
   RecordOrRepeatedRecordField,
   Field,
-} from '../component/render-result-metadata';
+} from '../data_tree';
 
 export class HTMLListDetailRenderer extends HTMLListRenderer {
   getDetailField(explore: RecordOrRepeatedRecordField): Field | undefined {

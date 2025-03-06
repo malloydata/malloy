@@ -26,7 +26,7 @@ import {createErrorElement, createNullElement, timeToString} from './utils';
 import {StyleDefaults, TimeRenderOptions} from './data_styles';
 import {RendererOptions} from './renderer_types';
 import {RendererFactory} from './renderer_factory';
-import {Cell, Field} from '../component/render-result-metadata';
+import {Cell, Field} from '../data_tree';
 
 export class HTMLDateRenderer implements Renderer {
   constructor(

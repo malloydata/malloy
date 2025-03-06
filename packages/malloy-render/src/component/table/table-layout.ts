@@ -21,8 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {Field, NestField} from '../../data_tree';
 import {FieldHeaderRangeMap} from '../types';
-import {Field, NestField} from '../render-result-metadata';
 
 type LayoutEntry = {
   field: Field;

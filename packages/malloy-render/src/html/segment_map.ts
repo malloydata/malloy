@@ -29,7 +29,7 @@ import {RendererFactory} from './renderer_factory';
 import {SegmentMapRenderOptions, StyleDefaults} from './data_styles';
 import {RendererOptions} from './renderer_types';
 import {Renderer} from './renderer';
-import {Cell, Field} from '../component/render-result-metadata';
+import {Cell, Field} from '../data_tree';
 
 export class HTMLSegmentMapRenderer extends HTMLChartRenderer {
   getDataValue(data: Cell): string | number | null {

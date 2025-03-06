@@ -27,7 +27,6 @@ import {
   Spec,
   View,
 } from 'vega';
-import {renderTimeString} from '../render-time';
 import {renderNumericField} from '../render-numeric-field';
 import {createMeasureAxis} from '../vega/measure-axis';
 import {getCustomTooltipEntries} from './get-custom-tooltips-entries';
@@ -37,8 +36,8 @@ import {
   Field,
   RecordCell,
   RepeatedRecordField,
-} from '../render-result-metadata';
-import {NULL_SYMBOL} from '../util';
+} from '../../data_tree';
+import {NULL_SYMBOL, renderTimeString} from '../../util';
 
 type BarDataRecord = {
   x: string | number;

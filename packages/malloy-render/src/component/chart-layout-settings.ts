@@ -25,7 +25,7 @@ import {Tag} from '@malloydata/malloy-tag';
 import {scale, locale, AlignValue, TextBaselineValue} from 'vega';
 import {getTextWidthDOM} from './util';
 import {renderNumericField} from './render-numeric-field';
-import {Field, NestField} from './render-result-metadata';
+import {Field, NestField} from '../data_tree';
 
 export type ChartLayoutSettings = {
   plotWidth: number;

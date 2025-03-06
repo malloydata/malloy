@@ -16,7 +16,8 @@ import css from './chart.css?raw';
 import {useConfig} from '../render';
 import {DebugIcon} from './debug_icon';
 import ChartDevTool from './chart-dev-tool';
-import {RepeatedRecordCell} from '../render-result-metadata';
+import {RepeatedRecordCell} from '../../data_tree';
+import {useResultContext} from '../result-context';
 
 let IS_STORYBOOK = false;
 try {
@@ -39,11 +40,12 @@ export type ChartProps = {
 
 export function Chart(props: ChartProps) {
   const config = useConfig();
+  const metadata = useResultContext();
   config.addCSSToShadowRoot(css);
   const data = props.data;
   const field = data.field;
-  const chartProps = field.vegaChartProps!;
-  const runtime = field.vegaRuntime;
+  const vegaInfo = metadata.vega[field.key];
+  const {runtime, props: chartProps} = vegaInfo;
   if (!runtime)
     throw new Error('Charts must have a runtime defined in their metadata');
   let values: unknown[] = [];
@@ -85,8 +87,6 @@ export function Chart(props: ChartProps) {
     } else setTooltipDataDebounce(null);
   };
 
-  const resultStore = field.root().store;
-
   // Enable charts to debounce interactions; this helps with rapid mouse movement through charts
   const timeouts = new Map();
   const debouncedApplyBrush = (brush: VegaBrushOutput) => {
@@ -118,24 +118,26 @@ export function Chart(props: ChartProps) {
         timeouts.set(
           brush.sourceId,
           setTimeout(() => {
-            resultStore.applyBrushOps([
+            metadata.store.applyBrushOps([
               {type: 'remove', sourceId: brush.sourceId},
             ]);
           }, debounceTime)
         );
       } else
-        resultStore.applyBrushOps([{type: 'remove', sourceId: brush.sourceId}]);
+        metadata.store.applyBrushOps([
+          {type: 'remove', sourceId: brush.sourceId},
+        ]);
     } else if (shouldDebounce && debounceStrategy === 'always')
       timeouts.set(
         brush.sourceId,
         setTimeout(() => {
-          resultStore.applyBrushOps([
+          metadata.store.applyBrushOps([
             {type: 'add', sourceId: brush.sourceId, value: brush.data!},
           ]);
         }, debounceTime)
       );
     else
-      resultStore.applyBrushOps([
+      metadata.store.applyBrushOps([
         {type: 'add', sourceId: brush.sourceId, value: brush.data!},
       ]);
   };
@@ -159,7 +161,7 @@ export function Chart(props: ChartProps) {
     const fieldRefIds = field.fields.map(f =>
       f.isAtomic() ? f.referenceId : null
     );
-    const relevantBrushes = resultStore.store.brushes.filter(brush =>
+    const relevantBrushes = metadata.store.store.brushes.filter(brush =>
       fieldRefIds.includes(brush.fieldRefId)
     );
 
@@ -189,7 +191,7 @@ export function Chart(props: ChartProps) {
       onMouseLeave={() => {
         // immediately clear tooltips and highlights on leaving chart
         setTooltipData(null);
-        resultStore.applyBrushOps(
+        metadata.store.applyBrushOps(
           brushOuts
             .filter(brush => brush.data?.type !== 'measure-range')
             .map(brush => ({type: 'remove', sourceId: brush.sourceId}))

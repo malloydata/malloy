@@ -7,8 +7,8 @@
 
 import {Tag} from '@malloydata/malloy-tag';
 import {Channel} from '../types';
-import {NestField} from '../render-result-metadata';
-import {walkFields} from '../util';
+import {NestField} from '../../data_tree';
+import {walkFields} from '../../util';
 
 export type LineChartSettings = {
   xChannel: Channel;

@@ -30,11 +30,7 @@ import {RendererOptions} from './renderer_types';
 import {RendererFactory} from './renderer_factory';
 import {Renderer} from './renderer';
 import {grayMedium, gridGray} from '../component/vega/base-vega-config';
-import {
-  Cell,
-  Field,
-  RecordOrRepeatedRecordField,
-} from '../component/render-result-metadata';
+import {Cell, Field, RecordOrRepeatedRecordField} from '../data_tree';
 
 type DataContainer = Array<unknown> | Record<string, unknown>;
 

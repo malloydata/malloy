@@ -30,7 +30,7 @@ import {ShapeMapRendererFactory} from './shape_map';
 import {PointMapRendererFactory} from './point_map';
 import {SegmentMapRendererFactory} from './segment_map';
 import {ScatterChartRendererFactory} from './scatter_chart';
-import {Field} from '../component/render-result-metadata';
+import {Field} from '../data_tree';
 import {ImageRendererFactory} from './image';
 import {JSONRendererFactory} from './json';
 import {LineChartRendererFactory} from './line_chart';

@@ -20,11 +20,8 @@ import {createStore, produce} from 'solid-js/store';
 import {createVirtualizer, Virtualizer} from '@tanstack/solid-virtual';
 import {useConfig} from '../render';
 import {copyExplorePathQueryToClipboard} from '../result-store/result-store';
-import {
-  Field,
-  RecordCell,
-  RecordOrRepeatedRecordCell,
-} from '../render-result-metadata';
+import {Field, RecordCell, RecordOrRepeatedRecordCell} from '../../data_tree';
+import {useResultContext} from '../result-context';
 
 const IS_CHROMIUM = navigator.userAgent.toLowerCase().indexOf('chrome') >= 0;
 // CSS Subgrid + Sticky Positioning only seems to work reliably in Chrome
@@ -226,11 +223,13 @@ const TableField = (props: {
   };
 
   const config = useConfig();
+  const metadata = useResultContext();
   const isDrillingEnabled = config.tableConfig().enableDrill;
   const handleClick = async evt => {
     evt.stopPropagation();
     if (isDrillingEnabled && !DRILL_RENDERER_IGNORE_LIST.includes(renderAs)) {
       copyExplorePathQueryToClipboard({
+        metadata,
         data: props.row.column(props.field.name),
         onDrill: config.onDrill,
       });

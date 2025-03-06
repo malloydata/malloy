@@ -15,7 +15,7 @@ import {renderImage} from './render-image';
 import {Dashboard} from './dashboard/dashboard';
 import {renderTime} from './render-time';
 import {LegacyChart} from './legacy-charts/legacy_chart';
-import {NULL_SYMBOL} from './util';
+import {NULL_SYMBOL} from '../util';
 import {RendererProps} from './types';
 
 export function applyRenderer(props: RendererProps) {

@@ -34,7 +34,7 @@ import {
   RecordOrRepeatedRecordCell,
   RecordOrRepeatedRecordField,
   SortableField,
-} from '../component/render-result-metadata';
+} from '../data_tree';
 
 class PivotedField {
   readonly key: string;

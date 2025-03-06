@@ -29,7 +29,7 @@ import {RendererFactory} from './renderer_factory';
 import {ColumnSparkLineRenderOptions, StyleDefaults} from './data_styles';
 import {RendererOptions} from './renderer_types';
 import {Renderer} from './renderer';
-import {Cell, Field} from '../component/render-result-metadata';
+import {Cell, Field} from '../data_tree';
 
 export class HTMLColumnSparkLineRenderer extends HTMLBarChartRenderer {
   override getSize(): {height: number; width: number} {

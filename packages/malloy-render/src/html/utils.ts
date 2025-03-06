@@ -26,7 +26,7 @@ import {RenderDef} from './data_styles';
 import {RendererOptions} from './renderer_types';
 import {DateTime} from 'luxon';
 import * as Malloy from '@malloydata/malloy-interfaces';
-import {Field} from '../component/render-result-metadata';
+import {Field} from '../data_tree';
 
 export function getColorScale(
   type: 'temporal' | 'ordinal' | 'quantitative' | 'nominal' | undefined,

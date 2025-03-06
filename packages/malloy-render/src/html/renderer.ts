@@ -24,7 +24,7 @@
 import {Tag} from '@malloydata/malloy-tag';
 import {RendererOptions} from './renderer_types';
 export type ChildRenderers = {[fieldName: string]: Renderer};
-import {Cell} from '../component/render-result-metadata';
+import {Cell} from '../data_tree';
 
 export interface Renderer {
   render(value: Cell): Promise<HTMLElement>;

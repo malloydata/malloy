@@ -26,7 +26,7 @@ import {createErrorElement, createNullElement} from './utils';
 import {RendererFactory} from './renderer_factory';
 import {ImageRenderOptions, StyleDefaults} from './data_styles';
 import {RendererOptions} from './renderer_types';
-import {Cell, Field} from '../component/render-result-metadata';
+import {Cell, Field} from '../data_tree';
 
 export class HTMLImageRenderer implements Renderer {
   constructor(private readonly document: Document) {}

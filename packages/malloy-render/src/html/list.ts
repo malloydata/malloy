@@ -28,7 +28,7 @@ import {
   Cell,
   Field,
   RecordOrRepeatedRecordField,
-} from '../component/render-result-metadata';
+} from '../data_tree';
 
 export class HTMLListRenderer extends ContainerRenderer {
   protected childrenStyleDefaults: StyleDefaults = {

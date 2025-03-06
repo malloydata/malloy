@@ -25,7 +25,7 @@ import {Renderer} from './renderer';
 import {JSONRenderOptions, StyleDefaults} from './data_styles';
 import {RendererOptions} from './renderer_types';
 import {RendererFactory} from './renderer_factory';
-import {Cell, Field} from '../component/render-result-metadata';
+import {Cell, Field} from '../data_tree';
 
 function mapToJSON(cell: Cell): unknown {
   if (cell.isArray()) {

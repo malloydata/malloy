@@ -34,7 +34,7 @@ import {
   Cell,
   Field,
   RecordOrRepeatedRecordField,
-} from '../component/render-result-metadata';
+} from '../data_tree';
 
 export class HTMLShapeMapRenderer extends HTMLChartRenderer {
   private getRegionField(explore: RecordOrRepeatedRecordField): Field {

@@ -31,7 +31,7 @@ import {RendererFactory} from './renderer_factory';
 import {RendererOptions} from './renderer_types';
 import {Renderer} from './renderer';
 import {timeToString} from './utils';
-import {Cell, Field} from '../component/render-result-metadata';
+import {Cell, Field} from '../data_tree';
 
 export class HTMLBarChartRenderer extends HTMLCartesianChartRenderer {
   getMark(): 'bar' {

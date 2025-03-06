@@ -14,7 +14,6 @@ import {
 } from '../types';
 import {getLineChartSettings} from './get-line_chart-settings';
 import {getChartLayoutSettings} from '../chart-layout-settings';
-import {renderTimeString} from '../render-time';
 import {createMeasureAxis} from '../vega/measure-axis';
 import {
   Data,
@@ -31,13 +30,8 @@ import {
 import {renderNumericField} from '../render-numeric-field';
 import {getMarkName} from '../vega/vega-utils';
 import {getCustomTooltipEntries} from '../bar-chart/get-custom-tooltips-entries';
-import {
-  CellValue,
-  Field,
-  NestField,
-  RecordCell,
-} from '../render-result-metadata';
-import {NULL_SYMBOL} from '../util';
+import {CellValue, Field, NestField, RecordCell} from '../../data_tree';
+import {NULL_SYMBOL, renderTimeString} from '../../util';
 
 type LineDataRecord = {
   x: string | number;

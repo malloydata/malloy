@@ -26,7 +26,7 @@ import {LineChartRenderOptions, StyleDefaults} from './data_styles';
 import {RendererFactory} from './renderer_factory';
 import {RendererOptions} from './renderer_types';
 import {Renderer} from './renderer';
-import {Cell, Field} from '../component/render-result-metadata';
+import {Cell, Field} from '../data_tree';
 
 export class HTMLLineChartRenderer extends HTMLCartesianChartRenderer {
   getMark(): 'line' {

@@ -8,8 +8,8 @@
 import {expressionFunction} from 'vega';
 import {renderNumericField} from '../render-numeric-field';
 import {BrushData} from '../result-store/result-store';
-import {renderTimeString} from '../render-time';
-import {NestField} from '../render-result-metadata';
+import {renderTimeString} from '../../util';
+import {NestField} from '../../data_tree';
 
 if (!expressionFunction('renderMalloyNumber')) {
   expressionFunction(

@@ -29,7 +29,7 @@ import {RendererFactory} from './renderer_factory';
 import {PointMapRenderOptions, StyleDefaults} from './data_styles';
 import {RendererOptions} from './renderer_types';
 import {Renderer} from './renderer';
-import {Cell, CellBase, Field} from '../component/render-result-metadata';
+import {Cell, CellBase, Field} from '../data_tree';
 
 export class HTMLPointMapRenderer extends HTMLChartRenderer {
   getDataValue(data: Cell): string | number {

@@ -25,10 +25,12 @@ import {
   TableConfig,
   VegaConfigHandler,
 } from './types';
-export type {DrillEntry, DrillData} from './types';
+export type {DrillData} from './types';
 import css from './render.css?raw';
 import * as Malloy from '@malloydata/malloy-interfaces';
 import {ModelDef, QueryResult, Result, API} from '@malloydata/malloy';
+import {getDataTree} from '../data_tree';
+import {ResultContext} from './result-context';
 
 export type MalloyRenderProps = {
   malloyResult?: Malloy.Result;
@@ -176,8 +178,9 @@ export function MalloyRenderInner(props: {
   scrollEl?: HTMLElement;
   vegaConfigOverride?: VegaConfigHandler;
 }) {
-  const rootCell = createMemo(() =>
-    getResultMetadata(props.result, {
+  const rootCell = createMemo(() => getDataTree(props.result));
+  const metadata = createMemo(() =>
+    getResultMetadata(rootCell(), {
       getVegaConfigOverride: props.vegaConfigOverride,
     })
   );
@@ -221,8 +224,10 @@ export function MalloyRenderInner(props: {
 
   return (
     <>
-      {rendering().renderValue}
-      <Show when={rootCell().field.store.store.showCopiedModal}>
+      <ResultContext.Provider value={metadata()}>
+        {rendering().renderValue}
+      </ResultContext.Provider>
+      <Show when={metadata().store.store.showCopiedModal}>
         <div class="malloy-copied-modal">Copied query to clipboard!</div>
       </Show>
     </>

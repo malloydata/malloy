@@ -4,7 +4,7 @@ import {ScatterChartRendererFactory} from '../../html/scatter_chart';
 import {ShapeMapRendererFactory} from '../../html/shape_map';
 import {SegmentMapRendererFactory} from '../../html/segment_map';
 import {useConfig} from '../render';
-import {RepeatedRecordCell} from '../render-result-metadata';
+import {RepeatedRecordCell} from '../../data_tree';
 
 const renderers = [
   LineChartRendererFactory.instance,

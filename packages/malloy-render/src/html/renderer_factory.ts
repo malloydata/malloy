@@ -25,7 +25,7 @@ import {Tag} from '@malloydata/malloy-tag';
 import {Renderer} from './renderer';
 import {DataRenderOptions, RenderDef, StyleDefaults} from './data_styles';
 import {RendererOptions} from './renderer_types';
-import {Field} from '../component/render-result-metadata';
+import {Field} from '../data_tree';
 
 type TagPropertyExtractor<T extends DataRenderOptions> = (
   options: T,

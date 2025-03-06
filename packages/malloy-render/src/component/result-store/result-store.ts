@@ -1,6 +1,7 @@
 import {createStore, produce, unwrap} from 'solid-js/store';
 import {DrillData} from '../types';
-import {Cell} from '../render-result-metadata';
+import {Cell} from '../../data_tree';
+import {RenderMetadata} from '../render-result-metadata';
 
 interface BrushDataBase {
   fieldRefId: string;
@@ -131,15 +132,15 @@ export function createResultStore() {
 export type ResultStore = ReturnType<typeof createResultStore>;
 
 export async function copyExplorePathQueryToClipboard({
+  metadata,
   data,
   onDrill,
 }: {
+  metadata: RenderMetadata;
   data: Cell;
   onDrill?: (drillData: DrillData) => void;
 }) {
   const expressions = data.getDrillExpressions();
-  const field = data.field;
-  const root = field.root();
   const drillEntries = data.getDrillEntries();
 
   const whereClause = expressions.join(',\n');
@@ -151,7 +152,7 @@ export async function copyExplorePathQueryToClipboard({
     copyQueryToClipboard: async () => {
       try {
         await navigator.clipboard.writeText(query);
-        root.store.triggerCopiedModal();
+        metadata.store.triggerCopiedModal();
       } catch (error) {
         // eslint-disable-next-line no-console
         console.error('Failed to copy text: ', error);
