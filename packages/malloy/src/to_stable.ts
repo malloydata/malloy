@@ -241,7 +241,8 @@ export function getResultStructMetadataAnnotation(
       const orderBy = resultMetadata.orderBy[i];
       const orderByField =
         typeof orderBy.field === 'number'
-          ? field.fields[orderBy.field].as ?? field.fields[orderBy.field].name
+          ? field.fields[orderBy.field - 1].as ??
+            field.fields[orderBy.field - 1].name
           : orderBy.field;
       const direction = orderBy.dir ?? null;
       tag.set(['ordered_by', i, orderByField], direction);

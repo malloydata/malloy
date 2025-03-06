@@ -173,7 +173,7 @@ expect.extend({
       return {
         pass: false,
         message: () =>
-          `Result could not be wrapped into new style result: ${error}`,
+          `Result could not be wrapped into new style result: ${error}\n${error.stack}`,
       };
     }
 
