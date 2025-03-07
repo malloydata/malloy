@@ -1229,7 +1229,7 @@ LIMIT 101
 
       const result = extractSourceDependencies({
         model_url: 'file://test.malloy',
-        source_name: 'derived',
+        source_name: 'derived3',
         compiler_needs: {
           table_schemas: [flightsTable],
           files: [
@@ -1244,7 +1244,9 @@ LIMIT 101
 
                 source: derived2 is flights -> {group_by: origin}
 
-                source: derived3 is flights -> {select: origin} -> {select: origin}
+                source: derived3 is flights -> {select: start is origin, destination \n where: carrier = 'UA'} -> {select: start, destination } extend {
+                  except: destination
+                }
 
               `,
             },
