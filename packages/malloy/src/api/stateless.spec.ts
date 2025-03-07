@@ -1006,7 +1006,7 @@ LIMIT 101
     });
   });
   describe('extract sql artifact dependencies from a source', () => {
-    test('source with a single table dependency', () => {
+    test('extended source with a single table dependency', () => {
       const flightsTable: Malloy.SQLTable = {
         connection_name: 'connection',
         name: 'flights',
@@ -1041,10 +1041,15 @@ LIMIT 101
               url: 'file://test.malloy',
               contents: `
                 source: flights is connection.table('flights') extend {
+                  rename: start is origin
+                  except: carrier
+                  where: destination = 'ohio'
                   dimension:
-                    start is origin
-                  measure:
-                    carrier_count is carrier.count()
+                    one is 1
+                    two is destination
+                    three is two
+                    four is concat(two, '-', three)
+                    trip is concat(start, '-', destination)
                 }
               `,
             },
@@ -1056,11 +1061,7 @@ LIMIT 101
         sql_sources: [
           {
             name: 'flights',
-            columns: [
-              {name: 'carrier'},
-              {name: 'origin'},
-              {name: 'destination'},
-            ],
+            columns: [{name: 'destination'}, {name: 'origin'}],
             filters: [],
           },
         ],
@@ -1113,53 +1114,7 @@ LIMIT 101
 
       expect(result).toMatchObject(expected);
     });
-    test('source extends another source', () => {
-      const flightsTable: Malloy.SQLTable = {
-        connection_name: 'connection',
-        name: 'flights',
-        schema: {
-          fields: [
-            {
-              kind: 'dimension',
-              name: 'carrier',
-              type: {kind: 'string_type'},
-            },
-            {
-              kind: 'dimension',
-              name: 'origin',
-              type: {kind: 'string_type'},
-            },
-            {
-              kind: 'dimension',
-              name: 'destination',
-              type: {kind: 'string_type'},
-            },
-          ],
-        },
-      };
-
-      const _result = extractSourceDependencies({
-        model_url: 'file://test.malloy',
-        source_name: 'flights',
-        compiler_needs: {
-          table_schemas: [flightsTable],
-          files: [
-            {
-              url: 'file://test.malloy',
-              contents: `
-                ##! experimental.access_modifiers
-                source: flights is connection.table('flights')
-                source: pared_flights is flights include {
-                  except: destination
-                }
-              `,
-            },
-          ],
-          connections: [{name: 'connection', dialect: 'presto'}],
-        },
-      });
-    });
-    test('source with joined query', () => {
+    test('source with join', () => {
       const flightsTable: Malloy.SQLTable = {
         connection_name: 'connection',
         name: 'flights',
@@ -1230,83 +1185,6 @@ LIMIT 101
       const expected: Malloy.ExtractSourceDependenciesResponse = {
         sql_sources: [
           {
-            sql,
-            columns: [{name: 'carrier'}],
-            filters: [],
-          },
-        ],
-      };
-
-      expect(result).toMatchObject(expected);
-    });
-    test('source with joined table', () => {
-      const flightsTable: Malloy.SQLTable = {
-        connection_name: 'connection',
-        name: 'flights',
-        schema: {
-          fields: [
-            {
-              kind: 'dimension',
-              name: 'carrier',
-              type: {kind: 'string_type'},
-            },
-            {
-              kind: 'dimension',
-              name: 'origin',
-              type: {kind: 'string_type'},
-            },
-            {
-              kind: 'dimension',
-              name: 'destination',
-              type: {kind: 'string_type'},
-            },
-          ],
-        },
-      };
-      const carriersTable: Malloy.SQLTable = {
-        connection_name: 'connection',
-        name: 'carriers',
-        schema: {
-          fields: [
-            {
-              kind: 'dimension',
-              name: 'carrier',
-              type: {kind: 'string_type'},
-            },
-            {
-              kind: 'dimension',
-              name: 'year_founded',
-              type: {kind: 'number_type'},
-            },
-          ],
-        },
-      };
-
-      const result = extractSourceDependencies({
-        model_url: 'file://test.malloy',
-        source_name: 'flights_with_carrier_dim',
-        compiler_needs: {
-          table_schemas: [flightsTable, carriersTable],
-          files: [
-            {
-              url: 'file://test.malloy',
-              contents: `
-                source: flights is connection.table('flights')
-                source: carriers is connection.table('carriers')
-
-                source: flights_with_carrier_dim is flights extend {
-                  join_many: carriers on carrier = carriers.carrier
-                }
-              `,
-            },
-          ],
-          connections: [{name: 'connection', dialect: 'presto'}],
-        },
-      });
-
-      const expected: Malloy.ExtractSourceDependenciesResponse = {
-        sql_sources: [
-          {
             name: 'flights',
             columns: [
               {name: 'carrier'},
@@ -1316,7 +1194,7 @@ LIMIT 101
             filters: [],
           },
           {
-            name: 'carriers',
+            sql,
             columns: [{name: 'carrier'}, {name: 'year_founded'}],
           },
         ],
@@ -1349,7 +1227,7 @@ LIMIT 101
         },
       };
 
-      const _result = extractSourceDependencies({
+      const result = extractSourceDependencies({
         model_url: 'file://test.malloy',
         source_name: 'derived',
         compiler_needs: {
@@ -1363,14 +1241,31 @@ LIMIT 101
                 source: derived is flights -> {select: origin, destination} extend {
                   dimension: trip is concat(origin, '-', destination)
                 }
+
+                source: derived2 is flights -> {group_by: origin}
+
+                source: derived3 is flights -> {select: origin} -> {select: origin}
+
               `,
             },
           ],
           connections: [{name: 'connection', dialect: 'presto'}],
         },
       });
+
+      const expected: Malloy.ExtractSourceDependenciesResponse = {
+        sql_sources: [
+          {
+            name: 'flights',
+            columns: [{name: 'origin'}, {name: 'destination'}],
+            filters: [],
+          },
+        ],
+      };
+
+      expect(result).toMatchObject(expected);
     });
-    test('source with filters', () => {
+    test('composite source', () => {
       const flightsTable: Malloy.SQLTable = {
         connection_name: 'connection',
         name: 'flights',
@@ -1404,9 +1299,19 @@ LIMIT 101
             {
               url: 'file://test.malloy',
               contents: `
-                source: flights is connection.table('flights') extend {
-                  where: carrier ? 'UA' | 'AA'
+                ##! experimental { composite_sources }
+
+                source: flights is connection.table('flights') -> {
+                  group_by: carrier
+                  aggregate: flights_by_carrier is count()
                 }
+
+                source: flights2 is flights extend {
+                  measure: total_flights is flights_by_carrier.sum()
+                }
+
+                source: composite is compose(flights, flights2)
+                source: composite2 is compose(flights, composite)
               `,
             },
           ],
@@ -1414,7 +1319,6 @@ LIMIT 101
         },
       });
     });
-    test('composite source', () => {});
   });
   describe('annotations in schemas', () => {
     test('annotations should be carried through the schema', () => {
