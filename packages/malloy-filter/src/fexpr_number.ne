@@ -8,6 +8,7 @@
 @preprocessor typescript
 @{%
 import moo from 'moo';
+import {maybeNot, mkRange, joinNumbers} from '../clause_utils';
 
 const fnumber_lexer = moo.compile({
   WS: /[ \t]+/,
@@ -18,22 +19,25 @@ const fnumber_lexer = moo.compile({
       'OR': 'or',
       'NOT': 'not',
       'NULL_KW': 'null',
+      'TO': 'to',
     }),
   },
   oparen: /\(/,
-  cparen: /)/,
+  cparen: /\)/,
   obrack: /\[/,
-  cbrack: /]/,
+  cbrack: /\]/,
+  comma: /,/,
   op: /=|!=|<=|>=|<|>/,
-  number: /-?(\d+)?\.\d+([Ee][+-]?\d+)?/,
+  float: /-?(?:\d+)?\.\d+(?:[Ee][+-]?\d+)?/,
   numberE: /-?\d+[Ee][+-]?\d+/,
+  integer: /-?\d+/,
 });
 
 const actual_next = fnumber_lexer.next;
 fnumber_lexer.next = (next => () => {
   for (;;) {
     const token = next.call(fnumber_lexer);
-    if (token == undefined || token.type !== 'WS') {
+    if (token === undefined || token.type !== 'WS') {
       return token;
     }
   }
@@ -42,16 +46,12 @@ fnumber_lexer.next = (next => () => {
 function conjoin(x: Object, y:  Object, z: Object) {
   return null;
 }
-
-function maybeNot(x: Object) {
-  return null;
-}
 %}
 
 @lexer fnumber_lexer
 
 numberFilter ->
-    numberFilter conjunction numberUnary {% ([left, cop, right]) => conjoin(left, cop[0].text, right) %}
+    numberFilter conjunction numberUnary {% ([left, cop, right]) => joinNumbers(left, cop[0].text, right) %}
   | numberUnary {% (data) => data[0] %}
 
 numberUnary ->
@@ -59,16 +59,16 @@ numberUnary ->
 
 clause ->
     %NULL_KW {% () => ({operator: 'null' }) %}
-  | N
-  | %op N
-  | %oparen N %TO N closeInterval
-  | %obrack N %TO N closeInterval
+  | N {% (d) => ({operator: '=', values: [d[0]]}) %}
+  | %op N {% ([op, n]) => ({operator: op.text, values: [n]}) %}
+  | openInterval N %TO N closeInterval {% ([l, b, _to, e, r]) => mkRange(l[0].text,b,e,r[0].text) %}
   | parens {% (data) => data[0] %}
 
 parens -> %open  numberFilter %close {% ([_1, subFilter, _3]) => ({operator: "()", expr: subFilter}) %}
 
 closeInterval -> %cbrack | %cparen
+openInterval -> %obrack | %oparen
 
-N -> %number | %numberE
+N -> (%float | %numberE | %integer) {% (nMatch) => nMatch[0][0].text %}
 
-conjunction -> %OR | %AND
+conjunction -> %OR | %AND | %comma

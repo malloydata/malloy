@@ -135,7 +135,7 @@ export type NumberClause =
   | ClauseGroup<NumberClause>
   | ClauseChain<NumberClause>;
 
-export function isNumberClause(sc: Object): sc is StringClause {
+export function isNumberClause(sc: Object): sc is NumberClause {
   return (
     'operator' in sc &&
     typeof sc.operator === 'string' &&

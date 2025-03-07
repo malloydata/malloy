@@ -7,9 +7,13 @@
 
 import {
   ChainOp,
+  isNumberClause,
   isStringClause,
   isStringCondition,
+  NumberRange,
   StringClause,
+  NumberClause,
+  ClauseBase,
 } from './clause_types';
 
 /**
@@ -140,7 +144,7 @@ export function matchOp(matchSrc: string): StringClause {
   return {operator: '=', values: [unescape(matchTxt)]};
 }
 
-function sameAs<T extends StringClause>(a: T, b: StringClause): b is T {
+function sameAs<T extends ClauseBase>(a: T, b: ClauseBase): b is T {
   return (
     a.operator === b.operator && (a['not'] ?? false) === (b['not'] ?? false)
   );
@@ -173,4 +177,49 @@ export function conjoin(
     }
   }
   return null;
+}
+
+export function joinNumbers(
+  left: Object,
+  op: string,
+  right: Object
+): NumberClause | null {
+  if (isNumberClause(left) && isNumberClause(right)) {
+    if (
+      (op === ',' || op === 'or') &&
+      left.operator === '=' &&
+      sameAs(left, right)
+    ) {
+      const ret: NumberClause = {
+        operator: '=',
+        values: [...left.values, ...right.values],
+      };
+      if (left.not) {
+        ret.not = true;
+      }
+      return ret;
+    }
+    if (op === ',' || op === 'and' || op === 'or') {
+      if (left.operator === op && sameAs(left, right)) {
+        return {...left, members: [...left.members, ...right.members]};
+      }
+      return {operator: op, members: [left, right]};
+    }
+  }
+  return null;
+}
+
+export function mkRange(
+  left: string,
+  rFrom: string,
+  rTo: string,
+  right: string
+): NumberRange | null {
+  return {
+    operator: 'range',
+    startValue: rFrom,
+    startOperator: left === '(' ? '>' : '>=',
+    endValue: rTo,
+    endOperator: right === ')' ? '<' : '<=',
+  };
 }

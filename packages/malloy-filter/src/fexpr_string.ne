@@ -8,7 +8,7 @@
 @preprocessor typescript
 @{%
 import moo from 'moo';
-import {conjoin, maybeNot, matchOp} from '../string_clause_utils';
+import {conjoin, maybeNot, matchOp} from '../clause_utils';
 
 const fstring_lexer = moo.compile({
   WS: /[ \t]+/,
