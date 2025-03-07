@@ -75,8 +75,7 @@ export interface TrinoConnectionConfiguration {
   schema?: string;
   user?: string;
   password?: string;
-  extraConfig?: any;;
-
+  extraConfig?: any;
 }
 
 export type TrinoConnectionOptions = ConnectionConfig;
