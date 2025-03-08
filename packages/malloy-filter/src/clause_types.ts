@@ -61,7 +61,7 @@ export type StringClause =
 
 export type BooleanOperator = 'true' | 'false' | 'false_or_null';
 
-export interface BooleanCondition {
+export interface BooleanCondition extends Negateable {
   operator: BooleanOperator;
 }
 
