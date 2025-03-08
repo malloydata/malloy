@@ -5,19 +5,15 @@
  *  LICENSE file in the root directory of this source tree.
  */
 
-import {Explore, QueryDataRow, QueryValue} from '@malloydata/malloy';
 import {
   ChartTooltipEntry,
   MalloyDataToChartDataHandler,
   MalloyVegaDataRecord,
-  RenderResultMetadata,
   VegaChartProps,
   VegaPadding,
 } from '../types';
 import {getLineChartSettings} from './get-line_chart-settings';
-import {getFieldFromRootPath, getFieldReferenceId} from '../plot/util';
 import {getChartLayoutSettings} from '../chart-layout-settings';
-import {renderTimeString} from '../render-time';
 import {createMeasureAxis} from '../vega/measure-axis';
 import {
   Data,
@@ -34,7 +30,8 @@ import {
 import {renderNumericField} from '../render-numeric-field';
 import {getMarkName} from '../vega/vega-utils';
 import {getCustomTooltipEntries} from '../bar-chart/get-custom-tooltips-entries';
-import {NULL_SYMBOL} from '../apply-renderer';
+import {CellValue, Field, NestField, RecordCell} from '../../data_tree';
+import {NULL_SYMBOL, renderTimeString} from '../../util';
 
 type LineDataRecord = {
   x: string | number;
@@ -56,11 +53,8 @@ function invertObject(obj: Record<string, string>): Record<string, string> {
   return inverted;
 }
 
-export function generateLineChartVegaSpec(
-  explore: Explore,
-  metadata: RenderResultMetadata
-): VegaChartProps {
-  const tag = explore.tagParse().tag;
+export function generateLineChartVegaSpec(explore: NestField): VegaChartProps {
+  const tag = explore.tag;
   const chartTag = tag.tag('line_chart');
   if (!chartTag)
     throw new Error('Line chart should only be rendered for line_chart tag');
@@ -77,28 +71,22 @@ export function generateLineChartVegaSpec(
   if (!xFieldPath) throw new Error('Malloy Bar Chart: Missing x field');
   if (!yFieldPath) throw new Error('Malloy Bar Chart: Missing y field');
 
-  const xField = getFieldFromRootPath(explore, xFieldPath);
-  const xIsDateorTime =
-    xField.isAtomicField() && (xField.isDate() || xField.isTimestamp());
-  const xIsBoolean = xField.isAtomicField() && xField.isBoolean();
-  const yField = getFieldFromRootPath(explore, yFieldPath);
-  const seriesField = seriesFieldPath
-    ? getFieldFromRootPath(explore, seriesFieldPath)
-    : null;
+  const xField = explore.fieldAt(xFieldPath);
+  const xIsDateorTime = xField.isTime();
+  const xIsBoolean = xField.isBoolean();
+  const yField = explore.fieldAt(yFieldPath);
+  const seriesField = seriesFieldPath ? explore.fieldAt(seriesFieldPath) : null;
 
-  const xRef = getFieldReferenceId(xField);
-  const yRef = getFieldReferenceId(yField);
-  const seriesRef = seriesField && getFieldReferenceId(seriesField);
-
-  const xMeta = metadata.field(xField);
-  const seriesMeta = seriesField ? metadata.field(seriesField) : null;
+  const xRef = xField.referenceId;
+  const yRef = yField.referenceId;
+  const seriesRef = seriesField?.referenceId;
 
   // Map y fields to ref ids
   const yRefsMap = settings.yChannel.fields.reduce((map, fieldPath) => {
-    const field = getFieldFromRootPath(explore, fieldPath);
+    const field = explore.fieldAt(fieldPath);
     return {
       ...map,
-      [fieldPath]: getFieldReferenceId(field),
+      [fieldPath]: field.referenceId,
     };
   }, {});
   // Map ref ids to y fields
@@ -123,17 +111,17 @@ export function generateLineChartVegaSpec(
   let yMin = Infinity;
   let yMax = -Infinity;
   for (const name of settings.yChannel.fields) {
-    const field = getFieldFromRootPath(explore, name);
-    const min = metadata.field(field).min;
-    if (min !== null) yMin = Math.min(yMin, min);
-    const max = metadata.field(field).max;
-    if (max !== null) yMax = Math.max(yMax, max);
+    const field = explore.fieldAt(name);
+    const min = field.minNumber;
+    if (min !== undefined) yMin = Math.min(yMin, min);
+    const max = field.maxNumber;
+    if (max !== undefined) yMax = Math.max(yMax, max);
   }
 
   const yDomainMin = settings.zeroBaseline ? Math.min(0, yMin) : yMin;
   const yDomainMax = settings.zeroBaseline ? Math.max(0, yMax) : yMax;
 
-  const chartSettings = getChartLayoutSettings(explore, metadata, chartTag, {
+  const chartSettings = getChartLayoutSettings(explore, chartTag, {
     xField,
     yField,
     chartType: 'line_chart',
@@ -141,14 +129,14 @@ export function generateLineChartVegaSpec(
   });
 
   // x axes across rows should auto share when distinct values <=20, unless user has explicitly set independent setting
-  const autoSharedX = xMeta.values.size <= 20;
+  const autoSharedX = xField.valueSet.size <= 20;
   const forceSharedX = chartTag.text('x', 'independent') === 'false';
   const forceIndependentX = chartTag.has('x', 'independent') && !forceSharedX;
   const shouldShareXDomain =
     forceSharedX || (autoSharedX && !forceIndependentX);
 
   // series legends across rows should auto share when distinct values <=20, unless user has explicitly set independent setting
-  const autoSharedSeries = seriesMeta && seriesMeta.values.size <= 20;
+  const autoSharedSeries = seriesField && seriesField.valueSet.size <= 20;
   const forceSharedSeries = chartTag.text('series', 'independent') === 'false';
   const forceIndependentSeries =
     chartTag.has('series', 'independent') && !forceSharedSeries;
@@ -163,7 +151,9 @@ export function generateLineChartVegaSpec(
   const yAxis = !chartSettings.yAxis.hidden
     ? createMeasureAxis({
         type: 'y',
-        title: settings.yChannel.fields.join(', '),
+        title: settings.yChannel.fields
+          .map(f => explore.fieldAt(f).name)
+          .join(', '),
         tickCount: chartSettings.yAxis.tickCount ?? 'ceil(height/40)',
         labelLimit: chartSettings.yAxis.width + 10,
         // Use first y number style for axis labels
@@ -361,16 +351,18 @@ export function generateLineChartVegaSpec(
   const valuesData: Data = {name: 'values', values: [], transform: []};
   // For measure series, unpivot the measures into the series column
   if (isMeasureSeries) {
-    // Pull the series values from the source record, then remap the names to remove __source
+    // Pull the series values from the source record, then remap the names to remove __values
     valuesData.transform!.push({
       type: 'fold',
-      fields: settings.yChannel.fields.map(f => `__source.${f}`),
+      fields: settings.yChannel.fields.map(
+        f => `__values.${explore.fieldAt(f).name}`
+      ),
       as: ['series', 'y'],
     });
     valuesData.transform!.push({
       type: 'formula',
       as: 'series',
-      expr: "replace(datum.series, '__source.', '')",
+      expr: "replace(datum.series, '__values.', '')",
     });
   }
 
@@ -576,10 +568,10 @@ export function generateLineChartVegaSpec(
         type: xIsDateorTime ? 'time' : 'point',
         domain: shouldShareXDomain
           ? xIsDateorTime
-            ? [xMeta.min, xMeta.max]
+            ? [xField.minNumber!, xField.maxNumber!]
             : xIsBoolean
             ? [true, false]
-            : [...xMeta.values]
+            : [...xField.valueSet]
           : {data: 'values', field: 'x'},
         range: 'width',
         paddingOuter: 0.05,
@@ -596,7 +588,7 @@ export function generateLineChartVegaSpec(
         type: 'ordinal',
         range: 'category',
         domain: shouldShareSeriesDomain
-          ? [...seriesMeta!.values]
+          ? [...seriesField!.valueSet]
           : {
               data: 'values',
               field: 'series',
@@ -607,7 +599,7 @@ export function generateLineChartVegaSpec(
       {
         orient: 'bottom',
         scale: 'xscale',
-        title: xFieldPath,
+        title: xField.name,
         labelOverlap: 'greedy',
         labelSeparation: 4,
         ...chartSettings.xAxis,
@@ -643,7 +635,7 @@ export function generateLineChartVegaSpec(
     // Get legend dimensions
     if (isDimensionalSeries) {
       // Legend size is by legend title or the longest legend value
-      maxCharCt = seriesMeta!.maxString?.length ?? 0;
+      maxCharCt = seriesField!.maxString?.length ?? 0;
       maxCharCt = Math.max(maxCharCt, seriesField!.name.length);
     } else {
       maxCharCt = settings.yChannel.fields.reduce(
@@ -729,38 +721,36 @@ export function generateLineChartVegaSpec(
     });
   }
 
-  const mapMalloyDataToChartData: MalloyDataToChartDataHandler = (
-    field,
-    data
-  ) => {
-    const getXValue = (row: QueryDataRow) =>
-      xIsDateorTime
-        ? new Date(row[xFieldPath] as string | number).valueOf()
-        : row[xFieldPath];
+  const mapMalloyDataToChartData: MalloyDataToChartDataHandler = data => {
+    const getXValue = (row: RecordCell) => {
+      const cell = row.column(xField.name);
+      return cell.isTime() ? cell.value.valueOf() : cell.value;
+    };
 
     const mappedData: {
-      __source: QueryDataRow;
-      x: QueryValue;
-      y: QueryValue;
-      series: QueryValue;
+      __values: {[name: string]: CellValue};
+      __row: RecordCell;
+      x: CellValue;
+      y: CellValue;
+      series: CellValue;
     }[] = [];
-    data.forEach(row => {
+    data.rows.forEach(row => {
       // Filter out missing date/time values
-      if (
-        xIsDateorTime &&
-        (row[xFieldPath] === null || typeof row[xFieldPath] === 'undefined')
-      ) {
+      if (xIsDateorTime && getXValue(row) === null) {
         return;
       }
       // Map data fields to chart properties.  Handle undefined values properly.
-      let seriesVal = seriesFieldPath ? row[seriesFieldPath] : yFieldPath;
+      let seriesVal = seriesField
+        ? row.column(seriesField.name).value
+        : yField.name;
       if (seriesVal === undefined || seriesVal === null) {
         seriesVal = NULL_SYMBOL;
       }
       mappedData.push({
-        __source: row,
+        __values: row.allCellValues(),
+        __row: row,
         x: getXValue(row) ?? NULL_SYMBOL,
-        y: row[yFieldPath],
+        y: row.column(yField.name).value,
         series: seriesVal,
       });
     });
@@ -788,14 +778,15 @@ export function generateLineChartVegaSpec(
       let records: LineDataRecord[] = [];
       const colorScale = view.scale('color');
       const formatY = (rec: LineDataRecord) => {
-        const fieldName = rec.series;
         // If dimensional, use the first yField for formatting. Else the series value is the field path of the field to use
         const field = isDimensionalSeries
           ? yField
-          : getFieldFromRootPath(explore, fieldName);
+          : explore.fieldAt(
+              seriesField ? Field.pathFromString(rec.series) : [rec.series]
+            );
 
         const value = rec.y;
-        return field.isAtomicField()
+        return field.isAtomic()
           ? renderNumericField(field, value)
           : String(value);
       };
@@ -807,11 +798,7 @@ export function generateLineChartVegaSpec(
         records = markName === 'x_hit_target' ? item.datum.datum.v : [];
 
         const title = xIsDateorTime
-          ? renderTimeString(
-              new Date(x),
-              xField.isAtomicField() && xField.isDate(),
-              xField.timeframe
-            )
+          ? renderTimeString(new Date(x), xField.isDate(), xField.timeframe)
           : x;
 
         tooltipData = {
@@ -841,7 +828,7 @@ export function generateLineChartVegaSpec(
         const title = xIsDateorTime
           ? renderTimeString(
               new Date(itemData.x),
-              xField.isAtomicField() && xField.isDate(),
+              xField.isDate(),
               xField.timeframe
             )
           : itemData.x;
@@ -885,7 +872,6 @@ export function generateLineChartVegaSpec(
           getCustomTooltipEntries({
             explore,
             records: customTooltipRecords,
-            metadata,
           });
 
         // If not series, put custom entries at end

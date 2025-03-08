@@ -22,7 +22,6 @@
  */
 
 import * as lite from 'vega-lite';
-import {DataArray, DataColumn, Explore, Field} from '@malloydata/malloy';
 import usAtlas from 'us-atlas/states-10m.json';
 import {HTMLChartRenderer} from './chart';
 import {formatTitle, getColorScale} from './utils';
@@ -30,9 +29,10 @@ import {RendererFactory} from './renderer_factory';
 import {SegmentMapRenderOptions, StyleDefaults} from './data_styles';
 import {RendererOptions} from './renderer_types';
 import {Renderer} from './renderer';
+import {Cell, Field} from '../data_tree';
 
 export class HTMLSegmentMapRenderer extends HTMLChartRenderer {
-  getDataValue(data: DataColumn): string | number | null {
+  getDataValue(data: Cell): string | number | null {
     if (data.isNull() || data.isNumber() || data.isString()) {
       return data.value;
     }
@@ -40,23 +40,21 @@ export class HTMLSegmentMapRenderer extends HTMLChartRenderer {
   }
 
   getDataType(field: Field): 'ordinal' | 'quantitative' | 'nominal' {
-    if (field.isAtomicField()) {
-      if (field.isString()) {
-        return 'nominal';
-      } else if (field.isNumber()) {
-        return 'quantitative';
-      }
-      // TODO dates nominal?
+    if (field.isString()) {
+      return 'nominal';
+    } else if (field.isNumber()) {
+      return 'quantitative';
     }
+    // TODO dates nominal?
     throw new Error('Invalid field type for segment map.');
   }
 
-  getVegaLiteSpec(data: DataArray): lite.TopLevelSpec {
-    if (data.isNull()) {
+  getVegaLiteSpec(data: Cell): lite.TopLevelSpec {
+    if (!data.isRepeatedRecord()) {
       throw new Error('Expected struct value not to be null.');
     }
 
-    const fields = data.field.allFields;
+    const fields = data.field.fields;
 
     const lat1Field = fields[0];
     const lon1Field = fields[1];
@@ -86,7 +84,7 @@ export class HTMLSegmentMapRenderer extends HTMLChartRenderer {
     return {
       ...this.getSize(),
       data: {
-        values: this.mapData(data),
+        values: this.mapData(data.rows),
       },
       projection: {
         type: 'albersUsa',
@@ -158,7 +156,7 @@ export class SegmentMapRendererFactory extends RendererFactory<SegmentMapRenderO
     document: Document,
     styleDefaults: StyleDefaults,
     rendererOptions: RendererOptions,
-    _field: Field | Explore,
+    _field: Field,
     options: SegmentMapRenderOptions,
     timezone?: string
   ): Renderer {

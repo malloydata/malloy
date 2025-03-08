@@ -15,7 +15,7 @@ type MeasureAxisOptions = {
   tickCount: string | number;
   labelLimit: number;
   fieldPath: string;
-  fieldRef: string | null;
+  fieldRef: string | undefined;
   brushMeasureRangeSourceId: string;
   showBrushes?: boolean;
   axisSettings: ChartLayoutSettings['yAxis'];
