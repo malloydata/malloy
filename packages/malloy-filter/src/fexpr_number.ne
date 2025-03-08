@@ -61,10 +61,10 @@ clause ->
     %NULL_KW {% () => ({operator: 'null' }) %}
   | N {% (d) => ({operator: '=', values: [d[0]]}) %}
   | %op N {% ([op, n]) => ({operator: op.text, values: [n]}) %}
-  | openInterval N %TO N closeInterval {% ([l, b, _to, e, r]) => mkRange(l[0].text,b,e,r[0].text) %}
   | parens {% (data) => data[0] %}
+  | openInterval N %TO N closeInterval {% ([l, b, _to, e, r]) => mkRange(l[0].text,b,e,r[0].text) %}
 
-parens -> %open  numberFilter %close {% ([_1, subFilter, _3]) => ({operator: "()", expr: subFilter}) %}
+parens -> %oparen  numberFilter %cparen {% ([_1, subFilter, _3]) => ({operator: "()", expr: subFilter}) %}
 
 closeInterval -> %cbrack | %cparen
 openInterval -> %obrack | %oparen

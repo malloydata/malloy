@@ -48,7 +48,7 @@ expect.extend({
           message: () => `${src} parsed and serialized correctly`,
         };
       }
-      const serialize_error = diff(src, unparse);
+      const serialize_error = diff(src, unparse, {contextLines: 10});
       return {
         pass: false,
         message: () =>
@@ -407,6 +407,16 @@ describe('string filter expressions', () => {
       operator: '~',
       not: true,
       escaped_values: ['a%a', 'b%b'],
+    });
+  });
+  test('multiple ands a;b;c', () => {
+    expect('a%; %b%; %c').isStringFilter({
+      operator: 'and',
+      members: [
+        {operator: 'starts', values: ['a']},
+        {operator: 'contains', values: ['b']},
+        {operator: 'ends', values: ['c']},
+      ],
     });
   });
   test.todo(

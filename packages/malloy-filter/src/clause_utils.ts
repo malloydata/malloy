@@ -170,8 +170,8 @@ export function conjoin(
     const operator: ChainOp | undefined =
       op === ',' ? ',' : op === '|' ? 'or' : op === ';' ? 'and' : undefined;
     if (operator) {
-      if (left.operator === operator && sameAs(left, right)) {
-        return {...left, members: [...left.members, ...right.members]};
+      if (left.operator === operator) {
+        return {...left, members: [...left.members, right]};
       }
       return {operator, members: [left, right]};
     }
@@ -200,8 +200,8 @@ export function joinNumbers(
       return ret;
     }
     if (op === ',' || op === 'and' || op === 'or') {
-      if (left.operator === op && sameAs(left, right)) {
-        return {...left, members: [...left.members, ...right.members]};
+      if (left.operator === op) {
+        return {...left, members: [...left.members, right]};
       }
       return {operator: op, members: [left, right]};
     }
