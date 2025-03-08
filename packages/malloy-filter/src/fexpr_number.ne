@@ -8,7 +8,7 @@
 @preprocessor typescript
 @{%
 import moo from 'moo';
-import {maybeNot, mkRange, joinNumbers} from '../clause_utils';
+import {numNot, mkRange, joinNumbers} from '../clause_utils';
 
 const fnumber_lexer = moo.compile({
   WS: /[ \t]+/,
@@ -42,10 +42,6 @@ fnumber_lexer.next = (next => () => {
     }
   }
 })(actual_next);
-
-function conjoin(x: Object, y:  Object, z: Object) {
-  return null;
-}
 %}
 
 @lexer fnumber_lexer
@@ -55,7 +51,7 @@ numberFilter ->
   | numberUnary {% (data) => data[0] %}
 
 numberUnary ->
-  %NOT:? clause {% (data) => maybeNot(data) %}
+  %NOT:? clause {% ([notToken, op]) => numNot(op, notToken) %}
 
 clause ->
     %NULL_KW {% () => ({operator: 'null' }) %}

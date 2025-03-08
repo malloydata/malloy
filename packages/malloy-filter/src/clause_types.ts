@@ -139,8 +139,19 @@ export function isNumberClause(sc: Object): sc is NumberClause {
   return (
     'operator' in sc &&
     typeof sc.operator === 'string' &&
-    ['range', '<=', '>=', '!=', '=', '>', '<', 'and', 'or', ',', '()'].includes(
-      sc.operator
-    )
+    [
+      'range',
+      '<=',
+      '>=',
+      '!=',
+      '=',
+      '>',
+      '<',
+      'and',
+      'or',
+      ',',
+      '()',
+      'null',
+    ].includes(sc.operator)
   );
 }

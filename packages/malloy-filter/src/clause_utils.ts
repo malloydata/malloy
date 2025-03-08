@@ -223,3 +223,10 @@ export function mkRange(
     endOperator: right === ')' ? '<' : '<=',
   };
 }
+
+export function numNot(op: Object, notToken: unknown) {
+  if (isNumberClause(op) && notToken) {
+    return {...op, not: true};
+  }
+  return op;
+}

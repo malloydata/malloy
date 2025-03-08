@@ -71,8 +71,18 @@ describe('number filter expressions', () => {
   test('not null', () => {
     expect('not null').isNumberFilter({operator: 'null', not: true});
   });
-  test('N', () => {
+  test('just N', () => {
     expect('5').isNumberFilter({operator: '=', values: ['5']});
+  });
+  test('not N', () => {
+    expect('not 5').isNumberFilter({operator: '=', values: ['5'], not: true});
+  });
+  test('not X, not Y', () => {
+    expect('not 5, not 6').isNumberFilter({
+      operator: '=',
+      values: ['5', '6'],
+      not: true,
+    });
   });
   test('-N', () => {
     expect('-5').isNumberFilter({operator: '=', values: ['-5']});
@@ -103,6 +113,13 @@ describe('number filter expressions', () => {
   });
   test('>= N', () => {
     expect('>= 42').isNumberFilter({operator: '>=', values: ['42']});
+  });
+  test('not >= Z', () => {
+    expect('not >= 42').isNumberFilter({
+      operator: '>=',
+      values: ['42'],
+      not: true,
+    });
   });
   test('(1 to 2)', () => {
     expect('(1 to 2)').isNumberFilter({
@@ -138,6 +155,16 @@ describe('number filter expressions', () => {
       startValue: '1',
       endOperator: '<',
       endValue: '2',
+    });
+  });
+  test('not [range]', () => {
+    expect('not [1 to 2)').isNumberFilter({
+      operator: 'range',
+      startOperator: '>=',
+      startValue: '1',
+      endOperator: '<',
+      endValue: '2',
+      not: true,
     });
   });
   test('1, 2', () => {
