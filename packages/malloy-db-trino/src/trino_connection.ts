@@ -75,6 +75,7 @@ export interface TrinoConnectionConfiguration {
   schema?: string;
   user?: string;
   password?: string;
+  extraConfig?: any;
 }
 
 export type TrinoConnectionOptions = ConnectionConfig;
@@ -146,6 +147,7 @@ class TrinoRunner implements BaseRunner {
       server: config.server,
       schema: config.schema,
       auth: new BasicAuth(config.user!, config.password || ''),
+      ...config.extraConfig,
     });
   }
   async runSQL(
