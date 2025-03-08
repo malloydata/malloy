@@ -294,6 +294,18 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     }
   );
 
+  test.when(runtime.supportsNesting)(
+    'model: having on just aggregation with a nest',
+    async () => {
+      await expect(`${modelText(databaseName)}
+      run: ${databaseName}.table('malloytest.state_facts') -> {
+          having: count(airport_count) > 0
+          aggregate: row_count is count()
+          nest: state
+      }`).malloyResultMatches(runtime, {row_count: 51});
+    }
+  );
+
   it('model: aggregate functions distinct min max', async () => {
     await expect(`
       run: aircraft_models->{
