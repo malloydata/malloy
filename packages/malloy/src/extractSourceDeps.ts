@@ -153,11 +153,7 @@ function parseMinimalFieldSetQuerySource(source: QuerySourceDef): Array<Field> {
   for (const f of firstSeg.queryFields ?? []) {
     if (isLeafAtomic(f)) {
       // using 'code' for name if mapped - is this valid?
-      if (f.code) {
-        fieldAcc.push({name: f.code});
-      } else {
-        fieldAcc.push({name: f.name});
-      }
+      fieldAcc.push({name: f.code ?? f.name});
     } else if (f.type === 'fieldref') {
       // what is 'path'?
       f.path[0] && fieldAcc.push({name: f.path[0]});
@@ -170,19 +166,14 @@ function parseMinimalFieldSetQuerySource(source: QuerySourceDef): Array<Field> {
     fieldAcc.push(...parseFieldsFromExpr(f.e));
   }
 
-  // filter fields that appear as fields and filters
-  const uniqueReqFields = [...new Map(fieldAcc.map(f => [f.name, f])).values()];
-
   const upstream = source.query.structRef;
   if (typeof upstream !== 'string' && upstream.filterList) {
     for (const f of upstream.filterList) {
-      uniqueReqFields.push(...parseFieldsFromExpr(f.e));
+      fieldAcc.push(...parseFieldsFromExpr(f.e));
     }
-
-    return [...new Map(uniqueReqFields.map(f => [f.name, f])).values()];
   }
 
-  return uniqueReqFields;
+  return [...new Map(fieldAcc.map(f => [f.name, f])).values()];
 }
 
 function parseMinimalFieldSetComposite(_source: SourceDef): Array<Field> {
@@ -294,3 +285,5 @@ export interface ConstrainedSQLArtifact {
 //   -> does this happen anywhere else?
 // - I need to make a decision about when I convert rep (even though currently identical)
 //   -> from a malloy 'field' to a sql 'column'
+// - Need to look into joins in 'extends' block on queries
+// - Need to look into 'partial' queries
