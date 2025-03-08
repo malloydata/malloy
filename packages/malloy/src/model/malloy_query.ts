@@ -3401,7 +3401,7 @@ class QueryQuery extends QueryField {
 
         let partition = '';
         if (dimensions.length > 0) {
-          partition = 'partition by';
+          partition = 'partition by ';
           partition += dimensions
             .map(this.parent.dialect.castToString)
             .join(',');
