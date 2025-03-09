@@ -6,7 +6,7 @@
  */
 
 export {BooleanFilterExpression} from './boolean_filter_expression';
-export {TimedateFilterExpression} from './timedate_filter_expression';
+export {TemporalFilterExpression} from './temporal_filter_expression';
 export {NumberFilterExpression} from './number_filter_expression';
 export {StringFilterExpression} from './string_filter_expression';
-export * from './clause_types';
+export * from './filter_clause';

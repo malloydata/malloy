@@ -5,15 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {FilterLog, isStringClause, StringClause} from './clause_types';
+import {
+  FilterParserReponse,
+  isStringClause,
+  StringClause,
+} from './filter_clause';
 import * as nearley from 'nearley';
 import fstring_grammar from './lib/fexpr_string_parser';
 import {escape} from './clause_utils';
-
-interface StringParseResult {
-  parsed: StringClause | null;
-  log: FilterLog[];
-}
 
 // This could be mistake, I am replacing the hand coded lexer and parsers
 // which previously existed with nearley/moo -- As the language is still
@@ -21,7 +20,7 @@ interface StringParseResult {
 // is not hand coded. Full apologies to the original author of the hand
 // coded parsers.
 export const StringFilterExpression = {
-  parse(src: string): StringParseResult {
+  parse(src: string): FilterParserReponse<StringClause> {
     const fstring_parser = new nearley.Parser(
       nearley.Grammar.fromCompiled(fstring_grammar)
     );

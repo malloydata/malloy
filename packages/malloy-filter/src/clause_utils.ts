@@ -14,7 +14,8 @@ import {
   StringClause,
   NumberClause,
   ClauseBase,
-} from './clause_types';
+  isTemporalClause,
+} from './filter_clause';
 
 /**
  * If there is a minus token, add "not:true" to the clause
@@ -229,4 +230,41 @@ export function numNot(op: Object, notToken: unknown) {
     return {...op, not: true};
   }
   return op;
+}
+
+export function temporalNot(op: Object, notToken: unknown) {
+  if (isTemporalClause(op) && notToken) {
+    return {...op, not: true};
+  }
+  return op;
+}
+
+export function joinTemporal(
+  left: Object,
+  op: string,
+  right: Object
+): NumberClause | null {
+  if (isTemporalClause(left) && isTemporalClause(right)) {
+    // if (
+    //   (op === ',' || op === 'or') &&
+    //   left.operator === '=' &&
+    //   sameAs(left, right)
+    // ) {
+    //   const ret: NumberClause = {
+    //     operator: '=',
+    //     values: [...left.values, ...right.values],
+    //   };
+    //   if (left.not) {
+    //     ret.not = true;
+    //   }
+    //   return ret;
+    // }
+    if (op === ',' || op === 'and' || op === 'or') {
+      if (left.operator === op) {
+        return {...left, members: [...left.members, right]};
+      }
+      return {operator: op, members: [left, right]};
+    }
+  }
+  return null;
 }

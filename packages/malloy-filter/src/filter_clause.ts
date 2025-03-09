@@ -67,30 +67,6 @@ export interface BooleanCondition extends Negateable {
 
 export type BooleanClause = BooleanCondition | Null;
 
-export type FilterLogSeverity = 'error' | 'warn';
-
-export interface FilterLog {
-  message: string;
-  startIndex: number;
-  endIndex: number;
-  severity: FilterLogSeverity;
-}
-
-export interface BooleanParserResponse {
-  clauses: BooleanClause[];
-  logs: FilterLog[];
-}
-
-export interface NumberParserResponse {
-  clauses: NumberClause[];
-  logs: FilterLog[];
-}
-
-export interface StringParserResponse {
-  clauses: StringClause[];
-  logs: FilterLog[];
-}
-
 export function isStringClause(sc: Object): sc is StringClause {
   return (
     'operator' in sc &&
@@ -154,4 +130,31 @@ export function isNumberClause(sc: Object): sc is NumberClause {
       'null',
     ].includes(sc.operator)
   );
+}
+
+export type TemporalClause =
+  | Null
+  | ClauseChain<TemporalClause>
+  | ClauseGroup<TemporalClause>;
+
+export function isTemporalClause(sc: Object): sc is TemporalClause {
+  return (
+    'operator' in sc &&
+    typeof sc.operator === 'string' &&
+    ['and', 'or', ',', '()', 'null'].includes(sc.operator)
+  );
+}
+
+export type FilterLogSeverity = 'error' | 'warn';
+
+export interface FilterLog {
+  message: string;
+  startIndex: number;
+  endIndex: number;
+  severity: FilterLogSeverity;
+}
+
+export interface FilterParserReponse<T extends ClauseBase> {
+  parsed: T | null;
+  log: FilterLog[];
 }

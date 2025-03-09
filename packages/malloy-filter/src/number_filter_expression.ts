@@ -1,13 +1,13 @@
-import {FilterLog, isNumberClause, NumberClause} from './clause_types';
+import {
+  FilterParserReponse,
+  isNumberClause,
+  NumberClause,
+} from './filter_clause';
 import * as nearley from 'nearley';
 import fstring_grammar from './lib/fexpr_string_parser';
 
-interface NumberParseResult {
-  parsed: NumberClause | null;
-  log: FilterLog[];
-}
 export const NumberFilterExpression = {
-  parse(src: string): NumberParseResult {
+  parse(src: string): FilterParserReponse<NumberClause> {
     const fstring_parser = new nearley.Parser(
       nearley.Grammar.fromCompiled(fstring_grammar)
     );

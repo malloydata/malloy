@@ -8,7 +8,7 @@
 import {diff} from 'jest-diff';
 import * as nearley from 'nearley';
 import fstring_grammar from '../lib/fexpr_string_parser';
-import {StringClause} from '../clause_types';
+import {StringClause} from '../filter_clause';
 import {StringFilterExpression} from '../string_filter_expression';
 
 declare global {
@@ -375,6 +375,7 @@ describe('string filter expressions', () => {
       ],
     });
   });
+  // mtoy todo parse an error, make sure it doesn't throw
   test.todo(
     'write many malformed expressions and generate reasonable errors for them'
   );
