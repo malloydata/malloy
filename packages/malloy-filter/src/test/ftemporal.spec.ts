@@ -71,4 +71,45 @@ describe('temporal filter expressions', () => {
   test('not null', () => {
     expect('not null').isTemporalFilter({operator: 'null', not: true});
   });
+  test('literal timestamp', () => {
+    expect('2001-02-03 04:05:06.7').isTemporalFilter({
+      operator: 'literal',
+      literal: '2001-02-03 04:05:06.7',
+    });
+  });
+  test('literal hour', () => {
+    expect('2001-02-03 04').isTemporalFilter({
+      operator: 'literal',
+      literal: '2001-02-03 04',
+      units: 'hour',
+    });
+  });
+  test('literal day', () => {
+    expect('2001-02-03').isTemporalFilter({
+      operator: 'literal',
+      literal: '2001-02-03',
+      units: 'day',
+    });
+  });
+  test('literal week', () => {
+    expect('2001-02-03-WK').isTemporalFilter({
+      operator: 'literal',
+      literal: '2001-02-03-WK',
+      units: 'week',
+    });
+  });
+  test('literal quarter', () => {
+    expect('2001-Q1').isTemporalFilter({
+      operator: 'literal',
+      literal: '2001-Q1',
+      units: 'quarter',
+    });
+  });
+  test('literal year', () => {
+    expect('2001').isTemporalFilter({
+      operator: 'literal',
+      literal: '2001',
+      units: 'year',
+    });
+  });
 });

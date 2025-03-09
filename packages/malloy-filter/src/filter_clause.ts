@@ -132,8 +132,23 @@ export function isNumberClause(sc: Object): sc is NumberClause {
   );
 }
 
+export type TemporalUnit =
+  | 'hour'
+  | 'day'
+  | 'week'
+  | 'month'
+  | 'quarter'
+  | 'year';
+
+export interface TemporalLiteral extends ClauseBase, Negateable {
+  operator: 'literal';
+  units?: TemporalUnit;
+  literal: string;
+}
+
 export type TemporalClause =
   | Null
+  | TemporalLiteral
   | ClauseChain<TemporalClause>
   | ClauseGroup<TemporalClause>;
 
@@ -141,7 +156,7 @@ export function isTemporalClause(sc: Object): sc is TemporalClause {
   return (
     'operator' in sc &&
     typeof sc.operator === 'string' &&
-    ['and', 'or', ',', '()', 'null'].includes(sc.operator)
+    ['literal', 'and', 'or', ',', '()', 'null'].includes(sc.operator)
   );
 }
 

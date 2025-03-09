@@ -38,6 +38,12 @@ export const TemporalFilterExpression = {
     };
   },
   unparse(tc: TemporalClause): string {
+    switch (tc.operator) {
+      case 'null':
+        return tc.not ? 'not null' : 'null';
+      case 'literal':
+        return tc.not ? `not ${tc.literal}` : tc.literal;
+    }
     return 'UNPARSE ERROR: ' + JSON.stringify(tc, null, 2);
   },
 };

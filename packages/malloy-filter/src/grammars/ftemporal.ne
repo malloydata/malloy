@@ -8,7 +8,7 @@
 @preprocessor typescript
 @{%
 import moo from 'moo';
-import {temporalNot, joinTemporal} from '../clause_utils';
+import {temporalNot, joinTemporal, timeLiteral} from '../clause_utils';
 
 const temporal_lexer = moo.compile({
   WS: /[ \t]+/,
@@ -59,14 +59,14 @@ const temporal_lexer = moo.compile({
   oparen: /\(/,
   cparen: /\)/,
   comma: /,/,
-  n: /\d+/,
-  literal: /\d\d\d\d-\d\d-\d\d[ Tt]\d\d:\d\d(?:\d\d(?:[.,]\d*))/,
-  lit_week: /\d\d\d\d-\d\d-\d\d-[Ww]-[Kk]/,
+  literal: /\d\d\d\d-\d\d-\d\d[ Tt]\d\d:\d\d(?::\d\d(?:[.,]\d*))/,
+  lit_week: /\d\d\d\d-\d\d-\d\d-[Ww][Kk]/,
   lit_quarter: /\d\d\d\d-[qQ][1234]/,
   lit_hour: /\d\d\d\d-\d\d-\d\d[ Tt]\d\d/,
   lit_day: /\d\d\d\d-\d\d-\d\d/,
   lit_month: /\d\d\d\d-\d\d-\d\d/,
   lit_year: /\d\d\d\d/,
+  n: /\d+/,
 });
 
 const actual_next = temporal_lexer.next;
@@ -89,7 +89,11 @@ temporalFilter ->
 temporalUnary ->
   %NOT:? clause {% ([notToken, op]) => temporalNot(op, notToken) %}
 
-duration -> %n unit
+duration -> number unit
+
+number ->
+    %n {% ([numToken]) => numToken.text %}
+  | %lityear {% ([yearToken]) => yearToken.text %}
 
 unit ->
     %SECOND | %MINUTE | %HOUR | %DAY | %WEEK | %MONTH | %QUARTER | %YEAR
@@ -102,7 +106,7 @@ clause ->
   | %AFTER moment
   | moment %TO moment
   | moment %FOR duration
-  | moment
+  | moment {% d => d[0] %}
 
 moment ->
     %NOW
@@ -113,6 +117,16 @@ moment ->
   | duration %AGO
   | duration %FROM %NOW
   | weekday
+  | timeLiteral {% d => d[0] %}
+
+timeLiteral ->
+    %literal {% ([l]) => timeLiteral(l.text) %}
+  | %lit_day {% ([l]) => timeLiteral(l.text, 'day') %}
+  | %lit_hour {% ([l]) => timeLiteral(l.text, 'hour') %}
+  | %lit_month {% ([l]) => timeLiteral(l.text, 'month') %}
+  | %lit_quarter {% ([l]) => timeLiteral(l.text, 'quarter') %}
+  | %lit_week {% ([l]) => timeLiteral(l.text, 'week') %}
+  | %lit_year {% ([l]) => timeLiteral(l.text, 'year') %}
 
 weekday -> %MONDAY | %TUESDAY | %WEDNESDAY | %THURSDAY | %FRIDAY | %SATURDAY | %SUNDAY
 

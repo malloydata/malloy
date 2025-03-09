@@ -15,6 +15,9 @@ import {
   NumberClause,
   ClauseBase,
   isTemporalClause,
+  TemporalUnit,
+  TemporalLiteral,
+  TemporalClause,
 } from './filter_clause';
 
 /**
@@ -36,7 +39,8 @@ export function unescape(str: string) {
  * Escape all of these:  ,;| ()\%_
  */
 export function escape(str: string) {
-  if (str === 'null' || str === 'empty') {
+  const lstr = str.toLowerCase();
+  if (lstr === 'null' || lstr === 'empty') {
     return '\\' + str;
   }
   return str.replace(/([,; |()\\%_-])/g, '\\$1');
@@ -243,7 +247,7 @@ export function joinTemporal(
   left: Object,
   op: string,
   right: Object
-): NumberClause | null {
+): TemporalClause | null {
   if (isTemporalClause(left) && isTemporalClause(right)) {
     // if (
     //   (op === ',' || op === 'or') &&
@@ -267,4 +271,15 @@ export function joinTemporal(
     }
   }
   return null;
+}
+
+export function timeLiteral(
+  literal: string,
+  units?: TemporalUnit
+): TemporalLiteral {
+  const ret: TemporalLiteral = {operator: 'literal', literal};
+  if (units) {
+    ret.units = units;
+  }
+  return ret;
 }
