@@ -10,7 +10,7 @@ After changing a `.ne` file use `npm run build` to update the generated parser.
 
 # API
 
-Refer to the [clause interfaces](src/filter_clauses.ts) for details on the
+Refer to the [clause interfaces](filter_clause.ts) for details on the
 output of the parser, or look at the parser tests in `tests/` for more examples
 of parser output.
 
