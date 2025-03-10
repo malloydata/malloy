@@ -367,6 +367,7 @@ export class Tag implements TagInterface {
       addTag(child);
     }
     addChildren(this);
+    annotation += '\n';
     return annotation;
   }
 

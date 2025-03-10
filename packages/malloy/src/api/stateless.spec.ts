@@ -318,9 +318,8 @@ describe('api', () => {
           connection_name: 'connection',
           annotations: [
             {value: '#(test) hello\n'},
-            // TODO generated tags have no newline?
-            {value: '#(malloy) ordered_by = [{ carrier = asc }]'},
-            {value: '#(malloy) source_name = flights'},
+            {value: '#(malloy) ordered_by = [{ carrier = asc }]\n'},
+            {value: '#(malloy) source_name = flights\n'},
           ],
           sql: `SELECT \n\
    base."carrier" as "carrier"
