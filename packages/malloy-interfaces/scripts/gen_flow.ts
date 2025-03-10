@@ -18,7 +18,7 @@ async function go() {
       const flow = await unstable_translateTSDefToFlowDef(contents);
       await fs.promises.writeFile(
         `./@flowtyped/${file.replace('.d.ts', '.js.flow')}`,
-        flow
+        '// @flow\n' + flow
       );
     })
   );
