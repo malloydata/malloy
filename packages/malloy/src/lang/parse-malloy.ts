@@ -22,16 +22,8 @@
  */
 
 import {
-  CharStreams,
-  CommonTokenStream,
-  ParserRuleContext,
-  Token,
-} from 'antlr4ts';
-import {ParseTree} from 'antlr4ts/tree';
-import {
   DocumentLocation,
   DocumentPosition,
-  DocumentRange,
   DocumentReference,
   ImportLocation,
   ModelDef,
@@ -40,9 +32,8 @@ import {
   SourceDef,
   SQLSourceDef,
   DependencyTree,
+  DocumentRange,
 } from '../model/malloy_types';
-import {MalloyLexer} from './lib/Malloy/MalloyLexer';
-import {MalloyParser} from './lib/Malloy/MalloyParser';
 import * as ast from './ast';
 import {MalloyToAST} from './malloy-to-ast';
 import {
@@ -91,8 +82,12 @@ import {walkForModelAnnotation} from './parse-tree-walkers/model-annotation-walk
 import {walkForTablePath} from './parse-tree-walkers/find-table-path-walker';
 import {EventStream} from '../runtime_types';
 import {annotationToTag} from '../annotation';
-import {MalloyErrorStrategy} from './syntax-errors/malloy-error-strategy';
-import {MalloyParserErrorListener} from './syntax-errors/malloy-parser-error-listener';
+import {
+  getSourceInfo,
+  rangeFromContext,
+  runMalloyParser,
+} from './run-malloy-parser';
+import {ParserRuleContext} from 'antlr4ts';
 
 export type StepResponses =
   | DataRequestResponse
@@ -101,19 +96,6 @@ export type StepResponses =
   | ParseResponse
   | MetadataResponse
   | PretranslatedResponse;
-
-/**
- * This ignores a -> popMode when the mode stack is empty, which is a hack,
- * but it let's us parse }%
- */
-class HandlesOverpoppingLexer extends MalloyLexer {
-  popMode(): number {
-    if (this._modeStack.isEmpty) {
-      return this._mode;
-    }
-    return super.popMode();
-  }
-}
 
 /**
  * A Translation is a series of translation steps. Each step can depend
@@ -182,11 +164,11 @@ class ParseStep implements TranslationStep {
       return {urls: [that.sourceURL]};
     }
     const source = srcEnt.value === '' ? '\n' : srcEnt.value;
-    this.sourceInfo = this.getSourceInfo(source);
+    this.sourceInfo = getSourceInfo(source);
 
     let parse: MalloyParseInfo | undefined;
     try {
-      parse = this.runParser(source, that);
+      parse = this.runParser(source, this.sourceInfo, that);
     } catch (parseException) {
       that.root.logError('parse-exception', {message: parseException.message});
       parse = undefined;
@@ -203,69 +185,22 @@ class ParseStep implements TranslationStep {
     return this.response;
   }
 
-  /**
-   * Split the source up into lines so we can correctly compute offset
-   * to the line/char positions favored by LSP and VSCode.
-   */
-  private getSourceInfo(code: string): SourceInfo {
-    const eolRegex = /\r?\n/;
-    const info: SourceInfo = {
-      at: [],
-      lines: [],
-      length: code.length,
-    };
-    let src = code;
-    let lineStart = 0;
-    while (src !== '') {
-      const eol = src.match(eolRegex);
-      if (eol && eol.index !== undefined) {
-        // line text DOES NOT include the EOL
-        info.lines.push(src.slice(0, eol.index));
-        const lineLength = eol.index + eol[0].length;
-        info.at.push({
-          begin: lineStart,
-          end: lineStart + lineLength,
-        });
-        lineStart += lineLength;
-        src = src.slice(lineLength);
-      } else {
-        // last line, does not have a line end
-        info.lines.push(src);
-        info.at.push({begin: lineStart, end: lineStart + src.length});
-        break;
-      }
-    }
-    return info;
-  }
-
-  private runParser(source: string, that: MalloyTranslation): MalloyParseInfo {
-    const inputStream = CharStreams.fromString(source);
-    const lexer = new HandlesOverpoppingLexer(inputStream);
-    const tokenStream = new CommonTokenStream(lexer);
-    const malloyParser = new MalloyParser(tokenStream);
-    malloyParser.removeErrorListeners();
-    malloyParser.addErrorListener(
-      new MalloyParserErrorListener(that, that.root.logger)
+  private runParser(
+    source: string,
+    sourceInfo: SourceInfo,
+    that: MalloyTranslation
+  ): MalloyParseInfo {
+    const parse = runMalloyParser(
+      source,
+      that.sourceURL,
+      sourceInfo,
+      that.root.logger,
+      that.grammarRule
     );
-    malloyParser.errorHandler = new MalloyErrorStrategy();
-
-    // Admitted code smell here, testing likes to parse from an arbitrary
-    // node and this is the simplest way to allow that.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const parseFunc = (malloyParser as any)[that.grammarRule];
-    if (!parseFunc) {
-      throw new Error(`No such parse rule as ${that.grammarRule}`);
-    }
 
     return {
-      root: parseFunc.call(malloyParser) as ParseTree,
-      tokenStream: tokenStream,
-      sourceStream: inputStream,
-      sourceURL: that.sourceURL,
+      ...parse,
       importBaseURL: that.importBaseURL || that.sourceURL,
-      rangeFromContext: cx => that.rangeFromContext(cx),
-      // TODO some way to not forget to update this
-      malloyVersion: '4.0.0',
     };
   }
 }
@@ -992,44 +927,7 @@ export abstract class MalloyTranslation {
   }
 
   rangeFromContext(pcx: ParserRuleContext): DocumentRange {
-    return this.rangeFromTokens(pcx.start, pcx.stop || pcx.start);
-  }
-
-  rangeFromTokens(startToken: Token, stopToken: Token): DocumentRange {
-    const start = {
-      line: startToken.line - 1,
-      character: startToken.charPositionInLine,
-    };
-    if (this.parseStep.sourceInfo && stopToken.stopIndex !== -1) {
-      // Find the line which contains the stopIndex
-      const lastLine = this.parseStep.sourceInfo.lines.length - 1;
-      for (let lineNo = startToken.line - 1; lineNo <= lastLine; lineNo++) {
-        const at = this.parseStep.sourceInfo.at[lineNo];
-        if (stopToken.stopIndex >= at.begin && stopToken.stopIndex < at.end) {
-          return {
-            start,
-            end: {
-              line: lineNo,
-              character: stopToken.stopIndex - at.begin + 1,
-            },
-          };
-        }
-      }
-      // Should be impossible to get here, but if we do ... return the last
-      // character of the last line of the file
-      return {
-        start,
-        end: {
-          line: lastLine,
-          character: this.parseStep.sourceInfo.lines[lastLine].length,
-        },
-      };
-    }
-    return {start, end: start};
-  }
-
-  rangeFromToken(token: Token): DocumentRange {
-    return this.rangeFromTokens(token, token);
+    return rangeFromContext(this.parseStep.sourceInfo, pcx);
   }
 
   /*

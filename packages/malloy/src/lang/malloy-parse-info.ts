@@ -21,20 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  CodePointCharStream,
-  CommonTokenStream,
-  ParserRuleContext,
-} from 'antlr4ts';
-import {ParseTree} from 'antlr4ts/tree';
-import {DocumentRange} from '../model/malloy_types';
+import {ParseInfo} from './run-malloy-parser';
 
-export interface MalloyParseInfo {
-  root: ParseTree;
-  tokenStream: CommonTokenStream;
-  sourceStream: CodePointCharStream;
-  sourceURL: string;
+export interface MalloyParseInfo extends ParseInfo {
   importBaseURL: string;
-  rangeFromContext: (pcx: ParserRuleContext) => DocumentRange;
-  malloyVersion: string;
 }

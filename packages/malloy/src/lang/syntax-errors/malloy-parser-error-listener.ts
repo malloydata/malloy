@@ -15,7 +15,7 @@ import {
   LogMessageOptions,
   makeLogMessage,
 } from '../parse-log';
-import {MalloyTranslation} from '../parse-malloy';
+import {rangeFromToken, SourceInfo} from '../run-malloy-parser';
 
 // A set of custom error messages and their triggering cases,
 // used for syntax error message re-writing when ANTLR would
@@ -155,8 +155,10 @@ export const malloyCustomErrorCases: ErrorCase[] = [
 
 export class MalloyParserErrorListener implements ANTLRErrorListener<Token> {
   constructor(
-    readonly translator: MalloyTranslation,
-    readonly messages: MessageLogger
+    // readonly translator: MalloyTranslation,
+    readonly messages: MessageLogger,
+    readonly sourceURL: string,
+    readonly sourceInfo: SourceInfo
   ) {}
 
   logError<T extends MessageCode>(
@@ -180,7 +182,7 @@ export class MalloyParserErrorListener implements ANTLRErrorListener<Token> {
   ): void {
     const errAt = {line: line - 1, character: charPositionInLine};
     const range = offendingSymbol
-      ? this.translator.rangeFromToken(offendingSymbol)
+      ? rangeFromToken(this.sourceInfo, offendingSymbol)
       : {start: errAt, end: errAt};
 
     const overrideMessage = checkCustomErrorMessage(
@@ -196,7 +198,7 @@ export class MalloyParserErrorListener implements ANTLRErrorListener<Token> {
       'syntax-error',
       {message},
       {
-        at: {url: this.translator.sourceURL, range},
+        at: {url: this.sourceURL, range},
       }
     );
   }
