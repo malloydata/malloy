@@ -146,8 +146,83 @@ export interface TemporalLiteral extends ClauseBase, Negateable {
   literal: string;
 }
 
+interface Duration {
+  units: TemporalUnit;
+  n: string;
+}
+
+export interface DayMoment {
+  moment:
+    | 'today'
+    | 'yesterday'
+    | 'tomorrow'
+    | 'monday'
+    | 'tuesday'
+    | 'wednesday'
+    | 'thursday'
+    | 'friday'
+    | 'saturday'
+    | 'sunday';
+}
+
+export interface FromNowMoment extends Duration {
+  moment: 'from_now';
+}
+
+export interface AgoMoment extends Duration {
+  moment: 'ago';
+}
+
+export interface NowMoment {
+  moment: 'now';
+}
+
+export interface AMoment {
+  moment: 'this' | 'last' | 'next';
+  units: TemporalUnit;
+  n?: string;
+}
+
+export type Moment =
+  | AMoment
+  | NowMoment
+  | AgoMoment
+  | FromNowMoment
+  | DayMoment;
+
+export interface Before extends Negateable {
+  operator: 'before';
+  moment: Moment;
+}
+
+export interface After extends Negateable {
+  operator: 'after';
+  moment: Moment;
+}
+
+export interface To extends Negateable {
+  operator: 'to';
+  fromMoment: Moment;
+  toMoment: Moment;
+}
+
+export interface For extends Negateable, Duration {
+  operator: 'for';
+  moment: Moment;
+}
+
+export interface InMoment extends Negateable {
+  operator: 'in';
+  moment: Moment;
+}
+
 export type TemporalClause =
   | Null
+  | Before
+  | After
+  | To
+  | For
+  | InMoment
   | TemporalLiteral
   | ClauseChain<TemporalClause>
   | ClauseGroup<TemporalClause>;
@@ -156,7 +231,19 @@ export function isTemporalClause(sc: Object): sc is TemporalClause {
   return (
     'operator' in sc &&
     typeof sc.operator === 'string' &&
-    ['literal', 'and', 'or', ',', '()', 'null'].includes(sc.operator)
+    [
+      'literal',
+      'before',
+      'after',
+      'to',
+      'for',
+      'in',
+      'and',
+      'or',
+      ',',
+      '()',
+      'null',
+    ].includes(sc.operator)
   );
 }
 

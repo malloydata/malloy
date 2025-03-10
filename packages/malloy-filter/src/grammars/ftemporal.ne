@@ -111,12 +111,12 @@ clause ->
 moment ->
     %NOW
   | (%THIS | %NEXT | %LAST) (unit | duration)
-  | %TODAY
-  | %YESTERDAY
-  | %TOMORROW
+  | %TODAY {% () => ({moment: 'today'}) %}
+  | %YESTERDAY {% () => ({moment: 'yesterday'}) %}
+  | %TOMORROW {% () => ({moment: 'tomorrow'}) %}
   | duration %AGO
   | duration %FROM %NOW
-  | weekday
+  | weekday {% ([dn]) => ({moment: dn.text.toLowerCase()}) %}
   | timeLiteral {% d => d[0] %}
 
 timeLiteral ->
