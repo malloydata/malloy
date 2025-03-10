@@ -132,8 +132,9 @@ export class MalloyToQuery
   }
 
   protected getIsAnnotations(
-    cx: parse.IsDefineContext
+    cx?: parse.IsDefineContext
   ): Malloy.Annotation[] | undefined {
+    if (cx === undefined) return undefined;
     const before = this.getAnnotations(cx._beforeIs) ?? [];
     const annotations = before.concat(this.getAnnotations(cx._afterIs) ?? []);
     return annotations.length > 0 ? annotations : undefined;
@@ -214,22 +215,22 @@ export class MalloyToQuery
         };
       }
     } else if (cx instanceof parse.SQParensContext) {
-      this.notAllowed(cx, 'Parenthesized query expressions');
+      return this.getQueryDefinition(cx.sqExpr());
     } else if (cx instanceof parse.SQComposeContext) {
       this.notAllowed(cx, 'Source compositions');
     } else if (cx instanceof parse.SQRefinedQueryContext) {
-      const seg = this.getRefinementSegment(cx.segExpr());
-      if (seg === null) return null;
       const qrefCx = cx.sqExpr();
-      if (qrefCx instanceof parse.SQIDContext) {
-        const qref = this.getQueryReference(qrefCx);
-        if (qref === null) return null;
-        return {
-          kind: 'refinement',
-          query_reference: qref,
-          refinement: seg,
-        };
+      const base = this.getQueryDefinition(qrefCx);
+      const seg = this.getRefinementSegment(cx.segExpr());
+      if (seg === null || base === null) return null;
+      if (seg.kind === 'arrow') {
+        this.notAllowed(cx, 'Queries against refined queries');
       }
+      return {
+        kind: 'refinement',
+        base: base,
+        refinement: seg,
+      };
     } else if (cx instanceof parse.SQExtendedSourceContext) {
       this.notAllowed(cx, 'Source extensions');
     } else if (cx instanceof parse.SQIncludeContext) {
@@ -240,19 +241,35 @@ export class MalloyToQuery
       this.notAllowed(cx, 'SQL statements');
     } else if (cx instanceof parse.SQArrowContext) {
       const qrefCx = cx.sqExpr();
+      const base = this.getQueryDefinition(qrefCx);
       const seg = this.getRefinementSegment(cx.segExpr());
-      if (seg === null) return null;
-      // TODO really I need to allow getting any sqExpr that starts with a query reference,
-      // then flip the precedence
-      if (qrefCx instanceof parse.SQIDContext) {
-        const qref = this.getQueryReference(qrefCx);
-        if (qref === null) return null;
+      if (seg === null || base === null) return null;
+      if (base.kind === 'query_reference') {
         return {
           kind: 'arrow',
-          source_reference: qref,
+          source: {
+            ...base,
+            kind: 'source_reference',
+          },
           view: seg,
         };
       }
+      if (base.kind === 'arrow') {
+        return {
+          kind: 'arrow',
+          source: base.source,
+          view: {
+            kind: 'arrow',
+            source: base.view,
+            view: seg,
+          },
+        };
+      }
+      return {
+        kind: 'arrow',
+        source: base,
+        view: seg,
+      };
     }
     return null;
   }
@@ -272,9 +289,165 @@ export class MalloyToQuery
         kind: 'segment',
         operations: operations as Malloy.ViewOperation[],
       };
+    } else if (cx instanceof parse.SegFieldContext) {
+      const {name, path} = this.getFieldPath(cx.fieldPath());
+      return {
+        kind: 'view_reference',
+        name,
+        path,
+      };
+    } else if (cx instanceof parse.SegParenContext) {
+      return this.getViewExpression(cx.vExpr());
+    } else if (cx instanceof parse.SegRefineContext) {
+      const l = this.getRefinementSegment(cx._lhs);
+      const r = this.getRefinementSegment(cx._rhs);
+      if (l === null || r === null) return null;
+      return {
+        kind: 'refinement',
+        base: l,
+        refinement: r,
+      };
     }
-    // TODO other kinds
     return null;
+  }
+
+  protected getGroupByStatement(gbcx: parse.GroupByStatementContext) {
+    const groupAnnotations = this.getAnnotations(gbcx.tags());
+    const fieldCxs = gbcx.queryFieldList().queryFieldEntry();
+    const fields = fieldCxs.map(f => this.getQueryField(f));
+    if (fields.some(o => o === null)) {
+      return null;
+    }
+    if (fields === null) return null;
+    return (fields as {name?: string; field: Malloy.Field}[]).map(f => {
+      const annotations = [
+        ...(groupAnnotations ?? []),
+        ...(f.field.annotations ?? []),
+      ];
+      const gb: Malloy.ViewOperationWithGroupBy = {
+        kind: 'group_by',
+        name: f.name,
+        field: {
+          ...f.field,
+          annotations: annotations.length > 0 ? annotations : undefined,
+        },
+      };
+      return gb;
+    });
+  }
+
+  protected getAggregateStatement(agcx: parse.AggregateStatementContext) {
+    const groupAnnotations = this.getAnnotations(agcx.tags());
+    const fieldCxs = agcx.queryFieldList().queryFieldEntry();
+    const fields = fieldCxs.map(f => this.getQueryField(f));
+    if (fields.some(o => o === null)) {
+      return null;
+    }
+    if (fields === null) return null;
+    return (fields as {name?: string; field: Malloy.Field}[]).map(f => {
+      const annotations = [
+        ...(groupAnnotations ?? []),
+        ...(f.field.annotations ?? []),
+      ];
+      const gb: Malloy.ViewOperationWithAggregate = {
+        kind: 'aggregate',
+        name: f.name,
+        field: {
+          ...f.field,
+          annotations: annotations.length > 0 ? annotations : undefined,
+        },
+      };
+      return gb;
+    });
+  }
+
+  protected getOrderByStatement(
+    obcx: parse.OrderByStatementContext
+  ): Malloy.ViewOperationWithOrderBy[] | null {
+    const specs = obcx.ordering().orderBySpec();
+    const orders: Malloy.ViewOperationWithOrderBy[] = [];
+    for (const spec of specs) {
+      if (spec.INTEGER_LITERAL()) {
+        this.notAllowed(spec, 'Indexed order by statements');
+      } else if (spec.fieldName()) {
+        const fieldName = getId(spec.fieldName()!);
+        const direction = spec.ASC() ? 'asc' : spec.DESC() ? 'desc' : undefined;
+        orders.push({
+          kind: 'order_by',
+          direction,
+          field_reference: {name: fieldName},
+        });
+      } else {
+        return null;
+      }
+    }
+    return orders;
+  }
+
+  protected getNestStatement(
+    nstcx: parse.NestStatementContext
+  ): Malloy.ViewOperationWithNest[] | null {
+    const groupAnnotations = this.getAnnotations(nstcx.tags());
+    const querylist = nstcx.nestedQueryList().nestEntry();
+    const nests: Malloy.ViewOperationWithNest[] = [];
+    for (const query of querylist) {
+      if (!(query instanceof parse.NestDefContext)) {
+        this.internalError(query, 'Expected nestDef');
+        return null;
+      }
+      const annotations1 = this.getAnnotations(query.tags());
+      const annotations2 = this.getIsAnnotations(query.isDefine());
+      const nameCx = query.queryName();
+      const name = nameCx ? getId(nameCx) : undefined;
+      const view = this.getViewExpression(query.vExpr());
+      if (view === null) {
+        return null;
+      }
+      nests.push({
+        kind: 'nest',
+        name,
+        view: {
+          definition: view,
+          annotations: this.combineAnnotations(
+            groupAnnotations,
+            annotations1,
+            annotations2
+          ),
+        },
+      });
+    }
+    return nests;
+  }
+
+  protected getViewExpression(
+    cx: parse.VExprContext
+  ): Malloy.ViewDefinition | null {
+    if (cx instanceof parse.VSegContext) {
+      return this.getRefinementSegment(cx.segExpr());
+    } else if (cx instanceof parse.VArrowContext) {
+      const l = this.getRefinementSegment(cx);
+      const r = this.getViewExpression(cx._rhs);
+      if (l === null) return null;
+      if (r === null) return null;
+      return {
+        kind: 'arrow',
+        source: l,
+        view: r,
+      };
+    } else {
+      this.internalError(cx, 'Unexpected VExpr node');
+      return null;
+    }
+  }
+
+  protected getLimitStatement(
+    cx: parse.LimitStatementContext
+  ): Malloy.ViewOperationWithLimit | null {
+    const limit = this.getNumber(cx.INTEGER_LITERAL());
+    return {
+      kind: 'limit',
+      limit,
+    };
   }
 
   protected getSegmentOperation(
@@ -282,28 +455,51 @@ export class MalloyToQuery
   ): Malloy.ViewOperation[] | null {
     if (cx.groupByStatement()) {
       const gbcx = cx.groupByStatement()!;
-      const groupAnnotations = this.getAnnotations(gbcx.tags());
-      const fieldCxs = gbcx.queryFieldList().queryFieldEntry();
-      const fields = fieldCxs.map(f => this.getQueryField(f));
-      if (fields.some(o => o === null)) {
-        return null;
-      }
-      if (fields === null) return null;
-      return (fields as {name?: string; field: Malloy.Field}[]).map(f => {
-        const annotations = [
-          ...(groupAnnotations ?? []),
-          ...(f.field.annotations ?? []),
-        ];
-        const gb: Malloy.ViewOperationWithGroupBy = {
-          kind: 'group_by',
-          name: f.name,
-          field: {
-            ...f.field,
-            annotations: annotations.length > 0 ? annotations : undefined,
-          },
-        };
-        return gb;
-      });
+      return this.getGroupByStatement(gbcx);
+    } else if (cx.aggregateStatement()) {
+      const agcx = cx.aggregateStatement()!;
+      return this.getAggregateStatement(agcx);
+    } else if (cx.limitStatement()) {
+      const limcx = cx.limitStatement()!;
+      const limit = this.getLimitStatement(limcx);
+      if (limit === null) return null;
+      return [limit];
+    } else if (cx.declareStatement()) {
+      this.notAllowed(cx, 'Declare statements');
+    } else if (cx.queryJoinStatement()) {
+      this.notAllowed(cx, 'Query join statements');
+    } else if (cx.queryExtend()) {
+      this.notAllowed(cx, 'Query extend statements');
+    } else if (cx.projectStatement()) {
+      this.notAllowed(cx, 'Select statements');
+    } else if (cx.indexStatement()) {
+      this.notAllowed(cx, 'Index statements');
+    } else if (cx.calculateStatement()) {
+      this.notAllowed(cx, 'Calculate statements');
+    } else if (cx.topStatement()) {
+      this.notAllowed(cx, 'Top statements');
+    } else if (cx.orderByStatement()) {
+      const obcx = cx.orderByStatement()!;
+      return this.getOrderByStatement(obcx);
+    } else if (cx.whereStatement()) {
+      const whcx = cx.whereStatement()!;
+      const where = this.getWhere(whcx);
+      if (where === null) return null;
+      return where.map(w => ({
+        kind: 'where',
+        ...w,
+      }));
+    } else if (cx.havingStatement()) {
+      this.notAllowed(cx, 'Having statements');
+    } else if (cx.nestStatement()) {
+      const obcx = cx.nestStatement()!;
+      return this.getNestStatement(obcx);
+    } else if (cx.sampleStatement()) {
+      this.notAllowed(cx, 'Sample statements');
+    } else if (cx.timezoneStatement()) {
+      this.notAllowed(cx, 'Timezone statements');
+    } else if (cx.queryAnnotation() || cx.ignoredModelAnnotations()) {
+      this.notAllowed(cx, 'Detached annotation statements');
     }
     return null;
   }
@@ -371,9 +567,107 @@ export class MalloyToQuery
           },
         };
       }
+    } else if (cx.fieldDef()) {
+      const defCx = cx.fieldDef()!;
+      const annotations1 = this.getAnnotations(defCx.tags());
+      const annotations2 = this.getIsAnnotations(defCx.isDefine());
+      const name = getId(defCx.fieldNameDef());
+      const expression = this.getFieldExpression(defCx.fieldExpr());
+      if (expression === null) {
+        return null;
+      }
+      return {
+        name,
+        field: {
+          expression,
+          annotations: this.combineAnnotations(annotations1, annotations2),
+        },
+      };
     }
-    // TODO other kinds
     return null;
+  }
+
+  getFieldExpression(cx: parse.FieldExprContext): Malloy.Expression | null {
+    if (cx instanceof parse.ExprFieldPathContext) {
+      const {name, path} = this.getFieldPath(cx.fieldPath());
+      return {
+        kind: 'field_reference',
+        name,
+        path,
+      };
+    } else if (cx instanceof parse.ExprTimeTruncContext) {
+      const timeframe = this.getTimeframe(cx.timeframe());
+      const exprCx = cx.fieldExpr();
+      const expr = this.getFieldExpression(exprCx);
+      if (expr === null) {
+        return null;
+      }
+      if (timeframe === null) {
+        return null;
+      }
+      if (expr.kind !== 'field_reference') {
+        this.illegal(
+          exprCx,
+          'Left hand side of time truncation must be a field reference'
+        );
+        return null;
+      }
+      return {
+        kind: 'time_truncation',
+        truncation: timeframe,
+        field_reference: {
+          name: expr.name,
+          path: expr.path,
+          parameters: expr.parameters,
+        },
+      };
+    } else if (cx instanceof parse.ExprFieldPropsContext) {
+      const exprCx = cx.fieldExpr();
+      const expr = this.getFieldExpression(exprCx);
+      if (expr === null) {
+        return null;
+      }
+      if (expr.kind !== 'field_reference') {
+        this.illegal(
+          exprCx,
+          'Left hand side of filtered field must be a field reference'
+        );
+        return null;
+      }
+      const props = cx.fieldProperties().fieldPropertyStatement();
+      const where: Malloy.Where[] = [];
+      for (const prop of props) {
+        const whereCx = prop.whereStatement();
+        if (whereCx) {
+          const it = this.getWhere(whereCx);
+          if (it === null) return null;
+          where.push(...it);
+        }
+      }
+      return {
+        kind: 'filtered_field',
+        field_reference: {
+          name: expr.name,
+          path: expr.path,
+          parameters: expr.parameters,
+        },
+        where,
+      };
+    }
+    return null;
+  }
+
+  getWhere(_whereCx: parse.WhereStatementContext): Malloy.Where[] | null {
+    // const exprs = whereCx.filterClauseList().fieldExpr();
+    // TODO get filter expr...
+    return null;
+  }
+
+  protected combineAnnotations(
+    ...a: (Malloy.Annotation[] | undefined)[]
+  ): Malloy.Annotation[] | undefined {
+    const annotations = a.flatMap(a => a ?? []);
+    return annotations.length > 0 ? annotations : undefined;
   }
 }
 
