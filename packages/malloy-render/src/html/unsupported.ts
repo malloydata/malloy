@@ -43,14 +43,6 @@ export class HTMLUnsupportedRenderer implements Renderer {
     ) {
       return value.toString();
     }
-    if (typeof value === 'object') {
-      // TODO this probably doesn't work with the new data structure.
-      // Maybe borrow the JSON renderer's mapper?
-      const record = value as Record<string, unknown>;
-      if ('value' in record && typeof record['value'] === 'string') {
-        return record['value'];
-      }
-    }
     return JSON.stringify(value);
   }
 
