@@ -129,7 +129,7 @@ export function mapData(data: QueryData, schema: Malloy.Schema): Malloy.Data {
         kind: 'array_cell',
         array_value: value.map(value =>
           mapValue(value, {
-            name: 'foo',
+            name: 'array_element',
             type: (field.type as Malloy.AtomicTypeWithArrayType).element_type,
           })
         ),
@@ -150,7 +150,7 @@ export function mapData(data: QueryData, schema: Malloy.Schema): Malloy.Data {
       return mapRow(value as QueryDataRow, {
         kind: 'join',
         relationship: 'many',
-        name: 'foo',
+        name: 'array_element',
         schema: {
           fields: type.fields.map(
             f => ({kind: 'dimension', ...f}) as Malloy.FieldInfoWithDimension
@@ -165,11 +165,8 @@ export function mapData(data: QueryData, schema: Malloy.Schema): Malloy.Data {
   ): Malloy.Cell {
     const cells: Malloy.Cell[] = [];
     for (const f of field.schema.fields) {
-      // TODO this might not work for weird names? Is it always the case
-      // that the names returned from the DB always match the field names excactly?
       const value = row[f.name];
       if (f.kind !== 'dimension') {
-        // TODO this makes me think that the result schema should be a repeated record dimension instead of a schema
         throw new Error(
           'Invalid result -- expected all fields to be dimensions'
         );
