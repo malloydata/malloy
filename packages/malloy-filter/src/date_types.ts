@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {FilterLog} from './clause_types';
+import {FilterLog} from './filter_clause';
 
 export type DateTimeUnit =
   | 'year'
