@@ -3,10 +3,9 @@ import {unstable_translateTSDefToFlowDef} from 'flow-api-translator';
 import * as fs from 'fs';
 
 async function go() {
-  const skipFiles = ['expects.d.ts', 'query-ast.spec.d.ts'];
   const files = fs
     .readdirSync('./dist')
-    .filter(f => f.endsWith('.d.ts') && !skipFiles.includes(f));
+    .filter(f => f.endsWith('.d.ts') && !f.endsWith('.spec.d.ts'));
   if (fs.existsSync('./@flowtyped'))
     fs.rmdirSync('./@flowtyped', {recursive: true});
   fs.mkdirSync('./@flowtyped');
