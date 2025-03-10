@@ -18,10 +18,13 @@
     "build": "tsc --build",
     "prepublishOnly": "npm run clean && npm run build",
     "verify-types": "thrift-typescript --strictUnions --target thrift-server --sourceDir thrift --outDir generated-types malloy.thrift",
-    "generate-types": "rm -f generated-types/* && thrift-typescript --strictUnions --target thrift-server --sourceDir thrift --outDir generated-types malloy.thrift && ts-node scripts/hacky_gen_types.ts > src/types.ts && cd ../.. && eslint 'packages/malloy-interfaces/src/types.ts' --fix"
+    "generate-types": "npm run generate-typescript && npm run generate-flow",
+    "generate-typescript": "rm -f generated-types/* && thrift-typescript --strictUnions --target thrift-server --sourceDir thrift --outDir generated-types malloy.thrift && ts-node scripts/hacky_gen_types.ts > src/types.ts && cd ../.. && eslint 'packages/malloy-interfaces/src/types.ts' --fix",
+    "generate-flow": "ts-node scripts/gen_flow.ts"
   },
   "devDependencies": {
     "@creditkarma/thrift-typescript": "^3.7.6",
+    "flow-api-translator": "^0.26.0",
     "ts-node": "^10.9.2"
   },
   "dependencies": {
