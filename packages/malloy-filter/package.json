@@ -29,6 +29,7 @@
   "devDependencies": {
     "@types/moo": "^0.5.10",
     "@types/nearley": "^2.11.5",
+    "flow-api-translator": "^0.26.0",
     "rimraf": "^6.0.1"
   }
 }
