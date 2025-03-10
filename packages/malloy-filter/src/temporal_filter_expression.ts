@@ -8,6 +8,7 @@
 import {
   FilterParserReponse,
   isTemporalClause,
+  Moment,
   TemporalClause,
 } from './filter_clause';
 import ftemporal_grammar from './lib/ftemporal_parser';
@@ -41,9 +42,19 @@ export const TemporalFilterExpression = {
     switch (tc.operator) {
       case 'null':
         return tc.not ? 'not null' : 'null';
-      case 'literal':
-        return tc.not ? `not ${tc.literal}` : tc.literal;
+      case 'in': {
+        const inStr = momentToStr(tc.moment);
+        return tc.not ? `not ${inStr}` : inStr;
+      }
     }
     return 'UNPARSE ERROR: ' + JSON.stringify(tc, null, 2);
   },
 };
+
+function momentToStr(m: Moment): string {
+  switch (m.moment) {
+    case 'literal':
+      return m.literal;
+  }
+  return `(UNPARSE MOMENT ERROR ${JSON.stringify(m, null, 2)})`;
+}

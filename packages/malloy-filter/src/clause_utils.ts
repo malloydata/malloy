@@ -277,9 +277,33 @@ export function timeLiteral(
   literal: string,
   units?: TemporalUnit
 ): TemporalLiteral {
-  const ret: TemporalLiteral = {operator: 'literal', literal};
+  const ret: TemporalLiteral = {moment: 'literal', literal};
   if (units) {
     ret.units = units;
   }
   return ret;
+}
+
+export function mkUnits(unit_s: string): TemporalUnit | undefined {
+  switch (unit_s) {
+    case 'hour':
+    case 'hours':
+      return 'hour';
+    case 'day':
+    case 'days':
+      return 'day';
+    case 'week':
+    case 'weeks':
+      return 'week';
+    case 'month':
+    case 'months':
+      return 'month';
+    case 'quarter':
+    case 'quarters':
+      return 'quarter';
+    case 'year':
+    case 'years':
+      return 'year';
+  }
+  return undefined;
 }

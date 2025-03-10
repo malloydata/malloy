@@ -140,13 +140,13 @@ export type TemporalUnit =
   | 'quarter'
   | 'year';
 
-export interface TemporalLiteral extends ClauseBase, Negateable {
-  operator: 'literal';
+export interface TemporalLiteral {
+  moment: 'literal';
   units?: TemporalUnit;
   literal: string;
 }
 
-interface Duration {
+export interface Duration {
   units: TemporalUnit;
   n: string;
 }
@@ -188,6 +188,7 @@ export type Moment =
   | NowMoment
   | AgoMoment
   | FromNowMoment
+  | TemporalLiteral
   | DayMoment;
 
 export interface Before extends Negateable {
@@ -223,7 +224,6 @@ export type TemporalClause =
   | To
   | For
   | InMoment
-  | TemporalLiteral
   | ClauseChain<TemporalClause>
   | ClauseGroup<TemporalClause>;
 

@@ -8,7 +8,7 @@
 @preprocessor typescript
 @{%
 import moo from 'moo';
-import {temporalNot, joinTemporal, timeLiteral} from '../clause_utils';
+import {temporalNot, joinTemporal, timeLiteral, mkUnits} from '../clause_utils';
 
 const temporal_lexer = moo.compile({
   WS: /[ \t]+/,
@@ -89,7 +89,7 @@ temporalFilter ->
 temporalUnary ->
   %NOT:? clause {% ([notToken, op]) => temporalNot(op, notToken) %}
 
-duration -> number unit
+duration -> number unit {% ([n, units]) => ({units: mkUnits(units.text), n}) %}
 
 number ->
     %n {% ([numToken]) => numToken.text %}
@@ -102,20 +102,23 @@ unit ->
 clause ->
     %NULL_KW {% () => ({operator: 'null' }) %}
   | parens {% (data) => data[0] %}
-  | %BEFORE moment
-  | %AFTER moment
-  | moment %TO moment
-  | moment %FOR duration
-  | moment {% d => d[0] %}
+  | %BEFORE moment {% ([_, moment]) => ({operator: 'before', moment }) %}
+  | %AFTER moment {% ([_, moment]) => ({operator: 'after', moment }) %}
+  | moment %TO moment {% ([fromMoment, _, toMoment]) => ({operator: 'to', fromMoment, toMoment}) %}
+  | moment %FOR duration {% ([moment, duration]) => ({...duration, operator: 'for', moment}) %}
+  | moment {% ([moment]) => ({operator: 'in', moment}) %}
+
+justOne -> (%THIS | %NEXT | %LAST) {% ([token]) => token.text %}
 
 moment ->
-    %NOW
-  | (%THIS | %NEXT | %LAST) (unit | duration)
+    %NOW {% () => ({moment: 'now'}) %}
+  | justOne unit {% ([moment, units]) => ({moment, units}) %}
+  | justOne duration {% ([moment, duration]) => ({moment, duration}) %}
   | %TODAY {% () => ({moment: 'today'}) %}
   | %YESTERDAY {% () => ({moment: 'yesterday'}) %}
   | %TOMORROW {% () => ({moment: 'tomorrow'}) %}
-  | duration %AGO
-  | duration %FROM %NOW
+  | duration %AGO {% ([duration, _]) => ({moment: 'ago', duration}) %}
+  | duration %FROM %NOW {% ([duration, _]) => ({moment: 'from_now', duration}) %}
   | weekday {% ([dn]) => ({moment: dn.text.toLowerCase()}) %}
   | timeLiteral {% d => d[0] %}
 
