@@ -7,8 +7,9 @@ async function go() {
   const files = fs
     .readdirSync('./dist')
     .filter(f => f.endsWith('.d.ts') && !skipFiles.includes(f));
-  if (fs.existsSync('./flow')) fs.rmdirSync('./flow', {recursive: true});
-  fs.mkdirSync('./flow');
+  if (fs.existsSync('./@flowtyped'))
+    fs.rmdirSync('./@flowtyped', {recursive: true});
+  fs.mkdirSync('./@flowtyped');
   await Promise.all(
     files.map(async file => {
       // eslint-disable-next-line no-console
@@ -16,7 +17,7 @@ async function go() {
       const contents = fs.readFileSync(`./dist/${file}`, 'utf8');
       const flow = await unstable_translateTSDefToFlowDef(contents);
       await fs.promises.writeFile(
-        `./flow/${file.replace('.d.ts', '.flow.js')}`,
+        `./@flowtyped/${file.replace('.d.ts', '.js.flow')}`,
         flow
       );
     })
