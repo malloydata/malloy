@@ -56,7 +56,7 @@ import {
   PrestoQuery,
 } from '@prestodb/presto-js-client';
 import {randomUUID} from 'crypto';
-import {Trino, BasicAuth} from 'trino-client';
+import {Trino, type ConnectionOptions, BasicAuth} from 'trino-client';
 
 export interface TrinoManagerOptions {
   credentials?: {
@@ -75,6 +75,7 @@ export interface TrinoConnectionConfiguration {
   schema?: string;
   user?: string;
   password?: string;
+  extraConfig?: Partial<Omit<ConnectionOptions, keyof TrinoConnectionConfiguration>>;
 }
 
 export type TrinoConnectionOptions = ConnectionConfig;
@@ -142,6 +143,7 @@ class TrinoRunner implements BaseRunner {
   client: Trino;
   constructor(config: TrinoConnectionConfiguration) {
     this.client = Trino.create({
+      ...config.extraConfig,
       catalog: config.catalog,
       server: config.server,
       schema: config.schema,
