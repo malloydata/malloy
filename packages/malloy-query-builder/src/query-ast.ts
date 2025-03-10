@@ -76,10 +76,6 @@ abstract class ASTNode<T> {
         if (node instanceof ASTReference) return node;
         throw new Error('Not an ASTReference');
       },
-      SourceReference(): ASTSourceReference {
-        if (node instanceof ASTSourceReference) return node;
-        throw new Error('Not an ASTSourceReference');
-      },
       ReferenceQueryArrowSource(): ASTReferenceQueryArrowSource {
         if (node instanceof ASTReferenceQueryArrowSource) return node;
         throw new Error('Not an ASTReferenceQueryArrowSource');
@@ -193,8 +189,8 @@ abstract class ASTNode<T> {
       Reference(path: Path): ASTReference {
         return node.findAny(path).as.Reference();
       },
-      SourceReference(path: Path): ASTSourceReference {
-        return node.findAny(path).as.SourceReference();
+      ReferenceQueryArrowSource(path: Path): ASTReferenceQueryArrowSource {
+        return node.findAny(path).as.ReferenceQueryArrowSource();
       },
       ParameterValueList(path: Path): ASTParameterValueList {
         return node.findAny(path).as.ParameterValueList();
@@ -720,6 +716,14 @@ export class ASTQuery
     return this.definition.isRunnable();
   }
 
+  isEmpty() {
+    return (
+      this.definition instanceof ASTArrowQueryDefinition &&
+      this.definition.view instanceof ASTSegmentViewDefinition &&
+      this.definition.view.operations.length === 0
+    );
+  }
+
   /**
    * Gets an {@link ASTSegmentViewDefinition} for the "default" place to add query
    * operations, or creates one if it doesn't exist.
@@ -1066,44 +1070,6 @@ export class ASTFieldReference extends ASTReference {
   getFieldInfo() {
     const schema = this.getReferenceSchema();
     return ASTNode.schemaGet(schema, this.name, this.path);
-  }
-}
-
-export class ASTSourceReference extends ASTReference {
-  /**
-   * @internal
-   */
-  get query(): ASTQuery {
-    return this.parent.parent.as.Query();
-  }
-
-  /**
-   * Gets the `Malloy.SourceInfo` for the referenced source
-   *
-   * @returns The source information for the referenced source
-   */
-  public getSourceInfo(): Malloy.SourceInfo {
-    const info = this.query.model.entries.find(e => e.name === this.name);
-    if (info === undefined) {
-      throw new Error('No source info found');
-    }
-    return info;
-  }
-
-  public getSourceParameters(): Malloy.ParameterInfo[] {
-    return this.getSourceInfo().parameters ?? [];
-  }
-
-  areRequiredParametersSet() {
-    const sourceParameters = this.getSourceParameters();
-    for (const parameterInfo of sourceParameters) {
-      if (parameterInfo.default_value !== undefined) continue;
-      const parameter = this.tryGetParameter(parameterInfo.name);
-      if (parameter === undefined) {
-        return false;
-      }
-    }
-    return true;
   }
 }
 
@@ -1677,7 +1643,7 @@ export class ASTReferenceQueryArrowSource
   }
 
   isRunnable(): boolean {
-    return true;
+    return this.areRequiredParametersSet();
   }
 
   get name() {
@@ -1755,6 +1721,33 @@ export class ASTReferenceQueryArrowSource
 
   public tryGetParameter(name: string): ASTParameterValue | undefined {
     return ASTReference.tryGetParameter(this, name);
+  }
+
+  /**
+   * @internal
+   */
+  get query(): ASTQuery {
+    return this.parent.parent.as.Query();
+  }
+
+  public getSourceParameters(): Malloy.ParameterInfo[] {
+    const sourceInfo = this.getSourceInfo();
+    if (sourceInfo.kind === 'query') {
+      return [];
+    }
+    return sourceInfo.parameters ?? [];
+  }
+
+  areRequiredParametersSet() {
+    const sourceParameters = this.getSourceParameters();
+    for (const parameterInfo of sourceParameters) {
+      if (parameterInfo.default_value !== undefined) continue;
+      const parameter = this.tryGetParameter(parameterInfo.name);
+      if (parameter === undefined) {
+        return false;
+      }
+    }
+    return true;
   }
 }
 
