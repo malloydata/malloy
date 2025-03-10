@@ -155,13 +155,15 @@ ORDER BY 1 asc NULLS LAST
   describe('run query', () => {
     test('run query with table dependency', async () => {
       const data: Malloy.Data = {
-        kind: 'table',
-        rows: [
+        kind: 'array_cell',
+        array_value: [
           {
-            cells: [{kind: 'string_cell', string_value: 'WN'}],
+            kind: 'record_cell',
+            record_value: [{kind: 'string_cell', string_value: 'WN'}],
           },
           {
-            cells: [{kind: 'string_cell', string_value: 'AA'}],
+            kind: 'record_cell',
+            record_value: [{kind: 'string_cell', string_value: 'AA'}],
           },
         ],
       };

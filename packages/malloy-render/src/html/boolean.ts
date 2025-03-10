@@ -21,39 +21,35 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {AtomicFieldType, DataColumn, Explore, Field} from '@malloydata/malloy';
 import {HTMLTextRenderer} from './text';
 import {RendererFactory} from './renderer_factory';
 import {BooleanRenderOptions, StyleDefaults} from './data_styles';
 import {RendererOptions} from './renderer_types';
 import {Renderer} from './renderer';
+import {Cell, Field} from '../data_tree';
 
 export class HTMLBooleanRenderer extends HTMLTextRenderer {
-  override getText(data: DataColumn): string | null {
-    if (data.isNull()) {
+  override getText(data: Cell): string | null {
+    if (!data.isBoolean()) {
       return null;
     }
 
-    return `${data.boolean.value}`;
+    return `${data.value}`;
   }
 }
 
 export class BooleanRendererFactory extends RendererFactory<BooleanRenderOptions> {
   public static readonly instance = new BooleanRendererFactory();
 
-  activates(field: Field | Explore): boolean {
-    return (
-      field.hasParentExplore() &&
-      field.isAtomicField() &&
-      field.type === AtomicFieldType.Boolean
-    );
+  activates(field: Field): boolean {
+    return field.isBoolean();
   }
 
   create(
     document: Document,
     _styleDefaults: StyleDefaults,
     _rendererOptions: RendererOptions,
-    _field: Field | Explore,
+    _field: Field,
     _options: BooleanRenderOptions
   ): Renderer {
     return new HTMLBooleanRenderer(document);

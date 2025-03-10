@@ -1,14 +1,19 @@
-import {AtomicField, DataColumn} from '@malloydata/malloy';
-import {getDynamicValue} from '../html/utils';
+import {Cell, Field} from '../data_tree';
 
-export function renderLink(f: AtomicField, data: DataColumn) {
-  const {tag} = f.tagParse();
+export function renderLink(f: Field, data: Cell) {
+  const tag = f.tag;
   if (data.isNull()) return '∅';
   const value = String(data.value);
   const linkTag = tag.tag('link');
   if (!linkTag) throw new Error('Missing tag for Link renderer');
   // Read href component from field value or override with field tag if it exists
-  const hrefComponent = getDynamicValue<string>({tag: linkTag, data}) ?? value;
+  const dynamicRef = linkTag.text('field');
+  let hrefCell: Cell | undefined;
+  if (dynamicRef) {
+    hrefCell = data.getRelativeCell(dynamicRef);
+  }
+  hrefCell ??= data;
+  const hrefComponent = String(hrefCell.value);
 
   // if a URL template is provided, replace the data were '$$$' appears.
   const urlTemplate = linkTag.text('url_template');

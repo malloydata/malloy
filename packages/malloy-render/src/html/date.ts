@@ -21,19 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  AtomicFieldType,
-  DataColumn,
-  DateTimeframe,
-  Explore,
-  Field,
-  TimestampTimeframe,
-} from '@malloydata/malloy';
 import {Renderer} from './renderer';
 import {createErrorElement, createNullElement, timeToString} from './utils';
 import {StyleDefaults, TimeRenderOptions} from './data_styles';
 import {RendererOptions} from './renderer_types';
 import {RendererFactory} from './renderer_factory';
+import {Cell, Field} from '../data_tree';
 
 export class HTMLDateRenderer implements Renderer {
   constructor(
@@ -41,12 +34,12 @@ export class HTMLDateRenderer implements Renderer {
     private readonly queryTimezone: string | undefined
   ) {}
 
-  async render(data: DataColumn): Promise<HTMLElement> {
+  async render(data: Cell): Promise<HTMLElement> {
     if (data.isNull()) {
       return createNullElement(this.document);
     }
 
-    if (!data.isDate() && !data.isTimestamp()) {
+    if (!data.isTime()) {
       return createErrorElement(
         this.document,
         'Invalid field for date renderer'
@@ -54,10 +47,11 @@ export class HTMLDateRenderer implements Renderer {
     }
 
     const timeframe =
-      data.field.timeframe ||
-      (data.isTimestamp() ? TimestampTimeframe.Second : DateTimeframe.Day);
+      data.field.timeframe ?? (data.field.isDate() ? 'day' : 'second');
 
-    const timestring = timeToString(data.value, timeframe, this.queryTimezone);
+    const value = data.value;
+
+    const timestring = timeToString(value, timeframe, this.queryTimezone);
 
     const element = this.document.createElement('span');
     element.appendChild(this.document.createTextNode(timestring));
@@ -68,20 +62,15 @@ export class HTMLDateRenderer implements Renderer {
 export class DateRendererFactory extends RendererFactory<TimeRenderOptions> {
   public static readonly instance = new DateRendererFactory();
 
-  activates(field: Field | Explore): boolean {
-    return (
-      field.hasParentExplore() &&
-      field.isAtomicField() &&
-      (field.type === AtomicFieldType.Date ||
-        field.type === AtomicFieldType.Timestamp)
-    );
+  activates(field: Field): boolean {
+    return field.isTime();
   }
 
   create(
     document: Document,
     _styleDefaults: StyleDefaults,
     _rendererOptions: RendererOptions,
-    _field: Field | Explore,
+    _field: Field,
     _options: TimeRenderOptions,
     timezone?: string
   ): Renderer {

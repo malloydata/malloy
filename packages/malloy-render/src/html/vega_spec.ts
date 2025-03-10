@@ -22,7 +22,6 @@
  */
 
 import * as lite from 'vega-lite';
-import {DataColumn, Explore, Field} from '@malloydata/malloy';
 import {HTMLChartRenderer} from './chart';
 
 import {getColorScale} from './utils';
@@ -31,6 +30,7 @@ import {RendererOptions} from './renderer_types';
 import {RendererFactory} from './renderer_factory';
 import {Renderer} from './renderer';
 import {grayMedium, gridGray} from '../component/vega/base-vega-config';
+import {Cell, Field, RecordOrRepeatedRecordField} from '../data_tree';
 
 type DataContainer = Array<unknown> | Record<string, unknown>;
 
@@ -465,7 +465,7 @@ export class HTMLVegaSpecRenderer extends HTMLChartRenderer {
     document: Document,
     styleDefaults: StyleDefaults,
     options: RendererOptions,
-    field: Field | Explore,
+    field: Field,
     vegaRenderOptions: VegaRenderOptions
   ) {
     super(document, styleDefaults, options);
@@ -490,41 +490,37 @@ export class HTMLVegaSpecRenderer extends HTMLChartRenderer {
     }
   }
 
-  getDataValue(data: DataColumn): Date | string | number | null {
-    if (data.isNull()) {
-      return null;
-    } else if (
-      data.isTimestamp() ||
-      data.isDate() ||
-      data.isNumber() ||
-      data.isString()
-    ) {
+  getDataValue(data: Cell): Date | string | number | null {
+    if (data.isNull() || data.isString() || data.isNumber() || data.isTime()) {
       return data.value;
-    } else {
-      throw new Error('Invalid field type for vega chart.');
     }
+    throw new Error('Invalid data type for vega chart.');
   }
 
   getDataType(field: Field): 'ordinal' | 'quantitative' | 'nominal' {
-    if (field.isAtomicField()) {
-      if (field.isDate() || field.isTimestamp() || field.isString()) {
-        return 'nominal';
-      } else if (field.isNumber()) {
-        return 'quantitative';
-      }
+    if (field.isTime() || field.isString()) {
+      return 'nominal';
+    } else if (field.isNumber()) {
+      return 'quantitative';
     }
     throw new Error('Invalid field type for vega chart.');
   }
 
-  translateField(explore: Explore, fieldString: string): string {
+  translateField(
+    explore: RecordOrRepeatedRecordField,
+    fieldString: string
+  ): string {
     const m = fieldString.match(/#\{(\d+)\}/);
     if (m && m.groups) {
-      return explore.allFields[parseInt(m.groups[1]) - 1].name;
+      return explore.fields[parseInt(m.groups[1]) - 1].name;
     }
     return fieldString;
   }
 
-  translateFields(node: DataContainer, explore: Explore): void {
+  translateFields(
+    node: DataContainer,
+    explore: RecordOrRepeatedRecordField
+  ): void {
     if (Array.isArray(node)) {
       for (const e of node) {
         if (isDataContainer(e)) {
@@ -562,8 +558,8 @@ export class HTMLVegaSpecRenderer extends HTMLChartRenderer {
   //   return ret;
   // }
 
-  getVegaLiteSpec(data: DataColumn): lite.TopLevelSpec {
-    if (data.isNull() || !data.isArray()) {
+  getVegaLiteSpec(data: Cell): lite.TopLevelSpec {
+    if (!data.isRecordOrRepeatedRecord()) {
       throw new Error('Expected struct value not to be null.');
     }
 
@@ -571,7 +567,7 @@ export class HTMLVegaSpecRenderer extends HTMLChartRenderer {
 
     this.translateFields(newSpec as unknown as DataContainer, data.field);
     const rdata = {
-      values: this.mapData(data),
+      values: this.mapData(data.rows),
     };
     newSpec.data = rdata;
 
@@ -586,7 +582,7 @@ export class VegaRendererFactory extends RendererFactory<VegaRenderOptions> {
     document: Document,
     styleDefaults: StyleDefaults,
     rendererOptions: RendererOptions,
-    field: Field | Explore,
+    field: Field,
     options: VegaRenderOptions
   ): Renderer {
     return new HTMLVegaSpecRenderer(

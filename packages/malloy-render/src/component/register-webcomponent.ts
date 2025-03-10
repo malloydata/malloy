@@ -15,6 +15,7 @@ export default function registerWebComponent({
       register(
         'malloy-render',
         {
+          malloyResult: undefined,
           result: undefined,
           queryResult: undefined,
           modelDef: undefined,

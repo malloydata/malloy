@@ -1263,7 +1263,7 @@ describe('query builder', () => {
                 {
                   kind: 'group_by',
                   field: {
-                    annotations: [{value: '# a.b.c = 10'}],
+                    annotations: [{value: '# a.b.c = 10\n'}],
                     expression: {
                       kind: 'field_reference',
                       name: 'carrier',
@@ -1306,7 +1306,7 @@ describe('query builder', () => {
               operations: [],
             },
           },
-          annotations: [{value: '# a = foo'}],
+          annotations: [{value: '# a = foo\n'}],
         },
         malloy: dedent`
           # a = foo
@@ -1338,7 +1338,7 @@ describe('query builder', () => {
                 kind: 'dimension',
                 name: 'carrier',
                 type: {kind: 'string_type'},
-                annotations: [{value: '# a'}],
+                annotations: [{value: '# a\n'}],
               },
             ],
           },
@@ -1354,7 +1354,7 @@ describe('query builder', () => {
                 {
                   kind: 'group_by',
                   field: {
-                    annotations: [{value: '# -a'}],
+                    annotations: [{value: '# -a\n'}],
                     expression: {
                       kind: 'field_reference',
                       name: 'carrier',

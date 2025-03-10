@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 import * as Malloy from '@malloydata/malloy-interfaces';
 import {
   AtomicTypeDef,
@@ -175,6 +182,13 @@ function getResultMetadataAnnotation(
     tag.set(['calculation']);
     hasAny = true;
   }
+  if (resultMetadata.filterList) {
+    const drillFilters = resultMetadata.filterList
+      .filter(f => f.expressionType === 'scalar')
+      .map(f => f.code);
+    tag.set(['drill_filters'], drillFilters);
+    hasAny = true;
+  }
   if (resultMetadata.fieldKind === 'dimension') {
     const dot = '.';
     // If field is joined-in from another table i.e. of type `tableName.columnName`,
@@ -183,7 +197,7 @@ function getResultMetadataAnnotation(
       resultMetadata?.sourceExpression ||
       (resultMetadata?.sourceField.includes(dot)
         ? resultMetadata?.sourceField
-        : field.name);
+        : identifierCode(field.name));
     tag.set(['drill_expression'], drillExpression);
     hasAny = true;
   }
@@ -194,7 +208,16 @@ function getResultMetadataAnnotation(
     : undefined;
 }
 
-function getResultStructMetadataAnnotation(
+function escapeIdentifier(str: string) {
+  return str.replace(/\\/g, '\\\\').replace(/`/g, '\\`');
+}
+
+function identifierCode(name: string) {
+  if (name.match(/^[A-Za-z_][0-9A-Za-z_]*$/)) return name;
+  return `\`${escapeIdentifier(name)}\``;
+}
+
+export function getResultStructMetadataAnnotation(
   field: SourceDef,
   resultMetadata: ResultStructMetadataDef
 ): Malloy.Annotation | undefined {
@@ -204,12 +227,22 @@ function getResultStructMetadataAnnotation(
     tag.set(['limit'], resultMetadata.limit);
     hasAny = true;
   }
+  if (resultMetadata.filterList) {
+    const drillFilters = resultMetadata.filterList
+      .filter(f => f.expressionType === 'scalar')
+      .map(f => f.code);
+    if (drillFilters.length > 0) {
+      tag.set(['drill_filters'], drillFilters);
+      hasAny = true;
+    }
+  }
   if (resultMetadata.orderBy) {
     for (let i = 0; i < resultMetadata.orderBy.length; i++) {
       const orderBy = resultMetadata.orderBy[i];
       const orderByField =
         typeof orderBy.field === 'number'
-          ? field.fields[orderBy.field].as ?? field.fields[orderBy.field].name
+          ? field.fields[orderBy.field - 1].as ??
+            field.fields[orderBy.field - 1].name
           : orderBy.field;
       const direction = orderBy.dir ?? null;
       tag.set(['ordered_by', i, orderByField], direction);
