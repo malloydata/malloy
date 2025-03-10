@@ -543,6 +543,13 @@ export function statedCompileQuery(
           .set(['source_name'], translatedQuery.sourceExplore)
           .toString(),
       });
+      if (translatedQuery.queryName) {
+        annotations.push({
+          value: Tag.withPrefix('#(malloy) ')
+            .set(['query_name'], translatedQuery.queryName)
+            .toString(),
+        });
+      }
       return {
         result: {
           sql: translatedQuery.sql,

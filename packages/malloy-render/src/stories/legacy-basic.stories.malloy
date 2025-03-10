@@ -360,8 +360,7 @@ source: location_data is duckdb.sql(
   """
 ) extend {
   #(story) story="Point Map"
-  # point_map
-  view: points is {
+  view: points_point_map is {
     timezone: 'America/Mexico_City'
     group_by: latitude, longitude, times
       aggregate:

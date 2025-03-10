@@ -29,9 +29,11 @@ export function getDataTree(result: Malloy.Result) {
     }
   }
 
+  const metadataTag = tagFromAnnotations(result.annotations, '#(malloy) ');
+  const rootName = metadataTag.text('query_name') ?? 'root';
   const rootFieldMeta = new RootField(
     {
-      name: 'root',
+      name: rootName,
       type: {
         kind: 'array_type',
         element_type: {

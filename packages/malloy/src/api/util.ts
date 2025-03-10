@@ -212,6 +212,11 @@ export function wrapResult(result: Result): Malloy.Result {
         .toString(),
     });
   }
+  annotations.push({
+    value: Tag.withPrefix('#(malloy) ')
+      .set(['query_name'], result.resultExplore.name)
+      .toString(),
+  });
   return {
     schema,
     data: mapData(result.data.toObject(), schema),
