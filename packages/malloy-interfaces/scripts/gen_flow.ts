@@ -15,7 +15,10 @@ async function go() {
       console.log(`Generating flow types for file ${file}`);
       const contents = fs.readFileSync(`./dist/${file}`, 'utf8');
       const flow = await unstable_translateTSDefToFlowDef(contents);
-      await fs.promises.writeFile(`./flow/${file}`, flow);
+      await fs.promises.writeFile(
+        `./flow/${file.replace('.d.ts', '.flow.js')}`,
+        flow
+      );
     })
   );
 }
