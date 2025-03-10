@@ -1,6 +1,7 @@
 build/
 packages/malloy-malloy-sql/src/grammar
 packages/malloy-syntax-highlight/**/*.monarch.ts
+packages/malloy-interfaces/docs
 packages/malloy-query-builder/docs
 packages/malloy-tag/src/lib
 packages/malloy-render/storybook-static
