@@ -7,19 +7,22 @@
 
 import {Tag} from '@malloydata/malloy-tag';
 import {annotationToTaglines} from '../annotation';
-import {InfoConnection as OldConnection} from '../connection';
+import {
+  InfoConnection as LegacyInfoConnection,
+  Connection as LegacyConnection,
+} from '../connection';
 import {Result} from '../malloy';
 import {QueryData, QueryDataRow, QueryValue} from '../model';
 import {
   convertFieldInfos,
   getResultStructMetadataAnnotation,
 } from '../to_stable';
-import {InfoConnection} from './connection';
+import {Connection, InfoConnection} from './connection';
 import * as Malloy from '@malloydata/malloy-interfaces';
 import {DateTime} from 'luxon';
 
-export function wrapOldStyleConnection(
-  connection: OldConnection
+export function wrapLegacyInfoConnection(
+  connection: LegacyInfoConnection
 ): InfoConnection {
   return {
     get dialectName() {
@@ -53,6 +56,16 @@ export function wrapOldStyleConnection(
       return {
         fields: convertFieldInfos(table, table.fields),
       };
+    },
+  };
+}
+
+export function wrapLegacyConnection(connection: LegacyConnection): Connection {
+  return {
+    ...wrapLegacyInfoConnection(connection),
+    runSQL: async (sql: string, schema: Malloy.Schema) => {
+      const result = await connection.runSQL(sql);
+      return mapData(result.rows, schema);
     },
   };
 }

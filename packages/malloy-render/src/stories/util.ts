@@ -60,34 +60,13 @@ export async function runQuery({
       },
     },
   };
-  const lookupInfoConnection: API.LookupConnection<API.InfoConnection> = {
+  const lookupConnection: API.LookupConnection<API.Connection> = {
     async lookupConnection(_name: string) {
       return wrappedConnection;
     },
   };
   const conn = await connection;
-  const wrappedConnection = API.util.wrapOldStyleConnection(conn);
-  const preparedResult = await API.asynchronous.compileQuery(
-    {
-      model_url: 'file:///script.malloy',
-      query,
-    },
-    {
-      urls: urlReader,
-      connections: lookupInfoConnection,
-    }
-  );
-  const lookupConnection: API.LookupConnection<API.Connection> = {
-    async lookupConnection(_name: string) {
-      return {
-        ...wrappedConnection,
-        runSQL: async (sql: string) => {
-          const result = await conn.runSQL(sql);
-          return API.util.mapData(result.rows, preparedResult.result!.schema);
-        },
-      };
-    },
-  };
+  const wrappedConnection = API.util.wrapLegacyConnection(conn);
   const result = await API.asynchronous.runQuery(
     {
       model_url: 'file:///script.malloy',

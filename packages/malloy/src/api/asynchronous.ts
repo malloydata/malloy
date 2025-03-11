@@ -193,7 +193,10 @@ export async function runQuery(
     const connection = await fetchers.connections.lookupConnection(
       compiled.result.connection_name
     );
-    const data = await connection.runSQL(compiled.result.sql);
+    const data = await connection.runSQL(
+      compiled.result.sql,
+      compiled.result.schema
+    );
     return {
       ...compiled,
       result: {
