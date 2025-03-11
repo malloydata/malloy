@@ -53,7 +53,10 @@ export async function runQuery({
   const query: Malloy.Query = {
     definition: {
       kind: 'arrow',
-      source_reference: {name: source},
+      source: {
+        kind: 'source_reference',
+        name: source,
+      },
       view: {
         kind: 'view_reference',
         name: view,
