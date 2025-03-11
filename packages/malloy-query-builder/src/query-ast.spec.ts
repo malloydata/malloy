@@ -342,7 +342,7 @@ describe('query builder', () => {
     expect((q: ASTQuery) => {
       q.getOrAddDefaultSegment().addWhere('carrier', {
         kind: 'string',
-        clauses: [{operator: '=', values: ['WN', 'AA']}],
+        clauses: {operator: '=', values: ['WN', 'AA']},
       });
     }).toModifyQuery({
       model: flights_model,
@@ -385,7 +385,7 @@ describe('query builder', () => {
       function add(str: string) {
         segment.addWhere('carrier', {
           kind: 'string',
-          clauses: [{operator: '=', values: [str]}],
+          clauses: {operator: '=', values: [str]},
         });
       }
       add("'");

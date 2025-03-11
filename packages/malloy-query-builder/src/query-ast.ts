@@ -8,11 +8,12 @@ import * as Malloy from '@malloydata/malloy-interfaces';
 import {Tag, TagSetValue} from '@malloydata/malloy-tag';
 import * as Filter from '@malloydata/malloy-filter';
 
+export type FilterType = 'string' | 'boolean' | 'number' | 'temporal';
 export type ParsedFilter =
-  | {kind: 'string'; clauses: Filter.StringClause[]}
-  | {kind: 'number'; clauses: Filter.NumberClause[]}
-  | {kind: 'boolean'; clauses: Filter.BooleanClause[]}
-  | {kind: 'date'; clauses: Filter.DateClause[]};
+  | {kind: 'string'; clauses: Filter.StringClause | null}
+  | {kind: 'number'; clauses: Filter.NumberClause | null}
+  | {kind: 'boolean'; clauses: Filter.BooleanClause | null}
+  | {kind: 'temporal'; clauses: Filter.TemporalClause | null};
 
 export type PathSegment = number | string;
 export type Path = PathSegment[];
@@ -4147,7 +4148,7 @@ export class ASTFilterWithFilterString extends ASTObjectNode<
     return field;
   }
 
-  getFilterType(): 'string' | 'boolean' | 'number' | 'date' | 'other' {
+  getFilterType(): FilterType | 'other' {
     const fieldInfo = this.getFieldInfo();
     return getFilterType(fieldInfo);
   }
@@ -4509,20 +4510,25 @@ function tagFromAnnotations(
 function serializeFilter(filter: ParsedFilter) {
   switch (filter.kind) {
     case 'string':
-      return new Filter.StringSerializer(filter.clauses).serialize();
+      return filter.clauses
+        ? Filter.StringFilterExpression.unparse(filter.clauses)
+        : '';
     case 'number':
-      return new Filter.NumberSerializer(filter.clauses).serialize();
+      return filter.clauses
+        ? Filter.NumberFilterExpression.unparse(filter.clauses)
+        : '';
     case 'boolean':
-      return new Filter.BooleanSerializer(filter.clauses).serialize();
-    case 'date':
-      return new Filter.DateSerializer(filter.clauses).serialize();
+      return filter.clauses
+        ? Filter.BooleanFilterExpression.unparse(filter.clauses)
+        : '';
+    case 'temporal':
+      return filter.clauses
+        ? Filter.TemporalFilterExpression.unparse(filter.clauses)
+        : '';
   }
 }
 
-function parseFilter(
-  filterString: string,
-  kind: 'string' | 'number' | 'boolean' | 'date' | 'other'
-) {
+function parseFilter(filterString: string, kind: FilterType | 'other') {
   function handleError(logs: Filter.FilterLog[]) {
     const errors = logs.filter(l => l.severity === 'error');
     if (errors.length === 0) return;
@@ -4530,24 +4536,24 @@ function parseFilter(
   }
   switch (kind) {
     case 'string': {
-      const result = new Filter.StringParser(filterString).parse();
-      handleError(result.logs);
-      return {kind, clauses: result.clauses};
+      const result = Filter.StringFilterExpression.parse(filterString);
+      handleError(result.log);
+      return {kind, clauses: result.parsed};
     }
     case 'number': {
-      const result = new Filter.NumberParser(filterString).parse();
-      handleError(result.logs);
-      return {kind, clauses: result.clauses};
+      const result = Filter.NumberFilterExpression.parse(filterString);
+      handleError(result.log);
+      return {kind, clauses: result.parsed};
     }
     case 'boolean': {
-      const result = new Filter.BooleanParser(filterString).parse();
-      handleError(result.logs);
-      return {kind, clauses: result.clauses};
+      const result = Filter.BooleanFilterExpression.parse(filterString);
+      handleError(result.log);
+      return {kind, clauses: result.parsed};
     }
-    case 'date': {
-      const result = new Filter.DateParser(filterString).parse();
-      handleError(result.logs);
-      return {kind, clauses: result.clauses};
+    case 'temporal': {
+      const result = Filter.TemporalFilterExpression.parse(filterString);
+      handleError(result.log);
+      return {kind, clauses: result.parsed};
     }
     case 'other':
       throw new Error('Not implemented');
@@ -4608,7 +4614,7 @@ function pathsMatch(a: string[] | undefined, b: string[] | undefined): boolean {
 
 function getFilterType(
   fieldInfo: Malloy.FieldInfoWithDimension | Malloy.FieldInfoWithMeasure
-): 'string' | 'boolean' | 'number' | 'date' | 'other' {
+): FilterType | 'other' {
   switch (fieldInfo.type.kind) {
     case 'string_type':
       return 'string';
@@ -4618,7 +4624,7 @@ function getFilterType(
       return 'number';
     case 'date_type':
     case 'timestamp_type':
-      return 'date';
+      return 'temporal';
     default:
       return 'other';
   }
