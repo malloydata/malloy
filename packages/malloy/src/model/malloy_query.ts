@@ -3398,14 +3398,20 @@ class QueryQuery extends QueryField {
           }
           r = r.parent;
         }
+
+        let partition = '';
+        if (dimensions.length > 0) {
+          partition = 'partition by ';
+          partition += dimensions
+            .map(this.parent.dialect.castToString)
+            .join(',');
+        }
         fields.push(
           `MAX(CASE WHEN group_set IN (${result.childGroups.join(
             ','
           )}) THEN __delete__${
             result.groupSet
-          } END) OVER(partition by ${dimensions
-            .map(this.parent.dialect.castToString)
-            .join(',')}) as __shaving__${result.groupSet}`
+          } END) OVER(${partition}) as __shaving__${result.groupSet}`
         );
       }
     }
