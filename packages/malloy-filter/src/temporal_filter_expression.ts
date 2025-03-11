@@ -39,7 +39,10 @@ export const TemporalFilterExpression = {
       ],
     };
   },
-  unparse(tc: TemporalClause): string {
+  unparse(tc: TemporalClause | null): string {
+    if (tc === null) {
+      return '';
+    }
     switch (tc.operator) {
       case 'null':
         return notStr(tc, 'null');

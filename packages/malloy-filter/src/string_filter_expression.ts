@@ -43,7 +43,10 @@ export const StringFilterExpression = {
       ],
     };
   },
-  unparse(sc: StringClause): string {
+  unparse(sc: StringClause | null): string {
+    if (sc === null) {
+      return '';
+    }
     switch (sc.operator) {
       case '=':
         if (sc.not) {

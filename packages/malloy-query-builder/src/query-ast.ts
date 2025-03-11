@@ -10,10 +10,10 @@ import * as Filter from '@malloydata/malloy-filter';
 
 export type FilterType = 'string' | 'boolean' | 'number' | 'temporal';
 export type ParsedFilter =
-  | {kind: 'string'; clauses: Filter.StringClause | null}
-  | {kind: 'number'; clauses: Filter.NumberClause | null}
-  | {kind: 'boolean'; clauses: Filter.BooleanClause | null}
-  | {kind: 'temporal'; clauses: Filter.TemporalClause | null};
+  | {kind: 'string'; parsed: Filter.StringClause | null}
+  | {kind: 'number'; parsed: Filter.NumberClause | null}
+  | {kind: 'boolean'; parsed: Filter.BooleanClause | null}
+  | {kind: 'temporal'; parsed: Filter.TemporalClause | null};
 
 export type PathSegment = number | string;
 export type Path = PathSegment[];
@@ -4510,21 +4510,13 @@ function tagFromAnnotations(
 function serializeFilter(filter: ParsedFilter) {
   switch (filter.kind) {
     case 'string':
-      return filter.clauses
-        ? Filter.StringFilterExpression.unparse(filter.clauses)
-        : '';
+      return Filter.StringFilterExpression.unparse(filter.parsed);
     case 'number':
-      return filter.clauses
-        ? Filter.NumberFilterExpression.unparse(filter.clauses)
-        : '';
+      return Filter.NumberFilterExpression.unparse(filter.parsed);
     case 'boolean':
-      return filter.clauses
-        ? Filter.BooleanFilterExpression.unparse(filter.clauses)
-        : '';
+      return Filter.BooleanFilterExpression.unparse(filter.parsed);
     case 'temporal':
-      return filter.clauses
-        ? Filter.TemporalFilterExpression.unparse(filter.clauses)
-        : '';
+      return Filter.TemporalFilterExpression.unparse(filter.parsed);
   }
 }
 
@@ -4538,22 +4530,22 @@ function parseFilter(filterString: string, kind: FilterType | 'other') {
     case 'string': {
       const result = Filter.StringFilterExpression.parse(filterString);
       handleError(result.log);
-      return {kind, clauses: result.parsed};
+      return {kind, parsed: result.parsed};
     }
     case 'number': {
       const result = Filter.NumberFilterExpression.parse(filterString);
       handleError(result.log);
-      return {kind, clauses: result.parsed};
+      return {kind, parsed: result.parsed};
     }
     case 'boolean': {
       const result = Filter.BooleanFilterExpression.parse(filterString);
       handleError(result.log);
-      return {kind, clauses: result.parsed};
+      return {kind, parsed: result.parsed};
     }
     case 'temporal': {
       const result = Filter.TemporalFilterExpression.parse(filterString);
       handleError(result.log);
-      return {kind, clauses: result.parsed};
+      return {kind, parsed: result.parsed};
     }
     case 'other':
       throw new Error('Not implemented');

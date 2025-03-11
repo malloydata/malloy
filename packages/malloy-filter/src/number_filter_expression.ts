@@ -29,7 +29,10 @@ export const NumberFilterExpression = {
       ],
     };
   },
-  unparse(nc: NumberClause): string {
+  unparse(nc: NumberClause | null): string {
+    if (nc === null) {
+      return '';
+    }
     switch (nc.operator) {
       case '=':
       case '!=':

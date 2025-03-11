@@ -43,7 +43,10 @@ export const BooleanFilterExpression = {
     }
     return ret;
   },
-  unparse(bc: BooleanClause): string {
+  unparse(bc: BooleanClause | null): string {
+    if (bc === null) {
+      return '';
+    }
     const n = bc.not ? 'not ' : '';
     switch (bc.operator) {
       case 'true':
