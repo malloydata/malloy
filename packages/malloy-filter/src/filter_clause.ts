@@ -9,6 +9,10 @@ export interface ClauseBase {
   operator: string;
 }
 
+export function isClauseBase(o: Object): o is ClauseBase {
+  return 'operator' in o;
+}
+
 interface Negateable {
   not?: boolean;
 }

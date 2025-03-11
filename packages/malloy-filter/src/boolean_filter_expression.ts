@@ -28,13 +28,14 @@ export const BooleanFilterExpression = {
       ret.parsed = {operator: 'null', not: true};
     } else {
       const nonSpace = srcText.match(/[^\s]/);
+      const startIndex = nonSpace ? nonSpace.index ?? 0 : 0;
       ret.log = [
         {
           message:
             'Illegal boolean filter. Must be one of true,false,=false,null,not null',
           severity: 'error',
-          startIndex: nonSpace ? nonSpace.index ?? 0 : 0,
-          endIndex: srcText.length - 1,
+          startIndex,
+          endIndex: startIndex + srcText.length - 1,
         },
       ];
     }

@@ -14,30 +14,18 @@ import {
 } from './filter_clause';
 import ftemporal_grammar from './lib/ftemporal_parser';
 import * as nearley from 'nearley';
+import {run_parser} from './nearley_parse';
 
 export const TemporalFilterExpression = {
   parse(src: string): FilterParserReponse<TemporalClause> {
     const ftemporal_parser = new nearley.Parser(
       nearley.Grammar.fromCompiled(ftemporal_grammar)
     );
-    ftemporal_parser.feed(src);
-    const results = ftemporal_parser.finish();
-    const expr = results[0];
-    if (isTemporalClause(expr)) {
-      return {parsed: expr, log: []};
+    const parse_result = run_parser(src, ftemporal_parser);
+    if (parse_result.parsed && isTemporalClause(parse_result.parsed)) {
+      return {parsed: parse_result.parsed, log: []};
     }
-    // mtoy todo catch parse errors and reflect the error position at least
-    return {
-      parsed: null,
-      log: [
-        {
-          message: 'Parse did not return a legal expression',
-          startIndex: 0,
-          endIndex: src.length - 1,
-          severity: 'error',
-        },
-      ],
-    };
+    return {parsed: null, log: parse_result.log};
   },
   unparse(tc: TemporalClause | null): string {
     if (tc === null) {

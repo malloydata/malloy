@@ -4,30 +4,19 @@ import {
   NumberClause,
 } from './filter_clause';
 import * as nearley from 'nearley';
-import fstring_grammar from './lib/fexpr_string_parser';
+import fnumber_grammar from './lib/fexpr_number_parser';
+import {run_parser} from './nearley_parse';
 
 export const NumberFilterExpression = {
   parse(src: string): FilterParserReponse<NumberClause> {
-    const fstring_parser = new nearley.Parser(
-      nearley.Grammar.fromCompiled(fstring_grammar)
+    const fnumber_parser = new nearley.Parser(
+      nearley.Grammar.fromCompiled(fnumber_grammar)
     );
-    fstring_parser.feed(src);
-    const results = fstring_parser.finish();
-    const expr = results[0];
-    if (isNumberClause(expr)) {
-      return {parsed: expr, log: []};
+    const parse_result = run_parser(src, fnumber_parser);
+    if (parse_result.parsed && isNumberClause(parse_result.parsed)) {
+      return {parsed: parse_result.parsed, log: []};
     }
-    return {
-      parsed: null,
-      log: [
-        {
-          message: 'Parse did not return a legal expression',
-          startIndex: 0,
-          endIndex: src.length - 1,
-          severity: 'error',
-        },
-      ],
-    };
+    return {parsed: null, log: parse_result.log};
   },
   unparse(nc: NumberClause | null): string {
     if (nc === null) {

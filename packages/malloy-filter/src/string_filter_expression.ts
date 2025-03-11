@@ -13,6 +13,7 @@ import {
 import * as nearley from 'nearley';
 import fstring_grammar from './lib/fexpr_string_parser';
 import {escape} from './clause_utils';
+import {run_parser} from './nearley_parse';
 
 // This could be mistake, I am replacing the hand coded lexer and parsers
 // which previously existed with nearley/moo -- As the language is still
@@ -24,24 +25,11 @@ export const StringFilterExpression = {
     const fstring_parser = new nearley.Parser(
       nearley.Grammar.fromCompiled(fstring_grammar)
     );
-    fstring_parser.feed(src);
-    const results = fstring_parser.finish();
-    const expr = results[0];
-    if (isStringClause(expr)) {
-      return {parsed: expr, log: []};
+    const parse_result = run_parser(src, fstring_parser);
+    if (parse_result.parsed && isStringClause(parse_result.parsed)) {
+      return {parsed: parse_result.parsed, log: []};
     }
-    // mtoy todo catch parse errors and reflect the error position at least
-    return {
-      parsed: null,
-      log: [
-        {
-          message: 'Parse did not return a legal expression',
-          startIndex: 0,
-          endIndex: src.length - 1,
-          severity: 'error',
-        },
-      ],
-    };
+    return {parsed: null, log: parse_result.log};
   },
   unparse(sc: StringClause | null): string {
     if (sc === null) {

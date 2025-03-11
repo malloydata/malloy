@@ -375,8 +375,15 @@ describe('string filter expressions', () => {
       ],
     });
   });
-  // mtoy todo parse an error, make sure it doesn't throw
-  test.todo(
-    'write many malformed expressions and generate reasonable errors for them'
-  );
+  // very hard to have syntax errors in strings ...
+  test('syntax error in column 0', () => {
+    const p = StringFilterExpression.parse(',');
+    const msg = p.log[0];
+    expect(msg).toMatchObject({startIndex: 0, endIndex: 0, severity: 'error'});
+  });
+  test('syntax error in column 4', () => {
+    const p = StringFilterExpression.parse('abc,,');
+    const msg = p.log[0];
+    expect(msg).toMatchObject({startIndex: 4, endIndex: 4, severity: 'error'});
+  });
 });
