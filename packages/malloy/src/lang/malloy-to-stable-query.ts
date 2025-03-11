@@ -21,13 +21,9 @@ import {
 } from './parse-log';
 import {getId} from './parse-utils';
 import {DocumentLocation, isTimestampUnit} from '../model/malloy_types';
-import {
-  getSourceInfo,
-  ParseInfo,
-  rangeFromContext,
-  runMalloyParser,
-} from './run-malloy-parser';
+import {runMalloyParser} from './run-malloy-parser';
 import {mapLogs} from '../api/core';
+import {getSourceInfo, ParseInfo, rangeFromContext} from './utils';
 
 type HasAnnotations = ParserRuleContext & {ANNOTATION: () => TerminalNode[]};
 

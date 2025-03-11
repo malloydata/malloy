@@ -15,7 +15,7 @@ import {
   LogMessageOptions,
   makeLogMessage,
 } from '../parse-log';
-import {rangeFromToken, SourceInfo} from '../run-malloy-parser';
+import {rangeFromToken, SourceInfo} from '../utils';
 
 // A set of custom error messages and their triggering cases,
 // used for syntax error message re-writing when ANTLR would

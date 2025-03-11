@@ -60,8 +60,7 @@ import {
 } from '../model/malloy_types';
 import {Tag} from '@malloydata/malloy-tag';
 import {ConstantExpression} from './ast/expressions/constant-expression';
-import {isNotUndefined} from './utils';
-import {rangeFromContext} from './run-malloy-parser';
+import {isNotUndefined, rangeFromContext} from './utils';
 
 class ErrorNode extends ast.SourceQueryElement {
   elementType = 'parseErrorSourceQuery';

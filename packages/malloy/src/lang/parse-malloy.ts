@@ -75,18 +75,18 @@ import {
   ModelAnnotationResponse,
   TablePathResponse,
 } from './translate-response';
-import {locationContainsPosition} from './utils';
+import {
+  getSourceInfo,
+  locationContainsPosition,
+  rangeFromContext,
+} from './utils';
 import {Tag} from '@malloydata/malloy-tag';
 import {MalloyParseInfo} from './malloy-parse-info';
 import {walkForModelAnnotation} from './parse-tree-walkers/model-annotation-walker';
 import {walkForTablePath} from './parse-tree-walkers/find-table-path-walker';
 import {EventStream} from '../runtime_types';
 import {annotationToTag} from '../annotation';
-import {
-  getSourceInfo,
-  rangeFromContext,
-  runMalloyParser,
-} from './run-malloy-parser';
+import {runMalloyParser} from './run-malloy-parser';
 import {ParserRuleContext} from 'antlr4ts';
 
 export type StepResponses =
