@@ -7,7 +7,7 @@ async function go() {
     .readdirSync('./dist')
     .filter(f => f.endsWith('.d.ts') && !f.endsWith('.spec.d.ts'));
   if (fs.existsSync('./@flowtyped'))
-    fs.rmdirSync('./@flowtyped', {recursive: true});
+    fs.rmSync('./@flowtyped', {recursive: true});
   fs.mkdirSync('./@flowtyped');
   await Promise.all(
     files.map(async file => {
