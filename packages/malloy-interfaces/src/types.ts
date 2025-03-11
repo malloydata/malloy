@@ -77,7 +77,8 @@ export type CellType =
   | 'json_cell'
   | 'record_cell'
   | 'array_cell'
-  | 'table_cell';
+  | 'null_cell'
+  | 'sql_native_cell';
 export type Cell =
   | CellWithStringCell
   | CellWithBooleanCell
@@ -87,7 +88,8 @@ export type Cell =
   | CellWithJSONCell
   | CellWithRecordCell
   | CellWithArrayCell
-  | CellWithTableCell;
+  | CellWithNullCell
+  | CellWithSQLNativeCell;
 export type CellWithStringCell = {kind: 'string_cell'} & StringCell;
 export type CellWithBooleanCell = {kind: 'boolean_cell'} & BooleanCell;
 export type CellWithDateCell = {kind: 'date_cell'} & DateCell;
@@ -96,7 +98,8 @@ export type CellWithNumberCell = {kind: 'number_cell'} & NumberCell;
 export type CellWithJSONCell = {kind: 'json_cell'} & JSONCell;
 export type CellWithRecordCell = {kind: 'record_cell'} & RecordCell;
 export type CellWithArrayCell = {kind: 'array_cell'} & ArrayCell;
-export type CellWithTableCell = {kind: 'table_cell'} & TableCell;
+export type CellWithNullCell = {kind: 'null_cell'} & NullCell;
+export type CellWithSQLNativeCell = {kind: 'sql_native_cell'} & SQLNativeCell;
 export type CompileModelRequest = {
   model_url: string;
   extend_model_url?: string;
@@ -139,10 +142,10 @@ export type Connection = {
   name: string;
   dialect?: string;
 };
-export type DataType = 'record' | 'table';
-export type Data = DataWithRecord | DataWithTable;
-export type DataWithRecord = {kind: 'record'} & RecordCell;
-export type DataWithTable = {kind: 'table'} & Table;
+export type DataType = 'record_cell' | 'array_cell';
+export type Data = DataWithRecordCell | DataWithArrayCell;
+export type DataWithRecordCell = {kind: 'record_cell'} & RecordCell;
+export type DataWithArrayCell = {kind: 'array_cell'} & ArrayCell;
 export type DateCell = {
   date_value: string;
 };
@@ -292,6 +295,7 @@ export type Nest = {
   name?: string;
   view: View;
 };
+export type NullCell = {};
 export type NullLiteral = {};
 export type NumberCell = {
   number_value: number;
@@ -326,9 +330,19 @@ export type Query = {
   annotations?: Array<Annotation>;
 };
 export type QueryArrow = {
-  source_reference: Reference;
+  source: QueryArrowSource;
   view: ViewDefinition;
 };
+export type QueryArrowSourceType = 'refinement' | 'source_reference';
+export type QueryArrowSource =
+  | QueryArrowSourceWithRefinement
+  | QueryArrowSourceWithSourceReference;
+export type QueryArrowSourceWithRefinement = {
+  kind: 'refinement';
+} & QueryRefinement;
+export type QueryArrowSourceWithSourceReference = {
+  kind: 'source_reference';
+} & Reference;
 export type QueryDefinitionType = 'arrow' | 'query_reference' | 'refinement';
 export type QueryDefinition =
   | QueryDefinitionWithArrow
@@ -350,7 +364,7 @@ export type QueryInfo = {
   location?: Location;
 };
 export type QueryRefinement = {
-  query_reference: Reference;
+  base: QueryDefinition;
   refinement: ViewDefinition;
 };
 export type Range = {
@@ -374,9 +388,9 @@ export type Result = {
   schema: Schema;
   sql?: string;
   connection_name: string;
-};
-export type Row = {
-  cells: Array<Cell>;
+  annotations?: Array<Annotation>;
+  model_annotations?: Array<Annotation>;
+  query_timezone?: string;
 };
 export type RunIndexQueryRequest = {
   model_url: string;
@@ -396,6 +410,9 @@ export type RunQueryResponse = {
   result?: Result;
   logs?: Array<LogMessage>;
   compiler_needs?: CompilerNeeds;
+};
+export type SQLNativeCell = {
+  sql_native_value: string;
 };
 export type SQLNativeType = {
   sql_type?: string;
@@ -426,12 +443,6 @@ export type StringLiteral = {
   string_value: string;
 };
 export type StringType = {};
-export type Table = {
-  rows: Array<Row>;
-};
-export type TableCell = {
-  table_value: Table;
-};
 export type TimeTruncationFieldReference = {
   field_reference: Reference;
   truncation: TimestampTimeframe;

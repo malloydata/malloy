@@ -2,7 +2,9 @@
   "extends": "../tsconfig.packages.json",
   "compilerOptions": {
     "noEmit": true,
-    "composite": true
+    "composite": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "solid-js",
   },
   "include": ["src", "bin", "./jest.setup.ts", "./types/jest.d.ts"],
   "references": [

@@ -1,11 +1,524 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`rendering results bar chart renderer date with timezone rendered correctly 1`] = `
-<span
-  class="error"
->
-  Cannot read properties of undefined (reading 'isAtomicField')
-</span>
+<div>
+  <svg
+    class="marks"
+    height="548"
+    version="1.1"
+    viewBox="0 0 567 548"
+    width="567"
+    xmlns="http://www.w3.org/2000/svg"
+    xmlns:xlink="http://www.w3.org/1999/xlink"
+  >
+    <g
+      fill="none"
+      stroke-miterlimit="10"
+      transform="translate(62,10)"
+    >
+      <g
+        aria-roledescription="group mark container"
+        class="mark-group role-frame root"
+        role="graphics-object"
+      >
+        <g
+          transform="translate(0,0)"
+        >
+          <path
+            aria-hidden="true"
+            class="background"
+            d="M0.5,0.5h500v350h-500Z"
+            stroke="#888"
+          />
+          <g>
+            <g
+              aria-hidden="true"
+              class="mark-group role-axis"
+            >
+              <g
+                transform="translate(0.5,0.5)"
+              >
+                <path
+                  aria-hidden="true"
+                  class="background"
+                  d="M0,0h0v0h0Z"
+                  pointer-events="none"
+                />
+                <g>
+                  <g
+                    class="mark-rule role-axis-grid"
+                    pointer-events="none"
+                  >
+                    <line
+                      opacity="1"
+                      stroke="#E5E7EB"
+                      stroke-width="1"
+                      transform="translate(0,350)"
+                      x2="500"
+                      y2="0"
+                    />
+                    <line
+                      opacity="1"
+                      stroke="#E5E7EB"
+                      stroke-width="1"
+                      transform="translate(0,315)"
+                      x2="500"
+                      y2="0"
+                    />
+                    <line
+                      opacity="1"
+                      stroke="#E5E7EB"
+                      stroke-width="1"
+                      transform="translate(0,280)"
+                      x2="500"
+                      y2="0"
+                    />
+                    <line
+                      opacity="1"
+                      stroke="#E5E7EB"
+                      stroke-width="1"
+                      transform="translate(0,245)"
+                      x2="500"
+                      y2="0"
+                    />
+                    <line
+                      opacity="1"
+                      stroke="#E5E7EB"
+                      stroke-width="1"
+                      transform="translate(0,210)"
+                      x2="500"
+                      y2="0"
+                    />
+                    <line
+                      opacity="1"
+                      stroke="#E5E7EB"
+                      stroke-width="1"
+                      transform="translate(0,175)"
+                      x2="500"
+                      y2="0"
+                    />
+                    <line
+                      opacity="1"
+                      stroke="#E5E7EB"
+                      stroke-width="1"
+                      transform="translate(0,140)"
+                      x2="500"
+                      y2="0"
+                    />
+                    <line
+                      opacity="1"
+                      stroke="#E5E7EB"
+                      stroke-width="1"
+                      transform="translate(0,105)"
+                      x2="500"
+                      y2="0"
+                    />
+                    <line
+                      opacity="1"
+                      stroke="#E5E7EB"
+                      stroke-width="1"
+                      transform="translate(0,70)"
+                      x2="500"
+                      y2="0"
+                    />
+                    <line
+                      opacity="1"
+                      stroke="#E5E7EB"
+                      stroke-width="1"
+                      transform="translate(0,35)"
+                      x2="500"
+                      y2="0"
+                    />
+                    <line
+                      opacity="1"
+                      stroke="#E5E7EB"
+                      stroke-width="1"
+                      transform="translate(0,0)"
+                      x2="500"
+                      y2="0"
+                    />
+                  </g>
+                </g>
+                <path
+                  aria-hidden="true"
+                  class="foreground"
+                  d=""
+                  display="none"
+                  pointer-events="none"
+                />
+              </g>
+            </g>
+            <g
+              aria-label="X-axis titled 'mex_time (America/Mexico_City)' for a discrete scale with 1 value: 2021-02-24 03:05:06"
+              aria-roledescription="axis"
+              class="mark-group role-axis"
+              role="graphics-symbol"
+            >
+              <g
+                transform="translate(0.5,350.5)"
+              >
+                <path
+                  aria-hidden="true"
+                  class="background"
+                  d="M0,0h0v0h0Z"
+                  pointer-events="none"
+                />
+                <g>
+                  <g
+                    class="mark-rule role-axis-tick"
+                    pointer-events="none"
+                  >
+                    <line
+                      opacity="1"
+                      stroke="#E5E7EB"
+                      stroke-width="1"
+                      transform="translate(250,0)"
+                      x2="0"
+                      y2="5"
+                    />
+                  </g>
+                  <g
+                    class="mark-text role-axis-label"
+                    pointer-events="none"
+                  >
+                    <text
+                      fill="var(--malloy-label-color, #727883)"
+                      font-family="var(--malloy-font-family, 'Inter')"
+                      font-size="10px"
+                      opacity="1"
+                      text-anchor="end"
+                      transform="translate(249.5,10) rotate(270) translate(0,3)"
+                    >
+                      2021-02-24 03:05:06
+                    </text>
+                  </g>
+                  <g
+                    class="mark-rule role-axis-domain"
+                    pointer-events="none"
+                  >
+                    <line
+                      opacity="1"
+                      stroke="#ddd"
+                      stroke-width="1"
+                      transform="translate(0,0)"
+                      x2="500"
+                      y2="0"
+                    />
+                  </g>
+                  <g
+                    class="mark-text role-axis-title"
+                    pointer-events="none"
+                  >
+                    <text
+                      fill="var(--malloy-title-color, #727883)"
+                      font-family="var(--malloy-font-family, 'Inter')"
+                      font-size="12px"
+                      font-weight="500"
+                      opacity="1"
+                      text-anchor="middle"
+                      transform="translate(250,181)"
+                    >
+                      mex_time (America/Mexico_City)
+                    </text>
+                  </g>
+                </g>
+                <path
+                  aria-hidden="true"
+                  class="foreground"
+                  d=""
+                  display="none"
+                  pointer-events="none"
+                />
+              </g>
+            </g>
+            <g
+              aria-label="Y-axis titled 'value' for a linear scale with values from 0.0 to 1.0"
+              aria-roledescription="axis"
+              class="mark-group role-axis"
+              role="graphics-symbol"
+            >
+              <g
+                transform="translate(0.5,0.5)"
+              >
+                <path
+                  aria-hidden="true"
+                  class="background"
+                  d="M0,0h0v0h0Z"
+                  pointer-events="none"
+                />
+                <g>
+                  <g
+                    class="mark-rule role-axis-tick"
+                    pointer-events="none"
+                  >
+                    <line
+                      opacity="1"
+                      stroke="#E5E7EB"
+                      stroke-width="1"
+                      transform="translate(0,350)"
+                      x2="-5"
+                      y2="0"
+                    />
+                    <line
+                      opacity="1"
+                      stroke="#E5E7EB"
+                      stroke-width="1"
+                      transform="translate(0,315)"
+                      x2="-5"
+                      y2="0"
+                    />
+                    <line
+                      opacity="1"
+                      stroke="#E5E7EB"
+                      stroke-width="1"
+                      transform="translate(0,280)"
+                      x2="-5"
+                      y2="0"
+                    />
+                    <line
+                      opacity="1"
+                      stroke="#E5E7EB"
+                      stroke-width="1"
+                      transform="translate(0,245)"
+                      x2="-5"
+                      y2="0"
+                    />
+                    <line
+                      opacity="1"
+                      stroke="#E5E7EB"
+                      stroke-width="1"
+                      transform="translate(0,210)"
+                      x2="-5"
+                      y2="0"
+                    />
+                    <line
+                      opacity="1"
+                      stroke="#E5E7EB"
+                      stroke-width="1"
+                      transform="translate(0,175)"
+                      x2="-5"
+                      y2="0"
+                    />
+                    <line
+                      opacity="1"
+                      stroke="#E5E7EB"
+                      stroke-width="1"
+                      transform="translate(0,140)"
+                      x2="-5"
+                      y2="0"
+                    />
+                    <line
+                      opacity="1"
+                      stroke="#E5E7EB"
+                      stroke-width="1"
+                      transform="translate(0,105)"
+                      x2="-5"
+                      y2="0"
+                    />
+                    <line
+                      opacity="1"
+                      stroke="#E5E7EB"
+                      stroke-width="1"
+                      transform="translate(0,70)"
+                      x2="-5"
+                      y2="0"
+                    />
+                    <line
+                      opacity="1"
+                      stroke="#E5E7EB"
+                      stroke-width="1"
+                      transform="translate(0,35)"
+                      x2="-5"
+                      y2="0"
+                    />
+                    <line
+                      opacity="1"
+                      stroke="#E5E7EB"
+                      stroke-width="1"
+                      transform="translate(0,0)"
+                      x2="-5"
+                      y2="0"
+                    />
+                  </g>
+                  <g
+                    class="mark-text role-axis-label"
+                    pointer-events="none"
+                  >
+                    <text
+                      fill="var(--malloy-label-color, #727883)"
+                      font-family="var(--malloy-font-family, 'Inter')"
+                      font-size="10px"
+                      opacity="1"
+                      text-anchor="end"
+                      transform="translate(-10,353)"
+                    >
+                      0.0
+                    </text>
+                    <text
+                      fill="var(--malloy-label-color, #727883)"
+                      font-family="var(--malloy-font-family, 'Inter')"
+                      font-size="10px"
+                      opacity="1"
+                      text-anchor="end"
+                      transform="translate(-10,318)"
+                    >
+                      0.1
+                    </text>
+                    <text
+                      fill="var(--malloy-label-color, #727883)"
+                      font-family="var(--malloy-font-family, 'Inter')"
+                      font-size="10px"
+                      opacity="1"
+                      text-anchor="end"
+                      transform="translate(-10,283)"
+                    >
+                      0.2
+                    </text>
+                    <text
+                      fill="var(--malloy-label-color, #727883)"
+                      font-family="var(--malloy-font-family, 'Inter')"
+                      font-size="10px"
+                      opacity="1"
+                      text-anchor="end"
+                      transform="translate(-10,247.99999999999997)"
+                    >
+                      0.3
+                    </text>
+                    <text
+                      fill="var(--malloy-label-color, #727883)"
+                      font-family="var(--malloy-font-family, 'Inter')"
+                      font-size="10px"
+                      opacity="1"
+                      text-anchor="end"
+                      transform="translate(-10,213)"
+                    >
+                      0.4
+                    </text>
+                    <text
+                      fill="var(--malloy-label-color, #727883)"
+                      font-family="var(--malloy-font-family, 'Inter')"
+                      font-size="10px"
+                      opacity="1"
+                      text-anchor="end"
+                      transform="translate(-10,178)"
+                    >
+                      0.5
+                    </text>
+                    <text
+                      fill="var(--malloy-label-color, #727883)"
+                      font-family="var(--malloy-font-family, 'Inter')"
+                      font-size="10px"
+                      opacity="1"
+                      text-anchor="end"
+                      transform="translate(-10,143)"
+                    >
+                      0.6
+                    </text>
+                    <text
+                      fill="var(--malloy-label-color, #727883)"
+                      font-family="var(--malloy-font-family, 'Inter')"
+                      font-size="10px"
+                      opacity="1"
+                      text-anchor="end"
+                      transform="translate(-10,108.00000000000001)"
+                    >
+                      0.7
+                    </text>
+                    <text
+                      fill="var(--malloy-label-color, #727883)"
+                      font-family="var(--malloy-font-family, 'Inter')"
+                      font-size="10px"
+                      opacity="1"
+                      text-anchor="end"
+                      transform="translate(-10,72.99999999999999)"
+                    >
+                      0.8
+                    </text>
+                    <text
+                      fill="var(--malloy-label-color, #727883)"
+                      font-family="var(--malloy-font-family, 'Inter')"
+                      font-size="10px"
+                      opacity="1"
+                      text-anchor="end"
+                      transform="translate(-10,37.99999999999999)"
+                    >
+                      0.9
+                    </text>
+                    <text
+                      fill="var(--malloy-label-color, #727883)"
+                      font-family="var(--malloy-font-family, 'Inter')"
+                      font-size="10px"
+                      opacity="1"
+                      text-anchor="end"
+                      transform="translate(-10,3)"
+                    >
+                      1.0
+                    </text>
+                  </g>
+                  <g
+                    class="mark-rule role-axis-domain"
+                    pointer-events="none"
+                  >
+                    <line
+                      opacity="1"
+                      stroke="#ddd"
+                      stroke-width="1"
+                      transform="translate(0,350)"
+                      x2="0"
+                      y2="-350"
+                    />
+                  </g>
+                  <g
+                    class="mark-text role-axis-title"
+                    pointer-events="none"
+                  >
+                    <text
+                      fill="var(--malloy-title-color, #727883)"
+                      font-family="var(--malloy-font-family, 'Inter')"
+                      font-size="12px"
+                      font-weight="500"
+                      opacity="1"
+                      text-anchor="middle"
+                      transform="translate(-44,175) rotate(-90) translate(0,-3)"
+                    >
+                      value
+                    </text>
+                  </g>
+                </g>
+                <path
+                  aria-hidden="true"
+                  class="foreground"
+                  d=""
+                  display="none"
+                  pointer-events="none"
+                />
+              </g>
+            </g>
+            <g
+              aria-roledescription="rect mark container"
+              class="mark-rect role-mark marks"
+              role="graphics-object"
+            >
+              <path
+                aria-label="mex_time: 2021-02-24 03:05:06; value: 1"
+                aria-roledescription="bar"
+                d="M25,0h450v350h-450Z"
+                fill="#4285F4"
+                role="graphics-symbol"
+              />
+            </g>
+          </g>
+          <path
+            aria-hidden="true"
+            class="foreground"
+            d=""
+            display="none"
+          />
+        </g>
+      </g>
+    </g>
+  </svg>
+</div>
 `;
 
 exports[`rendering results data volume renderer data volume tags works correctly 1`] = `

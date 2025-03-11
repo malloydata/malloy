@@ -186,6 +186,7 @@ export type {
   DocumentTablePath,
   DocumentSymbol,
   ResultJSON,
+  PreparedResultJSON,
   PreparedResultMaterializer,
   ExploreMaterializer,
   WriteStream,

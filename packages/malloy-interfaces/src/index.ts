@@ -135,10 +135,11 @@ export const test: Malloy.ModelInfo = {
 export const res: Malloy.Result = {
   connection_name: 'foo',
   data: {
-    kind: 'table',
-    rows: [
+    kind: 'array_cell',
+    array_value: [
       {
-        cells: [
+        kind: 'record_cell',
+        record_value: [
           {
             kind: 'string_cell',
             string_value: 'UA',
@@ -150,7 +151,8 @@ export const res: Malloy.Result = {
         ],
       },
       {
-        cells: [
+        kind: 'record_cell',
+        record_value: [
           {
             kind: 'string_cell',
             string_value: 'AA',
@@ -195,7 +197,10 @@ export const thingy1: Malloy.Query = {
 export const thingy123r: Malloy.Query = {
   definition: {
     kind: 'arrow',
-    source_reference: {name: 'flights'},
+    source: {
+      kind: 'source_reference',
+      name: 'flights',
+    },
     view: {
       kind: 'view_reference',
       name: 'by_carrier',
@@ -206,7 +211,10 @@ export const thingy123r: Malloy.Query = {
 export const thingyssdfg: Malloy.Query = {
   definition: {
     kind: 'refinement',
-    query_reference: {name: 'flights'},
+    base: {
+      kind: 'query_reference',
+      name: 'flights',
+    },
     refinement: {
       kind: 'view_reference',
       name: 'by_carrier',
@@ -217,7 +225,10 @@ export const thingyssdfg: Malloy.Query = {
 export const thingy2asdf: Malloy.Query = {
   definition: {
     kind: 'arrow',
-    source_reference: {name: 'flights'},
+    source: {
+      kind: 'source_reference',
+      name: 'flights',
+    },
     view: {
       kind: 'refinement',
       base: {
@@ -244,7 +255,8 @@ export const thingy2asdf: Malloy.Query = {
 export const thingy3: Malloy.Query = {
   definition: {
     kind: 'arrow',
-    source_reference: {
+    source: {
+      kind: 'source_reference',
       name: 'flights',
     },
     view: {
@@ -283,7 +295,8 @@ export const thingy3: Malloy.Query = {
 export const thingy3dfdf: Malloy.Query = {
   definition: {
     kind: 'arrow',
-    source_reference: {
+    source: {
+      kind: 'source_reference',
       name: 'flights',
     },
     view: {
@@ -303,7 +316,8 @@ export const thingy3dfdf: Malloy.Query = {
 export const thingy4asdfasdf: Malloy.Query = {
   definition: {
     kind: 'arrow',
-    source_reference: {
+    source: {
+      kind: 'source_reference',
       name: 'flights',
     },
     view: {
@@ -336,7 +350,8 @@ export const thingy4asdfasdf: Malloy.Query = {
 export const thingy4asdfas: Malloy.Query = {
   definition: {
     kind: 'arrow',
-    source_reference: {
+    source: {
+      kind: 'source_reference',
       name: 'flights',
     },
     view: {
@@ -350,7 +365,8 @@ export const thingy4asdfas: Malloy.Query = {
 export const thingy4dfdsfs: Malloy.Query = {
   definition: {
     kind: 'arrow',
-    source_reference: {
+    source: {
+      kind: 'source_reference',
       name: 'flights',
     },
     view: {
@@ -376,7 +392,8 @@ export const thingy4dfdsfs: Malloy.Query = {
 export const thingy4sdfsd: Malloy.Query = {
   definition: {
     kind: 'arrow',
-    source_reference: {
+    source: {
+      kind: 'source_reference',
       name: 'flights',
     },
     view: {
@@ -404,7 +421,8 @@ export const thingy4sdfsd: Malloy.Query = {
 export const thingy4sddfdfsd: Malloy.Query = {
   definition: {
     kind: 'arrow',
-    source_reference: {
+    source: {
+      kind: 'source_reference',
       name: 'flights',
     },
     view: {

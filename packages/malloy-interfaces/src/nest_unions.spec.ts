@@ -13,7 +13,8 @@ describe('unnest unions', () => {
     const query: Malloy.Query = {
       definition: {
         kind: 'arrow',
-        source_reference: {
+        source: {
+          kind: 'source_reference',
           name: 'flights',
         },
         view: {
@@ -39,8 +40,10 @@ describe('unnest unions', () => {
     expect(nestUnions(query)).toMatchObject({
       definition: {
         arrow: {
-          source_reference: {
-            name: 'flights',
+          source: {
+            source_reference: {
+              name: 'flights',
+            },
           },
           view: {
             segment: {

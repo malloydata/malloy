@@ -37,7 +37,10 @@ describe('query builder', () => {
     const from: Malloy.Query = {
       definition: {
         kind: 'arrow',
-        source_reference: {name: 'flights'},
+        source: {
+          kind: 'source_reference',
+          name: 'flights',
+        },
         view: {
           kind: 'segment',
           operations: [
@@ -62,7 +65,10 @@ describe('query builder', () => {
       to: {
         definition: {
           kind: 'arrow',
-          source_reference: {name: 'flights'},
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
           view: {
             kind: 'segment',
             operations: [
@@ -96,7 +102,10 @@ describe('query builder', () => {
     const from: Malloy.Query = {
       definition: {
         kind: 'arrow',
-        source_reference: {name: 'flights'},
+        source: {
+          kind: 'source_reference',
+          name: 'flights',
+        },
         view: {
           kind: 'segment',
           operations: [],
@@ -111,7 +120,10 @@ describe('query builder', () => {
       to: {
         definition: {
           kind: 'arrow',
-          source_reference: {name: 'flights'},
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
           view: {
             kind: 'segment',
             operations: [
@@ -135,7 +147,10 @@ describe('query builder', () => {
     const from: Malloy.Query = {
       definition: {
         kind: 'arrow',
-        source_reference: {name: 'flights'},
+        source: {
+          kind: 'source_reference',
+          name: 'flights',
+        },
         view: {
           kind: 'segment',
           operations: [],
@@ -151,7 +166,10 @@ describe('query builder', () => {
       to: {
         definition: {
           kind: 'arrow',
-          source_reference: {name: 'flights'},
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
           view: {
             kind: 'segment',
             operations: [
@@ -191,7 +209,10 @@ describe('query builder', () => {
     const from: Malloy.Query = {
       definition: {
         kind: 'arrow',
-        source_reference: {name: 'flights'},
+        source: {
+          kind: 'source_reference',
+          name: 'flights',
+        },
         view: {
           kind: 'segment',
           operations: [],
@@ -208,7 +229,10 @@ describe('query builder', () => {
       to: {
         definition: {
           kind: 'arrow',
-          source_reference: {name: 'flights'},
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
           view: {
             kind: 'segment',
             operations: [
@@ -244,7 +268,10 @@ describe('query builder', () => {
       const from: Malloy.Query = {
         definition: {
           kind: 'arrow',
-          source_reference: {name: 'flights'},
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
           view: {
             kind: 'segment',
             operations: [],
@@ -264,7 +291,10 @@ describe('query builder', () => {
         to: {
           definition: {
             kind: 'arrow',
-            source_reference: {name: 'flights'},
+            source: {
+              kind: 'source_reference',
+              name: 'flights',
+            },
             view: {
               kind: 'segment',
               operations: [
@@ -288,7 +318,10 @@ describe('query builder', () => {
       const from: Malloy.Query = {
         definition: {
           kind: 'arrow',
-          source_reference: {name: 'flights'},
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
           view: {
             kind: 'segment',
             operations: [],
@@ -305,7 +338,10 @@ describe('query builder', () => {
         to: {
           definition: {
             kind: 'arrow',
-            source_reference: {name: 'flights'},
+            source: {
+              kind: 'source_reference',
+              name: 'flights',
+            },
             view: {
               kind: 'segment',
               operations: [
@@ -340,7 +376,10 @@ describe('query builder', () => {
     const from: Malloy.Query = {
       definition: {
         kind: 'arrow',
-        source_reference: {name: 'flights'},
+        source: {
+          kind: 'source_reference',
+          name: 'flights',
+        },
         view: {
           kind: 'segment',
           operations: [],
@@ -355,7 +394,10 @@ describe('query builder', () => {
       to: {
         definition: {
           kind: 'arrow',
-          source_reference: {name: 'flights'},
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
           view: {
             kind: 'segment',
             operations: [
@@ -378,7 +420,10 @@ describe('query builder', () => {
     const from: Malloy.Query = {
       definition: {
         kind: 'arrow',
-        source_reference: {name: 'flights'},
+        source: {
+          kind: 'source_reference',
+          name: 'flights',
+        },
         view: {
           kind: 'segment',
           operations: [],
@@ -396,7 +441,10 @@ describe('query builder', () => {
       to: {
         definition: {
           kind: 'arrow',
-          source_reference: {name: 'flights'},
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
           view: {
             kind: 'segment',
             operations: [
@@ -419,7 +467,10 @@ describe('query builder', () => {
     const from: Malloy.Query = {
       definition: {
         kind: 'arrow',
-        source_reference: {name: 'flights'},
+        source: {
+          kind: 'source_reference',
+          name: 'flights',
+        },
         view: {
           kind: 'segment',
           operations: [],
@@ -446,7 +497,10 @@ describe('query builder', () => {
       to: {
         definition: {
           kind: 'arrow',
-          source_reference: {name: 'flights'},
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
           view: {
             kind: 'segment',
             operations: [
@@ -518,7 +572,10 @@ describe('query builder', () => {
     const from: Malloy.Query = {
       definition: {
         kind: 'arrow',
-        source_reference: {name: 'flights'},
+        source: {
+          kind: 'source_reference',
+          name: 'flights',
+        },
         view: {
           kind: 'segment',
           operations: [],
@@ -533,7 +590,10 @@ describe('query builder', () => {
       to: {
         definition: {
           kind: 'arrow',
-          source_reference: {name: 'flights'},
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
           view: {
             kind: 'segment',
             operations: [
@@ -558,7 +618,10 @@ describe('query builder', () => {
     const from: Malloy.Query = {
       definition: {
         kind: 'arrow',
-        source_reference: {name: 'flights'},
+        source: {
+          kind: 'source_reference',
+          name: 'flights',
+        },
         view: {
           kind: 'segment',
           operations: [],
@@ -575,7 +638,10 @@ describe('query builder', () => {
       to: {
         definition: {
           kind: 'arrow',
-          source_reference: {name: 'flights'},
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
           view: {
             kind: 'segment',
             operations: [
@@ -613,7 +679,10 @@ describe('query builder', () => {
     const from: Malloy.Query = {
       definition: {
         kind: 'arrow',
-        source_reference: {name: 'flights'},
+        source: {
+          kind: 'source_reference',
+          name: 'flights',
+        },
         view: {
           kind: 'segment',
           operations: [
@@ -648,7 +717,10 @@ describe('query builder', () => {
       to: {
         definition: {
           kind: 'arrow',
-          source_reference: {name: 'flights'},
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
           view: {
             kind: 'segment',
             operations: [
@@ -686,7 +758,10 @@ describe('query builder', () => {
     const from: Malloy.Query = {
       definition: {
         kind: 'arrow',
-        source_reference: {name: 'flights'},
+        source: {
+          kind: 'source_reference',
+          name: 'flights',
+        },
         view: {
           kind: 'segment',
           operations: [],
@@ -704,7 +779,10 @@ describe('query builder', () => {
       to: {
         definition: {
           kind: 'arrow',
-          source_reference: {name: 'flights'},
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
           view: {
             kind: 'segment',
             operations: [
@@ -739,7 +817,10 @@ describe('query builder', () => {
     const from: Malloy.Query = {
       definition: {
         kind: 'arrow',
-        source_reference: {name: 'flights'},
+        source: {
+          kind: 'source_reference',
+          name: 'flights',
+        },
         view: {
           kind: 'segment',
           operations: [],
@@ -755,7 +836,10 @@ describe('query builder', () => {
       to: {
         definition: {
           kind: 'arrow',
-          source_reference: {name: 'flights'},
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
           view: {
             kind: 'segment',
             operations: [
@@ -779,7 +863,10 @@ describe('query builder', () => {
     const from: Malloy.Query = {
       definition: {
         kind: 'arrow',
-        source_reference: {name: 'flights'},
+        source: {
+          kind: 'source_reference',
+          name: 'flights',
+        },
         view: {
           kind: 'segment',
           operations: [],
@@ -794,7 +881,10 @@ describe('query builder', () => {
       to: {
         definition: {
           kind: 'arrow',
-          source_reference: {name: 'flights'},
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
           view: {
             kind: 'view_reference',
             name: 'by_month',
@@ -808,7 +898,10 @@ describe('query builder', () => {
     const from: Malloy.Query = {
       definition: {
         kind: 'arrow',
-        source_reference: {name: 'flights'},
+        source: {
+          kind: 'source_reference',
+          name: 'flights',
+        },
         view: {
           kind: 'segment',
           operations: [],
@@ -824,7 +917,10 @@ describe('query builder', () => {
       to: {
         definition: {
           kind: 'arrow',
-          source_reference: {name: 'flights'},
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
           view: {
             kind: 'view_reference',
             name: 'by_month',
@@ -841,7 +937,10 @@ describe('query builder', () => {
     const from: Malloy.Query = {
       definition: {
         kind: 'arrow',
-        source_reference: {name: 'flights'},
+        source: {
+          kind: 'source_reference',
+          name: 'flights',
+        },
         view: {
           kind: 'segment',
           operations: [],
@@ -858,7 +957,10 @@ describe('query builder', () => {
       to: {
         definition: {
           kind: 'arrow',
-          source_reference: {name: 'flights'},
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
           view: {
             kind: 'refinement',
             base: {
@@ -885,7 +987,8 @@ describe('query builder', () => {
       const from: Malloy.Query = {
         definition: {
           kind: 'arrow',
-          source_reference: {
+          source: {
+            kind: 'source_reference',
             name: 'flights',
           },
           view: {
@@ -937,7 +1040,8 @@ describe('query builder', () => {
         to: {
           definition: {
             kind: 'arrow',
-            source_reference: {
+            source: {
+              kind: 'source_reference',
               name: 'flights',
             },
             view: {
@@ -1001,7 +1105,10 @@ describe('query builder', () => {
       const from: Malloy.Query = {
         definition: {
           kind: 'arrow',
-          source_reference: {name: 'flights'},
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
           view: {
             kind: 'view_reference',
             name: 'by_month',
@@ -1016,7 +1123,10 @@ describe('query builder', () => {
         to: {
           definition: {
             kind: 'arrow',
-            source_reference: {name: 'flights'},
+            source: {
+              kind: 'source_reference',
+              name: 'flights',
+            },
             view: {
               kind: 'refinement',
               base: {
@@ -1050,7 +1160,10 @@ describe('query builder', () => {
       from: {
         definition: {
           kind: 'arrow',
-          source_reference: {name: 'flights'},
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
           view: {
             kind: 'segment',
             operations: [],
@@ -1060,7 +1173,10 @@ describe('query builder', () => {
       to: {
         definition: {
           kind: 'arrow',
-          source_reference: {name: 'flights'},
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
           view: {
             kind: 'segment',
             operations: [],
@@ -1074,7 +1190,10 @@ describe('query builder', () => {
     const from: Malloy.Query = {
       definition: {
         kind: 'arrow',
-        source_reference: {name: 'flights'},
+        source: {
+          kind: 'source_reference',
+          name: 'flights',
+        },
         view: {
           kind: 'view_reference',
           name: 'by_carrier',
@@ -1143,7 +1262,10 @@ describe('query builder', () => {
       to: {
         definition: {
           kind: 'arrow',
-          source_reference: {name: 'flights'},
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
           view: {
             kind: 'refinement',
             base: {
@@ -1164,7 +1286,10 @@ describe('query builder', () => {
     const from: Malloy.Query = {
       definition: {
         kind: 'arrow',
-        source_reference: {name: 'flights'},
+        source: {
+          kind: 'source_reference',
+          name: 'flights',
+        },
         view: {
           kind: 'segment',
           operations: [],
@@ -1180,7 +1305,10 @@ describe('query builder', () => {
       to: {
         definition: {
           kind: 'arrow',
-          source_reference: {name: 'flights'},
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
           view: {
             kind: 'segment',
             operations: [
@@ -1199,7 +1327,10 @@ describe('query builder', () => {
     const from: Malloy.Query = {
       definition: {
         kind: 'arrow',
-        source_reference: {name: 'flights'},
+        source: {
+          kind: 'source_reference',
+          name: 'flights',
+        },
         view: {
           kind: 'segment',
           operations: [
@@ -1220,7 +1351,10 @@ describe('query builder', () => {
       to: {
         definition: {
           kind: 'arrow',
-          source_reference: {name: 'flights'},
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
           view: {
             kind: 'segment',
             operations: [
@@ -1240,7 +1374,10 @@ describe('query builder', () => {
       const from: Malloy.Query = {
         definition: {
           kind: 'arrow',
-          source_reference: {name: 'flights'},
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
           view: {
             kind: 'segment',
             operations: [],
@@ -1256,14 +1393,17 @@ describe('query builder', () => {
         to: {
           definition: {
             kind: 'arrow',
-            source_reference: {name: 'flights'},
+            source: {
+              kind: 'source_reference',
+              name: 'flights',
+            },
             view: {
               kind: 'segment',
               operations: [
                 {
                   kind: 'group_by',
                   field: {
-                    annotations: [{value: '# a.b.c = 10'}],
+                    annotations: [{value: '# a.b.c = 10\n'}],
                     expression: {
                       kind: 'field_reference',
                       name: 'carrier',
@@ -1285,7 +1425,10 @@ describe('query builder', () => {
       const from: Malloy.Query = {
         definition: {
           kind: 'arrow',
-          source_reference: {name: 'flights'},
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
           view: {
             kind: 'segment',
             operations: [],
@@ -1300,13 +1443,16 @@ describe('query builder', () => {
         to: {
           definition: {
             kind: 'arrow',
-            source_reference: {name: 'flights'},
+            source: {
+              kind: 'source_reference',
+              name: 'flights',
+            },
             view: {
               kind: 'segment',
               operations: [],
             },
           },
-          annotations: [{value: '# a = foo'}],
+          annotations: [{value: '# a = foo\n'}],
         },
         malloy: dedent`
           # a = foo
@@ -1318,7 +1464,10 @@ describe('query builder', () => {
       const from: Malloy.Query = {
         definition: {
           kind: 'arrow',
-          source_reference: {name: 'flights'},
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
           view: {
             kind: 'segment',
             operations: [],
@@ -1338,7 +1487,7 @@ describe('query builder', () => {
                 kind: 'dimension',
                 name: 'carrier',
                 type: {kind: 'string_type'},
-                annotations: [{value: '# a'}],
+                annotations: [{value: '# a\n'}],
               },
             ],
           },
@@ -1347,14 +1496,17 @@ describe('query builder', () => {
         to: {
           definition: {
             kind: 'arrow',
-            source_reference: {name: 'flights'},
+            source: {
+              kind: 'source_reference',
+              name: 'flights',
+            },
             view: {
               kind: 'segment',
               operations: [
                 {
                   kind: 'group_by',
                   field: {
-                    annotations: [{value: '# -a'}],
+                    annotations: [{value: '# -a\n'}],
                     expression: {
                       kind: 'field_reference',
                       name: 'carrier',
@@ -1377,7 +1529,10 @@ describe('query builder', () => {
     const from: Malloy.Query = {
       definition: {
         kind: 'arrow',
-        source_reference: {name: 'flights'},
+        source: {
+          kind: 'source_reference',
+          name: 'flights',
+        },
         view: {
           kind: 'segment',
           operations: [
@@ -1406,7 +1561,10 @@ describe('query builder', () => {
       to: {
         definition: {
           kind: 'arrow',
-          source_reference: {name: 'flights'},
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
           view: {
             kind: 'segment',
             operations: [
@@ -1440,7 +1598,10 @@ describe('query builder', () => {
     const from: Malloy.Query = {
       definition: {
         kind: 'arrow',
-        source_reference: {name: 'flights'},
+        source: {
+          kind: 'source_reference',
+          name: 'flights',
+        },
         view: {
           kind: 'refinement',
           base: {
@@ -1481,7 +1642,10 @@ describe('query builder', () => {
       to: {
         definition: {
           kind: 'arrow',
-          source_reference: {name: 'flights'},
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
           view: {
             kind: 'refinement',
             base: {
@@ -1519,7 +1683,10 @@ describe('query builder', () => {
     const from: Malloy.Query = {
       definition: {
         kind: 'arrow',
-        source_reference: {name: 'flights'},
+        source: {
+          kind: 'source_reference',
+          name: 'flights',
+        },
         view: {
           kind: 'refinement',
           base: {
@@ -1560,7 +1727,10 @@ describe('query builder', () => {
       to: {
         definition: {
           kind: 'arrow',
-          source_reference: {name: 'flights'},
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
           view: {
             kind: 'refinement',
             base: {
@@ -1581,7 +1751,10 @@ describe('query builder', () => {
     const from: Malloy.Query = {
       definition: {
         kind: 'arrow',
-        source_reference: {name: 'flights'},
+        source: {
+          kind: 'source_reference',
+          name: 'flights',
+        },
         view: {
           kind: 'arrow',
           source: {
@@ -1627,7 +1800,10 @@ describe('query builder', () => {
       to: {
         definition: {
           kind: 'arrow',
-          source_reference: {name: 'flights'},
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
           view: {
             kind: 'arrow',
             source: {
@@ -1653,7 +1829,10 @@ describe('query builder', () => {
         from: {
           definition: {
             kind: 'arrow',
-            source_reference: {name: 'flights'},
+            source: {
+              kind: 'source_reference',
+              name: 'flights',
+            },
             view: {
               kind: 'segment',
               operations: [],
@@ -1663,7 +1842,10 @@ describe('query builder', () => {
         to: {
           definition: {
             kind: 'arrow',
-            source_reference: {name: 'flights'},
+            source: {
+              kind: 'source_reference',
+              name: 'flights',
+            },
             view: {
               kind: 'segment',
               operations: [],
@@ -1681,7 +1863,10 @@ describe('query builder', () => {
         from: {
           definition: {
             kind: 'arrow',
-            source_reference: {name: 'flights'},
+            source: {
+              kind: 'source_reference',
+              name: 'flights',
+            },
             view: {
               kind: 'view_reference',
               name: 'by_month',
@@ -1691,7 +1876,10 @@ describe('query builder', () => {
         to: {
           definition: {
             kind: 'arrow',
-            source_reference: {name: 'flights'},
+            source: {
+              kind: 'source_reference',
+              name: 'flights',
+            },
             view: {
               kind: 'refinement',
               base: {
@@ -1716,7 +1904,10 @@ describe('query builder', () => {
         from: {
           definition: {
             kind: 'arrow',
-            source_reference: {name: 'flights'},
+            source: {
+              kind: 'source_reference',
+              name: 'flights',
+            },
             view: {
               kind: 'refinement',
               base: {
@@ -1733,7 +1924,10 @@ describe('query builder', () => {
         to: {
           definition: {
             kind: 'arrow',
-            source_reference: {name: 'flights'},
+            source: {
+              kind: 'source_reference',
+              name: 'flights',
+            },
             view: {
               kind: 'refinement',
               base: {
@@ -1764,7 +1958,10 @@ describe('query builder', () => {
         to: {
           definition: {
             kind: 'refinement',
-            query_reference: {name: 'flights_by_carrier'},
+            base: {
+              kind: 'query_reference',
+              name: 'flights_by_carrier',
+            },
             refinement: {
               kind: 'segment',
               operations: [],
@@ -1783,7 +1980,10 @@ describe('query builder', () => {
       from: {
         definition: {
           kind: 'arrow',
-          source_reference: {name: 'flights'},
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
           view: {
             kind: 'refinement',
             base: {
@@ -1800,7 +2000,10 @@ describe('query builder', () => {
       to: {
         definition: {
           kind: 'arrow',
-          source_reference: {name: 'flights'},
+          source: {
+            kind: 'source_reference',
+            name: 'flights',
+          },
           view: {
             kind: 'refinement',
             base: {
@@ -1829,7 +2032,7 @@ describe('query builder', () => {
       const from: Malloy.Query = {
         definition: {
           kind: 'arrow',
-          source_reference: {name: 'foo'},
+          source: {kind: 'source_reference', name: 'foo'},
           view: {
             kind: 'segment',
             operations: [],
@@ -1837,7 +2040,9 @@ describe('query builder', () => {
         },
       };
       expect((q: ASTQuery) => {
-        const source = q.definition.as.ArrowQueryDefinition().sourceReference;
+        const source = q.definition.as
+          .ArrowQueryDefinition()
+          .source.as.ReferenceQueryArrowSource();
         source.setParameter('string_param', 'COOL');
         source.setParameter('number_param', 7);
         source.setParameter('boolean_param', true);
@@ -1886,7 +2091,8 @@ describe('query builder', () => {
         to: {
           definition: {
             kind: 'arrow',
-            source_reference: {
+            source: {
+              kind: 'source_reference',
               name: 'foo',
               parameters: [
                 {

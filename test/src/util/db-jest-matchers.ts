@@ -30,6 +30,7 @@ import {
   MalloyError,
   LogMessage,
   SingleConnectionRuntime,
+  API,
 } from '@malloydata/malloy';
 import {Tag} from '@malloydata/malloy-tag';
 import EventEmitter from 'events';
@@ -164,6 +165,16 @@ expect.extend({
         failMsg += e.stack;
       }
       return {pass: false, message: () => failMsg};
+    }
+
+    try {
+      API.util.wrapResult(result);
+    } catch (error) {
+      return {
+        pass: false,
+        message: () =>
+          `Result could not be wrapped into new style result: ${error}\n${error.stack}`,
+      };
     }
 
     const allRows = Array.isArray(shouldEqual) ? shouldEqual : [shouldEqual];

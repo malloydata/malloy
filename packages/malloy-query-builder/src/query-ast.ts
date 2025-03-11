@@ -77,9 +77,9 @@ abstract class ASTNode<T> {
         if (node instanceof ASTReference) return node;
         throw new Error('Not an ASTReference');
       },
-      SourceReference(): ASTSourceReference {
-        if (node instanceof ASTSourceReference) return node;
-        throw new Error('Not an ASTSourceReference');
+      ReferenceQueryArrowSource(): ASTReferenceQueryArrowSource {
+        if (node instanceof ASTReferenceQueryArrowSource) return node;
+        throw new Error('Not an ASTReferenceQueryArrowSource');
       },
       ParameterValueList(): ASTParameterValueList {
         if (node instanceof ASTParameterValueList) return node;
@@ -190,8 +190,8 @@ abstract class ASTNode<T> {
       Reference(path: Path): ASTReference {
         return node.findAny(path).as.Reference();
       },
-      SourceReference(path: Path): ASTSourceReference {
-        return node.findAny(path).as.SourceReference();
+      ReferenceQueryArrowSource(path: Path): ASTReferenceQueryArrowSource {
+        return node.findAny(path).as.ReferenceQueryArrowSource();
       },
       ParameterValueList(path: Path): ASTParameterValueList {
         return node.findAny(path).as.ParameterValueList();
@@ -602,8 +602,11 @@ export class ASTQuery
       }
       if (options.query) {
         const definition = options.query.definition;
-        if (definition.kind === 'arrow') {
-          const name = definition.source_reference.name;
+        if (
+          definition.kind === 'arrow' &&
+          definition.source.kind === 'source_reference'
+        ) {
+          const name = definition.source.name;
           chosenSource = options.model.entries.find(e => e.name === name);
           if (chosenSource === undefined) {
             throw new Error(
@@ -623,7 +626,8 @@ export class ASTQuery
     const query = options.query ?? {
       definition: {
         kind: 'arrow',
-        source_reference: {
+        source: {
+          kind: 'source_reference',
           name: source.name,
         },
         view: {
@@ -700,7 +704,7 @@ export class ASTQuery
     }
     this.definition = new ASTArrowQueryDefinition({
       kind: 'arrow',
-      source_reference: this.definition.sourceReference.build(),
+      source: this.definition.source.build(),
       view: {
         kind: 'segment',
         operations: [],
@@ -711,6 +715,14 @@ export class ASTQuery
 
   isRunnable() {
     return this.definition.isRunnable();
+  }
+
+  isEmpty() {
+    return (
+      this.definition instanceof ASTArrowQueryDefinition &&
+      this.definition.view instanceof ASTSegmentViewDefinition &&
+      this.definition.view.operations.length === 0
+    );
   }
 
   /**
@@ -756,7 +768,10 @@ export class ASTQuery
    */
   public setSource(name: string) {
     if (this.definition instanceof ASTArrowQueryDefinition) {
-      if (this.definition.sourceReference.name === name) {
+      if (
+        this.definition.source instanceof ASTReferenceQueryArrowSource &&
+        this.definition.source.name === name
+      ) {
         return;
       }
     }
@@ -766,7 +781,10 @@ export class ASTQuery
     }
     this.definition = new ASTArrowQueryDefinition({
       kind: 'arrow',
-      source_reference: {name},
+      source: {
+        kind: 'source_reference',
+        name,
+      },
       view:
         this.definition instanceof ASTArrowQueryDefinition
           ? this.definition.view.build()
@@ -863,7 +881,7 @@ export class ASTQuery
     }
     this.definition = new ASTArrowQueryDefinition({
       kind: 'arrow',
-      source_reference: this.definition.sourceReference.build(),
+      source: this.definition.source.build(),
       view: {
         kind: 'view_reference',
         name,
@@ -872,17 +890,22 @@ export class ASTQuery
     return this.definition.view.as.ReferenceViewDefinition();
   }
 
-  getInheritedAnnotations(): Malloy.Annotation[] {
-    if (this.definition instanceof ASTReferenceQueryDefinition) {
-      const query = this.getQueryInfo(this.definition.name);
+  private _getInheritedAnnotations(
+    definition: ASTQueryDefinition
+  ): Malloy.Annotation[] {
+    if (definition instanceof ASTReferenceQueryDefinition) {
+      const query = this.getQueryInfo(definition.name);
       return query.annotations ?? [];
-    } else if (this.definition instanceof ASTRefinementQueryDefinition) {
-      const query = this.getQueryInfo(this.definition.queryReference.name);
-      return query.annotations ?? [];
-    } else if (this.definition instanceof ASTArrowQueryDefinition) {
-      return this.definition.view.getInheritedAnnotations();
+    } else if (definition instanceof ASTRefinementQueryDefinition) {
+      return this._getInheritedAnnotations(definition.base);
+    } else if (definition instanceof ASTArrowQueryDefinition) {
+      return definition.view.getInheritedAnnotations();
     }
     return [];
+  }
+
+  getInheritedAnnotations(): Malloy.Annotation[] {
+    return this._getInheritedAnnotations(this.definition);
   }
 }
 
@@ -1048,44 +1071,6 @@ export class ASTFieldReference extends ASTReference {
   getFieldInfo() {
     const schema = this.getReferenceSchema();
     return ASTNode.schemaGet(schema, this.name, this.path);
-  }
-}
-
-export class ASTSourceReference extends ASTReference {
-  /**
-   * @internal
-   */
-  get query(): ASTQuery {
-    return this.parent.parent.as.Query();
-  }
-
-  /**
-   * Gets the `Malloy.SourceInfo` for the referenced source
-   *
-   * @returns The source information for the referenced source
-   */
-  public getSourceInfo(): Malloy.SourceInfo {
-    const info = this.query.model.entries.find(e => e.name === this.name);
-    if (info === undefined) {
-      throw new Error('No source info found');
-    }
-    return info;
-  }
-
-  public getSourceParameters(): Malloy.ParameterInfo[] {
-    return this.getSourceInfo().parameters ?? [];
-  }
-
-  areRequiredParametersSet() {
-    const sourceParameters = this.getSourceParameters();
-    for (const parameterInfo of sourceParameters) {
-      if (parameterInfo.default_value !== undefined) continue;
-      const parameter = this.tryGetParameter(parameterInfo.name);
-      if (parameter === undefined) {
-        return false;
-      }
-    }
-    return true;
   }
 }
 
@@ -1340,12 +1325,26 @@ export interface IASTQueryDefinition extends IASTQueryOrViewDefinition {
   isRunnable(): boolean;
 }
 
+export type ASTQueryArrowSource =
+  | ASTReferenceQueryArrowSource
+  | ASTRefinementQueryDefinition;
+export const ASTQueryArrowSource = {
+  from(definition: Malloy.QueryArrowSource) {
+    switch (definition.kind) {
+      case 'refinement':
+        return new ASTRefinementQueryDefinition(definition);
+      case 'source_reference':
+        return new ASTReferenceQueryArrowSource(definition);
+    }
+  },
+};
+
 export type ASTQueryDefinition =
   | ASTReferenceQueryDefinition
   | ASTArrowQueryDefinition
   | ASTRefinementQueryDefinition;
 export const ASTQueryDefinition = {
-  from: (definition: Malloy.QueryDefinition) => {
+  from(definition: Malloy.QueryDefinition) {
     switch (definition.kind) {
       case 'arrow':
         return new ASTArrowQueryDefinition(definition);
@@ -1362,7 +1361,7 @@ export class ASTArrowQueryDefinition
     Malloy.QueryDefinitionWithArrow,
     {
       kind: 'arrow';
-      source_reference: ASTSourceReference;
+      source: ASTQueryArrowSource;
       view: ASTViewDefinition;
     }
   >
@@ -1371,7 +1370,7 @@ export class ASTArrowQueryDefinition
   constructor(public node: Malloy.QueryDefinitionWithArrow) {
     super(node, {
       kind: 'arrow',
-      source_reference: new ASTSourceReference(node.source_reference),
+      source: ASTQueryArrowSource.from(node.source),
       view: ASTViewDefinition.from(node.view),
     });
   }
@@ -1386,8 +1385,13 @@ export class ASTArrowQueryDefinition
     view.parent = this;
   }
 
-  get sourceReference() {
-    return this.children.source_reference;
+  get source() {
+    return this.children.source;
+  }
+
+  set source(source: ASTQueryArrowSource) {
+    this.edit();
+    this.children.source = source;
   }
 
   getOrAddDefaultSegment(): ASTSegmentViewDefinition {
@@ -1395,7 +1399,7 @@ export class ASTArrowQueryDefinition
   }
 
   getSourceInfo() {
-    return this.sourceReference.getSourceInfo();
+    return this.source.getSourceInfo();
   }
 
   getOutputSchema() {
@@ -1403,9 +1407,7 @@ export class ASTArrowQueryDefinition
   }
 
   isRunnable(): boolean {
-    return (
-      this.view.isRunnable() && this.sourceReference.areRequiredParametersSet()
-    );
+    return this.view.isRunnable() && this.source.isRunnable();
   }
 
   /**
@@ -1444,7 +1446,7 @@ export class ASTRefinementQueryDefinition
     Malloy.QueryDefinitionWithRefinement,
     {
       kind: 'refinement';
-      query_reference: ASTReference;
+      base: ASTQueryDefinition;
       refinement: ASTViewDefinition;
     }
   >
@@ -1453,13 +1455,13 @@ export class ASTRefinementQueryDefinition
   constructor(public node: Malloy.QueryDefinitionWithRefinement) {
     super(node, {
       kind: 'refinement',
-      query_reference: new ASTReference(node.query_reference),
+      base: ASTQueryDefinition.from(node.base),
       refinement: ASTViewDefinition.from(node.refinement),
     });
   }
 
-  get queryReference() {
-    return this.children.query_reference;
+  get base() {
+    return this.children.base;
   }
 
   get refinement() {
@@ -1488,12 +1490,7 @@ export class ASTRefinementQueryDefinition
   }
 
   getOutputSchema() {
-    const model = this.query.model;
-    const query = model.entries.find(e => e.name === this.queryReference.name);
-    if (query === undefined) {
-      throw new Error(`Query not found with name ${this.queryReference.name}`);
-    }
-    const base = query.schema;
+    const base = this.base.getOutputSchema();
     const refinement = this.refinement.getRefinementSchema();
     return ASTQuery.schemaMerge(base, refinement);
   }
@@ -1515,6 +1512,10 @@ export class ASTRefinementQueryDefinition
 
   reorderFields(names: string[]): void {
     this.query.getOrAddAnnotations().setTagProperty(['field_order'], names);
+  }
+
+  getSourceInfo() {
+    return this.base.getSourceInfo();
   }
 }
 
@@ -1567,11 +1568,7 @@ export class ASTReferenceQueryDefinition
   getOrAddDefaultSegment(): ASTSegmentViewDefinition {
     const newQuery = new ASTRefinementQueryDefinition({
       kind: 'refinement',
-      query_reference: {
-        name: this.name,
-        path: this.path,
-        parameters: this.parameters?.build(),
-      },
+      base: this.build(),
       refinement: {
         kind: 'segment',
         operations: [],
@@ -1609,6 +1606,149 @@ export class ASTReferenceQueryDefinition
 
   public tryGetParameter(name: string): ASTParameterValue | undefined {
     return ASTReference.tryGetParameter(this, name);
+  }
+
+  public getOutputSchema() {
+    return this.getSourceInfo().schema;
+  }
+
+  getSourceInfo() {
+    const model = this.query.model;
+    const query = model.entries.find(e => e.name === this.name);
+    if (query === undefined) {
+      throw new Error(`Query not found with name ${this.name}`);
+    }
+    return query;
+  }
+}
+
+export class ASTReferenceQueryArrowSource
+  extends ASTObjectNode<
+    Malloy.QueryArrowSourceWithSourceReference,
+    {
+      kind: 'source_reference';
+      name: string;
+      path?: string[];
+      parameters?: ASTParameterValueList;
+    }
+  >
+  implements IASTReference
+{
+  constructor(public node: Malloy.QueryArrowSourceWithSourceReference) {
+    super(node, {
+      kind: 'source_reference',
+      name: node.name,
+      path: node.path,
+      parameters: node.parameters && new ASTParameterValueList(node.parameters),
+    });
+  }
+
+  isRunnable(): boolean {
+    return this.areRequiredParametersSet();
+  }
+
+  get name() {
+    return this.children.name;
+  }
+
+  get arrow() {
+    return this.parent.as.ArrowQueryDefinition();
+  }
+
+  get parameters() {
+    return this.children.parameters;
+  }
+
+  set parameters(parameters: ASTParameterValueList | undefined) {
+    this.edit();
+    this.children.parameters = parameters;
+  }
+
+  get path() {
+    return this.children.path;
+  }
+
+  getSourceInfo() {
+    const entry = this.arrow.query.model.entries.find(
+      entry => entry.name === this.name
+    );
+    if (entry === undefined) {
+      throw new Error(`No query or source named ${this.name}`);
+    }
+    return entry;
+  }
+
+  getOrAddDefaultSegment(): ASTSegmentViewDefinition {
+    const entry = this.getSourceInfo();
+    if (entry.kind !== 'query') {
+      throw new Error(`Cannot refine source ${this.name}`);
+    }
+    const newQuery = new ASTRefinementQueryDefinition({
+      kind: 'refinement',
+      base: {
+        ...this.build(),
+        kind: 'query_reference',
+      },
+      refinement: {
+        kind: 'segment',
+        operations: [],
+      },
+    });
+    this.arrow.source = newQuery;
+    return newQuery.refinement.as.SegmentViewDefinition();
+  }
+
+  /**
+   * @internal
+   */
+  propagateUp(_f: PropagationFunction): void {
+    return;
+  }
+
+  /**
+   * @internal
+   */
+  propagateDown(_f: PropagationFunction): void {
+    return;
+  }
+
+  public getOrAddParameters() {
+    return ASTReference.getOrAddParameters(this);
+  }
+
+  public setParameter(name: string, value: RawLiteralValue) {
+    return ASTReference.setParameter(this, name, value);
+  }
+
+  public tryGetParameter(name: string): ASTParameterValue | undefined {
+    return ASTReference.tryGetParameter(this, name);
+  }
+
+  /**
+   * @internal
+   */
+  get query(): ASTQuery {
+    return this.parent.parent.as.Query();
+  }
+
+  public getSourceParameters(): Malloy.ParameterInfo[] {
+    const sourceInfo = this.getSourceInfo();
+    if (sourceInfo.kind === 'query') {
+      return [];
+    }
+    return sourceInfo.parameters ?? [];
+  }
+
+  areRequiredParametersSet() {
+    const sourceParameters = this.getSourceParameters();
+    for (const parameterInfo of sourceParameters) {
+      if (parameterInfo.default_value !== undefined) continue;
+      const parameter = this.tryGetParameter(parameterInfo.name);
+      if (parameter === undefined) {
+        return false;
+      }
+    }
+    return true;
   }
 }
 

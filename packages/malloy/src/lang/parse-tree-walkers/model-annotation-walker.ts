@@ -40,7 +40,7 @@ class ModelAnnotationWalker implements MalloyParserListener {
   protected getLocation(cx: ParserRuleContext): DocumentLocation {
     return {
       url: this.parseInfo.sourceURL,
-      range: this.parseInfo.rangeFromContext(cx),
+      range: this.translator.rangeFromContext(cx),
     };
   }
 

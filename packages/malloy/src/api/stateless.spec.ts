@@ -271,9 +271,10 @@ describe('api', () => {
       const result = compileQuery({
         model_url: 'file://test.malloy',
         query: {
+          annotations: [{value: '#(test) hello'}],
           definition: {
             kind: 'arrow',
-            source_reference: {name: 'flights'},
+            source: {kind: 'source_reference', name: 'flights'},
             view: {
               kind: 'segment',
               operations: [
@@ -315,6 +316,11 @@ describe('api', () => {
       const expected: Malloy.CompileQueryResponse = {
         result: {
           connection_name: 'connection',
+          annotations: [
+            {value: '#(test) hello\n'},
+            {value: '#(malloy) ordered_by = [{ carrier = asc }]\n'},
+            {value: '#(malloy) source_name = flights\n'},
+          ],
           sql: `SELECT \n\
    base."carrier" as "carrier"
 FROM flights as base

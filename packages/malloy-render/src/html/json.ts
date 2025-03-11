@@ -21,24 +21,51 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataColumn, Explore, Field} from '@malloydata/malloy';
 import {Renderer} from './renderer';
-import {createErrorElement} from './utils';
 import {JSONRenderOptions, StyleDefaults} from './data_styles';
 import {RendererOptions} from './renderer_types';
 import {RendererFactory} from './renderer_factory';
+import {Cell, Field} from '../data_tree';
+
+function mapToJSON(cell: Cell): unknown {
+  if (cell.isArray()) {
+    return cell.values.map(c => mapToJSON(c));
+  } else if (
+    cell.isBoolean() ||
+    cell.isNumber() ||
+    cell.isString() ||
+    cell.isNull()
+  ) {
+    return cell.value;
+  } else if (cell.isTime()) {
+    return cell.value.toISOString();
+  } else if (cell.isJSON()) {
+    {
+      try {
+        return JSON.parse(cell.value);
+      } catch (error) {
+        return cell.value;
+      }
+    }
+  } else if (cell.isRecord()) {
+    const result = {};
+    for (const child of cell.columns) {
+      result[child.field.name] = mapToJSON(child);
+    }
+    return result;
+  }
+  return null;
+}
 
 export class HTMLJSONRenderer implements Renderer {
   constructor(private readonly document: Document) {}
 
-  async render(table: DataColumn): Promise<HTMLElement> {
-    if (!table.isArray() && !table.isRecord()) {
-      createErrorElement(this.document, 'Invalid data for chart renderer.');
-    }
-
+  async render(table: Cell): Promise<HTMLElement> {
     const element = this.document.createElement('pre');
     element.appendChild(
-      this.document.createTextNode(JSON.stringify(table.value, undefined, 2))
+      this.document.createTextNode(
+        JSON.stringify(mapToJSON(table), undefined, 2)
+      )
     );
     return element;
   }
@@ -51,7 +78,7 @@ export class JSONRendererFactory extends RendererFactory<JSONRenderOptions> {
     document: Document,
     _styleDefaults: StyleDefaults,
     _rendererOptions: RendererOptions,
-    _field: Field | Explore,
+    _field: Field,
     _options: JSONRenderOptions
   ): Renderer {
     return new HTMLJSONRenderer(document);
