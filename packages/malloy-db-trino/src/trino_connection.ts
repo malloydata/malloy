@@ -56,7 +56,7 @@ import {
   PrestoQuery,
 } from '@prestodb/presto-js-client';
 import {randomUUID} from 'crypto';
-import {Trino, type ConnectionOptions, BasicAuth} from 'trino-client';
+import {Trino, ConnectionOptions, BasicAuth} from 'trino-client';
 
 export interface TrinoManagerOptions {
   credentials?: {
@@ -75,7 +75,9 @@ export interface TrinoConnectionConfiguration {
   schema?: string;
   user?: string;
   password?: string;
-  extraConfig?: Partial<Omit<ConnectionOptions, keyof TrinoConnectionConfiguration>>;
+  extraConfig?: Partial<
+    Omit<ConnectionOptions, keyof TrinoConnectionConfiguration>
+  >;
 }
 
 export type TrinoConnectionOptions = ConnectionConfig;
