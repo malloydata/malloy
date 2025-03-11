@@ -423,6 +423,8 @@ struct NumberCell {
   1: required double number_value,
 }
 
+struct NullCell {}
+
 struct TimestampCell {
   1: required string timestamp_value, // TODO another way to represent dates?
 }
@@ -435,6 +437,10 @@ struct JSONCell {
   1: required string json_value,
 }
 
+struct SQLNativeCell {
+  1: required string sql_native_value,
+}
+
 struct ArrayCell {
   1: required list<Cell> array_value,
 }
@@ -442,10 +448,6 @@ struct ArrayCell {
 // A record is also just a list of values, because we don't need to store the names in the data
 struct RecordCell {
   1: required list<Cell> record_value,
-}
-
-struct TableCell {
-  1: required Table table_value,
 }
 
 union Cell {
@@ -457,21 +459,13 @@ union Cell {
   6: required JSONCell json_cell, // TODO does this need to be here?
   7: required RecordCell record_cell,
   8: required ArrayCell array_cell,
-  9: required TableCell table_cell, // TODO does this need to be different from an array of records
-  // TODO sql_native???
-}
-
-struct Row {
-  1: required list<Cell> cells,
-}
-
-struct Table {
-  1: required list<Row> rows,
+  9: required NullCell null_cell,
+  10: required SQLNativeCell sql_native_cell,
 }
 
 union Data {
-  1: required RecordCell record,
-  2: required Table table,
+  1: required RecordCell record_cell,
+  2: required ArrayCell array_cell,
 }
 
 // should this be one type "Result" with optional data/sql, or three different types?
@@ -480,6 +474,9 @@ struct Result {
   2: required Schema schema,
   3: optional string sql,
   4: required string connection_name,
+  5: optional list<Annotation> annotations,
+  6: optional list<Annotation> model_annotations,
+  7: optional string query_timezone,
 }
 
 /*

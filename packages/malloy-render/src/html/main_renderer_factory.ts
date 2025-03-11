@@ -21,7 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Field, Explore} from '@malloydata/malloy';
 import {Tag} from '@malloydata/malloy-tag';
 import {DataRenderOptions, RenderDef, StyleDefaults} from './data_styles';
 import {Renderer} from './renderer';
@@ -29,28 +28,29 @@ import {RendererFactory} from './renderer_factory';
 import {RendererOptions} from './renderer_types';
 import {ShapeMapRendererFactory} from './shape_map';
 import {PointMapRendererFactory} from './point_map';
-import {ImageRendererFactory} from './image';
 import {SegmentMapRendererFactory} from './segment_map';
+import {ScatterChartRendererFactory} from './scatter_chart';
+import {Field} from '../data_tree';
+import {ImageRendererFactory} from './image';
 import {JSONRendererFactory} from './json';
-import {SparkLineRendererFactory} from './sparkline';
+import {LineChartRendererFactory} from './line_chart';
+import {ColumnSparkLineRendererFactory} from './column_sparkline';
 import {BarSparkLineRendererFactory} from './bar_sparkline';
 import {AreaSparkLineRendererFactory} from './area_sparkline';
-import {ColumnSparkLineRendererFactory} from './column_sparkline';
-import {ScatterChartRendererFactory} from './scatter_chart';
+import {SparkLineRendererFactory} from './sparkline';
 import {BarChartRendererFactory} from './bar_chart';
-import {VegaRendererFactory} from './vega_spec';
-import {LineChartRendererFactory} from './line_chart';
 import {DateRendererFactory} from './date';
+import {VegaRendererFactory} from './vega_spec';
 import {CurrencyRendererFactory} from './currency';
 import {PercentRendererFactory} from './percent';
-import {NumberRendererFactory} from './number';
+import {DataVolumeRendererFactory} from './data_volume';
 import {BytesRendererFactory} from './bytes';
-import {BooleanRendererFactory} from './boolean';
 import {LinkRendererFactory} from './link';
+import {DurationRendererFactory} from './duration';
+import {BooleanRendererFactory} from './boolean';
+import {NumberRendererFactory} from './number';
 import {UnsupportedRendererFactory} from './unsupported';
 import {TextRendererFactory} from './text';
-import {DataVolumeRendererFactory} from './data_volume';
-import {DurationRendererFactory} from './duration';
 
 export class MainRendererFactory {
   static renderFactories = [
@@ -87,7 +87,7 @@ export class MainRendererFactory {
     document: Document,
     styleDefaults: StyleDefaults,
     rendererOptions: RendererOptions,
-    field: Field | Explore,
+    field: Field,
     timezone?: string | undefined
   ): Renderer | undefined {
     let factory: RendererFactory<DataRenderOptions> | undefined;

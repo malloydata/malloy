@@ -1,12 +1,10 @@
-import {DataArray} from '@malloydata/malloy';
 import {LineChartRendererFactory} from '../../html/line_chart';
 import {createEffect} from 'solid-js';
 import {ScatterChartRendererFactory} from '../../html/scatter_chart';
 import {ShapeMapRendererFactory} from '../../html/shape_map';
 import {SegmentMapRendererFactory} from '../../html/segment_map';
-import {useResultContext} from '../result-context';
-import {getFieldKey} from '../util';
 import {useConfig} from '../render';
+import {RepeatedRecordCell} from '../../data_tree';
 
 const renderers = [
   LineChartRendererFactory.instance,
@@ -14,8 +12,7 @@ const renderers = [
   ShapeMapRendererFactory.instance,
   SegmentMapRendererFactory.instance,
 ];
-export function LegacyChart(props: {data: DataArray; type: string}) {
-  const metadata = useResultContext();
+export function LegacyChart(props: {data: RepeatedRecordCell; type: string}) {
   const config = useConfig();
   const vegaConfig = config.vegaConfigOverride?.(props.type) ?? {};
   const renderer = () =>
@@ -25,14 +22,12 @@ export function LegacyChart(props: {data: DataArray; type: string}) {
         document,
         {
           // If rendering chart at root, make large. Otherwise medium because its nested
-          size:
-            getFieldKey(metadata.rootField) === getFieldKey(props.data.field)
-              ? 'large'
-              : 'medium',
+          size: props.data.field.isRoot() ? 'large' : 'medium',
         },
         {dataStyles: {}},
         props.data.field,
-        {vegaConfigOverride: vegaConfig}
+        {vegaConfigOverride: vegaConfig},
+        props.data.field.root().queryTimezone
       );
   let el;
   createEffect(async () => {

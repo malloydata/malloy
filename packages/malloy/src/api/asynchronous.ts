@@ -127,7 +127,7 @@ export async function compileModel(
   // eslint-disable-next-line no-constant-condition
   while (true) {
     const result = Core.statedCompileModel(state);
-    if (result.model) {
+    if (result.model || Core.hasErrors(result.logs)) {
       return result;
     }
     const needs = await fetchNeeds(result.compiler_needs, fetchers);
@@ -143,7 +143,7 @@ export async function compileSource(
   // eslint-disable-next-line no-constant-condition
   while (true) {
     const result = Core.statedCompileSource(state, request.name);
-    if (result.source) {
+    if (result.source || Core.hasErrors(result.logs)) {
       return result;
     }
     const needs = await fetchNeeds(result.compiler_needs, fetchers);
@@ -159,7 +159,7 @@ export async function compileQuery(
   // eslint-disable-next-line no-constant-condition
   while (true) {
     const result = Core.statedCompileQuery(state);
-    if (result.result) {
+    if (result.result || Core.hasErrors(result.logs)) {
       return result;
     }
     const needs = await fetchNeeds(result.compiler_needs, fetchers);
@@ -193,7 +193,10 @@ export async function runQuery(
     const connection = await fetchers.connections.lookupConnection(
       compiled.result.connection_name
     );
-    const data = await connection.runSQL(compiled.result.sql);
+    const data = await connection.runSQL(
+      compiled.result.sql,
+      compiled.result.schema
+    );
     return {
       ...compiled,
       result: {

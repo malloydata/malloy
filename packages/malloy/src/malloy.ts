@@ -1377,16 +1377,12 @@ export class PreparedResult implements Taggable {
     }
   }
 
-  public get sourceExplore(): Explore {
+  public get sourceExplore(): Explore | undefined {
     const name = this.inner.sourceExplore;
     const explore = this.modelDef.contents[name];
-    if (explore === undefined) {
-      throw new Error('Malformed query result.');
-    }
-    if (isSourceDef(explore)) {
+    if (explore && isSourceDef(explore)) {
       return new Explore(explore);
     }
-    throw new Error(`'${name} is not an explore`);
   }
 
   public get _sourceExploreName(): string {

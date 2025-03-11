@@ -1,9 +1,10 @@
 import {LoaderFunction, Args} from '@storybook/types';
 import {HtmlRenderer} from '@storybook/html';
-import {SingleConnectionRuntime} from '@malloydata/malloy';
+import {API, SingleConnectionRuntime, URLReader} from '@malloydata/malloy';
 import {DuckDBWASMConnection} from '@malloydata/db-duckdb/wasm';
 import {HTMLView} from '../html';
 import {RendererOptions} from '../html/renderer_types';
+import * as Malloy from '@malloydata/malloy-interfaces';
 
 export type QueryOptions = {
   script: string;
@@ -44,10 +45,42 @@ export async function runQuery({
   view,
   connection,
 }: QueryOptions) {
-  const model = await loadModel({script, connection});
-  const runner = model.loadQuery(`run: ${source} -> ${view}`);
-  const result = await runner.run();
-  return result;
+  const urlReader: URLReader = {
+    readURL: async _url => {
+      return script;
+    },
+  };
+  const query: Malloy.Query = {
+    definition: {
+      kind: 'arrow',
+      source_reference: {name: source},
+      view: {
+        kind: 'view_reference',
+        name: view,
+      },
+    },
+  };
+  const lookupConnection: API.LookupConnection<API.Connection> = {
+    async lookupConnection(_name: string) {
+      return wrappedConnection;
+    },
+  };
+  const conn = await connection;
+  const wrappedConnection = API.util.wrapLegacyConnection(conn);
+  const result = await API.asynchronous.runQuery(
+    {
+      model_url: 'file:///script.malloy',
+      query,
+    },
+    {
+      urls: urlReader,
+      connections: lookupConnection,
+    }
+  );
+  if (result.logs?.some(l => l.severity === 'error')) {
+    throw new Error(JSON.stringify(result.logs));
+  }
+  return result.result!;
 }
 
 /* Legacy Renderer */

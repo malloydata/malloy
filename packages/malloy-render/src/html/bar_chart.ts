@@ -21,7 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataColumn, Explore, Field} from '@malloydata/malloy';
 import {HTMLCartesianChartRenderer} from './cartesian_chart';
 import {
   BarChartRenderOptions,
@@ -32,6 +31,7 @@ import {RendererFactory} from './renderer_factory';
 import {RendererOptions} from './renderer_types';
 import {Renderer} from './renderer';
 import {timeToString} from './utils';
+import {Cell, Field} from '../data_tree';
 
 export class HTMLBarChartRenderer extends HTMLCartesianChartRenderer {
   getMark(): 'bar' {
@@ -41,21 +41,20 @@ export class HTMLBarChartRenderer extends HTMLCartesianChartRenderer {
   getDataType(
     field: Field
   ): 'temporal' | 'ordinal' | 'quantitative' | 'nominal' {
-    if (field.isAtomicField()) {
-      if (field.isDate() || field.isTimestamp() || field.isString()) {
-        return 'nominal';
-      } else if (field.isNumber()) {
-        return 'quantitative';
-      }
+    if (field.isTime() || field.isString()) {
+      return 'nominal';
+    } else if (field.isNumber()) {
+      return 'quantitative';
     }
     throw new Error('Invalid field type for bar chart.');
   }
 
-  getDataValue(data: DataColumn): Date | string | number | null {
+  getDataValue(data: Cell): Date | string | number | null {
     if (data.isNull()) {
       return null;
-    } else if (data.isTimestamp() || data.isDate()) {
-      return timeToString(data.value, data.field.timeframe, this.timezone);
+    } else if (data.isTime()) {
+      const timeframe = data.field.timeframe;
+      return timeToString(data.value, timeframe, this.timezone);
     } else if (data.isNumber() || data.isString()) {
       return data.value;
     } else {
@@ -70,7 +69,7 @@ export class BarChartRendererFactory extends RendererFactory<BarChartRenderOptio
     document: Document,
     styleDefaults: StyleDefaults,
     rendererOptions: RendererOptions,
-    _field: Field | Explore,
+    _field: Field,
     options: SparkLineRenderOptions,
     timezone?: string
   ): Renderer {

@@ -5,18 +5,19 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Explore, ExploreField, QueryData} from '@malloydata/malloy';
 import {VegaChart, ViewInterface} from '../vega/vega-chart';
-import {ChartTooltipEntry, RenderResultMetadata} from '../types';
+import {ChartTooltipEntry} from '../types';
 import {Tooltip} from '../tooltip/tooltip';
 import {createEffect, createSignal, createMemo, Show} from 'solid-js';
 import {DefaultChartTooltip} from './default-chart-tooltip';
 import {EventListenerHandler, Runtime, View} from 'vega';
-import {useResultStore, VegaBrushOutput} from '../result-store/result-store';
+import {VegaBrushOutput} from '../result-store/result-store';
 import css from './chart.css?raw';
 import {useConfig} from '../render';
 import {DebugIcon} from './debug_icon';
 import ChartDevTool from './chart-dev-tool';
+import {RepeatedRecordCell} from '../../data_tree';
+import {useResultContext} from '../result-context';
 
 let IS_STORYBOOK = false;
 try {
@@ -30,9 +31,7 @@ try {
 }
 
 export type ChartProps = {
-  field: Explore | ExploreField;
-  data: QueryData;
-  metadata: RenderResultMetadata;
+  data: RepeatedRecordCell;
   // Debugging properties
   devMode?: boolean;
   runtime?: Runtime;
@@ -41,20 +40,18 @@ export type ChartProps = {
 
 export function Chart(props: ChartProps) {
   const config = useConfig();
+  const metadata = useResultContext();
   config.addCSSToShadowRoot(css);
-  const {field, data} = props;
-  const chartProps = props.metadata.field(field).vegaChartProps!;
-  const runtime = props.runtime ?? props.metadata.field(field).runtime;
+  const data = props.data;
+  const field = data.field;
+  const vegaInfo = metadata.vega[field.key];
+  const {runtime, props: chartProps} = vegaInfo;
   if (!runtime)
     throw new Error('Charts must have a runtime defined in their metadata');
-  const chartData = data;
-  for (let i = 0; i < chartData.length; i++) {
-    chartData[i]['__malloyDataRecord'] = data[i]['__malloyDataRecord'];
-  }
   let values: unknown[] = [];
   // New vega charts use mapMalloyDataToChartData handlers
   if (chartProps.mapMalloyDataToChartData) {
-    values = chartProps.mapMalloyDataToChartData(field, chartData);
+    values = chartProps.mapMalloyDataToChartData(data);
   }
 
   const [viewInterface, setViewInterface] = createSignal<ViewInterface | null>(
@@ -90,8 +87,6 @@ export function Chart(props: ChartProps) {
     } else setTooltipDataDebounce(null);
   };
 
-  const resultStore = useResultStore();
-
   // Enable charts to debounce interactions; this helps with rapid mouse movement through charts
   const timeouts = new Map();
   const debouncedApplyBrush = (brush: VegaBrushOutput) => {
@@ -123,24 +118,26 @@ export function Chart(props: ChartProps) {
         timeouts.set(
           brush.sourceId,
           setTimeout(() => {
-            resultStore.applyBrushOps([
+            metadata.store.applyBrushOps([
               {type: 'remove', sourceId: brush.sourceId},
             ]);
           }, debounceTime)
         );
       } else
-        resultStore.applyBrushOps([{type: 'remove', sourceId: brush.sourceId}]);
+        metadata.store.applyBrushOps([
+          {type: 'remove', sourceId: brush.sourceId},
+        ]);
     } else if (shouldDebounce && debounceStrategy === 'always')
       timeouts.set(
         brush.sourceId,
         setTimeout(() => {
-          resultStore.applyBrushOps([
+          metadata.store.applyBrushOps([
             {type: 'add', sourceId: brush.sourceId, value: brush.data!},
           ]);
         }, debounceTime)
       );
     else
-      resultStore.applyBrushOps([
+      metadata.store.applyBrushOps([
         {type: 'add', sourceId: brush.sourceId, value: brush.data!},
       ]);
   };
@@ -161,10 +158,10 @@ export function Chart(props: ChartProps) {
 
   // Pass relevant brushes from store into the vega view
   createEffect(() => {
-    const fieldRefIds = props.field.allFields.map(f =>
-      f.isAtomicField() ? f.referenceId : null
+    const fieldRefIds = field.fields.map(f =>
+      f.isAtomic() ? f.referenceId : null
     );
-    const relevantBrushes = resultStore.store.brushes.filter(brush =>
+    const relevantBrushes = metadata.store.store.brushes.filter(brush =>
       fieldRefIds.includes(brush.fieldRefId)
     );
 
@@ -194,7 +191,7 @@ export function Chart(props: ChartProps) {
       onMouseLeave={() => {
         // immediately clear tooltips and highlights on leaving chart
         setTooltipData(null);
-        resultStore.applyBrushOps(
+        metadata.store.applyBrushOps(
           brushOuts
             .filter(brush => brush.data?.type !== 'measure-range')
             .map(brush => ({type: 'remove', sourceId: brush.sourceId}))
@@ -214,7 +211,7 @@ export function Chart(props: ChartProps) {
         height={chartProps.plotHeight}
         onMouseOver={mouseOverHandler}
         onViewInterface={setViewInterface}
-        explore={props.field}
+        explore={field}
         runtime={runtime}
       />
       <Tooltip show={showTooltip()}>

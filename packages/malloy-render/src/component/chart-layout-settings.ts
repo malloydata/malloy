@@ -21,12 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Explore, ExploreField, Field} from '@malloydata/malloy';
 import {Tag} from '@malloydata/malloy-tag';
 import {scale, locale, AlignValue, TextBaselineValue} from 'vega';
-import {getFieldKey, getTextWidthDOM} from './util';
-import {RenderResultMetadata} from './types';
+import {getTextWidthDOM} from './util';
 import {renderNumericField} from './render-numeric-field';
+import {Field, NestField} from '../data_tree';
 
 export type ChartLayoutSettings = {
   plotWidth: number;
@@ -76,8 +75,7 @@ const CHART_SIZES = {
 const ROW_HEIGHT = 28;
 
 export function getChartLayoutSettings(
-  field: Explore | ExploreField,
-  metadata: RenderResultMetadata,
+  field: NestField,
   chartTag: Tag,
   options: {
     xField?: Field;
@@ -89,9 +87,9 @@ export function getChartLayoutSettings(
 ): ChartLayoutSettings {
   // TODO: improve logic for field extraction
   // may not need this anymore if we enforce the options, so each chart passes its specific needs for calculating layout
-  const xField = options?.xField ?? field.allFields.at(0)!;
-  const yField = options?.yField ?? field.allFields.at(1)!;
-  const {tag} = field.tagParse();
+  const xField = options?.xField ?? field.fields[0];
+  const yField = options?.yField ?? field.fields[1];
+  const tag = field.tag;
 
   // For now, support legacy API of size being its own tag
   const customWidth =
@@ -117,13 +115,11 @@ export function getChartLayoutSettings(
   let yTitleSize = 0;
   const hasXAxis = presetSize !== 'spark';
   const hasYAxis = presetSize !== 'spark';
-  const exploreMetadata = metadata.fields[getFieldKey(field)];
   let topPadding = presetSize !== 'spark' ? ROW_HEIGHT - 1 : 0; // Subtract 1 to account for top border
   let yTickCount: number | undefined;
-  const yKey = getFieldKey(yField);
   const [minVal, maxVal] = options?.getYMinMax?.() ?? [
-    metadata.fields[yKey]!.min!,
-    metadata.fields[yKey]!.max!,
+    yField.minNumber!,
+    yField.maxNumber!,
   ];
   const yScale = scale('linear')()
     .domain([minVal, maxVal])
@@ -135,10 +131,10 @@ export function getChartLayoutSettings(
     const maxAxisVal = yScale.domain().at(1);
     const minAxisVal = yScale.domain().at(0);
     const l = locale();
-    const formattedMin = yField.isAtomicField()
+    const formattedMin = yField.isAtomic()
       ? renderNumericField(yField, minAxisVal)
       : l.format(',')(minAxisVal);
-    const formattedMax = yField.isAtomicField()
+    const formattedMax = yField.isAtomic()
       ? renderNumericField(yField, maxAxisVal)
       : l.format(',')(maxAxisVal);
     // const formattedMin = l.format(',')(minAxisVal);
@@ -186,8 +182,7 @@ export function getChartLayoutSettings(
 
   if (hasXAxis) {
     // TODO: add type checking here for axis. for now assume number, string
-    const xKey = getFieldKey(xField);
-    const maxString = metadata.fields[xKey]!.maxString!;
+    const maxString = xField.maxString!;
     const maxStringSize =
       getTextWidthDOM(maxString, {
         fontFamily: 'Inter, sans-serif',
@@ -204,13 +199,11 @@ export function getChartLayoutSettings(
     labelLimit = xAxisHeight;
 
     // TODO: improve this, this logic exists in more detail in generate vega spec. this is a hacky partial solution for now :/
-    const uniqueValuesCt = metadata.fields[xKey]!.values.size;
+    const uniqueValuesCt = xField.valueSet.size;
     const isSharedDomain = uniqueValuesCt <= 20;
     const recordsToFit = isSharedDomain
       ? uniqueValuesCt
-      : exploreMetadata.maxUniqueFieldValueCounts.get(
-          metadata.getFieldKey(xField)
-        )!;
+      : field.maxUniqueFieldValueCounts.get(xField.name)!;
     const xSpacePerLabel = chartWidth / recordsToFit;
     if (xSpacePerLabel > xAxisHeight || xSpacePerLabel > maxStringSize) {
       labelAngle = 0;

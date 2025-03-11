@@ -1,7 +1,7 @@
 import {createStore, produce, unwrap} from 'solid-js/store';
-import {useResultContext} from '../result-context';
-import {DrillData, RenderResultMetadata, DimensionContextEntry} from '../types';
-import {Explore, Field} from '@malloydata/malloy';
+import {DrillData} from '../types';
+import {Cell} from '../../data_tree';
+import {RenderMetadata} from '../render-result-metadata';
 
 interface BrushDataBase {
   fieldRefId: string;
@@ -131,40 +131,24 @@ export function createResultStore() {
 
 export type ResultStore = ReturnType<typeof createResultStore>;
 
-export function useResultStore() {
-  const metadata = useResultContext();
-  return metadata.store;
-}
-
 export async function copyExplorePathQueryToClipboard({
   metadata,
-  field,
-  dimensionContext,
+  data,
   onDrill,
 }: {
-  metadata: RenderResultMetadata;
-  field: Field;
-  dimensionContext: DimensionContextEntry[];
+  metadata: RenderMetadata;
+  data: Cell;
   onDrill?: (drillData: DrillData) => void;
 }) {
-  const dimensionContextEntries = dimensionContext;
-  let explore: Field | Explore = field;
-  while (explore.parentExplore) {
-    explore = explore.parentExplore;
-  }
+  const expressions = data.getDrillExpressions();
+  const drillEntries = data.getDrillEntries();
 
-  const whereClause = dimensionContextEntries
-    .map(entry => `\t\t${entry.fieldDef} = ${JSON.stringify(entry.value)}`)
-    .join(',\n');
+  const whereClause = expressions.join(',\n');
 
-  const query = `
-run: ${explore.name} -> {
-where:
-${whereClause}
-} + { select: * }`.trim();
+  const query = data.getDrillQuery();
 
   const drillData: DrillData = {
-    dimensionFilters: dimensionContextEntries,
+    dimensionFilters: drillEntries,
     copyQueryToClipboard: async () => {
       try {
         await navigator.clipboard.writeText(query);

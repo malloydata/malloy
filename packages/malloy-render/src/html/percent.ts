@@ -21,19 +21,19 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataColumn, Explore, Field} from '@malloydata/malloy';
 import {HTMLNumberRenderer} from './number';
 import {PercentRenderOptions, StyleDefaults} from './data_styles';
 import {RendererOptions} from './renderer_types';
 import {Renderer} from './renderer';
 import {RendererFactory} from './renderer_factory';
+import {Cell, Field} from '../data_tree';
 
 export class HTMLPercentRenderer extends HTMLNumberRenderer {
-  override getText(data: DataColumn): string | null {
-    if (data.isNull()) {
+  override getText(data: Cell): string | null {
+    if (!data.isNumber()) {
       return null;
     }
-    const num = data.number.value;
+    const num = data.value;
 
     return num === null
       ? num
@@ -48,7 +48,7 @@ export class PercentRendererFactory extends RendererFactory<PercentRenderOptions
     document: Document,
     _styleDefaults: StyleDefaults,
     _rendererOptions: RendererOptions,
-    _field: Field | Explore,
+    _field: Field,
     options: PercentRenderOptions
   ): Renderer {
     return new HTMLPercentRenderer(document, options);
