@@ -305,7 +305,6 @@ stages: [
     ]
   }
 ]
-
 */
 
 struct Query {
