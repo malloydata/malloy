@@ -285,7 +285,13 @@ export function timeLiteral(
 }
 
 export function mkUnits(unit_s: string): TemporalUnit | undefined {
-  switch (unit_s) {
+  switch (unit_s.toLowerCase()) {
+    case 'second':
+    case 'seconds':
+      return 'second';
+    case 'minute':
+    case 'minutes':
+      return 'minute';
     case 'hour':
     case 'hours':
       return 'hour';

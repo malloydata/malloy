@@ -133,6 +133,8 @@ export function isNumberClause(sc: Object): sc is NumberClause {
 }
 
 export type TemporalUnit =
+  | 'second'
+  | 'minute'
   | 'hour'
   | 'day'
   | 'week'
@@ -151,11 +153,8 @@ export interface Duration {
   n: string;
 }
 
-export interface DayMoment {
+export interface WeekdayMoment {
   moment:
-    | 'today'
-    | 'yesterday'
-    | 'tomorrow'
     | 'monday'
     | 'tuesday'
     | 'wednesday'
@@ -163,6 +162,11 @@ export interface DayMoment {
     | 'friday'
     | 'saturday'
     | 'sunday';
+  which: 'last' | 'next';
+}
+
+export interface WhichdayMoment {
+  moment: 'yesterday' | 'today' | 'tomorrow';
 }
 
 export interface FromNowMoment extends Duration {
@@ -177,28 +181,28 @@ export interface NowMoment {
   moment: 'now';
 }
 
-export interface AMoment {
+export interface UnitMoment {
   moment: 'this' | 'last' | 'next';
   units: TemporalUnit;
-  n?: string;
 }
 
 export type Moment =
-  | AMoment
+  | UnitMoment
   | NowMoment
   | AgoMoment
   | FromNowMoment
   | TemporalLiteral
-  | DayMoment;
+  | WhichdayMoment
+  | WeekdayMoment;
 
 export interface Before extends Negateable {
   operator: 'before';
-  moment: Moment;
+  before: Moment;
 }
 
 export interface After extends Negateable {
   operator: 'after';
-  moment: Moment;
+  after: Moment;
 }
 
 export interface To extends Negateable {
@@ -209,12 +213,22 @@ export interface To extends Negateable {
 
 export interface For extends Negateable, Duration {
   operator: 'for';
-  moment: Moment;
+  begin: Moment;
+}
+
+// N units starting in the past, including this one
+export interface in_last extends Negateable, Duration {
+  operator: 'in_last';
+}
+
+// Nunits starting in the past, not including this one
+export interface JustUnits extends Negateable, Duration {
+  operator: 'last' | 'next';
 }
 
 export interface InMoment extends Negateable {
   operator: 'in';
-  moment: Moment;
+  in: Moment;
 }
 
 export type TemporalClause =
@@ -223,6 +237,8 @@ export type TemporalClause =
   | After
   | To
   | For
+  | JustUnits
+  | in_last
   | InMoment
   | ClauseChain<TemporalClause>
   | ClauseGroup<TemporalClause>;
@@ -240,6 +256,10 @@ export function isTemporalClause(sc: Object): sc is TemporalClause {
       'in',
       'and',
       'or',
+      'in_last',
+      'this',
+      'last',
+      'next',
       ',',
       '()',
       'null',
