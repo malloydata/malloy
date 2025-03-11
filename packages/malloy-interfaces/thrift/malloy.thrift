@@ -305,7 +305,6 @@ stages: [
     ]
   }
 ]
-
 */
 
 struct Query {
@@ -319,13 +318,18 @@ union QueryDefinition {
   3: QueryRefinement refinement,
 }
 
+union QueryArrowSource {
+  3: QueryRefinement refinement,
+  2: Reference source_reference,
+}
+
 struct QueryArrow {
-  1: required Reference source_reference,
+  1: required QueryArrowSource source,
   2: required ViewDefinition view,
 }
 
 struct QueryRefinement {
-  1: required Reference query_reference,
+  1: required QueryDefinition base,
   2: required ViewDefinition refinement,
 }
 

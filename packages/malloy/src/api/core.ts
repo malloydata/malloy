@@ -399,7 +399,10 @@ export const DEFAULT_LOG_RANGE: Malloy.DocumentRange = {
   },
 };
 
-function mapLogs(logs: LogMessage[], defaultURL: string): Malloy.LogMessage[] {
+export function mapLogs(
+  logs: LogMessage[],
+  defaultURL: string
+): Malloy.LogMessage[] {
   return logs.map(log => ({
     severity: log.severity,
     message: log.message,

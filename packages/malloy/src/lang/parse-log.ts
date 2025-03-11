@@ -403,6 +403,7 @@ type MessageParameterTypes = {
   'unsupported-path-in-include': string;
   'wildcard-include-rename': string;
   'literal-string-newline': string;
+  'invalid-malloy-query-document': string;
 };
 
 export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {

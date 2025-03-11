@@ -274,7 +274,7 @@ describe('api', () => {
           annotations: [{value: '#(test) hello'}],
           definition: {
             kind: 'arrow',
-            source_reference: {name: 'flights'},
+            source: {kind: 'source_reference', name: 'flights'},
             view: {
               kind: 'segment',
               operations: [

@@ -46,11 +46,18 @@ function codeFromFragments(fragments: Fragment[], {tabWidth} = {tabWidth: 2}) {
   return code;
 }
 
-function wrap(open: string, block: Fragment[], close: string): Fragment[] {
+function wrap(
+  open: string,
+  block: Fragment[],
+  close: string,
+  options?: {spaces: boolean}
+): Fragment[] {
   if (block.includes(NEWLINE)) {
     return [open, NEWLINE, INDENT, ...block, NEWLINE, OUTDENT, close];
   }
-  return [open, ' ', ...block, ' ', close];
+  const spaces = options?.spaces ?? true;
+  const maybeSpace = spaces ? ' ' : '';
+  return [open, maybeSpace, ...block, maybeSpace, close];
 }
 
 function escapeString(str: string): {contents: string; quoteCharacter: string} {
@@ -173,7 +180,7 @@ function referenceToFragments(reference: Malloy.Reference): Fragment[] {
         parameterFragments.push(',', NEWLINE);
       }
     }
-    fragments.push(...wrap('(', parameterFragments, ')'));
+    fragments.push(...wrap('(', parameterFragments, ')', {spaces: false}));
   }
   return fragments;
 }
@@ -186,11 +193,27 @@ function queryToFragments(query: Malloy.Query): Fragment[] {
   return fragments;
 }
 
+function queryArrowSourceToFragments(
+  query: Malloy.QueryArrowSource
+): Fragment[] {
+  const fragments: Fragment[] = [];
+  switch (query.kind) {
+    case 'source_reference': {
+      fragments.push(...referenceToFragments(query));
+      break;
+    }
+    case 'refinement':
+      fragments.push(...queryDefinitionToFragments(query));
+      break;
+  }
+  return fragments;
+}
+
 function queryDefinitionToFragments(query: Malloy.QueryDefinition): Fragment[] {
   const fragments: Fragment[] = [];
   switch (query.kind) {
     case 'arrow': {
-      fragments.push(...referenceToFragments(query.source_reference));
+      fragments.push(...queryArrowSourceToFragments(query.source));
       fragments.push(' -> ');
       fragments.push(...viewDefinitionToFragments(query.view));
       break;
@@ -200,7 +223,12 @@ function queryDefinitionToFragments(query: Malloy.QueryDefinition): Fragment[] {
       break;
     }
     case 'refinement': {
-      fragments.push(...referenceToFragments(query.query_reference));
+      const baseFragments = queryDefinitionToFragments(query.base);
+      if (query.base.kind === 'arrow') {
+        fragments.push(...wrap('(', baseFragments, ')', {spaces: false}));
+      } else {
+        fragments.push(...baseFragments);
+      }
       fragments.push(' + ');
       fragments.push(...viewDefinitionToFragments(query.refinement));
       break;

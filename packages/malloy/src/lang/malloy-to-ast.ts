@@ -60,7 +60,7 @@ import {
 } from '../model/malloy_types';
 import {Tag} from '@malloydata/malloy-tag';
 import {ConstantExpression} from './ast/expressions/constant-expression';
-import {isNotUndefined} from './utils';
+import {isNotUndefined, rangeFromContext} from './utils';
 
 class ErrorNode extends ast.SourceQueryElement {
   elementType = 'parseErrorSourceQuery';
@@ -124,10 +124,14 @@ export class MalloyToAST
     this.msgLog.log(makeLogMessage(code, data, {at: el.location, ...options}));
   }
 
+  protected rangeFromContext(cx: ParserRuleContext) {
+    return rangeFromContext(this.parseInfo.sourceInfo, cx);
+  }
+
   protected getLocation(cx: ParserRuleContext): DocumentLocation {
     return {
       url: this.parseInfo.sourceURL,
-      range: this.parseInfo.rangeFromContext(cx),
+      range: this.rangeFromContext(cx),
     };
   }
 
@@ -246,7 +250,7 @@ export class MalloyToAST
   ): MT {
     el.location = {
       url: this.parseInfo.sourceURL,
-      range: this.parseInfo.rangeFromContext(cx),
+      range: this.rangeFromContext(cx),
     };
     return el;
   }
@@ -1381,7 +1385,7 @@ export class MalloyToAST
     const left = this.getFieldExpr(pcx.fieldExpr(0));
     const right = this.getFieldExpr(pcx.fieldExpr(1));
     if (ast.isEquality(op)) {
-      const wholeRange = this.parseInfo.rangeFromContext(pcx);
+      const wholeRange = this.rangeFromContext(pcx);
       if (right instanceof ast.ExprNULL) {
         if (op === '=') {
           this.warnWithReplacement(
@@ -1693,7 +1697,7 @@ export class MalloyToAST
     this.warnWithReplacement(
       'sql-case',
       'Use a `pick` statement instead of `case`',
-      this.parseInfo.rangeFromContext(pcx),
+      this.rangeFromContext(pcx),
       `${[
         ...(valueCx ? [`${this.getSourceCode(valueCx)} ?`] : []),
         ...whenCxs.map(
@@ -2148,7 +2152,7 @@ export class MalloyToAST
     let op: ast.CompareMalloyOperator = '~';
     const left = pcx.fieldExpr(0);
     const right = pcx.fieldExpr(1);
-    const wholeRange = this.parseInfo.rangeFromContext(pcx);
+    const wholeRange = this.rangeFromContext(pcx);
     if (pcx.NOT()) {
       op = '!~';
       this.warnWithReplacement(
@@ -2198,7 +2202,7 @@ export class MalloyToAST
     this.warnWithReplacement(
       'sql-in',
       `Use = (a|b|c) instead of${isNot ? ' NOT' : ''} IN (a,b,c)`,
-      this.parseInfo.rangeFromContext(pcx),
+      this.rangeFromContext(pcx),
       `${this.getSourceCode(pcx.fieldExpr())} ${isNot ? '!=' : '='} (${from
         .map(f => this.getSourceCode(f))
         .join(' | ')})`

@@ -330,9 +330,19 @@ export type Query = {
   annotations?: Array<Annotation>;
 };
 export type QueryArrow = {
-  source_reference: Reference;
+  source: QueryArrowSource;
   view: ViewDefinition;
 };
+export type QueryArrowSourceType = 'refinement' | 'source_reference';
+export type QueryArrowSource =
+  | QueryArrowSourceWithRefinement
+  | QueryArrowSourceWithSourceReference;
+export type QueryArrowSourceWithRefinement = {
+  kind: 'refinement';
+} & QueryRefinement;
+export type QueryArrowSourceWithSourceReference = {
+  kind: 'source_reference';
+} & Reference;
 export type QueryDefinitionType = 'arrow' | 'query_reference' | 'refinement';
 export type QueryDefinition =
   | QueryDefinitionWithArrow
@@ -354,7 +364,7 @@ export type QueryInfo = {
   location?: Location;
 };
 export type QueryRefinement = {
-  query_reference: Reference;
+  base: QueryDefinition;
   refinement: ViewDefinition;
 };
 export type Range = {

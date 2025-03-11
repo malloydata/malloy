@@ -112,7 +112,7 @@ describe('api', () => {
           query: {
             definition: {
               kind: 'arrow',
-              source_reference: {name: 'flights'},
+              source: {kind: 'source_reference', name: 'flights'},
               view: {
                 kind: 'segment',
                 operations: [
@@ -207,7 +207,7 @@ ORDER BY 1 asc NULLS LAST
           query: {
             definition: {
               kind: 'arrow',
-              source_reference: {name: 'flights'},
+              source: {kind: 'source_reference', name: 'flights'},
               view: {
                 kind: 'segment',
                 operations: [
