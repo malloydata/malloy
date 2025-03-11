@@ -364,4 +364,14 @@ describe('temporal filter expressions', () => {
       });
     });
   });
+
+  test('a syntax error', () => {
+    const p = TemporalFilterExpression.parse('not nulll,now');
+    expect(p.log.length).toBeGreaterThan(0);
+    expect(p.log[0]).toMatchObject({
+      startIndex: 4,
+      endIndex: 8,
+      severity: 'error',
+    });
+  });
 });
