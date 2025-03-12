@@ -14,7 +14,7 @@ describe('api', () => {
       let result = compileModel({
         model_url: 'file://test.malloy',
       });
-      let expected: Malloy.CompileModelResponse = {
+      let expected: Malloy.CompileModelResponse & {session_id?: string} = {
         compiler_needs: {
           files: [
             {
@@ -24,17 +24,20 @@ describe('api', () => {
         },
       };
       expect(result).toMatchObject(expected);
-      result = compileModel({
-        model_url: 'file://test.malloy',
-        compiler_needs: {
-          files: [
-            {
-              url: 'file://test.malloy',
-              contents: "source: flights is connection.table('flights')",
-            },
-          ],
+      result = compileModel(
+        {
+          model_url: 'file://test.malloy',
+          compiler_needs: {
+            files: [
+              {
+                url: 'file://test.malloy',
+                contents: "source: flights is connection.table('flights')",
+              },
+            ],
+          },
         },
-      });
+        {session_id: result.session_id}
+      );
       expected = {
         compiler_needs: {
           table_schemas: [
@@ -45,29 +48,33 @@ describe('api', () => {
           ],
           connections: [{name: 'connection'}],
         },
+        session_id: result.session_id,
       };
       expect(result).toMatchObject(expected);
-      result = compileModel({
-        model_url: 'file://test.malloy',
-        compiler_needs: {
-          table_schemas: [
-            {
-              connection_name: 'connection',
-              name: 'flights',
-              schema: {
-                fields: [
-                  {
-                    kind: 'dimension',
-                    name: 'carrier',
-                    type: {kind: 'string_type'},
-                  },
-                ],
+      result = compileModel(
+        {
+          model_url: 'file://test.malloy',
+          compiler_needs: {
+            table_schemas: [
+              {
+                connection_name: 'connection',
+                name: 'flights',
+                schema: {
+                  fields: [
+                    {
+                      kind: 'dimension',
+                      name: 'carrier',
+                      type: {kind: 'string_type'},
+                    },
+                  ],
+                },
               },
-            },
-          ],
-          connections: [{name: 'connection', dialect: 'duckdb'}],
+            ],
+            connections: [{name: 'connection', dialect: 'duckdb'}],
+          },
         },
-      });
+        {session_id: result.session_id}
+      );
       expected = {
         model: {
           entries: [
@@ -87,6 +94,7 @@ describe('api', () => {
           ],
           anonymous_queries: [],
         },
+        session_id: result.session_id,
       };
       expect(result).toMatchObject(expected);
     });
@@ -103,7 +111,7 @@ describe('api', () => {
           ],
         },
       });
-      let expected: Malloy.CompileSourceResponse = {
+      let expected: Malloy.CompileSourceResponse & {session_id?: string} = {
         compiler_needs: {
           table_schemas: [
             {
@@ -115,28 +123,31 @@ describe('api', () => {
         },
       };
       expect(result).toMatchObject(expected);
-      result = compileSource({
-        model_url: 'file://test.malloy',
-        name: 'flights',
-        compiler_needs: {
-          table_schemas: [
-            {
-              connection_name: 'connection',
-              name: 'flights',
-              schema: {
-                fields: [
-                  {
-                    kind: 'dimension',
-                    name: 'carrier',
-                    type: {kind: 'string_type'},
-                  },
-                ],
+      result = compileSource(
+        {
+          model_url: 'file://test.malloy',
+          name: 'flights',
+          compiler_needs: {
+            table_schemas: [
+              {
+                connection_name: 'connection',
+                name: 'flights',
+                schema: {
+                  fields: [
+                    {
+                      kind: 'dimension',
+                      name: 'carrier',
+                      type: {kind: 'string_type'},
+                    },
+                  ],
+                },
               },
-            },
-          ],
-          connections: [{name: 'connection', dialect: 'duckdb'}],
+            ],
+            connections: [{name: 'connection', dialect: 'duckdb'}],
+          },
         },
-      });
+        {session_id: result.session_id}
+      );
       expected = {
         source: {
           name: 'flights',
@@ -150,6 +161,7 @@ describe('api', () => {
             ],
           },
         },
+        session_id: result.session_id,
       };
       expect(result).toMatchObject(expected);
     });
@@ -159,7 +171,7 @@ describe('api', () => {
       const query: Malloy.Query = {
         definition: {
           kind: 'arrow',
-          source_reference: {name: 'flights'},
+          source: {kind: 'source_reference', name: 'flights'},
           view: {
             kind: 'segment',
             operations: [
@@ -177,7 +189,7 @@ describe('api', () => {
         model_url: 'file://test.malloy',
         query,
       });
-      let expected: Malloy.CompileQueryResponse = {
+      let expected: Malloy.CompileQueryResponse & {session_id?: string} = {
         compiler_needs: {
           files: [
             {
@@ -187,18 +199,21 @@ describe('api', () => {
         },
       };
       expect(result).toMatchObject(expected);
-      result = compileQuery({
-        model_url: 'file://test.malloy',
-        query,
-        compiler_needs: {
-          files: [
-            {
-              url: 'file://test.malloy',
-              contents: "source: flights is connection.table('flights')",
-            },
-          ],
+      result = compileQuery(
+        {
+          model_url: 'file://test.malloy',
+          query,
+          compiler_needs: {
+            files: [
+              {
+                url: 'file://test.malloy',
+                contents: "source: flights is connection.table('flights')",
+              },
+            ],
+          },
         },
-      });
+        {session_id: result.session_id}
+      );
       expected = {
         compiler_needs: {
           table_schemas: [
@@ -211,28 +226,31 @@ describe('api', () => {
         },
       };
       expect(result).toMatchObject(expected);
-      result = compileQuery({
-        model_url: 'file://test.malloy',
-        query,
-        compiler_needs: {
-          table_schemas: [
-            {
-              connection_name: 'connection',
-              name: 'flights',
-              schema: {
-                fields: [
-                  {
-                    kind: 'dimension',
-                    name: 'carrier',
-                    type: {kind: 'string_type'},
-                  },
-                ],
+      result = compileQuery(
+        {
+          model_url: 'file://test.malloy',
+          query,
+          compiler_needs: {
+            table_schemas: [
+              {
+                connection_name: 'connection',
+                name: 'flights',
+                schema: {
+                  fields: [
+                    {
+                      kind: 'dimension',
+                      name: 'carrier',
+                      type: {kind: 'string_type'},
+                    },
+                  ],
+                },
               },
-            },
-          ],
-          connections: [{name: 'connection', dialect: 'duckdb'}],
+            ],
+            connections: [{name: 'connection', dialect: 'duckdb'}],
+          },
         },
-      });
+        {session_id: result.session_id}
+      );
       expected = {
         result: {
           connection_name: 'connection',
@@ -252,6 +270,7 @@ ORDER BY 1 asc NULLS LAST
             ],
           },
         },
+        session_id: result.session_id,
       };
       expect(result).toMatchObject(expected);
     });
@@ -268,6 +287,7 @@ ORDER BY 1 asc NULLS LAST
             ttl: new Date(Date.now() - 1000),
           }
         );
+        const session_id = result.session_id;
         let expected: Malloy.CompileModelResponse = {
           compiler_needs: {
             files: [
@@ -281,9 +301,7 @@ ORDER BY 1 asc NULLS LAST
         compileModel({
           model_url: 'file://some_other_model.malloy',
         });
-        result = compileModel({
-          model_url: 'file://test.malloy',
-        });
+        result = compileModel({model_url: 'file://test.malloy'}, {session_id});
         expected = {
           compiler_needs: {
             files: [
@@ -293,6 +311,67 @@ ORDER BY 1 asc NULLS LAST
             ],
           },
         };
+        expect(result).toMatchObject(expected);
+        // New session
+        expect(result.session_id).not.toBe(session_id);
+      });
+      test('ttl should be updated if set in a subsequent request', () => {
+        let result = compileModel(
+          {
+            model_url: 'file://test.malloy',
+          },
+          {
+            // This is in the past...
+            ttl: new Date(Date.now() - 1000),
+          }
+        );
+        const session_id = result.session_id;
+        let expected: Malloy.CompileModelResponse & {session_id?: string} = {
+          compiler_needs: {
+            files: [
+              {
+                url: 'file://test.malloy',
+              },
+            ],
+          },
+        };
+        expect(result).toMatchObject(expected);
+        result = compileModel(
+          {
+            model_url: 'file://test.malloy',
+            compiler_needs: {
+              files: [
+                {
+                  url: 'file://test.malloy',
+                  contents: 'source: flights is connection.table("flights")',
+                },
+              ],
+            },
+          },
+          {
+            session_id,
+            // Update TTL to be far in the future
+            ttl: {seconds: 100000},
+          }
+        );
+        expected = {
+          compiler_needs: {
+            table_schemas: [
+              {
+                connection_name: 'connection',
+                name: 'flights',
+              },
+            ],
+            connections: [{name: 'connection'}],
+          },
+          session_id,
+        };
+        expect(result).toMatchObject(expected);
+        // Now asking for a different file should NOT purge the original session
+        compileModel({
+          model_url: 'file://some_other_model.malloy',
+        });
+        result = compileModel({model_url: 'file://test.malloy'}, {session_id});
         expect(result).toMatchObject(expected);
       });
     });
@@ -338,10 +417,9 @@ ORDER BY 1 asc NULLS LAST
           },
         ],
       };
+      const session_id = result.session_id;
       expect(result).toMatchObject(expected);
-      result = compileModel({
-        model_url: 'file://test.malloy',
-      });
+      result = compileModel({model_url: 'file://test.malloy'}, {session_id});
       expected = {
         compiler_needs: {
           files: [
@@ -352,6 +430,8 @@ ORDER BY 1 asc NULLS LAST
         },
       };
       expect(result).toMatchObject(expected);
+      // Should be a new session
+      expect(result.session_id).not.toBe(session_id);
     });
     test('sessions should be cleared when they successfully return a result', () => {
       let result = compileModel({
@@ -401,10 +481,9 @@ ORDER BY 1 asc NULLS LAST
           anonymous_queries: [],
         },
       };
+      const session_id = result.session_id;
       expect(result).toMatchObject(expected);
-      result = compileModel({
-        model_url: 'file://test.malloy',
-      });
+      result = compileModel({model_url: 'file://test.malloy'}, {session_id});
       // Compiler should not know the contents of this file anymore because the session was cleared
       expected = {
         compiler_needs: {
@@ -416,6 +495,7 @@ ORDER BY 1 asc NULLS LAST
         },
       };
       expect(result).toMatchObject(expected);
+      expect(result.session_id).not.toBe(session_id);
     });
   });
 });

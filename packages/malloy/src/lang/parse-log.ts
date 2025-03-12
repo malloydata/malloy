@@ -405,6 +405,7 @@ type MessageParameterTypes = {
   'wildcard-include-rename': string;
   'literal-string-newline': string;
   'filter-expression-type': string;
+  'invalid-malloy-query-document': string;
 };
 
 export const MESSAGE_FORMATTERS: PartialErrorCodeMessageMap = {

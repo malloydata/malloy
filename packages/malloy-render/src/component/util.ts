@@ -1,5 +1,6 @@
 /*
  * Copyright 2023 Google LLC
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files
@@ -20,38 +21,6 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-import {Explore, Field} from '@malloydata/malloy';
-
-function getLocationInParent(f: Field | Explore) {
-  const parent = f.parentExplore;
-  return parent?.allFields.findIndex(pf => pf.name === f.name) ?? -1;
-}
-
-export function isLastChild(f: Field | Explore) {
-  if (f.parentExplore)
-    return getLocationInParent(f) === f.parentExplore.allFields.length - 1;
-  return true;
-}
-
-export function isFirstChild(f: Field | Explore) {
-  return getLocationInParent(f) === 0;
-}
-
-export function valueIsNumber(f: Field, v: unknown): v is number {
-  return f.isAtomicField() && f.isNumber() && v !== null;
-}
-
-export function valueIsBoolean(f: Field, v: unknown): v is boolean {
-  return f.isAtomicField() && f.isBoolean() && v !== null;
-}
-
-export function valueIsString(f: Field, s: unknown): s is string {
-  return f.isAtomicField() && f.isString() && s !== null;
-}
-
-export function valueIsDateTime(f: Field, v: unknown): v is Date {
-  return f.isAtomicField() && (f.isDate() || f.isTimestamp()) && v !== null;
-}
 
 export function getTextWidthCanvas(
   text: string,
@@ -79,10 +48,6 @@ export function getTextWidthDOM(text: string, styles: Record<string, string>) {
 
 export function clamp(s: number, e: number, v: number) {
   return Math.max(s, Math.min(e, v));
-}
-
-export function getFieldKey(f: Field | Explore) {
-  return JSON.stringify(f.fieldPath);
 }
 
 export function getRangeSize(range: [number, number]) {

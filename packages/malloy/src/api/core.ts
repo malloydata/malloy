@@ -21,6 +21,8 @@ import {
 import {modelDefToModelInfo} from '../to_stable';
 import {sqlKey} from '../model/sql_block';
 import {SQLSourceRequest} from '../lang/translate-response';
+import {annotationToTaglines} from '../annotation';
+import {Tag} from '@malloydata/malloy-tag';
 
 // TODO find where this should go...
 function tableKey(connectionName: string, tablePath: string): string {
@@ -397,7 +399,10 @@ export const DEFAULT_LOG_RANGE: Malloy.DocumentRange = {
   },
 };
 
-function mapLogs(logs: LogMessage[], defaultURL: string): Malloy.LogMessage[] {
+export function mapLogs(
+  logs: LogMessage[],
+  defaultURL: string
+): Malloy.LogMessage[] {
   return logs.map(log => ({
     severity: log.severity,
     message: log.message,
@@ -472,6 +477,10 @@ function extractSource(
   }
 }
 
+export function hasErrors(log: Malloy.LogMessage[] | undefined) {
+  return log?.some(m => m.severity === 'error') ?? false;
+}
+
 // Given a StableQueryDef and the URL to a model, run it and return a StableResult
 
 // Given a StableQueryDef and the URL to a model, compile it and return a StableResultDef
@@ -523,14 +532,36 @@ export function statedCompileQuery(
     const index = queries.length - 1;
     const query = result.modelDef.queryList[index];
     const schema = result.model.anonymous_queries[index].schema;
+    const annotations = result.model.anonymous_queries[index].annotations ?? [];
     try {
       const queryModel = new QueryModel(result.modelDef);
       const translatedQuery = queryModel.compileQuery(query);
+      const modelAnnotations = annotationToTaglines(
+        result.modelDef.annotation
+      ).map(l => ({
+        value: l,
+      }));
+      annotations.push({
+        value: Tag.withPrefix('#(malloy) ')
+          .set(['source_name'], translatedQuery.sourceExplore)
+          .toString(),
+      });
+      if (translatedQuery.queryName) {
+        annotations.push({
+          value: Tag.withPrefix('#(malloy) ')
+            .set(['query_name'], translatedQuery.queryName)
+            .toString(),
+        });
+      }
       return {
         result: {
           sql: translatedQuery.sql,
           schema,
           connection_name: translatedQuery.connectionName,
+          annotations: annotations.length > 0 ? annotations : undefined,
+          model_annotations:
+            modelAnnotations.length > 0 ? modelAnnotations : undefined,
+          query_timezone: translatedQuery.queryTimezone,
         },
       };
     } catch (error) {

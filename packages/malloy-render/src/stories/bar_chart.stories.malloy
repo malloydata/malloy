@@ -473,6 +473,25 @@ source: products is duckdb.table("static/data/products.parquet") extend {
     limit: 10
     order_by: id
   }
+
+
+  --#(story) story="Y in Nested Record"
+  # bar_chart x=carrier y='measures.Sales $'
+  view: y_in_nested_record is {
+    group_by: brand
+    nest: measures is {
+      aggregate:
+        `Sales $`
+        `Cost $ really long label`
+    }
+  }
+
+  --#(story) story="Y Field Name Contains Dot"
+  # bar_chart x=carrier y='measures.Sales $'
+  view: y_field_contains_dot is {
+    group_by: brand
+    aggregate: `measures.Sales $` is `Sales $`
+  }
 }
 
 run: products -> { group_by: distribution_center_id}

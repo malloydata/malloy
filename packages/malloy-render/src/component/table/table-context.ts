@@ -1,7 +1,6 @@
 import {createContext, useContext} from 'solid-js';
 import {createStore, SetStoreFunction, Store} from 'solid-js/store';
 import {TableLayout} from './table-layout';
-import {DimensionContextEntry} from '../types';
 
 type TableStore = {
   headerSizes: Record<string, number>;
@@ -19,7 +18,6 @@ export type TableContext = {
   headerSizeStore: ReturnType<typeof createStore<Record<string, number>>>;
   currentRow: number[];
   currentExplore: string[];
-  dimensionContext: DimensionContextEntry[];
 };
 
 export const TableContext = createContext<TableContext>();

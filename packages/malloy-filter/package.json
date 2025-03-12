@@ -1,8 +1,8 @@
 {
   "name": "@malloydata/malloy-filter",
-  "version": "0.0.239",
+  "version": "0.0.241",
   "license": "MIT",
-  "description": "",
+  "description": "Parsers for the Malloy filtering sub-languages",
   "main": "dist/index.js",
   "repository": {
     "type": "git",
@@ -12,12 +12,20 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "tsc --build",
-    "samples": "node dist/generate_samples.js",
-    "asimpleparser": "node dist/a_simple_parser.js",
-    "test": "jest --runInBand",
-    "test:tokenizer": "jest tokenizer.spec.ts"
+    "build": "npm run build-parsers && tsc --build",
+    "build-parsers": "mkdir -p src/lib && nearleyc src/grammars/fexpr_string.ne --out src/lib/fexpr_string_parser.ts && nearleyc src/grammars/fexpr_number.ne --out src/lib/fexpr_number_parser.ts && nearleyc src/grammars/ftemporal.ne --out src/lib/ftemporal_parser.ts",
+    "clean": "tsc --build --clean && rm -rf src/lib/* dist",
+    "test": "jest"
   },
   "keywords": [],
-  "author": ""
+  "author": "",
+  "dependencies": {
+    "jest-diff": "^29.6.2",
+    "moo": "^0.5.2",
+    "nearley": "^2.20.1"
+  },
+  "devDependencies": {
+    "@types/moo": "^0.5.10",
+    "@types/nearley": "^2.11.5"
+  }
 }

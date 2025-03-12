@@ -2782,13 +2782,13 @@ class QueryQuery extends QueryField {
     for (const [name, fi] of resultStruct.allFields) {
       const resultMetadata = this.getResultMetadata(fi);
       if (fi instanceof FieldInstanceResult) {
-        const {structDef} = this.generateTurtlePipelineSQL(
+        const {structDef, repeatedResultType} = this.generateTurtlePipelineSQL(
           fi,
           new StageWriter(true, undefined),
           '<nosource>'
         );
 
-        if (fi.getRepeatedResultType() === 'nested') {
+        if (repeatedResultType === 'nested') {
           const multiLineNest: RepeatedRecordDef = {
             ...structDef,
             type: 'array',
@@ -3398,14 +3398,20 @@ class QueryQuery extends QueryField {
           }
           r = r.parent;
         }
+
+        let partition = '';
+        if (dimensions.length > 0) {
+          partition = 'partition by ';
+          partition += dimensions
+            .map(this.parent.dialect.castToString)
+            .join(',');
+        }
         fields.push(
           `MAX(CASE WHEN group_set IN (${result.childGroups.join(
             ','
           )}) THEN __delete__${
             result.groupSet
-          } END) OVER(partition by ${dimensions
-            .map(this.parent.dialect.castToString)
-            .join(',')}) as __shaving__${result.groupSet}`
+          } END) OVER(${partition}) as __shaving__${result.groupSet}`
         );
       }
     }
@@ -3833,6 +3839,7 @@ class QueryQuery extends QueryField {
     const repeatedResultType = fi.getRepeatedResultType();
     const hasPipeline = fi.turtleDef.pipeline.length > 1;
     let pipeOut;
+    let outputRepeatedResultType = repeatedResultType;
     if (hasPipeline) {
       const pipeline: PipeSegment[] = [...fi.turtleDef.pipeline];
       pipeline.shift();
@@ -3866,6 +3873,7 @@ class QueryQuery extends QueryField {
         this.isJoinedSubquery
       );
       pipeOut = q.generateSQLFromPipeline(stageWriter);
+      outputRepeatedResultType = q.rootResult.getRepeatedResultType();
       // console.log(stageWriter.generateSQLStages());
       structDef = pipeOut.outputStruct;
     }
@@ -3873,6 +3881,7 @@ class QueryQuery extends QueryField {
     return {
       structDef,
       pipeOut,
+      repeatedResultType: outputRepeatedResultType,
     };
   }
 
@@ -5100,6 +5109,7 @@ export class QueryModel {
       queryName: query.name,
       connectionName: ret.connectionName,
       annotation: query.annotation,
+      queryTimezone: ret.structs[0].queryTimezone,
     };
   }
 

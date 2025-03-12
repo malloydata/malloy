@@ -21,17 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  DataColumn,
-  DateTimeframe,
-  Field,
-  TimestampTimeframe,
-} from '@malloydata/malloy';
-import {Tag} from '@malloydata/malloy-tag';
 import startCase from 'lodash/startCase';
 import {RenderDef} from './data_styles';
 import {RendererOptions} from './renderer_types';
 import {DateTime} from 'luxon';
+import * as Malloy from '@malloydata/malloy-interfaces';
+import {Field} from '../data_tree';
 
 export function getColorScale(
   type: 'temporal' | 'ordinal' | 'quantitative' | 'nominal' | undefined,
@@ -86,16 +81,16 @@ function numberFixedDigits(value: number, digits: number) {
 
 export function timeToString(
   time: Date,
-  timeframe: DateTimeframe | TimestampTimeframe | undefined,
+  timeframe: Malloy.DateTimeframe | Malloy.TimestampTimeframe | undefined,
   timezone?: string
 ): string {
-  timeframe ||= TimestampTimeframe.Second;
+  timeframe ||= 'second';
 
   let shouldNormalize = false;
   switch (timeframe) {
-    case TimestampTimeframe.Hour:
-    case TimestampTimeframe.Minute:
-    case TimestampTimeframe.Second:
+    case 'hour':
+    case 'minute':
+    case 'second':
       shouldNormalize = true;
       break;
   }
@@ -105,45 +100,40 @@ export function timeToString(
   });
 
   switch (timeframe) {
-    case TimestampTimeframe.Year:
-    case DateTimeframe.Year: {
+    case 'year': {
       const year = numberFixedDigits(dateTime.year, 4);
       return `${year}`;
     }
-    case TimestampTimeframe.Quarter:
-    case DateTimeframe.Quarter: {
+    case 'quarter': {
       const year = numberFixedDigits(dateTime.year, 4);
       const quarter = Math.floor(dateTime.month / 3) + 1;
       return `${year}-Q${quarter}`;
     }
-    case TimestampTimeframe.Month:
-    case DateTimeframe.Month: {
+    case 'month': {
       const year = numberFixedDigits(dateTime.year, 2);
       const month = numberFixedDigits(dateTime.month, 2);
       return `${year}-${month}`;
     }
-    case TimestampTimeframe.Week:
-    case DateTimeframe.Week: {
+    case 'week': {
       const year = numberFixedDigits(dateTime.year, 2);
       const month = numberFixedDigits(dateTime.month, 2);
       const day = numberFixedDigits(dateTime.day, 2);
-      return `WK${year}-${month}-${day}`;
+      return `${year}-${month}-${day}-WK`;
     }
-    case DateTimeframe.Day:
-    case TimestampTimeframe.Day: {
+    case 'day': {
       const year = numberFixedDigits(dateTime.year, 2);
       const month = numberFixedDigits(dateTime.month, 2);
       const day = numberFixedDigits(dateTime.day, 2);
       return `${year}-${month}-${day}`;
     }
-    case TimestampTimeframe.Hour: {
+    case 'hour': {
       const year = numberFixedDigits(dateTime.year, 2);
       const month = numberFixedDigits(dateTime.month, 2);
       const day = numberFixedDigits(dateTime.day, 2);
       const hour = numberFixedDigits(dateTime.hour, 2);
-      return `${year}-${month}-${day} ${hour}:00 for 1 hour`;
+      return `${year}-${month}-${day} ${hour}`;
     }
-    case TimestampTimeframe.Minute: {
+    case 'minute': {
       const year = numberFixedDigits(dateTime.year, 2);
       const month = numberFixedDigits(dateTime.month, 2);
       const day = numberFixedDigits(dateTime.day, 2);
@@ -151,7 +141,7 @@ export function timeToString(
       const minute = numberFixedDigits(dateTime.minute, 2);
       return `${year}-${month}-${day} ${hour}:${minute}`;
     }
-    case TimestampTimeframe.Second: {
+    case 'second': {
       const year = numberFixedDigits(dateTime.year, 2);
       const month = numberFixedDigits(dateTime.month, 2);
       const day = numberFixedDigits(dateTime.day, 2);
@@ -277,50 +267,9 @@ export function formatTitle(
 ) {
   const label = renderDef?.data?.label || field.name;
   let title = options.titleCase ? startCase(label) : label;
-  if (
-    field.isAtomicField() &&
-    (field.isDate() || field.isTimestamp()) &&
-    timezone
-  ) {
+  if (field.isTime() && timezone) {
     title = `${title} (${timezone})`;
   }
 
   return title;
-}
-
-export function getParentRecord(data: DataColumn, n = 0) {
-  let record = data;
-  while (n > 0 && record.parentRecord) {
-    n -= 1;
-    record = record.parentRecord;
-  }
-  return record;
-}
-
-function getPathInfo(path: string): {levelsUp: number; pathSegments: string[]} {
-  const pathParts = path.split('/');
-  const levelsUp = pathParts.filter(part => part === '..').length + 1;
-  const pathSegments = pathParts.filter(part => part !== '..' && part !== '');
-  return {levelsUp, pathSegments};
-}
-
-export function getDynamicValue<T = unknown>({
-  tag,
-  data,
-}: {
-  tag: Tag;
-  data: DataColumn;
-}): T | undefined {
-  try {
-    const path = tag.tag('field')?.text() ?? '';
-    const {levelsUp, pathSegments} = getPathInfo(path);
-    let scope = getParentRecord(data, levelsUp);
-    while (pathSegments.length > 0 && 'cell' in scope) {
-      const fieldName = pathSegments.shift()!;
-      scope = scope.cell(fieldName);
-    }
-    return scope?.value as T;
-  } catch (err) {
-    return undefined;
-  }
 }
