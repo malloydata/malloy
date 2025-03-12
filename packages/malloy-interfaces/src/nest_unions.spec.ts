@@ -5,12 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {nestUnions} from './nest_unions';
+import {nestUnions, unnestUnions} from './nest_unions';
 import * as Malloy from './types';
 
-describe('unnest unions', () => {
+describe('nest/unnest unions', () => {
   test('works', () => {
-    const query: Malloy.Query = {
+    const unnested: Malloy.Query = {
       definition: {
         kind: 'arrow',
         source: {
@@ -33,11 +33,18 @@ describe('unnest unions', () => {
               kind: 'limit',
               limit: 10,
             },
+            {
+              kind: 'order_by',
+              field_reference: {
+                name: 'carrier',
+              },
+              direction: 'asc',
+            },
           ],
         },
       },
     };
-    expect(nestUnions(query)).toMatchObject({
+    const nested = {
       definition: {
         arrow: {
           source: {
@@ -60,11 +67,25 @@ describe('unnest unions', () => {
                 {
                   limit: {limit: 10},
                 },
+                {
+                  order_by: {
+                    field_reference: {
+                      name: 'carrier',
+                    },
+                    direction: 'asc',
+                  },
+                },
               ],
             },
           },
         },
       },
-    });
+    };
+    bidirectional(nested, unnested, 'Query');
   });
 });
+
+function bidirectional(nested: {}, unnested: {}, type: string) {
+  expect(nestUnions(unnested)).toMatchObject(nested);
+  expect(unnestUnions(nested, type)).toMatchObject(unnested);
+}
