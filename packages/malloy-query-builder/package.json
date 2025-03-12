@@ -14,10 +14,10 @@
   },
   "scripts": {
     "test": "jest --config=../../jest.config.js",
-    "clean": "tsc --build --clean",
+    "clean": "tsc --build --clean && rimraf @flowtyped",
     "build": "tsc --build && npm run generate-flow",
     "prepublishOnly": "npm run clean && npm run build",
-    "generate-flow": "ts-node scripts/gen_flow.ts",
+    "generate-flow": "ts-node ../../scripts/gen-flow.ts --skip expects.d.ts",
     "generate-docs": "npx typedoc --excludeInternal",
     "serve-docs": "npx http-server -o docs"
   },
@@ -27,8 +27,8 @@
     "@malloydata/malloy-tag": "^0.0.241"
   },
   "devDependencies": {
-    "flow-api-translator": "^0.26.0",
     "http-server": "^14.1.1",
+    "rimraf": "^6.0.1",
     "typedoc": "^0.27.7"
   }
 }
