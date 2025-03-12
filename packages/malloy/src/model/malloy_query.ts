@@ -1314,11 +1314,17 @@ class QueryField extends QueryNode {
         return `${expr.kids.e.sql} ${expr.not ? 'NOT IN' : 'IN'} (${oneOf})`;
       }
       case 'like':
-        return this.parent.dialect.likeExpr(expr);
-      // Malloy inequality comparisons always return a boolean
       case '!like': {
-        const notLike = this.parent.dialect.likeExpr(expr);
-        return `COALESCE(${notLike},true)`;
+        const likeIt = expr.node === 'like' ? 'LIKE' : 'NOT LIKE';
+        const compare =
+          expr.kids.right.node === 'stringLiteral'
+            ? this.parent.dialect.sqlLike(
+                likeIt,
+                expr.kids.left.sql ?? '',
+                expr.kids.right.literal
+              )
+            : `${expr.kids.left.sql} ${likeIt} ${expr.kids.right.sql}`;
+        return expr.node === 'like' ? compare : `COALESCE(${compare},true)`;
       }
       case '()':
         return `(${expr.e.sql})`;
@@ -2570,8 +2576,8 @@ class QueryQuery extends QueryField {
     return fs.type === 'index'
       ? fs.indexFields
       : isQuerySegment(fs)
-      ? fs.queryFields
-      : [];
+        ? fs.queryFields
+        : [];
   }
 
   expandFields(resultStruct: FieldInstanceResult) {

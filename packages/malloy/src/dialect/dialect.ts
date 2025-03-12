@@ -38,7 +38,6 @@ import {
   isRawCast,
   isLeafAtomic,
   OrderBy,
-  BinaryExpr,
 } from '../model/malloy_types';
 import {DialectFunctionOverloadDef} from './functions';
 
@@ -296,11 +295,11 @@ export abstract class Dialect {
   abstract sqlMeasureTimeExpr(e: MeasureTimeExpr): string;
   abstract sqlAlterTimeExpr(df: TimeDeltaExpr): string;
   abstract sqlCast(qi: QueryInfo, cast: TypecastExpr): string;
+  abstract sqlRegexpMatch(df: RegexMatchExpr): string;
+
   abstract sqlLiteralTime(qi: QueryInfo, df: TimeLiteralNode): string;
   abstract sqlLiteralString(literal: string): string;
   abstract sqlLiteralRegexp(literal: string): string;
-
-  abstract sqlRegexpMatch(df: RegexMatchExpr): string;
   abstract sqlLiteralArray(lit: ArrayLiteralNode): string;
   abstract sqlLiteralRecord(lit: RecordLiteralNode): string;
 
@@ -448,20 +447,28 @@ export abstract class Dialect {
     };
   }
 
-  likeExpr(expr: BinaryExpr): string {
-    const isLike = expr.kids.right;
-    if (expr.node === 'like' || expr.node === '!like') {
-      const likeOp = expr.node === '!like' ? 'NOT LIKE' : 'LIKE';
-      if (this.likeEscape && isLike.node === 'stringLiteral') {
-        const likeStr = isLike.literal;
-        if (likeStr.includes('\\')) {
-          const escapeUp = likeStr.replace(/\^/g, '^^');
-          const newLikeStr = escapeUp.replace(/\\/g, '^');
-          return `${expr.kids.left.sql} ${likeOp} '${newLikeStr}' ESCAPE '^'`;
+  /**
+   * Write a LIKE expression. Malloy like strings are escaped with \\% and \\_
+   * but some SQL dialects use an ESCAPE clause.
+   */
+  sqlLike(likeOp: 'LIKE' | 'NOT LIKE', left: string, likeStr: string): string {
+    let escaped = '';
+    let escapeActive = false;
+    for (const c of likeStr) {
+      if (c === '\\' && !escapeActive) {
+        escapeActive = true;
+      } else if (this.likeEscape && c === '^') {
+        escaped += '^^';
+        escapeActive = false;
+      } else {
+        if (escapeActive && (c === '%' || c === '_')) {
+          escaped += this.likeEscape ? '^' : '\\';
         }
+        escaped += c;
+        escapeActive = false;
       }
-      return `${expr.kids.left.sql} ${likeOp} ${isLike.sql}`;
     }
-    return 'false';
+    const compare = `${left} ${likeOp} ${this.sqlLiteralString(escaped)}`;
+    return this.likeEscape ? `${compare} ESCAPE '^'` : compare;
   }
 }
