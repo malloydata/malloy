@@ -17,7 +17,7 @@
     "clean": "tsc --build --clean && rimraf src/lib/* dist @flowtyped",
     "test": "jest",
     "prepublishOnly": "npm run clean && npm run build",
-    "generate-flow": "ts-node scripts/gen_flow.ts"
+    "generate-flow": "ts-node ../../scripts/gen-flow.ts"
   },
   "keywords": [],
   "author": "",
@@ -29,7 +29,6 @@
   "devDependencies": {
     "@types/moo": "^0.5.10",
     "@types/nearley": "^2.11.5",
-    "flow-api-translator": "^0.26.0",
     "rimraf": "^6.0.1"
   }
 }

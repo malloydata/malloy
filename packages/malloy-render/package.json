@@ -28,7 +28,8 @@
     "build-storybook": "storybook build",
     "build-source": "vite build --outDir 'dist/module' --config vite.config.ts",
     "build-webcomponent": "vite build --outDir 'dist/webcomponent' --config vite.config.webcomponent.ts && vite build --outDir 'dist/register' --config vite.config.webcomponent-register.ts",
-    "build-types": "tsc --build --declaration --emitDeclarationOnly"
+    "build-types": "tsc --build --declaration --emitDeclarationOnly",
+    "generate-flow": "ts-node ../../scripts/gen-flow.ts"
   },
   "dependencies": {
     "@malloydata/db-duckdb": "^0.0.241",
