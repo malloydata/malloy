@@ -1137,11 +1137,6 @@ export interface CompositeSourceDef extends SourceDefBase {
  * Malloy has a kind of "strings" which is a list of segments. Each segment
  * is either a string, or a query, which is meant to be replaced
  * by the text of the query when the query is compiled to SQL.
- *
- * The data types for this are:
- *  SQLPhrase -- A phrase, used to make a sentence
- *  SQLSentence -- Used to request a schema from the connection
- *  SQLSelectSource -- Returned from a query, contains the scehma
  */
 export interface SQLStringSegment {
   sql: string;
@@ -1149,12 +1144,6 @@ export interface SQLStringSegment {
 export type SQLPhraseSegment = Query | SQLStringSegment;
 export function isSegmentSQL(f: SQLPhraseSegment): f is SQLStringSegment {
   return 'sql' in f;
-}
-
-export interface SQLSentence {
-  name: string;
-  connection: string;
-  select: SQLPhraseSegment[];
 }
 
 export interface SQLSourceDef extends SourceDefBase {

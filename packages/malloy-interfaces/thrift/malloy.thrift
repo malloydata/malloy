@@ -8,7 +8,7 @@
 struct ModelInfo {
   1: required list<ModelEntryValue> entries,
   2: optional list<Annotation> annotations,
-  3: required list<QueryInfo> anonymous_queries,
+  3: required list<AnonymousQueryInfo> anonymous_queries,
 }
 
 union ModelEntryValue {
@@ -479,6 +479,7 @@ struct Result {
   1: optional Data data,
   2: required Schema schema,
   3: optional string sql,
+  4: required string connection_name,
 }
 
 /*
@@ -523,3 +524,143 @@ TODO
 
 // concern: shape of FieldInfo and GroupBy (no object for "Field") are funadmentally pretty different,
 // but it might be nice for them to be more similar.
+
+struct SQLTable {
+  1: required string name,
+  2: optional Schema schema,
+  3: required string connection_name,
+}
+
+struct SQLQuery {
+  1: required string sql,
+  2: optional Schema schema,
+  3: required string connection_name,
+}
+
+struct File {
+  1: required string url,
+  2: optional string contents,
+  3: optional string invalidation_key,
+}
+
+struct Connection {
+  1: required string name,
+  2: optional string dialect,
+}
+
+struct Translation {
+  1: required string url,
+  2: optional string compiled_model_json,
+}
+
+struct CompilerNeeds {
+  1: optional list<SQLTable> table_schemas,
+  2: optional list<SQLQuery> sql_schemas,
+  3: optional list<File> files,
+  4: optional list<Connection> connections,
+  5: optional list<Translation> translations,
+}
+
+struct DocumentPosition {
+  1: required i32 line;
+  2: required i32 character;
+}
+
+struct DocumentRange {
+  1: required DocumentPosition start;
+  2: required DocumentPosition end;
+}
+
+enum LogSeverity {
+  DEBUG = 1,
+  INFO = 2,
+  WARN = 3,
+  ERROR = 4
+}
+
+struct LogMessage {
+  1: required string url;
+  2: required DocumentRange range;
+  3: required LogSeverity severity;
+  4: required string message;
+}
+
+// Given the URL to a model, return the StableModelDef for that model
+
+struct CompileModelRequest {
+  1: required string model_url,
+  2: optional string extend_model_url,
+
+  9: optional CompilerNeeds compiler_needs,
+}
+
+struct CompileModelResponse {
+  1: optional ModelInfo model,
+
+  8: optional list<LogMessage> logs,
+  9: optional CompilerNeeds compiler_needs,
+}
+
+// Given the URL to a model and a name of a queryable thing, get a StableSourceDef
+
+struct CompileSourceRequest {
+  1: required string model_url,
+  2: required string name,
+  3: optional string extend_model_url,
+
+  9: optional CompilerNeeds compiler_needs,
+}
+
+struct CompileSourceResponse {
+  1: optional SourceInfo source,
+
+  8: optional list<LogMessage> logs,
+  9: optional CompilerNeeds compiler_needs,
+}
+
+// Given a StableQueryDef and the URL to a model, run it and return a StableResult
+
+struct RunQueryRequest {
+  1: required string model_url,
+  2: required Query query,
+
+  9: optional CompilerNeeds compiler_needs,
+}
+
+struct RunQueryResponse {
+  1: optional Result result,
+
+  8: optional list<LogMessage> logs,
+  9: optional CompilerNeeds compiler_needs,
+}
+
+// Given a StableQueryDef and the URL to a model, compile it and return a StableResultDef
+
+struct CompileQueryRequest {
+  1: required string model_url,
+  2: required Query query,
+
+  9: optional CompilerNeeds compiler_needs,
+}
+
+struct CompileQueryResponse {
+  1: optional Result result,
+
+  8: optional list<LogMessage> logs,
+  9: optional CompilerNeeds compiler_needs,
+}
+
+// Given a URL to a model and the name of a source, run the indexing query
+
+struct RunIndexQueryRequest {
+  1: required string model_url,
+  2: required string source_name,
+
+  9: optional CompilerNeeds compiler_needs,
+}
+
+struct RunIndexQueryResponse {
+  1: optional Result result,
+
+  9: optional CompilerNeeds compiler_needs,
+}

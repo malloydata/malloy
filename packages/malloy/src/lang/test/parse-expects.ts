@@ -121,7 +121,7 @@ function prettyNeeds(response: TranslateResponse) {
     }
   }
   if (response.compileSQL) {
-    needString += `Compile SQL: ${response.compileSQL.name}`;
+    needString += `Compile SQL: ${response.compileSQL.selectStr}`;
   }
   if (response.urls) {
     needString += 'URLs:\n';

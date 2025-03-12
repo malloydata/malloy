@@ -8,6 +8,7 @@
 import * as Malloy from './types';
 export * from './types';
 export {queryToMalloy} from './to_malloy';
+export {nestUnions} from './nest_unions';
 
 export const test: Malloy.ModelInfo = {
   entries: [
@@ -132,6 +133,7 @@ export const test: Malloy.ModelInfo = {
 };
 
 export const res: Malloy.Result = {
+  connection_name: 'foo',
   data: {
     kind: 'table',
     rows: [

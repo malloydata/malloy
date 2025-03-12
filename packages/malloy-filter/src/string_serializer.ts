@@ -33,7 +33,8 @@ export class StringSerializer {
   }
 
   private static escapeSpecialCharacters(input: string): string {
-    return input.replace(/[,\\]/g, match => `\\${match}`);
+    // TODO: remove conjunctive characters from this list after they are supported. ();|
+    return input.replace(/[,();|\\]/g, match => `\\${match}`);
   }
 
   private static escapeWildcardCharacters(input: string): string {

@@ -97,6 +97,48 @@ export type CellWithJSONCell = {kind: 'json_cell'} & JSONCell;
 export type CellWithRecordCell = {kind: 'record_cell'} & RecordCell;
 export type CellWithArrayCell = {kind: 'array_cell'} & ArrayCell;
 export type CellWithTableCell = {kind: 'table_cell'} & TableCell;
+export type CompileModelRequest = {
+  model_url: string;
+  extend_model_url?: string;
+  compiler_needs?: CompilerNeeds;
+};
+export type CompileModelResponse = {
+  model?: ModelInfo;
+  logs?: Array<LogMessage>;
+  compiler_needs?: CompilerNeeds;
+};
+export type CompileQueryRequest = {
+  model_url: string;
+  query: Query;
+  compiler_needs?: CompilerNeeds;
+};
+export type CompileQueryResponse = {
+  result?: Result;
+  logs?: Array<LogMessage>;
+  compiler_needs?: CompilerNeeds;
+};
+export type CompileSourceRequest = {
+  model_url: string;
+  name: string;
+  extend_model_url?: string;
+  compiler_needs?: CompilerNeeds;
+};
+export type CompileSourceResponse = {
+  source?: SourceInfo;
+  logs?: Array<LogMessage>;
+  compiler_needs?: CompilerNeeds;
+};
+export type CompilerNeeds = {
+  table_schemas?: Array<SQLTable>;
+  sql_schemas?: Array<SQLQuery>;
+  files?: Array<File>;
+  connections?: Array<Connection>;
+  translations?: Array<Translation>;
+};
+export type Connection = {
+  name: string;
+  dialect?: string;
+};
 export type DataType = 'record' | 'table';
 export type Data = DataWithRecord | DataWithTable;
 export type DataWithRecord = {kind: 'record'} & RecordCell;
@@ -116,6 +158,14 @@ export type DimensionInfo = {
   name: string;
   type: AtomicType;
   annotations?: Array<Annotation>;
+};
+export type DocumentPosition = {
+  line: number;
+  character: number;
+};
+export type DocumentRange = {
+  start: DocumentPosition;
+  end: DocumentPosition;
 };
 export type ExpressionType =
   | 'field_reference'
@@ -148,6 +198,11 @@ export type FieldInfoWithDimension = {kind: 'dimension'} & DimensionInfo;
 export type FieldInfoWithMeasure = {kind: 'measure'} & MeasureInfo;
 export type FieldInfoWithJoin = {kind: 'join'} & JoinInfo;
 export type FieldInfoWithView = {kind: 'view'} & ViewInfo;
+export type File = {
+  url: string;
+  contents?: string;
+  invalidation_key?: string;
+};
 export type FilterType = 'filter_string';
 export type Filter = FilterWithFilterString;
 export type FilterWithFilterString = {
@@ -210,6 +265,13 @@ export type Location = {
   url: string;
   range: Range;
 };
+export type LogMessage = {
+  url: string;
+  range: DocumentRange;
+  severity: LogSeverity;
+  message: string;
+};
+export type LogSeverity = 'debug' | 'info' | 'warn' | 'error';
 export type MeasureInfo = {
   name: string;
   type: AtomicType;
@@ -224,7 +286,7 @@ export type ModelEntryValueWithQuery = {kind: 'query'} & QueryInfo;
 export type ModelInfo = {
   entries: Array<ModelEntryValue>;
   annotations?: Array<Annotation>;
-  anonymous_queries: Array<QueryInfo>;
+  anonymous_queries: Array<AnonymousQueryInfo>;
 };
 export type Nest = {
   name?: string;
@@ -311,12 +373,42 @@ export type Result = {
   data?: Data;
   schema: Schema;
   sql?: string;
+  connection_name: string;
 };
 export type Row = {
   cells: Array<Cell>;
 };
+export type RunIndexQueryRequest = {
+  model_url: string;
+  source_name: string;
+  compiler_needs?: CompilerNeeds;
+};
+export type RunIndexQueryResponse = {
+  result?: Result;
+  compiler_needs?: CompilerNeeds;
+};
+export type RunQueryRequest = {
+  model_url: string;
+  query: Query;
+  compiler_needs?: CompilerNeeds;
+};
+export type RunQueryResponse = {
+  result?: Result;
+  logs?: Array<LogMessage>;
+  compiler_needs?: CompilerNeeds;
+};
 export type SQLNativeType = {
   sql_type?: string;
+};
+export type SQLQuery = {
+  sql: string;
+  schema?: Schema;
+  connection_name: string;
+};
+export type SQLTable = {
+  name: string;
+  schema?: Schema;
+  connection_name: string;
 };
 export type Schema = {
   fields: Array<FieldInfo>;
@@ -362,6 +454,10 @@ export type TimestampTimeframe =
   | 'second';
 export type TimestampType = {
   timeframe?: TimestampTimeframe;
+};
+export type Translation = {
+  url: string;
+  compiled_model_json?: string;
 };
 export type View = {
   definition: ViewDefinition;

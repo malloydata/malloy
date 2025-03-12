@@ -904,7 +904,6 @@ export abstract class MalloyTranslation {
     if (ret?.compileSQL) {
       return {
         compileSQL: ret.compileSQL,
-        partialModel: ret.partialModel,
       };
     }
   }
