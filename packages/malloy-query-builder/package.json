@@ -17,7 +17,7 @@
     "clean": "tsc --build --clean && rimraf @flowtyped",
     "build": "tsc --build && npm run generate-flow",
     "prepublishOnly": "npm run clean && npm run build",
-    "generate-flow": "ts-node ../../scripts/gen-flow.ts",
+    "generate-flow": "ts-node ../../scripts/gen-flow.ts --skip expects.d.ts",
     "generate-docs": "npx typedoc --excludeInternal",
     "serve-docs": "npx http-server -o docs"
   },
