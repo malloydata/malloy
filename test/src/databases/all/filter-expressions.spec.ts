@@ -16,9 +16,10 @@ afterAll(async () => {
 });
 
 describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
+  const q = db.getQuoter();
   const abc = db.loadModel(`
     source: abc is ${dbName}.sql("""
-      SELECT 'abc' as s, '0 - abc' as nm
+      SELECT 'abc' as ${q`s`}, '0 - abc' as ${q`nm`}
       UNION ALL SELECT 'def', '1 - def'
       UNION ALL SELECT null, '2 - null'
       UNION ALL SELECT '', '3 - empty'

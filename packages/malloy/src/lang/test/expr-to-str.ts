@@ -12,7 +12,16 @@ import {
   exprIsLeaf,
 } from '../../model/malloy_types';
 
-import {BooleanClause, BooleanFilterExpression, NumberClause, NumberFilterExpression, StringClause, StringFilterExpression, TemporalClause, TemporalFilterExpression} from '@malloydata/malloy-filter';
+import {
+  BooleanClause,
+  BooleanFilterExpression,
+  NumberClause,
+  NumberFilterExpression,
+  StringClause,
+  StringFilterExpression,
+  TemporalClause,
+  TemporalFilterExpression,
+} from '@malloydata/malloy-filter';
 
 /**
  * Returns a readable shorthand for the an Expr for use in debugging.
