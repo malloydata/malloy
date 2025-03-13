@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/render",
-  "version": "0.0.241",
+  "version": "0.0.242",
   "license": "MIT",
   "main": "dist/module/index.umd.js",
   "types": "dist/index.d.ts",
@@ -28,13 +28,14 @@
     "build-storybook": "storybook build",
     "build-source": "vite build --outDir 'dist/module' --config vite.config.ts",
     "build-webcomponent": "vite build --outDir 'dist/webcomponent' --config vite.config.webcomponent.ts && vite build --outDir 'dist/register' --config vite.config.webcomponent-register.ts",
-    "build-types": "tsc --build --declaration --emitDeclarationOnly"
+    "build-types": "tsc --build --declaration --emitDeclarationOnly",
+    "generate-flow": "ts-node ../../scripts/gen-flow.ts"
   },
   "dependencies": {
-    "@malloydata/db-duckdb": "^0.0.241",
-    "@malloydata/malloy": "^0.0.241",
-    "@malloydata/malloy-interfaces": "^0.0.241",
-    "@malloydata/malloy-tag": "^0.0.241",
+    "@malloydata/db-duckdb": "^0.0.242",
+    "@malloydata/malloy": "^0.0.242",
+    "@malloydata/malloy-interfaces": "^0.0.242",
+    "@malloydata/malloy-tag": "^0.0.242",
     "@tanstack/solid-virtual": "^3.10.4",
     "component-register": "^0.8.6",
     "lodash": "^4.17.20",
