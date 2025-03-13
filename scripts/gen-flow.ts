@@ -66,8 +66,6 @@ async function go() {
   if (fs.existsSync(outDir)) fs.rmSync(outDir, {recursive: true});
   fs.mkdirSync(outDir);
 
-  console.log(args);
-
   await Promise.all(
     files.map(async file => {
       console.log(`Generating flow types for file ${file}`);
