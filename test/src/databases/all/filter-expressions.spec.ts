@@ -79,4 +79,25 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
       {row: 'empty'},
     ]);
   });
+  test('starts', async () => {
+    await expect(`
+      run: abc -> {
+        where: s ~ f'a%';
+        select: s
+      }`).malloyResultMatches(abc, [{s: 'abc'}]);
+  });
+  test('contains', async () => {
+    await expect(`
+      run: abc -> {
+        where: s ~ f'%b%';
+        select: s
+      }`).malloyResultMatches(abc, [{s: 'abc'}]);
+  });
+  test('ends', async () => {
+    await expect(`
+      run: abc -> {
+        where: s ~ f'%c';
+        select: s
+      }`).malloyResultMatches(abc, [{s: 'abc'}]);
+  });
 });
