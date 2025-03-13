@@ -11,24 +11,72 @@ import {databasesFromEnvironmentOr} from '../../util';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
-describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
-  test('abc', () => {
-    expect(`
-      run: ${dbName}.sql("SELECT 'abc' as s UNION ALL SELECT 'def'") -> {
-        where: s ~ f'abc';
-        select: s
-      }`).malloyResultMatches(db, [{s: 'abc'}]);
-  });
-  test('simple but not _%,-abc', () => {
-    expect(`
-      # test.debug
-      run: ${dbName}.sql("SELECT 'abc' as s UNION ALL SELECT 'def'") -> {
-        where: s ~ f'_%,-abc';
-        select: s
-      }`).malloyResultMatches(db, [{s: 'def'}]);
-  });
-});
-
 afterAll(async () => {
   await runtimes.closeAll();
+});
+
+describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
+  const abc = db.loadModel(`
+    source: abc is ${dbName}.sql("""
+      SELECT 'abc' as s, 'abc' as row
+      UNION ALL SELECT 'def', 'def'
+      UNION ALL SELECT null, 'null'
+      UNION ALL SELECT '', 'empty'
+
+    """)
+  `);
+
+  test('abc', async () => {
+    await expect(`
+      run: abc -> {
+        where: s ~ f'abc';
+        select: s
+      }`).malloyResultMatches(abc, [{s: 'abc'}]);
+  });
+  test('abc,def', async () => {
+    await expect(`
+      run: abc -> {
+        where: s ~ f'abc,def';
+        select: s
+      }`).malloyResultMatches(abc, [{s: 'abc'}, {s: 'def'}]);
+  });
+  test('simple but not _%,-abc', async () => {
+    await expect(`
+      run: abc -> {
+        where: s ~ f'_%,-abc';
+        select: s
+      }`).malloyResultMatches(abc, [{s: 'def'}]);
+  });
+  test('empty', async () => {
+    await expect(`
+      run: abc -> {
+        where: s ~ f'empty'
+        select: row
+      }`).malloyResultMatches(abc, [{row: 'null'}, {row: 'empty'}]);
+  });
+  test('-empty', async () => {
+    await expect(`
+      run: abc -> {
+        where: s ~ f'-empty'
+        select: row
+      }`).malloyResultMatches(abc, [{row: 'abc'}, {row: 'def'}]);
+  });
+  test('null', async () => {
+    await expect(`
+      run: abc -> {
+        where: s ~ f'null'
+        select: row
+      }`).malloyResultMatches(abc, [{row: 'null'}]);
+  });
+  test('-null', async () => {
+    await expect(`
+      run: abc -> {
+        where: s ~ f'-null'
+        select: row
+      }`).malloyResultMatches(abc, [
+      {row: 'abc'},
+      {row: 'def'},
+      {row: 'empty'},
+    ]);
+  });
 });
