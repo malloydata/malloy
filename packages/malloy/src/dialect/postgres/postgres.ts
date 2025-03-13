@@ -111,6 +111,7 @@ export class PostgresDialect extends PostgresBase {
   readsNestedData = false;
   supportsComplexFilteredSources = false;
   compoundObjectInSchema = false;
+  likeEscape = false;
 
   quoteTablePath(tablePath: string): string {
     return tablePath
@@ -463,36 +464,5 @@ export class PostgresDialect extends PostgresBase {
   sqlLiteralArray(lit: ArrayLiteralNode): string {
     const array = lit.kids.values.map(val => val.sql);
     return 'JSONB_BUILD_ARRAY(' + array.join(',') + ')';
-  }
-
-  /*
-   * Postgres loses it's mind if a like string ends in \
-   */
-  sqlLike(likeOp: 'LIKE' | 'NOT LIKE', left: string, likeStr: string): string {
-    let escaped = '';
-    let escapeActive = false;
-    let escapeClause = false;
-    for (const c of likeStr) {
-      if (c === '\\' && !escapeActive) {
-        escapeActive = true;
-      } else if (this.likeEscape && c === '^') {
-        escaped += '^^';
-        escapeActive = false;
-        escapeClause = true;
-      } else {
-        if (escapeActive && (c === '%' || c === '_')) {
-          escaped += this.likeEscape ? '^' : '\\';
-          escapeClause = this.likeEscape;
-        }
-        escaped += c;
-        escapeActive = false;
-      }
-    }
-    if (escaped.match(/[^^]\\$/)) {
-      escaped = escaped.slice(0, escaped.length - 1) + '^\\';
-      escapeClause = true;
-    }
-    const compare = `${left} ${likeOp} ${this.sqlLiteralString(escaped)}`;
-    return escapeClause ? `${compare} ESCAPE '^'` : compare;
   }
 }
