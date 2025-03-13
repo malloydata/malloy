@@ -139,7 +139,7 @@ export abstract class QuerySegmentBuilder implements QueryBuilder {
 
     const fromCompositeFieldUsage =
       from && isQuerySegment(from)
-        ? (from.compositeFieldUsage ?? emptyCompositeFieldUsage())
+        ? from.compositeFieldUsage ?? emptyCompositeFieldUsage()
         : emptyCompositeFieldUsage();
     to.compositeFieldUsage = mergeCompositeFieldUsage(
       fromCompositeFieldUsage,

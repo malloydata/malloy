@@ -29,14 +29,14 @@ type NonOptionalASTNode<T> = T extends undefined ? never : ASTNode<T>;
 type LiteralOrNode<T> = T extends string
   ? T
   : T extends number
-    ? T
-    : T extends string[]
-      ? T
-      : T extends boolean
-        ? T
-        : undefined extends T
-          ? NonOptionalASTNode<T> | undefined
-          : ASTNode<T>;
+  ? T
+  : T extends string[]
+  ? T
+  : T extends boolean
+  ? T
+  : undefined extends T
+  ? NonOptionalASTNode<T> | undefined
+  : ASTNode<T>;
 
 abstract class ASTNode<T> {
   /**
@@ -4428,9 +4428,9 @@ export class ASTAnnotation extends ASTObjectNode<
   getTag(): Tag {
     const extending =
       this.index === 0
-        ? (Tag.fromTagLines(
+        ? Tag.fromTagLines(
             this.list.getInheritedAnnotations().map(a => a.value)
-          ).tag ?? new Tag())
+          ).tag ?? new Tag()
         : this.list.index(this.index - 1).getTag();
     return Tag.fromTagLines([this.value], extending).tag ?? new Tag();
   }

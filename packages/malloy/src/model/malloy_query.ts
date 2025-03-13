@@ -2576,8 +2576,8 @@ class QueryQuery extends QueryField {
     return fs.type === 'index'
       ? fs.indexFields
       : isQuerySegment(fs)
-        ? fs.queryFields
-        : [];
+      ? fs.queryFields
+      : [];
   }
 
   expandFields(resultStruct: FieldInstanceResult) {

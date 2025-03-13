@@ -600,7 +600,7 @@ export function generateBarChartVegaSpec(
         range: 'height',
         domain: settings.isStack
           ? {data: 'values', field: 'y1'}
-          : (chartSettings.yScale.domain ?? {data: 'values', field: 'y'}),
+          : chartSettings.yScale.domain ?? {data: 'values', field: 'y'},
       },
       {
         name: 'color',

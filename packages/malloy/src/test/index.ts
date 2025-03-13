@@ -32,8 +32,8 @@ export function databasesFromEnvironmentOr(
   return process.env['MALLOY_DATABASES']
     ? process.env['MALLOY_DATABASES'].split(',')
     : process.env['MALLOY_DATABASE']
-      ? [process.env['MALLOY_DATABASE']]
-      : defaultDatabases;
+    ? [process.env['MALLOY_DATABASE']]
+    : defaultDatabases;
 }
 
 /**

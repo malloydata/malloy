@@ -241,8 +241,8 @@ export function getResultStructMetadataAnnotation(
       const orderBy = resultMetadata.orderBy[i];
       const orderByField =
         typeof orderBy.field === 'number'
-          ? (field.fields[orderBy.field - 1].as ??
-            field.fields[orderBy.field - 1].name)
+          ? field.fields[orderBy.field - 1].as ??
+            field.fields[orderBy.field - 1].name
           : orderBy.field;
       const direction = orderBy.dir ?? null;
       tag.set(['ordered_by', i, orderByField], direction);
@@ -268,8 +268,8 @@ function typeDefToType(field: AtomicTypeDef): Malloy.AtomicType {
             field.numberType === 'float'
               ? 'decimal'
               : field.numberType === 'integer'
-                ? 'integer'
-                : undefined,
+              ? 'integer'
+              : undefined,
         };
       case 'boolean':
         return {kind: 'boolean_type'};

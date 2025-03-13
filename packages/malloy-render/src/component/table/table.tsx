@@ -68,8 +68,8 @@ const Cell = (props: {
         displayValue: props.isHeader
           ? props.rawValue
           : typeof props.value !== 'function'
-            ? props.value
-            : null,
+          ? props.value
+          : null,
         value: typeof props.rawValue !== 'function' ? props.rawValue : null,
         fieldPath: props.field.path,
         isHeader: !!props.isHeader,
@@ -343,8 +343,9 @@ const MalloyTableRoot = (_props: {
         .forEach(([depth, size]) => {
           style[`--malloy-render--table-header-height-${depth}`] = `${size}px`;
           cumulativeDepth += size;
-          style[`--malloy-render--table-header-cumulative-height-${depth}`] =
-            `${cumulativeDepth}px`;
+          style[
+            `--malloy-render--table-header-cumulative-height-${depth}`
+          ] = `${cumulativeDepth}px`;
         });
 
       style['--total-header-size'] = tableCtx.layout.totalHeaderSize;
