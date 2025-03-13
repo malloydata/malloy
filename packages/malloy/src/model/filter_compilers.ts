@@ -12,6 +12,14 @@ function likeSafe(v: string) {
   return v.replace(/([_%])g/, '\\$1');
 }
 
+function unlike(disLiked: string[], x: string) {
+  const orNull = `OR ${x} IS NULL`;
+  if (disLiked.length === 1) {
+    return `${disLiked[0]} ${orNull}`;
+  }
+  return `(${disLiked.join(' and ')}) $orNULL`;
+}
+
 /*
  * These compilers from filter expression to SQL actually belong in malloy-filters but
  * that will require moving Dialect out to malloy-dialect to avoid a circular dependency
@@ -47,29 +55,39 @@ export const FilterCompilers = {
       case 'contains': {
         const matches = sc.values.map(v => '%' + likeSafe(v) + '%');
         if (sc.not) {
-          return matches.map(m => d.sqlLike('NOT LIKE', x, m)).join(' and ');
+          return unlike(
+            matches.map(m => d.sqlLike('NOT LIKE', x, m)),
+            x
+          );
         }
         return matches.map(m => d.sqlLike('LIKE', x, m)).join(' or ');
       }
       case 'starts': {
         const matches = sc.values.map(v => likeSafe(v) + '%');
         if (sc.not) {
-          return matches.map(m => d.sqlLike('NOT LIKE', x, m)).join(' and ');
+          return unlike(
+            matches.map(m => d.sqlLike('NOT LIKE', x, m)),
+            x
+          );
         }
         return matches.map(m => d.sqlLike('LIKE', x, m)).join(' or ');
       }
       case 'ends': {
         const matches = sc.values.map(v => '%' + likeSafe(v));
         if (sc.not) {
-          return matches.map(m => d.sqlLike('NOT LIKE', x, m)).join(' and ');
+          return unlike(
+            matches.map(m => d.sqlLike('NOT LIKE', x, m)),
+            x
+          );
         }
         return matches.map(m => d.sqlLike('LIKE', x, m)).join(' or ');
       }
       case '~':
         if (sc.not) {
-          return sc.escaped_values
-            .map(m => d.sqlLike('NOT LIKE', x, m))
-            .join(' and ');
+          return unlike(
+            sc.escaped_values.map(m => d.sqlLike('NOT LIKE', x, m)),
+            x
+          );
         }
         return sc.escaped_values.map(m => d.sqlLike('LIKE', x, m)).join(' or ');
       case 'and': {

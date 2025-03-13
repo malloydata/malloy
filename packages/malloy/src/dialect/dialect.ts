@@ -454,21 +454,24 @@ export abstract class Dialect {
   sqlLike(likeOp: 'LIKE' | 'NOT LIKE', left: string, likeStr: string): string {
     let escaped = '';
     let escapeActive = false;
+    let escapeClause = false;
     for (const c of likeStr) {
       if (c === '\\' && !escapeActive) {
         escapeActive = true;
       } else if (this.likeEscape && c === '^') {
         escaped += '^^';
         escapeActive = false;
+        escapeClause = true;
       } else {
         if (escapeActive && (c === '%' || c === '_')) {
           escaped += this.likeEscape ? '^' : '\\';
+          escapeClause = this.likeEscape;
         }
         escaped += c;
         escapeActive = false;
       }
     }
     const compare = `${left} ${likeOp} ${this.sqlLiteralString(escaped)}`;
-    return this.likeEscape ? `${compare} ESCAPE '^'` : compare;
+    return escapeClause ? `${compare} ESCAPE '^'` : compare;
   }
 }
