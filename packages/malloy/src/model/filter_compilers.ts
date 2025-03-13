@@ -31,12 +31,12 @@ export const FilterCompilers = {
         if (sc.values.length === 1) {
           const eq = sc.not ? '!=' : '=';
           const compare = `${x} ${eq} ${d.sqlLiteralString(sc.values[0])}`;
-          return sc.not ? `${compare} OR ${x} IS NULL` : compare;
+          return sc.not ? `(${compare} OR ${x} IS NULL)` : compare;
         }
         const eqList =
           '(' + sc.values.map(v => d.sqlLiteralString(v)).join(', ') + ')';
         return sc.not
-          ? `${x} NOT IN ${eqList} OR ${x} IS NULL`
+          ? `(${x} NOT IN ${eqList} OR ${x} IS NULL)`
           : `${x} IN ${eqList}`;
       }
       case '()': {
@@ -119,7 +119,7 @@ export const FilterCompilers = {
               }
               break;
             default:
-              (c.not ? includes : excludes).push(c);
+              (c.not ? excludes : includes).push(c);
           }
         }
         if ((includeEmpty && excludeEmpty) || (includeNull && excludeNull)) {

@@ -19,6 +19,14 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         select: s
       }`).malloyResultMatches(db, [{s: 'abc'}]);
   });
+  test('simple but not _%,-abc', () => {
+    expect(`
+      # test.debug
+      run: ${dbName}.sql("SELECT 'abc' as s UNION ALL SELECT 'def'") -> {
+        where: s ~ f'_%,-abc';
+        select: s
+      }`).malloyResultMatches(db, [{s: 'def'}]);
+  });
 });
 
 afterAll(async () => {
