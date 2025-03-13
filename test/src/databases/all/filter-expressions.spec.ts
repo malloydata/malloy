@@ -11,10 +11,10 @@ import {databasesFromEnvironmentOr} from '../../util';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
-describe.each(runtimes.runtimeList)('filter expressions %s', (_dbName, db) => {
+describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
   test('abc', () => {
     expect(`
-      run: duckdb.sql("SELECT 'abc' as s UNION ALL SELECT 'def'") -> {
+      run: ${dbName}.sql("SELECT 'abc' as s UNION ALL SELECT 'def'") -> {
         where: s ~ f'abc';
         select: s
       }`).malloyResultMatches(db, [{s: 'abc'}]);
