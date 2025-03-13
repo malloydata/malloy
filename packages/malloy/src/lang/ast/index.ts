@@ -68,6 +68,7 @@ export * from './expressions/expr-now';
 export * from './expressions/expr-null';
 export * from './expressions/expr-number';
 export * from './expressions/expr-parens';
+export * from './expressions/expr-filter-expr';
 export * from './expressions/expr-regex';
 export * from './expressions/expr-string';
 export * from './expressions/expr-sum';

@@ -1322,10 +1322,11 @@ export class MalloyToAST
     const str = pcx.text.slice(1).trimStart();
     const lastChar = str[str.length - 1];
     if (lastChar === '\n') {
+      const t = str[0] === "'" ? '"' : "'";
       this.contextError(
         pcx,
         'literal-string-newline',
-        'String cannot contain a new-line character'
+        `Missing ${t}${str[0]}${t} before end-of-line`
       );
     }
     const astStr = new ast.ExprString(str.slice(1, -1));
@@ -2208,5 +2209,32 @@ export class MalloyToAST
         .join(' | ')})`
     );
     return inStmt;
+  }
+
+  visitTickFilterString(
+    pcx: parse.TickFilterStringContext
+  ): ast.ExprFilterExpression {
+    const fString = pcx.text.slice(1).trimStart(); // remove fSPACE
+    const lastChar = fString[fString.length - 1];
+    if (lastChar === '\n') {
+      const t = fString[0] === "'" ? '"' : "'";
+      this.contextError(
+        pcx,
+        'literal-string-newline',
+        `Missing $${t}${fString[0]}${t} before end-of-line`
+      );
+    }
+    const filterText = fString.slice(1, -1);
+    const mfe = new ast.ExprFilterExpression(filterText);
+    return this.astAt(mfe, pcx);
+  }
+
+  visitTripFilterString(
+    pcx: parse.TripFilterStringContext
+  ): ast.ExprFilterExpression {
+    const fString = pcx.text.slice(1).trimStart();
+    const filterText = fString.slice(3, -3);
+    const mfe = new ast.ExprFilterExpression(filterText);
+    return this.astAt(mfe, pcx);
   }
 }

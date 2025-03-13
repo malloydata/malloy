@@ -253,9 +253,14 @@ describe('literals', () => {
       const x = new BetaExpression('"""x"""');
       expect(x).toParse();
     });
-    test('Error for missing close in raw string', () => {
+    test('Error for missing single in raw string', () => {
       expect(expr`s'hello\n`).toLog(
-        errorMessage('String cannot contain a new-line character')
+        errorMessage('Missing "\'" before end-of-line')
+      );
+    });
+    test('Error for missing double in raw string', () => {
+      expect(expr`s"hello\n`).toLog(
+        errorMessage("Missing '\"' before end-of-line")
       );
     });
     test('a string containing a tab', () => expect(expr`'\t'`).toParse());

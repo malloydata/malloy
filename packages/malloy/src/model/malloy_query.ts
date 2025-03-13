@@ -133,6 +133,8 @@ import {
 import {EventStream} from '../runtime_types';
 import {Tag} from '@malloydata/malloy-tag';
 import {annotationToTag} from '../annotation';
+import {FilterCompilers} from './filter_compilers';
+import {StringClause} from '@malloydata/malloy-filter';
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
@@ -1314,11 +1316,17 @@ class QueryField extends QueryNode {
         return `${expr.kids.e.sql} ${expr.not ? 'NOT IN' : 'IN'} (${oneOf})`;
       }
       case 'like':
-        return this.parent.dialect.likeExpr(expr);
-      // Malloy inequality comparisons always return a boolean
       case '!like': {
-        const notLike = this.parent.dialect.likeExpr(expr);
-        return `COALESCE(${notLike},true)`;
+        const likeIt = expr.node === 'like' ? 'LIKE' : 'NOT LIKE';
+        const compare =
+          expr.kids.right.node === 'stringLiteral'
+            ? this.parent.dialect.sqlLike(
+                likeIt,
+                expr.kids.left.sql ?? '',
+                expr.kids.right.literal
+              )
+            : `${expr.kids.left.sql} ${likeIt} ${expr.kids.right.sql}`;
+        return expr.node === 'like' ? compare : `COALESCE(${compare},true)`;
       }
       case '()':
         return `(${expr.e.sql})`;
@@ -1352,6 +1360,15 @@ class QueryField extends QueryNode {
         return '';
       case 'compositeField':
         return '{COMPOSITE_FIELD}';
+      case 'filterMatch':
+        if (expr.dataType === 'string') {
+          return FilterCompilers.stringCompile(
+            expr.filter as StringClause,
+            expr.e.sql || '',
+            this.parent.dialect
+          );
+        }
+        throw new Error(`Internal Error: FCU ${expr.dataType}`);
       default:
         throw new Error(
           `Internal Error: Unknown expression node '${

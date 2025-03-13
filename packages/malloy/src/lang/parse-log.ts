@@ -113,6 +113,7 @@ type MessageParameterTypes = {
   'pick-missing-value': {};
   'pick-illegal-partial': {};
   'pick-when-must-be-boolean': {whenType: ExpressionValueType};
+  'pick-non-atomic-type': string;
   'experiment-not-enabled': {experimentId: string};
   'experimental-dialect-not-enabled': {dialect: string};
   'sql-native-not-allowed-in-expression': {
@@ -403,6 +404,7 @@ type MessageParameterTypes = {
   'unsupported-path-in-include': string;
   'wildcard-include-rename': string;
   'literal-string-newline': string;
+  'filter-expression-type': string;
   'invalid-malloy-query-document': string;
 };
 
