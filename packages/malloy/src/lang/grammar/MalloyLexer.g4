@@ -261,7 +261,7 @@ mode REGEX_MODE;
 
 SR_QUOTED_CHAR: '\\' .;
 
-fragment CLASS_CHAR: ('\\' . | ~ '\\');
+fragment CLASS_CHAR: ('\\' . | ~ ']');
 fragment CLASS_CLAUSE: (CLASS_CHAR '-' CLASS_CHAR) | CLASS_CHAR;
 SR_CLASS: '[' CLASS_CLAUSE* ']';
 
