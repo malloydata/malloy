@@ -157,6 +157,15 @@ describe('literals', () => {
   test('regex', () => {
     expect(expr`r'RegularExpression'`).toTranslate();
   });
+  test('new slash regular expressions', () => {
+    expect(expr`r/abc/`).compilesTo('/abc/');
+  });
+  test('new slash regular expressions', () => {
+    expect(expr`r/a\\\\c/`).compilesTo('/a\\\\c/');
+  });
+  test('new slash regular expressions', () => {
+    expect(expr`r/[a-b/]/`).compilesTo('/[a-b/]/');
+  });
 
   describe('string parsing in language', () => {
     const tz = 'America/Mexico_City';

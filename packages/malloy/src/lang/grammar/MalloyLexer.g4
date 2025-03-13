@@ -237,6 +237,8 @@ WHITE_SPACE: SPACE_CHAR -> skip ;
 SQL_BEGIN: '"""' -> pushMode(SQL_MODE);
 CLOSE_CODE: '}%' -> popMode;
 
+SLASHY_REGEX: R '/' -> pushMode(REGEX_MODE);
+
 // Matching any of these is a parse error
 UNWATED_CHARS_TRAILING_NUMBERS: DIGIT+ ID_CHAR+ (ID_CHAR | DIGIT)*;
 UNEXPECTED_CHAR: .;
@@ -253,3 +255,15 @@ fragment SQL_CHAR
 
 OPEN_CODE: SQL_CHAR*? '%{' -> pushMode(DEFAULT_MODE);
 SQL_END: SQL_CHAR*? '"""' -> popMode;
+
+
+mode REGEX_MODE;
+
+SR_QUOTED_CHAR: '\\' .;
+
+fragment CLASS_CHAR: ('\\' . | ~ '\\');
+fragment CLASS_CLAUSE: (CLASS_CHAR '-' CLASS_CHAR) | CLASS_CHAR;
+SR_CLASS: '[' CLASS_CLAUSE* ']';
+
+SLASHY_REGEX_END: '/' -> popMode;
+SR_REGEX_CHAR: .;

@@ -554,7 +554,12 @@ literal
   | NULL                                        # exprNULL
   | (TRUE | FALSE)                              # exprBool
   | HACKY_REGEX                                 # exprRegex
+  | slashRegex                                  # stub_slashRegex
   | NOW                                         # exprNow
+  ;
+
+slashRegex
+  : SLASHY_REGEX (SR_QUOTED_CHAR | SR_CLASS | SR_REGEX_CHAR)* SLASHY_REGEX_END
   ;
 
 dateLiteral

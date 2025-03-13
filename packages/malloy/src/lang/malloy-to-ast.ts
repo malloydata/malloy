@@ -2209,4 +2209,9 @@ export class MalloyToAST
     );
     return inStmt;
   }
+
+  visitSlashRegex(pcx: parse.SlashRegexContext): ast.ExprRegEx {
+    const regexText = pcx.text.slice(2, -1);
+    return this.astAt(new ast.ExprRegEx(regexText), pcx);
+  }
 }
