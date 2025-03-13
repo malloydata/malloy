@@ -18,11 +18,10 @@ afterAll(async () => {
 describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
   const abc = db.loadModel(`
     source: abc is ${dbName}.sql("""
-      SELECT 'abc' as s, 'abc' as row
+      SELECT 'abc' as s, 'abc' as nm
       UNION ALL SELECT 'def', 'def'
       UNION ALL SELECT null, 'null'
       UNION ALL SELECT '', 'empty'
-
     """)
   `);
 
@@ -44,56 +43,36 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     await expect(`
       run: abc -> {
         where: s ~ f'-abc',
-        select: row
-      }`).malloyResultMatches(abc, [
-      {row: 'def'},
-      {row: 'null'},
-      {row: 'empty'},
-    ]);
+        select: nm
+      }`).malloyResultMatches(abc, [{nm: 'def'}, {nm: 'null'}, {nm: 'empty'}]);
   });
   test('-starts', async () => {
     await expect(`
       run: abc -> {
         where: s ~ f'-a%',
-        select: row
-      }`).malloyResultMatches(abc, [
-      {row: 'def'},
-      {row: 'null'},
-      {row: 'empty'},
-    ]);
+        select: nm
+      }`).malloyResultMatches(abc, [{nm: 'def'}, {nm: 'null'}, {nm: 'empty'}]);
   });
   test('-contains', async () => {
     await expect(`
       run: abc -> {
         where: s ~ f'-%b%',
-        select: row
-      }`).malloyResultMatches(abc, [
-      {row: 'def'},
-      {row: 'null'},
-      {row: 'empty'},
-    ]);
+        select: nm
+      }`).malloyResultMatches(abc, [{nm: 'def'}, {nm: 'null'}, {nm: 'empty'}]);
   });
   test('-end', async () => {
     await expect(`
       run: abc -> {
         where: s ~ f'-%c',
-        select: row
-      }`).malloyResultMatches(abc, [
-      {row: 'def'},
-      {row: 'null'},
-      {row: 'empty'},
-    ]);
+        select: nm
+      }`).malloyResultMatches(abc, [{nm: 'def'}, {nm: 'null'}, {nm: 'empty'}]);
   });
   test('unlike', async () => {
     await expect(`
       run: abc -> {
         where: s ~ f'-a%c',
-        select: row
-      }`).malloyResultMatches(abc, [
-      {row: 'def'},
-      {row: 'null'},
-      {row: 'empty'},
-    ]);
+        select: nm
+      }`).malloyResultMatches(abc, [{nm: 'def'}, {nm: 'null'}, {nm: 'empty'}]);
   });
   test('simple but not _%,-abc', async () => {
     await expect(`
@@ -106,33 +85,29 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     await expect(`
       run: abc -> {
         where: s ~ f'empty'
-        select: row
-      }`).malloyResultMatches(abc, [{row: 'null'}, {row: 'empty'}]);
+        select: nm
+      }`).malloyResultMatches(abc, [{nm: 'null'}, {nm: 'empty'}]);
   });
   test('-empty', async () => {
     await expect(`
       run: abc -> {
         where: s ~ f'-empty'
-        select: row
-      }`).malloyResultMatches(abc, [{row: 'abc'}, {row: 'def'}]);
+        select: nm
+      }`).malloyResultMatches(abc, [{nm: 'abc'}, {nm: 'def'}]);
   });
   test('null', async () => {
     await expect(`
       run: abc -> {
         where: s ~ f'null'
-        select: row
-      }`).malloyResultMatches(abc, [{row: 'null'}]);
+        select: nm
+      }`).malloyResultMatches(abc, [{nm: 'null'}]);
   });
   test('-null', async () => {
     await expect(`
       run: abc -> {
         where: s ~ f'-null'
-        select: row
-      }`).malloyResultMatches(abc, [
-      {row: 'abc'},
-      {row: 'def'},
-      {row: 'empty'},
-    ]);
+        select: nm
+      }`).malloyResultMatches(abc, [{nm: 'abc'}, {nm: 'def'}, {nm: 'empty'}]);
   });
   test('starts', async () => {
     await expect(`
