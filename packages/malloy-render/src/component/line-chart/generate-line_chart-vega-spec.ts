@@ -5,7 +5,7 @@
  *  LICENSE file in the root directory of this source tree.
  */
 
-import {
+import type {
   ChartTooltipEntry,
   MalloyDataToChartDataHandler,
   MalloyVegaDataRecord,
@@ -15,7 +15,7 @@ import {
 import {getLineChartSettings} from './get-line_chart-settings';
 import {getChartLayoutSettings} from '../chart-layout-settings';
 import {createMeasureAxis} from '../vega/measure-axis';
-import {
+import type {
   Data,
   GroupMark,
   Item,
@@ -30,7 +30,8 @@ import {
 import {renderNumericField} from '../render-numeric-field';
 import {getMarkName} from '../vega/vega-utils';
 import {getCustomTooltipEntries} from '../bar-chart/get-custom-tooltips-entries';
-import {CellValue, Field, NestField, RecordCell} from '../../data_tree';
+import type {CellValue, NestField, RecordCell} from '../../data_tree';
+import {Field} from '../../data_tree';
 import {NULL_SYMBOL, renderTimeString} from '../../util';
 
 type LineDataRecord = {

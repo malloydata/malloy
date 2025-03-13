@@ -21,9 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ViewFieldDeclaration} from './view-field-declaration';
+import type {ViewFieldDeclaration} from './view-field-declaration';
 import {DefinitionList} from '../types/definition-list';
-import {AccessModifierLabel} from '../../../model';
+import type {AccessModifierLabel} from '../../../model';
 
 export class Views extends DefinitionList<ViewFieldDeclaration> {
   elementType = 'turtleDefList';

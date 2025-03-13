@@ -21,18 +21,18 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   CodePointCharStream,
   CommonTokenStream,
   ParserRuleContext,
   Token,
 } from 'antlr4ts';
-import {
+import type {
   DocumentLocation,
   DocumentPosition,
   DocumentRange,
 } from '../model/malloy_types';
-import {ParseTree} from 'antlr4ts/tree';
+import type {ParseTree} from 'antlr4ts/tree';
 
 export function locationContainsPosition(
   location: DocumentLocation,

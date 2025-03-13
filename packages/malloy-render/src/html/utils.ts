@@ -22,11 +22,11 @@
  */
 
 import startCase from 'lodash/startCase';
-import {RenderDef} from './data_styles';
-import {RendererOptions} from './renderer_types';
+import type {RenderDef} from './data_styles';
+import type {RendererOptions} from './renderer_types';
 import {DateTime} from 'luxon';
-import * as Malloy from '@malloydata/malloy-interfaces';
-import {Field} from '../data_tree';
+import type * as Malloy from '@malloydata/malloy-interfaces';
+import type {Field} from '../data_tree';
 
 export function getColorScale(
   type: 'temporal' | 'ordinal' | 'quantitative' | 'nominal' | undefined,

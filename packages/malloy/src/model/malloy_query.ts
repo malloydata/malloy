@@ -21,35 +21,20 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 import {v4 as uuidv4} from 'uuid';
-import {
-  Dialect,
-  DialectFieldList,
-  FieldReferenceType,
-  getDialect,
-} from '../dialect';
+import type {Dialect, DialectFieldList, FieldReferenceType} from '../dialect';
+import {getDialect} from '../dialect';
 import {StandardSQLDialect} from '../dialect/standardsql/standardsql';
-import {
+import type {
   AggregateFunctionType,
   Annotation,
   CompiledQuery,
   Expr,
-  expressionIsAggregate,
-  expressionIsAnalytic,
-  expressionIsCalculation,
-  expressionIsScalar,
   FieldDef,
   Filtered,
   FunctionOverloadDef,
   FunctionParameterDef,
-  getIdentifier,
-  hasExpression,
   IndexFieldDef,
   IndexSegment,
-  isLiteral,
-  isAtomic,
-  isIndexSegment,
-  isQuerySegment,
-  isRawSegment,
   JoinRelationship,
   ModelDef,
   OrderBy,
@@ -72,9 +57,6 @@ import {
   Argument,
   AggregateExpr,
   FilterCondition,
-  exprHasE,
-  exprHasKids,
-  isAsymmetricExpr,
   GenericSQLExpr,
   FieldnameNode,
   FunctionCallNode,
@@ -84,8 +66,6 @@ import {
   SpreadExpr,
   FilteredExpr,
   SourceDef,
-  isSourceDef,
-  fieldIsIntrinsic,
   StringFieldDef,
   NumberFieldDef,
   BooleanFieldDef,
@@ -94,13 +74,9 @@ import {
   DateFieldDef,
   DateUnit,
   TimestampUnit,
-  isBaseTable,
   NestSourceDef,
   TimestampFieldDef,
-  isJoined,
-  isJoinedSource,
   QueryResultDef,
-  isScalarArray,
   RecordDef,
   FinalizeSourceDef,
   QueryToMaterialize,
@@ -108,13 +84,36 @@ import {
   RepeatedRecordDef,
   CaseExpr,
   TemporalTypeDef,
-  mkTemporal,
   JoinFieldDef,
   LeafAtomicDef,
   Expression,
 } from './malloy_types';
+import {
+  expressionIsAggregate,
+  expressionIsAnalytic,
+  expressionIsCalculation,
+  expressionIsScalar,
+  getIdentifier,
+  hasExpression,
+  isLiteral,
+  isAtomic,
+  isIndexSegment,
+  isQuerySegment,
+  isRawSegment,
+  exprHasE,
+  exprHasKids,
+  isAsymmetricExpr,
+  isSourceDef,
+  fieldIsIntrinsic,
+  isBaseTable,
+  isJoined,
+  isJoinedSource,
+  isScalarArray,
+  mkTemporal,
+} from './malloy_types';
 
-import {Connection} from '../connection/types';
+import type {Connection} from '../connection/types';
+import type {SQLExprElement} from './utils';
 import {
   AndChain,
   exprMap,
@@ -123,15 +122,14 @@ import {
   indent,
   composeSQLExpr,
   range,
-  SQLExprElement,
 } from './utils';
-import {DialectFieldTypeStruct, QueryInfo} from '../dialect/dialect';
+import type {DialectFieldTypeStruct, QueryInfo} from '../dialect/dialect';
 import {
   buildQueryMaterializationSpec,
   shouldMaterialize,
 } from './materialization/utils';
-import {EventStream} from '../runtime_types';
-import {Tag} from '@malloydata/malloy-tag';
+import type {EventStream} from '../runtime_types';
+import type {Tag} from '@malloydata/malloy-tag';
 import {annotationToTag} from '../annotation';
 import {FilterCompilers} from './filter_compilers';
 

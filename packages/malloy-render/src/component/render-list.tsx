@@ -1,6 +1,6 @@
 import {For} from 'solid-js';
 import {applyRenderer} from './apply-renderer';
-import {RendererProps} from './types';
+import type {RendererProps} from './types';
 
 export function renderList(props: RendererProps) {
   if (props.dataColumn.isNull()) return '∅';

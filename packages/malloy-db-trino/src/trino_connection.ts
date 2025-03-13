@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   ConnectionConfig,
   MalloyQueryData,
   PersistSQLResults,
@@ -31,32 +31,32 @@ import {
   QueryOptionsReader,
   QueryRunStats,
   RunSQLOptions,
-  TrinoDialect,
   StructDef,
   TableSourceDef,
   SQLSourceDef,
   AtomicTypeDef,
-  mkFieldDef,
-  isScalarArray,
   RecordTypeDef,
   Dialect,
   FieldDef,
-  TinyParser,
-  isRepeatedRecord,
   TestableConnection,
   SQLSourceRequest,
+} from '@malloydata/malloy';
+import {
+  TrinoDialect,
+  mkFieldDef,
+  isScalarArray,
+  TinyParser,
+  isRepeatedRecord,
   sqlKey,
 } from '@malloydata/malloy';
 
 import {BaseConnection} from '@malloydata/malloy/connection';
 
-import {
-  PrestoClient,
-  PrestoClientConfig,
-  PrestoQuery,
-} from '@prestodb/presto-js-client';
+import type {PrestoClientConfig, PrestoQuery} from '@prestodb/presto-js-client';
+import {PrestoClient} from '@prestodb/presto-js-client';
 import {randomUUID} from 'crypto';
-import {Trino, ConnectionOptions, BasicAuth} from 'trino-client';
+import type {ConnectionOptions} from 'trino-client';
+import {Trino, BasicAuth} from 'trino-client';
 
 export interface TrinoManagerOptions {
   credentials?: {

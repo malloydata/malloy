@@ -21,10 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FilterCondition, PipeSegment} from '../../../model/malloy_types';
-import {QueryProperty} from './query-property';
-import {QueryInputSpace} from '../field-space/query-input-space';
-import {QueryOperationSpace} from '../field-space/query-spaces';
+import type {FilterCondition, PipeSegment} from '../../../model/malloy_types';
+import type {QueryProperty} from './query-property';
+import type {QueryInputSpace} from '../field-space/query-input-space';
+import type {QueryOperationSpace} from '../field-space/query-spaces';
 
 export interface QueryBuilder {
   filters: FilterCondition[];

@@ -5,8 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Parser} from 'nearley';
-import {ClauseBase, FilterLog, isClauseBase} from './filter_clause';
+import type {Parser} from 'nearley';
+import type {ClauseBase, FilterLog} from './filter_clause';
+import {isClauseBase} from './filter_clause';
 
 export function run_parser(
   src: string,

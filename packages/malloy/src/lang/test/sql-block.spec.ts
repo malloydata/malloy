@@ -25,9 +25,9 @@
 import {TestTranslator, aTableDef} from './test-translator';
 import './parse-expects';
 import {MalloyTranslator} from '../parse-malloy';
-import {SQLSourceDef} from '../../model';
+import type {SQLSourceDef} from '../../model';
 import {sqlKey} from '../../model/sql_block';
-import {SQLSourceRequest} from '../translate-response';
+import type {SQLSourceRequest} from '../translate-response';
 
 describe('connection sql()', () => {
   const selStmt = 'SELECT * FROM aTable';

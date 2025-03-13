@@ -8,7 +8,7 @@
 import {diff} from 'jest-diff';
 import * as nearley from 'nearley';
 import ftemporal_grammar from '../lib/ftemporal_parser';
-import {TemporalClause} from '../filter_clause';
+import type {TemporalClause} from '../filter_clause';
 import {TemporalFilterExpression} from '../temporal_filter_expression';
 import {inspect} from 'util';
 

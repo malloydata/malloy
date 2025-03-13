@@ -24,7 +24,7 @@
 /* eslint-disable no-console */
 
 import {RuntimeList} from '../../runtimes';
-import {AtomicField, Runtime} from '@malloydata/malloy';
+import type {AtomicField, Runtime} from '@malloydata/malloy';
 import {describeIfDatabaseAvailable} from '../../util';
 import '../../util/db-jest-matchers';
 import {DateTime} from 'luxon';

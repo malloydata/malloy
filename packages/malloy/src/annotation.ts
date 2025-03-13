@@ -1,6 +1,7 @@
-import {Tag, TagError} from '@malloydata/malloy-tag';
-import {Annotation, Note} from './model';
-import {LogMessage} from './lang';
+import type {TagError} from '@malloydata/malloy-tag';
+import {Tag} from '@malloydata/malloy-tag';
+import type {Annotation, Note} from './model';
+import type {LogMessage} from './lang';
 
 export interface TagParseSpec {
   prefix?: RegExp;

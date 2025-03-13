@@ -22,10 +22,8 @@
  */
 
 import {MalloyElement} from '../types/malloy-element';
-import {
-  LegalRefinementStage,
-  QueryPropertyInterface,
-} from '../types/query-property-interface';
+import type {QueryPropertyInterface} from '../types/query-property-interface';
+import {LegalRefinementStage} from '../types/query-property-interface';
 
 export class Limit extends MalloyElement implements QueryPropertyInterface {
   elementType = 'limit';

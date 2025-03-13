@@ -24,7 +24,7 @@
 import {Currency, DurationUnit} from '../html/data_styles';
 import {format} from 'ssf';
 import {getText, NULL_SYMBOL} from '../util';
-import {Field} from '../data_tree';
+import type {Field} from '../data_tree';
 
 export function renderNumericField(
   f: Field,

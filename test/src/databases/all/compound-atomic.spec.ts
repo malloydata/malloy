@@ -8,7 +8,7 @@
 import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
 import '../../util/db-jest-matchers';
-import {
+import type {
   RecordLiteralNode,
   ArrayLiteralNode,
   ArrayTypeDef,

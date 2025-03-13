@@ -24,7 +24,7 @@
 import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
 import {DuckDBCommon} from './duckdb_common';
 import {DuckDBWASMConnection} from './duckdb_wasm_connection_node';
-import {SQLSourceDef} from '@malloydata/malloy';
+import type {SQLSourceDef} from '@malloydata/malloy';
 
 const [describe] = describeIfDatabaseAvailable(['duckdb_wasm']);
 

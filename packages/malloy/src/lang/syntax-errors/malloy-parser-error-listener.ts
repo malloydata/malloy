@@ -5,17 +5,19 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {ANTLRErrorListener, Token} from 'antlr4ts';
+import type {ANTLRErrorListener, Token} from 'antlr4ts';
 import {MalloyParser} from '../lib/Malloy/MalloyParser';
-import {checkCustomErrorMessage, ErrorCase} from './custom-error-messages';
-import {
+import type {ErrorCase} from './custom-error-messages';
+import {checkCustomErrorMessage} from './custom-error-messages';
+import type {
   MessageLogger,
   MessageCode,
   MessageParameterType,
   LogMessageOptions,
-  makeLogMessage,
 } from '../parse-log';
-import {rangeFromToken, SourceInfo} from '../utils';
+import {makeLogMessage} from '../parse-log';
+import type {SourceInfo} from '../utils';
+import {rangeFromToken} from '../utils';
 
 // A set of custom error messages and their triggering cases,
 // used for syntax error message re-writing when ANTLR would

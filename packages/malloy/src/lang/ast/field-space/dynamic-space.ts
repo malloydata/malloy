@@ -23,10 +23,10 @@
 
 import * as model from '../../../model/malloy_types';
 import {nameFromDef} from '../../field-utils';
-import {SpaceEntry} from '../types/space-entry';
+import type {SpaceEntry} from '../types/space-entry';
 import {ErrorFactory} from '../error-factory';
-import {HasParameter} from '../parameters/has-parameter';
-import {MalloyElement} from '../types/malloy-element';
+import type {HasParameter} from '../parameters/has-parameter';
+import type {MalloyElement} from '../types/malloy-element';
 import {SpaceField} from '../types/space-field';
 import {JoinSpaceField} from './join-space-field';
 import {ViewField} from './view-field';
@@ -34,8 +34,8 @@ import {AbstractParameter, SpaceParam} from '../types/space-param';
 import {StaticSpace} from './static-space';
 import {StructSpaceFieldBase} from './struct-space-field-base';
 import {ParameterSpace} from './parameter-space';
-import {SourceDef} from '../../../model/malloy_types';
-import {SourceFieldSpace} from '../types/field-space';
+import type {SourceDef} from '../../../model/malloy_types';
+import type {SourceFieldSpace} from '../types/field-space';
 
 export abstract class DynamicSpace
   extends StaticSpace

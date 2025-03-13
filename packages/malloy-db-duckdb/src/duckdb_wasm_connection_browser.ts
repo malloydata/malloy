@@ -23,24 +23,26 @@
 
 import * as duckdb from '@duckdb/duckdb-wasm';
 import {DuckDBWASMConnection as DuckDBWASMConnectionBase} from './duckdb_wasm_connection';
+import type {
+  // DuckDBMap,
+  DuckDBRow,
+  DuckDBValue,
+} from '@motherduck/wasm-client';
 import {
   // DuckDBBlob,
   DuckDBDate,
   DuckDBDecimal,
   // DuckDBInterval,
   DuckDBList,
-  // DuckDBMap,
-  DuckDBRow,
   DuckDBStruct,
   DuckDBTime,
   DuckDBTimestampMicroseconds,
   DuckDBTimestampMilliseconds,
   DuckDBTimestampNanoseconds,
   DuckDBTimestampSeconds,
-  DuckDBValue,
   MDConnection,
 } from '@motherduck/wasm-client';
-import {QueryDataRow, QueryValue} from '@malloydata/malloy';
+import type {QueryDataRow, QueryValue} from '@malloydata/malloy';
 
 function unwrapMotherDuck(value: DuckDBValue) {
   let result: QueryValue = null;

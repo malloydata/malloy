@@ -24,7 +24,7 @@
 import {SourceQueryElement} from './source-query-element';
 import {QuerySource} from '../source-elements/query-source';
 import {QueryRefine} from '../query-elements/query-refine';
-import {View} from '../view-elements/view';
+import type {View} from '../view-elements/view';
 import {SQReference} from './sq-reference';
 
 /**

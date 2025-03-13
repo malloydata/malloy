@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {BinaryOperator} from '../../../model';
+import type {BinaryOperator} from '../../../model';
 
 export type LogicalMalloyOperator = 'and' | 'or';
 export type ArithmeticMalloyOperator = '+' | '-' | '*' | '/' | '%';

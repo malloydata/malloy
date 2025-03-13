@@ -21,14 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   FieldDef,
   QueryFieldDef,
   TypeDesc,
   AtomicFieldDef,
 } from '../../../model/malloy_types';
 import {SpaceEntry} from './space-entry';
-import {FieldSpace} from './field-space';
+import type {FieldSpace} from './field-space';
 import {emptyCompositeFieldUsage} from '../../../model/composite_source_utils';
 
 export abstract class SpaceField extends SpaceEntry {

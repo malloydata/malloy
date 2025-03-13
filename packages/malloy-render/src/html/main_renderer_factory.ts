@@ -21,16 +21,16 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Tag} from '@malloydata/malloy-tag';
-import {DataRenderOptions, RenderDef, StyleDefaults} from './data_styles';
-import {Renderer} from './renderer';
-import {RendererFactory} from './renderer_factory';
-import {RendererOptions} from './renderer_types';
+import type {Tag} from '@malloydata/malloy-tag';
+import type {DataRenderOptions, RenderDef, StyleDefaults} from './data_styles';
+import type {Renderer} from './renderer';
+import type {RendererFactory} from './renderer_factory';
+import type {RendererOptions} from './renderer_types';
 import {ShapeMapRendererFactory} from './shape_map';
 import {PointMapRendererFactory} from './point_map';
 import {SegmentMapRendererFactory} from './segment_map';
 import {ScatterChartRendererFactory} from './scatter_chart';
-import {Field} from '../data_tree';
+import type {Field} from '../data_tree';
 import {ImageRendererFactory} from './image';
 import {JSONRendererFactory} from './json';
 import {LineChartRendererFactory} from './line_chart';

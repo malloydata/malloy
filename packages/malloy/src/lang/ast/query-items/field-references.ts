@@ -21,21 +21,22 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   Annotation,
   FieldDef,
   RefToField,
   TypeDesc,
 } from '../../../model/malloy_types';
-import {DynamicSpace} from '../field-space/dynamic-space';
+import type {DynamicSpace} from '../field-space/dynamic-space';
 import {ReferenceField} from '../field-space/reference-field';
 import {DefinitionList} from '../types/definition-list';
 
-import {FieldName, FieldSpace} from '../types/field-space';
-import {LookupResult} from '../types/lookup-result';
+import type {FieldName, FieldSpace} from '../types/field-space';
+import type {LookupResult} from '../types/lookup-result';
 import {ListOf, MalloyElement} from '../types/malloy-element';
-import {Noteable, extendNoteMethod} from '../types/noteable';
-import {MakeEntry} from '../types/space-entry';
+import type {Noteable} from '../types/noteable';
+import {extendNoteMethod} from '../types/noteable';
+import type {MakeEntry} from '../types/space-entry';
 
 import {
   typecheckAggregate,

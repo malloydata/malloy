@@ -21,38 +21,36 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   AccessModifierLabel,
   Annotation,
   DocumentLocation,
   SourceDef,
-  expressionIsCalculation,
 } from '../../../model/malloy_types';
+import {expressionIsCalculation} from '../../../model/malloy_types';
 
 import {RefinedSpace} from '../field-space/refined-space';
-import {HasParameter} from '../parameters/has-parameter';
+import type {HasParameter} from '../parameters/has-parameter';
 import {DeclareFields} from '../query-properties/declare-fields';
 import {Filter} from '../query-properties/filters';
 import {FieldListEdit} from '../source-properties/field-list-edit';
 import {PrimaryKey} from '../source-properties/primary-key';
 import {Views} from '../source-properties/views';
-import {SourceDesc} from '../types/source-desc';
+import type {SourceDesc} from '../types/source-desc';
 import {Source} from './source';
 import {TimezoneStatement} from '../source-properties/timezone-statement';
 import {ObjectAnnotation} from '../types/annotation-elements';
 import {Renames} from '../source-properties/renames';
-import {MakeEntry} from '../types/space-entry';
+import type {MakeEntry} from '../types/space-entry';
 import {ParameterSpace} from '../field-space/parameter-space';
 import {JoinStatement} from '../source-properties/join';
+import type {IncludeItem} from '../source-query-elements/include-item';
 import {
   IncludeAccessItem,
   IncludeExceptItem,
-  IncludeItem,
 } from '../source-query-elements/include-item';
-import {
-  FieldReference,
-  WildcardFieldReference,
-} from '../query-items/field-references';
+import type {FieldReference} from '../query-items/field-references';
+import {WildcardFieldReference} from '../query-items/field-references';
 
 /**
  * A Source made from a source reference and a set of refinements

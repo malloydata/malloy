@@ -22,16 +22,16 @@
  */
 
 import {HTMLCartesianChartRenderer} from './cartesian_chart';
-import {
+import type {
   BarChartRenderOptions,
   SparkLineRenderOptions,
   StyleDefaults,
 } from './data_styles';
 import {RendererFactory} from './renderer_factory';
-import {RendererOptions} from './renderer_types';
-import {Renderer} from './renderer';
+import type {RendererOptions} from './renderer_types';
+import type {Renderer} from './renderer';
 import {timeToString} from './utils';
-import {Cell, Field} from '../data_tree';
+import type {Cell, Field} from '../data_tree';
 
 export class HTMLBarChartRenderer extends HTMLCartesianChartRenderer {
   getMark(): 'bar' {

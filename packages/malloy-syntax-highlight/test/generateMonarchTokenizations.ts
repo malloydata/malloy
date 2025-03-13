@@ -21,8 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {MonarchTestConfig, TestItem} from './testUtils';
-import {editor as Monaco, Token} from 'monaco-editor';
+import type {MonarchTestConfig, TestItem} from './testUtils';
+import type {editor as Monaco, Token} from 'monaco-editor';
 
 export async function loadMonacoAssets() {
   // Waiting resolves difficult to track down race condition

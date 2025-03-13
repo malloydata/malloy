@@ -22,29 +22,31 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   Argument,
   InvokedStructRef,
+  Parameter,
+  SourceDef,
+} from '../../../model/malloy_types';
+import {
   isCastType,
   isSourceDef,
-  Parameter,
   paramHasValue,
-  SourceDef,
 } from '../../../model/malloy_types';
 
 import {Source} from './source';
 import {ErrorFactory} from '../error-factory';
 import {castTo} from '../time-utils';
 import {ModelEntryReference} from '../types/malloy-element';
-import {Argument as HasArgument} from '../parameters/argument';
-import {
+import type {Argument as HasArgument} from '../parameters/argument';
+import type {
   LogMessageOptions,
   MessageCode,
   MessageParameterType,
 } from '../../parse-log';
 import {ExprIdReference} from '../expressions/expr-id-reference';
 import {ParameterSpace} from '../field-space/parameter-space';
-import {HasParameter} from '../parameters/has-parameter';
+import type {HasParameter} from '../parameters/has-parameter';
 
 export class NamedSource extends Source {
   elementType = 'namedSource';

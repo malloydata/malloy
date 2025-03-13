@@ -1,4 +1,4 @@
-import {RuntimeList} from '../../runtimes';
+import type {RuntimeList} from '../../runtimes';
 
 export type DatabaseTestSet = (runtimeList: RuntimeList) => void;
 

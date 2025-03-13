@@ -21,10 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {QueryElement} from '../types/query-element';
+import type {QueryElement} from '../types/query-element';
 import {MalloyElement} from '../types/malloy-element';
-import {Source} from '../source-elements/source';
-import {
+import type {Source} from '../source-elements/source';
+import type {
   LogMessageOptions,
   MessageCode,
   MessageParameterType,

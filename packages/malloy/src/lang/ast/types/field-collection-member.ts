@@ -22,12 +22,12 @@
  */
 
 import {AtomicFieldDeclaration} from '../query-items/field-declaration';
+import type {FieldReferenceElement} from '../query-items/field-references';
 import {
   FieldReference,
-  FieldReferenceElement,
   WildcardFieldReference,
 } from '../query-items/field-references';
-import {MalloyElement} from './malloy-element';
+import type {MalloyElement} from './malloy-element';
 
 export type FieldCollectionMember =
   | FieldReferenceElement

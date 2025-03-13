@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {NamedModelObject} from '../../../model/malloy_types';
+import type {NamedModelObject} from '../../../model/malloy_types';
 
 export interface ModelEntry {
   entry: NamedModelObject;

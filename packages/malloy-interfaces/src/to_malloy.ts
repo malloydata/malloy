@@ -1,4 +1,4 @@
-import * as Malloy from './types';
+import type * as Malloy from './types';
 import {maybeQuoteIdentifier} from './util';
 
 export function queryToMalloy(

@@ -21,8 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import type {ExtractUnit} from '../../../model/malloy_types';
 import {
-  ExtractUnit,
   isExtractUnit,
   isTemporalType,
   isTimestampUnit,
@@ -30,13 +30,10 @@ import {
   TD,
 } from '../../../model/malloy_types';
 
-import {
-  ExprValue,
-  computedErrorExprValue,
-  computedExprValue,
-} from '../types/expr-value';
+import type {ExprValue} from '../types/expr-value';
+import {computedErrorExprValue, computedExprValue} from '../types/expr-value';
 import {ExpressionDef, getMorphicValue} from '../types/expression-def';
-import {FieldSpace} from '../types/field-space';
+import type {FieldSpace} from '../types/field-space';
 import {Range} from './range';
 
 export class ExprTimeExtract extends ExpressionDef {

@@ -21,10 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {CompareMalloyOperator} from '../types/binary_operators';
-import {ExprValue} from '../types/expr-value';
+import type {CompareMalloyOperator} from '../types/binary_operators';
+import type {ExprValue} from '../types/expr-value';
 import {ATNodeType, ExpressionDef} from '../types/expression-def';
-import {FieldSpace} from '../types/field-space';
+import type {FieldSpace} from '../types/field-space';
 
 export class PartialCompare extends ExpressionDef {
   elementType = '<=> a';

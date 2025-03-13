@@ -6,7 +6,7 @@
  */
 
 import {diff} from 'jest-diff';
-import {BooleanClause} from '../filter_clause';
+import type {BooleanClause} from '../filter_clause';
 import {BooleanFilterExpression} from '../boolean_filter_expression';
 import {inspect} from 'util';
 

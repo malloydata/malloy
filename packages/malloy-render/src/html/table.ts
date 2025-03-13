@@ -21,12 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {StyleDefaults} from './data_styles';
+import type {StyleDefaults} from './data_styles';
 import {ContainerRenderer} from './container';
 import {HTMLNumberRenderer} from './number';
 import {createDrillIcon, formatTitle, yieldTask} from './utils';
-import {ChildRenderers, Renderer} from './renderer';
-import {
+import type {ChildRenderers, Renderer} from './renderer';
+import type {
   Cell,
   Field,
   RecordCell,

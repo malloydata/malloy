@@ -24,7 +24,8 @@
 import * as malloy from '@malloydata/malloy';
 import {describeIfDatabaseAvailable} from '@malloydata/malloy/test';
 import {BigQueryConnection} from './bigquery_connection';
-import {BigQuery as BigQuerySDK, TableMetadata} from '@google-cloud/bigquery';
+import type {TableMetadata} from '@google-cloud/bigquery';
+import {BigQuery as BigQuerySDK} from '@google-cloud/bigquery';
 import * as util from 'util';
 import * as fs from 'fs';
 import {fileURLToPath} from 'url';

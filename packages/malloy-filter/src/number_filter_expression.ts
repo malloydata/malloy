@@ -5,11 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {
-  FilterParserReponse,
-  isNumberClause,
-  NumberClause,
-} from './filter_clause';
+import type {FilterParserReponse, NumberClause} from './filter_clause';
+import {isNumberClause} from './filter_clause';
 import * as nearley from 'nearley';
 import fnumber_grammar from './lib/fexpr_number_parser';
 import {run_parser} from './nearley_parse';

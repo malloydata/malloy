@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Parser, ParserRuleContext, RuleContext, Token} from 'antlr4ts';
+import type {Parser, ParserRuleContext, RuleContext, Token} from 'antlr4ts';
 
 export interface ErrorCase {
   // The rule contexts in which to apply this error case.

@@ -5,13 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {
-  def,
+import type {
   DefinitionBlueprint,
   DefinitionBlueprintMap,
   OverloadedDefinitionBlueprint,
   TypeDescBlueprint,
 } from '../functions/util';
+import {def} from '../functions/util';
 
 // Cute shortcut So you can write things like: {array: T} and {dimension: T}
 const T: TypeDescBlueprint = {generic: 'T'};

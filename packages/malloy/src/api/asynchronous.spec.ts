@@ -6,9 +6,9 @@
  */
 
 import {compileModel, compileQuery, runQuery} from './asynchronous';
-import * as Malloy from '@malloydata/malloy-interfaces';
-import {Connection, InfoConnection, LookupConnection} from './connection';
-import {URLReader} from '../runtime_types';
+import type * as Malloy from '@malloydata/malloy-interfaces';
+import type {Connection, InfoConnection, LookupConnection} from './connection';
+import type {URLReader} from '../runtime_types';
 
 describe('api', () => {
   describe('compile model', () => {

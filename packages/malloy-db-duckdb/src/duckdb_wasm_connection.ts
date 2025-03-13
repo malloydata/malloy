@@ -23,7 +23,7 @@
 
 import * as duckdb from '@duckdb/duckdb-wasm';
 import Worker from 'web-worker';
-import {
+import type {
   FetchSchemaOptions,
   QueryDataRow,
   QueryOptionsReader,
@@ -33,7 +33,7 @@ import {
   TableSourceDef,
   SQLSourceRequest,
 } from '@malloydata/malloy';
-import {StructRow, Table} from 'apache-arrow';
+import type {StructRow, Table} from 'apache-arrow';
 import {DuckDBCommon} from './duckdb_common';
 
 const TABLE_MATCH = /FROM\s*('([^']*)'|"([^"]*)")/gi;

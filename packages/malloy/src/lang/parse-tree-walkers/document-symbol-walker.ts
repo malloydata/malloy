@@ -21,13 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {CommonTokenStream} from 'antlr4ts';
+import type {CommonTokenStream} from 'antlr4ts';
 import {ParseTreeWalker} from 'antlr4ts/tree/ParseTreeWalker';
-import {ParseTree} from 'antlr4ts/tree';
-import {MalloyParserListener} from '../lib/Malloy/MalloyParserListener';
-import * as parser from '../lib/Malloy/MalloyParser';
-import {DocumentRange} from '../../model/malloy_types';
-import {MalloyTranslation} from '../parse-malloy';
+import type {ParseTree} from 'antlr4ts/tree';
+import type {MalloyParserListener} from '../lib/Malloy/MalloyParserListener';
+import type * as parser from '../lib/Malloy/MalloyParser';
+import type {DocumentRange} from '../../model/malloy_types';
+import type {MalloyTranslation} from '../parse-malloy';
 import {getStringIfShort} from '../parse-utils';
 
 export interface DocumentSymbol {

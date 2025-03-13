@@ -5,14 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Tag} from '@malloydata/malloy-tag';
+import type {Tag} from '@malloydata/malloy-tag';
 import {
   NULL_SYMBOL,
   tagFromAnnotations,
   valueToMalloy,
   renderTimeString,
 } from './util';
-import * as Malloy from '@malloydata/malloy-interfaces';
+import type * as Malloy from '@malloydata/malloy-interfaces';
 
 export type DrillEntry =
   | {

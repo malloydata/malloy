@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {ChartTooltipEntry, MalloyVegaDataRecord} from '../types';
+import type {ChartTooltipEntry, MalloyVegaDataRecord} from '../types';
 import {applyRenderer} from '../apply-renderer';
-import {NestField} from '../../data_tree';
+import type {NestField} from '../../data_tree';
 
 type CustomTooltipGetterOptions = {
   explore: NestField;

@@ -23,12 +23,12 @@
 
 import * as lite from 'vega-lite';
 import * as vega from 'vega';
-import {Renderer} from './renderer';
-import {RendererOptions} from './renderer_types';
-import {ChartRenderOptions, StyleDefaults} from './data_styles';
+import type {Renderer} from './renderer';
+import type {RendererOptions} from './renderer_types';
+import type {ChartRenderOptions, StyleDefaults} from './data_styles';
 import {normalizeToTimezone} from '../html/utils';
 import {mergeVegaConfigs} from '../component/vega/merge-vega-configs';
-import {Cell, Field, RecordCell} from '../data_tree';
+import type {Cell, Field, RecordCell} from '../data_tree';
 
 type MappedRow = {[p: string]: string | number | Date | undefined | null};
 

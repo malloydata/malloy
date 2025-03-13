@@ -22,7 +22,8 @@
  */
 
 import path from 'path';
-import {Package, readPackageJson} from './utils/licenses';
+import type {Package} from './utils/licenses';
+import {readPackageJson} from './utils/licenses';
 import fs from 'fs';
 
 let filePath: string;

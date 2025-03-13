@@ -21,14 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import type {TypeDesc} from '../../../model';
 import {
   expressionIsAggregate,
   expressionIsAnalytic,
   expressionIsScalar,
-  TypeDesc,
 } from '../../../model';
-import {MessageCode} from '../../parse-log';
-import {MalloyElement} from '../types/malloy-element';
+import type {MessageCode} from '../../parse-log';
+import type {MalloyElement} from '../types/malloy-element';
 
 export function typecheckProject(type: TypeDesc, logTo: MalloyElement) {
   if (type.type === 'turtle' || !expressionIsScalar(type.expressionType)) {

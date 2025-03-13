@@ -21,7 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {WriteStream, CSVWriter} from '@malloydata/malloy';
+import type {WriteStream} from '@malloydata/malloy';
+import {CSVWriter} from '@malloydata/malloy';
 import {describeIfDatabaseAvailable} from '../../util';
 import {RuntimeList} from '../../runtimes';
 

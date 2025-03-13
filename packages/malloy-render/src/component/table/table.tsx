@@ -1,14 +1,12 @@
+import type {Component, JSXElement, JSX} from 'solid-js';
 import {
   createSignal,
   createMemo,
   For,
-  Component,
   mergeProps,
   Show,
   Switch,
   Match,
-  JSXElement,
-  JSX,
   onMount,
 } from 'solid-js';
 import {getRangeSize} from '../util';
@@ -17,10 +15,15 @@ import {createTableStore, TableContext, useTableContext} from './table-context';
 import tableCss from './table.css?raw';
 import {applyRenderer} from '../apply-renderer';
 import {createStore, produce} from 'solid-js/store';
-import {createVirtualizer, Virtualizer} from '@tanstack/solid-virtual';
+import type {Virtualizer} from '@tanstack/solid-virtual';
+import {createVirtualizer} from '@tanstack/solid-virtual';
 import {useConfig} from '../render';
 import {copyExplorePathQueryToClipboard} from '../result-store/result-store';
-import {Field, RecordCell, RecordOrRepeatedRecordCell} from '../../data_tree';
+import type {
+  Field,
+  RecordCell,
+  RecordOrRepeatedRecordCell,
+} from '../../data_tree';
 import {useResultContext} from '../result-context';
 
 const IS_CHROMIUM = navigator.userAgent.toLowerCase().indexOf('chrome') >= 0;

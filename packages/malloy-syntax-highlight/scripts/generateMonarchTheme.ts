@@ -21,11 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {editor as Monaco} from 'monaco-editor';
+import type {editor as Monaco} from 'monaco-editor';
 import {retrieveEditorTheme} from '../test/generateTextmateTokenizations';
 import {inspect} from 'util';
 import {writeFileSync} from 'fs';
-import {IRawTheme} from 'vscode-textmate';
+import type {IRawTheme} from 'vscode-textmate';
 
 function generateMonarchTheme(inPath: string, outPath: string) {
   const rawTextmateTheme = retrieveEditorTheme(inPath);

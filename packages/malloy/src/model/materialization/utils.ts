@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Annotation, QueryToMaterialize} from '../malloy_types';
+import type {Annotation, QueryToMaterialize} from '../malloy_types';
 import {generateHash} from '../utils';
 import {annotationToTag} from '../../annotation';
 

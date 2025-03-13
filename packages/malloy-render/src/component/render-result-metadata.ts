@@ -22,15 +22,17 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Tag} from '@malloydata/malloy-tag';
-import {VegaChartProps, VegaConfigHandler} from './types';
+import type {Tag} from '@malloydata/malloy-tag';
+import type {VegaChartProps, VegaConfigHandler} from './types';
 import {mergeVegaConfigs} from './vega/merge-vega-configs';
 import {baseVegaConfig} from './vega/base-vega-config';
 import {generateBarChartVegaSpec} from './bar-chart/generate-bar_chart-vega-spec';
-import {createResultStore, ResultStore} from './result-store/result-store';
+import type {ResultStore} from './result-store/result-store';
+import {createResultStore} from './result-store/result-store';
 import {generateLineChartVegaSpec} from './line-chart/generate-line_chart-vega-spec';
-import {parse, Config, Runtime} from 'vega';
-import {NestField, RepeatedRecordField, RootCell} from '../data_tree';
+import type {Config, Runtime} from 'vega';
+import {parse} from 'vega';
+import type {NestField, RepeatedRecordField, RootCell} from '../data_tree';
 
 export type GetResultMetadataOptions = {
   getVegaConfigOverride?: VegaConfigHandler;

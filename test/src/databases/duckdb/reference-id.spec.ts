@@ -8,7 +8,7 @@
 import {RuntimeList} from '../../runtimes';
 import '../../util/db-jest-matchers';
 import {describeIfDatabaseAvailable} from '../../util';
-import {Explore, Field} from '@malloydata/malloy';
+import type {Explore, Field} from '@malloydata/malloy';
 
 const [describe, databases] = describeIfDatabaseAvailable(['duckdb']);
 const dbs = new RuntimeList(databases);

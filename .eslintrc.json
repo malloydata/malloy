@@ -14,7 +14,8 @@
     "no-console": "warn",
     "prettier/prettier": ["error", {"quoteProps": "preserve"}],
     "sort-keys": "off",
-    "no-duplicate-imports": "error",
+    "no-duplicate-imports": "off",
+    "@typescript-eslint/no-duplicate-imports": "error",
     "@typescript-eslint/no-explicit-any": "error",
     "no-restricted-imports": [
       "error",
@@ -31,7 +32,7 @@
     "no-throw-literal": "error",
     "@typescript-eslint/consistent-type-imports": [
       "error",
-      {"prefer": "no-type-imports"}
+      {"prefer": "type-imports"}
     ],
     "@typescript-eslint/no-unused-vars": [
       "error",

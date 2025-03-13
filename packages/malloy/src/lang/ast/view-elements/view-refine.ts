@@ -21,12 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {PipeSegment} from '../../../model';
+import type {PipeSegment} from '../../../model';
 import {ErrorFactory} from '../error-factory';
-import {QueryOperationSpace} from '../field-space/query-spaces';
+import type {QueryOperationSpace} from '../field-space/query-spaces';
 import {getFinalStruct} from '../struct-utils';
-import {FieldSpace, SourceFieldSpace} from '../types/field-space';
-import {PipelineComp} from '../types/pipeline-comp';
+import type {FieldSpace, SourceFieldSpace} from '../types/field-space';
+import type {PipelineComp} from '../types/pipeline-comp';
 import {refine} from './refine-utils';
 import {View} from './view';
 

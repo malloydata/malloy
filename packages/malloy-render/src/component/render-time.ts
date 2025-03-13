@@ -6,7 +6,7 @@
  */
 
 import {renderTimeString} from '../util';
-import {RendererProps} from './types';
+import type {RendererProps} from './types';
 
 export function renderTime({dataColumn}: RendererProps) {
   if (!dataColumn.field.isAtomic())

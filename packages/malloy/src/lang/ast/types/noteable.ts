@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Annotation} from '../../../model/malloy_types';
+import type {Annotation} from '../../../model/malloy_types';
 
 /**
  * An object which can receive annotations is "Noteable"

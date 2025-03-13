@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ParseInfo} from './utils';
+import type {ParseInfo} from './utils';
 
 export interface MalloyParseInfo extends ParseInfo {
   importBaseURL: string;

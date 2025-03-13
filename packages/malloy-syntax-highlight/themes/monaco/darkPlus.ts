@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {editor as Monaco} from 'monaco-editor';
+import type {editor as Monaco} from 'monaco-editor';
 
 export const theme: Monaco.IStandaloneThemeData = {
   base: 'vs',

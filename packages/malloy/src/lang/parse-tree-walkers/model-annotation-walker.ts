@@ -21,13 +21,17 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {CommonTokenStream, ParserRuleContext} from 'antlr4ts';
+import type {CommonTokenStream, ParserRuleContext} from 'antlr4ts';
 import {ParseTreeWalker} from 'antlr4ts/tree/ParseTreeWalker';
-import {MalloyParserListener} from '../lib/Malloy/MalloyParserListener';
-import * as parser from '../lib/Malloy/MalloyParser';
-import {MalloyTranslation} from '../parse-malloy';
-import {Annotation, DocumentLocation, Note} from '../../model/malloy_types';
-import {MalloyParseInfo} from '../malloy-parse-info';
+import type {MalloyParserListener} from '../lib/Malloy/MalloyParserListener';
+import type * as parser from '../lib/Malloy/MalloyParser';
+import type {MalloyTranslation} from '../parse-malloy';
+import type {
+  Annotation,
+  DocumentLocation,
+  Note,
+} from '../../model/malloy_types';
+import type {MalloyParseInfo} from '../malloy-parse-info';
 
 class ModelAnnotationWalker implements MalloyParserListener {
   private readonly notes: Note[] = [];

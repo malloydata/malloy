@@ -21,14 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  DialectFunctionOverloadDef,
-  getMalloyStandardFunctions,
-} from '../../../dialect';
+import type {DialectFunctionOverloadDef} from '../../../dialect';
+import {getMalloyStandardFunctions} from '../../../dialect';
 import {getDialects} from '../../../dialect/dialect_map';
-import {TD, FunctionDef, FunctionOverloadDef} from '../../../model';
-import {ModelEntry} from './model-entry';
-import {NameSpace} from './name-space';
+import type {FunctionDef, FunctionOverloadDef} from '../../../model';
+import {TD} from '../../../model';
+import type {ModelEntry} from './model-entry';
+import type {NameSpace} from './name-space';
 
 /**
  * This is a global namespace which exists in the root of all Documents

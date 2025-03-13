@@ -5,11 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import * as Malloy from '@malloydata/malloy-interfaces';
+import type * as Malloy from '@malloydata/malloy-interfaces';
 import {Tag} from '@malloydata/malloy-tag';
 import {DurationUnit, isDurationUnit} from './html/data_styles';
 import {format} from 'ssf';
-import {Cell, Field, NestField} from './data_tree';
+import type {Cell, NestField} from './data_tree';
+import {Field} from './data_tree';
 
 export const NULL_SYMBOL = '∅';
 

@@ -21,45 +21,39 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   DocumentLocation,
   DocumentPosition,
   DocumentReference,
   ImportLocation,
   ModelDef,
-  isSourceDef,
   NamedModelObject,
   SourceDef,
   SQLSourceDef,
   DependencyTree,
   DocumentRange,
 } from '../model/malloy_types';
+import {isSourceDef} from '../model/malloy_types';
 import * as ast from './ast';
 import {MalloyToAST} from './malloy-to-ast';
-import {
-  BaseMessageLogger,
+import type {
   LogMessage,
   LogMessageOptions,
   MessageCode,
   MessageParameterType,
-  makeLogMessage,
 } from './parse-log';
-import {
-  findReferences,
-  FindReferencesData,
-} from './parse-tree-walkers/find-external-references';
-import {Zone, ZoneData} from './zone';
+import {BaseMessageLogger, makeLogMessage} from './parse-log';
+import type {FindReferencesData} from './parse-tree-walkers/find-external-references';
+import {findReferences} from './parse-tree-walkers/find-external-references';
+import type {ZoneData} from './zone';
+import {Zone} from './zone';
 import {walkForDocumentSymbols} from './parse-tree-walkers/document-symbol-walker';
-import {
-  DocumentCompletion,
-  walkForDocumentCompletions,
-} from './parse-tree-walkers/document-completion-walker';
-import {
-  DocumentHelpContext,
-  walkForDocumentHelpContext,
-} from './parse-tree-walkers/document-help-context-walker';
+import type {DocumentCompletion} from './parse-tree-walkers/document-completion-walker';
+import {walkForDocumentCompletions} from './parse-tree-walkers/document-completion-walker';
+import type {DocumentHelpContext} from './parse-tree-walkers/document-help-context-walker';
+import {walkForDocumentHelpContext} from './parse-tree-walkers/document-help-context-walker';
 import {ReferenceList} from './reference-list';
-import {
+import type {
   ASTResponse,
   CompletionsResponse,
   DataRequestResponse,
@@ -71,23 +65,23 @@ import {
   ModelDataRequest,
   NeedURLData,
   TranslateResponse,
-  isNeedResponse,
   ModelAnnotationResponse,
   TablePathResponse,
 } from './translate-response';
+import {isNeedResponse} from './translate-response';
 import {
   getSourceInfo,
   locationContainsPosition,
   rangeFromContext,
 } from './utils';
 import {Tag} from '@malloydata/malloy-tag';
-import {MalloyParseInfo} from './malloy-parse-info';
+import type {MalloyParseInfo} from './malloy-parse-info';
 import {walkForModelAnnotation} from './parse-tree-walkers/model-annotation-walker';
 import {walkForTablePath} from './parse-tree-walkers/find-table-path-walker';
-import {EventStream} from '../runtime_types';
+import type {EventStream} from '../runtime_types';
 import {annotationToTag} from '../annotation';
 import {runMalloyParser} from './run-malloy-parser';
-import {ParserRuleContext} from 'antlr4ts';
+import type {ParserRuleContext} from 'antlr4ts';
 
 export type StepResponses =
   | DataRequestResponse

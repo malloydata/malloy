@@ -5,12 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {
+import type {
   DefinitionBlueprint,
   DefinitionBlueprintMap,
   OverloadedDefinitionBlueprint,
-  def,
 } from '../functions/util';
+import {def} from '../functions/util';
 
 const list_extract: DefinitionBlueprint = {
   takes: {'value': {array: {generic: 'T'}}, 'index': 'number'},

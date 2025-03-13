@@ -22,7 +22,8 @@
  */
 
 import {annotationToTag} from '@malloydata/malloy';
-import {TagDict, Tag} from '@malloydata/malloy-tag';
+import type {TagDict} from '@malloydata/malloy-tag';
+import {Tag} from '@malloydata/malloy-tag';
 import {runtimeFor} from '../runtimes';
 
 declare global {

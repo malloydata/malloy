@@ -5,18 +5,19 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {VegaChart, ViewInterface} from '../vega/vega-chart';
-import {ChartTooltipEntry} from '../types';
+import type {ViewInterface} from '../vega/vega-chart';
+import {VegaChart} from '../vega/vega-chart';
+import type {ChartTooltipEntry} from '../types';
 import {Tooltip} from '../tooltip/tooltip';
 import {createEffect, createSignal, createMemo, Show} from 'solid-js';
 import {DefaultChartTooltip} from './default-chart-tooltip';
-import {EventListenerHandler, Runtime, View} from 'vega';
-import {VegaBrushOutput} from '../result-store/result-store';
+import type {EventListenerHandler, Runtime, View} from 'vega';
+import type {VegaBrushOutput} from '../result-store/result-store';
 import css from './chart.css?raw';
 import {useConfig} from '../render';
 import {DebugIcon} from './debug_icon';
 import ChartDevTool from './chart-dev-tool';
-import {RepeatedRecordCell} from '../../data_tree';
+import type {RepeatedRecordCell} from '../../data_tree';
 import {useResultContext} from '../result-context';
 
 let IS_STORYBOOK = false;

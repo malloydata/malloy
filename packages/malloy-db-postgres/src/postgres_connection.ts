@@ -28,13 +28,12 @@
 //
 
 import * as crypto from 'crypto';
-import {
+import type {
   Connection,
   ConnectionConfig,
   MalloyQueryData,
   PersistSQLResults,
   PooledConnection,
-  PostgresDialect,
   QueryData,
   QueryDataRow,
   QueryOptionsReader,
@@ -44,10 +43,9 @@ import {
   TableSourceDef,
   StreamingConnection,
   StructDef,
-  mkArrayDef,
   SQLSourceRequest,
-  sqlKey,
 } from '@malloydata/malloy';
+import {PostgresDialect, mkArrayDef, sqlKey} from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 
 import {Client, Pool} from 'pg';
