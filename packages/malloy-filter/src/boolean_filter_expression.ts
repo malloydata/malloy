@@ -28,7 +28,7 @@ export const BooleanFilterExpression = {
       ret.parsed = {operator: 'null', not: true};
     } else {
       const nonSpace = srcText.match(/[^\s]/);
-      const startIndex = nonSpace ? nonSpace.index ?? 0 : 0;
+      const startIndex = nonSpace ? (nonSpace.index ?? 0) : 0;
       ret.log = [
         {
           message:

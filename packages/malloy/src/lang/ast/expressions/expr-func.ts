@@ -239,8 +239,8 @@ export class ExprFunc extends ExpressionDef {
         error.maxEvalSpace === 'literal'
           ? 'literal'
           : error.maxEvalSpace === 'constant'
-          ? 'literal or constant'
-          : 'literal, constant or output';
+            ? 'literal or constant'
+            : 'literal, constant or output';
       const arg = this.args[adjustedIndex];
       arg.logError(
         'invalid-function-argument-evaluation-space',
@@ -444,8 +444,8 @@ export class ExprFunc extends ExpressionDef {
       maxEvalSpace === 'constant'
         ? 'constant'
         : expressionIsScalar(expressionType)
-        ? maxEvalSpace
-        : 'output';
+          ? maxEvalSpace
+          : 'output';
     // TODO consider if I can use `computedExprValue` here...
     // seems like the rules for the evalSpace is a bit different from normal though
     return {

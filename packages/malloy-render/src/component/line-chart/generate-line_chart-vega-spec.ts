@@ -570,8 +570,8 @@ export function generateLineChartVegaSpec(explore: NestField): VegaChartProps {
           ? xIsDateorTime
             ? [xField.minNumber!, xField.maxNumber!]
             : xIsBoolean
-            ? [true, false]
-            : [...xField.valueSet]
+              ? [true, false]
+              : [...xField.valueSet]
           : {data: 'values', field: 'x'},
         range: 'width',
         paddingOuter: 0.05,

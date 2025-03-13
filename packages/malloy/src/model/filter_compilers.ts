@@ -47,27 +47,21 @@ export const FilterCompilers = {
       case 'contains': {
         const matches = sc.values.map(v => '%' + likeSafe(v) + '%');
         if (sc.not) {
-          return matches
-            .map(m => d.sqlLike('NOT LIKE', x, m))
-            .join(' and ');
+          return matches.map(m => d.sqlLike('NOT LIKE', x, m)).join(' and ');
         }
         return matches.map(m => d.sqlLike('LIKE', x, m)).join(' or ');
       }
       case 'starts': {
         const matches = sc.values.map(v => likeSafe(v) + '%');
         if (sc.not) {
-          return matches
-            .map(m => d.sqlLike('NOT LIKE', x, m))
-            .join(' and ');
+          return matches.map(m => d.sqlLike('NOT LIKE', x, m)).join(' and ');
         }
         return matches.map(m => d.sqlLike('LIKE', x, m)).join(' or ');
       }
       case 'ends': {
         const matches = sc.values.map(v => '%' + likeSafe(v));
         if (sc.not) {
-          return matches
-            .map(m => d.sqlLike('NOT LIKE', x, m))
-            .join(' and ');
+          return matches.map(m => d.sqlLike('NOT LIKE', x, m)).join(' and ');
         }
         return matches.map(m => d.sqlLike('LIKE', x, m)).join(' or ');
       }
@@ -77,9 +71,7 @@ export const FilterCompilers = {
             .map(m => d.sqlLike('NOT LIKE', x, m))
             .join(' and ');
         }
-        return sc.escaped_values
-          .map(m => d.sqlLike('LIKE', x, m))
-          .join(' or ');
+        return sc.escaped_values.map(m => d.sqlLike('LIKE', x, m)).join(' or ');
       case 'and': {
         const clauses = sc.members.map(c =>
           FilterCompilers.stringCompile(c, x, d)

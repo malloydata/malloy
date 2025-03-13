@@ -145,7 +145,7 @@ export class IndexBuilder implements QueryBuilder {
 
     const fromCompositeFieldUsage =
       from && from.type === 'index'
-        ? from.compositeFieldUsage ?? emptyCompositeFieldUsage()
+        ? (from.compositeFieldUsage ?? emptyCompositeFieldUsage())
         : emptyCompositeFieldUsage();
     indexSegment.compositeFieldUsage = mergeCompositeFieldUsage(
       fromCompositeFieldUsage,
