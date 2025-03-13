@@ -315,11 +315,12 @@ export type FilterExprType =
 export function isFilterExprType(s: string): s is FilterExprType {
   return ['string', 'number', 'boolean', 'date', 'timestamp'].includes(s);
 }
+
 export interface FilterMatchExpr extends ExprE {
   node: 'filterMatch';
   dataType: FilterExprType;
   notMatch?: true;
-  filter: string;
+  filter: {operator: string};
 }
 
 export interface TimeLiteralNode extends ExprLeaf {

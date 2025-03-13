@@ -9,7 +9,8 @@ import {BinaryMalloyOperator} from '../types/binary_operators';
 import {ExprValue, computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
-import {FilterMatchExpr, isFilterExprType} from '../../../model';
+import {FilterMatchExpr} from '../../../model';
+import {StringFilterExpression} from '@malloydata/malloy-filter';
 
 export class ExprFilterExpression extends ExpressionDef {
   elementType = 'filter expression literal';
@@ -36,11 +37,27 @@ export class ExprFilterExpression extends ExpressionDef {
       if (matchExpr.type === 'error') {
         return matchExpr;
       }
-      if (isFilterExprType(matchExpr.type)) {
+      if (matchExpr.type === 'string') {
+        const fParse = StringFilterExpression.parse(this.filterText);
+        if (fParse.log.length > 0) {
+          for (const _err of fParse.log) {
+            // mtoy todo actuall get error and report correct position and error type
+            return this.loggedErrorExpr(
+              'filter-expression-type',
+              'FHJKL:DSHJKL error in parsing filter expression'
+            );
+          }
+        }
+        if (!fParse.parsed) {
+          return this.loggedErrorExpr(
+            'filter-expression-type',
+            'FJKLD:JDKSL: expression parsed to null'
+          );
+        }
         const filterMatch: FilterMatchExpr = {
           node: 'filterMatch',
           dataType: matchExpr.type,
-          filter: this.filterText,
+          filter: fParse.parsed,
           e: matchExpr.value,
         };
         if (op === '!~') {
@@ -52,9 +69,9 @@ export class ExprFilterExpression extends ExpressionDef {
           from: [matchExpr],
         });
       }
-      return left.loggedErrorExpr(
+      return this.loggedErrorExpr(
         'filter-expression-type',
-        `Cannot use filter expressions with type '${matchExpr.type}'`
+        `CUISAO)VEFG Filter expressions for ${matchExpr.type} not available`
       );
     }
     return this.loggedErrorExpr(

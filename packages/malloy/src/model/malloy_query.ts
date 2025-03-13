@@ -133,6 +133,8 @@ import {
 import {EventStream} from '../runtime_types';
 import {Tag} from '@malloydata/malloy-tag';
 import {annotationToTag} from '../annotation';
+import {FilterCompilers} from './filter_compilers';
+import {StringClause} from '@malloydata/malloy-filter';
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
@@ -1358,6 +1360,15 @@ class QueryField extends QueryNode {
         return '';
       case 'compositeField':
         return '{COMPOSITE_FIELD}';
+      case 'filterMatch':
+        if (expr.dataType === 'string') {
+          return FilterCompilers.stringCompile(
+            expr.filter as StringClause,
+            expr.e.sql || '',
+            this.parent.dialect
+          );
+        }
+        throw new Error(`Internal Error: FCU ${expr.dataType}`);
       default:
         throw new Error(
           `Internal Error: Unknown expression node '${
