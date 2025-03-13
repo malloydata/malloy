@@ -101,6 +101,9 @@ describe('string filter expressions', () => {
   test('starts with %', () => {
     expect('\\%%').isStringFilter({operator: 'starts', values: ['%']});
   });
+  test('ends with backslash', () => {
+    expect('%\\\\').isStringFilter({operator: 'ends', values: ['\\']});
+  });
   test('end with _', () => {
     expect('%\\_').isStringFilter({operator: 'ends', values: ['_']});
   });
@@ -375,8 +378,14 @@ describe('string filter expressions', () => {
       ],
     });
   });
-  test.skip('= backslash', () => {
-    expect('\\').isStringFilter({operator: '=', values: ['\\']});
+  test('= backslash', () => {
+    // the string that the filter compiler needs to get is \\
+    // That is writen \\\\ inside a javsscript string
+    // The value will be backslash, which would only be
+    // quoted in \ escaping dialects
+    const escapedBack = '\\\\';
+    expect(escapedBack.length).toBe(2);
+    expect(escapedBack).isStringFilter({operator: '=', values: ['\\']});
   });
   test.todo('starts/ends/contains backslash');
   // very hard to have syntax errors in strings ...

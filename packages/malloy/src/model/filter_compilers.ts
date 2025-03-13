@@ -5,11 +5,21 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {StringClause} from '@malloydata/malloy-filter';
+import {
+  BooleanClause,
+  ClauseBase,
+  NumberClause,
+  StringClause,
+  TemporalClause,
+  isNumberClause,
+  isStringClause,
+  isTemporalClause,
+  isBooleanClause,
+} from '@malloydata/malloy-filter';
 import {Dialect} from '../dialect';
 
-function likeSafe(v: string) {
-  return v.replace(/([_%])g/, '\\$1');
+function escapeForLike(v: string) {
+  return v.replace(/([%_\\])/g, '\\$1');
 }
 
 function unlike(disLiked: string[], x: string) {
@@ -29,6 +39,30 @@ function unlike(disLiked: string[], x: string) {
  */
 
 export const FilterCompilers = {
+  compile(t: string, c: ClauseBase, x: string, d: Dialect) {
+    if (t === 'string' && isStringClause(c)) {
+      return FilterCompilers.stringCompile(c, x, d);
+    } else if (t === 'number' && isNumberClause(c)) {
+      return FilterCompilers.numberCompile(c, x, d);
+    } else if (t === 'boolean' && isBooleanClause(c)) {
+      return FilterCompilers.booleanCompile(c, x, d);
+    } else if ((t === 'date' || t === 'timestamp') && isTemporalClause(c)) {
+      return FilterCompilers.temporalCompile(c, x, d);
+    }
+    throw new Error('INTERNAL ERROR: No filter compiler for ' + t);
+  },
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  numberCompile(nc: NumberClause, x: string, d: Dialect): string {
+    return 'false';
+  },
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  booleanCompile(bc: BooleanClause, x: string, d: Dialect): string {
+    return 'false';
+  },
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  temporalCompile(tc: TemporalClause, x: string, d: Dialect): string {
+    return 'false';
+  },
   stringCompile(sc: StringClause, x: string, d: Dialect): string {
     switch (sc.operator) {
       case 'null':
@@ -53,7 +87,7 @@ export const FilterCompilers = {
         return sc.not ? `not ${wrapped}` : wrapped;
       }
       case 'contains': {
-        const matches = sc.values.map(v => '%' + likeSafe(v) + '%');
+        const matches = sc.values.map(v => '%' + escapeForLike(v) + '%');
         if (sc.not) {
           return unlike(
             matches.map(m => d.sqlLike('NOT LIKE', x, m)),
@@ -63,7 +97,7 @@ export const FilterCompilers = {
         return matches.map(m => d.sqlLike('LIKE', x, m)).join(' or ');
       }
       case 'starts': {
-        const matches = sc.values.map(v => likeSafe(v) + '%');
+        const matches = sc.values.map(v => escapeForLike(v) + '%');
         if (sc.not) {
           return unlike(
             matches.map(m => d.sqlLike('NOT LIKE', x, m)),
@@ -73,7 +107,7 @@ export const FilterCompilers = {
         return matches.map(m => d.sqlLike('LIKE', x, m)).join(' or ');
       }
       case 'ends': {
-        const matches = sc.values.map(v => '%' + likeSafe(v));
+        const matches = sc.values.map(v => '%' + escapeForLike(v));
         if (sc.not) {
           return unlike(
             matches.map(m => d.sqlLike('NOT LIKE', x, m)),

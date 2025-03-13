@@ -71,6 +71,14 @@ export interface BooleanCondition extends Negateable {
 
 export type BooleanClause = BooleanCondition | Null;
 
+export function isBooleanClause(bc: Object): bc is BooleanClause {
+  return (
+    'operator' in bc &&
+    typeof bc.operator === 'string' &&
+    ['null', 'true', 'false', 'false_or_null'].includes(bc.operator)
+  );
+}
+
 export function isStringClause(sc: Object): sc is StringClause {
   return (
     'operator' in sc &&
