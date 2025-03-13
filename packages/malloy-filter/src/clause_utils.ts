@@ -36,7 +36,7 @@ export function unescape(str: string) {
 }
 
 /**
- * Escape all of these:  ,;| ()\%_
+ * Escape all of these:  ,; |()\%_-
  */
 export function escape(str: string) {
   const lstr = str.toLowerCase();
@@ -49,21 +49,21 @@ export function escape(str: string) {
 /**
  * I tried to write the regex for these and I just kept finding strings where the regex failed.
  * Look at a string and find if it uses any unescaped like characters, if it starts or ends with
- * a percent match, and counts trailing spaces
+ * a percent match, and counts non escaped trailing spaces
  */
 function describeString(s: string) {
   let percentStart = false;
   let percentEnd = false;
-  let endSpace = 0;
+  let endSpaceCnt = 0;
   let hasLike = false;
   const iLen = s.length;
-  for (let i = 0; i < s.length; i += 1) {
+  for (let i = 0; i < iLen; i += 1) {
     const c = s[i];
     if (c === ' ' || c === '\t') {
-      endSpace += 1;
+      endSpaceCnt += 1;
       continue;
     }
-    endSpace = 0;
+    endSpaceCnt = 0;
 
     if (c === '%') {
       hasLike = true;
@@ -88,7 +88,7 @@ function describeString(s: string) {
     hasLike,
     percentEnd: percentEnd && iLen > 1,
     percentStart: percentStart && iLen > 1,
-    endSpace,
+    endSpace: endSpaceCnt,
   };
 }
 
@@ -132,7 +132,7 @@ export function matchOp(matchSrc: string): StringClause {
     }
     return {operator: '~', escaped_values: [matchTxt]};
   }
-  if (matchTxt === 'null' || matchTxt === 'NULL') {
+  if (matchTxt.toLowerCase() === 'null' || matchTxt === 'NULL') {
     return {operator: 'null'};
   }
   if (matchTxt === 'empty' || matchTxt === 'EMPTY') {
