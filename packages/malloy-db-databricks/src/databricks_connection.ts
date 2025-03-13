@@ -44,6 +44,7 @@ import {Client} from 'pg';
 import {DBSQLClient} from '@databricks/sql';
 import crypto from 'crypto';
 import IDBSQLSession from '@databricks/sql/dist/contracts/IDBSQLSession';
+import {ConnectionOptions} from '@databricks/sql/dist/contracts/IDBSQLClient';
 
 const DEFAULT_PAGE_SIZE = 1000;
 
@@ -73,7 +74,7 @@ export class DatabricksConnection
 
   private client: DBSQLClient | null = null;
   private session: IDBSQLSession | null = null;
-  private connecting: Promise<void>;
+  private connecting: Promise<void> = Promise.resolve();
 
   constructor(
     name: string,
@@ -94,12 +95,14 @@ export class DatabricksConnection
       this.queryOptionsReader = queryOptionsReader;
     }
 
-    // Initialize connection
+    this.client = new DBSQLClient();
     this.connecting = this.connect();
   }
 
   private async connect(): Promise<void> {
-    this.client = new DBSQLClient();
+    if (!this.client) {
+      this.client = new DBSQLClient();
+    }
 
     if (this.config.token) {
       await this.client.connect({
@@ -228,73 +231,81 @@ export class DatabricksConnection
     await client.query("SET TIME ZONE 'UTC'");
   }
 
-  public async runRawSQL(
-    sql: string[],
-    {rowLimit}: RunSQLOptions = {},
-    _rowIndex = 0
-  ): Promise<MalloyQueryData> {
-    const config = await this.readQueryConfig();
-
-    await this.connecting; // Wait for connection to be established
-    if (!this.client || !this.session) {
-      throw new Error('Databricks connection not established');
-    }
-
-    sql.unshift(`USE CATALOG ${this.config.defaultCatalog}`);
-
-    let result: QueryDataRow[] = [];
-    for (let i = 0; i < sql.length; i++) {
-      const queryOperation = await this.session.executeStatement(sql[i], {
-        runAsync: true,
-      });
-      result = (await queryOperation.fetchAll()) as QueryDataRow[];
-      await queryOperation.close();
-    }
-
-    // restrict num rows if necessary
-    const databricksRowLimit = rowLimit ?? config.rowLimit ?? DEFAULT_PAGE_SIZE;
-    if (result.length > databricksRowLimit) {
-      result = result.slice(0, databricksRowLimit);
-    }
-
-    return {rows: result, totalRows: result.length};
-  }
-
   public async runSQL(
     sql: string,
     {rowLimit}: RunSQLOptions = {},
     _rowIndex = 0
   ): Promise<MalloyQueryData> {
-    const config = await this.readQueryConfig();
+    const result = await this.runRawSQL([sql], {rowLimit}, _rowIndex);
+    const actualResult = result.rows.map(row =>
+      row['row'] ? JSON.parse(String(row['row'])) : row
+    );
+    return {rows: actualResult, totalRows: result.totalRows};
+  }
 
-    await this.connecting; // Wait for connection to be established
-    if (!this.client || !this.session) {
+  public async runRawSQL(
+    sql: string[],
+    {rowLimit}: RunSQLOptions = {},
+    _rowIndex = 0
+  ): Promise<MalloyQueryData> {
+    if (!this.client) {
       throw new Error('Databricks connection not established');
     }
 
-    const sqlWithDefaultCatalog = [`USE CATALOG ${this.config.defaultCatalog}`, sql]
+    const queryConfig = await this.readQueryConfig();
+    const args = this.config.token
+      ? {
+          token: this.config.token,
+          host: this.config.host,
+          path: this.config.path,
+        }
+      : ({
+          authType: 'databricks-oauth',
+          host: this.config.host,
+          path: this.config.path,
+          oauthClientId: this.config.oauthClientId,
+          oauthClientSecret: this.config.oauthClientSecret,
+        } as ConnectionOptions);
 
-    let result: QueryDataRow[] = [];
-    for (let i = 0; i < sqlWithDefaultCatalog.length; i++) {
-      const queryOperation = await this.session.executeStatement(sqlWithDefaultCatalog[i], {
-        runAsync: true,
+    return this.client
+      .connect(args)
+      .then(async client => {
+        const session = await client.openSession();
+        const catalogStmt = `USE CATALOG ${this.config.defaultCatalog}`;
+        const sqlWithCatalog = [catalogStmt, ...sql];
+        let result: QueryDataRow[] = [];
+        for (let i = 0; i < sqlWithCatalog.length; i++) {
+          const queryOperation = await session.executeStatement(
+            sqlWithCatalog[i],
+            {
+              runAsync: true,
+            }
+          );
+          result = (await queryOperation.fetchAll()) as QueryDataRow[];
+          await queryOperation.close();
+        }
+
+        // Extract actual result from Databricks response
+        const actualResult = result.map(row =>
+          row['row'] ? JSON.parse(String(row['row'])) : row
+        );
+
+        // restrict num rows if necessary
+        const databricksRowLimit =
+          rowLimit ?? queryConfig.rowLimit ?? DEFAULT_PAGE_SIZE;
+
+        if (result.length > databricksRowLimit) {
+          result = result.slice(0, databricksRowLimit);
+        }
+
+        const finalResult = {rows: actualResult, totalRows: result.length};
+        await session.close();
+        await client.close();
+        return finalResult;
+      })
+      .catch(error => {
+        throw new Error(`Databricks connection / execution error: ${error}`);
       });
-      result = (await queryOperation.fetchAll()) as QueryDataRow[];
-      await queryOperation.close();
-    }
-
-    // Extract actual result from Databricks response
-    const actualResult = result.map(row =>
-      row['row'] ? JSON.parse(String(row['row'])) : row
-    );
-
-    // restrict num rows if necessary
-    const databricksRowLimit = rowLimit ?? config.rowLimit ?? DEFAULT_PAGE_SIZE;
-    if (result.length > databricksRowLimit) {
-      result = result.slice(0, databricksRowLimit);
-    }
-
-    return {rows: actualResult, totalRows: result.length};
   }
 
   public async *runSQLStream(
