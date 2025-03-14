@@ -10,6 +10,7 @@ import * as nearley from 'nearley';
 import fstring_grammar from '../lib/fexpr_string_parser';
 import {StringClause} from '../filter_clause';
 import {StringFilterExpression} from '../string_filter_expression';
+import {inspect} from 'util';
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -52,14 +53,15 @@ expect.extend({
           `Unparse Error: '${src}' parsed correctly, but unparsed as '${unparse}'\n${serialize_error}`,
       };
     }
-    const errTest = diff(
-      {parse: expectedParse},
-      {parse: results[0]},
-      {expand: true}
+    const want = this.utils.printExpected(
+      `Expected: ${inspect(expectedParse, {breakLength: 80, depth: Infinity})}`
+    );
+    const rcv = this.utils.printReceived(
+      `Received: ${inspect(results[0], {breakLength: 80, depth: Infinity})}`
     );
     return {
       pass: false,
-      message: () => `${src} did not compile correctly\n${errTest}`,
+      message: () => `${src} did not compile correctly\n${want}\n${rcv}`,
     };
   },
 });
@@ -100,6 +102,9 @@ describe('string filter expressions', () => {
   });
   test('starts with %', () => {
     expect('\\%%').isStringFilter({operator: 'starts', values: ['%']});
+  });
+  test('ends with backslash', () => {
+    expect('%\\\\').isStringFilter({operator: 'ends', values: ['\\']});
   });
   test('end with _', () => {
     expect('%\\_').isStringFilter({operator: 'ends', values: ['_']});
@@ -375,8 +380,14 @@ describe('string filter expressions', () => {
       ],
     });
   });
-  test.skip('= backslash', () => {
-    expect('\\').isStringFilter({operator: '=', values: ['\\']});
+  test('= backslash', () => {
+    // the string that the filter compiler needs to get is \\
+    // That is writen \\\\ inside a javsscript string
+    // The value will be backslash, which would only be
+    // quoted in \ escaping dialects
+    const escapedBack = '\\\\';
+    expect(escapedBack.length).toBe(2);
+    expect(escapedBack).isStringFilter({operator: '=', values: ['\\']});
   });
   test.todo('starts/ends/contains backslash');
   // very hard to have syntax errors in strings ...

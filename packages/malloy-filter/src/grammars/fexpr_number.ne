@@ -8,7 +8,7 @@
 @preprocessor typescript
 @{%
 import moo from 'moo';
-import {numNot, mkRange, joinNumbers} from '../clause_utils';
+import {numNot, mkRange, joinNumbers, mkValues} from '../clause_utils';
 
 const fnumber_lexer = moo.compile({
   WS: /[ \t]+/,
@@ -22,12 +22,14 @@ const fnumber_lexer = moo.compile({
       'TO': 'to',
     }),
   },
-  oparen: /\(/,
-  cparen: /\)/,
-  obrack: /\[/,
-  cbrack: /\]/,
-  comma: /,/,
-  op: /=|!=|<=|>=|<|>/,
+  oparen: '(',
+  cparen: ')',
+  obrack: '[',
+  cbrack: ']',
+  comma: ',',
+  op: /<=|>=|<|>/,
+  ne: '!=',
+  eq: '=',
   float: /-?(?:\d+)?\.\d+(?:[Ee][+-]?\d+)?/,
   numberE: /-?\d+[Ee][+-]?\d+/,
   integer: /-?\d+/,
@@ -51,20 +53,22 @@ numberFilter ->
   | numberUnary {% (data) => data[0] %}
 
 numberUnary ->
-  %NOT:? clause {% ([notToken, op]) => numNot(op, notToken) %}
+  %NOT:? clause {% ([notToken, clause]) => numNot(clause, notToken) %}
 
 clause ->
     %NULL_KW {% () => ({operator: 'null' }) %}
-  | N {% (d) => ({operator: '=', values: [d[0]]}) %}
+  | N numberList:* {% ([n, nList]) => ({operator: '=', ...mkValues(n, nList)}) %}
+  | %eq N numberList:* {% ([_, n, nList]) => ({operator: '=', ...mkValues(n, nList)}) %}
+  | %ne N numberList:* {% ([_, n, nList]) => ({operator: '!=', ...mkValues(n, nList)}) %}
   | %op N {% ([op, n]) => ({operator: op.text, values: [n]}) %}
-  | parens {% (data) => data[0] %}
+  | %oparen numberFilter %cparen {% ([_1, subFilter, _3]) => ({operator: "()", expr: subFilter}) %}
   | openInterval N %TO N closeInterval {% ([l, b, _to, e, r]) => mkRange(l[0].text,b,e,r[0].text) %}
 
-parens -> %oparen  numberFilter %cparen {% ([_1, subFilter, _3]) => ({operator: "()", expr: subFilter}) %}
+numberList -> %comma N {% ([_, n]) => n %}
 
 closeInterval -> %cbrack | %cparen
 openInterval -> %obrack | %oparen
 
-N -> (%float | %numberE | %integer) {% (nMatch) => nMatch[0][0].text %}
+N -> (%float | %numberE | %integer) {% ([nMatch]) => nMatch[0].text %}
 
-conjunction -> %OR | %AND | %comma
+conjunction -> %OR | %AND

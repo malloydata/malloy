@@ -8,6 +8,7 @@
 import {diff} from 'jest-diff';
 import {BooleanClause} from '../filter_clause';
 import {BooleanFilterExpression} from '../boolean_filter_expression';
+import {inspect} from 'util';
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -46,10 +47,15 @@ expect.extend({
           `Unparse Error: '${src}' parsed correctly, but unparsed as '${unparse}'\n${serialize_error}`,
       };
     }
-    const errTest = diff(expectedParse, boolC.parsed, {expand: true});
+    const want = this.utils.printExpected(
+      `Expected: ${inspect(expectedParse, {breakLength: 80, depth: Infinity})}`
+    );
+    const rcv = this.utils.printReceived(
+      `Received: ${inspect(boolC.parsed, {breakLength: 80, depth: Infinity})}`
+    );
     return {
       pass: false,
-      message: () => `${src} did not compile correctly\n${errTest}`,
+      message: () => `${src} did not compile correctly\n${want}\n${rcv}`,
     };
   },
 });

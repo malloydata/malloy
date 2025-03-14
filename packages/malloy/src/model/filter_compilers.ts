@@ -5,19 +5,37 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {StringClause} from '@malloydata/malloy-filter';
+import {
+  BooleanClause,
+  ClauseBase,
+  NumberClause,
+  StringClause,
+  TemporalClause,
+  isNumberClause,
+  isStringClause,
+  isTemporalClause,
+  isBooleanClause,
+  NumberRangeOperator,
+} from '@malloydata/malloy-filter';
 import {Dialect} from '../dialect';
 
-function likeSafe(v: string) {
-  return v.replace(/([_%])g/, '\\$1');
+function escapeForLike(v: string) {
+  return v.replace(/([%_\\])/g, '\\$1');
+}
+
+function invertCompare(no: NumberRangeOperator): NumberRangeOperator {
+  if (no === '>') return '<=';
+  else if (no === '<') return '>=';
+  else if (no === '>=') return '<';
+  return '>';
 }
 
 function unlike(disLiked: string[], x: string) {
-  const orNull = `OR ${x} IS NULL`;
+  const orNull = ` OR ${x} IS NULL`;
   if (disLiked.length === 1) {
-    return `${disLiked[0]} ${orNull}`;
+    return `${disLiked[0]}${orNull}`;
   }
-  return `(${disLiked.join(' and ')}) $orNULL`;
+  return `(${disLiked.join(' AND ')})${orNull}`;
 }
 
 /*
@@ -29,6 +47,80 @@ function unlike(disLiked: string[], x: string) {
  */
 
 export const FilterCompilers = {
+  compile(t: string, c: ClauseBase, x: string, d: Dialect) {
+    if (t === 'string' && isStringClause(c)) {
+      return FilterCompilers.stringCompile(c, x, d);
+    } else if (t === 'number' && isNumberClause(c)) {
+      return FilterCompilers.numberCompile(c, x, d);
+    } else if (t === 'boolean' && isBooleanClause(c)) {
+      return FilterCompilers.booleanCompile(c, x, d);
+    } else if ((t === 'date' || t === 'timestamp') && isTemporalClause(c)) {
+      return FilterCompilers.temporalCompile(c, x, d);
+    }
+    throw new Error('INTERNAL ERROR: No filter compiler for ' + t);
+  },
+  numberCompile(nc: NumberClause, x: string, d: Dialect): string {
+    switch (nc.operator) {
+      case '!=':
+      case '=': {
+        const notEqual =
+          (nc.operator === '=' && nc.not) || (nc.operator === '!=' && !nc.not);
+        const optList = nc.values.join(', ');
+        if (nc.values.length === 1) {
+          if (notEqual) return `${x} != ${optList} OR ${x} IS NULL`;
+          return `${x} = ${optList}`;
+        }
+        if (notEqual) return `${x} NOT IN (${optList}) OR ${x} IS NULL`;
+        return `${x} IN (${optList})`;
+      }
+      case '>':
+      case '<':
+      case '>=':
+      case '<=':
+        return nc.values
+          .map(v => `${x} ${nc.operator} ${v}`)
+          .join(nc.not ? ' AND ' : ' OR ');
+      case 'range': {
+        let startOp = nc.startOperator;
+        let endOp = nc.endOperator;
+        let plus = ' AND ';
+        if (nc.not) {
+          startOp = invertCompare(startOp);
+          endOp = invertCompare(endOp);
+          plus = ' OR ';
+        }
+        return `${x} ${startOp} ${nc.startValue} ${plus} ${x} ${endOp} ${nc.endValue}`;
+      }
+      case 'null':
+        return nc.not ? `${x} IS NOT NULL` : `${x} IS NULL`;
+      case '()': {
+        const wrapped =
+          '(' + FilterCompilers.numberCompile(nc.expr, x, d) + ')';
+        return nc.not ? `NOT ${wrapped}` : wrapped;
+      }
+      case 'and':
+      case 'or':
+        return nc.members
+          .map(m => FilterCompilers.numberCompile(m, x, d))
+          .join(` ${nc.operator.toUpperCase()}`);
+    }
+  },
+  booleanCompile(bc: BooleanClause, x: string, _d: Dialect): string {
+    switch (bc.operator) {
+      case 'false':
+        return `${x} = false`;
+      case 'false_or_null':
+        return `${x} IS NULL OR ${x} = false`;
+      case 'null':
+        return bc.not ? `${x} IS NOT NULL` : `${x} IS NULL`;
+      case 'true':
+        return x;
+    }
+  },
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  temporalCompile(tc: TemporalClause, x: string, d: Dialect): string {
+    return 'false';
+  },
   stringCompile(sc: StringClause, x: string, d: Dialect): string {
     switch (sc.operator) {
       case 'null':
@@ -53,34 +145,34 @@ export const FilterCompilers = {
         return sc.not ? `not ${wrapped}` : wrapped;
       }
       case 'contains': {
-        const matches = sc.values.map(v => '%' + likeSafe(v) + '%');
+        const matches = sc.values.map(v => '%' + escapeForLike(v) + '%');
         if (sc.not) {
           return unlike(
             matches.map(m => d.sqlLike('NOT LIKE', x, m)),
             x
           );
         }
-        return matches.map(m => d.sqlLike('LIKE', x, m)).join(' or ');
+        return matches.map(m => d.sqlLike('LIKE', x, m)).join(' OR ');
       }
       case 'starts': {
-        const matches = sc.values.map(v => likeSafe(v) + '%');
+        const matches = sc.values.map(v => escapeForLike(v) + '%');
         if (sc.not) {
           return unlike(
             matches.map(m => d.sqlLike('NOT LIKE', x, m)),
             x
           );
         }
-        return matches.map(m => d.sqlLike('LIKE', x, m)).join(' or ');
+        return matches.map(m => d.sqlLike('LIKE', x, m)).join(' OR ');
       }
       case 'ends': {
-        const matches = sc.values.map(v => '%' + likeSafe(v));
+        const matches = sc.values.map(v => '%' + escapeForLike(v));
         if (sc.not) {
           return unlike(
             matches.map(m => d.sqlLike('NOT LIKE', x, m)),
             x
           );
         }
-        return matches.map(m => d.sqlLike('LIKE', x, m)).join(' or ');
+        return matches.map(m => d.sqlLike('LIKE', x, m)).join(' OR ');
       }
       case '~':
         if (sc.not) {
@@ -89,18 +181,18 @@ export const FilterCompilers = {
             x
           );
         }
-        return sc.escaped_values.map(m => d.sqlLike('LIKE', x, m)).join(' or ');
+        return sc.escaped_values.map(m => d.sqlLike('LIKE', x, m)).join(' OR ');
       case 'and': {
         const clauses = sc.members.map(c =>
           FilterCompilers.stringCompile(c, x, d)
         );
-        return clauses.join(' and ');
+        return clauses.join(' AND ');
       }
       case 'or': {
         const clauses = sc.members.map(c =>
           FilterCompilers.stringCompile(c, x, d)
         );
-        return clauses.join(' or ');
+        return clauses.join(' AND ');
       }
       case ',': {
         /*
@@ -156,7 +248,7 @@ export const FilterCompilers = {
           if (includeNull) {
             includeExprs.push(`${x} IS NULL`);
           }
-          includeSQL = includeExprs.join(' or ');
+          includeSQL = includeExprs.join(' OR ');
         }
         let excludeSQL = '';
         if (excludes.length > 0 || excludeEmpty || excludeNull) {
@@ -169,11 +261,11 @@ export const FilterCompilers = {
           if (excludeNull) {
             excludeExprs.push(`${x} IS NOT NULL`);
           }
-          excludeSQL = excludeExprs.join(' and ');
+          excludeSQL = excludeExprs.join(' AND ');
         }
         if (includeSQL) {
           return excludeSQL !== ''
-            ? includeSQL + ' and ' + excludeSQL
+            ? `(${includeSQL}) AND (${excludeSQL})`
             : includeSQL;
         }
         return excludeSQL !== '' ? excludeSQL : 'true';

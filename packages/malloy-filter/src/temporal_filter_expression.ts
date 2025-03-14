@@ -63,10 +63,6 @@ export const TemporalFilterExpression = {
         return tc.members
           .map(and => TemporalFilterExpression.unparse(and))
           .join(' and ');
-      case ',':
-        return tc.members
-          .map(comma => TemporalFilterExpression.unparse(comma))
-          .join(', ');
     }
   },
 };
