@@ -65,16 +65,13 @@ export const FilterCompilers = {
       case '=': {
         const notEqual =
           (nc.operator === '=' && !nc.not) || (nc.operator === '!=' && nc.not);
-        const optList = nc.values.map(
-          v => `${x} ${notEqual ? '!=' : '='} ${v}`
-        );
-        if (notEqual) {
-          if (optList.length > 1) {
-            return `(${optList.join(' AND ')}) OR ${x} IS NULL`;
-          }
-          return `${optList[0]} OR ${x} IS NULL`;
+        const optList = nc.values.join(', ');
+        if (nc.values.length === 1) {
+          if (notEqual) return `${x} != ${optList} OR ${x} IS NULL`;
+          return `${x} = ${optList}`;
         }
-        return optList.join(notEqual ? ' AND ' : ' OR ');
+        if (notEqual) return `${x} NOT IN (${optList}) OR ${x} IS NULL`;
+        return `${x} IN (${optList})`;
       }
       case '>':
       case '<':
