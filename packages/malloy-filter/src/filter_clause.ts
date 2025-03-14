@@ -292,7 +292,7 @@ export interface FilterLog {
   severity: FilterLogSeverity;
 }
 
-export interface FilterParserReponse<T extends ClauseBase> {
+export interface FilterParserResponse<T extends ClauseBase> {
   parsed: T | null;
   log: FilterLog[];
 }
