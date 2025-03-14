@@ -350,12 +350,6 @@ describe('temporal filter expressions', () => {
         ],
       });
     });
-    test('comma', () => {
-      expect('now, null').isTemporalFilter({
-        operator: ',',
-        members: [{operator: 'in', in: {moment: 'now'}}, {operator: 'null'}],
-      });
-    });
     test('and', () => {
       expect('not before tomorrow and after yesterday').isTemporalFilter({
         operator: 'and',

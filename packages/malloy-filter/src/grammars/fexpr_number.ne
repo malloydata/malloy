@@ -53,13 +53,13 @@ numberFilter ->
   | numberUnary {% (data) => data[0] %}
 
 numberUnary ->
-  %NOT:? clause {% ([notToken, op]) => numNot(op, notToken) %}
+  %NOT:? clause {% ([notToken, clause]) => numNot(clause, notToken) %}
 
 clause ->
     %NULL_KW {% () => ({operator: 'null' }) %}
-  | N numberList:* {% ([n, nList]) => ({operator: '=', values: mkValues(n, nList)}) %}
-  | %eq N numberList:* {% ([_, n, nList]) => ({operator: '=', values: mkValues(n, nList)}) %}
-  | %ne N numberList:* {% ([_, n, nList]) => ({operator: '!=', values: mkValues(n, nList)}) %}
+  | N numberList:* {% ([n, nList]) => ({operator: '=', ...mkValues(n, nList)}) %}
+  | %eq N numberList:* {% ([_, n, nList]) => ({operator: '=', ...mkValues(n, nList)}) %}
+  | %ne N numberList:* {% ([_, n, nList]) => ({operator: '!=', ...mkValues(n, nList)}) %}
   | %op N {% ([op, n]) => ({operator: op.text, values: [n]}) %}
   | %oparen numberFilter %cparen {% ([_1, subFilter, _3]) => ({operator: "()", expr: subFilter}) %}
   | openInterval N %TO N closeInterval {% ([l, b, _to, e, r]) => mkRange(l[0].text,b,e,r[0].text) %}

@@ -218,7 +218,7 @@ export function mkRange(
 }
 
 export function mkValues(n: string, nList: string[]) {
-  return [n, ...nList];
+  return {values: [n, ...nList]};
 }
 
 export function numNot(op: Object, notToken: unknown) {
@@ -257,7 +257,7 @@ export function joinTemporal(
     //   }
     //   return ret;
     // }
-    if (op === ',' || op === 'and' || op === 'or') {
+    if (op === 'and' || op === 'or') {
       if (left.operator === op) {
         return {...left, members: [...left.members, right]};
       }

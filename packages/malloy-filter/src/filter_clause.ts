@@ -257,7 +257,7 @@ export type TemporalClause =
   | JustUnits
   | in_last
   | InMoment
-  | ClauseChain<TemporalClause>
+  | BooleanChain<TemporalClause>
   | ClauseGroup<TemporalClause>;
 
 export function isTemporalClause(sc: Object): sc is TemporalClause {
@@ -277,7 +277,6 @@ export function isTemporalClause(sc: Object): sc is TemporalClause {
       'this',
       'last',
       'next',
-      ',',
       '()',
       'null',
     ].includes(sc.operator)

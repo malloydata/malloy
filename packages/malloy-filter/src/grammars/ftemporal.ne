@@ -57,9 +57,9 @@ const temporal_lexer = moo.compile({
       'SUNDAY': 'sunday',
     }),
   },
-  oparen: /\(/,
-  cparen: /\)/,
-  comma: /,/,
+  oparen: '(',
+  cparen: ')',
+  comma: ',',
   literal: /\d\d\d\d-\d\d-\d\d[ Tt]\d\d:\d\d(?::\d\d(?:[.,]\d*))/,
   lit_week: /\d\d\d\d-\d\d-\d\d-[Ww][Kk]/,
   lit_quarter: /\d\d\d\d-[qQ][1234]/,
@@ -142,4 +142,4 @@ weekday -> (%MONDAY | %TUESDAY | %WEDNESDAY | %THURSDAY | %FRIDAY | %SATURDAY | 
 
 parens -> %oparen temporalFilter %cparen {% ([_1, subFilter, _3]) => ({operator: "()", expr: subFilter}) %}
 
-conjunction -> %OR | %AND | %comma
+conjunction -> %OR | %AND
