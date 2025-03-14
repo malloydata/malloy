@@ -10,6 +10,7 @@ import * as nearley from 'nearley';
 import {NumberClause} from '../filter_clause';
 import fnumber_grammar from '../lib/fexpr_number_parser';
 import {NumberFilterExpression} from '../number_filter_expression';
+import {inspect} from 'util';
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -52,14 +53,15 @@ expect.extend({
           `Unparse Error: '${src}' parsed correctly, but unparsed as '${unparse}'\n${serialize_error}`,
       };
     }
-    const errTest = diff(
-      {parse: expectedParse},
-      {parse: results[0]},
-      {expand: true}
+    const want = this.utils.printExpected(
+      `Expected: ${inspect(expectedParse, {breakLength: 80, depth: Infinity})}`
+    );
+    const rcv = this.utils.printReceived(
+      `Received: ${inspect(results[0], {breakLength: 80, depth: Infinity})}`
     );
     return {
       pass: false,
-      message: () => `${src} did not compile correctly\n${errTest}`,
+      message: () => `${src} did not compile correctly\n${want}\n${rcv}`,
     };
   },
 });
@@ -75,17 +77,13 @@ describe('number filter expressions', () => {
     expect('5').isNumberFilter({operator: '=', values: ['5']});
   });
   test('not N', () => {
-    expect('not 5').isNumberFilter({operator: '=', values: ['5'], not: true});
-  });
-  test('not X, not Y', () => {
-    expect('not 5, not 6').isNumberFilter({
-      operator: '=',
-      values: ['5', '6'],
-      not: true,
-    });
+    expect('not 5').isNumberFilter({operator: '!=', values: ['5']}, '!= 5');
   });
   test('-N', () => {
     expect('-5').isNumberFilter({operator: '=', values: ['-5']});
+  });
+  test('!= 5,6', () => {
+    expect('!= 5, 6').isNumberFilter({operator: '!=', values: ['5', '6']});
   });
   test('N.N', () => {
     expect('4.2').isNumberFilter({operator: '=', values: ['4.2']});
@@ -198,15 +196,6 @@ describe('number filter expressions', () => {
       ],
     });
   });
-  test('1,!=2', () => {
-    expect('1, != 2').isNumberFilter({
-      operator: ',',
-      members: [
-        {operator: '=', values: ['1']},
-        {operator: '!=', values: ['2']},
-      ],
-    });
-  });
   test('just (1)', () => {
     expect('(1)').isNumberFilter({
       operator: '()',
@@ -219,6 +208,15 @@ describe('number filter expressions', () => {
       not: true,
       expr: {operator: '=', values: ['1']},
     });
+  });
+  test('not precedence', () => {
+    expect('not 1, 2, 3').isNumberFilter(
+      {
+        operator: '!=',
+        values: ['1', '2', '3'],
+      },
+      '!= 1, 2, 3'
+    );
   });
   test.todo('all the ways that not can be applied');
 });

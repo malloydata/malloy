@@ -31,7 +31,9 @@ export const NumberFilterExpression = {
     }
     switch (nc.operator) {
       case '=':
+        return nc.values.join(', ');
       case '!=':
+        return '!= ' + nc.values.join(', ');
       case '>':
       case '<':
       case '<=':
@@ -42,9 +44,6 @@ export const NumberFilterExpression = {
               nc.operator === '=' ? `not ${v}` : `not ${nc.operator} ${v}`
             )
             .join(', ');
-        }
-        if (nc.operator === '=') {
-          return nc.values.join(', ');
         }
         return nc.values.map(v => `${nc.operator} ${v}`).join(', ');
       case 'range': {
@@ -61,10 +60,6 @@ export const NumberFilterExpression = {
         return nc.members
           .map(m => NumberFilterExpression.unparse(m))
           .join(` ${nc.operator} `);
-      case ',':
-        return nc.members
-          .map(m => NumberFilterExpression.unparse(m))
-          .join(', ');
       case '()': {
         const expr = '(' + NumberFilterExpression.unparse(nc.expr) + ')';
         return nc.not ? 'not ' + expr : expr;

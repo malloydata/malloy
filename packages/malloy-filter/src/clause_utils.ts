@@ -36,7 +36,7 @@ export function unescape(str: string) {
 }
 
 /**
- * Escape all of these:  ,;| ()\%_
+ * Escape all of these:  ,; |()\%_-
  */
 export function escape(str: string) {
   const lstr = str.toLowerCase();
@@ -49,52 +49,35 @@ export function escape(str: string) {
 /**
  * I tried to write the regex for these and I just kept finding strings where the regex failed.
  * Look at a string and find if it uses any unescaped like characters, if it starts or ends with
- * a percent match, and counts trailing spaces
+ * a percent match, and counts non escaped trailing spaces
  */
 function describeString(s: string) {
-  let state = 0;
   let percentStart = false;
   let percentEnd = false;
-  let endSpace = 0;
+  let endSpaceCnt = 0;
   let hasLike = false;
   const iLen = s.length;
-  for (const c of s) {
-    if (state === 0) {
-      // Beginning of line
-      state = 1;
-      if (c === '%') {
-        hasLike = true;
-        percentStart = true;
-        continue;
-      }
-    }
-
-    if (state === 1) {
-      // Looking for backslash
-      if (c === '\\') {
-        endSpace = 0;
-        percentEnd = false;
-        state = 2;
-        continue;
-      }
-      if (c === ' ' || c === '\t') {
-        percentEnd = false;
-        endSpace += 1;
-      } else {
-        endSpace = 0;
-        if (c === '%') {
-          hasLike = true;
-          percentEnd = true;
-        } else if (c === '_') {
-          hasLike = true;
-          percentEnd = false;
-        }
-      }
+  for (let i = 0; i < iLen; i += 1) {
+    const c = s[i];
+    if (c === ' ' || c === '\t') {
+      endSpaceCnt += 1;
       continue;
     }
+    endSpaceCnt = 0;
 
-    if (state === 2) {
-      state = 1;
+    if (c === '%') {
+      hasLike = true;
+      if (i === 0) {
+        percentStart = true;
+      }
+      percentEnd = true;
+    } else {
+      percentEnd = false;
+      if (c === '\\') {
+        i += 1;
+      } else if (c === '_') {
+        hasLike = true;
+      }
     }
   }
   /*
@@ -105,7 +88,7 @@ function describeString(s: string) {
     hasLike,
     percentEnd: percentEnd && iLen > 1,
     percentStart: percentStart && iLen > 1,
-    endSpace,
+    endSpace: endSpaceCnt,
   };
 }
 
@@ -129,23 +112,32 @@ export function matchOp(matchSrc: string): StringClause {
     } else if (percentEnd) {
       const tail = matchTxt.slice(0, -1);
       if (!describeString(tail).hasLike) {
+        // the tail has no like characters, in the case of "starts with percent"
+        // this equals [\ %] which we need to unescape
+        // we want to write LIKE '^%%' ESCAPE
+        // if we unescape the % here we need to re-escape it when we write the like statement
+        // in this case the escaping needs to happen when the like string is computed
         return {operator: 'starts', values: [unescape(tail)]};
       }
     } else if (percentStart) {
       const head = matchTxt.slice(1);
       if (!describeString(head).hasLike) {
+        // the head has no like characters, in the case of "ends with backslash"
+        // head is [\, \]
+        // we want to write, on MySQL LIKE '%\' or LIKE '%\\' on bigquery
+        // which means we want the single backslash here ...
+        // in this case the escaping needs to happen whenthe like string is turned into a string literal
         return {operator: 'ends', values: [unescape(head)]};
       }
     }
     return {operator: '~', escaped_values: [matchTxt]};
   }
-  if (matchTxt === 'null' || matchTxt === 'NULL') {
+  if (matchTxt.toLowerCase() === 'null' || matchTxt === 'NULL') {
     return {operator: 'null'};
   }
   if (matchTxt === 'empty' || matchTxt === 'EMPTY') {
     return {operator: 'empty'};
   }
-  // Unescape everything else
   return {operator: '=', values: [unescape(matchTxt)]};
 }
 
@@ -190,11 +182,7 @@ export function joinNumbers(
   right: Object
 ): NumberClause | null {
   if (isNumberClause(left) && isNumberClause(right)) {
-    if (
-      (op === ',' || op === 'or') &&
-      left.operator === '=' &&
-      sameAs(left, right)
-    ) {
+    if (op === 'or' && left.operator === '=' && sameAs(left, right)) {
       const ret: NumberClause = {
         operator: '=',
         values: [...left.values, ...right.values],
@@ -204,7 +192,7 @@ export function joinNumbers(
       }
       return ret;
     }
-    if (op === ',' || op === 'and' || op === 'or') {
+    if (op === 'and' || op === 'or') {
       if (left.operator === op) {
         return {...left, members: [...left.members, right]};
       }
@@ -229,8 +217,14 @@ export function mkRange(
   };
 }
 
+export function mkValues(n: string, nList: string[]) {
+  return {values: [n, ...nList]};
+}
+
 export function numNot(op: Object, notToken: unknown) {
   if (isNumberClause(op) && notToken) {
+    if (op.operator === '=') return {operator: '!=', values: op.values};
+    if (op.operator === '!=') return {operator: '=', values: op.values};
     return {...op, not: true};
   }
   return op;
@@ -263,7 +257,7 @@ export function joinTemporal(
     //   }
     //   return ret;
     // }
-    if (op === ',' || op === 'and' || op === 'or') {
+    if (op === 'and' || op === 'or') {
       if (left.operator === op) {
         return {...left, members: [...left.members, right]};
       }

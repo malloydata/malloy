@@ -109,28 +109,28 @@ describe('Filter Expressions In Source', () => {
       errorMessage('Filter expression illegal here')
     );
   });
-  test.skip('simple numeric filter', () => {
+  test('simple numeric filter', () => {
     expect("ai ~ f'5'").compilesTo('{filterNumber ai | 5}');
   });
   test('simple string filter', () => {
     expect("astr ~ f'5'").compilesTo('{filterString astr | 5}');
   });
-  test.skip('simple boolean filter', () => {
+  test('simple boolean filter', () => {
     expect("abool ~ f'true'").compilesTo('{filterBoolean abool | true}');
   });
-  test.skip('simple date filter', () => {
+  test('simple date filter', () => {
     expect("ad ~ f'2001-02-03'").compilesTo('{filterDate ad | 2001-02-03}');
   });
-  test.skip('simple timestamp filter', () => {
+  test('simple timestamp filter', () => {
     expect("ats ~ f'2001-02-03'").compilesTo(
       '{filterTimestamp ats | 2001-02-03}'
     );
   });
-  test.skip('is backslash', () => {
+  test('is backslash', () => {
     expect('astr ~ f"\\\\"').compilesTo('{filterString astr | \\\\}');
   });
-  test.skip('backslash followed by close quote', () => {
-    expect('astr ~ f"\\""').compilesTo('{filterString astr | \\"}');
+  test('backslash followed by close quote', () => {
+    expect('astr ~ f"\\\\\\""').compilesTo('{filterString astr | \\\\"}');
   });
   test('contains percent', () => {
     expect('astr ~ f"%\\%%"').compilesTo('{filterString astr | %\\%%}');

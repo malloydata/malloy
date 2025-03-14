@@ -463,9 +463,17 @@ export abstract class Dialect {
         escapeActive = false;
         escapeClause = true;
       } else {
-        if (escapeActive && (c === '%' || c === '_')) {
-          escaped += this.likeEscape ? '^' : '\\';
-          escapeClause = this.likeEscape;
+        if (escapeActive) {
+          if (this.likeEscape) {
+            if (c === '%' || c === '_') {
+              escaped += '^';
+              escapeClause = true;
+            }
+          } else {
+            if (c === '%' || c === '_' || c === '\\') {
+              escaped += '\\';
+            }
+          }
         }
         escaped += c;
         escapeActive = false;

@@ -31,6 +31,12 @@ interface ClauseChain<T> extends ClauseBase {
   members: T[];
 }
 
+type BooleanChainOp = 'and' | 'or';
+export interface BooleanChain<T> extends ClauseBase {
+  operator: BooleanChainOp;
+  members: T[];
+}
+
 interface ClauseGroup<T> extends ClauseBase, Negateable {
   operator: '()';
   expr: T;
@@ -70,6 +76,14 @@ export interface BooleanCondition extends Negateable {
 }
 
 export type BooleanClause = BooleanCondition | Null;
+
+export function isBooleanClause(bc: Object): bc is BooleanClause {
+  return (
+    'operator' in bc &&
+    typeof bc.operator === 'string' &&
+    ['null', 'true', 'false', 'false_or_null'].includes(bc.operator)
+  );
+}
 
 export function isStringClause(sc: Object): sc is StringClause {
   return (
@@ -113,7 +127,7 @@ export type NumberClause =
   | NumberRange
   | Null
   | ClauseGroup<NumberClause>
-  | ClauseChain<NumberClause>;
+  | BooleanChain<NumberClause>;
 
 export function isNumberClause(sc: Object): sc is NumberClause {
   return (
@@ -129,7 +143,6 @@ export function isNumberClause(sc: Object): sc is NumberClause {
       '<',
       'and',
       'or',
-      ',',
       '()',
       'null',
     ].includes(sc.operator)
@@ -244,7 +257,7 @@ export type TemporalClause =
   | JustUnits
   | in_last
   | InMoment
-  | ClauseChain<TemporalClause>
+  | BooleanChain<TemporalClause>
   | ClauseGroup<TemporalClause>;
 
 export function isTemporalClause(sc: Object): sc is TemporalClause {
@@ -264,7 +277,6 @@ export function isTemporalClause(sc: Object): sc is TemporalClause {
       'this',
       'last',
       'next',
-      ',',
       '()',
       'null',
     ].includes(sc.operator)
