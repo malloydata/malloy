@@ -10,7 +10,11 @@ import {MALLOY_INTERFACE_TYPES} from './types';
 export function nestUnions(obj: unknown): unknown {
   if (obj === null || obj === undefined) {
     return obj;
-  } else if (typeof obj === 'string' || typeof obj === 'number') {
+  } else if (
+    typeof obj === 'string' ||
+    typeof obj === 'number' ||
+    typeof obj === 'boolean'
+  ) {
     return obj;
   } else if (Array.isArray(obj)) {
     return obj.map(nestUnions);
@@ -35,7 +39,11 @@ export function nestUnions(obj: unknown): unknown {
 export function unnestUnions(obj: unknown, type: string): unknown {
   if (obj === null || obj === undefined) {
     return obj;
-  } else if (typeof obj === 'string' || typeof obj === 'number') {
+  } else if (
+    typeof obj === 'string' ||
+    typeof obj === 'number' ||
+    typeof obj === 'boolean'
+  ) {
     return obj;
   } else if (Array.isArray(obj)) {
     return obj.map(value => unnestUnions(value, type));
@@ -72,7 +80,7 @@ export function unnestUnions(obj: unknown, type: string): unknown {
 export function convertFromThrift(obj: unknown, type: string): unknown {
   if (obj === null || obj === undefined) {
     return obj;
-  } else if (typeof obj === 'string') {
+  } else if (typeof obj === 'string' || typeof obj === 'boolean') {
     return obj;
   } else if (typeof obj === 'number') {
     if (type === 'number') return obj;
@@ -133,7 +141,7 @@ function getType(type: string) {
 export function convertToThrift(obj: unknown, type: string): unknown {
   if (obj === null || obj === undefined) {
     return obj;
-  } else if (typeof obj === 'number') {
+  } else if (typeof obj === 'number' || typeof obj === 'boolean') {
     return obj;
   } else if (typeof obj === 'string') {
     if (type === 'string') return obj;

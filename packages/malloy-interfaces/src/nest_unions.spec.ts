@@ -89,21 +89,45 @@ describe('nest/unnest unions', () => {
     bidirectional(nested, unnested, 'Query');
   });
   test('works with an explicit undefined', () => {
-    const typescript: Malloy.SourceInfo = {
+    const unnested: Malloy.SourceInfo = {
       name: 'foo',
       annotations: undefined,
       schema: {
         fields: [],
       },
     };
-    const thrift = {
+    const nested = {
       name: 'foo',
       annotations: undefined,
       schema: {
         fields: [],
       },
     };
-    bidirectional(typescript, thrift, 'SourceInfo');
+    bidirectional(nested, unnested, 'SourceInfo');
+  });
+  test('works with boolean values', () => {
+    const unnested: Malloy.Data = {
+      kind: 'record_cell',
+      record_value: [
+        {
+          kind: 'boolean_cell',
+          boolean_value: true,
+        },
+        {
+          kind: 'boolean_cell',
+          boolean_value: false,
+        },
+      ],
+    };
+    const nested = {
+      record_cell: {
+        record_value: [
+          {boolean_cell: {boolean_value: true}},
+          {boolean_cell: {boolean_value: false}},
+        ],
+      },
+    };
+    bidirectional(nested, unnested, 'Data');
   });
 });
 
@@ -252,6 +276,30 @@ describe('convert between default thrift and Malloy types', () => {
       },
     };
     thriftBidirectional(typescript, thrift, 'SourceInfo');
+  });
+  test('works with boolean values', () => {
+    const typescript: Malloy.Data = {
+      kind: 'record_cell',
+      record_value: [
+        {
+          kind: 'boolean_cell',
+          boolean_value: true,
+        },
+        {
+          kind: 'boolean_cell',
+          boolean_value: false,
+        },
+      ],
+    };
+    const thrift = {
+      record_cell: {
+        record_value: [
+          {boolean_cell: {boolean_value: true}},
+          {boolean_cell: {boolean_value: false}},
+        ],
+      },
+    };
+    thriftBidirectional(typescript, thrift, 'Data');
   });
 });
 
