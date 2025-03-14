@@ -184,4 +184,107 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     });
     // todo coverage check for every possible compile path
   });
+
+  describe('numeric filter expressions', () => {
+    const nums = db.loadModel(`
+      source: nums is ${dbName}.sql("""
+        SELECT 0 as ${q`n`}, '0' as ${q`t`}
+        UNION ALL SELECT 1, '1'
+        UNION ALL SELECT 2, '2'
+        UNION ALL SELECT 3, '3'
+        UNION ALL SELECT 4, '4'
+        UNION ALL SELECT NULL, 'null'
+      """)
+    `);
+    test('2', async () => {
+      await expect(`
+        run: nums -> {
+          where: n ~ f'2'
+          select: n
+        }`).malloyResultMatches(nums, [{n: 2}]);
+    });
+    test('!= 2', async () => {
+      await expect(`
+        run: nums -> {
+          where: n ~ f'!= 2'
+          select: t; order_by: t asc
+        }`).malloyResultMatches(nums, [
+        {t: '0'},
+        {t: '1'},
+        {t: '3'},
+        {t: '4'},
+        {t: 'null'},
+      ]);
+    });
+    test('[1 to 3]', async () => {
+      await expect(`
+        run: nums -> {
+          where: n ~ f'[1 to 3]'
+          select: t; order_by: t asc
+        }`).malloyResultMatches(nums, [{t: '1'}, {t: '2'}, {t: '3'}]);
+    });
+    test('123', async () => {
+      await expect(`
+        run: nums -> {
+          where: n ~ f'1,2,3'
+          select: t; order_by: t asc
+        }`).malloyResultMatches(nums, [{t: '1'}, {t: '2'}, {t: '3'}]);
+    });
+    test('not 123', async () => {
+      await expect(`
+        run: nums -> {
+          where: n ~ f'not 1,2,3'
+          select: t; order_by: t asc
+        }`).malloyResultMatches(nums, [{t: '0'}, {t: '4'}, {t: 'null'}]);
+    });
+    test('(1 to 3]', async () => {
+      await expect(`
+        run: nums -> {
+          where: n ~ f'(1 to 3]'
+          select: t; order_by: t asc
+        }`).malloyResultMatches(nums, [{t: '2'}, {t: '3'}]);
+    });
+    test('[1 to 3)', async () => {
+      await expect(`
+        run: nums -> {
+          where: n ~ f'[1 to 3)'
+          select: t; order_by: t asc
+        }`).malloyResultMatches(nums, [{t: '1'}, {t: '2'}]);
+    });
+    test('(1 to 3)', async () => {
+      await expect(`
+        run: nums -> {
+          where: n ~ f'(1 to 3)'
+          select: t; order_by: t asc
+        }`).malloyResultMatches(nums, [{t: '2'}]);
+    });
+    test('>3', async () => {
+      await expect(`
+        run: nums -> {
+          where: n ~ f'>3'
+          select: n
+        }`).malloyResultMatches(nums, [{n: 4}]);
+    });
+    test('>=3', async () => {
+      await expect(`
+        run: nums -> {
+          where: n ~ f'>=3'
+          select: n; order_by:n asc
+        }`).malloyResultMatches(nums, [{n: 3}, {n: 4}]);
+    });
+    test('<1', async () => {
+      await expect(`
+        run: nums -> {
+          where: n ~ f'<1'
+          select: n
+        }`).malloyResultMatches(nums, [{n: 0}]);
+    });
+    test('<=1', async () => {
+      await expect(`
+        run: nums -> {
+          where: n ~ f'<=1'
+          select: n; order_by: n asc
+        }`).malloyResultMatches(nums, [{n: 0}, {n: 1}]);
+    });
+  });
 });

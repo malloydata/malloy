@@ -64,7 +64,7 @@ export const FilterCompilers = {
       case '!=':
       case '=': {
         const notEqual =
-          (nc.operator === '=' && !nc.not) || (nc.operator === '!=' && nc.not);
+          (nc.operator === '=' && nc.not) || (nc.operator === '!=' && !nc.not);
         const optList = nc.values.join(', ');
         if (nc.values.length === 1) {
           if (notEqual) return `${x} != ${optList} OR ${x} IS NULL`;
