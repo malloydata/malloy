@@ -53,6 +53,12 @@ export class ExprFilterExpression extends ExpressionDef {
           fParse = NumberFilterExpression.parse(this.filterText);
           break;
         case 'boolean':
+          if (fs.dialectObj()?.booleanAsNumbers) {
+            return this.loggedErrorExpr(
+              'filter-expression-type',
+              'Boolean filters not supported on this connection type'
+            );
+          }
           fParse = BooleanFilterExpression.parse(this.filterText);
           break;
         case 'date':
