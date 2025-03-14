@@ -5,7 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {nestUnions, unnestUnions} from './nest_unions';
+import {
+  convertFromThrift,
+  convertToThrift,
+  nestUnions,
+  unnestUnions,
+} from './nest_unions';
 import * as Malloy from './types';
 
 describe('nest/unnest unions', () => {
@@ -88,4 +93,86 @@ describe('nest/unnest unions', () => {
 function bidirectional(nested: {}, unnested: {}, type: string) {
   expect(nestUnions(unnested)).toMatchObject(nested);
   expect(unnestUnions(nested, type)).toMatchObject(unnested);
+}
+
+describe('convert between default thrift and Malloy types', () => {
+  test('works', () => {
+    const typescript: Malloy.Query = {
+      definition: {
+        kind: 'arrow',
+        source: {
+          kind: 'source_reference',
+          name: 'flights',
+        },
+        view: {
+          kind: 'segment',
+          operations: [
+            {
+              kind: 'group_by',
+              field: {
+                expression: {
+                  kind: 'field_reference',
+                  name: 'carrier',
+                },
+              },
+            },
+            {
+              kind: 'limit',
+              limit: 10,
+            },
+            {
+              kind: 'order_by',
+              field_reference: {
+                name: 'carrier',
+              },
+              direction: 'asc',
+            },
+          ],
+        },
+      },
+    };
+    const thrift = {
+      definition: {
+        arrow: {
+          source: {
+            source_reference: {
+              name: 'flights',
+            },
+          },
+          view: {
+            segment: {
+              operations: [
+                {
+                  group_by: {
+                    field: {
+                      expression: {
+                        field_reference: {name: 'carrier'},
+                      },
+                    },
+                  },
+                },
+                {
+                  limit: {limit: 10},
+                },
+                {
+                  order_by: {
+                    field_reference: {
+                      name: 'carrier',
+                    },
+                    direction: 1,
+                  },
+                },
+              ],
+            },
+          },
+        },
+      },
+    };
+    thriftBidirectional(typescript, thrift, 'Query');
+  });
+});
+
+function thriftBidirectional(typescript: {}, thrift: {}, type: string) {
+  expect(convertFromThrift(thrift, type)).toMatchObject(typescript);
+  expect(convertToThrift(typescript, type)).toMatchObject(thrift);
 }
