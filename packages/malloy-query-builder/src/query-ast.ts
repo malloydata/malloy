@@ -1004,6 +1004,11 @@ export class ASTReference
     name: string,
     value: RawLiteralValue
   ) {
+    const existing = ASTReference.tryGetParameter(reference, name);
+    if (existing !== undefined) {
+      existing.value = ASTLiteralValue.from(ASTLiteralValue.makeLiteral(value));
+      return;
+    }
     return reference.getOrAddParameters().addParameter(name, value);
   }
 
@@ -1094,7 +1099,7 @@ export class ASTParameterValueList extends ASTListNode<
     this.add(
       new ASTParameterValue({
         name,
-        value: LiteralValueAST.makeLiteral(value),
+        value: ASTLiteralValue.makeLiteral(value),
       })
     );
   }
@@ -1110,12 +1115,21 @@ export class ASTParameterValue extends ASTObjectNode<
   constructor(public parameter: Malloy.ParameterValue) {
     super(parameter, {
       name: parameter.name,
-      value: LiteralValueAST.from(parameter.value),
+      value: ASTLiteralValue.from(parameter.value),
     });
   }
 
   get name() {
     return this.children.name;
+  }
+
+  get value() {
+    return this.children.value;
+  }
+
+  set value(value: ASTLiteralValue) {
+    this.edit();
+    this.children.value = value;
   }
 }
 
@@ -1126,7 +1140,7 @@ export type ASTLiteralValue =
   | ASTDateLiteralValue
   | ASTTimestampLiteralValue
   | ASTNullLiteralValue;
-export const LiteralValueAST = {
+export const ASTLiteralValue = {
   from(value: Malloy.LiteralValue) {
     switch (value.kind) {
       case 'string_literal':

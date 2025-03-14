@@ -2148,4 +2148,57 @@ describe('query builder', () => {
       });
     });
   });
+  test('add parameter twice overrides', () => {
+    const from: Malloy.Query = {
+      definition: {
+        kind: 'arrow',
+        source: {kind: 'source_reference', name: 'foo'},
+        view: {
+          kind: 'segment',
+          operations: [],
+        },
+      },
+    };
+    expect((q: ASTQuery) => {
+      const source = q.definition.as
+        .ArrowQueryDefinition()
+        .source.as.ReferenceQueryArrowSource();
+      source.setParameter('string_param', 'COOL');
+      source.setParameter('string_param', 'COOLER');
+    }).toModifyQuery({
+      source: {
+        name: 'foo',
+        schema: {fields: []},
+        parameters: [
+          {
+            name: 'string_param',
+            type: {kind: 'string_type'},
+          },
+        ],
+      },
+      from,
+      to: {
+        definition: {
+          kind: 'arrow',
+          source: {
+            kind: 'source_reference',
+            name: 'foo',
+            parameters: [
+              {
+                name: 'string_param',
+                value: {kind: 'string_literal', string_value: 'COOLER'},
+              },
+            ],
+          },
+          view: {
+            kind: 'segment',
+            operations: [],
+          },
+        },
+      },
+      malloy: dedent`
+        run: foo(string_param is "COOLER") -> { }
+      `,
+    });
+  });
 });
