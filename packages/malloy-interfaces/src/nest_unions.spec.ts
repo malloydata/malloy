@@ -96,7 +96,7 @@ function bidirectional(nested: {}, unnested: {}, type: string) {
 }
 
 describe('convert between default thrift and Malloy types', () => {
-  test('works', () => {
+  test('works with a query', () => {
     const typescript: Malloy.Query = {
       definition: {
         kind: 'arrow',
@@ -169,6 +169,38 @@ describe('convert between default thrift and Malloy types', () => {
       },
     };
     thriftBidirectional(typescript, thrift, 'Query');
+  });
+  test('works with an empty value', () => {
+    const typescript: Malloy.SourceInfo = {
+      name: 'foo',
+      schema: {
+        fields: [
+          {
+            kind: 'dimension',
+            name: 'bar',
+            type: {
+              kind: 'string_type',
+            },
+          },
+        ],
+      },
+    };
+    const thrift = {
+      name: 'foo',
+      schema: {
+        fields: [
+          {
+            dimension: {
+              name: 'bar',
+              type: {
+                string_type: {},
+              },
+            },
+          },
+        ],
+      },
+    };
+    thriftBidirectional(typescript, thrift, 'SourceInfo');
   });
 });
 
