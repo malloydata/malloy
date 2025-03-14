@@ -134,7 +134,6 @@ import {EventStream} from '../runtime_types';
 import {Tag} from '@malloydata/malloy-tag';
 import {annotationToTag} from '../annotation';
 import {FilterCompilers} from './filter_compilers';
-import {NumberClause, StringClause} from '@malloydata/malloy-filter';
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
