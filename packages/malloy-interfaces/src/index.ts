@@ -8,7 +8,12 @@
 import * as Malloy from './types';
 export * from './types';
 export {queryToMalloy} from './to_malloy';
-export {nestUnions} from './nest_unions';
+export {
+  nestUnions,
+  unnestUnions,
+  convertFromThrift,
+  convertToThrift,
+} from './nest_unions';
 
 export const test: Malloy.ModelInfo = {
   entries: [
