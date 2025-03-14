@@ -31,6 +31,12 @@ interface ClauseChain<T> extends ClauseBase {
   members: T[];
 }
 
+type BooleanChainOp = 'and' | 'or';
+export interface BooleanChain<T> extends ClauseBase {
+  operator: BooleanChainOp;
+  members: T[];
+}
+
 interface ClauseGroup<T> extends ClauseBase, Negateable {
   operator: '()';
   expr: T;
@@ -121,7 +127,7 @@ export type NumberClause =
   | NumberRange
   | Null
   | ClauseGroup<NumberClause>
-  | ClauseChain<NumberClause>;
+  | BooleanChain<NumberClause>;
 
 export function isNumberClause(sc: Object): sc is NumberClause {
   return (
@@ -137,7 +143,6 @@ export function isNumberClause(sc: Object): sc is NumberClause {
       '<',
       'and',
       'or',
-      ',',
       '()',
       'null',
     ].includes(sc.operator)

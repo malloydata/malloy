@@ -182,11 +182,7 @@ export function joinNumbers(
   right: Object
 ): NumberClause | null {
   if (isNumberClause(left) && isNumberClause(right)) {
-    if (
-      (op === ',' || op === 'or') &&
-      left.operator === '=' &&
-      sameAs(left, right)
-    ) {
+    if (op === 'or' && left.operator === '=' && sameAs(left, right)) {
       const ret: NumberClause = {
         operator: '=',
         values: [...left.values, ...right.values],
@@ -196,7 +192,7 @@ export function joinNumbers(
       }
       return ret;
     }
-    if (op === ',' || op === 'and' || op === 'or') {
+    if (op === 'and' || op === 'or') {
       if (left.operator === op) {
         return {...left, members: [...left.members, right]};
       }
@@ -221,8 +217,14 @@ export function mkRange(
   };
 }
 
+export function mkValues(n: string, nList: string[]) {
+  return [n, ...nList];
+}
+
 export function numNot(op: Object, notToken: unknown) {
   if (isNumberClause(op) && notToken) {
+    if (op.operator === '=') return {operator: '!=', values: op.values};
+    if (op.operator === '!=') return {operator: '=', values: op.values};
     return {...op, not: true};
   }
   return op;

@@ -182,6 +182,6 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
           select: nm
         }`).malloyResultMatches(abc, [{nm: '4 - xback'}]);
     });
-    // mtoy todo ands ors parens nots escaping
+    // todo coverage check for every possible compile path
   });
 });

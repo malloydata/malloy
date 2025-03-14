@@ -10,6 +10,7 @@ import * as nearley from 'nearley';
 import ftemporal_grammar from '../lib/ftemporal_parser';
 import {TemporalClause} from '../filter_clause';
 import {TemporalFilterExpression} from '../temporal_filter_expression';
+import {inspect} from 'util';
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -52,14 +53,15 @@ expect.extend({
           `Unparse Error: '${src}' unparsed incorrectly'\n${serialize_error}`,
       };
     }
-    const errTest = diff(
-      {parse: expectedParse},
-      {parse: results[0]},
-      {expand: true}
+    const want = this.utils.printExpected(
+      `Expected: ${inspect(expectedParse, {breakLength: 80, depth: Infinity})}`
+    );
+    const rcv = this.utils.printReceived(
+      `Received: ${inspect(results[0], {breakLength: 80, depth: Infinity})}`
     );
     return {
       pass: false,
-      message: () => `${src} did not compile correctly\n${errTest}`,
+      message: () => `${src} did not compile correctly\n${want}\n${rcv}`,
     };
   },
 });
