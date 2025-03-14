@@ -88,6 +88,23 @@ describe('nest/unnest unions', () => {
     };
     bidirectional(nested, unnested, 'Query');
   });
+  test('works with an explicit undefined', () => {
+    const typescript: Malloy.SourceInfo = {
+      name: 'foo',
+      annotations: undefined,
+      schema: {
+        fields: [],
+      },
+    };
+    const thrift = {
+      name: 'foo',
+      annotations: undefined,
+      schema: {
+        fields: [],
+      },
+    };
+    bidirectional(typescript, thrift, 'SourceInfo');
+  });
 });
 
 function bidirectional(nested: {}, unnested: {}, type: string) {
@@ -213,6 +230,23 @@ describe('convert between default thrift and Malloy types', () => {
     const thrift = {
       name: 'foo',
       annotations: [],
+      schema: {
+        fields: [],
+      },
+    };
+    thriftBidirectional(typescript, thrift, 'SourceInfo');
+  });
+  test('works with an explicit undefined', () => {
+    const typescript: Malloy.SourceInfo = {
+      name: 'foo',
+      annotations: undefined,
+      schema: {
+        fields: [],
+      },
+    };
+    const thrift = {
+      name: 'foo',
+      annotations: undefined,
       schema: {
         fields: [],
       },

@@ -8,7 +8,7 @@
 import {MALLOY_INTERFACE_TYPES} from './types';
 
 export function nestUnions(obj: unknown): unknown {
-  if (obj === null) {
+  if (obj === null || obj === undefined) {
     return obj;
   } else if (typeof obj === 'string' || typeof obj === 'number') {
     return obj;
