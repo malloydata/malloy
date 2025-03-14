@@ -297,6 +297,7 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
     });
   });
 
+  // mysql doesn't have true booleans ...
   describe('boolean filter expressions', () => {
     const facts = db.loadModel(`
       source: facts is ${dbName}.sql("""
@@ -305,42 +306,42 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         UNION ALL SELECT NULL, 'null'
       """)
     `);
-    test('true', async () => {
+    test.when(dbName !== 'mysql')('true', async () => {
       await expect(`
         run: facts -> {
           where: b ~ f'true'
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [{t: 'true'}]);
     });
-    test('true', async () => {
+    test.when(dbName !== 'mysql')('true', async () => {
       await expect(`
         run: facts -> {
           where: b ~ f'true'
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [{t: 'true'}]);
     });
-    test('false', async () => {
+    test.when(dbName !== 'mysql')('false', async () => {
       await expect(`
         run: facts -> {
           where: b ~ f'false'
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [{t: 'false'}, {t: 'null'}]);
     });
-    test('=false', async () => {
+    test.when(dbName !== 'mysql')('=false', async () => {
       await expect(`
         run: facts -> {
           where: b ~ f'=false'
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [{t: 'false'}]);
     });
-    test('null', async () => {
+    test.when(dbName !== 'mysql')('null', async () => {
       await expect(`
         run: facts -> {
           where: b ~ f'null'
           select: t; order_by: t asc
         }`).malloyResultMatches(facts, [{t: 'null'}]);
     });
-    test('not null', async () => {
+    test.when(dbName !== 'mysql')('not null', async () => {
       await expect(`
         run: facts -> {
           where: b ~ f'not null'

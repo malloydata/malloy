@@ -70,7 +70,7 @@ export class ExprFilterExpression extends ExpressionDef {
           // mtoy todo actuall get error and report correct position and error type
           return this.loggedErrorExpr(
             'filter-expression-type',
-            'FHJKL:DSHJKL error in parsing filter expression'
+            `Filter parse error: ${fParse.log[0].message}`
           );
         }
       }
