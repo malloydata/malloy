@@ -5,11 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {BooleanClause, FilterParserReponse} from './filter_clause';
+import type {BooleanClause, FilterParserResponse} from './filter_clause';
 
 export const BooleanFilterExpression = {
-  parse(srcText: string): FilterParserReponse<BooleanClause> {
-    const ret: FilterParserReponse<BooleanClause> = {parsed: null, log: []};
+  parse(srcText: string): FilterParserResponse<BooleanClause> {
+    const ret: FilterParserResponse<BooleanClause> = {parsed: null, log: []};
     let src = srcText.toLowerCase().trim().replace(/\s\s+/, ' ');
     let negate = false;
     if (src.startsWith('not ')) {

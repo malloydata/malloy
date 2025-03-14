@@ -5,14 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {FilterParserReponse, NumberClause} from './filter_clause';
+import type {FilterParserResponse, NumberClause} from './filter_clause';
 import {isNumberClause} from './filter_clause';
 import * as nearley from 'nearley';
 import fnumber_grammar from './lib/fexpr_number_parser';
 import {run_parser} from './nearley_parse';
 
 export const NumberFilterExpression = {
-  parse(src: string): FilterParserReponse<NumberClause> {
+  parse(src: string): FilterParserResponse<NumberClause> {
     const fnumber_parser = new nearley.Parser(
       nearley.Grammar.fromCompiled(fnumber_grammar)
     );
