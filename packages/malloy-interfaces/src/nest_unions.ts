@@ -40,13 +40,7 @@ export function unnestUnions(obj: unknown, type: string): unknown {
   } else if (Array.isArray(obj)) {
     return obj.map(value => unnestUnions(value, type));
   } else {
-    if (type === undefined) {
-      throw new Error('Cannot unnest unions of object without a type');
-    }
-    const typeDefinition = MALLOY_INTERFACE_TYPES[type];
-    if (typeDefinition === undefined) {
-      throw new Error(`Unknown Malloy interface type ${type}`);
-    }
+    const typeDefinition = getType(type);
     if (typeDefinition.type === 'union') {
       for (const kind in typeDefinition.options) {
         if (obj[kind] !== undefined) {
@@ -71,6 +65,106 @@ export function unnestUnions(obj: unknown, type: string): unknown {
       return result;
     } else {
       throw new Error(`Cannot unnest unions in an enum type ${type}`);
+    }
+  }
+}
+
+export function convertFromThrift(obj: unknown, type: string): unknown {
+  if (obj === null || obj === undefined) {
+    return obj;
+  } else if (typeof obj === 'string') {
+    return obj;
+  } else if (typeof obj === 'number') {
+    const typeDefinition = MALLOY_INTERFACE_TYPES[type];
+    if (typeDefinition && typeDefinition.type === 'enum') {
+      return typeDefinition.values[obj - 1];
+    }
+    return obj;
+  } else if (Array.isArray(obj)) {
+    return obj.map(value => convertFromThrift(value, type));
+  } else {
+    const typeDefinition = getType(type);
+    if (typeDefinition.type === 'union') {
+      for (const kind in typeDefinition.options) {
+        if (obj[kind] !== undefined) {
+          const result = convertFromThrift(
+            obj[kind],
+            typeDefinition.options[kind]
+          );
+          if (typeof result === 'object') {
+            return {
+              kind,
+              ...result,
+            };
+          }
+        }
+      }
+    } else if (typeDefinition.type === 'struct') {
+      const result = {};
+      for (const key in obj) {
+        const childType = typeDefinition.fields[key];
+        if (childType === undefined) {
+          throw new Error(`Unknown field ${key} in ${type}`);
+        }
+        result[key] = convertFromThrift(obj[key], childType.type);
+      }
+      return result;
+    } else {
+      throw new Error(`Cannot unnest unions in an enum type ${type}`);
+    }
+  }
+}
+
+function getType(type: string) {
+  const typeDefinition = MALLOY_INTERFACE_TYPES[type];
+  if (typeDefinition === undefined) {
+    throw new Error(`Unknown Malloy interface type ${type}`);
+  }
+  return typeDefinition;
+}
+
+export function convertToThrift(obj: unknown, type: string): unknown {
+  if (obj === null || obj === undefined) {
+    return obj;
+  } else if (typeof obj === 'number') {
+    return obj;
+  } else if (typeof obj === 'string') {
+    if (type === 'string') return obj;
+    const typeDefinition = getType(type);
+    if (typeDefinition.type === 'enum') {
+      return typeDefinition.values.indexOf(obj) + 1;
+    }
+  } else if (Array.isArray(obj)) {
+    return obj.map(el => convertToThrift(el, type));
+  } else {
+    const typeDefinition = getType(type);
+    if (typeDefinition.type === 'union') {
+      const kind = obj['kind'];
+      const unionType = typeDefinition.options[kind];
+      if (unionType === undefined) {
+        throw new Error(`${kind} is not a valid union of ${type}`);
+      }
+      const unionTypeDefinition = getType(unionType);
+      if (unionTypeDefinition.type !== 'struct') {
+        throw new Error('Union fields must be structs');
+      }
+      const result = {};
+      for (const key in obj) {
+        if (key === 'kind') continue;
+        const childType = unionTypeDefinition.fields[key];
+        result[key] = convertToThrift(obj[key], childType.type);
+      }
+      return {[kind]: result};
+    } else if (typeDefinition.type === 'struct') {
+      const result = {};
+      for (const key in obj) {
+        const childType = typeDefinition.fields[key];
+        if (childType === undefined) {
+          throw new Error(`Unknown field ${key} in ${type}`);
+        }
+        result[key] = convertToThrift(obj[key], childType.type);
+      }
+      return result;
     }
   }
 }
