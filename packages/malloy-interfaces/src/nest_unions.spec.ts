@@ -88,6 +88,47 @@ describe('nest/unnest unions', () => {
     };
     bidirectional(nested, unnested, 'Query');
   });
+  test('works with an explicit undefined', () => {
+    const unnested: Malloy.SourceInfo = {
+      name: 'foo',
+      annotations: undefined,
+      schema: {
+        fields: [],
+      },
+    };
+    const nested = {
+      name: 'foo',
+      annotations: undefined,
+      schema: {
+        fields: [],
+      },
+    };
+    bidirectional(nested, unnested, 'SourceInfo');
+  });
+  test('works with boolean values', () => {
+    const unnested: Malloy.Data = {
+      kind: 'record_cell',
+      record_value: [
+        {
+          kind: 'boolean_cell',
+          boolean_value: true,
+        },
+        {
+          kind: 'boolean_cell',
+          boolean_value: false,
+        },
+      ],
+    };
+    const nested = {
+      record_cell: {
+        record_value: [
+          {boolean_cell: {boolean_value: true}},
+          {boolean_cell: {boolean_value: false}},
+        ],
+      },
+    };
+    bidirectional(nested, unnested, 'Data');
+  });
 });
 
 function bidirectional(nested: {}, unnested: {}, type: string) {
@@ -202,9 +243,75 @@ describe('convert between default thrift and Malloy types', () => {
     };
     thriftBidirectional(typescript, thrift, 'SourceInfo');
   });
+  test('works with an empty array', () => {
+    const typescript: Malloy.SourceInfo = {
+      name: 'foo',
+      annotations: [],
+      schema: {
+        fields: [],
+      },
+    };
+    const thrift = {
+      name: 'foo',
+      annotations: [],
+      schema: {
+        fields: [],
+      },
+    };
+    thriftBidirectional(typescript, thrift, 'SourceInfo');
+  });
+  test('works with an explicit undefined', () => {
+    const typescript: Malloy.SourceInfo = {
+      name: 'foo',
+      annotations: undefined,
+      schema: {
+        fields: [],
+      },
+    };
+    const thrift = {
+      name: 'foo',
+      annotations: undefined,
+      schema: {
+        fields: [],
+      },
+    };
+    thriftBidirectional(typescript, thrift, 'SourceInfo');
+  });
+  test('works with boolean values', () => {
+    const typescript: Malloy.Data = {
+      kind: 'record_cell',
+      record_value: [
+        {
+          kind: 'boolean_cell',
+          boolean_value: true,
+        },
+        {
+          kind: 'boolean_cell',
+          boolean_value: false,
+        },
+      ],
+    };
+    const thrift = {
+      record_cell: {
+        record_value: [
+          {boolean_cell: {boolean_value: true}},
+          {boolean_cell: {boolean_value: false}},
+        ],
+      },
+    };
+    thriftBidirectional(typescript, thrift, 'Data');
+  });
 });
 
 function thriftBidirectional(typescript: {}, thrift: {}, type: string) {
-  expect(convertFromThrift(thrift, type)).toMatchObject(typescript);
-  expect(convertToThrift(typescript, type)).toMatchObject(thrift);
+  const actualThrift = convertToThrift(typescript, type);
+  const actualTypescript = convertFromThrift(thrift, type);
+  expect(actualTypescript).toMatchObject(typescript);
+  expect(actualThrift).toMatchObject(thrift);
+  expect(JSON.stringify(actualThrift, null, 2)).toBe(
+    JSON.stringify(thrift, null, 2)
+  );
+  expect(JSON.stringify(actualTypescript, null, 2)).toBe(
+    JSON.stringify(typescript, null, 2)
+  );
 }

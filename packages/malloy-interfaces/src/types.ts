@@ -22,7 +22,7 @@ type MalloyInterfaceType =
       fields: Record<string, MalloyInterfaceFieldType>;
     }
   | {name: string; type: 'union'; options: Record<string, string>}
-  | {name: string; type: 'enum'; values: string[]};
+  | {name: string; type: 'enum'; values: Record<string, number>};
 
 export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
   'Aggregate': {
@@ -379,7 +379,13 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
   'DateTimeframe': {
     'type': 'enum',
     'name': 'DateTimeframe',
-    'values': ['year', 'quarter', 'month', 'week', 'day'],
+    'values': {
+      'year': 1,
+      'quarter': 2,
+      'month': 3,
+      'week': 4,
+      'day': 5,
+    },
   },
   'DateType': {
     'type': 'struct',
@@ -666,7 +672,12 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
   'LogSeverity': {
     'type': 'enum',
     'name': 'LogSeverity',
-    'values': ['debug', 'info', 'warn', 'error'],
+    'values': {
+      'debug': 1,
+      'info': 2,
+      'warn': 3,
+      'error': 4,
+    },
   },
   'MeasureInfo': {
     'type': 'struct',
@@ -769,7 +780,10 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
   'NumberSubtype': {
     'type': 'enum',
     'name': 'NumberSubtype',
-    'values': ['integer', 'decimal'],
+    'values': {
+      'integer': 1,
+      'decimal': 2,
+    },
   },
   'NumberType': {
     'type': 'struct',
@@ -801,7 +815,10 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
   'OrderByDirection': {
     'type': 'enum',
     'name': 'OrderByDirection',
-    'values': ['asc', 'desc'],
+    'values': {
+      'asc': 1,
+      'desc': 2,
+    },
   },
   'ParameterInfo': {
     'type': 'struct',
@@ -1019,7 +1036,11 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
   'Relationship': {
     'type': 'enum',
     'name': 'Relationship',
-    'values': ['one', 'many', 'cross'],
+    'values': {
+      'one': 1,
+      'many': 2,
+      'cross': 3,
+    },
   },
   'Result': {
     'type': 'struct',
@@ -1315,16 +1336,16 @@ export const MALLOY_INTERFACE_TYPES: Record<string, MalloyInterfaceType> = {
   'TimestampTimeframe': {
     'type': 'enum',
     'name': 'TimestampTimeframe',
-    'values': [
-      'year',
-      'quarter',
-      'month',
-      'week',
-      'day',
-      'hour',
-      'minute',
-      'second',
-    ],
+    'values': {
+      'year': 1,
+      'quarter': 2,
+      'month': 3,
+      'week': 4,
+      'day': 5,
+      'hour': 6,
+      'minute': 7,
+      'second': 8,
+    },
   },
   'TimestampType': {
     'type': 'struct',
