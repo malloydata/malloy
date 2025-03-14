@@ -83,11 +83,13 @@ export const FilterCompilers = {
       case 'range': {
         let startOp = nc.startOperator;
         let endOp = nc.endOperator;
+        let plus = ' AND ';
         if (nc.not) {
           startOp = invertCompare(startOp);
           endOp = invertCompare(endOp);
+          plus = ' OR ';
         }
-        return `${x} ${startOp} ${nc.startValue} AND ${x} ${endOp} ${nc.endValue}`;
+        return `${x} ${startOp} ${nc.startValue} ${plus} ${x} ${endOp} ${nc.endValue}`;
       }
       case 'null':
         return nc.not ? `${x} IS NOT NULL` : `${x} IS NULL`;

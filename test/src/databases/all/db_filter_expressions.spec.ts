@@ -223,6 +223,14 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
           select: t; order_by: t asc
         }`).malloyResultMatches(nums, [{t: '1'}, {t: '2'}, {t: '3'}]);
     });
+    test('not [1 to 3]', async () => {
+      await expect(`
+        # test.verbose
+        run: nums -> {
+          where: n ~ f'not [1 to 3]'
+          select: t; order_by: t asc
+        }`).malloyResultMatches(nums, [{t: '0'}, {t: '4'}]);
+    });
     test('123', async () => {
       await expect(`
         run: nums -> {
