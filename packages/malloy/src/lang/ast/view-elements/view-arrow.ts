@@ -21,11 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {PipeSegment} from '../../../model/malloy_types';
-import {QueryOperationSpace} from '../field-space/query-spaces';
+import type {PipeSegment} from '../../../model/malloy_types';
+import type {QueryOperationSpace} from '../field-space/query-spaces';
 import {StaticSourceSpace} from '../field-space/static-space';
-import {FieldSpace} from '../types/field-space';
-import {PipelineComp} from '../types/pipeline-comp';
+import type {FieldSpace} from '../types/field-space';
+import type {PipelineComp} from '../types/pipeline-comp';
 import {View} from './view';
 
 /**

@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {MalloyStandardFunctionImplementations as OverrideMap} from '../functions/malloy_standard_functions';
+import type {MalloyStandardFunctionImplementations as OverrideMap} from '../functions/malloy_standard_functions';
 
 export const SNOWFLAKE_MALLOY_STANDARD_OVERLOADS: OverrideMap = {
   // Need to explicitly have a case for when the arg is 0, to return ''

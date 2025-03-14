@@ -6,7 +6,7 @@
  */
 
 import {compileModel, compileQuery, compileSource} from './sessioned';
-import * as Malloy from '@malloydata/malloy-interfaces';
+import type * as Malloy from '@malloydata/malloy-interfaces';
 
 describe('api', () => {
   describe('compile model', () => {

@@ -21,14 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ModelEntryReference} from '../types/malloy-element';
-import {Source} from '../source-elements/source';
+import type {ModelEntryReference} from '../types/malloy-element';
+import type {Source} from '../source-elements/source';
 import {SourceQueryElement} from './source-query-element';
-import {QueryElement} from '../types/query-element';
+import type {QueryElement} from '../types/query-element';
 import {QuerySource} from '../source-elements/query-source';
 import {NamedSource} from '../source-elements/named-source';
 import {QueryReference} from '../query-elements/query-reference';
-import {Argument} from '../parameters/argument';
+import type {Argument} from '../parameters/argument';
 import {isSourceDef} from '../../../model';
 
 /**

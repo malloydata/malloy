@@ -21,10 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {TimestampUnit} from '../../../model/malloy_types';
+import type {TimestampUnit} from '../../../model/malloy_types';
 
-import {ExprValue} from './expr-value';
-import {TimeResult} from './time-result';
+import type {ExprValue} from './expr-value';
+import type {TimeResult} from './time-result';
 
 export type GranularResult = TimeResult & {
   timeframe: TimestampUnit;

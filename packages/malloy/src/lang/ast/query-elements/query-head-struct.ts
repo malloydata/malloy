@@ -21,17 +21,17 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   Argument,
   InvokedStructRef,
   SourceDef,
   StructRef,
-  refIsStructDef,
 } from '../../../model/malloy_types';
+import {refIsStructDef} from '../../../model/malloy_types';
 
 import {Source} from '../source-elements/source';
 import {NamedSource} from '../source-elements/named-source';
-import {ParameterSpace} from '../field-space/parameter-space';
+import type {ParameterSpace} from '../field-space/parameter-space';
 
 export class QueryHeadStruct extends Source {
   elementType = 'internalOnlyQueryHead';

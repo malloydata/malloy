@@ -5,21 +5,19 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {
-  Expr,
-  exprHasE,
-  exprHasKids,
-  exprIsLeaf,
-} from '../../model/malloy_types';
+import type {Expr} from '../../model/malloy_types';
+import {exprHasE, exprHasKids, exprIsLeaf} from '../../model/malloy_types';
 
-import {
+import type {
   BooleanClause,
-  BooleanFilterExpression,
   NumberClause,
-  NumberFilterExpression,
   StringClause,
-  StringFilterExpression,
   TemporalClause,
+} from '@malloydata/malloy-filter';
+import {
+  BooleanFilterExpression,
+  NumberFilterExpression,
+  StringFilterExpression,
   TemporalFilterExpression,
 } from '@malloydata/malloy-filter';
 

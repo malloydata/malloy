@@ -11,7 +11,7 @@ import {
   nestUnions,
   unnestUnions,
 } from './nest_unions';
-import * as Malloy from './types';
+import type * as Malloy from './types';
 
 describe('nest/unnest unions', () => {
   test('works', () => {

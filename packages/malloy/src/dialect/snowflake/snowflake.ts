@@ -22,11 +22,8 @@
  */
 
 import {indent} from '../../model/utils';
-import {
+import type {
   Sampling,
-  isSamplingEnable,
-  isSamplingPercent,
-  isSamplingRows,
   AtomicTypeDef,
   TimeTruncExpr,
   TimeExtractExpr,
@@ -36,25 +33,22 @@ import {
   MeasureTimeExpr,
   RegexMatchExpr,
   LeafAtomicTypeDef,
-  TD,
   ArrayLiteralNode,
   RecordLiteralNode,
+} from '../../model/malloy_types';
+import {
+  isSamplingEnable,
+  isSamplingPercent,
+  isSamplingRows,
+  TD,
   isAtomic,
   isRepeatedRecord,
   isScalarArray,
 } from '../../model/malloy_types';
-import {
-  DialectFunctionOverloadDef,
-  expandOverrideMap,
-  expandBlueprintMap,
-} from '../functions';
-import {
-  Dialect,
-  DialectFieldList,
-  FieldReferenceType,
-  QueryInfo,
-  qtz,
-} from '../dialect';
+import type {DialectFunctionOverloadDef} from '../functions';
+import {expandOverrideMap, expandBlueprintMap} from '../functions';
+import type {DialectFieldList, FieldReferenceType, QueryInfo} from '../dialect';
+import {Dialect, qtz} from '../dialect';
 import {SNOWFLAKE_DIALECT_FUNCTIONS} from './dialect_functions';
 import {SNOWFLAKE_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 

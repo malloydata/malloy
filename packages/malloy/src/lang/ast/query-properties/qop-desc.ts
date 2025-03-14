@@ -21,20 +21,21 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {PipeSegment} from '../../../model/malloy_types';
-import {QueryBuilder} from '../types/query-builder';
+import type {PipeSegment} from '../../../model/malloy_types';
+import type {QueryBuilder} from '../types/query-builder';
 import {IndexBuilder} from '../query-builders/index-builder';
 import {ProjectBuilder} from '../query-builders/project-builder';
 import {ReduceBuilder} from '../query-builders/reduce-builder';
-import {SourceFieldSpace} from '../types/field-space';
-import {ListOf, MalloyElement} from '../types/malloy-element';
-import {OpDesc} from '../types/op-desc';
+import type {SourceFieldSpace} from '../types/field-space';
+import type {MalloyElement} from '../types/malloy-element';
+import {ListOf} from '../types/malloy-element';
+import type {OpDesc} from '../types/op-desc';
 import {opOutputStruct} from '../struct-utils';
-import {QueryProperty} from '../types/query-property';
+import type {QueryProperty} from '../types/query-property';
 import {StaticSourceSpace} from '../field-space/static-space';
 import {QueryClass} from '../types/query-property-interface';
 import {PartialBuilder} from '../query-builders/partial-builder';
-import {QueryOperationSpace} from '../field-space/query-spaces';
+import type {QueryOperationSpace} from '../field-space/query-spaces';
 
 export class QOpDesc extends ListOf<QueryProperty> {
   elementType = 'queryOperation';

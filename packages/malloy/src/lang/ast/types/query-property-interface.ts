@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {QueryBuilder} from './query-builder';
+import type {QueryBuilder} from './query-builder';
 
 export enum QueryClass {
   Index = 'index',

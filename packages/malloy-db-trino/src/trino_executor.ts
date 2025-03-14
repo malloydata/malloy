@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {TrinoConnectionConfiguration} from './trino_connection';
+import type {TrinoConnectionConfiguration} from './trino_connection';
 
 // Differences:
 // Trino uses TRINO_SERVER

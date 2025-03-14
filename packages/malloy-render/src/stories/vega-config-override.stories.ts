@@ -1,4 +1,4 @@
-import {Meta} from '@storybook/html';
+import type {Meta} from '@storybook/html';
 import script from './vega-config-override.malloy?raw';
 import {createLoader} from './util';
 import './themes.css';

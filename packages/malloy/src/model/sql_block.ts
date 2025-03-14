@@ -21,9 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {SQLSourceRequest} from '../lang/translate-response';
+import type {SQLSourceRequest} from '../lang/translate-response';
 import {QueryModel} from './malloy_query';
-import {SQLPhraseSegment, isSegmentSQL, ModelDef} from './malloy_types';
+import type {SQLPhraseSegment, ModelDef} from './malloy_types';
+import {isSegmentSQL} from './malloy_types';
 import {generateHash} from './utils';
 
 export function compileSQLInterpolation(

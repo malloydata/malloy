@@ -21,12 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {CaseExpr} from '../../../model/malloy_types';
+import type {CaseExpr} from '../../../model/malloy_types';
 
 import * as TDU from '../typedesc-utils';
-import {ExprValue, computedExprValue} from '../types/expr-value';
+import type {ExprValue} from '../types/expr-value';
+import {computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import {FieldSpace} from '../types/field-space';
+import type {FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
 
 interface Choice {

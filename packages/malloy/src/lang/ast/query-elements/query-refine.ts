@@ -23,9 +23,9 @@
 
 import {StaticSourceSpace} from '../field-space/static-space';
 import {getFinalStruct} from '../struct-utils';
-import {QueryComp} from '../types/query-comp';
-import {QueryElement} from '../types/query-element';
-import {View} from '../view-elements/view';
+import type {QueryComp} from '../types/query-comp';
+import type {QueryElement} from '../types/query-element';
+import type {View} from '../view-elements/view';
 import {QueryBase} from './query-base';
 
 /**

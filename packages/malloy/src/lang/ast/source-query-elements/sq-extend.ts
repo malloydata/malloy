@@ -23,8 +23,8 @@
 
 import {RefinedSource} from '../source-elements/refined-source';
 import {SourceQueryElement} from './source-query-element';
-import {SourceDesc} from '../types/source-desc';
-import {IncludeItem} from './include-item';
+import type {SourceDesc} from '../types/source-desc';
+import type {IncludeItem} from './include-item';
 
 /**
  * An element which represents adding source extensions to a

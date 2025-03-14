@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {PartitionByFieldReference} from '../query-items/field-references';
+import type {PartitionByFieldReference} from '../query-items/field-references';
 import {ListOf} from '../types/malloy-element';
 
 export class PartitionBy extends ListOf<PartitionByFieldReference> {

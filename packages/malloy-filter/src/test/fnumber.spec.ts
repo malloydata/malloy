@@ -7,7 +7,7 @@
 
 import {diff} from 'jest-diff';
 import * as nearley from 'nearley';
-import {NumberClause} from '../filter_clause';
+import type {NumberClause} from '../filter_clause';
 import fnumber_grammar from '../lib/fexpr_number_parser';
 import {NumberFilterExpression} from '../number_filter_expression';
 import {inspect} from 'util';

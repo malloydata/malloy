@@ -22,9 +22,9 @@
  */
 
 // taze: RegExpExecArray.groups from //third_party/javascript/node_modules/typescript:es2018.regexp
-import {DocumentRange, DocumentPosition} from '@malloydata/malloy';
+import type {DocumentRange, DocumentPosition} from '@malloydata/malloy';
 import * as parser from './grammar/malloySQLSQL';
-import {
+import type {
   MalloySQLSQLParseResults,
   ParsedMalloySQLMalloyStatementPart,
   MalloySQLParseRange,
@@ -34,7 +34,8 @@ import {
   EmbeddedComment,
   MalloySQLStatementConfig,
 } from './types';
-import {MalloySQLParseError, MalloySQLSyntaxError} from './malloySQLErrors';
+import type {MalloySQLParseError} from './malloySQLErrors';
+import {MalloySQLSyntaxError} from './malloySQLErrors';
 
 export class MalloySQLSQLParser {
   private static convertLocation(

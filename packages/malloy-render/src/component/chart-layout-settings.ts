@@ -21,11 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Tag} from '@malloydata/malloy-tag';
-import {scale, locale, AlignValue, TextBaselineValue} from 'vega';
+import type {Tag} from '@malloydata/malloy-tag';
+import type {AlignValue, TextBaselineValue} from 'vega';
+import {scale, locale} from 'vega';
 import {getTextWidthDOM} from './util';
 import {renderNumericField} from './render-numeric-field';
-import {Field, NestField} from '../data_tree';
+import type {Field, NestField} from '../data_tree';
 
 export type ChartLayoutSettings = {
   plotWidth: number;

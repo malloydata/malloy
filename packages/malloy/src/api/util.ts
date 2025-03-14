@@ -7,18 +7,18 @@
 
 import {Tag} from '@malloydata/malloy-tag';
 import {annotationToTaglines} from '../annotation';
-import {
+import type {
   InfoConnection as LegacyInfoConnection,
   Connection as LegacyConnection,
 } from '../connection';
-import {Result} from '../malloy';
-import {QueryData, QueryDataRow, QueryValue} from '../model';
+import type {Result} from '../malloy';
+import type {QueryData, QueryDataRow, QueryValue} from '../model';
 import {
   convertFieldInfos,
   getResultStructMetadataAnnotation,
 } from '../to_stable';
-import {Connection, InfoConnection} from './connection';
-import * as Malloy from '@malloydata/malloy-interfaces';
+import type {Connection, InfoConnection} from './connection';
+import type * as Malloy from '@malloydata/malloy-interfaces';
 import {DateTime} from 'luxon';
 
 export function wrapLegacyInfoConnection(

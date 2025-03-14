@@ -5,15 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {AggregateOrderByNode} from '../../model';
-import {
-  def,
+import type {AggregateOrderByNode} from '../../model';
+import type {
   DefinitionBlueprintMap,
   OverloadedDefinitionBlueprint,
   TypeDescBlueprint,
-  arg as a,
-  sql,
 } from '../functions/util';
+import {def, arg as a, sql} from '../functions/util';
 
 // Cute shortcut So you can write things like: {array: T} and {dimension: T}
 const T: TypeDescBlueprint = {generic: 'T'};

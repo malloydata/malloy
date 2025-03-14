@@ -22,7 +22,7 @@
  */
 
 import {DuckDBDialect} from './duckdb';
-import {Dialect} from './dialect';
+import type {Dialect} from './dialect';
 import {PostgresDialect} from './postgres';
 import {SnowflakeDialect} from './snowflake';
 import {StandardSQLDialect} from './standardsql';

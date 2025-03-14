@@ -22,8 +22,9 @@
  */
 
 import {ExpressionDef} from '../types/expression-def';
-import {FieldSpace} from '../types/field-space';
-import {ExprValue, literalExprValue} from '../types/expr-value';
+import type {FieldSpace} from '../types/field-space';
+import type {ExprValue} from '../types/expr-value';
+import {literalExprValue} from '../types/expr-value';
 
 export class ExprString extends ExpressionDef {
   elementType = 'string literal';

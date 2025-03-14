@@ -21,32 +21,33 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   Sampling,
-  isSamplingEnable,
-  isSamplingPercent,
-  isSamplingRows,
   AtomicTypeDef,
   TimeDeltaExpr,
   RegexMatchExpr,
   MeasureTimeExpr,
   LeafAtomicTypeDef,
-  TD,
   RecordLiteralNode,
   OrderBy,
+} from '../../model/malloy_types';
+import {
+  isSamplingEnable,
+  isSamplingPercent,
+  isSamplingRows,
+  TD,
   mkFieldDef,
 } from '../../model/malloy_types';
 import {indent} from '../../model/utils';
-import {
-  DialectFunctionOverloadDef,
-  expandOverrideMap,
-  expandBlueprintMap,
-} from '../functions';
-import {DialectFieldList, FieldReferenceType, inDays} from '../dialect';
+import type {DialectFunctionOverloadDef} from '../functions';
+import {expandOverrideMap, expandBlueprintMap} from '../functions';
+import type {DialectFieldList, FieldReferenceType} from '../dialect';
+import {inDays} from '../dialect';
 import {PostgresBase} from '../pg_impl';
 import {DUCKDB_DIALECT_FUNCTIONS} from './dialect_functions';
 import {DUCKDB_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
-import {TinyParseError, TinyParser, TinyToken} from '../tiny_parser';
+import type {TinyToken} from '../tiny_parser';
+import {TinyParseError, TinyParser} from '../tiny_parser';
 
 // need to refactor runSQL to take a SQLBlock instead of just a sql string.
 const hackSplitComment = '-- hack: split on this';

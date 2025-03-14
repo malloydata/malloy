@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {
+import type {
   Connection,
   MalloyQueryData,
   PersistSQLResults,
@@ -14,14 +14,13 @@ import {
   RunSQLOptions,
   StreamingConnection,
   StructDef,
-  MySQLDialect,
   QueryOptionsReader,
   QueryData,
   SQLSourceDef,
   TableSourceDef,
   SQLSourceRequest,
-  sqlKey,
 } from '@malloydata/malloy';
+import {MySQLDialect, sqlKey} from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 import {randomUUID, createHash} from 'crypto';
 import * as MYSQL from 'mysql2/promise';

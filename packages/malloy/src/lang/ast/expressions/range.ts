@@ -22,10 +22,11 @@
  */
 
 import {errorFor} from '../ast-utils';
-import {BinaryMalloyOperator} from '../types/binary_operators';
-import {ExprValue, computedExprValue} from '../types/expr-value';
+import type {BinaryMalloyOperator} from '../types/binary_operators';
+import type {ExprValue} from '../types/expr-value';
+import {computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import {FieldSpace} from '../types/field-space';
+import type {FieldSpace} from '../types/field-space';
 
 export class Range extends ExpressionDef {
   elementType = 'range';

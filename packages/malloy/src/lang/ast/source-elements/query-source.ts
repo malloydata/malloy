@@ -21,11 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {SourceDef, QuerySourceDef} from '../../../model/malloy_types';
+import type {SourceDef, QuerySourceDef} from '../../../model/malloy_types';
 import {Source} from './source';
-import {QueryElement} from '../types/query-element';
-import {ParameterSpace} from '../field-space/parameter-space';
-import {HasParameter} from '../parameters/has-parameter';
+import type {QueryElement} from '../types/query-element';
+import type {ParameterSpace} from '../field-space/parameter-space';
+import type {HasParameter} from '../parameters/has-parameter';
 import {v4 as uuidv4} from 'uuid';
 
 export class QuerySource extends Source {

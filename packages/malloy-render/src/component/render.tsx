@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Tag} from '@malloydata/malloy-tag';
+import type {Tag} from '@malloydata/malloy-tag';
+import type {Accessor} from 'solid-js';
 import {
-  Accessor,
   Show,
   createContext,
   createEffect,
@@ -16,9 +16,9 @@ import {
 } from 'solid-js';
 import {getResultMetadata} from './render-result-metadata';
 import './render.css';
-import {ComponentOptions, ICustomElement} from 'component-register';
+import type {ComponentOptions, ICustomElement} from 'component-register';
 import {applyRenderer} from './apply-renderer';
-import {
+import type {
   DashboardConfig,
   DrillData,
   MalloyClickEventPayload,
@@ -27,8 +27,9 @@ import {
 } from './types';
 export type {DrillData} from './types';
 import css from './render.css?raw';
-import * as Malloy from '@malloydata/malloy-interfaces';
-import {ModelDef, QueryResult, Result, API} from '@malloydata/malloy';
+import type * as Malloy from '@malloydata/malloy-interfaces';
+import type {ModelDef, QueryResult} from '@malloydata/malloy';
+import {Result, API} from '@malloydata/malloy';
 import {getDataTree} from '../data_tree';
 import {ResultContext} from './result-context';
 

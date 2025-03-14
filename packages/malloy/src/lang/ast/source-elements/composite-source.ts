@@ -5,17 +5,17 @@
  *  LICENSE file in the root directory of this source tree.
  */
 
-import {
+import type {
   Annotation,
   AtomicFieldDef,
   FieldDef,
-  isAtomic,
   SourceDef,
 } from '../../../model/malloy_types';
+import {isAtomic} from '../../../model/malloy_types';
 
-import {HasParameter} from '../parameters/has-parameter';
+import type {HasParameter} from '../parameters/has-parameter';
 import {Source} from './source';
-import {ParameterSpace} from '../field-space/parameter-space';
+import type {ParameterSpace} from '../field-space/parameter-space';
 
 /**
  * A Source that is a virtual union of the fields of other sources, choosing

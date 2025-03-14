@@ -21,8 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {BinaryMalloyOperator, FieldSpace} from '..';
-import {ExprValue, literalExprValue} from '../types/expr-value';
+import type {BinaryMalloyOperator, FieldSpace} from '..';
+import type {ExprValue} from '../types/expr-value';
+import {literalExprValue} from '../types/expr-value';
 import {ATNodeType, ExpressionDef} from '../types/expression-def';
 
 function doIsNull(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {

@@ -21,10 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {QueryFieldDef, TurtleDef} from '../../../model/malloy_types';
+import type {QueryFieldDef, TurtleDef} from '../../../model/malloy_types';
 
 import {ViewField} from './view-field';
-import {FieldSpace} from '../types/field-space';
+import type {FieldSpace} from '../types/field-space';
 
 export class IRViewField extends ViewField {
   constructor(

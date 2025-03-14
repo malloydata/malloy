@@ -7,7 +7,7 @@
 
 import {errorMessage, makeExprFunc, model} from './test-translator';
 import './parse-expects';
-import {CompositeFieldUsage} from '../../model';
+import type {CompositeFieldUsage} from '../../model';
 import {emptyCompositeFieldUsage} from '../../model/composite_source_utils';
 
 function addPathToCompositeUsage(

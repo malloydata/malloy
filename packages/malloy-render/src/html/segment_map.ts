@@ -21,15 +21,15 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import * as lite from 'vega-lite';
+import type * as lite from 'vega-lite';
 import usAtlas from 'us-atlas/states-10m.json';
 import {HTMLChartRenderer} from './chart';
 import {formatTitle, getColorScale} from './utils';
 import {RendererFactory} from './renderer_factory';
-import {SegmentMapRenderOptions, StyleDefaults} from './data_styles';
-import {RendererOptions} from './renderer_types';
-import {Renderer} from './renderer';
-import {Cell, Field} from '../data_tree';
+import type {SegmentMapRenderOptions, StyleDefaults} from './data_styles';
+import type {RendererOptions} from './renderer_types';
+import type {Renderer} from './renderer';
+import type {Cell, Field} from '../data_tree';
 
 export class HTMLSegmentMapRenderer extends HTMLChartRenderer {
   getDataValue(data: Cell): string | number | null {

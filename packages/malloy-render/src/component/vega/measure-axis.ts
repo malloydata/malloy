@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Axis, GroupMark, RectMark} from 'vega';
-import {ChartLayoutSettings} from '../chart-layout-settings';
+import type {Axis, GroupMark, RectMark} from 'vega';
+import type {ChartLayoutSettings} from '../chart-layout-settings';
 import {grayMedium} from './base-vega-config';
 
 type MeasureAxisOptions = {

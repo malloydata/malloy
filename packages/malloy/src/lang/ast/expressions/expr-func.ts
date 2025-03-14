@@ -21,14 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   CastType,
   EvalSpace,
   Expr,
-  expressionIsAggregate,
-  expressionIsAnalytic,
-  expressionIsScalar,
-  expressionIsUngroupedAggregate,
   ExpressionType,
   FunctionCallNode,
   FunctionDef,
@@ -40,6 +36,15 @@ import {
   FunctionParameterTypeDef,
   FunctionReturnTypeDef,
   FunctionReturnTypeDesc,
+  RecordFunctionParameterTypeDef,
+  RecordFunctionReturnTypeDef,
+  RecordTypeDef,
+} from '../../../model/malloy_types';
+import {
+  expressionIsAggregate,
+  expressionIsAnalytic,
+  expressionIsScalar,
+  expressionIsUngroupedAggregate,
   isAtomic,
   isAtomicFieldType,
   isExpressionTypeLEQ,
@@ -47,25 +52,25 @@ import {
   isScalarArray,
   maxOfExpressionTypes,
   mergeEvalSpaces,
-  RecordFunctionParameterTypeDef,
-  RecordFunctionReturnTypeDef,
-  RecordTypeDef,
   TD,
 } from '../../../model/malloy_types';
 import {errorFor} from '../ast-utils';
 import {StructSpaceFieldBase} from '../field-space/struct-space-field-base';
 
-import {FieldReference} from '../query-items/field-references';
-import {FunctionOrdering} from './function-ordering';
-import {Limit} from '../query-properties/limit';
-import {PartitionBy} from './partition_by';
-import {computedExprValue, ExprValue} from '../types/expr-value';
+import type {FieldReference} from '../query-items/field-references';
+import type {FunctionOrdering} from './function-ordering';
+import type {Limit} from '../query-properties/limit';
+import type {PartitionBy} from './partition_by';
+import type {ExprValue} from '../types/expr-value';
+import {computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import {FieldName, FieldSpace} from '../types/field-space';
-import {composeSQLExpr, SQLExprElement} from '../../../model/utils';
+import type {FieldSpace} from '../types/field-space';
+import {FieldName} from '../types/field-space';
+import type {SQLExprElement} from '../../../model/utils';
+import {composeSQLExpr} from '../../../model/utils';
 import * as TDU from '../typedesc-utils';
 import {mergeCompositeFieldUsage} from '../../../model/composite_source_utils';
-import {AnyMessageCodeAndParameters} from '../../parse-log';
+import type {AnyMessageCodeAndParameters} from '../../parse-log';
 
 export class ExprFunc extends ExpressionDef {
   elementType = 'function call()';

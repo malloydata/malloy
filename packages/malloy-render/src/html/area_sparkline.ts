@@ -22,14 +22,14 @@
  */
 
 import {HTMLSparkLineRenderer} from './sparkline';
-import * as lite from 'vega-lite';
+import type * as lite from 'vega-lite';
 import {getColorScale} from './utils';
 import {DEFAULT_SPEC} from './vega_spec';
 import {RendererFactory} from './renderer_factory';
-import {Renderer} from './renderer';
-import {SparkLineRenderOptions, StyleDefaults} from './data_styles';
-import {RendererOptions} from './renderer_types';
-import {Cell, Field} from '../data_tree';
+import type {Renderer} from './renderer';
+import type {SparkLineRenderOptions, StyleDefaults} from './data_styles';
+import type {RendererOptions} from './renderer_types';
+import type {Cell, Field} from '../data_tree';
 
 export class HTMLAreaSparkLineRenderer extends HTMLSparkLineRenderer {
   override getVegaLiteSpec(data: Cell): lite.TopLevelSpec {

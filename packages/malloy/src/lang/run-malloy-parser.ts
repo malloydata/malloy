@@ -9,9 +9,9 @@ import {CharStreams, CommonTokenStream} from 'antlr4ts';
 import {MalloyLexer} from './lib/Malloy/MalloyLexer';
 import {MalloyParser} from './lib/Malloy/MalloyParser';
 import {MalloyErrorStrategy} from './syntax-errors/malloy-error-strategy';
-import {ParseTree} from 'antlr4ts/tree';
-import {MessageLogger} from './parse-log';
-import {ParseInfo, SourceInfo} from './utils';
+import type {ParseTree} from 'antlr4ts/tree';
+import type {MessageLogger} from './parse-log';
+import type {ParseInfo, SourceInfo} from './utils';
 import {MalloyParserErrorListener} from './syntax-errors/malloy-parser-error-listener';
 
 /**

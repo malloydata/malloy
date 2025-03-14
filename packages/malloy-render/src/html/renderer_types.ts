@@ -21,8 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {MalloyRenderProps} from '../component/render';
-import {DataStyles} from './data_styles';
+import type {MalloyRenderProps} from '../component/render';
+import type {DataStyles} from './data_styles';
 
 export interface RendererOptions {
   dataStyles: DataStyles;

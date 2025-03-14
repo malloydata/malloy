@@ -22,10 +22,10 @@
  */
 
 import {emptyCompositeFieldUsage} from '../../../model/composite_source_utils';
-import {AggregateExpr} from '../../../model/malloy_types';
-import {FieldReference} from '../query-items/field-references';
-import {ExprValue} from '../types/expr-value';
-import {FieldSpace} from '../types/field-space';
+import type {AggregateExpr} from '../../../model/malloy_types';
+import type {FieldReference} from '../query-items/field-references';
+import type {ExprValue} from '../types/expr-value';
+import type {FieldSpace} from '../types/field-space';
 import {ExprAggregateFunction} from './expr-aggregate-function';
 
 export class ExprCount extends ExprAggregateFunction {

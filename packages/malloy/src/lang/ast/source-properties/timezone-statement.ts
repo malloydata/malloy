@@ -21,9 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {QueryBuilder} from '../types/query-builder';
+import type {QueryBuilder} from '../types/query-builder';
 import {MalloyElement} from '../types/malloy-element';
-import {QueryPropertyInterface} from '../types/query-property-interface';
+import type {QueryPropertyInterface} from '../types/query-property-interface';
 import {DateTime} from 'luxon';
 
 export class TimezoneStatement

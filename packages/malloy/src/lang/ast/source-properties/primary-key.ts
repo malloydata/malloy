@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FieldName} from '../types/field-space';
+import type {FieldName} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
 
 export class PrimaryKey extends MalloyElement {

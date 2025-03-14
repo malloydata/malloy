@@ -21,11 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import * as lite from 'vega-lite';
+import type * as lite from 'vega-lite';
 import {HTMLChartRenderer} from './chart';
 import {formatTitle, getColorScale} from './utils';
 import {DEFAULT_SPEC} from './vega_spec';
-import {Cell} from '../data_tree';
+import type {Cell} from '../data_tree';
 
 export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
   abstract getMark(): 'bar' | 'line' | 'point';

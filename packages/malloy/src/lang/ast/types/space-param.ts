@@ -21,10 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FieldDefType, Parameter, TypeDesc} from '../../../model/malloy_types';
+import type {
+  FieldDefType,
+  Parameter,
+  TypeDesc,
+} from '../../../model/malloy_types';
 
 import {SpaceEntry} from './space-entry';
-import {HasParameter} from '../parameters/has-parameter';
+import type {HasParameter} from '../parameters/has-parameter';
 import * as TDU from '../typedesc-utils';
 import {emptyCompositeFieldUsage} from '../../../model/composite_source_utils';
 

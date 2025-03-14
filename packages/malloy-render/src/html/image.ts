@@ -21,12 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Renderer} from './renderer';
+import type {Renderer} from './renderer';
 import {createErrorElement, createNullElement} from './utils';
 import {RendererFactory} from './renderer_factory';
-import {ImageRenderOptions, StyleDefaults} from './data_styles';
-import {RendererOptions} from './renderer_types';
-import {Cell, Field} from '../data_tree';
+import type {ImageRenderOptions, StyleDefaults} from './data_styles';
+import type {RendererOptions} from './renderer_types';
+import type {Cell, Field} from '../data_tree';
 
 export class HTMLImageRenderer implements Renderer {
   constructor(private readonly document: Document) {}

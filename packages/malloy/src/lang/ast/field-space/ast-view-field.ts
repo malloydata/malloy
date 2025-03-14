@@ -21,9 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {QueryFieldDef, TurtleDef} from '../../../model/malloy_types';
-import {ViewFieldDeclaration} from '../source-properties/view-field-declaration';
-import {FieldSpace} from '../types/field-space';
+import type {QueryFieldDef, TurtleDef} from '../../../model/malloy_types';
+import type {ViewFieldDeclaration} from '../source-properties/view-field-declaration';
+import type {FieldSpace} from '../types/field-space';
 import {ViewField} from './view-field';
 
 export class ASTViewField extends ViewField {

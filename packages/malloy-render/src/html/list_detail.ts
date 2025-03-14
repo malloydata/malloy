@@ -22,7 +22,7 @@
  */
 
 import {HTMLListRenderer} from './list';
-import {RecordOrRepeatedRecordField, Field} from '../data_tree';
+import type {RecordOrRepeatedRecordField, Field} from '../data_tree';
 
 export class HTMLListDetailRenderer extends HTMLListRenderer {
   getDetailField(explore: RecordOrRepeatedRecordField): Field | undefined {

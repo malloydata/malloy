@@ -22,11 +22,8 @@
  */
 
 import {indent} from '../../model/utils';
-import {
+import type {
   Sampling,
-  isSamplingEnable,
-  isSamplingPercent,
-  isSamplingRows,
   AtomicTypeDef,
   TimeTruncExpr,
   TimeExtractExpr,
@@ -36,16 +33,19 @@ import {
   TimeLiteralNode,
   MeasureTimeExpr,
   LeafAtomicTypeDef,
-  TD,
   RecordLiteralNode,
   ArrayLiteralNode,
 } from '../../model/malloy_types';
 import {
-  DialectFunctionOverloadDef,
-  expandOverrideMap,
-  expandBlueprintMap,
-} from '../functions';
-import {Dialect, DialectFieldList, QueryInfo} from '../dialect';
+  isSamplingEnable,
+  isSamplingPercent,
+  isSamplingRows,
+  TD,
+} from '../../model/malloy_types';
+import type {DialectFunctionOverloadDef} from '../functions';
+import {expandOverrideMap, expandBlueprintMap} from '../functions';
+import type {DialectFieldList, QueryInfo} from '../dialect';
+import {Dialect} from '../dialect';
 import {STANDARDSQL_DIALECT_FUNCTIONS} from './dialect_functions';
 import {STANDARDSQL_MALLOY_STANDARD_OVERLOADS} from './function_overrides';
 

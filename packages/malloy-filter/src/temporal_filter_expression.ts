@@ -5,13 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {
+import type {
   FilterParserReponse,
-  isTemporalClause,
   Moment,
   TemporalClause,
   Duration,
 } from './filter_clause';
+import {isTemporalClause} from './filter_clause';
 import ftemporal_grammar from './lib/ftemporal_parser';
 import * as nearley from 'nearley';
 import {run_parser} from './nearley_parse';

@@ -21,14 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {StructDef} from '../../../model/malloy_types';
-import {BinaryMalloyOperator} from '../types/binary_operators';
+import type {StructDef} from '../../../model/malloy_types';
+import type {BinaryMalloyOperator} from '../types/binary_operators';
 
-import {ExprValue} from '../types/expr-value';
+import type {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import {FieldSpace, QueryFieldSpace} from '../types/field-space';
-import {LookupResult} from '../types/lookup-result';
-import {SpaceEntry} from '../types/space-entry';
+import type {FieldSpace, QueryFieldSpace} from '../types/field-space';
+import type {LookupResult} from '../types/lookup-result';
+import type {SpaceEntry} from '../types/space-entry';
 
 export class ConstantFieldSpace implements FieldSpace {
   readonly type = 'fieldSpace';

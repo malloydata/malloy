@@ -21,14 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {AccessModifierLabel} from '../../../model';
-import {AtomicFieldDeclaration} from '../query-items/field-declaration';
+import type {AccessModifierLabel} from '../../../model';
+import type {AtomicFieldDeclaration} from '../query-items/field-declaration';
 import {DefinitionList} from '../types/definition-list';
-import {QueryBuilder} from '../types/query-builder';
-import {
-  LegalRefinementStage,
-  QueryPropertyInterface,
-} from '../types/query-property-interface';
+import type {QueryBuilder} from '../types/query-builder';
+import type {QueryPropertyInterface} from '../types/query-property-interface';
+import {LegalRefinementStage} from '../types/query-property-interface';
 
 export class DeclareFields
   extends DefinitionList<AtomicFieldDeclaration>

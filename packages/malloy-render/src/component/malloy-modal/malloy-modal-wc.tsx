@@ -1,4 +1,4 @@
-import {ComponentOptions} from 'component-register';
+import type {ComponentOptions} from 'component-register';
 
 export type MalloyModalWCProps = {
   stylesheet?: CSSStyleSheet;

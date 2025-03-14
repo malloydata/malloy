@@ -21,19 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  PipeSegment,
-  SourceDef,
-  isAtomic,
-  isTurtle,
-  sourceBase,
-} from '../../../model/malloy_types';
+import type {PipeSegment, SourceDef} from '../../../model/malloy_types';
+import {isAtomic, isTurtle, sourceBase} from '../../../model/malloy_types';
 import {ErrorFactory} from '../error-factory';
-import {QueryOperationSpace} from '../field-space/query-spaces';
-import {ViewOrScalarFieldReference} from '../query-items/field-references';
+import type {QueryOperationSpace} from '../field-space/query-spaces';
+import type {ViewOrScalarFieldReference} from '../query-items/field-references';
 import {getFinalStruct} from '../struct-utils';
-import {SourceFieldSpace} from '../types/field-space';
-import {PipelineComp} from '../types/pipeline-comp';
+import type {SourceFieldSpace} from '../types/field-space';
+import type {PipelineComp} from '../types/pipeline-comp';
 import {SpaceField} from '../types/space-field';
 import {refine} from './refine-utils';
 import {View} from './view';

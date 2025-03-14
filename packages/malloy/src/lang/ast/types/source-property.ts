@@ -27,7 +27,7 @@ import {FieldListEdit} from '../source-properties/field-list-edit';
 import {Renames} from '../source-properties/renames';
 import {PrimaryKey} from '../source-properties/primary-key';
 import {Views} from '../source-properties/views';
-import {MalloyElement} from './malloy-element';
+import type {MalloyElement} from './malloy-element';
 import {TimezoneStatement} from '../source-properties/timezone-statement';
 import {ObjectAnnotation} from './annotation-elements';
 import {JoinStatement} from '../source-properties/join';

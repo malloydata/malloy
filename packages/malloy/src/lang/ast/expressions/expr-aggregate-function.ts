@@ -21,13 +21,15 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   AggregateFunctionType,
-  expressionIsAggregate,
   FieldDef,
-  isAtomicFieldType,
   AggregateExpr,
   Expr,
+} from '../../../model/malloy_types';
+import {
+  expressionIsAggregate,
+  isAtomicFieldType,
   hasExpression,
   isAtomic,
   isJoined,
@@ -38,13 +40,13 @@ import {errorFor} from '../ast-utils';
 import {StructSpaceField} from '../field-space/static-space';
 import * as TDU from '../typedesc-utils';
 import {FieldReference} from '../query-items/field-references';
-import {ExprValue} from '../types/expr-value';
+import type {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import {FieldSpace} from '../types/field-space';
+import type {FieldSpace} from '../types/field-space';
 import {SpaceField} from '../types/space-field';
 import {ExprIdReference} from './expr-id-reference';
-import {JoinPath, JoinPathElement} from '../types/lookup-result';
-import {MessageCode} from '../../parse-log';
+import type {JoinPath, JoinPathElement} from '../types/lookup-result';
+import type {MessageCode} from '../../parse-log';
 
 export abstract class ExprAggregateFunction extends ExpressionDef {
   elementType: string;

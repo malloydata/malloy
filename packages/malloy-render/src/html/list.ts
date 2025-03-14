@@ -21,10 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {StyleDefaults} from './data_styles';
+import type {StyleDefaults} from './data_styles';
 import {ContainerRenderer} from './container';
 import {createErrorElement, yieldTask} from './utils';
-import {Cell, Field, RecordOrRepeatedRecordField} from '../data_tree';
+import type {Cell, Field, RecordOrRepeatedRecordField} from '../data_tree';
 
 export class HTMLListRenderer extends ContainerRenderer {
   protected childrenStyleDefaults: StyleDefaults = {

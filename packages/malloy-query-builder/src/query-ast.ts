@@ -5,7 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 import * as Malloy from '@malloydata/malloy-interfaces';
-import {Tag, TagSetValue} from '@malloydata/malloy-tag';
+import type {TagSetValue} from '@malloydata/malloy-tag';
+import {Tag} from '@malloydata/malloy-tag';
 import * as Filter from '@malloydata/malloy-filter';
 
 export type FilterType = 'string' | 'boolean' | 'number' | 'temporal';

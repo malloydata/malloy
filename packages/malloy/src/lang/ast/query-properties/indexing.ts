@@ -21,13 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FieldReferences} from '../query-items/field-references';
-import {FieldName} from '../types/field-space';
+import type {FieldReferences} from '../query-items/field-references';
+import type {FieldName} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
-import {
-  QueryClass,
-  QueryPropertyInterface,
-} from '../types/query-property-interface';
+import type {QueryPropertyInterface} from '../types/query-property-interface';
+import {QueryClass} from '../types/query-property-interface';
 
 export class Index extends MalloyElement implements QueryPropertyInterface {
   elementType = 'index';

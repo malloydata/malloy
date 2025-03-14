@@ -1,10 +1,11 @@
-import {LoaderFunction, Args} from '@storybook/types';
-import {HtmlRenderer} from '@storybook/html';
-import {API, SingleConnectionRuntime, URLReader} from '@malloydata/malloy';
-import {DuckDBWASMConnection} from '@malloydata/db-duckdb/wasm';
+import type {LoaderFunction, Args} from '@storybook/types';
+import type {HtmlRenderer} from '@storybook/html';
+import type {URLReader} from '@malloydata/malloy';
+import {API, SingleConnectionRuntime} from '@malloydata/malloy';
+import type {DuckDBWASMConnection} from '@malloydata/db-duckdb/wasm';
 import {HTMLView} from '../html';
-import {RendererOptions} from '../html/renderer_types';
-import * as Malloy from '@malloydata/malloy-interfaces';
+import type {RendererOptions} from '../html/renderer_types';
+import type * as Malloy from '@malloydata/malloy-interfaces';
 
 export type QueryOptions = {
   script: string;

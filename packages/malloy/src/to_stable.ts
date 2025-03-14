@@ -5,19 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import * as Malloy from '@malloydata/malloy-interfaces';
-import {
+import type * as Malloy from '@malloydata/malloy-interfaces';
+import type {
   AtomicTypeDef,
   DateUnit,
-  expressionIsAggregate,
-  expressionIsScalar,
   FieldDef,
-  isAtomic,
-  isJoinedSource,
-  isLeafAtomic,
-  isRepeatedRecord,
-  isSourceDef,
-  isTurtle,
   JoinType,
   ModelDef,
   Query,
@@ -27,6 +19,16 @@ import {
   ResultStructMetadataDef,
   SourceDef,
   TimestampUnit,
+} from './model';
+import {
+  expressionIsAggregate,
+  expressionIsScalar,
+  isAtomic,
+  isJoinedSource,
+  isLeafAtomic,
+  isRepeatedRecord,
+  isSourceDef,
+  isTurtle,
 } from './model';
 import {
   getResultStructDefForQuery,

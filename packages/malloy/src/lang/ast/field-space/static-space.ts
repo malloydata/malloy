@@ -21,21 +21,19 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Dialect} from '../../../dialect/dialect';
+import type {Dialect} from '../../../dialect/dialect';
 import {getDialect} from '../../../dialect/dialect_map';
-import {
+import type {
   FieldDef,
   StructDef,
   SourceDef,
-  isJoined,
-  isTurtle,
-  isSourceDef,
   JoinFieldDef,
 } from '../../../model/malloy_types';
+import {isJoined, isTurtle, isSourceDef} from '../../../model/malloy_types';
 
-import {SpaceEntry} from '../types/space-entry';
-import {LookupResult} from '../types/lookup-result';
-import {
+import type {SpaceEntry} from '../types/space-entry';
+import type {LookupResult} from '../types/lookup-result';
+import type {
   FieldName,
   FieldSpace,
   QueryFieldSpace,

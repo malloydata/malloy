@@ -21,8 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {PipeSegment, isPartialSegment} from '../../model';
-import {MalloyElement} from './types/malloy-element';
+import type {PipeSegment} from '../../model';
+import {isPartialSegment} from '../../model';
+import type {MalloyElement} from './types/malloy-element';
 
 // We don't want to ever generate actual 'partial' stages, so convert this
 // into a reduce so the compiler doesn't explode

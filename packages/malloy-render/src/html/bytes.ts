@@ -22,11 +22,11 @@
  */
 
 import {HTMLTextRenderer} from './text';
-import {BytesRenderOptions, StyleDefaults} from './data_styles';
-import {RendererOptions} from './renderer_types';
-import {Renderer} from './renderer';
+import type {BytesRenderOptions, StyleDefaults} from './data_styles';
+import type {RendererOptions} from './renderer_types';
+import type {Renderer} from './renderer';
 import {RendererFactory} from './renderer_factory';
-import {Cell, Field} from '../data_tree';
+import type {Cell, Field} from '../data_tree';
 
 export class HTMLBytesRenderer extends HTMLTextRenderer {
   override getText(_data: Cell): string | null {

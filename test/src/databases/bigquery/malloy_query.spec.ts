@@ -23,9 +23,10 @@
 
 import {test} from '@jest/globals';
 import * as malloy from '@malloydata/malloy';
-import {Query} from '@malloydata/malloy';
+import type {Query} from '@malloydata/malloy';
 import {testModel} from '../../models/faa_model';
-import {BigQueryTestConnection, RuntimeList} from '../../runtimes';
+import type {BigQueryTestConnection} from '../../runtimes';
+import {RuntimeList} from '../../runtimes';
 import {describeIfDatabaseAvailable, fStringEq, fToQF} from '../../util';
 import '../../util/db-jest-matchers';
 

@@ -21,20 +21,18 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  FilterCondition,
-  expressionIsCalculation,
-} from '../../../model/malloy_types';
+import type {FilterCondition} from '../../../model/malloy_types';
+import {expressionIsCalculation} from '../../../model/malloy_types';
 import {errorFor} from '../ast-utils';
 import * as TDU from '../typedesc-utils';
 import {FunctionOrdering} from './function-ordering';
-import {Filter} from '../query-properties/filters';
+import type {Filter} from '../query-properties/filters';
 import {Limit} from '../query-properties/limit';
 import {PartitionBy} from './partition_by';
-import {ExprValue} from '../types/expr-value';
+import type {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import {FieldPropStatement} from '../types/field-prop-statement';
-import {FieldSpace} from '../types/field-space';
+import type {FieldPropStatement} from '../types/field-prop-statement';
+import type {FieldSpace} from '../types/field-space';
 import {ExprFunc} from './expr-func';
 import {mergeCompositeFieldUsage} from '../../../model/composite_source_utils';
 

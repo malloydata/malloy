@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Expr, TypeDesc} from '../../../model/malloy_types';
+import type {Expr, TypeDesc} from '../../../model/malloy_types';
 
 type MorphicValues = Record<string, Expr>;
 export interface WithValue {

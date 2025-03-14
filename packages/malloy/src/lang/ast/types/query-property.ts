@@ -21,8 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {MalloyElement} from './malloy-element';
-import {QueryPropertyInterface} from './query-property-interface';
+import type {MalloyElement} from './malloy-element';
+import type {QueryPropertyInterface} from './query-property-interface';
 
 export type QueryProperty = MalloyElement & QueryPropertyInterface;
 

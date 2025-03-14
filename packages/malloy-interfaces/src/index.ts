@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import * as Malloy from './types';
+import type * as Malloy from './types';
 export * from './types';
 export {queryToMalloy} from './to_malloy';
 export {nestUnions} from './nest_unions';

@@ -23,7 +23,7 @@
 
 /* eslint-disable no-console */
 
-import {ModelDef, Query, StructDef} from '@malloydata/malloy';
+import type {ModelDef, Query, StructDef} from '@malloydata/malloy';
 import {describeIfDatabaseAvailable, fStringLike, fToQF} from '../../util';
 
 import * as malloy from '@malloydata/malloy';

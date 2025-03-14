@@ -21,15 +21,16 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import * as model from '../../../model/malloy_types';
-import {FieldSpace} from '../types/field-space';
+import type * as model from '../../../model/malloy_types';
+import type {FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
-import {DynamicSpace} from '../field-space/dynamic-space';
-import {View} from '../view-elements/view';
-import {Noteable, extendNoteMethod} from '../types/noteable';
+import type {DynamicSpace} from '../field-space/dynamic-space';
+import type {View} from '../view-elements/view';
+import type {Noteable} from '../types/noteable';
+import {extendNoteMethod} from '../types/noteable';
 import {detectAndRemovePartialStages} from '../query-utils';
 import {ASTViewField} from '../field-space/ast-view-field';
-import {MakeEntry} from '../types/space-entry';
+import type {MakeEntry} from '../types/space-entry';
 
 export class ViewFieldDeclaration
   extends MalloyElement

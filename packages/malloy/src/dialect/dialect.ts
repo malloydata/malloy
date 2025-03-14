@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   Expr,
   Sampling,
   AtomicTypeDef,
@@ -35,11 +35,10 @@ import {
   RecordLiteralNode,
   ArrayLiteralNode,
   LeafAtomicTypeDef,
-  isRawCast,
-  isLeafAtomic,
   OrderBy,
 } from '../model/malloy_types';
-import {DialectFunctionOverloadDef} from './functions';
+import {isRawCast, isLeafAtomic} from '../model/malloy_types';
+import type {DialectFunctionOverloadDef} from './functions';
 
 type DialectFieldTypes = string | 'struct';
 

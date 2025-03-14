@@ -22,7 +22,7 @@
  */
 
 import * as crypto from 'crypto';
-import {
+import type {
   RunSQLOptions,
   MalloyQueryData,
   QueryRunStats,
@@ -34,22 +34,24 @@ import {
   TableSourceDef,
   StructDef,
   QueryDataRow,
-  SnowflakeDialect,
   TestableConnection,
-  TinyParser,
   Dialect,
   RecordDef,
-  mkArrayDef,
   AtomicFieldDef,
   ArrayDef,
   SQLSourceRequest,
+} from '@malloydata/malloy';
+import {
+  SnowflakeDialect,
+  TinyParser,
+  mkArrayDef,
   sqlKey,
 } from '@malloydata/malloy';
 import {BaseConnection} from '@malloydata/malloy/connection';
 
 import {SnowflakeExecutor} from './snowflake_executor';
-import {ConnectionOptions} from 'snowflake-sdk';
-import {Options as PoolOptions} from 'generic-pool';
+import type {ConnectionOptions} from 'snowflake-sdk';
+import type {Options as PoolOptions} from 'generic-pool';
 
 type namespace = {database: string; schema: string};
 

@@ -5,25 +5,26 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {ParserRuleContext} from 'antlr4ts';
-import {ParseTree, TerminalNode} from 'antlr4ts/tree';
+import type {ParserRuleContext} from 'antlr4ts';
+import type {ParseTree, TerminalNode} from 'antlr4ts/tree';
 import {AbstractParseTreeVisitor} from 'antlr4ts/tree/AbstractParseTreeVisitor';
-import {MalloyParserVisitor} from './lib/Malloy/MalloyParserVisitor';
-import * as Malloy from '@malloydata/malloy-interfaces';
+import type {MalloyParserVisitor} from './lib/Malloy/MalloyParserVisitor';
+import type * as Malloy from '@malloydata/malloy-interfaces';
 import * as parse from './lib/Malloy/MalloyParser';
-import {
-  BaseMessageLogger,
+import type {
   LogMessageOptions,
   MessageCode,
   MessageLogger,
   MessageParameterType,
-  makeLogMessage,
 } from './parse-log';
+import {BaseMessageLogger, makeLogMessage} from './parse-log';
 import {getId} from './parse-utils';
-import {DocumentLocation, isTimestampUnit} from '../model/malloy_types';
+import type {DocumentLocation} from '../model/malloy_types';
+import {isTimestampUnit} from '../model/malloy_types';
 import {runMalloyParser} from './run-malloy-parser';
 import {mapLogs} from '../api/core';
-import {getSourceInfo, ParseInfo, rangeFromContext} from './utils';
+import type {ParseInfo} from './utils';
+import {getSourceInfo, rangeFromContext} from './utils';
 
 type HasAnnotations = ParserRuleContext & {ANNOTATION: () => TerminalNode[]};
 

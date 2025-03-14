@@ -26,15 +26,11 @@ import {
   isEmptyCompositeFieldUsage,
   resolveCompositeSources,
 } from '../../../model/composite_source_utils';
-import {
-  isIndexSegment,
-  isQuerySegment,
-  Query,
-  SourceDef,
-} from '../../../model/malloy_types';
+import type {Query, SourceDef} from '../../../model/malloy_types';
+import {isIndexSegment, isQuerySegment} from '../../../model/malloy_types';
 import {detectAndRemovePartialStages} from '../query-utils';
 import {MalloyElement} from '../types/malloy-element';
-import {QueryComp} from '../types/query-comp';
+import type {QueryComp} from '../types/query-comp';
 
 export abstract class QueryBase extends MalloyElement {
   abstract queryComp(isRefOk: boolean): QueryComp;

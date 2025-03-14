@@ -21,24 +21,23 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   PartialSegment,
   PipeSegment,
   ProjectSegment,
-  isPartialSegment,
-  isProjectSegment,
 } from '../../../model/malloy_types';
+import {isPartialSegment, isProjectSegment} from '../../../model/malloy_types';
 
 import {ErrorFactory} from '../error-factory';
-import {SourceFieldSpace} from '../types/field-space';
+import type {SourceFieldSpace} from '../types/field-space';
 import {GroupBy} from '../query-properties/group-by';
 import {ProjectFieldSpace} from '../field-space/project-field-space';
-import {QueryProperty} from '../types/query-property';
+import type {QueryProperty} from '../types/query-property';
 import {QuerySegmentBuilder} from './reduce-builder';
-import {QueryOperationSpace} from '../field-space/query-spaces';
-import {MalloyElement} from '../types/malloy-element';
-import {QueryBuilder} from '../types/query-builder';
-import {QueryInputSpace} from '../field-space/query-input-space';
+import type {QueryOperationSpace} from '../field-space/query-spaces';
+import type {MalloyElement} from '../types/malloy-element';
+import type {QueryBuilder} from '../types/query-builder';
+import type {QueryInputSpace} from '../field-space/query-input-space';
 
 export class ProjectBuilder
   extends QuerySegmentBuilder

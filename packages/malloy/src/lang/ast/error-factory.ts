@@ -27,7 +27,7 @@
  ** here to help you.
  */
 
-import {
+import type {
   TableSourceDef,
   IndexSegment,
   ProjectSegment,

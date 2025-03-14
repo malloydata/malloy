@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import * as malloy from '@malloydata/malloy';
+import type * as malloy from '@malloydata/malloy';
 import {RuntimeList} from '../../runtimes';
 
 // Chris, please rework.

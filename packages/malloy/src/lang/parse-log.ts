@@ -25,12 +25,12 @@ import {
   compositeFieldUsageIsPlural,
   formatCompositeFieldUsages,
 } from '../model/composite_source_utils';
-import {
+import type {
   CompositeFieldUsage,
   DocumentLocation,
   ExpressionValueType,
 } from '../model/malloy_types';
-import {EventStream} from '../runtime_types';
+import type {EventStream} from '../runtime_types';
 
 export type LogSeverity = 'error' | 'warn' | 'debug';
 

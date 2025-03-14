@@ -5,14 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {LeafExpressionType} from '../../model/malloy_types';
-import {
+import type {LeafExpressionType} from '../../model/malloy_types';
+import type {
   DefinitionBlueprint,
   DialectFunctionOverloadDef,
   ImplementationBlueprint,
-  expandBlueprintMap,
-  expandOverrideMapFromBase,
 } from './util';
+import {expandBlueprintMap, expandOverrideMapFromBase} from './util';
 
 type D = DefinitionBlueprint;
 type I = ImplementationBlueprint;

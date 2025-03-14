@@ -22,7 +22,7 @@
  */
 
 import {emptyCompositeFieldUsage} from '../../model/composite_source_utils';
-import {ExprValue} from './types/expr-value';
+import type {ExprValue} from './types/expr-value';
 
 /**
  * When a translation hits an error, log and return one of these as a value.

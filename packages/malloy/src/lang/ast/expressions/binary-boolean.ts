@@ -23,10 +23,12 @@
 
 import {errorFor} from '../ast-utils';
 import * as TDU from '../typedesc-utils';
-import {BinaryMalloyOperator, getExprNode} from '../types/binary_operators';
-import {ExprValue, computedExprValue} from '../types/expr-value';
+import type {BinaryMalloyOperator} from '../types/binary_operators';
+import {getExprNode} from '../types/binary_operators';
+import type {ExprValue} from '../types/expr-value';
+import {computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import {FieldSpace} from '../types/field-space';
+import type {FieldSpace} from '../types/field-space';
 
 export abstract class BinaryBoolean<
   opType extends BinaryMalloyOperator,

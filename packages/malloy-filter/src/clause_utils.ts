@@ -5,19 +5,21 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {
+import type {
   ChainOp,
-  isNumberClause,
-  isStringClause,
-  isStringCondition,
   NumberRange,
   StringClause,
   NumberClause,
   ClauseBase,
-  isTemporalClause,
   TemporalUnit,
   TemporalLiteral,
   TemporalClause,
+} from './filter_clause';
+import {
+  isNumberClause,
+  isStringClause,
+  isStringCondition,
+  isTemporalClause,
 } from './filter_clause';
 
 /**

@@ -1,4 +1,4 @@
-import {MalloyRenderProps} from './render';
+import type {MalloyRenderProps} from './render';
 
 export async function copyMalloyRenderHTML(
   element: HTMLElement & MalloyRenderProps

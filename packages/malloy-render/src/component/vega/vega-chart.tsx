@@ -6,10 +6,11 @@
  */
 
 import {createEffect, createSignal, untrack} from 'solid-js';
-import {EventListenerHandler, View, SignalListenerHandler, Runtime} from 'vega';
+import type {EventListenerHandler, SignalListenerHandler, Runtime} from 'vega';
+import {View} from 'vega';
 import './vega-expr-addons';
 import {addSignalListenerIfExists, setSignalIfExists} from './vega-utils';
-import {RepeatedRecordField} from '../../data_tree';
+import type {RepeatedRecordField} from '../../data_tree';
 
 type VegaChartProps = {
   explore: RepeatedRecordField;

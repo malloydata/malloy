@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {TextmateTestConfig, TestItem} from '../test/testUtils';
+import type {TextmateTestConfig, TestItem} from '../test/testUtils';
 import {generateTextmateTokenizations} from '../test/generateTextmateTokenizations';
 import {writeFileSync} from 'fs';
 import {inspect} from 'util';

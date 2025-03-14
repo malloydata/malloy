@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {JSXElement} from 'solid-js';
+import type {JSXElement} from 'solid-js';
 import {renderNumericField} from './render-numeric-field';
 import {renderLink} from './render-link';
 import {Chart} from './chart/chart';
@@ -16,7 +16,7 @@ import {Dashboard} from './dashboard/dashboard';
 import {renderTime} from './render-time';
 import {LegacyChart} from './legacy-charts/legacy_chart';
 import {NULL_SYMBOL} from '../util';
-import {RendererProps} from './types';
+import type {RendererProps} from './types';
 
 export function applyRenderer(props: RendererProps) {
   const {dataColumn, customProps = {}} = props;

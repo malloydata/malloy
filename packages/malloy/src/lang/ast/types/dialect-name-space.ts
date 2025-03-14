@@ -5,10 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {Dialect} from '../../../dialect';
-import {FunctionDef} from '../../../model';
-import {ModelEntry} from './model-entry';
-import {NameSpace} from './name-space';
+import type {Dialect} from '../../../dialect';
+import type {FunctionDef} from '../../../model';
+import type {ModelEntry} from './model-entry';
+import type {NameSpace} from './name-space';
 
 /**
  * This is the dialect namespace, which sits below the global namespace.

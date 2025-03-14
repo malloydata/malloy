@@ -21,20 +21,19 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   Expr,
   ExpressionValueTypeDef,
   TemporalTypeDef,
   TimestampUnit,
-  maxOfExpressionTypes,
-  mergeEvalSpaces,
 } from '../../../model';
+import {maxOfExpressionTypes, mergeEvalSpaces} from '../../../model';
 import {
   emptyCompositeFieldUsage,
   mergeCompositeFieldUsage,
 } from '../../../model/composite_source_utils';
-import {ExprResult} from './expr-result';
-import {TimeResult} from './time-result';
+import type {ExprResult} from './expr-result';
+import type {TimeResult} from './time-result';
 
 export type ExprValue = ExprResult | TimeResult;
 

@@ -21,7 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {TagDict, Tag} from './tags';
+import type {TagDict} from './tags';
+import {Tag} from './tags';
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace

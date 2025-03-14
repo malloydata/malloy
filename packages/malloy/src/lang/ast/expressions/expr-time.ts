@@ -21,15 +21,16 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
+import type {
   Expr,
   TemporalFieldType,
   TypecastExpr,
-  isTemporalType,
 } from '../../../model/malloy_types';
+import {isTemporalType} from '../../../model/malloy_types';
 
-import {FieldSpace} from '../types/field-space';
-import {ExprValue, computedExprValue} from '../types/expr-value';
+import type {FieldSpace} from '../types/field-space';
+import type {ExprValue} from '../types/expr-value';
+import {computedExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 
 export class ExprTime extends ExpressionDef {

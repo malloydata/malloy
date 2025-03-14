@@ -7,8 +7,10 @@ import {
   createMemo,
   createSignal,
 } from 'solid-js';
-import {Chart, ChartProps} from './chart';
-import {View, parse} from 'vega';
+import type {ChartProps} from './chart';
+import {Chart} from './chart';
+import type {View} from 'vega';
+import {parse} from 'vega';
 import {createStore} from 'solid-js/store';
 import {addSignalListenerIfExists} from '../vega/vega-utils';
 import {useResultContext} from '../result-context';

@@ -21,11 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Note} from '../../../model/malloy_types';
-import {Tag} from '@malloydata/malloy-tag';
-import {MessageLogger} from '../../parse-log';
-import {Document, DocStatement, MalloyElement} from './malloy-element';
-import {QueryPropertyInterface} from './query-property-interface';
+import type {Note} from '../../../model/malloy_types';
+import type {Tag} from '@malloydata/malloy-tag';
+import type {MessageLogger} from '../../parse-log';
+import type {Document, DocStatement} from './malloy-element';
+import {MalloyElement} from './malloy-element';
+import type {QueryPropertyInterface} from './query-property-interface';
 import {annotationToTag} from '../../../annotation';
 
 export class ObjectAnnotation

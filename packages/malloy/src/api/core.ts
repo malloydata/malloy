@@ -6,21 +6,21 @@
  */
 
 import * as Malloy from '@malloydata/malloy-interfaces';
-import {LogMessage, MalloyTranslator} from '../lang';
-import {ParseUpdate} from '../lang/parse-malloy';
-import {
+import type {LogMessage} from '../lang';
+import {MalloyTranslator} from '../lang';
+import type {ParseUpdate} from '../lang/parse-malloy';
+import type {
   AtomicFieldDef,
   AtomicTypeDef,
   FieldDef,
-  mkFieldDef,
   ModelDef,
-  QueryModel,
   SQLSourceDef,
   TableSourceDef,
 } from '../model';
+import {mkFieldDef, QueryModel} from '../model';
 import {modelDefToModelInfo} from '../to_stable';
 import {sqlKey} from '../model/sql_block';
-import {SQLSourceRequest} from '../lang/translate-response';
+import type {SQLSourceRequest} from '../lang/translate-response';
 import {annotationToTaglines} from '../annotation';
 import {Tag} from '@malloydata/malloy-tag';
 

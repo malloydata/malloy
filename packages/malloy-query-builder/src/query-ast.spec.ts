@@ -5,10 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import * as Malloy from '@malloydata/malloy-interfaces';
+import type * as Malloy from '@malloydata/malloy-interfaces';
 import {flights_model} from './flights_model';
 import './expects';
-import {ASTOrderByViewOperation, ASTQuery} from './query-ast';
+import type {ASTOrderByViewOperation} from './query-ast';
+import {ASTQuery} from './query-ast';
 
 function dedent(strs: TemplateStringsArray) {
   const str = strs.join('');

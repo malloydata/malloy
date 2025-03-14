@@ -5,11 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {
-  FilterParserReponse,
-  isStringClause,
-  StringClause,
-} from './filter_clause';
+import type {FilterParserReponse, StringClause} from './filter_clause';
+import {isStringClause} from './filter_clause';
 import * as nearley from 'nearley';
 import fstring_grammar from './lib/fexpr_string_parser';
 import {escape} from './clause_utils';

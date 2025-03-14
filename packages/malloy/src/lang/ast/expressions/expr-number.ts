@@ -21,10 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ExprValue, literalExprValue} from '../types/expr-value';
-import {FieldSpace} from '../types/field-space';
+import type {ExprValue} from '../types/expr-value';
+import {literalExprValue} from '../types/expr-value';
+import type {FieldSpace} from '../types/field-space';
 import {ExpressionDef} from '../types/expression-def';
-import {NumberTypeDef} from '../../../model';
+import type {NumberTypeDef} from '../../../model';
 
 export class ExprNumber extends ExpressionDef {
   elementType = 'numeric literal';

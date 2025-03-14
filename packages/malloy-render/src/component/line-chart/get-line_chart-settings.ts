@@ -5,9 +5,9 @@
  *  LICENSE file in the root directory of this source tree.
  */
 
-import {Tag} from '@malloydata/malloy-tag';
-import {Channel} from '../types';
-import {NestField} from '../../data_tree';
+import type {Tag} from '@malloydata/malloy-tag';
+import type {Channel} from '../types';
+import type {NestField} from '../../data_tree';
 import {walkFields} from '../../util';
 
 export type LineChartSettings = {
