@@ -200,6 +200,8 @@ export function generateLineChartVegaSpec(explore: NestField): VegaChartProps {
         stroke: {scale: 'color', field: 'series'},
         strokeWidth: {value: 2},
         zindex: {value: 0},
+        // Ensure lines don't connect through null/undefined points
+        defined: {signal: 'datum.y != null && !isNaN(datum.y)'},
       },
       update: {
         strokeOpacity: [
