@@ -15,6 +15,8 @@ afterAll(async () => {
   await runtimes.closeAll();
 });
 
+// mtoy todo sit down with each parser and compiler and make sure there is a test for every case
+
 describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
   const q = db.getQuoter();
   describe('string filter expressions', () => {
@@ -182,7 +184,6 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
           select: nm
         }`).malloyResultMatches(abc, [{nm: '4 - xback'}]);
     });
-    // todo coverage check for every possible compile path
   });
 
   describe('numeric filter expressions', () => {
@@ -293,6 +294,58 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
           where: n ~ f'<=1'
           select: n; order_by: n asc
         }`).malloyResultMatches(nums, [{n: 0}, {n: 1}]);
+    });
+  });
+
+  describe('boolean filter expressions', () => {
+    const facts = db.loadModel(`
+      source: facts is ${dbName}.sql("""
+        SELECT true as ${q`b`}, 'true' as ${q`t`}
+        UNION ALL SELECT false, 'false'
+        UNION ALL SELECT NULL, 'null'
+      """)
+    `);
+    test('true', async () => {
+      await expect(`
+        run: facts -> {
+          where: b ~ f'true'
+          select: t; order_by: t asc
+        }`).malloyResultMatches(facts, [{t: 'true'}]);
+    });
+    test('true', async () => {
+      await expect(`
+        run: facts -> {
+          where: b ~ f'true'
+          select: t; order_by: t asc
+        }`).malloyResultMatches(facts, [{t: 'true'}]);
+    });
+    test('false', async () => {
+      await expect(`
+        run: facts -> {
+          where: b ~ f'false'
+          select: t; order_by: t asc
+        }`).malloyResultMatches(facts, [{t: 'false'}, {t: 'null'}]);
+    });
+    test('=false', async () => {
+      await expect(`
+        run: facts -> {
+          where: b ~ f'=false'
+          select: t; order_by: t asc
+        }`).malloyResultMatches(facts, [{t: 'false'}]);
+    });
+    test('null', async () => {
+      await expect(`
+        run: facts -> {
+          where: b ~ f'null'
+          select: t; order_by: t asc
+        }`).malloyResultMatches(facts, [{t: 'null'}]);
+    });
+    test('not null', async () => {
+      await expect(`
+        run: facts -> {
+          where: b ~ f'not null'
+          select: t; order_by: t asc
+        }`).malloyResultMatches(facts, [{t: 'false'}, {t: 'true'}]);
     });
   });
 });
