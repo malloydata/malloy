@@ -75,11 +75,18 @@ export function convertFromThrift(obj: unknown, type: string): unknown {
   } else if (typeof obj === 'string') {
     return obj;
   } else if (typeof obj === 'number') {
-    const typeDefinition = MALLOY_INTERFACE_TYPES[type];
-    if (typeDefinition && typeDefinition.type === 'enum') {
-      return typeDefinition.values[obj - 1];
+    if (type === 'number') return obj;
+    const typeDefinition = getType(type);
+    if (typeDefinition.type !== 'enum') {
+      throw new Error(`Found a number where a ${type} was expected`);
     }
-    return obj;
+    const entry = Object.entries(typeDefinition.values).find(
+      ([, value]) => value === obj
+    );
+    if (entry === undefined) {
+      throw new Error(`${obj} is not a valid enum value for ${type}`);
+    }
+    return entry[0];
   } else if (Array.isArray(obj)) {
     return obj.map(value => convertFromThrift(value, type));
   } else {
@@ -132,7 +139,11 @@ export function convertToThrift(obj: unknown, type: string): unknown {
     if (type === 'string') return obj;
     const typeDefinition = getType(type);
     if (typeDefinition.type === 'enum') {
-      return typeDefinition.values.indexOf(obj) + 1;
+      const value = typeDefinition.values[obj];
+      if (value === undefined) {
+        throw new Error(`${obj} is not a valid enum value for ${type}`);
+      }
+      return value;
     }
   } else if (Array.isArray(obj)) {
     return obj.map(el => convertToThrift(el, type));

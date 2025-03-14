@@ -202,9 +202,34 @@ describe('convert between default thrift and Malloy types', () => {
     };
     thriftBidirectional(typescript, thrift, 'SourceInfo');
   });
+  test('works with an empty array', () => {
+    const typescript: Malloy.SourceInfo = {
+      name: 'foo',
+      annotations: [],
+      schema: {
+        fields: [],
+      },
+    };
+    const thrift = {
+      name: 'foo',
+      annotations: [],
+      schema: {
+        fields: [],
+      },
+    };
+    thriftBidirectional(typescript, thrift, 'SourceInfo');
+  });
 });
 
 function thriftBidirectional(typescript: {}, thrift: {}, type: string) {
-  expect(convertFromThrift(thrift, type)).toMatchObject(typescript);
-  expect(convertToThrift(typescript, type)).toMatchObject(thrift);
+  const actualThrift = convertToThrift(typescript, type);
+  const actualTypescript = convertFromThrift(thrift, type);
+  expect(actualTypescript).toMatchObject(typescript);
+  expect(actualThrift).toMatchObject(thrift);
+  expect(JSON.stringify(actualThrift, null, 2)).toBe(
+    JSON.stringify(thrift, null, 2)
+  );
+  expect(JSON.stringify(actualTypescript, null, 2)).toBe(
+    JSON.stringify(typescript, null, 2)
+  );
 }
