@@ -349,7 +349,7 @@ export class SnowflakeConnection
       const sampleQuery = `
         WITH base AS (
           SELECT
-            regexp_replace(path, '\\\\[[0-9]+\\\\]', '[]') AS norm_path,
+            regexp_replace(path, '\\\\[[0-9]+\\\\]', '[*]') AS norm_path,
             CASE
               WHEN typeof(value) = 'INTEGER' THEN 'decimal'
               WHEN typeof(value) = 'DOUBLE' THEN 'decimal'
@@ -357,13 +357,8 @@ export class SnowflakeConnection
             END AS type
           FROM
             (
-              SELECT
-                object_construct() o
-              FROM
-                ${tablePath}
-              LIMIT
-                100
-            ), table(flatten(input = > o, recursive = > true)) AS meta
+              SELECT object_construct(*) o FROM ${tablePath} LIMIT 100
+            ), table(flatten(input => o, recursive => true)) AS meta
           WHERE
             lower(typeof(value)) != 'null_value'
         ),
@@ -372,38 +367,26 @@ export class SnowflakeConnection
             norm_path,
             min(type) AS type,
             count(distinct type) AS type_count
-          FROM
-            base
-          GROUP BY
-            norm_path
+          FROM base
+          GROUP BY norm_path
         ),
         ambiguous AS (
-          SELECT
-            norm_path,
-          FROM
-            agg
-          WHERE
-            type_count > 1
+          SELECT norm_path,
+          FROM agg
+          WHERE type_count > 1
         )
-        SELECT
-          a.norm_path AS path,
-          a.type
-        FROM
-          agg a
+        SELECT a.norm_path AS path, a.type
+        FROM agg a
         WHERE
-          a.type_count = 1 -- now only include nodes that are a descendant of an ambiguous node
+          a.type_count = 1
           AND NOT EXISTS (
-            SELECT
-              1
-            FROM
-              ambiguous b
+            SELECT 1
+            FROM ambiguous b
             WHERE
               startswith(a.norm_path, b.norm_path || '.')
               OR startswith(a.norm_path, b.norm_path || '[')
           )
-        ORDER BY
-          a.norm_path;
-        `;
+      ORDER BY a.norm_path;`;
       const fieldPathRows = await this.executor.batch(sampleQuery);
 
       // take the schema in list form an convert it into a tree.
