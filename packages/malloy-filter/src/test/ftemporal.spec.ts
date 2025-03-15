@@ -105,6 +105,12 @@ describe('temporal filter expressions', () => {
         in: {moment: 'literal', literal: '2001-02-03-WK', units: 'week'},
       });
     });
+    test('literal month', () => {
+      expect('2001-01').isTemporalFilter({
+        operator: 'in',
+        in: {moment: 'literal', literal: '2001-01', units: 'month'},
+      });
+    });
     test('literal quarter', () => {
       expect('2001-Q1').isTemporalFilter({
         operator: 'in',

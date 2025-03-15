@@ -65,7 +65,7 @@ const temporal_lexer = moo.compile({
   lit_quarter: /\d\d\d\d-[qQ][1234]/,
   lit_hour: /\d\d\d\d-\d\d-\d\d[ Tt]\d\d/,
   lit_day: /\d\d\d\d-\d\d-\d\d/,
-  lit_month: /\d\d\d\d-\d\d-\d\d/,
+  lit_month: /\d\d\d\d-\d\d/,
   lit_year: /\d\d\d\d/,
   n: /\d+/,
 });

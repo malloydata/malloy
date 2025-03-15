@@ -1363,6 +1363,8 @@ class QueryField extends QueryNode {
         if (
           expr.dataType === 'string' ||
           expr.dataType === 'number' ||
+          expr.dataType === 'date' ||
+          expr.dataType === 'timestamp' ||
           expr.dataType === 'boolean'
         ) {
           return FilterCompilers.compile(
@@ -1372,6 +1374,7 @@ class QueryField extends QueryNode {
             this.parent.dialect
           );
         }
+        // mtoy todo no throw
         throw new Error(
           `Internal Error: Filter Compiler Undefined (FCU) ${expr.dataType}`
         );

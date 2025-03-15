@@ -349,4 +349,43 @@ describe.each(runtimes.runtimeList)('filter expressions %s', (dbName, db) => {
         }`).malloyResultMatches(facts, [{t: 'false'}, {t: 'true'}]);
     });
   });
+
+  type TL = 'timeLiteral';
+  type TS = {type: 'timestamp'};
+
+  describe('temporal filters', () => {
+    function ts(t: string): string {
+      const node: TL = 'timeLiteral';
+      const typeDef: TS = {type: 'timestamp'};
+      const n = {node, typeDef, literal: t};
+      return db.dialect.sqlLiteralTime({}, n);
+    }
+    const times = db.loadModel(`
+      source: times is ${dbName}.sql("""
+        SELECT ${ts('2001-01-02 03:04:05')} as ${q`t`}, 'y2k' as ${q`n`}
+        UNION ALL SELECT NULL, 'znull'
+      """)
+    `);
+    test('year', async () => {
+      await expect(`
+        run: times -> {
+          where: t ~ f'2001'
+          select: n; order_by: n asc
+        }`).malloyResultMatches(times, [{n: 'y2k'}]);
+    });
+    test('month', async () => {
+      await expect(`
+        run: times -> {
+          where: t ~ f'2001-01'
+          select: n; order_by: n asc
+        }`).malloyResultMatches(times, [{n: 'y2k'}]);
+    });
+    test('day', async () => {
+      await expect(`
+        run: times -> {
+          where: t ~ f'2001-01-02'
+          select: n; order_by: n asc
+        }`).malloyResultMatches(times, [{n: 'y2k'}]);
+    });
+  });
 });
