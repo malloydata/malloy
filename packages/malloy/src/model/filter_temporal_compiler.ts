@@ -234,7 +234,7 @@ export class TemporalFilterCompiler {
   }
 
   mod7(n: string): string {
-    return this.d.hasModOperator ? `(${n})%7` : `(${n}) MOD 7`;
+    return this.d.hasModOperator ? `(${n})%7` : `MOD(${n},7)`;
   }
 
   private moment(m: Moment): MomentIs {
