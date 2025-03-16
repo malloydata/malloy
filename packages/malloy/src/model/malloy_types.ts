@@ -228,7 +228,7 @@ export interface NowNode extends ExprLeaf {
 interface HasTimeValue {
   typeDef: TemporalTypeDef;
 }
-type TimeExpr = Expr & HasTimeValue;
+export type TimeExpr = Expr & HasTimeValue;
 
 /**
  * Return true if this node can be turned into a temporal node by simply

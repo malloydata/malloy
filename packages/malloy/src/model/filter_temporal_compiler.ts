@@ -21,15 +21,27 @@ import {
   NowNode,
   NumberLiteralNode,
   mkTemporal,
+  TimestampUnit,
+  TimeExtractExpr,
 } from './malloy_types';
 
-interface MomentIs {
-  begin: string;
-  end: string;
-}
-
-interface TranslatedExpr {
+/*
+ * The compilation from Expr to SQL string walks the expression tree, and I thought it was cute
+ * to walk the children, stash each child compilation in each child node in ".sql" rather
+ * that making every node have a recursive call. Every dialect function expects, if it is passed
+ * a node, that the node is already translated.
+ *
+ * Now that means I have to also do that, so that if I make an Expr to hand to a dialect function,
+ * any nodes it has inside it need to be already translated. All the private functions inside
+ * TemporalFilterCompiler deal with this kind of Expr
+ */
+type Translated<T extends Expr> = T & {
   sql: string;
+};
+
+interface MomentIs {
+  begin: Translated<Expr>;
+  end: string;
 }
 
 /**
@@ -57,23 +69,46 @@ export class TemporalFilterCompiler {
         return `${x} ${tc.not ? '>=' : '<'} ${this.moment(tc.before).begin}`;
       case 'in': {
         // mtoy todo in now
-        let begOp = '>=';
-        let endOp = '<';
-        let joinOp = 'AND';
-        if (tc.not) {
-          joinOp = 'OR';
-          begOp = '<';
-          endOp = '>=';
-        }
         const m = this.moment(tc.in);
-        return `${x} ${begOp} ${m.begin} ${joinOp} ${x} ${endOp} ${m.end}`;
+        return this.isIn(tc.not, m.begin.sql, m.end);
       }
-      case 'for':
-      case 'in_last':
-      case 'last':
-      case 'next':
-      case 'to':
-        throw new Error('Missing temporal operator');
+      case 'for': {
+        const start = this.moment(tc.begin);
+        const end = this.delta(start.begin, '+', tc.n, tc.units);
+        return this.isIn(tc.not, start.begin.sql, end.sql);
+      }
+      case 'in_last': {
+        // last N units means "N - 1 UNITS AGO FOR N UNITS"
+        const back = Number(tc.n) - 1;
+        const thisUnit = this.nowDot(tc.units);
+        const start =
+          back > 0
+            ? this.delta(thisUnit, '-', back.toString(), tc.units)
+            : thisUnit;
+        const end = this.delta(thisUnit, '+', '1', tc.units);
+        return this.isIn(tc.not, start.sql, end.sql);
+      }
+      case 'to': {
+        const firstMoment = this.moment(tc.fromMoment);
+        const lastMoment = this.moment(tc.toMoment);
+        return this.isIn(tc.not, firstMoment.begin.sql, lastMoment.end);
+      }
+      case 'last': {
+        const thisUnit = this.nowDot(tc.units);
+        const start = this.delta(thisUnit, '-', tc.n, tc.units);
+        return this.isIn(tc.not, start.sql, thisUnit.sql);
+      }
+      case 'next': {
+        const thisUnit = this.nowDot(tc.units);
+        const start = this.delta(thisUnit, '+', '1', tc.units);
+        const end = this.delta(
+          thisUnit,
+          '+',
+          (Number(tc.n) + 1).toString(),
+          tc.units
+        );
+        return this.isIn(tc.not, start.sql, end.sql);
+      }
       case 'null':
         return tc.not ? `${x} IS NOT NULL` : `${x} IS NULL`;
       case '()': {
@@ -88,7 +123,7 @@ export class TemporalFilterCompiler {
     }
   }
 
-  private expandLiteral(tl: TemporalLiteral): TimeLiteralNode & TranslatedExpr {
+  private expandLiteral(tl: TemporalLiteral): Translated<TimeLiteralNode> {
     let literal = tl.literal;
     switch (tl.units) {
       case 'year':
@@ -131,7 +166,7 @@ export class TemporalFilterCompiler {
     return {...literalNode, sql: this.d.sqlLiteralTime({}, literalNode)};
   }
 
-  private nowExpr(): NowNode & TranslatedExpr {
+  private nowExpr(): Translated<NowNode> {
     return {
       node: 'now',
       typeDef: {type: 'timestamp'},
@@ -139,7 +174,7 @@ export class TemporalFilterCompiler {
     };
   }
 
-  private n(literal: string): NumberLiteralNode & TranslatedExpr {
+  private n(literal: string): Translated<NumberLiteralNode> {
     return {node: 'numberLiteral', literal, sql: literal};
   }
 
@@ -148,7 +183,7 @@ export class TemporalFilterCompiler {
     op: '+' | '-',
     n: string,
     units: TemporalUnit
-  ): TimeDeltaExpr & TranslatedExpr {
+  ): Translated<TimeDeltaExpr> {
     const ret: TimeDeltaExpr = {
       node: 'delta',
       op,
@@ -161,13 +196,45 @@ export class TemporalFilterCompiler {
     return {...ret, sql: this.d.sqlAlterTimeExpr(ret)};
   }
 
-  private today(): TimeTruncExpr & TranslatedExpr {
+  private dayofWeek(e: Expr): Translated<TimeExtractExpr> {
+    const t: TimeExtractExpr = {
+      node: 'extract',
+      e: mkTemporal(e, 'timestamp'),
+      units: 'day_of_week',
+    };
+    return {...t, sql: this.d.sqlTimeExtractExpr({}, t)};
+  }
+
+  private nowDot(units: TimestampUnit): Translated<TimeTruncExpr> {
     const nowTruncExpr: TimeTruncExpr = {
       node: 'trunc',
       e: this.nowExpr(),
-      units: 'day',
+      units,
     };
     return {...nowTruncExpr, sql: this.d.sqlTruncExpr({}, nowTruncExpr)};
+  }
+
+  private thisUnit(units: TimestampUnit): MomentIs {
+    const thisUnit = this.nowDot(units);
+    const nextUnit = this.delta(thisUnit, '+', '1', 'day');
+    return {begin: thisUnit, end: nextUnit.sql};
+  }
+
+  private lastUnit(units: TimestampUnit): MomentIs {
+    const thisUnit = this.nowDot(units);
+    const lastUnit = this.delta(thisUnit, '-', '1', 'day');
+    return {begin: lastUnit, end: thisUnit.sql};
+  }
+
+  private nextUnit(units: TimestampUnit): MomentIs {
+    const thisUnit = this.nowDot(units);
+    const nextUnit = this.delta(thisUnit, '+', '1', 'day');
+    const next2Unit = this.delta(thisUnit, '+', '2', 'day');
+    return {begin: nextUnit, end: next2Unit.sql};
+  }
+
+  mod7(n: string): string {
+    return this.d.hasModOperator ? `(${n})%7` : `(${n}) MOD 7`;
   }
 
   private moment(m: Moment): MomentIs {
@@ -175,7 +242,7 @@ export class TemporalFilterCompiler {
       // mtoy todo moments which have no duration should have somethign in the interface?
       case 'now': {
         const now = this.nowExpr();
-        return {begin: now.sql, end: now.sql};
+        return {begin: now, end: now.sql};
       }
       case 'literal': {
         // begins on the literal, ends on the literal + 1 unit
@@ -186,7 +253,7 @@ export class TemporalFilterCompiler {
         if (m.units && isTimestampUnit(m.units)) {
           end = this.delta(beginLiteral, '+', '1', m.units).sql;
         }
-        return {begin, end};
+        return {begin: beginLiteral, end};
       }
       case 'ago':
       case 'from_now': {
@@ -204,45 +271,90 @@ export class TemporalFilterCompiler {
           m.n,
           m.units
         );
-        const begin = beginExpr.sql;
         // Now the end is one unit after that .. either n-1 units ago or n+1 units from now
         if (m.moment === 'ago' && m.n === '1') {
-          return {begin, end: nowTruncExpr.sql};
+          return {begin: beginExpr, end: nowTruncExpr.sql};
         }
         const oneDifferent = Number(m.n) + m.moment === 'ago' ? -1 : 1;
         const endExpr = {
           ...beginExpr,
           kids: {base: nowTrunc, delta: this.n(oneDifferent.toString())},
         };
-        return {begin, end: this.d.sqlAlterTimeExpr(endExpr)};
+        return {begin: beginExpr, end: this.d.sqlAlterTimeExpr(endExpr)};
       }
-      case 'today': {
-        const today = this.today();
-        const tomorrow = this.delta(today, '+', '1', 'day');
-        return {begin: today.sql, end: tomorrow.sql};
-      }
-      case 'yesterday': {
-        const today = this.today();
-        const yesterday = this.delta(today, '-', '1', 'day');
-        return {begin: yesterday.sql, end: today.sql};
-      }
-      case 'tomorrow': {
-        const today = this.today();
-        const tomorrow = this.delta(today, '+', '1', 'day');
-        const day_after_tomorrow = this.delta(today, '+', '2', 'day');
-        return {begin: tomorrow.sql, end: day_after_tomorrow.sql};
-      }
+      case 'today':
+        return this.thisUnit('day');
+      case 'yesterday':
+        return this.lastUnit('day');
+      case 'tomorrow':
+        return this.nextUnit('day');
+      case 'this':
+        return this.thisUnit(m.units);
+      case 'last':
+        return this.lastUnit(m.units);
+      case 'next':
+        return this.nextUnit(m.units);
+      // ------ mtoy todo implement (next ? last) weekday
+      // daqy of week === 0-6
+      /*
+       * nextDow = (dow(today) + 7) % 7;
+       * next = today + nextDow days;
+       */
       case 'monday':
       case 'tuesday':
       case 'wednesday':
       case 'thursday':
       case 'friday':
       case 'saturday':
-      case 'sunday':
-      case 'this':
-      case 'last':
-      case 'next':
-        throw new Error(`Temporal moment ${m.moment} not implemented`);
+      case 'sunday': {
+        const destDay = [
+          'monday',
+          'tuesday',
+          'wednesday',
+          'thursday',
+          'friday',
+          'saturday',
+          'sunday',
+        ].indexOf(m.moment);
+        const dow = this.dayofWeek(this.nowExpr());
+        if (m.which === 'next') {
+          const nForwards = this.mod7(`${destDay}-${dow.sql}+7`);
+          const begin = this.delta(
+            this.thisUnit('day').begin,
+            '+',
+            nForwards,
+            'day'
+          );
+          const end = this.delta(
+            this.thisUnit('day').begin,
+            '+',
+            `${nForwards}+1`,
+            'day'
+          );
+          return {begin, end: end.sql};
+        }
+        const nBack = this.mod7(`${dow.sql}-${destDay}+7`);
+        const begin = this.delta(this.thisUnit('day').begin, '-', nBack, 'day');
+        const end = this.delta(
+          this.thisUnit('day').begin,
+          '-',
+          `${nBack}-1`,
+          'day'
+        );
+        return {begin, end: end.sql};
+      }
     }
+  }
+
+  private isIn(notIn: boolean | undefined, begin: string, end: string) {
+    let begOp = '>=';
+    let endOp = '<';
+    let joinOp = 'AND';
+    if (notIn) {
+      joinOp = 'OR';
+      begOp = '<';
+      endOp = '>=';
+    }
+    return `${this.expr} ${begOp} ${begin} ${joinOp} ${this.expr} ${endOp} ${end}`;
   }
 }
