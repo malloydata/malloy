@@ -222,12 +222,14 @@ export interface ParameterNode extends ExprLeaf {
 
 export interface NowNode extends ExprLeaf {
   node: 'now';
+  typeDef: {type: 'timestamp'};
 }
 
 interface HasTimeValue {
   typeDef: TemporalTypeDef;
 }
 type TimeExpr = Expr & HasTimeValue;
+
 /**
  * Return true if this node can be turned into a temporal node by simply
  * appending a time type to the typedef. The type systsem makes this hard
@@ -249,9 +251,12 @@ export function mkTemporal(
   e: Expr,
   timeType: TemporalTypeDef | TemporalFieldType
 ): TimeExpr {
-  const ttd = typeof timeType === 'string' ? {type: timeType} : timeType;
-  if (canMakeTemporal(e)) {
-    return {...e, typeDef: {...ttd}};
+  if (!('typeDef' in e)) {
+    const ttd: TemporalTypeDef =
+      typeof timeType === 'string' ? {type: timeType} : timeType;
+    if (canMakeTemporal(e)) {
+      return {...e, typeDef: {...ttd}};
+    }
   }
   return e as TimeExpr;
 }

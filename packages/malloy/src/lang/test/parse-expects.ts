@@ -274,7 +274,8 @@ expect.extend({
     if (!badRefs.pass) {
       return badRefs;
     }
-    const rcvExpr = exprToStr(bx.generated().value, undefined);
+    const toExpr = bx.generated().value;
+    const rcvExpr = exprToStr(toExpr, undefined);
     const pass = this.equals(rcvExpr, expr);
     const msg = pass ? `Matched: ${rcvExpr}` : this.utils.diff(expr, rcvExpr);
     return {pass, message: () => `${msg}`};

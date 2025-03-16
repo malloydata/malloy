@@ -16,11 +16,9 @@ import {
   isTemporalClause,
   isBooleanClause,
   NumberRangeOperator,
-  Moment,
-  TemporalLiteral,
 } from '@malloydata/malloy-filter';
 import {Dialect} from '../dialect';
-import {TimeDeltaExpr, TimeLiteralNode, isTimestampUnit} from './malloy_types';
+import {TemporalFilterCompiler} from './filter_temporal_compiler';
 
 function escapeForLike(v: string) {
   return v.replace(/([%_\\])/g, '\\$1');
@@ -275,133 +273,7 @@ export const FilterCompilers = {
   },
   // mtoy todo figure out what to do about dates
   temporalCompile(tc: TemporalClause, x: string, d: Dialect): string {
-    switch (tc.operator) {
-      case 'after':
-        return `${x} ${tc.not ? '<' : '>='} ${mkMoment(tc.after, d).end}`;
-      case 'before':
-        return `${x} ${tc.not ? '>=' : '<'} ${mkMoment(tc.before, d).begin}`;
-      case 'in': {
-        // mtoy todo in now
-        let begOp = '>=';
-        let endOp = '<';
-        let joinOp = 'AND';
-        if (tc.not) {
-          joinOp = 'OR';
-          begOp = '<';
-          endOp = '>=';
-        }
-        const m = mkMoment(tc.in, d);
-        return `${x} ${begOp} ${m.begin} ${joinOp} ${x} ${endOp} ${m.end}`;
-      }
-      case 'for':
-      case 'in_last':
-      case 'last':
-      case 'next':
-      case 'to':
-        throw new Error('Missing temporal operator');
-      case 'null':
-        return tc.not ? `${x} IS NOT NULL` : `${x} IS NULL`;
-      case '()': {
-        const wrapped =
-          '(' + FilterCompilers.temporalCompile(tc.expr, x, d) + ')';
-        return tc.not ? `NOT ${wrapped}` : wrapped;
-      }
-      case 'and':
-      case 'or':
-        return tc.members
-          .map(m => FilterCompilers.temporalCompile(m, x, d))
-          .join(` ${tc.operator.toUpperCase()} `);
-    }
+    const c = new TemporalFilterCompiler(x, d);
+    return c.compile(tc);
   },
 };
-
-interface MomentIs {
-  begin: string;
-  end: string;
-}
-
-interface TranslatedExpr {
-  sql: string;
-}
-
-function expandLiteral(
-  tl: TemporalLiteral,
-  d: Dialect
-): TimeLiteralNode & TranslatedExpr {
-  let literal = tl.literal;
-  switch (tl.units) {
-    case 'year':
-      literal += '-01-01 00:00';
-      break;
-    case 'month':
-      literal += '-01 00:00';
-      break;
-    case 'day':
-      literal += ' 00:00';
-      break;
-    case 'hour':
-      literal += ':00';
-      break;
-    case 'second':
-      break;
-    case 'minute':
-      break;
-    case 'week':
-    case 'quarter':
-      throw new Error('timestamp literal code still in beta');
-  }
-  const literalNode: TimeLiteralNode & TranslatedExpr = {
-    node: 'timeLiteral',
-    typeDef: {type: 'timestamp'},
-    literal,
-    sql: '',
-  };
-  literalNode.sql = d.sqlLiteralTime({}, literalNode);
-  return literalNode;
-}
-
-function mkMoment(m: Moment, d: Dialect): MomentIs {
-  switch (m.moment) {
-    case 'now': {
-      const now = d.sqlNowExpr();
-      return {begin: now, end: now};
-    }
-    case 'literal': {
-      // begins on the literal, ends on the literal + 1 unit
-      // mtoy todo get the literal to timestamp code from the translator ...
-      const beginLiteral = expandLiteral(m, d);
-      const begin = beginLiteral.sql;
-      let end = begin;
-      if (m.units && isTimestampUnit(m.units)) {
-        const next: TimeDeltaExpr = {
-          node: 'delta',
-          op: '+',
-          units: m.units,
-          kids: {
-            // mtoy todo dates
-            base: beginLiteral,
-            delta: {node: 'numberLiteral', literal: '1', sql: '1'},
-          },
-        };
-        end = d.sqlAlterTimeExpr(next);
-      }
-      return {begin, end};
-    }
-    case 'ago':
-    case 'monday':
-    case 'tuesday':
-    case 'wednesday':
-    case 'thursday':
-    case 'friday':
-    case 'saturday':
-    case 'sunday':
-    case 'today':
-    case 'tomorrow':
-    case 'yesterday':
-    case 'from_now':
-    case 'this':
-    case 'last':
-    case 'next':
-      throw new Error(`Temporal moment ${m.moment} not implemented`);
-  }
-}

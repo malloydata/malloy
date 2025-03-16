@@ -70,6 +70,9 @@ describe('expressions', () => {
     test.each(diffable)('timestamp difference - %s', unit => {
       expect(new BetaExpression(`${unit}(ats to @2030)`)).toParse();
     });
+    test('now.day', () => {
+      expect(expr`now.day`).compilesTo('now');
+    });
   });
 
   test('field name', () => {
